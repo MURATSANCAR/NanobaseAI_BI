@@ -1,6 +1,6 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { api } from '@rocket.chat/core-services';
-import { isUserFederated, type IUser } from '@rocket.chat/core-typings';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { api } from '@zeki.chat/core-services';
+import { isUserFederated, type IUser } from '@zeki.chat/core-typings';
 import {
 	Integrations,
 	LivechatVisitors,
@@ -13,7 +13,7 @@ import {
 	ReadReceiptsArchive,
 	LivechatUnitMonitors,
 	ModerationReports,
-} from '@rocket.chat/models';
+} from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { getSubscribedRoomsForUserWithDetails, shouldRemoveOrChangeOwner } from './getRoomsWithSingleOwner';
@@ -32,8 +32,8 @@ import {
 } from '../lib/notifyListener';
 
 export async function deleteUser(userId: string, confirmRelinquish = false, deletedBy?: IUser['_id']): Promise<{ deletedRooms: string[] }> {
-	if (userId === 'rocket.cat') {
-		throw new Meteor.Error('error-action-not-allowed', 'Deleting the rocket.cat user is not allowed', {
+	if (userId === 'zeki.bot') {
+		throw new Meteor.Error('error-action-not-allowed', 'Deleting the zeki.bot user is not allowed', {
 			method: 'deleteUser',
 			action: 'Delete_user',
 		});
@@ -99,7 +99,7 @@ export async function deleteUser(userId: string, confirmRelinquish = false, dele
 
 				break;
 			case 'Unlink':
-				userToReplaceWhenUnlinking = await Users.findOneById('rocket.cat');
+				userToReplaceWhenUnlinking = await Users.findOneById('zeki.bot');
 				if (!userToReplaceWhenUnlinking?._id || !userToReplaceWhenUnlinking?.username) {
 					break;
 				}

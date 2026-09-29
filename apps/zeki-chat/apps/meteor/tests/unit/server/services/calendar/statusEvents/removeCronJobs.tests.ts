@@ -7,7 +7,7 @@ import { MockedCronJobs } from '../mocks/cronJobs';
 const cronJobsMock = new MockedCronJobs();
 
 const { removeCronJobs } = proxyquire.noCallThru().load('../../../../../../server/services/calendar/statusEvents/removeCronJobs', {
-	'@rocket.chat/cron': { cronJobs: cronJobsMock },
+	'@zeki.chat/cron': { cronJobs: cronJobsMock },
 });
 
 describe('Calendar.StatusEvents', () => {

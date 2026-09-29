@@ -1,6 +1,6 @@
-import type { IRoom, Serialized } from '@rocket.chat/core-typings';
+import type { IRoom, Serialized } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { usePermission, useSetModal, useToastMessageDispatch, useUserId } from '@rocket.chat/ui-contexts';
+import { usePermission, useSetModal, useToastMessageDispatch, useUserId } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import ConvertToChannelModal from './ConvertToChannelModal';

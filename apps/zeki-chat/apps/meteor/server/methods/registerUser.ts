@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Users } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 import { Match, check } from 'meteor/check';
 import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
@@ -11,7 +11,7 @@ import { validateEmailDomain, passwordPolicy, RateLimiter } from '../../app/lib/
 import { settings } from '../../app/settings/server';
 import { trim } from '../../lib/utils/stringUtils';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		registerUser(

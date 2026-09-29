@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';

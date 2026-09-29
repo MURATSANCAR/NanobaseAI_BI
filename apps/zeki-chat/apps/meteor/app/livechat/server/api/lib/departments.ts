@@ -1,7 +1,7 @@
-import type { ILivechatDepartment, ILivechatDepartmentAgents } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatDepartmentAgents } from '@rocket.chat/models';
-import { applyDepartmentRestrictions } from '@rocket.chat/omni-core';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
+import type { ILivechatDepartment, ILivechatDepartmentAgents } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatDepartmentAgents } from '@zeki.chat/models';
+import { applyDepartmentRestrictions } from '@zeki.chat/omni-core';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { Document, Filter, FilterOperators, FindOptions } from 'mongodb';
 

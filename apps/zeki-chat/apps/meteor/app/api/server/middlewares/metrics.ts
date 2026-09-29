@@ -23,8 +23,8 @@ export const metricsMiddleware =
 		activeRequestsGauge: Gauge;
 	}): MiddlewareHandler =>
 	async (c, next) => {
-		const rocketchatRestApiEnd = endpointTimeSummary.startTimer();
-		const rocketchatRestApiHistEnd = endpointTimeHistogram.startTimer();
+		const zekichatRestApiEnd = endpointTimeSummary.startTimer();
+		const zekichatRestApiHistEnd = endpointTimeHistogram.startTimer();
 
 		const methodLabel = { method: c.req.method.toLowerCase() };
 		activeRequestsGauge.inc(methodLabel);
@@ -45,12 +45,12 @@ export const metricsMiddleware =
 			entrypoint: basePathRegex && entrypoint.startsWith('method.call') ? decodeURIComponent(path.replace(basePathRegex, '')) : entrypoint,
 		};
 
-		rocketchatRestApiEnd({
+		zekichatRestApiEnd({
 			...histogramLabels,
 			...(settings.get('Prometheus_API_User_Agent') && { user_agent: c.req.header('user-agent') }),
 		});
 
-		rocketchatRestApiHistEnd(histogramLabels);
+		zekichatRestApiHistEnd(histogramLabels);
 
 		const contentLength = parseInt(c.res.headers.get('content-length') || '0', 10);
 		if (contentLength > 0) {

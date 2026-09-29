@@ -1,5 +1,5 @@
-import type { IServerSettingRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
+import type { IServerSettingRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
 
 import type { ServerSettingBridge } from '../bridges/ServerSettingBridge';
 

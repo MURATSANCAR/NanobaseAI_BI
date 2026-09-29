@@ -1,8 +1,8 @@
-import type { Serialized } from '@rocket.chat/core-typings';
-import type { ServerMethodName, ServerMethodParameters, ServerMethodReturn } from '@rocket.chat/ddp-client';
-import type { Method, OperationParams, OperationResult, PathFor, PathPattern } from '@rocket.chat/rest-typings';
-import type { UploadResult } from '@rocket.chat/ui-contexts';
-import { ServerContext } from '@rocket.chat/ui-contexts';
+import type { Serialized } from '@zeki.chat/core-typings';
+import type { ServerMethodName, ServerMethodParameters, ServerMethodReturn } from '@zeki.chat/ddp-client';
+import type { Method, OperationParams, OperationResult, PathFor, PathPattern } from '@zeki.chat/rest-typings';
+import type { UploadResult } from '@zeki.chat/ui-contexts';
+import { ServerContext } from '@zeki.chat/ui-contexts';
 import { action } from '@storybook/addon-actions';
 import type { ContextType, ReactElement, ReactNode } from 'react';
 import { useContext, useMemo } from 'react';

@@ -1,5 +1,5 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { useUserId, useRoomToolbox } from '@rocket.chat/ui-contexts';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { useUserId, useRoomToolbox } from '@zeki.chat/ui-contexts';
 
 import { useRoom } from './contexts/RoomContext';
 import RoomMembers from './contextualBar/RoomMembers';

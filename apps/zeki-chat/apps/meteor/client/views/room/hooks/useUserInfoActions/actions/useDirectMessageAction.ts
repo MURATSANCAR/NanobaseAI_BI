@@ -1,5 +1,5 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { useGoToDirectMessage } from '@rocket.chat/ui-client';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { useGoToDirectMessage } from '@zeki.chat/ui-client';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

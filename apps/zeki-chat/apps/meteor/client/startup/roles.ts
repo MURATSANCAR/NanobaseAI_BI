@@ -1,4 +1,4 @@
-import type { IRole } from '@rocket.chat/core-typings';
+import type { IRole } from '@zeki.chat/core-typings';
 
 import { sdk } from '../../app/utils/client/lib/SDKClient';
 import { onLoggedIn } from '../lib/loggedIn';

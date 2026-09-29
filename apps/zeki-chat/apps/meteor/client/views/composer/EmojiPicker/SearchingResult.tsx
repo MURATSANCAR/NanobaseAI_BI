@@ -1,4 +1,4 @@
-import { EmojiPickerNotFound, VirtualizedScrollbars } from '@rocket.chat/ui-client';
+import { EmojiPickerNotFound, VirtualizedScrollbars } from '@zeki.chat/ui-client';
 import type { MouseEvent } from 'react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';

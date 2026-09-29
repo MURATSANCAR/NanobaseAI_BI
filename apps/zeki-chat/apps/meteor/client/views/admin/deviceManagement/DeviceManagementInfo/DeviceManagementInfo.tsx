@@ -1,6 +1,6 @@
-import type { DeviceManagementPopulatedSession } from '@rocket.chat/core-typings';
+import type { DeviceManagementPopulatedSession } from '@zeki.chat/core-typings';
 import { Box, Button, ButtonGroup, StatusBullet } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import {
 	ContextualbarHeader,
 	ContextualbarClose,
@@ -11,8 +11,8 @@ import {
 	InfoPanelField,
 	InfoPanelLabel,
 	InfoPanelText,
-} from '@rocket.chat/ui-client';
-import { useRoute, useUserPresence } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useRoute, useUserPresence } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -22,7 +22,7 @@ export async function configurePushNotifications(settings: ICachedSettings): Pro
 			| undefined;
 
 		//  TODO: this part of the code should be refactored as the deprecated GCM methods are no longer being used and FCM is preferred.
-		// Zeki: no Rocket.Chat push gateway; always use direct APNs/FCM credentials.
+		// Zeki: no ZEKI AI CHAT push gateway; always use direct APNs/FCM credentials.
 		{
 			gcm = {
 				apiKey: 'TO_BE_REFACTORED',

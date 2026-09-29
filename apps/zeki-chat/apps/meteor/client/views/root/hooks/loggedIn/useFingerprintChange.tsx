@@ -1,4 +1,4 @@
-import { useEndpoint, useRole, useSetModal, useSetting, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useRole, useSetModal, useSetting, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';

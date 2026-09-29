@@ -1,4 +1,4 @@
-import { useUser } from '@rocket.chat/ui-contexts';
+import { useUser } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 
 import { useCustomEmoji } from '../hooks/loggedIn/useCustomEmoji';

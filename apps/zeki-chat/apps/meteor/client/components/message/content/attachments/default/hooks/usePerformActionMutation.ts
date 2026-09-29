@@ -1,4 +1,4 @@
-import type { IMessage, MessageAttachmentAction } from '@rocket.chat/core-typings';
+import type { IMessage, MessageAttachmentAction } from '@zeki.chat/core-typings';
 import type { UseMutationOptions, UseMutationResult } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
 

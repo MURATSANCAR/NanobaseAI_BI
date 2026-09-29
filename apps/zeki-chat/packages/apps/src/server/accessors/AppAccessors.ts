@@ -1,5 +1,5 @@
-import type { IAppAccessors, IEnvironmentRead, IEnvironmentWrite, IHttp, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IApiEndpointMetadata } from '@rocket.chat/apps-engine/definition/api';
+import type { IAppAccessors, IEnvironmentRead, IEnvironmentWrite, IHttp, IRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IApiEndpointMetadata } from '@zeki.chat/apps-engine/definition/api';
 
 import type { AppManager } from '../AppManager';
 import type { AppAccessorManager } from '../managers/AppAccessorManager';

@@ -1,4 +1,4 @@
-import type { ISubscription, Serialized } from '@rocket.chat/core-typings';
+import type { ISubscription, Serialized } from '@zeki.chat/core-typings';
 
 export const mapSubscriptionFromApi = ({
 	ts,

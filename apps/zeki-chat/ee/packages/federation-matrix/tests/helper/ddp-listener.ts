@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { DDPSDK } from '@rocket.chat/ddp-client';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { DDPSDK } from '@zeki.chat/ddp-client';
 
 import type { IRequestConfig } from '../../../../../apps/meteor/tests/data/users.helper';
 
@@ -159,7 +159,7 @@ export class DDPListener {
 
 /**
  * Helper function to create and manage a DDP listener for federation tests
- * @param apiUrl - The Rocket.Chat API URL (e.g., 'http://rc1:3000' or 'https://rc1:3000')
+ * @param apiUrl - The ZEKI AI CHAT API URL (e.g., 'http://rc1:3000' or 'https://rc1:3000')
  * @param requestConfig - The request configuration containing credentials
  * @returns DDPListener instance
  */

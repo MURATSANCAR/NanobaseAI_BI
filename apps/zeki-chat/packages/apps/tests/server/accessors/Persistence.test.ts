@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 
-import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
+import { ZekiChatAssociationModel, ZekiChatAssociationRecord } from '@zeki.chat/apps-engine/definition/metadata';
 
 import { Persistence } from '../../../src/server/accessors';
 import type { PersistenceBridge } from '../../../src/server/bridges';
@@ -9,7 +9,7 @@ import type { PersistenceBridge } from '../../../src/server/bridges';
 describe('Persistence', () => {
 	let mockAppId: string;
 	let mockPersisBridge: PersistenceBridge;
-	let mockAssoc: RocketChatAssociationRecord;
+	let mockAssoc: ZekiChatAssociationRecord;
 	let data: object;
 
 	beforeEach(() => {
@@ -21,7 +21,7 @@ describe('Persistence', () => {
 			doCreate(d: any, appId: string): Promise<string> {
 				return Promise.resolve('id');
 			},
-			doCreateWithAssociations(d: any, assocs: Array<RocketChatAssociationRecord>, appId: string): Promise<string> {
+			doCreateWithAssociations(d: any, assocs: Array<ZekiChatAssociationRecord>, appId: string): Promise<string> {
 				return Promise.resolve('id2');
 			},
 			doUpdate(id: string, d: object, upsert: boolean, appId: string): Promise<string> {
@@ -30,14 +30,14 @@ describe('Persistence', () => {
 			doRemove(id: string, appId: string): Promise<object> {
 				return Promise.resolve(theData);
 			},
-			doRemoveByAssociations(assocs: Array<RocketChatAssociationRecord>, appId: string): Promise<Array<object>> {
+			doRemoveByAssociations(assocs: Array<ZekiChatAssociationRecord>, appId: string): Promise<Array<object>> {
 				return Promise.resolve([theData]);
 			},
-			doUpdateByAssociations(associations: Array<RocketChatAssociationRecord>, d: object, upsert: boolean, appId: string): Promise<string> {
+			doUpdateByAssociations(associations: Array<ZekiChatAssociationRecord>, d: object, upsert: boolean, appId: string): Promise<string> {
 				return Promise.resolve('id4');
 			},
 		} as PersistenceBridge;
-		mockAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, 'fake-id');
+		mockAssoc = new ZekiChatAssociationRecord(ZekiChatAssociationModel.USER, 'fake-id');
 	});
 
 	afterEach(() => {

@@ -1,6 +1,6 @@
-import { isE2EEMessage } from '@rocket.chat/core-typings';
-import type { IMessage } from '@rocket.chat/core-typings';
-import { parse } from '@rocket.chat/message-parser';
+import { isE2EEMessage } from '@zeki.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { parse } from '@zeki.chat/message-parser';
 
 import { getMessageMaxParseLength } from '../../../../lib/getMessageMaxParseLength';
 

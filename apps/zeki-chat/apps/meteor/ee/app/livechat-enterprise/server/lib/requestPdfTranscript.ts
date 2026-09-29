@@ -1,5 +1,5 @@
-import { OmnichannelTranscript, QueueWorker } from '@rocket.chat/core-services';
-import type { AtLeast, IOmnichannelRoom } from '@rocket.chat/core-typings';
+import { OmnichannelTranscript, QueueWorker } from '@zeki.chat/core-services';
+import type { AtLeast, IOmnichannelRoom } from '@zeki.chat/core-typings';
 import ExpiryMap from 'expiry-map';
 
 import { logger } from './logger';

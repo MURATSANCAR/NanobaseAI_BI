@@ -1,8 +1,8 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { usePermission, useUserSubscriptionByName, useRouter } from '@rocket.chat/ui-contexts';
+import { usePermission, useUserSubscriptionByName, useRouter } from '@zeki.chat/ui-contexts';
 
 // TODO: Routes type definitions are declared in-file for most places, so this route doesn't exist in this package
-declare module '@rocket.chat/ui-contexts' {
+declare module '@zeki.chat/ui-contexts' {
 	export interface IRouterPaths {
 		direct: {
 			pathname: `/direct/:rid${`/${string}` | ''}${`/${string}` | ''}`;

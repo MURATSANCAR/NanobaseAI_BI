@@ -1,11 +1,11 @@
-import type { IPermission, IRole, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IPermissionsModel } from '@rocket.chat/model-typings';
+import type { IPermission, IRole, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IPermissionsModel } from '@zeki.chat/model-typings';
 import type { Collection, Db, FindCursor, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class PermissionsRaw extends BaseRaw<IPermission> implements IPermissionsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IPermission>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IPermission>>) {
 		super(db, 'permissions', trash);
 	}
 

@@ -1,6 +1,6 @@
-import { Authorization } from '@rocket.chat/core-services';
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatDepartmentAgents, Users } from '@rocket.chat/models';
+import { Authorization } from '@zeki.chat/core-services';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatDepartmentAgents, Users } from '@zeki.chat/models';
 import type { FilterOperators } from 'mongodb';
 
 import { addQueryRestrictionsToDepartmentsModel } from '../../units/addRoleBasedRestrictionsToDepartment';

@@ -1,13 +1,13 @@
-import { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IBlock } from '@rocket.chat/apps-engine/definition/uikit';
+import { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IBlock } from '@zeki.chat/apps-engine/definition/uikit';
 import type {
 	IVideoConferenceOptions,
 	IVideoConfProvider,
 	VideoConfData,
 	VideoConfDataExtended,
-} from '@rocket.chat/apps-engine/definition/videoConfProviders';
-import type { VideoConference } from '@rocket.chat/apps-engine/definition/videoConferences';
-import type { IVideoConferenceUser } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConferenceUser';
+} from '@zeki.chat/apps-engine/definition/videoConfProviders';
+import type { VideoConference } from '@zeki.chat/apps-engine/definition/videoConferences';
+import type { IVideoConferenceUser } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConferenceUser';
 
 import type { ProxiedApp } from '../ProxiedApp';
 import type { AppAccessorManager } from './AppAccessorManager';
@@ -16,7 +16,7 @@ import type { AppLogStorage } from '../storage';
 
 export class AppVideoConfProvider {
 	/**
-	 * States whether this provider has been registered into the Rocket.Chat system or not.
+	 * States whether this provider has been registered into the ZEKI AI CHAT system or not.
 	 */
 	public isRegistered: boolean;
 

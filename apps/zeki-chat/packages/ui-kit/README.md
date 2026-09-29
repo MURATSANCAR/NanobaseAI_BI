@@ -6,7 +6,7 @@
   </a>
 </p>
 
-# `@rocket.chat/ui-kit`
+# `@zeki.chat/ui-kit`
 
 > Interactive UI elements for ZEKI AI CHAT Apps
 
@@ -22,14 +22,14 @@
 
 <!--install-->
 
-Add `@rocket.chat/ui-kit` as a dependency:
+Add `@zeki.chat/ui-kit` as a dependency:
 
 ```sh
-npm i @rocket.chat/ui-kit
+npm i @zeki.chat/ui-kit
 
 # or, if you are using yarn:
 
-yarn add @rocket.chat/ui-kit
+yarn add @zeki.chat/ui-kit
 ```
 
 <!--/install-->

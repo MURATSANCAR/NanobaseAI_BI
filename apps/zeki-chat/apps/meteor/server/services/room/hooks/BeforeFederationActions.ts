@@ -1,5 +1,5 @@
-import { isRoomFederated, isRoomNativeFederated } from '@rocket.chat/core-typings';
-import type { IRoomNativeFederated, IRoom } from '@rocket.chat/core-typings';
+import { isRoomFederated, isRoomNativeFederated } from '@zeki.chat/core-typings';
+import type { IRoomNativeFederated, IRoom } from '@zeki.chat/core-typings';
 
 import { throwIfFederationNotEnabled } from '../../federation/utils';
 

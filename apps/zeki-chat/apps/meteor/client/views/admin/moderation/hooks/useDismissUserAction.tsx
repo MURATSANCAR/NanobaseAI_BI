@@ -1,6 +1,6 @@
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useEndpoint, useRouter, useSetModal, useToastMessageDispatch, useRouteParameter } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useEndpoint, useRouter, useSetModal, useToastMessageDispatch, useRouteParameter } from '@zeki.chat/ui-contexts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

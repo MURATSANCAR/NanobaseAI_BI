@@ -1,4 +1,4 @@
-import type { IOmnichannelSource } from '@rocket.chat/core-typings';
+import type { IOmnichannelSource } from '@zeki.chat/core-typings';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

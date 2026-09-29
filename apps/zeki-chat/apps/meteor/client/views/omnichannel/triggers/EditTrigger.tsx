@@ -1,4 +1,4 @@
-import type { ILivechatTrigger, ILivechatTriggerAction, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatTrigger, ILivechatTriggerAction, Serialized } from '@zeki.chat/core-typings';
 import { FieldGroup, Button, ButtonGroup, Field, FieldLabel, FieldRow, FieldError, TextInput, ToggleSwitch } from '@rocket.chat/fuselage';
 import {
 	ContextualbarScrollableContent,
@@ -6,8 +6,8 @@ import {
 	ContextualbarFooter,
 	ContextualbarHeader,
 	ContextualbarClose,
-} from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';

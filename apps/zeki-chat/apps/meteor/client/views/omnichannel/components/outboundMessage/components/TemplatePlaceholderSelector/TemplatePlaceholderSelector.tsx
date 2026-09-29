@@ -1,5 +1,5 @@
-import type { ILivechatContact, Serialized } from '@rocket.chat/core-typings';
-import { GenericMenu } from '@rocket.chat/ui-client';
+import type { ILivechatContact, Serialized } from '@zeki.chat/core-typings';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import type { ComponentProps } from 'react';
 
 import PlaceholderButton from './TemplatePlaceholderButton';

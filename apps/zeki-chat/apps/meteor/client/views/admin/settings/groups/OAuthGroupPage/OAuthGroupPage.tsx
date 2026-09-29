@@ -1,8 +1,8 @@
-import type { ISetting } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/core-typings';
 import { Button } from '@rocket.chat/fuselage';
 import { capitalize } from '@rocket.chat/string-helpers';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useAbsoluteUrl, useMethod, useTranslation, useSetModal } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useAbsoluteUrl, useMethod, useTranslation, useSetModal } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import type { ReactElement } from 'react';
 import { memo, useEffect, useState } from 'react';

@@ -1,5 +1,5 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import { useMethod } from '@rocket.chat/ui-contexts';
+import type { ISetting } from '@zeki.chat/core-typings';
+import { useMethod } from '@zeki.chat/ui-contexts';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 

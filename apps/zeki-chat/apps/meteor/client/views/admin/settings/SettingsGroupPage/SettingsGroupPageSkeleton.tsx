@@ -1,5 +1,5 @@
 import { Accordion, Box, Skeleton } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
 import { useMemo } from 'react';
 
 import SettingsSectionSkeleton from '../SettingsSection/SettingsSectionSkeleton';

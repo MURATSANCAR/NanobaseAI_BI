@@ -8,7 +8,7 @@ import { updatePermission } from '../../data/permissions.helper';
 import { getUserByUsername } from '../../data/users.helper';
 import { IS_EE } from '../../e2e/config/constants';
 
-const APP_USERNAME = 'appsrocketchattester.bot';
+const APP_USERNAME = 'appszekichattester.bot';
 
 describe('Apps - Installation', () => {
 	before((done) => getCredentials(done));

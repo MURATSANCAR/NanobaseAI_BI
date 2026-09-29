@@ -1,4 +1,4 @@
-import type { ILivechatDepartment, IOmnichannelBusinessUnit } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment, IOmnichannelBusinessUnit } from '@zeki.chat/core-typings';
 import type { FindOptions, Filter, FindCursor, DeleteResult, UpdateResult, Document } from 'mongodb';
 
 import type { FindPaginated, IBaseModel } from './IBaseModel';

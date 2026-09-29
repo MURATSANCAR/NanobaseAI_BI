@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import { usePermission, useUser } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import { usePermission, useUser } from '@zeki.chat/ui-contexts';
 
 import * as Federation from '../../../../../lib/federation/Federation';
 import { useRoomSubscription } from '../../../contexts/RoomContext';

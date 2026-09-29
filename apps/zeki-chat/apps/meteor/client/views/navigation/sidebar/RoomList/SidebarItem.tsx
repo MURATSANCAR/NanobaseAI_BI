@@ -1,6 +1,6 @@
 import { IconButton, SidebarV2Item, SidebarV2ItemAvatarWrapper, SidebarV2ItemMenu, SidebarV2ItemTitle } from '@rocket.chat/fuselage';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 import type { HTMLAttributes, ReactElement, ReactNode } from 'react';
 import { memo, useState } from 'react';
 

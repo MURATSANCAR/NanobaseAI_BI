@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/storybook-config",
+	"name": "@zeki.chat/storybook-config",
 	"version": "0.0.3",
 	"private": true,
 	"main": "./dist/index.js",
@@ -38,7 +38,7 @@
 	"devDependencies": {
 		"@rocket.chat/fuselage": "^0.78.0",
 		"@rocket.chat/icons": "~0.47.0",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@storybook/react": "^8.6.18",
 		"eslint": "~9.39.4",
 		"react": "~18.3.1",

@@ -1,6 +1,6 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
-import { UserContext, SettingsContext } from '@rocket.chat/ui-contexts';
+import type { ISetting } from '@zeki.chat/core-typings';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
+import { UserContext, SettingsContext } from '@zeki.chat/ui-contexts';
 import type { Meta, StoryFn } from '@storybook/react';
 import type { ObjectId } from 'mongodb';
 import type { ContextType } from 'react';

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import type { IExportOperation } from '@rocket.chat/core-typings';
+import type { IExportOperation } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import proxyquire from 'proxyquire';
 import Sinon from 'sinon';
@@ -106,7 +106,7 @@ const modelsMock = {
 };
 
 const { exportRoomMessagesToFile } = proxyquire.noCallThru().load('./exportRoomMessagesToFile.ts', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 	'../../../app/settings/server': {
 		settings: {
 			get: (_key: string) => {
@@ -122,7 +122,7 @@ const { exportRoomMessagesToFile } = proxyquire.noCallThru().load('./exportRoomM
 });
 
 const { requestDataDownload } = proxyquire.noCallThru().load('../../methods/requestDataDownload.ts', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 	'../../app/settings/server': {
 		settings: {
 			get: (_key: string) => {
@@ -148,7 +148,7 @@ const { requestDataDownload } = proxyquire.noCallThru().load('../../methods/requ
 };
 
 const { processDataDownloads } = proxyquire.noCallThru().load('./processDataDownloads.ts', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 	'../../../app/file-upload/server': {
 		FileUpload: {
 			copy: async (fileId: string, _options: any) => {

@@ -1,6 +1,6 @@
 import { Box, Icon, Option, OptionAvatar, OptionColumn, OptionContent, OptionDescription, OptionMenu } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { GenericMenu } from '@rocket.chat/ui-client';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

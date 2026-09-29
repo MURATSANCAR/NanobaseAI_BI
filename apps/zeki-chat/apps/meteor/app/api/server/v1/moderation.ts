@@ -1,5 +1,5 @@
-import type { IModerationAudit, IModerationReport, IUser, IUserEmail, UserReport } from '@rocket.chat/core-typings';
-import { ModerationReports, Users } from '@rocket.chat/models';
+import type { IModerationAudit, IModerationReport, IUser, IUserEmail, UserReport } from '@zeki.chat/core-typings';
+import { ModerationReports, Users } from '@zeki.chat/models';
 import {
 	ajv,
 	isReportHistoryProps,
@@ -12,7 +12,7 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateBadRequestErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { deleteReportedMessages } from '../../../../server/lib/moderation/deleteReportedMessages';

@@ -1,4 +1,4 @@
-import type { IRoom, ISubscription, IUser, ValueOf } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription, IUser, ValueOf } from '@zeki.chat/core-typings';
 
 import * as Federation from './Federation';
 import { RoomMemberActions, RoomSettingsEnum } from '../../../definition/IRoomTypeConfig';

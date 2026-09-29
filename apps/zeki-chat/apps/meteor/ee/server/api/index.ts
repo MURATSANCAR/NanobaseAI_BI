@@ -1,6 +1,6 @@
 import './api';
 import './ldap';
-import './licenses';
+import './capabilities';
 import './sessions';
 import './chat';
 import './roles';

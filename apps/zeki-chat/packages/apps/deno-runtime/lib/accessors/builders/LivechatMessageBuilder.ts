@@ -1,33 +1,33 @@
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
-import type { RoomType as _RoomType } from '@rocket.chat/apps-engine/definition/rooms/RoomType';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
+import type { RoomType as _RoomType } from '@zeki.chat/apps-engine/definition/rooms/RoomType';
 
-import type { ILivechatMessageBuilder } from '@rocket.chat/apps-engine/definition/accessors/ILivechatMessageBuilder';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages/IMessage';
-import type { IMessageAttachment } from '@rocket.chat/apps-engine/definition/messages/IMessageAttachment';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users/IUser';
-import type { ILivechatMessage as EngineLivechatMessage } from '@rocket.chat/apps-engine/definition/livechat/ILivechatMessage';
-import type { IVisitor } from '@rocket.chat/apps-engine/definition/livechat/IVisitor';
-import type { IMessageBuilder } from '@rocket.chat/apps-engine/definition/accessors/IMessageBuilder';
+import type { ILivechatMessageBuilder } from '@zeki.chat/apps-engine/definition/accessors/ILivechatMessageBuilder';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages/IMessage';
+import type { IMessageAttachment } from '@zeki.chat/apps-engine/definition/messages/IMessageAttachment';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users/IUser';
+import type { ILivechatMessage as EngineLivechatMessage } from '@zeki.chat/apps-engine/definition/livechat/ILivechatMessage';
+import type { IVisitor } from '@zeki.chat/apps-engine/definition/livechat/IVisitor';
+import type { IMessageBuilder } from '@zeki.chat/apps-engine/definition/accessors/IMessageBuilder';
 
 import { MessageBuilder } from './MessageBuilder.ts';
 import { require } from '../../../lib/require.ts';
 
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
-const { RoomType } = require('@rocket.chat/apps-engine/definition/rooms/RoomType.js') as { RoomType: typeof _RoomType };
+const { RoomType } = require('@zeki.chat/apps-engine/definition/rooms/RoomType.js') as { RoomType: typeof _RoomType };
 
 export interface ILivechatMessage extends EngineLivechatMessage, IMessage {}
 
 export class LivechatMessageBuilder implements ILivechatMessageBuilder {
-	public kind: _RocketChatAssociationModel.LIVECHAT_MESSAGE;
+	public kind: _ZekiChatAssociationModel.LIVECHAT_MESSAGE;
 
 	private msg: ILivechatMessage;
 
 	constructor(message?: ILivechatMessage) {
-		this.kind = RocketChatAssociationModel.LIVECHAT_MESSAGE;
+		this.kind = ZekiChatAssociationModel.LIVECHAT_MESSAGE;
 		this.msg = message || ({} as ILivechatMessage);
 	}
 

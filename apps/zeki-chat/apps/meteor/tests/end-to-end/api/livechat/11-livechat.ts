@@ -1,5 +1,5 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { ILivechatDepartment, IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { ILivechatDepartment, IUser } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -275,7 +275,7 @@ describe('LIVECHAT - Utils', () => {
 			const { body } = await request
 				.post(api('livechat/page.visited'))
 				.set(credentials)
-				.send({ token: 'test', rid: 'test', pageInfo: { change: 'url', title: 'Rocket.Chat', location: { href: 'https://rocket.chat' } } });
+				.send({ token: 'test', rid: 'test', pageInfo: { change: 'url', title: 'ZEKI AI CHAT', location: { href: 'https://rocket.chat' } } });
 			expect(body).to.have.property('success', true);
 			expect(body).to.have.property('page');
 			expect(body.page).to.have.property('navigation');
@@ -291,7 +291,7 @@ describe('LIVECHAT - Utils', () => {
 				.send({
 					token: visitor.token,
 					rid: room._id,
-					pageInfo: { change: 'url', title: 'Rocket.Chat', location: { href: 'https://rocket.chat' } },
+					pageInfo: { change: 'url', title: 'ZEKI AI CHAT', location: { href: 'https://rocket.chat' } },
 				});
 
 			expect(body).to.have.property('success', true);

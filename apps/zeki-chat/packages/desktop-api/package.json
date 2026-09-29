@@ -1,6 +1,6 @@
 {
 	"$schema": "https://www.schemastore.org/package",
-	"name": "@rocket.chat/desktop-api",
+	"name": "@zeki.chat/desktop-api",
 	"version": "1.2.0",
 	"type": "module",
 	"exports": {

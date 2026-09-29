@@ -1,5 +1,5 @@
 import { Button, ButtonGroup } from '@rocket.chat/fuselage';
-import { MessageFooterCallout, MessageFooterCalloutContent } from '@rocket.chat/ui-composer';
+import { MessageFooterCallout, MessageFooterCalloutContent } from '@zeki.chat/ui-composer';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

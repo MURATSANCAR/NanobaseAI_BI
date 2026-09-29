@@ -1,7 +1,7 @@
-import type { INotificationDesktop } from '@rocket.chat/core-typings';
+import type { INotificationDesktop } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { Random } from '@rocket.chat/random';
-import { useRouter, useUserPreference } from '@rocket.chat/ui-contexts';
+import { Random } from '@zeki.chat/random';
+import { useRouter, useUserPreference } from '@zeki.chat/ui-contexts';
 
 import { useNotificationAllowed } from './useNotificationAllowed';
 import { getUserAvatarURL } from '../../../app/utils/client';

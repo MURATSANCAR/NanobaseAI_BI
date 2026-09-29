@@ -1,4 +1,4 @@
-import type { IModerationReport, IMessage, IModerationAudit, MessageReport, UserReport } from '@rocket.chat/core-typings';
+import type { IModerationReport, IMessage, IModerationAudit, MessageReport, UserReport } from '@zeki.chat/core-typings';
 import type { AggregationCursor, Document, FindCursor, FindOptions, UpdateResult } from 'mongodb';
 
 import type { FindPaginated, IBaseModel } from './IBaseModel';

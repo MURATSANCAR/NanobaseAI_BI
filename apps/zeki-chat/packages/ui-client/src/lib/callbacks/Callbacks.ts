@@ -1,5 +1,5 @@
-import type { Logger } from '@rocket.chat/logger';
-import { Random } from '@rocket.chat/random';
+import type { Logger } from '@zeki.chat/logger';
+import { Random } from '@zeki.chat/random';
 
 const compareByRanking =
 	<T>(rank: (x: T) => number) =>

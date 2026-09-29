@@ -1,5 +1,5 @@
-import { logLevel, type LogLevelSetting } from '@rocket.chat/logger';
-import { Settings } from '@rocket.chat/models';
+import { logLevel, type LogLevelSetting } from '@zeki.chat/logger';
+import { Settings } from '@zeki.chat/models';
 
 import type { ICachedSettings } from '../../app/settings/server/CachedSettings';
 

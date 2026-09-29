@@ -1,4 +1,4 @@
-import { Rooms } from '@rocket.chat/models';
+import { Rooms } from '@zeki.chat/models';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 import limax from 'limax';
 import { Meteor } from 'meteor/meteor';
@@ -16,12 +16,12 @@ export const getValidRoomName = async (displayName: string, rid = '', options: {
 			if (room && room._id !== rid) {
 				if (room.archived) {
 					throw new Meteor.Error('error-archived-duplicate-name', `There's an archived channel with name ${cleanName}`, {
-						function: 'RocketChat.getValidRoomName',
+						function: 'ZekiChat.getValidRoomName',
 						channel_name: cleanName,
 					});
 				} else {
 					throw new Meteor.Error('error-duplicate-channel-name', `A channel with name '${cleanName}' exists`, {
-						function: 'RocketChat.getValidRoomName',
+						function: 'ZekiChat.getValidRoomName',
 						channel_name: cleanName,
 					});
 				}
@@ -40,7 +40,7 @@ export const getValidRoomName = async (displayName: string, rid = '', options: {
 
 	if (!nameValidation.test(slugifiedName) || !validateName(slugifiedName)) {
 		throw new Meteor.Error('error-invalid-room-name', `${escapeHTML(slugifiedName)} is not a valid room name.`, {
-			function: 'RocketChat.getValidRoomName',
+			function: 'ZekiChat.getValidRoomName',
 			channel_name: escapeHTML(slugifiedName),
 		});
 	}
@@ -57,12 +57,12 @@ export const getValidRoomName = async (displayName: string, rid = '', options: {
 				slugifiedName = tmpName;
 			} else if (room.archived) {
 				throw new Meteor.Error('error-archived-duplicate-name', `There's an archived channel with name ${escapeHTML(slugifiedName)}`, {
-					function: 'RocketChat.getValidRoomName',
+					function: 'ZekiChat.getValidRoomName',
 					channel_name: escapeHTML(slugifiedName),
 				});
 			} else {
 				throw new Meteor.Error('error-duplicate-channel-name', `A channel with name '${escapeHTML(slugifiedName)}' exists`, {
-					function: 'RocketChat.getValidRoomName',
+					function: 'ZekiChat.getValidRoomName',
 					channel_name: escapeHTML(slugifiedName),
 				});
 			}

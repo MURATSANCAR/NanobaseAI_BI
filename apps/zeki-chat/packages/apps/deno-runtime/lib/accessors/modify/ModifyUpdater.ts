@@ -1,16 +1,16 @@
-import { UIHelper } from '@rocket.chat/apps/dist/server/misc/UIHelper';
-import type { IModifyUpdater } from '@rocket.chat/apps-engine/definition/accessors/IModifyUpdater';
-import type { ILivechatUpdater } from '@rocket.chat/apps-engine/definition/accessors/ILivechatUpdater';
-import type { IUserUpdater } from '@rocket.chat/apps-engine/definition/accessors/IUserUpdater';
-import type { IMessageUpdater } from '@rocket.chat/apps-engine/definition/accessors/IMessageUpdater';
-import type { IMessageBuilder } from '@rocket.chat/apps-engine/definition/accessors/IMessageBuilder';
-import type { IRoomBuilder } from '@rocket.chat/apps-engine/definition/accessors/IRoomBuilder';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users/IUser';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages/IMessage';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
+import { UIHelper } from '@zeki.chat/apps/dist/server/misc/UIHelper';
+import type { IModifyUpdater } from '@zeki.chat/apps-engine/definition/accessors/IModifyUpdater';
+import type { ILivechatUpdater } from '@zeki.chat/apps-engine/definition/accessors/ILivechatUpdater';
+import type { IUserUpdater } from '@zeki.chat/apps-engine/definition/accessors/IUserUpdater';
+import type { IMessageUpdater } from '@zeki.chat/apps-engine/definition/accessors/IMessageUpdater';
+import type { IMessageBuilder } from '@zeki.chat/apps-engine/definition/accessors/IMessageBuilder';
+import type { IRoomBuilder } from '@zeki.chat/apps-engine/definition/accessors/IRoomBuilder';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users/IUser';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages/IMessage';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
 
-import type { RoomType as _RoomType } from '@rocket.chat/apps-engine/definition/rooms/RoomType';
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
+import type { RoomType as _RoomType } from '@zeki.chat/apps-engine/definition/rooms/RoomType';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
 
 import * as Messenger from '../../messenger.ts';
 
@@ -21,9 +21,9 @@ import { AppObjectRegistry } from '../../../AppObjectRegistry.ts';
 import { require } from '../../../lib/require.ts';
 import { formatErrorResponse } from '../formatResponseErrorHandler.ts';
 
-const { RoomType } = require('@rocket.chat/apps-engine/definition/rooms/RoomType.js') as { RoomType: typeof _RoomType };
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { RoomType } = require('@zeki.chat/apps-engine/definition/rooms/RoomType.js') as { RoomType: typeof _RoomType };
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export class ModifyUpdater implements IModifyUpdater {
@@ -98,9 +98,9 @@ export class ModifyUpdater implements IModifyUpdater {
 
 	public finish(builder: IMessageBuilder | IRoomBuilder): Promise<void> {
 		switch (builder.kind) {
-			case RocketChatAssociationModel.MESSAGE:
+			case ZekiChatAssociationModel.MESSAGE:
 				return this._finishMessage(builder as MessageBuilder);
-			case RocketChatAssociationModel.ROOM:
+			case ZekiChatAssociationModel.ROOM:
 				return this._finishRoom(builder as RoomBuilder);
 			default:
 				throw new Error('Invalid builder passed to the ModifyUpdater.finish function.');

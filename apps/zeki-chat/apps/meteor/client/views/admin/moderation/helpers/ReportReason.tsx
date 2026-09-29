@@ -12,7 +12,7 @@ const ReportReason = ({ ind, uinfo, msg, ts }: { ind: number; uinfo: string | un
 			</Box>
 			<Box>
 				<Box is='span' fontWeight='700' color='font-info' fontSize='micro'>
-					@{uinfo || 'rocket.cat'}
+					@{uinfo || 'zeki.bot'}
 				</Box>{' '}
 				<Box is='span' fontWeight='700' color='font-annotation' fontSize='micro'>
 					{formatDate(ts)}

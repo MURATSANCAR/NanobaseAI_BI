@@ -1,4 +1,4 @@
-import type { IExternalComponent } from '@rocket.chat/apps-engine/definition/externalComponent';
+import type { IExternalComponent } from '@zeki.chat/apps-engine/definition/externalComponent';
 
 /**
  * The external component manager for the apps.

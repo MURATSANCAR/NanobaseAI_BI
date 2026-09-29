@@ -1,4 +1,4 @@
-import type { ILDAPEntry } from '@rocket.chat/core-typings';
+import type { ILDAPEntry } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 

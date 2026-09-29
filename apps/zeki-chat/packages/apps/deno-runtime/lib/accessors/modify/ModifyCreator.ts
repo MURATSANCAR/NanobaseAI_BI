@@ -1,22 +1,22 @@
 import { randomBytes } from 'node:crypto';
 
-import { UIHelper } from '@rocket.chat/apps/dist/server/misc/UIHelper';
-import type { IModifyCreator } from '@rocket.chat/apps-engine/definition/accessors/IModifyCreator';
-import type { IUploadCreator } from '@rocket.chat/apps-engine/definition/accessors/IUploadCreator';
-import type { IEmailCreator } from '@rocket.chat/apps-engine/definition/accessors/IEmailCreator';
-import type { IContactCreator } from '@rocket.chat/apps-engine/definition/accessors/IContactCreator';
-import type { ILivechatCreator } from '@rocket.chat/apps-engine/definition/accessors/ILivechatCreator';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages/IMessage';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
-import type { IBotUser } from '@rocket.chat/apps-engine/definition/users/IBotUser';
-import type { UserType as _UserType } from '@rocket.chat/apps-engine/definition/users/UserType';
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
-import type { IMessageBuilder } from '@rocket.chat/apps-engine/definition/accessors/IMessageBuilder';
-import type { IRoomBuilder } from '@rocket.chat/apps-engine/definition/accessors/IRoomBuilder';
-import type { IUserBuilder } from '@rocket.chat/apps-engine/definition/accessors/IUserBuilder';
-import type { IVideoConferenceBuilder } from '@rocket.chat/apps-engine/definition/accessors/IVideoConferenceBuilder';
-import type { RoomType as _RoomType } from '@rocket.chat/apps-engine/definition/rooms/RoomType';
-import type { ILivechatMessageBuilder } from '@rocket.chat/apps-engine/definition/accessors/ILivechatMessageBuilder';
+import { UIHelper } from '@zeki.chat/apps/dist/server/misc/UIHelper';
+import type { IModifyCreator } from '@zeki.chat/apps-engine/definition/accessors/IModifyCreator';
+import type { IUploadCreator } from '@zeki.chat/apps-engine/definition/accessors/IUploadCreator';
+import type { IEmailCreator } from '@zeki.chat/apps-engine/definition/accessors/IEmailCreator';
+import type { IContactCreator } from '@zeki.chat/apps-engine/definition/accessors/IContactCreator';
+import type { ILivechatCreator } from '@zeki.chat/apps-engine/definition/accessors/ILivechatCreator';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages/IMessage';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
+import type { IBotUser } from '@zeki.chat/apps-engine/definition/users/IBotUser';
+import type { UserType as _UserType } from '@zeki.chat/apps-engine/definition/users/UserType';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
+import type { IMessageBuilder } from '@zeki.chat/apps-engine/definition/accessors/IMessageBuilder';
+import type { IRoomBuilder } from '@zeki.chat/apps-engine/definition/accessors/IRoomBuilder';
+import type { IUserBuilder } from '@zeki.chat/apps-engine/definition/accessors/IUserBuilder';
+import type { IVideoConferenceBuilder } from '@zeki.chat/apps-engine/definition/accessors/IVideoConferenceBuilder';
+import type { RoomType as _RoomType } from '@zeki.chat/apps-engine/definition/rooms/RoomType';
+import type { ILivechatMessageBuilder } from '@zeki.chat/apps-engine/definition/accessors/ILivechatMessageBuilder';
 
 import * as Messenger from '../../messenger.ts';
 
@@ -31,10 +31,10 @@ import { AppObjectRegistry } from '../../../AppObjectRegistry.ts';
 import { require } from '../../../lib/require.ts';
 import { formatErrorResponse } from '../formatResponseErrorHandler.ts';
 
-const { RoomType } = require('@rocket.chat/apps-engine/definition/rooms/RoomType.js') as { RoomType: typeof _RoomType };
-const { UserType } = require('@rocket.chat/apps-engine/definition/users/UserType.js') as { UserType: typeof _UserType };
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { RoomType } = require('@zeki.chat/apps-engine/definition/rooms/RoomType.js') as { RoomType: typeof _RoomType };
+const { UserType } = require('@zeki.chat/apps-engine/definition/users/UserType.js') as { UserType: typeof _UserType };
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export class ModifyCreator implements IModifyCreator {
@@ -200,17 +200,17 @@ export class ModifyCreator implements IModifyCreator {
 		builder: IMessageBuilder | ILivechatMessageBuilder | IRoomBuilder | IDiscussionBuilder | IVideoConferenceBuilder | IUserBuilder,
 	): Promise<string> {
 		switch (builder.kind) {
-			case RocketChatAssociationModel.MESSAGE:
+			case ZekiChatAssociationModel.MESSAGE:
 				return this._finishMessage(builder as IMessageBuilder);
-			case RocketChatAssociationModel.LIVECHAT_MESSAGE:
+			case ZekiChatAssociationModel.LIVECHAT_MESSAGE:
 				return this._finishLivechatMessage(builder as ILivechatMessageBuilder);
-			case RocketChatAssociationModel.ROOM:
+			case ZekiChatAssociationModel.ROOM:
 				return this._finishRoom(builder as IRoomBuilder);
-			case RocketChatAssociationModel.DISCUSSION:
+			case ZekiChatAssociationModel.DISCUSSION:
 				return this._finishDiscussion(builder as IDiscussionBuilder);
-			case RocketChatAssociationModel.VIDEO_CONFERENCE:
+			case ZekiChatAssociationModel.VIDEO_CONFERENCE:
 				return this._finishVideoConference(builder as IVideoConferenceBuilder);
-			case RocketChatAssociationModel.USER:
+			case ZekiChatAssociationModel.USER:
 				return this._finishUser(builder as IUserBuilder);
 			default:
 				throw new Error('Invalid builder passed to the ModifyCreator.finish function.');

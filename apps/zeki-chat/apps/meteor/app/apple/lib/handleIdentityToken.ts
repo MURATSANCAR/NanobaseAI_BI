@@ -1,6 +1,6 @@
 import { createPublicKey, verify } from 'node:crypto';
 
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 
 type AppleJWK = {
 	kty: string;

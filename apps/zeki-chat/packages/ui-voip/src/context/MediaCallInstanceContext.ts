@@ -1,5 +1,5 @@
 import { Emitter } from '@rocket.chat/emitter';
-import type { MediaSignalingSession } from '@rocket.chat/media-signaling';
+import type { MediaSignalingSession } from '@zeki.chat/media-signaling';
 import type { RefObject } from 'react';
 import { createContext, useContext } from 'react';
 

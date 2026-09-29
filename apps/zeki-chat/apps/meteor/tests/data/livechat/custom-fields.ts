@@ -1,4 +1,4 @@
-import type { ILivechatCustomField } from '@rocket.chat/core-typings';
+import type { ILivechatCustomField } from '@zeki.chat/core-typings';
 import type { Response } from 'supertest';
 
 import { credentials, request, api } from '../api-data';

@@ -1,7 +1,7 @@
-import { Push } from '@rocket.chat/core-services';
-import type { IPushToken } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { PushToken } from '@rocket.chat/models';
+import { Push } from '@zeki.chat/core-services';
+import type { IPushToken } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { PushToken } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
@@ -17,7 +17,7 @@ type PushUpdateOptions = {
 	userId: string | null;
 	metadata?: Record<string, unknown>;
 };
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		'raix:push-update'(options: PushUpdateOptions): Promise<Omit<IPushToken, 'authToken'>>;

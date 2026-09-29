@@ -1,5 +1,5 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IIntegration, IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IIntegration, IUser } from '@zeki.chat/core-typings';
 import { assert, expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -26,7 +26,7 @@ describe('[Outgoing Integrations]', () => {
 				type: 'webhook-outgoing',
 				name: 'Guggy',
 				enabled: true,
-				username: 'rocket.cat',
+				username: 'zeki.bot',
 				urls: ['http://text2gif.guggy.com/guggify'],
 				scriptEnabled: false,
 				channel: '#general',
@@ -71,7 +71,7 @@ describe('[Outgoing Integrations]', () => {
 						type: 'webhook-outgoing',
 						name: 'Guggy',
 						enabled: true,
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						urls: ['http://text2gif.guggy.com/guggify'],
 						scriptEnabled: false,
 						channel: '#general',
@@ -100,7 +100,7 @@ describe('[Outgoing Integrations]', () => {
 						type: 'webhook-outgoing',
 						name: 'Guggy',
 						enabled: true,
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						urls: ['http://text2gif.guggy.com/guggify'],
 						scriptEnabled: false,
 						channel: '#general',
@@ -128,7 +128,7 @@ describe('[Outgoing Integrations]', () => {
 					type: 'webhook-outgoing-invalid',
 					name: 'Guggy',
 					enabled: true,
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 					urls: ['http://text2gif.guggy.com/guggify'],
 					scriptEnabled: false,
 					channel: '#general',
@@ -157,7 +157,7 @@ describe('[Outgoing Integrations]', () => {
 						type: 'webhook-outgoing',
 						name: 'Guggy',
 						enabled: true,
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						urls: ['http://text2gif.guggy.com/guggify'],
 						scriptEnabled: false,
 						channel: '#general',
@@ -188,7 +188,7 @@ describe('[Outgoing Integrations]', () => {
 							type: 'webhook-outgoing',
 							name: 'Guggy',
 							enabled: true,
-							username: 'rocket.cat',
+							username: 'zeki.bot',
 							urls: ['http://text2gif.guggy.com/guggify'],
 							scriptEnabled: false,
 							channel: '#general',
@@ -219,7 +219,7 @@ describe('[Outgoing Integrations]', () => {
 					type: 'webhook-outgoing',
 					name: 'Guggy',
 					enabled: true,
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 					urls: ['http://text2gif.guggy.com/guggify'],
 					scriptEnabled: false,
 					channel: '#general',
@@ -236,7 +236,7 @@ describe('[Outgoing Integrations]', () => {
 					expect(res.body).to.have.nested.property('integration.name', 'Guggy');
 					expect(res.body).to.have.nested.property('integration.type', 'webhook-outgoing');
 					expect(res.body).to.have.nested.property('integration.enabled', true);
-					expect(res.body).to.have.nested.property('integration.username', 'rocket.cat');
+					expect(res.body).to.have.nested.property('integration.username', 'zeki.bot');
 					expect(res.body).to.have.nested.property('integration.event', 'sendMessage');
 					integrationId = res.body.integration._id;
 				})

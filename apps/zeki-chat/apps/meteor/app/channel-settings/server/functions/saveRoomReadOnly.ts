@@ -1,6 +1,6 @@
-import { Message } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
 import { Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -12,7 +12,7 @@ export async function saveRoomReadOnly(
 ) {
 	if (!Match.test(rid, String)) {
 		throw new Meteor.Error('invalid-room', 'Invalid room', {
-			function: 'RocketChat.saveRoomReadOnly',
+			function: 'ZekiChat.saveRoomReadOnly',
 		});
 	}
 

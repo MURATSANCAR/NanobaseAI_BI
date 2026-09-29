@@ -5,8 +5,8 @@ import {
 	MessageMetricsItemIcon,
 	MessageMetricsItemAvatarRowContent,
 } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useTranslation, useUserPreference } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useTranslation, useUserPreference } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 type ThreadMetricsParticipantsProps = {

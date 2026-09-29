@@ -10,8 +10,8 @@ import {
 	Page,
 	PageHeader,
 	PageContent,
-} from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';

@@ -1,7 +1,7 @@
-import type { ILivechatPriority, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatPriority, Serialized } from '@zeki.chat/core-typings';
 import { Field, FieldError, FieldLabel, FieldRow, TextInput, Button, ButtonGroup, ContextualbarFooter } from '@rocket.chat/fuselage';
-import { ContextualbarScrollableContent } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import { ContextualbarScrollableContent } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';

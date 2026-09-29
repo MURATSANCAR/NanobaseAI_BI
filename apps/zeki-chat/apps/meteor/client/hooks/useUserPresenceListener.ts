@@ -1,5 +1,5 @@
-import { UserStatus } from '@rocket.chat/core-typings';
-import { useStreamAll } from '@rocket.chat/ui-contexts';
+import { UserStatus } from '@zeki.chat/core-typings';
+import { useStreamAll } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { Presence } from '../lib/presence';

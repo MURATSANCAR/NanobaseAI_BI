@@ -1,4 +1,4 @@
-import type { ISetting } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/core-typings';
 
 import type { ICachedSettings } from '../CachedSettings';
 

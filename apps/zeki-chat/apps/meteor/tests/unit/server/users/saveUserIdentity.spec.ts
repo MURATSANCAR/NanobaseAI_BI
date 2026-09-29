@@ -18,7 +18,7 @@ const stubs = {
 };
 
 const { saveUserIdentity } = proxyquire.noCallThru().load('../../../../app/lib/server/functions/saveUserIdentity', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Users: {
 			findOneById: stubs.findOneUserById,
 		},

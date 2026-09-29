@@ -1,5 +1,5 @@
 /**
- * Zeki: Rocket.Chat Cloud is permanently disconnected.
+ * Zeki: ZEKI AI CHAT Cloud is permanently disconnected.
  * There is no workspace registration and no access token is ever requested from cloud services.
  * These exports are kept only so existing callers compile; they never perform network calls.
  */

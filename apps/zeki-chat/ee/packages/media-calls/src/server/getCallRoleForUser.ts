@@ -1,5 +1,5 @@
-import type { IMediaCall, IUser } from '@rocket.chat/core-typings';
-import type { CallRole } from '@rocket.chat/media-signaling';
+import type { IMediaCall, IUser } from '@zeki.chat/core-typings';
+import type { CallRole } from '@zeki.chat/media-signaling';
 
 export function getCallRoleForUser(call: IMediaCall, uid: IUser['_id']): CallRole | null {
 	if (call.caller.type === 'user' && call.caller.id === uid) {

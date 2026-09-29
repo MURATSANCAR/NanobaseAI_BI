@@ -1,6 +1,6 @@
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
-import { isE2EEMessage } from '@rocket.chat/core-typings';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
+import { isE2EEMessage } from '@zeki.chat/core-typings';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { Box, States, StatesAction, StatesActions, StatesIcon, StatesSubtitle, StatesTitle } from '@rocket.chat/fuselage';
 import type { ReactElement } from 'react';
 import { Trans, useTranslation } from 'react-i18next';

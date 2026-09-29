@@ -1,4 +1,4 @@
-import { HeaderTag, HeaderTagIcon } from '@rocket.chat/ui-client';
+import { HeaderTag, HeaderTagIcon } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 

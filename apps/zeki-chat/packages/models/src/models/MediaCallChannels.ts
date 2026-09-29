@@ -1,11 +1,11 @@
-import type { IMediaCallChannel, RocketChatRecordDeleted, MediaCallSignedActor } from '@rocket.chat/core-typings';
-import type { IMediaCallChannelsModel, InsertionModel } from '@rocket.chat/model-typings';
+import type { IMediaCallChannel, ZekiChatRecordDeleted, MediaCallSignedActor } from '@zeki.chat/core-typings';
+import type { IMediaCallChannelsModel, InsertionModel } from '@zeki.chat/model-typings';
 import type { IndexDescription, Collection, Db, UpdateFilter, UpdateOptions, UpdateResult, FindOptions, Document } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class MediaCallChannelsRaw extends BaseRaw<IMediaCallChannel> implements IMediaCallChannelsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IMediaCallChannel>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IMediaCallChannel>>) {
 		super(db, 'media_call_channels', trash);
 	}
 

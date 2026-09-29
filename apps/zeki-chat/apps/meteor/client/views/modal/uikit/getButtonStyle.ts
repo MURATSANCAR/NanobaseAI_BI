@@ -1,4 +1,4 @@
-import type { ButtonElement } from '@rocket.chat/ui-kit';
+import type { ButtonElement } from '@zeki.chat/ui-kit';
 
 // TODO: Move to fuselage-ui-kit
 export const getButtonStyle = (buttonElement: ButtonElement): { danger: boolean } | { primary: boolean } => {

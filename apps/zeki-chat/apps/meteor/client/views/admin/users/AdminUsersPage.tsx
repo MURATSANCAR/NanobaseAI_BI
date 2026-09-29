@@ -1,7 +1,6 @@
-import type { LicenseInfo } from '@rocket.chat/core-typings';
-import { Callout, ContextualbarIcon, Skeleton, Tabs, TabsItem } from '@rocket.chat/fuselage';
+import { ContextualbarIcon, Skeleton, Tabs, TabsItem } from '@rocket.chat/fuselage';
 import { useDebouncedValue, useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { OptionProp } from '@rocket.chat/ui-client';
+import type { OptionProp } from '@zeki.chat/ui-client';
 import {
 	ContextualbarHeader,
 	ContextualbarTitle,
@@ -12,26 +11,21 @@ import {
 	Page,
 	PageHeader,
 	PageContent,
-} from '@rocket.chat/ui-client';
-import { useRouteParameter, useTranslation, useRouter, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useRouteParameter, useTranslation, useRouter, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Trans } from 'react-i18next';
 
 import AdminInviteUsers from './AdminInviteUsers';
 import AdminUserCreated from './AdminUserCreated';
 import AdminUserForm from './AdminUserForm';
 import AdminUserFormWithData from './AdminUserFormWithData';
 import AdminUserInfoWithData from './AdminUserInfoWithData';
-import AdminUserUpgrade from './AdminUserUpgrade';
 import UsersPageHeaderContent from './UsersPageHeaderContent';
 import UsersTable from './UsersTable';
 import useFilteredUsers from './hooks/useFilteredUsers';
 import usePendingUsersCount from './hooks/usePendingUsersCount';
-import { useSeatsCap } from './useSeatsCap';
-import { useLicenseLimitsByBehavior } from '../../../hooks/useLicenseLimitsByBehavior';
-import { useShouldPreventAction } from '../../../hooks/useShouldPreventAction';
 
 export type UsersFilters = {
 	text: string;
@@ -45,16 +39,9 @@ export type UsersTableSortingOption = 'name' | 'username' | 'emails.address' | '
 const AdminUsersPage = (): ReactElement => {
 	const t = useTranslation();
 
-	const seatsCap = useSeatsCap();
-
-	const isSeatsCapExceeded = useShouldPreventAction('activeUsers');
-	const { prevent_action: preventAction } = useLicenseLimitsByBehavior() ?? {};
-
 	const router = useRouter();
 	const context = useRouteParameter('context');
 	const id = useRouteParameter('id');
-
-	const isCreateUserDisabled = useShouldPreventAction('activeUsers');
 
 	const getRoles = useEndpoint('GET', '/v1/roles.list');
 	const { data, error } = useQuery({
@@ -83,7 +70,6 @@ const AdminUsersPage = (): ReactElement => {
 	const pendingUsersCount = usePendingUsersCount(filteredUsersQueryResult.data?.users);
 
 	const handleReload = (): void => {
-		seatsCap?.reload();
 		filteredUsersQueryResult?.refetch();
 	};
 
@@ -100,31 +86,12 @@ const AdminUsersPage = (): ReactElement => {
 		prevSearchTerm.current = searchTerm;
 	}, [searchTerm]);
 
-	const isRoutePrevented = useMemo(
-		() => context && ['new', 'invite'].includes(context) && isCreateUserDisabled,
-		[context, isCreateUserDisabled],
-	);
-
-	const toTranslationKey = (key: keyof LicenseInfo['limits']) => t(`subscription.callout.${key}`);
-
 	return (
 		<Page flexDirection='row'>
 			<Page>
 				<PageHeader title={t('Users')}>
-					<UsersPageHeaderContent isSeatsCapExceeded={isSeatsCapExceeded} seatsCap={seatsCap} />
+					<UsersPageHeaderContent />
 				</PageHeader>
-				{preventAction?.includes('activeUsers') && (
-					<Callout type='danger' title={t('subscription.callout.servicesDisruptionsOccurring')} mbe={19} mi={24}>
-						<Trans
-							i18nKey='subscription.callout.description.limitsExceeded'
-							count={preventAction.length}
-							values={{ val: preventAction.map(toTranslationKey) }}
-						>
-							{/* Zeki: vendor "Manage your subscription" link removed */}
-							Your workspace exceeded the <>{preventAction.map(toTranslationKey)}</> license limit.
-						</Trans>
-					</Callout>
-				)}
 				<Tabs>
 					<TabsItem selected={!tab || tab === 'all'} onClick={() => handleTabChange('all')}>
 						{t('All')}
@@ -152,7 +119,6 @@ const AdminUsersPage = (): ReactElement => {
 						paginationData={paginationData}
 						sortData={sortData}
 						tab={tab}
-						isSeatsCapExceeded={isSeatsCapExceeded}
 						roleData={data}
 						onReload={handleReload}
 					/>
@@ -174,12 +140,11 @@ const AdminUsersPage = (): ReactElement => {
 					{context === 'edit' && id && (
 						<AdminUserFormWithData uid={id} onReload={handleReload} context={context} roleData={data} roleError={error} />
 					)}
-					{!isRoutePrevented && context === 'new' && (
+					{context === 'new' && (
 						<AdminUserForm onReload={handleReload} context={context} roleData={data} roleError={error} />
 					)}
-					{!isRoutePrevented && context === 'created' && id && <AdminUserCreated uid={id} />}
-					{!isRoutePrevented && context === 'invite' && <AdminInviteUsers />}
-					{isRoutePrevented && <AdminUserUpgrade />}
+					{context === 'created' && id && <AdminUserCreated uid={id} />}
+					{context === 'invite' && <AdminInviteUsers />}
 				</ContextualbarDialog>
 			)}
 		</Page>

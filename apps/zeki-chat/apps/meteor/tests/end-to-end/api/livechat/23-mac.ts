@@ -1,4 +1,4 @@
-import type { ILivechatVisitor } from '@rocket.chat/core-typings';
+import type { ILivechatVisitor } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { before, afterEach, after, describe, it } from 'mocha';
 import moment from 'moment';

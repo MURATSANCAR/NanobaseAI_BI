@@ -1,5 +1,5 @@
-import { Calendar } from '@rocket.chat/core-services';
-import type { ICalendarEvent } from '@rocket.chat/core-typings';
+import { Calendar } from '@zeki.chat/core-services';
+import type { ICalendarEvent } from '@zeki.chat/core-typings';
 import {
 	ajv,
 	isCalendarEventListProps,
@@ -10,7 +10,7 @@ import {
 	isCalendarEventDeleteProps,
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../api';
 

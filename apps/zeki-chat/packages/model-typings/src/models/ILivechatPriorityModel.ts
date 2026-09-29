@@ -1,4 +1,4 @@
-import type { ILivechatPriority } from '@rocket.chat/core-typings';
+import type { ILivechatPriority } from '@zeki.chat/core-typings';
 import type { FindCursor, WithId } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

@@ -1,7 +1,7 @@
-import { LivechatInquiryStatus } from '@rocket.chat/core-typings';
-import type { ILivechatContact, IOmnichannelRoom } from '@rocket.chat/core-typings';
+import { LivechatInquiryStatus } from '@zeki.chat/core-typings';
+import type { ILivechatContact, IOmnichannelRoom } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { LivechatContacts, LivechatInquiry, LivechatRooms } from '@rocket.chat/models';
+import { LivechatContacts, LivechatInquiry, LivechatRooms } from '@zeki.chat/models';
 
 import { QueueManager } from '../../../app/livechat/server/lib/QueueManager';
 import { mergeContacts } from '../../../app/livechat/server/lib/contacts/mergeContacts';

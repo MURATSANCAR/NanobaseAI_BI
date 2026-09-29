@@ -1,9 +1,9 @@
-import { Team } from '@rocket.chat/core-services';
-import type { IUser, AtLeast } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Rooms, Users, Subscriptions } from '@rocket.chat/models';
+import { Team } from '@zeki.chat/core-services';
+import type { IUser, AtLeast } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Rooms, Users, Subscriptions } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import { isTruthy } from '@rocket.chat/tools';
+import { isTruthy } from '@zeki.chat/tools';
 import mem from 'mem';
 import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
 import { Meteor } from 'meteor/meteor';
@@ -281,7 +281,7 @@ type BrowseChannelsParams = {
 	limit?: number;
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		browseChannels: (params: BrowseChannelsParams) => Promise<unknown>;

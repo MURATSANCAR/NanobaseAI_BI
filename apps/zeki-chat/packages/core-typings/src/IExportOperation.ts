@@ -1,9 +1,9 @@
 import type { FileProp } from './IMessage/MessageAttachment/Files/FileProp';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IUser } from './IUser';
 import type { RoomType } from './RoomType';
 
-export interface IExportOperation extends IRocketChatRecord {
+export interface IExportOperation extends IZekiChatRecord {
 	roomList?: (
 		| {
 				roomId: string;

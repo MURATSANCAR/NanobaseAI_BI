@@ -1,4 +1,4 @@
-import { useRouteParameter } from '@rocket.chat/ui-contexts';
+import { useRouteParameter } from '@zeki.chat/ui-contexts';
 
 import ChatsContextualBar from './ChatsContextualBar';
 import ContactContextualBar from './ContactContextualBar';

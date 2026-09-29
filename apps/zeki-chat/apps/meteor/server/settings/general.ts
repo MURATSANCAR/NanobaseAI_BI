@@ -276,7 +276,7 @@ export const createGeneralSettings = async () => {
 				public: true,
 			});
 		});
-		// Zeki: 'Statistics_reporting' (send statistics to Rocket.Chat) removed.
+		// Zeki: 'Statistics_reporting' (send statistics to ZEKI AI CHAT) removed.
 		await this.section('Notifications', async function () {
 			await this.add('Notifications_Max_Room_Members', 100, {
 				type: 'int',

@@ -1,7 +1,7 @@
 import { Box, Throbber } from '@rocket.chat/fuselage';
-import { useSession, useSetting } from '@rocket.chat/ui-contexts';
-import type { LoginRoutes } from '@rocket.chat/web-ui-registration';
-import RegistrationRoute from '@rocket.chat/web-ui-registration';
+import { useSession, useSetting } from '@zeki.chat/ui-contexts';
+import type { LoginRoutes } from '@zeki.chat/web-ui-registration';
+import RegistrationRoute from '@zeki.chat/web-ui-registration';
 import { Meteor } from 'meteor/meteor';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';

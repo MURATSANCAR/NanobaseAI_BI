@@ -1,4 +1,4 @@
-import type { IRole, IRoom } from '@rocket.chat/core-typings';
+import type { IRole, IRoom } from '@zeki.chat/core-typings';
 import type { ObjectId } from 'mongodb';
 import { createContext } from 'react';
 

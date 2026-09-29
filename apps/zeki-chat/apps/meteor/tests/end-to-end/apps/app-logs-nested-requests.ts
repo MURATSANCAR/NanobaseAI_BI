@@ -1,4 +1,4 @@
-import type { ILoggerStorageEntry } from '@rocket.chat/apps/dist/server/logging/ILoggerStorageEntry';
+import type { ILoggerStorageEntry } from '@zeki.chat/apps/dist/server/logging/ILoggerStorageEntry';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 

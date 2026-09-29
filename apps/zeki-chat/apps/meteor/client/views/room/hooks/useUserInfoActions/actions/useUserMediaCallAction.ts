@@ -1,7 +1,7 @@
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { useUserAvatarPath, useUserId, useUserSubscription, useUserCard, useUserRoom } from '@rocket.chat/ui-contexts';
-import { usePeekMediaSessionState, useWidgetExternalControls } from '@rocket.chat/ui-voip';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { useUserAvatarPath, useUserId, useUserSubscription, useUserCard, useUserRoom } from '@zeki.chat/ui-contexts';
+import { usePeekMediaSessionState, useWidgetExternalControls } from '@zeki.chat/ui-voip';
 import { useTranslation } from 'react-i18next';
 
 import type { UserInfoAction } from '../useUserInfoActions';

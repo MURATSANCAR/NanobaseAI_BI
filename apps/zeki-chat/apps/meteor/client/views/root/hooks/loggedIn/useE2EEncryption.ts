@@ -1,5 +1,5 @@
-import { isE2EEPinnedMessage, type IRoom, type IMessage } from '@rocket.chat/core-typings';
-import { useUserId, useSetting, useRouter, useLayout, useUser } from '@rocket.chat/ui-contexts';
+import { isE2EEPinnedMessage, type IRoom, type IMessage } from '@zeki.chat/core-typings';
+import { useUserId, useSetting, useRouter, useLayout, useUser } from '@zeki.chat/ui-contexts';
 import { useEffect, useRef } from 'react';
 
 import { MentionsParser } from '../../../../../app/mentions/lib/MentionsParser';

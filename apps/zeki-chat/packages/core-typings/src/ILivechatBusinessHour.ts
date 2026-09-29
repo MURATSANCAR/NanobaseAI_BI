@@ -1,5 +1,5 @@
 import type { ILivechatDepartment } from './ILivechatDepartment';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
 export enum LivechatBusinessHourTypes {
 	DEFAULT = 'default',
@@ -30,7 +30,7 @@ export interface IBusinessHourTimezone {
 	utc: string;
 }
 
-export interface ILivechatBusinessHour extends IRocketChatRecord {
+export interface ILivechatBusinessHour extends IZekiChatRecord {
 	name: string;
 	active: boolean;
 	type: LivechatBusinessHourTypes;

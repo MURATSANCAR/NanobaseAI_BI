@@ -1,5 +1,5 @@
-import { useDocumentTitle } from '@rocket.chat/ui-client';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useDocumentTitle } from '@zeki.chat/ui-client';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

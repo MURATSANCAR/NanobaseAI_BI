@@ -1,8 +1,8 @@
-import { type ISubscription, type ILivechatInquiryRecord, type IRoom, isTeamRoom, isDirectMessageRoom } from '@rocket.chat/core-typings';
+import { type ISubscription, type ILivechatInquiryRecord, type IRoom, isTeamRoom, isDirectMessageRoom } from '@zeki.chat/core-typings';
 import { useEffectEvent, useLocalStorage } from '@rocket.chat/fuselage-hooks';
 import type { Keys as IconName } from '@rocket.chat/icons';
-import { isTruthy } from '@rocket.chat/tools';
-import type { SubscriptionWithRoom, TranslationKey } from '@rocket.chat/ui-contexts';
+import { isTruthy } from '@zeki.chat/tools';
+import type { SubscriptionWithRoom, TranslationKey } from '@zeki.chat/ui-contexts';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 
 import { useCollapsedGroups } from '../hooks/useCollapsedGroups';

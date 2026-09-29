@@ -1,5 +1,5 @@
-import type { AppRequestFilter } from '@rocket.chat/core-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { AppRequestFilter } from '@zeki.chat/core-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 
 export const useAppRequests = (appId: string, limit?: number, offset?: number, sort?: string, filter?: AppRequestFilter) => {

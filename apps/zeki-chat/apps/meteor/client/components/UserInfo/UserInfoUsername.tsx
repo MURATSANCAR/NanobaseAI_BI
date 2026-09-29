@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import type { Box } from '@rocket.chat/fuselage';
 import type { ReactElement, ComponentProps } from 'react';
 

@@ -1,4 +1,4 @@
-import type { IOnetimeSchedule, IProcessor, IRecurringSchedule } from '@rocket.chat/apps-engine/definition/scheduler';
+import type { IOnetimeSchedule, IProcessor, IRecurringSchedule } from '@zeki.chat/apps-engine/definition/scheduler';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

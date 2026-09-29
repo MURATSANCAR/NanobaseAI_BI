@@ -1,19 +1,19 @@
-import type { IVideoConferenceExtender } from '@rocket.chat/apps-engine/definition/accessors/IVideoConferenceExtend';
-import type { VideoConference, VideoConferenceMember } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConference';
-import type { IVideoConferenceUser } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConferenceUser';
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
+import type { IVideoConferenceExtender } from '@zeki.chat/apps-engine/definition/accessors/IVideoConferenceExtend';
+import type { VideoConference, VideoConferenceMember } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConference';
+import type { IVideoConferenceUser } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConferenceUser';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
 
 import { require } from '../../../lib/require.ts';
 
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export class VideoConferenceExtender implements IVideoConferenceExtender {
-	public kind: _RocketChatAssociationModel.VIDEO_CONFERENCE;
+	public kind: _ZekiChatAssociationModel.VIDEO_CONFERENCE;
 
 	constructor(private videoConference: VideoConference) {
-		this.kind = RocketChatAssociationModel.VIDEO_CONFERENCE;
+		this.kind = ZekiChatAssociationModel.VIDEO_CONFERENCE;
 	}
 
 	public setProviderData(value: Record<string, unknown>): IVideoConferenceExtender {

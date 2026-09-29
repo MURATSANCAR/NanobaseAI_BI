@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import InviteUsers from './InviteUsers';

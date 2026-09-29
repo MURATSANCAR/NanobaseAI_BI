@@ -1,22 +1,22 @@
-import type { IUserBuilder } from '@rocket.chat/apps-engine/definition/accessors/IUserBuilder';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users/IUser';
-import type { IUserSettings } from '@rocket.chat/apps-engine/definition/users/IUserSettings';
-import type { IUserEmail } from '@rocket.chat/apps-engine/definition/users/IUserEmail';
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
+import type { IUserBuilder } from '@zeki.chat/apps-engine/definition/accessors/IUserBuilder';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users/IUser';
+import type { IUserSettings } from '@zeki.chat/apps-engine/definition/users/IUserSettings';
+import type { IUserEmail } from '@zeki.chat/apps-engine/definition/users/IUserEmail';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
 
 import { require } from '../../../lib/require.ts';
 
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export class UserBuilder implements IUserBuilder {
-	public kind: _RocketChatAssociationModel.USER;
+	public kind: _ZekiChatAssociationModel.USER;
 
 	private user: Partial<IUser>;
 
 	constructor(user?: Partial<IUser>) {
-		this.kind = RocketChatAssociationModel.USER;
+		this.kind = ZekiChatAssociationModel.USER;
 		this.user = user || ({} as Partial<IUser>);
 	}
 

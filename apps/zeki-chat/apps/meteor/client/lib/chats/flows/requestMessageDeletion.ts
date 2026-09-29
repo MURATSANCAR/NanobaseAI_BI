@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { imperativeModal } from '@rocket.chat/ui-client';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { imperativeModal } from '@zeki.chat/ui-client';
 
 import { t } from '../../../../app/utils/lib/i18n';
 import DeleteMessageConfirmModal from '../../../views/room/modals/DeleteMessageConfirmModal';

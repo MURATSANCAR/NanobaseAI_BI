@@ -1,5 +1,5 @@
 import { Button } from '@rocket.chat/fuselage';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import type { Meta, StoryFn, StoryObj } from '@storybook/react';
 
 import MediaCallWidget from './MediaCallWidget';

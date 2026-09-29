@@ -1,7 +1,7 @@
-import type { LoginServiceConfiguration } from '@rocket.chat/core-typings';
+import type { LoginServiceConfiguration } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
 import { capitalize } from '@rocket.chat/string-helpers';
-import type { LoginService } from '@rocket.chat/ui-contexts';
+import type { LoginService } from '@zeki.chat/ui-contexts';
 
 import { sdk } from '../../app/utils/client/lib/SDKClient';
 

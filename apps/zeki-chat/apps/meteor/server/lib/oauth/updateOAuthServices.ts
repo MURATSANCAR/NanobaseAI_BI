@@ -4,8 +4,8 @@ import type {
 	LinkedinOAuthConfiguration,
 	OAuthConfiguration,
 	TwitterOAuthConfiguration,
-} from '@rocket.chat/core-typings';
-import { LoginServiceConfiguration } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { LoginServiceConfiguration } from '@zeki.chat/models';
 
 import { logger } from './logger';
 import { CustomOAuth } from '../../../app/custom-oauth/server/custom_oauth_server';

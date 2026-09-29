@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { Roles, Rooms, Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { Roles, Rooms, Users } from '@zeki.chat/models';
 
 import { addUserToRoom } from '../../../../app/lib/server/functions/addUserToRoom';
 import { createRoom } from '../../../../app/lib/server/functions/createRoom';

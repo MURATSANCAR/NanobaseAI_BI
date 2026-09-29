@@ -1,5 +1,5 @@
-import type { IIntegration, ValueOf } from '@rocket.chat/core-typings';
-import { pick } from '@rocket.chat/tools';
+import type { IIntegration, ValueOf } from '@zeki.chat/core-typings';
+import { pick } from '@zeki.chat/tools';
 import ivm, { type Reference } from 'isolated-vm';
 
 import { IntegrationScriptEngine } from '../ScriptEngine';

@@ -1,5 +1,5 @@
-import { MessageFooterCallout, MessageFooterCalloutAction, MessageFooterCalloutContent } from '@rocket.chat/ui-composer';
-import { useEndpoint, useToastMessageDispatch, useTranslation, useUser } from '@rocket.chat/ui-contexts';
+import { MessageFooterCallout, MessageFooterCalloutAction, MessageFooterCalloutContent } from '@zeki.chat/ui-composer';
+import { useEndpoint, useToastMessageDispatch, useTranslation, useUser } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';

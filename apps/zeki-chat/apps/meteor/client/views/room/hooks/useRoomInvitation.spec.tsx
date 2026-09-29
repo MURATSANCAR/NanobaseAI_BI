@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 import { useRoomInvitation } from './useRoomInvitation';
@@ -16,8 +16,8 @@ jest.mock('./useRoomRejectInvitationModal', () => ({
 const mockInviteEndpoint = jest.fn();
 
 const mockedNavigate = jest.fn();
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useRouter: jest.fn(() => ({
 		navigate: mockedNavigate,
 	})),

@@ -238,7 +238,7 @@ function installStubMeteorStream(): void {
 	// fire('reset') calling makeClientLoggedOut on auth failure) BOTH clear
 	// _lastLoginTokenWhenPolled when they run, but in microservices the
 	// notify-user/<uid>/force_logout stream traverses
-	// rocketchat-main → broker → ddp-streamer → WS while the close fires
+	// zekichat-main → broker → ddp-streamer → WS while the close fires
 	// directly on ddp-streamer — so the stream message can be lost mid-flight.
 	// Wire a direct sdk.connection.on('disconnected') listener that nulls
 	// _lastLoginTokenWhenPolled so the next _pollStoredLoginToken call always

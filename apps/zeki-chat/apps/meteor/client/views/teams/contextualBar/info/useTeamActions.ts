@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

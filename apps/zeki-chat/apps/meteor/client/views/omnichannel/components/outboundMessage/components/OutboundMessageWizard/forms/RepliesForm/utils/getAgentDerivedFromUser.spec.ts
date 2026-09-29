@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 
 import { getAgentDerivedFromUser } from './getAgentDerivedFromUser';
 import { createFakeUser } from '../../../../../../../../../../tests/mocks/data';

@@ -1,7 +1,7 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { CheckBox } from '@rocket.chat/fuselage';
-import { GenericMenu } from '@rocket.chat/ui-client';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import { useRemoveRoomFromTeam } from './hooks/useRemoveRoomFromTeam';

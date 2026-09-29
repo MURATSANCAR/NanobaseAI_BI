@@ -1,6 +1,6 @@
 import { Box, Icon, Avatar, StatusBullet } from '@rocket.chat/fuselage';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useUserAvatarPath, useUserPresence, useUserCard } from '@rocket.chat/ui-contexts';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useUserAvatarPath, useUserPresence, useUserCard } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 type CallHistoryInternalUserProps = {

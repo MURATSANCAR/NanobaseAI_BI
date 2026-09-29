@@ -1,4 +1,4 @@
-import type { ILivechatCustomField, CustomFieldMetadata } from '@rocket.chat/core-typings';
+import type { ILivechatCustomField, CustomFieldMetadata } from '@zeki.chat/core-typings';
 
 export const formatCustomFieldsMetadata = (
 	customFields: ILivechatCustomField[] | undefined,

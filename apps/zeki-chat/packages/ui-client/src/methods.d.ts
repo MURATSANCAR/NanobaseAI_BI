@@ -1,7 +1,7 @@
-import '@rocket.chat/ddp-client';
-import type { ISetting } from '@rocket.chat/core-typings';
+import '@zeki.chat/ddp-client';
+import type { ISetting } from '@zeki.chat/core-typings';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		getSetupWizardParameters(): Promise<{

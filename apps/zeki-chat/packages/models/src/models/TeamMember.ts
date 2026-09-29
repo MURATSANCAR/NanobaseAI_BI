@@ -1,5 +1,5 @@
-import type { IRole, ITeamMember, IUser, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { FindPaginated, ITeamMemberModel } from '@rocket.chat/model-typings';
+import type { IRole, ITeamMember, IUser, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { FindPaginated, ITeamMemberModel } from '@zeki.chat/model-typings';
 import type {
 	Collection,
 	FindCursor,
@@ -16,7 +16,7 @@ import type {
 import { BaseRaw } from './BaseRaw';
 
 export class TeamMemberRaw extends BaseRaw<ITeamMember> implements ITeamMemberModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ITeamMember>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ITeamMember>>) {
 		super(db, 'team_member', trash);
 	}
 

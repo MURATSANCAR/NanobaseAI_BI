@@ -1,4 +1,4 @@
-import { isTruthy } from '@rocket.chat/tools';
+import { isTruthy } from '@zeki.chat/tools';
 import { expect } from 'chai';
 import proxyquire from 'proxyquire';
 import sinon from 'sinon';
@@ -1100,14 +1100,14 @@ describe('SAML', () => {
 
 		const loadSAML = () =>
 			proxyquire.noCallThru().load('../../../../app/meteor-accounts-saml/server/lib/SAML', {
-				'@rocket.chat/models': {
+				'@zeki.chat/models': {
 					SamlUsedAssertions: { markUsed },
 					CredentialTokens: { create: credentialCreate },
 					Users: {},
 					Rooms: {},
 					Roles: {},
 				},
-				'@rocket.chat/random': { Random: { id: () => '__credentialToken__' } },
+				'@zeki.chat/random': { Random: { id: () => '__credentialToken__' } },
 				'@rocket.chat/string-helpers': { escapeRegExp: (s: string) => s, escapeHTML: (s: string) => s },
 				'meteor/accounts-base': { Accounts: { _generateStampedLoginToken: () => ({ token: 't' }) } },
 				'meteor/meteor': { Meteor: { absoluteUrl: (path = '') => `http://localhost:3000/${path}`, Error } },

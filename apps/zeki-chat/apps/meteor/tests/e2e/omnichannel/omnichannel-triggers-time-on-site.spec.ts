@@ -88,7 +88,7 @@ test.describe('OC - Livechat Triggers - Time on site', () => {
 
 		await poLiveChat.page.reload();
 
-		await poLiveChat.btnOpenOnlineLiveChat('Rocket.Chat').click();
+		await poLiveChat.btnOpenOnlineLiveChat('ZEKI AI CHAT').click();
 
 		await expect(poLiveChat.page.locator('role=main')).toContainText('Chat started');
 		await poLiveChat.page.waitForTimeout(1000);

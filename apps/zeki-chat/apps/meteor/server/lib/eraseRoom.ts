@@ -1,7 +1,7 @@
-import { AppEvents, Apps } from '@rocket.chat/apps';
-import { Message, Team } from '@rocket.chat/core-services';
-import type { IRoom, IUser, AtLeast } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
+import { AppEvents, Apps } from '@zeki.chat/apps';
+import { Message, Team } from '@zeki.chat/core-services';
+import type { IRoom, IUser, AtLeast } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { roomCoordinator } from './rooms/roomCoordinator';

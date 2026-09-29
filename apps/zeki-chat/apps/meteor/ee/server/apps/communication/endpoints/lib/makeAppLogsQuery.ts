@@ -1,4 +1,4 @@
-import type { AppLogsProps } from '@rocket.chat/rest-typings';
+import type { AppLogsProps } from '@zeki.chat/rest-typings';
 
 /**
  * Creates a query object for fetching app logs based on provided parameters.

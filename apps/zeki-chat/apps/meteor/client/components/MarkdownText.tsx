@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { isExternal, getBaseURI } from '@rocket.chat/ui-client';
+import { isExternal, getBaseURI } from '@zeki.chat/ui-client';
 import dompurify from 'dompurify';
 import { marked } from 'marked';
 import type { ComponentProps } from 'react';

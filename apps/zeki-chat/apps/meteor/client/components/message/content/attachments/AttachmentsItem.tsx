@@ -1,5 +1,5 @@
-import type { MessageAttachmentBase } from '@rocket.chat/core-typings';
-import { isFileAttachment, isQuoteAttachment } from '@rocket.chat/core-typings';
+import type { MessageAttachmentBase } from '@zeki.chat/core-typings';
+import { isFileAttachment, isQuoteAttachment } from '@zeki.chat/core-typings';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 

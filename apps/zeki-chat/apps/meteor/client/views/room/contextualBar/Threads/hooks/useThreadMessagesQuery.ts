@@ -1,5 +1,5 @@
-import { isThreadMessage, type IMessage, type IRoom, type IThreadMainMessage, type IThreadMessage } from '@rocket.chat/core-typings';
-import { useMethod, useStream } from '@rocket.chat/ui-contexts';
+import { isThreadMessage, type IMessage, type IRoom, type IThreadMainMessage, type IThreadMessage } from '@zeki.chat/core-typings';
+import { useMethod, useStream } from '@zeki.chat/ui-contexts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 

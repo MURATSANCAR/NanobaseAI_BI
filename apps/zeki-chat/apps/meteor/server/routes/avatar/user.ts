@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
-import type { IIncomingMessage } from '@rocket.chat/core-typings';
-import { Avatars, Users } from '@rocket.chat/models';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
+import type { IIncomingMessage } from '@zeki.chat/core-typings';
+import { Avatars, Users } from '@zeki.chat/models';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 import type { NextFunction } from 'connect';
 
 import { serveSvgAvatarInRequestedFormat, wasFallbackModified, setCacheAndDispositionHeaders, serveAvatarFile } from './utils';

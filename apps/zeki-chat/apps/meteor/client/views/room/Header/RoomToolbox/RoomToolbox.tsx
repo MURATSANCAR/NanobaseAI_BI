@@ -1,7 +1,7 @@
 import type { Box } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericMenu, HeaderToolbarAction, HeaderToolbarDivider } from '@rocket.chat/ui-client';
-import { useRoomToolbox, type RenderToolboxItemParams, type RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
+import { GenericMenu, HeaderToolbarAction, HeaderToolbarDivider } from '@zeki.chat/ui-client';
+import { useRoomToolbox, type RenderToolboxItemParams, type RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
 import type { ComponentProps } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

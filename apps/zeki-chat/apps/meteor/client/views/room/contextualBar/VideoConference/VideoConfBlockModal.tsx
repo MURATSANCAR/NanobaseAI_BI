@@ -1,6 +1,6 @@
 import { Box, Icon } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useTranslation, useSetting } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useTranslation, useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useCallback } from 'react';
 

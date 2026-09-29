@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import { TeamType, type IIntegration, type IMessage, type IRoom, type ITeam, type IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import { TeamType, type IIntegration, type IMessage, type IRoom, type ITeam, type IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { expect, assert } from 'chai';
 import { after, before, describe, it, beforeEach } from 'mocha';
 
@@ -71,7 +71,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -90,7 +90,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -105,7 +105,7 @@ describe('[Channels]', () => {
 			.post(api('channels.addModerator'))
 			.set(credentials)
 			.send({
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(400)
@@ -136,7 +136,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -151,7 +151,7 @@ describe('[Channels]', () => {
 			.post(api('channels.removeModerator'))
 			.set(credentials)
 			.send({
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(400)
@@ -182,7 +182,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -198,7 +198,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -216,7 +216,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -237,7 +237,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -256,7 +256,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -610,7 +610,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -625,7 +625,7 @@ describe('[Channels]', () => {
 			.set(credentials)
 			.send({
 				roomId: channel._id,
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 			})
 			.expect('Content-Type', 'application/json')
 			.expect(200)
@@ -742,56 +742,7 @@ describe('[Channels]', () => {
 				});
 		});
 
-		it('should not add guest users to more rooms than defined in the license', async function () {
-			// TODO this is not the right way to do it. We're doing this way for now just because we have separate CI jobs for EE and CE,
-			// ideally we should have a single CI job that adds a license and runs both CE and EE tests.
-			if (!process.env.IS_EE) {
-				this.skip();
-			}
 
-			const promises = [];
-			for (let i = 0; i < maxRoomsPerGuest; i++) {
-				promises.push(
-					createRoom({
-						type: 'c',
-						name: `channel.test.${Date.now()}-${Math.random()}`,
-						members: [guestUser.username],
-					}),
-				);
-			}
-			const channelIds = (await Promise.all(promises)).map((r) => r.body.channel).map((channel) => channel._id);
-
-			void request
-				.post(api('channels.create'))
-				.set(credentials)
-				.send({
-					name: `channel.test.${Date.now()}-${Math.random()}`,
-					members: [guestUser.username],
-				})
-				.expect('Content-Type', 'application/json')
-				.expect(200)
-				.expect((res) => {
-					expect(res.body).to.have.property('success', true);
-					room = res.body.group;
-				})
-				.then(() => {
-					void request
-						.get(api('channels.members'))
-						.set(credentials)
-						.query({
-							roomId: room._id,
-						})
-						.expect('Content-Type', 'application/json')
-						.expect(200)
-						.expect((res) => {
-							expect(res.body).to.have.property('success', true);
-							expect(res.body).to.have.property('members').and.to.be.an('array');
-							expect(res.body.members).to.have.lengthOf(1);
-						});
-				});
-
-			await Promise.all(channelIds.map((id) => deleteRoom({ type: 'c', roomId: id })));
-		});
 
 		it('should successfully create a channel in a team', async () => {
 			await request
@@ -2288,7 +2239,7 @@ describe('[Channels]', () => {
 										name: 'Incoming test',
 										enabled: true,
 										alias: 'test',
-										username: 'rocket.cat',
+										username: 'zeki.bot',
 										scriptEnabled: false,
 										overrideDestinationChannelEnabled: true,
 										channel: `#${createdChannel.name}`,
@@ -3368,7 +3319,7 @@ describe('[Channels]', () => {
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
@@ -3378,7 +3329,7 @@ describe('[Channels]', () => {
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
@@ -3388,7 +3339,7 @@ describe('[Channels]', () => {
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
@@ -3440,7 +3391,7 @@ describe('[Channels]', () => {
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
@@ -3450,11 +3401,11 @@ describe('[Channels]', () => {
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
-		it('should return an array of moderators with rocket.cat as a moderator', (done) => {
+		it('should return an array of moderators with zeki.bot as a moderator', (done) => {
 			void request
 				.get(api('channels.moderators'))
 				.set(credentials)
@@ -3466,7 +3417,7 @@ describe('[Channels]', () => {
 				.expect((res) => {
 					expect(res.body).to.have.a.property('success', true);
 					expect(res.body).to.have.a.property('moderators').that.is.an('array').that.has.lengthOf(1);
-					expect(res.body.moderators[0].username).to.be.equal('rocket.cat');
+					expect(res.body.moderators[0].username).to.be.equal('zeki.bot');
 				})
 				.end(done);
 		});
@@ -4148,7 +4099,7 @@ describe('[Channels]', () => {
 					const { channel } = res.body;
 
 					expect(channel._id).to.be.equal(testChannel._id);
-					expect(channel).to.have.nested.property('lastMessage.u.name', 'RocketChat Internal Admin Test');
+					expect(channel).to.have.nested.property('lastMessage.u.name', 'ZekiChat Internal Admin Test');
 				})
 				.end(done);
 		});
@@ -4167,7 +4118,7 @@ describe('[Channels]', () => {
 
 					const retChannel = (res.body.channels as IRoom[]).find(({ _id }) => _id === testChannel._id);
 
-					expect(retChannel).to.have.nested.property('lastMessage.u.name', 'RocketChat Internal Admin Test');
+					expect(retChannel).to.have.nested.property('lastMessage.u.name', 'ZekiChat Internal Admin Test');
 				})
 				.end(done);
 		});
@@ -4340,7 +4291,7 @@ describe('[Channels]', () => {
 				.set(credentials)
 				.query({
 					roomId: testChannel._id,
-					starredIds: 'rocketchat.internal.admin.test',
+					starredIds: 'zekichat.internal.admin.test',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -4369,7 +4320,7 @@ describe('[Channels]', () => {
 					expect(res.body.messages).to.have.lengthOf(1);
 					expect(res.body.messages[0]).to.have.nested.property('pinned').that.is.an('boolean').and.to.be.true;
 					expect(res.body.messages[0]).to.have.nested.property('pinnedBy').that.is.an('object');
-					expect(res.body.messages[0].pinnedBy).to.have.property('_id', 'rocketchat.internal.admin.test');
+					expect(res.body.messages[0].pinnedBy).to.have.property('_id', 'zekichat.internal.admin.test');
 					expect(res.body).to.have.property('count', 1);
 					expect(res.body).to.have.property('total', 1);
 				});

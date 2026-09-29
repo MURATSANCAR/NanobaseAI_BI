@@ -1,6 +1,6 @@
-import { api } from '@rocket.chat/core-services';
-import { Logger } from '@rocket.chat/logger';
-import { OmnichannelTranscript, QueueWorker } from '@rocket.chat/omnichannel-services';
+import { api } from '@zeki.chat/core-services';
+import { Logger } from '@zeki.chat/logger';
+import { OmnichannelTranscript, QueueWorker } from '@zeki.chat/omnichannel-services';
 import { MongoInternals } from 'meteor/mongo';
 
 import { AuthorizationLivechat } from '../../app/livechat/server/roomAccessValidator.internalService';
@@ -62,7 +62,7 @@ export const registerServices = async (): Promise<void> => {
 
 	// if the process is running in micro services mode we don't need to register services that will run separately
 	if (!isRunningMs()) {
-		const { Presence } = await import('@rocket.chat/presence');
+		const { Presence } = await import('@zeki.chat/presence');
 
 		const { Authorization } = await import('./authorization/service');
 

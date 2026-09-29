@@ -1,4 +1,4 @@
-import type { ILivechatContact } from '@rocket.chat/apps-engine/definition/livechat/ILivechatContact';
+import type { ILivechatContact } from '@zeki.chat/apps-engine/definition/livechat/ILivechatContact';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

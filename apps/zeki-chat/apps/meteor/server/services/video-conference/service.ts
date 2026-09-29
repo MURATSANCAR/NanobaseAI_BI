@@ -1,8 +1,8 @@
-import { Apps } from '@rocket.chat/apps';
-import type { AppVideoConfProviderManager } from '@rocket.chat/apps/dist/server/managers/AppVideoConfProviderManager';
-import type { VideoConfData, VideoConfDataExtended } from '@rocket.chat/apps-engine/definition/videoConfProviders';
-import type { IVideoConfService, VideoConferenceJoinOptions } from '@rocket.chat/core-services';
-import { api, ServiceClassInternal, Room } from '@rocket.chat/core-services';
+import { Apps } from '@zeki.chat/apps';
+import type { AppVideoConfProviderManager } from '@zeki.chat/apps/dist/server/managers/AppVideoConfProviderManager';
+import type { VideoConfData, VideoConfDataExtended } from '@zeki.chat/apps-engine/definition/videoConfProviders';
+import type { IVideoConfService, VideoConferenceJoinOptions } from '@zeki.chat/core-services';
+import { api, ServiceClassInternal, Room } from '@zeki.chat/core-services';
 import type {
 	IDirectVideoConference,
 	ILivechatVideoConference,
@@ -23,24 +23,24 @@ import type {
 	Optional,
 	ExternalVideoConference,
 	IVoIPVideoConference,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import {
 	VideoConferenceStatus,
 	isDirectVideoConference,
 	isGroupVideoConference,
 	isLivechatVideoConference,
-} from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import type { InsertionModel } from '@rocket.chat/model-typings';
-import { Users, VideoConference as VideoConferenceModel, Rooms, Messages, Subscriptions } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
-import { wrapExceptions } from '@rocket.chat/tools';
-import type * as UiKit from '@rocket.chat/ui-kit';
+} from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import type { InsertionModel } from '@zeki.chat/model-typings';
+import { Users, VideoConference as VideoConferenceModel, Rooms, Messages, Subscriptions } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
+import { wrapExceptions } from '@zeki.chat/tools';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import { Meteor } from 'meteor/meteor';
 import { MongoInternals } from 'meteor/mongo';
 
-import { RocketChatAssets } from '../../../app/assets/server';
+import { ZekiChatAssets } from '../../../app/assets/server';
 import { canAccessRoomIdAsync } from '../../../app/authorization/server/functions/canAccessRoom';
 import { createRoom } from '../../../app/lib/server/functions/createRoom';
 import { sendMessage } from '../../../app/lib/server/functions/sendMessage';
@@ -565,7 +565,7 @@ export class VideoConfService extends ServiceClassInternal implements IVideoConf
 
 		const room = await Rooms.findOneById(call.rid);
 		const appId = videoConfProviders.getProviderAppId(call.providerName);
-		const user = createdBy || (appId && (await Users.findOneByAppId(appId))) || (await Users.findOneById('rocket.cat'));
+		const user = createdBy || (appId && (await Users.findOneByAppId(appId))) || (await Users.findOneById('zeki.bot'));
 
 		const message = await sendMessage(user, record, room);
 
@@ -694,7 +694,7 @@ export class VideoConfService extends ServiceClassInternal implements IVideoConf
 			notId: PushNotification.getNotificationId(`${call.rid}|${call._id}`),
 			gcm: {
 				style: 'inbox',
-				image: RocketChatAssets.getURL('Assets_favicon_192'),
+				image: ZekiChatAssets.getURL('Assets_favicon_192'),
 			},
 			apn: {
 				category: 'VIDEOCONF',

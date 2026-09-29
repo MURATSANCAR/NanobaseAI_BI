@@ -7,7 +7,7 @@ declare global {
 		SERVER_URL: string;
 		handleIframeClose?: () => void;
 		expandCall?: () => void;
-		RocketChat: {
+		ZekiChat: {
 			// TODO: Discover what the hell does "_" do
 			_: any;
 			url?: string;
@@ -48,7 +48,7 @@ declare global {
 				onServiceOffline;
 			};
 		};
-		initRocket?: string[];
+		initZeki?: string[];
 	}
 
 	interface Document {

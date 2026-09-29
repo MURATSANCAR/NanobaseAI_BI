@@ -1,6 +1,6 @@
-import { Message } from '@rocket.chat/core-services';
-import { isBannedSubscription, isInviteSubscription, type IUser } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import { isBannedSubscription, isInviteSubscription, type IUser } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import { afterUnbanFromRoomCallback } from '../../../../server/lib/callbacks/afterUnbanFromRoomCallback';
 import { notifyOnRoomChangedById, notifyOnSubscriptionChanged } from '../lib/notifyListener';

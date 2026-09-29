@@ -1,4 +1,4 @@
-import type { IImportProgress } from '@rocket.chat/core-typings';
+import type { IImportProgress } from '@zeki.chat/core-typings';
 
 import type { IStreamer } from '../../../../server/modules/streamer/types';
 import notifications from '../../../notifications/server/lib/Notifications';

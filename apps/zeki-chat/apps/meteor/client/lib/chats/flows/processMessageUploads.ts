@@ -1,11 +1,11 @@
-import type { AtLeast, FileAttachmentProps, IE2EEMessage, IMessage, IUploadToConfirm } from '@rocket.chat/core-typings';
-import { imperativeModal, GenericModal } from '@rocket.chat/ui-client';
+import type { AtLeast, FileAttachmentProps, IE2EEMessage, IMessage, IUploadToConfirm } from '@zeki.chat/core-typings';
+import { imperativeModal, GenericModal } from '@zeki.chat/ui-client';
 
 import { sdk } from '../../../../app/utils/client/lib/SDKClient';
 import { t } from '../../../../app/utils/lib/i18n';
 import { getFileExtension } from '../../../../lib/utils/getFileExtension';
-import { e2e } from '../../e2ee/rocketchat.e2e';
-import type { E2ERoom } from '../../e2ee/rocketchat.e2e.room';
+import { e2e } from '../../e2ee/zekichat.e2e';
+import type { E2ERoom } from '../../e2ee/zekichat.e2e.room';
 import { dispatchToastMessage } from '../../toast';
 import type { ChatAPI, UploadsAPI } from '../ChatAPI';
 import { isEncryptedUpload, type EncryptedUpload } from '../Upload';

@@ -1,8 +1,7 @@
-import { useTranslation, useLayout, useCurrentRoutePath } from '@rocket.chat/ui-contexts';
+import { useTranslation, useLayout, useCurrentRoutePath } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 
 import AdminSidebarPages from './AdminSidebarPages';
-import PlanTag from '../../../components/PlanTag';
 import Sidebar from '../../../components/Sidebar';
 import SettingsProvider from '../../../providers/SettingsProvider';
 
@@ -21,7 +20,7 @@ const AdminSidebar = () => {
 					onClose={sidebar.close}
 					title={
 						<>
-							{t('Administration')} <PlanTag />
+							{t('Administration')}
 						</>
 					}
 				/>

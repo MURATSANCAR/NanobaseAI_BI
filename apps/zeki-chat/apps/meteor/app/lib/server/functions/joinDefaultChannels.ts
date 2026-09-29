@@ -1,4 +1,4 @@
-import { Users } from '@rocket.chat/models';
+import { Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { addUserToDefaultChannels } from './addUserToDefaultChannels';

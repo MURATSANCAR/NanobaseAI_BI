@@ -1,4 +1,4 @@
-import type { IPermission, IRole } from '@rocket.chat/core-typings';
+import type { IPermission, IRole } from '@zeki.chat/core-typings';
 import type { FindCursor } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

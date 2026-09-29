@@ -4,9 +4,9 @@ import type {
 	MediaCallContactInformation,
 	MediaCallContact,
 	IMediaCallChannel,
-} from '@rocket.chat/core-typings';
-import { isBusyState, type ClientMediaSignalBody } from '@rocket.chat/media-signaling';
-import { MediaCallNegotiations, MediaCalls } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { isBusyState, type ClientMediaSignalBody } from '@zeki.chat/media-signaling';
+import { MediaCallNegotiations, MediaCalls } from '@zeki.chat/models';
 import type { SipMessage, SrfRequest, SrfResponse } from 'drachtio-srf';
 import type Srf from 'drachtio-srf';
 
@@ -439,9 +439,9 @@ export class IncomingSipCall extends BaseSipCall {
 		throw new SipError(SipErrorCodes.NOT_FOUND);
 	}
 
-	private static async getRocketChatCallerFromInvite(req: SrfRequest): Promise<MediaCallContact | null> {
+	private static async getZekiChatCallerFromInvite(req: SrfRequest): Promise<MediaCallContact | null> {
 		logger.debug({
-			msg: 'IncomingSipCall.getRocketChatCallerFromInvite',
+			msg: 'IncomingSipCall.getZekiChatCallerFromInvite',
 			callingNumber: req.callingNumber,
 			calledNumber: req.calledNumber,
 		});
@@ -458,10 +458,10 @@ export class IncomingSipCall extends BaseSipCall {
 
 	private static async getCallerContactFromInvite(sessionId: string, req: SrfRequest): Promise<MediaCallSignedContact<'sip'>> {
 		logger.debug({ msg: 'IncomingSipCall.getCallerContactFromInvite' });
-		const callerBase = await this.getRocketChatCallerFromInvite(req);
+		const callerBase = await this.getZekiChatCallerFromInvite(req);
 
-		const displayNameFromHeader = req.has('X-RocketChat-Caller-Name') && req.get('X-RocketChat-Caller-Name');
-		const usernameFromHeader = req.has('X-RocketChat-Caller-Username') && req.get('X-RocketChat-Caller-Username');
+		const displayNameFromHeader = req.has('X-ZekiChat-Caller-Name') && req.get('X-ZekiChat-Caller-Name');
+		const usernameFromHeader = req.has('X-ZekiChat-Caller-Username') && req.get('X-ZekiChat-Caller-Username');
 
 		const displayName = displayNameFromHeader || callerBase?.displayName || req.from;
 		const username = usernameFromHeader || callerBase?.username || req.callingNumber;

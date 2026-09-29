@@ -1,5 +1,5 @@
 import { Emitter } from '@rocket.chat/emitter';
-import { useUser } from '@rocket.chat/ui-contexts';
+import { useUser } from '@zeki.chat/ui-contexts';
 import { useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 

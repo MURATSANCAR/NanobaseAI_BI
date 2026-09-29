@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 
-import { Uploads } from '@rocket.chat/models';
+import { Uploads } from '@zeki.chat/models';
 import { WebApp } from 'meteor/webapp';
 
 import { FileUpload } from './FileUpload';

@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import type { TFunction } from 'i18next';
 
 export const getCheckboxLabel = (message: IMessage, t: TFunction): string => {

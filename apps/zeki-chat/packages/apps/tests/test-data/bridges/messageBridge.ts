@@ -1,6 +1,6 @@
-import type { IMessage, Reaction } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IMessage, Reaction } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { MessageBridge } from '../../../src/server/bridges';
 import type { ITypingDescriptor } from '../../../src/server/bridges/MessageBridge';

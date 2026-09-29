@@ -1,4 +1,4 @@
-import type { ILivechatAgent, ILivechatAgentStatus, ILivechatDepartmentAgents } from '@rocket.chat/core-typings';
+import type { ILivechatAgent, ILivechatAgentStatus, ILivechatDepartmentAgents } from '@zeki.chat/core-typings';
 import { Field, FieldLabel, FieldGroup, FieldRow, TextInput, Button, Box, Icon, Select, ButtonGroup } from '@rocket.chat/fuselage';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
@@ -8,8 +8,8 @@ import {
 	ContextualbarHeader,
 	ContextualbarScrollableContent,
 	ContextualbarFooter,
-} from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useTranslation, useEndpoint, useRouter } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useTranslation, useEndpoint, useRouter } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useMemo } from 'react';
 import { useForm, Controller, FormProvider } from 'react-hook-form';

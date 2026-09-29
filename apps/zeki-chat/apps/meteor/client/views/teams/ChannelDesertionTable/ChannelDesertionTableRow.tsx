@@ -1,7 +1,7 @@
-import type { IRoom, Serialized } from '@rocket.chat/core-typings';
+import type { IRoom, Serialized } from '@zeki.chat/core-typings';
 import { CheckBox, Icon, Margins } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericTableRow, GenericTableCell } from '@rocket.chat/ui-client';
+import { GenericTableRow, GenericTableCell } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 
 import { useFormatDateAndTime } from '../../../hooks/useFormatDateAndTime';

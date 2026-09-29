@@ -1,4 +1,4 @@
-import { Contextualbar } from '@rocket.chat/ui-client';
+import { Contextualbar } from '@zeki.chat/ui-client';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryFn } from '@storybook/react';
 
@@ -28,8 +28,8 @@ const fakeItems = Array.from({ length: 10 }, (_, i) => ({
 	url: '#',
 	uploadedAt: new Date(),
 	user: {
-		_id: 'rocket.cat',
-		username: 'rocket.cat',
+		_id: 'zeki.bot',
+		username: 'zeki.bot',
 	},
 	_updatedAt: new Date(),
 }));

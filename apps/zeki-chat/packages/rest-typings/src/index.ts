@@ -1,4 +1,4 @@
-import type { KeyOfEach } from '@rocket.chat/core-typings';
+import type { KeyOfEach } from '@zeki.chat/core-typings';
 
 import type { AppsEndpoints } from './apps';
 import type { DefaultEndpoints } from './default';
@@ -26,7 +26,7 @@ import type { IntegrationsEndpoints } from './v1/integrations';
 import type { IntegrationHooksEndpoints } from './v1/integrations/hooks';
 import type { InvitesEndpoints } from './v1/invites';
 import type { LDAPEndpoints } from './v1/ldap';
-import type { LicensesEndpoints } from './v1/licenses';
+import type { CapabilitiesEndpoints } from './v1/capabilities';
 import type { MailerEndpoints } from './v1/mailer';
 import type { MeEndpoints } from './v1/me';
 import type { MiscEndpoints } from './v1/misc';
@@ -70,7 +70,7 @@ export interface Endpoints
 		AppsEndpoints,
 		OmnichannelEndpoints,
 		StatisticsEndpoints,
-		LicensesEndpoints,
+		CapabilitiesEndpoints,
 		MiscEndpoints,
 		PresenceEndpoints,
 		InstancesEndpoints,
@@ -222,7 +222,7 @@ export * from './v1/invites';
 export * from './v1/dm';
 export * from './v1/dm/DmHistoryProps';
 export * from './v1/integrations';
-export * from './v1/licenses';
+export * from './v1/capabilities';
 export * from './v1/omnichannel';
 export * from './v1/push';
 export type * from './helpers/IGetRoomRoles';

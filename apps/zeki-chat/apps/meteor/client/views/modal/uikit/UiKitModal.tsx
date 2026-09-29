@@ -1,7 +1,7 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { UiKitContext } from '@rocket.chat/fuselage-ui-kit';
-import { MarkupInteractionContext } from '@rocket.chat/gazzodown';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import { UiKitContext } from '@zeki.chat/fuselage-ui-kit';
+import { MarkupInteractionContext } from '@zeki.chat/gazzodown';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import type { FormEvent } from 'react';
 
 import ModalBlock from './ModalBlock';

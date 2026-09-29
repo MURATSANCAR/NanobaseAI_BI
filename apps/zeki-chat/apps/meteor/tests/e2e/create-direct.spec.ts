@@ -14,7 +14,7 @@ test.describe.serial('channel-direct-message', () => {
 	});
 
 	test('expect create a direct room', async ({ page }) => {
-		await poHomeChannel.navbar.createNewDM('rocket.cat');
+		await poHomeChannel.navbar.createNewDM('zeki.bot');
 		await expect(page).toHaveURL(/direct\/.*/);
 	});
 });

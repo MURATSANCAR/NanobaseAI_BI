@@ -1,5 +1,5 @@
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { useUserPresence } from '@rocket.chat/ui-contexts';
+import { useUserPresence } from '@zeki.chat/ui-contexts';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 

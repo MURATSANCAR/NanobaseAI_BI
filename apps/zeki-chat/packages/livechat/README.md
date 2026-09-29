@@ -1,4 +1,4 @@
-# Rocket.Chat.Livechat
+# ZEKI AI CHAT.Livechat
 ![Language grade: JavaScript]([upstream link removed])
 ![Total alerts]([upstream link removed])
 [![Storybook](https://cdn.jsdelivr.net/gh/storybooks/brand@master/badge/badge-storybook.svg)]([upstream link removed])

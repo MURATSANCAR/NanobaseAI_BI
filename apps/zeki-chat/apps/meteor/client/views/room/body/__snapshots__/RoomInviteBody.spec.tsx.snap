@@ -43,9 +43,9 @@ exports[`RoomInvite renders Default without crashing 1`] = `
                   alt="Avatar"
                   aria-hidden="true"
                   class="rcx-avatar__element rcx-avatar__element--x16"
-                  data-username="rocket.cat"
+                  data-username="zeki.bot"
                   src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Oora39DwAFaQJ3y3rKeAAAAABJRU5ErkJggg=="
-                  title="rocket.cat"
+                  title="zeki.bot"
                 />
               </figure>
                
@@ -127,9 +127,9 @@ exports[`RoomInvite renders Loading without crashing 1`] = `
                   alt="Avatar"
                   aria-hidden="true"
                   class="rcx-avatar__element rcx-avatar__element--x16"
-                  data-username="rocket.cat"
+                  data-username="zeki.bot"
                   src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Oora39DwAFaQJ3y3rKeAAAAABJRU5ErkJggg=="
-                  title="rocket.cat"
+                  title="zeki.bot"
                 />
               </figure>
                
@@ -225,9 +225,9 @@ exports[`RoomInvite renders WithInfoLink without crashing 1`] = `
                   alt="Avatar"
                   aria-hidden="true"
                   class="rcx-avatar__element rcx-avatar__element--x16"
-                  data-username="rocket.cat"
+                  data-username="zeki.bot"
                   src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Oora39DwAFaQJ3y3rKeAAAAABJRU5ErkJggg=="
-                  title="rocket.cat"
+                  title="zeki.bot"
                 />
               </figure>
                

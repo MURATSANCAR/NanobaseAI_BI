@@ -1,4 +1,4 @@
-import { useSetting, useUserId } from '@rocket.chat/ui-contexts';
+import { useSetting, useUserId } from '@zeki.chat/ui-contexts';
 
 export const useMessageComposerIsAnonymous = (): boolean => {
 	const isAnonymousReadEnabled = useSetting('Accounts_AllowAnonymousRead');

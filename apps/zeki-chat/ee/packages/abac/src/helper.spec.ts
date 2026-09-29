@@ -10,7 +10,7 @@ import {
 } from './helper';
 
 const attributesFindMock = jest.fn();
-jest.mock('@rocket.chat/models', () => {
+jest.mock('@zeki.chat/models', () => {
 	return {
 		AbacAttributes: {
 			find: jest.fn().mockReturnValue({

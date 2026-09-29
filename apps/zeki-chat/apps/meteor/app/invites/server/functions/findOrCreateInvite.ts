@@ -1,7 +1,7 @@
-import { api } from '@rocket.chat/core-services';
-import type { IInvite } from '@rocket.chat/core-typings';
-import { Invites, Subscriptions, Rooms } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { api } from '@zeki.chat/core-services';
+import type { IInvite } from '@zeki.chat/core-typings';
+import { Invites, Subscriptions, Rooms } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import { Meteor } from 'meteor/meteor';
 
 import { RoomMemberActions } from '../../../../definition/IRoomTypeConfig';

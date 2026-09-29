@@ -1,4 +1,4 @@
-import type { IImporterSelectionChannel } from '@rocket.chat/core-typings';
+import type { IImporterSelectionChannel } from '@zeki.chat/core-typings';
 
 export class SelectionChannel implements IImporterSelectionChannel {
 	public channel_id: string;

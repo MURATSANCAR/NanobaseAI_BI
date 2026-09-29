@@ -1,7 +1,7 @@
-import { isExternalServiceTrigger } from '@rocket.chat/core-typings';
-import { LivechatTrigger } from '@rocket.chat/models';
-import { isLivechatTriggerWebhookCallParams } from '@rocket.chat/rest-typings';
-import { isLivechatTriggerWebhookTestParams } from '@rocket.chat/rest-typings/src/v1/omnichannel';
+import { isExternalServiceTrigger } from '@zeki.chat/core-typings';
+import { LivechatTrigger } from '@zeki.chat/models';
+import { isLivechatTriggerWebhookCallParams } from '@zeki.chat/rest-typings';
+import { isLivechatTriggerWebhookTestParams } from '@zeki.chat/rest-typings/src/v1/omnichannel';
 
 import { callTriggerExternalService } from './lib/triggers';
 import { API } from '../../../../../app/api/server';
@@ -14,7 +14,7 @@ API.v1.addRoute(
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatTriggerWebhookTestParams,
 		rateLimiterOptions: { numRequestsAllowed: 15, intervalTimeInMS: 60000 },
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async post() {
@@ -34,7 +34,7 @@ API.v1.addRoute(
 			const headers = {
 				'Accept': 'application/json',
 				'Content-Type': 'application/json',
-				'X-RocketChat-Livechat-Token': token,
+				'X-ZekiChat-Livechat-Token': token,
 			};
 
 			const response = await callTriggerExternalService({
@@ -69,7 +69,7 @@ API.v1.addRoute(
 			intervalTimeInMS: 60000,
 		},
 		validateParams: isLivechatTriggerWebhookCallParams,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async post() {
@@ -107,7 +107,7 @@ API.v1.addRoute(
 			const headers = {
 				'Accept': 'application/json',
 				'Content-Type': 'application/json',
-				'X-RocketChat-Livechat-Token': token,
+				'X-ZekiChat-Livechat-Token': token,
 			};
 
 			const response = await callTriggerExternalService({

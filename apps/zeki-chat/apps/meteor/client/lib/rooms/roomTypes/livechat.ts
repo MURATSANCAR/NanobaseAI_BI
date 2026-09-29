@@ -1,4 +1,4 @@
-import type { AtLeast, ValueOf } from '@rocket.chat/core-typings';
+import type { AtLeast, ValueOf } from '@zeki.chat/core-typings';
 
 import { getAvatarURL } from '../../../../app/utils/client/getAvatarURL';
 import type { IRoomTypeClientDirectives } from '../../../../definition/IRoomTypeConfig';

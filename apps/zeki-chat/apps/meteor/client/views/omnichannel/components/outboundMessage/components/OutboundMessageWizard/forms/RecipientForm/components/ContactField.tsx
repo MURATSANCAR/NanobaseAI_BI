@@ -1,6 +1,6 @@
 import { Box, Field, FieldError, FieldLabel, FieldRow, Option, OptionContent, OptionDescription } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import { useId } from 'react';
 import type { ComponentProps } from 'react';
 import { useController, type Control } from 'react-hook-form';

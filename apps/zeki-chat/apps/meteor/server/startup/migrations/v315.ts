@@ -1,5 +1,5 @@
-import type { IPermission } from '@rocket.chat/core-typings';
-import { Permissions } from '@rocket.chat/models';
+import type { IPermission } from '@zeki.chat/core-typings';
+import { Permissions } from '@zeki.chat/models';
 
 import { upsertPermissions } from '../../../app/authorization/server/functions/upsertPermissions';
 import { addMigration } from '../../lib/migrations';

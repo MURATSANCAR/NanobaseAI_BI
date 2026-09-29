@@ -1,5 +1,5 @@
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
-import { isFileAttachment, isFileImageAttachment } from '@rocket.chat/core-typings';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
+import { isFileAttachment, isFileImageAttachment } from '@zeki.chat/core-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { callbacks } from '../../../../../server/lib/callbacks';

@@ -1,8 +1,8 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { Message, MessageLeftContainer, MessageContainer, CheckBox } from '@rocket.chat/fuselage';
 import { useToggle } from '@rocket.chat/fuselage-hooks';
-import { MessageAvatar } from '@rocket.chat/ui-avatar';
-import { useUserId, useUserCard } from '@rocket.chat/ui-contexts';
+import { MessageAvatar } from '@zeki.chat/ui-avatar';
+import { useUserId, useUserCard } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

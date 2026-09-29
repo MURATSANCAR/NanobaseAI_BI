@@ -9,12 +9,12 @@ import { finished } from 'node:stream/promises';
 import URL from 'node:url';
 import { isArrayBufferView } from 'node:util/types';
 
-import { hashLoginToken } from '@rocket.chat/account-utils';
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { AppsEngineException } from '@rocket.chat/apps-engine/definition/exceptions';
-import { isE2EEUpload, type IUpload } from '@rocket.chat/core-typings';
-import { Users, Avatars, UserDataFiles, Uploads, Settings, Subscriptions, Messages, Rooms } from '@rocket.chat/models';
-import { streamToBuffer } from '@rocket.chat/tools';
+import { hashLoginToken } from '@zeki.chat/account-utils';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { AppsEngineException } from '@zeki.chat/apps-engine/definition/exceptions';
+import { isE2EEUpload, type IUpload } from '@zeki.chat/core-typings';
+import { Users, Avatars, UserDataFiles, Uploads, Settings, Subscriptions, Messages, Rooms } from '@zeki.chat/models';
+import { streamToBuffer } from '@zeki.chat/tools';
 import type { NextFunction } from 'connect';
 import filesize from 'filesize';
 import { Match } from 'meteor/check';

@@ -8,8 +8,8 @@ import {
 	EmojiPickerHeader,
 	EmojiPickerListArea,
 	EmojiPickerPreview,
-} from '@rocket.chat/ui-client';
-import { useTranslation, usePermission, useRoute } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, usePermission, useRoute } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent, KeyboardEvent, MouseEvent, RefObject } from 'react';
 import { useLayoutEffect, useState, useEffect, useRef } from 'react';
 import type { ListRange, VirtuosoHandle } from 'react-virtuoso';

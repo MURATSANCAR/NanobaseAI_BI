@@ -1,4 +1,4 @@
-import type { IOAuthApps, Serialized } from '@rocket.chat/core-typings';
+import type { IOAuthApps, Serialized } from '@zeki.chat/core-typings';
 import {
 	Button,
 	ButtonGroup,
@@ -13,8 +13,8 @@ import {
 	ToggleSwitch,
 	FieldGroup,
 } from '@rocket.chat/fuselage';
-import { GenericModal, ContextualbarScrollableContent } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useRoute, useAbsoluteUrl, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericModal, ContextualbarScrollableContent } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useRoute, useAbsoluteUrl, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ComponentProps } from 'react';
 import { useCallback, useId, useMemo } from 'react';
 import type { SubmitHandler } from 'react-hook-form';

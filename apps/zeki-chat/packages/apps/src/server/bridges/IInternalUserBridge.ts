@@ -1,4 +1,4 @@
-import type { IUser, IUserCreationOptions } from '@rocket.chat/apps-engine/definition/users';
+import type { IUser, IUserCreationOptions } from '@zeki.chat/apps-engine/definition/users';
 
 export interface IInternalUserBridge {
 	create(data: Partial<IUser>, appId: string, options?: IUserCreationOptions): Promise<string>;

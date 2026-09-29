@@ -1,4 +1,4 @@
-import type { ILDAPEntry } from '@rocket.chat/core-typings';
+import type { ILDAPEntry } from '@zeki.chat/core-typings';
 
 import { executeFallback, type LDAPVariableFallback } from './fallback';
 import { executeMatch, type LDAPVariableMatch } from './match';

@@ -1,7 +1,7 @@
-import type { IAbacAttributeDefinition } from '@rocket.chat/apps-engine/definition/abac/AbacAttributes';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
-import type { RoomType } from '@rocket.chat/apps-engine/definition/rooms/RoomType';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users/IUser';
+import type { IAbacAttributeDefinition } from '@zeki.chat/apps-engine/definition/abac/AbacAttributes';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
+import type { RoomType } from '@zeki.chat/apps-engine/definition/rooms/RoomType';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users/IUser';
 
 /** Minimal interface covering the only AppManager capability used by Room */
 interface IRoomManager {

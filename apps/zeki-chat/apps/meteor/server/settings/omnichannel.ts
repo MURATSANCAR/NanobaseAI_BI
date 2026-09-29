@@ -1,4 +1,4 @@
-import { SettingEditor } from '@rocket.chat/core-typings';
+import { SettingEditor } from '@zeki.chat/core-typings';
 
 import { settingsRegistry } from '../../app/settings/server';
 

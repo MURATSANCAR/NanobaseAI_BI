@@ -1,6 +1,6 @@
-import { eventTypes } from '@rocket.chat/core-typings';
-import type { IRoom, ISubscription, IUser, IFederationEvent } from '@rocket.chat/core-typings';
-import type { IFederationRoomEventsModel } from '@rocket.chat/model-typings';
+import { eventTypes } from '@zeki.chat/core-typings';
+import type { IRoom, ISubscription, IUser, IFederationEvent } from '@zeki.chat/core-typings';
+import type { IFederationRoomEventsModel } from '@zeki.chat/model-typings';
 import type { Db, DeleteResult, IndexDescription } from 'mongodb';
 
 import { FederationEventsModel } from './FederationEvents';

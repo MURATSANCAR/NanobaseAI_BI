@@ -1,6 +1,6 @@
 import { Box, Pagination } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import {
 	GenericTable,
 	GenericTableBody,
@@ -11,8 +11,8 @@ import {
 	GenericTableRow,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
-import { useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { hashKey, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 

@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/pdf-worker",
+	"name": "@zeki.chat/pdf-worker",
 	"version": "0.3.35",
 	"private": true,
 	"main": "./dist/index.js",
@@ -19,7 +19,7 @@
 	},
 	"dependencies": {
 		"@react-pdf/renderer": "^3.4.5",
-		"@rocket.chat/core-typings": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
 		"@rocket.chat/fuselage-tokens": "~0.33.2",
 		"emoji-toolkit": "^7.0.1",
 		"moment": "^2.30.1",
@@ -28,9 +28,9 @@
 		"react-i18next": "~13.2.2"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/message-parser": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/message-parser": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@storybook/addon-essentials": "^8.6.18",
 		"@storybook/addon-webpack5-compiler-swc": "~3.0.0",
 		"@storybook/react": "^8.6.18",

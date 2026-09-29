@@ -1,5 +1,5 @@
-import { Authorization } from '@rocket.chat/core-services';
-import { LivechatUnit, LivechatDepartmentAgents } from '@rocket.chat/models';
+import { Authorization } from '@zeki.chat/core-services';
+import { LivechatUnit, LivechatDepartmentAgents } from '@zeki.chat/models';
 import mem from 'mem';
 
 import { defaultLogger } from '../utils/logger';

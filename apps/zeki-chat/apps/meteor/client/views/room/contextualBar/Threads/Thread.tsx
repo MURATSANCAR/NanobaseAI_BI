@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, ModalBackdrop, Skeleton } from '@rocket.chat/fuselage';
 import { useLocalStorage } from '@rocket.chat/fuselage-hooks';
@@ -11,14 +11,14 @@ import {
 	ContextualbarBack,
 	ContextualbarInnerContent,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import {
 	useLayoutContextualBarExpanded,
 	useToastMessageDispatch,
 	useTranslation,
 	useUserId,
 	useRoomToolbox,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { createPortal } from 'react-dom';
 
 import ThreadChat from './components/ThreadChat';

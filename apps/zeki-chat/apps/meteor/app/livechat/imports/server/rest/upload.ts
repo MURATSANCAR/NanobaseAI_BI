@@ -1,4 +1,4 @@
-import { LivechatVisitors, LivechatRooms } from '@rocket.chat/models';
+import { LivechatVisitors, LivechatRooms } from '@zeki.chat/models';
 
 import { API } from '../../../../api/server';
 import { MultipartUploadHandler } from '../../../../api/server/lib/MultipartUploadHandler';

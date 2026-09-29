@@ -1,5 +1,5 @@
 import { Box, Skeleton, Tile, Option } from '@rocket.chat/fuselage';
-import { useMethod } from '@rocket.chat/ui-contexts';
+import { useMethod } from '@zeki.chat/ui-contexts';
 import type { ForwardedRef, ReactNode } from 'react';
 import { forwardRef, useEffect, useId, useImperativeHandle } from 'react';
 

@@ -1,13 +1,13 @@
-import type { CloudRegistrationStatus } from '@rocket.chat/core-typings';
-import { ajv, validateUnauthorizedErrorResponse, validateForbiddenErrorResponse, validateBadRequestErrorResponse } from '@rocket.chat/rest-typings';
+import type { CloudRegistrationStatus } from '@zeki.chat/core-typings';
+import { ajv, validateUnauthorizedErrorResponse, validateForbiddenErrorResponse, validateBadRequestErrorResponse } from '@zeki.chat/rest-typings';
 
 import { retrieveRegistrationStatus } from '../../../cloud/server/functions/retrieveRegistrationStatus';
 import { API } from '../api';
 
 /**
- * Zeki: Rocket.Chat Cloud is permanently disconnected.
+ * Zeki: ZEKI AI CHAT Cloud is permanently disconnected.
  * Registration (manual, intent, pre-intent, confirmation poll) endpoints were removed.
- * The remaining endpoints never contact any Rocket.Chat service.
+ * The remaining endpoints never contact any ZEKI AI CHAT service.
  */
 
 const successResponseSchema = ajv.compile<void>({

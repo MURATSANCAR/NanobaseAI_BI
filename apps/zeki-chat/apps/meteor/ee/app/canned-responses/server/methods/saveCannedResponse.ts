@@ -1,5 +1,5 @@
-import type { IOmnichannelCannedResponse, ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatDepartment, CannedResponse, Users } from '@rocket.chat/models';
+import type { IOmnichannelCannedResponse, ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatDepartment, CannedResponse, Users } from '@zeki.chat/models';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 

@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-import { Import } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import { Import } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 import { Meteor } from 'meteor/meteor';
 
 import { Importers } from '..';
@@ -13,7 +13,7 @@ import { SystemLogger } from '../../../../server/lib/logger/system';
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
 import { settings } from '../../../settings/server';
 import { ProgressStep } from '../../lib/ImporterProgressStep';
-import { RocketChatImportFileInstance } from '../startup/store';
+import { ZekiChatImportFileInstance } from '../startup/store';
 
 async function getHttpFileStream(fileUrl: string): Promise<Readable> {
 	const response = await fetch(fileUrl, {
@@ -62,7 +62,7 @@ export const executeDownloadPublicImportFile = async (userId: IUser['_id'], file
 	await instance.startFileUpload(newFileName);
 	await instance.updateProgress(ProgressStep.DOWNLOADING_FILE);
 
-	const writeStream = RocketChatImportFileInstance.createWriteStream(newFileName);
+	const writeStream = ZekiChatImportFileInstance.createWriteStream(newFileName);
 	let errorProgressUpdate: Promise<unknown> | undefined;
 	const markImportAsFailed = (): Promise<unknown> => {
 		errorProgressUpdate ??= instance.updateProgress(ProgressStep.ERROR).catch((error) => {
@@ -105,7 +105,7 @@ export const executeDownloadPublicImportFile = async (userId: IUser['_id'], file
 	copyLocalFile(fileUrl, writeStream);
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		downloadPublicImportFile(fileUrl: string, importerKey: string): void;

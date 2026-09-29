@@ -5,8 +5,8 @@ import type {
 	MediaCallNegotiationStream,
 	MediaCallSignedActor,
 	MediaCallSignedContact,
-} from '@rocket.chat/core-typings';
-import { isPendingState, isBusyState } from '@rocket.chat/media-signaling';
+} from '@zeki.chat/core-typings';
+import { isPendingState, isBusyState } from '@zeki.chat/media-signaling';
 import type {
 	ClientMediaSignalTransfer,
 	CallHangupReason,
@@ -17,8 +17,8 @@ import type {
 	ServerMediaSignal,
 	ClientMediaSignalAnswer,
 	CallFeature,
-} from '@rocket.chat/media-signaling';
-import { MediaCallChannels, MediaCallNegotiations, MediaCalls } from '@rocket.chat/models';
+} from '@zeki.chat/media-signaling';
+import { MediaCallChannels, MediaCallNegotiations, MediaCalls } from '@zeki.chat/models';
 
 import { DEFAULT_CALL_FEATURES } from '../../constants';
 import type { IMediaCallAgent } from '../../definition/IMediaCallAgent';

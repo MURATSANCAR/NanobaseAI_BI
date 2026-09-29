@@ -1,6 +1,6 @@
 import { federationSDK } from '@rocket.chat/federation-sdk';
-import { Router } from '@rocket.chat/http-router';
-import { ajv } from '@rocket.chat/rest-typings/dist/v1/Ajv';
+import { Router } from '@zeki.chat/http-router';
+import { ajv } from '@zeki.chat/rest-typings/dist/v1/Ajv';
 
 const ServerKeyResponseSchema = {
 	type: 'object',
@@ -40,7 +40,7 @@ export const getKeyServerRoutes = () => {
 				200: isServerKeyResponseProps,
 			},
 			tags: ['Key'],
-			license: ['federation'],
+			capabilities: ['federation'],
 		},
 		async () => {
 			const response = await federationSDK.getSignedServerKey();

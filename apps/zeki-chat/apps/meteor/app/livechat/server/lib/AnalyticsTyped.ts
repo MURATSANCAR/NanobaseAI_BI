@@ -1,4 +1,4 @@
-import { OmnichannelAnalytics } from '@rocket.chat/core-services';
+import { OmnichannelAnalytics } from '@zeki.chat/core-services';
 import mem from 'mem';
 
 export const getAgentOverviewDataCached = mem(OmnichannelAnalytics.getAgentOverviewData, {

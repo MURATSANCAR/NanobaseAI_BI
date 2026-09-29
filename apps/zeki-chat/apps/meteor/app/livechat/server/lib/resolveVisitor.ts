@@ -1,5 +1,5 @@
-import type { IVisitorExternalIdentifier, ILivechatVisitor } from '@rocket.chat/core-typings';
-import { LivechatVisitors } from '@rocket.chat/models';
+import type { IVisitorExternalIdentifier, ILivechatVisitor } from '@zeki.chat/core-typings';
+import { LivechatVisitors } from '@zeki.chat/models';
 
 type ResolveVisitorContactData = { phone: string } | { email: string };
 

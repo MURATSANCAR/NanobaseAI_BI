@@ -26,7 +26,7 @@ const { closeLivechatRoom } = proxyquire.noCallThru().load('../../../../../../ap
 	'../../../authorization/server/functions/hasPermission': {
 		hasPermissionAsync: hasPermissionStub,
 	},
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Subscriptions: subscriptionsStub,
 		LivechatRooms: livechatRoomsStub,
 	},

@@ -1,4 +1,4 @@
-import type { ILivechatVisitor } from '@rocket.chat/core-typings';
+import type { ILivechatVisitor } from '@zeki.chat/core-typings';
 
 import type { IAppsVisitor } from '../AppsEngine';
 

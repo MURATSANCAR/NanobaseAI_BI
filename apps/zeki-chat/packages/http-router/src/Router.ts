@@ -1,5 +1,5 @@
-import { Logger } from '@rocket.chat/logger';
-import type { Method } from '@rocket.chat/rest-typings';
+import { Logger } from '@zeki.chat/logger';
+import type { Method } from '@zeki.chat/rest-typings';
 import type { AnySchema } from 'ajv';
 import express from 'express';
 import type { Context, HonoRequest, MiddlewareHandler } from 'hono';

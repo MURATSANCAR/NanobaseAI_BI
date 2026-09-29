@@ -1,7 +1,7 @@
-import type { ILivechatBusinessHour, LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
+import type { ILivechatBusinessHour, LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
 import { Button, States, StatesAction, StatesActions, StatesIcon, StatesTitle } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useEndpoint, useRouter } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useEndpoint, useRouter } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

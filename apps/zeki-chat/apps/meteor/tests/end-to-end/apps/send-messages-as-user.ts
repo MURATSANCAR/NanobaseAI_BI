@@ -1,5 +1,5 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { App, IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { App, IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -136,7 +136,7 @@ import { IS_EE } from '../../e2e/config/constants';
 				dmRoom = (
 					await createRoom({
 						type: 'd',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 					})
 				).body.room;
 			});

@@ -1,6 +1,6 @@
 import { Accordion, AccordionItem } from '@rocket.chat/fuselage';
-import type { IInstance } from '@rocket.chat/rest-typings';
-import { GenericModal } from '@rocket.chat/ui-client';
+import type { IInstance } from '@zeki.chat/rest-typings';
+import { GenericModal } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import DescriptionList from './DescriptionList';

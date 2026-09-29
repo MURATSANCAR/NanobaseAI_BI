@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-import { Logger } from '@rocket.chat/logger';
-import { Settings } from '@rocket.chat/models';
+import { Logger } from '@zeki.chat/logger';
+import { Settings } from '@zeki.chat/models';
 
 import { updateAuditedBySystem } from './lib/auditedSettingUpdates';
 import { notifyOnSettingChangedById } from '../../app/lib/server/lib/notifyListener';

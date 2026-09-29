@@ -1,11 +1,11 @@
-import type { ILivechatUpdater } from '@rocket.chat/apps-engine/definition/accessors';
+import type { ILivechatUpdater } from '@zeki.chat/apps-engine/definition/accessors';
 import type {
 	ILivechatRoom,
 	ILivechatTransferData,
 	IVisitor,
 	IVisitorExternalIdentifier,
-} from '@rocket.chat/apps-engine/definition/livechat';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+} from '@zeki.chat/apps-engine/definition/livechat';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import type { AppBridges } from '../bridges';
 

@@ -1,5 +1,5 @@
-import type { IImportUser, IUser } from '@rocket.chat/core-typings';
-import { Rooms, Users } from '@rocket.chat/models';
+import type { IImportUser, IUser } from '@zeki.chat/core-typings';
+import { Rooms, Users } from '@zeki.chat/models';
 
 export type UserIdentification = {
 	_id: string;
@@ -109,10 +109,10 @@ export class ConverterCache {
 	}
 
 	async findImportedUser(importId: string): Promise<UserIdentification | null> {
-		if (importId === 'rocket.cat') {
+		if (importId === 'zeki.bot') {
 			return {
-				_id: 'rocket.cat',
-				username: 'rocket.cat',
+				_id: 'zeki.bot',
+				username: 'zeki.bot',
 			};
 		}
 
@@ -159,7 +159,7 @@ export class ConverterCache {
 		}
 
 		const user =
-			importId === 'rocket.cat' ? await Users.findOneById('rocket.cat', options) : await Users.findOneByImportId(importId, options);
+			importId === 'zeki.bot' ? await Users.findOneById('zeki.bot', options) : await Users.findOneByImportId(importId, options);
 		if (user) {
 			if (!this._userCache.has(importId)) {
 				this.addUser(importId, user._id, user.username);
@@ -177,7 +177,7 @@ export class ConverterCache {
 		return (
 			await Promise.all(
 				importedIds.map(async (user) => {
-					if (user === 'rocket.cat') {
+					if (user === 'zeki.bot') {
 						return user;
 					}
 

@@ -1,12 +1,12 @@
-import type { App } from '@rocket.chat/apps-engine/definition/App';
-import type { AppStatus as _AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
+import type { App } from '@zeki.chat/apps-engine/definition/App';
+import type { AppStatus as _AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
 
 import { AppObjectRegistry } from '../../AppObjectRegistry.ts';
 import { require } from '../../lib/require.ts';
 import { RequestContext } from '../../lib/requestContext.ts';
 import { wrapAppForRequest } from '../../lib/wrapAppForRequest.ts';
 
-const { AppStatus } = require('@rocket.chat/apps-engine/definition/AppStatus.js') as {
+const { AppStatus } = require('@zeki.chat/apps-engine/definition/AppStatus.js') as {
 	AppStatus: typeof _AppStatus;
 };
 

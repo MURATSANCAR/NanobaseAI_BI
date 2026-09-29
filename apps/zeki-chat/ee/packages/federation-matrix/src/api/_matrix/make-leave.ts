@@ -1,7 +1,7 @@
 import { NotAllowedError, federationSDK } from '@rocket.chat/federation-sdk';
-import { Router } from '@rocket.chat/http-router';
-import { Logger } from '@rocket.chat/logger';
-import { ajv } from '@rocket.chat/rest-typings';
+import { Router } from '@zeki.chat/http-router';
+import { Logger } from '@zeki.chat/logger';
+import { ajv } from '@zeki.chat/rest-typings';
 
 import { isAuthenticatedMiddleware } from '../middlewares/isAuthenticated';
 
@@ -68,7 +68,7 @@ export const getMatrixMakeLeaveRoutes = () => {
 				500: isMakeLeaveErrorResponseProps,
 			},
 			tags: ['Federation'],
-			license: ['federation'],
+			capabilities: ['federation'],
 		},
 		isAuthenticatedMiddleware(),
 		async (c) => {

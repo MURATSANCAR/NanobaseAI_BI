@@ -1,12 +1,12 @@
 import type {
 	ILivechatInquiryRecord,
 	IMessage,
-	RocketChatRecordDeleted,
+	ZekiChatRecordDeleted,
 	ILivechatPriority,
 	SelectedAgent,
-} from '@rocket.chat/core-typings';
-import { LivechatInquiryStatus } from '@rocket.chat/core-typings';
-import type { ILivechatInquiryModel } from '@rocket.chat/model-typings';
+} from '@zeki.chat/core-typings';
+import { LivechatInquiryStatus } from '@zeki.chat/core-typings';
+import type { ILivechatInquiryModel } from '@zeki.chat/model-typings';
 import type {
 	Collection,
 	Db,
@@ -29,7 +29,7 @@ import { readSecondaryPreferred } from '../readSecondaryPreferred';
 const { INQUIRY_LOCK_TIMEOUT = '10000' } = process.env;
 
 export class LivechatInquiryRaw extends BaseRaw<ILivechatInquiryRecord> implements ILivechatInquiryModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ILivechatInquiryRecord>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ILivechatInquiryRecord>>) {
 		super(db, 'livechat_inquiry', trash);
 	}
 

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { faker } from '@faker-js/faker';
 import { Box } from '@rocket.chat/fuselage';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import { WizardContext, StepsLinkedList } from '@rocket.chat/ui-client';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import { WizardContext, StepsLinkedList } from '@zeki.chat/ui-client';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
 

@@ -1,4 +1,4 @@
-import type { SAMLSignatureAlgorithm } from '@rocket.chat/core-typings';
+import type { SAMLSignatureAlgorithm } from '@zeki.chat/core-typings';
 
 export interface IServiceProviderOptions {
 	provider: string;

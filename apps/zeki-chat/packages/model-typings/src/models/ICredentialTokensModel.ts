@@ -1,4 +1,4 @@
-import type { ICredentialToken } from '@rocket.chat/core-typings';
+import type { ICredentialToken } from '@zeki.chat/core-typings';
 
 import type { IBaseModel } from './IBaseModel';
 

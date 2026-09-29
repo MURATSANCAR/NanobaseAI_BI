@@ -5,8 +5,8 @@ import {
 	type IMessage,
 	type IRoom,
 	type ISubscription,
-} from '@rocket.chat/core-typings';
-import { useUser, useEndpoint, usePermission } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/core-typings';
+import { useUser, useEndpoint, usePermission } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

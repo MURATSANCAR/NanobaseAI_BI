@@ -1,4 +1,4 @@
-import { Room, Authorization, Message, ServiceClassInternal, api } from '@rocket.chat/core-services';
+import { Room, Authorization, Message, ServiceClassInternal, api } from '@zeki.chat/core-services';
 import type {
 	IListRoomsFilter,
 	ITeamAutocompleteResult,
@@ -8,8 +8,8 @@ import type {
 	ITeamMemberParams,
 	ITeamService,
 	ITeamUpdateData,
-} from '@rocket.chat/core-services';
-import { TeamType } from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-services';
+import { TeamType } from '@zeki.chat/core-typings';
 import type {
 	IRoom,
 	IUser,
@@ -21,9 +21,9 @@ import type {
 	ITeamMember,
 	ITeamStats,
 	AtLeast,
-} from '@rocket.chat/core-typings';
-import type { InsertionModel } from '@rocket.chat/model-typings';
-import { Team, Rooms, Subscriptions, Users, TeamMember } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import type { InsertionModel } from '@zeki.chat/model-typings';
+import { Team, Rooms, Subscriptions, Users, TeamMember } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { Document, FindOptions, Filter } from 'mongodb';
 
@@ -829,7 +829,7 @@ export class TeamService extends ServiceClassInternal implements ITeamService {
 	}
 
 	async insertMemberOnTeams(userId: string, teamIds: Array<string>): Promise<void> {
-		const inviter = { _id: 'rocket.cat', username: 'rocket.cat' };
+		const inviter = { _id: 'zeki.bot', username: 'zeki.bot' };
 
 		await Promise.all(
 			teamIds.map(async (teamId) => {

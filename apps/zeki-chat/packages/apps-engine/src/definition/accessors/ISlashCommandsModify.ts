@@ -1,7 +1,7 @@
 import type { ISlashCommand } from '../slashcommands';
 
 /**
- * This accessor provides methods for modifying existing Rocket.Chat slash commands.
+ * This accessor provides methods for modifying existing ZEKI AI CHAT slash commands.
  * It is provided during "onEnable" of your App.
  */
 export interface ISlashCommandsModify {

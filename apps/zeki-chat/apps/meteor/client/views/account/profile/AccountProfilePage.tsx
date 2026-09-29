@@ -1,7 +1,7 @@
 import { ButtonGroup, Button, Box } from '@rocket.chat/fuselage';
-import { SHA256 } from '@rocket.chat/sha256';
-import { Page, PageFooter, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import { SHA256 } from '@zeki.chat/sha256';
+import { Page, PageFooter, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import {
 	useSetModal,
 	useToastMessageDispatch,
@@ -11,7 +11,7 @@ import {
 	useTranslation,
 	useSetting,
 	useLayout,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useId, useState, useCallback } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';

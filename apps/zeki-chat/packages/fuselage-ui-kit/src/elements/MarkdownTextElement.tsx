@@ -1,7 +1,7 @@
 import { Skeleton } from '@rocket.chat/fuselage';
-import { Markup } from '@rocket.chat/gazzodown';
-import { parse } from '@rocket.chat/message-parser';
-import type { TextObject } from '@rocket.chat/ui-kit';
+import { Markup } from '@zeki.chat/gazzodown';
+import { parse } from '@zeki.chat/message-parser';
+import type { TextObject } from '@zeki.chat/ui-kit';
 import { Suspense } from 'react';
 
 import { useAppTranslation } from '../hooks/useAppTranslation';

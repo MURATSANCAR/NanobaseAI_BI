@@ -1,5 +1,5 @@
-import type { IUserSessionConnection } from '@rocket.chat/core-typings';
-import { UserStatus } from '@rocket.chat/core-typings';
+import type { IUserSessionConnection } from '@zeki.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 
 /**
  * Defines new connection status compared to a previous connection status

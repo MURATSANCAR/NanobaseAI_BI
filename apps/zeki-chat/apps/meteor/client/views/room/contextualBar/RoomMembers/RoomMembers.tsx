@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { Box, Icon, TextInput, Select, Throbber, ButtonGroup, Button, Callout } from '@rocket.chat/fuselage';
 import { useAutoFocus, useDebouncedCallback } from '@rocket.chat/fuselage-hooks';
@@ -13,8 +13,8 @@ import {
 	ContextualbarEmptyContent,
 	ContextualbarSection,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useSetting } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement, FormEventHandler, ComponentProps, MouseEvent, ElementType } from 'react';
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

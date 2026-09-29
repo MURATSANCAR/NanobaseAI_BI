@@ -1,7 +1,6 @@
-import { api } from '@rocket.chat/core-services';
-import type { IUser, IRole, AtLeast } from '@rocket.chat/core-typings';
-import { Capabilities } from '@zeki.chat/capabilities';
-import { Users } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IUser, IRole, AtLeast } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { settings } from '../../../app/settings/server';
 import { addUserRolesAsync } from '../../../server/lib/roles/addUserRoles';
@@ -71,10 +70,6 @@ export async function syncUserRoles(
 		return;
 	}
 
-	const wasGuest = existingRoles.length === 1 && existingRoles[0] === 'guest';
-	if (wasGuest && (await Capabilities.shouldPreventAction('activeUsers'))) {
-		throw new Error('error-license-user-limit-reached');
-	}
 
 	if (rolesToAdd.length && (await addUserRolesAsync(uid, rolesToAdd, scope))) {
 		broadcastRoleChange('added', rolesToAdd, user);

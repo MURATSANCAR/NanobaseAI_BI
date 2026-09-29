@@ -1,4 +1,4 @@
-import type { ISamlUsedAssertions } from '@rocket.chat/core-typings';
+import type { ISamlUsedAssertions } from '@zeki.chat/core-typings';
 
 import type { IBaseModel } from './IBaseModel';
 

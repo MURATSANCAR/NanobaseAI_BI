@@ -1,7 +1,7 @@
-import type { IOmnichannelRoom, IOmnichannelSystemMessage, IMessage } from '@rocket.chat/core-typings';
-import { isEditedMessage, isOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatRooms, Messages } from '@rocket.chat/models';
-import type { Response } from '@rocket.chat/server-fetch';
+import type { IOmnichannelRoom, IOmnichannelSystemMessage, IMessage } from '@zeki.chat/core-typings';
+import { isEditedMessage, isOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatRooms, Messages } from '@zeki.chat/models';
+import type { Response } from '@zeki.chat/server-fetch';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import { settings } from '../../../settings/server';

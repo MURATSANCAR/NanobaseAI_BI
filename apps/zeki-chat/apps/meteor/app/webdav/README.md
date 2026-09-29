@@ -1,3 +1,3 @@
-# RocketChat WebDAV
+# ZekiChat WebDAV
 
-Package for RocketChat users to interact with WebDAV servers (Tested with ownCloud and Nextcloud).
+Package for ZekiChat users to interact with WebDAV servers (Tested with ownCloud and Nextcloud).

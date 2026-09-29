@@ -1,6 +1,6 @@
-import type { ILivechatContact } from '@rocket.chat/core-typings';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
 import { Divider, Margins } from '@rocket.chat/fuselage';
-import { ContextualbarScrollableContent } from '@rocket.chat/ui-client';
+import { ContextualbarScrollableContent } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import ContactInfoDetailsEntry from './ContactInfoDetailsEntry';

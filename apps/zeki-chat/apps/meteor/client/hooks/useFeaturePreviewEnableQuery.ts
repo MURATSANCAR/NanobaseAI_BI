@@ -1,4 +1,4 @@
-import type { FeaturePreviewProps } from '@rocket.chat/ui-client';
+import type { FeaturePreviewProps } from '@zeki.chat/ui-client';
 import { useMemo } from 'react';
 
 const handleFeaturePreviewEnableQuery = (item: FeaturePreviewProps, _: any, features: FeaturePreviewProps[]) => {

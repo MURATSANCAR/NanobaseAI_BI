@@ -1,4 +1,4 @@
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
 import { Icon, Box } from '@rocket.chat/fuselage';
 import {
 	Field,
@@ -12,8 +12,8 @@ import {
 	FieldError,
 } from '@rocket.chat/fuselage-forms';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';

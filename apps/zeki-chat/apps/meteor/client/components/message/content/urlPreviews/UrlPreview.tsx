@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { useAttachmentAutoLoadEmbedMedia } from '@rocket.chat/ui-contexts';
+import { useAttachmentAutoLoadEmbedMedia } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

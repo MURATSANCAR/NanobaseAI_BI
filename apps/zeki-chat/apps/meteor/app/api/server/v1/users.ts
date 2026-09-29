@@ -1,6 +1,6 @@
-import { MeteorError, Team, api, Calendar } from '@rocket.chat/core-services';
-import type { IExportOperation, ILoginToken, IPersonalAccessToken, IUser, UserStatus } from '@rocket.chat/core-typings';
-import { Users, Subscriptions, Sessions, OAuthAccessTokens, OAuthRefreshTokens, OAuthAuthCodes } from '@rocket.chat/models';
+import { MeteorError, Team, api, Calendar } from '@zeki.chat/core-services';
+import type { IExportOperation, ILoginToken, IPersonalAccessToken, IUser, UserStatus } from '@zeki.chat/core-typings';
+import { Users, Subscriptions, Sessions, OAuthAccessTokens, OAuthRefreshTokens, OAuthAuthCodes } from '@zeki.chat/models';
 import {
 	isUserCreateParamsPOST,
 	isUserSetActiveStatusParamsPOST,
@@ -27,9 +27,9 @@ import {
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import { getLoginExpirationInMs, wrapExceptions } from '@rocket.chat/tools';
+import { getLoginExpirationInMs, wrapExceptions } from '@zeki.chat/tools';
 import { Accounts } from 'meteor/accounts-base';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
@@ -2090,7 +2090,7 @@ settings.watch<number>('Rate_Limiter_Limit_RegisterUser', (value) => {
 
 type UsersEndpoints = ExtractRoutesFromAPI<typeof usersEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends UsersEndpoints {}
 }

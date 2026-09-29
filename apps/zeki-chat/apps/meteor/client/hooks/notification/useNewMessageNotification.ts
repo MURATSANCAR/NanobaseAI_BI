@@ -1,6 +1,6 @@
-import type { AtLeast, ISubscription } from '@rocket.chat/core-typings';
+import type { AtLeast, ISubscription } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useCustomSound } from '@rocket.chat/ui-contexts';
+import { useCustomSound } from '@zeki.chat/ui-contexts';
 
 export const useNewMessageNotification = () => {
 	const { notificationSounds } = useCustomSound();

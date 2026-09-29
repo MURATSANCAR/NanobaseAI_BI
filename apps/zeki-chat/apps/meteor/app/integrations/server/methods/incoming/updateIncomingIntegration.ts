@@ -1,7 +1,7 @@
-import type { IIntegration, INewIncomingIntegration, IUpdateIncomingIntegration } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Integrations, Subscriptions, Users, Rooms } from '@rocket.chat/models';
-import { wrapExceptions } from '@rocket.chat/tools';
+import type { IIntegration, INewIncomingIntegration, IUpdateIncomingIntegration } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Integrations, Subscriptions, Users, Rooms } from '@zeki.chat/models';
+import { wrapExceptions } from '@zeki.chat/tools';
 import { Meteor } from 'meteor/meteor';
 
 import { addUserRolesAsync } from '../../../../../server/lib/roles/addUserRoles';
@@ -12,7 +12,7 @@ import { isScriptEngineFrozen, validateScriptEngine } from '../../lib/validateSc
 
 const validChannelChars = ['@', '#'];
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		updateIncomingIntegration(

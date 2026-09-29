@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 
 import RoomSidePanelItemBadges from './RoomSidePanelItemBadges';
@@ -58,7 +58,7 @@ describe('RoomSidePanelItemBadges', () => {
 			<RoomSidePanelItemBadges
 				room={createFakeSubscription({
 					status: 'INVITED',
-					inviter: { name: 'Rocket Cat', username: 'rocket.cat', _id: 'rocket.cat' },
+					inviter: { name: 'Rocket Cat', username: 'zeki.bot', _id: 'zeki.bot' },
 					ts: new Date('2025-01-01T00:00:00.000Z'),
 				})}
 			/>,

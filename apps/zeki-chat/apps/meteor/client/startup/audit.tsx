@@ -13,7 +13,7 @@ const AuditPage = lazy(() => import('../views/audit/AuditPage'));
 const AuditLogPage = lazy(() => import('../views/audit/AuditLogPage'));
 const SecurityLogsPage = lazy(() => import('../views/audit/SecurityLogsPage'));
 
-declare module '@rocket.chat/ui-contexts' {
+declare module '@zeki.chat/ui-contexts' {
 	interface IRouterPaths {
 		'audit-home': {
 			pathname: '/audit';

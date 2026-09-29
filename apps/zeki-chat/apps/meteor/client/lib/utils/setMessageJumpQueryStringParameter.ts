@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import type { LocationPathname } from '@rocket.chat/ui-contexts';
+import type { IMessage } from '@zeki.chat/core-typings';
+import type { LocationPathname } from '@zeki.chat/ui-contexts';
 
 import { router } from '../../providers/RouterProvider';
 

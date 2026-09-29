@@ -1,4 +1,4 @@
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +13,7 @@ export const useOutlookAuthentication = () => {
 		queryKey: ['outlook', 'auth'],
 
 		queryFn: async () => {
-			const desktopApp = window.RocketChatDesktop;
+			const desktopApp = window.ZekiChatDesktop;
 			if (!desktopApp?.hasOutlookCredentials) {
 				throw new NotOnDesktopError();
 			}
@@ -42,7 +42,7 @@ export const useOutlookAuthenticationMutationLogout = () => {
 	const mutation = useOutlookAuthenticationMutation();
 	return useMutation({
 		mutationFn: async () => {
-			const desktopApp = window.RocketChatDesktop;
+			const desktopApp = window.ZekiChatDesktop;
 			if (!desktopApp?.clearOutlookCredentials) {
 				throw new NotOnDesktopError();
 			}

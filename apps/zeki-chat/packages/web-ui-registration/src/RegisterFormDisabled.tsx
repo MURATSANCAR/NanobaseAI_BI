@@ -1,6 +1,6 @@
 import { Callout } from '@rocket.chat/fuselage';
 import { Form, ActionLink } from '@rocket.chat/layout';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 

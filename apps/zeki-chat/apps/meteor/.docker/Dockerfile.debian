@@ -7,17 +7,17 @@ FROM node:22.22.3-bullseye-slim
 LABEL maintainer="buildmaster@rocket.chat"
 
 # dependencies
-RUN groupadd -g 65533 -r rocketchat \
-    && useradd -u 65533 -r -g rocketchat rocketchat \
+RUN groupadd -g 65533 -r zekichat \
+    && useradd -u 65533 -r -g zekichat zekichat \
     && mkdir -p /app/uploads \
-    && chown rocketchat:rocketchat /app/uploads \
+    && chown zekichat:zekichat /app/uploads \
     && apt-get update \
     && apt-get install -y --no-install-recommends fontconfig
 
 COPY --from=deno /deno /bin/deno
 
 # --chown requires Docker 17.12 and works only on Linux
-ADD --chown=rocketchat:rocketchat . /app
+ADD --chown=zekichat:zekichat . /app
 
 # needs a mongoinstance - defaults to container linking with alias 'mongo'
 ENV DEPLOY_METHOD=docker \
@@ -33,7 +33,7 @@ RUN aptMark="$(apt-mark showmanual)" \
     && apt-mark auto '.*' > /dev/null \
     && apt-mark manual $aptMark > /dev/null
 
-USER rocketchat
+USER zekichat
 
 RUN cd /app/bundle/programs/server \
     && npm install --omit=dev \
@@ -60,7 +60,7 @@ RUN find /usr/local -type f -executable -exec ldd '{}' ';' \
     | xargs -r apt-mark manual \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false
 
-USER rocketchat
+USER zekichat
 
 VOLUME /app/uploads
 

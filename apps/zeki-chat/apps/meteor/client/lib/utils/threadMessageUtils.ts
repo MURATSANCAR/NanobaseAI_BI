@@ -1,5 +1,5 @@
-import type { IMessage, IThreadMessage, MessageAttachment } from '@rocket.chat/core-typings';
-import { createPredicateFromFilter } from '@rocket.chat/mongo-adapter';
+import type { IMessage, IThreadMessage, MessageAttachment } from '@zeki.chat/core-typings';
+import { createPredicateFromFilter } from '@zeki.chat/mongo-adapter';
 import type { QueryClient } from '@tanstack/react-query';
 import type { Condition, Filter } from 'mongodb';
 

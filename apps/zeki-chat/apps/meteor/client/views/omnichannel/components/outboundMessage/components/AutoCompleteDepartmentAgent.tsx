@@ -1,7 +1,7 @@
-import type { ILivechatDepartmentAgents, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatDepartmentAgents, Serialized } from '@zeki.chat/core-typings';
 import { AutoComplete, Box, Chip, Option, OptionAvatar, OptionContent } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import type { AllHTMLAttributes, ReactElement } from 'react';
 import { useMemo, useState } from 'react';
 

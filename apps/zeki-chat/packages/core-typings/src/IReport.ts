@@ -1,7 +1,7 @@
 import type { IMessage } from './IMessage/IMessage';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IReport extends IRocketChatRecord {
+export interface IReport extends IZekiChatRecord {
 	message: IMessage;
 	description: string;
 	ts: Date;

@@ -1,11 +1,11 @@
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { OEmbedCache } from '@rocket.chat/models';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { OEmbedCache } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { hasPermissionAsync } from '../../app/authorization/server/functions/hasPermission';
 import { settings } from '../../app/settings/server';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		OEmbedCacheCleanup(): { message: string };

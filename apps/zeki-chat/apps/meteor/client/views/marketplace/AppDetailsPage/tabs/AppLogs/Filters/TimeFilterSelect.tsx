@@ -1,6 +1,6 @@
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { Select } from '@rocket.chat/fuselage';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import { endOfDay, endOfWeek, startOfDay, startOfWeek, subMinutes, format } from 'date-fns';
 import { useState, type ComponentProps } from 'react';
 import { Controller } from 'react-hook-form';

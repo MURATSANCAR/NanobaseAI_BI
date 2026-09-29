@@ -1,4 +1,4 @@
-import { useRouteParameter, useAtLeastOnePermission } from '@rocket.chat/ui-contexts';
+import { useRouteParameter, useAtLeastOnePermission } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import EditIntegrationsPage from './EditIntegrationsPage';

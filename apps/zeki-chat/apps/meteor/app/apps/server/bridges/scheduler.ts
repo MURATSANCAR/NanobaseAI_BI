@@ -1,9 +1,9 @@
-import type { Job } from '@rocket.chat/agenda';
-import { Agenda } from '@rocket.chat/agenda';
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import { SchedulerBridge } from '@rocket.chat/apps/dist/server/bridges/SchedulerBridge';
-import type { IProcessor, IOnetimeSchedule, IRecurringSchedule, IJobContext } from '@rocket.chat/apps-engine/definition/scheduler';
-import { StartupType } from '@rocket.chat/apps-engine/definition/scheduler';
+import type { Job } from '@zeki.chat/agenda';
+import { Agenda } from '@zeki.chat/agenda';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import { SchedulerBridge } from '@zeki.chat/apps/dist/server/bridges/SchedulerBridge';
+import type { IProcessor, IOnetimeSchedule, IRecurringSchedule, IJobContext } from '@zeki.chat/apps-engine/definition/scheduler';
+import { StartupType } from '@zeki.chat/apps-engine/definition/scheduler';
 import { ObjectId } from 'bson';
 import { MongoInternals } from 'meteor/mongo';
 
@@ -39,7 +39,7 @@ export class AppSchedulerBridge extends SchedulerBridge {
 		super();
 		this.scheduler = new Agenda({
 			mongo: (MongoInternals.defaultRemoteCollectionDriver().mongo as any).client.db(),
-			db: { collection: 'rocketchat_apps_scheduler' },
+			db: { collection: 'zeki_apps_scheduler' },
 			// this ensures the same job doesn't get executed multiple times in a cluster
 			defaultConcurrency: 1,
 		});
@@ -84,7 +84,7 @@ export class AppSchedulerBridge extends SchedulerBridge {
 					);
 					break;
 				default:
-					this.orch.getRocketChatLogger().error({ msg: 'Unknown startup setting type', type: (startupSetting as any).type });
+					this.orch.getZekiChatLogger().error({ msg: 'Unknown startup setting type', type: (startupSetting as any).type });
 					break;
 			}
 		});
@@ -104,7 +104,7 @@ export class AppSchedulerBridge extends SchedulerBridge {
 			const job = await this.scheduler.schedule(when, id, this.decorateJobData(data, appId));
 			return job.attrs._id.toString();
 		} catch (err) {
-			this.orch.getRocketChatLogger().error({ err });
+			this.orch.getZekiChatLogger().error({ err });
 		}
 	}
 
@@ -139,7 +139,7 @@ export class AppSchedulerBridge extends SchedulerBridge {
 			});
 			return job.attrs._id.toString();
 		} catch (err) {
-			this.orch.getRocketChatLogger().error({ err });
+			this.orch.getZekiChatLogger().error({ err });
 		}
 	}
 
@@ -166,7 +166,7 @@ export class AppSchedulerBridge extends SchedulerBridge {
 		try {
 			await this.scheduler.cancel(cancelQuery);
 		} catch (err) {
-			this.orch.getRocketChatLogger().error({ err });
+			this.orch.getZekiChatLogger().error({ err });
 		}
 	}
 
@@ -184,7 +184,7 @@ export class AppSchedulerBridge extends SchedulerBridge {
 		try {
 			await this.scheduler.cancel({ name: { $regex: matcher } });
 		} catch (err) {
-			this.orch.getRocketChatLogger().error({ err });
+			this.orch.getZekiChatLogger().error({ err });
 		}
 	}
 

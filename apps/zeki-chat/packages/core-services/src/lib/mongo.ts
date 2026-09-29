@@ -1,4 +1,4 @@
-import { isTracingEnabled } from '@rocket.chat/tracing';
+import { isTracingEnabled } from '@zeki.chat/tracing';
 import { MongoClient } from 'mongodb';
 import type { Db, Collection, MongoClientOptions, Document } from 'mongodb';
 
@@ -43,5 +43,5 @@ export async function getTrashCollection<T extends Document>(): Promise<Collecti
 		const { db: clientDb } = await getConnection();
 		db = clientDb;
 	}
-	return db.collection<T>('rocketchat__trash');
+	return db.collection<T>('zeki__trash');
 }

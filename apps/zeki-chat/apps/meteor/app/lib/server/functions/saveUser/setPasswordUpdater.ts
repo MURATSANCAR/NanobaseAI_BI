@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-import type { IUser } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/model-typings';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/model-typings';
 import bcrypt from 'bcrypt';
 import { Accounts } from 'meteor/accounts-base';
 

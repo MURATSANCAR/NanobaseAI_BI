@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useLayout, useSession } from '@rocket.chat/ui-contexts';
+import { useLayout, useSession } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 
 import SidebarTogglerButton from './SidebarTogglerButton';

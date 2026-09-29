@@ -1,4 +1,4 @@
-import type { IPermission, IRole, IUser } from '@rocket.chat/core-typings';
+import type { IPermission, IRole, IUser } from '@zeki.chat/core-typings';
 
 import { AuthorizationUtils } from './AuthorizationUtils';
 

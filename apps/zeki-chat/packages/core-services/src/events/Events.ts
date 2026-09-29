@@ -1,5 +1,5 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { ISetting as AppsSetting } from '@rocket.chat/apps-engine/definition/settings';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { ISetting as AppsSetting } from '@zeki.chat/apps-engine/definition/settings';
 import type {
 	IEmailInbox,
 	IEmoji,
@@ -27,13 +27,12 @@ import type {
 	ILivechatAgent,
 	IBanner,
 	ILivechatVisitor,
-	LicenseLimitKind,
 	ICustomUserStatus,
 	IWebdavAccount,
 	MessageAttachment,
-} from '@rocket.chat/core-typings';
-import type { ClientMediaSignalBody, ServerMediaSignal } from '@rocket.chat/media-signaling';
-import type * as UiKit from '@rocket.chat/ui-kit';
+} from '@zeki.chat/core-typings';
+import type { ClientMediaSignalBody, ServerMediaSignal } from '@zeki.chat/media-signaling';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 import type { AutoUpdateRecord } from '../types/IMeteor';
 
@@ -58,6 +57,7 @@ export type EventSignatures = {
 	'$services.changed': (info: { localService: boolean }) => void;
 	'accounts.login': (info: { userId: string; connection: ISocketConnection }) => void;
 	'accounts.logout': (info: { userId: string; connection: ISocketConnection }) => void;
+	'capabilities.changed'(): void;
 	'authorization.guestPermissions': (permissions: string[]) => void;
 	'socket.connected': (connection: ISocketConnection) => void;
 	'socket.disconnected': (connection: ISocketConnection) => void;
@@ -67,9 +67,6 @@ export type EventSignatures = {
 	'banner.user'(userId: string, banner: IBanner): void;
 	'emoji.deleteCustom'(emoji: IEmoji): void;
 	'emoji.updateCustom'(emoji: IEmoji): void;
-	'license.module'(data: { module: string; valid: boolean }): void;
-	'license.sync'(): void;
-	'license.actions'(actions: Record<Partial<LicenseLimitKind>, boolean>): void;
 
 	'livechat-inquiry-queue-observer'(data: { action: string; inquiry: ILivechatInquiryRecord }): void;
 	'message'(data: { action: string; message: IMessage }): void;

@@ -1,5 +1,5 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { Path } from '@rocket.chat/rest-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { Path } from '@zeki.chat/rest-typings';
 import { expect } from 'chai';
 
 import { api, request, type PathWithoutPrefix } from './api-data';

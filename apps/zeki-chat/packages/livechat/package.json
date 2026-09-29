@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/livechat",
+	"name": "@zeki.chat/livechat",
 	"version": "2.1.4",
 	"files": [
 		"/build"
@@ -22,10 +22,10 @@
 	],
 	"dependencies": {
 		"@rocket.chat/emitter": "^0.32.0",
-		"@rocket.chat/gazzodown": "workspace:^",
-		"@rocket.chat/message-parser": "workspace:^",
-		"@rocket.chat/random": "workspace:~",
-		"@rocket.chat/ui-kit": "workspace:~",
+		"@zeki.chat/gazzodown": "workspace:^",
+		"@zeki.chat/message-parser": "workspace:^",
+		"@zeki.chat/random": "workspace:~",
+		"@zeki.chat/ui-kit": "workspace:~",
 		"ajv": "^8.17.1",
 		"ajv-formats": "^3.0.1",
 		"css-vars-ponyfill": "^2.4.9",
@@ -49,12 +49,12 @@
 		"@babel/preset-env": "~7.29.5",
 		"@babel/preset-react": "~7.28.5",
 		"@babel/preset-typescript": "~7.28.5",
-		"@rocket.chat/core-typings": "workspace:^",
-		"@rocket.chat/ddp-client": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/ddp-client": "workspace:^",
 		"@rocket.chat/fuselage-hooks": "^0.41.0",
 		"@rocket.chat/fuselage-tokens": "~0.33.2",
-		"@rocket.chat/logo": "^0.32.5",
-		"@rocket.chat/ui-contexts": "workspace:^",
+		"@zeki.chat/logo": "^0.32.5",
+		"@zeki.chat/ui-contexts": "workspace:^",
 		"@storybook/addon-essentials": "^8.6.18",
 		"@storybook/addon-styling-webpack": "^1.0.1",
 		"@storybook/addon-webpack5-compiler-swc": "~3.0.0",
@@ -107,7 +107,7 @@
 	},
 	"peerDependencies": {
 		"@rocket.chat/fuselage-tokens": "*",
-		"@rocket.chat/logo": "*"
+		"@zeki.chat/logo": "*"
 	},
 	"volta": {
 		"extends": "../../package.json"

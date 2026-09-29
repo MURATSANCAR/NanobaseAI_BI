@@ -179,7 +179,7 @@ export abstract class App implements IApp {
 	 * Method which is called when the App is uninstalled and it is called one single time.
 	 *
 	 * This method will NOT be called when an App is getting disabled manually, ONLY when
-	 * it's being uninstalled from Rocket.Chat.
+	 * it's being uninstalled from ZEKI AI CHAT.
 	 */
 	public async onUninstall(
 		context: IAppUninstallationContext,

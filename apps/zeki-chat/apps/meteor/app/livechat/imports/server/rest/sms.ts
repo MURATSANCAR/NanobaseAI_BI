@@ -1,4 +1,4 @@
-import { OmnichannelIntegration } from '@rocket.chat/core-services';
+import { OmnichannelIntegration } from '@zeki.chat/core-services';
 import type {
 	ILivechatVisitor,
 	IUpload,
@@ -6,13 +6,13 @@ import type {
 	ServiceData,
 	FileAttachmentProps,
 	IOmnichannelRoomInfo,
-} from '@rocket.chat/core-typings';
-import { OmnichannelSourceType } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { LivechatVisitors, LivechatRooms, LivechatDepartment } from '@rocket.chat/models';
-import { registerGuest } from '@rocket.chat/omni-core';
-import { Random } from '@rocket.chat/random';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+} from '@zeki.chat/core-typings';
+import { OmnichannelSourceType } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { LivechatVisitors, LivechatRooms, LivechatDepartment } from '@zeki.chat/models';
+import { registerGuest } from '@zeki.chat/omni-core';
+import { Random } from '@zeki.chat/random';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 import { Meteor } from 'meteor/meteor';
 
 import { getFileExtension } from '../../../../../lib/utils/getFileExtension';

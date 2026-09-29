@@ -3,10 +3,10 @@ import {
 	type OmichannelRoutingConfig,
 	OmnichannelSortingMechanismSettingType,
 	LivechatInquiryStatus,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import { useSafely } from '@rocket.chat/fuselage-hooks';
-import { createComparatorFromSort } from '@rocket.chat/mongo-adapter';
-import { useUser, useSetting, usePermission, useEndpoint, useStream, useCustomSound } from '@rocket.chat/ui-contexts';
+import { createComparatorFromSort } from '@zeki.chat/mongo-adapter';
+import { useUser, useSetting, usePermission, useEndpoint, useStream, useCustomSound } from '@zeki.chat/ui-contexts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useState, useEffect, useMemo, memo, useRef } from 'react';
@@ -20,7 +20,6 @@ import { OmnichannelContext } from '../contexts/OmnichannelContext';
 import { useHasCapability } from '../hooks/useHasCapability';
 import { useLivechatInquiryStore } from '../hooks/useLivechatInquiryStore';
 import { useOmnichannelContinuousSoundNotification } from '../hooks/useOmnichannelContinuousSoundNotification';
-import { useShouldPreventAction } from '../hooks/useShouldPreventAction';
 
 const emptyContextValue: OmnichannelContextValue = {
 	inquiries: { enabled: false },
@@ -28,7 +27,6 @@ const emptyContextValue: OmnichannelContextValue = {
 	isEnterprise: false,
 	agentAvailable: false,
 	showOmnichannelQueueLink: false,
-	isOverMacLimit: false,
 	livechatPriorities: {
 		enabled: false,
 		data: [],
@@ -85,8 +83,6 @@ const OmnichannelProvider = ({ children }: OmnichannelProviderProps) => {
 		staleTime: Infinity,
 		enabled: isPrioritiesEnabled,
 	});
-
-	const isOverMacLimit = useShouldPreventAction('monthlyActiveContacts');
 
 	useEffect(() => {
 		if (!isPrioritiesEnabled) {
@@ -185,7 +181,6 @@ const OmnichannelProvider = ({ children }: OmnichannelProviderProps) => {
 				agentAvailable,
 				routeConfig,
 				livechatPriorities,
-				isOverMacLimit,
 			};
 		}
 
@@ -203,7 +198,6 @@ const OmnichannelProvider = ({ children }: OmnichannelProviderProps) => {
 				: { enabled: false },
 			showOmnichannelQueueLink: showOmnichannelQueueLink && !!agentAvailable,
 			livechatPriorities,
-			isOverMacLimit,
 		};
 	}, [
 		enabled,
@@ -217,7 +211,6 @@ const OmnichannelProvider = ({ children }: OmnichannelProviderProps) => {
 		routeConfig,
 		queue,
 		showOmnichannelQueueLink,
-		isOverMacLimit,
 	]);
 
 	return <OmnichannelContext.Provider value={contextValue}>{children}</OmnichannelContext.Provider>;

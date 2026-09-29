@@ -1,4 +1,4 @@
-import { Logger } from '@rocket.chat/logger';
+import { Logger } from '@zeki.chat/logger';
 import debounce from 'lodash.debounce';
 import { Meteor } from 'meteor/meteor';
 

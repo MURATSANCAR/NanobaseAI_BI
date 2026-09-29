@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it, beforeEach } from 'node:test';
 
-import type { ISchedulerModify, IServerSettingsModify, ISlashCommandsModify } from '@rocket.chat/apps-engine/definition/accessors';
+import type { ISchedulerModify, IServerSettingsModify, ISlashCommandsModify } from '@zeki.chat/apps-engine/definition/accessors';
 
 import { ConfigurationModify } from '../../../src/server/accessors';
 

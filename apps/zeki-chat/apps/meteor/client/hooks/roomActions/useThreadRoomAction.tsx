@@ -1,7 +1,7 @@
 import type { BadgeProps } from '@rocket.chat/fuselage';
-import { HeaderToolbarAction, HeaderToolbarActionBadge } from '@rocket.chat/ui-client';
-import { useSetting } from '@rocket.chat/ui-contexts';
-import type { RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
+import { HeaderToolbarAction, HeaderToolbarActionBadge } from '@zeki.chat/ui-client';
+import { useSetting } from '@zeki.chat/ui-contexts';
+import type { RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
 import { lazy, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

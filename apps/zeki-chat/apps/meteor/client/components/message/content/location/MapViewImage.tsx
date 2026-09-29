@@ -1,4 +1,4 @@
-import { ExternalLink } from '@rocket.chat/ui-client';
+import { ExternalLink } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 type MapViewImageProps = {

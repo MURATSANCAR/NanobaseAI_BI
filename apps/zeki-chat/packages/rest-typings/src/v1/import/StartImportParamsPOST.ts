@@ -1,4 +1,4 @@
-import type { IImporterShortSelection } from '@rocket.chat/core-typings';
+import type { IImporterShortSelection } from '@zeki.chat/core-typings';
 
 import { ajv } from '../Ajv';
 

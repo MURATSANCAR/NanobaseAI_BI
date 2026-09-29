@@ -1,4 +1,4 @@
-import type { IOutboundProviderTemplate, Serialized, ILivechatContact } from '@rocket.chat/core-typings';
+import type { IOutboundProviderTemplate, Serialized, ILivechatContact } from '@zeki.chat/core-typings';
 import { Box, Button, FieldGroup, Scrollable } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import { useToastBarDispatch } from '@rocket.chat/fuselage-toastbar';

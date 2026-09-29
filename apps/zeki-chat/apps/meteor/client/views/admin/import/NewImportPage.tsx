@@ -15,9 +15,9 @@ import {
 	FieldHint,
 } from '@rocket.chat/fuselage';
 import { useSafely } from '@rocket.chat/fuselage-hooks';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useToastMessageDispatch, useRouter, useRouteParameter, useSetting, useEndpoint } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useToastMessageDispatch, useRouter, useRouteParameter, useSetting, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ChangeEvent, DragEvent, FormEvent, Key, SyntheticEvent } from 'react';
 import { useState, useMemo, useEffect, useId } from 'react';

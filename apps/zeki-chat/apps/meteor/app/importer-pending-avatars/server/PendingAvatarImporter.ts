@@ -1,5 +1,5 @@
-import type { IImporterShortSelection } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IImporterShortSelection } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { Importer, ProgressStep } from '../../importer/server';
 import type { ImporterProgress } from '../../importer/server/classes/ImporterProgress';

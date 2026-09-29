@@ -2,7 +2,7 @@ import type {
 	IOutboundEmailMessageProvider,
 	IOutboundMessageProviders,
 	IOutboundPhoneMessageProvider,
-} from '@rocket.chat/apps-engine/definition/outboundCommunication';
+} from '@zeki.chat/apps-engine/definition/outboundCommunication';
 
 import { OutboundMessageBridge } from '../../../src/server/bridges';
 

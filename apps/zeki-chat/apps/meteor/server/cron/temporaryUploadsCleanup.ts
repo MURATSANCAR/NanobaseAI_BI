@@ -1,5 +1,5 @@
-import { cronJobs } from '@rocket.chat/cron';
-import { Uploads } from '@rocket.chat/models';
+import { cronJobs } from '@zeki.chat/cron';
+import { Uploads } from '@zeki.chat/models';
 
 import { FileUpload } from '../../app/file-upload/server';
 

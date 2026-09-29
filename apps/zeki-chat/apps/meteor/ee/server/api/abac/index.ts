@@ -1,10 +1,10 @@
-import { getPdpHealthErrorCode } from '@rocket.chat/abac';
-import { Abac } from '@rocket.chat/core-services';
-import type { AbacActor } from '@rocket.chat/core-services';
-import type { IServerEvents, IUser } from '@rocket.chat/core-typings';
-import { ServerEvents, Users } from '@rocket.chat/models';
-import { validateUnauthorizedErrorResponse } from '@rocket.chat/rest-typings/src/v1/Ajv';
-import { convertSubObjectsIntoPaths } from '@rocket.chat/tools';
+import { getPdpHealthErrorCode } from '@zeki.chat/abac';
+import { Abac } from '@zeki.chat/core-services';
+import type { AbacActor } from '@zeki.chat/core-services';
+import type { IServerEvents, IUser } from '@zeki.chat/core-typings';
+import { ServerEvents, Users } from '@zeki.chat/models';
+import { validateUnauthorizedErrorResponse } from '@zeki.chat/rest-typings/src/v1/Ajv';
+import { convertSubObjectsIntoPaths } from '@zeki.chat/tools';
 
 import {
 	GenericSuccessSchema,
@@ -54,7 +54,7 @@ const abacEndpoints = API.v1
 				400: GenericErrorSchema,
 				403: validateUnauthorizedErrorResponse,
 			},
-			license: ['abac'],
+			capabilities: ['abac'],
 		},
 		async function action() {
 			const { rid } = this.urlParams;
@@ -98,7 +98,7 @@ const abacEndpoints = API.v1
 		{
 			authRequired: true,
 			permissionsRequired: ['abac-management', 'manage-abac-admin-rooms'],
-			license: ['abac'],
+			capabilities: ['abac'],
 			body: POSTSingleRoomAbacAttributeBodySchema,
 			response: {
 				200: GenericSuccessSchema,
@@ -132,7 +132,7 @@ const abacEndpoints = API.v1
 				400: GenericErrorSchema,
 				403: validateUnauthorizedErrorResponse,
 			},
-			license: ['abac'],
+			capabilities: ['abac'],
 		},
 		async function action() {
 			const { rid, key } = this.urlParams;
@@ -204,7 +204,7 @@ const abacEndpoints = API.v1
 		{
 			authRequired: true,
 			permissionsRequired: ['abac-management', 'manage-abac-admin-room-attributes'],
-			license: ['abac', 'ldap-enterprise'],
+			capabilities: ['abac', 'ldap-enterprise'],
 			body: POSTAbacUsersSyncBodySchema,
 			response: {
 				200: GenericSuccessSchema,
@@ -230,7 +230,7 @@ const abacEndpoints = API.v1
 		{
 			authRequired: true,
 			permissionsRequired: ['abac-management', 'manage-abac-admin-room-attributes'],
-			license: ['abac'],
+			capabilities: ['abac'],
 			body: POSTAbacAttributeDefinitionSchema,
 			response: {
 				200: GenericSuccessSchema,
@@ -254,7 +254,7 @@ const abacEndpoints = API.v1
 		{
 			authRequired: true,
 			permissionsRequired: ['abac-management', 'manage-abac-admin-room-attributes'],
-			license: ['abac'],
+			capabilities: ['abac'],
 			body: PUTAbacAttributeUpdateBodySchema,
 			response: {
 				200: GenericSuccessSchema,
@@ -397,7 +397,7 @@ const abacEndpoints = API.v1
 			query: GETAbacAuditEventsQuerySchema,
 			authRequired: true,
 			permissionsRequired: ['abac-management', 'view-abac-admin-audit'],
-			license: ['abac', 'auditing'],
+			capabilities: ['abac', 'auditing'],
 		},
 		async function action() {
 			const { start, end, actor } = this.queryParams;
@@ -443,7 +443,7 @@ const abacEndpoints = API.v1
 
 export type AbacEndpoints = ExtractRoutesFromAPI<typeof abacEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends AbacEndpoints {}
 }

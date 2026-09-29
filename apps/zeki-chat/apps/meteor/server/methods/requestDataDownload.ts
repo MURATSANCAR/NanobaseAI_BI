@@ -2,15 +2,15 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path, { join } from 'node:path';
 
-import type { IExportOperation, IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { ExportOperations, UserDataFiles } from '@rocket.chat/models';
+import type { IExportOperation, IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { ExportOperations, UserDataFiles } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { settings } from '../../app/settings/server';
 import * as dataExport from '../lib/dataExport';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		requestDataDownload(params: { fullExport?: boolean }): Promise<{

@@ -1,4 +1,4 @@
-import { useCurrentRoutePath, useTranslation, useLayout } from '@rocket.chat/ui-contexts';
+import { useCurrentRoutePath, useTranslation, useLayout } from '@zeki.chat/ui-contexts';
 import { memo, useSyncExternalStore } from 'react';
 
 import { getAccountSidebarItems, subscribeToAccountSidebarItems } from './sidebarItems';

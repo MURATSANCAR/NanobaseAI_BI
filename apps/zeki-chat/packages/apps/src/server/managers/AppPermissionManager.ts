@@ -1,4 +1,4 @@
-import type { IPermission } from '@rocket.chat/apps-engine/definition/permissions/IPermission';
+import type { IPermission } from '@zeki.chat/apps-engine/definition/permissions/IPermission';
 
 import { getPermissionsByAppId } from '../AppManager';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

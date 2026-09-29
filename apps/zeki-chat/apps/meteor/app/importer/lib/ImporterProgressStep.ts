@@ -1,4 +1,4 @@
-import type { IImportProgress } from '@rocket.chat/core-typings';
+import type { IImportProgress } from '@zeki.chat/core-typings';
 
 /** The progress step that an importer is at. */
 export const ProgressStep = Object.freeze({

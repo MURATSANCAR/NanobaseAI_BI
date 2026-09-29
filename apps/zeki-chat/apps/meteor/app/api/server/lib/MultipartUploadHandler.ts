@@ -4,8 +4,8 @@ import type { Stream, Transform } from 'node:stream';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-import { MeteorError } from '@rocket.chat/core-services';
-import { Random } from '@rocket.chat/random';
+import { MeteorError } from '@zeki.chat/core-services';
+import { Random } from '@zeki.chat/random';
 import busboy, { type BusboyConfig } from 'busboy';
 import ExifTransformer from 'exif-be-gone';
 

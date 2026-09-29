@@ -1,8 +1,8 @@
 import * as assert from 'node:assert';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
 
 import type { AppManager } from '../../../src/server/AppManager';
 import type { ProxiedApp } from '../../../src/server/ProxiedApp';

@@ -1,7 +1,7 @@
-import type { Path } from '@rocket.chat/rest-typings';
+import type { Path } from '@zeki.chat/rest-typings';
 
 export const APP_URL = 'https://github.com/RocketChat/Apps.RocketChat.Tester/raw/master/dist/appsrocketchattester_0.3.0.zip?raw=true';
-export const APP_NAME = 'Apps.RocketChat.Tester';
+export const APP_NAME = 'Apps.ZekiChat.Tester';
 
 type PathWithoutPrefix<TPath> = TPath extends `/apps${infer U}` ? U : never;
 

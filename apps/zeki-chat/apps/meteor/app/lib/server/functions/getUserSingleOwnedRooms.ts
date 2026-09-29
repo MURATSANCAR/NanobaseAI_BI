@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
 
 import type { SubscribedRoomsForUserWithDetails } from './getRoomsWithSingleOwner';
 

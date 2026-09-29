@@ -1,4 +1,4 @@
-import type { AtLeast, ILivechatCustomField } from '@rocket.chat/core-typings';
+import type { AtLeast, ILivechatCustomField } from '@zeki.chat/core-typings';
 
 import { trim } from '../../../../../lib/utils/stringUtils';
 import { i18n } from '../../../../utils/lib/i18n';

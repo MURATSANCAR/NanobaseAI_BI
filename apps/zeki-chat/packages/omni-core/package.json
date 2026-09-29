@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/omni-core",
+	"name": "@zeki.chat/omni-core",
 	"version": "0.1.1",
 	"private": true,
 	"main": "./dist/index.js",
@@ -16,14 +16,14 @@
 		"testunit": "jest"
 	},
 	"dependencies": {
-		"@rocket.chat/models": "workspace:^",
-		"@rocket.chat/patch-injection": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/patch-injection": "workspace:^",
 		"mongodb": "6.16.0"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tools": "workspace:*",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tools": "workspace:*",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/jest": "~30.0.0",
 		"eslint": "~9.39.4",
 		"jest": "~30.2.0",

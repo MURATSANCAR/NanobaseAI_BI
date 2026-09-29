@@ -1,6 +1,6 @@
-import type { IReadReceipt } from '@rocket.chat/core-typings';
-import type { IReadReceiptsModel } from '@rocket.chat/model-typings';
-import { BaseRaw } from '@rocket.chat/models';
+import type { IReadReceipt } from '@zeki.chat/core-typings';
+import type { IReadReceiptsModel } from '@zeki.chat/model-typings';
+import { BaseRaw } from '@zeki.chat/models';
 import type { FindCursor, Db, IndexDescription, DeleteResult } from 'mongodb';
 
 export class ReadReceiptsRaw extends BaseRaw<IReadReceipt> implements IReadReceiptsModel {

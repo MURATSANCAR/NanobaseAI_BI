@@ -1,4 +1,4 @@
-import type { IRoom, ISubscription, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription, IUser } from '@zeki.chat/core-typings';
 
 import { RoomMemberActions } from '../../../../definition/IRoomTypeConfig';
 import { roomCoordinator } from '../../../lib/rooms/roomCoordinator';

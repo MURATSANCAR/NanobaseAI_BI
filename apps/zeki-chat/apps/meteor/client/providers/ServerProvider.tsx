@@ -1,4 +1,4 @@
-import type { Serialized } from '@rocket.chat/core-typings';
+import type { Serialized } from '@zeki.chat/core-typings';
 import type {
 	ServerMethodName,
 	ServerMethodParameters,
@@ -7,16 +7,16 @@ import type {
 	StreamerEvents,
 	StreamNames,
 	StreamKeys,
-} from '@rocket.chat/ddp-client';
-import type { Method, PathFor, OperationParams, OperationResult, UrlParams, PathPattern } from '@rocket.chat/rest-typings';
-import type { UploadResult, ServerContextValue } from '@rocket.chat/ui-contexts';
-import { ServerContext } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ddp-client';
+import type { Method, PathFor, OperationParams, OperationResult, UrlParams, PathPattern } from '@zeki.chat/rest-typings';
+import type { UploadResult, ServerContextValue } from '@zeki.chat/ui-contexts';
+import { ServerContext } from '@zeki.chat/ui-contexts';
 import { Meteor } from 'meteor/meteor';
 import { compile } from 'path-to-regexp';
 import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
 
 import { sdk } from '../../app/utils/client/lib/SDKClient';
-import { Info as info } from '../../app/utils/rocketchat.info';
+import { Info as info } from '../../app/utils/zekichat.info';
 import { absoluteUrl } from '../lib/absoluteUrl';
 import { ensureConnectedAndAuthenticated, getDdpSdk } from '../lib/sdk/ddpSdk';
 import { isSdkTransportEnabled } from '../lib/sdk/sdkTransportEnabled';

@@ -1,6 +1,6 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 import { Box, Tag } from '@rocket.chat/fuselage';
-import { AppAvatar } from '@rocket.chat/ui-avatar';
+import { AppAvatar } from '@zeki.chat/ui-avatar';
 import { formatDistanceToNow } from 'date-fns';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';

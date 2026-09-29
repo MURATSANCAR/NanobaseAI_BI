@@ -1,4 +1,4 @@
-import { useSetting, useUserPreference } from '@rocket.chat/ui-contexts';
+import { useSetting, useUserPreference } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import type { FeaturePreviewProps } from './useFeaturePreviewList';

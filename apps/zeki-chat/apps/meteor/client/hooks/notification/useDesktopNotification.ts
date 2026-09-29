@@ -1,6 +1,6 @@
-import type { INotificationDesktop } from '@rocket.chat/core-typings';
+import type { INotificationDesktop } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useUser } from '@rocket.chat/ui-contexts';
+import { useUser } from '@zeki.chat/ui-contexts';
 
 import { useNotification } from './useNotification';
 import { RoomManager } from '../../lib/RoomManager';

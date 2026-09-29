@@ -1,5 +1,5 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -8,7 +8,7 @@ import { getRoomRoles } from '../../../../server/lib/roles/getRoomRoles';
 import { canAccessRoomAsync } from '../../../authorization/server';
 import { settings } from '../../../settings/server';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		getRoomRoles(rid: IRoom['_id']): RoomRoles[];

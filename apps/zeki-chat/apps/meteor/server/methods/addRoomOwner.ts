@@ -1,8 +1,8 @@
-import { api, Message, Team } from '@rocket.chat/core-services';
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Subscriptions, Rooms, Users } from '@rocket.chat/models';
+import { api, Message, Team } from '@zeki.chat/core-services';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Subscriptions, Rooms, Users } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -13,7 +13,7 @@ import { beforeChangeRoomRole } from '../lib/callbacks/beforeChangeRoomRole';
 import { syncRoomRolePriorityForUserAndRoom } from '../lib/roles/syncRoomRolePriority';
 import { isFederationEnabled, FederationMatrixInvalidConfigurationError } from '../services/federation/utils';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		addRoomOwner(rid: IRoom['_id'], userId: IUser['_id']): boolean;

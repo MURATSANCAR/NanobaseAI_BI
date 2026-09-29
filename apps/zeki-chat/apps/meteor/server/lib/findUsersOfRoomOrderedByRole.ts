@@ -1,5 +1,5 @@
-import { type IUser, ROOM_ROLE_PRIORITY_MAP, type ISubscription } from '@rocket.chat/core-typings';
-import { Subscriptions, Users } from '@rocket.chat/models';
+import { type IUser, ROOM_ROLE_PRIORITY_MAP, type ISubscription } from '@zeki.chat/core-typings';
+import { Subscriptions, Users } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { Document, FilterOperators } from 'mongodb';
 

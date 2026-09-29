@@ -1,5 +1,5 @@
-import type { ILivechatDepartmentModel } from '@rocket.chat/model-typings';
-import { registerModel } from '@rocket.chat/models';
+import type { ILivechatDepartmentModel } from '@zeki.chat/model-typings';
+import { registerModel } from '@zeki.chat/models';
 
 import { isDepartmentCreationAvailable } from './isDepartmentCreationAvailable';
 

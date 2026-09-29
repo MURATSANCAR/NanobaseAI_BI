@@ -1,10 +1,10 @@
 import http from 'node:http';
 import https from 'node:https';
 
-import { api } from '@rocket.chat/core-services';
-import type { IImport, MessageAttachment, IUpload, IImporterShortSelection } from '@rocket.chat/core-typings';
-import { Messages } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { api } from '@zeki.chat/core-services';
+import type { IImport, MessageAttachment, IUpload, IImporterShortSelection } from '@zeki.chat/core-typings';
+import { Messages } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 
 import { FileUpload } from '../../file-upload/server';
 import { Importer, ProgressStep } from '../../importer/server';
@@ -142,7 +142,7 @@ export class PendingFileImporter extends Importer {
 								const url = FileUpload.getPath(`${file._id}/${encodeURI(file.name || '')}`);
 								const attachment = this.getMessageAttachment(file, url);
 
-								await Messages.setImportFileRocketChatAttachment(_importFile.id, url, attachment);
+								await Messages.setImportFileZekiChatAttachment(_importFile.id, url, attachment);
 								await completeFile(details);
 								importedRoomIds.add(message.rid);
 							} catch (err) {

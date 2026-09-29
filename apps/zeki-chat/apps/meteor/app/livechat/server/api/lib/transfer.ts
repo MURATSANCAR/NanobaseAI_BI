@@ -1,6 +1,6 @@
-import type { IOmnichannelSystemMessage } from '@rocket.chat/core-typings';
-import { Messages } from '@rocket.chat/models';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
+import type { IOmnichannelSystemMessage } from '@zeki.chat/core-typings';
+import { Messages } from '@zeki.chat/models';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
 
 const normalizeTransferHistory = ({ transferData }: IOmnichannelSystemMessage): IOmnichannelSystemMessage['transferData'] => transferData;
 

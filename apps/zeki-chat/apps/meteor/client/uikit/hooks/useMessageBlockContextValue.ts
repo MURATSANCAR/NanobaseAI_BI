@@ -1,7 +1,7 @@
-import type { IRoom, IMessage } from '@rocket.chat/core-typings';
+import type { IRoom, IMessage } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { UiKitContext } from '@rocket.chat/fuselage-ui-kit';
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+import type { UiKitContext } from '@zeki.chat/fuselage-ui-kit';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 import {
 	useVideoConfDispatchOutgoing,
 	useVideoConfIsCalling,
@@ -9,7 +9,7 @@ import {
 	useVideoConfJoinCall,
 	useVideoConfLoadCapabilities,
 	useVideoConfSetPreferences,
-} from '@rocket.chat/ui-video-conf';
+} from '@zeki.chat/ui-video-conf';
 import type { ContextType } from 'react';
 
 import { useUiKitActionManager } from './useUiKitActionManager';

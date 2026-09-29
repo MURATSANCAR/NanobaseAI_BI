@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 /**

@@ -1,4 +1,4 @@
-import { Rooms, Subscriptions } from '@rocket.chat/models';
+import { Rooms, Subscriptions } from '@zeki.chat/models';
 import { Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import type { UpdateResult } from 'mongodb';
@@ -8,13 +8,13 @@ import { notifyOnSubscriptionChangedByRoomId } from '../../../lib/server/lib/not
 export const saveRoomCustomFields = async function (rid: string, roomCustomFields: Record<string, any>): Promise<UpdateResult> {
 	if (!Match.test(rid, String)) {
 		throw new Meteor.Error('invalid-room', 'Invalid room', {
-			function: 'RocketChat.saveRoomCustomFields',
+			function: 'ZekiChat.saveRoomCustomFields',
 		});
 	}
 
 	if (!Match.test(roomCustomFields, Object)) {
 		throw new Meteor.Error('invalid-roomCustomFields-type', 'Invalid roomCustomFields type', {
-			function: 'RocketChat.saveRoomCustomFields',
+			function: 'ZekiChat.saveRoomCustomFields',
 		});
 	}
 

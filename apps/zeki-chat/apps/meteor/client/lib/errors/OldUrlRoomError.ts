@@ -1,6 +1,6 @@
-import type { IRoom, RoomType } from '@rocket.chat/core-typings';
+import type { IRoom, RoomType } from '@zeki.chat/core-typings';
 
-import { RocketChatError } from './RocketChatError';
+import { ZekiChatError } from './ZekiChatError';
 
 type OldUrlRoomErrorDetails =
 	| { rid: IRoom['_id'] }
@@ -9,7 +9,7 @@ type OldUrlRoomErrorDetails =
 			reference: string;
 	  };
 
-export class OldUrlRoomError extends RocketChatError<'old-url-format', OldUrlRoomErrorDetails> {
+export class OldUrlRoomError extends ZekiChatError<'old-url-format', OldUrlRoomErrorDetails> {
 	constructor(message = 'Old Url Format', details: OldUrlRoomErrorDetails) {
 		super('old-url-format', message, details);
 	}

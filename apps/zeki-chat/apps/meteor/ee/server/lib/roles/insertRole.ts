@@ -1,6 +1,6 @@
-import { api, MeteorError } from '@rocket.chat/core-services';
-import type { IRole } from '@rocket.chat/core-typings';
-import { Roles } from '@rocket.chat/models';
+import { api, MeteorError } from '@zeki.chat/core-services';
+import type { IRole } from '@zeki.chat/core-typings';
+import { Roles } from '@zeki.chat/models';
 
 import { notifyOnRoleChanged } from '../../../../app/lib/server/lib/notifyListener';
 import { isValidRoleScope } from '../../../../lib/roles/isValidRoleScope';

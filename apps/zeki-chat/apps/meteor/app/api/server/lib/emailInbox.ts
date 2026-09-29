@@ -1,5 +1,5 @@
-import type { IEmailInbox } from '@rocket.chat/core-typings';
-import { EmailInbox, Users } from '@rocket.chat/models';
+import type { IEmailInbox } from '@zeki.chat/core-typings';
+import { EmailInbox, Users } from '@zeki.chat/models';
 import type { DeleteResult, Filter, InsertOneResult, Sort } from 'mongodb';
 
 import { notifyOnEmailInboxChanged } from '../../../lib/server/lib/notifyListener';

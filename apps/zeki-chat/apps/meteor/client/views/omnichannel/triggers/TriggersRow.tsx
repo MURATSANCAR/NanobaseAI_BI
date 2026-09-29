@@ -1,8 +1,8 @@
-import type { ILivechatTrigger } from '@rocket.chat/core-typings';
+import type { ILivechatTrigger } from '@zeki.chat/core-typings';
 import { IconButton } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal, GenericTableCell, GenericTableRow } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useRoute, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericModal, GenericTableCell, GenericTableRow } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useRoute, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { memo } from 'react';
 

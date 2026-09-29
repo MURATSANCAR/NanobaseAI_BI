@@ -1,5 +1,5 @@
-import type { CallHistoryItem, IInternalMediaCallHistoryItem, IMediaCall, Serialized } from '@rocket.chat/core-typings';
-import { CallHistoryContextualBar } from '@rocket.chat/ui-voip';
+import type { CallHistoryItem, IInternalMediaCallHistoryItem, IMediaCall, Serialized } from '@zeki.chat/core-typings';
+import { CallHistoryContextualBar } from '@zeki.chat/ui-voip';
 import { useMemo } from 'react';
 
 import { useMediaCallInternalHistoryActions } from './useMediaCallInternalHistoryActions';

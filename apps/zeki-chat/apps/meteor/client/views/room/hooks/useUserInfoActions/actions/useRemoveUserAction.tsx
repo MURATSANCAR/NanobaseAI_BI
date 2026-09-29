@@ -1,8 +1,8 @@
-import type { IRoom, IUser, Serialized } from '@rocket.chat/core-typings';
-import { isRoomFederated, isRoomNativeFederated } from '@rocket.chat/core-typings';
+import type { IRoom, IUser, Serialized } from '@zeki.chat/core-typings';
+import { isRoomFederated, isRoomNativeFederated } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import { escapeHTML } from '@rocket.chat/string-helpers';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
 import {
 	usePermission,
 	useSetModal,
@@ -11,7 +11,7 @@ import {
 	useUser,
 	useUserRoom,
 	useUserSubscription,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 

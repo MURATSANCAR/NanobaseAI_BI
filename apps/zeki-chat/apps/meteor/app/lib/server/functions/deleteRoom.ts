@@ -1,4 +1,4 @@
-import { Messages, Rooms, Subscriptions } from '@rocket.chat/models';
+import { Messages, Rooms, Subscriptions } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import { FileUpload } from '../../../file-upload/server';

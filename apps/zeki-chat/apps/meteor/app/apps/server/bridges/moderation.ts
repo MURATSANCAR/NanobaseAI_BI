@@ -1,8 +1,8 @@
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import { ModerationBridge } from '@rocket.chat/apps/dist/server/bridges/ModerationBridge';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
-import { ModerationReports } from '@rocket.chat/models';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import { ModerationBridge } from '@zeki.chat/apps/dist/server/bridges/ModerationBridge';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
+import { ModerationReports } from '@zeki.chat/models';
 
 import { reportMessage } from '../../../../server/lib/moderation/reportMessage';
 
@@ -22,7 +22,7 @@ export class AppModerationBridge extends ModerationBridge {
 			throw new Error('Invalid description');
 		}
 
-		await reportMessage(messageId, description, userId || 'rocket.cat');
+		await reportMessage(messageId, description, userId || 'zeki.bot');
 	}
 
 	protected async dismissReportsByMessageId(messageId: IMessage['id'], reason: string, action: string, appId: string): Promise<void> {

@@ -1,6 +1,6 @@
 import { ButtonGroup, Button, Box, Accordion } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useSetting, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useSetting, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useId } from 'react';
 import type { ReactElement } from 'react';

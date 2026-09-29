@@ -1,4 +1,4 @@
-import { CannedResponse } from '@rocket.chat/models';
+import { CannedResponse } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { hasPermissionAsync } from '../../../../../app/authorization/server/functions/hasPermission';

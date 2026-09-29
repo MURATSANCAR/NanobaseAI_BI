@@ -1,7 +1,7 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import {
 	useSetModal,
 	useToastMessageDispatch,
@@ -10,7 +10,7 @@ import {
 	usePermission,
 	useEndpoint,
 	useTranslation,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import type { AdminUserAction } from './useAdminUserInfoActions';

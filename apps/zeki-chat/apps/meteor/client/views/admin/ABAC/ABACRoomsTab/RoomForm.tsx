@@ -1,7 +1,7 @@
 import { Box, Field, FieldLabel, FieldRow, FieldError, ButtonGroup, Button, ContextualbarFooter } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal, ContextualbarScrollableContent } from '@rocket.chat/ui-client';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { GenericModal, ContextualbarScrollableContent } from '@zeki.chat/ui-client';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import type { Dispatch, SetStateAction } from 'react';
 import { useId } from 'react';
 import { Controller, useFieldArray, useFormContext } from 'react-hook-form';

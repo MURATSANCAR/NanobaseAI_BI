@@ -1,4 +1,4 @@
-import type { ILivechatBusinessHour } from '@rocket.chat/core-typings';
+import type { ILivechatBusinessHour } from '@zeki.chat/core-typings';
 import {
 	isGETBusinessHourParams,
 	isPOSTLivechatBusinessHoursSaveParams,
@@ -7,7 +7,7 @@ import {
 	POSTLivechatBusinessHoursSaveSuccessResponse,
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import type { ExtractRoutesFromAPI } from '../../../../api/server/ApiClass';
@@ -71,7 +71,7 @@ const livechatBusinessHoursEndpoints = API.v1
 
 type LivechatBusinessHoursEndpoints = ExtractRoutesFromAPI<typeof livechatBusinessHoursEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatBusinessHoursEndpoints {}
 }

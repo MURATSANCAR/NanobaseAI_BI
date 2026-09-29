@@ -1,6 +1,6 @@
-import type { IAbacAttribute, IAbacAttributeDefinition, IAuditServerActor, IRoom, IServerEvents } from '@rocket.chat/core-typings';
-import type { PaginatedResult, PaginatedRequest } from '@rocket.chat/rest-typings';
-import { ajv, ajvQuery } from '@rocket.chat/rest-typings';
+import type { IAbacAttribute, IAbacAttributeDefinition, IAuditServerActor, IRoom, IServerEvents } from '@zeki.chat/core-typings';
+import type { PaginatedResult, PaginatedRequest } from '@zeki.chat/rest-typings';
+import { ajv, ajvQuery } from '@zeki.chat/rest-typings';
 
 const ATTRIBUTE_KEY_PATTERN = '^[A-Za-z0-9_-]+$';
 const MAX_ROOM_ATTRIBUTE_VALUES = 10;

@@ -1,8 +1,8 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { MeteorError } from '@rocket.chat/core-services';
-import { isUserFederated } from '@rocket.chat/core-typings';
-import type { IUser, IRole, IUserSettings, RequiredField } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { MeteorError } from '@zeki.chat/core-services';
+import { isUserFederated } from '@zeki.chat/core-typings';
+import type { IUser, IRole, IUserSettings, RequiredField } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import type { ClientSession } from 'mongodb';
 

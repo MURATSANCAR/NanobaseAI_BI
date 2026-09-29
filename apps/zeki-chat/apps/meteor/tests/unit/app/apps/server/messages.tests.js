@@ -8,17 +8,17 @@ import { UsersMock } from './mocks/models/Users.mock';
 import { AppServerOrchestratorMock } from './mocks/orchestrator.mock';
 
 const { AppMessagesConverter } = proxyquire.noCallThru().load('../../../../../app/apps/server/converters/messages', {
-	'@rocket.chat/random': {
+	'@zeki.chat/random': {
 		Random: {
 			id: () => 1,
 		},
 	},
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Rooms: new RoomsMock(),
 		Messages: new MessagesMock(),
 		Users: new UsersMock(),
 	},
-	'@rocket.chat/core-typings': {
+	'@zeki.chat/core-typings': {
 		isMessageFromVisitor: (message) => 'token' in message,
 	},
 });
@@ -55,7 +55,7 @@ describe('The AppMessagesConverter instance', () => {
 	const createdAt = new Date('2019-03-30T01:22:08.389Z');
 	const updatedAt = new Date('2019-03-30T01:22:08.412Z');
 
-	describe('when converting a message from Rocket.Chat to the Engine schema', () => {
+	describe('when converting a message from ZEKI AI CHAT to the Engine schema', () => {
 		it('should return `undefined` when `msgObj` is falsy', async () => {
 			const appMessage = await messagesConverter.convertMessage(undefined);
 
@@ -69,7 +69,7 @@ describe('The AppMessagesConverter instance', () => {
 			expect(appMessage).to.have.property('createdAt').which.equalTime(createdAt);
 			expect(appMessage).to.have.property('updatedAt').which.equalTime(updatedAt);
 			expect(appMessage).to.have.property('groupable', false);
-			expect(appMessage).to.have.property('sender').which.includes({ id: 'rocket.cat' });
+			expect(appMessage).to.have.property('sender').which.includes({ id: 'zeki.bot' });
 			expect(appMessage).to.have.property('room').which.includes({ id: 'GENERAL' });
 
 			expect(appMessage).not.to.have.property('editor');
@@ -82,26 +82,26 @@ describe('The AppMessagesConverter instance', () => {
 		});
 
 		it('should not mutate the original message object', () => {
-			const rocketchatMessageMock = messagesMock.findOneById('SimpleMessageMock');
+			const zekichatMessageMock = messagesMock.findOneById('SimpleMessageMock');
 
-			messagesConverter.convertMessage(rocketchatMessageMock);
+			messagesConverter.convertMessage(zekichatMessageMock);
 
-			expect(rocketchatMessageMock).to.deep.equal({
+			expect(zekichatMessageMock).to.deep.equal({
 				_id: 'SimpleMessageMock',
 				t: 'uj',
 				rid: 'GENERAL',
 				ts: new Date('2019-03-30T01:22:08.389Z'),
-				msg: 'rocket.cat',
+				msg: 'zeki.bot',
 				u: {
-					_id: 'rocket.cat',
-					username: 'rocket.cat',
+					_id: 'zeki.bot',
+					username: 'zeki.bot',
 				},
 				groupable: false,
 				_updatedAt: new Date('2019-03-30T01:22:08.412Z'),
 			});
 		});
 
-		it("should return basic sender info when it's not a Rocket.Chat user (e.g. Livechat Guest)", async () => {
+		it("should return basic sender info when it's not a ZEKI AI CHAT user (e.g. Livechat Guest)", async () => {
 			const appMessage = await messagesConverter.convertMessage(messagesMock.findOneById('LivechatGuestMessageMock'));
 
 			expect(appMessage).to.have.property('sender').which.includes({
@@ -112,47 +112,47 @@ describe('The AppMessagesConverter instance', () => {
 		});
 	});
 
-	describe('when converting a message from the Engine schema back to Rocket.Chat', () => {
+	describe('when converting a message from the Engine schema back to ZEKI AI CHAT', () => {
 		it('should return `undefined` when `message` is falsy', async () => {
-			const rocketchatMessage = await messagesConverter.convertAppMessage(undefined);
+			const zekichatMessage = await messagesConverter.convertAppMessage(undefined);
 
-			expect(rocketchatMessage).to.be.undefined;
+			expect(zekichatMessage).to.be.undefined;
 		});
 
 		it('should return a proper schema', async () => {
-			const rocketchatMessage = await messagesConverter.convertAppMessage(appMessageMock);
+			const zekichatMessage = await messagesConverter.convertAppMessage(appMessageMock);
 
-			expect(rocketchatMessage).to.have.property('_id', 'appMessageMock');
-			expect(rocketchatMessage).to.have.property('rid', 'GENERAL');
-			expect(rocketchatMessage).to.have.property('groupable', false);
-			expect(rocketchatMessage).to.have.property('ts').which.equalTime(createdAt);
-			expect(rocketchatMessage).to.have.property('_updatedAt').which.equalTime(updatedAt);
-			expect(rocketchatMessage).to.have.property('u').which.includes({
-				_id: 'rocket.cat',
-				username: 'rocket.cat',
-				name: 'Rocket.Cat',
+			expect(zekichatMessage).to.have.property('_id', 'appMessageMock');
+			expect(zekichatMessage).to.have.property('rid', 'GENERAL');
+			expect(zekichatMessage).to.have.property('groupable', false);
+			expect(zekichatMessage).to.have.property('ts').which.equalTime(createdAt);
+			expect(zekichatMessage).to.have.property('_updatedAt').which.equalTime(updatedAt);
+			expect(zekichatMessage).to.have.property('u').which.includes({
+				_id: 'zeki.bot',
+				username: 'zeki.bot',
+				name: 'ZEKI AI CHAT',
 			});
 		});
 
 		it('should return a proper schema when receiving a partial object', async () => {
-			const rocketchatMessage = await messagesConverter.convertAppMessage(appPartialMessageMock, true);
+			const zekichatMessage = await messagesConverter.convertAppMessage(appPartialMessageMock, true);
 
-			expect(rocketchatMessage).to.have.property('_id', 'appPartialMessageMock');
-			expect(rocketchatMessage).to.have.property('groupable', false);
-			expect(rocketchatMessage).to.have.property('emoji', ':smirk:');
-			expect(rocketchatMessage).to.have.property('alias', 'rocket.feline');
+			expect(zekichatMessage).to.have.property('_id', 'appPartialMessageMock');
+			expect(zekichatMessage).to.have.property('groupable', false);
+			expect(zekichatMessage).to.have.property('emoji', ':smirk:');
+			expect(zekichatMessage).to.have.property('alias', 'rocket.feline');
 
-			expect(rocketchatMessage).to.not.have.property('ts');
-			expect(rocketchatMessage).to.not.have.property('u');
-			expect(rocketchatMessage).to.not.have.property('rid');
-			expect(rocketchatMessage).to.not.have.property('_updatedAt');
+			expect(zekichatMessage).to.not.have.property('ts');
+			expect(zekichatMessage).to.not.have.property('u');
+			expect(zekichatMessage).to.not.have.property('rid');
+			expect(zekichatMessage).to.not.have.property('_updatedAt');
 		});
 
 		it('should merge `_unmappedProperties_` into the returned message', async () => {
-			const rocketchatMessage = await messagesConverter.convertAppMessage(appMessageMock);
+			const zekichatMessage = await messagesConverter.convertAppMessage(appMessageMock);
 
-			expect(rocketchatMessage).not.to.have.property('_unmappedProperties_');
-			expect(rocketchatMessage).to.have.property('t', 'uj');
+			expect(zekichatMessage).not.to.have.property('_unmappedProperties_');
+			expect(zekichatMessage).to.have.property('t', 'uj');
 		});
 
 		it('should not merge `_unmappedProperties_` into the returned message when receiving a partial object', async () => {
@@ -161,10 +161,10 @@ describe('The AppMessagesConverter instance', () => {
 				t: 'uj',
 			};
 
-			const rocketchatMessage = await messagesConverter.convertAppMessage(invalidPartialMessage, true);
+			const zekichatMessage = await messagesConverter.convertAppMessage(invalidPartialMessage, true);
 
-			expect(rocketchatMessage).to.not.have.property('_unmappedProperties_');
-			expect(rocketchatMessage).to.not.have.property('t');
+			expect(zekichatMessage).to.not.have.property('_unmappedProperties_');
+			expect(zekichatMessage).to.not.have.property('t');
 		});
 
 		it('should throw if message has an invalid room', async () => {

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-import type { IUser, IMethodConnection } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IUser, IMethodConnection } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 

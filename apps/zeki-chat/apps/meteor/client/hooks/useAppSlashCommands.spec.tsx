@@ -1,5 +1,5 @@
-import type { SlashCommand } from '@rocket.chat/core-typings';
-import { mockAppRoot, type StreamControllerRef } from '@rocket.chat/mock-providers';
+import type { SlashCommand } from '@zeki.chat/core-typings';
+import { mockAppRoot, type StreamControllerRef } from '@zeki.chat/mock-providers';
 import { QueryClient } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 

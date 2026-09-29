@@ -25,8 +25,8 @@ import {
 	GenericTableRow,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
-import { useTranslation, useToastMessageDispatch, useEndpoint, useSetModal } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, useToastMessageDispatch, useEndpoint, useSetModal } from '@zeki.chat/ui-contexts';
 import { useMutation, useQuery, hashKey, useQueryClient } from '@tanstack/react-query';
 import { useId, useMemo, useState } from 'react';
 

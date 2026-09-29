@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IOEmbedCache extends IRocketChatRecord {
+export interface IOEmbedCache extends IZekiChatRecord {
 	data: any;
-	updatedAt: Date; // TODO: this field name differs from `_updatedAt` on `IRocketChatRecord`, should we unify this?
+	updatedAt: Date; // TODO: this field name differs from `_updatedAt` on `IZekiChatRecord`, should we unify this?
 }

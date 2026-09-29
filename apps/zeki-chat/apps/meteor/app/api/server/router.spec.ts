@@ -3,7 +3,7 @@ import express from 'express';
 import request from 'supertest';
 
 import type { APIActionContext } from './router';
-import { RocketChatAPIRouter } from './router';
+import { ZekiChatAPIRouter } from './router';
 
 describe('Router use method', () => {
 	it('should parse nested query params into object for GET requests', async () => {
@@ -19,7 +19,7 @@ describe('Router use method', () => {
 			required: ['outerProperty'],
 		});
 
-		const api = new RocketChatAPIRouter('/api').get(
+		const api = new ZekiChatAPIRouter('/api').get(
 			'/test',
 			{
 				response: {

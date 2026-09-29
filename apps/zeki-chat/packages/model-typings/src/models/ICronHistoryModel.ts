@@ -1,4 +1,4 @@
-import type { ICronHistoryItem } from '@rocket.chat/core-typings';
+import type { ICronHistoryItem } from '@zeki.chat/core-typings';
 
 import type { IBaseModel } from './IBaseModel';
 

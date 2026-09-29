@@ -1,5 +1,5 @@
 import { Box, Button, ButtonGroup, Icon, MessageBlock } from '@rocket.chat/fuselage';
-import { UiKitComponent, UiKitMessage as UiKitMessageSurfaceRender, UiKitContext } from '@rocket.chat/fuselage-ui-kit';
+import { UiKitComponent, UiKitMessage as UiKitMessageSurfaceRender, UiKitContext } from '@zeki.chat/fuselage-ui-kit';
 import {
 	ContextualbarDialog,
 	ContextualbarHeader,
@@ -11,7 +11,7 @@ import {
 	InfoPanelSection,
 	InfoPanelLabel,
 	InfoPanelText,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import type { HistoryActionCallbacks } from './CallHistoryActions';

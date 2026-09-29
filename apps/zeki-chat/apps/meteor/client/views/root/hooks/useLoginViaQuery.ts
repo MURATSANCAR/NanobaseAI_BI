@@ -1,4 +1,4 @@
-import { useRouter, useLoginWithToken } from '@rocket.chat/ui-contexts';
+import { useRouter, useLoginWithToken } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 export const useLoginViaQuery = () => {

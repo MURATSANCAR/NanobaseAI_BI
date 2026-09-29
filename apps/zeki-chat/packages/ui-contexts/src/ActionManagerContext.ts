@@ -1,5 +1,5 @@
-import type { DistributiveOmit } from '@rocket.chat/core-typings';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type { DistributiveOmit } from '@zeki.chat/core-typings';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import { createContext } from 'react';
 
 /**

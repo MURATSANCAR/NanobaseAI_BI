@@ -1,10 +1,10 @@
-import { Apps } from '@rocket.chat/apps';
-import { AppInstallationSource } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
-import { AppStatus, AppStatusUtils } from '@rocket.chat/apps-engine/definition/AppStatus';
+import { Apps } from '@zeki.chat/apps';
+import { AppInstallationSource } from '@zeki.chat/apps/dist/server/storage/IAppStorageItem';
+import { AppStatus, AppStatusUtils } from '@zeki.chat/apps-engine/definition/AppStatus';
 import mem from 'mem';
 
 import { SystemLogger } from '../../../../server/lib/logger/system';
-import { Info } from '../../../utils/rocketchat.info';
+import { Info } from '../../../utils/zekichat.info';
 
 type AppsStatistics = {
 	engineVersion: string;

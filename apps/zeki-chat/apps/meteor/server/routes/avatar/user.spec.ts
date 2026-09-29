@@ -20,7 +20,7 @@ const mocks = {
 };
 
 const { userAvatarById, userAvatarByUsername } = proxyquire.noCallThru().load('./user', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Users: {
 			findOneByUsernameIgnoringCase: mocks.findOneByUsernameIgnoringCase,
 			findOneById: mocks.findOneById,
@@ -36,7 +36,7 @@ const { userAvatarById, userAvatarByUsername } = proxyquire.noCallThru().load('.
 		},
 	},
 	'./utils': mocks.utils,
-	'@rocket.chat/server-fetch': {
+	'@zeki.chat/server-fetch': {
 		serverFetch: mocks.serverFetch,
 	},
 });

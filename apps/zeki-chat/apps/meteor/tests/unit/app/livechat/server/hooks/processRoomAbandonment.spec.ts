@@ -26,7 +26,7 @@ const businessHourManagerMock = {
 const { getSecondsWhenOfficeHoursIsDisabled, parseDays, getSecondsSinceLastAgentResponse, onCloseRoom } = p
 	.noCallThru()
 	.load('../../../../../../app/livechat/server/hooks/processRoomAbandonment.ts', {
-		'@rocket.chat/models': models,
+		'@zeki.chat/models': models,
 		'../../../../server/lib/callbacks': {
 			callbacks: { add: sinon.stub(), priority: { HIGH: 'high' } },
 		},

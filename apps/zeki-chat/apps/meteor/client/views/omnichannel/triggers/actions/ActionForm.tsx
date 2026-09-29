@@ -10,7 +10,7 @@ import {
 	Tag,
 	type SelectOption,
 } from '@rocket.chat/fuselage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { ComponentProps } from 'react';
 import { useCallback, useId, useMemo } from 'react';
 import type { Control, UseFormTrigger } from 'react-hook-form';
@@ -60,7 +60,7 @@ export const ActionForm = ({ control, trigger, index, ...props }: SendMessageFor
 					{isOptionDisabled(value) ? (
 						<Box justifyContent='space-between' flexDirection='row' display='flex' width='100%'>
 							{t(label)}
-							<Tag variant='featured'>{t('Premium')}</Tag>
+							<Tag>{t('Unavailable')}</Tag>
 						</Box>
 					) : (
 						t(label)

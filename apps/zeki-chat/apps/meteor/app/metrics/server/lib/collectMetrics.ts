@@ -1,7 +1,7 @@
 import http from 'node:http';
 
-import { Statistics } from '@rocket.chat/models';
-import { tracerSpan } from '@rocket.chat/tracing';
+import { Statistics } from '@zeki.chat/models';
+import { tracerSpan } from '@zeki.chat/tracing';
 import connect from 'connect';
 import { Facts } from 'meteor/facts-base';
 import { Meteor } from 'meteor/meteor';
@@ -14,7 +14,7 @@ import { SystemLogger } from '../../../../server/lib/logger/system';
 import { getControl } from '../../../../server/lib/migrations';
 import { settings } from '../../../settings/server';
 import { getAppsStatistics } from '../../../statistics/server/lib/getAppsStatistics';
-import { Info } from '../../../utils/rocketchat.info';
+import { Info } from '../../../utils/zekichat.info';
 
 Facts.incrementServerFact = function (pkg: 'pkg' | 'fact', fact: string | number, increment: number): void {
 	metrics.meteorFacts.inc({ pkg, fact }, increment);
@@ -106,10 +106,10 @@ app.use('/metrics', (_req, res) => {
 app.use('/', (_req, res) => {
 	const html = `<html>
 		<head>
-			<title>Rocket.Chat Prometheus Exporter</title>
+			<title>ZEKI AI CHAT Prometheus Exporter</title>
 		</head>
 		<body>
-			<h1>Rocket.Chat Prometheus Exporter</h1>
+			<h1>ZEKI AI CHAT Prometheus Exporter</h1>
 			<p><a href="/metrics">Metrics</a></p>
 		</body>
 	</html>`;

@@ -1,5 +1,5 @@
 import apn from '@parse/node-apn';
-import type { RequiredField } from '@rocket.chat/core-typings';
+import type { RequiredField } from '@zeki.chat/core-typings';
 import EJSON from 'ejson';
 
 import type { PushOptions, PendingPushNotification } from './definition';

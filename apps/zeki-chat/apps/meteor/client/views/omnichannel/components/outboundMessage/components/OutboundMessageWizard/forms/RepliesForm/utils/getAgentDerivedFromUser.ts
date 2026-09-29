@@ -1,4 +1,4 @@
-import type { ILivechatDepartmentAgents, Serialized, IUser } from '@rocket.chat/core-typings';
+import type { ILivechatDepartmentAgents, Serialized, IUser } from '@zeki.chat/core-typings';
 
 const isOmnichannelAgent = (user: IUser | null): user is IUser => (user ? user.roles.includes('livechat-agent') : false);
 

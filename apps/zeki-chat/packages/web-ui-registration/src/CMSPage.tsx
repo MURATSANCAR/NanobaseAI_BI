@@ -1,6 +1,6 @@
 import { Box, IconButton } from '@rocket.chat/fuselage';
 import { VerticalWizardLayout, VerticalWizardLayoutFooter, VerticalWizardLayoutForm, VerticalWizardLayoutTitle } from '@rocket.chat/layout';
-import { useSetting, useTranslation, useAssetWithDarkModePath } from '@rocket.chat/ui-contexts';
+import { useSetting, useTranslation, useAssetWithDarkModePath } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import { LoginPoweredBy } from './components/LoginPoweredBy';

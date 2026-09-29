@@ -1,4 +1,4 @@
-import type { Serialized } from '@rocket.chat/core-typings';
+import type { Serialized } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import {
 	Box,
@@ -10,8 +10,8 @@ import {
 	MessageGenericPreviewDescription,
 	MessageGenericPreviewTitle,
 } from '@rocket.chat/fuselage';
-import type { ContactSearchChatsResult } from '@rocket.chat/rest-typings';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import type { ContactSearchChatsResult } from '@zeki.chat/rest-typings';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { OmnichannelRoomIcon } from '../../../../../components/RoomIcon/OmnichannelRoomIcon';

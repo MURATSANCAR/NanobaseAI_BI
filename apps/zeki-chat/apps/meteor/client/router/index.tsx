@@ -1,4 +1,4 @@
-import type { RoomType, RoomRouteData } from '@rocket.chat/core-typings';
+import type { RoomType, RoomRouteData } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
 import type {
 	LocationHash,
@@ -10,7 +10,7 @@ import type {
 	RouterContextValue,
 	SearchParameters,
 	To,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 
 import { Context, Page } from './page';
 import { appLayout } from '../lib/appLayout';

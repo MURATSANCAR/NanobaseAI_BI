@@ -1,7 +1,7 @@
-import type { IMessage, IRoom, IUser, RoomType } from '@rocket.chat/core-typings';
-import { isEditedMessage } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
-import { Subscriptions, Rooms } from '@rocket.chat/models';
+import type { IMessage, IRoom, IUser, RoomType } from '@zeki.chat/core-typings';
+import { isEditedMessage } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
+import { Subscriptions, Rooms } from '@zeki.chat/models';
 import moment from 'moment';
 
 import {

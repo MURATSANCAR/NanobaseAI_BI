@@ -1,5 +1,5 @@
-import { Settings } from '@rocket.chat/models';
-import { isPOSTomnichannelIntegrations } from '@rocket.chat/rest-typings';
+import { Settings } from '@zeki.chat/models';
+import { isPOSTomnichannelIntegrations } from '@zeki.chat/rest-typings';
 
 import { trim } from '../../../../../lib/utils/stringUtils';
 import { updateAuditedByUser } from '../../../../../server/settings/lib/auditedSettingUpdates';

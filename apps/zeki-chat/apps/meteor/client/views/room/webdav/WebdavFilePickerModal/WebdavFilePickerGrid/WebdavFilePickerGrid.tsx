@@ -1,4 +1,4 @@
-import type { IWebdavNode } from '@rocket.chat/core-typings';
+import type { IWebdavNode } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Icon, Skeleton, Palette } from '@rocket.chat/fuselage';
 import type { ReactElement } from 'react';

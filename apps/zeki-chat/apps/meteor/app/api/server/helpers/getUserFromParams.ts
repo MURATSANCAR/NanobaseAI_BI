@@ -1,6 +1,6 @@
 // Convenience method, almost need to turn it into a middleware of sorts
-import type { IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 export async function getUserFromParams<T extends boolean = false>(

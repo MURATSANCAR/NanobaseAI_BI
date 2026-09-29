@@ -1,8 +1,8 @@
 import { NavBarItem } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { GenericMenu } from '@rocket.chat/ui-client';
-import { useCurrentRoutePath, useLayout, useRouter, useSetting } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
+import { useCurrentRoutePath, useLayout, useRouter, useSetting } from '@zeki.chat/ui-contexts';
 import type { HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 

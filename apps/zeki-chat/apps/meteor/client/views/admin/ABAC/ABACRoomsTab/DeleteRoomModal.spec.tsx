@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -7,8 +7,8 @@ import DeleteRoomModal from './DeleteRoomModal';
 
 const mockDispatchToastMessage = jest.fn();
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useToastMessageDispatch: () => mockDispatchToastMessage,
 }));
 

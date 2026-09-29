@@ -1,4 +1,3 @@
-import { Omnichannel } from '@rocket.chat/core-services';
 import type {
 	ILivechatAgent,
 	IOmnichannelInquiryExtraData,
@@ -7,9 +6,9 @@ import type {
 	SelectedAgent,
 	TransferByData,
 	TransferData,
-} from '@rocket.chat/core-typings';
-import { isOmnichannelRoom, OmnichannelSourceType } from '@rocket.chat/core-typings';
-import { LivechatVisitors, Users, LivechatRooms } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { isOmnichannelRoom, OmnichannelSourceType } from '@zeki.chat/core-typings';
+import { LivechatVisitors, Users, LivechatRooms } from '@zeki.chat/models';
 import {
 	isLiveChatRoomForwardProps,
 	isPOSTLivechatRoomCloseParams,
@@ -25,8 +24,8 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	ajv,
-} from '@rocket.chat/rest-typings';
-import { isPOSTLivechatVisitorDepartmentTransferParams } from '@rocket.chat/rest-typings/src/v1/omnichannel';
+} from '@zeki.chat/rest-typings';
+import { isPOSTLivechatVisitorDepartmentTransferParams } from '@zeki.chat/rest-typings/src/v1/omnichannel';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -300,9 +299,6 @@ API.v1.addRoute(
 				throw new Error('This_conversation_is_already_closed');
 			}
 
-			if (!(await Omnichannel.isWithinMACLimit(room))) {
-				throw new Error('error-mac-limit-reached');
-			}
 
 			const guest = await LivechatVisitors.findOneEnabledById(room.v?._id);
 			if (!guest) {
@@ -368,9 +364,6 @@ const livechatVisitorDepartmentTransfer = API.v1.post(
 		}
 
 		// As this is a visitor endpoint, we should not show the mac limit error
-		if (!(await Omnichannel.isWithinMACLimit(room))) {
-			return API.v1.failure('error-transefing-chat');
-		}
 
 		const guest = await LivechatVisitors.findOneEnabledById(room.v?._id);
 		if (!guest) {
@@ -394,7 +387,7 @@ const livechatVisitorDepartmentTransfer = API.v1.post(
 );
 
 type LivechatAnalyticsEndpoints = ExtractRoutesFromAPI<typeof livechatVisitorDepartmentTransfer>;
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatAnalyticsEndpoints {}
 }
@@ -422,9 +415,6 @@ API.v1.addRoute(
 				throw new Error('room-closed');
 			}
 
-			if (!(await Omnichannel.isWithinMACLimit(room))) {
-				throw new Error('error-mac-limit-reached');
-			}
 
 			if (!(await canAccessRoomAsync(room, user))) {
 				throw new Error('error-not-allowed');
@@ -535,7 +525,7 @@ const livechatRoomsEndpoints = API.v1
 
 type LivechatRoomsEndpoints = ExtractRoutesFromAPI<typeof livechatRoomsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatRoomsEndpoints {}
 }

@@ -4,8 +4,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, it, before, after } from 'node:test';
 
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
 
 import { kSecureFields } from '../../../src/lib/SecureFields';
 import type { AppManager } from '../../../src/server/AppManager';

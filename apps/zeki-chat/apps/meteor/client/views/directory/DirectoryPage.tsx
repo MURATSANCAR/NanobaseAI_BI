@@ -1,6 +1,6 @@
 import { Tabs } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useRouter, useRouteParameter, useSetting } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useRouter, useRouteParameter, useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';

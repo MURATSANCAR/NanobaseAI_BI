@@ -1,6 +1,6 @@
-import { UserStatusConnection, UserType } from '@rocket.chat/apps-engine/definition/users';
-import { Users } from '@rocket.chat/models';
-import { removeEmpty } from '@rocket.chat/tools';
+import { UserStatusConnection, UserType } from '@zeki.chat/apps-engine/definition/users';
+import { Users } from '@zeki.chat/models';
+import { removeEmpty } from '@zeki.chat/tools';
 
 export class AppUsersConverter {
 	constructor(orch) {
@@ -54,7 +54,7 @@ export class AppUsersConverter {
 		};
 	}
 
-	convertToRocketChat(user) {
+	convertToZekiChat(user) {
 		if (!user) {
 			return undefined;
 		}
@@ -107,7 +107,7 @@ export class AppUsersConverter {
 			case 'busy':
 				return UserStatusConnection.BUSY;
 			case undefined:
-				// This is needed for Livechat guests and Rocket.Cat user.
+				// This is needed for Livechat guests and ZEKI AI CHAT user.
 				return UserStatusConnection.UNDEFINED;
 			default:
 				console.warn(

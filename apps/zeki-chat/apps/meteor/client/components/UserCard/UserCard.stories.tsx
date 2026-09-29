@@ -8,7 +8,7 @@ const user = {
 	roles: (
 		<>
 			<UserCardRole>Admin</UserCardRole>
-			<UserCardRole>Rocket.Chat</UserCardRole>
+			<UserCardRole>ZEKI AI CHAT</UserCardRole>
 			<UserCardRole>Team</UserCardRole>
 		</>
 	),

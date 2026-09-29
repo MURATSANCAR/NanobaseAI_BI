@@ -1,6 +1,6 @@
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
-import type { IUser, IRoom } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
+import type { IUser, IRoom } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { settings } from '../../../../../app/settings/server';
 import { callbacks } from '../../../../../server/lib/callbacks';

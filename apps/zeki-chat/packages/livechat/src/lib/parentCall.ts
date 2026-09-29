@@ -10,7 +10,7 @@ const getParentWindowTarget = () => {
 
 export const parentCall = (method: string, ...args: any[]) => {
 	const data = {
-		src: 'rocketchat',
+		src: 'zekichat',
 		fn: method,
 		args,
 	};

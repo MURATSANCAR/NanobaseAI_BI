@@ -1,4 +1,4 @@
-import type { IUser, IUserCreationOptions, UserType } from '@rocket.chat/apps-engine/definition/users';
+import type { IUser, IUserCreationOptions, UserType } from '@zeki.chat/apps-engine/definition/users';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

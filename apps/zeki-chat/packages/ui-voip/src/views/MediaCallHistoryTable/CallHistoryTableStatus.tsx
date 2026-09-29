@@ -1,4 +1,4 @@
-import type { CallHistoryItemState } from '@rocket.chat/core-typings';
+import type { CallHistoryItemState } from '@zeki.chat/core-typings';
 import { Box, Icon } from '@rocket.chat/fuselage';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';

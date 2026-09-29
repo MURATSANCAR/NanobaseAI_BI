@@ -1,4 +1,4 @@
-import { useSession } from '@rocket.chat/ui-contexts';
+import { useSession } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 

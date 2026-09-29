@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import type { IUser } from '@zeki.chat/core-typings';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 import { check } from 'meteor/check';
 import { ServiceConfiguration } from 'meteor/service-configuration';
 

@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
+import type { IUser } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 

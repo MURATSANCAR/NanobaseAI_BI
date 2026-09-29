@@ -1,5 +1,5 @@
-import type { IOutgoingIntegration } from '@rocket.chat/core-typings';
-import { Integrations } from '@rocket.chat/models';
+import type { IOutgoingIntegration } from '@zeki.chat/core-typings';
+import { Integrations } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { triggerHandler } from './lib/triggerHandler';

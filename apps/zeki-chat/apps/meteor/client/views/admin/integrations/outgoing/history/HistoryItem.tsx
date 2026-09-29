@@ -1,7 +1,7 @@
-import type { IIntegrationHistory, Serialized } from '@rocket.chat/core-typings';
+import type { IIntegrationHistory, Serialized } from '@zeki.chat/core-typings';
 import { Button, Icon, Box, AccordionItem, Field, FieldGroup, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useMethod } from '@rocket.chat/ui-contexts';
+import { useMethod } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';

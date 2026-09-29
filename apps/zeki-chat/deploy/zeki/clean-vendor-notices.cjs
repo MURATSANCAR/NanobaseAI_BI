@@ -20,7 +20,7 @@ function visit(directory) {
 			let pkg;
 			try { pkg = JSON.parse(source); } catch { continue; }
 			if (!(/^@rocket\.chat\//.test(pkg.name || '') || ['rocket.chat', 'rocketchat-services'].includes(pkg.name))) continue;
-			if (['@rocket.chat/poplib', '@rocket.chat/node-poplib'].includes(pkg.name)) continue;
+			if (['@zeki.chat/poplib', '@rocket.chat/node-poplib'].includes(pkg.name)) continue;
 			let changed = false;
 			for (const key of ['license', 'licenses']) {
 				if (Object.hasOwn(pkg, key)) { delete pkg[key]; changed = true; }

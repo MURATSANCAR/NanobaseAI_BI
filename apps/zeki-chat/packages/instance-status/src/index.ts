@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import type { IInstanceStatus } from '@rocket.chat/core-typings';
-import { InstanceStatus as InstanceStatusModel } from '@rocket.chat/models';
+import type { IInstanceStatus } from '@zeki.chat/core-typings';
+import { InstanceStatus as InstanceStatusModel } from '@zeki.chat/models';
 
 export const defaultPingInterval = parseInt(String(process.env.MULTIPLE_INSTANCES_PING_INTERVAL)) || 10;
 export const indexExpire = (parseInt(String(process.env.MULTIPLE_INSTANCES_EXPIRE)) || Math.ceil((defaultPingInterval * 3) / 60)) * 60;

@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { useQuery } from '@tanstack/react-query';
 
 import { useChat } from '../../../views/room/contexts/ChatContext';

@@ -1,7 +1,7 @@
 import { AutoComplete, Option, Box, Chip } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import { memo, useCallback, useState } from 'react';
 
 import { useChannelsData } from './hooks/useChannelsData';

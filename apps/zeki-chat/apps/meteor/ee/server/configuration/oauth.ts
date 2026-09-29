@@ -1,7 +1,7 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Logger } from '@rocket.chat/logger';
-import { Roles } from '@rocket.chat/models';
+import { Logger } from '@zeki.chat/logger';
+import { Roles } from '@zeki.chat/models';
 import { capitalize } from '@rocket.chat/string-helpers';
 
 import { settings } from '../../../app/settings/server';

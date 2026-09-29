@@ -1,4 +1,4 @@
-import type { ILivechatPriority } from '@rocket.chat/core-typings';
+import type { ILivechatPriority } from '@zeki.chat/core-typings';
 
 import type { BaseTest } from '../test';
 import { expect } from '../test';

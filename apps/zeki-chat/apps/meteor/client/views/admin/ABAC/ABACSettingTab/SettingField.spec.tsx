@@ -1,5 +1,5 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import type { ISetting } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -19,12 +19,12 @@ const settingStructure = {
 
 const dispatchMock = jest.fn();
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useSettingsDispatch: () => dispatchMock,
 }));
-jest.mock('@rocket.chat/core-typings', () => ({
-	...jest.requireActual('@rocket.chat/core-typings'),
+jest.mock('@zeki.chat/core-typings', () => ({
+	...jest.requireActual('@zeki.chat/core-typings'),
 	isSetting: jest.fn().mockReturnValue(true),
 }));
 

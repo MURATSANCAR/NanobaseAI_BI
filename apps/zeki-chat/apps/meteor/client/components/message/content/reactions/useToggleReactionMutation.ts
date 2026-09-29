@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { useEndpoint, useUserId } from '@rocket.chat/ui-contexts';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { useEndpoint, useUserId } from '@zeki.chat/ui-contexts';
 import type { UseMutationOptions, UseMutationResult } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
 

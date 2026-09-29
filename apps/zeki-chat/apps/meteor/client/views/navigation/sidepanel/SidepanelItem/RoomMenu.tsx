@@ -1,7 +1,7 @@
-import type { RoomType } from '@rocket.chat/core-typings';
-import { GenericMenu } from '@rocket.chat/ui-client';
-import type { LocationPathname } from '@rocket.chat/ui-contexts';
-import { useTranslation } from '@rocket.chat/ui-contexts';
+import type { RoomType } from '@zeki.chat/core-typings';
+import { GenericMenu } from '@zeki.chat/ui-client';
+import type { LocationPathname } from '@zeki.chat/ui-contexts';
+import { useTranslation } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 
 import { useRoomMenuActions } from '../hooks/useRoomMenuActions';

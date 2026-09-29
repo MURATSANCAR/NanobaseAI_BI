@@ -1,5 +1,5 @@
-import type { IRoom, ISubscription } from '@rocket.chat/core-typings';
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription } from '@zeki.chat/core-typings';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
 
 import { useOmnichannelPriorities } from '../../hooks/useOmnichannelPriorities';
 import { PriorityIcon } from '../../priorities/PriorityIcon';

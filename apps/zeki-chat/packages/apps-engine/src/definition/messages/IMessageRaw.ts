@@ -1,4 +1,4 @@
-import type { Block, LayoutBlock } from '@rocket.chat/ui-kit';
+import type { Block, LayoutBlock } from '@zeki.chat/ui-kit';
 
 import type { IRoom } from '../rooms';
 import type { IUserLookup } from '../users';

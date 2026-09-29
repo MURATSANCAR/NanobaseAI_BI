@@ -1,4 +1,4 @@
-import type { IApi } from '@rocket.chat/apps-engine/definition/api';
+import type { IApi } from '@zeki.chat/apps-engine/definition/api';
 
 import { ApiBridge } from '../../../src/server/bridges';
 import type { AppApi } from '../../../src/server/managers/AppApi';

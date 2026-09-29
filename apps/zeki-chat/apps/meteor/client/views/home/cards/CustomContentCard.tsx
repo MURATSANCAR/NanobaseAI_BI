@@ -1,5 +1,5 @@
 import { Box, Button, Card, CardBody, CardControls, CardHeader, Icon, Tag } from '@rocket.chat/fuselage';
-import { useRole, useSettingSetValue, useSetting, useToastMessageDispatch, useRouter } from '@rocket.chat/ui-contexts';
+import { useRole, useSettingSetValue, useSetting, useToastMessageDispatch, useRouter } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

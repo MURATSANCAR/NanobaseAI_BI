@@ -1,7 +1,7 @@
-import { isMessageFromVisitor } from '@rocket.chat/core-typings';
-import { Messages, Rooms, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
-import { removeEmpty } from '@rocket.chat/tools';
+import { isMessageFromVisitor } from '@zeki.chat/core-typings';
+import { Messages, Rooms, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
+import { removeEmpty } from '@zeki.chat/tools';
 
 import { cachedFunction } from './cachedFunction';
 import { convertMessageFiles } from './convertMessageFiles';

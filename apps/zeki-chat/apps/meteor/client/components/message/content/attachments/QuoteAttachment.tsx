@@ -1,7 +1,7 @@
-import type { MessageQuoteAttachment } from '@rocket.chat/core-typings';
+import type { MessageQuoteAttachment } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Palette } from '@rocket.chat/fuselage';
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import { useTimeAgo } from '../../../../hooks/useTimeAgo';

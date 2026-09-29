@@ -1,4 +1,4 @@
-import type { VideoConferenceInstructions, VideoConference, VideoConferenceCapabilities } from '@rocket.chat/core-typings';
+import type { VideoConferenceInstructions, VideoConference, VideoConferenceCapabilities } from '@zeki.chat/core-typings';
 
 import type { VideoConfCancelProps } from './VideoConfCancelProps';
 import type { VideoConfInfoProps } from './VideoConfInfoProps';

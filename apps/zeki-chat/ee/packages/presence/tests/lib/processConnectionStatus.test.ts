@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { UserStatus } from '@rocket.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 
 import { processConnectionStatus, processStatus, processPresenceAndStatus } from '../../src/lib/processConnectionStatus';
 

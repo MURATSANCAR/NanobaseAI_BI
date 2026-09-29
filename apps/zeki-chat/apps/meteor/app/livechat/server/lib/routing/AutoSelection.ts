@@ -1,5 +1,5 @@
-import type { IRoutingMethod, RoutingMethodConfig, SelectedAgent } from '@rocket.chat/core-typings';
-import { LivechatDepartmentAgents, Users } from '@rocket.chat/models';
+import type { IRoutingMethod, RoutingMethodConfig, SelectedAgent } from '@zeki.chat/core-typings';
+import { LivechatDepartmentAgents, Users } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../../server/lib/callbacks';
 import { settings } from '../../../../settings/server';

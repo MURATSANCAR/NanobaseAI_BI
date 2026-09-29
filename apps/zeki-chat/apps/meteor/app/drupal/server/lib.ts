@@ -1,11 +1,11 @@
-import type { OauthConfig } from '@rocket.chat/core-typings';
+import type { OauthConfig } from '@zeki.chat/core-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { CustomOAuth } from '../../custom-oauth/server/custom_oauth_server';
 import { settings } from '../../settings/server';
 
-// Drupal Server CallBack URL needs to be http(s)://{rocketchat.server}[:port]/_oauth/drupal
-// In RocketChat -> Administration the URL needs to be http(s)://{drupal.server}/
+// Drupal Server CallBack URL needs to be http(s)://{zekichat.server}[:port]/_oauth/drupal
+// In ZekiChat -> Administration the URL needs to be http(s)://{drupal.server}/
 
 const config: OauthConfig = {
 	serverURL: '',

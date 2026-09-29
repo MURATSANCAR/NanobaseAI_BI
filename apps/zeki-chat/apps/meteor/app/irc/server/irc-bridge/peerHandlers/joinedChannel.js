@@ -1,4 +1,4 @@
-import { Users, Rooms } from '@rocket.chat/models';
+import { Users, Rooms } from '@zeki.chat/models';
 
 import { addUserToRoom } from '../../../../lib/server/functions/addUserToRoom';
 import { createRoom } from '../../../../lib/server/functions/createRoom';

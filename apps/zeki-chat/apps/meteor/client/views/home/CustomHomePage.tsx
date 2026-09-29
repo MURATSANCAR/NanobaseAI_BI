@@ -1,4 +1,4 @@
-import { Page, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
+import { Page, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 
 import HomePageHeader from './HomePageHeader';

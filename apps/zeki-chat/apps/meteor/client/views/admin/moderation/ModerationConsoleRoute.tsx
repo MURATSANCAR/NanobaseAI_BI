@@ -1,4 +1,4 @@
-import { usePermission, useRouteParameter, useRouter } from '@rocket.chat/ui-contexts';
+import { usePermission, useRouteParameter, useRouter } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import ModerationConsolePage from './ModerationConsolePage';

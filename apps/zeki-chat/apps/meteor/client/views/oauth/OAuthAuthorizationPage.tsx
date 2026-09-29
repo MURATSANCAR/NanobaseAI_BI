@@ -1,5 +1,5 @@
-import { useSearchParameter, useUser } from '@rocket.chat/ui-contexts';
-import RegistrationPageRouter from '@rocket.chat/web-ui-registration';
+import { useSearchParameter, useUser } from '@zeki.chat/ui-contexts';
+import RegistrationPageRouter from '@zeki.chat/web-ui-registration';
 
 import { getErrorMessage } from '../../lib/errorHandling';
 import PageLoading from '../root/PageLoading';

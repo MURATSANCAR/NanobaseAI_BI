@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import { ReadableStream } from 'node:stream/web';
 
-import { MeteorError } from '@rocket.chat/core-services';
+import { MeteorError } from '@zeki.chat/core-services';
 import type { ValidateFunction } from 'ajv';
 import busboy from 'busboy';
 

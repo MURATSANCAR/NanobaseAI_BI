@@ -2,7 +2,7 @@ import type { SelectOption } from '@rocket.chat/fuselage';
 import { ButtonGroup, Button, Icon, InputBox, Callout } from '@rocket.chat/fuselage';
 import { FieldError, Field, FieldLabel, FieldRow, TextAreaInput, FieldGroup, Select, TextInput } from '@rocket.chat/fuselage-forms';
 import { useAutoFocus } from '@rocket.chat/fuselage-hooks';
-import { validateEmail } from '@rocket.chat/tools';
+import { validateEmail } from '@zeki.chat/tools';
 import {
 	ContextualbarHeader,
 	ContextualbarScrollableContent,
@@ -11,8 +11,8 @@ import {
 	ContextualbarClose,
 	ContextualbarFooter,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { usePermission, useRoomToolbox } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { usePermission, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useContext, useEffect, useId, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';

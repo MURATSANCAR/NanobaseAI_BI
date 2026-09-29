@@ -1,13 +1,13 @@
 import { faker } from '@faker-js/faker';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook, waitFor } from '@testing-library/react';
 
 import { useDeleteRoomModal } from './useDeleteRoomModal';
 
 const mockSetModal = jest.fn();
 
-jest.mock('@rocket.chat/ui-contexts', () => {
-	const originalModule = jest.requireActual('@rocket.chat/ui-contexts');
+jest.mock('@zeki.chat/ui-contexts', () => {
+	const originalModule = jest.requireActual('@zeki.chat/ui-contexts');
 	return {
 		...originalModule,
 		useSetModal: () => mockSetModal,

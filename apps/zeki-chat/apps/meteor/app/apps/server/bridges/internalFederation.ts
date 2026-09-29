@@ -1,5 +1,5 @@
-import type { IInternalFederationBridge } from '@rocket.chat/apps/dist/server/bridges/IInternalFederationBridge';
-import { FederationKeys } from '@rocket.chat/models';
+import type { IInternalFederationBridge } from '@zeki.chat/apps/dist/server/bridges/IInternalFederationBridge';
+import { FederationKeys } from '@zeki.chat/models';
 
 export class AppInternalFederationBridge implements IInternalFederationBridge {
 	async getPrivateKey(): Promise<string | null> {

@@ -21,7 +21,7 @@ class CookiesMock {
 }
 
 const { roomAvatar } = proxyquire.noCallThru().load('./room', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Rooms: {
 			findOneById: mocks.findOneById,
 		},

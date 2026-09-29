@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import type { IUpload } from '@rocket.chat/core-typings';
+import type { IUpload } from '@zeki.chat/core-typings';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import type { ClientSession } from 'mongodb';

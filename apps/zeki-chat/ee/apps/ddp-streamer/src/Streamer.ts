@@ -1,5 +1,5 @@
-import { api } from '@rocket.chat/core-services';
-import type { StreamNames } from '@rocket.chat/ddp-client';
+import { api } from '@zeki.chat/core-services';
+import type { StreamNames } from '@zeki.chat/ddp-client';
 import WebSocket from 'ws';
 
 import { server } from './configureServer';

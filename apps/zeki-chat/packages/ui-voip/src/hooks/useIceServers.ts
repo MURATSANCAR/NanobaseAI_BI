@@ -1,4 +1,4 @@
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import type { IceServer } from '../definitions';

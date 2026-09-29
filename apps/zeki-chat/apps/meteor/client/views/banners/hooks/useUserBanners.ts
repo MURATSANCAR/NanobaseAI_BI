@@ -1,4 +1,4 @@
-import { useUser } from '@rocket.chat/ui-contexts';
+import { useUser } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 

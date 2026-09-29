@@ -1,6 +1,6 @@
-import type { UserStatus } from '@rocket.chat/core-typings';
-import type { MediaSignalingSession, CallState, CallContact } from '@rocket.chat/media-signaling';
-import { useUserAvatarPath, useUserPresence } from '@rocket.chat/ui-contexts';
+import type { UserStatus } from '@zeki.chat/core-typings';
+import type { MediaSignalingSession, CallState, CallContact } from '@zeki.chat/media-signaling';
+import { useUserAvatarPath, useUserPresence } from '@zeki.chat/ui-contexts';
 import { useEffect, useReducer, useCallback } from 'react';
 
 import type { ConnectionState, PeerInfo, SessionState } from '../context/definitions';

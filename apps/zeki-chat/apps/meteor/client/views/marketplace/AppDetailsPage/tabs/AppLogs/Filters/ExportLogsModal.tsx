@@ -15,7 +15,7 @@ import {
 	NumberInput,
 	RadioButton,
 } from '@rocket.chat/fuselage';
-import { useRouteParameter } from '@rocket.chat/ui-contexts';
+import { useRouteParameter } from '@zeki.chat/ui-contexts';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 

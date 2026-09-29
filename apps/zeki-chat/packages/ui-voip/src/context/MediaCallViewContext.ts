@@ -1,5 +1,5 @@
-import { type IMediaStreamWrapper } from '@rocket.chat/media-signaling';
-import type { Device } from '@rocket.chat/ui-contexts';
+import { type IMediaStreamWrapper } from '@zeki.chat/media-signaling';
+import type { Device } from '@zeki.chat/ui-contexts';
 import { createContext, useContext } from 'react';
 
 import type { SessionState, PeerInfo } from './definitions';

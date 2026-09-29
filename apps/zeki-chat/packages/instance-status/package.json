@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/instance-status",
+	"name": "@zeki.chat/instance-status",
 	"version": "0.1.57",
 	"private": true,
 	"main": "./dist/index.js",
@@ -15,11 +15,11 @@
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"dependencies": {
-		"@rocket.chat/models": "workspace:^",
-		"@rocket.chat/tracing": "workspace:^"
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/tracing": "workspace:^"
 	},
 	"devDependencies": {
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"eslint": "~9.39.4",
 		"mongodb": "6.16.0",
 		"prettier": "~3.3.3",

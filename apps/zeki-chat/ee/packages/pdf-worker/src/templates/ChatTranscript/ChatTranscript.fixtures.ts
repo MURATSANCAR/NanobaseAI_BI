@@ -98,7 +98,7 @@ export const exampleData: WorkerData = {
 		name: 'Christian Castro',
 		username: 'christian.castro',
 	},
-	siteName: 'Rocket.Chat',
+	siteName: 'ZEKI AI CHAT',
 	closedAt: new Date('2022-11-21T00:00:00.000Z'),
 	dateFormat: 'MMM D, YYYY',
 	timeAndDateFormat: 'MMM D, YYYY H:mm:ss',

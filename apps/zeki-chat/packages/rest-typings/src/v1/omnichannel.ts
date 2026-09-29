@@ -32,8 +32,8 @@ import type {
 	ILivechatContactChannel,
 	IUser,
 	OmichannelRoutingConfig,
-} from '@rocket.chat/core-typings';
-import { ILivechatAgentStatus } from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
+import { ILivechatAgentStatus } from '@zeki.chat/core-typings';
 import type { WithId } from 'mongodb';
 
 import { ajv, ajvQuery } from './Ajv';

@@ -1,4 +1,4 @@
-import type { IUser, Serialized } from '@rocket.chat/core-typings';
+import type { IUser, Serialized } from '@zeki.chat/core-typings';
 import { Box, Margins, Tag } from '@rocket.chat/fuselage';
 import {
 	useUserDisplayName,
@@ -11,8 +11,8 @@ import {
 	InfoPanelSection,
 	InfoPanelText,
 	InfoPanelTitle,
-} from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useId } from 'react';
 import { useTranslation } from 'react-i18next';

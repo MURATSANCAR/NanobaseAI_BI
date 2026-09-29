@@ -1,6 +1,6 @@
 import { Box, Callout, Chip, Margins } from '@rocket.chat/fuselage';
-import { ExternalLink } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import { ExternalLink } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import { useTranslation } from 'react-i18next';
 

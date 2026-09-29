@@ -3,7 +3,7 @@ import type { CachedSettings } from '../../../settings/server/CachedSettings';
 
 const mockInfoVersion = jest.fn(() => '7.5.0');
 
-jest.mock('../../../utils/rocketchat.info', () => ({
+jest.mock('../../../utils/zekichat.info', () => ({
 	Info: {
 		get version() {
 			return mockInfoVersion();
@@ -11,7 +11,7 @@ jest.mock('../../../utils/rocketchat.info', () => ({
 	},
 }));
 
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	Users: {
 		findOneById: jest.fn().mockResolvedValue({
 			id: '123',

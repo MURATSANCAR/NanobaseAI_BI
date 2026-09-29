@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
-import type { Credentials } from '@rocket.chat/api-client';
-import { UserStatus, type ILivechatAgent, type IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import { UserStatus, type ILivechatAgent, type IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 
 import { api, credentials, request } from '../api-data';
 import { password } from '../user';

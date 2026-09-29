@@ -1,4 +1,4 @@
-import type { IRole } from '@rocket.chat/apps-engine/definition/roles';
+import type { IRole } from '@zeki.chat/apps-engine/definition/roles';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

@@ -1,6 +1,6 @@
-import { hashLoginToken } from '@rocket.chat/account-utils';
-import { Authorization } from '@rocket.chat/core-services';
-import { Users } from '@rocket.chat/models';
+import { hashLoginToken } from '@zeki.chat/account-utils';
+import { Authorization } from '@zeki.chat/core-services';
+import { Users } from '@zeki.chat/models';
 import type { Request, Response, NextFunction } from 'express';
 
 import { oAuth2ServerAuth } from '../../../oauth2-server-config/server/oauth/oauth2-server';

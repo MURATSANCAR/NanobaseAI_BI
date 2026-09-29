@@ -1,4 +1,4 @@
-import { ILivechatAgentStatus } from '@rocket.chat/core-typings';
+import { ILivechatAgentStatus } from '@zeki.chat/core-typings';
 import type {
 	AtLeast,
 	ILivechatDepartment,
@@ -10,9 +10,9 @@ import type {
 	SelectedAgent,
 	InquiryWithAgentInfo,
 	ILivechatInquiryRecord,
-} from '@rocket.chat/core-typings';
-import { LivechatContacts, LivechatDepartmentAgents, LivechatVisitors, Users } from '@rocket.chat/models';
-import { makeFunction } from '@rocket.chat/patch-injection';
+} from '@zeki.chat/core-typings';
+import { LivechatContacts, LivechatDepartmentAgents, LivechatVisitors, Users } from '@zeki.chat/models';
+import { makeFunction } from '@zeki.chat/patch-injection';
 
 import { setUserStatusLivechat } from './utils';
 import { callbacks } from '../../../../server/lib/callbacks';

@@ -1,4 +1,4 @@
-import type { IMessage, ILivechatInquiryRecord, LivechatInquiryStatus, SelectedAgent } from '@rocket.chat/core-typings';
+import type { IMessage, ILivechatInquiryRecord, LivechatInquiryStatus, SelectedAgent } from '@zeki.chat/core-typings';
 import type { FindOptions, Document, UpdateResult, DeleteResult, FindCursor, DeleteOptions, AggregateOptions } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

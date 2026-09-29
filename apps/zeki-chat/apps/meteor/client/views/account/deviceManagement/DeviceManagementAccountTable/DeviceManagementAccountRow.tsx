@@ -1,6 +1,6 @@
 import { Box, Button } from '@rocket.chat/fuselage';
 import { useMediaQuery } from '@rocket.chat/fuselage-hooks';
-import { GenericTableCell, GenericTableRow } from '@rocket.chat/ui-client';
+import { GenericTableCell, GenericTableRow } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

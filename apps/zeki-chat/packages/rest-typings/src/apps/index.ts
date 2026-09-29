@@ -1,9 +1,9 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IApiEndpointMetadata } from '@rocket.chat/apps-engine/definition/api';
-import type { IExternalComponent } from '@rocket.chat/apps-engine/definition/externalComponent';
-import type { IPermission } from '@rocket.chat/apps-engine/definition/permissions/IPermission';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
-import type { IUIActionButton } from '@rocket.chat/apps-engine/definition/ui';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IApiEndpointMetadata } from '@zeki.chat/apps-engine/definition/api';
+import type { IExternalComponent } from '@zeki.chat/apps-engine/definition/externalComponent';
+import type { IPermission } from '@zeki.chat/apps-engine/definition/permissions/IPermission';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
+import type { IUIActionButton } from '@zeki.chat/apps-engine/definition/ui';
 import type {
 	AppCategory,
 	AppScreenshot,
@@ -12,8 +12,8 @@ import type {
 	ILogItem,
 	AppRequestFilter,
 	AppRequest,
-} from '@rocket.chat/core-typings';
-import type * as UiKit from '@rocket.chat/ui-kit';
+} from '@zeki.chat/core-typings';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 import type { AppLogsExportProps } from './appLogsExportProps';
 import type { AppLogsProps } from './appLogsProps';
@@ -24,7 +24,7 @@ export * from './appLogsProps';
 
 export type AppsEndpoints = {
 	'/apps/count': {
-		GET: () => { totalMarketplaceEnabled: number; totalPrivateEnabled: number; maxMarketplaceApps: number; maxPrivateApps: number };
+		GET: () => { totalMarketplaceEnabled: number; totalPrivateEnabled: number };
 	};
 
 	'/apps/externalComponents': {

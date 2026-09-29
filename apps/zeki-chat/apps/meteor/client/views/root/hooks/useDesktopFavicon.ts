@@ -1,4 +1,4 @@
-import { useAbsoluteUrl, useAssetPath } from '@rocket.chat/ui-contexts';
+import { useAbsoluteUrl, useAssetPath } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 export const useDesktopFavicon = () => {
@@ -6,7 +6,7 @@ export const useDesktopFavicon = () => {
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
-		window.RocketChatDesktop?.setUrlResolver((relativePath?: string) => absoluteUrl(relativePath ?? '/'));
+		window.ZekiChatDesktop?.setUrlResolver((relativePath?: string) => absoluteUrl(relativePath ?? '/'));
 	}, [absoluteUrl]);
 
 	const faviconUrl = useAssetPath('favicon');
@@ -14,6 +14,6 @@ export const useDesktopFavicon = () => {
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 		if (!faviconUrl) return;
-		window.RocketChatDesktop?.setFavicon(faviconUrl);
+		window.ZekiChatDesktop?.setFavicon(faviconUrl);
 	}, [faviconUrl]);
 };

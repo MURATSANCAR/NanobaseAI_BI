@@ -1,7 +1,7 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import { AppStatusUtils } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { ISetting as AppsSetting } from '@rocket.chat/apps-engine/definition/settings';
-import { api } from '@rocket.chat/core-services';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import { AppStatusUtils } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { ISetting as AppsSetting } from '@zeki.chat/apps-engine/definition/settings';
+import { api } from '@zeki.chat/core-services';
 
 import { AppEvents } from './events';
 import notifications from '../../../../app/notifications/server/lib/Notifications';

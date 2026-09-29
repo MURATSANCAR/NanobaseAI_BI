@@ -1,5 +1,5 @@
-import type { IMessage, ISupportedLanguage } from '@rocket.chat/core-typings';
-import { Messages, Rooms } from '@rocket.chat/models';
+import type { IMessage, ISupportedLanguage } from '@zeki.chat/core-typings';
+import { Messages, Rooms } from '@zeki.chat/models';
 import {
 	ajv,
 	validateUnauthorizedErrorResponse,
@@ -7,7 +7,7 @@ import {
 	validateForbiddenErrorResponse,
 	isAutotranslateSaveSettingsParamsPOST,
 	isAutotranslateGetSupportedLanguagesParamsGET,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { canAccessRoomAsync } from '../../../authorization/server';
 import { getSupportedLanguages } from '../../../autotranslate/server/functions/getSupportedLanguages';
@@ -159,7 +159,7 @@ const autotranslateEndpoints = API.v1
 
 type AutotranslateEndpoints = ExtractRoutesFromAPI<typeof autotranslateEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends AutotranslateEndpoints {}
 }

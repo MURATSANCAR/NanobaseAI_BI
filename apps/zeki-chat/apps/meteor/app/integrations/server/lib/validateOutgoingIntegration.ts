@@ -1,5 +1,5 @@
-import type { IUser, INewOutgoingIntegration, IOutgoingIntegration, IUpdateOutgoingIntegration } from '@rocket.chat/core-typings';
-import { Subscriptions, Users, Rooms } from '@rocket.chat/models';
+import type { IUser, INewOutgoingIntegration, IOutgoingIntegration, IUpdateOutgoingIntegration } from '@zeki.chat/core-typings';
+import { Subscriptions, Users, Rooms } from '@zeki.chat/models';
 import { Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -145,7 +145,7 @@ export const validateOutgoingIntegration = async function (
 	const user = await Users.findOne({ username: integration.username });
 
 	if (!user) {
-		throw new Meteor.Error('error-invalid-user', 'Invalid user (did you delete the `rocket.cat` user?)', { function: 'validateOutgoing' });
+		throw new Meteor.Error('error-invalid-user', 'Invalid user (did you delete the `zeki.bot` user?)', { function: 'validateOutgoing' });
 	}
 
 	const integrationData: IOutgoingIntegration = {

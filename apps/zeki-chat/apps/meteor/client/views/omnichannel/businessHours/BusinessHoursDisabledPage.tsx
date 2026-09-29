@@ -1,6 +1,6 @@
 import { States, StatesIcon, StatesTitle, StatesSubtitle, StatesActions, StatesAction, Box } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useRole, useRouter } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useRole, useRouter } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 

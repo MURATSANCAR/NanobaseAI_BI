@@ -1,4 +1,4 @@
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { usePermission } from '@zeki.chat/ui-contexts';
 
 import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import { useOmnichannelEnabled } from '../../../hooks/useOmnichannelEnabled';

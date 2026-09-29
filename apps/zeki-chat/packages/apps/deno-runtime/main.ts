@@ -1,7 +1,7 @@
 if (!Deno.args.includes('--subprocess')) {
 	Deno.stderr.writeSync(
 		new TextEncoder().encode(`
-            This is a Deno wrapper for Rocket.Chat Apps. It is not meant to be executed stand-alone;
+            This is a Deno wrapper for ZEKI AI CHAT Apps. It is not meant to be executed stand-alone;
             It is instead meant to be executed as a subprocess by the Apps-Engine framework.
        `),
 	);

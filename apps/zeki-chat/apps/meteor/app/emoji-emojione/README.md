@@ -15,4 +15,4 @@ grunt sprite
 sass --sourcemap=none assets/sprites/emojione.sprites.scss sprites.css
 ```
 
-And replace the file `sprites.css` at ZEKI AI CHAT's `/packages/rocketchat-emoji-emojione/sprites.css`.
+And replace the file `sprites.css` at ZEKI AI CHAT's `/packages/zekichat-emoji-emojione/sprites.css`.

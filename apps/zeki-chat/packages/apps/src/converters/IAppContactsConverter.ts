@@ -1,4 +1,4 @@
-import type { ILivechatContact } from '@rocket.chat/core-typings';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
 
 import type { IAppsLivechatContact } from '../AppsEngine';
 

@@ -1,5 +1,5 @@
 import { NavBarGroup, NavBarSection } from '@rocket.chat/fuselage';
-import { useLayout } from '@rocket.chat/ui-contexts';
+import { useLayout } from '@zeki.chat/ui-contexts';
 
 import NavBarPagesGroup from './NavBarPagesGroup';
 import SidebarToggler from '../components/SidebarToggler';

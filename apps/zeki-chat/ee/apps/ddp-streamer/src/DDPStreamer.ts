@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 
-import { MeteorService, Presence, ServiceClass } from '@rocket.chat/core-services';
-import { InstanceStatus } from '@rocket.chat/instance-status';
-import { Users } from '@rocket.chat/models';
+import { MeteorService, Presence, ServiceClass } from '@zeki.chat/core-services';
+import { InstanceStatus } from '@zeki.chat/instance-status';
+import { Users } from '@zeki.chat/models';
 import polka from 'polka';
 import { throttle } from 'underscore';
 import WebSocket from 'ws';
@@ -118,10 +118,10 @@ export class DDPStreamer extends ServiceClass {
 		}
 
 		metrics.register({
-			name: 'rocketchat_subscription',
+			name: 'zeki_subscription',
 			type: 'histogram',
 			labelNames: ['subscription'],
-			description: 'Client subscriptions to Rocket.Chat',
+			description: 'Client subscriptions to ZEKI AI CHAT',
 			unit: 'millisecond',
 			quantiles: true,
 		});

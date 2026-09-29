@@ -1,5 +1,5 @@
-import type { IRole } from '@rocket.chat/core-typings';
-import { Roles } from '@rocket.chat/models';
+import type { IRole } from '@zeki.chat/core-typings';
+import { Roles } from '@zeki.chat/models';
 
 export const validateRoleList = async (roleIds: IRole['_id'][]): Promise<boolean> => {
 	const options = {

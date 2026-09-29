@@ -5,11 +5,11 @@ import type {
 	IProviderMetadata,
 	ISupportedLanguage,
 	ITranslationResult,
-} from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { Messages, Subscriptions } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { Messages, Subscriptions } from '@zeki.chat/models';
 import { escapeHTML } from '@rocket.chat/string-helpers';
-import { isTruthy } from '@rocket.chat/tools';
+import { isTruthy } from '@zeki.chat/tools';
 import { Meteor } from 'meteor/meteor';
 import _ from 'underscore';
 

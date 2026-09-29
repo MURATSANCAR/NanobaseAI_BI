@@ -1,4 +1,4 @@
-import { UserStatus } from '@rocket.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 
 import { Presence } from './presence';
 

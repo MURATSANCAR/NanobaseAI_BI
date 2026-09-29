@@ -1,5 +1,4 @@
-import type { AppManager } from '@rocket.chat/apps/dist/server/AppManager';
-import { Capabilities } from '@zeki.chat/capabilities';
+import type { AppManager } from '@zeki.chat/apps/dist/server/AppManager';
 
 import { API } from '../../../../../app/api/server';
 import { getInstallationSourceFromAppStorageItem } from '../../../../../lib/apps/getInstallationSourceFromAppStorageItem';
@@ -14,14 +13,11 @@ export const registerAppsCountHandler = ({ api, _manager }: AppsRestApi) =>
 				const manager = _manager as AppManager;
 
 				const apps = await manager.get({ enabled: true });
-				const { maxMarketplaceApps, maxPrivateApps } = Capabilities.getAppsConfig();
 
 				return API.v1.success({
 					totalMarketplaceEnabled: apps.filter((app) => getInstallationSourceFromAppStorageItem(app.getStorageItem()) === 'marketplace')
 						.length,
 					totalPrivateEnabled: apps.filter((app) => getInstallationSourceFromAppStorageItem(app.getStorageItem()) === 'private').length,
-					maxMarketplaceApps,
-					maxPrivateApps,
 				});
 			},
 		},

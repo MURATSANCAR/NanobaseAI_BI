@@ -1,4 +1,4 @@
-import { registerModel, BaseRaw } from '@rocket.chat/models';
+import { registerModel, BaseRaw } from '@zeki.chat/models';
 import { expect } from 'chai';
 import { afterEach, before, describe, it } from 'mocha';
 import proxyquire from 'proxyquire';

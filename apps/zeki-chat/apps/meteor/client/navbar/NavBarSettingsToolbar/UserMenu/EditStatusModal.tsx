@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import {
 	Field,
 	TextInput,
@@ -19,7 +19,7 @@ import {
 	ModalFooterControllers,
 } from '@rocket.chat/fuselage';
 import { useEffectEvent, useLocalStorage } from '@rocket.chat/fuselage-hooks';
-import { useToastMessageDispatch, useSetting, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch, useSetting, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ChangeEvent, ComponentProps, FormEvent } from 'react';
 import { useState, useCallback, useId } from 'react';
 

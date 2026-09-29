@@ -1,5 +1,5 @@
-import { isEditedMessage } from '@rocket.chat/core-typings';
-import { LivechatRooms } from '@rocket.chat/models';
+import { isEditedMessage } from '@zeki.chat/core-typings';
+import { LivechatRooms } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 

@@ -1,5 +1,5 @@
-import { isUserFederated } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { isUserFederated } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 export const isUserIdFederated = async (userId: string): Promise<boolean> => {
 	const user = await Users.findOneById(userId, { projection: { federated: 1 } });

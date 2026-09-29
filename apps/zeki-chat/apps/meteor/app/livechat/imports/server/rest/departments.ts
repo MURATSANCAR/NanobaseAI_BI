@@ -1,11 +1,11 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatDepartmentAgents } from '@rocket.chat/models';
-import { isDepartmentCreationAvailable } from '@rocket.chat/omni-core';
-import { isGETLivechatDepartmentProps, isPOSTLivechatDepartmentProps } from '@rocket.chat/rest-typings';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatDepartmentAgents } from '@zeki.chat/models';
+import { isDepartmentCreationAvailable } from '@zeki.chat/omni-core';
+import { isGETLivechatDepartmentProps, isPOSTLivechatDepartmentProps } from '@zeki.chat/rest-typings';
 import {
 	isLivechatDepartmentDepartmentIdAgentsGETProps,
 	isLivechatDepartmentDepartmentIdAgentsPOSTProps,
-} from '@rocket.chat/rest-typings/src/v1/omnichannel';
+} from '@zeki.chat/rest-typings/src/v1/omnichannel';
 import { Match, check } from 'meteor/check';
 
 import { API } from '../../../../api/server';

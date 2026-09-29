@@ -1,4 +1,4 @@
-import type { ActionableElement, InputElementDispatchAction } from '@rocket.chat/ui-kit';
+import type { ActionableElement, InputElementDispatchAction } from '@zeki.chat/ui-kit';
 import type { MouseEventHandler } from 'react';
 import { createContext } from 'react';
 

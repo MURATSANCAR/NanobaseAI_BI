@@ -7,7 +7,7 @@ import {
 	ContextualbarFooter,
 	ContextualbarClose,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import { useId, type ReactElement } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';

@@ -1,7 +1,7 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 import { Box, Button, Tag, Margins, Icon } from '@rocket.chat/fuselage';
 import { useSafely } from '@rocket.chat/fuselage-hooks';
-import { useRouteParameter, usePermission, useSetModal } from '@rocket.chat/ui-contexts';
+import { useRouteParameter, usePermission, useSetModal } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useCallback, useState, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,6 @@ import semver from 'semver';
 
 import AppStatusPriceDisplay from './AppStatusPriceDisplay';
 import { useHasCapability } from '../../../../../hooks/useHasCapability';
-import { useIsEnterprise } from '../../../../../hooks/useIsEnterprise';
 import AddonRequiredModal from '../../../AppsList/AddonRequiredModal';
 import type { appStatusSpanResponseProps } from '../../../helpers';
 import { appButtonProps, appMultiStatusProps } from '../../../helpers';
@@ -39,8 +38,7 @@ const AppStatus = ({ app, showStatus = true, isAppDetailsPage, installed, ...pro
 	const shouldShowPriceDisplay = isAppDetailsPage && button && !app.isEnterpriseOnly;
 	const canUpdate = installed && app?.version && app?.marketplaceVersion && semver.lt(app?.version, app?.marketplaceVersion);
 
-	const { data } = useIsEnterprise();
-	const isEnterprise = data?.isEnterprise ?? false;
+	const isEnterprise = false;
 
 	const appAddon = app.addon;
 	const { data: workspaceHasAddon = false } = useHasCapability(appAddon);

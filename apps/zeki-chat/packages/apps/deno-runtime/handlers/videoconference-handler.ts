@@ -1,4 +1,4 @@
-import type { IVideoConfProvider } from '@rocket.chat/apps-engine/definition/videoConfProviders/IVideoConfProvider';
+import type { IVideoConfProvider } from '@zeki.chat/apps-engine/definition/videoConfProviders/IVideoConfProvider';
 import { Defined, JsonRpcError } from 'jsonrpc-lite';
 
 import { AppObjectRegistry } from '../AppObjectRegistry.ts';

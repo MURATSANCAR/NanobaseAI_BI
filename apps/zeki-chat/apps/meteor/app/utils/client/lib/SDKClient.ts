@@ -1,5 +1,5 @@
-import type { RestClientInterface } from '@rocket.chat/api-client';
-import type { SDK, ClientStream, StreamKeys, StreamNames, StreamerCallbackArgs, ServerMethods } from '@rocket.chat/ddp-client';
+import type { RestClientInterface } from '@zeki.chat/api-client';
+import type { SDK, ClientStream, StreamKeys, StreamNames, StreamerCallbackArgs, ServerMethods } from '@zeki.chat/ddp-client';
 import { Emitter } from '@rocket.chat/emitter';
 import { Meteor } from 'meteor/meteor';
 
@@ -8,7 +8,7 @@ import { parseDDP } from '../../../../client/lib/sdk/ddpProtocol';
 import { ensureConnectedAndAuthenticated, getDdpSdk } from '../../../../client/lib/sdk/ddpSdk';
 import { isSdkTransportEnabled } from '../../../../client/lib/sdk/sdkTransportEnabled';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface SDK {
 		stream<N extends StreamNames, K extends StreamKeys<N>>(

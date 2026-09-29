@@ -1,4 +1,4 @@
-import type { IUserSettings } from '@rocket.chat/core-typings';
+import type { IUserSettings } from '@zeki.chat/core-typings';
 
 import { ajv } from '../Ajv';
 

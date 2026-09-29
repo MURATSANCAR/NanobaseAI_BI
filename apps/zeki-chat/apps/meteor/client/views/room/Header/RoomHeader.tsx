@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import { Header, HeaderContent, HeaderContentRow, HeaderToolbar } from '@rocket.chat/ui-client';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import { Header, HeaderContent, HeaderContentRow, HeaderToolbar } from '@zeki.chat/ui-client';
 import type { ReactNode } from 'react';
 import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';

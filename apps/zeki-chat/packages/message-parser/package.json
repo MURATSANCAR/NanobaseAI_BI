@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/message-parser",
+	"name": "@zeki.chat/message-parser",
 	"version": "0.31.36",
 	"description": "ZEKI AI CHAT parser for messages",
 	"exports": {
@@ -32,8 +32,8 @@
 		"tldts": "~6.1.86"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/peggy-loader": "workspace:~",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/peggy-loader": "workspace:~",
 		"@rocket.chat/prettier-config": "~0.31.25",
 		"@types/jest": "~30.0.0",
 		"@types/node": "~22.19.17",

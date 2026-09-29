@@ -1,5 +1,5 @@
 import { SidebarV2ItemBadge } from '@rocket.chat/fuselage';
-import type { SubscriptionWithRoom, TranslationKey } from '@rocket.chat/ui-contexts';
+import type { SubscriptionWithRoom, TranslationKey } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { useUnreadDisplay } from '../hooks/useUnreadDisplay';

@@ -1,12 +1,12 @@
-import { CustomSounds } from '@rocket.chat/models';
+import { CustomSounds } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import { WebApp } from 'meteor/webapp';
 
 import { SystemLogger } from '../../../../server/lib/logger/system';
-import { RocketChatFile } from '../../../file/server';
+import { ZekiChatFile } from '../../../file/server';
 import { settings } from '../../../settings/server';
 
-export let RocketChatFileCustomSoundsInstance;
+export let ZekiChatFileCustomSoundsInstance;
 
 const initializeCustomSoundsStorage = () => {
 	let storeType = 'GridFS';
@@ -15,10 +15,10 @@ const initializeCustomSoundsStorage = () => {
 		storeType = settings.get('CustomSounds_Storage_Type');
 	}
 
-	const RocketChatStore = RocketChatFile[storeType];
+	const ZekiChatStore = ZekiChatFile[storeType];
 
-	if (RocketChatStore == null) {
-		throw new Error(`Invalid RocketChatStore type [${storeType}]`);
+	if (ZekiChatStore == null) {
+		throw new Error(`Invalid ZekiChatStore type [${storeType}]`);
 	}
 
 	SystemLogger.info({
@@ -33,7 +33,7 @@ const initializeCustomSoundsStorage = () => {
 		}
 	}
 
-	RocketChatFileCustomSoundsInstance = new RocketChatStore({
+	ZekiChatFileCustomSoundsInstance = new ZekiChatStore({
 		name: 'custom_sounds',
 		absolutePath: path,
 	});
@@ -60,7 +60,7 @@ Meteor.startup(() => {
 			return;
 		}
 
-		const file = await RocketChatFileCustomSoundsInstance.getFileWithReadStream(fileId);
+		const file = await ZekiChatFileCustomSoundsInstance.getFileWithReadStream(fileId);
 
 		if (!file) {
 			res.writeHead(404);

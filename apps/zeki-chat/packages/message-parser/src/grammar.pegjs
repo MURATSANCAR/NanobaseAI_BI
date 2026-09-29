@@ -327,7 +327,7 @@ SpoilerContentItem = !"||" @InlineItemPattern / !"||" @Any
  *
  * URL
  * e.g:
- * Reference: [Rocket.Chat Website](https://rocket.chat), [](https://rocket.chat), <rocket.chat|Rocket.Chat Website>
+ * Reference: [ZEKI AI CHAT Website](https://rocket.chat), [](https://rocket.chat), <rocket.chat|ZEKI AI CHAT Website>
  * Image: ![](https://rocket.chat/logo.png)
  *
  */

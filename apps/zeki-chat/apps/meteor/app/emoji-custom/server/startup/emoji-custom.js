@@ -1,13 +1,13 @@
-import { EmojiCustom } from '@rocket.chat/models';
+import { EmojiCustom } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import { WebApp } from 'meteor/webapp';
 import _ from 'underscore';
 
 import { SystemLogger } from '../../../../server/lib/logger/system';
-import { RocketChatFile } from '../../../file/server';
+import { ZekiChatFile } from '../../../file/server';
 import { settings } from '../../../settings/server';
 
-export let RocketChatFileEmojiCustomInstance;
+export let ZekiChatFileEmojiCustomInstance;
 
 const writeSvgFallback = (res, req) => {
 	res.setHeader('Content-Type', 'image/svg+xml');
@@ -45,10 +45,10 @@ const initializeEmojiCustomStorage = () => {
 		storeType = settings.get('EmojiUpload_Storage_Type');
 	}
 
-	const RocketChatStore = RocketChatFile[storeType];
+	const ZekiChatStore = ZekiChatFile[storeType];
 
-	if (RocketChatStore == null) {
-		throw new Error(`Invalid RocketChatStore type [${storeType}]`);
+	if (ZekiChatStore == null) {
+		throw new Error(`Invalid ZekiChatStore type [${storeType}]`);
 	}
 
 	SystemLogger.info({
@@ -63,7 +63,7 @@ const initializeEmojiCustomStorage = () => {
 		}
 	}
 
-	RocketChatFileEmojiCustomInstance = new RocketChatStore({
+	ZekiChatFileEmojiCustomInstance = new ZekiChatStore({
 		name: 'custom_emoji',
 		absolutePath: path,
 	});
@@ -89,7 +89,7 @@ Meteor.startup(() => {
 			return writeSvgFallback(res, req);
 		}
 
-		const file = await RocketChatFileEmojiCustomInstance.getFileWithReadStream(encodeURIComponent(params.emoji));
+		const file = await ZekiChatFileEmojiCustomInstance.getFileWithReadStream(encodeURIComponent(params.emoji));
 
 		if (!file) {
 			// use code from username initials renderer until file upload is complete

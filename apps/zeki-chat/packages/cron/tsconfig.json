@@ -1,5 +1,5 @@
 {
-	"extends": "@rocket.chat/tsconfig/server.json",
+	"extends": "@zeki.chat/tsconfig/server.json",
 	"compilerOptions": {
 		"rootDir": "./src",
 		"declaration": true,

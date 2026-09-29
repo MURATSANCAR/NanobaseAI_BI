@@ -12,7 +12,7 @@ Migration from the legacy `API.v1.addRoute()` pattern to the new `API.v1.get()` 
 ## Legacy Pattern (BEFORE)
 
 ```typescript
-import { isChannelsAddAllProps } from '@rocket.chat/rest-typings';
+import { isChannelsAddAllProps } from '@zeki.chat/rest-typings';
 
 import { API } from '../api';
 
@@ -48,7 +48,7 @@ import {
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../api';
 import { getPaginationItems } from '../helpers/getPaginationItems';
@@ -178,7 +178,7 @@ The `validateParams` option is deprecated. Do not use it in new code.
 
 ### 4. Create response schemas
 
-Define response schemas using `ajv.compile<T>()` **before** the endpoint registration. Every response schema must include the `success` field. When the response contains complex types from `@rocket.chat/core-typings`, prefer using `$ref` instead of `{ type: 'object' }` (see [Using Typia `$ref` for Complex Types](#using-typia-ref-for-complex-types)).
+Define response schemas using `ajv.compile<T>()` **before** the endpoint registration. Every response schema must include the `success` field. When the response contains complex types from `@zeki.chat/core-typings`, prefer using `$ref` instead of `{ type: 'object' }` (see [Using Typia `$ref` for Complex Types](#using-typia-ref-for-complex-types)).
 
 ```typescript
 const myResponseSchema = ajv.compile<{ items: SomeType[]; count: number }>({
@@ -227,12 +227,12 @@ import {
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 ```
 
 ## Using Typia `$ref` for Complex Types
 
-For response fields that use complex types already defined in `@rocket.chat/core-typings` (like `IMessage`, `ISubscription`, `ICustomSound`, `IPermission`, etc.), **do not rewrite the JSON schema manually**. Instead, use `$ref` to link to the typia-generated schema.
+For response fields that use complex types already defined in `@zeki.chat/core-typings` (like `IMessage`, `ISubscription`, `ICustomSound`, `IPermission`, etc.), **do not rewrite the JSON schema manually**. Instead, use `$ref` to link to the typia-generated schema.
 
 ### How it works
 
@@ -257,8 +257,8 @@ For response fields that use complex types already defined in `@rocket.chat/core
 2. **`apps/meteor/app/api/server/ajv.ts`** registers all generated schemas into the shared AJV instance:
 
    ```typescript
-   import { schemas } from '@rocket.chat/core-typings';
-   import { ajv } from '@rocket.chat/rest-typings';
+   import { schemas } from '@zeki.chat/core-typings';
+   import { ajv } from '@zeki.chat/rest-typings';
 
    const components = schemas.components?.schemas;
    if (components) {
@@ -446,7 +446,7 @@ If you need a `$ref` for a type that is not yet registered:
 
 1. Edit `packages/core-typings/src/Ajv.ts`
 2. Import the type and add it to the `typia.json.schemas<[...]>()` type parameter list
-3. Rebuild `core-typings`: `yarn workspace @rocket.chat/core-typings run build`
+3. Rebuild `core-typings`: `yarn workspace @zeki.chat/core-typings run build`
 4. The new schema will be automatically registered at startup via `apps/meteor/app/api/server/ajv.ts`
 
 ## Chaining Endpoints and Type Augmentation
@@ -456,13 +456,13 @@ Migrated endpoints **must always be chained** when a file registers multiple end
 ### Full example
 
 ```typescript
-import type { IInvite } from '@rocket.chat/core-typings';
+import type { IInvite } from '@zeki.chat/core-typings';
 import {
 	ajv,
 	isFindOrCreateInviteParams,
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import type { ExtractRoutesFromAPI } from '../ApiClass';
 import { API } from '../api';
@@ -508,7 +508,7 @@ const invites = API.v1
 type InvitesEndpoints = ExtractRoutesFromAPI<typeof invites>;
 
 // Augment the Endpoints interface so the SDK, client hooks, and tests see these routes
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends InvitesEndpoints {}
 }
@@ -521,7 +521,7 @@ Source: `apps/meteor/app/api/server/v1/invites.ts`
 1. **Always chain**: Every `.get()` / `.post()` / `.put()` / `.delete()` call in the same file should be chained on the same variable (e.g., `const myEndpoints = API.v1.get(...).post(...).get(...)`).
 2. **Store in a `const`**: The chained result must be stored in a variable so `typeof` can extract its type.
 3. **Extract with `ExtractRoutesFromAPI`**: Use `type MyEndpoints = ExtractRoutesFromAPI<typeof myEndpoints>` to get the typed route definitions.
-4. **Augment `Endpoints`**: Use `declare module '@rocket.chat/rest-typings'` to merge the extracted types into the global `Endpoints` interface. This is what makes `useEndpoint('listInvites')` and similar SDK calls type-safe.
+4. **Augment `Endpoints`**: Use `declare module '@zeki.chat/rest-typings'` to merge the extracted types into the global `Endpoints` interface. This is what makes `useEndpoint('listInvites')` and similar SDK calls type-safe.
 5. **Import `ExtractRoutesFromAPI`** from `'../ApiClass'` (relative to the endpoint file in `v1/`).
 
 ### What augmentation enables

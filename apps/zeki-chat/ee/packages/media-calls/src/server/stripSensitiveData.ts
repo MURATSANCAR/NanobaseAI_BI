@@ -1,4 +1,4 @@
-import type { ClientMediaSignal, ServerMediaSignal } from '@rocket.chat/media-signaling';
+import type { ClientMediaSignal, ServerMediaSignal } from '@zeki.chat/media-signaling';
 
 export function stripSensitiveDataFromSdp<T extends RTCSessionDescriptionInit | null>(sdp: T): T {
 	if (!sdp?.sdp) {

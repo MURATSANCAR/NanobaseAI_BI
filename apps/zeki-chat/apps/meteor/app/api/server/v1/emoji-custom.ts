@@ -1,7 +1,7 @@
-import { Media } from '@rocket.chat/core-services';
-import type { IEmojiCustom, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import { EmojiCustom } from '@rocket.chat/models';
-import { ajv, isEmojiCustomList, validateUnauthorizedErrorResponse, validateBadRequestErrorResponse } from '@rocket.chat/rest-typings';
+import { Media } from '@zeki.chat/core-services';
+import type { IEmojiCustom, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import { EmojiCustom } from '@zeki.chat/models';
+import { ajv, isEmojiCustomList, validateUnauthorizedErrorResponse, validateBadRequestErrorResponse } from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import { Meteor } from 'meteor/meteor';
 import type { WithId } from 'mongodb';
@@ -63,7 +63,7 @@ function validateDateParam(paramName: string, paramValue: string | undefined): D
 }
 
 const emojiCustomListResponseSchema = ajv.compile<{
-	emojis: { update: IEmojiCustom[]; remove: WithId<RocketChatRecordDeleted<IEmojiCustom>>[] };
+	emojis: { update: IEmojiCustom[]; remove: WithId<ZekiChatRecordDeleted<IEmojiCustom>>[] };
 }>({
 	type: 'object',
 	properties: {
@@ -312,7 +312,7 @@ type EmojiCustomCreateEndpoints = ExtractRoutesFromAPI<typeof emojiCustomCreateE
 
 export type EmojiCustomEndpoints = EmojiCustomCreateEndpoints;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends EmojiCustomCreateEndpoints {}
 }

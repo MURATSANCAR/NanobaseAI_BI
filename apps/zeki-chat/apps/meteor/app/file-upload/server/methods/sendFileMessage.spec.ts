@@ -10,7 +10,7 @@ const isImagePreviewSupported = sinon.stub().returns(false);
 const getFileExtension = sinon.stub().returns('txt');
 
 const { parseFileIntoMessageAttachments } = proxyquire.noCallThru().load('./sendFileMessage', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Uploads: { findOneByIdAndUserIdAndRoomId, updateFileMetadata },
 		Rooms: { findOneById: sinon.stub() },
 		Users: { findOneById: sinon.stub() },

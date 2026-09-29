@@ -1,7 +1,7 @@
 import { Button, ButtonGroup } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { ContextualbarDialog, Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useRouter, useTranslation, useRouteParameter } from '@rocket.chat/ui-contexts';
+import { ContextualbarDialog, Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useRouter, useTranslation, useRouteParameter } from '@zeki.chat/ui-contexts';
 
 import TagEdit from './TagEdit';
 import TagEditWithData from './TagEditWithData';

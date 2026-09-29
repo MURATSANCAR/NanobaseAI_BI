@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker/locale/af_ZA';
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

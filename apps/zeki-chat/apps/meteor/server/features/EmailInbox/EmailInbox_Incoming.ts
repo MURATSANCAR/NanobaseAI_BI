@@ -4,11 +4,11 @@ import type {
 	VideoAttachmentProps,
 	ImageAttachmentProps,
 	AudioAttachmentProps,
-} from '@rocket.chat/core-typings';
-import { OmnichannelSourceType } from '@rocket.chat/core-typings';
-import { LivechatVisitors, LivechatRooms, Messages } from '@rocket.chat/models';
-import { registerGuest } from '@rocket.chat/omni-core';
-import { Random } from '@rocket.chat/random';
+} from '@zeki.chat/core-typings';
+import { OmnichannelSourceType } from '@zeki.chat/core-typings';
+import { LivechatVisitors, LivechatRooms, Messages } from '@zeki.chat/models';
+import { registerGuest } from '@zeki.chat/omni-core';
+import { Random } from '@zeki.chat/random';
 import type { ParsedMail, Attachment } from 'mailparser';
 import { stripHtml } from 'string-strip-html';
 

@@ -1,4 +1,4 @@
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 type LayoutBlockWithElement = Extract<UiKit.LayoutBlock, { element: UiKit.BlockElement | UiKit.TextObject }>;
 

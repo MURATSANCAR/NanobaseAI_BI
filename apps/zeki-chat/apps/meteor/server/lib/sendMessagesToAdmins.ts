@@ -1,5 +1,5 @@
-import type { IUser, IMessage } from '@rocket.chat/core-typings';
-import { Roles, Users } from '@rocket.chat/models';
+import type { IUser, IMessage } from '@zeki.chat/core-typings';
+import { Roles, Users } from '@zeki.chat/models';
 
 import { notifyOnUserChangeAsync } from '../../app/lib/server/lib/notifyListener';
 import { executeSendMessage } from '../../app/lib/server/methods/sendMessage';
@@ -27,7 +27,7 @@ const getData = async <T>(param: T[] | ((params: { adminUser: IUser }) => Promis
 };
 
 export async function sendMessagesToAdmins({
-	fromId = 'rocket.cat',
+	fromId = 'zeki.bot',
 	checkFrom = true,
 	msgs = [],
 	banners = [],

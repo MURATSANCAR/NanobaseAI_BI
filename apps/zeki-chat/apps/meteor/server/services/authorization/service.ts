@@ -1,7 +1,7 @@
-import type { IAuthorization, RoomAccessValidator } from '@rocket.chat/core-services';
-import { Capabilities, ServiceClass } from '@rocket.chat/core-services';
-import type { IUser, IRole, IRoom, ISubscription } from '@rocket.chat/core-typings';
-import { Subscriptions, Rooms, Users, Roles, Permissions } from '@rocket.chat/models';
+import type { IAuthorization, RoomAccessValidator } from '@zeki.chat/core-services';
+import { Capabilities, ServiceClass } from '@zeki.chat/core-services';
+import type { IUser, IRole, IRoom, ISubscription } from '@zeki.chat/core-typings';
+import { Subscriptions, Rooms, Users, Roles, Permissions } from '@zeki.chat/models';
 import mem from 'mem';
 
 import { canAccessRoom } from './canAccessRoom';

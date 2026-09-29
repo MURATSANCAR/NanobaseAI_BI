@@ -1,5 +1,5 @@
-import { Router } from '@rocket.chat/http-router';
-import { ajv } from '@rocket.chat/rest-typings/dist/v1/Ajv';
+import { Router } from '@zeki.chat/http-router';
+import { ajv } from '@zeki.chat/rest-typings/dist/v1/Ajv';
 
 const GetVersionsResponseSchema = {
 	type: 'object',
@@ -32,7 +32,7 @@ export const getFederationVersionsRoutes = (version: string) => {
 				200: isGetVersionsResponseProps,
 			},
 			tags: ['Federation'],
-			license: ['federation'],
+			capabilities: ['federation'],
 		},
 		async () => {
 			const response = {

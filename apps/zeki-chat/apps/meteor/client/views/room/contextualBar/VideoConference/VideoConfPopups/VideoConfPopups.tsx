@@ -1,13 +1,13 @@
 import { FocusScope } from '@react-aria/focus';
-import { useCustomSound } from '@rocket.chat/ui-contexts';
-import type { VideoConfPopupPayload } from '@rocket.chat/ui-video-conf';
+import { useCustomSound } from '@zeki.chat/ui-contexts';
+import type { VideoConfPopupPayload } from '@zeki.chat/ui-video-conf';
 import {
 	VideoConfPopupBackdrop,
 	useVideoConfIsCalling,
 	useVideoConfIsRinging,
 	useVideoConfIncomingCalls,
 	VideoConfPopupSkeleton,
-} from '@rocket.chat/ui-video-conf';
+} from '@zeki.chat/ui-video-conf';
 import type { ReactElement } from 'react';
 import { lazy, Suspense, useEffect, useMemo } from 'react';
 

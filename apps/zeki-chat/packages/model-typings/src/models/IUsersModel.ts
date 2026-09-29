@@ -10,7 +10,7 @@ import type {
 	ILivechatAgentStatus,
 	IMeteorLoginToken,
 	IRoom,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type {
 	Document,
 	UpdateResult,

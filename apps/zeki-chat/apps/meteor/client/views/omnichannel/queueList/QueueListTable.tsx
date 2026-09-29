@@ -1,7 +1,7 @@
-import { UserStatus } from '@rocket.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 import { Box, Pagination } from '@rocket.chat/fuselage';
 import { useMediaQuery } from '@rocket.chat/fuselage-hooks';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import {
 	GenericTable,
 	GenericTableHeader,
@@ -12,8 +12,8 @@ import {
 	GenericTableLoadingRow,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
-import { useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';

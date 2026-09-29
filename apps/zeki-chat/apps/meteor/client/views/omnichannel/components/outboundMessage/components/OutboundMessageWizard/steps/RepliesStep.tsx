@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useWizardContext, WizardActions, WizardBackButton, WizardNextButton } from '@rocket.chat/ui-client';
+import { useWizardContext, WizardActions, WizardBackButton, WizardNextButton } from '@zeki.chat/ui-client';
 
 import type { RepliesFormData, RepliesFormSubmitPayload } from '../forms/RepliesForm';
 import RepliesForm from '../forms/RepliesForm';

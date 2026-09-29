@@ -1,8 +1,8 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IExternalComponent } from '@rocket.chat/apps-engine/definition/externalComponent/IExternalComponent';
-import { ExternalComponentLocation } from '@rocket.chat/apps-engine/definition/externalComponent/IExternalComponent';
+import type { IExternalComponent } from '@zeki.chat/apps-engine/definition/externalComponent/IExternalComponent';
+import { ExternalComponentLocation } from '@zeki.chat/apps-engine/definition/externalComponent/IExternalComponent';
 
 import { AppExternalComponentManager } from '../../../src/server/managers';
 

@@ -1,4 +1,4 @@
-import type { IIntegrationHistory, Serialized } from '@rocket.chat/core-typings';
+import type { IIntegrationHistory, Serialized } from '@zeki.chat/core-typings';
 import { Skeleton, Box, Accordion } from '@rocket.chat/fuselage';
 import { useTranslation } from 'react-i18next';
 

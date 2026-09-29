@@ -1,4 +1,4 @@
-import type { RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
+import type { ZekiChatAssociationRecord } from '@zeki.chat/apps-engine/definition/metadata';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';
@@ -18,7 +18,7 @@ export abstract class PersistenceBridge extends BaseBridge {
 		}
 	}
 
-	public async doCreateWithAssociations(data: object, associations: Array<RocketChatAssociationRecord>, appId: string): Promise<string> {
+	public async doCreateWithAssociations(data: object, associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<string> {
 		if (this.hasDefaultPermission(appId)) {
 			return this.createWithAssociations(data, associations, appId);
 		}
@@ -30,7 +30,7 @@ export abstract class PersistenceBridge extends BaseBridge {
 		}
 	}
 
-	public async doReadByAssociations(associations: Array<RocketChatAssociationRecord>, appId: string): Promise<Array<object>> {
+	public async doReadByAssociations(associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<Array<object>> {
 		if (this.hasDefaultPermission(appId)) {
 			return this.readByAssociations(associations, appId);
 		}
@@ -42,7 +42,7 @@ export abstract class PersistenceBridge extends BaseBridge {
 		}
 	}
 
-	public async doRemoveByAssociations(associations: Array<RocketChatAssociationRecord>, appId: string): Promise<Array<object> | undefined> {
+	public async doRemoveByAssociations(associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<Array<object> | undefined> {
 		if (this.hasDefaultPermission(appId)) {
 			return this.removeByAssociations(associations, appId);
 		}
@@ -55,7 +55,7 @@ export abstract class PersistenceBridge extends BaseBridge {
 	}
 
 	public async doUpdateByAssociations(
-		associations: Array<RocketChatAssociationRecord>,
+		associations: Array<ZekiChatAssociationRecord>,
 		data: object,
 		upsert: boolean,
 		appId: string,
@@ -83,14 +83,14 @@ export abstract class PersistenceBridge extends BaseBridge {
 
 	/**
 	 * Creates a new record in the App's persistent storage with the data being
-	 * associated with at least one Rocket.Chat record.
+	 * associated with at least one ZEKI AI CHAT record.
 	 *
 	 * @argument data the data to store in the persistent storage
 	 * @argument associations the associations records this data is associated with
 	 * @argument appId the id of the app which is storing the data
 	 * @returns the id of the stored record
 	 */
-	protected abstract createWithAssociations(data: object, associations: Array<RocketChatAssociationRecord>, appId: string): Promise<string>;
+	protected abstract createWithAssociations(data: object, associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<string>;
 
 	/**
 	 * Retrieves from the persistent storage the record by the id provided.
@@ -108,7 +108,7 @@ export abstract class PersistenceBridge extends BaseBridge {
 	 * @argument appId the id of the app calling this
 	 * @returns an array of records if they exist, an empty array otherwise
 	 */
-	protected abstract readByAssociations(associations: Array<RocketChatAssociationRecord>, appId: string): Promise<Array<object>>;
+	protected abstract readByAssociations(associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<Array<object>>;
 
 	/**
 	 * Removes the record which matches the provided id.
@@ -127,7 +127,7 @@ export abstract class PersistenceBridge extends BaseBridge {
 	 * @returns the data of the removed records
 	 */
 	protected abstract removeByAssociations(
-		associations: Array<RocketChatAssociationRecord>,
+		associations: Array<ZekiChatAssociationRecord>,
 		appId: string,
 	): Promise<Array<object> | undefined>;
 
@@ -152,7 +152,7 @@ export abstract class PersistenceBridge extends BaseBridge {
 	 * @returns the id, whether the new one or the existing one
 	 */
 	protected abstract updateByAssociations(
-		associations: Array<RocketChatAssociationRecord>,
+		associations: Array<ZekiChatAssociationRecord>,
 		data: object,
 		upsert: boolean,
 		appId: string,

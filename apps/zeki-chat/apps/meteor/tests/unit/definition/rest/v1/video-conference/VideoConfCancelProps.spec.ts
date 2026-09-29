@@ -1,4 +1,4 @@
-import { isVideoConfCancelProps } from '@rocket.chat/rest-typings';
+import { isVideoConfCancelProps } from '@zeki.chat/rest-typings';
 import { assert } from 'chai';
 
 describe('VideoConfCancelProps (definition/rest/v1)', () => {

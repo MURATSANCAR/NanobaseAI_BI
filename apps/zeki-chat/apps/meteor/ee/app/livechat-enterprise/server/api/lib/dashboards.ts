@@ -1,5 +1,5 @@
-import type { ReportResult, ReportWithUnmatchingElements, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatRooms } from '@rocket.chat/models';
+import type { ReportResult, ReportWithUnmatchingElements, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatRooms } from '@zeki.chat/models';
 import mem from 'mem';
 import type { Filter } from 'mongodb';
 

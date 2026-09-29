@@ -1,5 +1,5 @@
-import type { IImportUser, IImportMessage, IImportPendingFile } from '@rocket.chat/core-typings';
-import { Messages, Settings, ImportData } from '@rocket.chat/models';
+import type { IImportUser, IImportMessage, IImportPendingFile } from '@zeki.chat/core-typings';
+import { Messages, Settings, ImportData } from '@zeki.chat/models';
 import type { IZipEntry } from 'adm-zip';
 
 import { Importer, ProgressStep, ImporterWebsocket } from '../../importer/server';
@@ -482,7 +482,7 @@ export class SlackImporter extends Importer {
 						newMessage.attachments = [];
 					}
 					newMessage.attachments.push({
-						text: this.convertSlackMessageToRocketChat(message.attachments[0].text),
+						text: this.convertSlackMessageToZekiChat(message.attachments[0].text),
 						author_name: message.attachments[0].author_subname,
 						author_icon: getUserAvatarURL(message.attachments[0].author_subname),
 					});
@@ -593,7 +593,7 @@ export class SlackImporter extends Importer {
 					await this.converter.addMessage(newMessage, this._useUpsert);
 				}
 			} else {
-				const text = this.convertSlackMessageToRocketChat(message.text);
+				const text = this.convertSlackMessageToZekiChat(message.text);
 
 				if (isBotMessage) {
 					newMessage.bot = true;
@@ -662,7 +662,7 @@ export class SlackImporter extends Importer {
 
 	_replaceSlackUserId(userId: string): string {
 		if (userId === 'USLACKBOT') {
-			return 'rocket.cat';
+			return 'zeki.bot';
 		}
 
 		return userId;
@@ -675,7 +675,7 @@ export class SlackImporter extends Importer {
 		return members.map((userId) => this._replaceSlackUserId(userId));
 	}
 
-	convertSlackMessageToRocketChat(message: string): string {
+	convertSlackMessageToZekiChat(message: string): string {
 		if (message) {
 			message = message.replace(/<!everyone>/g, '@all');
 			message = message.replace(/<!channel>/g, '@all');
@@ -720,9 +720,9 @@ export class SlackImporter extends Importer {
 
 		return attachments.map((attachment) => ({
 			...attachment,
-			text: this.convertSlackMessageToRocketChat(attachment.text),
-			title: this.convertSlackMessageToRocketChat(attachment.title),
-			fallback: this.convertSlackMessageToRocketChat(attachment.fallback),
+			text: this.convertSlackMessageToZekiChat(attachment.text),
+			title: this.convertSlackMessageToZekiChat(attachment.title),
+			fallback: this.convertSlackMessageToZekiChat(attachment.fallback),
 		}));
 	}
 }

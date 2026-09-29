@@ -25,7 +25,7 @@ test.describe('export-messages', () => {
 
 	test.afterAll(async ({ api }) => {
 		await Promise.all([
-			api.post('/users.setPreferences', { userId: 'rocketchat.internal.admin.test', data: { hideFlexTab: false } }),
+			api.post('/users.setPreferences', { userId: 'zekichat.internal.admin.test', data: { hideFlexTab: false } }),
 			deleteChannel(api, targetChannel),
 		]);
 	});
@@ -141,7 +141,7 @@ test.describe('export-messages', () => {
 
 	test('should be able to select a single message to export with hide contextual bar preference enabled', async ({ api }) => {
 		await api.post('/users.setPreferences', {
-			userId: 'rocketchat.internal.admin.test',
+			userId: 'zekichat.internal.admin.test',
 			data: { hideFlexTab: true },
 		});
 		const message1 = uniqueMessage();

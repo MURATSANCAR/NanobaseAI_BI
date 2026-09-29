@@ -1,4 +1,4 @@
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 
 import VideoConfList from './VideoConfList';
 import { useVideoConfList } from './useVideoConfList';

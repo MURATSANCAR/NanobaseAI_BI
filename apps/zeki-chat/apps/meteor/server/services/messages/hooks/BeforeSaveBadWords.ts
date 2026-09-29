@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
 import type BadWordsFilter from 'bad-words';
 
 export class BeforeSaveBadWords {

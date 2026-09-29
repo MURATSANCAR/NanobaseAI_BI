@@ -1,7 +1,7 @@
 import { Box, Button } from '@rocket.chat/fuselage';
 import { FieldGroup, TextInput, Field, FieldLabel, FieldRow, FieldError } from '@rocket.chat/fuselage-forms';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';

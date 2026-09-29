@@ -16,7 +16,7 @@ const mocks = {
 	'../../../../../app/livechat/server/lib/settings': { getInquirySortMechanismSetting: sinon.stub() },
 	'../../../../../app/livechat/lib/inquiries': { getOmniChatSortQuery: sinon.stub() },
 	'../../../../../app/settings/server': { settings: { get: settingGetMock } },
-	'@rocket.chat/models': { Users: usersModelMock, LivechatDepartment: departmentsMock },
+	'@zeki.chat/models': { Users: usersModelMock, LivechatDepartment: departmentsMock },
 };
 
 const { isAgentWithinChatLimits } = proxyquire.noCallThru().load('../../../../../app/livechat-enterprise/server/lib/Helper.ts', mocks);

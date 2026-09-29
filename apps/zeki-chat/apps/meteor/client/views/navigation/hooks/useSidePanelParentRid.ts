@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useEffectEvent, useLocalStorage } from '@rocket.chat/fuselage-hooks';
 
 import { collapsibleFilters, type AllGroupsKeys } from '../contexts/RoomsNavigationContext';

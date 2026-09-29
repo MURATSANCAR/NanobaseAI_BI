@@ -1,7 +1,7 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useLogout } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useLogout } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import UserMenuHeader from '../UserMenuHeader';

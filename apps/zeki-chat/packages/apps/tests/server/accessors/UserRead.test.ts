@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { UserRead } from '../../../src/server/accessors';
 import type { UserBridge } from '../../../src/server/bridges';

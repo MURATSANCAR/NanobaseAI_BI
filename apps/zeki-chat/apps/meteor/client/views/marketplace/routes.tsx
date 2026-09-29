@@ -2,7 +2,7 @@ import { lazy } from 'react';
 
 import { createRouteGroup } from '../../lib/createRouteGroup';
 
-declare module '@rocket.chat/ui-contexts' {
+declare module '@zeki.chat/ui-contexts' {
 	interface IRouterPaths {
 		'marketplace-index': {
 			pattern: '/marketplace';

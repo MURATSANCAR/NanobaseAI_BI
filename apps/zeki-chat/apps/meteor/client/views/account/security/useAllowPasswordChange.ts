@@ -1,4 +1,4 @@
-import { useSetting, useUser } from '@rocket.chat/ui-contexts';
+import { useSetting, useUser } from '@zeki.chat/ui-contexts';
 
 export const useAllowPasswordChange = () => {
 	const user = useUser();

@@ -1,5 +1,5 @@
-import type { IImportUser, ILDAPEntry } from '@rocket.chat/core-typings';
-import type { Logger } from '@rocket.chat/logger';
+import type { IImportUser, ILDAPEntry } from '@zeki.chat/core-typings';
+import type { Logger } from '@zeki.chat/logger';
 
 import { replacesNestedValues } from './replacesNestedValues';
 import { templateVarHandler } from '../../../../app/utils/lib/templateVarHandler';

@@ -1,4 +1,4 @@
-import type { IMessage, IPushNotificationConfig, IPushTokenTypes } from '@rocket.chat/core-typings';
+import type { IMessage, IPushNotificationConfig, IPushTokenTypes } from '@zeki.chat/core-typings';
 
 import { ajv, ajvQuery } from './Ajv';
 

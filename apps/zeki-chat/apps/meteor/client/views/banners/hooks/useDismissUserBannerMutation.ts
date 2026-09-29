@@ -1,4 +1,4 @@
-import { useMethod, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useMethod, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 
 export const useDismissUserBannerMutation = () => {

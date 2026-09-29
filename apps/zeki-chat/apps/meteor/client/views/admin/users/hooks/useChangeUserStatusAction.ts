@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { useToastMessageDispatch, useTranslation, useEndpoint, usePermission } from '@rocket.chat/ui-contexts';
+import type { IUser } from '@zeki.chat/core-typings';
+import { useToastMessageDispatch, useTranslation, useEndpoint, usePermission } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import type { AdminUserAction } from './useAdminUserInfoActions';

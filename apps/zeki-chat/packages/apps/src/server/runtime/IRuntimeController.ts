@@ -1,6 +1,6 @@
 import type { EventEmitter } from 'node:events';
 
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
 
 export type RuntimeRequestOptions = {
 	timeout: number;

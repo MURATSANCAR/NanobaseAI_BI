@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import type { Credentials } from '@rocket.chat/api-client';
-import type { ILivechatDepartment, IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { ILivechatDepartment, IUser } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { before, it, describe, after } from 'mocha';
 
@@ -31,7 +31,7 @@ type TestUser = { user: IUser; credentials: Credentials };
 	before((done) => getCredentials(done));
 	before(async () => {
 		await updateSetting('Livechat_accept_chats_with_no_agents', true);
-		await setUserActiveStatus('rocketchat.internal.admin.test', true);
+		await setUserActiveStatus('zekichat.internal.admin.test', true);
 		await createAgent();
 		await makeAgentAvailable();
 	});
@@ -266,7 +266,7 @@ type TestUser = { user: IUser; credentials: Credentials };
 				.set(monitor.credentials)
 				.send({
 					roomId: room._id,
-					userId: 'rocketchat.internal.admin.test',
+					userId: 'zekichat.internal.admin.test',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200);
@@ -276,7 +276,7 @@ type TestUser = { user: IUser; credentials: Credentials };
 			const room2 = await getLivechatRoomInfo(room._id);
 
 			expect(room2).to.have.property('servedBy').that.is.an('object');
-			expect(room2.servedBy).to.have.property('_id', 'rocketchat.internal.admin.test');
+			expect(room2.servedBy).to.have.property('_id', 'zekichat.internal.admin.test');
 		});
 		it('should successfully forward a room to a department', async () => {
 			const visitor = await createVisitor(noUnitDepartment._id);

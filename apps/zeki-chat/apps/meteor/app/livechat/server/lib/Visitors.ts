@@ -1,4 +1,4 @@
-import type { ILivechatContactVisitorAssociation, IOmnichannelSource } from '@rocket.chat/core-typings';
+import type { ILivechatContactVisitorAssociation, IOmnichannelSource } from '@zeki.chat/core-typings';
 
 export const Visitors = {
 	makeVisitorAssociation(visitorId: string, roomInfo: IOmnichannelSource): ILivechatContactVisitorAssociation {

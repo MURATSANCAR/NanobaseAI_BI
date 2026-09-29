@@ -1,5 +1,5 @@
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatRooms } from '@rocket.chat/models';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatRooms } from '@zeki.chat/models';
 
 import { API } from '../../../../../app/api/server';
 import { canAccessRoomAsync } from '../../../../../app/authorization/server/functions/canAccessRoom';
@@ -7,7 +7,7 @@ import { requestPdfTranscript } from '../lib/requestPdfTranscript';
 
 API.v1.addRoute(
 	'omnichannel/:rid/request-transcript',
-	{ authRequired: true, permissionsRequired: ['request-pdf-transcript'], license: ['livechat-enterprise'] },
+	{ authRequired: true, permissionsRequired: ['request-pdf-transcript'], capabilities: ['livechat-enterprise'] },
 	{
 		async post() {
 			const room = await LivechatRooms.findOneById<Pick<IOmnichannelRoom, '_id' | 'open' | 'v' | 't' | 'pdfTranscriptFileId'>>(

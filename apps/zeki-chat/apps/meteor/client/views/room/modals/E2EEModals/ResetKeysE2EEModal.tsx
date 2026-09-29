@@ -1,6 +1,6 @@
 import { Box, ModalFooterAnnotation, ModalIcon } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 

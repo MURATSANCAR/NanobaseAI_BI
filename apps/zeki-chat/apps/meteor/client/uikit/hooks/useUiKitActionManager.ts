@@ -1,4 +1,4 @@
-import { ActionManagerContext } from '@rocket.chat/ui-contexts';
+import { ActionManagerContext } from '@zeki.chat/ui-contexts';
 import { useContext } from 'react';
 
 export const useUiKitActionManager = () => {

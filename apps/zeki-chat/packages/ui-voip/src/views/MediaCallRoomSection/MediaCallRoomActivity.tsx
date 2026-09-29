@@ -1,7 +1,7 @@
 import { Box } from '@rocket.chat/fuselage';
 import { useResizeObserver } from '@rocket.chat/fuselage-hooks';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useUser, useUserAvatarPath } from '@rocket.chat/ui-contexts';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useUser, useUserAvatarPath } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 

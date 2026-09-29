@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { usePermission, useUser } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { usePermission, useUser } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import { roomCoordinator } from '../../../../lib/rooms/roomCoordinator';

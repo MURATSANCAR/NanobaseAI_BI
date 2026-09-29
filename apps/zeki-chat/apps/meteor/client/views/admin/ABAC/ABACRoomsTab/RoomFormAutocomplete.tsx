@@ -1,6 +1,6 @@
 import { AutoComplete, Option, Box } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ComponentProps } from 'react';
 import { memo, useState } from 'react';

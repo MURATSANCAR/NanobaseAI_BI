@@ -1,4 +1,4 @@
-import { isGETLivechatAgentsAgentIdDepartmentsParams } from '@rocket.chat/rest-typings';
+import { isGETLivechatAgentsAgentIdDepartmentsParams } from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import { findAgentDepartments } from '../../../server/api/lib/agents';

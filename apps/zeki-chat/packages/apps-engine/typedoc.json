@@ -1,6 +1,6 @@
 {
     "$schema": "https://typedoc.org/schema.json",
-    "name": "Rocket.Chat Apps TypeScript Definition",
+    "name": "ZEKI AI CHAT Apps TypeScript Definition",
     "entryPointStrategy": "expand",
     "entryPoints": ["./src/definition"],
     "excludePrivate": true,

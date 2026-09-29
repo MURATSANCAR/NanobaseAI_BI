@@ -1,4 +1,4 @@
-import type { ISetting } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/core-typings';
 
 import { api, credentials, request } from './api-data';
 import { permissions } from '../../app/authorization/server/constant/permissions';

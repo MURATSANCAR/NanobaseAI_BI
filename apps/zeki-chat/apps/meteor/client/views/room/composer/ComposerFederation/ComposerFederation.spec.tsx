@@ -1,11 +1,11 @@
-import type { CapabilityModule } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import type { CapabilityModule } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import ComposerFederation from './ComposerFederation';
 import FakeRoomProvider from '../../../../../tests/mocks/client/FakeRoomProvider';
-import { createFakeLicenseInfo } from '../../../../../tests/mocks/data';
+import { createFakeCapabilities } from '../../../../../tests/mocks/data';
 
 jest.mock('../ComposerMessage', () => ({
 	__esModule: true,
@@ -22,8 +22,8 @@ const appRoot = ({ enabled = true, activeModules = ['federation'] }: { enabled?:
 				'This room was created by an old Federation version and its blocked indeterminately. <1>Click here</1> for more information about Matrix Federation support',
 		})
 		.withSetting('Federation_Matrix_enabled', enabled ?? true)
-		.withEndpoint('GET', '/v1/licenses.info', () => ({
-			license: createFakeLicenseInfo({ activeModules }),
+		.withEndpoint('GET', '/v1/capabilities.info', () => ({
+			capabilities: createFakeCapabilities({ modules: activeModules }),
 		}))
 		.wrap((children) => <FakeRoomProvider>{children}</FakeRoomProvider>)
 		.build();

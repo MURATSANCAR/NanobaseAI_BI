@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import type { Meta, StoryFn } from '@storybook/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

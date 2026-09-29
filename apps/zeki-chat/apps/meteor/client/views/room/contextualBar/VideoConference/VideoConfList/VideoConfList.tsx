@@ -1,4 +1,4 @@
-import type { VideoConference } from '@rocket.chat/core-typings';
+import type { VideoConference } from '@zeki.chat/core-typings';
 import { Box, States, StatesIcon, StatesTitle, StatesSubtitle, Throbber } from '@rocket.chat/fuselage';
 import { useResizeObserver } from '@rocket.chat/fuselage-hooks';
 import {
@@ -10,7 +10,7 @@ import {
 	ContextualbarContent,
 	ContextualbarEmptyContent,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';

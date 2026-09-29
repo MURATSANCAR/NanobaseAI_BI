@@ -7,7 +7,7 @@ import type {
 	ProviderCapabilities,
 	Serialized,
 	SettingValue,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type {
 	ServerMethodName,
 	ServerMethodParameters,
@@ -17,11 +17,11 @@ import type {
 	StreamerEvents,
 	StreamKeys,
 	StreamNames,
-} from '@rocket.chat/ddp-client';
+} from '@zeki.chat/ddp-client';
 import { Emitter } from '@rocket.chat/emitter';
-import languages from '@rocket.chat/i18n/dist/languages';
-import { createPredicateFromFilter } from '@rocket.chat/mongo-adapter';
-import type { Method, OperationParams, OperationResult, PathPattern, UrlParams } from '@rocket.chat/rest-typings';
+import languages from '@zeki.chat/i18n/dist/languages';
+import { createPredicateFromFilter } from '@zeki.chat/mongo-adapter';
+import type { Method, OperationParams, OperationResult, PathPattern, UrlParams } from '@zeki.chat/rest-typings';
 import type {
 	Device,
 	DeviceContext,
@@ -31,7 +31,7 @@ import type {
 	SettingsContextQuery,
 	SubscriptionWithRoom,
 	TranslationKey,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import {
 	AuthorizationContext,
 	RouterContext,
@@ -43,9 +43,9 @@ import {
 	ModalContext,
 	UserPresenceContext,
 	AuthenticationContext,
-} from '@rocket.chat/ui-contexts';
-import type { VideoConfPopupPayload } from '@rocket.chat/ui-video-conf';
-import { VideoConfContext } from '@rocket.chat/ui-video-conf';
+} from '@zeki.chat/ui-contexts';
+import type { VideoConfPopupPayload } from '@zeki.chat/ui-video-conf';
+import { VideoConfContext } from '@zeki.chat/ui-video-conf';
 import type { Decorator } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createInstance } from 'i18next';

@@ -24,7 +24,7 @@ const { migrateVisitorToContactId } = proxyquire.noCallThru().load('./migrateVis
 			mergeVisitorIntoContact,
 		},
 	},
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 	'../logger': {
 		livechatContactsLogger: {
 			debug: sinon.stub(),

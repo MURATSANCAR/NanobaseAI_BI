@@ -1,3 +1,3 @@
-import { useLicense } from '@rocket.chat/ui-client';
+import { useSetting } from '@zeki.chat/ui-contexts';
 
-export const usePrivateAppsEnabled = () => (useLicense({ loadValues: true }).data?.limits?.privateApps?.max ?? 0) !== 0;
+export const usePrivateAppsEnabled = () => !useSetting('Zeki_Local_Only', true);

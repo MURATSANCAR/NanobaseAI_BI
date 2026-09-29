@@ -1,7 +1,7 @@
-import type { ILivechatTag, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatTag, Serialized } from '@zeki.chat/core-typings';
 import { Callout } from '@rocket.chat/fuselage';
-import { ContextualbarSkeletonBody } from '@rocket.chat/ui-client';
-import { useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { ContextualbarSkeletonBody } from '@zeki.chat/ui-client';
+import { useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 
 import TagEdit from './TagEdit';

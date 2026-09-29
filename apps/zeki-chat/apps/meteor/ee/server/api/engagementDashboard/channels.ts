@@ -1,4 +1,4 @@
-import type { IDirectMessageRoom, IRoom } from '@rocket.chat/core-typings';
+import type { IDirectMessageRoom, IRoom } from '@zeki.chat/core-typings';
 import { check, Match } from 'meteor/check';
 
 import { API } from '../../../../app/api/server';
@@ -6,7 +6,7 @@ import { getPaginationItems } from '../../../../app/api/server/helpers/getPagina
 import { findChannelsWithNumberOfMessages } from '../../lib/engagementDashboard/channels';
 import { isDateISOString, mapDateForAPI } from '../../lib/engagementDashboard/date';
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/engagement-dashboard/channels/list': {
@@ -37,7 +37,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: ['view-engagement-dashboard'],
-		license: ['engagement-dashboard'],
+		capabilities: ['engagement-dashboard'],
 	},
 	{
 		async get() {

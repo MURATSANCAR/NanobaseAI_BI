@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IEmailInbox extends IRocketChatRecord {
+export interface IEmailInbox extends IZekiChatRecord {
 	active: boolean;
 	name: string;
 	email: string;

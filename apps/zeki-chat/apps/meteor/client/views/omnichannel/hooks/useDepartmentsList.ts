@@ -1,5 +1,5 @@
-import type { ILivechatDepartment, Serialized } from '@rocket.chat/core-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { ILivechatDepartment, Serialized } from '@zeki.chat/core-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

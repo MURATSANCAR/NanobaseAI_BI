@@ -40,13 +40,13 @@ const { insertAdminUserFromEnv } = proxyquire.noCallThru().load('../../../../ser
 	'../../app/settings/server': {
 		settings: { get: settingsGet },
 	},
-	'@rocket.chat/tools': {
+	'@zeki.chat/tools': {
 		validateEmail,
 	},
 	'../lib/roles/addUserRoles': {
 		addUserRolesAsync,
 	},
-	'@rocket.chat/models': models,
+	'@zeki.chat/models': models,
 });
 
 describe('insertAdminUserFromEnv', () => {

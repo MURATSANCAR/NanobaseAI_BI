@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { WizardContext, StepsLinkedList } from '@rocket.chat/ui-client';
+import { WizardContext, StepsLinkedList } from '@zeki.chat/ui-client';
 import type { Meta, StoryObj } from '@storybook/react';
 
 import ReviewStep from './ReviewStep';
@@ -46,7 +46,7 @@ export const Default: Story = {
 		contactName: 'Jane Smith',
 		agentUsername: 'johndoe',
 		departmentName: 'Support',
-		providerName: 'Rocket.Chat',
+		providerName: 'ZEKI AI CHAT',
 		providerType: 'phone',
 		sender: '+1234567890',
 		recipient: '+0987654321',

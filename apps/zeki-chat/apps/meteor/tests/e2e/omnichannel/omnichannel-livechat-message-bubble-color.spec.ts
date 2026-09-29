@@ -9,7 +9,7 @@ import { createAgent, makeAgentAvailable } from '../utils/omnichannel/agents';
 import { test, expect } from '../utils/test';
 
 declare const window: Window & {
-	RocketChat: {
+	ZekiChat: {
 		livechat: {
 			setTheme: (theme: { guestBubbleBackgroundColor?: string; agentBubbleBackgroundColor?: string }) => void;
 		};
@@ -41,7 +41,7 @@ test.describe('OC - Livechat - Bubble background color', async () => {
 	test.beforeEach(async ({ page }) => {
 		poLiveChat = new OmnichannelLiveChatEmbedded(page);
 
-		await page.goto('/packages/rocketchat_livechat/assets/demo.html');
+		await page.goto('/packages/zeki_livechat/assets/demo.html');
 	});
 
 	test.afterEach(async ({ page }) => {
@@ -76,7 +76,7 @@ test.describe('OC - Livechat - Bubble background color', async () => {
 
 		await test.step('expect to change bubble background color', async () => {
 			await poLiveChat.page.evaluate(() =>
-				window.RocketChat.livechat.setTheme({
+				window.ZekiChat.livechat.setTheme({
 					guestBubbleBackgroundColor: 'rgb(186, 218, 85)',
 					agentBubbleBackgroundColor: 'rgb(0, 100, 250)',
 				}),
@@ -88,7 +88,7 @@ test.describe('OC - Livechat - Bubble background color', async () => {
 
 		await test.step('expect to reset bubble background color to defaults', async () => {
 			await poLiveChat.page.evaluate(() =>
-				window.RocketChat.livechat.setTheme({ guestBubbleBackgroundColor: undefined, agentBubbleBackgroundColor: undefined }),
+				window.ZekiChat.livechat.setTheme({ guestBubbleBackgroundColor: undefined, agentBubbleBackgroundColor: undefined }),
 			);
 
 			expect(await poLiveChat.messageBubbleBackground('message_from_user')).toBe('rgb(193, 39, 45)');

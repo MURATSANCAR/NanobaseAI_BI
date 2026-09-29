@@ -15,8 +15,8 @@ import {
 	ModalContent,
 	ModalFooter,
 } from '@rocket.chat/fuselage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useSetModal, useTranslation, useEndpoint, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useSetModal, useTranslation, useEndpoint, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { FormEvent } from 'react';
 import { useState } from 'react';

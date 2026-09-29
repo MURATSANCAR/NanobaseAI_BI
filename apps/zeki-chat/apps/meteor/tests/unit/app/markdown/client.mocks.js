@@ -9,7 +9,7 @@ const mocks = {
 		},
 		'@global': true,
 	},
-	'@rocket.chat/random': {
+	'@zeki.chat/random': {
 		'Random': {
 			id() {
 				return Math.random().toString().replace('0.', 'A');

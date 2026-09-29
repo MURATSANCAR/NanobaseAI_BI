@@ -8831,17 +8831,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/abac@workspace:^, @rocket.chat/abac@workspace:ee/packages/abac":
+"@zeki.chat/abac@workspace:^, @zeki.chat/abac@workspace:ee/packages/abac":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/abac@workspace:ee/packages/abac"
+  resolution: "@zeki.chat/abac@workspace:ee/packages/abac"
   dependencies:
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/server-fetch": "workspace:^"
-    "@rocket.chat/tools": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/server-fetch": "workspace:^"
+    "@zeki.chat/tools": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     "@types/node": "npm:~22.19.17"
     eslint: "npm:~9.39.4"
@@ -8854,22 +8854,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/account-service@workspace:ee/apps/account-service":
+"@zeki.chat/account-service@workspace:ee/apps/account-service":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/account-service@workspace:ee/apps/account-service"
+  resolution: "@zeki.chat/account-service@workspace:ee/apps/account-service"
   dependencies:
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
-    "@rocket.chat/tools": "workspace:^"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/tools": "workspace:^"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/bcrypt": "npm:^6.0.0"
     "@types/node": "npm:~22.19.17"
     "@types/polka": "npm:^0.5.8"
@@ -8891,18 +8891,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/account-utils@workspace:^, @rocket.chat/account-utils@workspace:packages/account-utils":
+"@zeki.chat/account-utils@workspace:^, @zeki.chat/account-utils@workspace:packages/account-utils":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/account-utils@workspace:packages/account-utils"
+  resolution: "@zeki.chat/account-utils@workspace:packages/account-utils"
   dependencies:
     eslint: "npm:~9.39.4"
     typescript: "npm:~5.9.3"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/agenda@workspace:^, @rocket.chat/agenda@workspace:packages/agenda":
+"@zeki.chat/agenda@workspace:^, @zeki.chat/agenda@workspace:packages/agenda":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/agenda@workspace:packages/agenda"
+  resolution: "@zeki.chat/agenda@workspace:packages/agenda"
   dependencies:
     "@types/debug": "npm:^4.1.13"
     cron: "npm:~1.8.2"
@@ -8916,14 +8916,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/api-client@workspace:^, @rocket.chat/api-client@workspace:packages/api-client":
+"@zeki.chat/api-client@workspace:^, @zeki.chat/api-client@workspace:packages/api-client":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/api-client@workspace:packages/api-client"
+  resolution: "@zeki.chat/api-client@workspace:packages/api-client"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/rest-typings": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/rest-typings": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     "@types/strict-uri-encode": "npm:^2.0.2"
     eslint: "npm:~9.39.4"
@@ -8937,11 +8937,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/apps-engine@workspace:^, @rocket.chat/apps-engine@workspace:packages/apps-engine":
+"@zeki.chat/apps-engine@workspace:^, @zeki.chat/apps-engine@workspace:packages/apps-engine":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/apps-engine@workspace:packages/apps-engine"
+  resolution: "@zeki.chat/apps-engine@workspace:packages/apps-engine"
   dependencies:
-    "@rocket.chat/ui-kit": "workspace:~"
+    "@zeki.chat/ui-kit": "workspace:~"
     "@types/node": "npm:~22.19.17"
     eslint: "npm:~9.39.4"
     npm-run-all: "npm:^4.1.5"
@@ -8952,15 +8952,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/apps@workspace:^, @rocket.chat/apps@workspace:packages/apps":
+"@zeki.chat/apps@workspace:^, @zeki.chat/apps@workspace:packages/apps":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/apps@workspace:packages/apps"
+  resolution: "@zeki.chat/apps@workspace:packages/apps"
   dependencies:
     "@msgpack/msgpack": "npm:3.0.0-beta2"
-    "@rocket.chat/apps-engine": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/apps-engine": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@seald-io/nedb": "npm:^4.1.2"
     "@types/adm-zip": "npm:^0.5.7"
     "@types/debug": "npm:^4.1.12"
@@ -8986,22 +8986,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/authorization-service@workspace:ee/apps/authorization-service":
+"@zeki.chat/authorization-service@workspace:ee/apps/authorization-service":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/authorization-service@workspace:ee/apps/authorization-service"
+  resolution: "@zeki.chat/authorization-service@workspace:ee/apps/authorization-service"
   dependencies:
-    "@rocket.chat/abac": "workspace:^"
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/abac": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/node": "npm:~22.19.17"
     "@types/polka": "npm:^0.5.8"
     "@types/prometheus-gc-stats": "npm:^0.6.4"
@@ -9021,20 +9021,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/base64@workspace:^, @rocket.chat/base64@workspace:packages/base64":
+"@zeki.chat/base64@workspace:^, @zeki.chat/base64@workspace:packages/base64":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/base64@workspace:packages/base64"
+  resolution: "@zeki.chat/base64@workspace:packages/base64"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     jest: "npm:~30.2.0"
     typescript: "npm:~5.9.3"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/cas-validate@workspace:^, @rocket.chat/cas-validate@workspace:packages/cas-validate":
+"@zeki.chat/cas-validate@workspace:^, @zeki.chat/cas-validate@workspace:packages/cas-validate":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/cas-validate@workspace:packages/cas-validate"
+  resolution: "@zeki.chat/cas-validate@workspace:packages/cas-validate"
   dependencies:
     cheerio: "npm:1.0.0"
     eslint: "npm:~9.39.4"
@@ -9043,23 +9043,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/core-services@workspace:^, @rocket.chat/core-services@workspace:packages/core-services":
+"@zeki.chat/core-services@workspace:^, @zeki.chat/core-services@workspace:packages/core-services":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/core-services@workspace:packages/core-services"
+  resolution: "@zeki.chat/core-services@workspace:packages/core-services"
   dependencies:
-    "@rocket.chat/apps": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/apps": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/federation-sdk": "npm:0.6.3"
-    "@rocket.chat/http-router": "workspace:^"
+    "@zeki.chat/http-router": "workspace:^"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/media-signaling": "workspace:^"
-    "@rocket.chat/message-parser": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-kit": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/media-signaling": "workspace:^"
+    "@zeki.chat/message-parser": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-kit": "workspace:~"
     "@types/jest": "npm:~30.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -9069,14 +9069,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/core-typings@workspace:^, @rocket.chat/core-typings@workspace:packages/core-typings, @rocket.chat/core-typings@workspace:~":
+"@zeki.chat/core-typings@workspace:^, @zeki.chat/core-typings@workspace:packages/core-typings, @zeki.chat/core-typings@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/core-typings@workspace:packages/core-typings"
+  resolution: "@zeki.chat/core-typings@workspace:packages/core-typings"
   dependencies:
-    "@rocket.chat/apps-engine": "workspace:^"
+    "@zeki.chat/apps-engine": "workspace:^"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/message-parser": "workspace:^"
-    "@rocket.chat/ui-kit": "workspace:~"
+    "@zeki.chat/message-parser": "workspace:^"
+    "@zeki.chat/ui-kit": "workspace:~"
     "@types/express": "npm:^4.17.25"
     eslint: "npm:~9.39.4"
     mongodb: "npm:6.16.0"
@@ -9090,16 +9090,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/cron@workspace:^, @rocket.chat/cron@workspace:packages/cron":
+"@zeki.chat/cron@workspace:^, @zeki.chat/cron@workspace:packages/cron":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/cron@workspace:packages/cron"
+  resolution: "@zeki.chat/cron@workspace:packages/cron"
   dependencies:
-    "@rocket.chat/agenda": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/random": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/agenda": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/random": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     eslint: "npm:~9.39.4"
     mongodb: "npm:6.16.0"
     typescript: "npm:~5.9.3"
@@ -9128,16 +9128,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/ddp-client@workspace:^, @rocket.chat/ddp-client@workspace:packages/ddp-client, @rocket.chat/ddp-client@workspace:~":
+"@zeki.chat/ddp-client@workspace:^, @zeki.chat/ddp-client@workspace:packages/ddp-client, @zeki.chat/ddp-client@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ddp-client@workspace:packages/ddp-client"
+  resolution: "@zeki.chat/ddp-client@workspace:packages/ddp-client"
   dependencies:
-    "@rocket.chat/api-client": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:~"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/media-signaling": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/api-client": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/media-signaling": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     "@types/ws": "npm:^8.18.1"
     eslint: "npm:~9.39.4"
@@ -9150,24 +9150,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/ddp-streamer@workspace:ee/apps/ddp-streamer":
+"@zeki.chat/ddp-streamer@workspace:ee/apps/ddp-streamer":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ddp-streamer@workspace:ee/apps/ddp-streamer"
+  resolution: "@zeki.chat/ddp-streamer@workspace:ee/apps/ddp-streamer"
   dependencies:
-    "@rocket.chat/apps-engine": "workspace:^"
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/ddp-client": "workspace:~"
+    "@zeki.chat/apps-engine": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/ddp-client": "workspace:~"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/instance-status": "workspace:^"
-    "@rocket.chat/jest-presets": "workspace:*"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
+    "@zeki.chat/instance-status": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:*"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
-    "@rocket.chat/tracing": "workspace:^"
+    "@zeki.chat/tracing": "workspace:^"
     "@types/ejson": "npm:^2.2.2"
     "@types/jest": "npm:~30.0.0"
     "@types/node": "npm:~22.19.17"
@@ -9200,9 +9200,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/desktop-api@workspace:^, @rocket.chat/desktop-api@workspace:packages/desktop-api, @rocket.chat/desktop-api@workspace:~":
+"@zeki.chat/desktop-api@workspace:^, @zeki.chat/desktop-api@workspace:packages/desktop-api, @zeki.chat/desktop-api@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/desktop-api@workspace:packages/desktop-api"
+  resolution: "@zeki.chat/desktop-api@workspace:packages/desktop-api"
   dependencies:
     eslint: "npm:~9.39.4"
     rimraf: "npm:~6.0.1"
@@ -9217,9 +9217,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/eslint-config@workspace:packages/eslint-config, @rocket.chat/eslint-config@workspace:~":
+"@zeki.chat/eslint-config@workspace:packages/eslint-config, @zeki.chat/eslint-config@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/eslint-config@workspace:packages/eslint-config"
+  resolution: "@zeki.chat/eslint-config@workspace:packages/eslint-config"
   dependencies:
     "@babel/core": "npm:~7.28.6"
     "@babel/eslint-parser": "npm:~7.28.6"
@@ -9245,29 +9245,29 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/favicon@workspace:^, @rocket.chat/favicon@workspace:packages/favicon":
+"@zeki.chat/favicon@workspace:^, @zeki.chat/favicon@workspace:packages/favicon":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/favicon@workspace:packages/favicon"
+  resolution: "@zeki.chat/favicon@workspace:packages/favicon"
   dependencies:
     eslint: "npm:~9.39.4"
     typescript: "npm:~5.9.3"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/federation-matrix@workspace:^, @rocket.chat/federation-matrix@workspace:ee/packages/federation-matrix":
+"@zeki.chat/federation-matrix@workspace:^, @zeki.chat/federation-matrix@workspace:ee/packages/federation-matrix":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/federation-matrix@workspace:ee/packages/federation-matrix"
+  resolution: "@zeki.chat/federation-matrix@workspace:ee/packages/federation-matrix"
   dependencies:
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/ddp-client": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/ddp-client": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/federation-sdk": "npm:0.6.3"
-    "@rocket.chat/http-router": "workspace:^"
-    "@rocket.chat/license": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
+    "@zeki.chat/http-router": "workspace:^"
+    "@zeki.chat/capabilities": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
     "@types/emojione": "npm:^2.2.9"
     "@types/lodash.debounce": "npm:^4.0.9"
     "@types/node": "npm:~22.19.17"
@@ -9358,26 +9358,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/fuselage-ui-kit@workspace:^, @rocket.chat/fuselage-ui-kit@workspace:packages/fuselage-ui-kit, @rocket.chat/fuselage-ui-kit@workspace:~":
+"@zeki.chat/fuselage-ui-kit@workspace:^, @zeki.chat/fuselage-ui-kit@workspace:packages/fuselage-ui-kit, @zeki.chat/fuselage-ui-kit@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/fuselage-ui-kit@workspace:packages/fuselage-ui-kit"
+  resolution: "@zeki.chat/fuselage-ui-kit@workspace:packages/fuselage-ui-kit"
   dependencies:
-    "@rocket.chat/apps-engine": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/apps-engine": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
-    "@rocket.chat/gazzodown": "workspace:^"
+    "@zeki.chat/gazzodown": "workspace:^"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/mock-providers": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/mock-providers": "workspace:^"
     "@rocket.chat/styled": "npm:^0.33.0"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
-    "@rocket.chat/ui-kit": "workspace:~"
-    "@rocket.chat/ui-video-conf": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-kit": "workspace:~"
+    "@zeki.chat/ui-video-conf": "workspace:^"
     "@storybook/addon-essentials": "npm:^8.6.18"
     "@storybook/addon-styling-webpack": "npm:^1.0.1"
     "@storybook/addon-webpack5-compiler-swc": "npm:~3.0.0"
@@ -9408,15 +9408,15 @@ __metadata:
     typescript: "npm:~5.9.3"
     webpack: "npm:~5.104.1"
   peerDependencies:
-    "@rocket.chat/apps-engine": "workspace:^"
+    "@zeki.chat/apps-engine": "workspace:^"
     "@rocket.chat/fuselage": "*"
     "@rocket.chat/fuselage-hooks": "*"
     "@rocket.chat/icons": "*"
     "@rocket.chat/styled": "*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
-    "@rocket.chat/ui-kit": "workspace:^"
-    "@rocket.chat/ui-video-conf": "workspace:^"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-kit": "workspace:^"
+    "@zeki.chat/ui-video-conf": "workspace:^"
     "@tanstack/react-query": "*"
     i18next: "*"
     react: "*"
@@ -9447,23 +9447,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/gazzodown@workspace:^, @rocket.chat/gazzodown@workspace:packages/gazzodown":
+"@zeki.chat/gazzodown@workspace:^, @zeki.chat/gazzodown@workspace:packages/gazzodown":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/gazzodown@workspace:packages/gazzodown"
+  resolution: "@zeki.chat/gazzodown@workspace:packages/gazzodown"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/css-in-js": "npm:^0.32.0"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/message-parser": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/message-parser": "workspace:^"
     "@rocket.chat/styled": "npm:^0.33.0"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-client": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-client": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     "@storybook/addon-actions": "npm:^8.6.18"
     "@storybook/addon-docs": "npm:^8.6.18"
     "@storybook/addon-essentials": "npm:^8.6.18"
@@ -9499,28 +9499,28 @@ __metadata:
     typescript: "npm:~5.9.3"
     webpack: "npm:~5.104.1"
   peerDependencies:
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/css-in-js": "*"
     "@rocket.chat/fuselage": "*"
     "@rocket.chat/fuselage-tokens": "*"
-    "@rocket.chat/message-parser": 0.31.36
+    "@zeki.chat/message-parser": 0.31.36
     "@rocket.chat/styled": "*"
-    "@rocket.chat/ui-client": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-client": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     katex: "*"
     react: "*"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/http-router@workspace:^, @rocket.chat/http-router@workspace:packages/http-router":
+"@zeki.chat/http-router@workspace:^, @zeki.chat/http-router@workspace:packages/http-router":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/http-router@workspace:packages/http-router"
+  resolution: "@zeki.chat/http-router@workspace:packages/http-router"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/jest-presets": "workspace:^"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/express": "npm:^4.17.25"
     "@types/jest": "npm:~30.0.0"
     "@types/supertest": "npm:~6.0.3"
@@ -9536,19 +9536,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/i18n@workspace:^, @rocket.chat/i18n@workspace:packages/i18n, @rocket.chat/i18n@workspace:~":
+"@zeki.chat/i18n@workspace:^, @zeki.chat/i18n@workspace:packages/i18n, @zeki.chat/i18n@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/i18n@workspace:packages/i18n"
+  resolution: "@zeki.chat/i18n@workspace:packages/i18n"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tools": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tools": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     eslint: "npm:~9.39.4"
     i18next: "npm:~23.4.9"
     jest: "npm:~30.2.0"
     typescript: "npm:~5.9.3"
   peerDependencies:
-    "@rocket.chat/tools": "workspace:~"
+    "@zeki.chat/tools": "workspace:~"
     i18next: "*"
   languageName: unknown
   linkType: soft
@@ -9560,13 +9560,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/instance-status@workspace:^, @rocket.chat/instance-status@workspace:packages/instance-status":
+"@zeki.chat/instance-status@workspace:^, @zeki.chat/instance-status@workspace:packages/instance-status":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/instance-status@workspace:packages/instance-status"
+  resolution: "@zeki.chat/instance-status@workspace:packages/instance-status"
   dependencies:
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     eslint: "npm:~9.39.4"
     mongodb: "npm:6.16.0"
     prettier: "npm:~3.3.3"
@@ -9574,9 +9574,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/jest-presets@workspace:*, @rocket.chat/jest-presets@workspace:^, @rocket.chat/jest-presets@workspace:packages/jest-presets, @rocket.chat/jest-presets@workspace:~":
+"@zeki.chat/jest-presets@workspace:*, @zeki.chat/jest-presets@workspace:^, @zeki.chat/jest-presets@workspace:packages/jest-presets, @zeki.chat/jest-presets@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/jest-presets@workspace:packages/jest-presets"
+  resolution: "@zeki.chat/jest-presets@workspace:packages/jest-presets"
   dependencies:
     "@swc/core": "npm:1.15.30"
     "@swc/jest": "npm:~0.2.39"
@@ -9596,12 +9596,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/jwt@workspace:^, @rocket.chat/jwt@workspace:packages/jwt":
+"@zeki.chat/jwt@workspace:^, @zeki.chat/jwt@workspace:packages/jwt":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/jwt@workspace:packages/jwt"
+  resolution: "@zeki.chat/jwt@workspace:packages/jwt"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -9622,19 +9622,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/license@workspace:^, @rocket.chat/license@workspace:ee/packages/license":
+"@zeki.chat/capabilities@workspace:^, @zeki.chat/capabilities@workspace:ee/packages/capabilities":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/license@workspace:ee/packages/license"
+  resolution: "@zeki.chat/capabilities@workspace:ee/packages/capabilities"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/jwt": "workspace:^"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/bcrypt": "npm:^6.0.0"
     "@types/jest": "npm:~30.0.0"
     "@types/ws": "npm:^8.5.14"
-    bcrypt: "npm:^6.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
     jest-websocket-mock: "npm:~2.5.0"
@@ -9642,25 +9639,25 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/livechat@workspace:^, @rocket.chat/livechat@workspace:packages/livechat":
+"@zeki.chat/livechat@workspace:^, @zeki.chat/livechat@workspace:packages/livechat":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/livechat@workspace:packages/livechat"
+  resolution: "@zeki.chat/livechat@workspace:packages/livechat"
   dependencies:
     "@babel/core": "npm:~7.29.0"
     "@babel/preset-env": "npm:~7.29.5"
     "@babel/preset-react": "npm:~7.28.5"
     "@babel/preset-typescript": "npm:~7.28.5"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/ddp-client": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/ddp-client": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
-    "@rocket.chat/gazzodown": "workspace:^"
-    "@rocket.chat/logo": "npm:^0.32.5"
-    "@rocket.chat/message-parser": "workspace:^"
-    "@rocket.chat/random": "workspace:~"
-    "@rocket.chat/ui-contexts": "workspace:^"
-    "@rocket.chat/ui-kit": "workspace:~"
+    "@zeki.chat/gazzodown": "workspace:^"
+    "@zeki.chat/logo": "npm:^0.32.5"
+    "@zeki.chat/message-parser": "workspace:^"
+    "@zeki.chat/random": "workspace:~"
+    "@zeki.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-kit": "workspace:~"
     "@storybook/addon-essentials": "npm:^8.6.18"
     "@storybook/addon-styling-webpack": "npm:^1.0.1"
     "@storybook/addon-webpack5-compiler-swc": "npm:~3.0.0"
@@ -9729,13 +9726,13 @@ __metadata:
     whatwg-fetch: "npm:^3.6.20"
   peerDependencies:
     "@rocket.chat/fuselage-tokens": "*"
-    "@rocket.chat/logo": "*"
+    "@zeki.chat/logo": "*"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/log-format@workspace:^, @rocket.chat/log-format@workspace:packages/log-format":
+"@zeki.chat/log-format@workspace:^, @zeki.chat/log-format@workspace:packages/log-format":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/log-format@workspace:packages/log-format"
+  resolution: "@zeki.chat/log-format@workspace:packages/log-format"
   dependencies:
     "@types/chalk": "npm:^2.2.4"
     "@types/ejson": "npm:^2.2.2"
@@ -9746,9 +9743,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/logger@workspace:^, @rocket.chat/logger@workspace:packages/logger":
+"@zeki.chat/logger@workspace:^, @zeki.chat/logger@workspace:packages/logger":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/logger@workspace:packages/logger"
+  resolution: "@zeki.chat/logger@workspace:packages/logger"
   dependencies:
     "@rocket.chat/emitter": "npm:^0.32.0"
     eslint: "npm:~9.39.4"
@@ -9757,24 +9754,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/logo@portal:./deploy/zeki/logo::locator=rocket.chat%40workspace%3A.":
+"@zeki.chat/logo@portal:./deploy/zeki/logo::locator=rocket.chat%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/logo@portal:./deploy/zeki/logo::locator=rocket.chat%40workspace%3A."
+  resolution: "@zeki.chat/logo@portal:./deploy/zeki/logo::locator=rocket.chat%40workspace%3A."
   peerDependencies:
     react: "*"
   languageName: node
   linkType: soft
 
-"@rocket.chat/media-calls@workspace:^, @rocket.chat/media-calls@workspace:ee/packages/media-calls":
+"@zeki.chat/media-calls@workspace:^, @zeki.chat/media-calls@workspace:ee/packages/media-calls":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/media-calls@workspace:ee/packages/media-calls"
+  resolution: "@zeki.chat/media-calls@workspace:ee/packages/media-calls"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/media-signaling": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/media-signaling": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     drachtio-srf: "patch:drachtio-srf@npm%3A5.0.12#~/.yarn/patches/drachtio-srf-npm-5.0.12-b0b1afaad6.patch"
     eslint: "npm:~9.39.4"
@@ -9782,13 +9779,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/media-signaling@workspace:^, @rocket.chat/media-signaling@workspace:packages/media-signaling, @rocket.chat/media-signaling@workspace:~":
+"@zeki.chat/media-signaling@workspace:^, @zeki.chat/media-signaling@workspace:packages/media-signaling, @zeki.chat/media-signaling@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/media-signaling@workspace:packages/media-signaling"
+  resolution: "@zeki.chat/media-signaling@workspace:packages/media-signaling"
   dependencies:
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     ajv: "npm:^8.17.1"
     eslint: "npm:~9.39.4"
@@ -9804,12 +9801,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/message-parser@workspace:^, @rocket.chat/message-parser@workspace:packages/message-parser, @rocket.chat/message-parser@workspace:~":
+"@zeki.chat/message-parser@workspace:^, @zeki.chat/message-parser@workspace:packages/message-parser, @zeki.chat/message-parser@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/message-parser@workspace:packages/message-parser"
+  resolution: "@zeki.chat/message-parser@workspace:packages/message-parser"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/peggy-loader": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/peggy-loader": "workspace:~"
     "@rocket.chat/prettier-config": "npm:~0.31.25"
     "@types/jest": "npm:~30.0.0"
     "@types/node": "npm:~22.19.17"
@@ -9831,11 +9828,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/message-types@workspace:packages/message-types, @rocket.chat/message-types@workspace:~":
+"@zeki.chat/message-types@workspace:packages/message-types, @zeki.chat/message-types@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/message-types@workspace:packages/message-types"
+  resolution: "@zeki.chat/message-types@workspace:packages/message-types"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:~"
+    "@zeki.chat/core-typings": "workspace:~"
     date-fns: "npm:~4.1.0"
     eslint: "npm:~9.39.4"
     i18next: "npm:~23.4.9"
@@ -9848,9 +9845,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/meteor@workspace:apps/meteor":
+"@zeki.chat/meteor@workspace:apps/meteor":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/meteor@workspace:apps/meteor"
+  resolution: "@zeki.chat/meteor@workspace:apps/meteor"
   dependencies:
     "@aws-sdk/client-s3": "npm:^3.862.0"
     "@aws-sdk/lib-storage": "npm:^3.862.0"
@@ -9882,81 +9879,81 @@ __metadata:
     "@playwright/test": "npm:~1.52.0"
     "@react-aria/toolbar": "npm:^3.0.0-nightly.5042"
     "@react-pdf/renderer": "npm:^4.3.2"
-    "@rocket.chat/abac": "workspace:^"
-    "@rocket.chat/account-utils": "workspace:^"
-    "@rocket.chat/agenda": "workspace:^"
-    "@rocket.chat/api-client": "workspace:^"
-    "@rocket.chat/apps": "workspace:^"
-    "@rocket.chat/apps-engine": "workspace:^"
-    "@rocket.chat/base64": "workspace:^"
-    "@rocket.chat/cas-validate": "workspace:^"
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/cron": "workspace:^"
+    "@zeki.chat/abac": "workspace:^"
+    "@zeki.chat/account-utils": "workspace:^"
+    "@zeki.chat/agenda": "workspace:^"
+    "@zeki.chat/api-client": "workspace:^"
+    "@zeki.chat/apps": "workspace:^"
+    "@zeki.chat/apps-engine": "workspace:^"
+    "@zeki.chat/base64": "workspace:^"
+    "@zeki.chat/cas-validate": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/cron": "workspace:^"
     "@rocket.chat/css-in-js": "npm:^0.32.0"
-    "@rocket.chat/ddp-client": "workspace:^"
-    "@rocket.chat/desktop-api": "workspace:~"
+    "@zeki.chat/ddp-client": "workspace:^"
+    "@zeki.chat/desktop-api": "workspace:~"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/favicon": "workspace:^"
-    "@rocket.chat/federation-matrix": "workspace:^"
+    "@zeki.chat/favicon": "workspace:^"
+    "@zeki.chat/federation-matrix": "workspace:^"
     "@rocket.chat/federation-sdk": "npm:0.6.3"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-forms": "npm:^1.3.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-toastbar": "npm:^0.35.2"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
-    "@rocket.chat/fuselage-ui-kit": "workspace:^"
-    "@rocket.chat/gazzodown": "workspace:^"
-    "@rocket.chat/http-router": "workspace:^"
-    "@rocket.chat/i18n": "workspace:^"
+    "@zeki.chat/fuselage-ui-kit": "workspace:^"
+    "@zeki.chat/gazzodown": "workspace:^"
+    "@zeki.chat/http-router": "workspace:^"
+    "@zeki.chat/i18n": "workspace:^"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/instance-status": "workspace:^"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/jwt": "workspace:^"
+    "@zeki.chat/instance-status": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/jwt": "workspace:^"
     "@rocket.chat/layout": "npm:^0.34.2"
-    "@rocket.chat/license": "workspace:^"
-    "@rocket.chat/livechat": "workspace:^"
-    "@rocket.chat/log-format": "workspace:^"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/logo": "npm:^0.32.5"
-    "@rocket.chat/media-calls": "workspace:^"
-    "@rocket.chat/media-signaling": "workspace:^"
+    "@zeki.chat/capabilities": "workspace:^"
+    "@zeki.chat/livechat": "workspace:^"
+    "@zeki.chat/log-format": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/logo": "npm:^0.32.5"
+    "@zeki.chat/media-calls": "workspace:^"
+    "@zeki.chat/media-signaling": "workspace:^"
     "@rocket.chat/memo": "npm:~0.31.25"
-    "@rocket.chat/message-parser": "workspace:^"
-    "@rocket.chat/message-types": "workspace:~"
-    "@rocket.chat/mock-providers": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/mongo-adapter": "workspace:^"
+    "@zeki.chat/message-parser": "workspace:^"
+    "@zeki.chat/message-types": "workspace:~"
+    "@zeki.chat/mock-providers": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/mongo-adapter": "workspace:^"
     "@rocket.chat/mp3-encoder": "npm:^0.31.26"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/omni-core": "workspace:^"
-    "@rocket.chat/omni-core-ee": "workspace:^"
-    "@rocket.chat/omnichannel-services": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/omni-core": "workspace:^"
+    "@zeki.chat/omni-core-ee": "workspace:^"
+    "@zeki.chat/omnichannel-services": "workspace:^"
     "@rocket.chat/onboarding-ui": "npm:^0.36.2"
-    "@rocket.chat/password-policies": "workspace:^"
-    "@rocket.chat/patch-injection": "workspace:^"
-    "@rocket.chat/pdf-worker": "workspace:^"
-    "@rocket.chat/poplib": "workspace:^"
-    "@rocket.chat/presence": "workspace:^"
-    "@rocket.chat/random": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
-    "@rocket.chat/server-cloud-communication": "workspace:^"
-    "@rocket.chat/server-fetch": "workspace:^"
-    "@rocket.chat/sha256": "workspace:^"
+    "@zeki.chat/password-policies": "workspace:^"
+    "@zeki.chat/patch-injection": "workspace:^"
+    "@zeki.chat/pdf-worker": "workspace:^"
+    "@zeki.chat/poplib": "workspace:^"
+    "@zeki.chat/presence": "workspace:^"
+    "@zeki.chat/random": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
+    "@zeki.chat/server-cloud-communication": "workspace:^"
+    "@zeki.chat/server-fetch": "workspace:^"
+    "@zeki.chat/sha256": "workspace:^"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
     "@rocket.chat/styled": "npm:^0.33.0"
-    "@rocket.chat/tools": "workspace:^"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-client": "workspace:^"
-    "@rocket.chat/ui-composer": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
-    "@rocket.chat/ui-kit": "workspace:~"
-    "@rocket.chat/ui-video-conf": "workspace:^"
-    "@rocket.chat/ui-voip": "workspace:^"
-    "@rocket.chat/web-ui-registration": "workspace:^"
+    "@zeki.chat/tools": "workspace:^"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-client": "workspace:^"
+    "@zeki.chat/ui-composer": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-kit": "workspace:~"
+    "@zeki.chat/ui-video-conf": "workspace:^"
+    "@zeki.chat/ui-voip": "workspace:^"
+    "@zeki.chat/web-ui-registration": "workspace:^"
     "@slack/bolt": "npm:^3.22.0"
     "@slack/rtm-api": "npm:~7.0.4"
     "@storybook/addon-a11y": "npm:^8.6.18"
@@ -10244,18 +10241,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/mock-providers@workspace:^, @rocket.chat/mock-providers@workspace:packages/mock-providers, @rocket.chat/mock-providers@workspace:~":
+"@zeki.chat/mock-providers@workspace:^, @zeki.chat/mock-providers@workspace:packages/mock-providers, @zeki.chat/mock-providers@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/mock-providers@workspace:packages/mock-providers"
+  resolution: "@zeki.chat/mock-providers@workspace:packages/mock-providers"
   dependencies:
     "@faker-js/faker": "npm:~8.0.2"
-    "@rocket.chat/ddp-client": "workspace:~"
+    "@zeki.chat/ddp-client": "workspace:~"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/i18n": "workspace:~"
-    "@rocket.chat/mongo-adapter": "workspace:~"
-    "@rocket.chat/tools": "workspace:~"
-    "@rocket.chat/ui-contexts": "workspace:^"
-    "@rocket.chat/ui-video-conf": "workspace:*"
+    "@zeki.chat/i18n": "workspace:~"
+    "@zeki.chat/mongo-adapter": "workspace:~"
+    "@zeki.chat/tools": "workspace:~"
+    "@zeki.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-video-conf": "workspace:*"
     "@storybook/react": "npm:^8.6.18"
     "@tanstack/react-query": "npm:~5.65.1"
     "@testing-library/dom": "npm:~10.4.1"
@@ -10277,11 +10274,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/model-typings@workspace:^, @rocket.chat/model-typings@workspace:packages/model-typings, @rocket.chat/model-typings@workspace:~":
+"@zeki.chat/model-typings@workspace:^, @zeki.chat/model-typings@workspace:packages/model-typings, @zeki.chat/model-typings@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/model-typings@workspace:packages/model-typings"
+  resolution: "@zeki.chat/model-typings@workspace:packages/model-typings"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@types/node-rsa": "npm:^1.1.4"
     eslint: "npm:~9.39.4"
     mongodb: "npm:6.16.0"
@@ -10289,19 +10286,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/models@workspace:^, @rocket.chat/models@workspace:packages/models, @rocket.chat/models@workspace:~":
+"@zeki.chat/models@workspace:^, @zeki.chat/models@workspace:packages/models, @zeki.chat/models@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/models@workspace:packages/models"
+  resolution: "@zeki.chat/models@workspace:packages/models"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/model-typings": "workspace:~"
-    "@rocket.chat/random": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
-    "@rocket.chat/sha256": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/model-typings": "workspace:~"
+    "@zeki.chat/random": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
+    "@zeki.chat/sha256": "workspace:^"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     "@types/node-rsa": "npm:^1.1.4"
     date-fns: "npm:~4.1.0"
@@ -10312,11 +10309,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/mongo-adapter@workspace:^, @rocket.chat/mongo-adapter@workspace:packages/mongo-adapter, @rocket.chat/mongo-adapter@workspace:~":
+"@zeki.chat/mongo-adapter@workspace:^, @zeki.chat/mongo-adapter@workspace:packages/mongo-adapter, @zeki.chat/mongo-adapter@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/mongo-adapter@workspace:packages/mongo-adapter"
+  resolution: "@zeki.chat/mongo-adapter@workspace:packages/mongo-adapter"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
     mongodb: "npm:6.16.0"
@@ -10333,12 +10330,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/network-broker@workspace:^, @rocket.chat/network-broker@workspace:ee/packages/network-broker":
+"@zeki.chat/network-broker@workspace:^, @zeki.chat/network-broker@workspace:ee/packages/network-broker":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/network-broker@workspace:ee/packages/network-broker"
+  resolution: "@zeki.chat/network-broker@workspace:ee/packages/network-broker"
   dependencies:
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/chai": "npm:~4.3.20"
     "@types/ejson": "npm:^2.2.2"
     "@types/node": "npm:~22.19.17"
@@ -10354,16 +10351,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/omni-core-ee@workspace:^, @rocket.chat/omni-core-ee@workspace:ee/packages/omni-core-ee":
+"@zeki.chat/omni-core-ee@workspace:^, @zeki.chat/omni-core-ee@workspace:ee/packages/omni-core-ee":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/omni-core-ee@workspace:ee/packages/omni-core-ee"
+  resolution: "@zeki.chat/omni-core-ee@workspace:ee/packages/omni-core-ee"
   dependencies:
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/omni-core": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/omni-core": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -10373,15 +10370,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/omni-core@workspace:^, @rocket.chat/omni-core@workspace:packages/omni-core":
+"@zeki.chat/omni-core@workspace:^, @zeki.chat/omni-core@workspace:packages/omni-core":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/omni-core@workspace:packages/omni-core"
+  resolution: "@zeki.chat/omni-core@workspace:packages/omni-core"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/patch-injection": "workspace:^"
-    "@rocket.chat/tools": "workspace:*"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/patch-injection": "workspace:^"
+    "@zeki.chat/tools": "workspace:*"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -10390,24 +10387,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/omnichannel-services@workspace:^, @rocket.chat/omnichannel-services@workspace:ee/packages/omnichannel-services":
+"@zeki.chat/omnichannel-services@workspace:^, @zeki.chat/omnichannel-services@workspace:ee/packages/omnichannel-services":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/omnichannel-services@workspace:ee/packages/omnichannel-services"
+  resolution: "@zeki.chat/omnichannel-services@workspace:ee/packages/omnichannel-services"
   dependencies:
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/i18n": "workspace:^"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/message-types": "workspace:~"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/pdf-worker": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
+    "@zeki.chat/i18n": "workspace:^"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/message-types": "workspace:~"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/pdf-worker": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
-    "@rocket.chat/tools": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/tools": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     "@types/node": "npm:~22.19.17"
     date-fns: "npm:~4.1.0"
@@ -10426,24 +10423,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/omnichannel-transcript@workspace:ee/apps/omnichannel-transcript":
+"@zeki.chat/omnichannel-transcript@workspace:ee/apps/omnichannel-transcript":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/omnichannel-transcript@workspace:ee/apps/omnichannel-transcript"
+  resolution: "@zeki.chat/omnichannel-transcript@workspace:ee/apps/omnichannel-transcript"
   dependencies:
     "@react-pdf/renderer": "npm:^3.4.5"
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/i18n": "workspace:^"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/omnichannel-services": "workspace:^"
-    "@rocket.chat/pdf-worker": "workspace:^"
-    "@rocket.chat/tools": "workspace:^"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/i18n": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/omnichannel-services": "workspace:^"
+    "@zeki.chat/pdf-worker": "workspace:^"
+    "@zeki.chat/tools": "workspace:^"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/i18next-sprintf-postprocessor": "npm:^0.2.3"
     "@types/node": "npm:~22.19.17"
     "@types/polka": "npm:^0.5.8"
@@ -10491,12 +10488,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/password-policies@workspace:^, @rocket.chat/password-policies@workspace:packages/password-policies":
+"@zeki.chat/password-policies@workspace:^, @zeki.chat/password-policies@workspace:packages/password-policies":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/password-policies@workspace:packages/password-policies"
+  resolution: "@zeki.chat/password-policies@workspace:packages/password-policies"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -10504,12 +10501,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/patch-injection@workspace:^, @rocket.chat/patch-injection@workspace:packages/patch-injection":
+"@zeki.chat/patch-injection@workspace:^, @zeki.chat/patch-injection@workspace:packages/patch-injection":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/patch-injection@workspace:packages/patch-injection"
+  resolution: "@zeki.chat/patch-injection@workspace:packages/patch-injection"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -10517,16 +10514,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/pdf-worker@workspace:^, @rocket.chat/pdf-worker@workspace:ee/packages/pdf-worker":
+"@zeki.chat/pdf-worker@workspace:^, @zeki.chat/pdf-worker@workspace:ee/packages/pdf-worker":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/pdf-worker@workspace:ee/packages/pdf-worker"
+  resolution: "@zeki.chat/pdf-worker@workspace:ee/packages/pdf-worker"
   dependencies:
     "@react-pdf/renderer": "npm:^3.4.5"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/message-parser": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/message-parser": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@storybook/addon-essentials": "npm:^8.6.18"
     "@storybook/addon-webpack5-compiler-swc": "npm:~3.0.0"
     "@storybook/react": "npm:^8.6.18"
@@ -10552,9 +10549,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/peggy-loader@workspace:packages/peggy-loader, @rocket.chat/peggy-loader@workspace:~":
+"@zeki.chat/peggy-loader@workspace:packages/peggy-loader, @zeki.chat/peggy-loader@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/peggy-loader@workspace:packages/peggy-loader"
+  resolution: "@zeki.chat/peggy-loader@workspace:packages/peggy-loader"
   dependencies:
     "@rocket.chat/prettier-config": "npm:~0.31.25"
     "@types/node": "npm:~22.19.17"
@@ -10571,29 +10568,29 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/poplib@workspace:^, @rocket.chat/poplib@workspace:packages/node-poplib":
+"@zeki.chat/poplib@workspace:^, @zeki.chat/poplib@workspace:packages/node-poplib":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/poplib@workspace:packages/node-poplib"
+  resolution: "@zeki.chat/poplib@workspace:packages/node-poplib"
   dependencies:
     typescript: "npm:~5.9.3"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/presence-service@workspace:ee/apps/presence-service":
+"@zeki.chat/presence-service@workspace:ee/apps/presence-service":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/presence-service@workspace:ee/apps/presence-service"
+  resolution: "@zeki.chat/presence-service@workspace:ee/apps/presence-service"
   dependencies:
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/presence": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/presence": "workspace:^"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/node": "npm:~22.19.17"
     "@types/polka": "npm:^0.5.8"
     "@types/prometheus-gc-stats": "npm:^0.6.4"
@@ -10613,15 +10610,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/presence@workspace:^, @rocket.chat/presence@workspace:ee/packages/presence":
+"@zeki.chat/presence@workspace:^, @zeki.chat/presence@workspace:ee/packages/presence":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/presence@workspace:ee/packages/presence"
+  resolution: "@zeki.chat/presence@workspace:ee/packages/presence"
   dependencies:
-    "@rocket.chat/apps-engine": "workspace:^"
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
+    "@zeki.chat/apps-engine": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
     "@types/node": "npm:~22.19.17"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -10639,20 +10636,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/queue-worker@workspace:ee/apps/queue-worker":
+"@zeki.chat/queue-worker@workspace:ee/apps/queue-worker":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/queue-worker@workspace:ee/apps/queue-worker"
+  resolution: "@zeki.chat/queue-worker@workspace:ee/apps/queue-worker"
   dependencies:
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/omnichannel-services": "workspace:^"
-    "@rocket.chat/tracing": "workspace:^"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/omnichannel-services": "workspace:^"
+    "@zeki.chat/tracing": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/node": "npm:~22.19.17"
     "@types/polka": "npm:^0.5.8"
     "@types/prometheus-gc-stats": "npm:^0.6.4"
@@ -10675,42 +10672,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/random@workspace:^, @rocket.chat/random@workspace:packages/random, @rocket.chat/random@workspace:~":
+"@zeki.chat/random@workspace:^, @zeki.chat/random@workspace:packages/random, @zeki.chat/random@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/random@workspace:packages/random"
+  resolution: "@zeki.chat/random@workspace:packages/random"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
     typescript: "npm:~5.9.3"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/release-action@workspace:packages/release-action":
+"@zeki.chat/release-changelog@workspace:packages/release-changelog":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/release-action@workspace:packages/release-action"
-  dependencies:
-    "@actions/core": "npm:^3.0.1"
-    "@actions/exec": "npm:^3.0.0"
-    "@actions/github": "npm:^9.1.1"
-    "@octokit/core": "npm:^7.0.6"
-    "@octokit/plugin-throttling": "npm:^11.0.3"
-    "@types/node": "npm:~22.19.17"
-    esbuild: "npm:~0.25.10"
-    eslint: "npm:~9.39.4"
-    mdast-util-to-string: "npm:2.0.0"
-    remark-parse: "npm:9.0.0"
-    remark-stringify: "npm:9.0.1"
-    semver: "npm:^7.6.3"
-    typescript: "npm:~5.9.3"
-    unified: "npm:9.2.2"
-  languageName: unknown
-  linkType: soft
-
-"@rocket.chat/release-changelog@workspace:packages/release-changelog":
-  version: 0.0.0-use.local
-  resolution: "@rocket.chat/release-changelog@workspace:packages/release-changelog"
+  resolution: "@zeki.chat/release-changelog@workspace:packages/release-changelog"
   dependencies:
     "@changesets/types": "npm:^6.0.0"
     "@types/node": "npm:~22.19.17"
@@ -10721,14 +10697,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/rest-typings@workspace:^, @rocket.chat/rest-typings@workspace:packages/rest-typings, @rocket.chat/rest-typings@workspace:~":
+"@zeki.chat/rest-typings@workspace:^, @zeki.chat/rest-typings@workspace:packages/rest-typings, @zeki.chat/rest-typings@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/rest-typings@workspace:packages/rest-typings"
+  resolution: "@zeki.chat/rest-typings@workspace:packages/rest-typings"
   dependencies:
-    "@rocket.chat/apps-engine": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/message-parser": "workspace:^"
-    "@rocket.chat/ui-kit": "workspace:~"
+    "@zeki.chat/apps-engine": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/message-parser": "workspace:^"
+    "@zeki.chat/ui-kit": "workspace:~"
     "@types/jest": "npm:~30.0.0"
     ajv: "npm:^8.17.1"
     ajv-formats: "npm:^3.0.1"
@@ -10738,23 +10714,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/server-cloud-communication@workspace:^, @rocket.chat/server-cloud-communication@workspace:packages/server-cloud-communication":
+"@zeki.chat/server-cloud-communication@workspace:^, @zeki.chat/server-cloud-communication@workspace:packages/server-cloud-communication":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/server-cloud-communication@workspace:packages/server-cloud-communication"
+  resolution: "@zeki.chat/server-cloud-communication@workspace:packages/server-cloud-communication"
   dependencies:
-    "@rocket.chat/license": "workspace:^"
+    "@zeki.chat/capabilities": "workspace:^"
     eslint: "npm:~9.39.4"
     typescript: "npm:~5.9.3"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/server-fetch@workspace:^, @rocket.chat/server-fetch@workspace:packages/server-fetch":
+"@zeki.chat/server-fetch@workspace:^, @zeki.chat/server-fetch@workspace:packages/server-fetch":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/server-fetch@workspace:packages/server-fetch"
+  resolution: "@zeki.chat/server-fetch@workspace:packages/server-fetch"
   dependencies:
-    "@rocket.chat/logger": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/tools": "workspace:^"
+    "@zeki.chat/logger": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/tools": "workspace:^"
     "@types/jest": "npm:^29.5.14"
     "@types/node-fetch": "npm:~2.6.13"
     "@types/proxy-from-env": "npm:^1.0.4"
@@ -10769,28 +10745,28 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/sha256@workspace:^, @rocket.chat/sha256@workspace:packages/sha256":
+"@zeki.chat/sha256@workspace:^, @zeki.chat/sha256@workspace:packages/sha256":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/sha256@workspace:packages/sha256"
+  resolution: "@zeki.chat/sha256@workspace:packages/sha256"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
     typescript: "npm:~5.9.3"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/storybook-config@workspace:packages/storybook-config, @rocket.chat/storybook-config@workspace:~":
+"@zeki.chat/storybook-config@workspace:packages/storybook-config, @zeki.chat/storybook-config@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/storybook-config@workspace:packages/storybook-config"
+  resolution: "@zeki.chat/storybook-config@workspace:packages/storybook-config"
   dependencies:
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@storybook/addon-a11y": "npm:^8.6.18"
     "@storybook/addon-essentials": "npm:^8.6.18"
     "@storybook/addon-styling-webpack": "npm:^1.0.1"
@@ -10843,12 +10819,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/tools@workspace:*, @rocket.chat/tools@workspace:^, @rocket.chat/tools@workspace:packages/tools, @rocket.chat/tools@workspace:~":
+"@zeki.chat/tools@workspace:*, @zeki.chat/tools@workspace:^, @zeki.chat/tools@workspace:packages/tools, @zeki.chat/tools@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/tools@workspace:packages/tools"
+  resolution: "@zeki.chat/tools@workspace:packages/tools"
   dependencies:
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -10856,9 +10832,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/tracing@workspace:^, @rocket.chat/tracing@workspace:packages/tracing":
+"@zeki.chat/tracing@workspace:^, @zeki.chat/tracing@workspace:packages/tracing":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/tracing@workspace:packages/tracing"
+  resolution: "@zeki.chat/tracing@workspace:packages/tracing"
   dependencies:
     "@opentelemetry/api": "npm:^1.9.1"
     "@opentelemetry/exporter-trace-otlp-grpc": "npm:^0.217.0"
@@ -10872,23 +10848,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/tsconfig@workspace:*, @rocket.chat/tsconfig@workspace:packages/tsconfig":
+"@zeki.chat/tsconfig@workspace:*, @zeki.chat/tsconfig@workspace:packages/tsconfig":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/tsconfig@workspace:packages/tsconfig"
+  resolution: "@zeki.chat/tsconfig@workspace:packages/tsconfig"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/ui-avatar@workspace:^, @rocket.chat/ui-avatar@workspace:packages/ui-avatar, @rocket.chat/ui-avatar@workspace:~":
+"@zeki.chat/ui-avatar@workspace:^, @zeki.chat/ui-avatar@workspace:packages/ui-avatar, @zeki.chat/ui-avatar@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ui-avatar@workspace:packages/ui-avatar"
+  resolution: "@zeki.chat/ui-avatar@workspace:packages/ui-avatar"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:~"
+    "@zeki.chat/core-typings": "workspace:~"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     "@types/react": "npm:~18.3.28"
     "@types/react-dom": "npm:~18.3.7"
     eslint: "npm:~9.39.4"
@@ -10898,34 +10874,34 @@ __metadata:
     typescript: "npm:~5.9.3"
   peerDependencies:
     "@rocket.chat/fuselage": "*"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     react: "*"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/ui-client@workspace:^, @rocket.chat/ui-client@workspace:packages/ui-client, @rocket.chat/ui-client@workspace:~":
+"@zeki.chat/ui-client@workspace:^, @zeki.chat/ui-client@workspace:packages/ui-client, @zeki.chat/ui-client@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ui-client@workspace:packages/ui-client"
+  resolution: "@zeki.chat/ui-client@workspace:packages/ui-client"
   dependencies:
     "@react-aria/toolbar": "npm:^3.0.0-nightly.5042"
-    "@rocket.chat/core-typings": "workspace:~"
+    "@zeki.chat/core-typings": "workspace:~"
     "@rocket.chat/css-in-js": "npm:^0.32.0"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
     "@rocket.chat/layout": "npm:^0.34.2"
-    "@rocket.chat/logo": "npm:^0.32.5"
-    "@rocket.chat/mock-providers": "workspace:^"
-    "@rocket.chat/models": "workspace:~"
+    "@zeki.chat/logo": "npm:^0.32.5"
+    "@zeki.chat/mock-providers": "workspace:^"
+    "@zeki.chat/models": "workspace:~"
     "@rocket.chat/onboarding-ui": "npm:~0.36.2"
-    "@rocket.chat/storybook-config": "workspace:~"
+    "@zeki.chat/storybook-config": "workspace:~"
     "@rocket.chat/styled": "npm:^0.33.0"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-avatar": "workspace:~"
-    "@rocket.chat/ui-contexts": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-avatar": "workspace:~"
+    "@zeki.chat/ui-contexts": "workspace:~"
     "@storybook/react": "npm:^8.6.18"
     "@storybook/react-webpack5": "npm:^8.6.18"
     "@testing-library/dom": "npm:~10.4.1"
@@ -10953,8 +10929,8 @@ __metadata:
     "@rocket.chat/fuselage": "*"
     "@rocket.chat/fuselage-hooks": "*"
     "@rocket.chat/icons": "*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     overlayscrollbars: "*"
     overlayscrollbars-react: "*"
     re-resizable: "*"
@@ -10963,9 +10939,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/ui-composer@workspace:^, @rocket.chat/ui-composer@workspace:packages/ui-composer":
+"@zeki.chat/ui-composer@workspace:^, @zeki.chat/ui-composer@workspace:packages/ui-composer":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ui-composer@workspace:packages/ui-composer"
+  resolution: "@zeki.chat/ui-composer@workspace:packages/ui-composer"
   dependencies:
     "@react-aria/toolbar": "npm:^3.0.0-nightly.5042"
     "@rocket.chat/emitter": "npm:^0.32.0"
@@ -10973,9 +10949,9 @@ __metadata:
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-client": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-client": "workspace:~"
     "@storybook/addon-a11y": "npm:^8.6.18"
     "@storybook/addon-actions": "npm:^8.6.18"
     "@storybook/addon-docs": "npm:^8.6.18"
@@ -10999,28 +10975,28 @@ __metadata:
     "@react-aria/toolbar": "*"
     "@rocket.chat/fuselage": "*"
     "@rocket.chat/icons": "*"
-    "@rocket.chat/ui-client": 31.0.0
+    "@zeki.chat/ui-client": 31.0.0
     react: "*"
     react-dom: "*"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/ui-contexts@workspace:^, @rocket.chat/ui-contexts@workspace:packages/ui-contexts, @rocket.chat/ui-contexts@workspace:~":
+"@zeki.chat/ui-contexts@workspace:^, @zeki.chat/ui-contexts@workspace:packages/ui-contexts, @zeki.chat/ui-contexts@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ui-contexts@workspace:packages/ui-contexts"
+  resolution: "@zeki.chat/ui-contexts@workspace:packages/ui-contexts"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/ddp-client": "workspace:~"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/ddp-client": "workspace:~"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
-    "@rocket.chat/i18n": "workspace:~"
+    "@zeki.chat/i18n": "workspace:~"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/password-policies": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
-    "@rocket.chat/tools": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/password-policies": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
+    "@zeki.chat/tools": "workspace:~"
     "@types/jest": "npm:~30.0.0"
     "@types/react": "npm:~18.3.28"
     "@types/react-dom": "npm:~18.3.7"
@@ -11033,23 +11009,23 @@ __metadata:
     react-virtuoso: "npm:~4.12.8"
     typescript: "npm:~5.9.3"
   peerDependencies:
-    "@rocket.chat/core-typings": "workspace:^"
-    "@rocket.chat/ddp-client": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
+    "@zeki.chat/ddp-client": "workspace:^"
     "@rocket.chat/emitter": "*"
     "@rocket.chat/fuselage-hooks": "*"
-    "@rocket.chat/i18n": "workspace:~"
-    "@rocket.chat/rest-typings": "workspace:^"
+    "@zeki.chat/i18n": "workspace:~"
+    "@zeki.chat/rest-typings": "workspace:^"
     react: "*"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/ui-kit@workspace:^, @rocket.chat/ui-kit@workspace:packages/ui-kit, @rocket.chat/ui-kit@workspace:~":
+"@zeki.chat/ui-kit@workspace:^, @zeki.chat/ui-kit@workspace:packages/ui-kit, @zeki.chat/ui-kit@workspace:~":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ui-kit@workspace:packages/ui-kit"
+  resolution: "@zeki.chat/ui-kit@workspace:packages/ui-kit"
   dependencies:
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/tsconfig": "workspace:*"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
     "@types/jest": "npm:~30.0.0"
     eslint: "npm:~9.39.4"
     jest: "npm:~30.2.0"
@@ -11065,9 +11041,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/ui-video-conf@workspace:*, @rocket.chat/ui-video-conf@workspace:^, @rocket.chat/ui-video-conf@workspace:packages/ui-video-conf":
+"@zeki.chat/ui-video-conf@workspace:*, @zeki.chat/ui-video-conf@workspace:^, @zeki.chat/ui-video-conf@workspace:packages/ui-video-conf":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ui-video-conf@workspace:packages/ui-video-conf"
+  resolution: "@zeki.chat/ui-video-conf@workspace:packages/ui-video-conf"
   dependencies:
     "@rocket.chat/css-in-js": "npm:^0.32.0"
     "@rocket.chat/emitter": "npm:^0.32.0"
@@ -11075,11 +11051,11 @@ __metadata:
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
     "@rocket.chat/styled": "npm:^0.33.0"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     "@storybook/addon-a11y": "npm:^8.6.18"
     "@storybook/addon-actions": "npm:^8.6.18"
     "@storybook/addon-docs": "npm:^8.6.18"
@@ -11107,37 +11083,37 @@ __metadata:
     "@rocket.chat/fuselage-hooks": "*"
     "@rocket.chat/icons": "*"
     "@rocket.chat/styled": "*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     react: "*"
     react-dom: "*"
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/ui-voip@workspace:^, @rocket.chat/ui-voip@workspace:packages/ui-voip":
+"@zeki.chat/ui-voip@workspace:^, @zeki.chat/ui-voip@workspace:packages/ui-voip":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/ui-voip@workspace:packages/ui-voip"
+  resolution: "@zeki.chat/ui-voip@workspace:packages/ui-voip"
   dependencies:
     "@playwright/test": "npm:~1.52.0"
     "@react-spectrum/test-utils": "npm:~1.0.0-alpha.8"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/css-in-js": "npm:^0.32.0"
-    "@rocket.chat/desktop-api": "workspace:^"
+    "@zeki.chat/desktop-api": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
-    "@rocket.chat/fuselage-ui-kit": "workspace:^"
+    "@zeki.chat/fuselage-ui-kit": "workspace:^"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/jest-presets": "workspace:~"
-    "@rocket.chat/media-signaling": "workspace:~"
-    "@rocket.chat/mock-providers": "workspace:~"
+    "@zeki.chat/jest-presets": "workspace:~"
+    "@zeki.chat/media-signaling": "workspace:~"
+    "@zeki.chat/mock-providers": "workspace:~"
     "@rocket.chat/styled": "npm:^0.33.0"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-client": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
-    "@rocket.chat/ui-kit": "workspace:^"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-client": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-kit": "workspace:^"
     "@storybook/addon-a11y": "npm:^8.6.18"
     "@storybook/addon-actions": "npm:^8.6.18"
     "@storybook/addon-docs": "npm:^8.6.18"
@@ -11171,12 +11147,12 @@ __metadata:
     "@rocket.chat/css-in-js": "*"
     "@rocket.chat/fuselage": "*"
     "@rocket.chat/fuselage-hooks": "*"
-    "@rocket.chat/fuselage-ui-kit": "workspace:^"
+    "@zeki.chat/fuselage-ui-kit": "workspace:^"
     "@rocket.chat/icons": "*"
     "@rocket.chat/styled": "*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-client": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-client": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     date-fns: "*"
     react: "*"
     react-aria: "*"
@@ -11184,28 +11160,28 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/uikit-playground@workspace:apps/uikit-playground":
+"@zeki.chat/uikit-playground@workspace:apps/uikit-playground":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/uikit-playground@workspace:apps/uikit-playground"
+  resolution: "@zeki.chat/uikit-playground@workspace:apps/uikit-playground"
   dependencies:
     "@codemirror/lang-javascript": "npm:^6.2.5"
     "@codemirror/lang-json": "npm:^6.0.2"
     "@hello-pangea/dnd": "npm:^17.0.0"
     "@lezer/highlight": "npm:^1.2.3"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/css-in-js": "npm:^0.32.0"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-toastbar": "npm:^0.35.2"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
-    "@rocket.chat/fuselage-ui-kit": "workspace:~"
+    "@zeki.chat/fuselage-ui-kit": "workspace:~"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/logo": "npm:^0.32.5"
+    "@zeki.chat/logo": "npm:^0.32.5"
     "@rocket.chat/styled": "npm:^0.33.0"
-    "@rocket.chat/tsconfig": "workspace:*"
-    "@rocket.chat/ui-avatar": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:~"
+    "@zeki.chat/tsconfig": "workspace:*"
+    "@zeki.chat/ui-avatar": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:~"
     "@types/lodash": "npm:~4.17.24"
     "@types/react": "npm:~18.3.28"
     "@types/react-beautiful-dnd": "npm:^13.1.8"
@@ -11228,24 +11204,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rocket.chat/web-ui-registration@workspace:^, @rocket.chat/web-ui-registration@workspace:packages/web-ui-registration":
+"@zeki.chat/web-ui-registration@workspace:^, @zeki.chat/web-ui-registration@workspace:packages/web-ui-registration":
   version: 0.0.0-use.local
-  resolution: "@rocket.chat/web-ui-registration@workspace:packages/web-ui-registration"
+  resolution: "@zeki.chat/web-ui-registration@workspace:packages/web-ui-registration"
   dependencies:
-    "@rocket.chat/core-typings": "workspace:~"
+    "@zeki.chat/core-typings": "workspace:~"
     "@rocket.chat/css-in-js": "npm:^0.32.0"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/fuselage": "npm:^0.78.0"
     "@rocket.chat/fuselage-hooks": "npm:^0.41.0"
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
-    "@rocket.chat/i18n": "workspace:~"
+    "@zeki.chat/i18n": "workspace:~"
     "@rocket.chat/icons": "npm:~0.47.0"
     "@rocket.chat/layout": "npm:^0.34.2"
-    "@rocket.chat/mock-providers": "workspace:~"
-    "@rocket.chat/rest-typings": "workspace:~"
-    "@rocket.chat/tools": "workspace:~"
-    "@rocket.chat/ui-client": "workspace:^"
-    "@rocket.chat/ui-contexts": "workspace:^"
+    "@zeki.chat/mock-providers": "workspace:~"
+    "@zeki.chat/rest-typings": "workspace:~"
+    "@zeki.chat/tools": "workspace:~"
+    "@zeki.chat/ui-client": "workspace:^"
+    "@zeki.chat/ui-contexts": "workspace:^"
     "@storybook/addon-actions": "npm:^8.6.18"
     "@storybook/addon-docs": "npm:^8.6.18"
     "@storybook/addon-essentials": "npm:^8.6.18"
@@ -11271,8 +11247,8 @@ __metadata:
     typescript: "npm:~5.9.3"
   peerDependencies:
     "@rocket.chat/layout": "*"
-    "@rocket.chat/tools": 0.3.0
-    "@rocket.chat/ui-contexts": 31.0.0
+    "@zeki.chat/tools": 0.3.0
+    "@zeki.chat/ui-contexts": 31.0.0
     "@tanstack/react-query": "*"
     react: "*"
     react-hook-form: "*"
@@ -33299,12 +33275,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rocket.chat@workspace:.":
+"zeki-chat@workspace:.":
   version: 0.0.0-use.local
-  resolution: "rocket.chat@workspace:."
+  resolution: "zeki-chat@workspace:."
   dependencies:
     "@changesets/cli": "npm:^2.27.12"
-    "@rocket.chat/eslint-config": "workspace:~"
+    "@zeki.chat/eslint-config": "workspace:~"
     "@types/chart.js": "npm:^2.9.41"
     "@types/js-yaml": "npm:^4.0.9"
     "@types/node": "npm:~22.19.17"
@@ -33318,22 +33294,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"rocketchat-services@workspace:apps/meteor/ee/server/services":
+"zekichat-services@workspace:apps/meteor/ee/server/services":
   version: 0.0.0-use.local
-  resolution: "rocketchat-services@workspace:apps/meteor/ee/server/services"
+  resolution: "zekichat-services@workspace:apps/meteor/ee/server/services"
   dependencies:
-    "@rocket.chat/apps-engine": "workspace:^"
-    "@rocket.chat/core-services": "workspace:^"
-    "@rocket.chat/core-typings": "workspace:^"
+    "@zeki.chat/apps-engine": "workspace:^"
+    "@zeki.chat/core-services": "workspace:^"
+    "@zeki.chat/core-typings": "workspace:^"
     "@rocket.chat/emitter": "npm:^0.32.0"
     "@rocket.chat/icons": "npm:~0.47.0"
-    "@rocket.chat/message-parser": "workspace:^"
-    "@rocket.chat/model-typings": "workspace:^"
-    "@rocket.chat/models": "workspace:^"
-    "@rocket.chat/network-broker": "workspace:^"
-    "@rocket.chat/rest-typings": "workspace:^"
+    "@zeki.chat/message-parser": "workspace:^"
+    "@zeki.chat/model-typings": "workspace:^"
+    "@zeki.chat/models": "workspace:^"
+    "@zeki.chat/network-broker": "workspace:^"
+    "@zeki.chat/rest-typings": "workspace:^"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
-    "@rocket.chat/ui-kit": "workspace:~"
+    "@zeki.chat/ui-kit": "workspace:~"
     "@types/cookie": "npm:^0.5.4"
     "@types/cookie-parser": "npm:^1.4.10"
     "@types/ejson": "npm:^2.2.2"

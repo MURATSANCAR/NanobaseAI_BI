@@ -1,5 +1,5 @@
-import type { IMessage, ISubscription } from '@rocket.chat/core-typings';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IMessage, ISubscription } from '@zeki.chat/core-typings';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useMemo, useSyncExternalStore } from 'react';
 

@@ -1,5 +1,5 @@
-import type { PaginatedRequest } from '@rocket.chat/rest-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { PaginatedRequest } from '@zeki.chat/rest-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 
 import { omnichannelQueryKeys } from '../../../../lib/queryKeys';

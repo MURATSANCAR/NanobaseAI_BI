@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook, waitFor } from '@testing-library/react';
 
 import { useLoadSurroundingMessages } from './useLoadSurroundingMessages';
@@ -46,8 +46,8 @@ jest.mock('../../../../stores', () => ({
 const mockUseSearchParameter = jest.fn<string | undefined, []>().mockReturnValue(undefined);
 const mockUseRouteParameter = jest.fn<string | undefined, [string]>().mockReturnValue(undefined);
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useSearchParameter: (..._args: unknown[]) => mockUseSearchParameter(),
 	useRouteParameter: (param: string) => mockUseRouteParameter(param),
 }));

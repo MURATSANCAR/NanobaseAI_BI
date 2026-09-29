@@ -1,5 +1,5 @@
-import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import type { MouseEvent, MouseEventHandler } from 'react';
 import { memo } from 'react';
 

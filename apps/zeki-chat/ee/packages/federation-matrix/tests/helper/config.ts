@@ -2,7 +2,7 @@
  * Configuration interface for federation test environment.
  *
  * Defines the structure for all federation-related configuration including
- * Rocket.Chat instances, Matrix homeservers, and user credentials needed
+ * ZEKI AI CHAT instances, Matrix homeservers, and user credentials needed
  * for end-to-end federation testing.
  */
 

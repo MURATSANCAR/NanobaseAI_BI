@@ -1,4 +1,4 @@
-import { Subscriptions, Rooms } from '@rocket.chat/models';
+import { Subscriptions, Rooms } from '@zeki.chat/models';
 
 import {
 	notifyOnSubscriptionChangedById,

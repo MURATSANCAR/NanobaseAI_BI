@@ -1,8 +1,8 @@
-import type { ProgressStep } from '@rocket.chat/core-typings';
+import type { ProgressStep } from '@zeki.chat/core-typings';
 import { Box, Margins, ProgressBar, Throbber } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint, useStream, useRouter } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint, useStream, useRouter } from '@zeki.chat/ui-contexts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';

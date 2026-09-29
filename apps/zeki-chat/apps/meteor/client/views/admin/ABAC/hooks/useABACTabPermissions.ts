@@ -1,4 +1,4 @@
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { usePermission } from '@zeki.chat/ui-contexts';
 
 export type ABACTab = 'settings' | 'room-attributes' | 'rooms' | 'logs';
 

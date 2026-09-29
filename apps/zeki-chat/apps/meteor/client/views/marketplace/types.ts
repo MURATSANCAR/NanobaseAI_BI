@@ -1,3 +1,3 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 
 export type { App };

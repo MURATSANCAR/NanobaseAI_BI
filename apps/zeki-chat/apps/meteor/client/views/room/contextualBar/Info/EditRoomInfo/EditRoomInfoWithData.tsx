@@ -1,5 +1,5 @@
-import type { IRoomWithRetentionPolicy } from '@rocket.chat/core-typings';
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+import type { IRoomWithRetentionPolicy } from '@zeki.chat/core-typings';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 
 import EditRoomInfo from './EditRoomInfo';
 import { useRoom } from '../../../contexts/RoomContext';

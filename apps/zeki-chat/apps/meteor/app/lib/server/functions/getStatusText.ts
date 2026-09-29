@@ -1,4 +1,4 @@
-import { Users } from '@rocket.chat/models';
+import { Users } from '@zeki.chat/models';
 
 export const getStatusText = async function (userId: string): Promise<string | undefined> {
 	if (!userId) {

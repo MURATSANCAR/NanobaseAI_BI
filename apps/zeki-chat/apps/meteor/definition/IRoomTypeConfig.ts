@@ -8,9 +8,9 @@ import type {
 	ISubscription,
 	IOmnichannelRoom,
 	IUpload,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type { Keys as IconName } from '@rocket.chat/icons';
-import type { IRouterPaths, RouteName } from '@rocket.chat/ui-contexts';
+import type { IRouterPaths, RouteName } from '@zeki.chat/ui-contexts';
 
 export type RoomIdentification = { rid?: IRoom['_id']; name?: string; tab?: string };
 

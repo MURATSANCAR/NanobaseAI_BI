@@ -1,4 +1,4 @@
-import type { IStats } from '@rocket.chat/core-typings';
+import type { IStats } from '@zeki.chat/core-typings';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import DeploymentCard from './DeploymentCard';

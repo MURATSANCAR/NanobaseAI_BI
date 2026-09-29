@@ -1,12 +1,12 @@
-import { Banner } from '@rocket.chat/core-services';
-import type { IBanner } from '@rocket.chat/core-typings';
+import { Banner } from '@zeki.chat/core-services';
+import type { IBanner } from '@zeki.chat/core-typings';
 import {
 	ajv,
 	isBannersDismissProps,
 	isBannersProps,
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../api';
 

@@ -1,4 +1,4 @@
-import type { DDPSDK } from '@rocket.chat/ddp-client';
+import type { DDPSDK } from '@zeki.chat/ddp-client';
 import { createContext, type ComponentChildren } from 'preact';
 import { useContext, useMemo } from 'preact/hooks';
 

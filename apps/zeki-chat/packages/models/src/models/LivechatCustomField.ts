@@ -1,11 +1,11 @@
-import type { ILivechatCustomField, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { ILivechatCustomFieldModel } from '@rocket.chat/model-typings';
+import type { ILivechatCustomField, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { ILivechatCustomFieldModel } from '@zeki.chat/model-typings';
 import type { Db, Collection, IndexDescription, FindOptions, FindCursor, Document } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class LivechatCustomFieldRaw extends BaseRaw<ILivechatCustomField> implements ILivechatCustomFieldModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ILivechatCustomField>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ILivechatCustomField>>) {
 		super(db, 'livechat_custom_field', trash);
 	}
 

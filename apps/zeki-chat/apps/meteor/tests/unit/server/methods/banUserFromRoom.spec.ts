@@ -33,10 +33,10 @@ const RoomMemberActions = {
 };
 
 const { banUserFromRoomMethod } = p.noCallThru().load('../../../../server/lib/banUserFromRoom.ts', {
-	'@rocket.chat/core-typings': {
+	'@zeki.chat/core-typings': {
 		isBannedSubscription: (sub: { status?: string } | null) => sub?.status === 'BANNED',
 	},
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 	'../../app/authorization/server': { canAccessRoomAsync: canAccessRoomAsyncMock },
 	'../../app/authorization/server/functions/hasPermission': { hasPermissionAsync: hasPermissionAsyncMock },
 	'../../app/authorization/server/functions/hasRole': { hasRoleAsync: hasRoleAsyncMock },

@@ -1,5 +1,5 @@
-import { type IUser, type RequiredField } from '@rocket.chat/core-typings';
-import { type Logger } from '@rocket.chat/logger';
+import { type IUser, type RequiredField } from '@zeki.chat/core-typings';
+import { type Logger } from '@zeki.chat/logger';
 import type { MiddlewareHandler } from 'hono';
 import { Meteor } from 'meteor/meteor';
 

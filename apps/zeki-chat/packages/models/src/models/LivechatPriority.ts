@@ -1,5 +1,5 @@
-import type { ILivechatPriority } from '@rocket.chat/core-typings';
-import type { ILivechatPriorityModel } from '@rocket.chat/model-typings';
+import type { ILivechatPriority } from '@zeki.chat/core-typings';
+import type { ILivechatPriorityModel } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { Db, UpdateFilter, WithId, IndexDescription, FindCursor } from 'mongodb';
 

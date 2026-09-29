@@ -1,5 +1,5 @@
-import type { ILivechatAgent, IRole } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { ILivechatAgent, IRole } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { FilterOperators } from 'mongodb';
 

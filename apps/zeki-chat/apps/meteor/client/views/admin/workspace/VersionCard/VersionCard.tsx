@@ -1,4 +1,4 @@
-import type { IWorkspaceInfo } from '@rocket.chat/core-typings';
+import type { IWorkspaceInfo } from '@zeki.chat/core-typings';
 import { Card, CardCol, CardHeader, CardTitle } from '@rocket.chat/fuselage';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 export const useKeepMountedMessages = (messages: IMessage[], canPreview: boolean = false): number[] => {
 	const offset = canPreview ? 1 : 0;

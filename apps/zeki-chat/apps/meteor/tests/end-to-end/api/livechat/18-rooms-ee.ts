@@ -1,5 +1,5 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IOmnichannelRoom, IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IOmnichannelRoom, IUser } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -291,7 +291,7 @@ import { IS_EE } from '../../../e2e/config/constants';
 			expect(messages).to.be.an('array');
 			expect(messages[0]).to.not.be.undefined;
 			expect(messages[0]).to.have.property('t', 'omnichannel_on_hold_chat_resumed');
-			expect(messages[0]).to.have.property('comment', 'The chat was manually resumed from On Hold by RocketChat Internal Admin Test');
+			expect(messages[0]).to.have.property('comment', 'The chat was manually resumed from On Hold by ZekiChat Internal Admin Test');
 		});
 		it('should resume chat automatically if visitor sent a message', async () => {
 			const { room, visitor } = await startANewLivechatRoomAndTakeIt();

@@ -1,4 +1,4 @@
-import type { IAbacAttributeDefinition } from '@rocket.chat/core-typings';
+import type { IAbacAttributeDefinition } from '@zeki.chat/core-typings';
 import { Box, Margins } from '@rocket.chat/fuselage';
 
 import UserInfoABACAttribute from './UserInfoABACAttribute';

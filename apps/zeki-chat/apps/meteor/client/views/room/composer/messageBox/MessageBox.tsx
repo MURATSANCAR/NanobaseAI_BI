@@ -1,5 +1,5 @@
 /* eslint-disable complexity */
-import { isRoomFederated, isRoomNativeFederated, type IMessage, type ISubscription } from '@rocket.chat/core-typings';
+import { isRoomFederated, isRoomNativeFederated, type IMessage, type ISubscription } from '@zeki.chat/core-typings';
 import { useContentBoxSize, useEffectEvent, useMediaQuery, useSafeRefCallback } from '@rocket.chat/fuselage-hooks';
 import {
 	MessageComposerAction,
@@ -10,8 +10,8 @@ import {
 	MessageComposerToolbarSubmit,
 	MessageComposerButton,
 	MessageComposerInputExpandable,
-} from '@rocket.chat/ui-composer';
-import { useTranslation, useUserPreference, useLayout, useSetting } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-composer';
+import { useTranslation, useUserPreference, useLayout, useSetting } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import type { ReactElement, FormEvent, MouseEvent, ClipboardEvent } from 'react';
 import { memo, useRef, useReducer, useCallback, useSyncExternalStore } from 'react';

@@ -1,5 +1,5 @@
-import type { IAuditLog } from '@rocket.chat/core-typings';
-import { useMethod } from '@rocket.chat/ui-contexts';
+import type { IAuditLog } from '@zeki.chat/core-typings';
+import { useMethod } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 
 import type { AuditFields } from './useAuditForm';

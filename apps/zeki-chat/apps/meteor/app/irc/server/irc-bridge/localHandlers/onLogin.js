@@ -1,4 +1,4 @@
-import { Rooms, Users } from '@rocket.chat/models';
+import { Rooms, Users } from '@zeki.chat/models';
 
 export default async function handleOnLogin(login) {
 	if (login.user === null) {

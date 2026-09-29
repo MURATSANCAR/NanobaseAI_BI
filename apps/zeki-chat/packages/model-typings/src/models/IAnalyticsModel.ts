@@ -1,4 +1,4 @@
-import type { IAnalytics, IRoom } from '@rocket.chat/core-typings';
+import type { IAnalytics, IRoom } from '@zeki.chat/core-typings';
 import type { AggregationCursor, FindCursor, FindOptions, UpdateResult, Document } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

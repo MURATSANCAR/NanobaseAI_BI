@@ -1,4 +1,4 @@
-import type { INps, NPSStatus } from '@rocket.chat/core-typings';
+import type { INps, NPSStatus } from '@zeki.chat/core-typings';
 import type { Document, UpdateResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

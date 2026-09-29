@@ -1,4 +1,4 @@
-import type { IRoom, ISubscription, IUser, IFederationEvent } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription, IUser, IFederationEvent } from '@zeki.chat/core-typings';
 import type { DeleteResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

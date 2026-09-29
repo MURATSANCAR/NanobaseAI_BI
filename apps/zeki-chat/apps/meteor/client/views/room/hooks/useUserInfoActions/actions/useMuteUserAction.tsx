@@ -1,7 +1,7 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import { escapeHTML } from '@rocket.chat/string-helpers';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
 import {
 	useAllPermissions,
 	usePermission,
@@ -11,7 +11,7 @@ import {
 	useUserRoom,
 	useUserSubscription,
 	useEndpoint,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import { roomCoordinator } from '../../../../../lib/rooms/roomCoordinator';

@@ -1,40 +1,40 @@
 import * as os from 'node:os';
 
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import { HttpStatusCode } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IApi, IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
-import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
-import type { IApiEndpointInfo } from '@rocket.chat/apps-engine/definition/api/IApiEndpointInfo';
-import type { IMessage, IMessageAttachment, IMessageRaw } from '@rocket.chat/apps-engine/definition/messages';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IHttp, IModify, IPersistence, IRead } from '@zeki.chat/apps-engine/definition/accessors';
+import { HttpStatusCode } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IApi, IApiRequest, IApiResponse } from '@zeki.chat/apps-engine/definition/api';
+import { ApiSecurity, ApiVisibility } from '@zeki.chat/apps-engine/definition/api';
+import type { IApiEndpointInfo } from '@zeki.chat/apps-engine/definition/api/IApiEndpointInfo';
+import type { IMessage, IMessageAttachment, IMessageRaw } from '@zeki.chat/apps-engine/definition/messages';
 import type {
 	IOutboundEmailMessageProvider,
 	IOutboundMessage,
 	IOutboundPhoneMessageProvider,
 	ProviderMetadata,
-} from '@rocket.chat/apps-engine/definition/outboundCommunication';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
-import { SettingType } from '@rocket.chat/apps-engine/definition/settings';
+} from '@zeki.chat/apps-engine/definition/outboundCommunication';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
+import { SettingType } from '@zeki.chat/apps-engine/definition/settings';
 import type {
 	ISlashCommand,
 	ISlashCommandPreview,
 	ISlashCommandPreviewItem,
 	SlashCommandContext,
-} from '@rocket.chat/apps-engine/definition/slashcommands';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
-import { UserStatusConnection, UserType } from '@rocket.chat/apps-engine/definition/users';
+} from '@zeki.chat/apps-engine/definition/slashcommands';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
+import { UserStatusConnection, UserType } from '@zeki.chat/apps-engine/definition/users';
 import type {
 	IVideoConferenceOptions,
 	IVideoConfProvider,
 	VideoConfData,
 	VideoConfDataExtended,
-} from '@rocket.chat/apps-engine/definition/videoConfProviders';
-import type { AppVideoConference } from '@rocket.chat/apps-engine/definition/videoConferences/AppVideoConference';
-import type { VideoConference } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConference';
-import { VideoConferenceStatus } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConference';
-import type { IVideoConferenceUser } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConferenceUser';
+} from '@zeki.chat/apps-engine/definition/videoConfProviders';
+import type { AppVideoConference } from '@zeki.chat/apps-engine/definition/videoConferences/AppVideoConference';
+import type { VideoConference } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConference';
+import { VideoConferenceStatus } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConference';
+import type { IVideoConferenceUser } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConferenceUser';
 
 import { TestsAppBridges } from './bridges/appBridges';
 import { TestSourceStorage } from './storage/TestSourceStorage';

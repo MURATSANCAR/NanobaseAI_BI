@@ -1,6 +1,6 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatUnit } from '@rocket.chat/models';
-import { getUnitsFromUser } from '@rocket.chat/omni-core-ee';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatUnit } from '@zeki.chat/models';
+import { getUnitsFromUser } from '@zeki.chat/omni-core-ee';
 
 import { hasAnyRoleAsync } from '../../../../../app/authorization/server/functions/hasRole';
 import { callbacks } from '../../../../../server/lib/callbacks';

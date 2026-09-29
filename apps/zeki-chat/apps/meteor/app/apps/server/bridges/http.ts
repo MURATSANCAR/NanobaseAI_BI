@@ -1,9 +1,9 @@
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import type { IHttpBridgeRequestInfo } from '@rocket.chat/apps/dist/server/bridges/HttpBridge';
-import { HttpBridge } from '@rocket.chat/apps/dist/server/bridges/HttpBridge';
-import type { IHttpResponse } from '@rocket.chat/apps-engine/definition/accessors';
-import { serverFetch as fetch, type ExtendedFetchOptions } from '@rocket.chat/server-fetch';
-import { censorUrl } from '@rocket.chat/tools';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import type { IHttpBridgeRequestInfo } from '@zeki.chat/apps/dist/server/bridges/HttpBridge';
+import { HttpBridge } from '@zeki.chat/apps/dist/server/bridges/HttpBridge';
+import type { IHttpResponse } from '@zeki.chat/apps-engine/definition/accessors';
+import { serverFetch as fetch, type ExtendedFetchOptions } from '@zeki.chat/server-fetch';
+import { censorUrl } from '@zeki.chat/tools';
 
 import { settings } from '../../../settings/server';
 

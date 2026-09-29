@@ -1,6 +1,6 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
 
 import type { IMarketplaceInfo } from '../../../src/server/marketplace';
 import type { IAppStorageItem } from '../../../src/server/storage';

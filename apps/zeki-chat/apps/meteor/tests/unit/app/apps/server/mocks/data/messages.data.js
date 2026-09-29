@@ -4,7 +4,7 @@ import { createFakeMessage, createFakeMessageWithAttachment } from '../../../../
 
 export const appMessageMock = {
 	id: 'appMessageMock',
-	text: 'rocket.cat',
+	text: 'zeki.bot',
 	createdAt: new Date('2019-03-30T01:22:08.389Z'),
 	updatedAt: new Date('2019-03-30T01:22:08.412Z'),
 	groupable: false,
@@ -14,7 +14,7 @@ export const appMessageMock = {
 		slugifiedName: 'general',
 		type: 'c',
 		creator: {
-			username: 'rocket.cat',
+			username: 'zeki.bot',
 			emails: [
 				{
 					address: 'rocketcat@rocket.chat',
@@ -23,7 +23,7 @@ export const appMessageMock = {
 			],
 			type: 'bot',
 			isEnabled: true,
-			name: 'Rocket.Cat',
+			name: 'ZEKI AI CHAT',
 			roles: ['bot'],
 			status: 'online',
 			statusConnection: 'online',
@@ -33,8 +33,8 @@ export const appMessageMock = {
 		},
 	},
 	sender: {
-		id: 'rocket.cat',
-		username: 'rocket.cat',
+		id: 'zeki.bot',
+		username: 'zeki.bot',
 		emails: [
 			{
 				address: 'rocketcat@rocket.chat',
@@ -43,7 +43,7 @@ export const appMessageMock = {
 		],
 		type: 'bot',
 		isEnabled: true,
-		name: 'Rocket.Cat',
+		name: 'ZEKI AI CHAT',
 		roles: ['bot'],
 		status: 'online',
 		statusConnection: 'online',
@@ -58,7 +58,7 @@ export const appMessageMock = {
 
 export const appPartialMessageMock = {
 	id: 'appPartialMessageMock',
-	text: 'rocket.cat',
+	text: 'zeki.bot',
 	groupable: false,
 	emoji: ':smirk:',
 	alias: 'rocket.feline',
@@ -66,7 +66,7 @@ export const appPartialMessageMock = {
 
 export const appMessageInvalidRoomMock = {
 	id: 'appMessageInvalidRoomMock',
-	text: 'rocket.cat',
+	text: 'zeki.bot',
 	createdAt: new Date('2019-03-30T01:22:08.389Z'),
 	updatedAt: new Date('2019-03-30T01:22:08.412Z'),
 	groupable: false,
@@ -76,7 +76,7 @@ export const appMessageInvalidRoomMock = {
 		slugifiedName: 'mocked-room',
 		type: 'c',
 		creator: {
-			username: 'rocket.cat',
+			username: 'zeki.bot',
 			emails: [
 				{
 					address: 'rocketcat@rocket.chat',
@@ -85,7 +85,7 @@ export const appMessageInvalidRoomMock = {
 			],
 			type: 'bot',
 			isEnabled: true,
-			name: 'Rocket.Cat',
+			name: 'ZEKI AI CHAT',
 			roles: ['bot'],
 			status: 'online',
 			statusConnection: 'online',
@@ -95,8 +95,8 @@ export const appMessageInvalidRoomMock = {
 		},
 	},
 	sender: {
-		id: 'rocket.cat',
-		username: 'rocket.cat',
+		id: 'zeki.bot',
+		username: 'zeki.bot',
 		emails: [
 			{
 				address: 'rocketcat@rocket.chat',
@@ -105,7 +105,7 @@ export const appMessageInvalidRoomMock = {
 		],
 		type: 'bot',
 		isEnabled: true,
-		name: 'Rocket.Cat',
+		name: 'ZEKI AI CHAT',
 		roles: ['bot'],
 		status: 'online',
 		statusConnection: 'online',

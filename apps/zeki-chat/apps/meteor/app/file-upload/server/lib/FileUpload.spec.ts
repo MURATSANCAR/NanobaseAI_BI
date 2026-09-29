@@ -26,7 +26,7 @@ const roomCoordinatorStub = {
 };
 
 const { FileUpload, FileUploadClass } = proxyquire.noCallThru().load('./FileUpload', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Messages: messagesModelStub,
 		Users: usersModelStub,
 		Subscriptions: subscriptionsModelStub,
@@ -36,7 +36,7 @@ const { FileUpload, FileUploadClass } = proxyquire.noCallThru().load('./FileUplo
 	'meteor/ostrio:cookies': { Cookies: sinon.stub() },
 	'sharp': sinon.stub(),
 	'stream-buffers': sinon.stub(),
-	'@rocket.chat/tools': sinon.stub(),
+	'@zeki.chat/tools': sinon.stub(),
 	'../../../../server/lib/i18n': sinon.stub(),
 	'../../../../server/lib/logger/system': { SystemLogger: systemLoggerStub },
 	'../../../../server/lib/rooms/roomCoordinator': { roomCoordinator: roomCoordinatorStub },
@@ -50,7 +50,7 @@ const { FileUpload, FileUploadClass } = proxyquire.noCallThru().load('./FileUplo
 	},
 	'../../../utils/server/restrictions': sinon.stub(),
 	'../../../api/server/lib/MultipartUploadHandler': sinon.stub(),
-	'@rocket.chat/account-utils': { hashLoginToken: sinon.stub().callsFake((token) => `hashed_${token}`) },
+	'@zeki.chat/account-utils': { hashLoginToken: sinon.stub().callsFake((token) => `hashed_${token}`) },
 });
 
 describe('FileUpload', () => {

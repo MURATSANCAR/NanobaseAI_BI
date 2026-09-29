@@ -1,6 +1,6 @@
-import type { INotification, INotificationItemPush, INotificationItemEmail, NotificationItem, IUser } from '@rocket.chat/core-typings';
-import { NotificationQueue, Users } from '@rocket.chat/models';
-import { tracerSpan } from '@rocket.chat/tracing';
+import type { INotification, INotificationItemPush, INotificationItemEmail, NotificationItem, IUser } from '@zeki.chat/core-typings';
+import { NotificationQueue, Users } from '@zeki.chat/models';
+import { tracerSpan } from '@zeki.chat/tracing';
 import { Meteor } from 'meteor/meteor';
 
 import { SystemLogger } from '../../../server/lib/logger/system';

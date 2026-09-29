@@ -1,4 +1,4 @@
-import type { MessageTypesValues, IRoom, IUser } from '@rocket.chat/core-typings';
+import type { MessageTypesValues, IRoom, IUser } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 
 import { getHiddenSystemMessages } from '../../../../../../app/lib/server/lib/getHiddenSystemMessages';

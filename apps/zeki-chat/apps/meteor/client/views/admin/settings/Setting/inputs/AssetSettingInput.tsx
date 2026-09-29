@@ -1,7 +1,7 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Button, Field, FieldHint, FieldLabel, FieldRow, Icon, Palette } from '@rocket.chat/fuselage';
-import { Random } from '@rocket.chat/random';
-import { useToastMessageDispatch, useEndpoint, useTranslation, useUpload } from '@rocket.chat/ui-contexts';
+import { Random } from '@zeki.chat/random';
+import { useToastMessageDispatch, useEndpoint, useTranslation, useUpload } from '@zeki.chat/ui-contexts';
 import type { ChangeEventHandler, DragEvent, ReactElement, SyntheticEvent } from 'react';
 
 import type { SettingInputProps } from './types';

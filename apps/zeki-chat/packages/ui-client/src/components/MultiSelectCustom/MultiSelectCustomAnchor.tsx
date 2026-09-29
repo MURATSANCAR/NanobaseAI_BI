@@ -1,6 +1,6 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Icon } from '@rocket.chat/fuselage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { ComponentPropsWithoutRef } from 'react';
 import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';

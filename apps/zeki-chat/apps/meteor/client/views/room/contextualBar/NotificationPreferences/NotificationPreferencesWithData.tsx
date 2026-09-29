@@ -1,5 +1,5 @@
 import type { SelectOption } from '@rocket.chat/fuselage';
-import { useCustomSound, useToastMessageDispatch, useRoomToolbox, useUserPreference } from '@rocket.chat/ui-contexts';
+import { useCustomSound, useToastMessageDispatch, useRoomToolbox, useUserPreference } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';

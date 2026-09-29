@@ -1,4 +1,4 @@
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 import { useShallow } from 'zustand/shallow';
 
 import { pipe } from '../../../../lib/cachedStores/pipe';

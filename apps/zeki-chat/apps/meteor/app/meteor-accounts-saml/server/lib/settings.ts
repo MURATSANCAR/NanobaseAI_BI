@@ -1,5 +1,5 @@
-import type { SAMLConfiguration } from '@rocket.chat/core-typings';
-import { LoginServiceConfiguration } from '@rocket.chat/models';
+import type { SAMLConfiguration } from '@zeki.chat/core-typings';
+import { LoginServiceConfiguration } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { SAMLUtils } from './Utils';
@@ -322,7 +322,7 @@ export const addSettings = async function (name: string): Promise<void> {
 						type: 'select',
 						values: [
 							{ key: 'SAML', i18nLabel: 'SAML_Custom_Logout_Behaviour_Terminate_SAML_Session' },
-							{ key: 'Local', i18nLabel: 'SAML_Custom_Logout_Behaviour_End_Only_RocketChat' },
+							{ key: 'Local', i18nLabel: 'SAML_Custom_Logout_Behaviour_End_Only_ZekiChat' },
 						],
 						i18nLabel: 'SAML_Custom_Logout_Behaviour',
 						public: true,

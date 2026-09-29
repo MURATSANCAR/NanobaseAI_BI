@@ -1,12 +1,12 @@
-import type { IModifyExtender } from '@rocket.chat/apps-engine/definition/accessors/IModifyExtender';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages/IMessage';
-import type { IMessageExtender } from '@rocket.chat/apps-engine/definition/accessors/IMessageExtender';
-import type { IRoomExtender } from '@rocket.chat/apps-engine/definition/accessors/IRoomExtender';
-import type { IVideoConferenceExtender } from '@rocket.chat/apps-engine/definition/accessors/IVideoConferenceExtend';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users/IUser';
-import type { VideoConference } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConference';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
+import type { IModifyExtender } from '@zeki.chat/apps-engine/definition/accessors/IModifyExtender';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages/IMessage';
+import type { IMessageExtender } from '@zeki.chat/apps-engine/definition/accessors/IMessageExtender';
+import type { IRoomExtender } from '@zeki.chat/apps-engine/definition/accessors/IRoomExtender';
+import type { IVideoConferenceExtender } from '@zeki.chat/apps-engine/definition/accessors/IVideoConferenceExtend';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users/IUser';
+import type { VideoConference } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConference';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
 
 import * as Messenger from '../../messenger.ts';
 import { AppObjectRegistry } from '../../../AppObjectRegistry.ts';
@@ -16,8 +16,8 @@ import { VideoConferenceExtender } from '../extenders/VideoConferenceExtend.ts';
 import { require } from '../../../lib/require.ts';
 import { formatErrorResponse } from '../formatResponseErrorHandler.ts';
 
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export class ModifyExtender implements IModifyExtender {
@@ -71,7 +71,7 @@ export class ModifyExtender implements IModifyExtender {
 
 	public async finish(extender: IMessageExtender | IRoomExtender | IVideoConferenceExtender): Promise<void> {
 		switch (extender.kind) {
-			case RocketChatAssociationModel.MESSAGE:
+			case ZekiChatAssociationModel.MESSAGE:
 				await this.senderFn({
 					method: 'bridges:getMessageBridge:doUpdate',
 					params: [(extender as IMessageExtender).getMessage(), AppObjectRegistry.get('id')],
@@ -79,7 +79,7 @@ export class ModifyExtender implements IModifyExtender {
 					throw formatErrorResponse(err);
 				});
 				break;
-			case RocketChatAssociationModel.ROOM:
+			case ZekiChatAssociationModel.ROOM:
 				await this.senderFn({
 					method: 'bridges:getRoomBridge:doUpdate',
 					params: [
@@ -91,7 +91,7 @@ export class ModifyExtender implements IModifyExtender {
 					throw formatErrorResponse(err);
 				});
 				break;
-			case RocketChatAssociationModel.VIDEO_CONFERENCE:
+			case ZekiChatAssociationModel.VIDEO_CONFERENCE:
 				await this.senderFn({
 					method: 'bridges:getVideoConferenceBridge:doUpdate',
 					params: [(extender as IVideoConferenceExtender).getVideoConference(), AppObjectRegistry.get('id')],

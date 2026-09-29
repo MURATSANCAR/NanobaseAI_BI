@@ -1,7 +1,7 @@
 import type { EventID } from '@rocket.chat/federation-sdk';
 import { federationSDK } from '@rocket.chat/federation-sdk';
-import { Router } from '@rocket.chat/http-router';
-import { ajv, ajvQuery } from '@rocket.chat/rest-typings';
+import { Router } from '@zeki.chat/http-router';
+import { ajv, ajvQuery } from '@zeki.chat/rest-typings';
 
 import { canAccessResourceMiddleware } from '../middlewares/canAccessResource';
 import { isAuthenticatedMiddleware } from '../middlewares/isAuthenticated';
@@ -330,7 +330,7 @@ export const getMatrixTransactionsRoutes = () => {
 						400: isErrorResponseProps,
 					},
 					tags: ['Federation'],
-					license: ['federation'],
+					capabilities: ['federation'],
 				},
 				async (c) => {
 					const body = await c.req.json();
@@ -435,7 +435,7 @@ export const getMatrixTransactionsRoutes = () => {
 						200: isGetEventResponseProps,
 					},
 					tags: ['Federation'],
-					license: ['federation'],
+					capabilities: ['federation'],
 				},
 				canAccessResourceMiddleware('event'),
 				async (c) => {
@@ -470,7 +470,7 @@ export const getMatrixTransactionsRoutes = () => {
 						200: isBackfillResponseProps,
 					},
 					tags: ['Federation'],
-					license: ['federation'],
+					capabilities: ['federation'],
 				},
 				canAccessResourceMiddleware('room'),
 				async (c) => {

@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { LivechatVisitors as VisitorsRaw, LivechatRooms } from '@rocket.chat/models';
-import { registerGuest } from '@rocket.chat/omni-core';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { LivechatVisitors as VisitorsRaw, LivechatRooms } from '@zeki.chat/models';
+import { registerGuest } from '@zeki.chat/omni-core';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 

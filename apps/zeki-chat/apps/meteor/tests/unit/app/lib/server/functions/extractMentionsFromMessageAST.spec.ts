@@ -1,4 +1,4 @@
-import type { Root } from '@rocket.chat/message-parser';
+import type { Root } from '@zeki.chat/message-parser';
 import { expect } from 'chai';
 
 import { extractMentionsFromMessageAST } from '../../../../../../app/lib/server/functions/extractMentionsFromMessageAST';

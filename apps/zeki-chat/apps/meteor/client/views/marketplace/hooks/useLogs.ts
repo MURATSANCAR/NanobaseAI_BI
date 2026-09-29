@@ -1,5 +1,5 @@
-import type { OperationResult } from '@rocket.chat/rest-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { OperationResult } from '@zeki.chat/rest-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';

@@ -1,7 +1,7 @@
-import type { IOAuthApps, IUser } from '@rocket.chat/core-typings';
+import type { IOAuthApps, IUser } from '@zeki.chat/core-typings';
 import { Box, Button, ButtonGroup } from '@rocket.chat/fuselage';
 import { Form } from '@rocket.chat/layout';
-import { useLoginToken, useLogout, useRoute } from '@rocket.chat/ui-contexts';
+import { useLoginToken, useLogout, useRoute } from '@zeki.chat/ui-contexts';
 import { useEffect, useId, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 

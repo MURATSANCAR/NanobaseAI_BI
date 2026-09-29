@@ -1,11 +1,11 @@
-import type { OauthConfig } from '@rocket.chat/core-typings';
+import type { OauthConfig } from '@zeki.chat/core-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { CustomOAuth } from '../../custom-oauth/server/custom_oauth_server';
 import { settings } from '../../settings/server';
 
-// GitHub Enterprise Server CallBack URL needs to be http(s)://{rocketchat.server}[:port]/_oauth/github_enterprise
-// In RocketChat -> Administration the URL needs to be http(s)://{github.enterprise.server}/
+// GitHub Enterprise Server CallBack URL needs to be http(s)://{zekichat.server}[:port]/_oauth/github_enterprise
+// In ZekiChat -> Administration the URL needs to be http(s)://{github.enterprise.server}/
 
 const config: OauthConfig = {
 	serverURL: '',

@@ -4,12 +4,12 @@ import type {
 	IRoom,
 	IUser,
 	MessageTypesValues,
-	RocketChatRecordDeleted,
+	ZekiChatRecordDeleted,
 	MessageAttachment,
 	IMessageWithPendingFileImport,
-} from '@rocket.chat/core-typings';
-import type { FindPaginated, IMessagesModel } from '@rocket.chat/model-typings';
-import type { PaginatedRequest } from '@rocket.chat/rest-typings';
+} from '@zeki.chat/core-typings';
+import type { FindPaginated, IMessagesModel } from '@zeki.chat/model-typings';
+import type { PaginatedRequest } from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type {
 	AggregationCursor,
@@ -39,7 +39,7 @@ type DeepWritable<T> = T extends (...args: any) => any
 		};
 
 export class MessagesRaw extends BaseRaw<IMessage> implements IMessagesModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IMessage>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IMessage>>) {
 		super(db, 'message', trash);
 	}
 
@@ -194,7 +194,7 @@ export class MessagesRaw extends BaseRaw<IMessage> implements IMessagesModel {
 		};
 		const lookup = {
 			$lookup: {
-				from: 'rocketchat_room',
+				from: 'zeki_room',
 				localField: 'rid',
 				foreignField: '_id',
 				as: 'room',
@@ -274,7 +274,7 @@ export class MessagesRaw extends BaseRaw<IMessage> implements IMessagesModel {
 			},
 			{
 				$lookup: {
-					from: 'rocketchat_room',
+					from: 'zeki_room',
 					localField: '_id',
 					foreignField: '_id',
 					as: 'room',
@@ -657,9 +657,9 @@ export class MessagesRaw extends BaseRaw<IMessage> implements IMessagesModel {
 		return this.updateOne({ _id: messageId }, { $set: updateObj });
 	}
 
-	setImportFileRocketChatAttachment(
+	setImportFileZekiChatAttachment(
 		importFileId: string,
-		rocketChatUrl: string,
+		zekiChatUrl: string,
 		attachment: MessageAttachment,
 	): Promise<UpdateResult | Document> {
 		const query = {
@@ -668,7 +668,7 @@ export class MessagesRaw extends BaseRaw<IMessage> implements IMessagesModel {
 
 		return this.updateMany(query, {
 			$set: {
-				'_importFile.rocketChatUrl': rocketChatUrl,
+				'_importFile.zekiChatUrl': zekiChatUrl,
 				'_importFile.downloaded': true,
 			},
 			$addToSet: {
@@ -1729,7 +1729,7 @@ export class MessagesRaw extends BaseRaw<IMessage> implements IMessagesModel {
 			'_importFile.downloadUrl': {
 				$exists: true,
 			},
-			'_importFile.rocketChatUrl': {
+			'_importFile.zekiChatUrl': {
 				$exists: false,
 			},
 			'_importFile.downloaded': {
@@ -1748,7 +1748,7 @@ export class MessagesRaw extends BaseRaw<IMessage> implements IMessagesModel {
 			'_importFile.downloadUrl': {
 				$exists: true,
 			},
-			'_importFile.rocketChatUrl': {
+			'_importFile.zekiChatUrl': {
 				$exists: false,
 			},
 			'_importFile.downloaded': {

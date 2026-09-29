@@ -1,4 +1,4 @@
-import type { MessageTypesValues, IMessage } from '@rocket.chat/core-typings';
+import type { MessageTypesValues, IMessage } from '@zeki.chat/core-typings';
 import type { TFunction } from 'i18next';
 
 type MessageType = {

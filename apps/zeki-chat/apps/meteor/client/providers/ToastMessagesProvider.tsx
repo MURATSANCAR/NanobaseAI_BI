@@ -1,5 +1,5 @@
 import { ToastBarProvider, useToastBarDispatch } from '@rocket.chat/fuselage-toastbar';
-import { ToastMessagesContext } from '@rocket.chat/ui-contexts';
+import { ToastMessagesContext } from '@zeki.chat/ui-contexts';
 import type { DefaultError, Query } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';

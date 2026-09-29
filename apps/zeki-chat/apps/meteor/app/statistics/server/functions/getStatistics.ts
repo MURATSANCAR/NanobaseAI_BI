@@ -1,5 +1,5 @@
-import type { IStats } from '@rocket.chat/core-typings';
-import { Statistics } from '@rocket.chat/models';
+import type { IStats } from '@zeki.chat/core-typings';
+import { Statistics } from '@zeki.chat/models';
 import type { FindOptions, SchemaMember } from 'mongodb';
 
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';

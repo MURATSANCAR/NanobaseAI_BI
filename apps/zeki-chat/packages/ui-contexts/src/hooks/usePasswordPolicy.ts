@@ -1,4 +1,4 @@
-import { PasswordPolicy, type PasswordPolicyOptions, type PasswordPolicyValidation } from '@rocket.chat/password-policies';
+import { PasswordPolicy, type PasswordPolicyOptions, type PasswordPolicyValidation } from '@zeki.chat/password-policies';
 import { useMemo, useCallback } from 'react';
 
 export type { PasswordPolicyValidation };

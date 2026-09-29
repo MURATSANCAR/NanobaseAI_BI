@@ -1,5 +1,5 @@
-import { UserStatus, type IUserSession, type IUserSessionConnection } from '@rocket.chat/core-typings';
-import { registerModel } from '@rocket.chat/models';
+import { UserStatus, type IUserSession, type IUserSessionConnection } from '@zeki.chat/core-typings';
+import { registerModel } from '@zeki.chat/models';
 import type { FindCursor, WithId } from 'mongodb';
 
 import { PresenceReaper } from './PresenceReaper';

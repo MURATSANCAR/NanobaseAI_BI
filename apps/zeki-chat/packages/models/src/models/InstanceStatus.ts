@@ -1,5 +1,5 @@
-import type { IInstanceStatus } from '@rocket.chat/core-typings';
-import type { IInstanceStatusModel } from '@rocket.chat/model-typings';
+import type { IInstanceStatus } from '@zeki.chat/core-typings';
+import type { IInstanceStatusModel } from '@zeki.chat/model-typings';
 import type { Db, UpdateResult, DeleteResult, ChangeStream } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

@@ -2,8 +2,8 @@
  * Markdown is a named function that will parse markdown syntax
  * @param {String} msg - The message html
  */
-import type { TokenType, TokenExtra } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { TokenType, TokenExtra } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 
 type MessageTokens = {
 	tokens?: {

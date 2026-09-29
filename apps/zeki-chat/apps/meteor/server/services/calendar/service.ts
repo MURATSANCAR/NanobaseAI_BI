@@ -1,11 +1,11 @@
-import type { ICalendarService } from '@rocket.chat/core-services';
-import { ServiceClassInternal, api } from '@rocket.chat/core-services';
-import type { IUser, ICalendarEvent } from '@rocket.chat/core-typings';
-import { UserStatus } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
-import { Logger } from '@rocket.chat/logger';
-import type { InsertionModel } from '@rocket.chat/model-typings';
-import { CalendarEvent, Users } from '@rocket.chat/models';
+import type { ICalendarService } from '@zeki.chat/core-services';
+import { ServiceClassInternal, api } from '@zeki.chat/core-services';
+import type { IUser, ICalendarEvent } from '@zeki.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
+import { Logger } from '@zeki.chat/logger';
+import type { InsertionModel } from '@zeki.chat/model-typings';
+import { CalendarEvent, Users } from '@zeki.chat/models';
 import type { UpdateResult, DeleteResult } from 'mongodb';
 
 import { applyStatusChange } from './statusEvents/applyStatusChange';

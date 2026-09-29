@@ -1,11 +1,11 @@
-import type { ICustomUserStatus, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { ICustomUserStatusModel, InsertionModel } from '@rocket.chat/model-typings';
+import type { ICustomUserStatus, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { ICustomUserStatusModel, InsertionModel } from '@zeki.chat/model-typings';
 import type { Collection, FindCursor, Db, FindOptions, IndexDescription, InsertOneResult, UpdateResult, WithId } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class CustomUserStatusRaw extends BaseRaw<ICustomUserStatus> implements ICustomUserStatusModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ICustomUserStatus>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ICustomUserStatus>>) {
 		super(db, 'custom_user_status', trash);
 	}
 

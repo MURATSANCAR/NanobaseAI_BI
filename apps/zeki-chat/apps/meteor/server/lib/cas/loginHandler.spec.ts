@@ -9,7 +9,7 @@ const findExistingCASUser = sinon.stub().resolves(null);
 const settingsGet = sinon.stub().returns(true);
 
 const { loginHandlerCAS: handler } = proxyquire.noCallThru().load('./loginHandler', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		CredentialTokens: { findOneNotExpiredById, removeById },
 		Users: { updateOne: sinon.stub().resolves() },
 	},

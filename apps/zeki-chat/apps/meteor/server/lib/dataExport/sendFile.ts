@@ -2,7 +2,7 @@ import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path, { join } from 'node:path';
 
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 
 import { getURL } from '../../../app/utils/server/getURL';
 import { i18n } from '../i18n';

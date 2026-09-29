@@ -5,7 +5,7 @@ import { SAMLUtils } from '../Utils';
 import { defaultIdentifierFormat, defaultLogoutRequestTemplate } from '../constants';
 
 /*
-	A Logout Request is used when the user is logged out of Rocket.Chat and the Service Provider is configured to also logout from the Identity Provider.
+	A Logout Request is used when the user is logged out of ZEKI AI CHAT and the Service Provider is configured to also logout from the Identity Provider.
 */
 export class LogoutRequest {
 	static generate(serviceProviderOptions: IServiceProviderOptions, nameID: string, sessionIndex: string): ISAMLRequest {

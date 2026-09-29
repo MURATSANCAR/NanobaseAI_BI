@@ -1,5 +1,5 @@
-import type { CallHistoryItemState, IMessage } from '@rocket.chat/core-typings';
-import type { IconButtonElement, FrameableIconElement, InfoCardBlock, TextObject } from '@rocket.chat/ui-kit';
+import type { CallHistoryItemState, IMessage } from '@zeki.chat/core-typings';
+import type { IconButtonElement, FrameableIconElement, InfoCardBlock, TextObject } from '@zeki.chat/ui-kit';
 import { intervalToDuration, secondsToMilliseconds } from 'date-fns';
 
 const APP_ID = 'media-call-core';

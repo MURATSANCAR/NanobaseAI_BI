@@ -1,4 +1,4 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
 
 import type { IAppsDepartment } from '../AppsEngine';
 

@@ -1,6 +1,6 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Box } from '@rocket.chat/fuselage';
-import { VirtualizedScrollbars } from '@rocket.chat/ui-client';
+import { VirtualizedScrollbars } from '@zeki.chat/ui-client';
 import type { MouseEvent } from 'react';
 import { forwardRef, memo, useRef } from 'react';
 import type { ListRange, VirtuosoHandle } from 'react-virtuoso';

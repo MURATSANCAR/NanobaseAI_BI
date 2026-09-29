@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import type * as http from 'node:http';
 import type stream from 'node:stream';
 
-import type { IUpload } from '@rocket.chat/core-typings';
-import type { IBaseUploadsModel } from '@rocket.chat/model-typings';
+import type { IUpload } from '@zeki.chat/core-typings';
+import type { IBaseUploadsModel } from '@zeki.chat/model-typings';
 import type createServer from 'connect';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';

@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import { OAuthAppsBridge } from '@rocket.chat/apps/dist/server/bridges/OAuthAppsBridge';
-import type { IOAuthApp, IOAuthAppParams } from '@rocket.chat/apps-engine/definition/accessors/IOAuthApp';
-import type { IOAuthApps } from '@rocket.chat/core-typings';
-import { OAuthApps, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import { OAuthAppsBridge } from '@zeki.chat/apps/dist/server/bridges/OAuthAppsBridge';
+import type { IOAuthApp, IOAuthAppParams } from '@zeki.chat/apps-engine/definition/accessors/IOAuthApp';
+import type { IOAuthApps } from '@zeki.chat/core-typings';
+import { OAuthApps, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 
 export class AppOAuthAppsBridge extends OAuthAppsBridge {
 	constructor(private readonly orch: IAppServerOrchestrator) {

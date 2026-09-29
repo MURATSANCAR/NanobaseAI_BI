@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import type { Root } from '@rocket.chat/message-parser';
+import type { IMessage } from '@zeki.chat/core-typings';
+import type { Root } from '@zeki.chat/message-parser';
 
 import { isParsedMessage } from './isParsedMessage';
 

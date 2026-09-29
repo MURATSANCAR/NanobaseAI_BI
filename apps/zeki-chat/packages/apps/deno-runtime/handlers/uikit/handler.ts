@@ -1,4 +1,4 @@
-import type { App } from '@rocket.chat/apps-engine/definition/App';
+import type { App } from '@zeki.chat/apps-engine/definition/App';
 import { Defined, JsonRpcError } from 'jsonrpc-lite';
 
 import { require } from '../../lib/require.ts';
@@ -21,9 +21,9 @@ export const {
 	UIKitViewSubmitInteractionContext,
 	UIKitViewCloseInteractionContext,
 	UIKitActionButtonInteractionContext,
-} = require('@rocket.chat/apps-engine/definition/uikit/UIKitInteractionContext.js');
+} = require('@zeki.chat/apps-engine/definition/uikit/UIKitInteractionContext.js');
 
-export const { UIKitLivechatBlockInteractionContext } = require('@rocket.chat/apps-engine/definition/uikit/livechat/UIKitLivechatInteractionContext.js');
+export const { UIKitLivechatBlockInteractionContext } = require('@zeki.chat/apps-engine/definition/uikit/livechat/UIKitLivechatInteractionContext.js');
 
 export default async function handleUIKitInteraction(request: RequestContext): Promise<Defined | JsonRpcError> {
 	const { method: reqMethod, params } = request;

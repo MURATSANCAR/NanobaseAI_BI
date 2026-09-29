@@ -1,6 +1,6 @@
-import type { RoomType } from '@rocket.chat/core-typings';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { usePermission, useSetting, useUserSubscription } from '@rocket.chat/ui-contexts';
+import type { RoomType } from '@zeki.chat/core-typings';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { usePermission, useSetting, useUserSubscription } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

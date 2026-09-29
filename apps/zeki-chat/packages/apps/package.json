@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/apps",
+	"name": "@zeki.chat/apps",
 	"version": "0.7.0",
 	"private": true,
 	"main": "./dist/index.js",
@@ -23,9 +23,9 @@
 	},
 	"dependencies": {
 		"@msgpack/msgpack": "3.0.0-beta2",
-		"@rocket.chat/apps-engine": "workspace:^",
-		"@rocket.chat/core-typings": "workspace:^",
-		"@rocket.chat/model-typings": "workspace:^",
+		"@zeki.chat/apps-engine": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/model-typings": "workspace:^",
 		"adm-zip": "^0.5.16",
 		"debug": "^4.3.7",
 		"esbuild": "~0.27.3",
@@ -37,7 +37,7 @@
 		"uuid": "~11.1.1"
 	},
 	"devDependencies": {
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@seald-io/nedb": "^4.1.2",
 		"@types/adm-zip": "^0.5.7",
 		"@types/debug": "^4.1.12",

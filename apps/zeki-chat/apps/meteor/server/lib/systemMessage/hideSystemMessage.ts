@@ -1,4 +1,4 @@
-import type { MessageTypesValues } from '@rocket.chat/core-typings';
+import type { MessageTypesValues } from '@zeki.chat/core-typings';
 
 export const isMutedUnmuted = (messageType: string): boolean => {
 	return messageType === 'user-muted' || messageType === 'user-unmuted';

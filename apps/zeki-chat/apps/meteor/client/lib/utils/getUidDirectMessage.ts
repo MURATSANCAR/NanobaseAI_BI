@@ -1,4 +1,4 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
 
 import { Rooms } from '../../stores';
 import { getUserId } from '../user';

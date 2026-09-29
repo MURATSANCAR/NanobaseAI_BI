@@ -1,14 +1,14 @@
-import { Settings } from '@rocket.chat/models';
+import { Settings } from '@zeki.chat/models';
 import {
 	ajv,
 	isAssetsUnsetAssetProps,
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateBadRequestErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { updateAuditedByUser } from '../../../../server/settings/lib/auditedSettingUpdates';
-import { RocketChatAssets, refreshClients } from '../../../assets/server';
+import { ZekiChatAssets, refreshClients } from '../../../assets/server';
 import { notifyOnSettingChangedById } from '../../../lib/server/lib/notifyListener';
 import { settings } from '../../../settings/server';
 import { API } from '../api';
@@ -46,14 +46,14 @@ API.v1.post(
 		const { refreshAllClients, assetName: customName } = fields;
 
 		const assetName = customName || filename;
-		const assetsKeys = Object.keys(RocketChatAssets.assets);
+		const assetsKeys = Object.keys(ZekiChatAssets.assets);
 
 		const isValidAsset = assetsKeys.includes(assetName);
 		if (!isValidAsset) {
 			throw new Error('Invalid asset');
 		}
 
-		const { key, value } = await RocketChatAssets.setAssetWithBuffer(fileBuffer, mimetype, assetName);
+		const { key, value } = await ZekiChatAssets.setAssetWithBuffer(fileBuffer, mimetype, assetName);
 
 		const { modifiedCount } = await updateAuditedByUser({
 			_id: this.userId,
@@ -89,12 +89,12 @@ API.v1.post(
 	},
 	async function action() {
 		const { assetName, refreshAllClients } = this.bodyParams;
-		const isValidAsset = Object.keys(RocketChatAssets.assets).includes(assetName);
+		const isValidAsset = Object.keys(ZekiChatAssets.assets).includes(assetName);
 		if (!isValidAsset) {
 			throw Error('Invalid asset');
 		}
 
-		const { key, value } = await RocketChatAssets.unsetAsset(assetName);
+		const { key, value } = await ZekiChatAssets.unsetAsset(assetName);
 
 		const { modifiedCount } = await updateAuditedByUser({
 			_id: this.userId,

@@ -1,4 +1,4 @@
-import type { AtLeast, IRoom, ISubscription, IUser, MessageTypesValues } from '@rocket.chat/core-typings';
+import type { AtLeast, IRoom, ISubscription, IUser, MessageTypesValues } from '@zeki.chat/core-typings';
 
 export interface ISubscriptionExtraData {
 	open: boolean;

@@ -1,5 +1,5 @@
 import { Tag } from '@rocket.chat/fuselage';
-import type * as MessageParser from '@rocket.chat/message-parser';
+import type * as MessageParser from '@zeki.chat/message-parser';
 import { format, intlFormatDistance } from 'date-fns';
 import { useContext, useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';

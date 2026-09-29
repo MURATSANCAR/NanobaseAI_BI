@@ -1,5 +1,5 @@
-import type { IImport } from '@rocket.chat/core-typings';
-import type { IImportsModel } from '@rocket.chat/model-typings';
+import type { IImport } from '@zeki.chat/core-typings';
+import type { IImportsModel } from '@zeki.chat/model-typings';
 import type { Db, Document, FindCursor, FindOptions, UpdateResult, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

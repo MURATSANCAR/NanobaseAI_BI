@@ -14,10 +14,10 @@ import type {
 	IUploadRead,
 	IUserRead,
 	IVideoConferenceRead,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import type { IContactRead } from '@rocket.chat/apps-engine/definition/accessors/IContactRead';
-import type { IOAuthAppsReader } from '@rocket.chat/apps-engine/definition/accessors/IOAuthAppsReader';
-import type { IThreadRead } from '@rocket.chat/apps-engine/definition/accessors/IThreadRead';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import type { IContactRead } from '@zeki.chat/apps-engine/definition/accessors/IContactRead';
+import type { IOAuthAppsReader } from '@zeki.chat/apps-engine/definition/accessors/IOAuthAppsReader';
+import type { IThreadRead } from '@zeki.chat/apps-engine/definition/accessors/IThreadRead';
 
 import { Reader } from '../../../src/server/accessors';
 

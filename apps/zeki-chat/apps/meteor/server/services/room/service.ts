@@ -1,5 +1,5 @@
-import { ServiceClassInternal, Authorization, Message, MeteorError, FederationMatrix } from '@rocket.chat/core-services';
-import type { ICreateRoomParams, IRoomService } from '@rocket.chat/core-services';
+import { ServiceClassInternal, Authorization, Message, MeteorError, FederationMatrix } from '@zeki.chat/core-services';
+import type { ICreateRoomParams, IRoomService } from '@zeki.chat/core-services';
 import {
 	type AtLeast,
 	type IRoom,
@@ -8,9 +8,9 @@ import {
 	type ISubscription,
 	isOmnichannelRoom,
 	isRoomWithJoinCode,
-} from '@rocket.chat/core-typings';
-import { isUserNativeFederated } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { isUserNativeFederated } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import { getNameForDMs } from './getNameForDMs';
 import { FederationActions } from './hooks/BeforeFederationActions';

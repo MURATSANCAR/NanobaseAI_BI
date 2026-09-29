@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 import { decode, Decoder, Encoder, ExtensionCodec } from '@msgpack/msgpack';
-import type { App as _App } from '@rocket.chat/apps-engine/definition/App';
+import type { App as _App } from '@zeki.chat/apps-engine/definition/App';
 
 import { require } from './require.ts';
 import { applySecureFields, type WithSecureFields } from './secureFields.ts';
@@ -10,7 +10,7 @@ const FUNCTION_DISABLER_EXT = 0;
 const BUFFER_HANDLER_EXT = 1;
 const SECURE_FIELDS_HANDLER_EXT = 2;
 
-const { App } = require('@rocket.chat/apps-engine/definition/App.js') as {
+const { App } = require('@zeki.chat/apps-engine/definition/App.js') as {
 	App: typeof _App;
 };
 

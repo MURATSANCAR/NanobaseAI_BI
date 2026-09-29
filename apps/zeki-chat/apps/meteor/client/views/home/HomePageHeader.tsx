@@ -1,6 +1,6 @@
 import { Button } from '@rocket.chat/fuselage';
-import { PageHeader } from '@rocket.chat/ui-client';
-import { useSetting, useTranslation, useAllPermissions, useRoute } from '@rocket.chat/ui-contexts';
+import { PageHeader } from '@zeki.chat/ui-client';
+import { useSetting, useTranslation, useAllPermissions, useRoute } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 const EDIT_LAYOUT_PERMISSIONS = ['view-privileged-setting', 'edit-privileged-setting', 'manage-selected-settings'];

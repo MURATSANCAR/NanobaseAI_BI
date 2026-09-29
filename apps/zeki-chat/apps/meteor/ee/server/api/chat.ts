@@ -1,4 +1,4 @@
-import type { IMessage, IReadReceiptWithUser } from '@rocket.chat/core-typings';
+import type { IMessage, IReadReceiptWithUser } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
 import { Meteor } from 'meteor/meteor';
 
@@ -9,7 +9,7 @@ type GetMessageReadReceiptsProps = {
 	messageId: IMessage['_id'];
 };
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/chat.getMessageReadReceipts': {
@@ -24,7 +24,7 @@ API.v1.addRoute(
 	'chat.getMessageReadReceipts',
 	{
 		authRequired: true,
-		// license: ['message-read-receipt']
+		// capabilities: ['message-read-receipt']
 	},
 	{
 		async get() {

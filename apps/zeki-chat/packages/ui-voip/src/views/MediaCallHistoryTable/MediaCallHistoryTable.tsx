@@ -1,4 +1,4 @@
-import { GenericTable, GenericTableHeaderCell, GenericTableHeader, GenericTableBody, GenericTableCell } from '@rocket.chat/ui-client';
+import { GenericTable, GenericTableHeaderCell, GenericTableHeader, GenericTableBody, GenericTableCell } from '@zeki.chat/ui-client';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 

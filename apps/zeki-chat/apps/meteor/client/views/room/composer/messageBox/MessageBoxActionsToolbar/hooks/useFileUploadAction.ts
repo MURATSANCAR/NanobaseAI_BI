@@ -1,5 +1,5 @@
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 

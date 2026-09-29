@@ -1,5 +1,5 @@
-import type { SlashCommandCallbackParams } from '@rocket.chat/core-typings';
-import { clientCallbacks } from '@rocket.chat/ui-client';
+import type { SlashCommandCallbackParams } from '@zeki.chat/core-typings';
+import { clientCallbacks } from '@zeki.chat/ui-client';
 
 import { dispatchToastMessage } from '../../../client/lib/toast';
 import { Rooms } from '../../../client/stores';

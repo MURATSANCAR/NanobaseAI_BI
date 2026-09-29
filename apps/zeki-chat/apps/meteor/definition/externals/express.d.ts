@@ -1,6 +1,6 @@
 import 'express';
 
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 
 declare module 'express' {
 	interface Request {

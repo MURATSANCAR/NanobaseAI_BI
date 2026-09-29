@@ -1,7 +1,7 @@
 import { Box } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { AnnouncementBanner, GenericModal } from '@rocket.chat/ui-client';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { AnnouncementBanner, GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import proxyquire from 'proxyquire';
 import sinon from 'sinon';
@@ -49,8 +49,8 @@ describe('Message Broadcast Tests', () => {
 		memStub = sinon.stub().callsFake((fn: any) => fn);
 
 		const proxyMock = proxyquire.noPreserveCache().load('../../../../../../app/lib/server/lib/notifyListener', {
-			'@rocket.chat/models': modelsStubs(),
-			'@rocket.chat/core-services': coreStubs(),
+			'@zeki.chat/models': modelsStubs(),
+			'@zeki.chat/core-services': coreStubs(),
 			'mem': memStub,
 		});
 
@@ -202,8 +202,8 @@ describe('Message Broadcast Tests', () => {
 	describe('notifyOnMessageChange', () => {
 		const setupProxyMock = () => {
 			const proxyMock = proxyquire.noCallThru().load('../../../../../../app/lib/server/lib/notifyListener', {
-				'@rocket.chat/models': modelsStubs(),
-				'@rocket.chat/core-services': coreStubs(),
+				'@zeki.chat/models': modelsStubs(),
+				'@zeki.chat/core-services': coreStubs(),
 				'mem': memStub,
 			});
 			notifyOnMessageChange = proxyMock.notifyOnMessageChange;

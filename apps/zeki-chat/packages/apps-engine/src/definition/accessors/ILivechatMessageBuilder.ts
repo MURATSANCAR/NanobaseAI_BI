@@ -1,6 +1,6 @@
 import type { ILivechatMessage, IVisitor } from '../livechat';
 import type { IMessageAttachment } from '../messages';
-import type { RocketChatAssociationModel } from '../metadata';
+import type { ZekiChatAssociationModel } from '../metadata';
 import type { IRoom } from '../rooms';
 import type { IUser } from '../users';
 import type { IMessageBuilder } from './IMessageBuilder';
@@ -11,7 +11,7 @@ import type { IMessageBuilder } from './IMessageBuilder';
  * be able to successfully save the message object.
  */
 export interface ILivechatMessageBuilder {
-	kind: RocketChatAssociationModel.LIVECHAT_MESSAGE;
+	kind: ZekiChatAssociationModel.LIVECHAT_MESSAGE;
 
 	/**
 	 * Provides a convient way to set the data for the message.
@@ -160,7 +160,7 @@ export interface ILivechatMessageBuilder {
 
 	/**
 	 * Sets whether this message should have any URLs in the text
-	 * parsed by Rocket.Chat and get the details added to the message's
+	 * parsed by ZEKI AI CHAT and get the details added to the message's
 	 * attachments.
 	 *
 	 * @param parseUrls whether URLs should be parsed in this message

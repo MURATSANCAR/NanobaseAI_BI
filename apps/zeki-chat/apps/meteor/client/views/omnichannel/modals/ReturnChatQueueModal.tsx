@@ -1,4 +1,4 @@
-import { GenericModal } from '@rocket.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 type ReturnChatQueueModalProps = {

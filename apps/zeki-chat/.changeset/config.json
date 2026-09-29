@@ -1,8 +1,8 @@
 {
 	"$schema": "https://unpkg.com/@changesets/config@2.3.0/schema.json",
-	"changelog": ["@rocket.chat/release-changelog", { "repo": "RocketChat/Rocket.Chat" }],
+	"changelog": ["@zeki.chat/release-changelog", { "repo": "ZekiChat/ZEKI AI CHAT" }],
 	"commit": false,
-	"fixed": [["@rocket.chat/meteor", "@rocket.chat/core-typings", "@rocket.chat/rest-typings"]],
+	"fixed": [["@zeki.chat/meteor", "@zeki.chat/core-typings", "@zeki.chat/rest-typings"]],
 	"linked": [],
 	"access": "public",
 	"baseBranch": "develop",

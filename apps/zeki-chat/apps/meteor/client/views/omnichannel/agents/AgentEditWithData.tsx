@@ -1,7 +1,7 @@
-import type { ILivechatAgent } from '@rocket.chat/core-typings';
+import type { ILivechatAgent } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
-import { ContextualbarSkeletonBody } from '@rocket.chat/ui-client';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { ContextualbarSkeletonBody } from '@zeki.chat/ui-client';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';

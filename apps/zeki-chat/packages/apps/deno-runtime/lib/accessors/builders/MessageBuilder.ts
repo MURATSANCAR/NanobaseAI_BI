@@ -1,22 +1,22 @@
-import { LayoutBlock } from '@rocket.chat/ui-kit';
+import { LayoutBlock } from '@zeki.chat/ui-kit';
 
-import type { IMessageBuilder } from '@rocket.chat/apps-engine/definition/accessors/IMessageBuilder';
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages/IMessage';
-import type { IMessageAttachment } from '@rocket.chat/apps-engine/definition/messages/IMessageAttachment';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users/IUser';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
-import type { IBlock } from '@rocket.chat/apps-engine/definition/uikit/blocks/Blocks';
+import type { IMessageBuilder } from '@zeki.chat/apps-engine/definition/accessors/IMessageBuilder';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages/IMessage';
+import type { IMessageAttachment } from '@zeki.chat/apps-engine/definition/messages/IMessageAttachment';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users/IUser';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
+import type { IBlock } from '@zeki.chat/apps-engine/definition/uikit/blocks/Blocks';
 
 import { BlockBuilder } from './BlockBuilder.ts';
 import { require } from '../../../lib/require.ts';
 
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export class MessageBuilder implements IMessageBuilder {
-	public kind: _RocketChatAssociationModel.MESSAGE;
+	public kind: _ZekiChatAssociationModel.MESSAGE;
 
 	private msg: IMessage;
 
@@ -25,7 +25,7 @@ export class MessageBuilder implements IMessageBuilder {
 	private customFieldsChanged = false;
 
 	constructor(message?: IMessage) {
-		this.kind = RocketChatAssociationModel.MESSAGE;
+		this.kind = ZekiChatAssociationModel.MESSAGE;
 		this.msg = message || ({} as IMessage);
 	}
 

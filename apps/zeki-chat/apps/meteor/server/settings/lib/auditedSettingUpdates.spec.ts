@@ -1,9 +1,9 @@
-import type { ISetting, SettingValue } from '@rocket.chat/core-typings';
+import type { ISetting, SettingValue } from '@zeki.chat/core-typings';
 
 import { updateAuditedByUser, updateAuditedBySystem, updateAuditedByApp, resetAuditedSettingByUser } from './auditedSettingUpdates';
 
 const mockCreateAuditServerEvent = jest.fn();
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	ServerEvents: {
 		createAuditServerEvent: (...args: any[]) => mockCreateAuditServerEvent(...args),
 	},

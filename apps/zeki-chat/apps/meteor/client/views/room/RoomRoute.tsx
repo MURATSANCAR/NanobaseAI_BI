@@ -1,6 +1,6 @@
-import type { RoomType } from '@rocket.chat/core-typings';
-import { useEmbeddedLayout } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import type { RoomType } from '@zeki.chat/core-typings';
+import { useEmbeddedLayout } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useLayoutEffect, useState } from 'react';
 
 import RoomOpener from './RoomOpener';

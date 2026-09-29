@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Messages, Subscriptions, Users, Rooms } from '@rocket.chat/models';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Messages, Subscriptions, Users, Rooms } from '@zeki.chat/models';
 import type { ParsedMail } from 'mailparser';
 import moment from 'moment';
 

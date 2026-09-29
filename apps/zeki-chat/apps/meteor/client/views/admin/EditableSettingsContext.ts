@@ -1,5 +1,5 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import { createPredicateFromFilter } from '@rocket.chat/mongo-adapter';
+import type { ISetting } from '@zeki.chat/core-typings';
+import { createPredicateFromFilter } from '@zeki.chat/mongo-adapter';
 import { createContext, useContext } from 'react';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';

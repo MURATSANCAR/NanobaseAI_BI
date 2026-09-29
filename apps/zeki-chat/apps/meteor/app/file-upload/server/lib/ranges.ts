@@ -1,6 +1,6 @@
 import type http from 'node:http';
 
-import type { IUpload } from '@rocket.chat/core-typings';
+import type { IUpload } from '@zeki.chat/core-typings';
 
 function getByteRange(header?: string) {
 	if (!header) {

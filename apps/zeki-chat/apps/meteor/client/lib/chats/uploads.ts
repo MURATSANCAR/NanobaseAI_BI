@@ -1,6 +1,6 @@
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
-import { Random } from '@rocket.chat/random';
+import { Random } from '@zeki.chat/random';
 import fileSize from 'filesize';
 
 import { getErrorMessage } from '../errorHandling';

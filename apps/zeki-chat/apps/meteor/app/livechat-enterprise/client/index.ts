@@ -1,6 +1,6 @@
-import { hasLicense } from '../../license/client';
+import { hasCapability } from '../../capabilities/client';
 
-void hasLicense('livechat-enterprise').then((enabled) => {
+void hasCapability('livechat-enterprise').then((enabled) => {
 	if (!enabled) {
 		return;
 	}

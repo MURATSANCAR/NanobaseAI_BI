@@ -1,9 +1,9 @@
-import type { IImport, IImporterSelection, IImporterSelectionContact, Serialized } from '@rocket.chat/core-typings';
+import type { IImport, IImporterSelection, IImporterSelectionContact, Serialized } from '@zeki.chat/core-typings';
 import { Badge, Box, Button, ButtonGroup, Margins, ProgressBar, Throbber, Tabs } from '@rocket.chat/fuselage';
 import { useDebouncedValue, useSafely } from '@rocket.chat/fuselage-hooks';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useEndpoint, useTranslation, useStream, useRouter } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useEndpoint, useTranslation, useStream, useRouter } from '@zeki.chat/ui-contexts';
 import { useEffect, useState, useMemo } from 'react';
 
 import type { ChannelDescriptor } from './ChannelDescriptor';

@@ -1,6 +1,6 @@
-import { api } from '@rocket.chat/core-services';
-import type { IUser, IMessage } from '@rocket.chat/core-typings';
-import { Messages, Uploads, ReadReceipts, ReadReceiptsArchive } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IUser, IMessage } from '@zeki.chat/core-typings';
+import { Messages, Uploads, ReadReceipts, ReadReceiptsArchive } from '@zeki.chat/models';
 
 import { FileUpload } from '../../../app/file-upload/server';
 import { settings } from '../../../app/settings/server';

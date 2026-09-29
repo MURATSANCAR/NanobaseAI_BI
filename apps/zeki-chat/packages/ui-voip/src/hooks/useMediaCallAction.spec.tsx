@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { act, renderHook } from '@testing-library/react';
 
 import type { PeerInfo } from '../context';

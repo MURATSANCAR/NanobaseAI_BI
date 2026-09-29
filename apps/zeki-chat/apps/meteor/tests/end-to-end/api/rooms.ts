@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import type { Credentials } from '@rocket.chat/api-client';
+import type { Credentials } from '@zeki.chat/api-client';
 import type {
 	IMessage,
 	IRole,
@@ -12,9 +12,9 @@ import type {
 	ImageAttachmentProps,
 	MessageAttachment,
 	SettingValue,
-} from '@rocket.chat/core-typings';
-import { isFileAttachment, isQuoteAttachment, TeamType } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+} from '@zeki.chat/core-typings';
+import { isFileAttachment, isQuoteAttachment, TeamType } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { assert, expect } from 'chai';
 import { after, afterEach, before, beforeEach, describe, it } from 'mocha';
 
@@ -1656,7 +1656,7 @@ describe('[Rooms]', () => {
 					prid: testChannel._id,
 					t_name: `discussion-create-from-tests-${testChannel.name}`,
 					reply: 'reply from discussion tests',
-					users: ['rocket.cat'],
+					users: ['zeki.bot'],
 				})
 				.expect(200)
 				.expect((res) => {
@@ -1675,7 +1675,7 @@ describe('[Rooms]', () => {
 					prid: testChannel._id,
 					t_name: `discussion-create-from-tests-${testChannel.name}`,
 					reply: 'reply from discussion tests',
-					users: ['rocket.cat'],
+					users: ['zeki.bot'],
 					pmid: messageSent._id,
 				})
 				.expect(200)
@@ -2825,13 +2825,13 @@ describe('[Rooms]', () => {
 			await deleteRoom({ type: 'c', roomId: testChannel._id });
 		});
 
-		it('should invite rocket.cat user to room', () => {
+		it('should invite zeki.bot user to room', () => {
 			return request
 				.post(api('channels.invite'))
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -2841,13 +2841,13 @@ describe('[Rooms]', () => {
 				});
 		});
 
-		it('should mute the rocket.cat user', () => {
+		it('should mute the zeki.bot user', () => {
 			return request
 				.post(api('rooms.muteUser'))
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -2856,7 +2856,7 @@ describe('[Rooms]', () => {
 				});
 		});
 
-		it('should contain rocket.cat user in mute list', () => {
+		it('should contain zeki.bot user in mute list', () => {
 			return request
 				.get(api('channels.info'))
 				.set(credentials)
@@ -2870,7 +2870,7 @@ describe('[Rooms]', () => {
 					expect(res.body).to.have.nested.property('channel.name', testChannel.name);
 					expect(res.body.channel).to.have.property('muted').and.to.be.an('array');
 					expect(res.body.channel.muted).to.have.lengthOf(1);
-					expect(res.body.channel.muted[0]).to.be.equal('rocket.cat');
+					expect(res.body.channel.muted[0]).to.be.equal('zeki.bot');
 				});
 		});
 	});
@@ -2900,7 +2900,7 @@ describe('[Rooms]', () => {
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -2914,13 +2914,13 @@ describe('[Rooms]', () => {
 			await deleteRoom({ type: 'c', roomId: testChannel._id });
 		});
 
-		it('should unmute the rocket.cat user in read-only room', () => {
+		it('should unmute the zeki.bot user in read-only room', () => {
 			return request
 				.post(api('rooms.unmuteUser'))
 				.set(credentials)
 				.send({
 					roomId: testChannel._id,
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -2929,7 +2929,7 @@ describe('[Rooms]', () => {
 				});
 		});
 
-		it('should contain rocket.cat user in unmute list', () => {
+		it('should contain zeki.bot user in unmute list', () => {
 			return request
 				.get(api('channels.info'))
 				.set(credentials)
@@ -2943,7 +2943,7 @@ describe('[Rooms]', () => {
 					expect(res.body).to.have.nested.property('channel.name', testChannel.name);
 					expect(res.body.channel).to.have.property('unmuted').and.to.be.an('array');
 					expect(res.body.channel.unmuted).to.have.lengthOf(1);
-					expect(res.body.channel.unmuted[0]).to.be.equal('rocket.cat');
+					expect(res.body.channel.unmuted[0]).to.be.equal('zeki.bot');
 				});
 		});
 	});

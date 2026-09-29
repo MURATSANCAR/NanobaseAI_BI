@@ -1,6 +1,6 @@
-import type { Serialized } from '@rocket.chat/core-typings';
-import type { Method, OperationParams, OperationResult, PathPattern, UrlParams } from '@rocket.chat/rest-typings';
-import { useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+import type { Serialized } from '@zeki.chat/core-typings';
+import type { Method, OperationParams, OperationResult, PathPattern, UrlParams } from '@zeki.chat/rest-typings';
+import { useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { UseMutationOptions, UseMutationResult } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
 

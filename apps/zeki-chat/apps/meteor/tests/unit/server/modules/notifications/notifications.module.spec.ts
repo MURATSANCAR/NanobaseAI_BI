@@ -23,11 +23,11 @@ const countByRoomIdAndUserIdStub = sinon.stub();
 const findSubscriptionsExcludingUserStub = sinon.stub();
 
 const { NotificationsModule } = proxyquire.noCallThru().load('../../../../../server/modules/notifications/notifications.module', {
-	'@rocket.chat/core-services': {
+	'@zeki.chat/core-services': {
 		VideoConf: { validateAction: validateActionStub },
 		MediaCall: { processSerializedSignal: processSerializedSignalStub },
 	},
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Subscriptions: {
 			countByRoomIdAndUserId: countByRoomIdAndUserIdStub,
 			findByRoomIdAndNotUserId: findSubscriptionsExcludingUserStub,

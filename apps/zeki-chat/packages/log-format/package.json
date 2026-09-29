@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/log-format",
+	"name": "@zeki.chat/log-format",
 	"version": "0.0.3",
 	"private": true,
 	"main": "./dist/index.js",

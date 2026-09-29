@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from '../../IRocketChatRecord';
+import type { IZekiChatRecord } from '../../IZekiChatRecord';
 
-export interface IFederationEvent extends IRocketChatRecord {
+export interface IFederationEvent extends IZekiChatRecord {
 	origin: string;
 	context: { roomId: string };
 	parentIds: string[];

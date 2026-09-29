@@ -1,20 +1,20 @@
-import { CallHistory, MediaCalls } from '@rocket.chat/models';
+import { CallHistory, MediaCalls } from '@zeki.chat/models';
 
 export async function addCallHistoryTestData(uid: string, extraUid: string): Promise<void> {
-	const callId1 = 'rocketchat.internal.call.test';
-	const callId2 = 'rocketchat.internal.call.test.2';
-	const callId3 = 'rocketchat.external.call.test.outbound';
-	const callId4 = 'rocketchat.external.call.test.inbound';
+	const callId1 = 'zekichat.internal.call.test';
+	const callId2 = 'zekichat.internal.call.test.2';
+	const callId3 = 'zekichat.external.call.test.outbound';
+	const callId4 = 'zekichat.external.call.test.inbound';
 
-	const extraCallId1 = 'rocketchat.extra.call.test.1';
-	const extraCallId2 = 'rocketchat.extra.call.test.2';
+	const extraCallId1 = 'zekichat.extra.call.test.1';
+	const extraCallId2 = 'zekichat.extra.call.test.2';
 
 	await CallHistory.deleteMany({ uid });
 	await MediaCalls.deleteMany({ _id: { $in: [callId1, callId2, callId3, callId4] } });
 
 	await CallHistory.insertMany([
 		{
-			_id: 'rocketchat.internal.history.test.outbound',
+			_id: 'zekichat.internal.history.test.outbound',
 			ts: new Date(),
 			callId: callId1,
 			state: 'ended',
@@ -29,7 +29,7 @@ export async function addCallHistoryTestData(uid: string, extraUid: string): Pro
 			contactUsername: 'fruit-001',
 		},
 		{
-			_id: 'rocketchat.internal.history.test.inbound',
+			_id: 'zekichat.internal.history.test.inbound',
 			ts: new Date(),
 			callId: callId2,
 			state: 'not-answered',
@@ -44,7 +44,7 @@ export async function addCallHistoryTestData(uid: string, extraUid: string): Pro
 			contactUsername: 'fruit-002',
 		},
 		{
-			_id: 'rocketchat.internal.history.test.outbound.2',
+			_id: 'zekichat.internal.history.test.outbound.2',
 			ts: new Date(),
 			callId: extraCallId1,
 			state: 'transferred',
@@ -59,7 +59,7 @@ export async function addCallHistoryTestData(uid: string, extraUid: string): Pro
 			contactUsername: 'username-001',
 		},
 		{
-			_id: 'rocketchat.internal.history.test.inbound.2',
+			_id: 'zekichat.internal.history.test.inbound.2',
 			ts: new Date(),
 			callId: extraCallId2,
 			state: 'transferred',
@@ -74,7 +74,7 @@ export async function addCallHistoryTestData(uid: string, extraUid: string): Pro
 			contactUsername: 'meal',
 		},
 		{
-			_id: 'rocketchat.external.history.test.outbound',
+			_id: 'zekichat.external.history.test.outbound',
 			ts: new Date(),
 			callId: callId3,
 			state: 'failed',
@@ -87,7 +87,7 @@ export async function addCallHistoryTestData(uid: string, extraUid: string): Pro
 			contactExtension: '1001',
 		},
 		{
-			_id: 'rocketchat.external.history.test.inbound',
+			_id: 'zekichat.external.history.test.inbound',
 			ts: new Date(),
 			callId: callId4,
 			state: 'ended',

@@ -6,7 +6,7 @@ import type {
 	IUser,
 	DeviceManagementPopulatedSession,
 	DeviceManagementSession,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type { BulkWriteResult, Document, FindOptions, UpdateResult, FindCursor, OptionalId } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

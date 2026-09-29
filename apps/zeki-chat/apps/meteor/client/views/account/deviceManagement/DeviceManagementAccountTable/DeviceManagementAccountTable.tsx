@@ -1,6 +1,6 @@
 import { useMediaQuery } from '@rocket.chat/fuselage-hooks';
-import { GenericTableHeaderCell, usePagination, useSort } from '@rocket.chat/ui-client';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericTableHeaderCell, usePagination, useSort } from '@zeki.chat/ui-client';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';

@@ -54,7 +54,7 @@ button {
 	font-style: inherit;
 }
 
-#rocket-chat {
+#zeki-chat {
 	position: relative;
 	display: flex;
 	overflow: hidden;
@@ -78,7 +78,7 @@ button {
 }
 
 @media print {
-	#rocket-chat.menu-nav,
+	#zeki-chat.menu-nav,
 	.messages-container .wrapper {
 		position: relative !important; /* 1 */
 	}

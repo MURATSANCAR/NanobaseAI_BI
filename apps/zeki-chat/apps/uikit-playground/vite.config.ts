@@ -7,7 +7,7 @@ export default defineConfig(() => ({
 	esbuild: {},
 	plugins: [react()],
 	optimizeDeps: {
-		include: ['@rocket.chat/ui-contexts', '@rocket.chat/message-parser', '@rocket.chat/core-typings'],
+		include: ['@zeki.chat/ui-contexts', '@zeki.chat/message-parser', '@zeki.chat/core-typings'],
 	},
 	build: {
 		commonjsOptions: {

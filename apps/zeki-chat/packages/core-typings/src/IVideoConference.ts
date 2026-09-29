@@ -1,5 +1,5 @@
 import type { IMessage } from './IMessage';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IRoom } from './IRoom';
 import type { IUser } from './IUser';
 import type { AtLeast } from './utils';
@@ -57,7 +57,7 @@ export interface IVideoConferenceUser extends Pick<Required<IUser>, '_id' | 'use
 	ts: Date;
 }
 
-export interface IVideoConference extends IRocketChatRecord {
+export interface IVideoConference extends IZekiChatRecord {
 	type: VideoConferenceType;
 	rid: string;
 	users: IVideoConferenceUser[];

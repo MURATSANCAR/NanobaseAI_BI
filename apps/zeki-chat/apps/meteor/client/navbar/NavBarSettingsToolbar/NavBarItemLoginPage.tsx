@@ -1,5 +1,5 @@
 import { Button } from '@rocket.chat/fuselage';
-import { useSessionDispatch } from '@rocket.chat/ui-contexts';
+import { useSessionDispatch } from '@zeki.chat/ui-contexts';
 import type { HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,4 +1,4 @@
-import { Contextualbar } from '@rocket.chat/ui-client';
+import { Contextualbar } from '@zeki.chat/ui-client';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import FileItem from './FileItem';
@@ -20,8 +20,8 @@ Default.args = {
 		url: '#',
 		uploadedAt: new Date(),
 		user: {
-			_id: 'rocket.cat',
-			username: 'rocket.cat',
+			_id: 'zeki.bot',
+			username: 'zeki.bot',
 		},
 		_updatedAt: new Date(),
 	},

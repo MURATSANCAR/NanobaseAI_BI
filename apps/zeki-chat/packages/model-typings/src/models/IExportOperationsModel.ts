@@ -1,4 +1,4 @@
-import type { IExportOperation } from '@rocket.chat/core-typings';
+import type { IExportOperation } from '@zeki.chat/core-typings';
 import type { FindCursor, UpdateResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

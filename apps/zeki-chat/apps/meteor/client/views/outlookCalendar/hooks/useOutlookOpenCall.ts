@@ -1,5 +1,5 @@
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useUser } from '@rocket.chat/ui-contexts';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useUser } from '@zeki.chat/ui-contexts';
 
 import { useVideoConfOpenCall } from '../../room/contextualBar/VideoConference/hooks/useVideoConfOpenCall';
 

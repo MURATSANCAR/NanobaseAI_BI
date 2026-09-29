@@ -1,4 +1,4 @@
-import { SettingType, type ISetting } from '@rocket.chat/apps-engine/definition/settings';
+import { SettingType, type ISetting } from '@zeki.chat/apps-engine/definition/settings';
 
 import { ServerSettingBridge } from '../../../src/server/bridges';
 

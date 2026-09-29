@@ -1,7 +1,7 @@
 import type Stream from 'node:stream';
 
-import type { IUploadDetails } from '@rocket.chat/apps-engine/definition/uploads/IUploadDetails';
-import type { IMessage, IUpload, IUser, FilesAndAttachments, AtLeast } from '@rocket.chat/core-typings';
+import type { IUploadDetails } from '@zeki.chat/apps-engine/definition/uploads/IUploadDetails';
+import type { IMessage, IUpload, IUser, FilesAndAttachments, AtLeast } from '@zeki.chat/core-typings';
 
 export interface IUploadFileParams {
 	userId: string;

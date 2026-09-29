@@ -1,8 +1,8 @@
-import { api } from '@rocket.chat/core-services';
-import { UserStatus } from '@rocket.chat/core-typings';
-import type { ICalendarEvent, IUser } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { Users } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import { UserStatus } from '@zeki.chat/core-typings';
+import type { ICalendarEvent, IUser } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { Users } from '@zeki.chat/models';
 
 const logger = new Logger('Calendar');
 

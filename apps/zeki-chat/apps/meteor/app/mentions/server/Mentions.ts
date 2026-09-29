@@ -2,7 +2,7 @@
  * Mentions is a named function that will process Mentions
  * @param {Object} message - The message object
  */
-import { isE2EEMessage, type IMessage, type IRoom, type IUser } from '@rocket.chat/core-typings';
+import { isE2EEMessage, type IMessage, type IRoom, type IUser } from '@zeki.chat/core-typings';
 
 import { extractMentionsFromMessageAST } from '../../lib/server/functions/extractMentionsFromMessageAST';
 import { type MentionsParserArgs, MentionsParser } from '../lib/MentionsParser';

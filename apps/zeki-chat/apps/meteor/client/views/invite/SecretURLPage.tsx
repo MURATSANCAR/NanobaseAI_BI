@@ -1,5 +1,5 @@
-import { useUserId, useRouter } from '@rocket.chat/ui-contexts';
-import RegistrationPageRouter from '@rocket.chat/web-ui-registration';
+import { useUserId, useRouter } from '@zeki.chat/ui-contexts';
+import RegistrationPageRouter from '@zeki.chat/web-ui-registration';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 

@@ -1,5 +1,5 @@
-import { isQuoteAttachment } from '@rocket.chat/core-typings';
-import type { IMessage, MessageAttachment, AtLeast } from '@rocket.chat/core-typings';
+import { isQuoteAttachment } from '@zeki.chat/core-typings';
+import type { IMessage, MessageAttachment, AtLeast } from '@zeki.chat/core-typings';
 
 // Observation:
 // Currently, if the limit is 0, one quote is still allowed.

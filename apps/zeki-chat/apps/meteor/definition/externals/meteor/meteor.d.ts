@@ -1,5 +1,5 @@
 import 'meteor/meteor';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import type { DDPCommon, IStreamerConstructor, IStreamer } from 'meteor/ddp-common';
 
 type StringifyBuffers<T extends unknown[]> = {

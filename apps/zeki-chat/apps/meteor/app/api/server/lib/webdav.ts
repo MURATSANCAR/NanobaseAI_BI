@@ -1,5 +1,5 @@
-import type { IWebdavAccount } from '@rocket.chat/core-typings';
-import { WebdavAccounts } from '@rocket.chat/models';
+import type { IWebdavAccount } from '@zeki.chat/core-typings';
+import { WebdavAccounts } from '@zeki.chat/models';
 
 export async function findWebdavAccountsByUserId({ uid }: { uid: string }): Promise<IWebdavAccount[]> {
 	return WebdavAccounts.findWithUserId(uid, {

@@ -1,5 +1,5 @@
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 

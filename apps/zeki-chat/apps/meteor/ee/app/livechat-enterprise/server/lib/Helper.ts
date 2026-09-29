@@ -1,11 +1,11 @@
-import { api } from '@rocket.chat/core-services';
+import { api } from '@zeki.chat/core-services';
 import type {
 	ILivechatDepartment,
 	IOmnichannelRoom,
 	IOmnichannelServiceLevelAgreements,
 	InquiryWithAgentInfo,
-} from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
 import {
 	Rooms as RoomRaw,
 	LivechatRooms,
@@ -13,7 +13,7 @@ import {
 	LivechatCustomField,
 	LivechatInquiry,
 	Users,
-} from '@rocket.chat/models';
+} from '@zeki.chat/models';
 import moment from 'moment';
 import type { Document } from 'mongodb';
 
@@ -167,7 +167,7 @@ const getQueueInfo = async (department?: string) => {
 	const text = await getWaitingQueueMessage(department);
 	const message = {
 		text,
-		user: { _id: 'rocket.cat', username: 'rocket.cat' },
+		user: { _id: 'zeki.bot', username: 'zeki.bot' },
 	};
 	return { message, statistics, numberMostRecentChats };
 };

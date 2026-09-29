@@ -1,5 +1,5 @@
-import { Router } from '@rocket.chat/http-router';
-import { ajv } from '@rocket.chat/rest-typings/dist/v1/Ajv';
+import { Router } from '@zeki.chat/http-router';
+import { ajv } from '@zeki.chat/rest-typings/dist/v1/Ajv';
 import { createHash } from 'node:crypto';
 
 import { federationSDK } from '@rocket.chat/federation-sdk';
@@ -27,7 +27,7 @@ export const getWellKnownRoutes = () => {
 				200: isWellKnownServerResponseProps,
 			},
 			tags: ['Well-Known'],
-			license: ['federation'],
+			capabilities: ['federation'],
 		},
 		async (c) => {
 			const responseData = federationSDK.getWellKnownHostData();

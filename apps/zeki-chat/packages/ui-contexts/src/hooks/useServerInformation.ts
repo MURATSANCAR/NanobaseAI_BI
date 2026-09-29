@@ -1,4 +1,4 @@
-import type { IServerInfo } from '@rocket.chat/core-typings';
+import type { IServerInfo } from '@zeki.chat/core-typings';
 import { useContext } from 'react';
 
 import { ServerContext } from '../ServerContext';

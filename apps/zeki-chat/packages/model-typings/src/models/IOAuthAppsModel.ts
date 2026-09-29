@@ -1,4 +1,4 @@
-import type { IOAuthApps } from '@rocket.chat/core-typings';
+import type { IOAuthApps } from '@zeki.chat/core-typings';
 import type { FindOptions } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

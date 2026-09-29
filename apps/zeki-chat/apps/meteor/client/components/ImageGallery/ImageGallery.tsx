@@ -1,5 +1,5 @@
 import { FocusScope } from '@react-aria/focus';
-import type { IUpload } from '@rocket.chat/core-typings';
+import type { IUpload } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, ButtonGroup, IconButton, Palette, PaletteStyleTag, Throbber, spacing } from '@rocket.chat/fuselage';
 import { useRef, useState } from 'react';

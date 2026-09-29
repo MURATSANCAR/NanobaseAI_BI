@@ -1,6 +1,6 @@
-import type { UsersListStatusParamsGET } from '@rocket.chat/rest-typings';
-import type { usePagination, useSort } from '@rocket.chat/ui-client';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { UsersListStatusParamsGET } from '@zeki.chat/rest-typings';
+import type { usePagination, useSort } from '@zeki.chat/ui-client';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { MutableRefObject } from 'react';
 import { useMemo } from 'react';

@@ -1,6 +1,6 @@
-import { isILivechatVisitor, isOmnichannelRoom } from '@rocket.chat/core-typings';
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import { LivechatVisitors, Users } from '@rocket.chat/models';
+import { isILivechatVisitor, isOmnichannelRoom } from '@zeki.chat/core-typings';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import { LivechatVisitors, Users } from '@zeki.chat/models';
 import get from 'lodash.get';
 import mem from 'mem';
 

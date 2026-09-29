@@ -1,6 +1,6 @@
-import type { ILivechatDepartment, IOmnichannelCannedResponse, IUser } from '@rocket.chat/core-typings';
-import { isPOSTCannedResponsesProps, isCannedResponsesProps, isDELETECannedResponsesProps } from '@rocket.chat/rest-typings';
-import type { PaginatedResult, PaginatedRequest } from '@rocket.chat/rest-typings';
+import type { ILivechatDepartment, IOmnichannelCannedResponse, IUser } from '@zeki.chat/core-typings';
+import { isPOSTCannedResponsesProps, isCannedResponsesProps, isDELETECannedResponsesProps } from '@zeki.chat/rest-typings';
+import type { PaginatedResult, PaginatedRequest } from '@zeki.chat/rest-typings';
 
 import { findAllCannedResponses, findAllCannedResponsesFilter, findOneCannedResponse } from './lib/canned-responses';
 import { API } from '../../../../app/api/server';
@@ -8,7 +8,7 @@ import { getPaginationItems } from '../../../../app/api/server/helpers/getPagina
 import { removeCannedResponse } from '../../canned-responses/server/methods/removeCannedResponse';
 import { saveCannedResponse } from '../../canned-responses/server/methods/saveCannedResponse';
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/canned-responses': {
@@ -45,7 +45,7 @@ declare module '@rocket.chat/rest-typings' {
 
 API.v1.addRoute(
 	'canned-responses.get',
-	{ authRequired: true, permissionsRequired: ['view-canned-responses'], license: ['canned-responses'] },
+	{ authRequired: true, permissionsRequired: ['view-canned-responses'], capabilities: ['canned-responses'] },
 	{
 		async get() {
 			return API.v1.success({
@@ -108,7 +108,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: { GET: ['view-canned-responses'], POST: ['save-canned-responses'], DELETE: ['remove-canned-responses'] },
 		validateParams: { POST: isPOSTCannedResponsesProps, DELETE: isDELETECannedResponsesProps, GET: isCannedResponsesProps },
-		license: ['canned-responses'],
+		capabilities: ['canned-responses'],
 		deprecations: { DELETE: { version: '8.0.0', alternatives: ['/v1/canned-responses/:_id'] } },
 	},
 	{
@@ -167,7 +167,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: { GET: ['view-canned-responses'], DELETE: ['remove-canned-responses'] },
-		license: ['canned-responses'],
+		capabilities: ['canned-responses'],
 	},
 	{
 		async get() {

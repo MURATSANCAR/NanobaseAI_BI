@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { type IOmnichannelServiceLevelAgreements, DEFAULT_SLA_CONFIG } from '@rocket.chat/core-typings';
+import { type IOmnichannelServiceLevelAgreements, DEFAULT_SLA_CONFIG } from '@zeki.chat/core-typings';
 
 import type { BaseTest } from '../test';
 import { expect } from '../test';

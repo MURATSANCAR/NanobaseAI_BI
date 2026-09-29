@@ -1,5 +1,5 @@
-import type { IRoom, IUser, RoomType } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
+import type { IRoom, IUser, RoomType } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
 
 export const getRoomData = async (
 	roomId: IRoom['_id'],

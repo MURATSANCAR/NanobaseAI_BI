@@ -1,7 +1,7 @@
-import type { IRocketChatRecord } from '../IRocketChatRecord';
+import type { IZekiChatRecord } from '../IZekiChatRecord';
 import type { MediaCallActorType } from './IMediaCall';
 
-export interface IMediaCallChannel extends IRocketChatRecord {
+export interface IMediaCallChannel extends IZekiChatRecord {
 	callId: string;
 
 	contractId: string;

@@ -1,12 +1,12 @@
-import { Apps } from '@rocket.chat/apps';
+import { Apps } from '@zeki.chat/apps';
 import type {
 	IOutboundProvider,
 	ValidOutboundProvider,
 	IOutboundMessageProviderService,
 	IOutboundProviderMetadata,
 	IOutboundMessage,
-} from '@rocket.chat/core-typings';
-import { ValidOutboundProviderList } from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
+import { ValidOutboundProviderList } from '@zeki.chat/core-typings';
 
 import { getOutboundService } from '../../../../../../app/livechat/server/lib/outboundcommunication';
 import { OutboundMessageProvider } from '../../../../../../server/lib/OutboundMessageProvider';

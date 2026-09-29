@@ -1,7 +1,7 @@
-import { AppStatusUtils } from '@rocket.chat/apps-engine/definition/AppStatus';
-import { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
-import type { ISlashCommand, ISlashCommandPreview, ISlashCommandPreviewItem } from '@rocket.chat/apps-engine/definition/slashcommands';
-import { SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
+import { AppStatusUtils } from '@zeki.chat/apps-engine/definition/AppStatus';
+import { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
+import type { ISlashCommand, ISlashCommandPreview, ISlashCommandPreviewItem } from '@zeki.chat/apps-engine/definition/slashcommands';
+import { SlashCommandContext } from '@zeki.chat/apps-engine/definition/slashcommands';
 
 import type { AppManager } from '../AppManager';
 import type { CommandBridge } from '../bridges';

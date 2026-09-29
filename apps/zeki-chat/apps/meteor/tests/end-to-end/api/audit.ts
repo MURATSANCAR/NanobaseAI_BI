@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { expect } from 'chai';
 import EJSON from 'ejson';
 import { before, describe, it, after } from 'mocha';
@@ -139,9 +139,9 @@ import { IS_EE } from '../../e2e/config/constants';
 						return audition.fields?.rids?.includes(testChannel._id);
 					});
 					expect(entry).to.have.property('u').that.is.an('object').deep.equal({
-						_id: 'rocketchat.internal.admin.test',
-						username: 'rocketchat.internal.admin.test',
-						name: 'RocketChat Internal Admin Test',
+						_id: 'zekichat.internal.admin.test',
+						username: 'zekichat.internal.admin.test',
+						name: 'ZekiChat Internal Admin Test',
 					});
 					expect(entry).to.have.property('fields').that.is.an('object');
 					const { fields } = entry;
@@ -235,7 +235,7 @@ import { IS_EE } from '../../e2e/config/constants';
 					expect(res.body).to.have.property('success', true);
 					expect(res.body.members).to.be.an('array');
 					expect(res.body.members).to.have.lengthOf(2);
-					expect(res.body.members[1].username).to.be.equal('rocketchat.internal.admin.test');
+					expect(res.body.members[1].username).to.be.equal('zekichat.internal.admin.test');
 					expect(res.body.members[0].username).to.be.equal(dummyUser.username);
 				});
 		});
@@ -246,7 +246,7 @@ import { IS_EE } from '../../e2e/config/constants';
 				.set(credentials)
 				.query({
 					roomId: testChannel._id,
-					filter: '{ "$ne": "rocketchat.internal.admin.test" }',
+					filter: '{ "$ne": "zekichat.internal.admin.test" }',
 				})
 				.expect(200)
 				.expect((res) => {
@@ -260,7 +260,7 @@ import { IS_EE } from '../../e2e/config/constants';
 				.set(credentials)
 				.query({
 					roomId: testChannel._id,
-					filter: { username: 'rocketchat.internal.admin.test' },
+					filter: { username: 'zekichat.internal.admin.test' },
 				})
 				.expect(400);
 		});
@@ -276,7 +276,7 @@ import { IS_EE } from '../../e2e/config/constants';
 				.expect((res) => {
 					expect(res.body).to.have.property('success', true);
 					expect(res.body.members).to.be.an('array');
-					expect(res.body.members[0].username).to.be.equal('rocketchat.internal.admin.test');
+					expect(res.body.members[0].username).to.be.equal('zekichat.internal.admin.test');
 					expect(res.body.members[1].username).to.be.equal(dummyUser.username);
 					expect(res.body.total).to.be.equal(2);
 				});
@@ -293,7 +293,7 @@ import { IS_EE } from '../../e2e/config/constants';
 				.expect((res) => {
 					expect(res.body).to.have.property('success', true);
 					expect(res.body.members).to.be.an('array');
-					expect(res.body.members[0].username).to.be.equal('rocketchat.internal.admin.test');
+					expect(res.body.members[0].username).to.be.equal('zekichat.internal.admin.test');
 					expect(res.body.total).to.be.equal(1);
 				});
 		});

@@ -1,7 +1,7 @@
-import { api } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
-import { Users } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
+import { Users } from '@zeki.chat/models';
 import type { ClientSession } from 'mongodb';
 
 import { onceTransactionCommitedSuccessfully } from '../../../../server/database/utils';

@@ -1,8 +1,8 @@
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { Box, Button } from '@rocket.chat/fuselage';
 import { Select, Field, FieldLabel, FieldRow, FieldError } from '@rocket.chat/fuselage-forms';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';

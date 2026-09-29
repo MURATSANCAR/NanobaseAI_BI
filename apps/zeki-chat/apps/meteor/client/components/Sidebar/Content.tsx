@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { CustomScrollbars } from '@rocket.chat/ui-client';
+import { CustomScrollbars } from '@zeki.chat/ui-client';
 import type { ComponentPropsWithoutRef } from 'react';
 
 type ContentProps = ComponentPropsWithoutRef<typeof CustomScrollbars>;

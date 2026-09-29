@@ -1,7 +1,7 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
-import { Random } from '@rocket.chat/random';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { Random } from '@zeki.chat/random';
+import { GenericModal } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -9,127 +9,127 @@ const queueWaitBuckets = [1, 5, 10, 30, 60, 120, 300, 600, 900, 1800, 3600];
 
 export const metrics = {
 	deprecations: new client.Counter({
-		name: 'rocketchat_deprecations',
+		name: 'zeki_deprecations',
 		labelNames: ['type', 'kind', 'name', 'params'],
 		help: 'cumulated number of deprecations being used',
 	}),
 	deprecationsTotal: new client.Counter({
-		name: 'rocketchat_deprecations_total',
+		name: 'zeki_deprecations_total',
 		labelNames: ['type', 'kind', 'name', 'params'],
 		help: 'cumulated number of deprecations being used',
 	}),
 	metricsRequests: new client.Counter({
-		name: 'rocketchat_metrics_requests',
+		name: 'zeki_metrics_requests',
 		labelNames: ['notification_type'],
 		help: 'cumulated number of calls to the metrics endpoint',
 	}),
 	metricsRequestsTotal: new client.Counter({
-		name: 'rocketchat_metrics_requests_total',
+		name: 'zeki_metrics_requests_total',
 		labelNames: ['notification_type'],
 		help: 'cumulated number of calls to the metrics endpoint',
 	}),
 	metricsSize: new client.Gauge({
-		name: 'rocketchat_metrics_size',
+		name: 'zeki_metrics_size',
 		help: 'size of the metrics response in chars',
 	}),
 	info: new client.Gauge({
-		name: 'rocketchat_info',
+		name: 'zeki_info',
 		labelNames: ['version', 'unique_id', 'site_url'],
 		help: 'ZEKI AI CHAT info',
 	}),
 	meteorMethods: new client.Summary({
-		name: 'rocketchat_meteor_methods',
+		name: 'zeki_meteor_methods',
 		help: 'summary of meteor methods count and time',
 		labelNames: ['method', 'has_connection', 'has_user'],
 		percentiles,
 	}),
 	meteorMethodsSeconds: new client.Histogram({
-		name: 'rocketchat_meteor_methods_seconds',
+		name: 'zeki_meteor_methods_seconds',
 		help: 'histogram of meteor methods count and time in seconds',
 		labelNames: ['method', 'has_connection', 'has_user'],
 		buckets: latencyBuckets,
 	}),
-	rocketchatCallbacks: new client.Summary({
-		name: 'rocketchat_callbacks',
-		help: 'summary of rocketchat callbacks count and time',
+	zekichatCallbacks: new client.Summary({
+		name: 'zeki_callbacks',
+		help: 'summary of zekichat callbacks count and time',
 		labelNames: ['hook', 'callback'],
 		percentiles,
 	}),
-	rocketchatCallbacksSeconds: new client.Histogram({
-		name: 'rocketchat_callbacks_seconds',
-		help: 'histogram of rocketchat callbacks count and time in seconds',
+	zekichatCallbacksSeconds: new client.Histogram({
+		name: 'zeki_callbacks_seconds',
+		help: 'histogram of zekichat callbacks count and time in seconds',
 		labelNames: ['hook', 'callback'],
 		buckets: latencyBuckets,
 	}),
-	rocketchatHooks: new client.Summary({
-		name: 'rocketchat_hooks',
-		help: 'summary of rocketchat hooks count and time',
+	zekichatHooks: new client.Summary({
+		name: 'zeki_hooks',
+		help: 'summary of zekichat hooks count and time',
 		labelNames: ['hook', 'callbacks_length'],
 		percentiles,
 	}),
-	rocketchatHooksSeconds: new client.Histogram({
-		name: 'rocketchat_hooks_seconds',
-		help: 'histogram of rocketchat hooks count and time in seconds',
+	zekichatHooksSeconds: new client.Histogram({
+		name: 'zeki_hooks_seconds',
+		help: 'histogram of zekichat hooks count and time in seconds',
 		labelNames: ['hook', 'callbacks_length'],
 		buckets: latencyBuckets,
 	}),
-	rocketchatRestApi: new client.Summary({
-		name: 'rocketchat_rest_api',
-		help: 'summary of rocketchat rest api count and time',
+	zekichatRestApi: new client.Summary({
+		name: 'zeki_rest_api',
+		help: 'summary of zekichat rest api count and time',
 		labelNames: ['method', 'entrypoint', 'user_agent', 'status', 'version'],
 		percentiles,
 	}),
-	rocketchatRestApiSeconds: new client.Histogram({
-		name: 'rocketchat_rest_api_seconds',
-		help: 'histogram of rocketchat rest api count and time in seconds',
+	zekichatRestApiSeconds: new client.Histogram({
+		name: 'zeki_rest_api_seconds',
+		help: 'histogram of zekichat rest api count and time in seconds',
 		labelNames: ['method', 'entrypoint', 'status', 'version'],
 		buckets: latencyBuckets,
 	}),
-	rocketchatRestApiResponseSizeBytes: new client.Histogram({
-		name: 'rocketchat_rest_api_response_size_bytes',
-		help: 'histogram of rocketchat rest api response sizes in bytes',
+	zekichatRestApiResponseSizeBytes: new client.Histogram({
+		name: 'zeki_rest_api_response_size_bytes',
+		help: 'histogram of zekichat rest api response sizes in bytes',
 		labelNames: ['method', 'entrypoint', 'status', 'version'],
 		buckets: [0, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000],
 	}),
-	rocketchatRestApiActiveRequests: new client.Gauge({
-		name: 'rocketchat_rest_api_active_requests',
+	zekichatRestApiActiveRequests: new client.Gauge({
+		name: 'zeki_rest_api_active_requests',
 		help: 'number of currently active rest api requests',
 		labelNames: ['method'],
 	}),
 
 	meteorSubscriptions: new client.Summary({
-		name: 'rocketchat_meteor_subscriptions',
+		name: 'zeki_meteor_subscriptions',
 		help: 'summary of meteor subscriptions count and time',
 		labelNames: ['subscription'],
 		percentiles,
 	}),
 	meteorSubscriptionsSeconds: new client.Histogram({
-		name: 'rocketchat_meteor_subscriptions_seconds',
+		name: 'zeki_meteor_subscriptions_seconds',
 		help: 'histogram of meteor subscriptions count and time in seconds',
 		labelNames: ['subscription'],
 		buckets: latencyBuckets,
 	}),
 
 	messagesSent: new client.Counter({
-		name: 'rocketchat_message_sent',
+		name: 'zeki_message_sent',
 		help: 'cumulated number of messages sent',
 	}),
 	messagesSentTotal: new client.Counter({
-		name: 'rocketchat_messages_sent_total',
+		name: 'zeki_messages_sent_total',
 		help: 'cumulated number of messages sent',
 	}),
 	notificationsSent: new client.Counter({
-		name: 'rocketchat_notification_sent',
+		name: 'zeki_notification_sent',
 		labelNames: ['notification_type'],
 		help: 'cumulated number of notifications sent',
 	}),
 	notificationsSentTotal: new client.Counter({
-		name: 'rocketchat_notifications_sent_total',
+		name: 'zeki_notifications_sent_total',
 		labelNames: ['notification_type'],
 		help: 'cumulated number of notifications sent',
 	}),
 	messageRoundtripTime: new client.Summary({
-		name: 'rocketchat_messages_roundtrip_time_summary',
+		name: 'zeki_messages_roundtrip_time_summary',
 		help: 'time spent by a message from save to receive back',
 		percentiles,
 		maxAgeSeconds: 60,
@@ -137,135 +137,135 @@ export const metrics = {
 		// pruneAgedBuckets: true, // Type not added to prom-client on 14.2 https://github.com/siimon/prom-client/pull/558
 	}),
 	messageRoundtripTimeSeconds: new client.Histogram({
-		name: 'rocketchat_messages_roundtrip_time_seconds',
+		name: 'zeki_messages_roundtrip_time_seconds',
 		help: 'time in seconds spent by a message from save to receive back',
 		buckets: latencyBuckets,
 	}),
 
 	ddpSessions: new client.Gauge({
-		name: 'rocketchat_ddp_sessions_count',
+		name: 'zeki_ddp_sessions_count',
 		help: 'number of open ddp sessions',
 	}),
 	ddpAuthenticatedSessions: new client.Gauge({
-		name: 'rocketchat_ddp_sessions_auth',
+		name: 'zeki_ddp_sessions_auth',
 		help: 'number of authenticated open ddp sessions',
 	}),
 	ddpConnectedUsers: new client.Gauge({
-		name: 'rocketchat_ddp_connected_users',
+		name: 'zeki_ddp_connected_users',
 		help: 'number of unique connected users',
 	}),
 	ddpRateLimitExceeded: new client.Counter({
-		name: 'rocketchat_ddp_rate_limit_exceeded',
+		name: 'zeki_ddp_rate_limit_exceeded',
 		labelNames: ['limit_name', 'user_id', 'client_address', 'type', 'name', 'connection_id'],
 		help: 'number of times a ddp rate limiter was exceeded',
 	}),
 	ddpRateLimitExceededTotal: new client.Counter({
-		name: 'rocketchat_ddp_rate_limit_exceeded_total',
+		name: 'zeki_ddp_rate_limit_exceeded_total',
 		labelNames: ['limit_name', 'user_id', 'client_address', 'type', 'name', 'connection_id'],
 		help: 'number of times a ddp rate limiter was exceeded',
 	}),
 
 	version: new client.Gauge({
-		name: 'rocketchat_version',
+		name: 'zeki_version',
 		labelNames: ['version'],
 		help: 'ZEKI AI CHAT version',
 	}),
-	migration: new client.Gauge({ name: 'rocketchat_migration', help: 'migration versoin' }),
+	migration: new client.Gauge({ name: 'zeki_migration', help: 'migration versoin' }),
 	instanceCount: new client.Gauge({
-		name: 'rocketchat_instance_count',
+		name: 'zeki_instance_count',
 		help: 'instances running',
 	}),
 	pushQueue: new client.Gauge({
-		name: 'rocketchat_push_queue',
+		name: 'zeki_push_queue',
 		labelNames: ['queue'],
 		help: 'push queue',
 	}),
 
 	// User statistics
-	totalUsers: new client.Gauge({ name: 'rocketchat_users_total', help: 'total of users' }),
+	totalUsers: new client.Gauge({ name: 'zeki_users_total', help: 'total of users' }),
 	activeUsers: new client.Gauge({
-		name: 'rocketchat_users_active',
+		name: 'zeki_users_active',
 		help: 'total of active users',
 	}),
 	nonActiveUsers: new client.Gauge({
-		name: 'rocketchat_users_non_active',
+		name: 'zeki_users_non_active',
 		help: 'total of non active users',
 	}),
 	onlineUsers: new client.Gauge({
-		name: 'rocketchat_users_online',
+		name: 'zeki_users_online',
 		help: 'total of users online',
 	}),
 	awayUsers: new client.Gauge({
-		name: 'rocketchat_users_away',
+		name: 'zeki_users_away',
 		help: 'total of users away',
 	}),
 	offlineUsers: new client.Gauge({
-		name: 'rocketchat_users_offline',
+		name: 'zeki_users_offline',
 		help: 'total of users offline',
 	}),
 
 	// Room statistics
-	totalRooms: new client.Gauge({ name: 'rocketchat_rooms_total', help: 'total of rooms' }),
+	totalRooms: new client.Gauge({ name: 'zeki_rooms_total', help: 'total of rooms' }),
 	totalChannels: new client.Gauge({
-		name: 'rocketchat_channels_total',
+		name: 'zeki_channels_total',
 		help: 'total of public rooms/channels',
 	}),
 	totalPrivateGroups: new client.Gauge({
-		name: 'rocketchat_private_groups_total',
+		name: 'zeki_private_groups_total',
 		help: 'total of private rooms',
 	}),
 	totalDirect: new client.Gauge({
-		name: 'rocketchat_direct_total',
+		name: 'zeki_direct_total',
 		help: 'total of direct rooms',
 	}),
 	totalLivechat: new client.Gauge({
-		name: 'rocketchat_livechat_total',
+		name: 'zeki_livechat_total',
 		help: 'total of livechat rooms',
 	}),
 
 	// Message statistics
 	totalMessages: new client.Gauge({
-		name: 'rocketchat_messages_total',
+		name: 'zeki_messages_total',
 		help: 'total of messages',
 	}),
 	totalChannelMessages: new client.Gauge({
-		name: 'rocketchat_channel_messages_total',
+		name: 'zeki_channel_messages_total',
 		help: 'total of messages in public rooms',
 	}),
 	totalPrivateGroupMessages: new client.Gauge({
-		name: 'rocketchat_private_group_messages_total',
+		name: 'zeki_private_group_messages_total',
 		help: 'total of messages in private rooms',
 	}),
 	totalDirectMessages: new client.Gauge({
-		name: 'rocketchat_direct_messages_total',
+		name: 'zeki_direct_messages_total',
 		help: 'total of messages in direct rooms',
 	}),
 	totalLivechatMessages: new client.Gauge({
-		name: 'rocketchat_livechat_messages_total',
+		name: 'zeki_livechat_messages_total',
 		help: 'total of messages in livechat rooms',
 	}),
 
 	// Apps metrics
 	totalAppsInstalled: new client.Gauge({
-		name: 'rocketchat_apps_installed',
+		name: 'zeki_apps_installed',
 		help: 'total apps installed',
 	}),
 	totalAppsEnabled: new client.Gauge({
-		name: 'rocketchat_apps_enabled',
+		name: 'zeki_apps_enabled',
 		help: 'total apps enabled',
 	}),
 	totalAppsFailed: new client.Gauge({
-		name: 'rocketchat_apps_failed',
+		name: 'zeki_apps_failed',
 		help: 'total apps that failed to load',
 	}),
 	appBridgeMethods: new client.Summary({
-		name: 'rocketchat_apps_bridge_methods',
+		name: 'zeki_apps_bridge_methods',
 		help: 'summary of app bridge method calls count and time',
 		labelNames: ['bridge', 'method', 'app_id'],
 		percentiles,
 	}),
 	appBridgeMethodsSeconds: new client.Histogram({
-		name: 'rocketchat_apps_bridge_methods_seconds',
+		name: 'zeki_apps_bridge_methods_seconds',
 		help: 'histogram of app bridge method calls count and time in seconds',
 		labelNames: ['bridge', 'method', 'app_id'],
 		buckets: latencyBuckets,
@@ -273,54 +273,54 @@ export const metrics = {
 
 	// Meteor Facts
 	meteorFacts: new client.Gauge({
-		name: 'rocketchat_meteor_facts',
+		name: 'zeki_meteor_facts',
 		labelNames: ['pkg', 'fact'],
 		help: 'internal meteor facts',
 	}),
 
 	// Livechat metrics
-	totalLivechatVisitors: new client.Gauge({ name: 'rocketchat_visitors_total', help: 'total of visitors' }),
-	totalLivechatAgents: new client.Gauge({ name: 'rocketchat_agents_total', help: 'total of agents' }),
+	totalLivechatVisitors: new client.Gauge({ name: 'zeki_visitors_total', help: 'total of visitors' }),
+	totalLivechatAgents: new client.Gauge({ name: 'zeki_agents_total', help: 'total of agents' }),
 	totalLivechatWebhooksSuccess: new client.Counter({
-		name: 'rocketchat_livechat_webhooks_success',
+		name: 'zeki_livechat_webhooks_success',
 		help: 'successful livechat webhooks',
 	}),
 	totalLivechatWebhooksSuccessTotal: new client.Counter({
-		name: 'rocketchat_livechat_webhooks_success_total',
+		name: 'zeki_livechat_webhooks_success_total',
 		help: 'successful livechat webhooks',
 	}),
 	totalLivechatWebhooksFailures: new client.Counter({
-		name: 'rocketchat_livechat_webhooks_failures',
+		name: 'zeki_livechat_webhooks_failures',
 		help: 'failed livechat webhooks',
 	}),
 	totalLivechatWebhooksFailuresTotal: new client.Counter({
-		name: 'rocketchat_livechat_webhooks_failures_total',
+		name: 'zeki_livechat_webhooks_failures_total',
 		help: 'failed livechat webhooks',
 	}),
 
 	totalItemsProcessedByQueue: new client.Counter({
-		name: 'rocketchat_queue_items_processed_total',
+		name: 'zeki_queue_items_processed_total',
 		labelNames: ['queue'],
 		help: 'Total number of items processed by Omnichannel queues',
 	}),
 	totalItemsFailedByQueue: new client.Counter({
-		name: 'rocketchat_queue_items_failed_total',
+		name: 'zeki_queue_items_failed_total',
 		labelNames: ['queue'],
 		help: 'Total number of items failed by Omnichannel queues',
 	}),
 	totalItemsProcessedByReconciliationQueue: new client.Counter({
-		name: 'rocketchat_reconciliation_queue_items_processed_total',
+		name: 'zeki_reconciliation_queue_items_processed_total',
 		labelNames: ['queue', 'action'],
 		help: 'Total number of items processed by the Omnichannel queue that were reconciled before processing',
 	}),
 	timeToQueueProcessingByQueue: new client.Summary({
-		name: 'rocketchat_queue_wait_time_seconds',
+		name: 'zeki_queue_wait_time_seconds',
 		labelNames: ['queue'],
 		help: 'Time taken in seconds for an item to be processed for the first time by Omni queues',
 		percentiles,
 	}),
 	timeToQueueProcessingByQueueHistogram: new client.Histogram({
-		name: 'rocketchat_queue_wait_duration_seconds',
+		name: 'zeki_queue_wait_duration_seconds',
 		labelNames: ['queue'],
 		help: 'Histogram of time taken in seconds for an item to be processed for the first time by Omni queues',
 		buckets: queueWaitBuckets,

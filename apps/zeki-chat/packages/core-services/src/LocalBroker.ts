@@ -1,8 +1,8 @@
 import { EventEmitter } from 'node:events';
 
-import { Logger } from '@rocket.chat/logger';
-import { InstanceStatus } from '@rocket.chat/models';
-import { injectCurrentContext, tracerActiveSpan } from '@rocket.chat/tracing';
+import { Logger } from '@zeki.chat/logger';
+import { InstanceStatus } from '@zeki.chat/models';
+import { injectCurrentContext, tracerActiveSpan } from '@zeki.chat/tracing';
 
 import { asyncLocalStorage } from '.';
 import type { EventSignatures } from './events/Events';

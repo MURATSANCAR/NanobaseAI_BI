@@ -4,7 +4,7 @@ import type {
 	IImportMessageRecord,
 	IImportContactRecord,
 	IImportChannelRecord,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type { FindCursor } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

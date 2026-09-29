@@ -1,7 +1,7 @@
-import type { ISettingColor, SettingEditor, SettingValue } from '@rocket.chat/core-typings';
-import { isSettingColor, isSetting } from '@rocket.chat/core-typings';
+import type { ISettingColor, SettingEditor, SettingValue } from '@zeki.chat/core-typings';
+import { isSettingColor, isSetting } from '@zeki.chat/core-typings';
 import { useDebouncedCallback } from '@rocket.chat/fuselage-hooks';
-import { useSettingsDispatch, useSettingStructure } from '@rocket.chat/ui-contexts';
+import { useSettingsDispatch, useSettingStructure } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState, useCallback } from 'react';

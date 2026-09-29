@@ -1,4 +1,4 @@
-import { cronJobs } from '@rocket.chat/cron';
+import { cronJobs } from '@zeki.chat/cron';
 
 import { generateEml } from './functions/generateEml';
 import { smarshIntervalValuesToCronMap } from '../../../server/settings/smarsh';

@@ -1,8 +1,8 @@
-import type { IRocketChatRecord } from '../IRocketChatRecord';
+import type { IZekiChatRecord } from '../IZekiChatRecord';
 import type { IUser } from '../IUser';
 import type { ProgressStep } from './IImportProgress';
 
-export interface IImport extends IRocketChatRecord {
+export interface IImport extends IZekiChatRecord {
 	type: string;
 	importerKey: string;
 	ts: Date;

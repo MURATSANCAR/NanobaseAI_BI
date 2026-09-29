@@ -1,7 +1,7 @@
-import { Team } from '@rocket.chat/core-services';
-import type { ITeamAutocompleteResult } from '@rocket.chat/core-services';
-import type { ITeam } from '@rocket.chat/core-typings';
-import { Users, Rooms } from '@rocket.chat/models';
+import { Team } from '@zeki.chat/core-services';
+import type { ITeamAutocompleteResult } from '@zeki.chat/core-services';
+import type { ITeam } from '@zeki.chat/core-typings';
+import { Users, Rooms } from '@zeki.chat/models';
 import {
 	ajv,
 	isTeamsAddRoomsProps,
@@ -25,7 +25,7 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateNotFoundErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { eraseRoom } from '../../../../server/lib/eraseRoom';
@@ -817,7 +817,7 @@ API.v1.post(
 
 export type TeamsEndpoints = ExtractRoutesFromAPI<typeof teamsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends TeamsEndpoints {}
 }

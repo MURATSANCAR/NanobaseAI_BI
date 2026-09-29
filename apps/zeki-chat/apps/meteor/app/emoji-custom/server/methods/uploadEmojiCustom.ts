@@ -1,9 +1,9 @@
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { Meteor } from 'meteor/meteor';
 
 import { uploadEmojiCustom } from '../lib/uploadEmojiCustom';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		uploadEmojiCustom(

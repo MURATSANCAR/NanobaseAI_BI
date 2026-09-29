@@ -1,4 +1,4 @@
-import type { AvatarObject, IUser } from '@rocket.chat/core-typings';
+import type { AvatarObject, IUser } from '@zeki.chat/core-typings';
 
 import { getUserEmailAddress } from '../../../../lib/getUserEmailAddress';
 

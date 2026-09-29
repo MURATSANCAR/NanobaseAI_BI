@@ -9,7 +9,7 @@ const queueWorkStub = sinon.stub();
 const { requestPdfTranscript } = proxyquire
 	.noCallThru()
 	.load('../../../../../ee/app/livechat-enterprise/server/lib/requestPdfTranscript.ts', {
-		'@rocket.chat/core-services': {
+		'@zeki.chat/core-services': {
 			OmnichannelTranscript: {
 				workOnPdf: workOnPdfStub,
 			},

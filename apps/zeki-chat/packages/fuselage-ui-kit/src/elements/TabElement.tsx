@@ -1,5 +1,5 @@
 import { TabsItem } from '@rocket.chat/fuselage';
-import * as UiKit from '@rocket.chat/ui-kit';
+import * as UiKit from '@zeki.chat/ui-kit';
 import type { Dispatch, ReactElement } from 'react';
 
 import { useUiKitState } from '../hooks/useUiKitState';

@@ -1,10 +1,10 @@
-import type { IMessage, RequiredField, SlashCommandPreviews } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import type { IMessage, RequiredField, SlashCommandPreviews } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { Meteor } from 'meteor/meteor';
 
 import { slashCommands } from '../../../utils/server/slashCommand';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		getSlashCommandPreviews(command: {

@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/agenda",
+	"name": "@zeki.chat/agenda",
 	"version": "0.1.1",
 	"private": true,
 	"description": "Fork of https://github.com/agenda/agenda",

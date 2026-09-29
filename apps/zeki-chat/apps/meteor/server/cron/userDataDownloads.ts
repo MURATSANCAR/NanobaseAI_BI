@@ -1,5 +1,5 @@
-import type { SettingValue } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
+import type { SettingValue } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
 
 import { settings } from '../../app/settings/server';
 import * as dataExport from '../lib/dataExport';

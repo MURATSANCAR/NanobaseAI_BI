@@ -1,5 +1,5 @@
-import type { ILivechatContactVisitorAssociation } from '@rocket.chat/core-typings';
-import { useEndpoint, useSetModal, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { ILivechatContactVisitorAssociation } from '@zeki.chat/core-typings';
+import { useEndpoint, useSetModal, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';

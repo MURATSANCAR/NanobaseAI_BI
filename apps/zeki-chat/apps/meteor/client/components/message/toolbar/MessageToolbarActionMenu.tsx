@@ -1,7 +1,7 @@
-import { isE2EEMessage, type IMessage, type IRoom, type ISubscription } from '@rocket.chat/core-typings';
-import { isTruthy } from '@rocket.chat/tools';
-import { GenericMenu, type GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useLayoutHiddenActions } from '@rocket.chat/ui-contexts';
+import { isE2EEMessage, type IMessage, type IRoom, type ISubscription } from '@zeki.chat/core-typings';
+import { isTruthy } from '@zeki.chat/tools';
+import { GenericMenu, type GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useLayoutHiddenActions } from '@zeki.chat/ui-contexts';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 

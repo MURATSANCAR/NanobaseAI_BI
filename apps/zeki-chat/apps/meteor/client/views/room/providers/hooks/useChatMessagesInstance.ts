@@ -1,5 +1,5 @@
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
-import { useUserId } from '@rocket.chat/ui-contexts';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
+import { useUserId } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { useInstance } from './useInstance';

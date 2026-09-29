@@ -1,5 +1,5 @@
-import type { ILivechatVisitor, IOmnichannelRoom, IUser } from '@rocket.chat/core-typings';
-import { LivechatVisitors, Users } from '@rocket.chat/models';
+import type { ILivechatVisitor, IOmnichannelRoom, IUser } from '@zeki.chat/core-typings';
+import { LivechatVisitors, Users } from '@zeki.chat/models';
 
 import type { CloseRoomParams } from './localTypes';
 import { settings } from '../../../settings/server';
@@ -39,7 +39,7 @@ export const parseTranscriptRequest = async (
 	const requestedBy =
 		user ||
 		(room.servedBy && (await Users.findOneById(room.servedBy._id, defOptions))) ||
-		(await Users.findOneById('rocket.cat', defOptions));
+		(await Users.findOneById('zeki.bot', defOptions));
 
 	// no user available for backing request, no changes
 	if (!requestedBy) {

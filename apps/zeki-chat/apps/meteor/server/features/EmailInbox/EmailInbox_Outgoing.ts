@@ -1,7 +1,7 @@
-import { isIMessageInbox } from '@rocket.chat/core-typings';
-import type { IEmailInbox, IUser, IOmnichannelRoom, SlashCommandCallbackParams, IUpload } from '@rocket.chat/core-typings';
-import { Messages, Uploads, LivechatRooms, Rooms, Users } from '@rocket.chat/models';
-import { isTruthy } from '@rocket.chat/tools';
+import { isIMessageInbox } from '@zeki.chat/core-typings';
+import type { IEmailInbox, IUser, IOmnichannelRoom, SlashCommandCallbackParams, IUpload } from '@zeki.chat/core-typings';
+import { Messages, Uploads, LivechatRooms, Rooms, Users } from '@zeki.chat/models';
+import { isTruthy } from '@zeki.chat/tools';
 import { Match } from 'meteor/check';
 import type Mail from 'nodemailer/lib/mailer';
 
@@ -18,7 +18,7 @@ import { i18n } from '../../lib/i18n';
 
 const livechatQuoteRegExp = /^\[\s\]\(https?:\/\/.+\/live\/.+\?msg=(?<id>.+?)\)\s(?<text>.+)/s;
 
-const getRocketCatUser = async (): Promise<IUser | null> => Users.findOneById('rocket.cat');
+const getRocketCatUser = async (): Promise<IUser | null> => Users.findOneById('zeki.bot');
 
 const language = settings.get<string>('Language') || 'en';
 const t = i18n.getFixedT(language);
@@ -217,7 +217,7 @@ callbacks.add(
 			return message;
 		}
 
-		if (message.files?.length && message.u.username !== 'rocket.cat') {
+		if (message.files?.length && message.u.username !== 'zeki.bot') {
 			await sendMessage(
 				user,
 				{

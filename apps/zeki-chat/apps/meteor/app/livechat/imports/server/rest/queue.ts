@@ -1,4 +1,4 @@
-import { isGETLivechatQueueParams } from '@rocket.chat/rest-typings';
+import { isGETLivechatQueueParams } from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import { getPaginationItems } from '../../../../api/server/helpers/getPaginationItems';

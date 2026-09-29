@@ -1,7 +1,7 @@
 import { Box, Button, Field, FieldError, FieldHint, FieldLabel, FieldRow, Icon, TextInput } from '@rocket.chat/fuselage';
 import { useSafely } from '@rocket.chat/fuselage-hooks';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import type { ComponentProps } from 'react';
 import { useId, useState } from 'react';

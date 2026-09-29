@@ -1,7 +1,7 @@
 import { Box, IconButton } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { GenericTableRow, GenericTableCell } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { GenericTableRow, GenericTableCell } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

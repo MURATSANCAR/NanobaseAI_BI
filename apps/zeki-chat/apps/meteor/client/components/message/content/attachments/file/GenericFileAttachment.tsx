@@ -1,4 +1,4 @@
-import type { MessageAttachmentBase } from '@rocket.chat/core-typings';
+import type { MessageAttachmentBase } from '@zeki.chat/core-typings';
 import {
 	MessageGenericPreview,
 	MessageGenericPreviewContent,
@@ -6,7 +6,7 @@ import {
 	MessageGenericPreviewTitle,
 	MessageGenericPreviewDescription,
 } from '@rocket.chat/fuselage';
-import { useMediaUrl } from '@rocket.chat/ui-contexts';
+import { useMediaUrl } from '@zeki.chat/ui-contexts';
 import { useId } from 'react';
 import type { UIEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +18,7 @@ import MessageCollapsible from '../../../MessageCollapsible';
 import MessageContentBody from '../../../MessageContentBody';
 import AttachmentSize from '../structure/AttachmentSize';
 
-const openDocumentViewer = window.RocketChatDesktop?.openDocumentViewer;
+const openDocumentViewer = window.ZekiChatDesktop?.openDocumentViewer;
 
 type GenericFileAttachmentProps = MessageAttachmentBase;
 

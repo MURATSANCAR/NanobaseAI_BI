@@ -1,6 +1,6 @@
 import { useFocusManager } from '@react-aria/focus';
-import type { IRoom } from '@rocket.chat/core-typings';
-import { useUserRoom } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { useUserRoom } from '@zeki.chat/ui-contexts';
 import {
 	useVideoConfAcceptCall,
 	useVideoConfAbortCall,
@@ -8,7 +8,7 @@ import {
 	useVideoConfDismissCall,
 	useVideoConfStartCall,
 	useVideoConfDismissOutgoing,
-} from '@rocket.chat/ui-video-conf';
+} from '@zeki.chat/ui-video-conf';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 

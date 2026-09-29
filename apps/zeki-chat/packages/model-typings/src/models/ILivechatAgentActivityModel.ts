@@ -1,4 +1,4 @@
-import type { ILivechatAgentActivity, IServiceHistory } from '@rocket.chat/core-typings';
+import type { ILivechatAgentActivity, IServiceHistory } from '@zeki.chat/core-typings';
 import type { AggregationCursor, FindCursor, Document, WithId, UpdateResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

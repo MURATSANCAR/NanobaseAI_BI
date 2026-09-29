@@ -14,7 +14,7 @@ describe('Mention', () => {
 	describe('getUserMentions', () => {
 		describe('for simple text, no mentions', () => {
 			const result = [];
-			['#rocket.cat', 'hello rocket.cat how are you?'].forEach((text) => {
+			['#zeki.bot', 'hello zeki.bot how are you?'].forEach((text) => {
 				it(`should return "${JSON.stringify(result)}" from "${text}"`, () => {
 					expect(result).to.be.deep.equal(mentionsParser.getUserMentions(text));
 				});
@@ -22,42 +22,42 @@ describe('Mention', () => {
 		});
 
 		describe('for one user', () => {
-			const result = ['@rocket.cat'];
+			const result = ['@zeki.bot'];
 			[
-				'@rocket.cat',
-				' @rocket.cat ',
-				'hello @rocket.cat',
-				// 'hello,@rocket.cat', // this test case is ignored since is not compatible with the message box behavior
-				'@rocket.cat, hello',
-				'@rocket.cat,hello',
-				'hello @rocket.cat how are you?',
+				'@zeki.bot',
+				' @zeki.bot ',
+				'hello @zeki.bot',
+				// 'hello,@zeki.bot', // this test case is ignored since is not compatible with the message box behavior
+				'@zeki.bot, hello',
+				'@zeki.bot,hello',
+				'hello @zeki.bot how are you?',
 			].forEach((text) => {
 				it(`should return "${JSON.stringify(result)}" from "${text}"`, () => {
 					expect(result).to.be.deep.equal(mentionsParser.getUserMentions(text));
 				});
 			});
 
-			it.skip('should return without the "." from "@rocket.cat."', () => {
-				expect(result).to.be.deep.equal(mentionsParser.getUserMentions('@rocket.cat.'));
+			it.skip('should return without the "." from "@zeki.bot."', () => {
+				expect(result).to.be.deep.equal(mentionsParser.getUserMentions('@zeki.bot.'));
 			});
 
-			it.skip('should return without the "_" from "@rocket.cat_"', () => {
-				expect(result).to.be.deep.equal(mentionsParser.getUserMentions('@rocket.cat_'));
+			it.skip('should return without the "_" from "@zeki.bot_"', () => {
+				expect(result).to.be.deep.equal(mentionsParser.getUserMentions('@zeki.bot_'));
 			});
 
-			it.skip('should return without the "-" from "@rocket.cat-"', () => {
-				expect(result).to.be.deep.equal(mentionsParser.getUserMentions('@rocket.cat-'));
+			it.skip('should return without the "-" from "@zeki.bot-"', () => {
+				expect(result).to.be.deep.equal(mentionsParser.getUserMentions('@zeki.bot-'));
 			});
 		});
 
 		describe('for two users', () => {
-			const result = ['@rocket.cat', '@all'];
+			const result = ['@zeki.bot', '@all'];
 			[
-				'@rocket.cat @all',
-				' @rocket.cat @all ',
-				'hello @rocket.cat and @all',
-				'@rocket.cat, hello @all',
-				'hello @rocket.cat and @all how are you?',
+				'@zeki.bot @all',
+				' @zeki.bot @all ',
+				'hello @zeki.bot and @all',
+				'@zeki.bot, hello @all',
+				'hello @zeki.bot and @all how are you?',
 			].forEach((text) => {
 				it(`should return "${JSON.stringify(result)}" from "${text}"`, () => {
 					expect(result).to.be.deep.equal(mentionsParser.getUserMentions(text));
@@ -69,7 +69,7 @@ describe('Mention', () => {
 	describe('getChannelMentions', () => {
 		describe('for simple text, no mentions', () => {
 			const result = [];
-			['@rocket.cat', 'hello rocket.cat how are you?'].forEach((text) => {
+			['@zeki.bot', 'hello zeki.bot how are you?'].forEach((text) => {
 				it(`should return "${JSON.stringify(result)}" from "${text}"`, () => {
 					expect(result).to.be.deep.equal(mentionsParser.getChannelMentions(text));
 				});
@@ -134,14 +134,14 @@ describe('Mention', () => {
 
 const message = {
 	mentions: [
-		{ username: 'rocket.cat', name: 'Rocket.Cat' },
+		{ username: 'zeki.bot', name: 'ZEKI AI CHAT' },
 		{ username: 'admin', name: 'Admin' },
 		{ username: 'me', name: 'Me' },
 		{ username: 'specialchars', name: '<img onerror=alert(hello)>' },
 	],
 	channels: [
 		{ name: 'general', _id: '42' },
-		{ name: 'rocket.cat', _id: '169' },
+		{ name: 'zeki.bot', _id: '169' },
 	],
 };
 
@@ -152,7 +152,7 @@ describe('replace methods', () => {
 			expect(result).to.be.equal('<a class="mention-link mention-link--all mention-link--group" data-group="all">all</a>');
 		});
 
-		const str2 = 'rocket.cat';
+		const str2 = 'zeki.bot';
 
 		it(`should render for "@${str2}"`, () => {
 			const result = mentionsParser.replaceUsers(`@${str2}`, message, 'me');
@@ -185,8 +185,8 @@ describe('replace methods', () => {
 			expect(result).to.be.equal('<a class="mention-link mention-link--all mention-link--group" data-group="all">all</a>');
 		});
 
-		const str2 = 'rocket.cat';
-		const str2Name = 'Rocket.Cat';
+		const str2 = 'zeki.bot';
+		const str2Name = 'ZEKI AI CHAT';
 
 		it(`should render for "@${str2}"`, () => {
 			const result = mentionsParser.replaceUsers(`@${str2}`, message, 'me');
@@ -234,7 +234,7 @@ describe('replace methods', () => {
 			expect('<).to.be.equal(class="mention-link mention-link--room" data-channel="42">#general</a>', result);
 		});
 
-		const str2 = '#rocket.cat';
+		const str2 = '#zeki.bot';
 
 		it(`should render for ${str2}`, () => {
 			const result = mentionsParser.replaceChannels(str2, message);
@@ -259,11 +259,11 @@ describe('replace methods', () => {
 			expect(result.html).to.be.equal('<a class="mention-link mention-link--room" data-channel="42">#general</a>');
 		});
 
-		it('should render for "#general and @rocket.cat', () => {
-			message.html = '#general and @rocket.cat';
+		it('should render for "#general and @zeki.bot', () => {
+			message.html = '#general and @zeki.bot';
 			const result = mentionsParser.parse(message, 'me');
 			expect(result.html).to.be.equal(
-				'<a class="mention-link mention-link--room" data-channel="42">#general</a> and <a class="mention-link mention-link--user" data-username="rocket.cat" title="rocket.cat">rocket.cat</a>',
+				'<a class="mention-link mention-link--room" data-channel="42">#general</a> and <a class="mention-link mention-link--user" data-username="zeki.bot" title="zeki.bot">zeki.bot</a>',
 			);
 		});
 
@@ -291,11 +291,11 @@ describe('replace methods', () => {
 			expect(result.html).to.be.equal('<a class="mention-link mention-link--room" data-channel="42">#general</a>');
 		});
 
-		it('should render for "#general and @rocket.cat', () => {
-			message.html = '#general and @rocket.cat';
+		it('should render for "#general and @zeki.bot', () => {
+			message.html = '#general and @zeki.bot';
 			const result = mentionsParser.parse(message, 'me');
 			expect(result.html).to.be.equal(
-				'<a class="mention-link mention-link--room" data-channel="42">#general</a> and <a class="mention-link mention-link--user" data-username="rocket.cat" title="rocket.cat">Rocket.Cat</a>',
+				'<a class="mention-link mention-link--room" data-channel="42">#general</a> and <a class="mention-link mention-link--user" data-username="zeki.bot" title="zeki.bot">ZEKI AI CHAT</a>',
 			);
 		});
 

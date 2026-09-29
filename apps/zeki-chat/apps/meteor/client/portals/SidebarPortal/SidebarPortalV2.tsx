@@ -1,5 +1,5 @@
 import { Box, AnimatedVisibility } from '@rocket.chat/fuselage';
-import { useLayout } from '@rocket.chat/ui-contexts';
+import { useLayout } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { memo, useEffect } from 'react';
 import { createPortal } from 'react-dom';

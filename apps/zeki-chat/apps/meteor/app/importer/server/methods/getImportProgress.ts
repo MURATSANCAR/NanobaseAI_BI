@@ -1,6 +1,6 @@
-import type { IImportProgress } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Imports } from '@rocket.chat/models';
+import type { IImportProgress } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Imports } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { Importers } from '..';
@@ -23,7 +23,7 @@ export const executeGetImportProgress = async (): Promise<IImportProgress> => {
 	return instance.getProgress();
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		getImportProgress(): IImportProgress;

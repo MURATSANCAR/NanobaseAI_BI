@@ -1,6 +1,6 @@
-import type { ISubscription } from '@rocket.chat/core-typings';
-import type { IActionManager } from '@rocket.chat/ui-contexts';
-import { useUserId } from '@rocket.chat/ui-contexts';
+import type { ISubscription } from '@zeki.chat/core-typings';
+import type { IActionManager } from '@zeki.chat/ui-contexts';
+import { useUserId } from '@zeki.chat/ui-contexts';
 import { renderHook } from '@testing-library/react';
 
 import { useChatMessagesInstance } from './useChatMessagesInstance';
@@ -11,7 +11,7 @@ import { useUiKitActionManager } from '../../../../uikit/hooks/useUiKitActionMan
 import { useRoomSubscription } from '../../contexts/RoomContext';
 import { useE2EERoomState } from '../../hooks/useE2EERoomState';
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
+jest.mock('@zeki.chat/ui-contexts', () => ({
 	useUserId: jest.fn(),
 }));
 jest.mock('../../contexts/RoomContext', () => ({

@@ -1,4 +1,4 @@
-import { isActionSettingWithEndpoint, type ISetting } from '@rocket.chat/core-typings';
+import { isActionSettingWithEndpoint, type ISetting } from '@zeki.chat/core-typings';
 
 export const validateSetting = <T extends ISetting>(_id: T['_id'], type: T['type'], value: T['value'] | unknown): boolean => {
 	switch (type) {

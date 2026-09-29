@@ -1,6 +1,6 @@
-import type { ILivechatAgent, ISocketConnection } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
-import { LivechatAgentActivity, Sessions, Users } from '@rocket.chat/models';
+import type { ILivechatAgent, ISocketConnection } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
+import { LivechatAgentActivity, Sessions, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
 

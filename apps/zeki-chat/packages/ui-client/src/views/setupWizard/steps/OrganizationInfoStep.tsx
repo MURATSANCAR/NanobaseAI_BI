@@ -1,8 +1,8 @@
-import type { ISetting } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/core-typings';
 // Zeki: deep import keeps the package's cloud/registration pages out of the client bundle.
 import OrganizationInfoPage from '@rocket.chat/onboarding-ui/dist/cjs/pages/OrganizationInfoPage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useRole } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useRole } from '@zeki.chat/ui-contexts';
 import type { TFunction } from 'i18next';
 import type { ComponentProps, ReactElement } from 'react';
 import { I18nextProvider, useTranslation } from 'react-i18next';

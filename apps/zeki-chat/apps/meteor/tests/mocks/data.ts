@@ -1,16 +1,15 @@
 import { faker } from '@faker-js/faker';
-import type { IExternalComponentRoomInfo } from '@rocket.chat/apps/dist/client/definition/IExternalComponentRoomInfo';
-import type { IExternalComponentUserInfo } from '@rocket.chat/apps/dist/client/definition/IExternalComponentUserInfo';
-import type { ILivechatContact } from '@rocket.chat/apps-engine/definition/livechat';
+import type { IExternalComponentRoomInfo } from '@zeki.chat/apps/dist/client/definition/IExternalComponentRoomInfo';
+import type { IExternalComponentUserInfo } from '@zeki.chat/apps/dist/client/definition/IExternalComponentUserInfo';
+import type { ILivechatContact } from '@zeki.chat/apps-engine/definition/livechat';
 import {
 	AppSubscriptionStatus,
 	ILivechatAgentStatus,
 	LivechatPriorityWeight,
 	OmnichannelSourceType,
 	UserStatus,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type {
-	LicenseInfo,
 	App,
 	IMessage,
 	IRoom,
@@ -23,10 +22,10 @@ import type {
 	ILivechatDepartment,
 	ILivechatMonitor,
 	IOmnichannelRoom,
-} from '@rocket.chat/core-typings';
-import { parse } from '@rocket.chat/message-parser';
-import type { ILivechatContactWithManagerData } from '@rocket.chat/rest-typings';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/core-typings';
+import { parse } from '@zeki.chat/message-parser';
+import type { ILivechatContactWithManagerData } from '@zeki.chat/rest-typings';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 
 import type { MessageWithMdEnforced } from '../../client/lib/parseMessageTextToAstMarkdown';
 
@@ -245,56 +244,7 @@ export const createFakeExternalComponentRoomInfo = (partial: Partial<IExternalCo
 	...partial,
 });
 
-export const createFakeLicenseInfo = (partial: Partial<Omit<LicenseInfo, 'license'>> = {}): Omit<LicenseInfo, 'license'> => ({
-	activeModules: faker.helpers.arrayElements([
-		'auditing',
-		'canned-responses',
-		'ldap-enterprise',
-		'livechat-enterprise',
-		'voip-enterprise',
-		'omnichannel-mobile-enterprise',
-		'engagement-dashboard',
-		'push-privacy',
-		'scalability',
-		'teams-mention',
-		'saml-enterprise',
-		'oauth-enterprise',
-		'device-management',
-		'federation',
-		'videoconference-enterprise',
-		'message-read-receipt',
-		'outlook-calendar',
-		'hide-watermark',
-		'custom-roles',
-		'accessibility-certification',
-		'outbound-messaging',
-		'abac',
-	]),
-	externalModules: [],
-	preventedActions: {
-		activeUsers: faker.datatype.boolean(),
-		guestUsers: faker.datatype.boolean(),
-		roomsPerGuest: faker.datatype.boolean(),
-		privateApps: faker.datatype.boolean(),
-		marketplaceApps: faker.datatype.boolean(),
-		monthlyActiveContacts: faker.datatype.boolean(),
-	},
-	limits: {
-		activeUsers: { value: faker.number.int({ min: 0 }), max: faker.number.int({ min: 0 }) },
-		guestUsers: { value: faker.number.int({ min: 0 }), max: faker.number.int({ min: 0 }) },
-		roomsPerGuest: { value: faker.number.int({ min: 0 }), max: faker.number.int({ min: 0 }) },
-		privateApps: { value: faker.number.int({ min: 0 }), max: faker.number.int({ min: 0 }) },
-		marketplaceApps: { value: faker.number.int({ min: 0 }), max: faker.number.int({ min: 0 }) },
-		monthlyActiveContacts: { value: faker.number.int({ min: 0 }), max: faker.number.int({ min: 0 }) },
-	},
-	tags: faker.helpers.multiple(() => ({
-		name: faker.commerce.productAdjective(),
-		color: faker.internet.color(),
-	})),
-	trial: faker.datatype.boolean(),
-	hasValidLicense: faker.datatype.boolean(),
-	...partial,
-});
+export const createFakeCapabilities = (partial: { modules?: string[] } = {}): { modules: string[] } => ({ modules: [], ...partial });
 
 export function createFakeMessageWithAttachment<TMessage extends IMessage>(overrides?: Partial<TMessage>): TMessage;
 export function createFakeMessageWithAttachment(overrides?: Partial<IMessage>): IMessage {

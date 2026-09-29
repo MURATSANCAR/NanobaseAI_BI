@@ -1,5 +1,5 @@
-import { isE2EEMessage, type IMessage } from '@rocket.chat/core-typings';
-import { GenericMenu, type GenericMenuItemProps } from '@rocket.chat/ui-client';
+import { isE2EEMessage, type IMessage } from '@zeki.chat/core-typings';
+import { GenericMenu, type GenericMenuItemProps } from '@zeki.chat/ui-client';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 

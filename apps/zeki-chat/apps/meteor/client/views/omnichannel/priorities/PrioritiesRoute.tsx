@@ -1,4 +1,4 @@
-import { usePermission, useRouteParameter } from '@rocket.chat/ui-contexts';
+import { usePermission, useRouteParameter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import { PrioritiesPage } from './PrioritiesPage';

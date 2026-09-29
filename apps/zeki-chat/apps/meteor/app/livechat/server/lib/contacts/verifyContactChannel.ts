@@ -1,5 +1,5 @@
-import type { ILivechatContact } from '@rocket.chat/core-typings';
-import { makeFunction } from '@rocket.chat/patch-injection';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
+import { makeFunction } from '@zeki.chat/patch-injection';
 
 export type VerifyContactChannelParams = {
 	contactId: string;

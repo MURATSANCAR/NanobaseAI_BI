@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { composeStories } from '@storybook/react';
 import { render, screen } from '@testing-library/react';
 import { axe } from 'jest-axe';
@@ -9,8 +9,8 @@ import * as stories from './CannedResponseList.stories';
 const testCases = Object.values(composeStories(stories)).map((Story) => [Story.storyName || 'Story', Story]);
 
 // Mock the useRoomToolbox hook
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useRoomToolbox: () => ({
 		context: undefined,
 	}),
@@ -48,11 +48,11 @@ describe('CannedResponseList', () => {
 					_id: 'test',
 					_updatedAt: new Date(),
 					createdBy: {
-						_id: 'rocket.cat',
-						username: 'rocket.cat',
+						_id: 'zeki.bot',
+						username: 'zeki.bot',
 					},
 					departmentName: '',
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 					departmentId: '',
 				},
 			],

@@ -1,8 +1,8 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { Box, Margins } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import MarkdownText from '../../../components/MarkdownText';

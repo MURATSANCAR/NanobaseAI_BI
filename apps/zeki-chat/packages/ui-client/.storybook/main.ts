@@ -1,3 +1,3 @@
-import baseConfig from '@rocket.chat/storybook-config/main';
+import baseConfig from '@zeki.chat/storybook-config/main';
 
 export default baseConfig();

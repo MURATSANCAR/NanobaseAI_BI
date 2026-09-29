@@ -1,7 +1,7 @@
 import type { Keys as IconName } from '@rocket.chat/icons';
-import { GenericMenu } from '@rocket.chat/ui-client';
-import { CallHistoryTableRow, usePeekMediaSessionState } from '@rocket.chat/ui-voip';
-import type { CallHistoryTableRowProps, CallHistoryTableInternalContact, PeekMediaSessionStateReturn } from '@rocket.chat/ui-voip';
+import { GenericMenu } from '@zeki.chat/ui-client';
+import { CallHistoryTableRow, usePeekMediaSessionState } from '@zeki.chat/ui-voip';
+import type { CallHistoryTableRowProps, CallHistoryTableInternalContact, PeekMediaSessionStateReturn } from '@zeki.chat/ui-voip';
 import type { TFunction } from 'i18next';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';

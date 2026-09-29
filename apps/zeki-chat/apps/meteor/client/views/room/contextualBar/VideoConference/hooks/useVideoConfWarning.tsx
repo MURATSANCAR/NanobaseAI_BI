@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useSetModal, useRoute, useRole } from '@rocket.chat/ui-contexts';
+import { useSetModal, useRoute, useRole } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import VideoConfConfigModal from '../VideoConfConfigModal';

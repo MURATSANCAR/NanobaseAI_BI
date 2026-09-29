@@ -1,4 +1,4 @@
-import { Rooms, Users } from '@rocket.chat/models';
+import { Rooms, Users } from '@zeki.chat/models';
 
 import { roomCoordinator } from './rooms/roomCoordinator';
 import { canAccessRoomAsync } from '../../app/authorization/server';

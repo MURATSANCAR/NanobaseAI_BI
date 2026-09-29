@@ -1,6 +1,6 @@
-import type { IUser, ILivechatContactVisitorAssociation } from '@rocket.chat/core-typings';
+import type { IUser, ILivechatContactVisitorAssociation } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { LivechatContacts, LivechatRooms, LivechatVisitors } from '@rocket.chat/models';
+import { LivechatContacts, LivechatRooms, LivechatVisitors } from '@zeki.chat/models';
 
 import { closeRoom } from '../../../../../../app/livechat/server/lib/closeRoom';
 import { i18n } from '../../../../../../server/lib/i18n';

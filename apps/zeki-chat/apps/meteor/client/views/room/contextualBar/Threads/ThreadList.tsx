@@ -1,4 +1,4 @@
-import type { IMessage, IThreadMainMessage } from '@rocket.chat/core-typings';
+import type { IMessage, IThreadMainMessage } from '@zeki.chat/core-typings';
 import { Box, Icon, TextInput, Select, Callout, Throbber } from '@rocket.chat/fuselage';
 import { useResizeObserver, useAutoFocus, useLocalStorage, useDebouncedValue } from '@rocket.chat/fuselage-hooks';
 import {
@@ -11,8 +11,8 @@ import {
 	ContextualbarEmptyContent,
 	ContextualbarSection,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useTranslation, useUserId, useRoomToolbox } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, useUserId, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import type { FormEvent } from 'react';
 import { useMemo, useState, useCallback, useId } from 'react';
 import { Virtuoso } from 'react-virtuoso';

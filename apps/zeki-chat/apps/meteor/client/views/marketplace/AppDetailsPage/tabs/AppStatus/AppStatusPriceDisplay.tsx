@@ -1,4 +1,4 @@
-import type { AppPricingPlan, PurchaseType } from '@rocket.chat/core-typings';
+import type { AppPricingPlan, PurchaseType } from '@zeki.chat/core-typings';
 import { Box, Margins, Tag } from '@rocket.chat/fuselage';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

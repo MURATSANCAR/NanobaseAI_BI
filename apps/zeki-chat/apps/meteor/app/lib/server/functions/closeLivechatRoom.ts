@@ -1,5 +1,5 @@
-import type { IUser, IRoom, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatRooms, Subscriptions } from '@rocket.chat/models';
+import type { IUser, IRoom, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatRooms, Subscriptions } from '@zeki.chat/models';
 
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
 import { closeRoom } from '../../../livechat/server/lib/closeRoom';

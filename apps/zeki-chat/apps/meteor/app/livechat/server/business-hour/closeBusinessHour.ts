@@ -1,6 +1,6 @@
-import type { ILivechatBusinessHour, IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
-import { makeFunction } from '@rocket.chat/patch-injection';
+import type { ILivechatBusinessHour, IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
+import { makeFunction } from '@zeki.chat/patch-injection';
 
 import { makeAgentsUnavailableBasedOnBusinessHour } from './Helper';
 import { getAgentIdsForBusinessHour } from './getAgentIdsForBusinessHour';

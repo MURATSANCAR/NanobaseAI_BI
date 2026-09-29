@@ -2,7 +2,7 @@
 // TODO: Remove the following lint/ts instructions when the file gets properly converted
 /* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 
 export class SlackAPI {
 	constructor(apiOrBotToken) {

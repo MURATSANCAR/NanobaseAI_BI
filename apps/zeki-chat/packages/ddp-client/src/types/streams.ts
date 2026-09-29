@@ -1,5 +1,5 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { ISetting as AppsSetting } from '@rocket.chat/apps-engine/definition/settings';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { ISetting as AppsSetting } from '@zeki.chat/apps-engine/definition/settings';
 import type {
 	IMessage,
 	IRoom,
@@ -20,14 +20,13 @@ import type {
 	ILivechatAgent,
 	IImportProgress,
 	IBanner,
-	LicenseLimitKind,
 	ICustomUserStatus,
 	IWebdavAccount,
 	MessageAttachment,
 	ISession,
-} from '@rocket.chat/core-typings';
-import type { ServerMediaSignal } from '@rocket.chat/media-signaling';
-import type * as UiKit from '@rocket.chat/ui-kit';
+} from '@zeki.chat/core-typings';
+import type { ServerMediaSignal } from '@zeki.chat/media-signaling';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 type ClientAction = 'inserted' | 'updated' | 'removed' | 'changed';
 
@@ -92,7 +91,7 @@ export interface StreamerEvents {
 		{ key: 'public-settings-changed'; args: ['inserted' | 'updated' | 'removed' | 'changed', ISetting] },
 		{ key: 'deleteCustomSound'; args: [{ soundData: ICustomSound }] },
 		{ key: 'updateCustomSound'; args: [{ soundData: ICustomSound }] },
-		{ key: 'license'; args: [{ preventedActions: Record<LicenseLimitKind, boolean> }] | [] },
+		{ key: 'capabilities'; args: [] },
 	];
 
 	'notify-user': [

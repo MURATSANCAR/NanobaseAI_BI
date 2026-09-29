@@ -1,7 +1,7 @@
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
 import { Box, Dropdown, Option } from '@rocket.chat/fuselage';
 import type { Keys as IconName } from '@rocket.chat/icons';
-import { HeaderToolbarAction } from '@rocket.chat/ui-client';
+import { HeaderToolbarAction } from '@zeki.chat/ui-client';
 import { memo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 

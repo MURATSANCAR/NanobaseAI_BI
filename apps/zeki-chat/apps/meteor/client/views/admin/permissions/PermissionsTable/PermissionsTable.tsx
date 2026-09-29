@@ -1,9 +1,9 @@
-import type { IPermission, IRole } from '@rocket.chat/core-typings';
+import type { IPermission, IRole } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Pagination, Palette } from '@rocket.chat/fuselage';
-import { GenericTable, GenericTableHeader, GenericTableHeaderCell, GenericTableBody } from '@rocket.chat/ui-client';
-import type { usePagination } from '@rocket.chat/ui-client';
-import { useMethod } from '@rocket.chat/ui-contexts';
+import { GenericTable, GenericTableHeader, GenericTableHeaderCell, GenericTableBody } from '@zeki.chat/ui-client';
+import type { usePagination } from '@zeki.chat/ui-client';
+import { useMethod } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import PermissionRow from './PermissionRow';

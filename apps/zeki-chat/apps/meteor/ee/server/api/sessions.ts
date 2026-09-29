@@ -1,9 +1,9 @@
-import { api } from '@rocket.chat/core-services';
-import type { IUser, ISession, DeviceManagementSession, DeviceManagementPopulatedSession } from '@rocket.chat/core-typings';
+import { api } from '@zeki.chat/core-services';
+import type { IUser, ISession, DeviceManagementSession, DeviceManagementPopulatedSession } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Users, Sessions } from '@rocket.chat/models';
-import type { PaginatedResult, PaginatedRequest } from '@rocket.chat/rest-typings';
-import { ajv, ajvQuery } from '@rocket.chat/rest-typings';
+import { Users, Sessions } from '@zeki.chat/models';
+import type { PaginatedResult, PaginatedRequest } from '@zeki.chat/rest-typings';
+import { ajv, ajvQuery } from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { API } from '../../../app/api/server/api';
@@ -54,7 +54,7 @@ const validateSortKeys = (sortKeys: string[]): boolean => {
 	return sortKeys.every((s) => validSortKeys.includes(s));
 };
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/sessions/list': {
@@ -80,7 +80,7 @@ declare module '@rocket.chat/rest-typings' {
 
 API.v1.addRoute(
 	'sessions/list',
-	{ authRequired: true, validateParams: isSessionsPaginateProps, license: ['device-management'] },
+	{ authRequired: true, validateParams: isSessionsPaginateProps, capabilities: ['device-management'] },
 	{
 		async get() {
 			if (!Capabilities.hasModule('device-management')) {
@@ -103,7 +103,7 @@ API.v1.addRoute(
 
 API.v1.addRoute(
 	'sessions/info',
-	{ authRequired: true, validateParams: isSessionsProps, license: ['device-management'] },
+	{ authRequired: true, validateParams: isSessionsProps, capabilities: ['device-management'] },
 	{
 		async get() {
 			if (!Capabilities.hasModule('device-management')) {
@@ -122,7 +122,7 @@ API.v1.addRoute(
 
 API.v1.addRoute(
 	'sessions/logout.me',
-	{ authRequired: true, validateParams: isSessionsProps, license: ['device-management'] },
+	{ authRequired: true, validateParams: isSessionsProps, capabilities: ['device-management'] },
 	{
 		async post() {
 			if (!Capabilities.hasModule('device-management')) {
@@ -155,7 +155,7 @@ API.v1.addRoute(
 		twoFactorRequired: true,
 		validateParams: isSessionsPaginateProps,
 		permissionsRequired: ['view-device-management'],
-		license: ['device-management'],
+		capabilities: ['device-management'],
 	},
 	{
 		async get() {
@@ -201,7 +201,7 @@ API.v1.addRoute(
 		twoFactorRequired: true,
 		validateParams: isSessionsProps,
 		permissionsRequired: ['view-device-management'],
-		license: ['device-management'],
+		capabilities: ['device-management'],
 	},
 	{
 		async get() {
@@ -226,7 +226,7 @@ API.v1.addRoute(
 		twoFactorRequired: true,
 		validateParams: isSessionsProps,
 		permissionsRequired: ['logout-device-management'],
-		license: ['device-management'],
+		capabilities: ['device-management'],
 	},
 	{
 		async post() {

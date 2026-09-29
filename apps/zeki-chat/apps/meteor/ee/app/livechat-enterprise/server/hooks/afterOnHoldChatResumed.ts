@@ -1,4 +1,4 @@
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
 
 import { callbacks } from '../../../../../server/lib/callbacks';
 import { AutoCloseOnHoldScheduler } from '../lib/AutoCloseOnHoldScheduler';

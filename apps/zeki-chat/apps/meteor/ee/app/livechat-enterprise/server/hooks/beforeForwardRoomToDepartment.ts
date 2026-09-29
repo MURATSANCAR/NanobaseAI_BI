@@ -1,5 +1,5 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatDepartment } from '@rocket.chat/models';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatDepartment } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../../../server/lib/callbacks';

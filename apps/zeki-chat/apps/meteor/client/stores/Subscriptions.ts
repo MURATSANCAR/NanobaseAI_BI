@@ -1,4 +1,4 @@
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 
 import { createDocumentMapStore } from '../lib/cachedStores/DocumentMapStore';
 import { createGlobalStore } from '../lib/cachedStores/createGlobalStore';

@@ -1,9 +1,9 @@
-import { UserStatus } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { UserStatus } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { createOrUpdateFederatedUser } from './createOrUpdateFederatedUser';
 
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	Users: {
 		findOneAndUpdate: jest.fn(),
 	},

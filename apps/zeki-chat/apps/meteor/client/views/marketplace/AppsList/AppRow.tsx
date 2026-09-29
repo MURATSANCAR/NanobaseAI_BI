@@ -1,7 +1,7 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 import { Badge, Card, CardBody, CardCol, CardControls, CardHeader, CardRow, CardTitle } from '@rocket.chat/fuselage';
-import { AppAvatar } from '@rocket.chat/ui-avatar';
-import { useRouteParameter, useRouter } from '@rocket.chat/ui-contexts';
+import { AppAvatar } from '@zeki.chat/ui-avatar';
+import { useRouteParameter, useRouter } from '@zeki.chat/ui-contexts';
 import type { KeyboardEvent, MouseEvent, ReactElement } from 'react';
 import { memo } from 'react';
 import semver from 'semver';

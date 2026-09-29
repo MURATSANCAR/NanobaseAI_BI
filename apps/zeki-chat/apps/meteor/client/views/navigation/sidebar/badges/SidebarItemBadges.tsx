@@ -1,5 +1,5 @@
-import { isInviteSubscription } from '@rocket.chat/core-typings';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import { isInviteSubscription } from '@zeki.chat/core-typings';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 
 import UnreadBadge from './UnreadBadge';
 import InvitationBadge from '../../../../components/InvitationBadge';

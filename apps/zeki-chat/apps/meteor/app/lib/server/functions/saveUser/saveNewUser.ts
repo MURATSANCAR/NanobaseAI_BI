@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 
 import { getNewUserRoles } from '../../../../../server/services/user/lib/getNewUserRoles';

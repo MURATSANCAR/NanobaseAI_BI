@@ -1,8 +1,8 @@
-import { api, FederationMatrix as FederationMatrixService } from '@rocket.chat/core-services';
-import { FederationMatrix, configureFederationMatrixSettings, setupFederationMatrix } from '@rocket.chat/federation-matrix';
-import { InstanceStatus } from '@rocket.chat/instance-status';
+import { api, FederationMatrix as FederationMatrixService } from '@zeki.chat/core-services';
+import { FederationMatrix, configureFederationMatrixSettings, setupFederationMatrix } from '@zeki.chat/federation-matrix';
+import { InstanceStatus } from '@zeki.chat/instance-status';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Logger } from '@rocket.chat/logger';
+import { Logger } from '@zeki.chat/logger';
 
 import { settings } from '../../../app/settings/server';
 import { StreamerCentral } from '../../../server/modules/streamer/streamer.module';

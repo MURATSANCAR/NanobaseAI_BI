@@ -1,4 +1,4 @@
-import type { IOutboundMessageProviders } from '@rocket.chat/apps-engine/definition/outboundCommunication/IOutboundCommsProvider';
+import type { IOutboundMessageProviders } from '@zeki.chat/apps-engine/definition/outboundCommunication/IOutboundCommsProvider';
 import { JsonRpcError, Defined } from 'jsonrpc-lite';
 
 import { AppObjectRegistry } from '../AppObjectRegistry.ts';

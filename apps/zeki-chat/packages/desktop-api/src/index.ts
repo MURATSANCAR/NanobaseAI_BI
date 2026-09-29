@@ -26,7 +26,7 @@ export type CustomNotificationOptions = {
 	};
 };
 
-export interface IRocketChatDesktop {
+export interface IZekiChatDesktop {
 	dispatchCustomNotification: (options: CustomNotificationOptions) => void;
 	closeCustomNotification: (id: string) => void;
 	onReady: (cb: (serverInfo: ServerInfo) => void) => void;

@@ -1,5 +1,5 @@
 import { Emitter } from '@rocket.chat/emitter';
-import { SessionContext } from '@rocket.chat/ui-contexts';
+import { SessionContext } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 
 const store = new Map<string, unknown>();

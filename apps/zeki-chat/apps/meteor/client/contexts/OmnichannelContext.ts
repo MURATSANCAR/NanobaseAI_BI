@@ -1,4 +1,4 @@
-import type { OmichannelRoutingConfig, Inquiries, ILivechatPriority, Serialized } from '@rocket.chat/core-typings';
+import type { OmichannelRoutingConfig, Inquiries, ILivechatPriority, Serialized } from '@zeki.chat/core-typings';
 import { createContext } from 'react';
 
 export type OmnichannelContextValue = {
@@ -8,7 +8,6 @@ export type OmnichannelContextValue = {
 	agentAvailable: boolean;
 	routeConfig?: OmichannelRoutingConfig;
 	showOmnichannelQueueLink: boolean;
-	isOverMacLimit: boolean;
 	livechatPriorities: {
 		data: Serialized<ILivechatPriority>[];
 		isLoading: boolean;
@@ -23,7 +22,6 @@ export const OmnichannelContext = createContext<OmnichannelContextValue>({
 	isEnterprise: false,
 	agentAvailable: false,
 	showOmnichannelQueueLink: false,
-	isOverMacLimit: false,
 	livechatPriorities: {
 		data: [],
 		isLoading: false,

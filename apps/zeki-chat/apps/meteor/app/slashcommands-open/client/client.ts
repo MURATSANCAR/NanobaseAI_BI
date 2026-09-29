@@ -1,4 +1,4 @@
-import type { RoomType, ISubscription, SlashCommandCallbackParams } from '@rocket.chat/core-typings';
+import type { RoomType, ISubscription, SlashCommandCallbackParams } from '@zeki.chat/core-typings';
 
 import { roomCoordinator } from '../../../client/lib/rooms/roomCoordinator';
 import { router } from '../../../client/providers/RouterProvider';

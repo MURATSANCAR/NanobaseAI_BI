@@ -1,4 +1,4 @@
-import { useRouteParameter } from '@rocket.chat/ui-contexts';
+import { useRouteParameter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import RegisterForm from './RegisterForm';

@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { Credentials } from '@rocket.chat/api-client';
+import type { Credentials } from '@zeki.chat/api-client';
 import type {
 	ILivechatInquiryRecord,
 	ILivechatAgent,
@@ -7,7 +7,7 @@ import type {
 	ILivechatVisitor,
 	IMessage,
 	IOmnichannelRoom,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type { Response } from 'supertest';
 
 import { api, credentials, methodCall, request } from '../api-data';
@@ -93,7 +93,7 @@ export const createVisitorWithCustomData = async ({
 			visitor: {
 				name: visitorName || `Visitor ${Date.now()}`,
 				token,
-				customFields: customFields || [{ key: 'address', value: 'Rocket.Chat street', overwrite: true }],
+				customFields: customFields || [{ key: 'address', value: 'ZEKI AI CHAT street', overwrite: true }],
 				...(department ? { department } : {}),
 				...(!ignoreEmail ? { email } : {}),
 				...(!ignorePhone ? { phone } : {}),
@@ -126,7 +126,7 @@ export const createVisitor = (
 						email,
 						token,
 						phone,
-						customFields: [{ key: 'address', value: 'Rocket.Chat street', overwrite: true }],
+						customFields: [{ key: 'address', value: 'ZEKI AI CHAT street', overwrite: true }],
 						...(department ? { department } : {}),
 					},
 				})

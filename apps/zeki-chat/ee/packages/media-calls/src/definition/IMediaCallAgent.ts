@@ -1,5 +1,5 @@
-import type { IMediaCall, MediaCallActor, MediaCallActorType, MediaCallContact } from '@rocket.chat/core-typings';
-import type { CallRole } from '@rocket.chat/media-signaling';
+import type { IMediaCall, MediaCallActor, MediaCallActorType, MediaCallContact } from '@zeki.chat/core-typings';
+import type { CallRole } from '@zeki.chat/media-signaling';
 
 export interface IMediaCallAgent {
 	readonly actorType: MediaCallActorType;

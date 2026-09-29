@@ -1,6 +1,6 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Box } from '@rocket.chat/fuselage';
-import { CustomScrollbars } from '@rocket.chat/ui-client';
+import { CustomScrollbars } from '@zeki.chat/ui-client';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { CARD_MARGIN, CARD_MIN_WIDTH } from './Card';

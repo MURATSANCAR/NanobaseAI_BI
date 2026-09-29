@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 
 import { credentials, methodCall, request } from './api-data';
 import type { IRequestConfig } from './users.helper';

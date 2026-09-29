@@ -1,10 +1,10 @@
 import os from 'node:os';
 
-import type { AppStatusReport } from '@rocket.chat/core-services';
-import { Apps, Capabilities, ServiceClassInternal, Settings } from '@rocket.chat/core-services';
-import type { IInstanceStatus } from '@rocket.chat/core-typings';
-import { InstanceStatus, defaultPingInterval, indexExpire } from '@rocket.chat/instance-status';
-import { InstanceStatus as InstanceStatusRaw } from '@rocket.chat/models';
+import type { AppStatusReport } from '@zeki.chat/core-services';
+import { Apps, Capabilities, ServiceClassInternal, Settings } from '@zeki.chat/core-services';
+import type { IInstanceStatus } from '@zeki.chat/core-typings';
+import { InstanceStatus, defaultPingInterval, indexExpire } from '@zeki.chat/instance-status';
+import { InstanceStatus as InstanceStatusRaw } from '@zeki.chat/models';
 import EJSON from 'ejson';
 import type { BrokerNode } from 'moleculer';
 import { ServiceBroker, Transporters, Serializers } from 'moleculer';
@@ -44,8 +44,8 @@ export class InstanceService extends ServiceClassInternal implements IInstanceSe
 	constructor() {
 		super();
 
-		this.onEvent('license.module', async ({ module, valid }) => {
-			if (module === 'scalability' && valid) {
+		this.onEvent('capabilities.changed', async () => {
+			if (await Capabilities.hasModule('scalability')) {
 				await this.startBroadcast();
 			}
 		});
@@ -179,8 +179,8 @@ export class InstanceService extends ServiceClassInternal implements IInstanceSe
 		await InstanceStatus.registerInstance('rocket.chat', instance);
 
 		try {
-			const hasLicense = await Capabilities.hasModule('scalability');
-			if (!hasLicense) {
+			const hasCapability = await Capabilities.hasModule('scalability');
+			if (!hasCapability) {
 				return;
 			}
 

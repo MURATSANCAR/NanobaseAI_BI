@@ -1,5 +1,5 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 
 import CloseChatModal from './CloseChatModal';

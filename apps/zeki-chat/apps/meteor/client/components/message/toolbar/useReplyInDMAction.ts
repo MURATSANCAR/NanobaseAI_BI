@@ -1,6 +1,6 @@
-import { type IMessage, type ISubscription, type IRoom, isE2EEMessage } from '@rocket.chat/core-typings';
-import { useEmbeddedLayout } from '@rocket.chat/ui-client';
-import { usePermission, useRouter, useUser } from '@rocket.chat/ui-contexts';
+import { type IMessage, type ISubscription, type IRoom, isE2EEMessage } from '@zeki.chat/core-typings';
+import { useEmbeddedLayout } from '@zeki.chat/ui-client';
+import { usePermission, useRouter, useUser } from '@zeki.chat/ui-contexts';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';

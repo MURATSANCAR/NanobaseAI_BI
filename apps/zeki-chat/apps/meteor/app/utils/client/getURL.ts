@@ -1,6 +1,6 @@
 import { settings } from '../../../client/lib/settings';
 import { getURLWithoutSettings } from '../lib/getURL';
-import { Info } from '../rocketchat.info';
+import { Info } from '../zekichat.info';
 
 export const getURL = function (
 	path: string, // eslint-disable-next-line @typescript-eslint/naming-convention

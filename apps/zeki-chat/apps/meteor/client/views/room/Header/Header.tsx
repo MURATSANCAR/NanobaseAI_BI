@@ -1,6 +1,6 @@
-import { isInviteSubscription } from '@rocket.chat/core-typings';
-import type { IRoom, ISubscription } from '@rocket.chat/core-typings';
-import { useLayout, useSetting } from '@rocket.chat/ui-contexts';
+import { isInviteSubscription } from '@zeki.chat/core-typings';
+import type { IRoom, ISubscription } from '@zeki.chat/core-typings';
+import { useLayout, useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { lazy, memo } from 'react';
 

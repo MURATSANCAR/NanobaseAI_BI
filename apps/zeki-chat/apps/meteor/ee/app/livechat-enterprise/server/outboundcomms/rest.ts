@@ -1,9 +1,9 @@
-import type { IOutboundMessage, IOutboundProvider, IOutboundProviderMetadata, ValidOutboundProvider } from '@rocket.chat/core-typings';
-import { ajv } from '@rocket.chat/rest-typings';
+import type { IOutboundMessage, IOutboundProvider, IOutboundProviderMetadata, ValidOutboundProvider } from '@zeki.chat/core-typings';
+import { ajv } from '@zeki.chat/rest-typings';
 
 import type { OutboundCommsEndpoints } from '../api/outbound';
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends OutboundCommsEndpoints {}
 }

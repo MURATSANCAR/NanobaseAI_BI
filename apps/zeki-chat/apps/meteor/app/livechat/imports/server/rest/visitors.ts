@@ -1,4 +1,4 @@
-import { Messages, LivechatRooms } from '@rocket.chat/models';
+import { Messages, LivechatRooms } from '@zeki.chat/models';
 import {
 	isLivechatVisitorsInfoProps,
 	isGETLivechatVisitorsPagesVisitedRoomIdParams,
@@ -7,7 +7,7 @@ import {
 	isGETLivechatVisitorsAutocompleteParams,
 	isLivechatRidMessagesProps,
 	isGETLivechatVisitorsSearch,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { API } from '../../../../api/server';

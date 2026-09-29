@@ -1,5 +1,5 @@
-import type { INewIncomingIntegration } from '@rocket.chat/core-typings';
-import { useAbsoluteUrl } from '@rocket.chat/ui-contexts';
+import type { INewIncomingIntegration } from '@zeki.chat/core-typings';
+import { useAbsoluteUrl } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 type UseExampleDataParams = {

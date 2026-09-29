@@ -1,8 +1,8 @@
-import type { AtLeast, ILivechatAgentStatus, ILivechatBusinessHour, ILivechatDepartment } from '@rocket.chat/core-typings';
-import { UserStatus } from '@rocket.chat/core-typings';
-import type { ILivechatBusinessHoursModel, IUsersModel } from '@rocket.chat/model-typings';
-import { LivechatBusinessHours, Users } from '@rocket.chat/models';
-import type { IWorkHoursCronJobsWrapper } from '@rocket.chat/models';
+import type { AtLeast, ILivechatAgentStatus, ILivechatBusinessHour, ILivechatDepartment } from '@zeki.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
+import type { ILivechatBusinessHoursModel, IUsersModel } from '@zeki.chat/model-typings';
+import { LivechatBusinessHours, Users } from '@zeki.chat/models';
+import type { IWorkHoursCronJobsWrapper } from '@zeki.chat/models';
 import moment from 'moment-timezone';
 import type { UpdateFilter } from 'mongodb';
 

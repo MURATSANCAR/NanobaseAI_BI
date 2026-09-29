@@ -23,7 +23,7 @@ const mockUsersUnsetAbacAttributesById = jest.fn();
 const mockAbacFindOneAndUpdate = jest.fn();
 const mockCreateAuditServerEvent = jest.fn();
 
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	Rooms: {
 		findOneByIdAndType: (...args: any[]) => mockFindOneByIdAndType(...args),
 		updateAbacConfigurationById: (...args: any[]) => mockUpdateAbacConfigurationById(...args),
@@ -58,9 +58,9 @@ jest.mock('@rocket.chat/models', () => ({
 	},
 }));
 
-// Partial mock for @rocket.chat/core-services: keep real MeteorError, override ServiceClass and Room
-jest.mock('@rocket.chat/core-services', () => {
-	const actual = jest.requireActual('@rocket.chat/core-services');
+// Partial mock for @zeki.chat/core-services: keep real MeteorError, override ServiceClass and Room
+jest.mock('@zeki.chat/core-services', () => {
+	const actual = jest.requireActual('@zeki.chat/core-services');
 	return {
 		...actual,
 		ServiceClass: class {

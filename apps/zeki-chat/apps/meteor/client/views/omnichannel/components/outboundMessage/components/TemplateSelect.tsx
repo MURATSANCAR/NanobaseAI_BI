@@ -1,7 +1,7 @@
-import type { IOutboundProviderTemplate } from '@rocket.chat/core-typings';
+import type { IOutboundProviderTemplate } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { Option, OptionDescription, SelectFiltered } from '@rocket.chat/fuselage';
-import { useLanguages } from '@rocket.chat/ui-contexts';
+import { useLanguages } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import type { Key, ComponentProps } from 'react';
 

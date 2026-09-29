@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatDepartmentAgents, Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatDepartmentAgents, Users } from '@zeki.chat/models';
 
 const getAllAgentIdsWithoutDepartment = async (): Promise<string[]> => {
 	// Fetch departments with agents excluding archived ones (disabled ones still can be tied to business hours)

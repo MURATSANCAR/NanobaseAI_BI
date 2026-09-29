@@ -2,18 +2,18 @@ import type {
 	IMessage,
 	IModerationAudit,
 	IModerationReport,
-	RocketChatRecordDeleted,
+	ZekiChatRecordDeleted,
 	MessageReport,
 	UserReport,
-} from '@rocket.chat/core-typings';
-import type { FindPaginated, IModerationReportsModel, PaginationParams } from '@rocket.chat/model-typings';
+} from '@zeki.chat/core-typings';
+import type { FindPaginated, IModerationReportsModel, PaginationParams } from '@zeki.chat/model-typings';
 import type { AggregationCursor, Collection, Db, Document, FindCursor, FindOptions, IndexDescription, UpdateResult } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 import { readSecondaryPreferred } from '../readSecondaryPreferred';
 
 export class ModerationReportsRaw extends BaseRaw<IModerationReport> implements IModerationReportsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IModerationReport>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IModerationReport>>) {
 		super(db, 'moderation_reports', trash);
 	}
 

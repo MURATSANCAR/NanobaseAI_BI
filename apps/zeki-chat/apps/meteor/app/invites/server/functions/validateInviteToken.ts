@@ -1,4 +1,4 @@
-import { Invites, Rooms } from '@rocket.chat/models';
+import { Invites, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { settings } from '../../../settings/server';

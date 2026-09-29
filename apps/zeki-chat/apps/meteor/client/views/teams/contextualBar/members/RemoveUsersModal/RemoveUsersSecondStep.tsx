@@ -1,6 +1,6 @@
-import type { Serialized, IRoom } from '@rocket.chat/core-typings';
+import type { Serialized, IRoom } from '@zeki.chat/core-typings';
 import { Icon } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 type RemoveUsersSecondStepProps = {

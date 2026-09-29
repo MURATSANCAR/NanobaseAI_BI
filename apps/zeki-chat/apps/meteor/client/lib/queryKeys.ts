@@ -7,8 +7,8 @@ import type {
 	ILivechatAgent,
 	IOutboundProvider,
 	RoomType,
-} from '@rocket.chat/core-typings';
-import type { PaginatedRequest } from '@rocket.chat/rest-typings';
+} from '@zeki.chat/core-typings';
+import type { PaginatedRequest } from '@zeki.chat/rest-typings';
 
 export const roomsQueryKeys = {
 	all: ['rooms'] as const,

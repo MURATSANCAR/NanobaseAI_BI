@@ -1,5 +1,5 @@
-import type { DeviceContextValue } from '@rocket.chat/ui-contexts';
-import { DeviceContext } from '@rocket.chat/ui-contexts';
+import type { DeviceContextValue } from '@zeki.chat/ui-contexts';
+import { DeviceContext } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 
 const mockPermissionStatus: PermissionStatus = {

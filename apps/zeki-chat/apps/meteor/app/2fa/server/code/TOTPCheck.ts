@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 
 import type { ICodeCheck, IProcessInvalidCodeResult } from './ICodeCheck';
 import { settings } from '../../../settings/server';

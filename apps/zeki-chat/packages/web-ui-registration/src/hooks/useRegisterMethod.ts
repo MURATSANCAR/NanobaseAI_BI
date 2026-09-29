@@ -1,4 +1,4 @@
-import { useEndpoint, useRouteParameter, useLoginWithPassword } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useRouteParameter, useLoginWithPassword } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 
 export const useRegisterMethod = () => {

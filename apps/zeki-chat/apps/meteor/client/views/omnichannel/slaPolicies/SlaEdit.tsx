@@ -1,4 +1,4 @@
-import type { IOmnichannelServiceLevelAgreements, Serialized } from '@rocket.chat/core-typings';
+import type { IOmnichannelServiceLevelAgreements, Serialized } from '@zeki.chat/core-typings';
 import {
 	Field,
 	FieldLabel,
@@ -10,8 +10,8 @@ import {
 	ButtonGroup,
 	ContextualbarFooter,
 } from '@rocket.chat/fuselage';
-import { ContextualbarScrollableContent } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useRoute, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { ContextualbarScrollableContent } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useRoute, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useId } from 'react';
 import { useController, useForm } from 'react-hook-form';

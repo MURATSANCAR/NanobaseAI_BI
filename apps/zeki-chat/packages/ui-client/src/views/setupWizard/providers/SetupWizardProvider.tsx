@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { validateEmail } from '@rocket.chat/tools';
+import { validateEmail } from '@zeki.chat/tools';
 import {
 	useToastMessageDispatch,
 	useSessionDispatch,
@@ -9,7 +9,7 @@ import {
 	useMethod,
 	useEndpoint,
 	useTranslation,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { ReactElement, ContextType } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 

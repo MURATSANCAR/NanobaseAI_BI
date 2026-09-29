@@ -1,5 +1,5 @@
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Settings } from '@rocket.chat/models';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Settings } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { updateAuditedByUser } from '../../../../server/settings/lib/auditedSettingUpdates';
@@ -8,7 +8,7 @@ import { notifyOnSettingChangedById } from '../../../lib/server/lib/notifyListen
 import { settings } from '../../../settings/server';
 import Bridge from '../irc-bridge';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		resetIrcConnection(): { message: string; params: unknown[] };

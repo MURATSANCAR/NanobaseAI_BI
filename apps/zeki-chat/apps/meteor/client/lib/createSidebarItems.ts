@@ -1,5 +1,5 @@
 import type { Keys as IconName } from '@rocket.chat/icons';
-import type { LocationPathname } from '@rocket.chat/ui-contexts';
+import type { LocationPathname } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 export type Item = {

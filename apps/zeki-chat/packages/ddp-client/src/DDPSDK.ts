@@ -1,4 +1,4 @@
-import { RestClient } from '@rocket.chat/api-client';
+import { RestClient } from '@zeki.chat/api-client';
 
 import { ClientStreamImpl } from './ClientStream';
 import type { Connection } from './Connection';

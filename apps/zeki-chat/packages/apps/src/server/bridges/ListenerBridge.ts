@@ -1,6 +1,6 @@
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { AppInterface } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
 
 import { BaseBridge } from './BaseBridge';
 

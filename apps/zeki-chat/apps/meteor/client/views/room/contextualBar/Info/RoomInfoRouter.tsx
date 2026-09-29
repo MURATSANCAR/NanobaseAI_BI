@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useState } from 'react';
 
 import EditRoomInfoWithData from './EditRoomInfo';

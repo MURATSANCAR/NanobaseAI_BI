@@ -1,4 +1,4 @@
-import { isVideoConfJoinProps } from '@rocket.chat/rest-typings';
+import { isVideoConfJoinProps } from '@zeki.chat/rest-typings';
 import { assert } from 'chai';
 
 describe('VideoConfJoinProps (definition/rest/v1)', () => {

@@ -1,5 +1,5 @@
 import { SidebarV2Action } from '@rocket.chat/fuselage';
-import { GenericMenu } from '@rocket.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import type { HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 

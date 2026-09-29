@@ -1,6 +1,6 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { MessageMetricsItem, MessageMetricsFollowing } from '@rocket.chat/fuselage';
-import { useToastMessageDispatch, useTranslation } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch, useTranslation } from '@zeki.chat/ui-contexts';
 import type { MouseEvent, ReactElement } from 'react';
 import { useCallback } from 'react';
 

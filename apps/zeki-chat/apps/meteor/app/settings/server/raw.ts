@@ -1,5 +1,5 @@
-import type { SettingValue } from '@rocket.chat/core-typings';
-import { Settings } from '@rocket.chat/models';
+import type { SettingValue } from '@zeki.chat/core-typings';
+import { Settings } from '@zeki.chat/models';
 
 const cache = new Map();
 

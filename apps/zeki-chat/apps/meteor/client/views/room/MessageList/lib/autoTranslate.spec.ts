@@ -1,4 +1,4 @@
-import type { IMessage, MessageAttachment } from '@rocket.chat/core-typings';
+import type { IMessage, MessageAttachment } from '@zeki.chat/core-typings';
 
 import { hasTranslationLanguageInAttachments, hasTranslationLanguageInMessage } from './autoTranslate';
 

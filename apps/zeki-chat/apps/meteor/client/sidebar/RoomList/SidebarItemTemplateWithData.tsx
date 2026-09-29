@@ -1,7 +1,7 @@
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
 import { SidebarV2Action, SidebarV2Actions, SidebarV2ItemIcon } from '@rocket.chat/fuselage';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
-import { useLayout } from '@rocket.chat/ui-contexts';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
+import { useLayout } from '@zeki.chat/ui-contexts';
 import type { TFunction } from 'i18next';
 import type { AllHTMLAttributes, ComponentType, ReactElement, ReactNode } from 'react';
 import { memo, useMemo } from 'react';

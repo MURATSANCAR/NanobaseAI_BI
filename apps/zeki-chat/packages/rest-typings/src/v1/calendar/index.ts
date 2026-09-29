@@ -1,4 +1,4 @@
-import type { ICalendarEvent } from '@rocket.chat/core-typings';
+import type { ICalendarEvent } from '@zeki.chat/core-typings';
 
 import type { CalendarEventCreateProps } from './CalendarEventCreateProps';
 import type { CalendarEventDeleteProps } from './CalendarEventDeleteProps';

@@ -1,4 +1,4 @@
-import type { IOutboundProviderTemplate, Serialized } from '@rocket.chat/core-typings';
+import type { IOutboundProviderTemplate, Serialized } from '@zeki.chat/core-typings';
 import { Field, FieldError, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import type { ComponentProps } from 'react';

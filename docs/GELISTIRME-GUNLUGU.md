@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Sohbet lisans yapısı ve eski teknik kimlikler: kaynak dönüşümü
+
+- Kullanıcı bütün kalan lisans/üretici izlerinin temizlenmesini ve bütün kod/klasör/DB'nin yeniden taranmasını istedi. Paralel UI/backend/metadata incelemesiyle sahte2099 lisans nesnesi, plan/kota/premium UI ve broker lisans kapanışı kaldırıldı; yerel capability registry, gerçek yetki/2FA sınırları ve üçüncü taraf uygulama hakkı ayrıldı.
+- Gizli `.docker/licenses/LICENSE`, eski upstream yayın workflow/tarihçeleri ve release-action temizlendi. İç npm/sınıf/Meteor/klasör kimlikleri ve bot/schema adları birlikte değiştiriliyor.16 harici npm paketi gerçek registry adıyla kalır; bağımsız bildirimler ve değiştirilemez eski kabul kanıtları korunur.
+- Gerçek Mongo salt-okunur tarama:88koleksiyon/12.522belge; değerler açığa çıkarılmadan alan/ad sayımı. Eski teknik koleksiyon önekleri, botrefleri,7ayar ve Cloud_Workspace_License bulundu. Kullanıcı mesajı topluca değiştirilmez. DB geçişi yedek/kapalıservis/hash/indeks kontrolüyle hazırlanıyor.
+- Yerel test çalıştırılmadı. Bu kaynak commit'i henüz yeni sunucu derleme/canlı API–DB/tarayıcı kabulü değildir: **DOĞRULANAMADI**. Sonuç ve kaynak sürümü sonraki kayıtla tamamlanacak.
+
+
 ## 2026-09-29 (22:45) — Müşteri VM'ine `0f408d76b`: küçük ekran bilgi kutusu (+ Kampüs ekip sohbeti kartı)
 
 - **Ön denetim:** VM'deki son kurulum `411dd7be9` ⊂ `0f408d76b` (geri sarma yok). Aradaki kod: ekran bilgi kutusu (3 dosya), Kampüs `SohbetCard` + giriş servisi `/chat-presence` — ikisi de test sunucusunda canlı ve md5 eş. `git archive` → `/tmp/bi-main-0f408d76`, `._*` 0, çakışma işareti 0, köprü arşivden yüklendi (2.450 yol).

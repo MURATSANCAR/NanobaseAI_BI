@@ -1,6 +1,6 @@
 import { Button, ButtonGroup } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useRouteParameter, useTranslation, useRouter } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useRouteParameter, useTranslation, useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import EditOauthAppWithData from './EditOauthAppWithData';

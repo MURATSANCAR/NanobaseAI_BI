@@ -1,5 +1,5 @@
-import type { IVisitorExternalIdentifier, ILivechatVisitor, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { FindPaginated, ILivechatVisitorsModel } from '@rocket.chat/model-typings';
+import type { IVisitorExternalIdentifier, ILivechatVisitor, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { FindPaginated, ILivechatVisitorsModel } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type {
 	AggregationCursor,
@@ -22,7 +22,7 @@ import { Settings } from '../index';
 import { BaseRaw } from './BaseRaw';
 
 export class LivechatVisitorsRaw extends BaseRaw<ILivechatVisitor> implements ILivechatVisitorsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ILivechatVisitor>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ILivechatVisitor>>) {
 		super(db, 'livechat_visitor', trash);
 	}
 

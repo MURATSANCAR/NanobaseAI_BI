@@ -8,8 +8,8 @@ import {
 	GenericTableHeaderCell,
 	GenericTableRow,
 	usePagination,
-} from '@rocket.chat/ui-client';
-import { useEndpoint, useRouter, useSearchParameter } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint, useRouter, useSearchParameter } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

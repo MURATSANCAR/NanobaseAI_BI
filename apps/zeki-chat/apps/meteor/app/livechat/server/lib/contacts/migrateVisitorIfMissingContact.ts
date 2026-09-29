@@ -1,5 +1,5 @@
-import type { ILivechatVisitor, IOmnichannelSource, ILivechatContact } from '@rocket.chat/core-typings';
-import { LivechatVisitors } from '@rocket.chat/models';
+import type { ILivechatVisitor, IOmnichannelSource, ILivechatContact } from '@zeki.chat/core-typings';
+import { LivechatVisitors } from '@zeki.chat/models';
 
 import { livechatContactsLogger as logger } from '../logger';
 import { getContactIdByVisitor } from './getContactIdByVisitor';

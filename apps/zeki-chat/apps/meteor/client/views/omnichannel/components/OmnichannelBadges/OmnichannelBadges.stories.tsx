@@ -1,6 +1,6 @@
-import { LivechatPriorityWeight } from '@rocket.chat/core-typings';
-import type { IRoom, ISubscription } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { LivechatPriorityWeight } from '@zeki.chat/core-typings';
+import type { IRoom, ISubscription } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import type { Meta } from '@storybook/react';
 
 import OmnichannelBadges from './OmnichannelBadges';
@@ -17,13 +17,11 @@ const meta = {
 		room: createFakeSubscription({ t: 'l' }) as unknown as ISubscription & IRoom,
 	},
 	decorators: [
-		(Story, context) => {
-			const { isOverMacLimit = false } = context.parameters;
+		(Story) => {
 			const AppRoot = mockAppRoot().build();
 
 			const contextValue = {
 				enabled: true,
-				isOverMacLimit,
 				livechatPriorities: {
 					enabled: true,
 					data: [{ name: 'Highest', i18n: 'highest', sortItem: LivechatPriorityWeight.HIGHEST, dirty: false }],
@@ -51,18 +49,5 @@ export const WithPriority = {
 		}),
 	},
 	parameters: {
-		isOverMacLimit: false,
-	},
-};
-
-export const OverMacLimit = {
-	args: {
-		room: createFakeSubscription({
-			t: 'l',
-			priorityWeight: LivechatPriorityWeight.NOT_SPECIFIED,
-		}),
-	},
-	parameters: {
-		isOverMacLimit: true,
 	},
 };

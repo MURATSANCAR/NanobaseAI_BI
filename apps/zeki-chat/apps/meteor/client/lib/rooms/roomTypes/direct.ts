@@ -1,6 +1,6 @@
-import type { AtLeast, IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import type { AtLeast, IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 
 import { getAvatarURL } from '../../../../app/utils/client/getAvatarURL';
 import { getUserAvatarURL } from '../../../../app/utils/client/getUserAvatarURL';

@@ -1,4 +1,4 @@
-import type { ISubscription } from '@rocket.chat/core-typings';
+import type { ISubscription } from '@zeki.chat/core-typings';
 import { Badge, SidebarV2CollapseGroup } from '@rocket.chat/fuselage';
 import type { HTMLAttributes, KeyboardEvent, MouseEventHandler } from 'react';
 import { useTranslation } from 'react-i18next';

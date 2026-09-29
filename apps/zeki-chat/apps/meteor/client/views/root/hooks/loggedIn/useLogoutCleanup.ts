@@ -1,4 +1,4 @@
-import { useOnLogout, useSetting } from '@rocket.chat/ui-contexts';
+import { useOnLogout, useSetting } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { useFireGlobalEvent } from '../../../../hooks/useFireGlobalEvent';

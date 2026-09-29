@@ -1,6 +1,6 @@
 #!/usr/bin/env npx ts-node
 /**
- * Benchmark suite for @rocket.chat/message-parser
+ * Benchmark suite for @zeki.chat/message-parser
  *
  * Measures parsing performance (ops/sec) across various message categories.
  * Run with: `yarn bench` from packages/message-parser/
@@ -71,7 +71,7 @@ const categories: BenchCategory[] = [
 		fixtures: [
 			{ name: 'single', input: 'Check out https://rocket.chat for more info' },
 			{ name: 'multiple', input: 'Visit https://rocket.chat or https://github.com/RocketChat/Rocket.Chat or https://open.rocket.chat' },
-			{ name: 'markdown link', input: '[Rocket.Chat](https://rocket.chat)' },
+			{ name: 'markdown link', input: '[ZEKI AI CHAT](https://rocket.chat)' },
 			{ name: 'autolinked domain', input: 'Visit rocket.chat for more info' },
 			{ name: 'with path', input: 'See https://github.com/RocketChat/Rocket.Chat/tree/develop/packages/message-parser for details' },
 		],
@@ -197,7 +197,7 @@ function formatResults(tasks: Task[]) {
 
 async function run() {
 	console.log('='.repeat(72));
-	console.log('  @rocket.chat/message-parser — Performance Benchmark Suite');
+	console.log('  @zeki.chat/message-parser — Performance Benchmark Suite');
 	console.log('='.repeat(72));
 	console.log();
 

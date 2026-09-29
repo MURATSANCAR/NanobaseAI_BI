@@ -1,4 +1,4 @@
-import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
 import { Box, Button, ButtonGroup, Tag } from '@rocket.chat/fuselage';
 import {
 	ContextualbarHeader,
@@ -8,7 +8,7 @@ import {
 	ContextualbarFooter,
 	ContextualbarDialog,
 	ContextualbarClose,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import type { MouseEventHandler } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

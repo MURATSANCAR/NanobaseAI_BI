@@ -1,4 +1,4 @@
-import type { IAuditLog } from '@rocket.chat/core-typings';
+import type { IAuditLog } from '@zeki.chat/core-typings';
 
 import type { IBaseModel } from './IBaseModel';
 

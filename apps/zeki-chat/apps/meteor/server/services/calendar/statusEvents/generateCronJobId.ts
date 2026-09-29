@@ -1,4 +1,4 @@
-import type { ICalendarEvent, IUser } from '@rocket.chat/core-typings';
+import type { ICalendarEvent, IUser } from '@zeki.chat/core-typings';
 
 export function generateCronJobId(eventId: ICalendarEvent['_id'], uid: IUser['_id'], eventType: 'status' | 'reminder'): string {
 	if (!eventId || !uid || !eventType || (eventType !== 'status' && eventType !== 'reminder')) {

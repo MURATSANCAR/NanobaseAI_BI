@@ -1,12 +1,12 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { Contextualbar } from '@rocket.chat/ui-client';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { Contextualbar } from '@zeki.chat/ui-client';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import TeamsInfo from './TeamsInfo';
 
 const room = {
 	_id: 'awdawd',
-	fname: 'rocketchat-frontend-team',
+	fname: 'zekichat-frontend-team',
 	description:
 		'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam mollis nisi vel arcu bibendum vehicula. Integer vitae suscipit libero',
 	announcement:

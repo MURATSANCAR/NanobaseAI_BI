@@ -1,4 +1,4 @@
-import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
 import { Box, Button, ButtonGroup, ContextualbarEmptyContent, Icon, Margins, Select, TextInput } from '@rocket.chat/fuselage';
 import { useAutoFocus, useResizeObserver } from '@rocket.chat/fuselage-hooks';
 import {
@@ -9,8 +9,8 @@ import {
 	ContextualbarContent,
 	ContextualbarFooter,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 import type { Dispatch, FormEventHandler, MouseEvent, ReactElement, SetStateAction } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +30,6 @@ type CannedResponseListProps = {
 	setText: FormEventHandler<HTMLInputElement>;
 	type: string;
 	setType: Dispatch<SetStateAction<string>>;
-	isRoomOverMacLimit: boolean;
 	onClickItem: (data: any) => void; // FIXME: fix typings
 	onClickCreate: (e: MouseEvent<HTMLOrSVGElement>) => void;
 	onClickUse: (e: MouseEvent<HTMLOrSVGElement>, text: string) => void;
@@ -47,7 +46,6 @@ const CannedResponseList = ({
 	setText,
 	type,
 	setType,
-	isRoomOverMacLimit,
 	onClickItem,
 	onClickCreate,
 	onClickUse,
@@ -68,7 +66,7 @@ const CannedResponseList = ({
 	if (cannedItem) {
 		return (
 			<WrapCannedResponse
-				canUseCannedResponses={!isRoomOverMacLimit}
+				canUseCannedResponses
 				cannedItem={cannedItem}
 				onClickBack={onClickItem}
 				onClickUse={onClickUse}
@@ -114,7 +112,7 @@ const CannedResponseList = ({
 								itemContent={(_index, data): ReactElement => (
 									<Item
 										data={data}
-										allowUse={!isRoomOverMacLimit}
+										allowUse
 										onClickItem={(): void => {
 											onClickItem(data);
 										}}

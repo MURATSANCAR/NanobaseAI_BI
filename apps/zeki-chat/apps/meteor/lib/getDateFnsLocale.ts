@@ -3,7 +3,7 @@ import { enUS } from 'date-fns/locale';
 
 type LocaleLoader = () => Promise<Locale>;
 
-// Maps Rocket.Chat language codes (from packages/i18n) to date-fns locale loaders.
+// Maps ZEKI AI CHAT language codes (from packages/i18n) to date-fns locale loaders.
 // Codes without a direct date-fns counterpart fall back to the closest match, or
 // to enUS when no reasonable counterpart exists.
 const localeLoaders: Record<string, LocaleLoader> = {

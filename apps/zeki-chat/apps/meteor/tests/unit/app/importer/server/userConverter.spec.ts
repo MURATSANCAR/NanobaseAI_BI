@@ -52,7 +52,7 @@ const { UserConverter } = proxyquire.noCallThru().load('../../../../../app/impor
 	},
 	'meteor/check': sinon.stub(),
 	'meteor/meteor': sinon.stub(),
-	'@rocket.chat/sha256': {
+	'@zeki.chat/sha256': {
 		SHA256: sha,
 	},
 	'meteor/accounts-base': {
@@ -61,7 +61,7 @@ const { UserConverter } = proxyquire.noCallThru().load('../../../../../app/impor
 			_bcryptRounds: () => 10,
 		},
 	},
-	'@rocket.chat/models': { ...modelsMock, '@global': true },
+	'@zeki.chat/models': { ...modelsMock, '@global': true },
 });
 
 describe('User Converter', () => {

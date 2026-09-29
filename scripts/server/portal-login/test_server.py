@@ -213,7 +213,7 @@ class Sessions(unittest.TestCase):
         config = {'url': 'http://chat', 'user_id': 'svc', 'token': 't', 'admin_username': 'zekiadmin'}
         users = [
             {'_id': 'svc', 'username': 'zekiservis', 'status': 'online'},
-            {'_id': 'bot', 'username': 'rocket.cat', 'status': 'online'},
+            {'_id': 'bot', 'username': 'zeki.bot', 'status': 'online'},
             {'_id': 'adm', 'username': 'zekiadmin', 'status': 'online'},
             {'_id': 'a', 'username': 'zeynep', 'name': 'Zeynep Ak', 'status': 'away'},
             {'_id': 'b', 'username': 'ali', 'name': 'Ali Can', 'status': 'online'},

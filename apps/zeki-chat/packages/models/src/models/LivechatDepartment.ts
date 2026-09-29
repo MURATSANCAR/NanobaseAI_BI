@@ -1,5 +1,5 @@
-import type { ILivechatDepartment, LivechatDepartmentDTO, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { ILivechatDepartmentModel } from '@rocket.chat/model-typings';
+import type { ILivechatDepartment, LivechatDepartmentDTO, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { ILivechatDepartmentModel } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type {
 	Collection,
@@ -19,7 +19,7 @@ import { LivechatDepartmentAgents, LivechatUnitMonitors } from '../index';
 import { BaseRaw } from './BaseRaw';
 
 export class LivechatDepartmentRaw extends BaseRaw<ILivechatDepartment> implements ILivechatDepartmentModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ILivechatDepartment>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ILivechatDepartment>>) {
 		super(db, 'livechat_department', trash);
 	}
 

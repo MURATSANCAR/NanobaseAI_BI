@@ -1,7 +1,7 @@
-import { Message } from '@rocket.chat/core-services';
-import type { IMessage, IUser, IRoom } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
-import { Rooms } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import type { IMessage, IUser, IRoom } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
+import { Rooms } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import type { SendMessageOptions } from '../functions/sendMessage';

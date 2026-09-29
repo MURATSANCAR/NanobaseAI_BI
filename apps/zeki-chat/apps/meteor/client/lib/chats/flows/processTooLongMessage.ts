@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { GenericModal, imperativeModal } from '@rocket.chat/ui-client';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { GenericModal, imperativeModal } from '@zeki.chat/ui-client';
 
 import { t } from '../../../../app/utils/lib/i18n';
 import { settings } from '../../settings';

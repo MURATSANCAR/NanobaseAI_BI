@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/abac",
+	"name": "@zeki.chat/abac",
 	"version": "0.2.1",
 	"private": true,
 	"description": "ZEKI AI CHAT - Attribute Based Access Control (ABAC) support utilities",
@@ -27,18 +27,18 @@
 		"extends": "../../../package.json"
 	},
 	"dependencies": {
-		"@rocket.chat/core-services": "workspace:^",
-		"@rocket.chat/core-typings": "workspace:^",
-		"@rocket.chat/logger": "workspace:^",
-		"@rocket.chat/models": "workspace:^",
-		"@rocket.chat/server-fetch": "workspace:^",
-		"@rocket.chat/tools": "workspace:^",
+		"@zeki.chat/core-services": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/logger": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/server-fetch": "workspace:^",
+		"@zeki.chat/tools": "workspace:^",
 		"mem": "^8.1.1",
 		"mongodb": "6.10.0",
 		"p-limit": "3.1.0"
 	},
 	"devDependencies": {
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/jest": "~30.0.0",
 		"@types/node": "~22.19.17",
 		"eslint": "~9.39.4",

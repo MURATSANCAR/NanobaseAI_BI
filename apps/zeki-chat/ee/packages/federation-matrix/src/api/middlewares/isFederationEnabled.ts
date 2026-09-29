@@ -1,4 +1,4 @@
-import { Settings } from '@rocket.chat/core-services';
+import { Settings } from '@zeki.chat/core-services';
 import { createMiddleware } from 'hono/factory';
 
 export const isFederationEnabledMiddleware = createMiddleware(async (c, next) => {

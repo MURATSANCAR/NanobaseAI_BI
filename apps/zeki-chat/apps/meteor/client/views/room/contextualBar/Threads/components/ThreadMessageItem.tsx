@@ -1,4 +1,4 @@
-import type { IThreadMainMessage, IThreadMessage } from '@rocket.chat/core-typings';
+import type { IThreadMainMessage, IThreadMessage } from '@zeki.chat/core-typings';
 import { Box, Bubble, MessageDivider } from '@rocket.chat/fuselage';
 import { useTranslation } from 'react-i18next';
 

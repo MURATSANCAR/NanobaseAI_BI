@@ -236,7 +236,7 @@ test.describe.serial('message-actions', () => {
 
 	test('expect forward message to direct message', async () => {
 		const message = 'this is a message to forward to direct message';
-		const direct = 'RocketChat Internal Admin Test';
+		const direct = 'ZekiChat Internal Admin Test';
 
 		// todo: Forward modal is using name as display and the sidebar is using username
 		await poHomeChannel.content.sendMessage(message);

@@ -189,7 +189,7 @@ test.describe('OC - Contact Center [Manual Selection]', () => {
 	});
 
 	test.beforeAll(async ({ api }) => {
-		agent = await createAgent(api, 'rocketchat.internal.admin.test');
+		agent = await createAgent(api, 'zekichat.internal.admin.test');
 
 		const agentStatus = await makeAgentAvailable(api, agent.data._id);
 

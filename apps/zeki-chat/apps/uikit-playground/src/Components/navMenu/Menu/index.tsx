@@ -71,7 +71,7 @@ const Menu = ({ isOpen }: { isOpen: boolean }) => {
 						});
 					}}
 				/>
-				<MenuItem name='Send to RocketChat' />
+				<MenuItem name='Send to ZekiChat' />
 			</Wrapper>
 		</Box>
 	);

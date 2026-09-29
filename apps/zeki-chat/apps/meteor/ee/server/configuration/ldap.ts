@@ -1,7 +1,7 @@
-import type { IImportUser, ILDAPEntry, IUser } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
+import type { IImportUser, ILDAPEntry, IUser } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Settings } from '@rocket.chat/models';
+import { Settings } from '@zeki.chat/models';
 import { isValidCron } from 'cron-validator';
 import { Meteor } from 'meteor/meteor';
 

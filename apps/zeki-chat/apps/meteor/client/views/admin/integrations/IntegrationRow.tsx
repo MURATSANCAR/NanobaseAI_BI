@@ -1,6 +1,6 @@
-import type { IIntegration, Serialized } from '@rocket.chat/core-typings';
+import type { IIntegration, Serialized } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
-import { GenericTableCell, GenericTableRow } from '@rocket.chat/ui-client';
+import { GenericTableCell, GenericTableRow } from '@zeki.chat/ui-client';
 
 import { useFormatDateAndTime } from '../../../hooks/useFormatDateAndTime';
 

@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import type { APIResponse } from '@playwright/test';
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 
 import type { BaseTest } from './test';
 import { BASE_URL, DEFAULT_USER_CREDENTIALS } from '../config/constants';

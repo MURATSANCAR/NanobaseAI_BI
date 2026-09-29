@@ -16,7 +16,7 @@ import type { IVideoConferenceRead } from './IVideoConferenceRead';
 
 /**
  * The IRead accessor provides methods for accessing the
- * Rocket.Chat's environment in a read-only-fashion.
+ * ZEKI AI CHAT's environment in a read-only-fashion.
  * It is safe to be injected in multiple places, idempotent and extensible
  */
 export interface IRead {

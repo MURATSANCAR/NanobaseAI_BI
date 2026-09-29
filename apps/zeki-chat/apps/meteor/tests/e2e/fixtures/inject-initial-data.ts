@@ -1,4 +1,4 @@
-import type { ISetting, IUser } from '@rocket.chat/core-typings';
+import type { ISetting, IUser } from '@zeki.chat/core-typings';
 import { MongoClient } from 'mongodb';
 
 import * as constants from '../config/constants';
@@ -75,7 +75,7 @@ export default async function injectInitialData() {
 		].map((setting) =>
 			connection
 				.db()
-				.collection<ISetting>('rocketchat_settings')
+				.collection<ISetting>('zeki_settings')
 				.updateOne({ _id: setting._id }, { $set: { value: setting.value } }),
 		),
 	);

@@ -1,4 +1,4 @@
-import type { ILivechatMonitor } from '@rocket.chat/core-typings';
+import type { ILivechatMonitor } from '@zeki.chat/core-typings';
 import {
 	isPOSTLivechatMonitorCreateRequest,
 	isPOSTLivechatMonitorsDeleteRequest,
@@ -7,7 +7,7 @@ import {
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { findMonitors, findMonitorByUsername } from './lib/monitors';
@@ -21,7 +21,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: ['manage-livechat-monitors'],
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -48,7 +48,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: ['manage-livechat-monitors'],
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -75,7 +75,7 @@ const livechatMonitorsEndpoints = API.v1
 			},
 			authRequired: true,
 			permissionsRequired: ['manage-livechat-monitors'],
-			license: ['livechat-enterprise'],
+			capabilities: ['livechat-enterprise'],
 			body: isPOSTLivechatMonitorCreateRequest,
 		},
 		async function action() {
@@ -97,7 +97,7 @@ const livechatMonitorsEndpoints = API.v1
 			},
 			authRequired: true,
 			permissionsRequired: ['manage-livechat-monitors'],
-			license: ['livechat-enterprise'],
+			capabilities: ['livechat-enterprise'],
 			body: isPOSTLivechatMonitorsDeleteRequest,
 		},
 		async function action() {
@@ -122,7 +122,7 @@ const livechatMonitorsEndpoints = API.v1
 
 type LivechatMonitorsEndpoints = ExtractRoutesFromAPI<typeof livechatMonitorsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatMonitorsEndpoints {}
 }

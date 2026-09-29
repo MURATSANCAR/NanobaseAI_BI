@@ -1,4 +1,4 @@
-import type { IMediaCallChannel, MediaCallSignedActor } from '@rocket.chat/core-typings';
+import type { IMediaCallChannel, MediaCallSignedActor } from '@zeki.chat/core-typings';
 import type { Document, FindOptions, UpdateResult } from 'mongodb';
 
 import type { IBaseModel, InsertionModel } from './IBaseModel';

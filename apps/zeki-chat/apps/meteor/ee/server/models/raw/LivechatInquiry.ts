@@ -1,10 +1,10 @@
-import type { ILivechatInquiryRecord, ILivechatPriority } from '@rocket.chat/core-typings';
-import { DEFAULT_SLA_CONFIG, LivechatPriorityWeight } from '@rocket.chat/core-typings';
-import type { ILivechatInquiryModel } from '@rocket.chat/model-typings';
-import { LivechatInquiryRaw } from '@rocket.chat/models';
+import type { ILivechatInquiryRecord, ILivechatPriority } from '@zeki.chat/core-typings';
+import { DEFAULT_SLA_CONFIG, LivechatPriorityWeight } from '@zeki.chat/core-typings';
+import type { ILivechatInquiryModel } from '@zeki.chat/model-typings';
+import { LivechatInquiryRaw } from '@zeki.chat/models';
 import type { UpdateResult, Document, WithId } from 'mongodb';
 
-declare module '@rocket.chat/model-typings' {
+declare module '@zeki.chat/model-typings' {
 	interface ILivechatInquiryModel {
 		setSlaForRoom(rid: string, sla: { estimatedWaitingTimeQueue: number; slaId: string }): Promise<null | WithId<ILivechatInquiryRecord>>;
 		unsetSlaForRoom(rid: string): Promise<null | WithId<ILivechatInquiryRecord>>;

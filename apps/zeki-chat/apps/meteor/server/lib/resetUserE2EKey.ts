@@ -1,5 +1,5 @@
-import { api } from '@rocket.chat/core-services';
-import { Subscriptions, Users, Rooms } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import { Subscriptions, Users, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { i18n } from './i18n';

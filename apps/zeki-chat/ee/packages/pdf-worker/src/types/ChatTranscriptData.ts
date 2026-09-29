@@ -1,5 +1,5 @@
-import type { Serialized, IOmnichannelSystemMessage, ILivechatAgent, ILivechatVisitor } from '@rocket.chat/core-typings';
-import type { Root } from '@rocket.chat/message-parser';
+import type { Serialized, IOmnichannelSystemMessage, ILivechatAgent, ILivechatVisitor } from '@zeki.chat/core-typings';
+import type { Root } from '@zeki.chat/message-parser';
 import type { i18n } from 'i18next';
 
 export type PDFFile = { name?: string; buffer?: Buffer | null; extension?: string };

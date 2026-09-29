@@ -1,6 +1,6 @@
-import { getUserDisplayName } from '@rocket.chat/core-typings';
-import type { IRoom, RoomType, IUser, IMessage, ValueOf, AtLeast, IUpload } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { getUserDisplayName } from '@zeki.chat/core-typings';
+import type { IRoom, RoomType, IUser, IMessage, ValueOf, AtLeast, IUpload } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { settings } from '../../../app/settings/server';
 import type { IRoomTypeConfig, IRoomTypeServerDirectives, RoomSettingsEnum, RoomMemberActions } from '../../../definition/IRoomTypeConfig';

@@ -1,6 +1,6 @@
 import { CheckBox } from '@rocket.chat/fuselage';
-import { useFeaturePreview, type GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useEndpoint, useUserPreference } from '@rocket.chat/ui-contexts';
+import { useFeaturePreview, type GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useEndpoint, useUserPreference } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

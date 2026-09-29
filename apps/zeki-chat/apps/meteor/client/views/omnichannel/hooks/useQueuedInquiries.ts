@@ -1,4 +1,4 @@
-import type { Inquiries } from '@rocket.chat/core-typings';
+import type { Inquiries } from '@zeki.chat/core-typings';
 
 import { useOmnichannel } from './useOmnichannel';
 

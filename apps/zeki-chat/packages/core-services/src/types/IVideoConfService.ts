@@ -7,10 +7,10 @@ import type {
 	VideoConferenceCapabilities,
 	VideoConferenceCreateData,
 	VideoConferenceInstructions,
-} from '@rocket.chat/core-typings';
-import type { InsertionModel } from '@rocket.chat/model-typings';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
-import type * as UiKit from '@rocket.chat/ui-kit';
+} from '@zeki.chat/core-typings';
+import type { InsertionModel } from '@zeki.chat/model-typings';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 export type VideoConferenceJoinOptions = {
 	mic?: boolean;

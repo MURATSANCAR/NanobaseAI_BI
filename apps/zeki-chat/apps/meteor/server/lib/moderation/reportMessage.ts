@@ -1,6 +1,6 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
-import { Messages, ModerationReports, Rooms, Users } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
+import { Messages, ModerationReports, Rooms, Users } from '@zeki.chat/models';
 
 import { canAccessRoomAsync } from '../../../app/authorization/server/functions/canAccessRoom';
 

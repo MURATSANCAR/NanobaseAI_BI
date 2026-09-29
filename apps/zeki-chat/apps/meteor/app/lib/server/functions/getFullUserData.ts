@@ -1,6 +1,6 @@
-import type { IUser, IUserEmail } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { Users } from '@rocket.chat/models';
+import type { IUser, IUserEmail } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { Users } from '@zeki.chat/models';
 
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
 import { settings } from '../../../settings/server';

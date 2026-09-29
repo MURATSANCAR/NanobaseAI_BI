@@ -1,4 +1,4 @@
-import type { EncryptedContent, IUpload } from '@rocket.chat/core-typings';
+import type { EncryptedContent, IUpload } from '@zeki.chat/core-typings';
 import type { DeleteResult, UpdateResult, ClientSession, Document, InsertOneResult, WithId, FindCursor, FindOptions } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

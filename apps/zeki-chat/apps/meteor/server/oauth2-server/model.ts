@@ -8,7 +8,7 @@ import type {
 	Token,
 	User,
 } from '@node-oauth/oauth2-server';
-import { OAuthApps, OAuthAuthCodes, OAuthAccessTokens, OAuthRefreshTokens, Users } from '@rocket.chat/models';
+import { OAuthApps, OAuthAuthCodes, OAuthAccessTokens, OAuthRefreshTokens, Users } from '@zeki.chat/models';
 
 export type ModelConfig = {
 	debug?: boolean;

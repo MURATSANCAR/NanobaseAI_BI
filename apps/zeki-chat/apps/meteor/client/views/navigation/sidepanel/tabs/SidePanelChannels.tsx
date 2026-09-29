@@ -1,5 +1,5 @@
-import type { ISubscription } from '@rocket.chat/core-typings';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
+import type { ISubscription } from '@zeki.chat/core-typings';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
 
 import { useUnreadOnlyToggle } from '../../contexts/RoomsNavigationContext';
 import SidePanel from '../SidePanel';

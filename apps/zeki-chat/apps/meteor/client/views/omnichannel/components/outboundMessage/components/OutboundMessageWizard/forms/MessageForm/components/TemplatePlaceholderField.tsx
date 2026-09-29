@@ -1,4 +1,4 @@
-import type { ILivechatContact, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatContact, Serialized } from '@zeki.chat/core-typings';
 import { Field, FieldError, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
 import type { ComponentProps } from 'react';
 import type { Control } from 'react-hook-form';

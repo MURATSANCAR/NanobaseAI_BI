@@ -1,6 +1,6 @@
-import type { IOmnichannelBusinessUnit, ILivechatUnitMonitor } from '@rocket.chat/core-typings';
-import { LivechatUnitMonitors, LivechatUnit } from '@rocket.chat/models';
-import { getUnitsFromUser } from '@rocket.chat/omni-core-ee';
+import type { IOmnichannelBusinessUnit, ILivechatUnitMonitor } from '@zeki.chat/core-typings';
+import { LivechatUnitMonitors, LivechatUnit } from '@zeki.chat/models';
+import { getUnitsFromUser } from '@zeki.chat/omni-core-ee';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { FindOptions } from 'mongodb';
 

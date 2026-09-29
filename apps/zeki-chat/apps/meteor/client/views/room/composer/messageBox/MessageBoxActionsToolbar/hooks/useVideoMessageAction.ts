@@ -1,6 +1,6 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useEffect, useMemo } from 'react';
 
 import { VideoRecorder } from '../../../../../../../app/ui/client/lib/recorderjs/videoRecorder';

@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useConnectionStatus, useSetting } from '@rocket.chat/ui-contexts';
+import { useConnectionStatus, useSetting } from '@zeki.chat/ui-contexts';
 
 import { useIdleActiveEvents } from './useIdleActiveEvents';
 

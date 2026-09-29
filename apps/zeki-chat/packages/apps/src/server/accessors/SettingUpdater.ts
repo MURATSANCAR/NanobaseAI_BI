@@ -1,5 +1,5 @@
-import type { ISettingUpdater } from '@rocket.chat/apps-engine/definition/accessors/ISettingUpdater';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
+import type { ISettingUpdater } from '@zeki.chat/apps-engine/definition/accessors/ISettingUpdater';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
 
 import type { ProxiedApp } from '../ProxiedApp';
 import type { AppSettingsManager } from '../managers';

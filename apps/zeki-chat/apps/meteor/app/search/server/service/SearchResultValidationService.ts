@@ -1,6 +1,6 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { Users, Rooms } from '@rocket.chat/models';
-import { isTruthy } from '@rocket.chat/tools';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { Users, Rooms } from '@zeki.chat/models';
+import { isTruthy } from '@zeki.chat/tools';
 import mem from 'mem';
 import { Meteor } from 'meteor/meteor';
 

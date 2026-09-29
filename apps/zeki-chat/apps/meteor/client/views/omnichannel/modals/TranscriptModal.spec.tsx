@@ -1,4 +1,4 @@
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { useDebouncedCallback, useSafely } from '@rocket.chat/fuselage-hooks';
 import type { CSSProperties, MutableRefObject } from 'react';

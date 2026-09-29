@@ -1,4 +1,4 @@
-import type { MessageAttachmentAction } from '@rocket.chat/core-typings';
+import type { MessageAttachmentAction } from '@zeki.chat/core-typings';
 import { Box, Button, ButtonGroup } from '@rocket.chat/fuselage';
 
 import ActionAttachmentButton from './ActionAttachmentButton';

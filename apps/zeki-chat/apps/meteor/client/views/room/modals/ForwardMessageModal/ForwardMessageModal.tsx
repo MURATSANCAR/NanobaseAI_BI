@@ -1,4 +1,4 @@
-import type { IMessage, MessageQuoteAttachment } from '@rocket.chat/core-typings';
+import type { IMessage, MessageQuoteAttachment } from '@zeki.chat/core-typings';
 import {
 	Modal,
 	Field,
@@ -15,8 +15,8 @@ import {
 	ModalFooter,
 } from '@rocket.chat/fuselage';
 import { useClipboard } from '@rocket.chat/fuselage-hooks';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useTranslation, useEndpoint, useToastMessageDispatch, useUserAvatarPath } from '@rocket.chat/ui-contexts';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useTranslation, useEndpoint, useToastMessageDispatch, useUserAvatarPath } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { memo, useId } from 'react';

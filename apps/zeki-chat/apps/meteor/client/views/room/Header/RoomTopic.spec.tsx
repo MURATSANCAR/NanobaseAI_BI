@@ -1,6 +1,6 @@
-import { UserStatus } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import { UserStatus } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 import { render, screen } from '@testing-library/react';
 
 import RoomTopic from './RoomTopic';

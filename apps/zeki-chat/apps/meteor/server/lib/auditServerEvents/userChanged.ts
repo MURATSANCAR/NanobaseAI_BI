@@ -1,5 +1,5 @@
-import type { IAuditServerUserActor, IServerEvents, ExtractDataToParams, IUser } from '@rocket.chat/core-typings';
-import { ServerEvents } from '@rocket.chat/models';
+import type { IAuditServerUserActor, IServerEvents, ExtractDataToParams, IUser } from '@zeki.chat/core-typings';
+import { ServerEvents } from '@zeki.chat/models';
 import type { UpdateFilter } from 'mongodb';
 
 const userKeysToObfuscate = ['authorizedClients', 'e2e', 'inviteToken', 'oauth'];

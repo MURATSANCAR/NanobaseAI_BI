@@ -1,4 +1,4 @@
-import { useUserId } from '@rocket.chat/ui-contexts';
+import { useUserId } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { fireGlobalEvent } from '../../../lib/utils/fireGlobalEvent';

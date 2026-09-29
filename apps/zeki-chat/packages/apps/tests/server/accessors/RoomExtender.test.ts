@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
 
 import { RoomExtender } from '../../../src/server/accessors';
 import { TestData } from '../../test-data/utilities';

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import type { IIncomingMessage } from '@rocket.chat/core-typings';
+import type { IIncomingMessage } from '@zeki.chat/core-typings';
 import type { NextFunction } from 'connect';
 
 import { userCanAccessAvatar, renderSVGLetters } from '../utils';

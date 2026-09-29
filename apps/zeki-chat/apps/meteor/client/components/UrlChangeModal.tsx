@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
 import DOMPurify from 'dompurify';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';

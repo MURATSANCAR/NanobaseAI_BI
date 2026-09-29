@@ -1,4 +1,4 @@
-import type { ILivechatContact } from '@rocket.chat/core-typings';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import proxyquire from 'proxyquire';
 import sinon from 'sinon';
@@ -16,11 +16,11 @@ const modelsMock = {
 const validateContactManagerMock = sinon.stub();
 
 const { patchContact } = proxyquire.noCallThru().load('./patchContact.ts', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 });
 
 const { resolveContactConflicts } = proxyquire.noCallThru().load('./resolveContactConflicts', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 	'./validateContactManager': {
 		validateContactManager: validateContactManagerMock,
 	},

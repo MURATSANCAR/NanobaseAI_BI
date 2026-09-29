@@ -1,8 +1,8 @@
-import { AppEvents, Apps } from '@rocket.chat/apps';
-import { Message } from '@rocket.chat/core-services';
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
-import { Messages } from '@rocket.chat/models';
-import { isAbsoluteURL } from '@rocket.chat/tools';
+import { AppEvents, Apps } from '@zeki.chat/apps';
+import { Message } from '@zeki.chat/core-services';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
+import { Messages } from '@zeki.chat/models';
+import { isAbsoluteURL } from '@zeki.chat/tools';
 import { Match, check } from 'meteor/check';
 
 import { isRelativeURL } from '../../../../lib/utils/isRelativeURL';
@@ -236,7 +236,7 @@ export const sendMessage = async function (user: any, message: any, room: any, o
 		message.unread = true;
 	}
 
-	// For the Rocket.Chat Apps :)
+	// For the ZEKI AI CHAT Apps :)
 	if (Apps.self?.isLoaded()) {
 		const prevent = await Apps.self?.triggerEvent(AppEvents.IPreMessageSentPrevent, message);
 

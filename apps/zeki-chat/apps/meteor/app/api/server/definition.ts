@@ -1,8 +1,8 @@
 import type { IncomingMessage } from 'node:http';
 
-import type { IUser, CapabilityModule, RequiredField } from '@rocket.chat/core-typings';
-import type { Logger } from '@rocket.chat/logger';
-import type { Method, MethodOf, OperationParams, OperationResult, PathPattern, UrlParams } from '@rocket.chat/rest-typings';
+import type { IUser, CapabilityModule, RequiredField } from '@zeki.chat/core-typings';
+import type { Logger } from '@zeki.chat/logger';
+import type { Method, MethodOf, OperationParams, OperationResult, PathPattern, UrlParams } from '@zeki.chat/rest-typings';
 import type { ValidateFunction } from 'ajv';
 
 import type { ITwoFactorOptions } from '../../2fa/server/code';
@@ -293,7 +293,7 @@ export type TypedOptions = {
 	body?: ValidateFunction;
 	tags?: string[];
 	typed?: boolean;
-	license?: CapabilityModule[];
+	capabilities?: CapabilityModule[];
 } & SharedOptions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'>;
 
 export type TypedThis<TOptions extends TypedOptions, TPath extends string = ''> = {

@@ -1,6 +1,6 @@
-import type { IDeviceManagementService } from '@rocket.chat/core-services';
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import { getHeader } from '@rocket.chat/tools';
+import type { IDeviceManagementService } from '@zeki.chat/core-services';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import { getHeader } from '@zeki.chat/tools';
 
 import { deviceManagementEvents } from './events';
 

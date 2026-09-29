@@ -21,7 +21,7 @@ const stubs = {
 const { getMessageData, exportRoomMessages, exportMessageObject } = proxyquire
 	.noCallThru()
 	.load('../../../../../server/lib/dataExport/exportRoomMessagesToFile.ts', {
-		'@rocket.chat/models': {
+		'@zeki.chat/models': {
 			Messages: {
 				findPaginated: stubs.findPaginatedMessages,
 			},

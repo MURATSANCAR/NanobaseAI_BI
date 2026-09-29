@@ -1,9 +1,9 @@
 import { log } from 'console';
 import os from 'node:os';
 
-import { Analytics, Team, VideoConf, Presence } from '@rocket.chat/core-services';
-import type { IRoom, IStats, ISetting } from '@rocket.chat/core-typings';
-import { UserStatus } from '@rocket.chat/core-typings';
+import { Analytics, Team, VideoConf, Presence } from '@zeki.chat/core-services';
+import type { IRoom, IStats, ISetting } from '@zeki.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
 import {
 	NotificationQueue,
@@ -27,7 +27,7 @@ import {
 	Users,
 	LivechatRooms,
 	AbacAttributes,
-} from '@rocket.chat/models';
+} from '@zeki.chat/models';
 import { MongoInternals } from 'meteor/mongo';
 import moment from 'moment';
 
@@ -42,7 +42,7 @@ import { getControl } from '../../../../server/lib/migrations';
 import { getSettingsStatistics } from '../../../../server/lib/statistics/getSettingsStatistics';
 import { getMatrixFederationStatistics } from '../../../../server/services/federation/infrastructure/rocket-chat/adapters/Statistics';
 import { settings } from '../../../settings/server';
-import { Info } from '../../../utils/rocketchat.info';
+import { Info } from '../../../utils/zekichat.info';
 import { getMongoInfo } from '../../../utils/server/functions/getMongoInfo';
 
 const getUserLanguages = async (totalUsers: number): Promise<{ [key: string]: number }> => {
@@ -527,7 +527,7 @@ export const statistics = {
 		statistics.totalWebRTCCalls = settings.get('WebRTC_Calls_Count');
 		statistics.uncaughtExceptionsCount = settings.get('Uncaught_Exceptions_Count');
 
-		// Push notification stats (Zeki: no Rocket.Chat push gateway)
+		// Push notification stats (Zeki: no ZEKI AI CHAT push gateway)
 		statistics.push = settings.get('Push_enable') ? 1 : 0;
 		statistics.pushSecured = settings.get<boolean>('Push_request_content_from_server');
 

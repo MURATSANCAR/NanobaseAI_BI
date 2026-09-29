@@ -11,7 +11,7 @@ const { beforeNewRoomPatched } = proxyquire.noCallThru().load('../../../../../ee
 			Error,
 		},
 	},
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		OmnichannelServiceLevelAgreements: {
 			findOneByIdOrName: findStub,
 		},

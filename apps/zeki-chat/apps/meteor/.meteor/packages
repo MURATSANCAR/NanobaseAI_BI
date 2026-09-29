@@ -3,9 +3,9 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-rocketchat:mongo-config
-rocketchat:livechat
-rocketchat:version
+zekichat:mongo-config
+zekichat:livechat
+zekichat:version
 
 accounts-base@3.2.1
 accounts-facebook@1.3.4

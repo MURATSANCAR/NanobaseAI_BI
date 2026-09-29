@@ -1,4 +1,4 @@
-import { useRoomToolbox, useRouteParameter } from '@rocket.chat/ui-contexts';
+import { useRoomToolbox, useRouteParameter } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
 import MediaCallHistoryContextualbar from './MediaCallHistoryContextualbar';

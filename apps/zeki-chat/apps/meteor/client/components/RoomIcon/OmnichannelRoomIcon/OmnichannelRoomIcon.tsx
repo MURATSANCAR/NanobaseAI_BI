@@ -1,5 +1,5 @@
-import type { IOmnichannelSource } from '@rocket.chat/core-typings';
-import { UserStatus, isOmnichannelSourceFromApp } from '@rocket.chat/core-typings';
+import type { IOmnichannelSource } from '@zeki.chat/core-typings';
+import { UserStatus, isOmnichannelSourceFromApp } from '@zeki.chat/core-typings';
 import type { Icon } from '@rocket.chat/fuselage';
 import type { ComponentProps } from 'react';
 

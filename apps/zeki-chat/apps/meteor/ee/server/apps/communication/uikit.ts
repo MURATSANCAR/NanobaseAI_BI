@@ -1,6 +1,6 @@
-import { AppEvents, type IAppServerOrchestrator } from '@rocket.chat/apps';
-import { UiKitCoreApp } from '@rocket.chat/core-services';
-import type { OperationParams, OperationResult, UrlParams } from '@rocket.chat/rest-typings';
+import { AppEvents, type IAppServerOrchestrator } from '@zeki.chat/apps';
+import { UiKitCoreApp } from '@zeki.chat/core-services';
+import type { OperationParams, OperationResult, UrlParams } from '@zeki.chat/rest-typings';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import type { Request, Response } from 'express';

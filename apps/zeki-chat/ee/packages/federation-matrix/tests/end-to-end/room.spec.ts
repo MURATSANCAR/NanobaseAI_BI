@@ -1,4 +1,4 @@
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
 import type { Room } from 'matrix-js-sdk';
 import { EventTimeline } from 'matrix-js-sdk';
 
@@ -288,7 +288,7 @@ import { SynapseClient } from '../helper/synapse-client';
 
 					// Verify the ephemeral message content
 					expect(ephemeralMessage.msg).toContain('You cannot add external users to a non-federated room');
-					expect(ephemeralMessage.u.username).toBe('rocket.cat');
+					expect(ephemeralMessage.u.username).toBe('zeki.bot');
 					expect(ephemeralMessage.private).toBe(true);
 					expect(ephemeralMessage.rid).toBe(nonFederatedChannel._id); // Verify it's for the correct room
 
@@ -748,8 +748,8 @@ import { SynapseClient } from '../helper/synapse-client';
 					expect(acceptedRoomId).not.toBe('');
 				}, 10000);
 
-				it('should set the topic on the Rocket.Chat side', async () => {
-					// RC view: Verify the topic is set in Rocket.Chat
+				it('should set the topic on the ZEKI AI CHAT side', async () => {
+					// RC view: Verify the topic is set in ZEKI AI CHAT
 					const roomInfo = await getRoomInfo(federatedChannel._id, rc1AdminRequestConfig);
 					expect(roomInfo.room).toHaveProperty('topic', channelTopic);
 				});
@@ -794,8 +794,8 @@ import { SynapseClient } from '../helper/synapse-client';
 					expect(acceptedRoomId).not.toBe('');
 				}, 10000);
 
-				it('should not set a topic on the Rocket.Chat side', async () => {
-					// RC view: Verify no topic is set in Rocket.Chat
+				it('should not set a topic on the ZEKI AI CHAT side', async () => {
+					// RC view: Verify no topic is set in ZEKI AI CHAT
 					const roomInfo = await getRoomInfo(federatedChannel._id, rc1AdminRequestConfig);
 					expect(roomInfo.room?.topic).toBeUndefined();
 				});

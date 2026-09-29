@@ -1,6 +1,6 @@
-import type { IAppServerOrchestrator, IAppsLivechatMessage } from '@rocket.chat/apps';
-import { LivechatBridge } from '@rocket.chat/apps/dist/server/bridges/LivechatBridge';
-import type { IExtraRoomParams } from '@rocket.chat/apps-engine/definition/accessors/ILivechatCreator';
+import type { IAppServerOrchestrator, IAppsLivechatMessage } from '@zeki.chat/apps';
+import { LivechatBridge } from '@zeki.chat/apps/dist/server/bridges/LivechatBridge';
+import type { IExtraRoomParams } from '@zeki.chat/apps-engine/definition/accessors/ILivechatCreator';
 import type {
 	IVisitorExternalIdentifier,
 	IVisitor,
@@ -8,13 +8,13 @@ import type {
 	ILivechatTransferData,
 	IDepartment,
 	ResolveVisitorContactData,
-} from '@rocket.chat/apps-engine/definition/livechat';
-import type { IMessage as IAppsEngineMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
-import type { ILivechatDepartment, IOmnichannelRoom, SelectedAgent, ILivechatVisitor } from '@rocket.chat/core-typings';
-import { OmnichannelSourceType } from '@rocket.chat/core-typings';
-import { LivechatVisitors, LivechatRooms, LivechatDepartment, Users } from '@rocket.chat/models';
-import { registerGuest } from '@rocket.chat/omni-core';
+} from '@zeki.chat/apps-engine/definition/livechat';
+import type { IMessage as IAppsEngineMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
+import type { ILivechatDepartment, IOmnichannelRoom, SelectedAgent, ILivechatVisitor } from '@zeki.chat/core-typings';
+import { OmnichannelSourceType } from '@zeki.chat/core-typings';
+import { LivechatVisitors, LivechatRooms, LivechatDepartment, Users } from '@zeki.chat/models';
+import { registerGuest } from '@zeki.chat/omni-core';
 
 import { deasyncPromise } from '../../../../server/deasync/deasync';
 import { callbacks } from '../../../../server/lib/callbacks';
@@ -29,7 +29,7 @@ import { online } from '../../../livechat/server/lib/service-status';
 import { transfer } from '../../../livechat/server/lib/transfer';
 import { settings } from '../../../settings/server';
 
-declare module '@rocket.chat/apps-engine/definition/accessors/ILivechatCreator' {
+declare module '@zeki.chat/apps-engine/definition/accessors/ILivechatCreator' {
 	interface IExtraRoomParams {
 		customFields?: Record<string, unknown>;
 	}
@@ -142,7 +142,7 @@ export class AppLivechatBridge extends LivechatBridge {
 	protected async closeRoom(room: ILivechatRoom, comment: string, closer: IUser | undefined, appId: string): Promise<boolean> {
 		this.orch.debugLog(`The App ${appId} is closing a livechat room.`);
 
-		const user = closer && this.orch.getConverters()?.get('users').convertToRocketChat(closer);
+		const user = closer && this.orch.getConverters()?.get('users').convertToZekiChat(closer);
 		const visitor = this.orch.getConverters()?.get('visitors').convertAppVisitor(room.visitor);
 
 		const closeData: any = {

@@ -1,5 +1,5 @@
-import { UserStatus } from '@rocket.chat/core-typings';
-import type { IUser } from '@rocket.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import type { Filter } from 'mongodb';
 
 /**

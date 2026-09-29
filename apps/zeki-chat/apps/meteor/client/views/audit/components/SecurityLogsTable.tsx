@@ -1,6 +1,6 @@
-import type { IAuditServerAppActor, IAuditServerSystemActor, IAuditServerUserActor } from '@rocket.chat/core-typings';
+import type { IAuditServerAppActor, IAuditServerSystemActor, IAuditServerUserActor } from '@zeki.chat/core-typings';
 import { Box, Button, ButtonGroup, Field, FieldLabel, Margins, Pagination } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import {
 	GenericTable,
 	GenericTableBody,
@@ -10,8 +10,8 @@ import {
 	GenericTableLoadingRow,
 	GenericTableRow,
 	usePagination,
-} from '@rocket.chat/ui-client';
-import { useEndpoint, useSetModal } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint, useSetModal } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useState, type ReactElement } from 'react';

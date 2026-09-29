@@ -1,6 +1,6 @@
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import { useSettingStructure } from '@rocket.chat/ui-contexts';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import { useSettingStructure } from '@zeki.chat/ui-contexts';
 import { renderHook } from '@testing-library/react';
 
 describe('useSettingStructure', () => {

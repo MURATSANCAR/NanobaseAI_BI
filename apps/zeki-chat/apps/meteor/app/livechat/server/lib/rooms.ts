@@ -1,5 +1,4 @@
-import { AppEvents, Apps } from '@rocket.chat/apps';
-import { Omnichannel } from '@rocket.chat/core-services';
+import { AppEvents, Apps } from '@zeki.chat/apps';
 import type {
 	ILivechatVisitor,
 	IMessage,
@@ -8,8 +7,8 @@ import type {
 	IOmnichannelRoomExtraData,
 	IOmnichannelRoom,
 	TransferData,
-} from '@rocket.chat/core-typings';
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
 import {
 	LivechatRooms,
 	LivechatContacts,
@@ -21,7 +20,7 @@ import {
 	Users,
 	ReadReceipts,
 	ReadReceiptsArchive,
-} from '@rocket.chat/models';
+} from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { normalizeTransferredByData } from './Helper';
@@ -226,9 +225,6 @@ export async function returnRoomAsInquiry(room: IOmnichannelRoom, departmentId?:
 		throw new Meteor.Error('error-room-onHold');
 	}
 
-	if (!(await Omnichannel.isWithinMACLimit(room))) {
-		throw new Meteor.Error('error-mac-limit-reached');
-	}
 
 	if (!room.servedBy) {
 		return false;

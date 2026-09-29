@@ -1,4 +1,4 @@
-import type { IImport, IImportUser, ImportStatus } from '@rocket.chat/core-typings';
+import type { IImport, IImportUser, ImportStatus } from '@zeki.chat/core-typings';
 
 export interface IImportService {
 	clear(): Promise<void>;

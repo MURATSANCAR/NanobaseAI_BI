@@ -1,4 +1,4 @@
-import type { ISettingStatistics, ISettingStatisticsObject } from '@rocket.chat/core-typings';
+import type { ISettingStatistics, ISettingStatisticsObject } from '@zeki.chat/core-typings';
 
 import { settings } from '../../../app/settings/server';
 

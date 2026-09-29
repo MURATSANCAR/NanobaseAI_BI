@@ -1,5 +1,5 @@
-import { LivechatRooms } from '@rocket.chat/models';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
+import { LivechatRooms } from '@zeki.chat/models';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
 
 export async function findQueueMetrics({
 	agentId,

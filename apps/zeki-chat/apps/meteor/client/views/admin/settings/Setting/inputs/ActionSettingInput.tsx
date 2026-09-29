@@ -1,7 +1,7 @@
-import { isActionSettingWithEndpoint } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import type { PathPattern, Method } from '@rocket.chat/rest-typings';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import { isActionSettingWithEndpoint } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import type { PathPattern, Method } from '@zeki.chat/rest-typings';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import EndpointActionInput from './EndpointActionInput';

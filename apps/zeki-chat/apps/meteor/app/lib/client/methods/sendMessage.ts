@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { onClientMessageReceived } from '../../../../client/lib/onClientMessageReceived';
 import { settings } from '../../../../client/lib/settings';

@@ -1,4 +1,4 @@
-import type { IExportOperation, ISubscription, ITeam, IUser, IPersonalAccessToken, UserStatus } from '@rocket.chat/core-typings';
+import type { IExportOperation, ISubscription, ITeam, IUser, IPersonalAccessToken, UserStatus } from '@zeki.chat/core-typings';
 
 import { ajv } from './Ajv';
 import type { PaginatedResult } from '../helpers/PaginatedResult';

@@ -1,8 +1,8 @@
-import { type ILivechatVisitor, type IVisitorExternalIdentifier, UserStatus } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { LivechatContacts, LivechatDepartment, LivechatVisitors, Users } from '@rocket.chat/models';
-import { makeFunction } from '@rocket.chat/patch-injection';
-import { validateEmail } from '@rocket.chat/tools';
+import { type ILivechatVisitor, type IVisitorExternalIdentifier, UserStatus } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { LivechatContacts, LivechatDepartment, LivechatVisitors, Users } from '@zeki.chat/models';
+import { makeFunction } from '@zeki.chat/patch-injection';
+import { validateEmail } from '@zeki.chat/tools';
 
 const logger = new Logger('Livechat - Visitor');
 

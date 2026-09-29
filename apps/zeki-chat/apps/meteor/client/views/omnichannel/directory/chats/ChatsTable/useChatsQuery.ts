@@ -1,4 +1,4 @@
-import { usePermission, useUserId } from '@rocket.chat/ui-contexts';
+import { usePermission, useUserId } from '@zeki.chat/ui-contexts';
 import { parse, endOfDay, startOfDay } from 'date-fns';
 import { useCallback } from 'react';
 

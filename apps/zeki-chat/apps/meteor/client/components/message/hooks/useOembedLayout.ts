@@ -1,4 +1,4 @@
-import { useLayout } from '@rocket.chat/ui-contexts';
+import { useLayout } from '@zeki.chat/ui-contexts';
 
 import { useMessageListOembedEnabled } from '../list/MessageListContext';
 

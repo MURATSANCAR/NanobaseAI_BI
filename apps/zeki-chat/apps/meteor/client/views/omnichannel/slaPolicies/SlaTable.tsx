@@ -10,8 +10,8 @@ import {
 	GenericTableCell,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
-import { useTranslation, useEndpoint, useRouter } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, useEndpoint, useRouter } from '@zeki.chat/ui-contexts';
 import { useQuery, hashKey } from '@tanstack/react-query';
 import type { MutableRefObject } from 'react';
 import { useMemo, useState, useEffect } from 'react';

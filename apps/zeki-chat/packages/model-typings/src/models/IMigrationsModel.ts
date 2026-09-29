@@ -1,4 +1,4 @@
-import type { IControl } from '@rocket.chat/core-typings';
+import type { IControl } from '@zeki.chat/core-typings';
 
 import type { IBaseModel } from './IBaseModel';
 

@@ -1,8 +1,8 @@
-import { Apps, type IAppServerOrchestrator } from '@rocket.chat/apps';
-import { ServerSettingBridge } from '@rocket.chat/apps/dist/server/bridges/ServerSettingBridge';
-import type { IReadSettingPermission } from '@rocket.chat/apps-engine/definition/permissions/IPermission';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
-import { Settings } from '@rocket.chat/models';
+import { Apps, type IAppServerOrchestrator } from '@zeki.chat/apps';
+import { ServerSettingBridge } from '@zeki.chat/apps/dist/server/bridges/ServerSettingBridge';
+import type { IReadSettingPermission } from '@zeki.chat/apps-engine/definition/permissions/IPermission';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
+import { Settings } from '@zeki.chat/models';
 
 import { updateAuditedByApp } from '../../../../server/settings/lib/auditedSettingUpdates';
 import { notifyOnSettingChanged, notifyOnSettingChangedById } from '../../../lib/server/lib/notifyListener';

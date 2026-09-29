@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IVideoConfProvider } from '@rocket.chat/apps-engine/definition/videoConfProviders';
+import type { IVideoConfProvider } from '@zeki.chat/apps-engine/definition/videoConfProviders';
 
 import type { ProxiedApp } from '../../../src/server/ProxiedApp';
 import { AppVideoConfProvider } from '../../../src/server/managers/AppVideoConfProvider';

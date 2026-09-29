@@ -1,7 +1,7 @@
-import type { IMessage, MessageQuoteAttachment } from '@rocket.chat/core-typings';
+import type { IMessage, MessageQuoteAttachment } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { IconButton, Box, Margins } from '@rocket.chat/fuselage';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

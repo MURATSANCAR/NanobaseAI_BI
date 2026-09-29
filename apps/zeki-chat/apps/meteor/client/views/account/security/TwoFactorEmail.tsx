@@ -1,5 +1,5 @@
 import { Box, Field, FieldLabel, FieldRow, Margins, ToggleSwitch } from '@rocket.chat/fuselage';
-import { useToastMessageDispatch, useUser } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch, useUser } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, FormEvent } from 'react';
 import { useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';

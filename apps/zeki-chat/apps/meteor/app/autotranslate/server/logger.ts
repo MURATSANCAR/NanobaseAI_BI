@@ -1,4 +1,4 @@
-import { Logger } from '@rocket.chat/logger';
+import { Logger } from '@zeki.chat/logger';
 
 const logger = new Logger('AutoTranslate');
 

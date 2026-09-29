@@ -9,8 +9,8 @@ import {
 	ContextualbarContent,
 	ContextualbarFooter,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useTranslation, useUser } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, useUser } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 

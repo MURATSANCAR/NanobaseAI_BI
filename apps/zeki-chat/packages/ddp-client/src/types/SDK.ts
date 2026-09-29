@@ -1,4 +1,4 @@
-import type { RestClient } from '@rocket.chat/api-client';
+import type { RestClient } from '@zeki.chat/api-client';
 
 import type { Connection } from '../Connection';
 import type { TimeoutControl } from '../TimeoutControl';

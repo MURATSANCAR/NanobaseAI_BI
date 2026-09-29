@@ -14,7 +14,7 @@ const samlUtilsMock = {
 
 const handler = sinon.stub();
 proxyquire.noCallThru().load('../../../../app/meteor-accounts-saml/server/loginHandler', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		CredentialTokens: { removeById },
 	},
 	'meteor/accounts-base': {

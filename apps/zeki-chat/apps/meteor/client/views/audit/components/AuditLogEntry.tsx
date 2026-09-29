@@ -1,8 +1,8 @@
-import type { IAuditLog } from '@rocket.chat/core-typings';
+import type { IAuditLog } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
 import { useMediaQuery } from '@rocket.chat/fuselage-hooks';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { GenericTableRow, GenericTableCell } from '@rocket.chat/ui-client';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { GenericTableRow, GenericTableCell } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

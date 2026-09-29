@@ -5,8 +5,8 @@ import {
 	isOmnichannelRoom,
 	isRoomFederated,
 	isRoomNativeFederated,
-} from '@rocket.chat/core-typings';
-import { useRouter, useSetting } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/core-typings';
+import { useRouter, useSetting } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import MessageToolbarItem from '../../MessageToolbarItem';

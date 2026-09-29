@@ -1,11 +1,11 @@
-import type { IUserSession, IUserSessionConnection, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IUsersSessionsModel } from '@rocket.chat/model-typings';
+import type { IUserSession, IUserSessionConnection, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IUsersSessionsModel } from '@zeki.chat/model-typings';
 import type { FindCursor, Collection, Db, FindOptions } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class UsersSessionsRaw extends BaseRaw<IUserSession> implements IUsersSessionsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IUserSession>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IUserSession>>) {
 		super(db, 'usersSessions', trash, {
 			preventSetUpdatedAt: true,
 			collectionNameResolver(name) {

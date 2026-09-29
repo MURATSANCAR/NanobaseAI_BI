@@ -17,11 +17,11 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@rocket.chat/core-typings": "workspace:^"
+		"@zeki.chat/core-typings": "workspace:^"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/bcrypt": "^6.0.0",
 		"@types/jest": "~30.0.0",
 		"@types/ws": "^8.5.14",

@@ -1,5 +1,5 @@
-import { LDAP } from '@rocket.chat/core-services';
-import { ajv, isLdapTestSearch, validateUnauthorizedErrorResponse, validateForbiddenErrorResponse } from '@rocket.chat/rest-typings';
+import { LDAP } from '@zeki.chat/core-services';
+import { ajv, isLdapTestSearch, validateUnauthorizedErrorResponse, validateForbiddenErrorResponse } from '@zeki.chat/rest-typings';
 
 import { SystemLogger } from '../../../../server/lib/logger/system';
 import { settings } from '../../../settings/server';

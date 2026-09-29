@@ -1,4 +1,4 @@
-import POP3Lib from '@rocket.chat/poplib';
+import POP3Lib from '@zeki.chat/poplib';
 import { simpleParser } from 'mailparser';
 
 import { processDirectEmail } from './processDirectEmail';

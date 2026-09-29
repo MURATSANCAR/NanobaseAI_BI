@@ -6,7 +6,7 @@ const changelogFunctions: ChangelogFunctions = {
 	getReleaseLine: async (changeset, _type, options) => {
 		if (!options?.repo) {
 			throw new Error(
-				'Please provide a repo to this changelog generator like this:\n"changelog": ["@rocket.chat/release-changelog", { "repo": "org/repo" }]',
+				'Please provide a repo to this changelog generator like this:\n"changelog": ["@zeki.chat/release-changelog", { "repo": "org/repo" }]',
 			);
 		}
 
@@ -69,7 +69,7 @@ const changelogFunctions: ChangelogFunctions = {
 	getDependencyReleaseLine: async (changesets, dependenciesUpdated, options) => {
 		if (!options.repo) {
 			throw new Error(
-				'Please provide a repo to this changelog generator like this:\n"changelog": ["@rocket.chat/release-changelog", { "repo": "org/repo" }]',
+				'Please provide a repo to this changelog generator like this:\n"changelog": ["@zeki.chat/release-changelog", { "repo": "org/repo" }]',
 			);
 		}
 		if (dependenciesUpdated.length === 0) return '';

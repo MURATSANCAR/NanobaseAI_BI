@@ -1,4 +1,4 @@
-import { clientCallbacks } from '@rocket.chat/ui-client';
+import { clientCallbacks } from '@zeki.chat/ui-client';
 import { performance } from 'universal-perf-hooks';
 
 import { getConfig } from '../lib/utils/getConfig';

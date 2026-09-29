@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import {
 	MessageSystem,
 	MessageSystemBody,
@@ -12,11 +12,11 @@ import {
 	MessageNameContainer,
 } from '@rocket.chat/fuselage';
 import { useButtonPattern } from '@rocket.chat/fuselage-hooks';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useUserPresence, useUserCard } from '@rocket.chat/ui-contexts';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useUserPresence, useUserCard } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

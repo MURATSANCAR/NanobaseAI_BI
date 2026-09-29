@@ -132,7 +132,7 @@ export const Users = {
 	samlusernoname2: generateContext('custom_saml_username2'),
 	userForSamlMerge: generateContext('user_for_saml_merge'),
 	userForSamlMerge2: generateContext('user_for_saml_merge2'),
-	admin: generateContext('rocketchat.internal.admin.test'),
+	admin: generateContext('zekichat.internal.admin.test'),
 };
 
 export async function storeState(page: Page, user: IUserState) {

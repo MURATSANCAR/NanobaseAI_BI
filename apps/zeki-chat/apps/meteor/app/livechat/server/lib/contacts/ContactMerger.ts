@@ -6,8 +6,8 @@ import type {
 	IUser,
 	DeepWritable,
 	IOmnichannelSource,
-} from '@rocket.chat/core-typings';
-import { LivechatContacts } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { LivechatContacts } from '@zeki.chat/models';
 import type { ClientSession, UpdateFilter } from 'mongodb';
 
 import { getContactManagerIdByUsername } from './getContactManagerIdByUsername';

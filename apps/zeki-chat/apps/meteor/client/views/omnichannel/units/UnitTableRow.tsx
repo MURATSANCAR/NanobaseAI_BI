@@ -1,7 +1,7 @@
 import { IconButton } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericTableCell, GenericTableRow } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { GenericTableCell, GenericTableRow } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { useRemoveUnit } from './useRemoveUnit';

@@ -1,5 +1,5 @@
 import { federationSDK, init } from '@rocket.chat/federation-sdk';
-import { Logger } from '@rocket.chat/logger';
+import { Logger } from '@zeki.chat/logger';
 
 import { registerEvents } from './events';
 

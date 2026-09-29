@@ -1,5 +1,5 @@
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { TranslationContext } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { TranslationContext } from '@zeki.chat/ui-contexts';
 import i18next from 'i18next';
 import type { ContextType, ReactElement, ReactNode } from 'react';
 import { useContext, useMemo } from 'react';
@@ -17,7 +17,7 @@ const TranslationContextMock = ({ children }: TranslationContextMockProps): Reac
 			defaultNS: 'project',
 			resources: {
 				en: {
-					project: require('../../../packages/rocketchat-i18n/i18n/en.i18n.json'),
+					project: require('../../../packages/zekichat-i18n/i18n/en.i18n.json'),
 				},
 			},
 			interpolation: {

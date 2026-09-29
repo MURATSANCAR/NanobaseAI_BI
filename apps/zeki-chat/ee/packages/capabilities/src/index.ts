@@ -1,7 +1,7 @@
-import { CoreModules } from '@rocket.chat/core-typings';
-import type { CapabilityModule } from '@rocket.chat/core-typings';
+import { CoreModules } from '@zeki.chat/core-typings';
+import type { CapabilityModule } from '@zeki.chat/core-typings';
 
-type Callback = () => void | Promise<void>;
+type Callback = () => unknown;
 type ModuleChange = { module: CapabilityModule; external: boolean; valid: boolean };
 
 /** Local implementation availability. This is not an entitlement or a subscription. */
@@ -14,13 +14,15 @@ export class CapabilityRegistry {
 
 	initialize(): void {
 		if (this.ready) return;
+		const queuedFeatures = new Map([...this.featureCallbacks].map(([module, callbacks]) => [module, [...callbacks]]));
+		const queuedReady = [...this.readyCallbacks];
 		for (const module of CoreModules) this.modules.add(module);
 		this.ready = true;
 		for (const module of this.modules) {
 			for (const cb of this.moduleCallbacks) cb({ module, external: false, valid: true });
-			for (const cb of this.featureCallbacks.get(module) || []) this.invoke(cb);
+			for (const cb of queuedFeatures.get(module) || []) this.invoke(cb);
 		}
-		for (const cb of this.readyCallbacks) this.invoke(cb);
+		for (const cb of queuedReady) this.invoke(cb);
 	}
 
 	private invoke(cb: Callback): void {
@@ -46,13 +48,14 @@ export class CapabilityRegistry {
 		return () => { callbacks.delete(cb); };
 	}
 
-	whenFeature(module: CapabilityModule, cb: Callback): void | Promise<void> {
+	whenFeature(module: CapabilityModule, cb: Callback): unknown {
 		if (this.hasModule(module)) return cb();
 		this.onFeature(module, cb);
+		return undefined;
 	}
 
 	onUnavailableFeature(module: CapabilityModule, cb: Callback): () => void {
-		return this.onReady(() => { if (!this.hasModule(module)) return cb(); });
+		return this.onReady(() => { return !this.hasModule(module) ? cb() : undefined; });
 	}
 
 	onToggledFeature(module: CapabilityModule, { up, down }: { up?: Callback; down?: Callback }): () => void {

@@ -1,5 +1,5 @@
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import { EnvironmentalVariableBridge } from '@rocket.chat/apps/dist/server/bridges/EnvironmentalVariableBridge';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import { EnvironmentalVariableBridge } from '@zeki.chat/apps/dist/server/bridges/EnvironmentalVariableBridge';
 
 export class AppEnvironmentalVariableBridge extends EnvironmentalVariableBridge {
 	allowed: Array<string>;

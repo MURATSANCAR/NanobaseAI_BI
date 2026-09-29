@@ -1,6 +1,6 @@
 import { Pagination, States, StatesIcon, StatesTitle, StatesActions, StatesAction } from '@rocket.chat/fuselage';
 import { useMediaQuery, useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import type { OptionProp } from '@rocket.chat/ui-client';
+import type { OptionProp } from '@zeki.chat/ui-client';
 import {
 	GenericTable,
 	GenericTableBody,
@@ -9,8 +9,8 @@ import {
 	GenericTableLoadingTable,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement, MutableRefObject } from 'react';
 import { useRef, useState, useEffect, useMemo } from 'react';

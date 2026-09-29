@@ -1,4 +1,4 @@
-import type { ILivechatCustomField } from '@rocket.chat/core-typings';
+import type { ILivechatCustomField } from '@zeki.chat/core-typings';
 import type { FindOptions, FindCursor, Document } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

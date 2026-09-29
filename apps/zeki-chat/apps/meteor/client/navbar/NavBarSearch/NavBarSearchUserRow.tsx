@@ -1,6 +1,6 @@
 import { SidebarV2ItemIcon } from '@rocket.chat/fuselage';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement } from 'react';
 import { memo } from 'react';
 

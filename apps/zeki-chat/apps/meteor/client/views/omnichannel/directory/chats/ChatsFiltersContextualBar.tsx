@@ -7,8 +7,8 @@ import {
 	ContextualbarScrollableContent,
 	ContextualbarFooter,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { usePermission } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import { format } from 'date-fns';
 import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';

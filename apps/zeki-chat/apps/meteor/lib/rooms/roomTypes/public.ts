@@ -1,7 +1,7 @@
 import type { IRoomTypeConfig } from '../../../definition/IRoomTypeConfig';
 import type { RoomCoordinator } from '../coordinator';
 
-declare module '@rocket.chat/ui-contexts' {
+declare module '@zeki.chat/ui-contexts' {
 	export interface IRouterPaths {
 		channel: {
 			pathname: `/channel/${string}${`/${string}` | ''}${`/${string}` | ''}`;

@@ -1,4 +1,4 @@
-import type { IOutgoingIntegration } from '@rocket.chat/core-typings';
+import type { IOutgoingIntegration } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import {
 	FieldError,
@@ -17,7 +17,7 @@ import {
 	Accordion,
 	NumberInput,
 } from '@rocket.chat/fuselage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import { useId, useMemo } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';

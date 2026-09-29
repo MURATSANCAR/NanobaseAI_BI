@@ -1,4 +1,4 @@
-import { Presence } from '@rocket.chat/core-services';
+import { Presence } from '@zeki.chat/core-services';
 
 import { settings } from '../../app/settings/server';
 

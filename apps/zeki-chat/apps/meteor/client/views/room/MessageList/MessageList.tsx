@@ -1,8 +1,8 @@
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import { isThreadMessage } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import { isThreadMessage } from '@zeki.chat/core-typings';
 import { useDebouncedCallback } from '@rocket.chat/fuselage-hooks';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { useSearchParameter, useSetting, useUserPreference } from '@rocket.chat/ui-contexts';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { useSearchParameter, useSetting, useUserPreference } from '@zeki.chat/ui-contexts';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

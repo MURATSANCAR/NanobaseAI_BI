@@ -1,8 +1,8 @@
-import { isRoomFederated } from '@rocket.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { imperativeModal } from '@rocket.chat/ui-client';
-import { useSetting, usePermission, useEndpoint, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
-import type { RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
+import { imperativeModal } from '@zeki.chat/ui-client';
+import { useSetting, usePermission, useEndpoint, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
+import type { RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

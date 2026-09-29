@@ -1,4 +1,4 @@
-import type { IOAuthApp, IOAuthAppParams } from '@rocket.chat/apps-engine/definition/accessors/IOAuthApp';
+import type { IOAuthApp, IOAuthAppParams } from '@zeki.chat/apps-engine/definition/accessors/IOAuthApp';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

@@ -1,4 +1,4 @@
-import type { IMessage, IRoom, ISubscription } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom, ISubscription } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
 import { differenceInMilliseconds } from 'date-fns';
 import { useCallback, useSyncExternalStore } from 'react';

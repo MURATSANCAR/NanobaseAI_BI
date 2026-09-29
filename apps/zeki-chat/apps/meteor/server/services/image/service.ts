@@ -1,9 +1,9 @@
 import type { Readable } from 'node:stream';
 import stream from 'node:stream';
 
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import type { IMediaService, ResizeResult } from '@rocket.chat/core-services';
-import { streamToBuffer } from '@rocket.chat/tools';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { IMediaService, ResizeResult } from '@zeki.chat/core-services';
+import { streamToBuffer } from '@zeki.chat/tools';
 import ExifTransformer from 'exif-be-gone';
 import ft from 'file-type';
 import isSvg from 'is-svg';

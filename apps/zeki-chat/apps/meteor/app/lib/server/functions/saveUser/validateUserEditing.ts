@@ -1,7 +1,7 @@
 /* eslint-disable complexity */
-import { MeteorError } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { MeteorError } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import type { UpdateUserData } from './saveUser';
 import { hasPermissionAsync } from '../../../../authorization/server/functions/hasPermission';

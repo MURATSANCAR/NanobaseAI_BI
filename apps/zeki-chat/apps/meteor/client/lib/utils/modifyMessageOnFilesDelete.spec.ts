@@ -1,4 +1,4 @@
-import type { IMessage, MessageAttachment, FileAttachmentProps, MessageQuoteAttachment } from '@rocket.chat/core-typings';
+import type { IMessage, MessageAttachment, FileAttachmentProps, MessageQuoteAttachment } from '@zeki.chat/core-typings';
 
 import { modifyMessageOnFilesDelete } from './modifyMessageOnFilesDelete';
 

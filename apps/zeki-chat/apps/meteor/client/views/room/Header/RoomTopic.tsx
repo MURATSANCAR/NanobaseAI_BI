@@ -1,7 +1,7 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isDirectMessageRoom, isPrivateRoom, isPublicRoom, isTeamRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isDirectMessageRoom, isPrivateRoom, isPublicRoom, isTeamRoom } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
-import { useUserId, useTranslation, useRouter, useUserPresence } from '@rocket.chat/ui-contexts';
+import { useUserId, useTranslation, useRouter, useUserPresence } from '@zeki.chat/ui-contexts';
 
 import MarkdownText from '../../../components/MarkdownText';
 import { useCanEditRoom } from '../contextualBar/Info/hooks/useCanEditRoom';

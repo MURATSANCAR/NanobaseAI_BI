@@ -1,5 +1,5 @@
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
-import { Messages, Users } from '@rocket.chat/models';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
+import { Messages, Users } from '@zeki.chat/models';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 import moment from 'moment';
 

@@ -1,6 +1,6 @@
-import type { IMediaCall, IUser, MediaCallContact, MediaCallActorType } from '@rocket.chat/core-typings';
-import type { VoipPushNotificationEventType } from '@rocket.chat/media-calls';
-import { MediaCalls, Users } from '@rocket.chat/models';
+import type { IMediaCall, IUser, MediaCallContact, MediaCallActorType } from '@zeki.chat/core-typings';
+import type { VoipPushNotificationEventType } from '@zeki.chat/media-calls';
+import { MediaCalls, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { getPushNotificationType } from './getPushNotificationType';

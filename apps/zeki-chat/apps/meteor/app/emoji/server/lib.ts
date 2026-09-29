@@ -1,4 +1,4 @@
-import type { EmojiPackages } from '../lib/rocketchat';
+import type { EmojiPackages } from '../lib/zekichat';
 
 export const emoji: EmojiPackages = {
 	packages: {

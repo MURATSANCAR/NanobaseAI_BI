@@ -1,6 +1,6 @@
-import type { ILivechatAgent } from '@rocket.chat/core-typings';
-import { ILivechatAgentStatus } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { ILivechatAgent } from '@zeki.chat/core-typings';
+import { ILivechatAgentStatus } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import {
 	isGETAgentNextToken,
 	isPOSTLivechatAgentSaveInfoParams,
@@ -9,7 +9,7 @@ import {
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import type { ExtractRoutesFromAPI } from '../../../../api/server/ApiClass';
@@ -164,7 +164,7 @@ const livechatAgentsEndpoints = API.v1.post(
 
 type LivechatAgentsEndpoints = ExtractRoutesFromAPI<typeof livechatAgentsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatAgentsEndpoints {}
 }

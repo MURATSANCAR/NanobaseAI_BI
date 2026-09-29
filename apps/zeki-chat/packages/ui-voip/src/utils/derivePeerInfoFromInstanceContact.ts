@@ -1,4 +1,4 @@
-import type { CallContact } from '@rocket.chat/media-signaling';
+import type { CallContact } from '@zeki.chat/media-signaling';
 
 import type { ExternalPeerInfo, InternalPeerInfo } from '../context/definitions';
 

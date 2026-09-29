@@ -1,4 +1,4 @@
-import type { IMessage, IRoom, AtLeast } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom, AtLeast } from '@zeki.chat/core-typings';
 
 import { settings } from '../../../settings/server';
 

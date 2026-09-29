@@ -1,4 +1,4 @@
-import { Logger } from '@rocket.chat/logger';
+import { Logger } from '@zeki.chat/logger';
 import { performance } from 'universal-perf-hooks';
 
 import { metrics, StatsTracker } from '../../app/metrics/server';
@@ -10,8 +10,8 @@ callbacks.setMetricsTrackers({
 	trackCallback: ({ hook, id }) => {
 		const start = performance.now();
 
-		const stopTimer = metrics.rocketchatCallbacks.startTimer({ hook, callback: id });
-		const stopHistogram = metrics.rocketchatCallbacksSeconds.startTimer({ hook, callback: id });
+		const stopTimer = metrics.zekichatCallbacks.startTimer({ hook, callback: id });
+		const stopHistogram = metrics.zekichatCallbacksSeconds.startTimer({ hook, callback: id });
 
 		return (): void => {
 			const end = performance.now();
@@ -22,11 +22,11 @@ callbacks.setMetricsTrackers({
 		};
 	},
 	trackHook: ({ hook, length }) => {
-		const stopTimer = metrics.rocketchatHooks.startTimer({
+		const stopTimer = metrics.zekichatHooks.startTimer({
 			hook,
 			callbacks_length: length,
 		});
-		const stopHistogram = metrics.rocketchatHooksSeconds.startTimer({
+		const stopHistogram = metrics.zekichatHooksSeconds.startTimer({
 			hook,
 			callbacks_length: length,
 		});

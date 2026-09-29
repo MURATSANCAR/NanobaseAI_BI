@@ -1,6 +1,6 @@
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import { isVideoConfMessage } from '@rocket.chat/core-typings';
-import type { IActionManager } from '@rocket.chat/ui-contexts';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import { isVideoConfMessage } from '@zeki.chat/core-typings';
+import type { IActionManager } from '@zeki.chat/ui-contexts';
 
 import { CurrentEditingMessage } from './CurrentEditingMessage';
 import { UserAction } from './UserAction';

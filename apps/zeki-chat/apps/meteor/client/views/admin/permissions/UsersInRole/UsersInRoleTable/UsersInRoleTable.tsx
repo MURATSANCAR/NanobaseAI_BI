@@ -1,4 +1,4 @@
-import type { IUserInRole, Serialized } from '@rocket.chat/core-typings';
+import type { IUserInRole, Serialized } from '@zeki.chat/core-typings';
 import { Pagination } from '@rocket.chat/fuselage';
 import {
 	GenericTable,
@@ -6,8 +6,8 @@ import {
 	GenericTableHeaderCell,
 	GenericTableBody,
 	GenericTableLoadingTable,
-} from '@rocket.chat/ui-client';
-import type { usePagination } from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
+import type { usePagination } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import UsersInRoleTableRow from './UsersInRoleTableRow';

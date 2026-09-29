@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/mock-providers",
+	"name": "@zeki.chat/mock-providers",
 	"version": "0.4.17",
 	"private": true,
 	"main": "./dist/index.js",
@@ -15,18 +15,18 @@
 	},
 	"dependencies": {
 		"@rocket.chat/emitter": "^0.32.0",
-		"@rocket.chat/i18n": "workspace:~",
-		"@rocket.chat/ui-contexts": "workspace:^",
+		"@zeki.chat/i18n": "workspace:~",
+		"@zeki.chat/ui-contexts": "workspace:^",
 		"@storybook/react": "^8.6.18",
 		"i18next": "~23.4.9",
 		"react-i18next": "~13.2.2"
 	},
 	"devDependencies": {
 		"@faker-js/faker": "~8.0.2",
-		"@rocket.chat/ddp-client": "workspace:~",
-		"@rocket.chat/mongo-adapter": "workspace:~",
-		"@rocket.chat/tools": "workspace:~",
-		"@rocket.chat/ui-video-conf": "workspace:*",
+		"@zeki.chat/ddp-client": "workspace:~",
+		"@zeki.chat/mongo-adapter": "workspace:~",
+		"@zeki.chat/tools": "workspace:~",
+		"@zeki.chat/ui-video-conf": "workspace:*",
 		"@tanstack/react-query": "~5.65.1",
 		"@testing-library/dom": "~10.4.1",
 		"@testing-library/jest-dom": "~6.8.0",

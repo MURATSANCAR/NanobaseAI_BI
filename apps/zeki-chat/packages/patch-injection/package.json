@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/patch-injection",
+	"name": "@zeki.chat/patch-injection",
 	"version": "0.0.2",
 	"private": true,
 	"main": "./dist/index.js",
@@ -17,8 +17,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/jest": "~30.0.0",
 		"eslint": "~9.39.4",
 		"jest": "~30.2.0",

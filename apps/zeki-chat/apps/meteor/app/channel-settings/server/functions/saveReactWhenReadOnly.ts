@@ -1,5 +1,5 @@
-import { Message } from '@rocket.chat/core-services';
-import { Rooms } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import { Rooms } from '@zeki.chat/models';
 import { Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -14,7 +14,7 @@ export const saveReactWhenReadOnly = async function (
 ) {
 	if (!Match.test(rid, String)) {
 		throw new Meteor.Error('invalid-room', 'Invalid room', {
-			function: 'RocketChat.saveReactWhenReadOnly',
+			function: 'ZekiChat.saveReactWhenReadOnly',
 		});
 	}
 

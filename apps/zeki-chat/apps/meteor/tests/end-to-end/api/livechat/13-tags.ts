@@ -1,4 +1,4 @@
-import type { ILivechatDepartment, ILivechatTag } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment, ILivechatTag } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 

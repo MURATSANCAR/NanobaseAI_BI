@@ -4,9 +4,9 @@ import type {
 	AudioAttachmentProps,
 	VideoAttachmentProps,
 	IUpload,
-} from '@rocket.chat/core-typings';
-import { LivechatVisitors, LivechatRooms } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+} from '@zeki.chat/core-typings';
+import { LivechatVisitors, LivechatRooms } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import { Match, check } from 'meteor/check';
 
 import { sendMessageLivechat } from './sendMessageLivechat';

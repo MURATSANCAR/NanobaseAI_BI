@@ -1,11 +1,11 @@
-import type { LoginServiceConfiguration, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { ILoginServiceConfigurationModel } from '@rocket.chat/model-typings';
+import type { LoginServiceConfiguration, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { ILoginServiceConfigurationModel } from '@zeki.chat/model-typings';
 import type { Collection, Db, DeleteResult, Document, FindOptions } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class LoginServiceConfigurationRaw extends BaseRaw<LoginServiceConfiguration> implements ILoginServiceConfigurationModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<LoginServiceConfiguration>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<LoginServiceConfiguration>>) {
 		super(db, 'meteor_accounts_loginServiceConfiguration', trash, {
 			preventSetUpdatedAt: true,
 			collectionNameResolver(name) {

@@ -1,6 +1,6 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { HeaderToolbarAction } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { HeaderToolbarAction } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

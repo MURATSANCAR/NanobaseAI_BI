@@ -1,9 +1,9 @@
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { renderHook } from '@testing-library/react';
 
 import { useAutoupdate } from './useAutoupdate';
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
+jest.mock('@zeki.chat/ui-contexts', () => ({
 	useToastMessageDispatch: jest.fn(() => jest.fn()),
 }));
 

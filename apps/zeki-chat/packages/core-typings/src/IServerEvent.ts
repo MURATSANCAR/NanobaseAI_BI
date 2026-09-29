@@ -1,4 +1,4 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IUser } from './IUser';
 import type {
 	IServerEventAbacActionPerformed,
@@ -15,7 +15,7 @@ export enum ServerEventType {
 	LOGIN = 'login',
 }
 
-export interface IServerEvent extends IRocketChatRecord {
+export interface IServerEvent extends IZekiChatRecord {
 	t: ServerEventType | keyof IServerEvents;
 	ts: Date;
 

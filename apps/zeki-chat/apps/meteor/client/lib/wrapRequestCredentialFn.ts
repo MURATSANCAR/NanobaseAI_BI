@@ -1,4 +1,4 @@
-import type { OAuthConfiguration } from '@rocket.chat/core-typings';
+import type { OAuthConfiguration } from '@zeki.chat/core-typings';
 import { Accounts } from 'meteor/accounts-base';
 import type { Meteor } from 'meteor/meteor';
 import { OAuth } from 'meteor/oauth';

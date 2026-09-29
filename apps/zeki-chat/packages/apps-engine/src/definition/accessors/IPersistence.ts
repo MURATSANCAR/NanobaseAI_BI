@@ -1,4 +1,4 @@
-import type { RocketChatAssociationRecord } from '../metadata';
+import type { ZekiChatAssociationRecord } from '../metadata';
 
 /**
  * Provides an accessor write data to the App's persistent storage.
@@ -22,17 +22,17 @@ export interface IPersistence {
 	 * @param association the association data which includes the model and record id
 	 * @return the resulting record's id
 	 */
-	createWithAssociation(data: object, association: RocketChatAssociationRecord): Promise<string>;
+	createWithAssociation(data: object, association: ZekiChatAssociationRecord): Promise<string>;
 
 	/**
 	 * Creates a new record in the App's persistent storage with the data being
-	 * associated with more than one Rocket.Chat record.
+	 * associated with more than one ZEKI AI CHAT record.
 	 *
 	 * @param data the actual data to store, must be an object otherwise it will error out
 	 * @param associations an array of association data which includes the model and record id
 	 * @return the resulting record's id
 	 */
-	createWithAssociations(data: object, associations: Array<RocketChatAssociationRecord>): Promise<string>;
+	createWithAssociations(data: object, associations: Array<ZekiChatAssociationRecord>): Promise<string>;
 
 	/**
 	 * Updates an existing record with the data provided in the App's persistent storage.
@@ -55,11 +55,11 @@ export interface IPersistence {
 	 * @param upsert whether a record should be created if the id to be updated does not exist
 	 * @return the id of the updated/upserted record
 	 */
-	updateByAssociation(association: RocketChatAssociationRecord, data: object, upsert?: boolean): Promise<string>;
+	updateByAssociation(association: ZekiChatAssociationRecord, data: object, upsert?: boolean): Promise<string>;
 
 	/**
 	 * Updates an existing record with the data provided in the App's persistent storage which are
-	 * associated with more than one Rocket.Chat record.
+	 * associated with more than one ZEKI AI CHAT record.
 	 * This will throw an error if the record doesn't currently exist or if the data is not an object.
 	 *
 	 * @param associations an array of association data which includes the model and record id
@@ -67,7 +67,7 @@ export interface IPersistence {
 	 * @param upsert whether a record should be created if the id to be updated does not exist
 	 * @return the id of the updated/upserted record
 	 */
-	updateByAssociations(associations: Array<RocketChatAssociationRecord>, data: object, upsert?: boolean): Promise<string>;
+	updateByAssociations(associations: Array<ZekiChatAssociationRecord>, data: object, upsert?: boolean): Promise<string>;
 
 	/**
 	 * Removes a record by the provided id and returns the removed record.
@@ -83,7 +83,7 @@ export interface IPersistence {
 	 * @param association the information about the association for the records to be removed
 	 * @return the data of the removed records
 	 */
-	removeByAssociation(association: RocketChatAssociationRecord): Promise<Array<object>>;
+	removeByAssociation(association: ZekiChatAssociationRecord): Promise<Array<object>>;
 
 	/**
 	 * Removes all of the records in persistent storage which are associated with the provided information.
@@ -93,5 +93,5 @@ export interface IPersistence {
 	 * @param associations the information about the associations for the records to be removed
 	 * @return the data of the removed records
 	 */
-	removeByAssociations(associations: Array<RocketChatAssociationRecord>): Promise<Array<object>>;
+	removeByAssociations(associations: Array<ZekiChatAssociationRecord>): Promise<Array<object>>;
 }

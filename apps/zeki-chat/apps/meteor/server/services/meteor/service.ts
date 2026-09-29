@@ -1,9 +1,9 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { api, ServiceClassInternal } from '@rocket.chat/core-services';
-import type { AutoUpdateRecord, IMeteor } from '@rocket.chat/core-services';
-import type { ILivechatAgent, LoginServiceConfiguration, UserStatus } from '@rocket.chat/core-typings';
-import { LoginServiceConfiguration as LoginServiceConfigurationModel, Users } from '@rocket.chat/models';
-import { wrapExceptions } from '@rocket.chat/tools';
+import { api, ServiceClassInternal } from '@zeki.chat/core-services';
+import type { AutoUpdateRecord, IMeteor } from '@zeki.chat/core-services';
+import type { ILivechatAgent, LoginServiceConfiguration, UserStatus } from '@zeki.chat/core-typings';
+import { LoginServiceConfiguration as LoginServiceConfigurationModel, Users } from '@zeki.chat/models';
+import { wrapExceptions } from '@zeki.chat/tools';
 import { Meteor } from 'meteor/meteor';
 
 import { processOnChange, serviceConfigCallbacks } from './userReactivity';

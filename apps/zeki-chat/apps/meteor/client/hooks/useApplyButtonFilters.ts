@@ -1,6 +1,6 @@
-import type { IUIActionButton } from '@rocket.chat/apps-engine/definition/ui';
-import { RoomTypeFilter } from '@rocket.chat/apps-engine/definition/ui';
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IUIActionButton } from '@zeki.chat/apps-engine/definition/ui';
+import { RoomTypeFilter } from '@zeki.chat/apps-engine/definition/ui';
+import type { IRoom } from '@zeki.chat/core-typings';
 import {
 	isDirectMessageRoom,
 	isMultipleDirectMessageRoom,
@@ -9,8 +9,8 @@ import {
 	isPrivateTeamRoom,
 	isPublicDiscussion,
 	isPublicTeamRoom,
-} from '@rocket.chat/core-typings';
-import { AuthorizationContext, useUserId } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/core-typings';
+import { AuthorizationContext, useUserId } from '@zeki.chat/ui-contexts';
 import { useCallback, useContext } from 'react';
 
 import { useRoom } from '../views/room/contexts/RoomContext';

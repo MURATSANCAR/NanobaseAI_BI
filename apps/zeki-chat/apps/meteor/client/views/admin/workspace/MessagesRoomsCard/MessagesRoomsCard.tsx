@@ -1,4 +1,4 @@
-import type { IStats } from '@rocket.chat/core-typings';
+import type { IStats } from '@zeki.chat/core-typings';
 import { Card } from '@rocket.chat/fuselage';
 import type { ReactElement } from 'react';
 import { memo } from 'react';

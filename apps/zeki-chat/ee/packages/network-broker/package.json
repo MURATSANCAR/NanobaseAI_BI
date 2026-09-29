@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/network-broker",
+	"name": "@zeki.chat/network-broker",
 	"version": "0.2.36",
 	"private": true,
 	"main": "./dist/index.js",
@@ -16,13 +16,13 @@
 		"typecheck": "tsc --noEmit --skipLibCheck"
 	},
 	"dependencies": {
-		"@rocket.chat/core-services": "workspace:^",
+		"@zeki.chat/core-services": "workspace:^",
 		"ejson": "^2.2.3",
 		"moleculer": "^0.14.35",
 		"pino": "10.3.1"
 	},
 	"devDependencies": {
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/chai": "~4.3.20",
 		"@types/ejson": "^2.2.2",
 		"@types/node": "~22.19.17",

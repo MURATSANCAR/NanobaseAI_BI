@@ -1,6 +1,6 @@
-import { MeteorError } from '@rocket.chat/core-services';
-import type { ILivechatVisitor, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatVisitors, Users, LivechatRooms, LivechatInquiry, Rooms, Subscriptions } from '@rocket.chat/models';
+import { MeteorError } from '@zeki.chat/core-services';
+import type { ILivechatVisitor, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatVisitors, Users, LivechatRooms, LivechatInquiry, Rooms, Subscriptions } from '@zeki.chat/models';
 import type { MatchKeysAndValues, OnlyFieldsOfType } from 'mongodb';
 
 import { getAllowedCustomFields } from './getAllowedCustomFields';

@@ -11,8 +11,8 @@ import {
 	ToggleSwitch,
 	FieldGroup,
 } from '@rocket.chat/fuselage';
-import { ContextualbarScrollableContent } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useRoute, useEndpoint } from '@rocket.chat/ui-contexts';
+import { ContextualbarScrollableContent } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useRoute, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useCallback, useId } from 'react';
 import type { SubmitHandler } from 'react-hook-form';

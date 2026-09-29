@@ -1,6 +1,6 @@
-import { isOAuthUser, type IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { isOAuthUser, type IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import bcrypt from 'bcrypt';
 import { Accounts } from 'meteor/accounts-base';
 

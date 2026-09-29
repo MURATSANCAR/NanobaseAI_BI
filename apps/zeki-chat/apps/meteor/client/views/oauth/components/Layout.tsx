@@ -1,6 +1,6 @@
 import { Box } from '@rocket.chat/fuselage';
 import { VerticalWizardLayout } from '@rocket.chat/layout';
-import { useAssetWithDarkModePath, useSetting } from '@rocket.chat/ui-contexts';
+import { useAssetWithDarkModePath, useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 
 type LayoutProps = {

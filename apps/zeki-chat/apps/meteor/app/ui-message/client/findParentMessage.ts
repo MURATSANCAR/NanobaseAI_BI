@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { callWithErrorHandling } from '../../../client/lib/utils/callWithErrorHandling';
 import { Messages } from '../../../client/stores';

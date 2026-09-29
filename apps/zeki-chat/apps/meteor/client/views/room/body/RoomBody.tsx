@@ -1,7 +1,7 @@
 import { Box } from '@rocket.chat/fuselage';
-import { isTruthy } from '@rocket.chat/tools';
-import { CustomVirtuaScrollbars, useEmbeddedLayout } from '@rocket.chat/ui-client';
-import { usePermission, useRole, useSetting, useTranslation, useUser, useUserPreference, useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { isTruthy } from '@zeki.chat/tools';
+import { CustomVirtuaScrollbars, useEmbeddedLayout } from '@zeki.chat/ui-client';
+import { usePermission, useRole, useSetting, useTranslation, useUser, useUserPreference, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import type { MouseEvent, ReactElement } from 'react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 

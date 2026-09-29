@@ -1,5 +1,5 @@
-import type { IRoom, ISubscription, IUser, ValueOf } from '@rocket.chat/core-typings';
-import { isRoomFederated, isDirectMessageRoom, isPublicRoom } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription, IUser, ValueOf } from '@zeki.chat/core-typings';
+import { isRoomFederated, isDirectMessageRoom, isPublicRoom } from '@zeki.chat/core-typings';
 
 import { RoomMemberActions, RoomSettingsEnum } from '../../../definition/IRoomTypeConfig';
 import type { RoomRoles } from '../../hooks/useRoomRolesQuery';

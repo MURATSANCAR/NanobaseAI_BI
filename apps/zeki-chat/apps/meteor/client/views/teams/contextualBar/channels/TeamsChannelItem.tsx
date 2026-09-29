@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import {
 	Box,
 	Icon,
@@ -12,8 +12,8 @@ import {
 	Tag,
 } from '@rocket.chat/fuselage';
 import { usePrefersReducedMotion } from '@rocket.chat/fuselage-hooks';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

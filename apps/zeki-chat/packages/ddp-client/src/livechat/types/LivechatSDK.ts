@@ -1,5 +1,5 @@
-import type { Serialized } from '@rocket.chat/core-typings';
-import type { OperationParams, OperationResult } from '@rocket.chat/rest-typings';
+import type { Serialized } from '@zeki.chat/core-typings';
+import type { OperationParams, OperationResult } from '@zeki.chat/rest-typings';
 
 import type { StreamerCallbackArgs } from '../../types/streams';
 

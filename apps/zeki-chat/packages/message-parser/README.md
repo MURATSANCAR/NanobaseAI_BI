@@ -6,7 +6,7 @@
   </a>
 </p>
 
-# `@rocket.chat/message-parser`
+# `@zeki.chat/message-parser`
 
 > ZEKI AI CHAT parser for messages
 

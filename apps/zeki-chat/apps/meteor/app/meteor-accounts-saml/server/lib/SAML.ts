@@ -1,8 +1,8 @@
 import type { ServerResponse } from 'node:http';
 
-import type { IUser, IIncomingMessage, IPersonalAccessToken, IRole } from '@rocket.chat/core-typings';
-import { CredentialTokens, Rooms, Users, Roles, SamlUsedAssertions } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import type { IUser, IIncomingMessage, IPersonalAccessToken, IRole } from '@zeki.chat/core-typings';
+import { CredentialTokens, Rooms, Users, Roles, SamlUsedAssertions } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import { escapeRegExp, escapeHTML } from '@rocket.chat/string-helpers';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';

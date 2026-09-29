@@ -1,4 +1,4 @@
-import type { IHttpRequest, IHttpResponse, RequestMethod } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IHttpRequest, IHttpResponse, RequestMethod } from '@zeki.chat/apps-engine/definition/accessors';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

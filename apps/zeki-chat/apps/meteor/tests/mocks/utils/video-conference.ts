@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { IRoom, VideoConferenceType } from '@rocket.chat/core-typings';
+import type { IRoom, VideoConferenceType } from '@zeki.chat/core-typings';
 
 const callId = faker.database.mongodbObjectId();
 const uid = faker.database.mongodbObjectId();

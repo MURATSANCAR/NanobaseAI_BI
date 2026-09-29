@@ -1,10 +1,10 @@
 import { VisuallyHidden } from '@react-aria/visually-hidden';
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Button, Icon } from '@rocket.chat/fuselage';
 import { Field, FieldGroup, FieldLabel, FieldRow, FieldError, FieldHint, TextInput, TextAreaInput } from '@rocket.chat/fuselage-forms';
-import { validateEmail } from '@rocket.chat/tools';
-import { CustomFieldsForm } from '@rocket.chat/ui-client';
+import { validateEmail } from '@zeki.chat/tools';
+import { CustomFieldsForm } from '@zeki.chat/ui-client';
 import {
 	useAccountsCustomFields,
 	useToastMessageDispatch,
@@ -12,7 +12,7 @@ import {
 	useEndpoint,
 	useUser,
 	useLayout,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import type { AllHTMLAttributes, ReactElement } from 'react';
 import { useCallback } from 'react';

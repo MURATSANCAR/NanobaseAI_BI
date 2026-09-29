@@ -1,6 +1,6 @@
-import { ILivechatAgentStatus } from '@rocket.chat/core-typings';
-import type { ILivechatAgent, IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { ILivechatAgentStatus } from '@zeki.chat/core-typings';
+import type { ILivechatAgent, IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import type { Filter } from 'mongodb';
 
 import { RoutingManager } from './RoutingManager';

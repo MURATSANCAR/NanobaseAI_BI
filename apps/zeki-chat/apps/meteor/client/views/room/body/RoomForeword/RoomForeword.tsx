@@ -1,7 +1,7 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { isDirectMessageRoom } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { isDirectMessageRoom } from '@zeki.chat/core-typings';
 import { Flex, Box } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

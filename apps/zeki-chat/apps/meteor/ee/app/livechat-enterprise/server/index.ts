@@ -1,5 +1,5 @@
 import { Capabilities } from '@zeki.chat/capabilities';
-import { patchOmniCore } from '@rocket.chat/omni-core-ee';
+import { patchOmniCore } from '@zeki.chat/omni-core-ee';
 import { Meteor } from 'meteor/meteor';
 
 import './hooks/afterTakeInquiry';

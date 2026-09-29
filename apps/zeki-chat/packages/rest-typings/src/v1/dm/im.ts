@@ -1,4 +1,4 @@
-import type { IMessage, IRoom, IUser, IUploadWithUser, ISubscription } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom, IUser, IUploadWithUser, ISubscription } from '@zeki.chat/core-typings';
 
 import type { DmCreateProps } from './DmCreateProps';
 import type { DmFileProps } from './DmFileProps';

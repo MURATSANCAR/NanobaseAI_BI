@@ -1,7 +1,7 @@
-import { type Job, Agenda } from '@rocket.chat/agenda';
-import { Logger } from '@rocket.chat/logger';
-import { CronHistory } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { type Job, Agenda } from '@zeki.chat/agenda';
+import { Logger } from '@zeki.chat/logger';
+import { CronHistory } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import type { Db } from 'mongodb';
 
 const logger = new Logger('Cron');
@@ -65,7 +65,7 @@ export class AgendaCronJobs {
 	public async start(mongo: Db): Promise<void> {
 		this.scheduler = new Agenda({
 			mongo,
-			db: { collection: 'rocketchat_cron' },
+			db: { collection: 'zeki_cron' },
 			defaultConcurrency: 1,
 			processEvery: '1 minute',
 		});

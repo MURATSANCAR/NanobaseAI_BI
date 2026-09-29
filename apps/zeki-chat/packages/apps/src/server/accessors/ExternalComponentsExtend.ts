@@ -1,5 +1,5 @@
-import type { IExternalComponentsExtend } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IExternalComponent } from '@rocket.chat/apps-engine/definition/externalComponent/IExternalComponent';
+import type { IExternalComponentsExtend } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IExternalComponent } from '@zeki.chat/apps-engine/definition/externalComponent/IExternalComponent';
 
 import type { AppExternalComponentManager } from '../managers/AppExternalComponentManager';
 

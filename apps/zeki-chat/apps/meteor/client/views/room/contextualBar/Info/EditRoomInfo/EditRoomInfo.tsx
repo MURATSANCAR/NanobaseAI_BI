@@ -1,6 +1,6 @@
 /* eslint-disable complexity */
-import type { IRoomWithRetentionPolicy } from '@rocket.chat/core-typings';
-import { isRoomFederated } from '@rocket.chat/core-typings';
+import type { IRoomWithRetentionPolicy } from '@zeki.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import {
 	FieldError,
@@ -31,9 +31,9 @@ import {
 	ContextualbarScrollableContent,
 	ContextualbarFooter,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useSetting, useTranslation, useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useSetting, useTranslation, useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ChangeEvent } from 'react';
 import { useId, useMemo } from 'react';

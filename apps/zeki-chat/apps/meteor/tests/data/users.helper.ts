@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IUser } from '@rocket.chat/core-typings';
-import { UserStatus } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IUser } from '@zeki.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 import supertest from 'supertest';
 import type { Response } from 'supertest';
 
@@ -25,9 +25,9 @@ export interface IRequestConfig {
  *
  * Sets up a new request instance and authenticates with the specified
  * domain, user, and password. This is essential for federation testing
- * where multiple Rocket.Chat instances need to be accessed.
+ * where multiple ZEKI AI CHAT instances need to be accessed.
  *
- * @param domain - The base URL of the Rocket.Chat instance
+ * @param domain - The base URL of the ZEKI AI CHAT instance
  * @param user - The username for authentication
  * @param password - The password for authentication
  * @returns Promise resolving to request configuration with credentials

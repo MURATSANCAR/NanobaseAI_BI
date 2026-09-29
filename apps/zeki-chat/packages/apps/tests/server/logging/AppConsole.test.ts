@@ -2,8 +2,8 @@ import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 import type { TestContext } from 'node:test';
 
-import { LogMessageSeverity } from '@rocket.chat/apps-engine/definition/accessors';
-import { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
+import { LogMessageSeverity } from '@zeki.chat/apps-engine/definition/accessors';
+import { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
 import type * as stackTrace from 'stack-trace';
 
 import { AppConsole } from '../../../src/server/logging';

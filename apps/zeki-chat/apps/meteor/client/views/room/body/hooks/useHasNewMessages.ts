@@ -1,7 +1,7 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { isEditedMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { isEditedMessage } from '@zeki.chat/core-typings';
 import { useDebouncedCallback } from '@rocket.chat/fuselage-hooks';
-import { clientCallbacks } from '@rocket.chat/ui-client';
+import { clientCallbacks } from '@zeki.chat/ui-client';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 

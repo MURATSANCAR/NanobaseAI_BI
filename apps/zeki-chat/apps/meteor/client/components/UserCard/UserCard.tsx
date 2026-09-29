@@ -1,7 +1,7 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Button, IconButton } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useEmbeddedLayout } from '@rocket.chat/ui-client';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useEmbeddedLayout } from '@zeki.chat/ui-client';
 import type { ReactNode, ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 

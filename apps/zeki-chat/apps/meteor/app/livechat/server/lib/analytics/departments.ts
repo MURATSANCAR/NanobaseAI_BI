@@ -1,4 +1,4 @@
-import { LivechatRooms, Messages } from '@rocket.chat/models';
+import { LivechatRooms, Messages } from '@zeki.chat/models';
 
 import { settings } from '../../../../settings/server';
 

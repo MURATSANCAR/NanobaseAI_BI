@@ -22,29 +22,29 @@ export default {
 	outputDir: 'tests/e2e/.playwright',
 	reporter: [
 		['list'],
-		process.env.REPORTER_ROCKETCHAT_REPORT === 'true' && [
-			'./reporters/rocketchat.ts',
+		process.env.REPORTER_ZEKICHAT_REPORT === 'true' && [
+			'./reporters/zekichat.ts',
 			{
-				url: process.env.REPORTER_ROCKETCHAT_URL,
-				apiKey: process.env.REPORTER_ROCKETCHAT_API_KEY,
-				branch: process.env.REPORTER_ROCKETCHAT_BRANCH,
-				run: Number(process.env.REPORTER_ROCKETCHAT_RUN),
-				draft: process.env.REPORTER_ROCKETCHAT_DRAFT === 'true',
-				headSha: process.env.REPORTER_ROCKETCHAT_HEAD_SHA,
+				url: process.env.REPORTER_ZEKICHAT_URL,
+				apiKey: process.env.REPORTER_ZEKICHAT_API_KEY,
+				branch: process.env.REPORTER_ZEKICHAT_BRANCH,
+				run: Number(process.env.REPORTER_ZEKICHAT_RUN),
+				draft: process.env.REPORTER_ZEKICHAT_DRAFT === 'true',
+				headSha: process.env.REPORTER_ZEKICHAT_HEAD_SHA,
 			},
 		],
-		process.env.REPORTER_ROCKETCHAT_REPORT === 'true' && [
+		process.env.REPORTER_ZEKICHAT_REPORT === 'true' && [
 			'./reporters/jira.ts',
 			{
 				url: `https://rocketchat.atlassian.net`,
-				apiKey: process.env.REPORTER_JIRA_ROCKETCHAT_API_KEY ?? process.env.JIRA_TOKEN,
-				branch: process.env.REPORTER_ROCKETCHAT_BRANCH,
-				run: Number(process.env.REPORTER_ROCKETCHAT_RUN),
-				headSha: process.env.REPORTER_ROCKETCHAT_HEAD_SHA,
-				author: process.env.REPORTER_ROCKETCHAT_AUTHOR,
-				run_url: process.env.REPORTER_ROCKETCHAT_RUN_URL,
-				pr: Number(process.env.REPORTER_ROCKETCHAT_PR),
-				draft: process.env.REPORTER_ROCKETCHAT_DRAFT === 'true',
+				apiKey: process.env.REPORTER_JIRA_ZEKICHAT_API_KEY ?? process.env.JIRA_TOKEN,
+				branch: process.env.REPORTER_ZEKICHAT_BRANCH,
+				run: Number(process.env.REPORTER_ZEKICHAT_RUN),
+				headSha: process.env.REPORTER_ZEKICHAT_HEAD_SHA,
+				author: process.env.REPORTER_ZEKICHAT_AUTHOR,
+				run_url: process.env.REPORTER_ZEKICHAT_RUN_URL,
+				pr: Number(process.env.REPORTER_ZEKICHAT_PR),
+				draft: process.env.REPORTER_ZEKICHAT_DRAFT === 'true',
 			},
 		],
 		[

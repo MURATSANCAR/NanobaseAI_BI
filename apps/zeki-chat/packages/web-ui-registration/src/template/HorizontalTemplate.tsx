@@ -6,7 +6,7 @@ import {
 	HorizontalWizardLayoutTitle,
 	HorizontalWizardLayoutFooter,
 } from '@rocket.chat/layout';
-import { useSetting, useAssetWithDarkModePath } from '@rocket.chat/ui-contexts';
+import { useSetting, useAssetWithDarkModePath } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 
 import LoginPoweredBy from '../components/LoginPoweredBy';

@@ -1,6 +1,6 @@
 import { Button, ButtonGroup } from '@rocket.chat/fuselage';
 import { Form } from '@rocket.chat/layout';
-import { useDocumentTitle } from '@rocket.chat/ui-client';
+import { useDocumentTitle } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import type { DispatchLoginRouter } from './hooks/useLoginRouter';
@@ -17,7 +17,7 @@ const GuestForm = ({ setLoginRoute }: { setLoginRoute: DispatchLoginRouter }) =>
 			<Form.Container>
 				<ButtonGroup large stretch vertical>
 					<Button primary onClick={() => setLoginRoute('login')}>
-						{t('registration.page.guest.loginWithRocketChat')}
+						{t('registration.page.guest.loginWithZekiChat')}
 					</Button>
 					<Button onClick={() => setLoginRoute('anonymous')}>{t('registration.page.guest.continueAsGuest')}</Button>
 				</ButtonGroup>

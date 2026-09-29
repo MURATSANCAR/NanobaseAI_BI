@@ -1,4 +1,4 @@
-import type { IHttpResponse } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IHttpResponse } from '@zeki.chat/apps-engine/definition/accessors';
 
 import type { IHttpBridgeRequestInfo } from '../../../src/server/bridges';
 import { HttpBridge } from '../../../src/server/bridges';

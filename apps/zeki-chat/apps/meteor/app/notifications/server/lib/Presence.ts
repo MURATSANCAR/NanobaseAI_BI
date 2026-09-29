@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import type { StreamerEvents } from '@rocket.chat/ddp-client';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { StreamerEvents } from '@zeki.chat/ddp-client';
 import { Emitter } from '@rocket.chat/emitter';
 
 import { Streamer } from '../../../../server/modules/streamer/streamer.module';

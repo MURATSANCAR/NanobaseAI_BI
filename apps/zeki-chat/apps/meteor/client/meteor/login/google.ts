@@ -1,4 +1,4 @@
-import { Random } from '@rocket.chat/random';
+import { Random } from '@zeki.chat/random';
 import { Accounts } from 'meteor/accounts-base';
 // eslint-disable-next-line import/no-duplicates
 import { Google } from 'meteor/google-oauth';

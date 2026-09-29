@@ -1,10 +1,10 @@
 import * as assert from 'node:assert';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 
-import type { ILivechatRoom } from '@rocket.chat/apps-engine/definition/livechat/ILivechatRoom';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
+import type { ILivechatRoom } from '@zeki.chat/apps-engine/definition/livechat/ILivechatRoom';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
 
 import { MessageBuilder, ModifyUpdater, RoomBuilder } from '../../../src/server/accessors';
 import type { AppBridges, MessageBridge, RoomBridge } from '../../../src/server/bridges';

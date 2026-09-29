@@ -1,4 +1,4 @@
-import type { TextObject } from '@rocket.chat/ui-kit';
+import type { TextObject } from '@zeki.chat/ui-kit';
 
 import { useAppTranslation } from '../hooks/useAppTranslation';
 

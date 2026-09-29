@@ -1,4 +1,4 @@
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
 
@@ -6,7 +6,7 @@ import { useOutboundMessageAccess } from './useOutboundMessageAccess';
 import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import { useOmnichannelEnabled } from '../../../hooks/useOmnichannelEnabled';
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
+jest.mock('@zeki.chat/ui-contexts', () => ({
 	usePermission: jest.fn(),
 }));
 

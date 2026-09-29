@@ -9,7 +9,7 @@ import {
 	ContextualbarIcon,
 	ContextualbarTitle,
 	VirtualizedScrollbars,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';

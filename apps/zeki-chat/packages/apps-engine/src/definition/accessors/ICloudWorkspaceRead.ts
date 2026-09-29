@@ -5,7 +5,7 @@ import type { IWorkspaceToken } from '../cloud/IWorkspaceToken';
  * related to the Cloud connectivity of the workspace.
  *
  * Methods in this accessor will usually connect to the
- * Rocket.Chat Cloud, which means they won't work properly
+ * ZEKI AI CHAT Cloud, which means they won't work properly
  * in air-gapped environment.
  *
  * This accessor available via `IRead` object, which is

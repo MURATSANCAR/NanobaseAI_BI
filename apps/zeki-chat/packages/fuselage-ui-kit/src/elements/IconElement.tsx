@@ -1,5 +1,5 @@
 import { Icon, FramedIcon } from '@rocket.chat/fuselage';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import type { ComponentProps, ReactElement } from 'react';
 
 import type { BlockProps } from '../utils/BlockProps';

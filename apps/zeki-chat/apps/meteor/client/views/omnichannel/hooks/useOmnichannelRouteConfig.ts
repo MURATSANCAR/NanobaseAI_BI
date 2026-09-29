@@ -1,4 +1,4 @@
-import type { OmichannelRoutingConfig } from '@rocket.chat/core-typings';
+import type { OmichannelRoutingConfig } from '@zeki.chat/core-typings';
 
 import { useOmnichannel } from './useOmnichannel';
 

@@ -1,7 +1,7 @@
-import { Agenda } from '@rocket.chat/agenda';
-import type { IUser } from '@rocket.chat/core-typings';
-import type { MainLogger } from '@rocket.chat/logger';
-import { LivechatRooms, Users } from '@rocket.chat/models';
+import { Agenda } from '@zeki.chat/agenda';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { MainLogger } from '@zeki.chat/logger';
+import { LivechatRooms, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import { MongoInternals } from 'meteor/mongo';
 import moment from 'moment';
@@ -72,7 +72,7 @@ export class AutoCloseOnHoldSchedulerClass {
 		const [room, user] = await Promise.all([LivechatRooms.findOneById(roomId), this.getSchedulerUser()]);
 		if (!room || !user) {
 			throw new Error(
-				`Unable to process AutoCloseOnHoldScheduler job because room or user not found for roomId: ${roomId} and userId: rocket.cat`,
+				`Unable to process AutoCloseOnHoldScheduler job because room or user not found for roomId: ${roomId} and userId: zeki.bot`,
 			);
 		}
 
@@ -87,7 +87,7 @@ export class AutoCloseOnHoldSchedulerClass {
 
 	private async getSchedulerUser(): Promise<IUser> {
 		if (!this.schedulerUser) {
-			const schedulerUser = await Users.findOneById('rocket.cat');
+			const schedulerUser = await Users.findOneById('zeki.bot');
 			if (!schedulerUser) {
 				throw new Error('Scheduler user not found');
 			}

@@ -1,4 +1,4 @@
-import type { ILivechatCustomField, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatCustomField, Serialized } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import {
 	FieldError,
@@ -19,8 +19,8 @@ import {
 	ContextualbarClose,
 	ContextualbarFooter,
 	ContextualbarScrollableContent,
-} from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useMemo } from 'react';
 import { FormProvider, useForm, Controller } from 'react-hook-form';

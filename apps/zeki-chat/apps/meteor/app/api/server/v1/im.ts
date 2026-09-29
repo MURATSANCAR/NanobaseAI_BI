@@ -1,8 +1,8 @@
 /**
  * Docs: https://github.com/RocketChat/developer-docs/blob/master/reference/api/rest-api/endpoints/team-collaboration-endpoints/im-endpoints
  */
-import type { IMessage, IRoom, ISubscription, IUser } from '@rocket.chat/core-typings';
-import { Subscriptions, Uploads, Messages, Rooms, Users } from '@rocket.chat/models';
+import type { IMessage, IRoom, ISubscription, IUser } from '@zeki.chat/core-typings';
+import { Subscriptions, Uploads, Messages, Rooms, Users } from '@zeki.chat/models';
 import {
 	ajv,
 	ajvQuery,
@@ -14,7 +14,7 @@ import {
 	isDmMessagesProps,
 	isDmCreateProps,
 	isDmHistoryProps,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import type { FindOptions } from 'mongodb';
@@ -954,7 +954,7 @@ const dmEndpoints = API.v1
 
 export type DmEndpoints = ExtractRoutesFromAPI<typeof dmEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends DmEndpoints {}
 }

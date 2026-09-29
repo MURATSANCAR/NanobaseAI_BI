@@ -8,7 +8,7 @@ import {
 	GenericTableLoadingTable,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import { hashKey } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

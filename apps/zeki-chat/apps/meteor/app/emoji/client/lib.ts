@@ -1,7 +1,7 @@
 import { Emitter } from '@rocket.chat/emitter';
 import emojione from 'emojione';
 
-import type { EmojiPackages } from '../lib/rocketchat';
+import type { EmojiPackages } from '../lib/zekichat';
 
 export const emojiEmitter = new Emitter<{ updated: void }>();
 

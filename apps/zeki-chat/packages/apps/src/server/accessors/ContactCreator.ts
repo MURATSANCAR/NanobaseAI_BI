@@ -1,5 +1,5 @@
-import type { IContactCreator } from '@rocket.chat/apps-engine/definition/accessors/IContactCreator';
-import type { ILivechatContact } from '@rocket.chat/apps-engine/definition/livechat';
+import type { IContactCreator } from '@zeki.chat/apps-engine/definition/accessors/IContactCreator';
+import type { ILivechatContact } from '@zeki.chat/apps-engine/definition/livechat';
 
 import type { AppBridges } from '../bridges';
 

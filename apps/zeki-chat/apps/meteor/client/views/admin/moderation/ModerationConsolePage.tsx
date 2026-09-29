@@ -1,6 +1,6 @@
 import { Tabs, TabsItem } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useTranslation, useRouteParameter, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useTranslation, useRouteParameter, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
 import ModConsoleReportDetails from './ModConsoleReportDetails';

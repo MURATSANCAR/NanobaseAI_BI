@@ -1,4 +1,4 @@
-import type { IUser, IRoom } from '@rocket.chat/core-typings';
+import type { IUser, IRoom } from '@zeki.chat/core-typings';
 import { Callout } from '@rocket.chat/fuselage';
 import {
 	ContextualbarHeader,
@@ -8,8 +8,8 @@ import {
 	ContextualbarClose,
 	ContextualbarContent,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useEndpoint, useRolesDescription } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint, useRolesDescription } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';

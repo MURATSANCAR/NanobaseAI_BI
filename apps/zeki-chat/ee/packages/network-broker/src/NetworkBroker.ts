@@ -1,11 +1,10 @@
 import Stream from 'node:stream';
 
-import { asyncLocalStorage } from '@rocket.chat/core-services';
-import type { CallingOptions, IBroker, IBrokerNode, IServiceMetrics, IServiceClass, EventSignatures } from '@rocket.chat/core-services';
-import { injectCurrentContext, tracerSpan } from '@rocket.chat/tracing';
+import { asyncLocalStorage } from '@zeki.chat/core-services';
+import type { CallingOptions, IBroker, IBrokerNode, IServiceMetrics, IServiceClass, EventSignatures } from '@zeki.chat/core-services';
+import { injectCurrentContext, tracerSpan } from '@zeki.chat/tracing';
 import type { ServiceBroker, Context, ServiceSchema } from 'moleculer';
 
-import { EnterpriseCheck } from './EnterpriseCheck';
 
 const events: { [k: string]: string } = {
 	onNodeConnected: '$node.connected',
@@ -24,7 +23,7 @@ export class NetworkBroker implements IBroker {
 
 	private started: Promise<boolean> = Promise.resolve(false);
 
-	private defaultDependencies = ['settings', 'license'];
+	private defaultDependencies = ['settings', 'capabilities'];
 
 	metrics: IServiceMetrics;
 
@@ -103,7 +102,6 @@ export class NetworkBroker implements IBroker {
 		const service: ServiceSchema = {
 			name,
 			actions: {},
-			mixins: !instance.isInternal() ? [EnterpriseCheck] : [],
 			...(dependencies.length ? { dependencies } : {}),
 			events: instanceEvents.reduce<Record<string, (ctx: Context) => void>>((map, { eventName }) => {
 				map[eventName] = /^\$/.test(eventName)

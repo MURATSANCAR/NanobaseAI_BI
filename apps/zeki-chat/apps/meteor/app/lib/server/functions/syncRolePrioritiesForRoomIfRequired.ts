@@ -1,5 +1,5 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { Subscriptions, Users, Rooms } from '@rocket.chat/models';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { Subscriptions, Users, Rooms } from '@zeki.chat/models';
 
 import { calculateRoomRolePriorityFromRoles } from '../../../../lib/roles/calculateRoomRolePriorityFromRoles';
 

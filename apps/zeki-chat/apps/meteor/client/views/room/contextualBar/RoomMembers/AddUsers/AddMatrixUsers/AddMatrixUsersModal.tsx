@@ -52,7 +52,7 @@ const AddMatrixUsersModal = ({ onClose, matrixIdVerifiedStatus, onSave, complete
 	const usersToInvite = completeUserList.filter(
 		(user) => !(matrixIdVerifiedStatus.has(user) && matrixIdVerifiedStatus.get(user) === 'UNVERIFIED'),
 	);
-	const rocketChatUsers = usersToInvite.filter((user) => !matrixIdVerifiedStatus.has(user));
+	const zekiChatUsers = usersToInvite.filter((user) => !matrixIdVerifiedStatus.has(user));
 
 	const { handleSubmit } = useForm<FormValues>({
 		defaultValues: {
@@ -93,7 +93,7 @@ const AddMatrixUsersModal = ({ onClose, matrixIdVerifiedStatus, onSave, complete
 							{_matrixId} <Icon mis={4} name={verificationStatusAsIcon(_verificationStatus)} title={t(_verificationStatus)} size='x20' />
 						</Box>
 					))}
-					{rocketChatUsers.map((_user) => (
+					{zekiChatUsers.map((_user) => (
 						<Box is='li' key={`rocket-chat-${_user}`}>
 							{_user}
 						</Box>

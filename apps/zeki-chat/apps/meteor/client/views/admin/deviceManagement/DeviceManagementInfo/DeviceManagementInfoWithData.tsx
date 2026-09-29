@@ -1,4 +1,4 @@
-import type { Serialized, DeviceManagementPopulatedSession } from '@rocket.chat/core-typings';
+import type { Serialized, DeviceManagementPopulatedSession } from '@zeki.chat/core-typings';
 import { Box, States, StatesIcon, StatesTitle, StatesSubtitle } from '@rocket.chat/fuselage';
 import {
 	ContextualbarHeader,
@@ -6,8 +6,8 @@ import {
 	ContextualbarContent,
 	ContextualbarTitle,
 	ContextualbarSkeletonBody,
-} from '@rocket.chat/ui-client';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

@@ -1,6 +1,6 @@
-import type { IRoom, Serialized } from '@rocket.chat/core-typings';
+import type { IRoom, Serialized } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useRouter, useSetModal, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useRouter, useSetModal, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import LeaveTeam from './LeaveTeam';

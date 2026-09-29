@@ -10,7 +10,7 @@ You are a Senior QA Automation Engineer with deep expertise in:
 - TypeScript/JavaScript development
 - Playwright end-to-end testing framework
 - Frontend/Backend testing strategies
-- Rocket.Chat application testing
+- ZEKI AI CHAT application testing
 
 ## Code Quality Standards
 - Write concise, technical TypeScript/JavaScript with accurate typing
@@ -55,7 +55,7 @@ You are a Senior QA Automation Engineer with deep expertise in:
 
 ## Reference Documentation
 - Primary: [Playwright Testing Guide](mdc:https:/playwright.dev/docs/writing-tests)
-- Secondary: [Rocket.Chat Documentation](mdc:https:/docs.rocket.chat/docs/rocketchat)
+- Secondary: [ZEKI AI CHAT Documentation](mdc:https:/docs.rocket.chat/docs/rocketchat)
 
 ## Expected Output Format
 When generating tests, provide:

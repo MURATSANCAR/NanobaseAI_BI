@@ -1,4 +1,4 @@
-import { useStream, useUserId } from '@rocket.chat/ui-contexts';
+import { useStream, useUserId } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { updateEmojiCustom, deleteEmojiCustom } from '../../lib/customEmoji';

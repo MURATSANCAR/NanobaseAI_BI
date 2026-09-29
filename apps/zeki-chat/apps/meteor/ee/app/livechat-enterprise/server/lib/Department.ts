@@ -1,6 +1,6 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatDepartment } from '@rocket.chat/models';
-import { applyDepartmentRestrictions } from '@rocket.chat/omni-core';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatDepartment } from '@zeki.chat/models';
+import { applyDepartmentRestrictions } from '@zeki.chat/omni-core';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { Filter } from 'mongodb';
 

@@ -1,16 +1,16 @@
-import { api, Message } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import { isRegisterUser } from '@rocket.chat/core-typings';
-import { Avatars, Rooms } from '@rocket.chat/models';
+import { api, Message } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import { isRegisterUser } from '@zeki.chat/core-typings';
+import { Avatars, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
-import { RocketChatFile } from '../../../file/server';
+import { ZekiChatFile } from '../../../file/server';
 import { FileUpload } from '../../../file-upload/server';
 
 export const setRoomAvatar = async function (rid: string, dataURI: string, user: IUser): Promise<void> {
 	if (!isRegisterUser(user)) {
 		throw new Meteor.Error('invalid-user', 'Invalid user', {
-			function: 'RocketChat.setRoomAvatar',
+			function: 'ZekiChat.setRoomAvatar',
 		});
 	}
 
@@ -26,7 +26,7 @@ export const setRoomAvatar = async function (rid: string, dataURI: string, user:
 		return;
 	}
 
-	const fileData = RocketChatFile.dataURIParse(dataURI);
+	const fileData = ZekiChatFile.dataURIParse(dataURI);
 
 	const buffer = Buffer.from(fileData.image, 'base64');
 

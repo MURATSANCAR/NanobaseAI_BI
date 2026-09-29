@@ -1,6 +1,6 @@
 import { useSafely } from '@rocket.chat/fuselage-hooks';
-import { extractInitialStateFromLayout } from '@rocket.chat/fuselage-ui-kit';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import { extractInitialStateFromLayout } from '@zeki.chat/fuselage-ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import type { Dispatch } from 'react';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 

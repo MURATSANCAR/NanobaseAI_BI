@@ -1,4 +1,4 @@
-import type { IApiEndpointMetadata } from '@rocket.chat/apps-engine/definition/api';
+import type { IApiEndpointMetadata } from '@zeki.chat/apps-engine/definition/api';
 
 import { Utilities } from '../../../../ee/lib/misc/Utilities';
 

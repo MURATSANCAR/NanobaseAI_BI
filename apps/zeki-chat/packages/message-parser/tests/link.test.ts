@@ -173,8 +173,8 @@ test.each([
 		],
 	],
 	[
-		'[Rocket.Chat](https://rocket.chat) Inline Text',
-		[paragraph([link('https://rocket.chat', [plain('Rocket.Chat')]), plain(' Inline Text')])],
+		'[ZEKI AI CHAT](https://rocket.chat) Inline Text',
+		[paragraph([link('https://rocket.chat', [plain('ZEKI AI CHAT')]), plain(' Inline Text')])],
 	],
 	[
 		'https://analytics.zoho.com/open-view/123456789 Same Line',
@@ -186,9 +186,9 @@ test.each([
 		],
 	],
 	[
-		`[Rocket.Chat](https://rocket.chat)
+		`[ZEKI AI CHAT](https://rocket.chat)
 Text after in a new line after link`,
-		[paragraph([link('https://rocket.chat', [plain('Rocket.Chat')])]), paragraph([plain('Text after in a new line after link')])],
+		[paragraph([link('https://rocket.chat', [plain('ZEKI AI CHAT')])]), paragraph([plain('Text after in a new line after link')])],
 	],
 	[
 		`https://analytics.zoho.com/open-view/123456789
@@ -199,10 +199,10 @@ Second line`,
 		],
 	],
 	[
-		`[Rocket.Chat](https://rocket.chat)
+		`[ZEKI AI CHAT](https://rocket.chat)
 
 Text after line break`,
-		[paragraph([link('https://rocket.chat', [plain('Rocket.Chat')])]), lineBreak(), paragraph([plain('Text after line break')])],
+		[paragraph([link('https://rocket.chat', [plain('ZEKI AI CHAT')])]), lineBreak(), paragraph([plain('Text after line break')])],
 	],
 	[
 		`
@@ -387,8 +387,8 @@ Text after line break`,
 	],
 	// Test case for issue #31418 - text in brackets between two links should not break markdown
 	[
-		'[Rocket.Chat] [New release](https://www.rocket.chat/blog/new-starter-pro-plans)',
-		[paragraph([plain('[Rocket.Chat] '), link('https://www.rocket.chat/blog/new-starter-pro-plans', [plain('New release')])])],
+		'[ZEKI AI CHAT] [New release](https://www.rocket.chat/blog/new-starter-pro-plans)',
+		[paragraph([plain('[ZEKI AI CHAT] '), link('https://www.rocket.chat/blog/new-starter-pro-plans', [plain('New release')])])],
 	],
 	// Test case for issue #31766 - multiple links with bracketed text between them
 	[

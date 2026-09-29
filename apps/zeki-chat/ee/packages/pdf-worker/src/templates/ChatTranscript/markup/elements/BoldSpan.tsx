@@ -1,5 +1,5 @@
 import { StyleSheet, View, Text } from '@react-pdf/renderer';
-import type * as MessageParser from '@rocket.chat/message-parser';
+import type * as MessageParser from '@zeki.chat/message-parser';
 
 import EmojiSpan from './EmojiSpan';
 import ItalicSpan from './ItalicSpan';

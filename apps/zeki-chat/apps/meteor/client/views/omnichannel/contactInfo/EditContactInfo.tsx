@@ -1,7 +1,7 @@
-import type { ILivechatContact, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatContact, Serialized } from '@zeki.chat/core-typings';
 import { ButtonGroup, Button, IconButton, Divider } from '@rocket.chat/fuselage';
 import { Field, FieldLabel, FieldRow, FieldError, TextInput } from '@rocket.chat/fuselage-forms';
-import { validateEmail } from '@rocket.chat/tools';
+import { validateEmail } from '@zeki.chat/tools';
 import {
 	CustomFieldsForm,
 	ContextualbarScrollableContent,
@@ -12,8 +12,8 @@ import {
 	ContextualbarClose,
 	ContextualbarDialog,
 	ContextualbarSkeleton,
-} from '@rocket.chat/ui-client';
-import { useEndpoint, useSetModal } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint, useSetModal } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { Fragment, useId } from 'react';

@@ -1,5 +1,5 @@
-import type { IOmnichannelSystemMessage } from '@rocket.chat/core-typings';
-import { isPOSTLivechatPageVisitedParams } from '@rocket.chat/rest-typings';
+import type { IOmnichannelSystemMessage } from '@zeki.chat/core-typings';
+import { isPOSTLivechatPageVisitedParams } from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import { savePageHistory } from '../../lib/tracking';

@@ -1,5 +1,5 @@
 import { Accordion, AccordionItem, Box, Callout, FieldGroup } from '@rocket.chat/fuselage';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useTranslation, Trans } from 'react-i18next';
 
 import AbacEnabledToggle from './AbacEnabledToggle';

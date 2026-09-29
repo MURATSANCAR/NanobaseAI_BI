@@ -1,17 +1,17 @@
-import type { IRoomExtender } from '@rocket.chat/apps-engine/definition/accessors';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IRoomExtender } from '@zeki.chat/apps-engine/definition/accessors';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { Utilities } from '../misc/Utilities';
 
 export class RoomExtender implements IRoomExtender {
-	public kind: RocketChatAssociationModel.ROOM;
+	public kind: ZekiChatAssociationModel.ROOM;
 
 	private members: Array<IUser>;
 
 	constructor(private room: IRoom) {
-		this.kind = RocketChatAssociationModel.ROOM;
+		this.kind = ZekiChatAssociationModel.ROOM;
 		this.members = [];
 	}
 

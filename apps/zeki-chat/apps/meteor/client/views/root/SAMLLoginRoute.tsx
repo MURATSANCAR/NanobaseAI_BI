@@ -1,4 +1,4 @@
-import { useRouter, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useRouter, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { Meteor } from 'meteor/meteor';
 import { useEffect } from 'react';
 

@@ -1,11 +1,11 @@
-import type { IIntegration, IUser, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IBaseModel, IIntegrationsModel } from '@rocket.chat/model-typings';
+import type { IIntegration, IUser, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IBaseModel, IIntegrationsModel } from '@zeki.chat/model-typings';
 import type { Collection, Db, FindCursor, FindOptions, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class IntegrationsRaw extends BaseRaw<IIntegration> implements IIntegrationsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IIntegration>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IIntegration>>) {
 		super(db, 'integrations', trash);
 	}
 

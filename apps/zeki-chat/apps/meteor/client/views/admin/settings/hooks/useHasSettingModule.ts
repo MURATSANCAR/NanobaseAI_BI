@@ -1,5 +1,5 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import { useCapabilities } from '@rocket.chat/ui-client';
+import type { ISetting } from '@zeki.chat/core-typings';
+import { useCapabilities } from '@zeki.chat/ui-client';
 
 export const useHasSettingModule = (setting?: ISetting) => {
 	const { data } = useCapabilities();

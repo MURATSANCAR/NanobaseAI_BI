@@ -1,6 +1,6 @@
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { useRouter } from '@zeki.chat/ui-contexts';
 
 export const useGoToThread = ({ replace = false }: { replace?: boolean } = {}) => {
 	const router = useRouter();

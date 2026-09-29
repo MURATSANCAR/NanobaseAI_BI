@@ -1,8 +1,8 @@
 import crypto from 'node:crypto';
 import type { ServerResponse, IncomingMessage } from 'node:http';
 
-import type { IRocketChatAssets, IRocketChatAsset, ISetting } from '@rocket.chat/core-typings';
-import { Settings } from '@rocket.chat/models';
+import type { IZekiChatAssets, IZekiChatAsset, ISetting } from '@zeki.chat/core-typings';
+import { Settings } from '@zeki.chat/models';
 import type { NextHandleFunction } from 'connect';
 import sizeOf from 'image-size';
 import { Meteor } from 'meteor/meteor';
@@ -10,19 +10,19 @@ import { WebApp, WebAppInternals } from 'meteor/webapp';
 import sharp from 'sharp';
 
 import { hasPermissionAsync } from '../../authorization/server/functions/hasPermission';
-import { RocketChatFile } from '../../file/server';
+import { ZekiChatFile } from '../../file/server';
 import { notifyOnSettingChangedById } from '../../lib/server/lib/notifyListener';
 import { settings, settingsRegistry } from '../../settings/server';
 import { getExtension } from '../../utils/lib/mimeTypes';
 import { getURL } from '../../utils/server/getURL';
 
-const RocketChatAssetsInstance = new RocketChatFile.GridFS({
+const ZekiChatAssetsInstance = new ZekiChatFile.GridFS({
 	name: 'assets',
 });
 
-type IRocketChatAssetsConfig = Record<keyof IRocketChatAssets, IRocketChatAsset & { settingOptions?: Partial<ISetting> }>;
+type IZekiChatAssetsConfig = Record<keyof IZekiChatAssets, IZekiChatAsset & { settingOptions?: Partial<ISetting> }>;
 
-const assets: IRocketChatAssetsConfig = {
+const assets: IZekiChatAssetsConfig = {
 	logo: {
 		label: 'logo (svg, png, jpg)',
 		defaultUrl: 'images/logo/logo.svg',
@@ -212,11 +212,11 @@ const assets: IRocketChatAssetsConfig = {
 };
 
 function getAssetByKey(key: string) {
-	return assets[key as keyof IRocketChatAssets];
+	return assets[key as keyof IZekiChatAssets];
 }
 
-class RocketChatAssetsClass {
-	get assets(): IRocketChatAssets {
+class ZekiChatAssetsClass {
+	get assets(): IZekiChatAssets {
 		return assets;
 	}
 
@@ -226,19 +226,19 @@ class RocketChatAssetsClass {
 		asset: string,
 	): Promise<{
 		key: string;
-		value: IRocketChatAsset;
+		value: IZekiChatAsset;
 	}> {
 		const assetInstance = getAssetByKey(asset);
 		if (!assetInstance) {
 			throw new Meteor.Error('error-invalid-asset', 'Invalid asset', {
-				function: 'RocketChat.Assets.setAsset',
+				function: 'ZekiChat.Assets.setAsset',
 			});
 		}
 
 		const extension = getExtension(contentType);
 		if (assetInstance.constraints.extensions.includes(extension) === false) {
 			throw new Meteor.Error('error-invalid-file-type', `Invalid file type: ${contentType}`, {
-				function: 'RocketChat.Assets.setAsset',
+				function: 'ZekiChat.Assets.setAsset',
 			});
 		}
 
@@ -254,10 +254,10 @@ class RocketChatAssetsClass {
 			}
 		}
 
-		const rs = RocketChatFile.bufferToStream(file);
-		await RocketChatAssetsInstance.deleteFile(asset);
+		const rs = ZekiChatFile.bufferToStream(file);
+		await ZekiChatAssetsInstance.deleteFile(asset);
 
-		const ws = RocketChatAssetsInstance.createWriteStream(asset, contentType);
+		const ws = ZekiChatAssetsInstance.createWriteStream(asset, contentType);
 
 		return new Promise((resolve) => {
 			ws.on('end', () => {
@@ -266,9 +266,9 @@ class RocketChatAssetsClass {
 					const value = {
 						url: `assets/${asset}.${extension}`,
 						defaultUrl: assetInstance.defaultUrl,
-					} as IRocketChatAsset;
+					} as IZekiChatAsset;
 
-					await RocketChatAssets.processAsset(key, value);
+					await ZekiChatAssets.processAsset(key, value);
 					resolve({
 						key,
 						value,
@@ -283,17 +283,17 @@ class RocketChatAssetsClass {
 	public async unsetAsset(asset: string) {
 		if (!getAssetByKey(asset)) {
 			throw new Meteor.Error('error-invalid-asset', 'Invalid asset', {
-				function: 'RocketChat.Assets.unsetAsset',
+				function: 'ZekiChat.Assets.unsetAsset',
 			});
 		}
 
-		await RocketChatAssetsInstance.deleteFile(asset);
+		await ZekiChatAssetsInstance.deleteFile(asset);
 		const key = `Assets_${asset}`;
 		const value = {
 			defaultUrl: getAssetByKey(asset).defaultUrl,
 		};
 
-		await RocketChatAssets.processAsset(key, value);
+		await ZekiChatAssets.processAsset(key, value);
 
 		return {
 			key,
@@ -324,7 +324,7 @@ class RocketChatAssetsClass {
 			return;
 		}
 
-		const file = await RocketChatAssetsInstance.getFile(assetKey);
+		const file = await ZekiChatAssetsInstance.getFile(assetKey);
 		if (!file) {
 			assetValue.cache = undefined;
 			return;
@@ -352,16 +352,16 @@ class RocketChatAssetsClass {
 	}
 
 	public getURL(assetName: string, options = { cdn: false, full: true }): string {
-		const asset = settings.get<IRocketChatAsset>(assetName);
+		const asset = settings.get<IZekiChatAsset>(assetName);
 		const url = asset.url || asset.defaultUrl;
 
 		return getURL(url as string, options);
 	}
 }
 
-export const RocketChatAssets = new RocketChatAssetsClass();
+export const ZekiChatAssets = new ZekiChatAssetsClass();
 
-export async function addAssetToSetting(asset: string, value: IRocketChatAsset, options?: Partial<ISetting>): Promise<void> {
+export async function addAssetToSetting(asset: string, value: IZekiChatAsset, options?: Partial<ISetting>): Promise<void> {
 	const key = `Assets_${asset}`;
 
 	await settingsRegistry.add(
@@ -380,7 +380,7 @@ export async function addAssetToSetting(asset: string, value: IRocketChatAsset, 
 		},
 	);
 
-	const currentValue = settings.get<IRocketChatAsset>(key);
+	const currentValue = settings.get<IZekiChatAsset>(key);
 
 	if (currentValue && typeof currentValue === 'object' && currentValue.defaultUrl !== getAssetByKey(asset).defaultUrl) {
 		currentValue.defaultUrl = getAssetByKey(asset).defaultUrl;
@@ -414,7 +414,7 @@ export const refreshClients = async (userId: string) => {
 		throw new Error('Managing assets not allowed');
 	}
 
-	return RocketChatAssets.refreshClients();
+	return ZekiChatAssets.refreshClients();
 };
 
 const listener = (req: IncomingMessage, res: ServerResponse, next: NextHandleFunction) => {

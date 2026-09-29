@@ -1,6 +1,6 @@
 import { Box } from '@rocket.chat/fuselage';
 import { HorizontalWizardLayoutCaption } from '@rocket.chat/layout';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';

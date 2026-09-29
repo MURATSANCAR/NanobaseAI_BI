@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 
 import { ajvQuery } from '../Ajv';
 import { withGroupBaseProperties } from './BaseProps';

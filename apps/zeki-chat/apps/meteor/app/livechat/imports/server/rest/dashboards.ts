@@ -1,5 +1,5 @@
-import { OmnichannelAnalytics } from '@rocket.chat/core-services';
-import { Users } from '@rocket.chat/models';
+import { OmnichannelAnalytics } from '@zeki.chat/core-services';
+import { Users } from '@zeki.chat/models';
 import {
 	isGETDashboardTotalizerParams,
 	isGETDashboardsAgentStatusParams,
@@ -7,7 +7,7 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	GETLivechatAnalyticsDashboardsChartDataSuccessSchema,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import type { ExtractRoutesFromAPI } from '../../../../api/server/ApiClass';
@@ -290,7 +290,7 @@ const livechatAnalyticsEndpoints = API.v1.get(
 
 type LivechatAnalyticsEndpoints = ExtractRoutesFromAPI<typeof livechatAnalyticsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatAnalyticsEndpoints {}
 }

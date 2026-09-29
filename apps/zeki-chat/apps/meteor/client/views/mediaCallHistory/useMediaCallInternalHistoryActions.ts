@@ -1,7 +1,7 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useGoToDirectMessage } from '@rocket.chat/ui-client';
-import { useRouter, useUserAvatarPath } from '@rocket.chat/ui-contexts';
-import { useWidgetExternalControls, usePeekMediaSessionState } from '@rocket.chat/ui-voip';
+import { useGoToDirectMessage } from '@zeki.chat/ui-client';
+import { useRouter, useUserAvatarPath } from '@zeki.chat/ui-contexts';
+import { useWidgetExternalControls, usePeekMediaSessionState } from '@zeki.chat/ui-voip';
 import { useMemo } from 'react';
 
 export type InternalCallHistoryContact = {

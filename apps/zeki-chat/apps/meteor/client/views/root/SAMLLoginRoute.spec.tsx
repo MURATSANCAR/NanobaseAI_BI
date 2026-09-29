@@ -1,4 +1,4 @@
-import { MockedServerContext, MockedUserContext } from '@rocket.chat/mock-providers';
+import { MockedServerContext, MockedUserContext } from '@zeki.chat/mock-providers';
 import { render } from '@testing-library/react';
 import { Meteor } from 'meteor/meteor';
 

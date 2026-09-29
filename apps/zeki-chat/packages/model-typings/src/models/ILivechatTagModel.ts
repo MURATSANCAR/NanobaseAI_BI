@@ -1,4 +1,4 @@
-import type { ILivechatTag } from '@rocket.chat/core-typings';
+import type { ILivechatTag } from '@zeki.chat/core-typings';
 import type { FindOptions, DeleteResult, FindCursor } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

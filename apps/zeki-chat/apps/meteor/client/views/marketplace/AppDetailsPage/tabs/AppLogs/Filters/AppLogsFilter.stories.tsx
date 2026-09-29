@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { action } from '@storybook/addon-actions';
 import type { Meta } from '@storybook/react';
 import { FormProvider } from 'react-hook-form';

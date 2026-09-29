@@ -1,6 +1,6 @@
 import { Field, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
-import { GenericTable, GenericTableHeaderCell, GenericTableBody, GenericTableLoadingRow, GenericTableHeader } from '@rocket.chat/ui-client';
-import { useTranslation, useMethod } from '@rocket.chat/ui-contexts';
+import { GenericTable, GenericTableHeaderCell, GenericTableBody, GenericTableLoadingRow, GenericTableHeader } from '@zeki.chat/ui-client';
+import { useTranslation, useMethod } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useState } from 'react';

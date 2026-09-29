@@ -42,7 +42,7 @@ const { runVerifyContactChannel } = proxyquire.noCallThru().load('../../../../..
 	'../../../app/livechat/server/lib/QueueManager': { QueueManager: queueManager },
 	'../../../server/database/utils': { client: clientMock },
 	'../../../app/livechat-enterprise/server/lib/logger': { logger: { info: sinon.stub(), debug: sinon.stub() } },
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 });
 
 describe('verifyContactChannel', () => {

@@ -1,5 +1,5 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { NotificationQueue, Subscriptions } from '@rocket.chat/models';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { NotificationQueue, Subscriptions } from '@zeki.chat/models';
 
 import { callbacks } from './callbacks';
 import { notifyOnSubscriptionChangedByRoomIdAndUserId } from '../../app/lib/server/lib/notifyListener';

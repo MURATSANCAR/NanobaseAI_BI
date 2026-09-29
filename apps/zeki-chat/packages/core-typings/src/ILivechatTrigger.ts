@@ -1,4 +1,4 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
 export type ILivechatTriggerType = 'time-on-site' | 'page-url' | 'chat-opened-by-visitor' | 'after-guest-registration';
 
@@ -35,7 +35,7 @@ export const isExternalServiceTrigger = (
 
 export type ILivechatTriggerAction = ILivechatSendMessageAction | ILivechatUseExternalServiceAction;
 
-export interface ILivechatTrigger extends IRocketChatRecord {
+export interface ILivechatTrigger extends IZekiChatRecord {
 	name: string;
 	description: string;
 	enabled: boolean;

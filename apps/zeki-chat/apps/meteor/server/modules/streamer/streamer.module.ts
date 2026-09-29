@@ -1,5 +1,5 @@
-import { MeteorError } from '@rocket.chat/core-services';
-import type { StreamerEvents } from '@rocket.chat/ddp-client';
+import { MeteorError } from '@zeki.chat/core-services';
+import type { StreamerEvents } from '@zeki.chat/ddp-client';
 import { EventEmitter } from 'eventemitter3';
 
 import type { IPublication, Rule, Connection, DDPSubscription, IStreamer, IRules, TransformMessage } from './types';

@@ -1,7 +1,7 @@
 import { Box, CodeSnippet } from '@rocket.chat/fuselage';
 import { useClipboard } from '@rocket.chat/fuselage-hooks';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { useAbsoluteUrl, useSetting } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { useAbsoluteUrl, useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,9 +14,9 @@ const Installation = (): ReactElement => {
 	const installString = `<!-- Start of ZEKI AI CHAT Livechat Script -->
 	<script type="text/javascript">
 	(function(w, d, s, u) {
-		w.RocketChat = function(c) { w.RocketChat._.push(c) }; w.RocketChat._ = []; w.RocketChat.url = u;
+		w.ZekiChat = function(c) { w.ZekiChat._.push(c) }; w.ZekiChat._ = []; w.ZekiChat.url = u;
 		var h = d.getElementsByTagName(s)[0], j = d.createElement(s);
-		j.async = true; j.src = '${siteUrl}/livechat/rocketchat-livechat.min.js?_=201903270000';
+		j.async = true; j.src = '${siteUrl}/livechat/zekichat-livechat.min.js?_=201903270000';
 		h.parentNode.insertBefore(j, h);
 	})(window, document, 'script', '${siteUrl}/livechat');
 	</script>`;
@@ -30,7 +30,7 @@ const Installation = (): ReactElement => {
 				<Box maxWidth='x600' alignSelf='center'>
 					<p>
 						<RawText>
-							{t('To_install_RocketChat_Livechat_in_your_website_copy_paste_this_code_above_the_last_body_tag_on_your_site')}
+							{t('To_install_ZekiChat_Livechat_in_your_website_copy_paste_this_code_above_the_last_body_tag_on_your_site')}
 						</RawText>
 					</p>
 					<CodeSnippet buttonText={hasCopied ? t('Copied') : t('Copy')} buttonDisabled={hasCopied} onClick={() => copy()}>

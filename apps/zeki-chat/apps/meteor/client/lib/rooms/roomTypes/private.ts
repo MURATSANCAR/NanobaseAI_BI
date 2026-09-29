@@ -1,5 +1,5 @@
-import type { AtLeast, IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated } from '@rocket.chat/core-typings';
+import type { AtLeast, IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
 
 import { getRoomAvatarURL } from '../../../../app/utils/client/getRoomAvatarURL';
 import type { IRoomTypeClientDirectives } from '../../../../definition/IRoomTypeConfig';

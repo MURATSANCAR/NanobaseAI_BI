@@ -141,7 +141,7 @@ async function generateTable({ owner, repo } = {}) {
 
 	const text = [
 		'<tr>',
-		header({data: 'Rocket.Chat Release'}),
+		header({data: 'ZEKI AI CHAT Release'}),
 		header({data: 'Released At'}),
 		header({data: 'End of Life'}),
 		'</tr>',
@@ -225,4 +225,4 @@ async function generateTable({ owner, repo } = {}) {
 	}
 }
 
-generateTable({ owner: 'RocketChat', repo: 'Rocket.Chat' });
+generateTable({ owner: 'ZekiChat', repo: 'ZEKI AI CHAT' });

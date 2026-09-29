@@ -1,4 +1,4 @@
-import type { BannerPlatform, IBanner, Optional } from '@rocket.chat/core-typings';
+import type { BannerPlatform, IBanner, Optional } from '@zeki.chat/core-typings';
 import type { Document, FindCursor, FindOptions, UpdateResult, InsertOneResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

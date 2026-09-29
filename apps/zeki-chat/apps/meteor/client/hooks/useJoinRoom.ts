@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { sdk } from '../../app/utils/client/lib/SDKClient';

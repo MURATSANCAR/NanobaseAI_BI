@@ -1,4 +1,4 @@
-import { useRoomToolbox, useSetting } from '@rocket.chat/ui-contexts';
+import { useRoomToolbox, useSetting } from '@zeki.chat/ui-contexts';
 
 import BannedUsers from './BannedUsers';
 import { useRoomBannedUsers } from '../../../hooks/useRoomBannedUsers';

@@ -1,4 +1,4 @@
-import type { SettingValueRoomPick } from '@rocket.chat/core-typings';
+import type { SettingValueRoomPick } from '@zeki.chat/core-typings';
 import { Field, FieldHint, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
 import type { ReactElement } from 'react';
 

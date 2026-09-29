@@ -1,7 +1,7 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IInstanceStatus, IRoom, ITeam, IUser } from '@rocket.chat/core-typings';
-import { TeamType } from '@rocket.chat/core-typings';
-import type { IInstance } from '@rocket.chat/rest-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IInstanceStatus, IRoom, ITeam, IUser } from '@zeki.chat/core-typings';
+import { TeamType } from '@zeki.chat/core-typings';
+import type { IInstance } from '@zeki.chat/rest-typings';
 import { AssertionError, expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -643,7 +643,7 @@ describe('miscellaneous', () => {
 					type: 'online',
 					icon: true,
 					channel: 'general',
-					name: 'Rocket.Chat',
+					name: 'ZEKI AI CHAT',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(400)
@@ -662,7 +662,7 @@ describe('miscellaneous', () => {
 						type: 'online',
 						icon: true,
 						channel: 'general',
-						name: 'Rocket.Chat',
+						name: 'ZEKI AI CHAT',
 					})
 					.expect('Content-Type', 'image/svg+xml;charset=utf-8')
 					.expect(200)

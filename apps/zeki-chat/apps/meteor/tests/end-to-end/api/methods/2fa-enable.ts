@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { expect } from 'chai';
 import { before, describe, it, after } from 'mocha';
 import speakeasy from 'speakeasy';

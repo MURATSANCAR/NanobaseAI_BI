@@ -1,6 +1,6 @@
-import type { IMessage, MessageAttachmentAction } from '@rocket.chat/core-typings';
+import type { IMessage, MessageAttachmentAction } from '@zeki.chat/core-typings';
 import { Button } from '@rocket.chat/fuselage';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 
 import { usePerformActionMutation } from './hooks/usePerformActionMutation';

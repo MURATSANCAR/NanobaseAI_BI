@@ -2,19 +2,17 @@ import {
 	Box,
 	Callout,
 	Margins,
-	ProgressBar,
 	Skeleton,
 	StatesAction,
 	StatesIcon,
 	StatesSubtitle,
 	ToggleSwitch,
 } from '@rocket.chat/fuselage';
-import { ContextualbarContent } from '@rocket.chat/ui-client';
-import { useEndpoint, useSetting } from '@rocket.chat/ui-contexts';
+import { ContextualbarContent } from '@zeki.chat/ui-client';
+import { useEndpoint, useSetting } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
-import { useIsEnterprise } from '../../../hooks/useIsEnterprise';
 import { useActiveConnections } from '../../hooks/useActiveConnections';
 
 const CustomUserStatusService = () => {
@@ -25,9 +23,8 @@ const CustomUserStatusService = () => {
 	const disablePresenceService = useMutation({
 		mutationFn: () => togglePresenceServiceEndpoint(),
 	});
-	const { data: license, isPending: licenseIsLoading } = useIsEnterprise();
 
-	if (result.isPending || disablePresenceService.isPending || licenseIsLoading) {
+	if (result.isPending || disablePresenceService.isPending) {
 		return (
 			<Box pi={16} pb={8}>
 				<Skeleton />
@@ -50,7 +47,7 @@ const CustomUserStatusService = () => {
 		);
 	}
 
-	const { current, max, percentage } = result.data;
+	const { current } = result.data;
 
 	return (
 		<>
@@ -59,16 +56,15 @@ const CustomUserStatusService = () => {
 					<Box display='flex' justifyContent='space-between' mb={16}>
 						<Box fontScale='p1'>{t('Service_status')}</Box>
 						<ToggleSwitch
-							disabled={disablePresenceService.isPending || !presenceDisabled || percentage === 100}
+							disabled={disablePresenceService.isPending || !presenceDisabled}
 							checked={!presenceDisabled}
 							onChange={() => disablePresenceService.mutate()}
 						/>
 					</Box>
 					<Box display='flex' fontScale='c1' justifyContent='space-between' mb={16}>
 						<Box>{t('Active_connections')}</Box>
-						<Box>{license?.isEnterprise ? current : `${current}/${max}`}</Box>
+						<Box>{current}</Box>
 					</Box>
-					{!license?.isEnterprise && <ProgressBar percentage={percentage} variant={percentage > 80 ? 'danger' : 'success'} />}
 					{presenceDisabled && (
 						<Margins block={16}>
 							<Callout type='danger' title={t('Service_disabled')}>
@@ -77,25 +73,6 @@ const CustomUserStatusService = () => {
 						</Margins>
 					)}
 				</div>
-				<Box display='flex' flexDirection='column' mb={16}>
-					{license?.isEnterprise ? (
-						<>
-							<Box fontScale='p2' mb={8}>
-								{t('Premium_cap_description')}
-							</Box>
-							{/* Zeki: vendor scaling-docs link removed */}
-						</>
-					) : (
-						<>
-							<Box fontScale='p2' mb={8}>
-								{t('Community_cap_description')}
-							</Box>
-							<Box fontScale='p2' mb={8}>
-								{t('Premium_cap_description')}
-							</Box>
-						</>
-					)}
-				</Box>
 			</ContextualbarContent>
 			{/* Zeki: vendor 'More about Premium plans' footer removed */}
 		</>

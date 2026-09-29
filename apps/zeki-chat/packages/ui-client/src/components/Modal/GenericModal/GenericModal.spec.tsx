@@ -1,4 +1,4 @@
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import { act, screen, renderHook } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';

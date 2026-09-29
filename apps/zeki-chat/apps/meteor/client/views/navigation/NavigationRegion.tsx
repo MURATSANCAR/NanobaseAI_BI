@@ -1,7 +1,7 @@
 import { FocusScope } from '@react-aria/focus';
 import { css } from '@rocket.chat/css-in-js';
 import { Box } from '@rocket.chat/fuselage';
-import { useLayout, useLayoutSizes } from '@rocket.chat/ui-contexts';
+import { useLayout, useLayoutSizes } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 
 import Sidebar from './sidebar';

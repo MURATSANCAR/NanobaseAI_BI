@@ -1,4 +1,4 @@
-import type { SlashCommandCallbackParams } from '@rocket.chat/core-typings';
+import type { SlashCommandCallbackParams } from '@zeki.chat/core-typings';
 
 import { queryClient } from '../../../client/lib/queryClient';
 import { roomsQueryKeys } from '../../../client/lib/queryKeys';

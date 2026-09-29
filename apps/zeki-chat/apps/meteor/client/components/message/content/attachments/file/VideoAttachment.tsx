@@ -1,6 +1,6 @@
-import type { VideoAttachmentProps } from '@rocket.chat/core-typings';
+import type { VideoAttachmentProps } from '@zeki.chat/core-typings';
 import { Box, MessageGenericPreview } from '@rocket.chat/fuselage';
-import { useMediaUrl } from '@rocket.chat/ui-contexts';
+import { useMediaUrl } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import { useReloadOnError } from './hooks/useReloadOnError';

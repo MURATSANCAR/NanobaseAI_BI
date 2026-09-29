@@ -1,20 +1,20 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { defaultTranslationNamespace, availableTranslationNamespaces, extractTranslationNamespaces } from '@rocket.chat/i18n';
-import { Logger } from '@rocket.chat/logger';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { defaultTranslationNamespace, availableTranslationNamespaces, extractTranslationNamespaces } from '@zeki.chat/i18n';
+import { Logger } from '@zeki.chat/logger';
 import * as i18next from 'i18next';
 import sprintf from 'i18next-sprintf-postprocessor';
 
 import { OmnichannelTranscript } from './OmnichannelTranscript';
 import { invalidSystemMessage, messages, validSystemMessage, validTranslatableSystemMessage } from './OmnichannelTranscript.fixtures';
 
-jest.mock('@rocket.chat/pdf-worker', () => ({
+jest.mock('@zeki.chat/pdf-worker', () => ({
 	PdfWorker: jest.fn().mockImplementation(() => ({
 		renderToStream: jest.fn().mockResolvedValue(Buffer.from('')),
 		isMimeTypeValid: jest.fn(() => true),
 	})),
 }));
 
-jest.mock('@rocket.chat/core-services', () => ({
+jest.mock('@zeki.chat/core-services', () => ({
 	ServiceClass: class {
 		onSettingChanged = jest.fn();
 	},
@@ -34,7 +34,7 @@ jest.mock('@rocket.chat/core-services', () => ({
 	},
 }));
 
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	LivechatRooms: {
 		findOneById: jest.fn().mockResolvedValue({}),
 	},
@@ -55,7 +55,7 @@ jest.mock('@rocket.chat/models', () => ({
 	},
 }));
 
-jest.mock('@rocket.chat/tools', () => ({
+jest.mock('@zeki.chat/tools', () => ({
 	guessTimezone: jest.fn().mockReturnValue('UTC'),
 	guessTimezoneFromOffset: jest.fn().mockReturnValue('UTC'),
 	streamToBuffer: jest.fn().mockResolvedValue(Buffer.from('')),

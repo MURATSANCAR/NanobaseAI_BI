@@ -1,4 +1,4 @@
-import { LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
+import { LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
 
 import { filterBusinessHoursThatMustBeOpened } from './filterBusinessHoursThatMustBeOpened';
 

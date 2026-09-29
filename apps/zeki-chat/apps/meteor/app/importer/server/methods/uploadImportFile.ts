@@ -1,13 +1,13 @@
-import { Import } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import { Import } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { Meteor } from 'meteor/meteor';
 
 import { Importers } from '..';
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
-import { RocketChatFile } from '../../../file/server';
+import { ZekiChatFile } from '../../../file/server';
 import { ProgressStep } from '../../lib/ImporterProgressStep';
-import { RocketChatImportFileInstance } from '../startup/store';
+import { ZekiChatImportFileInstance } from '../startup/store';
 
 export const executeUploadImportFile = async (
 	userId: IUser['_id'],
@@ -34,8 +34,8 @@ export const executeUploadImportFile = async (
 
 	// Save the file on the File Store
 	const file = Buffer.from(binaryContent, 'base64');
-	const readStream = RocketChatFile.bufferToStream(file);
-	const writeStream = RocketChatImportFileInstance.createWriteStream(newFileName, contentType);
+	const readStream = ZekiChatFile.bufferToStream(file);
+	const writeStream = ZekiChatImportFileInstance.createWriteStream(newFileName, contentType);
 
 	await new Promise<void>((resolve, reject) => {
 		try {
@@ -55,7 +55,7 @@ export const executeUploadImportFile = async (
 	await instance.updateProgress(ProgressStep.FILE_LOADED);
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		uploadImportFile(binaryContent: string, contentType: string, fileName: string, importerKey: string): void;

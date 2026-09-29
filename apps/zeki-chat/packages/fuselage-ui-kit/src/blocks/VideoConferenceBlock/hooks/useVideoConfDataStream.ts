@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { useStream } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { useStream } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 

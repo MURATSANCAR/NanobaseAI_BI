@@ -1,8 +1,8 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { TextAreaInput, FieldGroup, Field, FieldRow, FieldError, FieldLabel, FieldDescription, Box } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useId } from 'react';
 import { useForm, Controller } from 'react-hook-form';

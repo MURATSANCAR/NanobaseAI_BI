@@ -1,4 +1,4 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
 export interface IAbacAttributeDefinition {
 	/**
@@ -13,4 +13,4 @@ export interface IAbacAttributeDefinition {
 	values: string[];
 }
 
-export interface IAbacAttribute extends IRocketChatRecord, IAbacAttributeDefinition {}
+export interface IAbacAttribute extends IZekiChatRecord, IAbacAttributeDefinition {}

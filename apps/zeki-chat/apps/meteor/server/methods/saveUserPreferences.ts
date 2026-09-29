@@ -1,7 +1,7 @@
-import type { ISubscription, ThemePreference } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Subscriptions, Users } from '@rocket.chat/models';
-import type { FontSize } from '@rocket.chat/rest-typings';
+import type { ISubscription, ThemePreference } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Subscriptions, Users } from '@zeki.chat/models';
+import type { FontSize } from '@zeki.chat/rest-typings';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -54,7 +54,7 @@ type UserPreferences = {
 	mentionsWithSymbol?: boolean;
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		saveUserPreferences(preferences: Partial<UserPreferences>): boolean;

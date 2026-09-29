@@ -1,6 +1,6 @@
-import type { IModerationReport } from '@rocket.chat/core-typings';
+import type { IModerationReport } from '@zeki.chat/core-typings';
 import { Box, Message } from '@rocket.chat/fuselage';
-import { useEndpoint, useSetting } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useSetting } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

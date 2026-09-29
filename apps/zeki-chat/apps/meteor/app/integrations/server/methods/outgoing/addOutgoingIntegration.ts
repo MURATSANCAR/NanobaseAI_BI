@@ -1,7 +1,7 @@
-import type { INewOutgoingIntegration, IOutgoingIntegration } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Integrations } from '@rocket.chat/models';
-import { removeEmpty } from '@rocket.chat/tools';
+import type { INewOutgoingIntegration, IOutgoingIntegration } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Integrations } from '@zeki.chat/models';
+import { removeEmpty } from '@zeki.chat/tools';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -10,7 +10,7 @@ import { notifyOnIntegrationChanged } from '../../../../lib/server/lib/notifyLis
 import { validateOutgoingIntegration } from '../../lib/validateOutgoingIntegration';
 import { validateScriptEngine } from '../../lib/validateScriptEngine';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		addOutgoingIntegration(integration: INewOutgoingIntegration): Promise<IOutgoingIntegration>;

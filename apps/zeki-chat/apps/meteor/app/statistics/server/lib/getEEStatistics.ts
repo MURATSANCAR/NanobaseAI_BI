@@ -1,20 +1,19 @@
 import { log } from 'console';
 
-import { Analytics } from '@rocket.chat/core-services';
-import type { IStats } from '@rocket.chat/core-typings';
+import { Analytics } from '@zeki.chat/core-services';
+import type { IStats } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { CannedResponse, OmnichannelServiceLevelAgreements, LivechatRooms, LivechatTag, LivechatUnit, Users } from '@rocket.chat/models';
+import { CannedResponse, OmnichannelServiceLevelAgreements, LivechatRooms, LivechatTag, LivechatUnit, Users } from '@zeki.chat/models';
 
 type ENTERPRISE_STATISTICS = IStats['enterprise'];
 
-type GenericStats = Pick<ENTERPRISE_STATISTICS, 'modules' | 'tags' | 'seatRequests'>;
+type GenericStats = Pick<ENTERPRISE_STATISTICS, 'modules' | 'seatRequests'>;
 
 type EEOnlyStats = Omit<ENTERPRISE_STATISTICS, keyof GenericStats>;
 
 export async function getStatistics(): Promise<ENTERPRISE_STATISTICS> {
 	const genericStats: GenericStats = {
 		modules: Capabilities.getModules(),
-		tags: Capabilities.getTags().map(({ name }) => name),
 		seatRequests: await Analytics.getSeatRequestCount(),
 	};
 

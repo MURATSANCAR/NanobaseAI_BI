@@ -1,5 +1,5 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import { GenericMenu, useSort } from '@rocket.chat/ui-client';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import { GenericMenu, useSort } from '@zeki.chat/ui-client';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryFn } from '@storybook/react';
 

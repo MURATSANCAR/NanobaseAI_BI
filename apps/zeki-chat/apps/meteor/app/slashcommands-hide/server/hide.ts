@@ -1,6 +1,6 @@
-import { api } from '@rocket.chat/core-services';
-import type { IRoom, SlashCommandCallbackParams } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IRoom, SlashCommandCallbackParams } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import { i18n } from '../../../server/lib/i18n';
 import { hideRoomMethod } from '../../../server/methods/hideRoom';

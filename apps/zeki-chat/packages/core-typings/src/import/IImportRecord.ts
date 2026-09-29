@@ -2,12 +2,12 @@ import type { IImportChannel } from './IImportChannel';
 import type { IImportContact } from './IImportContact';
 import type { IImportMessage } from './IImportMessage';
 import type { IImportUser } from './IImportUser';
-import type { IRocketChatRecord } from '../IRocketChatRecord';
+import type { IZekiChatRecord } from '../IZekiChatRecord';
 
 export type IImportRecordType = 'user' | 'channel' | 'message' | 'contact';
 export type IImportData = IImportUser | IImportChannel | IImportMessage | IImportContact;
 
-export interface IImportRecord extends IRocketChatRecord {
+export interface IImportRecord extends IZekiChatRecord {
 	data: IImportData;
 	dataType: IImportRecordType;
 	options?: Record<string, any>;

@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
 
 import { ThreadBridge } from '../../../src/server/bridges/ThreadBridge';
 

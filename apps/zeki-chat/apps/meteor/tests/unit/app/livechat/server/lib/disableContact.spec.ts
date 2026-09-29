@@ -19,7 +19,7 @@ const settingsMock = {
 const removeGuestMock = { removeGuest: sinon.stub() };
 
 const { disableContactById } = proxyquire.noCallThru().load('../../../../../../app/livechat/server/lib/contacts/disableContact.ts', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 	'../guests': removeGuestMock,
 	'../../../../settings/server': { settings: settingsMock },
 });

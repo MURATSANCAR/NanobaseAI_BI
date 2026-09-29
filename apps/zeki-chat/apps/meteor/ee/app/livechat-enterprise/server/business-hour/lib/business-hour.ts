@@ -1,5 +1,5 @@
-import type { ILivechatBusinessHour } from '@rocket.chat/core-typings';
-import { LivechatBusinessHours, LivechatDepartment } from '@rocket.chat/models';
+import type { ILivechatBusinessHour } from '@zeki.chat/core-typings';
+import { LivechatBusinessHours, LivechatDepartment } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { hasPermissionAsync } from '../../../../../../app/authorization/server/functions/hasPermission';

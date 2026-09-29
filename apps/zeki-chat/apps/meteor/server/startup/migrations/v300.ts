@@ -1,4 +1,4 @@
-import { Settings } from '@rocket.chat/models';
+import { Settings } from '@zeki.chat/models';
 
 import { settingsRegistry } from '../../../app/settings/server';
 import { addMigration } from '../../lib/migrations';

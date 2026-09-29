@@ -1,5 +1,5 @@
-import type { IUserRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IUserRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import type { UserBridge } from '../bridges/UserBridge';
 

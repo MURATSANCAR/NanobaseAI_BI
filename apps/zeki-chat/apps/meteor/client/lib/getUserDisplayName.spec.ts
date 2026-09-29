@@ -1,4 +1,4 @@
-import { getUserDisplayName } from '@rocket.chat/core-typings';
+import { getUserDisplayName } from '@zeki.chat/core-typings';
 
 const fakeUser = {
 	name: 'John Doe',

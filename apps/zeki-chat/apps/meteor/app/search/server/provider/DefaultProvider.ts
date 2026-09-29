@@ -1,4 +1,4 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
 
 import { messageSearch } from '../../../../server/methods/messageSearch';
 import type { IRawSearchResult } from '../model/ISearchResult';

@@ -1,4 +1,4 @@
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 
 export type AccountPreferencesData = {
 	language?: string;

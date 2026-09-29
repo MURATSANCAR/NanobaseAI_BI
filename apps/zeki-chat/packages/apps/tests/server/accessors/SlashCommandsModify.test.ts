@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it, mock } from 'node:test';
 
-import type { ISlashCommand } from '@rocket.chat/apps-engine/definition/slashcommands';
+import type { ISlashCommand } from '@zeki.chat/apps-engine/definition/slashcommands';
 
 import { SlashCommandsModify } from '../../../src/server/accessors';
 import type { AppSlashCommandManager } from '../../../src/server/managers';

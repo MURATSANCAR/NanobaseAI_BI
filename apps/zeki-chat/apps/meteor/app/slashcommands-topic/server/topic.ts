@@ -1,4 +1,4 @@
-import type { SlashCommandCallbackParams } from '@rocket.chat/core-typings';
+import type { SlashCommandCallbackParams } from '@zeki.chat/core-typings';
 
 import { hasPermissionAsync } from '../../authorization/server/functions/hasPermission';
 import { saveRoomSettings } from '../../channel-settings/server/methods/saveRoomSettings';

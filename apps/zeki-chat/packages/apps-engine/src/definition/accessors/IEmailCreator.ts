@@ -2,7 +2,7 @@ import type { IEmail } from '../email';
 
 export interface IEmailCreator {
 	/**
-	 * Sends an email through Rocket.Chat
+	 * Sends an email through ZEKI AI CHAT
 	 *
 	 * @param email the email data
 	 */

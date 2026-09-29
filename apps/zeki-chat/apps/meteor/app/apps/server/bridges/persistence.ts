@@ -1,6 +1,6 @@
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import { PersistenceBridge } from '@rocket.chat/apps/dist/server/bridges/PersistenceBridge';
-import type { RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import { PersistenceBridge } from '@zeki.chat/apps/dist/server/bridges/PersistenceBridge';
+import type { ZekiChatAssociationRecord } from '@zeki.chat/apps-engine/definition/metadata';
 import type { InsertOneResult } from 'mongodb';
 
 export class AppPersistenceBridge extends PersistenceBridge {
@@ -27,7 +27,7 @@ export class AppPersistenceBridge extends PersistenceBridge {
 			.then(({ insertedId }: InsertOneResult) => (insertedId as unknown as string) || '');
 	}
 
-	protected async createWithAssociations(data: object, associations: Array<RocketChatAssociationRecord>, appId: string): Promise<string> {
+	protected async createWithAssociations(data: object, associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<string> {
 		this.orch.debugLog({
 			msg: `The App ${appId} is storing a new object in their persistence that is associated with some models.`,
 			associations,
@@ -51,7 +51,7 @@ export class AppPersistenceBridge extends PersistenceBridge {
 		return record?.data;
 	}
 
-	protected async readByAssociations(associations: Array<RocketChatAssociationRecord>, appId: string): Promise<Array<object>> {
+	protected async readByAssociations(associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<Array<object>> {
 		this.orch.debugLog({ msg: `The App ${appId} is searching for records that are associated with the following:`, associations });
 
 		const records = await this.orch
@@ -80,7 +80,7 @@ export class AppPersistenceBridge extends PersistenceBridge {
 	}
 
 	protected async removeByAssociations(
-		associations: Array<RocketChatAssociationRecord>,
+		associations: Array<ZekiChatAssociationRecord>,
 		appId: string,
 	): Promise<Array<object> | undefined> {
 		this.orch.debugLog({ msg: `The App ${appId} is removing records with the following associations:`, associations });
@@ -114,7 +114,7 @@ export class AppPersistenceBridge extends PersistenceBridge {
 	}
 
 	protected async updateByAssociations(
-		associations: Array<RocketChatAssociationRecord>,
+		associations: Array<ZekiChatAssociationRecord>,
 		data: object,
 		upsert = true,
 		appId: string,

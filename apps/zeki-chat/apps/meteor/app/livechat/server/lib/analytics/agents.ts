@@ -1,4 +1,4 @@
-import { LivechatRooms, LivechatAgentActivity } from '@rocket.chat/models';
+import { LivechatRooms, LivechatAgentActivity } from '@zeki.chat/models';
 
 type Params = {
 	start: Date;

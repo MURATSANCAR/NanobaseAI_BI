@@ -1,5 +1,5 @@
-import { Apps } from '@rocket.chat/apps';
-import type { IAppStorageItem } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
+import { Apps } from '@zeki.chat/apps';
+import type { IAppStorageItem } from '@zeki.chat/apps/dist/server/storage/IAppStorageItem';
 import { Capabilities } from '@zeki.chat/capabilities';
 
 import { addMigration } from '../../lib/migrations';

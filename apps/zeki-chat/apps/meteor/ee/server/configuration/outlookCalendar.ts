@@ -1,4 +1,4 @@
-import { Calendar } from '@rocket.chat/core-services';
+import { Calendar } from '@zeki.chat/core-services';
 import { Capabilities } from '@zeki.chat/capabilities';
 import { Meteor } from 'meteor/meteor';
 

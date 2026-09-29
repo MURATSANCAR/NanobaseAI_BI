@@ -1,4 +1,4 @@
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
 import VideoConfBlockModal from '../VideoConfBlockModal';
@@ -8,7 +8,7 @@ export const useVideoConfOpenCall = () => {
 
 	const handleOpenCall = useCallback(
 		(callUrl: string, providerName?: string | undefined) => {
-			const desktopApp = window.RocketChatDesktop;
+			const desktopApp = window.ZekiChatDesktop;
 
 			if (!desktopApp?.openInternalVideoChatWindow) {
 				const open = () => window.open(callUrl);

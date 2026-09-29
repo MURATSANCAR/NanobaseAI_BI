@@ -37,11 +37,11 @@
 			"dependsOn": ["^build"],
 			"cache": false
 		},
-		"@rocket.chat/meteor#build": {
+		"@zeki.chat/meteor#build": {
 			"dependsOn": ["^build"],
 			"cache": false
 		},
-		"@rocket.chat/meteor#build:ci": {
+		"@zeki.chat/meteor#build:ci": {
 			"env": ["BABEL_ENV"],
 			"cache": false
 		}

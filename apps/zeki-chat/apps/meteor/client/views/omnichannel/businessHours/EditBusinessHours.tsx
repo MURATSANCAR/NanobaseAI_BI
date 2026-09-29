@@ -1,9 +1,9 @@
-import type { ILivechatBusinessHour, LivechatBusinessHourTypes, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatBusinessHour, LivechatBusinessHourTypes, Serialized } from '@zeki.chat/core-typings';
 import { Box, Button, ButtonGroup } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { canonicalizeTimezone } from '@rocket.chat/tools';
-import { Page, PageFooter, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useTranslation, useRouter, useEndpoint } from '@rocket.chat/ui-contexts';
+import { canonicalizeTimezone } from '@zeki.chat/tools';
+import { Page, PageFooter, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useTranslation, useRouter, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useId } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 

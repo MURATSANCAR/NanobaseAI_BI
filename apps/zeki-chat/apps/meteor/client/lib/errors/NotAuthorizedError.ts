@@ -1,6 +1,6 @@
-import { RocketChatError } from './RocketChatError';
+import { ZekiChatError } from './ZekiChatError';
 
-export class NotAuthorizedError extends RocketChatError<'not-authorized'> {
+export class NotAuthorizedError extends ZekiChatError<'not-authorized'> {
 	constructor(message = 'Not authorized', details?: unknown) {
 		super('not-authorized', message, details);
 	}

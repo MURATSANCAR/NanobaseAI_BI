@@ -7,9 +7,9 @@ import type {
 	IRoomNativeFederated,
 	ITeam,
 	IUser,
-	RocketChatRecordDeleted,
-} from '@rocket.chat/core-typings';
-import type { FindPaginated, IRoomsModel, IChannelsWithNumberOfMessagesBetweenDate } from '@rocket.chat/model-typings';
+	ZekiChatRecordDeleted,
+} from '@zeki.chat/core-typings';
+import type { FindPaginated, IRoomsModel, IChannelsWithNumberOfMessagesBetweenDate } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type {
 	AggregationCursor,
@@ -34,7 +34,7 @@ import { readSecondaryPreferred } from '../readSecondaryPreferred';
 import type { Updater } from '../updater';
 
 export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IRoom>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IRoom>>) {
 		super(db, 'room', trash);
 	}
 
@@ -505,7 +505,7 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 		};
 		const lookup = {
 			$lookup: {
-				from: 'rocketchat_analytics',
+				from: 'zeki_analytics',
 				localField: '_id',
 				foreignField: 'room._id',
 				as: 'messages',
@@ -2074,9 +2074,9 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 			usersCount: 0,
 			_updatedAt: new Date(),
 			u: {
-				_id: 'rocket.cat',
-				username: 'rocket.cat',
-				name: 'Rocket.Cat',
+				_id: 'zeki.bot',
+				username: 'zeki.bot',
+				name: 'ZEKI AI CHAT',
 			},
 		};
 
@@ -2128,7 +2128,7 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 					{ $match: { encrypted: true } },
 					{
 						$lookup: {
-							from: 'rocketchat_subscription',
+							from: 'zeki_subscription',
 							localField: '_id',
 							foreignField: 'rid',
 							as: 'subs',
@@ -2248,7 +2248,7 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 			},
 			{
 				$lookup: {
-					from: 'rocketchat_subscription',
+					from: 'zeki_subscription',
 					let: {
 						roomId: '$_id',
 					},

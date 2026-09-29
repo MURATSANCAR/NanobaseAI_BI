@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { Settings } from '@rocket.chat/models';
+import { Settings } from '@zeki.chat/models';
 
 import { use } from './Middleware';
 import { SettingsRegistry } from './SettingsRegistry';

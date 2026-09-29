@@ -109,7 +109,7 @@ const strike = {
 
 const headersLevel1 = {
 	'# Hello': headerWrapper('Hello', 1),
-	'# Rocket.Cat': headerWrapper('Rocket.Cat', 1),
+	'# ZEKI AI CHAT': headerWrapper('ZEKI AI CHAT', 1),
 	'# Hi': headerWrapper('Hi', 1),
 	'# Hello this is dog': headerWrapper('Hello this is dog', 1),
 	'# Rocket cat says Hello': headerWrapper('Rocket cat says Hello', 1),
@@ -121,7 +121,7 @@ const headersLevel1 = {
 
 const headersLevel2 = {
 	'## Hello': headerWrapper('Hello', 2),
-	'## Rocket.Cat': headerWrapper('Rocket.Cat', 2),
+	'## ZEKI AI CHAT': headerWrapper('ZEKI AI CHAT', 2),
 	'## Hi': headerWrapper('Hi', 2),
 	'## Hello this is dog': headerWrapper('Hello this is dog', 2),
 	'## Rocket cat says Hello': headerWrapper('Rocket cat says Hello', 2),
@@ -133,7 +133,7 @@ const headersLevel2 = {
 
 const headersLevel3 = {
 	'### Hello': headerWrapper('Hello', 3),
-	'### Rocket.Cat': headerWrapper('Rocket.Cat', 3),
+	'### ZEKI AI CHAT': headerWrapper('ZEKI AI CHAT', 3),
 	'### Hi': headerWrapper('Hi', 3),
 	'### Hello this is dog': headerWrapper('Hello this is dog', 3),
 	'### Rocket cat says Hello': headerWrapper('Rocket cat says Hello', 3),
@@ -145,7 +145,7 @@ const headersLevel3 = {
 
 const headersLevel4 = {
 	'#### Hello': headerWrapper('Hello', 4),
-	'#### Rocket.Cat': headerWrapper('Rocket.Cat', 4),
+	'#### ZEKI AI CHAT': headerWrapper('ZEKI AI CHAT', 4),
 	'#### Hi': headerWrapper('Hi', 4),
 	'#### Hello this is dog': headerWrapper('Hello this is dog', 4),
 	'#### Rocket cat says Hello': headerWrapper('Rocket cat says Hello', 4),
@@ -157,26 +157,26 @@ const headersLevel4 = {
 
 const quote = {
 	'&gt;Hello': escapeHTML('&gt;Hello'),
-	'&gt;Rocket.Cat': escapeHTML('&gt;Rocket.Cat'),
+	'&gt;ZEKI AI CHAT': escapeHTML('&gt;ZEKI AI CHAT'),
 	'&gt;Hi': escapeHTML('&gt;Hi'),
 	'&gt; Hello this is dog': escapeHTML('&gt; Hello this is dog'),
 	'&gt; Rocket cat says Hello': escapeHTML('&gt; Rocket cat says Hello'),
 	'&gt; He said Hello to her': escapeHTML('&gt; He said Hello to her'),
 	'&gt; He said Hello to her ': escapeHTML('&gt; He said Hello to her '),
 	'&lt;Hello': escapeHTML('&lt;Hello'),
-	'&lt;Rocket.Cat&gt;': escapeHTML('&lt;Rocket.Cat&gt;'),
+	'&lt;ZEKI AI CHAT&gt;': escapeHTML('&lt;ZEKI AI CHAT&gt;'),
 	' &gt;Hi': escapeHTML(' &gt;Hi'),
 	'Hello &gt; this is dog': escapeHTML('Hello &gt; this is dog'),
 	'Roc&gt;ket cat says Hello': escapeHTML('Roc&gt;ket cat says Hello'),
 	'He said Hello to her&gt;': escapeHTML('He said Hello to her&gt;'),
 	'>Hello': quoteWrapper('Hello'),
-	'>Rocket.Cat': quoteWrapper('Rocket.Cat'),
+	'>ZEKI AI CHAT': quoteWrapper('ZEKI AI CHAT'),
 	'>Hi': quoteWrapper('Hi'),
 	'> Hello this is dog': quoteWrapper(' Hello this is dog'),
 	'> Rocket cat says Hello': quoteWrapper(' Rocket cat says Hello'),
 	'> He said Hello to her': quoteWrapper(' He said Hello to her'),
 	'<Hello': escapeHTML('<Hello'),
-	'<Rocket.Cat>': escapeHTML('<Rocket.Cat>'),
+	'<ZEKI AI CHAT>': escapeHTML('<ZEKI AI CHAT>'),
 	' >Hi': escapeHTML(' >Hi'),
 	'Hello > this is dog': escapeHTML('Hello > this is dog'),
 	'Roc>ket cat says Hello': escapeHTML('Roc>ket cat says Hello'),
@@ -185,68 +185,68 @@ const quote = {
 
 const link = {
 	'&lt;http://link|Text&gt;': escapeHTML('&lt;http://link|Text&gt;'),
-	'&lt;https://open.rocket.chat/|Open Site For Rocket.Chat&gt;': escapeHTML('&lt;https://open.rocket.chat/|Open Site For Rocket.Chat&gt;'),
-	'&lt;https://open.rocket.chat/ | Open Site For Rocket.Chat&gt;': escapeHTML(
-		'&lt;https://open.rocket.chat/ | Open Site For Rocket.Chat&gt;',
+	'&lt;https://open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;https://open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;'),
+	'&lt;https://open.rocket.chat/ | Open Site For ZEKI AI CHAT&gt;': escapeHTML(
+		'&lt;https://open.rocket.chat/ | Open Site For ZEKI AI CHAT&gt;',
 	),
 	'&lt;https://rocket.chat/|Rocket.Chat Site&gt;': '&amp;lt;https://rocket.chat/|Rocket.Chat Site&amp;gt;',
-	'&lt;https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on Rocket.Chat Docs Site&gt;': escapeHTML(
-		'&lt;https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on Rocket.Chat Docs Site&gt;',
+	'&lt;https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;': escapeHTML(
+		'&lt;https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;',
 	),
 	'&lt;http://linkText&gt;': escapeHTML('&lt;http://linkText&gt;'),
-	'&lt;https:open.rocket.chat/ | Open Site For Rocket.Chat&gt;': escapeHTML('&lt;https:open.rocket.chat/ | Open Site For Rocket.Chat&gt;'),
-	'https://open.rocket.chat/|Open Site For Rocket.Chat': escapeHTML('https://open.rocket.chat/|Open Site For Rocket.Chat'),
-	'&lt;www.open.rocket.chat/|Open Site For Rocket.Chat&gt;': escapeHTML('&lt;www.open.rocket.chat/|Open Site For Rocket.Chat&gt;'),
+	'&lt;https:open.rocket.chat/ | Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;https:open.rocket.chat/ | Open Site For ZEKI AI CHAT&gt;'),
+	'https://open.rocket.chat/|Open Site For ZEKI AI CHAT': escapeHTML('https://open.rocket.chat/|Open Site For ZEKI AI CHAT'),
+	'&lt;www.open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;www.open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;'),
 	'&lt;htps://rocket.chat/|Rocket.Chat Site&gt;': escapeHTML('&lt;htps://rocket.chat/|Rocket.Chat Site&gt;'),
 	'&lt;ttps://rocket.chat/|Rocket.Chat Site&gt;': escapeHTML('&lt;ttps://rocket.chat/|Rocket.Chat Site&gt;'),
 	'&lt;tps://rocket.chat/|Rocket.Chat Site&gt;': escapeHTML('&lt;tps://rocket.chat/|Rocket.Chat Site&gt;'),
-	'&lt;open.rocket.chat/|Open Site For Rocket.Chat&gt;': escapeHTML('&lt;open.rocket.chat/|Open Site For Rocket.Chat&gt;'),
-	'&lt;htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on Rocket.Chat Docs Site&gt;': escapeHTML(
-		'&lt;htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on Rocket.Chat Docs Site&gt;',
+	'&lt;open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;'),
+	'&lt;htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;': escapeHTML(
+		'&lt;htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;',
 	),
 
 	'<http://invalid link|Text>': escapeHTML('<http://invalid link|Text>'),
 	'<http://link|Text>': linkWrapped('http://link', 'Text'),
-	'<https://open.rocket.chat/|Open Site For Rocket.Chat>': linkWrapped('https://open.rocket.chat/', 'Open Site For Rocket.Chat'),
-	'<https://open.rocket.chat/ | Open Site For Rocket.Chat>': linkWrapped(
+	'<https://open.rocket.chat/|Open Site For ZEKI AI CHAT>': linkWrapped('https://open.rocket.chat/', 'Open Site For ZEKI AI CHAT'),
+	'<https://open.rocket.chat/ | Open Site For ZEKI AI CHAT>': linkWrapped(
 		encodeURI('https://open.rocket.chat/ '),
-		' Open Site For Rocket.Chat',
+		' Open Site For ZEKI AI CHAT',
 	),
-	'<https://rocket.chat/|Rocket.Chat Site>': linkWrapped('https://rocket.chat/', 'Rocket.Chat Site'),
-	'<https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on Rocket.Chat Docs Site>': linkWrapped(
+	'<https://rocket.chat/|Rocket.Chat Site>': linkWrapped('https://rocket.chat/', 'ZEKI AI CHAT Site'),
+	'<https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>': linkWrapped(
 		'https://rocket.chat/docs/developer-guides/testing/#testing',
-		'Testing Entry on Rocket.Chat Docs Site',
+		'Testing Entry on ZEKI AI CHAT Docs Site',
 	),
 	'<http://linkText>': escapeHTML('<http://linkText>'),
-	'<https:open.rocket.chat/ | Open Site For Rocket.Chat>': escapeHTML('<https:open.rocket.chat/ | Open Site For Rocket.Chat>'),
-	'<www.open.rocket.chat/|Open Site For Rocket.Chat>': escapeHTML('<www.open.rocket.chat/|Open Site For Rocket.Chat>'),
+	'<https:open.rocket.chat/ | Open Site For ZEKI AI CHAT>': escapeHTML('<https:open.rocket.chat/ | Open Site For ZEKI AI CHAT>'),
+	'<www.open.rocket.chat/|Open Site For ZEKI AI CHAT>': escapeHTML('<www.open.rocket.chat/|Open Site For ZEKI AI CHAT>'),
 	'<htps://rocket.chat/|Rocket.Chat Site>': escapeHTML('<htps://rocket.chat/|Rocket.Chat Site>'),
 	'<ttps://rocket.chat/|Rocket.Chat Site>': escapeHTML('<ttps://rocket.chat/|Rocket.Chat Site>'),
 	'<tps://rocket.chat/|Rocket.Chat Site>': escapeHTML('<tps://rocket.chat/|Rocket.Chat Site>'),
-	'<open.rocket.chat/|Open Site For Rocket.Chat>': escapeHTML('<open.rocket.chat/|Open Site For Rocket.Chat>'),
-	'<htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on Rocket.Chat Docs Site>': escapeHTML(
-		'<htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on Rocket.Chat Docs Site>',
+	'<open.rocket.chat/|Open Site For ZEKI AI CHAT>': escapeHTML('<open.rocket.chat/|Open Site For ZEKI AI CHAT>'),
+	'<htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>': escapeHTML(
+		'<htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>',
 	),
 
 	'[Text](http://invalid link)': '[Text](http://invalid link)',
 	'[Text](http://link)': linkWrapped('http://link', 'Text'),
-	'[Open Site For Rocket.Chat](https://open.rocket.chat/)': linkWrapped('https://open.rocket.chat/', 'Open Site For Rocket.Chat'),
-	'[ Open Site For Rocket.Chat ](https://open.rocket.chat/)': linkWrapped('https://open.rocket.chat/', ' Open Site For Rocket.Chat '),
-	'[Rocket.Chat Site](https://rocket.chat/)': linkWrapped('https://rocket.chat/', 'Rocket.Chat Site'),
-	'[Testing Entry on Rocket.Chat Docs Site](https://rocket.chat/docs/developer-guides/testing/#testing)': linkWrapped(
+	'[Open Site For ZEKI AI CHAT](https://open.rocket.chat/)': linkWrapped('https://open.rocket.chat/', 'Open Site For ZEKI AI CHAT'),
+	'[ Open Site For ZEKI AI CHAT ](https://open.rocket.chat/)': linkWrapped('https://open.rocket.chat/', ' Open Site For ZEKI AI CHAT '),
+	'[ZEKI AI CHAT Site](https://rocket.chat/)': linkWrapped('https://rocket.chat/', 'ZEKI AI CHAT Site'),
+	'[Testing Entry on ZEKI AI CHAT Docs Site](https://rocket.chat/docs/developer-guides/testing/#testing)': linkWrapped(
 		'https://rocket.chat/docs/developer-guides/testing/#testing',
-		'Testing Entry on Rocket.Chat Docs Site',
+		'Testing Entry on ZEKI AI CHAT Docs Site',
 	),
 	'[](http://linkText)': '[](http://linkText)',
 	'[text]': '[text]',
-	'[Open Site For Rocket.Chat](https:open.rocket.chat/)': '[Open Site For Rocket.Chat](https:open.rocket.chat/)',
-	'[Open Site For Rocket.Chat](www.open.rocket.chat/)': '[Open Site For Rocket.Chat](www.open.rocket.chat/)',
-	'[Rocket.Chat Site](htps://rocket.chat/)': '[Rocket.Chat Site](htps://rocket.chat/)',
-	'[Rocket.Chat Site](ttps://rocket.chat/)': '[Rocket.Chat Site](ttps://rocket.chat/)',
-	'[Rocket.Chat Site](tps://rocket.chat/)': '[Rocket.Chat Site](tps://rocket.chat/)',
-	'[Open Site For Rocket.Chat](open.rocket.chat/)': '[Open Site For Rocket.Chat](open.rocket.chat/)',
-	'[Testing Entry on Rocket.Chat Docs Site](htts://rocket.chat/docs/developer-guides/testing/#testing)':
-		'[Testing Entry on Rocket.Chat Docs Site](htts://rocket.chat/docs/developer-guides/testing/#testing)',
+	'[Open Site For ZEKI AI CHAT](https:open.rocket.chat/)': '[Open Site For ZEKI AI CHAT](https:open.rocket.chat/)',
+	'[Open Site For ZEKI AI CHAT](www.open.rocket.chat/)': '[Open Site For ZEKI AI CHAT](www.open.rocket.chat/)',
+	'[ZEKI AI CHAT Site](htps://rocket.chat/)': '[ZEKI AI CHAT Site](htps://rocket.chat/)',
+	'[ZEKI AI CHAT Site](ttps://rocket.chat/)': '[ZEKI AI CHAT Site](ttps://rocket.chat/)',
+	'[ZEKI AI CHAT Site](tps://rocket.chat/)': '[ZEKI AI CHAT Site](tps://rocket.chat/)',
+	'[Open Site For ZEKI AI CHAT](open.rocket.chat/)': '[Open Site For ZEKI AI CHAT](open.rocket.chat/)',
+	'[Testing Entry on ZEKI AI CHAT Docs Site](htts://rocket.chat/docs/developer-guides/testing/#testing)':
+		'[Testing Entry on ZEKI AI CHAT Docs Site](htts://rocket.chat/docs/developer-guides/testing/#testing)',
 	'[Text](http://link?param1=1&param2=2)': linkWrapped('http://link?param1=1&amp;param2=2', 'Text'),
 	'[Testing Double parentheses](https://en.wikipedia.org/wiki/Disambiguation_(disambiguation))': linkWrapped(
 		'https://en.wikipedia.org/wiki/Disambiguation_(disambiguation)',
@@ -373,9 +373,9 @@ const quoteFiltered = {
 
 const linkFiltered = {
 	'[Text](http://link)': 'Text',
-	'[Open Site For Rocket.Chat](https://open.rocket.chat/)': 'Open Site For Rocket.Chat',
-	'[ Open Site For Rocket.Chat](https://open.rocket.chat/ )': ' Open Site For Rocket.Chat',
-	'[Rocket.Chat Site](https://rocket.chat/)': 'Rocket.Chat Site',
+	'[Open Site For ZEKI AI CHAT](https://open.rocket.chat/)': 'Open Site For ZEKI AI CHAT',
+	'[ Open Site For ZEKI AI CHAT](https://open.rocket.chat/ )': ' Open Site For ZEKI AI CHAT',
+	'[ZEKI AI CHAT Site](https://rocket.chat/)': 'ZEKI AI CHAT Site',
 	'<http://link|Text>': 'Text',
 	'<http://link|Text for test>': 'Text for test',
 };

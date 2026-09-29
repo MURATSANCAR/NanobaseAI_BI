@@ -186,7 +186,7 @@ export async function addOAuthService(name: string, values: { [k: string]: strin
 		modules: ['oauth-enterprise'],
 	});
 
-	await settingsRegistry.add(`Accounts_OAuth_Custom-${name}-channels_admin`, values.channelsAdmin || 'rocket.cat', {
+	await settingsRegistry.add(`Accounts_OAuth_Custom-${name}-channels_admin`, values.channelsAdmin || 'zeki.bot', {
 		type: 'string',
 		group: 'OAuth',
 		section: `Custom OAuth: ${name}`,

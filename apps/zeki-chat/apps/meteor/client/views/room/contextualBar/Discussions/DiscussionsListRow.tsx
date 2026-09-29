@@ -1,4 +1,4 @@
-import type { IDiscussionMessage } from '@rocket.chat/core-typings';
+import type { IDiscussionMessage } from '@zeki.chat/core-typings';
 import type { MouseEvent } from 'react';
 import { memo } from 'react';
 

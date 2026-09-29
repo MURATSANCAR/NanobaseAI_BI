@@ -1,9 +1,9 @@
-import { Presence } from '@rocket.chat/core-services';
-import { UserStatus } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import { Presence } from '@zeki.chat/core-services';
+import { UserStatus } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { Meteor } from 'meteor/meteor';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		'UserPresence:setDefaultStatus'(status: UserStatus): boolean | undefined;

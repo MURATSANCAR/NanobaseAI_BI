@@ -1,5 +1,5 @@
 import type { IVisitorEmail, IVisitorPhone } from './ILivechatVisitor';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IOmnichannelSource, OmnichannelSourceType } from './IRoom';
 
 export interface ILivechatContactVisitorAssociation {
@@ -30,7 +30,7 @@ export interface ILivechatContactConflictingField {
 	value: string;
 }
 
-export interface ILivechatContact extends IRocketChatRecord {
+export interface ILivechatContact extends IZekiChatRecord {
 	name: string;
 	phones?: IVisitorPhone[];
 	emails?: IVisitorEmail[];

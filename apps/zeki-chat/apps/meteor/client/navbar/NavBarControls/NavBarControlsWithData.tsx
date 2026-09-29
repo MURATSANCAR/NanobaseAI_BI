@@ -1,6 +1,6 @@
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
-import { useMediaCallAction } from '@rocket.chat/ui-voip';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
+import { useMediaCallAction } from '@zeki.chat/ui-voip';
 import { useCallback, type HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 

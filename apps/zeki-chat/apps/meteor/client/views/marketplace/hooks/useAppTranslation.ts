@@ -1,4 +1,4 @@
-import { useTranslation } from '@rocket.chat/ui-contexts';
+import { useTranslation } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
 import { Utilities } from '../../../../ee/lib/misc/Utilities';

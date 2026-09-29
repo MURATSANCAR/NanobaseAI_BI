@@ -1,7 +1,7 @@
-import type { IMessage, ITranslatedMessage } from '@rocket.chat/core-typings';
-import { isEditedMessage, isE2EEMessage, isE2EEPinnedMessage } from '@rocket.chat/core-typings';
+import type { IMessage, ITranslatedMessage } from '@zeki.chat/core-typings';
+import { isEditedMessage, isE2EEMessage, isE2EEPinnedMessage } from '@zeki.chat/core-typings';
 import { MessageStatusIndicator, MessageStatusIndicatorItem } from '@rocket.chat/fuselage';
-import { useUserId } from '@rocket.chat/ui-contexts';
+import { useUserId } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

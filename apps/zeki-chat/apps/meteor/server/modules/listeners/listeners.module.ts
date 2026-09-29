@@ -1,12 +1,12 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { ISetting as AppsSetting } from '@rocket.chat/apps-engine/definition/settings';
-import type { IServiceClass } from '@rocket.chat/core-services';
-import { EnterpriseSettings } from '@rocket.chat/core-services';
-import { isSettingColor, isSettingEnterprise, UserStatus } from '@rocket.chat/core-typings';
-import type { IUser, IRoom, IRole, VideoConference, ISetting, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import type { ServerMediaSignal } from '@rocket.chat/media-signaling';
-import { parse } from '@rocket.chat/message-parser';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { ISetting as AppsSetting } from '@zeki.chat/apps-engine/definition/settings';
+import type { IServiceClass } from '@zeki.chat/core-services';
+import { EnterpriseSettings } from '@zeki.chat/core-services';
+import { isSettingColor, isSettingEnterprise, UserStatus } from '@zeki.chat/core-typings';
+import type { IUser, IRoom, IRole, VideoConference, ISetting, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import type { ServerMediaSignal } from '@zeki.chat/media-signaling';
+import { parse } from '@zeki.chat/message-parser';
 
 import { settings } from '../../../app/settings/server/cached';
 import type { NotificationsModule } from '../notifications/notifications.module';
@@ -30,9 +30,8 @@ const minimongoChangeMap: Record<string, string> = {
 export class ListenersModule {
 	constructor(service: IServiceClass, notifications: NotificationsModule) {
 		const logger = new Logger('ListenersModule');
+		service.onEvent('capabilities.changed', () => notifications.notifyAllInThisInstance('capabilities'));
 
-		service.onEvent('license.sync', () => notifications.notifyAllInThisInstance('license'));
-		service.onEvent('license.actions', () => notifications.notifyAllInThisInstance('license'));
 
 		service.onEvent('emoji.deleteCustom', (emoji) => {
 			notifications.notifyLoggedInThisInstance('deleteEmojiCustom', {
@@ -75,8 +74,8 @@ export class ListenersModule {
 			notifications.notifyUserInThisInstance(uid, 'message', {
 				groupable: false,
 				u: {
-					_id: 'rocket.cat',
-					username: 'rocket.cat',
+					_id: 'zeki.bot',
+					username: 'zeki.bot',
 				},
 				private: true,
 				_id: message._id || String(Date.now()),
@@ -195,6 +194,7 @@ export class ListenersModule {
 			notifications.notifyRoomInThisInstance(roomId, 'user-activity', user, isTyping ? ['user-typing'] : []);
 		});
 
+		service.onEvent('capabilities.changed', () => notifications.notifyAllInThisInstance('capabilities'));
 		service.onEvent('watch.messages', async ({ message }) => {
 			if (!message.rid) {
 				return;

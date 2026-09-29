@@ -1,5 +1,5 @@
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useRoute, useSetModal, useUser } from '@rocket.chat/ui-contexts';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useRoute, useSetModal, useUser } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 

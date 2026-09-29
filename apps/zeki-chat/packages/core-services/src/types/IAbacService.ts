@@ -6,7 +6,7 @@ import type {
 	AbacAccessOperation,
 	AbacObjectType,
 	ILDAPEntry,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 
 export type AbacActor = Pick<IUser, '_id' | 'username' | 'name'>;
 

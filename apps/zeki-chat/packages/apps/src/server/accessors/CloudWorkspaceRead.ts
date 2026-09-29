@@ -1,5 +1,5 @@
-import type { ICloudWorkspaceRead } from '@rocket.chat/apps-engine/definition/accessors/ICloudWorkspaceRead';
-import type { IWorkspaceToken } from '@rocket.chat/apps-engine/definition/cloud/IWorkspaceToken';
+import type { ICloudWorkspaceRead } from '@zeki.chat/apps-engine/definition/accessors/ICloudWorkspaceRead';
+import type { IWorkspaceToken } from '@zeki.chat/apps-engine/definition/cloud/IWorkspaceToken';
 
 import type { CloudWorkspaceBridge } from '../bridges/CloudWorkspaceBridge';
 

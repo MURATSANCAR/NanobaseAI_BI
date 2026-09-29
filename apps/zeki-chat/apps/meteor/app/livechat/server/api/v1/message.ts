@@ -1,7 +1,7 @@
-import { OmnichannelSourceType } from '@rocket.chat/core-typings';
-import { LivechatVisitors, LivechatRooms, Messages } from '@rocket.chat/models';
-import { registerGuest } from '@rocket.chat/omni-core';
-import { Random } from '@rocket.chat/random';
+import { OmnichannelSourceType } from '@zeki.chat/core-typings';
+import { LivechatVisitors, LivechatRooms, Messages } from '@zeki.chat/models';
+import { registerGuest } from '@zeki.chat/omni-core';
+import { Random } from '@zeki.chat/random';
 import {
 	isPOSTLivechatMessageParams,
 	isGETLivechatMessageIdParams,
@@ -9,7 +9,7 @@ import {
 	isDELETELivechatMessageIdParams,
 	isGETLivechatMessagesHistoryRidParams,
 	isGETLivechatMessagesParams,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { callbacks } from '../../../../../server/lib/callbacks';
 import { API } from '../../../../api/server';

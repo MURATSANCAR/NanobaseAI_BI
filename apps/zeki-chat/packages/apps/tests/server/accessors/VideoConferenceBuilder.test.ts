@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { AppVideoConference } from '@rocket.chat/apps-engine/definition/videoConferences';
+import type { AppVideoConference } from '@zeki.chat/apps-engine/definition/videoConferences';
 
 import { VideoConferenceBuilder } from '../../../src/server/accessors';
 import { TestData } from '../../test-data/utilities';

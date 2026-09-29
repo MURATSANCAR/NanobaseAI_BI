@@ -1,5 +1,5 @@
-import { MessageReads } from '@rocket.chat/core-services';
-import { type IUser, type IRoom, type IMessage } from '@rocket.chat/core-typings';
+import { MessageReads } from '@zeki.chat/core-services';
+import { type IUser, type IRoom, type IMessage } from '@zeki.chat/core-typings';
 
 import { settings } from '../../../../../app/settings/server';
 import { callbacks } from '../../../../../server/lib/callbacks';

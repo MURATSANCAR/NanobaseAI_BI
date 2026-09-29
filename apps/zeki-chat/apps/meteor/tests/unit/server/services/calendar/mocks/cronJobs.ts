@@ -1,4 +1,4 @@
-import type { AgendaCronJobs } from '@rocket.chat/cron';
+import type { AgendaCronJobs } from '@zeki.chat/cron';
 
 // #TODO: Move this to a package and write unit tests there ensuring that the behavior of the mock and the real class match 1:1
 export class MockedCronJobs {

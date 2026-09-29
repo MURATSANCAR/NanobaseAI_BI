@@ -1,9 +1,9 @@
 import * as assert from 'node:assert';
 import { describe, it, mock } from 'node:test';
 
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { MessageBuilder, Notifier } from '../../../src/server/accessors';
 import type { MessageBridge, UserBridge } from '../../../src/server/bridges';

@@ -1,5 +1,5 @@
-import type { IApiExtend } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IApi } from '@rocket.chat/apps-engine/definition/api';
+import type { IApiExtend } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IApi } from '@zeki.chat/apps-engine/definition/api';
 
 import type { AppApiManager } from '../managers/AppApiManager';
 

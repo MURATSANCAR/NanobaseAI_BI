@@ -1,6 +1,6 @@
-import type { IImportChannel, IImportChannelRecord, IRoom } from '@rocket.chat/core-typings';
-import { Subscriptions, Rooms, Users } from '@rocket.chat/models';
-import { removeEmpty } from '@rocket.chat/tools';
+import type { IImportChannel, IImportChannelRecord, IRoom } from '@zeki.chat/core-typings';
+import { Subscriptions, Rooms, Users } from '@zeki.chat/models';
+import { removeEmpty } from '@zeki.chat/tools';
 import limax from 'limax';
 
 import { RecordConverter } from './RecordConverter';
@@ -92,7 +92,7 @@ export class RoomConverter extends RecordConverter<IImportChannelRecord> {
 	}
 
 	async insertRoom(roomData: IImportChannel, startedByUserId: string): Promise<void> {
-		// Find the rocketchatId of the user who created this channel
+		// Find the zekichatId of the user who created this channel
 		const creatorId = await this.getRoomCreatorId(roomData, startedByUserId);
 		const members = await this._cache.convertImportedIdsToUsernames(roomData.users, roomData.t !== 'd' ? creatorId : undefined);
 

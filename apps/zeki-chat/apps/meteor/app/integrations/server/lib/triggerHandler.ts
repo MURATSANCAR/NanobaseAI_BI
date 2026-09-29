@@ -7,10 +7,10 @@ import type {
 	IRoom,
 	RequiredField,
 	AtLeast,
-} from '@rocket.chat/core-typings';
-import { Integrations, Users, Rooms, Messages } from '@rocket.chat/models';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
-import { wrapExceptions } from '@rocket.chat/tools';
+} from '@zeki.chat/core-typings';
+import { Integrations, Users, Rooms, Messages } from '@zeki.chat/models';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
+import { wrapExceptions } from '@zeki.chat/tools';
 import { Meteor } from 'meteor/meteor';
 import _ from 'underscore';
 
@@ -55,7 +55,7 @@ type IntegrationData = {
 	owner?: Partial<IUser>;
 };
 
-class RocketChatIntegrationHandler {
+class ZekiChatIntegrationHandler {
 	private successResults: number[];
 
 	private triggers: Trigger;
@@ -836,5 +836,5 @@ class RocketChatIntegrationHandler {
 		});
 	}
 }
-const triggerHandler = new RocketChatIntegrationHandler();
+const triggerHandler = new ZekiChatIntegrationHandler();
 export { triggerHandler };

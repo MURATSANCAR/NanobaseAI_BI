@@ -1,5 +1,5 @@
-import type { ILivechatContact } from '@rocket.chat/core-typings';
-import { LivechatContacts, LivechatRooms } from '@rocket.chat/models';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
+import { LivechatContacts, LivechatRooms } from '@zeki.chat/models';
 
 import { settings } from '../../../../settings/server';
 import { removeGuest } from '../guests';

@@ -1,7 +1,7 @@
-import { isSetting, isSettingColor } from '@rocket.chat/core-typings';
+import { isSetting, isSettingColor } from '@zeki.chat/core-typings';
 import { AccordionItem, Box, Button, FieldGroup } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

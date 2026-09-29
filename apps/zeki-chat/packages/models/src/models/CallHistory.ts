@@ -1,5 +1,5 @@
-import type { CallHistoryItem, IRegisterUser } from '@rocket.chat/core-typings';
-import type { ICallHistoryModel } from '@rocket.chat/model-typings';
+import type { CallHistoryItem, IRegisterUser } from '@zeki.chat/core-typings';
+import type { ICallHistoryModel } from '@zeki.chat/model-typings';
 import type { Db, FindOptions, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

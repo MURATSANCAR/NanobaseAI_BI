@@ -1,4 +1,4 @@
-import { Authorization } from '@rocket.chat/core-services';
+import { Authorization } from '@zeki.chat/core-services';
 
 export const canAccessRoomAsync = Authorization.canAccessRoom;
 export const canAccessRoomIdAsync = Authorization.canAccessRoomId;

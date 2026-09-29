@@ -1,6 +1,6 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Option, Icon } from '@rocket.chat/fuselage';
-import { useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 type MatrixFederationRemoveServerListProps = {

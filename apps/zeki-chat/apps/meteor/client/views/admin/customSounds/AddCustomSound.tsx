@@ -1,6 +1,6 @@
 import { Field, FieldLabel, FieldRow, TextInput, Box, Margins, Button, ButtonGroup, IconButton } from '@rocket.chat/fuselage';
-import { ContextualbarScrollableContent, ContextualbarFooter } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, type UploadResult } from '@rocket.chat/ui-contexts';
+import { ContextualbarScrollableContent, ContextualbarFooter } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, type UploadResult } from '@zeki.chat/ui-contexts';
 import fileSize from 'filesize';
 import type { ReactElement, FormEvent } from 'react';
 import { useState, useCallback } from 'react';

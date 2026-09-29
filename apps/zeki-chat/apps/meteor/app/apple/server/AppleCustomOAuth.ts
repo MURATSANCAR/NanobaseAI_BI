@@ -1,4 +1,4 @@
-import { MeteorError } from '@rocket.chat/core-services';
+import { MeteorError } from '@zeki.chat/core-services';
 import { Accounts } from 'meteor/accounts-base';
 
 import { CustomOAuth } from '../../custom-oauth/server/custom_oauth_server';

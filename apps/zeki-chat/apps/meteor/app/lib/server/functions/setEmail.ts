@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
-import { Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
+import { Users } from '@zeki.chat/models';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 import { Meteor } from 'meteor/meteor';
 import type { ClientSession } from 'mongodb';

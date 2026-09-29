@@ -9,7 +9,7 @@ import { createAgent, makeAgentAvailable } from '../utils/omnichannel/agents';
 import { test, expect } from '../utils/test';
 
 declare const window: Window & {
-	RocketChat: {
+	ZekiChat: {
 		livechat: {
 			setTheme: (theme: { hideAgentAvatar?: boolean; hideGuestAvatar?: boolean }) => void;
 		};
@@ -41,7 +41,7 @@ test.describe('OC - Livechat - Avatar visibility', async () => {
 	test.beforeEach(async ({ page }) => {
 		poLiveChat = new OmnichannelLiveChatEmbedded(page);
 
-		await page.goto('/packages/rocketchat_livechat/assets/demo.html');
+		await page.goto('/packages/zeki_livechat/assets/demo.html');
 	});
 
 	test.afterEach(async ({ page }) => {
@@ -79,12 +79,12 @@ test.describe('OC - Livechat - Avatar visibility', async () => {
 		});
 
 		await test.step('expect to make visitor avatar visible', async () => {
-			await poLiveChat.page.evaluate(() => window.RocketChat.livechat.setTheme({ hideGuestAvatar: false }));
+			await poLiveChat.page.evaluate(() => window.ZekiChat.livechat.setTheme({ hideGuestAvatar: false }));
 			await expect(poLiveChat.imgAvatar(visitor.name)).toBeVisible();
 		});
 
 		await test.step('expect to hide agent avatar', async () => {
-			await poLiveChat.page.evaluate(() => window.RocketChat.livechat.setTheme({ hideAgentAvatar: false }));
+			await poLiveChat.page.evaluate(() => window.ZekiChat.livechat.setTheme({ hideAgentAvatar: false }));
 			await expect(poLiveChat.imgAvatar('user1')).toBeVisible();
 		});
 

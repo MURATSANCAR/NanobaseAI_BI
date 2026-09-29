@@ -1,4 +1,4 @@
-import { Capabilities } from '@rocket.chat/core-services';
+import { Capabilities } from '@zeki.chat/core-services';
 import { createMiddleware } from 'hono/factory';
 
 export const isLicenseEnabledMiddleware = createMiddleware(async (c, next) => {

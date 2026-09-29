@@ -1,4 +1,4 @@
-import { useVerifyPassword } from '@rocket.chat/ui-contexts';
+import { useVerifyPassword } from '@zeki.chat/ui-contexts';
 
 import { PasswordVerifierList, type PasswordVerifierListProps } from './PasswordVerifierList';
 

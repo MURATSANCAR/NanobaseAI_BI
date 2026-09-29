@@ -1,4 +1,4 @@
-import type { IUser, UserType } from '@rocket.chat/apps-engine/definition/users';
+import type { IUser, UserType } from '@zeki.chat/apps-engine/definition/users';
 
 import { UserBridge } from '../../../src/server/bridges';
 

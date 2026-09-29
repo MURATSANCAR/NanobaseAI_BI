@@ -1,5 +1,5 @@
 import type { IMessage } from './IMessage/IMessage';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IRoom } from './IRoom';
 import type { IUser } from './IUser';
 
@@ -15,7 +15,7 @@ export type CallHistoryItemState =
 	/** The call ended due to a transfer */
 	| 'transferred';
 
-interface ICallHistoryItem extends IRocketChatRecord {
+interface ICallHistoryItem extends IZekiChatRecord {
 	uid: IUser['_id'];
 	ts: Date;
 

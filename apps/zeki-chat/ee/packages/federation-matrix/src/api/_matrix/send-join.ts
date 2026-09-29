@@ -1,7 +1,7 @@
 import type { EventID } from '@rocket.chat/federation-sdk';
 import { federationSDK } from '@rocket.chat/federation-sdk';
-import { Router } from '@rocket.chat/http-router';
-import { ajv } from '@rocket.chat/rest-typings/dist/v1/Ajv';
+import { Router } from '@zeki.chat/http-router';
+import { ajv } from '@zeki.chat/rest-typings/dist/v1/Ajv';
 
 import { canAccessResourceMiddleware } from '../middlewares/canAccessResource';
 
@@ -228,7 +228,7 @@ export const getMatrixSendJoinRoutes = () => {
 				200: isSendJoinResponseProps,
 			},
 			tags: ['Federation'],
-			license: ['federation'],
+			capabilities: ['federation'],
 		},
 		canAccessResourceMiddleware('room'),
 		async (c) => {

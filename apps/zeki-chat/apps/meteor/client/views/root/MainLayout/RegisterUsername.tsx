@@ -1,7 +1,7 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { TextInput, ButtonGroup, Button, FieldGroup, Field, FieldLabel, FieldRow, FieldError, Box } from '@rocket.chat/fuselage';
 import { VerticalWizardLayout, Form } from '@rocket.chat/layout';
-import { CustomFieldsForm } from '@rocket.chat/ui-client';
+import { CustomFieldsForm } from '@zeki.chat/ui-client';
 import {
 	useSetting,
 	useTranslation,
@@ -11,7 +11,7 @@ import {
 	useToastMessageDispatch,
 	useAssetWithDarkModePath,
 	useAccountsCustomFields,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId } from 'react';
 import { useForm } from 'react-hook-form';

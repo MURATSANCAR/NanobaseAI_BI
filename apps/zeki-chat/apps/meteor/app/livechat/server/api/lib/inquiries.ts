@@ -1,7 +1,7 @@
-import { LivechatInquiryStatus } from '@rocket.chat/core-typings';
-import type { ILivechatInquiryRecord, IRoom, IUser } from '@rocket.chat/core-typings';
-import { LivechatDepartmentAgents, LivechatDepartment, LivechatInquiry } from '@rocket.chat/models';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
+import { LivechatInquiryStatus } from '@zeki.chat/core-typings';
+import type { ILivechatInquiryRecord, IRoom, IUser } from '@zeki.chat/core-typings';
+import { LivechatDepartmentAgents, LivechatDepartment, LivechatInquiry } from '@zeki.chat/models';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
 import type { Filter } from 'mongodb';
 
 import { getOmniChatSortQuery } from '../../../lib/inquiries';

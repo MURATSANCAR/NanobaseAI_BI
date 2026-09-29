@@ -7,12 +7,12 @@ let mention;
 beforeEach(() => {
 	mention = new MentionsServer({
 		pattern: () => '[0-9a-zA-Z-_.]+',
-		messageMaxAll: () => 4, // || RocketChat.settings.get('Message_MaxAll')
+		messageMaxAll: () => 4, // || ZekiChat.settings.get('Message_MaxAll')
 		getUsers: async (usernames) =>
 			[
 				{
 					_id: 1,
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 				},
 				{
 					_id: 2,
@@ -26,7 +26,7 @@ beforeEach(() => {
 					name: 'general',
 				},
 			].filter((channel) => channels.includes(channel.name));
-			// return RocketChat.models.Rooms.find({ name: {$in: _.unique(channels)}, t: 'c'	}, { fields: {_id: 1, name: 1 }}).fetch();
+			// return ZekiChat.models.Rooms.find({ name: {$in: _.unique(channels)}, t: 'c'	}, { fields: {_id: 1, name: 1 }}).fetch();
 		},
 		getUser: (userId) => ({ _id: userId, language: 'en' }),
 		getTotalChannelMembers: (/* rid*/) => 2,
@@ -54,7 +54,7 @@ describe('Mention Server', () => {
 					usernames: [
 						{
 							_id: 1,
-							username: 'rocket.cat',
+							username: 'zeki.bot',
 						},
 						{
 							_id: 2,
@@ -90,14 +90,14 @@ describe('Mention Server', () => {
 				const result = await mention.getUsersByMentions(message);
 				expect(expected).to.be.deep.equal(result);
 			});
-			it('should return "rocket.cat"', async () => {
+			it('should return "zeki.bot"', async () => {
 				const message = {
-					msg: '@rocket.cat',
+					msg: '@zeki.bot',
 				};
 				const expected = [
 					{
 						_id: 1,
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 					},
 				];
 				const result = await mention.getUsersByMentions(message);
@@ -122,9 +122,9 @@ describe('Mention Server', () => {
 				const result = await mention.getUsersByMentions(message);
 				expect(expected).to.be.deep.equal(result);
 			});
-			it('should return "here and rocket.cat"', async () => {
+			it('should return "here and zeki.bot"', async () => {
 				const message = {
-					msg: '@here @rocket.cat',
+					msg: '@here @zeki.bot',
 				};
 				const expected = [
 					{
@@ -133,16 +133,16 @@ describe('Mention Server', () => {
 					},
 					{
 						_id: 1,
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 					},
 				];
 				const result = await mention.getUsersByMentions(message);
 				expect(expected).to.be.deep.equal(result);
 			});
 
-			it('should return "here, rocket.cat, jon"', async () => {
+			it('should return "here, zeki.bot, jon"', async () => {
 				const message = {
-					msg: '@here @rocket.cat @jon',
+					msg: '@here @zeki.bot @jon',
 				};
 				const expected = [
 					{
@@ -151,7 +151,7 @@ describe('Mention Server', () => {
 					},
 					{
 						_id: 1,
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 					},
 					{
 						_id: 2,
@@ -229,9 +229,9 @@ describe('Mention Server', () => {
 		describe('for message with only an md link', () => {
 			const result = [];
 			[
-				'[@rocket.cat](https://rocket.chat)',
-				'[@rocket.cat](https://rocket.chat) hello',
-				'[@rocket.cat](https://rocket.chat) hello how are you?',
+				'[@zeki.bot](https://rocket.chat)',
+				'[@zeki.bot](https://rocket.chat) hello',
+				'[@zeki.bot](https://rocket.chat) hello how are you?',
 				'[test](https://rocket.chat)',
 			].forEach((text) => {
 				it(`should return "${JSON.stringify(result)}" from "${text}"`, () => {

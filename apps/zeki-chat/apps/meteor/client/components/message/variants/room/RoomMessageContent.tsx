@@ -1,8 +1,8 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { isDiscussionMessage, isThreadMainMessage, isE2EEMessage, isQuoteAttachment } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { isDiscussionMessage, isThreadMainMessage, isE2EEMessage, isQuoteAttachment } from '@zeki.chat/core-typings';
 import { MessageBody } from '@rocket.chat/fuselage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useUserId, useUserPresence } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useUserId, useUserPresence } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

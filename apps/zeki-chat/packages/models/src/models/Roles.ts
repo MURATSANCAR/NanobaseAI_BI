@@ -1,12 +1,12 @@
-import type { IRole, IRoom, IUser, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IRolesModel } from '@rocket.chat/model-typings';
+import type { IRole, IRoom, IUser, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IRolesModel } from '@zeki.chat/model-typings';
 import type { Collection, FindCursor, Db, Filter, FindOptions, Document, CountDocumentsOptions } from 'mongodb';
 
 import { Subscriptions, Users } from '../index';
 import { BaseRaw } from './BaseRaw';
 
 export class RolesRaw extends BaseRaw<IRole> implements IRolesModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IRole>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IRole>>) {
 		super(db, 'roles', trash);
 	}
 

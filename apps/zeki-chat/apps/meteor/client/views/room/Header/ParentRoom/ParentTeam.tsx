@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { TeamType } from '@rocket.chat/core-typings';
-import { useUserId } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { TeamType } from '@zeki.chat/core-typings';
+import { useUserId } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import ParentRoomButton from './ParentRoomButton';

@@ -18,9 +18,9 @@ const Mark = ({ color = 'currentColor', height = 32 }) =>
 		),
 	);
 
-const RocketChatLogo = ({ color } = {}) => createElement(Mark, { color });
+const ZekiChatLogo = ({ color } = {}) => createElement(Mark, { color });
 
-const TaggedRocketChatLogo = ({ tagTitle, tagBackground, color, ...props } = {}) =>
+const TaggedZekiChatLogo = ({ tagTitle, tagBackground, color, ...props } = {}) =>
 	createElement(
 		'div',
 		{ ...props, style: { display: 'inline-flex', alignItems: 'center', gap: 8, ...(props.style || {}) } },
@@ -44,5 +44,5 @@ const TaggedRocketChatLogo = ({ tagTitle, tagBackground, color, ...props } = {})
 			: null,
 	);
 
-exports.RocketChatLogo = RocketChatLogo;
-exports.TaggedRocketChatLogo = TaggedRocketChatLogo;
+exports.ZekiChatLogo = ZekiChatLogo;
+exports.TaggedZekiChatLogo = TaggedZekiChatLogo;

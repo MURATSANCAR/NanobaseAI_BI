@@ -1,5 +1,5 @@
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import { Messages, Rooms } from '@rocket.chat/models';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import { Messages, Rooms } from '@zeki.chat/models';
 
 import { parseUrlsInMessage } from './parseUrlsInMessage';
 import { validateMessage, prepareMessageObject } from './sendMessage';

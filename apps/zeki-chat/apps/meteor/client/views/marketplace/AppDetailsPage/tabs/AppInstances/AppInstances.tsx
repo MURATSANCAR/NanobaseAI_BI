@@ -1,5 +1,5 @@
-import type { AppStatus } from '@rocket.chat/apps';
-import { AppStatusUtils } from '@rocket.chat/apps-engine/definition/AppStatus';
+import type { AppStatus } from '@zeki.chat/apps';
+import { AppStatusUtils } from '@zeki.chat/apps-engine/definition/AppStatus';
 import { Box, Palette, Tag } from '@rocket.chat/fuselage';
 import {
 	GenericMenu,
@@ -10,8 +10,8 @@ import {
 	GenericTableHeader,
 	GenericTableHeaderCell,
 	GenericTableRow,
-} from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

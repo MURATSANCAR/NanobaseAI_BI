@@ -1,6 +1,6 @@
-import type { IVideoConfProvider } from '@rocket.chat/apps-engine/definition/videoConfProviders';
-import type { AppVideoConference } from '@rocket.chat/apps-engine/definition/videoConferences/AppVideoConference';
-import type { VideoConference } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConference';
+import type { IVideoConfProvider } from '@zeki.chat/apps-engine/definition/videoConfProviders';
+import type { AppVideoConference } from '@zeki.chat/apps-engine/definition/videoConferences/AppVideoConference';
+import type { VideoConference } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConference';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

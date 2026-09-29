@@ -1,5 +1,5 @@
 import type { APIResponse } from '@playwright/test';
-import type { Serialized } from '@rocket.chat/core-typings';
+import type { Serialized } from '@zeki.chat/core-typings';
 
 export const parseMeteorResponse = async <ResponseType = unknown>(response: APIResponse): Promise<Serialized<ResponseType>> => {
 	const { message, success } = await response.json();

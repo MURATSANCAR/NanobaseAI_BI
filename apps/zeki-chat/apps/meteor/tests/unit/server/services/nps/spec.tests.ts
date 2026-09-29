@@ -24,8 +24,8 @@ const servicesMock = {
 const getbannerforadminsMock = sinon.stub();
 
 const { NPSService } = p('../../../../../server/services/nps/service.ts', {
-	'@rocket.chat/models': modelsMock,
-	'@rocket.chat/core-services': servicesMock,
+	'@zeki.chat/models': modelsMock,
+	'@zeki.chat/core-services': servicesMock,
 	'../../lib/logger/system': { 'SystemLogger': { error: sinon.stub() }, '@noCallThru': true },
 	'./notification': { 'notifyAdmins': sinon.stub(), 'getBannerForAdmins': getbannerforadminsMock, '@noCallThru': true },
 });

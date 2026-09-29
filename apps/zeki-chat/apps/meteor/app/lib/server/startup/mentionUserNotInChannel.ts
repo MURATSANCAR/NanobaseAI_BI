@@ -1,9 +1,9 @@
-import { api } from '@rocket.chat/core-services';
-import type { IMessage } from '@rocket.chat/core-typings';
-import { isDirectMessageRoom, isEditedMessage, isOmnichannelRoom, isRoomFederated, getUserDisplayName } from '@rocket.chat/core-typings';
-import { Subscriptions, Users } from '@rocket.chat/models';
-import { isTruthy } from '@rocket.chat/tools';
-import type { ActionsBlock } from '@rocket.chat/ui-kit';
+import { api } from '@zeki.chat/core-services';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { isDirectMessageRoom, isEditedMessage, isOmnichannelRoom, isRoomFederated, getUserDisplayName } from '@zeki.chat/core-typings';
+import { Subscriptions, Users } from '@zeki.chat/models';
+import { isTruthy } from '@zeki.chat/tools';
+import type { ActionsBlock } from '@zeki.chat/ui-kit';
 import moment from 'moment';
 
 import { callbacks } from '../../../../server/lib/callbacks';

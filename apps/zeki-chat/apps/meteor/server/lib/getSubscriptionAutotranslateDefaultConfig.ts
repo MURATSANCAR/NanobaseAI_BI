@@ -1,4 +1,4 @@
-import type { AtLeast, IUser } from '@rocket.chat/core-typings';
+import type { AtLeast, IUser } from '@zeki.chat/core-typings';
 
 import { settings } from '../../app/settings/server';
 

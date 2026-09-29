@@ -1,6 +1,6 @@
 import { useBreakpoints } from '@rocket.chat/fuselage-hooks';
-import { useFeaturePreview } from '@rocket.chat/ui-client';
-import { LayoutContext, useRouter, useSetting } from '@rocket.chat/ui-contexts';
+import { useFeaturePreview } from '@zeki.chat/ui-client';
+import { LayoutContext, useRouter, useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { useMemo, useState, useEffect } from 'react';
 

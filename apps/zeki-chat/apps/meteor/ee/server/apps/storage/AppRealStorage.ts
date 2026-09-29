@@ -1,11 +1,11 @@
-import type { IMarketplaceInfo } from '@rocket.chat/apps/dist/server/marketplace/IMarketplaceInfo';
-import { AppMetadataStorage } from '@rocket.chat/apps/dist/server/storage/AppMetadataStorage';
-import type { IAppStorageItem } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
-import type { Apps } from '@rocket.chat/models';
-import { removeEmpty } from '@rocket.chat/tools';
+import type { IMarketplaceInfo } from '@zeki.chat/apps/dist/server/marketplace/IMarketplaceInfo';
+import { AppMetadataStorage } from '@zeki.chat/apps/dist/server/storage/AppMetadataStorage';
+import type { IAppStorageItem } from '@zeki.chat/apps/dist/server/storage/IAppStorageItem';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
+import type { Apps } from '@zeki.chat/models';
+import { removeEmpty } from '@zeki.chat/tools';
 import type { UpdateFilter } from 'mongodb';
 
 export class AppRealStorage extends AppMetadataStorage {

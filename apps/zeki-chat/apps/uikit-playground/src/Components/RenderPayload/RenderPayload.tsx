@@ -3,7 +3,7 @@ import {
 	UiKitBanner as uiKitBanner,
 	UiKitMessage as uiKitMessage,
 	UiKitContextualBar as uiKitContextualBar,
-} from '@rocket.chat/fuselage-ui-kit';
+} from '@zeki.chat/fuselage-ui-kit';
 
 import type { ILayoutBlock } from '../../Context/initialState';
 import { SurfaceOptions } from '../Preview/Display/Surface/constant';

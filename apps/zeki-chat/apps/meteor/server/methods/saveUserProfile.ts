@@ -1,6 +1,6 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import type { UserStatus, IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import type { UserStatus, IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
@@ -200,7 +200,7 @@ const saveUserProfileWithTwoFactor = twoFactorRequired(saveUserProfile, {
 	requireSecondFactor: true,
 });
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		saveUserProfile(

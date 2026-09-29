@@ -23,7 +23,7 @@ Some features the Engine allows Apps to use:
 - App specific settings
 
 ## Development environment with ZEKI AI CHAT
-When developing new functionalities, you need to integrate the local version of the Apps-Engine with your local version of Rocket.Chat.
+When developing new functionalities, you need to integrate the local version of the Apps-Engine with your local version of ZEKI AI CHAT.
 
 First of all, make sure you've installed all required packages and compiled the changes you've made to the Apps-Engine, since that is what ZEKI AI CHAT will execute:
 ```sh
@@ -50,12 +50,12 @@ Whenever you make changes to the engine, run `npm run compile` again - meteor wi
 ```
 Unable to resolve some modules:
 
-  "@rocket.chat/apps-engine/definition/AppStatus" in
+  "@zeki.chat/apps-engine/definition/AppStatus" in
 /Users/dev/rocket.chat/Rocket.Chat/app/apps/client/admin/helpers.js (web.browser)
 
 If you notice problems related to these missing modules, consider running:
 
-  meteor npm install --save @rocket.chat/apps-engine
+  meteor npm install --save @zeki.chat/apps-engine
 ```
 
 Simply restart the meteor process and it should be fixed.
@@ -65,21 +65,21 @@ Simply restart the meteor process and it should be fixed.
 ```
 npm ERR! code ENOENT
 npm ERR! syscall rename
-npm ERR! path PATH_TO_ROCKETCHAT/node_modules/.staging/@rocket.chat/apps-engine-c7135600/node_modules/@babel/code-frame
-npm ERR! dest PATH_TO_ROCKETCHAT/node_modules/.staging/@babel/code-frame-f3697825
+npm ERR! path PATH_TO_ZEKICHAT/node_modules/.staging/@rocket.chat/apps-engine-c7135600/node_modules/@babel/code-frame
+npm ERR! dest PATH_TO_ZEKICHAT/node_modules/.staging/@babel/code-frame-f3697825
 npm ERR! errno -2
-npm ERR! enoent ENOENT: no such file or directory, rename 'PATH_TO_ROCKETCHAT/node_modules/.staging/@rocket.chat/apps-engine-c7135600/node_modules/@babel/code-frame' -> 'PATH_TO_ROCKETCHAT/node_modules/.staging/@babel/code-frame-f3697825'
+npm ERR! enoent ENOENT: no such file or directory, rename 'PATH_TO_ZEKICHAT/node_modules/.staging/@rocket.chat/apps-engine-c7135600/node_modules/@babel/code-frame' -> 'PATH_TO_ZEKICHAT/node_modules/.staging/@babel/code-frame-f3697825'
 npm ERR! enoent This is related to npm not being able to find a file.
 npm ERR! enoent
 ```
-Here `PATH_TO_ROCKETCHAT` is the path to the main rocketchat server repo in your system
+Here `PATH_TO_ZEKICHAT` is the path to the main zekichat server repo in your system
 To correct this we reinstall the package once again deleting the previous package
 ```
-~/Rocket.Chat$ rm -rf node_modules/@rocket.chat/apps-engine
-~/Rocket.Chat$ cd PATH_TO_APP_ENGINE
-~/Rocket.Chat.Apps-engine$ npm install
-~/Rocket.Chat.Apps-engine$ cd PATH_TO_ROCKETCHAT
-~/Rocket.Chat$ meteor npm install ../Rocket.Chat.Apps-engine
+~/ZEKI AI CHAT$ rm -rf node_modules/@zeki.chat/apps-engine
+~/ZEKI AI CHAT$ cd PATH_TO_APP_ENGINE
+~/ZEKI AI CHAT.Apps-engine$ npm install
+~/ZEKI AI CHAT.Apps-engine$ cd PATH_TO_ZEKICHAT
+~/ZEKI AI CHAT$ meteor npm install ../ZEKI AI CHAT.Apps-engine
 ```
 
 ## Implementer Needs to Implement:

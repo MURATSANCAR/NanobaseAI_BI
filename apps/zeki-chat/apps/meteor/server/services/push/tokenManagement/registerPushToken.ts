@@ -1,5 +1,5 @@
-import type { IPushToken, Optional } from '@rocket.chat/core-typings';
-import { PushToken } from '@rocket.chat/models';
+import type { IPushToken, Optional } from '@zeki.chat/core-typings';
+import { PushToken } from '@zeki.chat/models';
 
 import { findDocumentToUpdate } from './findDocumentToUpdate';
 import { logger } from '../logger';

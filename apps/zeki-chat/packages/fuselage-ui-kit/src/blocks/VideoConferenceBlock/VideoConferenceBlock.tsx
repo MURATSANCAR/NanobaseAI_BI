@@ -1,6 +1,6 @@
-import { getUserDisplayName, VideoConferenceStatus } from '@rocket.chat/core-typings';
-import { useGoToRoom, useSetting, useTranslation, useUserId, useUserPreference } from '@rocket.chat/ui-contexts';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import { getUserDisplayName, VideoConferenceStatus } from '@zeki.chat/core-typings';
+import { useGoToRoom, useSetting, useTranslation, useUserId, useUserPreference } from '@zeki.chat/ui-contexts';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import {
 	VideoConfMessageSkeleton,
 	VideoConfMessage,
@@ -14,7 +14,7 @@ import {
 	VideoConfMessageContent,
 	VideoConfMessageActions,
 	VideoConfMessageAction,
-} from '@rocket.chat/ui-video-conf';
+} from '@zeki.chat/ui-video-conf';
 import type { MouseEventHandler, ReactElement } from 'react';
 import { useContext, memo, useMemo } from 'react';
 

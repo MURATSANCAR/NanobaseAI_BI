@@ -1,4 +1,4 @@
-import { useUserPreference, useSetting } from '@rocket.chat/ui-contexts';
+import { useUserPreference, useSetting } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
 import { t } from '../../app/utils/lib/i18n';

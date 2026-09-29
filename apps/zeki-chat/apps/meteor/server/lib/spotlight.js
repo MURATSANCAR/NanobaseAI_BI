@@ -1,5 +1,5 @@
-import { Team } from '@rocket.chat/core-services';
-import { Users, Subscriptions as SubscriptionsRaw, Rooms } from '@rocket.chat/models';
+import { Team } from '@zeki.chat/core-services';
+import { Users, Subscriptions as SubscriptionsRaw, Rooms } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { canAccessRoomAsync, roomAccessAttributes } from '../../app/authorization/server';

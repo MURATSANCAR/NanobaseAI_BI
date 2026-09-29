@@ -1,4 +1,4 @@
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 const tenMinutes = 10 * 60 * 1000;

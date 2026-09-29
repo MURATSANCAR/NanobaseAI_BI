@@ -1,4 +1,4 @@
-import { proxify } from '@rocket.chat/core-services';
+import { proxify } from '@zeki.chat/core-services';
 
 import type { IInstanceService } from './types/IInstanceService';
 import type { ILDAPEEService } from './types/ILDAPEEService';

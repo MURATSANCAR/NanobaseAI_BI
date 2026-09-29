@@ -1,4 +1,4 @@
-import type { ILDAPEntry } from '@rocket.chat/core-typings';
+import type { ILDAPEntry } from '@zeki.chat/core-typings';
 import _ from 'underscore';
 
 export function ldapKeyExists(ldapUser: ILDAPEntry, key: string): boolean {

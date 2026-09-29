@@ -1,6 +1,6 @@
-import { api } from '@rocket.chat/core-services';
-import type { SlashCommandCallbackParams } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { SlashCommandCallbackParams } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { i18n } from '../../../server/lib/i18n';

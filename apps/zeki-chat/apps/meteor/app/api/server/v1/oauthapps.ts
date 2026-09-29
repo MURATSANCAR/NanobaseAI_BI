@@ -1,12 +1,12 @@
-import type { IOAuthApps } from '@rocket.chat/core-typings';
-import { OAuthApps } from '@rocket.chat/models';
+import type { IOAuthApps } from '@zeki.chat/core-typings';
+import { OAuthApps } from '@zeki.chat/models';
 import {
 	ajv,
 	ajvQuery,
 	validateUnauthorizedErrorResponse,
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
 import { addOAuthApp } from '../../../oauth2-server-config/server/admin/functions/addOAuthApp';
@@ -290,7 +290,7 @@ const oauthAppsEndpoints = API.v1
 
 export type OauthAppsEndpoints = ExtractRoutesFromAPI<typeof oauthAppsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends OauthAppsEndpoints {}
 }

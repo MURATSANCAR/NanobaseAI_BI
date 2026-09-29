@@ -1,7 +1,7 @@
-import { Authorization, MediaCall, VideoConf, Settings } from '@rocket.chat/core-services';
-import type { ISubscription, IOmnichannelRoom, IUser, IUserDataEvent } from '@rocket.chat/core-typings';
-import type { StreamerCallbackArgs, StreamKeys, StreamNames } from '@rocket.chat/ddp-client';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { Authorization, MediaCall, VideoConf, Settings } from '@zeki.chat/core-services';
+import type { ISubscription, IOmnichannelRoom, IUser, IUserDataEvent } from '@zeki.chat/core-typings';
+import type { StreamerCallbackArgs, StreamKeys, StreamNames } from '@zeki.chat/ddp-client';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import type { ImporterProgress } from '../../../app/importer/server/classes/ImporterProgress';
 import { emit, StreamPresence } from '../../../app/notifications/server/lib/Presence';

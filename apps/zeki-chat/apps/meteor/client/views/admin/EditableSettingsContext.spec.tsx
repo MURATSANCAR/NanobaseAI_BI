@@ -1,4 +1,4 @@
-import { mockAppRoot as _mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot as _mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook } from '@testing-library/react';
 
 import { useEditableSettingVisibilityQuery } from './EditableSettingsContext';

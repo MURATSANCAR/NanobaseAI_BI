@@ -1,7 +1,7 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { Message } from '@rocket.chat/core-services';
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import { Messages, EmojiCustom, Rooms, Users } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { Message } from '@zeki.chat/core-services';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import { Messages, EmojiCustom, Rooms, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../server/lib/callbacks';
@@ -142,7 +142,7 @@ export async function executeSetReaction(
 	return setReaction(room, user, message, reaction, userAlreadyReacted);
 }
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		setReaction(reaction: string, messageId: IMessage['_id'], shouldReact?: boolean): boolean | undefined;

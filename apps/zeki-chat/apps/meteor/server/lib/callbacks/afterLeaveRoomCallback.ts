@@ -1,4 +1,4 @@
-import type { IUser, IRoom } from '@rocket.chat/core-typings';
+import type { IUser, IRoom } from '@zeki.chat/core-typings';
 
 import { Callbacks } from './callbacksBase';
 

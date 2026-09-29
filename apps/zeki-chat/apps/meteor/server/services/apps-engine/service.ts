@@ -1,11 +1,11 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import type { IGetAppsFilter } from '@rocket.chat/apps/dist/server/IGetAppsFilter';
-import type { IAppStorageItem } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import { AppStatusUtils } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-import type { AppStatusReport, IAppsEngineService } from '@rocket.chat/core-services';
-import { ServiceClassInternal } from '@rocket.chat/core-services';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import type { IGetAppsFilter } from '@zeki.chat/apps/dist/server/IGetAppsFilter';
+import type { IAppStorageItem } from '@zeki.chat/apps/dist/server/storage/IAppStorageItem';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import { AppStatusUtils } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
+import type { AppStatusReport, IAppsEngineService } from '@zeki.chat/core-services';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
 
 import { isRunningMs } from '../../lib/isRunningMs';
 import { SystemLogger } from '../../lib/logger/system';
@@ -31,7 +31,7 @@ export class AppsEngineService extends ServiceClassInternal implements IAppsEngi
 		});
 
 		this.onEvent('apps.added', async (appId: string): Promise<void> => {
-			Apps.self?.getRocketChatLogger().debug({
+			Apps.self?.getZekiChatLogger().debug({
 				msg: '"apps.added" event received for app',
 				appId,
 			});
@@ -39,7 +39,7 @@ export class AppsEngineService extends ServiceClassInternal implements IAppsEngi
 			const app = Apps.self?.getManager()?.getOneById(appId);
 
 			if (app) {
-				Apps.self?.getRocketChatLogger().info({
+				Apps.self?.getZekiChatLogger().info({
 					msg: '"apps.added" event received for app, but it already exists in this instance',
 					appId,
 				});
@@ -50,13 +50,13 @@ export class AppsEngineService extends ServiceClassInternal implements IAppsEngi
 		});
 
 		this.onEvent('apps.removed', async (appId: string): Promise<void> => {
-			Apps.self?.getRocketChatLogger().debug({
+			Apps.self?.getZekiChatLogger().debug({
 				msg: '"apps.removed" event received for app',
 				appId,
 			});
 			const app = Apps.self?.getManager()?.getOneById(appId);
 			if (!app) {
-				Apps.self?.getRocketChatLogger().info({
+				Apps.self?.getZekiChatLogger().info({
 					msg: '"apps.removed" event received for app, but it could not be found in this instance',
 					appId,
 				});
@@ -67,13 +67,13 @@ export class AppsEngineService extends ServiceClassInternal implements IAppsEngi
 		});
 
 		this.onEvent('apps.updated', async (appId: string): Promise<void> => {
-			Apps.self?.getRocketChatLogger().debug({
+			Apps.self?.getZekiChatLogger().debug({
 				msg: '"apps.updated" event received for app',
 				appId,
 			});
 			const storageItem = await Apps.self?.getStorage()?.retrieveOne(appId);
 			if (!storageItem) {
-				Apps.self?.getRocketChatLogger().info({
+				Apps.self?.getZekiChatLogger().info({
 					msg: '"apps.updated" event received for app, but it could not be found in the storage',
 					appId,
 				});
@@ -94,14 +94,14 @@ export class AppsEngineService extends ServiceClassInternal implements IAppsEngi
 		});
 
 		this.onEvent('apps.statusUpdate', async (appId: string, status: AppStatus): Promise<void> => {
-			Apps.self?.getRocketChatLogger().debug({
+			Apps.self?.getZekiChatLogger().debug({
 				msg: '"apps.statusUpdate" event received for app with status',
 				appId,
 				status,
 			});
 			const app = Apps.self?.getManager()?.getOneById(appId);
 			if (!app) {
-				Apps.self?.getRocketChatLogger().info({
+				Apps.self?.getZekiChatLogger().info({
 					msg: '"apps.statusUpdate" event received for app, but it could not be found in this instance',
 					appId,
 					status,
@@ -110,7 +110,7 @@ export class AppsEngineService extends ServiceClassInternal implements IAppsEngi
 			}
 
 			if ((await app.getStatus()) === status) {
-				Apps.self?.getRocketChatLogger().info({
+				Apps.self?.getZekiChatLogger().info({
 					msg: '"apps.statusUpdate" event received for app, but the status is the same',
 					appId,
 					status,
@@ -126,7 +126,7 @@ export class AppsEngineService extends ServiceClassInternal implements IAppsEngi
 		});
 
 		this.onEvent('apps.settingUpdated', async (appId: string, setting): Promise<void> => {
-			Apps.self?.getRocketChatLogger().debug({
+			Apps.self?.getZekiChatLogger().debug({
 				msg: '"apps.settingUpdated" event received for app',
 				appId,
 				setting,
@@ -140,7 +140,7 @@ export class AppsEngineService extends ServiceClassInternal implements IAppsEngi
 			// so we need to convert it to JSON stringified to compare it
 
 			if (JSON.stringify(oldSetting) === JSON.stringify(setting.value)) {
-				Apps.self?.getRocketChatLogger().info({
+				Apps.self?.getZekiChatLogger().info({
 					msg: '"apps.settingUpdated" event received for app, but the setting value is the same',
 					appId,
 					settingId: setting.id,

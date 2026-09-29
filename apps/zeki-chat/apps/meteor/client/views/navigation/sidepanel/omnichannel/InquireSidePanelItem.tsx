@@ -1,8 +1,8 @@
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
 import { SidebarV2ItemIcon as SidebarItemIcon } from '@rocket.chat/fuselage';
 import { escapeHTML } from '@rocket.chat/string-helpers';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import { useUserId } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import { useUserId } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 

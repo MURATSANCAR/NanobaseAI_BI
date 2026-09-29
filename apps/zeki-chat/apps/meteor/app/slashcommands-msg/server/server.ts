@@ -1,7 +1,7 @@
-import { api } from '@rocket.chat/core-services';
-import type { SlashCommandCallbackParams } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { api } from '@zeki.chat/core-services';
+import type { SlashCommandCallbackParams } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 
 import { i18n } from '../../../server/lib/i18n';
 import { createDirectMessage } from '../../../server/methods/createDirectMessage';

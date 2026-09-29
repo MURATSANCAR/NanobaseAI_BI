@@ -1,6 +1,6 @@
-import type { ICustomSound } from '@rocket.chat/core-typings';
-import { CustomSounds } from '@rocket.chat/models';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
+import type { ICustomSound } from '@zeki.chat/core-typings';
+import { CustomSounds } from '@zeki.chat/models';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
 import {
 	isCustomSoundsGetOneProps,
 	isCustomSoundsListProps,
@@ -11,7 +11,7 @@ import {
 	validateNotFoundErrorResponse,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { MAX_CUSTOM_SOUND_SIZE_BYTES, CUSTOM_SOUND_ALLOWED_MIME_TYPES } from '../../../../lib/constants';
@@ -284,7 +284,7 @@ const customSoundsEndpoints = API.v1
 
 export type CustomSoundEndpoints = ExtractRoutesFromAPI<typeof customSoundsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends CustomSoundEndpoints {}
 }

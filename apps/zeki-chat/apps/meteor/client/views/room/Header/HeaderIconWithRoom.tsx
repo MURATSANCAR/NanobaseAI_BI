@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
-import { HeaderIcon } from '@rocket.chat/ui-client';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
+import { HeaderIcon } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 
 import { OmnichannelRoomIcon } from '../../../components/RoomIcon/OmnichannelRoomIcon';

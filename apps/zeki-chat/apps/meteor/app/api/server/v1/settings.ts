@@ -5,9 +5,9 @@ import type {
 	LoginServiceConfiguration,
 	TwitterOAuthConfiguration,
 	OAuthConfiguration,
-} from '@rocket.chat/core-typings';
-import { isActionSettingWithEndpoint, isSettingAction, isSettingColor } from '@rocket.chat/core-typings';
-import { LoginServiceConfiguration as LoginServiceConfigurationModel, Settings } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { isActionSettingWithEndpoint, isSettingAction, isSettingColor } from '@zeki.chat/core-typings';
+import { LoginServiceConfiguration as LoginServiceConfigurationModel, Settings } from '@zeki.chat/models';
 import {
 	ajv,
 	isSettingsUpdatePropDefault,
@@ -17,7 +17,7 @@ import {
 	isSettingsGetParams,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
 import type { FindOptions } from 'mongodb';
 import _ from 'underscore';

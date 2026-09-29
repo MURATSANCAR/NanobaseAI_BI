@@ -1,4 +1,4 @@
-import type { ILivechatVisitor, IOmnichannelSource } from '@rocket.chat/core-typings';
+import type { ILivechatVisitor, IOmnichannelSource } from '@zeki.chat/core-typings';
 
 import type { CreateContactParams } from './createContact';
 import { getAllowedCustomFields } from './getAllowedCustomFields';

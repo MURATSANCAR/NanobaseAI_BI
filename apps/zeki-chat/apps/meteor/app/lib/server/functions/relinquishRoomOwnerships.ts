@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { Messages, Rooms, Subscriptions, ReadReceipts, ReadReceiptsArchive, Team } from '@rocket.chat/models';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { Messages, Rooms, Subscriptions, ReadReceipts, ReadReceiptsArchive, Team } from '@zeki.chat/models';
 
 import type { SubscribedRoomsForUserWithDetails } from './getRoomsWithSingleOwner';
 import { addUserRolesAsync } from '../../../../server/lib/roles/addUserRoles';

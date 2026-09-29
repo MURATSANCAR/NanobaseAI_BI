@@ -1,4 +1,4 @@
-import { useMediaDeviceMicrophonePermission, useSelectedDevices, useSetInputMediaDevice, useSetModal } from '@rocket.chat/ui-contexts';
+import { useMediaDeviceMicrophonePermission, useSelectedDevices, useSetInputMediaDevice, useSetModal } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 

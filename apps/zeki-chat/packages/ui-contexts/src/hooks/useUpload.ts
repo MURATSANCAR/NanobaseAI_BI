@@ -1,4 +1,4 @@
-import type { PathFor } from '@rocket.chat/rest-typings';
+import type { PathFor } from '@zeki.chat/rest-typings';
 import { useCallback, useContext } from 'react';
 
 import type { UploadResult } from '../ServerContext';

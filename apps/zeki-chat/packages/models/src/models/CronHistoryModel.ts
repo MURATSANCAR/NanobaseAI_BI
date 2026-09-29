@@ -1,5 +1,5 @@
-import type { ICronHistoryItem } from '@rocket.chat/core-typings';
-import type { ICronHistoryModel } from '@rocket.chat/model-typings';
+import type { ICronHistoryItem } from '@zeki.chat/core-typings';
+import type { ICronHistoryModel } from '@zeki.chat/model-typings';
 import type { Db, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

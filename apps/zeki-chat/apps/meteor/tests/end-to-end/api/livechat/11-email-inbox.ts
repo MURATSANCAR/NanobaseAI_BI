@@ -1,4 +1,4 @@
-import type { IEmailInbox } from '@rocket.chat/core-typings';
+import type { IEmailInbox } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 import type { Response } from 'supertest';

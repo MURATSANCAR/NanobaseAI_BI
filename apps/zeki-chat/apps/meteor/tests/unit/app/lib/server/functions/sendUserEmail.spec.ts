@@ -1,4 +1,4 @@
-import { MeteorError } from '@rocket.chat/core-services';
+import { MeteorError } from '@zeki.chat/core-services';
 import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import mock from 'proxyquire';

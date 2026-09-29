@@ -1,5 +1,5 @@
-import type { ILivechatAgentActivity, IServiceHistory, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { ILivechatAgentActivityModel } from '@rocket.chat/model-typings';
+import type { ILivechatAgentActivity, IServiceHistory, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { ILivechatAgentActivityModel } from '@zeki.chat/model-typings';
 import { parseISO, format } from 'date-fns';
 import type { AggregationCursor, Collection, Document, FindCursor, Db, WithId, IndexDescription, UpdateResult } from 'mongodb';
 
@@ -7,7 +7,7 @@ import { BaseRaw } from './BaseRaw';
 import { readSecondaryPreferred } from '../readSecondaryPreferred';
 
 export class LivechatAgentActivityRaw extends BaseRaw<ILivechatAgentActivity> implements ILivechatAgentActivityModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ILivechatAgentActivity>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ILivechatAgentActivity>>) {
 		super(db, 'livechat_agent_activity', trash);
 	}
 
@@ -98,7 +98,7 @@ export class LivechatAgentActivityRaw extends BaseRaw<ILivechatAgentActivity> im
 		const match = { $match: { date } };
 		const lookup = {
 			$lookup: {
-				from: 'rocketchat_livechat_department_agents',
+				from: 'zeki_livechat_department_agents',
 				localField: 'agentId',
 				foreignField: 'agentId',
 				as: 'departments',

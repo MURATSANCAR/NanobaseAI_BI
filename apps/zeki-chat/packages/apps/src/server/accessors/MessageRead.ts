@@ -1,7 +1,7 @@
-import type { IMessageRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IMessageRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import type { MessageBridge } from '../bridges/MessageBridge';
 

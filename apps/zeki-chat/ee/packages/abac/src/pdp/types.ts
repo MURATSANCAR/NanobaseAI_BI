@@ -1,4 +1,4 @@
-import type { IAbacAttributeDefinition, IRoom, IUser, AtLeast } from '@rocket.chat/core-typings';
+import type { IAbacAttributeDefinition, IRoom, IUser, AtLeast } from '@zeki.chat/core-typings';
 
 export type IEntityIdentifier = { emailAddress: string } | { id: string };
 

@@ -1,5 +1,5 @@
-import type { ISocketConnection } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { ISocketConnection } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
@@ -86,7 +86,7 @@ export const listenSessionLogin = () => {
 				mailData.osInfo = `${os.name}`;
 				mailData.deviceInfo = `${device.type} ${device.vendor || ''} ${device.model || ''} ${cpu.architecture || ''}`;
 				break;
-			// Zeki: device-login email shows the ZEKI AI CHAT brand instead of Rocket.Chat.
+			// Zeki: device-login email shows the ZEKI AI CHAT brand instead of ZEKI AI CHAT.
 			case 'mobile-app':
 				mailData.browserInfo = `ZEKI AI CHAT App ${app?.bundle || app?.version}`;
 				mailData.osInfo = `${os.name}`;

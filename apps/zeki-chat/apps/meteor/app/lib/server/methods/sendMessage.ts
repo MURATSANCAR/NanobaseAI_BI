@@ -1,9 +1,9 @@
-import { api } from '@rocket.chat/core-services';
-import type { AtLeast, IMessage, IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import type { RocketchatI18nKeys } from '@rocket.chat/i18n';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { Messages, Users } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { AtLeast, IMessage, IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import type { RocketchatI18nKeys } from '@zeki.chat/i18n';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { Messages, Users } from '@zeki.chat/models';
 import type { TOptions } from 'i18next';
 import { check, Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
@@ -13,7 +13,6 @@ import { i18n } from '../../../../server/lib/i18n';
 import { SystemLogger } from '../../../../server/lib/logger/system';
 import { canSendMessageAsync } from '../../../authorization/server/functions/canSendMessage';
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
-import { applyAirGappedRestrictionsValidation } from '../../../license/server/airGappedRestrictionsWrapper';
 import { metrics } from '../../../metrics/server';
 import { settings } from '../../../settings/server';
 import { sendMessage } from '../functions/sendMessage';
@@ -128,7 +127,7 @@ export async function executeSendMessage(
 	}
 }
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		sendMessage(message: AtLeast<IMessage, '_id' | 'rid' | 'msg'>, previewUrls?: string[]): any;
@@ -167,7 +166,7 @@ Meteor.methods<ServerMethods>({
 		}
 
 		try {
-			return await applyAirGappedRestrictionsValidation(() => executeSendMessage(user, message, { previewUrls }));
+			return await executeSendMessage(user, message, { previewUrls });
 		} catch (error: any) {
 			if (['error-not-allowed', 'restricted-workspace'].includes(error.error || error.message)) {
 				throw new Meteor.Error(error.error || error.message, error.reason, {

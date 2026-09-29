@@ -1,13 +1,12 @@
 import { useDebouncedCallback } from '@rocket.chat/fuselage-hooks';
-import { useInvalidateCapabilities } from '@rocket.chat/ui-client';
-import { usePermission, useStream } from '@rocket.chat/ui-contexts';
+import { useInvalidateCapabilities } from '@zeki.chat/ui-client';
+import { usePermission, useStream } from '@zeki.chat/ui-contexts';
 import type { UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useContext, useEffect } from 'react';
 
 import { useInvalidateAppsCountQueryCallback } from './useAppsCountQuery';
 import { AppsContext } from '../../../contexts/AppsContext';
-import { useIsEnterprise } from '../../../hooks/useIsEnterprise';
 import { marketplaceQueryKeys } from '../../../lib/queryKeys';
 import type { App } from '../types';
 
@@ -103,10 +102,8 @@ export const useApps = <
 
 	const queryClient = useQueryClient();
 
-	const { data: isEnterprise } = useIsEnterprise();
-
 	const invalidateAppsCountQuery = useInvalidateAppsCountQueryCallback();
-	const invalidateLicenseQuery = useInvalidateCapabilities();
+	const invalidateCapabilities = useInvalidateCapabilities();
 
 	const stream = useStream('apps');
 
@@ -124,11 +121,11 @@ export const useApps = <
 			if (['app/added', 'app/removed', 'app/updated', 'app/statusUpdate', 'app/settingUpdated'].includes(key)) {
 				invalidate();
 			}
-			if (['app/added', 'app/removed'].includes(key) && !isEnterprise) {
-				invalidateLicenseQuery();
+			if (['app/added', 'app/removed'].includes(key)) {
+				invalidateCapabilities();
 			}
 		});
-	}, [invalidate, invalidateLicenseQuery, isEnterprise, stream]);
+	}, [invalidate, invalidateCapabilities, stream]);
 
 	const marketplace = useQuery({
 		queryKey: marketplaceQueryKeys.appsMarketplace(canManageApps),

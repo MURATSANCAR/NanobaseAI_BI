@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { roomCoordinator } from '../../../../client/lib/rooms/roomCoordinator';
 import { getUser, getUserId } from '../../../../client/lib/user';

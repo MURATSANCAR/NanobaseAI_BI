@@ -1,4 +1,4 @@
-import type { FindOptions } from '@rocket.chat/ui-contexts';
+import type { FindOptions } from '@zeki.chat/ui-contexts';
 
 import { pipe } from './pipe';
 

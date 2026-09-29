@@ -1,5 +1,5 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IRoom, IMessage } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IRoom, IMessage } from '@zeki.chat/core-typings';
 
 import { api, credentials, request } from './api-data';
 

@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { settings } from '../../../settings/server';
 

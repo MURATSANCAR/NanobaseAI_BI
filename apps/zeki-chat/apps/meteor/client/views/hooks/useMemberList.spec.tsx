@@ -1,6 +1,6 @@
-import { UserStatus } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import { useStream } from '@rocket.chat/ui-contexts';
+import { UserStatus } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import { useStream } from '@zeki.chat/ui-contexts';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 import type { RoomMember } from './useMembersList';
@@ -18,8 +18,8 @@ type MembersPage = {
 	}>;
 };
 
-jest.mock('@rocket.chat/ui-contexts', () => {
-	const originalModule = jest.requireActual('@rocket.chat/ui-contexts');
+jest.mock('@zeki.chat/ui-contexts', () => {
+	const originalModule = jest.requireActual('@zeki.chat/ui-contexts');
 
 	return {
 		__esModule: true,

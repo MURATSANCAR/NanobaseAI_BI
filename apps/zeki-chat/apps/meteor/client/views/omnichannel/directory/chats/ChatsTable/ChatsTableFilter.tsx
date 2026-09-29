@@ -1,7 +1,7 @@
 import { Box, Button, Chip } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericMenu, GenericModal } from '@rocket.chat/ui-client';
-import { useEndpoint, usePermission, useSetModal, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { GenericMenu, GenericModal } from '@zeki.chat/ui-client';
+import { useEndpoint, usePermission, useSetModal, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

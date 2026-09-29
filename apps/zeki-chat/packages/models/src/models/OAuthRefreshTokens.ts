@@ -1,11 +1,11 @@
-import type { IOAuthRefreshToken, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IOAuthRefreshTokensModel } from '@rocket.chat/model-typings';
+import type { IOAuthRefreshToken, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IOAuthRefreshTokensModel } from '@zeki.chat/model-typings';
 import type { Db, Collection, DeleteResult, FindOptions, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class OAuthRefreshTokensRaw extends BaseRaw<IOAuthRefreshToken> implements IOAuthRefreshTokensModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IOAuthRefreshToken>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IOAuthRefreshToken>>) {
 		super(db, 'oauth_refresh_tokens', trash);
 	}
 

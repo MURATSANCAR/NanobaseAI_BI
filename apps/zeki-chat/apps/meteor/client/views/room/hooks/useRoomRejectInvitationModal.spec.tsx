@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker/locale/af_ZA';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook, act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

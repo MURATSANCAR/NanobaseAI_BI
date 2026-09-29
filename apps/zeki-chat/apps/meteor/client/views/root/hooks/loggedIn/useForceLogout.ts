@@ -1,4 +1,4 @@
-import { useSessionDispatch, useStream, useWipeLocalAuth } from '@rocket.chat/ui-contexts';
+import { useSessionDispatch, useStream, useWipeLocalAuth } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { isSdkTransportEnabled } from '../../../../lib/sdk/sdkTransportEnabled';

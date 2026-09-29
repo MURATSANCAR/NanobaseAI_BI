@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
-import { CalendarEvent } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
+import { CalendarEvent } from '@zeki.chat/models';
 
 import { generateCronJobId } from './generateCronJobId';
 import { settings } from '../../../../app/settings/server';

@@ -8,7 +8,7 @@ describe('Utilities', () => {
 		id: '614055e2-3dba-41fb-be48-c1ff146f5932',
 		name: 'Testing App',
 		nameSlug: 'testing-app',
-		description: 'A Rocket.Chat Application used to test out the various features.',
+		description: 'A ZEKI AI CHAT Application used to test out the various features.',
 		version: '0.0.8',
 		requiredApiVersion: '>=0.9.6',
 		author: {
@@ -35,7 +35,7 @@ describe('Utilities', () => {
 			id: '614055e2-3dba-41fb-be48-c1ff146f5932',
 			name: 'Testing App',
 			nameSlug: 'testing-app',
-			description: 'A Rocket.Chat Application used to test out the various features.',
+			description: 'A ZEKI AI CHAT Application used to test out the various features.',
 			version: '0.0.8',
 			requiredApiVersion: '>=0.9.6',
 			author: {
@@ -73,7 +73,7 @@ describe('Utilities', () => {
 			id: '614055e2-3dba-41fb-be48-c1ff146f5932',
 			name: 'Testing App',
 			nameSlug: 'testing-app',
-			description: 'A Rocket.Chat Application used to test out the various features.',
+			description: 'A ZEKI AI CHAT Application used to test out the various features.',
 			version: '0.0.8',
 			requiredApiVersion: '>=0.9.6',
 			author: {

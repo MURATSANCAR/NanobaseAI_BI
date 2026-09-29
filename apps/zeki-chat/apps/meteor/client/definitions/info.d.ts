@@ -29,7 +29,7 @@ declare module '*.info' {
 		mobile: string;
 	};
 
-	import type { SignedSupportedVersions } from '@rocket.chat/server-cloud-communication';
+	import type { SignedSupportedVersions } from '@zeki.chat/server-cloud-communication';
 
 	export const supportedVersions: SignedSupportedVersions;
 }

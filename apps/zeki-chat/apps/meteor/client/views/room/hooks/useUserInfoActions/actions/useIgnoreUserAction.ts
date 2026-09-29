@@ -1,4 +1,4 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import {
 	useTranslation,
@@ -7,7 +7,7 @@ import {
 	useUserId,
 	useToastMessageDispatch,
 	useEndpoint,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import { getRoomDirectives } from '../../../lib/getRoomDirectives';

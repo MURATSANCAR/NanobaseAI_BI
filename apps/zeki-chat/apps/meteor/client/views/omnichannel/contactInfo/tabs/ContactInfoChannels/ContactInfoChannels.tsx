@@ -1,7 +1,7 @@
-import type { ILivechatContact } from '@rocket.chat/core-typings';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
 import { Box, States, StatesIcon, StatesTitle, Throbber } from '@rocket.chat/fuselage';
-import { VirtualizedScrollbars, ContextualbarContent, ContextualbarEmptyContent } from '@rocket.chat/ui-client';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { VirtualizedScrollbars, ContextualbarContent, ContextualbarEmptyContent } from '@zeki.chat/ui-client';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';

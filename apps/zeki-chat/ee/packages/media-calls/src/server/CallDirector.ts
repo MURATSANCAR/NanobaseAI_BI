@@ -7,10 +7,10 @@ import type {
 	MediaCallSignedContact,
 	ServerActor,
 	MediaCallNegotiationStream,
-} from '@rocket.chat/core-typings';
-import type { CallFeature, CallHangupReason, CallRole } from '@rocket.chat/media-signaling';
-import type { InsertionModel } from '@rocket.chat/model-typings';
-import { MediaCallNegotiations, MediaCalls } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import type { CallFeature, CallHangupReason, CallRole } from '@zeki.chat/media-signaling';
+import type { InsertionModel } from '@zeki.chat/model-typings';
+import { MediaCallNegotiations, MediaCalls } from '@zeki.chat/models';
 
 import { getCastDirector, getMediaCallServer } from './injection';
 import type { IMediaCallAgent } from '../definition/IMediaCallAgent';

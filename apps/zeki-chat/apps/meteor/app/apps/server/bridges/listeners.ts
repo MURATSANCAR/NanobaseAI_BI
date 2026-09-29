@@ -2,16 +2,16 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { IAppServerOrchestrator, IAppsRoom, IAppsLivechatRoom, IAppsMessage } from '@rocket.chat/apps';
-import type { IPreEmailSentContext } from '@rocket.chat/apps-engine/definition/email';
-import type { IExternalComponent } from '@rocket.chat/apps-engine/definition/externalComponent';
-import { LivechatTransferEventType } from '@rocket.chat/apps-engine/definition/livechat';
-import { isLivechatRoom } from '@rocket.chat/apps-engine/definition/livechat/ILivechatRoom';
-import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
-import type { UIKitIncomingInteraction } from '@rocket.chat/apps-engine/definition/uikit';
-import type { IUIKitLivechatIncomingInteraction } from '@rocket.chat/apps-engine/definition/uikit/livechat';
-import type { IUserContext, IUserUpdateContext } from '@rocket.chat/apps-engine/definition/users';
-import type { IMessage, IRoom, IUser, ILivechatDepartment, IUpload } from '@rocket.chat/core-typings';
+import type { IAppServerOrchestrator, IAppsRoom, IAppsLivechatRoom, IAppsMessage } from '@zeki.chat/apps';
+import type { IPreEmailSentContext } from '@zeki.chat/apps-engine/definition/email';
+import type { IExternalComponent } from '@zeki.chat/apps-engine/definition/externalComponent';
+import { LivechatTransferEventType } from '@zeki.chat/apps-engine/definition/livechat';
+import { isLivechatRoom } from '@zeki.chat/apps-engine/definition/livechat/ILivechatRoom';
+import { AppInterface } from '@zeki.chat/apps-engine/definition/metadata';
+import type { UIKitIncomingInteraction } from '@zeki.chat/apps-engine/definition/uikit';
+import type { IUIKitLivechatIncomingInteraction } from '@zeki.chat/apps-engine/definition/uikit/livechat';
+import type { IUserContext, IUserUpdateContext } from '@zeki.chat/apps-engine/definition/users';
+import type { IMessage, IRoom, IUser, ILivechatDepartment, IUpload } from '@zeki.chat/core-typings';
 
 type LivechatTransferData = {
 	type: LivechatTransferEventType;
@@ -257,14 +257,14 @@ export class AppListenerBridge {
 		if (typeof content === 'string') {
 			// If content is a string, we assume it's a path and create a symlink to avoid file duplication
 			await fs.promises.symlink(content, tmpfile, 'file').catch((err) => {
-				this.orch.getRocketChatLogger().error({ msg: `AppListenerBridge: Could not create symlink at ${tmpfile}`, err });
+				this.orch.getZekiChatLogger().error({ msg: `AppListenerBridge: Could not create symlink at ${tmpfile}`, err });
 
 				throw new Error('Error sending file to apps', { cause: err });
 			});
 		} else {
 			// Otherwise, we write the buffer content to a temporary file
 			await fs.promises.writeFile(tmpfile, content).catch((err) => {
-				this.orch.getRocketChatLogger().error({ msg: `AppListenerBridge: Could not write temporary file at ${tmpfile}`, err });
+				this.orch.getZekiChatLogger().error({ msg: `AppListenerBridge: Could not write temporary file at ${tmpfile}`, err });
 
 				throw new Error('Error sending file to apps', { cause: err });
 			});
@@ -289,7 +289,7 @@ export class AppListenerBridge {
 			await fs.promises
 				.unlink(tmpfile)
 				.catch((err) =>
-					this.orch.getRocketChatLogger().warn({ msg: `AppListenerBridge: Could not delete temporary file at ${tmpfile}`, err }),
+					this.orch.getZekiChatLogger().warn({ msg: `AppListenerBridge: Could not delete temporary file at ${tmpfile}`, err }),
 				);
 		}
 	}

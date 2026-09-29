@@ -1,7 +1,7 @@
-import type { IMessageSearchProvider } from '@rocket.chat/core-typings';
+import type { IMessageSearchProvider } from '@zeki.chat/core-typings';
 import { Box, Field, FieldLabel, FieldHint, Icon, TextInput, ToggleSwitch, Callout } from '@rocket.chat/fuselage';
 import { useDebouncedCallback, useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import { useEffect, useId } from 'react';
 import { useForm, useWatch } from 'react-hook-form';

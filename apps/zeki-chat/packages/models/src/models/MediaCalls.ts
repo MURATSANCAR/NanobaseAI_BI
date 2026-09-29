@@ -1,13 +1,13 @@
 import type {
 	IMediaCall,
-	RocketChatRecordDeleted,
+	ZekiChatRecordDeleted,
 	MediaCallActorType,
 	MediaCallSignedContact,
 	MediaCallContact,
 	IUser,
 	MediaCallActor,
-} from '@rocket.chat/core-typings';
-import type { IMediaCallsModel } from '@rocket.chat/model-typings';
+} from '@zeki.chat/core-typings';
+import type { IMediaCallsModel } from '@zeki.chat/model-typings';
 import type {
 	IndexDescription,
 	Collection,
@@ -23,7 +23,7 @@ import type {
 import { BaseRaw } from './BaseRaw';
 
 export class MediaCallsRaw extends BaseRaw<IMediaCall> implements IMediaCallsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IMediaCall>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IMediaCall>>) {
 		super(db, 'media_calls', trash);
 	}
 

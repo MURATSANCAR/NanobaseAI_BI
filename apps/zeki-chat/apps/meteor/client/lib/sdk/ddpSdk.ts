@@ -1,4 +1,4 @@
-import { DDPSDK } from '@rocket.chat/ddp-client';
+import { DDPSDK } from '@zeki.chat/ddp-client';
 import EJSON from 'ejson';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
@@ -241,7 +241,7 @@ const teardownAuthenticatedConnection = (): void => {
 declare global {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Window {
-		__rocketChatSdk?: DDPSDK;
+		__zekiChatSdk?: DDPSDK;
 	}
 }
 
@@ -251,7 +251,7 @@ if (typeof window !== 'undefined' && isSdkTransportEnabled()) {
 		'color:#fff;background:#f5455c;padding:2px 6px;border-radius:3px;font-weight:bold',
 	);
 	const sdk = getDdpSdk();
-	window.__rocketChatSdk = sdk;
+	window.__zekiChatSdk = sdk;
 
 	// DDPSDK auto-fires loginWithToken on every `connected` event using the
 	// in-memory account.user.token (DDPSDK.create line 115-122). When the

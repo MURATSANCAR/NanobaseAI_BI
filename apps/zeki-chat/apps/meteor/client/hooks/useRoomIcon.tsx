@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated, isDirectMessageRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated, isDirectMessageRoom } from '@zeki.chat/core-typings';
 import type { Icon } from '@rocket.chat/fuselage';
 import type { ComponentProps, ReactElement } from 'react';
 

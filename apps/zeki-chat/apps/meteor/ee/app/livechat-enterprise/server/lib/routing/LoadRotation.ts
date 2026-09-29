@@ -1,5 +1,5 @@
-import type { IOmnichannelCustomAgent } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IOmnichannelCustomAgent } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { RoutingManager } from '../../../../../../app/livechat/server/lib/RoutingManager';
 import { settings } from '../../../../../../app/settings/server';

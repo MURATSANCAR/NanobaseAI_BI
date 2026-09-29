@@ -1,4 +1,4 @@
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
 import type { ValidateFunction } from 'ajv';
 
 import type { APIClass, ExtractRoutesFromAPI } from './ApiClass';

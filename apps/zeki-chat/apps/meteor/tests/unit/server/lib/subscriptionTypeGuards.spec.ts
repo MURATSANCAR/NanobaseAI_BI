@@ -1,5 +1,5 @@
-import type { ISubscription } from '@rocket.chat/core-typings';
-import { isBannedSubscription, isInviteSubscription } from '@rocket.chat/core-typings';
+import type { ISubscription } from '@zeki.chat/core-typings';
+import { isBannedSubscription, isInviteSubscription } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 

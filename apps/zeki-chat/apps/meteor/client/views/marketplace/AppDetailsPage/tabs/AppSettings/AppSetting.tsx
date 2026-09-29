@@ -1,6 +1,6 @@
-import type { ISettingSelectValue } from '@rocket.chat/apps-engine/definition/settings';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings/ISetting';
-import { useRouteParameter } from '@rocket.chat/ui-contexts';
+import type { ISettingSelectValue } from '@zeki.chat/apps-engine/definition/settings';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings/ISetting';
+import { useRouteParameter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';

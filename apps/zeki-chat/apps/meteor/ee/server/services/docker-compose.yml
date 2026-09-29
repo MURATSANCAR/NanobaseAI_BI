@@ -7,7 +7,7 @@ services:
       context: .
       args:
         SERVICE: authorization
-    image: rocketchat/authorization-service:latest
+    image: zekichat/authorization-service:latest
     env_file: .config/services/service.env
     depends_on:
       - nats
@@ -18,7 +18,7 @@ services:
       context: .
       args:
         SERVICE: account
-    image: rocketchat/account-service:latest
+    image: zekichat/account-service:latest
     env_file: .config/services/service.env
     depends_on:
       - nats
@@ -29,7 +29,7 @@ services:
       context: .
       args:
         SERVICE: presence
-    image: rocketchat/presence-service:latest
+    image: zekichat/presence-service:latest
     env_file: .config/services/service.env
     depends_on:
       - nats
@@ -40,7 +40,7 @@ services:
       context: .
       args:
         SERVICE: ddp-streamer
-    image: rocketchat/ddp-streamer-service:latest
+    image: zekichat/ddp-streamer-service:latest
     env_file: .config/services/service.env
     depends_on:
       - nats
@@ -56,7 +56,7 @@ services:
       context: .
       args:
         SERVICE: ecdh-proxy
-    image: rocketchat/ecdh-proxy-service:latest
+    image: zekichat/ecdh-proxy-service:latest
     env_file: .config/services/service.env
     environment:
       PROXY_HOST: ddp-streamer-service
@@ -76,7 +76,7 @@ services:
       context: .
       args:
         SERVICE: ecdh-proxy
-    image: rocketchat/ecdh-proxy-service:latest
+    image: zekichat/ecdh-proxy-service:latest
     env_file: .config/services/service.env
     environment:
       PROXY_HOST: host.docker.internal
@@ -95,7 +95,7 @@ services:
       context: .
       args:
         SERVICE: queue-worker
-    image: rocketchat/queue-worker-service:latest
+    image: zekichat/queue-worker-service:latest
     env_file: .config/services/service.env
     depends_on:
       - nats
@@ -106,7 +106,7 @@ services:
       context: .
       args:
         SERVICE: omnichannel-transcript
-    image: rocketchat/omnichannel-transcript-service:latest
+    image: zekichat/omnichannel-transcript-service:latest
     env_file: .config/services/service.env
     depends_on:
       - nats

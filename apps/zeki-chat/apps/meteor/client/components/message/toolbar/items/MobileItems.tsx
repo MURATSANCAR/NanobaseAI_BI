@@ -1,4 +1,4 @@
-import type { IRoom, ISubscription, IMessage } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription, IMessage } from '@zeki.chat/core-typings';
 
 import ForwardMessageAction from './actions/ForwardMessageAction';
 import JumpToMessageAction from './actions/JumpToMessageAction';

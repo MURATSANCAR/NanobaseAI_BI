@@ -1,6 +1,6 @@
-import type { IEmailInbox } from '@rocket.chat/core-typings';
+import type { IEmailInbox } from '@zeki.chat/core-typings';
 import { States, StatesIcon, StatesTitle } from '@rocket.chat/fuselage';
-import { useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 

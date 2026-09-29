@@ -1,5 +1,5 @@
-import { getUserDisplayName } from '@rocket.chat/core-typings';
-import type { IMessage, IRoom, MessageAttachment } from '@rocket.chat/core-typings';
+import { getUserDisplayName } from '@zeki.chat/core-typings';
+import type { IMessage, IRoom, MessageAttachment } from '@zeki.chat/core-typings';
 
 import { roomCoordinator } from '../../../../server/lib/rooms/roomCoordinator';
 import { settings } from '../../../settings/server/cached';

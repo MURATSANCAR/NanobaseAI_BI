@@ -1,4 +1,4 @@
-import { useTranslation, useLayout, useCurrentRoutePath } from '@rocket.chat/ui-contexts';
+import { useTranslation, useLayout, useCurrentRoutePath } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo, useSyncExternalStore } from 'react';
 

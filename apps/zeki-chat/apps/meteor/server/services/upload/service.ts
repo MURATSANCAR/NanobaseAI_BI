@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import type Stream from 'node:stream';
 
-import type { IUploadDetails } from '@rocket.chat/apps-engine/definition/uploads/IUploadDetails';
-import { api, ServiceClassInternal } from '@rocket.chat/core-services';
-import type { ISendFileLivechatMessageParams, ISendFileMessageParams, IUploadFileParams, IUploadService } from '@rocket.chat/core-services';
-import type { IUpload, IUser, FilesAndAttachments, IMessage, AtLeast } from '@rocket.chat/core-typings';
-import { isFileAttachment } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { Uploads, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import type { IUploadDetails } from '@zeki.chat/apps-engine/definition/uploads/IUploadDetails';
+import { api, ServiceClassInternal } from '@zeki.chat/core-services';
+import type { ISendFileLivechatMessageParams, ISendFileMessageParams, IUploadFileParams, IUploadService } from '@zeki.chat/core-services';
+import type { IUpload, IUser, FilesAndAttachments, IMessage, AtLeast } from '@zeki.chat/core-typings';
+import { isFileAttachment } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { Uploads, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import sharp from 'sharp';
 
 import { canAccessRoomIdAsync } from '../../../app/authorization/server/functions/canAccessRoom';

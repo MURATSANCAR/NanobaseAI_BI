@@ -1,8 +1,8 @@
-import type { ILivechatPriority, Serialized } from '@rocket.chat/core-typings';
-import { LivechatPriorityWeight } from '@rocket.chat/core-typings';
+import type { ILivechatPriority, Serialized } from '@zeki.chat/core-typings';
+import { LivechatPriorityWeight } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { Options, Box, Option, Field, FieldLabel, FieldRow, SelectLegacy } from '@rocket.chat/fuselage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { ComponentProps } from 'react';
 import { useCallback, forwardRef, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

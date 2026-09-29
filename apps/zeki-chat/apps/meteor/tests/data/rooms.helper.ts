@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IRoom, ISubscription, IUser, IMessage } from '@rocket.chat/core-typings';
-import type { Endpoints } from '@rocket.chat/rest-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IRoom, ISubscription, IUser, IMessage } from '@zeki.chat/core-typings';
+import type { Endpoints } from '@zeki.chat/rest-typings';
 
 import { api, credentials, methodCall, request } from './api-data';
 import type { IRequestConfig } from './users.helper';
@@ -243,7 +243,7 @@ export const getRoomInfo = (roomId: IRoom['_id'], config?: IRequestConfig) => {
  *
  * Gets the complete list of room members with their roles and permissions,
  * ordered by importance. Essential for verifying federation member synchronization
- * and role assignments across different Rocket.Chat instances.
+ * and role assignments across different ZEKI AI CHAT instances.
  *
  * @param roomId - The unique identifier of the room
  * @param config - Optional request configuration for custom domains

@@ -101,15 +101,15 @@ RUN apk update && \
     # CVE -> https://scout.docker.com/vulnerabilities/id/CVE-2025-9230?s=alpine&n=openssl&ns=alpine&t=apk&osn=alpine&osv=3.22
     apk upgrade --no-cache openssl && \
     rm -rf /var/cache/apk/* && \
-    groupmod -n rocketchat nogroup && \
-    useradd -u 65533 -r -g rocketchat rocketchat && \
+    groupmod -n zekichat nogroup && \
+    useradd -u 65533 -r -g zekichat zekichat && \
     apk del deps
 
-COPY --chown=rocketchat:rocketchat --from=builder /app /app
+COPY --chown=zekichat:zekichat --from=builder /app /app
 
 WORKDIR /app/ee/apps/${SERVICE}
 
-USER rocketchat
+USER zekichat
 
 EXPOSE 3000 9458
 

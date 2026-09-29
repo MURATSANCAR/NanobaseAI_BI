@@ -1,5 +1,5 @@
-import { CredentialTokens, Users } from '@rocket.chat/models';
-import { getObjectKeys, wrapExceptions } from '@rocket.chat/tools';
+import { CredentialTokens, Users } from '@zeki.chat/models';
+import { getObjectKeys, wrapExceptions } from '@zeki.chat/tools';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 

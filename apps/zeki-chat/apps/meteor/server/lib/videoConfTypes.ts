@@ -5,7 +5,7 @@ import type {
 	VideoConference,
 	VideoConferenceCreateData,
 	VideoConferenceType,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 
 type RoomRequiredFields = AtLeast<IRoom, '_id' | 't'>;
 type VideoConferenceTypeCondition = (room: RoomRequiredFields, allowRinging: boolean) => Promise<boolean>;

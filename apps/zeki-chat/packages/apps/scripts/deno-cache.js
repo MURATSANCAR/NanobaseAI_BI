@@ -59,7 +59,7 @@ try {
 		console.error(
 			new Error(
 				[
-					'Could not execute "deno" in the system. It is now a requirement for the Apps-Engine framework, and Rocket.Chat apps will not work without it.',
+					'Could not execute "deno" in the system. It is now a requirement for the Apps-Engine framework, and ZEKI AI CHAT apps will not work without it.',
 					'Make sure to install Deno and run the installation process for the Apps-Engine again. More info on https://docs.deno.com/runtime/manual/getting_started/installation',
 				].join('\n'),
 				{ cause: e },

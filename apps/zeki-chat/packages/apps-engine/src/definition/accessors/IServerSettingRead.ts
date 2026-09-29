@@ -1,7 +1,7 @@
 import type { ISetting } from '../settings/ISetting';
 
 /**
- * Reader for the settings inside of the server (Rocket.Chat).
+ * Reader for the settings inside of the server (ZEKI AI CHAT).
  * Only a subset of them are exposed to Apps.
  */
 export interface IServerSettingRead {

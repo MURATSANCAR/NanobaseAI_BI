@@ -1,8 +1,8 @@
-import { FederationMatrix, Message, MeteorService } from '@rocket.chat/core-services';
-import type { IUser, IRoom, FileAttachmentProps } from '@rocket.chat/core-typings';
+import { FederationMatrix, Message, MeteorService } from '@zeki.chat/core-services';
+import type { IUser, IRoom, FileAttachmentProps } from '@zeki.chat/core-typings';
 import { type FileMessageType, type MessageType, type FileMessageContent, type EventID, federationSDK } from '@rocket.chat/federation-sdk';
-import { Logger } from '@rocket.chat/logger';
-import { Users, Rooms, Messages } from '@rocket.chat/models';
+import { Logger } from '@zeki.chat/logger';
+import { Users, Rooms, Messages } from '@zeki.chat/models';
 
 import { fileTypes } from '../FederationMatrix';
 import { toInternalMessageFormat, toInternalQuoteMessageFormat } from '../helpers/message.parsers';

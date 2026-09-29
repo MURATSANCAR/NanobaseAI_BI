@@ -1,4 +1,4 @@
-import type { INotification } from '@rocket.chat/core-typings';
+import type { INotification } from '@zeki.chat/core-typings';
 import type { Document, UpdateResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

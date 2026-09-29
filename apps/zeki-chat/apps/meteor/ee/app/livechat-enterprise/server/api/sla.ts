@@ -1,5 +1,5 @@
-import { OmnichannelServiceLevelAgreements } from '@rocket.chat/models';
-import { isLivechatPrioritiesProps, isCreateOrUpdateLivechatSlaProps } from '@rocket.chat/rest-typings';
+import { OmnichannelServiceLevelAgreements } from '@zeki.chat/models';
+import { isLivechatPrioritiesProps, isCreateOrUpdateLivechatSlaProps } from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../../app/api/server';
 import { getPaginationItems } from '../../../../../app/api/server/helpers/getPaginationItems';
@@ -18,7 +18,7 @@ API.v1.addRoute(
 			GET: isLivechatPrioritiesProps,
 			POST: isCreateOrUpdateLivechatSlaProps,
 		},
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -67,7 +67,7 @@ API.v1.addRoute(
 		validateParams: {
 			PUT: isCreateOrUpdateLivechatSlaProps,
 		},
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {

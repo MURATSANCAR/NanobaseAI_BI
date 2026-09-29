@@ -14,7 +14,7 @@ const AppsMock = {
 };
 
 const serviceMocks = {
-	'@rocket.chat/core-services': {
+	'@zeki.chat/core-services': {
 		ServiceClassInternal: class {
 			onEvent = sinon.stub();
 

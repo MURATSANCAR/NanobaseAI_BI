@@ -1,4 +1,4 @@
-import type { CallFeature } from '@rocket.chat/media-signaling';
+import type { CallFeature } from '@zeki.chat/media-signaling';
 import { useCallback, useRef, useSyncExternalStore } from 'react';
 
 import { useMediaCallInstance } from './MediaCallInstanceContext';

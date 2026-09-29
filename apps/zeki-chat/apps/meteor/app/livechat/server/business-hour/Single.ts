@@ -1,5 +1,5 @@
-import { ILivechatAgentStatus, LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
-import { LivechatBusinessHours, Users } from '@rocket.chat/models';
+import { ILivechatAgentStatus, LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
+import { LivechatBusinessHours, Users } from '@zeki.chat/models';
 
 import type { IBusinessHourBehavior } from './AbstractBusinessHour';
 import { AbstractBusinessHourBehavior } from './AbstractBusinessHour';

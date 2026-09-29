@@ -2,9 +2,9 @@
     "kind": "Template",
     "apiVersion": "v1",
     "metadata": {
-        "name": "rocket-chat",
+        "name": "zeki-chat",
         "annotations": {
-            "description": "Rocket.Chat with a MongoDB database running with a Persistent storage. Use this template if you want to run Rocket.Chat in production.",
+            "description": "ZEKI AI CHAT with a MongoDB database running with a Persistent storage. Use this template if you want to run ZEKI AI CHAT in production.",
             "tags": "quickstart,nodejs,mongodb,instant-app",
             "iconClass": "icon-nodejs"
         }
@@ -168,17 +168,17 @@
             "kind": "ImageStream",
             "apiVersion": "v1",
             "metadata": {
-                "name": "rocketchat"
+                "name": "zekichat"
             },
             "spec": {
-                "dockerImageRepository": "${ROCKETCHAT_IMAGE}",
+                "dockerImageRepository": "${ZEKICHAT_IMAGE}",
                 "tags": [
                     {
                         "name": "latest",
                         "annotations": {
-                            "description": "Provides a Rocket.Chat application",
+                            "description": "Provides a ZEKI AI CHAT application",
                             "iconClass": "icon-nodejs",
-                            "tags": "rocketchat"
+                            "tags": "zekichat"
                         },
                         "from": {
                             "kind": "ImageStreamTag",
@@ -194,10 +194,10 @@
             "kind": "DeploymentConfig",
             "apiVersion": "v1",
             "metadata": {
-                "name": "rocketchat",
+                "name": "zekichat",
                 "creationTimestamp": null,
                 "labels": {
-                    "app": "rocketchat"
+                    "app": "zekichat"
                 },
                 "annotations": {
                     "openshift.io/generated-by": "OpenShiftNewApp"
@@ -224,11 +224,11 @@
                         "imageChangeParams": {
                             "automatic": true,
                             "containerNames": [
-                                "rocketchat"
+                                "zekichat"
                             ],
                             "from": {
                                 "kind": "ImageStreamTag",
-                                "name": "rocketchat:latest"
+                                "name": "zekichat:latest"
                             }
                         }
                     }
@@ -236,32 +236,32 @@
                 "replicas": 1,
                 "test": false,
                 "selector": {
-                    "app": "rocketchat",
-                    "deploymentconfig": "rocketchat"
+                    "app": "zekichat",
+                    "deploymentconfig": "zekichat"
                 },
                 "template": {
                     "metadata": {
                         "creationTimestamp": null,
                         "labels": {
-                            "app": "rocketchat",
-                            "deploymentconfig": "rocketchat"
+                            "app": "zekichat",
+                            "deploymentconfig": "zekichat"
                         },
                         "annotations": {
-                            "openshift.io/container.rocketchat.image.entrypoint": "[\"node\",\"main.js\"]",
+                            "openshift.io/container.zekichat.image.entrypoint": "[\"node\",\"main.js\"]",
                             "openshift.io/generated-by": "OpenShiftNewApp"
                         }
                     },
                     "spec": {
                         "volumes": [
                             {
-                                "name": "rocketchat-volume-1",
+                                "name": "zekichat-volume-1",
                                 "emptyDir": {}
                             }
                         ],
                         "containers": [
                             {
-                                "name": "rocketchat",
-                                "image": "${ROCKETCHAT_IMAGE}:latest",
+                                "name": "zekichat",
+                                "image": "${ZEKICHAT_IMAGE}:latest",
                                 "ports": [
                                     {
                                         "containerPort": 3000,
@@ -277,7 +277,7 @@
                                 "resources": {},
                                 "volumeMounts": [
                                     {
-                                        "name": "rocketchat-volume-1",
+                                        "name": "zekichat-volume-1",
                                         "mountPath": "/app/uploads"
                                     }
                                 ],
@@ -322,10 +322,10 @@
             "kind": "Route",
             "apiVersion": "v1",
             "metadata": {
-                "name": "rocketchat",
+                "name": "zekichat",
                 "creationTimestamp": null,
                 "labels": {
-                    "app": "rocketchat"
+                    "app": "zekichat"
                 },
                 "annotations": {
                     "openshift.io/host.generated": "true"
@@ -334,7 +334,7 @@
             "spec": {
                 "to": {
                     "kind": "Service",
-                    "name": "rocketchat"
+                    "name": "zekichat"
                 },
                 "port": {
                     "targetPort": "3000-tcp"
@@ -377,10 +377,10 @@
             "kind": "Service",
             "apiVersion": "v1",
             "metadata": {
-                "name": "rocketchat",
+                "name": "zekichat",
                 "creationTimestamp": null,
                 "labels": {
-                    "app": "rocketchat"
+                    "app": "zekichat"
                 },
                 "annotations": {
                     "openshift.io/generated-by": "OpenShiftNewApp"
@@ -396,8 +396,8 @@
                     }
                 ],
                 "selector": {
-                    "app": "rocketchat",
-                    "deploymentconfig": "rocketchat"
+                    "app": "zekichat",
+                    "deploymentconfig": "zekichat"
                 },
                 "type": "ClusterIP",
                 "sessionAffinity": "None"
@@ -441,7 +441,7 @@
             "name": "MONGODB_DATABASE",
             "displayName": "MongoDB Database Name",
             "description": "Name of the MongoDB database accessed.",
-            "value": "rocketchatdb",
+            "value": "zekichatdb",
             "required": true
         },
         {
@@ -453,11 +453,11 @@
             "required": true
         },
         {
-            "name": "ROCKETCHAT_IMAGE",
-            "displayName": "RocketChat Image",
-            "description": "The RocketChat image to use for this deployment",
+            "name": "ZEKICHAT_IMAGE",
+            "displayName": "ZekiChat Image",
+            "description": "The ZekiChat image to use for this deployment",
             "required": true,
-            "value": "rocketchat/rocket.chat"
+            "value": "zekichat/rocket.chat"
         },
         {
             "name": "VOLUME_CAPACITY",

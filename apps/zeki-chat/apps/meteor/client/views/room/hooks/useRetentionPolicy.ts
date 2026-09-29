@@ -1,5 +1,5 @@
-import type { IRoom, IRoomWithRetentionPolicy } from '@rocket.chat/core-typings';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import type { IRoom, IRoomWithRetentionPolicy } from '@zeki.chat/core-typings';
+import { useSetting } from '@zeki.chat/ui-contexts';
 
 import { TIMEUNIT, isValidTimespan, timeUnitToMs } from '../../../lib/convertTimeUnit';
 

@@ -2,8 +2,8 @@
 // TODO: Remove the following lint/ts instructions when the file gets properly converted
 /* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
-import { Rooms, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { Rooms, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import { Match } from 'meteor/check';
 
 import { SlackBridge } from './slackbridge';
@@ -23,7 +23,7 @@ async function SlackBridgeImport({ command, params, message, userId }) {
 	msgStream.emit(message.rid, {
 		_id: Random.id(),
 		rid: message.rid,
-		u: { username: 'rocket.cat' },
+		u: { username: 'zeki.bot' },
 		ts: new Date(),
 		msg: i18n.t(
 			'SlackBridge_start',
@@ -42,7 +42,7 @@ async function SlackBridgeImport({ command, params, message, userId }) {
 					msgStream.emit(message.rid, {
 						_id: Random.id(),
 						rid: message.rid,
-						u: { username: 'rocket.cat' },
+						u: { username: 'zeki.bot' },
 						ts: new Date(),
 						msg: i18n.t(
 							'SlackBridge_error',
@@ -57,7 +57,7 @@ async function SlackBridgeImport({ command, params, message, userId }) {
 					msgStream.emit(message.rid, {
 						_id: Random.id(),
 						rid: message.rid,
-						u: { username: 'rocket.cat' },
+						u: { username: 'zeki.bot' },
 						ts: new Date(),
 						msg: i18n.t(
 							'SlackBridge_finish',
@@ -75,7 +75,7 @@ async function SlackBridgeImport({ command, params, message, userId }) {
 		msgStream.emit(message.rid, {
 			_id: Random.id(),
 			rid: message.rid,
-			u: { username: 'rocket.cat' },
+			u: { username: 'zeki.bot' },
 			ts: new Date(),
 			msg: i18n.t(
 				'SlackBridge_error',

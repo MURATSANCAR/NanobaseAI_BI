@@ -1,4 +1,4 @@
-import type { IEmoji } from '@rocket.chat/core-typings';
+import type { IEmoji } from '@zeki.chat/core-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 
 import { emoji, removeFromRecent, replaceEmojiInRecent } from '../../app/emoji/client';

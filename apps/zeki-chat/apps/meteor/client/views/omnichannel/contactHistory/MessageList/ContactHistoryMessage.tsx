@@ -1,4 +1,4 @@
-import { isQuoteAttachment, type IMessage, type MessageAttachment } from '@rocket.chat/core-typings';
+import { isQuoteAttachment, type IMessage, type MessageAttachment } from '@zeki.chat/core-typings';
 import {
 	Message as MessageTemplate,
 	MessageLeftContainer,
@@ -18,9 +18,9 @@ import {
 	MessageSystemTimestamp,
 	Bubble,
 } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useUserCard } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useUserCard } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 

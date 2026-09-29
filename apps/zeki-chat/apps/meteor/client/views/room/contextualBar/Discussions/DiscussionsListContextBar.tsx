@@ -1,5 +1,5 @@
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { useUserId, useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useUserId, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 

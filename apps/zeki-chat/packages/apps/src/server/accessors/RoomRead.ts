@@ -1,7 +1,7 @@
-import type { IRoomRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IMessageRaw } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom, IRoomRaw } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IRoomRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IMessageRaw } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom, IRoomRaw } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import type { RoomBridge } from '../bridges';
 import { type GetMessagesOptions, type GetRoomsFilters, type GetRoomsOptions, GetMessagesSortableFields } from '../bridges/RoomBridge';

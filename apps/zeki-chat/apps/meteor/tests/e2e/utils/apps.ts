@@ -1,7 +1,7 @@
 import fs from 'fs';
 
 import { request } from '@playwright/test';
-import type { Endpoints } from '@rocket.chat/rest-typings';
+import type { Endpoints } from '@zeki.chat/rest-typings';
 
 import { expect, type BaseTest } from './test';
 import { APP_URL } from '../../data/apps/apps-data';

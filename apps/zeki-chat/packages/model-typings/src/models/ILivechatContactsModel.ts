@@ -4,7 +4,7 @@ import type {
 	ILivechatContactChannel,
 	ILivechatContactVisitorAssociation,
 	ILivechatVisitor,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type {
 	AggregationCursor,
 	Document,

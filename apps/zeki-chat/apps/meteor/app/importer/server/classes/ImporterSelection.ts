@@ -3,7 +3,7 @@ import type {
 	IImporterSelectionChannel,
 	IImporterSelectionUser,
 	IImporterSelectionContact,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 
 export class ImporterSelection implements IImporterSelection {
 	public name: string;

@@ -1,6 +1,6 @@
 import { Box, Field, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
-import { Markup } from '@rocket.chat/gazzodown';
-import { parse } from '@rocket.chat/message-parser';
+import { Markup } from '@zeki.chat/gazzodown';
+import { parse } from '@zeki.chat/message-parser';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

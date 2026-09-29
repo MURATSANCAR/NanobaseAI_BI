@@ -1,4 +1,4 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
 import { Pagination } from '@rocket.chat/fuselage';
 import { useDebouncedValue, useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import {
@@ -11,8 +11,8 @@ import {
 	GenericTableRow,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
-import { useTranslation, useEndpoint, useRouter } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, useEndpoint, useRouter } from '@zeki.chat/ui-contexts';
 import { useQuery, hashKey, keepPreviousData } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 

@@ -1,4 +1,4 @@
-export { Info } from '../rocketchat.info';
+export { Info } from '../zekichat.info';
 export { getUserPreference } from './lib/getUserPreference';
 export { fileUploadIsValidContentType } from './restrictions';
 export { getUserAvatarURL } from './getUserAvatarURL';

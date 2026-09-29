@@ -36,8 +36,8 @@ const meteorErrorMock = class extends Error {
 };
 
 const { removeUserReaction, executeSetReaction, setReaction } = p.noCallThru().load('../../../../../app/reactions/server/setReaction.ts', {
-	'@rocket.chat/models': modelsMock,
-	'@rocket.chat/core-services': { Message: { beforeReacted: sinon.stub() } },
+	'@zeki.chat/models': modelsMock,
+	'@zeki.chat/core-services': { Message: { beforeReacted: sinon.stub() } },
 	'meteor/meteor': { Meteor: { methods: meteorMethodsMock, Error: meteorErrorMock } },
 	'../../../server/lib/callbacks': { callbacks: { run: callbacksRunMock } },
 	'../../../server/lib/i18n': { i18n: i18nMock },

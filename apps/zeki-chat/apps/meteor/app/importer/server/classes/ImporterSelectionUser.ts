@@ -1,4 +1,4 @@
-import type { IImporterSelectionUser } from '@rocket.chat/core-typings';
+import type { IImporterSelectionUser } from '@zeki.chat/core-typings';
 
 export class SelectionUser implements IImporterSelectionUser {
 	public user_id: string;

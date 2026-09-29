@@ -1,7 +1,7 @@
-import type { ILivechatVisitor, IOmnichannelRoom, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatVisitor, IOmnichannelRoom, Serialized } from '@zeki.chat/core-typings';
 import { Field, FieldLabel, FieldRow, TextInput, ButtonGroup, Button } from '@rocket.chat/fuselage';
-import { CustomFieldsForm, ContextualbarContent, ContextualbarFooter, ContextualbarScrollableContent } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { CustomFieldsForm, ContextualbarContent, ContextualbarFooter, ContextualbarScrollableContent } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useId } from 'react';
 import { useController, useForm } from 'react-hook-form';

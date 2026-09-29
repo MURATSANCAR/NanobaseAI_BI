@@ -1,15 +1,15 @@
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 
-export const useActiveConnections = (): UseQueryResult<{ max: number; current: number; percentage: number }> => {
+export const useActiveConnections = (): UseQueryResult<{ current: number }> => {
 	const getConnections = useEndpoint('GET', '/v1/presence.getConnections');
 	return useQuery({
 		queryKey: ['userConnections'],
 
 		queryFn: async () => {
-			const { current, max } = await getConnections();
-			return { current, max, percentage: Math.min((current / max) * 100, 100) };
+			const { current } = await getConnections();
+			return { current };
 		},
 
 		staleTime: 1000 * 60,

@@ -1,8 +1,8 @@
-import type { IAppServerOrchestrator, IAppsSetting } from '@rocket.chat/apps';
-import { InternalBridge } from '@rocket.chat/apps/dist/server/bridges/InternalBridge';
-import type { ISetting, ISubscription } from '@rocket.chat/core-typings';
-import { Settings, Subscriptions } from '@rocket.chat/models';
-import { isTruthy } from '@rocket.chat/tools';
+import type { IAppServerOrchestrator, IAppsSetting } from '@zeki.chat/apps';
+import { InternalBridge } from '@zeki.chat/apps/dist/server/bridges/InternalBridge';
+import type { ISetting, ISubscription } from '@zeki.chat/core-typings';
+import { Settings, Subscriptions } from '@zeki.chat/models';
+import { isTruthy } from '@zeki.chat/tools';
 
 import { deasyncPromise } from '../../../../server/deasync/deasync';
 

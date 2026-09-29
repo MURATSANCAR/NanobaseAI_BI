@@ -1,11 +1,11 @@
-import { Markup } from '@rocket.chat/gazzodown';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { Markup } from '@zeki.chat/gazzodown';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 
 import GazzodownText from './GazzodownText';
 import { useMessageListHighlights } from './message/list/MessageListContext';
 
-jest.mock('@rocket.chat/ui-client', () => ({
+jest.mock('@zeki.chat/ui-client', () => ({
 	useFeaturePreview: () => false,
 }));
 jest.mock('@rocket.chat/fuselage-hooks', () => ({

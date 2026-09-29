@@ -1,9 +1,9 @@
-import type { IAppRoomsConverter, IAppThreadsConverter, IAppUsersConverter, IAppsMessage, IAppsUser } from '@rocket.chat/apps';
-import type { IMessage as AppsEngineMessage, IMessageAttachment } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import { isEditedMessage, isFileAttachment } from '@rocket.chat/core-typings';
-import type { IUser, IMessage } from '@rocket.chat/core-typings';
-import { Messages } from '@rocket.chat/models';
+import type { IAppRoomsConverter, IAppThreadsConverter, IAppUsersConverter, IAppsMessage, IAppsUser } from '@zeki.chat/apps';
+import type { IMessage as AppsEngineMessage, IMessageAttachment } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import { isEditedMessage, isFileAttachment } from '@zeki.chat/core-typings';
+import type { IUser, IMessage } from '@zeki.chat/core-typings';
+import { Messages } from '@zeki.chat/models';
 
 import { cachedFunction } from './cachedFunction';
 import { convertMessageFiles } from './convertMessageFiles';

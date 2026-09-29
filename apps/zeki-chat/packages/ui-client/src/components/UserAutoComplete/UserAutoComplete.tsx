@@ -1,7 +1,7 @@
 import { AutoComplete, Option, Box, Chip } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ComponentPropsWithoutRef } from 'react';
 import { memo, useMemo, useState } from 'react';

@@ -1,4 +1,4 @@
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import * as z from 'zod';
 
 import { IBannerSchema } from '../IBanner';
@@ -9,23 +9,6 @@ import { TimestampSchema } from '../utils';
 export const WorkspaceSyncPayloadSchema = z.object({
 	workspaceId: z.string(),
 	publicKey: z.string().optional(),
-	trial: z
-		.object({
-			trialing: z.boolean(),
-			trialID: z.string(),
-			endDate: TimestampSchema,
-			marketing: z.object({
-				utmContent: z.string(),
-				utmMedium: z.string(),
-				utmSource: z.string(),
-				utmCampaign: z.string(),
-			}),
-			DowngradesToPlan: z.object({
-				id: z.string(),
-			}),
-			trialRequested: z.boolean(),
-		})
-		.optional(),
 	/** @deprecated */
 	nps: NpsSurveyAnnouncementSchema.optional().meta({ deprecated: true }),
 	/** @deprecated */
@@ -47,15 +30,12 @@ export type WorkspaceSyncRequestPayload = {
 	deploymentMethod: string;
 	deploymentPlatform: string;
 	version: string;
-	licenseVersion: number;
 	connectionDisable: boolean;
 };
 
 export const WorkspaceSyncResponseSchema = z.object({
 	workspaceId: z.string(),
 	publicKey: z.string().optional(),
-	license: z.string(),
-	removeLicense: z.boolean().optional(),
 	cloudSyncAnnouncement: z.unknown(),
 });
 

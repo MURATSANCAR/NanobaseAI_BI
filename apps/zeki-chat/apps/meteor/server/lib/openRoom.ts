@@ -1,4 +1,4 @@
-import { Subscriptions } from '@rocket.chat/models';
+import { Subscriptions } from '@zeki.chat/models';
 
 import { notifyOnSubscriptionChangedByRoomIdAndUserId } from '../../app/lib/server/lib/notifyListener';
 

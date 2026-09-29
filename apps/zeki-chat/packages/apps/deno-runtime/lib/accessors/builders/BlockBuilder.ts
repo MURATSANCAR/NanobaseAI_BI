@@ -10,7 +10,7 @@ import type {
 	IImageBlock,
 	IInputBlock,
 	ISectionBlock,
-} from '@rocket.chat/apps-engine/definition/uikit/blocks/Blocks';
+} from '@zeki.chat/apps-engine/definition/uikit/blocks/Blocks';
 import type {
 	BlockElementType as _BlockElementType,
 	IBlockElement,
@@ -23,15 +23,15 @@ import type {
 	IPlainTextInputElement,
 	ISelectElement,
 	IStaticSelectElement,
-} from '@rocket.chat/apps-engine/definition/uikit/blocks/Elements';
-import type { ITextObject, TextObjectType as _TextObjectType } from '@rocket.chat/apps-engine/definition/uikit/blocks/Objects';
+} from '@zeki.chat/apps-engine/definition/uikit/blocks/Elements';
+import type { ITextObject, TextObjectType as _TextObjectType } from '@zeki.chat/apps-engine/definition/uikit/blocks/Objects';
 
 import { AppObjectRegistry } from '../../../AppObjectRegistry.ts';
 import { require } from '../../../lib/require.ts';
 
-const { BlockType } = require('@rocket.chat/apps-engine/definition/uikit/blocks/Blocks.js') as { BlockType: typeof _BlockType };
-const { BlockElementType } = require('@rocket.chat/apps-engine/definition/uikit/blocks/Elements.js') as { BlockElementType: typeof _BlockElementType };
-const { TextObjectType } = require('@rocket.chat/apps-engine/definition/uikit/blocks/Objects.js') as { TextObjectType: typeof _TextObjectType };
+const { BlockType } = require('@zeki.chat/apps-engine/definition/uikit/blocks/Blocks.js') as { BlockType: typeof _BlockType };
+const { BlockElementType } = require('@zeki.chat/apps-engine/definition/uikit/blocks/Elements.js') as { BlockElementType: typeof _BlockElementType };
+const { TextObjectType } = require('@zeki.chat/apps-engine/definition/uikit/blocks/Objects.js') as { TextObjectType: typeof _TextObjectType };
 
 type BlockFunctionParameter<T extends IBlock> = Omit<T, 'type'>;
 type ElementFunctionParameter<T extends IBlockElement> = T extends IInteractiveElement ? Omit<T, 'type' | 'actionId'> | Partial<Pick<T, 'actionId'>>

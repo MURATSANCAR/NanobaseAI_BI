@@ -3,7 +3,7 @@ import { lazy } from 'react';
 import { onToggledFeature } from '../lib/onToggledFeature';
 import { registerAccountRoute, registerAccountSidebarItem, unregisterSidebarItem } from '../views/account';
 
-declare module '@rocket.chat/ui-contexts' {
+declare module '@zeki.chat/ui-contexts' {
 	interface IRouterPaths {
 		'manage-devices': {
 			pathname: '/account/manage-devices';

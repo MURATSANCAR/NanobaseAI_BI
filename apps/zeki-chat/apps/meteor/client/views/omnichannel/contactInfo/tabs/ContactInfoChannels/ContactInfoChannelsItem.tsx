@@ -1,8 +1,8 @@
-import type { ILivechatContact, ILivechatContactChannel, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatContact, ILivechatContactChannel, Serialized } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Palette } from '@rocket.chat/fuselage';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { GenericMenu } from '@rocket.chat/ui-client';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

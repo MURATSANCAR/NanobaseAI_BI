@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/core-services",
+	"name": "@zeki.chat/core-services",
 	"version": "0.14.1",
 	"private": true,
 	"main": "./dist/index.js",
@@ -17,21 +17,21 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@rocket.chat/core-typings": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
 		"@rocket.chat/federation-sdk": "0.6.3",
-		"@rocket.chat/http-router": "workspace:^",
+		"@zeki.chat/http-router": "workspace:^",
 		"@rocket.chat/icons": "~0.47.0",
-		"@rocket.chat/media-signaling": "workspace:^",
-		"@rocket.chat/message-parser": "workspace:^",
-		"@rocket.chat/models": "workspace:^",
-		"@rocket.chat/rest-typings": "workspace:^",
-		"@rocket.chat/tracing": "workspace:^",
-		"@rocket.chat/ui-kit": "workspace:~"
+		"@zeki.chat/media-signaling": "workspace:^",
+		"@zeki.chat/message-parser": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/rest-typings": "workspace:^",
+		"@zeki.chat/tracing": "workspace:^",
+		"@zeki.chat/ui-kit": "workspace:~"
 	},
 	"devDependencies": {
-		"@rocket.chat/apps": "workspace:^",
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/apps": "workspace:^",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/jest": "~30.0.0",
 		"eslint": "~9.39.4",
 		"jest": "~30.2.0",

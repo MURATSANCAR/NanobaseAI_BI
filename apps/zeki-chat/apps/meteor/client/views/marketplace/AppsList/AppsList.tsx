@@ -1,4 +1,4 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 import { Box, CardGroup } from '@rocket.chat/fuselage';
 import type { ReactElement } from 'react';
 

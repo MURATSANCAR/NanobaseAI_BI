@@ -1,4 +1,4 @@
-import type { SlashCommandCallbackParams } from '@rocket.chat/core-typings';
+import type { SlashCommandCallbackParams } from '@zeki.chat/core-typings';
 
 import { dispatchToastMessage } from '../../../client/lib/toast';
 import { sdk } from '../../utils/client/lib/SDKClient';

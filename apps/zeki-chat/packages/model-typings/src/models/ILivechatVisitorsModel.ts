@@ -1,4 +1,4 @@
-import type { IVisitorExternalIdentifier, ILivechatVisitor } from '@rocket.chat/core-typings';
+import type { IVisitorExternalIdentifier, ILivechatVisitor } from '@zeki.chat/core-typings';
 import type {
 	AggregationCursor,
 	FindCursor,

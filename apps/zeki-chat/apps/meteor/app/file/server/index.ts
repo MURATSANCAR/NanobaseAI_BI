@@ -1,3 +1,3 @@
-import { RocketChatFile } from './file.server';
+import { ZekiChatFile } from './file.server';
 
-export { RocketChatFile };
+export { ZekiChatFile };

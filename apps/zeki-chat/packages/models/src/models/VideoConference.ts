@@ -4,11 +4,11 @@ import type {
 	ILivechatVideoConference,
 	IUser,
 	IRoom,
-	RocketChatRecordDeleted,
+	ZekiChatRecordDeleted,
 	IVoIPVideoConference,
-} from '@rocket.chat/core-typings';
-import { VideoConferenceStatus } from '@rocket.chat/core-typings';
-import type { FindPaginated, InsertionModel, IVideoConferenceModel } from '@rocket.chat/model-typings';
+} from '@zeki.chat/core-typings';
+import { VideoConferenceStatus } from '@zeki.chat/core-typings';
+import type { FindPaginated, InsertionModel, IVideoConferenceModel } from '@zeki.chat/model-typings';
 import type {
 	FindCursor,
 	UpdateOptions,
@@ -23,7 +23,7 @@ import type {
 import { BaseRaw } from './BaseRaw';
 
 export class VideoConferenceRaw extends BaseRaw<VideoConference> implements IVideoConferenceModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<VideoConference>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<VideoConference>>) {
 		super(db, 'video_conference', trash);
 	}
 

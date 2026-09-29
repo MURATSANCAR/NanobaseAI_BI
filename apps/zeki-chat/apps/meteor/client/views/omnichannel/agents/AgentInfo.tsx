@@ -7,8 +7,8 @@ import {
 	ContextualbarSkeletonBody,
 	InfoPanelLabel,
 	InfoPanelText,
-} from '@rocket.chat/ui-client';
-import { useEndpoint, useRouter } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint, useRouter } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';

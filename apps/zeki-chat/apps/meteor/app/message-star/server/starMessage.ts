@@ -1,7 +1,7 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Subscriptions, Rooms } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Subscriptions, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { canAccessRoomAsync, roomAccessAttributes } from '../../authorization/server';
@@ -10,7 +10,7 @@ import { methodDeprecationLogger } from '../../lib/server/lib/deprecationWarning
 import { notifyOnRoomChangedById, notifyOnMessageChange } from '../../lib/server/lib/notifyListener';
 import { settings } from '../../settings/server';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		starMessage(message: Pick<IMessage, 'rid' | '_id'> & { starred: boolean }): boolean;

@@ -1,4 +1,4 @@
-import { uiKitMessage, UiKitParserMessage, BlockContext } from '@rocket.chat/ui-kit';
+import { uiKitMessage, UiKitParserMessage, BlockContext } from '@zeki.chat/ui-kit';
 import type { ComponentChild } from 'preact';
 import { Suspense } from 'preact/compat';
 

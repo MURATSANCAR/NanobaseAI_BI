@@ -1,5 +1,5 @@
-import { LivechatPriority } from '@rocket.chat/models';
-import { isGETLivechatPrioritiesParams, isPUTLivechatPriority } from '@rocket.chat/rest-typings';
+import { LivechatPriority } from '@zeki.chat/models';
+import { isGETLivechatPrioritiesParams, isPUTLivechatPriority } from '@zeki.chat/rest-typings';
 
 import { findPriority, updatePriority } from './lib/priorities';
 import { API } from '../../../../../app/api/server';
@@ -12,7 +12,7 @@ API.v1.addRoute(
 		authRequired: true,
 		validateParams: isGETLivechatPrioritiesParams,
 		permissionsRequired: { GET: { permissions: ['manage-livechat-priorities', 'view-l-room'], operation: 'hasAny' } },
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -43,7 +43,7 @@ API.v1.addRoute(
 			PUT: { permissions: ['manage-livechat-priorities'], operation: 'hasAny' },
 		},
 		validateParams: { PUT: isPUTLivechatPriority },
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -76,7 +76,7 @@ API.v1.addRoute(
 			POST: { permissions: ['manage-livechat-priorities'], operation: 'hasAny' },
 			GET: { permissions: ['manage-livechat-priorities'], operation: 'hasAny' },
 		},
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async post() {

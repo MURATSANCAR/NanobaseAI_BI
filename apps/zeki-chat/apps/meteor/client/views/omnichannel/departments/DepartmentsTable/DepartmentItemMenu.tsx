@@ -1,7 +1,7 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericMenu } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint, useRoute, useSetModal, useSetting } from '@rocket.chat/ui-contexts';
+import { GenericMenu } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint, useRoute, useSetModal, useSetting } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useCallback, useMemo } from 'react';

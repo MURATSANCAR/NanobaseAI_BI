@@ -1,4 +1,4 @@
-import type { App, ILivechatVisitor } from '@rocket.chat/core-typings';
+import type { App, ILivechatVisitor } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 import { MongoClient } from 'mongodb';
@@ -186,7 +186,7 @@ import { IS_EE, URL_MONGODB } from '../../e2e/config/constants';
 			try {
 				await connection
 					.db()
-					.collection<ILivechatVisitor>('rocketchat_livechat_visitor')
+					.collection<ILivechatVisitor>('zeki_livechat_visitor')
 					.updateOne({ _id: visitorId }, { $push: { externalIds: externalId } });
 			} finally {
 				await connection.close();

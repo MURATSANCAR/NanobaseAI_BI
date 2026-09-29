@@ -1,9 +1,9 @@
-import type { INotificationDesktop } from '@rocket.chat/core-typings';
+import type { INotificationDesktop } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { AccordionItem, Button } from '@rocket.chat/fuselage';
 import { Field, FieldGroup, FieldHint, FieldLabel, FieldRow, Select, ToggleSwitch } from '@rocket.chat/fuselage-forms';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useSetting, useUserPreference, useUser } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useSetting, useUserPreference, useUser } from '@zeki.chat/ui-contexts';
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -50,7 +50,7 @@ const PreferencesNotificationsSection = () => {
 	const onSendNotification = useCallback(() => {
 		notify({
 			payload: {
-				sender: { _id: 'rocket.cat', username: 'rocket.cat' },
+				sender: { _id: 'zeki.bot', username: 'zeki.bot' },
 				rid: 'GENERAL',
 			} as INotificationDesktop['payload'],
 			title: t('Desktop_Notification_Test'),

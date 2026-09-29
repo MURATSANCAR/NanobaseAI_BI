@@ -1,5 +1,5 @@
-import { LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
-import { useRouteParameter, useRouter, useSetting } from '@rocket.chat/ui-contexts';
+import { LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
+import { useRouteParameter, useRouter, useSetting } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import BusinessHoursDisabledPage from './BusinessHoursDisabledPage';

@@ -1,7 +1,7 @@
-import type { OAuthConfiguration, OauthConfig } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { OAuthConfiguration, OauthConfig } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { capitalize } from '@rocket.chat/string-helpers';
-import { isAbsoluteURL } from '@rocket.chat/tools';
+import { isAbsoluteURL } from '@zeki.chat/tools';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import { OAuth } from 'meteor/oauth';

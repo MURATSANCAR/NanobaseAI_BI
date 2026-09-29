@@ -1,7 +1,7 @@
 import { Box } from '@rocket.chat/fuselage';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { clientCallbacks } from '@rocket.chat/ui-client';
-import { useEndpoint, useMethod, useSetting, useStream } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { clientCallbacks } from '@zeki.chat/ui-client';
+import { useEndpoint, useMethod, useSetting, useStream } from '@zeki.chat/ui-contexts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -9,8 +9,8 @@ import {
 	GenericTableLoadingTable,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
-import { useEndpoint, useRoute, useTranslation, useLayout } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint, useRoute, useTranslation, useLayout } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useCallback, useState } from 'react';
 

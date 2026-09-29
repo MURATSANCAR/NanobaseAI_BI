@@ -1,7 +1,7 @@
-import type { AppClientManager } from '@rocket.chat/apps/dist/client/AppClientManager';
-import type { IPermission } from '@rocket.chat/apps-engine/definition/permissions/IPermission';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
-import type { Serialized } from '@rocket.chat/core-typings';
+import type { AppClientManager } from '@zeki.chat/apps/dist/client/AppClientManager';
+import type { IPermission } from '@zeki.chat/apps-engine/definition/permissions/IPermission';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
+import type { Serialized } from '@zeki.chat/core-typings';
 import { createContext } from 'react';
 
 import type { IAppExternalURL, ICategory } from '../apps/@types/IOrchestrator';

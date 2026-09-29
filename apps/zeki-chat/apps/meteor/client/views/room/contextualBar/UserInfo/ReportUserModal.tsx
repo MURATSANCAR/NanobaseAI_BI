@@ -1,6 +1,6 @@
 import { Box, FieldGroup, Field, FieldLabel, FieldRow, FieldError, TextAreaInput, FieldDescription } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { GenericModal } from '@zeki.chat/ui-client';
 import { useId, type ComponentProps } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';

@@ -1,69 +1,30 @@
 import { expect } from 'chai';
-import proxyquire from 'proxyquire';
-import sinon from 'sinon';
+import { disableCustomScripts } from '../../../../../../app/lib/server/functions/disableCustomScripts';
 
 describe('disableCustomScripts', () => {
-	let mockLicense: sinon.SinonStubbedInstance<any>;
-	let disableCustomScripts: () => boolean;
-	let disableCustomScriptsVar: any;
-
+	let originalDisabled: string | undefined;
+	let originalLocal: string | undefined;
 	beforeEach(() => {
-		disableCustomScriptsVar = process.env.DISABLE_CUSTOM_SCRIPTS;
-		mockLicense = {
-			getLicense: sinon.stub(),
-		};
-
-		disableCustomScripts = proxyquire('../../../../../../app/lib/server/functions/disableCustomScripts.ts', {
-			'@zeki.chat/capabilities': { License: mockLicense },
-		}).disableCustomScripts;
+		originalDisabled = process.env.DISABLE_CUSTOM_SCRIPTS;
+		originalLocal = process.env.ZEKI_LOCAL_ONLY;
+		delete process.env.DISABLE_CUSTOM_SCRIPTS;
+		delete process.env.ZEKI_LOCAL_ONLY;
 	});
-
 	afterEach(() => {
-		process.env.DISABLE_CUSTOM_SCRIPTS = disableCustomScriptsVar;
-		sinon.restore();
+		if (originalDisabled === undefined) delete process.env.DISABLE_CUSTOM_SCRIPTS;
+		else process.env.DISABLE_CUSTOM_SCRIPTS = originalDisabled;
+		if (originalLocal === undefined) delete process.env.ZEKI_LOCAL_ONLY;
+		else process.env.ZEKI_LOCAL_ONLY = originalLocal;
 	});
-
-	it('should return false when license is missing', () => {
-		mockLicense.getLicense.returns(null);
-
-		const result = disableCustomScripts();
-		expect(result).to.be.false;
+	it('leaves scripts enabled when neither policy disables them', () => {
+		expect(disableCustomScripts()).to.be.false;
 	});
-
-	it('should return false when DISABLE_CUSTOM_SCRIPTS is not true', () => {
-		mockLicense.getLicense.returns({
-			information: {
-				trial: true,
-			},
-		});
-
-		const result = disableCustomScripts();
-		expect(result).to.be.false;
+	it('disables scripts in local-only mode', () => {
+		process.env.ZEKI_LOCAL_ONLY = 'true';
+		expect(disableCustomScripts()).to.be.true;
 	});
-
-	it('should return false when license is not a trial', () => {
-		mockLicense.getLicense.returns({
-			information: {
-				trial: false,
-			},
-		});
-
+	it('honors an explicit script prohibition independently of capabilities', () => {
 		process.env.DISABLE_CUSTOM_SCRIPTS = 'true';
-
-		const result = disableCustomScripts();
-		expect(result).to.be.false;
-	});
-
-	it('should return true when DISABLE_CUSTOM_SCRIPTS is true and license is a trial', () => {
-		mockLicense.getLicense.returns({
-			information: {
-				trial: true,
-			},
-		});
-
-		process.env.DISABLE_CUSTOM_SCRIPTS = 'true';
-
-		const result = disableCustomScripts();
-		expect(result).to.be.true;
+		expect(disableCustomScripts()).to.be.true;
 	});
 });

@@ -2,7 +2,7 @@ import {
 	isLivechatAnalyticsAgentsTotalServiceTimeProps,
 	isLivechatAnalyticsAgentsAverageServiceTimeProps,
 	isLivechatAnalyticsAgentsAvailableForServiceHistoryProps,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../../app/api/server';
 import { getPaginationItems } from '../../../../../app/api/server/helpers/getPaginationItems';
@@ -18,7 +18,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsAgentsAverageServiceTimeProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -56,7 +56,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsAgentsTotalServiceTimeProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -94,7 +94,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsAgentsAvailableForServiceHistoryProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {

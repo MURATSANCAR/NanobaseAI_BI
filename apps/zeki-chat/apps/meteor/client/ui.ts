@@ -1,4 +1,4 @@
-import type { RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
+import type { RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
 
 import { useChatForwardQuickAction } from './hooks/quickActions/useChatForwardQuickAction';
 import { useCloseChatQuickAction } from './hooks/quickActions/useCloseChatQuickAction';

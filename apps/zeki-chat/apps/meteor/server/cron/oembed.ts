@@ -1,4 +1,4 @@
-import { cronJobs } from '@rocket.chat/cron';
+import { cronJobs } from '@zeki.chat/cron';
 
 import { executeClearOEmbedCache } from '../methods/OEmbedCacheCleanup';
 

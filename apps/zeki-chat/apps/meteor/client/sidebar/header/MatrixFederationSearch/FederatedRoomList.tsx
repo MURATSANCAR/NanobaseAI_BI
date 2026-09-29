@@ -1,7 +1,7 @@
 import { Throbber, Box } from '@rocket.chat/fuselage';
-import type { IFederationPublicRooms } from '@rocket.chat/rest-typings';
-import { VirtualizedScrollbars } from '@rocket.chat/ui-client';
-import { useSetModal, useEndpoint, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IFederationPublicRooms } from '@zeki.chat/rest-typings';
+import { VirtualizedScrollbars } from '@zeki.chat/ui-client';
+import { useSetModal, useEndpoint, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';

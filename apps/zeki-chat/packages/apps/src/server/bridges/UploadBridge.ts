@@ -1,5 +1,5 @@
-import type { IUpload } from '@rocket.chat/apps-engine/definition/uploads';
-import type { IUploadDetails } from '@rocket.chat/apps-engine/definition/uploads/IUploadDetails';
+import type { IUpload } from '@zeki.chat/apps-engine/definition/uploads';
+import type { IUploadDetails } from '@zeki.chat/apps-engine/definition/uploads/IUploadDetails';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

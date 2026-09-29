@@ -10,7 +10,7 @@ import {
 	ModalFooter,
 	ModalFooterControllers,
 } from '@rocket.chat/fuselage';
-import { useAbsoluteUrl, useSetModal } from '@rocket.chat/ui-contexts';
+import { useAbsoluteUrl, useSetModal } from '@zeki.chat/ui-contexts';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -33,14 +33,14 @@ test.describe('Admin Device Management Page', () => {
 	});
 
 	test('should logout current device and redirect to login page', async () => {
-		const deviceId = await adminDeviceManagement.getUsersDeviceId('rocketchat.internal.admin.test');
+		const deviceId = await adminDeviceManagement.getUsersDeviceId('zekichat.internal.admin.test');
 		await adminDeviceManagement.logoutDeviceById(deviceId);
 		await poLogin.waitForDisplay();
 	});
 
 	test('should logout current device from device info tab and redirect to login page', async () => {
-		const deviceId = await adminDeviceManagement.getUsersDeviceId('rocketchat.internal.admin.test');
-		await adminDeviceManagement.searchUserDevice('rocketchat.internal.admin.test');
+		const deviceId = await adminDeviceManagement.getUsersDeviceId('zekichat.internal.admin.test');
+		await adminDeviceManagement.searchUserDevice('zekichat.internal.admin.test');
 		await adminDeviceManagement.table.getDeviceRowById(deviceId).click();
 
 		await expect(adminDeviceManagement.deviceInfo.getDeviceInfoId(deviceId)).toBeVisible();

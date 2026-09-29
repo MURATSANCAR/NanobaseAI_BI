@@ -1,6 +1,6 @@
-import { eventTypes } from '@rocket.chat/core-typings';
-import type { IFederationEvent } from '@rocket.chat/core-typings';
-import { SHA256 } from '@rocket.chat/sha256';
+import { eventTypes } from '@zeki.chat/core-typings';
+import type { IFederationEvent } from '@zeki.chat/core-typings';
+import { SHA256 } from '@zeki.chat/sha256';
 import type { IndexDescription, Db } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

@@ -1,4 +1,4 @@
-import { FederationKeys } from '@rocket.chat/models';
+import { FederationKeys } from '@zeki.chat/models';
 
 import { settingsRegistry } from '../../app/settings/server';
 

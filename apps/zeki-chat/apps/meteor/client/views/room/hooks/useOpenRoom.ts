@@ -1,6 +1,6 @@
-import { isPublicRoom, type IRoom, type RoomType } from '@rocket.chat/core-typings';
-import { getObjectKeys } from '@rocket.chat/tools';
-import { useMethod, usePermission, useRoute, useSetting, useUser } from '@rocket.chat/ui-contexts';
+import { isPublicRoom, type IRoom, type RoomType } from '@zeki.chat/core-typings';
+import { getObjectKeys } from '@zeki.chat/tools';
+import { useMethod, usePermission, useRoute, useSetting, useUser } from '@zeki.chat/ui-contexts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 

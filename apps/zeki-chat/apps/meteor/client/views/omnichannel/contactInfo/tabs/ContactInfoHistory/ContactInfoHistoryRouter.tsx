@@ -1,5 +1,5 @@
-import type { ILivechatContact, Serialized } from '@rocket.chat/core-typings';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import type { ILivechatContact, Serialized } from '@zeki.chat/core-typings';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useState } from 'react';
 
 import ContactInfoHistory from './ContactInfoHistory';

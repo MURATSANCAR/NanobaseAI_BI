@@ -1,7 +1,7 @@
-import type { IApi, IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
-import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
-import type { IApiEndpoint } from '@rocket.chat/apps-engine/definition/api/IApiEndpoint';
-import type { IApiEndpointInfo } from '@rocket.chat/apps-engine/definition/api/IApiEndpointInfo';
+import type { IApi, IApiRequest, IApiResponse } from '@zeki.chat/apps-engine/definition/api';
+import { ApiSecurity, ApiVisibility } from '@zeki.chat/apps-engine/definition/api';
+import type { IApiEndpoint } from '@zeki.chat/apps-engine/definition/api/IApiEndpoint';
+import type { IApiEndpointInfo } from '@zeki.chat/apps-engine/definition/api/IApiEndpointInfo';
 
 import type { ProxiedApp } from '../ProxiedApp';
 import type { AppLogStorage } from '../storage';

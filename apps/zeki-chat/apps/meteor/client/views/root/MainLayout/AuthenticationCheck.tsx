@@ -1,5 +1,5 @@
-import { useSession, useUser, useSetting } from '@rocket.chat/ui-contexts';
-import RegistrationRoute from '@rocket.chat/web-ui-registration';
+import { useSession, useUser, useSetting } from '@zeki.chat/ui-contexts';
+import RegistrationRoute from '@zeki.chat/web-ui-registration';
 import type { ReactElement, ReactNode } from 'react';
 
 import LoggedInArea from './LoggedInArea';

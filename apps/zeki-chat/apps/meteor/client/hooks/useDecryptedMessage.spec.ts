@@ -1,15 +1,15 @@
-import { isE2EEMessage } from '@rocket.chat/core-typings';
+import { isE2EEMessage } from '@zeki.chat/core-typings';
 import { renderHook, waitFor } from '@testing-library/react';
 
 import { useDecryptedMessage } from './useDecryptedMessage';
-import { e2e } from '../lib/e2ee/rocketchat.e2e';
+import { e2e } from '../lib/e2ee/zekichat.e2e';
 
 // Mock the dependencies
-jest.mock('@rocket.chat/core-typings', () => ({
+jest.mock('@zeki.chat/core-typings', () => ({
 	isE2EEMessage: jest.fn(),
 }));
 
-jest.mock('../lib/e2ee/rocketchat.e2e', () => ({
+jest.mock('../lib/e2ee/zekichat.e2e', () => ({
 	e2e: {
 		decryptMessage: jest.fn(),
 	},

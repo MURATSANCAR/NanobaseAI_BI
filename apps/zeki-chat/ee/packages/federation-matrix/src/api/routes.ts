@@ -1,4 +1,4 @@
-import { Router } from '@rocket.chat/http-router';
+import { Router } from '@zeki.chat/http-router';
 
 import { getWellKnownRoutes } from './.well-known/server';
 import { getMatrixInviteRoutes } from './_matrix/invite';

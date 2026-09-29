@@ -1,6 +1,6 @@
-import type { IAppContactsConverter, IAppsLivechatContact } from '@rocket.chat/apps';
-import type { ILivechatContact } from '@rocket.chat/core-typings';
-import { LivechatContacts } from '@rocket.chat/models';
+import type { IAppContactsConverter, IAppsLivechatContact } from '@zeki.chat/apps';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
+import { LivechatContacts } from '@zeki.chat/models';
 
 import { transformMappedData } from './transformMappedData';
 

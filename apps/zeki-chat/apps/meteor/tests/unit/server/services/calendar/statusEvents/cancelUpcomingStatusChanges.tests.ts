@@ -23,8 +23,8 @@ const { cancelUpcomingStatusChanges } = proxyquire
 	.noCallThru()
 	.load('../../../../../../server/services/calendar/statusEvents/cancelUpcomingStatusChanges', {
 		'../../../../app/settings/server': { settings: settingsMock },
-		'@rocket.chat/cron': { cronJobs: cronJobsMock },
-		'@rocket.chat/models': {
+		'@zeki.chat/cron': { cronJobs: cronJobsMock },
+		'@zeki.chat/models': {
 			CalendarEvent: CalendarEventMock,
 		},
 	});

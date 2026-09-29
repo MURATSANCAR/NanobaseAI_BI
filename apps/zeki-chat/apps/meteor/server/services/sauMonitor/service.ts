@@ -1,8 +1,8 @@
 // import type { Db } from 'mongodb';
 
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import type { ISAUMonitorService } from '@rocket.chat/core-services';
-import { getHeader } from '@rocket.chat/tools';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { ISAUMonitorService } from '@zeki.chat/core-services';
+import { getHeader } from '@zeki.chat/tools';
 
 import { sauEvents } from './events';
 

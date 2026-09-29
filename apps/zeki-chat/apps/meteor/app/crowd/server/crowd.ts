@@ -1,7 +1,7 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
-import { Users } from '@rocket.chat/models';
-import { SHA256 } from '@rocket.chat/sha256';
+import type { IUser } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
+import { Users } from '@zeki.chat/models';
+import { SHA256 } from '@zeki.chat/sha256';
 import AtlassianCrowd from 'atlassian-crowd-patched';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';

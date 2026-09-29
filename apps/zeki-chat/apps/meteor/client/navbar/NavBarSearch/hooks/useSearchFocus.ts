@@ -1,5 +1,5 @@
 import type { OverlayTriggerState } from '@react-stately/overlays';
-import { useLayout } from '@rocket.chat/ui-contexts';
+import { useLayout } from '@zeki.chat/ui-contexts';
 import { useCallback, useEffect } from 'react';
 
 export const useSearchFocus = (state: OverlayTriggerState) => {

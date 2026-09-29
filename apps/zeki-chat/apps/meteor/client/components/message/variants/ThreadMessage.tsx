@@ -1,8 +1,8 @@
-import { type IThreadMessage, type IThreadMainMessage, isVideoConfMessage } from '@rocket.chat/core-typings';
+import { type IThreadMessage, type IThreadMainMessage, isVideoConfMessage } from '@zeki.chat/core-typings';
 import { Message, MessageLeftContainer, MessageContainer } from '@rocket.chat/fuselage';
 import { useToggle } from '@rocket.chat/fuselage-hooks';
-import { MessageAvatar } from '@rocket.chat/ui-avatar';
-import { useTranslation, useUserId, useUserCard } from '@rocket.chat/ui-contexts';
+import { MessageAvatar } from '@zeki.chat/ui-avatar';
+import { useTranslation, useUserId, useUserCard } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 

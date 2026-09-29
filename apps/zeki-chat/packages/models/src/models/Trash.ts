@@ -1,11 +1,11 @@
-import type { RocketChatRecordDeleted } from '@rocket.chat/core-typings';
+import type { ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
 import type { Db, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
-export class TrashRaw extends BaseRaw<RocketChatRecordDeleted<any>> {
+export class TrashRaw extends BaseRaw<ZekiChatRecordDeleted<any>> {
 	constructor(db: Db) {
-		super(db, 'rocketchat__trash', undefined, {
+		super(db, 'zeki__trash', undefined, {
 			collectionNameResolver(name) {
 				return name;
 			},

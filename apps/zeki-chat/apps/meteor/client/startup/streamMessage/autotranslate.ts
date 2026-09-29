@@ -1,4 +1,4 @@
-import { clientCallbacks } from '@rocket.chat/ui-client';
+import { clientCallbacks } from '@zeki.chat/ui-client';
 
 import { hasPermission } from '../../../app/authorization/client';
 import { PermissionsCachedStore } from '../../cachedStores';

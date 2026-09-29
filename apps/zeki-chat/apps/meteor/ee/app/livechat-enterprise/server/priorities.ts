@@ -1,6 +1,6 @@
-import type { ILivechatPriority } from '@rocket.chat/core-typings';
-import { LivechatPriorityWeight } from '@rocket.chat/core-typings';
-import { LivechatPriority } from '@rocket.chat/models';
+import type { ILivechatPriority } from '@zeki.chat/core-typings';
+import { LivechatPriorityWeight } from '@zeki.chat/core-typings';
+import { LivechatPriority } from '@zeki.chat/models';
 
 const defaultPriorities: Omit<ILivechatPriority, '_id' | '_updatedAt'>[] = [
 	{

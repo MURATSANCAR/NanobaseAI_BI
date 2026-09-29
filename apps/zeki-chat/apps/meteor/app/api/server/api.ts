@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import type { Router } from '@rocket.chat/http-router';
-import { Logger } from '@rocket.chat/logger';
+import type { IRoom } from '@zeki.chat/core-typings';
+import type { Router } from '@zeki.chat/http-router';
+import { Logger } from '@zeki.chat/logger';
 import type express from 'express';
 import { WebApp } from 'meteor/webapp';
 
@@ -10,7 +10,7 @@ import { loggerMiddleware } from './middlewares/logger';
 import { metricsMiddleware } from './middlewares/metrics';
 import { remoteAddressMiddleware } from './middlewares/remoteAddressMiddleware';
 import { tracerSpanMiddleware } from './middlewares/tracer';
-import { type APIActionHandler, RocketChatAPIRouter } from './router';
+import { type APIActionHandler, ZekiChatAPIRouter } from './router';
 import { metrics } from '../../metrics/server';
 import { settings } from '../../settings/server';
 
@@ -68,7 +68,7 @@ export const API: {
 	};
 } = {
 	ApiClass: APIClass,
-	api: new RocketChatAPIRouter('/api'),
+	api: new ZekiChatAPIRouter('/api'),
 	v1: createApi({
 		version: 'v1',
 		useDefaultAuth: true,
@@ -107,10 +107,10 @@ export const startRestAPI = () => {
 					basePathRegex: new RegExp(/^\/api\/v1\//),
 					api: API.v1,
 					settings,
-					endpointTimeSummary: metrics.rocketchatRestApi,
-					endpointTimeHistogram: metrics.rocketchatRestApiSeconds,
-					responseSizeHistogram: metrics.rocketchatRestApiResponseSizeBytes,
-					activeRequestsGauge: metrics.rocketchatRestApiActiveRequests,
+					endpointTimeSummary: metrics.zekichatRestApi,
+					endpointTimeHistogram: metrics.zekichatRestApiSeconds,
+					responseSizeHistogram: metrics.zekichatRestApiResponseSizeBytes,
+					activeRequestsGauge: metrics.zekichatRestApiActiveRequests,
 				}),
 			)
 			.use(tracerSpanMiddleware)

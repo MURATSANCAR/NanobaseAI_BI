@@ -1,9 +1,9 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import CreateChannelModal from './CreateChannelModal';
-import { createFakeLicenseInfo } from '../../../../tests/mocks/data';
+import { createFakeCapabilities } from '../../../../tests/mocks/data';
 
 jest.mock('../../../lib/rooms/roomCoordinator', () => ({}));
 
@@ -199,9 +199,9 @@ describe('CreateChannelModal', () => {
 					.withSetting('Federation_Matrix_enabled', false)
 					.withEndpoint(
 						'GET',
-						'/v1/licenses.info',
+						'/v1/capabilities.info',
 						jest.fn().mockImplementation(() => ({
-							license: createFakeLicenseInfo({ activeModules: ['federation'] }),
+							capabilities: createFakeCapabilities({ modules: ['federation'] }),
 						})),
 					)
 					.build(),
@@ -223,9 +223,9 @@ describe('CreateChannelModal', () => {
 					.withSetting('Federation_Matrix_enabled', true)
 					.withEndpoint(
 						'GET',
-						'/v1/licenses.info',
+						'/v1/capabilities.info',
 						jest.fn().mockImplementation(() => ({
-							license: createFakeLicenseInfo({ activeModules: ['federation'] }),
+							capabilities: createFakeCapabilities({ modules: ['federation'] }),
 						})),
 					)
 					.build(),
@@ -248,9 +248,9 @@ describe('CreateChannelModal', () => {
 					.withPermission('access-federation')
 					.withEndpoint(
 						'GET',
-						'/v1/licenses.info',
+						'/v1/capabilities.info',
 						jest.fn().mockImplementation(() => ({
-							license: createFakeLicenseInfo({ activeModules: ['federation'] }),
+							capabilities: createFakeCapabilities({ modules: ['federation'] }),
 						})),
 					)
 					.build(),

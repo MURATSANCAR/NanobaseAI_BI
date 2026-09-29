@@ -1,4 +1,4 @@
-import type { ICustomEmojiDescriptor, IEmojiCustom } from '@rocket.chat/core-typings';
+import type { ICustomEmojiDescriptor, IEmojiCustom } from '@zeki.chat/core-typings';
 
 import { ajv, ajvQuery } from './Ajv';
 import type { PaginatedRequest } from '../helpers/PaginatedRequest';

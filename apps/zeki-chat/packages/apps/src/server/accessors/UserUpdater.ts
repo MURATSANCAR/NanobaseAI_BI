@@ -1,6 +1,6 @@
-import type { IUserUpdater } from '@rocket.chat/apps-engine/definition/accessors/IUserUpdater';
-import type { UserStatusConnection } from '@rocket.chat/apps-engine/definition/users';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users/IUser';
+import type { IUserUpdater } from '@zeki.chat/apps-engine/definition/accessors/IUserUpdater';
+import type { UserStatusConnection } from '@zeki.chat/apps-engine/definition/users';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users/IUser';
 
 import type { AppBridges } from '../bridges';
 

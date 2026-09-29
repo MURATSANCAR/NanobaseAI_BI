@@ -1,6 +1,6 @@
 import { Button, ButtonGroup, Field, FieldGroup, FieldLabel, FieldRow, TextInput } from '@rocket.chat/fuselage';
-import { PageScrollableContent, Page, PageHeader } from '@rocket.chat/ui-client';
-import { useTranslation, useRouter } from '@rocket.chat/ui-contexts';
+import { PageScrollableContent, Page, PageHeader } from '@zeki.chat/ui-client';
+import { useTranslation, useRouter } from '@zeki.chat/ui-contexts';
 import { useCallback, useId } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 

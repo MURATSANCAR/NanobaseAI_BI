@@ -23,9 +23,9 @@ exports[`renders Default without crashing 1`] = `
           </i>
           <div
             class="rcx-box rcx-box--full rcx-css-dredvr"
-            title="rocketchat-frontend-team"
+            title="zekichat-frontend-team"
           >
-            rocketchat-frontend-team
+            zekichat-frontend-team
           </div>
         </div>
       </div>

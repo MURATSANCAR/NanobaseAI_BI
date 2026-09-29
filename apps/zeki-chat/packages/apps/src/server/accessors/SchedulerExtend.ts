@@ -1,5 +1,5 @@
-import type { ISchedulerExtend } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IProcessor } from '@rocket.chat/apps-engine/definition/scheduler';
+import type { ISchedulerExtend } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IProcessor } from '@zeki.chat/apps-engine/definition/scheduler';
 
 import type { AppSchedulerManager } from '../managers/AppSchedulerManager';
 

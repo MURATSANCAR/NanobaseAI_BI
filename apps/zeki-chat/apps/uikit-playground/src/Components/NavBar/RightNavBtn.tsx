@@ -9,7 +9,7 @@ const RightNavBtn = () => {
 
 	return (
 		<Box mie='15px' onClick={() => state.isMobile && dispatch(navMenuToggleAction(true))}>
-			{state.isMobile ? <BurgerIcon /> : <Button primary>Send to RocketChat</Button>}
+			{state.isMobile ? <BurgerIcon /> : <Button primary>Send to ZekiChat</Button>}
 		</Box>
 	);
 };

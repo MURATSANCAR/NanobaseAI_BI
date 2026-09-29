@@ -3,10 +3,10 @@
  * @param {Object} message - The message object
  */
 
-import { api } from '@rocket.chat/core-services';
-import type { ISubscription, SlashCommand, SlashCommandCallbackParams } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
-import { isTruthy } from '@rocket.chat/tools';
+import { api } from '@zeki.chat/core-services';
+import type { ISubscription, SlashCommand, SlashCommandCallbackParams } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
+import { isTruthy } from '@zeki.chat/tools';
 import { Meteor } from 'meteor/meteor';
 
 import { i18n } from '../../../server/lib/i18n';

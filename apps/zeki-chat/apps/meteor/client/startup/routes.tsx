@@ -1,4 +1,4 @@
-import { SetupWizardRoute } from '@rocket.chat/ui-client';
+import { SetupWizardRoute } from '@zeki.chat/ui-client';
 import { createElement, lazy, useEffect } from 'react';
 
 import { appLayout } from '../lib/appLayout';
@@ -10,7 +10,7 @@ const HomePage = lazy(() => import('../views/home/HomePage'));
 const DirectoryPage = lazy(() => import('../views/directory'));
 const OmnichannelDirectoryRouter = lazy(() => import('../views/omnichannel/directory/OmnichannelDirectoryRouter'));
 const OmnichannelQueueList = lazy(() => import('../views/omnichannel/queueList'));
-const CMSPage = lazy(() => import('@rocket.chat/web-ui-registration').then(({ CMSPage }) => ({ default: CMSPage })));
+const CMSPage = lazy(() => import('@zeki.chat/web-ui-registration').then(({ CMSPage }) => ({ default: CMSPage })));
 const SecretURLPage = lazy(() => import('../views/invite/SecretURLPage'));
 const InvitePage = lazy(() => import('../views/invite/InvitePage'));
 const ConferenceRoute = lazy(() => import('../views/conference/ConferenceRoute'));
@@ -18,14 +18,14 @@ const MailerUnsubscriptionPage = lazy(() => import('../views/mailer/MailerUnsubs
 const LoginTokenRoute = lazy(() => import('../views/root/LoginTokenRoute'));
 const SAMLLoginRoute = lazy(() => import('../views/root/SAMLLoginRoute'));
 const ResetPasswordPage = lazy(() =>
-	import('@rocket.chat/web-ui-registration').then(({ ResetPasswordPage }) => ({ default: ResetPasswordPage })),
+	import('@zeki.chat/web-ui-registration').then(({ ResetPasswordPage }) => ({ default: ResetPasswordPage })),
 );
 const OAuthAuthorizationPage = lazy(() => import('../views/oauth/OAuthAuthorizationPage'));
 const OAuthErrorPage = lazy(() => import('../views/oauth/OAuthErrorPage'));
 const NotFoundPage = lazy(() => import('../views/notFound/NotFoundPage'));
 const CallHistoryPage = lazy(() => import('../views/mediaCallHistory/CallHistoryPage'));
 
-declare module '@rocket.chat/ui-contexts' {
+declare module '@zeki.chat/ui-contexts' {
 	interface IRouterPaths {
 		'index': {
 			pathname: '/';

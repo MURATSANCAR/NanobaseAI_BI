@@ -1,4 +1,4 @@
-import { UserStatus } from '@rocket.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import UsersTable from './UsersTable';

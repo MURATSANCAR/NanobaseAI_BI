@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 
-import type { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata/IAppInfo';
-import { version } from '@rocket.chat/apps-engine/package.json';
+import type { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata/IAppInfo';
+import { version } from '@zeki.chat/apps-engine/package.json';
 import AdmZip from 'adm-zip';
 import * as semver from 'semver';
 

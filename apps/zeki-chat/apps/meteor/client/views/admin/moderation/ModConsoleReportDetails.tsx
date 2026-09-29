@@ -1,8 +1,8 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { Tabs, TabsItem, ContextualbarHeader, ContextualbarTitle } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { ContextualbarClose, ContextualbarDialog } from '@rocket.chat/ui-client';
-import { useTranslation, useRouter, useRouteParameter } from '@rocket.chat/ui-contexts';
+import { ContextualbarClose, ContextualbarDialog } from '@zeki.chat/ui-client';
+import { useTranslation, useRouter, useRouteParameter } from '@zeki.chat/ui-contexts';
 import { useState } from 'react';
 
 import UserMessages from './UserMessages';

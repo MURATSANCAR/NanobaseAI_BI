@@ -1,4 +1,4 @@
-import type { ICustomUserStatus } from '@rocket.chat/core-typings';
+import type { ICustomUserStatus } from '@zeki.chat/core-typings';
 
 export type CustomUserStatusEndpoints = {
 	'/v1/custom-user-status.create': {

@@ -1,6 +1,6 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
-import { VideoConfContext } from '@rocket.chat/ui-video-conf';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
+import { VideoConfContext } from '@zeki.chat/ui-video-conf';
 import { renderHook } from '@testing-library/react';
 
 import { useRoomList } from './useRoomList';

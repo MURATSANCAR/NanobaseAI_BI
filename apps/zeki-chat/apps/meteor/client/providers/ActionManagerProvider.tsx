@@ -1,4 +1,4 @@
-import { ActionManagerContext, useRouter } from '@rocket.chat/ui-contexts';
+import { ActionManagerContext, useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactNode, ReactElement } from 'react';
 
 import { ActionManager } from '../../app/ui-message/client/ActionManager';

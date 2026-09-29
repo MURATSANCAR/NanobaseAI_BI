@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import type { FC } from 'react';
 
 export const useCreateRoomModal = (Component: FC<any>): (() => void) => {

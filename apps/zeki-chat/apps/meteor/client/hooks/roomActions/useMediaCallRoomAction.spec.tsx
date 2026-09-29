@@ -1,19 +1,19 @@
-import type { IUser, IRoom } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
-import { useMediaCallAction } from '@rocket.chat/ui-voip';
+import type { IUser, IRoom } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
+import { useMediaCallAction } from '@zeki.chat/ui-voip';
 import { act, renderHook } from '@testing-library/react';
 
 import { useMediaCallRoomAction } from './useMediaCallRoomAction';
 import FakeRoomProvider from '../../../tests/mocks/client/FakeRoomProvider';
 import { createFakeRoom, createFakeSubscription, createFakeUser } from '../../../tests/mocks/data';
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useUserAvatarPath: jest.fn((_args: any) => 'avatar-url'),
 }));
 
-jest.mock('@rocket.chat/ui-voip', () => ({
+jest.mock('@zeki.chat/ui-voip', () => ({
 	useMediaCallAction: jest.fn(),
 }));
 

@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { runOptimisticSendMessage } from '../../../../app/lib/client/methods/sendMessage';
 import { sdk } from '../../../../app/utils/client/lib/SDKClient';

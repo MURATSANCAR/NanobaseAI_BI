@@ -5,9 +5,9 @@ import type {
 	ILivechatContactConflictingField,
 	ILivechatContactVisitorAssociation,
 	ILivechatVisitor,
-	RocketChatRecordDeleted,
-} from '@rocket.chat/core-typings';
-import type { FindPaginated, ILivechatContactsModel, InsertionModel, Updater } from '@rocket.chat/model-typings';
+	ZekiChatRecordDeleted,
+} from '@zeki.chat/core-typings';
+import type { FindPaginated, ILivechatContactsModel, InsertionModel, Updater } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type {
 	Document,
@@ -29,7 +29,7 @@ import { BaseRaw } from './BaseRaw';
 import { readSecondaryPreferred } from '../readSecondaryPreferred';
 
 export class LivechatContactsRaw extends BaseRaw<ILivechatContact> implements ILivechatContactsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ILivechatContact>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ILivechatContact>>) {
 		super(db, 'livechat_contact', trash);
 	}
 

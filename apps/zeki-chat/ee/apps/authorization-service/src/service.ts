@@ -1,8 +1,8 @@
-import { AbacService } from '@rocket.chat/abac';
-import { api, getConnection, getTrashCollection } from '@rocket.chat/core-services';
-import { registerServiceModels } from '@rocket.chat/models';
-import { startBroker } from '@rocket.chat/network-broker';
-import { startTracing } from '@rocket.chat/tracing';
+import { AbacService } from '@zeki.chat/abac';
+import { api, getConnection, getTrashCollection } from '@zeki.chat/core-services';
+import { registerServiceModels } from '@zeki.chat/models';
+import { startBroker } from '@zeki.chat/network-broker';
+import { startTracing } from '@zeki.chat/tracing';
 import polka from 'polka';
 
 const PORT = process.env.PORT || 3034;

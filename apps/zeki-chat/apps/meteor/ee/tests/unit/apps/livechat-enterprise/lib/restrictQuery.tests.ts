@@ -36,10 +36,10 @@ describe('restrictQuery', () => {
 		const debugStub = sinon.stub();
 
 		const { restrictQuery } = proxyquire.noCallThru().load(modulePath, {
-			'@rocket.chat/models': {
+			'@zeki.chat/models': {
 				LivechatDepartment: { find: findStub },
 			},
-			'@rocket.chat/omni-core-ee': {
+			'@zeki.chat/omni-core-ee': {
 				getUnitsFromUser: getUnitsFromUserStub,
 			},
 			'./logger': {

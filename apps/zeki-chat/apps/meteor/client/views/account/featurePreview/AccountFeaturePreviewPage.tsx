@@ -16,9 +16,9 @@ import {
 	Callout,
 	Margins,
 } from '@rocket.chat/fuselage';
-import { usePreferenceFeaturePreviewList, Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useToastMessageDispatch, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { usePreferenceFeaturePreviewList, Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useToastMessageDispatch, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent } from 'react';
 import { useEffect, Fragment } from 'react';
 import { useForm } from 'react-hook-form';

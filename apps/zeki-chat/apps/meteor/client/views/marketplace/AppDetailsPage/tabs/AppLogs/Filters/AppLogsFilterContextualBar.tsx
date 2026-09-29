@@ -7,7 +7,7 @@ import {
 	ContextualbarScrollableContent,
 	ContextualbarDialog,
 	ContextualbarFooter,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 

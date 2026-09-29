@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import type { ISetting, SettingValue, CapabilityModule } from '@rocket.chat/core-typings';
+import type { ISetting, SettingValue, CapabilityModule } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Settings } from '@rocket.chat/models';
+import { Settings } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { settings, SettingsEvents } from '../../../../app/settings/server';
@@ -60,6 +60,4 @@ Meteor.startup(async () => {
 	await updateSettings();
 
 	Capabilities.onReady(updateSettings);
-	Capabilities.onInvalidateLicense(updateSettings);
-	Capabilities.onRemoveLicense(updateSettings);
 });

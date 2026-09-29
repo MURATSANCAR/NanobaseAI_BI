@@ -1,7 +1,7 @@
-import type { IAppRolesConverter } from '@rocket.chat/apps';
-import type { IRole as AppsEngineRole } from '@rocket.chat/apps-engine/definition/roles';
-import type { IRole } from '@rocket.chat/core-typings';
-import { Roles } from '@rocket.chat/models';
+import type { IAppRolesConverter } from '@zeki.chat/apps';
+import type { IRole as AppsEngineRole } from '@zeki.chat/apps-engine/definition/roles';
+import type { IRole } from '@zeki.chat/core-typings';
+import { Roles } from '@zeki.chat/models';
 
 import { transformMappedData } from './transformMappedData';
 

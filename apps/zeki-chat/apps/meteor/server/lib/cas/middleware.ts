@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import url from 'node:url';
 
-import { validate } from '@rocket.chat/cas-validate';
-import type { ICredentialToken, RequiredField } from '@rocket.chat/core-typings';
-import { CredentialTokens } from '@rocket.chat/models';
+import { validate } from '@zeki.chat/cas-validate';
+import type { ICredentialToken, RequiredField } from '@zeki.chat/core-typings';
+import { CredentialTokens } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import _ from 'underscore';
 

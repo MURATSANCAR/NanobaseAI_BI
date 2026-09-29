@@ -1,4 +1,4 @@
-import { MessageComposerFileGroup } from '@rocket.chat/ui-composer';
+import { MessageComposerFileGroup } from '@zeki.chat/ui-composer';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

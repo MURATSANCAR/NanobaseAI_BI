@@ -1,5 +1,5 @@
-import type { IAbacAttributeDefinition, IRoom, AtLeast, IUser } from '@rocket.chat/core-typings';
-import { Rooms, Users } from '@rocket.chat/models';
+import type { IAbacAttributeDefinition, IRoom, AtLeast, IUser } from '@zeki.chat/core-typings';
+import { Rooms, Users } from '@zeki.chat/models';
 
 import { OnlyCompliantCanBeAddedToRoomError } from '../errors';
 import { buildCompliantConditions, buildNonCompliantConditions, buildRoomNonCompliantConditionsFromSubject } from '../helper';

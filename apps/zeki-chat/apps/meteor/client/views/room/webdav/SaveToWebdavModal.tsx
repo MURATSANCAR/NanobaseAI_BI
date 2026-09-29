@@ -1,4 +1,4 @@
-import type { MessageAttachment, IWebdavAccount } from '@rocket.chat/core-typings';
+import type { MessageAttachment, IWebdavAccount } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import {
 	Modal,
@@ -18,7 +18,7 @@ import {
 	ModalFooter,
 	ModalFooterControllers,
 } from '@rocket.chat/fuselage';
-import { useMethod, useSetting, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useMethod, useSetting, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useState, useMemo, useEffect, useRef, useId } from 'react';
 import { useForm, Controller } from 'react-hook-form';

@@ -1,5 +1,5 @@
 import { Tabs } from '@rocket.chat/fuselage';
-import type { ExperimentalTabNavigationBlock } from '@rocket.chat/ui-kit';
+import type { ExperimentalTabNavigationBlock } from '@zeki.chat/ui-kit';
 import type { ReactElement } from 'react';
 import { memo, useState } from 'react';
 

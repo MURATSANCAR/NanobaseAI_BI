@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 
-import type { IMessage, IRoom, IUser, MessageAttachment, FileProp, RoomType, IExportOperation } from '@rocket.chat/core-typings';
-import { Messages } from '@rocket.chat/models';
+import type { IMessage, IRoom, IUser, MessageAttachment, FileProp, RoomType, IExportOperation } from '@zeki.chat/core-typings';
+import { Messages } from '@zeki.chat/models';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 
 import { settings } from '../../../app/settings/server';

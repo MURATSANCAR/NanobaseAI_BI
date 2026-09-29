@@ -1,9 +1,9 @@
-import type { RocketChatAssociationModel } from '../metadata';
+import type { ZekiChatAssociationModel } from '../metadata';
 import type { IRoom } from '../rooms';
 import type { IUser } from '../users';
 
 export interface IRoomExtender {
-	kind: RocketChatAssociationModel.ROOM;
+	kind: ZekiChatAssociationModel.ROOM;
 
 	/**
 	 * Adds a custom field to the room.

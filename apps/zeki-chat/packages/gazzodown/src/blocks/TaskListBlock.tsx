@@ -1,5 +1,5 @@
 import { CheckBox } from '@rocket.chat/fuselage';
-import type * as MessageParser from '@rocket.chat/message-parser';
+import type * as MessageParser from '@zeki.chat/message-parser';
 import type { ReactElement } from 'react';
 import { useContext } from 'react';
 

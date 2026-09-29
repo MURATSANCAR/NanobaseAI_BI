@@ -1,5 +1,5 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 import { renderHook } from '@testing-library/react';
 
 import { useGoToDirectMessage } from './useGoToDirectMessage';

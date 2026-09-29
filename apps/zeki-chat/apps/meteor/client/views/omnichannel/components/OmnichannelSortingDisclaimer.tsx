@@ -1,5 +1,5 @@
-import { OmnichannelSortingMechanismSettingType as OmniSortingType } from '@rocket.chat/core-typings';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { OmnichannelSortingMechanismSettingType as OmniSortingType } from '@zeki.chat/core-typings';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

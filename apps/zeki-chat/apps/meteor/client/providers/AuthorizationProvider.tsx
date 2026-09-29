@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { AuthorizationContext, useUserId } from '@rocket.chat/ui-contexts';
+import type { IUser } from '@zeki.chat/core-typings';
+import { AuthorizationContext, useUserId } from '@zeki.chat/ui-contexts';
 import type { ContextType, ReactNode } from 'react';
 import { useMemo, useSyncExternalStore } from 'react';
 

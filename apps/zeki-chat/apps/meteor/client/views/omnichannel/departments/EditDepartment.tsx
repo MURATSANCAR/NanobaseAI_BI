@@ -1,4 +1,4 @@
-import type { ILivechatDepartment, ILivechatDepartmentAgents, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment, ILivechatDepartmentAgents, Serialized } from '@zeki.chat/core-typings';
 import {
 	FieldGroup,
 	Field,
@@ -18,9 +18,9 @@ import {
 	Option,
 } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { validateEmail } from '@rocket.chat/tools';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint, useRouter, usePermission } from '@rocket.chat/ui-contexts';
+import { validateEmail } from '@zeki.chat/tools';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint, useRouter, usePermission } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';

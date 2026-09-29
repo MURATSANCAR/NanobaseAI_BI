@@ -1,14 +1,14 @@
-import type { IMessageExtender } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IMessage, IMessageAttachment } from '@rocket.chat/apps-engine/definition/messages';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
+import type { IMessageExtender } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IMessage, IMessageAttachment } from '@zeki.chat/apps-engine/definition/messages';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
 
 import { Utilities } from '../misc/Utilities';
 
 export class MessageExtender implements IMessageExtender {
-	public readonly kind: RocketChatAssociationModel.MESSAGE;
+	public readonly kind: ZekiChatAssociationModel.MESSAGE;
 
 	constructor(private msg: IMessage) {
-		this.kind = RocketChatAssociationModel.MESSAGE;
+		this.kind = ZekiChatAssociationModel.MESSAGE;
 
 		if (!Array.isArray(msg.attachments)) {
 			this.msg.attachments = [];

@@ -1,10 +1,10 @@
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { renderHook } from '@testing-library/react';
 
 import { useAppsContextualBar } from './useAppsContextualBar';
 import { useUiKitActionManager } from '../../../uikit/hooks/useUiKitActionManager';
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
+jest.mock('@zeki.chat/ui-contexts', () => ({
 	useRouteParameter: jest.fn((param: string) => {
 		if (param === 'context') return 'test-context';
 		if (param === 'tab') return 'app';

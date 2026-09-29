@@ -1,7 +1,7 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { Box, MessageDivider, Throbber } from '@rocket.chat/fuselage';
 import type { Keys as IconName } from '@rocket.chat/icons';
-import { MessageTypes } from '@rocket.chat/message-types';
+import { MessageTypes } from '@zeki.chat/message-types';
 import {
 	VirtualizedScrollbars,
 	ContextualbarContent,
@@ -11,8 +11,8 @@ import {
 	ContextualbarClose,
 	ContextualbarEmptyContent,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useUserPreference, useRoomToolbox } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useUserPreference, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactElement, ReactNode } from 'react';
 import { useCallback } from 'react';

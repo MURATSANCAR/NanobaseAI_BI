@@ -8,7 +8,7 @@ import type {
 	IModify,
 	IPersistence,
 	IRead,
-} from '@rocket.chat/apps-engine/definition/accessors';
+} from '@zeki.chat/apps-engine/definition/accessors';
 
 import type { AppManager } from '../AppManager';
 import {

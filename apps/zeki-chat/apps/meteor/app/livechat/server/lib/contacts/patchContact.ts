@@ -1,5 +1,5 @@
-import type { ILivechatContact } from '@rocket.chat/core-typings';
-import { LivechatContacts } from '@rocket.chat/models';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
+import { LivechatContacts } from '@zeki.chat/models';
 
 export const patchContact = async (
 	contactId: ILivechatContact['_id'],

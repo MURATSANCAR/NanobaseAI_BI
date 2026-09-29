@@ -1,7 +1,7 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useTranslation, useSetting, usePermission, useSetModal } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useTranslation, useSetting, usePermission, useSetModal } from '@zeki.chat/ui-contexts';
 
 import CreateDiscussion from '../../../../../../components/CreateDiscussion';
 

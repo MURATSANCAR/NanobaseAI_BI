@@ -1,7 +1,7 @@
-import type { ISubscription, RoomType } from '@rocket.chat/core-typings';
+import type { ISubscription, RoomType } from '@zeki.chat/core-typings';
 import { Box, States, StatesIcon, StatesSubtitle, StatesTitle } from '@rocket.chat/fuselage';
-import { Header } from '@rocket.chat/ui-client';
-import { useStream, useUserId } from '@rocket.chat/ui-contexts';
+import { Header } from '@zeki.chat/ui-client';
+import { useStream, useUserId } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { lazy, Suspense, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';

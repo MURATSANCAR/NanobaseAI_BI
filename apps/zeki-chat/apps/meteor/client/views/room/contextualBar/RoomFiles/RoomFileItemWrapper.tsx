@@ -1,4 +1,4 @@
-import type { IUploadWithUser } from '@rocket.chat/core-typings';
+import type { IUploadWithUser } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Palette } from '@rocket.chat/fuselage';
 import type { ComponentProps, Ref } from 'react';

@@ -1,5 +1,5 @@
-import type { ILivechatInquiryRecord, SelectedAgent, ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatInquiry, LivechatRooms } from '@rocket.chat/models';
+import type { ILivechatInquiryRecord, SelectedAgent, ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatInquiry, LivechatRooms } from '@zeki.chat/models';
 
 import { notifyOnLivechatInquiryChanged, notifyOnRoomChangedById } from '../../../../../app/lib/server/lib/notifyListener';
 import { allowAgentSkipQueue } from '../../../../../app/livechat/server/lib/Helper';

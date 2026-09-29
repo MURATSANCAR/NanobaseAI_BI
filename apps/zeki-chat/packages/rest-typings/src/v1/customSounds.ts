@@ -1,4 +1,4 @@
-import type { ICustomSound } from '@rocket.chat/core-typings';
+import type { ICustomSound } from '@zeki.chat/core-typings';
 
 import { ajvQuery, ajv } from './Ajv';
 import { type PaginatedRequest } from '../helpers/PaginatedRequest';

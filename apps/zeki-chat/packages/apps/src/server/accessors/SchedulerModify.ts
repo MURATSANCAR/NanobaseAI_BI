@@ -1,5 +1,5 @@
-import type { ISchedulerModify } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IOnetimeSchedule, IRecurringSchedule } from '@rocket.chat/apps-engine/definition/scheduler';
+import type { ISchedulerModify } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IOnetimeSchedule, IRecurringSchedule } from '@zeki.chat/apps-engine/definition/scheduler';
 
 import type { SchedulerBridge } from '../bridges';
 

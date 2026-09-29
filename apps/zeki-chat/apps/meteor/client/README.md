@@ -1,7 +1,7 @@
 # How does the folder structure work in the frontend?
 
 
-## The folder structure should follow rocketchat's html 'semantics' like:
+## The folder structure should follow zekichat's html 'semantics' like:
 ```
     main   -> room
                 -> header

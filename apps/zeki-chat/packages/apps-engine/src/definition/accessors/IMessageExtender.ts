@@ -1,8 +1,8 @@
 import type { IMessage, IMessageAttachment } from '../messages';
-import type { RocketChatAssociationModel } from '../metadata';
+import type { ZekiChatAssociationModel } from '../metadata';
 
 export interface IMessageExtender {
-	kind: RocketChatAssociationModel.MESSAGE;
+	kind: ZekiChatAssociationModel.MESSAGE;
 
 	/**
 	 * Adds a custom field to the message.

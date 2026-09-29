@@ -1,6 +1,6 @@
 import { Box, IconButton, Sidepanel, SidepanelHeader, SidepanelHeaderTitle, SidepanelListItem, ToggleSwitch } from '@rocket.chat/fuselage';
-import { VirtualizedScrollbars } from '@rocket.chat/ui-client';
-import { useLayout } from '@rocket.chat/ui-contexts';
+import { VirtualizedScrollbars } from '@zeki.chat/ui-client';
+import { useLayout } from '@zeki.chat/ui-contexts';
 import { useId, useRef, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';

@@ -1,6 +1,6 @@
 import { Field, FieldHint, FieldLabel, FieldRow, Select } from '@rocket.chat/fuselage';
-import type { PathPattern } from '@rocket.chat/rest-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { PathPattern } from '@zeki.chat/rest-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 

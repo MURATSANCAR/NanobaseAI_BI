@@ -1,7 +1,7 @@
-import { Push } from '@rocket.chat/core-services';
-import { pushTokenTypes } from '@rocket.chat/core-typings';
-import type { IMessage, IPushNotificationConfig, IPushToken, IPushTokenTypes } from '@rocket.chat/core-typings';
-import { Messages, PushToken, Users, Rooms } from '@rocket.chat/models';
+import { Push } from '@zeki.chat/core-services';
+import { pushTokenTypes } from '@zeki.chat/core-typings';
+import type { IMessage, IPushNotificationConfig, IPushToken, IPushTokenTypes } from '@zeki.chat/core-typings';
+import { Messages, PushToken, Users, Rooms } from '@zeki.chat/models';
 import {
 	ajv,
 	isPushGetProps,
@@ -9,7 +9,7 @@ import {
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import type { JSONSchemaType } from 'ajv';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
@@ -335,7 +335,7 @@ const pushGetInfoEndpoints = API.v1
 			},
 		},
 		async function action() {
-			// Zeki: the Rocket.Chat push gateway is removed; notifications are sent directly (APNs/FCM) only.
+			// Zeki: the ZEKI AI CHAT push gateway is removed; notifications are sent directly (APNs/FCM) only.
 			return API.v1.success({
 				pushGatewayEnabled: Boolean(settings.get('Push_enable')),
 				defaultPushGateway: false,
@@ -391,7 +391,7 @@ type PushGetInfoEndpoints = ExtractRoutesFromAPI<typeof pushGetInfoEndpoints>;
 
 type PushEndpoints = PushTestEndpoints & PushTokenEndpoints & PushGetInfoEndpoints;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends PushEndpoints {}
 }

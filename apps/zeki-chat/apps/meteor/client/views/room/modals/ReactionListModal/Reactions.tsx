@@ -1,6 +1,6 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import ReactionUserTag from './ReactionUserTag';

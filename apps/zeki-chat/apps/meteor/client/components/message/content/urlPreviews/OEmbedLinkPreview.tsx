@@ -1,5 +1,5 @@
 import { MessageGenericPreviewCoverImage } from '@rocket.chat/fuselage';
-import { ExternalLink } from '@rocket.chat/ui-client';
+import { ExternalLink } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 
 import OEmbedCollapsible from './OEmbedCollapsible';

@@ -1,5 +1,5 @@
 import { Capabilities } from '@zeki.chat/capabilities';
-import { LivechatRooms } from '@rocket.chat/models';
+import { LivechatRooms } from '@zeki.chat/models';
 
 import { fetchContactHistory } from '../../../app/livechat/server/lib/contacts/getContactHistory';
 

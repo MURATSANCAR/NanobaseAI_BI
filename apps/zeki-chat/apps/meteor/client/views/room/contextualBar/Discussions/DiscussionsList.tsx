@@ -1,4 +1,4 @@
-import type { IDiscussionMessage } from '@rocket.chat/core-typings';
+import type { IDiscussionMessage } from '@zeki.chat/core-typings';
 import { Box, Icon, TextInput, Callout, Throbber } from '@rocket.chat/fuselage';
 import { useResizeObserver, useAutoFocus } from '@rocket.chat/fuselage-hooks';
 import {
@@ -11,8 +11,8 @@ import {
 	ContextualbarTitle,
 	ContextualbarSection,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useSetting } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent, MouseEvent, RefObject } from 'react';
 import { useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';

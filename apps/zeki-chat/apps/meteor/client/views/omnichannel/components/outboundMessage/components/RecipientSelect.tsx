@@ -1,4 +1,4 @@
-import type { Serialized, ILivechatContact } from '@rocket.chat/core-typings';
+import type { Serialized, ILivechatContact } from '@zeki.chat/core-typings';
 import { Select } from '@rocket.chat/fuselage';
 import type { ComponentProps, Key, ReactElement } from 'react';
 import { useMemo } from 'react';

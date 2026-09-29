@@ -1,5 +1,5 @@
-import type { IRole } from '@rocket.chat/core-typings';
-import { ROOM_ROLE_PRIORITY_MAP } from '@rocket.chat/core-typings';
+import type { IRole } from '@zeki.chat/core-typings';
+import { ROOM_ROLE_PRIORITY_MAP } from '@zeki.chat/core-typings';
 
 /**
  * Retrieves the role priority for a given role.

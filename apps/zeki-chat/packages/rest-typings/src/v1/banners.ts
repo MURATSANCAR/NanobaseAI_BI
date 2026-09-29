@@ -1,4 +1,4 @@
-import type { BannerPlatform, IBanner } from '@rocket.chat/core-typings';
+import type { BannerPlatform, IBanner } from '@zeki.chat/core-typings';
 
 import { ajv, ajvQuery } from './Ajv';
 

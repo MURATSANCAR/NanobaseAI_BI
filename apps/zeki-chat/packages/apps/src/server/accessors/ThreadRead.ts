@@ -1,5 +1,5 @@
-import type { IThreadRead } from '@rocket.chat/apps-engine/definition/accessors/IThreadRead';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
+import type { IThreadRead } from '@zeki.chat/apps-engine/definition/accessors/IThreadRead';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
 
 import type { ThreadBridge } from '../bridges/ThreadBridge';
 

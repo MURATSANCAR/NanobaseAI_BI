@@ -1,4 +1,4 @@
-import { LivechatDepartment, Users, LivechatDepartmentAgents, LivechatVisitors } from '@rocket.chat/models';
+import { LivechatDepartment, Users, LivechatDepartmentAgents, LivechatVisitors } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import { notifyOnLivechatDepartmentAgentChanged, notifyOnUserChange } from '../../../lib/server/lib/notifyListener';

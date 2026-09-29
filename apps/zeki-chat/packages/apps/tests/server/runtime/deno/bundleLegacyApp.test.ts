@@ -65,9 +65,9 @@ describe('bundleLegacyApp', () => {
 		assert.ok(appPackage.files['app.js'].includes('fromIndex'));
 	});
 
-	it('marks @rocket.chat/apps-engine/* imports as external', async () => {
+	it('marks @zeki.chat/apps-engine/* imports as external', async () => {
 		const appPackage = makeAppPackage('app.js', {
-			'app.js': ['var AppInterface = require("@rocket.chat/apps-engine/definition/AppInterface");', 'module.exports = AppInterface;'].join(
+			'app.js': ['var AppInterface = require("@zeki.chat/apps-engine/definition/AppInterface");', 'module.exports = AppInterface;'].join(
 				'\n',
 			),
 		});
@@ -76,7 +76,7 @@ describe('bundleLegacyApp', () => {
 
 		assert.strictEqual(Object.keys(appPackage.files).length, 1);
 		// The apps-engine import should remain as an external require, not be inlined
-		assert.ok(appPackage.files['app.js'].includes('@rocket.chat/apps-engine'));
+		assert.ok(appPackage.files['app.js'].includes('@zeki.chat/apps-engine'));
 	});
 
 	it('handles deeply nested relative imports', async () => {

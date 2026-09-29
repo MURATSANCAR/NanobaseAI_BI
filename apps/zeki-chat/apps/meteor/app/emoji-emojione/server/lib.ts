@@ -17,7 +17,7 @@ if (emoji.packages.emojione) {
 	emoji.packages.emojione.render = config.render;
 	emoji.packages.emojione.renderPicker = config.renderPicker;
 	// TODO: check types
-	// RocketChat.emoji.list is the collection of emojis from all emoji packages
+	// ZekiChat.emoji.list is the collection of emojis from all emoji packages
 	for (const key in config.emojione.emojioneList) {
 		if (config.emojione.emojioneList.hasOwnProperty(key)) {
 			const currentEmoji = config.emojione.emojioneList[key];

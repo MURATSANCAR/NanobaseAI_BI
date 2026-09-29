@@ -1,4 +1,4 @@
-import type { IEmojiCustom } from '@rocket.chat/core-typings';
+import type { IEmojiCustom } from '@zeki.chat/core-typings';
 import type { FindCursor, FindOptions, InsertOneResult, UpdateResult, WithId } from 'mongodb';
 
 import type { IBaseModel, InsertionModel } from './IBaseModel';

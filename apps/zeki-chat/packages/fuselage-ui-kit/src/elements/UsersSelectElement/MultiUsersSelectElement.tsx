@@ -1,7 +1,7 @@
 import { Box, Chip, AutoComplete, Option, OptionAvatar, OptionContent, OptionDescription } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import type { ReactElement } from 'react';
 import { memo, useCallback, useState } from 'react';
 

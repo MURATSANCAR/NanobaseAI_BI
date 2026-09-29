@@ -2,7 +2,7 @@ import type { IUser } from '../users/IUser';
 
 /**
  * Updating a user is a more granular approach, since
- * it is one of the more sensitive aspects of Rocket.Chat -
+ * it is one of the more sensitive aspects of ZEKI AI CHAT -
  * or any other system for that matter.
  *
  * Allowing apps to modify _all_ the aspects of a user

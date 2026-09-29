@@ -1,6 +1,6 @@
-import { Message } from '@rocket.chat/core-services';
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions } from '@zeki.chat/models';
 import { Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import type { UpdateResult, Document } from 'mongodb';
@@ -19,26 +19,26 @@ export const saveRoomType = async function (
 ): Promise<UpdateResult | Document> {
 	if (!Match.test(rid, String)) {
 		throw new Meteor.Error('invalid-room', 'Invalid room', {
-			function: 'RocketChat.saveRoomType',
+			function: 'ZekiChat.saveRoomType',
 		});
 	}
 	if (roomType !== 'c' && roomType !== 'p') {
 		throw new Meteor.Error('error-invalid-room-type', 'error-invalid-room-type', {
-			function: 'RocketChat.saveRoomType',
+			function: 'ZekiChat.saveRoomType',
 			type: roomType,
 		});
 	}
 	const room = await Rooms.findOneById(rid);
 	if (room == null) {
 		throw new Meteor.Error('error-invalid-room', 'error-invalid-room', {
-			function: 'RocketChat.saveRoomType',
+			function: 'ZekiChat.saveRoomType',
 			_id: rid,
 		});
 	}
 
 	if (!(await roomCoordinator.getRoomDirectives(room.t)?.allowRoomSettingChange(room, RoomSettingsEnum.TYPE))) {
 		throw new Meteor.Error('error-direct-room', "Can't change type of direct rooms", {
-			function: 'RocketChat.saveRoomType',
+			function: 'ZekiChat.saveRoomType',
 		});
 	}
 

@@ -1,4 +1,4 @@
-import { usePermission, useRouter, useCurrentModal, useRouteParameter, useEndpoint } from '@rocket.chat/ui-contexts';
+import { usePermission, useRouter, useCurrentModal, useRouteParameter, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 

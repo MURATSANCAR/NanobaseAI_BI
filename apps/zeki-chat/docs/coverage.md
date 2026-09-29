@@ -11,7 +11,7 @@ Coverage is collected during E2E test runs (API, UI, Livechat) to measure how mu
 The coverage pipeline has three components:
 
 1. **Build-time instrumentation** - injects coverage counters into the code during Meteor build
-2. **Runtime collection** - the `rocketchat:coverage` Meteor package collects `__coverage__` data on process exit
+2. **Runtime collection** - the `zekichat:coverage` Meteor package collects `__coverage__` data on process exit
 3. **CI reporting** - test workflows merge coverage data and upload reports
 
 ```
@@ -33,7 +33,7 @@ env:
 
 When `BABEL_ENV=coverage`, the build script:
 
-1. Adds `rocketchat:coverage` to `.meteor/packages`
+1. Adds `zekichat:coverage` to `.meteor/packages`
 2. Injects `swc-plugin-coverage-instrument` into `.swcrc` via a node script:
 
 ```js
@@ -64,9 +64,9 @@ Before the modern build stack, coverage was handled via `babel-plugin-istanbul` 
 
 This section is still present in `.babelrc` as a fallback for files that fall back to Babel compilation (e.g., SWC-incompatible code).
 
-## Runtime collection: `rocketchat:coverage`
+## Runtime collection: `zekichat:coverage`
 
-The `rocketchat:coverage` Meteor package (`apps/meteor/packages/rocketchat-coverage/`) is only added to the build during coverage runs. It:
+The `zekichat:coverage` Meteor package (`apps/meteor/packages/zekichat-coverage/`) is only added to the build during coverage runs. It:
 
 1. Registers a `process.on('exit')` handler
 2. Reads `globalThis['__coverage__']` (populated by the instrumentation)
@@ -107,7 +107,7 @@ node -e "
 "
 
 # Add the coverage package
-echo -e "rocketchat:coverage\n" >> .meteor/packages
+echo -e "zekichat:coverage\n" >> .meteor/packages
 
 # Set env vars and run
 COVERAGE_DIR=/tmp/coverage COVERAGE_FILE_NAME=local.json COVERAGE_REPORTER=lcov yarn dev
@@ -120,6 +120,6 @@ Remember to restore `.swcrc` and `.meteor/packages` after testing.
 | Package | Purpose |
 |---|---|
 | `swc-plugin-coverage-instrument` | SWC plugin for Istanbul-compatible instrumentation |
-| `istanbul-lib-coverage` | Coverage map creation (used by `rocketchat:coverage`) |
+| `istanbul-lib-coverage` | Coverage map creation (used by `zekichat:coverage`) |
 | `istanbul-lib-report` | Report context creation |
 | `istanbul-reports` | Report formatters (json, lcov, etc.) |

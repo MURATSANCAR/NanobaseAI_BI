@@ -1,4 +1,4 @@
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 export const useDesktopTitle = () => {
@@ -7,6 +7,6 @@ export const useDesktopTitle = () => {
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 		if (!title) return;
-		window.RocketChatDesktop?.setTitle(title);
+		window.ZekiChatDesktop?.setTitle(title);
 	}, [title]);
 };

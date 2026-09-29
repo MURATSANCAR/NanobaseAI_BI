@@ -1,4 +1,4 @@
-import type { OutgoingIntegrationEvent } from '@rocket.chat/core-typings';
+import type { OutgoingIntegrationEvent } from '@zeki.chat/core-typings';
 
 import { ajv } from '../Ajv';
 

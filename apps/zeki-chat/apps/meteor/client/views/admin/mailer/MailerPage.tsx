@@ -12,9 +12,9 @@ import {
 	ButtonGroup,
 	Box,
 } from '@rocket.chat/fuselage';
-import { validateEmail } from '@rocket.chat/tools';
-import { Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@rocket.chat/ui-client';
-import { useEndpoint, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { validateEmail } from '@zeki.chat/tools';
+import { Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@zeki.chat/ui-client';
+import { useEndpoint, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';

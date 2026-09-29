@@ -1,7 +1,7 @@
 import { Box, Input } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

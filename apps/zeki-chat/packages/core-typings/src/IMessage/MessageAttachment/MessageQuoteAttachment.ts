@@ -1,4 +1,4 @@
-import type { Root } from '@rocket.chat/message-parser';
+import type { Root } from '@zeki.chat/message-parser';
 
 import type { MessageAttachment } from './MessageAttachment';
 import type { MessageAttachmentBase } from './MessageAttachmentBase';

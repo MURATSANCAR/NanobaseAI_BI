@@ -1,9 +1,8 @@
-import { isOmnichannelRoom, isRoomFederated, isRoomNativeFederated } from '@rocket.chat/core-typings';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { isOmnichannelRoom, isRoomFederated, isRoomNativeFederated } from '@zeki.chat/core-typings';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 
-import ComposerAirGappedRestricted from './ComposerAirGappedRestricted';
 import ComposerAnonymous from './ComposerAnonymous';
 import ComposerArchived from './ComposerArchived';
 import ComposerBlocked from './ComposerBlocked';
@@ -19,7 +18,6 @@ import { useMessageComposerIsAnonymous } from './hooks/useMessageComposerIsAnony
 import { useMessageComposerIsArchived } from './hooks/useMessageComposerIsArchived';
 import { useMessageComposerIsBlocked } from './hooks/useMessageComposerIsBlocked';
 import { useMessageComposerIsReadOnly } from './hooks/useMessageComposerIsReadOnly';
-import { useAirGappedRestriction } from '../../../hooks/useAirGappedRestriction';
 import { useIsSelecting } from '../MessageList/contexts/SelectedMessagesContext';
 
 const ComposerContainer = ({ children, ...props }: ComposerMessageProps): ReactElement => {
@@ -38,12 +36,6 @@ const ComposerContainer = ({ children, ...props }: ComposerMessageProps): ReactE
 	const isFederation = isRoomFederated(room);
 
 	const isFederationBlocked = !isRoomNativeFederated(room);
-
-	const [isAirGappedRestricted] = useAirGappedRestriction();
-
-	if (isAirGappedRestricted) {
-		return <ComposerAirGappedRestricted />;
-	}
 
 	if (isOmnichannel) {
 		return <ComposerOmnichannel {...props} />;

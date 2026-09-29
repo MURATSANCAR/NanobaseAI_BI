@@ -1,14 +1,14 @@
-import type { IReadReceiptWithUser, IMessage } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import type { IReadReceiptWithUser, IMessage } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Messages } from '@rocket.chat/models';
+import { Messages } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
 import { canAccessRoomIdAsync } from '../../../app/authorization/server/functions/canAccessRoom';
 import { ReadReceipt } from '../lib/message-read-receipt/ReadReceipt';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		getReadReceipts(options: { messageId: IMessage['_id'] }): IReadReceiptWithUser[];

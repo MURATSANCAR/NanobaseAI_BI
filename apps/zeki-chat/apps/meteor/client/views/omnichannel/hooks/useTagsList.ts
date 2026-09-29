@@ -1,5 +1,5 @@
-import type { ILivechatTag, Serialized } from '@rocket.chat/core-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { ILivechatTag, Serialized } from '@zeki.chat/core-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 type TagsListOptions = {

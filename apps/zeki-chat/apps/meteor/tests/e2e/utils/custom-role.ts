@@ -1,4 +1,4 @@
-import type { Endpoints } from '@rocket.chat/rest-typings';
+import type { Endpoints } from '@zeki.chat/rest-typings';
 
 import type { BaseTest } from './test';
 

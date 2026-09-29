@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, beforeEach, afterEach, describe, it } from 'mocha';
 

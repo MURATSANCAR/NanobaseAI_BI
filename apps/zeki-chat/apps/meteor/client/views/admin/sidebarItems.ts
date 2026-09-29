@@ -1,4 +1,4 @@
-import { defaultFeaturesPreview } from '@rocket.chat/ui-client';
+import { defaultFeaturesPreview } from '@zeki.chat/ui-client';
 
 import { hasPermission, hasAtLeastOnePermission, hasAllPermission } from '../../../app/authorization/client';
 import { createSidebarItems } from '../../lib/createSidebarItems';

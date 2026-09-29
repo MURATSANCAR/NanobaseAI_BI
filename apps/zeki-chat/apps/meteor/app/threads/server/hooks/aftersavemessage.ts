@@ -1,6 +1,6 @@
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import { isEditedMessage } from '@rocket.chat/core-typings';
-import { Messages } from '@rocket.chat/models';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import { isEditedMessage } from '@zeki.chat/core-typings';
+import { Messages } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../../server/lib/callbacks';

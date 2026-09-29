@@ -1,5 +1,5 @@
-import { InstanceStatus } from '@rocket.chat/models';
-import { ajv, validateUnauthorizedErrorResponse, validateForbiddenErrorResponse } from '@rocket.chat/rest-typings';
+import { InstanceStatus } from '@zeki.chat/models';
+import { ajv, validateUnauthorizedErrorResponse, validateForbiddenErrorResponse } from '@zeki.chat/rest-typings';
 
 import { isRunningMs } from '../../../../server/lib/isRunningMs';
 import { API } from '../api';

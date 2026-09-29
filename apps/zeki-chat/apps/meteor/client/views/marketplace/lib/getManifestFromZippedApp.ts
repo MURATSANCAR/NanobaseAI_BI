@@ -1,4 +1,4 @@
-import type { AppPermission } from '@rocket.chat/core-typings';
+import type { AppPermission } from '@zeki.chat/core-typings';
 import { unzipSync, strFromU8 } from 'fflate';
 
 type Uint8ArrayObject = { [fileName: string]: Uint8Array };

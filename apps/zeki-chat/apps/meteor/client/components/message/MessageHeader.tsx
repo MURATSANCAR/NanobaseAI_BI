@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import {
 	MessageHeader as FuselageMessageHeader,
 	MessageName,
@@ -8,8 +8,8 @@ import {
 	MessageNameContainer,
 } from '@rocket.chat/fuselage';
 import { useButtonPattern } from '@rocket.chat/fuselage-hooks';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useUserPresence, useUserCard } from '@rocket.chat/ui-contexts';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useUserPresence, useUserCard } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

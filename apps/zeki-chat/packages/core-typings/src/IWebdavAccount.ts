@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IWebdavAccount extends IRocketChatRecord {
+export interface IWebdavAccount extends IZekiChatRecord {
 	userId: string;
 	serverURL: string;
 	username: string;

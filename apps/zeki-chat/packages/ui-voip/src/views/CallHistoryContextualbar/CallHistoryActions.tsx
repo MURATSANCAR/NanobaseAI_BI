@@ -1,5 +1,5 @@
 import type { Keys as IconName } from '@rocket.chat/icons';
-import { ContextualbarActions, ContextualbarClose, GenericMenu } from '@rocket.chat/ui-client';
+import { ContextualbarActions, ContextualbarClose, GenericMenu } from '@zeki.chat/ui-client';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 

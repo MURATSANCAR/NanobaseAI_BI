@@ -1,8 +1,8 @@
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import { VideoConferenceBridge } from '@rocket.chat/apps/dist/server/bridges/VideoConferenceBridge';
-import type { IVideoConfProvider } from '@rocket.chat/apps-engine/definition/videoConfProviders';
-import type { AppVideoConference, VideoConference } from '@rocket.chat/apps-engine/definition/videoConferences';
-import { VideoConf } from '@rocket.chat/core-services';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import { VideoConferenceBridge } from '@zeki.chat/apps/dist/server/bridges/VideoConferenceBridge';
+import type { IVideoConfProvider } from '@zeki.chat/apps-engine/definition/videoConfProviders';
+import type { AppVideoConference, VideoConference } from '@zeki.chat/apps-engine/definition/videoConferences';
+import { VideoConf } from '@zeki.chat/core-services';
 
 import { videoConfProviders } from '../../../../server/lib/videoConfProviders';
 import type { AppVideoConferencesConverter } from '../converters/videoConferences';

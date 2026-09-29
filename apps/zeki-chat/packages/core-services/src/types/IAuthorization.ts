@@ -1,4 +1,4 @@
-import type { IRoom, IUser, IRole } from '@rocket.chat/core-typings';
+import type { IRoom, IUser, IRole } from '@zeki.chat/core-typings';
 
 export type RoomAccessValidator = (
 	room?: Pick<IRoom, '_id' | 't' | 'teamId' | 'prid' | 'abacAttributes'>,

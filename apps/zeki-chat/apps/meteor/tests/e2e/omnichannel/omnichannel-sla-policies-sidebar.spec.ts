@@ -2,7 +2,7 @@ import {
 	OmnichannelSortingMechanismSettingType,
 	type IOmnichannelServiceLevelAgreements,
 	type Serialized,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 
 import { createFakeVisitor } from '../../mocks/data';
 import { IS_EE } from '../config/constants';

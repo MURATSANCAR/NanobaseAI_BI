@@ -1,4 +1,4 @@
-import { isFederationAddServerProps } from '@rocket.chat/rest-typings';
+import { isFederationAddServerProps } from '@zeki.chat/rest-typings';
 import { assert } from 'chai';
 
 describe('FederationAddServerProps (definition/rest/v1)', () => {

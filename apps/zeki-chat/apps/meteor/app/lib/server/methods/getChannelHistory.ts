@@ -1,7 +1,7 @@
-import { Authorization } from '@rocket.chat/core-services';
-import type { IMessage, MessageTypesValues } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Rooms } from '@rocket.chat/models';
+import { Authorization } from '@zeki.chat/core-services';
+import type { IMessage, MessageTypesValues } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Rooms } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -9,7 +9,7 @@ import { settings } from '../../../settings/server/cached';
 import { normalizeMessagesForUser } from '../../../utils/server/lib/normalizeMessagesForUser';
 import { getHiddenSystemMessages } from '../lib/getHiddenSystemMessages';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		getChannelHistory(params: {

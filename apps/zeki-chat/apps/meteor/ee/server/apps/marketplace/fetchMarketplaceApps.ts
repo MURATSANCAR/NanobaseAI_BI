@@ -1,4 +1,4 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 import * as z from 'zod';
 
 import { getMarketplaceHeaders } from './getMarketplaceHeaders';
@@ -168,7 +168,7 @@ export async function fetchMarketplaceApps({ endUserID }: FetchMarketplaceAppsPa
 
 	const response = await request.json();
 
-	Apps.getRocketChatLogger().error({ msg: 'Error fetching marketplace apps', status: request.status, response });
+	Apps.getZekiChatLogger().error({ msg: 'Error fetching marketplace apps', status: request.status, response });
 
 	// TODO: Refactor cloud to return a proper error code on unsupported version
 	if (request.status === 426 && 'errorMsg' in response && response.errorMsg === 'unsupported version') {

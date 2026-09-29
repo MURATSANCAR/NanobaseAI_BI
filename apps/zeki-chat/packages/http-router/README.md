@@ -15,13 +15,13 @@ This package provides a flexible HTTP routing solution for ZEKI AI CHAT services
 ## Installation
 
 ```sh
-yarn add @rocket.chat/http-router
+yarn add @zeki.chat/http-router
 ```
 
 ## Usage
 
 ```typescript
-import { Router } from '@rocket.chat/http-router';
+import { Router } from '@zeki.chat/http-router';
 import express from 'express';
 
 // Create a new router
@@ -112,7 +112,7 @@ This router is designed to work seamlessly with Express applications:
 
 ```typescript
 import express from 'express';
-import { Router } from '@rocket.chat/http-router';
+import { Router } from '@zeki.chat/http-router';
 
 const app = express();
 const api = new Router('api');

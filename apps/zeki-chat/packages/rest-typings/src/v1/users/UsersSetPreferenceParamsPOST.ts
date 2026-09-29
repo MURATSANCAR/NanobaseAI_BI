@@ -1,4 +1,4 @@
-import type { ThemePreference } from '@rocket.chat/core-typings';
+import type { ThemePreference } from '@zeki.chat/core-typings';
 
 import { ajv } from '../Ajv';
 

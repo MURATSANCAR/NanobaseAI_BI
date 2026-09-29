@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { IOutboundProvider, IOutboundProviderMetadata, IOutboundProviderTemplate } from '@rocket.chat/core-typings';
+import type { IOutboundProvider, IOutboundProviderMetadata, IOutboundProviderTemplate } from '@zeki.chat/core-typings';
 import { capitalize } from '@rocket.chat/string-helpers';
 
 export const createFakeProvider = (overrides: Partial<IOutboundProvider> = {}): IOutboundProvider => ({

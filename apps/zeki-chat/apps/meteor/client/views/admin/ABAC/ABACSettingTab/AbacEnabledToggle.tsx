@@ -1,5 +1,5 @@
-import type { SettingValue } from '@rocket.chat/core-typings';
-import { useSetModal, useSettingsDispatch } from '@rocket.chat/ui-contexts';
+import type { SettingValue } from '@zeki.chat/core-typings';
+import { useSetModal, useSettingsDispatch } from '@zeki.chat/ui-contexts';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

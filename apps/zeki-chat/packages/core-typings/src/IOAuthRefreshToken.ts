@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IOAuthRefreshToken extends IRocketChatRecord {
+export interface IOAuthRefreshToken extends IZekiChatRecord {
 	refreshToken: string;
 	expires?: Date;
 	clientId: string;

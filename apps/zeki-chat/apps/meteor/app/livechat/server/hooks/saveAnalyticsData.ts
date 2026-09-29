@@ -1,6 +1,6 @@
-import { isEditedMessage, isMessageFromVisitor, isSystemMessage } from '@rocket.chat/core-typings';
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatRooms } from '@rocket.chat/models';
+import { isEditedMessage, isMessageFromVisitor, isSystemMessage } from '@zeki.chat/core-typings';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatRooms } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import { settings } from '../../../settings/server';

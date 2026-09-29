@@ -1,4 +1,4 @@
-import type { ILivechatContact } from '@rocket.chat/apps-engine/definition/livechat';
+import type { ILivechatContact } from '@zeki.chat/apps-engine/definition/livechat';
 
 import { ContactBridge } from '../../../src/server/bridges';
 

@@ -1,5 +1,5 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { Subscriptions, Rooms } from '@rocket.chat/models';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { Subscriptions, Rooms } from '@zeki.chat/models';
 
 import { canAccessRoomAsync } from './canAccessRoom';
 import { hasPermissionAsync } from './hasPermission';

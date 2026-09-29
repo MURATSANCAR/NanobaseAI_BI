@@ -1,5 +1,5 @@
-import type { RouteParameters, SearchParameters } from '@rocket.chat/ui-contexts';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import type { RouteParameters, SearchParameters } from '@zeki.chat/ui-contexts';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
 export const useOmnichannelDirectoryRouter = () => {

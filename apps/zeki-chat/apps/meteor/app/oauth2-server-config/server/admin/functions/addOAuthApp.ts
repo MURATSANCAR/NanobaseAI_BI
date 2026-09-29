@@ -1,6 +1,6 @@
-import type { IOAuthApps, IUser } from '@rocket.chat/core-typings';
-import { OAuthApps, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import type { IOAuthApps, IUser } from '@zeki.chat/core-typings';
+import { OAuthApps, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import { Meteor } from 'meteor/meteor';
 
 import { parseUriList } from './parseUriList';

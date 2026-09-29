@@ -1,4 +1,4 @@
-import type { AtLeast, IUser } from '@rocket.chat/core-typings';
+import type { AtLeast, IUser } from '@zeki.chat/core-typings';
 
 const getFname = (members: AtLeast<IUser, 'name' | 'username'>[]): string | undefined => {
 	if (members.length === 0) {

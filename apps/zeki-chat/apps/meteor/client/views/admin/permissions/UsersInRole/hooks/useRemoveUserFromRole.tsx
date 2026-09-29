@@ -1,7 +1,7 @@
-import type { IRole, IRoom, IUserInRole } from '@rocket.chat/core-typings';
+import type { IRole, IRoom, IUserInRole } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

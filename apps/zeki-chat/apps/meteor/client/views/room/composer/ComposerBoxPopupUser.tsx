@@ -1,6 +1,6 @@
 import { OptionAvatar, OptionColumn, OptionContent, OptionInput } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { getUserDisplayNames } from '../../../../lib/getUserDisplayNames';

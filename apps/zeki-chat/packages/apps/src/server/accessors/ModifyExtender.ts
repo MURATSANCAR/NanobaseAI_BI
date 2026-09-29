@@ -3,9 +3,9 @@ import type {
 	IModifyExtender,
 	IRoomExtender,
 	IVideoConferenceExtender,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { MessageExtender } from './MessageExtender';
 import { RoomExtender } from './RoomExtender';
@@ -42,11 +42,11 @@ export class ModifyExtender implements IModifyExtender {
 
 	public finish(extender: IMessageExtender | IRoomExtender | IVideoConferenceExtender): Promise<void> {
 		switch (extender.kind) {
-			case RocketChatAssociationModel.MESSAGE:
+			case ZekiChatAssociationModel.MESSAGE:
 				return this.bridges.getMessageBridge().doUpdate(extender.getMessage(), this.appId);
-			case RocketChatAssociationModel.ROOM:
+			case ZekiChatAssociationModel.ROOM:
 				return this.bridges.getRoomBridge().doUpdate(extender.getRoom(), extender.getUsernamesOfMembersBeingAdded(), this.appId);
-			case RocketChatAssociationModel.VIDEO_CONFERENCE:
+			case ZekiChatAssociationModel.VIDEO_CONFERENCE:
 				return this.bridges.getVideoConferenceBridge().doUpdate(extender.getVideoConference(), this.appId);
 			default:
 				throw new Error('Invalid extender passed to the ModifyExtender.finish function.');

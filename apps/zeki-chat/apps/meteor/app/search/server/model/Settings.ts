@@ -1,4 +1,4 @@
-import type { SettingValue } from '@rocket.chat/core-typings';
+import type { SettingValue } from '@zeki.chat/core-typings';
 
 import { Setting } from './Setting';
 

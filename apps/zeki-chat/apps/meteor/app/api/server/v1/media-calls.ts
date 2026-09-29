@@ -1,15 +1,15 @@
-import { MediaCall } from '@rocket.chat/core-services';
-import type { IMediaCall } from '@rocket.chat/core-typings';
-import type { CallAnswer, CallFeature, ServerMediaCallSignal } from '@rocket.chat/media-signaling';
-import { callFeatureList, callAnswerList } from '@rocket.chat/media-signaling';
-import { MediaCalls } from '@rocket.chat/models';
+import { MediaCall } from '@zeki.chat/core-services';
+import type { IMediaCall } from '@zeki.chat/core-typings';
+import type { CallAnswer, CallFeature, ServerMediaCallSignal } from '@zeki.chat/media-signaling';
+import { callFeatureList, callAnswerList } from '@zeki.chat/media-signaling';
+import { MediaCalls } from '@zeki.chat/models';
 import {
 	ajv,
 	validateNotFoundErrorResponse,
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import type { JSONSchemaType } from 'ajv';
 
 import type { ExtractRoutesFromAPI } from '../ApiClass';
@@ -93,7 +93,7 @@ const mediaCallsAnswerEndpoints = API.v1.post(
 
 type MediaCallsAnswerEndpoints = ExtractRoutesFromAPI<typeof mediaCallsAnswerEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends MediaCallsAnswerEndpoints {}
 }
@@ -206,7 +206,7 @@ const mediaCallsStateEndpoints = API.v1
 
 type MediaCallsStateEndpoints = ExtractRoutesFromAPI<typeof mediaCallsStateEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends MediaCallsStateEndpoints {}
 }

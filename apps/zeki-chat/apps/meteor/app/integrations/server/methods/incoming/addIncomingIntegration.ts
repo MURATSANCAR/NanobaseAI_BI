@@ -1,8 +1,8 @@
-import type { INewIncomingIntegration, IIncomingIntegration } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Integrations, Subscriptions, Users, Rooms } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
-import { removeEmpty } from '@rocket.chat/tools';
+import type { INewIncomingIntegration, IIncomingIntegration } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Integrations, Subscriptions, Users, Rooms } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
+import { removeEmpty } from '@zeki.chat/tools';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -14,7 +14,7 @@ import { validateScriptEngine, isScriptEngineFrozen } from '../../lib/validateSc
 
 const validChannelChars = ['@', '#'];
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		addIncomingIntegration(integration: INewIncomingIntegration): Promise<IIncomingIntegration>;

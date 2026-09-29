@@ -1,8 +1,8 @@
-import { api, getConnection, getTrashCollection } from '@rocket.chat/core-services';
-import { Logger } from '@rocket.chat/logger';
-import { registerServiceModels } from '@rocket.chat/models';
-import { startBroker } from '@rocket.chat/network-broker';
-import { startTracing } from '@rocket.chat/tracing';
+import { api, getConnection, getTrashCollection } from '@zeki.chat/core-services';
+import { Logger } from '@zeki.chat/logger';
+import { registerServiceModels } from '@zeki.chat/models';
+import { startBroker } from '@zeki.chat/network-broker';
+import { startTracing } from '@zeki.chat/tracing';
 import polka from 'polka';
 
 const PORT = process.env.PORT || 3038;
@@ -17,7 +17,7 @@ void (async () => {
 	api.setBroker(startBroker());
 
 	// need to import service after models are registeredpackagfe
-	const { QueueWorker } = await import('@rocket.chat/omnichannel-services');
+	const { QueueWorker } = await import('@zeki.chat/omnichannel-services');
 
 	api.registerService(new QueueWorker(db, Logger));
 

@@ -1,4 +1,4 @@
-import type * as uikit from '@rocket.chat/ui-kit';
+import type * as uikit from '@zeki.chat/ui-kit';
 import { memo } from 'preact/compat';
 
 import { createClassName } from '../../../../helpers/createClassName';

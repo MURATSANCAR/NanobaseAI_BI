@@ -1,7 +1,7 @@
-import { Abac } from '@rocket.chat/core-services';
-import { cronJobs } from '@rocket.chat/cron';
+import { Abac } from '@zeki.chat/core-services';
+import { cronJobs } from '@zeki.chat/cron';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Users } from '@rocket.chat/models';
+import { Users } from '@zeki.chat/models';
 import { isValidCron } from 'cron-validator';
 import { Meteor } from 'meteor/meteor';
 

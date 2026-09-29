@@ -1,7 +1,7 @@
-import { Message, Team } from '@rocket.chat/core-services';
-import { isBannedSubscription } from '@rocket.chat/core-typings';
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { Message, Team } from '@zeki.chat/core-services';
+import { isBannedSubscription } from '@zeki.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import { afterBanFromRoomCallback } from '../../../../server/lib/callbacks/afterBanFromRoomCallback';
 import { removeUserFromRolesAsync } from '../../../../server/lib/roles/removeUserFromRoles';
@@ -11,7 +11,7 @@ import { notifyOnRoomChangedById, notifyOnSubscriptionChanged } from '../lib/not
  * Bans a user from a room when triggered by federation or other external events.
  * Executes only the necessary database operations, with no callbacks, to prevent
  * propagation loops during external event processing.
- * `byUser` must be the Rocket.Chat user who initiated the ban (local record).
+ * `byUser` must be the ZEKI AI CHAT user who initiated the ban (local record).
  */
 export const performUserBan = async function (room: IRoom, user: IUser, byUser: IUser): Promise<void> {
 	const subscription = await Subscriptions.findOneByRoomIdAndUserId(room._id, user._id);

@@ -1,6 +1,6 @@
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

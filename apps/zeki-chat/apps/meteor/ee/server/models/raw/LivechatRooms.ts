@@ -2,20 +2,20 @@ import type {
 	ILivechatPriority,
 	IOmnichannelRoom,
 	IOmnichannelServiceLevelAgreements,
-	RocketChatRecordDeleted,
+	ZekiChatRecordDeleted,
 	ReportResult,
 	ILivechatContact,
-} from '@rocket.chat/core-typings';
-import { LivechatPriorityWeight, DEFAULT_SLA_CONFIG } from '@rocket.chat/core-typings';
-import type { FindPaginated, ILivechatRoomsModel } from '@rocket.chat/model-typings';
-import type { Updater } from '@rocket.chat/models';
-import { LivechatRoomsRaw } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { LivechatPriorityWeight, DEFAULT_SLA_CONFIG } from '@zeki.chat/core-typings';
+import type { FindPaginated, ILivechatRoomsModel } from '@zeki.chat/model-typings';
+import type { Updater } from '@zeki.chat/models';
+import { LivechatRoomsRaw } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { FindCursor, UpdateResult, Document, FindOptions, Db, Collection, Filter, AggregationCursor, UpdateOptions } from 'mongodb';
 
 import { readSecondaryPreferred } from '../../../../server/database/readSecondaryPreferred';
 
-declare module '@rocket.chat/model-typings' {
+declare module '@zeki.chat/model-typings' {
 	interface ILivechatRoomsModel {
 		associateRoomsWithDepartmentToUnit: (departments: string[], unit: string) => Promise<void>;
 		removeUnitAssociationFromRooms: (unit: string) => Promise<void>;
@@ -76,7 +76,7 @@ declare module '@rocket.chat/model-typings' {
 }
 
 export class LivechatRoomsRawEE extends LivechatRoomsRaw implements ILivechatRoomsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IOmnichannelRoom>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IOmnichannelRoom>>) {
 		super(db, trash);
 	}
 
@@ -494,7 +494,7 @@ export class LivechatRoomsRawEE extends LivechatRoomsRaw implements ILivechatRoo
 				},
 				{
 					$lookup: {
-						from: 'rocketchat_livechat_department',
+						from: 'zeki_livechat_department',
 						localField: '_id',
 						foreignField: '_id',
 						as: 'department',

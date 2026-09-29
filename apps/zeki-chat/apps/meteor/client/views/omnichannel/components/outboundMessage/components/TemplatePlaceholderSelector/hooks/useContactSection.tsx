@@ -1,4 +1,4 @@
-import type { ILivechatContact, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatContact, Serialized } from '@zeki.chat/core-typings';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

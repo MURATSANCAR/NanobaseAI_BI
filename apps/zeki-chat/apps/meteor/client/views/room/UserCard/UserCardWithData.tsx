@@ -1,8 +1,8 @@
-import { getUserDisplayName } from '@rocket.chat/core-typings';
-import type { IRoom } from '@rocket.chat/core-typings';
+import { getUserDisplayName } from '@zeki.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericMenu } from '@rocket.chat/ui-client';
-import { useSetting, useRolesDescription } from '@rocket.chat/ui-contexts';
+import { GenericMenu } from '@zeki.chat/ui-client';
+import { useSetting, useRolesDescription } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

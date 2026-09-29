@@ -1,5 +1,5 @@
-import type { IUser, SelectedAgent } from '@rocket.chat/core-typings';
-import { LivechatVisitors, LivechatContacts, LivechatInquiry, LivechatRooms, Users } from '@rocket.chat/models';
+import type { IUser, SelectedAgent } from '@zeki.chat/core-typings';
+import { LivechatVisitors, LivechatContacts, LivechatInquiry, LivechatRooms, Users } from '@zeki.chat/models';
 
 import { notifyOnLivechatInquiryChanged } from '../../../../../app/lib/server/lib/notifyListener';
 import { RoutingManager } from '../../../../../app/livechat/server/lib/RoutingManager';

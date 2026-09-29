@@ -1,6 +1,6 @@
-import type { IMessage, IMessageAttachment, IMessageFile, IMessageReactions } from '@rocket.chat/apps-engine/definition/messages';
-import type { IUser, IUserLookup } from '@rocket.chat/apps-engine/definition/users';
-import type { LayoutBlock } from '@rocket.chat/ui-kit';
+import type { IMessage, IMessageAttachment, IMessageFile, IMessageReactions } from '@zeki.chat/apps-engine/definition/messages';
+import type { IUser, IUserLookup } from '@zeki.chat/apps-engine/definition/users';
+import type { LayoutBlock } from '@zeki.chat/ui-kit';
 
 import type { AppManager } from '../AppManager';
 import { Room } from '../rooms/Room';

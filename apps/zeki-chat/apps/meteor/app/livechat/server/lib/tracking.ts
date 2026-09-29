@@ -1,5 +1,5 @@
-import { Message } from '@rocket.chat/core-services';
-import { Users } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import { Users } from '@zeki.chat/models';
 
 import { livechatLogger } from './logger';
 import { settings } from '../../../settings/server';
@@ -16,7 +16,7 @@ export async function savePageHistory(token: string, roomId: string | undefined,
 	if (pageInfo.change !== settings.get<string>('Livechat_history_monitor_type')) {
 		return;
 	}
-	const user = await Users.findOneById('rocket.cat');
+	const user = await Users.findOneById('zeki.bot');
 
 	if (!user) {
 		throw new Error('error-invalid-user');

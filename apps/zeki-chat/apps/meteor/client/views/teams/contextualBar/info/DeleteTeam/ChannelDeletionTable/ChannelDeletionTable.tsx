@@ -1,6 +1,6 @@
-import type { IRoom, Serialized } from '@rocket.chat/core-typings';
+import type { IRoom, Serialized } from '@zeki.chat/core-typings';
 import { Box, CheckBox } from '@rocket.chat/fuselage';
-import { GenericTable, GenericTableHeaderCell, GenericTableBody, GenericTableHeader, useSort } from '@rocket.chat/ui-client';
+import { GenericTable, GenericTableHeaderCell, GenericTableBody, GenericTableHeader, useSort } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import ChannelDeletionTableRow from './ChannelDeletionTableRow';

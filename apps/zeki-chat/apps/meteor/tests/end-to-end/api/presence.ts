@@ -60,7 +60,7 @@ describe('[Presence]', () => {
 			await updatePermission('manage-user-status', ['admin']);
 		});
 
-		it('should return current and max connections of 200', async () => {
+		it('should return the current connection count', async () => {
 			await request
 				.get(api('presence.getConnections'))
 				.set(credentials)
@@ -69,7 +69,6 @@ describe('[Presence]', () => {
 				.expect((res: Response) => {
 					expect(res.body).to.have.property('success', true);
 					expect(res.body).to.have.property('current').to.be.a('number');
-					expect(res.body).to.have.property('max').to.be.a('number').and.to.be.equal(200);
 				});
 		});
 	});

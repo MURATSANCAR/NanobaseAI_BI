@@ -1,6 +1,6 @@
-import type { IImportMessageRecord, IMessage as IDBMessage, IImportMessage, IImportMessageReaction } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
-import { removeEmpty } from '@rocket.chat/tools';
+import type { IImportMessageRecord, IMessage as IDBMessage, IImportMessage, IImportMessageReaction } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
+import { removeEmpty } from '@zeki.chat/tools';
 import limax from 'limax';
 
 import type { UserIdentification, MentionedChannel } from './ConverterCache';

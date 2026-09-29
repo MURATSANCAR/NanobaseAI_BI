@@ -1,4 +1,4 @@
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import type { UseMutationOptions } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
 

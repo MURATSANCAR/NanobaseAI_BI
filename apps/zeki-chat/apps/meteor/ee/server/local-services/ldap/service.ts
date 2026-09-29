@@ -1,5 +1,5 @@
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
 import type { FindCursor } from 'mongodb';
 
 import { LDAPEEManager } from '../../lib/ldap/Manager';

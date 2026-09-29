@@ -1,5 +1,5 @@
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 
 import type { EmojiCategory, EmojiItem } from '.';
 import { emoji, emojiEmitter } from './lib';

@@ -1,4 +1,4 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 
 import { request, credentials } from '../api-data';
 import { apps, APP_URL, installedApps } from './apps-data';

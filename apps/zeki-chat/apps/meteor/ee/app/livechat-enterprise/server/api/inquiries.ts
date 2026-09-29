@@ -8,7 +8,7 @@ API.v1.addRoute(
 		permissionsRequired: {
 			PUT: { permissions: ['view-l-room', 'manage-livechat-sla'], operation: 'hasAny' },
 		},
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async put() {

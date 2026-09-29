@@ -1,9 +1,9 @@
-import type { IMatrixFederationStatistics } from '@rocket.chat/core-typings';
-import { Rooms, Users } from '@rocket.chat/models';
+import type { IMatrixFederationStatistics } from '@zeki.chat/core-typings';
+import { Rooms, Users } from '@zeki.chat/models';
 
 import { settings } from '../../../../../../app/settings/server';
 
-class RocketChatStatisticsAdapter {
+class ZekiChatStatisticsAdapter {
 	async getBiggestRoomAvailable(): Promise<{
 		_id: string;
 		name: string;
@@ -55,7 +55,7 @@ class RocketChatStatisticsAdapter {
 }
 
 export const getMatrixFederationStatistics = async (): Promise<IMatrixFederationStatistics> => {
-	const statisticsService = new RocketChatStatisticsAdapter();
+	const statisticsService = new ZekiChatStatisticsAdapter();
 
 	return {
 		enabled: settings.get('Federation_Matrix_enabled'),

@@ -2,8 +2,8 @@ import type {
 	IOutboundEmailMessageProvider,
 	IOutboundMessageProviders,
 	IOutboundPhoneMessageProvider,
-} from '@rocket.chat/apps-engine/definition/outboundCommunication';
-import type { ValidOutboundProvider, IOutboundProvider, IOutboundMessageProvider } from '@rocket.chat/core-typings';
+} from '@zeki.chat/apps-engine/definition/outboundCommunication';
+import type { ValidOutboundProvider, IOutboundProvider, IOutboundMessageProvider } from '@zeki.chat/core-typings';
 
 export class OutboundMessageProvider implements IOutboundMessageProvider {
 	private readonly outboundMessageProviders: Map<ValidOutboundProvider, IOutboundMessageProviders[]>;

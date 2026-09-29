@@ -85,8 +85,8 @@ async function autoCloseDuplicates(): Promise<void> {
 	}
 	console.log('[DEBUG] GitHub token found');
 
-	const owner = process.env.GITHUB_REPOSITORY_OWNER || 'RocketChat';
-	const repo = process.env.GITHUB_REPOSITORY_NAME || 'Rocket.Chat';
+	const owner = process.env.GITHUB_REPOSITORY_OWNER || 'ZekiChat';
+	const repo = process.env.GITHUB_REPOSITORY_NAME || 'ZEKI AI CHAT';
 	console.log(`[DEBUG] Repository: ${owner}/${repo}`);
 
 	const threeDaysAgo = new Date();

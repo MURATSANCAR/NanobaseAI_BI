@@ -1,22 +1,22 @@
-import type { IAppAccessors } from '@rocket.chat/apps-engine/definition/accessors/IAppAccessors';
-import type { IApiEndpointMetadata } from '@rocket.chat/apps-engine/definition/api/IApiEndpointMetadata';
-import type { IEnvironmentWrite } from '@rocket.chat/apps-engine/definition/accessors/IEnvironmentWrite';
-import type { IEnvironmentRead } from '@rocket.chat/apps-engine/definition/accessors/IEnvironmentRead';
-import type { IConfigurationModify } from '@rocket.chat/apps-engine/definition/accessors/IConfigurationModify';
-import type { IRead } from '@rocket.chat/apps-engine/definition/accessors/IRead';
-import type { IModify } from '@rocket.chat/apps-engine/definition/accessors/IModify';
-import type { INotifier } from '@rocket.chat/apps-engine/definition/accessors/INotifier';
-import type { IPersistence } from '@rocket.chat/apps-engine/definition/accessors/IPersistence';
-import type { IHttp, IHttpExtend } from '@rocket.chat/apps-engine/definition/accessors/IHttp';
-import type { IConfigurationExtend } from '@rocket.chat/apps-engine/definition/accessors/IConfigurationExtend';
-import type { ISlashCommand } from '@rocket.chat/apps-engine/definition/slashcommands/ISlashCommand';
-import type { IProcessor } from '@rocket.chat/apps-engine/definition/scheduler/IProcessor';
-import type { IApi } from '@rocket.chat/apps-engine/definition/api/IApi';
-import type { IVideoConfProvider } from '@rocket.chat/apps-engine/definition/videoConfProviders/IVideoConfProvider';
+import type { IAppAccessors } from '@zeki.chat/apps-engine/definition/accessors/IAppAccessors';
+import type { IApiEndpointMetadata } from '@zeki.chat/apps-engine/definition/api/IApiEndpointMetadata';
+import type { IEnvironmentWrite } from '@zeki.chat/apps-engine/definition/accessors/IEnvironmentWrite';
+import type { IEnvironmentRead } from '@zeki.chat/apps-engine/definition/accessors/IEnvironmentRead';
+import type { IConfigurationModify } from '@zeki.chat/apps-engine/definition/accessors/IConfigurationModify';
+import type { IRead } from '@zeki.chat/apps-engine/definition/accessors/IRead';
+import type { IModify } from '@zeki.chat/apps-engine/definition/accessors/IModify';
+import type { INotifier } from '@zeki.chat/apps-engine/definition/accessors/INotifier';
+import type { IPersistence } from '@zeki.chat/apps-engine/definition/accessors/IPersistence';
+import type { IHttp, IHttpExtend } from '@zeki.chat/apps-engine/definition/accessors/IHttp';
+import type { IConfigurationExtend } from '@zeki.chat/apps-engine/definition/accessors/IConfigurationExtend';
+import type { ISlashCommand } from '@zeki.chat/apps-engine/definition/slashcommands/ISlashCommand';
+import type { IProcessor } from '@zeki.chat/apps-engine/definition/scheduler/IProcessor';
+import type { IApi } from '@zeki.chat/apps-engine/definition/api/IApi';
+import type { IVideoConfProvider } from '@zeki.chat/apps-engine/definition/videoConfProviders/IVideoConfProvider';
 import type {
 	IOutboundPhoneMessageProvider,
 	IOutboundEmailMessageProvider,
-} from '@rocket.chat/apps-engine/definition/outboundCommunication/IOutboundCommsProvider';
+} from '@zeki.chat/apps-engine/definition/outboundCommunication/IOutboundCommsProvider';
 
 import { Http } from './http.ts';
 import { HttpExtend } from './extenders/HttpExtender.ts';

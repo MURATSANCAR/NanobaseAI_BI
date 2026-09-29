@@ -1,4 +1,4 @@
-import type { ISetting, ISettingColor, ISettingSelectOption, SettingValue } from '@rocket.chat/core-typings';
+import type { ISetting, ISettingColor, ISettingSelectOption, SettingValue } from '@zeki.chat/core-typings';
 import type {
 	FindCursor,
 	UpdateFilter,

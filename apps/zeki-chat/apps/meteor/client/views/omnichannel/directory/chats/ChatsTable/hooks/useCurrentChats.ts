@@ -1,6 +1,6 @@
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import type { GETLivechatRoomsParams, OperationResult } from '@rocket.chat/rest-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { GETLivechatRoomsParams, OperationResult } from '@zeki.chat/rest-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 

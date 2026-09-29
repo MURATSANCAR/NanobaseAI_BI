@@ -1,5 +1,5 @@
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IJobContext, IOnetimeSchedule, IProcessor, IRecurringSchedule } from '@rocket.chat/apps-engine/definition/scheduler';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IJobContext, IOnetimeSchedule, IProcessor, IRecurringSchedule } from '@zeki.chat/apps-engine/definition/scheduler';
 
 import type { AppManager } from '../AppManager';
 import type { IInternalSchedulerBridge } from '../bridges/IInternalSchedulerBridge';

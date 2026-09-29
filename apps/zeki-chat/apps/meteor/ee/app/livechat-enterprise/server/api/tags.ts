@@ -6,7 +6,7 @@ import {
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { findTags, findTagById } from './lib/tags';
 import { API } from '../../../../../app/api/server';
@@ -19,7 +19,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: { GET: { permissions: ['view-l-room', 'manage-livechat-tags'], operation: 'hasAny' } },
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -49,7 +49,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: { GET: { permissions: ['view-l-room', 'manage-livechat-tags'], operation: 'hasAny' } },
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -81,7 +81,7 @@ const livechatTagsEndpoints = API.v1
 			},
 			authRequired: true,
 			permissions: ['manage-livechat-tags'],
-			license: ['livechat-enterprise'],
+			capabilities: ['livechat-enterprise'],
 			body: isPOSTLivechatTagsSaveParams,
 		},
 		async function action() {
@@ -103,7 +103,7 @@ const livechatTagsEndpoints = API.v1
 			},
 			authRequired: true,
 			permissions: ['manage-livechat-tags'],
-			license: ['livechat-enterprise'],
+			capabilities: ['livechat-enterprise'],
 			body: isPOSTLivechatTagsDeleteParams,
 		},
 		async function action() {
@@ -117,7 +117,7 @@ const livechatTagsEndpoints = API.v1
 
 type LivechatTagsEndpoints = ExtractRoutesFromAPI<typeof livechatTagsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatTagsEndpoints {}
 }

@@ -1,11 +1,11 @@
-import { ServiceClassInternal } from '@rocket.chat/core-services';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
 import type {
 	IUiKitCoreApp,
 	IUiKitCoreAppService,
 	UiKitCoreAppBlockActionPayload,
 	UiKitCoreAppViewClosedPayload,
 	UiKitCoreAppViewSubmitPayload,
-} from '@rocket.chat/core-services';
+} from '@zeki.chat/core-services';
 
 const registeredApps = new Map<string, IUiKitCoreApp>();
 

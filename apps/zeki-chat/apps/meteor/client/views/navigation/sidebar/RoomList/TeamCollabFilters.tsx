@@ -1,5 +1,5 @@
 import { Divider, Box } from '@rocket.chat/fuselage';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import RoomListFiltersItem from './RoomListFiltersItem';

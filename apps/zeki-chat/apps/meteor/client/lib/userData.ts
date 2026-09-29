@@ -1,5 +1,5 @@
-import type { ILivechatAgent, IUser, Serialized } from '@rocket.chat/core-typings';
-import { createTransformFromUpdateFilter } from '@rocket.chat/mongo-adapter';
+import type { ILivechatAgent, IUser, Serialized } from '@zeki.chat/core-typings';
+import { createTransformFromUpdateFilter } from '@zeki.chat/mongo-adapter';
 import { create } from 'zustand';
 
 import { sdk } from '../../app/utils/client/lib/SDKClient';

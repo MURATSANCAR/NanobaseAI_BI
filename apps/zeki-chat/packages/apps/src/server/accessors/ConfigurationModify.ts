@@ -3,7 +3,7 @@ import type {
 	ISchedulerModify,
 	IServerSettingsModify,
 	ISlashCommandsModify,
-} from '@rocket.chat/apps-engine/definition/accessors';
+} from '@zeki.chat/apps-engine/definition/accessors';
 
 export class ConfigurationModify implements IConfigurationModify {
 	constructor(

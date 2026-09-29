@@ -1,12 +1,12 @@
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Subscriptions } from '@rocket.chat/models';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Subscriptions } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import logger from './logger';
 import { notifyOnSubscriptionChangedByRoomIdAndUserId } from '../../lib/server/lib/notifyListener';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		unreadMessages(firstUnreadMessage?: Pick<IMessage, '_id'>, room?: IRoom['_id']): void;

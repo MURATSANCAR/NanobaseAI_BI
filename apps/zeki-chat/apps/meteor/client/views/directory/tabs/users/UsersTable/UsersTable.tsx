@@ -1,4 +1,4 @@
-import type { IDirectoryUserResult, IUser, Serialized } from '@rocket.chat/core-typings';
+import type { IDirectoryUserResult, IUser, Serialized } from '@zeki.chat/core-typings';
 import { Pagination, States, StatesIcon, StatesTitle, StatesActions, StatesAction } from '@rocket.chat/fuselage';
 import { useMediaQuery } from '@rocket.chat/fuselage-hooks';
 import {
@@ -9,8 +9,8 @@ import {
 	GenericTableLoadingTable,
 	usePagination,
 	useSort,
-} from '@rocket.chat/ui-client';
-import { usePermission, useRoute, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { usePermission, useRoute, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { KeyboardEvent, MouseEvent, ReactElement } from 'react';
 import { useCallback, useMemo, useState } from 'react';

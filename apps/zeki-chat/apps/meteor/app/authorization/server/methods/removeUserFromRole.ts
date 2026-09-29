@@ -1,6 +1,6 @@
-import { api } from '@rocket.chat/core-services';
-import type { IRole, IUser } from '@rocket.chat/core-typings';
-import { Roles, Users } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IRole, IUser } from '@zeki.chat/core-typings';
+import { Roles, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { removeUserFromRolesAsync } from '../../../../server/lib/roles/removeUserFromRoles';

@@ -1,9 +1,9 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useLocalStorage } from '@rocket.chat/fuselage-hooks';
-import type { ChannelMention, UserMention } from '@rocket.chat/gazzodown';
-import { MarkupInteractionContext } from '@rocket.chat/gazzodown';
+import type { ChannelMention, UserMention } from '@zeki.chat/gazzodown';
+import { MarkupInteractionContext } from '@zeki.chat/gazzodown';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import { useLayout, useRouter, useUserPreference, useUserId, useUserCard } from '@rocket.chat/ui-contexts';
+import { useLayout, useRouter, useUserPreference, useUserId, useUserCard } from '@zeki.chat/ui-contexts';
 import type { UIEvent } from 'react';
 import { useCallback, memo, useMemo } from 'react';
 

@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { useLayout } from '@rocket.chat/ui-contexts';
+import { useLayout } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { lazy } from 'react';
 
@@ -15,7 +15,7 @@ const TwoFactorAuthSetupCheck = ({ children }: { children: ReactNode }): ReactEl
 
 	if (require2faSetup) {
 		return (
-			<Box bg='surface-light' id='rocket-chat' className={embeddedLayout ? 'embedded-view' : undefined}>
+			<Box bg='surface-light' id='zeki-chat' className={embeddedLayout ? 'embedded-view' : undefined}>
 				<MainContent>
 					<AccountSecurityPage />
 				</MainContent>

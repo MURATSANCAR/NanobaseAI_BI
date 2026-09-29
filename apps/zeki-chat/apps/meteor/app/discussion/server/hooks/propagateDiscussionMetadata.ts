@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { Messages, Rooms, VideoConference } from '@rocket.chat/models';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { Messages, Rooms, VideoConference } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import { deleteRoom } from '../../../lib/server/functions/deleteRoom';

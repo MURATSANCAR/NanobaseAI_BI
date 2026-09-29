@@ -1,4 +1,4 @@
-import type { IUserDataFile } from '@rocket.chat/core-typings';
+import type { IUserDataFile } from '@zeki.chat/core-typings';
 import type { FindOptions, InsertOneResult, WithId } from 'mongodb';
 
 import type { IBaseUploadsModel } from './IBaseUploadsModel';

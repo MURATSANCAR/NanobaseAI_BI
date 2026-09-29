@@ -1,4 +1,4 @@
-import { useUserPreference, useSetting } from '@rocket.chat/ui-contexts';
+import { useUserPreference, useSetting } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 export const useSortQueryOptions = (): {

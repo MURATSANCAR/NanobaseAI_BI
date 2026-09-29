@@ -1,14 +1,14 @@
-import { api, Media } from '@rocket.chat/core-services';
-import { EmojiCustom } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { api, Media } from '@zeki.chat/core-services';
+import { EmojiCustom } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import limax from 'limax';
 import { Meteor } from 'meteor/meteor';
 import sharp from 'sharp';
 
 import type { EmojiData } from './insertOrUpdateEmoji';
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
-import { RocketChatFile } from '../../../file/server';
-import { RocketChatFileEmojiCustomInstance } from '../startup/emoji-custom';
+import { ZekiChatFile } from '../../../file/server';
+import { ZekiChatFileEmojiCustomInstance } from '../startup/emoji-custom';
 
 const getFile = async (file: Buffer, extension: string) => {
 	if (extension !== 'svg+xml') {
@@ -62,11 +62,11 @@ export async function uploadEmojiCustomWithBuffer(
 		fileBuffer = resizedEmojiBuffer;
 	}
 
-	const rs = RocketChatFile.bufferToStream(fileBuffer);
-	await RocketChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.name}.${emojiData.extension}`));
+	const rs = ZekiChatFile.bufferToStream(fileBuffer);
+	await ZekiChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.name}.${emojiData.extension}`));
 
 	return new Promise((resolve) => {
-		const ws = RocketChatFileEmojiCustomInstance.createWriteStream(
+		const ws = ZekiChatFileEmojiCustomInstance.createWriteStream(
 			encodeURIComponent(`${emojiData.name}.${emojiData.extension}`),
 			contentType,
 		);

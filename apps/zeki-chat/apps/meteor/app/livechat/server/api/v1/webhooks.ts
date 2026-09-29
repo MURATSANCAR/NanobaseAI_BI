@@ -1,6 +1,6 @@
-import { Logger } from '@rocket.chat/logger';
-import type { ExtendedFetchOptions } from '@rocket.chat/server-fetch';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import { Logger } from '@zeki.chat/logger';
+import type { ExtendedFetchOptions } from '@zeki.chat/server-fetch';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 
 import { API } from '../../../../api/server';
 import { settings } from '../../../../settings/server';
@@ -60,7 +60,7 @@ API.v1.addRoute(
 			const options = {
 				method: 'POST',
 				headers: {
-					'X-RocketChat-Livechat-Token': settings.get<string>('Livechat_secret_token'),
+					'X-ZekiChat-Livechat-Token': settings.get<string>('Livechat_secret_token'),
 					'Accept': 'application/json',
 				},
 				body: sampleData,

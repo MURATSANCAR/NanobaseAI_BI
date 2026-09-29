@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { useStream } from '@rocket.chat/ui-contexts';
+import type { IUser } from '@zeki.chat/core-typings';
+import { useStream } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { RoomHistoryManager } from '../../../../app/ui-utils/client';

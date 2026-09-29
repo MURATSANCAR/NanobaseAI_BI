@@ -1,7 +1,7 @@
-import type { ILivechatBusinessHour, IBusinessHourTimezone } from '@rocket.chat/core-typings';
-import { LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
-import type { AgendaCronJobs } from '@rocket.chat/cron';
-import { LivechatBusinessHours, LivechatDepartment, Users } from '@rocket.chat/models';
+import type { ILivechatBusinessHour, IBusinessHourTimezone } from '@zeki.chat/core-typings';
+import { LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
+import type { AgendaCronJobs } from '@zeki.chat/cron';
+import { LivechatBusinessHours, LivechatDepartment, Users } from '@zeki.chat/models';
 import moment from 'moment-timezone';
 
 import type { IBusinessHourBehavior, IBusinessHourType } from './AbstractBusinessHour';

@@ -1,5 +1,5 @@
 import { Box, Divider } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { Fragment, memo } from 'react';
 import { useTranslation } from 'react-i18next';

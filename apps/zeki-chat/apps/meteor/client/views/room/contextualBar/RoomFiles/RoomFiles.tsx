@@ -1,4 +1,4 @@
-import type { IRoom, IUpload, IUploadWithUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUpload, IUploadWithUser } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { Box, Icon, TextInput, Select, Throbber, ContextualbarSection } from '@rocket.chat/fuselage';
 import {
@@ -10,7 +10,7 @@ import {
 	ContextualbarContent,
 	ContextualbarEmptyContent,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import type { ChangeEvent } from 'react';
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

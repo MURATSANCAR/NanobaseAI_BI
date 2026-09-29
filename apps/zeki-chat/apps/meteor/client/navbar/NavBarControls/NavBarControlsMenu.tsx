@@ -1,6 +1,6 @@
 import { NavBarItem } from '@rocket.chat/fuselage';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { GenericMenu } from '@rocket.chat/ui-client';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import type { HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 

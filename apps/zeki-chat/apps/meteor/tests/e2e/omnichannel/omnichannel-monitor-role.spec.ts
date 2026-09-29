@@ -13,7 +13,7 @@ import { createOrUpdateUnit, fetchUnitMonitors } from '../utils/omnichannel/unit
 import { test, expect } from '../utils/test';
 
 const MONITOR = 'user3';
-const MONITOR_ADMIN = 'rocketchat.internal.admin.test';
+const MONITOR_ADMIN = 'zekichat.internal.admin.test';
 const ROOM_A = faker.person.fullName();
 const ROOM_B = faker.person.fullName();
 const ROOM_C = faker.person.fullName();

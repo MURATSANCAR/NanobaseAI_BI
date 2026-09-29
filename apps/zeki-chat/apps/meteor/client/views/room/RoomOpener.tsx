@@ -1,6 +1,6 @@
-import type { RoomType } from '@rocket.chat/core-typings';
+import type { RoomType } from '@zeki.chat/core-typings';
 import { Box, States, StatesIcon, StatesSubtitle, StatesTitle } from '@rocket.chat/fuselage';
-import { Header } from '@rocket.chat/ui-client';
+import { Header } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';

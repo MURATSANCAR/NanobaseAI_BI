@@ -6,7 +6,7 @@ import {
 	GenericTableHeader,
 	GenericTableHeaderCell,
 	GenericTableRow,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,5 +1,5 @@
-import type { OauthConfig } from '@rocket.chat/core-typings';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import type { OauthConfig } from '@zeki.chat/core-typings';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { CustomOAuth } from '../../../../lib/customOAuth/CustomOAuth';

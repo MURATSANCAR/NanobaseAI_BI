@@ -1,4 +1,4 @@
-import type { ILivechatVisitor, IOmnichannelRoom, ISetting } from '@rocket.chat/core-typings';
+import type { ILivechatVisitor, IOmnichannelRoom, ISetting } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 

@@ -1,8 +1,8 @@
-import type { ILivechatContact, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import type { FindPaginated } from '@rocket.chat/model-typings';
-import { LivechatContacts, LivechatRooms } from '@rocket.chat/models';
-import { makeFunction } from '@rocket.chat/patch-injection';
-import type { PaginatedResult, VisitorSearchChatsResult } from '@rocket.chat/rest-typings';
+import type { ILivechatContact, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import type { FindPaginated } from '@zeki.chat/model-typings';
+import { LivechatContacts, LivechatRooms } from '@zeki.chat/models';
+import { makeFunction } from '@zeki.chat/patch-injection';
+import type { PaginatedResult, VisitorSearchChatsResult } from '@zeki.chat/rest-typings';
 import type { FindOptions, Sort, FindCursor } from 'mongodb';
 
 export type GetContactHistoryParams = {

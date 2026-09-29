@@ -1,4 +1,4 @@
-import { defaultFeaturesPreview, FeaturePreviewBadge } from '@rocket.chat/ui-client';
+import { defaultFeaturesPreview, FeaturePreviewBadge } from '@zeki.chat/ui-client';
 
 import { hasPermission, hasAtLeastOnePermission } from '../../../app/authorization/client';
 import { createSidebarItems } from '../../lib/createSidebarItems';

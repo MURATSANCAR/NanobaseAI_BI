@@ -1,11 +1,11 @@
-import type { IOAuthAuthCode, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IOAuthAuthCodesModel } from '@rocket.chat/model-typings';
+import type { IOAuthAuthCode, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IOAuthAuthCodesModel } from '@zeki.chat/model-typings';
 import type { Db, Collection, DeleteResult, FindOptions, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class OAuthAuthCodesRaw extends BaseRaw<IOAuthAuthCode> implements IOAuthAuthCodesModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IOAuthAuthCode>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IOAuthAuthCode>>) {
 		super(db, 'oauth_auth_codes', trash);
 	}
 

@@ -1,4 +1,4 @@
-import type { MessageTypesValues as MessageTypesValuesType } from '@rocket.chat/core-typings';
+import type { MessageTypesValues as MessageTypesValuesType } from '@zeki.chat/core-typings';
 
 export const MessageTypesValues: Array<{ key: MessageTypesValuesType; i18nLabel: string }> = [
 	{

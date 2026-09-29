@@ -1,4 +1,4 @@
-import type { IModerationAudit, IModerationReport, IUser, MessageReport, UserReport } from '@rocket.chat/core-typings';
+import type { IModerationAudit, IModerationReport, IUser, MessageReport, UserReport } from '@zeki.chat/core-typings';
 
 import type { ArchiveReportPropsPOST } from './ArchiveReportProps';
 import type { GetUserReportsParamsGET } from './GetUserReportsParams';

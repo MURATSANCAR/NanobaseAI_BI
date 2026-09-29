@@ -1,5 +1,5 @@
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
-import type { Response } from '@rocket.chat/server-fetch';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
+import type { Response } from '@zeki.chat/server-fetch';
 
 import { webhooksLogger } from './logger';
 import { metrics } from '../../../metrics/server';
@@ -23,7 +23,7 @@ export async function sendRequest(
 		const result = await fetch(webhookUrl, {
 			method: 'POST',
 			headers: {
-				...(secretToken && { 'X-RocketChat-Livechat-Token': secretToken }),
+				...(secretToken && { 'X-ZekiChat-Livechat-Token': secretToken }),
 			},
 			body: postData,
 			timeout,

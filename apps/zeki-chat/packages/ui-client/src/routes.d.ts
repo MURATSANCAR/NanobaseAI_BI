@@ -1,6 +1,6 @@
-import '@rocket.chat/ui-contexts';
+import '@zeki.chat/ui-contexts';
 
-declare module '@rocket.chat/ui-contexts' {
+declare module '@zeki.chat/ui-contexts' {
 	interface IRouterPaths {
 		'setup-wizard': {
 			pathname: `/setup-wizard${`/${string}` | ''}`;

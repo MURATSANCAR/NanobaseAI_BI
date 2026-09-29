@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/server-cloud-communication",
+	"name": "@zeki.chat/server-cloud-communication",
 	"version": "0.0.3",
 	"private": true,
 	"main": "./src/index.ts",

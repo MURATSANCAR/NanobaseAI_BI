@@ -1,4 +1,4 @@
-import type { IRocketChatRecord } from '../IRocketChatRecord';
+import type { IZekiChatRecord } from '../IZekiChatRecord';
 import type { IUser } from '../IUser';
 import type { RequiredField } from '../utils';
 
@@ -32,7 +32,7 @@ export type MediaCallSignedContact<T extends MediaCallActorType = MediaCallActor
 /* The list of call states that may actually be stored on the collection is smaller than the list of call states that may be computed by the client class */
 type MediaCallState = 'none' | 'ringing' | 'accepted' | 'active' | 'hangup';
 
-export interface IMediaCall extends IRocketChatRecord {
+export interface IMediaCall extends IZekiChatRecord {
 	service: 'webrtc';
 	kind: 'direct';
 

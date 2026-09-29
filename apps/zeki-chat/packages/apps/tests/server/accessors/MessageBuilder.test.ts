@@ -1,8 +1,8 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { MessageBuilder, UserBuilder } from '../../../src/server/accessors';
 import { TestData } from '../../test-data/utilities';

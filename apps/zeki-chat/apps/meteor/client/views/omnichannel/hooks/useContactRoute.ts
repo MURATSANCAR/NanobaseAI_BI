@@ -1,5 +1,5 @@
-import type { RouteParameters } from '@rocket.chat/ui-contexts';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import type { RouteParameters } from '@zeki.chat/ui-contexts';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useCallback, useEffect } from 'react';
 
 export const useContactRoute = () => {

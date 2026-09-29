@@ -1,4 +1,4 @@
-import { CannedResponse } from '@rocket.chat/models';
+import { CannedResponse } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../../server/lib/callbacks';
 

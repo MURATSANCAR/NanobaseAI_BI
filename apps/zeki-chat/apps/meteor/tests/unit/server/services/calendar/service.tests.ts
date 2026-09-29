@@ -1,4 +1,4 @@
-import { api } from '@rocket.chat/core-services';
+import { api } from '@zeki.chat/core-services';
 import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import type { DeleteResult, UpdateResult } from 'mongodb';
@@ -43,9 +43,9 @@ const serviceMocks = {
 	'./statusEvents/removeCronJobs': { removeCronJobs: statusEventManagerMock.removeCronJobs },
 	'./statusEvents/applyStatusChange': { applyStatusChange: statusEventManagerMock.applyStatusChange },
 	'../../../app/settings/server': { settings: settingsMock },
-	'@rocket.chat/core-services': { api, ServiceClassInternal: class {} },
-	'@rocket.chat/cron': { cronJobs: cronJobsMock },
-	'@rocket.chat/models': { CalendarEvent: CalendarEventMock, Users: UsersMock },
+	'@zeki.chat/core-services': { api, ServiceClassInternal: class {} },
+	'@zeki.chat/cron': { cronJobs: cronJobsMock },
+	'@zeki.chat/models': { CalendarEvent: CalendarEventMock, Users: UsersMock },
 	'../../../app/utils/server/lib/getUserPreference': { getUserPreference: getUserPreferenceMock },
 };
 

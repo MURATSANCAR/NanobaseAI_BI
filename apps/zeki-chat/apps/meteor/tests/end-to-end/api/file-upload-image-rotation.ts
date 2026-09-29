@@ -1,7 +1,7 @@
 import path from 'path';
 
-import type { Credentials } from '@rocket.chat/api-client';
-import type { ImageAttachmentProps, IRoom, IUser, SettingValue } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { ImageAttachmentProps, IRoom, IUser, SettingValue } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 import sharp from 'sharp';

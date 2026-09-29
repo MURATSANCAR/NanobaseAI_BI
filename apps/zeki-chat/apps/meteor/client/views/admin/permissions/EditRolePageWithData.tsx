@@ -1,6 +1,6 @@
-import type { IRole } from '@rocket.chat/core-typings';
+import type { IRole } from '@zeki.chat/core-typings';
 import { Callout } from '@rocket.chat/fuselage';
-import { useRouteParameter } from '@rocket.chat/ui-contexts';
+import { useRouteParameter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

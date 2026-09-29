@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook, act } from '@testing-library/react';
 
 import { useThemeMode } from './useThemeMode';

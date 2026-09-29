@@ -1,5 +1,5 @@
-import { isThreadMainMessage, isRoomFederated } from '@rocket.chat/core-typings';
-import { useLayout, useUser, useUserPreference, useSetting, useEndpoint, useSearchParameter } from '@rocket.chat/ui-contexts';
+import { isThreadMainMessage, isRoomFederated } from '@zeki.chat/core-typings';
+import { useLayout, useUser, useUserPreference, useSetting, useEndpoint, useSearchParameter } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { useMemo, memo } from 'react';
 

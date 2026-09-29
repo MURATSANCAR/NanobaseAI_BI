@@ -1,6 +1,6 @@
-import type { IUserStatus } from '@rocket.chat/core-typings';
+import type { IUserStatus } from '@zeki.chat/core-typings';
 import { Box, Callout } from '@rocket.chat/fuselage';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';

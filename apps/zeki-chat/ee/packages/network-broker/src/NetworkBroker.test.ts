@@ -1,4 +1,4 @@
-import { ServiceClass } from '@rocket.chat/core-services';
+import { ServiceClass } from '@zeki.chat/core-services';
 import { expect } from 'chai';
 import sinon from 'sinon';
 

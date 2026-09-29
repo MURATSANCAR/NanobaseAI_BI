@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 
 import OmnichannelVerificationTag from '../../../omnichannel/components/OmnichannelVerificationTag';
 import AdvancedContactModal from '../../../omnichannel/contactInfo/AdvancedContactModal';

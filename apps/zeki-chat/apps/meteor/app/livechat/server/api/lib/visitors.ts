@@ -1,5 +1,5 @@
-import type { ILivechatVisitor, IMessage, IOmnichannelRoom, IRoom, IUser, IVisitor } from '@rocket.chat/core-typings';
-import { LivechatVisitors, Messages, LivechatRooms, LivechatCustomField } from '@rocket.chat/models';
+import type { ILivechatVisitor, IMessage, IOmnichannelRoom, IRoom, IUser, IVisitor } from '@zeki.chat/core-typings';
+import { LivechatVisitors, Messages, LivechatRooms, LivechatCustomField } from '@zeki.chat/models';
 import type { FindOptions } from 'mongodb';
 
 import { callbacks } from '../../../../../server/lib/callbacks';

@@ -1,5 +1,5 @@
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import { isAbsoluteURL } from '@rocket.chat/tools';
+import { isAbsoluteURL } from '@zeki.chat/tools';
 
 import { ltrim, rtrim, trim } from '../../../lib/utils/stringUtils';
 

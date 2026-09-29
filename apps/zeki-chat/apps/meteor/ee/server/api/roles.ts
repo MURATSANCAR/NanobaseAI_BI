@@ -1,7 +1,7 @@
-import type { IRole } from '@rocket.chat/core-typings';
+import type { IRole } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Roles } from '@rocket.chat/models';
-import { ajv } from '@rocket.chat/rest-typings';
+import { Roles } from '@zeki.chat/models';
+import { ajv } from '@zeki.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { API } from '../../../app/api/server/api';
@@ -72,7 +72,7 @@ const roleUpdatePropsSchema = {
 
 export const isRoleUpdateProps = ajv.compile<RoleUpdateProps>(roleUpdatePropsSchema);
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/roles.create': {
@@ -90,7 +90,7 @@ declare module '@rocket.chat/rest-typings' {
 
 API.v1.addRoute(
 	'roles.create',
-	{ authRequired: true, license: ['custom-roles'] },
+	{ authRequired: true, capabilities: ['custom-roles'] },
 	{
 		async post() {
 			if (!Capabilities.hasModule('custom-roles')) {
@@ -134,7 +134,7 @@ API.v1.addRoute(
 
 API.v1.addRoute(
 	'roles.update',
-	{ authRequired: true, license: ['custom-roles'] },
+	{ authRequired: true, capabilities: ['custom-roles'] },
 	{
 		async post() {
 			if (!isRoleUpdateProps(this.bodyParams)) {

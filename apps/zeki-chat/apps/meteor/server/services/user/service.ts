@@ -1,6 +1,6 @@
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import type { IUserService } from '@rocket.chat/core-services';
-import { Users } from '@rocket.chat/models';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { IUserService } from '@zeki.chat/core-services';
+import { Users } from '@zeki.chat/models';
 
 import { getMaxLoginTokens } from '../../lib/getMaxLoginTokens';
 

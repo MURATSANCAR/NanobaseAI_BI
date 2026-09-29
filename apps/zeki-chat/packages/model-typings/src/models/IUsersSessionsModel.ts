@@ -1,4 +1,4 @@
-import type { IUserSession, IUserSessionConnection } from '@rocket.chat/core-typings';
+import type { IUserSession, IUserSessionConnection } from '@zeki.chat/core-typings';
 import type { FindCursor, FindOptions } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

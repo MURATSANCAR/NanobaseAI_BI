@@ -1,4 +1,4 @@
-import type { ILivechatDepartmentAgents, IUser, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatDepartmentAgents, IUser, Serialized } from '@zeki.chat/core-typings';
 import { renderHook } from '@testing-library/react';
 
 import { useAllowedAgents } from './useAllowedAgents';

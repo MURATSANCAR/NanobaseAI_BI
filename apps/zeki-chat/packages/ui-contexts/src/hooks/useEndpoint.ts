@@ -1,5 +1,5 @@
-import type { Serialized } from '@rocket.chat/core-typings';
-import type { Method, OperationParams, OperationResult, PathPattern, UrlParams } from '@rocket.chat/rest-typings';
+import type { Serialized } from '@zeki.chat/core-typings';
+import type { Method, OperationParams, OperationResult, PathPattern, UrlParams } from '@zeki.chat/rest-typings';
 import { useCallback, useContext, useRef } from 'react';
 
 import { ServerContext } from '../ServerContext';

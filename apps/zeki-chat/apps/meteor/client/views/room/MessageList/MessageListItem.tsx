@@ -1,4 +1,4 @@
-import { isThreadMessage, type IMessage, type ISubscription } from '@rocket.chat/core-typings';
+import { isThreadMessage, type IMessage, type ISubscription } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Bubble, MessageDivider } from '@rocket.chat/fuselage';
 import { useTranslation } from 'react-i18next';

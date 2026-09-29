@@ -1,5 +1,5 @@
 declare module 'meteor/oauth' {
-	import type { IRocketChatRecord } from '@rocket.chat/core-typings';
+	import type { IZekiChatRecord } from '@zeki.chat/core-typings';
 	import type { Meteor } from 'meteor/meteor';
 	import type { Mongo } from 'meteor/mongo';
 
@@ -9,7 +9,7 @@ declare module 'meteor/oauth' {
 		'remove' | 'findOne' | 'insert' | 'update' | 'upsert'
 	>;
 
-	interface IOauthCredentials extends IRocketChatRecord {
+	interface IOauthCredentials extends IZekiChatRecord {
 		key: string;
 		credentialSecret: string;
 		credential:

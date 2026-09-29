@@ -6,7 +6,7 @@ import {
 	isPublicTeamRoom,
 	isPrivateDiscussion,
 	isPrivateRoom,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 
 import { t } from '../../app/utils/lib/i18n';
 

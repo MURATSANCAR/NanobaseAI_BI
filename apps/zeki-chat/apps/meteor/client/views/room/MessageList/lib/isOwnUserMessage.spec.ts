@@ -1,4 +1,4 @@
-import type { IMessage, ISubscription } from '@rocket.chat/core-typings';
+import type { IMessage, ISubscription } from '@zeki.chat/core-typings';
 
 import { isOwnUserMessage } from './isOwnUserMessage';
 

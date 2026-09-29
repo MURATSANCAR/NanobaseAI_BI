@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface ILivechatTag extends IRocketChatRecord {
+export interface ILivechatTag extends IZekiChatRecord {
 	name: string;
 	description?: string;
 	numDepartments: number;

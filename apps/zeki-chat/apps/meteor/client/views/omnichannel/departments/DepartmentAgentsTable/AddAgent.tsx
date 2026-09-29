@@ -1,6 +1,6 @@
 import { Box, Button } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { AriaAttributes } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -1,4 +1,4 @@
-import { isTeamsConvertToChannelProps } from '@rocket.chat/rest-typings';
+import { isTeamsConvertToChannelProps } from '@zeki.chat/rest-typings';
 import { assert } from 'chai';
 
 describe('TeamsConvertToChannelProps (definition/rest/v1)', () => {

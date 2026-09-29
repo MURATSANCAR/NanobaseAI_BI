@@ -1,7 +1,7 @@
-import { Abac, Team } from '@rocket.chat/core-services';
-import type { ILDAPEntry, IUser, IRoom, IRole, IImportUser, IImportRecord } from '@rocket.chat/core-typings';
+import { Abac, Team } from '@zeki.chat/core-services';
+import type { ILDAPEntry, IUser, IRoom, IRole, IImportUser, IImportRecord } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Users, Roles, Subscriptions as SubscriptionsRaw, Rooms } from '@rocket.chat/models';
+import { Users, Roles, Subscriptions as SubscriptionsRaw, Rooms } from '@zeki.chat/models';
 import type ldapjs from 'ldapjs';
 import type { FindCursor } from 'mongodb';
 
@@ -168,8 +168,8 @@ export class LDAPEEManager extends LDAPManager {
 			return;
 		}
 
-		const mappedRocketChatTeams = Object.values(mappedTeams);
-		const validStructureMapping = mappedRocketChatTeams.every(mustBeAnArrayOfStrings);
+		const mappedZekiChatTeams = Object.values(mappedTeams);
+		const validStructureMapping = mappedZekiChatTeams.every(mustBeAnArrayOfStrings);
 		if (!validStructureMapping) {
 			throw new Error(
 				'Please verify your mapping for LDAP X Teams. The structure is invalid, the structure should be an object like: {key: LdapTeam, value: [An array of local teams]}',
@@ -184,9 +184,9 @@ export class LDAPEEManager extends LDAPManager {
 
 		const mappedAttributes = this.parseJson(json);
 
-		// attributes are { key: value } with key being the ldap attribute and value being the abac attribute in rocketchat
+		// attributes are { key: value } with key being the ldap attribute and value being the abac attribute in zekichat
 		// both strings
-		// There's no need for the attribute to exist in rocketchat, we just add whatever the admin wants to map
+		// There's no need for the attribute to exist in zekichat, we just add whatever the admin wants to map
 
 		if (!mappedAttributes || Object.keys(mappedAttributes).length === 0) {
 			return;

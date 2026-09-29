@@ -1,4 +1,4 @@
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings/ISetting';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings/ISetting';
 
 export interface IAppExternalURL {
 	url: string;

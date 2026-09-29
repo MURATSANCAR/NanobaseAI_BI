@@ -1,5 +1,5 @@
-import { api, ServiceClassInternal } from '@rocket.chat/core-services';
-import { Users } from '@rocket.chat/models';
+import { api, ServiceClassInternal } from '@zeki.chat/core-services';
+import { Users } from '@zeki.chat/models';
 
 import { searchEventService } from './events';
 import { searchProviderService } from './service';

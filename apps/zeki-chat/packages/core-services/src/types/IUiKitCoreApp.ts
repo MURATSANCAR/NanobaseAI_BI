@@ -1,5 +1,5 @@
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 import type { IServiceClass } from './ServiceClass';
 

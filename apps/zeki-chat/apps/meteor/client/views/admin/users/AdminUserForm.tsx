@@ -1,4 +1,4 @@
-import type { AvatarObject, IRole, IUser, Serialized } from '@rocket.chat/core-typings';
+import type { AvatarObject, IRole, IUser, Serialized } from '@zeki.chat/core-typings';
 import {
 	Field,
 	FieldLabel,
@@ -18,9 +18,9 @@ import {
 } from '@rocket.chat/fuselage';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { UserCreateParamsPOST } from '@rocket.chat/rest-typings';
-import { validateEmail } from '@rocket.chat/tools';
-import { CustomFieldsForm, ContextualbarScrollableContent, ContextualbarFooter } from '@rocket.chat/ui-client';
+import type { UserCreateParamsPOST } from '@zeki.chat/rest-typings';
+import { validateEmail } from '@zeki.chat/tools';
+import { CustomFieldsForm, ContextualbarScrollableContent, ContextualbarFooter } from '@zeki.chat/ui-client';
 import {
 	useAccountsCustomFields,
 	useSetting,
@@ -28,7 +28,7 @@ import {
 	useRouter,
 	useToastMessageDispatch,
 	useTranslation,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';

@@ -1,5 +1,5 @@
 import type { IAbacAttributeDefinition } from './IAbacAttribute';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IRole } from './IRole';
 import type { UserStatus } from './UserStatus';
 import type { Serialized } from './utils';
@@ -166,7 +166,7 @@ export interface IUserSettings {
 	calendar?: IUserCalendar;
 }
 
-export interface IUser extends IRocketChatRecord {
+export interface IUser extends IZekiChatRecord {
 	createdAt: Date;
 	roles: IRole['_id'][];
 	type: string;

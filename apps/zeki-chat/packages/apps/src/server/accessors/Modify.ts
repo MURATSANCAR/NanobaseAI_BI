@@ -7,8 +7,8 @@ import type {
 	INotifier,
 	ISchedulerModify,
 	IUIController,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import type { IOAuthAppsModify } from '@rocket.chat/apps-engine/definition/accessors/IOAuthAppsModify';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import type { IOAuthAppsModify } from '@zeki.chat/apps-engine/definition/accessors/IOAuthAppsModify';
 
 import type { AppBridges } from '../bridges';
 import { ModerationModify } from './ModerationModify';

@@ -1,7 +1,7 @@
-import type { IEmailInboxPayload } from '@rocket.chat/core-typings';
+import type { IEmailInboxPayload } from '@zeki.chat/core-typings';
 import { Button } from '@rocket.chat/fuselage';
-import { GenericTableCell } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericTableCell } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { MouseEvent, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

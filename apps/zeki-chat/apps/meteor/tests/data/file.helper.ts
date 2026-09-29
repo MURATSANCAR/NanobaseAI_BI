@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { api } from './api-data';
 import type { IRequestConfig } from './users.helper';
 
 /**
- * Uploads a file to Rocket.Chat using the two-step process (rooms.media then rooms.mediaConfirm).
+ * Uploads a file to ZEKI AI CHAT using the two-step process (rooms.media then rooms.mediaConfirm).
  *
  * @param roomId - The room ID where the file will be uploaded
  * @param filePath - Path to the file to upload

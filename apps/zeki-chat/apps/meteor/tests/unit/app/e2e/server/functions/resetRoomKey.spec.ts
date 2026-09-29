@@ -29,7 +29,7 @@ const models = {
 const { resetRoomKey, pushToLimit, replicateMongoSlice } = proxyquire
 	.noCallThru()
 	.load('../../../../../../app/e2e/server/functions/resetRoomKey', {
-		'@rocket.chat/models': models,
+		'@zeki.chat/models': models,
 		'../../../lib/server/lib/notifyListener': {
 			notifyOnRoomChanged: sinon.stub(),
 			notifyOnSubscriptionChanged: sinon.stub(),

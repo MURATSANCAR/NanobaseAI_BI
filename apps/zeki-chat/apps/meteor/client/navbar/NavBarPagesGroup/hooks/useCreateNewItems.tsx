@@ -1,5 +1,5 @@
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useTranslation, useSetting, useAtLeastOnePermission } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useTranslation, useSetting, useAtLeastOnePermission } from '@zeki.chat/ui-contexts';
 
 import { useCreateRoomModal } from './useCreateRoomModal';
 import CreateDiscussion from '../../../components/CreateDiscussion';

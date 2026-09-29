@@ -1,4 +1,4 @@
-import type { LoginServiceConfiguration } from '@rocket.chat/core-typings';
+import type { LoginServiceConfiguration } from '@zeki.chat/core-typings';
 import { ServiceConfiguration } from 'meteor/service-configuration';
 
 import { logger } from './logger';

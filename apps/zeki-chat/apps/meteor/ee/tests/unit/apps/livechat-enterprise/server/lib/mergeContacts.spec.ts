@@ -26,7 +26,7 @@ const { runMergeContacts } = proxyquire.noCallThru().load('../../../../../../ser
 	'../../../app/livechat/server/lib/contacts/ContactMerger': { ContactMerger: contactMergerStub },
 	'../../../app/livechat-enterprise/server/lib/logger': { logger: { info: sinon.stub(), debug: sinon.stub() } },
 	'../../../app/lib/server/lib/notifyListener': { notifyOnSettingChanged: sinon.stub() },
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 });
 
 describe('mergeContacts', () => {

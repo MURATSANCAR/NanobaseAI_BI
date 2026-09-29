@@ -1,5 +1,5 @@
 import { Box, Button } from '@rocket.chat/fuselage';
-import * as UiKit from '@rocket.chat/ui-kit';
+import * as UiKit from '@zeki.chat/ui-kit';
 import type { ReactElement } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 

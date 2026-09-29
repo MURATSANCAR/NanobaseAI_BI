@@ -1,4 +1,4 @@
-import type { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
+import type { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
 
 import type { ProxiedApp } from '../ProxiedApp';
 import { AppLicenseValidationResult } from '../marketplace/license';

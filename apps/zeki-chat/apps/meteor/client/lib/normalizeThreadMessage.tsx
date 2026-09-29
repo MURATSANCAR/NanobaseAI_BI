@@ -1,6 +1,6 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Markup } from '@rocket.chat/gazzodown';
-import { parse } from '@rocket.chat/message-parser';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Markup } from '@zeki.chat/gazzodown';
+import { parse } from '@zeki.chat/message-parser';
 import type { ReactElement } from 'react';
 
 import { filterMarkdown } from '../../app/markdown/lib/markdown';

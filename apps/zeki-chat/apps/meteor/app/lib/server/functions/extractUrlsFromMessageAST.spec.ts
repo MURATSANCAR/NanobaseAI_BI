@@ -42,12 +42,12 @@ describe('extractUrlsFromMessageAST', () => {
 						value: {
 							src: {
 								type: 'PLAIN_TEXT',
-								value: '//github.com/RocketChat/Rocket.Chat',
+								value: '//github.com/ZekiChat/ZEKI AI CHAT',
 							},
 							label: [
 								{
 									type: 'PLAIN_TEXT',
-									value: 'github.com/RocketChat/Rocket.Chat',
+									value: 'github.com/ZekiChat/ZEKI AI CHAT',
 								},
 							],
 						},
@@ -89,12 +89,12 @@ describe('extractUrlsFromMessageAST', () => {
 						value: {
 							src: {
 								type: 'PLAIN_TEXT',
-								value: '//github.com/RocketChat',
+								value: '//github.com/ZekiChat',
 							},
 							label: [
 								{
 									type: 'PLAIN_TEXT',
-									value: 'github.com/RocketChat',
+									value: 'github.com/ZekiChat',
 								},
 							],
 						},

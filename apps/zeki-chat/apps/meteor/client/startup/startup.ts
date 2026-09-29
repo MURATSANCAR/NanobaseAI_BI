@@ -1,4 +1,4 @@
-import type { UserStatus } from '@rocket.chat/core-typings';
+import type { UserStatus } from '@zeki.chat/core-typings';
 
 import 'highlight.js/styles/github.css';
 import { sdk } from '../../app/utils/client/lib/SDKClient';

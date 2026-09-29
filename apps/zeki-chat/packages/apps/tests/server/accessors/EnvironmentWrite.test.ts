@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IServerSettingUpdater, ISettingUpdater } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IServerSettingUpdater, ISettingUpdater } from '@zeki.chat/apps-engine/definition/accessors';
 
 import { EnvironmentWrite } from '../../../src/server/accessors';
 

@@ -1,8 +1,8 @@
 import { Banner, Icon } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { UiKitContext, bannerParser, UiKitBanner as UiKitBannerSurfaceRender, UiKitComponent } from '@rocket.chat/fuselage-ui-kit';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import { UiKitContext, bannerParser, UiKitBanner as UiKitBannerSurfaceRender, UiKitComponent } from '@zeki.chat/fuselage-ui-kit';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 

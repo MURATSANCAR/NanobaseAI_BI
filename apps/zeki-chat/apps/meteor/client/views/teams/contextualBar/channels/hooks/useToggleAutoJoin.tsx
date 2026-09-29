@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { useEndpoint, usePermission, useSetting, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { useEndpoint, usePermission, useSetting, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { t } from 'i18next';
 
 import { roomCoordinator } from '../../../../../lib/rooms/roomCoordinator';

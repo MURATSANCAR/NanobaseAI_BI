@@ -1,6 +1,6 @@
-import { Import } from '@rocket.chat/core-services';
-import type { IImport } from '@rocket.chat/core-typings';
-import { Imports } from '@rocket.chat/models';
+import { Import } from '@zeki.chat/core-services';
+import type { IImport } from '@zeki.chat/core-typings';
+import { Imports } from '@zeki.chat/models';
 import {
 	ajv,
 	isUploadImportFileParamsPOST,
@@ -17,7 +17,7 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateBadRequestErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { Importers } from '../../../importer/server';

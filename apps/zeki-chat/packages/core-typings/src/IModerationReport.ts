@@ -1,9 +1,9 @@
 import type { IMessage } from './IMessage/IMessage';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IRoom } from './IRoom';
 import type { IUser } from './IUser';
 
-export interface IModerationReport extends IRocketChatRecord {
+export interface IModerationReport extends IZekiChatRecord {
 	message?: IMessage;
 	room?: Pick<IRoom, '_id' | 'name' | 'fname' | 't' | 'federated' | 'prid'>;
 	reportedUser?: Pick<IUser, '_id' | 'username' | 'name' | 'emails' | 'createdAt'>;

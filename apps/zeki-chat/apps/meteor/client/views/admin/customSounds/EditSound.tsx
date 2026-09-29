@@ -1,6 +1,6 @@
 import { Box, Button, ButtonGroup, Margins, TextInput, Field, FieldLabel, FieldRow, IconButton } from '@rocket.chat/fuselage';
-import { GenericModal, ContextualbarScrollableContent, ContextualbarFooter } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useMethod } from '@rocket.chat/ui-contexts';
+import { GenericModal, ContextualbarScrollableContent, ContextualbarFooter } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useMethod } from '@zeki.chat/ui-contexts';
 import fileSize from 'filesize';
 import type { ReactElement, SyntheticEvent } from 'react';
 import { useCallback, useState, useMemo, useEffect } from 'react';

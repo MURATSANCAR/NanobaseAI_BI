@@ -1,4 +1,4 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
 export enum LivechatPriorityWeight {
 	LOWEST = 5,
@@ -9,7 +9,7 @@ export enum LivechatPriorityWeight {
 	NOT_SPECIFIED = 99,
 }
 
-export interface ILivechatPriority extends IRocketChatRecord {
+export interface ILivechatPriority extends IZekiChatRecord {
 	name?: string;
 	i18n: string;
 	sortItem: LivechatPriorityWeight;

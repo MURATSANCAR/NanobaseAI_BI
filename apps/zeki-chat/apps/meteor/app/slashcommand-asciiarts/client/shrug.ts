@@ -1,4 +1,4 @@
-import type { SlashCommandCallbackParams } from '@rocket.chat/core-typings';
+import type { SlashCommandCallbackParams } from '@zeki.chat/core-typings';
 
 import { sdk } from '../../utils/client/lib/SDKClient';
 import { slashCommands } from '../../utils/client/slashCommand';

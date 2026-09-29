@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { useEndpoint, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { useEndpoint, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

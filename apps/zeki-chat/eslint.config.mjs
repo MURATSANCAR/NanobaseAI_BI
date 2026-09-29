@@ -1,10 +1,10 @@
-import rocketChatConfig from '@rocket.chat/eslint-config';
+import zekiChatConfig from '@zeki.chat/eslint-config';
 import youDontNeedLodashUnderscorePlugin from 'eslint-plugin-you-dont-need-lodash-underscore';
 import globals from 'globals';
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
-	...rocketChatConfig,
+	...zekiChatConfig,
 	{
 		ignores: [
 			'apps/meteor/app/emoji-emojione/generateEmojiIndex.js',

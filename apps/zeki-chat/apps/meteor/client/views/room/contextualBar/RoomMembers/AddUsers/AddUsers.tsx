@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated, isRoomNativeFederated } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated, isRoomNativeFederated } from '@zeki.chat/core-typings';
 import { Field, FieldError, FieldLabel, Button, ButtonGroup, FieldGroup } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import {
@@ -10,8 +10,8 @@ import {
 	ContextualbarScrollableContent,
 	ContextualbarFooter,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useMethod, useSetModal, useEndpoint, useRoomToolbox } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useMethod, useSetModal, useEndpoint, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useId } from 'react';
 import type { ReactElement } from 'react';
 import { Controller, useForm } from 'react-hook-form';

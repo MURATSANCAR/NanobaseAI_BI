@@ -26,7 +26,7 @@ test.describe('enforce two factor authentication', () => {
 
 		const userUpdateRes = await api.post('/users.update', {
 			data: { roles: ['user', customRoleId, 'admin'] },
-			userId: 'rocketchat.internal.admin.test',
+			userId: 'zekichat.internal.admin.test',
 		});
 		expect(userUpdateRes.status()).toBe(200);
 
@@ -37,7 +37,7 @@ test.describe('enforce two factor authentication', () => {
 	test.afterAll(async ({ api }) => {
 		const userUpdateRes = await api.post('/users.update', {
 			data: { roles: ['user', 'admin'] },
-			userId: 'rocketchat.internal.admin.test',
+			userId: 'zekichat.internal.admin.test',
 		});
 		expect(userUpdateRes.status()).toBe(200);
 

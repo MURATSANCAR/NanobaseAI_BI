@@ -1,6 +1,6 @@
-import type { IThreadMainMessage } from '@rocket.chat/core-typings';
+import type { IThreadMainMessage } from '@zeki.chat/core-typings';
 import { escapeHTML } from '@rocket.chat/string-helpers';
-import { useUser, useSetting } from '@rocket.chat/ui-contexts';
+import { useUser, useSetting } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import { emojiParser } from '../../../../../../app/emoji/client/emojiParser';

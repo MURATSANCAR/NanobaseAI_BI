@@ -1,5 +1,5 @@
-import { isThreadMainMessage, isThreadMessage } from '@rocket.chat/core-typings';
-import { useEndpoint, useSearchParameter } from '@rocket.chat/ui-contexts';
+import { isThreadMainMessage, isThreadMessage } from '@zeki.chat/core-typings';
+import { useEndpoint, useSearchParameter } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useEffect } from 'react';

@@ -1,4 +1,4 @@
-import { Settings } from '@rocket.chat/core-services';
+import { Settings } from '@zeki.chat/core-services';
 import { createMiddleware } from 'hono/factory';
 import mem from 'mem';
 

@@ -1,9 +1,9 @@
-import { kSecureFields, WithSecureFields } from '@rocket.chat/apps/dist/lib/SecureFields';
-import type { App } from '@rocket.chat/apps-engine/definition/App';
+import { kSecureFields, WithSecureFields } from '@zeki.chat/apps/dist/lib/SecureFields';
+import type { App } from '@zeki.chat/apps-engine/definition/App';
 
 import { AppObjectRegistry } from '../AppObjectRegistry.ts';
 
-export type { WithSecureFields } from '@rocket.chat/apps/dist/lib/SecureFields';
+export type { WithSecureFields } from '@zeki.chat/apps/dist/lib/SecureFields';
 
 export function applySecureFields(object: WithSecureFields<Record<string, unknown>>) {
 	const { [kSecureFields]: secureFields, ...rest } = object;

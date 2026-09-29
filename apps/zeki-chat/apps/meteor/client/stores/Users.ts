@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 
 import type { IDocumentMapStoreHooks } from '../lib/cachedStores/DocumentMapStore';
 import { createDocumentMapStore } from '../lib/cachedStores/DocumentMapStore';

@@ -1,8 +1,8 @@
-import { isDirectMessageRoom, isDiscussion, isOmnichannelRoom, isPrivateRoom, isPublicRoom, isTeamRoom } from '@rocket.chat/core-typings';
-import type { ILivechatInquiryRecord, IRoom } from '@rocket.chat/core-typings';
+import { isDirectMessageRoom, isDiscussion, isOmnichannelRoom, isPrivateRoom, isPublicRoom, isTeamRoom } from '@zeki.chat/core-typings';
+import type { ILivechatInquiryRecord, IRoom } from '@zeki.chat/core-typings';
 import { useDebouncedValue, useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { SubscriptionWithRoom, TranslationKey } from '@rocket.chat/ui-contexts';
-import { useSetting, useUserPreference, useUserSubscriptions, useLayout } from '@rocket.chat/ui-contexts';
+import type { SubscriptionWithRoom, TranslationKey } from '@zeki.chat/ui-contexts';
+import { useSetting, useUserPreference, useUserSubscriptions, useLayout } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 

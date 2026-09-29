@@ -1,6 +1,6 @@
 import { Button, ButtonGroup } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 

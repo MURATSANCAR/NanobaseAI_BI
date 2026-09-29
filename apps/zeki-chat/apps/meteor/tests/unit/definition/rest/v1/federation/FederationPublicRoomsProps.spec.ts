@@ -1,4 +1,4 @@
-import { isFederationSearchPublicRoomsProps } from '@rocket.chat/rest-typings';
+import { isFederationSearchPublicRoomsProps } from '@zeki.chat/rest-typings';
 import { assert } from 'chai';
 
 describe('FederationPublicRoomProps (definition/rest/v1)', () => {

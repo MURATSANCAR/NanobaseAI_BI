@@ -1,4 +1,4 @@
-import { type FileAttachmentProps, isFileAudioAttachment, isFileImageAttachment, isFileVideoAttachment } from '@rocket.chat/core-typings';
+import { type FileAttachmentProps, isFileAudioAttachment, isFileImageAttachment, isFileVideoAttachment } from '@zeki.chat/core-typings';
 
 import AudioAttachment from './file/AudioAttachment';
 import GenericFileAttachment from './file/GenericFileAttachment';

@@ -1,4 +1,4 @@
-import { Contextualbar } from '@rocket.chat/ui-client';
+import { Contextualbar } from '@zeki.chat/ui-client';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import ExportMessages from './index';

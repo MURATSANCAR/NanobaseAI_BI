@@ -1,13 +1,13 @@
 import type { HTMLAttributes, ReactElement, SVGAttributes } from 'react';
 
-type RocketChatLogoProps = {
+type ZekiChatLogoProps = {
 	color?: SVGAttributes<SVGSVGElement>['fill'];
 };
-export declare const RocketChatLogo: ({ color }?: RocketChatLogoProps) => ReactElement;
+export declare const ZekiChatLogo: ({ color }?: ZekiChatLogoProps) => ReactElement;
 
-type TaggedRocketChatLogoProps = {
+type TaggedZekiChatLogoProps = {
 	tagTitle?: string;
 	tagBackground?: string;
 	color?: string;
 } & HTMLAttributes<HTMLDivElement>;
-export declare const TaggedRocketChatLogo: ({ tagTitle, tagBackground, color, ...props }?: TaggedRocketChatLogoProps) => ReactElement;
+export declare const TaggedZekiChatLogo: ({ tagTitle, tagBackground, color, ...props }?: TaggedZekiChatLogoProps) => ReactElement;

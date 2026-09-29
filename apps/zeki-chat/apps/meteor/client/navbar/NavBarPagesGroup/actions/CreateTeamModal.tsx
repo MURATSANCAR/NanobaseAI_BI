@@ -20,7 +20,7 @@ import {
 	useSetting,
 	useToastMessageDispatch,
 	useTranslation,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { ComponentProps } from 'react';
 import { useId, memo, useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';

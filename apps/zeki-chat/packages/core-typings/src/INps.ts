@@ -1,4 +1,4 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IUser } from './IUser';
 
 export enum NPSStatus {
@@ -8,7 +8,7 @@ export enum NPSStatus {
 	CLOSED = 'closed',
 }
 
-export interface INps extends IRocketChatRecord {
+export interface INps extends IZekiChatRecord {
 	startAt: Date; // start date a banner should be presented
 	expireAt: Date; // date when banner should not be shown anymore
 	createdBy: Pick<IUser, '_id' | 'username'>;
@@ -22,7 +22,7 @@ export enum INpsVoteStatus {
 	SENT = 'sent',
 }
 
-export interface INpsVote extends IRocketChatRecord {
+export interface INpsVote extends IZekiChatRecord {
 	npsId: INps['_id'];
 	ts: Date;
 	identifier: string; // voter identifier

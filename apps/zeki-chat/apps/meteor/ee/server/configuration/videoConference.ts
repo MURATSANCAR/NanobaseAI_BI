@@ -1,8 +1,8 @@
-import { VideoConf } from '@rocket.chat/core-services';
-import type { IRoom, IUser, VideoConference } from '@rocket.chat/core-typings';
-import { VideoConferenceStatus } from '@rocket.chat/core-typings';
+import { VideoConf } from '@zeki.chat/core-services';
+import type { IRoom, IUser, VideoConference } from '@zeki.chat/core-typings';
+import { VideoConferenceStatus } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Rooms, Subscriptions } from '@rocket.chat/models';
+import { Rooms, Subscriptions } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../server/lib/callbacks';

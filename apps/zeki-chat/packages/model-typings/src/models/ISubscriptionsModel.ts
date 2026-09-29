@@ -1,4 +1,4 @@
-import type { ISubscription, IRole, IUser, IRoom, RoomType, SpotlightUser, AtLeast } from '@rocket.chat/core-typings';
+import type { ISubscription, IRole, IUser, IRoom, RoomType, SpotlightUser, AtLeast } from '@zeki.chat/core-typings';
 import type {
 	FindOptions,
 	FindCursor,

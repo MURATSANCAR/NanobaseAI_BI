@@ -1,4 +1,4 @@
-import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Button, Icon, Tag } from '@rocket.chat/fuselage';
 import type { MouseEvent } from 'react';

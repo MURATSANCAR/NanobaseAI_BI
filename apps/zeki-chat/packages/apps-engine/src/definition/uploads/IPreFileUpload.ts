@@ -9,7 +9,7 @@ import type { IFileUploadContext } from './IFileUploadContext';
  *
  * This event is triggered prior to an upload succesfully
  * being saved to the database, but *after* all its contents
- * have been retrieved by Rocket.Chat.
+ * have been retrieved by ZEKI AI CHAT.
  *
  * To prevent the upload from completing, an app should throw a
  * `FileUploadNotAllowedException` with a message specifying the

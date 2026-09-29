@@ -34,3 +34,11 @@ SSO kurulum betiği varsayılan olarak BI içindeki compose dizinini kullanır. 
 ## Taşımanın doğrulama sınırı
 
 Bu işlem kaynak yerleşimi ve kurulum yolu değişikliğidir; canlı konteyner yeniden kurulmadı, UI/DB davranışı değiştirilmedi. Son test sunucusu imajı `zeki-ai-chat:8.5.3-9b12e38` olarak kalır. 9.711 dosyanın içerik/modları kaynak Git ağacıyla karşılaştırıldı; 9.709 dosya birebir aynı ([taşıma kaydı](zeki-chat-import.json)); yalnız README ve konumdan bağımsız build yolu uyarlanır. Yerel test çalıştırılmaz. Yeni BI commit'inden üretilecek bir imaj, yeniden gerçek API–DB ve tarayıcı kabulü gerektirir.
+
+## Lisans ve teknik kimlik temizliği — devam eden kurulum
+
+2026-09-29: ürünün sahte iç lisans nesnesi, süre/plan/kota sistemi ve `ee/packages/license` kaldırıldı. Yerel özellik listesi `ee/packages/capabilities` içindedir; abonelik veya lisans belgesi üretmez. Yetki ve üçüncü taraf uygulama hakları ayrı kalır. Yerel paketler `@zeki.chat/*`, veritabanı hedef öneki `zeki_`, bot teknik kimliği `zeki.bot` olur.
+
+Yeni kaynak eski DB şeması üzerinde doğrudan başlatılmaz. Önce main kaynağı sunucuda derlenir; sohbet durdurulur, doğrulanmış Mongo yedeği alınır, `deploy/zeki/migrate-owned-identity.cjs` ile koleksiyonlar/referanslar taşınır; kayıt sayısı, indeks sayısı ve beklenen içerik hashleri eşleşmeden servis açılmaz. Geçiş betiği kullanıcı mesajlarını veya ekleri topluca yeniden yazmaz. Başarısız geçişte servis kapalı tutulur ve yedekten geri dönüş yapılır.
+
+Bu bölüm hazırlanan kaynak değişikliğini anlatır; bu commit için canlı kabul henüz **DOĞRULANAMADI**. Son kabul kaydı tamamlandığında ayrı kanıtla güncellenir. Harici npm paketlerinin gerçek registry kimlikleri, bağımsız bileşen bildirimleri, geri dönüş/geçiş eşlemesi ve geçmiş kabul kanıtları kaynakta açıkça ayrılır; sahte paket adresi veya değiştirilmiş geçmiş kanıt üretilmez.

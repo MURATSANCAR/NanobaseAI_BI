@@ -1,4 +1,4 @@
-import { FederationMatrix, MeteorError, Team } from '@rocket.chat/core-services';
+import { FederationMatrix, MeteorError, Team } from '@zeki.chat/core-services';
 import {
 	type IRoom,
 	type IUpload,
@@ -7,9 +7,9 @@ import {
 	isPrivateRoom,
 	isPublicRoom,
 	type IUser,
-} from '@rocket.chat/core-typings';
-import { Messages, Rooms, Users, Uploads, Subscriptions } from '@rocket.chat/models';
-import type { Notifications } from '@rocket.chat/rest-typings';
+} from '@zeki.chat/core-typings';
+import { Messages, Rooms, Users, Uploads, Subscriptions } from '@zeki.chat/models';
+import type { Notifications } from '@zeki.chat/rest-typings';
 import {
 	ajv,
 	ajvQuery,
@@ -39,8 +39,8 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateNotFoundErrorResponse,
-} from '@rocket.chat/rest-typings';
-import { isTruthy } from '@rocket.chat/tools';
+} from '@zeki.chat/rest-typings';
+import { isTruthy } from '@zeki.chat/tools';
 import { Meteor } from 'meteor/meteor';
 
 import { adminFields } from '../../../../lib/rooms/adminFields';
@@ -71,7 +71,6 @@ import { cleanRoomHistoryMethod } from '../../../lib/server/methods/cleanRoomHis
 import { executeGetRoomRoles } from '../../../lib/server/methods/getRoomRoles';
 import { leaveRoomMethod } from '../../../lib/server/methods/leaveRoom';
 import { executeUnarchiveRoom } from '../../../lib/server/methods/unarchiveRoom';
-import { applyAirGappedRestrictionsValidation } from '../../../license/server/airGappedRestrictionsWrapper';
 import type { NotificationFieldType } from '../../../push-notifications/server/methods/saveNotificationSettings';
 import { saveNotificationSettingsMethod } from '../../../push-notifications/server/methods/saveNotificationSettings';
 import { settings } from '../../../settings/server';
@@ -351,9 +350,7 @@ API.v1.addRoute(
 				delete this.bodyParams.fileContent;
 			}
 
-			await applyAirGappedRestrictionsValidation(() =>
-				sendFileMessage(this.userId, { roomId: this.urlParams.rid, file, msgData: this.bodyParams }),
-			);
+			await sendFileMessage(this.userId, { roomId: this.urlParams.rid, file, msgData: this.bodyParams });
 
 			await Uploads.confirmTemporaryFile(this.urlParams.fileId, this.userId);
 
@@ -577,8 +574,7 @@ API.v1.post(
 	async function action() {
 		const { prid, pmid, reply, t_name, users, encrypted, topic } = this.bodyParams;
 
-		const discussion = await applyAirGappedRestrictionsValidation(() =>
-			createDiscussion(this.userId, {
+		const discussion = await createDiscussion(this.userId, {
 				prid,
 				pmid,
 				t_name,
@@ -586,8 +582,7 @@ API.v1.post(
 				users: users?.filter(isTruthy) || [],
 				encrypted,
 				topic,
-			}),
-		);
+			});
 
 		return API.v1.success({ discussion });
 	},
@@ -1683,7 +1678,7 @@ type RoomEndpoints = ExtractRoutesFromAPI<typeof roomEndpoints> &
 	ExtractRoutesFromAPI<typeof roomsSaveNotificationEndpoint> &
 	ExtractRoutesFromAPI<typeof roomsSaveDraftEndpoint>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends RoomEndpoints {}
 }

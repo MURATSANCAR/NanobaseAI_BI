@@ -1,9 +1,9 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IUser } from './IUser';
 
 export type IntegrationScriptEngine = 'isolated-vm';
 
-export interface IIncomingIntegration extends IRocketChatRecord {
+export interface IIncomingIntegration extends IZekiChatRecord {
 	type: 'webhook-incoming';
 	_createdBy: Pick<IUser, 'username' | '_id'> | null;
 	_createdAt: Date;
@@ -45,7 +45,7 @@ export type OutgoingIntegrationEvent =
 	| 'roomLeft'
 	| 'userCreated';
 
-export interface IOutgoingIntegration extends IRocketChatRecord {
+export interface IOutgoingIntegration extends IZekiChatRecord {
 	type: 'webhook-outgoing';
 	_createdBy: Pick<IUser, 'username' | '_id'> | null;
 	_createdAt: Date;

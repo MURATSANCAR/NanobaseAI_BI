@@ -1,4 +1,4 @@
-import type { IDiscussionMessage, IEditedMessage, IMessage, Serialized } from '@rocket.chat/core-typings';
+import type { IDiscussionMessage, IEditedMessage, IMessage, Serialized } from '@zeki.chat/core-typings';
 
 type MappableMessage = IMessage & Partial<Pick<IEditedMessage, 'editedAt' | 'editedBy'>> & Partial<Pick<IDiscussionMessage, 'dlm'>>;
 

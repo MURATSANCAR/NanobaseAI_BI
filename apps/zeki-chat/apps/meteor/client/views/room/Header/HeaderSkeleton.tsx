@@ -1,5 +1,5 @@
 import { Skeleton } from '@rocket.chat/fuselage';
-import { Header, HeaderContent, HeaderContentRow } from '@rocket.chat/ui-client';
+import { Header, HeaderContent, HeaderContentRow } from '@zeki.chat/ui-client';
 
 const HeaderSkeleton = () => {
 	return (

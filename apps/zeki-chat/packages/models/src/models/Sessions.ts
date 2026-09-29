@@ -9,10 +9,10 @@ import type {
 	DeviceManagementPopulatedSession,
 	OSSessionAggregationResult,
 	IUser,
-	RocketChatRecordDeleted,
-} from '@rocket.chat/core-typings';
-import type { ISessionsModel } from '@rocket.chat/model-typings';
-import type { PaginatedResult, WithItemCount } from '@rocket.chat/rest-typings';
+	ZekiChatRecordDeleted,
+} from '@zeki.chat/core-typings';
+import type { ISessionsModel } from '@zeki.chat/model-typings';
+import type { PaginatedResult, WithItemCount } from '@zeki.chat/rest-typings';
 import type {
 	AggregationCursor,
 	AnyBulkWriteOperation,
@@ -736,7 +736,7 @@ export const aggregates = {
 export class SessionsRaw extends BaseRaw<ISession> implements ISessionsModel {
 	private secondaryCollection: Collection<ISession>;
 
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ISession>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ISession>>) {
 		super(db, 'sessions', trash);
 
 		this.secondaryCollection = db.collection(getCollectionName('sessions'), { readPreference: readSecondaryPreferred(db) });

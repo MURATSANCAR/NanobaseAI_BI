@@ -1,4 +1,4 @@
-import type { IRoom, ISubscription, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription, IUser } from '@zeki.chat/core-typings';
 import type { OffCallbackHandler } from '@rocket.chat/emitter';
 import type { ObjectId, Filter, FindOptions as MongoFindOptions, Document } from 'mongodb';
 import { createContext } from 'react';

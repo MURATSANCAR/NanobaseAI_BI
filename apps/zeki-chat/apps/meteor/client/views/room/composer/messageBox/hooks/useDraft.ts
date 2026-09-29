@@ -1,5 +1,5 @@
 import { useLocalStorage } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useCallback, useRef } from 'react';
 
 export const useDraft = (rid: string, serverDraft?: string, tmid?: string) => {

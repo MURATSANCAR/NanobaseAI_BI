@@ -1,4 +1,4 @@
-import { isFederationJoinExternalPublicRoomProps } from '@rocket.chat/rest-typings';
+import { isFederationJoinExternalPublicRoomProps } from '@zeki.chat/rest-typings';
 import { assert } from 'chai';
 
 describe('FederationJoinExternalPublicRoomProps (definition/rest/v1)', () => {

@@ -1,4 +1,4 @@
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 export const contextWithPlainText: readonly UiKit.LayoutBlock[] = [
 	{

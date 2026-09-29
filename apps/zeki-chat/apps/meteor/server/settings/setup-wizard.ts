@@ -1192,7 +1192,7 @@ export const createSetupWSettings = () =>
 				hidden: true,
 			});
 		});
-		// Zeki: Rocket.Chat Cloud endpoints (cloud, billing, nps, omni-gateway) and sync payload settings were removed.
+		// Zeki: ZEKI AI CHAT Cloud endpoints (cloud, billing, nps, omni-gateway) and sync payload settings were removed.
 		// The remaining Cloud_* values are inert, hidden leftovers kept only because local code still reads/resets them.
 		await this.section('Cloud_Info', async function () {
 			await this.add('Cloud_Service_Agree_PrivacyTerms', false, {
@@ -1278,23 +1278,7 @@ export const createSetupWSettings = () =>
 				secret: true,
 			});
 
-			await this.add('Cloud_Workspace_License', '', {
-				type: 'string',
-				hidden: true,
-				readonly: true,
-				enableQuery: {
-					_id: 'Register_Server',
-					value: true,
-				},
-				secret: true,
-			});
 
-			await this.add('Cloud_Workspace_Had_Trial', false, {
-				type: 'boolean',
-				hidden: true,
-				readonly: true,
-				secret: true,
-			});
 
 			await this.add('Cloud_Workspace_Registration_State', '', {
 				type: 'string',

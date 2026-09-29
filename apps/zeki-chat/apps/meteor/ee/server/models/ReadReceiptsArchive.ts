@@ -1,4 +1,4 @@
-import { registerModel } from '@rocket.chat/models';
+import { registerModel } from '@zeki.chat/models';
 
 import { ReadReceiptsArchiveRaw } from './raw/ReadReceiptsArchive';
 import { db } from '../../../server/database/utils';

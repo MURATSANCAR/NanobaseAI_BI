@@ -5,7 +5,7 @@ import {
 	UiKitContextualBar as UiKitContextualBarSurfaceRender,
 	contextualBarParser,
 	UiKitContext,
-} from '@rocket.chat/fuselage-ui-kit';
+} from '@zeki.chat/fuselage-ui-kit';
 import {
 	ContextualbarHeader,
 	ContextualbarTitle,
@@ -13,9 +13,9 @@ import {
 	ContextualbarDialog,
 	ContextualbarScrollableContent,
 	ContextualbarFooter,
-} from '@rocket.chat/ui-client';
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
-import type * as UiKit from '@rocket.chat/ui-kit';
+} from '@zeki.chat/ui-client';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import type { FormEvent, UIEvent } from 'react';
 import { memo } from 'react';
 

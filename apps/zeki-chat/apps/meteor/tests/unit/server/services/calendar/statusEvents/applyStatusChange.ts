@@ -1,5 +1,5 @@
-import { api } from '@rocket.chat/core-services';
-import { UserStatus } from '@rocket.chat/core-typings';
+import { api } from '@zeki.chat/core-services';
+import { UserStatus } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import proxyquire from 'proxyquire';
@@ -12,8 +12,8 @@ const UsersMock = {
 };
 
 const { applyStatusChange } = proxyquire.noCallThru().load('../../../../../../server/services/calendar/statusEvents/applyStatusChange', {
-	'@rocket.chat/core-services': { api },
-	'@rocket.chat/models': {
+	'@zeki.chat/core-services': { api },
+	'@zeki.chat/models': {
 		Users: UsersMock,
 	},
 });

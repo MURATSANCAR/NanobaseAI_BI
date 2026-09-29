@@ -1,6 +1,6 @@
 /* eslint-disable testing-library/no-container */
 /* eslint-disable testing-library/no-node-access */
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, waitFor } from '@testing-library/react';
 
 import TeamsChannels from './TeamsChannels';

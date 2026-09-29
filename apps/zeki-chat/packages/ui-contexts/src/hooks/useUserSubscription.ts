@@ -1,4 +1,4 @@
-import type { ISubscription } from '@rocket.chat/core-typings';
+import type { ISubscription } from '@zeki.chat/core-typings';
 import { useContext, useMemo, useSyncExternalStore } from 'react';
 
 import { UserContext } from '../UserContext';

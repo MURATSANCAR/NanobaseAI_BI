@@ -1,7 +1,7 @@
 import * as timers from 'node:timers';
 import * as vm from 'node:vm';
 
-import type { App } from '@rocket.chat/apps-engine/definition/App';
+import type { App } from '@zeki.chat/apps-engine/definition/App';
 
 import type { IAppsEngineRuntimeOptions } from './AppsEngineRuntime';
 import { APPS_ENGINE_RUNTIME_DEFAULT_TIMEOUT, AppsEngineRuntime, getFilenameForApp } from './AppsEngineRuntime';

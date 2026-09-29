@@ -1,4 +1,4 @@
-import type { IExtraRoomParams } from '@rocket.chat/apps-engine/definition/accessors/ILivechatCreator';
+import type { IExtraRoomParams } from '@zeki.chat/apps-engine/definition/accessors/ILivechatCreator';
 import type {
 	IDepartment,
 	IVisitorExternalIdentifier,
@@ -7,9 +7,9 @@ import type {
 	ILivechatTransferData,
 	IVisitor,
 	ResolveVisitorContactData,
-} from '@rocket.chat/apps-engine/definition/livechat';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+} from '@zeki.chat/apps-engine/definition/livechat';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

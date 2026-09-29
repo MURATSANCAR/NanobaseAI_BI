@@ -1,5 +1,5 @@
-import type { IMediaCall } from '@rocket.chat/core-typings';
-import { MediaCalls } from '@rocket.chat/models';
+import type { IMediaCall } from '@zeki.chat/core-typings';
+import { MediaCalls } from '@zeki.chat/models';
 
 import { BaseCallProvider } from '../base/BaseCallProvider';
 import { CallRejectedError, type InternalCallParams } from '../definition/common';

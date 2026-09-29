@@ -1,6 +1,6 @@
-import type { AudioAttachmentProps } from '@rocket.chat/core-typings';
+import type { AudioAttachmentProps } from '@zeki.chat/core-typings';
 import { AudioPlayer } from '@rocket.chat/fuselage';
-import { useMediaUrl } from '@rocket.chat/ui-contexts';
+import { useMediaUrl } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import { useReloadOnError } from './hooks/useReloadOnError';

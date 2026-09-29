@@ -1,7 +1,7 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Imports } from '@rocket.chat/models';
-import { isStartImportParamsPOST, type StartImportParamsPOST } from '@rocket.chat/rest-typings';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Imports } from '@zeki.chat/models';
+import { isStartImportParamsPOST, type StartImportParamsPOST } from '@zeki.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { Importers } from '..';
@@ -24,7 +24,7 @@ export const executeStartImport = async ({ input }: StartImportParamsPOST, start
 	await instance.startImport(input, startedByUserId);
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		startImport(params: StartImportParamsPOST): void;

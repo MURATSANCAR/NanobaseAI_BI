@@ -1,7 +1,7 @@
-import { type ExtendedFetchOptions, Response } from '@rocket.chat/server-fetch';
+import { type ExtendedFetchOptions, Response } from '@zeki.chat/server-fetch';
 
 /**
- * Zeki: the Rocket.Chat Marketplace (marketplace.rocket.chat) is permanently disconnected.
+ * Zeki: the ZEKI AI CHAT Marketplace (marketplace.rocket.chat) is permanently disconnected.
  * This client performs no network request at all: every marketplace endpoint answers locally
  * with an empty/disabled payload, so callers keep working while nothing leaves the workspace.
  */

@@ -1,5 +1,5 @@
 import { useToolbar } from '@react-aria/toolbar';
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { MessageReactions, MessageReactionAction } from '@rocket.chat/fuselage';
 import { useButtonPattern } from '@rocket.chat/fuselage-hooks';
 import type { HTMLAttributes, ReactElement } from 'react';

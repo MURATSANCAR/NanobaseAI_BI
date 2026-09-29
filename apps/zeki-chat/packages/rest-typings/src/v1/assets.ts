@@ -1,11 +1,11 @@
-import type { IRocketChatAssets } from '@rocket.chat/core-typings';
+import type { IZekiChatAssets } from '@zeki.chat/core-typings';
 import type { JSONSchemaType } from 'ajv';
 
 import { ajv } from './Ajv';
 
-export type AssetsUnsetAssetProps = { assetName: keyof IRocketChatAssets; refreshAllClients?: boolean };
+export type AssetsUnsetAssetProps = { assetName: keyof IZekiChatAssets; refreshAllClients?: boolean };
 
-export type AssetsSetAssetProps = { asset: string | ArrayBuffer; assetName: keyof IRocketChatAssets; refreshAllClients?: boolean };
+export type AssetsSetAssetProps = { asset: string | ArrayBuffer; assetName: keyof IZekiChatAssets; refreshAllClients?: boolean };
 
 export type AssetsEndpoints = {
 	'/v1/assets.setAsset': {

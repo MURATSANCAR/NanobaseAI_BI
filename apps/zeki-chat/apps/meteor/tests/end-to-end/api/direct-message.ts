@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -396,7 +396,7 @@ describe('[Direct Messages]', () => {
 
 					const { lastMessage } = im;
 
-					expect(lastMessage).to.have.nested.property('u.name', 'RocketChat Internal Admin Test');
+					expect(lastMessage).to.have.nested.property('u.name', 'ZekiChat Internal Admin Test');
 				})
 				.end(done);
 		});
@@ -425,7 +425,7 @@ describe('[Direct Messages]', () => {
 
 					const { lastMessage } = im;
 
-					expect(lastMessage).to.have.nested.property('u.name', 'RocketChat Internal Admin Test');
+					expect(lastMessage).to.have.nested.property('u.name', 'ZekiChat Internal Admin Test');
 				})
 				.end(done);
 		});

@@ -1,4 +1,4 @@
-import type { IAvatar, IUser } from '@rocket.chat/core-typings';
+import type { IAvatar, IUser } from '@zeki.chat/core-typings';
 import type { FindOptions } from 'mongodb';
 
 import type { IBaseUploadsModel } from './IBaseUploadsModel';

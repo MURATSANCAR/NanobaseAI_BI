@@ -7,7 +7,7 @@ import {
 	ContextualbarIcon,
 	ContextualbarContent,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import type { ReactElement, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 

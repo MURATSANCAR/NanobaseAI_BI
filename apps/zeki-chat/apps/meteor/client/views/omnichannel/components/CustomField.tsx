@@ -1,6 +1,6 @@
 import { Box } from '@rocket.chat/fuselage';
-import { InfoPanelField, InfoPanelLabel, InfoPanelText } from '@rocket.chat/ui-client';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { InfoPanelField, InfoPanelLabel, InfoPanelText } from '@zeki.chat/ui-client';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

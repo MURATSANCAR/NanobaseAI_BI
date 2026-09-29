@@ -1,5 +1,5 @@
-import type { ILivechatInquiryRecord, ILivechatPriority, IOmnichannelServiceLevelAgreements } from '@rocket.chat/core-typings';
-import { LivechatPriority, OmnichannelServiceLevelAgreements } from '@rocket.chat/models';
+import type { ILivechatInquiryRecord, ILivechatPriority, IOmnichannelServiceLevelAgreements } from '@zeki.chat/core-typings';
+import { LivechatPriority, OmnichannelServiceLevelAgreements } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../../../server/lib/callbacks';

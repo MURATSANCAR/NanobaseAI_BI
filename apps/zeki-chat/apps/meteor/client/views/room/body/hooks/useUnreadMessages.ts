@@ -1,5 +1,5 @@
-import type { IRoom, ISubscription } from '@rocket.chat/core-typings';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import type { IRoom, ISubscription } from '@zeki.chat/core-typings';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 

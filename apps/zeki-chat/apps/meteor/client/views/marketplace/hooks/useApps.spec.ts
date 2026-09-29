@@ -1,4 +1,4 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { storeQueryFunction } from './useApps';

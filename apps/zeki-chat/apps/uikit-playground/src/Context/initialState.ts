@@ -1,4 +1,4 @@
-import type { LayoutBlock } from '@rocket.chat/ui-kit';
+import type { LayoutBlock } from '@zeki.chat/ui-kit';
 import type { Edge, Node, Viewport } from 'reactflow';
 
 import { SurfaceOptions } from '../Components/Preview/Display/Surface/constant';

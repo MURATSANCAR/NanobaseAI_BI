@@ -4,7 +4,7 @@ import {
 	type ILivechatInquiryRecord,
 	type IOmnichannelAgent,
 	type Serialized,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 
 import { useLivechatInquiryStore } from '../../../../../client/hooks/useLivechatInquiryStore';
 import { queryClient } from '../../../../../client/lib/queryClient';

@@ -8,7 +8,7 @@ import { addAgentToDepartment, createDepartment } from '../utils/omnichannel/dep
 import { test, expect } from '../utils/test';
 
 declare const window: Window & {
-	RocketChat: { livechat: { setDepartment: (dep: string) => void; maximizeWidget: () => void } };
+	ZekiChat: { livechat: { setDepartment: (dep: string) => void; maximizeWidget: () => void } };
 };
 
 test.use({ storageState: Users.admin.state });
@@ -97,11 +97,11 @@ test.describe('OC - Livechat Triggers - SetDepartment', () => {
 	});
 
 	test('OC - Livechat Triggers - setDepartment should affect agent.next call', async () => {
-		await poLiveChat.page.goto('/packages/rocketchat_livechat/assets/demo.html');
+		await poLiveChat.page.goto('/packages/zeki_livechat/assets/demo.html');
 
 		const depId = departmentB._id;
 
-		await poLiveChat.page.evaluate((depId) => window.RocketChat.livechat.setDepartment(depId), depId);
+		await poLiveChat.page.evaluate((depId) => window.ZekiChat.livechat.setDepartment(depId), depId);
 
 		await poLiveChat.openLiveChat();
 
@@ -113,11 +113,11 @@ test.describe('OC - Livechat Triggers - SetDepartment', () => {
 	test('OC - Livechat Triggers - setDepartment should affect agent.next call - Register Form Disabled', async ({ api }) => {
 		await api.post('/settings/Livechat_registration_form', { value: false });
 
-		await poLiveChat.page.goto('/packages/rocketchat_livechat/assets/demo.html');
+		await poLiveChat.page.goto('/packages/zeki_livechat/assets/demo.html');
 
 		const depId = departmentB._id;
 
-		await poLiveChat.page.evaluate((depId) => window.RocketChat.livechat.setDepartment(depId), depId);
+		await poLiveChat.page.evaluate((depId) => window.ZekiChat.livechat.setDepartment(depId), depId);
 
 		await poLiveChat.openLiveChat();
 

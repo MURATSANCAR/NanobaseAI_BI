@@ -1,4 +1,4 @@
-import type { IAuditServerActor } from '@rocket.chat/core-typings';
+import type { IAuditServerActor } from '@zeki.chat/core-typings';
 
 import type { PaginatedRequest } from '../../helpers/PaginatedRequest';
 import { ajvQuery } from '../Ajv';

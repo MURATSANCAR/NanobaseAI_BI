@@ -1,4 +1,4 @@
-import { PasswordPolicy } from '@rocket.chat/password-policies';
+import { PasswordPolicy } from '@zeki.chat/password-policies';
 
 import { settings } from '../../../settings/server';
 

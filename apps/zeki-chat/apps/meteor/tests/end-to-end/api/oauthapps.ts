@@ -1,4 +1,4 @@
-import type { IOAuthApps } from '@rocket.chat/core-typings';
+import type { IOAuthApps } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { before, describe, it, after } from 'mocha';
 

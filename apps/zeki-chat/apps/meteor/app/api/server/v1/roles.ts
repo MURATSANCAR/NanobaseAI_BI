@@ -1,6 +1,6 @@
-import { api, Authorization } from '@rocket.chat/core-services';
-import type { IRole, IUserInRole } from '@rocket.chat/core-typings';
-import { Roles, Users } from '@rocket.chat/models';
+import { api, Authorization } from '@zeki.chat/core-services';
+import type { IRole, IUserInRole } from '@zeki.chat/core-typings';
+import { Roles, Users } from '@zeki.chat/models';
 import {
 	ajv,
 	ajvQuery,
@@ -11,7 +11,7 @@ import {
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { removeUserFromRolesAsync } from '../../../../server/lib/roles/removeUserFromRoles';
@@ -364,7 +364,7 @@ const rolesRoutes = API.v1
 
 type RolesEndpoints = ExtractRoutesFromAPI<typeof rolesRoutes>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends RolesEndpoints {}
 }

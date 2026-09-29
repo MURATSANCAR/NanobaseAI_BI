@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
+import type { IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { before, describe, it } from 'mocha';
 

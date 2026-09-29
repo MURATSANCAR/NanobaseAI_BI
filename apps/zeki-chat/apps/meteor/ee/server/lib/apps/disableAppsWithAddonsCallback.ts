@@ -1,4 +1,4 @@
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
 import type { CapabilityRegistry } from '@zeki.chat/capabilities';
 
 import { i18n } from '../../../../server/lib/i18n';

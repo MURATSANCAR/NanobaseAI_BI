@@ -1,5 +1,5 @@
-import type { IVideoConferenceRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { VideoConference } from '@rocket.chat/apps-engine/definition/videoConferences';
+import type { IVideoConferenceRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { VideoConference } from '@zeki.chat/apps-engine/definition/videoConferences';
 
 import type { VideoConferenceBridge } from '../bridges';
 

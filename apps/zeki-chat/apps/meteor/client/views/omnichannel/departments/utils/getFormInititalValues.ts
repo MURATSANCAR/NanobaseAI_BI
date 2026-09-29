@@ -1,4 +1,4 @@
-import type { ILivechatDepartment, Serialized, ILivechatDepartmentAgents } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment, Serialized, ILivechatDepartmentAgents } from '@zeki.chat/core-typings';
 
 import type { EditDepartmentProps } from '../EditDepartment';
 

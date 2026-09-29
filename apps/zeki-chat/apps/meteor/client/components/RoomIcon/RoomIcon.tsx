@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
 import { Icon } from '@rocket.chat/fuselage';
 import type { ComponentProps, ReactElement } from 'react';
 import { isValidElement } from 'react';

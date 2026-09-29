@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useSetModal, usePermission, useSetting, useEndpoint, useTranslation, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IUser } from '@zeki.chat/core-typings';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal, usePermission, useSetting, useEndpoint, useTranslation, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
 import type { AdminUserAction } from './useAdminUserInfoActions';

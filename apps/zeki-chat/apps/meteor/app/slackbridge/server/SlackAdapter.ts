@@ -8,8 +8,8 @@ import http from 'node:http';
 import https from 'node:https';
 import url from 'node:url';
 
-import { Message } from '@rocket.chat/core-services';
-import { Messages, Rooms, Users } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import { Messages, Rooms, Users } from '@zeki.chat/models';
 import { App as SlackApp } from '@slack/bolt';
 import { RTMClient } from '@slack/rtm-api';
 import { Meteor } from 'meteor/meteor';
@@ -718,11 +718,11 @@ export default class SlackAdapter {
 		}
 
 		for await (const slackChannel of channels) {
-			const rocketchat_room =
+			const zeki_room =
 				(await Rooms.findOneByName(slackChannel.name, { projection: { _id: 1 } })) ||
 				(await Rooms.findOneByImportId(slackChannel.id, { projection: { _id: 1 } }));
-			if (rocketchat_room && slackChannel.is_member) {
-				this.addSlackChannel(rocketchat_room._id, slackChannel.id);
+			if (zeki_room && slackChannel.is_member) {
+				this.addSlackChannel(zeki_room._id, slackChannel.id);
 			}
 		}
 	}
@@ -734,11 +734,11 @@ export default class SlackAdapter {
 		}
 
 		for await (const slackGroup of groups) {
-			const rocketchat_room =
+			const zeki_room =
 				(await Rooms.findOneByName(slackGroup.name, { projection: { _id: 1 } })) ||
 				(await Rooms.findOneByImportId(slackGroup.id, { projection: { _id: 1 } }));
-			if (rocketchat_room && slackGroup.is_member) {
-				this.addSlackChannel(rocketchat_room._id, slackGroup.id);
+			if (zeki_room && slackGroup.is_member) {
+				this.addSlackChannel(zeki_room._id, slackGroup.id);
 			}
 		}
 	}
@@ -911,8 +911,8 @@ export default class SlackAdapter {
 		if (rocketCh != null) {
 			this.addSlackChannel(rocketCh._id, event.channel);
 			if (context?.botUserId !== event?.user) {
-				const rocketChatUser = await this.rocket.getUser(event.user);
-				await addUserToRoom(rocketCh._id, rocketChatUser);
+				const zekiChatUser = await this.rocket.getUser(event.user);
+				await addUserToRoom(rocketCh._id, zekiChatUser);
 			}
 		}
 	}
@@ -962,7 +962,7 @@ export default class SlackAdapter {
 	async processMessageDeleted(slackMessage) {
 		if (slackMessage.previous_message) {
 			const rocketChannel = await this.rocket.getChannel(slackMessage);
-			const rocketUser = await Users.findOneById('rocket.cat', { projection: { username: 1 } });
+			const rocketUser = await Users.findOneById('zeki.bot', { projection: { username: 1 } });
 
 			if (rocketChannel && rocketUser) {
 				// Find the Rocket message to delete
@@ -1021,7 +1021,7 @@ export default class SlackAdapter {
 		const rocketChannel = await this.rocket.getChannel(slackMessage);
 		let rocketUser = null;
 		if (slackMessage.subtype === 'bot_message') {
-			rocketUser = await Users.findOneById('rocket.cat', { projection: { username: 1 } });
+			rocketUser = await Users.findOneById('zeki.bot', { projection: { username: 1 } });
 		} else {
 			rocketUser = slackMessage.user
 				? (await this.rocket.findUser(slackMessage.user)) || (await this.rocket.addUser(slackMessage.user))
@@ -1261,8 +1261,8 @@ export default class SlackAdapter {
 	Uploads the file to the storage.
 	@param [Object] details an object with details about the upload. name, size, type, and rid
 	@param [String] fileUrl url of the file to download/import
-	@param [Object] user the Rocket.Chat user
-	@param [Object] room the Rocket.Chat room
+	@param [Object] user the ZEKI AI CHAT user
+	@param [Object] room the ZEKI AI CHAT room
 	@param [Date] timeStamp the timestamp the file was uploaded
 	**/
 	// details, slackMessage.file.url_private_download, rocketUser, rocketChannel, new Date(parseInt(slackMessage.ts.split('.')[0]) * 1000), isImporting);
@@ -1416,8 +1416,8 @@ export default class SlackAdapter {
 
 	async importMessages(rid, callback) {
 		slackLogger.info({ msg: 'importMessages', rid });
-		const rocketchat_room = await Rooms.findOneById(rid);
-		if (rocketchat_room) {
+		const zeki_room = await Rooms.findOneById(rid);
+		if (zeki_room) {
 			if (this.getSlackChannel(rid)) {
 				await this.copyChannelInfo(rid, this.getSlackChannel(rid));
 
@@ -1439,12 +1439,12 @@ export default class SlackAdapter {
 
 				return callback();
 			}
-			const slack_room = await this.postFindChannel(rocketchat_room.name);
+			const slack_room = await this.postFindChannel(zeki_room.name);
 			if (slack_room) {
 				this.addSlackChannel(rid, slack_room.id);
 				return this.importMessages(rid, callback);
 			}
-			slackLogger.error({ msg: 'Could not find Slack room with specified name', roomName: rocketchat_room.name });
+			slackLogger.error({ msg: 'Could not find Slack room with specified name', roomName: zeki_room.name });
 			return callback(new Meteor.Error('error-slack-room-not-found', 'Could not find Slack room with specified name'));
 		}
 		slackLogger.error({ msg: 'Could not find ZEKI AI CHAT room with specified id', rid });

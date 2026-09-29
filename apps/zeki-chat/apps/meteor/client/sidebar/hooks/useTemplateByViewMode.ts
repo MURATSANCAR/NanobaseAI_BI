@@ -1,4 +1,4 @@
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import Condensed from '../Item/Condensed';

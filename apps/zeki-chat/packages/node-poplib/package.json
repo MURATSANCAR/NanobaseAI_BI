@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/poplib",
+	"name": "@zeki.chat/poplib",
 	"version": "0.0.3",
 	"private": true,
 	"main": "./src/index.js",

@@ -1,10 +1,10 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 
-import { RocketChatError } from './RocketChatError';
+import { ZekiChatError } from './ZekiChatError';
 
 type NotSubscribedToRoomErrorDetails = { rid: IRoom['_id'] };
 
-export class NotSubscribedToRoomError extends RocketChatError<'not-subscribed-room', NotSubscribedToRoomErrorDetails> {
+export class NotSubscribedToRoomError extends ZekiChatError<'not-subscribed-room', NotSubscribedToRoomErrorDetails> {
 	public declare readonly reason: string;
 
 	public declare readonly details: NotSubscribedToRoomErrorDetails;

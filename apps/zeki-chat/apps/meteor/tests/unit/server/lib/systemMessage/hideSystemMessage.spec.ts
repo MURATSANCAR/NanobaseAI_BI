@@ -1,4 +1,4 @@
-import type { MessageTypesValues } from '@rocket.chat/core-typings';
+import type { MessageTypesValues } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 
 import { isMutedUnmuted, shouldHideSystemMessage } from '../../../../../server/lib/systemMessage/hideSystemMessage';

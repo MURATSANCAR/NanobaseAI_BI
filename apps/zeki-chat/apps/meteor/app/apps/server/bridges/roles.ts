@@ -1,7 +1,7 @@
-import type { IAppServerOrchestrator, IAppsRole } from '@rocket.chat/apps';
-import { RoleBridge } from '@rocket.chat/apps/dist/server/bridges/RoleBridge';
-import type { IRole } from '@rocket.chat/core-typings';
-import { Roles } from '@rocket.chat/models';
+import type { IAppServerOrchestrator, IAppsRole } from '@zeki.chat/apps';
+import { RoleBridge } from '@zeki.chat/apps/dist/server/bridges/RoleBridge';
+import type { IRole } from '@zeki.chat/core-typings';
+import { Roles } from '@zeki.chat/models';
 
 export class AppRoleBridge extends RoleBridge {
 	constructor(private readonly orch: IAppServerOrchestrator) {

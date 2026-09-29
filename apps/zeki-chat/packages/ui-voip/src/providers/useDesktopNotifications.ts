@@ -1,4 +1,4 @@
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -31,8 +31,8 @@ export const useDesktopNotifications = (sessionInfo: SessionState) => {
 		}
 
 		if (
-			typeof window.RocketChatDesktop?.dispatchCustomNotification !== 'function' ||
-			typeof window.RocketChatDesktop?.closeCustomNotification !== 'function'
+			typeof window.ZekiChatDesktop?.dispatchCustomNotification !== 'function' ||
+			typeof window.ZekiChatDesktop?.closeCustomNotification !== 'function'
 		) {
 			return;
 		}
@@ -41,7 +41,7 @@ export const useDesktopNotifications = (sessionInfo: SessionState) => {
 
 		if (sessionInfo.state !== 'ringing') {
 			if (previousCallId.current) {
-				window.RocketChatDesktop.closeCustomNotification(previousCallId.current);
+				window.ZekiChatDesktop.closeCustomNotification(previousCallId.current);
 				previousCallId.current = undefined;
 			}
 			return;
@@ -58,7 +58,7 @@ export const useDesktopNotifications = (sessionInfo: SessionState) => {
 				return;
 			}
 
-			window.RocketChatDesktop?.dispatchCustomNotification({
+			window.ZekiChatDesktop?.dispatchCustomNotification({
 				type: 'voice',
 				id: sessionInfo.callId,
 				payload: {

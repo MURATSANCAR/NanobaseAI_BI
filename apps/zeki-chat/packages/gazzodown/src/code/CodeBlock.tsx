@@ -1,7 +1,7 @@
 import { css } from '@rocket.chat/css-in-js';
 import { IconButton, Box } from '@rocket.chat/fuselage';
-import type * as MessageParser from '@rocket.chat/message-parser';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type * as MessageParser from '@zeki.chat/message-parser';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import hljs from 'highlight.js';
 import type { ReactElement } from 'react';
 import { Fragment, useContext, useLayoutEffect, useMemo, useRef, useCallback } from 'react';

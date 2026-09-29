@@ -1,8 +1,7 @@
-import type { ISettingColor, SettingEditor, SettingValue } from '@rocket.chat/core-typings';
-import { isSettingColor, isSetting } from '@rocket.chat/core-typings';
-import { Box, Tag } from '@rocket.chat/fuselage';
+import type { ISettingColor, SettingEditor, SettingValue } from '@zeki.chat/core-typings';
+import { isSettingColor, isSetting } from '@zeki.chat/core-typings';
 import { useDebouncedCallback } from '@rocket.chat/fuselage-hooks';
-import { useSettingStructure } from '@rocket.chat/ui-contexts';
+import { useSettingStructure } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -130,20 +129,7 @@ function Setting({ className = undefined, settingId, sectionChanged }: SettingPr
 	// Zeki: vendor paid-plan button removed
 	const showUpgradeButton = undefined;
 
-	const label = useMemo(() => {
-		if (!shouldDisableEnterprise) {
-			return labelText;
-		}
-
-		return (
-			<>
-				<Box is='span' mie={4}>
-					{labelText}
-				</Box>
-				<Tag variant='featured'>{t('Premium')}</Tag>
-			</>
-		);
-	}, [labelText, shouldDisableEnterprise, t]);
+	const label = labelText;
 
 	const hasResetButton =
 		!shouldDisableEnterprise &&

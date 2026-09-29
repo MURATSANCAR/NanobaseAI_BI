@@ -1,5 +1,5 @@
-import type { IWorkspaceCredentials } from '@rocket.chat/core-typings';
-import type { IWorkspaceCredentialsModel } from '@rocket.chat/model-typings';
+import type { IWorkspaceCredentials } from '@zeki.chat/core-typings';
+import type { IWorkspaceCredentialsModel } from '@zeki.chat/model-typings';
 import type { Db, DeleteResult, Filter, IndexDescription, UpdateResult } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

@@ -1,6 +1,6 @@
-import type { IRoomWithRetentionPolicy } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
-import { Rooms } from '@rocket.chat/models';
+import type { IRoomWithRetentionPolicy } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
+import { Rooms } from '@zeki.chat/models';
 
 import { getCronAdvancedTimerFromPrecisionSetting } from '../../../lib/getCronAdvancedTimerFromPrecisionSetting';
 import { cleanRoomHistory } from '../../lib/server/functions/cleanRoomHistory';

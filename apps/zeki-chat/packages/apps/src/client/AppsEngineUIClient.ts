@@ -35,7 +35,7 @@ export class AppsEngineUIClient {
 	}
 
 	/**
-	 * Initialize the app  SDK for communicating with Rocket.Chat
+	 * Initialize the app  SDK for communicating with ZEKI AI CHAT
 	 */
 	public init(): void {
 		this.listener = ({ data }) => {

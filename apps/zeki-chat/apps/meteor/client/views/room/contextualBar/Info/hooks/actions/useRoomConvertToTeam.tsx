@@ -1,8 +1,8 @@
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import type { IRoom } from '@rocket.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useTranslation, useEndpoint, usePermission } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useTranslation, useEndpoint, usePermission } from '@zeki.chat/ui-contexts';
 
 import { useCanEditRoom } from '../useCanEditRoom';
 

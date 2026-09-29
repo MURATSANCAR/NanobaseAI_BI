@@ -1,6 +1,6 @@
-import { InstanceStatus } from '@rocket.chat/instance-status';
-import { Logger } from '@rocket.chat/logger';
-import { tracerActiveSpan } from '@rocket.chat/tracing';
+import { InstanceStatus } from '@zeki.chat/instance-status';
+import { Logger } from '@zeki.chat/logger';
+import { tracerActiveSpan } from '@zeki.chat/tracing';
 import { Meteor } from 'meteor/meteor';
 import { WebApp } from 'meteor/webapp';
 import _ from 'underscore';

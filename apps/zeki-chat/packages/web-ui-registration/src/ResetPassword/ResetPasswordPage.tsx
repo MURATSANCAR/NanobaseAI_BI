@@ -1,8 +1,8 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { Button, FieldGroup, Field, FieldLabel, ButtonGroup, PasswordInput, FieldRow, FieldError } from '@rocket.chat/fuselage';
 import { Form } from '@rocket.chat/layout';
-import { PasswordVerifier, useValidatePassword } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import { PasswordVerifier, useValidatePassword } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import {
 	useSetting,
 	useRouter,
@@ -12,7 +12,7 @@ import {
 	useTranslation,
 	useLoginWithToken,
 	useEndpoint,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect, useId, useRef } from 'react';
 import { useForm } from 'react-hook-form';

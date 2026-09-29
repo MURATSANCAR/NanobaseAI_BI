@@ -1,7 +1,7 @@
-import { Message } from '@rocket.chat/core-services';
-import type { IMessage, IThreadMainMessage } from '@rocket.chat/core-typings';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { Messages, Users, Rooms, Subscriptions } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import type { IMessage, IThreadMainMessage } from '@zeki.chat/core-typings';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { Messages, Users, Rooms, Subscriptions } from '@zeki.chat/models';
 import {
 	ajv,
 	isChatReportMessageProps,
@@ -26,7 +26,7 @@ import {
 	isChatGetDiscussionsProps,
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import { Meteor } from 'meteor/meteor';
 
@@ -42,7 +42,6 @@ import { processWebhookMessage } from '../../../lib/server/functions/processWebh
 import { getSingleMessage } from '../../../lib/server/methods/getSingleMessage';
 import { executeSendMessage } from '../../../lib/server/methods/sendMessage';
 import { executeUpdateMessage } from '../../../lib/server/methods/updateMessage';
-import { applyAirGappedRestrictionsValidation } from '../../../license/server/airGappedRestrictionsWrapper';
 import { pinMessage, unpinMessage } from '../../../message-pin/server/pinMessage';
 import { starMessage } from '../../../message-star/server/starMessage';
 import { executeSetReaction } from '../../../reactions/server/setReaction';
@@ -297,7 +296,7 @@ const chatEndpoints = API.v1
 			];
 
 			// Permission checks are already done in the updateMessage method, so no need to duplicate them
-			await applyAirGappedRestrictionsValidation(() => executeUpdateMessage(...updateData));
+			await executeUpdateMessage(...updateData);
 
 			const updatedMessage = await Messages.findOneById(msg._id);
 			const [message] = await normalizeMessagesForUser(updatedMessage ? [updatedMessage] : [], this.userId);
@@ -750,7 +749,7 @@ const chatEndpoints = API.v1
 				}
 			}
 
-			const messageReturn = (await applyAirGappedRestrictionsValidation(() => processWebhookMessage(this.bodyParams, this.user)))[0];
+			const messageReturn = (await processWebhookMessage(this.bodyParams, this.user))[0];
 
 			if (!messageReturn?.message) {
 				return API.v1.failure('unknown-error');
@@ -837,9 +836,7 @@ const chatEndpoints = API.v1
 				throw new Error("Cannot send system messages using 'chat.sendMessage'");
 			}
 
-			const sent = await applyAirGappedRestrictionsValidation(() =>
-				executeSendMessage(this.user, this.bodyParams.message as Pick<IMessage, 'rid'>, { previewUrls: this.bodyParams.previewUrls }),
-			);
+			const sent = await executeSendMessage(this.user, this.bodyParams.message as Pick<IMessage, 'rid'>, { previewUrls: this.bodyParams.previewUrls });
 			const [message] = await normalizeMessagesForUser([sent], this.userId);
 
 			return API.v1.success({
@@ -1379,7 +1376,7 @@ const chatEndpoints = API.v1
 
 export type ChatEndpoints = ExtractRoutesFromAPI<typeof chatEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends ChatEndpoints {}
 }

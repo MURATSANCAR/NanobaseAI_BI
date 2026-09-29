@@ -33,12 +33,12 @@ class MockImporter {
 const { executeDownloadPublicImportFile } = proxyquire
 	.noCallThru()
 	.load('../../../../../app/importer/server/methods/downloadPublicImportFile.ts', {
-		'@rocket.chat/core-services': { Import: { newOperation: stubs.newOperation } },
-		'@rocket.chat/server-fetch': { serverFetch: stubs.serverFetch },
+		'@zeki.chat/core-services': { Import: { newOperation: stubs.newOperation } },
+		'@zeki.chat/server-fetch': { serverFetch: stubs.serverFetch },
 		'meteor/meteor': { Meteor: { methods: sinon.stub() } },
 		'../../../authorization/server/functions/hasPermission': { hasPermissionAsync: sinon.stub() },
 		'..': { Importers: { get: stubs.importersGet } },
-		'../startup/store': { RocketChatImportFileInstance: { createWriteStream: stubs.createWriteStream } },
+		'../startup/store': { ZekiChatImportFileInstance: { createWriteStream: stubs.createWriteStream } },
 		'../../../../server/lib/logger/system': { SystemLogger: { error: stubs.systemLoggerError } },
 		'../../../settings/server': { settings: { get: sinon.stub().returns('') } },
 		'../../lib/ImporterProgressStep': { ProgressStep: progressStep },

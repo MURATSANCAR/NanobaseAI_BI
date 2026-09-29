@@ -1,8 +1,8 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { AppsEngineException } from '@rocket.chat/apps-engine/definition/exceptions';
-import { Message, Team, Room } from '@rocket.chat/core-services';
-import type { IRoom, IUser, MessageTypesValues } from '@rocket.chat/core-typings';
-import { Subscriptions, Rooms } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { AppsEngineException } from '@zeki.chat/apps-engine/definition/exceptions';
+import { Message, Team, Room } from '@zeki.chat/core-services';
+import type { IRoom, IUser, MessageTypesValues } from '@zeki.chat/core-typings';
+import { Subscriptions, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { afterLeaveRoomCallback } from '../../../../server/lib/callbacks/afterLeaveRoomCallback';

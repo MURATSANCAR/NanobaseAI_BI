@@ -1,4 +1,4 @@
-import type { AbacActor } from '@rocket.chat/core-services';
+import type { AbacActor } from '@zeki.chat/core-services';
 import type {
 	ExtractDataToParams,
 	IAbacAttributeDefinition,
@@ -11,8 +11,8 @@ import type {
 	MinimalRoom,
 	MinimalUser,
 	AbacActionPerformed,
-} from '@rocket.chat/core-typings';
-import { ServerEvents } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { ServerEvents } from '@zeki.chat/models';
 
 type EventParamsMap = {
 	[K in AbacAuditServerEventKey]: ExtractDataToParams<IServerEvents[K]>;

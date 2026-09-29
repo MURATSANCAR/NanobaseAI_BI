@@ -1,5 +1,5 @@
-import type { IMessageUpdater } from '@rocket.chat/apps-engine/definition/accessors/IMessageUpdater';
-import type { Reaction } from '@rocket.chat/apps-engine/definition/messages';
+import type { IMessageUpdater } from '@zeki.chat/apps-engine/definition/accessors/IMessageUpdater';
+import type { Reaction } from '@zeki.chat/apps-engine/definition/messages';
 
 import type { AppBridges } from '../bridges';
 

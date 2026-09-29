@@ -1,6 +1,6 @@
 import { eventIdSchema, roomIdSchema, userIdSchema, federationSDK, type RoomVersion } from '@rocket.chat/federation-sdk';
-import { Router } from '@rocket.chat/http-router';
-import { ajv, ajvQuery } from '@rocket.chat/rest-typings';
+import { Router } from '@zeki.chat/http-router';
+import { ajv, ajvQuery } from '@zeki.chat/rest-typings';
 
 import { canAccessResourceMiddleware } from '../middlewares/canAccessResource';
 import { isAuthenticatedMiddleware } from '../middlewares/isAuthenticated';
@@ -357,7 +357,7 @@ export const getMatrixProfilesRoutes = () => {
 					200: isQueryProfileResponseProps,
 				},
 				tags: ['Federation'],
-				license: ['federation'],
+				capabilities: ['federation'],
 			},
 			async (c) => {
 				const { user_id: userId, field } = c.req.query();
@@ -400,7 +400,7 @@ export const getMatrixProfilesRoutes = () => {
 					200: isQueryKeysResponseProps,
 				},
 				tags: ['Federation'],
-				license: ['federation'],
+				capabilities: ['federation'],
 			},
 			async (c) => {
 				const body = await c.req.json();
@@ -421,7 +421,7 @@ export const getMatrixProfilesRoutes = () => {
 					200: isGetDevicesResponseProps,
 				},
 				tags: ['Federation'],
-				license: ['federation'],
+				capabilities: ['federation'],
 			},
 			async (c) => {
 				return {
@@ -443,7 +443,7 @@ export const getMatrixProfilesRoutes = () => {
 					200: isMakeJoinResponseProps,
 				},
 				tags: ['Federation'],
-				license: ['federation'],
+				capabilities: ['federation'],
 			},
 			canAccessResourceMiddleware('room'),
 			async (c) => {
@@ -475,7 +475,7 @@ export const getMatrixProfilesRoutes = () => {
 					200: isGetMissingEventsResponseProps,
 				},
 				tags: ['Federation'],
-				license: ['federation'],
+				capabilities: ['federation'],
 			},
 			canAccessResourceMiddleware('room'),
 			async (c) => {
@@ -503,7 +503,7 @@ export const getMatrixProfilesRoutes = () => {
 					200: isEventAuthResponseProps,
 				},
 				tags: ['Federation'],
-				license: ['federation'],
+				capabilities: ['federation'],
 			},
 			canAccessResourceMiddleware('room'),
 			async (c) => {

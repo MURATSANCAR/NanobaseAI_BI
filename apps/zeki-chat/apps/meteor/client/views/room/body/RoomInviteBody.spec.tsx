@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { composeStories } from '@storybook/react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,9 +15,9 @@ describe('RoomInvite', () => {
 	const onAccept = jest.fn();
 	const onReject = jest.fn();
 	const inviter = {
-		username: 'rocket.cat',
+		username: 'zeki.bot',
 		name: 'Rocket Cat',
-		_id: 'rocket.cat',
+		_id: 'zeki.bot',
 	};
 
 	beforeEach(() => {

@@ -1,5 +1,5 @@
 import { Text } from '@react-pdf/renderer';
-import type * as MessageParser from '@rocket.chat/message-parser';
+import type * as MessageParser from '@zeki.chat/message-parser';
 import emojione from 'emoji-toolkit';
 import type { ReactElement } from 'react';
 

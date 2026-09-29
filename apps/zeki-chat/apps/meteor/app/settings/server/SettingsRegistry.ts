@@ -1,7 +1,7 @@
-import type { ISetting, ISettingGroup, Optional, SettingValue } from '@rocket.chat/core-typings';
-import { isSettingEnterprise } from '@rocket.chat/core-typings';
+import type { ISetting, ISettingGroup, Optional, SettingValue } from '@zeki.chat/core-typings';
+import { isSettingEnterprise } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
-import type { ISettingsModel } from '@rocket.chat/model-typings';
+import type { ISettingsModel } from '@zeki.chat/model-typings';
 import { isEqual } from 'underscore';
 
 import type { ICachedSettings } from './CachedSettings';

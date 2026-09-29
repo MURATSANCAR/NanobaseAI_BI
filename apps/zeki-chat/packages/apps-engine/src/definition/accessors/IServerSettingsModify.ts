@@ -2,7 +2,7 @@ import type { ISetting } from '../settings';
 
 /**
  * This accessor provides methods to change default setting options
- * of Rocket.Chat in a compatible way. It is provided during
+ * of ZEKI AI CHAT in a compatible way. It is provided during
  * your App's "onEnable".
  */
 export interface IServerSettingsModify {
@@ -23,7 +23,7 @@ export interface IServerSettingsModify {
 
 	/**
 	 * Modifies the configured value of another setting, please use it with caution as an invalid
-	 * setting configuration could cause a Rocket.Chat instance to become unstable.
+	 * setting configuration could cause a ZEKI AI CHAT instance to become unstable.
 	 *
 	 * @param setting the modified setting (id must be provided)
 	 */
@@ -33,7 +33,7 @@ export interface IServerSettingsModify {
 	 * Increases the setting value by the specified amount.
 	 * To be used only with statistic settings that track the amount of times an action has been performed
 	 *
-	 * @param id the id of the existing Rocket.Chat setting
+	 * @param id the id of the existing ZEKI AI CHAT setting
 	 * @param value how much should the count be increased by. Defaults to 1.
 	 */
 	incrementValue(id: ISetting['id'], value?: number): Promise<void>;

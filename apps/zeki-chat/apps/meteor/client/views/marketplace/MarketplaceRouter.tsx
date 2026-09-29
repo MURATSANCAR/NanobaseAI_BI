@@ -1,4 +1,4 @@
-import { useAtLeastOnePermission, useRoute, useRouteParameter } from '@rocket.chat/ui-contexts';
+import { useAtLeastOnePermission, useRoute, useRouteParameter } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { Suspense, useEffect } from 'react';
 

@@ -1,4 +1,4 @@
-import type { IIncomingMessage } from '@rocket.chat/core-typings';
+import type { IIncomingMessage } from '@zeki.chat/core-typings';
 
 import { SAMLUtils } from './Utils';
 import type {

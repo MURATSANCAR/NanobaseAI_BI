@@ -1,6 +1,6 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
 
-import type { ExternalModuleName } from './license';
+import type { ExternalModuleName } from './CapabilityModule';
 
 export type AppScreenshot = {
 	id: string;

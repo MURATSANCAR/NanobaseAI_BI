@@ -1,7 +1,7 @@
-import { isTeamRoom, type IRoom } from '@rocket.chat/core-typings';
+import { isTeamRoom, type IRoom } from '@zeki.chat/core-typings';
 import { useButtonPattern, useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useDocumentTitle, HeaderTitle, HeaderTitleButton } from '@rocket.chat/ui-client';
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useDocumentTitle, HeaderTitle, HeaderTitleButton } from '@zeki.chat/ui-client';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import HeaderIconWithRoom from './HeaderIconWithRoom';

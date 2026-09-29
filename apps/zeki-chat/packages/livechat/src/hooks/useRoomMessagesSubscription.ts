@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { useStream } from '@rocket.chat/ui-contexts';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { useStream } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'preact/hooks';
 
 import { onMessage } from '../lib/room';

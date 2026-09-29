@@ -1,7 +1,7 @@
-import { AppEvents, Apps } from '@rocket.chat/apps';
-import { MeteorError, Team } from '@rocket.chat/core-services';
-import type { IRoom, ITeam, IUser, AtLeast } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
+import { AppEvents, Apps } from '@zeki.chat/apps';
+import { MeteorError, Team } from '@zeki.chat/core-services';
+import type { IRoom, ITeam, IUser, AtLeast } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
 
 import { eraseRoom } from '../../../../server/lib/eraseRoom';
 import { SystemLogger } from '../../../../server/lib/logger/system';
@@ -55,7 +55,7 @@ export const eraseTeam = async (user: IUser, team: ITeam, roomsToRemove: IRoom['
 export const eraseTeamOnRelinquishRoomOwnerships = async (team: ITeam, roomsToRemove: IRoom['_id'][] = []): Promise<string[]> => {
 	const deletedRooms = new Set<string>();
 	// Zeki: system actor display name rebranded; username kept for lookups.
-	await eraseTeamShared({ _id: 'rocket.cat', username: 'rocket.cat', name: 'ZEKI AI CHAT' } as IUser, team, roomsToRemove, async (rid) => {
+	await eraseTeamShared({ _id: 'zeki.bot', username: 'zeki.bot', name: 'ZEKI AI CHAT' } as IUser, team, roomsToRemove, async (rid) => {
 		const isDeleted = await eraseRoomLooseValidation(rid);
 		if (isDeleted) {
 			deletedRooms.add(rid);

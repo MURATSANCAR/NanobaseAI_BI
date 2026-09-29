@@ -1,6 +1,6 @@
-import type { IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
-import type { ICannedResponseModel } from '@rocket.chat/model-typings';
-import { BaseRaw } from '@rocket.chat/models';
+import type { IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
+import type { ICannedResponseModel } from '@zeki.chat/model-typings';
+import { BaseRaw } from '@zeki.chat/models';
 import type { Db, DeleteResult, FindCursor, FindOptions, IndexDescription, UpdateFilter } from 'mongodb';
 
 // TODO need to define type for CannedResponse object

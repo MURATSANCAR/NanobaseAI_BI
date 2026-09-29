@@ -1,6 +1,6 @@
-import { secureFieldsMapper } from '@rocket.chat/apps/dist/lib/SecureFields';
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import { LivechatVisitors, Rooms, LivechatDepartment, Users, LivechatContacts } from '@rocket.chat/models';
+import { secureFieldsMapper } from '@zeki.chat/apps/dist/lib/SecureFields';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import { LivechatVisitors, Rooms, LivechatDepartment, Users, LivechatContacts } from '@zeki.chat/models';
 
 import { transformMappedData } from './transformMappedData';
 

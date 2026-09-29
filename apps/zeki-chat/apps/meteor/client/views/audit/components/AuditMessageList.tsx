@@ -1,7 +1,7 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { MessageDivider } from '@rocket.chat/fuselage';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { Fragment, memo } from 'react';
 

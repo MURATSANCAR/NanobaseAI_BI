@@ -1,17 +1,17 @@
-import type { IRoomBuilder } from '@rocket.chat/apps-engine/definition/accessors';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IRoom, RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IRoomBuilder } from '@zeki.chat/apps-engine/definition/accessors';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IRoom, RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 export class RoomBuilder implements IRoomBuilder {
-	public kind: RocketChatAssociationModel.ROOM | RocketChatAssociationModel.DISCUSSION;
+	public kind: ZekiChatAssociationModel.ROOM | ZekiChatAssociationModel.DISCUSSION;
 
 	protected room: IRoom;
 
 	private members: Array<string>;
 
 	constructor(data?: Partial<IRoom>) {
-		this.kind = RocketChatAssociationModel.ROOM;
+		this.kind = ZekiChatAssociationModel.ROOM;
 		this.room = (data || { customFields: {} }) as IRoom;
 		this.members = [];
 	}

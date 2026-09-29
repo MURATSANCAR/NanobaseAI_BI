@@ -1,6 +1,6 @@
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Rooms } from '@rocket.chat/models';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Rooms } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -9,7 +9,7 @@ import { settings } from '../../app/settings/server';
 import { readThread } from '../../app/threads/server/functions';
 import { callbacks } from '../lib/callbacks';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		readThreads(tmid: IMessage['_id']): void;

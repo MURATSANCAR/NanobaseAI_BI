@@ -1,9 +1,9 @@
-import { Federation, FederationEE, Authorization } from '@rocket.chat/core-services';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import { Federation, FederationEE, Authorization } from '@zeki.chat/core-services';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { Capabilities } from '@zeki.chat/capabilities';
 import { Meteor } from 'meteor/meteor';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		checkFederationConfiguration(): Promise<{ message: string }>;

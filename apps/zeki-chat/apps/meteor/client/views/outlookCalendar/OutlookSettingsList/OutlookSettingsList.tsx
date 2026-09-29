@@ -7,8 +7,8 @@ import {
 	ContextualbarContent,
 	ContextualbarFooter,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
-import { useTranslation, useUserPreference, useEndpoint, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useTranslation, useUserPreference, useEndpoint, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useCallback } from 'react';
 

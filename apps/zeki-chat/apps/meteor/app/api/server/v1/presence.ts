@@ -1,5 +1,5 @@
-import { Presence } from '@rocket.chat/core-services';
-import { ajv, validateUnauthorizedErrorResponse, validateForbiddenErrorResponse } from '@rocket.chat/rest-typings';
+import { Presence } from '@zeki.chat/core-services';
+import { ajv, validateUnauthorizedErrorResponse, validateForbiddenErrorResponse } from '@zeki.chat/rest-typings';
 
 import { API } from '../api';
 
@@ -9,17 +9,16 @@ API.v1.get(
 		authRequired: true,
 		permissionsRequired: ['manage-user-status'],
 		response: {
-			200: ajv.compile<{ current: number; max: number; success: true }>({
+			200: ajv.compile<{ current: number; success: true }>({
 				type: 'object',
 				properties: {
 					current: { type: 'number' },
-					max: { type: 'number' },
 					success: {
 						type: 'boolean',
 						enum: [true],
 					},
 				},
-				required: ['current', 'max', 'success'],
+				required: ['current', 'success'],
 				additionalProperties: false,
 			}),
 			401: validateUnauthorizedErrorResponse,

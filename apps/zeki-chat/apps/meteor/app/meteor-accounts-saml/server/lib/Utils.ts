@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import zlib from 'node:zlib';
 
-import type { Logger } from '@rocket.chat/logger';
+import type { Logger } from '@zeki.chat/logger';
 
 import { StatusCode } from './constants';
 import { ensureArray } from '../../../../lib/utils/arrayUtils';
@@ -434,7 +434,7 @@ export class SAMLUtils {
 		const profileUsername = this.getProfileValue(profile, userDataMap.username, true);
 		const name = this.getProfileValue(profile, userDataMap.name, true);
 
-		// Even if we're not using the email to identify the user, it is still mandatory because it's a mandatory information on Rocket.Chat
+		// Even if we're not using the email to identify the user, it is still mandatory because it's a mandatory information on ZEKI AI CHAT
 		if (!email) {
 			throw new Error('SAML Profile did not contain an email address');
 		}

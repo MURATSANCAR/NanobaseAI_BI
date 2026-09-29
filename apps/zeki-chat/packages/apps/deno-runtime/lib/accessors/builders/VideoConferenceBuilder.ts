@@ -1,12 +1,12 @@
-import type { IVideoConferenceBuilder } from '@rocket.chat/apps-engine/definition/accessors/IVideoConferenceBuilder';
-import type { IGroupVideoConference } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConference';
+import type { IVideoConferenceBuilder } from '@zeki.chat/apps-engine/definition/accessors/IVideoConferenceBuilder';
+import type { IGroupVideoConference } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConference';
 
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
 
 import { require } from '../../../lib/require.ts';
 
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export type AppVideoConference = Pick<IGroupVideoConference, 'rid' | 'providerName' | 'providerData' | 'title' | 'discussionRid'> & {
@@ -14,7 +14,7 @@ export type AppVideoConference = Pick<IGroupVideoConference, 'rid' | 'providerNa
 };
 
 export class VideoConferenceBuilder implements IVideoConferenceBuilder {
-	public kind: _RocketChatAssociationModel.VIDEO_CONFERENCE = RocketChatAssociationModel.VIDEO_CONFERENCE;
+	public kind: _ZekiChatAssociationModel.VIDEO_CONFERENCE = ZekiChatAssociationModel.VIDEO_CONFERENCE;
 
 	protected call: AppVideoConference;
 

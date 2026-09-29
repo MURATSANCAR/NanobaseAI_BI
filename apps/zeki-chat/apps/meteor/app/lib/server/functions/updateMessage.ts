@@ -1,7 +1,7 @@
-import { AppEvents, Apps } from '@rocket.chat/apps';
-import { Message } from '@rocket.chat/core-services';
-import type { IMessage, IUser, AtLeast } from '@rocket.chat/core-typings';
-import { Messages, Rooms } from '@rocket.chat/models';
+import { AppEvents, Apps } from '@zeki.chat/apps';
+import { Message } from '@zeki.chat/core-services';
+import type { IMessage, IUser, AtLeast } from '@zeki.chat/core-typings';
+import { Messages, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { settings } from '../../../settings/server';
@@ -27,7 +27,7 @@ export const updateMessage = async function (
 
 	let messageData: IMessage = Object.assign({}, originalMessage, message);
 
-	// For the Rocket.Chat Apps :)
+	// For the ZEKI AI CHAT Apps :)
 	if (message && Apps.self && Apps.isLoaded()) {
 		const prevent = await Apps.self?.triggerEvent(AppEvents.IPreMessageUpdatedPrevent, messageData);
 		if (prevent) {

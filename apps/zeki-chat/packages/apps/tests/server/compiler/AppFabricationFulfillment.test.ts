@@ -1,9 +1,9 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
+import { AppInterface } from '@zeki.chat/apps-engine/definition/metadata';
 
 import type { AppManager } from '../../../src/server/AppManager';
 import { ProxiedApp } from '../../../src/server/ProxiedApp';
@@ -18,7 +18,7 @@ describe('AppFabricationFulfillment', () => {
 			id: '614055e2-3dba-41fb-be48-c1ff146f5932',
 			name: 'Testing App',
 			nameSlug: 'testing-app',
-			description: 'A Rocket.Chat Application used to test out the various features.',
+			description: 'A ZEKI AI CHAT Application used to test out the various features.',
 			version: '0.0.8',
 			requiredApiVersion: '>=0.9.6',
 			author: {

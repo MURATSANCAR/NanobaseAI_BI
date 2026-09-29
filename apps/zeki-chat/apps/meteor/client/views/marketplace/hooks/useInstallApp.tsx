@@ -1,5 +1,5 @@
-import type { App, AppPermission } from '@rocket.chat/core-typings';
-import { useRouter, useSetModal, useUpload } from '@rocket.chat/ui-contexts';
+import type { App, AppPermission } from '@zeki.chat/core-typings';
+import { useRouter, useSetModal, useUpload } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 

@@ -1,4 +1,4 @@
-import { LivechatDepartment, LivechatDepartmentAgents, LivechatUnit } from '@rocket.chat/models';
+import { LivechatDepartment, LivechatDepartmentAgents, LivechatUnit } from '@zeki.chat/models';
 
 import { helperLogger } from '../../lib/logger';
 

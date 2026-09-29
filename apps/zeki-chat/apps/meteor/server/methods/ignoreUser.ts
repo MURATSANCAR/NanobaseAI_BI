@@ -1,11 +1,11 @@
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Subscriptions } from '@rocket.chat/models';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Subscriptions } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
 import { notifyOnSubscriptionChangedById } from '../../app/lib/server/lib/notifyListener';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		ignoreUser(params: { rid: string; userId: string; ignore?: boolean }): boolean;

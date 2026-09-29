@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
-import type { IAuditServerUserActor, IUser } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
-import { UpdaterImpl } from '@rocket.chat/models';
+import type { IAuditServerUserActor, IUser } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
+import { UpdaterImpl } from '@zeki.chat/models';
 
 import { UserChangedAuditStore } from './userChanged';
 import { createFakeUser } from '../../../tests/mocks/data';
@@ -35,9 +35,9 @@ const createEmailsField = (address?: string, verified = true) => {
 	};
 };
 
-jest.mock('@rocket.chat/models', () => {
+jest.mock('@zeki.chat/models', () => {
 	return {
-		UpdaterImpl: jest.requireActual('@rocket.chat/models').UpdaterImpl,
+		UpdaterImpl: jest.requireActual('@zeki.chat/models').UpdaterImpl,
 		ServerEvents: {
 			createAuditServerEvent: (...args: any) => args,
 		},

@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IRoom, IThreadMessage, IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IRoom, IThreadMessage, IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { expect } from 'chai';
 import { before, describe, it, after } from 'mocha';
 

@@ -1,4 +1,4 @@
-import { Message, Omnichannel } from '@rocket.chat/core-services';
+import { Message} from '@zeki.chat/core-services';
 import {
 	type IUser,
 	type MessageTypesValues,
@@ -8,11 +8,11 @@ import {
 	isFileAttachment,
 	isFileImageAttachment,
 	type AtLeast,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import colors from '@rocket.chat/fuselage-tokens/colors.json';
-import { Logger } from '@rocket.chat/logger';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { LivechatRooms, Messages, Uploads, Users } from '@rocket.chat/models';
+import { Logger } from '@zeki.chat/logger';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { LivechatRooms, Messages, Uploads, Users } from '@zeki.chat/models';
 import createDOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { Meteor } from 'meteor/meteor';
@@ -199,7 +199,7 @@ export async function sendTranscript({
 	};
 
 	if (!user?.username) {
-		const cat = await Users.findOneById('rocket.cat', { projection: { _id: 1, username: 1, name: 1 } });
+		const cat = await Users.findOneById('zeki.bot', { projection: { _id: 1, username: 1, name: 1 } });
 		if (cat) {
 			requestData.user = cat;
 			requestData.type = 'visitor';
@@ -207,8 +207,8 @@ export async function sendTranscript({
 	}
 
 	if (!requestData.user) {
-		logger.error('rocket.cat user not found');
-		throw new Error('No user provided and rocket.cat not found');
+		logger.error('zeki.bot user not found');
+		throw new Error('No user provided and zeki.bot not found');
 	}
 
 	await Message.saveSystemMessage<IOmnichannelSystemMessage>('livechat_transcript_history', room._id, '', requestData.user, {
@@ -239,9 +239,6 @@ export async function requestTranscript({
 		throw new Meteor.Error('error-transcript-already-requested', 'Transcript already requested');
 	}
 
-	if (!(await Omnichannel.isWithinMACLimit(room))) {
-		throw new Error('error-mac-limit-reached');
-	}
 
 	const { _id, username, name, utcOffset } = user;
 	const transcriptRequest = {

@@ -1,8 +1,8 @@
-import { api, FederationMatrix, isMeteorError } from '@rocket.chat/core-services';
-import type { IUser, SlashCommandCallbackParams } from '@rocket.chat/core-typings';
-import { isBannedSubscription } from '@rocket.chat/core-typings';
-import { validateFederatedUsername } from '@rocket.chat/federation-matrix';
-import { Subscriptions, Users, Rooms } from '@rocket.chat/models';
+import { api, FederationMatrix, isMeteorError } from '@zeki.chat/core-services';
+import type { IUser, SlashCommandCallbackParams } from '@zeki.chat/core-typings';
+import { isBannedSubscription } from '@zeki.chat/core-typings';
+import { validateFederatedUsername } from '@zeki.chat/federation-matrix';
+import { Subscriptions, Users, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { i18n } from '../../../server/lib/i18n';

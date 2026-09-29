@@ -1,9 +1,9 @@
-import { ServiceClassInternal, Message } from '@rocket.chat/core-services';
-import type { IOmnichannelEEService } from '@rocket.chat/core-services';
-import { isOmnichannelRoom, LivechatInquiryStatus } from '@rocket.chat/core-typings';
-import type { IOmnichannelRoom, IUser, ILivechatInquiryRecord, IOmnichannelSystemMessage } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { LivechatRooms, Subscriptions, LivechatInquiry } from '@rocket.chat/models';
+import { ServiceClassInternal, Message } from '@zeki.chat/core-services';
+import type { IOmnichannelEEService } from '@zeki.chat/core-services';
+import { isOmnichannelRoom, LivechatInquiryStatus } from '@zeki.chat/core-typings';
+import type { IOmnichannelRoom, IUser, ILivechatInquiryRecord, IOmnichannelSystemMessage } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { LivechatRooms, Subscriptions, LivechatInquiry } from '@zeki.chat/models';
 
 import {
 	notifyOnSubscriptionChangedByRoomId,

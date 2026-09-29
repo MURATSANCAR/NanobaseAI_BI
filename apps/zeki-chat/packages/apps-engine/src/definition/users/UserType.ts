@@ -1,5 +1,5 @@
 export enum UserType {
-	/** A user type for Rocket.Chat apps. */
+	/** A user type for ZEKI AI CHAT apps. */
 	APP = 'app',
 	/** The user is a regular user of the system. */
 	USER = 'user',

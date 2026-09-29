@@ -1,5 +1,5 @@
-import type { BannerPlatform, IBanner, IBannerDismiss } from '@rocket.chat/core-typings';
-import { registerModel, BaseRaw } from '@rocket.chat/models';
+import type { BannerPlatform, IBanner, IBannerDismiss } from '@zeki.chat/core-typings';
+import { registerModel, BaseRaw } from '@zeki.chat/models';
 import { expect } from 'chai';
 import { afterEach, before, describe, it } from 'mocha';
 import type { FindCursor, FindOptions } from 'mongodb';

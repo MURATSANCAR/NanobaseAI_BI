@@ -1,6 +1,6 @@
-import type { IRoom, RoomType } from '@rocket.chat/core-typings';
+import type { IRoom, RoomType } from '@zeki.chat/core-typings';
 
-import { RocketChatError } from './RocketChatError';
+import { ZekiChatError } from './ZekiChatError';
 
 type RoomNotFoundErrorDetails =
 	| { rid: IRoom['_id'] }
@@ -9,7 +9,7 @@ type RoomNotFoundErrorDetails =
 			reference: string;
 	  };
 
-export class RoomNotFoundError extends RocketChatError<'room-not-found', RoomNotFoundErrorDetails> {
+export class RoomNotFoundError extends ZekiChatError<'room-not-found', RoomNotFoundErrorDetails> {
 	constructor(message = 'Room not found', details: RoomNotFoundErrorDetails) {
 		super('room-not-found', message, details);
 	}

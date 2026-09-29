@@ -1,12 +1,12 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isDirectMessageRoom } from '@rocket.chat/core-typings';
-import type { PeerInfo } from '@rocket.chat/ui-voip';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isDirectMessageRoom } from '@zeki.chat/core-typings';
+import type { PeerInfo } from '@zeki.chat/ui-voip';
 import {
 	MediaCallRoomActivity,
 	usePeekMediaSessionState,
 	usePeekMediaSessionPeerInfo,
 	usePeekMediaSessionFeatures,
-} from '@rocket.chat/ui-voip';
+} from '@zeki.chat/ui-voip';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 

@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-interface IAnalyticsBase extends IRocketChatRecord {
+interface IAnalyticsBase extends IZekiChatRecord {
 	type: 'messages' | 'users' | 'seat-request';
 	date: number;
 }

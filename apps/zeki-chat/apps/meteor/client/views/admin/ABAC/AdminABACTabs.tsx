@@ -1,5 +1,5 @@
 import { Tabs, TabsItem } from '@rocket.chat/fuselage';
-import { useRouteParameter, useRouter } from '@rocket.chat/ui-contexts';
+import { useRouteParameter, useRouter } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { useABACTabPermissions } from './hooks/useABACTabPermissions';

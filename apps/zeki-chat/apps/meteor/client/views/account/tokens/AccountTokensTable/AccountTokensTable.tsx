@@ -7,8 +7,8 @@ import {
 	GenericTableLoadingTable,
 	GenericTableHeaderCell,
 	usePagination,
-} from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useUserId, useMethod, useEndpoint } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useUserId, useMethod, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactElement, RefObject } from 'react';
 import { useMemo, useCallback } from 'react';

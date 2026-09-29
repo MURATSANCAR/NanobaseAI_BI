@@ -6,8 +6,8 @@ import {
 	type NotificationItem,
 	isEditedMessage,
 	type AtLeast,
-} from '@rocket.chat/core-typings';
-import { Subscriptions, Users } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { Subscriptions, Users } from '@zeki.chat/models';
 import emojione from 'emojione';
 import moment from 'moment';
 import type { RootFilterOperators } from 'mongodb';

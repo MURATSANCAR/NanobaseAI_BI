@@ -37,7 +37,7 @@ export const Example: StoryFn<typeof Page> = () => (
 		<PageContent>
 			<Box marginBlock={16}>
 				Say goodbye to inefficient email threads and managing multiple guest accounts. Enable teams to communicate safely with partners,
-				vendors, and suppliers directly from Rocket.Chat regardless of which collaboration platform they use.
+				vendors, and suppliers directly from ZEKI AI CHAT regardless of which collaboration platform they use.
 			</Box>
 		</PageContent>
 	</Page>

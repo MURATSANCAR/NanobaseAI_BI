@@ -52,8 +52,8 @@ const mailerMock = sinon.stub();
 const tStub = sinon.stub();
 
 const { sendTranscript } = p.noCallThru().load('../../../../../../app/livechat/server/lib/sendTranscript', {
-	'@rocket.chat/models': modelsMock,
-	'@rocket.chat/logger': { Logger: mockLogger },
+	'@zeki.chat/models': modelsMock,
+	'@zeki.chat/logger': { Logger: mockLogger },
 	'meteor/meteor': {
 		Meteor: {
 			Error: globalThis.Error,

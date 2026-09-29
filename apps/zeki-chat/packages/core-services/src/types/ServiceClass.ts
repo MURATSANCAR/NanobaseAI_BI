@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 
-import type { ISetting } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/core-typings';
 
 import type { IApiService } from './IApiService';
 import type { IBroker, IBrokerNode } from './IBroker';

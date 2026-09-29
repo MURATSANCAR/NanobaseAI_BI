@@ -1,5 +1,5 @@
-import type { IMessage, ISubscription, ITranslatedMessage } from '@rocket.chat/core-typings';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import type { IMessage, ISubscription, ITranslatedMessage } from '@zeki.chat/core-typings';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useCallback, useMemo } from 'react';
 
 import { AutoTranslate } from '../../../../../app/autotranslate/client';

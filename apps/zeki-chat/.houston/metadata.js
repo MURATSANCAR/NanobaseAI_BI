@@ -40,7 +40,7 @@ const getNodeNpmVersions = async function({ version, git, request }) {
 
 const getAppsEngineVersion = async function({ version, git }) {
 	try {
-		const result = execSync('yarn why @rocket.chat/apps-engine --json');
+		const result = execSync('yarn why @zeki.chat/apps-engine --json');
 
 		const resultString = result.toString();
 

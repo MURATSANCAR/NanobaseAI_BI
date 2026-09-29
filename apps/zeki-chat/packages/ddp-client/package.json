@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/ddp-client",
+	"name": "@zeki.chat/ddp-client",
 	"version": "1.1.0",
 	"main": "./dist/index.js",
 	"typings": "./dist/index.d.ts",
@@ -16,14 +16,14 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@rocket.chat/api-client": "workspace:^",
-		"@rocket.chat/core-typings": "workspace:~",
-		"@rocket.chat/media-signaling": "workspace:^",
-		"@rocket.chat/rest-typings": "workspace:^"
+		"@zeki.chat/api-client": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:~",
+		"@zeki.chat/media-signaling": "workspace:^",
+		"@zeki.chat/rest-typings": "workspace:^"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/jest": "~30.0.0",
 		"@types/ws": "^8.18.1",
 		"eslint": "~9.39.4",

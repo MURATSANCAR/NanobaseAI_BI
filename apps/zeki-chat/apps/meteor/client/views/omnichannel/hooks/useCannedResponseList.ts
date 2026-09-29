@@ -1,5 +1,5 @@
-import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { ILivechatDepartment, IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { cannedResponsesQueryKeys } from '../../../lib/queryKeys';

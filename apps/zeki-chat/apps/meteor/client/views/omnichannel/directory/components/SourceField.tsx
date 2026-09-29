@@ -1,4 +1,4 @@
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
 import { useTranslation } from 'react-i18next';
 

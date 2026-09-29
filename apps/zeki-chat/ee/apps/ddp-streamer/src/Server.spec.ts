@@ -1,17 +1,17 @@
-import { MeteorService } from '@rocket.chat/core-services';
+import { MeteorService } from '@zeki.chat/core-services';
 import WebSocket from 'ws';
 
 import { Server } from './Server';
 import type { IPacket } from './types/IPacket';
 
-jest.mock('@rocket.chat/core-services', () => ({
-	...jest.requireActual('@rocket.chat/core-services'),
+jest.mock('@zeki.chat/core-services', () => ({
+	...jest.requireActual('@zeki.chat/core-services'),
 	MeteorService: {
 		callMethodWithToken: jest.fn(),
 	},
 }));
 
-jest.mock('@rocket.chat/logger', () => ({
+jest.mock('@zeki.chat/logger', () => ({
 	Logger: jest.fn().mockReturnValue({
 		error: jest.fn(),
 	}),

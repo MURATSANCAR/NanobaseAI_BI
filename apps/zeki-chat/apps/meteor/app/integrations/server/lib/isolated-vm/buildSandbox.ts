@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 
-import { serverFetch as fetch, Response } from '@rocket.chat/server-fetch';
+import { serverFetch as fetch, Response } from '@zeki.chat/server-fetch';
 import ivm, { type Context } from 'isolated-vm';
 
 import * as s from '../../../../../lib/utils/stringUtils';

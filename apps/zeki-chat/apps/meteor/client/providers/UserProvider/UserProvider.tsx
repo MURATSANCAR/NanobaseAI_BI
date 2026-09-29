@@ -1,9 +1,9 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
 import { useLocalStorage } from '@rocket.chat/fuselage-hooks';
-import { createPredicateFromFilter } from '@rocket.chat/mongo-adapter';
-import type { FindOptions, SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
-import { UserContext, useRouteParameter, useSearchParameter } from '@rocket.chat/ui-contexts';
+import { createPredicateFromFilter } from '@zeki.chat/mongo-adapter';
+import type { FindOptions, SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
+import { UserContext, useRouteParameter, useSearchParameter } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { Meteor } from 'meteor/meteor';
 import type { Filter, ObjectId } from 'mongodb';

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { faker } from '@faker-js/faker';
-import type { Credentials } from '@rocket.chat/api-client';
+import type { Credentials } from '@zeki.chat/api-client';
 import type {
 	IOmnichannelRoom,
 	ILivechatVisitor,
@@ -12,8 +12,8 @@ import type {
 	ISubscription,
 	IOmnichannelBusinessUnit,
 	IUser,
-} from '@rocket.chat/core-typings';
-import { LivechatPriorityWeight } from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
+import { LivechatPriorityWeight } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, afterEach, before, describe, it } from 'mocha';
 import type { Response } from 'supertest';

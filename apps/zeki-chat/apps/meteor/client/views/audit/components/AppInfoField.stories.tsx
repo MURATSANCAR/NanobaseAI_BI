@@ -1,5 +1,5 @@
-import type { AppSubscriptionStatus } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import type { AppSubscriptionStatus } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import { AppInfoField } from './AppInfoField';

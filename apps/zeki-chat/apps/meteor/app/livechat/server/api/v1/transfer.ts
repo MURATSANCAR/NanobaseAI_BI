@@ -1,4 +1,4 @@
-import { LivechatRooms } from '@rocket.chat/models';
+import { LivechatRooms } from '@zeki.chat/models';
 
 import { API } from '../../../../api/server';
 import { getPaginationItems } from '../../../../api/server/helpers/getPaginationItems';

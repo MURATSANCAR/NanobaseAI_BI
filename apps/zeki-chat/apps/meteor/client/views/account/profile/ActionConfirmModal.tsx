@@ -1,5 +1,5 @@
 import { Box, PasswordInput, TextInput, FieldGroup, Field, FieldRow, FieldError, FieldLabel } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
 import { useId } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';

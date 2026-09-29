@@ -1,8 +1,8 @@
-import type { IRole } from '@rocket.chat/core-typings';
+import type { IRole } from '@zeki.chat/core-typings';
 import { Button } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericTableHeaderCell } from '@rocket.chat/ui-client';
-import { useRoute } from '@rocket.chat/ui-contexts';
+import { GenericTableHeaderCell } from '@zeki.chat/ui-client';
+import { useRoute } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 

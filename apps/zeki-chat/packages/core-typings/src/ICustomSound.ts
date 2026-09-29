@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface ICustomSound extends IRocketChatRecord {
+export interface ICustomSound extends IZekiChatRecord {
 	name: string;
 	extension: string;
 	src?: string;

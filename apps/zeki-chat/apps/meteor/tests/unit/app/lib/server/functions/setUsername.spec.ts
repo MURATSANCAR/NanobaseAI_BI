@@ -48,8 +48,8 @@ describe('setUsername', () => {
 		.load('../../../../../../app/lib/server/functions/setUsername', {
 			'../../../../server/database/utils': { onceTransactionCommitedSuccessfully: async (cb: any, _sess: any) => cb() },
 			'meteor/meteor': { Meteor: { Error } },
-			'@rocket.chat/core-services': { api: stubs.api },
-			'@rocket.chat/models': { Users: stubs.Users, Invites: stubs.Invites, Subscriptions: stubs.Subscriptions },
+			'@zeki.chat/core-services': { api: stubs.api },
+			'@zeki.chat/models': { Users: stubs.Users, Invites: stubs.Invites, Subscriptions: stubs.Subscriptions },
 			'meteor/accounts-base': { Accounts: stubs.Accounts },
 			'underscore': stubs.underscore,
 			'../../../settings/server': { settings: stubs.settings },

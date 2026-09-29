@@ -1,8 +1,8 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { User } from '@rocket.chat/core-services';
-import { Roles, Settings, Users } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { User } from '@zeki.chat/core-services';
+import { Roles, Settings, Users } from '@zeki.chat/models';
 import { escapeRegExp, escapeHTML } from '@rocket.chat/string-helpers';
-import { getLoginExpirationInDays, removeEmpty } from '@rocket.chat/tools';
+import { getLoginExpirationInDays, removeEmpty } from '@zeki.chat/tools';
 import { Accounts } from 'meteor/accounts-base';
 import { Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
@@ -400,7 +400,7 @@ Accounts.insertUserDoc = async function (options, user) {
 	if (!options.skipAppsEngineEvent) {
 		// `post` triggered events don't need to wait for the promise to resolve
 		Apps.self?.triggerEvent(AppEvents.IPostUserCreated, { user, performedBy: options.performedBy }).catch((e) => {
-			Apps.self?.getRocketChatLogger().error({ msg: 'Error while executing post user created event', err: e });
+			Apps.self?.getZekiChatLogger().error({ msg: 'Error while executing post user created event', err: e });
 		});
 	}
 

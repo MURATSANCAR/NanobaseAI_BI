@@ -1,5 +1,5 @@
-import type { ILivechatContact, ILivechatContactChannel } from '@rocket.chat/core-typings';
-import { LivechatContacts } from '@rocket.chat/models';
+import type { ILivechatContact, ILivechatContactChannel } from '@zeki.chat/core-typings';
+import { LivechatContacts } from '@zeki.chat/models';
 
 export async function getContactChannelsGrouped(contactId: string): Promise<ILivechatContactChannel[]> {
 	const contact = await LivechatContacts.findOneEnabledById<Pick<ILivechatContact, 'channels'>>(contactId, { projection: { channels: 1 } });

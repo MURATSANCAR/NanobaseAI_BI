@@ -1,5 +1,5 @@
 import { NavBar as NavBarComponent } from '@rocket.chat/fuselage';
-import { useLayout } from '@rocket.chat/ui-contexts';
+import { useLayout } from '@zeki.chat/ui-contexts';
 
 import NavBarControlsSection from './NavBarControls/NavBarControlsSection';
 import NavBarNavigation from './NavBarNavigation';

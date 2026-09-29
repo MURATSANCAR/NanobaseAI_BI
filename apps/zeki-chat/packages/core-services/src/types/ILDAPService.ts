@@ -1,4 +1,4 @@
-import type { LDAPLoginResult } from '@rocket.chat/core-typings';
+import type { LDAPLoginResult } from '@zeki.chat/core-typings';
 
 export interface ILDAPService {
 	loginRequest(username: string, password: string): Promise<LDAPLoginResult>;

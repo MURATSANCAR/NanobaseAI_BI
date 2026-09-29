@@ -1,6 +1,6 @@
 import { MultiSelectFiltered } from '@rocket.chat/fuselage-forms';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { AllHTMLAttributes } from 'react';
 import { memo, useState, useCallback, useMemo, forwardRef } from 'react';

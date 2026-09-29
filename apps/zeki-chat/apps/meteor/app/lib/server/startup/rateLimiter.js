@@ -1,4 +1,4 @@
-import { Logger } from '@rocket.chat/logger';
+import { Logger } from '@zeki.chat/logger';
 import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
 import { Meteor } from 'meteor/meteor';
 import { RateLimiter } from 'meteor/rate-limit';

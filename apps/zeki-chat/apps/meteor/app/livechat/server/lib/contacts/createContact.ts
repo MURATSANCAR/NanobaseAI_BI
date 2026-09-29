@@ -1,5 +1,5 @@
-import type { ILivechatContactChannel, IVisitorLastChat } from '@rocket.chat/core-typings';
-import { LivechatContacts } from '@rocket.chat/models';
+import type { ILivechatContactChannel, IVisitorLastChat } from '@zeki.chat/core-typings';
+import { LivechatContacts } from '@zeki.chat/models';
 
 import { getAllowedCustomFields } from './getAllowedCustomFields';
 import { validateContactManager } from './validateContactManager';

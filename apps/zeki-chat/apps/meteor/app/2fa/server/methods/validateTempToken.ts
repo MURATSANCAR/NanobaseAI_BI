@@ -1,12 +1,12 @@
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Users } from '@rocket.chat/models';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Users } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 
 import { notifyOnUserChange, notifyOnUserChangeAsync } from '../../../lib/server/lib/notifyListener';
 import { TOTP } from '../lib/totp';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		'2fa:validateTempToken': (userToken: string) => { codes: string[] } | undefined;

@@ -1,5 +1,5 @@
-import type { InquiryWithAgentInfo, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatVisitors } from '@rocket.chat/models';
+import type { InquiryWithAgentInfo, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatVisitors } from '@zeki.chat/models';
 
 import { RoutingManager } from '../../../../../app/livechat/server/lib/RoutingManager';
 import { afterTakeInquiry } from '../../../../../app/livechat/server/lib/hooks';

@@ -1,7 +1,7 @@
-import type { ISettingsService } from '@rocket.chat/core-services';
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import type { SettingValue } from '@rocket.chat/core-typings';
-import { Settings } from '@rocket.chat/models';
+import type { ISettingsService } from '@zeki.chat/core-services';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { SettingValue } from '@zeki.chat/core-typings';
+import { Settings } from '@zeki.chat/models';
 
 import { notifyOnSettingChangedById } from '../../../app/lib/server/lib/notifyListener';
 import { settings } from '../../../app/settings/server';

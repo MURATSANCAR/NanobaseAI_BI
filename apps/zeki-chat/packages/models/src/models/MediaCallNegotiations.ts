@@ -1,11 +1,11 @@
-import type { RocketChatRecordDeleted, IMediaCallNegotiation, MediaCallNegotiationStream } from '@rocket.chat/core-typings';
-import type { IMediaCallNegotiationsModel } from '@rocket.chat/model-typings';
+import type { ZekiChatRecordDeleted, IMediaCallNegotiation, MediaCallNegotiationStream } from '@zeki.chat/core-typings';
+import type { IMediaCallNegotiationsModel } from '@zeki.chat/model-typings';
 import type { IndexDescription, Collection, Db, FindOptions, Document, UpdateResult } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class MediaCallNegotiationsRaw extends BaseRaw<IMediaCallNegotiation> implements IMediaCallNegotiationsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IMediaCallNegotiation>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IMediaCallNegotiation>>) {
 		super(db, 'media_call_negotiations', trash);
 	}
 

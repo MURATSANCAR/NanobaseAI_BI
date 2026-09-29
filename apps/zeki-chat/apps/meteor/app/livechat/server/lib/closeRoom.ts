@@ -1,9 +1,9 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { Message } from '@rocket.chat/core-services';
-import type { ILivechatDepartment, ILivechatInquiryRecord, IOmnichannelRoom, IOmnichannelRoomClosingInfo } from '@rocket.chat/core-typings';
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatInquiry, LivechatRooms, Subscriptions, Users } from '@rocket.chat/models';
-import { applyDepartmentRestrictions } from '@rocket.chat/omni-core';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { Message } from '@zeki.chat/core-services';
+import type { ILivechatDepartment, ILivechatInquiryRecord, IOmnichannelRoom, IOmnichannelRoomClosingInfo } from '@zeki.chat/core-typings';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatInquiry, LivechatRooms, Subscriptions, Users } from '@zeki.chat/models';
+import { applyDepartmentRestrictions } from '@zeki.chat/omni-core';
 import type { ClientSession } from 'mongodb';
 
 import type { CloseRoomParams, CloseRoomParamsByUser, CloseRoomParamsByVisitor } from './localTypes';

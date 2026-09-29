@@ -1,9 +1,9 @@
-import { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
+import { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
 import type {
 	IOutboundMessage,
 	IOutboundMessageProviders,
 	ProviderMetadata,
-} from '@rocket.chat/apps-engine/definition/outboundCommunication';
+} from '@zeki.chat/apps-engine/definition/outboundCommunication';
 
 import type { AppAccessorManager } from '.';
 import type { ProxiedApp } from '../ProxiedApp';

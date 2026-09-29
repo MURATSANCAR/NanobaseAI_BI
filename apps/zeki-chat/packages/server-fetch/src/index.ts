@@ -1,8 +1,8 @@
 import http from 'node:http';
 import https from 'node:https';
 
-import { Logger } from '@rocket.chat/logger';
-import { censorUrl } from '@rocket.chat/tools';
+import { Logger } from '@zeki.chat/logger';
+import { censorUrl } from '@zeki.chat/tools';
 import { AbortController } from 'abort-controller';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';

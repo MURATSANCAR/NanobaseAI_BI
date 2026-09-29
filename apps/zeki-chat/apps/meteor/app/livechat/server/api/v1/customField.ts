@@ -1,4 +1,4 @@
-import { LivechatCustomField } from '@rocket.chat/models';
+import { LivechatCustomField } from '@zeki.chat/models';
 import {
 	isLivechatCustomFieldsProps,
 	isPOSTLivechatCustomFieldParams,
@@ -10,7 +10,7 @@ import {
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import type { ExtractRoutesFromAPI } from '../../../../api/server/ApiClass';
@@ -160,7 +160,7 @@ const livechatCustomFieldsEndpoints = API.v1
 
 type LivechatCustomFieldsEndpoints = ExtractRoutesFromAPI<typeof livechatCustomFieldsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatCustomFieldsEndpoints {}
 }

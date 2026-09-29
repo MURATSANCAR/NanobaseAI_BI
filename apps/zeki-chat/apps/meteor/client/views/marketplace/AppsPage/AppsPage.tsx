@@ -1,4 +1,4 @@
-import { Page } from '@rocket.chat/ui-client';
+import { Page } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 
 import AppsPageContent from './AppsPageContent';

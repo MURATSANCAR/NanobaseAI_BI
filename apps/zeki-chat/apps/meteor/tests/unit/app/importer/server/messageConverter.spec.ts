@@ -19,7 +19,7 @@ const { MessageConverter } = proxyquire.noCallThru().load('../../../../../app/im
 	},
 	'meteor/check': sinon.stub(),
 	'meteor/meteor': sinon.stub(),
-	'@rocket.chat/models': { ...modelsMock, '@global': true },
+	'@zeki.chat/models': { ...modelsMock, '@global': true },
 });
 
 describe('Message Converter', () => {
@@ -32,7 +32,7 @@ describe('Message Converter', () => {
 	const messageToImport = {
 		ts: Date.now(),
 		u: {
-			_id: 'rocket.cat',
+			_id: 'zeki.bot',
 		},
 		rid: 'general',
 		msg: 'testing',
@@ -63,8 +63,8 @@ describe('Message Converter', () => {
 			expect(insertMessage.getCalls()).to.be.an('array').with.lengthOf(1);
 			expect(insertMessage.getCall(0).args).to.be.an('array').with.lengthOf(4);
 			expect(insertMessage.getCall(0).args[0]).to.be.deep.equal({
-				_id: 'rocket.cat',
-				username: 'rocket.cat',
+				_id: 'zeki.bot',
+				username: 'zeki.bot',
 			});
 			expect(insertMessage.getCall(0).args[1]).to.deep.include({
 				ts: messageToImport.ts,
@@ -78,7 +78,7 @@ describe('Message Converter', () => {
 		it('should have the basic info', async () => {
 			const converter = new MessageConverter({ workInMemory: true });
 
-			const converted = await converter.buildMessageObject(messageToImport, 'general', { _id: 'rocket.cat', username: 'rocket.cat' });
+			const converted = await converter.buildMessageObject(messageToImport, 'general', { _id: 'zeki.bot', username: 'zeki.bot' });
 
 			expect(converted)
 				.to.be.an('object')
@@ -86,8 +86,8 @@ describe('Message Converter', () => {
 					ts: messageToImport.ts,
 					msg: messageToImport.msg,
 					u: {
-						_id: 'rocket.cat',
-						username: 'rocket.cat',
+						_id: 'zeki.bot',
+						username: 'zeki.bot',
 					},
 				});
 		});
@@ -95,7 +95,7 @@ describe('Message Converter', () => {
 		it('should not have properties with undefined values', async () => {
 			const converter = new MessageConverter({ workInMemory: true });
 
-			const converted = await converter.buildMessageObject(messageToImport, 'general', { _id: 'rocket.cat', username: 'rocket.cat' });
+			const converted = await converter.buildMessageObject(messageToImport, 'general', { _id: 'zeki.bot', username: 'zeki.bot' });
 
 			Object.entries(converted).forEach(([key, value]) => {
 				expect(value, `Property "${key}" should not be undefined`).to.not.be.undefined;

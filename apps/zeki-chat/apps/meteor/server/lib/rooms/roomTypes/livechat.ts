@@ -1,6 +1,6 @@
-import type { AtLeast, ValueOf } from '@rocket.chat/core-typings';
-import { isMessageFromVisitor } from '@rocket.chat/core-typings';
-import { LivechatVisitors, LivechatRooms } from '@rocket.chat/models';
+import type { AtLeast, ValueOf } from '@zeki.chat/core-typings';
+import { isMessageFromVisitor } from '@zeki.chat/core-typings';
+import { LivechatVisitors, LivechatRooms } from '@zeki.chat/models';
 
 import { RoomSettingsEnum, RoomMemberActions } from '../../../../definition/IRoomTypeConfig';
 import type { IRoomTypeServerDirectives } from '../../../../definition/IRoomTypeConfig';

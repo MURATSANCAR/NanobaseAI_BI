@@ -1,20 +1,20 @@
-import type { IUIController } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IUIController } from '@zeki.chat/apps-engine/definition/accessors';
 import type {
 	IUIKitErrorInteractionParam,
 	IUIKitInteractionParam,
 	IUIKitSurfaceViewParam,
-} from '@rocket.chat/apps-engine/definition/accessors/IUIController';
-import { UIKitInteractionType, UIKitSurfaceType } from '@rocket.chat/apps-engine/definition/uikit';
+} from '@zeki.chat/apps-engine/definition/accessors/IUIController';
+import { UIKitInteractionType, UIKitSurfaceType } from '@zeki.chat/apps-engine/definition/uikit';
 import {
 	formatContextualBarInteraction,
 	formatErrorInteraction,
 	formatModalInteraction,
-} from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionPayloadFormatter';
+} from '@zeki.chat/apps-engine/definition/uikit/UIKitInteractionPayloadFormatter';
 import type {
 	IUIKitContextualBarViewParam,
 	IUIKitModalViewParam,
-} from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+} from '@zeki.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import type { AppBridges, UiInteractionBridge } from '../bridges';
 import { UIHelper } from '../misc/UIHelper';

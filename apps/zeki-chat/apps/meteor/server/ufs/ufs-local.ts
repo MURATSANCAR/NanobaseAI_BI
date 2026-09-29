@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { unlink } from 'node:fs/promises';
 import { isNativeError } from 'node:util/types';
 
-import type { IUpload } from '@rocket.chat/core-typings';
+import type { IUpload } from '@zeki.chat/core-typings';
 import mkdirp from 'mkdirp';
 
 import { UploadFS } from './ufs';

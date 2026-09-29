@@ -1,24 +1,20 @@
-import type { IPresence, IBrokerNode } from '@rocket.chat/core-services';
-import { Capabilities, ServiceClass, Settings } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import { UserStatus } from '@rocket.chat/core-typings';
-import { Users, UsersSessions } from '@rocket.chat/models';
+import type { IPresence, IBrokerNode } from '@zeki.chat/core-services';
+import { ServiceClass, Settings } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
+import { Users, UsersSessions } from '@zeki.chat/models';
 
 import { PresenceReaper } from './lib/PresenceReaper';
 import { processPresenceAndStatus } from './lib/processConnectionStatus';
 
-const MAX_CONNECTIONS = 200;
 
 export class Presence extends ServiceClass implements IPresence {
 	protected name = 'presence';
 
 	private broadcastEnabled = true;
 
-	private hasPresenceLicense = false;
 
-	private hasScalabilityLicense = false;
 
-	private hasLicense = false;
 
 	private lostConTimeout?: NodeJS.Timeout;
 
@@ -55,25 +51,6 @@ export class Presence extends ServiceClass implements IPresence {
 			}
 		});
 
-		this.onEvent('license.module', async ({ module, valid }) => {
-			switch (module) {
-				case 'unlimited-presence':
-					this.hasPresenceLicense = valid;
-					break;
-				case 'scalability':
-					this.hasScalabilityLicense = valid;
-					break;
-				default:
-					return;
-			}
-
-			// The scalability module is also accepted as a way to enable the presence service for backwards compatibility
-			this.hasLicense = this.hasPresenceLicense || this.hasScalabilityLicense;
-			// broadcast should always be enabled if license is active (unless the troubleshoot setting is on)
-			if (!this.broadcastEnabled && this.hasLicense) {
-				await this.toggleBroadcast(true);
-			}
-		});
 	}
 
 	async onNodeDisconnected({ node }: { node: IBrokerNode }): Promise<void> {
@@ -91,9 +68,6 @@ export class Presence extends ServiceClass implements IPresence {
 		try {
 			await Settings.set('Presence_broadcast_disabled', false);
 
-			this.hasScalabilityLicense = await Capabilities.hasModule('scalability');
-			this.hasPresenceLicense = await Capabilities.hasModule('unlimited-presence');
-			this.hasLicense = this.hasPresenceLicense || this.hasScalabilityLicense;
 		} catch (e: unknown) {
 			// ignore
 		}
@@ -134,10 +108,9 @@ export class Presence extends ServiceClass implements IPresence {
 		}
 	}
 
-	getConnectionCount(): { current: number; max: number } {
+	getConnectionCount(): { current: number } {
 		return {
 			current: this.getTotalConnections(),
-			max: MAX_CONNECTIONS,
 		};
 	}
 

@@ -1,4 +1,4 @@
-import type { Serialized, ILivechatContact } from '@rocket.chat/core-typings';
+import type { Serialized, ILivechatContact } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 
 import { mapLivechatContactConflicts } from './mapLivechatContactConflicts';

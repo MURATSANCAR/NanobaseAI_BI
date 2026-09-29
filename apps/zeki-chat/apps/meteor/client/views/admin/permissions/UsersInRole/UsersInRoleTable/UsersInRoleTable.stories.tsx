@@ -1,5 +1,5 @@
 import { Margins } from '@rocket.chat/fuselage';
-import { PageContent } from '@rocket.chat/ui-client';
+import { PageContent } from '@zeki.chat/ui-client';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import UsersInRoleTable from './UsersInRoleTable';

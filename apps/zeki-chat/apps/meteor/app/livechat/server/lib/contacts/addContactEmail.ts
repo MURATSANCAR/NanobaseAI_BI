@@ -1,5 +1,5 @@
-import type { ILivechatContact } from '@rocket.chat/core-typings';
-import { LivechatContacts } from '@rocket.chat/models';
+import type { ILivechatContact } from '@zeki.chat/core-typings';
+import { LivechatContacts } from '@zeki.chat/models';
 
 /**
  * Adds a new email into the contact's email list, if the email is already in the list it does not add anything

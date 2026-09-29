@@ -1,5 +1,5 @@
-import { Logger } from '@rocket.chat/logger';
-import type { Method } from '@rocket.chat/rest-typings';
+import { Logger } from '@zeki.chat/logger';
+import type { Method } from '@zeki.chat/rest-typings';
 import type { MiddlewareHandler } from 'hono';
 
 import { applyBreakingChanges } from '../ApiClass';

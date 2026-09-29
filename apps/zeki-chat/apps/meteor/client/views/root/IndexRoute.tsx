@@ -1,5 +1,5 @@
-import type { RouteName } from '@rocket.chat/ui-contexts';
-import { useRouter, useUser, useUserId } from '@rocket.chat/ui-contexts';
+import type { RouteName } from '@zeki.chat/ui-contexts';
+import { useRouter, useUser, useUserId } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import PageLoading from './PageLoading';

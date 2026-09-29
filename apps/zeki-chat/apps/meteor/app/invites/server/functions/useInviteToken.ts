@@ -1,5 +1,5 @@
-import { isBannedSubscription } from '@rocket.chat/core-typings';
-import { Invites, Subscriptions, Users } from '@rocket.chat/models';
+import { isBannedSubscription } from '@zeki.chat/core-typings';
+import { Invites, Subscriptions, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { validateInviteToken } from './validateInviteToken';

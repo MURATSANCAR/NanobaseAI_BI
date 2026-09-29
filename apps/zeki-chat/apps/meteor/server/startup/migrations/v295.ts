@@ -1,5 +1,5 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import { Settings } from '@rocket.chat/models';
+import type { ISetting } from '@zeki.chat/core-typings';
+import { Settings } from '@zeki.chat/models';
 
 import { SystemLogger } from '../../lib/logger/system';
 import { addMigration } from '../../lib/migrations';

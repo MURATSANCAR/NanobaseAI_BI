@@ -9,10 +9,10 @@ import type {
 	IRole,
 	IRoom,
 	IUser,
-	RocketChatRecordDeleted,
-} from '@rocket.chat/core-typings';
-import { ILivechatAgentStatus, UserStatus } from '@rocket.chat/core-typings';
-import type { DefaultFields, InsertionModel, IUsersModel } from '@rocket.chat/model-typings';
+	ZekiChatRecordDeleted,
+} from '@zeki.chat/core-typings';
+import { ILivechatAgentStatus, UserStatus } from '@zeki.chat/core-typings';
+import type { DefaultFields, InsertionModel, IUsersModel } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type {
 	Collection,
@@ -34,7 +34,7 @@ import { BaseRaw } from './BaseRaw';
 import { queryAvailableAgentsForSelection, queryStatusAgentOnline } from '../helpers';
 
 export class UsersRaw extends BaseRaw<IUser, DefaultFields<IUser>> implements IUsersModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IUser>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IUser>>) {
 		super(db, 'users', trash, {
 			collectionNameResolver(name) {
 				return name;
@@ -264,7 +264,7 @@ export class UsersRaw extends BaseRaw<IUser, DefaultFields<IUser>> implements IU
 			},
 			{
 				$lookup: {
-					from: 'rocketchat_livechat_department_agents',
+					from: 'zeki_livechat_department_agents',
 					localField: '_id',
 					foreignField: 'agentId',
 					as: 'departments',
@@ -572,7 +572,7 @@ export class UsersRaw extends BaseRaw<IUser, DefaultFields<IUser>> implements IU
 			? [
 					{
 						$lookup: {
-							from: 'rocketchat_livechat_department_agents',
+							from: 'zeki_livechat_department_agents',
 							let: { userId: '$_id' },
 							pipeline: [
 								{
@@ -597,7 +597,7 @@ export class UsersRaw extends BaseRaw<IUser, DefaultFields<IUser>> implements IU
 			...departmentFilter,
 			{
 				$lookup: {
-					from: 'rocketchat_subscription',
+					from: 'zeki_subscription',
 					let: { id: '$_id' },
 					pipeline: [
 						{
@@ -654,7 +654,7 @@ export class UsersRaw extends BaseRaw<IUser, DefaultFields<IUser>> implements IU
 			? [
 					{
 						$lookup: {
-							from: 'rocketchat_livechat_department_agents',
+							from: 'zeki_livechat_department_agents',
 							let: { userId: '$_id' },
 							pipeline: [
 								{
@@ -746,7 +746,7 @@ export class UsersRaw extends BaseRaw<IUser, DefaultFields<IUser>> implements IU
 			},
 			{
 				$lookup: {
-					from: 'rocketchat_subscription',
+					from: 'zeki_subscription',
 					localField: '_id',
 					foreignField: 'u._id',
 					as: 'subs',
@@ -990,7 +990,7 @@ export class UsersRaw extends BaseRaw<IUser, DefaultFields<IUser>> implements IU
 		};
 		const lookup: Document = {
 			$lookup: {
-				from: 'rocketchat_livechat_department_agents',
+				from: 'zeki_livechat_department_agents',
 				localField: '_id',
 				foreignField: 'agentId',
 				as: 'departments',
@@ -2676,12 +2676,12 @@ export class UsersRaw extends BaseRaw<IUser, DefaultFields<IUser>> implements IU
 	}
 
 	/**
-	 * @param {import('mongodb').Filter<import('@rocket.chat/core-typings').IStats>} projection
+	 * @param {import('mongodb').Filter<import('@zeki.chat/core-typings').IStats>} projection
 	 */
 	getOldest(optionsParams?: FindOptions<IUser>) {
 		const query = {
 			_id: {
-				$ne: 'rocket.cat',
+				$ne: 'zeki.bot',
 			},
 		};
 

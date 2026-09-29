@@ -1,4 +1,4 @@
-import type { IAbacAttribute } from '@rocket.chat/core-typings';
+import type { IAbacAttribute } from '@zeki.chat/core-typings';
 import type { Db, FindOptions, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

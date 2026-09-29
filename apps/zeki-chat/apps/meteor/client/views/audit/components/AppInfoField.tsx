@@ -1,5 +1,5 @@
 import { Skeleton } from '@rocket.chat/fuselage';
-import { useEndpoint, useTranslation } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useTranslation } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 
 import AuditModalField from './AuditModalField';

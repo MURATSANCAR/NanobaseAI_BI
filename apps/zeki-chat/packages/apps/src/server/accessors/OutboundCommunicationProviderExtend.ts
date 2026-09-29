@@ -1,8 +1,8 @@
-import type { IOutboundCommunicationProviderExtend } from '@rocket.chat/apps-engine/definition/accessors/IOutboundCommunicationProviderExtend';
+import type { IOutboundCommunicationProviderExtend } from '@zeki.chat/apps-engine/definition/accessors/IOutboundCommunicationProviderExtend';
 import type {
 	IOutboundPhoneMessageProvider,
 	IOutboundEmailMessageProvider,
-} from '@rocket.chat/apps-engine/definition/outboundCommunication';
+} from '@zeki.chat/apps-engine/definition/outboundCommunication';
 
 import type { AppOutboundCommunicationProviderManager } from '../managers/AppOutboundCommunicationProviderManager';
 

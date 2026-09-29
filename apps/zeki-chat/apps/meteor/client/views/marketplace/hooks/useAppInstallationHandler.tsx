@@ -1,11 +1,9 @@
-import type { App } from '@rocket.chat/core-typings';
-import { useEndpoint, useRouteParameter, useSetModal, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { App } from '@zeki.chat/core-typings';
+import { useEndpoint, useSetModal, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
-import { isMarketplaceRouteContext, useAppsCountQuery } from './useAppsCountQuery';
 import { useOpenAppPermissionsReviewModal } from './useOpenAppPermissionsReviewModal';
 import IframeModal from '../IframeModal';
-import AppInstallModal from '../components/AppInstallModal/AppInstallModal';
 import type { Actions } from '../helpers';
 import { useAppsOrchestration } from './useAppsOrchestration';
 import { useOpenIncompatibleModal } from './useOpenIncompatibleModal';
@@ -30,11 +28,6 @@ export function useAppInstallationHandler({
 }: AppInstallationHandlerParams) {
 	const dispatchToastMessage = useToastMessageDispatch();
 	const setModal = useSetModal();
-
-	const routeContext = String(useRouteParameter('context'));
-	const context = isMarketplaceRouteContext(routeContext) ? routeContext : 'explore';
-
-	const appCountQuery = useAppsCountQuery(context);
 
 	const notifyAdmins = useEndpoint('POST', `/apps/notify-admins`);
 
@@ -114,27 +107,10 @@ export function useAppInstallationHandler({
 			return;
 		}
 
-		if (!appCountQuery.data) {
-			return;
-		}
-
-		if (appCountQuery.data.hasUnlimitedApps) {
-			return acquireApp();
-		}
-
-		setModal(
-			<AppInstallModal
-				enabled={appCountQuery.data.enabled}
-				limit={appCountQuery.data.limit}
-				appName={app.name}
-				handleClose={closeModal}
-				handleConfirm={acquireApp}
-			/>,
-		);
+		return acquireApp();
 	}, [
 		app,
 		action,
-		appCountQuery.data,
 		setModal,
 		closeModal,
 		acquireApp,

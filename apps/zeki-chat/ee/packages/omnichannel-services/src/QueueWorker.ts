@@ -1,6 +1,6 @@
-import { ServiceClass, api } from '@rocket.chat/core-services';
-import type { IQueueWorkerService, HealthAggResult } from '@rocket.chat/core-services';
-import type { Logger } from '@rocket.chat/logger';
+import { ServiceClass, api } from '@zeki.chat/core-services';
+import type { IQueueWorkerService, HealthAggResult } from '@zeki.chat/core-services';
+import type { Logger } from '@zeki.chat/logger';
 import type { Actions, ValidResult, Work } from 'mongo-message-queue';
 import MessageQueue from 'mongo-message-queue';
 import type { Db } from 'mongodb';

@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 
-import type { IServiceMetrics } from '@rocket.chat/core-services';
-import { MeteorService, isMeteorError, MeteorError } from '@rocket.chat/core-services';
-import { Logger } from '@rocket.chat/logger';
+import type { IServiceMetrics } from '@zeki.chat/core-services';
+import { MeteorService, isMeteorError, MeteorError } from '@zeki.chat/core-services';
+import { Logger } from '@zeki.chat/logger';
 import ejson from 'ejson';
 import { v1 as uuidv1 } from 'uuid';
 import WebSocket from 'ws';
@@ -106,7 +106,7 @@ export class Server extends EventEmitter {
 				throw new MeteorError(404, `Subscription '${packet.name}' not found`);
 			}
 
-			const end = this.metrics?.timer('rocketchat_subscription', { subscription: packet.name });
+			const end = this.metrics?.timer('zeki_subscription', { subscription: packet.name });
 
 			const publication = new Publication(client, packet, this);
 			const [eventName, options] = packet.params;

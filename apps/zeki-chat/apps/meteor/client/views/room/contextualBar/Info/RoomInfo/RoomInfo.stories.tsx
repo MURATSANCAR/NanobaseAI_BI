@@ -1,6 +1,6 @@
-import type { RoomType } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import { Contextualbar } from '@rocket.chat/ui-client';
+import type { RoomType } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import { Contextualbar } from '@zeki.chat/ui-client';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import RoomInfo from './RoomInfo';
@@ -30,13 +30,13 @@ const roomArgs = {
 	msgs: 5,
 	usersCount: 1,
 	u: {
-		_id: 'rocketchat.internal.admin.test',
-		username: 'rocketchat.internal.admin.test',
+		_id: 'zekichat.internal.admin.test',
+		username: 'zekichat.internal.admin.test',
 	},
 	ts: new Date(),
 	autoTranslateLanguage: 'en',
 	_updatedAt: new Date(),
-	fname: 'rocketchat-frontend-team',
+	fname: 'zekichat-frontend-team',
 	description:
 		'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam mollis nisi vel arcu bibendum vehicula. Integer vitae suscipit libero',
 	announcement:

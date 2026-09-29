@@ -1,4 +1,4 @@
-import { isMeteorError, MeteorError } from '@rocket.chat/core-services';
+import { isMeteorError, MeteorError } from '@zeki.chat/core-services';
 import EJSON from 'ejson';
 import type Moleculer from 'moleculer';
 import { Errors, Serializers, ServiceBroker } from 'moleculer';

@@ -1,5 +1,5 @@
-import type { IDirectMessageRoom, IRoom, IMessage } from '@rocket.chat/core-typings';
-import { Messages, Analytics } from '@rocket.chat/models';
+import type { IDirectMessageRoom, IRoom, IMessage } from '@zeki.chat/core-typings';
+import { Messages, Analytics } from '@zeki.chat/models';
 import moment from 'moment';
 
 import { convertDateToInt, diffBetweenDaysInclusive, convertIntToDate, getTotalOfWeekItems } from './date';

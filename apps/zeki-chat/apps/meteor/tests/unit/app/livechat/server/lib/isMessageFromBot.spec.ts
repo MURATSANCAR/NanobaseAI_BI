@@ -11,7 +11,7 @@ const modelsMock = {
 };
 
 const { isMessageFromBot } = p.noCallThru().load('../../../../../../app/livechat/server/lib/isMessageFromBot', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 });
 
 describe('isMessageFromBot', () => {

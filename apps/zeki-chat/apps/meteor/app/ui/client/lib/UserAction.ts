@@ -1,4 +1,4 @@
-import type { IExtras, IRoomActivity, IUser } from '@rocket.chat/core-typings';
+import type { IExtras, IRoomActivity, IUser } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
 import { debounce } from 'lodash';
 

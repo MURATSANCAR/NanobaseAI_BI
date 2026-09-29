@@ -1,6 +1,6 @@
-import { Message } from '@rocket.chat/core-services';
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { Message } from '@zeki.chat/core-services';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import { notifyOnRoomChangedById, notifyOnSubscriptionChangedByRoomId } from '../lib/notifyListener';
 

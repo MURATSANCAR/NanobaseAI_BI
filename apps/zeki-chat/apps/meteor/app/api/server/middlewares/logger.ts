@@ -1,5 +1,5 @@
-import type { Logger } from '@rocket.chat/logger';
-import { censorUrl } from '@rocket.chat/tools';
+import type { Logger } from '@zeki.chat/logger';
+import { censorUrl } from '@zeki.chat/tools';
 import type { MiddlewareHandler } from 'hono';
 
 import { getRestPayload } from '../../../../server/lib/logger/logPayloads';

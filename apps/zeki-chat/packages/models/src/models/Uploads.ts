@@ -1,13 +1,13 @@
 // TODO: Lib imports should not exists inside the raw models
-import type { IUpload, RocketChatRecordDeleted, IRoom } from '@rocket.chat/core-typings';
-import type { FindPaginated, IUploadsModel } from '@rocket.chat/model-typings';
+import type { IUpload, ZekiChatRecordDeleted, IRoom } from '@zeki.chat/core-typings';
+import type { FindPaginated, IUploadsModel } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { Collection, FindCursor, Db, IndexDescription, WithId, Filter, FindOptions, UpdateResult } from 'mongodb';
 
 import { BaseUploadModelRaw } from './BaseUploadModel';
 
 export class UploadsRaw extends BaseUploadModelRaw implements IUploadsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IUpload>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IUpload>>) {
 		super(db, 'uploads', trash);
 	}
 

@@ -1,7 +1,7 @@
-import type { IWorkspaceInfo, IStats } from '@rocket.chat/core-typings';
+import type { IWorkspaceInfo, IStats } from '@zeki.chat/core-typings';
 import { Box, Button, ButtonGroup, Callout, CardGrid } from '@rocket.chat/fuselage';
-import type { IInstance } from '@rocket.chat/rest-typings';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
+import type { IInstance } from '@zeki.chat/rest-typings';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 

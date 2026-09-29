@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/base64",
+	"name": "@zeki.chat/base64",
 	"version": "1.0.14",
 	"private": true,
 	"description": "Base64 encoding and decoding; Fork of Meteor's Base64 package",
@@ -14,8 +14,8 @@
 		"testunit": "jest"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"jest": "~30.2.0",
 		"typescript": "~5.9.3"
 	},

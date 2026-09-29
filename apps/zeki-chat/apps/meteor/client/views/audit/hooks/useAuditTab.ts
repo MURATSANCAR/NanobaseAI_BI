@@ -1,6 +1,6 @@
-import type { IAuditLog } from '@rocket.chat/core-typings';
+import type { IAuditLog } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useRoute, useRouteParameter } from '@rocket.chat/ui-contexts';
+import { useRoute, useRouteParameter } from '@zeki.chat/ui-contexts';
 import type { SetStateAction } from 'react';
 import { useMemo } from 'react';
 

@@ -1,4 +1,4 @@
-import { useConnectionStatus, useIsLoggingIn } from '@rocket.chat/ui-contexts';
+import { useConnectionStatus, useIsLoggingIn } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { VideoConfManager } from '../../../../lib/VideoConfManager';

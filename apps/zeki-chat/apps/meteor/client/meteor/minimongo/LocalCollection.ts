@@ -1,11 +1,11 @@
-import type { Optional } from '@rocket.chat/core-typings';
+import type { Optional } from '@zeki.chat/core-typings';
 import {
 	createDocumentMatcherFromFilter,
 	createPredicateFromFilter,
 	createTransformFromUpdateFilter,
 	createUpsertDocument,
-} from '@rocket.chat/mongo-adapter';
-import type { ArrayIndices } from '@rocket.chat/mongo-adapter';
+} from '@zeki.chat/mongo-adapter';
+import type { ArrayIndices } from '@zeki.chat/mongo-adapter';
 import { Meteor } from 'meteor/meteor';
 import type { CountDocumentsOptions, FilterOperators, Filter, UpdateFilter } from 'mongodb';
 import type { StoreApi, UseBoundStore } from 'zustand';

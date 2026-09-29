@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { createContext, useContext } from 'react';
 

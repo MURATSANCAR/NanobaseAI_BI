@@ -7,8 +7,8 @@ import {
 	Page,
 	PageHeader,
 	PageContent,
-} from '@rocket.chat/ui-client';
-import { useRoute, useRouteParameter, usePermission } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useRoute, useRouteParameter, usePermission } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

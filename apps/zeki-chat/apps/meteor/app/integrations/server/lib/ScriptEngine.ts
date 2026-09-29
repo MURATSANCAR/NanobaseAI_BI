@@ -6,10 +6,10 @@ import type {
 	IIncomingIntegration,
 	IIntegration,
 	IIntegrationHistory,
-} from '@rocket.chat/core-typings';
-import type { Logger } from '@rocket.chat/logger';
-import type { serverFetch } from '@rocket.chat/server-fetch';
-import { wrapExceptions } from '@rocket.chat/tools';
+} from '@zeki.chat/core-typings';
+import type { Logger } from '@zeki.chat/logger';
+import type { serverFetch } from '@zeki.chat/server-fetch';
+import { wrapExceptions } from '@zeki.chat/tools';
 
 import { incomingLogger, outgoingLogger } from '../logger';
 import type { IScriptClass, CompiledScript } from './definition';

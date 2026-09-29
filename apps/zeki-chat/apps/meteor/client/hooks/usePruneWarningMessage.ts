@@ -1,7 +1,7 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useSafely } from '@rocket.chat/fuselage-hooks';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useSetting, useTranslation, useLanguage } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useSetting, useTranslation, useLanguage } from '@zeki.chat/ui-contexts';
 import { sendAt } from 'cron';
 import { intlFormat } from 'date-fns';
 import { useEffect, useState } from 'react';

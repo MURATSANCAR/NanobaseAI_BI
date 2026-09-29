@@ -1,8 +1,8 @@
-import { Authorization, MeteorError, User } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
+import { Authorization, MeteorError, User } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
 import { Accounts } from 'meteor/accounts-base';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		createToken(userId: string): { userId: string; authToken: string };

@@ -1,4 +1,4 @@
-import { AnchorPortal } from '@rocket.chat/ui-client';
+import { AnchorPortal } from '@zeki.chat/ui-client';
 import type { ReactElement, ReactNode } from 'react';
 import { memo } from 'react';
 

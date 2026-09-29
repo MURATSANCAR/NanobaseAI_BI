@@ -5,7 +5,7 @@ import type {
 	MediaCallActorType,
 	MediaCallContact,
 	MediaCallSignedContact,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type { Document, FindCursor, FindOptions, UpdateResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

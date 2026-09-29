@@ -1,4 +1,4 @@
-import { Contextualbar } from '@rocket.chat/ui-client';
+import { Contextualbar } from '@zeki.chat/ui-client';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryFn } from '@storybook/react';
 
@@ -31,11 +31,11 @@ Default.args = {
 			_id: 'test',
 			_updatedAt: new Date(),
 			createdBy: {
-				_id: 'rocket.cat',
-				username: 'rocket.cat',
+				_id: 'zeki.bot',
+				username: 'zeki.bot',
 			},
 			departmentName: '',
-			userId: 'rocket.cat',
+			userId: 'zeki.bot',
 			departmentId: '',
 		},
 		{
@@ -47,11 +47,11 @@ Default.args = {
 			_id: 'test',
 			_updatedAt: new Date(),
 			createdBy: {
-				_id: 'rocket.cat',
-				username: 'rocket.cat',
+				_id: 'zeki.bot',
+				username: 'zeki.bot',
 			},
 			departmentName: '',
-			userId: 'rocket.cat',
+			userId: 'zeki.bot',
 			departmentId: '',
 		},
 		{
@@ -63,11 +63,11 @@ Default.args = {
 			_id: 'test',
 			_updatedAt: new Date(),
 			createdBy: {
-				_id: 'rocket.cat',
-				username: 'rocket.cat',
+				_id: 'zeki.bot',
+				username: 'zeki.bot',
 			},
 			departmentName: '',
-			userId: 'rocket.cat',
+			userId: 'zeki.bot',
 			departmentId: '',
 		},
 	],

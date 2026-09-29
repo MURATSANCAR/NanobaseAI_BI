@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { RestClient } from '@rocket.chat/api-client';
+import { RestClient } from '@zeki.chat/api-client';
 
 import { invokeTwoFactorModal } from '../../../../client/lib/2fa/process2faReturn';
 import { baseURI } from '../../../../client/lib/baseURI';
@@ -33,7 +33,7 @@ APIClient.handleTwoFactorChallenge(invokeTwoFactorModal);
 /**
  * The original rest api code throws the Response object, which is very useful
  * for the client sometimes, if the developer wants to access more information about the error
- * unfortunately/fortunately Rocket.Chat expects an error object (from Response.json()
+ * unfortunately/fortunately ZEKI AI CHAT expects an error object (from Response.json()
  * This middleware will throw the error object instead.
  * */
 

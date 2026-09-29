@@ -1,4 +1,4 @@
-import { Settings } from '@rocket.chat/models';
+import { Settings } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 

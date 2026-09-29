@@ -1,8 +1,8 @@
-import type { IUser, AvatarObject } from '@rocket.chat/core-typings';
+import type { IUser, AvatarObject } from '@zeki.chat/core-typings';
 import { Box, Button, Avatar, IconButton } from '@rocket.chat/fuselage';
 import { Field, FieldLabel, FieldRow, FieldError, TextInput } from '@rocket.chat/fuselage-forms';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useToastMessageDispatch, useSetting } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useToastMessageDispatch, useSetting } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ChangeEvent } from 'react';
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';

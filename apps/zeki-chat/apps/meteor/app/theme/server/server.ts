@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { Settings } from '@rocket.chat/models';
+import { Settings } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import { WebApp } from 'meteor/webapp';
 

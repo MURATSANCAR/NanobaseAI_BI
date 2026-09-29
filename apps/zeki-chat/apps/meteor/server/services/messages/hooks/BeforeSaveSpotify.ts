@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 // look for spotify syntax (e.g.: spotify:track:1q6IK1l4qpYykOaWaLJkWG) on the message and add them to the urls array
 export class BeforeSaveSpotify {

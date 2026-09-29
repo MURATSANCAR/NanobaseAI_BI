@@ -1,5 +1,5 @@
-import type { IStats } from '@rocket.chat/core-typings';
-import { LivechatContacts } from '@rocket.chat/models';
+import type { IStats } from '@zeki.chat/core-typings';
+import { LivechatContacts } from '@zeki.chat/models';
 
 import { settings } from '../../../settings/server';
 

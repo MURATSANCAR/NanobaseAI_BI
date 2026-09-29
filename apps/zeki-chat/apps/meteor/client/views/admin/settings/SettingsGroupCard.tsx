@@ -1,8 +1,8 @@
-import type { ISetting } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Button, Box, Card, CardTitle, CardBody, CardControls } from '@rocket.chat/fuselage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useId, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,4 +1,4 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
 
 import { appErroredStatuses } from './appErroredStatuses';
 import { t } from '../../../../app/utils/lib/i18n';

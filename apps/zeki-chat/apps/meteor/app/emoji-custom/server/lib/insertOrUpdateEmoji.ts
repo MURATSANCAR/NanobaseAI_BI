@@ -1,11 +1,11 @@
-import { api } from '@rocket.chat/core-services';
-import { EmojiCustom } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import { EmojiCustom } from '@zeki.chat/models';
 import limax from 'limax';
 import { Meteor } from 'meteor/meteor';
 
 import { trim } from '../../../../lib/utils/stringUtils';
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
-import { RocketChatFileEmojiCustomInstance } from '../startup/emoji-custom';
+import { ZekiChatFileEmojiCustomInstance } from '../startup/emoji-custom';
 
 export type EmojiData = {
 	_id?: string;
@@ -111,25 +111,25 @@ export async function insertOrUpdateEmoji(userId: string | null, emojiData: Emoj
 
 	// update emoji
 	if (emojiData.newFile) {
-		await RocketChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.name}.${emojiData.extension}`));
-		await RocketChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.name}.${emojiData.previousExtension}`));
-		await RocketChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.previousName}.${emojiData.extension}`));
-		await RocketChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.previousName}.${emojiData.previousExtension}`));
+		await ZekiChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.name}.${emojiData.extension}`));
+		await ZekiChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.name}.${emojiData.previousExtension}`));
+		await ZekiChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.previousName}.${emojiData.extension}`));
+		await ZekiChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.previousName}.${emojiData.previousExtension}`));
 
 		await EmojiCustom.setExtension(emojiData._id, emojiData.extension);
 	} else if (emojiData.name !== emojiData.previousName) {
-		const rs = await RocketChatFileEmojiCustomInstance.getFileWithReadStream(
+		const rs = await ZekiChatFileEmojiCustomInstance.getFileWithReadStream(
 			encodeURIComponent(`${emojiData.previousName}.${emojiData.previousExtension}`),
 		);
 
 		if (rs) {
-			await RocketChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.name}.${emojiData.extension}`));
-			const ws = RocketChatFileEmojiCustomInstance.createWriteStream(
+			await ZekiChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.name}.${emojiData.extension}`));
+			const ws = ZekiChatFileEmojiCustomInstance.createWriteStream(
 				encodeURIComponent(`${emojiData.name}.${emojiData.previousExtension}`),
 				rs.contentType,
 			);
 			ws.on('end', () =>
-				RocketChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.previousName}.${emojiData.previousExtension}`)),
+				ZekiChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emojiData.previousName}.${emojiData.previousExtension}`)),
 			);
 			rs.readStream.pipe(ws);
 		}

@@ -1,8 +1,8 @@
-import { Message } from '@rocket.chat/core-services';
-import type { IMessage, IRoom, IUser, MessageAttachmentDefault } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Rooms, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { Message } from '@zeki.chat/core-services';
+import type { IMessage, IRoom, IUser, MessageAttachmentDefault } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Rooms, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import { check, Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -196,7 +196,7 @@ const create = async ({
 	return discussion;
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		createDiscussion: typeof create;

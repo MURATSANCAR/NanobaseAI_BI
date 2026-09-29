@@ -1,4 +1,4 @@
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 import { Match, check } from 'meteor/check';
 import { Google } from 'meteor/google-oauth';
 import _ from 'underscore';

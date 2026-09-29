@@ -266,7 +266,7 @@ def chat_login_token(account, display):
 # Kampüs'teki sohbet kartı her açık ekranda yarım dakikada bir sorar; sohbete giden istek bu süre içinde bir tanedir.
 PRESENCE_TTL = 15
 # Sohbetin kendi hesapları (hoş geldin botu, kurulum yöneticisi) kişi sayılmaz.
-CHAT_SYSTEM_ACCOUNTS = {'rocket.cat'}
+CHAT_SYSTEM_ACCOUNTS = {'zeki.bot'}
 PRESENCE_ORDER = {'online': 0, 'busy': 1, 'away': 2}
 _presence = {'at': 0.0, 'value': None}
 _presence_lock = threading.Lock()

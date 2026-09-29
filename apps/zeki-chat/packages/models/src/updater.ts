@@ -1,4 +1,4 @@
-import type { Updater, SetProps, UnsetProps, IncProps, AddToSetProps } from '@rocket.chat/model-typings';
+import type { Updater, SetProps, UnsetProps, IncProps, AddToSetProps } from '@zeki.chat/model-typings';
 import type { UpdateFilter } from 'mongodb';
 
 type ArrayElementType<T> = T extends (infer E)[] ? E : T;

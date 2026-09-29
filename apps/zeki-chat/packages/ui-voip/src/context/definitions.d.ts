@@ -1,5 +1,5 @@
-import type { UserStatus } from '@rocket.chat/core-typings';
-import type { CallFeature } from '@rocket.chat/media-signaling';
+import type { UserStatus } from '@zeki.chat/core-typings';
+import type { CallFeature } from '@zeki.chat/media-signaling';
 
 export type InternalPeerInfo = {
 	displayName: string;

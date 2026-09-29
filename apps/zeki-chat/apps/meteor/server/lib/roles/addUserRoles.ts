@@ -1,6 +1,6 @@
-import { MeteorError } from '@rocket.chat/core-services';
-import type { IRole, IUser, IRoom } from '@rocket.chat/core-typings';
-import { Roles, Subscriptions, Users } from '@rocket.chat/models';
+import { MeteorError } from '@zeki.chat/core-services';
+import type { IRole, IUser, IRoom } from '@zeki.chat/core-typings';
+import { Roles, Subscriptions, Users } from '@zeki.chat/models';
 
 import { syncRoomRolePriorityForUserAndRoom } from './syncRoomRolePriority';
 import { validateRoleList } from './validateRoleList';

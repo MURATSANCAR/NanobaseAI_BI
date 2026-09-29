@@ -1,7 +1,7 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Avatar, Box, Palette, Skeleton } from '@rocket.chat/fuselage';
 import { useButtonPattern } from '@rocket.chat/fuselage-hooks';
-import { FilePreviewIcon } from '@rocket.chat/ui-client';
+import { FilePreviewIcon } from '@zeki.chat/ui-client';
 import { useMemo, type KeyboardEvent, type MouseEvent, type AllHTMLAttributes, type ReactElement } from 'react';
 
 type MessageComposerFileProps = {

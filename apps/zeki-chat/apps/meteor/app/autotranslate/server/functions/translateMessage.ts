@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
 
 import { TranslationProviderRegistry } from '..';
 

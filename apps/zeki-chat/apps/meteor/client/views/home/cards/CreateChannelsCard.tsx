@@ -1,5 +1,5 @@
 import type { Card } from '@rocket.chat/fuselage';
-import { useTranslation, useSetModal } from '@rocket.chat/ui-contexts';
+import { useTranslation, useSetModal } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement } from 'react';
 
 import { GenericCard, GenericCardButton } from '../../../components/GenericCard';

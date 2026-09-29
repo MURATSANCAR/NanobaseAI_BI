@@ -1,5 +1,5 @@
-import type { IVideoConfProvidersExtend } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IVideoConfProvider } from '@rocket.chat/apps-engine/definition/videoConfProviders';
+import type { IVideoConfProvidersExtend } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IVideoConfProvider } from '@zeki.chat/apps-engine/definition/videoConfProviders';
 
 import type { AppVideoConfProviderManager } from '../managers/AppVideoConfProviderManager';
 

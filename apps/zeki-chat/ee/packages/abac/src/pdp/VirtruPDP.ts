@@ -1,6 +1,6 @@
-import type { IAbacAttributeDefinition, IRoom, IUser, AtLeast } from '@rocket.chat/core-typings';
-import { Rooms, Users } from '@rocket.chat/models';
-import { serverFetch } from '@rocket.chat/server-fetch';
+import type { IAbacAttributeDefinition, IRoom, IUser, AtLeast } from '@zeki.chat/core-typings';
+import { Rooms, Users } from '@zeki.chat/models';
+import { serverFetch } from '@zeki.chat/server-fetch';
 import pLimit from 'p-limit';
 
 import { OnlyCompliantCanBeAddedToRoomError, PdpHealthCheckError } from '../errors';

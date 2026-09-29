@@ -1,7 +1,7 @@
 import { Button } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { ContextualbarDialog, Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useRouteParameter, useRouter } from '@rocket.chat/ui-contexts';
+import { ContextualbarDialog, Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useRouteParameter, useRouter } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import CustomFieldsTable from './CustomFieldsTable';

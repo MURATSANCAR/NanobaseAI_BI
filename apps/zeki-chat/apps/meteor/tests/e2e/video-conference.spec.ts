@@ -125,7 +125,7 @@ test.describe('video conference', () => {
 	});
 
 	test('should create video conference in a direct multiple', async () => {
-		await poHomeChannel.navbar.openChat('rocketchat.internal.admin.test, user2');
+		await poHomeChannel.navbar.openChat('zekichat.internal.admin.test, user2');
 
 		await poHomeChannel.content.btnVideoCall.click();
 		await poHomeChannel.content.btnStartVideoCall.click();
@@ -135,7 +135,7 @@ test.describe('video conference', () => {
 	test.describe('received in a direct multiple', async () => {
 		test.use({ storageState: Users.user2.state });
 		test('should display a message block in a direct multiple', async () => {
-			await poHomeChannel.navbar.openChat('rocketchat.internal.admin.test, user1');
+			await poHomeChannel.navbar.openChat('zekichat.internal.admin.test, user1');
 			await expect(poHomeChannel.content.videoConfMessageBlock.last()).toBeVisible();
 		});
 	});

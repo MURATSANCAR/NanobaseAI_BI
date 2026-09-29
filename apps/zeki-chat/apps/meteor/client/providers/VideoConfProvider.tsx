@@ -1,6 +1,6 @@
-import { useToastMessageDispatch, useSetting } from '@rocket.chat/ui-contexts';
-import type { VideoConfPopupPayload, VideoConfContextValue } from '@rocket.chat/ui-video-conf';
-import { VideoConfContext } from '@rocket.chat/ui-video-conf';
+import { useToastMessageDispatch, useSetting } from '@zeki.chat/ui-contexts';
+import type { VideoConfPopupPayload, VideoConfContextValue } from '@zeki.chat/ui-video-conf';
+import { VideoConfContext } from '@zeki.chat/ui-video-conf';
 import type { ReactElement, ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';

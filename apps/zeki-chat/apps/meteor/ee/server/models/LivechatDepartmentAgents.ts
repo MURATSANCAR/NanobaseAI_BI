@@ -1,4 +1,4 @@
-import { registerModel } from '@rocket.chat/models';
+import { registerModel } from '@zeki.chat/models';
 
 import { LivechatDepartmentAgents } from './raw/LivechatDepartmentAgents';
 import { trashCollection } from '../../../server/database/trash';

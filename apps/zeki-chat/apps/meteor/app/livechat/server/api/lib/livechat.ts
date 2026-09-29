@@ -1,7 +1,7 @@
-import type { ILivechatAgent, ILivechatDepartment, ILivechatTrigger, ILivechatVisitor, IOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { ILivechatAgent, ILivechatDepartment, ILivechatTrigger, ILivechatVisitor, IOmnichannelRoom } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { EmojiCustom, LivechatTrigger, LivechatVisitors, LivechatRooms, LivechatDepartment } from '@rocket.chat/models';
-import { makeFunction } from '@rocket.chat/patch-injection';
+import { EmojiCustom, LivechatTrigger, LivechatVisitors, LivechatRooms, LivechatDepartment } from '@zeki.chat/models';
+import { makeFunction } from '@zeki.chat/patch-injection';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../../../server/lib/callbacks';
@@ -10,11 +10,11 @@ import { getInitSettings } from '../../lib/settings';
 
 async function findTriggers(): Promise<Pick<ILivechatTrigger, '_id' | 'actions' | 'conditions' | 'runOnce'>[]> {
 	const triggers = await LivechatTrigger.findEnabled().toArray();
-	const hasLicense = Capabilities.hasModule('livechat-enterprise');
+	const hasCapability = Capabilities.hasModule('livechat-enterprise');
 	const premiumActions = ['use-external-service'];
 
 	return triggers
-		.filter(({ actions }) => hasLicense || actions.some((c) => !premiumActions.includes(c.name)))
+		.filter(({ actions }) => hasCapability || actions.some((c) => !premiumActions.includes(c.name)))
 		.map(({ _id, actions, conditions, runOnce }) => ({
 			_id,
 			actions,

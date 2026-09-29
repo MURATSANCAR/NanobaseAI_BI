@@ -10,7 +10,7 @@ export const generateJWT = (payload: Record<string, any>, secret: string, option
 		iat: jsr.KJUR.jws.IntDate.get('now'),
 		nbf: jsr.KJUR.jws.IntDate.get('now'),
 		exp: jsr.KJUR.jws.IntDate.get('now + 1hour'),
-		aud: options?.aud || 'RocketChat',
+		aud: options?.aud || 'ZekiChat',
 		context: payload,
 	};
 
@@ -45,7 +45,7 @@ export const validateAndDecodeJWT = (jwt: string, secret: string, options?: { au
 			return null;
 		}
 
-		if (payload.aud !== (options?.aud || 'RocketChat')) {
+		if (payload.aud !== (options?.aud || 'ZekiChat')) {
 			return null;
 		}
 

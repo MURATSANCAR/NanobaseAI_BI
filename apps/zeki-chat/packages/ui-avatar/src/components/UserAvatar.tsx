@@ -1,4 +1,4 @@
-import { useUserAvatarPath } from '@rocket.chat/ui-contexts';
+import { useUserAvatarPath } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 

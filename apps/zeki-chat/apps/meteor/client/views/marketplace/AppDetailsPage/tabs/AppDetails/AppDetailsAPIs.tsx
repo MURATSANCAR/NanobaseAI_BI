@@ -1,6 +1,6 @@
-import type { IApiEndpointMetadata } from '@rocket.chat/apps-engine/definition/api';
+import type { IApiEndpointMetadata } from '@zeki.chat/apps-engine/definition/api';
 import { Box } from '@rocket.chat/fuselage';
-import { useAbsoluteUrl } from '@rocket.chat/ui-contexts';
+import { useAbsoluteUrl } from '@zeki.chat/ui-contexts';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 

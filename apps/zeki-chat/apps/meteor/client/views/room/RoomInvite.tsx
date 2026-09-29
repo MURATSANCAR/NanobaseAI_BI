@@ -1,4 +1,4 @@
-import type { IUser, IInviteSubscription } from '@rocket.chat/core-typings';
+import type { IUser, IInviteSubscription } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ComponentProps } from 'react';

@@ -8,18 +8,18 @@ import type {
 	IUploadCreator,
 	IUserBuilder,
 	IVideoConferenceBuilder,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import type { IContactCreator } from '@rocket.chat/apps-engine/definition/accessors/IContactCreator';
-import type { IEmailCreator } from '@rocket.chat/apps-engine/definition/accessors/IEmailCreator';
-import type { ILivechatMessage } from '@rocket.chat/apps-engine/definition/livechat/ILivechatMessage';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import { BlockBuilder } from '@rocket.chat/apps-engine/definition/uikit';
-import type { IBotUser } from '@rocket.chat/apps-engine/definition/users/IBotUser';
-import { UserType } from '@rocket.chat/apps-engine/definition/users/UserType';
-import type { AppVideoConference } from '@rocket.chat/apps-engine/definition/videoConferences';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import type { IContactCreator } from '@zeki.chat/apps-engine/definition/accessors/IContactCreator';
+import type { IEmailCreator } from '@zeki.chat/apps-engine/definition/accessors/IEmailCreator';
+import type { ILivechatMessage } from '@zeki.chat/apps-engine/definition/livechat/ILivechatMessage';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import { BlockBuilder } from '@zeki.chat/apps-engine/definition/uikit';
+import type { IBotUser } from '@zeki.chat/apps-engine/definition/users/IBotUser';
+import { UserType } from '@zeki.chat/apps-engine/definition/users/UserType';
+import type { AppVideoConference } from '@zeki.chat/apps-engine/definition/videoConferences';
 
 import { ContactCreator } from './ContactCreator';
 import { DiscussionBuilder } from './DiscussionBuilder';
@@ -140,17 +140,17 @@ export class ModifyCreator implements IModifyCreator {
 		builder: IMessageBuilder | ILivechatMessageBuilder | IRoomBuilder | IDiscussionBuilder | IVideoConferenceBuilder | IUserBuilder,
 	): Promise<string> {
 		switch (builder.kind) {
-			case RocketChatAssociationModel.MESSAGE:
+			case ZekiChatAssociationModel.MESSAGE:
 				return this._finishMessage(builder);
-			case RocketChatAssociationModel.LIVECHAT_MESSAGE:
+			case ZekiChatAssociationModel.LIVECHAT_MESSAGE:
 				return this._finishLivechatMessage(builder);
-			case RocketChatAssociationModel.ROOM:
+			case ZekiChatAssociationModel.ROOM:
 				return this._finishRoom(builder);
-			case RocketChatAssociationModel.DISCUSSION:
+			case ZekiChatAssociationModel.DISCUSSION:
 				return this._finishDiscussion(builder as IDiscussionBuilder);
-			case RocketChatAssociationModel.VIDEO_CONFERENCE:
+			case ZekiChatAssociationModel.VIDEO_CONFERENCE:
 				return this._finishVideoConference(builder);
-			case RocketChatAssociationModel.USER:
+			case ZekiChatAssociationModel.USER:
 				return this._finishUser(builder);
 			default:
 				throw new Error('Invalid builder passed to the ModifyCreator.finish function.');

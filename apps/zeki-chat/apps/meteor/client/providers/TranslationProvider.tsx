@@ -6,13 +6,13 @@ import {
 	availableTranslationNamespaces,
 	defaultTranslationNamespace,
 	extractTranslationNamespaces,
-} from '@rocket.chat/i18n';
-import languages from '@rocket.chat/i18n/dist/languages';
-import en from '@rocket.chat/i18n/dist/resources/en.i18n.json';
+} from '@zeki.chat/i18n';
+import languages from '@zeki.chat/i18n/dist/languages';
+import en from '@zeki.chat/i18n/dist/resources/en.i18n.json';
 import { capitalize } from '@rocket.chat/string-helpers';
-import { normalizeLanguage } from '@rocket.chat/tools';
-import type { TranslationContextValue } from '@rocket.chat/ui-contexts';
-import { useSetting, TranslationContext } from '@rocket.chat/ui-contexts';
+import { normalizeLanguage } from '@zeki.chat/tools';
+import type { TranslationContextValue } from '@zeki.chat/ui-contexts';
+import { useSetting, TranslationContext } from '@zeki.chat/ui-contexts';
 import type i18next from 'i18next';
 import I18NextHttpBackend from 'i18next-http-backend';
 import type { ReactElement, ReactNode } from 'react';
@@ -237,8 +237,8 @@ const TranslationProvider = ({ children }: TranslationProviderProps): ReactEleme
 };
 
 /**
- * I was forced to create this component to keep the api useTranslation from rocketchat
- * rocketchat useTranslation invalidates the provider content, triggering all the places that use it
+ * I was forced to create this component to keep the api useTranslation from zekichat
+ * zekichat useTranslation invalidates the provider content, triggering all the places that use it
  * i18next triggers a re-render inside useTranslation, since now we are using 100% of the i18next
  * the only way to invalidate after changing the language in a safe way is using the useTranslation from i8next
  * and invalidating the provider content

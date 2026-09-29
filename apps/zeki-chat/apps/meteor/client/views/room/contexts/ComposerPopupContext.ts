@@ -1,4 +1,4 @@
-import type { Optional } from '@rocket.chat/core-typings';
+import type { Optional } from '@zeki.chat/core-typings';
 import type { ReactElement } from 'react';
 import { useContext, createContext } from 'react';
 

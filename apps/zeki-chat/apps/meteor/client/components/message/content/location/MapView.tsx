@@ -1,4 +1,4 @@
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 
 import MapViewFallback from './MapViewFallback';

@@ -1,4 +1,4 @@
-import type { IUser, IRole } from '@rocket.chat/core-typings';
+import type { IUser, IRole } from '@zeki.chat/core-typings';
 
 export type NPSVotePayload = {
 	userId: string | undefined;

@@ -1,6 +1,6 @@
 import { Box, Grid, GridItem } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { AgentsSection, ChannelsSection, DepartmentsSection, StatusSection, TagsSection } from './sections';

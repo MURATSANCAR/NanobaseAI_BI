@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { emoji } from '../../../../app/emoji/client';
 import { runOptimisticSetReaction } from '../../../../app/reactions/client/methods/setReaction';

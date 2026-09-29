@@ -1,5 +1,5 @@
-import type { RoomType } from '@rocket.chat/core-typings';
-import type { LocationPathname } from '@rocket.chat/ui-contexts';
+import type { RoomType } from '@zeki.chat/core-typings';
+import type { LocationPathname } from '@zeki.chat/ui-contexts';
 
 import type {
 	IRoomTypeConfig,

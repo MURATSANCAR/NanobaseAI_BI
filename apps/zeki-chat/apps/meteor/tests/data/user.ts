@@ -1,8 +1,8 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IUser } from '@zeki.chat/core-typings';
 
 export const password = 'R0ck3t.ch@tP@ssw0rd1234.!';
-export const adminUsername = 'rocketchat.internal.admin.test';
+export const adminUsername = 'zekichat.internal.admin.test';
 export const adminEmail = `${adminUsername}@rocket.chat`;
 export const adminPassword = adminUsername;
 

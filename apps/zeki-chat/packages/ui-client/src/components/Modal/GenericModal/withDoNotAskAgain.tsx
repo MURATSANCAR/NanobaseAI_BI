@@ -1,5 +1,5 @@
 import { Box, Label, CheckBox } from '@rocket.chat/fuselage';
-import { useUserPreference, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { useUserPreference, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ComponentType } from 'react';
 import { useId, useState } from 'react';
 

@@ -1,6 +1,6 @@
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
-import type { IRoom, ILivechatVisitor, ILivechatDepartment, TransferData, AtLeast } from '@rocket.chat/core-typings';
-import { LivechatDepartment } from '@rocket.chat/models';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
+import type { IRoom, ILivechatVisitor, ILivechatDepartment, TransferData, AtLeast } from '@zeki.chat/core-typings';
+import { LivechatDepartment } from '@zeki.chat/models';
 
 import { forwardRoomToDepartment } from '../../../../../app/livechat/server/lib/Helper';
 import { settings } from '../../../../../app/settings/server';

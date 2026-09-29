@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { createDocumentMapStore } from '../lib/cachedStores/DocumentMapStore';
 import { createGlobalStore } from '../lib/cachedStores/createGlobalStore';

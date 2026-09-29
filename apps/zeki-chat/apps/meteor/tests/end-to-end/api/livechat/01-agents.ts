@@ -1,7 +1,7 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import { UserStatus } from '@rocket.chat/core-typings';
-import type { ILivechatVisitor, IOmnichannelRoom, ILivechatAgent, ILivechatDepartment, IRoom, IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import { UserStatus } from '@zeki.chat/core-typings';
+import type { ILivechatVisitor, IOmnichannelRoom, ILivechatAgent, ILivechatDepartment, IRoom, IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 import type { Response } from 'supertest';

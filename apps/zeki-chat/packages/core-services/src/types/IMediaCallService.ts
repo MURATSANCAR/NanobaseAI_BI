@@ -1,5 +1,5 @@
-import type { IMediaCall, IUser } from '@rocket.chat/core-typings';
-import type { ClientMediaSignal, ServerMediaCallSignal, ClientMediaSignalAnswer } from '@rocket.chat/media-signaling';
+import type { IMediaCall, IUser } from '@zeki.chat/core-typings';
+import type { ClientMediaSignal, ServerMediaCallSignal, ClientMediaSignalAnswer } from '@zeki.chat/media-signaling';
 
 export interface IMediaCallService {
 	answerCall(uid: IUser['_id'], params: Omit<ClientMediaSignalAnswer, 'type'>): Promise<IMediaCall>;

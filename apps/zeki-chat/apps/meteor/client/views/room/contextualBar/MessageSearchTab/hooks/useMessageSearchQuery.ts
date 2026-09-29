@@ -1,4 +1,4 @@
-import { useMethod, useTranslation, useUserId } from '@rocket.chat/ui-contexts';
+import { useMethod, useTranslation, useUserId } from '@zeki.chat/ui-contexts';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { useRoom } from '../../../contexts/RoomContext';
@@ -17,7 +17,7 @@ export const useMessageSearchQuery = ({
 
 	const t = useTranslation();
 
-	const searchMessages = useMethod('rocketchatSearch.search');
+	const searchMessages = useMethod('zekichatSearch.search');
 	return useQuery({
 		queryKey: ['rooms', room._id, 'message-search', { uid, rid: room._id, searchText, limit, globalSearch }] as const,
 

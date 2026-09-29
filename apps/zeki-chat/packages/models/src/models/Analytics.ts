@@ -1,6 +1,6 @@
-import type { IAnalytics, IRoom } from '@rocket.chat/core-typings';
-import type { IAnalyticsModel, IChannelsWithNumberOfMessagesBetweenDate } from '@rocket.chat/model-typings';
-import { Random } from '@rocket.chat/random';
+import type { IAnalytics, IRoom } from '@zeki.chat/core-typings';
+import type { IAnalyticsModel, IChannelsWithNumberOfMessagesBetweenDate } from '@zeki.chat/model-typings';
+import { Random } from '@zeki.chat/random';
 import type { AggregationCursor, FindCursor, Db, IndexDescription, FindOptions, UpdateResult, Document, Collection } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
@@ -248,7 +248,7 @@ export class AnalyticsRaw extends BaseRaw<IAnalytics> implements IAnalyticsModel
 		};
 		const lookup = {
 			$lookup: {
-				from: 'rocketchat_room',
+				from: 'zeki_room',
 				localField: '_id',
 				foreignField: '_id',
 				as: 'room',

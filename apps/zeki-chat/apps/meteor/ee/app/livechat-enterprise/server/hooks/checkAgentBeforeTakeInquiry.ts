@@ -1,4 +1,4 @@
-import { Users } from '@rocket.chat/models';
+import { Users } from '@zeki.chat/models';
 
 import { allowAgentSkipQueue } from '../../../../../app/livechat/server/lib/Helper';
 import { checkOnlineAgents } from '../../../../../app/livechat/server/lib/service-status';

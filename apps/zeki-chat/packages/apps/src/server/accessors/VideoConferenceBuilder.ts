@@ -1,9 +1,9 @@
-import type { IVideoConferenceBuilder } from '@rocket.chat/apps-engine/definition/accessors';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import type { AppVideoConference } from '@rocket.chat/apps-engine/definition/videoConferences';
+import type { IVideoConferenceBuilder } from '@zeki.chat/apps-engine/definition/accessors';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import type { AppVideoConference } from '@zeki.chat/apps-engine/definition/videoConferences';
 
 export class VideoConferenceBuilder implements IVideoConferenceBuilder {
-	public kind: RocketChatAssociationModel.VIDEO_CONFERENCE = RocketChatAssociationModel.VIDEO_CONFERENCE;
+	public kind: ZekiChatAssociationModel.VIDEO_CONFERENCE = ZekiChatAssociationModel.VIDEO_CONFERENCE;
 
 	protected call: AppVideoConference;
 

@@ -1,4 +1,4 @@
-import type { ICreateRoomOptions } from '@rocket.chat/core-services';
+import type { ICreateRoomOptions } from '@zeki.chat/core-services';
 import type {
 	IMessage,
 	IRoom,
@@ -18,8 +18,8 @@ import type {
 	ILivechatDepartment,
 	MessageMention,
 	IOmnichannelInquiryExtraData,
-} from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
 import type { FilterOperators } from 'mongodb';
 
 import { Callbacks } from './callbacks/callbacksBase';

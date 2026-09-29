@@ -1,8 +1,8 @@
 /* eslint-env mocha */
 
 import { faker } from '@faker-js/faker';
-import type { Credentials } from '@rocket.chat/api-client';
-import type { ILivechatDepartment, ILivechatVisitor, IOmnichannelRoom, IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { ILivechatDepartment, ILivechatVisitor, IOmnichannelRoom, IUser } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 import type { Response } from 'supertest';

@@ -1,6 +1,6 @@
 import { Socket } from 'node:net';
 
-import type { IParseAppPackageResult } from '@rocket.chat/apps/dist/server/compiler/IParseAppPackageResult';
+import type { IParseAppPackageResult } from '@zeki.chat/apps/dist/server/compiler/IParseAppPackageResult';
 
 import { AppObjectRegistry } from '../../AppObjectRegistry.ts';
 import { require } from '../../lib/require.ts';
@@ -41,7 +41,7 @@ function buildRequire(): (module: string) => unknown {
             return require(`npm:${module}`);
         }
 
-        if (module.startsWith('@rocket.chat/apps-engine')) {
+        if (module.startsWith('@zeki.chat/apps-engine')) {
             // Our `require` function knows how to handle these
             return require(module);
         }

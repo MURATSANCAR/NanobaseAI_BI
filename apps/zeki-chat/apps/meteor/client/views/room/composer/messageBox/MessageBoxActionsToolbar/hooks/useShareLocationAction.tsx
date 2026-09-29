@@ -1,7 +1,7 @@
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useSetting, useSetModal } from '@rocket.chat/ui-contexts';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useSetting, useSetModal } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import ShareLocationModal from '../../../../ShareLocation/ShareLocationModal';

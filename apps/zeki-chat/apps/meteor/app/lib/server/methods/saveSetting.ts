@@ -1,6 +1,6 @@
-import type { SettingEditor, SettingValue } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Settings } from '@rocket.chat/models';
+import type { SettingEditor, SettingValue } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Settings } from '@zeki.chat/models';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -11,7 +11,7 @@ import { hasPermissionAsync, hasAllPermissionAsync } from '../../../authorizatio
 import { disableCustomScripts } from '../functions/disableCustomScripts';
 import { notifyOnSettingChanged } from '../lib/notifyListener';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		saveSetting(_id: string, value: SettingValue, editor: SettingEditor): Promise<boolean>;

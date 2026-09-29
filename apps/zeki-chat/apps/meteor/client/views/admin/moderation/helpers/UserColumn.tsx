@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import type { ComponentProps } from 'react';
 
 type UserColumnProps = {

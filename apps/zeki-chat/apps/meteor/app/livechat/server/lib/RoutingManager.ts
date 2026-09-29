@@ -1,5 +1,5 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { Message } from '@rocket.chat/core-services';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { Message } from '@zeki.chat/core-services';
 import type {
 	ILivechatInquiryRecord,
 	ILivechatVisitor,
@@ -11,10 +11,10 @@ import type {
 	InquiryWithAgentInfo,
 	TransferData,
 	IUser,
-} from '@rocket.chat/core-typings';
-import { LivechatInquiryStatus } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { LivechatInquiry, LivechatRooms, Subscriptions, Rooms, Users } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { LivechatInquiryStatus } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { LivechatInquiry, LivechatRooms, Subscriptions, Rooms, Users } from '@zeki.chat/models';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 

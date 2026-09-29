@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/model-typings",
+	"name": "@zeki.chat/model-typings",
 	"version": "2.3.1",
 	"private": true,
 	"main": "./dist/index.js",
@@ -13,7 +13,7 @@
 		"lint:fix": "eslint --fix ."
 	},
 	"dependencies": {
-		"@rocket.chat/core-typings": "workspace:^"
+		"@zeki.chat/core-typings": "workspace:^"
 	},
 	"devDependencies": {
 		"@types/node-rsa": "^1.1.4",

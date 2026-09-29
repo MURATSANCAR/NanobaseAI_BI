@@ -1,9 +1,9 @@
 import type { IncomingMessage } from 'node:http';
 
-import type { IUser } from '@rocket.chat/core-typings';
-import type { ResponseSchema } from '@rocket.chat/http-router';
-import { Router } from '@rocket.chat/http-router';
-import { type Logger } from '@rocket.chat/logger';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { ResponseSchema } from '@zeki.chat/http-router';
+import { Router } from '@zeki.chat/http-router';
+import { type Logger } from '@zeki.chat/logger';
 import type { Context } from 'hono';
 
 import type { TypedOptions } from './definition';
@@ -33,7 +33,7 @@ export type APIActionContext = {
 
 export type APIActionHandler = (this: APIActionContext, request: Request) => Promise<ResponseSchema<TypedOptions>>;
 
-export class RocketChatAPIRouter<
+export class ZekiChatAPIRouter<
 	TBasePath extends string,
 	TOperations extends {
 		[x: string]: unknown;
@@ -77,5 +77,5 @@ export const convertHonoContextToApiActionContext = (
 	};
 };
 
-export type ExtractRouterEndpoints<TRoute extends RocketChatAPIRouter<any, any>> =
-	TRoute extends RocketChatAPIRouter<any, infer TOperations> ? TOperations : never;
+export type ExtractRouterEndpoints<TRoute extends ZekiChatAPIRouter<any, any>> =
+	TRoute extends ZekiChatAPIRouter<any, infer TOperations> ? TOperations : never;

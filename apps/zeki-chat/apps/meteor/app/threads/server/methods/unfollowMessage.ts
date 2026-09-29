@@ -1,7 +1,7 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -11,7 +11,7 @@ import { notifyOnMessageChange } from '../../../lib/server/lib/notifyListener';
 import { settings } from '../../../settings/server';
 import { unfollow } from '../functions';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		unfollowMessage(message: { mid: IMessage['_id'] }): false | undefined;

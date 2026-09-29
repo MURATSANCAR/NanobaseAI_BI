@@ -1,4 +1,4 @@
-import { MeteorError } from '@rocket.chat/core-services';
+import { MeteorError } from '@zeki.chat/core-services';
 import { Meteor } from 'meteor/meteor';
 
 import type { SaveUserData } from './saveUser';
@@ -40,7 +40,7 @@ export async function sendUserEmail(subject: string, html: string, userData: Sav
 		const errorMessage = typeof error === 'object' && error && 'message' in error ? error.message : '';
 
 		throw new MeteorError('error-email-send-failed', `Error trying to send email: ${errorMessage}`, {
-			function: 'RocketChat.saveUser',
+			function: 'ZekiChat.saveUser',
 			message: errorMessage,
 		});
 	}

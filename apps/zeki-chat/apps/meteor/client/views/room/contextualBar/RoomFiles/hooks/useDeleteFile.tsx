@@ -1,7 +1,7 @@
-import type { IUpload } from '@rocket.chat/core-typings';
+import type { IUpload } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useMethod } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useMethod } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 export const useDeleteFile = (reload: () => void) => {

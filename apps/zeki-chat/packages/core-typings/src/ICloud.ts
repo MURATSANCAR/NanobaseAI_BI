@@ -29,14 +29,6 @@ type CloudConfirmationPollDataSuccess = {
 		publicKey: string;
 		client_secret_expires_at: number;
 		registration_client_uri: string;
-		licenseData: {
-			version: number;
-			address: string;
-			license: string;
-			updatedAt: string;
-			modules?: string;
-			expireAt: string;
-		};
 	};
 };
 

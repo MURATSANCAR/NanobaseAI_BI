@@ -1,8 +1,8 @@
-import type { IOmnichannelRoomWithDepartment } from '@rocket.chat/core-typings';
+import type { IOmnichannelRoomWithDepartment } from '@zeki.chat/core-typings';
 import { Tag, Box } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericTableCell, GenericTableRow } from '@rocket.chat/ui-client';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { GenericTableCell, GenericTableRow } from '@zeki.chat/ui-client';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import RemoveChatButton from './RemoveChatButton';

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it, mock } from 'node:test';
 
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
 
 import { ServerSettingsModify } from '../../../src/server/accessors';
 import type { ServerSettingBridge } from '../../../src/server/bridges';

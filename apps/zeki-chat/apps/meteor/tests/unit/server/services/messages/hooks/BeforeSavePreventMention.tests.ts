@@ -10,7 +10,7 @@ class MeteorError extends Error {}
 const { BeforeSavePreventMention } = proxyquire
 	.noCallThru()
 	.load('../../../../../../server/services/messages/hooks/BeforeSavePreventMention', {
-		'@rocket.chat/core-services': {
+		'@zeki.chat/core-services': {
 			Authorization,
 			MeteorError,
 		},

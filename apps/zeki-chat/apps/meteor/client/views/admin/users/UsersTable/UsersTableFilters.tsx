@@ -1,8 +1,8 @@
-import type { IRole, Serialized } from '@rocket.chat/core-typings';
+import type { IRole, Serialized } from '@zeki.chat/core-typings';
 import { Box, Icon, Margins, TextInput } from '@rocket.chat/fuselage';
 import { useBreakpoints } from '@rocket.chat/fuselage-hooks';
-import type { OptionProp } from '@rocket.chat/ui-client';
-import { MultiSelectCustom } from '@rocket.chat/ui-client';
+import type { OptionProp } from '@zeki.chat/ui-client';
+import { MultiSelectCustom } from '@zeki.chat/ui-client';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

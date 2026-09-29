@@ -1,5 +1,5 @@
-import type { ILivechatAgent, Serialized } from '@rocket.chat/core-typings';
-import { MockedAppRootBuilder } from '@rocket.chat/mock-providers/dist/MockedAppRootBuilder';
+import type { ILivechatAgent, Serialized } from '@zeki.chat/core-typings';
+import { MockedAppRootBuilder } from '@zeki.chat/mock-providers/dist/MockedAppRootBuilder';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useAgentsList } from './useAgentsList';

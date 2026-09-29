@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IOmnichannelBusinessUnit extends IRocketChatRecord {
+export interface IOmnichannelBusinessUnit extends IZekiChatRecord {
 	name: string;
 	visibility: 'public' | 'private';
 	type: string;

@@ -1,8 +1,8 @@
-import type { Serialized, ILivechatDepartment, ILivechatDepartmentAgents } from '@rocket.chat/core-typings';
+import type { Serialized, ILivechatDepartment, ILivechatDepartmentAgents } from '@zeki.chat/core-typings';
 import { Box, Button, FieldGroup, Scrollable } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import { useToastBarDispatch } from '@rocket.chat/fuselage-toastbar';
-import { useEndpoint, usePermission, useUser } from '@rocket.chat/ui-contexts';
+import { useEndpoint, usePermission, useUser } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useEffect, useId, useMemo } from 'react';

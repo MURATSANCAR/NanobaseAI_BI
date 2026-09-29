@@ -1,9 +1,9 @@
-import { UserStatus as Status } from '@rocket.chat/core-typings';
-import type { IUser, Serialized } from '@rocket.chat/core-typings';
+import { UserStatus as Status } from '@zeki.chat/core-typings';
+import type { IUser, Serialized } from '@zeki.chat/core-typings';
 import { Box, Button } from '@rocket.chat/fuselage';
-import type { DefaultUserInfo } from '@rocket.chat/rest-typings';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { GenericMenu, GenericTableRow, GenericTableCell } from '@rocket.chat/ui-client';
+import type { DefaultUserInfo } from '@zeki.chat/rest-typings';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { GenericMenu, GenericTableRow, GenericTableCell } from '@zeki.chat/ui-client';
 import type { KeyboardEvent, MouseEvent, ReactElement } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +25,6 @@ type UsersTableRowProps = {
 	isLaptop: boolean;
 	onReload: () => void;
 	onClick: (id: IUser['_id'], e: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => void;
-	isSeatsCapExceeded: boolean;
 	showVoipExtension: boolean;
 };
 
@@ -34,7 +33,6 @@ const UsersTableRow = ({
 	tab,
 	isMobile,
 	isLaptop,
-	isSeatsCapExceeded,
 	showVoipExtension,
 	onClick,
 	onReload,
@@ -195,7 +193,7 @@ const UsersTableRow = ({
 									{t('Resend_welcome_email')}
 								</Button>
 							) : (
-								<Button small primary onClick={changeUserStatusAction?.onClick} disabled={isSeatsCapExceeded}>
+								<Button small primary onClick={changeUserStatusAction?.onClick}>
 									{t('Activate')}
 								</Button>
 							)}

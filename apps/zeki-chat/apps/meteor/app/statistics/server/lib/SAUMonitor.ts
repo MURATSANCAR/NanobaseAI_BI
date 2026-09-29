@@ -1,7 +1,7 @@
-import type { ISession, ISessionDevice, IUser } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
-import { Logger } from '@rocket.chat/logger';
-import { Sessions, Users, aggregates } from '@rocket.chat/models';
+import type { ISession, ISessionDevice, IUser } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
+import { Logger } from '@zeki.chat/logger';
+import { Sessions, Users, aggregates } from '@zeki.chat/models';
 import mem from 'mem';
 import { Meteor } from 'meteor/meteor';
 import UAParser from 'ua-parser-js';

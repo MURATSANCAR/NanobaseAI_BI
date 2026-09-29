@@ -1,9 +1,9 @@
-import type { RocketChatAssociationModel } from '../metadata';
+import type { ZekiChatAssociationModel } from '../metadata';
 import type { IVideoConferenceUser, VideoConference } from '../videoConferences';
 import type { VideoConferenceMember } from '../videoConferences/IVideoConference';
 
 export interface IVideoConferenceExtender {
-	kind: RocketChatAssociationModel.VIDEO_CONFERENCE;
+	kind: ZekiChatAssociationModel.VIDEO_CONFERENCE;
 
 	setProviderData(value: Record<string, any>): IVideoConferenceExtender;
 

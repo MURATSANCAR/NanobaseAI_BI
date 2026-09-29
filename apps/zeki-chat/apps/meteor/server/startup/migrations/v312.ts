@@ -1,4 +1,4 @@
-import { LivechatRooms, Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { LivechatRooms, Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import { addMigration } from '../../lib/migrations';
 

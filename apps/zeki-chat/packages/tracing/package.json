@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/tracing",
+	"name": "@zeki.chat/tracing",
 	"version": "0.0.2",
 	"private": true,
 	"main": "./dist/index.js",

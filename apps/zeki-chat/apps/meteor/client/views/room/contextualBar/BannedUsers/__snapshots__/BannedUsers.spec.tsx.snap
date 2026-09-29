@@ -253,9 +253,9 @@ exports[`renders Default without crashing 1`] = `
                                   alt="Avatar"
                                   aria-hidden="true"
                                   class="rcx-avatar__element rcx-avatar__element--x28"
-                                  data-username="rocket.cat"
+                                  data-username="zeki.bot"
                                   src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Oora39DwAFaQJ3y3rKeAAAAABJRU5ErkJggg=="
-                                  title="rocket.cat"
+                                  title="zeki.bot"
                                 />
                               </figure>
                             </div>
@@ -285,7 +285,7 @@ exports[`renders Default without crashing 1`] = `
                             <div
                               class="rcx-option__content"
                             >
-                              rocket.cat
+                              zeki.bot
                                
                             </div>
                             <div
@@ -979,9 +979,9 @@ exports[`renders WithRealNames without crashing 1`] = `
                                   alt="Avatar"
                                   aria-hidden="true"
                                   class="rcx-avatar__element rcx-avatar__element--x28"
-                                  data-username="rocket.cat"
+                                  data-username="zeki.bot"
                                   src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Oora39DwAFaQJ3y3rKeAAAAABJRU5ErkJggg=="
-                                  title="rocket.cat"
+                                  title="zeki.bot"
                                 />
                               </figure>
                             </div>
@@ -1011,13 +1011,13 @@ exports[`renders WithRealNames without crashing 1`] = `
                             <div
                               class="rcx-option__content"
                             >
-                              Rocket.Cat
+                              ZEKI AI CHAT
                                
                               <div
                                 class="rcx-option__description"
                               >
                                 @
-                                rocket.cat
+                                zeki.bot
                               </div>
                             </div>
                             <div

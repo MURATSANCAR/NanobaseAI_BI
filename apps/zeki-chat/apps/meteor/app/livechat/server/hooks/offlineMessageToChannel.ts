@@ -1,6 +1,6 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { isOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatDepartment, Users, Rooms } from '@rocket.chat/models';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
+import { isOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatDepartment, Users, Rooms } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import { i18n } from '../../../../server/lib/i18n';
@@ -39,7 +39,7 @@ callbacks.add(
 			return data;
 		}
 
-		const user = await Users.findOneById('rocket.cat', { projection: { username: 1 } });
+		const user = await Users.findOneById('zeki.bot', { projection: { username: 1 } });
 		if (!user) {
 			return data;
 		}

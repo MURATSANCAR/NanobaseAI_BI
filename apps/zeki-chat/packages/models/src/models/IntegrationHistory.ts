@@ -1,5 +1,5 @@
-import type { IIntegrationHistory } from '@rocket.chat/core-typings';
-import type { IIntegrationHistoryModel } from '@rocket.chat/model-typings';
+import type { IIntegrationHistory } from '@zeki.chat/core-typings';
+import type { IIntegrationHistoryModel } from '@zeki.chat/model-typings';
 import type { Db, IndexDescription, InsertOneResult, FindOneAndUpdateOptions } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

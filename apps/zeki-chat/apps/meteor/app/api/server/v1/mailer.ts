@@ -5,7 +5,7 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateBadRequestErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { sendMail } from '../../../mail-messages/server/functions/sendMail';
 import { Mailer } from '../../../mail-messages/server/lib/Mailer';

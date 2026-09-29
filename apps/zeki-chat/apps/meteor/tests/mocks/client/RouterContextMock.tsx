@@ -1,5 +1,5 @@
-import type { To, SearchParameters, LocationPathname, LocationSearch } from '@rocket.chat/ui-contexts';
-import { RouterContext } from '@rocket.chat/ui-contexts';
+import type { To, SearchParameters, LocationPathname, LocationSearch } from '@zeki.chat/ui-contexts';
+import { RouterContext } from '@zeki.chat/ui-contexts';
 import { compile } from 'path-to-regexp';
 import { useRef, useMemo } from 'react';
 import type { MutableRefObject, ReactElement, ReactNode } from 'react';

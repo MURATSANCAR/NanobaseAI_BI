@@ -1,4 +1,4 @@
-import { useRouteParameter, useRouter, useRole, useSetting } from '@rocket.chat/ui-contexts';
+import { useRouteParameter, useRouter, useRole, useSetting } from '@zeki.chat/ui-contexts';
 import type { Dispatch, SetStateAction } from 'react';
 import { useState, useEffect } from 'react';
 

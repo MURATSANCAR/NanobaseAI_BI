@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
+import { AppInterface } from '@zeki.chat/apps-engine/definition/metadata';
 
 import { AppImplements } from '../../../src/server/compiler';
 

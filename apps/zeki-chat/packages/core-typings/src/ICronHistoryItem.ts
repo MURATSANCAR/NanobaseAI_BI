@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface ICronHistoryItem extends IRocketChatRecord {
+export interface ICronHistoryItem extends IZekiChatRecord {
 	name: string;
 	intendedAt: Date;
 	startedAt: Date;

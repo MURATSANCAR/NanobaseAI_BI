@@ -1,4 +1,4 @@
-import type { AvailableAgentsAggregation, ILivechatDepartmentAgents } from '@rocket.chat/core-typings';
+import type { AvailableAgentsAggregation, ILivechatDepartmentAgents } from '@zeki.chat/core-typings';
 import type { DeleteResult, FindCursor, FindOptions, Document, UpdateResult, Filter, AggregationCursor } from 'mongodb';
 
 import type { FindPaginated, IBaseModel } from './IBaseModel';

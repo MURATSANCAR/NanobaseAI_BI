@@ -1,8 +1,8 @@
-import { LDAP } from '@rocket.chat/core-services';
-import { Logger } from '@rocket.chat/logger';
-import { Users } from '@rocket.chat/models';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
-import { isAbsoluteURL } from '@rocket.chat/tools';
+import { LDAP } from '@zeki.chat/core-services';
+import { Logger } from '@zeki.chat/logger';
+import { Users } from '@zeki.chat/models';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
+import { isAbsoluteURL } from '@zeki.chat/tools';
 import { Accounts } from 'meteor/accounts-base';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
@@ -88,7 +88,7 @@ export class CustomOAuth {
 		this.mergeUsersDistinctServices = options.mergeUsersDistinctServices;
 		this.rolesClaim = options.rolesClaim || 'roles';
 		this.accessTokenParam = options.accessTokenParam;
-		this.channelsAdmin = options.channelsAdmin || 'rocket.cat';
+		this.channelsAdmin = options.channelsAdmin || 'zeki.bot';
 
 		if (this.identityTokenSentVia == null || this.identityTokenSentVia === 'default') {
 			this.identityTokenSentVia = this.tokenSentVia;

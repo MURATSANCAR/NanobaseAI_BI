@@ -1,5 +1,5 @@
-import type { IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
+import type { IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
 
 import { Callbacks } from './Callbacks';
 

@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { useUserSubscription } from '@rocket.chat/ui-contexts';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { useUserSubscription } from '@zeki.chat/ui-contexts';
 
 import ParentDiscussion from './ParentDiscussion';
 import ParentDiscussionWithData from './ParentDiscussionWithData';

@@ -1,9 +1,9 @@
-import { ReadReceipts, ReadReceiptsArchive, Messages } from '@rocket.chat/models';
+import { ReadReceipts, ReadReceiptsArchive, Messages } from '@zeki.chat/models';
 
 import { archiveOldReadReceipts } from './readReceiptsArchive';
 import { settings } from '../../../app/settings/server';
 
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	ReadReceipts: {
 		findOlderThan: jest.fn(),
 		removeByIds: jest.fn(),
@@ -16,7 +16,7 @@ jest.mock('@rocket.chat/models', () => ({
 	},
 }));
 
-jest.mock('@rocket.chat/logger', () => ({
+jest.mock('@zeki.chat/logger', () => ({
 	Logger: jest.fn().mockImplementation(() => ({
 		info: jest.fn(),
 		error: jest.fn(),
@@ -30,7 +30,7 @@ jest.mock('../../../app/settings/server', () => ({
 	},
 }));
 
-jest.mock('@rocket.chat/cron', () => ({
+jest.mock('@zeki.chat/cron', () => ({
 	cronJobs: {
 		add: jest.fn(),
 		has: jest.fn(),

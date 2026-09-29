@@ -1,5 +1,5 @@
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { TimestampPickerModal } from '../../../../../../components/message/toolbar/items/actions/Timestamp/TimestampPicker/TimestampPickerModal';

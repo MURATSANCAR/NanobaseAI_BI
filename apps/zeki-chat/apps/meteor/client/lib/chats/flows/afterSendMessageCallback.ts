@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { clientCallbacks } from '@rocket.chat/ui-client';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { clientCallbacks } from '@zeki.chat/ui-client';
 
 import { Rooms } from '../../../stores';
 import { getUser } from '../../user';

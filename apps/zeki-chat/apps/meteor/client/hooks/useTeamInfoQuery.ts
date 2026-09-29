@@ -1,5 +1,5 @@
-import type { ITeam, Serialized } from '@rocket.chat/core-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { ITeam, Serialized } from '@zeki.chat/core-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import type { UseQueryOptions } from '@tanstack/react-query';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 

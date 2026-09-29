@@ -1,4 +1,4 @@
-import { useRoomAvatarPath } from '@rocket.chat/ui-contexts';
+import { useRoomAvatarPath } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 

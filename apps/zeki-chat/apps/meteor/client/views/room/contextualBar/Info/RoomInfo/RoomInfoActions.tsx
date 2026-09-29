@@ -1,5 +1,5 @@
 import type { Keys as IconKeys } from '@rocket.chat/icons';
-import { InfoPanelAction } from '@rocket.chat/ui-client';
+import { InfoPanelAction } from '@zeki.chat/ui-client';
 
 type Action = {
 	id: string;

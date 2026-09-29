@@ -1,7 +1,7 @@
-import type { IMediaCall, MediaCallSignedContact } from '@rocket.chat/core-typings';
-import { isBusyState } from '@rocket.chat/media-signaling';
-import type { ClientMediaSignal, ServerMediaSignal, CallFeature } from '@rocket.chat/media-signaling';
-import { MediaCallNegotiations, MediaCalls } from '@rocket.chat/models';
+import type { IMediaCall, MediaCallSignedContact } from '@zeki.chat/core-typings';
+import { isBusyState } from '@zeki.chat/media-signaling';
+import type { ClientMediaSignal, ServerMediaSignal, CallFeature } from '@zeki.chat/media-signaling';
+import { MediaCallNegotiations, MediaCalls } from '@zeki.chat/models';
 
 import { UserActorSignalProcessor } from './CallSignalProcessor';
 import { BaseMediaCallAgent } from '../../base/BaseAgent';

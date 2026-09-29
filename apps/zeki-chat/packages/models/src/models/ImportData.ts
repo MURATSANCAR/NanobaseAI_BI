@@ -4,15 +4,15 @@ import type {
 	IImportRecord,
 	IImportUserRecord,
 	IImportContactRecord,
-	RocketChatRecordDeleted,
-} from '@rocket.chat/core-typings';
-import type { IImportDataModel } from '@rocket.chat/model-typings';
+	ZekiChatRecordDeleted,
+} from '@zeki.chat/core-typings';
+import type { IImportDataModel } from '@zeki.chat/model-typings';
 import type { Collection, FindCursor, Db, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class ImportDataRaw extends BaseRaw<IImportRecord> implements IImportDataModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IImportRecord>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IImportRecord>>) {
 		super(db, 'import_data', trash);
 	}
 

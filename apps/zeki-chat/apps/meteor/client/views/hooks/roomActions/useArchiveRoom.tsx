@@ -1,6 +1,6 @@
-import type { IRoom, RoomAdminFieldsType } from '@rocket.chat/core-typings';
+import type { IRoom, RoomAdminFieldsType } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 export const useArchiveRoom = (room: Pick<IRoom, RoomAdminFieldsType>) => {

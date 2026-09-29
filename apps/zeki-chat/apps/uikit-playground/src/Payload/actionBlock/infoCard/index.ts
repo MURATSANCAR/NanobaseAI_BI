@@ -1,4 +1,4 @@
-import type { LayoutBlock, IconElement, IconButtonElement } from '@rocket.chat/ui-kit';
+import type { LayoutBlock, IconElement, IconButtonElement } from '@zeki.chat/ui-kit';
 
 const getIconButtonPayload = (icon: Partial<IconElement>, label?: string): IconButtonElement => ({
 	appId: 'dummy-app-id',

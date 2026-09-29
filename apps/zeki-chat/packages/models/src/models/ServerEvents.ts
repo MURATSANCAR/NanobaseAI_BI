@@ -3,16 +3,16 @@ import type {
 	IAuditServerActor,
 	IServerEvent,
 	IServerEvents,
-	RocketChatRecordDeleted,
-} from '@rocket.chat/core-typings';
-import { ServerEventType } from '@rocket.chat/core-typings';
-import type { IServerEventsModel } from '@rocket.chat/model-typings';
+	ZekiChatRecordDeleted,
+} from '@zeki.chat/core-typings';
+import { ServerEventType } from '@zeki.chat/core-typings';
+import type { IServerEventsModel } from '@zeki.chat/model-typings';
 import type { Collection, Db, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class ServerEventsRaw extends BaseRaw<IServerEvent> implements IServerEventsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IServerEvent>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IServerEvent>>) {
 		super(db, 'server_events', trash);
 	}
 

@@ -1,4 +1,4 @@
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import AdminUsersPage from './AdminUsersPage';

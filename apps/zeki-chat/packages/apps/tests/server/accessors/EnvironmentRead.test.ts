@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IEnvironmentalVariableRead, IServerSettingRead, ISettingRead } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IEnvironmentalVariableRead, IServerSettingRead, ISettingRead } from '@zeki.chat/apps-engine/definition/accessors';
 
 import { EnvironmentRead } from '../../../src/server/accessors';
 

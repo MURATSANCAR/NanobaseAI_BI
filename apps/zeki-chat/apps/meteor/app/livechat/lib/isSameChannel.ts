@@ -1,4 +1,4 @@
-import type { ILivechatContactVisitorAssociation } from '@rocket.chat/core-typings';
+import type { ILivechatContactVisitorAssociation } from '@zeki.chat/core-typings';
 
 export function isSameChannel(channel1: ILivechatContactVisitorAssociation, channel2: ILivechatContactVisitorAssociation): boolean {
 	if (!channel1 || !channel2) {

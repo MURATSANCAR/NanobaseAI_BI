@@ -1,4 +1,4 @@
-import { api, ServiceClassInternal, type IMediaCallService, Authorization } from '@rocket.chat/core-services';
+import { api, ServiceClassInternal, type IMediaCallService, Authorization } from '@zeki.chat/core-services';
 import type {
 	IMediaCall,
 	IUser,
@@ -6,19 +6,19 @@ import type {
 	IInternalMediaCallHistoryItem,
 	CallHistoryItemState,
 	IExternalMediaCallHistoryItem,
-} from '@rocket.chat/core-typings';
-import { callServer, type IMediaCallServerSettings, getSignalsForExistingCall } from '@rocket.chat/media-calls';
+} from '@zeki.chat/core-typings';
+import { callServer, type IMediaCallServerSettings, getSignalsForExistingCall } from '@zeki.chat/media-calls';
 import type {
 	CallFeature,
 	ClientMediaSignal,
 	ServerMediaSignal,
 	ServerMediaCallSignal,
 	ClientMediaSignalAnswer,
-} from '@rocket.chat/media-signaling';
-import { isClientMediaSignal } from '@rocket.chat/media-signaling';
-import type { InsertionModel } from '@rocket.chat/model-typings';
-import { CallHistory, MediaCalls, Rooms, Users } from '@rocket.chat/models';
-import { callStateToTranslationKey, getHistoryMessagePayload } from '@rocket.chat/ui-voip/dist/ui-kit/getHistoryMessagePayload';
+} from '@zeki.chat/media-signaling';
+import { isClientMediaSignal } from '@zeki.chat/media-signaling';
+import type { InsertionModel } from '@zeki.chat/model-typings';
+import { CallHistory, MediaCalls, Rooms, Users } from '@zeki.chat/models';
+import { callStateToTranslationKey, getHistoryMessagePayload } from '@zeki.chat/ui-voip/dist/ui-kit/getHistoryMessagePayload';
 
 import { logger } from './logger';
 import { sendVoipPushNotification } from './push/sendVoipPushNotification';

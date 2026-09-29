@@ -1,7 +1,7 @@
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
 import { Field, FieldGroup, TextAreaInput, Box, Divider, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useEndpoint, useRouter, useSetting, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useEndpoint, useRouter, useSetting, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';

@@ -1,5 +1,5 @@
-import type { ICalendarEvent, IUser } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
+import type { ICalendarEvent, IUser } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
 
 import { generateCronJobId } from './generateCronJobId';
 

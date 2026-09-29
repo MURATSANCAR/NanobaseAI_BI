@@ -4,7 +4,7 @@ import { themes } from '@storybook/theming';
 import manifest from '../package.json';
 import logo from './logo.svg';
 import '@rocket.chat/fuselage/dist/fuselage.css';
-import '@rocket.chat/icons/dist/rocketchat.css';
+import '@rocket.chat/icons/dist/zekichat.css';
 
 export const parameters: Parameters = {
 	backgrounds: {

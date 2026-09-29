@@ -1,4 +1,4 @@
-import type { OauthConfig } from '@rocket.chat/core-typings';
+import type { OauthConfig } from '@zeki.chat/core-typings';
 
 import { CustomOAuth } from '../../custom-oauth/server/custom_oauth_server';
 

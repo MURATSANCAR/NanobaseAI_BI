@@ -1,11 +1,11 @@
-import type { ICustomSound, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { ICustomSoundsModel } from '@rocket.chat/model-typings';
+import type { ICustomSound, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { ICustomSoundsModel } from '@zeki.chat/model-typings';
 import type { Collection, FindCursor, Db, FindOptions, IndexDescription, InsertOneResult, UpdateResult, WithId } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class CustomSoundsRaw extends BaseRaw<ICustomSound> implements ICustomSoundsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ICustomSound>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ICustomSound>>) {
 		super(db, 'custom_sounds', trash);
 	}
 

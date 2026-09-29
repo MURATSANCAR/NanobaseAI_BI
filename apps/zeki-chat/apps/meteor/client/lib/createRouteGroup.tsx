@@ -1,4 +1,4 @@
-import type { IRouterPaths, RouteName, RouterPathPattern } from '@rocket.chat/ui-contexts';
+import type { IRouterPaths, RouteName, RouterPathPattern } from '@zeki.chat/ui-contexts';
 import type { ElementType, ReactNode } from 'react';
 
 import { appLayout } from './appLayout';

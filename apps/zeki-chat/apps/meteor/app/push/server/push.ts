@@ -1,7 +1,7 @@
-import type { IPushToken, RequiredField, IPushNotificationConfig } from '@rocket.chat/core-typings';
-import { PushToken } from '@rocket.chat/models';
-import { ajv } from '@rocket.chat/rest-typings';
-import { pick, truncateString } from '@rocket.chat/tools';
+import type { IPushToken, RequiredField, IPushNotificationConfig } from '@zeki.chat/core-typings';
+import { PushToken } from '@zeki.chat/models';
+import { ajv } from '@zeki.chat/rest-typings';
+import { pick, truncateString } from '@zeki.chat/tools';
 import { JWT } from 'google-auth-library';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
@@ -230,7 +230,7 @@ class PushClass {
 		for await (const app of appTokens) {
 			logger.debug({ msg: 'send to token', token: app.token });
 
-			// Zeki: the Rocket.Chat push gateway (gateway.rocket.chat) was removed; only direct APNs/FCM are used.
+			// Zeki: the ZEKI AI CHAT push gateway (gateway.rocket.chat) was removed; only direct APNs/FCM are used.
 			await this.sendNotificationNative(app, notification, countApn, countGcm);
 		}
 

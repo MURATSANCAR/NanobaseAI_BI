@@ -1,5 +1,5 @@
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { App, AppPermission } from '@rocket.chat/core-typings';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { App, AppPermission } from '@zeki.chat/core-typings';
 import { Box, Icon } from '@rocket.chat/fuselage';
 import {
 	useSetModal,
@@ -9,24 +9,21 @@ import {
 	useToastMessageDispatch,
 	usePermission,
 	useRouter,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { MouseEvent, ReactNode } from 'react';
 import { useMemo, useCallback, useState } from 'react';
 import semver from 'semver';
 
 import { useAppInstallationHandler } from './useAppInstallationHandler';
 import type { MarketplaceRouteContext } from './useAppsCountQuery';
-import { useAppsCountQuery } from './useAppsCountQuery';
 import { useMarketplaceActions } from './useMarketplaceActions';
 import { useOpenAppPermissionsReviewModal } from './useOpenAppPermissionsReviewModal';
 import { useOpenIncompatibleModal } from './useOpenIncompatibleModal';
 import WarningModal from '../../../components/WarningModal';
 import { useHasCapability } from '../../../hooks/useHasCapability';
-import { useIsEnterprise } from '../../../hooks/useIsEnterprise';
 import type { AddonActionType } from '../AppsList/AddonRequiredModal';
 import AddonRequiredModal from '../AppsList/AddonRequiredModal';
 import IframeModal from '../IframeModal';
-import UninstallGrandfatheredAppModal from '../components/UninstallGrandfatheredAppModal/UninstallGrandfatheredAppModal';
 import type { Actions } from '../helpers';
 import { appEnabledStatuses, appButtonProps } from '../helpers';
 import { handleAPIError } from '../helpers/handleAPIError';
@@ -53,11 +50,8 @@ export const useAppMenu = (app: App, isAppDetailsPage: boolean) => {
 
 	const context = useRouteParameter('context') as MarketplaceRouteContext;
 	const currentTab = useRouteParameter('tab');
-	const appCountQuery = useAppsCountQuery(context);
 
 	const isAdminUser = usePermission('manage-apps');
-	const { data } = useIsEnterprise();
-	const isEnterpriseLicense = !!data?.isEnterprise;
 
 	const { data: workspaceHasMarketplaceAddon = false } = useHasCapability(app.addon);
 	const { data: workspaceHasInstalledAddon = false } = useHasCapability(app.installedAddon);
@@ -260,29 +254,11 @@ export const useAppMenu = (app: App, isAppDetailsPage: boolean) => {
 			);
 		}
 
-		if (!appCountQuery.data) {
-			return;
-		}
-
-		if (app.migrated) {
-			setModal(
-				<UninstallGrandfatheredAppModal
-					context={context}
-					appName={app.name}
-					limit={appCountQuery.data.limit}
-					handleUninstall={uninstall}
-					handleClose={closeModal}
-				/>,
-			);
-			return;
-		}
-
 		setModal(
 			<WarningModal close={closeModal} confirm={uninstall} text={t('Apps_Marketplace_Uninstall_App_Prompt')} confirmText={t('Yes')} />,
 		);
 	}, [
 		isSubscribed,
-		appCountQuery.data,
 		app.migrated,
 		app.name,
 		setModal,
@@ -371,14 +347,8 @@ export const useAppMenu = (app: App, isAppDetailsPage: boolean) => {
 			isAdminUser &&
 			!isAppEnabled &&
 			// If the app is migrated, it can be enabled regardless of other validations
-			// If not, and the app isEnterpriseOnly, we need to check the workspace's license
-			(app.migrated || !app.isEnterpriseOnly || isEnterpriseLicense);
-
-		const doesItReachedTheLimit =
-			!app.migrated &&
-			!appCountQuery?.data?.hasUnlimitedApps &&
-			appCountQuery?.data?.enabled !== undefined &&
-			appCountQuery?.data?.enabled >= appCountQuery?.data?.limit;
+			// Third-party enterprise-only apps require their own verified entitlement.
+			(app.migrated || !app.isEnterpriseOnly);
 
 		const installedAppOptions = [
 			context !== 'details' &&
@@ -423,7 +393,6 @@ export const useAppMenu = (app: App, isAppDetailsPage: boolean) => {
 			isPossibleToEnableApp && {
 				id: 'enable',
 				section: 0,
-				disabled: doesItReachedTheLimit,
 				content: (
 					<>
 						<Icon name='check' size='x16' marginInlineEnd='x4' />
@@ -473,11 +442,7 @@ export const useAppMenu = (app: App, isAppDetailsPage: boolean) => {
 		requestedEndUser,
 		buttonLabel,
 		handleAcquireApp,
-		isEnterpriseLicense,
 		isAppEnabled,
-		appCountQuery?.data?.hasUnlimitedApps,
-		appCountQuery?.data?.enabled,
-		appCountQuery?.data?.limit,
 		context,
 		handleViewLogs,
 		canUpdate,

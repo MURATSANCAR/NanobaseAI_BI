@@ -1,7 +1,7 @@
-import { api, getConnection, getTrashCollection } from '@rocket.chat/core-services';
-import { registerServiceModels } from '@rocket.chat/models';
-import { startBroker } from '@rocket.chat/network-broker';
-import { startTracing } from '@rocket.chat/tracing';
+import { api, getConnection, getTrashCollection } from '@zeki.chat/core-services';
+import { registerServiceModels } from '@zeki.chat/models';
+import { startBroker } from '@zeki.chat/network-broker';
+import { startTracing } from '@zeki.chat/tracing';
 import polka from 'polka';
 
 const PORT = process.env.PORT || 3031;
@@ -16,7 +16,7 @@ void (async () => {
 	api.setBroker(startBroker());
 
 	// need to import Presence service after models are registered
-	const { Presence } = await import('@rocket.chat/presence');
+	const { Presence } = await import('@zeki.chat/presence');
 
 	api.registerService(new Presence());
 

@@ -1,5 +1,5 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { ILivechatDepartment, ILivechatInquiryRecord, ILivechatVisitor, IOmnichannelRoom, IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { ILivechatDepartment, ILivechatInquiryRecord, ILivechatVisitor, IOmnichannelRoom, IUser } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { before, describe, it, after } from 'mocha';
 import type { Response } from 'supertest';
@@ -225,7 +225,7 @@ describe('LIVECHAT - inquiries', () => {
 			const roomInfo = await getLivechatRoomInfo(servedByRoom._id);
 
 			expect(roomInfo).to.have.property('servedBy').that.is.an('object');
-			expect(roomInfo.servedBy).to.have.property('_id', 'rocketchat.internal.admin.test');
+			expect(roomInfo.servedBy).to.have.property('_id', 'zekichat.internal.admin.test');
 		});
 	});
 
@@ -569,7 +569,7 @@ describe('LIVECHAT - inquiries', () => {
 				createAgent(),
 				updateSetting('Omnichannel_enable_department_removal', true),
 			]);
-			testDepartment = await createDepartment([{ agentId: 'rocketchat.internal.admin.test' }]);
+			testDepartment = await createDepartment([{ agentId: 'zekichat.internal.admin.test' }]);
 		});
 
 		after(async () => {

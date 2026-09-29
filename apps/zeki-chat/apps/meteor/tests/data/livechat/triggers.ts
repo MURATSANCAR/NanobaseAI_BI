@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { ILivechatTrigger } from '@rocket.chat/core-typings';
+import type { ILivechatTrigger } from '@zeki.chat/core-typings';
 
 import { api, credentials, request } from '../api-data';
 import type { DummyResponse } from './utils';

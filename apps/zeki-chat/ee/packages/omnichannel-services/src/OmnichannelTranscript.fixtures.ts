@@ -1,4 +1,4 @@
-import type { MessageTypesValues } from '@rocket.chat/core-typings';
+import type { MessageTypesValues } from '@zeki.chat/core-typings';
 
 export const validFile = { name: 'screenshot.png', buffer: Buffer.from([1, 2, 3]) };
 

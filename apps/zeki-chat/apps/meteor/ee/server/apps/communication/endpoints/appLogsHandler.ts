@@ -1,4 +1,4 @@
-import { isAppLogsProps, ajv } from '@rocket.chat/rest-typings';
+import { isAppLogsProps, ajv } from '@zeki.chat/rest-typings';
 
 import { getPaginationItems } from '../../../../../app/api/server/helpers/getPaginationItems';
 import type { AppsRestApi } from '../rest';

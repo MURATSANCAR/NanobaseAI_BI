@@ -1,4 +1,4 @@
-import type { AppPricingPlan } from '@rocket.chat/core-typings';
+import type { AppPricingPlan } from '@zeki.chat/core-typings';
 
 import { formatPrice } from './formatPrice';
 import { t } from '../../../../app/utils/lib/i18n';

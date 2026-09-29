@@ -4,7 +4,7 @@ import type {
 	IOutboundProviderMetadata,
 	IOutboundProviderTemplate,
 	ILivechatContact,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import { Box, Margins } from '@rocket.chat/fuselage';
 import type { ComponentProps } from 'react';
 import { useMemo } from 'react';

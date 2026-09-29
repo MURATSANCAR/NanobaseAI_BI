@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook, waitFor } from '@testing-library/react';
 
 import { useToggleReactionMutation } from './useToggleReactionMutation';

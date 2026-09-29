@@ -1,7 +1,7 @@
 import stream from 'node:stream';
 
-import type { IUpload } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { IUpload } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { check } from 'meteor/check';
 
 import { SystemLogger } from '../../../../server/lib/logger/system';

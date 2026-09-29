@@ -1,4 +1,4 @@
-import { Random } from '@rocket.chat/random';
+import { Random } from '@zeki.chat/random';
 
 import type { ImportDataConverter } from '../../importer/server/classes/ImportDataConverter';
 

@@ -1,8 +1,8 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { AppsEngineException } from '@rocket.chat/apps-engine/definition/exceptions';
-import { Message, Team, Room } from '@rocket.chat/core-services';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Subscriptions, Rooms, Users, Roles } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { AppsEngineException } from '@zeki.chat/apps-engine/definition/exceptions';
+import { Message, Team, Room } from '@zeki.chat/core-services';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Subscriptions, Rooms, Users, Roles } from '@zeki.chat/models';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -17,7 +17,7 @@ import { afterRemoveFromRoomCallback } from '../lib/callbacks/afterRemoveFromRoo
 import { removeUserFromRolesAsync } from '../lib/roles/removeUserFromRoles';
 import { roomCoordinator } from '../lib/rooms/roomCoordinator';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		removeUserFromRoom(data: { rid: string; username: string }): boolean;

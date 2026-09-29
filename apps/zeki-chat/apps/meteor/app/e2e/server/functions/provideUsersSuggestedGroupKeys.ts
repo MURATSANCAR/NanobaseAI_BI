@@ -1,5 +1,5 @@
-import type { IRoom, IUser, ISubscription } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions } from '@rocket.chat/models';
+import type { IRoom, IUser, ISubscription } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions } from '@zeki.chat/models';
 
 import { canAccessRoomIdAsync } from '../../../authorization/server/functions/canAccessRoom';
 import { notifyOnSubscriptionChanged, notifyOnRoomChangedById } from '../../../lib/server/lib/notifyListener';

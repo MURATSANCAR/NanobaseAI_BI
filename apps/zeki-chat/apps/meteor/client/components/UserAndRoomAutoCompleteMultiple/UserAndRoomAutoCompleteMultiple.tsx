@@ -1,9 +1,9 @@
-import { type RoomType, isDirectMessageRoom } from '@rocket.chat/core-typings';
+import { type RoomType, isDirectMessageRoom } from '@zeki.chat/core-typings';
 import { AutoComplete, Box, Option, OptionAvatar, OptionContent, Chip } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import { useUser, useUserSubscriptions } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import { useUser, useUserSubscriptions } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement } from 'react';
 import { memo, useMemo, useState } from 'react';
 

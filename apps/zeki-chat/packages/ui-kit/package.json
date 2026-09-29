@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/ui-kit",
+	"name": "@zeki.chat/ui-kit",
 	"version": "1.1.0",
 	"description": "Interactive UI elements for ZEKI AI CHAT Apps",
 	"main": "dist/index.js",
@@ -22,8 +22,8 @@
 	},
 	"devDependencies": {
 		"@rocket.chat/icons": "~0.47.0",
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/jest": "~30.0.0",
 		"eslint": "~9.39.4",
 		"jest": "~30.2.0",

@@ -1,4 +1,4 @@
-import { useSettings } from '@rocket.chat/ui-contexts';
+import { useSettings } from '@zeki.chat/ui-contexts';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useCallback } from 'react';
 

@@ -77,12 +77,12 @@ services:
       - 'traefik.http.routers.hs1.tls=true'
       - 'traefik.http.services.hs1.loadbalancer.server.port=8008'
 
-  # Rocket.Chat rc1
+  # ZEKI AI CHAT rc1
   rc1:
     build:
-      context: ${ROCKETCHAT_BUILD_CONTEXT:-./test/dist}
-      dockerfile: ${ROCKETCHAT_DOCKERFILE:-../../../apps/meteor/.docker/Dockerfile.alpine}
-    image: ${ROCKETCHAT_IMAGE:-rocketchat/rocket.chat:latest}
+      context: ${ZEKICHAT_BUILD_CONTEXT:-./test/dist}
+      dockerfile: ${ZEKICHAT_DOCKERFILE:-../../../apps/meteor/.docker/Dockerfile.alpine}
+    image: ${ZEKICHAT_IMAGE:-zekichat/rocket.chat:latest}
     profiles:
       - test
       - element
@@ -92,7 +92,7 @@ services:
       MONGO_URL: mongodb://mongo:27017/rc1?replicaSet=rs0
       NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/rootCA.pem
       LOG_LEVEL: debug
-      ROCKETCHAT_LICENSE: ${ENTERPRISE_LICENSE_RC1}
+      ZEKICHAT_LICENSE: ${ENTERPRISE_LICENSE_RC1}
       OVERWRITE_SETTING_Show_Setup_Wizard: completed
       OVERWRITE_SETTING_Federation_Service_Enabled: true
       OVERWRITE_SETTING_Federation_Service_Domain: rc1

@@ -1,4 +1,4 @@
-import { GETLivechatConfigRouting, isGETLivechatConfigParams } from '@rocket.chat/rest-typings';
+import { GETLivechatConfigRouting, isGETLivechatConfigParams } from '@zeki.chat/rest-typings';
 import mem from 'mem';
 
 import { API } from '../../../../api/server';
@@ -58,7 +58,7 @@ const livechatConfigEndpoints = API.v1.get(
 
 type LivechatConfigEndpoints = ExtractRoutesFromAPI<typeof livechatConfigEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatConfigEndpoints {}
 }

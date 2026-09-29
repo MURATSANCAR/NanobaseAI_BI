@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IInvite extends IRocketChatRecord {
+export interface IInvite extends IZekiChatRecord {
 	days: number;
 	maxUses: number;
 	rid: string;

@@ -1,11 +1,11 @@
-import type { ILDAPEntry, IUser, IAbacAttributeDefinition } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { ILDAPEntry, IUser, IAbacAttributeDefinition } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import type { Collection, Db } from 'mongodb';
 
 import { AbacService } from './index';
 import { acquireSharedInMemoryMongo, SHARED_ABAC_TEST_DB, type SharedMongoConnection } from './test-helpers/mongoMemoryServer';
 
-jest.mock('@rocket.chat/core-services', () => ({
+jest.mock('@zeki.chat/core-services', () => ({
 	ServiceClass: class {
 		onSettingChanged = jest.fn();
 	},
@@ -167,7 +167,7 @@ describe('Subject Attributes validation', () => {
 		sharedMongo = await acquireSharedInMemoryMongo(SHARED_ABAC_TEST_DB);
 		db = sharedMongo.db;
 
-		roomsCol = db.collection('rocketchat_room');
+		roomsCol = db.collection('zeki_room');
 		usersCol = db.collection('users');
 
 		await usersCol.deleteMany({ _id: { $in: staticUserIds } });
@@ -365,7 +365,7 @@ describe('Subject Attributes validation', () => {
 	});
 
 	describe('AbacService.addSubjectAttributes (room removals)', () => {
-		const originalCoreServices = jest.requireMock('@rocket.chat/core-services');
+		const originalCoreServices = jest.requireMock('@zeki.chat/core-services');
 		originalCoreServices.Room.removeUserFromRoom = async (rid: string, user: IUser) => {
 			await usersCol.updateOne({ _id: user._id }, { $pull: { __rooms: rid } });
 		};

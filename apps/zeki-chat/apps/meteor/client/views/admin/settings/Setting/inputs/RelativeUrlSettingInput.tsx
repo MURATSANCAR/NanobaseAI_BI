@@ -1,5 +1,5 @@
 import { Field, FieldHint, FieldLabel, FieldRow, UrlInput } from '@rocket.chat/fuselage';
-import { useAbsoluteUrl } from '@rocket.chat/ui-contexts';
+import { useAbsoluteUrl } from '@zeki.chat/ui-contexts';
 import type { EventHandler, ReactElement, SyntheticEvent } from 'react';
 
 import ResetSettingButton from '../ResetSettingButton';

@@ -1,4 +1,4 @@
-import type { IMeApiUser } from '@rocket.chat/core-typings';
+import type { IMeApiUser } from '@zeki.chat/core-typings';
 
 /**
  * GET /api/v1/me success body: {@link IMeApiUser} flattened with `success: true` (API.v1.success).

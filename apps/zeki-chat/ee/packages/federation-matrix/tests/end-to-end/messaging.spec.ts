@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import {
 	uploadFileToRC,

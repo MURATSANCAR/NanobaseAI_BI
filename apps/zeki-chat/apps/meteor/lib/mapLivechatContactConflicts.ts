@@ -1,5 +1,5 @@
-import type { CustomFieldMetadata, ILivechatContact, Serialized } from '@rocket.chat/core-typings';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { CustomFieldMetadata, ILivechatContact, Serialized } from '@zeki.chat/core-typings';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 
 const fieldNameMap: { [key: string]: TranslationKey } = {
 	name: 'Name',

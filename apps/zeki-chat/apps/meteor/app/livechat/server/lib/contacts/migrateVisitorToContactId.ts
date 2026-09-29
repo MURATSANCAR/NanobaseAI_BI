@@ -1,5 +1,5 @@
-import type { ILivechatVisitor, IOmnichannelSource, ILivechatContact, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatContacts, LivechatRooms } from '@rocket.chat/models';
+import type { ILivechatVisitor, IOmnichannelSource, ILivechatContact, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatContacts, LivechatRooms } from '@zeki.chat/models';
 
 import { livechatContactsLogger as logger } from '../logger';
 import { ContactMerger } from './ContactMerger';

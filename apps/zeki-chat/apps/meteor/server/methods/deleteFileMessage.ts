@@ -1,6 +1,6 @@
-import { Upload } from '@rocket.chat/core-services';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Users, Uploads } from '@rocket.chat/models';
+import { Upload } from '@zeki.chat/core-services';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Users, Uploads } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import type { DeleteResult } from 'mongodb';
@@ -8,7 +8,7 @@ import type { DeleteResult } from 'mongodb';
 import { FileUpload } from '../../app/file-upload/server';
 import { deleteMessageValidatingPermission } from '../../app/lib/server/functions/deleteMessage';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		deleteFileMessage(fileID: string): Promise<void | DeleteResult>;

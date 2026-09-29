@@ -1,4 +1,4 @@
-import type { ISetting, ISettingColor, LoginServiceConfiguration } from '@rocket.chat/core-typings';
+import type { ISetting, ISettingColor, LoginServiceConfiguration } from '@zeki.chat/core-typings';
 
 import { ajvQuery } from './Ajv';
 import type { PaginatedRequest } from '../helpers/PaginatedRequest';

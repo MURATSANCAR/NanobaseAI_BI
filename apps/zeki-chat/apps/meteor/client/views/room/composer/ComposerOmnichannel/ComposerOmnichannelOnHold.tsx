@@ -1,4 +1,4 @@
-import { MessageFooterCallout, MessageFooterCalloutAction, MessageFooterCalloutContent } from '@rocket.chat/ui-composer';
+import { MessageFooterCallout, MessageFooterCalloutAction, MessageFooterCalloutContent } from '@zeki.chat/ui-composer';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

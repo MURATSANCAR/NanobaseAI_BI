@@ -1,6 +1,6 @@
-import type { ThemePreference as ThemeMode, Themes } from '@rocket.chat/core-typings';
+import type { ThemePreference as ThemeMode, Themes } from '@zeki.chat/core-typings';
 import { useDarkMode } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint, useUserPreference } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useUserPreference } from '@zeki.chat/ui-contexts';
 import { useCallback, useState } from 'react';
 
 /**

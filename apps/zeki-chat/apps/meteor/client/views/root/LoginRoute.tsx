@@ -1,4 +1,4 @@
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 const LoginRoute = () => {

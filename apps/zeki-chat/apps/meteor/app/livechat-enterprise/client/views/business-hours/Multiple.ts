@@ -1,5 +1,5 @@
-import type { ILivechatBusinessHour } from '@rocket.chat/core-typings';
-import { LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
+import type { ILivechatBusinessHour } from '@zeki.chat/core-typings';
+import { LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
 
 import type { IBusinessHourBehavior } from '../../../../livechat/client/views/app/business-hours/IBusinessHourBehavior';
 

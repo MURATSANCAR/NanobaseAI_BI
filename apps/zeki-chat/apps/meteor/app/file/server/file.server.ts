@@ -21,7 +21,7 @@ type IFile = {
 	uploadDate?: Date;
 };
 
-interface IRocketChatFileStore {
+interface IZekiChatFileStore {
 	remove(fileId: string): Promise<void>;
 
 	createWriteStream(fileName: string, contentType: string): void;
@@ -43,7 +43,7 @@ interface IRocketChatFileStore {
 	deleteFile(fileName: string): Promise<void>;
 }
 
-class GridFS implements IRocketChatFileStore {
+class GridFS implements IZekiChatFileStore {
 	private name: string;
 
 	private bucket: NpmModuleMongodb.GridFSBucket;
@@ -126,7 +126,7 @@ class GridFS implements IRocketChatFileStore {
 	}
 }
 
-class FileSystem implements IRocketChatFileStore {
+class FileSystem implements IZekiChatFileStore {
 	private absolutePath: string;
 
 	constructor({ absolutePath = '~/uploads' } = {}) {
@@ -209,7 +209,7 @@ class FileSystem implements IRocketChatFileStore {
 	}
 }
 
-export const RocketChatFile = {
+export const ZekiChatFile = {
 	bufferToStream(buffer: Buffer) {
 		return Readable.from(buffer);
 	},

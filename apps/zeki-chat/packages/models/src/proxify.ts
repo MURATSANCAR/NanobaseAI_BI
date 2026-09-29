@@ -1,4 +1,4 @@
-import type { IBaseModel } from '@rocket.chat/model-typings';
+import type { IBaseModel } from '@zeki.chat/model-typings';
 
 const lazyModels = new Map<string, () => IBaseModel<any>>();
 const models = new Map<string, IBaseModel<any>>();

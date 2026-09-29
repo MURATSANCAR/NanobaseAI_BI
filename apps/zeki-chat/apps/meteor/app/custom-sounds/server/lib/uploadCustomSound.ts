@@ -1,24 +1,24 @@
-import { api } from '@rocket.chat/core-services';
-import type { RequiredField } from '@rocket.chat/core-typings';
-import { CustomSounds } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { RequiredField } from '@zeki.chat/core-typings';
+import { CustomSounds } from '@zeki.chat/models';
 
-import { RocketChatFile } from '../../../file/server';
+import { ZekiChatFile } from '../../../file/server';
 import type { ICustomSoundData } from '../methods/insertOrUpdateSound';
-import { RocketChatFileCustomSoundsInstance } from '../startup/custom-sounds';
+import { ZekiChatFileCustomSoundsInstance } from '../startup/custom-sounds';
 
 export const uploadCustomSound = async (
 	buffer: Buffer,
 	contentType: string,
 	soundData: RequiredField<ICustomSoundData, '_id'>,
 ): Promise<void> => {
-	const rs = RocketChatFile.bufferToStream(buffer);
+	const rs = ZekiChatFile.bufferToStream(buffer);
 
 	if (soundData.previousExtension) {
-		await RocketChatFileCustomSoundsInstance.deleteFile(`${soundData._id}.${soundData.previousExtension}`);
+		await ZekiChatFileCustomSoundsInstance.deleteFile(`${soundData._id}.${soundData.previousExtension}`);
 	}
 
 	return new Promise((resolve, reject) => {
-		const ws = RocketChatFileCustomSoundsInstance.createWriteStream(`${soundData._id}.${soundData.extension}`, contentType);
+		const ws = ZekiChatFileCustomSoundsInstance.createWriteStream(`${soundData._id}.${soundData.extension}`, contentType);
 
 		ws.on('error', (err: Error) => {
 			reject(err);

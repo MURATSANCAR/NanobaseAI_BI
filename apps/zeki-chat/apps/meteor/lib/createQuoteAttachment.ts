@@ -1,5 +1,5 @@
-import { isTranslatedMessage, getUserDisplayName } from '@rocket.chat/core-typings';
-import type { ITranslatedMessage, IMessage } from '@rocket.chat/core-typings';
+import { isTranslatedMessage, getUserDisplayName } from '@zeki.chat/core-typings';
+import type { ITranslatedMessage, IMessage } from '@zeki.chat/core-typings';
 
 export function createQuoteAttachment(
 	message: IMessage | ITranslatedMessage,

@@ -1,6 +1,6 @@
-import type { IRoutingMethod, RoutingMethodConfig, SelectedAgent } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import type { IRoutingMethod, RoutingMethodConfig, SelectedAgent } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 import { Meteor } from 'meteor/meteor';
 
 import { SystemLogger } from '../../../../../server/lib/logger/system';
@@ -43,9 +43,9 @@ class ExternalQueue implements IRoutingMethod {
 		try {
 			const request = await fetch(`${settings.get('Livechat_External_Queue_URL')}`, {
 				headers: {
-					'User-Agent': 'RocketChat Server',
+					'User-Agent': 'ZekiChat Server',
 					'Accept': 'application/json',
-					'X-RocketChat-Secret-Token': settings.get('Livechat_External_Queue_Token'),
+					'X-ZekiChat-Secret-Token': settings.get('Livechat_External_Queue_Token'),
 				},
 				params: {
 					...(department && { departmentId: department }),

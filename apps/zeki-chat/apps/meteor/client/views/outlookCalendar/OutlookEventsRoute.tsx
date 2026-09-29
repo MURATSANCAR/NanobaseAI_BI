@@ -1,4 +1,4 @@
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useState } from 'react';
 
 import OutlookEventsList from './OutlookEventsList';

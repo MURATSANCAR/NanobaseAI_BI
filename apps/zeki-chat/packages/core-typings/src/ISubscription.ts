@@ -1,4 +1,4 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IRole } from './IRole';
 import type { IRoom } from './IRoom';
 import type { IUser } from './IUser';
@@ -8,7 +8,7 @@ type OldKey = { e2eKeyId: string; ts: Date; E2EKey: string };
 
 export type SubscriptionStatus = 'INVITED' | 'BANNED';
 
-export interface ISubscription extends IRocketChatRecord {
+export interface ISubscription extends IZekiChatRecord {
 	u: Pick<IUser, '_id' | 'username' | 'name'>;
 	v?: Pick<IUser, '_id' | 'username' | 'name' | 'status'> & { token?: string };
 	rid: IRoom['_id'];

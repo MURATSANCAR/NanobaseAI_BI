@@ -1,6 +1,6 @@
-import { RocketChatError } from './RocketChatError';
+import { ZekiChatError } from './ZekiChatError';
 
-export class PinMessagesNotAllowed extends RocketChatError<'error-pinning-message'> {
+export class PinMessagesNotAllowed extends ZekiChatError<'error-pinning-message'> {
 	constructor(message = 'Pinning messages is not allowed', details?: unknown) {
 		super('error-pinning-message', message, details);
 	}

@@ -1,7 +1,7 @@
 import { IconButton } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal, GenericTableCell } from '@rocket.chat/ui-client';
-import { useRoute, useEndpoint, useSetModal, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { GenericModal, GenericTableCell } from '@zeki.chat/ui-client';
+import { useRoute, useEndpoint, useSetModal, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 

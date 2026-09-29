@@ -15,7 +15,7 @@ describe('[Push]', () => {
 				.send({
 					type: 'gcm',
 					value: 'token',
-					appName: 'com.example.rocketchat',
+					appName: 'com.example.zekichat',
 				})
 				.expect(200)
 				.expect((res) => {
@@ -31,7 +31,7 @@ describe('[Push]', () => {
 				.send({
 					type: 'apn',
 					value: 'token',
-					appName: 'com.example.rocketchat',
+					appName: 'com.example.zekichat',
 				})
 				.expect(200)
 				.expect((res) => {
@@ -46,7 +46,7 @@ describe('[Push]', () => {
 				.send({
 					type: 'gcm',
 					value: 'token',
-					appName: 'com.example.rocketchat',
+					appName: 'com.example.zekichat',
 				})
 				.expect(401)
 				.expect((res) => {
@@ -61,7 +61,7 @@ describe('[Push]', () => {
 				.set(credentials)
 				.send({
 					value: 'token',
-					appName: 'com.example.rocketchat',
+					appName: 'com.example.zekichat',
 				})
 				.expect(400)
 				.expect((res) => {
@@ -77,7 +77,7 @@ describe('[Push]', () => {
 				.set(credentials)
 				.send({
 					type: 'gcm',
-					appName: 'com.example.rocketchat',
+					appName: 'com.example.zekichat',
 				})
 				.expect(400)
 				.expect((res) => {
@@ -110,7 +110,7 @@ describe('[Push]', () => {
 				.send({
 					type: 'unknownPlatform',
 					value: 'token',
-					appName: 'com.example.rocketchat',
+					appName: 'com.example.zekichat',
 				})
 				.expect(400)
 				.expect((res) => {
@@ -126,7 +126,7 @@ describe('[Push]', () => {
 				.set(credentials)
 				.send({
 					type: 'gcm',
-					appName: 'com.example.rocketchat',
+					appName: 'com.example.zekichat',
 					value: '',
 				})
 				.expect(400)

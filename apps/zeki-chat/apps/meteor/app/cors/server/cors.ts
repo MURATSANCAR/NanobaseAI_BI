@@ -2,7 +2,7 @@ import type http from 'node:http';
 import type { UrlWithParsedQuery } from 'node:url';
 import url from 'node:url';
 
-import { Logger } from '@rocket.chat/logger';
+import { Logger } from '@zeki.chat/logger';
 import { Meteor } from 'meteor/meteor';
 import type { StaticFiles } from 'meteor/webapp';
 import { WebApp, WebAppInternals } from 'meteor/webapp';
@@ -87,7 +87,7 @@ WebApp.rawConnectHandlers.use(async (_req: http.IncomingMessage, res: http.Serve
 		const inlineHashes = [
 			// Hash for `window.close()`, required by the CAS login popup.
 			"'sha256-jqxtvDkBbRAl9Hpqv68WdNOieepg8tJSYu1xIy7zT34='",
-			// Hash for /apps/meteor/packages/rocketchat-livechat/assets/demo.html:25
+			// Hash for /apps/meteor/packages/zekichat-livechat/assets/demo.html:25
 			"'sha256-aui5xYk3Lu1dQcnsPlNZI+qDTdfzdUv3fzsw80VLJgw='",
 		]
 			.filter(Boolean)

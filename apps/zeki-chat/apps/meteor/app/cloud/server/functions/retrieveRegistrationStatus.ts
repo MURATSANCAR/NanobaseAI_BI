@@ -1,8 +1,8 @@
-import { Users } from '@rocket.chat/models';
+import { Users } from '@zeki.chat/models';
 
 import { settings } from '../../../settings/server';
 
-// Zeki: the workspace is never registered with Rocket.Chat Cloud, regardless of stored settings.
+// Zeki: the workspace is never registered with ZEKI AI CHAT Cloud, regardless of stored settings.
 export async function retrieveRegistrationStatus(): Promise<{
 	workspaceRegistered: boolean;
 	workspaceId: string;

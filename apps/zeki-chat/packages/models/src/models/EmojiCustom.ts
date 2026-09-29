@@ -1,11 +1,11 @@
-import type { IEmojiCustom, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IEmojiCustomModel, InsertionModel } from '@rocket.chat/model-typings';
+import type { IEmojiCustom, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IEmojiCustomModel, InsertionModel } from '@zeki.chat/model-typings';
 import type { Collection, FindCursor, Db, FindOptions, IndexDescription, InsertOneResult, UpdateResult, WithId } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class EmojiCustomRaw extends BaseRaw<IEmojiCustom> implements IEmojiCustomModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IEmojiCustom>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IEmojiCustom>>) {
 		super(db, 'custom_emoji', trash);
 	}
 

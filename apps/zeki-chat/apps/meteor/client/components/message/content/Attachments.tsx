@@ -1,4 +1,4 @@
-import type { MessageAttachmentBase } from '@rocket.chat/core-typings';
+import type { MessageAttachmentBase } from '@zeki.chat/core-typings';
 import type { ReactElement } from 'react';
 
 import AttachmentsItem from './attachments/AttachmentsItem';

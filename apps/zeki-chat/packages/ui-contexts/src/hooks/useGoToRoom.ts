@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useStableCallback } from '@rocket.chat/fuselage-hooks';
 
 import { useEndpoint } from './useEndpoint';

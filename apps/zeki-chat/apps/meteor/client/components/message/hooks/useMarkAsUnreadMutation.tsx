@@ -1,5 +1,5 @@
-import type { IMessage, ISubscription } from '@rocket.chat/core-typings';
-import { useEndpoint, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IMessage, ISubscription } from '@zeki.chat/core-typings';
+import { useEndpoint, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 
 import { LegacyRoomManager } from '../../../../app/ui-utils/client';

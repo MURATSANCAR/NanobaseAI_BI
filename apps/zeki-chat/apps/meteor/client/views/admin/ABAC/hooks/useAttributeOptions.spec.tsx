@@ -1,8 +1,8 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook, waitFor } from '@testing-library/react';
 
 import { useAttributeOptions } from './useAttributeOptions';
-import { createFakeLicenseInfo } from '../../../../../tests/mocks/data';
+import { createFakeCapabilities } from '../../../../../tests/mocks/data';
 
 const mockNavigate = jest.fn();
 const mockSetModal = jest.fn();
@@ -13,8 +13,8 @@ jest.mock('./useIsABACAvailable', () => ({
 	useIsABACAvailable: () => useIsABACAvailableMock(),
 }));
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useRouter: () => ({
 		navigate: mockNavigate,
 	}),
@@ -49,8 +49,8 @@ const baseAppRoot = mockAppRoot()
 		i18nLabel: 'ABAC_Enabled',
 		i18nDescription: 'ABAC_Enabled_Description',
 	})
-	.withEndpoint('GET', '/v1/licenses.info', async () => ({
-		license: createFakeLicenseInfo({ activeModules: ['abac'] }),
+	.withEndpoint('GET', '/v1/capabilities.info', async () => ({
+		capabilities: createFakeCapabilities({ modules: ['abac'] }),
 	}));
 
 describe('useAttributeOptions', () => {
@@ -133,8 +133,8 @@ describe('useAttributeOptions', () => {
 					i18nLabel: 'ABAC_Enabled',
 					i18nDescription: 'ABAC_Enabled_Description',
 				})
-				.withEndpoint('GET', '/v1/licenses.info', async () => ({
-					license: createFakeLicenseInfo({ activeModules: [] }),
+				.withEndpoint('GET', '/v1/capabilities.info', async () => ({
+					capabilities: createFakeCapabilities({ modules: [] }),
 				}))
 				.withEndpoint('DELETE', '/v1/abac/attributes/:_id', async () => null)
 				.withEndpoint('GET', '/v1/abac/attributes/:key/is-in-use', async () => ({ inUse: false }))

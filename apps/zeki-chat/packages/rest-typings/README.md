@@ -1,5 +1,5 @@
 
-#  @rocket.chat/rest-typings
+#  @zeki.chat/rest-typings
 
 Package containing all ZEKI AI CHAT rest endpoint definitions
 
@@ -68,7 +68,7 @@ However we have some recommendations.
 we use interfaces to register endpoints, so if you use a custom version, or miss an endpoint, you don't necessarily need to recompile the code, you can do it in your own code
 
 ```typescript
-    declare module '@rocket.chat/rest-typings' {
+    declare module '@zeki.chat/rest-typings' {
         interface Endpoints {
             'custom/endpoint': {
                 GET: (params: PaginatedRequest<{ query: string }>) => PaginatedResult<{

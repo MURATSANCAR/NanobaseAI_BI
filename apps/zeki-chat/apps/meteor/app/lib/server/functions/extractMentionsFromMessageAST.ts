@@ -1,4 +1,4 @@
-import type { Root, Paragraph, Blocks, Inlines, UserMention, ChannelMention, Task, ListItem, BigEmoji } from '@rocket.chat/message-parser';
+import type { Root, Paragraph, Blocks, Inlines, UserMention, ChannelMention, Task, ListItem, BigEmoji } from '@zeki.chat/message-parser';
 
 type ExtractedMentions = {
 	mentions: string[];

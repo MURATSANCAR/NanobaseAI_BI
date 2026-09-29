@@ -1,8 +1,8 @@
-import { OmnichannelEEService } from '@rocket.chat/core-services';
-import type { ILivechatVisitor, IOmnichannelRoom, IUser, ILivechatDepartment } from '@rocket.chat/core-typings';
-import { cronJobs } from '@rocket.chat/cron';
-import type { MainLogger } from '@rocket.chat/logger';
-import { LivechatVisitors, LivechatRooms, LivechatDepartment, Users } from '@rocket.chat/models';
+import { OmnichannelEEService } from '@zeki.chat/core-services';
+import type { ILivechatVisitor, IOmnichannelRoom, IUser, ILivechatDepartment } from '@zeki.chat/core-typings';
+import { cronJobs } from '@zeki.chat/cron';
+import type { MainLogger } from '@zeki.chat/logger';
+import { LivechatVisitors, LivechatRooms, LivechatDepartment, Users } from '@zeki.chat/models';
 
 import { schedulerLogger } from './logger';
 import { notifyOnRoomChangedById } from '../../../../../app/lib/server/lib/notifyListener';
@@ -36,7 +36,7 @@ export class VisitorInactivityMonitor {
 	async start() {
 		await this._startMonitoring();
 		this._initializeMessageCache();
-		const cat = await Users.findOneById('rocket.cat');
+		const cat = await Users.findOneById('zeki.bot');
 		if (cat) {
 			this.user = cat;
 		}

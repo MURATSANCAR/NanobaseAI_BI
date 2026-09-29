@@ -15,7 +15,7 @@ import {
 	MessageToolbarItem,
 	Avatar,
 } from '@rocket.chat/fuselage';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import { action } from '@storybook/addon-actions';
 
 import { UiKitContext, UiKitMessage } from '..';

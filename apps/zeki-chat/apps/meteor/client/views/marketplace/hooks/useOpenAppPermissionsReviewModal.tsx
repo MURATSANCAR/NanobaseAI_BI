@@ -1,5 +1,5 @@
-import type { App } from '@rocket.chat/core-typings';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import type { App } from '@zeki.chat/core-typings';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 
 import type { AppPermissionsReviewModalProps } from '../AppPermissionsReviewModal';

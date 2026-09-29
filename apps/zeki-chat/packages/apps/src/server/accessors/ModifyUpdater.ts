@@ -4,11 +4,11 @@ import type {
 	IMessageUpdater,
 	IModifyUpdater,
 	IRoomBuilder,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import type { IUserUpdater } from '@rocket.chat/apps-engine/definition/accessors/IUserUpdater';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import type { IUserUpdater } from '@zeki.chat/apps-engine/definition/accessors/IUserUpdater';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { LivechatUpdater } from './LivechatUpdater';
 import { MessageBuilder } from './MessageBuilder';
@@ -60,9 +60,9 @@ export class ModifyUpdater implements IModifyUpdater {
 
 	public finish(builder: IMessageBuilder | IRoomBuilder): Promise<void> {
 		switch (builder.kind) {
-			case RocketChatAssociationModel.MESSAGE:
+			case ZekiChatAssociationModel.MESSAGE:
 				return this._finishMessage(builder);
-			case RocketChatAssociationModel.ROOM:
+			case ZekiChatAssociationModel.ROOM:
 				return this._finishRoom(builder);
 			default:
 				throw new Error('Invalid builder passed to the ModifyUpdater.finish function.');

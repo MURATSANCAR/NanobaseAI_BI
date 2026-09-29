@@ -1,7 +1,7 @@
-import { MeteorError } from '@rocket.chat/core-services';
-import type { IOmnichannelBusinessUnit, IOmnichannelServiceLevelAgreements, IUser, ILivechatTag } from '@rocket.chat/core-typings';
-import { Users, OmnichannelServiceLevelAgreements, LivechatTag, LivechatUnitMonitors, LivechatUnit } from '@rocket.chat/models';
-import { getUnitsFromUser } from '@rocket.chat/omni-core-ee';
+import { MeteorError } from '@zeki.chat/core-services';
+import type { IOmnichannelBusinessUnit, IOmnichannelServiceLevelAgreements, IUser, ILivechatTag } from '@zeki.chat/core-typings';
+import { Users, OmnichannelServiceLevelAgreements, LivechatTag, LivechatUnitMonitors, LivechatUnit } from '@zeki.chat/models';
+import { getUnitsFromUser } from '@zeki.chat/omni-core-ee';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 

@@ -1,4 +1,4 @@
-import type { IIncomingIntegration, Serialized } from '@rocket.chat/core-typings';
+import type { IIncomingIntegration, Serialized } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import {
 	FieldError,
@@ -17,7 +17,7 @@ import {
 	FieldRow,
 	FieldHint,
 } from '@rocket.chat/fuselage';
-import { useAbsoluteUrl } from '@rocket.chat/ui-contexts';
+import { useAbsoluteUrl } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import { useId, useMemo } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';

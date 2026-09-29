@@ -1,4 +1,4 @@
-import type { SlashCommandPreviews } from '@rocket.chat/core-typings';
+import type { SlashCommandPreviews } from '@zeki.chat/core-typings';
 
 export type CommandsEndpoints = {
 	'/v1/commands.run': {

@@ -4,11 +4,11 @@ import type {
 	IRoom,
 	ISubscription,
 	IUser,
-	RocketChatRecordDeleted,
+	ZekiChatRecordDeleted,
 	RoomType,
 	SpotlightUser,
-} from '@rocket.chat/core-typings';
-import type { ISubscriptionsModel } from '@rocket.chat/model-typings';
+} from '@zeki.chat/core-typings';
+import type { ISubscriptionsModel } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import { compact } from 'lodash';
 import mem from 'mem';
@@ -37,7 +37,7 @@ import { Rooms, Users } from '../index';
 import { BaseRaw } from './BaseRaw';
 
 export class SubscriptionsRaw extends BaseRaw<ISubscription> implements ISubscriptionsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ISubscription>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ISubscription>>) {
 		super(db, 'subscription', trash);
 	}
 
@@ -452,7 +452,7 @@ export class SubscriptionsRaw extends BaseRaw<ISubscription> implements ISubscri
 					// find all subscriptions to the same rooms by other users
 					{
 						$lookup: {
-							from: 'rocketchat_subscription',
+							from: 'zeki_subscription',
 							as: 'subscription',
 							let: {
 								rid: '$_id',
@@ -2099,7 +2099,7 @@ export class SubscriptionsRaw extends BaseRaw<ISubscription> implements ISubscri
 			},
 			{
 				$lookup: {
-					from: 'rocketchat_room',
+					from: 'zeki_room',
 					localField: 'rid',
 					foreignField: '_id',
 					as: 'room',

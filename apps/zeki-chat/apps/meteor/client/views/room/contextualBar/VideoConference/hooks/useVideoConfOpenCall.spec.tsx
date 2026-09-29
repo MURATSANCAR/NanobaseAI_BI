@@ -1,18 +1,18 @@
 import { faker } from '@faker-js/faker';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { screen, act, renderHook } from '@testing-library/react';
 
 import { useVideoConfOpenCall } from './useVideoConfOpenCall';
 
-describe('with window.RocketChatDesktop set', () => {
+describe('with window.ZekiChatDesktop set', () => {
 	beforeEach(() => {
-		window.RocketChatDesktop = {
+		window.ZekiChatDesktop = {
 			openInternalVideoChatWindow: jest.fn(),
 		} as any;
 	});
 
 	afterAll(() => {
-		delete window.RocketChatDesktop;
+		delete window.ZekiChatDesktop;
 	});
 
 	it('should pass to videoConfOpenCall the url', async () => {
@@ -24,7 +24,7 @@ describe('with window.RocketChatDesktop set', () => {
 			result.current(url);
 		});
 
-		expect(window.RocketChatDesktop?.openInternalVideoChatWindow).toHaveBeenCalledWith(url, { providerName: undefined });
+		expect(window.ZekiChatDesktop?.openInternalVideoChatWindow).toHaveBeenCalledWith(url, { providerName: undefined });
 	});
 
 	it('should pass to videoConfOpenCall the url and the providerName', async () => {
@@ -37,13 +37,13 @@ describe('with window.RocketChatDesktop set', () => {
 			result.current(url, providerName);
 		});
 
-		expect(window.RocketChatDesktop?.openInternalVideoChatWindow).toHaveBeenCalledWith(url, {
+		expect(window.ZekiChatDesktop?.openInternalVideoChatWindow).toHaveBeenCalledWith(url, {
 			providerName,
 		});
 	});
 });
 
-describe('without window.RocketChatDesktop set', () => {
+describe('without window.ZekiChatDesktop set', () => {
 	const previousWindowOpen = window.open;
 
 	afterAll(() => {

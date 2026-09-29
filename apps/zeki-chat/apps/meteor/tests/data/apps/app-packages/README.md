@@ -31,11 +31,11 @@ An app that handles the `IPreFileUpload` event. If the file name starts with `"t
 <summary>App source code</summary>
 
 ```typescript
-import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import { App } from '@rocket.chat/apps-engine/definition/App';
-import { FileUploadNotAllowedException } from '@rocket.chat/apps-engine/definition/exceptions';
-import { IPreFileUpload } from '@rocket.chat/apps-engine/definition/uploads';
-import { IFileUploadContext } from '@rocket.chat/apps-engine/definition/uploads/IFileUploadContext';
+import { IHttp, IModify, IPersistence, IRead } from '@zeki.chat/apps-engine/definition/accessors';
+import { App } from '@zeki.chat/apps-engine/definition/App';
+import { FileUploadNotAllowedException } from '@zeki.chat/apps-engine/definition/exceptions';
+import { IPreFileUpload } from '@zeki.chat/apps-engine/definition/uploads';
+import { IFileUploadContext } from '@zeki.chat/apps-engine/definition/uploads/IFileUploadContext';
 
 export class TestIPreFileUpload extends App implements IPreFileUpload {
 	public async executePreFileUpload(
@@ -74,10 +74,10 @@ An app that provides a public API endpoint with URL parameters. The endpoint pat
 **APIParameterTestApp.ts**
 
 ```typescript
-import { IAppAccessors, IConfigurationExtend, IEnvironmentRead, ILogger } from '@rocket.chat/apps-engine/definition/accessors';
-import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
-import { App } from '@rocket.chat/apps-engine/definition/App';
-import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
+import { IAppAccessors, IConfigurationExtend, IEnvironmentRead, ILogger } from '@zeki.chat/apps-engine/definition/accessors';
+import { ApiSecurity, ApiVisibility } from '@zeki.chat/apps-engine/definition/api';
+import { App } from '@zeki.chat/apps-engine/definition/App';
+import { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
 import { TestEndpoint } from './TestEndpoint';
 
 export class APIParameterTestApp extends App {
@@ -98,8 +98,8 @@ export class APIParameterTestApp extends App {
 **TestEndpoint.ts**
 
 ```typescript
-import { HttpStatusCode, IModify, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
+import { HttpStatusCode, IModify, IRead } from '@zeki.chat/apps-engine/definition/accessors';
+import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@zeki.chat/apps-engine/definition/api';
 
 export class TestEndpoint extends ApiEndpoint {
 	public path = 'api/:param1/:param2/test';
@@ -158,10 +158,10 @@ import {
 	IAppAccessors,
 	IConfigurationExtend,
 	ILogger,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import { App } from '@rocket.chat/apps-engine/definition/App';
-import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import { App } from '@zeki.chat/apps-engine/definition/App';
+import { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
+import { ApiSecurity, ApiVisibility } from '@zeki.chat/apps-engine/definition/api';
 import { ResolveVisitorEndpoint } from './ResolveVisitorEndpoint';
 import { UpdateExternalIdEndpoint } from './UpdateExternalIdEndpoint';
 
@@ -188,8 +188,8 @@ import {
 	IModify,
 	IPersistence,
 	IRead,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@zeki.chat/apps-engine/definition/api';
 
 export class ResolveVisitorEndpoint extends ApiEndpoint {
 	public override path = 'resolve-visitor';
@@ -230,8 +230,8 @@ import {
 	IModify,
 	IPersistence,
 	IRead,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@zeki.chat/apps-engine/definition/api';
 
 export class UpdateExternalIdEndpoint extends ApiEndpoint {
 	public override path = 'update-external-id';
@@ -343,10 +343,10 @@ import {
     IAppAccessors,
     IConfigurationExtend,
     ILogger,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
-import { App } from '@rocket.chat/apps-engine/definition/App';
-import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import { ApiSecurity, ApiVisibility } from '@zeki.chat/apps-engine/definition/api';
+import { App } from '@zeki.chat/apps-engine/definition/App';
+import { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
 import { UpdateStatusEndpoint } from './endpoints/UpdateStatusEndpoint';
 import { UpdateStatusTextEndpoint } from './endpoints/UpdateStatusTextEndpoint';
 
@@ -370,9 +370,9 @@ export class UpdateStatusTestApp extends App {
 
 **endpoints/UpdateStatusEndpoint.ts**
 ```typescript
-import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
-import { IUser } from '@rocket.chat/apps-engine/definition/users';
+import { IHttp, IModify, IPersistence, IRead } from '@zeki.chat/apps-engine/definition/accessors';
+import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@zeki.chat/apps-engine/definition/api';
+import { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 export class UpdateStatusEndpoint extends ApiEndpoint {
     public path = 'update-status';
@@ -403,9 +403,9 @@ export class UpdateStatusEndpoint extends ApiEndpoint {
 
 **endpoints/UpdateStatusTextEndpoint.ts**
 ```typescript
-import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
-import { IUser } from '@rocket.chat/apps-engine/definition/users';
+import { IHttp, IModify, IPersistence, IRead } from '@zeki.chat/apps-engine/definition/accessors';
+import { ApiEndpoint, IApiEndpointInfo, IApiRequest, IApiResponse } from '@zeki.chat/apps-engine/definition/api';
+import { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 export class UpdateStatusTextEndpoint extends ApiEndpoint {
     public path = 'update-status-text';
@@ -506,18 +506,18 @@ import {
 	IModify,
 	IPersistence,
 	IRead,
-} from '@rocket.chat/apps-engine/definition/accessors';
-import { App } from '@rocket.chat/apps-engine/definition/App';
-import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
+} from '@zeki.chat/apps-engine/definition/accessors';
+import { App } from '@zeki.chat/apps-engine/definition/App';
+import { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
 import {
 	IUIKitInteractionHandler,
 	IUIKitResponse,
 	UIKitBlockInteractionContext,
 	UIKitViewCloseInteractionContext,
 	UIKitViewSubmitInteractionContext,
-} from '@rocket.chat/apps-engine/definition/uikit';
-import { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
-import { UIKitSurfaceType } from '@rocket.chat/apps-engine/definition/uikit';
+} from '@zeki.chat/apps-engine/definition/uikit';
+import { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
+import { UIKitSurfaceType } from '@zeki.chat/apps-engine/definition/uikit';
 
 export class UiKitRoomTestApp extends App implements IUIKitInteractionHandler {
 	constructor(info: IAppInfo, logger: ILogger, accessors: IAppAccessors) {

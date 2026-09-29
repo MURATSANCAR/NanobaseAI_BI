@@ -1,10 +1,10 @@
-import { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
+import { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
 import type {
 	ISlashCommand,
 	ISlashCommandPreview,
 	ISlashCommandPreviewItem,
 	SlashCommandContext,
-} from '@rocket.chat/apps-engine/definition/slashcommands';
+} from '@zeki.chat/apps-engine/definition/slashcommands';
 
 import type { ProxiedApp } from '../ProxiedApp';
 import type { AppLogStorage } from '../storage';
@@ -12,19 +12,19 @@ import type { AppAccessorManager } from './AppAccessorManager';
 
 export class AppSlashCommand {
 	/**
-	 * States whether this command has been registered into the Rocket.Chat system or not.
+	 * States whether this command has been registered into the ZEKI AI CHAT system or not.
 	 */
 	public isRegistered: boolean;
 
 	/**
 	 * Declares whether this command has been enabled or not,
-	 * does not have to be inside of the Rocket.Chat system if `isRegistered` is false.
+	 * does not have to be inside of the ZEKI AI CHAT system if `isRegistered` is false.
 	 */
 	public isEnabled: boolean;
 
 	/**
 	 * Proclaims whether this command has been disabled or not,
-	 * does not have to be inside the Rocket.Chat system if `isRegistered` is false.
+	 * does not have to be inside the ZEKI AI CHAT system if `isRegistered` is false.
 	 */
 	public isDisabled: boolean;
 

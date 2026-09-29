@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import type { IRoom, IMessage } from '@rocket.chat/core-typings';
-import type { ChannelsCreateProps, GroupsCreateProps } from '@rocket.chat/rest-typings';
+import type { IRoom, IMessage } from '@zeki.chat/core-typings';
+import type { ChannelsCreateProps, GroupsCreateProps } from '@zeki.chat/rest-typings';
 
 import type { BaseTest } from './test';
 

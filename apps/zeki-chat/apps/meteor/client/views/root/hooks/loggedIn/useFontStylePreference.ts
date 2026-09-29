@@ -1,5 +1,5 @@
-import type { FontSize } from '@rocket.chat/rest-typings';
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import type { FontSize } from '@zeki.chat/rest-typings';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import { useLayoutEffect } from 'react';
 
 import { useCreateFontStyleElement } from '../../../account/accessibility/hooks/useCreateFontStyleElement';

@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { Users, Analytics, Sessions } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Users, Analytics, Sessions } from '@zeki.chat/models';
 import moment from 'moment';
 
 import { convertDateToInt, diffBetweenDaysInclusive, getTotalOfWeekItems, convertIntToDate } from './date';

@@ -1,9 +1,9 @@
-import { AppEvents, Apps } from '@rocket.chat/apps';
-import { AppsEngineException } from '@rocket.chat/apps-engine/definition/exceptions';
-import { FederationMatrix, Message, Room, Team } from '@rocket.chat/core-services';
-import type { ICreateRoomParams, ISubscriptionExtraData } from '@rocket.chat/core-services';
-import { type ICreatedRoom, type IUser, type IRoom, type RoomType, isUserNativeFederated } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { AppEvents, Apps } from '@zeki.chat/apps';
+import { AppsEngineException } from '@zeki.chat/apps-engine/definition/exceptions';
+import { FederationMatrix, Message, Room, Team } from '@zeki.chat/core-services';
+import type { ICreateRoomParams, ISubscriptionExtraData } from '@zeki.chat/core-services';
+import { type ICreatedRoom, type IUser, type IRoom, type RoomType, isUserNativeFederated } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { createDirectRoom } from './createDirectRoom';
@@ -203,19 +203,19 @@ export const createRoom = async <T extends RoomType>(
 
 	if (!isValidName(name)) {
 		throw new Meteor.Error('error-invalid-name', 'Invalid name', {
-			function: 'RocketChat.createRoom',
+			function: 'ZekiChat.createRoom',
 		});
 	}
 
 	if (!owner) {
 		throw new Meteor.Error('error-invalid-user', 'Invalid user', {
-			function: 'RocketChat.createRoom',
+			function: 'ZekiChat.createRoom',
 		});
 	}
 
 	if (!owner?.username) {
 		throw new Meteor.Error('error-invalid-user', 'Invalid user', {
-			function: 'RocketChat.createRoom',
+			function: 'ZekiChat.createRoom',
 		});
 	}
 

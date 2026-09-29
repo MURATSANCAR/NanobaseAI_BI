@@ -1,5 +1,5 @@
 import { HeroLayout, HeroLayoutTitle } from '@rocket.chat/layout';
-import { useRouteParameter, useUserId } from '@rocket.chat/ui-contexts';
+import { useRouteParameter, useUserId } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

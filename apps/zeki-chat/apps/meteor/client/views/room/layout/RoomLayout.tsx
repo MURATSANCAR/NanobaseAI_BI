@@ -2,7 +2,7 @@
 import { Box } from '@rocket.chat/fuselage';
 import { useResizeObserver } from '@rocket.chat/fuselage-hooks';
 import breakpointsDefinitions from '@rocket.chat/fuselage-tokens/breakpoints.json';
-import { LayoutContext, useLayout } from '@rocket.chat/ui-contexts';
+import { LayoutContext, useLayout } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { Suspense, useMemo } from 'react';
 

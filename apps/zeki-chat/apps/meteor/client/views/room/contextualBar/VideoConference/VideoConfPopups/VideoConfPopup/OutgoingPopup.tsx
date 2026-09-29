@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import {
 	VideoConfPopup,
 	VideoConfPopupContent,
@@ -12,7 +12,7 @@ import {
 	VideoConfPopupHeader,
 	useVideoConfCapabilities,
 	useVideoConfPreferences,
-} from '@rocket.chat/ui-video-conf';
+} from '@zeki.chat/ui-video-conf';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

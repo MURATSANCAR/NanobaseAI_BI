@@ -69,7 +69,7 @@ class JIRAReporter implements Reporter {
 	}
 
 	private async _onTestEnd(test: TestCase, result: TestResult) {
-		if (process.env.REPORTER_ROCKETCHAT_REPORT !== 'true') {
+		if (process.env.REPORTER_ZEKICHAT_REPORT !== 'true') {
 			return;
 		}
 
@@ -155,7 +155,7 @@ class JIRAReporter implements Reporter {
 author: ${this.author}
 PR: ${this.pr}
 https://github.com/RocketChat/Rocket.Chat/blob/${payload.headSha}/${location.file.replace(
-						'/home/runner/work/Rocket.Chat/Rocket.Chat',
+						'/home/runner/work/ZEKI AI CHAT/ZEKI AI CHAT',
 						'',
 					)}#L${location.line}:${location.column}
 ${this.run_url}
@@ -226,7 +226,7 @@ ${this.run_url}
 author: ${this.author}
 PR: ${this.pr}
 https://github.com/RocketChat/Rocket.Chat/blob/${payload.headSha}/${location.file.replace(
-					'/home/runner/work/Rocket.Chat/Rocket.Chat',
+					'/home/runner/work/ZEKI AI CHAT/ZEKI AI CHAT',
 					'',
 				)}#L${location.line}:${location.column}
 ${this.run_url}

@@ -1,5 +1,5 @@
-import { Logger } from '@rocket.chat/logger';
-import { Settings } from '@rocket.chat/models';
+import { Logger } from '@zeki.chat/logger';
+import { Settings } from '@zeki.chat/models';
 import moment from 'moment';
 import Queue from 'queue-fifo';
 
@@ -37,7 +37,7 @@ class Bridge {
 		// General
 		this.config = config;
 
-		// Workaround for Rocket.Chat callbacks being called multiple times
+		// Workaround for ZEKI AI CHAT callbacks being called multiple times
 		this.loggedInUsers = [];
 
 		// Server

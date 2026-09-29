@@ -1,11 +1,11 @@
-import type { IBannerDismiss, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IBannersDismissModel } from '@rocket.chat/model-typings';
+import type { IBannerDismiss, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IBannersDismissModel } from '@zeki.chat/model-typings';
 import type { Collection, FindCursor, Db, FindOptions, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class BannersDismissRaw extends BaseRaw<IBannerDismiss> implements IBannersDismissModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IBannerDismiss>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IBannerDismiss>>) {
 		super(db, 'banner_dismiss', trash);
 	}
 

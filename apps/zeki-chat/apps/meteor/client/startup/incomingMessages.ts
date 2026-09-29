@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { sdk } from '../../app/utils/client/lib/SDKClient';
 import { onLoggedIn } from '../lib/loggedIn';
@@ -10,7 +10,7 @@ onLoggedIn(() => {
 	// Only event I found triggers this is from ephemeral messages
 	// Other types of messages come from another stream
 	return sdk.stream('notify-user', [`${getUserId()}/message`], (msg: IMessage) => {
-		msg.u = msg.u || { username: 'rocket.cat' };
+		msg.u = msg.u || { username: 'zeki.bot' };
 		msg.private = true;
 
 		if (msg.tmid) {

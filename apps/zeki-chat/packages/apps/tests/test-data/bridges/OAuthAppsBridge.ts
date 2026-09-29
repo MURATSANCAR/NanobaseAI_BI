@@ -1,4 +1,4 @@
-import type { IOAuthApp, IOAuthAppParams } from '@rocket.chat/apps-engine/definition/accessors/IOAuthApp';
+import type { IOAuthApp, IOAuthAppParams } from '@zeki.chat/apps-engine/definition/accessors/IOAuthApp';
 
 import { OAuthAppsBridge } from '../../../src/server/bridges/OAuthAppsBridge';
 

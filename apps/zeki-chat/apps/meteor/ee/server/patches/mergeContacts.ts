@@ -1,6 +1,6 @@
-import type { ILivechatContact, ILivechatContactChannel, ILivechatContactVisitorAssociation } from '@rocket.chat/core-typings';
+import type { ILivechatContact, ILivechatContactChannel, ILivechatContactVisitorAssociation } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { LivechatContacts, LivechatRooms, Settings } from '@rocket.chat/models';
+import { LivechatContacts, LivechatRooms, Settings } from '@zeki.chat/models';
 import type { ClientSession } from 'mongodb';
 
 import { notifyOnSettingChanged } from '../../../app/lib/server/lib/notifyListener';

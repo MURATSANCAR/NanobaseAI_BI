@@ -6,8 +6,8 @@ import {
 	MessageComposerInput,
 	MessageComposerToolbar,
 	MessageComposerActionsDivider,
-} from '@rocket.chat/ui-composer';
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-composer';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ChangeEvent } from 'react';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';

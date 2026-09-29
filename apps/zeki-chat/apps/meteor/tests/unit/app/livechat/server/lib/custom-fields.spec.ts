@@ -9,7 +9,7 @@ const modelsMock = {
 };
 
 const { updateContactsCustomFields } = proxyquire.noCallThru().load('../../../../../../app/livechat/server/lib/custom-fields.ts', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 });
 
 describe('[Custom Fields] updateContactsCustomFields', () => {

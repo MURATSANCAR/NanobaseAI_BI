@@ -1,10 +1,10 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { Message } from '@rocket.chat/core-services';
-import { isQuoteAttachment, isRegisterUser } from '@rocket.chat/core-typings';
-import type { IMessage, MessageAttachment, MessageQuoteAttachment } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Rooms, Subscriptions, Users } from '@rocket.chat/models';
-import { isTruthy } from '@rocket.chat/tools';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { Message } from '@zeki.chat/core-services';
+import { isQuoteAttachment, isRegisterUser } from '@zeki.chat/core-typings';
+import type { IMessage, MessageAttachment, MessageQuoteAttachment } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Rooms, Subscriptions, Users } from '@zeki.chat/models';
+import { isTruthy } from '@zeki.chat/tools';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -35,7 +35,7 @@ const recursiveRemove = (msg: MessageAttachment, deep = 1) => {
 const shouldAdd = (attachments: MessageAttachment[], attachment: MessageQuoteAttachment) =>
 	!attachments.some((_attachment) => isQuoteAttachment(_attachment) && _attachment.message_link === attachment.message_link);
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		pinMessage(message: IMessage, pinnedAt?: Date): IMessage | null;

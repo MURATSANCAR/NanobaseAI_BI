@@ -1,15 +1,15 @@
-import { Authorization } from '@rocket.chat/core-services';
-import { LivechatDepartment, LivechatDepartmentAgents, Users } from '@rocket.chat/models';
+import { Authorization } from '@zeki.chat/core-services';
+import { LivechatDepartment, LivechatDepartmentAgents, Users } from '@zeki.chat/models';
 
 import { canSendOutboundMessage, validateAgentAssignPermissions } from './canSendMessage';
 
-jest.mock('@rocket.chat/core-services', () => ({
+jest.mock('@zeki.chat/core-services', () => ({
 	Authorization: {
 		hasPermission: jest.fn(),
 	},
 }));
 
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	LivechatDepartment: {
 		findOne: jest.fn(),
 	},

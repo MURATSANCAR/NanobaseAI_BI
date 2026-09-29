@@ -31,7 +31,7 @@ export const Default: StoryFn<typeof InfoPanel> = () => (
 	<InfoPanel>
 		<InfoPanelAvatar />
 		<InfoPanelSection>
-			<InfoPanelTitle title='rocketchat-frontend-team' icon='hashtag' />
+			<InfoPanelTitle title='zekichat-frontend-team' icon='hashtag' />
 		</InfoPanelSection>
 		<InfoPanelSection>
 			<InfoPanelField>

@@ -1,4 +1,4 @@
-import { useEndpoint, useSessionDispatch, useSetting, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useSessionDispatch, useSetting, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

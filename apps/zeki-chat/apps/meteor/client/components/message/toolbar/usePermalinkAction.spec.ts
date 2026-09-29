@@ -1,6 +1,6 @@
-import type { MessageActionContext } from '@rocket.chat/apps-engine/definition/ui';
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import type { MessageActionContext } from '@zeki.chat/apps-engine/definition/ui';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook } from '@testing-library/react';
 
 import { usePermalinkAction } from './usePermalinkAction';

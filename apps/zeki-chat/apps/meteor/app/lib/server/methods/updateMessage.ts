@@ -1,13 +1,12 @@
-import type { IEditedMessage, IMessage, IUser, AtLeast } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Users } from '@rocket.chat/models';
+import type { IEditedMessage, IMessage, IUser, AtLeast } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Users } from '@zeki.chat/models';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
 
 import { canSendMessageAsync } from '../../../authorization/server/functions/canSendMessage';
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
-import { applyAirGappedRestrictionsValidation } from '../../../license/server/airGappedRestrictionsWrapper';
 import { settings } from '../../../settings/server';
 import { updateMessage } from '../functions/updateMessage';
 
@@ -98,7 +97,7 @@ export async function executeUpdateMessage(
 	return updateMessage(message, user, originalMessage, previewUrls);
 }
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		updateMessage(message: IEditedMessage, previewUrls?: string[]): void;
@@ -116,6 +115,6 @@ Meteor.methods<ServerMethods>({
 			throw new Meteor.Error('error-invalid-user', 'Invalid user', { method: 'updateMessage' });
 		}
 
-		return applyAirGappedRestrictionsValidation(() => executeUpdateMessage(uid, message, previewUrls));
+		return executeUpdateMessage(uid, message, previewUrls);
 	},
 });

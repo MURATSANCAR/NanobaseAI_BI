@@ -2,7 +2,7 @@ import type { Config } from 'jest';
 
 export type {} from '@testing-library/jest-dom'; // trick to cascade global types for Jest matchers
 
-const preset = '@rocket.chat/jest-presets/client';
+const preset = '@zeki.chat/jest-presets/client';
 
 export default {
 	preset,

@@ -9,7 +9,7 @@ import {
 	SidebarV2ItemTimestamp,
 	SidebarV2ItemTitle,
 } from '@rocket.chat/fuselage';
-import { useLayout } from '@rocket.chat/ui-contexts';
+import { useLayout } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useState } from 'react';
 

@@ -1,4 +1,4 @@
-import type { RocketChatAssociationModel } from '../metadata';
+import type { ZekiChatAssociationModel } from '../metadata';
 import type { IUser, IUserEmail } from '../users';
 
 /**
@@ -7,7 +7,7 @@ import type { IUser, IUserEmail } from '../users';
  * be able to successfully save the user object.
  */
 export interface IUserBuilder {
-	kind: RocketChatAssociationModel.USER;
+	kind: ZekiChatAssociationModel.USER;
 
 	/**
 	 * Provides a convient way to set the data for the user.

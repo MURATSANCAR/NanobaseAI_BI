@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 
 import { Users } from './fixtures/userStates';
 import { HomeChannel } from './page-objects';

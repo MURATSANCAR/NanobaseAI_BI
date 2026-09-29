@@ -1,5 +1,5 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { isRoomFederated, isRoomNativeFederated } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { isRoomFederated, isRoomNativeFederated } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import {
 	useTranslation,
@@ -9,7 +9,7 @@ import {
 	useToastMessageDispatch,
 	useAtLeastOnePermission,
 	useEndpoint,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import * as Federation from '../../../../../lib/federation/Federation';

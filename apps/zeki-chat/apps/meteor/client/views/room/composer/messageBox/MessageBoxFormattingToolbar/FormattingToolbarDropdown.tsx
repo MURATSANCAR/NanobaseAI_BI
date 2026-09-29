@@ -1,5 +1,5 @@
-import { GenericMenu } from '@rocket.chat/ui-client';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import { isPromptButton, type FormattingButton } from '../../../../../../app/ui-message/client/messageBox/messageBoxFormatting';

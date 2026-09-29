@@ -1,5 +1,5 @@
-import type { TwitterOAuthConfiguration } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { TwitterOAuthConfiguration } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { Meteor } from 'meteor/meteor';
 // eslint-disable-next-line import/no-duplicates
 import { OAuth } from 'meteor/oauth';

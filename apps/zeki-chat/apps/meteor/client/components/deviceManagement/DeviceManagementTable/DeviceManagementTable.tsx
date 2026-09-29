@@ -1,7 +1,7 @@
-import type { DeviceManagementSession, DeviceManagementPopulatedSession, Serialized } from '@rocket.chat/core-typings';
+import type { DeviceManagementSession, DeviceManagementPopulatedSession, Serialized } from '@zeki.chat/core-typings';
 import { Box, Pagination, States, StatesAction, StatesActions, StatesIcon, StatesSubtitle, StatesTitle } from '@rocket.chat/fuselage';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
-import { GenericTable, GenericTableHeader, GenericTableBody, GenericTableLoadingTable } from '@rocket.chat/ui-client';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
+import { GenericTable, GenericTableHeader, GenericTableBody, GenericTableLoadingTable } from '@zeki.chat/ui-client';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ComponentProps, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';

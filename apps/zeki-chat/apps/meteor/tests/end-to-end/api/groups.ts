@@ -1,5 +1,5 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import { TeamType, type IIntegration, type IMessage, type IRoom, type ITeam, type IUser } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import { TeamType, type IIntegration, type IMessage, type IRoom, type ITeam, type IUser } from '@zeki.chat/core-typings';
 import { assert, expect } from 'chai';
 import { after, before, describe, it, beforeEach } from 'mocha';
 
@@ -104,53 +104,7 @@ describe('[Groups]', () => {
 		});
 
 		describe('guest users', () => {
-			it('should not add guest users to more rooms than defined in the license', async function () {
-				// TODO this is not the right way to do it. We're doing this way for now just because we have separate CI jobs for EE and CE,
-				// ideally we should have a single CI job that adds a license and runs both CE and EE tests.
-				if (!process.env.IS_EE) {
-					this.skip();
-				}
-				const promises = [];
 
-				for (let i = 0; i < maxRoomsPerGuest; i++) {
-					promises.push(
-						createRoom({
-							type: 'p',
-							name: `channel.test.${Date.now()}-${Math.random()}`,
-							members: [guestUser.username],
-						}),
-					);
-				}
-				await Promise.all(promises);
-
-				await request
-					.post(api('groups.create'))
-					.set(credentials)
-					.send({
-						name: `channel.test.${Date.now()}-${Math.random()}`,
-						members: [guestUser.username],
-					})
-					.expect('Content-Type', 'application/json')
-					.expect(200)
-					.expect((res) => {
-						expect(res.body).to.have.property('success', true);
-						room = res.body.group;
-					});
-
-				await request
-					.get(api('groups.members'))
-					.set(credentials)
-					.query({
-						roomId: room._id,
-					})
-					.expect('Content-Type', 'application/json')
-					.expect(200)
-					.expect((res) => {
-						expect(res.body).to.have.property('success', true);
-						expect(res.body).to.have.property('members').and.to.be.an('array');
-						expect(res.body.members).to.have.lengthOf(1);
-					});
-			});
 		});
 
 		describe('validate E2E rooms', () => {
@@ -603,7 +557,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.query({
 					roomId: testGroup._id,
-					starredIds: 'rocketchat.internal.admin.test',
+					starredIds: 'zekichat.internal.admin.test',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -631,7 +585,7 @@ describe('[Groups]', () => {
 					expect(res.body.messages).to.have.lengthOf(1);
 					expect(res.body.messages[0]).to.have.nested.property('pinned').that.is.an('boolean').and.to.be.true;
 					expect(res.body.messages[0]).to.have.nested.property('pinnedBy').that.is.an('object');
-					expect(res.body.messages[0].pinnedBy).to.have.property('_id', 'rocketchat.internal.admin.test');
+					expect(res.body.messages[0].pinnedBy).to.have.property('_id', 'zekichat.internal.admin.test');
 					expect(res.body).to.have.property('count', 1);
 					expect(res.body).to.have.property('total', 1);
 				});
@@ -761,7 +715,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: group._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -782,7 +736,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: group._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -800,7 +754,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: group._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -818,7 +772,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: group._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -836,7 +790,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: group._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -854,7 +808,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: group._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -872,7 +826,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: group._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(200)
@@ -1730,7 +1684,7 @@ describe('[Groups]', () => {
 					name: 'Incoming test',
 					enabled: true,
 					alias: 'test',
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 					scriptEnabled: false,
 					overrideDestinationChannelEnabled: true,
 					channel: `#${createdGroup.name}`,
@@ -2407,7 +2361,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: testGroup._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
@@ -2417,7 +2371,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: testGroup._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
@@ -2427,7 +2381,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: testGroup._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
@@ -2495,7 +2449,7 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: testGroup._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
@@ -2505,11 +2459,11 @@ describe('[Groups]', () => {
 				.set(credentials)
 				.send({
 					roomId: testGroup._id,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.end(done);
 		});
-		it('should return an array of moderators with rocket.cat as a moderator', (done) => {
+		it('should return an array of moderators with zeki.bot as a moderator', (done) => {
 			void request
 				.get(api('groups.moderators'))
 				.set(credentials)
@@ -2521,7 +2475,7 @@ describe('[Groups]', () => {
 				.expect((res) => {
 					expect(res.body).to.have.a.property('success', true);
 					expect(res.body).to.have.a.property('moderators').that.is.an('array').that.has.lengthOf(1);
-					expect(res.body.moderators[0].username).to.be.equal('rocket.cat');
+					expect(res.body.moderators[0].username).to.be.equal('zeki.bot');
 				})
 				.end(done);
 		});
@@ -2771,7 +2725,7 @@ describe('[Groups]', () => {
 					const { group } = res.body;
 
 					expect(group._id).to.be.equal(realNameGroup._id);
-					expect(group).to.have.nested.property('lastMessage.u.name', 'RocketChat Internal Admin Test');
+					expect(group).to.have.nested.property('lastMessage.u.name', 'ZekiChat Internal Admin Test');
 				})
 				.end(done);
 		});

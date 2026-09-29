@@ -1,8 +1,8 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isDirectMessageRoom, isMultipleDirectMessageRoom } from '@rocket.chat/core-typings';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import { useUser } from '@rocket.chat/ui-contexts';
-import { VideoConfPopupInfo } from '@rocket.chat/ui-video-conf';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isDirectMessageRoom, isMultipleDirectMessageRoom } from '@zeki.chat/core-typings';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import { useUser } from '@zeki.chat/ui-contexts';
+import { VideoConfPopupInfo } from '@zeki.chat/ui-video-conf';
 import type { ReactElement } from 'react';
 
 import { RoomIcon } from '../../../../../../components/RoomIcon';

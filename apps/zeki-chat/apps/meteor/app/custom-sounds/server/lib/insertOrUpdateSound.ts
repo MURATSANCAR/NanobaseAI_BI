@@ -1,9 +1,9 @@
-import { api } from '@rocket.chat/core-services';
-import { CustomSounds } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import { CustomSounds } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import type { ICustomSoundData } from '../methods/insertOrUpdateSound';
-import { RocketChatFileCustomSoundsInstance } from '../startup/custom-sounds';
+import { ZekiChatFileCustomSoundsInstance } from '../startup/custom-sounds';
 
 export const insertOrUpdateSound = async (soundData: ICustomSoundData): Promise<string> => {
 	// silently strip colon; this allows for uploading :soundname: as soundname
@@ -46,7 +46,7 @@ export const insertOrUpdateSound = async (soundData: ICustomSoundData): Promise<
 	}
 
 	if (soundData.newFile) {
-		await RocketChatFileCustomSoundsInstance.deleteFile(`${soundData._id}.${soundData.previousExtension}`);
+		await ZekiChatFileCustomSoundsInstance.deleteFile(`${soundData._id}.${soundData.previousExtension}`);
 	}
 
 	if (soundData.name !== soundData.previousName || soundData.extension !== soundData.previousExtension) {

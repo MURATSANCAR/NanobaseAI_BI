@@ -1,4 +1,4 @@
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 import { type Value, getInitialValue } from './getInitialValue';
 import { hasElement } from './hasElement';

@@ -1,8 +1,8 @@
-import { Team, isMeteorError } from '@rocket.chat/core-services';
-import type { IIntegration, IUser, IRoom, RoomType, UserStatus } from '@rocket.chat/core-typings';
-import { Integrations, Messages, Rooms, Subscriptions, Uploads, Users } from '@rocket.chat/models';
-import { isGroupsOnlineProps, isGroupsMessagesProps, isGroupsFilesProps } from '@rocket.chat/rest-typings';
-import { isTruthy } from '@rocket.chat/tools';
+import { Team, isMeteorError } from '@zeki.chat/core-services';
+import type { IIntegration, IUser, IRoom, RoomType, UserStatus } from '@zeki.chat/core-typings';
+import { Integrations, Messages, Rooms, Subscriptions, Uploads, Users } from '@zeki.chat/models';
+import { isGroupsOnlineProps, isGroupsMessagesProps, isGroupsFilesProps } from '@zeki.chat/rest-typings';
+import { isTruthy } from '@zeki.chat/tools';
 import { check, Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import type { Filter } from 'mongodb';

@@ -6,7 +6,7 @@ import sinon from 'sinon';
 const settingsMock = sinon.stub();
 
 const { EmailCheck } = proxyquire.noCallThru().load('./EmailCheck', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Users: {},
 	},
 	'meteor/accounts-base': {

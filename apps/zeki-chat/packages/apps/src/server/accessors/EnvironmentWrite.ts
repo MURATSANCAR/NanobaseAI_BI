@@ -1,4 +1,4 @@
-import type { IEnvironmentWrite, IServerSettingUpdater, ISettingUpdater } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IEnvironmentWrite, IServerSettingUpdater, ISettingUpdater } from '@zeki.chat/apps-engine/definition/accessors';
 
 export class EnvironmentWrite implements IEnvironmentWrite {
 	constructor(

@@ -1,4 +1,3 @@
-export { type WorkspaceLicensePayload, WorkspaceLicensePayloadSchema } from './WorkspaceLicensePayload';
 export {
 	type WorkspaceSyncPayload,
 	WorkspaceSyncPayloadSchema,

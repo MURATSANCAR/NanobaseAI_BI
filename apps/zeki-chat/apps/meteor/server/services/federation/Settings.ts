@@ -40,7 +40,7 @@ export const addMatrixBridgeFederationSettings = async (): Promise<void> => {
 
 	const siteUrl = settings.get<string>('Site_Url');
 
-	await settingsRegistry.add('Federation_Matrix_id', `rocketchat_${uniqueId}`, {
+	await settingsRegistry.add('Federation_Matrix_id', `zeki_${uniqueId}`, {
 		readonly: true,
 		type: 'string',
 		i18nLabel: 'Federation_Matrix_id',
@@ -96,7 +96,7 @@ export const addMatrixBridgeFederationSettings = async (): Promise<void> => {
 		section: 'Matrix Bridge',
 	});
 
-	await settingsRegistry.add('Federation_Matrix_bridge_localpart', 'rocket.cat', {
+	await settingsRegistry.add('Federation_Matrix_bridge_localpart', 'zeki.bot', {
 		readonly: true,
 		type: 'string',
 		i18nLabel: 'Federation_Matrix_bridge_localpart',

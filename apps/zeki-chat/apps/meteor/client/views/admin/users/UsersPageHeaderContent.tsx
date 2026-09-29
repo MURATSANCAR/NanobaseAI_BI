@@ -1,16 +1,8 @@
-import { Button, ButtonGroup, Margins } from '@rocket.chat/fuselage';
-import { usePermission, useRouter } from '@rocket.chat/ui-contexts';
+import { Button, ButtonGroup } from '@rocket.chat/fuselage';
+import { usePermission, useRouter } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
-import SeatsCapUsage from './SeatsCapUsage';
-import type { SeatCapProps } from './useSeatsCap';
-
-type UsersPageHeaderContentProps = {
-	isSeatsCapExceeded: boolean;
-	seatsCap?: Omit<SeatCapProps, 'reload'>;
-};
-
-const UsersPageHeaderContent = ({ isSeatsCapExceeded, seatsCap }: UsersPageHeaderContentProps) => {
+const UsersPageHeaderContent = () => {
 	const { t } = useTranslation();
 	const router = useRouter();
 	const canCreateUser = usePermission('create-user');
@@ -26,20 +18,15 @@ const UsersPageHeaderContent = ({ isSeatsCapExceeded, seatsCap }: UsersPageHeade
 
 	return (
 		<>
-			{seatsCap && seatsCap.maxActiveUsers < Number.POSITIVE_INFINITY && (
-				<Margins inline={16}>
-					<SeatsCapUsage members={seatsCap.activeUsers} limit={seatsCap.maxActiveUsers} />
-				</Margins>
-			)}
 			<ButtonGroup>
 				{canBulkCreateUser && (
-					<Button icon='mail' onClick={handleInviteButtonClick} disabled={isSeatsCapExceeded}>
+					<Button icon='mail' onClick={handleInviteButtonClick}>
 						{t('Invite')}
 					</Button>
 				)}
 
 				{canCreateUser && (
-					<Button icon='user-plus' onClick={handleNewButtonClick} disabled={isSeatsCapExceeded}>
+					<Button icon='user-plus' onClick={handleNewButtonClick}>
 						{t('New_user')}
 					</Button>
 				)}

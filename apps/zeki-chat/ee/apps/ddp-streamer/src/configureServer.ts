@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 
-import { Account, Presence, MeteorService, MeteorError } from '@rocket.chat/core-services';
-import { UserStatus } from '@rocket.chat/core-typings';
+import { Account, Presence, MeteorService, MeteorError } from '@zeki.chat/core-services';
+import { UserStatus } from '@zeki.chat/core-typings';
 
 import { Server } from './Server';
 import { DDP_EVENTS, WS_ERRORS } from './constants';

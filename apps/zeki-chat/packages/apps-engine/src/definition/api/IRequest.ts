@@ -10,7 +10,7 @@ export interface IApiRequest {
 	privateHash?: string;
 	/**
 	 * The user that is making the request, as
-	 * authenticated by Rocket.Chat's strategy.
+	 * authenticated by ZEKI AI CHAT's strategy.
 	 */
 	user?: IUser;
 }

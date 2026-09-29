@@ -1,4 +1,4 @@
-import type { ILogItem } from '@rocket.chat/core-typings';
+import type { ILogItem } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
 import DOMPurify from 'dompurify';
 

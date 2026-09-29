@@ -1,5 +1,5 @@
-import type { IMediaCall } from '@rocket.chat/core-typings';
-import type { ClientMediaSignalBody } from '@rocket.chat/media-signaling';
+import type { IMediaCall } from '@zeki.chat/core-typings';
+import type { ClientMediaSignalBody } from '@zeki.chat/media-signaling';
 
 import { BaseMediaCallAgent } from '../base/BaseAgent';
 import { logger } from '../logger';

@@ -57,14 +57,6 @@ export const startupApp = async function startupApp() {
 		});
 	});
 
-	async function migratePrivateAppsCallback() {
-		void Apps.migratePrivateApps();
-		void Apps.disablePrivateApps();
-		void Apps.disableMarketplaceApps();
-	}
-
-	Capabilities.onInvalidateLicense(migratePrivateAppsCallback);
-	Capabilities.onRemoveLicense(migratePrivateAppsCallback);
 
 	// Disable apps that depend on add-ons (external modules) if they are invalidated
 	Capabilities.onModule(disableAppsWithAddonsCallback);

@@ -1,4 +1,4 @@
-import { useUserId, useStream } from '@rocket.chat/ui-contexts';
+import { useUserId, useStream } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { Users } from '../../../stores';

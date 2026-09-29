@@ -1,9 +1,9 @@
-import type { ILivechatContact, Serialized } from '@rocket.chat/core-typings';
-import { OmnichannelSourceType } from '@rocket.chat/core-typings';
+import type { ILivechatContact, Serialized } from '@zeki.chat/core-typings';
+import { OmnichannelSourceType } from '@zeki.chat/core-typings';
 import { Box, Margins, Throbber, States, StatesIcon, StatesTitle, Select } from '@rocket.chat/fuselage';
 import { useLocalStorage } from '@rocket.chat/fuselage-hooks';
-import { VirtualizedScrollbars, ContextualbarContent, ContextualbarEmptyContent } from '@rocket.chat/ui-client';
-import { useEndpoint, useSetModal } from '@rocket.chat/ui-contexts';
+import { VirtualizedScrollbars, ContextualbarContent, ContextualbarEmptyContent } from '@zeki.chat/ui-client';
+import { useEndpoint, useSetModal } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { Key } from 'react';
 import { useMemo } from 'react';

@@ -1,7 +1,7 @@
 import { Icon, SearchInput, CardGrid } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { Page, PageHeader, PageScrollableContentWithShadow, PageBlockWithBorder } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow, PageBlockWithBorder } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent, ReactElement } from 'react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';

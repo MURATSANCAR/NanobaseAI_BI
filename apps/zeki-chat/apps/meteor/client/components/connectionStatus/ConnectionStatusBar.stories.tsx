@@ -1,5 +1,5 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import type { ServerContextValue } from '@rocket.chat/ui-contexts';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import type { ServerContextValue } from '@zeki.chat/ui-contexts';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryFn } from '@storybook/react';
 

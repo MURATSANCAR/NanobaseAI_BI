@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { Avatar, Box, IconButton } from '@rocket.chat/fuselage';
-import { SettingsContext } from '@rocket.chat/ui-contexts';
+import { SettingsContext } from '@zeki.chat/ui-contexts';
 import { action } from '@storybook/addon-actions';
 import type { Meta } from '@storybook/react';
 import type { ComponentPropsWithoutRef, ComponentType } from 'react';
@@ -78,9 +78,9 @@ const room: IRoom = {
 	autoTranslate: true,
 	autoTranslateLanguage: 'pt-BR',
 	u: {
-		_id: 'rocket.cat',
-		name: 'rocket.cat',
-		username: 'rocket.cat',
+		_id: 'zeki.bot',
+		name: 'zeki.bot',
+		username: 'zeki.bot',
 	},
 	msgs: 123,
 	usersCount: 3,

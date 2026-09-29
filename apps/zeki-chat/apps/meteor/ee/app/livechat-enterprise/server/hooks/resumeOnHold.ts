@@ -1,7 +1,7 @@
-import { OmnichannelEEService } from '@rocket.chat/core-services';
-import type { ILivechatVisitor, IMessage, IOmnichannelRoom, IUser } from '@rocket.chat/core-typings';
-import { isMessageFromVisitor, isEditedMessage } from '@rocket.chat/core-typings';
-import { LivechatRooms, LivechatVisitors, Users } from '@rocket.chat/models';
+import { OmnichannelEEService } from '@zeki.chat/core-services';
+import type { ILivechatVisitor, IMessage, IOmnichannelRoom, IUser } from '@zeki.chat/core-typings';
+import { isMessageFromVisitor, isEditedMessage } from '@zeki.chat/core-typings';
+import { LivechatRooms, LivechatVisitors, Users } from '@zeki.chat/models';
 
 import { callbackLogger } from '../../../../../app/livechat/server/lib/logger';
 import { callbacks } from '../../../../../server/lib/callbacks';
@@ -24,7 +24,7 @@ const resumeOnHoldCommentAndUser = async (room: IOmnichannelRoom): Promise<{ com
 
 	const resumeChatComment = i18n.t('Omnichannel_on_hold_chat_automatically', { guest });
 
-	const resumedBy = await Users.findOneById('rocket.cat');
+	const resumedBy = await Users.findOneById('zeki.bot');
 	if (!resumedBy) {
 		callbackLogger.error({ msg: '[afterOmnichannelSaveMessage] User Not found for room while trying to resume on hold', rid });
 		throw new Error(`User not found while trying to resume on hold`);

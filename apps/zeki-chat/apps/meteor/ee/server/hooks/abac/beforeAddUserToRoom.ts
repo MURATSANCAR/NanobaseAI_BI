@@ -1,4 +1,4 @@
-import { Abac } from '@rocket.chat/core-services';
+import { Abac } from '@zeki.chat/core-services';
 import { Capabilities } from '@zeki.chat/capabilities';
 
 import { beforeAddUserToRoom } from '../../../../app/lib/server/lib/beforeAddUserToRoom';

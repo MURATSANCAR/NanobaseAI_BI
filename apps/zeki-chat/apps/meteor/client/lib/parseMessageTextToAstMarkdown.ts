@@ -1,4 +1,4 @@
-import type { IMessage, ITranslatedMessage, MessageAttachment } from '@rocket.chat/core-typings';
+import type { IMessage, ITranslatedMessage, MessageAttachment } from '@zeki.chat/core-typings';
 import {
 	isFileAttachment,
 	isE2EEMessage,
@@ -6,9 +6,9 @@ import {
 	isTranslatedAttachment,
 	isTranslatedMessage,
 	isEncryptedMessageAttachment,
-} from '@rocket.chat/core-typings';
-import type { Options, Root } from '@rocket.chat/message-parser';
-import { parse } from '@rocket.chat/message-parser';
+} from '@zeki.chat/core-typings';
+import type { Options, Root } from '@zeki.chat/message-parser';
+import { parse } from '@zeki.chat/message-parser';
 
 import type { AutoTranslateOptions } from '../views/room/MessageList/hooks/useAutoTranslate';
 import { isParsedMessage } from '../views/room/MessageList/lib/isParsedMessage';

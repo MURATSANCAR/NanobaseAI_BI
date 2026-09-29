@@ -1,4 +1,4 @@
-import type { IRole, IRoom, ITeam, IUser } from '@rocket.chat/core-typings';
+import type { IRole, IRoom, ITeam, IUser } from '@zeki.chat/core-typings';
 
 import type { TeamsAddMembersProps } from './TeamsAddMembersProps';
 import type { TeamsConvertToChannelProps } from './TeamsConvertToChannelProps';

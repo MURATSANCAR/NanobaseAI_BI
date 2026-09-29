@@ -1,6 +1,6 @@
-import { Team } from '@rocket.chat/core-services';
-import type { AtLeast, IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated, isRoomNativeFederated, TeamType } from '@rocket.chat/core-typings';
+import { Team } from '@zeki.chat/core-services';
+import type { AtLeast, IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated, isRoomNativeFederated, TeamType } from '@zeki.chat/core-typings';
 
 import { settings } from '../../../../app/settings/server';
 import type { IRoomTypeServerDirectives } from '../../../../definition/IRoomTypeConfig';

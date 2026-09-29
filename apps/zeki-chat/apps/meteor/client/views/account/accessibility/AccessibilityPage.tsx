@@ -13,8 +13,8 @@ import {
 	Select,
 	ToggleSwitch,
 } from '@rocket.chat/fuselage-forms';
-import { Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@rocket.chat/ui-client';
-import { useTranslation, useToastMessageDispatch, useEndpoint, useSetting, useLocationHash } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@zeki.chat/ui-client';
+import { useTranslation, useToastMessageDispatch, useEndpoint, useSetting, useLocationHash } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useId, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';

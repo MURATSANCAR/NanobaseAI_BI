@@ -1,4 +1,4 @@
-import type { ILivechatBusinessHour } from '@rocket.chat/core-typings';
+import type { ILivechatBusinessHour } from '@zeki.chat/core-typings';
 
 import { businessHourManager } from '../../business-hour';
 

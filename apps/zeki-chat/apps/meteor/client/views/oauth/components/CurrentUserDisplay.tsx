@@ -1,7 +1,7 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
-import { UserStatus } from '@rocket.chat/ui-client';
-import { useRolesDescription, useSetting } from '@rocket.chat/ui-contexts';
+import { UserStatus } from '@zeki.chat/ui-client';
+import { useRolesDescription, useSetting } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

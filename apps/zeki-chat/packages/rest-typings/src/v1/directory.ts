@@ -1,4 +1,4 @@
-import type { IDirectoryChannelResult, IDirectoryUserResult } from '@rocket.chat/core-typings';
+import type { IDirectoryChannelResult, IDirectoryUserResult } from '@zeki.chat/core-typings';
 
 import { ajv } from './Ajv';
 import type { PaginatedRequest } from '../helpers/PaginatedRequest';

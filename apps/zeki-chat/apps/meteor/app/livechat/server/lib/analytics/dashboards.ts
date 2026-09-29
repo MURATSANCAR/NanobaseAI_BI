@@ -1,6 +1,6 @@
-import { OmnichannelAnalytics } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import { LivechatRooms, Users, LivechatVisitors, LivechatAgentActivity } from '@rocket.chat/models';
+import { OmnichannelAnalytics } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import { LivechatRooms, Users, LivechatVisitors, LivechatAgentActivity } from '@zeki.chat/models';
 import mem from 'mem';
 import moment from 'moment';
 

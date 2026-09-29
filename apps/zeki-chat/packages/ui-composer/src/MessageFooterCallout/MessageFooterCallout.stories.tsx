@@ -6,7 +6,7 @@ import MessageFooterCalloutDivider from './MessageFooterCalloutDivider';
 import MessageComposer from '../MessageComposer/MessageComposer';
 import MessageComposerIcon from '../MessageComposer/MessageComposerIcon';
 
-import '@rocket.chat/icons/dist/rocketchat.css';
+import '@rocket.chat/icons/dist/zekichat.css';
 
 export default {
 	title: 'Components/MessageComposerCallout',

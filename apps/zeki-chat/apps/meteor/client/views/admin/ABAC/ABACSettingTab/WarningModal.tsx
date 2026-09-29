@@ -1,6 +1,6 @@
 import { Box } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { Trans, useTranslation } from 'react-i18next';
 
 type WarningModalProps = {

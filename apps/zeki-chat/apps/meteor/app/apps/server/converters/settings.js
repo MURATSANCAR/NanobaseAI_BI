@@ -1,5 +1,5 @@
-import { SettingType } from '@rocket.chat/apps-engine/definition/settings';
-import { Settings } from '@rocket.chat/models';
+import { SettingType } from '@zeki.chat/apps-engine/definition/settings';
+import { Settings } from '@zeki.chat/models';
 
 export class AppSettingsConverter {
 	constructor(orch) {

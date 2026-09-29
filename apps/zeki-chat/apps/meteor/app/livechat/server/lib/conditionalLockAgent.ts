@@ -1,4 +1,4 @@
-import { Users } from '@rocket.chat/models';
+import { Users } from '@zeki.chat/models';
 
 import { hasRoleAsync } from '../../../authorization/server/functions/hasRole';
 import { settings } from '../../../settings/server';

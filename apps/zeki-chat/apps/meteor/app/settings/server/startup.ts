@@ -1,5 +1,5 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import type { Settings } from '@rocket.chat/models';
+import type { ISetting } from '@zeki.chat/core-typings';
+import type { Settings } from '@zeki.chat/models';
 
 import type { ICachedSettings } from './CachedSettings';
 

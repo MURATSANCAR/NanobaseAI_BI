@@ -1,4 +1,4 @@
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactNode, ReactElement } from 'react';
 import { Suspense, useEffect } from 'react';
 

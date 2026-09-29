@@ -1,7 +1,7 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import { createPredicateFromFilter } from '@rocket.chat/mongo-adapter';
-import type { SettingsContextQuery, SettingsContextValue } from '@rocket.chat/ui-contexts';
-import { SettingsContext, useAtLeastOnePermission, useMethod } from '@rocket.chat/ui-contexts';
+import type { ISetting } from '@zeki.chat/core-typings';
+import { createPredicateFromFilter } from '@zeki.chat/mongo-adapter';
+import type { SettingsContextQuery, SettingsContextValue } from '@zeki.chat/ui-contexts';
+import { SettingsContext, useAtLeastOnePermission, useMethod } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { useCallback, useMemo } from 'react';
 

@@ -1,6 +1,6 @@
-import type { IRole, IPermission } from '@rocket.chat/core-typings';
-import { GenericTableRow, GenericTableCell } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { IRole, IPermission } from '@zeki.chat/core-typings';
+import { GenericTableRow, GenericTableCell } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import type { TFunction } from 'i18next';
 import type { ReactElement } from 'react';
 import { memo } from 'react';

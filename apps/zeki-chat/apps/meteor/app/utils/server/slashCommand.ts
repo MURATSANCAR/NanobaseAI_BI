@@ -1,4 +1,4 @@
-import { MeteorError } from '@rocket.chat/core-services';
+import { MeteorError } from '@zeki.chat/core-services';
 import type {
 	IMessage,
 	SlashCommand,
@@ -6,8 +6,8 @@ import type {
 	RequiredField,
 	SlashCommandPreviewItem,
 	SlashCommandPreviews,
-} from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+} from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { Meteor } from 'meteor/meteor';
 
 interface ISlashCommandAddParams<T extends string> {
@@ -130,7 +130,7 @@ export const slashCommands = {
 	},
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		slashCommand(params: { cmd: string; params: string; msg: IMessage; triggerId: string }): unknown;

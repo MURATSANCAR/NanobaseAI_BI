@@ -1,6 +1,6 @@
-import type { ILDAPEntry, LDAPLoginResult, ILDAPUniqueIdentifierField, IUser, LoginUsername, IImportUser } from '@rocket.chat/core-typings';
-import { Users as UsersRaw } from '@rocket.chat/models';
-import { SHA256 } from '@rocket.chat/sha256';
+import type { ILDAPEntry, LDAPLoginResult, ILDAPUniqueIdentifierField, IUser, LoginUsername, IImportUser } from '@zeki.chat/core-typings';
+import { Users as UsersRaw } from '@zeki.chat/models';
+import { SHA256 } from '@zeki.chat/sha256';
 import ldapEscape from 'ldap-escape';
 import limax from 'limax';
 // #ToDo: #TODO: Remove Meteor dependencies

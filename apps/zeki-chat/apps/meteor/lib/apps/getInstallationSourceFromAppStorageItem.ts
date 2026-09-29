@@ -1,5 +1,5 @@
-import type { IAppStorageItem } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
-import type { LicenseAppSources } from '@rocket.chat/core-typings';
+import type { IAppStorageItem } from '@zeki.chat/apps/dist/server/storage/IAppStorageItem';
+import type { LicenseAppSources } from '@zeki.chat/core-typings';
 
 /**
  * There have been reports of apps not being correctly migrated from versions prior to 6.0

@@ -29,7 +29,7 @@ ENV LANG=C.UTF-8
 # `nogroup` group is historically reserved for NFS.
 # We don't use any NFS related tools in this image.
 # For the same reason of NFS using the gid, we can also use it as long as there are no conflicts in terms of running processes with the same egid (which is 1 in our case).
-# While 65533 raw gid could be used, renaming nogroup to rocketchat here for maximum compatibility with older debian image.
+# While 65533 raw gid could be used, renaming nogroup to zekichat here for maximum compatibility with older debian image.
 # More info on nobody/nogroup - https://wiki.ubuntu.com/nobody
 # Debian wiki - https://wiki.debian.org/SystemGroups
 # """
@@ -42,8 +42,8 @@ RUN apk add --no-cache shadow deno ttf-dejavu \
     # Update OpenSSL
     # CVE -> https://scout.docker.com/vulnerabilities/id/CVE-2025-9230?s=alpine&n=openssl&ns=alpine&t=apk&osn=alpine&osv=3.22
     && apk upgrade --no-cache openssl \
-    && groupmod -n rocketchat nogroup \
-    && useradd -u 65533 -r -g rocketchat rocketchat
+    && groupmod -n zekichat nogroup \
+    && useradd -u 65533 -r -g zekichat zekichat
 
 # needs a mongo instance - defaults to container linking with alias 'mongo'
 ENV DEPLOY_METHOD=docker \
@@ -54,9 +54,9 @@ ENV DEPLOY_METHOD=docker \
     ROOT_URL=http://localhost:3000 \
     Accounts_AvatarStorePath=/app/uploads
 
-USER rocketchat
+USER zekichat
 
-COPY --from=builder --chown=rocketchat:rocketchat /app /app
+COPY --from=builder --chown=zekichat:zekichat /app /app
 
 VOLUME /app/uploads
 

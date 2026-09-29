@@ -1,7 +1,7 @@
-import type { IServerEvent } from '@rocket.chat/core-typings';
-import { ServerEventType } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { Rooms, ServerEvents, Users } from '@rocket.chat/models';
+import type { IServerEvent } from '@zeki.chat/core-typings';
+import { ServerEventType } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { Rooms, ServerEvents, Users } from '@zeki.chat/models';
 
 import { addMinutesToADate } from '../../../../lib/utils/addMinutesToADate';
 import { getClientAddress } from '../../../../server/lib/getClientAddress';
@@ -26,7 +26,7 @@ const notifyFailedLogin = async (ipOrUsername: string, blockedUntil: Date, faile
 		return;
 	}
 
-	const rocketCat = await Users.findOneById('rocket.cat');
+	const rocketCat = await Users.findOneById('zeki.bot');
 	// send message
 	const message = {
 		attachments: [

@@ -1,4 +1,4 @@
-import type { UserStatus } from '@rocket.chat/core-typings';
+import type { UserStatus } from '@zeki.chat/core-typings';
 
 import type { IServiceClass } from './ServiceClass';
 
@@ -19,7 +19,7 @@ export interface IPresence extends IServiceClass {
 	setConnectionStatus(uid: string, status: UserStatus, session: string): Promise<boolean>;
 	updateUserPresence(uid: string): Promise<void>;
 	toggleBroadcast(enabled: boolean): void;
-	getConnectionCount(): { current: number; max: number };
+	getConnectionCount(): { current: number };
 	getPeakConnections(reset?: boolean): number;
 	resetPeakConnections(): void;
 }

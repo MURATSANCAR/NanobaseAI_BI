@@ -1,7 +1,7 @@
-import { api } from '@rocket.chat/core-services';
-import type { IWebdavAccount, IWebdavAccountIntegration } from '@rocket.chat/core-typings';
-import { WebdavAccounts } from '@rocket.chat/models';
-import { ajv, validateUnauthorizedErrorResponse, validateBadRequestErrorResponse } from '@rocket.chat/rest-typings';
+import { api } from '@zeki.chat/core-services';
+import type { IWebdavAccount, IWebdavAccountIntegration } from '@zeki.chat/core-typings';
+import { WebdavAccounts } from '@zeki.chat/models';
+import { ajv, validateUnauthorizedErrorResponse, validateBadRequestErrorResponse } from '@zeki.chat/rest-typings';
 import type { DeleteResult } from 'mongodb';
 
 import type { ExtractRoutesFromAPI } from '../ApiClass';
@@ -133,7 +133,7 @@ type WebdavRemoveAccountEndpoints = ExtractRoutesFromAPI<typeof webdavRemoveAcco
 
 export type WebdavEndpoints = WebdavGetMyAccountsEndpoints | WebdavRemoveAccountEndpoints;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends WebdavGetMyAccountsEndpoints {}
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface

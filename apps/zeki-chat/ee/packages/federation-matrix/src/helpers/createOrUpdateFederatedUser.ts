@@ -1,5 +1,5 @@
-import { type IUser, UserStatus } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { type IUser, UserStatus } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 /**
  * Helper function to create a federated user

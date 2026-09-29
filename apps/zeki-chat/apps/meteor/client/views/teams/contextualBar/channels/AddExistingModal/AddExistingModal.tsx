@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import {
 	Box,
 	Button,
@@ -12,7 +12,7 @@ import {
 	ModalHeader,
 	ModalTitle,
 } from '@rocket.chat/fuselage';
-import { useToastMessageDispatch, useEndpoint } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch, useEndpoint } from '@zeki.chat/ui-contexts';
 import { memo, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';

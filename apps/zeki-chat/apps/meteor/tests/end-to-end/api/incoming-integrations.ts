@@ -1,7 +1,7 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import { TeamType } from '@rocket.chat/core-typings';
-import type { AtLeast, IIntegration, IMessage, IRoom, ITeam, IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import { TeamType } from '@zeki.chat/core-typings';
+import type { AtLeast, IIntegration, IMessage, IRoom, ITeam, IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { assert, expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -70,7 +70,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: false,
 						overrideDestinationChannelEnabled: true,
 						channel: '#general',
@@ -93,7 +93,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: false,
 						overrideDestinationChannelEnabled: true,
 						channel: '#general',
@@ -130,7 +130,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: false,
 						overrideDestinationChannelEnabled: false,
 						channel: '#general',
@@ -152,7 +152,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: false,
 						channel: '#general',
 					})
@@ -191,7 +191,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test 2',
 						enabled: true,
 						alias: 'test2',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: false,
 						overrideDestinationChannelEnabled: false,
 						channel: '#general',
@@ -217,7 +217,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: false,
 						overrideDestinationChannelEnabled: true,
 						channel: '#general',
@@ -303,7 +303,7 @@ describe('[Incoming Integrations]', () => {
 						type: 'webhook-incoming',
 						overrideDestinationChannelEnabled: true,
 						integrationId: integration._id,
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						channel: '#general',
 						scriptEnabled: true,
 						enabled: true,
@@ -403,7 +403,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test with script',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: true,
 						overrideDestinationChannelEnabled: false,
 						channel: '#general',
@@ -430,7 +430,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test with script and default content-type',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: true,
 						overrideDestinationChannelEnabled: false,
 						channel: '#general',
@@ -449,7 +449,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test with skipTranspile',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: true,
 						skipTranspile: true,
 						overrideDestinationChannelEnabled: false,
@@ -553,7 +553,7 @@ describe('[Incoming Integrations]', () => {
 						name: 'Incoming test',
 						enabled: true,
 						alias: 'test',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 						scriptEnabled: true,
 						scriptEngine: 'isolated-vm',
 						channel: '#general',
@@ -621,7 +621,7 @@ describe('[Incoming Integrations]', () => {
 								name: 'Incoming test',
 								enabled: true,
 								alias: 'test',
-								username: 'rocket.cat',
+								username: 'zeki.bot',
 								scriptEnabled: false,
 								overrideDestinationChannelEnabled: true,
 								channel: '#general',
@@ -869,7 +869,7 @@ describe('[Incoming Integrations]', () => {
 					name: 'Incoming test updated',
 					enabled: true,
 					alias: 'test updated',
-					username: 'rocket.cat',
+					username: 'zeki.bot',
 					scriptEnabled: true,
 					overrideDestinationChannelEnabled: true,
 					channel: '#general',

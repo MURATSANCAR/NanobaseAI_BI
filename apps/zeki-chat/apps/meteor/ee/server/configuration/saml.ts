@@ -1,5 +1,5 @@
 import { Capabilities } from '@zeki.chat/capabilities';
-import { Roles, Users } from '@rocket.chat/models';
+import { Roles, Users } from '@zeki.chat/models';
 
 import type { ISAMLUser } from '../../../app/meteor-accounts-saml/server/definition/ISAMLUser';
 import { SAMLUtils } from '../../../app/meteor-accounts-saml/server/lib/Utils';

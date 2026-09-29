@@ -1,9 +1,9 @@
-import type { DistributiveOmit } from '@rocket.chat/core-typings';
+import type { DistributiveOmit } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
-import { Random } from '@rocket.chat/random';
-import { imperativeModal } from '@rocket.chat/ui-client';
-import type { RouterContext, IActionManager } from '@rocket.chat/ui-contexts';
-import type * as UiKit from '@rocket.chat/ui-kit';
+import { Random } from '@zeki.chat/random';
+import { imperativeModal } from '@zeki.chat/ui-client';
+import type { RouterContext, IActionManager } from '@zeki.chat/ui-contexts';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import { t } from 'i18next';
 import type { ContextType } from 'react';
 import { lazy } from 'react';

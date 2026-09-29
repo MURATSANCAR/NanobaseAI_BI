@@ -1,6 +1,6 @@
 import type { IRoomBuilder } from '.';
 import type { IMessage } from '../messages';
-import type { RocketChatAssociationModel } from '../metadata';
+import type { ZekiChatAssociationModel } from '../metadata';
 import type { IRoom } from '../rooms';
 
 /**
@@ -9,7 +9,7 @@ import type { IRoom } from '../rooms';
  * be able to successfully save the room object.
  */
 export interface IDiscussionBuilder extends IRoomBuilder {
-	kind: RocketChatAssociationModel.DISCUSSION;
+	kind: ZekiChatAssociationModel.DISCUSSION;
 
 	setParentRoom(parentRoom: IRoom): IDiscussionBuilder;
 

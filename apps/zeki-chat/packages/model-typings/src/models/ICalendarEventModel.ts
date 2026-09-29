@@ -1,4 +1,4 @@
-import type { ICalendarEvent, IUser } from '@rocket.chat/core-typings';
+import type { ICalendarEvent, IUser } from '@zeki.chat/core-typings';
 import type { FindCursor, UpdateResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

@@ -1,8 +1,8 @@
 import type { Decorator, Parameters } from '@storybook/react';
 
-import { rocketChatDecorator } from './decorators';
+import { zekiChatDecorator } from './decorators';
 
-export const decorators: Decorator[] = [rocketChatDecorator];
+export const decorators: Decorator[] = [zekiChatDecorator];
 
 export const parameters: Parameters = {
 	backgrounds: {

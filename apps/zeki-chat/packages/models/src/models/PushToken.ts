@@ -1,5 +1,5 @@
-import type { IPushToken, IUser, AtLeast } from '@rocket.chat/core-typings';
-import type { IPushTokenModel } from '@rocket.chat/model-typings';
+import type { IPushToken, IUser, AtLeast } from '@zeki.chat/core-typings';
+import type { IPushTokenModel } from '@zeki.chat/model-typings';
 import type { Db, DeleteResult, FindOptions, IndexDescription, InsertOneResult, UpdateResult, FindCursor } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

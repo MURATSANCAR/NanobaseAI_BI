@@ -1,13 +1,13 @@
-import type { IEmailDescriptor, IPreEmailSentContext } from '@rocket.chat/apps-engine/definition/email';
-import { EssentialAppDisabledException } from '@rocket.chat/apps-engine/definition/exceptions';
-import type { IExternalComponent } from '@rocket.chat/apps-engine/definition/externalComponent';
+import type { IEmailDescriptor, IPreEmailSentContext } from '@zeki.chat/apps-engine/definition/email';
+import { EssentialAppDisabledException } from '@zeki.chat/apps-engine/definition/exceptions';
+import type { IExternalComponent } from '@zeki.chat/apps-engine/definition/externalComponent';
 import type {
 	ILivechatEventContext,
 	ILivechatRoom,
 	ILivechatTransferEventContext,
 	IVisitor,
-} from '@rocket.chat/apps-engine/definition/livechat';
-import type { ILivechatDepartmentEventContext } from '@rocket.chat/apps-engine/definition/livechat/ILivechatEventContext';
+} from '@zeki.chat/apps-engine/definition/livechat';
+import type { ILivechatDepartmentEventContext } from '@zeki.chat/apps-engine/definition/livechat/ILivechatEventContext';
 import type {
 	IMessage,
 	IMessageDeleteContext,
@@ -16,20 +16,20 @@ import type {
 	IMessageReactionContext,
 	IMessageReportContext,
 	IMessageStarContext,
-} from '@rocket.chat/apps-engine/definition/messages';
-import { AppInterface, AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IRoom, IRoomUserJoinedContext, IRoomUserLeaveContext } from '@rocket.chat/apps-engine/definition/rooms';
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import { UIActionButtonContext } from '@rocket.chat/apps-engine/definition/ui';
-import type { IUIKitResponse, IUIKitSurface, UIKitIncomingInteraction } from '@rocket.chat/apps-engine/definition/uikit';
-import { UIKitIncomingInteractionType } from '@rocket.chat/apps-engine/definition/uikit';
-import { isUIKitIncomingInteractionActionButtonMessageBox } from '@rocket.chat/apps-engine/definition/uikit/IUIKitIncomingInteractionActionButton';
+} from '@zeki.chat/apps-engine/definition/messages';
+import { AppInterface, AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IRoom, IRoomUserJoinedContext, IRoomUserLeaveContext } from '@zeki.chat/apps-engine/definition/rooms';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import { UIActionButtonContext } from '@zeki.chat/apps-engine/definition/ui';
+import type { IUIKitResponse, IUIKitSurface, UIKitIncomingInteraction } from '@zeki.chat/apps-engine/definition/uikit';
+import { UIKitIncomingInteractionType } from '@zeki.chat/apps-engine/definition/uikit';
+import { isUIKitIncomingInteractionActionButtonMessageBox } from '@zeki.chat/apps-engine/definition/uikit/IUIKitIncomingInteractionActionButton';
 import type {
 	IUIKitLivechatBlockIncomingInteraction,
 	IUIKitLivechatIncomingInteraction,
-} from '@rocket.chat/apps-engine/definition/uikit/livechat';
-import type { IFileUploadInternalContext } from '@rocket.chat/apps-engine/definition/uploads/IFileUploadContext';
-import type { IUser, IUserContext, IUserStatusContext, IUserUpdateContext } from '@rocket.chat/apps-engine/definition/users';
+} from '@zeki.chat/apps-engine/definition/uikit/livechat';
+import type { IFileUploadInternalContext } from '@zeki.chat/apps-engine/definition/uploads/IFileUploadContext';
+import type { IUser, IUserContext, IUserStatusContext, IUserUpdateContext } from '@zeki.chat/apps-engine/definition/users';
 
 import type { AppAccessorManager } from './AppAccessorManager';
 import type { AppManager } from '../AppManager';

@@ -1,9 +1,9 @@
-import type { IMessage, IPushNotificationConfig, IRoom, IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IMessage, IPushNotificationConfig, IRoom, IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../../server/lib/callbacks';
-import { RocketChatAssets } from '../../../assets/server';
+import { ZekiChatAssets } from '../../../assets/server';
 import { replaceMentionedUsernamesWithFullNames, parseMessageTextPerUser } from '../../../lib/server/functions/notifications';
 import { getPushData } from '../../../lib/server/functions/notifications/mobile';
 import { metrics } from '../../../metrics/server';
@@ -82,7 +82,7 @@ class PushNotification {
 			notId: this.getNotificationId(rid),
 			gcm: {
 				style: 'inbox',
-				image: RocketChatAssets.getURL('Assets_favicon_192'),
+				image: ZekiChatAssets.getURL('Assets_favicon_192'),
 			},
 			...(category !== '' ? { apn: { category } } : {}),
 		};

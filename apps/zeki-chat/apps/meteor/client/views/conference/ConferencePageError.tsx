@@ -1,6 +1,6 @@
 import { States, StatesIcon, StatesTitle, StatesSubtitle, StatesActions, StatesAction } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useTranslation, useUser, useRoute } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useTranslation, useUser, useRoute } from '@zeki.chat/ui-contexts';
 
 const ConferencePageError = () => {
 	const t = useTranslation();

@@ -1,8 +1,7 @@
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import type { IOmnichannelService } from '@rocket.chat/core-services';
-import type { AtLeast, IOmnichannelQueue, IOmnichannelRoom } from '@rocket.chat/core-typings';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { IOmnichannelService } from '@zeki.chat/core-services';
+import type { IOmnichannelQueue } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import moment from 'moment';
 
 import { OmnichannelQueue } from './queue';
 import { RoutingManager } from '../../../app/livechat/server/lib/RoutingManager';
@@ -37,23 +36,11 @@ export class OmnichannelService extends ServiceClassInternal implements IOmnicha
 			this.queueWorker.shouldStart();
 		});
 
-		Capabilities.onLimitReached('monthlyActiveContacts', async (): Promise<void> => {
-			this.queueWorker.isRunning() && (await this.queueWorker.stop());
-		});
 
 		Capabilities.onReady(async (): Promise<void> => {
 			RoutingManager.isMethodSet() && (await this.queueWorker.shouldStart());
 		});
 
-		// NOTE: When there's no license or license is invalid, we fallback to CE behavior
-		// CE behavior means there's no MAC limit, so we start the queue
-		Capabilities.onInvalidateLicense(async (): Promise<void> => {
-			this.queueWorker.isRunning() && (await this.queueWorker.shouldStart());
-		});
 	}
 
-	async isWithinMACLimit(room: AtLeast<IOmnichannelRoom, 'v'>): Promise<boolean> {
-		const currentMonth = moment.utc().format('YYYY-MM');
-		return room.v?.activity?.includes(currentMonth) || !(await Capabilities.shouldPreventAction('monthlyActiveContacts'));
-	}
 }

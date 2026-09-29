@@ -1,4 +1,4 @@
-import { getTimezoneNames } from '@rocket.chat/tools';
+import { getTimezoneNames } from '@zeki.chat/tools';
 import { useMemo } from 'react';
 
 export const useTimezoneNameList = (): string[] =>

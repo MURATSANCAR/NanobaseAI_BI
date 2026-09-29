@@ -1,4 +1,4 @@
-import type { CallHistoryItem, IRegisterUser } from '@rocket.chat/core-typings';
+import type { CallHistoryItem, IRegisterUser } from '@zeki.chat/core-typings';
 import type { FindOptions } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

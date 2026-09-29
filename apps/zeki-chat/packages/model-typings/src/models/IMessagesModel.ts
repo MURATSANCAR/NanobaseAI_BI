@@ -6,7 +6,7 @@ import type {
 	MessageTypesValues,
 	MessageAttachment,
 	IMessageWithPendingFileImport,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type {
 	AggregationCursor,
 	CountDocumentsOptions,
@@ -125,9 +125,9 @@ export interface IMessagesModel extends IBaseModel<IMessage> {
 	unsetReactions(messageId: string): Promise<UpdateResult>;
 	addTranslations(messageId: string, translations: Record<string, string>, providerName: string): Promise<UpdateResult>;
 	addAttachmentTranslations(messageId: string, attachmentIndex: string, translations: Record<string, string>): Promise<UpdateResult>;
-	setImportFileRocketChatAttachment(
+	setImportFileZekiChatAttachment(
 		importFileId: string,
-		rocketChatUrl: string,
+		zekiChatUrl: string,
 		attachment: MessageAttachment,
 	): Promise<UpdateResult | Document>;
 	countVisibleByRoomIdBetweenTimestampsInclusive(roomId: string, afterTimestamp: Date, beforeTimestamp: Date): Promise<number>;

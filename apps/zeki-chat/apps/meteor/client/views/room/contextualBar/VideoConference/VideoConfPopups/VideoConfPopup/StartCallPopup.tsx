@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useOutsideClick, useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import {
 	VideoConfPopup,
@@ -14,7 +14,7 @@ import {
 	useVideoConfSetPreferences,
 	useVideoConfCapabilities,
 	useVideoConfPreferences,
-} from '@rocket.chat/ui-video-conf';
+} from '@zeki.chat/ui-video-conf';
 import type { ReactElement } from 'react';
 import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

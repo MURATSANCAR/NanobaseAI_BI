@@ -1,4 +1,4 @@
-import type { VideoConference } from '@rocket.chat/core-typings';
+import type { VideoConference } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import {
 	Button,
@@ -17,10 +17,10 @@ import {
 	AvatarStack,
 } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useTranslation } from '@rocket.chat/ui-contexts';
-import { useVideoConfJoinCall } from '@rocket.chat/ui-video-conf';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useTranslation } from '@zeki.chat/ui-contexts';
+import { useVideoConfJoinCall } from '@zeki.chat/ui-video-conf';
 import type { ReactElement } from 'react';
 
 import { useTimeAgo } from '../../../../../hooks/useTimeAgo';

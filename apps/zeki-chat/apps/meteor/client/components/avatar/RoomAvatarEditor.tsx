@@ -1,10 +1,10 @@
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import type { IRoom, RoomAdminFieldsType } from '@rocket.chat/core-typings';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import type { IRoom, RoomAdminFieldsType } from '@zeki.chat/core-typings';
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Button, ButtonGroup } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';

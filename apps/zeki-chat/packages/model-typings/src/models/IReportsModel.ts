@@ -1,4 +1,4 @@
-import type { IReport, IMessage } from '@rocket.chat/core-typings';
+import type { IReport, IMessage } from '@zeki.chat/core-typings';
 
 import type { IBaseModel } from './IBaseModel';
 

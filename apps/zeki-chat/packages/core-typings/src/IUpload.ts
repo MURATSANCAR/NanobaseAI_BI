@@ -1,8 +1,8 @@
 import type { EncryptedContent } from './IMessage';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IUser } from './IUser';
 
-export interface IUpload extends IRocketChatRecord {
+export interface IUpload extends IZekiChatRecord {
 	typeGroup?: string;
 	description?: string;
 	type?: string;

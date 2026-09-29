@@ -4,8 +4,8 @@ import type {
 	ILivechatPriority,
 	IOmnichannelRoom,
 	IOmnichannelServiceLevelAgreements,
-} from '@rocket.chat/core-typings';
-import { OmnichannelSortingMechanismSettingType } from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
+import { OmnichannelSortingMechanismSettingType } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 

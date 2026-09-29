@@ -1,7 +1,7 @@
 import type { Meta, StoryFn } from '@storybook/react';
 
 import { MessageComposerHint } from '.';
-import '@rocket.chat/icons/dist/rocketchat.css';
+import '@rocket.chat/icons/dist/zekichat.css';
 
 export default {
 	title: 'Components/MessageComposerHint',

@@ -1,11 +1,11 @@
-import type { ICredentialToken, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { ICredentialTokensModel, InsertionModel } from '@rocket.chat/model-typings';
+import type { ICredentialToken, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { ICredentialTokensModel, InsertionModel } from '@zeki.chat/model-typings';
 import type { Collection, Db, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class CredentialTokensRaw extends BaseRaw<ICredentialToken> implements ICredentialTokensModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ICredentialToken>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ICredentialToken>>) {
 		super(db, 'credential_tokens', trash);
 	}
 

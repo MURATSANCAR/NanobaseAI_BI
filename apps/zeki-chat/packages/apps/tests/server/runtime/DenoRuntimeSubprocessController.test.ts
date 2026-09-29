@@ -6,8 +6,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, it, afterEach, mock, before, after } from 'node:test';
 
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import { UserStatusConnection, UserType } from '@rocket.chat/apps-engine/definition/users';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import { UserStatusConnection, UserType } from '@zeki.chat/apps-engine/definition/users';
 import { type RpcStatusType, SuccessObject } from 'jsonrpc-lite';
 
 import type { AppManager } from '../../../src/server/AppManager';
@@ -109,7 +109,7 @@ describe('DenoRuntimeSubprocessController', () => {
 		const doGetByUsernameSpy = mock.method(userBridge, 'doGetByUsername', () =>
 			Promise.resolve({
 				id: 'id',
-				username: 'rocket.cat',
+				username: 'zeki.bot',
 				isEnabled: true,
 				emails: [],
 				name: 'name',
@@ -131,16 +131,16 @@ describe('DenoRuntimeSubprocessController', () => {
 				jsonrpc: '2.0',
 				id: 'test',
 				method: 'accessor:getReader:getUserReader:getByUsername',
-				params: ['rocket.cat'],
+				params: ['zeki.bot'],
 				serialize: () => '',
 			},
 		});
 
 		assert.strictEqual(doGetByUsernameSpy.mock.calls.length, 1);
-		assert.deepStrictEqual(doGetByUsernameSpy.mock.calls[0].arguments, ['rocket.cat', '9c1d62ca-e40f-456f-8601-17c823a16c68']);
+		assert.deepStrictEqual(doGetByUsernameSpy.mock.calls[0].arguments, ['zeki.bot', '9c1d62ca-e40f-456f-8601-17c823a16c68']);
 
 		assert.strictEqual(id, 'test');
-		assert.partialDeepStrictEqual(result, { username: 'rocket.cat' });
+		assert.partialDeepStrictEqual(result, { username: 'zeki.bot' });
 	});
 
 	it('correctly identifies a call to the IEnvironmentReader accessor via IRead', { timeout: 15_000 }, async () => {

@@ -1,5 +1,5 @@
-import { isBannedSubscription } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users, Roles } from '@rocket.chat/models';
+import { isBannedSubscription } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users, Roles } from '@zeki.chat/models';
 
 import { roomCoordinator } from './rooms/roomCoordinator';
 import { canAccessRoomAsync } from '../../app/authorization/server';

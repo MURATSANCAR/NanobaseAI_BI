@@ -1,4 +1,4 @@
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import type { UserAutoCompleteOptionType } from '../UsersSelectElement';

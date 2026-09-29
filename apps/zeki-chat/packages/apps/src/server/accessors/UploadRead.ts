@@ -1,5 +1,5 @@
-import type { IUploadRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IUpload } from '@rocket.chat/apps-engine/definition/uploads';
+import type { IUploadRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IUpload } from '@zeki.chat/apps-engine/definition/uploads';
 
 import type { UploadBridge } from '../bridges/UploadBridge';
 

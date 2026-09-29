@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 
 import '@testing-library/jest-dom';
@@ -6,7 +6,7 @@ import '@testing-library/jest-dom';
 import UsersPageHeaderContent from './UsersPageHeaderContent';
 
 it('should show "Invite" button if has build-register-user permission', () => {
-	render(<UsersPageHeaderContent isSeatsCapExceeded={false} seatsCap={{ activeUsers: 1, maxActiveUsers: 1 }} />, {
+	render(<UsersPageHeaderContent />, {
 		wrapper: mockAppRoot().withJohnDoe().withPermission('bulk-register-user').build(),
 	});
 
@@ -14,7 +14,7 @@ it('should show "Invite" button if has build-register-user permission', () => {
 });
 
 it('should hide "Invite" button if user doesnt have build-register-user permission', () => {
-	render(<UsersPageHeaderContent isSeatsCapExceeded={false} seatsCap={{ activeUsers: 1, maxActiveUsers: 1 }} />, {
+	render(<UsersPageHeaderContent />, {
 		wrapper: mockAppRoot().withJohnDoe().build(),
 	});
 
@@ -22,7 +22,7 @@ it('should hide "Invite" button if user doesnt have build-register-user permissi
 });
 
 it('should show "New User" button if has create-user permission', () => {
-	render(<UsersPageHeaderContent isSeatsCapExceeded={false} seatsCap={{ activeUsers: 1, maxActiveUsers: 1 }} />, {
+	render(<UsersPageHeaderContent />, {
 		wrapper: mockAppRoot().withJohnDoe().withPermission('create-user').build(),
 	});
 
@@ -30,41 +30,9 @@ it('should show "New User" button if has create-user permission', () => {
 });
 
 it('should hide "New User" button if user doesnt have create-user permission', () => {
-	render(<UsersPageHeaderContent isSeatsCapExceeded={false} seatsCap={{ activeUsers: 1, maxActiveUsers: 1 }} />, {
-		wrapper: mockAppRoot().withJohnDoe().withPermission('create-user').build(),
-	});
-
-	expect(screen.getByRole('button', { name: 'New_user' })).toBeInTheDocument();
-});
-
-it('should show "Buy more seats" button if seats caps is exceeded', () => {
-	render(<UsersPageHeaderContent isSeatsCapExceeded seatsCap={{ activeUsers: 1, maxActiveUsers: 1 }} />, {
+	render(<UsersPageHeaderContent />, {
 		wrapper: mockAppRoot().withJohnDoe().build(),
 	});
 
-	expect(screen.getByRole('link', { name: 'Buy_more_seats' })).toBeInTheDocument();
-});
-
-it('should hide "Buy more seats" button if seats caps is within limits', () => {
-	render(<UsersPageHeaderContent isSeatsCapExceeded={false} seatsCap={{ activeUsers: 1, maxActiveUsers: 1 }} />, {
-		wrapper: mockAppRoot().withJohnDoe().build(),
-	});
-
-	expect(screen.queryByRole('link', { name: 'Buy_more_seats' })).not.toBeInTheDocument();
-});
-
-it('should show seats available progress bar', () => {
-	render(<UsersPageHeaderContent isSeatsCapExceeded={false} seatsCap={{ activeUsers: 1, maxActiveUsers: 10 }} />, {
-		wrapper: mockAppRoot().withJohnDoe().build(),
-	});
-
-	expect(screen.getByTestId('seats-cap-progress-bar')).toBeInTheDocument();
-});
-
-it('should hide seats available progress bar if theres no limit', () => {
-	render(<UsersPageHeaderContent isSeatsCapExceeded={false} seatsCap={{ activeUsers: 1, maxActiveUsers: Number.POSITIVE_INFINITY }} />, {
-		wrapper: mockAppRoot().withJohnDoe().build(),
-	});
-
-	expect(screen.queryByTestId('seats-cap-progress-bar')).not.toBeInTheDocument();
+	expect(screen.queryByRole('button', { name: 'New_user' })).not.toBeInTheDocument();
 });

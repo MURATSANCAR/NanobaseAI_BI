@@ -1,7 +1,7 @@
-import { Message } from '@rocket.chat/core-services';
-import type { ILivechatPriority, IOmnichannelRoom, IUser } from '@rocket.chat/core-typings';
-import { LivechatInquiry, LivechatPriority, LivechatRooms } from '@rocket.chat/models';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
+import { Message } from '@zeki.chat/core-services';
+import type { ILivechatPriority, IOmnichannelRoom, IUser } from '@zeki.chat/core-typings';
+import { LivechatInquiry, LivechatPriority, LivechatRooms } from '@zeki.chat/models';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { FindOptions } from 'mongodb';
 

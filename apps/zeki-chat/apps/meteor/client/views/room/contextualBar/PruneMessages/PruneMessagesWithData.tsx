@@ -1,7 +1,7 @@
-import { isDirectMessageRoom } from '@rocket.chat/core-typings';
+import { isDirectMessageRoom } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useEndpoint, useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useEndpoint, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';

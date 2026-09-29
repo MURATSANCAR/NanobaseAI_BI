@@ -1,5 +1,5 @@
-import type { IRole, IUser, IRoom, ISubscription } from '@rocket.chat/core-typings';
-import { Roles } from '@rocket.chat/models';
+import type { IRole, IUser, IRoom, ISubscription } from '@zeki.chat/core-typings';
+import { Roles } from '@zeki.chat/models';
 
 /**
  * @deprecated use `Authorization.hasAnyRole` instead

@@ -1,5 +1,5 @@
-import { LivechatInquiryStatus } from '@rocket.chat/core-typings';
-import { LivechatInquiry, LivechatDepartment, Users, LivechatRooms } from '@rocket.chat/models';
+import { LivechatInquiryStatus } from '@zeki.chat/core-typings';
+import { LivechatInquiry, LivechatDepartment, Users, LivechatRooms } from '@zeki.chat/models';
 import {
 	isGETLivechatInquiriesListParams,
 	isPOSTLivechatInquiriesTakeParams,
@@ -10,7 +10,7 @@ import {
 	validateForbiddenErrorResponse,
 	isPOSTLivechatInquiriesReturnAsInquiry,
 	POSTLivechatInquiriesReturnAsInquirySuccessResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import type { ExtractRoutesFromAPI } from '../../../../api/server/ApiClass';
@@ -154,7 +154,7 @@ const livechatInquiriesEndpoints = API.v1.post(
 
 type LivechatInquiriesEndpoints = ExtractRoutesFromAPI<typeof livechatInquiriesEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends LivechatInquiriesEndpoints {}
 }

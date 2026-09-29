@@ -1,5 +1,5 @@
-import type { AppManager } from '@rocket.chat/apps/dist/server/AppManager';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
+import type { AppManager } from '@zeki.chat/apps/dist/server/AppManager';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
 
 import { AppAccessors } from './accessors/mod.ts';
 import { formatErrorResponse } from './accessors/formatResponseErrorHandler.ts';

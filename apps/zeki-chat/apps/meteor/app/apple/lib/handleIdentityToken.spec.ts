@@ -1,11 +1,11 @@
 import { generateKeyPairSync, sign } from 'node:crypto';
 
-import { serverFetch } from '@rocket.chat/server-fetch';
+import { serverFetch } from '@zeki.chat/server-fetch';
 import { Response } from 'node-fetch';
 
 import { handleIdentityToken } from './handleIdentityToken';
 
-jest.mock('@rocket.chat/server-fetch', () => ({
+jest.mock('@zeki.chat/server-fetch', () => ({
 	serverFetch: jest.fn(),
 }));
 

@@ -1,10 +1,10 @@
 // Expects the following details:
 // {
 // 	body: '<table>',
-// 	subject: 'Rocket.Chat, 17 Users, 24 Messages, 1 File, 799504 Minutes, in #random',
+// 	subject: 'ZEKI AI CHAT, 17 Users, 24 Messages, 1 File, 799504 Minutes, in #random',
 //  files: ['i3nc9l3mn']
 // }
-import { Uploads } from '@rocket.chat/models';
+import { Uploads } from '@zeki.chat/models';
 
 import { UploadFS } from '../../../../server/ufs';
 import * as Mailer from '../../../mailer/server/api';
@@ -15,7 +15,7 @@ export const sendEmail = async (data: { files: string[]; subject: string; body: 
 
 	for await (const fileId of data.files) {
 		const file = await Uploads.findOneById(fileId);
-		if (file?.store === 'rocketchat_uploads' || file?.store === 'fileSystem') {
+		if (file?.store === 'zeki_uploads' || file?.store === 'fileSystem') {
 			const rs = await UploadFS.getStore(file.store).getReadStream(fileId, file);
 			attachments.push({
 				filename: file.name,

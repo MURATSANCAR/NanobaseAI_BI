@@ -2,8 +2,8 @@
  * @author Vigneshwaran Odayappan <vickyokrm@gmail.com>
  */
 
-import type { IMessage, IProviderMetadata, ISupportedLanguage, ITranslationResult, MessageAttachment } from '@rocket.chat/core-typings';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import type { IMessage, IProviderMetadata, ISupportedLanguage, ITranslationResult, MessageAttachment } from '@zeki.chat/core-typings';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 import _ from 'underscore';
 
 import { TranslationProviderRegistry, AutoTranslate } from './autotranslate';

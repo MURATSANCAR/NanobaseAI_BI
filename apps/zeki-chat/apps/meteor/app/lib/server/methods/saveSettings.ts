@@ -1,7 +1,7 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import { isSettingCode } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Settings } from '@rocket.chat/models';
+import type { ISetting } from '@zeki.chat/core-typings';
+import { isSettingCode } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Settings } from '@zeki.chat/models';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -14,7 +14,7 @@ import { disableCustomScripts } from '../functions/disableCustomScripts';
 import { checkSettingValueBounds } from '../lib/checkSettingValueBonds';
 import { notifyOnSettingChangedById } from '../lib/notifyListener';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		saveSettings(

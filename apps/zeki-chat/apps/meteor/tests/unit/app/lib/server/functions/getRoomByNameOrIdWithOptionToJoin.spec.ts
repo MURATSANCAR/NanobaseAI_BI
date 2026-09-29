@@ -68,12 +68,12 @@ const {
 }: {
 	getRoomByNameOrIdWithOptionToJoin: GetRoomByNameOrIdWithOptionToJoinFn;
 } = proxyquire.noCallThru().load('../../../../../../../meteor/app/lib/server/functions/getRoomByNameOrIdWithOptionToJoin.ts', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Rooms: RoomsStub,
 		Subscriptions: SubscriptionsStub,
 		Users: UsersStub,
 	},
-	'@rocket.chat/core-services': {
+	'@zeki.chat/core-services': {
 		Room: RoomServiceStub,
 	},
 	'../../../../lib/utils/isObject': isObjectMock,

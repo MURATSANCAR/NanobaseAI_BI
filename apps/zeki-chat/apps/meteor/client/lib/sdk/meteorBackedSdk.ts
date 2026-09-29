@@ -1,4 +1,4 @@
-import type { DDPSDK } from '@rocket.chat/ddp-client';
+import type { DDPSDK } from '@zeki.chat/ddp-client';
 import { Emitter } from '@rocket.chat/emitter';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
@@ -312,7 +312,7 @@ declare global {
 	}
 }
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface DDPSDK {
 		storage: {

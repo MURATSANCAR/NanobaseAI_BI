@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { Roles, Subscriptions, Users } from '@rocket.chat/models';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { Roles, Subscriptions, Users } from '@zeki.chat/models';
 import _ from 'underscore';
 
 import { settings } from '../../../app/settings/server';

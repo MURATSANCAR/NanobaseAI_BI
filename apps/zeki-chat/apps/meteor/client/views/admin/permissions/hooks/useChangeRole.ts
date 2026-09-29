@@ -1,6 +1,6 @@
-import type { IRole, IPermission } from '@rocket.chat/core-typings';
+import type { IRole, IPermission } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 
 export const useChangeRole = ({
 	onGrant,

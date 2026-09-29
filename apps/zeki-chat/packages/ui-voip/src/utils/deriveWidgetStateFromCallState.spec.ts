@@ -1,4 +1,4 @@
-import type { CallState } from '@rocket.chat/media-signaling';
+import type { CallState } from '@zeki.chat/media-signaling';
 
 import { deriveWidgetStateFromCallState } from './deriveWidgetStateFromCallState';
 

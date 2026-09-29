@@ -1,6 +1,6 @@
-import type { IOmnichannelCannedResponse, ILivechatDepartment } from '@rocket.chat/core-typings';
+import type { IOmnichannelCannedResponse, ILivechatDepartment } from '@zeki.chat/core-typings';
 import { useDebouncedValue, useLocalStorage, useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useSetModal, useRouter, useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useSetModal, useRouter, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent, MouseEvent } from 'react';
 import { memo, useCallback, useState } from 'react';
 
@@ -9,7 +9,6 @@ import { useChat } from '../../../../room/contexts/ChatContext';
 import { useRoom } from '../../../../room/contexts/RoomContext';
 import { useCannedResponseFilterOptions } from '../../../hooks/useCannedResponseFilterOptions';
 import { useCannedResponseList } from '../../../hooks/useCannedResponseList';
-import { useIsRoomOverMacLimit } from '../../../hooks/useIsRoomOverMacLimit';
 import CreateCannedResponse from '../../modals/CreateCannedResponse';
 
 export const WrapCannedResponseList = () => {
@@ -22,8 +21,6 @@ export const WrapCannedResponseList = () => {
 
 	const [text, setText] = useState('');
 	const [type, setType] = useLocalStorage('canned-response-list-type', 'all');
-
-	const isRoomOverMacLimit = useIsRoomOverMacLimit(room);
 
 	const handleTextChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
 		setText(event.currentTarget.value);
@@ -78,7 +75,6 @@ export const WrapCannedResponseList = () => {
 			setText={handleTextChange}
 			type={type}
 			setType={setType}
-			isRoomOverMacLimit={isRoomOverMacLimit}
 			onClickUse={onClickUse}
 			onClickItem={onClickItem}
 			onClickCreate={onClickCreate}

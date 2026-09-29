@@ -1,4 +1,4 @@
-import { LivechatTag } from '@rocket.chat/models';
+import { LivechatTag } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../../server/lib/callbacks';
 

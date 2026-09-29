@@ -1,4 +1,4 @@
-import type { OauthConfig } from '@rocket.chat/core-typings';
+import type { OauthConfig } from '@zeki.chat/core-typings';
 
 export const config = {
 	serverURL: 'https://appleid.apple.com',

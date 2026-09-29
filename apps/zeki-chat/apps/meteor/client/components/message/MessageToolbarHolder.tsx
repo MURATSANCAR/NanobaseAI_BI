@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { MessageToolbarWrapper } from '@rocket.chat/fuselage';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';

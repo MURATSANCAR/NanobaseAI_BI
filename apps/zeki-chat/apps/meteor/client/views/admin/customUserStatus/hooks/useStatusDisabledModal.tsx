@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useRole, useRoute, useSetModal } from '@rocket.chat/ui-contexts';
+import { useRole, useRoute, useSetModal } from '@zeki.chat/ui-contexts';
 
 import CustomUserStatusDisabledModal from '../CustomUserStatusDisabledModal';
 

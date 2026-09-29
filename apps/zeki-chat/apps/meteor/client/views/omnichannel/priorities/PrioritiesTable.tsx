@@ -1,11 +1,11 @@
-import type { ILivechatPriority, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatPriority, Serialized } from '@zeki.chat/core-typings';
 import {
 	GenericTable,
 	GenericTableHeaderCell,
 	GenericTableHeader,
 	GenericTableBody,
 	GenericTableLoadingTable,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

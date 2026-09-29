@@ -1,6 +1,6 @@
 import { federationSDK } from '@rocket.chat/federation-sdk';
-import { Router } from '@rocket.chat/http-router';
-import { ajv, ajvQuery } from '@rocket.chat/rest-typings';
+import { Router } from '@zeki.chat/http-router';
+import { ajv, ajvQuery } from '@zeki.chat/rest-typings';
 
 import { isAuthenticatedMiddleware } from '../middlewares/isAuthenticated';
 
@@ -134,7 +134,7 @@ export const getMatrixRoomsRoutes = () => {
 					200: isPublicRoomsResponseProps,
 				},
 				tags: ['Federation'],
-				license: ['federation'],
+				capabilities: ['federation'],
 			},
 			async () => {
 				const defaultObj = {
@@ -165,7 +165,7 @@ export const getMatrixRoomsRoutes = () => {
 					200: isPublicRoomsResponseProps,
 				},
 				tags: ['Federation'],
-				license: ['federation'],
+				capabilities: ['federation'],
 			},
 			async (c) => {
 				const body = await c.req.json();

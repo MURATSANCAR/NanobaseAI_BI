@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 
 import * as Mailer from '../../../app/mailer/server/api';
 import { settings } from '../../../app/settings/server';

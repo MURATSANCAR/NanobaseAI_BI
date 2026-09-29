@@ -1,5 +1,5 @@
 import { usePrefersReducedMotion } from '@rocket.chat/fuselage-hooks';
-import type { RouterContextValue } from '@rocket.chat/ui-contexts';
+import type { RouterContextValue } from '@zeki.chat/ui-contexts';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 /**

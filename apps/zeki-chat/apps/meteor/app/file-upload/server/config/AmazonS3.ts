@@ -71,7 +71,7 @@ const configure = _.debounce(() => {
 	const URLExpiryTimeSpan = settings.get<number>('FileUpload_S3_URLExpiryTimeSpan');
 	const Region = settings.get<string>('FileUpload_S3_Region');
 	const ForcePathStyle = settings.get<boolean>('FileUpload_S3_ForcePathStyle');
-	// const CDN = RocketChat.settings.get('FileUpload_S3_CDN');
+	// const CDN = ZekiChat.settings.get('FileUpload_S3_CDN');
 	const BucketURL = settings.get<string>('FileUpload_S3_BucketURL');
 
 	if (!Bucket) {

@@ -1,7 +1,7 @@
-import { isThreadMainMessage, isThreadMessage } from '@rocket.chat/core-typings';
-import type { IMessage } from '@rocket.chat/core-typings';
+import { isThreadMainMessage, isThreadMessage } from '@zeki.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { useStableCallback } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint, useRouteParameter, useSearchParameter } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useRouteParameter, useSearchParameter } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 

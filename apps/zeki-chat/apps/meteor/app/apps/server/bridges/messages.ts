@@ -1,11 +1,11 @@
-import type { IAppServerOrchestrator, IAppsMessage, IAppsUser } from '@rocket.chat/apps';
-import type { ITypingDescriptor } from '@rocket.chat/apps/dist/server/bridges/MessageBridge';
-import { MessageBridge } from '@rocket.chat/apps/dist/server/bridges/MessageBridge';
-import type { Reaction } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import { api } from '@rocket.chat/core-services';
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Users, Subscriptions } from '@rocket.chat/models';
+import type { IAppServerOrchestrator, IAppsMessage, IAppsUser } from '@zeki.chat/apps';
+import type { ITypingDescriptor } from '@zeki.chat/apps/dist/server/bridges/MessageBridge';
+import { MessageBridge } from '@zeki.chat/apps/dist/server/bridges/MessageBridge';
+import type { Reaction } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import { api } from '@zeki.chat/core-services';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Users, Subscriptions } from '@zeki.chat/models';
 
 import { deleteMessage } from '../../../lib/server/functions/deleteMessage';
 import { updateMessage } from '../../../lib/server/functions/updateMessage';
@@ -63,7 +63,7 @@ export class AppMessageBridge extends MessageBridge {
 		}
 
 		const convertedMsg = await this.orch.getConverters()?.get('messages').convertAppMessage(message);
-		const convertedUser = (await Users.findOneById(user.id)) || this.orch.getConverters()?.get('users').convertToRocketChat(user);
+		const convertedUser = (await Users.findOneById(user.id)) || this.orch.getConverters()?.get('users').convertToZekiChat(user);
 
 		await deleteMessage(convertedMsg as IMessage, convertedUser);
 	}

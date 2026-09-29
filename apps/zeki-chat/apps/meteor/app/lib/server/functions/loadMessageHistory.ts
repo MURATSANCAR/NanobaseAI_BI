@@ -1,5 +1,5 @@
-import type { IMessage, MessageTypesValues } from '@rocket.chat/core-typings';
-import { Messages, Rooms } from '@rocket.chat/models';
+import type { IMessage, MessageTypesValues } from '@zeki.chat/core-typings';
+import { Messages, Rooms } from '@zeki.chat/models';
 import type { FindOptions } from 'mongodb';
 
 import { settings } from '../../../settings/server/cached';

@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { IOmnichannelBusinessUnit } from '@rocket.chat/core-typings';
+import type { IOmnichannelBusinessUnit } from '@zeki.chat/core-typings';
 
 import { methodCall, credentials, request, api } from '../api-data';
 import type { DummyResponse } from './utils';

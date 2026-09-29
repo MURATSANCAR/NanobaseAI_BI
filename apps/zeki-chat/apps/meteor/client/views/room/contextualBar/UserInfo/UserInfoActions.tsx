@@ -1,7 +1,7 @@
 /* eslint-disable react/display-name, react/no-multi-comp */
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
 import { ButtonGroup, IconButton, Skeleton } from '@rocket.chat/fuselage';
-import { GenericMenu } from '@rocket.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

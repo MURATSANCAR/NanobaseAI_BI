@@ -1,8 +1,8 @@
 import type { ILivechatDepartment } from './ILivechatDepartment';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IUser } from './IUser';
 
-export interface IOmnichannelCannedResponse extends IRocketChatRecord {
+export interface IOmnichannelCannedResponse extends IZekiChatRecord {
 	shortcut: string;
 	text: string;
 	scope: string;

@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-// import { Users } from '@rocket.chat/models';
+// import { Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import semver from 'semver';
 
 import { settings } from '../../app/settings/server';
-import { Info } from '../../app/utils/rocketchat.info';
+import { Info } from '../../app/utils/zekichat.info';
 import { getMongoInfo } from '../../app/utils/server/functions/getMongoInfo';
 // import { i18n } from '../lib/i18n';
 // import { isRunningMs } from '../lib/isRunningMs';

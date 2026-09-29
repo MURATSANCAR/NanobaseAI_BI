@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IIntegration } from '@rocket.chat/core-typings';
-import type { IntegrationsCreateProps } from '@rocket.chat/rest-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IIntegration } from '@zeki.chat/core-typings';
+import type { IntegrationsCreateProps } from '@zeki.chat/rest-typings';
 
 import { api, credentials, request } from './api-data';
 

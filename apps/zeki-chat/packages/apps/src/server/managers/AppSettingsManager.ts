@@ -1,6 +1,6 @@
-import { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
-import type { ISettingUpdateContext } from '@rocket.chat/apps-engine/definition/settings/ISettingUpdateContext';
+import { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
+import type { ISettingUpdateContext } from '@zeki.chat/apps-engine/definition/settings/ISettingUpdateContext';
 
 import type { AppManager } from '../AppManager';
 import { Utilities } from '../misc/Utilities';

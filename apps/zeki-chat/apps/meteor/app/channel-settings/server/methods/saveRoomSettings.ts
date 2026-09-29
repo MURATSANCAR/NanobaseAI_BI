@@ -1,8 +1,8 @@
-import { Team } from '@rocket.chat/core-services';
-import type { IRoom, IRoomWithRetentionPolicy, IUser, MessageTypesValues, ITeam, RequiredField } from '@rocket.chat/core-typings';
-import { TeamType } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Rooms, Users } from '@rocket.chat/models';
+import { Team } from '@zeki.chat/core-services';
+import type { IRoom, IRoomWithRetentionPolicy, IUser, MessageTypesValues, ITeam, RequiredField } from '@zeki.chat/core-typings';
+import { TeamType } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Rooms, Users } from '@zeki.chat/models';
 import { Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -374,7 +374,7 @@ const settingSavers: RoomSettingsSavers = {
 	},
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		saveRoomSettings(rid: IRoom['_id'], settings: Partial<RoomSettings>): Promise<{ result: true; rid: IRoom['_id'] }>;
@@ -456,7 +456,7 @@ export async function saveRoomSettings(
 ): Promise<{ result: true; rid: IRoom['_id'] }> {
 	if (!userId) {
 		throw new Meteor.Error('error-invalid-user', 'Invalid user', {
-			function: 'RocketChat.saveRoomName',
+			function: 'ZekiChat.saveRoomName',
 		});
 	}
 	if (!Match.test(rid, String)) {
@@ -550,7 +550,7 @@ Meteor.methods<ServerMethods>({
 		const userId = Meteor.userId();
 		if (!userId) {
 			throw new Meteor.Error('error-invalid-user', 'Invalid user', {
-				function: 'RocketChat.saveRoomName',
+				function: 'ZekiChat.saveRoomName',
 			});
 		}
 

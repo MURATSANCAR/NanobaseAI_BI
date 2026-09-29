@@ -1,4 +1,4 @@
-import { Random } from '@rocket.chat/random';
+import { Random } from '@zeki.chat/random';
 
 import { settingsRegistry } from '../../app/settings/server';
 

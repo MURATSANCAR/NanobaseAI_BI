@@ -1,4 +1,4 @@
-import { Imports } from '@rocket.chat/models';
+import { Imports } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { ProgressStep } from '../../lib/ImporterProgressStep';

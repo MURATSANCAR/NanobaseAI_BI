@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/release-changelog",
+	"name": "@zeki.chat/release-changelog",
 	"version": "0.1.1",
 	"private": true,
 	"main": "dist/index.js",

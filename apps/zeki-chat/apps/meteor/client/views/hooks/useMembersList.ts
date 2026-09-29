@@ -1,5 +1,5 @@
-import type { IRole, IUser, AtLeast, ISubscription, Serialized } from '@rocket.chat/core-typings';
-import { useEndpoint, useSetting, useStream } from '@rocket.chat/ui-contexts';
+import type { IRole, IUser, AtLeast, ISubscription, Serialized } from '@zeki.chat/core-typings';
+import { useEndpoint, useSetting, useStream } from '@zeki.chat/ui-contexts';
 import type { InfiniteData, QueryClient } from '@tanstack/react-query';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';

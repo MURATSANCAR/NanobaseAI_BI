@@ -1,13 +1,13 @@
-import { api } from '@rocket.chat/core-services';
-import type { ICustomEmojiDescriptor } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { EmojiCustom } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { ICustomEmojiDescriptor } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { EmojiCustom } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
-import { RocketChatFileEmojiCustomInstance } from '../startup/emoji-custom';
+import { ZekiChatFileEmojiCustomInstance } from '../startup/emoji-custom';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		deleteEmojiCustom(emojiID: ICustomEmojiDescriptor['_id']): boolean;
@@ -26,7 +26,7 @@ export const deleteEmojiCustom = async (userId: string, emojiID: ICustomEmojiDes
 		});
 	}
 
-	await RocketChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emoji.name}.${emoji.extension}`));
+	await ZekiChatFileEmojiCustomInstance.deleteFile(encodeURIComponent(`${emoji.name}.${emoji.extension}`));
 	await EmojiCustom.removeById(emojiID);
 	void api.broadcast('emoji.deleteCustom', emoji);
 

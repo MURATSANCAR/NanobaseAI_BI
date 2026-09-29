@@ -1,4 +1,4 @@
-import { Users } from '@rocket.chat/models';
+import { Users } from '@zeki.chat/models';
 
 export default async function handleOnCreateRoom(user, room) {
 	const users = await Users.findByRoomId(room._id);

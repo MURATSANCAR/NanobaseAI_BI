@@ -38,9 +38,6 @@ const models = {
 	},
 };
 
-const license = {
-	shouldPreventAction: Sinon.stub(),
-};
 
 const { OmnichannelQueue } = p.noCallThru().load('../../../../../server/services/omnichannel/queue', {
 	'../../../app/livechat/server/lib/Helper': {
@@ -55,8 +52,7 @@ const { OmnichannelQueue } = p.noCallThru().load('../../../../../server/services
 	'../../../app/livechat/server/lib/settings': libSettings,
 	'../../../app/settings/server': { settings },
 	'./logger': { queueLogger },
-	'@rocket.chat/models': models,
-	'@zeki.chat/capabilities': { License: license },
+	'@zeki.chat/models': models,
 	'../../../app/metrics/server': {
 		metrics: {
 			timeToQueueProcessingByQueue: { observe: Sinon.stub() },
@@ -353,12 +349,10 @@ describe('Omnichannel Queue processor', () => {
 	});
 	describe('execute', () => {
 		beforeEach(() => {
-			license.shouldPreventAction.reset();
 			queueLogger.debug.reset();
 		});
 
 		after(() => {
-			license.shouldPreventAction.reset();
 			queueLogger.debug.reset();
 		});
 
@@ -367,17 +361,8 @@ describe('Omnichannel Queue processor', () => {
 			queue.running = false;
 			expect(await queue.execute()).to.be.undefined;
 		});
-		it('should return undefined if license is over mac limits', async () => {
-			license.shouldPreventAction.returns(true);
 
-			const queue = new OmnichannelQueue();
-			queue.running = true;
-			expect(await queue.execute()).to.be.undefined;
-			expect(license.shouldPreventAction.calledOnce).to.be.true;
-			expect(queue.running).to.be.false;
-		});
-		it('should try to process a queue if license is not over mac limits', async () => {
-			license.shouldPreventAction.returns(false);
+		it('should try to process a running queue', async () => {
 
 			const queue = new OmnichannelQueue();
 			queue.running = true;

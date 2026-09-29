@@ -1,7 +1,7 @@
 import { Tabs, Button } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useRoute, useTranslation, useRouteParameter } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useRoute, useTranslation, useRouteParameter } from '@zeki.chat/ui-contexts';
 
 import DepartmentsTable from './DepartmentsTable';
 import EditDepartmentWithData from './EditDepartmentWithData';

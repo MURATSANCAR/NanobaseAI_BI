@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { Page, PageContent } from '@rocket.chat/ui-client';
+import { Page, PageContent } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

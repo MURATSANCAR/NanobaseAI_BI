@@ -1,5 +1,5 @@
 import { AccordionItem, Box, Button, ButtonGroup } from '@rocket.chat/fuselage';
-import { useMethod, useSetModal, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useMethod, useSetModal, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import DOMPurify from 'dompurify';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';

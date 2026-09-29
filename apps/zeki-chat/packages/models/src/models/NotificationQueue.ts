@@ -1,11 +1,11 @@
-import type { INotification, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { INotificationQueueModel } from '@rocket.chat/model-typings';
+import type { INotification, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { INotificationQueueModel } from '@zeki.chat/model-typings';
 import type { Collection, Db, Document, IndexDescription, UpdateResult } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class NotificationQueueRaw extends BaseRaw<INotification> implements INotificationQueueModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<INotification>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<INotification>>) {
 		super(db, 'notification_queue', trash);
 	}
 

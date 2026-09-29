@@ -1,6 +1,6 @@
-import type { LoginServiceConfiguration } from '@rocket.chat/core-typings';
+import type { LoginServiceConfiguration } from '@zeki.chat/core-typings';
 import { capitalize } from '@rocket.chat/string-helpers';
-import { AuthenticationContext, useSetting } from '@rocket.chat/ui-contexts';
+import { AuthenticationContext, useSetting } from '@zeki.chat/ui-contexts';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import type { ContextType, ReactElement, ReactNode } from 'react';

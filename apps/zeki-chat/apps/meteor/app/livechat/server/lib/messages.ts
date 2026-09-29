@@ -1,8 +1,8 @@
 import dns from 'node:dns';
 import * as util from 'node:util';
 
-import type { ILivechatVisitor, AtLeast, IMessage, IUser, IOmnichannelRoomInfo, SelectedAgent } from '@rocket.chat/core-typings';
-import { LivechatDepartment, Messages } from '@rocket.chat/models';
+import type { ILivechatVisitor, AtLeast, IMessage, IUser, IOmnichannelRoomInfo, SelectedAgent } from '@zeki.chat/core-typings';
+import { LivechatDepartment, Messages } from '@zeki.chat/models';
 
 import type { ILivechatMessage } from './localTypes';
 import { getRoom } from './rooms';

@@ -1,4 +1,4 @@
-import { MessageComposerHint } from '@rocket.chat/ui-composer';
+import { MessageComposerHint } from '@zeki.chat/ui-composer';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation, Trans } from 'react-i18next';

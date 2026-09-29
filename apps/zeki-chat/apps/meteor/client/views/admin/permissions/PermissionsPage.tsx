@@ -1,7 +1,7 @@
 import { Margins, Tabs, Button } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { usePagination, Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useRoute, usePermission } from '@rocket.chat/ui-contexts';
+import { usePagination, Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useRoute, usePermission } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

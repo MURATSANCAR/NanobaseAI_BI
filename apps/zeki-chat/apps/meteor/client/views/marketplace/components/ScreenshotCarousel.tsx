@@ -1,4 +1,4 @@
-import type { AppScreenshot } from '@rocket.chat/core-typings';
+import type { AppScreenshot } from '@zeki.chat/core-typings';
 import { Box, IconButton } from '@rocket.chat/fuselage';
 import type { ReactElement } from 'react';
 

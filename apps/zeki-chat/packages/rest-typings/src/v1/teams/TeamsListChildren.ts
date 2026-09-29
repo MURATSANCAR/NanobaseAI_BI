@@ -1,4 +1,4 @@
-import type { ITeam } from '@rocket.chat/core-typings';
+import type { ITeam } from '@zeki.chat/core-typings';
 
 import type { PaginatedRequest } from '../../helpers/PaginatedRequest';
 import { ajvQuery } from '../Ajv';

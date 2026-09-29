@@ -1,10 +1,10 @@
-import type { ProxiedApp } from '@rocket.chat/apps/dist/server/ProxiedApp';
-import type { AppLicenseValidationResult } from '@rocket.chat/apps/dist/server/marketplace/license/AppLicenseValidationResult';
-import type { IAppStorageItem } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-import type { AppStatusReport } from '@rocket.chat/core-services';
-import type { App } from '@rocket.chat/core-typings';
+import type { ProxiedApp } from '@zeki.chat/apps/dist/server/ProxiedApp';
+import type { AppLicenseValidationResult } from '@zeki.chat/apps/dist/server/marketplace/license/AppLicenseValidationResult';
+import type { IAppStorageItem } from '@zeki.chat/apps/dist/server/storage/IAppStorageItem';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
+import type { AppStatusReport } from '@zeki.chat/core-services';
+import type { App } from '@zeki.chat/core-typings';
 
 import { getInstallationSourceFromAppStorageItem } from '../../../lib/apps/getInstallationSourceFromAppStorageItem';
 

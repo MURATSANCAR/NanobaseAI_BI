@@ -1,4 +1,4 @@
-import { MeteorError } from '@rocket.chat/core-services';
+import { MeteorError } from '@zeki.chat/core-services';
 import { expect } from 'chai';
 import { beforeEach, describe, it } from 'mocha';
 import p from 'proxyquire';
@@ -35,8 +35,8 @@ p.noCallThru().load('../../../../server/methods/deleteFileMessage', {
 	'meteor/check': {
 		check: checkMock,
 	},
-	'@rocket.chat/models': modelsMock,
-	'@rocket.chat/core-services': {
+	'@zeki.chat/models': modelsMock,
+	'@zeki.chat/core-services': {
 		Upload: { canDeleteFile: canDeleteFileMock },
 	},
 	'../../app/file-upload/server': {

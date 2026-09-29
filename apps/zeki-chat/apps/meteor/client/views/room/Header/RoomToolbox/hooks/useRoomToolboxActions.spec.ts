@@ -1,5 +1,5 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import type { RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import type { RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
 import { renderHook } from '@testing-library/react';
 
 import { useRoomToolboxActions } from './useRoomToolboxActions';

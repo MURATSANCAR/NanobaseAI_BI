@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IRole extends IRocketChatRecord {
+export interface IRole extends IZekiChatRecord {
 	description: string;
 	mandatory2fa?: boolean;
 	name: string;

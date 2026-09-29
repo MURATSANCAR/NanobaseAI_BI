@@ -419,10 +419,10 @@ export const bigConversationData: WorkerData = {
 		{
 			msg: 'PDF Transcript successfully generated',
 			u: {
-				_id: 'rocket.cat',
-				username: 'rocket.cat',
+				_id: 'zeki.bot',
+				username: 'zeki.bot',
 
-				name: 'Rocket.Cat',
+				name: 'ZEKI AI CHAT',
 			},
 			files: [
 				{
@@ -448,10 +448,10 @@ export const bigConversationData: WorkerData = {
 		{
 			msg: 'PDF Transcript successfully generated, this is a very long message that should be just fine. no all caps just wowow im drowning i vindicated im selfish im raw im right i swear im rigth when i look into your eyes and i am fly when im treating out so well, im sitting in the life for things that we could to urself oversized and overwhelmend and rendered me so isolatred and so motivated i am certain now that i am vidicated i am selfish i am wrong i am right i swear im right swear i knew it al allong',
 			u: {
-				_id: 'rocket.cat',
+				_id: 'zeki.bot',
 
-				username: 'rocket.cat',
-				name: 'Rocket.Cat',
+				username: 'zeki.bot',
+				name: 'ZEKI AI CHAT',
 			},
 			files: [
 				{
@@ -477,7 +477,7 @@ export const dataWithASingleMessageButAReallyLongMessage: WorkerData = {
 		name: 'Christian Castro',
 		username: 'christian.castro',
 	},
-	siteName: 'Rocket.Chat',
+	siteName: 'ZEKI AI CHAT',
 	closedAt: new Date('2022-11-21T00:00:00.000Z'),
 	dateFormat: 'MMM D, YYYY',
 	timeAndDateFormat: 'MMM D, YYYY H:mm:ss',
@@ -523,7 +523,7 @@ export const dataWithMultipleMessagesAndABigMessage: WorkerData = {
 		name: 'Christian Castro',
 		username: 'christian.castro',
 	},
-	siteName: 'Rocket.Chat',
+	siteName: 'ZEKI AI CHAT',
 	closedAt: new Date('2022-11-21T00:00:00.000Z'),
 	dateFormat: 'MMM D, YYYY',
 	timeAndDateFormat: 'MMM D, YYYY H:mm:ss',
@@ -587,7 +587,7 @@ export const dataWithASingleMessageAndAnImage: WorkerData = {
 		name: 'Christian Castro',
 		username: 'christian.castro',
 	},
-	siteName: 'Rocket.Chat',
+	siteName: 'ZEKI AI CHAT',
 	closedAt: new Date('2022-11-21T00:00:00.000Z'),
 	dateFormat: 'MMM D, YYYY',
 	timeAndDateFormat: 'MMM D, YYYY H:mm:ss',
@@ -617,7 +617,7 @@ export const dataWithASingleSystemMessage: WorkerData = {
 		name: 'Christian Castro',
 		username: 'christian.castro',
 	},
-	siteName: 'Rocket.Chat',
+	siteName: 'ZEKI AI CHAT',
 	closedAt: new Date('2022-11-21T00:00:00.000Z'),
 	dateFormat: 'MMM D, YYYY',
 	timeAndDateFormat: 'MMM D, YYYY H:mm:ss',
@@ -645,7 +645,7 @@ export const dataWith2ReallyBigMessages: WorkerData = {
 		name: 'Christian Castro',
 		username: 'christian.castro',
 	},
-	siteName: 'Rocket.Chat',
+	siteName: 'ZEKI AI CHAT',
 	closedAt: new Date('2022-11-21T00:00:00.000Z'),
 	dateFormat: 'MMM D, YYYY',
 	timeAndDateFormat: 'MMM D, YYYY H:mm:ss',

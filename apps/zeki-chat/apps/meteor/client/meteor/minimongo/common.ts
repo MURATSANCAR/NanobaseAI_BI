@@ -1,4 +1,4 @@
-import { getBSONType } from '@rocket.chat/mongo-adapter';
+import { getBSONType } from '@zeki.chat/mongo-adapter';
 
 import { entriesOf } from '../../lib/objectUtils';
 

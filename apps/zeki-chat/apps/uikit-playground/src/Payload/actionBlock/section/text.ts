@@ -1,4 +1,4 @@
-import type { LayoutBlock } from '@rocket.chat/ui-kit';
+import type { LayoutBlock } from '@zeki.chat/ui-kit';
 
 export const sectionWithPlainText: readonly LayoutBlock[] = [
 	{

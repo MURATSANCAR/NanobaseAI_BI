@@ -1,8 +1,8 @@
-import type { IWorkspaceInfo, IStats } from '@rocket.chat/core-typings';
+import type { IWorkspaceInfo, IStats } from '@zeki.chat/core-typings';
 import { Button, Card, CardBody, CardControls, Margins } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { IInstance } from '@rocket.chat/rest-typings';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import type { IInstance } from '@zeki.chat/rest-typings';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

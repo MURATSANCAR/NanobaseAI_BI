@@ -1,4 +1,4 @@
-import type { ILivechatContact, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatContact, Serialized } from '@zeki.chat/core-typings';
 import { Option, OptionDescription, PaginatedSelectFiltered } from '@rocket.chat/fuselage';
 import type { ComponentProps, ReactElement } from 'react';
 import { useState } from 'react';

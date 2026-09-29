@@ -1,6 +1,6 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { GenericModal, GenericModalSkeleton } from '@rocket.chat/ui-client';
-import { useMethod, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { GenericModal, GenericModalSkeleton } from '@zeki.chat/ui-client';
+import { useMethod, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';

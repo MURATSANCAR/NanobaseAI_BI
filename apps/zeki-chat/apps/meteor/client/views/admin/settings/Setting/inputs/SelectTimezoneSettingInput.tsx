@@ -1,5 +1,5 @@
 import { Field, FieldHint, FieldLabel, FieldRow, Select } from '@rocket.chat/fuselage';
-import { canonicalizeTimezone } from '@rocket.chat/tools';
+import { canonicalizeTimezone } from '@zeki.chat/tools';
 import type { ReactElement } from 'react';
 
 import { useTimezoneNameList } from '../../../../../hooks/useTimezoneNameList';

@@ -1,6 +1,6 @@
-import { UserStatus } from '@rocket.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
-import type { MediaSignalingSession } from '@rocket.chat/media-signaling';
+import type { MediaSignalingSession } from '@zeki.chat/media-signaling';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 

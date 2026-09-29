@@ -405,5 +405,5 @@ export const createOauthSettings = () =>
 				enableQuery,
 			});
 		});
-		// Zeki: the Rocket.Chat OAuth proxy (oauth-proxy.rocket.chat) and its settings were removed.
+		// Zeki: the ZEKI AI CHAT OAuth proxy (oauth-proxy.rocket.chat) and its settings were removed.
 	});

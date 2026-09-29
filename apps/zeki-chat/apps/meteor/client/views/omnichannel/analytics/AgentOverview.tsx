@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableRow } from '@rocket.chat/fuselage';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useMemo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

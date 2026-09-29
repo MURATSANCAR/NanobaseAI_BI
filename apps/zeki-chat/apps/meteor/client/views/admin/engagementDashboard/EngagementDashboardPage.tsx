@@ -1,5 +1,5 @@
 import { Box, Select, Tabs } from '@rocket.chat/fuselage';
-import { PageScrollableContent, Page, PageHeader } from '@rocket.chat/ui-client';
+import { PageScrollableContent, Page, PageHeader } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

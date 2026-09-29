@@ -1,6 +1,6 @@
-import type { IRocketChatRecord } from '@rocket.chat/core-typings';
-import type { StreamNames } from '@rocket.chat/ddp-client';
-import { isTruthy } from '@rocket.chat/tools';
+import type { IZekiChatRecord } from '@zeki.chat/core-typings';
+import type { StreamNames } from '@zeki.chat/ddp-client';
+import { isTruthy } from '@zeki.chat/tools';
 import localforage from 'localforage';
 import { Meteor } from 'meteor/meteor';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
@@ -41,7 +41,7 @@ export interface IWithManageableCache {
 	clearCacheOnLogout(): void;
 }
 
-export abstract class CachedStore<T extends IRocketChatRecord, U = T> implements IWithManageableCache {
+export abstract class CachedStore<T extends IZekiChatRecord, U = T> implements IWithManageableCache {
 	private static readonly MAX_CACHE_TIME = 60 * 60 * 24 * 30;
 
 	readonly store: UseBoundStore<StoreApi<IDocumentMapStore<T>>>;
@@ -368,7 +368,7 @@ export abstract class CachedStore<T extends IRocketChatRecord, U = T> implements
 	}
 }
 
-export class PublicCachedStore<T extends IRocketChatRecord, U = T> extends CachedStore<T, U> {
+export class PublicCachedStore<T extends IZekiChatRecord, U = T> extends CachedStore<T, U> {
 	protected override getToken() {
 		return undefined;
 	}
@@ -378,7 +378,7 @@ export class PublicCachedStore<T extends IRocketChatRecord, U = T> extends Cache
 	}
 }
 
-export class PrivateCachedStore<T extends IRocketChatRecord, U = T> extends CachedStore<T, U> {
+export class PrivateCachedStore<T extends IZekiChatRecord, U = T> extends CachedStore<T, U> {
 	protected override getToken() {
 		return getStoredItem(STORAGE_KEYS.LOGIN_TOKEN);
 	}

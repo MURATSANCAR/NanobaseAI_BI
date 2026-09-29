@@ -1,6 +1,6 @@
-import { api } from '@rocket.chat/core-services';
-import type { IMessage, IRoom, IUser, IReadReceipt, IReadReceiptWithUser } from '@rocket.chat/core-typings';
-import { LivechatVisitors, ReadReceipts, ReadReceiptsArchive, Messages, Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IMessage, IRoom, IUser, IReadReceipt, IReadReceiptWithUser } from '@zeki.chat/core-typings';
+import { LivechatVisitors, ReadReceipts, ReadReceiptsArchive, Messages, Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import { notifyOnRoomChangedById, notifyOnMessageChange } from '../../../../app/lib/server/lib/notifyListener';
 import { settings } from '../../../../app/settings/server';

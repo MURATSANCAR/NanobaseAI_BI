@@ -1,17 +1,17 @@
-import type { IRole, IUser, Serialized } from '@rocket.chat/core-typings';
+import type { IRole, IUser, Serialized } from '@zeki.chat/core-typings';
 import { Pagination } from '@rocket.chat/fuselage';
 import { useEffectEvent, useBreakpoints } from '@rocket.chat/fuselage-hooks';
-import type { DefaultUserInfo } from '@rocket.chat/rest-typings';
+import type { DefaultUserInfo } from '@zeki.chat/rest-typings';
 import {
 	GenericTable,
 	GenericTableHeader,
 	GenericTableHeaderCell,
 	GenericTableBody,
 	GenericTableLoadingTable,
-} from '@rocket.chat/ui-client';
-import type { usePagination, useSort } from '@rocket.chat/ui-client';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useRouter } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import type { usePagination, useSort } from '@zeki.chat/ui-client';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactElement, Dispatch, SetStateAction, MouseEvent, KeyboardEvent } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,7 +34,6 @@ type UsersTableProps = {
 	setUserFilters: Dispatch<SetStateAction<UsersFilters>>;
 	paginationData: ReturnType<typeof usePagination>;
 	sortData: ReturnType<typeof useSort<UsersTableSortingOption>>;
-	isSeatsCapExceeded: boolean;
 };
 
 const UsersTable = ({
@@ -49,7 +48,6 @@ const UsersTable = ({
 	onReload,
 	paginationData,
 	sortData,
-	isSeatsCapExceeded,
 }: UsersTableProps): ReactElement | null => {
 	const { t } = useTranslation();
 	const router = useRouter();
@@ -194,7 +192,6 @@ const UsersTable = ({
 									user={user}
 									isMobile={isMobile}
 									isLaptop={isLaptop}
-									isSeatsCapExceeded={isSeatsCapExceeded}
 									showVoipExtension={showVoipExtension}
 									onReload={onReload}
 									onClick={handleClickOrKeyDown}

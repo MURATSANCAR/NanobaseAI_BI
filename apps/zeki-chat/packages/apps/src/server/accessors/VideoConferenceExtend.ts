@@ -1,15 +1,15 @@
-import type { IVideoConferenceExtender } from '@rocket.chat/apps-engine/definition/accessors';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IVideoConferenceUser, VideoConference } from '@rocket.chat/apps-engine/definition/videoConferences';
-import type { VideoConferenceMember } from '@rocket.chat/apps-engine/definition/videoConferences/IVideoConference';
+import type { IVideoConferenceExtender } from '@zeki.chat/apps-engine/definition/accessors';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IVideoConferenceUser, VideoConference } from '@zeki.chat/apps-engine/definition/videoConferences';
+import type { VideoConferenceMember } from '@zeki.chat/apps-engine/definition/videoConferences/IVideoConference';
 
 import { Utilities } from '../misc/Utilities';
 
 export class VideoConferenceExtender implements IVideoConferenceExtender {
-	public kind: RocketChatAssociationModel.VIDEO_CONFERENCE;
+	public kind: ZekiChatAssociationModel.VIDEO_CONFERENCE;
 
 	constructor(private videoConference: VideoConference) {
-		this.kind = RocketChatAssociationModel.VIDEO_CONFERENCE;
+		this.kind = ZekiChatAssociationModel.VIDEO_CONFERENCE;
 	}
 
 	public setProviderData(value: Record<string, any>): IVideoConferenceExtender {

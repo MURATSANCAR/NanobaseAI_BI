@@ -7,9 +7,9 @@ import type {
 	FilesAndAttachments,
 	IMessage,
 	FileProp,
-} from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Rooms, Uploads, Users } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Rooms, Uploads, Users } from '@zeki.chat/models';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -163,7 +163,7 @@ export const parseFileIntoMessageAttachments = async (
 	return { files, attachments };
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		sendFileMessage: (roomId: string, _store: string, file: Partial<IUpload>, msgData?: Record<string, any>) => boolean;

@@ -1,4 +1,4 @@
-import { useRouteParameter, usePermission } from '@rocket.chat/ui-contexts';
+import { useRouteParameter, usePermission } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import PermissionsPage from './PermissionsPage';
@@ -14,7 +14,7 @@ const PermissionsRouter = (): ReactElement => {
 	const { data, isLoading } = useHasCapability('custom-roles');
 
 	if (isLoading) {
-		<PageSkeleton />;
+		return <PageSkeleton />;
 	}
 
 	if (!canViewPermission && !canViewSettingPermission) {

@@ -1,5 +1,5 @@
-import type { IRoleRead } from '@rocket.chat/apps-engine/definition/accessors/IRoleRead';
-import type { IRole } from '@rocket.chat/apps-engine/definition/roles';
+import type { IRoleRead } from '@zeki.chat/apps-engine/definition/accessors/IRoleRead';
+import type { IRole } from '@zeki.chat/apps-engine/definition/roles';
 
 import type { RoleBridge } from '../bridges';
 

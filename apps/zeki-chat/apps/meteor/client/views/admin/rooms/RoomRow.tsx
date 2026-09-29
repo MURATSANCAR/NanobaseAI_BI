@@ -1,10 +1,10 @@
-import { isDiscussion } from '@rocket.chat/core-typings';
-import type { IRoom, RoomAdminFieldsType, Serialized } from '@rocket.chat/core-typings';
+import { isDiscussion } from '@zeki.chat/core-typings';
+import type { IRoom, RoomAdminFieldsType, Serialized } from '@zeki.chat/core-typings';
 import { Box, Icon } from '@rocket.chat/fuselage';
 import { useMediaQuery } from '@rocket.chat/fuselage-hooks';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import { GenericTableCell, GenericTableRow } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import { GenericTableCell, GenericTableRow } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

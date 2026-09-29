@@ -1,6 +1,6 @@
-import type { IAppVideoConferencesConverter, AppsVideoConference } from '@rocket.chat/apps';
-import { VideoConf } from '@rocket.chat/core-services';
-import type { VideoConference } from '@rocket.chat/core-typings';
+import type { IAppVideoConferencesConverter, AppsVideoConference } from '@zeki.chat/apps';
+import { VideoConf } from '@zeki.chat/core-services';
+import type { VideoConference } from '@zeki.chat/core-typings';
 
 export class AppVideoConferencesConverter implements IAppVideoConferencesConverter {
 	async convertById(callId: string): Promise<AppsVideoConference | undefined> {

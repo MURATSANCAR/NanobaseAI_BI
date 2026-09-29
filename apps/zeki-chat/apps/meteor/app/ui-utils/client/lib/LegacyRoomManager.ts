@@ -1,7 +1,7 @@
-import type { IMessage, IRoom } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
-import { createPredicateFromFilter } from '@rocket.chat/mongo-adapter';
-import { clientCallbacks } from '@rocket.chat/ui-client';
+import { createPredicateFromFilter } from '@zeki.chat/mongo-adapter';
+import { clientCallbacks } from '@zeki.chat/ui-client';
 import type { Filter } from 'mongodb';
 
 import { upsertMessage, RoomHistoryManager } from './RoomHistoryManager';

@@ -1,6 +1,6 @@
-import type { IModerationModify } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IModerationModify } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import type { ModerationBridge } from '../bridges';
 

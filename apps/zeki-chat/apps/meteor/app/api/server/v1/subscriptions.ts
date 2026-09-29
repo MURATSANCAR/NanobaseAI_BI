@@ -1,5 +1,5 @@
-import type { ISubscription } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions } from '@rocket.chat/models';
+import type { ISubscription } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions } from '@zeki.chat/models';
 import {
 	ajv,
 	isSubscriptionsGetProps,
@@ -8,7 +8,7 @@ import {
 	isSubscriptionsUnreadProps,
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { readMessages } from '../../../../server/lib/readMessages';

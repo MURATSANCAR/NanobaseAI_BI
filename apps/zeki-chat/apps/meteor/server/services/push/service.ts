@@ -1,7 +1,7 @@
-import type { IPushService } from '@rocket.chat/core-services';
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import type { IPushToken, Optional } from '@rocket.chat/core-typings';
-import { PushToken } from '@rocket.chat/models';
+import type { IPushService } from '@zeki.chat/core-services';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { IPushToken, Optional } from '@zeki.chat/core-typings';
+import { PushToken } from '@zeki.chat/models';
 
 import { logger } from './logger';
 import { registerPushToken } from './tokenManagement/registerPushToken';

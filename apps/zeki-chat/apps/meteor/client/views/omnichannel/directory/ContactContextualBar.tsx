@@ -1,4 +1,4 @@
-import { useRouteParameter } from '@rocket.chat/ui-contexts';
+import { useRouteParameter } from '@zeki.chat/ui-contexts';
 
 import ContactInfo from '../contactInfo/ContactInfo';
 import ContactInfoError from '../contactInfo/ContactInfoError';

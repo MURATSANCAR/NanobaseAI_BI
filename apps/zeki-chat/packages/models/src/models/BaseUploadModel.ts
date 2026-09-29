@@ -1,5 +1,5 @@
-import type { EncryptedContent, IUpload } from '@rocket.chat/core-typings';
-import type { IBaseUploadsModel } from '@rocket.chat/model-typings';
+import type { EncryptedContent, IUpload } from '@zeki.chat/core-typings';
+import type { IBaseUploadsModel } from '@zeki.chat/model-typings';
 import type {
 	DeleteResult,
 	IndexDescription,

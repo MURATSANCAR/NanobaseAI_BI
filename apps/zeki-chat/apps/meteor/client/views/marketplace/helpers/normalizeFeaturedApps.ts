@@ -1,4 +1,4 @@
-import type { App, AppOverview } from '@rocket.chat/core-typings';
+import type { App, AppOverview } from '@zeki.chat/core-typings';
 
 const normalizeFeaturedApps = (appOverviewList: AppOverview[], appsResultItems: App[]): App[] => {
 	const featuredAppsIdList = appOverviewList.map<string>((featuredApp) => featuredApp.latest.id);

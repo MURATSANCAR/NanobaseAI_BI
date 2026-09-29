@@ -1,13 +1,13 @@
-import type { IDiscussionBuilder } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
+import type { IDiscussionBuilder } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
 
 import { RoomBuilder } from './RoomBuilder';
 
 export class DiscussionBuilder extends RoomBuilder implements IDiscussionBuilder {
-	public kind: RocketChatAssociationModel.DISCUSSION;
+	public kind: ZekiChatAssociationModel.DISCUSSION;
 
 	private reply: string;
 
@@ -15,7 +15,7 @@ export class DiscussionBuilder extends RoomBuilder implements IDiscussionBuilder
 
 	constructor(data?: Partial<IRoom>) {
 		super(data);
-		this.kind = RocketChatAssociationModel.DISCUSSION;
+		this.kind = ZekiChatAssociationModel.DISCUSSION;
 		this.room.type = RoomType.PRIVATE_GROUP;
 	}
 

@@ -1,4 +1,4 @@
-import { ModalProvider, TooltipProvider } from '@rocket.chat/ui-client';
+import { ModalProvider, TooltipProvider } from '@zeki.chat/ui-client';
 import type { ReactNode } from 'react';
 
 import ActionManagerProvider from './ActionManagerProvider';

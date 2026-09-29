@@ -1,8 +1,8 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IApi } from '@rocket.chat/apps-engine/definition/api';
-import type { IApiEndpoint } from '@rocket.chat/apps-engine/definition/api/IApiEndpoint';
+import type { IApi } from '@zeki.chat/apps-engine/definition/api';
+import type { IApiEndpoint } from '@zeki.chat/apps-engine/definition/api/IApiEndpoint';
 
 import type { ProxiedApp } from '../../../src/server/ProxiedApp';
 import { AppApi } from '../../../src/server/managers/AppApi';

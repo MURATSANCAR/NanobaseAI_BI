@@ -1,4 +1,4 @@
-import type { IAppLogsModel } from '@rocket.chat/model-typings';
+import type { IAppLogsModel } from '@zeki.chat/model-typings';
 import type { Db, DeleteResult, Filter, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

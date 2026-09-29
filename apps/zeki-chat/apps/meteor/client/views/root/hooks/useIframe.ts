@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useLoginWithIframe, useLoginWithToken, useSetting } from '@rocket.chat/ui-contexts';
+import { useLoginWithIframe, useLoginWithToken, useSetting } from '@zeki.chat/ui-contexts';
 import { useCallback, useState } from 'react';
 
 type CallbackError = Error & { error?: string | number; reason?: string; details?: unknown };

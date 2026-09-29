@@ -1,4 +1,4 @@
-import type { RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
+import type { ZekiChatAssociationRecord } from '@zeki.chat/apps-engine/definition/metadata';
 
 import { PersistenceBridge } from '../../../src/server/bridges';
 
@@ -11,7 +11,7 @@ export class TestsPersisBridge extends PersistenceBridge {
 		throw new Error('Method not implemented.');
 	}
 
-	public createWithAssociations(data: object, associations: Array<RocketChatAssociationRecord>, appId: string): Promise<string> {
+	public createWithAssociations(data: object, associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<string> {
 		throw new Error('Method not implemented.');
 	}
 
@@ -19,7 +19,7 @@ export class TestsPersisBridge extends PersistenceBridge {
 		throw new Error('Method not implemented.');
 	}
 
-	public readByAssociations(associations: Array<RocketChatAssociationRecord>, appId: string): Promise<Array<object>> {
+	public readByAssociations(associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<Array<object>> {
 		throw new Error('Method not implemented.');
 	}
 
@@ -27,7 +27,7 @@ export class TestsPersisBridge extends PersistenceBridge {
 		throw new Error('Method not implemented.');
 	}
 
-	public removeByAssociations(associations: Array<RocketChatAssociationRecord>, appId: string): Promise<Array<object>> {
+	public removeByAssociations(associations: Array<ZekiChatAssociationRecord>, appId: string): Promise<Array<object>> {
 		throw new Error('Method not implemented.');
 	}
 
@@ -36,7 +36,7 @@ export class TestsPersisBridge extends PersistenceBridge {
 	}
 
 	public updateByAssociations(
-		associations: Array<RocketChatAssociationRecord>,
+		associations: Array<ZekiChatAssociationRecord>,
 		data: object,
 		upsert: boolean,
 		appId: string,

@@ -1,5 +1,5 @@
-import type { IUser, IRoom } from '@rocket.chat/core-typings';
-import { GenericMenu } from '@rocket.chat/ui-client';
+import type { IUser, IRoom } from '@zeki.chat/core-typings';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

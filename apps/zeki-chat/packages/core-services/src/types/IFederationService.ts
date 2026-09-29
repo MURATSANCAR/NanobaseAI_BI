@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import type { FederationPaginatedResult, IFederationPublicRooms } from '@rocket.chat/rest-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
+import type { FederationPaginatedResult, IFederationPublicRooms } from '@zeki.chat/rest-typings';
 
 export type FederationConfigurationStatus = {
 	appservice: {

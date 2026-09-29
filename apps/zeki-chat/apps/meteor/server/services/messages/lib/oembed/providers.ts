@@ -1,8 +1,8 @@
-import type { OEmbedMeta, OEmbedUrlContent, OEmbedProvider } from '@rocket.chat/core-typings';
+import type { OEmbedMeta, OEmbedUrlContent, OEmbedProvider } from '@zeki.chat/core-typings';
 import { camelCase } from 'change-case';
 
 import { settings } from '../../../../../app/settings/server';
-import { Info } from '../../../../../app/utils/rocketchat.info';
+import { Info } from '../../../../../app/utils/zekichat.info';
 import { SystemLogger } from '../../../../lib/logger/system';
 
 class Providers {

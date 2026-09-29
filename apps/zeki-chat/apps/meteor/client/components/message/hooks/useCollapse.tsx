@@ -1,5 +1,5 @@
 import { useToggle } from '@rocket.chat/fuselage-hooks';
-import { useAttachmentIsCollapsedByDefault } from '@rocket.chat/ui-contexts';
+import { useAttachmentIsCollapsedByDefault } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 
 import CollapsibleContent from '../content/collapsible/CollapsibleContent';

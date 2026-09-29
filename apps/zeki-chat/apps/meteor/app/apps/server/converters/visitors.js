@@ -1,4 +1,4 @@
-import { LivechatVisitors } from '@rocket.chat/models';
+import { LivechatVisitors } from '@zeki.chat/models';
 
 import { transformMappedData } from './transformMappedData';
 

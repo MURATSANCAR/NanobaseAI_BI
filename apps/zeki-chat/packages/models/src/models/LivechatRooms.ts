@@ -1,6 +1,6 @@
 import type {
 	IOmnichannelRoom,
-	RocketChatRecordDeleted,
+	ZekiChatRecordDeleted,
 	IOmnichannelRoomClosingInfo,
 	DeepWritable,
 	IMessage,
@@ -11,9 +11,9 @@ import type {
 	ILivechatContactVisitorAssociation,
 	ILivechatContact,
 	AtLeast,
-} from '@rocket.chat/core-typings';
-import { UserStatus } from '@rocket.chat/core-typings';
-import type { FindPaginated, ILivechatRoomsModel } from '@rocket.chat/model-typings';
+} from '@zeki.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
+import type { FindPaginated, ILivechatRoomsModel } from '@zeki.chat/model-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type {
 	Db,
@@ -35,7 +35,7 @@ import { BaseRaw } from './BaseRaw';
 import { readSecondaryPreferred } from '../readSecondaryPreferred';
 
 export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILivechatRoomsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IOmnichannelRoom>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IOmnichannelRoom>>) {
 		super(db, 'room', trash);
 	}
 
@@ -120,7 +120,7 @@ export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILive
 
 		const departmentsLookup = {
 			$lookup: {
-				from: 'rocketchat_livechat_department',
+				from: 'zeki_livechat_department',
 				let: {
 					deptId: '$departmentId',
 				},
@@ -611,7 +611,7 @@ export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILive
 		};
 		const departmentsLookup = {
 			$lookup: {
-				from: 'rocketchat_livechat_department',
+				from: 'zeki_livechat_department',
 				localField: 'departmentId',
 				foreignField: '_id',
 				as: 'departments',
@@ -648,7 +648,7 @@ export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILive
 		};
 		const messagesLookup = {
 			$lookup: {
-				from: 'rocketchat_message',
+				from: 'zeki_message',
 				localField: 'rooms._id',
 				foreignField: 'rid',
 				as: 'messages',
@@ -868,7 +868,7 @@ export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILive
 		};
 		const lookup = {
 			$lookup: {
-				from: 'rocketchat_livechat_department',
+				from: 'zeki_livechat_department',
 				localField: 'departmentId',
 				foreignField: '_id',
 				as: 'departments',
@@ -914,7 +914,7 @@ export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILive
 		};
 		const lookup = {
 			$lookup: {
-				from: 'rocketchat_livechat_department',
+				from: 'zeki_livechat_department',
 				localField: 'departmentId',
 				foreignField: '_id',
 				as: 'departments',
@@ -1185,7 +1185,7 @@ export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILive
 		};
 		const lookup = {
 			$lookup: {
-				from: 'rocketchat_message',
+				from: 'zeki_message',
 				localField: '_id',
 				foreignField: 'rid',
 				as: 'messages',
@@ -2170,7 +2170,7 @@ export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILive
 				{ $addFields: { roomId: '$_id' } },
 				{
 					$lookup: {
-						from: 'rocketchat_message',
+						from: 'zeki_message',
 						// mongo doesn't like _id as variable name here :(
 						let: { roomId: '$roomId' },
 						pipeline: [
@@ -2247,7 +2247,7 @@ export class LivechatRoomsRaw extends BaseRaw<IOmnichannelRoom> implements ILive
 				{ $addFields: { roomId: '$_id' } },
 				{
 					$lookup: {
-						from: 'rocketchat_message',
+						from: 'zeki_message',
 						// mongo doesn't like _id as variable name here :(
 						let: { roomId: '$roomId' },
 						pipeline: [

@@ -1,9 +1,9 @@
-import type { IMessage, IThreadMainMessage } from '@rocket.chat/core-typings';
-import { isEditedMessage } from '@rocket.chat/core-typings';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { isTruthy } from '@rocket.chat/tools';
-import { clientCallbacks, CustomVirtuaScrollbars } from '@rocket.chat/ui-client';
-import { useSearchParameter, useSetting, useUserId, useUserPreference } from '@rocket.chat/ui-contexts';
+import type { IMessage, IThreadMainMessage } from '@zeki.chat/core-typings';
+import { isEditedMessage } from '@zeki.chat/core-typings';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { isTruthy } from '@zeki.chat/tools';
+import { clientCallbacks, CustomVirtuaScrollbars } from '@zeki.chat/ui-client';
+import { useSearchParameter, useSetting, useUserId, useUserPreference } from '@zeki.chat/ui-contexts';
 import { differenceInSeconds } from 'date-fns';
 import type { ReactElement } from 'react';
 import { Fragment, useEffect, useMemo, useRef } from 'react';

@@ -1,7 +1,7 @@
-import type { MessageQuoteAttachment, IMessage } from '@rocket.chat/core-typings';
+import type { MessageQuoteAttachment, IMessage } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
-import { useUserDisplayName, GenericModal } from '@rocket.chat/ui-client';
-import { useTranslation, useUserAvatarPath } from '@rocket.chat/ui-contexts';
+import { useUserDisplayName, GenericModal } from '@zeki.chat/ui-client';
+import { useTranslation, useUserAvatarPath } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement } from 'react';
 
 import { QuoteAttachment } from '../../../../components/message/content/attachments/QuoteAttachment';

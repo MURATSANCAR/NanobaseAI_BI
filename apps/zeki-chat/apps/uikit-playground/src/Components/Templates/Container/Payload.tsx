@@ -1,6 +1,6 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Box, Button } from '@rocket.chat/fuselage';
-import type { LayoutBlock } from '@rocket.chat/ui-kit';
+import type { LayoutBlock } from '@zeki.chat/ui-kit';
 import { useContext, useMemo } from 'react';
 
 import { context, templatesToggleAction, updatePayloadAction } from '../../../Context';

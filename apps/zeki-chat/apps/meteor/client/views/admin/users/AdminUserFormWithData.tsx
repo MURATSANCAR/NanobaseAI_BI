@@ -1,4 +1,4 @@
-import type { IRole, IUser, Serialized } from '@rocket.chat/core-typings';
+import type { IRole, IUser, Serialized } from '@zeki.chat/core-typings';
 import { Box, Callout } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import type { ReactElement } from 'react';

@@ -1,17 +1,17 @@
-import type { IMessageSearchProvider, IMessageSearchSuggestion, IRoom, IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import type { IMessageSearchProvider, IMessageSearchSuggestion, IRoom, IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { Meteor } from 'meteor/meteor';
 
 import { SearchLogger } from './logger/logger';
 import type { IRawSearchResult, ISearchResult } from './model/ISearchResult';
 import { searchProviderService, validationService } from './service';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
-		'rocketchatSearch.getProvider'(): IMessageSearchProvider | undefined;
-		'rocketchatSearch.search'(text: string, context: { uid?: IUser['_id']; rid: IRoom['_id'] }, payload: unknown): Promise<ISearchResult>;
-		'rocketchatSearch.suggest'(
+		'zekichatSearch.getProvider'(): IMessageSearchProvider | undefined;
+		'zekichatSearch.search'(text: string, context: { uid?: IUser['_id']; rid: IRoom['_id'] }, payload: unknown): Promise<ISearchResult>;
+		'zekichatSearch.suggest'(
 			text: string,
 			context: { uid?: IUser['_id']; rid: IRoom['_id'] },
 			payload: unknown,
@@ -23,7 +23,7 @@ Meteor.methods<ServerMethods>({
 	/**
 	 * Get the current provider with key, description, resultTemplate, suggestionItemTemplate and settings (as Map)
 	 */
-	'rocketchatSearch.getProvider'() {
+	'zekichatSearch.getProvider'() {
 		const provider = searchProviderService.activeProvider;
 		if (!provider) {
 			return undefined;
@@ -46,7 +46,7 @@ Meteor.methods<ServerMethods>({
 	 * @param context the context (uid, rid)
 	 * @param payload custom payload (e.g. for paging)
 	 */
-	async 'rocketchatSearch.search'(text, context, payload) {
+	async 'zekichatSearch.search'(text, context, payload) {
 		payload = payload !== null ? payload : undefined; // TODO is this cleanup necessary?
 
 		if (!searchProviderService.activeProvider) {
@@ -71,7 +71,7 @@ Meteor.methods<ServerMethods>({
 		}).then((result) => validationService.validateSearchResult(result));
 	},
 
-	async 'rocketchatSearch.suggest'(text, context, payload) {
+	async 'zekichatSearch.suggest'(text, context, payload) {
 		payload ??= undefined; // TODO is this cleanup necessary?
 
 		if (!searchProviderService.activeProvider) {

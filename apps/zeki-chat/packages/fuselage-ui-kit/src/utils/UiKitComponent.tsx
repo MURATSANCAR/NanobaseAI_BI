@@ -1,4 +1,4 @@
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import type { ReactElement } from 'react';
 
 import type { UiKitBanner, UiKitContextualBar, UiKitMessage, UiKitModal } from '../surfaces';

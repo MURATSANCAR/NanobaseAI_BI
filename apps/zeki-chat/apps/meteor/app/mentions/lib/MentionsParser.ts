@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 
 export type MentionsParserArgs = {

@@ -1,5 +1,5 @@
 import { Capabilities } from '@zeki.chat/capabilities';
-import { isDepartmentCreationAvailable } from '@rocket.chat/omni-core';
+import { isDepartmentCreationAvailable } from '@zeki.chat/omni-core';
 
 export function isDepartmentCreationAvailablePatch(): void {
 	isDepartmentCreationAvailable.patch(async (next) => {

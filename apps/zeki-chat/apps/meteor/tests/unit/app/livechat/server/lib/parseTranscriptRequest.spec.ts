@@ -16,7 +16,7 @@ const settingsGetMock = {
 };
 
 const { parseTranscriptRequest } = p.noCallThru().load('../../../../../../app/livechat/server/lib/parseTranscriptRequest', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 	'../../../settings/server': { settings: settingsGetMock },
 });
 
@@ -106,21 +106,21 @@ describe('parseTranscriptRequest', () => {
 		expect(options.emailTranscript.requestData.requestedBy).to.be.deep.equal({ _id: '123', username: 'kevsxxx', name: 'Kev' });
 	});
 
-	it('should return `options` param with `transcriptRequest` key attached when no user is passed, no agent is serving but rocket.cat is present', async () => {
+	it('should return `options` param with `transcriptRequest` key attached when no user is passed, no agent is serving but zeki.bot is present', async () => {
 		settingsGetMock.get.withArgs('Livechat_enable_transcript').returns(false);
 		settingsGetMock.get.withArgs('Livechat_transcript_send_always').returns(true);
-		modelsMock.Users.findOneById.resolves({ _id: 'rocket.cat', username: 'rocket.cat', name: 'Rocket Cat' } as any);
+		modelsMock.Users.findOneById.resolves({ _id: 'zeki.bot', username: 'zeki.bot', name: 'Rocket Cat' } as any);
 		modelsMock.LivechatVisitors.findOneById.resolves({ visitorEmails: [{ address: 'abc@rocket.chat' }] } as any);
 
 		const options = await parseTranscriptRequest({ v: { _id: '123' } } as any, {} as any);
 
-		expect(modelsMock.Users.findOneById.getCall(0).firstArg).to.be.equal('rocket.cat');
+		expect(modelsMock.Users.findOneById.getCall(0).firstArg).to.be.equal('zeki.bot');
 		expect(options).to.have.property('emailTranscript').that.is.an('object');
 		expect(options.emailTranscript.requestData).to.have.property('email', 'abc@rocket.chat');
 		expect(options.emailTranscript.requestData).to.have.property('subject', '');
 		expect(options.emailTranscript.requestData.requestedBy).to.be.deep.equal({
-			_id: 'rocket.cat',
-			username: 'rocket.cat',
+			_id: 'zeki.bot',
+			username: 'zeki.bot',
 			name: 'Rocket Cat',
 		});
 	});

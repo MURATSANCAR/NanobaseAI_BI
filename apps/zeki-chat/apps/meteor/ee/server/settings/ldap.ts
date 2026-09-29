@@ -198,10 +198,10 @@ export function addSettings(): Promise<void> {
 
 					const syncChannelsQuery = [enableQuery, { _id: 'LDAP_Sync_User_Data_Channels', value: true }];
 
-					await this.add('LDAP_Sync_User_Data_Channels_Admin', 'rocket.cat', {
+					await this.add('LDAP_Sync_User_Data_Channels_Admin', 'zeki.bot', {
 						type: 'string',
 						enableQuery: syncChannelsQuery,
-						invalidValue: 'rocket.cat',
+						invalidValue: 'zeki.bot',
 					});
 
 					await this.add('LDAP_Sync_User_Data_Channels_BaseDN', '', {

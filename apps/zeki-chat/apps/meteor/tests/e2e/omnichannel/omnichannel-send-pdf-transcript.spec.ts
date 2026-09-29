@@ -59,16 +59,16 @@ test.describe('omnichannel- export chat transcript as PDF', () => {
 			await agent.poHomeChannel.quickActionsRoomToolbar.closeChat({ downloadPDF: true });
 		});
 
-		// Exported PDF can be downloaded from rocket.cat room
-		await test.step('Expect to have exported PDF in rocket.cat', async () => {
+		// Exported PDF can be downloaded from zeki.bot room
+		await test.step('Expect to have exported PDF in zeki.bot', async () => {
 			await page.waitForTimeout(3000);
-			await agent.poHomeChannel.navbar.openChat('rocket.cat');
+			await agent.poHomeChannel.navbar.openChat('zeki.bot');
 			await expect(agent.poHomeChannel.content.lastUserMessage.getByText('PDF Transcript successfully generated')).toBeVisible();
 			await expect(agent.poHomeChannel.content.lastUserMessage.getByRole('link', { name: 'Transcript' })).toBeVisible();
 		});
 
 		// PDF can be exported from Omnichannel Contact Center
-		await test.step('Expect to have exported PDF in rocket.cat', async () => {
+		await test.step('Expect to have exported PDF in zeki.bot', async () => {
 			await agent.poHomeChannel.navbar.btnContactCenter.click();
 			await agent.poHomeChannel.transcript.contactCenterChats.click();
 			await agent.poHomeChannel.transcript.contactCenterSearch.type(newVisitor.name);

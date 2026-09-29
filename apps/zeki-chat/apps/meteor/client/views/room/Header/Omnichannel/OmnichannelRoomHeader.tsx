@@ -1,5 +1,5 @@
-import { HeaderToolbar } from '@rocket.chat/ui-client';
-import { useRouter } from '@rocket.chat/ui-contexts';
+import { HeaderToolbar } from '@zeki.chat/ui-client';
+import { useRouter } from '@zeki.chat/ui-contexts';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 import { useOmnichannelRoom } from '../../contexts/RoomContext';

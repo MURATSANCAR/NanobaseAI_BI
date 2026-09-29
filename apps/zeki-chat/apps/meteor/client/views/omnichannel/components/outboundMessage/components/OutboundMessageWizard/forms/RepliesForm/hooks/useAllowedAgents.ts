@@ -1,4 +1,4 @@
-import type { Serialized, ILivechatDepartmentAgents, IUser } from '@rocket.chat/core-typings';
+import type { Serialized, ILivechatDepartmentAgents, IUser } from '@zeki.chat/core-typings';
 import { useMemo } from 'react';
 
 import { getAgentDerivedFromUser } from '../utils/getAgentDerivedFromUser';

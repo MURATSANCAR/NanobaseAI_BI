@@ -1,8 +1,8 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
 import type { Icon } from '@rocket.chat/fuselage';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useEmbeddedLayout } from '@rocket.chat/ui-client';
-import { useLayoutHiddenActions } from '@rocket.chat/ui-contexts';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useEmbeddedLayout } from '@zeki.chat/ui-client';
+import { useLayoutHiddenActions } from '@zeki.chat/ui-contexts';
 import type { ComponentProps } from 'react';
 import { useMemo } from 'react';
 

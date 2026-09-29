@@ -6,7 +6,7 @@ test.each([
 	[`\`code\``, [paragraph([inlineCode(plain('code'))])]],
 	[`File extension (\`.mov\`)`, [paragraph([plain('File extension ('), inlineCode(plain('.mov')), plain(')')])]],
 	['`@rocket.chat`', [paragraph([inlineCode(plain('@rocket.chat'))])]],
-	['`@rocket.chat/message-parser`', [paragraph([inlineCode(plain('@rocket.chat/message-parser'))])]],
+	['`@zeki.chat/message-parser`', [paragraph([inlineCode(plain('@zeki.chat/message-parser'))])]],
 ])('parses %p', (input, output) => {
 	expect(parse(input)).toEqual(output);
 });

@@ -1,5 +1,5 @@
-import type { IIntegration, IUser } from '@rocket.chat/core-typings';
-import { Integrations } from '@rocket.chat/models';
+import type { IIntegration, IUser } from '@zeki.chat/core-typings';
+import { Integrations } from '@zeki.chat/models';
 
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
 

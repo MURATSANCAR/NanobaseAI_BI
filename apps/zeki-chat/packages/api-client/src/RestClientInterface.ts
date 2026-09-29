@@ -1,4 +1,4 @@
-import type { Serialized } from '@rocket.chat/core-typings';
+import type { Serialized } from '@zeki.chat/core-typings';
 import type {
 	MatchPathPattern,
 	OperationParams,
@@ -6,7 +6,7 @@ import type {
 	PathFor,
 	PathWithParamsFor,
 	PathWithoutParamsFor,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 type Next<T extends (...args: any[]) => any> = (...args: Parameters<T>) => ReturnType<T>;
 

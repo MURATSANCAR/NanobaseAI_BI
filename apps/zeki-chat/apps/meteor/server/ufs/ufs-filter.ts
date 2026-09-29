@@ -1,4 +1,4 @@
-import type { IUpload } from '@rocket.chat/core-typings';
+import type { IUpload } from '@zeki.chat/core-typings';
 import { Meteor } from 'meteor/meteor';
 import type { OptionalId } from 'mongodb';
 

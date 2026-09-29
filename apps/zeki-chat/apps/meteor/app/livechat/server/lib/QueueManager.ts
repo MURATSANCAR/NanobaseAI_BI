@@ -1,6 +1,6 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { AppsEngineException } from '@rocket.chat/apps-engine/definition/exceptions/AppsEngineException';
-import { Message, Omnichannel } from '@rocket.chat/core-services';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { AppsEngineException } from '@zeki.chat/apps-engine/definition/exceptions/AppsEngineException';
+import { Message} from '@zeki.chat/core-services';
 import type {
 	ILivechatDepartment,
 	IOmnichannelRoomInfo,
@@ -10,12 +10,12 @@ import type {
 	ILivechatVisitor,
 	IOmnichannelRoom,
 	SelectedAgent,
-} from '@rocket.chat/core-typings';
-import { LivechatInquiryStatus } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import type { InsertionModel } from '@rocket.chat/model-typings';
-import { LivechatContacts, LivechatDepartment, LivechatInquiry, LivechatRooms, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+} from '@zeki.chat/core-typings';
+import { LivechatInquiryStatus } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import type { InsertionModel } from '@zeki.chat/model-typings';
+import { LivechatContacts, LivechatDepartment, LivechatInquiry, LivechatRooms, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -91,13 +91,6 @@ const getDepartment = async (department: string): Promise<string | undefined> =>
 
 export class QueueManager {
 	static async requeueInquiry(inquiry: ILivechatInquiryRecord, room: IOmnichannelRoom, defaultAgent?: SelectedAgent) {
-		if (!(await Omnichannel.isWithinMACLimit(room))) {
-			logger.error({ msg: 'MAC limit reached, not routing inquiry', inquiry });
-			// We'll queue these inquiries so when new license is applied, they just start rolling again
-			// Minimizing disruption
-			await saveQueueInquiry(inquiry);
-			return;
-		}
 
 		const inquiryAgent = await RoutingManager.delegateAgent(defaultAgent, inquiry);
 		logger.debug({
@@ -138,9 +131,6 @@ export class QueueManager {
 			return LivechatInquiryStatus.VERIFYING;
 		}
 
-		if (!(await Omnichannel.isWithinMACLimit(room))) {
-			return LivechatInquiryStatus.QUEUED;
-		}
 
 		// bots should be able to skip the queue and the routing check
 		if (agent && (await allowAgentSkipQueue(agent))) {

@@ -1,4 +1,4 @@
-import type { IAppsEngineService } from '@rocket.chat/core-services';
+import type { IAppsEngineService } from '@zeki.chat/core-services';
 import { expect } from 'chai';
 import { afterEach, beforeEach, describe, it } from 'mocha';
 import proxyquire from 'proxyquire';
@@ -10,7 +10,7 @@ const AppsMock = {
 		getManager: sinon.stub(),
 		getStorage: sinon.stub(),
 		getAppSourceStorage: sinon.stub(),
-		getRocketChatLogger: sinon.stub(),
+		getZekiChatLogger: sinon.stub(),
 		triggerEvent: sinon.stub(),
 	},
 };
@@ -23,8 +23,8 @@ const apiMock = {
 const isRunningMsMock = sinon.stub();
 
 const serviceMocks = {
-	'@rocket.chat/apps': { Apps: AppsMock },
-	'@rocket.chat/core-services': {
+	'@zeki.chat/apps': { Apps: AppsMock },
+	'@zeki.chat/core-services': {
 		api: apiMock,
 		ServiceClassInternal: class {
 			onEvent = sinon.stub();
@@ -66,7 +66,7 @@ describe('AppsEngineService', () => {
 		AppsMock.self.getManager.reset();
 		AppsMock.self.getStorage.reset();
 		AppsMock.self.getAppSourceStorage.reset();
-		AppsMock.self.getRocketChatLogger.reset();
+		AppsMock.self.getZekiChatLogger.reset();
 		AppsMock.self.triggerEvent.reset();
 		isRunningMsMock.reset();
 	});

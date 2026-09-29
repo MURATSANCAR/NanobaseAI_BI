@@ -1,5 +1,5 @@
-import type { AtLeast, ILivechatAgent, ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatUnit } from '@rocket.chat/models';
+import type { AtLeast, ILivechatAgent, ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatUnit } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../../server/lib/callbacks';
 import { cbLogger } from '../lib/logger';

@@ -1,5 +1,5 @@
 {
-	"extends": "@rocket.chat/tsconfig/server.json",
+	"extends": "@zeki.chat/tsconfig/server.json",
 	"compilerOptions": {
 		"strictPropertyInitialization": false, // TODO: Remove this line
 		"outDir": "./dist/ee/apps/presence-service/src",

@@ -1,6 +1,6 @@
 import { Option, OptionDescription } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import type { UserLabel } from './UserAutoCompleteMultipleOptions';

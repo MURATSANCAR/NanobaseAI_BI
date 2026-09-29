@@ -4,7 +4,7 @@ import type {
 	IOutboundPhoneMessageProvider,
 	ValidOutboundProvider,
 	IOutboundMessage,
-} from '@rocket.chat/apps-engine/definition/outboundCommunication';
+} from '@zeki.chat/apps-engine/definition/outboundCommunication';
 
 import type { AppAccessorManager } from '.';
 import type { AppManager } from '../AppManager';

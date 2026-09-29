@@ -1,6 +1,6 @@
-import { ServiceClass, Settings } from '@rocket.chat/core-services';
-import type { IAccount, ILoginResult } from '@rocket.chat/core-services';
-import { getLoginExpirationInDays } from '@rocket.chat/tools';
+import { ServiceClass, Settings } from '@zeki.chat/core-services';
+import type { IAccount, ILoginResult } from '@zeki.chat/core-services';
+import { getLoginExpirationInDays } from '@zeki.chat/tools';
 
 import { loginViaResume } from './lib/loginViaResume';
 import { removeSession } from './lib/removeSession';

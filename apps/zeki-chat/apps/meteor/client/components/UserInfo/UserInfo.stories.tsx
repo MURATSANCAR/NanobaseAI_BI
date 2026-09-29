@@ -1,4 +1,4 @@
-import { ContextualbarDialog } from '@rocket.chat/ui-client';
+import { ContextualbarDialog } from '@zeki.chat/ui-client';
 import type { Meta, StoryFn } from '@storybook/react';
 
 import * as Status from '../UserStatus';

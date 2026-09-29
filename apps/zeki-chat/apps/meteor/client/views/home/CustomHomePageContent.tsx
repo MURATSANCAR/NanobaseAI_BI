@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { useSetting } from '@rocket.chat/ui-contexts';
+import { useSetting } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ReactElement } from 'react';
 
 const CustomHomePageContent = (props: ComponentProps<typeof Box>): ReactElement => {

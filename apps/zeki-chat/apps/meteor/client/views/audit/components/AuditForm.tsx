@@ -1,4 +1,4 @@
-import type { IAuditLog, IRoom } from '@rocket.chat/core-typings';
+import type { IAuditLog, IRoom } from '@zeki.chat/core-typings';
 import { Box, Field, FieldLabel, FieldRow, FieldError, TextInput, Button, ButtonGroup } from '@rocket.chat/fuselage';
 import type { Dispatch, SetStateAction } from 'react';
 import { useController } from 'react-hook-form';

@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/models",
+	"name": "@zeki.chat/models",
 	"version": "2.3.1",
 	"private": true,
 	"main": "./dist/index.js",
@@ -18,19 +18,19 @@
 		"unit": "jest"
 	},
 	"dependencies": {
-		"@rocket.chat/core-typings": "workspace:^",
-		"@rocket.chat/model-typings": "workspace:~",
-		"@rocket.chat/random": "workspace:^",
-		"@rocket.chat/rest-typings": "workspace:^",
-		"@rocket.chat/sha256": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/model-typings": "workspace:~",
+		"@zeki.chat/random": "workspace:^",
+		"@zeki.chat/rest-typings": "workspace:^",
+		"@zeki.chat/sha256": "workspace:^",
 		"@rocket.chat/string-helpers": "~0.32.0",
-		"@rocket.chat/tracing": "workspace:^",
+		"@zeki.chat/tracing": "workspace:^",
 		"date-fns": "~4.1.0",
 		"node-rsa": "^1.1.1"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/jest": "~30.0.0",
 		"@types/node-rsa": "^1.1.4",
 		"eslint": "~9.39.4",

@@ -1,4 +1,4 @@
-import type { ICustomSound } from '@rocket.chat/core-typings';
+import type { ICustomSound } from '@zeki.chat/core-typings';
 
 import { getURL } from '../../../../app/utils/client';
 

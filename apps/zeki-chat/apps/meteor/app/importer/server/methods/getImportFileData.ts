@@ -1,15 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { IImportProgress, IImporterSelection } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Imports } from '@rocket.chat/models';
+import type { IImportProgress, IImporterSelection } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Imports } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { Importers } from '..';
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
 import { ProgressStep } from '../../lib/ImporterProgressStep';
-import { RocketChatImportFileInstance } from '../startup/store';
+import { ZekiChatImportFileInstance } from '../startup/store';
 
 export const executeGetImportFileData = async (): Promise<IImporterSelection | { waiting: true }> => {
 	const operation = await Imports.findLastImport();
@@ -55,14 +55,14 @@ export const executeGetImportFileData = async (): Promise<IImporterSelection | {
 
 	const fileName = instance.importRecord.file;
 	if (fileName) {
-		const fullFilePath = fs.existsSync(fileName) ? fileName : path.join(RocketChatImportFileInstance.absolutePath, fileName);
+		const fullFilePath = fs.existsSync(fileName) ? fileName : path.join(ZekiChatImportFileInstance.absolutePath, fileName);
 		await instance.prepareUsingLocalFile(fullFilePath);
 	}
 
 	return instance.buildSelection();
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		getImportFileData(): IImporterSelection | { waiting: true };

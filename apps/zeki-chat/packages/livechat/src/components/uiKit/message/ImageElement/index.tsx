@@ -1,4 +1,4 @@
-import * as uikit from '@rocket.chat/ui-kit';
+import * as uikit from '@zeki.chat/ui-kit';
 import { memo } from 'preact/compat';
 
 import styles from './styles.scss';

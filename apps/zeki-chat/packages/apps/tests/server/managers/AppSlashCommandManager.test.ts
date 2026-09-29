@@ -1,8 +1,8 @@
 import * as assert from 'node:assert';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 
-import type { ISlashCommandPreviewItem } from '@rocket.chat/apps-engine/definition/slashcommands';
-import { SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
+import type { ISlashCommandPreviewItem } from '@zeki.chat/apps-engine/definition/slashcommands';
+import { SlashCommandContext } from '@zeki.chat/apps-engine/definition/slashcommands';
 
 import type { AppManager } from '../../../src/server/AppManager';
 import type { ProxiedApp } from '../../../src/server/ProxiedApp';

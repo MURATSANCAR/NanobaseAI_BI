@@ -1,4 +1,4 @@
-import type { IEmojiCustom } from '@rocket.chat/core-typings';
+import type { IEmojiCustom } from '@zeki.chat/core-typings';
 import { assert, expect } from 'chai';
 import { before, describe, it, after } from 'mocha';
 

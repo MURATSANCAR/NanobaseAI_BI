@@ -1,9 +1,9 @@
-import type { IControl } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { Migrations } from '@rocket.chat/models';
+import type { IControl } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { Migrations } from '@zeki.chat/models';
 
 import { showErrorBox } from './logger/showBox';
-import { Info } from '../../app/utils/rocketchat.info';
+import { Info } from '../../app/utils/zekichat.info';
 import { sleep } from '../../lib/utils/sleep';
 
 type IMigration = {

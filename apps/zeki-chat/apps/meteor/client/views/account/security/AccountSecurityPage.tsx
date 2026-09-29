@@ -1,6 +1,6 @@
 import { Box, Accordion, AccordionItem, ButtonGroup, Button, Callout } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@rocket.chat/ui-client';
-import { useSetting, useTranslation, useUser } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@zeki.chat/ui-client';
+import { useSetting, useTranslation, useUser } from '@zeki.chat/ui-contexts';
 import { useId } from 'react';
 import type { ReactElement } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';

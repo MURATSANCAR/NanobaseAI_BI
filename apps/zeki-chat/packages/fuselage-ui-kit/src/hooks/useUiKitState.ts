@@ -1,5 +1,5 @@
 import { useEffectEvent, useSafely } from '@rocket.chat/fuselage-hooks';
-import * as UiKit from '@rocket.chat/ui-kit';
+import * as UiKit from '@zeki.chat/ui-kit';
 import { useContext, useMemo, useState } from 'react';
 
 import { UiKitContext } from '../contexts/UiKitContext';

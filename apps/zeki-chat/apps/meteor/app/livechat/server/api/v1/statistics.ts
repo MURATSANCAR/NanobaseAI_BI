@@ -1,5 +1,5 @@
-import { Users } from '@rocket.chat/models';
-import { isLivechatAnalyticsAgentOverviewProps, isLivechatAnalyticsOverviewProps } from '@rocket.chat/rest-typings';
+import { Users } from '@zeki.chat/models';
+import { isLivechatAnalyticsAgentOverviewProps, isLivechatAnalyticsOverviewProps } from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../api/server';
 import { settings } from '../../../../settings/server';

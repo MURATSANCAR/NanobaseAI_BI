@@ -1,5 +1,5 @@
-import type { IOmnichannelBusinessUnit, Serialized } from '@rocket.chat/core-typings';
-import { MockedAppRootBuilder } from '@rocket.chat/mock-providers/dist/MockedAppRootBuilder';
+import type { IOmnichannelBusinessUnit, Serialized } from '@zeki.chat/core-typings';
+import { MockedAppRootBuilder } from '@zeki.chat/mock-providers/dist/MockedAppRootBuilder';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useUnitsList } from './useUnitsList';

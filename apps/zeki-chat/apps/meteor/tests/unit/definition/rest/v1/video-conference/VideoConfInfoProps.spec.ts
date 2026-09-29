@@ -1,4 +1,4 @@
-import { isVideoConfInfoProps } from '@rocket.chat/rest-typings';
+import { isVideoConfInfoProps } from '@zeki.chat/rest-typings';
 import { assert } from 'chai';
 
 describe('VideoConfInfoProps (definition/rest/v1)', () => {

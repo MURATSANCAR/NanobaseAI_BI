@@ -1,8 +1,7 @@
-import { ServiceStarter } from '@rocket.chat/core-services';
-import { LivechatInquiryStatus, type InquiryWithAgentInfo, type IOmnichannelQueue } from '@rocket.chat/core-typings';
-import { Capabilities } from '@zeki.chat/capabilities';
-import { LivechatInquiry, LivechatRooms } from '@rocket.chat/models';
-import { tracerSpan } from '@rocket.chat/tracing';
+import { ServiceStarter } from '@zeki.chat/core-services';
+import { LivechatInquiryStatus, type InquiryWithAgentInfo, type IOmnichannelQueue } from '@zeki.chat/core-typings';
+import { LivechatInquiry, LivechatRooms } from '@zeki.chat/models';
+import { tracerSpan } from '@zeki.chat/tracing';
 
 import { queueLogger } from './logger';
 import { notifyOnLivechatInquiryChangedByRoom } from '../../../app/lib/server/lib/notifyListener';
@@ -89,11 +88,6 @@ export class OmnichannelQueue implements IOmnichannelQueue {
 				return;
 			}
 
-			if (await Capabilities.shouldPreventAction('monthlyActiveContacts', 1)) {
-				queueLogger.debug('MAC limit reached. Queue wont execute');
-				this.running = false;
-				return;
-			}
 
 			// We still go 1 by 1, but we go with every queue every cycle instead of just 1 queue per cycle
 			// And we get tracing :)

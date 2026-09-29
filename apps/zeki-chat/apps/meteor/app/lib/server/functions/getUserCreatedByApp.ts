@@ -1,6 +1,6 @@
-import type { UserType } from '@rocket.chat/apps-engine/definition/users';
-import type { IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { UserType } from '@zeki.chat/apps-engine/definition/users';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import type { FindOptions } from 'mongodb';
 
 export async function getUserCreatedByApp(

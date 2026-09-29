@@ -1,4 +1,4 @@
-import type { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
+import type { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
 
 import type { ProxiedApp } from '../../../src/server/ProxiedApp';
 import { AppActivationBridge } from '../../../src/server/bridges';

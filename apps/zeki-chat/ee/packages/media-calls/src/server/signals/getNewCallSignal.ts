@@ -1,5 +1,5 @@
-import type { IMediaCall } from '@rocket.chat/core-typings';
-import type { CallFlag, CallRole, ServerMediaSignalNewCall } from '@rocket.chat/media-signaling';
+import type { IMediaCall } from '@zeki.chat/core-typings';
+import type { CallFlag, CallRole, ServerMediaSignalNewCall } from '@zeki.chat/media-signaling';
 
 import { getNewCallTransferredBy } from './getNewCallTransferredBy';
 

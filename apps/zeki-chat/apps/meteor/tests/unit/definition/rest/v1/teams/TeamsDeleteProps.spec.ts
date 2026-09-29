@@ -1,4 +1,4 @@
-import { isTeamsDeleteProps } from '@rocket.chat/rest-typings';
+import { isTeamsDeleteProps } from '@zeki.chat/rest-typings';
 import { assert } from 'chai';
 
 describe('TeamsDeleteProps (definition/rest/v1)', () => {

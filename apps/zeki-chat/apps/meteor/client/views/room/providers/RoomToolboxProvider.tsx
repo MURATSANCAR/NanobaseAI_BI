@@ -7,7 +7,7 @@ import {
 	useLayoutHiddenActions,
 	RoomToolboxContext,
 	type RoomToolboxContextValue,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 

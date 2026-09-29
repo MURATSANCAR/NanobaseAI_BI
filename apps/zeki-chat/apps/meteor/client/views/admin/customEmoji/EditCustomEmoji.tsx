@@ -11,8 +11,8 @@ import {
 	FieldError,
 	IconButton,
 } from '@rocket.chat/fuselage';
-import { GenericModal, ContextualbarScrollableContent, ContextualbarFooter } from '@rocket.chat/ui-client';
-import { useSetModal, useAbsoluteUrl, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { GenericModal, ContextualbarScrollableContent, ContextualbarFooter } from '@zeki.chat/ui-client';
+import { useSetModal, useAbsoluteUrl, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent } from 'react';
 import { useCallback, useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -1,4 +1,4 @@
-import { FederationKeys } from '@rocket.chat/models';
+import { FederationKeys } from '@zeki.chat/models';
 
 // Create key pair if needed
 export async function generateFederationKeys() {

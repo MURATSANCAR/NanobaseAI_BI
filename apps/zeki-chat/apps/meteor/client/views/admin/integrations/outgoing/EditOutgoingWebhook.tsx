@@ -1,7 +1,7 @@
-import type { IOutgoingIntegration, OutgoingIntegrationEvent, Serialized } from '@rocket.chat/core-typings';
+import type { IOutgoingIntegration, OutgoingIntegrationEvent, Serialized } from '@zeki.chat/core-typings';
 import { Button, ButtonGroup, Tabs, TabsItem } from '@rocket.chat/fuselage';
-import { GenericModal, Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@rocket.chat/ui-client';
-import { useSetModal, useTranslation, useRouter, useRouteParameter } from '@rocket.chat/ui-contexts';
+import { GenericModal, Page, PageHeader, PageScrollableContentWithShadow, PageFooter } from '@zeki.chat/ui-client';
+import { useSetModal, useTranslation, useRouter, useRouteParameter } from '@zeki.chat/ui-contexts';
 import { useId, useCallback } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 

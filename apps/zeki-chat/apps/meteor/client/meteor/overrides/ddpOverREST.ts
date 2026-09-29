@@ -19,7 +19,7 @@ const shouldBypass = ({ msg, method, params }: Meteor.IDDPMessage): boolean => {
 	// in ee/apps/ddp-streamer); every other method delegates to the Meteor
 	// service via callMethodWithToken (extra hop). Bypassing these to Meteor's
 	// own WS routes them straight to ddp-streamer for the fast path; routing
-	// them through REST would wedge them on the slow rocketchat-main path
+	// them through REST would wedge them on the slow zekichat-main path
 	// instead, blowing past the 5s `expect(...).toBeVisible()` timeouts the
 	// post-relogin tests rely on.
 	if (method === 'login' && params?.[0]?.resume) {
@@ -68,7 +68,7 @@ const withDDPOverREST = (_send: (this: Meteor.IMeteorConnection, message: Meteor
 		// the SDK socket would also race the follow-up `Meteor.loginWithToken`
 		// resume that gets queued from the success handler — two logins on
 		// different sockets for the same user, with diverging account state.
-		// REST → rocketchat-main is one hop and lets the resume follow-up
+		// REST → zekichat-main is one hop and lets the resume follow-up
 		// settle the SDK auth via ensureConnectedAndAuthenticated.
 
 		// Login itself is the call that establishes auth — running it through
@@ -163,6 +163,6 @@ const withDDPOverREST = (_send: (this: Meteor.IMeteorConnection, message: Meteor
 // methods (including user/password login) through REST. In MS the WS
 // connects to `ddp-streamer-service`, whose native `login` handler only
 // accepts `{ resume }` tokens and 403s everything else; routing login via
-// REST hits `rocketchat-main` directly so the full
+// REST hits `zekichat-main` directly so the full
 // `Accounts.registerLoginHandler` chain runs.
 Meteor.connection._send = withDDPOverREST(Meteor.connection._send);

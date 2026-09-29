@@ -1,4 +1,4 @@
-import { useRole, useRouter, useSetting, useUserId } from '@rocket.chat/ui-contexts';
+import { useRole, useRouter, useSetting, useUserId } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 export const useRedirectToSetupWizard = (): void => {

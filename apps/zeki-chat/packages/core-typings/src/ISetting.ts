@@ -1,5 +1,5 @@
-import type { IRocketChatAssetConstraint } from './IRocketChatAssets';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatAssetConstraint } from './IZekiChatAssets';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
 export enum SettingEditor {
 	COLOR = 'color',
@@ -31,7 +31,7 @@ export type ISetting = ISettingBase | ISettingEnterprise | ISettingColor | ISett
 
 type EnableQuery = string | { _id: string; value: any } | { _id: string; value: any }[];
 
-export interface ISettingBase extends IRocketChatRecord {
+export interface ISettingBase extends IZekiChatRecord {
 	type:
 		| 'boolean'
 		| 'timezone'
@@ -136,7 +136,7 @@ interface ISettingAction extends ISettingBase {
 export interface ISettingAsset extends ISettingBase {
 	type: 'asset';
 	value: { url?: string; defaultUrl?: string };
-	fileConstraints: IRocketChatAssetConstraint;
+	fileConstraints: IZekiChatAssetConstraint;
 	asset: string;
 }
 

@@ -1,7 +1,7 @@
-import { Agenda } from '@rocket.chat/agenda';
-import type { IUser, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import type { MainLogger } from '@rocket.chat/logger';
-import { LivechatRooms, LivechatInquiry as LivechatInquiryRaw, Users } from '@rocket.chat/models';
+import { Agenda } from '@zeki.chat/agenda';
+import type { IUser, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import type { MainLogger } from '@zeki.chat/logger';
+import { LivechatRooms, LivechatInquiry as LivechatInquiryRaw, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 import { MongoInternals } from 'meteor/mongo';
 import type { Db } from 'mongodb';
@@ -48,7 +48,7 @@ export class OmnichannelQueueInactivityMonitorClass {
 	}
 
 	private async getRocketCatUser(): Promise<IUser | null> {
-		return Users.findOneById('rocket.cat');
+		return Users.findOneById('zeki.bot');
 	}
 
 	getName(inquiryId: string): string {

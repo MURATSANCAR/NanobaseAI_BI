@@ -1,6 +1,6 @@
 import { NavBarItem } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useRouter, useLayout, useSetting, useCurrentRoutePath } from '@rocket.chat/ui-contexts';
+import { useRouter, useLayout, useSetting, useCurrentRoutePath } from '@zeki.chat/ui-contexts';
 import type { HTMLAttributes } from 'react';
 
 type NavBarItemHomePageProps = Omit<HTMLAttributes<HTMLElement>, 'is'>;

@@ -1,5 +1,5 @@
-import { MockedAppRootBuilder } from '@rocket.chat/mock-providers/dist/MockedAppRootBuilder';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
+import { MockedAppRootBuilder } from '@zeki.chat/mock-providers/dist/MockedAppRootBuilder';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

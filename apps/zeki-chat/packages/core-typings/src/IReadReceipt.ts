@@ -1,9 +1,9 @@
 import type { IMessage } from './IMessage/IMessage';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IRoom } from './IRoom';
 import type { IUser } from './IUser';
 
-export interface IReadReceipt extends IRocketChatRecord {
+export interface IReadReceipt extends IZekiChatRecord {
 	token?: string;
 	messageId: IMessage['_id'];
 	roomId: IRoom['_id'];

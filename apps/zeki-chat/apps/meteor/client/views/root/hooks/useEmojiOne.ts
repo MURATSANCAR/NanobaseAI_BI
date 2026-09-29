@@ -1,4 +1,4 @@
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import { useEffect, useLayoutEffect } from 'react';
 
 import { emoji } from '../../../../app/emoji/client';
@@ -21,7 +21,7 @@ export const useEmojiOne = () => {
 			emoji.packages.emojione.render = config.render;
 			emoji.packages.emojione.renderPicker = config.renderPicker;
 
-			// RocketChat.emoji.list is the collection of emojis from all emoji packages
+			// ZekiChat.emoji.list is the collection of emojis from all emoji packages
 			for (const [key, currentEmoji] of Object.entries(config.emojione.emojioneList)) {
 				currentEmoji.emojiPackage = 'emojione';
 				emoji.list[key] = currentEmoji;

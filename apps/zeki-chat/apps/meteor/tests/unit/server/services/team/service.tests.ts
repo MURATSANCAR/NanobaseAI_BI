@@ -14,14 +14,14 @@ const Users = {
 const addUserToRoom = sinon.stub();
 
 const { TeamService } = proxyquire.noCallThru().load('../../../../../server/services/team/service', {
-	'@rocket.chat/core-services': {
+	'@zeki.chat/core-services': {
 		Room: {},
 		Authorization: {},
 		Message: {},
 		ServiceClassInternal: class {},
 		api: {},
 	},
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Team: {},
 		Rooms,
 		Subscriptions: {},

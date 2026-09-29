@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-import type { IDirectoryChannelResult, IDirectoryUserResult, IRoom, IUser } from '@rocket.chat/core-typings';
-import { Settings, Users, WorkspaceCredentials } from '@rocket.chat/models';
+import type { IDirectoryChannelResult, IDirectoryUserResult, IRoom, IUser } from '@zeki.chat/core-typings';
+import { Settings, Users, WorkspaceCredentials } from '@zeki.chat/models';
 import {
 	ajv,
 	isShieldSvgProps,
@@ -13,8 +13,8 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateBadRequestErrorResponse,
-} from '@rocket.chat/rest-typings';
-import type { MeApiSuccessResponse } from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
+import type { MeApiSuccessResponse } from '@zeki.chat/rest-typings';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 import EJSON from 'ejson';
 import { check } from 'meteor/check';
@@ -535,7 +535,7 @@ API.v1.get(
  *                $ref: '#/components/schemas/ApiFailureV1'
  */
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'method.call/:method': {
@@ -824,7 +824,6 @@ API.v1.post(
 				'Cloud_Workspace_Client_Secret_Expires_At',
 				'Cloud_Workspace_Registration_Client_Uri',
 				'Cloud_Workspace_PublicKey',
-				'Cloud_Workspace_License',
 				'Cloud_Workspace_Had_Trial',
 				'uniqueID',
 			);

@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 
-import type { IImport, IImportUser } from '@rocket.chat/core-typings';
-import { Settings } from '@rocket.chat/models';
+import type { IImport, IImportUser } from '@zeki.chat/core-typings';
+import { Settings } from '@zeki.chat/models';
 import { parse } from 'csv-parse/lib/sync';
 
-import { RocketChatFile } from '../../file/server';
+import { ZekiChatFile } from '../../file/server';
 import { Importer, ProgressStep } from '../../importer/server';
 import type { ConverterOptions } from '../../importer/server/classes/ImportDataConverter';
 import type { ImporterProgress } from '../../importer/server/classes/ImporterProgress';
@@ -42,7 +42,7 @@ export class SlackUsersImporter extends Importer {
 		await this.updateRecord({ file: fileName });
 
 		await super.updateProgress(ProgressStep.PREPARING_USERS);
-		const uriResult = RocketChatFile.dataURIParse(dataURI);
+		const uriResult = ZekiChatFile.dataURIParse(dataURI);
 		const buf = Buffer.from(uriResult.image, 'base64');
 		const parsed = this.csvParser(buf.toString());
 

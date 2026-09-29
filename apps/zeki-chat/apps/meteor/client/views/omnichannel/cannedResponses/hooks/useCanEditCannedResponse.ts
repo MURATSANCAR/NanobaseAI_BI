@@ -1,5 +1,5 @@
-import type { IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import type { IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
+import { usePermission } from '@zeki.chat/ui-contexts';
 
 export const useCanEditCannedResponse = (cannedItem: IOmnichannelCannedResponse): boolean => {
 	const canViewAllCannedResponses = usePermission('view-all-canned-responses');

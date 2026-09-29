@@ -1,5 +1,5 @@
-import type { ILivechatContactVisitorAssociation } from '@rocket.chat/core-typings';
-import { ContactVisitorAssociationSchema, ajv } from '@rocket.chat/rest-typings';
+import type { ILivechatContactVisitorAssociation } from '@zeki.chat/core-typings';
+import { ContactVisitorAssociationSchema, ajv } from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../../app/api/server';
 import { logger } from '../lib/logger';
@@ -20,7 +20,7 @@ const blockContactSchema = {
 
 const isBlockContactProps = ajv.compile<blockContactProps>(blockContactSchema);
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/omnichannel/contacts.block': {
@@ -38,7 +38,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['block-livechat-contact'],
 		validateParams: isBlockContactProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async post() {
@@ -69,7 +69,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['unblock-livechat-contact'],
 		validateParams: isBlockContactProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async post() {

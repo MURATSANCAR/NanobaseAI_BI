@@ -1,6 +1,6 @@
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Messages, Rooms } from '@rocket.chat/models';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Messages, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../../server/lib/callbacks';
@@ -8,7 +8,7 @@ import { canAccessRoomAsync } from '../../../authorization/server';
 import { settings } from '../../../settings/server';
 import { readThread } from '../functions';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		getThreadMessages(params: { tmid: IMessage['_id']; limit?: number; skip?: number }): Promise<IMessage[]>;

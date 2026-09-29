@@ -1,7 +1,7 @@
-import { api } from '@rocket.chat/core-services';
-import type { SlashCommandCallbackParams } from '@rocket.chat/core-typings';
-import { isRegisterUser } from '@rocket.chat/core-typings';
-import { Users, Rooms } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { SlashCommandCallbackParams } from '@zeki.chat/core-typings';
+import { isRegisterUser } from '@zeki.chat/core-typings';
+import { Users, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { RoomMemberActions } from '../../../definition/IRoomTypeConfig';

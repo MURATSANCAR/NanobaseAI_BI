@@ -1,7 +1,7 @@
-import { FederationMatrix } from '@rocket.chat/core-services';
-import { getFederationRoutes } from '@rocket.chat/federation-matrix';
-import { Logger } from '@rocket.chat/logger';
-import { ajv, ajvQuery } from '@rocket.chat/rest-typings';
+import { FederationMatrix } from '@zeki.chat/core-services';
+import { getFederationRoutes } from '@zeki.chat/federation-matrix';
+import { Logger } from '@zeki.chat/logger';
+import { ajv, ajvQuery } from '@zeki.chat/rest-typings';
 import type express from 'express';
 import { WebApp } from 'meteor/webapp';
 

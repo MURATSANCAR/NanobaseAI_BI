@@ -1,4 +1,4 @@
-import type { IWorkspaceToken } from '@rocket.chat/apps-engine/definition/cloud/IWorkspaceToken';
+import type { IWorkspaceToken } from '@zeki.chat/apps-engine/definition/cloud/IWorkspaceToken';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

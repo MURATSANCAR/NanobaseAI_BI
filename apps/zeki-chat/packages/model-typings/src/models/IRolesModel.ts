@@ -1,4 +1,4 @@
-import type { IRole, IUser, IRoom } from '@rocket.chat/core-typings';
+import type { IRole, IUser, IRoom } from '@zeki.chat/core-typings';
 import type { FindCursor, FindOptions, CountDocumentsOptions } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

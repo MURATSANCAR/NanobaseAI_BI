@@ -7,7 +7,7 @@ import type {
 	ILivechatContactVisitorAssociation,
 	AtLeast,
 	ILivechatContact,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type { FindCursor, UpdateResult, AggregationCursor, Document, FindOptions, DeleteResult, Filter, UpdateOptions } from 'mongodb';
 
 import type { FindPaginated } from '..';

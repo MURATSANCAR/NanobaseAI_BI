@@ -1,6 +1,6 @@
-import type { IExternalComponent } from '@rocket.chat/apps-engine/definition/externalComponent';
+import type { IExternalComponent } from '@zeki.chat/apps-engine/definition/externalComponent';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useState } from 'react';
 import type { MouseEvent, ReactElement } from 'react';
 

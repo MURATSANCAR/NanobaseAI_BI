@@ -1,5 +1,5 @@
-import type { ILivechatDepartmentAgents } from '@rocket.chat/core-typings';
-import { LivechatDepartmentAgentsRaw } from '@rocket.chat/models';
+import type { ILivechatDepartmentAgents } from '@zeki.chat/core-typings';
+import { LivechatDepartmentAgentsRaw } from '@zeki.chat/models';
 
 export class LivechatDepartmentAgents extends LivechatDepartmentAgentsRaw {
 	override findAgentsByAgentIdAndBusinessHourId(agentId: string, businessHourId: string): Promise<ILivechatDepartmentAgents[]> {
@@ -8,7 +8,7 @@ export class LivechatDepartmentAgents extends LivechatDepartmentAgentsRaw {
 		};
 		const lookup = {
 			$lookup: {
-				from: 'rocketchat_livechat_department',
+				from: 'zeki_livechat_department',
 				localField: 'departmentId',
 				foreignField: '_id',
 				as: 'departments',

@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { IS_EE } from './config/constants';
 import { Users } from './fixtures/userStates';

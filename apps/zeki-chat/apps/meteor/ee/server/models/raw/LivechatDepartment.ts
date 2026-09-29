@@ -1,6 +1,6 @@
-import type { ILivechatDepartment, RocketChatRecordDeleted, LivechatDepartmentDTO } from '@rocket.chat/core-typings';
-import type { ILivechatDepartmentModel } from '@rocket.chat/model-typings';
-import { LivechatDepartmentRaw } from '@rocket.chat/models';
+import type { ILivechatDepartment, ZekiChatRecordDeleted, LivechatDepartmentDTO } from '@zeki.chat/core-typings';
+import type { ILivechatDepartmentModel } from '@zeki.chat/model-typings';
+import { LivechatDepartmentRaw } from '@zeki.chat/models';
 import type {
 	Collection,
 	DeleteResult,
@@ -14,7 +14,7 @@ import type {
 	AggregationCursor,
 } from 'mongodb';
 
-declare module '@rocket.chat/model-typings' {
+declare module '@zeki.chat/model-typings' {
 	interface ILivechatDepartmentModel {
 		removeDepartmentFromForwardListById(departmentId: string): Promise<void>;
 		unfilteredFind(query: Filter<ILivechatDepartment>, options: FindOptions<ILivechatDepartment>): FindCursor<ILivechatDepartment>;
@@ -36,7 +36,7 @@ declare module '@rocket.chat/model-typings' {
 }
 
 export class LivechatDepartmentEE extends LivechatDepartmentRaw implements ILivechatDepartmentModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ILivechatDepartment>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ILivechatDepartment>>) {
 		super(db, trash);
 	}
 
@@ -113,7 +113,7 @@ export class LivechatDepartmentEE extends LivechatDepartmentRaw implements ILive
 				},
 				{
 					$lookup: {
-						from: 'rocketchat_livechat_department_agents',
+						from: 'zeki_livechat_department_agents',
 						localField: '_id',
 						foreignField: 'departmentId',
 						as: 'agents',

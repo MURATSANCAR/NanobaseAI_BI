@@ -1,5 +1,5 @@
 import type { APIResponse } from '@playwright/test';
-import type { ISetting } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/core-typings';
 
 import type { BaseTest } from './test';
 

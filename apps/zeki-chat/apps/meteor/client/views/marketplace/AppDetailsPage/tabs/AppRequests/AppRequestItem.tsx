@@ -1,6 +1,6 @@
 import { Badge, Box } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import { useFormatDateAndTime } from '../../../../../hooks/useFormatDateAndTime';

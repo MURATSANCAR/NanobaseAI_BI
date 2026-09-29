@@ -1,8 +1,8 @@
-import type { IRole, IRoom } from '@rocket.chat/core-typings';
+import type { IRole, IRoom } from '@zeki.chat/core-typings';
 import { Box, Field, FieldLabel, FieldRow, Margins, ButtonGroup, Button, Callout, FieldError } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { usePagination, Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useEndpoint, useRouter } from '@rocket.chat/ui-contexts';
+import { usePagination, Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useEndpoint, useRouter } from '@zeki.chat/ui-contexts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useMemo, type ReactElement } from 'react';
 import { useForm, Controller } from 'react-hook-form';

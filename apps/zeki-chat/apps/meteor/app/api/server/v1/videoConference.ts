@@ -1,5 +1,5 @@
-import { VideoConf } from '@rocket.chat/core-services';
-import type { VideoConference, VideoConferenceCapabilities, VideoConferenceInstructions } from '@rocket.chat/core-typings';
+import { VideoConf } from '@zeki.chat/core-services';
+import type { VideoConference, VideoConferenceCapabilities, VideoConferenceInstructions } from '@zeki.chat/core-typings';
 import {
 	ajv,
 	isVideoConfStartProps,
@@ -10,7 +10,7 @@ import {
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateBadRequestErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { availabilityErrors } from '../../../../lib/videoConference/constants';
 import { videoConfProviders } from '../../../../server/lib/videoConfProviders';

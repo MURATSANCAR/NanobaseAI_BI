@@ -1,5 +1,5 @@
-import type { FacebookOAuthConfiguration } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { FacebookOAuthConfiguration } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 // eslint-disable-next-line import/no-duplicates
 import { Facebook } from 'meteor/facebook-oauth';
 import { Meteor } from 'meteor/meteor';

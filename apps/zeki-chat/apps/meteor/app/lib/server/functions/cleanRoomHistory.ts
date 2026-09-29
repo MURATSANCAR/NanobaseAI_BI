@@ -1,6 +1,6 @@
-import { api } from '@rocket.chat/core-services';
-import type { IRoom } from '@rocket.chat/core-typings';
-import { Messages, Rooms, Subscriptions, ReadReceipts, ReadReceiptsArchive } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { Messages, Rooms, Subscriptions, ReadReceipts, ReadReceiptsArchive } from '@zeki.chat/models';
 
 import { deleteRoom } from './deleteRoom';
 import { NOTIFICATION_ATTACHMENT_COLOR } from '../../../../lib/constants';

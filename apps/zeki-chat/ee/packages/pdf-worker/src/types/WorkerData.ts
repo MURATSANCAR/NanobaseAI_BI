@@ -1,5 +1,5 @@
-import type { ILivechatAgent, ILivechatVisitor, IOmnichannelSystemMessage } from '@rocket.chat/core-typings';
-import type { Root } from '@rocket.chat/message-parser';
+import type { ILivechatAgent, ILivechatVisitor, IOmnichannelSystemMessage } from '@zeki.chat/core-typings';
+import type { Root } from '@zeki.chat/message-parser';
 
 export type Quote = { name: string; ts?: Date; md: Root };
 

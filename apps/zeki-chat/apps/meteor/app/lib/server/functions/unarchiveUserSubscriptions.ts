@@ -1,4 +1,4 @@
-import { Rooms, Subscriptions } from '@rocket.chat/models';
+import { Rooms, Subscriptions } from '@zeki.chat/models';
 
 const BATCH_SIZE = 100_000;
 

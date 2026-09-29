@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { IRoom, ISubscription } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription } from '@zeki.chat/core-typings';
 import type { ReactNode, ReactElement } from 'react';
 import { useMemo } from 'react';
 

@@ -1,1 +1,1 @@
-import './lib/RocketChat.ErrorHandler';
+import './lib/ZekiChat.ErrorHandler';

@@ -1,9 +1,9 @@
-import { api } from '@rocket.chat/core-services';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Subscriptions, Rooms } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Subscriptions, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		'e2e.requestSubscriptionKeys'(): boolean;

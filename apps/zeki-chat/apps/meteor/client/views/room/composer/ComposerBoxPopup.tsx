@@ -1,6 +1,6 @@
 import { Box, Option, OptionSkeleton, Tile } from '@rocket.chat/fuselage';
 import { useContentBoxSize } from '@rocket.chat/fuselage-hooks';
-import { CustomScrollbars } from '@rocket.chat/ui-client';
+import { CustomScrollbars } from '@zeki.chat/ui-client';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useEffect, memo, useMemo, useRef, useId } from 'react';

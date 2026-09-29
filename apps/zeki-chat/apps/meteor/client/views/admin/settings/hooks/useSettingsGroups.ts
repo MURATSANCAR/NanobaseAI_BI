@@ -1,6 +1,6 @@
-import type { ISetting } from '@rocket.chat/core-typings';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useSettings } from '@rocket.chat/ui-contexts';
+import type { ISetting } from '@zeki.chat/core-typings';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useSettings } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

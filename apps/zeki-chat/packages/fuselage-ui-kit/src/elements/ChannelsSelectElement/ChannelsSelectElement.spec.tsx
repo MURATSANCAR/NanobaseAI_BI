@@ -1,7 +1,7 @@
-import { RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import { MockedServerContext } from '@rocket.chat/mock-providers';
-import type { ChannelsSelectElement as ChannelsSelectElementType } from '@rocket.chat/ui-kit';
-import { BlockContext } from '@rocket.chat/ui-kit';
+import { RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import { MockedServerContext } from '@zeki.chat/mock-providers';
+import type { ChannelsSelectElement as ChannelsSelectElementType } from '@zeki.chat/ui-kit';
+import { BlockContext } from '@zeki.chat/ui-kit';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

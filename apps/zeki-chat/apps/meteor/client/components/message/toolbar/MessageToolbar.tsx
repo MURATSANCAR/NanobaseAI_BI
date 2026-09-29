@@ -1,8 +1,8 @@
 import { useToolbar } from '@react-aria/toolbar';
-import type { IMessage, IRoom, ISubscription, ITranslatedMessage } from '@rocket.chat/core-typings';
-import { isThreadMessage, isRoomFederated, isVideoConfMessage } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom, ISubscription, ITranslatedMessage } from '@zeki.chat/core-typings';
+import { isThreadMessage, isRoomFederated, isVideoConfMessage } from '@zeki.chat/core-typings';
 import { MessageToolbar as FuselageMessageToolbar } from '@rocket.chat/fuselage';
-import { useTranslation } from '@rocket.chat/ui-contexts';
+import { useTranslation } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, ElementType, ReactElement } from 'react';
 import { memo, useRef } from 'react';
 

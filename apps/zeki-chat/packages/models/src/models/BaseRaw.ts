@@ -1,6 +1,6 @@
-import type { RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IBaseModel, DefaultFields, ResultFields, FindPaginated, InsertionModel } from '@rocket.chat/model-typings';
-import { traceInstanceMethods } from '@rocket.chat/tracing';
+import type { ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IBaseModel, DefaultFields, ResultFields, FindPaginated, InsertionModel } from '@zeki.chat/model-typings';
+import { traceInstanceMethods } from '@zeki.chat/tracing';
 import { ObjectId } from 'mongodb';
 import type {
 	BulkWriteOptions,
@@ -49,7 +49,7 @@ type ModelOptions = {
 export abstract class BaseRaw<
 	T extends { _id: string },
 	C extends DefaultFields<T> = undefined,
-	TDeleted extends RocketChatRecordDeleted<T> = RocketChatRecordDeleted<T>,
+	TDeleted extends ZekiChatRecordDeleted<T> = ZekiChatRecordDeleted<T>,
 > implements IBaseModel<T, C, TDeleted>
 {
 	protected defaultFields: C | undefined;

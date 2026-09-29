@@ -1,4 +1,4 @@
-import type { IImportRecord, IImportRecordType } from '@rocket.chat/core-typings';
+import type { IImportRecord, IImportRecordType } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import proxyquire from 'proxyquire';
 import sinon from 'sinon';
@@ -20,7 +20,7 @@ const { RecordConverter } = proxyquire.noCallThru().load('../../../../../app/imp
 	},
 	'meteor/check': sinon.stub(),
 	'meteor/meteor': sinon.stub(),
-	'@rocket.chat/models': { ...modelsMock, '@global': true },
+	'@zeki.chat/models': { ...modelsMock, '@global': true },
 });
 
 class TestConverter extends RecordConverter<IImportRecord> {

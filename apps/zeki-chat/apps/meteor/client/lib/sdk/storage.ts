@@ -1,5 +1,5 @@
 // Single point of access to the client-side persistent storage that
-// Rocket.Chat shares with Meteor's accounts-base. Reads and writes use
+// ZEKI AI CHAT shares with Meteor's accounts-base. Reads and writes use
 // window.localStorage under the hood; the keys mirror the names Meteor
 // originally wrote so sessions persist across the Meteor → SDK migration.
 import { Accounts } from 'meteor/accounts-base';

@@ -1,4 +1,4 @@
-import { usePermission, useCurrentModal } from '@rocket.chat/ui-contexts';
+import { usePermission, useCurrentModal } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import DeviceManagementAdminPage from './DeviceManagementAdminPage';

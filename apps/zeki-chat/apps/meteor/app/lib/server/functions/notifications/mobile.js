@@ -1,4 +1,4 @@
-import { Subscriptions } from '@rocket.chat/models';
+import { Subscriptions } from '@zeki.chat/models';
 
 import { i18n } from '../../../../../server/lib/i18n';
 import { isRoomCompatibleWithVideoConfRinging } from '../../../../../server/lib/isRoomCompatibleWithVideoConfRinging';

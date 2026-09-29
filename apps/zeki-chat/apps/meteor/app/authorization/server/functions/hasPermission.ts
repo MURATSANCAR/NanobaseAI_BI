@@ -1,5 +1,5 @@
-import { Authorization } from '@rocket.chat/core-services';
-import type { IUser, IPermission, IRoom } from '@rocket.chat/core-typings';
+import { Authorization } from '@zeki.chat/core-services';
+import type { IUser, IPermission, IRoom } from '@zeki.chat/core-typings';
 
 export const hasAllPermissionAsync = async (
 	userId: IUser['_id'],

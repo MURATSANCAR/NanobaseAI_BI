@@ -1,5 +1,5 @@
-import type { IUser, UserReport, Serialized } from '@rocket.chat/core-typings';
-import { GenericTableCell, GenericTableRow } from '@rocket.chat/ui-client';
+import type { IUser, UserReport, Serialized } from '@zeki.chat/core-typings';
+import { GenericTableCell, GenericTableRow } from '@zeki.chat/ui-client';
 
 import ModConsoleUserActions from './ModConsoleUserActions';
 import { normalizeUsername } from '../../../../../lib/utils/normalizeUsername';

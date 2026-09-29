@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint, useTranslation, useToastMessageDispatch, useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useTranslation, useToastMessageDispatch, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useState, useEffect } from 'react';

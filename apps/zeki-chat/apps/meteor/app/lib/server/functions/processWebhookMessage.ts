@@ -1,5 +1,5 @@
-import type { IMessage, IUser, RequiredField, MessageAttachment, IRoom } from '@rocket.chat/core-typings';
-import { removeEmpty } from '@rocket.chat/tools';
+import type { IMessage, IUser, RequiredField, MessageAttachment, IRoom } from '@zeki.chat/core-typings';
+import { removeEmpty } from '@zeki.chat/tools';
 import { Meteor } from 'meteor/meteor';
 import _ from 'underscore';
 

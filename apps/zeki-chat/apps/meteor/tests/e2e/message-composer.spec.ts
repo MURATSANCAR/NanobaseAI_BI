@@ -101,9 +101,9 @@ test.describe.serial('message-composer', () => {
 		await poHomeChannel.content.sendMessage('hello composer');
 
 		await test.step('mention popup', async () => {
-			await page.keyboard.type('hello composer @rocket.cat');
+			await page.keyboard.type('hello composer @zeki.bot');
 
-			await expect(poHomeChannel.composer.boxPopup.getByText('rocket.cat')).toBeVisible();
+			await expect(poHomeChannel.composer.boxPopup.getByText('zeki.bot')).toBeVisible();
 		});
 	});
 

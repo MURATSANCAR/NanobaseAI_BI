@@ -1,4 +1,4 @@
-import { parse } from '@rocket.chat/message-parser';
+import { parse } from '@zeki.chat/message-parser';
 
 export const normalizeUrl = (url: string): string | undefined => {
 	if (url.startsWith('http')) {

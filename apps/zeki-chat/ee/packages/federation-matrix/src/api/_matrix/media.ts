@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
 
-import type { IUpload } from '@rocket.chat/core-typings';
+import type { IUpload } from '@zeki.chat/core-typings';
 import { federationSDK } from '@rocket.chat/federation-sdk';
-import { Router } from '@rocket.chat/http-router';
-import { ajv } from '@rocket.chat/rest-typings/dist/v1/Ajv';
+import { Router } from '@zeki.chat/http-router';
+import { ajv } from '@zeki.chat/rest-typings/dist/v1/Ajv';
 
 import { MatrixMediaService } from '../../services/MatrixMediaService';
 import { canAccessResourceMiddleware } from '../middlewares/canAccessResource';

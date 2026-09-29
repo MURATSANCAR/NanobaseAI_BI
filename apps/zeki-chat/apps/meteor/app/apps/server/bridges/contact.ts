@@ -1,6 +1,6 @@
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import { ContactBridge } from '@rocket.chat/apps/dist/server/bridges/ContactBridge';
-import type { ILivechatContact } from '@rocket.chat/apps-engine/definition/livechat';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import { ContactBridge } from '@zeki.chat/apps/dist/server/bridges/ContactBridge';
+import type { ILivechatContact } from '@zeki.chat/apps-engine/definition/livechat';
 
 import { addContactEmail } from '../../../livechat/server/lib/contacts/addContactEmail';
 import { verifyContactChannel } from '../../../livechat/server/lib/contacts/verifyContactChannel';

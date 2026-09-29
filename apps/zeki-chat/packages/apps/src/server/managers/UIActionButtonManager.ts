@@ -1,5 +1,5 @@
-import { AppStatusUtils } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { IUIActionButton, IUIActionButtonDescriptor } from '@rocket.chat/apps-engine/definition/ui';
+import { AppStatusUtils } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { IUIActionButton, IUIActionButtonDescriptor } from '@zeki.chat/apps-engine/definition/ui';
 
 import type { AppManager } from '../AppManager';
 import type { AppActivationBridge } from '../bridges';

@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { Subscriptions } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Subscriptions } from '@zeki.chat/models';
 
 import { notifyOnSubscriptionChangedByUserId } from './notifyListener';
 import { callbacks } from '../../../../server/lib/callbacks';

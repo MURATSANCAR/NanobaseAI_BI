@@ -1,4 +1,4 @@
-import type { ILivechatContact, Serialized } from '@rocket.chat/core-typings';
+import type { ILivechatContact, Serialized } from '@zeki.chat/core-typings';
 import { Box, Icon, TextInput } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import { useRef, type ComponentProps, type FormEvent, type FormEventHandler } from 'react';

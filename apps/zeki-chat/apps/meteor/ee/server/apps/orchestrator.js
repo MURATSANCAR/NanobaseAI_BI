@@ -2,11 +2,11 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { registerOrchestrator } from '@rocket.chat/apps';
-import { AppManager } from '@rocket.chat/apps/dist/server/AppManager';
-import { EssentialAppDisabledException } from '@rocket.chat/apps-engine/definition/exceptions';
-import { Logger } from '@rocket.chat/logger';
-import { AppLogs, Apps as AppsModel, AppsPersistence, Statistics } from '@rocket.chat/models';
+import { registerOrchestrator } from '@zeki.chat/apps';
+import { AppManager } from '@zeki.chat/apps/dist/server/AppManager';
+import { EssentialAppDisabledException } from '@zeki.chat/apps-engine/definition/exceptions';
+import { Logger } from '@zeki.chat/logger';
+import { AppLogs, Apps as AppsModel, AppsPersistence, Statistics } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { AppServerNotifier, AppsRestApi, AppUIKitInteractionApi } from './communication';
@@ -28,7 +28,7 @@ import {
 } from '../../../app/apps/server/converters';
 import { AppThreadsConverter } from '../../../app/apps/server/converters/threads';
 import { settings } from '../../../app/settings/server';
-import { canEnableApp } from '../../app/license/server/canEnableApp';
+import { canEnableApp } from '../../app/capabilities/server/canEnableApp';
 
 const DISABLED_PRIVATE_APP_INSTALLATION = ['yes', 'true'].includes(String(process.env.DISABLE_PRIVATE_APP_INSTALLATION).toLowerCase());
 
@@ -44,7 +44,7 @@ export class AppServerOrchestrator {
 			return;
 		}
 
-		this._rocketchatLogger = new Logger('ZEKI AI CHAT Apps', { redact: redactionFieldPaths });
+		this._zekichatLogger = new Logger('ZEKI AI CHAT Apps', { redact: redactionFieldPaths });
 
 		this._model = AppsModel;
 		this._logModel = AppLogs;
@@ -174,13 +174,13 @@ export class AppServerOrchestrator {
 	/**
 	 * @returns {Logger}
 	 */
-	getRocketChatLogger() {
-		return this._rocketchatLogger;
+	getZekiChatLogger() {
+		return this._zekichatLogger;
 	}
 
 	debugLog(...args) {
 		if (this.isDebugging()) {
-			this.getRocketChatLogger().debug(...args);
+			this.getZekiChatLogger().debug(...args);
 		}
 	}
 
@@ -203,7 +203,7 @@ export class AppServerOrchestrator {
 
 				await this.getManager().loadOne(app.getID(), true);
 			} catch (error) {
-				this._rocketchatLogger.warn({
+				this._zekichatLogger.warn({
 					msg: 'App could not be enabled',
 					appName: app.getInfo().name,
 					err: error,
@@ -215,7 +215,7 @@ export class AppServerOrchestrator {
 
 		const appCount = (await this.getManager().get({ enabled: true })).length;
 
-		this._rocketchatLogger.info({
+		this._zekichatLogger.info({
 			msg: 'Loaded the Apps Framework and apps',
 			appCount,
 		});
@@ -235,7 +235,7 @@ export class AppServerOrchestrator {
 		try {
 			const statistics = await this.getStatisticsModel().findInstallationDates();
 			if (!statistics || statistics.length === 0) {
-				this._rocketchatLogger.info('No statistics found');
+				this._zekichatLogger.info('No statistics found');
 				return upgradeToV7Date;
 			}
 
@@ -258,7 +258,7 @@ export class AppServerOrchestrator {
 
 				if (hadPreTargetVersion && majorVersion >= targetVersion) {
 					upgradeToV7Date = new Date(stat.installedAt);
-					this._rocketchatLogger.info({
+					this._zekichatLogger.info({
 						msg: 'Found upgrade to target version date',
 						targetVersion,
 						upgradeToDate: upgradeToV7Date.toISOString(),
@@ -267,7 +267,7 @@ export class AppServerOrchestrator {
 				}
 			}
 		} catch (err) {
-			this._rocketchatLogger.error({
+			this._zekichatLogger.error({
 				msg: 'Error checking statistics for version history',
 				err,
 			});
@@ -331,14 +331,14 @@ export class AppServerOrchestrator {
 
 		try {
 			await Promise.all(disablePromises);
-			this._rocketchatLogger.info({
+			this._zekichatLogger.info({
 				msg: 'Apps processing complete',
 				installationSource,
 				keptCount: grandfathered.length + toKeep.length,
 				disabledCount: toDisable.length,
 			});
 		} catch (error) {
-			this._rocketchatLogger.error({
+			this._zekichatLogger.error({
 				msg: 'Error disabling apps',
 				err: error,
 			});
@@ -354,9 +354,9 @@ export class AppServerOrchestrator {
 
 		return this._manager
 			.unload()
-			.then(() => this._rocketchatLogger.info('Unloaded the Apps Framework.'))
+			.then(() => this._zekichatLogger.info('Unloaded the Apps Framework.'))
 			.catch((err) =>
-				this._rocketchatLogger.error({
+				this._zekichatLogger.error({
 					msg: 'Failed to unload the Apps Framework!',
 					err,
 				}),

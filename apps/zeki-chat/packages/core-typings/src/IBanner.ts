@@ -1,7 +1,7 @@
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import * as z from 'zod';
 
-import { IRocketChatRecordSchema, type IRocketChatRecord } from './IRocketChatRecord';
+import { IZekiChatRecordSchema, type IZekiChatRecord } from './IZekiChatRecord';
 import type { IUser } from './IUser';
 import { TimestampSchema } from './utils';
 
@@ -10,7 +10,7 @@ export enum BannerPlatform {
 	Mobile = 'mobile',
 }
 
-export const IBannerSchema = IRocketChatRecordSchema.extend({
+export const IBannerSchema = IZekiChatRecordSchema.extend({
 	platform: z.array(z.enum(BannerPlatform)), // pĺatforms a banner could be shown
 	expireAt: TimestampSchema, // date when banner should not be shown anymore
 	startAt: TimestampSchema, // start date a banner should be presented
@@ -32,7 +32,7 @@ export const IBannerSchema = IRocketChatRecordSchema.extend({
 	surface: z.enum(['banner', 'modal']),
 });
 
-export interface IBanner extends z.infer<typeof IBannerSchema>, IRocketChatRecord {}
+export interface IBanner extends z.infer<typeof IBannerSchema>, IZekiChatRecord {}
 
 export type InactiveBanner = IBanner & {
 	active: false;
@@ -41,7 +41,7 @@ export type InactiveBanner = IBanner & {
 
 export const isInactiveBanner = (banner: IBanner): banner is InactiveBanner => banner.active === false;
 
-export interface IBannerDismiss extends IRocketChatRecord {
+export interface IBannerDismiss extends IZekiChatRecord {
 	userId: IUser['_id']; // user receiving the banner dismissed
 	bannerId: IBanner['_id']; // banner dismissed
 	dismissedAt: Date; // when is was dismissed

@@ -4,8 +4,8 @@ import type {
 	IAuditServerUserActor,
 	ISetting,
 	SettingValue,
-} from '@rocket.chat/core-typings';
-import { ServerEvents } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { ServerEvents } from '@zeki.chat/models';
 
 import { settings } from '../../../app/settings/server/cached';
 

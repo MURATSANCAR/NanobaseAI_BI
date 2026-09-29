@@ -1,11 +1,11 @@
-import type { ILivechatBusinessHour } from '@rocket.chat/core-typings';
-import type { PaginatedRequest } from '@rocket.chat/rest-typings';
+import type { ILivechatBusinessHour } from '@zeki.chat/core-typings';
+import type { PaginatedRequest } from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../../app/api/server';
 import { getPaginationItems } from '../../../../../app/api/server/helpers/getPaginationItems';
 import { findBusinessHours } from '../business-hour/lib/business-hour';
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/livechat/business-hours': {
@@ -21,7 +21,7 @@ declare module '@rocket.chat/rest-typings' {
 
 API.v1.addRoute(
 	'livechat/business-hours',
-	{ authRequired: true, permissionsRequired: ['view-livechat-business-hours'], license: ['livechat-enterprise'] },
+	{ authRequired: true, permissionsRequired: ['view-livechat-business-hours'], capabilities: ['livechat-enterprise'] },
 	{
 		async get() {
 			const { offset, count } = await getPaginationItems(this.queryParams);

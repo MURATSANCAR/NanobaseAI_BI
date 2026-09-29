@@ -6,17 +6,17 @@ import {
 	Message as messageService,
 	Room as roomService,
 	Settings as settingsService,
-} from '@rocket.chat/core-services';
-import type { IOmnichannelTranscriptService } from '@rocket.chat/core-services';
-import type { IMessage, IUpload, ILivechatAgent, AtLeast, IOmnichannelRoom, IUser, ILivechatVisitor } from '@rocket.chat/core-typings';
-import { isQuoteAttachment, isFileAttachment, isFileImageAttachment } from '@rocket.chat/core-typings';
-import type { Logger } from '@rocket.chat/logger';
-import { parse } from '@rocket.chat/message-parser';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { LivechatRooms, Messages, Uploads, Users, LivechatVisitors } from '@rocket.chat/models';
-import { PdfWorker } from '@rocket.chat/pdf-worker';
-import type { MessageData, Quote, WorkerData } from '@rocket.chat/pdf-worker';
-import { guessTimezone, guessTimezoneFromOffset, streamToBuffer } from '@rocket.chat/tools';
+} from '@zeki.chat/core-services';
+import type { IOmnichannelTranscriptService } from '@zeki.chat/core-services';
+import type { IMessage, IUpload, ILivechatAgent, AtLeast, IOmnichannelRoom, IUser, ILivechatVisitor } from '@zeki.chat/core-typings';
+import { isQuoteAttachment, isFileAttachment, isFileImageAttachment } from '@zeki.chat/core-typings';
+import type { Logger } from '@zeki.chat/logger';
+import { parse } from '@zeki.chat/message-parser';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { LivechatRooms, Messages, Uploads, Users, LivechatVisitors } from '@zeki.chat/models';
+import { PdfWorker } from '@zeki.chat/pdf-worker';
+import type { MessageData, Quote, WorkerData } from '@zeki.chat/pdf-worker';
+import { guessTimezone, guessTimezoneFromOffset, streamToBuffer } from '@zeki.chat/tools';
 import type { TFunction, i18n } from 'i18next';
 
 import type { WorkDetailsWithSource } from './localTypes';
@@ -414,7 +414,7 @@ export class OmnichannelTranscript extends ServiceClass implements IOmnichannelT
 		const stream = await this.worker.renderToStream({ data, i18n });
 
 		try {
-			const { rid } = await roomService.createDirectMessage({ to: details.userId, from: 'rocket.cat' });
+			const { rid } = await roomService.createDirectMessage({ to: details.userId, from: 'zeki.bot' });
 			const [rocketCatFile, transcriptFile] = await this.uploadFiles({
 				streamParam: Readable.from(stream),
 				roomIds: [rid, details.rid],
@@ -439,14 +439,14 @@ export class OmnichannelTranscript extends ServiceClass implements IOmnichannelT
 			return;
 		}
 
-		const { rid } = await roomService.createDirectMessage({ to: details.userId, from: 'rocket.cat' });
+		const { rid } = await roomService.createDirectMessage({ to: details.userId, from: 'zeki.bot' });
 		this.log.info({
 			msg: 'Transcript error message being sent to user',
 			rid: details.rid,
 			userId: details.userId,
 		});
 		await messageService.sendMessage({
-			fromId: 'rocket.cat',
+			fromId: 'zeki.bot',
 			rid,
 			msg: `${i18n.t('pdf_error_message')}: ${e.message}`,
 		});
@@ -475,7 +475,7 @@ export class OmnichannelTranscript extends ServiceClass implements IOmnichannelT
 						type: 'application/pdf',
 						rid: roomId,
 						// Rocket.cat is the goat
-						userId: 'rocket.cat',
+						userId: 'zeki.bot',
 					},
 				});
 			}),
@@ -511,7 +511,7 @@ export class OmnichannelTranscript extends ServiceClass implements IOmnichannelT
 			const result = await Promise.allSettled([
 				uploadService.sendFileMessage({
 					roomId: details.rid,
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 					file: transcriptFile,
 					message: {
 						// Translate from service
@@ -521,7 +521,7 @@ export class OmnichannelTranscript extends ServiceClass implements IOmnichannelT
 				// Send the file to the user who requested it, so they can download it
 				uploadService.sendFileMessage({
 					roomId: rocketCatFile.rid || '',
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 					file: rocketCatFile,
 					message: {
 						// Translate from service

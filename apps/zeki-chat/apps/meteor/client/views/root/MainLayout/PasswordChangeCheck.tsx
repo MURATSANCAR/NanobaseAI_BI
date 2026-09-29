@@ -1,11 +1,11 @@
-import { useUser } from '@rocket.chat/ui-contexts';
+import { useUser } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { lazy } from 'react';
 
 import TwoFactorAuthSetupCheck from './TwoFactorAuthSetupCheck';
 
 const ResetPasswordPage = lazy(() =>
-	import('@rocket.chat/web-ui-registration').then(({ ResetPasswordPage }) => ({ default: ResetPasswordPage })),
+	import('@zeki.chat/web-ui-registration').then(({ ResetPasswordPage }) => ({ default: ResetPasswordPage })),
 );
 
 const PasswordChangeCheck = ({ children }: { children: ReactNode }): ReactElement => {

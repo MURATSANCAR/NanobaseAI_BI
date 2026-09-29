@@ -10,14 +10,14 @@ ZEKI AI CHAT uses a custom SPA router that intercepts link clicks via `e.prevent
 
 Scrolling to hash targets is handled automatically by `RouterProvider` via `useRouterScrollToHash`. Any element with an `id` matching the URL hash will be scrolled into view on navigation.
 
-For pages that need to adjust layout based on the hash (e.g., expanding an accordion section), `useLocationHash()` from `@rocket.chat/ui-contexts` provides the current hash value.
+For pages that need to adjust layout based on the hash (e.g., expanding an accordion section), `useLocationHash()` from `@zeki.chat/ui-contexts` provides the current hash value.
 
 ### Key files
 
 | File | Purpose |
 |------|---------|
 | `apps/meteor/client/hooks/useRouterScrollToHash.ts` | Scroll logic, called by `RouterProvider` |
-| `packages/ui-contexts/src/hooks/useLocationHash.ts` | Generic `useLocationHash()` hook from `@rocket.chat/ui-contexts` |
+| `packages/ui-contexts/src/hooks/useLocationHash.ts` | Generic `useLocationHash()` hook from `@zeki.chat/ui-contexts` |
 
 ## How it works
 
@@ -55,7 +55,7 @@ On the destination page, set the `id` on the element you want to scroll to:
 If the target field is inside a collapsed section, use `useLocationHash()` to expand it:
 
 ```tsx
-import { useLocationHash } from '@rocket.chat/ui-contexts';
+import { useLocationHash } from '@zeki.chat/ui-contexts';
 
 const MyPage = () => {
   const shouldExpand = useLocationHash().length > 1;

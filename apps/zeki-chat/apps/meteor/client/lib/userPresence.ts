@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { UserStatus } from '@rocket.chat/core-typings';
-import { useConnectionStatus, useIsLoggingIn, useMethod, useUser, useUserPreference } from '@rocket.chat/ui-contexts';
+import type { IUser } from '@zeki.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
+import { useConnectionStatus, useIsLoggingIn, useMethod, useUser, useUserPreference } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { withDebouncing } from '../../lib/utils/highOrderFunctions';
@@ -70,19 +70,19 @@ export class UserPresence {
 		const isLoggingIn = useIsLoggingIn();
 		const enableAutoAway = useUserPreference<boolean>('enableAutoAway');
 		const idleTimeLimit = useUserPreference<number>('idleTimeLimit') ?? 300;
-		const { RocketChatDesktop } = window;
+		const { ZekiChatDesktop } = window;
 
 		this.user = user;
 		this.connected = connected;
-		this.awayTime = enableAutoAway && !RocketChatDesktop ? idleTimeLimit * 1000 : undefined;
+		this.awayTime = enableAutoAway && !ZekiChatDesktop ? idleTimeLimit * 1000 : undefined;
 		this.goOnline = useMethod('UserPresence:online');
 		this.goAway = useMethod('UserPresence:away');
 		this.storeUser = Users.use((state) => state.store);
 
 		useEffect(() => {
-			if (!RocketChatDesktop) return;
+			if (!ZekiChatDesktop) return;
 
-			RocketChatDesktop.setUserPresenceDetection({
+			ZekiChatDesktop.setUserPresenceDetection({
 				isAutoAwayEnabled: enableAutoAway ?? false,
 				idleThreshold: idleTimeLimit,
 				setUserOnline: (online) => {
@@ -95,16 +95,16 @@ export class UserPresence {
 			});
 
 			return () => {
-				RocketChatDesktop.setUserPresenceDetection({
+				ZekiChatDesktop.setUserPresenceDetection({
 					isAutoAwayEnabled: false,
 					idleThreshold: null,
 					setUserOnline: () => undefined,
 				});
 			};
-		}, [RocketChatDesktop, enableAutoAway, idleTimeLimit]);
+		}, [ZekiChatDesktop, enableAutoAway, idleTimeLimit]);
 
 		useEffect(() => {
-			if (RocketChatDesktop) return;
+			if (ZekiChatDesktop) return;
 
 			const documentEvents = ['mousemove', 'mousedown', 'touchend', 'keydown'] as const;
 			documentEvents.forEach((key) => document.addEventListener(key, this.setOnline));
@@ -114,7 +114,7 @@ export class UserPresence {
 				documentEvents.forEach((key) => document.removeEventListener(key, this.setOnline));
 				window.removeEventListener('focus', this.setOnline);
 			};
-		}, [RocketChatDesktop]);
+		}, [ZekiChatDesktop]);
 
 		useEffect(() => {
 			if (!user || !connected || isLoggingIn) return;

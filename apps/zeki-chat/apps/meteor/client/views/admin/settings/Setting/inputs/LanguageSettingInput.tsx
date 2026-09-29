@@ -1,5 +1,5 @@
 import { Field, FieldHint, FieldLabel, FieldRow, Select } from '@rocket.chat/fuselage';
-import { useLanguages } from '@rocket.chat/ui-contexts';
+import { useLanguages } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import ResetSettingButton from '../ResetSettingButton';

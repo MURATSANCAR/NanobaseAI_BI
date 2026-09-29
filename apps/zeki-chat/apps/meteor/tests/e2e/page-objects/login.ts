@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { MongoClient } from 'mongodb';
 
 import * as constants from '../config/constants';

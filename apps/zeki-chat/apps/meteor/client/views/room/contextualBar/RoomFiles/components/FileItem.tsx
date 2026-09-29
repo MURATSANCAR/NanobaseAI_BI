@@ -1,6 +1,6 @@
-import type { IRoom, IUpload, IUploadWithUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUpload, IUploadWithUser } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
-import { FilePreviewIcon } from '@rocket.chat/ui-client';
+import { FilePreviewIcon } from '@zeki.chat/ui-client';
 
 import FileItemMenu from './FileItemMenu';
 import ImageItem from './ImageItem';

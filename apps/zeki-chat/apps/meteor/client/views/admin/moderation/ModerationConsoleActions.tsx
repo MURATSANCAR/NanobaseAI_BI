@@ -1,5 +1,5 @@
 // import { Menu, Option } from '@rocket.chat/fuselage';
-import { GenericMenu } from '@rocket.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import type { ModerationConsoleRowProps } from './ModerationConsoleTableRow';

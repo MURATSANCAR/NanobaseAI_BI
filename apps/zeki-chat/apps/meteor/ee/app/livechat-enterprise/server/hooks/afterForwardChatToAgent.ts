@@ -1,4 +1,4 @@
-import { LivechatRooms } from '@rocket.chat/models';
+import { LivechatRooms } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../../server/lib/callbacks';
 

@@ -13,7 +13,7 @@ const modelsMock = {
 };
 
 const { patchContact } = proxyquire.noCallThru().load('./patchContact.ts', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 });
 
 const { updateContact } = proxyquire.noCallThru().load('./updateContact', {
@@ -27,7 +27,7 @@ const { updateContact } = proxyquire.noCallThru().load('./updateContact', {
 		validateCustomFields: sinon.stub(),
 	},
 
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 
 	'./patchContact': {
 		patchContact,

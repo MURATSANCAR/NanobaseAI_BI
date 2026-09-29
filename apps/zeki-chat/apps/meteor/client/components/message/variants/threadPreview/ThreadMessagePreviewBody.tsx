@@ -1,7 +1,7 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { isQuoteAttachment, isE2EEMessage } from '@rocket.chat/core-typings';
-import { PreviewMarkup } from '@rocket.chat/gazzodown';
-import type { Root } from '@rocket.chat/message-parser';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { isQuoteAttachment, isE2EEMessage } from '@zeki.chat/core-typings';
+import { PreviewMarkup } from '@zeki.chat/gazzodown';
+import type { Root } from '@zeki.chat/message-parser';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

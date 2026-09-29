@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Federation Integration Test Runner
-# This script builds Rocket.Chat locally and starts the federation services,
-# then waits for Rocket.Chat to be ready before running the end-to-end tests.
+# This script builds ZEKI AI CHAT locally and starts the federation services,
+# then waits for ZEKI AI CHAT to be ready before running the end-to-end tests.
 
 set -e  # Exit on any error
 
@@ -24,7 +24,7 @@ CHECK_INTERVAL=5   # Check every 5 seconds
 # Build configuration
 # Use a temporary directory outside the repo to avoid symlink traversal issues during Meteor build
 BUILD_DIR="$(mktemp -d "${FEDERATION_TEST_TMPDIR:-/tmp}/rc-federation-build-XXXXXX")"
-ROCKETCHAT_ROOT="$(cd "$PACKAGE_ROOT/../../.." && pwd)"  # Go up to project root
+ZEKICHAT_ROOT="$(cd "$PACKAGE_ROOT/../../.." && pwd)"  # Go up to project root
 
 # Parse command line arguments
 KEEP_RUNNING=false
@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
             USE_PREBUILT_IMAGE=true
             # If no IMAGE value is provided (or next token is another flag), default to latest
             if [[ -z "${2:-}" || "$2" == -* ]]; then
-                PREBUILT_IMAGE="rocketchat/rocket.chat:latest"
+                PREBUILT_IMAGE="zekichat/rocket.chat:latest"
                 shift 1
             else
                 PREBUILT_IMAGE="$2"
@@ -92,9 +92,9 @@ while [[ $# -gt 0 ]]; do
             echo "  --image [IMAGE]           Use a pre-built Docker image instead of building locally"
             echo "  --help, -h                Show this help message"
             echo ""
-            echo "By default, builds Rocket.Chat locally and runs the 'test' profile"
-            echo "Use --image to test against a pre-built image (e.g., --image rocketchat/rocket.chat:latest)"
-            echo "If --image is provided without a value, defaults to rocketchat/rocket.chat:latest"
+            echo "By default, builds ZEKI AI CHAT locally and runs the 'test' profile"
+            echo "Use --image to test against a pre-built image (e.g., --image zekichat/rocket.chat:latest)"
+            echo "If --image is provided without a value, defaults to zekichat/rocket.chat:latest"
             echo "Use --element to run all services including Element web client"
             echo "Use --no-test to start containers and skip running tests"
             exit 0
@@ -161,7 +161,7 @@ cleanup() {
     if [ "$KEEP_RUNNING" = true ]; then
         log_info "Keeping Docker containers running (--keep-running flag set)"
         log_info "Services are available at:"
-        log_info "  - Rocket.Chat: https://rc1"
+        log_info "  - ZEKI AI CHAT: https://rc1"
         log_info "  - Synapse: https://hs1"
         log_info "  - MongoDB: localhost:27017"
         if [ "$INCLUDE_ELEMENT" = true ]; then
@@ -206,9 +206,9 @@ else
 fi
 
 if [ "$START_CONTAINERS" = true ]; then
-    # Build Rocket.Chat locally if not using pre-built image
+    # Build ZEKI AI CHAT locally if not using pre-built image
     if [ "$USE_PREBUILT_IMAGE" = false ]; then
-        log_info "🚀 Building Rocket.Chat locally..."
+        log_info "🚀 Building ZEKI AI CHAT locally..."
         log_info "====================================="
 
         # Clean up any existing build
@@ -217,12 +217,12 @@ if [ "$START_CONTAINERS" = true ]; then
 
         # Build the project
         log_info "Building packages from project root..."
-        cd "$ROCKETCHAT_ROOT"
+        cd "$ZEKICHAT_ROOT"
         yarn build
 
         # Build the Meteor bundle (must be run from the meteor directory)
         log_info "Building Meteor bundle..."
-        cd "$ROCKETCHAT_ROOT/apps/meteor"
+        cd "$ZEKICHAT_ROOT/apps/meteor"
         METEOR_DISABLE_OPTIMISTIC_CACHING=1 meteor build --server-only --directory "$BUILD_DIR"
 
         log_success "Build completed!"
@@ -238,11 +238,11 @@ if [ "$START_CONTAINERS" = true ]; then
 
     # Set environment variables for Docker Compose
     if [ "$USE_PREBUILT_IMAGE" = true ]; then
-        export ROCKETCHAT_IMAGE="$PREBUILT_IMAGE"
+        export ZEKICHAT_IMAGE="$PREBUILT_IMAGE"
         log_info "Using pre-built image: $PREBUILT_IMAGE"
     else
-        export ROCKETCHAT_BUILD_CONTEXT="$BUILD_DIR"
-        export ROCKETCHAT_DOCKERFILE="$ROCKETCHAT_ROOT/apps/meteor/.docker/Dockerfile.alpine"
+        export ZEKICHAT_BUILD_CONTEXT="$BUILD_DIR"
+        export ZEKICHAT_DOCKERFILE="$ZEKICHAT_ROOT/apps/meteor/.docker/Dockerfile.alpine"
         BUILD_PARAM="--build"
         log_info "Building from local context: $BUILD_DIR"
     fi
@@ -278,8 +278,8 @@ if [ "$START_CONTAINERS" = true ]; then
         exit 1
     fi
 
-    # Wait for both Rocket.Chat and Synapse to be ready
-    log_info "Waiting for Rocket.Chat and Synapse servers to be ready..."
+    # Wait for both ZEKI AI CHAT and Synapse to be ready
+    log_info "Waiting for ZEKI AI CHAT and Synapse servers to be ready..."
 
     # Function to wait for a service to be ready
     wait_for_service() {
@@ -333,8 +333,8 @@ if [ "$START_CONTAINERS" = true ]; then
         return 1
     }
 
-    # Wait for Rocket.Chat
-    if ! wait_for_service "https://rc1/api/info" "Rocket.Chat" "rc1"; then
+    # Wait for ZEKI AI CHAT
+    if ! wait_for_service "https://rc1/api/info" "ZEKI AI CHAT" "rc1"; then
         log_error "Last 50 lines of rc1 logs:"
         docker compose -f "$DOCKER_COMPOSE_FILE" logs --tail 50 rc1
         exit 1
@@ -363,7 +363,7 @@ elif [ "$LOGS" = true ]; then
 else
     log_info "No-test mode: skipping test execution"
     log_info "Services are ready and running. You can now:"
-    log_info "  - Access Rocket.Chat at: https://rc1"
+    log_info "  - Access ZEKI AI CHAT at: https://rc1"
     log_info "  - Access Synapse at: https://hs1"
     log_info "  - Access MongoDB at: localhost:27017"
     if [ "$INCLUDE_ELEMENT" = true ]; then

@@ -1,19 +1,19 @@
-import type { IMessageExtender } from '@rocket.chat/apps-engine/definition/accessors/IMessageExtender';
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages/IMessage';
-import type { IMessageAttachment } from '@rocket.chat/apps-engine/definition/messages/IMessageAttachment';
+import type { IMessageExtender } from '@zeki.chat/apps-engine/definition/accessors/IMessageExtender';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages/IMessage';
+import type { IMessageAttachment } from '@zeki.chat/apps-engine/definition/messages/IMessageAttachment';
 
 import { require } from '../../../lib/require.ts';
 
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export class MessageExtender implements IMessageExtender {
-	public readonly kind: _RocketChatAssociationModel.MESSAGE;
+	public readonly kind: _ZekiChatAssociationModel.MESSAGE;
 
 	constructor(private msg: IMessage) {
-		this.kind = RocketChatAssociationModel.MESSAGE;
+		this.kind = ZekiChatAssociationModel.MESSAGE;
 
 		if (!Array.isArray(msg.attachments)) {
 			this.msg.attachments = [];

@@ -1,9 +1,9 @@
-import { canSendOutboundMessage } from '@rocket.chat/omni-core-ee';
+import { canSendOutboundMessage } from '@zeki.chat/omni-core-ee';
 import {
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../../app/api/server';
 import {
@@ -30,7 +30,7 @@ const outboundCommsEndpoints = API.v1
 			query: GETOutboundProviderParamsSchema,
 			permissionsRequired: ['outbound.send-messages'],
 			authRequired: true,
-			license: ['outbound-messaging'],
+			capabilities: ['outbound-messaging'],
 		},
 		async function action() {
 			const { type } = this.queryParams;
@@ -52,7 +52,7 @@ const outboundCommsEndpoints = API.v1
 			},
 			permissionsRequired: ['outbound.send-messages'],
 			authRequired: true,
-			license: ['outbound-messaging'],
+			capabilities: ['outbound-messaging'],
 		},
 		async function action() {
 			const { id } = this.urlParams;
@@ -75,7 +75,7 @@ const outboundCommsEndpoints = API.v1
 			authRequired: true,
 			permissionsRequired: ['outbound.send-messages'],
 			body: POSTOutboundMessageParams,
-			license: ['outbound-messaging'],
+			capabilities: ['outbound-messaging'],
 		},
 		async function action() {
 			const { id } = this.urlParams;

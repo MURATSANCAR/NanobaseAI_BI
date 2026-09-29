@@ -1,7 +1,7 @@
-import type { IImportUser, IImportUserRecord, IUser, IUserEmail } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
-import { SHA256 } from '@rocket.chat/sha256';
+import type { IImportUser, IImportUserRecord, IUser, IUserEmail } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
+import { SHA256 } from '@zeki.chat/sha256';
 import { hash as bcryptHash } from 'bcrypt';
 import { Accounts } from 'meteor/accounts-base';
 
@@ -318,7 +318,7 @@ export class UserConverter extends RecordConverter<IImportUserRecord, UserConver
 			this._cache.addUser(userData.importIds[0], existingUser._id, existingUser.username || userData.username);
 		}
 
-		// Deleted users are 'inactive' users in Rocket.Chat
+		// Deleted users are 'inactive' users in ZEKI AI CHAT
 		if (userData.deleted && existingUser?.active) {
 			await setUserActiveStatus(_id, false, true);
 		} else if (userData.deleted === false && existingUser?.active === false) {

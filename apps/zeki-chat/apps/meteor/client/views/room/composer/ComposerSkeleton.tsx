@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { MessageComposerSkeleton } from '@rocket.chat/ui-composer';
+import { MessageComposerSkeleton } from '@zeki.chat/ui-composer';
 
 const ComposerSkeleton = () => {
 	return (

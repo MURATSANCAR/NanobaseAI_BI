@@ -14,12 +14,12 @@ const stubs = {
 };
 
 const { uploadZipFile } = proxyquire.noCallThru().load('../../../../../server/lib/dataExport/uploadZipFile.ts', {
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Users: {
 			findOneById: stubs.findOneUserById,
 		},
 	},
-	'@rocket.chat/random': {
+	'@zeki.chat/random': {
 		Random: {
 			id: stubs.randomId,
 		},

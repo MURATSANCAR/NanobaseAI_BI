@@ -1,5 +1,5 @@
-import type { IRole, AtLeast } from '@rocket.chat/core-typings';
-import { Roles } from '@rocket.chat/models';
+import type { IRole, AtLeast } from '@zeki.chat/core-typings';
+import { Roles } from '@zeki.chat/models';
 
 export const createOrUpdateProtectedRoleAsync = async (
 	roleId: string,

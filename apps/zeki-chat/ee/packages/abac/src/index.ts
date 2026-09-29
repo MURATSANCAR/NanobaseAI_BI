@@ -1,6 +1,6 @@
-import { api, Room, ServiceClass, Settings } from '@rocket.chat/core-services';
-import type { AbacActor, IAbacService } from '@rocket.chat/core-services';
-import { AbacAccessOperation, AbacObjectType } from '@rocket.chat/core-typings';
+import { api, Room, ServiceClass, Settings } from '@zeki.chat/core-services';
+import type { AbacActor, IAbacService } from '@zeki.chat/core-services';
+import { AbacAccessOperation, AbacObjectType } from '@zeki.chat/core-typings';
 import type {
 	IAbacAttribute,
 	IAbacAttributeDefinition,
@@ -9,10 +9,10 @@ import type {
 	IUser,
 	ILDAPEntry,
 	AbacAuditReason,
-} from '@rocket.chat/core-typings';
-import { Rooms, AbacAttributes, Users, Subscriptions } from '@rocket.chat/models';
+} from '@zeki.chat/core-typings';
+import { Rooms, AbacAttributes, Users, Subscriptions } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import { isTruthy } from '@rocket.chat/tools';
+import { isTruthy } from '@zeki.chat/tools';
 import type { Document, UpdateFilter } from 'mongodb';
 import pLimit from 'p-limit';
 

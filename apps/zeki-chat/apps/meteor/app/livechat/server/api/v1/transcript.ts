@@ -1,7 +1,6 @@
-import { Omnichannel } from '@rocket.chat/core-services';
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatRooms, Users } from '@rocket.chat/models';
-import { isPOSTLivechatTranscriptParams, isPOSTLivechatTranscriptRequestParams } from '@rocket.chat/rest-typings';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatRooms, Users } from '@zeki.chat/models';
+import { isPOSTLivechatTranscriptParams, isPOSTLivechatTranscriptRequestParams } from '@zeki.chat/rest-typings';
 
 import { i18n } from '../../../../../server/lib/i18n';
 import { API } from '../../../../api/server';
@@ -45,9 +44,6 @@ API.v1.addRoute(
 				throw new Error('error-transcript-not-requested');
 			}
 
-			if (!(await Omnichannel.isWithinMACLimit(room))) {
-				throw new Error('error-mac-limit-reached');
-			}
 
 			await LivechatRooms.unsetEmailTranscriptRequestedByRoomId(rid);
 

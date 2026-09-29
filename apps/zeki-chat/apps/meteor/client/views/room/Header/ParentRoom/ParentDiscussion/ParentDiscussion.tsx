@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { useTranslation } from 'react-i18next';
 
 import { roomCoordinator } from '../../../../../lib/rooms/roomCoordinator';

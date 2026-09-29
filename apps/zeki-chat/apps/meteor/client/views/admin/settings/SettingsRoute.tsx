@@ -1,4 +1,4 @@
-import { useRouteParameter, useIsPrivilegedSettingsContext, useRouter } from '@rocket.chat/ui-contexts';
+import { useRouteParameter, useIsPrivilegedSettingsContext, useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 
 import EditableSettingsProvider from './EditableSettingsProvider';

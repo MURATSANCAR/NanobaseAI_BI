@@ -1,7 +1,7 @@
-import type { LayoutBlock } from '@rocket.chat/ui-kit';
+import type { LayoutBlock } from '@zeki.chat/ui-kit';
 
 import type { IMessage, IMessageAttachment } from '../messages';
-import type { RocketChatAssociationModel } from '../metadata';
+import type { ZekiChatAssociationModel } from '../metadata';
 import type { IRoom } from '../rooms';
 import type { BlockBuilder, IBlock } from '../uikit';
 import type { IUser } from '../users';
@@ -12,7 +12,7 @@ import type { IUser } from '../users';
  * be able to successfully save the message object.
  */
 export interface IMessageBuilder {
-	kind: RocketChatAssociationModel.MESSAGE;
+	kind: ZekiChatAssociationModel.MESSAGE;
 
 	/**
 	 * Provides a convenient way to set the data for the message.
@@ -187,7 +187,7 @@ export interface IMessageBuilder {
 
 	/**
 	 * Sets whether this message should have any URLs in the text
-	 * parsed by Rocket.Chat and get the details added to the message's
+	 * parsed by ZEKI AI CHAT and get the details added to the message's
 	 * attachments.
 	 *
 	 * @param parseUrls whether URLs should be parsed in this message

@@ -1,5 +1,5 @@
-import type { IPushNotificationConfig } from '@rocket.chat/core-typings/src/IPushNotificationConfig';
-import { pick, truncateString } from '@rocket.chat/tools';
+import type { IPushNotificationConfig } from '@zeki.chat/core-typings/src/IPushNotificationConfig';
+import { pick, truncateString } from '@zeki.chat/tools';
 import { expect } from 'chai';
 import proxyquire from 'proxyquire';
 import sinon from 'sinon';
@@ -10,7 +10,7 @@ const settingsStub = { get: sinon.stub().returns('') };
 const { Push } = proxyquire.noCallThru().load('../../../../app/push/server/push', {
 	'./logger': { logger: loggerStub },
 	'../../settings/server': { settings: settingsStub },
-	'@rocket.chat/tools': { pick, truncateString },
+	'@zeki.chat/tools': { pick, truncateString },
 	'meteor/check': {
 		check: sinon.stub(),
 		Match: {

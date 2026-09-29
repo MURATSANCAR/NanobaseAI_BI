@@ -6,8 +6,8 @@ import {
 	GenericTableCell,
 	GenericTableBody,
 	GenericTableLoadingRow,
-} from '@rocket.chat/ui-client';
-import { useEndpoint, useRoute, useTranslation, useUserId } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useEndpoint, useRoute, useTranslation, useUserId } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useCallback } from 'react';

@@ -1,6 +1,6 @@
-import { MeteorError } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/model-typings';
+import { MeteorError } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/model-typings';
 
 import type { SaveUserData } from './saveUser';
 

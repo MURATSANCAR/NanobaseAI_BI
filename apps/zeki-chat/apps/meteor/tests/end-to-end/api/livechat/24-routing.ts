@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
-import type { Credentials } from '@rocket.chat/api-client';
-import { UserStatus } from '@rocket.chat/core-typings';
-import type { ILivechatDepartment, IUser, ILivechatAgent } from '@rocket.chat/core-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import { UserStatus } from '@zeki.chat/core-typings';
+import type { ILivechatDepartment, IUser, ILivechatAgent } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 

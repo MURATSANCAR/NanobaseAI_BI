@@ -1,5 +1,5 @@
 /* eslint-disable new-cap */
-import type { ILivechatRoomsModel } from '@rocket.chat/model-typings';
+import type { ILivechatRoomsModel } from '@zeki.chat/model-typings';
 import { expect } from 'chai';
 import moment from 'moment-timezone';
 import sinon from 'sinon';

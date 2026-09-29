@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 
 import { normalizeMessagesForUser } from '../../../utils/server/lib/normalizeMessagesForUser';
 

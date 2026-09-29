@@ -1,4 +1,4 @@
-import { UserStatus } from '@rocket.chat/core-typings';
+import { UserStatus } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { describe, it, beforeEach } from 'mocha';
 import proxyquire from 'proxyquire';
@@ -18,8 +18,8 @@ const { handleOverlappingEvents } = proxyquire
 	.noCallThru()
 	.load('../../../../../../server/services/calendar/statusEvents/handleOverlappingEvents', {
 		'./applyStatusChange': { applyStatusChange },
-		'@rocket.chat/cron': { cronJobs: cronJobsMock },
-		'@rocket.chat/models': {
+		'@zeki.chat/cron': { cronJobs: cronJobsMock },
+		'@zeki.chat/models': {
 			CalendarEvent: CalendarEventMock,
 		},
 	});

@@ -1,10 +1,10 @@
 import os from 'os';
 
-import { api, getConnection, getTrashCollection } from '@rocket.chat/core-services';
-import { InstanceStatus } from '@rocket.chat/instance-status';
-import { registerServiceModels } from '@rocket.chat/models';
-import { startBroker } from '@rocket.chat/network-broker';
-import { startTracing } from '@rocket.chat/tracing';
+import { api, getConnection, getTrashCollection } from '@zeki.chat/core-services';
+import { InstanceStatus } from '@zeki.chat/instance-status';
+import { registerServiceModels } from '@zeki.chat/models';
+import { startBroker } from '@zeki.chat/network-broker';
+import { startTracing } from '@zeki.chat/tracing';
 
 void (async () => {
 	const { db, client } = await getConnection();

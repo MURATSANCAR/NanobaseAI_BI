@@ -1,7 +1,7 @@
-import type { IUploadCreator } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IUpload } from '@rocket.chat/apps-engine/definition/uploads';
-import type { IUploadDescriptor } from '@rocket.chat/apps-engine/definition/uploads/IUploadDescriptor';
-import type { IUploadDetails } from '@rocket.chat/apps-engine/definition/uploads/IUploadDetails';
+import type { IUploadCreator } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IUpload } from '@zeki.chat/apps-engine/definition/uploads';
+import type { IUploadDescriptor } from '@zeki.chat/apps-engine/definition/uploads/IUploadDescriptor';
+import type { IUploadDetails } from '@zeki.chat/apps-engine/definition/uploads/IUploadDetails';
 
 import type { AppBridges } from '../bridges';
 

@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 
-import type { INPSService, NPSVotePayload, NPSCreatePayload } from '@rocket.chat/core-services';
-import { ServiceClassInternal, Banner, Settings } from '@rocket.chat/core-services';
-import type { INps } from '@rocket.chat/core-typings';
-import { NPSStatus, INpsVoteStatus } from '@rocket.chat/core-typings';
-import { Nps, NpsVote } from '@rocket.chat/models';
+import type { INPSService, NPSVotePayload, NPSCreatePayload } from '@zeki.chat/core-services';
+import { ServiceClassInternal, Banner, Settings } from '@zeki.chat/core-services';
+import type { INps } from '@zeki.chat/core-typings';
+import { NPSStatus, INpsVoteStatus } from '@zeki.chat/core-typings';
+import { Nps, NpsVote } from '@zeki.chat/models';
 
 import { getBannerForAdmins, notifyAdmins } from './notification';
 import { SystemLogger } from '../../lib/logger/system';
@@ -46,7 +46,7 @@ export class NPSService extends ServiceClassInternal implements INPSService {
 		return true;
 	}
 
-	// Zeki: NPS results are never sent to Rocket.Chat (nps.rocket.chat). Any open/expired survey is simply closed locally.
+	// Zeki: NPS results are never sent to ZEKI AI CHAT (nps.rocket.chat). Any open/expired survey is simply closed locally.
 	async sendResults(): Promise<void> {
 		await Nps.closeAllByStatus(NPSStatus.OPEN);
 	}

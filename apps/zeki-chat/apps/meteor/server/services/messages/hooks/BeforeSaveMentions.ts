@@ -1,6 +1,6 @@
-import { api, Team, MeteorError } from '@rocket.chat/core-services';
-import type { IMessage, IUser, IRoom } from '@rocket.chat/core-typings';
-import { Subscriptions, Users, Rooms } from '@rocket.chat/models';
+import { api, Team, MeteorError } from '@zeki.chat/core-services';
+import type { IMessage, IUser, IRoom } from '@zeki.chat/core-typings';
+import { Subscriptions, Users, Rooms } from '@zeki.chat/models';
 
 import { MentionsServer } from '../../../../app/mentions/server/Mentions';
 import { settings } from '../../../../app/settings/server';

@@ -1,4 +1,4 @@
-import type { IOutboundProviderMetadata } from '@rocket.chat/core-typings';
+import type { IOutboundProviderMetadata } from '@zeki.chat/core-typings';
 import { Select } from '@rocket.chat/fuselage';
 import { useMemo, type ComponentProps } from 'react';
 

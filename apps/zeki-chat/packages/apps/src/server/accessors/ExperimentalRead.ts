@@ -1,4 +1,4 @@
-import type { IExperimentalRead } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IExperimentalRead } from '@zeki.chat/apps-engine/definition/accessors';
 
 import type { ExperimentalBridge } from '../bridges';
 

@@ -1,4 +1,4 @@
-import type { AtLeast, IMessage } from '@rocket.chat/core-typings';
+import type { AtLeast, IMessage } from '@zeki.chat/core-typings';
 
 import { createAsyncTransformChain } from '../../lib/transforms';
 

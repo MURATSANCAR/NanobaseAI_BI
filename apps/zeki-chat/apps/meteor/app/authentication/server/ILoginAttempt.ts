@@ -1,5 +1,5 @@
-import type { MeteorError } from '@rocket.chat/core-services';
-import type { IUser, IMethodConnection } from '@rocket.chat/core-typings';
+import type { MeteorError } from '@zeki.chat/core-services';
+import type { IUser, IMethodConnection } from '@zeki.chat/core-typings';
 
 interface IMethodArgument {
 	user?: { username: string };

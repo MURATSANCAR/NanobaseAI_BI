@@ -1,6 +1,6 @@
 import { NavBarSection, NavBarGroup } from '@rocket.chat/fuselage';
-import { useUser, useLayout } from '@rocket.chat/ui-contexts';
-import { useMediaCallAction } from '@rocket.chat/ui-voip';
+import { useUser, useLayout } from '@zeki.chat/ui-contexts';
+import { useMediaCallAction } from '@zeki.chat/ui-voip';
 import { useTranslation } from 'react-i18next';
 
 import NavBarControlsWithData from './NavBarControlsWithData';

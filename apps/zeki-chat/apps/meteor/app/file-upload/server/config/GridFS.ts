@@ -3,8 +3,8 @@ import type { TransformCallback, TransformOptions } from 'node:stream';
 import stream from 'node:stream';
 import zlib from 'node:zlib';
 
-import type { IUpload } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
+import type { IUpload } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
 
 import { getContentDisposition } from './helper';
 import { UploadFS } from '../../../../server/ufs';
@@ -142,18 +142,18 @@ const copyFromGridFS = async function (storeName: string | undefined, fileId: st
 };
 
 FileUpload.configureUploadsStore('GridFS', 'GridFS:Uploads', {
-	collectionName: 'rocketchat_uploads',
+	collectionName: 'zeki_uploads',
 });
 
 FileUpload.configureUploadsStore('GridFS', 'GridFS:UserDataFiles', {
-	collectionName: 'rocketchat_userDataFiles',
+	collectionName: 'zeki_userDataFiles',
 });
 
 // DEPRECATED: backwards compatibility (remove)
-UploadFS.getStores().rocketchat_uploads = UploadFS.getStores()['GridFS:Uploads'];
+UploadFS.getStores().zeki_uploads = UploadFS.getStores()['GridFS:Uploads'];
 
 FileUpload.configureUploadsStore('GridFS', 'GridFS:Avatars', {
-	collectionName: 'rocketchat_avatars',
+	collectionName: 'zeki_avatars',
 });
 
 new FileUploadClass({

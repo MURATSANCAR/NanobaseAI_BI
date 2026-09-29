@@ -1,5 +1,5 @@
-import { ContextualbarSkeleton } from '@rocket.chat/ui-client';
-import { useEndpoint, usePermission } from '@rocket.chat/ui-contexts';
+import { ContextualbarSkeleton } from '@zeki.chat/ui-client';
+import { useEndpoint, usePermission } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 
 import ContactInfoError from '../ContactInfoError';

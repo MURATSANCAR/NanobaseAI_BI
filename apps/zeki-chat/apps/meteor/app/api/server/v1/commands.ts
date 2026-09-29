@@ -1,14 +1,14 @@
-import { Apps } from '@rocket.chat/apps';
-import type { SlashCommand, SlashCommandPreviewItem } from '@rocket.chat/core-typings';
-import { Messages } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { Apps } from '@zeki.chat/apps';
+import type { SlashCommand, SlashCommandPreviewItem } from '@zeki.chat/core-typings';
+import { Messages } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import {
 	ajv,
 	ajvQuery,
 	validateUnauthorizedErrorResponse,
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import objectPath from 'object-path';
 
 import { canAccessRoomIdAsync } from '../../../authorization/server/functions/canAccessRoom';
@@ -515,7 +515,7 @@ API.v1.post(
 
 export type CommandsEndpoints = ExtractRoutesFromAPI<typeof commandsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends CommandsEndpoints {}
 }

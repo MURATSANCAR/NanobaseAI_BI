@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { ILivechatVisitor, IOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { ILivechatVisitor, IOmnichannelRoom } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { before, describe, it, after } from 'mocha';
 import type { Response } from 'supertest';
@@ -29,9 +29,6 @@ import {
 import { adminUsername } from '../../../data/user';
 import { IS_EE } from '../../../e2e/config/constants';
 
-const getLicenseInfo = (loadValues = false) => {
-	return request.get(api('licenses.info')).set(credentials).query({ loadValues }).expect(200);
-};
 
 describe('LIVECHAT - visitors', () => {
 	let visitor: ILivechatVisitor;
@@ -804,40 +801,7 @@ describe('LIVECHAT - visitors', () => {
 				});
 		});
 
-		it('should not affect MAC count when a visitor is removed via GDPR', async () => {
-			const { visitor, room } = await startANewLivechatRoomAndTakeIt();
-			// agent should send a message on the room
-			await request
-				.post(api('chat.sendMessage'))
-				.set(credentials)
-				.send({
-					message: {
-						rid: room._id,
-						msg: 'test',
-					},
-				});
-			const { body: currentLicense } = await getLicenseInfo(true);
 
-			await request
-				.delete(api(`livechat/visitor/${visitor.token}`))
-				.set(credentials)
-				.expect('Content-Type', 'application/json')
-				.expect(200);
-
-			const { body: licenseAfterGdpr } = await getLicenseInfo(true);
-
-			expect(currentLicense.license).to.have.property('limits');
-			expect(currentLicense.license.limits).to.have.property('monthlyActiveContacts');
-			expect(currentLicense.license.limits.monthlyActiveContacts).to.have.property('value');
-			const currentLimit = currentLicense.license.limits.monthlyActiveContacts.value;
-
-			expect(licenseAfterGdpr.license).to.have.property('limits');
-			expect(licenseAfterGdpr.license.limits).to.have.property('monthlyActiveContacts');
-			expect(licenseAfterGdpr.license.limits.monthlyActiveContacts).to.have.property('value');
-			const limitAfterGdpr = licenseAfterGdpr.license.limits.monthlyActiveContacts.value;
-
-			expect(limitAfterGdpr).to.be.equal(currentLimit);
-		});
 
 		it("should return a 'error-removing-visitor' error when removeGuest's result is false", async () => {
 			await request
@@ -1219,7 +1183,7 @@ describe('LIVECHAT - visitors', () => {
 
 			await request
 				.get(api('omnichannel/contact.search'))
-				.query({ custom: JSON.stringify({ address: 'Rocket.Chat' }) })
+				.query({ custom: JSON.stringify({ address: 'ZEKI AI CHAT' }) })
 				.set(credentials)
 				.send()
 				.expect('Content-Type', 'application/json')
@@ -1230,7 +1194,7 @@ describe('LIVECHAT - visitors', () => {
 					expect(res.body.contact).to.have.property('username');
 					expect(res.body.contact).to.have.property('phone');
 					expect(res.body.contact).to.have.property('visitorEmails');
-					expect(res.body.contact.livechatData).to.have.property('address', 'Rocket.Chat street');
+					expect(res.body.contact.livechatData).to.have.property('address', 'ZEKI AI CHAT street');
 				});
 
 			await deleteCustomField(cfID);

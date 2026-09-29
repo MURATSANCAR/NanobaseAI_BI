@@ -1,6 +1,6 @@
-import type { IRoom, ISubscription } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription } from '@zeki.chat/core-typings';
 import { useStableCallback } from '@rocket.chat/fuselage-hooks';
-import { useMethod, useRouter, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useMethod, useRouter, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 
 import { roomCoordinator } from '../../../lib/rooms/roomCoordinator';
 import { Subscriptions } from '../../../stores';

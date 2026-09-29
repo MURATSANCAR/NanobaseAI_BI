@@ -1,7 +1,7 @@
-import { api } from '@rocket.chat/core-services';
-import type { IUiKitCoreApp, UiKitCoreAppBlockActionPayload } from '@rocket.chat/core-services';
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
-import { Subscriptions, Messages } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IUiKitCoreApp, UiKitCoreAppBlockActionPayload } from '@zeki.chat/core-services';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
+import { Subscriptions, Messages } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { processWebhookMessage } from '../../../app/lib/server/functions/processWebhookMessage';

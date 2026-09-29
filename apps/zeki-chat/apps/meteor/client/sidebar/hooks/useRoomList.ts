@@ -1,9 +1,9 @@
-import type { ILivechatInquiryRecord } from '@rocket.chat/core-typings';
+import type { ILivechatInquiryRecord } from '@zeki.chat/core-typings';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { useFeaturePreview } from '@rocket.chat/ui-client';
-import type { SubscriptionWithRoom, TranslationKey } from '@rocket.chat/ui-contexts';
-import { useUserPreference, useUserSubscriptions, useSetting } from '@rocket.chat/ui-contexts';
-import { useVideoConfIncomingCalls } from '@rocket.chat/ui-video-conf';
+import { useFeaturePreview } from '@zeki.chat/ui-client';
+import type { SubscriptionWithRoom, TranslationKey } from '@zeki.chat/ui-contexts';
+import { useUserPreference, useUserSubscriptions, useSetting } from '@zeki.chat/ui-contexts';
+import { useVideoConfIncomingCalls } from '@zeki.chat/ui-video-conf';
 import { useMemo } from 'react';
 
 import { useSortQueryOptions } from '../../hooks/useSortQueryOptions';

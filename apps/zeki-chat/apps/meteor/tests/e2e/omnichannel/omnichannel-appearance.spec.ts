@@ -81,7 +81,7 @@ test.describe('OC - Livechat Appearance - CE', () => {
 	});
 
 	test.afterAll(async ({ api }) => {
-		const res = await api.post('/settings/Livechat_title', { value: 'Rocket.Chat' });
+		const res = await api.post('/settings/Livechat_title', { value: 'ZEKI AI CHAT' });
 
 		if (res.status() !== 200) {
 			throw new Error('Failed to reset settings');
@@ -90,7 +90,7 @@ test.describe('OC - Livechat Appearance - CE', () => {
 
 	test('OC - Livechat Appearance - Change Livechat Title', async ({ page }) => {
 		await test.step('expect to have default value', async () => {
-			await expect(poLivechatAppearance.inputLivechatTitle).toHaveValue('Rocket.Chat');
+			await expect(poLivechatAppearance.inputLivechatTitle).toHaveValue('ZEKI AI CHAT');
 		});
 
 		await test.step('expect to change value', async () => {

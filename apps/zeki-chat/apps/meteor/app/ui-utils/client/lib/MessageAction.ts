@@ -1,5 +1,5 @@
 import type { Keys as IconName } from '@rocket.chat/icons';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 
 type MessageActionGroup = 'menu';
 

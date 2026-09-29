@@ -1,5 +1,5 @@
-import { getObjectKeys } from '@rocket.chat/tools';
-import { useEndpoint, useMethod, useRouter, useUserId } from '@rocket.chat/ui-contexts';
+import { getObjectKeys } from '@zeki.chat/tools';
+import { useEndpoint, useMethod, useRouter, useUserId } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';

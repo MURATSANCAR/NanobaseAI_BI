@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { isNotUndefined } from '@rocket.chat/core-typings';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { isNotUndefined } from '@zeki.chat/core-typings';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 import type { ClientSession } from 'mongodb';
 
 import { notifyOnSubscriptionChangedByRoomId } from '../lib/notifyListener';

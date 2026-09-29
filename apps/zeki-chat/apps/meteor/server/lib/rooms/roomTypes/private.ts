@@ -1,5 +1,5 @@
-import type { IRoom } from '@rocket.chat/core-typings';
-import { isRoomFederated, isRoomNativeFederated } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
+import { isRoomFederated, isRoomNativeFederated } from '@zeki.chat/core-typings';
 
 import { settings } from '../../../../app/settings/server';
 import { RoomSettingsEnum, RoomMemberActions } from '../../../../definition/IRoomTypeConfig';

@@ -1,5 +1,5 @@
-import { Presence } from '@rocket.chat/core-services';
-import { InstanceStatus } from '@rocket.chat/instance-status';
+import { Presence } from '@zeki.chat/core-services';
+import { InstanceStatus } from '@zeki.chat/instance-status';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import { throttle } from 'underscore';

@@ -11,7 +11,7 @@ import type {
 	ISlashCommandsExtend,
 	IUIExtend,
 	IVideoConfProvidersExtend,
-} from '@rocket.chat/apps-engine/definition/accessors';
+} from '@zeki.chat/apps-engine/definition/accessors';
 
 import { ConfigurationExtend } from '../../../src/server/accessors';
 

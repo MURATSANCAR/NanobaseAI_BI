@@ -1,5 +1,5 @@
-import type { UserPresenceContextValue } from '@rocket.chat/ui-contexts';
-import { useSetting, UserPresenceContext } from '@rocket.chat/ui-contexts';
+import type { UserPresenceContextValue } from '@zeki.chat/ui-contexts';
+import { useSetting, UserPresenceContext } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { useMemo, useEffect } from 'react';
 

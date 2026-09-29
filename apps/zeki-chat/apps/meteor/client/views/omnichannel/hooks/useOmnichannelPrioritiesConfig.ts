@@ -1,7 +1,7 @@
-import { LivechatPriorityWeight } from '@rocket.chat/core-typings';
+import { LivechatPriorityWeight } from '@zeki.chat/core-typings';
 import { Palette } from '@rocket.chat/fuselage';
 import type { Keys } from '@rocket.chat/icons';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "title": "Rocket.Chat App",
-    "description": "A Rocket.Chat App declaration for usage inside of Rocket.Chat.",
+    "title": "ZEKI AI CHAT App",
+    "description": "A ZEKI AI CHAT App declaration for usage inside of ZEKI AI CHAT.",
     "type": "object",
     "properties": {
         "id": {

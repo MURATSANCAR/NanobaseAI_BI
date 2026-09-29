@@ -1,4 +1,4 @@
-import type { ISMSProviderConstructor } from '@rocket.chat/core-typings';
+import type { ISMSProviderConstructor } from '@zeki.chat/core-typings';
 
 import { Twilio } from './twilio';
 

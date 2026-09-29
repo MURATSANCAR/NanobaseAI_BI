@@ -20,9 +20,9 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
 	args: {
 		inviter: {
-			username: 'rocket.cat',
+			username: 'zeki.bot',
 			name: 'Rocket Cat',
-			_id: 'rocket.cat',
+			_id: 'zeki.bot',
 		},
 	},
 };
@@ -34,9 +34,9 @@ export const WithInfoLink: Story = {
 			href: 'https://rocket.chat',
 		},
 		inviter: {
-			username: 'rocket.cat',
+			username: 'zeki.bot',
 			name: 'Rocket Cat',
-			_id: 'rocket.cat',
+			_id: 'zeki.bot',
 		},
 	},
 };
@@ -45,9 +45,9 @@ export const Loading: Story = {
 	args: {
 		isLoading: true,
 		inviter: {
-			username: 'rocket.cat',
+			username: 'zeki.bot',
 			name: 'Rocket Cat',
-			_id: 'rocket.cat',
+			_id: 'zeki.bot',
 		},
 	},
 };

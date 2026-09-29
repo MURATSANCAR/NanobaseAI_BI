@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint, useLanguage, useToastMessageDispatch, useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useLanguage, useToastMessageDispatch, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ChangeEvent, ReactElement } from 'react';
 import { useEffect, useState, memo } from 'react';

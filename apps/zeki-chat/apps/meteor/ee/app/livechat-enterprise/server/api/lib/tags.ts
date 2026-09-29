@@ -1,5 +1,5 @@
-import type { ILivechatTag, FindTagsResult } from '@rocket.chat/core-typings';
-import { LivechatTag } from '@rocket.chat/models';
+import type { ILivechatTag, FindTagsResult } from '@zeki.chat/core-typings';
+import { LivechatTag } from '@zeki.chat/models';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { Filter, FindOptions } from 'mongodb';
 

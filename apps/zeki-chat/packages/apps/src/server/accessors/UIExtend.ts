@@ -1,5 +1,5 @@
-import type { IUIExtend } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IUIActionButtonDescriptor } from '@rocket.chat/apps-engine/definition/ui';
+import type { IUIExtend } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IUIActionButtonDescriptor } from '@zeki.chat/apps-engine/definition/ui';
 
 import type { UIActionButtonManager } from '../managers/UIActionButtonManager';
 

@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/federation-matrix",
+	"name": "@zeki.chat/federation-matrix",
 	"version": "0.1.5",
 	"private": true,
 	"main": "./dist/index.js",
@@ -19,15 +19,15 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@rocket.chat/core-services": "workspace:^",
-		"@rocket.chat/core-typings": "workspace:^",
+		"@zeki.chat/core-services": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
 		"@rocket.chat/emitter": "^0.32.0",
 		"@rocket.chat/federation-sdk": "0.6.3",
-		"@rocket.chat/http-router": "workspace:^",
+		"@zeki.chat/http-router": "workspace:^",
 		"@zeki.chat/capabilities": "workspace:^",
-		"@rocket.chat/models": "workspace:^",
-		"@rocket.chat/network-broker": "workspace:^",
-		"@rocket.chat/rest-typings": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/network-broker": "workspace:^",
+		"@zeki.chat/rest-typings": "workspace:^",
 		"emojione": "^4.5.0",
 		"lodash.debounce": "^4.0.8",
 		"marked": "^16.1.2",
@@ -40,7 +40,7 @@
 		"tweetnacl": "^1.0.3"
 	},
 	"devDependencies": {
-		"@rocket.chat/ddp-client": "workspace:^",
+		"@zeki.chat/ddp-client": "workspace:^",
 		"@types/emojione": "^2.2.9",
 		"@types/lodash.debounce": "^4.0.9",
 		"@types/node": "~22.19.17",

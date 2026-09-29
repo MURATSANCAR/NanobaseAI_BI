@@ -1,4 +1,4 @@
-import type { IInstanceStatus } from '@rocket.chat/core-typings';
+import type { IInstanceStatus } from '@zeki.chat/core-typings';
 
 export interface IInstance {
 	address?: string;

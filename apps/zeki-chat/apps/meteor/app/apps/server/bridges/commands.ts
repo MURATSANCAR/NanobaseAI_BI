@@ -1,8 +1,8 @@
-import type { IAppServerOrchestrator, IAppsRoom, IAppsUser } from '@rocket.chat/apps';
-import { CommandBridge } from '@rocket.chat/apps/dist/server/bridges/CommandBridge';
-import type { ISlashCommand, ISlashCommandPreview, ISlashCommandPreviewItem } from '@rocket.chat/apps-engine/definition/slashcommands';
-import { SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
-import type { IMessage, RequiredField, SlashCommand, SlashCommandCallbackParams } from '@rocket.chat/core-typings';
+import type { IAppServerOrchestrator, IAppsRoom, IAppsUser } from '@zeki.chat/apps';
+import { CommandBridge } from '@zeki.chat/apps/dist/server/bridges/CommandBridge';
+import type { ISlashCommand, ISlashCommandPreview, ISlashCommandPreviewItem } from '@zeki.chat/apps-engine/definition/slashcommands';
+import { SlashCommandContext } from '@zeki.chat/apps-engine/definition/slashcommands';
+import type { IMessage, RequiredField, SlashCommand, SlashCommandCallbackParams } from '@zeki.chat/core-typings';
 
 import { Utilities } from '../../../../ee/lib/misc/Utilities';
 import { parseParameters } from '../../../../lib/utils/parseParameters';

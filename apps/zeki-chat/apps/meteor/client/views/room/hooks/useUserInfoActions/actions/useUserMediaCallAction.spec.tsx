@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { act, renderHook } from '@testing-library/react';
 
 import { useUserMediaCallAction } from './useUserMediaCallAction';
@@ -7,14 +7,14 @@ import { createFakeRoom, createFakeSubscription, createFakeUser } from '../../..
 const usePeekMediaSessionStateMock = jest.fn().mockReturnValue('available');
 const toggleWidgetMock = jest.fn();
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useUserAvatarPath: jest.fn().mockReturnValue((_args: any) => 'avatar-url'),
 	useUserCard: jest.fn().mockReturnValue({ closeUserCard: jest.fn() }),
 }));
 
-jest.mock('@rocket.chat/ui-voip', () => ({
-	...jest.requireActual('@rocket.chat/ui-voip'),
+jest.mock('@zeki.chat/ui-voip', () => ({
+	...jest.requireActual('@zeki.chat/ui-voip'),
 	useWidgetExternalControls: jest.fn().mockReturnValue({ toggleWidget: (...args: any[]) => toggleWidgetMock(...args) }),
 	usePeekMediaSessionState: () => usePeekMediaSessionStateMock(),
 }));

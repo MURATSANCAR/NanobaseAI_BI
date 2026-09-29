@@ -1,5 +1,5 @@
-import type { ILivechatMonitor, Serialized } from '@rocket.chat/core-typings';
-import { MockedAppRootBuilder } from '@rocket.chat/mock-providers/dist/MockedAppRootBuilder';
+import type { ILivechatMonitor, Serialized } from '@zeki.chat/core-typings';
+import { MockedAppRootBuilder } from '@zeki.chat/mock-providers/dist/MockedAppRootBuilder';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useMonitorsList } from './useMonitorsList';

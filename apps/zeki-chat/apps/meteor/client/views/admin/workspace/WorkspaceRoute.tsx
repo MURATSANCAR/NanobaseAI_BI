@@ -1,6 +1,6 @@
 import { Callout, ButtonGroup, Button } from '@rocket.chat/fuselage';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

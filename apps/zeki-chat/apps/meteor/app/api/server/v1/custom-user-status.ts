@@ -1,13 +1,13 @@
-import type { ICustomUserStatus } from '@rocket.chat/core-typings';
-import { CustomUserStatus } from '@rocket.chat/models';
+import type { ICustomUserStatus } from '@zeki.chat/core-typings';
+import { CustomUserStatus } from '@zeki.chat/models';
 import {
 	ajv,
 	ajvQuery,
 	validateUnauthorizedErrorResponse,
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
-import type { PaginatedRequest, PaginatedResult } from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
+import type { PaginatedRequest, PaginatedResult } from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import { Meteor } from 'meteor/meteor';
 
@@ -277,7 +277,7 @@ API.v1.post(
 
 export type CustomUserStatusEndpoints = ExtractRoutesFromAPI<typeof customUserStatusEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends CustomUserStatusEndpoints {}
 }

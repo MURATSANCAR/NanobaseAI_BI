@@ -1,4 +1,4 @@
-import type { MessageTypesValues, IRoom } from '@rocket.chat/core-typings';
+import type { MessageTypesValues, IRoom } from '@zeki.chat/core-typings';
 
 export const getHiddenSystemMessages = (room: IRoom, hiddenSystemMessages: MessageTypesValues[]): MessageTypesValues[] => {
 	const hiddenTypes = hiddenSystemMessages.reduce((array, value): MessageTypesValues[] => {

@@ -1,5 +1,5 @@
-import type { UsersInfoParamsGet } from '@rocket.chat/rest-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { UsersInfoParamsGet } from '@zeki.chat/rest-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 type UserInfoQueryOptions = {

@@ -1,5 +1,5 @@
-import type { ISettingRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
+import type { ISettingRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
 
 import type { ProxiedApp } from '../ProxiedApp';
 

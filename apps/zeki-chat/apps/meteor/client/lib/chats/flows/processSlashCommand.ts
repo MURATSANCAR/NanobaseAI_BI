@@ -1,5 +1,5 @@
-import type { IMessage, SlashCommand } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { IMessage, SlashCommand } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 
 import { hasAtLeastOnePermission } from '../../../../app/authorization/client';
@@ -34,8 +34,8 @@ const warnUnrecognizedSlashCommand = async (chat: ChatAPI, message: string): Pro
 		ts: new Date(),
 		msg: message,
 		u: {
-			_id: 'rocket.cat',
-			username: 'rocket.cat',
+			_id: 'zeki.bot',
+			username: 'zeki.bot',
 			name: 'ZEKI AI CHAT',
 		},
 		private: true,

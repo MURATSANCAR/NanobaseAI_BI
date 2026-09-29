@@ -1,7 +1,7 @@
-import { OmnichannelEEService } from '@rocket.chat/core-services';
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { LivechatRooms, Subscriptions } from '@rocket.chat/models';
-import { isLivechatRoomOnHoldProps, isLivechatRoomResumeOnHoldProps, isPOSTLivechatRoomPriorityParams } from '@rocket.chat/rest-typings';
+import { OmnichannelEEService } from '@zeki.chat/core-services';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { LivechatRooms, Subscriptions } from '@zeki.chat/models';
+import { isLivechatRoomOnHoldProps, isLivechatRoomResumeOnHoldProps, isPOSTLivechatRoomPriorityParams } from '@zeki.chat/rest-typings';
 
 import { removePriorityFromRoom, updateRoomPriority } from './lib/priorities';
 import { API } from '../../../../../app/api/server';
@@ -14,7 +14,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['on-hold-livechat-room'],
 		validateParams: isLivechatRoomOnHoldProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async post() {
@@ -52,7 +52,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-l-room'],
 		validateParams: isLivechatRoomResumeOnHoldProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async post() {
@@ -97,7 +97,7 @@ API.v1.addRoute(
 			POST: { permissions: ['view-l-room'], operation: 'hasAny' },
 			DELETE: { permissions: ['view-l-room'], operation: 'hasAny' },
 		},
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async post() {

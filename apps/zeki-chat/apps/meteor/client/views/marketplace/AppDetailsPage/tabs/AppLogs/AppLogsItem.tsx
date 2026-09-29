@@ -1,4 +1,4 @@
-import type { ILogItem } from '@rocket.chat/core-typings';
+import type { ILogItem } from '@zeki.chat/core-typings';
 import { Box, Divider } from '@rocket.chat/fuselage';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';

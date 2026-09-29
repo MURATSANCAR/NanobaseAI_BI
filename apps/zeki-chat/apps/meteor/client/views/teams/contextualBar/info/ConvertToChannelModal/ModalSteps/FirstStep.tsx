@@ -1,6 +1,6 @@
-import type { IRoom, Serialized } from '@rocket.chat/core-typings';
+import type { IRoom, Serialized } from '@zeki.chat/core-typings';
 import { Box } from '@rocket.chat/fuselage';
-import { GenericModal } from '@rocket.chat/ui-client';
+import { GenericModal } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import ChannelDesertionTable from '../../../../ChannelDesertionTable';

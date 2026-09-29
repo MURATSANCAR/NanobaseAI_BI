@@ -1,4 +1,4 @@
-import type { Serialized, ILivechatContact } from '@rocket.chat/core-typings';
+import type { Serialized, ILivechatContact } from '@zeki.chat/core-typings';
 import { Field, FieldError, FieldHint, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
 import { useId, useMemo } from 'react';
 import type { ComponentProps } from 'react';

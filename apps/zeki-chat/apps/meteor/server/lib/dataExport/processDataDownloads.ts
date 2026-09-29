@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 
-import type { IExportOperation, IUser, RoomType } from '@rocket.chat/core-typings';
-import { Avatars, ExportOperations, UserDataFiles, Subscriptions } from '@rocket.chat/models';
+import type { IExportOperation, IUser, RoomType } from '@zeki.chat/core-typings';
+import { Avatars, ExportOperations, UserDataFiles, Subscriptions } from '@zeki.chat/models';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 import moment from 'moment';
 

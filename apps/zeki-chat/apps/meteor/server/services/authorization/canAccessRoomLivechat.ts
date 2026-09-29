@@ -1,7 +1,7 @@
-import type { IAuthorizationLivechat, RoomAccessValidator } from '@rocket.chat/core-services';
-import { proxify } from '@rocket.chat/core-services';
-import type { IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { Rooms } from '@rocket.chat/models';
+import type { IAuthorizationLivechat, RoomAccessValidator } from '@zeki.chat/core-services';
+import { proxify } from '@zeki.chat/core-services';
+import type { IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { Rooms } from '@zeki.chat/models';
 
 const AuthorizationLivechat = proxify<IAuthorizationLivechat>('authorization-livechat');
 

@@ -322,8 +322,8 @@ test.describe('SAML', () => {
 		});
 	};
 
-	test('Logout - Rocket.Chat only', async ({ page, api }) => {
-		await test.step('Configure logout to only logout from Rocket.Chat', async () => {
+	test('Logout - ZEKI AI CHAT only', async ({ page, api }) => {
+		await test.step('Configure logout to only logout from ZEKI AI CHAT', async () => {
 			await expect((await setSettingValueById(api, 'SAML_Custom_Default_logout_behaviour', 'Local')).status()).toBe(200);
 		});
 
@@ -362,7 +362,7 @@ test.describe('SAML', () => {
 		// This should trigger a logout request from the IdP, with a redirect to our home on success
 		await page.goto('http://localhost:8080/simplesaml/saml2/idp/SingleLogoutService.php?ReturnTo=http://localhost:3000');
 
-		await test.step('expect user to be logged out from Rocket.Chat', async () => {
+		await test.step('expect user to be logged out from ZEKI AI CHAT', async () => {
 			await expect(page).toHaveURL('/home');
 			await expect(page.getByRole('button', { name: 'User menu' })).not.toBeVisible();
 			await expect(poRegistration.btnLoginWithSaml).toBeVisible();
@@ -666,7 +666,7 @@ test.describe('SAML', () => {
 
 				await page.goto(`${logoutRequest}&Signature=${logoutRequestSignature}`);
 
-				await test.step('expect user to be logged out from Rocket.Chat', async () => {
+				await test.step('expect user to be logged out from ZEKI AI CHAT', async () => {
 					await expect(page).toHaveURL('/home');
 					await expect(page.getByRole('button', { name: 'User menu' })).not.toBeVisible();
 					await expect(poRegistration.btnLoginWithSaml).toBeVisible();
@@ -685,7 +685,7 @@ test.describe('SAML', () => {
 
 				await page.goto(`${logoutRequest}&Signature=invalid`);
 
-				await test.step('expect user to be logged out from Rocket.Chat', async () => {
+				await test.step('expect user to be logged out from ZEKI AI CHAT', async () => {
 					await expect(page).toHaveURL('/home');
 					await expect(page.getByRole('button', { name: 'User menu' })).not.toBeVisible();
 					await expect(poRegistration.btnLoginWithSaml).toBeVisible();
@@ -698,7 +698,7 @@ test.describe('SAML', () => {
 
 				await page.goto(logoutRequest);
 
-				await test.step('expect user to be logged out from Rocket.Chat', async () => {
+				await test.step('expect user to be logged out from ZEKI AI CHAT', async () => {
 					await expect(page).toHaveURL('/home');
 					await expect(page.getByRole('button', { name: 'User menu' })).not.toBeVisible();
 					await expect(poRegistration.btnLoginWithSaml).toBeVisible();

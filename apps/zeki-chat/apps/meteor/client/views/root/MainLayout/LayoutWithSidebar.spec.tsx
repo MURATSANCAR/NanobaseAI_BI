@@ -1,12 +1,12 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import { useCurrentRoutePath, useRouter } from '@rocket.chat/ui-contexts';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import { useCurrentRoutePath, useRouter } from '@zeki.chat/ui-contexts';
 import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import LayoutWithSidebar from './LayoutWithSidebar';
 
-jest.mock('@rocket.chat/ui-contexts', () => ({
-	...jest.requireActual('@rocket.chat/ui-contexts'),
+jest.mock('@zeki.chat/ui-contexts', () => ({
+	...jest.requireActual('@zeki.chat/ui-contexts'),
 	useCurrentRoutePath: jest.fn(),
 	useRouter: jest.fn(),
 }));
@@ -20,8 +20,8 @@ jest.mock('../../navigation/providers/RoomsNavigationProvider', () => ({
 	default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-jest.mock('@rocket.chat/ui-client', () => ({
-	...jest.requireActual('@rocket.chat/ui-client'),
+jest.mock('@zeki.chat/ui-client', () => ({
+	...jest.requireActual('@zeki.chat/ui-client'),
 	FeaturePreview: ({ children }: { children: ReactNode }) => <>{children}</>,
 	FeaturePreviewOn: ({ children }: { children: ReactNode }) => <>{children}</>,
 	FeaturePreviewOff: ({ children }: { children: ReactNode }) => <>{children}</>,

@@ -1,4 +1,4 @@
-import { useUserId } from '@rocket.chat/ui-contexts';
+import { useUserId } from '@zeki.chat/ui-contexts';
 
 import { PublicSettingsCachedStore, SubscriptionsCachedStore } from '../../../cachedStores';
 import { useUserDataSyncReady } from '../../../lib/userData';

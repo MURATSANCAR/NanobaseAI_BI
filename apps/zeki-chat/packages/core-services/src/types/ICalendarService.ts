@@ -1,5 +1,5 @@
-import type { ICalendarEvent, IUser } from '@rocket.chat/core-typings';
-import type { InsertionModel } from '@rocket.chat/model-typings';
+import type { ICalendarEvent, IUser } from '@zeki.chat/core-typings';
+import type { InsertionModel } from '@zeki.chat/model-typings';
 import type { UpdateResult, DeleteResult } from 'mongodb';
 
 export interface ICalendarService {

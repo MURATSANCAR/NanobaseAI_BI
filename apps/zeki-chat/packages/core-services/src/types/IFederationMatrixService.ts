@@ -1,4 +1,4 @@
-import type { IMessage, IRoomFederated, IRoomNativeFederated, ISubscription, IUser } from '@rocket.chat/core-typings';
+import type { IMessage, IRoomFederated, IRoomNativeFederated, ISubscription, IUser } from '@zeki.chat/core-typings';
 import type { EventStore } from '@rocket.chat/federation-sdk';
 
 export interface IFederationMatrixService {

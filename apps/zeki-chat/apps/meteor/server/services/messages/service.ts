@@ -1,9 +1,9 @@
-import { AppEvents, Apps } from '@rocket.chat/apps';
-import type { IMessageService } from '@rocket.chat/core-services';
-import { Authorization, ServiceClassInternal } from '@rocket.chat/core-services';
-import { isEditedMessage } from '@rocket.chat/core-typings';
-import type { MessageUrl, IMessage, MessageTypesValues, IUser, IRoom, AtLeast } from '@rocket.chat/core-typings';
-import { Messages, Rooms } from '@rocket.chat/models';
+import { AppEvents, Apps } from '@zeki.chat/apps';
+import type { IMessageService } from '@zeki.chat/core-services';
+import { Authorization, ServiceClassInternal } from '@zeki.chat/core-services';
+import { isEditedMessage } from '@zeki.chat/core-typings';
+import type { MessageUrl, IMessage, MessageTypesValues, IUser, IRoom, AtLeast } from '@zeki.chat/core-typings';
+import { Messages, Rooms } from '@zeki.chat/models';
 
 import { OEmbed } from './hooks/AfterSaveOEmbed';
 import { deleteMessage } from '../../../app/lib/server/functions/deleteMessage';
@@ -20,7 +20,6 @@ import { BeforeSaveCannedResponse } from '../../../ee/server/hooks/messages/Befo
 import { FederationMatrixInvalidConfigurationError } from '../federation/utils';
 import { FederationActions } from './hooks/BeforeFederationActions';
 import { BeforeSaveBadWords } from './hooks/BeforeSaveBadWords';
-import { BeforeSaveCheckMAC } from './hooks/BeforeSaveCheckMAC';
 import { BeforeSaveJumpToMessage } from './hooks/BeforeSaveJumpToMessage';
 import { BeforeSaveMarkdownParser } from './hooks/BeforeSaveMarkdownParser';
 import { mentionServer } from './hooks/BeforeSaveMentions';
@@ -46,7 +45,6 @@ export class MessageService extends ServiceClassInternal implements IMessageServ
 
 	private markdownParser: BeforeSaveMarkdownParser;
 
-	private checkMAC: BeforeSaveCheckMAC;
 
 	override async created() {
 		this.preventMention = new BeforeSavePreventMention();
@@ -68,7 +66,6 @@ export class MessageService extends ServiceClassInternal implements IMessageServ
 		});
 		this.cannedResponse = new BeforeSaveCannedResponse();
 		this.markdownParser = new BeforeSaveMarkdownParser(!disableMarkdownParser);
-		this.checkMAC = new BeforeSaveCheckMAC();
 
 		await this.configureBadWords();
 	}
@@ -261,7 +258,6 @@ export class MessageService extends ServiceClassInternal implements IMessageServ
 
 		if (!this.isEditedOrOld(message)) {
 			await Promise.all([
-				this.checkMAC.isWithinLimits({ message, room }),
 				this.preventMention.preventMention({ message, user, mention: 'all', permission: 'mention-all' }),
 				this.preventMention.preventMention({ message, user, mention: 'here', permission: 'mention-here' }),
 			]);

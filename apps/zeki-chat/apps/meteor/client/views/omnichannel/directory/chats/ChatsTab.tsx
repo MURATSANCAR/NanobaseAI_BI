@@ -1,4 +1,4 @@
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { usePermission } from '@zeki.chat/ui-contexts';
 
 import ChatsTable from './ChatsTable';
 import NotAuthorizedPage from '../../../notAuthorized/NotAuthorizedPage';

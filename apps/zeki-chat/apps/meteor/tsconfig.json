@@ -1,5 +1,5 @@
 {
-	"extends": "@rocket.chat/tsconfig/base.json",
+	"extends": "@zeki.chat/tsconfig/base.json",
 	"compilerOptions": {
 		"target": "es2018",
 		"module": "esNext",

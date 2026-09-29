@@ -25,8 +25,8 @@ COPY ./apps/meteor/ee/server/services apps/meteor/ee/server/services
 
 RUN yarn install
 
-RUN yarn workspace @rocket.chat/core-typings run build \
-    && yarn workspace @rocket.chat/rest-typings run build
+RUN yarn workspace @zeki.chat/core-typings run build \
+    && yarn workspace @zeki.chat/rest-typings run build
 
 FROM node:22.22.3-alpine3.23
 

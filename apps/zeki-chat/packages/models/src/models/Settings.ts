@@ -1,5 +1,5 @@
-import type { ISetting, ISettingColor, ISettingSelectOption, RocketChatRecordDeleted, SettingValue } from '@rocket.chat/core-typings';
-import type { ISettingsModel } from '@rocket.chat/model-typings';
+import type { ISetting, ISettingColor, ISettingSelectOption, ZekiChatRecordDeleted, SettingValue } from '@zeki.chat/core-typings';
+import type { ISettingsModel } from '@zeki.chat/model-typings';
 import type {
 	Collection,
 	FindCursor,
@@ -17,7 +17,7 @@ import type {
 import { BaseRaw } from './BaseRaw';
 
 export class SettingsRaw extends BaseRaw<ISetting> implements ISettingsModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ISetting>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ISetting>>) {
 		super(db, 'settings', trash);
 	}
 

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IHttpPreRequestHandler, IHttpPreResponseHandler } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IHttpPreRequestHandler, IHttpPreResponseHandler } from '@zeki.chat/apps-engine/definition/accessors';
 
 import { HttpExtend } from '../../../src/server/accessors';
 

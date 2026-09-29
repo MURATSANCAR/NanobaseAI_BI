@@ -1,6 +1,6 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { applyDepartmentRestrictions } from '@rocket.chat/omni-core';
+import { applyDepartmentRestrictions } from '@zeki.chat/omni-core';
 import type { FilterOperators } from 'mongodb';
 
 import { addQueryRestrictionsToDepartmentsModel } from '../units/addRoleBasedRestrictionsToDepartment';

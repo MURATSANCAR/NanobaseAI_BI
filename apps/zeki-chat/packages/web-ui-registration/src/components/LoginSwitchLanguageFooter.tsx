@@ -1,8 +1,8 @@
 import { Button } from '@rocket.chat/fuselage';
 import { useLocalStorage } from '@rocket.chat/fuselage-hooks';
 import { HorizontalWizardLayoutCaption } from '@rocket.chat/layout';
-import { normalizeLanguage } from '@rocket.chat/tools';
-import { type TranslationLanguage, useSetting, useLoadLanguage, useLanguage, useLanguages } from '@rocket.chat/ui-contexts';
+import { normalizeLanguage } from '@zeki.chat/tools';
+import { type TranslationLanguage, useSetting, useLoadLanguage, useLanguage, useLanguages } from '@zeki.chat/ui-contexts';
 import { useMemo, useEffect } from 'react';
 import type { ReactElement, UIEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';

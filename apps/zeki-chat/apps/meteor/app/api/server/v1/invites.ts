@@ -1,4 +1,4 @@
-import type { IInvite } from '@rocket.chat/core-typings';
+import type { IInvite } from '@zeki.chat/core-typings';
 import {
 	ajv,
 	isFindOrCreateInviteParams,
@@ -7,7 +7,7 @@ import {
 	isSendInvitationEmailParams,
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { findOrCreateInvite } from '../../../invites/server/functions/findOrCreateInvite';
 import { listInvites } from '../../../invites/server/functions/listInvites';
@@ -294,7 +294,7 @@ const invites = API.v1
 
 type InvitesEndpoints = ExtractRoutesFromAPI<typeof invites>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends InvitesEndpoints {}
 }

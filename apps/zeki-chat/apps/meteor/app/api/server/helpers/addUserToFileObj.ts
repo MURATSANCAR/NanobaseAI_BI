@@ -1,5 +1,5 @@
-import type { IUpload, IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IUpload, IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 const isString = (value: unknown): value is string => typeof value === 'string';
 

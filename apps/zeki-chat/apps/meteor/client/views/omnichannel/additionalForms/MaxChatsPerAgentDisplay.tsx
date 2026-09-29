@@ -1,4 +1,4 @@
-import { InfoPanelLabel, InfoPanelText } from '@rocket.chat/ui-client';
+import { InfoPanelLabel, InfoPanelText } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import { useHasCapability } from '../../../hooks/useHasCapability';

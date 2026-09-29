@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
-import type { IMessage } from '@rocket.chat/core-typings';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import { Random } from '@rocket.chat/random';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import { Random } from '@zeki.chat/random';
 import { render, screen } from '@testing-library/react';
 
 import SystemMessage from './SystemMessage';

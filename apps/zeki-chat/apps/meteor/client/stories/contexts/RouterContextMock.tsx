@@ -1,4 +1,4 @@
-import { RouterContext } from '@rocket.chat/ui-contexts';
+import { RouterContext } from '@zeki.chat/ui-contexts';
 import { action } from '@storybook/addon-actions';
 import type { ContextType, ReactElement, ReactNode } from 'react';
 import { useContext, useMemo } from 'react';

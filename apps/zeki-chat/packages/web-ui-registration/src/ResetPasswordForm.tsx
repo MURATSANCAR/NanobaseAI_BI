@@ -1,6 +1,6 @@
 import { FieldGroup, TextInput, Field, FieldLabel, FieldRow, FieldError, ButtonGroup, Button, Callout } from '@rocket.chat/fuselage';
 import { Form, ActionLink } from '@rocket.chat/layout';
-import { useDocumentTitle } from '@rocket.chat/ui-client';
+import { useDocumentTitle } from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useEffect, useId, useRef } from 'react';
 import { useForm } from 'react-hook-form';

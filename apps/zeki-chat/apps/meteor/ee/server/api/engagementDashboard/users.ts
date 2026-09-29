@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { check, Match } from 'meteor/check';
 
 import { API } from '../../../../app/api/server';
@@ -11,7 +11,7 @@ import {
 	findUserSessionsByHourWithinAWeek,
 } from '../../lib/engagementDashboard/users';
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/engagement-dashboard/users/active-users': {
@@ -75,7 +75,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: ['view-engagement-dashboard'],
-		license: ['engagement-dashboard'],
+		capabilities: ['engagement-dashboard'],
 	},
 	{
 		async get() {
@@ -100,7 +100,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: ['view-engagement-dashboard'],
-		license: ['engagement-dashboard'],
+		capabilities: ['engagement-dashboard'],
 	},
 	{
 		async get() {
@@ -125,7 +125,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: ['view-engagement-dashboard'],
-		license: ['engagement-dashboard'],
+		capabilities: ['engagement-dashboard'],
 	},
 	{
 		async get() {
@@ -149,7 +149,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: ['view-engagement-dashboard'],
-		license: ['engagement-dashboard'],
+		capabilities: ['engagement-dashboard'],
 	},
 	{
 		async get() {
@@ -173,7 +173,7 @@ API.v1.addRoute(
 	{
 		authRequired: true,
 		permissionsRequired: ['view-engagement-dashboard'],
-		license: ['engagement-dashboard'],
+		capabilities: ['engagement-dashboard'],
 	},
 	{
 		async get() {

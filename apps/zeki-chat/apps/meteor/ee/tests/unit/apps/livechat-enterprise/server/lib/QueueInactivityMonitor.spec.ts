@@ -35,10 +35,10 @@ const settingsMock = { settings: { get: sinon.stub() } };
 const { OmnichannelQueueInactivityMonitorClass } = proxyquire
 	.noCallThru()
 	.load('../../../../../../app/livechat-enterprise/server/lib/QueueInactivityMonitor', {
-		'@rocket.chat/agenda': {
+		'@zeki.chat/agenda': {
 			Agenda: sinon.stub().returns(AgendaStub),
 		},
-		'@rocket.chat/models': modelsMock,
+		'@zeki.chat/models': modelsMock,
 		'meteor/meteor': meteorMock,
 		'meteor/mongo': mongoMock,
 		'../../../../../app/livechat/server/lib/closeRoom': livechatMock,
@@ -50,12 +50,12 @@ describe('OmnichannelQueueInactivityMonitorClass', () => {
 	afterEach(() => {
 		modelsMock.Users.findOneById.reset();
 	});
-	describe('getRocketChatUser', () => {
-		it('should return rocket.cat user', async () => {
+	describe('getZekiChatUser', () => {
+		it('should return zeki.bot user', async () => {
 			const qclass = new OmnichannelQueueInactivityMonitorClass();
 			await qclass.getRocketCatUser();
 
-			expect(modelsMock.Users.findOneById.calledWith('rocket.cat')).to.be.true;
+			expect(modelsMock.Users.findOneById.calledWith('zeki.bot')).to.be.true;
 		});
 	});
 
@@ -178,7 +178,7 @@ describe('OmnichannelQueueInactivityMonitorClass', () => {
 			const qclass = new OmnichannelQueueInactivityMonitorClass();
 			modelsMock.LivechatInquiry.findOneById.resolves({ status: 'queued', rid: 'roomId' });
 			modelsMock.LivechatRooms.findOneById.resolves({ _id: 'roomId' });
-			modelsMock.Users.findOneById.resolves({ _id: 'rocket.cat' });
+			modelsMock.Users.findOneById.resolves({ _id: 'zeki.bot' });
 
 			await qclass.closeRoom({ attrs: { data: { inquiryId: 'inquiryId' } } });
 
@@ -189,7 +189,7 @@ describe('OmnichannelQueueInactivityMonitorClass', () => {
 					sinon.match({
 						comment: 'Closed automatically',
 						room: { _id: 'roomId' },
-						user: { _id: 'rocket.cat' },
+						user: { _id: 'zeki.bot' },
 					}),
 				),
 			);

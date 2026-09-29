@@ -1,4 +1,4 @@
-import type { IWebdavAccountPayload } from '@rocket.chat/core-typings';
+import type { IWebdavAccountPayload } from '@zeki.chat/core-typings';
 import {
 	Modal,
 	Field,
@@ -17,7 +17,7 @@ import {
 	ModalFooter,
 	ModalFooterControllers,
 } from '@rocket.chat/fuselage';
-import { useToastMessageDispatch, useMethod } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch, useMethod } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import type { SubmitHandler } from 'react-hook-form';

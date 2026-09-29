@@ -1,4 +1,4 @@
-import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata/AppInterface';
+import { AppInterface } from '@zeki.chat/apps-engine/definition/metadata/AppInterface';
 
 import { Utilities } from '../misc/Utilities';
 

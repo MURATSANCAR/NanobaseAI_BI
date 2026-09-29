@@ -1,17 +1,17 @@
-import { UserStatus } from '@rocket.chat/core-typings';
-import type { ILivechatContactsModel, ILivechatDepartmentModel, ILivechatVisitorsModel, IUsersModel } from '@rocket.chat/model-typings';
-import { registerModel } from '@rocket.chat/models';
-import { validateEmail } from '@rocket.chat/tools';
+import { UserStatus } from '@zeki.chat/core-typings';
+import type { ILivechatContactsModel, ILivechatDepartmentModel, ILivechatVisitorsModel, IUsersModel } from '@zeki.chat/model-typings';
+import { registerModel } from '@zeki.chat/models';
+import { validateEmail } from '@zeki.chat/tools';
 
 import { registerGuest } from './create';
 
 // Mock the validateEmail function
-jest.mock('@rocket.chat/tools', () => ({
+jest.mock('@zeki.chat/tools', () => ({
 	validateEmail: jest.fn(),
 }));
 
 // Mock the Logger
-jest.mock('@rocket.chat/logger', () => ({
+jest.mock('@zeki.chat/logger', () => ({
 	Logger: jest.fn().mockImplementation(() => ({
 		debug: jest.fn(),
 	})),

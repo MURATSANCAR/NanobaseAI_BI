@@ -1,4 +1,4 @@
-import { isGETDashboardConversationsByType } from '@rocket.chat/rest-typings';
+import { isGETDashboardConversationsByType } from '@zeki.chat/rest-typings';
 import type { Moment } from 'moment';
 import moment from 'moment';
 
@@ -36,7 +36,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-reports'],
 		validateParams: isGETDashboardConversationsByType,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -61,7 +61,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-reports'],
 		validateParams: isGETDashboardConversationsByType,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -85,7 +85,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-reports'],
 		validateParams: isGETDashboardConversationsByType,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -110,7 +110,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-reports'],
 		validateParams: isGETDashboardConversationsByType,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -135,7 +135,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-reports'],
 		validateParams: isGETDashboardConversationsByType,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {

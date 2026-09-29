@@ -1,5 +1,5 @@
 import { Button, Modal, ModalContent, ModalFooter, ModalFooterControllers, ModalHeader, ModalTitle } from '@rocket.chat/fuselage';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

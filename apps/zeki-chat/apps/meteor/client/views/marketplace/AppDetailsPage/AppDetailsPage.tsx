@@ -1,9 +1,9 @@
-import type { ISetting } from '@rocket.chat/apps-engine/definition/settings';
-import type { App, SettingValue } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/apps-engine/definition/settings';
+import type { App, SettingValue } from '@zeki.chat/core-typings';
 import { Button, ButtonGroup, Box } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { Page, PageFooter, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { useTranslation, useRouteParameter, useToastMessageDispatch, usePermission, useRouter } from '@rocket.chat/ui-contexts';
+import { Page, PageFooter, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { useTranslation, useRouteParameter, useToastMessageDispatch, usePermission, useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useMemo, useCallback } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';

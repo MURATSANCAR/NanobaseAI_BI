@@ -1,7 +1,7 @@
-import { AppEvents, Apps } from '@rocket.chat/apps';
-import type { LivechatDepartmentDTO, ILivechatDepartment, ILivechatDepartmentAgents, ILivechatAgent } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatDepartmentAgents, LivechatVisitors, LivechatRooms, Users } from '@rocket.chat/models';
-import { isDepartmentCreationAvailable } from '@rocket.chat/omni-core';
+import { AppEvents, Apps } from '@zeki.chat/apps';
+import type { LivechatDepartmentDTO, ILivechatDepartment, ILivechatDepartmentAgents, ILivechatAgent } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatDepartmentAgents, LivechatVisitors, LivechatRooms, Users } from '@zeki.chat/models';
+import { isDepartmentCreationAvailable } from '@zeki.chat/omni-core';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -16,7 +16,7 @@ import {
 import { settings } from '../../../settings/server';
 /**
  * @param {string|null} _id - The department id
- * @param {Partial<import('@rocket.chat/core-typings').ILivechatDepartment>} departmentData
+ * @param {Partial<import('@zeki.chat/core-typings').ILivechatDepartment>} departmentData
  * @param {{upsert?: { agentId: string; count?: number; order?: number; }[], remove?: { agentId: string; count?: number; order?: number; }}} [departmentAgents] - The department agents
  * @param {{_id?: string}} [departmentUnit] - The department's unit id
  */

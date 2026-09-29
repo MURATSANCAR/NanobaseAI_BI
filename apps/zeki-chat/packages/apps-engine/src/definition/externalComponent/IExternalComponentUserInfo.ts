@@ -8,7 +8,7 @@ type ClientUserInfo = Pick<IUser, 'id' | 'username'>;
  */
 export interface IExternalComponentUserInfo extends ClientUserInfo {
 	/**
-	 * the avatar URL of the Rocket.Chat user
+	 * the avatar URL of the ZEKI AI CHAT user
 	 */
 	avatarUrl: string;
 }

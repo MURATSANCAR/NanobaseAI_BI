@@ -1,4 +1,4 @@
-import { Users, Rooms } from '@rocket.chat/models';
+import { Users, Rooms } from '@zeki.chat/models';
 
 import { removeUserFromRoom } from '../../../../lib/server/functions/removeUserFromRoom';
 

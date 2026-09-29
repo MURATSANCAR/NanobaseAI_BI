@@ -1,8 +1,8 @@
-import type { ISetting } from '@rocket.chat/core-typings';
+import type { ISetting } from '@zeki.chat/core-typings';
 import { Button, Box, TextInput, Field, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useSetting, useEndpoint } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useSetting, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { FormEvent } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

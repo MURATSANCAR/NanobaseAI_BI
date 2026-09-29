@@ -1,8 +1,8 @@
 import * as assert from 'node:assert';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 
-import { RequestMethod } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IApi, IApiRequest } from '@rocket.chat/apps-engine/definition/api';
+import { RequestMethod } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IApi, IApiRequest } from '@zeki.chat/apps-engine/definition/api';
 
 import type { AppManager } from '../../../src/server/AppManager';
 import type { ProxiedApp } from '../../../src/server/ProxiedApp';

@@ -1,4 +1,4 @@
-import { useToastMessageDispatch, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useOutlookAuthenticationMutation } from './useOutlookAuthentication';

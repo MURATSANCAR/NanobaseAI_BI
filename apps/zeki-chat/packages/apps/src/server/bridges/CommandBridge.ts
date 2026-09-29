@@ -1,4 +1,4 @@
-import type { ISlashCommand } from '@rocket.chat/apps-engine/definition/slashcommands';
+import type { ISlashCommand } from '@zeki.chat/apps-engine/definition/slashcommands';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

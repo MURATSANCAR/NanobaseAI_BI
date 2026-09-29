@@ -1,4 +1,4 @@
-import { useLogout, useMethod, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useLogout, useMethod, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { MutationOptions } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';

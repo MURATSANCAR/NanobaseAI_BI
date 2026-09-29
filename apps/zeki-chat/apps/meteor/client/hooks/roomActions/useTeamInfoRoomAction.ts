@@ -1,4 +1,4 @@
-import type { RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
+import type { RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
 import { lazy, useMemo } from 'react';
 
 const TeamsInfoWithData = lazy(() => import('../../views/teams/contextualBar/info/TeamsInfoWithData'));

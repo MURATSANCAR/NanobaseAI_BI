@@ -1,6 +1,6 @@
 import { AutoComplete, Option, Box } from '@rocket.chat/fuselage';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import type { ComponentProps } from 'react';
 import { memo, useMemo, useState } from 'react';

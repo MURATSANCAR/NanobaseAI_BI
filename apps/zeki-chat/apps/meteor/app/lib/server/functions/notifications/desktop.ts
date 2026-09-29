@@ -1,5 +1,5 @@
-import { api } from '@rocket.chat/core-services';
-import type { IMessage, IRoom, IUser, AtLeast } from '@rocket.chat/core-typings';
+import { api } from '@zeki.chat/core-services';
+import type { IMessage, IRoom, IUser, AtLeast } from '@zeki.chat/core-typings';
 
 import { roomCoordinator } from '../../../../../server/lib/rooms/roomCoordinator';
 import { metrics } from '../../../../metrics/server';

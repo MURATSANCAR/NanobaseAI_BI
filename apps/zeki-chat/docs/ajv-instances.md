@@ -1,6 +1,6 @@
 # AJV instances: `ajv` and `ajvQuery`
 
-The `@rocket.chat/rest-typings` package uses two [AJV](https://ajv.js.org/) instances for JSON schema validation: **`ajv`** and **`ajvQuery`**. The choice between them depends on the **source of the data** being validated (request body vs query string).
+The `@zeki.chat/rest-typings` package uses two [AJV](https://ajv.js.org/) instances for JSON schema validation: **`ajv`** and **`ajvQuery`**. The choice between them depends on the **source of the data** being validated (request body vs query string).
 
 ---
 

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
 
-import { RestClient } from '@rocket.chat/api-client';
-import type { IMessage, Serialized } from '@rocket.chat/core-typings';
+import { RestClient } from '@zeki.chat/api-client';
+import type { IMessage, Serialized } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
-import type { OperationParams, OperationResult } from '@rocket.chat/rest-typings';
+import type { OperationParams, OperationResult } from '@zeki.chat/rest-typings';
 
 import { ClientStreamImpl } from '../ClientStream';
 import { ConnectionImpl } from '../Connection';

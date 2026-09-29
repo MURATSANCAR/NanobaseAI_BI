@@ -1,6 +1,6 @@
-import { Team, Room } from '@rocket.chat/core-services';
-import { TeamType, type IRoom, type ISubscription, type IUser, type RoomType, type UserStatus } from '@rocket.chat/core-typings';
-import { Integrations, Messages, Rooms, Subscriptions, Uploads, Users } from '@rocket.chat/models';
+import { Team, Room } from '@zeki.chat/core-services';
+import { TeamType, type IRoom, type ISubscription, type IUser, type RoomType, type UserStatus } from '@zeki.chat/core-typings';
+import { Integrations, Messages, Rooms, Subscriptions, Uploads, Users } from '@zeki.chat/models';
 import {
 	isChannelsAddAllProps,
 	isChannelsArchiveProps,
@@ -21,8 +21,8 @@ import {
 	isChannelsListProps,
 	isChannelsFilesListProps,
 	isChannelsOnlineProps,
-} from '@rocket.chat/rest-typings';
-import { isTruthy } from '@rocket.chat/tools';
+} from '@zeki.chat/rest-typings';
+import { isTruthy } from '@zeki.chat/tools';
 import { Meteor } from 'meteor/meteor';
 
 import { eraseRoom } from '../../../../server/lib/eraseRoom';

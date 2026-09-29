@@ -1,4 +1,4 @@
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 
 export type EmojiItem = {
 	emoji: string;

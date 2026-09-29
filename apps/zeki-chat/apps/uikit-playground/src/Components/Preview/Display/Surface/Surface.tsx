@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { UiKitContext } from '@rocket.chat/fuselage-ui-kit';
+import { UiKitContext } from '@zeki.chat/fuselage-ui-kit';
 import { useContext, useState, useEffect } from 'react';
 import type { DropResult } from 'react-beautiful-dnd';
 

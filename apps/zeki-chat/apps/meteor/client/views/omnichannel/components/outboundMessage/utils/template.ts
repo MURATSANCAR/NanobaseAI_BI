@@ -1,4 +1,4 @@
-import type { IOutboundProviderTemplate } from '@rocket.chat/core-typings';
+import type { IOutboundProviderTemplate } from '@zeki.chat/core-typings';
 import { capitalize } from '@rocket.chat/string-helpers';
 
 import type { ComponentType, TemplateParameterMetadata, TemplateParameter } from '../types/template';

@@ -1,8 +1,8 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { AppsEngineException } from '@rocket.chat/apps-engine/definition/exceptions';
-import { Message, Team, Room } from '@rocket.chat/core-services';
-import { isBannedSubscription, isRoomNativeFederated, type IUser } from '@rocket.chat/core-typings';
-import { Subscriptions, Users, Rooms } from '@rocket.chat/models';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { AppsEngineException } from '@zeki.chat/apps-engine/definition/exceptions';
+import { Message, Team, Room } from '@zeki.chat/core-services';
+import { isBannedSubscription, isRoomNativeFederated, type IUser } from '@zeki.chat/core-typings';
+import { Subscriptions, Users, Rooms } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { RoomMemberActions } from '../../../../definition/IRoomTypeConfig';

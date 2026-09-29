@@ -1,4 +1,4 @@
-import { startTracing } from '@rocket.chat/tracing';
+import { startTracing } from '@zeki.chat/tracing';
 
 import { client } from './database/utils';
 

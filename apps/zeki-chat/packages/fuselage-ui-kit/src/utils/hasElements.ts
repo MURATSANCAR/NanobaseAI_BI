@@ -1,4 +1,4 @@
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 
 type LayoutBlockWithElements = Extract<UiKit.LayoutBlock, { elements: readonly (UiKit.BlockElement | UiKit.TextObject)[] }>;
 

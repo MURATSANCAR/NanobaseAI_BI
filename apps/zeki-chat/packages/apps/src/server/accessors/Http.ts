@@ -1,5 +1,5 @@
-import type { IHttp, IHttpExtend, IHttpRequest, IHttpResponse } from '@rocket.chat/apps-engine/definition/accessors';
-import { RequestMethod } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IHttp, IHttpExtend, IHttpRequest, IHttpResponse } from '@zeki.chat/apps-engine/definition/accessors';
+import { RequestMethod } from '@zeki.chat/apps-engine/definition/accessors';
 
 import type { AppBridges } from '../bridges/AppBridges';
 import type { AppAccessorManager } from '../managers/AppAccessorManager';

@@ -1,4 +1,4 @@
-import type { App, IMessage, IRoom } from '@rocket.chat/core-typings';
+import type { App, IMessage, IRoom } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -102,7 +102,7 @@ import { IS_EE } from '../../e2e/config/constants';
 				dmRoom = (
 					await createRoom({
 						type: 'd',
-						username: 'rocket.cat',
+						username: 'zeki.bot',
 					})
 				).body.room;
 			});

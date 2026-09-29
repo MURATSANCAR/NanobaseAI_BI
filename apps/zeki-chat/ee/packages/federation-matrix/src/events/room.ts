@@ -1,6 +1,6 @@
-import { Room } from '@rocket.chat/core-services';
+import { Room } from '@zeki.chat/core-services';
 import { federationSDK } from '@rocket.chat/federation-sdk';
-import { Rooms, Users } from '@rocket.chat/models';
+import { Rooms, Users } from '@zeki.chat/models';
 
 import { getUsernameServername } from '../helpers/getUsernameServername';
 

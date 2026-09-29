@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/jwt",
+	"name": "@zeki.chat/jwt",
 	"version": "0.2.1",
 	"private": true,
 	"main": "./dist/index.js",
@@ -20,8 +20,8 @@
 		"jose": "^4.15.9"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"@types/jest": "~30.0.0",
 		"eslint": "~9.39.4",
 		"jest": "~30.2.0",

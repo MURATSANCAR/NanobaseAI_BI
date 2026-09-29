@@ -1,4 +1,4 @@
-import { CallHistory, Users } from '@rocket.chat/models';
+import { CallHistory, Users } from '@zeki.chat/models';
 
 import { addMigration } from '../../lib/migrations';
 

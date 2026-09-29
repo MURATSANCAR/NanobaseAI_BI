@@ -1,10 +1,10 @@
-import type { IRocketChatAssets } from '@rocket.chat/core-typings';
+import type { IZekiChatAssets } from '@zeki.chat/core-typings';
 import { useDarkMode } from '@rocket.chat/fuselage-hooks';
 
 import { useAssetPath } from './useAssetPath';
 import { useUserPreference } from './useUserPreference';
 
-export const useAssetWithDarkModePath = <A extends keyof IRocketChatAssets>(
+export const useAssetWithDarkModePath = <A extends keyof IZekiChatAssets>(
 	assetId: A extends `${infer T}_dark` ? T : never,
 ): string | undefined => {
 	const userThemePreference = useUserPreference('themeAppearence') || 'auto';

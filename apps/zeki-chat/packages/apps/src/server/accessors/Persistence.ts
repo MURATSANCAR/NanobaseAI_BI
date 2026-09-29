@@ -1,5 +1,5 @@
-import type { IPersistence } from '@rocket.chat/apps-engine/definition/accessors';
-import type { RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
+import type { IPersistence } from '@zeki.chat/apps-engine/definition/accessors';
+import type { ZekiChatAssociationRecord } from '@zeki.chat/apps-engine/definition/metadata';
 
 import type { PersistenceBridge } from '../bridges/PersistenceBridge';
 
@@ -13,11 +13,11 @@ export class Persistence implements IPersistence {
 		return this.persistBridge.doCreate(data, this.appId);
 	}
 
-	public createWithAssociation(data: object, association: RocketChatAssociationRecord): Promise<string> {
+	public createWithAssociation(data: object, association: ZekiChatAssociationRecord): Promise<string> {
 		return this.persistBridge.doCreateWithAssociations(data, new Array(association), this.appId);
 	}
 
-	public createWithAssociations(data: object, associations: Array<RocketChatAssociationRecord>): Promise<string> {
+	public createWithAssociations(data: object, associations: Array<ZekiChatAssociationRecord>): Promise<string> {
 		return this.persistBridge.doCreateWithAssociations(data, associations, this.appId);
 	}
 
@@ -25,11 +25,11 @@ export class Persistence implements IPersistence {
 		return this.persistBridge.doUpdate(id, data, upsert, this.appId);
 	}
 
-	public updateByAssociation(association: RocketChatAssociationRecord, data: object, upsert = false): Promise<string> {
+	public updateByAssociation(association: ZekiChatAssociationRecord, data: object, upsert = false): Promise<string> {
 		return this.persistBridge.doUpdateByAssociations(new Array(association), data, upsert, this.appId);
 	}
 
-	public updateByAssociations(associations: Array<RocketChatAssociationRecord>, data: object, upsert = false): Promise<string> {
+	public updateByAssociations(associations: Array<ZekiChatAssociationRecord>, data: object, upsert = false): Promise<string> {
 		return this.persistBridge.doUpdateByAssociations(associations, data, upsert, this.appId);
 	}
 
@@ -37,11 +37,11 @@ export class Persistence implements IPersistence {
 		return this.persistBridge.doRemove(id, this.appId);
 	}
 
-	public removeByAssociation(association: RocketChatAssociationRecord): Promise<Array<object>> {
+	public removeByAssociation(association: ZekiChatAssociationRecord): Promise<Array<object>> {
 		return this.persistBridge.doRemoveByAssociations(new Array(association), this.appId);
 	}
 
-	public removeByAssociations(associations: Array<RocketChatAssociationRecord>): Promise<Array<object>> {
+	public removeByAssociations(associations: Array<ZekiChatAssociationRecord>): Promise<Array<object>> {
 		return this.persistBridge.doRemoveByAssociations(associations, this.appId);
 	}
 }

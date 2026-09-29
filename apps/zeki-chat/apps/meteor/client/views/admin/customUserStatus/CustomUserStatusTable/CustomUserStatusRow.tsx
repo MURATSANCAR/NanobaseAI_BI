@@ -1,5 +1,5 @@
-import type { IUserStatus } from '@rocket.chat/core-typings';
-import { GenericTableRow, GenericTableCell } from '@rocket.chat/ui-client';
+import type { IUserStatus } from '@zeki.chat/core-typings';
+import { GenericTableRow, GenericTableCell } from '@zeki.chat/ui-client';
 import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

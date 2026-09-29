@@ -1,4 +1,4 @@
-import type { RocketChatAssociationRecord } from '../metadata';
+import type { ZekiChatAssociationRecord } from '../metadata';
 
 /**
  * Provides a read-only accessor for the App's persistent storage.
@@ -24,7 +24,7 @@ export interface IPersistenceRead {
 	 * @param association the association record to query the persistent storage for
 	 * @return array of the records if any exists, empty array if none exist
 	 */
-	readByAssociation(association: RocketChatAssociationRecord): Promise<Array<object>>;
+	readByAssociation(association: ZekiChatAssociationRecord): Promise<Array<object>>;
 
 	/**
 	 * Retrieves a record from the App's persistent storage by the provided id.
@@ -36,5 +36,5 @@ export interface IPersistenceRead {
 	 * @param associations the association records to query the persistent storage for
 	 * @return array of the records if any exists, empty array if none exist
 	 */
-	readByAssociations(associations: Array<RocketChatAssociationRecord>): Promise<Array<object>>;
+	readByAssociations(associations: Array<ZekiChatAssociationRecord>): Promise<Array<object>>;
 }

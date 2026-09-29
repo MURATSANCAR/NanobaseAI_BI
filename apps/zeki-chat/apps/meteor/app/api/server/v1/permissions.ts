@@ -1,12 +1,12 @@
-import type { IPermission } from '@rocket.chat/core-typings';
-import { Permissions, Roles } from '@rocket.chat/models';
+import type { IPermission } from '@zeki.chat/core-typings';
+import { Permissions, Roles } from '@zeki.chat/models';
 import {
 	ajv,
 	ajvQuery,
 	validateUnauthorizedErrorResponse,
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
 
 import { permissionsGetMethod } from '../../../authorization/server/streamer/permissions';
@@ -189,7 +189,7 @@ const permissionsEndpoints = API.v1
 
 export type PermissionsEndpoints = ExtractRoutesFromAPI<typeof permissionsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends PermissionsEndpoints {}
 }

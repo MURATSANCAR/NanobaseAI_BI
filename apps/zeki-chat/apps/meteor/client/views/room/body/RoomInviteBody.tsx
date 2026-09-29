@@ -1,6 +1,6 @@
-import type { IInviteSubscription } from '@rocket.chat/core-typings';
+import type { IInviteSubscription } from '@zeki.chat/core-typings';
 import { Box, Button, Chip, States, StatesActions, StatesIcon, StatesLink, StatesSubtitle, StatesTitle } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
 import { useTranslation } from 'react-i18next';
 
 type RoomInviteBodyProps = {

@@ -1,7 +1,7 @@
-import type { App } from '@rocket.chat/apps-engine/definition/App';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages/IMessage';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
-import type { AppsEngineException as _AppsEngineException } from '@rocket.chat/apps-engine/definition/exceptions/AppsEngineException';
+import type { App } from '@zeki.chat/apps-engine/definition/App';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages/IMessage';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
+import type { AppsEngineException as _AppsEngineException } from '@zeki.chat/apps-engine/definition/exceptions/AppsEngineException';
 import { Defined, JsonRpcError } from 'jsonrpc-lite';
 
 import { AppObjectRegistry } from '../../AppObjectRegistry.ts';
@@ -16,7 +16,7 @@ import { Room } from '../../lib/room.ts';
 import { RequestContext } from '../../lib/requestContext.ts';
 import { wrapAppForRequest } from '../../lib/wrapAppForRequest.ts';
 
-const { AppsEngineException } = require('@rocket.chat/apps-engine/definition/exceptions/AppsEngineException.js') as {
+const { AppsEngineException } = require('@zeki.chat/apps-engine/definition/exceptions/AppsEngineException.js') as {
 	AppsEngineException: typeof _AppsEngineException;
 };
 

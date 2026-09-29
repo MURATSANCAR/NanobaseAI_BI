@@ -1,4 +1,4 @@
-import type { IPushToken, Optional } from '@rocket.chat/core-typings';
+import type { IPushToken, Optional } from '@zeki.chat/core-typings';
 
 import type { IServiceClass } from './ServiceClass';
 

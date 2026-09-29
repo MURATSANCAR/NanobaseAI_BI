@@ -1,6 +1,6 @@
-import type { IOmnichannelCannedResponse } from '@rocket.chat/core-typings';
+import type { IOmnichannelCannedResponse } from '@zeki.chat/core-typings';
 import { Callout } from '@rocket.chat/fuselage';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

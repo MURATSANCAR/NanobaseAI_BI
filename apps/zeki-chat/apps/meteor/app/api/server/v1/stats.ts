@@ -1,11 +1,11 @@
-import type { IStats } from '@rocket.chat/core-typings';
+import type { IStats } from '@zeki.chat/core-typings';
 import {
 	ajv,
 	isTelemetryPayload,
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
 	validateBadRequestErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { getStatistics, getLastStatistics } from '../../../statistics/server';
 import telemetryEvent from '../../../statistics/server/lib/telemetryEvents';

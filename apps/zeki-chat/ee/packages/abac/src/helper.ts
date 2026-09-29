@@ -1,5 +1,5 @@
-import type { ILDAPEntry, IAbacAttributeDefinition, IRoom } from '@rocket.chat/core-typings';
-import { AbacAttributes, Rooms } from '@rocket.chat/models';
+import type { ILDAPEntry, IAbacAttributeDefinition, IRoom } from '@zeki.chat/core-typings';
+import { AbacAttributes, Rooms } from '@zeki.chat/models';
 import mem from 'mem';
 
 import {

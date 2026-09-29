@@ -1,6 +1,6 @@
-import { AppSourceStorage } from '@rocket.chat/apps/dist/server/storage/AppSourceStorage';
-import type { IAppStorageItem } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
-import { streamToBuffer } from '@rocket.chat/tools';
+import { AppSourceStorage } from '@zeki.chat/apps/dist/server/storage/AppSourceStorage';
+import type { IAppStorageItem } from '@zeki.chat/apps/dist/server/storage/IAppStorageItem';
+import { streamToBuffer } from '@zeki.chat/tools';
 import { MongoInternals } from 'meteor/mongo';
 import { NpmModuleMongodb } from 'meteor/npm-mongo';
 import { ObjectId } from 'mongodb';
@@ -16,7 +16,7 @@ export class AppGridFSSourceStorage extends AppSourceStorage {
 		const { db } = MongoInternals.defaultRemoteCollectionDriver().mongo;
 
 		this.bucket = new NpmModuleMongodb.GridFSBucket(db as any, {
-			bucketName: 'rocketchat_apps_packages',
+			bucketName: 'zeki_apps_packages',
 			chunkSizeBytes: 1024 * 255,
 		});
 	}

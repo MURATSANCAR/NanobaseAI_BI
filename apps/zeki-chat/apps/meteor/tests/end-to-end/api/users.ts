@@ -1,9 +1,9 @@
 import crypto from 'crypto';
 
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IRoom, ISubscription, ITeam, IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
-import type { IGetRoomRoles, PaginatedResult, DefaultUserInfo } from '@rocket.chat/rest-typings';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IRoom, ISubscription, ITeam, IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
+import type { IGetRoomRoles, PaginatedResult, DefaultUserInfo } from '@zeki.chat/rest-typings';
 import { assert, expect } from 'chai';
 import { after, afterEach, before, beforeEach, describe, it } from 'mocha';
 import { MongoClient } from 'mongodb';
@@ -1446,7 +1446,7 @@ describe('[Users]', () => {
 						expect(res.body).to.have.property('success', true);
 						expect(res.body).to.have.property('full', true);
 
-						const user = (res.body.users as IUser[]).find((user) => user.username === 'rocket.cat');
+						const user = (res.body.users as IUser[]).find((user) => user.username === 'zeki.bot');
 
 						expect(user).to.have.all.keys('_id', 'avatarETag', 'username', 'name', 'status', 'utcOffset');
 					})
@@ -1471,7 +1471,7 @@ describe('[Users]', () => {
 			it('should return presence for a single id', async () => {
 				const res = await request
 					.get(api('users.presence'))
-					.query({ ids: 'rocket.cat' })
+					.query({ ids: 'zeki.bot' })
 					.set(credentials)
 					.expect('Content-Type', 'application/json')
 					.expect(200);
@@ -1479,35 +1479,35 @@ describe('[Users]', () => {
 				expect(res.body).to.have.property('success', true);
 				expect(res.body).to.have.property('full', false);
 				expect(res.body).to.have.property('users').that.is.an('array').with.lengthOf(1);
-				expect(res.body.users[0]).to.have.property('_id', 'rocket.cat');
+				expect(res.body.users[0]).to.have.property('_id', 'zeki.bot');
 			});
 
 			it('should correctly parse comma-separated ids and not return an empty result', async () => {
 				const res = await request
 					.get(api('users.presence'))
-					.query({ ids: `rocket.cat,${credentials['X-User-Id']}` })
+					.query({ ids: `zeki.bot,${credentials['X-User-Id']}` })
 					.set(credentials)
 					.expect('Content-Type', 'application/json')
 					.expect(200);
 
 				expect(res.body).to.have.property('success', true);
 				expect(res.body).to.have.property('full', false);
-				// only rocket.cat is guaranteed to be online; admin may be offline
-				expect(res.body.users.map((u: IUser) => u._id)).to.include('rocket.cat');
+				// only zeki.bot is guaranteed to be online; admin may be offline
+				expect(res.body.users.map((u: IUser) => u._id)).to.include('zeki.bot');
 			});
 
 			it('should return presence for repeated ids params', async () => {
 				const res = await request
 					.get(api('users.presence'))
-					.query(`ids=rocket.cat&ids=${credentials['X-User-Id']}`)
+					.query(`ids=zeki.bot&ids=${credentials['X-User-Id']}`)
 					.set(credentials)
 					.expect('Content-Type', 'application/json')
 					.expect(200);
 
 				expect(res.body).to.have.property('success', true);
 				expect(res.body).to.have.property('full', false);
-				// only rocket.cat is guaranteed to be online; admin may be offline
-				expect(res.body.users.map((u: IUser) => u._id)).to.include('rocket.cat');
+				// only zeki.bot is guaranteed to be online; admin may be offline
+				expect(res.body.users.map((u: IUser) => u._id)).to.include('zeki.bot');
 			});
 
 			it('should return full list of online users for more than 10 minutes in the past', (done) => {
@@ -1524,7 +1524,7 @@ describe('[Users]', () => {
 						expect(res.body).to.have.property('success', true);
 						expect(res.body).to.have.property('full', true);
 
-						const user = (res.body.users as IUser[]).find((user) => user.username === 'rocket.cat');
+						const user = (res.body.users as IUser[]).find((user) => user.username === 'zeki.bot');
 
 						expect(user).to.have.all.keys('_id', 'avatarETag', 'username', 'name', 'status', 'utcOffset');
 					})
@@ -2310,7 +2310,7 @@ describe('[Users]', () => {
 				.post(api('users.update'))
 				.set(credentials)
 				.send({
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 					data: { email: 'nouser@rocket.cat' },
 				})
 				.expect('Content-Type', 'application/json')
@@ -3496,7 +3496,7 @@ describe('[Users]', () => {
 
 		it('should return an error when the user try to update info of another user and does not have the necessary permission', (done) => {
 			const userPreferences = {
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 				data: {
 					...preferences.data,
 				},
@@ -3543,7 +3543,7 @@ describe('[Users]', () => {
 		});
 		it('should set some preferences of another user successfully', (done) => {
 			const userPreferences = {
-				userId: 'rocket.cat',
+				userId: 'zeki.bot',
 				data: {
 					...preferences.data,
 				},
@@ -3558,7 +3558,7 @@ describe('[Users]', () => {
 					.expect((res) => {
 						expect(res.body.user).to.have.property('settings');
 						expect(res.body.user.settings).to.have.property('preferences');
-						expect(res.body.user._id).to.be.equal('rocket.cat');
+						expect(res.body.user._id).to.be.equal('zeki.bot');
 						expect(res.body).to.have.property('success', true);
 					})
 					.end(done);
@@ -5289,14 +5289,14 @@ describe('[Users]', () => {
 		it('should return other user status', (done) => {
 			void request
 				.get(api('users.getStatus'))
-				.query({ userId: 'rocket.cat' })
+				.query({ userId: 'zeki.bot' })
 				.set(credentials)
 				.expect('Content-Type', 'application/json')
 				.expect(200)
 				.expect((res) => {
 					expect(res.body).to.have.property('success', true);
 					expect(res.body).to.have.property('status');
-					expect(res.body._id).to.be.equal('rocket.cat');
+					expect(res.body._id).to.be.equal('zeki.bot');
 				})
 				.end(done);
 		});

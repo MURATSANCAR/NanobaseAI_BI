@@ -1,9 +1,9 @@
 import { Pagination } from '@rocket.chat/fuselage';
 import { useDebouncedValue } from '@rocket.chat/fuselage-hooks';
-import { useSort, usePagination, GenericTableLoadingRow } from '@rocket.chat/ui-client';
-import { useEndpoint, useRouteParameter, useRouter } from '@rocket.chat/ui-contexts';
-import { MediaCallHistoryTable, isCallHistoryUnknownContact, isCallHistoryTableInternalContact } from '@rocket.chat/ui-voip';
-import type { CallHistoryTableInternalContact, CallHistoryUnknownContact, CallHistoryTableExternalContact } from '@rocket.chat/ui-voip';
+import { useSort, usePagination, GenericTableLoadingRow } from '@zeki.chat/ui-client';
+import { useEndpoint, useRouteParameter, useRouter } from '@zeki.chat/ui-contexts';
+import { MediaCallHistoryTable, isCallHistoryUnknownContact, isCallHistoryTableInternalContact } from '@zeki.chat/ui-voip';
+import type { CallHistoryTableInternalContact, CallHistoryUnknownContact, CallHistoryTableExternalContact } from '@zeki.chat/ui-voip';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

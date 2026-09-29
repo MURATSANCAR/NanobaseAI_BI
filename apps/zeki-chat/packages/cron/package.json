@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/cron",
+	"name": "@zeki.chat/cron",
 	"version": "0.1.57",
 	"private": true,
 	"main": "./dist/index.js",
@@ -14,15 +14,15 @@
 		"lint:fix": "eslint --fix ."
 	},
 	"dependencies": {
-		"@rocket.chat/agenda": "workspace:^",
-		"@rocket.chat/core-typings": "workspace:^",
-		"@rocket.chat/logger": "workspace:^",
-		"@rocket.chat/models": "workspace:^",
-		"@rocket.chat/random": "workspace:^",
+		"@zeki.chat/agenda": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/logger": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/random": "workspace:^",
 		"mongodb": "6.16.0"
 	},
 	"devDependencies": {
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"eslint": "~9.39.4",
 		"typescript": "~5.9.3"
 	},

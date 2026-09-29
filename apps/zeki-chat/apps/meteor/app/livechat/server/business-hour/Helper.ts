@@ -1,6 +1,6 @@
-import type { ILivechatBusinessHour } from '@rocket.chat/core-typings';
-import { ILivechatAgentStatus, LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
-import { LivechatBusinessHours, Users } from '@rocket.chat/models';
+import type { ILivechatBusinessHour } from '@zeki.chat/core-typings';
+import { ILivechatAgentStatus, LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
+import { LivechatBusinessHours, Users } from '@zeki.chat/models';
 import moment from 'moment';
 
 import { createDefaultBusinessHourRow } from './LivechatBusinessHours';

@@ -1,6 +1,6 @@
-import type { ILivechatContact, ILivechatVisitor, IOmnichannelSource } from '@rocket.chat/core-typings';
+import type { ILivechatContact, ILivechatVisitor, IOmnichannelSource } from '@zeki.chat/core-typings';
 import { Capabilities } from '@zeki.chat/capabilities';
-import { LivechatContacts } from '@rocket.chat/models';
+import { LivechatContacts } from '@zeki.chat/models';
 
 import { isAgentAvailableToTakeContactInquiry } from '../../../app/livechat/server/lib/contacts/isAgentAvailableToTakeContactInquiry';
 import { isVerifiedChannelInSource } from '../../../app/livechat/server/lib/contacts/isVerifiedChannelInSource';

@@ -1,4 +1,4 @@
-import { useAttachmentAutoLoadEmbedMedia } from '@rocket.chat/ui-contexts';
+import { useAttachmentAutoLoadEmbedMedia } from '@zeki.chat/ui-contexts';
 import { useCallback, useState } from 'react';
 
 export const useLoadImage = (): [boolean, () => void] => {

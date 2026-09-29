@@ -1,7 +1,7 @@
-import type { AtLeast, INotificationDesktop, ISubscription, IUser } from '@rocket.chat/core-typings';
+import type { AtLeast, INotificationDesktop, ISubscription, IUser } from '@zeki.chat/core-typings';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useEmbeddedLayout } from '@rocket.chat/ui-client';
-import { useCustomSound, useRouter, useStream, useUserPreference } from '@rocket.chat/ui-contexts';
+import { useEmbeddedLayout } from '@zeki.chat/ui-client';
+import { useCustomSound, useRouter, useStream, useUserPreference } from '@zeki.chat/ui-contexts';
 import { useEffect } from 'react';
 
 import { useDesktopNotification } from '../../../../hooks/notification/useDesktopNotification';

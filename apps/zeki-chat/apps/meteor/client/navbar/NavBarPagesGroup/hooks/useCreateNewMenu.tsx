@@ -1,4 +1,4 @@
-import { useAtLeastOnePermission } from '@rocket.chat/ui-contexts';
+import { useAtLeastOnePermission } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { useCreateNewItems } from './useCreateNewItems';

@@ -1,8 +1,8 @@
-import { isOAuthUser, type IMeApiUser, type IUser, type IUserEmail, type IUserCalendar } from '@rocket.chat/core-typings';
+import { isOAuthUser, type IMeApiUser, type IUser, type IUserEmail, type IUserCalendar } from '@zeki.chat/core-typings';
 import semver from 'semver';
 
 import { settings } from '../../../settings/server';
-import { Info } from '../../../utils/rocketchat.info';
+import { Info } from '../../../utils/zekichat.info';
 import { getURL } from '../../../utils/server/getURL';
 import { getUserPreference } from '../../../utils/server/lib/getUserPreference';
 

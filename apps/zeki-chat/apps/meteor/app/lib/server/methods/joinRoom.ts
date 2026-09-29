@@ -1,11 +1,11 @@
-import { Room } from '@rocket.chat/core-services';
-import type { IRoom } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { Rooms } from '@rocket.chat/models';
+import { Room } from '@zeki.chat/core-services';
+import type { IRoom } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { Rooms } from '@zeki.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		joinRoom(rid: IRoom['_id'], code?: string): boolean | undefined;

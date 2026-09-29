@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { useSetting, useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import type { IUser } from '@zeki.chat/core-typings';
+import { useSetting, useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 

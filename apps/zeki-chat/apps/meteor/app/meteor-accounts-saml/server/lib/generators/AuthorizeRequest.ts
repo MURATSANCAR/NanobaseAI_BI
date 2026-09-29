@@ -18,7 +18,7 @@ function resolveCustomAuthnContext(serviceProviderOptions: IServiceProviderOptio
 }
 
 /*
-	An Authorize Request is used to show the Identity Provider login form when the user clicks on the Rocket.Chat SAML login button
+	An Authorize Request is used to show the Identity Provider login form when the user clicks on the ZEKI AI CHAT SAML login button
 */
 export class AuthorizeRequest {
 	public static generate(serviceProviderOptions: IServiceProviderOptions, credentialToken: string): ISAMLRequest {

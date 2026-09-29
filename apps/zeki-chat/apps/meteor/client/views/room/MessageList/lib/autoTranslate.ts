@@ -1,5 +1,5 @@
-import type { IMessage, MessageAttachment } from '@rocket.chat/core-typings';
-import { isTranslatedMessageAttachment, isTranslatedMessage } from '@rocket.chat/core-typings';
+import type { IMessage, MessageAttachment } from '@zeki.chat/core-typings';
+import { isTranslatedMessageAttachment, isTranslatedMessage } from '@zeki.chat/core-typings';
 
 export const hasTranslationLanguageInMessage = (message: IMessage, language: string): boolean =>
 	isTranslatedMessage(message) && Boolean(message.translations?.[language]);

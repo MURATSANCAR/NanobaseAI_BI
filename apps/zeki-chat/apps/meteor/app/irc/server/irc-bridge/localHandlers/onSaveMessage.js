@@ -1,4 +1,4 @@
-import { Subscriptions, Users } from '@rocket.chat/models';
+import { Subscriptions, Users } from '@zeki.chat/models';
 
 import { SystemLogger } from '../../../../../server/lib/logger/system';
 

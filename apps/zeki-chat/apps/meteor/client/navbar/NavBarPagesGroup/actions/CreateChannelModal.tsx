@@ -1,4 +1,4 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import {
 	Box,
 	Modal,
@@ -14,7 +14,7 @@ import {
 	ModalFooterControllers,
 } from '@rocket.chat/fuselage';
 import { TextInput, Field, ToggleSwitch, FieldGroup, FieldLabel, FieldRow, FieldError, FieldHint } from '@rocket.chat/fuselage-forms';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import {
 	useSetting,
 	useTranslation,
@@ -22,7 +22,7 @@ import {
 	useToastMessageDispatch,
 	usePermissionWithScopedRoles,
 	usePermission,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { ComponentProps } from 'react';
 import { useId, useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';

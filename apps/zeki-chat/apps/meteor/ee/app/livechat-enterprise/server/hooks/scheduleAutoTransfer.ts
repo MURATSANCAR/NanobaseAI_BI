@@ -1,4 +1,4 @@
-import type { IMessage, IOmnichannelRoom } from '@rocket.chat/core-typings';
+import type { IMessage, IOmnichannelRoom } from '@zeki.chat/core-typings';
 
 import type { CloseRoomParams } from '../../../../../app/livechat/server/lib/localTypes';
 import { settings } from '../../../../../app/settings/server';

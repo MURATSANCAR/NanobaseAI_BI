@@ -1,7 +1,7 @@
-import type { IRoom, IMessage, MessageTypesValues } from '@rocket.chat/core-typings';
+import type { IRoom, IMessage, MessageTypesValues } from '@zeki.chat/core-typings';
 import { useStableArray } from '@rocket.chat/fuselage-hooks';
-import { createPredicateFromFilter } from '@rocket.chat/mongo-adapter';
-import { useSetting, useUserPreference } from '@rocket.chat/ui-contexts';
+import { createPredicateFromFilter } from '@zeki.chat/mongo-adapter';
+import { useSetting, useUserPreference } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/shallow';
 

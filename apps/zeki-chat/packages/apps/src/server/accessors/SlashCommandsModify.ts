@@ -1,5 +1,5 @@
-import type { ISlashCommandsModify } from '@rocket.chat/apps-engine/definition/accessors';
-import type { ISlashCommand } from '@rocket.chat/apps-engine/definition/slashcommands';
+import type { ISlashCommandsModify } from '@zeki.chat/apps-engine/definition/accessors';
+import type { ISlashCommand } from '@zeki.chat/apps-engine/definition/slashcommands';
 
 import type { AppSlashCommandManager } from '../managers';
 

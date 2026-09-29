@@ -1,4 +1,4 @@
-import type { CalendarEventImportProps } from '@rocket.chat/rest-typings';
+import type { CalendarEventImportProps } from '@zeki.chat/rest-typings';
 
 import { Users } from './fixtures/userStates';
 import { test, expect, type BaseTest } from './utils/test';

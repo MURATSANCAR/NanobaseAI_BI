@@ -1,4 +1,4 @@
-import type { IUser } from '@rocket.chat/core-typings';
+import type { IUser } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
 import type {
 	CallFeature,
@@ -6,7 +6,7 @@ import type {
 	ClientMediaSignal,
 	ClientMediaSignalBody,
 	ServerMediaSignal,
-} from '@rocket.chat/media-signaling';
+} from '@zeki.chat/media-signaling';
 
 import { mediaCallDirector } from './CallDirector';
 import { getDefaultSettings } from './getDefaultSettings';

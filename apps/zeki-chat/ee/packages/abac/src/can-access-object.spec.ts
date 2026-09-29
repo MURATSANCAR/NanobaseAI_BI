@@ -1,4 +1,4 @@
-import { AbacAccessOperation, AbacObjectType } from '@rocket.chat/core-typings';
+import { AbacAccessOperation, AbacObjectType } from '@zeki.chat/core-typings';
 
 import { AbacService } from './index';
 
@@ -9,7 +9,7 @@ const mockUsersFindOne = jest.fn();
 const mockUsersFindOneById = jest.fn();
 const mockRoomRemoveUserFromRoom = jest.fn().mockResolvedValue(undefined);
 
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	Subscriptions: {
 		findOneByRoomIdAndUserId: (...args: any[]) => mockSubscriptionsFindOneByRoomIdAndUserId(...args),
 		setAbacLastTimeCheckedByUserIdAndRoomId: (...args: any[]) => mockSubscriptionsSetAbacLastTimeCheckedByUserIdAndRoomId(...args),
@@ -23,7 +23,7 @@ jest.mock('@rocket.chat/models', () => ({
 	},
 }));
 
-jest.mock('@rocket.chat/core-services', () => ({
+jest.mock('@zeki.chat/core-services', () => ({
 	ServiceClass: class {
 		onSettingChanged = jest.fn();
 	},

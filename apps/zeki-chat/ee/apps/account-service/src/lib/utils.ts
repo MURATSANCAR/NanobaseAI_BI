@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-import { convertFromDaysToMilliseconds } from '@rocket.chat/tools';
+import { convertFromDaysToMilliseconds } from '@zeki.chat/tools';
 import bcrypt from 'bcrypt';
 
 export interface IStampedToken {

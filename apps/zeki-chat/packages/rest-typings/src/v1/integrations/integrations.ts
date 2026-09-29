@@ -1,4 +1,4 @@
-import type { IIntegration, IIntegrationHistory } from '@rocket.chat/core-typings';
+import type { IIntegration, IIntegrationHistory } from '@zeki.chat/core-typings';
 
 import type { IntegrationsCreateProps } from './IntegrationsCreateProps';
 import type { IntegrationsGetProps } from './IntegrationsGetProps';

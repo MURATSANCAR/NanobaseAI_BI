@@ -1,6 +1,6 @@
-import type { IStats, IWorkspaceInfo, Serialized } from '@rocket.chat/core-typings';
-import type { IInstance } from '@rocket.chat/rest-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { IStats, IWorkspaceInfo, Serialized } from '@zeki.chat/core-typings';
+import type { IInstance } from '@zeki.chat/rest-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { keepPreviousData, useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 
 export const useWorkspaceInfo = ({ refreshStatistics }: { refreshStatistics?: boolean } = {}) => {

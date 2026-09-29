@@ -24,6 +24,6 @@ export class OmnichannelSettings extends OmnichannelAdmin {
 	}
 
 	get labelHideWatermark(): Locator {
-		return this.page.locator('label').getByText('Hide "powered by Rocket.Chat"');
+		return this.page.locator('label').getByText('Hide "powered by ZEKI AI CHAT"');
 	}
 }

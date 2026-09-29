@@ -1,7 +1,7 @@
-import type { IIncomingIntegration, IIntegration, IOutgoingIntegration, IUser, RequiredField } from '@rocket.chat/core-typings';
-import { Integrations, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
-import { isIntegrationsHooksAddSchema, isIntegrationsHooksRemoveSchema } from '@rocket.chat/rest-typings';
+import type { IIncomingIntegration, IIntegration, IOutgoingIntegration, IUser, RequiredField } from '@zeki.chat/core-typings';
+import { Integrations, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
+import { isIntegrationsHooksAddSchema, isIntegrationsHooksRemoveSchema } from '@zeki.chat/rest-typings';
 import type express from 'express';
 import { Meteor } from 'meteor/meteor';
 import type { RateLimiterOptionsToCheck } from 'meteor/rate-limit';
@@ -63,7 +63,7 @@ async function createIntegration(options: IntegrationOptions, user: IUser): Prom
 				options.data.channel_name = `#${options.data.channel_name}`;
 			}
 			return addOutgoingIntegration(user._id, {
-				username: 'rocket.cat',
+				username: 'zeki.bot',
 				urls: [options.target_url],
 				name: options.name,
 				channel: options.data.channel_name,
@@ -86,7 +86,7 @@ async function createIntegration(options: IntegrationOptions, user: IUser): Prom
 			}
 
 			return addOutgoingIntegration(user._id, {
-				username: 'rocket.cat',
+				username: 'zeki.bot',
 				urls: [options.target_url],
 				name: options.name,
 				channel: options.data.username,
@@ -319,7 +319,7 @@ function integrationSampleRest(): { statusCode: number; body: IntegrationSampleB
 				channel_name: 'general',
 				timestamp: new Date(),
 				user_id: Random.id(),
-				user_name: 'rocket.cat',
+				user_name: 'zeki.bot',
 				text: 'Sample text 1',
 				trigger_word: 'Sample',
 			},
@@ -329,7 +329,7 @@ function integrationSampleRest(): { statusCode: number; body: IntegrationSampleB
 				channel_name: 'general',
 				timestamp: new Date(),
 				user_id: Random.id(),
-				user_name: 'rocket.cat',
+				user_name: 'zeki.bot',
 				text: 'Sample text 2',
 				trigger_word: 'Sample',
 			},
@@ -339,7 +339,7 @@ function integrationSampleRest(): { statusCode: number; body: IntegrationSampleB
 				channel_name: 'general',
 				timestamp: new Date(),
 				user_id: Random.id(),
-				user_name: 'rocket.cat',
+				user_name: 'zeki.bot',
 				text: 'Sample text 3',
 				trigger_word: 'Sample',
 			},
@@ -432,10 +432,10 @@ Api.router
 			basePathRegex: new RegExp(/^\/hooks\//),
 			api: Api,
 			settings,
-			endpointTimeSummary: metrics.rocketchatRestApi,
-			endpointTimeHistogram: metrics.rocketchatRestApiSeconds,
-			responseSizeHistogram: metrics.rocketchatRestApiResponseSizeBytes,
-			activeRequestsGauge: metrics.rocketchatRestApiActiveRequests,
+			endpointTimeSummary: metrics.zekichatRestApi,
+			endpointTimeHistogram: metrics.zekichatRestApiSeconds,
+			responseSizeHistogram: metrics.zekichatRestApiResponseSizeBytes,
+			activeRequestsGauge: metrics.zekichatRestApiActiveRequests,
 		}),
 	)
 	.use(tracerSpanMiddleware)

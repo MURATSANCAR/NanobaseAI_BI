@@ -1,5 +1,5 @@
-import { ServiceClassInternal, api } from '@rocket.chat/core-services';
-import { Messages, MessageReads, Subscriptions } from '@rocket.chat/models';
+import { ServiceClassInternal, api } from '@zeki.chat/core-services';
+import { Messages, MessageReads, Subscriptions } from '@zeki.chat/models';
 
 import { MAX_ROOM_SIZE_CHECK_INDIVIDUAL_READ_RECEIPTS } from '../../lib/constants';
 import { ReadReceipt } from '../../lib/message-read-receipt/ReadReceipt';

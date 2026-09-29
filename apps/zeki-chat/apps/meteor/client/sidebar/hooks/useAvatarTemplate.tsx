@@ -1,6 +1,6 @@
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
-import type { SubscriptionWithRoom } from '@rocket.chat/ui-contexts';
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
+import type { SubscriptionWithRoom } from '@zeki.chat/ui-contexts';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import type { ComponentType } from 'react';
 import { useMemo } from 'react';
 

@@ -7,7 +7,7 @@ import type {
 	IRoomNativeFederated,
 	ITeam,
 	IUser,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import type {
 	AggregationCursor,
 	DeleteResult,

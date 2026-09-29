@@ -1,8 +1,8 @@
 import { Box, RadioButton } from '@rocket.chat/fuselage';
 import { useSafely } from '@rocket.chat/fuselage-hooks';
-import { GenericMenu } from '@rocket.chat/ui-client';
-import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { useAvailableDevices, useSelectedDevices } from '@rocket.chat/ui-contexts';
+import { GenericMenu } from '@zeki.chat/ui-client';
+import type { GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { useAvailableDevices, useSelectedDevices } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, MouseEvent } from 'react';
 import { forwardRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';

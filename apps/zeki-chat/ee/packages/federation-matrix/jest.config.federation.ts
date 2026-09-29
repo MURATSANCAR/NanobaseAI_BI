@@ -5,7 +5,7 @@
  * extended timeouts for distributed system operations, proper module transformation
  * for Matrix SDK dependencies, and global teardown for resource cleanup.
  */
-import server from '@rocket.chat/jest-presets/server';
+import server from '@zeki.chat/jest-presets/server';
 import type { Config } from 'jest';
 
 function qaseRunTitle(): string {

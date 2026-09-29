@@ -1,5 +1,5 @@
-import type { ILivechatContact, ILivechatCustomField, ILivechatVisitor } from '@rocket.chat/core-typings';
-import { LivechatContacts, LivechatCustomField, LivechatRooms, LivechatVisitors } from '@rocket.chat/models';
+import type { ILivechatContact, ILivechatCustomField, ILivechatVisitor } from '@zeki.chat/core-typings';
+import { LivechatContacts, LivechatCustomField, LivechatRooms, LivechatVisitors } from '@zeki.chat/models';
 
 import { livechatLogger } from './logger';
 import { i18n } from '../../../utils/lib/i18n';

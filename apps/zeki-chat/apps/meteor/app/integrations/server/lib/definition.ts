@@ -1,4 +1,4 @@
-import type { IIntegration, IOutgoingIntegration } from '@rocket.chat/core-typings';
+import type { IIntegration, IOutgoingIntegration } from '@zeki.chat/core-typings';
 
 export interface IScriptClass {
 	prepare_outgoing_request?: (params: Record<string, any>) => any;

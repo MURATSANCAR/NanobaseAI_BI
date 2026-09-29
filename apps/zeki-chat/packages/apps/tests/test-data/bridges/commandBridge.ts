@@ -1,5 +1,5 @@
-import type { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
+import type { IHttp, IModify, IPersistence, IRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { ISlashCommand, SlashCommandContext } from '@zeki.chat/apps-engine/definition/slashcommands';
 
 import { CommandBridge } from '../../../src/server/bridges';
 import { TestData } from '../utilities';

@@ -1,9 +1,9 @@
-import type { IOmnichannelRoom, IVisitor } from '@rocket.chat/core-typings';
+import type { IOmnichannelRoom, IVisitor } from '@zeki.chat/core-typings';
 import { Box, Margins, Tag, Button, ButtonGroup } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { ContextualbarScrollableContent, ContextualbarFooter, InfoPanelField, InfoPanelLabel, InfoPanelText } from '@rocket.chat/ui-client';
-import type { IRouterPaths } from '@rocket.chat/ui-contexts';
-import { useToastMessageDispatch, useRoute, useUserSubscription, useTranslation, usePermission, useUserId } from '@rocket.chat/ui-contexts';
+import { ContextualbarScrollableContent, ContextualbarFooter, InfoPanelField, InfoPanelLabel, InfoPanelText } from '@zeki.chat/ui-client';
+import type { IRouterPaths } from '@zeki.chat/ui-contexts';
+import { useToastMessageDispatch, useRoute, useUserSubscription, useTranslation, usePermission, useUserId } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import DepartmentField from './DepartmentField';

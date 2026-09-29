@@ -1,4 +1,4 @@
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
 import { startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, subDays, subMonths } from 'date-fns';
 
 const label = (translationKey: TranslationKey): readonly [translationKey: TranslationKey] => [translationKey];

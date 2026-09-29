@@ -1,4 +1,4 @@
-import type { IDirectMediaCallData, ITempMediaCallData } from '@rocket.chat/media-signaling';
+import type { IDirectMediaCallData, ITempMediaCallData } from '@zeki.chat/media-signaling';
 
 import { derivePeerInfoFromInstanceState } from './derivePeerInfoFromInstanceState';
 

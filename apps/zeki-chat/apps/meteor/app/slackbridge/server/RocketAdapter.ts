@@ -5,8 +5,8 @@
 // @ts-nocheck
 import util from 'node:util';
 
-import { Messages, Rooms, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import { Messages, Rooms, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import _ from 'underscore';
@@ -159,7 +159,7 @@ export default class RocketAdapter {
 					continue;
 				}
 
-				// A new message from Rocket.Chat
+				// A new message from ZEKI AI CHAT
 				await this.processSendMessage(rocketMessage, slack);
 			} catch (err) {
 				rocketLogger.error({ msg: 'Unhandled error onMessage', err });
@@ -225,7 +225,7 @@ export default class RocketAdapter {
 				return;
 			}
 
-			// This was a change from Rocket.Chat
+			// This was a change from ZEKI AI CHAT
 			const slackChannel = slack.getSlackChannel(rocketMessage.rid);
 			await slack.postMessageUpdate(slackChannel, rocketMessage);
 		}
@@ -387,7 +387,7 @@ export default class RocketAdapter {
 
 					rocketUserData.rocketId = await Accounts.createUserAsync(newUser);
 					const userUpdate = {
-						utcOffset: rocketUserData.tz_offset / 3600, // Slack's is -18000 which translates to Rocket.Chat's after dividing by 3600,
+						utcOffset: rocketUserData.tz_offset / 3600, // Slack's is -18000 which translates to ZEKI AI CHAT's after dividing by 3600,
 						roles: isBot ? ['bot'] : ['user'],
 					};
 
@@ -489,7 +489,7 @@ export default class RocketAdapter {
 			}
 
 			if (slackMessage.subtype === 'bot_message') {
-				rocketUser = await Users.findOneById('rocket.cat', { projection: { username: 1 } });
+				rocketUser = await Users.findOneById('zeki.bot', { projection: { username: 1 } });
 			}
 
 			if (slackMessage.pinned_to && slackMessage.pinned_to.indexOf(slackMessage.channel) !== -1) {

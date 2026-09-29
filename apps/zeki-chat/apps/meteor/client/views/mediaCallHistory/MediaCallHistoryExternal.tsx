@@ -1,5 +1,5 @@
-import type { CallHistoryItem, IExternalMediaCallHistoryItem, IMediaCall, Serialized } from '@rocket.chat/core-typings';
-import { CallHistoryContextualBar, useWidgetExternalControls, usePeekMediaSessionState } from '@rocket.chat/ui-voip';
+import type { CallHistoryItem, IExternalMediaCallHistoryItem, IMediaCall, Serialized } from '@zeki.chat/core-typings';
+import { CallHistoryContextualBar, useWidgetExternalControls, usePeekMediaSessionState } from '@zeki.chat/ui-voip';
 import { useMemo } from 'react';
 
 type ExternalCallEndpointData = Serialized<{

@@ -1,7 +1,7 @@
-import type { ITypingOptions } from '@rocket.chat/apps-engine/definition/accessors/INotifier';
-import type { IMessage, Reaction } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { ITypingOptions } from '@zeki.chat/apps-engine/definition/accessors/INotifier';
+import type { IMessage, Reaction } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { BaseBridge } from './BaseBridge';
 import { PermissionDeniedError } from '../errors/PermissionDeniedError';

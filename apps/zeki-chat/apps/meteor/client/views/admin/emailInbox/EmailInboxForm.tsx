@@ -1,4 +1,4 @@
-import type { IEmailInboxPayload } from '@rocket.chat/core-typings';
+import type { IEmailInboxPayload } from '@zeki.chat/core-typings';
 import {
 	Accordion,
 	AccordionItem,
@@ -19,9 +19,9 @@ import {
 	FieldHint,
 } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { validateEmail } from '@rocket.chat/tools';
-import { GenericModal, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { useSetModal, useToastMessageDispatch, useRoute, useEndpoint } from '@rocket.chat/ui-contexts';
+import { validateEmail } from '@zeki.chat/tools';
+import { GenericModal, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useRoute, useEndpoint } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useId, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';

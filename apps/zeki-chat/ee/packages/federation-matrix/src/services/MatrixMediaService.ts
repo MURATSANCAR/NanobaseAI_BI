@@ -1,9 +1,9 @@
-import type { IUploadDetails } from '@rocket.chat/apps-engine/definition/uploads/IUploadDetails';
-import { Upload } from '@rocket.chat/core-services';
-import type { IUpload } from '@rocket.chat/core-typings';
+import type { IUploadDetails } from '@zeki.chat/apps-engine/definition/uploads/IUploadDetails';
+import { Upload } from '@zeki.chat/core-services';
+import type { IUpload } from '@zeki.chat/core-typings';
 import { federationSDK } from '@rocket.chat/federation-sdk';
-import { Logger } from '@rocket.chat/logger';
-import { Avatars, Uploads } from '@rocket.chat/models';
+import { Logger } from '@zeki.chat/logger';
+import { Avatars, Uploads } from '@zeki.chat/models';
 
 const logger = new Logger('federation-matrix:media-service');
 

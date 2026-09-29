@@ -9,9 +9,9 @@ import {
 	StatesTitle,
 	TextAreaInput,
 } from '@rocket.chat/fuselage';
-import { validateEmail } from '@rocket.chat/tools';
-import { ContextualbarScrollableContent, ContextualbarFooter, ContextualbarContent } from '@rocket.chat/ui-client';
-import { useTranslation, useRoute } from '@rocket.chat/ui-contexts';
+import { validateEmail } from '@zeki.chat/tools';
+import { ContextualbarScrollableContent, ContextualbarFooter, ContextualbarContent } from '@zeki.chat/ui-client';
+import { useTranslation, useRoute } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent } from 'react';
 import { useCallback, useState } from 'react';
 

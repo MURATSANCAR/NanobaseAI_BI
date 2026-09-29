@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { ILivechatTag } from '@rocket.chat/core-typings';
+import type { ILivechatTag } from '@zeki.chat/core-typings';
 
 import type { BaseTest } from '../test';
 

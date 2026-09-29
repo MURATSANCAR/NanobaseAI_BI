@@ -53,7 +53,7 @@ const mockLogger = {
 };
 
 const mocks = {
-	'@rocket.chat/agenda': { Agenda: MockAgendaClass },
+	'@zeki.chat/agenda': { Agenda: MockAgendaClass },
 	'meteor/meteor': { Meteor: { startup: mockMeteorStartup } },
 	'meteor/mongo': {
 		MongoInternals: {
@@ -66,7 +66,7 @@ const mocks = {
 	},
 	'../../../../../app/livechat/server/lib/closeRoom': { closeRoom: mockLivechatCloseRoom },
 	'./logger': { schedulerLogger: mockLogger },
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		LivechatRooms: mockLivechatRooms,
 		Users: mockUsers,
 	},
@@ -181,13 +181,13 @@ describe('AutoCloseOnHoldScheduler', () => {
 			const scheduler = new AutoCloseOnHoldSchedulerClass();
 
 			mockLivechatRooms.findOneById.returns(null);
-			mockUsers.findOneById.returns({ _id: 'rocket.cat' });
+			mockUsers.findOneById.returns({ _id: 'zeki.bot' });
 
 			try {
 				await scheduler.executeJob({ attrs: { data: { roomId: 'roomId', comment: 'comment' } } });
 			} catch (e: any) {
 				expect(e.message).to.be.equal(
-					'Unable to process AutoCloseOnHoldScheduler job because room or user not found for roomId: roomId and userId: rocket.cat',
+					'Unable to process AutoCloseOnHoldScheduler job because room or user not found for roomId: roomId and userId: zeki.bot',
 				);
 			}
 		});
@@ -209,11 +209,11 @@ describe('AutoCloseOnHoldScheduler', () => {
 			const scheduler = new AutoCloseOnHoldSchedulerClass();
 
 			mockLivechatRooms.findOneById.returns({ _id: 'me' });
-			mockUsers.findOneById.returns({ _id: 'rocket.cat' });
+			mockUsers.findOneById.returns({ _id: 'zeki.bot' });
 
 			await scheduler.executeJob({ attrs: { data: { roomId: 'roomId', comment: 'comment' } } });
 
-			expect(mockLivechatCloseRoom.calledWithMatch({ room: { _id: 'me' }, user: { _id: 'rocket.cat' }, comment: 'comment' }));
+			expect(mockLivechatCloseRoom.calledWithMatch({ room: { _id: 'me' }, user: { _id: 'zeki.bot' }, comment: 'comment' }));
 		});
 	});
 
@@ -231,7 +231,7 @@ describe('AutoCloseOnHoldScheduler', () => {
 			expect(user).to.be.equal(scheduler.schedulerUser);
 		});
 
-		it('should fail when rocket.cat does not exist', async () => {
+		it('should fail when zeki.bot does not exist', async () => {
 			const scheduler = new AutoCloseOnHoldSchedulerClass();
 
 			mockUsers.findOneById.returns(null);
@@ -243,14 +243,14 @@ describe('AutoCloseOnHoldScheduler', () => {
 			}
 		});
 
-		it('should return rocket.cat', async () => {
+		it('should return zeki.bot', async () => {
 			const scheduler = new AutoCloseOnHoldSchedulerClass();
 
-			mockUsers.findOneById.returns({ _id: 'rocket.cat' });
+			mockUsers.findOneById.returns({ _id: 'zeki.bot' });
 
 			const u = await scheduler.getSchedulerUser();
 
-			expect(u).to.be.an('object').with.property('_id', 'rocket.cat');
+			expect(u).to.be.an('object').with.property('_id', 'zeki.bot');
 		});
 	});
 });

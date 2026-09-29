@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
-import { api, ServiceClassInternal } from '@rocket.chat/core-services';
-import type { IBannerService } from '@rocket.chat/core-services';
-import type { BannerPlatform, IBanner, IBannerDismiss, Optional, IUser } from '@rocket.chat/core-typings';
-import { Banners, BannersDismiss, Users } from '@rocket.chat/models';
+import { api, ServiceClassInternal } from '@zeki.chat/core-services';
+import type { IBannerService } from '@zeki.chat/core-services';
+import type { BannerPlatform, IBanner, IBannerDismiss, Optional, IUser } from '@zeki.chat/core-typings';
+import { Banners, BannersDismiss, Users } from '@zeki.chat/models';
 
 export class BannerService extends ServiceClassInternal implements IBannerService {
 	protected name = 'banner';

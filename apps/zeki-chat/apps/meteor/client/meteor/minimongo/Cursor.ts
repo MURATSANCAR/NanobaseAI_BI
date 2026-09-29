@@ -1,5 +1,5 @@
-import type { Optional } from '@rocket.chat/core-typings';
-import { createComparatorFromSort, createPredicateFromFilter } from '@rocket.chat/mongo-adapter';
+import type { Optional } from '@zeki.chat/core-typings';
+import { createComparatorFromSort, createPredicateFromFilter } from '@zeki.chat/mongo-adapter';
 import { Tracker } from 'meteor/tracker';
 import type { Filter, Sort } from 'mongodb';
 

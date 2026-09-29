@@ -1,4 +1,4 @@
-import type { IOAuthAccessToken } from '@rocket.chat/core-typings';
+import type { IOAuthAccessToken } from '@zeki.chat/core-typings';
 import type { DeleteResult, FindOptions } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

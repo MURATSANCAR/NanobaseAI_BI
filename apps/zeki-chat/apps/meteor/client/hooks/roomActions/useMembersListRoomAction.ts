@@ -1,6 +1,6 @@
-import { isRoomFederated, isRoomNativeFederated } from '@rocket.chat/core-typings';
-import { usePermission } from '@rocket.chat/ui-contexts';
-import type { RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
+import { isRoomFederated, isRoomNativeFederated } from '@zeki.chat/core-typings';
+import { usePermission } from '@zeki.chat/ui-contexts';
+import type { RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
 import { useMemo } from 'react';
 
 import { MemberListRouter } from '../../views/room';

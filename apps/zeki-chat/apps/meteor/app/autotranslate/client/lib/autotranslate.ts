@@ -1,5 +1,5 @@
-import type { IRoom, ISubscription, ISupportedLanguage, ITranslatedMessage, MessageAttachmentDefault } from '@rocket.chat/core-typings';
-import { isTranslatedMessageAttachment } from '@rocket.chat/core-typings';
+import type { IRoom, ISubscription, ISupportedLanguage, ITranslatedMessage, MessageAttachmentDefault } from '@zeki.chat/core-typings';
+import { isTranslatedMessageAttachment } from '@zeki.chat/core-typings';
 import mem from 'mem';
 
 import { PermissionsCachedStore } from '../../../../client/cachedStores';

@@ -1,5 +1,5 @@
-import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { LivechatRooms, LivechatDepartment } from '@rocket.chat/models';
+import type { ILivechatDepartment } from '@zeki.chat/core-typings';
+import { LivechatRooms, LivechatDepartment } from '@zeki.chat/models';
 
 import { onNewRoom } from '../../../../../app/livechat/server/lib/hooks';
 

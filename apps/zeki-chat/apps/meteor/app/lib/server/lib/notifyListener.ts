@@ -1,6 +1,6 @@
-import { api } from '@rocket.chat/core-services';
+import { api } from '@zeki.chat/core-services';
 import type {
-	IRocketChatRecord,
+	IZekiChatRecord,
 	IRoom,
 	ILoginServiceConfiguration,
 	ISetting,
@@ -21,7 +21,7 @@ import type {
 	SettingValue,
 	MessageTypesValues,
 	ILivechatContact,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import {
 	Rooms,
 	LivechatRooms,
@@ -36,7 +36,7 @@ import {
 	LivechatDepartmentAgents,
 	Users,
 	Messages,
-} from '@rocket.chat/models';
+} from '@zeki.chat/models';
 import mem from 'mem';
 
 import { subscriptionFields } from '../../../../lib/publishFields';
@@ -52,7 +52,7 @@ export const notifyOnLivechatPriorityChanged = async (
 	void api.broadcast('watch.priorities', { clientAction, id: _id, diff: { ...rest } });
 };
 
-export const notifyOnRoomChanged = async <T extends IRocketChatRecord>(
+export const notifyOnRoomChanged = async <T extends IZekiChatRecord>(
 	data: T | T[],
 	clientAction: ClientAction = 'updated',
 ): Promise<void> => {
@@ -62,7 +62,7 @@ export const notifyOnRoomChanged = async <T extends IRocketChatRecord>(
 	}
 };
 
-export const notifyOnRoomChangedById = async <T extends IRocketChatRecord>(
+export const notifyOnRoomChangedById = async <T extends IZekiChatRecord>(
 	ids: T['_id'] | T['_id'][],
 	clientAction: ClientAction = 'updated',
 ): Promise<void> => {

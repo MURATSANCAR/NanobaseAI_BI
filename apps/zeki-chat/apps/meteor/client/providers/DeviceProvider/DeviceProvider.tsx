@@ -1,6 +1,6 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import type { Device, DeviceContextValue } from '@rocket.chat/ui-contexts';
-import { DeviceContext } from '@rocket.chat/ui-contexts';
+import type { Device, DeviceContextValue } from '@zeki.chat/ui-contexts';
+import { DeviceContext } from '@zeki.chat/ui-contexts';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useState, useMemo } from 'react';

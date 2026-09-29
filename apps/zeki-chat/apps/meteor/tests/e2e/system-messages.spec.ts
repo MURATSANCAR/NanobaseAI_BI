@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import type { Locator, Page } from '@playwright/test';
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
 
 import { Users } from './fixtures/userStates';
 import { HomeChannel } from './page-objects';

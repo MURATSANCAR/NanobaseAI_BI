@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IMessage, IOmnichannelRoom, IRoom, IThreadMessage, IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IMessage, IOmnichannelRoom, IRoom, IThreadMessage, IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { expect } from 'chai';
 import { after, before, describe, it } from 'mocha';
 
@@ -152,33 +152,8 @@ describe('Meteor.methods', () => {
 				});
 		});
 
-		(!IS_EE ? describe : describe.skip)('[@getReadReceipts] CE', () => {
-			it('should fail if there is no enterprise license', async () => {
-				await request
-					.post(methodCall('getReadReceipts'))
-					.set(credentials)
-					.send({
-						message: JSON.stringify({
-							method: 'getReadReceipts',
-							params: [{ messageId: 'test' }],
-							id: 'id',
-							msg: 'method',
-						}),
-					})
-					.expect('Content-Type', 'application/json')
-					.expect(400)
-					.expect((res) => {
-						expect(res.body).to.have.property('success', false);
 
-						const data = JSON.parse(res.body.message);
-						expect(data).to.have.property('error').that.is.an('object');
-						expect(data.error).to.have.property('error', 'error-action-not-allowed');
-						expect(data.error).to.have.property('message', 'This is an enterprise feature [error-action-not-allowed]');
-					});
-			});
-		});
-
-		(IS_EE ? describe : describe.skip)('[@getReadReceipts] EE', () => {
+		describe('[@getReadReceipts] capability', () => {
 			let user: TestUser<IUser>;
 			let userCredentials: Credentials;
 			let room: IRoom;
@@ -3173,44 +3148,7 @@ describe('Meteor.methods', () => {
 					.catch(done);
 			});
 
-			it('should not add guest users to more rooms than defined in the license', async function () {
-				// TODO this is not the right way to do it. We're doing this way for now just because we have separate CI jobs for EE and CE,
-				// ideally we should have a single CI job that adds a license and runs both CE and EE tests.
-				if (!process.env.IS_EE) {
-					this.skip();
-				}
-				const promises = [];
-				for (let i = 0; i < maxRoomsPerGuest; i++) {
-					promises.push(
-						createRoom({
-							type: 'c',
-							name: `channel.test.${Date.now()}-${Math.random()}`,
-							members: [guestUser.username],
-						}),
-					);
-				}
-				createdRooms = [...createdRooms, ...(await Promise.all(promises)).map((res) => res.body.channel)];
 
-				void request
-					.post(methodCall('addUsersToRoom'))
-					.set(credentials)
-					.send({
-						message: JSON.stringify({
-							method: 'addUsersToRoom',
-							params: [{ rid: room._id, users: [guestUser.username] }],
-							id: 'id',
-							msg: 'method',
-						}),
-					})
-					.expect('Content-Type', 'application/json')
-					.expect(400)
-					.expect((res) => {
-						expect(res.body).to.have.property('success', false);
-						const parsedBody = JSON.parse(res.body.message);
-						expect(parsedBody).to.have.property('error');
-						expect(parsedBody.error).to.have.property('error', 'error-max-rooms-per-guest-reached');
-					});
-			});
 		});
 	});
 

@@ -1,7 +1,7 @@
-import type { IDirectoryUserResult, IUser, Serialized } from '@rocket.chat/core-typings';
+import type { IDirectoryUserResult, IUser, Serialized } from '@zeki.chat/core-typings';
 import { Box, Flex } from '@rocket.chat/fuselage';
-import { UserAvatar } from '@rocket.chat/ui-avatar';
-import { GenericTableRow, GenericTableCell } from '@rocket.chat/ui-client';
+import { UserAvatar } from '@zeki.chat/ui-avatar';
+import { GenericTableRow, GenericTableCell } from '@zeki.chat/ui-client';
 import type { KeyboardEvent, MouseEvent } from 'react';
 
 import MarkdownText from '../../../../../components/MarkdownText';

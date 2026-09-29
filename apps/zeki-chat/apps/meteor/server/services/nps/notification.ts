@@ -1,6 +1,6 @@
-import type { IBanner } from '@rocket.chat/core-typings';
-import { BannerPlatform } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { IBanner } from '@zeki.chat/core-typings';
+import { BannerPlatform } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import moment from 'moment';
 
 import { settings } from '../../../app/settings/server';
@@ -17,8 +17,8 @@ export const getBannerForAdmins = (expireAt: Date): Omit<IBanner, '_id'> => {
 		startAt: new Date(),
 		roles: ['admin'],
 		createdBy: {
-			_id: 'rocket.cat',
-			username: 'rocket.cat',
+			_id: 'zeki.bot',
+			username: 'zeki.bot',
 		},
 		_updatedAt: new Date(),
 		surface: 'banner',

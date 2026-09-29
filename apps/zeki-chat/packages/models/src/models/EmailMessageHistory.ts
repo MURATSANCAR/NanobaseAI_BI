@@ -1,11 +1,11 @@
-import type { IEmailMessageHistory, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import type { IEmailMessageHistoryModel, InsertionModel } from '@rocket.chat/model-typings';
+import type { IEmailMessageHistory, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import type { IEmailMessageHistoryModel, InsertionModel } from '@zeki.chat/model-typings';
 import type { Collection, Db, InsertOneResult, WithId, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class EmailMessageHistoryRaw extends BaseRaw<IEmailMessageHistory> implements IEmailMessageHistoryModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IEmailMessageHistory>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IEmailMessageHistory>>) {
 		super(db, 'email_message_history', trash);
 	}
 

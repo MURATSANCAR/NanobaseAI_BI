@@ -1,4 +1,4 @@
-import type { PasswordPolicyOptions } from '@rocket.chat/password-policies';
+import type { PasswordPolicyOptions } from '@zeki.chat/password-policies';
 
 import { useSetting } from './useSetting';
 

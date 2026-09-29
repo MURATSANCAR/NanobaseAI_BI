@@ -1,6 +1,6 @@
 import { Box, Icon, TextInput, Select } from '@rocket.chat/fuselage';
-import type { OptionProp } from '@rocket.chat/ui-client';
-import { MultiSelectCustom } from '@rocket.chat/ui-client';
+import type { OptionProp } from '@zeki.chat/ui-client';
+import { MultiSelectCustom } from '@zeki.chat/ui-client';
 import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent, Key } from 'react';
 import { useTranslation } from 'react-i18next';

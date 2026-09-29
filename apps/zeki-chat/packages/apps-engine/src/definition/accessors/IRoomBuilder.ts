@@ -1,4 +1,4 @@
-import type { RocketChatAssociationModel } from '../metadata';
+import type { ZekiChatAssociationModel } from '../metadata';
 import type { IRoom, RoomType } from '../rooms';
 import type { IUser } from '../users';
 
@@ -8,7 +8,7 @@ import type { IUser } from '../users';
  * be able to successfully save the room object.
  */
 export interface IRoomBuilder {
-	kind: RocketChatAssociationModel.ROOM | RocketChatAssociationModel.DISCUSSION;
+	kind: ZekiChatAssociationModel.ROOM | ZekiChatAssociationModel.DISCUSSION;
 
 	/**
 	 * Provides a convient way to set the data for the room.
@@ -31,7 +31,7 @@ export interface IRoomBuilder {
 	getDisplayName(): string;
 
 	/**
-	 * Sets the slugified name of this room, it must align to the rules of Rocket.Chat room
+	 * Sets the slugified name of this room, it must align to the rules of ZEKI AI CHAT room
 	 * names otherwise there will be an error thrown (no spaces, special characters, etc).
 	 *
 	 * @param name the slugified name
@@ -140,7 +140,7 @@ export interface IRoomBuilder {
 	/**
 	 * Sets whether this room should display the system messages (like user join, etc)
 	 * or not. This means that whenever a system event, such as joining or leaving, happens
-	 * then Rocket.Chat won't send the message to the channel.
+	 * then ZEKI AI CHAT won't send the message to the channel.
 	 *
 	 * @param displaySystemMessages whether the messages should display or not
 	 */

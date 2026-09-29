@@ -1,6 +1,6 @@
 import { Box, Button, TextInput, Margins, Field, FieldRow, FieldLabel, ToggleSwitch } from '@rocket.chat/fuselage';
 import { useEffectEvent, useSafely } from '@rocket.chat/fuselage-hooks';
-import { useSetModal, useToastMessageDispatch, useUser, useMethod } from '@rocket.chat/ui-contexts';
+import { useSetModal, useToastMessageDispatch, useUser, useMethod } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ComponentPropsWithoutRef, FormEvent } from 'react';
 import { useState, useCallback, useEffect, useId } from 'react';
 import { useForm } from 'react-hook-form';

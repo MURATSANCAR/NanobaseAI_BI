@@ -1,7 +1,7 @@
-import type { IRocketChatDesktop } from '@rocket.chat/desktop-api';
+import type { IZekiChatDesktop } from '@zeki.chat/desktop-api';
 
 declare global {
 	interface Window {
-		RocketChatDesktop?: IRocketChatDesktop;
+		ZekiChatDesktop?: IZekiChatDesktop;
 	}
 }

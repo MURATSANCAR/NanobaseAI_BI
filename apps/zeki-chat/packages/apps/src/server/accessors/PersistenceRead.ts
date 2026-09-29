@@ -1,5 +1,5 @@
-import type { IPersistenceRead } from '@rocket.chat/apps-engine/definition/accessors';
-import type { RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
+import type { IPersistenceRead } from '@zeki.chat/apps-engine/definition/accessors';
+import type { ZekiChatAssociationRecord } from '@zeki.chat/apps-engine/definition/metadata';
 
 import type { PersistenceBridge } from '../bridges';
 
@@ -13,11 +13,11 @@ export class PersistenceRead implements IPersistenceRead {
 		return this.persistBridge.doReadById(id, this.appId);
 	}
 
-	public readByAssociation(association: RocketChatAssociationRecord): Promise<Array<object>> {
+	public readByAssociation(association: ZekiChatAssociationRecord): Promise<Array<object>> {
 		return this.persistBridge.doReadByAssociations(new Array(association), this.appId);
 	}
 
-	public readByAssociations(associations: Array<RocketChatAssociationRecord>): Promise<Array<object>> {
+	public readByAssociations(associations: Array<ZekiChatAssociationRecord>): Promise<Array<object>> {
 		return this.persistBridge.doReadByAssociations(associations, this.appId);
 	}
 }

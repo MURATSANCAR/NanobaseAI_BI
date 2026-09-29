@@ -1,4 +1,4 @@
-import type { IPermission } from '@rocket.chat/apps-engine/definition/permissions/IPermission';
+import type { IPermission } from '@zeki.chat/apps-engine/definition/permissions/IPermission';
 
 interface IPermissionDeniedErrorParams {
 	appId: string;

@@ -1,6 +1,6 @@
-import type { AtLeast } from '@rocket.chat/core-typings';
-import { isRoomFederated, isRoomNativeFederated } from '@rocket.chat/core-typings';
-import { Subscriptions } from '@rocket.chat/models';
+import type { AtLeast } from '@zeki.chat/core-typings';
+import { isRoomFederated, isRoomNativeFederated } from '@zeki.chat/core-typings';
+import { Subscriptions } from '@zeki.chat/models';
 
 import { settings } from '../../../../app/settings/server';
 import type { IRoomTypeServerDirectives } from '../../../../definition/IRoomTypeConfig';

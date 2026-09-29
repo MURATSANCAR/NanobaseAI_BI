@@ -1,4 +1,4 @@
-import type { IRoom, Serialized } from '@rocket.chat/core-typings';
+import type { IRoom, Serialized } from '@zeki.chat/core-typings';
 import { Box, Margins, Tag } from '@rocket.chat/fuselage';
 import { useTranslation } from 'react-i18next';
 

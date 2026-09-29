@@ -1,17 +1,12 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook, waitFor } from '@testing-library/react';
 
 import { useAuditMenu } from './useAuditMenu';
 
-it('should return an empty array of items if doesn`t have license', async () => {
+it('should return an empty array of items if doesn`t have capability', async () => {
 	const { result } = renderHook(() => useAuditMenu(), {
 		wrapper: mockAppRoot()
-			.withEndpoint('GET', '/v1/licenses.info', () => ({
-				// @ts-expect-error: just for testing
-				license: {
-					activeModules: [],
-				},
-			}))
+			.withEndpoint('GET', '/v1/capabilities.info', () => ({ capabilities: { modules: [] } }))
 			.withJohnDoe()
 			.withPermission('can-audit')
 			.withPermission('can-audit-log')
@@ -21,20 +16,11 @@ it('should return an empty array of items if doesn`t have license', async () => 
 	await waitFor(() => expect(result.current.items).toEqual([]));
 });
 
-it('should return an empty array of items if have license and not have permissions', async () => {
+it('should return an empty array of items if have capability and not have permissions', async () => {
 	const { result } = renderHook(() => useAuditMenu(), {
 		wrapper: mockAppRoot()
-			.withEndpoint('GET', '/v1/licenses.info', () => ({
-				license: {
-					license: {
-						// @ts-expect-error: just for testing
-						grantedModules: [{ module: 'auditing' }],
-					},
-					// @ts-expect-error: just for testing
-					activeModules: ['auditing'],
-				},
-			}))
-			.withMethod('license:getModules', () => ['auditing'])
+			.withEndpoint('GET', '/v1/capabilities.info', () => ({ capabilities: { modules: ['auditing'] } }))
+			.withMethod('capabilities:getModules', () => ['auditing'])
 			.withJohnDoe()
 			.build(),
 	});
@@ -42,19 +28,10 @@ it('should return an empty array of items if have license and not have permissio
 	await waitFor(() => expect(result.current.items).toEqual([]));
 });
 
-it('should return auditItems if have license and permissions', async () => {
+it('should return auditItems if have capability and permissions', async () => {
 	const { result } = renderHook(() => useAuditMenu(), {
 		wrapper: mockAppRoot()
-			.withEndpoint('GET', '/v1/licenses.info', () => ({
-				license: {
-					license: {
-						// @ts-expect-error: just for testing
-						grantedModules: [{ module: 'auditing' }],
-					},
-					// @ts-expect-error: just for testing
-					activeModules: ['auditing'],
-				},
-			}))
+			.withEndpoint('GET', '/v1/capabilities.info', () => ({ capabilities: { modules: ['auditing'] } }))
 			.withJohnDoe()
 			.withPermission('can-audit')
 			.withPermission('can-audit-log')
@@ -76,19 +53,10 @@ it('should return auditItems if have license and permissions', async () => {
 	);
 });
 
-it('should return auditMessages item if have license and can-audit permission', async () => {
+it('should return auditMessages item if have capability and can-audit permission', async () => {
 	const { result } = renderHook(() => useAuditMenu(), {
 		wrapper: mockAppRoot()
-			.withEndpoint('GET', '/v1/licenses.info', () => ({
-				license: {
-					license: {
-						// @ts-expect-error: just for testing
-						grantedModules: [{ module: 'auditing' }],
-					},
-					// @ts-expect-error: just for testing
-					activeModules: ['auditing'],
-				},
-			}))
+			.withEndpoint('GET', '/v1/capabilities.info', () => ({ capabilities: { modules: ['auditing'] } }))
 			.withJohnDoe()
 			.withPermission('can-audit')
 			.build(),
@@ -103,19 +71,10 @@ it('should return auditMessages item if have license and can-audit permission', 
 	);
 });
 
-it('should return audiLogs item if have license and can-audit-log permission', async () => {
+it('should return audiLogs item if have capability and can-audit-log permission', async () => {
 	const { result } = renderHook(() => useAuditMenu(), {
 		wrapper: mockAppRoot()
-			.withEndpoint('GET', '/v1/licenses.info', () => ({
-				license: {
-					license: {
-						// @ts-expect-error: just for testing
-						grantedModules: [{ module: 'auditing' }],
-					},
-					// @ts-expect-error: just for testing
-					activeModules: ['auditing'],
-				},
-			}))
+			.withEndpoint('GET', '/v1/capabilities.info', () => ({ capabilities: { modules: ['auditing'] } }))
 			.withJohnDoe()
 			.withPermission('can-audit-log')
 			.build(),
@@ -130,19 +89,10 @@ it('should return audiLogs item if have license and can-audit-log permission', a
 	);
 });
 
-it('should return auditSecurityLog item if have license and can-audit-log permission', async () => {
+it('should return auditSecurityLog item if have capability and can-audit-log permission', async () => {
 	const { result } = renderHook(() => useAuditMenu(), {
 		wrapper: mockAppRoot()
-			.withEndpoint('GET', '/v1/licenses.info', () => ({
-				license: {
-					license: {
-						// @ts-expect-error: just for testing
-						grantedModules: [{ module: 'auditing' }],
-					},
-					// @ts-expect-error: just for testing
-					activeModules: ['auditing'],
-				},
-			}))
+			.withEndpoint('GET', '/v1/capabilities.info', () => ({ capabilities: { modules: ['auditing'] } }))
 			.withJohnDoe()
 			.withPermission('can-audit')
 			.build(),

@@ -1,4 +1,4 @@
-import { Permissions, Roles, Settings, Users } from '@rocket.chat/models';
+import { Permissions, Roles, Settings, Users } from '@zeki.chat/models';
 import type { UpdateResult } from 'mongodb';
 
 import { upsertPermissions } from '../../../app/authorization/server/functions/upsertPermissions';

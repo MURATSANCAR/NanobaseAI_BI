@@ -1,4 +1,4 @@
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -6,7 +6,7 @@ import { settings } from '../../../settings/server';
 import { setRealName } from '../functions/setRealName';
 import { RateLimiter } from '../lib';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		setRealName(name: string): string;

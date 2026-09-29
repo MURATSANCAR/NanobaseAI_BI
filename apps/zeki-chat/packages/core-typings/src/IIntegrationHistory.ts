@@ -1,8 +1,8 @@
 import type { OutgoingIntegrationEvent } from './IIntegration';
 import type { IMessage } from './IMessage';
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 
-export interface IIntegrationHistory extends IRocketChatRecord {
+export interface IIntegrationHistory extends IZekiChatRecord {
 	type: string;
 	step: string;
 	integration: {

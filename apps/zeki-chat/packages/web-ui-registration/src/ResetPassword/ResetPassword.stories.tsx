@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import type { Meta } from '@storybook/react';
 
 import ResetPasswordPage from './ResetPasswordPage';

@@ -1,16 +1,16 @@
-import { api } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
-import { Users } from '@rocket.chat/models';
-import type { Response } from '@rocket.chat/server-fetch';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
+import { api } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
+import { Users } from '@zeki.chat/models';
+import type { Response } from '@zeki.chat/server-fetch';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
 import { Meteor } from 'meteor/meteor';
 import type { ClientSession } from 'mongodb';
 
 import { onceTransactionCommitedSuccessfully } from '../../../../server/database/utils';
 import { SystemLogger } from '../../../../server/lib/logger/system';
 import { hasPermissionAsync } from '../../../authorization/server/functions/hasPermission';
-import { RocketChatFile } from '../../../file/server';
+import { ZekiChatFile } from '../../../file/server';
 import { FileUpload } from '../../../file-upload/server';
 import { settings } from '../../../settings/server';
 
@@ -130,7 +130,7 @@ export async function setUserAvatar(
 					throw new Meteor.Error(
 						'error-avatar-url-handling',
 						`Error while handling avatar setting from a URL (${encodeURI(dataURI)}) for ${user.username}`,
-						{ function: 'RocketChat.setUserAvatar', url: dataURI, username: user.username },
+						{ function: 'ZekiChat.setUserAvatar', url: dataURI, username: user.username },
 					);
 				}
 
@@ -176,7 +176,7 @@ export async function setUserAvatar(
 			};
 		}
 
-		const fileData = RocketChatFile.dataURIParse(dataURI);
+		const fileData = ZekiChatFile.dataURIParse(dataURI);
 
 		return {
 			buffer: Buffer.from(fileData.image, 'base64'),

@@ -1,5 +1,5 @@
-import type { MessageTypesValues, IRoom } from '@rocket.chat/core-typings';
-import { Rooms, Messages } from '@rocket.chat/models';
+import type { MessageTypesValues, IRoom } from '@zeki.chat/core-typings';
+import { Rooms, Messages } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 export async function getRoomMessages({ rid }: { rid: string }) {

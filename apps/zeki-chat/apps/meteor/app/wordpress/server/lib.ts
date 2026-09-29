@@ -1,4 +1,4 @@
-import type { OauthConfig } from '@rocket.chat/core-typings';
+import type { OauthConfig } from '@zeki.chat/core-typings';
 import { Meteor } from 'meteor/meteor';
 import { ServiceConfiguration } from 'meteor/service-configuration';
 import _ from 'underscore';

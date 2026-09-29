@@ -1,4 +1,4 @@
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
 
 import { ajv } from '../Ajv';
 

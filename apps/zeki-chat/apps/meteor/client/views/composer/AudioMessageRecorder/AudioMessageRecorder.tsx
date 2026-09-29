@@ -1,7 +1,7 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { Box, Icon, Throbber } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { MessageComposerAction } from '@rocket.chat/ui-composer';
+import { MessageComposerAction } from '@zeki.chat/ui-composer';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';

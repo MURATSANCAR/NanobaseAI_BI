@@ -1,5 +1,5 @@
-import type { ILivechatUnitMonitor, IOmnichannelBusinessUnit, OmnichannelBusinessUnitPayload } from '@rocket.chat/core-typings';
-import type { PaginatedResult, PaginatedRequest } from '@rocket.chat/rest-typings';
+import type { ILivechatUnitMonitor, IOmnichannelBusinessUnit, OmnichannelBusinessUnitPayload } from '@zeki.chat/core-typings';
+import type { PaginatedResult, PaginatedRequest } from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../../app/api/server';
 import { getPaginationItems } from '../../../../../app/api/server/helpers/getPaginationItems';
@@ -8,7 +8,7 @@ import { LivechatEnterprise } from '../lib/LivechatEnterprise';
 import { findUnits, findUnitById, findUnitMonitors, findUnitsOfUser } from './lib/units';
 import { hasPermissionAsync } from '../../../../../app/authorization/server/functions/hasPermission';
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/livechat/units/:unitId/monitors': {
@@ -28,7 +28,7 @@ declare module '@rocket.chat/rest-typings' {
 
 API.v1.addRoute(
 	'livechat/units/:unitId/monitors',
-	{ authRequired: true, permissionsRequired: ['manage-livechat-monitors'], license: ['livechat-enterprise'] },
+	{ authRequired: true, permissionsRequired: ['manage-livechat-monitors'], capabilities: ['livechat-enterprise'] },
 	{
 		async get() {
 			const { unitId } = this.urlParams;
@@ -47,7 +47,7 @@ API.v1.addRoute(
 
 API.v1.addRoute(
 	'livechat/units',
-	{ authRequired: true, permissionsRequired: { POST: ['manage-livechat-units'], GET: [] }, license: ['livechat-enterprise'] },
+	{ authRequired: true, permissionsRequired: { POST: ['manage-livechat-units'], GET: [] }, capabilities: ['livechat-enterprise'] },
 	{
 		async get() {
 			const params = this.queryParams;
@@ -79,7 +79,7 @@ API.v1.addRoute(
 
 API.v1.addRoute(
 	'livechat/units/:id',
-	{ authRequired: true, permissionsRequired: ['manage-livechat-units'], license: ['livechat-enterprise'] },
+	{ authRequired: true, permissionsRequired: ['manage-livechat-units'], capabilities: ['livechat-enterprise'] },
 	{
 		async get() {
 			const { id } = this.urlParams;
@@ -106,7 +106,7 @@ API.v1.addRoute(
 
 API.v1.addRoute(
 	'livechat/units/:unitId/departments',
-	{ authRequired: true, permissionsRequired: ['manage-livechat-units'], license: ['livechat-enterprise'] },
+	{ authRequired: true, permissionsRequired: ['manage-livechat-units'], capabilities: ['livechat-enterprise'] },
 	{
 		async get() {
 			const { offset, count } = await getPaginationItems(this.queryParams);
@@ -126,7 +126,7 @@ API.v1.addRoute(
 
 API.v1.addRoute(
 	'livechat/units/:unitId/departments/available',
-	{ authRequired: true, permissionsRequired: ['manage-livechat-units'], license: ['livechat-enterprise'] },
+	{ authRequired: true, permissionsRequired: ['manage-livechat-units'], capabilities: ['livechat-enterprise'] },
 	{
 		async get() {
 			const { offset, count } = await getPaginationItems(this.queryParams);

@@ -1,4 +1,4 @@
-import type { IRoomNativeFederated, IUser } from '@rocket.chat/core-typings';
+import type { IRoomNativeFederated, IUser } from '@zeki.chat/core-typings';
 import { Visibility } from 'matrix-js-sdk';
 
 import type {} from '../../../../../apps/meteor/app/api/server/v1/rooms.ts';

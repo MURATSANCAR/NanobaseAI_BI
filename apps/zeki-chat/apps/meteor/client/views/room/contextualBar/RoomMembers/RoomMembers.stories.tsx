@@ -1,5 +1,5 @@
-import { UserStatus } from '@rocket.chat/core-typings';
-import { Contextualbar } from '@rocket.chat/ui-client';
+import { UserStatus } from '@zeki.chat/core-typings';
+import { Contextualbar } from '@zeki.chat/ui-client';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryFn } from '@storybook/react';
 
@@ -32,13 +32,13 @@ Default.args = {
 	isSuccess: true,
 	members: [
 		{
-			_id: 'rocket.cat',
-			username: 'rocket.cat',
+			_id: 'zeki.bot',
+			username: 'zeki.bot',
 			status: UserStatus.ONLINE,
-			name: 'Rocket.Cat',
+			name: 'ZEKI AI CHAT',
 			roles: ['user'],
 			subscription: {
-				_id: 'sub-rocket.cat',
+				_id: 'sub-zeki.bot',
 				ts: '2025-01-01T00:00:00Z',
 			},
 		},
@@ -55,13 +55,13 @@ WithABACRoom.args = {
 	isSuccess: true,
 	members: [
 		{
-			_id: 'rocket.cat',
-			username: 'rocket.cat',
+			_id: 'zeki.bot',
+			username: 'zeki.bot',
 			status: UserStatus.ONLINE,
-			name: 'Rocket.Cat',
+			name: 'ZEKI AI CHAT',
 			roles: ['user'],
 			subscription: {
-				_id: 'sub-rocket.cat',
+				_id: 'sub-zeki.bot',
 				ts: '2025-01-01T00:00:00Z',
 			},
 		},
@@ -74,15 +74,15 @@ WithInvitedMember.args = {
 	isSuccess: true,
 	members: [
 		{
-			_id: 'rocket.cat',
-			username: 'rocket.cat',
+			_id: 'zeki.bot',
+			username: 'zeki.bot',
 			roles: ['user'],
 			subscription: {
-				_id: 'sub-rocket.cat',
+				_id: 'sub-zeki.bot',
 				status: 'INVITED',
 				ts: '2025-01-01T00:00:00Z',
 			},
-			name: 'Rocket.Cat',
+			name: 'ZEKI AI CHAT',
 		},
 	],
 };

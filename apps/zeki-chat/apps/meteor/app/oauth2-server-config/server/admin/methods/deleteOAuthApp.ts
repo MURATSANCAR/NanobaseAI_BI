@@ -1,11 +1,11 @@
-import type { IOAuthApps } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { OAuthAccessTokens, OAuthApps, OAuthAuthCodes } from '@rocket.chat/models';
+import type { IOAuthApps } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { OAuthAccessTokens, OAuthApps, OAuthAuthCodes } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { hasPermissionAsync } from '../../../../authorization/server/functions/hasPermission';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		deleteOAuthApp(applicationId: IOAuthApps['_id']): boolean;

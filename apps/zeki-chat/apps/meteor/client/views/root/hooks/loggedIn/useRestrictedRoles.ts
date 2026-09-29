@@ -1,4 +1,4 @@
-import { useMethod } from '@rocket.chat/ui-contexts';
+import { useMethod } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 

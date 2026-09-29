@@ -1,4 +1,4 @@
-import { Uploads } from '@rocket.chat/models';
+import { Uploads } from '@zeki.chat/models';
 
 import { transformMappedData } from './transformMappedData';
 
@@ -63,7 +63,7 @@ export class AppUploadsConverter {
 		return transformMappedData(upload, map);
 	}
 
-	convertToRocketChat(upload) {
+	convertToZekiChat(upload) {
 		if (!upload) {
 			return undefined;
 		}

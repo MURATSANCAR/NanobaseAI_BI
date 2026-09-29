@@ -1,5 +1,5 @@
 import { SidebarV2 } from '@rocket.chat/fuselage';
-import { useUserPreference } from '@rocket.chat/ui-contexts';
+import { useUserPreference } from '@zeki.chat/ui-contexts';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 

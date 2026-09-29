@@ -1,4 +1,4 @@
-import type { IOutboundProviderTemplate } from '@rocket.chat/core-typings';
+import type { IOutboundProviderTemplate } from '@zeki.chat/core-typings';
 import { Box, Callout } from '@rocket.chat/fuselage';
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

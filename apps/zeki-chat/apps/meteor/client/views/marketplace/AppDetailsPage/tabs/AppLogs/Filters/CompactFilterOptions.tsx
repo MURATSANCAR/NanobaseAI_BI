@@ -1,4 +1,4 @@
-import { GenericMenu } from '@rocket.chat/ui-client';
+import { GenericMenu } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 type CompactFilterOptionsProps = {

@@ -1,12 +1,12 @@
-import type { IBanner, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import { BannerPlatform } from '@rocket.chat/core-typings';
-import type { IBannersModel } from '@rocket.chat/model-typings';
+import type { IBanner, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import { BannerPlatform } from '@zeki.chat/core-typings';
+import type { IBannersModel } from '@zeki.chat/model-typings';
 import type { Collection, FindCursor, Db, FindOptions, IndexDescription, InsertOneResult, UpdateResult } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class BannersRaw extends BaseRaw<IBanner> implements IBannersModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IBanner>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IBanner>>) {
 		super(db, 'banner', trash);
 	}
 

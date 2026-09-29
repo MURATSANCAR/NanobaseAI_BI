@@ -6,7 +6,7 @@ import {
 	useLoginWithToken,
 	useToastMessageDispatch,
 	useMethod,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 

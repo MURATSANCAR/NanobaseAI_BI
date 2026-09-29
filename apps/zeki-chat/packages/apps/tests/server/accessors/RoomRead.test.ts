@@ -1,9 +1,9 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { IMessageRaw } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom, IRoomRaw } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IMessageRaw } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom, IRoomRaw } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import { RoomRead } from '../../../src/server/accessors';
 import type { RoomBridge } from '../../../src/server/bridges';

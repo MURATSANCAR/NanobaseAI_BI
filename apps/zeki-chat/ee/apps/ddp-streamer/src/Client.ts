@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 import type { IncomingMessage } from 'http';
 
-import { Presence } from '@rocket.chat/core-services';
-import type { ISocketConnection } from '@rocket.chat/core-typings';
+import { Presence } from '@zeki.chat/core-services';
+import type { ISocketConnection } from '@zeki.chat/core-typings';
 import { throttle } from 'underscore';
 import { v1 as uuidv1 } from 'uuid';
 import type WebSocket from 'ws';

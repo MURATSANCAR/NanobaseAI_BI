@@ -1,4 +1,4 @@
-import type { IRoutingMethod, RoutingMethodConfig, SelectedAgent } from '@rocket.chat/core-typings';
+import type { IRoutingMethod, RoutingMethodConfig, SelectedAgent } from '@zeki.chat/core-typings';
 
 import { RoutingManager } from '../RoutingManager';
 

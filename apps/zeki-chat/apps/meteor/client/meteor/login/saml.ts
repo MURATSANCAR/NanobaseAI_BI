@@ -1,4 +1,4 @@
-import { Random } from '@rocket.chat/random';
+import { Random } from '@zeki.chat/random';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 
@@ -54,7 +54,7 @@ Meteor.logout = async function (...args) {
 	}
 
 	if (settings.peek('SAML_Custom_Default_logout_behaviour') === 'Local') {
-		console.info('SAML session not terminated, only the Rocket.Chat session is going to be killed');
+		console.info('SAML session not terminated, only the ZEKI AI CHAT session is going to be killed');
 		return standardLogout();
 	}
 

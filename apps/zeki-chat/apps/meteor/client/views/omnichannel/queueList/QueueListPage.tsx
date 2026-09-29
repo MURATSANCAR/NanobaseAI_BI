@@ -1,4 +1,4 @@
-import { Page, PageHeader, PageContent } from '@rocket.chat/ui-client';
+import { Page, PageHeader, PageContent } from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import QueueListTable from './QueueListTable';

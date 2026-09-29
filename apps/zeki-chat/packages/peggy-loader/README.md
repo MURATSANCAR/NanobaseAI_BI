@@ -6,7 +6,7 @@
   </a>
 </p>
 
-# `@rocket.chat/peggy-loader`
+# `@zeki.chat/peggy-loader`
 
 > Peggy loader for webpack
 
@@ -32,14 +32,14 @@ npm i peggy webpack
 yarn add peggy webpack
 ```
 
-Add `@rocket.chat/peggy-loader` as a dependency:
+Add `@zeki.chat/peggy-loader` as a dependency:
 
 ```sh
-npm i @rocket.chat/peggy-loader
+npm i @zeki.chat/peggy-loader
 
 # or, if you are using yarn:
 
-yarn add @rocket.chat/peggy-loader
+yarn add @zeki.chat/peggy-loader
 ```
 
 <!--/install-->

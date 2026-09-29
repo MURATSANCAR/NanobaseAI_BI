@@ -22,8 +22,8 @@ import {
 	ContextualbarEmptyContent,
 	ContextualbarDialog,
 	ContextualbarFooter,
-} from '@rocket.chat/ui-client';
-import { useSetting, useUserPreference } from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-client';
+import { useSetting, useUserPreference } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

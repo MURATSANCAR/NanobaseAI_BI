@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/mongo-adapter",
+	"name": "@zeki.chat/mongo-adapter",
 	"version": "0.0.3",
 	"private": true,
 	"main": "./dist/index.js",
@@ -16,7 +16,7 @@
 		"testunit": "jest"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
+		"@zeki.chat/jest-presets": "workspace:~",
 		"eslint": "~9.39.4",
 		"jest": "~30.2.0",
 		"mongodb": "6.16.0",

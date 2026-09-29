@@ -1,4 +1,4 @@
-import type { IThreadMessage } from '@rocket.chat/core-typings';
+import type { IThreadMessage } from '@zeki.chat/core-typings';
 import {
 	Skeleton,
 	ThreadMessage,
@@ -12,8 +12,8 @@ import {
 	CheckBox,
 	MessageStatusIndicatorItem,
 } from '@rocket.chat/fuselage';
-import { MessageTypes } from '@rocket.chat/message-types';
-import { MessageAvatar } from '@rocket.chat/ui-avatar';
+import { MessageTypes } from '@zeki.chat/message-types';
+import { MessageAvatar } from '@zeki.chat/ui-avatar';
 import type { ComponentProps, ReactElement } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

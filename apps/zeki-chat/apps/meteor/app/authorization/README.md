@@ -21,18 +21,18 @@ if hasAnyRole(userId, ['admin','site-moderator','moderator'])
 Usage:
 ```
 # assign user to admin role.  Permissions scoped globally
-RocketChat.authz.addUserRoles(userId, ['admin'])
+ZekiChat.authz.addUserRoles(userId, ['admin'])
 
 # assign user to moderator role.  Permissions scoped to the specified room
 # user can moderate (e.g. edit channel name, delete private group message) for only one room specified by the roomId
-RocketChat.authz.addUserRoles(userId, ['moderator'], roomId )
+ZekiChat.authz.addUserRoles(userId, ['moderator'], roomId )
 
 # check if user can modify message for any room
-RocketChat.authz.hasPermission(userId, 'edit-message')
+ZekiChat.authz.hasPermission(userId, 'edit-message')
 
 # check if user can modify message for the specified room.  Also returns true if user
 # has 'edit-message' at global scope.
-RocketChat.authz.hasPermission(userId, 'edit-message', roomId)
+ZekiChat.authz.hasPermission(userId, 'edit-message', roomId)
 ```
 
 Notes:

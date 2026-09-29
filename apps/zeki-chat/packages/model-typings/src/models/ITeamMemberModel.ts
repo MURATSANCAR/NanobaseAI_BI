@@ -1,4 +1,4 @@
-import type { ITeamMember, IUser, IRole } from '@rocket.chat/core-typings';
+import type { ITeamMember, IUser, IRole } from '@zeki.chat/core-typings';
 import type { FindOptions, FindCursor, InsertOneResult, UpdateResult, DeleteResult, Filter, Document } from 'mongodb';
 
 import type { FindPaginated, IBaseModel } from './IBaseModel';

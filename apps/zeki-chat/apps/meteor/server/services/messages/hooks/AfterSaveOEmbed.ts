@@ -5,12 +5,12 @@ import type {
 	OEmbedMeta,
 	IMessage,
 	OEmbedUrlContent,
-} from '@rocket.chat/core-typings';
-import { isOEmbedUrlWithMetadata } from '@rocket.chat/core-typings';
-import { Logger } from '@rocket.chat/logger';
-import { OEmbedCache, Messages } from '@rocket.chat/models';
-import { serverFetch as fetch } from '@rocket.chat/server-fetch';
-import { isAbsoluteURL } from '@rocket.chat/tools';
+} from '@zeki.chat/core-typings';
+import { isOEmbedUrlWithMetadata } from '@zeki.chat/core-typings';
+import { Logger } from '@zeki.chat/logger';
+import { OEmbedCache, Messages } from '@zeki.chat/models';
+import { serverFetch as fetch } from '@zeki.chat/server-fetch';
+import { isAbsoluteURL } from '@zeki.chat/tools';
 import he from 'he';
 import iconv from 'iconv-lite';
 import ipRangeCheck from 'ip-range-check';
@@ -18,7 +18,7 @@ import jschardet from 'jschardet';
 import { camelCase } from 'lodash';
 
 import { settings } from '../../../../app/settings/server';
-import { Info } from '../../../../app/utils/rocketchat.info';
+import { Info } from '../../../../app/utils/zekichat.info';
 import { afterParseUrlContent, beforeGetUrlContent } from '../lib/oembed/providers';
 
 const MAX_EXTERNAL_URL_PREVIEWS = 5;

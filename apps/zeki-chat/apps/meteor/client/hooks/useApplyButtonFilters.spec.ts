@@ -1,6 +1,6 @@
-import type { IUIActionButton } from '@rocket.chat/apps-engine/definition/ui';
-import { UIActionButtonContext } from '@rocket.chat/apps-engine/definition/ui';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import type { IUIActionButton } from '@zeki.chat/apps-engine/definition/ui';
+import { UIActionButtonContext } from '@zeki.chat/apps-engine/definition/ui';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { renderHook } from '@testing-library/react';
 
 import { useApplyButtonAuthFilter } from './useApplyButtonFilters';

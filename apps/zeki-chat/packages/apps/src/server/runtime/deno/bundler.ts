@@ -19,7 +19,7 @@ export async function bundleLegacyApp(appPackage: IParseAppPackageResult) {
 		define: {
 			'global.Promise': 'Promise',
 		},
-		external: ['@rocket.chat/apps-engine/*'],
+		external: ['@zeki.chat/apps-engine/*'],
 		stdin: {
 			contents: appPackage.files[appPackage.info.classFile],
 			sourcefile: appPackage.info.classFile,

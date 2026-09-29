@@ -1,4 +1,4 @@
-import type { DeepWritable } from '@rocket.chat/core-typings';
+import type { DeepWritable } from '@zeki.chat/core-typings';
 import { Meteor } from 'meteor/meteor';
 import type { Filter } from 'mongodb';
 

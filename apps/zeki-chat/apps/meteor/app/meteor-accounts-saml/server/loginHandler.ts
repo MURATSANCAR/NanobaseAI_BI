@@ -1,4 +1,4 @@
-import { CredentialTokens } from '@rocket.chat/models';
+import { CredentialTokens } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 

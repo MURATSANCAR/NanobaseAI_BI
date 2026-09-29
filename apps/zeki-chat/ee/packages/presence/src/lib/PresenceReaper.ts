@@ -1,7 +1,7 @@
 import { setInterval } from 'node:timers';
 
-import type { IUserSession } from '@rocket.chat/core-typings';
-import { UsersSessions } from '@rocket.chat/models';
+import type { IUserSession } from '@zeki.chat/core-typings';
+import { UsersSessions } from '@zeki.chat/models';
 import type { AnyBulkWriteOperation } from 'mongodb';
 
 type ReaperPlan = {

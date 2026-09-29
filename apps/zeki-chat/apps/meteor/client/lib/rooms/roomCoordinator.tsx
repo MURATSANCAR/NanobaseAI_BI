@@ -1,5 +1,5 @@
-import type { IRoom, RoomType, IUser, AtLeast, ValueOf, ISubscription } from '@rocket.chat/core-typings';
-import type { RouteName } from '@rocket.chat/ui-contexts';
+import type { IRoom, RoomType, IUser, AtLeast, ValueOf, ISubscription } from '@zeki.chat/core-typings';
+import type { RouteName } from '@zeki.chat/ui-contexts';
 
 import { hasPermission } from '../../../app/authorization/client';
 import type {

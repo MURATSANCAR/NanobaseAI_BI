@@ -1,5 +1,5 @@
-import type { IEmailCreator } from '@rocket.chat/apps-engine/definition/accessors/IEmailCreator';
-import type { IEmail } from '@rocket.chat/apps-engine/definition/email';
+import type { IEmailCreator } from '@zeki.chat/apps-engine/definition/accessors/IEmailCreator';
+import type { IEmail } from '@zeki.chat/apps-engine/definition/email';
 
 import type { AppBridges } from '../bridges';
 

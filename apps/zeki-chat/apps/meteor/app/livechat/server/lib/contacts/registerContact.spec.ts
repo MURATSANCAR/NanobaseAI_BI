@@ -34,8 +34,8 @@ const modelsMock = {
 
 const { registerContact } = proxyquire.noCallThru().load('./registerContact', {
 	'meteor/meteor': sinon.stub(),
-	'@rocket.chat/models': modelsMock,
-	'@rocket.chat/tools': { wrapExceptions: sinon.stub() },
+	'@zeki.chat/models': modelsMock,
+	'@zeki.chat/tools': { wrapExceptions: sinon.stub() },
 	'./Helper': { validateEmail: sinon.stub() },
 });
 

@@ -1,5 +1,5 @@
-import type { IReadReceipt } from '@rocket.chat/core-typings';
-import type { IReadReceiptsModel } from '@rocket.chat/model-typings';
+import type { IReadReceipt } from '@zeki.chat/core-typings';
+import type { IReadReceiptsModel } from '@zeki.chat/model-typings';
 import type { FindCursor, DeleteResult } from 'mongodb';
 
 import { BaseDummy } from './BaseDummy';

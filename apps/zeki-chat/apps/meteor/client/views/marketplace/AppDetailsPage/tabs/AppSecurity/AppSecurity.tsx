@@ -1,4 +1,4 @@
-import type { AppPermission } from '@rocket.chat/core-typings';
+import type { AppPermission } from '@zeki.chat/core-typings';
 import { Box, Margins } from '@rocket.chat/fuselage';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';

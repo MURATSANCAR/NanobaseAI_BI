@@ -1,5 +1,5 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import { afterAgentUserActivated, afterAgentAdded, afterRemoveAgent } from '../lib/hooks';

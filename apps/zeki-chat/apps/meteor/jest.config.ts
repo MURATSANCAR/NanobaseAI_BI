@@ -1,5 +1,5 @@
-import client from '@rocket.chat/jest-presets/client';
-import server from '@rocket.chat/jest-presets/server';
+import client from '@zeki.chat/jest-presets/client';
+import server from '@zeki.chat/jest-presets/server';
 import type { Config } from 'jest';
 
 export default {
@@ -36,8 +36,7 @@ export default {
 			testMatch: [
 				'<rootDir>/app/livechat/server/business-hour/**/*.spec.ts?(x)',
 				'<rootDir>/app/livechat/server/api/**/*.spec.ts',
-				'<rootDir>/ee/app/authorization/server/validateUserRoles.spec.ts',
-				'<rootDir>/ee/app/license/server/**/*.spec.ts',
+				'<rootDir>/ee/app/capabilities/server/**/*.spec.ts',
 				'<rootDir>/ee/server/patches/**/*.spec.ts',
 				'<rootDir>/ee/server/cron/**/*.spec.ts',
 				'<rootDir>/app/utils/lib/**.spec.ts',

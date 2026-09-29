@@ -1,5 +1,5 @@
-import { api } from '@rocket.chat/core-services';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
+import { api } from '@zeki.chat/core-services';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
 import { DDPCommon } from 'meteor/ddp-common';
 import { Meteor } from 'meteor/meteor';
 

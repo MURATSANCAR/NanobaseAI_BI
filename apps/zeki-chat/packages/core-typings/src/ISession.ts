@@ -1,4 +1,4 @@
-import type { IRocketChatRecord } from './IRocketChatRecord';
+import type { IZekiChatRecord } from './IZekiChatRecord';
 import type { IRole } from './IRole';
 import type { IUser } from './IUser';
 
@@ -13,7 +13,7 @@ export interface ISessionDevice {
 	version: string;
 }
 
-export interface ISession extends IRocketChatRecord {
+export interface ISession extends IZekiChatRecord {
 	type: 'session' | 'computed-session' | 'user_daily';
 	mostImportantRole: IRole['_id'];
 	userId: string;

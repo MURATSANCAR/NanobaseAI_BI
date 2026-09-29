@@ -1,4 +1,4 @@
-import { LivechatContacts, LivechatCustomField, LivechatVisitors } from '@rocket.chat/models';
+import { LivechatContacts, LivechatCustomField, LivechatVisitors } from '@zeki.chat/models';
 import {
 	isPOSTOmnichannelContactsProps,
 	isPOSTUpdateOmnichannelContactsProps,
@@ -13,9 +13,9 @@ import {
 	validateBadRequestErrorResponse,
 	validateUnauthorizedErrorResponse,
 	validateForbiddenErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import { removeEmpty } from '@rocket.chat/tools';
+import { removeEmpty } from '@zeki.chat/tools';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -263,7 +263,7 @@ const omnichannelContactsEndpoints = API.v1.post(
 
 type OmnichannelContactsEndpoints = ExtractRoutesFromAPI<typeof omnichannelContactsEndpoints>;
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-empty-interface
 	interface Endpoints extends OmnichannelContactsEndpoints {}
 }

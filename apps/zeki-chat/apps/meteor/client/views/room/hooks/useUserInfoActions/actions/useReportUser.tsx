@@ -1,6 +1,6 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { useUserDisplayName } from '@rocket.chat/ui-client';
-import { useEndpoint, useSetModal, useToastMessageDispatch, useUserId } from '@rocket.chat/ui-contexts';
+import type { IUser } from '@zeki.chat/core-typings';
+import { useUserDisplayName } from '@zeki.chat/ui-client';
+import { useEndpoint, useSetModal, useToastMessageDispatch, useUserId } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

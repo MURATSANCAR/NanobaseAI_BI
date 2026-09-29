@@ -5,7 +5,7 @@ import type {
 	RequiredField,
 	SlashCommandPreviewItem,
 	SlashCommandPreviews,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 
 import { InvalidCommandUsage, InvalidPreview } from '../../../client/lib/errors';
 
@@ -129,7 +129,7 @@ export const slashCommands = {
 	},
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		slashCommand(params: { cmd: string; params: string; msg: IMessage; triggerId: string }): unknown;

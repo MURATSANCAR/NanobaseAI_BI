@@ -1,5 +1,5 @@
-import { GenericModal } from '@rocket.chat/ui-client';
-import { useSetModal, useUserSubscription } from '@rocket.chat/ui-contexts';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal, useUserSubscription } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

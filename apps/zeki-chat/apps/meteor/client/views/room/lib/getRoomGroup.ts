@@ -1,5 +1,5 @@
-import type { RoomType, IRoom } from '@rocket.chat/core-typings';
-import type { RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
+import type { RoomType, IRoom } from '@zeki.chat/core-typings';
+import type { RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
 
 const groupsDict = {
 	l: 'live',

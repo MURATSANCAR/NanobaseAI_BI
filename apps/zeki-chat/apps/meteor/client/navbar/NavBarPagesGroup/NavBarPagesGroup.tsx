@@ -1,5 +1,5 @@
 import { NavBarGroup } from '@rocket.chat/fuselage';
-import { useLayout, usePermission } from '@rocket.chat/ui-contexts';
+import { useLayout, usePermission } from '@zeki.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import NavBarItemCreateNew from './NavBarItemCreateNew';

@@ -1,4 +1,4 @@
-import type { IEmailInbox } from '@rocket.chat/core-typings';
+import type { IEmailInbox } from '@zeki.chat/core-typings';
 
 import { ajv, ajvQuery } from './Ajv';
 import type { PaginatedRequest } from '../helpers/PaginatedRequest';

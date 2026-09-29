@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 
 import { callbacks } from '../../../../server/lib/callbacks';
 import { settings } from '../../../settings/server';

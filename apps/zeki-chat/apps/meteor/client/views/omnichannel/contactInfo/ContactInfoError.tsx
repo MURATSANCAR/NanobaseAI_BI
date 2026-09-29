@@ -5,7 +5,7 @@ import {
 	ContextualbarClose,
 	ContextualbarEmptyContent,
 	ContextualbarDialog,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 const ContactInfoError = ({ onClose }: { onClose: () => void }) => {

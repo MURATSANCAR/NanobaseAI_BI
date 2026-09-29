@@ -1,16 +1,16 @@
-import type { IMessageBuilder, INotifier } from '@rocket.chat/apps-engine/definition/accessors';
-import type { ITypingOptions } from '@rocket.chat/apps-engine/definition/accessors/INotifier';
-import type { _TypingScope } from '@rocket.chat/apps-engine/definition/accessors/INotifier';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IMessageBuilder, INotifier } from '@zeki.chat/apps-engine/definition/accessors';
+import type { ITypingOptions } from '@zeki.chat/apps-engine/definition/accessors/INotifier';
+import type { _TypingScope } from '@zeki.chat/apps-engine/definition/accessors/INotifier';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 import { MessageBuilder } from './builders/MessageBuilder.ts';
 import { AppObjectRegistry } from '../../AppObjectRegistry.ts';
 import * as Messenger from '../messenger.ts';
 import { require } from '../require.ts';
 import { formatErrorResponse } from './formatResponseErrorHandler.ts';
 
-const { TypingScope } = require('@rocket.chat/apps-engine/definition/accessors/INotifier.js') as {
+const { TypingScope } = require('@zeki.chat/apps-engine/definition/accessors/INotifier.js') as {
 	TypingScope: typeof _TypingScope;
 };
 

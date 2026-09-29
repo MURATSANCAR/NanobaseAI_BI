@@ -1,5 +1,5 @@
-import type { IIntegration, IIntegrationHistory, INewIncomingIntegration, INewOutgoingIntegration } from '@rocket.chat/core-typings';
-import { Integrations, IntegrationHistory } from '@rocket.chat/models';
+import type { IIntegration, IIntegrationHistory, INewIncomingIntegration, INewOutgoingIntegration } from '@zeki.chat/core-typings';
+import { Integrations, IntegrationHistory } from '@zeki.chat/models';
 import {
 	ajv,
 	isIntegrationsCreateProps,
@@ -11,7 +11,7 @@ import {
 	validateBadRequestErrorResponse,
 	validateForbiddenErrorResponse,
 	validateUnauthorizedErrorResponse,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import { Match, check } from 'meteor/check';
 import type { Filter } from 'mongodb';

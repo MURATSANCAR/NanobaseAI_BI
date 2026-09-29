@@ -1,6 +1,6 @@
-import type { App } from '@rocket.chat/core-typings';
+import type { App } from '@zeki.chat/core-typings';
 import { Box, Pagination } from '@rocket.chat/fuselage';
-import type { PaginatedResult } from '@rocket.chat/rest-typings';
+import type { PaginatedResult } from '@zeki.chat/rest-typings';
 import type { Dispatch, SetStateAction } from 'react';
 import { useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

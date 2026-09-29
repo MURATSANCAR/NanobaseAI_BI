@@ -6,7 +6,7 @@
   </a>
 </p>
 
-# `@rocket.chat/fuselage-ui-kit`
+# `@zeki.chat/fuselage-ui-kit`
 
 > UiKit elements for ZEKI AI CHAT Apps built under Fuselage design system
 
@@ -32,14 +32,14 @@ npm i @rocket.chat/fuselage @rocket.chat/fuselage-hooks @rocket.chat/icons @rock
 yarn add @rocket.chat/fuselage @rocket.chat/fuselage-hooks @rocket.chat/icons @rocket.chat/styled react react-dom
 ```
 
-Add `@rocket.chat/fuselage-ui-kit` as a dependency:
+Add `@zeki.chat/fuselage-ui-kit` as a dependency:
 
 ```sh
-npm i @rocket.chat/fuselage-ui-kit
+npm i @zeki.chat/fuselage-ui-kit
 
 # or, if you are using yarn:
 
-yarn add @rocket.chat/fuselage-ui-kit
+yarn add @zeki.chat/fuselage-ui-kit
 ```
 
 <!--/install-->

@@ -1,8 +1,8 @@
-import { FederationMatrix, Message, MeteorError, Room } from '@rocket.chat/core-services';
-import { isEditedMessage, isRoomNativeFederated, isUserNativeFederated, isBannedSubscription } from '@rocket.chat/core-typings';
-import type { IRoomNativeFederated, IMessage, IRoom, IUser } from '@rocket.chat/core-typings';
-import { validateFederatedUsername } from '@rocket.chat/federation-matrix';
-import { Rooms, Subscriptions, Users } from '@rocket.chat/models';
+import { FederationMatrix, Message, MeteorError, Room } from '@zeki.chat/core-services';
+import { isEditedMessage, isRoomNativeFederated, isUserNativeFederated, isBannedSubscription } from '@zeki.chat/core-typings';
+import type { IRoomNativeFederated, IMessage, IRoom, IUser } from '@zeki.chat/core-typings';
+import { validateFederatedUsername } from '@zeki.chat/federation-matrix';
+import { Rooms, Subscriptions, Users } from '@zeki.chat/models';
 
 import { notifyOnRoomChangedById, notifyOnSubscriptionChanged } from '../../../../app/lib/server/lib/notifyListener';
 import { callbacks } from '../../../../server/lib/callbacks';

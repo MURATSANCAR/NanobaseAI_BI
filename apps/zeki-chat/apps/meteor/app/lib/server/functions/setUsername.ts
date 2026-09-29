@@ -1,8 +1,8 @@
-import { api } from '@rocket.chat/core-services';
-import type { IUser } from '@rocket.chat/core-typings';
-import { isUserNativeFederated } from '@rocket.chat/core-typings';
-import type { Updater } from '@rocket.chat/models';
-import { Invites, Users, Subscriptions } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IUser } from '@zeki.chat/core-typings';
+import { isUserNativeFederated } from '@zeki.chat/core-typings';
+import type { Updater } from '@zeki.chat/models';
+import { Invites, Users, Subscriptions } from '@zeki.chat/models';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import type { ClientSession } from 'mongodb';

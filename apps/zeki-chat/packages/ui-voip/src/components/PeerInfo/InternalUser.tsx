@@ -1,4 +1,4 @@
-import type { UserStatus } from '@rocket.chat/core-typings';
+import type { UserStatus } from '@zeki.chat/core-typings';
 import { Avatar, Box, Icon, StatusBullet } from '@rocket.chat/fuselage';
 
 import type { Slot } from './useInfoSlots';

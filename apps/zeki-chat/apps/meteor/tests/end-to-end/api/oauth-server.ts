@@ -203,7 +203,7 @@ describe('[OAuth Server]', () => {
 				.expect('Content-Type', 'application/json; charset=utf-8')
 				.expect(200)
 				.expect((res: Response) => {
-					expect(res.body).to.have.property('sub', 'rocketchat.internal.admin.test');
+					expect(res.body).to.have.property('sub', 'zekichat.internal.admin.test');
 				});
 		});
 	});
@@ -223,20 +223,20 @@ describe('[OAuth Server]', () => {
 				.expect(200)
 				.expect((res: Response) => {
 					expect(res.body).to.have.property('success', true);
-					expect(res.body).to.have.property('_id', 'rocketchat.internal.admin.test');
+					expect(res.body).to.have.property('_id', 'zekichat.internal.admin.test');
 				});
 		});
 
 		it('should be able to use oauth credentials to access v1 endpoints (/v1/users.info)', async () => {
 			await request
 				.get(api('users.info'))
-				.query({ username: 'rocketchat.internal.admin.test' })
+				.query({ username: 'zekichat.internal.admin.test' })
 				.auth(accessToken, { type: 'bearer' })
 				.expect('Content-Type', 'application/json')
 				.expect(200)
 				.expect((res: Response) => {
 					expect(res.body).to.have.property('success', true);
-					expect(res.body).to.have.nested.property('user._id', 'rocketchat.internal.admin.test');
+					expect(res.body).to.have.nested.property('user._id', 'zekichat.internal.admin.test');
 				});
 		});
 

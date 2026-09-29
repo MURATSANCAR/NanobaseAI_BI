@@ -1,4 +1,4 @@
-import { isObject } from '@rocket.chat/tools';
+import { isObject } from '@zeki.chat/tools';
 import type { i18n, TFunction, TOptions } from 'i18next';
 
 import type { RocketchatI18nKeys } from './resources.ts';

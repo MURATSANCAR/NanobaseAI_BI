@@ -1,12 +1,12 @@
-import { AnchorPortal, useGoToDirectMessage } from '@rocket.chat/ui-client';
-import type { Device } from '@rocket.chat/ui-contexts';
+import { AnchorPortal, useGoToDirectMessage } from '@zeki.chat/ui-client';
+import type { Device } from '@zeki.chat/ui-contexts';
 import {
 	useSetOutputMediaDevice,
 	useSetInputMediaDevice,
 	useSetModal,
 	useSelectedDevices,
 	useToastMessageDispatch,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';

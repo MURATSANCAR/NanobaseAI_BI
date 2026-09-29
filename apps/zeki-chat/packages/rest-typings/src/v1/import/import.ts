@@ -1,4 +1,4 @@
-import type { IImport, IImporterSelection, IImportProgress, ImportStatus, IImportUser } from '@rocket.chat/core-typings';
+import type { IImport, IImporterSelection, IImportProgress, ImportStatus, IImportUser } from '@zeki.chat/core-typings';
 
 import type { DownloadPublicImportFileParamsPOST } from './DownloadPublicImportFileParamsPOST';
 import type { StartImportParamsPOST } from './StartImportParamsPOST';

@@ -1,5 +1,5 @@
-import { Omnichannel } from '@rocket.chat/core-services';
-import { LivechatInquiry, LivechatRooms, Users } from '@rocket.chat/models';
+import { Omnichannel } from '@zeki.chat/core-services';
+import { LivechatInquiry, LivechatRooms, Users } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { RoutingManager } from './RoutingManager';
@@ -44,8 +44,8 @@ export const takeInquiry = async (
 	}
 
 	const room = await LivechatRooms.findOneById(inquiry.rid);
-	if (!room || !(await Omnichannel.isWithinMACLimit(room))) {
-		throw new Meteor.Error('error-mac-limit-reached');
+	if (!room) {
+		throw new Meteor.Error('error-invalid-room');
 	}
 
 	const contactId = room.contactId ?? (await migrateVisitorIfMissingContact(room.v._id, room.source));

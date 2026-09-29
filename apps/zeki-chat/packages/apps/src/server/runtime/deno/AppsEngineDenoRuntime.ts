@@ -4,8 +4,8 @@ import * as path from 'node:path';
 import { type Readable, EventEmitter } from 'node:stream';
 import { inspect as utilInspect } from 'node:util';
 
-import { AppStatus, AppStatusUtils } from '@rocket.chat/apps-engine/definition/AppStatus';
-import type { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
+import { AppStatus, AppStatusUtils } from '@zeki.chat/apps-engine/definition/AppStatus';
+import type { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
 import debugFactory from 'debug';
 import * as jsonrpc from 'jsonrpc-lite';
 
@@ -82,18 +82,18 @@ function getDenoConfigPath(): string {
 }
 
 /**
- * Resolves the absolute path to @rocket.chat/apps-engine's src/ directory.
+ * Resolves the absolute path to @zeki.chat/apps-engine's src/ directory.
  * Uses require.resolve so it works regardless of the runtime environment
  * (monorepo dev, Meteor bundle, standalone node_modules).
  */
 function getAppsEngineDir(): string {
-	return path.dirname(require.resolve('@rocket.chat/apps-engine/package.json'));
+	return path.dirname(require.resolve('@zeki.chat/apps-engine/package.json'));
 }
 
 /**
  * Generates a runtime deno.jsonc at `<tempDir>/deno_runtime.jsonc` by reading
  * the static config and injecting the resolved absolute path for
- * `@rocket.chat/apps-engine/`. This makes deno-runtime location-independent:
+ * `@zeki.chat/apps-engine/`. This makes deno-runtime location-independent:
  * the path is always correct regardless of where this package is installed.
  *
  * Returns the path to the generated config file.
@@ -111,7 +111,7 @@ function generateEphemeralDenoConfig(targetPath: string, denoConfigPath: string,
 		...staticConfig,
 		imports: {
 			...staticConfig.imports,
-			'@rocket.chat/apps-engine/': `${appsEnginePath}/`,
+			'@zeki.chat/apps-engine/': `${appsEnginePath}/`,
 		},
 	};
 
@@ -194,7 +194,7 @@ export class DenoRuntimeSubprocessController extends EventEmitter implements IRu
 			}
 		}
 
-		// Generate a runtime config with the resolved absolute path for @rocket.chat/apps-engine/
+		// Generate a runtime config with the resolved absolute path for @zeki.chat/apps-engine/
 		generateEphemeralDenoConfig(this.denoEphemeralConfigPath, this.denoConfigPath, this.appsEnginePath);
 
 		this.debug = baseDebug.extend(appPackage.info.id);

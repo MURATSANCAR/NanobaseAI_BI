@@ -1,5 +1,5 @@
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { useMethod } from '@rocket.chat/ui-contexts';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { useMethod } from '@zeki.chat/ui-contexts';
 
 import type { ActionInputBaseProps } from './ActionInputBase';
 import ActionInputBase from './ActionInputBase';

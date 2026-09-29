@@ -1,8 +1,8 @@
 import { PublicSettings } from '../../stores';
 import { watch } from '../watch';
 
-if (window.RocketChatDesktop) {
-	// backport of rocketchat:user-presence for the desktop app
+if (window.ZekiChatDesktop) {
+	// backport of zekichat:user-presence for the desktop app
 	const fakeUserPresenceModule = {
 		UserPresence: {
 			awayTime: undefined,
@@ -19,7 +19,7 @@ if (window.RocketChatDesktop) {
 
 	window.require = ((fn) =>
 		Object.assign((id: string) => {
-			if (id === 'meteor/rocketchat:user-presence') {
+			if (id === 'meteor/zekichat:user-presence') {
 				return fakeUserPresenceModule;
 			}
 

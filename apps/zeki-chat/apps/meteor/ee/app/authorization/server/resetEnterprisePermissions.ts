@@ -1,4 +1,4 @@
-import { Permissions } from '@rocket.chat/models';
+import { Permissions } from '@zeki.chat/models';
 
 import { guestPermissions } from '../lib/guestPermissions';
 

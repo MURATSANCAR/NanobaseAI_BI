@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/i18n",
+	"name": "@zeki.chat/i18n",
 	"version": "3.1.0",
 	"private": true,
 	"type": "module",
@@ -34,16 +34,16 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@rocket.chat/jest-presets": "workspace:~",
-		"@rocket.chat/tools": "workspace:~",
-		"@rocket.chat/tsconfig": "workspace:*",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tools": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
 		"eslint": "~9.39.4",
 		"i18next": "~23.4.9",
 		"jest": "~30.2.0",
 		"typescript": "~5.9.3"
 	},
 	"peerDependencies": {
-		"@rocket.chat/tools": "workspace:~",
+		"@zeki.chat/tools": "workspace:~",
 		"i18next": "*"
 	},
 	"volta": {

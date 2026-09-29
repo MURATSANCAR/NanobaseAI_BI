@@ -1,5 +1,5 @@
-import type { ILivechatDepartmentAgents } from '@rocket.chat/core-typings';
-import { LivechatDepartmentAgents } from '@rocket.chat/models';
+import type { ILivechatDepartmentAgents } from '@zeki.chat/core-typings';
+import { LivechatDepartmentAgents } from '@zeki.chat/models';
 
 export async function findAgentDepartments({
 	enabledDepartmentsOnly,

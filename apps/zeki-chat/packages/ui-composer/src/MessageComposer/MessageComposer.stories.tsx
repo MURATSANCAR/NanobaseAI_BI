@@ -2,7 +2,7 @@ import { Button, IconButton } from '@rocket.chat/fuselage';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryFn } from '@storybook/react';
 
-import '@rocket.chat/icons/dist/rocketchat.css';
+import '@rocket.chat/icons/dist/zekichat.css';
 import {
 	MessageComposer,
 	MessageComposerAction,

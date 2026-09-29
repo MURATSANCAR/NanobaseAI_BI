@@ -14,8 +14,8 @@ export const MOCK_SERVER_URL = process.env.MOCK_SERVER_URL || 'http://localhost:
 
 export const ADMIN_CREDENTIALS = {
 	email: 'rocketchat.internal.admin.test@rocket.chat',
-	password: 'rocketchat.internal.admin.test',
-	username: 'rocketchat.internal.admin.test',
+	password: 'zekichat.internal.admin.test',
+	username: 'zekichat.internal.admin.test',
 } as const;
 
 export const DEFAULT_USER_CREDENTIALS = {

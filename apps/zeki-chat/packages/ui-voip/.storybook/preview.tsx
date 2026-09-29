@@ -2,7 +2,7 @@ import type { Decorator, Parameters } from '@storybook/react';
 
 import '../../../apps/meteor/app/theme/client/main.css';
 import 'highlight.js/styles/github.css';
-import '@rocket.chat/icons/dist/rocketchat.css';
+import '@rocket.chat/icons/dist/zekichat.css';
 
 export const parameters: Parameters = {
 	controls: {

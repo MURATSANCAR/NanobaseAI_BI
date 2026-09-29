@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { faker } from '@faker-js/faker/locale/af_ZA';
 import { Box } from '@rocket.chat/fuselage';
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import type { Meta, StoryObj } from '@storybook/react';
 
 import OutboundMessageWizard from './OutboundMessageWizard';

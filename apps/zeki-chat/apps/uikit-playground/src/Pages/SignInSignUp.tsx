@@ -1,6 +1,6 @@
 import { css } from '@rocket.chat/css-in-js';
 import { Flex, Box, InputBox, Button, Label } from '@rocket.chat/fuselage';
-import { RocketChatLogo } from '@rocket.chat/logo';
+import { ZekiChatLogo } from '@zeki.chat/logo';
 import { useNavigate } from 'react-router-dom';
 
 import routes from '../Routes/Routes';
@@ -33,7 +33,7 @@ const SignInSignUp = ({ route }: { route: string }) => {
 				<Flex.Container justifyContent='start' alignItems='center' direction='column'>
 					<Box w='max-content' h='100%'>
 						<Box w='180px' h='40px' mbs='100px'>
-							<RocketChatLogo />
+							<ZekiChatLogo />
 						</Box>
 						<Label mbs='20px' fontScale='hero'>
 							{labels[route].header}

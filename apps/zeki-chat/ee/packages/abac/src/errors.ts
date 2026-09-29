@@ -1,4 +1,4 @@
-import { MeteorError, isMeteorError } from '@rocket.chat/core-services';
+import { MeteorError, isMeteorError } from '@zeki.chat/core-services';
 
 export enum AbacErrorCode {
 	InvalidAttributeValues = 'error-invalid-attribute-values',

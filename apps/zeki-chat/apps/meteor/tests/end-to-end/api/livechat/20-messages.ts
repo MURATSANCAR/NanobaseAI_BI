@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { ILivechatAgent, ILivechatVisitor, IOmnichannelRoom, IRoom } from '@rocket.chat/core-typings';
+import type { ILivechatAgent, ILivechatVisitor, IOmnichannelRoom, IRoom } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { before, describe, it, after } from 'mocha';
 

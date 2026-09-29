@@ -73,7 +73,7 @@ export interface IInputBlock extends IBlock {
 }
 
 export enum ConditionalBlockFiltersEngine {
-	ROCKETCHAT = 'rocket.chat',
+	ZEKICHAT = 'rocket.chat',
 	LIVECHAT = 'livechat',
 }
 
@@ -96,7 +96,7 @@ export interface IConditionalBlockFilters {
  * Currently supported conditions:
  *      `engine: Array<"rocket.chat" | "omnichannel">` specifies what engine should
  *      render the block:
- *          "rocket.chat" for regular Rocket.Chat engine
+ *          "rocket.chat" for regular ZEKI AI CHAT engine
  *          "omnichannel" for the Livechat/Omnichannel widget engine
  *      leave it blank to show the block in both engines
  */

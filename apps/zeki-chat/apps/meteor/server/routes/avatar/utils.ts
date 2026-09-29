@@ -1,8 +1,8 @@
 import type { ServerResponse } from 'node:http';
 
-import { hashLoginToken } from '@rocket.chat/account-utils';
-import type { IIncomingMessage, IUpload } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import { hashLoginToken } from '@zeki.chat/account-utils';
+import type { IIncomingMessage, IUpload } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 import type { NextFunction } from 'connect';
 import { Cookies } from 'meteor/ostrio:cookies';
 import sanitizeHtml from 'sanitize-html';

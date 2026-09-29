@@ -1,18 +1,18 @@
-import type { IRoomBuilder } from '@rocket.chat/apps-engine/definition/accessors/IRoomBuilder';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms/IRoom';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users/IUser';
+import type { IRoomBuilder } from '@zeki.chat/apps-engine/definition/accessors/IRoomBuilder';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms/IRoom';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users/IUser';
 
-import type { RoomType } from '@rocket.chat/apps-engine/definition/rooms/RoomType';
-import type { RocketChatAssociationModel as _RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations';
+import type { RoomType } from '@zeki.chat/apps-engine/definition/rooms/RoomType';
+import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';
 
 import { require } from '../../../lib/require.ts';
 
-const { RocketChatAssociationModel } = require('@rocket.chat/apps-engine/definition/metadata/RocketChatAssociations.js') as {
-	RocketChatAssociationModel: typeof _RocketChatAssociationModel;
+const { ZekiChatAssociationModel } = require('@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations.js') as {
+	ZekiChatAssociationModel: typeof _ZekiChatAssociationModel;
 };
 
 export class RoomBuilder implements IRoomBuilder {
-	public kind: _RocketChatAssociationModel.ROOM | _RocketChatAssociationModel.DISCUSSION;
+	public kind: _ZekiChatAssociationModel.ROOM | _ZekiChatAssociationModel.DISCUSSION;
 
 	protected room: IRoom;
 
@@ -22,7 +22,7 @@ export class RoomBuilder implements IRoomBuilder {
 	private customFieldsChanged = false;
 
 	constructor(data?: Partial<IRoom>) {
-		this.kind = RocketChatAssociationModel.ROOM;
+		this.kind = ZekiChatAssociationModel.ROOM;
 		this.room = (data || { customFields: {} }) as IRoom;
 		this.members = [];
 	}

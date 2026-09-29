@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -43,16 +43,7 @@ it('should not display any audit items if has at least one admin permission, som
 it('should display audit items if has at least one admin permission, both audit permission and the auditing module is enabled', async () => {
 	render(<NavBarItemAdministrationMenu />, {
 		wrapper: mockAppRoot()
-			.withEndpoint('GET', '/v1/licenses.info', () => ({
-				license: {
-					license: {
-						// @ts-expect-error: just for testing
-						grantedModules: [{ module: 'auditing' }],
-					},
-					// @ts-expect-error: just for testing
-					activeModules: ['auditing'],
-				},
-			}))
+			.withEndpoint('GET', '/v1/capabilities.info', () => ({ capabilities: { modules: ['auditing'] } }))
 			.withJohnDoe()
 			.withPermission('can-audit')
 			.withPermission('can-audit-log')

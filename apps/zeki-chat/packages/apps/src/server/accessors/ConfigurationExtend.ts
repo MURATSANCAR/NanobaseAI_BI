@@ -9,7 +9,7 @@ import type {
 	IUIExtend,
 	IVideoConfProvidersExtend,
 	IOutboundCommunicationProviderExtend,
-} from '@rocket.chat/apps-engine/definition/accessors';
+} from '@zeki.chat/apps-engine/definition/accessors';
 
 export class ConfigurationExtend implements IConfigurationExtend {
 	constructor(

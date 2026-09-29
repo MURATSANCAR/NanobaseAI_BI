@@ -1,7 +1,7 @@
 import { Box } from '@rocket.chat/fuselage';
-import { FeaturePreview, FeaturePreviewOff, FeaturePreviewOn } from '@rocket.chat/ui-client';
-import type { IRouterPaths } from '@rocket.chat/ui-contexts';
-import { useLayout, useSetting, useCurrentRoutePath, useRouter } from '@rocket.chat/ui-contexts';
+import { FeaturePreview, FeaturePreviewOff, FeaturePreviewOn } from '@zeki.chat/ui-client';
+import type { IRouterPaths } from '@zeki.chat/ui-contexts';
+import { useLayout, useSetting, useCurrentRoutePath, useRouter } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 
@@ -57,7 +57,7 @@ const LayoutWithSidebar = ({ children }: { children: ReactNode }): ReactElement 
 			{!embeddedLayout && <NavBar />}
 			<Box
 				bg='surface-light'
-				id='rocket-chat'
+				id='zeki-chat'
 				className={[embeddedLayout ? 'embedded-view' : undefined, 'menu-nav'].filter(Boolean).join(' ')}
 			>
 				<MainLayoutStyleTags />

@@ -1,4 +1,4 @@
-import type { IPermission } from '@rocket.chat/core-typings';
+import type { IPermission } from '@zeki.chat/core-typings';
 
 import { PrivateCachedStore } from '../lib/cachedStores/CachedStore';
 import { Permissions } from '../stores';

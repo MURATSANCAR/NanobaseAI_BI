@@ -7,7 +7,7 @@ import {
 	isLivechatAnalyticsDepartmentsTotalTransferredChatsProps,
 	isLivechatAnalyticsDepartmentsTotalAbandonedChatsProps,
 	isLivechatAnalyticsDepartmentsPercentageAbandonedChatsProps,
-} from '@rocket.chat/rest-typings';
+} from '@zeki.chat/rest-typings';
 
 import { API } from '../../../../../app/api/server';
 import { getPaginationItems } from '../../../../../app/api/server/helpers/getPaginationItems';
@@ -28,7 +28,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsDepartmentsAmountOfChatsProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -69,7 +69,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsDepartmentsAverageServiceTimeProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -109,7 +109,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsDepartmentsAverageChatDurationTimeProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -149,7 +149,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsDepartmentsTotalServiceTimeProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -189,7 +189,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsDepartmentsAverageWaitingTimeProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -229,7 +229,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsDepartmentsTotalTransferredChatsProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -269,7 +269,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsDepartmentsTotalAbandonedChatsProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {
@@ -309,7 +309,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-livechat-manager'],
 		validateParams: isLivechatAnalyticsDepartmentsPercentageAbandonedChatsProps,
-		license: ['livechat-enterprise'],
+		capabilities: ['livechat-enterprise'],
 	},
 	{
 		async get() {

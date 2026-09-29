@@ -1,4 +1,4 @@
-import type { UserPresence } from '@rocket.chat/core-typings';
+import type { UserPresence } from '@zeki.chat/core-typings';
 import { useContext, useMemo, useSyncExternalStore } from 'react';
 
 import { UserPresenceContext } from '../UserPresenceContext';

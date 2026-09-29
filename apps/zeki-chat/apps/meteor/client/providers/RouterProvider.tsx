@@ -1,5 +1,5 @@
-import { RouterContext } from '@rocket.chat/ui-contexts';
-import type { RouterContextValue } from '@rocket.chat/ui-contexts';
+import { RouterContext } from '@zeki.chat/ui-contexts';
+import type { RouterContextValue } from '@zeki.chat/ui-contexts';
 import type { ReactNode } from 'react';
 
 import { useRouterScrollToHash } from '../hooks/useRouterScrollToHash';

@@ -1,9 +1,9 @@
-import type { IRocketChatDesktop } from '@rocket.chat/desktop-api';
+import type { IZekiChatDesktop } from '@zeki.chat/desktop-api';
 
 declare global {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Window {
-		RocketChatDesktop?: IRocketChatDesktop;
+		ZekiChatDesktop?: IZekiChatDesktop;
 
 		/** @deprecated use `window.RTCPeerConnection` */
 		mozRTCPeerConnection?: RTCPeerConnection;

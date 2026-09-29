@@ -1,4 +1,4 @@
-import type { IWebdavNode } from '@rocket.chat/core-typings';
+import type { IWebdavNode } from '@zeki.chat/core-typings';
 import { Box, Icon } from '@rocket.chat/fuselage';
 import {
 	GenericTable,
@@ -8,7 +8,7 @@ import {
 	GenericTableHeaderCell,
 	GenericTableLoadingRow,
 	GenericTableRow,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

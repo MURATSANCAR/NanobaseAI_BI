@@ -1,6 +1,6 @@
-import type { IThreadMainMessage, IMessage, ISubscription } from '@rocket.chat/core-typings';
+import type { IThreadMainMessage, IMessage, ISubscription } from '@zeki.chat/core-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
-import { useEndpoint, useUserId } from '@rocket.chat/ui-contexts';
+import { useEndpoint, useUserId } from '@zeki.chat/ui-contexts';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { useInfiniteMessageQueryUpdates } from '../../../../../hooks/useInfiniteMessageQueryUpdates';

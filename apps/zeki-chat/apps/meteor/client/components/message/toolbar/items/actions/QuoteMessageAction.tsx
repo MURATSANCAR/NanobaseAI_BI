@@ -4,7 +4,7 @@ import {
 	type ISubscription,
 	isRoomFederated,
 	isRoomNativeFederated,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 import { useTranslation } from 'react-i18next';
 
 import { useChat } from '../../../../../views/room/contexts/ChatContext';

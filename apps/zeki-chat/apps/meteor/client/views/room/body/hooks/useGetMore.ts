@@ -1,5 +1,5 @@
 import { useSafeRefCallback } from '@rocket.chat/fuselage-hooks';
-import { useSearchParameter } from '@rocket.chat/ui-contexts';
+import { useSearchParameter } from '@zeki.chat/ui-contexts';
 import { useCallback } from 'react';
 import { flushSync } from 'react-dom';
 

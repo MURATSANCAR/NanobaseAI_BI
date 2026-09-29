@@ -1,11 +1,10 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { usePermission, useSetting, useTranslation, useUser } from '@rocket.chat/ui-contexts';
+import { usePermission, useSetting, useTranslation, useUser } from '@zeki.chat/ui-contexts';
 import type { DragEvent, ReactNode } from 'react';
 import { useMemo, useSyncExternalStore } from 'react';
 
 import { useDropTarget } from './useDropTarget';
 import { roomCoordinator } from '../../../../lib/rooms/roomCoordinator';
-import { useIsRoomOverMacLimit } from '../../../omnichannel/hooks/useIsRoomOverMacLimit';
 import { useChat } from '../../contexts/ChatContext';
 import { useRoom, useRoomSubscription } from '../../contexts/RoomContext';
 
@@ -22,8 +21,6 @@ export const useFileUploadDropTarget = (): readonly [
 ] => {
 	const room = useRoom();
 	const { triggerProps, overlayProps } = useDropTarget();
-
-	const isRoomOverMacLimit = useIsRoomOverMacLimit(room);
 
 	const t = useTranslation();
 
@@ -69,7 +66,7 @@ export const useFileUploadDropTarget = (): readonly [
 	});
 
 	const allOverlayProps = useMemo(() => {
-		if (!fileUploadEnabled || isRoomOverMacLimit) {
+		if (!fileUploadEnabled) {
 			return {
 				enabled: false,
 				reason: t('FileUpload_Disabled'),
@@ -90,7 +87,7 @@ export const useFileUploadDropTarget = (): readonly [
 			onFileDrop,
 			...overlayProps,
 		} as const;
-	}, [isEditing, fileUploadAllowedForUser, fileUploadEnabled, isRoomOverMacLimit, onFileDrop, overlayProps, subscription, t]);
+	}, [isEditing, fileUploadAllowedForUser, fileUploadEnabled, onFileDrop, overlayProps, subscription, t]);
 
 	return [triggerProps, allOverlayProps] as const;
 };

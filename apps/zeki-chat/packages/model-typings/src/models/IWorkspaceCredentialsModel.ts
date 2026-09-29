@@ -1,4 +1,4 @@
-import type { IWorkspaceCredentials } from '@rocket.chat/core-typings';
+import type { IWorkspaceCredentials } from '@zeki.chat/core-typings';
 import type { DeleteResult, UpdateResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

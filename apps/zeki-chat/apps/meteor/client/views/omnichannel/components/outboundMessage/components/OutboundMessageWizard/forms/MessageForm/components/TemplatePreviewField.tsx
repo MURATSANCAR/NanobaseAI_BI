@@ -1,4 +1,4 @@
-import type { IOutboundProviderTemplate } from '@rocket.chat/core-typings';
+import type { IOutboundProviderTemplate } from '@zeki.chat/core-typings';
 import type { Control } from 'react-hook-form';
 import { useWatch } from 'react-hook-form';
 

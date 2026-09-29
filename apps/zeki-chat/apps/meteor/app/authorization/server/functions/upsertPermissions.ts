@@ -1,6 +1,6 @@
 /* eslint no-multi-spaces: 0 */
-import type { IPermission, ISetting } from '@rocket.chat/core-typings';
-import { Permissions, Settings } from '@rocket.chat/models';
+import type { IPermission, ISetting } from '@zeki.chat/core-typings';
+import { Permissions, Settings } from '@zeki.chat/models';
 
 import { createOrUpdateProtectedRoleAsync } from '../../../../server/lib/roles/createOrUpdateProtectedRole';
 import { settings } from '../../../settings/server';

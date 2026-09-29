@@ -1,5 +1,5 @@
-import type { IIntegrationHistory, OutgoingIntegrationEvent, IIntegration, IMessage, AtLeast } from '@rocket.chat/core-typings';
-import { IntegrationHistory } from '@rocket.chat/models';
+import type { IIntegrationHistory, OutgoingIntegrationEvent, IIntegration, IMessage, AtLeast } from '@zeki.chat/core-typings';
+import { IntegrationHistory } from '@zeki.chat/models';
 
 import { omit } from '../../../../lib/utils/omit';
 import { notifyOnIntegrationHistoryChangedById, notifyOnIntegrationHistoryChanged } from '../../../lib/server/lib/notifyListener';

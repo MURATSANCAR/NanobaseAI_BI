@@ -1,5 +1,5 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
-import { WizardContext, StepsLinkedList } from '@rocket.chat/ui-client';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
+import { WizardContext, StepsLinkedList } from '@zeki.chat/ui-client';
 import { composeStories } from '@storybook/react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

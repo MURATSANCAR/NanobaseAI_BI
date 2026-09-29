@@ -1,13 +1,13 @@
-# @rocket.chat/pdf-worker
+# @zeki.chat/pdf-worker
 
-This package is a PDF worker for Rocket.Chat. It allows for the rendering of PDFs within the ZEKI AI CHAT application. `@react-pdf/renderer` is used as the PDF renderer, as it provides a React-based solution for rendering PDFs, making it easy to integrate into the existing React codebase of Rocket.Chat.
+This package is a PDF worker for ZEKI AI CHAT. It allows for the rendering of PDFs within the ZEKI AI CHAT application. `@react-pdf/renderer` is used as the PDF renderer, as it provides a React-based solution for rendering PDFs, making it easy to integrate into the existing React codebase of ZEKI AI CHAT.
 
 ## Installation
 
 To install this package, you can use yarn:
 
 ```
-yarn add @rocket.chat/pdf-worker
+yarn add @zeki.chat/pdf-worker
 
 yarn install
 ```
@@ -17,7 +17,7 @@ yarn install
 To use this package, you will need to import it in your project and use the provided PDF renderer.
 
 ```
-import { PdfWorker } from '@rocket.chat/pdf-worker';
+import { PdfWorker } from '@zeki.chat/pdf-worker';
 
 const PdfWorker = new PdfWorker();
 PdfWorker.render('template-mode');
@@ -53,4 +53,4 @@ This will start a development server and allow you to see the different componen
 
 ## Additional Note
 
-Please refer to the official documentation of @rocket.chat/pdf-worker for more information about this package.
+Please refer to the official documentation of @zeki.chat/pdf-worker for more information about this package.

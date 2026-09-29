@@ -1,8 +1,8 @@
-import type { IUser, IRoom } from '@rocket.chat/core-typings';
-import { Rooms, AuditLog, ServerEvents } from '@rocket.chat/models';
-import { isServerEventsAuditSettingsProps, ajv, ajvQuery } from '@rocket.chat/rest-typings';
-import type { PaginatedRequest, PaginatedResult } from '@rocket.chat/rest-typings';
-import { convertSubObjectsIntoPaths } from '@rocket.chat/tools';
+import type { IUser, IRoom } from '@zeki.chat/core-typings';
+import { Rooms, AuditLog, ServerEvents } from '@zeki.chat/models';
+import { isServerEventsAuditSettingsProps, ajv, ajvQuery } from '@zeki.chat/rest-typings';
+import type { PaginatedRequest, PaginatedResult } from '@zeki.chat/rest-typings';
+import { convertSubObjectsIntoPaths } from '@zeki.chat/tools';
 
 import { API } from '../../../app/api/server/api';
 import { getPaginationItems } from '../../../app/api/server/helpers/getPaginationItems';
@@ -28,7 +28,7 @@ const auditRoomMembersSchema = {
 
 export const isAuditRoomMembersProps = ajvQuery.compile<AuditRoomMembersParams>(auditRoomMembersSchema);
 
-declare module '@rocket.chat/rest-typings' {
+declare module '@zeki.chat/rest-typings' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface Endpoints {
 		'/v1/audit/rooms.members': {
@@ -45,7 +45,7 @@ API.v1.addRoute(
 		authRequired: true,
 		permissionsRequired: ['view-members-list-all-rooms'],
 		validateParams: isAuditRoomMembersProps,
-		license: ['auditing'],
+		capabilities: ['auditing'],
 	},
 	{
 		async get() {
@@ -149,7 +149,7 @@ API.v1.get(
 		query: isServerEventsAuditSettingsProps,
 		authRequired: true,
 		permissionsRequired: ['can-audit'],
-		license: ['auditing'],
+		capabilities: ['auditing'],
 	},
 	async function action() {
 		const { start, end, settingId, actor } = this.queryParams;

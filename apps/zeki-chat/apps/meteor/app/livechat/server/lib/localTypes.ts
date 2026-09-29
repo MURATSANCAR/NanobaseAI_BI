@@ -6,7 +6,7 @@ import type {
 	MessageAttachment,
 	IMessageInbox,
 	IOmnichannelAgent,
-} from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
 
 type GenericCloseRoomParams = {
 	room: IOmnichannelRoom;

@@ -1,5 +1,5 @@
-import type { IRoom, VideoConference } from '@rocket.chat/core-typings';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import type { IRoom, VideoConference } from '@zeki.chat/core-typings';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { videoConferenceQueryKeys } from '../../../../../lib/queryKeys';

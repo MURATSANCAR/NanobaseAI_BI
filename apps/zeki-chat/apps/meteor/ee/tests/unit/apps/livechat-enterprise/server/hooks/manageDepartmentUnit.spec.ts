@@ -21,13 +21,13 @@ const getUnitsFromUserStub = sinon.stub();
 const { manageDepartmentUnit } = proxyquire
 	.noCallThru()
 	.load('../../../../../../app/livechat-enterprise/server/hooks/manageDepartmentUnit.ts', {
-		'@rocket.chat/omni-core-ee': {
+		'@zeki.chat/omni-core-ee': {
 			getUnitsFromUser: getUnitsFromUserStub,
 		},
 		'../../../../../app/authorization/server/functions/hasRole': {
 			hasAnyRoleAsync: hasAnyRoleStub,
 		},
-		'@rocket.chat/models': {
+		'@zeki.chat/models': {
 			LivechatDepartment: livechatDepartmentStub,
 			LivechatUnit: livechatUnitStub,
 		},

@@ -1,14 +1,14 @@
-import { api } from '@rocket.chat/core-services';
-import type { IWebdavAccountPayload } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { WebdavAccounts } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { IWebdavAccountPayload } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import { WebdavAccounts } from '@zeki.chat/models';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
 import { settings } from '../../../settings/server';
 import { WebdavClientAdapter } from '../lib/webdavClientAdapter';
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		addWebdavAccount(formData: IWebdavAccountPayload): boolean;

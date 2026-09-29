@@ -4,7 +4,7 @@ import { useSetupWizardContext } from './contexts/SetupWizardContext';
 import AdminInfoStep from './steps/AdminInfoStep';
 import OrganizationInfoStep from './steps/OrganizationInfoStep';
 
-// Zeki: the Rocket.Chat Cloud register/confirmation steps were removed; the wizard has two local steps only.
+// Zeki: the ZEKI AI CHAT Cloud register/confirmation steps were removed; the wizard has two local steps only.
 const SetupWizardPage = (): ReactElement => {
 	const { currentStep } = useSetupWizardContext();
 

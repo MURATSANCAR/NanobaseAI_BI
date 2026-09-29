@@ -1,4 +1,4 @@
-import type { IEnvironmentalVariableRead } from '@rocket.chat/apps-engine/definition/accessors';
+import type { IEnvironmentalVariableRead } from '@zeki.chat/apps-engine/definition/accessors';
 
 import type { EnvironmentalVariableBridge } from '../bridges';
 

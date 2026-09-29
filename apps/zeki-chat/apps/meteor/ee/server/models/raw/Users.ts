@@ -1,10 +1,10 @@
-import type { RocketChatRecordDeleted, IUser, AvailableAgentsAggregation } from '@rocket.chat/core-typings';
-import { queryStatusAgentOnline, UsersRaw } from '@rocket.chat/models';
+import type { ZekiChatRecordDeleted, IUser, AvailableAgentsAggregation } from '@zeki.chat/core-typings';
+import { queryStatusAgentOnline, UsersRaw } from '@zeki.chat/models';
 import type { Db, Collection, Filter } from 'mongodb';
 
 import { readSecondaryPreferred } from '../../../../server/database/readSecondaryPreferred';
 
-declare module '@rocket.chat/model-typings' {
+declare module '@zeki.chat/model-typings' {
 	interface IUsersModel {
 		getUnavailableAgents(
 			departmentId: string,
@@ -16,7 +16,7 @@ declare module '@rocket.chat/model-typings' {
 }
 
 export class UsersEE extends UsersRaw {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<IUser>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<IUser>>) {
 		super(db, trash);
 	}
 
@@ -31,7 +31,7 @@ export class UsersEE extends UsersRaw {
 			? [
 					{
 						$lookup: {
-							from: 'rocketchat_livechat_department_agents',
+							from: 'zeki_livechat_department_agents',
 							let: { userId: '$_id' },
 							pipeline: [
 								{
@@ -60,7 +60,7 @@ export class UsersEE extends UsersRaw {
 					...departmentFilter,
 					{
 						$lookup: {
-							from: 'rocketchat_subscription',
+							from: 'zeki_subscription',
 							localField: '_id',
 							foreignField: 'u._id',
 							pipeline: [{ $match: { $and: [{ t: 'l' }, { open: true }, { onHold: { $ne: true } }] } }],

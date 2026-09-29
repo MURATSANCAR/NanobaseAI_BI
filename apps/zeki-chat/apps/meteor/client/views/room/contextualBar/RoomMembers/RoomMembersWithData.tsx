@@ -1,5 +1,5 @@
-import type { IRoom, IUser } from '@rocket.chat/core-typings';
-import { isRoomFederated, isDirectMessageRoom, isTeamRoom, isRoomNativeFederated } from '@rocket.chat/core-typings';
+import type { IRoom, IUser } from '@zeki.chat/core-typings';
+import { isRoomFederated, isDirectMessageRoom, isTeamRoom, isRoomNativeFederated } from '@zeki.chat/core-typings';
 import { useEffectEvent, useDebouncedValue, useLocalStorage } from '@rocket.chat/fuselage-hooks';
 import {
 	useUserRoom,
@@ -8,7 +8,7 @@ import {
 	usePermission,
 	useUserSubscription,
 	useRoomToolbox,
-} from '@rocket.chat/ui-contexts';
+} from '@zeki.chat/ui-contexts';
 import type { ChangeEvent, MouseEvent, ReactElement } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 

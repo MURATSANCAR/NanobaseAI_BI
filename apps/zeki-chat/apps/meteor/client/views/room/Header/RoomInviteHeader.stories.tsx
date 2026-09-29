@@ -4,7 +4,7 @@ import RoomInviteHeader from './RoomInviteHeader';
 import FakeRoomProvider from '../../../../tests/mocks/client/FakeRoomProvider';
 import { createFakeRoom } from '../../../../tests/mocks/data';
 
-const mockedRoom = createFakeRoom({ name: 'rocket.cat', federated: true });
+const mockedRoom = createFakeRoom({ name: 'zeki.bot', federated: true });
 
 const meta = {
 	component: RoomInviteHeader,

@@ -1,5 +1,5 @@
-import type { IMessage, ITranslatedMessage } from '@rocket.chat/core-typings';
-import type { Options, Root } from '@rocket.chat/message-parser';
+import type { IMessage, ITranslatedMessage } from '@zeki.chat/core-typings';
+import type { Options, Root } from '@zeki.chat/message-parser';
 
 import { parseMessageAttachments, parseMessageTextToAstMarkdown } from './parseMessageTextToAstMarkdown';
 

@@ -1,4 +1,4 @@
-import type { ButtonElement, LayoutBlock, TextObject } from '@rocket.chat/ui-kit';
+import type { ButtonElement, LayoutBlock, TextObject } from '@zeki.chat/ui-kit';
 
 import type { IBlock, IButtonElement, ITextObject } from './blocks';
 

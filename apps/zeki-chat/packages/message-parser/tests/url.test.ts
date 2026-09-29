@@ -17,8 +17,8 @@ test.each([
 	['https://pt.wikipedia.org/with-hyphen', [paragraph([link('https://pt.wikipedia.org/with-hyphen')])]],
 	['https://pt.wikipedia.org/with_underscore', [paragraph([link('https://pt.wikipedia.org/with_underscore')])]],
 	[
-		'https://www.npmjs.com/package/@rocket.chat/message-parser',
-		[paragraph([link('https://www.npmjs.com/package/@rocket.chat/message-parser')])],
+		'https://www.npmjs.com/package/@zeki.chat/message-parser',
+		[paragraph([link('https://www.npmjs.com/package/@zeki.chat/message-parser')])],
 	],
 	['http:/rocket.chat/teste', [paragraph([plain('http:/rocket.chat/teste')])]],
 	['https:/rocket.chat/', [paragraph([plain('https:/rocket.chat/')])]],
@@ -136,7 +136,7 @@ test.each([
 	expect(parse(input)).toEqual(output);
 });
 
-describe('autoLink with custom hosts settings comming from Rocket.Chat', () => {
+describe('autoLink with custom hosts settings comming from ZEKI AI CHAT', () => {
 	test.each([
 		['http://gitlab.local', [paragraph([link('http://gitlab.local', [plain('http://gitlab.local')])])]],
 		['gitlab.local', [paragraph([link('//gitlab.local', [plain('gitlab.local')])])]],
@@ -146,7 +146,7 @@ describe('autoLink with custom hosts settings comming from Rocket.Chat', () => {
 	});
 });
 
-describe('autoLink WITHOUT custom hosts settings comming from Rocket.Chat', () => {
+describe('autoLink WITHOUT custom hosts settings comming from ZEKI AI CHAT', () => {
 	test.each([['https://internaltool.testt', [paragraph([plain('https://internaltool.testt')])]]])('parses %p', (input, output) => {
 		expect(parse(input, { customDomains: ['local'] })).toEqual(output);
 	});

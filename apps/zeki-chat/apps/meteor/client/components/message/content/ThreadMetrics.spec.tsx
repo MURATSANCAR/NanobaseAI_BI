@@ -1,4 +1,4 @@
-import { mockAppRoot, MockedRouterContext } from '@rocket.chat/mock-providers';
+import { mockAppRoot, MockedRouterContext } from '@zeki.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';

@@ -1,6 +1,6 @@
-import { OmnichannelIntegration } from '@rocket.chat/core-services';
-import { isEditedMessage } from '@rocket.chat/core-typings';
-import { LivechatVisitors } from '@rocket.chat/models';
+import { OmnichannelIntegration } from '@zeki.chat/core-services';
+import { isEditedMessage } from '@zeki.chat/core-typings';
+import { LivechatVisitors } from '@zeki.chat/models';
 
 import { callbackLogger } from './lib/logger';
 import { callbacks } from '../../../server/lib/callbacks';

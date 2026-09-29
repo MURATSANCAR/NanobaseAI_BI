@@ -25,7 +25,7 @@ const { updateGroupKey } = proxyquire.noCallThru().load('../../../../../../app/e
 			method: sinon.stub(),
 		},
 	},
-	'@rocket.chat/models': models,
+	'@zeki.chat/models': models,
 	'meteor/meteor': { Meteor: { methods: sinon.stub() } },
 });
 

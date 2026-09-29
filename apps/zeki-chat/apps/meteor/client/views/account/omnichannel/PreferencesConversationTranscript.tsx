@@ -1,6 +1,6 @@
 import { AccordionItem, Tag } from '@rocket.chat/fuselage';
 import { Field, FieldGroup, FieldLabel, FieldRow, FieldHint, ToggleSwitch } from '@rocket.chat/fuselage-forms';
-import { useTranslation, usePermission, useSetting } from '@rocket.chat/ui-contexts';
+import { useTranslation, usePermission, useSetting } from '@zeki.chat/ui-contexts';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { useHasCapability } from '../../../hooks/useHasCapability';
@@ -23,11 +23,6 @@ const PreferencesConversationTranscript = () => {
 					<FieldRow>
 						<FieldLabel>
 							{t('Omnichannel_transcript_pdf')}
-							{!hasLicense && (
-								<Tag mi={4} variant='featured'>
-									{t('Premium')}
-								</Tag>
-							)}
 							{!canSendTranscriptPDF && hasLicense && <Tag mi={4}>{t('No_permission')}</Tag>}
 						</FieldLabel>
 						<Controller

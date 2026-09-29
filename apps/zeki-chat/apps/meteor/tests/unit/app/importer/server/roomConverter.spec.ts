@@ -39,7 +39,7 @@ const { RoomConverter } = proxyquire.noCallThru().load('../../../../../app/impor
 	},
 	'meteor/check': sinon.stub(),
 	'meteor/meteor': sinon.stub(),
-	'@rocket.chat/models': { ...modelsMock, '@global': true },
+	'@zeki.chat/models': { ...modelsMock, '@global': true },
 });
 
 describe('Room Converter', () => {

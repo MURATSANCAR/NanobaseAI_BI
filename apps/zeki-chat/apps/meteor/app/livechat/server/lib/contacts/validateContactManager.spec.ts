@@ -9,7 +9,7 @@ const modelsMock = {
 };
 
 const { validateContactManager } = proxyquire.noCallThru().load('./validateContactManager', {
-	'@rocket.chat/models': modelsMock,
+	'@zeki.chat/models': modelsMock,
 });
 
 describe('validateContactManager', () => {

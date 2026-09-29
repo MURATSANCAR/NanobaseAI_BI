@@ -1,5 +1,5 @@
 import { Box } from '@rocket.chat/fuselage';
-import { Page } from '@rocket.chat/ui-client';
+import { Page } from '@zeki.chat/ui-client';
 
 import ListSkeleton from '../../components/ListSkeleton';
 import { RoomSkeleton } from '../room';

@@ -1,4 +1,4 @@
-import type { MediaSignalingSession } from '@rocket.chat/media-signaling';
+import type { MediaSignalingSession } from '@zeki.chat/media-signaling';
 import { useEffect, useState } from 'react';
 
 import { usePlayMediaStream } from './usePlayMediaStream';

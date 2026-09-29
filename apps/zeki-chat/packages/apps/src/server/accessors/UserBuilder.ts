@@ -1,15 +1,15 @@
-import type { IUserBuilder } from '@rocket.chat/apps-engine/definition/accessors';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IUser, IUserEmail } from '@rocket.chat/apps-engine/definition/users';
-import type { IUserSettings } from '@rocket.chat/apps-engine/definition/users/IUserSettings';
+import type { IUserBuilder } from '@zeki.chat/apps-engine/definition/accessors';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IUser, IUserEmail } from '@zeki.chat/apps-engine/definition/users';
+import type { IUserSettings } from '@zeki.chat/apps-engine/definition/users/IUserSettings';
 
 export class UserBuilder implements IUserBuilder {
-	public kind: RocketChatAssociationModel.USER;
+	public kind: ZekiChatAssociationModel.USER;
 
 	private user: Partial<IUser>;
 
 	constructor(user?: Partial<IUser>) {
-		this.kind = RocketChatAssociationModel.USER;
+		this.kind = ZekiChatAssociationModel.USER;
 		this.user = user || ({} as Partial<IUser>);
 	}
 

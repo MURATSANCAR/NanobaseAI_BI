@@ -1,8 +1,8 @@
-import { isRoomFederated } from '@rocket.chat/core-typings';
-import { useUserAvatarPath, useUserId } from '@rocket.chat/ui-contexts';
-import type { TranslationKey, RoomToolboxActionConfig } from '@rocket.chat/ui-contexts';
-import type { PeerInfo } from '@rocket.chat/ui-voip';
-import { useMediaCallAction } from '@rocket.chat/ui-voip';
+import { isRoomFederated } from '@zeki.chat/core-typings';
+import { useUserAvatarPath, useUserId } from '@zeki.chat/ui-contexts';
+import type { TranslationKey, RoomToolboxActionConfig } from '@zeki.chat/ui-contexts';
+import type { PeerInfo } from '@zeki.chat/ui-voip';
+import { useMediaCallAction } from '@zeki.chat/ui-voip';
 import { useMemo } from 'react';
 
 import { useRoom, useRoomSubscription } from '../../views/room/contexts/RoomContext';

@@ -9,7 +9,7 @@ import type {
 	IHttpResponse,
 	IPersistence,
 	IRead,
-} from '@rocket.chat/apps-engine/definition/accessors';
+} from '@zeki.chat/apps-engine/definition/accessors';
 
 import { Http, HttpExtend } from '../../../src/server/accessors';
 import type { AppBridges, HttpBridge, IHttpBridgeRequestInfo } from '../../../src/server/bridges';

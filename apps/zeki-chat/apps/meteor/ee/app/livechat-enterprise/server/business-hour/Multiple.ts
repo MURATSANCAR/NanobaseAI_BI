@@ -1,7 +1,7 @@
-import { LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
-import type { AtLeast, ILivechatDepartment, ILivechatBusinessHour } from '@rocket.chat/core-typings';
-import { LivechatDepartment, LivechatDepartmentAgents, Users } from '@rocket.chat/models';
-import { isTruthy } from '@rocket.chat/tools';
+import { LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
+import type { AtLeast, ILivechatDepartment, ILivechatBusinessHour } from '@zeki.chat/core-typings';
+import { LivechatDepartment, LivechatDepartmentAgents, Users } from '@zeki.chat/models';
+import { isTruthy } from '@zeki.chat/tools';
 import moment from 'moment';
 
 import { openBusinessHour, removeBusinessHourByAgentIds } from './Helper';

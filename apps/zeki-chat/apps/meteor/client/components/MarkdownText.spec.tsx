@@ -1,4 +1,4 @@
-import { mockAppRoot } from '@rocket.chat/mock-providers';
+import { mockAppRoot } from '@zeki.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 import dompurify from 'dompurify';
 
@@ -8,10 +8,10 @@ import '@testing-library/jest-dom';
 
 const MOCKED_BASE_URI = 'http://localhost/';
 
-// Mock getBaseURI from @rocket.chat/ui-client to ensure consistent behavior in tests
+// Mock getBaseURI from @zeki.chat/ui-client to ensure consistent behavior in tests
 // This will affect the isExternal function imported above.
-jest.mock('@rocket.chat/ui-client', () => ({
-	...jest.requireActual('@rocket.chat/ui-client'), // Import and retain default behavior for other exports
+jest.mock('@zeki.chat/ui-client', () => ({
+	...jest.requireActual('@zeki.chat/ui-client'), // Import and retain default behavior for other exports
 	getBaseURI: jest.fn(() => MOCKED_BASE_URI), // Mock getBaseURI for consistent test behavior
 }));
 
@@ -102,7 +102,7 @@ const markdownText = `
   3. List Item 3
   4. List Item 4
   **Links:**
-  [Rocket.Chat](rocket.chat)
+  [ZEKI AI CHAT](rocket.chat)
   gabriel.engel@rocket.chat
   +55991999999
   \`Inline code\`
@@ -138,7 +138,7 @@ it('should render html elements as expected using default parser', async () => {
 	expect(normalizedHtml).toContain('title=""');
 	expect(normalizedHtml).toContain('rel="nofollow noopener noreferrer"');
 	expect(normalizedHtml).toContain('target="_blank"');
-	expect(normalizedHtml).toContain('>Rocket.Chat</a>');
+	expect(normalizedHtml).toContain('>ZEKI AI CHAT</a>');
 
 	expect(normalizedHtml).toContain('href="mailto:gabriel.engel@rocket.chat"');
 	expect(normalizedHtml).toContain('title="mailto:gabriel.engel@rocket.chat"');
@@ -176,7 +176,7 @@ it('should render html elements as expected using inline parser', async () => {
 	expect(normalizedHtml).toContain('title=""');
 	expect(normalizedHtml).toContain('rel="nofollow noopener noreferrer"');
 	expect(normalizedHtml).toContain('target="_blank"');
-	expect(normalizedHtml).toContain('>Rocket.Chat</a>');
+	expect(normalizedHtml).toContain('>ZEKI AI CHAT</a>');
 
 	expect(normalizedHtml).toContain('href="mailto:gabriel.engel@rocket.chat"');
 	expect(normalizedHtml).toContain('title="mailto:gabriel.engel@rocket.chat"');

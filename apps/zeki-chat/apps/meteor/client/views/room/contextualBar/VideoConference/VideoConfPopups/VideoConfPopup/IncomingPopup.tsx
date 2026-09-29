@@ -1,7 +1,7 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { Skeleton } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useEndpoint } from '@rocket.chat/ui-contexts';
+import { useEndpoint } from '@zeki.chat/ui-contexts';
 import {
 	useVideoConfSetPreferences,
 	VideoConfPopup,
@@ -14,7 +14,7 @@ import {
 	VideoConfPopupFooterButtons,
 	VideoConfPopupTitle,
 	VideoConfPopupHeader,
-} from '@rocket.chat/ui-video-conf';
+} from '@zeki.chat/ui-video-conf';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';

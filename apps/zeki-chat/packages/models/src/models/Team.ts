@@ -1,11 +1,11 @@
-import type { ITeam, RocketChatRecordDeleted, TeamType } from '@rocket.chat/core-typings';
-import type { FindPaginated, ITeamModel } from '@rocket.chat/model-typings';
+import type { ITeam, ZekiChatRecordDeleted, TeamType } from '@zeki.chat/core-typings';
+import type { FindPaginated, ITeamModel } from '@zeki.chat/model-typings';
 import type { Collection, FindCursor, Db, DeleteResult, Document, Filter, FindOptions, IndexDescription, UpdateResult } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
 
 export class TeamRaw extends BaseRaw<ITeam> implements ITeamModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ITeam>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ITeam>>) {
 		super(db, 'team', trash);
 	}
 

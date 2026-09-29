@@ -1,4 +1,4 @@
-import type { IInvite } from '@rocket.chat/core-typings';
+import type { IInvite } from '@zeki.chat/core-typings';
 import type { UpdateResult } from 'mongodb';
 
 import type { IBaseModel } from './IBaseModel';

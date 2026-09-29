@@ -1,5 +1,5 @@
-import type { IMessage, ISubscription } from '@rocket.chat/core-typings';
-import { useSetModal, useSetting } from '@rocket.chat/ui-contexts';
+import type { IMessage, ISubscription } from '@zeki.chat/core-typings';
+import { useSetModal, useSetting } from '@zeki.chat/ui-contexts';
 
 import type { MessageActionConfig } from '../../../../app/ui-utils/client/lib/MessageAction';
 import { getURL } from '../../../../app/utils/client';

@@ -1,6 +1,6 @@
-import type { Credentials } from '@rocket.chat/api-client';
-import type { IMessage, IRoom, ISubscription, IThreadMessage, IUser } from '@rocket.chat/core-typings';
-import { Random } from '@rocket.chat/random';
+import type { Credentials } from '@zeki.chat/api-client';
+import type { IMessage, IRoom, ISubscription, IThreadMessage, IUser } from '@zeki.chat/core-typings';
+import { Random } from '@zeki.chat/random';
 import { expect } from 'chai';
 import { after, before, beforeEach, describe, it } from 'mocha';
 import type { Response } from 'supertest';
@@ -2745,12 +2745,8 @@ describe('[Chat]', () => {
 	});
 
 	describe('[/chat.getMessageReadReceipts]', () => {
-		const isEnterprise = typeof process.env.IS_EE === 'string' ? process.env.IS_EE === 'true' : !!process.env.IS_EE;
 		describe('when execute successfully', () => {
 			it('should return statusCode: 200 and an array of receipts when running EE', function (done) {
-				if (!isEnterprise) {
-					this.skip();
-				}
 
 				void request
 					.get(api(`chat.getMessageReadReceipts`))
@@ -2769,32 +2765,9 @@ describe('[Chat]', () => {
 		});
 
 		describe('when an error occurs', () => {
-			it('should throw error-action-not-allowed error when not running EE', function (done) {
-				// TODO this is not the right way to do it. We're doing this way for now just because we have separate CI jobs for EE and CE,
-				// ideally we should have a single CI job that adds a license and runs both CE and EE tests.
-				if (isEnterprise) {
-					this.skip();
-				}
-				void request
-					.get(api(`chat.getMessageReadReceipts`))
-					.set(credentials)
-					.query({
-						messageId: message._id,
-					})
-					.expect('Content-Type', 'application/json')
-					.expect(400)
-					.expect((res) => {
-						expect(res.body).to.have.property('success', false);
-						expect(res.body).to.have.property('error', 'This is an enterprise feature [error-action-not-allowed]');
-						expect(res.body).to.have.property('errorType', 'error-action-not-allowed');
-					})
-					.end(done);
-			});
+
 
 			it('should return statusCode: 400 and an error when no messageId is provided', function (done) {
-				if (!isEnterprise) {
-					this.skip();
-				}
 
 				void request
 					.get(api('chat.getMessageReadReceipts'))
@@ -3236,7 +3209,7 @@ describe('[Chat]', () => {
 				.set(credentials)
 				.query({
 					rid: 'invalid',
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 				})
 				.expect('Content-Type', 'application/json')
 				.expect(400)

@@ -1,5 +1,5 @@
-import { Team } from '@rocket.chat/core-services';
-import type { MessageMention } from '@rocket.chat/core-typings';
+import { Team } from '@zeki.chat/core-services';
+import type { MessageMention } from '@zeki.chat/core-typings';
 
 import { callbacks } from '../../../server/lib/callbacks';
 import { settings } from '../../settings/server';

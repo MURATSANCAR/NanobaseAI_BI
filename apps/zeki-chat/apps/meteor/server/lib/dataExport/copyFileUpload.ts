@@ -1,5 +1,5 @@
-import type { FileProp } from '@rocket.chat/core-typings';
-import { Uploads } from '@rocket.chat/models';
+import type { FileProp } from '@zeki.chat/core-typings';
+import { Uploads } from '@zeki.chat/models';
 
 import { FileUpload } from '../../../app/file-upload/server';
 import { joinPath } from '../fileUtils';

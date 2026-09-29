@@ -1,4 +1,4 @@
-import { useEndpoint, usePermission } from '@rocket.chat/ui-contexts';
+import { useEndpoint, usePermission } from '@zeki.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 
 export const useAppRequestStats = () => {

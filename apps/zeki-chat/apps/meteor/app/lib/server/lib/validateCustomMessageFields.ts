@@ -1,4 +1,4 @@
-import { ajv } from '@rocket.chat/rest-typings';
+import { ajv } from '@zeki.chat/rest-typings';
 import mem from 'mem';
 
 const customFieldsValidate = mem(

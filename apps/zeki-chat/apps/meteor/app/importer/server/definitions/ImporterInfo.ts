@@ -1,4 +1,4 @@
-import type { RocketchatI18nKeys } from '@rocket.chat/i18n';
+import type { RocketchatI18nKeys } from '@zeki.chat/i18n';
 
 import type { Importer } from '../classes/Importer';
 

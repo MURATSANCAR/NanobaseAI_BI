@@ -1,4 +1,4 @@
-import { Authorization, type IFederationMatrixService, Room, ServiceClass, Settings } from '@rocket.chat/core-services';
+import { Authorization, type IFederationMatrixService, Room, ServiceClass, Settings } from '@zeki.chat/core-services';
 import {
 	isDeletedMessage,
 	isMessageFromMatrixFederation,
@@ -6,12 +6,12 @@ import {
 	isRoomNativeFederated,
 	isUserNativeFederated,
 	UserStatus,
-} from '@rocket.chat/core-typings';
-import type { MessageQuoteAttachment, IMessage, IRoom, IUser, IRoomNativeFederated, ISubscription } from '@rocket.chat/core-typings';
+} from '@zeki.chat/core-typings';
+import type { MessageQuoteAttachment, IMessage, IRoom, IUser, IRoomNativeFederated, ISubscription } from '@zeki.chat/core-typings';
 import { eventIdSchema, roomIdSchema, userIdSchema, federationSDK, FederationRequestError } from '@rocket.chat/federation-sdk';
 import type { EventID, FileMessageType, PresenceState } from '@rocket.chat/federation-sdk';
-import { Logger } from '@rocket.chat/logger';
-import { Users, Subscriptions, Messages, Rooms } from '@rocket.chat/models';
+import { Logger } from '@zeki.chat/logger';
+import { Users, Subscriptions, Messages, Rooms } from '@zeki.chat/models';
 import emojione from 'emojione';
 
 import { createOrUpdateFederatedUser } from './helpers/createOrUpdateFederatedUser';

@@ -1,5 +1,5 @@
-import type { UserStatus } from '@rocket.chat/core-typings';
-import type { LivechatRoomEvents } from '@rocket.chat/ddp-client';
+import type { UserStatus } from '@zeki.chat/core-typings';
+import type { LivechatRoomEvents } from '@zeki.chat/ddp-client';
 import { Emitter } from '@rocket.chat/emitter';
 
 import { isDefined } from './helpers/isDefined';
@@ -51,7 +51,7 @@ const WIDGET_MINIMIZED_WIDTH = 54;
 const WIDGET_MINIMIZED_HEIGHT = 54;
 const WIDGET_MARGIN = 16;
 
-window.RocketChat = window.RocketChat || { _: [] };
+window.ZekiChat = window.ZekiChat || { _: [] };
 const config: { url?: string } = {};
 let widget: HTMLDivElement | null;
 let iframe: HTMLIFrameElement | null;
@@ -104,7 +104,7 @@ function clearAllCallbacks() {
 }
 
 const formatMessage = (action: keyof HooksWidgetAPI, ...params: Parameters<HooksWidgetAPI[keyof HooksWidgetAPI]>) => ({
-	src: 'rocketchat',
+	src: 'zekichat',
 	fn: action,
 	args: params,
 });
@@ -177,7 +177,7 @@ const updateWidgetStyle = (isOpened: boolean) => {
 
 const createWidget = (url: string) => {
 	widget = document.createElement('div');
-	widget.className = 'rocketchat-widget';
+	widget.className = 'zekichat-widget';
 	widget.style.position = 'fixed';
 	widget.style.width = `${WIDGET_MARGIN + WIDGET_MINIMIZED_WIDTH + WIDGET_MARGIN}px`;
 	widget.style.height = `${WIDGET_MARGIN + WIDGET_MINIMIZED_HEIGHT + WIDGET_MARGIN}px`;
@@ -188,12 +188,12 @@ const createWidget = (url: string) => {
 	widget.dataset.state = 'closed';
 
 	const container = document.createElement('div');
-	container.className = 'rocketchat-container';
+	container.className = 'zekichat-container';
 	container.style.width = '100%';
 	container.style.height = '100%';
 
 	iframe = document.createElement('iframe');
-	iframe.id = 'rocketchat-iframe';
+	iframe.id = 'zekichat-iframe';
 	iframe.src = url;
 	iframe.style.width = '100%';
 	iframe.style.height = '100%';
@@ -641,7 +641,7 @@ function isValidMessage(event: MessageEvent<LivechatMessageEventData<InternalWid
 		return false;
 	}
 
-	if (!event.data.src || event.data.src !== 'rocketchat') {
+	if (!event.data.src || event.data.src !== 'zekichat') {
 		return false;
 	}
 
@@ -711,27 +711,27 @@ const init = (url: string) => {
 	trackNavigation();
 };
 
-if (typeof window.initRocket !== 'undefined') {
-	console.warn('initRocket is now deprecated. Please update the livechat code.');
-	init(window.initRocket[0]);
+if (typeof window.initZeki !== 'undefined') {
+	console.warn('initZeki is now deprecated. Please update the livechat code.');
+	init(window.initZeki[0]);
 }
 
-if (typeof window.RocketChat.url !== 'undefined') {
-	init(window.RocketChat.url);
+if (typeof window.ZekiChat.url !== 'undefined') {
+	init(window.ZekiChat.url);
 }
 
-const queue = window.RocketChat._;
+const queue = window.ZekiChat._;
 
-window.RocketChat._.push = function (c: () => void) {
-	c.call(window.RocketChat.livechat);
+window.ZekiChat._.push = function (c: () => void) {
+	c.call(window.ZekiChat.livechat);
 };
 
-window.RocketChat = window.RocketChat._.push;
+window.ZekiChat = window.ZekiChat._.push;
 
 // exports
-window.RocketChat.livechat = livechatWidgetAPI;
+window.ZekiChat.livechat = livechatWidgetAPI;
 
 // proccess queue
 queue.forEach((c: () => void) => {
-	c.call(window.RocketChat.livechat);
+	c.call(window.ZekiChat.livechat);
 });

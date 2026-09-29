@@ -1,4 +1,4 @@
-import type { SettingValue } from '@rocket.chat/core-typings';
+import type { SettingValue } from '@zeki.chat/core-typings';
 import type { SelectOption } from '@rocket.chat/fuselage';
 import {
 	Box,
@@ -13,8 +13,8 @@ import {
 	FieldLabel,
 } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { Page, PageHeader, PageScrollableContentWithShadow } from '@rocket.chat/ui-client';
-import { useToastMessageDispatch, useTranslation, useEndpoint } from '@rocket.chat/ui-contexts';
+import { Page, PageHeader, PageScrollableContentWithShadow } from '@zeki.chat/ui-client';
+import { useToastMessageDispatch, useTranslation, useEndpoint } from '@zeki.chat/ui-contexts';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';

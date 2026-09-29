@@ -1,8 +1,8 @@
 import { Box } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
 import { useToastBarDispatch } from '@rocket.chat/fuselage-toastbar';
-import { Wizard, useWizard, WizardContent, WizardTabs } from '@rocket.chat/ui-client';
-import { usePermission } from '@rocket.chat/ui-contexts';
+import { Wizard, useWizard, WizardContent, WizardTabs } from '@zeki.chat/ui-client';
+import { usePermission } from '@zeki.chat/ui-contexts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';

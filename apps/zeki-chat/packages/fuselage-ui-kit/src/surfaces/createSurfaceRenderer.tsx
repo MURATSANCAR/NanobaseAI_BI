@@ -1,4 +1,4 @@
-import type * as UiKit from '@rocket.chat/ui-kit';
+import type * as UiKit from '@zeki.chat/ui-kit';
 import type { ComponentType, ReactElement, ReactNode } from 'react';
 
 export const createSurfaceRenderer = <S extends UiKit.SurfaceRenderer<ReactElement>>(

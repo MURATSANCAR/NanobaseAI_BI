@@ -1,4 +1,4 @@
-import type { IAppsPersistenceModel } from '@rocket.chat/model-typings';
+import type { IAppsPersistenceModel } from '@zeki.chat/model-typings';
 import type { Db, DeleteResult, Filter, IndexDescription } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';

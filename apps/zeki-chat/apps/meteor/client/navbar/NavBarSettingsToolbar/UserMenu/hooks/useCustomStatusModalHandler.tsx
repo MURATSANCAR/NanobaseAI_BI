@@ -1,4 +1,4 @@
-import { useSetModal, useUser } from '@rocket.chat/ui-contexts';
+import { useSetModal, useUser } from '@zeki.chat/ui-contexts';
 
 import EditStatusModal from '../EditStatusModal';
 

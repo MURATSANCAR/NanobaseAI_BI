@@ -1,7 +1,7 @@
 import { IconButton } from '@rocket.chat/fuselage';
 import { useButtonPattern } from '@rocket.chat/fuselage-hooks';
-import { MessageComposerFile, MessageComposerFileError, MessageComposerFileLoader } from '@rocket.chat/ui-composer';
-import { useSetModal } from '@rocket.chat/ui-contexts';
+import { MessageComposerFile, MessageComposerFileError, MessageComposerFileLoader } from '@zeki.chat/ui-composer';
+import { useSetModal } from '@zeki.chat/ui-contexts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

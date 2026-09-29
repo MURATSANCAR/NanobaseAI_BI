@@ -1,9 +1,9 @@
-import { FederationMatrix } from '@rocket.chat/core-services';
+import { FederationMatrix } from '@zeki.chat/core-services';
 import { NotAllowedError, federationSDK } from '@rocket.chat/federation-sdk';
-import { Router } from '@rocket.chat/http-router';
-import { Logger } from '@rocket.chat/logger';
-import { Users } from '@rocket.chat/models';
-import { ajv } from '@rocket.chat/rest-typings/dist/v1/Ajv';
+import { Router } from '@zeki.chat/http-router';
+import { Logger } from '@zeki.chat/logger';
+import { Users } from '@zeki.chat/models';
+import { ajv } from '@zeki.chat/rest-typings/dist/v1/Ajv';
 
 import { isAuthenticatedMiddleware } from '../middlewares/isAuthenticated';
 
@@ -141,7 +141,7 @@ export const getMatrixInviteRoutes = () => {
 				200: isProcessInviteResponseProps,
 			},
 			tags: ['Federation'],
-			license: ['federation'],
+			capabilities: ['federation'],
 		},
 		isAuthenticatedMiddleware(),
 		async (c) => {

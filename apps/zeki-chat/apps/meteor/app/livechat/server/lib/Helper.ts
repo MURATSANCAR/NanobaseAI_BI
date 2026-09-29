@@ -1,6 +1,6 @@
-import { Apps, AppEvents } from '@rocket.chat/apps';
-import { LivechatTransferEventType } from '@rocket.chat/apps-engine/definition/livechat';
-import { api, Message, Omnichannel } from '@rocket.chat/core-services';
+import { Apps, AppEvents } from '@zeki.chat/apps';
+import { LivechatTransferEventType } from '@zeki.chat/apps-engine/definition/livechat';
+import { api, Message} from '@zeki.chat/core-services';
 import type {
 	ILivechatVisitor,
 	IOmnichannelRoom,
@@ -17,11 +17,11 @@ import type {
 	IOmnichannelInquiryExtraData,
 	IOmnichannelRoomExtraData,
 	ILivechatContact,
-} from '@rocket.chat/core-typings';
-import { LivechatInquiryStatus, OmnichannelSourceType, DEFAULT_SLA_CONFIG, UserStatus } from '@rocket.chat/core-typings';
-import { LivechatPriorityWeight } from '@rocket.chat/core-typings/src/ILivechatPriority';
-import { Logger } from '@rocket.chat/logger';
-import type { InsertionModel } from '@rocket.chat/model-typings';
+} from '@zeki.chat/core-typings';
+import { LivechatInquiryStatus, OmnichannelSourceType, DEFAULT_SLA_CONFIG, UserStatus } from '@zeki.chat/core-typings';
+import { LivechatPriorityWeight } from '@zeki.chat/core-typings/src/ILivechatPriority';
+import { Logger } from '@zeki.chat/logger';
+import type { InsertionModel } from '@zeki.chat/model-typings';
 import {
 	LivechatDepartmentAgents,
 	LivechatInquiry,
@@ -30,8 +30,8 @@ import {
 	Subscriptions,
 	Users,
 	LivechatContacts,
-} from '@rocket.chat/models';
-import { removeEmpty, validateEmail as validatorFunc } from '@rocket.chat/tools';
+} from '@zeki.chat/models';
+import { removeEmpty, validateEmail as validatorFunc } from '@zeki.chat/tools';
 import { Match, check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import type { ClientSession } from 'mongodb';
@@ -700,7 +700,6 @@ export const forwardRoomToDepartment = async (room: IOmnichannelRoom, guest: ILi
 	const isWaitingQueueEnabled = settings.get('Livechat_waiting_queue');
 	if (
 		!RoutingManager.getConfig()?.autoAssignAgent ||
-		!(await Omnichannel.isWithinMACLimit(room)) ||
 		(department?.allowReceiveForwardOffline && !onlineAgents) ||
 		(isWaitingQueueEnabled && onlineAgents)
 	) {

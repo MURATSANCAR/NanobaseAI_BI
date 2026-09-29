@@ -1,5 +1,5 @@
-import type { ILivechatContact, ILivechatVisitor, IOmnichannelSource } from '@rocket.chat/core-typings';
-import { makeFunction } from '@rocket.chat/patch-injection';
+import type { ILivechatContact, ILivechatVisitor, IOmnichannelSource } from '@zeki.chat/core-typings';
+import { makeFunction } from '@zeki.chat/patch-injection';
 
 export const isAgentAvailableToTakeContactInquiry = makeFunction(
 	async (

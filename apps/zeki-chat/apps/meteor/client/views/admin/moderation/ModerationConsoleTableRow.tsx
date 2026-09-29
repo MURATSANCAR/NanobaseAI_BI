@@ -1,5 +1,5 @@
-import type { IModerationAudit, IUser } from '@rocket.chat/core-typings';
-import { GenericTableCell, GenericTableRow } from '@rocket.chat/ui-client';
+import type { IModerationAudit, IUser } from '@zeki.chat/core-typings';
+import { GenericTableCell, GenericTableRow } from '@zeki.chat/ui-client';
 
 import ModerationConsoleActions from './ModerationConsoleActions';
 import UserColumn from './helpers/UserColumn';

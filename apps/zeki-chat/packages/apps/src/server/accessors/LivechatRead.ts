@@ -1,8 +1,8 @@
-import type { ILivechatRead } from '@rocket.chat/apps-engine/definition/accessors/ILivechatRead';
-import type { IDepartment } from '@rocket.chat/apps-engine/definition/livechat';
-import type { ILivechatRoom } from '@rocket.chat/apps-engine/definition/livechat/ILivechatRoom';
-import type { IVisitor } from '@rocket.chat/apps-engine/definition/livechat/IVisitor';
-import type { IMessage } from '@rocket.chat/apps-engine/definition/messages';
+import type { ILivechatRead } from '@zeki.chat/apps-engine/definition/accessors/ILivechatRead';
+import type { IDepartment } from '@zeki.chat/apps-engine/definition/livechat';
+import type { ILivechatRoom } from '@zeki.chat/apps-engine/definition/livechat/ILivechatRoom';
+import type { IVisitor } from '@zeki.chat/apps-engine/definition/livechat/IVisitor';
+import type { IMessage } from '@zeki.chat/apps-engine/definition/messages';
 
 import type { LivechatBridge } from '../bridges/LivechatBridge';
 

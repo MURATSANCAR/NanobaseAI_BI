@@ -1,4 +1,4 @@
-import type { IMessage, IUser } from '@rocket.chat/core-typings';
+import type { IMessage, IUser } from '@zeki.chat/core-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { Filter, FindOptions } from 'mongodb';
 
@@ -309,7 +309,7 @@ class MessageSearchQueryParser {
  * @returns The MongoDB query and options
  * @private
  * @example
- * const { query, options } = parseMessageSearchQuery('from:rocket.cat', {
+ * const { query, options } = parseMessageSearchQuery('from:zeki.bot', {
  * 	user: await Meteor.userAsync(),
  * 	offset: 0,
  * 	limit: 20,

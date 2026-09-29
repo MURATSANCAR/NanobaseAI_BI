@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import proxyquire from 'proxyquire';
@@ -43,7 +43,7 @@ const {
 		},
 		'@global': true,
 	},
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Messages: messagesMock,
 	},
 });

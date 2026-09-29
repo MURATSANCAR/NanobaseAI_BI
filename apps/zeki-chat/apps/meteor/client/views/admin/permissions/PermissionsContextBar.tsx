@@ -1,6 +1,6 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { ContextualbarHeader, ContextualbarTitle, ContextualbarClose, ContextualbarDialog } from '@rocket.chat/ui-client';
-import { useRouteParameter, useRoute, useTranslation } from '@rocket.chat/ui-contexts';
+import { ContextualbarHeader, ContextualbarTitle, ContextualbarClose, ContextualbarDialog } from '@zeki.chat/ui-client';
+import { useRouteParameter, useRoute, useTranslation } from '@zeki.chat/ui-contexts';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 

@@ -1,6 +1,6 @@
-import type { ILDAPService } from '@rocket.chat/core-services';
-import { ServiceClassInternal } from '@rocket.chat/core-services';
-import type { LDAPLoginResult } from '@rocket.chat/core-typings';
+import type { ILDAPService } from '@zeki.chat/core-services';
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { LDAPLoginResult } from '@zeki.chat/core-typings';
 
 import { LDAPManager } from '../../lib/ldap/Manager';
 

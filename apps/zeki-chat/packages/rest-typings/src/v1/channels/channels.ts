@@ -1,4 +1,4 @@
-import type { IUploadWithUser, IMessage, IRoom, ITeam, IUser, IIntegration } from '@rocket.chat/core-typings';
+import type { IUploadWithUser, IMessage, IRoom, ITeam, IUser, IIntegration } from '@zeki.chat/core-typings';
 
 import type { ChannelsAddAllProps } from './ChannelsAddAllProps';
 import type { ChannelsArchiveProps } from './ChannelsArchiveProps';

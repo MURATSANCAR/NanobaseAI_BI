@@ -1,14 +1,14 @@
-import type { IMediaCall, IUser } from '@rocket.chat/core-typings';
+import type { IMediaCall, IUser } from '@zeki.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
-import { isPendingState } from '@rocket.chat/media-signaling';
+import { isPendingState } from '@zeki.chat/media-signaling';
 import type {
 	ClientMediaSignal,
 	ClientMediaSignalRegister,
 	ClientMediaSignalRequestCall,
 	ServerMediaSignal,
 	ServerMediaSignalRejectedCallRequest,
-} from '@rocket.chat/media-signaling';
-import { MediaCalls } from '@rocket.chat/models';
+} from '@zeki.chat/media-signaling';
+import { MediaCalls } from '@zeki.chat/models';
 
 import { DEFAULT_CALL_FEATURES } from '../constants';
 import type { InternalCallParams, SignalProcessingOptions } from '../definition/common';

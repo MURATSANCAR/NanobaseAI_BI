@@ -1,9 +1,9 @@
 import { inspect } from 'node:util';
 
-import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
-import { AppsEngineException } from '@rocket.chat/apps-engine/definition/exceptions';
-import type { IAppAuthorInfo, IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-import { AppMethod } from '@rocket.chat/apps-engine/definition/metadata';
+import { AppStatus } from '@zeki.chat/apps-engine/definition/AppStatus';
+import { AppsEngineException } from '@zeki.chat/apps-engine/definition/exceptions';
+import type { IAppAuthorInfo, IAppInfo } from '@zeki.chat/apps-engine/definition/metadata';
+import { AppMethod } from '@zeki.chat/apps-engine/definition/metadata';
 import mem from 'mem';
 
 import type { AppManager } from './AppManager';

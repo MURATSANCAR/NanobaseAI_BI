@@ -1,6 +1,6 @@
 import { TextInput, Chip, Button, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
+import { useToastMessageDispatch } from '@zeki.chat/ui-contexts';
 import type { ChangeEvent, ReactElement } from 'react';
 import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

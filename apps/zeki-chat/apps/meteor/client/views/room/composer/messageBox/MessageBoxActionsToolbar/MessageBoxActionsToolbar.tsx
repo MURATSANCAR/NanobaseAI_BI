@@ -1,10 +1,10 @@
-import type { IRoom, IMessage } from '@rocket.chat/core-typings';
+import type { IRoom, IMessage } from '@zeki.chat/core-typings';
 import type { Icon } from '@rocket.chat/fuselage';
-import { isTruthy } from '@rocket.chat/tools';
-import { GenericMenu, type GenericMenuItemProps } from '@rocket.chat/ui-client';
-import { MessageComposerAction, MessageComposerActionsDivider } from '@rocket.chat/ui-composer';
-import type { TranslationKey } from '@rocket.chat/ui-contexts';
-import { useTranslation, useLayoutHiddenActions } from '@rocket.chat/ui-contexts';
+import { isTruthy } from '@zeki.chat/tools';
+import { GenericMenu, type GenericMenuItemProps } from '@zeki.chat/ui-client';
+import { MessageComposerAction, MessageComposerActionsDivider } from '@zeki.chat/ui-composer';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useTranslation, useLayoutHiddenActions } from '@zeki.chat/ui-contexts';
 import type { ComponentProps, MouseEvent } from 'react';
 import { memo } from 'react';
 

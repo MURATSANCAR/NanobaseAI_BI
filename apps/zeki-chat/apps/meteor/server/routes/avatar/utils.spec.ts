@@ -30,7 +30,7 @@ const {
 	'../../../../app/utils/server/getURL': {
 		getURL: () => '',
 	},
-	'@rocket.chat/models': {
+	'@zeki.chat/models': {
 		Users: {
 			findOneByIdAndLoginToken: mocks.findOneByIdAndLoginToken,
 		},

@@ -1,5 +1,5 @@
 import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
-import { usePermission, useRoomToolbox } from '@rocket.chat/ui-contexts';
+import { usePermission, useRoomToolbox } from '@zeki.chat/ui-contexts';
 import { useCallback, useState } from 'react';
 
 import TeamsInfo from './TeamsInfo';

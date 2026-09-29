@@ -1,6 +1,6 @@
-import { ServiceClassInternal, Settings } from '@rocket.chat/core-services';
-import type { IOmnichannelIntegrationService } from '@rocket.chat/core-services';
-import type { ISMSProviderConstructor, ISMSProvider } from '@rocket.chat/core-typings';
+import { ServiceClassInternal, Settings } from '@zeki.chat/core-services';
+import type { IOmnichannelIntegrationService } from '@zeki.chat/core-services';
+import type { ISMSProviderConstructor, ISMSProvider } from '@zeki.chat/core-typings';
 
 import { registerSmsProviders } from './providers';
 

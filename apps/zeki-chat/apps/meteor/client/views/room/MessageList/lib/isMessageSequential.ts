@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { MessageTypes } from '@rocket.chat/message-types';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { MessageTypes } from '@zeki.chat/message-types';
 import { differenceInSeconds } from 'date-fns';
 
 import { isMessageNewDay } from './isMessageNewDay';

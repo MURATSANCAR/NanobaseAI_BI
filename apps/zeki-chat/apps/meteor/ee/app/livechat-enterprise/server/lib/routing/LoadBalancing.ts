@@ -1,4 +1,4 @@
-import { Users } from '@rocket.chat/models';
+import { Users } from '@zeki.chat/models';
 
 import { RoutingManager } from '../../../../../../app/livechat/server/lib/RoutingManager';
 import { settings } from '../../../../../../app/settings/server';

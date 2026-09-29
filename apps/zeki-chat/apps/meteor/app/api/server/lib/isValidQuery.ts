@@ -1,4 +1,4 @@
-import { isRecord } from '@rocket.chat/tools';
+import { isRecord } from '@zeki.chat/tools';
 
 import { removeDangerousProps } from './cleanQuery';
 

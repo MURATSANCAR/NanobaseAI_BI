@@ -1,12 +1,12 @@
-import type { IUser } from '@rocket.chat/core-typings';
-import { Users } from '@rocket.chat/models';
+import type { IUser } from '@zeki.chat/core-typings';
+import { Users } from '@zeki.chat/models';
 
 import { executeSendMessage } from '../../app/lib/server/methods/sendMessage';
 import { createDirectMessage } from '../methods/createDirectMessage';
 import { SystemLogger } from './logger/system';
 
 export async function sendDirectMessageToUsers(
-	fromId = 'rocket.cat',
+	fromId = 'zeki.bot',
 	toIds: string[],
 	messageFn: (user: IUser) => string,
 ): Promise<string[]> {

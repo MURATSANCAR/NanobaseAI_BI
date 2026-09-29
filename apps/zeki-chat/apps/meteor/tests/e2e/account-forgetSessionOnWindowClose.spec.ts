@@ -20,12 +20,12 @@ test.describe.serial('Forget session on window close setting', () => {
 		test('Login using credentials and reload to stay logged in', async ({ page, context }) => {
 			await poLogin.login('user1', DEFAULT_USER_CREDENTIALS.password);
 
-			await expect(page.locator('role=heading[name="Welcome to Rocket.Chat"]')).toBeVisible();
+			await expect(page.locator('role=heading[name="Welcome to ZEKI AI CHAT"]')).toBeVisible();
 
 			const newPage = await context.newPage();
 			await newPage.goto('/home');
 
-			await expect(newPage.locator('role=heading[name="Welcome to Rocket.Chat"]')).toBeVisible();
+			await expect(newPage.locator('role=heading[name="Welcome to ZEKI AI CHAT"]')).toBeVisible();
 		});
 	});
 
@@ -41,17 +41,17 @@ test.describe.serial('Forget session on window close setting', () => {
 		test('Login using credentials and reload to stay logged in', async ({ page }) => {
 			await poLogin.login('user1', DEFAULT_USER_CREDENTIALS.password);
 
-			await expect(page.locator('role=heading[name="Welcome to Rocket.Chat"]')).toBeVisible();
+			await expect(page.locator('role=heading[name="Welcome to ZEKI AI CHAT"]')).toBeVisible();
 
 			await page.reload();
 
-			await expect(page.locator('role=heading[name="Welcome to Rocket.Chat"]')).toBeVisible();
+			await expect(page.locator('role=heading[name="Welcome to ZEKI AI CHAT"]')).toBeVisible();
 		});
 
 		test('Login using credentials in a new tab after first tab logged in', async ({ page, context }) => {
 			await poLogin.login('user1', DEFAULT_USER_CREDENTIALS.password);
 
-			await expect(page.locator('role=heading[name="Welcome to Rocket.Chat"]')).toBeVisible();
+			await expect(page.locator('role=heading[name="Welcome to ZEKI AI CHAT"]')).toBeVisible();
 
 			const newPage = await context.newPage();
 			await newPage.goto('/home');
@@ -59,7 +59,7 @@ test.describe.serial('Forget session on window close setting', () => {
 			const newPoLogin = new Login(newPage);
 			await newPoLogin.login('user1', DEFAULT_USER_CREDENTIALS.password);
 
-			await expect(newPage.locator('role=heading[name="Welcome to Rocket.Chat"]')).toBeVisible();
+			await expect(newPage.locator('role=heading[name="Welcome to ZEKI AI CHAT"]')).toBeVisible();
 		});
 
 		test.describe('E2EE save password flow', () => {
@@ -87,7 +87,7 @@ test.describe.serial('Forget session on window close setting', () => {
 				const poAccountSecurity = new AccountSecurity(page);
 
 				await poLogin.login(e2eeUser.data.username, DEFAULT_USER_CREDENTIALS.password);
-				await expect(page.locator('role=heading[name="Welcome to Rocket.Chat"]')).toBeVisible();
+				await expect(page.locator('role=heading[name="Welcome to ZEKI AI CHAT"]')).toBeVisible();
 
 				await poAccountSecurity.goto();
 				await poAccountSecurity.resetE2EEPassword();
@@ -95,7 +95,7 @@ test.describe.serial('Forget session on window close setting', () => {
 				await page.locator('role=button[name="Login"]').waitFor();
 
 				await poLogin.login(e2eeUser.data.username, DEFAULT_USER_CREDENTIALS.password);
-				await expect(page.locator('role=heading[name="Welcome to Rocket.Chat"]')).toBeVisible();
+				await expect(page.locator('role=heading[name="Welcome to ZEKI AI CHAT"]')).toBeVisible();
 				await expect(poHomeChannel.bannerSaveEncryptionPassword).toBeVisible();
 				await poHomeChannel.bannerSaveEncryptionPassword.click();
 

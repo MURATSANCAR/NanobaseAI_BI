@@ -1,16 +1,16 @@
-import { Authorization } from '@rocket.chat/core-services';
-import { LivechatUnit, LivechatDepartmentAgents } from '@rocket.chat/models';
+import { Authorization } from '@zeki.chat/core-services';
+import { LivechatUnit, LivechatDepartmentAgents } from '@zeki.chat/models';
 
 import { getUnitsFromUser } from './getUnitsFromUser';
 import { defaultLogger } from '../utils/logger';
 
 // Mock the dependencies
-jest.mock('@rocket.chat/core-services', () => ({
+jest.mock('@zeki.chat/core-services', () => ({
 	Authorization: {
 		hasAnyRole: jest.fn(),
 	},
 }));
-jest.mock('@rocket.chat/models', () => ({
+jest.mock('@zeki.chat/models', () => ({
 	LivechatUnit: {
 		findByMonitorId: jest.fn(),
 		countUnits: jest.fn(),

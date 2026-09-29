@@ -19,7 +19,7 @@ exports[`RoomInviteHeader renders Default without crashing 1`] = `
             class="rcx-box rcx-box--full rcx-css-1c6vtok"
           >
             <div
-              aria-label="rocket.cat"
+              aria-label="zeki.bot"
               class="rcx-box rcx-box--full rcx-css-1xfh5sj rcx-css-f2vsf1"
               role="button"
               tabindex="0"
@@ -37,12 +37,12 @@ exports[`RoomInviteHeader renders Default without crashing 1`] = `
               <h1
                 class="rcx-box rcx-box--full rcx-css-uuz7h"
               >
-                rocket.cat
+                zeki.bot
               </h1>
             </div>
             <button
               class="rcx-box rcx-box--full rcx-button--tiny-square rcx-button--square rcx-button--icon rcx-button rcx-css-sdt442"
-              title="Favorite rocket.cat"
+              title="Favorite zeki.bot"
               type="button"
             >
               <i

@@ -1,4 +1,4 @@
-import type { IMessage } from '@rocket.chat/core-typings';
+import type { IMessage } from '@zeki.chat/core-typings';
 import {
 	Message,
 	MessageLeftContainer,
@@ -10,7 +10,7 @@ import {
 	MessageContainerFixed,
 	Box,
 } from '@rocket.chat/fuselage';
-import { MessageAvatar } from '@rocket.chat/ui-avatar';
+import { MessageAvatar } from '@zeki.chat/ui-avatar';
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { memo } from 'react';
 

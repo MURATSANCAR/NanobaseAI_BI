@@ -1,4 +1,4 @@
-import { Router } from '@rocket.chat/http-router';
+import { Router } from '@zeki.chat/http-router';
 import Ajv from 'ajv';
 import express from 'express';
 import request from 'supertest';

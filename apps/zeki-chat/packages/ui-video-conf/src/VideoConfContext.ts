@@ -1,4 +1,4 @@
-import type { IRoom, DirectCallData, ProviderCapabilities, CallPreferences } from '@rocket.chat/core-typings';
+import type { IRoom, DirectCallData, ProviderCapabilities, CallPreferences } from '@zeki.chat/core-typings';
 import { createContext } from 'react';
 
 export type VideoConfPopupPayload = {

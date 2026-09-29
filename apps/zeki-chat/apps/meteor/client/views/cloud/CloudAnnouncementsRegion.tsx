@@ -1,5 +1,5 @@
-import { BannerPlatform } from '@rocket.chat/core-typings';
-import { useEndpoint, useStream, useUserId } from '@rocket.chat/ui-contexts';
+import { BannerPlatform } from '@zeki.chat/core-typings';
+import { useEndpoint, useStream, useUserId } from '@zeki.chat/ui-contexts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 

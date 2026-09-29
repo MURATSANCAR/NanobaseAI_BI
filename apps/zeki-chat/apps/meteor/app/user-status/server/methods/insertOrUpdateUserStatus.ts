@@ -1,8 +1,8 @@
-import { api } from '@rocket.chat/core-services';
-import type { ICustomUserStatus } from '@rocket.chat/core-typings';
-import type { ServerMethods } from '@rocket.chat/ddp-client';
-import type { InsertionModel } from '@rocket.chat/model-typings';
-import { CustomUserStatus } from '@rocket.chat/models';
+import { api } from '@zeki.chat/core-services';
+import type { ICustomUserStatus } from '@zeki.chat/core-typings';
+import type { ServerMethods } from '@zeki.chat/ddp-client';
+import type { InsertionModel } from '@zeki.chat/model-typings';
+import { CustomUserStatus } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { trim } from '../../../../lib/utils/stringUtils';
@@ -20,7 +20,7 @@ type InsertOrUpdateUserStatus = {
 	previousStatusType?: string;
 };
 
-declare module '@rocket.chat/ddp-client' {
+declare module '@zeki.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
 		insertOrUpdateUserStatus(userStatusData: InsertOrUpdateUserStatus): string | boolean;

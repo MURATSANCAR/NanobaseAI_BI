@@ -1,21 +1,21 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- the builder works under the assumption that "gets" would only happen after the corresponding "sets" */
 
-import type { IMessageBuilder } from '@rocket.chat/apps-engine/definition/accessors';
-import type { IMessage, IMessageAttachment } from '@rocket.chat/apps-engine/definition/messages';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
-import type { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IBlock } from '@rocket.chat/apps-engine/definition/uikit';
-import { BlockBuilder } from '@rocket.chat/apps-engine/definition/uikit';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
-import type { LayoutBlock } from '@rocket.chat/ui-kit';
+import type { IMessageBuilder } from '@zeki.chat/apps-engine/definition/accessors';
+import type { IMessage, IMessageAttachment } from '@zeki.chat/apps-engine/definition/messages';
+import { ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata';
+import type { IRoom } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IBlock } from '@zeki.chat/apps-engine/definition/uikit';
+import { BlockBuilder } from '@zeki.chat/apps-engine/definition/uikit';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
+import type { LayoutBlock } from '@zeki.chat/ui-kit';
 
 export class MessageBuilder implements IMessageBuilder {
-	public kind: RocketChatAssociationModel.MESSAGE;
+	public kind: ZekiChatAssociationModel.MESSAGE;
 
 	private msg: IMessage;
 
 	constructor(message?: IMessage) {
-		this.kind = RocketChatAssociationModel.MESSAGE;
+		this.kind = ZekiChatAssociationModel.MESSAGE;
 		this.msg = message || ({} as IMessage);
 	}
 

@@ -1,5 +1,5 @@
-import type { IRoom, RoomType } from '@rocket.chat/apps-engine/definition/rooms';
-import type { IUser } from '@rocket.chat/apps-engine/definition/users';
+import type { IRoom, RoomType } from '@zeki.chat/apps-engine/definition/rooms';
+import type { IUser } from '@zeki.chat/apps-engine/definition/users';
 
 import type { AppManager } from '../AppManager';
 

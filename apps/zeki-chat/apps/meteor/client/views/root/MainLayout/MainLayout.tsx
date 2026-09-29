@@ -1,4 +1,4 @@
-import { useEmbeddedLayout } from '@rocket.chat/ui-client';
+import { useEmbeddedLayout } from '@zeki.chat/ui-client';
 import type { ReactElement, ReactNode } from 'react';
 import { Suspense } from 'react';
 

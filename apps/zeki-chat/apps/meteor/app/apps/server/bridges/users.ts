@@ -1,10 +1,10 @@
-import type { IAppServerOrchestrator } from '@rocket.chat/apps';
-import { UserBridge } from '@rocket.chat/apps/dist/server/bridges/UserBridge';
-import type { IUserCreationOptions, IUser, UserType } from '@rocket.chat/apps-engine/definition/users';
-import { Presence } from '@rocket.chat/core-services';
-import type { UserStatus } from '@rocket.chat/core-typings';
-import { Subscriptions, Users } from '@rocket.chat/models';
-import { Random } from '@rocket.chat/random';
+import type { IAppServerOrchestrator } from '@zeki.chat/apps';
+import { UserBridge } from '@zeki.chat/apps/dist/server/bridges/UserBridge';
+import type { IUserCreationOptions, IUser, UserType } from '@zeki.chat/apps-engine/definition/users';
+import { Presence } from '@zeki.chat/core-services';
+import type { UserStatus } from '@zeki.chat/core-typings';
+import { Subscriptions, Users } from '@zeki.chat/models';
+import { Random } from '@zeki.chat/random';
 
 import { checkUsernameAvailability } from '../../../lib/server/functions/checkUsernameAvailability';
 import { deleteUser } from '../../../lib/server/functions/deleteUser';
@@ -76,7 +76,7 @@ export class AppUserBridge extends UserBridge {
 		const user = this.orch
 			.getConverters()
 			?.get('users')
-			.convertToRocketChat(userDescriptor as IUser);
+			.convertToZekiChat(userDescriptor as IUser);
 
 		if (!user._id) {
 			user._id = Random.id();

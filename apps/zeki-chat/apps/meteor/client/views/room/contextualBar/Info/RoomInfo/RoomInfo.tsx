@@ -1,6 +1,6 @@
-import type { IRoom } from '@rocket.chat/core-typings';
+import type { IRoom } from '@zeki.chat/core-typings';
 import { Box, Callout, IconButton } from '@rocket.chat/fuselage';
-import { RoomAvatar } from '@rocket.chat/ui-avatar';
+import { RoomAvatar } from '@zeki.chat/ui-avatar';
 import {
 	GenericMenu,
 	ContextualbarHeader,
@@ -18,7 +18,7 @@ import {
 	InfoPanelSection,
 	InfoPanelText,
 	InfoPanelTitle,
-} from '@rocket.chat/ui-client';
+} from '@zeki.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
 import RoomInfoActions from './RoomInfoActions';

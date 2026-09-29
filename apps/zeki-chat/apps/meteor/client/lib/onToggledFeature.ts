@@ -1,4 +1,4 @@
-import type { CapabilityModule } from '@rocket.chat/core-typings';
+import type { CapabilityModule } from '@zeki.chat/core-typings';
 import { QueryObserver } from '@tanstack/react-query';
 
 import { fetchFeatures } from './fetchFeatures';

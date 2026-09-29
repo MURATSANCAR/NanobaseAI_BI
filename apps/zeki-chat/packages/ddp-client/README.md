@@ -1,9 +1,9 @@
 # Getting started
-Add `@rocket.chat/ddp-client`  and `@rocket.chat/emitter` as dependencies of your project:
+Add `@zeki.chat/ddp-client`  and `@rocket.chat/emitter` as dependencies of your project:
 
-`yarn add @rocket.chat/ddp-client @rocket.chat/emitter`
+`yarn add @zeki.chat/ddp-client @rocket.chat/emitter`
 or:
-`npm install @rocket.chat/ddp-client @rocket.chat/emitter`
+`npm install @zeki.chat/ddp-client @rocket.chat/emitter`
 
 > @rocket.chat/emitter is listed as a peer dependency of ddp-client and is strictly necessary to make it work.
 
@@ -13,7 +13,7 @@ or:
  >This works out of the box for browsers. if you want to use it on NodeJS, you need to offer a `WebSocket`  implementation and a `fetch` implementation.
 
  First things first, let's import the SDK:
- `import  { DDPSDK }  from  '@rocket.chat/ddp-client';`
+ `import  { DDPSDK }  from  '@zeki.chat/ddp-client';`
 
  Now we need to create a new SDK instance. Fortunately, `DDPSDK` exposes a `create` function that initalizes everything for a quick setup:
  `const  sdk  =  DDPSDK.create('http://localhost:3000');`

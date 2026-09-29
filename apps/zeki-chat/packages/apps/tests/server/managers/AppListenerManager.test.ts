@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
+import { AppInterface } from '@zeki.chat/apps-engine/definition/metadata';
 
 import type { AppManager } from '../../../src/server/AppManager';
 import type { ProxiedApp } from '../../../src/server/ProxiedApp';

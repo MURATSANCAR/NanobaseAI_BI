@@ -1,5 +1,5 @@
-import type { IMessage } from '@rocket.chat/core-typings';
-import { Uploads } from '@rocket.chat/models';
+import type { IMessage } from '@zeki.chat/core-typings';
+import { Uploads } from '@zeki.chat/models';
 
 import { FileUpload } from '../../../file-upload/server';
 import { getURL } from '../getURL';

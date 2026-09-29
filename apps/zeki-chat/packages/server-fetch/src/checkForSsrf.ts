@@ -1,4 +1,4 @@
-import { isTruthy } from '@rocket.chat/tools';
+import { isTruthy } from '@zeki.chat/tools';
 
 import {
 	allowlistedIpResolved,

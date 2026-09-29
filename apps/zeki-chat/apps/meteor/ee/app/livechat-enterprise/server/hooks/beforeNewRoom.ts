@@ -1,5 +1,5 @@
-import type { IOmnichannelRoomInfo, IOmnichannelRoomExtraData, IOmnichannelRoom } from '@rocket.chat/core-typings';
-import { OmnichannelServiceLevelAgreements } from '@rocket.chat/models';
+import type { IOmnichannelRoomInfo, IOmnichannelRoomExtraData, IOmnichannelRoom } from '@zeki.chat/core-typings';
+import { OmnichannelServiceLevelAgreements } from '@zeki.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { beforeNewRoom } from '../../../../../app/livechat/server/lib/hooks';

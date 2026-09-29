@@ -1,6 +1,6 @@
-import { UserStatus, type IUser } from '@rocket.chat/core-typings';
-import { Settings, Rooms, Users, Roles } from '@rocket.chat/models';
-import { validateEmail } from '@rocket.chat/tools';
+import { UserStatus, type IUser } from '@zeki.chat/core-typings';
+import { Settings, Rooms, Users, Roles } from '@zeki.chat/models';
+import { validateEmail } from '@zeki.chat/tools';
 import colors from 'colors/safe';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
@@ -126,14 +126,14 @@ Meteor.startup(async () => {
 			void notifyOnSettingChangedById('Initial_Channel_Created');
 	}
 
-	// Zeki: the built-in bot keeps the technical username 'rocket.cat' (code and integrations look it up by that id/username),
+	// Zeki: the built-in bot keeps the technical username 'zeki.bot' (code and integrations look it up by that id/username),
 	// Zeki: only the display name shown to users is rebranded. Existing workspaces are corrected below.
 	try {
-		if (!(await Users.findOneById('rocket.cat', { projection: { _id: 1 } }))) {
+		if (!(await Users.findOneById('zeki.bot', { projection: { _id: 1 } }))) {
 			await Users.create({
-				_id: 'rocket.cat',
+				_id: 'zeki.bot',
 				name: 'ZEKI AI CHAT',
-				username: 'rocket.cat',
+				username: 'zeki.bot',
 				status: UserStatus.ONLINE,
 				statusDefault: UserStatus.ONLINE,
 				utcOffset: 0,
@@ -141,31 +141,31 @@ Meteor.startup(async () => {
 				type: 'bot',
 			});
 
-			await addUserRolesAsync('rocket.cat', ['bot']);
+			await addUserRolesAsync('zeki.bot', ['bot']);
 
-			const asset = await Assets.getBinaryAsync('avatars/rocketcat.png');
+			const asset = await Assets.getBinaryAsync('avatars/zekibot.png');
 			if (asset) {
 				const buffer = Buffer.from(asset);
 
 				const fileStore = FileUpload.getStore('Avatars');
-				await fileStore.deleteByName('rocket.cat');
+				await fileStore.deleteByName('zeki.bot');
 
 				const file = {
-					userId: 'rocket.cat',
+					userId: 'zeki.bot',
 					type: 'image/png',
 					size: buffer.length,
 				};
 
 				const upload = await fileStore.insert(file, buffer);
-				await Users.setAvatarData('rocket.cat', 'local', upload.etag);
+				await Users.setAvatarData('zeki.bot', 'local', upload.etag);
 			}
 		} else {
 			// Zeki: rename the built-in bot on workspaces created before the rebrand.
-			await Users.updateOne({ _id: 'rocket.cat', name: { $in: ['Rocket.Cat', 'Zeki AI', 'ZEKI AI'] } }, { $set: { name: 'ZEKI AI CHAT' } });
+			await Users.updateOne({ _id: 'zeki.bot', name: { $in: ['ZEKI AI CHAT', 'Zeki AI', 'ZEKI AI'] } }, { $set: { name: 'ZEKI AI CHAT' } });
 		}
 	} catch (error) {
 		console.log(
-			'Error creating the default bot user `rocket.cat`; if you created a user with this username please remove it and restart the server',
+			'Error creating the default bot user `zeki.bot`; if you created a user with this username please remove it and restart the server',
 		);
 		throw error;
 	}
@@ -208,15 +208,15 @@ Meteor.startup(async () => {
 		}
 	}
 
-	await Users.removeById('rocketchat.internal.admin.test');
+	await Users.removeById('zekichat.internal.admin.test');
 
 	if (process.env.TEST_MODE === 'true') {
 		console.log(colors.green('Inserting admin test user:'));
 
 		const adminUser: Omit<IUser, 'createdAt' | 'roles' | '_updatedAt'> = {
-			_id: 'rocketchat.internal.admin.test',
+			_id: 'zekichat.internal.admin.test',
 			name: 'Internal Admin Test',
-			username: 'rocketchat.internal.admin.test',
+			username: 'zekichat.internal.admin.test',
 			emails: [
 				{
 					address: 'rocketchat.internal.admin.test@rocket.chat',
@@ -257,6 +257,6 @@ Meteor.startup(async () => {
 		await addUserToDefaultChannels(adminUser as IUser, true);
 
 		// Create sample call history for API tests
-		return addCallHistoryTestData('rocketchat.internal.admin.test', 'rocket.cat');
+		return addCallHistoryTestData('zekichat.internal.admin.test', 'zeki.bot');
 	}
 });

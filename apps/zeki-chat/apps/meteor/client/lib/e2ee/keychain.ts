@@ -1,4 +1,4 @@
-import { Base64 } from '@rocket.chat/base64';
+import { Base64 } from '@zeki.chat/base64';
 
 import { Binary } from './binary';
 import type { ICodec } from './codec';

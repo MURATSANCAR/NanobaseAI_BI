@@ -1,4 +1,4 @@
-import type { IMessage, MessageTypesValues, IUser, IRoom, AtLeast, MessageUrl } from '@rocket.chat/core-typings';
+import type { IMessage, MessageTypesValues, IUser, IRoom, AtLeast, MessageUrl } from '@zeki.chat/core-typings';
 
 export interface IMessageService {
 	sendMessage({ fromId, rid, msg }: { fromId: string; rid: string; msg: string }): Promise<IMessage>;

@@ -1,4 +1,4 @@
-import type { IMessage, IRoom, ITeam, IUser, IUploadWithUser, IIntegration, ISubscription } from '@rocket.chat/core-typings';
+import type { IMessage, IRoom, ITeam, IUser, IUploadWithUser, IIntegration, ISubscription } from '@zeki.chat/core-typings';
 
 import type { GroupsAddAllProps } from './GroupsAddAllProps';
 import type { GroupsAddLeaderProps } from './GroupsAddLeaderProps';

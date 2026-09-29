@@ -1,4 +1,4 @@
-import { Contextualbar } from '@rocket.chat/ui-client';
+import { Contextualbar } from '@zeki.chat/ui-client';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
 
@@ -36,8 +36,8 @@ export const Default: Story = {
 			},
 			{
 				_id: 'user3',
-				username: 'rocket.cat',
-				name: 'Rocket.Cat',
+				username: 'zeki.bot',
+				name: 'ZEKI AI CHAT',
 			},
 		],
 		useRealName: false,

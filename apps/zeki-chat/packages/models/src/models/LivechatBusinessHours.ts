@@ -1,6 +1,6 @@
-import type { ILivechatBusinessHour, RocketChatRecordDeleted } from '@rocket.chat/core-typings';
-import { LivechatBusinessHourTypes } from '@rocket.chat/core-typings';
-import type { ILivechatBusinessHoursModel } from '@rocket.chat/model-typings';
+import type { ILivechatBusinessHour, ZekiChatRecordDeleted } from '@zeki.chat/core-typings';
+import { LivechatBusinessHourTypes } from '@zeki.chat/core-typings';
+import type { ILivechatBusinessHoursModel } from '@zeki.chat/model-typings';
 import type { Collection, Db, Document, FindOptions } from 'mongodb';
 
 import { BaseRaw } from './BaseRaw';
@@ -16,7 +16,7 @@ export interface IWorkHoursCronJobsWrapper {
 }
 
 export class LivechatBusinessHoursRaw extends BaseRaw<ILivechatBusinessHour> implements ILivechatBusinessHoursModel {
-	constructor(db: Db, trash?: Collection<RocketChatRecordDeleted<ILivechatBusinessHour>>) {
+	constructor(db: Db, trash?: Collection<ZekiChatRecordDeleted<ILivechatBusinessHour>>) {
 		super(db, 'livechat_business_hours', trash);
 	}
 

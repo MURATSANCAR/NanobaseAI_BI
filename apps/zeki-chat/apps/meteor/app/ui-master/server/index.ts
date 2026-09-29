@@ -1,5 +1,5 @@
-import type { ISettingColor } from '@rocket.chat/core-typings';
-import { Settings } from '@rocket.chat/models';
+import type { ISettingColor } from '@zeki.chat/core-typings';
+import { Settings } from '@zeki.chat/models';
 import { escapeHTML } from '@rocket.chat/string-helpers';
 import { Meteor } from 'meteor/meteor';
 import { Inject } from 'meteor/meteorhacks:inject-initial';
@@ -133,7 +133,7 @@ Meteor.startup(() => {
 });
 
 const renderDynamicCssList = withDebouncing({ wait: 500 })(async () => {
-	// const variables = RocketChat.models.Settings.findOne({_id:'theme-custom-variables'}, {fields: { value: 1}});
+	// const variables = ZekiChat.models.Settings.findOne({_id:'theme-custom-variables'}, {fields: { value: 1}});
 	const colors = await Settings.find({ _id: /theme-color-rc/i }, { projection: { value: 1, editor: 1 } }).toArray();
 	const css = colors
 		.filter((color): color is ISettingColor => !!color?.value)

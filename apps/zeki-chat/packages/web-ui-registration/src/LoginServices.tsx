@@ -1,5 +1,5 @@
 import { ButtonGroup, Divider } from '@rocket.chat/fuselage';
-import { useLoginServices, useSetting } from '@rocket.chat/ui-contexts';
+import { useLoginServices, useSetting } from '@zeki.chat/ui-contexts';
 import type { Dispatch, ReactElement, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 

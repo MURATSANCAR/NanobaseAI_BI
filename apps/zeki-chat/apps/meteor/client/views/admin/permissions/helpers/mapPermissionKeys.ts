@@ -1,4 +1,4 @@
-import type { IPermission } from '@rocket.chat/core-typings';
+import type { IPermission } from '@zeki.chat/core-typings';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import type { TFunction } from 'i18next';
 

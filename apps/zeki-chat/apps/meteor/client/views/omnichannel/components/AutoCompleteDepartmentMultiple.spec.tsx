@@ -1,4 +1,4 @@
-import { MockedAppRootBuilder } from '@rocket.chat/mock-providers/dist/MockedAppRootBuilder';
+import { MockedAppRootBuilder } from '@zeki.chat/mock-providers/dist/MockedAppRootBuilder';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { VirtuosoMockContext } from 'react-virtuoso';
