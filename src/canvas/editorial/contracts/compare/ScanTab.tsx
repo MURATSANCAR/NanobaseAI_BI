@@ -50,6 +50,11 @@ export default function ScanTab({ meta, onOpen }: { meta: Meta; onOpen: (id: str
           <Kpi label="Şekil eksiği olan" value={nf.format(d.ozet.sekil)} help="Mali hak, süre, taraf, kitap ya da ücret kaydı eksik"
             active={f.only === 'sekil'} onClick={() => set({ only: 'sekil' })}
             info={<SqlInfo k={d.kaynaklar} alan="ozet.sekil" label="Şekil eksiği olan" />} />
+          {d.ozet.pozisyon > 0 && (
+            <Kpi label="Pozisyon ihlali olan" value={nf.format(d.ozet.pozisyon)} help="Onaylı standart pozisyona aykırı"
+              active={f.only === 'pozisyon'} onClick={() => set({ only: 'pozisyon' })}
+              info={<SqlInfo k={d.kaynaklar} alan="ozet.pozisyon" label="Pozisyon ihlali olan" />} />
+          )}
         </KpiRow>
       )}
 
@@ -64,6 +69,7 @@ export default function ScanTab({ meta, onOpen }: { meta: Meta; onOpen: (id: str
             <option value="sapan">Farklı maddesi olanlar</option>
             <option value="ozgun">Özgün notu olanlar</option>
             <option value="sekil">Şekil eksiği olanlar</option>
+            <option value="pozisyon">Standart pozisyon ihlali olanlar</option>
             <option value="hepsi-sapma">Farklı madde ya da özgün not</option>
             <option value="hepsi">Bütün sözleşmeler</option>
           </select>
@@ -191,12 +197,19 @@ function Row({ it, onOpen }: { it: ScanItem; onOpen: () => void }) {
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {it.sapmalar.length > 0 && <Pill tone="err">{`${it.sapmalar.length} farklı`}</Pill>}
-            {it.sapmalar.length + it.sekilEksik.length + it.ozgunNotlar.length > 0 && it.acikBulgu === 0 && <Pill tone="ok">İncelendi</Pill>}
+            {it.sapmalar.length + it.sekilEksik.length + it.ozgunNotlar.length + it.pozisyon.length > 0 && it.acikBulgu === 0 && <Pill tone="ok">İncelendi</Pill>}
             <ChevronRight aria-hidden className="h-4 w-4 text-canvas-muted" />
           </div>
         </div>
-        {(it.sapmalar.length > 0 || it.ozgunNotlar.length > 0 || it.sekilEksik.length > 0) && (
+        {(it.sapmalar.length > 0 || it.ozgunNotlar.length > 0 || it.sekilEksik.length > 0 || it.pozisyon.length > 0) && (
           <div className="mt-2 flex flex-wrap gap-1.5">
+            {it.pozisyon.map((x) => (
+              <span key={`p${x.id}`} className={`inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-bold ${x.inceleme && !x.inceleme.open ? TONE.muted : x.level === 'kirmizi' ? TONE.err : TONE.warn}`}>
+                {x.inceleme && !x.inceleme.open && <CheckCircle2 aria-hidden className="h-3 w-3 shrink-0" />}
+                <span className="truncate">{`Pozisyon: ${x.rule}`}</span>
+                <span className="font-mono">{x.value}</span>
+              </span>
+            ))}
             {it.sapmalar.map((s) => (
               <span key={s.key} className={`inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-semibold ${s.inceleme && !s.inceleme.open ? TONE.muted : TONE[statusTone(s.status)]}`}>
                 {s.inceleme && !s.inceleme.open && <CheckCircle2 aria-label={s.inceleme.statusLabel} className="h-3 w-3 shrink-0" />}

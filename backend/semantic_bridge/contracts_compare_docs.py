@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import base64
 import difflib
+from collections import Counter
 import hashlib
 import json
 import logging
@@ -64,12 +65,164 @@ DOCS = sa.Table(
 
 KINDS = {"crm": "CRM eki", "belge": "Portal belgesi", "sablon": "Şablon", "yukleme": "Karşılaştırma için yüklenen"}
 STATUS = {"bekliyor": "Okunmadı", "okunuyor": "Okunuyor", "hazir": "Okundu", "hata": "Okunamadı"}
-ALLOWED = ("pdf", "docx", "odt", "txt") + tuple(DR.IMAGES)
+HEIC = ("heic", "heif")
+ALLOWED = ("pdf", "docx", "odt", "txt") + tuple(DR.IMAGES) + HEIC
+
+
+def heic_available() -> bool:
+    try:
+        import pillow_heif  # noqa: F401
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def heic_to_jpeg(data: bytes) -> bytes:
+    """Telefon fotoğrafı (HEIC) → JPEG; çevirici paket yoksa açık hata (sessizce atlanmaz)."""
+    try:
+        import pillow_heif
+        from PIL import Image
+    except Exception as e:  # noqa: BLE001
+        raise DocError("HEIC fotoğraf okunamıyor: bu kurulumda HEIC çevirici yok (yönetici kurmalı).") from e
+    import io as _io
+
+    pillow_heif.register_heif_opener()
+    img = Image.open(_io.BytesIO(data))
+    out = _io.BytesIO()
+    img.convert("RGB").save(out, "JPEG", quality=92)
+    return out.getvalue()
+
+
+#: Belgede sözleşme numarası (CRM biçimi: yıl + 6 hane, isteğe bağlı kopya eki).
+CONTRACT_NO = re.compile(r"\b((?:19|20)\d{8})(?:\s*-\s*(\d{1,3}))?\b")
+
+
+def find_contract_no(filename: str, text: str, known: Callable[[str], bool]) -> Optional[str]:
+    """Dosya adında ya da belgenin ilk 5.000 karakterinde geçen ve CRM'de var olan sözleşme numarası (ilk bulunan)."""
+    for src in (filename or "", (text or "")[:5000]):
+        for m in CONTRACT_NO.finditer(src):
+            for cand in ([f"{m.group(1)}-{m.group(2)}", m.group(1)] if m.group(2) else [m.group(1), f"{m.group(1)}-1"]):
+                if known(cand):
+                    return cand
+    return None
+
+
+def mask_clauses(clauses: list[dict[str, Any]], names: list[str] = ()) -> list[dict[str, Any]]:
+    """Ekrana giden madde metinleri maskeli (kimlik no, telefon, e-posta, IBAN, kart, etiketli kişi satırları, bilinen
+    adlar). Karşılaştırma maskeli metinle yapılır; maskesiz görünüm yalnız belge yetkisiyle ve kayıt altında."""
+    from semantic_bridge import doc_extract as X
+
+    out = []
+    for c in clauses:
+        d = dict(c)
+        d["metin"] = X.mask_all(c.get("metin") or "", names)
+        if c.get("baslik"):
+            d["baslik"] = X.mask_all(c["baslik"], names)
+        d.pop("_t", None)
+        out.append(d)
+    return out
 FILE_MAX = 10 * 1024 * 1024
 
 #: Eşleme eşikleri (0–1): `MATCH` altındaki iki madde eşlenmez; `SAME` ve üstü (sayılar da aynıysa) «aynı»;
 #: `MOVED` sırası tutmayan iki maddenin «yeri değişmiş» sayılması için gereken benzerlik.
 MATCH, SAME, MOVED = 0.45, 0.97, 0.60
+
+# ================================================================================ hukuki madde türleri
+
+#: Kapalı tür kümesi: (ad, katlanmış anahtar sözcükler). Önce kural (başlıkta geçen sözcük 3, metnin başında 1 puan;
+#: en az 2 puan ve tek kazanan), karar çıkmazsa Zeki AI kapalı küme seçimi (olasılık ve fark eşiği; altı «belirsiz»).
+CLAUSE_TYPES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "taraflar": ("Taraflar", ("taraflar", "taraf", "arasinda yapilmistir", "adresi")),
+    "konu": ("Konu ve eser", ("konu", "sozlesmenin konusu", "kapsam", "eserin adi")),
+    "haklar": ("Devredilen haklar", ("mali hak", "cogaltma", "yayma", "isleme", "temsil", "umuma iletim", "devreder",
+                                     "devretmistir", "lisans verir")),
+    "munhasirlik": ("Münhasırlık", ("munhasir", "exclusive", "tek yetkili")),
+    "sure": ("Süre", ("sozlesme suresi", "yil sureyle", "yururlukte kalir", "gecerlidir", "sona erer", "suresi")),
+    "bolge": ("Bölge ve dil", ("bolge", "ulke", "dunya genelinde", "dilinde", "territory")),
+    "ucret": ("Telif ve ücret", ("telif ucreti", "telif orani", "ucret", "bedel", "net satis", "kapak fiyat", "royalt")),
+    "avans": ("Avans", ("avans", "pesin odeme", "mahsup")),
+    "hesap": ("Hesap, rapor ve denetim", ("hesap", "rapor", "hakedis", "denetleme", "inceleme hakki", "statement")),
+    "teslim": ("Teslim ve yayın yükümlülüğü", ("teslim", "yayimla", "yayinlama", "basima", "yayin tarihi")),
+    "geri_donus": ("Hakların geri dönüşü", ("geri doner", "baskisi tukenmis", "yeniden basilmaz", "haklarin iadesi",
+                                            "reversion", "yayinlanmamasi halinde")),
+    "stok": ("Stok eritme", ("stok", "eritme", "elde kalan", "sell off", "kalan kitaplar")),
+    "tercih": ("Tercih (ilk okuma) hakkı", ("tercih hakki", "ilk okuma", "oncelik hakki", "sonraki eser", "option")),
+    "fesih": ("Fesih", ("fesih", "feshed", "sona erdirme", "ihlal halinde")),
+    "cezai": ("Cezai şart ve tazminat", ("cezai sart", "tazminat")),
+    "manevi": ("Manevi haklar", ("manevi hak", "adin belirtilmesi", "eserde degisiklik", "butunlugu")),
+    "garanti": ("Hak sahibinin taahhüdü", ("taahhut eder", "ucuncu kisi", "garanti eder", "hukuki ayip")),
+    "kvkk": ("Kişisel veriler", ("kisisel veri", "kvkk", "6698")),
+    "uyusmazlik": ("Uyuşmazlık ve yetkili mahkeme", ("uyusmazlik", "mahkeme", "icra daire", "tahkim", "uygulanacak hukuk")),
+    "tebligat": ("Tebligat", ("tebligat", "bildirim adresi", "ihtarname")),
+    "yururluk": ("Yürürlük ve nüsha", ("nusha", "yururluge girer", "isbu sozlesme")),
+}
+TYPE_MODULE = "sozlesme"
+TYPE_THRESHOLDS = (0.70, 0.30)
+
+
+def _type_scores(c: dict[str, Any]) -> dict[str, int]:
+    title = " " + DR.fold(c.get("baslik") or "") + " "
+    head = " " + DR.fold((c.get("metin") or "")[:500]) + " "
+    scores: dict[str, int] = {}
+
+    def hits(text: str, words: tuple[str, ...]) -> list[str]:
+        got = [w for w in words if f" {w}" in text]
+        # Bir sözcük aynı türün daha uzun bir sözcüğünün içinde kalıyorsa ayrıca sayılmaz («taraf» ⊂ «taraflar»).
+        return [w for w in got if not any(w != o and w in o for o in got)]
+
+    for tid, (_, words) in CLAUSE_TYPES.items():
+        sc = 3 * len(hits(title, words)) + len(hits(head, words))
+        if sc:
+            scores[tid] = sc
+    return scores
+
+
+def rule_type(c: dict[str, Any]) -> Optional[str]:
+    sc = _type_scores(c)
+    if not sc:
+        return None
+    best = max(sc.values())
+    top = [t for t, v in sc.items() if v == best]
+    return top[0] if best >= 2 and len(top) == 1 else None
+
+
+def classify(clauses: list[dict[str, Any]], choose: Optional[Callable[[str, list[str]], Any]] = None,
+             mask: Callable[[str], str] = lambda t: t) -> dict[str, int]:
+    """Maddelere tür yazar (`tur`, `turAd`, `turKaynak`: kural | zeki | None, `olasilik`). Modele maskeli metin gider;
+    model yoksa ya da emin değilse tür boş kalır (tahmin yazılmaz). Dönüş: kaç madde kuralla, kaçı modelle bulundu."""
+    labels = [v[0] for v in CLAUSE_TYPES.values()] + ["Diğer"]
+    back = {v[0]: k for k, v in CLAUSE_TYPES.items()}
+    n = {"kural": 0, "zeki": 0, "belirsiz": 0}
+    for c in clauses:
+        t = rule_type(c)
+        c["olasilik"] = None
+        if t:
+            c["tur"], c["turKaynak"] = t, "kural"
+            n["kural"] += 1
+        elif choose is not None and len((c.get("metin") or "").strip()) >= 20:
+            text = mask(((c.get("baslik") or "") + "\n" + (c.get("metin") or ""))[:1500])
+            try:
+                ch = choose("Aşağıdaki sözleşme maddesi hangi konuyu düzenler? Yalnız maddede yazana bak.\n\nMADDE:\n" + text, labels)
+            except Exception as e:  # noqa: BLE001 — model düşerse tür boş kalır
+                log.warning("madde türü sorulamadı: %s", str(e)[:160])
+                ch = None
+            ok = ch is not None and getattr(ch, "choice", None) and ch.confident(*TYPE_THRESHOLDS)
+            if ok and ch.choice in back:
+                c["tur"], c["turKaynak"], c["olasilik"] = back[ch.choice], "zeki", round(float(ch.probability or 0), 3)
+                n["zeki"] += 1
+            else:
+                c["tur"], c["turKaynak"] = None, None
+                n["belirsiz"] += 1
+        else:
+            c["tur"], c["turKaynak"] = None, None
+            n["belirsiz"] += 1
+        c["turAd"] = CLAUSE_TYPES[c["tur"]][0] if c.get("tur") else None
+    return n
+
+
+def types_of(clauses: list[dict[str, Any]]) -> set[str]:
+    return {c["tur"] for c in clauses if c.get("tur")}
+
 
 _ready_lock = threading.Lock()
 _ensured: set[int] = set()
@@ -228,7 +381,10 @@ def align(a: list[dict[str, Any]], b: list[dict[str, Any]]) -> list[tuple[Option
     _prep(a)
     _prep(b)
     n, m = len(a), len(b)
-    sim = [[similarity(a[i]["_t"], b[j]["_t"]) for j in range(m)] for i in range(n)]
+    raw = [[similarity(a[i]["_t"], b[j]["_t"]) for j in range(m)] for i in range(n)]
+    # Aynı hukuki türdeki maddeler eşlemede öne alınır (+0,15); «aynı» kararı ham benzerlikle verilir.
+    sim = [[min(1.0, raw[i][j] + (0.15 if a[i].get("tur") and a[i].get("tur") == b[j].get("tur") else 0.0)) for j in range(m)]
+           for i in range(n)]
     score = [[0.0] * (m + 1) for _ in range(n + 1)]
     for i in range(n - 1, -1, -1):
         for j in range(m - 1, -1, -1):
@@ -264,18 +420,18 @@ def align(a: list[dict[str, Any]], b: list[dict[str, Any]]) -> list[tuple[Option
     out: list[tuple[Optional[int], Optional[int], float]] = []
     for x, y, s in pairs:
         if y is None and x in moved:
-            out.append((x, moved[x][0], -moved[x][1]))      # eksi: yeri değişmiş
+            out.append((x, moved[x][0], -max(raw[x][moved[x][0]], 1e-6)))      # eksi: yeri değişmiş
         elif x is None and y in used_b:
             continue
         else:
-            out.append((x, y, s))
+            out.append((x, y, raw[x][y] if x is not None and y is not None else s))
     return out
 
 
 def _clause_out(c: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
     if c is None:
         return None
-    return {k: c.get(k) for k in ("sira", "no", "baslik", "metin", "sayfa")}
+    return {k: c.get(k) for k in ("sira", "no", "baslik", "metin", "sayfa", "tur", "turAd", "turKaynak", "olasilik")}
 
 
 def diff(a: list[dict[str, Any]], b: list[dict[str, Any]], b_is_template: bool = False) -> dict[str, Any]:
@@ -312,7 +468,10 @@ def diff(a: list[dict[str, Any]], b: list[dict[str, Any]], b_is_template: bool =
             row = {"durum": status, "benzerlik": 0.0, "a": None, "b": _clause_out(cb)}
         counts[status] += 1
         rows.append(row)
-    return {"maddeler": rows, "sayim": counts, "esik": {"eslesme": MATCH, "ayni": SAME, "yeri": MOVED}}
+    ta, tb = types_of(a), types_of(b)
+    return {"maddeler": rows, "sayim": counts, "esik": {"eslesme": MATCH, "ayni": SAME, "yeri": MOVED},
+            "turler": {"a": sorted(ta), "b": sorted(tb), "yalnizB": sorted(tb - ta), "yalnizA": sorted(ta - tb)},
+            "turAdlari": {k: v[0] for k, v in CLAUSE_TYPES.items()}}
 
 
 def against_corpus(a: list[dict[str, Any]], corpus: list[tuple[dict[str, Any], list[dict[str, Any]]]]) -> dict[str, Any]:
@@ -352,7 +511,13 @@ def against_corpus(a: list[dict[str, Any]], corpus: list[tuple[dict[str, Any], l
             if status != "ayni":
                 row["fark"] = word_diff(ca["metin"], cb["metin"])
         rows.append(row)
-    return {"maddeler": rows, "sayim": counts, "belgeSayisi": len(corpus)}
+    # Arşivdeki belgelerin en az yarısında bulunan ama bu belgede olmayan madde türleri
+    ta = types_of(a)
+    freq: Counter = Counter(t for _, cl in corpus for t in types_of(cl))
+    missing = [{"tur": t, "ad": CLAUSE_TYPES[t][0], "belge": n} for t, n in freq.most_common()
+               if t not in ta and corpus and n / len(corpus) >= 0.5]
+    return {"maddeler": rows, "sayim": counts, "belgeSayisi": len(corpus), "eksikTurler": missing,
+            "turler": sorted(ta), "turAdlari": {k: v[0] for k, v in CLAUSE_TYPES.items()}}
 
 
 # ================================================================================ arşiv
@@ -424,10 +589,12 @@ def archive(engine: sa.engine.Engine, tenant: str, crm_rows: list[dict[str, Any]
 
     for r in crm_rows:
         name = str(r.get("ad") or "ek")
-        ok = DR.ext_of(name) in ALLOWED
+        ok = DR.ext_of(name) in ALLOWED and (DR.ext_of(name) not in HEIC or heic_available())
         out.append(item(f"crm:{str(r.get('id')).strip('{}').lower()}", "crm", name, name, r.get("boyut"),
                         r.get("sozlesme"), r.get("tarih"), ok,
-                        None if ok else f"Bu dosya türü okunmuyor (.{DR.ext_of(name) or '?'}); desteklenen: {', '.join(ALLOWED)}."))
+                        None if ok else (f"HEIC fotoğraf: bu kurulumda HEIC çevirici yok (yönetici kurmalı)."
+                                         if DR.ext_of(name) in HEIC else
+                                         f"Bu dosya türü okunmuyor (.{DR.ext_of(name) or '?'}); desteklenen: {', '.join(ALLOWED)}.")))
     for e in extracts:
         out.append(item(f"belge:{e.id}", "belge", e.filename, e.filename, e.bytes, e.contract_key, e.created_at, True))
     for t in templates:
@@ -515,7 +682,10 @@ def ready_corpus(engine: sa.engine.Engine, tenant: str, exclude_ref: str) -> lis
 
 
 def read_bytes(filename: str, data: bytes) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Belge baytları → maddeler ve okuma özeti."""
+    """Belge baytları → maddeler ve okuma özeti. HEIC önce JPEG'e çevrilir."""
+    if DR.ext_of(filename) in HEIC:
+        data = heic_to_jpeg(data)
+        filename = re.sub(r"\.(heic|heif)$", ".jpg", filename, flags=re.I)
     reading = DR.read(filename, data, allowed=ALLOWED)
     pages = reading.pages
     clauses = split(pages)
@@ -563,6 +733,8 @@ def upload(engine: sa.engine.Engine, tenant: str, user: str, filename: str, data
         DR.check(name, data, ALLOWED)
     except DR.ReadError as e:
         raise DocError(str(e), e.status) from None
+    if DR.ext_of(name) in HEIC and not heic_available():
+        raise DocError("HEIC fotoğraf okunamıyor: bu kurulumda HEIC çevirici yok. Fotoğrafı JPEG olarak yükleyin.", 415)
     did = uuid.uuid4().hex
     folder = os.path.join(_upload_root(), tenant, "karsilastirma")
     path = os.path.join(folder, f"{did}.{DR.ext_of(name)}")
@@ -606,6 +778,36 @@ def forget(engine: sa.engine.Engine, tenant: str, ref: str) -> dict[str, Any]:
         except OSError as e:
             log.warning("karşılaştırma belgesi diskten silinemedi (%s): %s", r.path, e)
     return {"ref": r.ref, "title": r.title, "kind": r.kind}
+
+
+def set_contract_no(engine: sa.engine.Engine, tenant: str, ref: str, no: Optional[str]) -> dict[str, Any]:
+    ensure(engine)
+    with engine.begin() as c:
+        r = c.execute(sa.select(DOCS).where(DOCS.c.tenant_id == tenant, DOCS.c.ref == ref)).first()
+        if r is None:
+            raise DocError("Belge bulunamadı.", 404)
+        c.execute(sa.update(DOCS).where(DOCS.c.id == r.id).values(contract_no=no))
+        return _row_out(c.execute(sa.select(DOCS).where(DOCS.c.id == r.id)).first())
+
+
+def purge_uploads(engine: sa.engine.Engine, tenant: str, days: int) -> list[dict[str, Any]]:
+    """Saklama süresi dolan yüklenmiş belgeler (dosya + okuma) silinir; 0 = süresiz (hiçbir şey silinmez)."""
+    if not days or days <= 0:
+        return []
+    from datetime import timedelta
+
+    ensure(engine)
+    limit = _now() - timedelta(days=int(days))
+    with engine.connect() as c:
+        rows = c.execute(sa.select(DOCS.c.ref).where(DOCS.c.tenant_id == tenant, DOCS.c.kind == "yukleme",
+                                                     DOCS.c.created_at < limit, DOCS.c.status != "okunuyor")).all()
+    out = []
+    for r in rows:
+        try:
+            out.append(forget(engine, tenant, r.ref))
+        except DocError as e:
+            log.warning("saklama süresi: %s silinemedi: %s", r.ref, e)
+    return out
 
 
 def docs_stmt(tenant: str) -> sa.Select:

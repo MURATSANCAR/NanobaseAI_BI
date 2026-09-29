@@ -8,6 +8,14 @@
     GET    …/reviews?key=             bir sözleşmenin bulgu incelemeleri
     POST   …/reviews                  {key, clause, status, note, owner} inceleme yaz  (ozellik:sozlesme-karsilastirma.inceleme)
     DELETE …/reviews?key=&clause=     incelemeyi kaldır                                   (ozellik:sozlesme-karsilastirma.inceleme)
+    GET    …/positions                standart pozisyonlar (kural listesi, madde seçenekleri)
+    POST   …/positions                kural yaz / düzelt (id ile)                          (ozellik:sozlesme-karsilastirma.pozisyon)
+    POST   …/positions/{id}/approve   öneriyi onayla                                       (ozellik:sozlesme-karsilastirma.pozisyon)
+    DELETE …/positions/{id}           kuralı sil                                           (ozellik:sozlesme-karsilastirma.pozisyon)
+    POST   …/positions/suggest        {tip, odeme} emsalden öneri üret (onay bekler)      (ozellik:sozlesme-karsilastirma.pozisyon)
+    POST   …/documents/link           {ref, no} belgeyi sözleşmeye bağla                   (ozellik:sozlesme-karsilastirma.belge)
+    GET    …/contract/{key}/report.docx   sözleşme karşılaştırma raporu (Word)            (ozellik:veri.disa-aktar)
+    GET    …/documents/diff.docx?a=&b=    belge farkı raporu (Word)                       (ozellik:veri.disa-aktar)
     GET    …/search?q=                sözleşme seçici (numara, kitap, yazar)
     GET    …/contract/{key}           tek sözleşme: madde madde emsal, serbest metin, aynı hak sahibinin öbür sözleşmeleri
                                       (key = CRM kimliği | portal kaydı | belge-<okuma>)
@@ -26,6 +34,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import threading
 from typing import Any, Callable, Optional
 
@@ -43,6 +52,9 @@ log = logging.getLogger("semantic.contracts_compare")
 B = "/api/v1/editorial/contracts/compare"
 UPLOAD = "ozellik:sozlesme-karsilastirma.belge"
 REVIEW = "ozellik:sozlesme-karsilastirma.inceleme"
+POSITION = "ozellik:sozlesme-karsilastirma.pozisyon"
+EXPORT = "ozellik:veri.disa-aktar"
+DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 # ------------------------------------------------------------------ sorgu bilgisi
 
@@ -77,12 +89,16 @@ F_OLCUT = ("İsteğe bağlı ölçütler (ekrandan seçilir): ajans üzerinden =
            "satış adedi (satış − iade), satışı olan hak sahipleri arasında üst %20 / orta %40 / alt %40, satışı yoksa ayrı "
            "dilim; hedef kitle = kitapların en sık hedef kitlesi; tür = türler metninin ilk türü; yerli/çeviri = kitabın "
            "orijinal dili (Türkçe ve Osmanlı Türkçesi yerli). Emsal azsa önce bu ölçütler gevşer.")
+F_POZ = ("Standart pozisyon: hukuk biriminin onayladığı kural (madde, kapsam: sözleşme tipi / ödeme türü / para birimi, işlem: "
+         "en az / en çok / eşit / şunlardan biri / olmalı / olmamalı). Öneriler onaylanmadan denetlenmez. Belge kuralları "
+         "(«belgede … maddesi olmalı») belgenin madde türlerine uygulanır.")
 F_BELGE = ("Belge maddelere «Madde N», «N.», «N.N», «Article N» başlıklarından bölünür (numara yoksa paragraflar). İki belge "
            "madde sırası korunarak en yüksek toplam benzerlikle eşlenir; benzerlik kelime dizisi eşleşme oranıdır (şablon "
            "yer tutucusu sayılmaz). Eşik altı madde «yalnız bu belgede» ya da «yalnız karşılaştırılanda»; sırası tutmayan "
            "benzer madde «yeri değişmiş»; «aynı» için benzerlik ve sayılar aynı olmalı.")
 
-NOT_RAKAM = ("ayar", "kur", "page", "pageSize", "sekil[].ok", "items[].yil", "items[].kopya", "hesapMs", "subject.yil", "peers[].yil", "peers[].kopya",
+NOT_RAKAM = ("ayar", "kur", "page", "pageSize", "sekil[].ok", "saklamaGun", "items[].pozisyon[].id", "pozisyon[].id",
+             "maddeler[].a.olasilik", "maddeler[].b.olasilik", "maddeler[].enYakin.madde.olasilik", "items[].yil", "items[].kopya", "hesapMs", "subject.yil", "peers[].yil", "peers[].kopya",
              "history.items[].yil", "history.items[].kopya", "criteria.yil", "yillar", "facets.yillar", "ayarlar",
              "maddeler[].a.sira", "maddeler[].b.sira", "maddeler[].enYakin.madde.sira", "esik", "items[].bytes",
              "items[].maddeSayisi", "facets.tip[].kod", "facets.odeme[].kod", "facets.bolum[].kod", "facets.para[].kod")
@@ -148,6 +164,9 @@ def kaynak_contract(port: CC.Portfolio, prefix: str, subject_src: Optional[tuple
         k.hesap("inceleme", F_INCELEME, [rv])
     k.alanlar({"criteria": grup, "groups[]": sapma, "sayim": sapma, "texts[]": metin, "peers[]": grup, "history": gecmis,
                "subject": src[0], "sekil[]": sekil})
+    if tenant is not None and engine is not None:
+        k.alan("pozisyon[]", k.hesap("pozisyon", F_POZ, [k.portal("karsilastirma.pozisyon", "Standart pozisyonlar",
+                                                                 ST.positions_stmt(tenant, "onayli"), engine)]))
     return k
 
 
@@ -158,7 +177,8 @@ def kaynak_docs(stmt: Any, bind: Any, crm_sql: Optional[str], prefix: str) -> P.
     if crm_sql:
         ids.append(k.sorgu("karsilastirma.crm.ekler", "CRM sözleşme ekleri", "crm", crm_sql, database=_crm_db(prefix)))
     belge = k.hesap("belge", F_BELGE, ids)
-    k.alanlar({"items[]": belge, "maddeler[]": belge, "sayim": belge, "belgeSayisi": belge, "a": belge, "b": belge})
+    k.alanlar({"items[]": belge, "maddeler[]": belge, "sayim": belge, "belgeSayisi": belge, "a": belge, "b": belge,
+               "eksikTurler[]": belge, "pozisyon[]": belge})
     return k
 
 
@@ -268,7 +288,10 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
                "kur": snaps.rate_status(tenant),
                "olcutler": {d: CC.DIM_LABELS[d] for d in CC.EXTRA_DIMS}, "varsayilanOlcut": list(c.dims),
                "satisVar": port.sales_known, "satisDilimleri": CC.SALES_TIERS,
-               "can": {"upload": can(user, UPLOAD), "review": can(user, REVIEW), "export": can(user, "ozellik:veri.disa-aktar")}}
+               "maddeTurleri": {k: v[0] for k, v in CD.CLAUSE_TYPES.items()}, "heicVar": CD.heic_available(),
+               "pozisyonIslemleri": ST.OPS, "pozisyonDuzeyleri": ST.LEVELS,
+               "can": {"upload": can(user, UPLOAD), "review": can(user, REVIEW), "export": can(user, EXPORT),
+                       "position": can(user, POSITION)}}
         return P.bagla(out, lambda: _meta_k(port))
 
     def _meta_k(port: CC.Portfolio) -> P.Kaynaklar:
@@ -288,13 +311,14 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
 
     def scan_kw(q: str, tip, odeme, bolum, yilDen, yilE, only: str, madde: str, aktif: bool, enAz: int, acik: bool,
                 engine, tenant: str) -> dict[str, Any]:
-        if only not in ("sapan", "ozgun", "sekil", "hepsi-sapma", "hepsi"):
+        if only not in ("sapan", "ozgun", "sekil", "pozisyon", "hepsi-sapma", "hepsi"):
             raise HTTPException(status_code=400, detail={"code": "CONTRACT_COMPARE", "message": "Süzgeç geçerli değil."})
         if madde and madde not in CC.BY_KEY:
             raise HTTPException(status_code=400, detail={"code": "CONTRACT_COMPARE", "message": "Madde geçerli değil."})
         ST.ensure(engine)
         return dict(q=q, tip=tip, odeme=odeme, bolum=bolum, yil_from=yilDen, yil_to=yilE, only=only, clause=madde,
-                    aktif=aktif, min_devs=enAz, reviews=ST.reviews(engine, tenant), unreviewed=acik)
+                    aktif=aktif, min_devs=enAz, reviews=ST.reviews(engine, tenant), unreviewed=acik,
+                    rules=ST.positions(engine, tenant, "onayli"))
 
     @app.get(B + "/scan")
     def compare_scan(request: Request, q: str = "", tip: Optional[int] = None, odeme: Optional[int] = None,
@@ -308,7 +332,13 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
         out = call(CC.scan_page, port, c, page=page, **kw)
         out["gorunum"] = snap_info(tenant, port)
         out["ayar"] = {"yil": c.years, "olcut": list(c.dims)}
-        return P.bagla(out, lambda: kaynak_scan(port, prefix(), tenant, engine))
+        return P.bagla(out, lambda: _scan_k(port, tenant, engine))
+
+    def _scan_k(port: CC.Portfolio, tenant: str, engine: Any) -> P.Kaynaklar:
+        k = kaynak_scan(port, prefix(), tenant, engine)
+        k.alan("ozet.pozisyon", k.hesap("pozisyon", F_POZ, [k.portal("karsilastirma.pozisyon", "Standart pozisyonlar",
+                                                                    ST.positions_stmt(tenant, "onayli"), engine)]))
+        return k
 
     @app.get(B + "/scan.csv")
     def compare_scan_csv(request: Request, q: str = "", tip: Optional[int] = None, odeme: Optional[int] = None,
@@ -398,6 +428,7 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
         out["can"] = {"review": can(user, REVIEW) and subj.kind in ("crm", "portal")}
         out["olaylar"] = CC.timeline(port, subj) + portal_addenda(engine, tenant, subj)
         out["olaylar"].sort(key=lambda x: x["tarih"])
+        out["pozisyon"] = CC.positions_for(port, subj, ST.positions(engine, tenant, "onayli"))
         attach_reviews(engine, tenant, subj, out)
         attach_rights_class(engine, tenant, subj, out)
         return out
@@ -432,6 +463,8 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
             t["inceleme"] = ST.attach(rv.get((subj.agreement, "not:" + t["key"])), ST.sig(subj.texts.get(t["key"])))
         for x in out["sekil"]:
             x["inceleme"] = None if x["ok"] else ST.attach(rv.get((subj.agreement, "sekil:" + x["id"])), ST.sig("eksik"))
+        for x in out.get("pozisyon") or []:
+            x["inceleme"] = None if x["ok"] else ST.attach(rv.get((subj.agreement, f"pozisyon:{x['id']}")), ST.sig("ihlal"))
 
     def attach_rights_class(engine, tenant: str, subj: CC.Subject, out: dict[str, Any]) -> None:
         """Haklar ve lisanslar ekranının hak açıklaması sınıfı (tablo yoksa ya da not sınıflanmamışsa boş)."""
@@ -490,6 +523,8 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
             if clause[6:] not in CC.FORMAL:
                 raise HTTPException(status_code=400, detail={"code": "CONTRACT_COMPARE", "message": "Denetim geçerli değil."})
             value = "eksik"
+        elif clause.startswith("pozisyon:"):
+            value = "ihlal"
         elif clause in CC.BY_KEY:
             value = subj.values.get(clause)
         else:
@@ -538,6 +573,99 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
         audit(engine, user, "delete", "contract_compare", f"{agreement}:{clause}"[:120], no, None)
         return {"ok": True}
 
+    @app.get(B + "/contract/{key}/report.docx")
+    def compare_contract_report(key: str, request: Request, yil: Optional[int] = None, olcut: Optional[str] = None) -> Response:
+        from semantic_bridge import contracts_compare_report as RP
+
+        engine, tenant, user = session(request)
+        c = cfg(yil, olcut)
+        port = portfolio(tenant, c)
+        subj, _ = call(subject_of, engine, tenant, port, key)
+        out = contract_view(engine, tenant, user, port, subj, c)
+        data = RP.contract_docx(out)
+        audit(engine, user, "export", "contract_compare", subj.agreement[:120], subj.no, {"rapor": "word"})
+        name = f"sozlesme-karsilastirma-{re.sub(r'[^A-Za-z0-9-]', '_', subj.no)}.docx"
+        return Response(data, media_type=DOCX, headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    # ------------------------------------------------------------------ standart pozisyonlar
+
+    def need_position(user: str) -> None:
+        if not can(user, POSITION):
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Bu işlem rolünüzde yok."})
+
+    def store_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except ST.StoreError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "CONTRACT_COMPARE", "message": str(e)}) from e
+
+    @app.get(B + "/positions")
+    def compare_positions(request: Request) -> dict[str, Any]:
+        engine, tenant, user = session(request)
+        port = portfolio(tenant, cfg())
+        items = ST.positions(engine, tenant)
+        for p in items:
+            p["text"] = CC.position_text(port, p)
+        clauses = [{"key": c.key, "label": port.labels[c.key], "kind": c.kind, "group": c.group,
+                    "options": ([{"kod": int(k), "ad": v} for k, v in (port.options.get(c.key.lower()) or {}).items()]
+                                if c.kind == "secim" else None)} for c in CC.VALUE_CLAUSES]
+        types = [{"key": f"tur:{k}", "label": f"Belgede: {v[0]}", "kind": "tur"} for k, v in CD.CLAUSE_TYPES.items()]
+        out = {"items": items, "clauses": clauses + types, "ops": ST.OPS, "levels": ST.LEVELS, "states": ST.STATES,
+               "facets": CC.facets(port), "can": {"position": can(user, POSITION)}}
+        k = P.Kaynaklar()
+        k.alan("items[]", k.portal("karsilastirma.pozisyon", "Standart pozisyonlar", ST.positions_stmt(tenant), engine,
+                                   description="Kurallar portalda tutulur; onaylanan kural sözleşme ve taramada denetlenir."))
+        k.alan("facets", k.hesap("secenek", "Seçenekteki sayı = o değerdeki anlaşma sayısı.", _snapshot_sources(k, port, prefix())))
+        return P.ekle(out, k)
+
+    @app.post(B + "/positions")
+    def compare_position_save(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user = session(request)
+        need_position(user)
+        b = body or {}
+        pid = b.get("id")
+        out = store_call(ST.save_position, engine, tenant, user, b, CC.valid_position_clause, int(pid) if pid else None)
+        audit(engine, user, "update" if pid else "create", "contract_position", str(out["id"]), out["clause"],
+              {"islem": out["op"], "deger": out["value"], "duzey": out["level"], "kapsam": out["scope"]})
+        return out
+
+    @app.post(B + "/positions/{pid}/approve")
+    def compare_position_approve(pid: int, request: Request) -> dict[str, Any]:
+        engine, tenant, user = session(request)
+        need_position(user)
+        out = store_call(ST.approve_position, engine, tenant, user, pid)
+        audit(engine, user, "approve", "contract_position", str(pid), out["clause"], None)
+        return out
+
+    @app.delete(B + "/positions/{pid}")
+    def compare_position_delete(pid: int, request: Request) -> dict[str, Any]:
+        engine, tenant, user = session(request)
+        need_position(user)
+        out = store_call(ST.delete_position, engine, tenant, pid)
+        audit(engine, user, "delete", "contract_position", str(pid), out["clause"], None)
+        return {"ok": True}
+
+    @app.post(B + "/positions/suggest")
+    def compare_position_suggest(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user = session(request)
+        need_position(user)
+        c = cfg()
+        port = portfolio(tenant, c)
+        b = body or {}
+        tip = int(b["tip"]) if b.get("tip") not in (None, "") else None
+        odeme = int(b["odeme"]) if b.get("odeme") not in (None, "") else None
+        props = call(CC.suggest_positions, port, tip, odeme, c)
+        have = {(p["clause"], p["op"], p["scope"].get("tip"), p["scope"].get("odeme"), p["scope"].get("para"))
+                for p in ST.positions(engine, tenant)}
+        made = []
+        for pr in props:
+            sig_ = (pr["clause"], pr["op"], tip, odeme, None)
+            if sig_ in have:
+                continue
+            made.append(store_call(ST.save_position, engine, tenant, user, pr, CC.valid_position_clause, None, state="oneri"))
+        audit(engine, user, "create", "contract_position", f"oneri:{tip}:{odeme}", "Emsalden öneri", {"sayi": len(made)})
+        return {"eklenen": len(made), "atlanan": len(props) - len(made)}
+
     # ------------------------------------------------------------------ belgeler
 
     def crm_docs() -> tuple[list[dict[str, Any]], Optional[str], Optional[str]]:
@@ -555,6 +683,9 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
         from semantic_bridge import contracts as C
 
         engine, tenant, user = session(request)
+        days = int(float(conf("CONTRACT_COMPARE_UPLOAD_DAYS") or 0) or 0)
+        for gone in CD.purge_uploads(engine, tenant, days):
+            audit(engine, user, "delete", "contract_compare_doc", gone["ref"], gone["title"], {"neden": f"saklama süresi {days} gün doldu (otomatik)"})
         rows, crm_sql, crm_error = crm_docs()
         CE.ensure(engine)
         with engine.connect() as cx:
@@ -563,7 +694,8 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
                                   .where(CE.EXTRACTS.c.tenant_id == tenant)).all()
         tpls = [t for t in C.templates(engine, tenant, target="sozlesme")]
         items = CD.archive(engine, tenant, rows, extracts, tpls)
-        out = {"items": items, "crmHata": crm_error, "can": {"upload": can(user, UPLOAD)}}
+        out = {"items": items, "crmHata": crm_error, "saklamaGun": days, "heicVar": CD.heic_available(),
+               "can": {"upload": can(user, UPLOAD), "export": can(user, EXPORT)}}
         return P.bagla(out, lambda: kaynak_docs(CD.docs_stmt(tenant), engine, crm_sql, prefix()))
 
     def load_bytes(engine, tenant: str, ref: str) -> tuple[str, bytes, Optional[str]]:
@@ -587,6 +719,21 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
                 return name, fh.read(), None
         raise CD.DocError("Belge kaynağı tanınmadı.")
 
+    def classify(clauses: list[dict[str, Any]]) -> dict[str, int]:
+        """Madde türleri: önce kural; kalanı kendi modelimiz (LLM kapısı, maskeli metin, kapalı küme). Model yoksa kural."""
+        from semantic_bridge import doc_extract as X
+
+        choose = None
+        try:
+            from semantic_layer.runtime.llm_queue import NORMAL
+
+            llm = rt().llm_for(CD.TYPE_MODULE, NORMAL)
+            if llm is not None and hasattr(llm, "choose"):
+                choose = lambda prompt, labels: llm.choose(prompt, labels)  # noqa: E731
+        except Exception as e:  # noqa: BLE001
+            log.info("madde türü: model bağlı değil: %s", str(e)[:120])
+        return CD.classify(clauses, choose, mask=lambda t: X.mask_all(t, []))
+
     def start_read(engine, tenant: str, user: str, ref: str) -> dict[str, Any]:
         from semantic_bridge import contracts as C
 
@@ -608,11 +755,21 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
             try:
                 if kind == "sablon":
                     clauses, summary = CD.template_clauses(tpl["body"], tpl.get("docx"), tpl.get("docxName"))
+                    summary["turler"] = classify(clauses)
                     CD.finish(engine, tenant, ref, clauses=clauses, reading=summary,
                               sha=hashlib.sha256((tpl["body"] or "").encode() + (tpl.get("docx") or b"")).hexdigest())
                     return
                 name, data, no = load_bytes(engine, tenant, ref)
                 clauses, summary = CD.read_bytes(name, data)
+                summary["turler"] = classify(clauses)
+                if not no:                              # sözleşme numarası dosya adından ya da ilk sayfalardan
+                    try:
+                        port = portfolio(tenant, cfg())
+                        no = CD.find_contract_no(name, "\n".join(c.get("metin") or "" for c in clauses[:6]),
+                                                 lambda x: x.upper() in port.no_index)
+                        summary["eslesme"] = "otomatik" if no else None
+                    except Exception as e:  # noqa: BLE001 — eşleşme olmazsa kişi elle bağlar
+                        log.info("karşılaştırma belgesi sözleşmeye eşlenemedi: %s", str(e)[:120])
                 CD.finish(engine, tenant, ref, clauses=clauses, reading=summary, sha=hashlib.sha256(data).hexdigest(), size=len(data),
                           title=name if kind != "yukleme" else None, filename=name, contract_no=no)
             except (CD.DocError, CC.CompareError) as e:
@@ -705,26 +862,103 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
         path, name = call(CD.upload_path, engine, tenant, ref)
         return FileResponse(path, filename=name, headers={"Cache-Control": "private, no-store"})
 
-    @app.post(B + "/documents/diff")
-    def compare_doc_diff(body: dict[str, Any], request: Request) -> dict[str, Any]:
-        engine, tenant, _ = session(request)
-        a_ref, b_ref = str((body or {}).get("a") or ""), str((body or {}).get("b") or "")
+    @app.post(B + "/documents/link")
+    def compare_doc_link(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user = session(request)
+        need(user)
+        b = body or {}
+        ref, no = str(b.get("ref") or ""), str(b.get("no") or "").strip() or None
+        if no:
+            port = portfolio(tenant, cfg())
+            e = port.no_index.get(no.upper())
+            if e is None:
+                raise HTTPException(status_code=404, detail={"code": "CONTRACT_COMPARE", "message": "Bu numarada etkin sözleşme yok."})
+            no = next(x for x in e.nos if x.upper() == no.upper())
+        out = call(CD.set_contract_no, engine, tenant, ref, no)
+        audit(engine, user, "update", "contract_compare_doc", ref, out["title"], {"sozlesme": no})
+        return out
+
+    def doc_names(engine, tenant: str, doc: dict[str, Any]) -> tuple[list[str], Optional[CC.Subject]]:
+        """Belgenin bağlı olduğu sözleşme: taraf adları (maske) ve konu (pozisyon kapsamı)."""
+        no = doc.get("contractNo")
+        if not no:
+            return [], None
+        try:
+            port = portfolio(tenant, cfg())
+        except HTTPException:
+            return [], None
+        e = port.no_index.get(str(no).upper())
+        if e is None:
+            return [], None
+        return [n for _, n in port.parties_of.get(e.agreement, []) if n], CC.Subject.of_entry(e)
+
+    def view_clauses(engine, tenant: str, user: str, doc: dict[str, Any], clauses: list[dict[str, Any]], raw: bool) -> list[dict[str, Any]]:
+        if raw:
+            if not can(user, UPLOAD):
+                raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Maskesiz metin için belge yetkisi gerekir."})
+            audit(engine, user, "view", "contract_compare_doc", doc["ref"], doc["title"], {"maskesiz": True})
+            return clauses
+        names, _ = doc_names(engine, tenant, doc)
+        return CD.mask_clauses(clauses, names)
+
+    def doc_positions(engine, tenant: str, doc: dict[str, Any], clauses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Belgeye uygulanan madde türü kuralları (`tur:*`): kapsamı boş kurallar ve bağlı sözleşmenin kapsamındakiler."""
+        rules = [p for p in ST.positions(engine, tenant, "onayli") if p["clause"].startswith("tur:")]
+        if not rules:
+            return []
+        _, subj = doc_names(engine, tenant, doc)
+        dims = subj.dims if subj is not None else {}
+        port = portfolio(tenant, cfg())
+        fake = subj or CC.Subject("belge", doc["ref"], doc.get("title") or "", "", doc["ref"], {}, None, {}, {})
+        types = CD.types_of(clauses)
+        out = []
+        for p in rules:
+            if any((p.get("scope") or {}).get(k) is not None for k in ("tip", "odeme", "para")) and not dims:
+                continue
+            r = CC.check_position(port, p, fake, types)
+            if r is not None:
+                out.append(r)
+        return sorted(out, key=lambda x: (x["ok"], x["level"] != "kirmizi"))
+
+    def diff_view(engine, tenant: str, user: str, a_ref: str, b_ref: str, raw: bool) -> dict[str, Any]:
         if not a_ref or not b_ref or a_ref == b_ref:
             raise HTTPException(status_code=400, detail={"code": "CONTRACT_COMPARE", "message": "İki farklı belge seçin."})
         a_doc, a = call(CD.read_clauses, engine, tenant, a_ref)
         b_doc, b = call(CD.read_clauses, engine, tenant, b_ref)
-        out = CD.diff(a, b, b_is_template=b_doc["kind"] == "sablon")
-        out.update({"a": a_doc, "b": b_doc})
+        out = CD.diff(view_clauses(engine, tenant, user, a_doc, a, raw), view_clauses(engine, tenant, user, b_doc, b, raw),
+                      b_is_template=b_doc["kind"] == "sablon")
+        out.update({"a": a_doc, "b": b_doc, "maskeli": not raw, "pozisyon": doc_positions(engine, tenant, a_doc, a)})
+        return out
+
+    @app.post(B + "/documents/diff")
+    def compare_doc_diff(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user = session(request)
+        b = body or {}
+        a_ref, b_ref = str(b.get("a") or ""), str(b.get("b") or "")
+        out = diff_view(engine, tenant, user, a_ref, b_ref, bool(b.get("maskesiz")))
         return P.bagla(out, lambda: kaynak_docs(CD.docs_stmt(tenant).where(CD.DOCS.c.ref.in_([a_ref, b_ref])), engine, None, prefix()))
+
+    @app.get(B + "/documents/diff.docx")
+    def compare_doc_diff_docx(request: Request, a: str = "", b: str = "", hepsi: bool = False) -> Response:
+        from semantic_bridge import contracts_compare_report as RP
+
+        engine, tenant, user = session(request)
+        out = diff_view(engine, tenant, user, a, b, False)
+        audit(engine, user, "export", "contract_compare_doc", a, out["a"]["title"], {"rapor": "word", "karsilastirilan": b})
+        return Response(RP.diff_docx(out, only_diff=not hepsi), media_type=DOCX,
+                        headers={"Content-Disposition": 'attachment; filename="belge-karsilastirma.docx"'})
 
     @app.post(B + "/documents/corpus")
     def compare_doc_corpus(body: dict[str, Any], request: Request) -> dict[str, Any]:
-        engine, tenant, _ = session(request)
-        a_ref = str((body or {}).get("a") or "")
+        engine, tenant, user = session(request)
+        b = body or {}
+        a_ref = str(b.get("a") or "")
+        raw = bool(b.get("maskesiz"))
         a_doc, a = call(CD.read_clauses, engine, tenant, a_ref)
-        corpus = CD.ready_corpus(engine, tenant, a_ref)
-        out = CD.against_corpus(a, corpus)
-        out["a"] = a_doc
+        corpus = [(d, view_clauses(engine, tenant, user, dict(d, title=d.get("title") or ""), cl, raw) if not raw else cl)
+                  for d, cl in CD.ready_corpus(engine, tenant, a_ref)]
+        out = CD.against_corpus(view_clauses(engine, tenant, user, a_doc, a, raw), corpus)
+        out.update({"a": a_doc, "maskeli": not raw, "pozisyon": doc_positions(engine, tenant, a_doc, a)})
         return P.bagla(out, lambda: kaynak_docs(CD.docs_stmt(tenant).where(CD.DOCS.c.status == "hazir"), engine, None, prefix()))
 
 

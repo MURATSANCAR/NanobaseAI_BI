@@ -823,6 +823,7 @@ class Portfolio:
         for pid, name in self.name_of_party.items():
             if name:
                 self.party_by_name[fold(name)].add(pid)
+        self.no_index = {no.upper(): e for e in self.entries for no in e.nos}
         self.book_options = data.get("bookOptions") or {}
         self.sales_known = sales is not None
         self._extra_dims(data.get("books") or {}, sales)
@@ -1461,6 +1462,133 @@ def formal(port: "Portfolio", subj: Subject) -> list[dict[str, Any]]:
     return out
 
 
+# ================================================================================ standart pozisyonlar
+
+def valid_position_clause(clause: str) -> bool:
+    from semantic_bridge.contracts_compare_docs import CLAUSE_TYPES
+
+    return clause in BY_KEY or (clause.startswith("tur:") and clause[4:] in CLAUSE_TYPES)
+
+
+def position_applies(p: dict[str, Any], dims: dict[str, Optional[int]]) -> bool:
+    sc = p.get("scope") or {}
+    return all(sc.get(k) is None or sc.get(k) == dims.get(d) for k, d in (("tip", "tip"), ("odeme", "odeme"), ("para", "para")))
+
+
+def position_text(port: "Portfolio", p: dict[str, Any]) -> str:
+    from semantic_bridge.contracts_compare_docs import CLAUSE_TYPES
+
+    clause = p["clause"]
+    if clause.startswith("tur:"):
+        name = f"Belgede «{CLAUSE_TYPES.get(clause[4:], (clause[4:],))[0]}» maddesi"
+        return f"{name} {'olmalı' if p['op'] == 'zorunlu' else 'olmamalı'}"
+    c = BY_KEY[clause]
+    label = port.labels.get(clause, c.label)
+    v = p.get("value")
+    cur = (p.get("scope") or {}).get("para")
+    if p["op"] in ("min", "max"):
+        return f"{label} {'en az' if p['op'] == 'min' else 'en çok'} {port.show(c, v, cur)}"
+    if p["op"] == "eq":
+        return f"{label} = {port.show(c, v, cur)}"
+    if p["op"] == "in":
+        return f"{label}: " + " / ".join(port.show(c, x, cur) for x in v or [])
+    return f"{label} {'olmalı' if p['op'] == 'zorunlu' else 'olmamalı'}"
+
+
+def check_position(port: "Portfolio", p: dict[str, Any], subj: Subject,
+                   doc_types: Optional[set[str]] = None) -> Optional[dict[str, Any]]:
+    """Kuralın bu konuya sonucu; uygulanamıyorsa (kapsam dışı, belgede o alan yok) None."""
+    if not position_applies(p, subj.dims):
+        return None
+    clause = p["clause"]
+    if clause.startswith("tur:"):
+        if doc_types is None:
+            return None
+        present = clause[4:] in doc_types
+        ok = present if p["op"] == "zorunlu" else not present
+        shown = "Var" if present else "Yok"
+    else:
+        if subj.compared is not None and clause not in subj.compared:
+            return None
+        c = BY_KEY[clause]
+        v = subj.texts.get(clause) if c.kind == "metin" else subj.values.get(clause)
+        empty = v is None or v == "" or v is False
+        op, val = p["op"], p.get("value")
+        if op == "zorunlu":
+            ok = not empty
+        elif op == "yasak":
+            ok = empty
+        elif op == "min":
+            ok = isinstance(v, (int, float)) and not isinstance(v, bool) and v >= float(val)
+        elif op == "max":
+            ok = empty or (isinstance(v, (int, float)) and not isinstance(v, bool) and v <= float(val))
+        elif op == "eq":
+            ok = (bool(v) == bool(val)) if c.kind == "bayrak" else (v == val or (isinstance(v, (int, float)) and v == _num(val)))
+        else:
+            ok = v in (val or []) or (isinstance(v, (int, float)) and v in [_num(x) for x in val or []])
+        shown = port.show(c, v, subj.dims.get("para"))
+    return {"id": p["id"], "clause": clause, "rule": position_text(port, p), "level": p["level"], "levelLabel": p.get("levelLabel"),
+            "reason": p.get("reason"), "ok": bool(ok), "value": shown}
+
+
+def _num(v: Any) -> Optional[float]:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def positions_for(port: "Portfolio", subj: Subject, rules: list[dict[str, Any]],
+                  doc_types: Optional[set[str]] = None) -> list[dict[str, Any]]:
+    out = [check_position(port, p, subj, doc_types) for p in rules if p.get("state") == "onayli"]
+    return sorted((x for x in out if x is not None), key=lambda x: (x["ok"], x["level"] != "kirmizi", x["rule"]))
+
+
+def suggest_positions(port: "Portfolio", tip: Optional[int], odeme: Optional[int], cfg: Cfg) -> list[dict[str, Any]]:
+    """Emsalden kural önerisi (onaya düşer): sayısal maddede emsallerin %5–%95 aralığı (maddenin en az yarısı doluysa),
+    %95'inde var olan madde zorunlu, %95'inde olmayan hak yasak, %95'i aynı seçim o değere eşit. Tutarlar önerilmez
+    (para birimi ve kur kıyası kural değerine sığmaz; elle yazılır)."""
+    now = datetime.now(timezone.utc).year
+    first = now - cfg.years if cfg.years >= 0 else None
+    pool = [e for e in port.reps if (tip is None or e.dims.get("tip") == tip) and (odeme is None or e.dims.get("odeme") == odeme)
+            and (first is None or (e.year is not None and first <= e.year <= now))]
+    n = len(pool)
+    if n < cfg.min_peers:
+        raise CompareError(f"Öneri için en az {cfg.min_peers} emsal gerekir; bu kapsamda {n} var.")
+    span = f"{first}–{now}" if first else "bütün yıllar"
+    scope = {"tip": tip, "odeme": odeme}
+    out = []
+    for c in VALUE_CLAUSES:
+        vals = [e.values.get(c.key) for e in pool]
+        why = f"Emsalden öneri: {span}, {n} anlaşma."
+        if c.kind == "tutar":
+            continue
+        if c.kind in ("bayrak",):
+            yes = sum(1 for v in vals if v)
+            if yes / n >= 0.95:
+                out.append({"clause": c.key, "op": "zorunlu", "level": "uyari", "scope": scope, "reason": f"{why} %{round(yes / n * 100)} işaretli."})
+            elif (n - yes) / n >= 0.95:
+                out.append({"clause": c.key, "op": "yasak", "level": "uyari", "scope": scope, "reason": f"{why} %{round((n - yes) / n * 100)} boş."})
+            continue
+        if c.kind == "secim":
+            top = Counter(v for v in vals if v is not None).most_common(1)
+            if top and top[0][1] / n >= 0.95:
+                out.append({"clause": c.key, "op": "eq", "value": top[0][0], "level": "uyari", "scope": scope,
+                            "reason": f"{why} %{round(top[0][1] / n * 100)} aynı değer."})
+            continue
+        nums = sorted(v for v in vals if isinstance(v, (int, float)) and not isinstance(v, bool))
+        if len(nums) / n >= 0.5 and len(nums) >= cfg.min_peers:
+            lo, hi = _pct(nums, 0.05), _pct(nums, 0.95)
+            out.append({"clause": c.key, "op": "min", "value": lo, "level": "uyari", "scope": scope,
+                        "reason": f"{why} Dolu {len(nums)} değerin alt %5 sınırı."})
+            out.append({"clause": c.key, "op": "max", "value": hi, "level": "uyari", "scope": scope,
+                        "reason": f"{why} Dolu {len(nums)} değerin üst %95 sınırı."})
+            if len(nums) / n >= 0.95:
+                out.append({"clause": c.key, "op": "zorunlu", "level": "uyari", "scope": scope,
+                            "reason": f"{why} %{round(len(nums) / n * 100)} dolu."})
+    return out
+
+
 def compare(port: Portfolio, subj: Subject, cfg: Cfg) -> dict[str, Any]:
     """Konunun bütün maddeleri: değer, emsal dağılımı, durum ve gerekçe; serbest metin maddeleri; kıyas ölçütleri."""
     w, own, crit = port.peers_for(subj, cfg)
@@ -1628,13 +1756,16 @@ def finding_reviews(e: Entry, r: dict[str, Any], reviews: Optional[Reviews]) -> 
         out["not:" + key] = ST.attach(rv.get((e.agreement, "not:" + key)), ST.sig(e.texts.get(key)))
     for i in r.get("sekil") or []:
         out["sekil:" + i] = ST.attach(rv.get((e.agreement, "sekil:" + i)), ST.sig("eksik"))
+    for pid in r.get("pozisyon") or []:
+        pid = pid["id"] if isinstance(pid, dict) else pid
+        out[f"pozisyon:{pid}"] = ST.attach(rv.get((e.agreement, f"pozisyon:{pid}")), ST.sig("ihlal"))
     return out
 
 
 def scan_rows(port: Portfolio, cfg: Cfg, *, q: str = "", tip: Optional[int] = None, odeme: Optional[int] = None,
               bolum: Optional[int] = None, yil_from: Optional[int] = None, yil_to: Optional[int] = None, only: str = "sapan",
               clause: str = "", aktif: bool = False, min_devs: int = 1, reviews: Optional[Reviews] = None,
-              unreviewed: bool = False) -> list[tuple[dict[str, Any], Entry, dict[str, Any]]]:
+              unreviewed: bool = False, rules: Optional[list[dict[str, Any]]] = None) -> list[tuple[dict[str, Any], Entry, dict[str, Any]]]:
     """Süzgece uyan tarama satırları, sıralı (en çok farklı maddesi olan üstte). Satır tavanı yok."""
     res = port.scan(cfg)
     k = fold(q)
@@ -1662,16 +1793,19 @@ def scan_rows(port: Portfolio, cfg: Cfg, *, q: str = "", tip: Optional[int] = No
             continue
         if only == "sekil" and not r.get("sekil"):
             continue
+        viol = [x for x in positions_for(port, Subject.of_entry(e), rules) if not x["ok"]] if rules else []
+        if only == "pozisyon" and not viol:
+            continue
         if only == "hepsi-sapma" and not (r["devs"] or r["specials"] or r.get("sekil")):
             continue
         if k and k not in fold(" ".join([*e.nos, e.book, e.author])):
             continue
-        rv = finding_reviews(e, r, reviews)
+        rv = finding_reviews(e, dict(r, pozisyon=[x["id"] for x in viol]), reviews)
         if unreviewed and not any(x is None or x["open"] for x in rv.values()):
             continue
-        rows.append((r, e, rv))
-    rows.sort(key=lambda x: (-len(x[0]["devs"]), -len(x[0].get("sekil") or []), -len(x[0]["specials"]), -(x[1].year or 0),
-                             _natural(x[1].no)))
+        rows.append((dict(r, pozisyon=viol), e, rv))
+    rows.sort(key=lambda x: (-sum(1 for p in x[0].get("pozisyon") or [] if p["level"] == "kirmizi"), -len(x[0]["devs"]),
+                             -len(x[0].get("sekil") or []), -len(x[0]["specials"]), -(x[1].year or 0), _natural(x[1].no)))
     return rows
 
 
@@ -1698,6 +1832,8 @@ def scan_item(port: Portfolio, r: dict[str, Any], e: Entry, rv: dict[str, Option
                       "valueLabel": value_label(d["key"]), "inceleme": short(rv.get(d["key"]))} for d in r["devs"]],
         "ozgunNotlar": [{"key": key, "label": port.labels[key], "inceleme": short(rv.get("not:" + key))} for key in r["specials"]],
         "sekilEksik": [{"id": i, "label": FORMAL[i][0], "inceleme": short(rv.get("sekil:" + i))} for i in r.get("sekil") or []],
+        "pozisyon": [{"id": x["id"], "rule": x["rule"], "level": x["level"], "value": x["value"],
+                      "inceleme": short(rv.get(f"pozisyon:{x['id']}"))} for x in r.get("pozisyon") or []],
         "acikBulgu": sum(1 for x in rv.values() if x is None or x["open"]),
     }
 
@@ -1705,6 +1841,8 @@ def scan_item(port: Portfolio, r: dict[str, Any], e: Entry, rv: dict[str, Option
 def scan_page(port: Portfolio, cfg: Cfg, *, page: int = 0, size: int = 50, **kw: Any) -> dict[str, Any]:
     """Tarama sonucu süzülür ve sayfalanır (toplam her zaman yazar; sessiz kesme yok)."""
     res = port.scan(cfg)
+    rules = [p for p in (kw.get("rules") or []) if p.get("state") == "onayli"]
+    viol_count = sum(1 for e in port.entries if any(not x["ok"] for x in positions_for(port, Subject.of_entry(e), rules))) if rules else 0
     rows = scan_rows(port, cfg, **kw)
     total = len(rows)
     size = max(1, min(int(size), 200))
@@ -1719,6 +1857,7 @@ def scan_page(port: Portfolio, cfg: Cfg, *, page: int = 0, size: int = 50, **kw:
             "sapan": sum(1 for r in all_rows if r["devs"]),
             "ozgun": sum(1 for r in all_rows if r["specials"]),
             "sekil": sum(1 for r in all_rows if r.get("sekil")),
+            "pozisyon": viol_count,
             "emsalYetersiz": sum(1 for r in all_rows if not r["enough"]),
         },
         "maddeler": [{"key": key, "label": port.labels[key], "sayi": n}
@@ -1738,7 +1877,7 @@ def scan_csv(port: Portfolio, cfg: Cfg, **kw: Any) -> str:
     w = csv.writer(buf, delimiter=";")
     w.writerow(["Sözleşme no", "Kitap", "Yazar", "Başlangıç yılı", "Sözleşme tipi", "Ödeme türü", "Para birimi", "Bölüm",
                 "Durum", "Emsal sayısı", "Gevşetilen ölçüt", "Farklı madde sayısı", "Farklı maddeler", "Özgün notlar",
-                "Şekil eksikleri", "Açık bulgu", "İncelemeler"])
+                "Şekil eksikleri", "Standart pozisyon ihlalleri", "Açık bulgu", "İncelemeler"])
     for r, e, rv in scan_rows(port, cfg, **kw):
         it = scan_item(port, r, e, rv)
         notes = []
@@ -1750,7 +1889,7 @@ def scan_csv(port: Portfolio, cfg: Cfg, **kw: Any) -> str:
                     it["bolum"] or "", it["durum"] or "", it["emsal"], ", ".join(it["gevsetilen"]), len(it["sapmalar"]),
                     " | ".join(f"{d['label']}: {d['valueLabel']} ({d['statusLabel']})" for d in it["sapmalar"]),
                     ", ".join(n["label"] for n in it["ozgunNotlar"]), ", ".join(x["label"] for x in it["sekilEksik"]),
-                    it["acikBulgu"], " | ".join(notes)])
+                    " | ".join(f"{x['rule']} ({x['value']})" for x in it["pozisyon"]), it["acikBulgu"], " | ".join(notes)])
     return "\ufeff" + buf.getvalue()
 
 

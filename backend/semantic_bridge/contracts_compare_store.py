@@ -141,5 +141,135 @@ def delete_review(engine: sa.engine.Engine, tenant: str, agreement: str, clause:
     return _out(r)
 
 
-__all__ = ["REVIEWS", "REVIEW_STATUS", "CLOSED", "StoreError", "attach", "delete_review", "ensure", "reviews",
+# ================================================================================ standart pozisyonlar (playbook)
+
+POSITIONS = sa.Table(
+    "semantic_contract_positions", _md,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
+    sa.Column("clause", sa.String(80), nullable=False),           # CRM maddesi ya da `tur:<madde türü>` (belge)
+    sa.Column("scope_tip", sa.Integer),
+    sa.Column("scope_odeme", sa.Integer),
+    sa.Column("scope_para", sa.Integer),
+    sa.Column("op", sa.String(12), nullable=False),
+    sa.Column("value_json", sa.Text),
+    sa.Column("level", sa.String(12), nullable=False),
+    sa.Column("reason", sa.Text),
+    sa.Column("state", sa.String(12), nullable=False),            # oneri | onayli
+    sa.Column("created_by", sa.String(120), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("approved_by", sa.String(120)),
+    sa.Column("approved_at", sa.DateTime(timezone=True)),
+    sa.Column("updated_by", sa.String(120), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+)
+
+OPS = {"min": "en az", "max": "en çok", "eq": "eşit", "in": "şunlardan biri", "zorunlu": "olmalı", "yasak": "olmamalı"}
+LEVELS = {"kirmizi": "Kırmızı çizgi", "uyari": "Uyarı"}
+STATES = {"oneri": "Öneri (onay bekliyor)", "onayli": "Onaylı"}
+
+
+def _pos_out(r: Any) -> dict[str, Any]:
+    return {"id": r.id, "clause": r.clause, "scope": {"tip": r.scope_tip, "odeme": r.scope_odeme, "para": r.scope_para},
+            "op": r.op, "opLabel": OPS.get(r.op, r.op), "value": json.loads(r.value_json) if r.value_json else None,
+            "level": r.level, "levelLabel": LEVELS.get(r.level, r.level), "reason": r.reason, "state": r.state,
+            "stateLabel": STATES.get(r.state, r.state), "createdBy": r.created_by,
+            "approvedBy": r.approved_by, "approvedAt": r.approved_at.isoformat() if r.approved_at else None,
+            "updatedBy": r.updated_by, "updatedAt": r.updated_at.isoformat() if r.updated_at else None}
+
+
+def positions_stmt(tenant: str, state: Optional[str] = None) -> sa.Select:
+    stmt = sa.select(POSITIONS).where(POSITIONS.c.tenant_id == tenant)
+    if state:
+        stmt = stmt.where(POSITIONS.c.state == state)
+    return stmt.order_by(POSITIONS.c.clause, POSITIONS.c.id)
+
+
+def positions(engine: sa.engine.Engine, tenant: str, state: Optional[str] = None) -> list[dict[str, Any]]:
+    ensure(engine)
+    with engine.connect() as c:
+        return [_pos_out(r) for r in c.execute(positions_stmt(tenant, state))]
+
+
+def _pos_fields(b: dict[str, Any], valid_clause) -> dict[str, Any]:
+    clause = str(b.get("clause") or "").strip()
+    if not valid_clause(clause):
+        raise StoreError("Madde geçerli değil.")
+    op = str(b.get("op") or "")
+    if op not in OPS:
+        raise StoreError("Kural işlemi geçerli değil.")
+    level = str(b.get("level") or "uyari")
+    if level not in LEVELS:
+        raise StoreError("Düzey geçerli değil.")
+    value = b.get("value")
+    if op in ("min", "max"):
+        try:
+            value = float(str(value).replace(",", "."))
+        except (TypeError, ValueError):
+            raise StoreError("Sınır sayı olmalı.") from None
+    elif op == "in":
+        if not isinstance(value, list) or not value:
+            raise StoreError("En az bir değer seçin.")
+    elif op == "eq":
+        if value is None or value == "":
+            raise StoreError("Değer girin.")
+    else:
+        value = None
+
+    def scope(k: str) -> Optional[int]:
+        v = (b.get("scope") or {}).get(k)
+        try:
+            return None if v in (None, "") else int(v)
+        except (TypeError, ValueError):
+            raise StoreError("Kapsam geçerli değil.") from None
+
+    reason = " ".join(str(b.get("reason") or "").split())[:2000] or None
+    return {"clause": clause, "op": op, "level": level, "value_json": json.dumps(value, ensure_ascii=False),
+            "scope_tip": scope("tip"), "scope_odeme": scope("odeme"), "scope_para": scope("para"), "reason": reason}
+
+
+def save_position(engine: sa.engine.Engine, tenant: str, user: str, b: dict[str, Any], valid_clause,
+                  pid: Optional[int] = None, state: str = "onayli") -> dict[str, Any]:
+    """Kural yazılır. Elle yazılan kural onaylıdır (yazan yetkilidir); öneri üretimi `oneri` yazar."""
+    vals = _pos_fields(b, valid_clause)
+    ensure(engine)
+    now = _now()
+    with engine.begin() as c:
+        if pid is None:
+            extra = {"approved_by": user, "approved_at": now} if state == "onayli" else {}
+            res = c.execute(POSITIONS.insert().values(tenant_id=tenant, state=state, created_by=user, created_at=now,
+                                                      updated_by=user, updated_at=now, **extra, **vals))
+            pid = res.inserted_primary_key[0]
+        else:
+            r = c.execute(sa.select(POSITIONS).where(POSITIONS.c.tenant_id == tenant, POSITIONS.c.id == int(pid))).first()
+            if r is None:
+                raise StoreError("Kural bulunamadı.", 404)
+            c.execute(sa.update(POSITIONS).where(POSITIONS.c.id == r.id).values(updated_by=user, updated_at=now, **vals))
+        return _pos_out(c.execute(sa.select(POSITIONS).where(POSITIONS.c.id == pid)).first())
+
+
+def approve_position(engine: sa.engine.Engine, tenant: str, user: str, pid: int) -> dict[str, Any]:
+    ensure(engine)
+    now = _now()
+    with engine.begin() as c:
+        r = c.execute(sa.select(POSITIONS).where(POSITIONS.c.tenant_id == tenant, POSITIONS.c.id == int(pid))).first()
+        if r is None:
+            raise StoreError("Kural bulunamadı.", 404)
+        c.execute(sa.update(POSITIONS).where(POSITIONS.c.id == r.id).values(state="onayli", approved_by=user, approved_at=now,
+                                                                            updated_by=user, updated_at=now))
+        return _pos_out(c.execute(sa.select(POSITIONS).where(POSITIONS.c.id == r.id)).first())
+
+
+def delete_position(engine: sa.engine.Engine, tenant: str, pid: int) -> dict[str, Any]:
+    ensure(engine)
+    with engine.begin() as c:
+        r = c.execute(sa.select(POSITIONS).where(POSITIONS.c.tenant_id == tenant, POSITIONS.c.id == int(pid))).first()
+        if r is None:
+            raise StoreError("Kural bulunamadı.", 404)
+        c.execute(POSITIONS.delete().where(POSITIONS.c.id == r.id))
+    return _pos_out(r)
+
+
+__all__ = ["POSITIONS", "OPS", "LEVELS", "STATES", "approve_position", "delete_position", "positions", "positions_stmt",
+           "save_position", "REVIEWS", "REVIEW_STATUS", "CLOSED", "StoreError", "attach", "delete_review", "ensure", "reviews",
            "reviews_stmt", "save_review", "sig"]

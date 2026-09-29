@@ -9,8 +9,9 @@ import { compareApi } from './api';
 import ScanTab from './ScanTab';
 import ContractTab from './ContractTab';
 import DocsTab from './DocsTab';
+import PositionsTab from './PositionsTab';
 
-type Tab = 'tarama' | 'sozlesme' | 'belge';
+type Tab = 'tarama' | 'sozlesme' | 'belge' | 'pozisyon';
 
 /**
  * Sözleşme karşılaştırma: bir sözleşmenin maddeleri geçmiş sözleşmelerle (emsal), serbest metinli özel maddeler ve
@@ -19,7 +20,7 @@ type Tab = 'tarama' | 'sozlesme' | 'belge';
  */
 export default function CompareScreen() {
   const [params, setParams] = useSearchParams();
-  const tab = (['tarama', 'sozlesme', 'belge'].includes(params.get('sekme') ?? '') ? params.get('sekme') : 'tarama') as Tab;
+  const tab = (['tarama', 'sozlesme', 'belge', 'pozisyon'].includes(params.get('sekme') ?? '') ? params.get('sekme') : 'tarama') as Tab;
   const key = params.get('sozlesme') ?? '';
   const qc = useQueryClient();
   // CRM yeniden okunurken 5 sn'de bir bakılır; okuma bitince görüntünün anı değişir, sekmelerin sorguları bu anla
@@ -90,11 +91,13 @@ export default function CompareScreen() {
           { id: 'tarama', label: 'Olağan dışı sözleşmeler' },
           { id: 'sozlesme', label: 'Sözleşme incele' },
           { id: 'belge', label: 'Belge karşılaştırma' },
+          { id: 'pozisyon', label: 'Standart pozisyonlar' },
         ]}
       />
       {meta.data && tab === 'tarama' && <ScanTab meta={meta.data} onOpen={(id) => go('sozlesme', id)} />}
       {meta.data && tab === 'sozlesme' && <ContractTab meta={meta.data} contractKey={key} onPick={(id) => go('sozlesme', id)} />}
       {meta.data && tab === 'belge' && <DocsTab meta={meta.data} />}
+      {meta.data && tab === 'pozisyon' && <PositionsTab meta={meta.data} />}
     </ModuleFrame>
   );
 }

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRight, CheckCircle2, ExternalLink, Search, TriangleAlert } from 'lucide-react';
-import { Note, Pill, field, nf } from '../../../admin/ui';
+import { ArrowRight, CheckCircle2, Download, ExternalLink, Search, TriangleAlert } from 'lucide-react';
+import { Note, Pill, btnGhost, field, nf } from '../../../admin/ui';
 import SqlInfo, { InfoLabel } from '../../../components/SqlInfo';
 import { Kpi, KpiRow, Panel, useDebounced } from '../../kit';
 import { day, errMsg } from '../ui';
-import { compareApi, type ClauseRow, type Detail, type FormalCheck, type Meta, type TextRow } from './api';
+import { compareApi, type ClauseRow, type Detail, type FormalCheck, type Meta, type PositionResult, type TextRow } from './api';
 import { band, pct, periodOptions, statusTone, textTone, visibleClauses } from './compare';
 import { TONE } from './ScanTab';
 import { ReviewButton } from './Review';
@@ -41,7 +41,8 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
       {contractKey && q.isLoading && <Panel><p className="py-10 text-center text-[12.5px] text-canvas-muted">Emsaller okunuyor…</p></Panel>}
       {d && (
         <div className={`flex flex-col gap-3 transition-opacity duration-150 ease-out lg:gap-4 ${q.isFetching ? 'opacity-70' : ''}`}>
-          <Head d={d} meta={meta} years={years ?? d.ayar.yil} onYears={setYears} dims={d.ayar.olcut} onDims={setDims} />
+          <Head d={d} meta={meta} years={years ?? d.ayar.yil} onYears={setYears} dims={d.ayar.olcut} onDims={setDims}
+            reportUrl={meta.can.export && d.subject.kaynak !== 'belge' ? compareApi.reportUrl(d.subject.key, years, dims) : null} />
           {d.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
           <KpiRow>
             <Kpi label="Farklı madde" value={nf.format(d.sayim.sapan)} help="Emsalden yüksek/düşük, nadir ya da eksik"
@@ -79,6 +80,7 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
               <p className="py-6 text-center text-[12.5px] text-canvas-muted">Bütün maddeler emsalle uyumlu. Hepsini görmek için süzgeci kaldırın.</p>
             )}
           </Panel>
+          {d.pozisyon.length > 0 && <Positions d={d} />}
           {d.sekil.length > 0 && <Formal d={d} />}
           {d.texts.length > 0 && <Texts d={d} />}
           <History d={d} />
@@ -147,13 +149,14 @@ function Picker({ onPick }: { onPick: (id: string) => void }) {
   );
 }
 
-function Head({ d, meta, years, onYears, dims, onDims }: {
+function Head({ d, meta, years, onYears, dims, onDims, reportUrl }: {
   d: Detail;
   meta: Meta;
   years: number;
   onYears: (y: number) => void;
   dims: string[];
   onDims: (v: string) => void;
+  reportUrl: string | null;
 }) {
   const s = d.subject;
   const c = d.criteria;
@@ -181,12 +184,20 @@ function Head({ d, meta, years, onYears, dims, onDims }: {
           {s.kopyalar.length > 1 && (
             <p className="mt-1 text-[11.5px] text-canvas-muted">{`Aynı şartlı ${s.kopyalar.length} kitap kaydı: ${s.kopyalar.map((k) => k.no).join(', ')}`}</p>
           )}
-          {link && (
-            <Link to={link} className="mt-1 inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
-              Sözleşme sayfası
-              <ExternalLink aria-hidden className="h-3.5 w-3.5" />
-            </Link>
-          )}
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {link && (
+              <Link to={link} className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
+                Sözleşme sayfası
+                <ExternalLink aria-hidden className="h-3.5 w-3.5" />
+              </Link>
+            )}
+            {reportUrl && (
+              <a href={reportUrl} className={btnGhost}>
+                <Download aria-hidden className="h-4 w-4" />
+                Word raporu
+              </a>
+            )}
+          </div>
         </div>
         <div className="w-full shrink-0 rounded-2xl border border-slate-100 bg-white/80 p-3 lg:w-[380px]">
           <div className="flex items-center justify-between gap-2">
@@ -292,6 +303,47 @@ function Band({ c, b, tone }: { c: ClauseRow; b: NonNullable<ReturnType<typeof b
         <span>{c.enCokAd ?? '—'}</span>
       </div>
     </div>
+  );
+}
+
+function Positions({ d }: { d: Detail }) {
+  const bad = d.pozisyon.filter((x) => !x.ok);
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-[15px] font-extrabold">
+          <InfoLabel k={d.kaynaklar} alan="pozisyon[]" label="Standart pozisyon">Standart pozisyon</InfoLabel>
+        </h2>
+        <span className={`rounded-md px-2 py-0.5 text-[11.5px] font-bold ${bad.length ? TONE.err : TONE.ok}`}>
+          {bad.length ? `${bad.length} ihlal` : `${d.pozisyon.length} kurala uyuyor`}
+        </span>
+      </div>
+      <ul className="mt-2 divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white/85">
+        {d.pozisyon.map((x) => <PositionLine key={x.id} x={x} contractKey={d.subject.key} canReview={d.can.review} />)}
+      </ul>
+    </Panel>
+  );
+}
+
+function PositionLine({ x, contractKey, canReview }: { x: PositionResult; contractKey: string; canReview: boolean }) {
+  const Icon = x.ok ? CheckCircle2 : TriangleAlert;
+  return (
+    <li className="flex gap-2.5 p-3 text-[12.5px]">
+      <Icon aria-hidden className={`mt-0.5 h-4 w-4 shrink-0 ${x.ok ? 'text-emerald-600' : x.level === 'kirmizi' ? 'text-rose-600' : 'text-amber-600'}`} />
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="font-bold">{x.rule}</span>
+          {!x.ok && <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${x.level === 'kirmizi' ? TONE.err : TONE.warn}`}>{x.levelLabel ?? x.level}</span>}
+        </div>
+        <div className="text-[12px] text-canvas-muted">{`Bu sözleşme: ${x.value}`}</div>
+        {x.reason && <div className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">{x.reason}</div>}
+        {!x.ok && (
+          <div className="mt-1.5">
+            <ReviewButton contractKey={contractKey} clause={`pozisyon:${x.id}`} title={x.rule} value={x.value} current={x.inceleme} can={canReview} />
+          </div>
+        )}
+      </div>
+    </li>
   );
 }
 

@@ -17,6 +17,37 @@ export type Review = {
   by?: string | null;
   at?: string | null;
 };
+export type PositionResult = {
+  id: number;
+  clause: string;
+  rule: string;
+  level: 'kirmizi' | 'uyari';
+  levelLabel?: string;
+  reason: string | null;
+  ok: boolean;
+  value: string;
+  inceleme?: Review | null;
+};
+export type Position = {
+  id: number;
+  clause: string;
+  scope: { tip: number | null; odeme: number | null; para: number | null };
+  op: 'min' | 'max' | 'eq' | 'in' | 'zorunlu' | 'yasak';
+  opLabel: string;
+  value: unknown;
+  level: 'kirmizi' | 'uyari';
+  levelLabel: string;
+  reason: string | null;
+  state: 'oneri' | 'onayli';
+  stateLabel: string;
+  text: string;
+  createdBy: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  updatedBy: string;
+  updatedAt: string | null;
+};
+export type PositionClause = { key: string; label: string; kind: string; group?: string; options?: Array<{ kod: number; ad: string }> | null };
 export type FormalCheck = { id: string; label: string; ok: boolean; detail: string | null; law: string; inceleme?: Review | null };
 export type TextStatus = 'ozgun' | 'az' | 'kalip';
 export type View = { okunduAn: string | null; yenileniyor: boolean };
@@ -38,7 +69,11 @@ export type Meta = {
   varsayilanOlcut: string[];
   satisVar: boolean;
   satisDilimleri: Record<string, string>;
-  can: { upload: boolean; review: boolean; export: boolean };
+  maddeTurleri: Record<string, string>;
+  heicVar: boolean;
+  pozisyonIslemleri: Record<string, string>;
+  pozisyonDuzeyleri: Record<string, string>;
+  can: { upload: boolean; review: boolean; export: boolean; position: boolean };
   kaynaklar?: Kaynaklar;
 };
 
@@ -61,6 +96,7 @@ export type ScanItem = {
   sapmalar: Array<{ key: string; label: string; status: Status; statusLabel: string; valueLabel: string; inceleme: Review | null }>;
   ozgunNotlar: Array<{ key: string; label: string; inceleme: Review | null }>;
   sekilEksik: Array<{ id: string; label: string; inceleme: Review | null }>;
+  pozisyon: Array<{ id: number; rule: string; level: 'kirmizi' | 'uyari'; value: string; inceleme: Review | null }>;
   acikBulgu: number;
 };
 export type Scan = {
@@ -68,7 +104,7 @@ export type Scan = {
   total: number;
   page: number;
   pageSize: number;
-  ozet: { sozlesme: number; anlasma: number; sapan: number; ozgun: number; sekil: number; emsalYetersiz: number };
+  ozet: { sozlesme: number; anlasma: number; sapan: number; ozgun: number; sekil: number; pozisyon: number; emsalYetersiz: number };
   maddeler: Array<{ key: string; label: string; sayi: number }>;
   sekilSayim: Array<{ id: string; label: string; sayi: number }>;
   gorunum: View;
@@ -82,7 +118,7 @@ export type ScanQuery = {
   bolum?: number;
   yilDen?: number;
   yilE?: number;
-  only?: 'sapan' | 'ozgun' | 'sekil' | 'hepsi-sapma' | 'hepsi';
+  only?: 'sapan' | 'ozgun' | 'sekil' | 'pozisyon' | 'hepsi-sapma' | 'hepsi';
   acik?: boolean;
   /** Ek kıyas ölçütleri, virgülle («ajans,satis»); boş dize = hiçbiri, yok = Yönetim varsayılanı. */
   olcut?: string;
@@ -173,6 +209,7 @@ export type Detail = {
   groups: Array<{ id: string; label: string; clauses: ClauseRow[] }>;
   texts: TextRow[];
   sekil: FormalCheck[];
+  pozisyon: PositionResult[];
   sayim: { sapan: number; uyumlu: number; emsalAz: number; ozgunNot: number };
   peers: Array<{ id: string; no: string; kitap: string; yazar: string; yil: number | null; kopya: number }>;
   history: {
@@ -208,7 +245,18 @@ export type Doc = {
   finishedAt: string | null;
   okunabilir?: boolean;
 };
-export type Clause = { sira: number; no: string | null; baslik: string | null; metin: string; sayfa: string | null };
+export type Clause = {
+  sira: number;
+  no: string | null;
+  baslik: string | null;
+  metin: string;
+  sayfa: string | null;
+  tur?: string | null;
+  turAd?: string | null;
+  turKaynak?: 'kural' | 'zeki' | null;
+  olasilik?: number | null;
+};
+export type TypeInfo = { a: string[]; b: string[]; yalnizA: string[]; yalnizB: string[] };
 export type Op = { op: 'eq' | 'ins' | 'del' | 'fill'; text: string; alan?: string };
 export type DiffRow = {
   durum: 'ayni' | 'degismis' | 'yeri-degismis' | 'eklenmis' | 'cikarilmis';
@@ -223,6 +271,10 @@ export type DocDiff = {
   sayim: Record<DiffRow['durum'], number>;
   a: Doc;
   b: Doc;
+  turler: TypeInfo;
+  turAdlari: Record<string, string>;
+  pozisyon: PositionResult[];
+  maskeli: boolean;
   kaynaklar?: Kaynaklar;
 };
 export type CorpusRow = {
@@ -233,7 +285,18 @@ export type CorpusRow = {
   enYakin?: { belge: { ref: string; title: string; kindLabel: string; contractNo: string | null }; madde: Clause; benzerlik: number };
   fark?: Op[];
 };
-export type Corpus = { maddeler: CorpusRow[]; sayim: Record<CorpusRow['durum'], number>; belgeSayisi: number; a: Doc; kaynaklar?: Kaynaklar };
+export type Corpus = {
+  maddeler: CorpusRow[];
+  sayim: Record<CorpusRow['durum'], number>;
+  belgeSayisi: number;
+  a: Doc;
+  eksikTurler: Array<{ tur: string; ad: string; belge: number }>;
+  turler: string[];
+  turAdlari: Record<string, string>;
+  pozisyon: PositionResult[];
+  maskeli: boolean;
+  kaynaklar?: Kaynaklar;
+};
 
 const B = '/compare';
 const enc = encodeURIComponent;
@@ -252,12 +315,23 @@ export const compareApi = {
   reviewDelete: (key: string, clause: string) => call<{ ok: boolean }>(`${B}/reviews${qs({ key, clause })}`, { method: 'DELETE' }),
   contract: (key: string, yil?: number, olcut?: string) =>
     call<Detail>(`${B}/contract/${enc(key)}${qs({ yil, olcut: olcut === '' ? '-' : olcut })}`, { timeout: 180_000 }),
-  documents: () => call<{ items: Doc[]; crmHata: string | null; can: { upload: boolean }; kaynaklar?: Kaynaklar }>(`${B}/documents`),
+  documents: () =>
+    call<{ items: Doc[]; crmHata: string | null; saklamaGun: number; heicVar: boolean; can: { upload: boolean; export: boolean }; kaynaklar?: Kaynaklar }>(`${B}/documents`),
+  link: (ref: string, no: string) => call<Doc>(`${B}/documents/link`, { method: 'POST', body: { ref, no } }),
+  reportUrl: (key: string, yil?: number, olcut?: string) =>
+    `${ENGINE_BASE}/api/v1/editorial/contracts${B}/contract/${enc(key)}/report.docx${qs({ yil, olcut: olcut === '' ? '-' : olcut })}`,
+  diffDocxUrl: (a: string, b: string, hepsi = false) => `${ENGINE_BASE}/api/v1/editorial/contracts${B}/documents/diff.docx${qs({ a, b, hepsi })}`,
+  positions: () =>
+    call<{ items: Position[]; clauses: PositionClause[]; ops: Record<string, string>; levels: Record<string, string>; states: Record<string, string>; facets: Meta['facets']; can: { position: boolean }; kaynaklar?: Kaynaklar }>(`${B}/positions`),
+  positionSave: (b: Partial<Omit<Position, 'scope'>> & { scope?: Partial<Position['scope']> }) => call<Position>(`${B}/positions`, { method: 'POST', body: b }),
+  positionApprove: (id: number) => call<Position>(`${B}/positions/${id}/approve`, { method: 'POST', body: {} }),
+  positionDelete: (id: number) => call<{ ok: boolean }>(`${B}/positions/${id}`, { method: 'DELETE' }),
+  positionSuggest: (tip?: number, odeme?: number) => call<{ eklenen: number; atlanan: number }>(`${B}/positions/suggest`, { method: 'POST', body: { tip, odeme }, timeout: 120_000 }),
   read: (ref: string) => call<Doc | { ref: string; status: DocStatus }>(`${B}/documents/read`, { method: 'POST', body: { ref } }),
   readAll: () => call<{ ok: boolean; kuyruk: number | null; suruyor: boolean }>(`${B}/documents/read-all`, { method: 'POST', body: {} }),
   upload: (file: File) => call<Doc>(`${B}/documents${qs({ filename: file.name })}`, { method: 'PUT', raw: file, timeout: 300_000 }),
   remove: (ref: string) => call<{ ok: boolean }>(`${B}/documents${qs({ ref })}`, { method: 'DELETE' }),
   fileUrl: (ref: string) => `${ENGINE_BASE}/api/v1/editorial/contracts${B}/documents/file${qs({ ref })}`,
-  diff: (a: string, b: string) => call<DocDiff>(`${B}/documents/diff`, { method: 'POST', body: { a, b } }),
-  corpus: (a: string) => call<Corpus>(`${B}/documents/corpus`, { method: 'POST', body: { a }, timeout: 180_000 }),
+  diff: (a: string, b: string, maskesiz = false) => call<DocDiff>(`${B}/documents/diff`, { method: 'POST', body: { a, b, maskesiz } }),
+  corpus: (a: string, maskesiz = false) => call<Corpus>(`${B}/documents/corpus`, { method: 'POST', body: { a, maskesiz }, timeout: 180_000 }),
 };

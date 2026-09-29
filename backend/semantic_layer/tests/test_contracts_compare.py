@@ -439,3 +439,138 @@ def test_timeline_lists_events_of_all_copies():
     port = portfolio([r1, r2])
     ev = CC.timeline(port, subj(port, 101))
     assert [x["olay"] for x in ev] == ["Başlangıç", "Ek protokol", "Fesih"]
+
+
+# ------------------------------------------------------------------ Faz 3: pozisyon, madde türü, eşleşme, maske, rapor
+
+
+def pos(pid, clause, op, value=None, level="kirmizi", state="onayli", **scope):
+    return {"id": pid, "clause": clause, "op": op, "value": value, "level": level, "levelLabel": level, "state": state,
+            "scope": {"tip": scope.get("tip"), "odeme": scope.get("odeme"), "para": scope.get("para")}, "reason": None}
+
+
+def test_position_rules_and_scope():
+    port = portfolio([row(99, new_Telif=18, new_iletimhakki=0, new_OdemeSekli=1)])
+    s = subj(port, 99)
+    rules = [pos(1, "new_Telif", "max", 15), pos(2, "new_Telif", "min", 5), pos(3, "new_iletimhakki", "zorunlu"),
+             pos(4, "new_OdemeSekli", "in", [3, 5]), pos(5, "new_Telif", "max", 10, tip=1), pos(6, "new_Telif", "max", 1, state="oneri")]
+    got = {x["id"]: x["ok"] for x in CC.positions_for(port, s, rules)}
+    assert got == {1: False, 2: True, 3: False, 4: False}                  # 5 kapsam dışı, 6 onaysız
+    rows = CC.scan_rows(port, CFG, only="pozisyon", rules=rules)
+    assert gid(99) in {e.id for _, e, _ in rows}
+    it = CC.scan_item(port, *next(x for x in rows if x[1].id == gid(99)))
+    assert {p["id"] for p in it["pozisyon"]} == {1, 3, 4}
+
+
+def test_suggestions_come_from_peers():
+    port = portfolio()
+    props = CC.suggest_positions(port, 5, 2, CFG)
+    by = {(p["clause"], p["op"]): p for p in props}
+    assert by[("new_Telif", "min")]["value"] == 10 and by[("new_Telif", "max")]["value"] == 10
+    assert ("new_cogaltmahakki", "zorunlu") in by and ("new_OdemeSekli", "eq") in by
+    assert not any(p["clause"] == "new_sozlesmeavanstutari" for p in props)
+    with pytest.raises(CC.CompareError):
+        CC.suggest_positions(portfolio(n=5), 5, 2, CFG)
+
+
+def test_position_store_roundtrip(tmp_path):
+    import sqlalchemy as sa
+    from semantic_bridge import contracts_compare_store as ST
+
+    eng = sa.create_engine(f"sqlite:///{tmp_path}/p.db")
+    with pytest.raises(ST.StoreError):
+        ST.save_position(eng, "t", "u", {"clause": "yok", "op": "min", "value": 1}, CC.valid_position_clause)
+    p = ST.save_position(eng, "t", "u", {"clause": "new_Telif", "op": "max", "value": "15,5", "scope": {"tip": 5}},
+                         CC.valid_position_clause, state="oneri")
+    assert p["state"] == "oneri" and p["value"] == 15.5 and p["scope"]["tip"] == 5
+    assert ST.approve_position(eng, "t", "hukuk", p["id"])["state"] == "onayli"
+    t = ST.save_position(eng, "t", "u", {"clause": "tur:fesih", "op": "zorunlu"}, CC.valid_position_clause)
+    assert t["clause"] == "tur:fesih" and len(ST.positions(eng, "t", "onayli")) == 2
+    ST.delete_position(eng, "t", t["id"])
+    assert len(ST.positions(eng, "t")) == 1
+
+
+def test_clause_types_rule_then_model():
+    cl = CD.split(pages("Madde 1 - Taraflar\nYayınevi ile yazar arasında yapılmıştır.\n"
+                        "Madde 2 - Fesih\nTaraflardan biri ihlal halinde sözleşmeyi feshedebilir.\n"
+                        "Madde 3 - Diğer\nTaraflar bu konuda karşılıklı olarak görüşmeyi kabul eder ve iyi niyetle davranır.\n"))
+
+    class Ch:
+        def __init__(self, choice, p):
+            self.choice, self.probability = choice, p
+
+        def confident(self, a, b):
+            return self.probability >= a
+
+    asked = []
+
+    def choose(prompt, labels):
+        asked.append(prompt)
+        return Ch("Uyuşmazlık ve yetkili mahkeme", 0.9)
+
+    n = CD.classify(cl, choose, mask=lambda t: t.replace("yazar", "[AD]"))
+    by = {c["no"]: c for c in cl}
+    assert by["1"]["tur"] == "taraflar" and by["1"]["turKaynak"] == "kural"
+    assert by["2"]["tur"] == "fesih" and by["3"]["turKaynak"] == "zeki" and n["zeki"] == 1
+    assert all("[AD]" in p or "yazar" not in p for p in asked)
+    low = CD.split(pages("Madde 1 - Diğer\nTaraflar bu konuda karşılıklı olarak görüşmeyi kabul eder.\n"))
+    CD.classify(low, lambda p, l: Ch("Fesih", 0.4))
+    assert low[0]["tur"] is None                                           # eşik altı: tür yazılmaz
+
+
+def test_missing_clause_types_against_archive():
+    a = CD.split(pages("Madde 1 - Taraflar\nA ile B arasında.\nMadde 2 - Telif\nTelif oranı %10.\n"))
+    b = CD.split(pages("Madde 1 - Taraflar\nA ile B arasında.\nMadde 2 - Fesih\nİhlal halinde feshedilir.\n"))
+    CD.classify(a)
+    CD.classify(b)
+    res = CD.against_corpus(a, [({"ref": "b", "title": "B"}, b)])
+    assert [x["tur"] for x in res["eksikTurler"]] == ["fesih"]
+    d = CD.diff(a, b)
+    assert d["turler"]["yalnizB"] == ["fesih"]
+
+
+def test_contract_number_found_in_name_or_text():
+    known = {"2018000102-1", "2024007074"}.__contains__
+    assert CD.find_contract_no("2018000102-1.pdf", "", known) == "2018000102-1"
+    assert CD.find_contract_no("tarama.pdf", "Sözleşme No: 2024007074 tarihli", known) == "2024007074"
+    assert CD.find_contract_no("2018000102.pdf", "", known) == "2018000102-1"
+    assert CD.find_contract_no("x.pdf", "2099000001", known) is None
+
+
+def test_masking_hides_personal_data():
+    cl = [{"no": "1", "baslik": "Taraflar", "metin": "Ayşe Yılmaz, T.C. Kimlik No: 12345678901, e-posta ayse@ornek.com", "_t": ["x"]}]
+    out = CD.mask_clauses(cl, ["Ayşe Yılmaz"])
+    assert "12345678901" not in out[0]["metin"] and "ayse@ornek.com" not in out[0]["metin"] and "Ayşe Yılmaz" not in out[0]["metin"]
+    assert "_t" not in out[0] and cl[0]["metin"].startswith("Ayşe")
+
+
+def test_upload_retention(tmp_path, monkeypatch):
+    import sqlalchemy as sa
+    from datetime import timedelta
+
+    monkeypatch.setenv("CONTRACT_DOCS_DIR", str(tmp_path))
+    eng = sa.create_engine(f"sqlite:///{tmp_path}/d.db")
+    row_ = CD.upload(eng, "t", "u", "a.txt", "Madde 1 - Konu\nDeneme.".encode())
+    assert CD.purge_uploads(eng, "t", 0) == [] and CD.purge_uploads(eng, "t", 30) == []
+    with eng.begin() as c:
+        c.execute(sa.update(CD.DOCS).values(created_at=CD._now() - timedelta(days=40), status="hazir"))
+    gone = CD.purge_uploads(eng, "t", 30)
+    assert [g["ref"] for g in gone] == [row_["ref"]] and not list(tmp_path.glob("t/karsilastirma/*"))
+
+
+def test_word_reports_open_and_carry_text():
+    import io
+    import zipfile
+    from semantic_bridge import contracts_compare_report as RP
+
+    port = portfolio([row(99, new_Telif=18, new_OdemeSekli=1)])
+    s = subj(port, 99)
+    out = CC.compare(port, s, CFG)
+    out.update({"subject": CC.subject_head(port, s), "history": CC.history(port, s), "gorunum": {"okunduAn": "x"},
+                "pozisyon": CC.positions_for(port, s, [pos(1, "new_Telif", "max", 15)])})
+    xml = zipfile.ZipFile(io.BytesIO(RP.contract_docx(out))).read("word/document.xml").decode()
+    assert "S99" in xml and "Karton K Telif %" in xml and "Emsalden yüksek" in xml and "en çok %15" in xml
+    d = CD.diff(CD.split(pages(DOC_A)), CD.split(pages(DOC_B)))
+    d.update({"a": {"title": "A"}, "b": {"title": "B"}})
+    xml2 = zipfile.ZipFile(io.BytesIO(RP.diff_docx(d))).read("word/document.xml").decode()
+    assert "<w:strike/>" in xml2 and "Film hakları" in xml2 and "Yalnız incelenen belgede" in xml2
