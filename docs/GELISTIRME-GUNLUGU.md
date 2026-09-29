@@ -41,6 +41,33 @@
 - **Haklar ve lisans:** `crm_rights.py` — CRM görünen adlarıyla 12 hak (çoğaltma … Z-kitap, yurt dışı telif satışı, promosyon), bayraklar (mali hak devri, koruma dışı eser, grup, ikale, muvafakatname, ek protokol), lisans şartları ve ülke/dil kapsamı. Hak alanı boşsa «girilmemiş» (eski kod `ISNULL(…,0)` ile «yok» sayıyordu). Sözleşme listesi (hak çipleri), sözleşme sayfası (CRM haklar + lisans panelleri), kitap 360 (kitabın hakları: yürürlükteki Telif Alış sözleşmelerinin hepsinde varsa «var», bir kısmında varsa eksik sözleşme no), kişi kartı (sözleşme başına haklar ve lisans), `/haklar` hak kartı. **Düzeltme:** `/haklar`'da orijinal dil, satılan ülke ve hakkı devreden firma CRM'de bağlı kayıttır (2.097 / 3.643 / 200 dolu, hepsi eşleşiyor); kod bunları seçim listesi sanıp her zaman boş gösteriyordu, artık adıyla geliyor.
 - **Doğrulama (test sunucusu, gerçek CRM .28):** pytest 397 geçti (ilgili modüller; `test_crm_active` 6 yeni, `test_editorial_assign` yeniden yazıldı), `tsc -b` 0 hata, vitest 229/229. Yan köprü (8798, aday kod) + kısa ömürlü timasai oturumu ile `scripts/acceptance/crm-pasif-gorev-haklar/kabul.py` **19/19**: editörsüz proje 352 = 352, sözleşme 14.863 = 14.863, liste hakları = CRM, kitap hak tabanı 6 = 6 ve iletim 5/6 «kısmi» = referans, kişi sözleşmesi 20 = 20, ülke kapsamı 2 = 2, pasif kişi taraf listesinde yok, `/haklar` orijinal dil adı = CRM, kaldırılan uçlar 404/405. Gerçek editörde (277 iş durumunda proje) pano 277 satır. Oturum satırı, ortam kopyası ve yan köprü iş bitince silindi; root'a geçen dosya 0. **Görsel kontrol yapılmadı:** HttpOnly oturum çerezi tarayıcı panesine konamıyor.
 - **Açık:** test sunucusuna ve müşteri VM'ine kurulmadı. CRM «iş planı» durumu kitap basıldıktan sonra da açık kalabildiği için bazı editörlerin Görevlerim'i uzun (277); kapanmış işi «Tamamlandı» işaretlemek 30 gün sonra panodan düşürür.
+## 2026-09-29 (09:50) — CSV indiren her ekrana Excel eşi; her uç gerçek veriyle hücre hücre sınandı
+
+- **İstek:** «CSV olarak indirilen ekranların tamamına Excel indir de ekle ve her birinin doğru Excel indirip indirmediğini detaylı test et.»
+- **Mekanizma (tek yer, uç başına kod yok):** köprüde `csv_excel.py` — en dış ASGI katmanı. CSV adresine `bicim=xlsx` eklenince uç
+  aynen çalışır (aynı sayfa kapısı, `veri.disa-aktar` yetkisi, denetim/erişim kaydı), `text/csv` cevabı Excel'e çevrilir; hata/JSON
+  olduğu gibi geçer. Dosya adı CSV'ninki, uzantı .xlsx; öteki başlıklar (ör. `X-Readers-Count`) korunur. Hücre türü yalnız
+  tartışmasızsa sayı/tarih: Türkçe ondalık («1.234,56») ve nokta ondalık kolon kolon ayrılır, iki türlü okunan «12.500» dosyanın
+  alışkanlığına bakar ya da metin kalır; kod/no/ISBN/barkod/telefon başlıklı kolonlar, baştaki sıfırlı ve 12 haneden uzun tam sayılar
+  metin; «=» ile başlayan metin formül olmaz. Başlık kalın, ilk satır sabit, süzgeç açık.
+  Tarayıcıda üretilen CSV'ler (baskı öneri, dahili rehber) `POST /api/v1/export/xlsx` ile aynı çeviriden geçer (kural OPEN, bildirim
+  istemciden `export-notice` 'xlsx'). Pano kartında Excel zaten vardı; rapor ekranı ve e-ticaret içerik paketi zaten iki biçimliydi.
+- **Ön yüz:** `src/canvas/components/excel.ts` (`xlsxUrl`, `downloadCsvAsXlsx`); 36 dosyada her CSV düğmesinin yanında «Excel»
+  (FileSpreadsheet simgesi, aynı düğme sınıfı, aynı yetki koşulu). Liste indirme POST'ları (e-ticaret hedef grubu, okur listesi,
+  CRM'e işlenecek yeni kişiler) biçim seçimiyle: CSV ya da Excel düğmesi; dışa aktarım kaydı yine bir kez yazılır.
+- **Test (test sunucusu, aday ağaç `git archive`):** `test_csv_excel.py` 18 ✓ (okuma, tür kararları, 2.500 satır birebir, ara katman
+  GET/POST/hata, çeviri ucu, gerçek köprüde en dış katman + kapı), `test_access`+`test_data_security` 33 ✓, `tsc -b` 0, `vite build` ✓.
+- **Kabul `scripts/acceptance/excel-indirme/` (gerçek veri):** giriş oturumu açmadan (oturum tablosuna dokunmak izin denetiminde
+  reddedildi) köprü süreç içinde kurulur, kişi yalnız o süreçte sabitlenir (`yerinde.py`); dışa aktarma uçlarının yazdığı denetim/erişim
+  kayıtları o süreçte sayaca bağlanır, veritabanına test satırı girmez (koşuda 41 denetim + 47 erişim çağrısı sayıldı). Her uçta CSV ve
+  Excel ayrı indirilir, bağımsız çözümleyiciyle satır/başlık/hücre karşılaştırılır: **146 geçti, 0 kaldı, 23 uyarı.** Örnek hacim:
+  cari listesi 248.351 satır (947.871 sayı + 325.781 tarih hücresi) birebir; bayi riski 25.733; CRM düzeltilecek 113.415; kârlılık
+  9.456; baskı öneri 5.060; dahili rehber 130. Uyarılar: 8 kimlikli uçta test sunucusunda kayıt yok (İK anket/değerlendirme, okur
+  yüklemesi, çeviri işi, serbest hakediş, telif koşusu ×2, bütçe planı) — sınanamadı, test verisi yaratılmadı; İK zorunlu eğitim
+  timasai rolünde yok (CSV de Excel de 403, dosya inmedi); 4 uç boş liste (yalnız başlık sınandı); «sayı gibi görünüp metin kalan»
+  hücrelerin hepsi kod (stok kodu, barkod, cari kodu, «.» yer tutucu). Sunucuda LibreOffice'in yalnız yazı modülü var (Calc yok):
+  Office ile açılış yerine zip bütünlüğü + her XML parçası denetlendi.
+- **Durum:** dalda; main'e taşıma ve test sunucusu → VM kurulumu sırada. Ekranlarda görsel kontrol AD girişi istediği için yapılamadı.
 
 ## 2026-09-28 (17:05) — Müşteri VM'ine `04105220` kuruldu: 67 zamanlanmış iş, T-soft/Google bağlı
 
