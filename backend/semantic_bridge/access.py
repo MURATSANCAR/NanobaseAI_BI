@@ -1182,7 +1182,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # Kitap Tasarım Stüdyosu: işin altındaki her yazma (üretim, düzenleme, onay, yükleme; yeni uçlar da kendiliğinden)
     # «Kitap tasarımında üretim ve düzenleme» ister. Dışarıda kalan iki POST okumadır: `plan/prepare` sayfa düzeni
     # ekranının açılışı, `narration/read` metnin nasıl okunacağını döndürür. Ses kütüphanesine yükleme de aynı yetki;
-    # sesi kaldırma ve kapak arşivi beslemesi ucun içinde yalnız yönetici. İndirilen dosyalar `veri.disa-aktar`.
+    # sesi kaldırma ve kapak arşivi beslemesi ucun içinde yalnız yönetici. İndirilen dosyalar `veri.disa-aktar`;
+    # tek sosyal görselin indirmesi (`marketing/social/{sid}?download=1`) görüntülemeyle aynı yolda olduğundan ucun içinde.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}), _S + r"(/(?![^/]+/(plan/prepare|narration/read)$).*)?$",
      "ozellik:tasarim.uret"),
     (frozenset({"POST"}), r"^/api/v1/editorial/studio/voices$", "ozellik:tasarim.uret"),
