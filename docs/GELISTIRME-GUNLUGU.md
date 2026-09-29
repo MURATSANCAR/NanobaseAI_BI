@@ -105,6 +105,7 @@
 - **Liste:** `crm_unassigned.py` — kök iş birimi (`ParentBusinessUnitId IS NULL`, ada bakılmaz) + etkin + giriş yapabilen + AD hesaplı CRM kullanıcıları; AD birimi kişi listesinden, roller ayrı sorguyla (CRM SQL Server'ında `STRING_AGG` yok). İlk ölçüm 107, dört saat sonra 105 kişi.
 - **Uçlar:** `GET /api/v1/access/crm-unassigned.xlsx` (Yetkiler başlığında «Departmansız CRM kullanıcıları» indirme, denetim kaydı), `POST /api/v1/access/crm-unassigned/send` (caller token ya da yönetici). Zamanlayıcı `timas-crm-unassigned.timer/.service`; VM'de `jobs.py` dosyadan kendiliğinden okur.
 - **Alıcılar:** Ayarlar → Bildirim ve raporlar → `CRM_UNASSIGNED_TO` (virgülle; `ALERT_RECIPIENT_DOMAINS` süzgeci). Boşsa CRM'e hiç gidilmez.
+- **Kurulum (test sunucusu):** zamanlayıcılar kurulu; 12:00 turu başarılı (yönetici grubu 13 kişi; liste alıcısızdı). Alıcı kullanıcı kararıyla `Bilgiislem@timas.com.tr` (ayar kaydı muratsancar adına, SMTP zeki@timas.com.tr); ilk gönderim 30.09 07:00. VM'e kurulum yok — Yetkiler ekranı VM'de henüz yok.
 - **Testler:** `test_crm_unassigned.py` (yeni, 4), `test_access*.py`, `test_vm_jobs_schedule.py` — 30 geçti; vitest ekran bilgisi + yönetim 10 geçti.
 ## 2026-09-29 (gece) — Kitap hesabı: kâğıt fiyatı kitap bazında elle; Excel'de hiç kullanılmamış 33 seçenek de Excel'le aynı
 
