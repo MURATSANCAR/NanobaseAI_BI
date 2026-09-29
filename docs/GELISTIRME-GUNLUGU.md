@@ -31,6 +31,11 @@
 - Gerçek timasai oturumuyla 320/390/768/1440 px, ikon fontu, capability API (25 modül), eski lisans API 404, CSP/SW kontrolleri geçti. Tam mesaj ve abonelik sonuçları bağımsız Mongo okumasıyla eşleşti.
 - Dış çıkış 7/7, üç konteynerin DNS/firewall kuralları geçti; eth0 yakalamasında dış prob paketi 0. 1 portal oturumu ve 4 chat jetonu silindi, kalan 0. Yeni test kullanıcı/mesajı yok. Yerel test ve müşteri VM kurulumu yapılmadı.
 - Teknik dış paket/protokol kimlikleri, bağımsız bildirimler, engelleme/geçiş referansları, Git geçmişi ve geri dönüş yedekleri korunur; mutlak sözcük sıfırı iddiası yok. Rapor ve kanıtlar: `apps/zeki-chat/docs/zeki-owned-cleanup.md`, `apps/zeki-chat/docs/evidence/2026-09-29-full-cleanup/`.
+## 2026-09-29 (23:30) — Test sunucusuna main `c66e8ec12`: ZEKI-54/45; ZEKI-54 hâlâ açık (yazar katalogda yok)
+
+- **Kurulum:** 17 dosya (köprü, çözümleyici, derleyici, kapı, hazır cevap katmanı, kalite kapısı araçları) md5 korumalı — hepsi kurulum öncesi eski main'le aynıydı; md5 17/17, `._*` 0, köprü 13 sn'de açıldı, günlükte hata yok.
+- **ZEKI-54 plan kapalı yan köprüde (VM gibi), aynı rapor sorusu 3+2 koşu:** iki sunucuyu tek SQL'de birleştiren sorgu ve «ayrı sunucularda» hatası 0. Bir koşuda kapı kolonu süzgece çeviren sorguyu yakaladı (dürüst eksik cevap). Ama çoğu koşuda model «yazar»ı `CLCARD.DEFINITION_` (müşteri cari adı) diye yazdı ve kapıdan geçti — **sessizce yanlış, çözülmedi.** Kök neden: Logo'da yazar yok, «yazar» katalogda tanımsız. Katalog betiği kuru koşusu: CRM 3.485 kitap/466 yazar, stok kodu ↔ Logo ITEMS.CODE %95,7 eşleşme, 139 kitap çok yazarlı; ölçülmüş stok kodu bağı yok. Kalıcı çözüm ayrı iş: bağı ölç+yaz, «kitap yazarı» kavramı, çıplak «yazar»ın sözleşme (C9) okumasına etkisini hızlı kapıyla ölç.
+- **Temizlik:** 4 test oturumu, 1 kitap sorusu, 1 test raporu, 4 test eseri (+153 bölüm satırı, klasörler), 1/100/300 MB/1 GB test PDF'leri, yan köprü ve anahtar içeren geçici ortam dosyası, `/tmp/claude-zeki` silindi. `timasai` denetim satırları (id 7999 ve sonrası) gerçek hesap kaydı olarak bırakıldı.
 
 ## 2026-09-29 (23:30) — Sohbet: bot adı test sunucusunda «zeki.bot», belge gönderimi sınandı, indirme simgesi düzeltildi
 
