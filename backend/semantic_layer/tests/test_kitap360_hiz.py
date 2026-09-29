@@ -224,3 +224,35 @@ def test_catalog_index_is_built_once_per_profile_list_and_context():
     assert not G.allowed_tables("SELECT X FROM D", profiles, {})[0]
     profiles.append(prof("D"))
     assert G.allowed_tables("SELECT X FROM D", profiles, {})[0]
+
+
+# ------------------------------------------------------------------ kart servisi: kapanmış açık bağlantı
+
+def test_card_read_retries_once_when_the_kept_alive_connection_was_closed(monkeypatch):
+    import httpx
+    from semantic_bridge import editorial_cards as C
+
+    cagri = []
+
+    def cevap(req):
+        cagri.append(req.url.path)
+        if len(cagri) == 1:
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.", request=req)
+        return httpx.Response(200, json={"open": 2})
+
+    istemci = httpx.Client(transport=httpx.MockTransport(cevap))
+    monkeypatch.setenv("EDITOR_CATALOG_BASE", "http://kart.test")
+    monkeypatch.setenv("EDITOR_CATALOG_KEY", "k")
+    monkeypatch.setattr(C, "_client", lambda ca: istemci)
+    assert C.review_queue(BOOK) == {"open": 2} and len(cagri) == 2
+    cagri.clear()
+
+    def hep_kopuk(req):
+        cagri.append(1)
+        raise httpx.RemoteProtocolError("Server disconnected without sending a response.", request=req)
+
+    istemci2 = httpx.Client(transport=httpx.MockTransport(hep_kopuk))
+    monkeypatch.setattr(C, "_client", lambda ca: istemci2)
+    with pytest.raises(httpx.RemoteProtocolError):
+        C.review_queue(BOOK)
+    assert len(cagri) == 2                     # bir kez yeniden dener, sonsuz döngü yok

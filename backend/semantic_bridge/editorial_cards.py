@@ -54,7 +54,13 @@ def _client(ca: str) -> httpx.Client:
 
 def request(path: str):
     base,headers,ca=_headers()
-    r=_client(ca).get(base+path,headers=headers)
+    try:
+        r=_client(ca).get(base+path,headers=headers)
+    except httpx.RemoteProtocolError:
+        # Açık tutulan bağlantıyı karşı taraf (nginx) sessizce kapatmış: «Server disconnected without sending a
+        # response» (2026-09-29, Kitap 360 ölçümünde editör kartı bu yüzden boş geldi). Okuma yeni bağlantıyla bir kez
+        # daha denenir; yazma isteği (`request_json`) yeniden gönderilmez.
+        r=_client(ca).get(base+path,headers=headers)
     r.raise_for_status()
     return r
 
