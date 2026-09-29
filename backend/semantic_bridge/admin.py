@@ -1229,7 +1229,7 @@ SPEC: list[dict[str, Any]] = [
      "help": "Sertifika geçerliliği bitmeden kaç gün önce «dolacak» sayılsın ve sabah özetine girsin. Boş: yalnız süresi dolmuş olanlar"},
     {"key": "HR_PRIVACY_MIN_GROUP", "group": "hr", "label": "Gizlilik eşiği (kişi)", "type": "text", "default": "",
      "help": "Kullanım haritasında bu sayıdan az çalışanı olan birimler birleştirilir; anket sonucu bu sayıdan az yanıtta "
-             "gösterilmez. Boş: birleştirme yok, ekran uyarır"},
+             "gösterilmez. Boş: 5 kişi. 0: birleştirme bilerek kapalı"},
     {"key": "HR_TRAINING_ACCOUNTS", "group": "hr", "label": "Eğitim gider hesapları (Logo)", "type": "text", "default": "",
      "help": "Virgülle 7'li gider hesap kodları; alt hesaplar dahil sayılır. Adayları Eğitim → Gider ekranı listeler (Mali İşler seçer)"},
     # İnsan kaynakları — M56 performans, M58 bağlılık
