@@ -856,6 +856,12 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                     f"{prof.entity} tablosunda {c.name} adında kolon yok."))
 
     findings += _mismatched_keys(tree, by_table, by_entity, dialect)
+    # Beyanlı ay kolonu grubunu elle ve eksik/yanlış açan okuma (K13): onarıma gider, derleyicinin açılımı istenir.
+    try:
+        from semantic_layer.runtime import month_groups
+        findings += [Finding(kind, "block", msg) for kind, msg in month_groups.review(tree, profiles, dialect)]
+    except Exception:  # noqa: BLE001 — okuyamadığı sorguda susar, her yerde olduğu gibi
+        pass
     order = {"block": 0, "warn": 1}
     seen: set[tuple] = set()
     out = []

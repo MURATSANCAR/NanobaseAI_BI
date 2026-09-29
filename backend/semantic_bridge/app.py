@@ -404,6 +404,14 @@ class Runtime:
         from semantic_layer import coverage as coverage_mod
         coverage_mod.apply(self.profiles, self.store, s)
         mark("donem-kapsami")
+        # Ay kolonu grubu beyanları (K13, katalog `extra.month_columns`): açılımı derleyici yazar, kapı eksik el açılımını
+        # onarıma yollar. Profilde durur (dönem kapsamı gibi); SEMANTIC_MONTH_GROUPS_FILE yan köprü denemesi içindir.
+        from semantic_layer.runtime import month_groups as month_groups_mod
+        try:
+            month_groups_mod.apply(self.profiles, self.store, s)
+        except Exception as e:  # noqa: BLE001 — beyan okunamazsa model eskisi gibi yazar; açılış durmaz
+            log.warning("ay kolonu grupları uygulanamadı: %s", e)
+        mark("ay-gruplari")
         # Profiller artık son hâlinde (açılışta: `run_sql` ile okuyan ekranlar buradan sonra beklemez).
         profiles_ready = self.__dict__.get("_profiles_ready")
         if profiles_ready is not None and not profiles_ready.is_set():
