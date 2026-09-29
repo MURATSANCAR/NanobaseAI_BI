@@ -1,4 +1,4 @@
-import type { RocketchatI18nKeys } from '@zeki.chat/i18n';
+import type { ZekichatI18nKeys } from '@zeki.chat/i18n';
 import { createContext } from 'react';
 
 export type TranslationLanguage = {
@@ -9,7 +9,7 @@ export type TranslationLanguage = {
 };
 
 type KeysWithoutSuffix = {
-	[K in RocketchatI18nKeys as K extends `${infer T extends string}_${'one' | 'other' | 'zero' | 'few' | 'many' | 'two' | 'three' | 'four'}`
+	[K in ZekichatI18nKeys as K extends `${infer T extends string}_${'one' | 'other' | 'zero' | 'few' | 'many' | 'two' | 'three' | 'four'}`
 		? T
 		: K]: never;
 };

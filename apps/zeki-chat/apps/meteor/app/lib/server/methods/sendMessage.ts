@@ -1,7 +1,7 @@
 import { api } from '@zeki.chat/core-services';
 import type { AtLeast, IMessage, IUser } from '@zeki.chat/core-typings';
 import type { ServerMethods } from '@zeki.chat/ddp-client';
-import type { RocketchatI18nKeys } from '@zeki.chat/i18n';
+import type { ZekichatI18nKeys } from '@zeki.chat/i18n';
 import { MessageTypes } from '@zeki.chat/message-types';
 import { Messages, Users } from '@zeki.chat/models';
 import type { TOptions } from 'i18next';
@@ -113,7 +113,7 @@ export async function executeSendMessage(
 	} catch (err: any) {
 		SystemLogger.error({ msg: 'Error sending message:', err });
 
-		const errorMessage: RocketchatI18nKeys = typeof err === 'string' ? err : err.error || err.message;
+		const errorMessage: ZekichatI18nKeys = typeof err === 'string' ? err : err.error || err.message;
 		const errorContext: TOptions = err.details ?? {};
 		void api.broadcast('notify.ephemeralMessage', user._id, message.rid, {
 			msg: i18n.t(errorMessage, { ...errorContext, lng: user.language }),

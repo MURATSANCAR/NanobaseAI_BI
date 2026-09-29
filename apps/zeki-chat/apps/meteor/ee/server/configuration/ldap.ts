@@ -79,7 +79,7 @@ Meteor.startup(async () => {
 			await addAbacCronJob();
 		});
 
-		settings.watch<string>('LDAP_Groups_To_Rocket_Chat_Teams', (value) => {
+		settings.watch<string>('LDAP_Groups_To_Zeki_Chat_Teams', (value) => {
 			try {
 				LDAPEEManager.validateLDAPTeamsMappingChanges(value);
 			} catch (err) {

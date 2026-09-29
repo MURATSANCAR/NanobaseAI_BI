@@ -40,7 +40,7 @@ import { readSecondaryPreferred } from '../../../../server/database/readSecondar
 import { isRunningMs } from '../../../../server/lib/isRunningMs';
 import { getControl } from '../../../../server/lib/migrations';
 import { getSettingsStatistics } from '../../../../server/lib/statistics/getSettingsStatistics';
-import { getMatrixFederationStatistics } from '../../../../server/services/federation/infrastructure/rocket-chat/adapters/Statistics';
+import { getMatrixFederationStatistics } from '../../../../server/services/federation/infrastructure/zeki-chat/adapters/Statistics';
 import { settings } from '../../../settings/server';
 import { Info } from '../../../utils/zekichat.info';
 import { getMongoInfo } from '../../../utils/server/functions/getMongoInfo';

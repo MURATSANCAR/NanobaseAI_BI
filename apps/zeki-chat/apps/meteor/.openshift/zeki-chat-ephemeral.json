@@ -2,7 +2,7 @@
     "kind": "Template",
     "apiVersion": "v1",
     "metadata": {
-        "name": "rocket-chat-ephemeral",
+        "name": "zeki-chat-ephemeral",
         "annotations": {
             "description": "ZEKI AI CHAT with a MongoDB database running with an Ephemeral storage.",
             "tags": "quickstart,nodejs,mongodb,instant-app",

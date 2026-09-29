@@ -1,15 +1,15 @@
 import { isObject } from '@zeki.chat/tools';
 import type { i18n, TFunction, TOptions } from 'i18next';
 
-import type { RocketchatI18nKeys } from './resources.ts';
+import type { ZekichatI18nKeys } from './resources.ts';
 
-export type { RocketchatI18nKeys };
+export type { ZekichatI18nKeys };
 
 declare module 'i18next' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface TFunction {
-		(key: RocketchatI18nKeys): string;
-		(key: RocketchatI18nKeys, options: TOptions): string;
+		(key: ZekichatI18nKeys): string;
+		(key: ZekichatI18nKeys, options: TOptions): string;
 	}
 }
 
@@ -112,7 +112,7 @@ export const extractTranslationKeys = (source: Record<string, string>, namespace
 };
 
 export type TranslationNamespace =
-	| (Extract<RocketchatI18nKeys, `${string}.${string}`> extends `${infer T}.${string}` ? (T extends Lowercase<T> ? T : never) : never)
+	| (Extract<ZekichatI18nKeys, `${string}.${string}`> extends `${infer T}.${string}` ? (T extends Lowercase<T> ? T : never) : never)
 	| 'core';
 
 const namespacesMap: Record<TranslationNamespace, true> = {

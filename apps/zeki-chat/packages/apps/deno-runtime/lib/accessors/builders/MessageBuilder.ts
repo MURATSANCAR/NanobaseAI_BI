@@ -1,4 +1,4 @@
-import { LayoutBlock } from '@zeki.chat/ui-kit';
+import type { LayoutBlock } from '@zeki.chat/ui-kit';
 
 import type { IMessageBuilder } from '@zeki.chat/apps-engine/definition/accessors/IMessageBuilder';
 import type { ZekiChatAssociationModel as _ZekiChatAssociationModel } from '@zeki.chat/apps-engine/definition/metadata/ZekiChatAssociations';

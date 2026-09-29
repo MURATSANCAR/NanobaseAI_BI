@@ -255,7 +255,7 @@ export function addSettings(): Promise<void> {
 
 					const enableQueryTeams = { _id: 'LDAP_Enable_LDAP_Groups_To_RC_Teams', value: true };
 
-					await this.add('LDAP_Groups_To_Rocket_Chat_Teams', '{}', {
+					await this.add('LDAP_Groups_To_Zeki_Chat_Teams', '{}', {
 						type: 'code',
 						enableQuery: enableQueryTeams,
 						invalidValue: '{}',

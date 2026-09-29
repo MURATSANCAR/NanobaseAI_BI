@@ -529,7 +529,7 @@ export class LDAPEEManager extends LDAPManager {
 		const filter = settings.get<string>('LDAP_Query_To_Get_User_Teams');
 		const groupAttributeName = settings.get<string>('LDAP_Teams_Name_Field');
 		const ldapUserTeams = await this.getLdapGroupsByUsername(ldap, user.username, dn, baseDN, filter, groupAttributeName);
-		const mapJson = settings.get<string>('LDAP_Groups_To_Rocket_Chat_Teams');
+		const mapJson = settings.get<string>('LDAP_Groups_To_Zeki_Chat_Teams');
 		if (!mapJson) {
 			return;
 		}

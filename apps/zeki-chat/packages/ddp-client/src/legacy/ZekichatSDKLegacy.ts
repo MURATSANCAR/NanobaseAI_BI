@@ -18,9 +18,9 @@ import type { StreamNames, StreamKeys, StreamerCallbackArgs } from '../types/str
 import type {
 	APILegacy,
 	DPPLegacy,
-	RocketchatSdkLegacyEvents,
-	RocketchatSdkLegacyEventsKeys,
-	RocketchatSdkLegacyEventsValues,
+	ZekichatSdkLegacyEvents,
+	ZekichatSdkLegacyEventsKeys,
+	ZekichatSdkLegacyEventsValues,
 } from './types/SDKLegacy';
 
 declare module '../ClientStream' {
@@ -47,10 +47,10 @@ declare module '../types/SDK' {
 	}
 }
 
-interface RocketchatSDKLegacy extends APILegacy, DPPLegacy {}
+interface ZekichatSDKLegacy extends APILegacy, DPPLegacy {}
 
-export class RocketchatSdkLegacyImpl extends DDPSDK implements RocketchatSDKLegacy {
-	private ev = new Emitter<RocketchatSdkLegacyEvents>();
+export class ZekichatSdkLegacyImpl extends DDPSDK implements ZekichatSDKLegacy {
+	private ev = new Emitter<ZekichatSdkLegacyEvents>();
 
 	get url(): string {
 		return this.connection.url;
@@ -231,7 +231,7 @@ export class RocketchatSdkLegacyImpl extends DDPSDK implements RocketchatSDKLega
 		]);
 	};
 
-	onStreamData<E extends RocketchatSdkLegacyEventsKeys>(event: E, cb: (...data: RocketchatSdkLegacyEventsValues<E>) => void): () => void {
+	onStreamData<E extends ZekichatSdkLegacyEventsKeys>(event: E, cb: (...data: ZekichatSdkLegacyEventsValues<E>) => void): () => void {
 		return this.ev.on(event, cb as any);
 	}
 
@@ -251,7 +251,7 @@ export class RocketchatSdkLegacyImpl extends DDPSDK implements RocketchatSDKLega
 		return Promise.all(Object.entries(this.client.subscriptions).map(([, subscription]) => this.client.unsubscribe(subscription)));
 	}
 
-	static override create(url: string, retryOptions = { retryCount: 1, retryTime: 100 }): RocketchatSdkLegacyImpl {
+	static override create(url: string, retryOptions = { retryCount: 1, retryTime: 100 }): ZekichatSdkLegacyImpl {
 		const ddp = new DDPDispatcher();
 
 		const connection = ConnectionImpl.create(url, WebSocket, ddp, retryOptions);
@@ -274,7 +274,7 @@ export class RocketchatSdkLegacyImpl extends DDPSDK implements RocketchatSDKLega
 			}
 		})({ baseUrl: url });
 
-		const sdk = new RocketchatSdkLegacyImpl(connection, stream, account, timeoutControl, rest);
+		const sdk = new ZekichatSdkLegacyImpl(connection, stream, account, timeoutControl, rest);
 
 		connection.on('connected', () => {
 			Object.entries(stream.subscriptions).forEach(([, sub]) => {

@@ -1,5 +1,5 @@
 // dummy
-export type RocketchatI18nKeys =
+export type ZekichatI18nKeys =
 	| 'core.key1'
 	| 'core.key2'
 	| 'onboarding.key1'

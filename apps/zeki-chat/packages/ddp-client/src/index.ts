@@ -1,5 +1,5 @@
 export * from './DDPSDK';
-export * from './legacy/RocketchatSDKLegacy';
+export * from './legacy/ZekichatSDKLegacy';
 export * from './livechat/LivechatClientImpl';
 export type * from './livechat/types/LivechatSDK';
 export type * from './types/ClientStream';

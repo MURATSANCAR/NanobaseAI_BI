@@ -219,7 +219,7 @@ Meteor.startup(async () => {
 			username: 'zekichat.internal.admin.test',
 			emails: [
 				{
-					address: 'rocketchat.internal.admin.test@rocket.chat',
+					address: 'zeki.bot@localhost',
 					verified: true,
 				},
 			],

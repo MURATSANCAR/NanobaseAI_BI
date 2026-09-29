@@ -57,7 +57,7 @@ export interface DPPLegacy {
 
 	disconnect(): Promise<unknown>;
 
-	onStreamData<E extends RocketchatSdkLegacyEventsKeys>(event: E, cb: (...data: RocketchatSdkLegacyEventsValues<E>) => void): () => void;
+	onStreamData<E extends ZekichatSdkLegacyEventsKeys>(event: E, cb: (...data: ZekichatSdkLegacyEventsValues<E>) => void): () => void;
 
 	subscribe(topic: string, ...args: any[]): Promise<unknown>;
 	unsubscribe(subscription: unknown): Promise<unknown>;
@@ -74,7 +74,7 @@ export interface DPPLegacy {
 	methodCall(method: string, ...args: any[]): Promise<unknown>;
 }
 
-export type RocketchatSdkLegacyEvents = {
+export type ZekichatSdkLegacyEvents = {
 	'message': StreamerCallbackArgs<'room-messages', string>;
 	'typing': StreamerCallbackArgs<'notify-room', `${string}/typing`>;
 	'deleteMessage': StreamerCallbackArgs<'notify-room', `${string}/deleteMessage`>;
@@ -93,6 +93,6 @@ export type RocketchatSdkLegacyEvents = {
 	'uiInteraction': StreamerCallbackArgs<'notify-user', `${string}/uiInteraction`>;
 };
 
-export type RocketchatSdkLegacyEventsKeys = keyof RocketchatSdkLegacyEvents;
+export type ZekichatSdkLegacyEventsKeys = keyof ZekichatSdkLegacyEvents;
 
-export type RocketchatSdkLegacyEventsValues<E extends RocketchatSdkLegacyEventsKeys> = RocketchatSdkLegacyEvents[E];
+export type ZekichatSdkLegacyEventsValues<E extends ZekichatSdkLegacyEventsKeys> = ZekichatSdkLegacyEvents[E];

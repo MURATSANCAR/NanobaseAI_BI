@@ -60,13 +60,13 @@ async function build() {
 
 	await writeFile(
 		join(distDirectory, 'resources.d.ts'),
-		`export interface RocketchatI18n {
+		`export interface ZekichatI18n {
 	${Object.keys(baseResource.content)
 		.map((key) => `${JSON.stringify(key)}: string;`)
 		.join('\n\t')}
 }
-export type RocketchatI18nKeys = keyof RocketchatI18n;
-declare const resources: Record<string, RocketchatI18n>;
+export type ZekichatI18nKeys = keyof ZekichatI18n;
+declare const resources: Record<string, ZekichatI18n>;
 export default resources;`,
 	);
 

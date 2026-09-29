@@ -22,7 +22,7 @@ RUN cd /app/bundle/programs/server \
 
 FROM node:22.22.3-alpine3.23
 
-LABEL maintainer="buildmaster@rocket.chat"
+LABEL maintainer="zeki.bot@localhost"
 
 ENV LANG=C.UTF-8
 
@@ -48,7 +48,7 @@ RUN apk add --no-cache shadow deno ttf-dejavu \
 # needs a mongo instance - defaults to container linking with alias 'mongo'
 ENV DEPLOY_METHOD=docker \
     NODE_ENV=production \
-    MONGO_URL=mongodb://mongo:27017/rocketchat \
+    MONGO_URL=mongodb://mongo:27017/zeki \
     HOME=/tmp \
     PORT=3000 \
     ROOT_URL=http://localhost:3000 \

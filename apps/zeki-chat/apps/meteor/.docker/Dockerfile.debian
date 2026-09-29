@@ -4,7 +4,7 @@ FROM denoland/deno:bin-${DENO_VERSION} as deno
 
 FROM node:22.22.3-bullseye-slim
 
-LABEL maintainer="buildmaster@rocket.chat"
+LABEL maintainer="zeki.bot@localhost"
 
 # dependencies
 RUN groupadd -g 65533 -r zekichat \
@@ -22,7 +22,7 @@ ADD --chown=zekichat:zekichat . /app
 # needs a mongoinstance - defaults to container linking with alias 'mongo'
 ENV DEPLOY_METHOD=docker \
     NODE_ENV=production \
-    MONGO_URL=mongodb://mongo:27017/rocketchat \
+    MONGO_URL=mongodb://mongo:27017/zeki \
     HOME=/tmp \
     PORT=3000 \
     ROOT_URL=http://localhost:3000 \
