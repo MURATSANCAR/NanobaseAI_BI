@@ -50,6 +50,48 @@ def _profiles_by_name(profiles: list[SchemaProfile]) -> tuple[dict[str, SchemaPr
     return by_table, by_entity
 
 
+def prefer_base_tables(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> str:
+    """A bare Logo name the catalog gave to a view, read with the columns only the base table has.
+
+    Two relations can claim one logical name: Logo's reporting view `LV_191_01_CLFLINE` (13 columns) became
+    entity `CLFLINE`, and the ledger it summarises — `LG_411_01_CLFLINE`, 130 columns — became `LG_CLFLINE`
+    (17 such pairs, 2026-09-29: CLFLINE, KSLINES, STFICHE, ORFICHE, BNFLINE …). The model writes the Logo table
+    name it knows, `FROM CLFLINE l … l.AMOUNT`, and was refused for a column "the table does not have".
+    Decided by the statement's own columns: where every column read through that alias exists in `LG_<name>`
+    and not all of them in `<name>`, the base table is what was meant. A statement that reads only the view's
+    columns keeps the view. Fails open: anything unreadable returns the statement unchanged."""
+    try:
+        tree = sqlglot.parse_one(sql, read=dialect)
+        root = build_scope(tree)
+    except Exception:  # noqa: BLE001
+        return sql
+    if root is None:
+        return sql
+    by_table, by_entity = _profiles_by_name(profiles)
+    changed = False
+    try:
+        for scope in root.traverse():
+            selected = scope.selected_sources
+            for alias, (_node, source) in selected.items():
+                if not isinstance(source, exp.Table) or not source.name:
+                    continue
+                name = source.name
+                if by_table.get(name.upper()) or name.upper().startswith("LG_"):
+                    continue                        # a physical name, or already the base table's label
+                cur, base = by_entity.get(name.upper()), by_entity.get("LG_" + name.upper())
+                if cur is None or base is None or cur is base or not base.columns or not cur.columns:
+                    continue
+                cols = {c.name.upper() for c in scope.columns
+                        if c.name and c.name != "*" and ((c.table or "").upper() == str(alias).upper()
+                                                         or (not c.table and len(selected) == 1))}
+                if cols and all(base.column(c) for c in cols) and not all(cur.column(c) for c in cols):
+                    source.set("this", exp.to_identifier("LG_" + name))
+                    changed = True
+    except Exception:  # noqa: BLE001
+        return sql
+    return tree.sql(dialect=dialect) if changed else sql
+
+
 def _resolve(node: exp.Table, by_table: dict, by_entity: dict) -> Optional[SchemaProfile]:
     raw = node.name
     key = ((node.db + "_") if node.db else "") + raw

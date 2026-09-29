@@ -21,3 +21,5 @@ Ortalama tahsilat süresi (DSO): Logo'da ödeme kapama (PAYTRANS PAID/CROSSREF) 
 faturanın ne zaman tahsil edildiği bilinmez. Standart muhasebe yaklaşımı: müşteri carilerinin (120%)
 bugünkü net bakiyesi ÷ yıl başından bu yana müşteri satış faturaları × geçen gün. Ödeme süresi (DPO)
 aynası tedarikçi (320%) carileri, SIGN ters, TRCODE 31, 34 (− 36) ile hesaplanır. Sonuç yaklaşıktır.
+«Vade» soran söyleyiş (tahsilat vadesi, ortalama vade, vademiz) bu yöntemi DEĞİL planlanan ödeme vadesini
+(plan tarihi − fatura tarihi, PAYTRANS) ister; o, yaklaşık değil ölçülen değerdir.

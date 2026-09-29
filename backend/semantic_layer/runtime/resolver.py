@@ -292,6 +292,21 @@ def _inflects(token: str, root: str) -> bool:
     return bool(root) and root[-1] in soft and is_inflection_of(token, root[:-1] + soft[root[-1]])
 
 
+
+def _temporal_positions(tokens: list[str], temporal) -> set[int]:
+    """Token positions of the time expressions the resolver read ("bu yil" → {1, 2})."""
+    out: set[int] = set()
+    toks = [fold(x) for x in tokens]
+    for t in temporal or []:
+        words = [w for w in fold(getattr(t, "text", "") or "").split() if w]
+        n = len(words)
+        if not n:
+            continue
+        for i in range(len(toks) - n + 1):
+            if toks[i:i + n] == words:
+                out.update(range(i, i + n))
+    return out
+
 class SemanticResolver:
     def _whole_scope(self, sq: SemanticQuery, cue: str, text: str, today: Optional[date] = None) -> bool:
         """A question that named no period and cannot be answered from one year's copy reads every copy.
@@ -2352,6 +2367,10 @@ class SemanticResolver:
             # faturalar" placed only the CRM's "fiyat listesi", and the shortcut carried a question
             # about invoices to the database that has none, without the invoices ever being counted.
             covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
+            # The words of a time expression are the question's period, not a thing it names: "bu yıl"
+            # voted for the ERP through a consultant report called AHMET_YILLARA_GÖRE_SATIS and carried a
+            # question about CRM royalty contracts to the other database (A019, 2026-09-29).
+            covered |= _temporal_positions(qf.tokens, sq.temporal)
             plain_votes, plain_named = self._source_votes(qf, covered)
             if len(column_homes) == 1 and not elsewhere and not (set(plain_votes) - column_homes):
                 homes = column_homes
@@ -2373,7 +2392,12 @@ class SemanticResolver:
                     # a phrase or a table's own word is a full voice; a lone word is half of one — two
                     # of them weigh what one deliberate phrase does, and one alone decides nothing
                     # against a table the question names in plain words
-                    votes[src] = votes.get(src, 0) + (1 if self._names_a_source(s_) else 0.5)
+                    # A certified phrase for a table itself ("telif sözleşmeleri" → the contracts table) is both
+                    # voices at once — a deliberate phrase *and* the table's own word — and it outweighs a
+                    # plain word whose stem only resembles some report table's name on the other side.
+                    span_len = s_.span[1] - s_.span[0]
+                    weight = 2 if s_.semantic_type == SemanticType.ENTITY and span_len >= 2 else (1 if self._names_a_source(s_) else 0.5)
+                    votes[src] = votes.get(src, 0) + weight
             ranked = sorted(votes.items(), key=lambda kv: -kv[1])
             homes = {ranked[0][0]} if ranked and (len(ranked) == 1 or ranked[0][1] >= 2 * ranked[1][1]) else set()
             if not homes and ranked and votes.get("", 0) == ranked[0][1] and plain.get("", 0) > 0:

@@ -1337,6 +1337,7 @@ class Runtime:
         error: Optional[str] = None
         critic_notes: list[dict] = []
         if self.connector is not None:
+            sql = critic.prefer_base_tables(sql, self.profiles, self.settings.dialect or "tsql")
             for attempt in range(3):
                 try:
                     # Read the query against what the catalog already knows *before* asking the
