@@ -51,7 +51,7 @@ export default function TariffPanel() {
           <h3 className="flex items-center gap-1.5 text-[14px] font-extrabold">
             Matbaa ve malzeme fiyat listesi
             <SqlInfo k={setup.data?.kaynaklar} alan="tariff" label="Matbaa ve malzeme fiyat listesi"
-              help={help('Kitap hesabının kullandığı birim fiyatlar: Logo'da alışı olmayan kâğıdın ton fiyatı, kalıp ve kapak işlemleri, cilt işçiliği, fire payları, dolaylı gider oranı ve yayınevi vadeli iskontoları.', { excel: 'Excel\'in sağ tarafındaki tablolar: M9:Q35 (kâğıt), L42:X76 (matbaa kalemleri), L79:V203 (ebat), S7:T27 (iskonto).' })} />
+              help={help('Kitap hesabının kullandığı birim fiyatlar: Logo\'da alışı olmayan kâğıdın ton fiyatı, kalıp ve kapak işlemleri, cilt işçiliği, fire payları, dolaylı gider oranı ve yayınevi vadeli iskontoları.', { excel: 'Excel\'in sağ tarafındaki tablolar: M9:Q35 (kâğıt), L42:X76 (matbaa kalemleri), L79:V203 (ebat), S7:T27 (iskonto).' })} />
           </h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
             {t.isDefault ? 'Basım Excel\'lerindeki fiyatlar (14.09.2026) kullanılıyor.' : `Son değişiklik ${t.updatedBy ?? '—'} · ${fmtDate(t.updatedAt)}.`} Kâğıt fiyatı Logo alışından gelir; buradaki ton fiyatı yalnız
