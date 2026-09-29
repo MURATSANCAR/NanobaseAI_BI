@@ -37,14 +37,49 @@ F_OZETYAZI = ("Aylık özet: metindeki her sayı özetin dayandığı olgulardan
 F_TAZELIK = ("Tazelik: rakip kayıt sayısı, son oluşturma ve değişiklik günü CRM rakip kitap kayıtlarından; «N gün önce» "
              "bugünden farkı; eşik gün ayardır.")
 
+F_RAKIP_BASARI = ("Yayınevi kitapları: fiyat (liste fiyatı), sayfa, kapak ve dağıtımcı stoğu Başarı Dağıtım kataloğunun son "
+                  "görüntüsünden; yalnız TİMAŞ grubu dışındaki başlıklar.")
+F_ESLEME_BASARI = ("Kategori eşlemesi (Başarı): onaylı kapsam = onaylı eşlemelerin başlık sayısı ÷ Başarı kataloğundaki TİMAŞ "
+                   "grubu dışı başlıklar; satırdaki sayı o Başarı kategorisindeki (üst > alt) başlık sayısı, son görüntüden.")
+F_TAZELIK_BASARI = ("Tazelik (Başarı): katalog tarihi kaynağın kendi tarihidir; başlık sayısı son görüntüdeki TİMAŞ grubu dışı "
+                    "başlıklar; «N gün önce» bugünden farkı; eşik gün ayardır.")
+
+
+def texts(kaynak: str) -> dict[str, str]:
+    """Seçilen rakip kaynağına göre formül metinleri."""
+    if kaynak == "basari":
+        return {"rakip": F_RAKIP_BASARI, "esleme": F_ESLEME_BASARI, "tazelik": F_TAZELIK_BASARI,
+                "matris": F_MATRIS + " Rakip satırları Başarı Dağıtım kataloğundan (liste fiyatı).",
+                "emsal": F_EMSAL.replace("CRM kaydından", "rakipte Başarı kataloğundan, TİMAŞ'ta CRM kaydından")}
+    return {"rakip": F_RAKIP, "esleme": F_ESLEME, "tazelik": F_TAZELIK, "matris": F_MATRIS, "emsal": F_EMSAL}
+
+
+def origin_basari(k: P.Kaynaklar, engine: Any, tenant: str) -> list[str]:
+    """Başarı kataloğunu dolduran asıl okuma (dağıtımcı turunun sorgusu, kaynağın kendi tarihiyle)."""
+    from semantic_bridge import pazar_dagitim as D
+
+    cat = PZ.basari_catalog(engine, tenant)
+    if not cat["tarih"]:
+        return [k.hesap("basari-bekliyor", "Başarı Dağıtım kataloğu henüz okunmadı; dağıtımcı katalogları her sabah okunur.",
+                        dis="Başarı Dağıtım kataloğu")]
+    return [k.sorgu("pazar.dagitim.basari", "Başarı Dağıtım kataloğu", "logo", D.SQL_BASARI, rows=cat["satir"],
+                    ran_at=cat["okundu"], data_end=cat["tarih"],
+                    description="Başarı'nın güncel kataloğu; her gün okunur, yalnız değişen satır saklanır. Rakip olarak "
+                                "son görüntüdeki TİMAŞ grubu dışı başlıklar kullanılır.")]
+
+
 RAPOR_DIS = "Yüklenen sektör raporu (PDF, Excel ya da CSV); rakam raporun ilgili sayfasından"
 
 
 def origin(k: P.Kaynaklar, engine: Any, tenant: str, logo_db: Optional[str], crm_db: Optional[str], *,
-           crm: bool = True, logo: bool = True) -> list[str]:
-    """Anlık görüntüyü dolduran asıl CRM ve Logo sorguları (kayıt kimlikleri)."""
+           crm: bool = True, logo: bool = True, basari: bool = False, crm_rakip: Optional[bool] = None) -> list[str]:
+    """Anlık görüntüyü dolduran asıl CRM ve Logo sorguları (kayıt kimlikleri). `basari`: rakip kaynağı Başarı
+    kataloğudur — CRM rakip kitap ve emsal bağı okumaları yerine Başarı okuması yazılır (TİMAŞ kitapları CRM'den).
+    `crm_rakip`: iki kaynak birlikteyse (eşleme listesi «tümü») CRM rakip okuması da yazılır."""
+    if crm_rakip is None:
+        crm_rakip = not basari
     snap = PZ.meta_get(engine, tenant, "snapshot", {}) or {}
-    ids: list[str] = []
+    ids: list[str] = origin_basari(k, engine, tenant) if basari else []
     ok = snap.get("okuma") or {}
     if crm and ok.get("crmSchema"):
         rows = ok.get("crmRows") or {}
@@ -54,6 +89,8 @@ def origin(k: P.Kaynaklar, engine: Any, tenant: str, logo_db: Optional[str], crm
                 ("ownBooks", "CRM TİMAŞ kitapları", src.own_books_sql(ok["crmSchema"], int(ok.get("blurbChars") or 0))),
                 ("links", "CRM emsal bağları", src.links_sql(ok["crmSchema"])),
                 ("kitaplik", "CRM kitaplık listesi", src.kitaplik_sql(ok["crmSchema"]))):
+            if not crm_rakip and key in ("competitors", "links"):
+                continue
             ids.append(k.sorgu(f"crm.pazar.{key}", title, "crm", sql, database=crm_db, rows=rows.get(key), ran_at=at,
                                description="Haftalık anlık görüntüyü dolduran okuma (tam yenileme)."))
     own = snap.get("ownSales") or {}

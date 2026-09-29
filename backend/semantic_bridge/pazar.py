@@ -2,11 +2,14 @@
 kategori eşlemesi, yayınevi × kategori fiyat/format matrisi, emsal bulma, TİMAŞ iç göstergeleri (Logo), sektör raporu
 yükleme ve rakam çıkarımı, aylık yönetim özeti (DYK'ya).
 
-**Kaynak ve yazma:** CRM'e ve Logo'ya yazılmaz. Rakip verisi CRM'deki «Rakip Kitap» varlığıdır (kaynağı ve tazeliği
-bilinmiyor — her ekranda tazelik şeridi). Dış tarama yok: bot korumalı siteler, çok satan listeleri, sosyal medya ve
-arama eğilimi bu sürümde yok; pazar rakamları yalnız kullanıcının yüklediği rapordan ve insan onayıyla gelir. Pazar
-büyüklüğü kaynağı yoksa «kaynak yok» yazılır, tahmin üretilmez. TİMAŞ'ın Logo satışı sell-in'dir; «pazar payı»
-diye sunulmaz.
+**Kaynak ve yazma:** CRM'e ve Logo'ya yazılmaz. Rakip verisinin iki kaynağı var (ekranda seçilir, tazelik şeridi
+seçilenin tarihini yazar): **Başarı Dağıtım kataloğu** (`pazar_dagitim` tabloları; son görüntüdeki TİMAŞ grubu dışı
+başlıklar, liste fiyatı; Pazar ekranının varsayılanı) ve CRM'deki **«Rakip Kitap»** varlığı (kaynağı ve tazeliği
+bilinmiyor; uçların parametresiz varsayılanı — fiyatlama ve yayın kurulu ekranları böyle çağırır). İki kaynağın ham
+kategorisi aynı eşleme tablosundadır; Başarı anahtarı «basari:» önekiyle ayrılır. Dış tarama yok: bot korumalı
+siteler, çok satan listeleri, sosyal medya ve arama eğilimi bu sürümde yok; pazar rakamları yalnız kullanıcının
+yüklediği rapordan ve insan onayıyla gelir. Pazar büyüklüğü kaynağı yoksa «kaynak yok» yazılır, tahmin üretilmez.
+TİMAŞ'ın Logo satışı sell-in'dir; «pazar payı» diye sunulmaz.
 
 **Zeki AI (K2/K3):** kategori eşlemesi kapalı küme seçimdir (`QueuedLlm.choose`, olasılıkla); emsal sıralaması aday
 başına kapalı küme («çok benzer / kısmen / benzemiyor»), gerekçe kurallıdır; rapordan rakam çıkarımında modelin verdiği
@@ -220,6 +223,12 @@ SELL_IN_NOTE = ("TİMAŞ rakamları Logo'daki faturalı satıştır (kitapçıya
                 "satış ya da pazar payı değildir.")
 SIMILARITY = ["çok benzer", "kısmen benzer", "benzemiyor"]
 BRIEF_SECTIONS = {"firsatlar": "Fırsatlar", "tehditler": "Tehditler", "aksiyonlar": "Öncelikli aksiyonlar"}
+#: Rakip kaynağı: matris, rakip listesi, emsal ve kategori eşlemesi hangi katalogdan okur. Uçların varsayılanı `crm`
+#: (başka ekranlar — fiyatlama, yayın kurulu — parametresiz çağırır); Pazar ekranı `basari`'yı varsayılan gönderir.
+RAKIP_KAYNAK = {"basari": "Başarı Dağıtım kataloğu", "crm": "CRM rakip kayıtları"}
+#: Başarı ham kategorisinin eşleme anahtarı öneki: `semantic_pazar_category_map.kategori_ham` = «basari:Üst>Alt».
+#: CRM ham kategorileri öneksizdir; iki kaynağın eşlemesi aynı tabloda, birbirini ezmeden durur.
+BASARI_PREFIX = "basari:"
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -310,6 +319,7 @@ def settings() -> dict[str, Any]:
         "extractChars": max(2000, int(_f("PAZAR_EXTRACT_PAGE_CHARS", 12000))),
         "fileMaxMb": max(1, int(_f("PAZAR_FILE_MAX_MB", 50))),
         "briefMaxSources": max(5, int(_f("PAZAR_BRIEF_MAX_SOURCES", 60))),
+        "basariStaleDays": max(1, int(_f("PAZAR_BASARI_STALE_DAYS", 7))),
         "twoEyes": (_conf("PAZAR_BRIEF_TWO_EYES", "1") or "1").strip().lower() in ("1", "true", "evet", "on"),
         "recipients": [x.strip() for x in re.split(r"[,;\s]+", _conf("PAZAR_ALERT_RECIPIENTS", "") or "") if "@" in x],
     }
@@ -543,6 +553,16 @@ def apply_snapshot(engine: sa.engine.Engine, tenant: str, *, competitors: list[d
                 reset += 1
             c.execute(CATEGORY_MAP.update().where(CATEGORY_MAP.c.tenant_id == tenant, CATEGORY_MAP.c.kategori_ham == ham).values(**vals))
         for ham in set(existing) - set(raw_counts):
+            if ham.startswith(BASARI_PREFIX):
+                # Başarı eşlemesinin sayısı Başarı kataloğundan (`sync_basari_categories`); yalnız kategori listesi
+                # değiştiyse karşılığı kalmayan öneri/onay «yeni»ye döner.
+                r = existing[ham]
+                if (r.kategori_id and r.kategori_id not in cat_ids) or (r.oneri_kategori_id and r.oneri_kategori_id not in cat_ids):
+                    c.execute(CATEGORY_MAP.update().where(CATEGORY_MAP.c.tenant_id == tenant, CATEGORY_MAP.c.kategori_ham == ham)
+                              .values(kategori_id=None, oneri_kategori_id=None, durum="yeni", olasilik=None, marj=None,
+                                      not_="Kategori listesi değişti; önceki karşılık listede yok."))
+                    reset += 1
+                continue
             c.execute(CATEGORY_MAP.update().where(CATEGORY_MAP.c.tenant_id == tenant, CATEGORY_MAP.c.kategori_ham == ham)
                       .values(kayit_sayisi=0))
         approved = {r.kategori_ham: r.kategori_id for r in c.execute(
@@ -582,10 +602,155 @@ def apply_snapshot(engine: sa.engine.Engine, tenant: str, *, competitors: list[d
     return info
 
 
+# ================================================================================ Başarı Dağıtım kataloğu (ikinci rakip kaynağı)
+#
+# Başarı'nın güncel kataloğu `pazar_dagitim` tablolarındadır (her gün okunur, yalnız değişen satır saklanır). Rakip
+# olarak yalnız son görüntüde bulunan ve TİMAŞ grubu dışındaki başlıklar alınır (`timas` bayrağı Logo barkod oranıyla,
+# `pazar_dagitim.mark_timas`). Başarı'nın «Üst>Alt» kategorisi CRM ham kategorisiyle aynı eşleme hattından geçer
+# (ad eşleşmesi → Zeki AI önerisi → insan kararı); anahtar «basari:» önekiyle ayrılır. Portal Başarı tablolarına yazmaz.
+
+
+def check_kaynak(kaynak: Optional[str]) -> str:
+    k = (kaynak or "crm").strip().lower()
+    if k not in RAKIP_KAYNAK:
+        raise PazarError("Rakip kaynağı «basari» ya da «crm» olmalı.")
+    return k
+
+
+def map_key(kaynak: str, ham: str) -> str:
+    """Eşleme tablosundaki anahtar (kolon 300 karakter)."""
+    return (BASARI_PREFIX + ham)[:300] if kaynak == "basari" else ham
+
+
+def split_key(key: str) -> tuple[str, str]:
+    """Eşleme anahtarı → (kaynak, ekranda görünen ham kategori)."""
+    return ("basari", key[len(BASARI_PREFIX):]) if key.startswith(BASARI_PREFIX) else ("crm", key)
+
+
+def _key_cond(kaynak: str) -> Any:
+    like = CATEGORY_MAP.c.kategori_ham.like(BASARI_PREFIX + "%")
+    return like if kaynak == "basari" else sa.not_(like)
+
+
+def _dagitim(engine: sa.engine.Engine) -> Any:
+    from semantic_bridge import pazar_dagitim as D
+
+    D.ensure(engine)
+    return D
+
+
+def _basari_cond(D: Any, tenant: str, tarih: date) -> list[Any]:
+    T = D.TITLES.c
+    return [T.tenant_id == tenant, T.kaynak == "basari", T.timas.is_(False), T.son_gorulme == tarih]
+
+
+def basari_catalog(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+    """Başarı kataloğunun portaldaki son görüntüsü: kaynağın kendi tarihi, portalın okuduğu an, ilk görüntü, görüntü
+    sayısı ve rakip olarak kullanılan (TİMAŞ grubu dışı) başlık sayısı. Okunmadıysa `tarih` None."""
+    D = _dagitim(engine)
+    S = D.SNAPS.c
+    with engine.connect() as c:
+        last = c.execute(sa.select(S.tarih, S.okundu_at, S.satir).where(S.tenant_id == tenant, S.kaynak == "basari")
+                         .order_by(S.tarih.desc()).limit(1)).first()
+        first, n_snap = c.execute(sa.select(sa.func.min(S.tarih), sa.func.count()).where(
+            S.tenant_id == tenant, S.kaynak == "basari")).first()
+        n = c.execute(sa.select(sa.func.count()).select_from(D.TITLES).where(
+            *_basari_cond(D, tenant, last.tarih))).scalar() if last else 0
+    return {"kaynak": "basari", "ad": RAKIP_KAYNAK["basari"], "tarih": last.tarih.isoformat() if last else None,
+            "okundu": iso(last.okundu_at) if last else None, "satir": int(last.satir) if last else None,
+            "ilk": first.isoformat() if first else None, "goruntu": int(n_snap or 0), "rakip": int(n or 0)}
+
+
+def rakip_sources(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
+    """Ekrandaki kaynak seçicinin satırları: Başarı (kataloğun kendi tarihi) ve CRM (portalın okuduğu gün)."""
+    b = basari_catalog(engine, tenant)
+    snap = meta_get(engine, tenant, "snapshot", {}) or {}
+    with engine.connect() as c:
+        n = c.execute(sa.select(sa.func.count()).select_from(COMPETITORS).where(COMPETITORS.c.tenant_id == tenant)).scalar() or 0
+    return [{"kaynak": "basari", "ad": RAKIP_KAYNAK["basari"], "tarih": b["tarih"], "kayit": b["rakip"], "hazir": bool(b["tarih"])},
+            {"kaynak": "crm", "ad": RAKIP_KAYNAK["crm"], "tarih": (snap.get("at") or "")[:10] or None, "kayit": int(n),
+             "hazir": bool(n)}]
+
+
+def sync_basari_categories(engine: sa.engine.Engine, tenant: str, *, force: bool = False) -> dict[str, Any]:
+    """Başarı'nın ham kategorilerini (TİMAŞ dışı, son görüntü) eşleme tablosuna yazar: yeni kategori «yeni» durumla
+    girer, var olanın kayıt sayısı yenilenir, katalogdan düşenin sayısı 0 olur (kararı silinmez). Aynı görüntü ve aynı
+    dağıtımcı turu için ikinci kez çalışmaz (`force` hariç). Onaylı eşleme korunur."""
+    D = _dagitim(engine)
+    cat = basari_catalog(engine, tenant)
+    if not cat["tarih"]:
+        return {"skipped": "Başarı Dağıtım kataloğu henüz okunmadı."}
+    run = D.meta_get(engine, tenant, "last_run", {}) or {}
+    sig = f"{cat['tarih']}|{run.get('at') or ''}"
+    prev = meta_get(engine, tenant, "basari_map", {}) or {}
+    if not force and prev.get("imza") == sig:
+        return prev
+    T = D.TITLES.c
+    counts: Counter = Counter()
+    with engine.connect() as c:
+        for k, n in c.execute(sa.select(T.kategori, sa.func.count()).where(
+                *_basari_cond(D, tenant, date.fromisoformat(cat["tarih"])), T.kategori.isnot(None)).group_by(T.kategori)).all():
+            if k and str(k).strip():
+                counts[map_key("basari", str(k))] += int(n)
+    M = CATEGORY_MAP.c
+    with engine.begin() as c:
+        existing = {r.kategori_ham: int(r.kayit_sayisi or 0) for r in c.execute(
+            sa.select(M.kategori_ham, M.kayit_sayisi).where(M.tenant_id == tenant, _key_cond("basari"))).all()}
+        new = [{"tenant_id": tenant, "kategori_ham": k, "kayit_sayisi": n, "durum": "yeni"}
+               for k, n in counts.items() if k not in existing]
+        for i in range(0, len(new), 1000):
+            c.execute(CATEGORY_MAP.insert(), new[i:i + 1000])
+        for k, n in counts.items():
+            if k in existing and existing[k] != n:
+                c.execute(CATEGORY_MAP.update().where(M.tenant_id == tenant, M.kategori_ham == k).values(kayit_sayisi=n))
+        for k in set(existing) - set(counts):
+            if existing[k]:
+                c.execute(CATEGORY_MAP.update().where(M.tenant_id == tenant, M.kategori_ham == k).values(kayit_sayisi=0))
+    info = {"imza": sig, "tarih": cat["tarih"], "kategori": len(counts), "kayit": sum(counts.values()), "yeni": len(new),
+            "at": iso(now())}
+    meta_set(engine, tenant, "basari_map", info)
+    return info
+
+
+def _approved_maps(c: Any, tenant: str) -> dict[str, tuple[Optional[str], Optional[str], str]]:
+    """Eşleme anahtarı → (onaylı kategori, öneri, durum)."""
+    M = CATEGORY_MAP.c
+    return {r.kategori_ham: (r.kategori_id, r.oneri_kategori_id, r.durum) for r in c.execute(
+        sa.select(M.kategori_ham, M.kategori_id, M.oneri_kategori_id, M.durum).where(M.tenant_id == tenant)).all()}
+
+
+def _basari_rows(engine: sa.engine.Engine, tenant: str, *cond: Any) -> tuple[list[Any], dict[str, Any]]:
+    """Başarı rakip başlıkları (son görüntü, TİMAŞ dışı) ve katalog bilgisi. Katalog okunmadıysa 409."""
+    cat = basari_catalog(engine, tenant)
+    if not cat["tarih"]:
+        raise PazarError("Başarı Dağıtım kataloğu henüz okunmadı; «CRM rakip kayıtları» kaynağını seçin ya da "
+                         "dağıtımcı kataloglarının okunmasını bekleyin.", 409)
+    D = _dagitim(engine)
+    T = D.TITLES.c
+    with engine.connect() as c:
+        rows = c.execute(sa.select(T.barkod, T.ad, T.yazar, T.yayinevi, T.kategori, T.sayfa, T.kapak, T.kagit, T.basim_yili,
+                                   T.stok, T.fiyat, T.durum, T.baski_no, T.ilk_gorulme)
+                         .where(*_basari_cond(D, tenant, date.fromisoformat(cat["tarih"])), *cond)
+                         .order_by(T.ilk_gorulme.desc(), T.ad)).all()
+    return rows, cat
+
+
+def _basari_new_since(cat: dict[str, Any], new_days: int) -> Optional[str]:
+    """Başarı'da «son N günde eklenen» = kataloğa ilk görüntüden SONRA giren başlık (ilk görüntüdekilerin giriş günü
+    bilinmez). Tek görüntü varsa bilinmez: None (ekranda «—»)."""
+    if cat["goruntu"] < 2 or not cat["ilk"]:
+        return None
+    since = today() - timedelta(days=new_days)
+    first_next = date.fromisoformat(cat["ilk"]) + timedelta(days=1)
+    return max(since, first_next).isoformat()
+
+
 # ================================================================================ tazelik
 
 
-def freshness(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+def freshness(engine: sa.engine.Engine, tenant: str, kaynak: str = "crm") -> dict[str, Any]:
+    if check_kaynak(kaynak) == "basari":
+        return basari_freshness(engine, tenant)
     st = settings()
     C = COMPETITORS.c
     with engine.connect() as c:
@@ -603,7 +768,24 @@ def freshness(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
             "crmLinks": nlinks, "snapshotAt": snap.get("at"), "ownSalesAt": snap.get("ownSalesAt"),
             "dataEnd": (snap.get("ownSales") or {}).get("dataEnd"),
             "note": "Rakip kitap verisinin kaynağı ve toplanma yöntemi CRM'de kayıtlı değil; «satış adedi» alanlarının "
-                    "anlamı bilinmediği için hiçbir hesapta kullanılmaz."}
+                    "anlamı bilinmediği için hiçbir hesapta kullanılmaz.",
+            "kaynak": "crm", "kaynakAd": RAKIP_KAYNAK["crm"]}
+
+
+def basari_freshness(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+    """Başarı kataloğunun tazeliği: kataloğun kendi tarihi (kaynak kendi üstüne yazar, geçmiş tutmaz), portalın okuduğu
+    an, rakip olarak kullanılan başlık sayısı. Eşik `PAZAR_BASARI_STALE_DAYS` (katalog her gün okunur)."""
+    st = settings()
+    b = basari_catalog(engine, tenant)
+    d = _day(b["tarih"])
+    age = (today() - d).days if d else None
+    return {"kaynak": "basari", "kaynakAd": RAKIP_KAYNAK["basari"], "records": b["rakip"], "katalogTarihi": b["tarih"],
+            "firstCreated": b["ilk"], "lastCreated": None, "lastModified": None, "lastChange": b["tarih"],
+            "ageDays": age, "staleDays": st["basariStaleDays"], "stale": age is not None and age > st["basariStaleDays"],
+            "byYear": [], "crmLinks": 0, "snapshotAt": b["okundu"], "goruntu": b["goruntu"], "katalogSatir": b["satir"],
+            "ownSalesAt": None, "dataEnd": None,
+            "note": "Başarı Dağıtım kataloğu her gün okunur; rakip olarak TİMAŞ grubu dışındaki başlıklar kullanılır. "
+                    "Fiyat kataloğun liste fiyatıdır; stok dağıtımcı deposudur, okura satış değildir."}
 
 
 # ================================================================================ kategori eşlemesi
@@ -611,7 +793,9 @@ def freshness(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
 
 def _map_out(r: Any, idx: CatIndex, samples: Optional[list[str]] = None) -> dict[str, Any]:
     m = dict(r._mapping) if hasattr(r, "_mapping") else dict(r)
-    return {"ham": m["kategori_ham"], "kayit": m["kayit_sayisi"], "durum": m["durum"], "durumAd": MAP_STATUS.get(m["durum"]),
+    kaynak, ad = split_key(m["kategori_ham"])
+    return {"ham": m["kategori_ham"], "ad": ad, "kaynak": kaynak, "kaynakAd": RAKIP_KAYNAK[kaynak],
+            "kayit": m["kayit_sayisi"], "durum": m["durum"], "durumAd": MAP_STATUS.get(m["durum"]),
             "oneriId": m["oneri_kategori_id"], "oneriYol": idx.path(m["oneri_kategori_id"]),
             "kategoriId": m["kategori_id"], "kategoriYol": idx.path(m["kategori_id"]), "olasilik": m["olasilik"],
             "marj": m["marj"], "yontem": m["yontem"], "oneren": m["oneren"], "onaylayan": m["onaylayan"],
@@ -619,10 +803,32 @@ def _map_out(r: Any, idx: CatIndex, samples: Optional[list[str]] = None) -> dict
             **({"ornekler": samples} if samples is not None else {})}
 
 
+def _basari_samples(engine: sa.engine.Engine, tenant: str, keys: list[str], n: int = 3) -> dict[str, list[str]]:
+    """Başarı ham kategorisindeki örnek başlıklar (son görüntü, TİMAŞ dışı)."""
+    out: dict[str, list[str]] = {}
+    if not keys:
+        return out
+    cat = basari_catalog(engine, tenant)
+    if not cat["tarih"]:
+        return out
+    D = _dagitim(engine)
+    T = D.TITLES.c
+    cond = _basari_cond(D, tenant, date.fromisoformat(cat["tarih"]))
+    with engine.connect() as c:
+        for k in keys:
+            out[k] = [r[0] for r in c.execute(sa.select(T.ad).where(*cond, T.kategori == split_key(k)[1], T.ad.isnot(None))
+                                              .order_by(T.ad).limit(n)).all()]
+    return out
+
+
 def category_map(engine: sa.engine.Engine, tenant: str, *, durum: str = "", q: str = "", page: int = 0,
-                 page_size: int = 50) -> dict[str, Any]:
+                 page_size: int = 50, kaynak: str = "") -> dict[str, Any]:
+    """Eşleme listesi. `kaynak` boşsa iki kaynak birlikte; «crm» ya da «basari» ise sayaçlar ve kapsam da o kaynağın."""
     M = CATEGORY_MAP.c
-    cond = [M.tenant_id == tenant, M.kayit_sayisi > 0]
+    base = [M.tenant_id == tenant, M.kayit_sayisi > 0]
+    if kaynak:
+        base.append(_key_cond(check_kaynak(kaynak)))
+    cond = list(base)
     if durum:
         cond.append(M.durum.in_([d for d in durum.split(",") if d in MAP_STATUS]))
     idx = categories(engine, tenant)
@@ -630,32 +836,35 @@ def category_map(engine: sa.engine.Engine, tenant: str, *, durum: str = "", q: s
         rows = c.execute(sa.select(CATEGORY_MAP).where(*cond).order_by(M.kayit_sayisi.desc(), M.kategori_ham)).all()
         if q:
             f = fold(q)
-            rows = [r for r in rows if f in fold(r.kategori_ham)]
-        counts = dict(c.execute(sa.select(M.durum, sa.func.count()).where(M.tenant_id == tenant, M.kayit_sayisi > 0)
-                                .group_by(M.durum)).all())
-        recs = dict(c.execute(sa.select(M.durum, sa.func.sum(M.kayit_sayisi)).where(M.tenant_id == tenant, M.kayit_sayisi > 0)
-                              .group_by(M.durum)).all())
+            rows = [r for r in rows if f in fold(split_key(r.kategori_ham)[1])]
+        counts = dict(c.execute(sa.select(M.durum, sa.func.count()).where(*base).group_by(M.durum)).all())
+        recs = dict(c.execute(sa.select(M.durum, sa.func.sum(M.kayit_sayisi)).where(*base).group_by(M.durum)).all())
         chunk = rows[page * page_size:(page + 1) * page_size]
         samples: dict[str, list[str]] = defaultdict(list)
-        if chunk:
+        crm_keys = [x.kategori_ham for x in chunk if not x.kategori_ham.startswith(BASARI_PREFIX)]
+        if crm_keys:
             for r in c.execute(sa.select(COMPETITORS.c.kategori_ham, COMPETITORS.c.ad).where(
-                    COMPETITORS.c.tenant_id == tenant, COMPETITORS.c.kategori_ham.in_([x.kategori_ham for x in chunk]))
+                    COMPETITORS.c.tenant_id == tenant, COMPETITORS.c.kategori_ham.in_(crm_keys))
                     .order_by(COMPETITORS.c.crm_created.desc())).all():
                 if len(samples[r.kategori_ham]) < 3:
                     samples[r.kategori_ham].append(r.ad)
+    samples.update(_basari_samples(engine, tenant, [x.kategori_ham for x in chunk if x.kategori_ham.startswith(BASARI_PREFIX)]))
     total_recs = sum(float(v or 0) for v in recs.values())
     return {"items": [_map_out(r, idx, samples.get(r.kategori_ham, [])) for r in chunk], "total": len(rows), "page": page,
             "pageSize": page_size, "counts": {k: int(v) for k, v in counts.items()},
             "coverage": {"records": int(total_recs), "approved": int(recs.get("onaylandi") or 0),
                          "noMatch": int(recs.get("reddedildi") or 0)},
+            "kaynak": kaynak or None, "kaynakAd": RAKIP_KAYNAK.get(kaynak) if kaynak else None,
             "categories": idx.items(), "statusLabels": MAP_STATUS}
 
 
-def to_suggest(engine: sa.engine.Engine, tenant: str, hams: Optional[list[str]] = None) -> list[str]:
-    """Öneri sırası: öneri bekleyen ham kategoriler, kayıt sayısı büyükten küçüğe."""
+def to_suggest(engine: sa.engine.Engine, tenant: str, hams: Optional[list[str]] = None, kaynak: str = "") -> list[str]:
+    """Öneri sırası: öneri bekleyen ham kategoriler, kayıt sayısı büyükten küçüğe (`kaynak` verilirse yalnız o kaynak)."""
     M = CATEGORY_MAP.c
     cond = [M.tenant_id == tenant, M.kayit_sayisi > 0]
     cond.append(M.kategori_ham.in_(hams) if hams else M.durum == "yeni")
+    if kaynak:
+        cond.append(_key_cond(check_kaynak(kaynak)))
     with engine.connect() as c:
         return [r[0] for r in c.execute(sa.select(M.kategori_ham).where(*cond).order_by(M.kayit_sayisi.desc())).all()]
 
@@ -681,8 +890,9 @@ def suggest_mapping(engine: sa.engine.Engine, tenant: str, hams: list[str], choo
         if _t.monotonic() - t0 > budget_sec:
             stopped = "süre bütçesi doldu"
             break
-        segs = [s for s in re.split(r"\s*(?:>|/|;|,|\|)\s*", ham) if s.strip()]
-        hit = by_name.get(fold(ham)) or (by_name.get(fold(segs[-1])) if segs else None)
+        kaynak, raw = split_key(ham)
+        segs = [s for s in re.split(r"\s*(?:>|/|;|,|\|)\s*", raw) if s.strip()]
+        hit = by_name.get(fold(raw)) or (by_name.get(fold(segs[-1])) if segs else None)
         vals: dict[str, Any] = {"oneren": actor, "onerildi_at": now()}
         if hit and len(hit) == 1:
             vals.update(oneri_kategori_id=hit[0], olasilik=1.0, marj=1.0, yontem="ad", durum="oneri",
@@ -691,12 +901,17 @@ def suggest_mapping(engine: sa.engine.Engine, tenant: str, hams: list[str], choo
             stopped = "Zeki AI bu kurulumda tanımlı değil; yalnız ad eşleşmeleri önerildi."
             continue
         else:
-            with engine.connect() as c:
-                ex = [r[0] for r in c.execute(sa.select(COMPETITORS.c.ad).where(
-                    COMPETITORS.c.tenant_id == tenant, COMPETITORS.c.kategori_ham == ham).limit(3)).all()]
-            prompt = ("Bir rakip yayınevinin kitap kaydındaki kategori adı aşağıda. TİMAŞ'ın kategori listesinde "
-                      "hangisine karşılık gelir? Tam karşılık yoksa en yakın geniş kategoriyi seç.\n\n"
-                      f"Rakip kategori: «{ham}»\n"
+            if kaynak == "basari":
+                ex = _basari_samples(engine, tenant, [ham]).get(ham, [])
+                head = ("Bir kitap dağıtımcısının kataloğundaki kategori (üst kategori > alt kategori) aşağıda. TİMAŞ'ın "
+                        "kategori listesinde hangisine karşılık gelir? Tam karşılık yoksa en yakın geniş kategoriyi seç.\n\n")
+            else:
+                with engine.connect() as c:
+                    ex = [r[0] for r in c.execute(sa.select(COMPETITORS.c.ad).where(
+                        COMPETITORS.c.tenant_id == tenant, COMPETITORS.c.kategori_ham == ham).limit(3)).all()]
+                head = ("Bir rakip yayınevinin kitap kaydındaki kategori adı aşağıda. TİMAŞ'ın kategori listesinde "
+                        "hangisine karşılık gelir? Tam karşılık yoksa en yakın geniş kategoriyi seç.\n\n")
+            prompt = (head + f"Rakip kategori: «{raw}»\n"
                       + (("Bu kategorideki örnek kitaplar: " + "; ".join(f"«{x}»" for x in ex) + "\n") if ex else ""))
             try:
                 r = choose(prompt, options)
@@ -760,13 +975,16 @@ def decide_mapping(engine: sa.engine.Engine, tenant: str, actor: str, items: lis
 # ================================================================================ matris ve rakip listesi
 
 
-def _effective_cat(row: Any, maps: dict[str, Any], include_suggested: bool) -> Optional[str]:
-    if row.kategori_id:
-        return row.kategori_id
-    if include_suggested and row.kategori_ham:
-        m = maps.get(row.kategori_ham)
-        if m is not None and m[1] == "oneri":
-            return m[0]
+def _effective_cat(kid: Optional[str], key: Optional[str], maps: dict[str, Any], include_suggested: bool) -> Optional[str]:
+    """Rakip kaydının TİMAŞ kategorisi: onaylı eşleme; istenirse onay bekleyen öneri. `maps`: anahtar → (onaylı, öneri,
+    durum) (`_approved_maps`)."""
+    m = maps.get(key or "") if key else None
+    if kid:
+        return kid
+    if m is not None and m[2] == "onaylandi" and m[0]:
+        return m[0]
+    if include_suggested and m is not None and m[2] == "oneri":
+        return m[1]
     return None
 
 
@@ -782,24 +1000,37 @@ def _stats(books: list[dict[str, Any]], new_since: Optional[str]) -> dict[str, A
             "cilt": [{"ad": k, "kitap": v} for k, v in cilt.most_common(3)]}
 
 
+def _rakip_matrix_rows(engine: sa.engine.Engine, tenant: str, kaynak: str) -> tuple[list[tuple], Optional[dict[str, Any]]]:
+    """Matrisin rakip satırları: (yayınevi, fiyat, sayfa, cilt, eklenme günü, onaylı kategori, eşleme anahtarı)."""
+    if kaynak == "basari":
+        rows, cat = _basari_rows(engine, tenant)
+        return [(r.yayinevi, r.fiyat, r.sayfa, r.kapak, r.ilk_gorulme.isoformat() if r.ilk_gorulme else "", None,
+                 map_key("basari", r.kategori) if r.kategori else None) for r in rows], cat
+    Cc = COMPETITORS.c
+    with engine.connect() as c:
+        comp = c.execute(sa.select(Cc.yayinevi, Cc.liste_fiyat, Cc.sayfa, Cc.cilt, Cc.crm_created, Cc.kategori_id,
+                                   Cc.kategori_ham).where(Cc.tenant_id == tenant)).all()
+    return [(r.yayinevi, r.liste_fiyat, r.sayfa, r.cilt, (r.crm_created or "")[:10], r.kategori_id, r.kategori_ham)
+            for r in comp], None
+
+
 def matrix(engine: sa.engine.Engine, tenant: str, *, kategori: str = "", include_suggested: bool = False,
            sayfa_min: Optional[int] = None, sayfa_max: Optional[int] = None, yayinevi_q: str = "",
-           watch_only: bool = False) -> dict[str, Any]:
+           watch_only: bool = False, kaynak: str = "crm") -> dict[str, Any]:
     """Yayınevi × (seçili kategori) fiyat, sayfa ve format özeti; TİMAŞ satırları (marka ve toplam) aynı ölçülerle.
-    Medyan ve çeyrekler SQL Server `PERCENTILE_CONT` ile aynı yöntemle; fiyatı 0/boş kayıt fiyat ölçüsüne girmez."""
+    Medyan ve çeyrekler SQL Server `PERCENTILE_CONT` ile aynı yöntemle; fiyatı 0/boş kayıt fiyat ölçüsüne girmez.
+    `kaynak`: «crm» (CRM rakip kayıtları) ya da «basari» (Başarı kataloğu, TİMAŞ grubu dışı başlıklar, liste fiyatı)."""
+    kaynak = check_kaynak(kaynak)
     st = settings()
     idx = categories(engine, tenant)
     allowed = idx.subtree(kategori) if kategori else None
     if kategori and kategori not in idx.nodes:
         raise PazarError("Kategori listede yok.", 404)
-    new_since = (today() - timedelta(days=st["newDays"])).isoformat()
-    Cc = COMPETITORS.c
+    comp, cat = _rakip_matrix_rows(engine, tenant, kaynak)
+    own_since = (today() - timedelta(days=st["newDays"])).isoformat()
+    new_since = _basari_new_since(cat, st["newDays"]) if cat else own_since
     with engine.connect() as c:
-        maps = {r.kategori_ham: (r.oneri_kategori_id, r.durum) for r in c.execute(
-            sa.select(CATEGORY_MAP.c.kategori_ham, CATEGORY_MAP.c.oneri_kategori_id, CATEGORY_MAP.c.durum).where(
-                CATEGORY_MAP.c.tenant_id == tenant)).all()}
-        comp = c.execute(sa.select(Cc.yayinevi, Cc.liste_fiyat, Cc.sayfa, Cc.cilt, Cc.crm_created, Cc.kategori_id,
-                                   Cc.kategori_ham).where(Cc.tenant_id == tenant)).all()
+        maps = _approved_maps(c, tenant)
         own = c.execute(sa.select(OWN_BOOKS.c.marka, OWN_BOOKS.c.fiyat, OWN_BOOKS.c.sayfa, OWN_BOOKS.c.cilt,
                                   OWN_BOOKS.c.ilk_yayin, OWN_BOOKS.c.kategori_id).where(OWN_BOOKS.c.tenant_id == tenant)).all()
         watch = c.execute(sa.select(WATCHLIST).where(WATCHLIST.c.tenant_id == tenant)).all()
@@ -814,18 +1045,17 @@ def matrix(engine: sa.engine.Engine, tenant: str, *, kategori: str = "", include
 
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     unmapped = 0
-    for r in comp:
-        cat = _effective_cat(r, maps, include_suggested)
+    for yayinevi, fiyat, sayfa, cilt, created, kid, key in comp:
         if allowed is not None:
-            if not cat:
+            cat_id = _effective_cat(kid, key, maps, include_suggested)
+            if not cat_id:
                 unmapped += 1
                 continue
-            if cat not in allowed:
+            if cat_id not in allowed:
                 continue
-        if not page_ok(r.sayfa):
+        if not page_ok(sayfa):
             continue
-        groups[r.yayinevi or "(yayınevi yok)"].append({"fiyat": r.liste_fiyat, "sayfa": r.sayfa, "cilt": r.cilt,
-                                                         "created": (r.crm_created or "")[:10]})
+        groups[yayinevi or "(yayınevi yok)"].append({"fiyat": fiyat, "sayfa": sayfa, "cilt": cilt, "created": created})
     rows = []
     f = fold(yayinevi_q)
     for name, books in groups.items():
@@ -845,19 +1075,25 @@ def matrix(engine: sa.engine.Engine, tenant: str, *, kategori: str = "", include
         b = {"fiyat": r.fiyat, "sayfa": r.sayfa, "cilt": r.cilt, "created": r.ilk_yayin or ""}
         own_groups[r.marka or "(marka yok)"].append(b)
     all_own = [b for v in own_groups.values() for b in v]
-    own_rows = [{"yayinevi": "TİMAŞ (tümü)", "own": True, "total": True, "watched": False, **_stats(all_own, new_since)}]
-    own_rows += sorted(({"yayinevi": k, "own": True, "watched": False, **_stats(v, new_since)} for k, v in own_groups.items()),
+    own_rows = [{"yayinevi": "TİMAŞ (tümü)", "own": True, "total": True, "watched": False, **_stats(all_own, own_since)}]
+    own_rows += sorted(({"yayinevi": k, "own": True, "watched": False, **_stats(v, own_since)} for k, v in own_groups.items()),
                        key=lambda x: -x["kitap"])
     all_comp = [b for v in groups.values() for b in v]
     comp_prices = sorted(b["fiyat"] for b in all_comp if b.get("fiyat") and b["fiyat"] > 0)
     own_med = own_rows[0]["medyan"]
     position = (sum(1 for p in comp_prices if p < own_med) / len(comp_prices)) if (own_med is not None and comp_prices) else None
-    return {"kategori": {"id": kategori, "yol": idx.path(kategori)} if kategori else None,
+    rakip_fiyat = ("rakip fiyatı Başarı Dağıtım kataloğundaki liste fiyatıdır (TİMAŞ grubu dışındaki başlıklar)"
+                   if kaynak == "basari" else "rakip fiyatı CRM «Rakip Kitap» kaydındaki liste fiyatıdır")
+    return {"kaynak": kaynak, "kaynakAd": RAKIP_KAYNAK[kaynak], "katalogTarihi": cat["tarih"] if cat else None,
+            "kategori": {"id": kategori, "yol": idx.path(kategori)} if kategori else None,
             "includeSuggested": include_suggested, "sayfa": {"min": sayfa_min, "max": sayfa_max},
             "rakipOzet": {"yayinevi": len(groups), **_stats(all_comp, new_since)}, "timas": own_rows, "rows": rows,
             "timasKonum": position, "eslenmemis": unmapped if allowed is not None else None,
             "newDays": st["newDays"],
-            "note": "TİMAŞ fiyatı CRM'deki KDV dahil fiyattır; rakip fiyatı CRM «Rakip Kitap» kaydındaki liste fiyatıdır. "
+            "yeniNot": ("Başarı'da «son günlerde eklenen», kataloğa portalın ilk görüntüsünden sonra giren başlıktır; "
+                        + ("tek görüntü olduğu için henüz bilinmiyor." if new_since is None else f"{new_since} ve sonrası."))
+            if kaynak == "basari" else None,
+            "note": f"TİMAŞ fiyatı CRM'deki KDV dahil fiyattır; {rakip_fiyat}. "
                     "Kategori süzgecinde yalnız eşlemesi onaylı rakip kayıtlar sayılır"
                     + (" (önerilenler de dahil edildi)." if include_suggested else ".")}
 
@@ -878,9 +1114,46 @@ def matrix_csv(m: dict[str, Any]) -> bytes:
     return ("﻿" + buf.getvalue()).encode("utf-8")
 
 
+def _basari_competitors(engine: sa.engine.Engine, tenant: str, idx: CatIndex, *, yayinevi: str, kategori: str, q: str,
+                        durum: str, page: int, page_size: int) -> dict[str, Any]:
+    D = _dagitim(engine)
+    T = D.TITLES.c
+    rows, cat = _basari_rows(engine, tenant, *([T.yayinevi == yayinevi] if yayinevi else []))
+    with engine.connect() as c:
+        maps = _approved_maps(c, tenant)
+
+    def kid(r: Any) -> Optional[str]:
+        m = maps.get(map_key("basari", r.kategori)) if r.kategori else None
+        return m[0] if m is not None and m[2] == "onaylandi" else None
+
+    if kategori:
+        allowed = idx.subtree(kategori)
+        rows = [r for r in rows if kid(r) in allowed]
+    if durum == "eslenmemis":
+        rows = [r for r in rows if not kid(r)]
+    if q:
+        f = fold(q)
+        rows = [r for r in rows if f in fold(r.ad) or f in fold(r.yazar) or f in r.barkod]
+    chunk = rows[page * page_size:(page + 1) * page_size]
+    items = []
+    for r in chunk:
+        k = kid(r)
+        items.append({"crmId": r.barkod, "kaynak": "basari", "ad": r.ad, "yayinevi": r.yayinevi, "yazarlar": r.yazar,
+                      "isbn": r.barkod, "fiyat": r.fiyat, "sayfa": r.sayfa, "cilt": r.kapak, "kagit": r.kagit,
+                      "baski": r.baski_no, "dil": None, "kategoriHam": r.kategori, "kategoriId": k, "kategoriYol": idx.path(k),
+                      "satisDurumu": r.durum, "satisAdediHam": None, "satisAdedi2Ham": None,
+                      "olusturma": r.ilk_gorulme.isoformat() if r.ilk_gorulme else None, "degisme": None,
+                      "emsalBagi": False, "stok": r.stok, "basimYili": r.basim_yili})
+    return {"items": items, "total": len(rows), "page": page, "pageSize": page_size, "kaynak": "basari",
+            "kaynakAd": RAKIP_KAYNAK["basari"], "katalogTarihi": cat["tarih"]}
+
+
 def competitors(engine: sa.engine.Engine, tenant: str, *, yayinevi: str = "", kategori: str = "", q: str = "",
-                durum: str = "", page: int = 0, page_size: int = 50) -> dict[str, Any]:
+                durum: str = "", page: int = 0, page_size: int = 50, kaynak: str = "crm") -> dict[str, Any]:
     idx = categories(engine, tenant)
+    if check_kaynak(kaynak) == "basari":
+        return _basari_competitors(engine, tenant, idx, yayinevi=yayinevi, kategori=kategori, q=q, durum=durum, page=page,
+                                   page_size=page_size)
     Cc = COMPETITORS.c
     cond = [Cc.tenant_id == tenant]
     if yayinevi:
@@ -904,10 +1177,20 @@ def competitors(engine: sa.engine.Engine, tenant: str, *, yayinevi: str = "", ka
                        "satisAdediHam": r.satis_adedi_ham, "satisAdedi2Ham": r.satis_adedi2_ham,
                        "olusturma": r.crm_created, "degisme": r.crm_modified, "emsalBagi": r.crm_id in link_ids}
                       for r in chunk],
-            "total": len(rows), "page": page, "pageSize": page_size}
+            "total": len(rows), "page": page, "pageSize": page_size, "kaynak": "crm", "kaynakAd": RAKIP_KAYNAK["crm"]}
 
 
-def publishers(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
+def publishers(engine: sa.engine.Engine, tenant: str, kaynak: str = "crm") -> list[dict[str, Any]]:
+    if check_kaynak(kaynak) == "basari":
+        cat = basari_catalog(engine, tenant)
+        if not cat["tarih"]:
+            return []
+        D = _dagitim(engine)
+        T = D.TITLES.c
+        with engine.connect() as c:
+            rows = c.execute(sa.select(T.yayinevi, sa.func.count()).where(
+                *_basari_cond(D, tenant, date.fromisoformat(cat["tarih"])), T.yayinevi.isnot(None)).group_by(T.yayinevi)).all()
+        return sorted(({"ad": r[0], "kitap": int(r[1])} for r in rows), key=lambda x: (-x["kitap"], fold(x["ad"])))
     with engine.connect() as c:
         rows = c.execute(sa.select(COMPETITORS.c.yayinevi, sa.func.count()).where(
             COMPETITORS.c.tenant_id == tenant, COMPETITORS.c.yayinevi.isnot(None)).group_by(COMPETITORS.c.yayinevi)).all()
@@ -945,6 +1228,7 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
     yazılmaz. Dizin yoksa davranış eskisiyle aynıdır."""
     st = settings()
     idx = categories(engine, tenant)
+    kaynak = check_kaynak(str(body.get("kaynak") or "crm"))
     q = str(body.get("q") or "").strip()
     base_id = str(body.get("crmKitapId") or "").strip().upper() or None
     kategori = str(body.get("kategoriId") or "").strip() or None
@@ -962,10 +1246,12 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
             fiyat = fiyat or base.fiyat
         if not q:
             raise PazarError("Kitap adı, konu ya da bir TİMAŞ kitabı girin.")
-        comp = c.execute(sa.select(COMPETITORS).where(COMPETITORS.c.tenant_id == tenant)).all()
+        comp = c.execute(sa.select(COMPETITORS).where(COMPETITORS.c.tenant_id == tenant)).all() if kaynak == "crm" else []
         own = c.execute(sa.select(OWN_BOOKS).where(OWN_BOOKS.c.tenant_id == tenant)).all()
+        # CRM emsal bağı CRM rakip kaydına bağlıdır; Başarı kaynağında yoktur.
         linked = {r.rakip_crm_id for r in c.execute(sa.select(LINKS.c.rakip_crm_id).where(
-            LINKS.c.tenant_id == tenant, LINKS.c.kitap_crm_id == base_id)).all()} if base_id else set()
+            LINKS.c.tenant_id == tenant, LINKS.c.kitap_crm_id == base_id)).all()} if base_id and kaynak == "crm" else set()
+        maps = _approved_maps(c, tenant) if kaynak == "basari" else {}
         sales = defaultdict(lambda: {"adet": 0.0, "ciro": 0.0})
         last_year = c.execute(sa.select(sa.func.max(OWN_SALES.c.yil)).where(OWN_SALES.c.tenant_id == tenant)).scalar()
         if last_year:
@@ -998,6 +1284,17 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
         except Exception as e:  # noqa: BLE001 — dizin yoksa sözcük sırası kalır
             emb_note = f"Anlam benzerliği okunamadı: {str(e)[:160]}"
     pool: list[dict[str, Any]] = []
+    cat_info = None
+    if kaynak == "basari":
+        brows, cat_info = _basari_rows(engine, tenant)
+        for r in brows:
+            m = maps.get(map_key("basari", r.kategori)) if r.kategori else None
+            kid = m[0] if m is not None and m[2] == "onaylandi" else None
+            if rule_ok(kid, r.sayfa, r.fiyat):
+                pool.append({"tur": "rakip", "kaynak": "basari", "id": r.barkod, "ad": r.ad, "yazar": r.yazar,
+                             "yayinevi": r.yayinevi, "kategoriId": kid, "kategoriHam": r.kategori, "sayfa": r.sayfa,
+                             "fiyat": r.fiyat, "metin": None, "crmEmsal": False, "basimYili": r.basim_yili,
+                             "tok": set(tokens(f"{r.ad} {r.kategori or ''}"))})
     for r in comp:
         if rule_ok(r.kategori_id, r.sayfa, r.liste_fiyat) or r.crm_id in linked:
             pool.append({"tur": "rakip", "id": r.crm_id, "ad": r.ad, "yazar": r.yazarlar, "yayinevi": r.yayinevi,
@@ -1078,7 +1375,8 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
             "counts": {"havuz": len(pool), "sozcukEslesen": len(word_rank), "adayToplam": len(ranked), "zekiOkudu": len(judged),
                        "zekiBenzemiyor": len(dropped), "crmEmsal": len(linked),
                        "anlamAday": len(emb_rank), "anlamEklenen": sum(1 for p in ranked if p.get("anlamSira") and not p["skor"])},
-            "anlamNot": emb_note,
+            "anlamNot": emb_note, "kaynak": kaynak, "kaynakAd": RAKIP_KAYNAK[kaynak],
+            "katalogTarihi": cat_info["tarih"] if cat_info else None,
             "salesYear": last_year, "stopped": stopped,
             "note": (f"Zeki AI ilk {len(judged)} adayı okudu; kalan {len(rest)} aday ortak sözcük puanıyla sıralı."
                      if choose else "Zeki AI bu kurulumda tanımlı değil; adaylar ortak sözcük puanıyla sıralı.")}
@@ -1895,11 +2193,13 @@ def overview(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
         waiting = c.execute(sa.select(BRIEFS).where(BRIEFS.c.tenant_id == tenant, BRIEFS.c.durum != "onaylandi")
                             .order_by(BRIEFS.c.donem.desc())).first()
         wl = c.execute(sa.select(sa.func.count()).select_from(WATCHLIST).where(WATCHLIST.c.tenant_id == tenant)).scalar() or 0
-    cmap = category_map(engine, tenant, page_size=0)
+    cmap = category_map(engine, tenant, page_size=0, kaynak="crm")
+    bmap = category_map(engine, tenant, page_size=0, kaynak="basari")
     figs = approved_figures(engine, tenant)
     snap = meta_get(engine, tenant, "snapshot", {}) or {}
     return {"freshness": fr, "snapshot": snap, "ownBooks": own_n, "publishers": pub_n,
             "mapping": {"counts": cmap["counts"], "coverage": cmap["coverage"]},
+            "mappingBasari": {"counts": bmap["counts"], "coverage": bmap["coverage"]},
             "own": own_market(engine, tenant, "kategori"), "figures": figs, "pendingFigures": pending_figs,
             "brief": approved_brief(engine, tenant),
             "pendingBrief": {k: v for k, v in _brief_out(waiting).items() if k in ("id", "donem", "donemAd", "durum", "durumAd", "yazan")}

@@ -143,6 +143,27 @@
   (ekran yazar). Gerçek «yeni başlık» ölçüsü ilk görülme tarihiyle görüntüler birikince gelir.
 - **Test:** `backend/semantic_layer/tests/test_ilk_baski_pazar.py` (sqlite; koordinatör sunucuda koşturacak). Mac'te koşulmadı.
 
+## 2026-09-29 (akşam, 4) — Pazar › Rakipler ve emsal: Başarı Dağıtım kataloğu ikinci rakip kaynağı
+
+- **Neden:** matris, rakip listesi ve emsal bulucu yalnız CRM «Rakip Kitap» kayıtlarını (~30 bin; kaynağı ve tazeliği
+  bilinmiyor) okuyordu. Başarı'nın güncel kataloğu (`pazar_dagitim`, her gün okunur) Timaş grubu dışında ~230 bin başlık,
+  liste fiyatı, sayfa, kapak ve «üst > alt» kategori taşıyor.
+- **Ne yapıldı:** Rakipler, Emsal bul ve Kategori eşlemesi bölümlerinin üstünde **kaynak seçici** («Başarı Dağıtım
+  kataloğu (GG.AA.YYYY)» varsayılan — tarih kataloğun kendi tarihi; «CRM rakip kayıtları»); tazelik şeridi seçilenin
+  tarihini yazar. Seçim üç bölümde ortak, sekme açıkken hatırlanır; Başarı okunmadıysa CRM'e düşer. Köprüde
+  `freshness/publishers/competitors/matrix(+CSV)/comparables` `kaynak=crm|basari` alır; **parametresiz varsayılan `crm`**
+  (fiyatlama, yayın kurulu, başvurular ve ilk baskı ekranları değişmedi). Başarı'da rakip = son görüntüde bulunan,
+  `timas` bayrağı kapalı başlık; «son N günde eklenen» yalnız portalın ilk görüntüsünden sonra kataloğa girenler (tek
+  görüntüde «—»).
+- **Kategori eşlemesi:** Başarı'nın ham kategorisi aynı hattan geçer (ad eşleşmesi → Zeki AI `choose` → insan kararı);
+  anahtar `semantic_pazar_category_map.kategori_ham` = «basari:Üst>Alt» (şema değişikliği yok). Yeni Başarı görüntüsü
+  geldiğinde (ya da «Kaynakları yenile»de) `sync_basari_categories` yeni kategoriyi «yeni» durumla ekler, sayıyı
+  yeniler, katalogdan düşenin sayısını 0 yapar; karar silinmez. CRM anlık görüntüsü Başarı sayılarını sıfırlamaz;
+  kategori listesi değişince karşılığı kalmayan Başarı onayı da «yeni»ye döner. Matris yalnız onaylı eşlemeyi sayar.
+- **Sorgu bilgisi:** Başarı kaynağında asıl okuma Başarı kataloğu sorgusu (`pazar_dagitim.SQL_BASARI`); CRM rakip kitap
+  ve emsal bağı okumaları yazılmaz, Timaş kitapları CRM'den.
+- **Test:** `test_pazar_rakip_kaynak.py` (10), `api.test.ts`'e seçici adı. Yerelde koşturulmadı — DOĞRULANAMADI;
+  testler ve gerçek katalogla kabul koordinatörde (test sunucusu).
 ## 2026-09-29 (akşam, 3) — Sadeleştirme turunda bulunan 11 mantık hatası düzeldi
 
 - **Stüdyo:** karakter referans görseli artık onayla silinir (stüdyonun `ConfirmDialog`'u; metin kartın taslağa döneceğini ve birincil görselin değişeceğini söyler); şekil «Sayfadan kaldır» geri alınabildiği için onay yerine «Ctrl/Cmd+Z ya da Geri al» notu; boyama «Fark» 1–20'ye sıkıştırılır; yaş raporunda karardan sonra yazılan not «Notu kaydet» ile aynı karar çağrısıyla kaydedilir; telaffuz sözlüğünde okunuşu ya da yazılışı boş satır varken «Sözlüğü kaydet» kapalı ve satırlar adıyla yazılır (sessizce atılmaz); ses yükleme «uzun» uyarısı sunucunun gerçek sınırında çıkar; okur panelinde sunucu kararı reddederse işaret geri döner.
