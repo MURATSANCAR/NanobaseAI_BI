@@ -331,7 +331,7 @@ def studio_assets(kitap_id: Optional[str], title: Optional[str]) -> dict[str, An
         for s in (view.get("social") or {}).get("items") or []:
             items.append({"tip": "studio", "job": j.get("id"), "sid": s.get("id"), "ad": s.get("headline") or s.get("template"),
                           "boyut": f"{s.get('w')}×{s.get('h')}", "sablon": s.get("template"), "gorsel": s.get("visual"),
-                          "onayli": bool(s.get("approved")), "taslak": bool(s.get("draft"))})
+                          "onayli": bool(s.get("approved"))})
         quotes += [q for q in view.get("quotes") or [] if q and q not in quotes]
     return {"items": items, "alintilar": quotes, "hata": "; ".join(errors) or None}
 

@@ -651,7 +651,6 @@ const CONTENT: ScreenInfoMap = {
     how: [
       "Görsel tek tasarımdan bütün boyutlarda hazırlanır; önce tasarım, sonra mesaj onayı alır. Metin yalnız mesaj onayı alır.",
       "Metinler karakter sınırı, yasaklı kalıp, kaynakta olmayan sayı ve alıntıya göre denetlenir.",
-      "Zeki AI ile çizilmiş resim içeren görsel, kullanım izni gelene kadar «TASLAK» adıyla iner.",
       "Portal hiçbir kanala yükleme yapmaz; onaylı dosyayı indirip siz yüklersiniz.",
     ],
     data: "CRM kitap kartı ve portalın marka kiti",

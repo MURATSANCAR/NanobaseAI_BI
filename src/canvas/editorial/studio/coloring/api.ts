@@ -29,8 +29,7 @@ export type ColoringDerived = {
   sentences: ColoringSentence[];
   activities: { kind: string; title: string; info: Record<string, unknown> }[];
   arts: { aid: string; no: number | null; source_no: number | null; versions: number; selected: number | null;
-          approved: boolean; method: string | null; draft: boolean; regions: number | null }[];
-  drafts: (number | null)[];
+          approved: boolean; method: string | null; model: boolean; regions: number | null }[];
   filler: number;
   state: { title: string; status: string; error: string | null; steps: ColoringStep[] } | null;
   busy: { key: string; queued?: boolean; error?: string | null } | null;

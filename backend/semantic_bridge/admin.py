@@ -1141,8 +1141,6 @@ SPEC: list[dict[str, Any]] = [
      "help": "Yalnız gün seçilen gönderinin saati (SS:DD)"},
     {"key": "SOCIAL_BANNED_CLAIMS", "group": "social", "label": "Ek yasaklı ifadeler", "type": "text", "default": "",
      "help": "Zeki AI taslağında geçerse cümlenin düşeceği ek ifadeler (virgülle). Kanıtsız üstünlük iddiaları zaten yasak"},
-    {"key": "SOCIAL_STUDIO_LICENSE_PENDING", "group": "social", "label": "Stüdyo görseli lisans uyarısı", "type": "bool",
-     "default": "1", "help": "Açıkken stüdyo görseli eklenen gönderide ve pakette «ticari kullanım lisansı bekleniyor» uyarısı durur"},
     # İşbirlikleri (M23: içerik üreticisi kayıt defteri, işbirliği panosu, ödeme listesi)
     {"key": "INFLUENCER_ALERT_RECIPIENTS", "group": "influencer", "label": "Hatırlatma alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç ekip e-posta adresleri (işbirliği sorumlusu). Yayın tarihi yaklaşan, bağlantısı girilmemiş, içerik onayı "

@@ -19,7 +19,8 @@ Doğrudan-SQL referansları (uygulamanın SQL'i yeniden çalıştırılmaz; ayr�
   R5 hashtag: CRM `new_hastag` etiketleri üretilen hashtag setinin başında.
   R6 kapak özeti: talebe kaydedilen kapak özeti = stüdyodaki kitapsız işin kaydettiği kaynak özeti.
 Diğer denetimler: her biçim tam piksel ölçüsünde (PIL), sınırı aşan metin varyantı 0, aynı kişi iki onay → 409,
-her onay `semantic_audit`'te, lisans taslağının adı TASLAK-, ekran/dosya adında teknoloji adı 0, geçersiz gövde 4xx.
+her onay `semantic_audit`'te, dosya adında TASLAK- öneki 0 (görsel modelin ticari lisansı 2026-09-29'da alındı),
+ekran/dosya adında teknoloji adı 0, geçersiz gövde 4xx.
 
 Ölçülecek (bu betik kapsamaz): rolsüz hesapla 403 (yalnız timasai var; test sunucusunda «Herkes» rolü her şeyi
 içeriyor — M10 notu), GPU gateway kaydında görsel model devri olmaması (GPU'da: `journalctl -u editor-gateway
@@ -197,9 +198,8 @@ def main() -> int:
                 bad.append({"format": a["format"], "size": size})
         check("her biçim tam piksel ölçüsünde", job["durum"] == "bitti" and visuals and not bad,
               uretilen=len(visuals), atlanan=(job.get("sonuc") or {}).get("atlanan"), yanlis=bad, hata=job.get("hata"))
-        drafts = [a for a in visuals if a["taslakLisans"]]
-        check("lisans taslağı adı TASLAK-", all(a["dosyaAdi"].startswith("TASLAK-") for a in drafts)
-              and not any(a["dosyaAdi"].startswith("TASLAK-") for a in visuals if not a["taslakLisans"]), taslak=len(drafts))
+        check("dosya adında TASLAK- yok", not any(a["dosyaAdi"].startswith("TASLAK-") or "taslakLisans" in a for a in visuals),
+              gorsel=len(visuals))
 
         # R6 kapak özeti (kitapsız iş)
         if d.get("studioKind") == "pazarlama":

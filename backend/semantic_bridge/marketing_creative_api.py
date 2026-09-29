@@ -497,14 +497,14 @@ def register(app: Any, deps: dict[str, Any]) -> None:
                         continue
                     a = store.add_asset(engine, tenant, user, rid, tur="gorsel", varyant=letter,
                                         kaynak="studio-kit" if kind == "kitap" else "studio-marketing-job", fmt=fmt,
-                                        dosya=png, studio_ref=f"{job}/{item['id']}", taslak=bool(item.get("draft")),
+                                        dosya=png, studio_ref=f"{job}/{item['id']}",
                                         ayar=var, size=(item.get("w"), item.get("h")))
                     done.append({"id": a["id"], "varyant": letter, "format": fmt})
             # Palet ve kaynaklar düzenleme panelinin seçenekleridir (renk kitabın paletinden, görsel stüdyonun listesinden).
             store.finish_job(engine, tenant, jid, {
                 "uretilen": len(done), "atlanan": skipped, "kapak": cover_meta,
                 "palet": (kit.get("social") or {}).get("palette") or [],
-                "kaynaklar": [{k: s.get(k) for k in ("key", "label", "kind", "draft")}
+                "kaynaklar": [{k: s.get(k) for k in ("key", "label", "kind")}
                               for s in (kit.get("social") or {}).get("sources") or []],
                 "alintilar": [q for q in (kit.get("quotes") or []) if isinstance(q, str)]})
             audit(engine, user, "run", "mkt_creative_produce", rid, None, {"uretilen": len(done), "atlanan": len(skipped)})
@@ -707,7 +707,7 @@ def register(app: Any, deps: dict[str, Any]) -> None:
                     continue
                 n = store.add_asset(engine, tenant, user, a["request_id"], tur="gorsel", varyant=a["varyant"],
                                     kaynak=a["kaynak"], fmt=a["format"], dosya=png, studio_ref=f"{job}/{item['id']}",
-                                    taslak=bool(item.get("draft")), ayar=_clean_variant(var),
+                                    ayar=_clean_variant(var),
                                     size=(item.get("w"), item.get("h")), onceki=a)
                 done.append(n["id"])
             store.finish_job(engine, tenant, jid, {"uretilen": len(done), "atlanan": skipped})
@@ -815,7 +815,7 @@ def register(app: Any, deps: dict[str, Any]) -> None:
 
     @app.get(f"{P}/assets/{{aid}}/file")
     def creative_file(aid: str, request: Request, w: int = 0, download: bool = False):
-        """Önizleme (w>0 küçük), tam boy ya da indirme (yalnız onaylı; ad `dosyaAdi`, lisans taslağında TASLAK-)."""
+        """Önizleme (w>0 küçük), tam boy ya da indirme (yalnız onaylı; ad `dosyaAdi`)."""
         engine, tenant, user, _ = ctx(request)
         v = call(store.get_asset, engine, tenant, aid)
         a = call(store.asset_row, engine, tenant, aid)

@@ -6,7 +6,7 @@ import { Note, btnGhost, btnPrimary, errText, field, label } from '../../admin/u
 import { Img } from '../../editorial/studio/shared';
 import { EmptyHint } from '../../components/Explain';
 import { creativeApi, type Asset, type Meta, type RequestDetail, type VisualSetting } from './api';
-import { ApprovalLine, Block, DraftBadge, JobBar, chip, smallBtn } from './parts';
+import { ApprovalLine, Block, JobBar, chip, smallBtn } from './parts';
 import { invalidateCreative } from './useMeta';
 import { AskSheet } from '../../budget/parts';
 
@@ -257,7 +257,6 @@ export default function VisualPanel({ r, meta, onVersions }: { r: RequestDetail;
                   </div>
                   <ApprovalLine a={a} />
                   {a.red?.not && <p className="text-[11.5px] text-red-700">Ret notu: {a.red.not}</p>}
-                  {a.taslakLisans && <DraftBadge />}
                   <AssetActions a={a} meta={meta} onVersions={onVersions} />
                 </li>
               ))}

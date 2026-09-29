@@ -164,9 +164,9 @@ def test_limits_override(monkeypatch):
 
 
 # ------------------------------------------------------------------ varlık, onay, durum
-def _visual(engine, rid, varyant="A", fmt="kare", taslak=False):
+def _visual(engine, rid, varyant="A", fmt="kare"):
     return M.add_asset(engine, T, "grafik1", rid, tur="gorsel", varyant=varyant, kaynak="studio-marketing-job", fmt=fmt,
-                       dosya=_png(), studio_ref="20260928120000abcdef/s_0000abcd", taslak=taslak,
+                       dosya=_png(), studio_ref="20260928120000abcdef/s_0000abcd",
                        ayar={"visual": "cover"}, size=(1080, 1080))
 
 
@@ -215,23 +215,24 @@ def test_text_asset_flow_versions_and_errors(engine):
         M.reject(engine, T, "mudur", v2["id"], "")
 
 
-def test_license_draft_name_zip_and_archive(engine):
+def test_file_name_zip_and_archive(engine):
     r = _req(engine)
-    a = _visual(engine, r["id"], "A", "kare", taslak=True)
+    a = _visual(engine, r["id"], "A", "kare")                         # model görseli: lisans alındı (2026-09-29)
     b = _visual(engine, r["id"], "B", "site-bandi")
-    assert a["dosyaAdi"].startswith("TASLAK-kitap-adi_kare_1080x1080_A_v1") and not b["dosyaAdi"].startswith("TASLAK-")
+    assert a["dosyaAdi"].startswith("kitap-adi_kare_1080x1080_A_v1") and not b["dosyaAdi"].startswith("TASLAK-")
+    assert "taslakLisans" not in a
     t = M.add_asset(engine, T, "ayse", r["id"], tur="metin", varyant="A", kaynak="zeki", fmt="instagram",
                     metin_turu="aciklama", metin="Metin", dogrulama={"durum": "tamam"})
     for x in (a, b):
         M.approve(engine, T, "grafik1", x["id"], "tasarim")
         M.approve(engine, T, "mudur", x["id"], "mesaj")
     M.approve(engine, T, "mudur", t["id"], "mesaj")
-    assert not M.get_asset(engine, T, a["id"])["yayinaHazir"] and M.get_asset(engine, T, a["id"])["onayli"]
+    assert M.get_asset(engine, T, a["id"])["yayinaHazir"] and M.get_asset(engine, T, a["id"])["onayli"]
     title, rows = M.approved_for_zip(engine, T, r["id"])
     z = zipfile.ZipFile(io.BytesIO(M.build_zip(title, rows)))
     names = z.namelist()
     assert len([n for n in names if n.endswith(".png")]) == 2 and any(n.endswith(".txt") and "aciklama" in n for n in names)
-    assert "OKUYUN.txt" in names and any(n.startswith("TASLAK-") for n in names)
+    assert "OKUYUN.txt" not in names and not any(n.startswith("TASLAK-") for n in names)
     arc = M.archive(engine, T, stok="15201.01.0001")
     assert arc["total"] == 3 == len(rows)
     assert M.archive(engine, T, etiket="Öğretmenler Günü 2026")["total"] == 3
@@ -371,13 +372,13 @@ def _client(engine, monkeypatch, tmp_path, user="ayse", admin=True):
     rendered: list[dict] = []
     monkeypatch.setattr(src, "marketing_job", lambda b, cover, meta, pal, ed: {"id": "20260928120000abcdef", "cover": None})
     monkeypatch.setattr(src, "kit_view", lambda job: {"quotes": [], "social": {
-        "palette": ["#112233", "#445566"], "sources": [{"key": "kapak", "label": "Ön kapak", "kind": "cover", "draft": False}],
+        "palette": ["#112233", "#445566"], "sources": [{"key": "kapak", "label": "Ön kapak", "kind": "cover"}],
         "templates": [{"key": k, "quote": k not in ("banner-320x50", "banner-728x90", "banner-160x600")}
                       for k in M.FORMATS]}})
 
     def social_add(job, body, ed):
         rendered.append(body)
-        return {"id": f"s_{len(rendered):08x}", "w": 1080, "h": 1080, "draft": False}
+        return {"id": f"s_{len(rendered):08x}", "w": 1080, "h": 1080}
 
     monkeypatch.setattr(src, "social_add", social_add)
     monkeypatch.setattr(src, "social_png", lambda job, sid: _png(1080, 1080))

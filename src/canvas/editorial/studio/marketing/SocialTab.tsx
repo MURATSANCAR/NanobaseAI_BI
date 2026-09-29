@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { AlertTriangle, Check, Download, ImagePlus, Trash2 } from 'lucide-react';
+import { Check, Download, ImagePlus, Trash2 } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { Img, press } from '../shared';
 import { marketingApi, type MarketingView, type SocialEffect, type SocialTemplate, type SocialVisual } from './api';
@@ -41,8 +41,6 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
     if (visual === 'quote') return;
     if (!source || !pickable.some((x) => x.key === source)) setSource(pickable[0]?.key ?? null);
   }, [visual, pickable, source]);
-  const chosen = s.sources.find((x) => x.key === (visual === 'quote' ? 'kapak' : source));
-  const draftSelected = !!chosen?.draft;
 
   const add = useMutation({
     mutationFn: () => marketingApi.addSocial(jobId, { template, visual, source: visual === 'quote' ? null : source, headline, effect, color, quote: visual === 'quote' ? quote : null }),
@@ -149,11 +147,6 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
             </div>
           </div>
 
-          {draftSelected && (
-            <Note tone="warn">
-              <span className="inline-flex items-start gap-1.5"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{s.draft_note}: seçilen görsel Zeki AI ile çizildi.</span>
-            </Note>
-          )}
           {err && <Note tone="err">{err}</Note>}
           <button type="button" className={gradientBtn} disabled={!canMake || add.isPending} onClick={() => add.mutate()}>
             <ImagePlus className="h-4 w-4" aria-hidden />{add.isPending ? 'Diziliyor…' : 'Görseli diz'}
@@ -177,11 +170,6 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
                   <span className="text-[11.5px] font-bold">{TEMPLATE_TEXT[it.template] ?? `${it.w}×${it.h}`} · {VISUALS.find((x) => x[0] === it.visual)?.[1]}</span>
                   <Approval approved={it.approved} />
                 </div>
-                {it.draft && (
-                  <p className="flex items-start gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{s.draft_note}
-                  </p>
-                )}
                 {(canEdit || (canExport && it.approved)) && <div className="flex flex-wrap gap-1.5">
                   {canEdit && <button type="button" disabled={approve.isPending} onClick={() => approve.mutate({ id: it.id, ok: !it.approved })}
                     className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border-2 px-3 text-[12.5px] font-bold disabled:opacity-50 ${press} ${it.approved ? 'border-slate-200 bg-white text-canvas-muted' : 'border-emerald-500 bg-white text-emerald-700'}`}>

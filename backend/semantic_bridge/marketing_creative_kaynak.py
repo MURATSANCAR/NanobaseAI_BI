@@ -17,7 +17,7 @@ NOT_RAKAM = ("page", "pageSize", "items[].surum", "items[].varyant", "items[].ge
              "varliklar[].surum", "varliklar[].varyant", "varliklar[].genislik", "varliklar[].yukseklik")
 
 F_SAYAC = ("Talep sayaçları: güncel varlıklardan görsel / metin sayısı; onaylı = mesaj onayı almış ve reddedilmemiş, "
-           "bekleyen = mesaj onayı yok ve reddedilmemiş, reddedilen, taslak lisanslı.")
+           "bekleyen = mesaj onayı yok ve reddedilmemiş, reddedilen.")
 F_OZET = ("Yeni talep = son 24 saatte açılan talep; tasarım onayı = tasarım onayı bekleyen güncel görsel; mesaj onayı = mesaj "
           "onayı bekleyen metin ya da tasarım onaylı görsel (tasarımı onaylayan kişi hariç); termini yakın = termini 2 gün "
           "içinde, onaylanmamış talep.")

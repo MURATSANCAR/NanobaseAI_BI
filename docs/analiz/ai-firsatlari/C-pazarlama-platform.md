@@ -156,7 +156,7 @@ Menü: Pazarlama › Üretim › «Görsel ve metin» (1 öğe) · Rotalar: 2 (`
   - **Varyant seçim önerisi** · M21/M22 geçmiş performans (tıklama, etkileşim) + varyant özellikleri · kural sıralama + model açıklama · 3/5 · M (~4 gün) · veri yoksa gösterilmez.
   - **Görsel okunurluk/kontrast denetimi** · dizilmiş görsel · kural (kontrast, yazı alanı) + görsel açıklama modeli (doğrulanmadı) · 2/5 · M.
   - **Brief'ten eksik bilgi soruları** · brief alanları · model «şu bilgi eksik» listesi · 2/5 · S.
-- **Eksik:** Görsel modelle üretimde ticari kullanım izni bekleniyor (proje belleği); etiket kuralı var.
+- **Eksik:** — (görsel modelin ticari lisansı 2026-09-29'da alındı; taslak etiketi kaldırıldı).
 
 ## M53 Set, hediye ve promosyon
 

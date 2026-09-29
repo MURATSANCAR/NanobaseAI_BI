@@ -361,7 +361,7 @@ Ortak: köprü yalnız vekildir (`backend/semantic_bridge/editorial_studio*.py`)
 - **Yapabileceklerimiz:**
   - **Süre tahmini** — geçmiş işlerin adım süreleri (sayfa × resim sayısı) → bekleme tahmini. Teknik: kural/istatistik.
     Değer 2 · Zorluk S.
-- **Eksik/zayıf:** Lisans bekleniyor notu (görsel model; `MEMORY` kaydı) — ekranda durum görünürlüğü doğrulanmadı.
+- **Eksik/zayıf:** — (lisans notu kalktı: görsel modelin ticari lisansı 2026-09-29'da alındı; model çıktısı normal, basılabilir).
 
 ### Tasarım akışı (`/kitap-tasarim/:jobId`)
 - **Ne yapıyor:** İçerik, CRM proje bilgisi, «sistemin kararları» (profil: yaş, tür, resim ihtiyacı; spec) ve canlı üretim

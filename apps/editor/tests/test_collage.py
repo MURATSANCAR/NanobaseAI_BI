@@ -215,7 +215,7 @@ def test_collage_cover_pdf_turkish_text_vector_gray_300dpi(tmp_path, monkeypatch
     rect = doc[0].get_image_rects(art[0][0])[0]
     assert rect.x0 == pytest.approx(front_x, abs=0.5)
     assert art[0][2] / (rect.width / 72) == pytest.approx(300, abs=1)          # etkin çözünürlük 300 dpi
-    assert view["draft"] is False and view["photos"][0]["overflow"]
+    assert "draft" not in view and view["photos"][0]["overflow"]
     # başka düzen: kapak değişir; aynı düzene dönünce aynı ön kapak
     first = hashlib.md5((d / "kapak" / "kolaj-on.png").read_bytes()).hexdigest()
     K.set_layout(d, None, "sınama")
@@ -308,7 +308,8 @@ def test_generate_uses_collage_negative_and_book_seed(tmp_path, monkeypatch):
     assert st["scene"]["negative"] == K.NEGATIVE
     again = asyncio.run(K.generate(d, 1, "", "sınama", painter=Painter(), llm=Llm()))
     assert len(set(seen["seeds"])) == 3 and len(again) == 1                 # yeni adaylar yeni tohum
-    assert K.view(d)["draft"] is True                                     # model fotoğrafı: taslak uyarısı
+    v = K.view(d)                                  # ticari lisans alındı (2026-09-29): model fotoğrafında taslak yok
+    assert "draft" not in v and all("draft" not in p and p["source"] == "model" for p in v["photos"])
 
 
 def test_workflow_registered():

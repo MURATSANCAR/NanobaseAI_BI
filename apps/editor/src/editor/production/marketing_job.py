@@ -17,7 +17,7 @@ yol); hat koşmaz, GPU harcamaz. İş klasörü pazarlama kitinin beklediği bi�
 
 Aynı stok kodu için ikinci istek yeni iş açmaz, var olanı günceller (metinler, kapak, palet). Stüdyonun iş listesi
 bu işleri göstermez (`api.jobs`); yalnız pazarlama ekranı kullanır. Model görseli burada üretilmez: kapak gerçek
-kapaktır, dizim modelsizdir; bu yüzden bu işin görselleri «taslak» değildir.
+kapaktır, dizim modelsizdir.
 """
 
 from __future__ import annotations

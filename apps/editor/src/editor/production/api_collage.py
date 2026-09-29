@@ -1,7 +1,7 @@
 """Kapak tarzı ve kolaj kapak uçları (collage.py). api.py'de tek satırla bağlanır; yetki uygulamanın genel
 bağımlılığından (Bearer), yazanlarda X-Editor. Hepsi /v1/studio/jobs/{job}/collage altında:
 
-    GET  collage                          görünüm: tarz, adaylar, seçili, düzen, etiketler, iş durumu, taslak uyarısı
+    GET  collage                          görünüm: tarz, adaylar, seçili, düzen, etiketler, iş durumu
     PUT  collage/style      {style}       illustrated | collage | typographic → kapak yeniden kurulur
     POST collage/photos     {count, direction}  model adayları (GPU işi, Temporal CollagePhotos) → {workflow}
     PUT  collage/upload?filename=         ham gövde: editörün fotoğrafı (STUDIO_UPLOAD_MB; aşan 413 TOO_LARGE)

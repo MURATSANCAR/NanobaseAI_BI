@@ -18,7 +18,7 @@ import NewPost, { type NewPostSeed } from './NewPost';
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
 
 function PostChip({ p }: { p: Post }) {
-  const warn = (p.uyarilar ?? []).filter((w) => w.kod !== 'lisans');
+  const warn = p.uyarilar ?? [];
   return (
     <Link to={`/sosyal-medya/gonderi/${encodeURIComponent(p.id)}`}
       className="flex min-h-11 flex-col gap-1 rounded-xl border border-slate-100 bg-white/90 px-2.5 py-2 text-left transition-colors duration-150 hover:border-canvas-violet/40">

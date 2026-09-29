@@ -277,7 +277,6 @@ const CONTENT: ScreenInfoMap = {
     how: [
       'Resimli kapak, Sayfa stüdyosundaki kapak resmiyle kurulur; resmi orada düzeltebilirsiniz.',
       'Kolajda siyah-beyaz fotoğraf yırtık kâğıt gibi kesilir, başlık daktilo şeritlerine yazılır; fotoğrafı Zeki AI üretir ya da siz yüklersiniz.',
-      "Zeki AI'ın ürettiği fotoğrafla kurulan kolaj, ticari kullanım izni gelene kadar taslaktır; yüklediğiniz fotoğraf taslak sayılmaz.",
     ],
     actions: [
       'Kapak tarzını seçin.',

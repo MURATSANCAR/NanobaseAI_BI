@@ -10,7 +10,8 @@ tipografik). `studio.build_cover` önce `build_cover(d)`'yi sorar; True dönerse
 Fotoğraf iki kaynaktan: (a) görsel model, kitabın profilinden/özetinden yazılan sahneyle (kitaba özel istem yok;
 dil modeli genel kalıbı doldurur, `prompts/production_collage_scene.md`), bu tarza özel negatif istemle
 (analog görünümle çelişen «blurry, low quality» yok); her çağrıda 2–3 tohumla aday. (b) editörün yüklediği fotoğraf
-(`photo.ingest`: EXIF yönü, sRGB, üst veri silinir). Model fotoğrafı ekranda «taslak» uyarısı taşır (ticari lisans).
+(`photo.ingest`: EXIF yönü, sRGB, üst veri silinir). İki kaynağın fotoğrafı da basılabilir çıktıdır (görsel modelin
+ticari lisansı 2026-09-29'da alındı).
 
 Kurallar (hepsi kitaptan bağımsız; değiştirmek buradaki sabitleri değiştirmektir):
 1. Belirlenimcilik: bütün rastgelelik tek tohumdan (`seed_for(başlık, düzen)`): aynı kitap + aynı düzen numarası +
@@ -77,7 +78,6 @@ ANALYSIS_W = 640                 # figür çözümlemesi bu genişlikte (hız); 
 FLAT_NOISE = 18.0                # üst şerit gürültüsü (0–255) bunun üstündeyse zemin düz değil: taşma yok
 PHOTO_ASPECT = (0.66, 1.0)       # fotoğraf en/boy aralığı; dışındaki fotoğraf ortadan kırpılır
 GEN_ASPECT = 0.8                 # model fotoğrafı 4:5 dik üretilir
-DRAFT = "Taslak — ticari kullanım izni bekleniyor"
 
 # Görsel model istemi: genel kalıp; konu (özne, hareket, yer, dönem) dil modelinden, kitaba özel cümle yok.
 PHOTO_FRAME = ("Black and white analog film photograph, {era} documentary snapshot. {subject} {gesture} {setting} "
@@ -692,7 +692,7 @@ def build_cover(d: Path) -> bool:
                                  d / "kapak", studio.fonts(), collage=front)
     preflight.set_boxes(cpdf, spec.bleed)
     studio.write(d, "cover.json", {**info, "style": "collage", "photo": ph["id"], "source": ph["source"],
-                                   "draft": ph["source"] == "model", "seconds": round(time.time() - t, 1),
+                                   "seconds": round(time.time() - t, 1),
                                    "cut": info_c["cut"], "labels": info_c["labels"]})
     return True
 
@@ -923,10 +923,9 @@ def view(d: Path) -> dict:
         "layout": int(st.get("layout") or 0),
         "photos": [{k: p.get(k) for k in ("id", "source", "w_px", "h_px", "name", "by", "at", "seed", "note")}
                    | {"overflow": bool((p.get("cut") or {}).get("overflow")),
-                      "cut_note": (p.get("cut") or {}).get("note"), "draft": p["source"] == "model"}
+                      "cut_note": (p.get("cut") or {}).get("note")}
                    for p in st["photos"]],
         "selected": st.get("selected"),
-        "draft": bool(ph and ph["source"] == "model"),
         "labels": st.get("labels"),
         "auto_labels": auto and auto["lines"],
         "auto_labels_error": auto_err,
