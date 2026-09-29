@@ -108,6 +108,13 @@
 - **Yazar ilişkileri** (2,3 sn): hazır parça istekte ayrıştırılmıyor, sadakat günde bir kez (`test_hiz_yazar_iliskileri.py`). Kart/ajanda ucunda ağır iş bulunmadı; ısı haritasıyla aynı süreçte bekliyorlardı.
 - **Sözleşmeler** (11–14 sn): özet editoryal masam hazırlığından, liste bellekte (`contracts_hizli.py`, `test_hiz_sozlesmeler.py`). Ortak kök neden: `Runtime._execute` tek bağlantı kilidi turların arkasında sıraya sokuyor (dokunulmadı).
 - **Açık:** kategori ağacı/üretim ve pazarlama backlist alt ajanlarda sürüyor; «Verileri yenile» başlığıyla ölçüm üretim/sözleşme/yazar ucunda kaynağı bilinçli bekler — ölçüm başlıksız yapılmalı.
+## 2026-09-29 — Kitap pazarı veri kaynağı: `API_URUN_DB` (.25) bulundu ve profillendi
+
+- **Kullanıcı:** «.25'te Logo prod'un yanında kitap pazar araştırması için başka bir DB daha var.»
+- **Bulunan:** `.25`'te 16 veritabanı; `zekiai`'nin girebildiği aday `API_URUN_DB`. Başarı Dağıtım kataloğunun tarihli arşivi (`urun_list_BACKUP` 7.525.932 satır, 35 görüntü 2024-03-21 → 2026-01-01, 2.649 yayınevi), güncel Başarı (`basari_list` 234.705) ve D&R B2B (`prefix_list` 386.124) katalogları (ikisi de 2026-09-25 tek görüntü), `LOGO_TARCIN_ITEM_LIST`, `urun_raf`, 3 eşleme görünümü.
+- **Yetki:** `zekiai` bu veritabanında yanlışlıkla `db_datawriter`'dı (okuyamıyor, yazabiliyordu; kullanıcının «yetki var» demesi bundan). Sistem kataloğundan rol üyeliği ölçülüp BT'ye tek satır verildi; aynı gün `db_datareader` yapıldı, yazma kaldırıldı.
+- **İlk ölçüm:** 2025-12-01 → 2026-01-01 arasında 221.964 ortak barkodun 41.680'inde depo stoku değişti, toplam düşüş 229.073 adet → stok farkı satış hızı vekili olarak kullanılabilir. Arşiv 2026-01-01'de duruyor; ileriye dönük hız için görüntüleri bizim saklamamız gerekir.
+- **Belge:** `docs/analiz/kitap-pazari-veri-kaynagi-API_URUN_DB-2026-09-29.md`. Kod değişikliği yok.
 
 ## 2026-09-29 — Yetki üye okuması 07:00/12:00; departmansız CRM kullanıcıları Excel'i aynı saatlerde e-postayla
 
