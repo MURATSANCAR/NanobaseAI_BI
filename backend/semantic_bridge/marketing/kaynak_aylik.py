@@ -152,9 +152,13 @@ def for_month_events(engine: Any, plan_id: str) -> P.Kaynaklar:
     return k
 
 
-def _logo_price(k: P.Kaynaklar, logo: Any, codes: list[str], logo_db: Optional[str]) -> list[str]:
+def _logo_price(k: P.Kaynaklar, logo: Any, codes: list[str], logo_db: Optional[str],
+                runs: Optional[list[dict[str, Any]]] = None) -> list[str]:
+    """`runs`: eşitleme kaydındaki çalışmış Logo SQL'leri (verilmezse bu süreçte kaydedilenler)."""
     ids = []
-    for i, r in enumerate(logo.runs_for(codes) if logo is not None else []):
+    if runs is None:
+        runs = logo.runs_for(codes) if logo is not None else []
+    for i, r in enumerate(runs):
         try:
             ids.append(k.sorgu(f"foy.logo.fiyat.{i + 1}", "Logo fiyatı (föy karşılaştırması)", "logo", r["sql"],
                                database=logo_db, rows=r.get("rows"), ms=r.get("dbMs"), ran_at=r.get("at"),
@@ -164,17 +168,43 @@ def _logo_price(k: P.Kaynaklar, logo: Any, codes: list[str], logo_db: Optional[s
     return ids
 
 
-def for_foy_list(engine: Any, tenant: str, schema: str, out: dict[str, Any], logo: Any, logo_db: Optional[str]) -> P.Kaynaklar:
+F_ESITLEME = ("Eşitleme kaydı: günlük pazarlama turunda (bu ay ve gelecek ay), «CRM'den yenile»de ya da dönem ilk açıldığında "
+              "CRM ve Logo okunur, föyler yazılır; bu kayıt o okumanın zamanını, kitap künyesini (yazar, yayınevi, kitaplık, "
+              "yayın günü, sorumlu), notlarını ve çalışmış Logo sorgularını tutar. Ekran istek anında CRM'e ve Logo'ya gitmez.")
+
+
+def _sync_origin(k: P.Kaynaklar, schema: str, donem: str, sync: dict[str, Any], logo_db: Optional[str]) -> list[str]:
+    """Eşitlemede çalışmış CRM/Logo sorguları: yeni kitaplar (ay aralığı), föy alanları (eşitlenen kodlar, sıralı, 500'lük
+    parçalar — `Crm.foy_books` ile aynı bölme) ve kayıttaki Logo SQL metinleri (satır, süre, an ile)."""
+    first, last = M.bounds(donem)
+    ids = [k.sorgu("foy.crm.yeni", "CRM yeni kitaplar (yayın günü bu ay)", "crm", S.new_books_sql(schema, first, last),
+                   database=PK.crm_db(), period=M.label(donem))]
+    codes = sorted(sync.get("kitap") or {})
+    for i in range(0, len(codes), 500):
+        ids.append(k.sorgu(f"foy.crm.alan.{i // 500 + 1}", "CRM föy alanları", "crm", S.foy_books_sql(schema, codes[i:i + 500]),
+                           database=PK.crm_db(), description="Künye, fiyat, barkod, hedef kitle ve tanıtım metinleri."))
+    ids += _logo_price(k, None, codes, logo_db, runs=list(sync.get("logo") or []))
+    return ids
+
+
+def for_foy_list(engine: Any, tenant: str, schema: str, out: dict[str, Any], logo: Any, logo_db: Optional[str],
+                 sync: Optional[dict[str, Any]] = None) -> P.Kaynaklar:
+    """`sync`: dönemin eşitleme kaydı (`foy.read_sync`); verilirse köken onda çalışmış CRM/Logo sorgularıdır."""
     donem = out["donem"]
     k = P.Kaynaklar(data_end=PL.data_end(engine))
     first, last = M.bounds(donem)
-    codes = sorted({r["stokKodu"] for r in out.get("items") or [] if r.get("stokKodu")})
-    origin = [k.sorgu("foy.crm.yeni", "CRM yeni kitaplar (yayın günü bu ay)", "crm", S.new_books_sql(schema, first, last),
-                      database=PK.crm_db(), period=M.label(donem))]
-    for i in range(0, len(codes), 500):
-        origin.append(k.sorgu(f"foy.crm.alan.{i // 500 + 1}", "CRM föy alanları", "crm", S.foy_books_sql(schema, codes[i:i + 500]),
-                              database=PK.crm_db(), description="Künye, fiyat, barkod, hedef kitle ve tanıtım metinleri."))
-    origin += _logo_price(k, logo, codes, logo_db)
+    if sync:
+        origin = _sync_origin(k, schema, donem, sync, logo_db)
+        origin.append(k.portal("foy.esitleme", "Föy eşitleme kaydı (son CRM/Logo okuması)", F.sync_stmt(tenant, donem), engine,
+                               origin=list(origin), description=F_ESITLEME))
+    else:
+        codes = sorted({r["stokKodu"] for r in out.get("items") or [] if r.get("stokKodu")})
+        origin = [k.sorgu("foy.crm.yeni", "CRM yeni kitaplar (yayın günü bu ay)", "crm", S.new_books_sql(schema, first, last),
+                          database=PK.crm_db(), period=M.label(donem))]
+        for i in range(0, len(codes), 500):
+            origin.append(k.sorgu(f"foy.crm.alan.{i // 500 + 1}", "CRM föy alanları", "crm", S.foy_books_sql(schema, codes[i:i + 500]),
+                                  database=PK.crm_db(), description="Künye, fiyat, barkod, hedef kitle ve tanıtım metinleri."))
+        origin += _logo_price(k, logo, codes, logo_db)
     foy = k.portal("foy.liste", "Dönemin satış föyleri", F.month_stmt(tenant, donem), engine, origin=origin,
                    description="Föyler CRM'den okunurken yazılır; eksik alan ve uyumsuzluk o an hesaplanır (semantic_mkt_foy).")
     ref = k.hesap("foy", F_FOY, [foy])
@@ -183,13 +213,20 @@ def for_foy_list(engine: Any, tenant: str, schema: str, out: dict[str, Any], log
     return k
 
 
-def for_foy(engine: Any, tenant: str, schema: str, out: dict[str, Any], logo: Any, logo_db: Optional[str]) -> P.Kaynaklar:
+def for_foy(engine: Any, tenant: str, schema: str, out: dict[str, Any], logo: Any, logo_db: Optional[str],
+            sync: Optional[dict[str, Any]] = None) -> P.Kaynaklar:
+    """`sync`: föy eşitleme kaydından okunduysa (CRM'e gidilmedi) o kayıt; köken eşitlemede çalışmış sorgulardır."""
     stok, donem = out["stokKodu"], out.get("donem")
     k = P.Kaynaklar(data_end=PL.data_end(engine))
-    origin = [k.sorgu("foy.crm.alan", "CRM föy alanları", "crm", S.foy_books_sql(schema, [stok]), database=PK.crm_db(),
-                      description="Künye, fiyat, barkod, hedef kitle ve tanıtım metinleri."),
-              k.sorgu("foy.crm.kitap", "CRM kitap kartı (yayın günü)", "crm", S.book_sql(schema, stok), database=PK.crm_db())]
-    origin += _logo_price(k, logo, [stok], logo_db)
+    if sync and donem:
+        origin = _sync_origin(k, schema, donem, sync, logo_db)
+        origin.append(k.portal("foy.esitleme", "Föy eşitleme kaydı (yayın günü kaynağı, sorumlu)", F.sync_stmt(tenant, donem),
+                               engine, origin=list(origin), description=F_ESITLEME))
+    else:
+        origin = [k.sorgu("foy.crm.alan", "CRM föy alanları", "crm", S.foy_books_sql(schema, [stok]), database=PK.crm_db(),
+                          description="Künye, fiyat, barkod, hedef kitle ve tanıtım metinleri."),
+                  k.sorgu("foy.crm.kitap", "CRM kitap kartı (yayın günü)", "crm", S.book_sql(schema, stok), database=PK.crm_db())]
+        origin += _logo_price(k, logo, [stok], logo_db)
     row = k.portal("foy.kayit", "Föy kaydı", F.row_stmt(tenant, stok, donem), engine, origin=origin,
                    description="Föy alanları (kaynağıyla), eksikler, uyumsuzluklar, onay (semantic_mkt_foy).")
     alan = k.hesap("alan", "Föy alanları CRM kitap kartından (kaynağı her alanda yazılı) ya da elle girildi.", [row])

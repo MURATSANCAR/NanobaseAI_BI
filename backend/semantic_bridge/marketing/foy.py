@@ -379,6 +379,50 @@ class LogoPrices:
         return out
 
 
+# ------------------------------------------------------------------ eşitleme kaydı (ekran yalnız bunu okur)
+
+
+def sync_key(donem: str) -> str:
+    return f"foy-sync:{donem}"
+
+
+#: Liste ve föy sayfasında gösterilen CRM kitap bilgisi (eşitlemede yazılır).
+SYNC_BOOK_KEYS = ("yazar", "yayinevi", "kitaplik", "yayinTarihi", "sorumlu", "yayinKaynagi", "tarihKaynagi")
+
+
+def save_sync(engine: sa.engine.Engine, tenant: str, donem: str, pubs: list[dict[str, Any]], notes: list[str],
+              logo_note: Optional[str], logo_runs: list[dict[str, Any]], date_order: list[str]) -> dict[str, Any]:
+    """Dönemin son CRM/Logo eşitlemesi (`semantic_mkt_meta`, anahtar `foy-sync:<dönem>`): yayın günü bu aya düşen
+    kitapların künyesi, eşitleme notları, Logo notu ve fiyatı getiren, gerçekten çalışmış Logo SQL'leri. Eşitleme her gün
+    `timas-marketing.timer` turunda (bu ay + gelecek ay) ve ekrandaki «CRM'den yenile»de koşar; föy listesi ve föy sayfası
+    istek anında CRM'e ve Logo'ya gitmez, föy tablosunu ve bu kaydı okur."""
+    kitap: dict[str, dict[str, Any]] = {}
+    for b in pubs:
+        # Föy sayfasının «yayın günü kaynağı»: kitap kartı tarihlerinin ayar sırası (elle girilen M15 günü hariç — eski
+        # tek föy okumasıyla aynı: `plans.resolve_pub(crm.book(..)["tarihler"])`).
+        _pub, src = P.resolve_pub(b.get("tarihler") or {}, date_order)
+        kitap[b["stokKodu"]] = {"yazar": b.get("yazar"), "yayinevi": b.get("yayinevi"), "kitaplik": b.get("kitaplik"),
+                                "yayinTarihi": b.get("yayinTarihi"), "sorumlu": b.get("sorumlu"),
+                                "yayinKaynagi": b.get("yayinKaynagi"), "tarihKaynagi": src}
+    snap = {"zaman": C.iso(C.now()), "kitap": kitap, "notlar": list(notes), "logoNotu": logo_note,
+            "logo": [{"sql": r["sql"], "rows": r.get("rows"), "dbMs": r.get("dbMs"), "at": r.get("at")} for r in logo_runs]}
+    C.meta_set(engine, tenant, sync_key(donem), snap)
+    return snap
+
+
+def sync_stmt(tenant: str, donem: str):
+    """Eşitleme kaydının okuması (aynı ifade sorgu bilgisinde gösterilir)."""
+    return sa.select(C.META).where(C.META.c.tenant_id == tenant, C.META.c.key == sync_key(donem))
+
+
+def read_sync(engine: sa.engine.Engine, tenant: str, donem: str) -> Optional[dict[str, Any]]:
+    """Dönemin son eşitleme kaydı; hiç eşitlenmemişse None."""
+    with engine.connect() as c:
+        row = c.execute(sync_stmt(tenant, donem)).first()
+    v = C.loads(row.value_json, {}) if row else {}
+    return v if isinstance(v, dict) and v.get("zaman") else None
+
+
 # ------------------------------------------------------------------ okuma / yazma
 
 

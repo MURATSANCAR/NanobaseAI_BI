@@ -448,3 +448,186 @@ def test_endpoints_build_view_foy_and_explicit_approval(monkeypatch, store, sett
     assert client.post(f"/api/v1/marketing/foy/paket/{ay}/send", headers=a).status_code == 403
     assert client.post("/api/v1/marketing/months/run-due", headers=a).status_code == 403
     assert client.get(f"/api/v1/marketing/contract/month/{ay}", headers=a).json()["plan"] is None   # onaylı ay planı yok
+
+
+# ------------------------------------------------------------------ hız: föy ekranı eşitleme kaydından okur
+
+
+def _foy_app(monkeypatch, store, settings, fake):
+    """Föy uçları için köprü: CRM sahte, Logo bağlantısı tanımsız (fiyat okunamadı notu). CRM ve Logo çağrıları sayılır.
+    Dönen `calls` her CRM/Logo okumasının adını toplar; `fake`in yöntemleri çağrı anında aranır (testte değiştirilebilir)."""
+    from fastapi.testclient import TestClient
+
+    from semantic_bridge import admin as admin_mod
+    from semantic_bridge import board as board_mod
+    from semantic_bridge.app import Runtime, create_app
+    from semantic_layer.candidates.llm_client import FakeLlm
+
+    users = {"timas_session=a": "ayse"}
+    monkeypatch.setattr(board_mod, "_fetch_user", lambda cookie: users.get(cookie))
+    monkeypatch.setattr(board_mod, "_fetch_session", lambda cookie: {"username": users.get(cookie), "displayName": "x"})
+    monkeypatch.setattr(admin_mod, "admins", lambda: [])
+    monkeypatch.delenv("SEMANTIC_CALLER_TOKEN", raising=False)
+    monkeypatch.delenv("SEMANTIC_ADMIN_TOKEN", raising=False)
+    A._ready.clear()
+    A.invalidate()
+    for s in (C._ready, B._ready, M._ready, F._ready):
+        s.discard(id(store.engine))
+    _targets(monkeypatch, [])
+    app = create_app(Runtime(settings, store=store, llm=FakeLlm([""])))
+    calls: list[str] = []
+    crm = app.state.marketing["crm"]
+
+    def counted(name):
+        def fn(*a, **kw):
+            calls.append(name)
+            return getattr(fake, name)(*a, **kw)
+        return fn
+    for name in ("new_books", "campaigns", "all_special_days", "spend", "region_targets", "foy_books", "book", "email_of"):
+        monkeypatch.setattr(crm, name, counted(name))
+    orig = F.LogoPrices.read
+
+    def logo_read(self, *a, **kw):
+        calls.append("logo")
+        return orig(self, *a, **kw)
+    monkeypatch.setattr(F.LogoPrices, "read", logo_read)
+    return TestClient(app), calls
+
+
+def _no_prov(j: dict) -> dict:
+    return {k: v for k, v in j.items() if k != "kaynaklar"}
+
+
+def _prov_ok(j: dict) -> dict:
+    from semantic_bridge import provenance as PV
+    from semantic_bridge.marketing import kaynak_aylik as KA
+
+    k = j.get("kaynaklar")
+    assert k and not k.get("error"), k
+    assert PV.uncovered_numbers(j, KA.NOT_RAKAM) == []
+    assert PV.problems(j) == []
+    return k
+
+
+def test_foy_screen_reads_sync_record_without_crm_or_logo(monkeypatch, store, settings):
+    """Eski hesap = yeni hesap: ilk açılış (eşitleme) ile sonraki okuma (yalnız föy tablosu + eşitleme kaydı) aynı cevabı
+    verir; sonraki okumada CRM'e ve Logo'ya hiç gidilmez. «CRM'den yenile» (yenile=true) yine CRM ve Logo'yu okur."""
+    ay = (date.today().replace(day=1) + timedelta(days=40)).strftime("%Y-%m")
+    ean = _valid_ean("978605081234")
+    fake = FakeCrm(books=[_book("N9", f"{ay}-10", sorumlu="Ayşe Yılmaz"), _book("N8", f"{ay}-12")],
+                   raw={"N9": _raw(stok_kodu="N9", ean13=ean, isbn13=ean)})       # N8'in föy kartı yok → not
+    client, calls = _foy_app(monkeypatch, store, settings, fake)
+    h = {"cookie": "timas_session=a", "x-data-refresh": "1"}
+
+    first = client.get(f"/api/v1/marketing/foy?donem={ay}", headers=h)
+    assert first.status_code == 200, first.text
+    j1 = first.json()
+    assert {"new_books", "foy_books", "logo"} <= set(calls)                  # dönem hiç eşitlenmemişti: eşitlendi
+    assert j1["kpi"]["toplam"] == 1 and j1["crmOkuma"]
+    assert j1["items"][0]["kitap"] == {"yazar": "Yazar", "yayinevi": "Timaş", "kitaplik": "Roman", "yayinTarihi": f"{ay}-10",
+                                       "sorumlu": "Ayşe Yılmaz"}
+    assert j1["notlar"] == ["N8: CRM kitap kartı etkin değil; föy açılmadı."]
+    assert j1["logoNotu"]                                                    # bağlantı tanımsız: eski davranış
+    snap = F.read_sync(store.engine, settings.tenant_id, ay)
+    assert snap and sorted(snap["kitap"]) == ["N8", "N9"] and snap["kitap"]["N9"]["tarihKaynagi"] == "crm-kitap"
+    assert snap["logo"] == []                                                # okunamadı: gösterilecek çalışmış Logo SQL'i yok
+
+    calls.clear()
+    second = client.get(f"/api/v1/marketing/foy?donem={ay}", headers=h)
+    assert second.status_code == 200, second.text
+    j2 = second.json()
+    assert calls == []                                                       # istek anında CRM/Logo yok
+    assert _no_prov(j2) == _no_prov(j1)
+    k = _prov_ok(j2)
+    assert "foy.esitleme" in k["sources"] and "foy.esitleme" in k["sources"]["foy.liste"]["origin"]
+    assert "foy-sync:" + ay in k["sources"]["foy.esitleme"]["sql"]
+    assert "foy.crm.yeni" in k["sources"] and "foy.crm.alan.1" in k["sources"]
+    for durum in ("taslak", "eksik", "uyumsuz", "eski", "onayli"):
+        assert client.get(f"/api/v1/marketing/foy?donem={ay}&durum={durum}", headers=h).status_code == 200
+    assert calls == []
+
+    # Tek föy: eşitleme kaydında kitap var → CRM'e gidilmez; cevap eski okumayla (CRM'den) aynı.
+    fast = client.get(f"/api/v1/marketing/foy/N9?donem={ay}", headers=h)
+    assert fast.status_code == 200, fast.text
+    assert calls == []
+    jf = fast.json()
+    assert jf["kitap"] == {"yayinKaynagi": "crm-kitap", "sorumlu": "Ayşe Yılmaz"}
+    kf = _prov_ok(jf)
+    assert "foy.esitleme" in kf["sources"]["foy.kayit"]["origin"]
+    nodonem = client.get("/api/v1/marketing/foy/N9", headers=h)              # dönemsiz: föyün (ay dışı olmayan) ayı
+    assert nodonem.status_code == 200 and nodonem.json()["donem"] == ay and calls == []
+    with store.engine.begin() as c:                                          # kayıt yoksa eski yol: CRM okunur
+        c.execute(C.META.delete().where(C.META.c.key == F.sync_key(ay)))
+    old = client.get(f"/api/v1/marketing/foy/N9?donem={ay}", headers=h)
+    assert old.status_code == 200, old.text
+    assert {"foy_books", "book"} <= set(calls)
+    assert _no_prov(old.json()) == _no_prov(jf)
+    _prov_ok(old.json())
+
+    # «CRM'den yenile»: CRM ve Logo yeniden okunur, kayıt yeniden yazılır.
+    calls.clear()
+    again = client.get(f"/api/v1/marketing/foy?donem={ay}&yenile=true", headers=h)
+    assert again.status_code == 200, again.text
+    assert {"new_books", "foy_books", "logo"} <= set(calls)
+    assert F.read_sync(store.engine, settings.tenant_id, ay)
+    assert again.json()["kpi"] == j1["kpi"]
+
+
+def test_foy_list_keeps_last_sync_when_crm_fails(monkeypatch, store, settings):
+    """«CRM'den yenile»de CRM okunamazsa eski davranış: not düşer, föyler son okunan hâlleriyle; kitap künyesi son
+    eşitleme kaydından gelir."""
+    from semantic_bridge.marketing.sources import SourceError
+
+    ay = (date.today().replace(day=1) + timedelta(days=40)).strftime("%Y-%m")
+    ean = _valid_ean("978605081234")
+    fake = FakeCrm(books=[_book("N9", f"{ay}-10")], raw={"N9": _raw(stok_kodu="N9", ean13=ean, isbn13=ean)})
+    client, calls = _foy_app(monkeypatch, store, settings, fake)
+    h = {"cookie": "timas_session=a", "x-data-refresh": "1"}
+    assert client.get(f"/api/v1/marketing/foy?donem={ay}", headers=h).json()["kpi"]["toplam"] == 1
+
+    def down(*a, **kw):
+        raise SourceError("CRM bağlantısı yok")
+    monkeypatch.setattr(fake, "new_books", down)
+    r = client.get(f"/api/v1/marketing/foy?donem={ay}&yenile=true", headers=h)
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["notlar"] == ["CRM okunamadı; föyler son okunan hâlleriyle: CRM bağlantısı yok"] and j["logoNotu"] is None
+    assert j["kpi"]["toplam"] == 1 and j["items"][0]["kitap"]["yazar"] == "Yazar"
+    _prov_ok(j)
+
+
+def test_logo_runs_from_sync_record_are_the_foy_origin(engine):
+    """Logo fiyatı okunduysa çalışmış SQL eşitleme kaydına yazılır ve föy sayfasının kökeninde aynen görünür (süreç yeniden
+    başlasa da: kayıttan okunur)."""
+    from semantic_bridge import provenance as PV
+    from semantic_bridge.marketing import kaynak_aylik as KA
+
+    this_year = date.today().year
+    views = [{"name": f"V_SatisRaporu_{y}"} for y in range(2020, this_year + 2)]
+
+    def runner():
+        def run(sql):
+            if "sys.views" in sql:
+                return views
+            return [{"stok_kodu": "N1", "birim_fiyat": 240.0, "son_fiyat_degisikligi": None}]
+        return run
+
+    logo = F.LogoPrices(runner)
+    prices, note = logo.read(["N1"], "satis")
+    runs = logo.runs_for(["N1"])
+    fst = _fst()
+    F.upsert_from_crm(engine, T, "N1", "2026-11", _raw(), "2026-11-10", "crm-kitap", prices.get("N1"), note, fst)
+    F.save_sync(engine, T, "2026-11", [{**_book("N1", "2026-11-10"), "yayinTarihi": "2026-11-10", "yayinKaynagi": "crm-kitap"}],
+                [], note, runs, _st()["dateOrder"])
+    snap = F.read_sync(engine, T, "2026-11")
+    assert [r["sql"] for r in snap["logo"]] == [r["sql"] for r in runs]
+    out = F.get(engine, T, "N1", fst["required"], "2026-11")
+    out["crmTodo"], out["logo"], out["kitap"] = [], next((x for x in out["uyumsuzluk"] if x["tur"] == "fiyat-logo"), None), {}
+    out = PV.ekle(out, KA.for_foy(engine, T, "Timas_MSCRM.dbo", out, F.LogoPrices(runner), "TIGERDB", sync=snap))
+    k = out["kaynaklar"]
+    assert PV.problems(out) == [] and PV.uncovered_numbers(out, KA.NOT_RAKAM) == []
+    shown = [s for sid, s in k["sources"].items() if sid.startswith("foy.logo.fiyat.")]
+    assert len(shown) == len(runs) == 2
+    assert [s["stats"]["rows"] for s in shown] == [r["rows"] for r in runs]
+    assert all("SatisRaporu" in s["sql"] for s in shown)
+    assert "foy.esitleme" in k["sources"]["foy.kayit"]["origin"]

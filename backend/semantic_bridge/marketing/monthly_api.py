@@ -15,7 +15,9 @@ from __future__ import annotations
 
 import io
 import logging
+import threading
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from fastapi import HTTPException, Request
@@ -87,7 +89,18 @@ def register(app, rt, H: Any) -> None:
 
     # ------------------------------------------------------------------ föy eşitleme
 
+    #: Aynı dönemin eşitlemesi aynı anda bir kez koşar (ilk açılışta iki kişi gelirse ikincisi kaydı bekler, okur).
+    sync_locks: dict[tuple[str, str], threading.Lock] = {}
+    sync_guard = threading.Lock()
+
+    def sync_lock(tenant: str, donem: str) -> threading.Lock:
+        with sync_guard:
+            return sync_locks.setdefault((tenant, donem), threading.Lock())
+
     def foy_sync(engine, tenant: str, donem: str, fresh: bool) -> dict[str, Any]:
+        """CRM (yayın günü bu aya düşen kitaplar + föy alanları) ve Logo fiyatı okunur, föyler açılır/tazelenir, sonuç
+        `F.save_sync` ile kaydedilir. Günlük turda (`run_due`: bu ay + gelecek ay), «CRM'den yenile»de ve dönem hiç
+        eşitlenmemişse ilk açılışta koşar; ekranın sıradan okuması bunu çağırmaz."""
         s, fs = st(), fst()
         first, last = M.bounds(donem)
         pubs = M._pub_rows(engine, tenant, crm, s, first, last, fresh)
@@ -105,21 +118,35 @@ def register(app, rt, H: Any) -> None:
                                      prices.get(b["stokKodu"]), note, fs)
             done[what] = done.get(what, 0) + 1
         F.mark_out_of_month(engine, tenant, donem, set(codes))
+        # Fiyatı getiren Logo SQL'leri yalnız okuma başarılıysa kaydedilir (okunamadıysa gösterilecek çalışmış metin yok).
+        runs = logo.runs_for(codes) if note is None else []
+        F.save_sync(engine, tenant, donem, pubs, notes, note, runs, s["dateOrder"])
         return {"pubs": {b["stokKodu"]: b for b in pubs}, "notlar": notes, "logoNotu": note, "islem": done}
 
     def foy_list(engine, tenant: str, donem: str, durum: str, fresh: bool) -> dict[str, Any]:
+        """Föy tablosu + dönemin eşitleme kaydı; istek anında CRM'e ve Logo'ya gidilmez. Dönem hiç eşitlenmemişse ya da
+        «CRM'den yenile» (`fresh`) istendiyse önce eşitlenir (eski davranış: ilk açılışta föyler açılır)."""
         fs = fst()
         notes: list[str] = []
-        sync = None
-        try:
-            sync = foy_sync(engine, tenant, donem, fresh)
-            notes += sync["notlar"]
-        except SourceError as e:
-            notes.append(f"CRM okunamadı; föyler son okunan hâlleriyle: {e}")
+        failed = False
+        snap = None if fresh else F.read_sync(engine, tenant, donem)
+        if snap is None:
+            with sync_lock(tenant, donem):
+                snap = None if fresh else F.read_sync(engine, tenant, donem)   # beklerken başka istek eşitlemiş olabilir
+                if snap is None:
+                    try:
+                        foy_sync(engine, tenant, donem, fresh)
+                    except SourceError as e:
+                        failed = True
+                        notes.append(f"CRM okunamadı; föyler son okunan hâlleriyle: {e}")
+                    snap = F.read_sync(engine, tenant, donem)
+        snap = snap or {}
+        if not failed:
+            notes += snap.get("notlar") or []
         rows = F.list_month(engine, tenant, donem, fs["required"])
-        pubs = (sync or {}).get("pubs") or {}
+        books = snap.get("kitap") or {}
         for r in rows:
-            b = pubs.get(r["stokKodu"]) or {}
+            b = books.get(r["stokKodu"]) or {}
             r["kitap"] = {"yazar": b.get("yazar"), "yayinevi": b.get("yayinevi"), "kitaplik": b.get("kitaplik"),
                           "yayinTarihi": b.get("yayinTarihi"), "sorumlu": b.get("sorumlu")}
         kpi = {"toplam": sum(1 for r in rows if not r["ayDisi"]),
@@ -132,13 +159,32 @@ def register(app, rt, H: Any) -> None:
         shown = [r for r in rows if not durum or r["durum"] == durum or (durum == "eksik" and r["eksikler"])
                  or (durum == "uyumsuz" and r["engelleyen"]) or (durum == "eski" and r["eski"])]
         out = {"donem": donem, "donemAdi": M.label(donem), "items": shown, "kpi": kpi, "notlar": notes,
-               "logoNotu": (sync or {}).get("logoNotu"), "gonderimler": F.sends_of(engine, tenant, donem),
-               "zorunlu": fs["required"], "logoKaynak": fs["logoPrice"]}
-        return PV.bagla(out, lambda: K.for_foy_list(engine, tenant, crm.schema(), out, logo, logo_db()))
+               "logoNotu": None if failed else snap.get("logoNotu"), "gonderimler": F.sends_of(engine, tenant, donem),
+               "zorunlu": fs["required"], "logoKaynak": fs["logoPrice"], "crmOkuma": snap.get("zaman")}
+        return PV.bagla(out, lambda: K.for_foy_list(engine, tenant, crm.schema(), out, logo, logo_db(), sync=snap or None))
+
+    def _foy_view(engine, tenant: str, stok: str, d: str, fs: dict[str, Any], src: Any, sorumlu: Any,
+                  snap: dict[str, Any] | None) -> dict[str, Any]:
+        out = F.get(engine, tenant, stok, fs["required"], d)
+        out["crmTodo"] = F.crm_todo(out) if out["durum"] == "onayli" else []
+        out["logo"] = next((x for x in out["uyumsuzluk"] if x["tur"] == "fiyat-logo"), None)
+        out["kitap"] = {"yayinKaynagi": src, "sorumlu": sorumlu}
+        return PV.bagla(out, lambda: K.for_foy(engine, tenant, crm.schema(), out, logo, logo_db(), sync=snap))
 
     def foy_one(engine, tenant: str, stok: str, donem: str | None, fresh: bool = False, force: bool = False) -> dict[str, Any]:
-        """Tek föy; yoksa (ya da `fresh`) CRM'den açar/tazeler. Dönem verilmezse yayın gününün ayı."""
+        """Tek föy; yoksa (ya da `fresh`) CRM'den açar/tazeler. Dönem verilmezse yayın gününün ayı.
+
+        Föy kaydı varsa ve dönemin eşitleme kaydında bu kitap bulunuyorsa CRM'e gidilmez: yayın günü kaynağı ve sorumlu
+        eşitlemede yazıldı (eski okuma da föy varken CRM'den yalnız bu ikisini ve kartın etkinliğini alıyordu)."""
         fs, s = fst(), st()
+        if not fresh and not force:
+            with engine.connect() as c:
+                r0 = F.get_row(c, tenant, stok, donem)
+            if r0 is not None and (donem or not r0.ay_disi):
+                snap = F.read_sync(engine, tenant, r0.donem) or {}
+                b = (snap.get("kitap") or {}).get(r0.stok_kodu)
+                if b is not None:
+                    return _foy_view(engine, tenant, r0.stok_kodu, r0.donem, fs, b.get("tarihKaynagi"), b.get("sorumlu"), snap)
         rows = crm.foy_books([stok], fresh=fresh)
         raw = rows.get(stok)
         if raw is None:
@@ -151,11 +197,7 @@ def register(app, rt, H: Any) -> None:
         if exists is None or fresh or force:
             prices, note = logo.read([stok], fs["logoPrice"], fresh=fresh)
             F.upsert_from_crm(engine, tenant, stok, d, raw, pub, src, prices.get(stok), note, fs, force=force)
-        out = F.get(engine, tenant, stok, fs["required"], d)
-        out["crmTodo"] = F.crm_todo(out) if out["durum"] == "onayli" else []
-        out["logo"] = next((x for x in out["uyumsuzluk"] if x["tur"] == "fiyat-logo"), None)
-        out["kitap"] = {"yayinKaynagi": src, "sorumlu": (detail or {}).get("sorumlu")}
-        return PV.bagla(out, lambda: K.for_foy(engine, tenant, crm.schema(), out, logo, logo_db()))
+        return _foy_view(engine, tenant, stok, d, fs, src, (detail or {}).get("sorumlu"), None)
 
     # ------------------------------------------------------------------ ay planı
 
@@ -420,12 +462,14 @@ def register(app, rt, H: Any) -> None:
 
     # Dosya uçları `{stok}` uçlarından önce kaydedilir (yol eşleşmesi sırayla).
     def _covers(items: list[dict[str, Any]]) -> dict[str, Any]:
+        """Kapak görselleri eşzamanlı okunur (paket PDF'inde kitap başına sırayla beklemek yerine; her kitap okunur)."""
         base = fst()["coverBase"]
-        out = {}
-        for f in items:
-            rel = next((a.get("deger") for a in f["alanlar"] if a["key"] == "kapak"), None)
-            out[f["stokKodu"]] = F.cover_bytes(base, rel)
-        return out
+        rels = {f["stokKodu"]: next((a.get("deger") for a in f["alanlar"] if a["key"] == "kapak"), None) for f in items}
+        if len(rels) <= 1:
+            return {k: F.cover_bytes(base, v) for k, v in rels.items()}
+        with ThreadPoolExecutor(max_workers=min(8, len(rels)), thread_name_prefix="foy-kapak") as ex:
+            got = list(ex.map(lambda rel: F.cover_bytes(base, rel), rels.values()))
+        return dict(zip(rels.keys(), got))
 
     def _package(engine, tenant: str, d: str) -> list[dict[str, Any]]:
         return [r for r in F.list_month(engine, tenant, d, fst()["required"]) if r["durum"] == "onayli" and not r["ayDisi"]]
