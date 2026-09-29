@@ -84,6 +84,7 @@ def test_sharp_drop_accounts_for_site_trend_and_noise():
     assert not g.sharp_drop(100, 50, 0.5)          # site de yarıya indi: sayfaya özgü düşüş yok
     assert not g.sharp_drop(4, 1, 1.0)             # 4 → 1: fark gürültüden büyük değil
     assert not g.sharp_drop(0, 0, 1.0)
+    assert not g.sharp_drop(900, 1010, 3.0)        # ziyaret arttı: site daha çok büyüse de «düştü» denmez
 
 
 def test_quantile():

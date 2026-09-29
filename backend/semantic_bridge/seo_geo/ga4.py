@@ -251,8 +251,10 @@ def quantile(values: list[float], q: float) -> float:
 
 
 def sharp_drop(prev: float, cur: float, site_ratio: float) -> bool:
-    """Site genelindeki değişim hesaba katılarak beklenen değerin DROP_RATIO katının altı ve fark gürültüden büyük."""
-    if prev <= 0:
+    """Site genelindeki değişim hesaba katılarak beklenen değerin DROP_RATIO katının altı ve fark gürültüden büyük.
+    Değer gerçekten düşmüş olmalı: site daha çok büyüdü diye artan sayfaya «sert düştü» denmez (2026-09-29 testte
+    %12 artan sayfa işaretleniyordu)."""
+    if prev <= 0 or cur >= prev:
         return False
     expected = prev * (site_ratio if site_ratio > 0 else 1.0)
     return cur <= expected * DROP_RATIO and (expected - cur) >= 2 * math.sqrt(expected)
