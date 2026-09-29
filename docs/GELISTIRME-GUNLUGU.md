@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (15:45) — CRM başlıkları test sunucusunda ve müşteri VM'inde (`151ee17d`)
+
+- **Test sunucusu:** 5 dosya (md5 = değişiklik öncesi main), `tsc -b` 0, portal `index-DnyhC6rB.js`, köprü yeniden başladı.
+  Canlı uç: 689 varlık + 3.848 alan (183 KB), ilk istek 13 sn, sonra 0,008 sn. Tarayıcıyla «Kişisel veri envanteri» ve
+  «Veri alanları»: sayfa metninde ham `new_`/`obs_` adı 0.
+- **Müşteri VM'i:** ön denetim (VM'deki `14d2346d` ata, 15 commit; çakışma 0; arşiv köprüyü 2.374 uçla yükledi; `._*` 0).
+  Kurulum komutu Claude oturumunda «Production Deploy» izin reddi → kullanıcı açık SSH bağlantısı üzerinden koştu (yeni
+  bağlantılar IP engeline takılıyordu): **EXIT 0**, 5 konteyner, `bi_var` 7 → 7. VM köprüsü CRM haritasını müşterinin canlı
+  CRM'inden okuyor: 689 varlık, 3.848 alan («Baskı Sayısı», «Yayın Kararı», «Haber Mecrası»).
+
 ## 2026-09-29 (gece, 3) — Kitap hesabı: yeni kitapta KDV %0, telif varsayılanı kapak fiyatı × basılan adet
 
 - **Üretim/fiyat ekibinin geri bildirimi:** (1) kitapta KDV %0 — CRM'de 6.200 kitap %0, 16 kitap %8–20, 90 boş; (2) fiyat çalışmasında telif kapak fiyatı üzerinden, sözleşme ayrıntısına bakılmıyor; (3) dolaylı giderin telife uygulanması yönetime sorulacak; (4) küçük baskılar (500/200/100) için ayrı maliyet Excel'i var, üretimden istenecek.
