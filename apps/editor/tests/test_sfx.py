@@ -380,8 +380,10 @@ def test_pick_prompt_carries_who_makes_the_human_sound(pool):
              N.Unit("k2", "bubble", "Can", "canli-erkek-radyo", b, N.read(b))]
     cands = [{"id": "x1", "title": "male sigh", "source": "kenney", "dur": 1.0},
              {"id": "x2", "title": "female sigh", "source": "kenney", "dur": 1.0}]
+    # anlatımda okuyan anlatıcı sesi çıkaran değildir: kişi satırı yok (kişiyi metin söyler)
+    assert sfx.block_speaker(units, "b1") is None
     nar = sfx.pick_prompt({"quote": "iç çekti", "query": "iç çekiş"}, cands, sfx.block_speaker(units, "b1"))
-    assert "Sesi çıkaran: kadın (bu yeri okuyan anlatıcı" in nar
+    assert "Sesi çıkaran" not in nar
     assert "adayın cinsiyeti ve yaşı sesi çıkaranla tutmalı" in nar and "A) male sigh" in nar
     bub = sfx.pick_prompt({"quote": "Tüh", "query": "hayal kırıklığı iç çekişi"}, cands, sfx.block_speaker(units, "k1"))
     assert "Sesi çıkaran: kız çocuğu («Elif» konuşuyor)." in bub
@@ -390,7 +392,7 @@ def test_pick_prompt_carries_who_makes_the_human_sound(pool):
     assert "Sesi çıkaran" not in sfx.pick_prompt({"quote": "Tüh"}, cands, None)   # bilinmiyorsa satır yok
     # ipucu okumasında da her bloğun okuyan sesi görünür (tarif cinsiyet/yaşla yazılsın)
     prompt, _ = sfx._page_prompt(units)
-    assert "[b1] (okuyan ses: kadın) Kız derin" in prompt and "[k1] (Elif · okuyan ses: kız çocuğu) Tüh!" in prompt
+    assert "[b1] Kız derin" in prompt and "[k1] (Elif · konuşan ses: kız çocuğu) Tüh!" in prompt
 
     class Llm:
         def __init__(self):
@@ -404,10 +406,11 @@ def test_pick_prompt_carries_who_makes_the_human_sound(pool):
     llm = Llm()
     ranked, fit = asyncio.run(sfx.rerank(llm, {"quote": "Tüh"}, cands, sfx.block_speaker(units, "k1")))
     assert [r["id"] for r in ranked] == ["x2", "x1"] and fit == 0.95
-    assert "Sesi çıkaran: kız çocuğu" in llm.msgs[0] and llm.refs[0] == ("sfx.pick", "4")
+    assert "Sesi çıkaran: kız çocuğu" in llm.msgs[0] and llm.refs[0] == ("sfx.pick", "5")
 
 
-def test_suggest_page_tells_the_picker_who_reads_the_block(job, pool, monkeypatch):
+def test_suggest_page_gives_no_person_for_narration_text(job, pool, monkeypatch):
+    """Anlatım metnindeki ipucunda okuyan anlatıcı sesi çıkaran sayılmaz (kişiyi metin söyler): seçime kişi gitmez."""
     async def fake_read(llm, units, pid, t):
         return [{"blok": "b1", "alinti": "vak vak", "tur": "yansima", "kategori": "ordek", "tarif": "ördek vaklıyor",
                  "tarif_en": "duck quacking", "yer": "birlikte"}]
@@ -423,7 +426,7 @@ def test_suggest_page_tells_the_picker_who_reads_the_block(job, pool, monkeypatc
         return cands, 0.9
     monkeypatch.setattr(sfx, "rerank", fake_rerank)
     asyncio.run(sfx.suggest_page(job, "p_1", "editör", llm=object()))
-    assert seen and all(w == {"person": "kadın", "speaker": None, "narrator": True} for w in seen)
+    assert seen and all(w is None for w in seen)
 
 
 def test_back_to_back_effects_do_not_overlap(pool):
@@ -446,3 +449,11 @@ def test_back_to_back_effects_do_not_overlap(pool):
     for a, b in zip(pl, pl[1:]):
         assert a["start"] + a["length"] <= b["start"] or a["length"] == sfx.FX_MIN_SEC
     assert sfx.MIX_VERSION >= 3                                         # eski karışımlar yeniden yapılır
+
+
+def test_stretched_word_is_a_sound_only_as_a_standalone_exclamation():
+    t = "Aslan çoook korkmuştu. Güüüümmmm! O günleriiii hatırladı."
+    u = [N.Unit("b1", "para", None, "anlatici-kadin", t, N.read(t))]
+    assert sfx.strong_hints(u) == ["Güüüümmmm"]
+    assert "çoook" not in sfx.sound_hints(u) and "günleriiii" not in sfx.sound_hints(u)
+    assert "Güüüümmmm" in sfx.sound_hints(u)

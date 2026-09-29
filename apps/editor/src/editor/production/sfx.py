@@ -334,7 +334,9 @@ Kurallar:
   ateş», «uğuldayan rüzgâr»). «tarif_en»: aynı tarifin kısa İngilizce karşılığı (ör. "duck quacking").
 - İnsanın çıkardığı seste (iç çekiş, gülüş, kıkırdama, hapşırık, öksürük, çığlık, ağlama, esneme) tarife sesi çıkaranın
   cinsiyetini ve yaşını yaz (ör. «kadın iç çekişi» / "woman sighing", «kız çocuğu kıkırdıyor» / "little girl
-  giggling"). Sesi çıkaran metinde anlatılıyorsa odur; anlatılmıyorsa bloğun başındaki okuyan sestir.
+  giggling") yalnız sesi çıkaran belliyse: metin söylüyorsa odur («aslan kahkaha attı» → aslan, «fil hapşırdı» → fil),
+  konuşma balonunda konuşan karakterdir. Anlatım metnini okuyan anlatıcının sesi, sesi çıkaran değildir; belli değilse
+  cinsiyet yazma.
 - «kategori»: listeden en uygun anahtar; hiçbiri uymuyorsa "diger".
 - «yer»: yansıma sözcükte ve anlık vuruşta "birlikte" (kelimeyle aynı anda); bir olayın sonucu olan seste
   (ör. kapı kapandı, düştü) "ardindan" (cümle o yeri okuyup bitirince).
@@ -369,6 +371,17 @@ STRONG_STEMS = ("havla", "miyavla", "mırla", "kükre", "gıdakla", "vakla", "ki
                 "uğulda", "patla")
 
 
+def _stretched_exclamation(u, k: int) -> bool:
+    """k. kelime harf uzatmalı ve tek başına ünlem mi: «Güüüümmmm!», «Happppşuuuu!». Cümle içindeki uzatma vurgudur
+    («çoook korkmuş», «o günleriiii»; 2026-09-29 dinleme: ikisine de efekt seçilmişti)."""
+    w = u.words[k]
+    if not _STRETCH.search(L.tr_lower(w.text)):
+        return False
+    ends = w.spoken.rstrip()[-1:] in "!?…" or w.text.rstrip("”\"»’'")[-1:] in "!?…"
+    starts = k == 0 or u.words[k - 1].spoken.rstrip()[-1:] in ".!?…:" or w.text[:1] in "“\"«‘'"
+    return ends and starts
+
+
 def strong_hints(units) -> list[str]:
     """`sound_hints`'in kural ipucu açacak kadar güçlü olanları: ikileme, tırnak + «diye», harf uzatması, güçlü ses
     fiili."""
@@ -380,10 +393,10 @@ def strong_hints(units) -> list[str]:
         for m in _SAID.finditer(u.text):
             if len(m.group(1).split()) <= 3:
                 out.append(m.group(1).strip(" ,.;:!?…"))
-        for w in u.words:
+        for k, w in enumerate(u.words):
             raw = w.text.strip(" ,.;:!?…\"'«»“”‘’()")
             f = L.tr_lower(raw)
-            if _STRETCH.search(f) or any(f.startswith(s) for s in STRONG_STEMS):
+            if _stretched_exclamation(u, k) or any(f.startswith(s) for s in STRONG_STEMS):
                 out.append(raw)
     return list(dict.fromkeys(x for x in out if x))
 
@@ -423,9 +436,9 @@ def sound_hints(units) -> list[str]:
         for m in _SAID.finditer(u.text):
             if len(m.group(1).split()) <= 3:
                 out.append(m.group(1).strip(" ,.;:!?…"))
-        for w in u.words:
+        for k, w in enumerate(u.words):
             f = L.tr_lower(w.text.strip(" ,.;:!?…\"'«»“”‘’()"))
-            if any(f.startswith(s) for s in SOUND_STEMS) or _STRETCH.search(f):
+            if any(f.startswith(s) for s in SOUND_STEMS) or _stretched_exclamation(u, k):
                 out.append(w.text.strip(" ,.;:!?…\"'«»“”‘’()"))
     return list(dict.fromkeys(x for x in out if x))
 
@@ -438,8 +451,10 @@ def _page_prompt(units) -> tuple[str, list[str]]:
     lines, ids = [], []
     for u in units:
         ids.append(u.id)
-        person = voice_person(u.voice)
-        who = " · ".join(x for x in (u.speaker, f"okuyan ses: {person}" if person else None) if x)
+        # yalnız balonda konuşanın sesi söylenir; anlatım metnini okuyan anlatıcı sesi çıkaran değildir (2026-09-29:
+        # kadın anlatıcının okuduğu «aslan kahkaha attı»ya kadın kahkahası, «fil hapşırdı»ya kız hapşırığı seçiliyordu)
+        person = voice_person(u.voice) if u.kind == "bubble" else None
+        who = " · ".join(x for x in (u.speaker, f"konuşan ses: {person}" if person else None) if x)
         lines.append(f"[{u.id}]{f' ({who})' if who else ''} {u.text}")
     hints = sound_hints(units)
     hint = ("\nMetinde ses olabilecek ifadeler (her birine ayrıca karar ver; efekt değilse alma): "
@@ -454,7 +469,7 @@ async def _read_page(llm, units, pid: str, temperature: float) -> list[dict]:
     item["properties"]["blok"] = {"type": "string", "enum": ids}
     schema = {"type": "object", "additionalProperties": False, "required": ["ipuclari"],
               "properties": {"ipuclari": {"type": "array", "items": item}}}
-    out, _ = await llm.chat(ALIAS, [{"role": "user", "content": prompt}], prompt=PromptRef("sfx.cues", "2"),
+    out, _ = await llm.chat(ALIAS, [{"role": "user", "content": prompt}], prompt=PromptRef("sfx.cues", "3"),
                             schema=schema, max_tokens=2500, temperature=temperature, thinking=False)
     return out.get("ipuclari") or []
 
@@ -576,10 +591,12 @@ def block_speaker(units, block: str | None) -> dict | None:
     u = next((u for u in units if u.id == block), None)
     if u is None:
         return None
+    if u.kind != "bubble":                   # anlatım: okuyan anlatıcı sesi çıkaran değil; kişiyi metin söyler
+        return None
     person = voice_person(u.voice)
     if person is None:
         return None
-    return {"person": person, "speaker": u.speaker, "narrator": u.kind != "bubble"}
+    return {"person": person, "speaker": u.speaker, "narrator": False}
 
 
 def _who_line(who: dict | None) -> str:
@@ -635,7 +652,7 @@ async def rerank(llm, cue: dict, cands: list[dict], who: dict | None = None) -> 
     msg = pick_prompt(cue, cands, who)
     try:
         probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": msg}], list(letters) + ["X"],
-                                    prompt=PromptRef("sfx.pick", "4"))
+                                    prompt=PromptRef("sfx.pick", "5"))
     except Exception:  # noqa: BLE001 — model yoksa aramanın sırası
         return cands, None
     order = sorted(range(len(cands)), key=lambda i: (-probs.get(letters[i], 0.0), i))
