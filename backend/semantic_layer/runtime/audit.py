@@ -1172,8 +1172,8 @@ def _columns_turned_into_filters(sq: SemanticQuery, sql: str, tree: exp.Expressi
             if hit:
                 out.append(Unmet("column_filter",
                                  f"'{term}' kolon olarak istendi; sorgu onu {', '.join(hit)} üzerinde bir süzgece çevirip satırları daralttı",
-                                 f"'{term}' için WHERE/HAVING süzgeci yazma: karşılığını SELECT'te kolon olarak göster; veride karşılığı "
-                                 f"yoksa -- yorum satırında bunu söyle ve o kolonu ekleme.", column=hit[0]))
+                                 f"'{term}' için WHERE/HAVING süzgeci yazma: karşılığını SELECT'te kolon olarak göster ve GROUP BY'a koy; "
+                                 f"ölçünün tablosundan bu kolona ulaşılamıyorsa NO_SQL yaz ve neden ulaşılamadığını söyle.", column=hit[0]))
     return out
 
 
@@ -1473,7 +1473,13 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
     out += _excluded_groups_unmet(sq, tree, occ)
     # «X bazında» asked and not placed: the answer must group by something — one total under a per-X question is a
     # different question (2026-09-29, A044 sınıfı). Checked always, not only in strict mode.
-    if getattr(sq, "requested_breakdowns", None) and isinstance(tree, exp.Select) and not any(
+    # One reason per fault: a breakdown the model turned into a filter ("'yazar' → SPECODE = 'YAZARLAR'") is already
+    # refused above as a column made a filter, with the repair that also restores the grouping; saying "groups by
+    # nothing" about the same words again only gives the repair two instructions for one mistake.
+    filtered_words = {w for w in (getattr(sq, "requested_breakdowns", None) or [])
+                      if any(u.kind == "column_filter" and f"'{w}'" in u.text for u in out)}
+    if getattr(sq, "requested_breakdowns", None) and isinstance(tree, exp.Select) \
+            and not set(sq.requested_breakdowns) <= filtered_words and not any(
             s.args.get("group") is not None for s in tree.find_all(exp.Select)):
         words = ", ".join(f"'{w}'" for w in sq.requested_breakdowns)
         out.append(Unmet("grain", f"{words} bazında kırılım istendi; sorgu hiçbir şeye göre gruplamıyor",

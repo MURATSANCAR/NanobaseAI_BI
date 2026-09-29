@@ -2818,9 +2818,9 @@ class SemanticResolver:
         return out
 
     def _unplaced_columns(self, sq: SemanticQuery, qf) -> None:
-        """Words nothing in the catalog placed, asked for as columns. With one server per question they are
-        not handed to the model (`_omit_column`); with two-server plans they still are, and the gate holds the
-        model to reading them as columns, not filters (`sq.column_terms`). Qualifiers keep the 2026-09-16 rule."""
+        """Words nothing in the catalog placed, asked for as columns: undefined terms the model places, a
+        breakdown the answer must carry, and a column the gate will not let become a filter (`sq.column_terms`).
+        Qualifiers keep the 2026-09-16 rule."""
         # Only words nothing placed. A qualifier (`model_qualifiers`) narrows the noun after it by definition and
         # keeps the 2026-09-16 rule; its reading is still held to the column rule by the gate when it is one.
         positions: dict[int, str] = {}
@@ -2849,25 +2849,22 @@ class SemanticResolver:
         columns = self._column_role_positions(sq, qf, {k: k + 1 for k in positions})
         if not columns:
             return
-        one_server = not federated.plans_enabled()
-        metrics = [s for s in sq.slots if s.semantic_type == SemanticType.METRIC and s.mapping]
-        homes = {self._source_of(m.mapping.entity) for m in metrics}
-        # Where the word lives, when the tables' own names say it: "yazar" is a CRM table's word and no ERP
-        # table's. Only for the sentence the person reads — the word is omitted either way.
-        named_at = {k: src for k, src, _ents in self._source_hits(qf, set())}
+        # Nothing in the catalog places these words on either server, so there is no "other server" to name and
+        # no reason to take them from the model: the A044 path (2026-09-29, `_requested_breakdowns`) — the word
+        # stays an undefined term the model places, the answer must group by it, and the gate holds the model to
+        # reading it as a column, never as a filter. Plans on or off alike. Only a word *certified on the other
+        # server* is taken out of the answer (`_keep_to_one_source` → `_omit_column`).
         for k in sorted(columns):
             tok = positions[k]
             if k in verbish:
                 sq.ignored[:] = [w for w in sq.ignored if fold(str(w)) != tok]
                 sq.explanation.append(f"'{tok}' kolonların arasında sayıldı: fiil değil, istenen bir kolon")
-                if not one_server and tok not in sq.unresolved:
-                    sq.unresolved.append(tok)     # the model's to read, as a column
-            if one_server:
-                sq.unresolved[:] = [w for w in sq.unresolved if fold(str(w)) != tok]
-                src = named_at.get(k)
-                self._omit_column(sq, tok, src if src is not None and src not in homes else None, metrics)
-            elif tok not in sq.column_terms:
-                sq.column_terms.append(tok)       # still the model's to read — as a column, never as a filter
+            if tok not in sq.unresolved:
+                sq.unresolved.append(tok)
+            if tok not in sq.requested_breakdowns:
+                sq.requested_breakdowns.append(tok)
+            if tok not in sq.column_terms:
+                sq.column_terms.append(tok)
 
     @staticmethod
     def _names_a_source(slot: ResolvedSlot) -> bool:

@@ -118,18 +118,18 @@ def test_a_word_beside_the_measure_keeps_its_old_reading(catalog, profiles, monk
     assert "kitap yazari" in sq.unresolved and not sq.omitted, (sq.unresolved, sq.omitted)
 
 
-def test_an_unplaced_word_listed_as_a_column_is_omitted_with_plans_off_and_held_as_a_column_with_plans_on(catalog, profiles, monkeypatch):
-    """ZEKI-54 (a): katalogda hiç karşılığı olmayan "yazar", kolon sırasında ("kanal yazar") istendi. Plan kapalı:
-    modele bırakılmaz, cevaba alınmaz, söylenir. Plan açık: modele kalır ama kapı onu kolon olarak tutar."""
+def test_an_unplaced_word_listed_as_a_column_takes_the_a044_path_with_plans_on_or_off(catalog, profiles, monkeypatch):
+    """Katalogda hiç karşılığı olmayan "yazar" kolon sırasında ("kanal yazar") istendi. Öteki sunucuda da tanımlı
+    değil, yani söylenecek bir "öteki sunucu" yok: A044 yolu (2026-09-29) — kelime fiil biçimi yüzünden grameri
+    sayılıp atılmaz, tanımsız terim olarak modele kalır, istenen kırılımdır ve kapı onu kolon olarak tutar.
+    Plan kapalı da açık da aynı; cevaptan çıkarma (omitted) yalnız öteki sunucuda sertifikalı terim içindir."""
     r = _sales_world(catalog, profiles)
-    monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
-    sq = r.resolve("2026 satılan adet kanal yazar", today=TODAY)
-    assert "yazar" not in sq.unresolved, sq.unresolved
-    assert [fold(o["term"]) for o in sq.omitted] == ["yazar"], sq.omitted
-    assert "eklenmedi" in sq.omitted[0]["sentence"]
-    monkeypatch.setenv("SEMANTIC_FEDERATED", "1")
-    sq = r.resolve("2026 satılan adet kanal yazar", today=TODAY)
-    assert "yazar" in sq.unresolved and "yazar" in sq.column_terms and not sq.omitted, (sq.unresolved, sq.column_terms)
+    for plans in ("0", "1"):
+        monkeypatch.setenv("SEMANTIC_FEDERATED", plans)
+        sq = r.resolve("2026 satılan adet kanal yazar", today=TODAY)
+        assert "yazar" in sq.unresolved and "yazar" not in sq.ignored, (plans, sq.unresolved, sq.ignored)
+        assert "yazar" in sq.requested_breakdowns and "yazar" in sq.column_terms, (plans, sq.requested_breakdowns, sq.column_terms)
+        assert not sq.omitted, (plans, sq.omitted)
 
 
 def test_the_gate_refuses_a_column_the_model_turned_into_a_filter():
@@ -150,6 +150,23 @@ def test_the_gate_refuses_a_column_the_model_turned_into_a_filter():
     assert _columns_turned_into_filters(sq, shown, parse_sql(shown)) == []
     sq.column_terms = []
     assert _columns_turned_into_filters(sq, filtered, parse_sql(filtered)) == []
+
+
+def test_one_fault_one_reason_a_breakdown_made_a_filter_is_not_also_refused_as_ungrouped():
+    """Kırılım olarak istenen kelime süzgece çevrilip hiçbir şeye gruplanmadıysa tek gerekçe: kolon süzgece çevrildi
+    (onarım ipucu gruplamayı da söyler). Süzgeç yoksa A044'ün "hiçbir şeye göre gruplamıyor" gerekçesi aynen kalır."""
+    from semantic_layer.runtime.audit import gate_report
+    sq = SemanticQuery(question="satış adedi yazar bazında", tenant_id=TENANT, datasource_id=DS)
+    sq.requested_breakdowns, sq.column_terms, sq.unresolved = ["yazar"], ["yazar"], ["yazar"]
+    filtered = ("-- yorum: 'yazar' → CLCARD.SPECODE = 'YAZARLAR' filtresi\n"
+                "SELECT SUM(s.AMOUNT) AS adet FROM STLINE s JOIN CLCARD cl ON cl.LOGICALREF = s.CLIENTREF "
+                "WHERE cl.SPECODE = 'YAZARLAR'")
+    kinds = [u.kind for u in gate_report(sq, filtered)]
+    assert "column_filter" in kinds and "grain" not in kinds, kinds
+    plain = ("-- yorum: 'yazar' → karşılığı yok\n"
+             "SELECT SUM(s.AMOUNT) AS adet FROM STLINE s WHERE s.TRCODE IN (7, 8)")
+    kinds = [u.kind for u in gate_report(sq, plain)]
+    assert "grain" in kinds and "column_filter" not in kinds, kinds
 
 
 def test_measures_on_two_servers_are_refused_before_any_model_call_when_plans_are_off(profiles, monkeypatch):
