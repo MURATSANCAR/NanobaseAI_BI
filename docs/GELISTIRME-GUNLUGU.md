@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (15:45) — Test sunucusu main ile eşitlendi; içeriği main'de olan dallar kapatıldı
+
+- **Test sunucusu:** canlı ağaçta main'den farklı 46 dosya vardı (31'i main'in eski sürümü, 15'i yeni; main dışı yama 0). Hepsi `git archive main`'den kondu; çalışan koda etki eden yalnız `src/canvas/kampus/DestekCard.tsx` → tsc temiz, ön yüz derlendi ve yayınlandı (`index-BVfiR10d.js`), köprü kodu değişmediği için yeniden başlatılmadı. Sonra 3.287 izlenen dosyada main (`81efd969`) ile fark 0, `._*` 0. Yeni `timas-pazar-dagitim.timer` yalnız ağaca kondu, systemd'ye kurulmadı (sahibi pazar işi; önce elle koşturulmalı).
+- **Dallar:** `git cherry` ile main'de olmayan commit'i 0 olan 38 yerel dal kapatıldı (15'i temiz worktree'siyle) + 2 kopuk worktree. Dokunulmayanlar: içeriği main'de olsa da son 3 saatte commit almış / kilitli / kirli 13 worktree (açık oturumlar) ve main'de olmayan commit'i olan 31 dal (18'i main'le çakışıyor) — birleştirme kararı sahibine/kullanıcıya bırakıldı. Uzak depoda içeriği main'de olan 6 dalın silinmesi izin denetimine takıldı, komut kullanıcıda.
+
 ## 2026-09-29 (15:40) — Stüdyo ses işleri kuruldu: fısıltı düzeyi, insan kaydı eksikleri, yetki kapısı, VM yükleme sınırı
 
 - **Fısıltı:** üretimden sonra kısılır — tonsuz (5 kelimeden kısa) −10 dB, tonlu −5 dB (`expression.TABLE` `gain_db`/
