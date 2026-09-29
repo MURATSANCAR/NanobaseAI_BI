@@ -105,6 +105,16 @@ SOURCES: list[Source] = [
         "  AND SC.DEFINITION_ LIKE N'Satış Nakliye%' AND I.DATE_ >= '{start}' AND I.DATE_ < '{end}'",
     ),
     Source(
+        "logo_kur", "logo", "Günlük döviz kurları (Logo)",
+        "Logo'nun günlük kur tablosundan dolar (1) ve euro (20) için veri sonuna kadar girilmiş en son kur; maliyet "
+        "formunda dolar/euro fiyatlı malzemenin ₺ karşılığı için. Satış kuru (RATES2), yoksa alış (RATES1).",
+        "SELECT K.CRTYPE AS tur, CONVERT(date, K.EDATE) AS tarih, K.RATES1 AS alis, K.RATES2 AS satis\n"
+        "FROM dbo.L_DAILYEXCHANGES K\n"
+        "WHERE K.CRTYPE IN (1, 20) AND K.RATES1 > 0 AND K.EDATE < '{end}'\n"
+        "  AND K.EDATE = (SELECT MAX(D.EDATE) FROM dbo.L_DAILYEXCHANGES D\n"
+        "                 WHERE D.CRTYPE = K.CRTYPE AND D.RATES1 > 0 AND D.EDATE < '{end}')",
+    ),
+    Source(
         "crm_kitap", "crm", "CRM kitap kartları",
         "Kitap künyesi (stok kodu, sayfa, ebat, KDV dahil fiyat, KDV oranı), yayınevi ve kitaplık adı, yürürlükteki "
         "sözleşmenin telif oranı, türü (brüt/net), ödeme tipi (baskıdan/satıştan) ve avansı.",

@@ -91,7 +91,9 @@ export type Suggested = { kaynaklar?: Kaynaklar;
   sellThrough: number; targetMargin: number; origin: Record<string, string>; comparables: Comparables;
 };
 
-export type Spec = { code?: string | null; pages?: number | null; trim?: string | null; gsm?: number | null; binding?: string | null; vat?: number | null };
+export type Spec = { code?: string | null; pages?: number | null; trim?: string | null; gsm?: number | null; binding?: string | null; vat?: number | null;
+  /** Maliyet formundan aktarıldıysa formun girdileri (analizle birlikte saklanır). */
+  form?: FormInputs };
 
 export type BookDetail = { kaynaklar?: Kaynaklar;
   book: { id: string | null; name: string | null; code: string; pages: number | null; trim: string | null; price: number | null; vat: number | null;
@@ -174,6 +176,61 @@ export type Proposal = { kaynaklar?: Kaynaklar; id: string; title: string; statu
 export type Sources = { kaynaklar?: Kaynaklar; sources: Array<{ id: string; connection: 'logo' | 'crm'; title: string; description: string; sql: string; runs: number; stats: { rows: number; ms: number } | null }>;
   copies: Array<{ firm: string; from: string; to: string; last: string }> | null; dataEnd: string | null; asOf: string | null };
 
+// ---- maliyet formu (basım Excel'iyle aynı hesap; köprü pricing/form.py)
+export type FormPart = { kagit?: string | null; en?: number | null; boy?: number | null; gr?: number | null; verim?: number | null; fire?: number | null;
+  renk?: number | null; iscilik?: boolean; sayfa?: number | null };
+export type FormInputs = {
+  yayinevi?: string | null; kitap?: string; yazar?: string; sayfa?: number | null; adet?: number | null; ebat?: string | null;
+  fiyat?: number | null; simdikiFiyat?: number | null; ozelIskonto?: number | null; matbaaAyar?: number | null;
+  kur?: { USD?: number | null; EUR?: number | null } | null;
+  ic: FormPart; renkli: FormPart;
+  kapak: FormPart & { bolen?: number | null; selofan: { var: boolean; tur: string; ciftYuz?: boolean; bolen?: number | null };
+    lak: { var: boolean; tur: string | null }; yaldiz: boolean; gofre: boolean; gren: number; klise: { adet: number | null; ebat: string | null } };
+  ekler: Record<'yanKagit' | 'somiz' | 'ayrac' | 'mukavva' | 'ciltBezi' | 'digerKagit', FormPart> & {
+    kenarBoyama: number | null; vakum: boolean; icSelofan: { var: boolean; tur: string } };
+  cilt: { tur: string; birim: number | null };
+  diger: { kapakUcreti: number | null; kapakBolen: number | null; kapakEtiket: string | null; nakliye: number | null; mizanpaj: number | null; diger: number | null };
+  telif: number | null; dolayli: number | null;
+};
+export type ExtraKey = keyof Omit<FormInputs['ekler'], 'kenarBoyama' | 'vakum' | 'icSelofan'>;
+export type TariffPaper = { name: string; base: number; cur: 'USD' | 'EUR'; unit: 'ton' | 'adet' };
+export type TariffPrice = { label: string | null; m: number; n: number; eski?: Array<number | null> };
+export type Tariff = {
+  kur: { USD: number; EUR: number }; vade: { oran: number; ay: number }; papers: TariffPaper[]; prices: Record<string, TariffPrice>;
+  trims: Array<{ ebat: string; taslama: number | null; kapakTakma: number | null; mukavvaVerim: number | null; icVerim: number | null; icEn: number | null; icBoy: number | null }>;
+  cliche: Record<string, { pieces: number; price: number }>; publishers: Record<string, number>; fire: Record<string, number>;
+  dolayli: number; kapakBolen: number; updatedBy: string | null; updatedAt: string | null; isDefault: boolean;
+};
+export type FormSetup = { kaynaklar?: Kaynaklar;
+  tariff: Tariff; bindings: string[]; laminates: string[]; varnishes: string[];
+  extras: Record<ExtraKey, { row: number; label: string; kind: 'kg' | 'tabaka' }>;
+  logoKur: Partial<Record<'USD' | 'EUR', { rate: number; date: string | null }>>; paper: PaperTable | null; dataEnd: string | null; canWrite: boolean;
+  inputs: FormInputs; origin: Record<string, string>; paperSource: 'logo' | 'tarife';
+  book?: { code: string; name: string | null; author: string | null; publisher: string | null; price: number | null; pages: number | null; trim: string | null;
+    lastPrint: LogoPrint | null; logoUnitCost: number | null };
+};
+export type FormLine = { key: string; group: 'kagit' | 'matbaa' | 'telif' | 'diger'; name: string; excel: string; total: number; perCopy: number;
+  material?: string; sheets?: number; kg?: number; unitPrice?: number; unit?: string; priceSource?: 'logo' | 'tarife'; plates?: number; formula?: string };
+export type FormPrice = { name: string; unit: 'kg' | 'adet'; tarife: number; used: number; source: 'logo' | 'tarife'; tarifeText: string; gsm: number | null;
+  logo?: { perKg: number; kg: number; cards: number; sameGsm: boolean; last: string | null; names: string[] } | null };
+export type FormSummary = {
+  forma: number; kagitAdet: number; matbaaAdet: number; telifAdet: number; kitapMaliyeti: number; kitapMaliyetiToplam: number; matbaaToplam: number;
+  digerToplam: number; toplam: number; dolayliOran: number; dolayli: number; genelToplam: number; birimMaliyet: number; iskonto: number; kapakFiyati: number;
+  satisFiyati: number; karAdet: number; toplamKar: number; karYuzde: number | null; adet: number; sayfa: number; kapakPayi: number; sayfaBasi: number;
+};
+export type FormResult = { kaynaklar?: Kaynaklar;
+  lines: FormLine[]; summary: FormSummary; warnings: string[]; paperSource: 'logo' | 'tarife'; prices: FormPrice[]; kur: { USD: number; EUR: number }; vade: number;
+  fire: { ic: number; icPay: number };
+  compare: { paperSource: 'logo' | 'tarife'; birimMaliyet: number; kagitAdet: number; karAdet: number; karYuzde: number | null } | null;
+  analysis: { printService: number; paperPerCopy: number; printSetup: number; overheadRate: number; royaltyRate: number; royaltyBase: 'kapak'; royaltyOn: 'baski';
+    chosenQty: number; price: number | null; fixed: { grafik: number; diger: number }; note: string } | null;
+  dataEnd: string | null;
+};
+
+/** Maliyet formundan fiyat analizine aktarım (sorgu önbelleğinde bir kez okunur). */
+export const FORM_TRANSFER_KEY = ['pricing', 'formTransfer'] as const;
+export type FormTransfer = { result: NonNullable<FormResult['analysis']>; inputs: FormInputs; code: string | null; title: string };
+
 const BASE = '/api/v1/pricing';
 
 /** Özet sorgusunun anahtarı: yazan her işlem bunu tazeler. */
@@ -232,6 +289,9 @@ export const pricingApi = {
   proposal: (id: string) => send<Proposal>('GET', `/proposals/${enc(id)}`),
   createProposal: (b: { title: string; codes: string[]; target?: number | null; minSold?: number }) => send<Proposal>('POST', '/proposals', b),
   decideProposal: (id: string, b: { decision: 'onay' | 'ret'; note: string }) => send<Proposal>('POST', `/proposals/${enc(id)}/decide`, b),
+  formSetup: (kitap?: string | null) => send<FormSetup>('GET', `/form/setup${qs({ kitap })}`),
+  formCalc: (b: { inputs: FormInputs; paperSource: 'logo' | 'tarife' }) => send<FormResult>('POST', '/form/calc', b),
+  saveTariff: (b: Partial<Tariff> & { reset?: boolean }) => send<Tariff>('PUT', '/form/tariff', b),
 };
 
 // ---- biçimler

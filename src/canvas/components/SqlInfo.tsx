@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
-import { Check, Copy, CornerDownRight, Database, Info, Sigma, X } from 'lucide-react';
+import { BookOpenText, Check, Copy, CornerDownRight, Database, FileSpreadsheet, Info, MapPin, Sigma, TriangleAlert, X } from 'lucide-react';
 import { useCan } from '../useAdmin';
 import { allSqlText, collect, copyText, fmtMs, fmtWhen, resolveRef, type KaynakSorgu, type Kaynaklar } from './sqlInfo';
 
@@ -11,24 +11,40 @@ import { allSqlText, collect, copyText, fmtMs, fmtWhen, resolveRef, type KaynakS
  *
  *   <SqlInfo k={data.kaynaklar} alan="sirket" label="Şirket satışı" />
  *   <SqlInfo k={data.kaynaklar} alan="cards[]" row={card.id} label={card.label} />
+ *
+ * `help` verilirse pencerenin başında alanın ne işe yaradığı, verinin nereden geldiği ve (varsa) Excel'deki karşılığı
+ * yazılır; sorgusu olmayan girdi kutularında da «i» görünür (yalnız açıklama).
  */
+export type FieldHelp = {
+  /** Bu alan ne işe yarar, hesapta nereye girer. */
+  ne: string;
+  /** Kutuya gelen değerin kaynağı (Logo, CRM, tarife, elle…). */
+  nereden?: string;
+  /** Excel'deki karşılığı (hücre, satır). */
+  excel?: string;
+  /** Dikkat edilecek nokta. */
+  dikkat?: string;
+};
+
 export default function SqlInfo({
   k,
   alan,
   row,
   label,
   className = '',
+  help,
 }: {
   k: Kaynaklar | null | undefined;
   alan: string;
   row?: string | number | null;
   label: string;
   className?: string;
+  help?: FieldHelp;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useMemo(() => resolveRef(k, alan, row), [k, alan, row]);
-  if (!k) return null;
-  if (!ref && !k.error) {
+  if (!k && !help) return null;
+  if (k && !ref && !k.error && !help) {
     if (import.meta.env.DEV) console.warn(`[sorgu bilgisi] kaynağı yazılmamış alan: ${alan}${row != null ? `:${row}` : ''}`);
     return null;
   }
@@ -36,21 +52,25 @@ export default function SqlInfo({
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger
         className={`relative inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full align-middle text-canvas-muted transition-[transform,color,background-color] duration-150 ease-out after:absolute after:-inset-2.5 after:content-[''] hover:bg-violet-50 hover:text-canvas-violet focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 active:scale-[0.95] ${className}`}
-        aria-label={`${label}: sorgu bilgisi`}
-        title="Bu rakamın sorgusu ve hesabı"
-        onClick={(e) => e.stopPropagation()}
+        aria-label={help ? `${label}: bu alan ne işe yarar` : `${label}: sorgu bilgisi`}
+        title={help ? 'Bu alan ne işe yarar, veri nereden gelir' : 'Bu rakamın sorgusu ve hesabı'}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          setOpen(true);
+        }}
       >
         <Info aria-hidden className="h-3.5 w-3.5" strokeWidth={2.4} />
       </Dialog.Trigger>
-      <Panel k={k} refId={ref} label={label} />
+      <Panel k={k} refId={ref} label={label} help={help} />
     </Dialog.Root>
   );
 }
 
-function Panel({ k, refId, label }: { k: Kaynaklar; refId: string | null; label: string }) {
+function Panel({ k, refId, label, help }: { k: Kaynaklar | null | undefined; refId: string | null; label: string; help?: FieldHelp }) {
   const canSql = useCan('kart.sql-goster');
   const { formulas, sources } = useMemo(() => collect(k, refId), [k, refId]);
-  const dataEnd = sources.find((s) => s.dataEnd)?.dataEnd ?? k.dataEnd ?? null;
+  const dataEnd = sources.find((s) => s.dataEnd)?.dataEnd ?? k?.dataEnd ?? null;
   return (
     <Dialog.Portal>
       <Dialog.Backdrop className="fixed inset-0 z-[90] bg-slate-950/40 transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 data-[ending-style]:duration-150" />
@@ -59,7 +79,7 @@ function Panel({ k, refId, label }: { k: Kaynaklar; refId: string | null; label:
       >
         <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 pb-3 pt-4 max-sm:px-4">
           <div className="min-w-0">
-            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-canvas-violet">Sorgu bilgisi</div>
+            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-canvas-violet">{help && !sources.length ? 'Alan bilgisi' : 'Sorgu bilgisi'}</div>
             <Dialog.Title className="mt-0.5 text-[17px] font-extrabold leading-snug">{label}</Dialog.Title>
             <Dialog.Description className="mt-1 text-[12px] leading-relaxed text-canvas-muted">
               {dataEnd ? <>Veri {fmtWhen(dataEnd)} tarihine kadar. </> : null}
@@ -67,7 +87,9 @@ function Panel({ k, refId, label }: { k: Kaynaklar; refId: string | null; label:
                 ? `Bu rakam ${sources.length} sorgudan${formulas.length ? ' ve aşağıdaki hesaptan' : ''} gelir.`
                 : formulas.some((f) => f.external)
                   ? 'Bu rakam veritabanı sorgusundan değil, aşağıda adı yazan kaynaktan gelir.'
-                  : 'Bu rakam için kayıtlı sorgu yok.'}
+                  : help
+                    ? 'Bu alanın ne işe yaradığı ve değerin nereden geldiği.'
+                    : 'Bu rakam için kayıtlı sorgu yok.'}
             </Dialog.Description>
           </div>
           <Dialog.Close
@@ -79,7 +101,8 @@ function Panel({ k, refId, label }: { k: Kaynaklar; refId: string | null; label:
         </header>
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-5 pb-5 pt-3 max-sm:px-4 max-sm:pb-[max(16px,env(safe-area-inset-bottom))]">
-          {k.error && <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12.5px] font-semibold text-amber-800">{k.error}</p>}
+          {help && <HelpBlock help={help} />}
+          {k?.error && <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12.5px] font-semibold text-amber-800">{k.error}</p>}
 
           {formulas.map((f) => (
             <section key={f.name} className="rounded-2xl bg-violet-50/70 px-3.5 py-2.5">
@@ -104,6 +127,27 @@ function Panel({ k, refId, label }: { k: Kaynaklar; refId: string | null; label:
         </div>
       </Dialog.Popup>
     </Dialog.Portal>
+  );
+}
+
+function HelpBlock({ help }: { help: FieldHelp }) {
+  const rows = [
+    { icon: BookOpenText, title: 'Ne işe yarar', text: help.ne },
+    { icon: MapPin, title: 'Veri nereden gelir', text: help.nereden },
+    { icon: FileSpreadsheet, title: "Excel'deki karşılığı", text: help.excel },
+    { icon: TriangleAlert, title: 'Dikkat', text: help.dikkat },
+  ].filter((r) => r.text);
+  return (
+    <dl className="grid gap-2">
+      {rows.map(({ icon: Icon, title, text }) => (
+        <div key={title} className={`rounded-2xl px-3.5 py-2.5 ${title === 'Dikkat' ? 'bg-amber-50' : 'bg-slate-50'}`}>
+          <dt className={`flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide ${title === 'Dikkat' ? 'text-amber-800' : 'text-canvas-violet'}`}>
+            <Icon aria-hidden className="h-3.5 w-3.5" /> {title}
+          </dt>
+          <dd className="mt-1 whitespace-pre-line text-[12.5px] leading-relaxed text-canvas-ink">{text}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

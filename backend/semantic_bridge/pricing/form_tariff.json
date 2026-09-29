@@ -1,0 +1,1662 @@
+{
+ "kur": {
+  "USD": 49.0,
+  "EUR": 58.0
+ },
+ "vade": {
+  "oran": 5.0,
+  "ay": 6.0
+ },
+ "papers": [
+  {
+   "name": "KİTAP KAĞIDI-60-70-80",
+   "base": 1000.0,
+   "cur": "EUR",
+   "unit": "ton"
+  },
+  {
+   "name": "KİTAP KAĞIDI-52-55-65",
+   "base": 1025.0,
+   "cur": "EUR",
+   "unit": "ton"
+  },
+  {
+   "name": "ENSO VİVİD",
+   "base": 1800.0,
+   "cur": "EUR",
+   "unit": "ton"
+  },
+  {
+   "name": "BRİSTOL",
+   "base": 900.0,
+   "cur": "USD",
+   "unit": "ton"
+  },
+  {
+   "name": "ÇİFT RARAFLI BRİSTOL",
+   "base": 1000.0,
+   "cur": "USD",
+   "unit": "ton"
+  },
+  {
+   "name": "MAT KUŞE",
+   "base": 900.0,
+   "cur": "EUR",
+   "unit": "ton"
+  },
+  {
+   "name": "PARLAK KUŞE",
+   "base": 900.0,
+   "cur": "EUR",
+   "unit": "ton"
+  },
+  {
+   "name": "1.HAMUR-70-80-90-100-110",
+   "base": 1000.0,
+   "cur": "USD",
+   "unit": "ton"
+  },
+  {
+   "name": "1.HAMUR-120-140-150-170-200",
+   "base": 1150.0,
+   "cur": "USD",
+   "unit": "ton"
+  },
+  {
+   "name": "ŞAMUA",
+   "base": 1400.0,
+   "cur": "EUR",
+   "unit": "ton"
+  },
+  {
+   "name": "GELTEX K - 111 BEYAZ",
+   "base": 0.95,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "IVORY",
+   "base": 1400.0,
+   "cur": "EUR",
+   "unit": "ton"
+  },
+  {
+   "name": "STİCKER",
+   "base": 0.4,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "1,5mm ESKA MUKAVVA",
+   "base": 0.7,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "1,75mm ESKA MUKAVVA",
+   "base": 0.8,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "2mm ESKA MUKAVVA",
+   "base": 0.88,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "2,5mm ESKA MUKAVVA",
+   "base": 1.2,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "3mm ESKA MUKAVVA",
+   "base": 1.34,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "1,5mm KİNWA MUKAVVA",
+   "base": 0.56,
+   "cur": "USD",
+   "unit": "adet"
+  },
+  {
+   "name": "1,82mm KİNWA MUKAVVA",
+   "base": 0.68,
+   "cur": "USD",
+   "unit": "adet"
+  },
+  {
+   "name": "2mm KİNWA MUKAVVA",
+   "base": 0.74,
+   "cur": "USD",
+   "unit": "adet"
+  },
+  {
+   "name": "2,5mm KİNWA MUKAVVA",
+   "base": 1.0,
+   "cur": "USD",
+   "unit": "adet"
+  },
+  {
+   "name": "3mm KİNWA MUKAVVA",
+   "base": 1.2,
+   "cur": "USD",
+   "unit": "adet"
+  },
+  {
+   "name": "TURUNCU CİLT BEZİ-SÜMER",
+   "base": 0.9,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "TERİ CİLT BEZİ-FEZA",
+   "base": 2.8,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "TAF CİLT BEZİ-FEZA",
+   "base": 2.9,
+   "cur": "EUR",
+   "unit": "adet"
+  },
+  {
+   "name": "CİLT BEZİ-CİHAN",
+   "base": 2.0,
+   "cur": "EUR",
+   "unit": "adet"
+  }
+ ],
+ "prices": {
+  "tekRenkKalip": {
+   "label": "tek renk kalıp",
+   "m": 950.0,
+   "n": 150.0,
+   "eski": [
+    750.0,
+    120.0
+   ]
+  },
+  "renkliKalip": {
+   "label": "renkli kalıp",
+   "m": 1000.0,
+   "n": 180.0,
+   "eski": [
+    850.0,
+    140.0
+   ]
+  },
+  "Kabartma Lak-50x70": {
+   "label": "Kabartma Lak-50x70",
+   "m": 6500.0,
+   "n": 4290.0,
+   "eski": [
+    5070.0,
+    3445.0
+   ]
+  },
+  "Lokal Lak-50x70": {
+   "label": "Lokal Lak-50x70",
+   "m": 5000.0,
+   "n": 3300.0,
+   "eski": [
+    3900.0,
+    2650.0
+   ]
+  },
+  "Simli Lak-50x70": {
+   "label": "Simli Lak-50x70",
+   "m": 8450.0,
+   "n": 5577.0,
+   "eski": [
+    6591.0,
+    4478.5
+   ]
+  },
+  "DİSPERSİYON LAK": {
+   "label": "DİSPERSİYON LAK",
+   "m": 2500.0,
+   "n": 600.0,
+   "eski": [
+    2000.0,
+    400.0
+   ]
+  },
+  "SELOFAN": {
+   "label": "SELOFAN",
+   "m": 7.5,
+   "n": 0.0,
+   "eski": [
+    6.0,
+    null
+   ]
+  },
+  "harmanlama": {
+   "label": "Harmanlama ve Kutulama",
+   "m": 0.72,
+   "n": 0.72,
+   "eski": [
+    0.55,
+    0.55
+   ]
+  },
+  "gofre": {
+   "label": "GOFRE",
+   "m": 5000.0,
+   "n": 2500.0,
+   "eski": [
+    4000.0,
+    2000.0
+   ]
+  },
+  "yaldiz": {
+   "label": "YALDIZ",
+   "m": 6000.0,
+   "n": 3500.0,
+   "eski": [
+    4750.0,
+    3000.0
+   ]
+  },
+  "sogukBaski": {
+   "label": "SOĞUK BASKI",
+   "m": 4800.0,
+   "n": 2200.0,
+   "eski": [
+    3750.0,
+    1800.0
+   ]
+  },
+  "ayracIscilik": {
+   "label": "AYRAÇ-AFİŞ İŞÇİLİK",
+   "m": 0.72,
+   "n": 800.0,
+   "eski": [
+    0.55,
+    600.0
+   ]
+  },
+  "somizIscilik": {
+   "label": "ŞÖMİZ İŞÇİLİK",
+   "m": 4.0,
+   "n": 2000.0,
+   "eski": [
+    3.0,
+    1500.0
+   ]
+  },
+  "tekliVakum": {
+   "label": "TEKLİ VAKUMLU PAKET",
+   "m": 5.5,
+   "n": 5000.0,
+   "eski": [
+    4.5,
+    4000.0
+   ]
+  },
+  "gren": {
+   "label": "GREN UYGULAMA",
+   "m": 2300.0,
+   "n": 1300.0,
+   "eski": [
+    1800.0,
+    1000.0
+   ]
+  },
+  "ozelKesimRadius": {
+   "label": "ÖZEL KESİM-RADİUS",
+   "m": 3.25,
+   "n": 4500.0,
+   "eski": [
+    2.5,
+    3500.0
+   ]
+  },
+  "ozelKesimTbk": {
+   "label": "ÖZEL KESİM-TBK",
+   "m": 0.75,
+   "n": 5200.0,
+   "eski": [
+    0.6,
+    4000.0
+   ]
+  },
+  "sertKapakTakma": {
+   "label": "SERT KAPAK TAKMA",
+   "m": 6.8,
+   "n": 0.0,
+   "eski": [
+    5.25,
+    null
+   ]
+  },
+  "sertKapakTaslama": {
+   "label": "SERT KAPAK TASLAMA",
+   "m": 5.2,
+   "n": 0.0,
+   "eski": [
+    4.0,
+    null
+   ]
+  },
+  "sertKapakIplikDikis": {
+   "label": "SERT KAPAK İPLİK DİKİŞ",
+   "m": 0.38,
+   "n": 0.0,
+   "eski": [
+    0.3,
+    null
+   ]
+  },
+  "sertKapakFormaHarman": {
+   "label": "SERT KAPAK FORMA HARMAN",
+   "m": 0.38,
+   "n": 0.0,
+   "eski": [
+    0.3,
+    null
+   ]
+  },
+  "amerikanCiltForma": {
+   "label": "AMERİKAN CİLT FORMA",
+   "m": 0.38,
+   "n": 0.0,
+   "eski": [
+    0.3,
+    null
+   ]
+  },
+  "telDikisForma": {
+   "label": "TEL FİKİŞ CİLT FORMA",
+   "m": 0.38,
+   "n": 0.0,
+   "eski": [
+    0.3,
+    null
+   ]
+  },
+  "iplikDikis": {
+   "label": "İPLİK DİKİŞ",
+   "m": 0.38,
+   "n": 0.0,
+   "eski": [
+    0.3,
+    null
+   ]
+  },
+  "boardPenceresiz": {
+   "label": "BOARD BOOK SIVAMA-PENCERESİZ",
+   "m": 0.8,
+   "n": 5.5,
+   "eski": [
+    0.6,
+    4.25
+   ]
+  },
+  "boardPencereli": {
+   "label": "BOARD BOOK SIVAMA-PENCERELİ",
+   "m": 1.95,
+   "n": 5.5,
+   "eski": [
+    1.5,
+    4.25
+   ]
+  },
+  "boardBristolMukavva": {
+   "label": "BOARD BOOK SIVAMA-BRİSTOL+MUKAVVA+BRİSTOL+PENCERELİ",
+   "m": 2.27,
+   "n": 5.5,
+   "eski": [
+    1.75,
+    4.25
+   ]
+  },
+  "setMikroOluklu": {
+   "label": "SET MİKRO OLUKLU KUTU MALİYET",
+   "m": 10.0,
+   "n": 0.0,
+   "eski": [
+    8.25,
+    null
+   ]
+  },
+  "setBristolKutu": {
+   "label": "SET BRİSTOL KUTU MALİYET",
+   "m": 12.0,
+   "n": 0.0,
+   "eski": [
+    10.0,
+    null
+   ]
+  },
+  "setVakum": {
+   "label": "SET VAKUMLU PAKET MALİYET",
+   "m": 9.0,
+   "n": 0.0,
+   "eski": [
+    7.0,
+    null
+   ]
+  },
+  "setPoset": {
+   "label": "SET PP ÇITÇITLI POŞET MALİYET",
+   "m": 13.0,
+   "n": 0.0,
+   "eski": [
+    10.0,
+    null
+   ]
+  },
+  "setKoli": {
+   "label": "SET KOLİ MALİYET",
+   "m": 22.0,
+   "n": 0.0,
+   "eski": [
+    18.0,
+    null
+   ]
+  },
+  "setShirink": {
+   "label": "SET SHİRİNK MALİYET",
+   "m": 7.0,
+   "n": 0.0,
+   "eski": [
+    5.25,
+    null
+   ]
+  }
+ },
+ "trims": [
+  {
+   "ebat": "10,5x14,5",
+   "taslama": 4.7247200000000005,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 18.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "10,5x14,8",
+   "taslama": 4.7247200000000005,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 18.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "10,5x15",
+   "taslama": 4.7247200000000005,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 18.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "10,5x15,5",
+   "taslama": 4.7247200000000005,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 18.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "10x10",
+   "taslama": 4.7247200000000005,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 27.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "10x15",
+   "taslama": 4.7247200000000005,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 18.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "10x21",
+   "taslama": 4.7247200000000005,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "10x90",
+   "taslama": 4.7247200000000005,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 3.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "11,5x15",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 18.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "11,5x16",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 18.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "11,5x16,5",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 18.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "11,5x18,5",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 15.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "11,5x21",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "11x17",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 15.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "11x18",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 15.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "11x19",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 15.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "12,5x19,5",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": 32.0,
+   "icEn": 57.0,
+   "icBoy": 82.0
+  },
+  {
+   "ebat": "12,5x21",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": 32.0,
+   "icEn": 57.0,
+   "icBoy": 88.0
+  },
+  {
+   "ebat": "12x16,5",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 15.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "12x17",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "12x17,5",
+   "taslama": 5.369,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "12x22",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "12x60",
+   "taslama": 12.8856,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 8.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "13,5x17,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "13,5x18",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": 32.0,
+   "icEn": 57.0,
+   "icBoy": 76.0
+  },
+  {
+   "ebat": "13,5x18,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": 32.0,
+   "icEn": 57.0,
+   "icBoy": 78.0
+  },
+  {
+   "ebat": "13,5x19,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": 32.0,
+   "icEn": 57.0,
+   "icBoy": 82.0
+  },
+  {
+   "ebat": "13,5x20,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": 32.0,
+   "icEn": 57.0,
+   "icBoy": 86.0
+  },
+  {
+   "ebat": "13,5x21",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": 32.0,
+   "icEn": 57.0,
+   "icBoy": 88.0
+  },
+  {
+   "ebat": "13,5x7",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 31.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "13x18",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "13x18,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "13x19",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "13x20",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "14,5x19",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "14,5x21,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 9.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "14,5x29,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "14,5x56",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 3.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "14,5x90",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "14x21",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "14x21,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "15,5x15,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "15,5x21",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 8.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "15,5x21,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 8.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "15,5x23,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 8.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "15x15",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 12.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "15x17,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "15x19",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": 32.0,
+   "icEn": 64.0,
+   "icBoy": 80.0
+  },
+  {
+   "ebat": "15x21",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 64.0,
+   "icBoy": 90.0
+  },
+  {
+   "ebat": "15x21,5",
+   "taslama": 6.120660000000001,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 64.0,
+   "icBoy": 90.0
+  },
+  {
+   "ebat": "15x23",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 64.0,
+   "icBoy": 98.0
+  },
+  {
+   "ebat": "15x23,5",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 64.0,
+   "icBoy": 100.0
+  },
+  {
+   "ebat": "15x24",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 64.0,
+   "icBoy": 100.0
+  },
+  {
+   "ebat": "16,5x16,5",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 12.0,
+   "icVerim": 32.0,
+   "icEn": 64.0,
+   "icBoy": 100.0
+  },
+  {
+   "ebat": "16,5x23",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 70.0,
+   "icBoy": 100.0
+  },
+  {
+   "ebat": "16,5x23,5",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 70.0,
+   "icBoy": 100.0
+  },
+  {
+   "ebat": "16,5x24",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 70.0,
+   "icBoy": 100.0
+  },
+  {
+   "ebat": "16,7x22",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 70.0,
+   "icBoy": 92.0
+  },
+  {
+   "ebat": "17x24",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "16x16",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 12.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "16x23",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "16x24",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": 32.0,
+   "icEn": 70.0,
+   "icBoy": 100.0
+  },
+  {
+   "ebat": "16x64",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 3.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "17,5x21",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 8.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "17x27",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "17x7",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 28.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "18,5x23",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "18,5x24",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "18x18",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 7.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "18x24",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "19,5x24",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "19,5x24,5",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "19,5x27,5",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "19x20,5",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 7.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "19x24",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "19x26",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "19x27",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "19x30",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "20x20",
+   "taslama": 6.979699999999999,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 7.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "20x26",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 5.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "20x27",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 5.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "21x28",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "21x29,7",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "22,5x27",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "22x22",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "22x25,4",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "22x27",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "22x38",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "23,5x37",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "23x22,5",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "23x31",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "23x38",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 3.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "24x21",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "24x26",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "24x30,5",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "24x32",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "24x33",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 6.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "26,5x30,5",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 3.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "26,5x32,5",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 3.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "26x26",
+   "taslama": 7.5166,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 3.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "27,2x20,7",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "27x19",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "28,5x28,5",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 3.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "28x37,5",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "29,5x42",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "29,7x42",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "29x30",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "29x33",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "30,5x24",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 4.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "30,5x38",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "39x33,5",
+   "taslama": 8.0535,
+   "kapakTakma": 9.449440000000001,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "4,8x4,8",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 140.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "4x17",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 42.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "5,5x21",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 24.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "5,6x5,6",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 102.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "6,5x45",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 10.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "6,5x6,5",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 75.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "7,8x15",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 24.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "7,9x7,9",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 48.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "7x8",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 48.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "8x10,8",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 36.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "8x8",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 48.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "9x13",
+   "taslama": 4.8321,
+   "kapakTakma": 8.0535,
+   "mukavvaVerim": 24.5,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "68x98",
+   "taslama": 107.38,
+   "kapakTakma": 107.38,
+   "mukavvaVerim": 1.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  },
+  {
+   "ebat": "48x68",
+   "taslama": 64.428,
+   "kapakTakma": 64.428,
+   "mukavvaVerim": 2.0,
+   "icVerim": null,
+   "icEn": null,
+   "icBoy": null
+  }
+ ],
+ "cliche": {
+  "70x100": {
+   "pieces": 1.0,
+   "price": 20000.0
+  },
+  "50x70": {
+   "pieces": 2.0,
+   "price": 15000.0
+  },
+  "35x50": {
+   "pieces": 3.0,
+   "price": 10000.0
+  },
+  "25x35": {
+   "pieces": 4.0,
+   "price": 8000.0
+  },
+  "25x50": {
+   "pieces": 6.0,
+   "price": 8000.0
+  },
+  "33x70": {
+   "pieces": 6.0,
+   "price": 9000.0
+  }
+ },
+ "publishers": {
+  "Antik Kitap": 45.0,
+  "Bi Kutu Oyun": 40.0,
+  "Bir Ocak Eğitim Yayıncılığı A. Ş.": 45.0,
+  "Carpe Diem Kitap": 45.0,
+  "Dikkat ve Zeka Akademisi": 45.0,
+  "Eğlenceli Bilgi": 45.0,
+  "Genç Timaş": 40.0,
+  "Gülce Çocuk": 45.0,
+  "Gülce İlk Genç": 40.0,
+  "İlk Genç Timaş": 40.0,
+  "Mavi Kirpi Kitap": 60.0,
+  "Portakal Kitap": 40.0,
+  "Sufi Kitap": 40.0,
+  "Timas Publishing": 45.0,
+  "Timaş Akademi": 35.0,
+  "Timaş Çocuk": 45.0,
+  "Timaş İnanç": 40.0,
+  "Timaş Okul": 45.0,
+  "Timaş Tarih": 40.0,
+  "Timaş Yayınları": 40.0,
+  "YUZU": 40.0
+ },
+ "fire": {
+  "ic": 800.0,
+  "renkli": 800.0,
+  "kapak": 1000.0,
+  "yanKagit": 800.0,
+  "somiz": 800.0,
+  "ayrac": 1000.0,
+  "mukavva": 700.0,
+  "ciltBezi": 200.0,
+  "digerKagit": 1000.0
+ },
+ "dolayli": 90.0,
+ "kapakBolen": 3.0
+}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { BookOpen, Calculator, Search, Send, Save, X } from 'lucide-react';
@@ -24,9 +24,12 @@ import {
   type Stage,
   type Suggested,
   overviewKey,
+  FORM_TRANSFER_KEY,
+  type FormTransfer,
 } from './api';
 import { Group, NumField, Select, Stat, parseQtys } from './parts';
-import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import SqlInfo, { InfoLabel, type FieldHelp } from '../components/SqlInfo';
+import { CALC_HELP as CH } from './help';
 import type { Kaynaklar } from '../components/sqlInfo';
 import MarketPrices from './MarketPrices';
 
@@ -64,6 +67,28 @@ const INPUT_SOURCE: Record<string, string> = {
   discount: 'discount', variableRate: 'variableRate', sellThrough: 'sellThrough', targetMargin: 'targetMargin', avans: 'advance',
 };
 
+/** Formsuz başlangıç (yeni kitap, formdan aktarım): portal varsayılanları. */
+function fromDefaults(ov: Overview): Form {
+  const d = ov.defaults;
+  return {
+    printService: null, paperPerCopy: null, printSetup: 0, overheadRate: d.overheadRate,
+    fixed: { avans: 0, ceviri: 0, grafik: 0, redaksiyon: 0, pazarlama: 0, diger: 0 },
+    royaltyRate: 0, royaltyBase: 'kapak', royaltyOn: 'satis', vat: 0.1, discount: ov.measured?.discount ?? 0,
+    variableRate: ov.measured?.distribution.rate ?? d.variableRate, sellThrough: d.sellThrough, targetMargin: d.targetMargin,
+    qtys: d.qtys, chosenQty: d.qtys[Math.floor(d.qtys.length / 2)] ?? null, price: null,
+  };
+}
+
+/** Maliyet formunun cilt adı → fiyat analizindeki (CRM) cilt şekli; emsal süzgeci için. */
+function bindingOf(tur: string | null | undefined): string | null {
+  const t = (tur ?? '').toLocaleUpperCase('tr-TR');
+  if (t.includes('SERT')) return 'Sert Kapak';
+  if (t.includes('FLEKS')) return 'Flexi Kapak Cilt';
+  if (t.includes('TEL')) return 'Tel Dikiş';
+  if (t.includes('AMER')) return 'Amerikan Cilt';
+  return null;
+}
+
 const toInputs = (f: Form): Inputs => ({
   ...f,
   printPerCopy: (f.printService ?? 0) + (f.paperPerCopy ?? 0) || null,
@@ -85,6 +110,8 @@ export default function CalcPane({ ov }: { ov: Overview }) {
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   /** Girdi kutularının dolduğu cevap: analizden (`inputs`), kitaptan (`suggested.*`) ya da «Veriden öner»den. */
   const [fill, setFill] = useState<{ k?: Kaynaklar; prefix: 'inputs' | 'suggested.' | '' } | null>(null);
+  /** Girdiler maliyet formundan aktarıldıysa (kutuların kaynağı form). */
+  const [fromForm, setFromForm] = useState(false);
 
   const analysis = useQuery({ queryKey: ['pricing', 'analysis', aid], queryFn: () => pricingApi.analysis(aid!), enabled: ENGINE_ENABLED && !!aid });
   const book = useQuery({
@@ -120,6 +147,32 @@ export default function CalcPane({ ov }: { ov: Overview }) {
     }
   }, [aid, analysis.data, book.data, loadedKey, ov]);
 
+  // Maliyet formundan aktarım: kitap verisi yüklendikten sonra (ya da yeni kitapta hemen) formun sonucu kutulara yazılır.
+  useEffect(() => {
+    const t = qc.getQueryData<FormTransfer>(FORM_TRANSFER_KEY);
+    if (!t || aid || (t.code ?? null) !== (code ?? null)) return;
+    if (code && loadedKey !== `b:${code}`) return;
+    qc.removeQueries({ queryKey: FORM_TRANSFER_KEY, exact: true });
+    const r = t.result;
+    const qtys = [...new Set([...(ov.defaults.qtys ?? []), r.chosenQty])].sort((a, b) => a - b);
+    setForm((f) => {
+      const base = f ?? fromDefaults(ov);
+      return {
+        ...base,
+        printService: r.printService, paperPerCopy: r.paperPerCopy, printSetup: r.printSetup, overheadRate: r.overheadRate,
+        royaltyRate: r.royaltyRate, royaltyBase: r.royaltyBase, royaltyOn: r.royaltyOn, qtys, chosenQty: r.chosenQty,
+        price: r.price ?? base.price ?? null, fixed: { ...(base.fixed ?? {}), grafik: r.fixed.grafik, diger: r.fixed.diger },
+      };
+    });
+    setQtyText(qtys.join(', '));
+    setSpec((sp) => ({ ...sp, code: t.code ?? sp.code ?? null, pages: t.inputs.sayfa ?? sp.pages, trim: t.inputs.ebat ?? sp.trim, gsm: t.inputs.ic.gr ?? sp.gsm,
+      binding: bindingOf(t.inputs.cilt.tur) ?? sp.binding ?? null, form: t.inputs }));
+    setTitle((x) => x || t.title);
+    setStage('kesin');
+    setOrigin({ printService: 'Maliyet formundan: baskı ve kâğıt bedeli formun kalemlerinden, iki adette hesaplanıp adet başı ve baskı başı diye ayrıldı', paper: '', royalty: 'Maliyet formundan: telif basılan adet ve kapak fiyatı üzerinden (Excel gibi)' });
+    setFromForm(true);
+  }, [aid, code, loadedKey, ov, qc]);
+
   const suggest = useMutation({
     mutationFn: () => pricingApi.suggest(spec),
     onSuccess: (s) => {
@@ -145,15 +198,18 @@ export default function CalcPane({ ov }: { ov: Overview }) {
   /** Girdi kutusunun «i»'si: kutuya gelen önerinin kaynağı. Varsayımlar (genel gider, adetler) portaldaki varsayılanlardan;
    *  serbest çalışan kutuları kitabın iş paketlerinden; elle başlayan kutu (pazarlama) için yok. */
   const inputInfo = (key: string, label: string) => {
-    if (!fill) return undefined;
-    if (fill.prefix === 'inputs') return <SqlInfo k={fill.k} alan="inputs" label={`${label} (kayıtlı analiz)`} />;
-    if (key === 'overheadRate' || key === 'qtys') return <SqlInfo k={ov.kaynaklar} alan="defaults" label={label} />;
+    const help: FieldHelp | undefined = CH[key] ?? (['avans', 'ceviri', 'grafik', 'redaksiyon', 'pazarlama', 'diger'].includes(key) ? (key === 'avans' ? CH.avans : CH.fixed) : undefined);
+    const only = help ? <SqlInfo k={null} alan="" label={label} help={help} /> : undefined;
+    if (!fill || fromForm) return only;
+    if (fill.prefix === 'inputs') return <SqlInfo k={fill.k} alan="inputs" label={`${label} (kayıtlı analiz)`} help={help} />;
+    if (key === 'overheadRate' || key === 'qtys') return <SqlInfo k={ov.kaynaklar} alan="defaults" label={label} help={help} />;
     if (key === 'ceviri' || key === 'grafik' || key === 'redaksiyon' || key === 'diger') {
-      return book.data ? <SqlInfo k={book.data.kaynaklar} alan="freelance" label={label} /> : undefined;
+      return book.data ? <SqlInfo k={book.data.kaynaklar} alan="freelance" label={label} help={help} /> : only;
     }
     const f = INPUT_SOURCE[key];
-    return f ? <SqlInfo k={fill.k} alan={`${fill.prefix}${f}`} label={label} /> : undefined;
+    return f ? <SqlInfo k={fill.k} alan={`${fill.prefix}${f}`} label={label} help={help} /> : only;
   };
+  const hi = (key: string, label: string) => <SqlInfo k={null} alan="" label={label} help={CH[key]} />;
   const setFixed = (k: FixedKey, v: number | null) => setForm((f) => ({ ...(f ?? {}), fixed: { ...(f?.fixed ?? {}), [k]: v ?? 0 } }));
 
   const save = useMutation({
@@ -189,6 +245,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
     setStage('tahmini');
     setOrigin({});
     setLoadedKey(null);
+    setFromForm(false);
   };
 
   return (
@@ -231,15 +288,22 @@ export default function CalcPane({ ov }: { ov: Overview }) {
 
       {(book.error || analysis.error) && <Note tone="err">{errText(book.error ?? analysis.error, 'Kayıt okunamadı.')}</Note>}
       {book.data && !aid && <BookFacts b={book.data} />}
+      {fromForm && (
+        <Note tone="info">
+          Baskı, kâğıt, genel gider, telif ve kapak ücreti maliyet formundan aktarıldı. Bu bölüm KDV'yi düşer, iskontoyu Logo'daki gerçek kanal
+          satışından alır ve adet senaryolarıyla başabaşı hesaplar; bu yüzden birim maliyet ve kâr formdakinden farklı olabilir.
+        </Note>
+      )}
 
       <Panel>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <label className="block min-w-0 sm:col-span-2">
-            <span className={labelCls}>Kitap / analiz adı</span>
+            <span className={`${labelCls} flex items-center gap-1`}>Kitap / analiz adı{hi('title', 'Kitap / analiz adı')}</span>
             <input className={`${field} mt-1`} value={title} disabled={readOnly} onChange={(e) => setTitle(e.target.value)} placeholder="Ör. yeni roman — ilk baskı" />
           </label>
           <Select<Stage>
             label="Aşama"
+            info={hi('stage', 'Aşama')}
             value={stage}
             onChange={setStage}
             options={[
@@ -249,21 +313,22 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             hint={stage === 'tahmini' ? 'Kabul kararından sonra, emsal kitaplarla. Onay: Mali İşler + Satış.' : 'Kesin sayfa sayısı ve matbaa teklifiyle. Onay: Mali İşler + Satış + Pazarlama + Üst Yönetim.'}
           />
           <label className="block min-w-0">
-            <span className={labelCls}>Stok kodu</span>
+            <span className={`${labelCls} flex items-center gap-1`}>Stok kodu{hi('code', 'Stok kodu')}</span>
             <input className={`${field} mt-1 font-mono`} value={spec.code ?? ''} disabled={readOnly || !!code} onChange={(e) => setSpec({ ...spec, code: e.target.value || null })} placeholder="Yeni kitapta boş" />
           </label>
         </div>
       </Panel>
 
       <Group title="Teknik özellikler" help="Sayfa, ebat ve kâğıt gramajı kâğıt maliyetini; sayfa ve cilt şekli emsal kitapları belirler.">
-        <NumField label="Sayfa sayısı" value={spec.pages} digits={0} disabled={readOnly} onChange={(v) => setSpec({ ...spec, pages: v })} />
+        <NumField label="Sayfa sayısı" info={hi('pages', 'Sayfa sayısı')} value={spec.pages} digits={0} disabled={readOnly} onChange={(v) => setSpec({ ...spec, pages: v })} />
         <label className="block min-w-0">
-          <span className={labelCls}>Ebat (cm)</span>
+          <span className={`${labelCls} flex items-center gap-1`}>Ebat (cm){hi('trim', 'Ebat')}</span>
           <input className={`${field} mt-1`} value={spec.trim ?? ''} disabled={readOnly} placeholder="13,5x21" onChange={(e) => setSpec({ ...spec, trim: e.target.value || null })} />
         </label>
-        <NumField label="İç kâğıt gramajı" suffix="gr" value={spec.gsm} digits={0} disabled={readOnly} onChange={(v) => setSpec({ ...spec, gsm: v })} />
+        <NumField label="İç kâğıt gramajı" info={hi('gsm', 'İç kâğıt gramajı')} suffix="gr" value={spec.gsm} digits={0} disabled={readOnly} onChange={(v) => setSpec({ ...spec, gsm: v })} />
         <Select<string>
           label="Cilt şekli"
+          info={hi('binding', 'Cilt şekli')}
           value={spec.binding ?? ''}
           onChange={(v) => setSpec({ ...spec, binding: v || null })}
           options={[{ value: '', label: 'Hepsi (emsalde ayırma)' }, ...BINDINGS.map((b) => ({ value: b, label: b }))]}
@@ -312,6 +377,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             <NumField label="Telif oranı" info={inputInfo('royaltyRate', 'Telif oranı')} suffix="%" percent value={form.royaltyRate} disabled={readOnly} onChange={(v) => set({ royaltyRate: v })} />
             <Select<'kapak' | 'net'>
               label="Telif tabanı"
+              info={hi('royaltyBase', 'Telif tabanı')}
               value={form.royaltyBase ?? 'kapak'}
               onChange={(v) => set({ royaltyBase: v })}
               options={[
@@ -321,6 +387,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             />
             <Select<'satis' | 'baski'>
               label="Telif doğuşu"
+              info={hi('royaltyOn', 'Telif doğuşu')}
               value={form.royaltyOn ?? 'satis'}
               onChange={(v) => set({ royaltyOn: v })}
               options={[
@@ -359,12 +426,14 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             </label>
             <Select<string>
               label="Seçilen adet"
+              info={hi('chosenQty', 'Seçilen adet')}
               value={String(form.chosenQty ?? '')}
               onChange={(v) => set({ chosenQty: Number(v) })}
               options={(form.qtys ?? []).map((q) => ({ value: String(q), label: num(q) }))}
             />
             <NumField
               label="Kapak fiyatı (KDV dahil)"
+              info={hi('price', 'Kapak fiyatı')}
               suffix="₺"
               value={form.price}
               disabled={readOnly}
@@ -405,14 +474,14 @@ export default function CalcPane({ ov }: { ov: Overview }) {
   );
 }
 
-function BookPicker({ onPick, disabled }: { onPick: (code: string) => void; disabled?: boolean }) {
+export function BookPicker({ onPick, disabled, label = 'Kitap ara (ad, yazar ya da stok kodu)', info }: { onPick: (code: string) => void; disabled?: boolean; label?: string; info?: ReactNode }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const dq = useDebounced(q.trim(), 250);
   const hits = useQuery({ queryKey: ['pricing', 'books', dq], queryFn: () => pricingApi.books(dq), enabled: ENGINE_ENABLED && dq.length >= 2 && !disabled });
   return (
     <div className="relative min-w-0 flex-1">
-      <span className={labelCls}>Kitap ara (ad, yazar ya da stok kodu)</span>
+      <span className={`${labelCls} flex items-center gap-1`}>{label}{info}</span>
       <div className="relative mt-1">
         <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
         <input

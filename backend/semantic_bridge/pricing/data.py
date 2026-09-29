@@ -213,6 +213,15 @@ class Builder:
                     x["amount"] += _f(r.get("tutar")) or 0
                     x["rows"] += _i(r.get("satir")) or 0
                     x["last"] = max(filter(None, [x["last"], _day(r.get("son"))]), default=None)
+        kur: dict[str, Any] = {}
+        try:
+            for r in self._q("logo_kur", "logo", SRC.logo_sql("logo_kur", copies[-1]["firm"], "", ymd(copies[-1]["to"]))):
+                cur = {1: "USD", 20: "EUR"}.get(_i(r.get("tur")) or 0)
+                rate = _f(r.get("satis")) or _f(r.get("alis"))
+                if cur and rate and rate > 0:
+                    kur[cur] = {"rate": round(rate, 4), "date": _day(r.get("tarih"))}
+        except Exception as e:  # noqa: BLE001 — kur tablosu yoksa maliyet formu tarifedeki kuru kullanır
+            self.warnings.append(f"Logo günlük kur tablosu okunamadı ({type(e).__name__}); maliyet formu tarifedeki kuru kullanır.")
         channels = channel_table(list(chan.values()))
         net12 = sum(ch["net"] for ch in channels)
 
@@ -250,7 +259,7 @@ class Builder:
         return {
             "version": 1, "asOf": datetime.now(timezone.utc).isoformat(), "durationMs": int((time.time() - started) * 1000),
             "dataEnd": data_end, "copies": copies, "books": books, "prints": prints, "crmPrints": crm_prints,
-            "sales": sales, "channels": channels, "paper": paper_table(list(paper_items.values())),
+            "sales": sales, "channels": channels, "paper": paper_table(list(paper_items.values())), "kur": kur,
             "distribution": {"freight": round(freight, 2), "net": round(net12, 2),
                              "rate": round(freight / net12, 4) if net12 > 0 else None, "from": ch_start, "to": data_end},
             "labels": labels, "sources": {k: {"rows": v["rows"], "ms": v["ms"]} for k, v in self.stats.items()},

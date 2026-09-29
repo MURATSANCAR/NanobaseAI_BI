@@ -8,6 +8,7 @@ import { Tabs } from '../editorial/freelance/shared';
 import Frame from './Frame';
 import { day, overviewKey, pct, pricingApi } from './api';
 import CalcPane from './CalcPane';
+import FormPane from './FormPane';
 import AnalysesPane from './AnalysesPane';
 import ActualsPane from './ActualsPane';
 import BacklistPane from './BacklistPane';
@@ -19,12 +20,15 @@ import SqlInfo from '../components/SqlInfo';
  * Rakamlar Logo'nun ve CRM'in salt okunur anlık görüntüsünden gelir (6 saatte bir ya da «Verileri yenile»).
  */
 
-export type Section = 'hesap' | 'analizler' | 'gerceklesen' | 'backlist' | 'veri';
-const SECTIONS: Section[] = ['hesap', 'analizler', 'gerceklesen', 'backlist', 'veri'];
+export type Section = 'form' | 'hesap' | 'analizler' | 'gerceklesen' | 'backlist' | 'veri';
+const SECTIONS: Section[] = ['form', 'hesap', 'analizler', 'gerceklesen', 'backlist', 'veri'];
+
+/** Veri sonu bu kadar günden eskiyse ekran Logo verisinin güncel olmadığını söyler. */
+const STALE_DAYS = 3;
 
 export default function PricingScreen() {
   const [params, setParams] = useSearchParams();
-  const section = (SECTIONS.includes(params.get('bolum') as Section) ? params.get('bolum') : 'hesap') as Section;
+  const section = (SECTIONS.includes(params.get('bolum') as Section) ? params.get('bolum') : 'form') as Section;
   const qc = useQueryClient();
   const ov = useQuery({
     queryKey: overviewKey,
@@ -44,7 +48,7 @@ export default function PricingScreen() {
   return (
     <Frame
       title="Fiyatlama ve maliyet"
-      lead="Kitap bazlı maliyet (kâğıt, baskı, telif, çeviri, grafik…), baskı adedi senaryoları, başabaş, kapak fiyatı önerisi ve kanal fiyat matrisi; Logo'dan gerçekleşen maliyet ve marj, backlist fiyat revizyonu. Onaylanan fiyat CRM kitap kartına ayrıca girilir; buradan CRM'e, Logo'ya ya da e-ticarete yazılmaz."
+      lead="Maliyet formu: basım Excel'indeki Kitap Maliyet Formu'nun aynısı (kâğıt, baskı, kapak, cilt, telif, dolaylı gider). Fiyat analizi: baskı adedi senaryoları, başabaş, kapak fiyatı önerisi, kanal matrisi ve onay. Ayrıca Logo'dan gerçekleşen maliyet ve backlist fiyat revizyonu. Buradan CRM'e, Logo'ya ya da e-ticarete yazılmaz."
       source={m ? `Logo + CRM · veri sonu ${day(m.dataEnd)}` : 'Logo + CRM'}
       presence={o?.status.refreshing ? 'Veriler yenileniyor…' : m ? `Görüntü ${day(m.asOf)}` : 'Hazırlanıyor'}
     >
@@ -58,6 +62,12 @@ export default function PricingScreen() {
         </Note>
       )}
       {m && m.warnings.length > 0 && <Note tone="warn">{m.warnings.join(' ')}</Note>}
+      {m && staleDays(m.dataEnd) > STALE_DAYS && (
+        <Note tone="warn">
+          Logo verisi {day(m.dataEnd)} tarihinde bitiyor ({staleDays(m.dataEnd)} gün önce): kâğıt fiyatı, kur, baskı faturaları ve satışlar o güne kadar.
+          Logo bağlantısı canlıya geçince veriler 6 saatte bir kendiliğinden yenilenir.
+        </Note>
+      )}
 
       {o && (
         <KpiRow>
@@ -101,7 +111,8 @@ export default function PricingScreen() {
             value={section}
             onChange={(s) => go(s)}
             items={[
-              { key: 'hesap', label: 'Kitap hesabı' },
+              { key: 'form', label: 'Maliyet formu' },
+              { key: 'hesap', label: 'Fiyat analizi' },
               { key: 'analizler', label: 'Analizler ve onay', badge: o?.toApprove || undefined },
               { key: 'gerceklesen', label: 'Gerçekleşen' },
               { key: 'backlist', label: 'Backlist revizyonu' },
@@ -122,6 +133,8 @@ export default function PricingScreen() {
 
       {!o ? (
         !ov.error && <Loading />
+      ) : section === 'form' ? (
+        <FormPane ov={o} />
       ) : section === 'hesap' ? (
         <CalcPane ov={o} />
       ) : section === 'analizler' ? (
@@ -135,4 +148,11 @@ export default function PricingScreen() {
       )}
     </Frame>
   );
+}
+
+/** Veri sonunun bugünden kaç gün önce olduğu. */
+function staleDays(end: string | null | undefined): number {
+  if (!end) return 0;
+  const d = new Date(`${end.slice(0, 10)}T00:00:00Z`).getTime();
+  return Number.isNaN(d) ? 0 : Math.floor((Date.now() - d) / 86_400_000);
 }

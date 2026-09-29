@@ -60,10 +60,16 @@ export function NumField({
   );
 }
 
-export function Group({ title, help, children }: { title: string; help?: ReactNode; children: ReactNode }) {
+export function Group({ title, help, children, step, info }: { title: string; help?: ReactNode; children: ReactNode; step?: number; info?: ReactNode }) {
   return (
     <fieldset className="min-w-0 rounded-2xl border border-slate-100 bg-white/70 p-3 sm:p-4">
-      <legend className="px-1 text-[12px] font-extrabold uppercase tracking-wide text-canvas-ink">{title}</legend>
+      <legend className="flex items-center gap-1.5 px-1 text-[12px] font-extrabold uppercase tracking-wide text-canvas-ink">
+        {step != null && (
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-canvas-violet text-[11px] font-extrabold text-white tabular-nums">{step}</span>
+        )}
+        {title}
+        {info}
+      </legend>
       {help && <p className="-mt-1 mb-2 text-[11.5px] leading-snug text-canvas-muted">{help}</p>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">{children}</div>
     </fieldset>
@@ -83,18 +89,20 @@ export function Stat({ label, value, note, tone, info }: { label: string; value:
   );
 }
 
-/** Seçim kutusu (yerel select; telefonda sistem seçicisi açılır). */
-export function Select<T extends string>({ label, value, onChange, options, hint }: {
+/** Seçim kutusu (yerel select; telefonda sistem seçicisi açılır). `info`: etiketin yanındaki «i». */
+export function Select<T extends string>({ label, value, onChange, options, hint, info, disabled }: {
   label: string;
   value: T;
   onChange: (v: T) => void;
   options: Array<{ value: T; label: string }>;
   hint?: ReactNode;
+  info?: ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <label className="block min-w-0">
-      <span className={labelCls}>{label}</span>
-      <select className={`${field} mt-1`} value={value} onChange={(e) => onChange(e.target.value as T)}>
+      {info ? <span className={`${labelCls} flex items-center gap-1`}>{label}{info}</span> : <span className={labelCls}>{label}</span>}
+      <select className={`${field} mt-1`} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as T)}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
@@ -111,3 +119,59 @@ export const parseQtys = (text: string): number[] =>
   [...new Set(text.split(/[;,\s]+/).map((t) => parseNum(t.replace(/\./g, ''))).filter((v): v is number => v != null && v > 0).map(Math.round))].sort(
     (a, b) => a - b,
   );
+
+/** Aç/kapa kutusu (işaret kutusu; telefonda 44 px dokunma alanı). */
+export function Toggle({ label, checked, onChange, info, hint, disabled }: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  info?: ReactNode;
+  hint?: ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-slate-100 bg-white px-3 py-2 sm:min-h-10">
+        <input
+          type="checkbox"
+          className="h-4 w-4 shrink-0 accent-canvas-violet"
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span className="min-w-0 flex-1 text-[12.5px] font-bold leading-snug text-canvas-ink">{label}</span>
+        {info}
+      </label>
+      {hint && <span className="mt-1 block text-[11px] leading-snug text-canvas-muted">{hint}</span>}
+    </div>
+  );
+}
+
+/** Metin kutusu (seçenek listesiyle öneri: `list`). */
+export function TextField({ label, value, onChange, info, hint, placeholder, list, disabled }: {
+  label: string;
+  value: string | null | undefined;
+  onChange: (v: string) => void;
+  info?: ReactNode;
+  hint?: ReactNode;
+  placeholder?: string;
+  list?: string[];
+  disabled?: boolean;
+}) {
+  const id = `dl-${label.replace(/[^a-z0-9]/gi, '')}`;
+  return (
+    <label className="block min-w-0">
+      {info ? <span className={`${labelCls} flex items-center gap-1`}>{label}{info}</span> : <span className={labelCls}>{label}</span>}
+      <input className={`${field} mt-1`} value={value ?? ''} placeholder={placeholder} disabled={disabled} list={list ? id : undefined}
+        onChange={(e) => onChange(e.target.value)} />
+      {list && (
+        <datalist id={id}>
+          {list.map((o) => (
+            <option key={o} value={o} />
+          ))}
+        </datalist>
+      )}
+      {hint && <span className="mt-1 block text-[11px] leading-snug text-canvas-muted">{hint}</span>}
+    </label>
+  );
+}

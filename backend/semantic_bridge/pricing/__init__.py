@@ -424,6 +424,82 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
               {k: {"once": before.get(k), "sonra": out.get(k)} for k in S.BASE_DEFAULTS if before.get(k) != out.get(k)})
         return out
 
+    # ---- maliyet formu (TİMAŞ basım Excel'iyle aynı hesap)
+    def form_call(fn, *a, **kw):
+        from semantic_bridge.pricing import form as F
+        try:
+            return fn(*a, **kw)
+        except F.FormError as e:
+            raise HTTPException(status_code=400, detail={"code": "PRICING_FORM", "message": str(e)}) from e
+
+    def snap_kur(snap: Optional[dict]) -> Optional[dict]:
+        k = (snap or {}).get("kur") or {}
+        return {c: v["rate"] for c, v in k.items() if (v or {}).get("rate")} or None
+
+    @app.get("/api/v1/pricing/form/setup")
+    def pricing_form_setup(request: Request, kitap: str = "") -> dict[str, Any]:
+        """Formun seçenekleri (tarife), başlangıç girdileri (yeni kitap ya da `kitap` stok kodundan), Logo kuru ve kâğıt fiyatları."""
+        from semantic_bridge.pricing import form as F
+        engine, tenant, user, _ = ses(request)
+        snap = snaps.get()
+        tariff = S.get_form_tariff(engine, tenant)
+        kur = snap_kur(snap)
+        start = {"inputs": F.blank_inputs(tariff, kur=kur), "origin": {}}
+        if kitap:
+            det = D.book_detail(need_snap(), kitap)
+            if not det:
+                raise HTTPException(404, detail={"code": "PRICING", "message": "Bu stok koduyla kitap bulunamadı."})
+            start = F.from_book(det, tariff, kur=kur)
+            start["book"] = {k: (det.get("book") or {}).get(k) for k in ("code", "name", "author", "publisher", "price", "pages", "trim")}
+            start["book"]["lastPrint"] = (det.get("prints") or [None])[-1]
+            start["book"]["logoUnitCost"] = (det.get("total") or {}).get("unitCost")
+        out = {"tariff": tariff, "bindings": list(F.BINDINGS), "laminates": list(F.LAMINATES), "varnishes": list(F.VARNISHES),
+               "extras": {k: {"row": v[0], "label": v[1], "kind": v[7]} for k, v in F.EXTRAS.items()},
+               "logoKur": (snap or {}).get("kur") or {}, "paper": (snap or {}).get("paper"), "dataEnd": (snap or {}).get("dataEnd"),
+               "canWrite": can(user, "ozellik:fiyatlama.yaz"), **start}
+        out["paperSource"] = "logo"
+        return P.bagla(out, lambda: K.for_form(engine, tenant, snap, out, *dbs()))
+
+    @app.post("/api/v1/pricing/form/calc")
+    def pricing_form_calc(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Formun hesabı. `paperSource`: «logo» (kâğıt Logo alış fiyatı) ya da «tarife» (Excel'le birebir). Yanında öbür
+        kaynakla hesap da döner (iki kâğıt fiyatının farkı ekranda). `tariff` verilirse o tarifeyle (kabul, ne-olur-eğer)."""
+        from semantic_bridge.pricing import form as F
+        engine, tenant, _, _ = ses(request)
+        snap = snaps.get()
+        tariff = body.get("tariff") if isinstance(body.get("tariff"), dict) else S.get_form_tariff(engine, tenant)
+        src = body.get("paperSource") if body.get("paperSource") in ("logo", "tarife") else "logo"
+        inputs = body.get("inputs") or {}
+        paper = (snap or {}).get("paper")
+        out = form_call(F.compute, inputs, tariff, paper_source=src, snap_paper=paper)
+        other = "tarife" if src == "logo" else "logo"
+        try:
+            alt = F.compute(inputs, tariff, paper_source=other, snap_paper=paper)
+            out["compare"] = {"paperSource": other, "birimMaliyet": alt["summary"]["birimMaliyet"],
+                              "kagitAdet": alt["summary"]["kagitAdet"], "karAdet": alt["summary"]["karAdet"],
+                              "karYuzde": alt["summary"]["karYuzde"]}
+        except F.FormError:
+            out["compare"] = None
+        try:
+            out["analysis"] = F.to_analysis(inputs, tariff, paper_source=src, snap_paper=paper)
+        except F.FormError:
+            out["analysis"] = None
+        out["dataEnd"] = (snap or {}).get("dataEnd")
+        return P.bagla(out, lambda: K.for_form(engine, tenant, snap, out, *dbs()))
+
+    @app.put("/api/v1/pricing/form/tariff")
+    def pricing_form_tariff(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, _ = ses(request)
+        if not can(user, "ozellik:fiyatlama.yaz"):
+            raise HTTPException(403, detail={"code": "PRICING", "message": "Tarifeyi değiştirmek «Fiyat analizi hazırlama» yetkisi ister."})
+        reset = bool(body.get("reset"))
+        before = S.get_form_tariff(engine, tenant)
+        out = call(S.reset_form_tariff, engine, tenant) if reset else call(S.save_form_tariff, engine, tenant, user, body)
+        keys = ("kur", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")
+        audit(engine, user, "update", "pricing_form_tariff", tenant, "Maliyet formu tarifesi",
+              {"sifirla": reset} if reset else {k: "değişti" for k in keys if before.get(k) != out.get(k)})
+        return out
+
     # ---- backlist toplu zam teklifi
     @app.get("/api/v1/pricing/proposals")
     def pricing_proposals(request: Request) -> dict[str, Any]:

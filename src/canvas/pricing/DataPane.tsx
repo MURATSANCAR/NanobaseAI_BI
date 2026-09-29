@@ -8,12 +8,14 @@ import { day, mn, num, overviewKey, pct, pricingApi, tl2, type Defaults, type Ov
 import { NumField, parseQtys } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { useCan } from '../useAdmin';
+import TariffPanel from './TariffPanel';
 
 /** Ölçülen değerler (kanal iskontosu, kâğıt fiyatı, dağıtım gideri), düzenlenebilir varsayımlar ve kaynak sorgular. */
 export default function DataPane({ ov }: { ov: Overview }) {
   const m = ov.measured;
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
+      <TariffPanel />
       {m && (
         <>
           <Panel>

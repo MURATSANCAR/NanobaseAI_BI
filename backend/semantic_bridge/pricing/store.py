@@ -101,6 +101,13 @@ DEFAULTS = sa.Table(
     sa.Column("updated_by", sa.String(120)),
     _ts("updated_at"),
 )
+FORM_TARIFF = sa.Table(
+    "semantic_pricing_form_tariff", _md,
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("values_json", sa.Text, nullable=False),
+    sa.Column("updated_by", sa.String(120)),
+    _ts("updated_at"),
+)
 PROPOSALS = sa.Table(
     "semantic_pricing_proposals", _md,
     sa.Column("id", sa.String(32), primary_key=True),
@@ -621,3 +628,72 @@ def proposal_decide(engine: sa.engine.Engine, tenant: str, user: str, pid: str, 
             status="onaylandi" if decision == "onay" else "reddedildi", decided_by=user, decided_at=_now(),
             decision_note=(note or "").strip()[:2000] or None))
     return proposal_get(engine, tenant, pid)
+
+
+# ------------------------------------------------------------------ maliyet formu tarifesi
+
+def form_tariff_stmt(tenant: str):
+    return sa.select(FORM_TARIFF).where(FORM_TARIFF.c.tenant_id == tenant)
+
+
+def get_form_tariff(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+    """Maliyet formunun matbaa ve malzeme tarifesi: portalda değiştirildiyse o, yoksa basım Excel'inden alınan varsayılan."""
+    from semantic_bridge.pricing import form as F
+    base = F.default_tariff()
+    with engine.connect() as c:
+        row = c.execute(form_tariff_stmt(tenant)).mappings().first()
+    saved = _j(row["values_json"], {}) if row else {}
+    return {**base, **saved, "updatedBy": row["updated_by"] if row else None,
+            "updatedAt": _iso(row["updated_at"]) if row else None, "isDefault": not row}
+
+
+def _pos(v: Any, what: str, allow_zero: bool = True) -> float:
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        raise PricingError(f"{what} sayı olmalı.") from None
+    if x < 0 or (x == 0 and not allow_zero) or x > 1e9:
+        raise PricingError(f"{what} geçersiz.")
+    return x
+
+
+def save_form_tariff(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str, Any]) -> dict[str, Any]:
+    """Tarifenin değiştirilebilen kısımları: kur, vade, kâğıt fiyatları, kalem fiyatları, fire, dolaylı gider, kapak
+    ücretinin bölündüğü baskı sayısı, yayınevi iskontoları. Ebat ve klişe tabloları varsayılandan gelir."""
+    cur = get_form_tariff(engine, tenant)
+    out = {k: cur[k] for k in ("kur", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")}
+    if "kur" in body:
+        out["kur"] = {c: _pos((body["kur"] or {}).get(c, out["kur"][c]), f"{c} kuru", False) for c in ("USD", "EUR")}
+    if "vade" in body:
+        v = body["vade"] or {}
+        out["vade"] = {"oran": _pos(v.get("oran", out["vade"]["oran"]), "Vade oranı"),
+                       "ay": _pos(v.get("ay", out["vade"]["ay"]), "Vade süresi")}
+    if "papers" in body:
+        by = {p["name"]: p for p in out["papers"]}
+        for p in body["papers"] or []:
+            if p.get("name") in by:
+                by[p["name"]]["base"] = _pos(p.get("base"), f"«{p['name']}» fiyatı")
+    if "prices" in body:
+        for k, v in (body["prices"] or {}).items():
+            if k in out["prices"]:
+                out["prices"][k] = {**out["prices"][k], "m": _pos((v or {}).get("m", out["prices"][k]["m"]), k),
+                                    "n": _pos((v or {}).get("n", out["prices"][k]["n"]), k)}
+    if "fire" in body:
+        out["fire"] = {k: _pos((body["fire"] or {}).get(k, v), f"{k} firesi") for k, v in out["fire"].items()}
+    if "dolayli" in body:
+        out["dolayli"] = _pos(body["dolayli"], "Dolaylı gider oranı")
+    if "kapakBolen" in body:
+        out["kapakBolen"] = _pos(body["kapakBolen"], "Kapak ücretinin bölündüğü baskı sayısı", False)
+    if "publishers" in body:
+        out["publishers"] = {str(k): _pos(v, f"«{k}» iskontosu") for k, v in (body["publishers"] or {}).items() if str(k).strip()}
+    with engine.begin() as c:
+        c.execute(FORM_TARIFF.delete().where(FORM_TARIFF.c.tenant_id == tenant))
+        c.execute(FORM_TARIFF.insert().values(tenant_id=tenant, values_json=json.dumps(out, ensure_ascii=False),
+                                              updated_by=user, updated_at=_now()))
+    return get_form_tariff(engine, tenant)
+
+
+def reset_form_tariff(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+    with engine.begin() as c:
+        c.execute(FORM_TARIFF.delete().where(FORM_TARIFF.c.tenant_id == tenant))
+    return get_form_tariff(engine, tenant)
