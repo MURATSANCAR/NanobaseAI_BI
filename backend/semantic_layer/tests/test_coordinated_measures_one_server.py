@@ -15,7 +15,7 @@ from datetime import date
 
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.models import ColumnProfile, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType
-from semantic_layer.normalize import fold
+from semantic_layer.normalize import fold, normalize_term
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.tests.conftest import DS, TENANT
 from semantic_layer.tests.test_runtime import _certify, catalog  # noqa: F401
@@ -25,9 +25,13 @@ STL = "LG_{n0}_{n1}_STLINE"
 
 
 def _sales_world(catalog, profiles):
+    # Satır seviyeli "satış tutarı" — canlıdaki sem_b62a0c853395'in (LINENET, INVOICEREF≠0) karşılığı. Test
+    # fikstürünün STLINE profilinde LINENET/INVOICEREF kolonu yok; o kolonlarla yazılınca fiziksel eşleme
+    # geçersiz sayılıp kavram hiç sertifikalanmıyor, katalogda yalnız fatura seviyeli anlam kalıyordu. Burada
+    # fikstürün taşıdığı kolonlarla yazılır (anlam aynı: satır tutarı, satış türleri).
     _certify(catalog, "satış tutarı", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern=STL,
-             formula="SUM(CASE WHEN STLINE.TRCODE IN (7, 8, 9) THEN STLINE.LINENET ELSE 0 END)",
-             extra={"func": "SUM", "conditions": ["STLINE.INVOICEREF NOT IN (0)"]}), synonyms=["satış"])
+             formula="SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.TOTAL ELSE 0 END)",
+             extra={"func": "SUM", "conditions": ["STLINE.LINETYPE IN (0)"]}), synonyms=["satış"])
     _certify(catalog, "kargo tutarı", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern=STL,
              formula="SUM(STLINE.TOTAL)", extra={"func": "SUM"}))
     # "satilan adet" (STLINE.AMOUNT, eş anlamlı "adet") ortak test kataloğunda zaten sertifikalı.
@@ -46,7 +50,10 @@ def test_amount_and_then_quantity_are_both_answered(catalog, profiles):
 
 
 def test_quantity_and_then_amount_are_both_answered(catalog, profiles):
-    sq = _sales_world(catalog, profiles).resolve("2025 eylül ayı toplam satış adedi ve tutarı nedir?", today=TODAY)
+    r = _sales_world(catalog, profiles)
+    senses = catalog.certified_index(TENANT, DS).get(normalize_term("satış tutarı")) or []
+    assert any(m.entity == "STLINE" for _, maps in senses for m in maps), "satır seviyeli satış tutarı sertifikalı olmalı"
+    sq = r.resolve("2025 eylül ayı toplam satış adedi ve tutarı nedir?", today=TODAY)
     assert _metrics(sq) == ["satilan adet", "satis tutari"], (_metrics(sq), sq.explanation)
     assert not sq.clarification, sq.clarification
     # ikinci ölçü birincinin tablosundaki anlamıyla okunur (satırdaki tutar, fatura başlığı değil)
