@@ -34,6 +34,7 @@ from semantic_layer.normalize import (
     is_negative,
     is_inflection_of,
     is_participle,
+    is_verb_form,
     number_role,
     short_root,
     stem,
@@ -2789,6 +2790,9 @@ class SemanticResolver:
                  if s.mapping and getattr(s, "span", None) and tuple(s.span) != (0, 0)
                  and tuple(s.span) not in {(a, b) for a, b in positions.items()}
                  and s.semantic_type != SemanticType.DIMENSION_VALUE
+                 # A grouping the resolver added for a top-N ("en çok ciro yapan on kanal") is bookkeeping, not
+                 # a column the person listed: a word after it ("…on kanal, kâr ile") is another figure.
+                 and (s.explain or {}).get("role") != "rank_group_by"
                  and (s.semantic_type in (SemanticType.COLUMN, SemanticType.ENTITY) or s in sq.group_by)]
         ends = {s.span[1] for s in shown}
         starts = {s.span[0] for s in shown}
@@ -2821,9 +2825,25 @@ class SemanticResolver:
         # keeps the 2026-09-16 rule; its reading is still held to the column rule by the gate when it is one.
         positions: dict[int, str] = {}
         single = {fold(w) for w in sq.unresolved if " " not in str(w)}
+        # A noun that is also a verb form ("yazar": writer / writes) was set aside by step 6 as grammar and never
+        # reached `unresolved`: in a list of columns it vanished without a word. Only such a word — ignored as a
+        # verb, not a generic head ("bilgilerini"), not a polite request ("yazar mısın"), not a record verb.
+        covered = {i for s in list(sq.slots) + list(sq.group_by) if getattr(s, "span", None) for i in range(*s.span)}
+        ignored = {fold(w) for w in sq.ignored if " " not in str(w)}
+        verbish: set[int] = set()
         for k, tok in enumerate(qf.tokens):
+            if k in covered:
+                continue
             if tok in single:
                 positions[k] = tok
+                continue
+            nxt = qf.tokens[k + 1] if k + 1 < len(qf.tokens) else ""
+            st = stem(tok)
+            if (tok in ignored and is_verb_form(tok) and not _REQUEST_PARTICLE.fullmatch(nxt)
+                    and tok not in (_RECORD_VERBS | _RECORD_CONVERBS)
+                    and not ({st, short_root(tok)} & (GENERIC_S | STOPWORDS_S | MODIFIERS_S | METRIC_VOCAB_S))):
+                positions[k] = tok
+                verbish.add(k)
         if not positions:
             return
         columns = self._column_role_positions(sq, qf, {k: k + 1 for k in positions})
@@ -2837,6 +2857,11 @@ class SemanticResolver:
         named_at = {k: src for k, src, _ents in self._source_hits(qf, set())}
         for k in sorted(columns):
             tok = positions[k]
+            if k in verbish:
+                sq.ignored[:] = [w for w in sq.ignored if fold(str(w)) != tok]
+                sq.explanation.append(f"'{tok}' kolonların arasında sayıldı: fiil değil, istenen bir kolon")
+                if not one_server and tok not in sq.unresolved:
+                    sq.unresolved.append(tok)     # the model's to read, as a column
             if one_server:
                 sq.unresolved[:] = [w for w in sq.unresolved if fold(str(w)) != tok]
                 src = named_at.get(k)
