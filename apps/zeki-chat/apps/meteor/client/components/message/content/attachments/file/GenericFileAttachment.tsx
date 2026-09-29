@@ -73,7 +73,8 @@ const GenericFileAttachment = ({
 	return (
 		<>
 			{descriptionMd ? <MessageContentBody md={descriptionMd} /> : <MarkdownText parseEmoji content={description} />}
-			<MessageCollapsible title={title} hasDownload={hasDownload} link={link} isCollapsed={collapsed}>
+			{/* Zeki: like image/audio attachments, the download icon needs the sub-path prefix (/timas/sohbet); a bare /file-upload/… link 404s. */}
+			<MessageCollapsible title={title} hasDownload={hasDownload} link={link && getURL(link)} isCollapsed={collapsed}>
 				<MessageGenericPreview style={{ maxWidth: 368, width: '100%' }}>
 					<MessageGenericPreviewContent
 						thumb={<MessageGenericPreviewIcon name='attachment-file' type={format || getFileExtension(title)} />}
