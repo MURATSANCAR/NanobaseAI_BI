@@ -330,10 +330,23 @@ def settings(conf: Callable[[str], str]) -> dict[str, Any]:
 # ------------------------------------------------------------------ meta
 
 
+def meta_stmt(tenant: str, key: str):
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
     with engine.connect() as c:
-        row = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).first()
+        row = c.execute(meta_stmt(tenant, key)).first()
     return {**loads(row.value_json, {}), "_at": iso(row.updated_at)} if row else {}
+
+
+def meta_prune(engine: sa.engine.Engine, tenant: str, prefix: str, keep: str, older_than: datetime) -> int:
+    """`prefix` ile başlayan, `keep` dışındaki ve `older_than`dan önce yazılmış kayıtlar silinir (tarih aralığına bağlı
+    saklanan CRM okumaları her gün yeni anahtar açar; eskileri birikmez)."""
+    with engine.begin() as c:
+        res = c.execute(META.delete().where(META.c.tenant_id == tenant, META.c.key.like(prefix + "%"), META.c.key != keep,
+                                            META.c.updated_at < older_than))
+    return int(res.rowcount or 0)
 
 
 def meta_set(engine: sa.engine.Engine, tenant: str, key: str, value: dict[str, Any]) -> None:

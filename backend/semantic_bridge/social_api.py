@@ -20,8 +20,8 @@ import os
 import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta
-from typing import Any, Callable
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Callable, Optional
 
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
@@ -119,6 +119,96 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def audit(engine, user: str, action: str, kind: str, oid: Any, title: Any, detail: Any = None) -> None:
         admin_mod.audit(engine, user, action, kind, oid, title, detail)
 
+    # ------------------------------------------------------------------ saklanan CRM okumaları (hız, 2026-09-29)
+    # Fırsatlar ve marka önerileri her açılışta CRM'e 1–3 sorgu atıyordu (her biri VPN üstünden yeni bağlantı; ekran
+    # 4,8–6,8 sn). Özel günler, kitap bağları, marka kartları ve aralıktaki yeni kitaplar gün içinde nadiren değişir:
+    # okuma portal tablosunda (semantic_social_meta, anahtar `crm.*`) saklanır, ekran oradan okur. Kayıt
+    # `SOCIAL_CRM_FRESH_SEC` (varsayılan 1 saat) eskidiyse ya da «Verileri yenile» basıldıysa (1 dk'dan eskiyse) hemen
+    # eldeki döner ve CRM arkada yeniden okunur; hiç kayıt yoksa (ilk kurulum, yeni tarih aralığı) CRM beklenir.
+    # Sabah turu (run-due, 07:00) hepsini beklenerek yeniler. Sorgu bilgisi: saklanan kaydın okuması + onu dolduran CRM SQL'i.
+    crm_busy: set[str] = set()
+
+    def crm_fresh_sec() -> float:
+        try:
+            return max(0.0, float(os.environ.get("SOCIAL_CRM_FRESH_SEC", "3600")))
+        except ValueError:
+            return 3600.0
+
+    def _age(at: Any) -> Optional[float]:
+        try:
+            dt = datetime.fromisoformat(str(at))
+        except (TypeError, ValueError):
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (S.now() - dt).total_seconds()
+
+    def crm_store(engine, tenant: str, key: str, data: Any) -> str:
+        S.meta_set(engine, tenant, key, {"schema": schema(), "data": data})
+        if key.startswith("crm.yeni."):
+            S.meta_prune(engine, tenant, "crm.yeni.", key, S.now() - timedelta(days=2))
+        return S.iso(S.now()) or ""
+
+    def crm_later(engine, tenant: str, key: str, read: Callable[[], Any]) -> None:
+        with lock:
+            if key in crm_busy:
+                return
+            crm_busy.add(key)
+
+        def run() -> None:
+            try:
+                crm_store(engine, tenant, key, read())
+            except Exception as e:  # noqa: BLE001 — saklanan okuma gösterilmeye devam eder
+                log.info("social: CRM okuması arkada yenilenemedi (%s): %s", key, e)
+            finally:
+                with lock:
+                    crm_busy.discard(key)
+
+        threading.Thread(target=run, name=f"social-crm:{key}", daemon=True).start()
+
+    def crm_saved(engine, tenant: str, key: str, read: Callable[[], Any], *, force: bool = False,
+                  nudge: bool = False) -> tuple[Any, Optional[str]]:
+        """(veri, okuma anı). `force`: CRM beklenerek şimdi okunur. `nudge`: «Verileri yenile» — beklemeden arkada."""
+        if not force:
+            row = S.meta_get(engine, tenant, key)
+            if "data" in row and row.get("schema") == schema():
+                age = _age(row.get("_at"))
+                if age is None or age > crm_fresh_sec() or (nudge and age > 60):
+                    crm_later(engine, tenant, key, read)
+                return row["data"], row.get("_at")
+        data = read()
+        return data, crm_store(engine, tenant, key, data)
+
+    def saved_days(engine, tenant: str, *, force: bool = False, nudge: bool = False, seen: Optional[dict] = None):
+        from semantic_bridge.seo_geo import seasons as SS
+
+        def read() -> dict[str, Any]:
+            days, books = crm.special_days_crm()
+            return {"days": days, "books": books}
+
+        data, at = crm_saved(engine, tenant, "crm.ozelgun", read, force=force, nudge=nudge)
+        if seen is not None:
+            seen["crm.ozelgun"] = at
+        return SS.merge_builtin(list(data["days"])), dict(data["books"])
+
+    def saved_new_books(engine, tenant: str, start: date, end: date, *, force: bool = False, nudge: bool = False,
+                        seen: Optional[dict] = None) -> list[dict[str, Any]]:
+        key = f"crm.yeni.{start.isoformat()}.{end.isoformat()}"
+        data, at = crm_saved(engine, tenant, key, lambda: crm.new_books(start, end), force=force, nudge=nudge)
+        if seen is not None:
+            seen["crm.yeni"] = (key, at)
+        return list(data)
+
+    def saved_brands(engine, tenant: str, *, force: bool = False, nudge: bool = False,
+                     seen: Optional[dict] = None) -> list[dict[str, Any]]:
+        data, at = crm_saved(engine, tenant, "crm.marka", crm.brands, force=force, nudge=nudge)
+        if seen is not None:
+            seen["crm.marka"] = at
+        return list(data)
+
+    def refresh_asked(request: Request) -> bool:
+        return request.headers.get("x-data-refresh") == "1"
+
     def link(path: str = "") -> str:
         base = (admin_mod.conf("ALERT_LINK") or "").split("/uyarilar")[0]
         return f"{base}/sosyal-medya{('/' + path) if path else ''}" if base else ""
@@ -187,11 +277,12 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def social_account_suggestions(request: Request) -> dict[str, Any]:
         """CRM marka kartlarındaki Instagram kullanıcı adları (hesap listesine öneri; eklenmişler işaretli)."""
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        brands = await run_in_threadpool(call, crm.brands)
+        seen: dict[str, Any] = {}
+        brands = await run_in_threadpool(call, saved_brands, engine, tenant, nudge=refresh_asked(request), seen=seen)
         have = {(a["platform"], a["handle"].lstrip("@").lower()) for a in S.list_accounts(engine, tenant)}
         items = [{**b, "ekli": ("instagram", (b["instagram"] or "").lower()) in have} for b in brands]
         return PV.bagla({"items": items, "instagramDolu": sum(1 for b in brands if b["instagram"]), "marka": len(brands)},
-                        lambda: K.for_brands(engine, tenant))
+                        lambda: K.for_brands(engine, tenant, saved=seen))
 
     # ------------------------------------------------------------------ kitap ve içerik havuzu
 
@@ -253,7 +344,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out["onayBekleyen"] = S.pending(engine, tenant, st())
         return PV.bagla(out, lambda: K.for_calendar(engine, tenant, start, end, account))
 
-    def build_opportunities(engine, tenant: str, days: int, bpage: int, ref: date) -> dict[str, Any]:
+    def build_opportunities(engine, tenant: str, days: int, bpage: int, ref: date, *, force: bool = False,
+                            nudge: bool = False, seen: Optional[dict] = None) -> dict[str, Any]:
         from semantic_bridge.seo_geo import seasons as SS
 
         s = st()
@@ -266,7 +358,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 by_occ.setdefault(p["occasionKey"], set()).add(p["crmBookId"])
         out: dict[str, Any] = {"tarih": ref.isoformat(), "gun": days, "hatalar": []}
         try:
-            sdays, sbooks = crm.special_days()
+            sdays, sbooks = saved_days(engine, tenant, force=force, nudge=nudge, seen=seen)
             planned = {d["key"]: by_occ.get(d["key"], set()) | window_books for d in sdays}
             out["ozelGunler"] = S.occasion_items(sdays, sbooks, ref, days, s["leadDays"], planned, SS.resolve, SS.next_occurrence)
         except SourceError as e:
@@ -275,7 +367,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         end = max(ref + timedelta(days=days), (start + timedelta(days=32)).replace(day=1) - timedelta(days=1))
         posted_stok = {p["stokKodu"] for p in posts if p.get("stokKodu")}
         try:
-            nb = crm.new_books(start, end)
+            nb = saved_new_books(engine, tenant, start, end, force=force, nudge=nudge, seen=seen)
             out["yeniKitaplar"] = {"baslangic": start.isoformat(), "bitis": end.isoformat(),
                                    "items": [{**b, "takvimde": b["stokKodu"] in posted_stok} for b in nb]}
         except SourceError as e:
@@ -303,8 +395,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         d = min(days if days > 0 else st()["opportunityDays"], 366)
         ref = S.today()
-        out = await run_in_threadpool(call, build_opportunities, engine, tenant, d, max(0, bpage), ref)
-        return PV.bagla(out, lambda: K.for_opportunities(engine, tenant, ref, d, PK.logo_db(rt)))
+        seen: dict[str, Any] = {}
+        out = await run_in_threadpool(call, build_opportunities, engine, tenant, d, max(0, bpage), ref,
+                                      nudge=refresh_asked(request), seen=seen)
+        return PV.bagla(out, lambda: K.for_opportunities(engine, tenant, ref, d, PK.logo_db(rt), saved=seen))
 
     # ------------------------------------------------------------------ gönderiler
 
@@ -609,11 +703,13 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         ref = S.today()
         out: dict[str, Any] = {"tarih": ref.isoformat()}
         try:
-            opp = build_opportunities(engine, tenant, s["leadDays"], 0, ref)
+            # Sabah turu saklanan CRM okumalarını beklenerek yeniler (özel günler, kitap bağları, yeni kitaplar).
+            opp = build_opportunities(engine, tenant, s["leadDays"], 0, ref, force=True)
             occ = [o for o in opp["ozelGunler"] if o["uyari"]]
             out["hatalar"] = opp["hatalar"]
         except Exception as e:  # noqa: BLE001
             occ, out["hatalar"] = [], [str(e)[:300]]
+        out["crmOkuma"] = refresh_saved(engine, tenant, s, ref)
         dg = {"yarin": S.due_tomorrow(engine, tenant, s, ref), "ozelGun": occ, "onayda": len(S.pending(engine, tenant, s))}
         out["ozet"] = {"yarin": len(dg["yarin"]), "ozelGun": len(occ), "onayda": dg["onayda"]}
         body = S.digest_text(dg, link())
@@ -630,6 +726,19 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out["turEtiketi"] = label_kinds(engine, tenant)
         S.meta_set(engine, tenant, "run-due", out)
         return out
+
+    def refresh_saved(engine, tenant: str, s: dict[str, Any], ref: date) -> dict[str, Any]:
+        """Ekranın varsayılan fırsat penceresinin yeni kitapları ve marka kartları (özel günler yukarıda yenilendi)."""
+        res: dict[str, Any] = {}
+        start = ref.replace(day=1)
+        end = max(ref + timedelta(days=s["opportunityDays"]), (start + timedelta(days=32)).replace(day=1) - timedelta(days=1))
+        for name, fn in (("yeniKitaplar", lambda: saved_new_books(engine, tenant, start, end, force=True)),
+                         ("markalar", lambda: saved_brands(engine, tenant, force=True))):
+            try:
+                res[name] = len(fn())
+            except Exception as e:  # noqa: BLE001 — tur sürer; ekran saklanan okumayla çalışır
+                res[name] = f"hata: {str(e)[:200]}"
+        return res
 
     def label_kinds(engine, tenant: str) -> dict[str, Any]:
         """Türü boş, metni olan onaylı/yayınlanmış gönderiler: kapalı seçim (tek token + olasılık); eşiğin altı boş kalır."""

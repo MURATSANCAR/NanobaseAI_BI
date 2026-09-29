@@ -41,6 +41,16 @@ def _crm(k: P.Kaynaklar, id_: str, title: str, sql: str) -> str:
     return k.sorgu(id_, title, "crm", sql, database=PK.crm_db())
 
 
+def _crm_saved(k: P.Kaynaklar, engine: Any, tenant: str, key: str, at: Any, id_: str, title: str,
+               sqls: list[tuple[str, str, str]]) -> str:
+    """Portal tablosunda saklanan CRM okuması: ekranın çalıştırdığı okuma (semantic_social_meta) + onu dolduran CRM
+    sorguları (köken, okuma anıyla)."""
+    origin = [k.sorgu(sid, stitle, "crm", sql, database=PK.crm_db(), ran_at=at) for sid, stitle, sql in sqls]
+    return k.portal(id_, f"{title} (saklanan CRM okuması)", S.meta_stmt(tenant, key), engine, origin=origin,
+                    description="CRM okuması portal tablosunda saklanır; ekran bunu okur. Bir saatten eskiyse ya da «Verileri "
+                                "yenile» basılınca arkada yeniden okunur, her sabah 07:00 turunda yenilenir.")
+
+
 def _posts(k: P.Kaynaklar, engine: Any, tenant: str, id_: str, title: str, **kw: Any) -> str:
     return k.portal(id_, title, S.posts_stmt(tenant, **kw), engine)
 
@@ -51,9 +61,13 @@ def for_accounts(engine: Any, tenant: str) -> P.Kaynaklar:
     return k
 
 
-def for_brands(engine: Any, tenant: str) -> P.Kaynaklar:
+def for_brands(engine: Any, tenant: str, saved: Optional[dict[str, Any]] = None) -> P.Kaynaklar:
     k = P.Kaynaklar()
-    b = _crm(k, "sosyal.marka", "CRM marka kartları", src.brands_sql(_schema()))
+    if saved is not None and "crm.marka" in saved:
+        b = _crm_saved(k, engine, tenant, "crm.marka", saved["crm.marka"], "sosyal.marka.kayit", "CRM marka kartları",
+                       [("sosyal.marka", "CRM marka kartları", src.brands_sql(_schema()))])
+    else:
+        b = _crm(k, "sosyal.marka", "CRM marka kartları", src.brands_sql(_schema()))
     a = k.portal("sosyal.hesap", "Tanımlı hesaplar (eklenmiş işareti)", S.accounts_stmt(tenant), engine)
     ref = k.hesap("marka", "Marka sayısı = CRM marka kartı; Instagram dolu = kullanıcı adı yazılı kart; ekli = tanımlı hesaplarda "
                            "aynı kullanıcı adı olan.", [b, a])
@@ -92,17 +106,30 @@ def for_calendar(engine: Any, tenant: str, start: date, end: date, account: str)
     return k
 
 
-def for_opportunities(engine: Any, tenant: str, ref_day: date, days: int, logo_db: Optional[str]) -> P.Kaynaklar:
+def for_opportunities(engine: Any, tenant: str, ref_day: date, days: int, logo_db: Optional[str],
+                      saved: Optional[dict[str, Any]] = None) -> P.Kaynaklar:
+    """`saved`: uçta okunan saklanan CRM kayıtları (anahtar → okuma anı); verilmişse gösterilen okuma o kayıttır."""
     from semantic_bridge import budget as B
 
     k = P.Kaynaklar(as_of=S.now())
     sch = _schema()
-    crm = [_crm(k, "sosyal.ozelgun", "Özel günler (CRM)", src.days_sql(sch)),
-           _crm(k, "sosyal.ozelgun.kitap", "Özel gün – kitap bağları (CRM)", src.links_sql(sch))]
+    saved = saved or {}
+    days_sqls = [("sosyal.ozelgun", "Özel günler (CRM)", src.days_sql(sch)),
+                 ("sosyal.ozelgun.kitap", "Özel gün – kitap bağları (CRM)", src.links_sql(sch))]
+    if "crm.ozelgun" in saved:
+        crm = [_crm_saved(k, engine, tenant, "crm.ozelgun", saved["crm.ozelgun"], "sosyal.ozelgun.kayit",
+                          "Özel günler ve kitap bağları", days_sqls)]
+    else:
+        crm = [_crm(k, sid, title, sql) for sid, title, sql in days_sqls]
     posts = _posts(k, engine, tenant, "sosyal.gonderi", "Takvimdeki gönderiler", status="fikir,taslak,onayda,onayli,yayinlandi")
     start = ref_day.replace(day=1)
     end = max(ref_day + timedelta(days=days), (start + timedelta(days=32)).replace(day=1) - timedelta(days=1))
-    nb = _crm(k, "sosyal.yeni", "Yeni kitaplar (CRM)", src.new_books_sql(sch, start, end))
+    if "crm.yeni" in saved:
+        key, at = saved["crm.yeni"]
+        nb = _crm_saved(k, engine, tenant, key, at, "sosyal.yeni.kayit", "Yeni kitaplar",
+                        [("sosyal.yeni", "Yeni kitaplar (CRM)", src.new_books_sql(sch, start, end))])
+    else:
+        nb = _crm(k, "sosyal.yeni", "Yeni kitaplar (CRM)", src.new_books_sql(sch, start, end))
     back: list[str] = []
     try:
         de = B.data_end(engine)

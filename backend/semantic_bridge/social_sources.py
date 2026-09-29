@@ -199,6 +199,13 @@ class Crm:
         """Özel günler (aynı adlılar birleşik, kodda tanımlı hareketli günler eklenir) ve gün anahtarı → kitaplar."""
         from semantic_bridge.seo_geo import seasons as S
 
+        days, books = self.special_days_crm()
+        return S.merge_builtin(days), books
+
+    def special_days_crm(self) -> tuple[list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
+        """Yalnız CRM'den okunan kısım (kodda tanımlı günler eklenmeden): saklanabilir, JSON'a çevrilebilir."""
+        from semantic_bridge.seo_geo import seasons as S
+
         days: dict[str, dict[str, Any]] = {}
         by_id: dict[str, str] = {}
         for r in self._run(days_sql(self.schema())):
@@ -220,7 +227,7 @@ class Crm:
             if not key or not bid:
                 continue
             books.setdefault(key, {}).setdefault(bid, {"bookId": bid, "ad": _s(r.get("name")), "stokKodu": _s(r.get("stok"))})
-        return S.merge_builtin(list(days.values())), {k: list(v.values()) for k, v in books.items()}
+        return list(days.values()), {k: list(v.values()) for k, v in books.items()}
 
 
 # ------------------------------------------------------------------ M46 önbelleği (Logo satışı)
