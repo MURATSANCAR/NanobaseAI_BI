@@ -72,6 +72,17 @@ def test_kalici_kayit_yeniden_baslayinca_okunur_bayatsa_arkada_tazelenir(monkeyp
     assert HK.oku(bellek("v2"), key, hesap)["n"] == 5
 
 
+def test_kalici_ayri_veritabani(tmp_path, monkeypatch):
+    """`HIZLI_KAYIT_DSN`: kayıt portal veritabanına değil ayrı veritabanına yazılır (yan port ölçümü)."""
+    e = _motor()
+    monkeypatch.setenv("HIZLI_KAYIT_DSN", f"sqlite:///{tmp_path / 'hizli.db'}")
+    k = HK.Kalici("t.ayri", lambda: (e, "t1"))
+    HK.oku(HK.bellek("t.ayri", 600, kalici=k), "a", lambda: 1)
+    assert not sa.inspect(e).has_table("semantic_hizli_okuma") or not e.connect().execute(
+        sa.select(sa.func.count()).select_from(HK.OKUMA)).scalar()
+    assert HK.oku(HK.bellek("t.ayri", 600, kalici=k), "a", lambda: 2) == 1     # ayrı veritabanından okundu
+
+
 def test_kalici_dusurulen_deger_tablodan_geri_gelmez():
     e = _motor()
     n = {"x": 0}
@@ -281,7 +292,13 @@ def test_matris_bellekten_eski_hesapla_ayni_eslesme_degisince_yeniden():
     assert SC.matrix(e, TC.T, 2026, 7, sort="timas.com.tr")["items"][0]["stokKodu"] == "B3"
     assert SC.matrix(e, TC.T, 2026, 7, q="B3")["total"] == 1
     assert SC.matrix(e, TC.T, 2026, 7, size=1)["total"] == 3
+    d0 = SC._girdi_damgasi(e, TC.T, 2026)
+    with e.begin() as c:                                                       # Zeki AI aday yazımı (onaysız satır)
+        c.execute(S.ACCOUNTS.insert().values(tenant_id=TC.T, logo_cari_kodu="ADAY1", durum="bekliyor", guncellendi=S.now()))
+    M._save_candidate(e, TC.T, "ADAY1", "kitapyurdu", "zeki", 0.9, {})
+    assert SC._girdi_damgasi(e, TC.T, 2026) == d0                             # aday matrisi değiştirmez: bellek geçerli
     M.decide(e, TC.T, "ayse", "HB1", {"platform": "kitapyurdu"})              # eşleme kararı → damga değişir
+    assert SC._girdi_damgasi(e, TC.T, 2026) != d0
     b1b = next(x for x in SC.matrix(e, TC.T, 2026, 7)["items"] if x["stokKodu"] == "B1")
     assert b1b["kanallar"]["kitapyurdu"]["alim"] == pytest.approx(1400 + 7 * 60)   # HB1'in satışı artık Kitapyurdu'nda
 

@@ -17,7 +17,8 @@
   `semantic_hizli_okuma`'da da durur (kiracı + bellek adı + anahtarın özeti başına tek satır; değer `typed_json` ile,
   pickle yok). Köprü yeniden başlayınca ekranı ilk açan kişi kaynağı beklemez: kayıt okunur, taze/bayat penceresi
   kaydın okunma anına göre işler (bayatsa eldeki hemen döner, kaynak arkada okunur). `bicim` okuma sorgusunun şeklidir;
-  değişince eski kayıt kullanılmaz. `HIZLI_KAYIT=0` kapatır (yan port ölçümü: canlı tabloya yazılmasın).
+  değişince eski kayıt kullanılmaz. `HIZLI_KAYIT=0` kapatır; `HIZLI_KAYIT_DSN` kaydı ayrı bir veritabanına yazar
+  (yan port ölçümü: canlı portal tablosuna yazılmasın).
 
 Rakamlar değişmez: bellekteki değer aynı işlevin aynı SQL ile döndürdüğü değerdir. Sayı tavanı yok (bellek yalnız en
 eski anahtarı düşürür, sonuç kesilmez). Kaynağa yazma yok.
@@ -87,6 +88,21 @@ def kayit_acik() -> bool:
     return (os.environ.get("HIZLI_KAYIT", "1") or "1").strip().lower() not in _KAPALI
 
 
+_ayri: dict[str, Any] = {}
+
+
+def _ayri_motor() -> Any:
+    """`HIZLI_KAYIT_DSN` verilmişse kayıt portal veritabanı yerine oraya yazılır (yan port ölçümü: canlı portal
+    tablosuna yazmadan köprü yeniden başlama davranışını gerçek veriyle denemek için). Verilmemişse None."""
+    dsn = (os.environ.get("HIZLI_KAYIT_DSN") or "").strip()
+    if not dsn:
+        return None
+    with _ready_lock:
+        if dsn not in _ayri:
+            _ayri[dsn] = sa.create_engine(dsn)
+        return _ayri[dsn]
+
+
 class Kalici:
     """`Bellek`in kalıcı katmanı. `motor()` → (engine, kiracı) ya da None (bağlı değil: kayıt yok, bellek eskisi gibi).
     `bicim`: okuma sorgusunun şekli (SQL metninin özeti gibi); kayıttaki şekil farklıysa kayıt yok sayılır."""
@@ -107,8 +123,9 @@ class Kalici:
         m = self.motor()
         if not m or m[0] is None:
             return None
-        _ensure(m[0])
-        return m
+        engine = _ayri_motor() or m[0]
+        _ensure(engine)
+        return engine, m[1]
 
     def yukle(self, anahtar: Hashable) -> Optional[tuple[Any, float]]:
         m = self._baglam()

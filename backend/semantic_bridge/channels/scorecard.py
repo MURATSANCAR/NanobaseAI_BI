@@ -585,17 +585,20 @@ _MATRIS = HB.Bellek("kanal.matris", taze=float("inf"), en_cok=16)
 
 
 def _girdi_damgasi(engine: sa.engine.Engine, tenant: str, yil: int) -> str:
-    """Matrise giren tabloların tek sorguda damgası: Logo okuma kaydı (meta: okuma turu, veri sonu), eşleme ayarları,
-    cari eşlemesi, yılın kitap satırı sayısı ve kitap adları. Okuma turu meta'yı, eşleme kararı cariyi/ayarı günceller."""
+    """Matrise giren tabloların tek sorguda damgası: Logo okuma kaydı (meta: okuma turu, veri sonu), eşleme ayarları
+    (kanal kodu → platform), onaylı cari eşlemesi, yılın kitap satırı sayısı ve kitap adları. Okuma turu meta'yı, eşleme
+    kararı onaylı cariyi (onay anı / sayı) ya da ayarı günceller. Onaysız aday satırları (Zeki AI önerisi, sürekli
+    yazılır) matrise girmediği için damgaya da girmez."""
     def cnt(t: sa.Table, *cond: Any) -> Any:
         return sa.select(sa.func.count()).select_from(t).where(t.c.tenant_id == tenant, *cond).scalar_subquery()
 
-    def mx(col: Any, t: sa.Table) -> Any:
-        return sa.select(sa.func.max(col)).where(t.c.tenant_id == tenant).scalar_subquery()
+    def mx(col: Any, t: sa.Table, *cond: Any) -> Any:
+        return sa.select(sa.func.max(col)).where(t.c.tenant_id == tenant, *cond).scalar_subquery()
 
     A = S.ACCOUNTS
+    ok = A.c.durum == "onayli"
     stmt = sa.select(cnt(S.META), mx(S.META.c.updated_at, S.META), cnt(S.SETTINGS), mx(S.SETTINGS.c.guncellendi, S.SETTINGS),
-                     cnt(A), mx(A.c.guncellendi, A), mx(A.c.onay_tarihi, A), mx(A.c.aday_zamani, A),
+                     cnt(A, ok), mx(A.c.onay_tarihi, A, ok), mx(A.c.platform, A, ok),
                      cnt(S.BOOK_MONTHS, S.BOOK_MONTHS.c.yil == yil), cnt(S.BOOKS))
     with Y.ayri(), engine.connect() as c:          # damga okuması sorgu bilgisine girmez (rakam üretmez)
         row = c.execute(stmt).first()

@@ -375,9 +375,7 @@ def register(app, runtime, authorize):
     #: liste ve sıra her istekte klasörden okunur (silinen rapor düşer, yeni rapor eklenir).
     meta_cache: dict[str, tuple[int, int, dict]] = {}
 
-    @app.get('/api/v1/financial-audit/runs')
-    def list_runs(request: Request):
-        authorize(request)
+    def runs_listing():
         root = archive_root()
         # Bütün arşiv döner (sessiz tavan yok); seçici yazarak arar ve listeyi pencereleyerek çizer.
         found = []
@@ -398,6 +396,14 @@ def register(app, runtime, authorize):
         for gone in set(meta_cache) - {f[1] for f in found}:
             meta_cache.pop(gone, None)
         return {'items':items, 'total':len(items)}
+
+    from . import hizli_kaynak as HK
+    HK.acilista('denetim.arsiv', runs_listing)   # köprü açılışında özet dosyaları bir kez okunur
+
+    @app.get('/api/v1/financial-audit/runs')
+    def list_runs(request: Request):
+        authorize(request)
+        return runs_listing()
 
     @app.get('/api/v1/financial-audit/runs/{run_id}')
     def saved_run(request: Request, run_id: str):
