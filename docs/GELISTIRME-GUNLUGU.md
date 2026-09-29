@@ -10,6 +10,7 @@
 - **Neden:** sekme şeridi `nav` `-mx-1 overflow-x-auto px-1` idi; sayfa kabının kenarında (panel dolgusu yok) negatif kenar boşluğu `main`in iki yanından 4'er px taşıyor, sağdaki 4 px `main`i yatay kaydırılabilir yapıyordu (solu kaydırılamaz).
 - **Düzeltme:** sayfa düzeyindeki beş şeritte (`pazar/parts.tsx`, `commerce/parts.tsx`, `ads/parts.tsx`, `eticaret/parts.tsx`, `editorial/freelance/shared.tsx` `Tabs`) yalnız `overflow-x-auto`; şeridin yeri değişmez (−4 + 4 = 0). Panel içindeki aynı kalıp (Pipeline, İhale kalemleri, E-ticaret farkları, Hakediş, Koşular, Dağıtım) taşmaz, dokunulmadı.
 - **Doğrulama (test portalı, Pazar, gerçek oturum):** kuralı sayfaya ekleyerek önce/sonra: `main` taşması 320/390/768 px'te 4 → 0; şerit sol 8,0 px, genişlik 522,1 px aynı; sekmeler şeridin içinde kayıyor.
+- **Test sunucusu (`eada266f3`):** sunucudaki üç dosya kurulumdan önce eski main (`8735bd66a`) ile md5 aynıydı; kondu, `tsc -b` 0, `._*` 0. Yayındaki giriş `index-bHMAQu2z.js` + `KampusPage-B7dAgvgT.js` (16:53'te paralel bir oturumun yayını bu dosyalarla derlendi; benim derlemem aynı özetleri verdi). Tarayıcıda (timasai, yönetici): kart 13 modül; her kutu tıklandı → adres modülün giriş ekranı, ray yalnız o modülü gösterdi (Editoryal 18, Fiyatlama 4, Pazarlama 53, Saha 5, Dijital 12, Müşteri 6, Platform 13, Lojistik 15, Finans, Altyapı 4, İK 25, Yönetim 5 ekran; Analiz). 390 px: taşma 0. Müşteri VM'i: kullanıcı onayı bekliyor.
 
 ## 2026-09-29 (16:45) — Sözleşme karşılaştırma: eksik kalan denemeler kapatıldı; ortak belge okumada açık bulundu
 
