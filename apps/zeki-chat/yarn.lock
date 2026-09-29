@@ -15309,6 +15309,7 @@ __metadata:
     "@rocket.chat/fuselage-tokens": "npm:~0.33.2"
     "@rocket.chat/icons": "npm:~0.47.0"
     "@rocket.chat/layout": "npm:^0.34.2"
+    "@rocket.chat/logo": "portal:../../deploy/zeki/logo"
     "@rocket.chat/onboarding-ui": "npm:~0.36.2"
     "@rocket.chat/styled": "npm:^0.33.0"
     "@storybook/react": "npm:^8.6.18"
