@@ -377,9 +377,10 @@ const CONTENT: ScreenInfoMap = {
       "Satış hızı ve tükenme süresi Baskı Öneri raporuyla aynı hesaptır; yeterlilik = stok ÷ günlük satış.",
       "Süreler Logo verisinin bittiği güne göre hesaplanır; veri günü ekranın üstünde yazar.",
       "Kitaplar stokta yok, bitecek, yeterli, fazla, hareketsiz ya da satışı yok diye ayrılır.",
+      "Dağıtımcıda kolonu Başarı Dağıtım ve D&R kataloglarını barkodla bağlar; bizde stok varken Başarı «baskısı yok» diyorsa ya da deposu boşsa işaretlenir.",
       "Logo'ya, CRM'e ve T-soft'a hiçbir şey yazılmaz.",
     ],
-    data: "Logo stok bakiyesi, hareketler, satış ve bekleyen siparişler; CRM raf stoğu ve üretim kartları",
+    data: "Logo stok bakiyesi, hareketler, satış ve bekleyen siparişler; CRM raf stoğu ve üretim kartları; Başarı Dağıtım ve D&R katalogları",
     refresh: "Okuma 5 dakika saklanır, eskiyince arka planda tazelenir; her sabah 06:30'da gece fotoğrafı alınır.",
     jobs: [
       {
@@ -404,7 +405,7 @@ const CONTENT: ScreenInfoMap = {
       "Baskı süresi Üretim yönetiminde ölçülen gerçek sürelerden gelir; ölçüm yoksa varsayılan süre kullanılır ve bu yazılır.",
       "Açık üretim kartı olmayan kritik kitap için her sabah «baskı tekrarı değerlendirilsin» önerisi açılır.",
     ],
-    data: "Logo stok ve satış; CRM üretim kartları ve bekleyen siparişler",
+    data: "Logo stok ve satış; CRM üretim kartları ve bekleyen siparişler; Başarı Dağıtım ve D&R katalogları (dağıtımcı stoğu ve durumu)",
     refresh: "Liste 5 dakikada bir tazelenir; öneriler her sabah 06:30'da üretilir.",
     jobs: [
       {
@@ -426,7 +427,7 @@ const CONTENT: ScreenInfoMap = {
       "Zeki AI her kitap için eritme yönü önerir; emin olmadığında karar size bırakılır.",
       "Öneriler gece üretilir; yetişmeyenler bir sonraki sabaha kalır.",
     ],
-    data: "Logo stok, hareket ve son 12 ay satış",
+    data: "Logo stok, hareket ve son 12 ay satış; Başarı Dağıtım ve D&R katalogları (dağıtımcı stoğu ve durumu)",
     refresh: "Her sabah 06:30'da yeni öneriler üretilir.",
     jobs: [
       {

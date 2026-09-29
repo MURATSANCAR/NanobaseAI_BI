@@ -374,8 +374,10 @@ def _gun_key(i: dict[str, Any]) -> tuple:
 
 
 def filter_items(model: dict[str, Any], *, q: str = "", yayinevi: str = "", depo: str = "", durum: str = "",
-                 sira: str = "gun") -> list[dict[str, Any]]:
+                 sira: str = "gun", dagitim: str = "") -> list[dict[str, Any]]:
     rows = model["items"]
+    if dagitim:
+        rows = [i for i in rows if (i.get("dagitim") or {}).get("isaret") == dagitim]
     if durum:
         wanted = set(durum.split(","))
         rows = [i for i in rows if i["durum"] in wanted]
@@ -877,6 +879,14 @@ class Service:
             fc = {}
         m = build(raw, s, store.approved_thresholds(engine, tenant), cards, fc)
         m["movementWindow"] = raw.get("movementWindow")
+        try:
+            # M39 dağıtımcı katalogları (Başarı, D&R): kitap satırına `dagitim`; tablo boşsa satırlar None alır.
+            from semantic_bridge import pazar_dagitim
+
+            m["dagitim"] = pazar_dagitim.attach_stock(engine, tenant, m["items"])
+        except Exception as e:  # noqa: BLE001 — dağıtımcı bilgisi stok ekranını düşürmez
+            log.info("stock: dağıtımcı bilgisi eklenemedi: %s", e)
+            m["dagitim"] = None
         with self._lock:
             self._model = (key, m)
         return m

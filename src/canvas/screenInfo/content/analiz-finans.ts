@@ -116,7 +116,7 @@ const CONTENT: ScreenInfoMap = {
       "Aylık özeti Zeki AI taslak olarak yazar; her madde bir kaynağa bağlıdır ve sayısı kaynakla tutmayan madde kabul edilmez.",
       "Özet, yazan ya da gönderen dışında bir yetkili onaylayınca kurula gider.",
     ],
-    data: "Logo faturalı satış satırları, CRM kitap ve rakip kitap kayıtları, yüklenen sektör raporlarının onaylı rakamları",
+    data: "Logo faturalı satış satırları, CRM kitap ve rakip kitap kayıtları, yüklenen sektör raporlarının onaylı rakamları; Başarı Dağıtım kataloğu görüntüleri (dağıtımcı nabzı)",
     refresh: "Kaynaklar her pazartesi 05:30'da yeniden okunur; ekranın üstündeki şerit rakip verisinin yaşını gösterir.",
     jobs: [
       { name: "Haftalık kaynak okuma", when: "Her pazartesi 05:30", what: "CRM ve Logo'yu okur, yeni rakip kategorileri için eşleme önerir, veri eskiyse e-postayla haber verir." },

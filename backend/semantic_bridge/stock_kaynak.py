@@ -19,6 +19,10 @@ from semantic_bridge.kaynak_ayar import ayar, bind, h
 F_BAKIYE = ("Logo stok bakiyesi = güncel yıl kopyasında giriş (IOCODE 1, 2) − çıkış (IOCODE 3, 4), malzeme satırı "
             "(LINETYPE 0), iptaller hariç, tarih süzgeci yok; ambar = SOURCEINDEX. Planlanan üretimden giriş fişi "
             "(PRODSTAT 1) ayara göre hariç. Ayardaki öneklerle başlayan ticari ürün kodları listede yok.")
+F_DAGITIM = ("Dağıtımcıda = stok kodunun Logo barkoduyla eşleşen Başarı ve D&R başlığı, son görüntü. İşaret: Logo "
+             "stoğu varken Başarı «Baskısı Yok» ya da «Temin Edilemiyor» diyorsa «baskısı yok görünüyor»; «Satışta» ama "
+             "Başarı deposu 0 ise «tükenmiş». Çıkış endeksi = son kesintisiz görüntü dizisinde Başarı deposundaki stok "
+             "düşüşlerinin toplamı; kitapçılara çıkıştır, okura satış değildir.")
 F_TOPLAM = "Toplam stok = bakiyesi sıfırdan büyük kitapların Logo bakiyesi toplamı; kitap sayısı = bu kitapların sayısı."
 F_HIZ = ("Aylık satış hızı ve yıllık satış = Baskı Öneri raporunun satış hızı sorgusu (yıllık satış görünümleri, aynı "
          "ağırlıklandırma) — iki ekranda aynı sayı.")
@@ -122,6 +126,24 @@ class Stock:
                              self.engine, description="Kitap başına yürürlükteki (onaylı, depo belirtilmemiş) eşik: "
                                                       "güvenlik günü ve yeniden sipariş noktası.")
 
+    def dagitim(self) -> Optional[str]:
+        """Dağıtımcı ve perakende katalogları: kaynak sorguları (Logo sunucusundaki ayrı veritabanı) ve köprü tablosu."""
+        if not self.m.get("dagitim"):
+            return None
+        from semantic_bridge import pazar_dagitim as D
+
+        b = self.k.sorgu("stok.dagitim.basari", "Başarı Dağıtım kataloğu", "logo", D.SQL_BASARI,
+                         description="Başarı'nın güncel kataloğu (kaynak kendi üstüne yazar); gece görüntüsüyle saklanır.")
+        r = self.k.sorgu("stok.dagitim.dr", "D&R kataloğu", "logo", D.SQL_DR,
+                         description="D&R Prefix kataloğu: Prefix B2B stoğu ve D&R/İdefix site stoğu ayrı okunur.")
+        T, K = D.TITLES.c, D.BARKOD.c
+        j = D.TITLES.join(D.BARKOD, D.sa.and_(K.tenant_id == T.tenant_id, K.barkod == T.barkod))
+        stmt = D.sa.select(T.kaynak, T.barkod, K.stok_kodu, T.stok, T.site_stok, T.fiyat, T.iskonto, T.dr_fiyat, T.durum,
+                           T.son_gorulme, T.timas).select_from(j).where(T.tenant_id == self.tenant)
+        p = self.k.portal("stok.portal.dagitim", "Dağıtımcı başlıkları (son görüntü)", stmt, self.engine,
+                          description="Barkodu TİMAŞ'ın Logo barkoduyla eşleşen Başarı ve D&R başlıkları.", origin=[b, r])
+        return h(self.k, "dagitim", F_DAGITIM, [p])
+
     def settings(self, *keys: str) -> str:
         sid = "stok.ayar" + ("." + ".".join(x.lower() for x in keys) if keys else "")
         return ayar(self.k, self.engine, sid, keys or ("STOCK_RUNOUT_DAYS", "STOCK_SAFETY_DAYS", "STOCK_LEAD_DAYS",
@@ -217,6 +239,7 @@ class Stock:
             f"{p}tahminAralik": "hesap:tahmin" if "tahmin" in k.formulas else None,
             f"{p}esik": h(k, "esik", F_ESIK, [self.thresholds()]),
             f"{p}yenidenSiparisNoktasi": "hesap:esik",
+            f"{p}dagitim": self.dagitim(),
         }
         if cost_codes is not None:
             m = h(k, "maliyet", F_MALIYET, [bak] + self.cost(cost_codes, logo_db))

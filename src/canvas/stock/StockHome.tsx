@@ -11,7 +11,7 @@ import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { fmtDay } from '../budget/api';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
-import { gunText, n0, stockApi, tl, type StockState } from './api';
+import { gunText, n0, stockApi, tl, type DagitimIsaret, type StockState } from './api';
 import ItemList from './ItemList';
 import { BookCell, Chips, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
 import { RULES } from './rules';
@@ -47,6 +47,7 @@ export default function StockHome() {
   const yayinevi = params.get('yayinevi') ?? '';
   const depo = params.get('depo') ?? '';
   const sira = params.get('sira') ?? 'gun';
+  const dagitim = (params.get('dagitim') ?? '') as '' | DagitimIsaret;
   const sayfa = Number(params.get('sayfa') ?? 0) || 0;
   const [q, setQ] = useState(params.get('q') ?? '');
   const dq = useDebounced(q, 250);
@@ -65,8 +66,8 @@ export default function StockHome() {
   );
 
   const list = useQuery({
-    queryKey: ['stock', 'items', dq, durum, yayinevi, depo, sira, sayfa],
-    queryFn: () => stockApi.items({ q: dq, durum, yayinevi, depo, sira, sayfa }),
+    queryKey: ['stock', 'items', dq, durum, yayinevi, depo, sira, sayfa, dagitim],
+    queryFn: () => stockApi.items({ q: dq, durum, yayinevi, depo, sira, sayfa, dagitim }),
     enabled: ENGINE_ENABLED && !!ov.data,
     placeholderData: (prev) => prev,
   });
@@ -184,6 +185,34 @@ export default function StockHome() {
               </Explain>
               <SqlInfo k={o.kaynaklar} alan="durumlar" label="Durum sayaçları" />
             </div>
+            {list.data?.dagitim && (
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  <Chips<'' | DagitimIsaret>
+                    label="Dağıtımcıda"
+                    items={[
+                      { key: '', label: 'Dağıtımcı: hepsi' },
+                      ...(['baskisi_yok', 'tukendi'] as const).map((k) => ({
+                        key: k,
+                        label: list.data?.dagitim?.etiketler[k] ?? k,
+                        count: list.data?.dagitim?.isaretler[k] ?? 0,
+                      })),
+                    ]}
+                    value={dagitim}
+                    onChange={(k) => update({ dagitim: k || null })}
+                  />
+                </div>
+                <Explain label="Dağıtımcı" title="Dağıtımcıda ne görünüyor?">
+                  <span className="block"><b>Başarı’da baskısı yok görünüyor:</b> bizde Logo stoğu var, Başarı kataloğu kitapçılara «Baskısı Yok» ya da «Temin Edilemiyor» diyor.</span>
+                  <span className="block"><b>Başarı deposunda tükenmiş:</b> bizde stok var, Başarı’da «Satışta» ama deposu boş.</span>
+                  <span className="block">
+                    Son görüntü: Başarı {list.data.dagitim.sonGoruntu.basari ? fmtDay(list.data.dagitim.sonGoruntu.basari) : 'okunmadı'} · D&amp;R{' '}
+                    {list.data.dagitim.sonGoruntu.dr ? fmtDay(list.data.dagitim.sonGoruntu.dr) : 'okunmadı'}.
+                  </span>
+                </Explain>
+                <SqlInfo k={list.data.kaynaklar} alan="items[].dagitim" label="Dağıtımcı bilgisi" />
+              </div>
+            )}
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <label className="flex flex-col gap-1">
                 <span className={labelCls}>Ara</span>
@@ -218,11 +247,11 @@ export default function StockHome() {
             <EmptyHint
               title="Bu süzgeçte kitap yok"
               why="Seçtiğiniz durum, yayınevi, ambar ya da aramaya uyan kitap bulunamadı."
-              action={(durum || yayinevi || depo || dq) ? <button type="button" className={btnGhost} onClick={() => { setQ(''); update({ durum: null, yayinevi: null, depo: null, q: null }); }}>Süzgeçleri temizle</button> : undefined}
+              action={(durum || yayinevi || depo || dq || dagitim) ? <button type="button" className={btnGhost} onClick={() => { setQ(''); update({ durum: null, yayinevi: null, depo: null, q: null, dagitim: null }); }}>Süzgeçleri temizle</button> : undefined}
             />
           )}
           {!!list.data?.items.length && (
-            <ItemList k={list.data.kaynaklar} items={list.data.items} cols={['bakiye', 'crmRaf', 'hiz', 'gun', 'tukenme', 'bekleyen', 'durum', 'deger']} />
+            <ItemList k={list.data.kaynaklar} items={list.data.items} cols={['bakiye', 'crmRaf', 'hiz', 'gun', 'tukenme', 'bekleyen', 'durum', 'dagitim', 'deger']} />
           )}
           {list.data && (
             <Pager page={list.data.page} pageSize={list.data.pageSize} total={list.data.total} shown={list.data.items.length}

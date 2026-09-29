@@ -11,7 +11,7 @@ import { BookCell, StatePill, num } from './parts';
  *  kapsayıcısında kayar (sayfa taşmaz). */
 
 export type Col = 'bakiye' | 'crmRaf' | 'hiz' | 'gun' | 'tukenme' | 'bekleyen' | 'durum' | 'uretim' | 'fark' | 'aktarim'
-  | 'devir' | 'sonHareket' | 'net12' | 'deger' | 'kritik' | 'tahmin90';
+  | 'devir' | 'sonHareket' | 'net12' | 'deger' | 'kritik' | 'tahmin90' | 'dagitim';
 
 /** `alan`: kolonun sorgu bilgisindeki alan adı (satır yolunun altında, ör. «items[].bakiye»); yoksa kolon rakam değil. */
 const SPEC: Record<Col, { head: string; alan?: string; right?: boolean; cell: (i: Item) => ReactNode }> = {
@@ -92,6 +92,27 @@ const SPEC: Record<Col, { head: string; alan?: string; right?: boolean; cell: (i
       );
     },
   },
+  dagitim: {
+    head: 'Dağıtımcıda',
+    alan: 'dagitim',
+    cell: (i) => {
+      const d = i.dagitim;
+      if (!d || (!d.basari && !d.dr)) return <span className="text-canvas-muted">—</span>;
+      const b = d.basari;
+      return (
+        <>
+          <div className={d.isaret ? 'font-semibold text-amber-800' : ''}>
+            Başarı: {b ? (b.katalogda ? `${b.durum ?? '—'} · ${n0(b.stok)}` : 'katalogda yok') : 'yok'}
+          </div>
+          {d.dr ? (
+            <div className="text-[11px] text-canvas-muted">
+              D&amp;R: {d.dr.katalogda ? `B2B ${n0(d.dr.stok)}${d.dr.siteStok !== null ? ` · site ${n0(d.dr.siteStok)}` : ''}` : 'katalogda yok'}
+            </div>
+          ) : null}
+        </>
+      );
+    },
+  },
   deger: { head: 'Stok değeri', alan: 'stokDegeri', right: true, cell: (i) => (i.stokDegeri === undefined ? '—' : i.stokDegeri === null ? 'maliyet yok' : tl(i.stokDegeri)) },
 };
 
@@ -108,6 +129,7 @@ const TIP: Partial<Record<Col, string>> = {
   devir: 'Yıl satış adedi ÷ ortalama stok. Sayı büyüdükçe stok daha hızlı dönüyor demektir.',
   sonHareket: 'Seçilen pencere içindeki son stok hareketinin tarihi; yılbaşı devri hareket sayılmaz.',
   tahmin90: 'Zeki AI tahminlemesinin önümüzdeki 90 gün için beklediği satış adedi; alttaki aralık olası en düşük ve en yüksek değer.',
+  dagitim: 'Başarı Dağıtım kataloğunda kitabın durumu ve Başarı deposundaki adet; altında D&R’nin Prefix B2B stoğu ve D&R/İdefix site stoğu. Turuncu: bizde stok varken Başarı kitapçılara «baskısı yok» diyor ya da deposu boş.',
   deger: 'Logo stoğu × birim maliyet. Birim maliyeti bulunamayan kitapta «maliyet yok» yazar.',
   bekleyen: 'CRM’deki açık siparişlerde bekleyen adet (perakende ve iç cariler hariç). Alttaki «Logo» satırı, Logo’daki açık satış siparişlerinde henüz sevk edilmemiş adettir.',
 };

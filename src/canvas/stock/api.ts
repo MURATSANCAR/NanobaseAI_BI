@@ -70,6 +70,36 @@ export type Item = {
   maliyetKaynak?: string | null;
   stokDegeri?: number | null;
   oneri?: { id: string; hedef: string | null; hedefEtiket: string | null; gerekce: string | null } | null;
+  /** Dağıtımcı ve perakende katalogları (Başarı, D&R); barkod Logo'da eşleşmiyorsa ya da kaynak okunmadıysa null. */
+  dagitim?: Dagitim | null;
+};
+
+export type DagitimIsaret = 'baskisi_yok' | 'tukendi';
+export type Dagitim = {
+  basari: {
+    barkod: string;
+    /** Son görüntüde var mı; yoksa diğer alanlar en son görüldüğü günündür. */
+    katalogda: boolean;
+    durum: string | null;
+    stok: number | null;
+    fiyat: number | null;
+    iskonto: number | null;
+    son: string | null;
+    durumTarihi: string | null;
+    /** Çıkış endeksi (son kesintisiz görüntü dizisi); kitapçılara çıkış, okura satış değil. */
+    cikis: number | null;
+  } | null;
+  /** D&R: `stok` Prefix B2B stoğu, `siteStok` D&R + İdefix sitelerinin stoğu (yer tutucu değerler null). */
+  dr: { barkod: string; katalogda: boolean; stok: number | null; siteStok: number | null; durum: string | null; fiyat: number | null; drFiyat: number | null; son: string | null } | null;
+  isaret: DagitimIsaret | null;
+  isaretEtiket?: string;
+};
+export type DagitimOzet = {
+  pencere: { bas: string; son: string } | null;
+  sonGoruntu: { basari: string | null; dr: string | null };
+  isaretler: Partial<Record<DagitimIsaret, number>>;
+  etiketler: Record<DagitimIsaret, string>;
+  not: string;
 };
 
 /** `kaynaklar`: ekrandaki her rakamın sorgu bilgisi (köprü `stock_kaynak.py`). */
@@ -115,7 +145,7 @@ export type Overview = {
   kaynaklar?: Kaynaklar;
 };
 
-export type ItemPage = Page<Item> & { yayinevleri: string[]; ambarlar: Array<{ no: number; ad: string }>; veriSonu: string | null };
+export type ItemPage = Page<Item> & { yayinevleri: string[]; ambarlar: Array<{ no: number; ad: string }>; veriSonu: string | null; dagitim?: DagitimOzet | null };
 
 export type Shelf = {
   stokKodu: string;
@@ -191,6 +221,7 @@ export type ItemDetail = Item & {
   baskiSuresiKaynak: string;
   hareketPenceresi: [string, string] | null;
   tahminBaslangic: string | null;
+  dagitimOzet?: DagitimOzet | null;
   kaynaklar?: Kaynaklar;
 };
 
@@ -257,7 +288,7 @@ export const stockApi = {
   sources: () => send<{ sources: Array<{ id: string; baglanti: string; baslik: string; aciklama: string; sql: string | null }> }>('GET', '/sources'),
   overview: () => send<Overview>('GET', '/overview'),
   names: () => send<{ items: Array<{ value: string; label: string }> }>('GET', '/names'),
-  items: (f: { q?: string; yayinevi?: string; depo?: string; durum?: string; sira?: string; sayfa?: number }) =>
+  items: (f: { q?: string; yayinevi?: string; depo?: string; durum?: string; sira?: string; sayfa?: number; dagitim?: string }) =>
     send<ItemPage>('GET', `/items${qs(f)}`),
   item: (code: string) => send<ItemDetail>('GET', `/items/${enc(code)}`),
   addNote: (code: string, text: string) => send<Note>('POST', `/items/${enc(code)}/notes`, { not: text }),

@@ -97,7 +97,7 @@ export default function RunningOut() {
           {d && !d.items.length && (
             <EmptyHint title="Bu sürede bitecek kitap yok" why="Stoktaki her kitap, seçtiğiniz gün sayısından ve yeni baskının gelme süresinden uzun yetiyor. Daha uzun bir süre yazıp yeniden bakabilirsiniz." />
           )}
-          {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'tahmin90', 'kritik', 'bekleyen', 'uretim', 'deger']} />}
+          {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'tahmin90', 'kritik', 'bekleyen', 'uretim', 'dagitim', 'deger']} />}
           {!!d?.items.some((i) => i.tahminAralik?.g90) && (
             <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
               «Tahmin · 90 gün»: tahmin başlangıcından sonraki üç ayın beklenen satışı (temel); altındaki aralık muhafazakâr–iyimser

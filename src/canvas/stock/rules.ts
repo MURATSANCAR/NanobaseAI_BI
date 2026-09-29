@@ -9,5 +9,6 @@ export const RULES: Array<[string, string]> = [
   ['Fazla stok', 'Stoğu varsayılan 730 günden uzun yeten kitap. Zeki AI eritme yönü önerir (kampanya, set, bekle); karar sizindir.'],
   ['Logo–CRM farkı', 'CRM raf kalanı − Logo stok. Logo’ya aktarılmamış hareket farkı açıklıyorsa kök neden odur; açıklanamayan fark sayım adayıdır.'],
   ['Stok devir hızı', 'Katalogdaki onaylı ölçü: yıl satış adedi ÷ ((yılbaşı devri + güncel stok) ÷ 2).'],
+  ['Dağıtımcıda', 'Barkodu Logo’daki kitapla eşleşen Başarı Dağıtım ve D&R başlığı (her gün okunan son görüntü). Bizde stok varken Başarı «Baskısı Yok / Temin Edilemiyor» diyorsa «baskısı yok görünüyor», «Satışta» ama deposu boşsa «tükenmiş». Başarı çıkışı = görüntüler arası depo düşüşlerinin toplamı; kitapçılara çıkıştır, okura satış değil.'],
   ['Güvenlik stoku', 'Yeniden sipariş noktası = günlük satış × (baskı süresi + güvenlik günü). Onay portalda durur; Logo’ya yazılmaz.'],
 ];

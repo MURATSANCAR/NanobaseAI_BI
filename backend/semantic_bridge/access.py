@@ -711,6 +711,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/dijital/", frozenset({page("dijital-yayin")})),
     # M39 Pazar ve rakip. Meta, tazelik ve kategori listesi her üç sayfada; emsal M1/M10'da, matris M9'da da okunur.
     ("/api/v1/pazar/run-due", SYSTEM),
+    ("/api/v1/pazar/dagitim/run-due", SYSTEM),
+    ("/api/v1/pazar/dagitim/", _PAZAR),
     ("/api/v1/pazar/meta", _PAZAR),
     ("/api/v1/pazar/freshness", _PAZAR),
     ("/api/v1/pazar/status", _PAZAR),
