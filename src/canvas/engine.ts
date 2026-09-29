@@ -991,6 +991,8 @@ export const accessApi = {
   deleteBinding: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/access/bindings/${encodeURIComponent(id)}`, undefined, 30_000),
   subjects: (type: AccessSubjectType) =>
     send<WithK<{ type: AccessSubjectType; items: AccessCandidate[] }>>('GET', `/api/v1/access/subjects${qs({ type })}`, undefined, 120_000),
+  /** CRM'de departmana atanmamış etkin kullanıcılar, AD birimleriyle (Excel indirme). */
+  crmUnassignedUrl: `${ENGINE_BASE}/api/v1/access/crm-unassigned.xlsx`,
   /** Bağın bugünkü etkin üyeleri (grupta iç içe gruplar, birimde alt birimler dahil). */
   members: (type: AccessSubjectType, subject: string) =>
     send<WithK<{ type: AccessSubjectType; subject: string; count: number; items: AccessCandidate[] }>>(

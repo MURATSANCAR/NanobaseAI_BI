@@ -810,7 +810,8 @@ const CONTENT: ScreenInfoMap = {
     data: 'Portal ayarları, rol ve yetki kayıtları, Active Directory ve CRM rolleri, soru kayıtları',
     refresh: 'Genel durum dakikada bir',
     jobs: [
-      { name: 'Yönetici grubu tazeleme', when: '15 dakikada bir', what: 'Yönetici AD grubunun üyelerini okur; gruba eklenen kişi yetkisini en geç 15 dakikada alır.' },
+      { name: 'Yönetici grubu ve yetki üyeleri tazeleme', when: 'her gün 07:00 ve 12:00', what: 'Yönetici AD grubunun ve yetki bağlarının (AD grubu, AD birimi, CRM rolü) üyelerini okur; gruba eklenen kişi yetkisini bir sonraki okumada alır, «Üyeleri şimdi oku» hemen okur.' },
+      { name: 'Departmansız CRM kullanıcıları', when: 'her gün 07:00 ve 12:00', what: 'CRM\'de departmana atanmamış etkin kullanıcıları AD birimleriyle Excel\'e yazar ve Ayarlar\'daki alıcılara gönderir; CRM\'e yalnız okur.' },
     ],
     actions: [
       'Bağlantı ayarlarını girip «Bağlantıyı sına» ile deneyin.',

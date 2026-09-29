@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronDown, Loader2, Plus, RefreshCw, Search, Trash2, UserRound, X } from 'lucide-react';
+import { Check, ChevronDown, Download, Loader2, Plus, RefreshCw, Search, Trash2, UserRound, X } from 'lucide-react';
 import {
   accessApi,
   type AccessBinding,
@@ -23,7 +23,7 @@ import { Card, Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, fiel
  */
 
 const TYPES: Array<{ id: AccessSubjectType; label: string; hint: string }> = [
-  { id: 'ad_group', label: 'AD grubu', hint: 'Gruba eklenen kişi rolü en geç 15 dakikada alır' },
+  { id: 'ad_group', label: 'AD grubu', hint: "AD'de gruba eklenen kişi rolü her gün 07:00 ve 12:00 okumasında alır; hemen için «Üyeleri şimdi oku»" },
   { id: 'ou', label: 'AD birimi', hint: 'Birimdeki (OU) herkes; kişi birim değiştirince rolü de değişir' },
   { id: 'crm_role', label: 'CRM rolü', hint: 'CRM güvenlik rolünü taşıyan etkin kullanıcılar' },
   { id: 'user', label: 'Kişi', hint: 'Tek bir AD hesabı; grup açmadan istisna vermek için' },
@@ -39,12 +39,23 @@ export default function AccessAdmin() {
   return (
     <Section
       title="Yetkiler"
-      help="Kim hangi sayfayı görür, hangi işlemi yapar ve Zeki AI'da hangi veriyi okur. Rolü bir Active Directory (AD) grubuna ya da birimine, CRM rolüne veya tek kişiye bağlayın; kişi bağlı olduğu bütün rollerin yetkilerini alır. Yöneticiler her şeyi görür."
+      help="Kim hangi sayfayı görür, hangi işlemi yapar ve Zeki AI'da hangi veriyi okur. Rolü bir Active Directory (AD) grubuna ya da birimine, CRM rolüne veya tek kişiye bağlayın; kişi bağlı olduğu bütün rollerin yetkilerini alır. Yöneticiler her şeyi görür. Grup, birim ve CRM rolü üyeleri her gün 07:00 ve 12:00'de okunur."
       action={
-        <button type="button" onClick={() => refresh.mutate()} disabled={refresh.isPending} className={btnGhost}>
-          {refresh.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Üyeleri şimdi oku
-        </button>
+        <span className="flex flex-wrap items-center gap-2">
+          <a
+            href={accessApi.crmUnassignedUrl}
+            download
+            className={btnGhost}
+            title="CRM'de departmana atanmamış etkin kullanıcılar, AD birimleriyle. Her gün 07:00 ve 12:00'de Ayarlar'daki alıcılara da gider."
+          >
+            <Download className="h-4 w-4" />
+            Departmansız CRM kullanıcıları
+          </a>
+          <button type="button" onClick={() => refresh.mutate()} disabled={refresh.isPending} className={btnGhost}>
+            {refresh.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Üyeleri şimdi oku
+          </button>
+        </span>
       }
     >
       {refresh.data && (
@@ -619,7 +630,7 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
       </div>
       {add.error && <Note tone="err">{errText(add.error, 'Bağ eklenemedi.')}</Note>}
       {add.data?.refresh && !add.data.refresh.ok && (
-        <Note tone="warn">Bağ eklendi ama üyeler okunamadı; portal 15 dakika içinde yeniden dener.</Note>
+        <Note tone="warn">Bağ eklendi ama üyeler okunamadı; 07:00 ya da 12:00 okumasında yeniden denenir, «Üyeleri şimdi oku» ile hemen de denenebilir.</Note>
       )}
       {list.isLoading ? (
         <Loading />

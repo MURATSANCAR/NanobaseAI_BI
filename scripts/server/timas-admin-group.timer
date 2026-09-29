@@ -1,9 +1,11 @@
 [Unit]
-Description=Yönetici AD grubu tazeleme, 15 dakikada bir
+Description=Yönetici AD grubu ve yetki bağlarının üyelerini tazeleme, her gün 07:00 ve 12:00
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=15min
+OnCalendar=*-*-* 07:00:00
+OnCalendar=*-*-* 12:00:00
+Persistent=true
 Unit=timas-admin-group.service
 
 [Install]

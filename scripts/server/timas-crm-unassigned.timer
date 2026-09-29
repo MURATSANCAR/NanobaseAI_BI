@@ -1,0 +1,10 @@
+[Unit]
+Description=CRM'de departmansız kullanıcılar listesi e-postası, her gün 07:00 ve 12:00
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+OnCalendar=*-*-* 12:00:00
+Unit=timas-crm-unassigned.service
+
+[Install]
+WantedBy=timers.target

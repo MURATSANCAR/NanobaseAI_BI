@@ -80,6 +80,9 @@ SPEC: list[dict[str, Any]] = [
     # Bildirim ve raporlar
     {"key": "ALERT_LINK", "group": "delivery", "label": "E-postadaki bağlantı", "type": "text",
      "default": "", "help": "Uyarı ve rapor e-postalarının sonuna eklenen adres"},
+    {"key": "CRM_UNASSIGNED_TO", "group": "delivery", "label": "Departmansız CRM kullanıcıları listesi alıcıları",
+     "type": "text", "default": "",
+     "help": "Virgülle e-posta adresleri. CRM'de departmana atanmamış kullanıcıların Excel listesi her gün 07:00 ve 12:00'de gider; boşsa gönderilmez"},
     {"key": "ALERT_REMIND_HOURS", "group": "delivery", "label": "Uyarı hatırlatma (saat)", "type": "int", "default": "24",
      "help": "Eşik aşılmaya devam ederse kaç saat sonra yeniden bildirilir"},
     {"key": "REPORT_KEEP_FILES", "group": "delivery", "label": "Rapor başına saklanan dosya", "type": "int", "default": "10",

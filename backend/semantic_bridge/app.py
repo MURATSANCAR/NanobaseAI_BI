@@ -6841,7 +6841,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/admin/group/refresh")
     def admin_group_refresh(request: Request) -> dict[str, Any]:
         """Yönetici AD grubunu canlı okuyup DB anlık görüntüsünü tazeler.
-        15 dk'lık `timas-admin-group.timer` çağırır (caller token ile); yönetici ekrandan da tetikler.
+        `timas-admin-group.timer` her gün 07:00 ve 12:00'de çağırır (caller token ile); yönetici ekrandan da tetikler.
         Aynı tur yetki bağlarının (AD grubu, OU, CRM rolü) üye görüntüsünü de tazeler."""
         _require_caller(request)
         if "timas_session" in request.headers.get("cookie", ""):
@@ -7027,6 +7027,48 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             source = "CRM" if kind == "crm_role" else "Active Directory"
             raise HTTPException(status_code=503, detail={
                 "code": "UNAVAILABLE", "message": f"{source} okunamadı: {type(e).__name__}"}) from e
+
+    @app.get("/api/v1/access/crm-unassigned.xlsx")
+    def access_crm_unassigned_xlsx(request: Request) -> Response:
+        """CRM'de departmana atanmamış (kök iş birimindeki) etkin kullanıcılar, AD birimleriyle — Excel."""
+        engine, _, user = _access_admin(request)
+        from semantic_bridge import crm_unassigned as CU
+
+        try:
+            rows = CU.build(access_dir)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=503, detail={
+                "code": "UNAVAILABLE", "message": f"CRM okunamadı: {type(e).__name__}"}) from e
+        now = datetime.now()
+        admin_mod.audit(engine, user, "run", "access", "crm-unassigned", "Departmansız CRM kullanıcıları indirildi",
+                        {"count": len(rows)})
+        return Response(content=CU.xlsx(rows, now),
+                        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition":
+                                 f'attachment; filename="CRM-departmansiz-kullanicilar-{now:%Y-%m-%d-%H%M}.xlsx"'})
+
+    @app.post("/api/v1/access/crm-unassigned/send")
+    def access_crm_unassigned_send(request: Request) -> dict[str, Any]:
+        """Listeyi `CRM_UNASSIGNED_TO` alıcılarına Excel olarak gönderir. Her gün 07:00 ve 12:00'de
+        `timas-crm-unassigned.timer` çağırır (caller token, çerezsiz); yönetici ekrandan da tetikler."""
+        _require_caller(request)
+        actor = "zamanlayıcı"
+        if "timas_session" in request.headers.get("cookie", ""):
+            _, _, actor = _access_admin(request)
+        from semantic_bridge import crm_unassigned as CU
+        from semantic_bridge.corporate_sales_api import send_mail
+
+        try:
+            out = CU.send(access_dir, admin_mod.conf, send_mail)
+        except Exception as e:  # noqa: BLE001
+            log.warning("crm-unassigned: liste gönderilemedi: %s", e)
+            raise HTTPException(status_code=503, detail={
+                "code": "UNAVAILABLE", "message": f"CRM okunamadı: {type(e).__name__}"}) from e
+        if out.get("status") != "no_recipient":
+            admin_mod.audit(rt().store.engine, actor, "run", "access", "crm-unassigned",
+                            "Departmansız CRM kullanıcıları e-postası",
+                            {"status": out.get("status"), "to": out.get("to"), "count": out.get("count")})
+        return out
 
     @app.get("/api/v1/access/explain")
     def access_explain(user: str, request: Request) -> dict[str, Any]:

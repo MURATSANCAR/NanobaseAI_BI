@@ -6,7 +6,7 @@ Yönetici (`admin.is_admin`) her şeyi görür. «Herkes» sistem rolü giriş y
 «bütün yetkiler» açık gelir — 2026-09-27 kararı: roller prod öncesi atanır, o gün Herkes daraltılır.
 
 Üyelikler istek yolunda okunmaz. AD grubu/OU üyeleri ve CRM rol sahipleri `semantic_access_members`
-anlık görüntüsünden gelir; 15 dk'lık `timas-admin-group` zamanlayıcısı `refresh()` ile tazeler. Okunamayan
+anlık görüntüsünden gelir; `timas-admin-group` zamanlayıcısı (her gün 07:00 ve 12:00) `refresh()` ile tazeler. Okunamayan
 kaynağın eski görüntüsü silinmez, yalnız hatası yazılır.
 
 Sayfa kapısı köprüdedir (`rule_for` + `page_allowed`); ön yüzdeki menü ve rota bu kapının yansımasıdır.
@@ -1403,7 +1403,7 @@ def _write_snapshot(engine: sa.engine.Engine, t: str, subject: str, members: Opt
 
 def refresh(engine: sa.engine.Engine, directory: "Directory", only: Optional[tuple[str, str]] = None) -> dict[str, Any]:
     """Bağı olan her AD grubunun, OU'nun ve CRM rolünün üyelerini okuyup görüntüye yazar.
-    Zamanlayıcı (15 dk) ve yönetim ekranı çağırır; istek yolunda değil. `only` yalnız o bağı okur."""
+    Zamanlayıcı (07:00 ve 12:00) ve yönetim ekranı çağırır; istek yolunda değil. `only` yalnız o bağı okur."""
     _md.create_all(engine, checkfirst=True)
     with engine.connect() as c:
         subjects = sorted({(t, str(s)) for t, s in c.execute(

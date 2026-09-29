@@ -1,0 +1,8 @@
+[Unit]
+Description=CRM'de departmansız kullanıcıların Excel listesini alıcılara gönder (CRM_UNASSIGNED_TO)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+ExecStart=/bin/sh -c 'curl -fsS -m 300 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/access/crm-unassigned/send'

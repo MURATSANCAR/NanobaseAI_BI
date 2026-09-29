@@ -389,7 +389,8 @@ EXTRA_TIMERS = [
     {"unit": "timas-field-gece.timer", "label": "Saha satış gece okuması", "every": "gece"},
     {"unit": "timas-web-watch.timer", "label": "Basın ve web taraması", "every": "gece 02:30"},
     {"unit": "timas-copurchase.timer", "label": "Birlikte alınan yazarlar", "every": "gece"},
-    {"unit": "timas-admin-group.timer", "label": "Yetki grupları tazeleme", "every": "15 dk"},
+    {"unit": "timas-admin-group.timer", "label": "Yetki grupları tazeleme", "every": "07:00 ve 12:00"},
+    {"unit": "timas-crm-unassigned.timer", "label": "Departmansız CRM kullanıcıları e-postası", "every": "07:00 ve 12:00"},
     {"unit": "editor-crm-connector.timer", "label": "Editör CRM bağlayıcısı", "every": "gece 03:10"},
     {"unit": "timas-itops.timer", "label": "Sistem durumu denetimi", "every": "5 dk"},
 ]
