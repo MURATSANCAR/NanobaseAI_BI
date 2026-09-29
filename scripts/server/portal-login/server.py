@@ -252,7 +252,8 @@ def chat_login_token(account, display):
         user = created.get('user') if created.get('success') else None
         if not user:
             raise ChatUnavailable(f"user create refused: {created.get('errorType') or created.get('error')}")
-    elif not user.get('active', True):
+    elif not user.get('active', True) or user.get('type') == 'bot' or user.get('_id') in CHAT_BOT_IDS:
+        # Sohbetin kendi botu (zeki.bot) bir AD hesabının adını taşısa bile kimse onun yerine girmez.
         return None
     elif user.get('name') != display:
         chat_call(config, 'POST', 'users.update', body={'userId': user['_id'], 'data': {'name': display}})
@@ -265,8 +266,10 @@ def chat_login_token(account, display):
 
 # Kampüs'teki sohbet kartı her açık ekranda yarım dakikada bir sorar; sohbete giden istek bu süre içinde bir tanedir.
 PRESENCE_TTL = 15
-# Sohbetin kendi hesapları (hoş geldin botu, kurulum yöneticisi) kişi sayılmaz.
-CHAT_SYSTEM_ACCOUNTS = {'zeki.bot'}
+# Sohbetin kendi hesapları (yerleşik bot, kurulum yöneticisi) kişi sayılmaz. Botun kimliği ve kullanıcı adı 'zeki.bot';
+# kimlik göçü (apps/zeki-chat/deploy/zeki/migrate-owned-identity.cjs) koşmamış veritabanında kimlik hâlâ eski adıyla durur.
+CHAT_BOT_IDS = {'zeki.bot', 'rocket.cat'}
+CHAT_SYSTEM_ACCOUNTS = {'zeki.bot', 'rocket.cat'}
 PRESENCE_ORDER = {'online': 0, 'busy': 1, 'away': 2}
 _presence = {'at': 0.0, 'value': None}
 _presence_lock = threading.Lock()
@@ -289,7 +292,7 @@ def chat_presence():
         people = [
             {'username': u['username'], 'name': u.get('name') or u['username'], 'status': u.get('status')}
             for u in found.get('users') or []
-            if u.get('username') and u.get('_id') != config.get('user_id') and u['username'].lower() not in skip
+            if u.get('username') and u.get('_id') != config.get('user_id') and u.get('_id') not in CHAT_BOT_IDS and u['username'].lower() not in skip
             and u.get('status') in PRESENCE_ORDER
         ]
         people.sort(key=lambda p: (PRESENCE_ORDER[p['status']], p['name'].casefold()))

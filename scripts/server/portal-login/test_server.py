@@ -213,7 +213,8 @@ class Sessions(unittest.TestCase):
         config = {'url': 'http://chat', 'user_id': 'svc', 'token': 't', 'admin_username': 'zekiadmin'}
         users = [
             {'_id': 'svc', 'username': 'zekiservis', 'status': 'online'},
-            {'_id': 'bot', 'username': 'zeki.bot', 'status': 'online'},
+            {'_id': 'zeki.bot', 'username': 'zeki.bot', 'status': 'online'},
+            {'_id': 'rocket.cat', 'username': 'zeki.bot', 'status': 'online'},
             {'_id': 'adm', 'username': 'zekiadmin', 'status': 'online'},
             {'_id': 'a', 'username': 'zeynep', 'name': 'Zeynep Ak', 'status': 'away'},
             {'_id': 'b', 'username': 'ali', 'name': 'Ali Can', 'status': 'online'},
@@ -235,6 +236,13 @@ class Sessions(unittest.TestCase):
         with patch.object(login, 'chat_config', return_value=config), \
                 patch.object(login, 'chat_call', side_effect=login.ChatUnavailable('URLError')):
             self.assertEqual(self.request('/chat-presence', headers=cookie)[0], 503)
+
+    def test_chat_sso_never_signs_in_as_the_bot(self):
+        config = {'url': 'http://chat', 'user_id': 'svc', 'token': 't', 'sso_secret': 's'}
+        bot = {'success': True, 'user': {'_id': 'rocket.cat', 'username': 'zeki.bot', 'type': 'bot', 'active': True}}
+        with patch.object(login, 'chat_config', return_value=config), patch.object(login, 'chat_call', return_value=bot) as call:
+            self.assertIsNone(login.chat_login_token('zeki.bot', 'Zeki'))
+            self.assertEqual(call.call_count, 1)
 
 
 if __name__ == '__main__':
