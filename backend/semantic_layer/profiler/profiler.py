@@ -13,7 +13,7 @@ from typing import Any, Callable, Optional
 
 from semantic_layer.models import ColumnProfile, SchemaProfile
 from semantic_layer.conventions import is_time, is_technical_time
-from semantic_layer.firm_scope import included_firms
+from semantic_layer.firm_scope import foreign_tables
 from semantic_layer.naming import disambiguate, is_shadow_copy, logical_table
 from semantic_layer.profiler import sensitivity
 from semantic_layer.profiler.connectors import Connector, ModelFileConnector
@@ -154,6 +154,16 @@ class Profiler:
                     seen_names.add(tbl)
                     discovered.append((sch, tbl))
         tables = discovered
+        # Other companies on the same server. An accounting office's Logo holds every company it keeps books for
+        # in one database, each year of each company its own firm; the names do not say whose books a firm is.
+        # SEMANTIC_FIRMS names this company's firms, and another company's copy stays out of the catalog —
+        # scanned, it would become one more "copy" of the company's own table for the runtime to union. Decided
+        # on the whole schema, before anything narrows it: whether a number is a firm slot is read from the
+        # sibling names (firm_scope.foreign_tables).
+        theirs = foreign_tables([t for _, t in discovered])
+        if theirs:
+            log.info("kapsam: %d nesne başka firmaya ait (SEMANTIC_FIRMS dışında)", len(theirs))
+            tables = discovered = [(sch, t) for sch, t in discovered if t not in theirs]
         # A table that holds nothing answers nothing. A schema this size carries thousands of them —
         # features never switched on, a module the customer does not use — and cataloguing them puts
         # empty tables in the way of routing a question to the one with the data. Off by default,
@@ -224,20 +234,6 @@ class Profiler:
             if len(kept) != len(discovered):
                 log.info("kapsam: %d nesne kapsam dışı (dönem kodu %s)",
                          len(discovered) - len(kept), ", ".join(sorted(drop)))
-                tables = discovered = kept
-        # Other companies on the same server. An accounting office's Logo holds every company it keeps books for
-        # in one database, each year of each company its own firm; the names do not say whose books a firm is.
-        # SEMANTIC_FIRMS names this company's firms, and a table carrying any other firm code stays out of the
-        # catalog — scanned, it would become another "copy" of the company's own tables for the runtime to union.
-        # Tables without a firm code (L_CAPIFIRM, shared views) are not affected.
-        own = included_firms()
-        if own is not None:
-            def _theirs(sch: str, t: str) -> bool:
-                firm = logical_table(t, sch).context.get("n0", "")
-                return len(firm) == 3 and firm.isdigit() and int(firm) not in own
-            kept = [(sch, t) for sch, t in discovered if not _theirs(sch, t)]
-            if len(kept) != len(discovered):
-                log.info("kapsam: %d nesne başka firmaya ait (SEMANTIC_FIRMS dışında)", len(discovered) - len(kept))
                 tables = discovered = kept
         # Somebody's backup, somebody's test, a staging table left behind: real tables with real rows
         # that answer no question anybody asks. Left in, each one is a shape of its own — a copy of a
