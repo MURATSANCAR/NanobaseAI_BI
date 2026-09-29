@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (gece) — GPU editörü main `04698f28` tek sürüm olarak kuruldu; parça kurulumlar bitti
+
+- **Neden:** gün içinde üç oturum main'in yalnız kendi parçasını çalışan imajın üstüne türeterek kurmuştu (`-kapak`, `-ses2`, `-ses2-read`); her biri öncekini ezdi (kapak tarzı düzeltmesi 15:29'da geri gitti). Main'deki bütün editör işleri (sesli okuma insan kaydı, OCR `/v1/read`, metin bütçesi/pencereleme, kapak tarzı, lisans taslağının kalkması, kapak önizlemesi WebP) tek sürümde.
+- **Kurulum:** `/data/editor/releases/04698f28` (`git archive`, `._*` 0), imajlar `editor-py:0.15.9-04698f28` + `editor-py-studio:0.15.9-04698f28`; yeni imajda editör testleri 649 geçti / 1 kaldı (`test_proofing_contract.py:64`, bilinen sıra sorunu, önceki sürümde de). `editorctl status` işlenen istek 0 iken `/data/editor/app` → yeni klasör; cards, control, studio, studio-worker, gateway, mcp, document-review, worker, rebuild yeni imajla (embed/hermes dokunulmadı). Eski bağlantı `ce0fd1ce-ses2`, geri dönüş için imajlar duruyor.
+- **Doğrulama:** 9 konteynerde `EDITOR_CODE_VERSION=0.15.9-04698f28`; portalda kapak tarzı «illustrated», `draft` alanı yok, kapak önizlemesi WebP 1,3 sn, boyama/pazarlamada taslak yok, kitap kartı 25; VM köprüsünden kart 25, kapak arşivi 6.273.
+- **Kalan:** VM için GPU nginx'e `/editor/cards/v1/read` yolu (OCR, VM'de); `test_proofing_contract.py:64` düzeltmesi.
+
 ## 2026-09-29 (akşam) — Test sunucusuna main `69a2b3de9` (Editoryal düzeltmeleri, lisans, İK KVKK, Trendyol/Amazon, Kitap 360); GPU'da kurulum parçalanması
 
 - **Kurulum:** 15 commit'in değiştirdiği çalışan 84 dosya (35 ön yüz, 49 köprü); her birinin sunucu hâli bir önceki main'di (`478cd5d0c`), kopyalamadan hemen önce yeniden denetlendi. Sunucu ağacının kopyasında `tsc -b` 0, `vite build` 33 sn, köprü testleri (tanımsız ad, erişim, pazar yeri, Kitap 360, sosyal) geçti. `cockpit/dist` → `index-BuUc4LKe.js`, `._*` 0, köprü yeniden başladı, `/health` 200, günlükte hata yok. GPU nginx betikleri ve VM compose'u (2 dosya) sunucuda başka hâlde; çalışan kodla ilgisiz, dokunulmadı.
