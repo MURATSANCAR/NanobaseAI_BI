@@ -123,7 +123,7 @@ function IndicatorCard({ g, meta, k, onEdit, expanded, onToggle }: { g: Indicato
       {expanded && (
         <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 text-[12px] leading-snug">
           {g.aciklama && <p>{g.aciklama}</p>}
-          <p className="text-canvas-muted" title={g.kaynakRef}>Kaynak: {readableText(g.kaynakRef)}</p>
+          <p className="text-canvas-muted" title={g.kaynakRef ?? undefined}>Kaynak: {readableText(g.kaynakRef)}</p>
           {son && <Evidence kanit={son.kanit} birim={g.birim} />}
         </div>
       )}

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { rawTitle, readableName, readableText, setDisplayWords, splitCompound } from './readableName';
+import { rawTitle, readableName, readableText, setDisplayWords, setLogoNames, splitCompound } from './readableName';
 
-afterEach(() => setDisplayWords({}));
+afterEach(() => {
+  setDisplayWords({});
+  setLogoNames({ tables: {}, columns: {} });
+});
 
 describe('readableName: ham veritabanı adı → ekrandaki başlık', () => {
   it('Logo tablo adı: firma/dönem öneki atılır, Logo ekran adı yazılır', () => {
@@ -78,6 +81,8 @@ describe('splitCompound', () => {
     expect(splitCompound('musteriler')).toBeNull();
     expect(splitCompound('hastag')).toBeNull();
     expect(splitCompound('kitap')).toBeNull();
+    expect(splitCompound('uzunbilgi')).toEqual(['uzun', 'bilgi']);
+    expect(splitCompound('toplamsatistutari')).toEqual(['toplam', 'satis', 'tutari']);
   });
 });
 
@@ -96,5 +101,26 @@ describe('readableText: cümle içindeki ham adlar', () => {
     expect(readableText('YouTube ve LinkedIn gönderileri')).toBe('YouTube ve LinkedIn gönderileri');
     expect(readableText('KDV dahil net ciro, TİMAŞ')).toBe('KDV dahil net ciro, TİMAŞ');
     expect(readableText('Bu rakam Logo satış faturalarından gelir.')).toBe('Bu rakam Logo satış faturalarından gelir.');
+  });
+});
+
+describe('Logo alan sözlüğü haritası', () => {
+  it('çekirdek sözlükte olmayan Logo adı haritadan; harita yoksa yarım çevrilmez', () => {
+    expect(readableName('ACCOUNTEDCNT')).toBe('ACCOUNTEDCNT');
+    expect(readableName('ADDTAXPRCOST')).toBe('ADDTAXPRCOST');
+    setLogoNames({ tables: { SRVTOT: 'Aylık hizmet toplamları', NET: 'Network kontrolü' }, columns: { ACCOUNTEDCNT: 'Muhasebeleştirme sayısı', MONTH: 'Geri ödeme planı ayı' } });
+    expect(readableName('ACCOUNTEDCNT')).toBe('Muhasebeleştirme sayısı');
+    expect(readableName('LG_411_01_SRVTOT')).toBe('Aylık hizmet toplamları');
+    expect(readableText('Kaynak: ACCOUNTEDCNT alanı')).toBe('Kaynak: ACCOUNTEDCNT alanı');
+    // Genel sözcükler ve SQL takma adları haritaya takılmaz
+    expect(readableName('MONTH')).toBe('Ay');
+    expect(readableName('NET_CIRO')).toBe('Net ciro');
+  });
+
+  it('B2B ve marka yazımı', () => {
+    expect(readableName('b2c_no')).toBe('B2C no');
+    expect(readableName('new_yenib2b')).toBe('Yeni B2B');
+    expect(readableName('new_youtubelink')).toBe('YouTube bağlantı');
+    expect(readableName('new_Instagram')).toBe('Instagram');
   });
 });

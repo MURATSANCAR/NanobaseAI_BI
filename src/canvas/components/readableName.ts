@@ -35,6 +35,22 @@ export function setDisplayWords(w: Record<string, string> | undefined | null): v
   listeners.forEach((l) => l());
 }
 
+/** Logo'nun kendi alan sözlüğünden türetilen ad haritası (`logoNames.json`, `scripts/logo-display-names.py`).
+ *  Büyük olduğu için ayrı parça olarak sonradan iner (`useDisplayWords`); gelene kadar yerleşik çekirdek sözlük yeter. */
+type LogoNames = { tables: Record<string, string>; columns: Record<string, string> };
+let logoNames: LogoNames = { tables: {}, columns: {} };
+
+/** Cümle içinde kullanılabilsin diye ilk harf küçültülür; kısaltmayla başlıyorsa (KDV, GSM) dokunulmaz. */
+const lowerFirst = (v: string) => (/^\p{Lu}{2,}(?![\p{Ll}])/u.test(v) ? v : v.charAt(0).toLocaleLowerCase('tr-TR') + v.slice(1));
+
+export function setLogoNames(n: Partial<LogoNames> | undefined | null): void {
+  if (!n) return;
+  const low = (o: Record<string, string> | undefined) => Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [k, lowerFirst(v)]));
+  logoNames = { tables: low(n.tables), columns: low(n.columns) };
+  wordsVersion += 1;
+  listeners.forEach((l) => l());
+}
+
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
@@ -128,7 +144,7 @@ const LOGO_COLUMNS: Record<string, string> = {
   DUEDATE: 'vade tarihi',
   NETTOTAL: 'net tutar',
   GROSSTOTAL: 'brüt tutar',
-  TOTALVAT: 'kdv tutarı',
+  TOTALVAT: 'toplam KDV',
   TOTALDISCOUNTS: 'indirim toplamı',
   TOTALDISCOUNTED: 'indirimli toplam',
   TOTALEXPENSES: 'masraf toplamı',
@@ -136,22 +152,22 @@ const LOGO_COLUMNS: Record<string, string> = {
   REPORTNET: 'raporlama net tutarı',
   TRNET: 'işlem dövizi net tutarı',
   AMOUNT: 'miktar',
-  PRICE: 'fiyat',
-  TOTAL: 'tutar',
-  LINENET: 'satır net tutarı',
+  PRICE: 'birim fiyat',
+  TOTAL: 'toplam',
+  LINENET: 'net satır tutarı',
   LINEEXP: 'satır açıklaması',
   LINETYPE: 'satır türü',
-  VAT: 'kdv oranı',
-  VATAMNT: 'kdv tutarı',
-  VATMATRAH: 'kdv matrahı',
+  VAT: 'KDV oranı',
+  VATAMNT: 'KDV tutarı',
+  VATMATRAH: 'KDV matrahı',
   DISCPER: 'indirim oranı',
-  DISTCOST: 'dağıtılan maliyet',
+  DISTCOST: 'satıra dağıtılan maliyet',
   OUTCOST: 'birim maliyet',
   ONHAND: 'eldeki miktar',
   CANCELLED: 'iptal',
   ACTIVE: 'durum',
   CARDTYPE: 'kart türü',
-  IOCODE: 'giriş çıkış kodu',
+  IOCODE: 'giriş/çıkış kodu',
   SOURCEINDEX: 'ambar no',
   BRANCH: 'işyeri',
   DEPARTMENT: 'bölüm',
@@ -175,7 +191,7 @@ const LOGO_COLUMNS: Record<string, string> = {
   EMAILADDR: 'e-posta',
   TAXNR: 'vergi no',
   TAXOFFICE: 'vergi dairesi',
-  TCKNO: 'tc kimlik no',
+  TCKNO: 'TC kimlik no',
   STGRPCODE: 'stok grup kodu',
   PRODUCERCODE: 'üretici kodu',
   BARCODE: 'barkod',
@@ -257,6 +273,20 @@ const WORDS: Record<string, string> = {
   iletisim: 'iletişim', iliski: 'ilişki', ilgi: 'ilgi', izin: 'izin', izni: 'izni', calisan: 'çalışan', cari: 'cari',
   ogretim: 'öğretim', stoku: 'stoku', dijital: 'dijital', basili: 'basılı', sayfasi: 'sayfası', gorsel: 'görsel',
   konusu: 'konusu', ozeti: 'özeti', talebi: 'talebi', guven: 'güven', puani: 'puanı', siniflandirma: 'sınıflandırma',
+  toplam: 'toplam', dagitilan: 'dağıtılan', oncelikli: 'öncelikli', oncelik: 'öncelik', bolge: 'bölge', bolgesi: 'bölgesi',
+  sifreli: 'şifreli', sifre: 'şifre', yas: 'yaş', sinif: 'sınıf', katilim: 'katılım', kaynagi: 'kaynağı', yakin: 'yakın',
+  cikan: 'çıkan', one: 'öne', kisa: 'kısa', eticaret: 'e-ticaret', odul: 'ödül', odulu: 'ödülü', gecmisi: 'geçmişi',
+  gecmis: 'geçmiş', satici: 'satıcı', alici: 'alıcı', kullanici: 'kullanıcı', kullanicisi: 'kullanıcısı', ulkesi: 'ülkesi',
+  alani: 'alanı', alanlari: 'alanları', kanali: 'kanalı', kategorisi: 'kategorisi', durumu: 'durumu', tipi: 'tipi',
+  adedi: 'adedi', miktari: 'miktarı', bedeli: 'bedeli', butcesi: 'bütçesi', numarasi: 'numarası', riski: 'riski',
+  sarti: 'şartı', alisveris: 'alışveriş', hazir: 'hazır', ogrencisi: 'öğrencisi', yerleri: 'yerleri', toplantilari: 'toplantıları',
+  toplantisi: 'toplantısı', kurulu: 'kurulu', yayinlari: 'yayınları', yayinci: 'yayıncı', grafiker: 'grafiker', mecrasi: 'mecrası',
+  gonderen: 'gönderen', gonderilen: 'gönderilen', ucret: 'ücret', ucreti: 'ücreti', odemesi: 'ödemesi', tahsilat: 'tahsilat',
+  ocak: 'ocak', subat: 'şubat', mart: 'mart', nisan: 'nisan', mayis: 'mayıs', haziran: 'haziran', temmuz: 'temmuz',
+  agustos: 'ağustos', eylul: 'eylül', ekim: 'ekim', kasim: 'kasım', aralik: 'aralık',
+  // Marka ve kısaltma yazımı
+  instagram: 'Instagram', youtube: 'YouTube', facebook: 'Facebook', twitter: 'Twitter', linkedin: 'LinkedIn',
+  tiktok: 'TikTok', whatsapp: 'WhatsApp', google: 'Google', tsoft: 'T-soft', logo: 'Logo', b2b: 'B2B', b2c: 'B2C',
   // Sık görülen İngilizce kolon sözcükleri
   ekitap: 'e-kitap', active: 'aktif', id: 'no', no: 'no', created: 'oluşturulma', updated: 'güncellenme', modified: 'değişiklik', status: 'durum',
   type: 'tür', kind: 'tür', date: 'tarih', day: 'gün', month: 'ay', year: 'yıl', total: 'toplam', count: 'sayısı',
@@ -272,6 +302,10 @@ const WORDS: Record<string, string> = {
   stock: 'stok', warehouse: 'ambar', invoice: 'fatura', line: 'satır', lines: 'satırlar', row: 'satır', rows: 'satır',
   concept: 'kavram', mapping: 'eşleme', editorial: 'editoryal', tasks: 'görevler', task: 'görev',
   query: 'sorgu', answer: 'cevap', question: 'soru', feedback: 'geri bildirim', role: 'rol', system: 'sistem',
+  permission: 'izin', entity: 'varlık', blacklist: 'kara liste', integration: 'entegrasyon', field: 'alan',
+  language: 'dil', original: 'orijinal', preview: 'önizleme', reviews: 'yorumlar', review: 'yorum', entries: 'kayıtlar',
+  link: 'bağlantı', len: 'uzunluk', length: 'uzunluk', primary: 'birincil', approved: 'onaylayan', by: '',
+  sub: 'alt', group: 'grup', level: 'seviye', parent: 'üst', child: 'alt', version: 'sürüm', file: 'dosya',
 };
 
 /** Birleşik yazılmış adları (CRM özel alanları: «projekarti», «hedefkitle») bölmek için kökler. Sözlük ve katalog
@@ -290,12 +324,22 @@ const STEMS = [
   'sozlesme', 'ek', 'protokol', 'lisans', 'dijital', 'ekitap', 'sesli', 'basili', 'orijinal', 'eser', 'yayinevi',
   'redaksiyon', 'dizgi', 'tasarim', 'grafik', 'cizim', 'cizer', 'mutercim', 'tercume', 'rapor', 'raportor', 'kurul',
   'karar', 'degerlendirme', 'oneri', 'text', 'base', 'type', 'code', 'name', 'date', 'value', 'user', 'system',
+  'toplam', 'hesap', 'risk', 'takip', 'limit', 'bedel', 'bilgi', 'bilgisi', 'uzun', 'kisa', 'hediye', 'kampanya', 'set',
+  'odul', 'mecra', 'reklam', 'paketleme', 'ziyaret', 'haber', 'ilgi', 'derslik', 'sorumlu', 'sevkiyat', 'kargo',
+  'fikri', 'yeni', 'eski', 'minimum', 'opsiyonel', 'kesin', 'raf', 'yas', 'kurul', 'basin', 'gelis', 'ev', 'il',
+  'malzeme', 'hareketi', 'hareket', 'ait', 'yerleri', 'yer', 'tipi', 'durumu', 'adedi', 'miktari', 'sayisi', 'tarihi',
+  'kanali', 'kategorisi', 'alani', 'ulkesi', 'kullanici', 'adi', 'numarasi', 'bedeli', 'butcesi', 'riski', 'sarti',
+  'alisveris', 'gecmisi', 'toplantilari', 'kurulu', 'ilk', 'son', 'hazir', 'hazirlik', 'metin', 'kitabin', 'kitabi',
 ];
+
+/** Başında bilinmeyen bir ad olsa da bölünebilen son ekler: «stakkarti» → stak + kartı. Yalnız bu baş sözcükler
+ *  kabul edilir; «uzunbilgi» gibi rastgele kesmeler yapılmaz. */
+const HEADS = new Set(['karti', 'kodu', 'tarihi', 'adi', 'sayisi', 'tutari', 'turu', 'tipi', 'durumu', 'metni', 'numarasi', 'adedi']);
 
 /** Kısaltmalar büyük harfle kalır. */
 const ACRONYMS = new Set([
   'KDV', 'TL', 'ISBN', 'KVKK', 'İYS', 'IYS', 'SMS', 'CRM', 'SEO', 'GEO', 'PDF', 'URL', 'USD', 'EUR', 'SKU', 'EAN', 'TC',
-  'GSC', 'AI', 'KPI', 'ABC', 'XYZ', 'API',
+  'GSC', 'AI', 'KPI', 'ABC', 'XYZ', 'API', 'B2B', 'B2C', 'GSM', 'IBAN',
 ]);
 
 /** «12 ay» gibi süre sözcükleri; başlığın sonundaysa ayraç içinde yazılır («Net (12 ay)»). */
@@ -315,7 +359,12 @@ const IDENT = /^[\p{L}\p{N}_.[\]$#-]+$/u;
 let lexiconCache: Set<string> | null = null;
 function lexicon(): Set<string> {
   if (!lexiconCache) {
-    lexiconCache = new Set<string>([...STEMS, ...Object.keys(WORDS), ...Object.keys(displayWords)].filter((w) => w.length >= 2 && /^[a-z]+$/.test(w)));
+    const short = new Set(['id', 'no', 'ad', 'ay', 'ek', 'il', 'ev']);
+    lexiconCache = new Set<string>(
+      [...STEMS, ...Object.keys(WORDS), ...Object.keys(displayWords)].filter(
+        (w) => /^[a-z]+$/.test(w) && (w.length >= 3 || short.has(w)) && WORDS[w] !== '',
+      ),
+    );
   }
   return lexiconCache;
 }
@@ -342,17 +391,16 @@ function segment(word: string, lex: Set<string>): string[] | null {
 
 /**
  * Birleşik küçük harfli sözcüğü köklere böler: «projekarti» → [proje, karti], «anasozlesmeid» → [ana, sozlesme, id].
- * En az parçalı bölünme seçilir. Bilinen köklerle bölünmüyorsa başta bir bilinmeyen ad (≥3 harf) kabul edilir
- * («stakkarti» → [stak, karti]); sonda bilinmeyen parça kabul edilmez — o çoğu zaman bir ektir («musteri|ler»).
+ * En az parçalı bölünme seçilir. Bilinen köklerle bölünmüyorsa yalnız sondaki baş sözcük ayrılır («stakkarti» →
+ * [stak, karti]); sonda bilinmeyen parça kabul edilmez — o çoğu zaman bir ektir («musteri|ler»).
  */
 export function splitCompound(word: string): string[] | null {
   if (word.length < 6 || !/^[a-z]+$/.test(word)) return null;
   const lex = lexicon();
   const known = segment(word, lex);
   if (known) return known.length >= 2 ? known : null;
-  for (let i = 3; i <= word.length - 4; i++) {
-    const rest = segment(word.slice(i), lex);
-    if (rest && rest.some((p) => p.length >= 4)) return [word.slice(0, i), ...rest];
+  for (const head of HEADS) {
+    if (word.length - head.length >= 3 && word.endsWith(head)) return [word.slice(0, -head.length), head];
   }
   return null;
 }
@@ -383,6 +431,15 @@ function logoWord(tok: string): string | null {
   return null;
 }
 
+/** Logo sözlüğü haritasından (yalnız bütün ad eşleşince). İngilizce kolon sözcüğüyle aynı adlar («MONTH», «YEAR»,
+ *  «STATUS») sözlüğe bırakılır: SQL takma adı da olabilirler, Logo'daki özel anlamları (geri ödeme ayı) yanıltır. */
+function logoData(up: string, table: boolean): string | null {
+  if (own(WORDS, up.toLowerCase())) return null;
+  const { tables, columns } = logoNames;
+  if (table) return own(tables, up) ? tables[up] : own(columns, up) ? columns[up] : null;
+  return own(columns, up) ? columns[up] : null;
+}
+
 /** Bir ad parçasını (noktasız) sözcüklere çevirir. */
 function part(raw: string): string {
   let s = raw.replace(/^\[|\]$/g, '');
@@ -390,7 +447,7 @@ function part(raw: string): string {
   const lg = /^L[GV]_(?:\d{3}|EXCHANGE)_(?:\d{2}_)?([A-Z0-9_]+)$/i.exec(s) ?? /^L_([A-Z0-9_]+)$/.exec(s);
   if (lg) s = lg[1];
   // Logo adları büyük harfle yazılır; küçük harfli «total», «city» İngilizce kolon sözcüğüdür (aşağıdaki sözlük).
-  const logo = s === s.toUpperCase() ? logoWord(s) : null;
+  const logo = s === s.toUpperCase() ? logoWord(s) ?? logoData(s, !!lg) : null;
   if (logo) return logo;
   // CRM: yayıncı öneki (new_, obs_), SQL tablosunun Base / ExtensionBase soneki; portal: semantic_ / sl_ öneki; tarih kolonu d2026.
   s = s
@@ -401,12 +458,21 @@ function part(raw: string): string {
   if (!s) return raw;
   const wholeUpper = s === s.toUpperCase() && /[A-Z]/.test(s);
   const toks = s
-    .replace(/([a-zçğıöşü\d])([A-ZÇĞİÖŞÜ])/g, '$1 $2') // camelCase
+    .replace(/b2([bc])(?![a-z])/gi, (m) => ` ${m.toUpperCase()} `) // B2B, B2C tek sözcük
+    .replace(/([a-zçğıöşü])([A-ZÇĞİÖŞÜ])/g, '$1 $2') // camelCase
     .replace(/([A-ZÇĞİÖŞÜ]+)([A-ZÇĞİÖŞÜ][a-zçğıöşü])/g, '$1 $2') // HTTPServer → HTTP Server
-    .replace(/(\p{L})(\d)/gu, '$1 $2')
-    .replace(/(\d)(\p{L})/gu, '$1 $2')
     .split(/[_\s-]+/)
-    .filter(Boolean);
+    .filter(Boolean)
+    .flatMap((t) => (/^B2[BC]$/.test(t) ? [t] : t.replace(/(\p{L})(\d)/gu, '$1 $2').replace(/(\d)(\p{L})/gu, '$1 $2').split(' ')));
+  // Logo biçimli tek parça büyük harfli ad («ACCOUNTEDCNT»): sözlükte ya da bütünüyle bilinen köklere bölünerek
+  // çevrilemiyorsa yarım çevrilmez («Addtaxpr maliyet» olmaz), olduğu gibi kalır.
+  if (wholeUpper && toks.length === 1 && !s.includes('_') && !ACRONYMS.has(toks[0]) && !lexicon().has(lower(toks[0]))) {
+    const low = lower(toks[0]);
+    const m = mapped(low);
+    if (m !== undefined) return m || raw;
+    const parts = segment(low, lexicon());
+    if (!parts || parts.length < 2 || parts.some((x) => mapped(x) === undefined)) return toks[0];
+  }
   const out: string[] = [];
   for (const t of toks) {
     if (/^\d+$/.test(t)) {
@@ -438,11 +504,16 @@ function part(raw: string): string {
   return words.join(' ') || raw;
 }
 
-/** Küçük harfle başlayan okunur karşılık (cümle içinde kullanılır). */
-function readableLower(s: string): string {
+/** Okunur karşılık; nitelikli adda her parça ayrı yazılır. `head`: her parçanın ilk harfi büyük (başlık), değilse
+ *  olduğu gibi küçük (cümle içi). */
+function readableParts(s: string, head: boolean): string {
   const pieces = s.split('.').filter(Boolean);
   const kept = pieces.length > 1 ? pieces.filter((p, i) => i === pieces.length - 1 || !/^(dbo|\[?dbo\]?|[A-Za-z]{1,2})$/.test(p)) : pieces;
-  return kept.map(part).filter(Boolean).join(' · ');
+  return kept
+    .map(part)
+    .filter(Boolean)
+    .map((t) => (head ? upperFirst(t) : t))
+    .join(' · ');
 }
 
 /** Ekrandaki başlık: ham veritabanı adını okunur Türkçeye çevirir; zaten okunur metne dokunmaz. */
@@ -451,7 +522,7 @@ export function readableName(raw: unknown): string {
   const s = String(raw).trim();
   if (!s || !IDENT.test(s) || /^[\d.,-]+$/.test(s)) return s;
   // Nitelikli ad: dbo.X, I.[NETTOTAL], LG_411_CLCARD.SPECODE. Şema ve tek/iki harfli takma ad atılır.
-  return upperFirst(readableLower(s));
+  return readableParts(s, true);
 }
 
 /** `title` özniteliği için: okunur ad ham addan farklıysa ham ad (üstüne gelince görünür), değilse undefined. */
@@ -493,7 +564,7 @@ export function readableText(raw: unknown): string {
   if (IDENT.test(s.trim())) return readableName(s);
   return s.replace(TOKEN, (tok, offset: number) => {
     if (!looksRaw(tok)) return tok;
-    const text = readableLower(tok);
+    const text = readableParts(tok, false);
     if (!text) return tok;
     // Metnin ya da cümlenin başındaysa büyük harfle.
     const before = s.slice(0, offset).trimEnd();
