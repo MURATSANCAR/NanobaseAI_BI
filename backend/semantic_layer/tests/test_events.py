@@ -442,6 +442,18 @@ class FakeSource:
                  "sorumlu": "ayse", "iptal": False, "yer": "Kadıköy", "il": "İstanbul"},
                 {"id": "e2", "ad": "Ziyaret", "tipId": TY_ZIY, "baslangic": E.today().isoformat(), "sorumlu": "mehmet", "iptal": False}]
 
+    def window_events(self, frm, to, fresh=False):
+        """Gerçek kaynaktaki gibi: takvim yılı okumaları, başlangıcı [frm, to) aralığında olanlar."""
+        from datetime import date as _d
+
+        from semantic_bridge.events_sources import year_slices
+
+        out = []
+        for y, _a, _b in year_slices(frm, to):
+            out += [r for r in self.events(_d(y, 1, 1), _d(y + 1, 1, 1), fresh)
+                    if frm.isoformat() <= r["baslangic"] < to.isoformat()]
+        return out
+
     def types(self, fresh=False):
         return [{"id": TY_FUAR, "ad": "Fuar", "adet": 1, "etkin": True, "son": None}]
 

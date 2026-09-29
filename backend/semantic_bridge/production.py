@@ -779,6 +779,10 @@ class Service:
         with self._lock:
             self._baglam[(id(engine), tenant)] = (id(engine), tenant, entries, settings)
             son = self._son.get(yan)
+            if son is None and not fresh:
+                # Gün değişti (hız 4. tur): aynı kayıt ve ayarlarla dünün kartları varsa bugünkü kurulana kadar onlar
+                # gösterilir, bugünkü arkada kurulur (günün ilk açılışı kart kurulumunu beklemez).
+                son = self._son.get(yan[:4] + ((now - timedelta(days=1)).isoformat(),))
         if not fresh and self._kartlar.an(key) is None and son is not None and son[0] != key \
                 and self._kartlar.an(son[0]) is not None:
             self._isit(key, hesap, snap, now)
@@ -1158,8 +1162,23 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     source = Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA"),
                     lambda: parse_day(settings()["historyFrom"]) or date(today().year - 2, 1, 1))
     svc = Service(source, settings, deps.get("studio_jobs"))
+    from semantic_bridge import hizli_kaynak as HK
     from semantic_bridge import production_kaynak as K
     from semantic_bridge import provenance as PV
+
+    def isit() -> None:
+        """Köprü açılışı (hız 4. tur): diskteki son okumadan bugünün kartları ve özeti arkada kurulur — üretim özetini
+        ilk açan kişi kart kurulumunu (5.600 kart) beklemesin. Okuma eskiyse kaynak ayrıca arkada okunur (`peek`)."""
+        system = deps.get("system")
+        if system is None:
+            return
+        engine, tenant = system()
+        if HK.sqlite_mi(engine):
+            return
+        store.ensure(engine)
+        svc.overview(engine, tenant)
+
+    HK.acilista("uretim.kartlar", isit)
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)

@@ -2967,34 +2967,52 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     #: aynı ekranın eksik açıklama hesabıyla aynı anda istenince 7,8 sn. Cevap katalogdaki terimlerin damgasına
     #: (`concept_stamp`: terim sayısı + son terim yazımı; eşleme değişikliği de terimi günceller) bağlı hatırlanır —
     #: damga değişmedikçe aynı okuma aynı sonucu verir, değişince ilk açılış yeniden okur.
+    #: Hız 4. tur (2026-09-29): bellekten dönen cevap bile her istekte sorgu bilgisiyle birleşip 5.000 terim (+ eşleme)
+    #: yeniden JSON'a çevriliyordu (0,5 sn; olay döngüsünde, eşzamanlı açılan ekranları bekletiyordu). Şimdi bellekte
+    #: cevabın bayt hâli durur (aynı JSONResponse biçimi); köprü açılışında katalog yüklenince veri sözlüğünün açılış
+    #: listesi (onaylı terimler) arkada hazırlanır.
     _concepts_mem = _HB.Bellek("veri-sozlugu.terimler", taze=24 * 3600, en_cok=8)
 
-    @app.get("/api/v1/semantic/concepts")
-    def concepts(request: Request, status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> dict[str, Any]:
-        _admin_gate(request)
-        r = rt()
-        s = r.settings
+    def _concepts_body(r: Any, status: Optional[str], type_: Optional[str], q: Optional[str], limit: int) -> bytes:
+        from fastapi.encoders import jsonable_encoder
+
         from semantic_bridge import sorgu_izi as IZ
         from semantic_bridge import sozluk_kaynak as SZK
 
+        s = r.settings
         profiles = r.profiles
         stamp = r.store.concept_stamp(s.tenant_id, s.datasource_id)
 
-        def read() -> dict[str, Any]:
+        def read() -> bytes:
             with IZ.izle(r.store.engine) as ran:
-                rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
+                rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type_, limit=limit)
             src = source_by_entity(profiles)
             # Terim başına ayrı eşleme sorgusu 5.000 terimde 13–15 sn sürüyordu (Veri sözlüğü açılışı); toplu okunur.
             maps = r.store.list_mappings_many([c.id for c in rows])
             out = {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in maps.get(c.id, [])]} for c in rows]}
-            return {"out": out, "ran": list(ran)}
+            ran_ = list(ran)
+            # Sorgu bilgisi: terim sayısını veren okuma (bellekten dönse de o sonucu üreten okuma; eşleme okumaları
+            # sayı vermez, kayda girmez).
+            out = P.bagla(out, lambda: SZK.for_catalog(r.store.engine, s.datasource_id, ran_, out, title="Katalog terimleri",
+                                                       text=SZK.F_TERIM))
+            return json.dumps(jsonable_encoder(out), ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
 
-        hit = _concepts_mem.al((s.tenant_id, s.datasource_id, status, type, q, limit, stamp, id(profiles)), read)
-        out, ran = dict(hit["out"]), hit["ran"]
-        # Sorgu bilgisi: terim sayısını veren okuma (bellekten dönse de o sonucu üreten okuma; eşleme okumaları sayı
-        # vermez, kayda girmez).
-        return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, s.datasource_id, ran, out, title="Katalog terimleri",
-                                                    text=SZK.F_TERIM))
+        return _concepts_mem.al((s.tenant_id, s.datasource_id, status, type_, q, limit, stamp, id(profiles)), read)
+
+    from semantic_bridge import hizli_kaynak as _HKC
+
+    def _concepts_warm() -> None:
+        r = rt()
+        if _HKC.sqlite_mi(r.store.engine):
+            return
+        _concepts_body(r, "CERTIFIED", None, None, 5000)       # veri sözlüğünün açılış isteği (katalog yüklenince)
+
+    _HKC.acilista("veri-sozlugu.terimler", _concepts_warm)
+
+    @app.get("/api/v1/semantic/concepts")
+    def concepts(request: Request, status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> Response:
+        _admin_gate(request)
+        return Response(content=_concepts_body(rt(), status, type, q, limit), media_type="application/json")
 
     @app.post("/api/v1/semantic/concepts/{concept_id}/review")
     def review_concept(concept_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -4459,7 +4477,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # Rehber CRM'den gelir (yalnız gerçek, etkin kullanıcılar). Kişinin eklediği dahili/kat/fotoğraf sunucuda.
     from semantic_bridge import people as people_mod
 
-    people_dir = people_mod.Directory()
+    from semantic_bridge import hizli_kaynak as _HKP
+
+    # Kişi rehberi kişiden bağımsızdır: ortak bellekte ve portal tablosunda (hız 4. tur). Profil ve rehber açılışı
+    # CRM + AD okumasını beklemez; eskiyse arkada tazelenir, köprü açılışında ısıtılır.
+    people_dir = people_mod.Directory(kalici=_HKP.Kalici(
+        "kisi.rehber", lambda: (rt().store.engine, rt().settings.tenant_id),
+        bicim=people_mod.directory_sql("s.dbo") + repr(sorted(people_mod.AD_FIELDS.items()))))
 
     def _people(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = _greetings(request)
@@ -4469,31 +4493,35 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     _people_last: dict[str, Any] = {}
 
-    def _crm_people(fresh: bool = False) -> tuple[list[dict[str, Any]], float, bool]:
+    def _people_run(sql: str) -> dict[str, Any]:
         r = rt()
-        truncated = False
+        return r.run_sql(sql, r.settings.max_rows)
 
-        def run(sql: str) -> dict[str, Any]:
-            nonlocal truncated
-            out = r.run_sql(sql, r.settings.max_rows)
-            truncated = bool(out.get("truncated"))
-            # Sorgu bilgisi: rehberi dolduran, köprünün CRM'de koşturduğu metin (liste bellekteyken de gösterilir).
-            _people_last.update(sql=out.get("physicalSql"), rows=out.get("totalRows"), ms=out.get("dbMs"),
-                                at=out.get("computedAt"))
-            return out
+    def _people_ad() -> Optional[dict[str, dict[str, Any]]]:
+        return people_mod.ad_people({k: admin_mod.conf(k) for k in admin_mod.store_keys("ad")})
 
+    def _people_warm() -> None:
+        if _HKP.sqlite_mi(rt().store.engine):
+            return
+        people_dir.isit(admin_mod.conf("CRM_SCHEMA"), _people_run, ad=_people_ad,
+                        max_idle_days=_int_conf("PEOPLE_MAX_IDLE_DAYS", 365))
+
+    _HKP.acilista("kisi.rehber", _people_warm)
+
+    def _crm_people(fresh: bool = False) -> tuple[list[dict[str, Any]], float, bool]:
         try:
-            rows, at = people_dir.rows(
-                admin_mod.conf("CRM_SCHEMA"), run, fresh=fresh,
-                ad=lambda: people_mod.ad_people({k: admin_mod.conf(k) for k in admin_mod.store_keys("ad")}),
-                max_idle_days=_int_conf("PEOPLE_MAX_IDLE_DAYS", 365))
+            val, at = people_dir.read(admin_mod.conf("CRM_SCHEMA"), _people_run, fresh=fresh, ad=_people_ad,
+                                      max_idle_days=_int_conf("PEOPLE_MAX_IDLE_DAYS", 365))
+            # Sorgu bilgisi: rehberi dolduran, köprünün CRM'de koşturduğu metin (liste bellekteyken de gösterilir).
+            if val.get("sorgu"):
+                _people_last.update(val["sorgu"])
+            return val["rows"], at, bool(val.get("truncated"))
         except people_mod.ProfileError as e:
             raise HTTPException(status_code=503, detail={"code": "CRM_NOT_CONFIGURED", "message": str(e)}) from e
         except Exception as e:  # noqa: BLE001
             log.warning("people: CRM okunamadı: %s", e)
             raise HTTPException(status_code=503, detail={"code": "CRM_UNAVAILABLE",
                                                          "message": "CRM'e şu an ulaşılamıyor; rehber okunamadı."}) from e
-        return rows, at, truncated
 
     def _int_conf(key: str, default: int) -> int:
         try:
@@ -7995,6 +8023,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
         "logo_connect": _production_connect(lambda: rt().settings.connection_file),
         "studio_jobs": _production_studio.jobs,
+        "system": lambda: (rt().store.engine, rt().settings.tenant_id),
     })
 
     # M52 Tedarik ve baskı: M12 kartları (production.Service) + CRM kağıt/teknik alanları + Logo tedarikçi borç, ödeme

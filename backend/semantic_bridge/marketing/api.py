@@ -23,6 +23,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import pazarlama_kaynak as PK
 from semantic_bridge import provenance as PV
 from semantic_bridge.marketing import core as C
@@ -64,7 +65,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     from semantic_bridge import board as board_mod
     from semantic_bridge.budget_api import _send_mail
 
-    crm = Crm(lambda: admin_mod.conf("CRM_SCHEMA") or "Timas_MSCRM.dbo")
+    crm = Crm(lambda: admin_mod.conf("CRM_SCHEMA") or "Timas_MSCRM.dbo",
+              motor=lambda: (rt().store.engine, rt().settings.tenant_id))
     pool = ThreadPoolExecutor(max_workers=max(1, int(os.environ.get("MARKETING_JOB_WORKERS", "2"))), thread_name_prefix="marketing")
     started = {"stale": False}
     lock = threading.Lock()
@@ -73,6 +75,19 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     def st() -> dict[str, Any]:
         return P.settings(admin_mod.conf)
+
+    def default_window() -> tuple[date, date]:
+        """Yeni kitap ekranının açılış aralığı (bugün → ufuk): açılışta ve gece turunda ısıtılan liste."""
+        t = C.today()
+        return t, t + timedelta(days=st()["horizonDays"])
+
+    def isit() -> None:
+        """Köprü açılışında ekranın açılış aralığının CRM listesi (tablodaki taze kayıt yoksa) arkada okunur."""
+        if HK.sqlite_mi(rt().store.engine):
+            return
+        crm.new_books_isit(*default_window())
+
+    HK.acilista("pazarlama.yeni-kitaplar", isit)
 
     def db() -> tuple[Any, str]:
         r = rt()
@@ -557,6 +572,12 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 out["eposta"] = status
         except (SourceError, C.MarketingError) as e:
             out["hata"] = str(e)
+        # Ekranın açılış aralığı (ufuk, 120 gün) hatırlatma aralığından geniş: gün değişince ilk açan CRM'i beklemesin.
+        try:
+            frm_, to_ = default_window()
+            out["ekranListesi"] = len(crm.new_books(frm_, to_, fresh=True))
+        except SourceError as e:
+            out["ekranListesiHata"] = str(e)
         refreshed, errors = 0, []
         eng = m10()
         for p in C.list_plans(engine, tenant, kind="yeni", durum="taslak,onayda,geri"):

@@ -353,13 +353,21 @@ class Crm:
     Hız (2026-09-29): medya kişileri ekranı (`/pr/contacts`) test sunucusunda 14,1 / 9,4 sn sürüyordu — kişi listesi, haber
     arşivi (görünüm; olmazsa temel tablo) ve haber–kitap bağları her biri yeni bağlantıyla CRM'den okunuyor, eski
     önbellek 10 dakika dolunca ekranı açan kişi üç okumayı bekliyordu. Şimdi süre dolunca eldeki liste gösterilir ve CRM
-    arkada okunur; köprü açılışında bir kez ısıtılır (`pr_api`). Rakamlar aynı SQL'in sonucudur."""
+    arkada okunur; köprü açılışında bir kez ısıtılır (`pr_api`). Rakamlar aynı SQL'in sonucudur.
 
-    def __init__(self, schema: Callable[[], str], roles: Callable[[], list[str]], runner: Callable[[], Runner] = crm_runner):
+    Hız 4. tur (2026-09-29): ayın kitapları (`/pr/home`, soğuk CRM'de 3,5–7 sn) ayrı bellekte; `motor` verilirse son
+    okuma `semantic_hizli_okuma` tablosunda da durur (köprü yeniden başlayınca da beklenmez) ve açılışta bu ayınki
+    ısıtılır. Kişi verisi taşıyan okumalar (medya kişileri, haber arşivi, e-posta) tabloya yazılmaz, yalnız süreçte."""
+
+    def __init__(self, schema: Callable[[], str], roles: Callable[[], list[str]], runner: Callable[[], Runner] = crm_runner,
+                 motor: Optional[Callable[[], Optional[tuple[Any, str]]]] = None):
         self.schema = schema
         self.roles = roles
         self.runner = runner
         self._bellek = HK.bellek("pr.crm", CACHE_TTL)
+        self._ay = HK.bellek("pr.ayin-kitaplari", CACHE_TTL, en_cok=48, kalici=HK.Kalici(
+            "pr.ayin-kitaplari", motor, bicim=month_books_sql("s.dbo", date(2000, 1, 1), date(2000, 1, 2)))
+            if motor is not None else None)
 
     def _cached(self, key: Any, fresh: bool, fn: Callable[[], Any]) -> Any:
         return HK.oku(self._bellek, key, fn, zorla=fresh)
@@ -370,15 +378,20 @@ class Crm:
         except bsrc.SourceError as e:
             raise SourceError(str(e)) from None
 
+    def _month_read(self, frm: date, to: date) -> list[dict[str, Any]]:
+        by: dict[str, dict[str, Any]] = {}
+        for r in self._run(month_books_sql(self.schema(), frm, to)):
+            b = book_row(r)
+            if b["kitapId"]:
+                by.setdefault(b["kitapId"], b)
+        return list(by.values())
+
     def month_books(self, frm: date, to: date, fresh: bool = False) -> list[dict[str, Any]]:
-        def load() -> list[dict[str, Any]]:
-            by: dict[str, dict[str, Any]] = {}
-            for r in self._run(month_books_sql(self.schema(), frm, to)):
-                b = book_row(r)
-                if b["kitapId"]:
-                    by.setdefault(b["kitapId"], b)
-            return list(by.values())
-        return self._cached(("month", frm, to), fresh, load)
+        return HK.oku(self._ay, ("month", self.schema(), frm, to), lambda: self._month_read(frm, to), zorla=fresh)
+
+    def month_books_isit(self, frm: date, to: date) -> bool:
+        """Köprü açılışı: ayın listesi tazeyse (bellekte ya da tabloda) bir şey yapmaz, değilse CRM arkada okunur."""
+        return self._ay.isit_gerekirse(("month", self.schema(), frm, to), lambda: self._month_read(frm, to))
 
     def book(self, kitap_id: str, fresh: bool = False) -> Optional[dict[str, Any]]:
         def load() -> Optional[dict[str, Any]]:

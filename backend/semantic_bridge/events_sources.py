@@ -429,7 +429,8 @@ class Source:
     """CRM + Logo okuması. Bağlantı okuma başına açılıp kapanır; sonuç anahtar başına `ttl()` saniye bellekte.
     `fresh=True` önbelleği atlar (ekrandaki «Verileri yenile»)."""
 
-    def __init__(self, crm_connect: Callable[[], Any], logo_connect: Callable[[], Any], schema: Callable[[], str]):
+    def __init__(self, crm_connect: Callable[[], Any], logo_connect: Callable[[], Any], schema: Callable[[], str],
+                 motor: Optional[Callable[[], Optional[tuple[Any, str]]]] = None):
         self._crm = crm_connect
         self._logo = logo_connect
         self._schema = schema
@@ -437,14 +438,27 @@ class Source:
         #: Yıl → firma eşlemesi: açık Logo bağlantısıyla okunur, arkada yenilenemez; eskisi gibi süreli sözlük.
         self._cache: dict[tuple, tuple[float, Any]] = {}
         self._bellek = HK.bellek("etkinlik.kaynak", ttl())
+        #: Takvim yılının CRM etkinlikleri (hız 4. tur): takvim, Kampüs ajandası ve açılış ısıtması aynı okumayı paylaşır;
+        #: `motor` verilirse son okuma `semantic_hizli_okuma`'da da durur (köprü yeniden başlayınca da beklenmez).
+        self._yil = HK.bellek("etkinlik.yil", ttl(), en_cok=16, kalici=HK.Kalici(
+            "etkinlik.yil", motor, bicim=events_sql("s.dbo", date(2000, 1, 1), date(2001, 1, 1)))
+            if motor is not None else None)
         self._okuyucu: dict[tuple, Callable[[], Any]] = {}
 
     # -------------------------------------------------------------- önbellek
+    @staticmethod
+    def _yil_mi(key: tuple) -> bool:
+        return (len(key) == 3 and key[0] == "events" and isinstance(key[1], date) and key[1] == date(key[1].year, 1, 1)
+                and key[2] == date(key[1].year + 1, 1, 1))
+
+    def _b(self, key: tuple) -> Any:
+        return self._yil if self._yil_mi(key) else self._bellek
+
     def _memo(self, key: tuple, fresh: bool, fn: Callable[[], Any]) -> Any:
         """Bellekten; tazeyse hemen, eskiyse eldeki hemen + arkada okuma, yoksa beklenir. `fresh`: kaynak beklenir."""
         with self._lock:
             self._okuyucu[key] = fn
-        return HK.oku(self._bellek, key, fn, zorla=fresh)
+        return HK.oku(self._b(key), key, fn, zorla=fresh)
 
     def durt(self, key: tuple) -> bool:
         """«Verileri yenile»: bellekteki okuma 60 sn'den eskiyse arkada yeniden okunur (beklemeden). Okuyucu yoksa False."""
@@ -452,9 +466,10 @@ class Source:
             fn = self._okuyucu.get(key)
         if fn is None:
             return False
-        yas = self._bellek.yas(key)
+        b = self._b(key)
+        yas = b.yas(key)
         if yas is not None and yas >= HK.DURT_EN_AZ:
-            self._bellek.isit(key, fn)
+            b.isit(key, fn)
         return True
 
     def _firms_memo(self, fn: Callable[[], Any]) -> Any:
@@ -477,6 +492,7 @@ class Source:
         with self._lock:
             self._cache.clear()
         self._bellek.dusur()
+        self._yil.dusur()
 
     def _crm_rows(self, sqls: list[str]) -> list[list[dict[str, Any]]]:
         conn = self._crm()
@@ -508,6 +524,18 @@ class Source:
     def events(self, frm: date, to: date, fresh: bool = False) -> list[dict[str, Any]]:
         return self._memo(("events", frm, to), fresh,
                           lambda: [event_row(r) for r in self._crm_rows([events_sql(self._schema(), frm, to)])[0]])
+
+    def window_events(self, frm: date, to: date, fresh: bool = False) -> list[dict[str, Any]]:
+        """Başlangıcı [frm, to) aralığında olan etkinlikler, takvim yılı okumalarından (aynı SQL, aynı `statecode`
+        süzgeci; yıl okuması ortak bellekte). Başlangıç günü İstanbul günüdür (`event_row` → `dayiso`, SQL sınırı
+        `utc_bound`): süzme SQL'in [frm, to) koşuluyla aynı satırları verir. Kampüs ajandası kişi başına pencere okumak
+        yerine bunu kullanır; kişi süzgeci (`E.agenda`) üstünde yapılır."""
+        a, b = frm.isoformat(), to.isoformat()
+        out: list[dict[str, Any]] = []
+        for y, _lo, _hi in year_slices(frm, to):
+            out += [r for r in self.events(date(y, 1, 1), date(y + 1, 1, 1), fresh)
+                    if r.get("baslangic") and a <= r["baslangic"] < b]
+        return out
 
     def events_by_id(self, ids: list[str]) -> list[dict[str, Any]]:
         ids = guids(ids)

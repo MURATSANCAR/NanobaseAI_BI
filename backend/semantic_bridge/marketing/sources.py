@@ -363,13 +363,25 @@ def detail_row(r: dict[str, Any]) -> dict[str, Any]:
 
 
 class Crm:
-    """CRM okumaları; liste 5 dakika bellekte tutulur («yenile» kaynağa gider)."""
+    """CRM okumaları; liste 5 dakika bellekte tutulur («yenile» kaynağa gider).
 
-    def __init__(self, schema: Callable[[], str], runner: Callable[[], Runner] = crm_runner):
+    Yeni kitap listesi (hız 4. tur, 2026-09-29): kişiden bağımsız CRM okumasıdır (yayın günü aralıktaki kitap kartları +
+    ilk baskı + proje; soğuk CRM'de 7–10 sn, ekranda eşzamanlı açılışla 51 sn ölçüldü). `hizli_kaynak` belleğinde: 5 dk
+    tazeyse hemen, eskiyse eldeki liste hemen + CRM arkada bir kez; `motor` verilirse son okuma `semantic_hizli_okuma`
+    tablosunda da durur (köprü yeniden başlayınca da beklenmez). «Yenile» (`fresh`) CRM'i bekler. Kişi süzgeci
+    («benim»), plan/hedef birleşimi ve bütçe gizleme okumanın üstünde, istekte yapılır."""
+
+    def __init__(self, schema: Callable[[], str], runner: Callable[[], Runner] = crm_runner,
+                 motor: Optional[Callable[[], Optional[tuple[Any, str]]]] = None):
+        from semantic_bridge import hizli_kaynak as HK
+
         self.schema = schema
         self.runner = runner
         self._cache: dict[Any, tuple[float, Any]] = {}
         self._lock = threading.Lock()
+        self._yeni = HK.bellek("pazarlama.yeni-kitaplar", CACHE_TTL, en_cok=64, kalici=HK.Kalici(
+            "pazarlama.yeni-kitaplar", motor, bicim=new_books_sql("s.dbo", date(2000, 1, 1), date(2000, 1, 2)))
+            if motor is not None else None)
 
     def _cached(self, key: Any, fresh: bool, fn: Callable[[], Any]) -> Any:
         with self._lock:
@@ -387,17 +399,24 @@ class Crm:
         except bsrc.SourceError as e:
             raise SourceError(str(e)) from None
 
+    def _new_books_read(self, frm: date, to: date) -> list[dict[str, Any]]:
+        by: dict[str, dict[str, Any]] = {}
+        for r in self._run(new_books_sql(self.schema(), frm, to)):
+            b = book_row(r)
+            if not b["stokKodu"]:
+                continue
+            # powerbikitap aynı stok kodunda birden çok satır verebilir: ilk dolu olan kalır.
+            by.setdefault(b["stokKodu"], b)
+        return list(by.values())
+
     def new_books(self, frm: date, to: date, fresh: bool = False) -> list[dict[str, Any]]:
-        def load() -> list[dict[str, Any]]:
-            by: dict[str, dict[str, Any]] = {}
-            for r in self._run(new_books_sql(self.schema(), frm, to)):
-                b = book_row(r)
-                if not b["stokKodu"]:
-                    continue
-                # powerbikitap aynı stok kodunda birden çok satır verebilir: ilk dolu olan kalır.
-                by.setdefault(b["stokKodu"], b)
-            return list(by.values())
-        return self._cached(("new", frm, to), fresh, load)
+        from semantic_bridge import hizli_kaynak as HK
+
+        return HK.oku(self._yeni, ("new", self.schema(), frm, to), lambda: self._new_books_read(frm, to), zorla=fresh)
+
+    def new_books_isit(self, frm: date, to: date) -> bool:
+        """Köprü açılışı ve gece turu: aralığın listesi tazeyse bir şey yapmaz, değilse CRM arkada okunur."""
+        return self._yeni.isit_gerekirse(("new", self.schema(), frm, to), lambda: self._new_books_read(frm, to))
 
     def book(self, stok: str, fresh: bool = False) -> Optional[dict[str, Any]]:
         def load() -> Optional[dict[str, Any]]:

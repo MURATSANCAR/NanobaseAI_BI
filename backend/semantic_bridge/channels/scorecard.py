@@ -26,6 +26,8 @@ from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
 
+from semantic_bridge import hizli_bellek as HB
+from semantic_bridge import sorgu_yakala as Y
 from semantic_bridge.channels import mapping as M
 from semantic_bridge.channels import store as S
 from semantic_bridge.channels.sources import BOOK_METRICS, KANAL_PREFIX, METRICS
@@ -565,6 +567,49 @@ def matrix(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, ay:
     bir platformun net adedine göre. Sayfa 100 satır; hepsi sayfalanarak görülür (sessiz tavan yok)."""
     p = period(engine, tenant, yil, ay)
     need_read(engine, tenant, [p["yil"]])
+    key = (id(engine), tenant, p["yil"], p["ay"], p["gunPayi"], _girdi_damgasi(engine, tenant, p["yil"]))
+    base = _MATRIS.al(key, lambda: _matrix_base(engine, tenant, p))
+    Y.aktar(base["queries"])                     # sorgu bilgisi: matrisi kuran okumalar (bellekten gelse de)
+    words = M.fold(q).split()
+    rows = [r for r, t in zip(base["rows"], base["fold"]) if all(w in t for w in words)] if words else list(base["rows"])
+    cols = [c["platform"] for c in base["columns"]]
+    if sort and sort in cols:
+        rows.sort(key=lambda r: (-(r["kanallar"].get(sort, {}).get("net", 0.0)), r["stokKodu"]))
+    return _page(rows, page, {"period": p, "columns": base["columns"], "sort": sort if sort in cols else ""}, size)
+
+
+#: Matris hesabı (hız 4. tur, 2026-09-29): yılın kitap × grup × ay satırları (≈46 bin) her açılışta okunup platformlara
+#: dağıtılıyordu (tek başına 0,8–1 sn, eşzamanlı açılışta 3–10 sn). Sonuç girdilerin damgasına bağlı süreçte tutulur;
+#: arama, sıralama ve sayfa istekte. Damga değişmedikçe aynı girdi aynı matrisi verir; değişince ilk istek yeniden kurar.
+_MATRIS = HB.Bellek("kanal.matris", taze=float("inf"), en_cok=16)
+
+
+def _girdi_damgasi(engine: sa.engine.Engine, tenant: str, yil: int) -> str:
+    """Matrise giren tabloların tek sorguda damgası: Logo okuma kaydı (meta: okuma turu, veri sonu), eşleme ayarları,
+    cari eşlemesi, yılın kitap satırı sayısı ve kitap adları. Okuma turu meta'yı, eşleme kararı cariyi/ayarı günceller."""
+    def cnt(t: sa.Table, *cond: Any) -> Any:
+        return sa.select(sa.func.count()).select_from(t).where(t.c.tenant_id == tenant, *cond).scalar_subquery()
+
+    def mx(col: Any, t: sa.Table) -> Any:
+        return sa.select(sa.func.max(col)).where(t.c.tenant_id == tenant).scalar_subquery()
+
+    A = S.ACCOUNTS
+    stmt = sa.select(cnt(S.META), mx(S.META.c.updated_at, S.META), cnt(S.SETTINGS), mx(S.SETTINGS.c.guncellendi, S.SETTINGS),
+                     cnt(A), mx(A.c.guncellendi, A), mx(A.c.onay_tarihi, A), mx(A.c.aday_zamani, A),
+                     cnt(S.BOOK_MONTHS, S.BOOK_MONTHS.c.yil == yil), cnt(S.BOOKS))
+    with Y.ayri(), engine.connect() as c:          # damga okuması sorgu bilgisine girmez (rakam üretmez)
+        row = c.execute(stmt).first()
+    return json.dumps([str(v) for v in (row or ())])
+
+
+def _matrix_base(engine: sa.engine.Engine, tenant: str, p: dict[str, Any]) -> dict[str, Any]:
+    with Y.ayri(engine) as yq:
+        base = _matrix_rows(engine, tenant, p)
+    base["queries"] = list(yq.queries)
+    return base
+
+
+def _matrix_rows(engine: sa.engine.Engine, tenant: str, p: dict[str, Any]) -> dict[str, Any]:
     mp = Mapping(engine, tenant)
     w = _window(p, p["yil"])
     cells: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))
@@ -590,13 +635,9 @@ def matrix(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, ay:
         vals = {k: {"alim": round(s, 2), "iade": round(i, 2), "net": round(s - i, 2)} for k, (s, i) in per.items()}
         total = sum(v["net"] for v in vals.values())
         rows.append({"stokKodu": code, "ad": names.get(code, ""), "toplam": round(total, 2), "kanallar": vals})
-    rows = _search(rows, q)
-    if sort and sort in cols:
-        rows.sort(key=lambda r: (-(r["kanallar"].get(sort, {}).get("net", 0.0)), r["stokKodu"]))
-    else:
-        rows.sort(key=lambda r: (-r["toplam"], r["stokKodu"]))
-    return _page(rows, page, {"period": p, "columns": [{"platform": k, "label": platform_label(k), "net": round(totals[k], 2)} for k in cols],
-                              "sort": sort if sort in cols else ""}, size)
+    rows.sort(key=lambda r: (-r["toplam"], r["stokKodu"]))          # varsayılan sıra; platform sırası istekte
+    return {"rows": rows, "fold": [M.fold(f"{r['stokKodu']} {r.get('ad') or ''}") for r in rows],
+            "columns": [{"platform": k, "label": platform_label(k), "net": round(totals[k], 2)} for k in cols]}
 
 
 # ------------------------------------------------------------------ hedef ↔ gerçekleşen

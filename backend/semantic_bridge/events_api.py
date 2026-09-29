@@ -196,7 +196,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     crm_connect() / logo_connect() → salt okunur bağlantı · llm(priority) → LLM kapısı istemcisi ya da None ·
     system() → (engine, tenant) · require_caller(request) (zamanlayıcı jetonu)."""
     auth, can, is_admin, audit, conf, fresh = (deps[k] for k in ("auth", "can", "is_admin", "audit", "conf", "fresh"))
-    source = src.Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo")
+    source = src.Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo",
+                        motor=deps.get("system"))
     svc = Service(source, deps.get("llm") or (lambda _p: None))
 
     def fair_out(engine, tenant: str, fid: str) -> dict[str, Any]:
@@ -274,8 +275,10 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         if HK.sqlite_mi(engine):
             return
         source.types()
-        y = E.today().year
-        source.events(date(y, 1, 1), date(y + 1, 1, 1))
+        t = E.today()
+        years = {t.year} | {y for y, _a, _b in src.year_slices(t, t + timedelta(days=E.settings()["agendaDays"] + 1))}
+        for y in sorted(years):            # takvimin yılı + Kampüs ajandasının penceresine düşen yıllar
+            source.events(date(y, 1, 1), date(y + 1, 1, 1))
 
     HK.acilista("etkinlik.crm", isit)
 
@@ -310,7 +313,11 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         t = E.today()
         warnings = []
         try:
-            crm = source.events(t, t + timedelta(days=days + 1), fresh())
+            # Hız 4. tur: kişi başına pencere okuması yerine takvim yılı okumaları (ortak bellek + tablo, açılışta
+            # ısıtılır) süzülür; «Verileri yenile» ekranı bekletmez, yıl okumaları arkada yenilenir.
+            crm = source.window_events(t, t + timedelta(days=days + 1))
+            for y, _a, _b in src.year_slices(t, t + timedelta(days=days + 1)):
+                durt(year_key(y))
         except Exception as e:  # noqa: BLE001
             log.info("events agenda: CRM okunamadı: %s", e)
             crm = []

@@ -166,6 +166,25 @@ def yakala(*engines: Any) -> Iterator[Yakalanan]:
         _ACTIVE.reset(token)
 
 
+@contextmanager
+def ayri(*engines: Any) -> Iterator[Yakalanan]:
+    """Bellekte saklanacak bir hesabın okumaları yalnız bu kayda yazılır, isteğin açık yakalamasına düşmez (hız 4. tur).
+    Saklanan sorgular her istekte `aktar` ile isteğin yakalamasına eklenir: sorgu bilgisi hesap bellekten gelse de
+    rakamı üreten okumayı gösterir, ilk istekte «2 kez çalıştı» yazmaz."""
+    token = _ACTIVE.set(())
+    try:
+        with yakala(*engines) as q:
+            yield q
+    finally:
+        _ACTIVE.reset(token)
+
+
+def aktar(queries: Iterable[dict[str, Any]]) -> None:
+    """Saklanmış okumaları (bkz. `ayri`) şu an açık yakalamalara ekler."""
+    for y in _ACTIVE.get():
+        y.extend(queries)
+
+
 def baslat(*engines: Any) -> tuple[Yakalanan, Any]:
     """`with` bloğuna sığmayan uzun işler (yenileme) için: yakalamayı başlatır; `bitir(token)` ile kapatılır."""
     for e in engines:
