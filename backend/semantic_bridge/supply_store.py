@@ -12,6 +12,7 @@
   seçimi, olasılıkla) ya da `elle`. Yalnız onaylanan bağ hesaba girer.
 - **Matbaa ↔ cari eşlemesi** (`semantic_supply_supplier_map`): CRM matbaa seçenek adı ↔ Logo cari kodu. Önerisi
   veriden (kartın matbaası ile faturayı kesen cari); elle girilen kayıt öneriyi ezer.
+- **Son okuma** (`semantic_supply_reads`): kaynak okumasının kendisi, kiracı başına tek satır; uçlar yalnız bunu okur.
 
 Silinen kayıt işaretlenir, satır kalır (değişiklik kaydı `semantic_audit`'te).
 """
@@ -91,6 +92,16 @@ SUPPLIER_MAP = sa.Table(
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("deleted_at", sa.DateTime(timezone=True)),
 )
+#: Son kaynak okuması (M12 kartları + CRM teknik alanlar + Logo tedarikçi/fatura), kiracı başına tek satır. Gece turu
+#: (`run-due`) ve arka plan tazelemesi yazar; ekran uçları yalnız bunu okur. Gövde okumanın kendisidir (tarih, sayı
+#: anahtarlı sözlük, `runs` = çalışan SQL / satır / süre / an aynen korunsun diye pickle + zlib; yalnız köprü yazar).
+READS = sa.Table(
+    "semantic_supply_reads", _md,
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("read_at", sa.Float, nullable=False),              # okumanın anı (snap["at"], epoch)
+    sa.Column("payload", sa.LargeBinary, nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+)
 
 KINDS = {"yuk": "Yük dengeleme", "kagit": "Kağıt alım zamanı", "eskalasyon": "Matbaaya gecikme yazısı",
          "sartname": "Sipariş formu / teknik şartname"}
@@ -124,6 +135,43 @@ def ensure(engine: sa.engine.Engine) -> None:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+# ------------------------------------------------------------------ son okuma
+
+
+def read_stmt(tenant: str) -> Any:
+    """Uçların son okumayı aldığı ifade (sorgu bilgisi aynı ifadeyi gösterir)."""
+    return sa.select(READS.c.payload).where(READS.c.tenant_id == tenant)
+
+
+def read_at(engine: sa.engine.Engine, tenant: str) -> Optional[float]:
+    """Tablodaki son okumanın anı (gövdesiz, ucuz)."""
+    with engine.connect() as c:
+        v = c.execute(sa.select(READS.c.read_at).where(READS.c.tenant_id == tenant)).scalar()
+    return float(v) if v is not None else None
+
+
+def read_get(engine: sa.engine.Engine, tenant: str) -> Optional[dict[str, Any]]:
+    import pickle
+    import zlib
+
+    with engine.connect() as c:
+        v = c.execute(read_stmt(tenant)).scalar()
+    if not v:
+        return None
+    out = pickle.loads(zlib.decompress(bytes(v)))
+    return out if isinstance(out, dict) else None
+
+
+def read_put(engine: sa.engine.Engine, tenant: str, snap: dict[str, Any]) -> None:
+    import pickle
+    import zlib
+
+    body = zlib.compress(pickle.dumps(snap, protocol=pickle.HIGHEST_PROTOCOL), 1)
+    with engine.begin() as c:
+        c.execute(READS.delete().where(READS.c.tenant_id == tenant))
+        c.execute(READS.insert().values(tenant_id=tenant, read_at=float(snap.get("at") or 0), payload=body, updated_at=_now()))
 
 
 def _iso(v: Optional[datetime]) -> Optional[str]:

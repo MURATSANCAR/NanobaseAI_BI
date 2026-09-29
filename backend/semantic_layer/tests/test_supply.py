@@ -486,3 +486,78 @@ def test_api_permissions_and_no_logo(engine):
     from semantic_bridge.supply_store import SUGGESTIONS
     with engine.begin() as conn:
         conn.execute(SUGGESTIONS.delete().where(SUGGESTIONS.c.id == d.json()["id"]))
+
+
+# ------------------------------------------------------------------ hız (2026-09-29): uç kaynağı beklemez
+
+
+def test_table_read_gives_the_same_answers_as_the_live_read(engine):
+    """Eski hesap = yeni hesap: ilk açılış kaynağı okur ve okumayı tabloya yazar; köprü yeniden başladıktan sonra aynı
+    uçlar tablodaki okumayla (kaynağa gitmeden) birebir aynı cevabı verir."""
+    import json
+
+    y = datetime.now(S.TZ).year
+    cards = [card(1, qty=700, baski=f"{y}-12-31"), card(2, qty=500, stage="matbaada", printer="B Matbaa"),
+             card(3, qty=900, stage="tamam", depo=f"{y}-01-10", bdone=f"{y}-01-05")]
+    a = {"cookie": "a"}
+    paths = ("/overview", "/load", "/paper", "/suppliers", "/unbilled", "/incoming?aylar=6", "/conflicts")
+    c1 = _client(engine, cards, {"ayse": set()})
+    first = {p: c1.get("/api/v1/supply" + p, headers=a).json() for p in paths}
+    assert store.read_at(engine, T) is not None                       # okuma tabloya yazıldı
+    c2 = _client(engine, [], {"ayse": set()})                          # köprü yeniden başladı; kaynak artık boş dönse de
+    second = {p: c2.get("/api/v1/supply" + p, headers=a).json() for p in paths}
+    for p in paths:
+        assert json.dumps(second[p], sort_keys=True, default=str) == json.dumps(first[p], sort_keys=True, default=str), p
+
+
+def test_refresh_does_not_wait_and_the_tour_does(engine, monkeypatch):
+    """«Verileri yenile» eldeki okumayla hemen döner, yenisi arka planda okunup tabloya yazılır; tablodan gelen okuma
+    tarihleri ve sayı anahtarlarıyla aynıdır; gece turu (`wait`) kaynağı bekler."""
+    import threading
+    import time as _t
+
+    src_ = S.Source(SimpleNamespace(cards=lambda *a, **k: ([], {})), lambda: "", lambda: "", lambda: "", lambda: {})
+    snap0 = {"at": _t.time(), "today": "2026-10-10", "since": "2025-01-01", "cards": [], "rawCards": [], "tech": {},
+             "paperNames": {}, "options": {"new_matbaa": {1: "A Matbaa"}}, "planChanges": [], "warnings": [],
+             "logo": {"ok": True, "dataEnd": date(2026, 8, 17), "firms": {"2026": "411"},
+                      "planLines": [{"ref": 1, "vade": date(2026, 9, 1), "tutar": 10.0, "kumulatif": 10.0}]},
+             "db": {}, "runs": {}}
+    store.read_put(engine, T, snap0)                                   # gece turu yazmış
+    got = store.read_get(engine, T)
+    assert got == snap0 and isinstance(got["logo"]["dataEnd"], date) and 1 in got["options"]["new_matbaa"]
+    gate = threading.Event()
+    reads: list[int] = []
+
+    def slow_read(engine_, tenant, fresh=False, now=None):
+        reads.append(1)
+        gate.wait(10)
+        return {**snap0, "at": snap0["at"] + 1}
+    monkeypatch.setattr(src_, "read", slow_read)
+    t0 = _t.monotonic()
+    s = src_.snapshot(engine, T, fresh=True)
+    assert _t.monotonic() - t0 < 1.0 and s["at"] == snap0["at"] and src_.refreshing()
+    gate.set()
+    src_._bg.join(10)
+    assert src_.snapshot(engine, T)["at"] == snap0["at"] + 1 and store.read_at(engine, T) == snap0["at"] + 1
+    assert reads == [1]
+    assert src_.snapshot(engine, T, True, None, wait=True) and reads == [1, 1]   # gece turu bekler
+
+
+def test_supplier_invoices_from_the_read_equal_the_single_supplier_query():
+    """Tedarikçi sayfası: turda okunan bütün tedarikçi faturalarından süzülen liste = eski tek cari sorgusunun sonucu."""
+    since = date(2025, 10, 1)
+    rows = [{"cari_kod": "320.01", "tarih": date(2026, 1, 20), "no": "F1", "tur": 4, "tutar": 8400.0, "kdv": 1400.0, "aciklama": "Baskı"},
+            {"cari_kod": "320.02", "tarih": date(2026, 2, 1), "no": "F2", "tur": 1, "tutar": 500.0, "kdv": 80.0, "aciklama": None},
+            {"cari_kod": "320.01", "tarih": date(2026, 3, 5), "no": "F3", "tur": 1, "tutar": 1200.5, "kdv": 200.1, "aciklama": "Kağıt"},
+            {"cari_kod": "320.01", "tarih": date(2025, 9, 30), "no": "F0", "tur": 1, "tutar": 99.0, "kdv": 9.0, "aciklama": None}]
+
+    def run(sql):
+        sid = src._filled.last[0]
+        if sid == "logo_tedarikci_faturalar":          # SQL: C.CODE = '320.01' AND DATE_ >= since
+            return [{k: v for k, v in r.items() if k != "cari_kod"} for r in rows
+                    if r["cari_kod"] == "320.01" and r["tarih"] >= since]
+        assert sid == "logo_tedarikci_faturalar_tumu" and "LIKE '320%'" in sql
+        return [r for r in rows if r["tarih"] >= date(2025, 9, 1)]   # turun penceresi daha erken başlamış olabilir
+    old = src.read_supplier_invoices(run, ["411"], "320.01", since)
+    new = src.supplier_invoices_of(src.read_all_supplier_invoices(run, ["411"], "320", date(2025, 9, 1)), "320.01", since)
+    assert new == old and [x["no"] for x in new] == ["F3", "F1"]

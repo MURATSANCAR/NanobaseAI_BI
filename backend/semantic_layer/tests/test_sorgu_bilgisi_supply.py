@@ -53,6 +53,8 @@ def _rows(sid: str) -> list[dict]:
                                    "malzeme": "1. hamur 80 gr", "birim": "KG", "miktar": 1000, "tutar": 30000}],
         "logo_tedarikci_faturalar": [{"tarih": date(today.year, 1, 20), "no": "BF1", "tur": 4, "tutar": 8400.0, "kdv": 1400.0,
                                       "aciklama": "Baskı"}],
+        "logo_tedarikci_faturalar_tumu": [{"cari_kod": "320.01", "tarih": date(today.year, 1, 20), "no": "BF1", "tur": 4,
+                                           "tutar": 8400.0, "kdv": 1400.0, "aciklama": "Baskı"}],
     }.get(sid, [])
 
 
@@ -148,6 +150,19 @@ def test_debt_numbers_point_to_logo_queries_and_fifo_formula(engine, monkeypatch
     assert {"tedarik.logo_tedarikci_cari.411", "tedarik.logo_tedarikci_vade.411"} <= set(k["formulas"]["borc"]["inputs"])
     assert k["sources"]["tedarik.logo_tedarikci_cari.411"]["stats"]["rows"] == 2
     assert "LG_411_" in k["sources"]["tedarik.logo_tedarikci_cari.411"]["sql"]
+
+
+def test_supplier_page_invoices_come_from_the_read_not_a_live_query(engine, monkeypatch):
+    """Tedarikçi sayfası Logo'ya gitmez: faturalar turda okunan bütün tedarikçi faturalarından; «i» turda çalışan metni
+    ve son okuma tablosunu (kökeniyle) gösterir."""
+    c = _client(engine, monkeypatch, ALL)
+    out = c.get("/api/v1/supply/suppliers/320.01").json()
+    k = _check(out)
+    assert {f["no"] for f in out["faturalar"]} == {"BF1"}
+    assert "tedarik.logo_tedarikci_faturalar_tumu.411" in k["formulas"]["faturalar"]["inputs"]
+    assert not any(s.startswith("tedarik.logo_tedarikci_faturalar.") for s in k["sources"])
+    assert "tedarik.logo_tedarikci_faturalar_tumu.411" in k["sources"]["tedarik.portal.okuma"]["origin"]
+    assert "semantic_supply_reads" in k["sources"]["tedarik.portal.okuma"]["sql"]
 
 
 def test_recorder_keys_runs_by_source_and_firm():

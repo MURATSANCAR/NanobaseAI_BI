@@ -303,7 +303,7 @@ def run_due(svc: S.Service, engine: Any, tenant: str, *, llm: Any = None, now: O
     now = now or S.today()
     s = svc.settings()
     out: dict[str, Any] = {"yuk": 0, "kagit": 0, "eskiyen": 0, "eslesme": 0, "eposta": []}
-    snap = svc.snap(engine, tenant, True, now)
+    snap = svc.snap(engine, tenant, True, now, wait=True)   # tur kaynağı bekler; okuma son okuma tablosuna yazılır
     table = S.load_table(snap["cards"], snap["tech"], store.list_capacity(engine, tenant), now, s["loadMonths"], s["overloadRatio"])
     stats = {x["printer"]: x for x in svc.printer_stats(snap["cards"], now)}
 

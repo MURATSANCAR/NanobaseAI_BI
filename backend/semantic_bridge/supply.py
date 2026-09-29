@@ -870,7 +870,13 @@ def depot_capacity() -> Optional[dict[str, Any]]:
 
 class Source:
     """M12 kartları + CRM teknik alanları + Logo tedarikçi/fatura okuması. Bağlantılar okuma başına açılır; aynı anda tek
-    okuma; sonuç 5 dakika bellekte. Logo düşerse CRM/M12 ile devam edilir, ekranda söylenir."""
+    okuma. Logo düşerse CRM/M12 ile devam edilir, ekranda söylenir.
+
+    Hız (2026-09-29): okuma 1–1,5 dakika sürer (test sunucusunda `X-Data-Refresh` ile özet 90 sn, depo girişi 60 sn) ve
+    eski sürümde 5 dakika dolunca her istek onu kilit altında bekliyordu. Şimdi son okuma portal tablosundadır
+    (`semantic_supply_reads`; gece turu `run-due` ve arka plan tazelemesi yazar). İstek bellekteki ya da tablodaki okumayla
+    hemen döner; okuma 5 dakikadan eskiyse ya da «Verileri yenile» (`fresh`) istendiyse yenisi arka planda okunur. Kaynak
+    yalnız hiç okuma yokken ve gece turunda (`wait=True`) beklenir."""
 
     def __init__(self, production: Any, logo_file: Callable[[], str], crm_file: Callable[[], str], schema: Callable[[], str],
                  settings: Callable[[], dict[str, Any]]):
@@ -879,20 +885,87 @@ class Source:
         self._crm_file = crm_file
         self._schema = schema
         self._settings = settings
-        self._lock = threading.Lock()
+        self._lock = threading.Lock()          # bellek durumu
+        self._reading = threading.Lock()       # aynı anda tek okuma
         self._snap: Optional[dict[str, Any]] = None
         self._at = 0.0
+        self._bg: Optional[threading.Thread] = None
 
     def logo_runner(self) -> src.Run:
         return src.runner(self._logo_file())
 
-    def snapshot(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None) -> dict[str, Any]:
+    def refreshing(self) -> bool:
+        return bool(self._bg and self._bg.is_alive())
+
+    def _adopt(self, snap: dict[str, Any]) -> dict[str, Any]:
+        """Tablodan gelen okumayı bellekteki yerine koyar (yalnız daha yeniyse)."""
         with self._lock:
-            if not fresh and self._snap is not None and time.time() - self._at < TTL:
-                return self._snap
+            if self._snap is None or float(snap.get("at") or 0) > self._at:
+                self._snap, self._at = snap, float(snap.get("at") or 0)
+            return self._snap
+
+    def _refresh(self, engine: Any, tenant: str, fresh: bool, now: Optional[date], since: float) -> dict[str, Any]:
+        """Tek okuma: bu istekten sonra başlamış bir okuma bittiyse onu kullanır. Biten okuma tabloya yazılır."""
+        with self._reading:
+            with self._lock:
+                cur = self._snap
+            if cur is not None and float(cur.get("_started") or 0) >= since:
+                return cur
+            started = time.time()
             snap = self.read(engine, tenant, fresh, now)
-            self._snap, self._at = snap, time.time()
+            snap["_started"] = started
+            with self._lock:
+                self._snap, self._at = snap, float(snap.get("at") or time.time())
+            try:
+                store.read_put(engine, tenant, snap)
+            except Exception as e:  # noqa: BLE001 — okuma bellekte kalır, sonraki tur yine yazar
+                log.warning("supply: son okuma tabloya yazılamadı: %s", e)
             return snap
+
+    def _refresh_later(self, engine: Any, tenant: str, fresh: bool, now: Optional[date], since: float) -> None:
+        with self._lock:
+            if self._bg and self._bg.is_alive():
+                return
+
+            def bg() -> None:
+                try:
+                    self._refresh(engine, tenant, fresh, now, since)
+                except Exception as e:  # noqa: BLE001 — eski okuma ekranda kalır
+                    log.warning("supply: arka plan okuması başarısız: %s", e)
+            self._bg = threading.Thread(target=bg, daemon=True, name="supply-refresh")
+            self._bg.start()
+
+    def snapshot(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None,
+                 wait: bool = False) -> dict[str, Any]:
+        """Son okuma, beklemeden. `fresh` («Verileri yenile»): yenisi arka planda (üretim kartları da tazelenerek)
+        okunur, bu istek eldekini alır. `wait` (gece turu): kaynak beklenerek okunur."""
+        asked = time.time()
+        with self._lock:
+            cur = self._snap
+        if cur is None:
+            try:
+                loaded = store.read_get(engine, tenant)
+            except Exception as e:  # noqa: BLE001 — tablo okunamazsa kaynaktan okunur
+                log.info("supply: son okuma tablodan okunamadı: %s", e)
+                loaded = None
+            cur = self._adopt(loaded) if loaded is not None else None
+        if wait or cur is None:
+            return self._refresh(engine, tenant, fresh, now, asked)
+        stale = time.time() - self._at >= TTL
+        if stale and not self.refreshing():
+            # Gece turu ya da başka bir köprü süreci daha yeni bir okuma yazdıysa önce o alınır.
+            try:
+                at = store.read_at(engine, tenant)
+                if at is not None and at > self._at:
+                    newer = store.read_get(engine, tenant)
+                    if newer is not None:
+                        cur = self._adopt(newer)
+                        stale = time.time() - self._at >= TTL
+            except Exception as e:  # noqa: BLE001
+                log.info("supply: son okuma anı okunamadı: %s", e)
+        if fresh or stale:
+            self._refresh_later(engine, tenant, fresh, now, asked)
+        return cur
 
     def read(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None) -> dict[str, Any]:
         now = now or today()
@@ -950,6 +1023,14 @@ class Source:
                                            src.window_start(now, 24), s["supplierPrefix"])
             receipts = src.read_production_receipts(run, src.firms_between(firms, src.window_start(now, 24), now),
                                                     src.window_start(now, 24))
+            # Tedarikçi sayfasının faturaları: eskiden sayfa açılınca tek cari için Logo'ya gidiliyordu; şimdi turda bir kez.
+            inv_since = src.window_start(now, 12)
+            try:
+                supplier_invoices: Optional[list[dict[str, Any]]] = src.read_all_supplier_invoices(
+                    run, src.firms_between(firms, inv_since, now), s["supplierPrefix"], inv_since)
+            except Exception as e:  # noqa: BLE001 — okunamazsa sayfa eskisi gibi tek cariyi Logo'dan okur
+                log.info("supply: tedarikçi faturaları okunamadı: %s", e)
+                supplier_invoices = None
             kinds = classify(suppliers, s["printerSpecodes"], s["paperSpecodes"], {x["cariKod"] for x in invoices if x.get("cariKod")})
             paper_codes = [k for k, v in kinds.items() if v["tur"] == "kagit"]
             paper_rows: list[dict[str, Any]] = []
@@ -966,7 +1047,7 @@ class Source:
             logo = {"ok": True, "firm": firm, "year": year, "firms": {str(k): v for k, v in firms.items()},
                     "dataEnd": (src.read_data_end(run, firms) or None), "suppliers": suppliers, "planLines": plan_lines,
                     "specodes": specodes, "invoices": invoices, "purchases": purchases, "receipts": receipts,
-                    "paperRows": paper_rows, "kinds": kinds}
+                    "paperRows": paper_rows, "kinds": kinds, "supplierInvoices": supplier_invoices}
         except src.SourceError as e:
             log.warning("supply: Logo okunamadı: %s", e)
             warnings.append("Logo'ya şu an ulaşılamıyor; tedarikçi borcu, fatura eşleşmesi ve alış eğilimi gösterilemiyor.")
@@ -1004,8 +1085,13 @@ class Service:
         self.unit_costs = unit_costs
 
     # ---- ortak
-    def snap(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None) -> dict[str, Any]:
-        return self.source.snapshot(engine, tenant, fresh, now)
+    def snap(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None,
+             wait: bool = False) -> dict[str, Any]:
+        """Son okuma, beklemeden (`wait` yalnız gece turunda)."""
+        return self.source.snapshot(engine, tenant, fresh, now, wait)
+
+    def refreshing(self) -> bool:
+        return self.source.refreshing()
 
     def mapping(self, engine: Any, tenant: str, snap: dict[str, Any]) -> dict[str, dict[str, Any]]:
         s = self.settings()
@@ -1178,14 +1264,18 @@ class Service:
                 for c in snap["cards"] if c.get("printer") in printers and c.get("stage") == "tamam"]
         done.sort(key=lambda x: x.get("depo") or "", reverse=True)
         stats = [x for x in self.printer_stats(snap["cards"], now) if x["printer"] in printers]
-        firms = src.firms_between({int(k): v for k, v in lg["firms"].items()}, src.window_start(now, 12), now)
         rec: Optional[src.Recorder] = None
-        try:
-            rec = src.Recorder(self.source.logo_runner())
-            invoices = src.read_supplier_invoices(rec, firms, code, src.window_start(now, 12))
-        except src.SourceError as e:
-            log.warning("supply: tedarikçi faturaları okunamadı: %s", e)
-            invoices = []
+        if lg.get("supplierInvoices") is not None:
+            # Turda okunmuş bütün tedarikçi faturalarından bu cari (Logo'ya gidilmez; sorgu bilgisi turdaki metin).
+            invoices = src.supplier_invoices_of(lg["supplierInvoices"], code, src.window_start(now, 12))
+        else:
+            firms = src.firms_between({int(k): v for k, v in lg["firms"].items()}, src.window_start(now, 12), now)
+            try:
+                rec = src.Recorder(self.source.logo_runner())
+                invoices = src.read_supplier_invoices(rec, firms, code, src.window_start(now, 12))
+            except src.SourceError as e:
+                log.warning("supply: tedarikçi faturaları okunamadı: %s", e)
+                invoices = []
         buys = purchases_by_supplier([x for x in lg["purchases"] if x["cariKod"] == code], now).get(code)
         kind = lg["kinds"].get(code) or {"tur": "diger", "kaynak": ""}
         return {"kod": code, "unvan": sp["unvan"], "ozelKod": sp["ozelKod"], "tur": kind["tur"], "turKaynak": kind["kaynak"],

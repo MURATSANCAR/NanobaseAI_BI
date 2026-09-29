@@ -6,12 +6,15 @@ birim maliyet ve fiyat `ozellik:tedarik.maliyet`, fatura–kart eşleşmesi ve m
 Yetkisi olmayana alan boş gider (ekran «yetkiniz yok» yazar), tutar sızmaz.
 
 Zamanlayıcı (`timas-supply.timer`, her gece 03:30; `timas-supply-weekly.timer` pazartesi 08:00 ödeme listesi) yalnız
-`POST /api/v1/supply/run-due`'yu çağırır. CRM'e, Logo'ya ve matbaaya yazma/gönderim yoktur.
+`POST /api/v1/supply/run-due`'yu çağırır; tur kaynağı bekleyerek okur ve okumayı `semantic_supply_reads`'e yazar. Ekran
+uçları yalnız o okumayı kullanır, Logo/CRM'i beklemez («Verileri yenile» yenisini arka planda başlatır). CRM'e, Logo'ya ve
+matbaaya yazma/gönderim yoktur.
 """
 from __future__ import annotations
 
 import io
 import logging
+import time
 from datetime import date, datetime
 from typing import Any, Callable, Optional
 
@@ -87,8 +90,21 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
     production = deps["production"]
     settings = lambda: S.settings_from(conf)  # noqa: E731
     source = S.Source(production, deps["logo_file"], deps["crm_file"], lambda: conf("CRM_SCHEMA"), settings)
+    report_fn = deps.get("report_data")
+    report_memo: dict[str, Any] = {"at": 0.0, "data": None}
+
+    def report_data() -> Optional[dict[str, Any]]:
+        """Baskı Öneri önbelleği (büyük JSON dosyası) en çok 5 dakikada bir ayrıştırılır: özet ve yük uçları her istekte
+        dosyayı yeniden okumaz; rakam ve sorgu bilgisi aynı okumadan gelir."""
+        if time.time() - report_memo["at"] < S.TTL:
+            return report_memo["data"]
+        data = report_fn()
+        report_memo.update(at=time.time(), data=data)
+        return data
+
+    report = report_data if report_fn else None
     svc = S.Service(source, settings, match_costs=production_mod.match_costs, printer_stats=plan_mod.printer_stats,
-                    report_data=deps.get("report_data"), decisions=deps.get("decisions"), unit_costs=deps.get("unit_costs"))
+                    report_data=report, decisions=deps.get("decisions"), unit_costs=deps.get("unit_costs"))
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)
@@ -126,7 +142,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         """Sorgu bilgisi bağlamı: yalnız veritabanı adları (bağlantı bilgisi okunmaz), üretim modülü, rapor ve kararlar."""
         return {"logo_db": PV.connection_database(deps["logo_file"]() or None),
                 "crm_db": PV.connection_database(deps["crm_file"]() or None), "production": production,
-                "report_data": deps.get("report_data"), "decisions": deps.get("decisions")}
+                "report_data": report, "decisions": deps.get("decisions")}
 
     def snap_of(engine: Any, tenant: str) -> dict[str, Any]:
         """Uçun az önce kullandığı okuma (5 dk bellekte; yeniden okuma yapmaz)."""
@@ -169,6 +185,11 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         engine, tenant, user, _ = ctx(request)
         out = call(svc.overview, engine, tenant, debt=allowed(user, "ozellik:tedarik.borc"),
                    cost=allowed(user, "ozellik:tedarik.maliyet"), fresh=fresh())
+        out["yenileniyor"] = svc.refreshing()     # «Verileri yenile»: yeni okuma arka planda
+        if out["yenileniyor"]:
+            # okumanın uyarı listesi paylaşılır: kopyasına eklenir
+            out["uyarilar"] = [*(out.get("uyarilar") or []), "Veriler arka planda tazeleniyor; birkaç dakika sonra yeniden "
+                                                               "açtığınızda yeni okuma görünür."]
         return PV.bagla(out, lambda: K.for_overview(engine, tenant, snap_of(engine, tenant), out, kdeps()))
 
     @app.get(f"{P}/sources")

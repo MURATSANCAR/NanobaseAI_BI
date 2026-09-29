@@ -58,6 +58,8 @@ SOURCES = [
     ("logo_baski_faturasi", "logo", "Matbaa baskı faturaları", "Komple Baskı Giderleri satırları; özel kod = stok kodu."),
     ("logo_alis_fatura", "logo", "Alış faturaları", "Tedarikçi × ay, TRCODE 1/4, NETTOTAL (KDV dahil)."),
     ("logo_tedarikci_faturalar", "logo", "Tedarikçinin faturaları", "Tek tedarikçinin alış faturaları."),
+    ("logo_tedarikci_faturalar_tumu", "logo", "Tedarikçilerin faturaları",
+     "Bütün tedarikçilerin son 12 ay alış faturaları (okuma turunda); tedarikçi sayfası kendi carisini süzer."),
     ("logo_kagit_alis_satir", "logo", "Kağıt alış satırları", "Kağıtçı carilerinden mal alımı: miktar, birim, tutar."),
     ("logo_uretim_giris", "logo", "Üretimden giriş", "Ay bazında basılan adet (gerçek giriş fişi)."),
     ("crm_kart_teknik", "crm", "Üretim kartı teknik alanları", "Forma, sayfa, cilt, baskı tipi, parça başına kağıt ihtiyacı."),
@@ -305,6 +307,30 @@ def read_supplier_invoices(run: Run, firms: list[str], code: str, since: date) -
             out.append({"tarih": d.isoformat() if d else None, "no": text(r.get("no")), "tur": int(r.get("tur") or 0),
                         "tutar": round(num(r.get("tutar")), 2), "kdv": round(num(r.get("kdv")), 2),
                         "aciklama": text(r.get("aciklama"))})
+    out.sort(key=lambda x: x["tarih"] or "", reverse=True)
+    return out
+
+
+def read_all_supplier_invoices(run: Run, firms: list[str], prefix_: str, since: date) -> list[dict[str, Any]]:
+    """Bütün tedarikçilerin (önekli cariler) alış faturaları, okuma turunda bir kez; tedarikçi sayfası kendi carisini
+    süzer (`read_supplier_invoices` ile aynı kolonlar ve tanım + cari kodu)."""
+    out: list[dict[str, Any]] = []
+    for f in firms:
+        sql = fill("logo_tedarikci_faturalar_tumu", firma=firm(f), donem=period("01"), on_ek=prefix(prefix_),
+                   bas=since.isoformat())
+        for r in lower_keys(run(sql)):
+            d = day(r.get("tarih"))
+            out.append({"cariKod": text(r.get("cari_kod")) or "", "tarih": d.isoformat() if d else None,
+                        "no": text(r.get("no")), "tur": int(r.get("tur") or 0), "tutar": round(num(r.get("tutar")), 2),
+                        "kdv": round(num(r.get("kdv")), 2), "aciklama": text(r.get("aciklama"))})
+    return out
+
+
+def supplier_invoices_of(rows: list[dict[str, Any]], code: str, since: date) -> list[dict[str, Any]]:
+    """Turda okunmuş faturalardan tek tedarikçininki; `read_supplier_invoices` cevabıyla aynı biçim ve sıra."""
+    s = since.isoformat()
+    out = [{k: v for k, v in x.items() if k != "cariKod"} for x in rows
+           if x.get("cariKod") == code and x.get("tarih") and x["tarih"] >= s]
     out.sort(key=lambda x: x["tarih"] or "", reverse=True)
     return out
 

@@ -1,7 +1,8 @@
 """M52 Tedarik ve baskı: ekrandaki her rakamın sorgu bilgisi (ortak sözleşme `provenance.py`).
 
-Rakamlar `supply.Source` okumasından (üretim kartları + CRM teknik alanlar + Logo tedarikçi/fatura/giriş; 5 dk bellek,
-gece `timas-supply.timer`) ve portal kayıtlarından (kapasite, öneri, eşleme, fatura bağı) gelir. Gösterilen Logo/CRM
+Rakamlar `supply.Source` okumasından (üretim kartları + CRM teknik alanlar + Logo tedarikçi/fatura/giriş; gece
+`timas-supply.timer` ve arka plan tazelemesi son okuma tablosuna `semantic_supply_reads` yazar, uç oradan okur —
+`tedarik.portal.okuma`, kökeni Logo/CRM sorguları) ve portal kayıtlarından (kapasite, öneri, eşleme, fatura bağı) gelir. Gösterilen Logo/CRM
 SQL'i o okumada ÇALIŞAN metnin kendisidir (`snap["runs"]`: firma kopyası, CRM şeması, pencere başı yerinde; satır, süre
 ve an ile) — `/sources` panelinin eski şablon metni yerine. Okunmamış kaynağın kaydı açılmaz. Borç hesabı FIFO
 yaklaşımıyla Python'da yapılır; formül metni bunu söyler.
@@ -98,7 +99,14 @@ class Supply:
                 _sid(rid), title + (f" · Logo firma {firm}" if firm else ""), conn, r["sql"],
                 database=deps.get("logo_db") if conn == "logo" else deps.get("crm_db"), rows=r.get("rows"), ms=r.get("ms"),
                 ran_at=r.get("at"), period=f"Logo firma {firm}" if firm else None,
-                description=(desc + " Sonuç tedarik okumasının önbelleğinde tutulur (beş dakika, gece yenilenir).").strip())
+                description=(desc + " Sorgu gece turunda ya da arka plan tazelemesinde çalışır, sonucu son tedarik okuması "
+                             "tablosunda tutulur (çalıştığı an satırda).").strip())
+        snap_ids = [v for rid, v in self.ids.items() if rid in (snap.get("runs") or {})]
+        if snap_ids:
+            # Ucun çalıştırdığı portal okuması: son okuma tablosu; kökeni yukarıdaki Logo/CRM sorguları.
+            self.k.portal("tedarik.portal.okuma", "Son tedarik okuması", store.read_stmt(tenant), engine, origin=snap_ids,
+                          description="Gece turunun ya da arka plan tazelemesinin yazdığı son okuma (üretim kartları, CRM "
+                                      "teknik alanlar, Logo tedarikçi ve fatura). Uç kaynağı beklemez, bu satırı okur.")
 
     def s(self, *bases: str) -> list[str]:
         """Okunmuş kaynaklar; firma kopyası başına okunan kaynakta hepsi."""
@@ -319,8 +327,9 @@ def for_supplier(engine: Any, tenant: str, snap: dict[str, Any], out: dict[str, 
     k = x.k
     card_cost = h(k, "kartTutar", F_KART + " " + F_KART_TUTAR, x.cards() + x.s("logo_baski_faturasi"))
     bind(k, {"yaslandirma": x.borc(), "alis": x.alis(),
+             # Turda okunan bütün tedarikçi faturaları (cari süzgeci sayfada); tur okuyamadıysa sayfanın tek cari sorgusu.
              "faturalar": h(k, "faturalar", F_ALIS + " Liste: son 12 ayın faturaları, tutar ve KDV satır satır.",
-                            x.s("logo_tedarikci_faturalar")),
+                            x.s("logo_tedarikci_faturalar", "logo_tedarikci_faturalar_tumu")),
              "acikIsler": card_cost, "bitenIsler": card_cost, "karne": x.karne()})
     return k
 
