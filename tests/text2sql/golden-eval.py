@@ -149,4 +149,11 @@ def report(rows: list[dict], out: str) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    rc = main(sys.argv[1:])
+    # The runtime leaves native-library threads behind, and tearing the interpreter down under them
+    # segfaulted about one shard in six (exit 139) after the result was already written; the gate then
+    # reported «ölçüm çalışmadı» for a measurement that had finished (2026-09-29). Nothing is left to
+    # clean up once the report is on disk.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(rc)
