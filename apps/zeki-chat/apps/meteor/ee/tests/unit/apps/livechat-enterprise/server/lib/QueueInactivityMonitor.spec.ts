@@ -53,7 +53,7 @@ describe('OmnichannelQueueInactivityMonitorClass', () => {
 	describe('getZekiChatUser', () => {
 		it('should return zeki.bot user', async () => {
 			const qclass = new OmnichannelQueueInactivityMonitorClass();
-			await qclass.getRocketCatUser();
+			await qclass.getZekiBotUser();
 
 			expect(modelsMock.Users.findOneById.calledWith('zeki.bot')).to.be.true;
 		});

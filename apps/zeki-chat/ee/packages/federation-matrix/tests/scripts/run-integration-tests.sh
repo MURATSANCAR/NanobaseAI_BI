@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
             USE_PREBUILT_IMAGE=true
             # If no IMAGE value is provided (or next token is another flag), default to latest
             if [[ -z "${2:-}" || "$2" == -* ]]; then
-                PREBUILT_IMAGE="zekichat/rocket.chat:latest"
+                PREBUILT_IMAGE="zeki-ai-chat:8.5.3"
                 shift 1
             else
                 PREBUILT_IMAGE="$2"
@@ -93,8 +93,8 @@ while [[ $# -gt 0 ]]; do
             echo "  --help, -h                Show this help message"
             echo ""
             echo "By default, builds ZEKI AI CHAT locally and runs the 'test' profile"
-            echo "Use --image to test against a pre-built image (e.g., --image zekichat/rocket.chat:latest)"
-            echo "If --image is provided without a value, defaults to zekichat/rocket.chat:latest"
+            echo "Use --image to test against a pre-built image (e.g., --image zeki-ai-chat:8.5.3)"
+            echo "If --image is provided without a value, defaults to zeki-ai-chat:8.5.3"
             echo "Use --element to run all services including Element web client"
             echo "Use --no-test to start containers and skip running tests"
             exit 0

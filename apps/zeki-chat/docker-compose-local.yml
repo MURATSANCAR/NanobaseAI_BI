@@ -1,7 +1,7 @@
 services:
   zekichat:
     platform: linux/amd64
-    image: ghcr.io/${LOWERCASE_REPOSITORY}/rocket.chat:${DOCKER_TAG}
+    image: zeki-ai-chat:8.5.3
     environment:
       - TEST_MODE=true
       - EXIT_UNHANDLEDPROMISEREJECTION=true

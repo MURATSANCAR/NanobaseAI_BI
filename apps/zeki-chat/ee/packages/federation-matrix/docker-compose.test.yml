@@ -82,7 +82,7 @@ services:
     build:
       context: ${ZEKICHAT_BUILD_CONTEXT:-./test/dist}
       dockerfile: ${ZEKICHAT_DOCKERFILE:-../../../apps/meteor/.docker/Dockerfile.alpine}
-    image: ${ZEKICHAT_IMAGE:-zekichat/rocket.chat:latest}
+    image: ${ZEKICHAT_IMAGE:-zeki-ai-chat:8.5.3}
     profiles:
       - test
       - element

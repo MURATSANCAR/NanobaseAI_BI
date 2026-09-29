@@ -71,7 +71,13 @@ async function main() {
 			for (const plan of plans) {
 				if (plan.remove) { await collection.deleteOne({ _id: plan.id }); report.obsoleteSettingsRemoved++; }
 				else if (String(plan.next._id) !== String(plan.id)) {
-					await collection.insertOne(plan.next); await collection.deleteOne({ _id: plan.id });
+					const session = client.startSession();
+					try {
+						await session.withTransaction(async () => {
+							await collection.deleteOne({ _id: plan.id }, { session });
+							await collection.insertOne(plan.next, { session });
+						});
+					} finally { await session.endSession(); }
 				} else await collection.replaceOne({ _id: plan.id }, plan.next);
 			}
 			if (renameCollection(name) !== name) await collection.rename(renameCollection(name), { dropTarget: false });

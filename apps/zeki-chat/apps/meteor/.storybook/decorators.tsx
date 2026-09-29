@@ -9,15 +9,8 @@ import TranslationContextMock from '../client/stories/contexts/TranslationContex
 const MockedAppRoot = mockAppRoot().build();
 
 export const zekiChatDecorator: Decorator = (fn, { parameters }) => {
-	const linkElement = document.getElementById('theme-styles') || document.createElement('link');
-	if (linkElement.id !== 'theme-styles') {
-		require('../app/theme/client/main.css');
-		require('../app/theme/client/zekichat.font.css');
-		linkElement.setAttribute('id', 'theme-styles');
-		linkElement.setAttribute('rel', 'stylesheet');
-		linkElement.setAttribute('href', 'https://open.rocket.chat/theme.css');
-		document.head.appendChild(linkElement);
-	}
+	require('../app/theme/client/main.css');
+	require('../app/theme/client/zekichat.font.css');
 
 	return (
 		<MockedAppRoot>

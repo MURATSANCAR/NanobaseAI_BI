@@ -415,13 +415,13 @@ export class OmnichannelTranscript extends ServiceClass implements IOmnichannelT
 
 		try {
 			const { rid } = await roomService.createDirectMessage({ to: details.userId, from: 'zeki.bot' });
-			const [rocketCatFile, transcriptFile] = await this.uploadFiles({
+			const [zekiBotFile, transcriptFile] = await this.uploadFiles({
 				streamParam: Readable.from(stream),
 				roomIds: [rid, details.rid],
 				data,
 				transcriptText,
 			});
-			await this.pdfComplete({ details, transcriptFile, rocketCatFile, i18n });
+			await this.pdfComplete({ details, transcriptFile, zekiBotFile, i18n });
 		} catch (error) {
 			void this.pdfFailed({ details, e: error as Error, i18n });
 		}
@@ -485,12 +485,12 @@ export class OmnichannelTranscript extends ServiceClass implements IOmnichannelT
 	private async pdfComplete({
 		details,
 		transcriptFile,
-		rocketCatFile,
+		zekiBotFile,
 		i18n,
 	}: {
 		details: WorkDetailsWithSource;
 		transcriptFile: IUpload;
-		rocketCatFile: IUpload;
+		zekiBotFile: IUpload;
 		i18n: i18n;
 	}): Promise<void> {
 		this.log.info({
@@ -520,9 +520,9 @@ export class OmnichannelTranscript extends ServiceClass implements IOmnichannelT
 				}),
 				// Send the file to the user who requested it, so they can download it
 				uploadService.sendFileMessage({
-					roomId: rocketCatFile.rid || '',
+					roomId: zekiBotFile.rid || '',
 					userId: 'zeki.bot',
-					file: rocketCatFile,
+					file: zekiBotFile,
 					message: {
 						// Translate from service
 						msg: i18n.t('pdf_success_message'),

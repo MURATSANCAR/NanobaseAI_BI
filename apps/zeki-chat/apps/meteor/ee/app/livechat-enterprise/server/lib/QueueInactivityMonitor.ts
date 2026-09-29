@@ -47,7 +47,7 @@ export class OmnichannelQueueInactivityMonitorClass {
 		this.bindedCloseRoom = this.closeRoom.bind(this);
 	}
 
-	private async getRocketCatUser(): Promise<IUser | null> {
+	private async getZekiBotUser(): Promise<IUser | null> {
 		return Users.findOneById('zeki.bot');
 	}
 
@@ -104,7 +104,7 @@ export class OmnichannelQueueInactivityMonitorClass {
 		return closeRoom({
 			comment,
 			room,
-			user: await this.getRocketCatUser(),
+			user: await this.getZekiBotUser(),
 		});
 	}
 

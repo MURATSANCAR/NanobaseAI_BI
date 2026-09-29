@@ -18,7 +18,7 @@ import { i18n } from '../../lib/i18n';
 
 const livechatQuoteRegExp = /^\[\s\]\(https?:\/\/.+\/live\/.+\?msg=(?<id>.+?)\)\s(?<text>.+)/s;
 
-const getRocketCatUser = async (): Promise<IUser | null> => Users.findOneById('zeki.bot');
+const getZekiBotUser = async (): Promise<IUser | null> => Users.findOneById('zeki.bot');
 
 const language = settings.get<string>('Language') || 'en';
 const t = i18n.getFixedT(language);
@@ -49,7 +49,7 @@ const sendErrorReplyMessage = async (error: string, options: any) => {
 		ts: new Date(),
 	};
 
-	const user = await getRocketCatUser();
+	const user = await getZekiBotUser();
 	if (!user) {
 		return;
 	}
@@ -69,7 +69,7 @@ const sendSuccessReplyMessage = async (options: { room: IOmnichannelRoom; msgId:
 		ts: new Date(),
 	};
 
-	const user = await getRocketCatUser();
+	const user = await getZekiBotUser();
 	if (!user) {
 		return;
 	}
@@ -212,7 +212,7 @@ callbacks.add(
 			return message;
 		}
 
-		const user = await getRocketCatUser();
+		const user = await getZekiBotUser();
 		if (!user) {
 			return message;
 		}
