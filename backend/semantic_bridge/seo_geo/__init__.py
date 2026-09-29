@@ -1516,7 +1516,8 @@ def register(app, runtime, authorize, session_user):
     hazir.mesgul(seo, lambda: bool(seo.crm_state.get("running")))
     seo.nightly.append(("hazir", lambda: hazir.isit_arkada(seo)))
     # Köprü açılışında da: kaydı olmayan ya da girdisi değişmiş hesap arkada hesaplanır, güncel kayıt belleğe alınır.
-    hazir.acilis(seo)
+    # Çağrı köprünün arka plan açılışında (app.py `_boot_services`), çalışma ortamı kurulduktan sonra: kayıt sırasında
+    # çalışma ortamı istenirse köprünün açılışı onu bekler.
     # Sorgu bilgisi (2026-09-28): SEO & GEO okuma uçlarının cevabına «kaynaklar» (çalışan SQL + hesap) eklenir.
     from . import kaynak as sorgu_kaynak
 

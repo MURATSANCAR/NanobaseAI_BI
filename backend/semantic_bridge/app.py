@@ -2395,6 +2395,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         app.state.management_reports.start()
         if os.environ.get("SEMANTIC_LLM_JOBS", "1").strip() not in ("0", "false", "no", "off"):
             r.jobs.start()
+        # SEO & GEO hazır hesapları: kaydı olmayan ya da girdisi değişmiş hesap arkada hesaplanır (seo_geo/hazir.py).
+        from semantic_bridge.seo_geo import hazir as seo_hazir
+        seo_hazir.acilis(app.state.seo_geo)
 
     def _boot_catalog_services(r: Runtime) -> None:
         log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(r.profiles), r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id).get("CERTIFIED"), bool(r.llm), bool(r.connector))

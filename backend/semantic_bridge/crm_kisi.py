@@ -69,7 +69,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _ready_lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)   # sürüm damgası: tanım değişmediyse açılışta veritabanına sorulmaz
         _ready.add(id(engine))
 
 
