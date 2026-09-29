@@ -137,7 +137,7 @@ export default function MemoryBank() {
           </label>
         )}
         <p className="mt-2 px-1 text-[11px] leading-snug text-canvas-muted">
-          TMX, çeviri programlarının (Trados, memoQ, OmegaT, Phrase) bellek dosyası biçimidir. Bölgesel dil kodu (en-US, tr-TR) seçilen dile sayılır; bellekte zaten olan cümle çifti ikinci kez yazılmaz. İndirilen dosyada bu dil çiftindeki bütün
+          TMX, çevirmenlerin kullandığı çeviri programlarının ortak bellek dosyası biçimidir. Bölgesel dil kodu (en-US, tr-TR) seçilen dile sayılır; bellekte zaten olan cümle çifti ikinci kez yazılmaz. İndirilen dosyada bu dil çiftindeki bütün
           işlerin çevrilmiş ve onaylı segmentleri vardır.
         </p>
         {notice && (

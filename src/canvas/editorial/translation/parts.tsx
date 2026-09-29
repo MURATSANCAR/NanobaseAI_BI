@@ -110,7 +110,7 @@ export function SegmentHelp() {
 export function XliffHelp() {
   return (
     <Explain label="XLIFF" title="XLIFF dosyası">
-      Çevirmenlerin kullandığı masaüstü çeviri programlarının (Trados, memoQ, OmegaT, Phrase) açtığı ortak dosya biçimi. Portala girmeyen çevirmene bu
+      Çevirmenlerin kullandığı masaüstü çeviri programlarının açtığı ortak dosya biçimi. Portala girmeyen çevirmene bu
       dosyayı verirsiniz; çevirip geri gönderdiği dosyayı «XLIFF yükle» ile alırsınız.
     </Explain>
   );

@@ -293,7 +293,7 @@ export default function TermBank() {
           CSV sütunları: kaynak; hedef; kullanılmayacak karşılıklar (; ile); not. İçe aktarım seçili dil çiftine yazılır, var olan terimi günceller.
         </p>
         <p className="mt-1 px-1 text-[11px] leading-snug text-canvas-muted">
-          TBX (MultiTerm, memoQ, Phrase): tercih edilen karşılık ilk, kabul edilenler «|» ile eklenir; kullanımdan kalkmış terim kullanılmayacak karşılık olur. TBX indir yalnız onaylı terimleri verir.
+          TBX (çeviri programlarının ortak terim dosyası): tercih edilen karşılık ilk, kabul edilenler «|» ile eklenir; kullanımdan kalkmış terim kullanılmayacak karşılık olur. TBX indir yalnız onaylı terimleri verir.
         </p>
         {notice && (
           <div className="mt-2">
