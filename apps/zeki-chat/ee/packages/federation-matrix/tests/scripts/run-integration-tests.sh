@@ -126,7 +126,7 @@ log_error() {
 
 docker_logs() {
     echo ""
-    echo "ROCKET.CHAT (rc1) LOGS:"
+    echo "chat.example.invalid (rc1) LOGS:"
     echo "----------------------------------------"
     docker compose -f "$DOCKER_COMPOSE_FILE" --profile "$COMPOSE_PROFILE" logs rc1
 

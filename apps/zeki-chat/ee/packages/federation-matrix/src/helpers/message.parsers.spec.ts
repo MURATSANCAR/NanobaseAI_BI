@@ -20,24 +20,24 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 		it('should parse the mentions correctly when there is some room mention in RC format', async () => {
 			expect(
 				await toInternalMessageFormat({
-					rawMessage: "hello @marcos.defendi:tests-b.fed.rocket.chat, here's from Server A, @all, @marcos.defendi:tests-b.fed.rocket.chat",
+					rawMessage: "hello @marcos.defendi:chat.example.invalid, here's from Server A, @all, @marcos.defendi:chat.example.invalid",
 					formattedMessage:
-						'<p>hello <a href="https://matrix.to/#/@marcos.defendi:tests-b.fed.rocket.chat">@marcos.defendi:tests-b.fed.rocket.chat</a>, here&#39;s from Server A, <a href="https://matrix.to/#/!nAWjvnrjAoUWVMpqTy:tests-b.fed.rocket.chat">!nAWjvnrjAoUWVMpqTy:tests-b.fed.rocket.chat</a>, <a href="https://matrix.to/#/@marcos.defendi:tests-b.fed.rocket.chat">@marcos.defendi:tests-b.fed.rocket.chat</a></p>',
+						'<p>hello <a href="https://matrix.to/#/@marcos.defendi:chat.example.invalid">@marcos.defendi:chat.example.invalid</a>, here&#39;s from Server A, <a href="https://matrix.to/#/!nAWjvnrjAoUWVMpqTy:chat.example.invalid">!nAWjvnrjAoUWVMpqTy:chat.example.invalid</a>, <a href="https://matrix.to/#/@marcos.defendi:chat.example.invalid">@marcos.defendi:chat.example.invalid</a></p>',
 					homeServerDomain: 'localDomain',
 					senderExternalId: '@user:externalDomain.com',
 				}),
-			).toBe("hello @marcos.defendi:tests-b.fed.rocket.chat, here's from Server A, @all, @marcos.defendi:tests-b.fed.rocket.chat");
+			).toBe("hello @marcos.defendi:chat.example.invalid, here's from Server A, @all, @marcos.defendi:chat.example.invalid");
 		});
 		it('should parse the mentions correctly when there is some room mention in Element format', async () => {
 			expect(
 				await toInternalMessageFormat({
 					rawMessage: "hello marcos.defendi, here's from Server A, #test-thread:matrix.org, marcos.defendi",
 					formattedMessage:
-						'hello <a href="https://matrix.to/#/@marcos.defendi:tests-b.fed.rocket.chat">marcos.defendi</a>, here\'s from Server A, <a href="https://matrix.to/#/#test-thread:matrix.org">#test-thread:matrix.org</a>, <a href="https://matrix.to/#/@marcos.defendi:tests-b.fed.rocket.chat">marcos.defendi</a>',
+						'hello <a href="https://matrix.to/#/@marcos.defendi:chat.example.invalid">marcos.defendi</a>, here\'s from Server A, <a href="https://matrix.to/#/#test-thread:matrix.org">#test-thread:matrix.org</a>, <a href="https://matrix.to/#/@marcos.defendi:chat.example.invalid">marcos.defendi</a>',
 					homeServerDomain: 'localDomain',
 					senderExternalId: '@user:externalDomain.com',
 				}),
-			).toBe("hello @marcos.defendi:tests-b.fed.rocket.chat, here's from Server A, @all, @marcos.defendi:tests-b.fed.rocket.chat");
+			).toBe("hello @marcos.defendi:chat.example.invalid, here's from Server A, @all, @marcos.defendi:chat.example.invalid");
 		});
 
 		it('should parse the user mention correctly when using the RC format', async () => {
@@ -126,11 +126,11 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				await toInternalMessageFormat({
 					rawMessage: `hey User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`,
 					formattedMessage:
 						'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item </code></pre>',
@@ -139,11 +139,11 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				}),
 			).toBe(`hey @user, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`);
 		});
 
@@ -152,11 +152,11 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				await toInternalMessageFormat({
 					rawMessage: `hey, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`,
 					formattedMessage:
 						'<p>hey, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item </code></pre>',
@@ -165,11 +165,11 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				}),
 			).toBe(`hey, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`);
 		});
 
@@ -178,11 +178,11 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				await toInternalMessageFormat({
 					rawMessage: `hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`,
 					formattedMessage:
 						'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item </code></pre>',
@@ -191,11 +191,11 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				}),
 			).toBe(`hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`);
 		});
 
@@ -204,14 +204,14 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				await toInternalMessageFormat({
 					rawMessage: `hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 					`,
 					formattedMessage:
 						'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet </code></pre>',
@@ -220,13 +220,13 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				}),
 			).toBe(`hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
+
 					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet`);
 		});
 
@@ -235,14 +235,14 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				await toInternalMessageFormat({
 					rawMessage: `@user, hello Remote User Real Name, here's @user, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 					`,
 					formattedMessage:
 						'<p><a href="https://matrix.to/#/@user:externalDomain.com">@user:externalDomain.com</a>, hello <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, here\'s <a href="https://matrix.to/#/@user:externalDomain.com">@user:externalDomain.com</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet </code></pre>',
@@ -252,13 +252,13 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			)
 				.toBe(`@user:externalDomain.com, hello @remoteuser:matrix.org, here's @user:externalDomain.com, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
+
 					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet`);
 		});
 
@@ -279,14 +279,14 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				await toInternalMessageFormat({
 					rawMessage: `hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 
 					marcos.defendi@email.com
 					`,
@@ -297,14 +297,14 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				}),
 			).toBe(`hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 
 					marcos.defendi@email.com`);
 		});
@@ -313,97 +313,97 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			expect(
 				await toInternalMessageFormat({
 					rawMessage: `hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\`
 
 				`,
 					formattedMessage:
-						'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](rocket.chat) [ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@rocket.chat +55991999999 `Inline code` ```typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); ``` </code></pre>',
+						'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](chat.example.invalid) [ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@chat.example.invalid +55991999999 `Inline code` ```typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); ``` </code></pre>',
 					homeServerDomain: 'localDomain.com',
 					senderExternalId: '@user:externalDomain.com',
 				}),
 			).toBe(`hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\``);
 		});
 
@@ -411,47 +411,47 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			expect(
 				await toInternalMessageFormat({
 					rawMessage: `hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\`
 					😀
 					😀
@@ -459,52 +459,52 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 					😀
 				`,
 					formattedMessage:
-						'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](rocket.chat) [ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@rocket.chat +55991999999 `Inline code` ```typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); ``` 😀 😀 😀 😀 </code></pre>',
+						'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](chat.example.invalid) [ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@chat.example.invalid +55991999999 `Inline code` ```typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); ``` 😀 😀 😀 😀 </code></pre>',
 					homeServerDomain: 'localDomain.com',
 					senderExternalId: '@user:externalDomain.com',
 				}),
 			).toBe(`hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\`
 					😀
 					😀
@@ -547,7 +547,7 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 		});
 
 		it('should parse the nested quotes correctly', async () => {
-			const rawMessage = '> <@marcos.defendi:tests-a.fed.rocket.chat>\n> test\nhello nested quote';
+			const rawMessage = '> <@marcos.defendi:chat.example.invalid>\n> test\nhello nested quote';
 			const nested =
 				'<mx-reply><blockquote><a href="https://matrix.to/#/externalRoomId/eventToReplyToId">In reply to</a> <a href="https://matrix.to/#/originalEventSender">originalEventSender</a><br>test</blockquote></mx-reply>hello nested quote';
 
@@ -598,11 +598,11 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 		it('should parse correctly a message containing both local mentions + some markdown', async () => {
 			const rawMessage = `> <@originalEventSender:localDomain.com> Quoted message\n\n hey User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 							# List 1:
-							**Ordered List** 
+							**Ordered List**
 
-							1. List Item 
-							2. List Item 
-							3. List Item 
+							1. List Item
+							2. List Item
+							3. List Item
 							4. List Item`;
 			const formattedMessage = `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item </code></pre>`;
 
@@ -617,22 +617,22 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			)
 				.toBe(`[ ](http://localhost:3000/group/1?msg=2354543564) hey @user, how are you? Hope **you** __are__ doing well, please see the list:
 							# List 1:
-							**Ordered List** 
+							**Ordered List**
 
-							1. List Item 
-							2. List Item 
-							3. List Item 
+							1. List Item
+							2. List Item
+							3. List Item
 							4. List Item`);
 		});
 
 		it('should parse correctly a message containing both external mentions + some markdown', async () => {
 			const rawMessage = `> <@originalEventSender:localDomain.com> Quoted message\n\n hey, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 							# List 1:
-							**Ordered List** 
+							**Ordered List**
 
-							1. List Item 
-							2. List Item 
-							3. List Item 
+							1. List Item
+							2. List Item
+							3. List Item
 							4. List Item`;
 			const formattedMessage = `${quotedMessage}<p>hey, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item </code></pre>`;
 
@@ -647,25 +647,25 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			)
 				.toBe(`[ ](http://localhost:3000/group/1?msg=2354543564) hey, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 							# List 1:
-							**Ordered List** 
+							**Ordered List**
 
-							1. List Item 
-							2. List Item 
-							3. List Item 
+							1. List Item
+							2. List Item
+							3. List Item
 							4. List Item`);
 		});
 
 		it('should parse correctly a message containing mentions for the user himself + external mentions', async () => {
 			const rawMessage = `> <@originalEventSender:localDomain.com> Quoted message\n\n @user, hello Remote User Real Name, here's @user, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 					`;
 			const formattedMessage = `${quotedMessage}<p><a href="https://matrix.to/#/@user:externalDomain.com">@user:externalDomain.com</a>, hello <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, here\'s <a href="https://matrix.to/#/@user:externalDomain.com">@user:externalDomain.com</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet </code></pre>`;
 			expect(
@@ -679,13 +679,13 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			)
 				.toBe(`[ ](http://localhost:3000/group/1?msg=2354543564) @user:externalDomain.com, hello @remoteuser:matrix.org, here's @user:externalDomain.com, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
+
 					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet`);
 		});
 
@@ -706,11 +706,11 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 		it('should parse correctly a message containing both local mentions + external mentions + some markdown', async () => {
 			const rawMessage = `> <@originalEventSender:localDomain.com> Quoted message\n\n hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 						# List 1:
-						**Ordered List** 
+						**Ordered List**
 
-						1. List Item 
-						2. List Item 
-						3. List Item 
+						1. List Item
+						2. List Item
+						3. List Item
 						4. List Item`;
 			const formattedMessage = `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item </code></pre>`;
 
@@ -725,25 +725,25 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			)
 				.toBe(`[ ](http://localhost:3000/group/1?msg=2354543564) hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 						# List 1:
-						**Ordered List** 
+						**Ordered List**
 
-						1. List Item 
-						2. List Item 
-						3. List Item 
+						1. List Item
+						2. List Item
+						3. List Item
 						4. List Item`);
 		});
 
 		it('should parse correctly a message containing both mentions + some quoting inside the message', async () => {
 			const rawMessage = `> <@originalEventSender:localDomain.com> Quoted message\n\n hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 					`;
 			const formattedMessage = `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see the list: # List 1: <strong>Ordered List</strong> </p> <pre><code> 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet </code></pre>`;
 
@@ -758,27 +758,27 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			)
 				.toBe(`[ ](http://localhost:3000/group/1?msg=2354543564) hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
+
 					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet`);
 		});
 
 		it('should parse correctly a message containing both mentions + some quoting inside the message + an email inside the message', async () => {
 			const rawMessage = `> <@originalEventSender:localDomain.com> Quoted message\n\n hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 
 					marcos.defendi@email.com
 					`;
@@ -795,64 +795,64 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 			)
 				.toBe(`[ ](http://localhost:3000/group/1?msg=2354543564) hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 
 					marcos.defendi@email.com`);
 		});
 
 		it('should parse correctly a message containing a message with mentions + the whole markdown spec', async () => {
 			const rawMessage = `> <@originalEventSender:localDomain.com> Quoted message\n\n hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\`
 			`;
-			const formattedMessage = `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](rocket.chat) [ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@rocket.chat +55991999999 \`Inline code\` \`\`\`typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); \`\`\` </code></pre>`;
+			const formattedMessage = `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](chat.example.invalid) [ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@chat.example.invalid +55991999999 \`Inline code\` \`\`\`typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); \`\`\` </code></pre>`;
 
 			expect(
 				await toInternalQuoteMessageFormat({
@@ -864,100 +864,100 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				}),
 			)
 				.toBe(`[ ](http://localhost:3000/group/1?msg=2354543564) hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\``);
 		});
 
 		it('should parse correctly a message containing a message with mentions + the whole markdown spec + emojis', async () => {
 			const rawMessage = `> <@originalEventSender:localDomain.com> Quoted message\n\n hey User Real Name, here its Remote User Real Name, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\`
 					😀
 					😀
 					😀
 					😀
 		`;
-			const formattedMessage = `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](rocket.chat) [ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@rocket.chat +55991999999 \`Inline code\` \`\`\`typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); \`\`\` 😀 😀 😀 😀 </code></pre>`;
+			const formattedMessage = `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">User Real Name</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">Remote User Real Name</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](chat.example.invalid) [ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@chat.example.invalid +55991999999 \`Inline code\` \`\`\`typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); \`\`\` 😀 😀 😀 😀 </code></pre>`;
 
 			expect(
 				await toInternalQuoteMessageFormat({
@@ -969,47 +969,47 @@ describe('Federation - Infrastructure - Matrix - RocketTextParser', () => {
 				}),
 			)
 				.toBe(`[ ](http://localhost:3000/group/1?msg=2354543564) hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\`
 					😀
 					😀
@@ -1130,11 +1130,11 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 				await toExternalMessageFormat({
 					message: `hey @user, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`,
 					externalRoomId: 'externalRoomId',
 					homeServerDomain: 'localDomain.com',
@@ -1149,11 +1149,11 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 				await toExternalMessageFormat({
 					message: `hey, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`,
 					externalRoomId: 'externalRoomId',
 					homeServerDomain: 'localDomain.com',
@@ -1168,11 +1168,11 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 				await toExternalMessageFormat({
 					message: `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item`,
 					externalRoomId: 'externalRoomId',
 					homeServerDomain: 'localDomain.com',
@@ -1187,14 +1187,14 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 				await toExternalMessageFormat({
 					message: `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 					`,
 					externalRoomId: 'externalRoomId',
 					homeServerDomain: 'localDomain.com',
@@ -1209,14 +1209,14 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 				await toExternalMessageFormat({
 					message: `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 
 					marcos.defendi@email.com
 					`,
@@ -1233,14 +1233,14 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 				await toExternalMessageFormat({
 					message: `@user, hello @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 					# List 1:
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
 					4. List Item
-					
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 
 					marcos.defendi@email.com
 					`,
@@ -1256,47 +1256,47 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 			expect(
 				await toExternalMessageFormat({
 					message: `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\`
 
 				`,
@@ -1304,7 +1304,7 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 					homeServerDomain: 'localDomain.com',
 				}),
 			).toBe(
-				'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">@user:localDomain.com</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">@remoteuser:matrix.org</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](rocket.chat) [ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@rocket.chat +55991999999 `Inline code` ```typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); ``` </code></pre>',
+				'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">@user:localDomain.com</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">@remoteuser:matrix.org</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](chat.example.invalid) [ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@chat.example.invalid +55991999999 `Inline code` ```typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); ``` </code></pre>',
 			);
 		});
 
@@ -1312,47 +1312,47 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 			expect(
 				await toExternalMessageFormat({
 					message: `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see:
-					# Heading 1 
+					# Heading 1
 
-					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 					## Heading 2
 
 					_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					### Heading 3 
+					### Heading 3
 
 					- Lists, Links and elements
 
-					**Unordered List** 
-					- List Item 1 
-					- List Item 2 
-					- List Item 3 
+					**Unordered List**
+					- List Item 1
+					- List Item 2
+					- List Item 3
 					- List Item 4
 
-					**Ordered List** 
+					**Ordered List**
 
-					1. List Item 
-					2. List Item 
-					3. List Item 
-					4. List Item 
+					1. List Item
+					2. List Item
+					3. List Item
+					4. List Item
 
-					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+					> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-					**Links:** 
+					**Links:**
 
 					[Google](google.com)
-					[ZEKI AI CHAT](rocket.chat)
-					[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-					marcos.defendi@rocket.chat 
-					+55991999999 
+					[ZEKI AI CHAT](chat.example.invalid)
+					[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+					marcos.defendi@chat.example.invalid
+					+55991999999
 					\`Inline code\`
-					\`\`\`typescript 
-					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+					\`\`\`typescript
+					const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 					\`\`\`
 					😀
 					😀
@@ -1363,7 +1363,7 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 					homeServerDomain: 'localDomain.com',
 				}),
 			).toBe(
-				'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">@user:localDomain.com</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">@remoteuser:matrix.org</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](rocket.chat) [ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@rocket.chat +55991999999 `Inline code` ```typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); ``` 😀 😀 😀 😀 </code></pre>',
+				'<p>hey <a href="https://matrix.to/#/@user:localDomain.com">@user:localDomain.com</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">@remoteuser:matrix.org</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](chat.example.invalid) [ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@chat.example.invalid +55991999999 `Inline code` ```typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); ``` 😀 😀 😀 😀 </code></pre>',
 			);
 		});
 	});
@@ -1497,11 +1497,11 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 		it('should parse correctly a message containing both local mentions + some markdown', async () => {
 			const message = `hey @user, how are you? Hope **you** __are__ doing well, please see the list:
 			# List 1:
-			**Ordered List** 
+			**Ordered List**
 
-			1. List Item 
-			2. List Item 
-			3. List Item 
+			1. List Item
+			2. List Item
+			3. List Item
 			4. List Item`;
 
 			expect(
@@ -1521,11 +1521,11 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 		it('should parse correctly a message containing both external mentions + some markdown', async () => {
 			const message = `hey, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 			# List 1:
-			**Ordered List** 
+			**Ordered List**
 
-			1. List Item 
-			2. List Item 
-			3. List Item 
+			1. List Item
+			2. List Item
+			3. List Item
 			4. List Item`;
 
 			expect(
@@ -1545,11 +1545,11 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 		it('should parse correctly a message containing both local mentions + external mentions + some markdown', async () => {
 			const message = `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 			# List 1:
-			**Ordered List** 
+			**Ordered List**
 
-			1. List Item 
-			2. List Item 
-			3. List Item 
+			1. List Item
+			2. List Item
+			3. List Item
 			4. List Item`;
 
 			expect(
@@ -1569,14 +1569,14 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 		it('should parse correctly a message containing both mentions + some quoting inside the message', async () => {
 			const message = `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 			# List 1:
-			**Ordered List** 
+			**Ordered List**
 
-			1. List Item 
-			2. List Item 
-			3. List Item 
+			1. List Item
+			2. List Item
+			3. List Item
 			4. List Item
-			
-			> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+			> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 			`;
 
 			expect(
@@ -1596,14 +1596,14 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 		it('should parse correctly a message containing both mentions + some quoting inside the message + an email inside the message', async () => {
 			const message = `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see the list:
 			# List 1:
-			**Ordered List** 
+			**Ordered List**
 
-			1. List Item 
-			2. List Item 
-			3. List Item 
+			1. List Item
+			2. List Item
+			3. List Item
 			4. List Item
-			
-			> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet 
+
+			> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet
 
 			marcos.defendi@email.com
 			`;
@@ -1624,47 +1624,47 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 
 		it('should parse correctly a message containing a message with mentions + the whole markdown spec', async () => {
 			const message = `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see:
-			# Heading 1 
+			# Heading 1
 
-			**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+			**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 			## Heading 2
 
 			_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-			### Heading 3 
+			### Heading 3
 
 			- Lists, Links and elements
 
-			**Unordered List** 
-			- List Item 1 
-			- List Item 2 
-			- List Item 3 
+			**Unordered List**
+			- List Item 1
+			- List Item 2
+			- List Item 3
 			- List Item 4
 
-			**Ordered List** 
+			**Ordered List**
 
-			1. List Item 
-			2. List Item 
-			3. List Item 
-			4. List Item 
+			1. List Item
+			2. List Item
+			3. List Item
+			4. List Item
 
-			> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+			> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-			**Links:** 
+			**Links:**
 
 			[Google](google.com)
-			[ZEKI AI CHAT](rocket.chat)
-			[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			marcos.defendi@rocket.chat 
-			+55991999999 
+			[ZEKI AI CHAT](chat.example.invalid)
+			[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			marcos.defendi@chat.example.invalid
+			+55991999999
 			\`Inline code\`
-			\`\`\`typescript 
-			const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+			\`\`\`typescript
+			const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 			\`\`\`
 
 		`;
@@ -1679,53 +1679,53 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 				}),
 			).toEqual({
 				message: `> <${originalEventSender}> \n\n${message}`,
-				formattedMessage: `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">@user:localDomain.com</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">@remoteuser:matrix.org</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](rocket.chat) [ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@rocket.chat +55991999999 \`Inline code\` \`\`\`typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); \`\`\` </code></pre>`,
+				formattedMessage: `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">@user:localDomain.com</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">@remoteuser:matrix.org</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](chat.example.invalid) [ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@chat.example.invalid +55991999999 \`Inline code\` \`\`\`typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); \`\`\` </code></pre>`,
 			});
 		});
 
 		it('should parse correctly a message containing a message with mentions + the whole markdown spec + emojis', async () => {
 			const message = `hey @user, here its @remoteuser:matrix.org, how are you? Hope **you** __are__ doing well, please see:
-			# Heading 1 
+			# Heading 1
 
-			**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+			**Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
 			## Heading 2
 
 			_Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-			### Heading 3 
+			### Heading 3
 
 			- Lists, Links and elements
 
-			**Unordered List** 
-			- List Item 1 
-			- List Item 2 
-			- List Item 3 
+			**Unordered List**
+			- List Item 1
+			- List Item 2
+			- List Item 3
 			- List Item 4
 
-			**Ordered List** 
+			**Ordered List**
 
-			1. List Item 
-			2. List Item 
-			3. List Item 
-			4. List Item 
+			1. List Item
+			2. List Item
+			3. List Item
+			4. List Item
 
-			> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. 
+			> Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla.
 
-			**Links:** 
+			**Links:**
 
 			[Google](google.com)
-			[ZEKI AI CHAT](rocket.chat)
-			[ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			[**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			[~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			[__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			[__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351)
-			marcos.defendi@rocket.chat 
-			+55991999999 
+			[ZEKI AI CHAT](chat.example.invalid)
+			[ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			[**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			[~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			[__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			[__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351)
+			marcos.defendi@chat.example.invalid
+			+55991999999
 			\`Inline code\`
-			\`\`\`typescript 
-			const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text); 
+			\`\`\`typescript
+			const applyMarkdownIfRequires = ( list: MessageAttachmentDefault['mrkdwn_in'] = ['text', 'pretext'], key: MarkdownFields, text: string, variant: 'inline' | 'inlineWithoutBreaks' | 'document' = 'inline', ): ReactNode => (list?.includes(key) ? <MarkdownText parseEmoji variant={variant} content={text} /> : text);
 			\`\`\`
 			😀
 			😀
@@ -1743,7 +1743,7 @@ describe('Federation - Infrastructure - Matrix - MatrixTextParser', () => {
 				}),
 			).toEqual({
 				message: `> <${originalEventSender}> \n\n${message}`,
-				formattedMessage: `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">@user:localDomain.com</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">@remoteuser:matrix.org</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](rocket.chat) [ZEKI AI CHAT Link Test](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://desk.rocket.chat/support/rocketchat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@rocket.chat +55991999999 \`Inline code\` \`\`\`typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); \`\`\` 😀 😀 😀 😀 </code></pre>`,
+				formattedMessage: `${quotedMessage}<p>hey <a href="https://matrix.to/#/@user:localDomain.com">@user:localDomain.com</a>, here its <a href="https://matrix.to/#/@remoteuser:matrix.org">@remoteuser:matrix.org</a>, how are you? Hope <strong>you</strong> <strong>are</strong> doing well, please see: # Heading 1 </p> <pre><code> **Paragraph text**: **Bold** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ## Heading 2 _Italict Text_: _Italict_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. ### Heading 3 - Lists, Links and elements **Unordered List** - List Item 1 - List Item 2 - List Item 3 - List Item 4 **Ordered List** 1. List Item 2. List Item 3. List Item 4. List Item &gt; Quote test: **Bold** _Italic_ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, enim et facilisis commodo, est augue venenatis ligula, in convallis erat felis nec nisi. In eleifend ligula a nunc efficitur, ut finibus enim fringilla. **Links:** [Google](google.com) [ZEKI AI CHAT](chat.example.invalid) [ZEKI AI CHAT Link Test](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [**ZEKI AI CHAT Link Test**](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [~~ZEKI AI CHAT Link Test~~](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__ZEKI AI CHAT Link Test__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) [__**~~ZEKI AI CHAT Link Test~~**__](https://chat.example.invalid/support/examplechat/ShowHomePage.do#Cases/dv/413244000073043351) marcos.defendi@chat.example.invalid +55991999999 \`Inline code\` \`\`\`typescript const applyMarkdownIfRequires = ( list: MessageAttachmentDefault[&#39;mrkdwn_in&#39;] = [&#39;text&#39;, &#39;pretext&#39;], key: MarkdownFields, text: string, variant: &#39;inline&#39; | &#39;inlineWithoutBreaks&#39; | &#39;document&#39; = &#39;inline&#39;, ): ReactNode =&gt; (list?.includes(key) ? &lt;MarkdownText parseEmoji variant={variant} content={text} /&gt; : text); \`\`\` 😀 😀 😀 😀 </code></pre>`,
 			});
 		});
 	});

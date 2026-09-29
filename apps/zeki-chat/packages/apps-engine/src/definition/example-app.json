@@ -7,7 +7,7 @@
     "requiredApiVersion": "0.0.1",
     "author": {
         "name": "Bradley Hilton",
-        "support": "https://github.com/RocketChat/Rocket.Chat.Apps-engine"
+        "support": "https://support.example.invalid"
     },
     "classFile": "ExampleApp.ts"
 }

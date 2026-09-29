@@ -29,7 +29,7 @@ describe('parseStringToIceServers', () => {
 			expect(servers[0].urls).toEqual('stun:stun.l.google.com:19302');
 			expect(servers[1].urls).toEqual('stun:stun1.l.google.com:19302');
 			expect(servers[2].urls).toEqual('turn:numb.viagenie.ca:3478');
-			expect(servers[2].username).toEqual('team@rocket.chat');
+			expect(servers[2].username).toEqual('team@chat.example.invalid');
 			expect(servers[2].credential).toEqual('demo');
 		});
 	});
@@ -43,7 +43,7 @@ describe('parseStringToIceServers', () => {
 		it('should parse string to server with username and password', () => {
 			const server = parseStringToIceServer('team%40rocket.chat:demo@turn:numb.viagenie.ca:3478');
 			expect(server.urls).toEqual('turn:numb.viagenie.ca:3478');
-			expect(server.username).toEqual('team@rocket.chat');
+			expect(server.username).toEqual('team@chat.example.invalid');
 			expect(server.credential).toEqual('demo');
 		});
 	});

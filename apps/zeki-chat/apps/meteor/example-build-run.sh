@@ -6,7 +6,7 @@ IFS=$'\n\t'
 # Requires Node.js version 4.x
 # Do not run as root
 
-DEPLOY_DIR=/var/www/rocket.chat
+DEPLOY_DIR=/var/www/zeki-chat
 
 ### BUILD
 meteor npm install
@@ -28,6 +28,6 @@ cd $DEPLOY_DIR/bundle
 NODE_ENV=production \
 PORT=3000 \
 ROOT_URL=http://localhost:3000 \
-MONGO_URL=mongodb://localhost:27017/rocketchat \
+MONGO_URL=mongodb://localhost:27017/zeki \
 MONGO_OPLOG_URL=mongodb://localhost:27017/local \
 node main.js

@@ -14,12 +14,12 @@ describe('extractUrlsFromMessageAST', () => {
 						value: {
 							src: {
 								type: 'PLAIN_TEXT',
-								value: 'https://rocket.chat',
+								value: 'https://chat.example.invalid',
 							},
 							label: [
 								{
 									type: 'PLAIN_TEXT',
-									value: 'rocket.chat',
+									value: 'chat.example.invalid',
 								},
 							],
 						},
@@ -29,7 +29,7 @@ describe('extractUrlsFromMessageAST', () => {
 		];
 
 		const urls = extractUrlsFromMessageAST(md as any);
-		expect(urls).to.deep.equal(['https://rocket.chat']);
+		expect(urls).to.deep.equal(['https://chat.example.invalid']);
 	});
 
 	it('should convert // prefix to https://', () => {
@@ -57,7 +57,7 @@ describe('extractUrlsFromMessageAST', () => {
 		];
 
 		const urls = extractUrlsFromMessageAST(md as any);
-		expect(urls).to.deep.equal(['https://github.com/RocketChat/Rocket.Chat']);
+		expect(urls).to.deep.equal(['https://assets.example.invalid/sample']);
 	});
 
 	it('should handle multiple links', () => {
@@ -70,12 +70,12 @@ describe('extractUrlsFromMessageAST', () => {
 						value: {
 							src: {
 								type: 'PLAIN_TEXT',
-								value: 'https://rocket.chat',
+								value: 'https://chat.example.invalid',
 							},
 							label: [
 								{
 									type: 'PLAIN_TEXT',
-									value: 'rocket.chat',
+									value: 'chat.example.invalid',
 								},
 							],
 						},
@@ -104,7 +104,7 @@ describe('extractUrlsFromMessageAST', () => {
 		];
 
 		const urls = extractUrlsFromMessageAST(md as any);
-		expect(urls).to.deep.equal(['https://rocket.chat', 'https://github.com/RocketChat']);
+		expect(urls).to.deep.equal(['https://chat.example.invalid', 'https://github.com/examplechat']);
 	});
 
 	it('should return empty array for undefined or non-array input', () => {

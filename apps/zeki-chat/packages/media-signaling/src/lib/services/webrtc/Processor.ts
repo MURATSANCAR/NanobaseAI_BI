@@ -6,7 +6,7 @@ import type { ServiceStateValue } from '../../../definition/services/IServicePro
 import { MediaStreamManager } from '../../media/MediaStreamManager';
 import { getExternalWaiter, type PromiseWaiterData } from '../../utils/getExternalWaiter';
 
-const DATA_CHANNEL_LABEL = 'rocket.chat';
+const DATA_CHANNEL_LABEL = 'zeki-chat';
 type P2PCommand = 'mute' | 'unmute' | 'end' | 'screen-share.start' | 'screen-share.stop';
 
 export class MediaCallWebRTCProcessor implements IWebRTCProcessor {

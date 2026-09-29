@@ -63,7 +63,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -91,7 +91,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -112,7 +112,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat',
+						url: 'https://chat.example.invalid',
 						meta: {},
 					},
 				],
@@ -120,7 +120,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -141,7 +141,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/?token=value',
+						url: 'https://chat.example.invalid/?token=value',
 						meta: {},
 					},
 				],
@@ -149,7 +149,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -170,7 +170,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/?msg=value',
+						url: 'https://chat.example.invalid/?msg=value',
 						meta: {},
 					},
 				],
@@ -178,7 +178,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -199,7 +199,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/?msg=value',
+						url: 'https://chat.example.invalid/?msg=value',
 						meta: {},
 					},
 				],
@@ -207,7 +207,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -228,7 +228,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/?msg=value',
+						url: 'https://chat.example.invalid/?msg=value',
 						meta: {},
 					},
 				],
@@ -236,7 +236,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -257,7 +257,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/linked?msg=linked',
+						url: 'https://chat.example.invalid/linked?msg=linked',
 						meta: {},
 					},
 				],
@@ -266,7 +266,7 @@ describe('Create attachments for message URLs', () => {
 						text: 'old attachment',
 						author_name: 'username',
 						author_icon: 'url',
-						message_link: 'https://open.rocket.chat/linked?msg=linked',
+						message_link: 'https://chat.example.invalid/linked?msg=linked',
 						ts: new Date(),
 					},
 				],
@@ -274,7 +274,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -284,7 +284,7 @@ describe('Create attachments for message URLs', () => {
 		const [url] = message.urls ?? [];
 
 		expect(url).to.include({
-			url: 'https://open.rocket.chat/linked?msg=linked',
+			url: 'https://chat.example.invalid/linked?msg=linked',
 			ignoreParse: true,
 		});
 
@@ -311,7 +311,7 @@ describe('Create attachments for message URLs', () => {
 						text: 'old attachment',
 						author_name: 'username',
 						author_icon: 'url',
-						message_link: 'https://open.rocket.chat/linked?msg=linked',
+						message_link: 'https://chat.example.invalid/linked?msg=linked',
 						ts: new Date(),
 					},
 				],
@@ -319,7 +319,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -351,7 +351,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -373,7 +373,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/linked?msg=linked',
+						url: 'https://chat.example.invalid/linked?msg=linked',
 						meta: {},
 					},
 				],
@@ -381,7 +381,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -391,7 +391,7 @@ describe('Create attachments for message URLs', () => {
 		const [url] = message.urls ?? [];
 
 		expect(url).to.include({
-			url: 'https://open.rocket.chat/linked?msg=linked',
+			url: 'https://chat.example.invalid/linked?msg=linked',
 			ignoreParse: true,
 		});
 
@@ -413,20 +413,20 @@ describe('Create attachments for message URLs', () => {
 							author_name: 'username',
 							author_icon: 'url',
 							ts: new Date(),
-							message_link: 'https://open.rocket.chat/linked?msg=linkedMsgId',
+							message_link: 'https://chat.example.invalid/linked?msg=linkedMsgId',
 							attachments: [
 								{
 									text: 'chained 2',
 									author_name: 'username',
 									author_icon: 'url',
-									message_link: 'https://open.rocket.chat/linked?msg=linkedMsgId',
+									message_link: 'https://chat.example.invalid/linked?msg=linkedMsgId',
 									ts: new Date(),
 									attachments: [
 										{
 											text: 'chained 3',
 											author_name: 'username',
 											author_icon: 'url',
-											message_link: 'https://open.rocket.chat/linked?msg=linkedMsgId',
+											message_link: 'https://chat.example.invalid/linked?msg=linkedMsgId',
 											ts: new Date(),
 										},
 									],
@@ -445,7 +445,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/linked?msg=linked',
+						url: 'https://chat.example.invalid/linked?msg=linked',
 						meta: {},
 					},
 				],
@@ -453,7 +453,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 3,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -476,13 +476,13 @@ describe('Create attachments for message URLs', () => {
 							author_name: 'username',
 							author_icon: 'url',
 							ts: new Date(),
-							message_link: 'https://open.rocket.chat/linked?msg=linkedMsgId',
+							message_link: 'https://chat.example.invalid/linked?msg=linkedMsgId',
 							attachments: [
 								{
 									text: 'chained 2',
 									author_name: 'username',
 									author_icon: 'url',
-									message_link: 'https://open.rocket.chat/linked?msg=linkedMsgId',
+									message_link: 'https://chat.example.invalid/linked?msg=linkedMsgId',
 									ts: new Date(),
 									attachments: [
 										{
@@ -528,7 +528,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/linked?msg=linked',
+						url: 'https://chat.example.invalid/linked?msg=linked',
 						meta: {},
 					},
 				],
@@ -536,7 +536,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 3,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -560,7 +560,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/linked?msg=linked',
+						url: 'https://chat.example.invalid/linked?msg=linked',
 						meta: {},
 					},
 				],
@@ -569,7 +569,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -579,7 +579,7 @@ describe('Create attachments for message URLs', () => {
 		const [url] = message.urls ?? [];
 
 		expect(url).to.include({
-			url: 'https://open.rocket.chat/linked?msg=linked',
+			url: 'https://chat.example.invalid/linked?msg=linked',
 			ignoreParse: true,
 		});
 
@@ -602,7 +602,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/linked?msg=linked',
+						url: 'https://chat.example.invalid/linked?msg=linked',
 						meta: {},
 					},
 				],
@@ -611,7 +611,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 10,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -630,7 +630,7 @@ describe('Create attachments for message URLs', () => {
 							text: 'chained 1',
 							author_name: 'username',
 							author_icon: 'url',
-							message_link: 'https://open.rocket.chat/linked?msg=linkedMsgId1',
+							message_link: 'https://chat.example.invalid/linked?msg=linkedMsgId1',
 							ts: new Date(),
 						},
 					],
@@ -645,7 +645,7 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/linked?msg=linkedMsgId',
+						url: 'https://chat.example.invalid/linked?msg=linkedMsgId',
 						meta: {},
 					},
 				],
@@ -653,7 +653,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 1,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -671,7 +671,7 @@ describe('Create attachments for message URLs', () => {
 			text: 'linked message',
 			author_name: 'username',
 			author_icon: 'url',
-			message_link: 'https://open.rocket.chat/linked?msg=linkedMsgId',
+			message_link: 'https://chat.example.invalid/linked?msg=linkedMsgId',
 		});
 	});
 
@@ -696,11 +696,11 @@ describe('Create attachments for message URLs', () => {
 			message: createMessage('hey', {
 				urls: [
 					{
-						url: 'https://open.rocket.chat/linked?msg=msg1',
+						url: 'https://chat.example.invalid/linked?msg=msg1',
 						meta: {},
 					},
 					{
-						url: 'https://open.rocket.chat/linked?msg=msg2',
+						url: 'https://chat.example.invalid/linked?msg=msg2',
 						meta: {},
 					},
 				],
@@ -708,7 +708,7 @@ describe('Create attachments for message URLs', () => {
 			user: createUser(),
 			config: {
 				chainLimit: 1,
-				siteUrl: 'https://open.rocket.chat',
+				siteUrl: 'https://chat.example.invalid',
 				useRealName: true,
 			},
 		});
@@ -723,12 +723,12 @@ describe('Create attachments for message URLs', () => {
 
 		expect(att1).to.include({
 			text: 'first message',
-			message_link: 'https://open.rocket.chat/linked?msg=msg1',
+			message_link: 'https://chat.example.invalid/linked?msg=msg1',
 		});
 
 		expect(att2).to.include({
 			text: 'second message',
-			message_link: 'https://open.rocket.chat/linked?msg=msg2',
+			message_link: 'https://chat.example.invalid/linked?msg=msg2',
 		});
 	});
 });

@@ -40,9 +40,9 @@ export const Default: Story = {
 			2. Consectetur adipiscing elit
 			3. Integer molestie lorem at massa
 
-			\`rocket.chat();\`
+			\`examplechat();\`
 
-			https://rocket.chat
+			https://chat.example.invalid
 		`,
 	},
 };

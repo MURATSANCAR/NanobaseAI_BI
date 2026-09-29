@@ -203,7 +203,7 @@ test.describe.serial('homepage', () => {
 				test('expect default layout not be visible and custom body visible', async () => {
 					await test.step('expect default layout to not be visible', async () => {
 						await expect(
-							regularUserPage.getByRole('main').getByRole('heading', { level: 2, name: 'Welcome to Rocket.chat', exact: true }),
+							regularUserPage.getByRole('main').getByRole('heading', { level: 2, name: 'Welcome to chat.example.invalid', exact: true }),
 						).not.toBeVisible();
 					});
 

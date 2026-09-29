@@ -102,8 +102,8 @@ const markdownText = `
   3. List Item 3
   4. List Item 4
   **Links:**
-  [ZEKI AI CHAT](rocket.chat)
-  gabriel.engel@rocket.chat
+  [ZEKI AI CHAT](chat.example.invalid)
+  gabriel.engel@chat.example.invalid
   +55991999999
   \`Inline code\`
   \`\`\`typescript
@@ -140,9 +140,9 @@ it('should render html elements as expected using default parser', async () => {
 	expect(normalizedHtml).toContain('target="_blank"');
 	expect(normalizedHtml).toContain('>ZEKI AI CHAT</a>');
 
-	expect(normalizedHtml).toContain('href="mailto:gabriel.engel@rocket.chat"');
-	expect(normalizedHtml).toContain('title="mailto:gabriel.engel@rocket.chat"');
-	expect(normalizedHtml).toContain('gabriel.engel@rocket.chat');
+	expect(normalizedHtml).toContain('href="mailto:gabriel.engel@chat.example.invalid"');
+	expect(normalizedHtml).toContain('title="mailto:gabriel.engel@chat.example.invalid"');
+	expect(normalizedHtml).toContain('gabriel.engel@chat.example.invalid');
 
 	expect(normalizedHtml).toContain('+55991999999');
 	expect(normalizedHtml).toContain('<code>Inline code</code>');
@@ -178,8 +178,8 @@ it('should render html elements as expected using inline parser', async () => {
 	expect(normalizedHtml).toContain('target="_blank"');
 	expect(normalizedHtml).toContain('>ZEKI AI CHAT</a>');
 
-	expect(normalizedHtml).toContain('href="mailto:gabriel.engel@rocket.chat"');
-	expect(normalizedHtml).toContain('title="mailto:gabriel.engel@rocket.chat"');
+	expect(normalizedHtml).toContain('href="mailto:gabriel.engel@chat.example.invalid"');
+	expect(normalizedHtml).toContain('title="mailto:gabriel.engel@chat.example.invalid"');
 	expect(normalizedHtml).toContain('rel="nofollow noopener noreferrer"');
 	expect(normalizedHtml).toContain('target="_blank"');
 

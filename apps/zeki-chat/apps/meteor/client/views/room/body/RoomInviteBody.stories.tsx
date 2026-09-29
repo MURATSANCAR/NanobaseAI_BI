@@ -31,7 +31,7 @@ export const WithInfoLink: Story = {
 	args: {
 		infoLink: {
 			label: 'Learn more',
-			href: 'https://rocket.chat',
+			href: 'https://chat.example.invalid',
 		},
 		inviter: {
 			username: 'zeki.bot',

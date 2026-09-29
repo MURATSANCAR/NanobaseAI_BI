@@ -5,7 +5,7 @@ import { OAuth } from 'meteor/oauth';
 // https://github.com/meteor/meteor/blob/ffcfa5062cf1bf8a64ea64fef681ffcd99fe7939/packages/oauth/oauth_server.js
 
 Meteor.startup(() => {
-	const appRedirectUrl = 'rocketchat://auth';
+	const appRedirectUrl = 'zekichat://auth';
 
 	const renderEndOfLoginResponse = async (options) => {
 		const escape = (s) => {

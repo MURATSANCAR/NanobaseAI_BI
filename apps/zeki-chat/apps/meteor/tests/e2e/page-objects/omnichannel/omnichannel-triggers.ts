@@ -119,7 +119,7 @@ export class OmnichannelTriggers extends OmnichannelAdmin {
 			description: 'Updating the existing trigger',
 			condition,
 			sender: 'custom',
-			agentName: 'Rocket.cat',
+			agentName: 'zeki.bot',
 			triggerMessage,
 		});
 		await this.editTrigger.save();

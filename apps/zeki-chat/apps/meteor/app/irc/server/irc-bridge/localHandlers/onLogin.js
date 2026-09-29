@@ -20,7 +20,7 @@ export default async function handleOnLogin(login) {
 				'profile.irc.fromIRC': false,
 				'profile.irc.username': `${login.user.username}-rkt`,
 				'profile.irc.nick': `${login.user.username}-rkt`,
-				'profile.irc.hostname': 'rocket.chat',
+				'profile.irc.hostname': 'localhost',
 			},
 		},
 	);

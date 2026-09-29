@@ -384,7 +384,7 @@ describe('ImageElement sanitization', () => {
 							{
 								type: 'IMAGE',
 								value: {
-									src: { type: 'PLAIN_TEXT', value: 'https://rocket.chat/logo.svg' },
+									src: { type: 'PLAIN_TEXT', value: 'https://chat.example.invalid/logo.svg' },
 									label: { type: 'PLAIN_TEXT', value: 'logo' },
 								},
 							},
@@ -394,7 +394,7 @@ describe('ImageElement sanitization', () => {
 			/>,
 		);
 
-		expect(screen.getByRole('link')).toHaveAttribute('href', 'https://rocket.chat/logo.svg');
-		expect(screen.getByRole('img')).toHaveAttribute('src', 'https://rocket.chat/logo.svg');
+		expect(screen.getByRole('link')).toHaveAttribute('href', 'https://chat.example.invalid/logo.svg');
+		expect(screen.getByRole('img')).toHaveAttribute('src', 'https://chat.example.invalid/logo.svg');
 	});
 });

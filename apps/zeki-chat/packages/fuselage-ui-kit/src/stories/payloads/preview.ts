@@ -60,6 +60,6 @@ export const previewWithExternalUrl: PreviewBlock[] = [
 				},
 			],
 		},
-		externalUrl: 'https://rocketchat.github.io/Rocket.Chat.Fuselage/?path=/story/*',
+		externalUrl: 'https://examplechat.github.io/examplechat.Fuselage/?path=/story/*',
 	},
 ];

@@ -51,7 +51,7 @@ Whenever you make changes to the engine, run `npm run compile` again - meteor wi
 Unable to resolve some modules:
 
   "@zeki.chat/apps-engine/definition/AppStatus" in
-/Users/dev/rocket.chat/Rocket.Chat/app/apps/client/admin/helpers.js (web.browser)
+/Users/dev/zeki-chat/app/apps/client/admin/helpers.js (web.browser)
 
 If you notice problems related to these missing modules, consider running:
 

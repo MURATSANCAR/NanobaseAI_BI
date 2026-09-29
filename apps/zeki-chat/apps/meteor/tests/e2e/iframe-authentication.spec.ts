@@ -5,8 +5,8 @@ import { Users } from './fixtures/userStates';
 import { Authenticated, Login } from './page-objects';
 import { test, expect } from './utils/test';
 
-const IFRAME_URL = 'http://iframe.rocket.chat';
-const API_URL = 'http://auth.rocket.chat/api/login';
+const IFRAME_URL = 'https://chat.example.invalid';
+const API_URL = 'https://chat.example.invalid/api/login';
 
 test.describe('iframe-authentication', () => {
 	let poLogin: Login;

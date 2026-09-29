@@ -595,7 +595,7 @@ describe('miscellaneous', () => {
 
 					const instances = res.body.instances as IInstance[];
 
-					const instanceName = IS_EE ? 'ddp-streamer' : 'rocket.chat';
+					const instanceName = IS_EE ? 'ddp-streamer' : 'chat.example.invalid';
 
 					const instance = instances.find(
 						(i): i is IInstance & { instanceRecord: IInstanceStatus } => i.instanceRecord?.name === instanceName,

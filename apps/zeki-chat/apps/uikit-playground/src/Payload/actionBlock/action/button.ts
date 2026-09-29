@@ -154,7 +154,7 @@ export const actionWithButtonAsLink: readonly LayoutBlock[] = [
 					text: 'Click Me',
 					emoji: true,
 				},
-				url: 'https://rocket.chat',
+				url: 'https://chat.example.invalid',
 			},
 		],
 	},

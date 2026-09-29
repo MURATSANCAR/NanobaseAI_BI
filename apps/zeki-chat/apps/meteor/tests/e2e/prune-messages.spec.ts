@@ -31,7 +31,7 @@ test.describe('prune-messages', () => {
 			tag: '@channel',
 			annotation: {
 				type: 'issue',
-				description: 'https://rocketchat.atlassian.net/browse/CORE-1146',
+				description: 'https://examplechat.atlassian.net/browse/CORE-1146',
 			},
 		},
 		async ({ api }) => {
@@ -98,7 +98,7 @@ test.describe('prune-messages', () => {
 			tag: '@channel',
 			annotation: {
 				type: 'issue',
-				description: 'https://rocketchat.atlassian.net/browse/CORE-1168',
+				description: 'https://examplechat.atlassian.net/browse/CORE-1168',
 			},
 		},
 		async () => {
@@ -136,7 +136,7 @@ test.describe('prune-messages', () => {
 			tag: '@channel',
 			annotation: {
 				type: 'issue',
-				description: 'https://rocketchat.atlassian.net/browse/CORE-1168',
+				description: 'https://examplechat.atlassian.net/browse/CORE-1168',
 			},
 		},
 		async ({ api }) => {

@@ -283,7 +283,7 @@ test.describe('SAML', () => {
 			await page.getByLabel('Password').fill('password');
 			await page.locator('role=button[name="Login"]').click();
 
-			// Redirect back to rocket.chat
+			// Redirect back to chat.example.invalid
 			if (redirectUrl) {
 				await expect(page).toHaveURL(redirectUrl);
 				await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
@@ -642,7 +642,7 @@ test.describe('SAML', () => {
 
 				await page.goto(`${logoutRequest}&Signature=invalid`);
 
-				await test.step('expect to be redirected back to rocket.chat without being logged out', async () => {
+				await test.step('expect to be redirected back to chat.example.invalid without being logged out', async () => {
 					await expect(page).toHaveURL('/home');
 					await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
 				});
@@ -654,7 +654,7 @@ test.describe('SAML', () => {
 
 				await page.goto(logoutRequest);
 
-				await test.step('expect to be redirected back to rocket.chat without being logged out', async () => {
+				await test.step('expect to be redirected back to chat.example.invalid without being logged out', async () => {
 					await expect(page).toHaveURL('/home');
 					await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
 				});

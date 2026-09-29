@@ -20,16 +20,16 @@ test.each([
 		'https://www.npmjs.com/package/@zeki.chat/message-parser',
 		[paragraph([link('https://www.npmjs.com/package/@zeki.chat/message-parser')])],
 	],
-	['http:/rocket.chat/teste', [paragraph([plain('http:/rocket.chat/teste')])]],
-	['https:/rocket.chat/', [paragraph([plain('https:/rocket.chat/')])]],
+	['http:/chat.example.invalid/teste', [paragraph([plain('http:/chat.example.invalid/teste')])]],
+	['https:/chat.example.invalid/', [paragraph([plain('https:/chat.example.invalid/')])]],
 	['https://test', [paragraph([plain('https://test')])]],
-	['httpsss://rocket.chat/test', [paragraph([link('httpsss://rocket.chat/test')])]],
-	['https://rocket.chat:3000/test', [paragraph([link('https://rocket.chat:3000/test')])]],
-	['https://rocket.chat:99999', [paragraph([link('https://rocket.chat:99999')])]],
-	['https://rocket.chat:99999/test', [paragraph([link('https://rocket.chat:99999/test')])]],
-	['https://rocket.chat/test?search', [paragraph([link('https://rocket.chat/test?search')])]],
-	['https://rocket.chat/test?search=test', [paragraph([link('https://rocket.chat/test?search=test')])]],
-	['https://rocket.chat', [paragraph([link('https://rocket.chat')])]],
+	['httpsss://chat.example.invalid/test', [paragraph([link('httpsss://chat.example.invalid/test')])]],
+	['https://chat.example.invalid/test', [paragraph([link('https://chat.example.invalid/test')])]],
+	['https://chat.example.invalid', [paragraph([link('https://chat.example.invalid')])]],
+	['https://chat.example.invalid/test', [paragraph([link('https://chat.example.invalid/test')])]],
+	['https://chat.example.invalid/test?search', [paragraph([link('https://chat.example.invalid/test?search')])]],
+	['https://chat.example.invalid/test?search=test', [paragraph([link('https://chat.example.invalid/test?search=test')])]],
+	['https://chat.example.invalid', [paragraph([link('https://chat.example.invalid')])]],
 	['http://127.0.0.1:3000/images/logo/logo.png', [paragraph([link('http://127.0.0.1:3000/images/logo/logo.png')])]],
 	['https://localhost', [paragraph([link('https://localhost')])]],
 	['https://localhost:3000', [paragraph([link('https://localhost:3000')])]],
@@ -44,49 +44,49 @@ test.each([
 	['https://www.thingiverse.com/thing:5451684', [paragraph([link('https://www.thingiverse.com/thing:5451684')])]],
 	['http://📙.la/❤️', [paragraph([link('http://📙.la/❤️')])]],
 	[
-		'https://developer.rocket.chat/reference/api/rest-api#production-security-concerns look at this',
-		[paragraph([link('https://developer.rocket.chat/reference/api/rest-api#production-security-concerns'), plain(' look at this')])],
+		'https://chat.example.invalid/reference/api/rest-api#production-security-concerns look at this',
+		[paragraph([link('https://chat.example.invalid/reference/api/rest-api#production-security-concerns'), plain(' look at this')])],
 	],
 	[
-		'https://developer.rocket.chat/reference/api/rest-api look at this',
-		[paragraph([link('https://developer.rocket.chat/reference/api/rest-api'), plain(' look at this')])],
+		'https://chat.example.invalid/reference/api/rest-api look at this',
+		[paragraph([link('https://chat.example.invalid/reference/api/rest-api'), plain(' look at this')])],
 	],
 
 	[
-		'https://developer.rocket.chat/reference/api/rest-api#fragment?query=query look at this',
-		[paragraph([link('https://developer.rocket.chat/reference/api/rest-api#fragment?query=query'), plain(' look at this')])],
+		'https://chat.example.invalid/reference/api/rest-api#fragment?query=query look at this',
+		[paragraph([link('https://chat.example.invalid/reference/api/rest-api#fragment?query=query'), plain(' look at this')])],
 	],
-	['https://developer.rocket.chat look at this', [paragraph([link('https://developer.rocket.chat'), plain(' look at this')])]],
+	['https://chat.example.invalid look at this', [paragraph([link('https://chat.example.invalid'), plain(' look at this')])]],
 	[
-		'https://developer.rocket.chat?query=query look at this',
-		[paragraph([link('https://developer.rocket.chat?query=query'), plain(' look at this')])],
-	],
-	[
-		'https://developer.rocket.chat?query=query\nline break',
-		[paragraph([link('https://developer.rocket.chat?query=query')]), paragraph([plain('line break')])],
+		'https://chat.example.invalid?query=query look at this',
+		[paragraph([link('https://chat.example.invalid?query=query'), plain(' look at this')])],
 	],
 	[
-		'https://developer.rocket.chat?query=query\n\nline break',
-		[paragraph([link('https://developer.rocket.chat?query=query')]), lineBreak(), paragraph([plain('line break')])],
+		'https://chat.example.invalid?query=query\nline break',
+		[paragraph([link('https://chat.example.invalid?query=query')]), paragraph([plain('line break')])],
 	],
 	[
-		'https://developer.rocket.chat?query=query_with_underscore look at this',
-		[paragraph([link('https://developer.rocket.chat?query=query_with_underscore'), plain(' look at this')])],
+		'https://chat.example.invalid?query=query\n\nline break',
+		[paragraph([link('https://chat.example.invalid?query=query')]), lineBreak(), paragraph([plain('line break')])],
 	],
 	[
-		'https://developer.rocket.chat/path_with_underscore look at this',
-		[paragraph([link('https://developer.rocket.chat/path_with_underscore'), plain(' look at this')])],
+		'https://chat.example.invalid?query=query_with_underscore look at this',
+		[paragraph([link('https://chat.example.invalid?query=query_with_underscore'), plain(' look at this')])],
 	],
 	[
-		'https://developer.rocket.chat#fragment_with_underscore look at this',
-		[paragraph([link('https://developer.rocket.chat#fragment_with_underscore'), plain(' look at this')])],
+		'https://chat.example.invalid/path_with_underscore look at this',
+		[paragraph([link('https://chat.example.invalid/path_with_underscore'), plain(' look at this')])],
 	],
-	['https://developer.rocket.chat followed by text', [paragraph([link('https://developer.rocket.chat'), plain(' followed by text')])]],
 	[
-		'two urls https://developer.rocket.chat , https://rocket.chat',
-		[paragraph([plain('two urls '), link('https://developer.rocket.chat'), plain(' , '), link('https://rocket.chat')])],
+		'https://chat.example.invalid#fragment_with_underscore look at this',
+		[paragraph([link('https://chat.example.invalid#fragment_with_underscore'), plain(' look at this')])],
 	],
-	['https://1developer.rocket.chat', [paragraph([link('https://1developer.rocket.chat')])]],
+	['https://chat.example.invalid followed by text', [paragraph([link('https://chat.example.invalid'), plain(' followed by text')])]],
+	[
+		'two urls https://chat.example.invalid , https://chat.example.invalid',
+		[paragraph([plain('two urls '), link('https://chat.example.invalid'), plain(' , '), link('https://chat.example.invalid')])],
+	],
+	['https://chat.example.invalid', [paragraph([link('https://chat.example.invalid')])]],
 	['https://en.m.wikipedia.org/wiki/Main_Page', [paragraph([link('https://en.m.wikipedia.org/wiki/Main_Page')])]],
 	['test.1test.com', [paragraph([link('//test.1test.com', [plain('test.1test.com')])])]],
 	['http://test.e-xample.com', [paragraph([link('http://test.e-xample.com')])]],
@@ -98,32 +98,32 @@ test.each([
 	['http://te_st.com', [paragraph([link('http://te_st.com', [plain('http://te_st.com')])])]],
 	['www.te_st.com', [paragraph([link('//www.te_st.com', [plain('www.te_st.com')])])]],
 	['[google_search](http://google.com)', [paragraph([link('http://google.com', [plain('google_search')])])]],
-	['app...https://rocket.chat https://rocket.chat', [paragraph([plain('app...https://rocket.chat '), link('https://rocket.chat')])]],
+	['app...https://chat.example.invalid https://chat.example.invalid', [paragraph([plain('app...https://chat.example.invalid '), link('https://chat.example.invalid')])]],
 	[
-		'Hey check it out the best communication platform https://rocket.chat! There is not discussion about it.',
+		'Hey check it out the best communication platform https://chat.example.invalid! There is not discussion about it.',
 		[
 			paragraph([
 				plain('Hey check it out the best communication platform '),
-				link('https://rocket.chat'),
+				link('https://chat.example.invalid'),
 				plain('! There is not discussion about it.'),
 			]),
 		],
 	],
 	['This is a normal phrase.This in another phrase.', [paragraph([plain('This is a normal phrase.This in another phrase.')])]],
 	[
-		'https://github.com/RocketChat/Rocket.Chat/releases/tag/6.0.0-rc.3',
-		[paragraph([link('https://github.com/RocketChat/Rocket.Chat/releases/tag/6.0.0-rc.3')])],
+		'https://assets.example.invalid/sample',
+		[paragraph([link('https://assets.example.invalid/sample')])],
 	],
 	[
-		'https://www.rocket.chat/(W(601))/Main?ScreenId=GI000027',
-		[paragraph([link('https://www.rocket.chat/(W(601))/Main?ScreenId=GI000027')])],
+		'https://chat.example.invalid/(W(601))/Main?ScreenId=GI000027',
+		[paragraph([link('https://chat.example.invalid/(W(601))/Main?ScreenId=GI000027')])],
 	],
 	[
-		'https://rocketchat.atlassian.net/browse/OC-718?filter=10078&jql=%22Defect%20from%5BVersion%20Picker%20(multiple%20versions)%5D%22%20%3D%206.0.0%20AND%20%22Defect%20from%5BVersion%20Picker%20(multiple%20versions)%5D%22%20%3D%206.0.0%20AND%20created%20%3E%3D%20-48h%20ORDER%20BY%20cf%5B10070%5D%20ASC%2C%20status%20ASC%2C%20created%20DESC',
+		'https://examplechat.atlassian.net/browse/OC-718?filter=10078&jql=%22Defect%20from%5BVersion%20Picker%20(multiple%20versions)%5D%22%20%3D%206.0.0%20AND%20%22Defect%20from%5BVersion%20Picker%20(multiple%20versions)%5D%22%20%3D%206.0.0%20AND%20created%20%3E%3D%20-48h%20ORDER%20BY%20cf%5B10070%5D%20ASC%2C%20status%20ASC%2C%20created%20DESC',
 		[
 			paragraph([
 				link(
-					'https://rocketchat.atlassian.net/browse/OC-718?filter=10078&jql=%22Defect%20from%5BVersion%20Picker%20(multiple%20versions)%5D%22%20%3D%206.0.0%20AND%20%22Defect%20from%5BVersion%20Picker%20(multiple%20versions)%5D%22%20%3D%206.0.0%20AND%20created%20%3E%3D%20-48h%20ORDER%20BY%20cf%5B10070%5D%20ASC%2C%20status%20ASC%2C%20created%20DESC',
+					'https://examplechat.atlassian.net/browse/OC-718?filter=10078&jql=%22Defect%20from%5BVersion%20Picker%20(multiple%20versions)%5D%22%20%3D%206.0.0%20AND%20%22Defect%20from%5BVersion%20Picker%20(multiple%20versions)%5D%22%20%3D%206.0.0%20AND%20created%20%3E%3D%20-48h%20ORDER%20BY%20cf%5B10070%5D%20ASC%2C%20status%20ASC%2C%20created%20DESC',
 				),
 			]),
 		],
@@ -154,26 +154,26 @@ describe('autoLink WITHOUT custom hosts settings comming from ZEKI AI CHAT', () 
 
 describe('autoLink helper function', () => {
 	it('should preserve the original protocol if the protocol is http or https', () => {
-		expect(autoLink('https://rocket.chat/test')).toEqual(link('https://rocket.chat/test'));
+		expect(autoLink('https://chat.example.invalid/test')).toEqual(link('https://chat.example.invalid/test'));
 
-		expect(autoLink('http://rocket.chat/test')).toEqual(link('http://rocket.chat/test'));
+		expect(autoLink('https://chat.example.invalid/test')).toEqual(link('https://chat.example.invalid/test'));
 	});
 
 	it('should preserve the original protocol for invalid absolute URLs', () => {
-		expect(autoLink('https://rocket.chat:99999')).toMatchObject(link('https://rocket.chat:99999'));
-		expect(autoLink('https://rocket.chat:65536')).toMatchObject(link('https://rocket.chat:65536'));
+		expect(autoLink('https://chat.example.invalid')).toMatchObject(link('https://chat.example.invalid'));
+		expect(autoLink('https://chat.example.invalid')).toMatchObject(link('https://chat.example.invalid'));
 	});
 
 	it('should preserve the original protocol even if for custom protocols', () => {
-		expect(autoLink('custom://rocket.chat/test')).toEqual(link('custom://rocket.chat/test'));
+		expect(autoLink('custom://chat.example.invalid/test')).toEqual(link('custom://chat.example.invalid/test'));
 	});
 
 	it('should return // as the protocol if // is the protocol specified', () => {
-		expect(autoLink('//rocket.chat/test')).toEqual(link('//rocket.chat/test'));
+		expect(autoLink('//chat.example.invalid/test')).toEqual(link('//chat.example.invalid/test'));
 	});
 
 	it("should return an url concatenated '//' if the url has no protocol", () => {
-		expect(autoLink('rocket.chat/test')).toEqual(link('//rocket.chat/test', [plain('rocket.chat/test')]));
+		expect(autoLink('chat.example.invalid/test')).toEqual(link('//chat.example.invalid/test', [plain('chat.example.invalid/test')]));
 	});
 
 	it("should return an url concatenated '//' if the url has no protocol and has sub-domain", () => {
@@ -183,6 +183,6 @@ describe('autoLink helper function', () => {
 	});
 
 	it("should return an plain text url due to invalid TLD that's validate with the external library TLDTS", () => {
-		expect(autoLink('rocket.chattt/url_path')).toEqual(plain('rocket.chattt/url_path'));
+		expect(autoLink('examplechattt/url_path')).toEqual(plain('examplechattt/url_path'));
 	});
 });

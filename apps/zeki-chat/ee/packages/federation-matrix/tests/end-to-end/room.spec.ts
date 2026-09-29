@@ -44,7 +44,7 @@ import { SynapseClient } from '../helper/synapse-client';
 			{
 				username: federationConfig.rc1.additionalUser1.username,
 				password: federationConfig.rc1.additionalUser1.password,
-				email: `${federationConfig.rc1.additionalUser1.username}@rocket.chat`,
+				email: `${federationConfig.rc1.additionalUser1.username}@example.invalid`,
 				name: federationConfig.rc1.additionalUser1.username,
 			},
 			rc1AdminRequestConfig,
@@ -1710,7 +1710,7 @@ import { SynapseClient } from '../helper/synapse-client';
 					await acceptRoomInvite(rid, rc1AdminRequestConfig);
 				}, 15000);
 
-				describe('It should reflect all the members and messagens on the rocket.chat side', () => {
+				describe('It should reflect all the members and messagens on the chat.example.invalid side', () => {
 					it('should show all the three users in the members list', async () => {
 						await retry(
 							'Getting room members until all are present',
@@ -1974,7 +1974,7 @@ import { SynapseClient } from '../helper/synapse-client';
 					{
 						username: rcUser1.username,
 						password: 'random',
-						email: `${rcUser1.username}@rocket.chat`,
+						email: `${rcUser1.username}@example.invalid`,
 						name: rcUser1.fullName,
 					},
 					rc1AdminRequestConfig,

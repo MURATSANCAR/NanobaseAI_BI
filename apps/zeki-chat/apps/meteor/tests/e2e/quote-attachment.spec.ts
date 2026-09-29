@@ -99,7 +99,7 @@ test.describe.parallel('Quote Attachment', () => {
 	});
 
 	test('should show link preview when quoting a link with preview', async () => {
-		const testLink = 'https://rocket.chat';
+		const testLink = 'https://chat.example.invalid';
 
 		await test.step('Send link message in channel', async () => {
 			await poHomeChannel.content.sendMessage(testLink);

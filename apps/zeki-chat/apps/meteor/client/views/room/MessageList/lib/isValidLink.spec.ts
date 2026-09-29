@@ -7,8 +7,8 @@ describe('isValidLink', () => {
 		['test/test', false],
 		['.', false],
 		['./test', false],
-		['https://rocket.chat', true],
-		['rocket.chat', false],
+		['https://chat.example.invalid', true],
+		['chat.example.invalid', false],
 		['data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAAsBAAEAAAICTAEAOw==', true],
 	] as const;
 

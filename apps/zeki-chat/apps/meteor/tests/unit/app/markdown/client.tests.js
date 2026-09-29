@@ -1,4 +1,4 @@
-import { escapeHTML } from '@rocket.chat/string-helpers';
+import { escapeHTML } from '@chat.example.invalid/string-helpers';
 import { expect } from 'chai';
 
 import { Markdown, original, filtered } from './client.mocks';
@@ -185,68 +185,68 @@ const quote = {
 
 const link = {
 	'&lt;http://link|Text&gt;': escapeHTML('&lt;http://link|Text&gt;'),
-	'&lt;https://open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;https://open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;'),
-	'&lt;https://open.rocket.chat/ | Open Site For ZEKI AI CHAT&gt;': escapeHTML(
-		'&lt;https://open.rocket.chat/ | Open Site For ZEKI AI CHAT&gt;',
+	'&lt;https://chat.example.invalid/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;https://chat.example.invalid/|Open Site For ZEKI AI CHAT&gt;'),
+	'&lt;https://chat.example.invalid/ | Open Site For ZEKI AI CHAT&gt;': escapeHTML(
+		'&lt;https://chat.example.invalid/ | Open Site For ZEKI AI CHAT&gt;',
 	),
-	'&lt;https://rocket.chat/|Rocket.Chat Site&gt;': '&amp;lt;https://rocket.chat/|Rocket.Chat Site&amp;gt;',
-	'&lt;https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;': escapeHTML(
-		'&lt;https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;',
+	'&lt;https://chat.example.invalid/|chat.example.invalid Site&gt;': '&amp;lt;https://chat.example.invalid/|chat.example.invalid Site&amp;gt;',
+	'&lt;https://chat.example.invalid/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;': escapeHTML(
+		'&lt;https://chat.example.invalid/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;',
 	),
 	'&lt;http://linkText&gt;': escapeHTML('&lt;http://linkText&gt;'),
-	'&lt;https:open.rocket.chat/ | Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;https:open.rocket.chat/ | Open Site For ZEKI AI CHAT&gt;'),
-	'https://open.rocket.chat/|Open Site For ZEKI AI CHAT': escapeHTML('https://open.rocket.chat/|Open Site For ZEKI AI CHAT'),
-	'&lt;www.open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;www.open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;'),
-	'&lt;htps://rocket.chat/|Rocket.Chat Site&gt;': escapeHTML('&lt;htps://rocket.chat/|Rocket.Chat Site&gt;'),
-	'&lt;ttps://rocket.chat/|Rocket.Chat Site&gt;': escapeHTML('&lt;ttps://rocket.chat/|Rocket.Chat Site&gt;'),
-	'&lt;tps://rocket.chat/|Rocket.Chat Site&gt;': escapeHTML('&lt;tps://rocket.chat/|Rocket.Chat Site&gt;'),
-	'&lt;open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;open.rocket.chat/|Open Site For ZEKI AI CHAT&gt;'),
-	'&lt;htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;': escapeHTML(
-		'&lt;htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;',
+	'&lt;https:chat.example.invalid/ | Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;https:chat.example.invalid/ | Open Site For ZEKI AI CHAT&gt;'),
+	'https://chat.example.invalid/|Open Site For ZEKI AI CHAT': escapeHTML('https://chat.example.invalid/|Open Site For ZEKI AI CHAT'),
+	'&lt;chat.example.invalid/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;chat.example.invalid/|Open Site For ZEKI AI CHAT&gt;'),
+	'&lt;htps://chat.example.invalid/|chat.example.invalid Site&gt;': escapeHTML('&lt;htps://chat.example.invalid/|chat.example.invalid Site&gt;'),
+	'&lt;ttps://chat.example.invalid/|chat.example.invalid Site&gt;': escapeHTML('&lt;ttps://chat.example.invalid/|chat.example.invalid Site&gt;'),
+	'&lt;tps://chat.example.invalid/|chat.example.invalid Site&gt;': escapeHTML('&lt;tps://chat.example.invalid/|chat.example.invalid Site&gt;'),
+	'&lt;chat.example.invalid/|Open Site For ZEKI AI CHAT&gt;': escapeHTML('&lt;chat.example.invalid/|Open Site For ZEKI AI CHAT&gt;'),
+	'&lt;htts://chat.example.invalid/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;': escapeHTML(
+		'&lt;htts://chat.example.invalid/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site&gt;',
 	),
 
 	'<http://invalid link|Text>': escapeHTML('<http://invalid link|Text>'),
 	'<http://link|Text>': linkWrapped('http://link', 'Text'),
-	'<https://open.rocket.chat/|Open Site For ZEKI AI CHAT>': linkWrapped('https://open.rocket.chat/', 'Open Site For ZEKI AI CHAT'),
-	'<https://open.rocket.chat/ | Open Site For ZEKI AI CHAT>': linkWrapped(
-		encodeURI('https://open.rocket.chat/ '),
+	'<https://chat.example.invalid/|Open Site For ZEKI AI CHAT>': linkWrapped('https://chat.example.invalid/', 'Open Site For ZEKI AI CHAT'),
+	'<https://chat.example.invalid/ | Open Site For ZEKI AI CHAT>': linkWrapped(
+		encodeURI('https://chat.example.invalid/ '),
 		' Open Site For ZEKI AI CHAT',
 	),
-	'<https://rocket.chat/|Rocket.Chat Site>': linkWrapped('https://rocket.chat/', 'ZEKI AI CHAT Site'),
-	'<https://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>': linkWrapped(
-		'https://rocket.chat/docs/developer-guides/testing/#testing',
+	'<https://chat.example.invalid/|chat.example.invalid Site>': linkWrapped('https://chat.example.invalid/', 'ZEKI AI CHAT Site'),
+	'<https://chat.example.invalid/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>': linkWrapped(
+		'https://chat.example.invalid/docs/developer-guides/testing/#testing',
 		'Testing Entry on ZEKI AI CHAT Docs Site',
 	),
 	'<http://linkText>': escapeHTML('<http://linkText>'),
-	'<https:open.rocket.chat/ | Open Site For ZEKI AI CHAT>': escapeHTML('<https:open.rocket.chat/ | Open Site For ZEKI AI CHAT>'),
-	'<www.open.rocket.chat/|Open Site For ZEKI AI CHAT>': escapeHTML('<www.open.rocket.chat/|Open Site For ZEKI AI CHAT>'),
-	'<htps://rocket.chat/|Rocket.Chat Site>': escapeHTML('<htps://rocket.chat/|Rocket.Chat Site>'),
-	'<ttps://rocket.chat/|Rocket.Chat Site>': escapeHTML('<ttps://rocket.chat/|Rocket.Chat Site>'),
-	'<tps://rocket.chat/|Rocket.Chat Site>': escapeHTML('<tps://rocket.chat/|Rocket.Chat Site>'),
-	'<open.rocket.chat/|Open Site For ZEKI AI CHAT>': escapeHTML('<open.rocket.chat/|Open Site For ZEKI AI CHAT>'),
-	'<htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>': escapeHTML(
-		'<htts://rocket.chat/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>',
+	'<https:chat.example.invalid/ | Open Site For ZEKI AI CHAT>': escapeHTML('<https:chat.example.invalid/ | Open Site For ZEKI AI CHAT>'),
+	'<chat.example.invalid/|Open Site For ZEKI AI CHAT>': escapeHTML('<chat.example.invalid/|Open Site For ZEKI AI CHAT>'),
+	'<htps://chat.example.invalid/|chat.example.invalid Site>': escapeHTML('<htps://chat.example.invalid/|chat.example.invalid Site>'),
+	'<ttps://chat.example.invalid/|chat.example.invalid Site>': escapeHTML('<ttps://chat.example.invalid/|chat.example.invalid Site>'),
+	'<tps://chat.example.invalid/|chat.example.invalid Site>': escapeHTML('<tps://chat.example.invalid/|chat.example.invalid Site>'),
+	'<chat.example.invalid/|Open Site For ZEKI AI CHAT>': escapeHTML('<chat.example.invalid/|Open Site For ZEKI AI CHAT>'),
+	'<htts://chat.example.invalid/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>': escapeHTML(
+		'<htts://chat.example.invalid/docs/developer-guides/testing/#testing|Testing Entry on ZEKI AI CHAT Docs Site>',
 	),
 
 	'[Text](http://invalid link)': '[Text](http://invalid link)',
 	'[Text](http://link)': linkWrapped('http://link', 'Text'),
-	'[Open Site For ZEKI AI CHAT](https://open.rocket.chat/)': linkWrapped('https://open.rocket.chat/', 'Open Site For ZEKI AI CHAT'),
-	'[ Open Site For ZEKI AI CHAT ](https://open.rocket.chat/)': linkWrapped('https://open.rocket.chat/', ' Open Site For ZEKI AI CHAT '),
-	'[ZEKI AI CHAT Site](https://rocket.chat/)': linkWrapped('https://rocket.chat/', 'ZEKI AI CHAT Site'),
-	'[Testing Entry on ZEKI AI CHAT Docs Site](https://rocket.chat/docs/developer-guides/testing/#testing)': linkWrapped(
-		'https://rocket.chat/docs/developer-guides/testing/#testing',
+	'[Open Site For ZEKI AI CHAT](https://chat.example.invalid/)': linkWrapped('https://chat.example.invalid/', 'Open Site For ZEKI AI CHAT'),
+	'[ Open Site For ZEKI AI CHAT ](https://chat.example.invalid/)': linkWrapped('https://chat.example.invalid/', ' Open Site For ZEKI AI CHAT '),
+	'[ZEKI AI CHAT Site](https://chat.example.invalid/)': linkWrapped('https://chat.example.invalid/', 'ZEKI AI CHAT Site'),
+	'[Testing Entry on ZEKI AI CHAT Docs Site](https://chat.example.invalid/docs/developer-guides/testing/#testing)': linkWrapped(
+		'https://chat.example.invalid/docs/developer-guides/testing/#testing',
 		'Testing Entry on ZEKI AI CHAT Docs Site',
 	),
 	'[](http://linkText)': '[](http://linkText)',
 	'[text]': '[text]',
-	'[Open Site For ZEKI AI CHAT](https:open.rocket.chat/)': '[Open Site For ZEKI AI CHAT](https:open.rocket.chat/)',
-	'[Open Site For ZEKI AI CHAT](www.open.rocket.chat/)': '[Open Site For ZEKI AI CHAT](www.open.rocket.chat/)',
-	'[ZEKI AI CHAT Site](htps://rocket.chat/)': '[ZEKI AI CHAT Site](htps://rocket.chat/)',
-	'[ZEKI AI CHAT Site](ttps://rocket.chat/)': '[ZEKI AI CHAT Site](ttps://rocket.chat/)',
-	'[ZEKI AI CHAT Site](tps://rocket.chat/)': '[ZEKI AI CHAT Site](tps://rocket.chat/)',
-	'[Open Site For ZEKI AI CHAT](open.rocket.chat/)': '[Open Site For ZEKI AI CHAT](open.rocket.chat/)',
-	'[Testing Entry on ZEKI AI CHAT Docs Site](htts://rocket.chat/docs/developer-guides/testing/#testing)':
-		'[Testing Entry on ZEKI AI CHAT Docs Site](htts://rocket.chat/docs/developer-guides/testing/#testing)',
+	'[Open Site For ZEKI AI CHAT](https:chat.example.invalid/)': '[Open Site For ZEKI AI CHAT](https:chat.example.invalid/)',
+	'[Open Site For ZEKI AI CHAT](chat.example.invalid/)': '[Open Site For ZEKI AI CHAT](chat.example.invalid/)',
+	'[ZEKI AI CHAT Site](htps://chat.example.invalid/)': '[ZEKI AI CHAT Site](htps://chat.example.invalid/)',
+	'[ZEKI AI CHAT Site](ttps://chat.example.invalid/)': '[ZEKI AI CHAT Site](ttps://chat.example.invalid/)',
+	'[ZEKI AI CHAT Site](tps://chat.example.invalid/)': '[ZEKI AI CHAT Site](tps://chat.example.invalid/)',
+	'[Open Site For ZEKI AI CHAT](chat.example.invalid/)': '[Open Site For ZEKI AI CHAT](chat.example.invalid/)',
+	'[Testing Entry on ZEKI AI CHAT Docs Site](htts://chat.example.invalid/docs/developer-guides/testing/#testing)':
+		'[Testing Entry on ZEKI AI CHAT Docs Site](htts://chat.example.invalid/docs/developer-guides/testing/#testing)',
 	'[Text](http://link?param1=1&param2=2)': linkWrapped('http://link?param1=1&amp;param2=2', 'Text'),
 	'[Testing Double parentheses](https://en.wikipedia.org/wiki/Disambiguation_(disambiguation))': linkWrapped(
 		'https://en.wikipedia.org/wiki/Disambiguation_(disambiguation)',
@@ -373,9 +373,9 @@ const quoteFiltered = {
 
 const linkFiltered = {
 	'[Text](http://link)': 'Text',
-	'[Open Site For ZEKI AI CHAT](https://open.rocket.chat/)': 'Open Site For ZEKI AI CHAT',
-	'[ Open Site For ZEKI AI CHAT](https://open.rocket.chat/ )': ' Open Site For ZEKI AI CHAT',
-	'[ZEKI AI CHAT Site](https://rocket.chat/)': 'ZEKI AI CHAT Site',
+	'[Open Site For ZEKI AI CHAT](https://chat.example.invalid/)': 'Open Site For ZEKI AI CHAT',
+	'[ Open Site For ZEKI AI CHAT](https://chat.example.invalid/ )': ' Open Site For ZEKI AI CHAT',
+	'[ZEKI AI CHAT Site](https://chat.example.invalid/)': 'ZEKI AI CHAT Site',
 	'<http://link|Text>': 'Text',
 	'<http://link|Text for test>': 'Text for test',
 };

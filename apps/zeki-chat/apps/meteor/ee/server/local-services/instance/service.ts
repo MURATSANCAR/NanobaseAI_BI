@@ -176,7 +176,7 @@ export class InstanceService extends ServiceClassInternal implements IInstanceSe
 			nodeVersion: process.version,
 		};
 
-		await InstanceStatus.registerInstance('rocket.chat', instance);
+		await InstanceStatus.registerInstance('zeki-chat', instance);
 
 		try {
 			const hasCapability = await Capabilities.hasModule('scalability');

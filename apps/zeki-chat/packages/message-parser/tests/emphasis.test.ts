@@ -67,16 +67,16 @@ test.each([
 	['_9797.76_', [paragraph([italic([plain('9797.76')])])]],
 	['_3.14_', [paragraph([italic([plain('3.14')])])]],
 	['_example.com_', [paragraph([italic([plain('example.com')])])]],
-	['_rocket.chat_', [paragraph([italic([plain('rocket.chat')])])]],
+	['_examplechat_', [paragraph([italic([plain('chat.example.invalid')])])]],
 	['_example.com', [paragraph([plain('_example.com')])]],
 	[
-		'**reference link inside [emphasis with more [references](https://rocket.chat)](https://rocket.chat)**',
+		'**reference link inside [emphasis with more [references](https://chat.example.invalid)](https://chat.example.invalid)**',
 		[
 			paragraph([
 				bold([
 					plain('reference link inside '),
-					link('https://rocket.chat', [plain('emphasis with more [references')]),
-					plain('](https://rocket.chat)'),
+					link('https://chat.example.invalid', [plain('emphasis with more [references')]),
+					plain('](https://chat.example.invalid)'),
 				]),
 			]),
 		],

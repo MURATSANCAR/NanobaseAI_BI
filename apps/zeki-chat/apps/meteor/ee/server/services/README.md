@@ -73,4 +73,4 @@ Used for the communication of the microservices
 `docker-compose up --remove-orphans` will run all the micro-services, still need to run MongoDB and ZEKI AI CHAT Core separated
 
 ### Running ZEKI AI CHAT core
-`MONGO_URL=mongodb://localhost:27017/rocketchat MONGO_OPLOG_URL=mongodb://localhost:27017/local TRANSPORTER=nats://localhost:4222 MOLECULER_LOG_LEVEL=debug meteor`
+`MONGO_URL=mongodb://localhost:27017/zeki MONGO_OPLOG_URL=mongodb://localhost:27017/local TRANSPORTER=nats://localhost:4222 MOLECULER_LOG_LEVEL=debug meteor`

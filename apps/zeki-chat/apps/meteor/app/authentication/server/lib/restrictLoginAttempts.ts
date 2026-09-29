@@ -26,7 +26,7 @@ const notifyFailedLogin = async (ipOrUsername: string, blockedUntil: Date, faile
 		return;
 	}
 
-	const rocketCat = await Users.findOneById('zeki.bot');
+	const zekiBot = await Users.findOneById('zeki.bot');
 	// send message
 	const message = {
 		attachments: [
@@ -43,7 +43,7 @@ const notifyFailedLogin = async (ipOrUsername: string, blockedUntil: Date, faile
 		],
 	};
 
-	await sendMessage(rocketCat, message, room);
+	await sendMessage(zekiBot, message, room);
 };
 
 export const isValidLoginAttemptByIp = async (ip: string): Promise<boolean> => {

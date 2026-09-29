@@ -177,10 +177,10 @@ const DEFAULT_ATTACHMENT = {
 	},
 	title: {
 		value: 'Attachment Title',
-		link: 'https://github.com/RocketChat',
+		link: 'https://github.com/examplechat',
 		displayDownloadLink: false,
 	},
-	imageUrl: 'https://rocket.chat/images/default/logo.svg',
+	imageUrl: 'https://chat.example.invalid/images/default/logo.svg',
 	audioUrl: 'http://www.w3schools.com/tags/horse.mp3',
 	videoUrl: 'http://www.w3schools.com/tags/movie.mp4',
 	fields: [
@@ -510,7 +510,7 @@ export class TestData {
 			appId: `${name}-app-id`,
 			name,
 			supportsTemplates: true,
-			documentationUrl: 'https://rocket.chat',
+			documentationUrl: 'https://chat.example.invalid',
 			sendOutboundMessage: async (message): Promise<void> => {
 				console.log('Sending message', message);
 			},
@@ -526,7 +526,7 @@ export class TestData {
 			appId: `${name}-app-id`,
 			name,
 			supportsTemplates: true,
-			documentationUrl: 'https://rocket.chat',
+			documentationUrl: 'https://chat.example.invalid',
 			sendOutboundMessage: async (message): Promise<void> => {
 				console.log('Sending message', message);
 			},

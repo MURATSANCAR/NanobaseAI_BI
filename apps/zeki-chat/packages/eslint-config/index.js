@@ -14,13 +14,13 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
 	{
-		name: 'rocket.chat/linter',
+		name: 'zeki-chat/linter',
 		linterOptions: {
 			reportUnusedDisableDirectives: true,
 		},
 	},
 	{
-		name: 'rocket.chat/ignored',
+		name: 'zeki-chat/ignored',
 		ignores: ['**/dist', '**/coverage', '**/storybook-static'],
 	},
 	eslint.configs.recommended,
@@ -36,7 +36,7 @@ export default defineConfig(
 	importPlugin.flatConfigs.typescript,
 	jsxA11yPlugin.flatConfigs.recommended,
 	{
-		name: 'rocket.chat/jsx-a11y',
+		name: 'zeki-chat/jsx-a11y',
 		rules: {
 			'jsx-a11y/no-autofocus': ['error', { ignoreNonDOM: true }],
 		},
@@ -44,7 +44,7 @@ export default defineConfig(
 	reactPlugin.configs.flat.recommended,
 	reactPlugin.configs.flat['jsx-runtime'],
 	{
-		name: 'rocket.chat/react',
+		name: 'zeki-chat/react',
 		settings: {
 			react: {
 				version: 'detect',
@@ -62,7 +62,7 @@ export default defineConfig(
 	},
 	reactHooksPlugin.configs.flat.recommended,
 	{
-		name: 'rocket.chat/react-hooks',
+		name: 'zeki-chat/react-hooks',
 		rules: {
 			// Core hooks rules
 			'react-hooks/exhaustive-deps': 'error',
@@ -120,7 +120,7 @@ export default defineConfig(
 	},
 	...storybookPlugin.configs['flat/recommended'],
 	{
-		name: 'rocket.chat/anti-trojan',
+		name: 'zeki-chat/anti-trojan',
 		plugins: {
 			'anti-trojan-source': antiTrojanSourcePlugin,
 		},
@@ -130,14 +130,14 @@ export default defineConfig(
 	},
 	prettierPluginRecommended,
 	{
-		name: 'rocket.chat/ecmascript',
+		name: 'zeki-chat/ecmascript',
 		languageOptions: {
 			ecmaVersion: 2024,
 			sourceType: 'module',
 		},
 	},
 	{
-		name: 'rocket.chat/disable-typescript-rules-for-js',
+		name: 'zeki-chat/disable-typescript-rules-for-js',
 		files: ['**/*.@(js|jsx|mjs|cjs)'],
 		rules: {
 			'@typescript-eslint/ban-ts-comment': 'off',
@@ -163,12 +163,12 @@ export default defineConfig(
 		},
 	},
 	{
-		name: 'rocket.chat/disable-type-checked-rules-for-js',
+		name: 'zeki-chat/disable-type-checked-rules-for-js',
 		files: ['**/*.@(js|jsx|mjs|cjs)'],
 		...tseslint.configs.disableTypeChecked,
 	},
 	{
-		name: 'rocket.chat/best-practices',
+		name: 'zeki-chat/best-practices',
 		rules: {
 			'array-callback-return': ['error', { allowImplicit: true }],
 			'block-scoped-var': 'error',
@@ -227,7 +227,7 @@ export default defineConfig(
 		},
 	},
 	{
-		name: 'rocket.chat/common-mistakes',
+		name: 'zeki-chat/common-mistakes',
 		rules: {
 			'getter-return': ['error', { allowImplicit: true }],
 			'no-async-promise-executor': 'warn',
@@ -245,7 +245,7 @@ export default defineConfig(
 	},
 	// TODO: disable, as they are not available in all environments
 	{
-		name: 'rocket.chat/node-globals',
+		name: 'zeki-chat/node-globals',
 		languageOptions: {
 			globals: {
 				...globals.node,
@@ -253,7 +253,7 @@ export default defineConfig(
 		},
 	},
 	{
-		name: 'rocket.chat/stylistic',
+		name: 'zeki-chat/stylistic',
 		rules: {
 			'lines-between-class-members': ['error', 'always', { exceptAfterSingleLine: false }],
 			'lines-around-directive': [
@@ -277,7 +277,7 @@ export default defineConfig(
 		},
 	},
 	{
-		name: 'rocket.chat/variables',
+		name: 'zeki-chat/variables',
 		rules: {
 			'no-unused-vars': [
 				'error',
@@ -292,7 +292,7 @@ export default defineConfig(
 		},
 	},
 	{
-		name: 'rocket.chat/es2015',
+		name: 'zeki-chat/es2015',
 		rules: {
 			'no-duplicate-imports': 'off',
 			'no-useless-computed-key': 'error',
@@ -335,7 +335,7 @@ export default defineConfig(
 		},
 	},
 	{
-		name: 'rocket.chat/import',
+		name: 'zeki-chat/import',
 		settings: {
 			'import/resolver': {
 				node: true,
@@ -386,12 +386,12 @@ export default defineConfig(
 				'warn',
 				{
 					types: {
-						'FC': 'Useless and has some drawbacks, see https://adr.rocket.chat/0094',
-						'React.FC': 'Useless and has some drawbacks, see https://adr.rocket.chat/0094',
-						'VFC': 'Useless and has some drawbacks, see https://adr.rocket.chat/0094',
-						'React.VFC': 'Useless and has some drawbacks, see https://adr.rocket.chat/0094',
-						'FunctionComponent': 'Useless and has some drawbacks, see https://adr.rocket.chat/0094',
-						'React.FunctionComponent': 'Useless and has some drawbacks, see https://adr.rocket.chat/0094',
+						'FC': 'Useless and has some drawbacks; use an explicit function signature',
+						'React.FC': 'Useless and has some drawbacks; use an explicit function signature',
+						'VFC': 'Useless and has some drawbacks; use an explicit function signature',
+						'React.VFC': 'Useless and has some drawbacks; use an explicit function signature',
+						'FunctionComponent': 'Useless and has some drawbacks; use an explicit function signature',
+						'React.FunctionComponent': 'Useless and has some drawbacks; use an explicit function signature',
 					},
 				},
 			],
@@ -557,7 +557,7 @@ export default defineConfig(
 		},
 	},
 	{
-		name: 'rocket.chat/react-testing',
+		name: 'zeki-chat/react-testing',
 		files: ['**/*.stories.@(ts|tsx|mts|cts|js|jsx|mjs|cjs)', '**/*.spec.@(ts|tsx|js|jsx|mjs|cjs)'],
 		rules: {
 			'react/display-name': 'off',

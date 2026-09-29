@@ -33,7 +33,7 @@ describe('isNodeOfType', () => {
 	});
 
 	it('narrows image nodes from parser output', () => {
-		const paragraph: unknown = parse('![logo](https://rocket.chat/logo.png)')[0];
+		const paragraph: unknown = parse('![logo](https://chat.example.invalid/logo.png)')[0];
 
 		expect(isNodeOfType(paragraph, 'PARAGRAPH')).toBe(true);
 
@@ -50,8 +50,8 @@ describe('isNodeOfType', () => {
 		}
 
 		const narrowed: Image = imageNode;
-		expect(imageNode.value.src.value).toBe('https://rocket.chat/logo.png');
-		expect(narrowed.value.src.value).toBe('https://rocket.chat/logo.png');
+		expect(imageNode.value.src.value).toBe('https://chat.example.invalid/logo.png');
+		expect(narrowed.value.src.value).toBe('https://chat.example.invalid/logo.png');
 	});
 
 	it('returns false for mismatched types', () => {

@@ -2,7 +2,7 @@ import { isTracingEnabled } from '@zeki.chat/tracing';
 import { MongoClient } from 'mongodb';
 import type { Db, Collection, MongoClientOptions, Document } from 'mongodb';
 
-const { MONGO_URL = 'mongodb://localhost:27017/rocketchat' } = process.env;
+const { MONGO_URL = 'mongodb://localhost:27017/zeki' } = process.env;
 
 const name = /^mongodb:\/\/.*?(?::[0-9]+)?\/([^?]*)/.exec(MONGO_URL)?.[1];
 

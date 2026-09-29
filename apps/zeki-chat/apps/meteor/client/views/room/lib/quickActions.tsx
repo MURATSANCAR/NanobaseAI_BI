@@ -23,7 +23,7 @@ export type QuickActionsActionConfig = {
 
 export enum QuickActionsEnum {
 	MoveQueue = 'rocket-move-to-queue',
-	ChatForward = 'rocket-chat-forward',
+	ChatForward = 'zeki-chat-forward',
 	Transcript = 'rocket-transcript',
 	TranscriptEmail = 'rocket-transcript-email',
 	TranscriptPDF = 'rocket-transcript-pdf',

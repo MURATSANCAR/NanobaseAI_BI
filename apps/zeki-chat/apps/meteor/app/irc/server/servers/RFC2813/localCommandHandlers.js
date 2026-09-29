@@ -9,7 +9,7 @@ function registerUser(parameters) {
 	this.write({
 		prefix: this.config.server.name,
 		command: 'NICK',
-		parameters: [nick, 1, username, 'irc.rocket.chat', 1, '+i'],
+		parameters: [nick, 1, username, 'localhost', 1, '+i'],
 		trailer: name,
 	});
 }

@@ -158,7 +158,7 @@ const registerUser = async (
 	overrideCredentials: Credentials | null = credentials,
 ) => {
 	const username = userData.username || `user.test.${Date.now()}`;
-	const email = userData.email || `${username}@rocket.chat`;
+	const email = userData.email || `${username}@example.invalid`;
 
 	const req = request.post(api('users.register'));
 
@@ -598,7 +598,7 @@ describe('[Users]', () => {
 					.post(api('users.create'))
 					.set(credentials)
 					.send({
-						email: 'success_extension_user@rocket.chat',
+						email: 'success_extension_user@chat.example.invalid',
 						name: 'success_extension_user',
 						username: 'success_extension_user',
 						password,
@@ -628,7 +628,7 @@ describe('[Users]', () => {
 					.post(api('users.create'))
 					.set(credentials)
 					.send({
-						email: 'fail_extension_in_use@rocket.chat',
+						email: 'fail_extension_in_use@chat.example.invalid',
 						name: 'fail_extension_in_use',
 						username: 'fail_extension_in_use',
 						password,
@@ -654,7 +654,7 @@ describe('[Users]', () => {
 					.post(api('users.create'))
 					.set(credentials)
 					.send({
-						email: 'fail_voip_disabled@rocket.chat',
+						email: 'fail_voip_disabled@chat.example.invalid',
 						name: 'fail_voip_disabled',
 						username: 'fail_voip_disabled',
 						password,
@@ -684,7 +684,7 @@ describe('[Users]', () => {
 			});
 
 			const dummyUser = {
-				email: 'email2fa_auto_opt_in@rocket.chat',
+				email: 'email2fa_auto_opt_in@chat.example.invalid',
 				name: 'email2fa_auto_opt_in',
 				username: 'email2fa_auto_opt_in',
 				password,
@@ -5976,7 +5976,7 @@ describe('[Users]', () => {
 			await request
 				.post(api('users.sendWelcomeEmail'))
 				.set(credentials)
-				.send({ email: 'fake_user32132131231@rocket.chat' })
+				.send({ email: 'fake_user32132131231@chat.example.invalid' })
 				.expect('Content-Type', 'application/json')
 				.expect(400)
 				.expect((res) => {

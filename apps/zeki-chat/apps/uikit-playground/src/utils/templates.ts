@@ -229,7 +229,7 @@ export const templates: templateType[] = [
 									text: 'Click Me',
 									emoji: true,
 								},
-								url: 'https://rocket.chat',
+								url: 'https://chat.example.invalid',
 							},
 						],
 					},
@@ -398,7 +398,7 @@ export const templates: templateType[] = [
 								},
 							],
 						},
-						externalUrl: 'https://rocket.chat',
+						externalUrl: 'https://chat.example.invalid',
 					},
 					{
 						type: 'image',

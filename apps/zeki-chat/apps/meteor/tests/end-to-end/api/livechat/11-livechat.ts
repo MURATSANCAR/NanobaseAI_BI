@@ -75,7 +75,7 @@ describe('LIVECHAT - Utils', () => {
 		});
 		it('should send an offline email', async () => {
 			await updateSetting('Livechat_validate_offline_email', false);
-			await updateSetting('Livechat_offline_email', 'test-email@rocket.chat');
+			await updateSetting('Livechat_offline_email', 'test-email@chat.example.invalid');
 			await request
 				.post(api('livechat/offline.message'))
 				.set(credentials)
@@ -275,7 +275,7 @@ describe('LIVECHAT - Utils', () => {
 			const { body } = await request
 				.post(api('livechat/page.visited'))
 				.set(credentials)
-				.send({ token: 'test', rid: 'test', pageInfo: { change: 'url', title: 'ZEKI AI CHAT', location: { href: 'https://rocket.chat' } } });
+				.send({ token: 'test', rid: 'test', pageInfo: { change: 'url', title: 'ZEKI AI CHAT', location: { href: 'https://chat.example.invalid' } } });
 			expect(body).to.have.property('success', true);
 			expect(body).to.have.property('page');
 			expect(body.page).to.have.property('navigation');
@@ -291,7 +291,7 @@ describe('LIVECHAT - Utils', () => {
 				.send({
 					token: visitor.token,
 					rid: room._id,
-					pageInfo: { change: 'url', title: 'ZEKI AI CHAT', location: { href: 'https://rocket.chat' } },
+					pageInfo: { change: 'url', title: 'ZEKI AI CHAT', location: { href: 'https://chat.example.invalid' } },
 				});
 
 			expect(body).to.have.property('success', true);

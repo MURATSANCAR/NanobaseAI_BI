@@ -212,9 +212,9 @@ exports[`renders Default without crashing 1`] = `
                       >
                         <a
                           class="rcx-box rcx-box--full rcx-css-1te28na"
-                          href="mailto:rocketchat@rocket.chat"
+                          href="mailto:examplechat@chat.example.invalid"
                         >
-                          rocketchat@rocket.chat
+                          examplechat@chat.example.invalid
                         </a>
                         <span
                           class="rcx-box rcx-box--full rcx-tag  rcx-css-1dtwr38 rcx-css-1eogw2f"
@@ -509,9 +509,9 @@ exports[`renders InvitedUser without crashing 1`] = `
                       >
                         <a
                           class="rcx-box rcx-box--full rcx-css-1te28na"
-                          href="mailto:rocketchat@rocket.chat"
+                          href="mailto:examplechat@chat.example.invalid"
                         >
-                          rocketchat@rocket.chat
+                          examplechat@chat.example.invalid
                         </a>
                         <span
                           class="rcx-box rcx-box--full rcx-tag  rcx-css-1dtwr38 rcx-css-1eogw2f"
@@ -820,9 +820,9 @@ exports[`renders WithABACAttributes without crashing 1`] = `
                       >
                         <a
                           class="rcx-box rcx-box--full rcx-css-1te28na"
-                          href="mailto:rocketchat@rocket.chat"
+                          href="mailto:examplechat@chat.example.invalid"
                         >
-                          rocketchat@rocket.chat
+                          examplechat@chat.example.invalid
                         </a>
                         <span
                           class="rcx-box rcx-box--full rcx-tag  rcx-css-1dtwr38 rcx-css-1eogw2f"
@@ -1177,9 +1177,9 @@ exports[`renders WithVoiceCallExtension without crashing 1`] = `
                       >
                         <a
                           class="rcx-box rcx-box--full rcx-css-1te28na"
-                          href="mailto:rocketchat@rocket.chat"
+                          href="mailto:examplechat@chat.example.invalid"
                         >
-                          rocketchat@rocket.chat
+                          examplechat@chat.example.invalid
                         </a>
                         <span
                           class="rcx-box rcx-box--full rcx-tag  rcx-css-1dtwr38 rcx-css-1eogw2f"

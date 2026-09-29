@@ -15,8 +15,8 @@ describe('isAbsoluteURL', () => {
 	});
 
 	test.each([
-		['https://rocket.chat', true],
-		['http://rocket.chat', true],
+		['https://chat.example.invalid', true],
+		['https://chat.example.invalid', true],
 		['https://example.com/path?query=1#hash', true],
 		['http://localhost:3000', true],
 		['data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', true],

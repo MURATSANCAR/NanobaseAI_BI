@@ -69,11 +69,11 @@ const categories: BenchCategory[] = [
 	{
 		name: 'URLs & Links',
 		fixtures: [
-			{ name: 'single', input: 'Check out https://rocket.chat for more info' },
-			{ name: 'multiple', input: 'Visit https://rocket.chat or https://github.com/RocketChat/Rocket.Chat or https://open.rocket.chat' },
-			{ name: 'markdown link', input: '[ZEKI AI CHAT](https://rocket.chat)' },
-			{ name: 'autolinked domain', input: 'Visit rocket.chat for more info' },
-			{ name: 'with path', input: 'See https://github.com/RocketChat/Rocket.Chat/tree/develop/packages/message-parser for details' },
+			{ name: 'single', input: 'Check out https://examplechat for more info' },
+			{ name: 'multiple', input: 'Visit https://examplechat or https://assets.example.invalid/sample or https://open.examplechat' },
+			{ name: 'markdown link', input: '[ZEKI AI CHAT](https://examplechat)' },
+			{ name: 'autolinked domain', input: 'Visit examplechat for more info' },
+			{ name: 'with path', input: 'See https://assets.example.invalid/sample for details' },
 		],
 	},
 	{
@@ -158,12 +158,12 @@ const categories: BenchCategory[] = [
 			{
 				name: 'medium',
 				input:
-					'@admin I pushed the fix to `develop` branch. Check https://github.com/RocketChat/Rocket.Chat/pull/12345 for details. :thumbsup:',
+					'@admin I pushed the fix to `develop` branch. Check https://assets.example.invalid/sample for details. :thumbsup:',
 			},
 			{
 				name: 'complex',
 				input:
-					'**Release Notes v7.0**\n- [x] Fix #12345\n- [ ] Update docs\n\n> Important: check https://docs.rocket.chat\n\ncc @admin @devlead #releases :rocket:',
+					'**Release Notes v7.0**\n- [x] Fix #12345\n- [ ] Update docs\n\n> Important: check https://docs.examplechat\n\ncc @admin @devlead #releases :rocket:',
 				options: fullOptions,
 			},
 			{

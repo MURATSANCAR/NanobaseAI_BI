@@ -20,7 +20,7 @@ export default async function handleOnCreateUser(newUser) {
 				'profile.irc.fromIRC': false,
 				'profile.irc.username': `${newUser.username}-rkt`,
 				'profile.irc.nick': `${newUser.username}-rkt`,
-				'profile.irc.hostname': 'rocket.chat',
+				'profile.irc.hostname': 'localhost',
 			},
 		},
 	);

@@ -94,7 +94,7 @@ const AddMatrixUsersModal = ({ onClose, matrixIdVerifiedStatus, onSave, complete
 						</Box>
 					))}
 					{zekiChatUsers.map((_user) => (
-						<Box is='li' key={`rocket-chat-${_user}`}>
+						<Box is='li' key={`zeki-chat-${_user}`}>
 							{_user}
 						</Box>
 					))}

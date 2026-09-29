@@ -38,7 +38,7 @@ Change to the top-level directory of your ZEKI AI CHAT repo. Edit .meteor/packag
 Modify as necessary.
 
 	export ROOT_URL=http://localhost
-	export MONGO_URL=mongodb://localhost:27017/rocketchat
+	export MONGO_URL=mongodb://localhost:27017/zeki
 	export PORT=3000
 
 #### Compile the development environment

@@ -13,8 +13,8 @@ describe('Utilities', () => {
 		requiredApiVersion: '>=0.9.6',
 		author: {
 			name: 'Bradley Hilton',
-			homepage: 'https://github.com/RocketChat/Rocket.Chat.Apps-ts-definitions',
-			support: 'https://github.com/RocketChat/Rocket.Chat.Apps-ts-definitions/issues',
+			homepage: 'https://assets.example.invalid/sample',
+			support: 'https://assets.example.invalid/sample',
 		},
 		classFile: 'TestingApp.ts',
 		iconFile: 'testing.jpg',
@@ -40,8 +40,8 @@ describe('Utilities', () => {
 			requiredApiVersion: '>=0.9.6',
 			author: {
 				name: 'Bradley Hilton',
-				homepage: 'https://github.com/RocketChat/Rocket.Chat.Apps-ts-definitions',
-				support: 'https://github.com/RocketChat/Rocket.Chat.Apps-ts-definitions/issues',
+				homepage: 'https://assets.example.invalid/sample',
+				support: 'https://assets.example.invalid/sample',
 			},
 			classFile: 'TestingApp.ts',
 			iconFile: 'testing.jpg',
@@ -78,8 +78,8 @@ describe('Utilities', () => {
 			requiredApiVersion: '>=0.9.6',
 			author: {
 				name: 'Bradley H',
-				homepage: 'https://github.com/RocketChat/Rocket.Chat.Apps-ts-definitions',
-				support: 'https://github.com/RocketChat/Rocket.Chat.Apps-ts-definitions/issues',
+				homepage: 'https://assets.example.invalid/sample',
+				support: 'https://assets.example.invalid/sample',
 			},
 			classFile: 'TestingApp.ts',
 			iconFile: 'testing.jpg',

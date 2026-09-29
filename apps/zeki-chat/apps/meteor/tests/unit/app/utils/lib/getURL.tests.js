@@ -20,7 +20,7 @@ const testPaths = (o, _processPath) => {
 		processPath = (path) => _processPath(o._root_url_path_prefix + path);
 	}
 
-	const cloudDeepLinkUrl = 'https://go.rocket.chat';
+	const cloudDeepLinkUrl = 'https://chat.example.invalid';
 
 	expect(_getURL('', o, cloudDeepLinkUrl)).to.be.equal(processPath(''));
 	expect(_getURL('/', o, cloudDeepLinkUrl)).to.be.equal(processPath(''));
@@ -37,7 +37,7 @@ const testPaths = (o, _processPath) => {
 
 const getCloudUrl = (_site_url, path) => {
 	path = ltrim(path, '/');
-	const url = `https://go.rocket.chat/?host=${encodeURIComponent(_site_url.replace(/https?:\/\//, ''))}&path=${encodeURIComponent(path)}`;
+	const url = `https://chat.example.invalid/?host=${encodeURIComponent(_site_url.replace(/https?:\/\//, ''))}&path=${encodeURIComponent(path)}`;
 	if (_site_url.includes('http://')) {
 		return `${url}&secure=no`;
 	}

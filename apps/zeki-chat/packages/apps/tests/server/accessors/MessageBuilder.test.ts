@@ -55,9 +55,9 @@ describe('MessageBuilder', () => {
 		assert.deepStrictEqual(msg.emoji, ':ghost:');
 		assert.deepStrictEqual(mb.getEmojiAvatar(), ':ghost:');
 
-		assert.strictEqual(mb.setAvatarUrl('https://rocket.chat/'), mb);
-		assert.deepStrictEqual(msg.avatarUrl, 'https://rocket.chat/');
-		assert.deepStrictEqual(mb.getAvatarUrl(), 'https://rocket.chat/');
+		assert.strictEqual(mb.setAvatarUrl('https://chat.example.invalid/'), mb);
+		assert.deepStrictEqual(msg.avatarUrl, 'https://chat.example.invalid/');
+		assert.deepStrictEqual(mb.getAvatarUrl(), 'https://chat.example.invalid/');
 
 		assert.strictEqual(mb.setUsernameAlias('Some Bot'), mb);
 		assert.deepStrictEqual(msg.alias, 'Some Bot');

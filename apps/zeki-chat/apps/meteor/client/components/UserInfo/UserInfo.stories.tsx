@@ -26,7 +26,7 @@ const defaultArgs = {
 	nickname: 'gazzo',
 	statusText: '🛴 currently working on User Card',
 	bio: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla tempus, eros convallis vulputate cursus, nisi neque eleifend libero, eget lacinia justo purus nec est. In at sodales ipsum. Sed lacinia quis purus eget pulvinar. Aenean eu pretium nunc, at aliquam magna. Praesent dignissim, tortor sed volutpat mattis, mauris diam pulvinar leo, porta commodo risus est non purus.',
-	email: 'rocketchat@rocket.chat',
+	email: 'examplechat@chat.example.invalid',
 	status: <Status.Offline />,
 	roles: [<UserCardRole key='admin'>admin</UserCardRole>, <UserCardRole key='user'>user</UserCardRole>],
 };
