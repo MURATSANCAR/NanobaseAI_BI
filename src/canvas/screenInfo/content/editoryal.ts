@@ -719,6 +719,7 @@ const CONTENT: ScreenInfoMap = {
       "Görevlerim: CRM'de editörü siz olan iş planı ya da kurul onaylı projeler; durumu, termini ve notu siz tutarsınız; girilmiş termini değiştirmek gerekçe ister. CRM'e yazılmaz.",
       'Yönetici bütün editörlerin dosyalarını, gecikenleri ve editör atanmamış projeleri görür.',
       'Soru kutusunda bir kitaba soru sorarsınız; Zeki AI cevabı kitabın kendi metninden, sayfa numarasıyla verir.',
+      'Cevaptaki her sayfa rozeti, cümlede kendinden önce anılan kitabın o sayfasını açar; o kitapta bulunmayan sayfa kesik çizgili gösterilir ve açınca kaynağa bağlanamadığı yazar.',
     ],
     data: 'CRM projeleri ve editoryal masa kayıtları.',
     refresh: "CRM'den 5 dakikada bir kendiliğinden okunur; okunamazsa son başarılı bilgiler gösterilir.",

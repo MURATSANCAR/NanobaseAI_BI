@@ -24,6 +24,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from .editorial_citations import GROUP as _CITATION_GROUP
+
 log = logging.getLogger("semantic.editorial_export")
 
 PRODUCT = "ZEKİ AI"
@@ -49,7 +51,8 @@ AMBER_BG, AMBER_INK = (255, 247, 230), (146, 84, 8)
 RED_INK = (185, 28, 28)
 GRAPH_FILL = {"lead": (124, 92, 255), "family": (167, 139, 250), "other": (196, 181, 253)}
 
-_PAGE_REF = re.compile(r"(\[?s\.\s?\d+(?:\s?[-–]\s?\d+)?\]?)")
+# Atıf grubu ekrandaki rozetle aynı desen: «(s. 114, 127)», «ss. 3, 5 ve 9» tek rozet (ZEKI-43; önceden yalnız ilk sayı).
+_PAGE_REF = re.compile(f"({_CITATION_GROUP.pattern})", re.I)
 _BOLD = re.compile(r"(\*\*[^*\n]+\*\*)")
 _BULLET = re.compile(r"^\s*(?:[-*•])\s+")
 _NUMBERED = re.compile(r"^\s*\d+[.)]\s+")

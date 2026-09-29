@@ -750,6 +750,20 @@ button.zk-page-ref--live:focus-visible {
 @media (pointer: coarse) {
   button.zk-page-ref--live { padding-block: 0.2em; }
 }
+/* Kaynaksız atıf: sayfa o kitapta yok. Kesik çizgi + soluk renk; renk tek başına anlam taşımaz (çizgi de değişir). */
+button.zk-page-ref--missing {
+  border-style: dashed;
+  border-color: #d6d3e0;
+  background: #f7f7fa;
+  color: #8a8799;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.zk-page-ref--missing:hover,
+  button.zk-page-ref--missing[aria-expanded='true'] {
+    border-color: #b9b5c8;
+    background: #f1f0f5;
+  }
+}
 
 /* Sayfa önizlemesi: rozetin üstünde (yer yoksa altında) küçük bir kart. Tooltip ölçüsü: 150 ms giriş,
    100 ms çıkış, ölçek 0.97→1 + opaklık; transform-origin rozetin bulunduğu noktadır (--zk-origin, JS'ten). */

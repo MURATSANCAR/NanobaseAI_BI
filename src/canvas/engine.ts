@@ -2554,6 +2554,14 @@ export type BookQuestion = {
   /** Kart kimliği: kitap adı kataloğa tam eşleşince köprü ekler; sayfa rozetlerinin görsel önizlemesi buna bağlıdır.
    *  Yoksa rozet düz metin kalır (önizleme yok). */
   bookId?: string | null;
+  /** Sayfa atıflarının kitabı (ZEKI-43): aday kitaplar (katalogdaki adlarıyla), varsayılan kitap ve cevap bittiğinde
+   *  denetlenen «bu sayfa bu kitapta var mı». Rozet, metinde kendinden önce anılan kitaba bağlanır; yoksa önceki
+   *  davranış (bütün rozetler `bookId`). Çözüm: editorial/citations.ts. */
+  citations?: {
+    books: { id: string; title?: string | null; names: string[] }[];
+    defaultId: string | null;
+    pages?: Record<string, Record<string, boolean>>;
+  } | null;
   cards?: BookCard[];
   cardError?: string | null;
   cardMatch?: string | null;
