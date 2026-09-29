@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (öğleden sonra, 2) — `window.confirm` kullanan 4 ekran onay penceresine taşındı; onay adımı test sunucusunda
+
+- **Taşınan (kullanıcı onayıyla):** hak kaydı silme (`rights/RightsScreen.tsx`), terim silme (`translation/TermBank.tsx`), çeviri belleği dosyası kaldırma (`translation/MemoryBank.tsx`), çeviri işini silme (`translation/TranslationScreen.tsx`). Hepsi `AskSheet`; metin kaydı adıyla, dil çiftiyle ve «geri alınamaz» diye anar. Hatanın satırda/ekranda yazıldığı üçünde pencere `onSettled`'te kapanır ki hata görünsün. Doğrulama (geçici dizin): `tsc` 0, vitest 45 dosya / 251 test.
+- **Kurulum (test sunucusu, main `4d6c630d`):** bu iki işin 14 dosyası + `translation/parts.tsx`. 12'si sunucuda eski main hâlindeydi; `MemoryBank`/`TermBank`/`parts` ise `c00bdfb2` («dış çeviri programı adları yazmaz», başka oturum, main'de ama kurulmamıştı) öncesindeydi — üçü main hâliyle kuruldu, yani `c00bdfb2` de test sunucusuna girdi. 15/15 yeni md5; sunucu ağacının kopyasında `tsc -b` 0 hata, `vite build` 30 sn (VITE_BASE=/timas/), `cockpit/dist`'e önce parçalar sonra `index.html`; dışarıdan `index-3qt_CEu_.js`. `._*` kaynakta ve dist'te 0. Köprü değişmediği için yeniden başlatılmadı.
+- **Tıklayarak deneme yapılamadı:** timasai kısa oturumu açıldı, ama oturumla veri arayan istek izin denetiminde reddedildi; deneme orada durdu, oturum silindi (1 satır, kalan 0). İlk bakışta kargo kararı, kapasite ve terim listeleri boştu, yani çoğu ekranda denemek için önce kayıt açmak gerekecek. Pencerenin kendisi 320/1280 px'te ayrıca ölçülmüştü (önceki giriş).
+- **Başka oturumdan kalan test verisi:** Yayın kurulunda timasai'nin 29.09 07:24'te açtığı «TEST-Otomatik sınama kurulu» (planlı, 2 gündem maddesi, 2 oy) duruyor. Bu oturumun işi değil; dokunulmadı.
+- **Kurulmadı:** müşteri VM'i.
+
 ## 2026-09-29 — Sadeleştirme turunda bulunan yanıltıcı sayılar: dördünde hesap, ikisinde etiket düzeldi
 
 - **İstek (kullanıcı):** sabah turunda yalnız açıklaması düzeltilen 6 sayı için «etiket mi hesap mı» kararı koda bakarak verilsin (iş kararı Claude'da).
