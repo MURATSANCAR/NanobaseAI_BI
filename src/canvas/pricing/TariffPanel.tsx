@@ -8,7 +8,7 @@ import SqlInfo, { type FieldHelp } from '../components/SqlInfo';
 import { num, pricingApi, type Tariff } from './api';
 import { NumField } from './parts';
 
-/** Maliyet formu tarifesi: basım Excel'indeki fiyat listelerinin portaldaki hâli. Değiştirmek «Fiyat analizi hazırlama» ister. */
+/** Matbaa ve malzeme fiyat listesi: basım Excel'indeki fiyatların portaldaki hâli. Değiştirmek «Fiyat analizi hazırlama» ister. */
 
 const PRICE_LABELS: Record<string, string> = {
   tekRenkKalip: 'Tek renk kalıp (forma başı)', renkliKalip: 'Renkli kalıp (renk başı)', 'Kabartma Lak-50x70': 'Kabartma lak', 'Lokal Lak-50x70': 'Lokal lak',
@@ -39,7 +39,7 @@ export default function TariffPanel() {
     },
   });
   const can = !!setup.data?.canWrite;
-  if (setup.error) return <Note tone="err">{errText(setup.error, 'Tarife okunamadı.')}</Note>;
+  if (setup.error) return <Note tone="err">{errText(setup.error, 'Fiyat listesi okunamadı.')}</Note>;
   if (!t) return null;
   const up = (p: Partial<Tariff>) => setT({ ...t, ...p });
   const dirty = JSON.stringify(t) !== JSON.stringify(setup.data?.tariff);
@@ -49,27 +49,27 @@ export default function TariffPanel() {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="flex items-center gap-1.5 text-[14px] font-extrabold">
-            Maliyet formu tarifesi
-            <SqlInfo k={setup.data?.kaynaklar} alan="tariff" label="Maliyet formu tarifesi"
-              help={help('Maliyet formunun kullandığı bütün birim fiyatlar: kâğıt ton fiyatları, kalıp ve kapak işlemleri, cilt işçiliği, fire payları, dolaylı gider oranı ve yayınevi vadeli iskontoları.', { excel: 'Excel\'in sağ tarafındaki tablolar: M9:Q35 (kâğıt), L42:X76 (matbaa kalemleri), L79:V203 (ebat), S7:T27 (iskonto).' })} />
+            Matbaa ve malzeme fiyat listesi
+            <SqlInfo k={setup.data?.kaynaklar} alan="tariff" label="Matbaa ve malzeme fiyat listesi"
+              help={help('Kitap hesabının kullandığı birim fiyatlar: Logo'da alışı olmayan kâğıdın ton fiyatı, kalıp ve kapak işlemleri, cilt işçiliği, fire payları, dolaylı gider oranı ve yayınevi vadeli iskontoları.', { excel: 'Excel\'in sağ tarafındaki tablolar: M9:Q35 (kâğıt), L42:X76 (matbaa kalemleri), L79:V203 (ebat), S7:T27 (iskonto).' })} />
           </h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
-            {t.isDefault ? 'Basım Excel\'lerindeki tarife (14.09.2026) kullanılıyor.' : `Son değişiklik ${t.updatedBy ?? '—'} · ${fmtDate(t.updatedAt)}.`} Kâğıtta Logo alış fiyatı
-            seçiliyse ton fiyatı yalnız Logo'da alışı olmayan kâğıtta kullanılır.
+            {t.isDefault ? 'Basım Excel\'lerindeki fiyatlar (14.09.2026) kullanılıyor.' : `Son değişiklik ${t.updatedBy ?? '—'} · ${fmtDate(t.updatedAt)}.`} Kâğıt fiyatı Logo alışından gelir; buradaki ton fiyatı yalnız
+            Logo'da son 6 ayda alışı olmayan kâğıtta kullanılır.
           </p>
         </div>
         {can && (
           <div className="flex flex-wrap gap-2">
             <button type="button" className={btnGhost} disabled={save.isPending || t.isDefault} onClick={() => save.mutate(true)}>
-              <RotateCcw aria-hidden className="h-4 w-4" /> Excel tarifesine dön
+              <RotateCcw aria-hidden className="h-4 w-4" /> İlk fiyatlara dön
             </button>
             <button type="button" className={btnPrimary} disabled={save.isPending || !dirty} onClick={() => save.mutate(false)}>
-              <Save aria-hidden className="h-4 w-4" /> {save.isPending ? 'Kaydediliyor…' : 'Tarifeyi kaydet'}
+              <Save aria-hidden className="h-4 w-4" /> {save.isPending ? 'Kaydediliyor…' : 'Fiyat listesini kaydet'}
             </button>
           </div>
         )}
       </div>
-      {!can && <p className="mt-1 text-[11.5px] text-canvas-muted">Tarifeyi değiştirmek «Fiyat analizi hazırlama» yetkisi ister.</p>}
+      {!can && <p className="mt-1 text-[11.5px] text-canvas-muted">Fiyat listesini değiştirmek «Fiyat analizi hazırlama» yetkisi ister.</p>}
       {save.error && <div className="mt-2"><Note tone="err">{errText(save.error, 'Kaydedilemedi.')}</Note></div>}
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -78,13 +78,13 @@ export default function TariffPanel() {
         <NumField label="1 euro" suffix="₺" disabled={!can} value={t.kur.EUR} onChange={(v) => up({ kur: { ...t.kur, EUR: v ?? t.kur.EUR } })}
           info={i(help('Logo\'da günlük kur yoksa ya da formda kur yazılmadıysa kullanılan euro kuru.', { excel: 'J57.' }), '1 euro')} />
         <NumField label="Vade farkı (aylık)" suffix="%" disabled={!can} value={t.vade.oran} onChange={(v) => up({ vade: { ...t.vade, oran: v ?? 0 } })}
-          info={i(help('Tarife kâğıt fiyatına eklenen vade farkı: aylık oran × vade süresi (5 × 6 = %30).', { excel: 'P7 (oran), P8 (süre), Q8 (fark).' }), 'Vade farkı')} />
+          info={i(help('Logo\'da alışı olmayan kâğıdın ton fiyatına eklenen vade farkı: aylık oran × vade süresi (5 × 6 = %30).', { excel: 'P7 (oran), P8 (süre), Q8 (fark).' }), 'Vade farkı')} />
         <NumField label="Vade süresi" suffix="ay" digits={0} disabled={!can} value={t.vade.ay} onChange={(v) => up({ vade: { ...t.vade, ay: v ?? 0 } })}
           info={i(help('Kâğıt ödemesinin vadesi (ay).', { excel: 'P8.' }), 'Vade süresi')} />
         <NumField label="Dolaylı gider" suffix="%" disabled={!can} value={t.dolayli} onChange={(v) => up({ dolayli: v ?? 0 })}
-          info={i(help('Yeni formda dolaylı gider kutusuna gelen oran.', { excel: 'I41 (çoğu dosyada 90).' }), 'Dolaylı gider')} />
+          info={i(help('Yeni kitapta dolaylı gider kutusuna gelen oran.', { excel: 'I41 (çoğu dosyada 90).' }), 'Dolaylı gider')} />
         <NumField label="Kapak ücreti bölünür" suffix="baskı" digits={0} disabled={!can} value={t.kapakBolen} onChange={(v) => up({ kapakBolen: v ?? 1 })}
-          info={i(help('Kapak/çizim ücretinin kaç baskıya paylaştırıldığı (yeni formdaki varsayılan).', { excel: 'J33 = Y33 ÷ 3.' }), 'Kapak ücreti bölünür')} />
+          info={i(help('Kapak/çizim ücretinin kaç baskıya paylaştırıldığı (yeni kitaptaki varsayılan).', { excel: 'J33 = Y33 ÷ 3.' }), 'Kapak ücreti bölünür')} />
       </div>
 
       <details className="group mt-3">

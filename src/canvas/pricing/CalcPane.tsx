@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, Calculator, Search, Send, Save, X } from 'lucide-react';
+import { BookOpen, FilePlus2, Search, Send, Save } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
@@ -23,13 +23,13 @@ import {
   type Spec,
   type Stage,
   type Suggested,
+  type FormInputs,
   overviewKey,
-  FORM_TRANSFER_KEY,
-  type FormTransfer,
 } from './api';
 import { Group, NumField, Select, Stat, parseQtys } from './parts';
 import SqlInfo, { InfoLabel, type FieldHelp } from '../components/SqlInfo';
-import { CALC_HELP as CH } from './help';
+import { CALC_HELP as CH, FORM_HELP } from './help';
+import { CostGroups, Lines, MobileBar, ResultCard, setters } from './CostForm';
 import type { Kaynaklar } from '../components/sqlInfo';
 import MarketPrices from './MarketPrices';
 
@@ -37,7 +37,6 @@ import MarketPrices from './MarketPrices';
 type Form = Inputs & { printService?: number | null; paperPerCopy?: number | null };
 
 const FIXED_ORDER: FixedKey[] = ['avans', 'ceviri', 'grafik', 'redaksiyon', 'pazarlama', 'diger'];
-const BINDINGS = ['Amerikan Cilt', 'Tel Dikiş', 'Sert Kapak', 'Sert Kapak (Cilt Bezi Sıvamalı)', 'Spiral Cilt', 'Flexi Kapak Cilt', 'Plastik Kapak Cilt', 'Biala Kapak Cilt', 'Omega Tel Dikiş'];
 
 function fromSuggested(s: Suggested, ov: Overview, fl: Partial<Record<FixedKey, number>> = {}): Form {
   const d = ov.defaults;
@@ -108,10 +107,13 @@ export default function CalcPane({ ov }: { ov: Overview }) {
   const [qtyText, setQtyText] = useState(ov.defaults.qtys.join(', '));
   const [origin, setOrigin] = useState<Record<string, string>>({});
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
-  /** Girdi kutularının dolduğu cevap: analizden (`inputs`), kitaptan (`suggested.*`) ya da «Veriden öner»den. */
+  /** Girdi kutularının dolduğu cevap: analizden (`inputs`) ya da kitaptan (`suggested.*`). */
   const [fill, setFill] = useState<{ k?: Kaynaklar; prefix: 'inputs' | 'suggested.' | '' } | null>(null);
-  /** Girdiler maliyet formundan aktarıldıysa (kutuların kaynağı form). */
-  const [fromForm, setFromForm] = useState(false);
+  /** Maliyet alanları (basım Excel'iyle aynı). `sync`: sonuçları fiyat hesabına kendiliğinden yazılsın mı. */
+  const [cost, setCost] = useState<FormInputs | null>(null);
+  const [sync, setSync] = useState(true);
+  /** Baskı/kâğıt bedeli elle (matbaa teklifi) girildiyse maliyet alanları onları ezmez. */
+  const [manualPrint, setManualPrint] = useState(false);
 
   const analysis = useQuery({ queryKey: ['pricing', 'analysis', aid], queryFn: () => pricingApi.analysis(aid!), enabled: ENGINE_ENABLED && !!aid });
   const book = useQuery({
@@ -120,69 +122,94 @@ export default function CalcPane({ ov }: { ov: Overview }) {
     enabled: ENGINE_ENABLED && !!code && ready,
     retry: false,
   });
+  const setup = useQuery({
+    queryKey: ['pricing', 'form', 'setup', code ?? ''],
+    queryFn: () => pricingApi.formSetup(code),
+    enabled: ENGINE_ENABLED && (!code || ready),
+    retry: false,
+  });
+  const st = useMemo(() => setters((fn) => {
+    setSync(true);
+    setCost(fn);
+  }), []);
 
-  // Kayıtlı analiz açıldıysa girdiler ondan, yoksa kitaptan (veriden öneri) dolar. Kullanıcının yazdığı ezilmez.
+  // Kayıtlı analiz açıldıysa girdiler ondan; kitap seçildiyse kitaptan (CRM + Logo); yoksa yeni kitap. Kullanıcının yazdığı ezilmez.
   useEffect(() => {
     const a = analysis.data;
-    if (aid && a && loadedKey !== `a:${a.id}:${a.version}`) {
+    if (aid && a && setup.data && loadedKey !== `a:${a.id}:${a.version}`) {
       setTitle(a.title);
       setStage(a.stage);
       setSpec(a.specs ?? {});
       const f = (a.inputs ?? {}) as Form;
       setForm({ ...f, price: a.chosenPrice ?? f.price ?? null, chosenQty: a.chosenQty ?? f.chosenQty ?? null });
       setQtyText((f.qtys ?? ov.defaults.qtys).join(', '));
+      // Maliyet alanları analizle saklanır; eski analizde yoksa kitabın/yeni formun alanları gösterilir ama kayıtlı
+      // bedeller ezilmez (kullanıcı bir alanı değiştirene kadar).
+      setCost(a.specs?.form ?? { ...setup.data.inputs, sayfa: a.specs?.pages ?? setup.data.inputs.sayfa, ebat: a.specs?.trim ?? setup.data.inputs.ebat });
+      setSync(false);
       setLoadedKey(`a:${a.id}:${a.version}`);
       setFill({ k: a.kaynaklar, prefix: 'inputs' });
       return;
     }
     const b = book.data;
-    if (!aid && b && loadedKey !== `b:${b.book.code}`) {
+    if (!aid && code && b && setup.data && loadedKey !== `b:${b.book.code}`) {
       setTitle(b.book.name ?? b.book.code);
       setSpec(b.spec);
       setForm(fromSuggested(b.suggested, ov, b.freelance.byKey));
       setOrigin(b.suggested.origin);
       setQtyText(ov.defaults.qtys.join(', '));
+      setCost(setup.data.inputs);
+      setSync(true);
+      setManualPrint(false);
       setLoadedKey(`b:${b.book.code}`);
       setFill({ k: b.kaynaklar, prefix: 'suggested.' });
+      return;
     }
-  }, [aid, analysis.data, book.data, loadedKey, ov]);
-
-  // Maliyet formundan aktarım: kitap verisi yüklendikten sonra (ya da yeni kitapta hemen) formun sonucu kutulara yazılır.
-  useEffect(() => {
-    const t = qc.getQueryData<FormTransfer>(FORM_TRANSFER_KEY);
-    if (!t || aid || (t.code ?? null) !== (code ?? null)) return;
-    if (code && loadedKey !== `b:${code}`) return;
-    qc.removeQueries({ queryKey: FORM_TRANSFER_KEY, exact: true });
-    const r = t.result;
-    const qtys = [...new Set([...(ov.defaults.qtys ?? []), r.chosenQty])].sort((a, b) => a - b);
-    setForm((f) => {
-      const base = f ?? fromDefaults(ov);
-      return {
-        ...base,
-        printService: r.printService, paperPerCopy: r.paperPerCopy, printSetup: r.printSetup, overheadRate: r.overheadRate,
-        royaltyRate: r.royaltyRate, royaltyBase: r.royaltyBase, royaltyOn: r.royaltyOn, qtys, chosenQty: r.chosenQty,
-        price: r.price ?? base.price ?? null, fixed: { ...(base.fixed ?? {}), grafik: r.fixed.grafik, diger: r.fixed.diger },
-      };
-    });
-    setQtyText(qtys.join(', '));
-    setSpec((sp) => ({ ...sp, code: t.code ?? sp.code ?? null, pages: t.inputs.sayfa ?? sp.pages, trim: t.inputs.ebat ?? sp.trim, gsm: t.inputs.ic.gr ?? sp.gsm,
-      binding: bindingOf(t.inputs.cilt.tur) ?? sp.binding ?? null, form: t.inputs }));
-    setTitle((x) => x || t.title);
-    setStage('kesin');
-    setOrigin({ printService: 'Maliyet formundan: baskı ve kâğıt bedeli formun kalemlerinden, iki adette hesaplanıp adet başı ve baskı başı diye ayrıldı', paper: '', royalty: 'Maliyet formundan: telif basılan adet ve kapak fiyatı üzerinden (Excel gibi)' });
-    setFromForm(true);
-  }, [aid, code, loadedKey, ov, qc]);
-
-  const suggest = useMutation({
-    mutationFn: () => pricingApi.suggest(spec),
-    onSuccess: (s) => {
-      setForm((f) => ({ ...fromSuggested(s, ov), ...(f ? { fixed: f.fixed, price: f.price } : {}) }));
-      setOrigin(s.origin);
-      setFill({ k: s.kaynaklar, prefix: '' });
-    },
-  });
+    if (!aid && !code && setup.data && loadedKey !== 'yeni') {
+      setForm(fromDefaults(ov));
+      setCost(setup.data.inputs);
+      setSync(true);
+      setManualPrint(false);
+      setLoadedKey('yeni');
+    }
+  }, [aid, code, analysis.data, book.data, setup.data, loadedKey, ov]);
 
   const readOnly = !!analysis.data && ['onayda', 'onaylandi', 'arsiv'].includes(analysis.data.status);
+
+  const costBody = useMemo(() => (cost ? { inputs: cost } : null), [cost]);
+  const costDebounced = useDebounced(costBody, 300);
+  const costCalc = useQuery({
+    queryKey: ['pricing', 'form', 'calc', costDebounced],
+    queryFn: () => pricingApi.formCalc(costDebounced!),
+    enabled: ENGINE_ENABLED && !!costDebounced && !!costDebounced.inputs.sayfa && !!costDebounced.inputs.adet,
+    placeholderData: (prev) => prev,
+    retry: false,
+  });
+
+  // Maliyet alanlarının sonucu fiyat hesabına: baskı ve kâğıt bedeli (adet başı + baskı başı), genel gider, kapak ücreti,
+  // telif oranı, baskı adedi ve kapak fiyatı. Telifin tabanı ve doğuşu CRM sözleşmesinde kalır.
+  const mapped = costCalc.data?.analysis;
+  useEffect(() => {
+    if (!mapped || !sync || readOnly || !cost) return;
+    const q = mapped.chosenQty;
+    setForm((f) => {
+      const base = f ?? fromDefaults(ov);
+      const qtys = [...new Set([...(base.qtys ?? ov.defaults.qtys), q])].sort((a, b) => a - b);
+      return {
+        ...base,
+        ...(manualPrint ? {} : { printService: mapped.printService, paperPerCopy: mapped.paperPerCopy, printSetup: mapped.printSetup }),
+        overheadRate: mapped.overheadRate, royaltyRate: mapped.royaltyRate, qtys, chosenQty: q, price: mapped.price ?? base.price ?? null,
+        fixed: { ...(base.fixed ?? {}), grafik: mapped.fixed.grafik, diger: mapped.fixed.diger },
+      };
+    });
+    setQtyText((t) => {
+      const cur = parseQtys(t);
+      return cur.includes(q) ? t : [...cur, q].sort((a, b) => a - b).join(', ');
+    });
+    setSpec((sp) => ({ ...sp, pages: cost.sayfa ?? sp.pages ?? null, trim: cost.ebat ?? sp.trim ?? null, gsm: cost.ic.gr ?? sp.gsm ?? null,
+      binding: bindingOf(cost.cilt.tur) ?? sp.binding ?? null, form: cost }));
+  }, [mapped, sync, readOnly, manualPrint]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const market = (analysis.data?.market ?? book.data?.market ?? []).map((m) => m.price);
   const body = useMemo(() => (form ? { inputs: toInputs(form), spec, marketPrices: market } : null), [form, spec, market.join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
   const debounced = useDebounced(body, 350);
@@ -195,14 +222,21 @@ export default function CalcPane({ ov }: { ov: Overview }) {
   });
 
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...(f ?? {}), ...patch }));
-  /** Girdi kutusunun «i»'si: kutuya gelen önerinin kaynağı. Varsayımlar (genel gider, adetler) portaldaki varsayılanlardan;
-   *  serbest çalışan kutuları kitabın iş paketlerinden; elle başlayan kutu (pazarlama) için yok. */
+  const setPrint = (patch: Partial<Form>) => {
+    setManualPrint(true);
+    set(patch);
+  };
+  /** Girdi kutusunun «i»'si: ne işe yarar ve (varsa) kutuya gelen değerin sorgusu. */
   const inputInfo = (key: string, label: string) => {
     const help: FieldHelp | undefined = CH[key] ?? (['avans', 'ceviri', 'grafik', 'redaksiyon', 'pazarlama', 'diger'].includes(key) ? (key === 'avans' ? CH.avans : CH.fixed) : undefined);
     const only = help ? <SqlInfo k={null} alan="" label={label} help={help} /> : undefined;
-    if (!fill || fromForm) return only;
+    if (!fill || ['printService', 'paperPerCopy', 'printSetup', 'overheadRate'].includes(key)) {
+      return ['printService', 'paperPerCopy', 'printSetup', 'overheadRate'].includes(key) && costCalc.data
+        ? <SqlInfo k={costCalc.data.kaynaklar} alan="summary" label={label} help={help} />
+        : only;
+    }
     if (fill.prefix === 'inputs') return <SqlInfo k={fill.k} alan="inputs" label={`${label} (kayıtlı analiz)`} help={help} />;
-    if (key === 'overheadRate' || key === 'qtys') return <SqlInfo k={ov.kaynaklar} alan="defaults" label={label} help={help} />;
+    if (key === 'qtys') return <SqlInfo k={ov.kaynaklar} alan="defaults" label={label} help={help} />;
     if (key === 'ceviri' || key === 'grafik' || key === 'redaksiyon' || key === 'diger') {
       return book.data ? <SqlInfo k={book.data.kaynaklar} alan="freelance" label={label} help={help} /> : only;
     }
@@ -216,9 +250,9 @@ export default function CalcPane({ ov }: { ov: Overview }) {
     mutationFn: async (then: 'save' | 'submit') => {
       if (!form) throw new Error('Önce girdileri doldurun.');
       const payload = {
-        title: title.trim() || spec.code || 'Yeni kitap',
+        title: title.trim() || spec.code || cost?.kitap || 'Yeni kitap',
         stage,
-        specs: { ...spec },
+        specs: { ...spec, ...(cost ? { form: cost } : {}) },
         inputs: toInputs(form),
         chosenPrice: form.price ?? calc.data?.summary.price ?? null,
         chosenQty: form.chosenQty ?? null,
@@ -240,12 +274,12 @@ export default function CalcPane({ ov }: { ov: Overview }) {
   const clear = () => {
     setParams({ bolum: 'hesap' });
     setForm(null);
+    setCost(null);
     setSpec({});
     setTitle('');
     setStage('tahmini');
     setOrigin({});
     setLoadedKey(null);
-    setFromForm(false);
   };
 
   return (
@@ -254,26 +288,24 @@ export default function CalcPane({ ov }: { ov: Overview }) {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <BookPicker
             disabled={!ready}
+            info={<SqlInfo k={null} alan="" label="Kitap ara" help={FORM_HELP.kitapAra} />}
             onPick={(c) => {
               setLoadedKey(null);
               setParams({ bolum: 'hesap', kitap: c });
             }}
           />
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={btnGhost}
-              onClick={() => {
-                clear();
-                setForm(null);
-              }}
-            >
-              <X aria-hidden className="h-4 w-4" />
-              Temizle
+            <button type="button" className={btnGhost} onClick={clear}>
+              <FilePlus2 aria-hidden className="h-4 w-4" />
+              Yeni kitap
             </button>
           </div>
         </div>
         {!ready && <p className="mt-2 text-[12px] text-canvas-muted">Kitap araması veri görüntüsü hazır olunca açılır.</p>}
+        <p className="mt-2 text-[12px] leading-snug text-canvas-muted">
+          Alanlar basım Excel'indeki «Kitap Maliyet Formu»yla aynı ve aynı hesabı yapar. Kitap seçince CRM ve Logo'dan dolar; her alanın yanındaki
+          <span className="font-bold"> i </span>işaretine basınca o alanın ne işe yaradığı ve verinin nereden geldiği açılır.
+        </p>
         {analysis.data && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px]">
             <Pill tone={STATUS_TONE[analysis.data.status]}>{analysis.data.statusLabel}</Pill>
@@ -286,14 +318,8 @@ export default function CalcPane({ ov }: { ov: Overview }) {
         )}
       </Panel>
 
-      {(book.error || analysis.error) && <Note tone="err">{errText(book.error ?? analysis.error, 'Kayıt okunamadı.')}</Note>}
+      {(book.error || analysis.error || setup.error) && <Note tone="err">{errText(book.error ?? analysis.error ?? setup.error, 'Kayıt okunamadı.')}</Note>}
       {book.data && !aid && <BookFacts b={book.data} />}
-      {fromForm && (
-        <Note tone="info">
-          Baskı, kâğıt, genel gider, telif ve kapak ücreti maliyet formundan aktarıldı. Bu bölüm KDV'yi düşer, iskontoyu Logo'daki gerçek kanal
-          satışından alır ve adet senaryolarıyla başabaşı hesaplar; bu yüzden birim maliyet ve kâr formdakinden farklı olabilir.
-        </Note>
-      )}
 
       <Panel>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -306,11 +332,12 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             info={hi('stage', 'Aşama')}
             value={stage}
             onChange={setStage}
+            disabled={readOnly}
             options={[
               { value: 'tahmini', label: ov.stages.tahmini },
               { value: 'kesin', label: ov.stages.kesin },
             ]}
-            hint={stage === 'tahmini' ? 'Kabul kararından sonra, emsal kitaplarla. Onay: Mali İşler + Satış.' : 'Kesin sayfa sayısı ve matbaa teklifiyle. Onay: Mali İşler + Satış + Pazarlama + Üst Yönetim.'}
+            hint={stage === 'tahmini' ? 'Kabul kararından sonra. Onay: Mali İşler + Satış.' : 'Kesin sayfa sayısı ve matbaa teklifiyle. Onay: Mali İşler + Satış + Pazarlama + Üst Yönetim.'}
           />
           <label className="block min-w-0">
             <span className={`${labelCls} flex items-center gap-1`}>Stok kodu{hi('code', 'Stok kodu')}</span>
@@ -319,41 +346,43 @@ export default function CalcPane({ ov }: { ov: Overview }) {
         </div>
       </Panel>
 
-      <Group title="Teknik özellikler" help="Sayfa, ebat ve kâğıt gramajı kâğıt maliyetini; sayfa ve cilt şekli emsal kitapları belirler.">
-        <NumField label="Sayfa sayısı" info={hi('pages', 'Sayfa sayısı')} value={spec.pages} digits={0} disabled={readOnly} onChange={(v) => setSpec({ ...spec, pages: v })} />
-        <label className="block min-w-0">
-          <span className={`${labelCls} flex items-center gap-1`}>Ebat (cm){hi('trim', 'Ebat')}</span>
-          <input className={`${field} mt-1`} value={spec.trim ?? ''} disabled={readOnly} placeholder="13,5x21" onChange={(e) => setSpec({ ...spec, trim: e.target.value || null })} />
-        </label>
-        <NumField label="İç kâğıt gramajı" info={hi('gsm', 'İç kâğıt gramajı')} suffix="gr" value={spec.gsm} digits={0} disabled={readOnly} onChange={(v) => setSpec({ ...spec, gsm: v })} />
-        <Select<string>
-          label="Cilt şekli"
-          info={hi('binding', 'Cilt şekli')}
-          value={spec.binding ?? ''}
-          onChange={(v) => setSpec({ ...spec, binding: v || null })}
-          options={[{ value: '', label: 'Hepsi (emsalde ayırma)' }, ...BINDINGS.map((b) => ({ value: b, label: b }))]}
-        />
-        <div className="flex items-end">
-          <button type="button" className={btnGhost} disabled={!ready || !spec.pages || suggest.isPending || readOnly} onClick={() => suggest.mutate()}>
-            <Calculator aria-hidden className="h-4 w-4" />
-            {suggest.isPending ? 'Hesaplanıyor…' : form ? 'Maliyeti veriden yeniden öner' : 'Veriden öner'}
-          </button>
-        </div>
-        {suggest.error && <Note tone="err">{errText(suggest.error, 'Öneri alınamadı.')}</Note>}
-      </Group>
-
-      {!form ? (
-        <Note tone="info">
-          Bir kitap seçin ya da yeni kitabın sayfa sayısını yazıp «Veriden öner»e basın: baskı bedeli emsal kitapların matbaa faturalarından, kâğıt Logo'daki
-          son alış fiyatından, telif CRM sözleşmesinden, iskonto son 12 ayın satışından gelir. Her kutu elle değiştirilebilir.
-        </Note>
+      {!cost || !setup.data ? (
+        !setup.error && <Note tone="info">Kitap hesabı hazırlanıyor…</Note>
       ) : (
+        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-4">
+          <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-3 lg:gap-4">
+            <CostGroups form={cost} s={setup.data} st={st} />
+          </fieldset>
+          <div className="lg:sticky lg:top-2">
+            <ResultCard r={costCalc.data} loading={costCalc.isFetching} err={costCalc.error} />
+          </div>
+        </div>
+      )}
+      {!sync && !readOnly && cost && (
+        <Note tone="info">
+          Bu analiz maliyet alanları eklenmeden önce kaydedilmiş; fiyat hesabındaki bedeller kayıttaki gibi duruyor. Yukarıdaki alanlardan birini
+          değiştirince bedeller alanlardan yeniden hesaplanır.
+        </Note>
+      )}
+
+      {form && (
         <>
-          <Group title="Baskı ve kâğıt (adet başına)" help={origin.printService || origin.paper ? `${origin.printService ?? ''}. ${origin.paper ?? ''}` : undefined}>
-            <NumField label="Baskı hizmeti" info={inputInfo('printService', 'Baskı hizmeti')} suffix="₺" value={form.printService} disabled={readOnly} onChange={(v) => set({ printService: v })} hint="Matbaa «komple baskı» bedeli, KDV hariç" />
-            <NumField label="Kâğıt, kapak kartonu, bandrol" info={inputInfo('paperPerCopy', 'Kâğıt, kapak kartonu, bandrol')} suffix="₺" value={form.paperPerCopy} disabled={readOnly} onChange={(v) => set({ paperPerCopy: v })} hint="Kâğıdı Timaş alır; matbaa faturası kâğıtsızdır" />
-            <NumField label="Baskı başına hazırlık" info={inputInfo('printSetup', 'Baskı başına hazırlık')} suffix="₺" value={form.printSetup} disabled={readOnly} onChange={(v) => set({ printSetup: v })} hint="Kalıp ve ayar gibi adetten bağımsız bedel (eğriden)" />
-            <NumField label="Genel gider payı" info={inputInfo('overheadRate', 'Genel gider payı')} suffix="%" percent value={form.overheadRate} disabled={readOnly} onChange={(v) => set({ overheadRate: v })} hint="Baskı ve kâğıda eklenir (varsayım)" />
+          <Group
+            step={7}
+            title="Fiyat hesabına giden bedeller (adet başına)"
+            help={manualPrint ? 'Baskı ve kâğıt bedeli elle girildi; maliyet alanları bu kutuları değiştirmez.' : 'Yukarıdaki alanlardan hesaplanır: baskı ve kâğıt bedeli iki adette hesaplanıp adet başı ve baskı başı diye ayrılır.'}
+          >
+            <NumField label="Baskı hizmeti" info={inputInfo('printService', 'Baskı hizmeti')} suffix="₺" value={form.printService} disabled={readOnly} onChange={(v) => setPrint({ printService: v })} hint="Matbaa bedeli, KDV hariç, kâğıtsız" />
+            <NumField label="Kâğıt, kapak kartonu" info={inputInfo('paperPerCopy', 'Kâğıt, kapak kartonu')} suffix="₺" value={form.paperPerCopy} disabled={readOnly} onChange={(v) => setPrint({ paperPerCopy: v })} hint="Logo kâğıt alış fiyatıyla" />
+            <NumField label="Baskı başına hazırlık" info={inputInfo('printSetup', 'Baskı başına hazırlık')} suffix="₺" value={form.printSetup} disabled={readOnly} onChange={(v) => setPrint({ printSetup: v })} hint="Kalıp, fire gibi adetten bağımsız kısım" />
+            <NumField label="Genel gider payı" info={inputInfo('overheadRate', 'Genel gider payı')} suffix="%" percent value={form.overheadRate} disabled={readOnly} onChange={(v) => set({ overheadRate: v })} hint="Dolaylı gider (yukarıda)" />
+            {manualPrint && !readOnly && (
+              <div className="flex items-end">
+                <button type="button" className={btnGhost} onClick={() => { setManualPrint(false); setSync(true); }}>
+                  Alanlardan yeniden hesapla
+                </button>
+              </div>
+            )}
           </Group>
 
           {!readOnly && (book.data?.quotes.length ?? 0) > 0 && (
@@ -361,25 +390,25 @@ export default function CalcPane({ ov }: { ov: Overview }) {
               quotes={book.data!.quotes}
               k={book.data!.kaynaklar}
               onUse={(unit) => {
-                set({ printService: unit });
+                setPrint({ printService: unit });
                 setStage('kesin');
               }}
             />
           )}
 
-          <Group title="Sabit giderler (kitap başına)" help="Serbest çalışanlar ekranında bu kitaba açılmış iş paketleri çeviri/grafik/redaksiyon kutularına gelir.">
+          <Group title="Sabit giderler (kitap başına)" help="Kapak ücreti yukarıdaki alandan; serbest çalışanlar ekranında bu kitaba açılmış iş paketleri çeviri/grafik/redaksiyon kutularına gelir.">
             {FIXED_ORDER.map((k) => (
               <NumField key={k} label={ov.fixedLabels[k]} info={inputInfo(k, ov.fixedLabels[k])} suffix="₺" digits={0} value={form.fixed?.[k] ?? 0} disabled={readOnly} onChange={(v) => setFixed(k, v)} />
             ))}
           </Group>
 
-          <Group title="Telif" help={origin.royalty}>
-            <NumField label="Telif oranı" info={inputInfo('royaltyRate', 'Telif oranı')} suffix="%" percent value={form.royaltyRate} disabled={readOnly} onChange={(v) => set({ royaltyRate: v })} />
+          <Group title="Telif" help={origin.royalty ? `${origin.royalty}. Oran yukarıda (Kitap ve baskı).` : 'Oran yukarıda (Kitap ve baskı).'}>
             <Select<'kapak' | 'net'>
               label="Telif tabanı"
               info={hi('royaltyBase', 'Telif tabanı')}
               value={form.royaltyBase ?? 'kapak'}
               onChange={(v) => set({ royaltyBase: v })}
+              disabled={readOnly}
               options={[
                 { value: 'kapak', label: 'Brüt — KDV hariç kapak fiyatı' },
                 { value: 'net', label: 'Net — iskonto sonrası satış' },
@@ -390,6 +419,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
               info={hi('royaltyOn', 'Telif doğuşu')}
               value={form.royaltyOn ?? 'satis'}
               onChange={(v) => set({ royaltyOn: v })}
+              disabled={readOnly}
               options={[
                 { value: 'satis', label: 'Satıştan ödeme — satılan adet' },
                 { value: 'baski', label: 'Baskıdan ödeme — basılan adet' },
@@ -419,31 +449,25 @@ export default function CalcPane({ ov }: { ov: Overview }) {
                 onChange={(e) => {
                   setQtyText(e.target.value);
                   const q = parseQtys(e.target.value);
-                  if (q.length) set({ qtys: q, chosenQty: q.includes(form.chosenQty ?? -1) ? form.chosenQty : q[Math.floor(q.length / 2)] });
+                  if (q.length) set({ qtys: q.includes(form.chosenQty ?? -1) ? q : [...q, form.chosenQty!].filter(Boolean).sort((a, b) => a - b) });
                 }}
               />
-              <span className="mt-1 block text-[11px] text-canvas-muted">Virgülle: 1000, 2000, 3000, 5000</span>
+              <span className="mt-1 block text-[11px] text-canvas-muted">Virgülle: 1000, 2000, 3000, 5000. Baskı adedi (yukarıda) her zaman eklenir.</span>
             </label>
-            <Select<string>
-              label="Seçilen adet"
-              info={hi('chosenQty', 'Seçilen adet')}
-              value={String(form.chosenQty ?? '')}
-              onChange={(v) => set({ chosenQty: Number(v) })}
-              options={(form.qtys ?? []).map((q) => ({ value: String(q), label: num(q) }))}
-            />
-            <NumField
-              label="Kapak fiyatı (KDV dahil)"
-              info={hi('price', 'Kapak fiyatı')}
-              suffix="₺"
-              value={form.price}
-              disabled={readOnly}
-              onChange={(v) => set({ price: v })}
-              placeholder={calc.data?.recommendation.price ? `Öneri ${num(calc.data.recommendation.price)}` : 'Boşsa öneri kullanılır'}
-            />
           </Group>
 
           {calc.error && <Note tone="err">{errText(calc.error, 'Hesap yapılamadı.')}</Note>}
-          {calc.data && <Results r={calc.data} chosenQty={form.chosenQty ?? null} onPickPrice={(p) => !readOnly && set({ price: p })} />}
+          {calc.data && (
+            <Results
+              r={calc.data}
+              chosenQty={form.chosenQty ?? null}
+              onPickPrice={(p) => {
+                if (readOnly) return;
+                st.set({ fiyat: p });
+                set({ price: p });
+              }}
+            />
+          )}
 
           {!readOnly && ov.me.canWrite && (
             <Panel>
@@ -457,7 +481,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
                   Kaydet ve onaya gönder
                 </button>
                 <span className="text-[11.5px] text-canvas-muted">
-                  Onaya giden rakamlar sunucuda yeniden hesaplanıp dondurulur; seçilen adet {num(form.chosenQty)} ve kapak fiyatı{' '}
+                  Onaya giden rakamlar sunucuda yeniden hesaplanıp dondurulur; baskı adedi {num(form.chosenQty)} ve kapak fiyatı{' '}
                   {tl0(form.price ?? calc.data?.summary.price)}.
                   <SqlInfo k={calc.data?.kaynaklar} alan="summary" label="Seçilen adet ve kapak fiyatı" className="ml-0.5" />
                 </span>
@@ -470,6 +494,9 @@ export default function CalcPane({ ov }: { ov: Overview }) {
           {aid && analysis.data && <MarketPrices analysis={analysis.data} canWrite={ov.me.canWrite} />}
         </>
       )}
+
+      {costCalc.data && <Lines r={costCalc.data} />}
+      {costCalc.data && <MobileBar r={costCalc.data} />}
     </div>
   );
 }

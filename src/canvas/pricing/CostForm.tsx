@@ -1,141 +1,54 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
-import { ArrowRight, ChevronDown, FilePlus2, Layers } from 'lucide-react';
-import { ENGINE_ENABLED } from '../engine';
-import { Note, TableWrap, btnGhost, btnPrimary, errText, td, th } from '../admin/ui';
-import { Panel, useDebounced } from '../editorial/kit';
+import { type ReactNode } from 'react';
+import { ChevronDown, Layers } from 'lucide-react';
+import { Note, TableWrap, errText, td, th } from '../admin/ui';
 import SqlInfo, { type FieldHelp } from '../components/SqlInfo';
-import { FORM_TRANSFER_KEY, day, num, pct, pricingApi, tl0, tl2, type ExtraKey, type FormTransfer, type FormInputs, type FormPart, type FormResult, type FormSetup, type Overview } from './api';
+import { day, num, pct, tl0, tl2, type ExtraKey, type FormInputs, type FormPart, type FormResult, type FormSetup } from './api';
 import { Group, NumField, Select, TextField, Toggle } from './parts';
-import { BookPicker } from './CalcPane';
 import { FORM_HELP as H, FORM_RESULT_HELP as R } from './help';
 
 /**
- * Maliyet formu: TİMAŞ basım Excel'indeki «Kitap Maliyet Formu»nun ekrandaki hâli. Hesap köprüde (`pricing/form.py`),
- * Excel'le aynı kurallarla; kâğıt fiyatı Logo alışından ya da Excel tarifesinden. Kitap seçilince form CRM ve Logo'dan
- * dolar; sonuç «Fiyat analizi»ne aktarılabilir.
+ * Kitap hesabının maliyet alanları: TİMAŞ basım Excel'indeki «Kitap Maliyet Formu»yla aynı alanlar ve aynı hesap
+ * (köprü `pricing/form.py`). Kâğıt fiyatı Logo alışından; matbaa kalemleri fiyat listesinden. Sonuç (baskı ve kâğıt
+ * bedeli, adet, kapak fiyatı, telif, dolaylı gider) Kitap hesabının fiyat analizine kendiliğinden gider.
  */
 
+export const i = (help: FieldHelp, label: string) => <SqlInfo k={null} alan="" label={label} help={help} />;
 
-const i = (help: FieldHelp, label: string) => <SqlInfo k={null} alan="" label={label} help={help} />;
+export type Setters = {
+  set: (p: Partial<FormInputs>) => void;
+  setIn: SetIn;
+  setKapak: (p: Partial<FormInputs['kapak']>) => void;
+  setEk: (p: Partial<FormInputs['ekler']>) => void;
+  setPart: (key: ExtraKey, p: Partial<FormPart>) => void;
+};
 
-export default function FormPane({ ov }: { ov: Overview }) {
-  const [params, setParams] = useSearchParams();
-  const code = params.get('kitap');
-  const qc = useQueryClient();
-  const setup = useQuery({
-    queryKey: ['pricing', 'form', 'setup', code ?? ''],
-    queryFn: () => pricingApi.formSetup(code),
-    enabled: ENGINE_ENABLED,
-    retry: false,
-  });
-  const [form, setForm] = useState<FormInputs | null>(null);
-  const [loaded, setLoaded] = useState<string | null>(null);
-  const [src, setSrc] = useState<'logo' | 'tarife'>('logo');
-  const s = setup.data;
-
-  useEffect(() => {
-    if (s && loaded !== (code ?? '')) {
-      setForm(s.inputs);
-      setLoaded(code ?? '');
-    }
-  }, [s, code, loaded]);
-
-  const body = useMemo(() => (form ? { inputs: form, paperSource: src } : null), [form, src]);
-  const debounced = useDebounced(body, 300);
-  const calc = useQuery({
-    queryKey: ['pricing', 'form', 'calc', debounced],
-    queryFn: () => pricingApi.formCalc(debounced!),
-    enabled: ENGINE_ENABLED && !!debounced && !!debounced.inputs.sayfa && !!debounced.inputs.adet,
-    placeholderData: (prev) => prev,
-    retry: false,
-  });
-
-  const set = (patch: Partial<FormInputs>) => setForm((f) => (f ? { ...f, ...patch } : f));
-  const setIn = <K extends 'ic' | 'renkli' | 'cilt' | 'diger'>(key: K, patch: Partial<FormInputs[K]>) =>
-    setForm((f) => (f ? { ...f, [key]: { ...f[key], ...patch } } : f));
-  const setKapak = (patch: Partial<FormInputs['kapak']>) => setForm((f) => (f ? { ...f, kapak: { ...f.kapak, ...patch } } : f));
-  const setEk = (patch: Partial<FormInputs['ekler']>) => setForm((f) => (f ? { ...f, ekler: { ...f.ekler, ...patch } } : f));
-  const setPart = (key: ExtraKey, patch: Partial<FormPart>) => setForm((f) => (f ? { ...f, ekler: { ...f.ekler, [key]: { ...f.ekler[key], ...patch } } } : f));
-
-  const pick = (c: string | null) => {
-    setLoaded(null);
-    setForm(null);
-    setParams(c ? { bolum: 'form', kitap: c } : { bolum: 'form' });
+export function setters(setForm: (fn: (f: FormInputs | null) => FormInputs | null) => void): Setters {
+  return {
+    set: (patch) => setForm((f) => (f ? { ...f, ...patch } : f)),
+    setIn: (key, patch) => setForm((f) => (f ? { ...f, [key]: { ...f[key], ...patch } } : f)),
+    setKapak: (patch) => setForm((f) => (f ? { ...f, kapak: { ...f.kapak, ...patch } } : f)),
+    setEk: (patch) => setForm((f) => (f ? { ...f, ekler: { ...f.ekler, ...patch } } : f)),
+    setPart: (key, patch) => setForm((f) => (f ? { ...f, ekler: { ...f.ekler, [key]: { ...f.ekler[key], ...patch } } } : f)),
   };
+}
 
-  const toAnalysis = () => {
-    const r = calc.data?.analysis;
-    if (!r || !form) return;
-    const t: FormTransfer = { result: r, inputs: form, code, title: form.kitap || s?.book?.name || 'Yeni kitap' };
-    qc.setQueryData(FORM_TRANSFER_KEY, t);
-    setParams(code ? { bolum: 'hesap', kitap: code } : { bolum: 'hesap' });
-  };
-
+/** Maliyet alanlarının altı adımı (Excel'in sol tarafı). */
+export function CostGroups({ form, s, st }: { form: FormInputs; s: FormSetup; st: Setters }) {
   return (
-    <div className="flex flex-col gap-3 lg:gap-4">
-      <Panel>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-          <div className="min-w-0 flex-1">
-            <BookPicker disabled={!ov.measured} onPick={(c) => pick(c)} label="Kitap seç (ad, yazar ya da stok kodu)" info={i(H.kitapAra, 'Kitap seç')} />
-          </div>
-          <button type="button" className={btnGhost} onClick={() => pick(null)}>
-            <FilePlus2 aria-hidden className="h-4 w-4" />
-            Yeni kitap
-          </button>
-        </div>
-        <p className="mt-2 text-[12px] leading-snug text-canvas-muted">
-          Basım Excel'indeki «Kitap Maliyet Formu»nun aynısı: aynı girdilerle aynı sonucu verir. Kitap seçince form CRM ve Logo'dan dolar; her alanın
-          yanındaki <span className="font-bold">i</span> işaretine basınca o alanın ne işe yaradığı ve verinin nereden geldiği açılır.
-        </p>
-        {s?.book && <BookLine s={s} />}
-      </Panel>
-
-      {setup.error && <Note tone="err">{errText(setup.error, 'Form açılamadı.')}</Note>}
-      {!form ? (
-        !setup.error && <Note tone="info">Form hazırlanıyor…</Note>
-      ) : (
-        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-4">
-          <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
-            <BookGroup form={form} s={s!} set={set} />
-            <InnerGroup form={form} s={s!} setIn={setIn} />
-            <CoverGroup form={form} s={s!} setKapak={setKapak} />
-            <BindingGroup form={form} s={s!} setIn={setIn} />
-            <ExtrasGroup form={form} s={s!} setEk={setEk} setPart={setPart} />
-            <OtherGroup form={form} setIn={setIn} set={set} />
-          </div>
-          <div className="lg:sticky lg:top-2">
-            <ResultCard r={calc.data} loading={calc.isFetching} err={calc.error} src={src} setSrc={setSrc} onTransfer={toAnalysis} canTransfer={!!calc.data?.analysis} />
-          </div>
-        </div>
-      )}
-
-      {form && calc.data && <Lines r={calc.data} />}
-      {form && calc.data && (
-        <MobileBar r={calc.data} />
-      )}
-    </div>
+    <>
+      <BookGroup form={form} s={s} set={st.set} />
+      <InnerGroup form={form} s={s} setIn={st.setIn} />
+      <CoverGroup form={form} s={s} setKapak={st.setKapak} />
+      <BindingGroup form={form} s={s} setIn={st.setIn} />
+      <ExtrasGroup form={form} s={s} setEk={st.setEk} setPart={st.setPart} />
+      <OtherGroup form={form} setIn={st.setIn} set={st.set} />
+    </>
   );
 }
 
 // ------------------------------------------------------------------ gruplar
 
-function BookLine({ s }: { s: FormSetup }) {
-  const b = s.book!;
-  return (
-    <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-2xl bg-slate-50 px-3 py-2 text-[12px]">
-      <span className="text-[14px] font-extrabold">{b.name ?? b.code}</span>
-      <span className="text-canvas-muted">{[b.author, b.publisher, b.code].filter(Boolean).join(' · ')}</span>
-      <span className="text-canvas-muted">
-        Logo son baskı: {b.lastPrint ? `${tl2(b.lastPrint.unit)} / adet (${num(b.lastPrint.qty)} adet, ${day(b.lastPrint.date)}, kâğıtsız)` : 'fatura yok'}
-      </span>
-      <span className="text-canvas-muted">Logo birim maliyet: {tl2(b.logoUnitCost)}</span>
-    </div>
-  );
-}
-
-type SetIn = <K extends 'ic' | 'renkli' | 'cilt' | 'diger'>(key: K, patch: Partial<FormInputs[K]>) => void;
+export type SetIn = <K extends 'ic' | 'renkli' | 'cilt' | 'diger'>(key: K, patch: Partial<FormInputs[K]>) => void;
 
 function More({ children, label = 'Ayrıntılar' }: { children: ReactNode; label?: string }) {
   return (
@@ -178,7 +91,7 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
           value={form.kur?.USD ?? null}
           onChange={(v) => set({ kur: { ...(form.kur ?? {}), USD: v } })}
           placeholder={num(s.tariff.kur.USD)}
-          hint={logoKur.USD ? `Logo ${day(logoKur.USD.date)}: ${logoKur.USD.rate.toLocaleString('tr-TR')} ₺` : `Tarife: ${num(s.tariff.kur.USD)} ₺`}
+          hint={logoKur.USD ? `Logo ${day(logoKur.USD.date)}: ${logoKur.USD.rate.toLocaleString('tr-TR')} ₺` : `Fiyat listesi: ${num(s.tariff.kur.USD)} ₺`}
         />
         <NumField
           label="1 euro"
@@ -187,7 +100,7 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
           value={form.kur?.EUR ?? null}
           onChange={(v) => set({ kur: { ...(form.kur ?? {}), EUR: v } })}
           placeholder={num(s.tariff.kur.EUR)}
-          hint={logoKur.EUR ? `Logo ${day(logoKur.EUR.date)}: ${logoKur.EUR.rate.toLocaleString('tr-TR')} ₺` : `Tarife: ${num(s.tariff.kur.EUR)} ₺`}
+          hint={logoKur.EUR ? `Logo ${day(logoKur.EUR.date)}: ${logoKur.EUR.rate.toLocaleString('tr-TR')} ₺` : `Fiyat listesi: ${num(s.tariff.kur.EUR)} ₺`}
         />
       </More>
     </Group>
@@ -277,7 +190,7 @@ function BindingGroup({ form, s, setIn }: { form: FormInputs; s: FormSetup; setI
   return (
     <Group step={4} title="Cilt">
       <Select<string> label="Cilt şekli" info={i(H.cilt, 'Cilt şekli')} value={form.cilt.tur} onChange={(v) => setIn('cilt', { tur: v })} options={s.bindings.map((b) => ({ value: b, label: b.charAt(0) + b.slice(1).toLocaleLowerCase('tr-TR') }))} hint={s.origin.cilt} />
-      <NumField label="Cilt birim fiyatı (elle)" info={i(H.ciltBirim, 'Cilt birim fiyatı')} suffix="₺" value={form.cilt.birim} onChange={(v) => setIn('cilt', { birim: v })} placeholder="Tarifeden hesaplanır" />
+      <NumField label="Cilt birim fiyatı (elle)" info={i(H.ciltBirim, 'Cilt birim fiyatı')} suffix="₺" value={form.cilt.birim} onChange={(v) => setIn('cilt', { birim: v })} placeholder="Fiyat listesinden hesaplanır" />
     </Group>
   );
 }
@@ -340,36 +253,17 @@ function OtherGroup({ form, setIn, set }: { form: FormInputs; setIn: SetIn; set:
 
 // ------------------------------------------------------------------ sonuç
 
-function ResultCard({ r, loading, err, src, setSrc, onTransfer, canTransfer }: {
-  r: FormResult | undefined; loading: boolean; err: unknown; src: 'logo' | 'tarife'; setSrc: (v: 'logo' | 'tarife') => void; onTransfer: () => void; canTransfer: boolean;
-}) {
+export function ResultCard({ r, loading, err }: { r: FormResult | undefined; loading: boolean; err: unknown }) {
   const sm = r?.summary;
   const loss = sm && sm.karAdet < 0;
   return (
     <section className="glass-panel flex flex-col gap-3 rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4" aria-live="polite">
-      <div>
-        <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-          Kâğıt fiyatı {i(H.paperSource, 'Kâğıt fiyatı')}
-        </div>
-        <div role="radiogroup" aria-label="Kâğıt fiyatı" className="mt-1 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
-          {(['logo', 'tarife'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              role="radio"
-              aria-checked={src === v}
-              onClick={() => setSrc(v)}
-              className={`min-h-10 rounded-lg px-2 text-[12px] font-bold transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97] ${src === v ? 'bg-white text-canvas-ink shadow-sm' : 'text-canvas-muted hover:text-canvas-ink'}`}
-            >
-              {v === 'logo' ? 'Logo alış fiyatı' : 'Excel tarifesi'}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-1 text-[12px] font-extrabold uppercase tracking-wide text-canvas-ink">
+        Maliyet {i(R.birimMaliyet, 'Maliyet')}
       </div>
-
       {Boolean(err) && <Note tone="err">{errText(err, 'Hesaplanamadı.')}</Note>}
       {!sm ? (
-        !err && <p className="text-[12.5px] text-canvas-muted">Sayfa sayısı ve baskı adedi girilince sonuç burada görünür.</p>
+        !err && <p className="text-[12.5px] text-canvas-muted">Sayfa sayısı ve baskı adedi girilince maliyet burada görünür.</p>
       ) : (
         <div className={`flex flex-col gap-3 transition-opacity duration-150 ${loading ? 'opacity-60' : ''}`}>
           <div className="rounded-2xl bg-white/80 p-3">
@@ -383,16 +277,6 @@ function ResultCard({ r, loading, err, src, setSrc, onTransfer, canTransfer }: {
             <Mini label="Kâr %" help={R.karYuzde} value={pct(sm.karYuzde)} tone={loss ? 'err' : 'ok'} note="maliyete göre" />
           </div>
           <Breakdown sm={sm} />
-          {r.compare && (
-            <p className="flex items-start gap-1 rounded-xl bg-violet-50/70 px-3 py-2 text-[12px] leading-snug">
-              <span>
-                {r.compare.paperSource === 'tarife' ? 'Excel tarifesiyle' : 'Logo alış fiyatıyla'} birim maliyet{' '}
-                <b className="tabular-nums">{tl2(r.compare.birimMaliyet)}</b> ({r.compare.birimMaliyet >= sm.birimMaliyet ? '+' : ''}
-                {tl2(r.compare.birimMaliyet - sm.birimMaliyet)}), kâr {pct(r.compare.karYuzde)}.
-              </span>
-              {i(R.karsilastir, 'Karşılaştırma')}
-            </p>
-          )}
           {r.warnings.length > 0 && (
             <ul className="space-y-1 text-[11.5px] leading-snug text-amber-800">
               {r.warnings.map((w) => (
@@ -400,13 +284,6 @@ function ResultCard({ r, loading, err, src, setSrc, onTransfer, canTransfer }: {
               ))}
             </ul>
           )}
-          <div className="flex items-center gap-1">
-            <button type="button" className={`${btnPrimary} flex-1 justify-center`} disabled={!canTransfer} onClick={onTransfer}>
-              Fiyat analizine aktar
-              <ArrowRight aria-hidden className="h-4 w-4" />
-            </button>
-            {i(R.aktar, 'Fiyat analizine aktar')}
-          </div>
           <a href="#kalemler" className="inline-flex items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline">
             <Layers aria-hidden className="h-4 w-4" /> Kalem kalem döküm
           </a>
@@ -468,7 +345,7 @@ function Breakdown({ sm }: { sm: FormResult['summary'] }) {
   );
 }
 
-function Lines({ r }: { r: FormResult }) {
+export function Lines({ r }: { r: FormResult }) {
   const groups: Array<[FormResult['lines'][number]['group'], string]> = [['kagit', 'Kâğıt'], ['matbaa', 'Matbaa ve işçilik'], ['telif', 'Telif'], ['diger', 'Diğer giderler']];
   const sm = r.summary;
   return (
@@ -505,7 +382,7 @@ function Lines({ r }: { r: FormResult }) {
                   <td className={td}>
                     <span className="inline-flex items-center gap-1 font-bold">
                       {l.name}
-                      {i({ ne: l.formula ?? 'Tarifedeki sabit bedel.', nereden: lineSource(l), excel: `${l.excel} hücresi.` }, l.name)}
+                      {i({ ne: l.formula ?? 'Fiyat listesindeki bedel.', nereden: lineSource(l), excel: `${l.excel} hücresi.` }, l.name)}
                     </span>
                     {l.material && <div className="text-[11px] text-canvas-muted">{l.material}</div>}
                   </td>
@@ -514,7 +391,7 @@ function Lines({ r }: { r: FormResult }) {
                   </td>
                   <td className={`${td} text-right tabular-nums`}>
                     {l.unitPrice != null ? `${l.unitPrice.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ${l.unit ?? '₺'}` : '—'}
-                    {l.priceSource && <div className="text-[10.5px] text-canvas-muted">{l.priceSource === 'logo' ? 'Logo alışı' : 'Excel tarifesi'}</div>}
+                    {l.priceSource && <div className="text-[10.5px] text-canvas-muted">{l.priceSource === 'logo' ? 'Logo alışı' : 'Fiyat listesi (Logo\'da alış yok)'}</div>}
                   </td>
                   <td className={`${td} text-right tabular-nums`}>{tl0(l.total)}</td>
                   <td className={`${td} text-right tabular-nums`}>{tl2(l.perCopy)}</td>
@@ -552,8 +429,8 @@ function Lines({ r }: { r: FormResult }) {
 
 function lineSource(l: FormResult['lines'][number]): string {
   if (l.priceSource === 'logo') return 'Kâğıt fiyatı Logo\'daki son 6 ayın alış faturalarından (aynı cins ve gramaj, kg ağırlıklı ortalama).';
-  if (l.priceSource === 'tarife') return 'Kâğıt fiyatı maliyet formu tarifesinden (ton fiyatı × vade farkı × kur).';
-  return 'Birim fiyatlar maliyet formu tarifesinden (Veri ve varsayımlar → Maliyet formu tarifesi).';
+  if (l.priceSource === 'tarife') return 'Bu kâğıdın Logo\'da son 6 ayda alışı yok; fiyat listesindeki ton fiyatı × vade farkı × kur kullanıldı.';
+  return 'Birim fiyatlar matbaa ve malzeme fiyat listesinden (Veri ve varsayımlar → Matbaa ve malzeme fiyat listesi).';
 }
 
 function Prices({ r }: { r: FormResult }) {
@@ -561,14 +438,13 @@ function Prices({ r }: { r: FormResult }) {
     <div className="space-y-1.5 pt-2">
       <h4 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
         Kullanılan kâğıt fiyatları
-        <SqlInfo k={r.kaynaklar} alan="prices[]" label="Kâğıt fiyatları" help={H.paperSource} />
+        <SqlInfo k={r.kaynaklar} alan="prices[]" label="Kâğıt fiyatları" help={H.kagitFiyati} />
       </h4>
       <TableWrap>
         <thead>
           <tr>
             <th className={th}>Kâğıt</th>
-            <th className={`${th} text-right`}>Logo alışı</th>
-            <th className={`${th} text-right`}>Excel tarifesi</th>
+            <th className={th}>Kaynak</th>
             <th className={`${th} text-right`}>Hesapta</th>
           </tr>
         </thead>
@@ -577,25 +453,24 @@ function Prices({ r }: { r: FormResult }) {
             <tr key={`${p.name}-${p.gsm}`} className="border-t border-slate-100">
               <td className={td}>
                 <div className="font-bold">{p.name}{p.gsm ? ` · ${num(p.gsm)} gr` : ''}</div>
-                {p.logo && <div className="text-[11px] text-canvas-muted">{p.logo.cards} Logo kartı{p.logo.sameGsm ? ', aynı gramaj' : ', gramaj yok — cins ortalaması'} · son alış {day(p.logo.last)}</div>}
               </td>
-              <td className={`${td} text-right tabular-nums`}>{p.logo ? `${p.logo.perKg.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺/kg` : p.unit === 'kg' ? 'alış yok' : '—'}</td>
-              <td className={`${td} text-right tabular-nums`}>
-                {p.tarife.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺/{p.unit}
-                <div className="text-[10.5px] text-canvas-muted">{p.tarifeText}</div>
+              <td className={`${td} text-[12px]`}>
+                {p.source === 'logo' && p.logo
+                  ? `Logo alışı · ${p.logo.cards} kâğıt kartı${p.logo.sameGsm ? ', aynı gramaj' : ', aynı cins (gramaj yok)'} · son alış ${day(p.logo.last)}`
+                  : p.unit === 'kg' ? `Fiyat listesi (Logo'da alış yok): ${p.tarifeText}` : `Fiyat listesi: ${p.tarifeText}`}
               </td>
               <td className={`${td} text-right font-bold tabular-nums`}>{p.used.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺/{p.unit}</td>
             </tr>
           ))}
         </tbody>
       </TableWrap>
-      <p className="px-1 text-[11px] text-canvas-muted">Kur: 1 $ = {r.kur.USD.toLocaleString('tr-TR')} ₺, 1 € = {r.kur.EUR.toLocaleString('tr-TR')} ₺ · vade farkı %{num(r.vade)} · Logo verisi {day(r.dataEnd)} tarihine kadar.</p>
+      <p className="px-1 text-[11px] text-canvas-muted">Kur: 1 $ = {r.kur.USD.toLocaleString('tr-TR')} ₺, 1 € = {r.kur.EUR.toLocaleString('tr-TR')} ₺ · Logo verisi {day(r.dataEnd)} tarihine kadar.</p>
     </div>
   );
 }
 
 /** Telefonda formu doldururken sonucun özeti ekranın altında kalır. */
-function MobileBar({ r }: { r: FormResult }) {
+export function MobileBar({ r }: { r: FormResult }) {
   const sm = r.summary;
   return (
     <a

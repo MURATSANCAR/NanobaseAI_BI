@@ -95,7 +95,7 @@ class _Prices:
         """Birinci fiyat (Excel M sütunu, ayarlı)."""
         row = self.t["prices"].get(key)
         if row is None:
-            raise FormError(f"Tarifede «{key}» yok.")
+            raise FormError(f"Fiyat listesinde «{key}» yok.")
         return float(row.get("m") or 0) * self.k
 
     def n(self, key: str) -> float:
@@ -167,7 +167,7 @@ def paper_price(tariff: dict, name: Optional[str], gsm: Optional[float], source:
     """Bir malzemenin birim fiyatı: ₺/kg (ton fiyatlı kâğıt) ya da ₺/adet (tabaka/adet fiyatlı malzeme)."""
     row = paper_row(tariff, name)
     if row is None:
-        raise FormError(f"«{name}» tarifede yok; tarifedeki kâğıtlardan birini seçin.")
+        raise FormError(f"«{name}» fiyat listesinde yok; listedeki kâğıtlardan birini seçin.")
     vade = float(tariff["vade"]["oran"]) * float(tariff["vade"]["ay"])
     cur = row.get("cur") or "EUR"
     kur = float(tariff["kur"][cur])
@@ -188,9 +188,10 @@ def paper_price(tariff: dict, name: Optional[str], gsm: Optional[float], source:
 
 # ------------------------------------------------------------------ hesap
 
-def compute(inputs: dict[str, Any], tariff: dict[str, Any], *, paper_source: str = "tarife",
+def compute(inputs: dict[str, Any], tariff: dict[str, Any], *, paper_source: str = "logo",
             snap_paper: Optional[dict] = None) -> dict[str, Any]:
-    """Formun bütün hesabı. `paper_source`: «tarife» (Excel'le birebir) ya da «logo» (kâğıdın Logo alış fiyatı)."""
+    """Formun bütün hesabı. Kâğıt fiyatı `paper_source` «logo»: Logo alışı (alışı olmayan kâğıtta fiyat listesi);
+    «tarife»: yalnız fiyat listesi — Excel'deki elle yazılmış ton fiyatlarıyla birebir karşılaştırma (kabul) için."""
     inp = inputs or {}
     t = tariff
     kur_in = inp.get("kur") or {}
@@ -345,7 +346,7 @@ def compute(inputs: dict[str, Any], tariff: dict[str, Any], *, paper_source: str
     j26 = 0.0
     if klise_adet:
         if not cl:
-            raise FormError(f"Klişe ebatı «{klise_ebat}» tarifede yok.")
+            raise FormError(f"Klişe ebatı «{klise_ebat}» fiyat listesinde yok.")
         j26 = line("klise", "matbaa", "Klişe", "J26", float(cl["price"]) * klise_adet,
                    formula=f"{klise_adet:g} klişe × {float(cl['price']):,.0f} ₺ ({klise_ebat})")
 
@@ -355,7 +356,7 @@ def compute(inputs: dict[str, Any], tariff: dict[str, Any], *, paper_source: str
         src_f = {"icKagit": (adet + fire_ic) * (d24 / e7), "kapakKagit": f10, **f_extra}.get(kesim, 0.0)
         g27 = pr.n("ozelKesimTbk")
         v = max(g27, src_f * float(cl["pieces"]) / klise_adet * pr.m("ozelKesimTbk")) * klise_adet
-        f27 = line("ozelKesim", "matbaa", "Özel kesim (TBK)", "F27", v, formula="Kesilen tabaka × parça ÷ klişe × birim; en az tarife tutarı")
+        f27 = line("ozelKesim", "matbaa", "Özel kesim (TBK)", "F27", v, formula="Kesilen tabaka × parça ÷ klişe × birim; en az fiyat listesindeki tutar")
 
     # İşçilikler (Excel J27–J31).
     def gren_cost() -> float:
@@ -478,7 +479,7 @@ def compute(inputs: dict[str, Any], tariff: dict[str, Any], *, paper_source: str
         if iskonto is None:
             iskonto = 0.0
             if inp.get("yayinevi"):
-                warnings.append(f"«{inp.get('yayinevi')}» için vadeli iskonto tarifede yok; iskonto 0 sayıldı.")
+                warnings.append(f"«{inp.get('yayinevi')}» için vadeli iskonto fiyat listesinde yok; iskonto 0 sayıldı.")
             else:
                 warnings.append("Yayınevi seçilmedi; vadeli iskonto 0 sayıldı.")
     j5 = fiyat * (1 - iskonto / 100.0)
@@ -528,7 +529,7 @@ def binding_unit(pr: _Prices, tur: str, e36: float, sayfa: float, ebat: Optional
     if key in (_norm("SERT KAPAK CİLT"), _norm("FLEKSİ KAPAK CİLT")):
         tr = pr.trim(ebat or "")
         if not tr:
-            raise FormError(f"«{ebat}» ebatı tarifenin ebat tablosunda yok: {tur.title()} için taslama ve kapak takma bedeli "
+            raise FormError(f"«{ebat}» ebatı fiyat listesinin ebat tablosunda yok: {tur.title()} için taslama ve kapak takma bedeli "
                             f"bulunamadı. Cilt birim fiyatını elle girin.")
         base = float(tr["taslama"]) * pr.k + float(tr["kapakTakma"]) * pr.k + (pr.m("sertKapakIplikDikis") + pr.m("sertKapakFormaHarman")) * (e36 + 2)
         return base * 0.9 if key == _norm("FLEKSİ KAPAK CİLT") else base
@@ -541,7 +542,7 @@ def binding_unit(pr: _Prices, tur: str, e36: float, sayfa: float, ebat: Optional
 
 # ------------------------------------------------------------------ fiyat analizine aktarım
 
-def to_analysis(inputs: dict, tariff: dict, *, paper_source: str = "tarife", snap_paper: Optional[dict] = None) -> dict:
+def to_analysis(inputs: dict, tariff: dict, *, paper_source: str = "logo", snap_paper: Optional[dict] = None) -> dict:
     """Formu M9 fiyat analizinin girdilerine çevirir: baskı bedeli c(Q) = a + b/Q iki adette hesaplanıp ayrılır
     (fire, kalıp ve en az bedeller adetten bağımsız kısımda). Telif Excel'deki gibi basılan adet üzerinden, KDV dahil
     kapak fiyatı tabanında; dolaylı gider «genel gider payı» olur (analizde yalnız baskı ve kâğıda eklenir)."""
@@ -660,7 +661,7 @@ def from_book(detail: dict, tariff: dict, *, kur: Optional[dict] = None) -> dict
         tr = _Prices(tariff, 0).trim(inp["ebat"])
         if tr and tr.get("icEn") and tr.get("icBoy") and tr.get("icVerim"):
             inp["ic"].update(en=tr["icEn"], boy=tr["icBoy"], verim=tr["icVerim"])
-            origin["ic"] = "Tarifedeki ebat tablosu (iç tabaka ve verim)"
+            origin["ic"] = "Fiyat listesinin ebat tablosu (iç tabaka ve verim)"
     if b.get("price"):
         inp["fiyat"] = b["price"]
         origin["fiyat"] = "CRM kitap kartı (KDV dahil kapak fiyatı)"

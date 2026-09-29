@@ -92,7 +92,7 @@ export type Suggested = { kaynaklar?: Kaynaklar;
 };
 
 export type Spec = { code?: string | null; pages?: number | null; trim?: string | null; gsm?: number | null; binding?: string | null; vat?: number | null;
-  /** Maliyet formundan aktarıldıysa formun girdileri (analizle birlikte saklanır). */
+  /** Kitap hesabının maliyet alanları (basım Excel'iyle aynı; analizle birlikte saklanır). */
   form?: FormInputs };
 
 export type BookDetail = { kaynaklar?: Kaynaklar;
@@ -221,15 +221,10 @@ export type FormSummary = {
 export type FormResult = { kaynaklar?: Kaynaklar;
   lines: FormLine[]; summary: FormSummary; warnings: string[]; paperSource: 'logo' | 'tarife'; prices: FormPrice[]; kur: { USD: number; EUR: number }; vade: number;
   fire: { ic: number; icPay: number };
-  compare: { paperSource: 'logo' | 'tarife'; birimMaliyet: number; kagitAdet: number; karAdet: number; karYuzde: number | null } | null;
   analysis: { printService: number; paperPerCopy: number; printSetup: number; overheadRate: number; royaltyRate: number; royaltyBase: 'kapak'; royaltyOn: 'baski';
     chosenQty: number; price: number | null; fixed: { grafik: number; diger: number }; note: string } | null;
   dataEnd: string | null;
 };
-
-/** Maliyet formundan fiyat analizine aktarım (sorgu önbelleğinde bir kez okunur). */
-export const FORM_TRANSFER_KEY = ['pricing', 'formTransfer'] as const;
-export type FormTransfer = { result: NonNullable<FormResult['analysis']>; inputs: FormInputs; code: string | null; title: string };
 
 const BASE = '/api/v1/pricing';
 
@@ -290,7 +285,7 @@ export const pricingApi = {
   createProposal: (b: { title: string; codes: string[]; target?: number | null; minSold?: number }) => send<Proposal>('POST', '/proposals', b),
   decideProposal: (id: string, b: { decision: 'onay' | 'ret'; note: string }) => send<Proposal>('POST', `/proposals/${enc(id)}/decide`, b),
   formSetup: (kitap?: string | null) => send<FormSetup>('GET', `/form/setup${qs({ kitap })}`),
-  formCalc: (b: { inputs: FormInputs; paperSource: 'logo' | 'tarife' }) => send<FormResult>('POST', '/form/calc', b),
+  formCalc: (b: { inputs: FormInputs }) => send<FormResult>('POST', '/form/calc', b),
   saveTariff: (b: Partial<Tariff> & { reset?: boolean }) => send<Tariff>('PUT', '/form/tariff', b),
 };
 

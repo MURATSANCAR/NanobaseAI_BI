@@ -306,19 +306,19 @@ NOT_RAKAM = ("status", "version", "items[].version", "status", "total", "offset"
 
 F_FORM = ("Maliyet formu (TİMAŞ basım Excel'iyle aynı hesap): kâğıt tabakası = (adet + fire) × sayfa ÷ verim; kg = en × boy × "
           "gramaj ÷ 10.000 × tabaka ÷ 1.000; iç baskı = ⌈sayfa ÷ forma sayfası⌉ × renk kalıp × kalıp bedeli (3.000 adet "
-          "üstü her 1.000 adete ek bedel); kapak baskı, selofan, lak, cilt ve işçilikler tarifeden; telif = kapak fiyatı × "
+          "üstü her 1.000 adete ek bedel); kapak baskı, selofan, lak, cilt ve işçilikler fiyat listesinden; telif = kapak fiyatı × "
           "basılan adet × oran; dolaylı gider = toplam × oran; birim maliyet = genel toplam ÷ adet; kâr = kapak fiyatı × "
           "(1 − yayınevi iskontosu) − birim maliyet; kâr % = toplam kâr ÷ genel toplam.")
-F_TARIFE = ("Tarife: matbaa kalem fiyatları, kâğıt ton fiyatları (€/$), vade farkı, kur, fire payları, dolaylı gider oranı ve "
+F_TARIFE = ("Matbaa ve malzeme fiyat listesi: matbaa kalem fiyatları, Logo'da alışı olmayan kâğıdın ton fiyatı (€/$), vade farkı, kur, fire payları, dolaylı gider oranı ve "
             "yayınevi vadeli iskontoları. İlk hâli TİMAŞ basım Excel'lerinden (14.09.2026) alındı; Fiyatlama → Veri ve "
-            "varsayımlar → Maliyet formu tarifesi'nden değiştirilir.")
+            "varsayımlar → Matbaa ve malzeme fiyat listesi'nden değiştirilir.")
 
 
 def for_form(engine: Any, tenant: str, snap: Optional[dict[str, Any]], out: dict[str, Any], logo_db: Optional[str],
              crm_db: Optional[str]) -> P.Kaynaklar:
     k = _new(snap)
-    t = k.portal("portal.fiyat.form_tarife", "Maliyet formu tarifesi", S.form_tariff_stmt(tenant), engine,
-                 description="Portalda değiştirilmiş tarife; satır yoksa basım Excel'inden alınan varsayılan kullanılır.")
+    t = k.portal("portal.fiyat.form_tarife", "Matbaa ve malzeme fiyat listesi", S.form_tariff_stmt(tenant), engine,
+                 description="Portalda değiştirilmiş fiyat listesi; satır yoksa basım Excel'inden alınan ilk fiyatlar kullanılır.")
     tarife = k.hesap("formTarife", F_TARIFE, [t])
     ins = [t]
     kagit = snap_sources(k, snap, ["logo_kagit"], logo_db, crm_db) if snap else []
@@ -327,12 +327,12 @@ def for_form(engine: Any, tenant: str, snap: Optional[dict[str, Any]], out: dict
     if logo_used:
         ins += kagit
     fields = {"summary": k.hesap("form", F_FORM + (" Kâğıt ₺/kg Logo'daki son 6 ayın alış faturalarından (aynı cins ve "
-                                                    "gramaj, kg ağırlıklı)." if logo_used else " Kâğıt fiyatı tarifeden."), ins),
+                                                    "gramaj, kg ağırlıklı); alışı olmayan kâğıtta fiyat listesi." if logo_used else " Kâğıt fiyatı fiyat listesinden."), ins),
               "tariff": tarife, "vade": tarife}
     fields["lines[]"] = "hesap:form"
-    fields["prices[]"] = k.hesap("formKagit", "Kâğıt birim fiyatı. Tarife: ton fiyatı × (1 + vade farkı) × kur ÷ 1.000. "
+    fields["prices[]"] = k.hesap("formKagit", "Kâğıt birim fiyatı. Fiyat listesi: ton fiyatı × (1 + vade farkı) × kur ÷ 1.000. "
                                              "Logo: son 6 ayın 15001 kâğıt kartı alışları, tutar ÷ kg.", [t] + kagit)
     fields["kur"] = k.hesap("formKur", "Kur: formda yazılan; boşsa Logo günlük kur tablosunun veri sonundaki kuru, o da "
-                                       "yoksa tarifedeki kur.", [t] + kur)
+                                       "yoksa fiyat listesindeki kur.", [t] + kur)
     k.alanlar(fields)
     return k

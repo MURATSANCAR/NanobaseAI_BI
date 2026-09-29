@@ -462,8 +462,8 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
 
     @app.post("/api/v1/pricing/form/calc")
     def pricing_form_calc(request: Request, body: dict[str, Any]) -> dict[str, Any]:
-        """Formun hesabı. `paperSource`: «logo» (kâğıt Logo alış fiyatı) ya da «tarife» (Excel'le birebir). Yanında öbür
-        kaynakla hesap da döner (iki kâğıt fiyatının farkı ekranda). `tariff` verilirse o tarifeyle (kabul, ne-olur-eğer)."""
+        """Kitap hesabının maliyet kısmı (basım Excel'iyle aynı kurallar). Kâğıt Logo alışından; `paperSource: "tarife"`
+        ve `tariff` yalnız kabul içindir (Excel'in kendi fiyatlarıyla birebir karşılaştırma)."""
         from semantic_bridge.pricing import form as F
         engine, tenant, _, _ = ses(request)
         snap = snaps.get()
@@ -472,14 +472,6 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         inputs = body.get("inputs") or {}
         paper = (snap or {}).get("paper")
         out = form_call(F.compute, inputs, tariff, paper_source=src, snap_paper=paper)
-        other = "tarife" if src == "logo" else "logo"
-        try:
-            alt = F.compute(inputs, tariff, paper_source=other, snap_paper=paper)
-            out["compare"] = {"paperSource": other, "birimMaliyet": alt["summary"]["birimMaliyet"],
-                              "kagitAdet": alt["summary"]["kagitAdet"], "karAdet": alt["summary"]["karAdet"],
-                              "karYuzde": alt["summary"]["karYuzde"]}
-        except F.FormError:
-            out["compare"] = None
         try:
             out["analysis"] = F.to_analysis(inputs, tariff, paper_source=src, snap_paper=paper)
         except F.FormError:
@@ -491,12 +483,12 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
     def pricing_form_tariff(request: Request, body: dict[str, Any]) -> dict[str, Any]:
         engine, tenant, user, _ = ses(request)
         if not can(user, "ozellik:fiyatlama.yaz"):
-            raise HTTPException(403, detail={"code": "PRICING", "message": "Tarifeyi değiştirmek «Fiyat analizi hazırlama» yetkisi ister."})
+            raise HTTPException(403, detail={"code": "PRICING", "message": "Fiyat listesini değiştirmek «Fiyat analizi hazırlama» yetkisi ister."})
         reset = bool(body.get("reset"))
         before = S.get_form_tariff(engine, tenant)
         out = call(S.reset_form_tariff, engine, tenant) if reset else call(S.save_form_tariff, engine, tenant, user, body)
         keys = ("kur", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")
-        audit(engine, user, "update", "pricing_form_tariff", tenant, "Maliyet formu tarifesi",
+        audit(engine, user, "update", "pricing_form_tariff", tenant, "Matbaa ve malzeme fiyat listesi",
               {"sifirla": reset} if reset else {k: "değişti" for k in keys if before.get(k) != out.get(k)})
         return out
 

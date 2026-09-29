@@ -9,14 +9,14 @@ import type { FieldHelp } from '../components/SqlInfo';
 // ------------------------------------------------------------------ maliyet formu
 export const FORM_HELP: Record<string, FieldHelp> = {
   kitapAra: {
-    ne: 'Kitabı seçince form, kitabın bilinen bilgileriyle kendiliğinden dolar; siz yalnız eksik ya da değişecek alanları düzeltirsiniz.',
+    ne: 'Kitabı seçince hesap, kitabın bilinen bilgileriyle kendiliğinden dolar; siz yalnız eksik ya da değişecek alanları düzeltirsiniz.',
     nereden:
       'CRM kitap kartından: ad, yazar, sayfa sayısı, ebat, KDV dahil kapak fiyatı, yayınevi ve yürürlükteki sözleşmenin telif oranı.\nCRM\'deki son üretim (baskı) kaydından: basılan adet, iç kâğıt gramajı, iç renk sayısı ve cilt şekli.\nArama Logo\'da baskı faturası olan ve CRM\'de kartı bulunan kitaplar arasında yapılır.',
-    dikkat: 'Yeni (henüz CRM\'e girilmemiş) kitap için «Yeni kitap»a basın; en sık kullanılan seçimlerle boş bir form açılır.',
+    dikkat: 'Yeni (henüz CRM\'e girilmemiş) kitap için «Yeni kitap»a basın; basım Excel\'lerinde en sık kullanılan seçimlerle açılır.',
   },
   yayinevi: {
     ne: 'Kitabın çıktığı yayınevi (marka). Satış fiyatındaki vadeli iskonto buna göre seçilir: satış fiyatı = kapak fiyatı × (1 − iskonto).',
-    nereden: 'Liste, maliyet formu tarifesindeki yayınevi iskonto tablosundan (Veri ve varsayımlar → Maliyet formu tarifesi). Kitap seçilince CRM kitap kartındaki yayınevi gelir.',
+    nereden: 'Liste, fiyat listesindeki yayınevi iskonto tablosundan (Veri ve varsayımlar → Matbaa ve malzeme fiyat listesi). Kitap seçilince CRM kitap kartındaki yayınevi gelir.',
     excel: 'A1 hücresi; iskonto S7:T27 tablosundan (I5).',
   },
   sayfa: {
@@ -31,18 +31,18 @@ export const FORM_HELP: Record<string, FieldHelp> = {
     dikkat: 'Fire payı adetten bağımsız sabit bir sayı olduğu için küçük baskıda birim maliyet belirgin artar.',
   },
   ebat: {
-    ne: 'Kitabın kesim ebadı (en x boy, cm). Sert kapak ve fleksi ciltte taslama ve kapak takma bedeli, mukavvada bir tabakadan çıkan kapak sayısı bu ebada göre tarifeden okunur.',
-    nereden: 'Kitap seçilince CRM kitap kartındaki ebat. Liste, tarifenin ebat tablosu.',
+    ne: 'Kitabın kesim ebadı (en x boy, cm). Sert kapak ve fleksi ciltte taslama ve kapak takma bedeli, mukavvada bir tabakadan çıkan kapak sayısı bu ebada göre fiyat listesinden okunur.',
+    nereden: 'Kitap seçilince CRM kitap kartındaki ebat. Liste, fiyat listesinin ebat tablosu.',
     excel: 'G5 hücresi; ebat tablosu L79:V203.',
   },
   fiyat: {
     ne: 'Kitabın KDV dahil kapak (etiket) fiyatı. Telif ve satış fiyatı bundan hesaplanır.',
-    nereden: 'Kitap seçilince CRM kitap kartındaki KDV dahil fiyat. Yeni kitapta boş; «Fiyat analizi» bölümü hedef kâra göre fiyat önerir.',
+    nereden: 'Kitap seçilince CRM kitap kartındaki KDV dahil fiyat. Yeni kitapta boş; aşağıdaki öneri kartı hedef kâra göre fiyat önerir («Bu fiyatı kullan»).',
     excel: 'J3 «Kesinleşen satış fiyatı» (boşsa J2 «Şimdiki satış fiyatı»).',
     dikkat: 'Excel\'de olduğu gibi KDV düşülmez: telif KDV dahil fiyattan, kâr KDV dahil satış fiyatından hesaplanır.',
   },
   ozelIskonto: {
-    ne: 'Bu kitaba özel vadeli iskonto. Doluysa yayınevinin tarifedeki iskontosunun yerine geçer.',
+    ne: 'Bu kitaba özel vadeli iskonto. Doluysa yayınevinin fiyat listesindeki iskontosunun yerine geçer.',
     nereden: 'Elle girilir.',
     excel: 'I4 «Özel iskonto».',
   },
@@ -53,25 +53,25 @@ export const FORM_HELP: Record<string, FieldHelp> = {
     dikkat: 'Kapak baskısının 3.000 tabaka üstü ek bedeli Excel\'de olduğu gibi ayarsız fiyatla hesaplanır.',
   },
   kur: {
-    ne: 'Dolar ve euro kuru. Tarifede döviz ile fiyatlanan kâğıt, mukavva, cilt bezi gibi malzemelerin ₺ karşılığı için kullanılır.',
-    nereden: 'Logo\'nun günlük kur tablosundan, verinin son gününe kadar girilmiş en son satış kuru. Logo\'da kur yoksa tarifedeki kur. Kutuya yazarak değiştirebilirsiniz.',
+    ne: 'Dolar ve euro kuru. Fiyat listesinde döviz ile fiyatlanan kâğıt, mukavva, cilt bezi gibi malzemelerin ₺ karşılığı için kullanılır.',
+    nereden: 'Logo\'nun günlük kur tablosundan, verinin son gününe kadar girilmiş en son satış kuru. Logo\'da kur yoksa fiyat listesindeki kur. Kutuya yazarak değiştirebilirsiniz.',
     excel: 'J56 (1 dolar) ve J57 (1 euro).',
   },
-  paperSource: {
-    ne: 'Kâğıt birim fiyatının nereden alınacağı. Sonuç iki kaynakla da hesaplanır; seçilmeyenin birim maliyeti sonuç kartının altında yazar.',
+  kagitFiyati: {
+    ne: 'Kâğıdın kilogram fiyatı. Kâğıt maliyeti = kilogram × bu fiyat.',
     nereden:
-      'Logo alış fiyatı: son 6 ayda satın alma faturasıyla gelen aynı cins ve gramajdaki kâğıt kartlarının (15001…) tutarı ÷ kilogramı; aynı gramaj yoksa aynı cinsin ortalaması.\nExcel tarifesi: ton fiyatı (€ ya da $) × (1 + vade farkı) × kur ÷ 1.000 — basım Excel\'iyle birebir aynı sonuç.',
-    excel: 'Excel yalnız tarifeyi kullanır: N9:Q35 kâğıt tablosu, P7 vade oranı × P8 vade süresi.',
-    dikkat: 'Logo\'da o cins kâğıdın son 6 ayda alışı yoksa o kâğıt için tarife fiyatı kullanılır ve kalem satırında yazar.',
+      'Logo\'da son 6 ayda satın alma faturasıyla gelen aynı cins ve gramajdaki kâğıt kartlarının (15001…) tutarı ÷ kilogramı (kg ağırlıklı ortalama). Aynı gramajda alış yoksa aynı cinsin ortalaması.',
+    excel: 'Excel\'de kâğıt fiyatı elle yazılan ton fiyatından geliyordu (N9:Q35); burada Logo\'daki gerçek alış fiyatı kullanılır.',
+    dikkat: 'Logo\'da o cins kâğıdın son 6 ayda hiç alışı yoksa fiyat listesindeki ton fiyatı kullanılır (ton fiyatı × vade farkı × kur); kalem satırında «Fiyat listesi» diye yazar.',
   },
   icKagit: {
     ne: 'İç sayfaların basıldığı kâğıdın cinsi. Kâğıt maliyetinin büyük kısmı buradan gelir.',
-    nereden: 'Liste tarifedeki kâğıtlar. Kitap seçilince gramaja göre önerilir (60–65 gr 3. hamur, 90 gr ve üstü 1. hamur).',
+    nereden: 'Liste fiyat listesindeki kâğıtlar. Kitap seçilince gramaja göre önerilir (60–65 gr 3. hamur, 90 gr ve üstü 1. hamur).',
     excel: 'A7 hücresi (fiyat N9:Q35\'ten).',
   },
   tabaka: {
     ne: 'Matbaanın bastığı kâğıt tabakasının eni ve boyu (cm). Kilogram = en × boy × gramaj ÷ 10.000 × tabaka ÷ 1.000.',
-    nereden: 'Ebadın tarifedeki iç tabaka ölçüsü (varsa), yoksa en sık kullanılan 57x88.',
+    nereden: 'Ebadın fiyat listesindeki iç tabaka ölçüsü (varsa), yoksa en sık kullanılan 57x88.',
     excel: 'B7 (en) ve C7 (boy).',
   },
   gramaj: {
@@ -81,7 +81,7 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   verim: {
     ne: 'Bir tabakanın iki yüzünden çıkan sayfa sayısı. İç tabaka sayısı = (adet + fire) × sayfa ÷ verim. Bir forma = verim ÷ 2 sayfa.',
-    nereden: 'Ebadın tarifedeki iç sayfa verimi; yoksa 32 (57x88 tabakada 13,5x21 kitap).',
+    nereden: 'Ebadın fiyat listesindeki iç sayfa verimi; yoksa 32 (57x88 tabakada 13,5x21 kitap).',
     excel: 'E7 hücresi (32).',
   },
   renk: {
@@ -91,7 +91,7 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   fire: {
     ne: 'Baskı ve kesimde bozulan kâğıt için eklenen adet payı. Tabaka hesabında basılan adede eklenir: (adet + fire).',
-    nereden: 'Tarifedeki fire değeri (iç 800, kapak 1.000); kutudan bu kitap için değiştirilebilir.',
+    nereden: 'Fiyat listesindeki fire değeri (iç 800, kapak 1.000); kutudan bu kitap için değiştirilebilir.',
     excel: 'F7 formülündeki «$F$5+800» (kitaba göre 350–1.500 arası elle değiştirilmişti).',
     dikkat: 'Oranı değil adedi sabittir: 1.500 adetlik baskıda 800 fire %53, 10.000 adette %8 demektir.',
   },
@@ -102,7 +102,7 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   kapakKagit: {
     ne: 'Kapak kartonunun cinsi, tabaka ölçüsü ve gramajı. Kapak tabakası = (adet + kapak firesi) ÷ bir tabakadan çıkan kapak.',
-    nereden: 'Tarifedeki kâğıtlar; yeni formda 70x100 bristol 230 gr, tabakadan 8 kapak.',
+    nereden: 'Fiyat listesindeki kâğıtlar; yeni formda 70x100 bristol 230 gr, tabakadan 8 kapak.',
     excel: 'A10–E10 satırı.',
   },
   kapakVerim: {
@@ -117,7 +117,7 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   selofan: {
     ne: 'Kapağa selofan (ya da dispersiyon lak) kaplama. Selofan: tabaka alanı (m²) × birim fiyat, en az 250 ₺.',
-    nereden: 'Birim fiyat tarifeden (Selofan 7,5 ₺/m²).',
+    nereden: 'Birim fiyat fiyat listesinden (Selofan 7,5 ₺/m²).',
     excel: 'A34–B34, bedel F34.',
   },
   ciftYuz: {
@@ -127,31 +127,31 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   lak: {
     ne: 'Kapağa lokal, kabartma ya da simli lak. İlk 1.000 tabaka (50x70) sabit bedel, fazlası her 1.000 tabaka için ek bedel.',
-    nereden: 'Tarifeden (Lokal lak 5.000 ₺ + 3.300 ₺/1.000).',
+    nereden: 'Fiyat listesinden (Lokal lak 5.000 ₺ + 3.300 ₺/1.000).',
     excel: 'A35–B35, bedel F35.',
   },
   yaldiz: {
     ne: 'Kapağa yaldız ya da gofre (kabartma) uygulaması. İlk 1.000 vuruş sabit bedel, fazlası her 1.000 için ek bedel (kapak tabakası × 4).',
-    nereden: 'Tarifeden (Yaldız 6.000 ₺ + 3.500 ₺/1.000; gofre 5.000 ₺ + 2.500 ₺/1.000).',
+    nereden: 'Fiyat listesinden (Yaldız 6.000 ₺ + 3.500 ₺/1.000; gofre 5.000 ₺ + 2.500 ₺/1.000).',
     excel: 'B29 (yaldız, F29) ve B28 (gofre, F28).',
   },
   klise: {
-    ne: 'Yaldız, gofre ya da özel kesim için yaptırılan klişe (kalıp) sayısı ve ebadı. Her klişe tarifedeki ebat fiyatıyla eklenir.',
-    nereden: 'Tarifenin klişe tablosu (35x50 klişe 10.000 ₺).',
+    ne: 'Yaldız, gofre ya da özel kesim için yaptırılan klişe (kalıp) sayısı ve ebadı. Her klişe fiyat listesindeki ebat fiyatıyla eklenir.',
+    nereden: 'Fiyat listesinin klişe tablosu (35x50 klişe 10.000 ₺).',
     excel: 'I26 (adet), D27 (ebat), bedel J26.',
   },
   gren: {
     ne: 'Kapağa gren (doku) uygulaması. 500 tabakaya kadar sabit bedel, üstünde her 1.000 adet için ek.',
-    nereden: 'Tarifeden (2.300 ₺ + 1.300 ₺/1.000 adet).',
+    nereden: 'Fiyat listesinden (2.300 ₺ + 1.300 ₺/1.000 adet).',
     excel: 'I27 ya da I30 işareti, bedel J27/J30.',
   },
   cilt: {
     ne: 'Cilt şekli. Bedel adet başına hesaplanır ve adetle çarpılır, toplam en az 1.000 ₺.\nAmerikan cilt: (forma + 2) × forma işçiliği, en az 10 forma. İplik dikiş eklenirse işçilik ikiye çıkar. Kulaklı kapak ×1,5. Sert kapak: ebadın taslama + kapak takma bedeli + (forma + 2) × (iplik dikiş + forma harman); fleksi sert kapağın %90\'ı.',
-    nereden: 'Kitap seçilince CRM\'deki son baskının cilt şekli. İşçilik fiyatları tarifeden.',
+    nereden: 'Kitap seçilince CRM\'deki son baskının cilt şekli. İşçilik fiyatları fiyat listesinden.',
     excel: 'A36; bedel tablosu L208:M218, sonuç F36.',
   },
   ciltBirim: {
-    ne: 'Cilt için matbaanın verdiği adet başı fiyat biliniyorsa buraya yazın; tarifedeki hesabın yerine geçer.',
+    ne: 'Cilt için matbaanın verdiği adet başı fiyat biliniyorsa buraya yazın; fiyat listesindeki hesabın yerine geçer.',
     nereden: 'Elle (matbaa teklifi).',
     excel: 'D36 hücresi.',
   },
@@ -162,18 +162,18 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   kapakBolen: {
     ne: 'Kapak ücretinin kaç baskıya bölüneceği. Bu baskıya düşen pay = ücret ÷ bu sayı.',
-    nereden: 'Tarifedeki varsayılan (3); kitaba göre değiştirilebilir.',
+    nereden: 'Fiyat listesindeki varsayılan (3); kitaba göre değiştirilebilir.',
     excel: 'J33 formülündeki «/3».',
   },
   telif: {
     ne: 'Yazar telif oranı (%). Telif = kapak fiyatı × basılan adet × oran (baskıdan ödeme gibi hesaplanır).',
     nereden: 'Kitap seçilince CRM\'deki yürürlükteki sözleşmenin telif oranı.',
     excel: 'I35, bedel J35.',
-    dikkat: 'Excel\'deki gibi KDV dahil kapak fiyatı ve basılan adet üzerinden. Sözleşme satıştan ödeme ya da net fiyattan telif diyorsa gerçek telif bundan düşük olur; «Fiyat analizi» bölümü sözleşmeye göre hesaplar.',
+    dikkat: 'Excel\'deki gibi KDV dahil kapak fiyatı ve basılan adet üzerinden. Sözleşme satıştan ödeme ya da net fiyattan telif diyorsa gerçek telif bundan düşük olur; aşağıdaki fiyat hesabı (senaryolar, başabaş) telifi sözleşmeye göre (Telif bölümü) hesaplar.',
   },
   dolayli: {
     ne: 'İşletme (genel) giderlerinin kitaba yüklenen payı: kâğıt + matbaa + diğer giderler toplamının yüzdesi. Birim maliyetin çoğu zaman en büyük kalemidir.',
-    nereden: 'Tarifedeki varsayılan (%90; basım Excel\'lerinin çoğunda bu). Kitaba göre değiştirilebilir.',
+    nereden: 'Fiyat listesindeki varsayılan (%90; basım Excel\'lerinin çoğunda bu). Kitaba göre değiştirilebilir.',
     excel: 'I41, bedel J41.',
     dikkat: 'Excel\'de olduğu gibi telif ve kapak ücretine de uygulanır.',
   },
@@ -184,7 +184,7 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   ekParca: {
     ne: 'Kitapla basılan ek kâğıt parçaları: yan kâğıt (forza), şömiz, ayraç/afiş, sert kapak mukavvası, cilt bezi. Seçilen her parça kendi kâğıdı, baskısı ve işçiliğiyle eklenir.',
-    nereden: 'Kâğıt ve işçilik fiyatları tarifeden; tabaka ölçüleri basım Excel\'indeki varsayılanlar.',
+    nereden: 'Kâğıt ve işçilik fiyatları fiyat listesinden; tabaka ölçüleri basım Excel\'indeki varsayılanlar.',
     excel: 'Satır 11–16 (kâğıt), 30–32 (baskı), J28 ve J31 (işçilik).',
   },
   kenarBoyama: {
@@ -194,7 +194,7 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   vakum: {
     ne: 'Her kitabın tek tek vakumlu pakete konması. Bedel = (adet + 100) × birim fiyat.',
-    nereden: 'Tarifeden (5,5 ₺).',
+    nereden: 'Fiyat listesinden (5,5 ₺).',
     excel: 'I29, bedel J29.',
   },
 };
@@ -208,7 +208,7 @@ export const FORM_RESULT_HELP: Record<string, FieldHelp> = {
   },
   satisFiyati: {
     ne: 'Yayınevinin eline geçen fiyat = KDV dahil kapak fiyatı × (1 − vadeli iskonto).',
-    nereden: 'Kapak fiyatı formdan, iskonto yayınevinin tarifedeki iskontosu (ya da özel iskonto).',
+    nereden: 'Kapak fiyatı formdan, iskonto yayınevinin fiyat listesindeki iskontosu (ya da özel iskonto).',
     excel: 'J5 «İndirimli satış fiyatı» (J47).',
   },
   karAdet: {
@@ -228,15 +228,8 @@ export const FORM_RESULT_HELP: Record<string, FieldHelp> = {
     excel: 'J42 «Genel toplam» (J40 toplam + J41 dolaylı gider).',
   },
   kalemler: {
-    ne: 'Maliyetin kalem kalem dökümü; her satırın yanında Excel\'deki hücresi ve hesabı yazar. Kâğıt satırlarında fiyatın Logo\'dan mı tarifeden mi geldiği görünür.',
+    ne: 'Maliyetin kalem kalem dökümü; her satırın yanında Excel\'deki hücresi ve hesabı yazar. Kâğıt satırlarında fiyatın Logo\'dan mı fiyat listesinden mi geldiği görünür.',
     excel: 'J7–J24 (matbaa giderleri), F26–F36 ve J26–J36 (diğer giderler).',
-  },
-  karsilastir: {
-    ne: 'Aynı formun öbür kâğıt fiyatıyla hesabı: Logo alış fiyatıyla mı yoksa Excel tarifesiyle mi daha pahalı olduğu görünür.',
-  },
-  aktar: {
-    ne: 'Formun sonucunu «Fiyat analizi» bölümüne taşır: baskı ve kâğıt bedeli adet başı ve baskı başı olarak ayrılır, kapak ücreti sabit gidere, dolaylı gider genel gider payına, telif oranı telife yazılır. Orada adet senaryoları, başabaş, fiyat önerisi ve onaya gönderme yapılır.',
-    dikkat: 'Fiyat analizi KDV\'yi düşer ve telifi sözleşmeye göre hesaplar; bu yüzden birim maliyet ve kâr formdakinden farklı çıkabilir.',
   },
 };
 
@@ -253,28 +246,28 @@ export const CALC_HELP: Record<string, FieldHelp> = {
   gsm: { ne: 'İç kâğıt gramajı; kâğıdın kilogramını ve Logo\'dan hangi gramajın fiyatının alınacağını belirler.', nereden: 'CRM son üretim kaydı; yoksa 60 gr varsayılır.', excel: 'D7.' },
   binding: { ne: 'Cilt şekli; emsal kitapları yalnız aynı ciltle sınırlar.', nereden: 'Elle; «Hepsi» seçilirse emsallerde cilt ayrımı yapılmaz.', excel: 'A36.' },
   printService: {
-    ne: 'Matbaanın «komple baskı» bedeli, adet başına, KDV hariç, kâğıtsız (baskı, cilt, selofan, lak…).',
-    nereden: 'Emsal kitapların son 12 aydaki Logo matbaa faturalarından (hizmet kartı 730.38.381 «Komple Baskı Giderleri», satırın özel kodunda kitabın stok kodu) sayfa başına ölçülen eğri × sayfa. Maliyet formundan aktarılınca formun matbaa kalemleri.',
+    ne: 'Matbaa bedeli, adet başına, KDV hariç, kâğıtsız (kalıp, baskı, kapak baskı, selofan, lak, cilt, işçilikler). Fiyat önerisi, başabaş ve senaryolar bununla hesaplanır.',
+    nereden: 'Yukarıdaki maliyet alanlarının matbaa kalemlerinden (Excel\'le aynı hesap), adet başı kısmı. Matbaa teklifi yazılırsa ya da kutu elle değiştirilirse o kullanılır.',
     excel: 'D41 «1 kitap matbaa maliyeti» karşılığı.',
   },
   paperPerCopy: {
-    ne: 'Kâğıt, kapak kartonu ve bandrolün adet başı bedeli. Kâğıdı Timaş kendisi alır, matbaa faturası kâğıtsızdır.',
-    nereden: 'Sayfa × ebat × gramaj ile kilogram, Logo\'daki son 6 ayın kâğıt alış fiyatı (₺/kg); kapak kartonu ve bandrol de Logo alışlarından. Maliyet formundan aktarılınca formun kâğıt kalemleri.',
+    ne: 'Kâğıt ve kapak kartonunun adet başı bedeli. Kâğıdı Timaş kendisi alır, matbaa faturası kâğıtsızdır.',
+    nereden: 'Yukarıdaki maliyet alanlarının kâğıt kalemlerinden; kâğıt fiyatı Logo\'daki son 6 ayın alış faturalarından (₺/kg).',
     excel: 'D40 «1 kitap kâğıt maliyeti».',
   },
   printSetup: {
-    ne: 'Baskı başına bir kez ödenen, adetten bağımsız kısım (kalıp, makine ayarı, fire). Adet büyüdükçe adet başına payı düşer.',
-    nereden: 'Emsal faturaların adete göre eğrisinden; maliyet formundan aktarılınca formun iki farklı adetteki hesabının farkından.',
+    ne: 'Baskı başına bir kez ödenen, adetten bağımsız kısım (kalıp, fire, en az bedeller). Adet büyüdükçe adet başına payı düşer; senaryo tablosundaki farklı adetler bununla hesaplanır.',
+    nereden: 'Maliyet alanları iki farklı adette hesaplanır; aradaki fark adet başı ve baskı başı diye ayrılır.',
   },
   overheadRate: {
     ne: 'Baskı ve kâğıt bedeline eklenen genel (işletme) gider payı.',
-    nereden: 'Veri ve varsayımlar ekranındaki varsayılan; maliyet formundan aktarılınca formdaki dolaylı gider oranı.',
-    excel: 'I41 «Dolaylı gider» (Excel\'de telif ve kapak ücretine de uygulanır; burada yalnız baskı ve kâğıda).',
+    nereden: 'Yukarıdaki «Dolaylı gider» alanından.',
+    excel: 'I41 «Dolaylı gider» (Excel\'de telif ve kapak ücretine de uygulanır; fiyat hesabında yalnız baskı ve kâğıda).',
   },
   fixed: {
     ne: 'Kitap başına bir kez ödenen giderler; basılan adede bölünerek birim maliyete girer.',
-    nereden: 'Serbest çalışanlar ekranında bu kitaba açılmış iş paketleri çeviri, grafik ve redaksiyon kutularına gelir; avans CRM sözleşmesinden (TL ise). Maliyet formundan aktarılınca kapak ücreti payı «Grafik» kutusuna gelir.',
-    excel: 'J33 (kapak/çizim), J34 (mizanpaj), J36 (diğer).',
+    nereden: 'Grafik kutusuna yukarıdaki kapak/çizim ücretinin bu baskıya düşen payı, Diğer kutusuna nakliye + mizanpaj + diğer gider gelir. Serbest çalışanlar ekranında bu kitaba açılmış iş paketleri çeviri ve redaksiyon kutularına gelir; avans CRM sözleşmesinden (TL ise).',
+    excel: 'J33 (kapak/çizim), J32, J34, J36.',
   },
   avans: { ne: 'Sözleşmedeki telif avansı; telife mahsup edilir, avansı aşan telif ayrıca ödenir.', nereden: 'CRM yürürlükteki sözleşmenin avans tutarı (TL ise).' },
   royaltyRate: { ne: 'Telif oranı.', nereden: 'CRM yürürlükteki sözleşmenin telif oranı.', excel: 'I35.' },
