@@ -355,6 +355,41 @@ def test_studio_gate_keeps_viewers_read_only(monkeypatch, store, settings):
         assert client.request(m, p, json=body, headers=a).status_code != 403, (m, p)
 
 
+def test_single_social_image_download_needs_the_export_permission(monkeypatch, store, settings):
+    """Tek sosyal görselin görüntülenmesi ve indirilmesi aynı yolda (`…/social/{sid}` ve `?download=1`): kapı yola
+    baktığı için ayıramaz, indirme ucun içinde `veri.disa-aktar` ister; görüntüleme yalnız sayfa yetkisiyle kalır."""
+    from semantic_bridge import editorial_studio_marketing as esm
+
+    app, client = _app(monkeypatch, store, settings)
+    got: list[dict] = []
+
+    def fake_fetch(job, sub, params=None):
+        got.append(dict(params or {}))
+        return b"png", "image/png", None
+
+    monkeypatch.setattr(esm, "fetch", fake_fetch)
+    engine = store.engine
+    A.ensure(engine, TENANT)
+    _narrow_everyone(engine)
+    rid = A.save_role(engine, TENANT, "zekiai", {"name": "Tasarım izleyici", "perms": ["sayfa:kitap-tasarim"]})["id"]
+    A.add_binding(engine, TENANT, "zekiai", rid, {"type": "user", "subject": "ayse"})
+    A.invalidate()
+    a = {"cookie": "timas_session=a"}
+    url = "/api/v1/editorial/studio/jobs/j1/marketing/social/s_0123abcd"
+    view = client.get(url + "?w=640", headers=a)
+    assert view.status_code == 200 and "attachment" not in view.headers.get("content-disposition", "")
+    denied = client.get(url + "?download=1", headers=a)
+    assert denied.status_code == 403 and denied.json()["detail"]["message"] == "Bu işlem rolünüzde yok."
+    assert got == [{"w": 640}]                    # yetkisiz indirme stüdyo servisine hiç gitmedi
+    A.save_role(engine, TENANT, "zekiai", {"name": "Tasarım izleyici", "perms": [
+        "sayfa:kitap-tasarim", "ozellik:veri.disa-aktar"]}, rid)
+    A.invalidate()
+    ok = client.get(url + "?download=1", headers=a)
+    assert ok.status_code == 200 and "attachment" in ok.headers["content-disposition"]
+    assert got[-1] == {"download": "1"}
+    assert client.get(url + "?download=1", headers={"cookie": "timas_session=z"}).status_code == 200   # yönetici
+
+
 def test_feature_gate_in_the_bridge(monkeypatch, store, settings):
     app, client = _app(monkeypatch, store, settings)
     engine = store.engine

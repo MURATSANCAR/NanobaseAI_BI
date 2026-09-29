@@ -32,6 +32,7 @@ SOCIAL_ID = re.compile(r"^s_[0-9a-f]{8}$")
 SOURCE_KEY = re.compile(r"^(?:kapak|[0-9]{1,4}|a_[0-9a-f]{8}|[A-Za-z0-9][A-Za-z0-9_-]{0,63})$")
 FILE_MIME = {"image/png", "application/zip", "application/pdf", "text/html", "text/plain", "application/json"}
 SOURCE_LABEL = "Kitap Tasarım Stüdyosu · pazarlama kiti"
+EXPORT_KEY = "ozellik:veri.disa-aktar"
 
 
 def _path(job: str, sub: str = "") -> str:
@@ -111,9 +112,11 @@ def seo_match(seo, isbn: str | None, title: str, author: str | None) -> list[dic
 
 # ------------------------------------------------------------------ uçlar
 def register(app, deps: dict[str, Any]) -> None:
-    """`deps["auth"]`: app.py'deki `_books(request)`; `deps["seo"]`: seo_geo.register'ın döndürdüğü SeoGeo."""
+    """`deps["auth"]`: app.py'deki `_books(request)`; `deps["seo"]`: seo_geo.register'ın döndürdüğü SeoGeo;
+    `deps["can"]`: app.py'deki `_can(user, key)` (yönetici ya da rolünde bu yetki)."""
     auth: Callable[[Request], Any] = deps["auth"]
     seo = deps.get("seo")
+    can: Callable[[str, str], bool] = deps.get("can") or (lambda _user, _key: False)
 
     def call(fn, *a, **kw):
         try:
@@ -262,9 +265,13 @@ def register(app, deps: dict[str, Any]) -> None:
 
     @app.get(P + "/social/{sid}")
     def marketing_social_image(job: str, sid: str, request: Request, w: int = 0, download: bool = False):
-        auth(request)
+        _engine, _tenant, user, _ = auth(request)
         if not SOCIAL_ID.match(sid or ""):
             raise HTTPException(404, "Görsel bulunamadı.")
+        # Görüntüleme ile indirme aynı yolda: sayfa kapısı yalnız yola baktığı için ayıramaz, indirme (dosya adıyla
+        # ek olarak verilen PNG) diğer stüdyo indirmeleri gibi `veri.disa-aktar` ister — ucun içinde denetlenir.
+        if download and not can(user, EXPORT_KEY):
+            raise HTTPException(403, {"code": "FORBIDDEN", "message": "Bu işlem rolünüzde yok."})
         params = {"download": "1"} if download else {"w": max(0, min(int(w), 2400))}
         result = call(fetch, job, f"/social/{sid}", params)
         if download:
