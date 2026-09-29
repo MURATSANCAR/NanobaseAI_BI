@@ -35,6 +35,7 @@ from semantic_bridge import provenance as PV
 from semantic_bridge import sorgu_yakala as Y
 from semantic_bridge import readers as R
 from semantic_bridge import readers_segments as seg
+from semantic_bridge.hizli_bellek import Bellek
 
 log = logging.getLogger("semantic.commerce.api")
 P = "/api/v1/commerce"
@@ -46,6 +47,10 @@ F_PERSONAL = "ozellik:okur.kisisel-veri"
 F_EXPORT = "ozellik:veri.disa-aktar"
 #: Tek tek T-soft'tan okunacak kişi bu sayıyı aşarsa üye listesi bir kez baştan sona okunur (istek sayısı düşsün).
 BULK_MEMBER_READ = 50
+#: Kitap adı haritaları (kitap dizini, sitedeki ürün adları) süreç belleğinde: bu kadar saniye taze, bayatsa hemen verilip
+#: arkada yenilenir; bayat sınırını aşınca beklenir. Adlar gece eşitlemesiyle değişir.
+NAMES_FRESH_SEC = 600
+NAMES_STALE_SEC = 86400
 
 _job: dict[str, Any] = {"running": False, "startedAt": None, "finishedAt": None, "error": None, "result": None, "full": False}
 _job_lock = threading.Lock()
@@ -77,6 +82,26 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         engine, tenant, user, display = auth(request)
         C.ensure(engine)
         return engine, tenant, user, display
+
+    # Özetteki «en çok satanlar» adları: eskiden her istekte kitap dizininin tamamı ve (dizinde olmayan barkod varsa)
+    # sitedeki bütün ürün kayıtları (JSON gövdesiyle) okunuyordu. Haritalar süreç belleğinde, kayıt başına ayrı.
+    adlar = Bellek("commerce.kitap-adlari", taze=NAMES_FRESH_SEC, bayat=NAMES_STALE_SEC, en_cok=16)
+
+    def names_for(engine: Any, tenant: str) -> C.NamesFn:
+        def h1() -> dict[str, str]:
+            return adlar.al((tenant, "dizin"), lambda: C.name_map_h1(engine, tenant))
+
+        def site() -> dict[str, str]:
+            return adlar.al((tenant, "site"), lambda: C.name_map_site(engine, tenant))
+        return lambda barcodes: C.book_names(engine, tenant, barcodes, h1=h1, site=site)
+
+    def warm_names(engine: Any, tenant: str) -> None:
+        """Zamanlayıcı turunda (eşitlemeden sonra) adlar yeniden okunur; ekranı ilk açan beklemez. Hata turu durdurmaz."""
+        try:
+            adlar.al((tenant, "dizin"), lambda: C.name_map_h1(engine, tenant), zorla=True)
+            adlar.al((tenant, "site"), lambda: C.name_map_site(engine, tenant), zorla=True)
+        except Exception as e:  # noqa: BLE001
+            log.info("commerce: kitap adları hazırlanamadı: %s", e)
 
     def st(engine: Any, tenant: str) -> dict[str, Any]:
         return C.settings(engine, tenant, conf)
@@ -212,7 +237,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         s = st(engine, tenant)
         with Y.yakala(engine) as q:
-            out = call(C.overview, engine, tenant, s, period)
+            out = call(C.overview, engine, tenant, s, period, names=names_for(engine, tenant))
         return PV.bagla(out, lambda: CK.for_overview(engine, tenant, out, q))
 
     @app.get(P + "/status")
@@ -464,8 +489,9 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                     out["adminMail"] = deps["send_mail"]("E-ticaret müşteri: site siparişleri okunamadı",
                                                          f"T-soft okuması başarısız:\n{str(e)[:1000]}", s["adminTo"])
         out["results"] = await run_in_threadpool(C.refresh_results, engine, tenant, s)
+        await run_in_threadpool(warm_names, engine, tenant)
         if (d["summary"] or summary) and C.has_data(engine, tenant):
-            ov = await run_in_threadpool(C.overview, engine, tenant, s, "dun")
+            ov = await run_in_threadpool(lambda: C.overview(engine, tenant, s, "dun", names=names_for(engine, tenant)))
             if s["summaryTo"]:
                 link = (conf("ALERT_LINK", "") or "").split("/uyarilar")[0]
                 status = deps["send_mail"]("Site siparişleri — sabah özeti", C.summary_text(ov, C.pending_runs(engine, tenant), link),

@@ -696,9 +696,14 @@ def _window_stats(engine: sa.engine.Engine, tenant: str, s: date, e: date) -> di
                               .where(ORDERS.c.tenant_id == tenant, ORDERS.c.ordered_at >= lo, ORDERS.c.ordered_at < hi)))
         keys = sorted({r.customer_key for r in rows if r.valid and r.customer_key})
         firsts: dict[str, Any] = {}
-        for part in src.chunks(keys):
+        if keys:
+            # Dönemde geçerli siparişi olan müşterilerin ilk geçerli siparişi tek sorguda (eskiden 500'lük anahtar
+            # listeleriyle ayrı ayrı; aylık pencerede onlarca sorgu). Alt sorgu `keys` ile aynı kümedir.
+            win = (sa.select(ORDERS.c.customer_key)
+                   .where(ORDERS.c.tenant_id == tenant, ORDERS.c.valid.is_(True), ORDERS.c.customer_key.isnot(None),
+                          ORDERS.c.customer_key != "", ORDERS.c.ordered_at >= lo, ORDERS.c.ordered_at < hi))
             for r in c.execute(sa.select(ORDERS.c.customer_key, sa.func.min(ORDERS.c.ordered_at).label("f"))
-                               .where(ORDERS.c.tenant_id == tenant, ORDERS.c.valid.is_(True), ORDERS.c.customer_key.in_(part))
+                               .where(ORDERS.c.tenant_id == tenant, ORDERS.c.valid.is_(True), ORDERS.c.customer_key.in_(win))
                                .group_by(ORDERS.c.customer_key)):
                 firsts[r.customer_key] = r.f
     valid = [r for r in rows if r.valid]
@@ -715,7 +720,14 @@ def _change(cur: Optional[float], prev: Optional[float]) -> Optional[float]:
     return round(cur / prev - 1, 4)
 
 
-def top_books(engine: sa.engine.Engine, tenant: str, s: date, e: date, n: Optional[int] = 10) -> list[dict[str, Any]]:
+#: Barkod listesi → {barkod: ad}. Uç, adları süreç belleğinden veren bir okuyucu geçebilir (`NameMaps`).
+NamesFn = Callable[[list[str]], dict[str, str]]
+
+
+def top_books(engine: sa.engine.Engine, tenant: str, s: date, e: date, n: Optional[int] = 10,
+              names: Optional[NamesFn] = None) -> list[dict[str, Any]]:
+    """Dönemde en çok satan barkodlar. Sıra adla ilgisiz (adet, tutar, barkod); ad yalnız dönen satırlar için bulunur
+    (hız, 2026-09-29: eskiden dönemin bütün barkodları için bütün kitap ve site ürün kayıtları okunuyordu)."""
     lo, hi = datetime.combine(s, datetime.min.time()), datetime.combine(e, datetime.min.time())
     agg: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0, 0])
     with engine.connect() as c:
@@ -728,21 +740,44 @@ def top_books(engine: sa.engine.Engine, tenant: str, s: date, e: date, n: Option
             agg[k][0] += float(r.qty or 0)
             agg[k][1] += float(r.amount or 0)
             agg[k][2] += 1
-    names = book_names(engine, tenant, list(agg))
-    out = [{"barkod": k, "ad": names.get(k), "adet": round(v[0], 2), "tutar": round(v[1], 2), "siparis": int(v[2])}
+    out = [{"barkod": k, "ad": None, "adet": round(v[0], 2), "tutar": round(v[1], 2), "siparis": int(v[2])}
            for k, v in agg.items()]
     out.sort(key=lambda x: (-x["adet"], -x["tutar"], x["barkod"]))
-    return out if n is None else out[:n]
+    out = out if n is None else out[:n]
+    found = (names or (lambda bcs: book_names(engine, tenant, bcs)))([x["barkod"] for x in out])
+    for x in out:
+        x["ad"] = found.get(x["barkod"])
+    return out
 
 
-def book_names(engine: sa.engine.Engine, tenant: str, barcodes: list[str]) -> dict[str, str]:
+def name_map_h1(engine: sa.engine.Engine, tenant: str) -> dict[str, str]:
+    """Kitap dizininden (kategori ağacı kitap profili; yoksa SEO'nun CRM kitap eşlemesi) barkod → ad, adı dolu olanlar."""
     idx = src.book_index(engine, tenant)["books"]
-    out = {b: idx[b]["name"] for b in barcodes if b in idx and idx[b].get("name")}
+    return {b: v["name"] for b, v in idx.items() if v.get("name")}
+
+
+def name_map_site(engine: sa.engine.Engine, tenant: str) -> dict[str, str]:
+    """Sitedeki ürün kayıtlarından barkod → ad: aynı barkodlu ürünlerden okuma sırasında adı dolu ilk olan."""
+    out: dict[str, str] = {}
+    for p in src.site_products(engine, tenant):
+        if p["barcode"] and p["name"]:
+            out.setdefault(p["barcode"], p["name"])
+    return out
+
+
+def book_names(engine: sa.engine.Engine, tenant: str, barcodes: list[str],
+               h1: Optional[Callable[[], dict[str, str]]] = None,
+               site: Optional[Callable[[], dict[str, str]]] = None) -> dict[str, str]:
+    """Barkod → kitap adı: önce kitap dizini, bulunmayan için sitedeki ürün adı. `h1`/`site` verilirse haritalar oradan
+    (uç belleği); site kayıtları yalnız dizinde bulunmayan barkod varsa okunur."""
+    idx = (h1 or (lambda: name_map_h1(engine, tenant)))()
+    out = {b: idx[b] for b in barcodes if b in idx}
     miss = [b for b in barcodes if b not in out]
     if miss:
-        for p in src.site_products(engine, tenant):
-            if p["barcode"] in miss and p["name"] and p["barcode"] not in out:
-                out[p["barcode"]] = p["name"]
+        by_site = (site or (lambda: name_map_site(engine, tenant)))()
+        for b in miss:
+            if b in by_site:
+                out[b] = by_site[b]
     return out
 
 
@@ -781,7 +816,7 @@ def logo_d2c(engine: sa.engine.Engine, tenant: str, yil: int, ay: int) -> dict[s
 
 
 def overview(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], period: str = "dun",
-             today: Optional[date] = None) -> dict[str, Any]:
+             today: Optional[date] = None, names: Optional[NamesFn] = None) -> dict[str, Any]:
     today = today or date.today()
     s, e, ps, pe, label = windows(period, today)
     cur = _window_stats(engine, tenant, s, e)
@@ -790,7 +825,7 @@ def overview(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], period: 
                                       "prevFrom": ps.isoformat(), "prevTo": (pe - timedelta(days=1)).isoformat()},
                            "cur": cur, "prev": prev,
                            "change": {k: _change(cur[k], prev[k]) for k in ("siparis", "ciro", "sepet", "musteri", "yeni")},
-                           "top": top_books(engine, tenant, s, e), "freshness": freshness(engine, tenant, st),
+                           "top": top_books(engine, tenant, s, e, names=names), "freshness": freshness(engine, tenant, st),
                            "drop": drop_alert(engine, tenant, st, today)}
     # Logo uzlaşması aylıktır (M42 kanal karnesi ay kırılımlı): pencerenin başladığı ayın bütün site cirosu ile.
     m0 = s.replace(day=1)
