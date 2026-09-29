@@ -2424,6 +2424,39 @@ class SemanticResolver:
                 homes = {""}                   # a tie with a table's own word on the ERP side goes to the connection's own database
             if len(homes) == 1:
                 sq.source_hint = next(iter(homes))
+        if metrics and len(homes) == 1 and all(getattr(m, "span", None) and m.span[1] - m.span[0] == 1 for m in metrics):
+            # One generic measure word against a question that plainly names the other database: "Etkinliklere
+            # harcadığımız toplam gider bütçenin neresinde duruyor?" — "gider" is certified on the ERP ledger,
+            # while "etkinlik" is a CRM table's own word and "bütçe" answers only to CRM tables. The measure
+            # decided alone, the CRM words were handed over as "left to the model", and the ERP's total expense
+            # was served as event spending (B064, 2026-09-29). A one-word measure is one voice; two independent
+            # words that answer only to the other side, with a clear margin, decide instead.
+            mhome = next(iter(homes))
+            covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
+            covered |= _temporal_positions(qf.tokens, sq.temporal)
+            pv, _pn = self._source_votes(qf, covered)
+            signal: dict[str, float] = dict(pv)
+            for s_ in sq.slots:
+                if s_ in metrics or s_.mapping is None or not s_.mapping.entity or s_.semantic_type == SemanticType.DEFAULT_FILTER:
+                    continue
+                if s_.status == "CERTIFIED" and getattr(s_, "span", None) and self._names_a_source(s_):
+                    src = self._source_of(s_.mapping.entity)
+                    signal[src] = signal.get(src, 0) + 1
+            rivals = sorted(((src, v) for src, v in signal.items() if src != mhome), key=lambda kv: -kv[1])
+            mine = signal.get(mhome, 0) + len(metrics)
+            if rivals and rivals[0][1] >= 2 and rivals[0][1] >= 2 * mine:
+                other = rivals[0][0]
+                homes = {other}
+                sq.source_hint = other
+                sq.explanation.append(f"tek kelimelik ölçü ({', '.join(m.term for m in metrics)}) {mhome or 'ana veri tabanı'} tarafında; "
+                                      f"soru {other or 'ana veri tabanı'} tarafında {int(rivals[0][1])} şey adlandırıyor → o kaynak seçildi")
+                for m in metrics:
+                    if m in sq.slots:
+                        sq.slots.remove(m)
+                    word = fold(m.term)
+                    if word and word not in sq.unresolved:
+                        sq.unresolved.append(word)
+                metrics = []
         if len(homes) > 1:
             # Measures on both sides: "sevkiyatlarda liste fiyatı üzerinden indirim" names an ERP
             # measure by one word and two CRM things by phrase. The side the question names more
