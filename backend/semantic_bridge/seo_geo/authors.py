@@ -20,6 +20,7 @@ Puan: bilinen maddelerin ağırlıklı oranı (bilinmeyen ya da bu yazara uymaya
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -28,7 +29,7 @@ from typing import Any, Optional
 import sqlalchemy as sa
 from fastapi import Request
 
-from . import entity as entity_mod, rules
+from . import entity as entity_mod, hazir, rules
 from .store import CRM_BOOKS, LINKS, PRODUCTS, PROPOSALS, SCHEMA, _md, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
@@ -69,6 +70,8 @@ def _ensure(eng: sa.engine.Engine) -> None:
         if id(eng) in _ready:
             return
         AUTHOR_CRM.create(eng, checkfirst=True)
+        # Kimlik önbelleği entity.py'nindir; hazır hesabın damgası onu da okur.
+        entity_mod.ENTITY.create(eng, checkfirst=True)
         _ready.add(id(eng))
 
 
@@ -249,6 +252,21 @@ class Authors:
 
     # ---- hesap
     def rows(self) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        """Hazır hesaptan (girdiler değişmediyse) ya da yeniden hesaplanarak: (yazar satırları, özet)."""
+        self.engine()
+        site = (self.seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        lim = rules.thresholds(self.seo.conf)
+        st = hazir.damga(self.seo, [
+            (PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at),
+            (LINKS, LINKS.c.synced_at, LINKS.c.type == "model"),
+            (PROPOSALS, PROPOSALS.c.decided_at, PROPOSALS.c.product_id.like("model:%")),
+            (SCHEMA, SCHEMA.c.checked_at), (AUTHOR_CRM, AUTHOR_CRM.c.synced_at),
+            (entity_mod.ENTITY, entity_mod.ENTITY.c.checked_at, entity_mod.ENTITY.c.kind == "author")],
+            ek=(site, json.dumps(lim, sort_keys=True)))
+        out, meta = hazir.al(self.seo, "authors.trust", st, lambda: list(self.compute()))
+        return out, meta
+
+    def compute(self) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         from . import EAN, SALES, VIEWS, _num
 
         tenant = self.seo.tenant()
@@ -330,6 +348,8 @@ class Authors:
 
 def register(app, ctx) -> None:
     au = Authors(ctx.seo)
+    hazir.kaydet(ctx.seo, "authors.trust", au.rows)
+    hazir.mesgul(ctx.seo, lambda: bool(au.state.get("running")))
 
     @app.get("/api/v1/seo-geo/authors-trust")
     def seo_authors_trust(request: Request, q: str = "", missing: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:

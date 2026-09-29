@@ -40,7 +40,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import crm, propose, rules
+from . import crm, hazir, propose, rules
 from .entity import ENTITY, fold, split_authors
 from .store import _md, dumps, iso, loads, now
 
@@ -470,8 +470,6 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde
     run: dict[str, Any] = {"running": False, "phase": None, "read": None, "done": 0, "failed": 0, "startedAt": None,
                            "finishedAt": None, "error": None}
     run_lock = threading.Lock()
-    cache: dict[str, Any] = {}
-    cache_lock = threading.Lock()
 
     def err(status: int, message: str) -> HTTPException:
         return HTTPException(status, {"code": "SEO", "message": message})
@@ -524,19 +522,20 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde
                 c.execute(BIOS_SRC.insert(), vals[i:i + 1000])
         return len(vals)
 
-    # ---- yazar listesi (eşitleme damgası değişene kadar bellekte)
-    def authors() -> tuple[list[dict[str, Any]], dict[str, str]]:
+    # ---- yazar listesi (hazır hesap: girdilerin damgası değişene kadar tablodan/bellekten)
+    def authors() -> list[dict[str, Any]]:
+        from .store import LINKS, PRODUCTS
+
+        eng()
+        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at), (BIOS_SRC, BIOS_SRC.c.synced_at),
+                               (LINKS, LINKS.c.synced_at, LINKS.c.type == "model"),
+                               (ENTITY, ENTITY.c.checked_at, ENTITY.c.kind == "author")], ek=(bio_min(), site()))
+        return hazir.al(seo, "bios.authors", st, compute_authors)
+
+    def compute_authors() -> list[dict[str, Any]]:
         from .store import LINKS, PRODUCTS
 
         tenant = seo.tenant()
-        with eng().connect() as c:
-            stamp = tuple(c.execute(sa.select(sa.func.max(t.c.synced_at if t is not ENTITY else t.c.checked_at))
-                                    .where(t.c.tenant_id == tenant)).scalar() for t in (PRODUCTS, BIOS_SRC, LINKS, ENTITY))
-        stamp = stamp + (bio_min(), site())
-        with cache_lock:
-            hit = cache.get(tenant)
-            if hit and hit[0] == stamp:
-                return hit[1], hit[2]
         with eng().connect() as c:
             src_rows = c.execute(sa.select(BIOS_SRC).where(BIOS_SRC.c.tenant_id == tenant)).mappings().all()
             prods = [product_brief(loads(r[0], {}), site()) for r in c.execute(
@@ -548,18 +547,19 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde
         same_as = {n: loads(d, {}) for n, d in ents}
         sources = [{"key": r["author_key"], "name": r["name"], "bioLong": r["bio_long"], "bioShort": r["bio_short"],
                     "biography": r["biography"], "books": loads(r["books_json"], [])} for r in src_rows]
-        texts = {s["key"]: bio_text(s) for s in sources}
-        rows = build_authors(sources, prods, links, same_as, site(), bio_min())
-        with cache_lock:
-            cache[tenant] = (stamp, rows, texts)
-        return rows, texts
+        return build_authors(sources, prods, links, same_as, site(), bio_min())
 
     def author(key: str) -> tuple[dict[str, Any], str]:
-        rows, texts = authors()
-        a = next((x for x in rows if x["key"] == key), None)
+        a = next((x for x in authors() if x["key"] == key), None)
         if a is None:
             raise err(404, "Yazar bulunamadı; CRM okuması yenilenmiş ya da kitapları satıştan kalkmış olabilir.")
-        return a, texts.get(key, "")
+        # Özgeçmiş metni yalnız bu yazar için okunur (listede metin taşınmaz).
+        with eng().connect() as c:
+            r = c.execute(sa.select(BIOS_SRC).where(BIOS_SRC.c.tenant_id == seo.tenant(),
+                                                    BIOS_SRC.c.author_key == key)).mappings().first()
+        text = bio_text({"key": r["author_key"], "name": r["name"], "bioLong": r["bio_long"], "bioShort": r["bio_short"],
+                         "biography": r["biography"], "books": loads(r["books_json"], [])}) if r else ""
+        return a, text
 
     def drafts_by_author() -> dict[str, dict[str, Any]]:
         with eng().connect() as c:
@@ -628,7 +628,7 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde
         ctx.gate(request)
         if status and status not in FILTERS:
             raise err(422, "Bilinmeyen süzgeç.")
-        rows, _ = authors()
+        rows = authors()
         drafts = drafts_by_author()
         items = [{**{k: v for k, v in a.items() if k != "books"}, "topBooks": [b["name"] for b in a["books"][:3]],
                   "draft": drafts.get(a["key"])} for a in rows]
@@ -726,8 +726,7 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde
             if generate:
                 run["phase"] = "taslak"
                 deadline = time.monotonic() + max(60, budget)
-                rows, _ = authors()
-                for a in queue(rows, set(drafts_by_author())):
+                for a in queue(authors(), set(drafts_by_author())):
                     if time.monotonic() > deadline:
                         break
                     try:
@@ -754,3 +753,5 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde
         start_run(generate=True)
 
     seo.nightly.append(("bios", nightly))
+    hazir.kaydet(seo, "bios.authors", authors)
+    hazir.mesgul(seo, lambda: run.get("phase") == "crm")

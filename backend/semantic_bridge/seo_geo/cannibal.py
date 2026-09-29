@@ -27,17 +27,16 @@ from __future__ import annotations
 
 import logging
 import re
-import threading
 from typing import Any, Optional
 from urllib.parse import urlsplit
 
 import sqlalchemy as sa
 from fastapi import HTTPException, Request
 
-from . import connections
+from . import connections, hazir
 from .competitors import clean_title
-from .opportunities import fold, is_brand, path_key, source
-from .store import CRM_BOOKS, LINKS, PRODUCTS
+from .opportunities import OPPS, ensure_table, fold, is_brand, path_key, source
+from .store import CRM_BOOKS, GSC, LINKS, PRODUCTS
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -64,8 +63,6 @@ EDITION_WORDS = frozenset({"ciltli", "karton", "kapak", "baski", "baskisi", "yen
                            "set", "seti", "sert", "kapakli", "genisletilmis", "gozden", "gecirilmis", "revize",
                            "tam", "metin", "orijinal", "buyuk", "kucuk", "ciltsiz", "numarali", "imzali"})
 _TOKEN = re.compile(r"[a-z0-9]+")
-_cache: dict[str, Any] = {"key": None, "data": None}
-_cache_lock = threading.Lock()
 
 
 # ------------------------------------------------------------------------------------------------ saf işlevler
@@ -255,22 +252,27 @@ def _maps(seo) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
 
 
 def computed(seo) -> dict[str, Any]:
+    """Hazır hesaptan (girdiler değişmediyse). Girdiler: fırsat kırılımı (yoksa yalnız-sorgu önbelleği), ürünler, CRM
+    kartları (ürün adının ikinci adı), site sayfaları. Eskiden yalnız Search Console damgasına bakılırdı ve her istekte
+    bütün kırılım JSON'u açılırdı."""
+    ensure_table(seo.engine())
+    st = hazir.damga(seo, [(OPPS, OPPS.c.saved_at, OPPS.c.kind == "query_page"),
+                           (GSC, GSC.c.saved_at, GSC.c.kind == "queries"),
+                           (PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at),
+                           (LINKS, LINKS.c.synced_at)])
+    return hazir.al(seo, "cannibal", st, lambda: compute(seo))
+
+
+def compute(seo) -> dict[str, Any]:
     src = source(seo)
-    key = (seo.tenant(), src["from"], src["savedAt"])
-    with _cache_lock:
-        if _cache["key"] == key and _cache["data"] is not None:
-            return _cache["data"]
     items: list[dict[str, Any]] = []
     if src["from"] == "query_page":
         groups = detect(src["rows"])
         if groups:
             products, links = _maps(seo)
             items = annotate(groups, products, links)
-    data = {"source": {k: v for k, v in src.items() if k != "rows"} | {"rowCount": len(src["rows"])}, "items": items,
+    return {"source": {k: v for k, v in src.items() if k != "rows"} | {"rowCount": len(src["rows"])}, "items": items,
             "totals": totals(items)}
-    with _cache_lock:
-        _cache.update(key=key, data=data)
-    return data
 
 
 def _page_view(p: dict[str, Any]) -> dict[str, Any]:
@@ -291,6 +293,7 @@ def _err(status: int, message: str) -> HTTPException:
 
 def register(app, ctx) -> None:
     seo = ctx.seo
+    hazir.kaydet(seo, "cannibal", lambda: computed(seo))
 
     @app.get("/api/v1/seo-geo/cannibal")
     def seo_cannibal(request: Request, kind: str = "zararli", brand: str = "0", type: str = "", start: int = 0,

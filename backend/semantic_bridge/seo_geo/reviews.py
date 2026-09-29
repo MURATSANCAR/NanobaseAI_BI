@@ -20,6 +20,7 @@ from typing import Any, Iterable, Optional
 import sqlalchemy as sa
 from fastapi import Request
 
+from . import hazir
 from .store import PRODUCTS, SCHEMA, _md, dumps, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
@@ -216,7 +217,15 @@ class Reviews:
             self._lock.release()
 
     def rows(self) -> tuple[list[dict[str, Any]], Optional[str]]:
-        """Aktif kitaplar çok satandan aza, yorum özetiyle."""
+        """Aktif kitaplar çok satandan aza, yorum özetiyle — hazır hesaptan (girdiler değişmediyse)."""
+        self.engine()
+        site = (self.seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        st = hazir.damga(self.seo, [(PRODUCTS, PRODUCTS.c.synced_at), (REVIEWS, REVIEWS.c.synced_at),
+                                    (SCHEMA, SCHEMA.c.checked_at)], ek=(site,))
+        out, last = hazir.al(self.seo, "reviews", st, lambda: list(self.compute()))
+        return out, last
+
+    def compute(self) -> tuple[list[dict[str, Any]], Optional[str]]:
         from . import SALES, VIEWS, _image, _num as num
 
         tenant = self.seo.tenant()
@@ -284,6 +293,8 @@ def pick(rows: list[dict[str, Any]], view: str) -> list[dict[str, Any]]:
 
 def register(app, ctx) -> None:
     rv = Reviews(ctx.seo)
+    hazir.kaydet(ctx.seo, "reviews", rv.rows)
+    hazir.mesgul(ctx.seo, lambda: bool(rv.state.get("running")))
 
     @app.get("/api/v1/seo-geo/reviews")
     def seo_reviews(request: Request, view: str = "yorumsuz", q: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:

@@ -32,7 +32,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import crm, guides, propose, rules
+from . import crm, guides, hazir, propose, rules
 from .store import _md, dumps, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo.faq")
@@ -329,11 +329,21 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde
                        unsupported=loads(r["unsupported_json"], []))
         return out
 
-    def list_item(b: dict[str, Any], drafts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    def base_item(b: dict[str, Any]) -> dict[str, Any]:
         st, why = state(b)
         return {"id": b["id"], "name": b.get("name"), "authors": b.get("authors"), "brand": b.get("brand"),
-                "image": b.get("image"), "url": b.get("url"), "sales": b.get("sales") or 0, "state": st, "reason": why,
-                "draft": drafts.get(b["id"])}
+                "image": b.get("image"), "url": b.get("url"), "sales": b.get("sales") or 0, "state": st, "reason": why}
+
+    def list_base() -> list[dict[str, Any]]:
+        """Liste satırları (taslak durumu hariç) hazır hesaptan: katalog JSON'u her istekte açılmaz."""
+        from .store import CRM_BOOKS, PRODUCTS
+
+        eng()
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)], ek=(site,))
+        return hazir.al(seo, "faq.list", st, lambda: [base_item(b) for b in catalog()])
+
+    hazir.kaydet(seo, "faq.list", list_base)
 
     def make(pid: str, user: str, priority: Optional[int] = None) -> dict[str, Any]:
         gen_key = f"faq:{pid}"
@@ -374,7 +384,7 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde
         if status and status not in FILTERS:
             raise err(422, "Bilinmeyen süzgeç.")
         drafts = drafts_by_product()
-        items = [list_item(b, drafts) for b in catalog()]
+        items = [{**b, "draft": drafts.get(b["id"])} for b in list_base()]
         counts: dict[str, int] = {s: sum(1 for i in items if i["state"] == s) for s in STATES}
         counts["taslak_yok"] = sum(1 for i in items if i["state"] == "uygun" and not i["draft"])
         for s in STATUSES:

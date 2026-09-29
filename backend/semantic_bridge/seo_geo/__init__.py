@@ -12,6 +12,7 @@ Uçlar `/api/v1/seo-geo/*`; oturum şart. `run-due` gece zamanlayıcısının uc
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -23,7 +24,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, crm, geo, llms, pages, propose, redirects, rules, schema
+from . import connections, crm, geo, hazir, llms, pages, propose, redirects, rules, schema
 import hashlib
 
 from .store import CRM_BOOKS, GEO_RESULTS, GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, TARGETS, dumps, ensure, iso, loads, now
@@ -741,33 +742,49 @@ def register(app, runtime, authorize, session_user):
             raise _err(403, "Öneri onaylama yetkiniz yok (Yönetim → SEO & GEO → Onay verebilenler).")
         return user
 
-    @app.get("/api/v1/seo-geo/overview")
-    def seo_overview(request: Request) -> dict[str, Any]:
-        gate(request)
-        eng, tenant = seo.engine(), seo.tenant()
-        with eng.connect() as c:
+    def _product_stats() -> dict[str, Any]:
+        """Ürün denetimi özeti (hazır kayda yazılır): toplam, ortalama puan, 70 altı, kural başına ihlal, öncelik listesi
+        (puanı 70 altındaki en çok satan 10 ürün — ekranın tanımıdır, tavan değil)."""
+        tenant = seo.tenant()
+        with seo.engine().connect() as c:
             total = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(PRODUCTS.c.tenant_id == tenant)).scalar() or 0
             active = sa.and_(PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True))
             avg = c.execute(sa.select(sa.func.avg(PRODUCTS.c.score)).where(active)).scalar()
             failing = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(active, PRODUCTS.c.score < 70)).scalar() or 0
             by_rule = {k: c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(
                 active, PRODUCTS.c.rules.like(f"%,{k},%"))).scalar() or 0 for k in rules.RULES}
+            top = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name, PRODUCTS.c.score, SALES, VIEWS).where(
+                active, PRODUCTS.c.score < 70).order_by(SALES.desc(), VIEWS.desc()).limit(10)).all()
+        return {"products": total, "activeAverage": round(float(avg), 1) if avg is not None else None, "failing": failing,
+                "rules": [{"rule": k, "title": v[2], "severity": v[1], "count": by_rule[k]} for k, v in rules.RULES.items()],
+                "priority": [{"id": r[0], "name": r[1], "score": r[2], "sales": int(r[3]), "views": int(r[4])} for r in top]}
+
+    def product_stats() -> dict[str, Any]:
+        seo.engine()
+        return hazir.al(seo, "overview.products", hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at)]), _product_stats)
+
+    hazir.kaydet(seo, "overview.products", product_stats)
+
+    @app.get("/api/v1/seo-geo/overview")
+    def seo_overview(request: Request) -> dict[str, Any]:
+        gate(request)
+        eng, tenant = seo.engine(), seo.tenant()
+        ps = product_stats()
+        with eng.connect() as c:
             status = dict(c.execute(sa.select(PROPOSALS.c.status, sa.func.count()).where(
                 PROPOSALS.c.tenant_id == tenant).group_by(PROPOSALS.c.status)).all())
             week = now() - timedelta(days=7)
             approved_week = c.execute(sa.select(sa.func.count()).select_from(PROPOSALS).where(
                 PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == "onaylandi", PROPOSALS.c.decided_at >= week)).scalar() or 0
-            top = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name, PRODUCTS.c.score, SALES, VIEWS).where(
-                active, PRODUCTS.c.score < 70).order_by(SALES.desc(), VIEWS.desc()).limit(10)).all()
             last = c.execute(sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.kind == "tsoft")
                              .order_by(RUNS.c.started_at.desc()).limit(1)).mappings().first()
         daily = seo.gsc("daily")
         return {
-            "products": total, "activeAverage": round(float(avg), 1) if avg is not None else None,
-            "failing": failing, "failingThreshold": 70,
-            "rules": [{"rule": k, "title": v[2], "severity": v[1], "count": by_rule[k]} for k, v in rules.RULES.items()],
+            "products": ps["products"], "activeAverage": ps["activeAverage"],
+            "failing": ps["failing"], "failingThreshold": 70,
+            "rules": ps["rules"],
             "proposals": status, "approvedThisWeek": approved_week, "tsoftWrite": False,
-            "priority": [{"id": r[0], "name": r[1], "score": r[2], "sales": int(r[3]), "views": int(r[4])} for r in top],
+            "priority": ps["priority"],
             "lastSync": ({"startedAt": iso(last["started_at"]), "finishedAt": iso(last["finished_at"]),
                           "count": last["count"], "error": last["error"]} if last else None),
             "sync": seo.state, "batch": seo.batch, "search": daily, "crm": _crm_summary(),
@@ -790,6 +807,20 @@ def register(app, runtime, authorize, session_user):
         seo.audit(user, "run", "tsoft", "T-soft eşitlemesi", {"started": started})
         return {"started": started, "sync": seo.state}
 
+    def _priority_order() -> list[str]:
+        """Aktif ürünlerin öncelik sırası (hazır kayda yazılır): satış, görüntülenme (T-soft sayaçları JSON'dan), puan,
+        ürün no. Eskiden her sayfa isteğinde bütün ürünlerin JSON'u veritabanında açılıp sıralanırdı."""
+        with seo.engine().connect() as c:
+            return [r[0] for r in c.execute(sa.select(PRODUCTS.c.product_id).where(
+                PRODUCTS.c.tenant_id == seo.tenant(), PRODUCTS.c.active.is_(True))
+                .order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc(), PRODUCTS.c.product_id))]
+
+    def priority_order() -> list[str]:
+        seo.engine()
+        return hazir.al(seo, "products.order", hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at)]), _priority_order)
+
+    hazir.kaydet(seo, "products.order", priority_order)
+
     @app.get("/api/v1/seo-geo/products")
     def seo_products(request: Request, rule: str = "", status: str = "", q: str = "", start: int = 0,
                      limit: int = 50, order: str = "oncelik") -> dict[str, Any]:
@@ -807,12 +838,23 @@ def register(app, runtime, authorize, session_user):
         if status:
             cond.append(PRODUCTS.c.product_id.in_(sa.select(PROPOSALS.c.product_id).where(
                 PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == status)))
+        ranked = priority_order() if order not in ("name", "score") else None
         with seo.engine().connect() as c:
-            total = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(*cond)).scalar() or 0
-            sort = {"name": [PRODUCTS.c.name.asc()], "score": [PRODUCTS.c.score.asc()]}.get(
-                order, [SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc()])
-            rows = c.execute(sa.select(PRODUCTS).where(*cond).order_by(*sort, PRODUCTS.c.product_id)
-                             .offset(max(0, start)).limit(max(1, limit))).mappings().all()
+            if ranked is None:
+                total = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(*cond)).scalar() or 0
+                sort = [PRODUCTS.c.name.asc()] if order == "name" else [PRODUCTS.c.score.asc()]
+                rows = c.execute(sa.select(PRODUCTS).where(*cond).order_by(*sort, PRODUCTS.c.product_id)
+                                 .offset(max(0, start)).limit(max(1, limit))).mappings().all()
+            else:
+                # Öncelik sırası hazır kayıttan; süzgece uyan ürünler o sırayla, sayfa satırları kimlikle okunur.
+                rank = {pid: i for i, pid in enumerate(ranked)}
+                match = sorted((r[0] for r in c.execute(sa.select(PRODUCTS.c.product_id).where(*cond))),
+                               key=lambda pid: (rank.get(pid, len(rank)), pid))
+                total = len(match)
+                page_ids = match[max(0, start):max(0, start) + max(1, limit)]
+                got = {r["product_id"]: r for r in c.execute(sa.select(PRODUCTS).where(
+                    PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.product_id.in_(page_ids))).mappings()} if page_ids else {}
+                rows = [got[pid] for pid in page_ids if pid in got]
             ids = [r["product_id"] for r in rows]
             states: dict[str, str] = {}
             if ids:
@@ -1019,31 +1061,51 @@ def register(app, runtime, authorize, session_user):
         except Exception:  # noqa: BLE001 — basın-web modülü kapalı ortamda tablo yoktur
             return None
 
+    def _page_lists() -> dict[str, list[dict[str, Any]]]:
+        """Tür başına sayfa satırları (hazır kayda yazılır): kitap sayısı ve satış toplamı bütün ürün JSON'undan, denetim
+        puanı kurallarla; sıra satıştan aza. Öneri durumu ve arama süzgeci istekte eklenir."""
+        links, st = _page_data()
+        lim = rules.thresholds(seo.conf)
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        out: dict[str, list[dict[str, Any]]] = {}
+        for kind in pages.KINDS:
+            items = []
+            for l in links:
+                if l["type"] != kind:
+                    continue
+                s = st.get((kind, str(l["table_id"])), {})
+                name = _page_name(l)
+                a = pages.audit(kind, name, l["title"], l["description"], lim)
+                items.append({"id": str(l["table_id"]), "name": name, "link": l["link"], "url": f"{site}/{l['link']}",
+                              "books": s.get("books", 0), "sales": s.get("sales", 0), "score": a["score"],
+                              "issues": len(a["issues"])})
+            items.sort(key=lambda x: (-x["sales"], -x["books"], x["name"]))
+            out[kind] = items
+        return out
+
+    def page_lists() -> dict[str, list[dict[str, Any]]]:
+        seo.engine()
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        st = hazir.damga(seo, [(LINKS, LINKS.c.synced_at), (PRODUCTS, PRODUCTS.c.synced_at)],
+                         ek=(site, json.dumps(rules.thresholds(seo.conf), sort_keys=True)))
+        return hazir.al(seo, "pages", st, _page_lists)
+
+    hazir.kaydet(seo, "pages", page_lists)
+
     @app.get("/api/v1/seo-geo/pages")
     def seo_pages(request: Request, type: str = "model", q: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:
         gate(request)
         if type not in pages.KINDS:
             raise _err(422, "Bilinmeyen sayfa türü.")
-        links, st = _page_data()
-        lim = rules.thresholds(seo.conf)
-        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        base = page_lists().get(type, [])
         with seo.engine().connect() as c:
             states = dict(c.execute(sa.select(PROPOSALS.c.product_id, PROPOSALS.c.status).where(
                 PROPOSALS.c.tenant_id == seo.tenant(), PROPOSALS.c.product_id.like(f"{type}:%"))
                 .order_by(PROPOSALS.c.created_at)).all())
-        items = []
-        for l in links:
-            if l["type"] != type:
-                continue
-            s = st.get((type, str(l["table_id"])), {})
-            name = _page_name(l)
-            if q.strip() and q.strip().casefold() not in (name + " " + l["link"]).casefold():
-                continue
-            a = pages.audit(type, name, l["title"], l["description"], lim)
-            items.append({"id": str(l["table_id"]), "name": name, "link": l["link"], "url": f"{site}/{l['link']}",
-                          "books": s.get("books", 0), "sales": s.get("sales", 0), "score": a["score"],
-                          "issues": len(a["issues"]), "proposal": states.get(f"{type}:{l['table_id']}")})
-        items.sort(key=lambda x: (-x["sales"], -x["books"], x["name"]))
+        needle = q.strip().casefold()
+        # Sıra hazır kayıttadır; süzgeç sırayı bozmaz (kararlı sıralamada süz-sonra-sırala = sırala-sonra-süz).
+        items = [{**x, "proposal": states.get(f"{type}:{x['id']}")} for x in base
+                 if not needle or needle in (x["name"] + " " + x["link"]).casefold()]
         return {"total": len(items), "items": items[max(0, start):max(0, start) + max(1, limit)],
                 "withBooks": sum(1 for x in items if x["books"])}
 
@@ -1309,13 +1371,14 @@ def register(app, runtime, authorize, session_user):
     def _crm_join():
         return PRODUCTS.outerjoin(CRM_BOOKS, sa.and_(CRM_BOOKS.c.tenant_id == PRODUCTS.c.tenant_id, CRM_BOOKS.c.ean == EAN))
 
-    def _crm_summary() -> dict[str, Any]:
+    def _crm_counts() -> dict[str, Any]:
+        """CRM eşleşme sayıları (hazır kayda yazılır): barkod eşleşmesi ürün JSON'undan hesaplanır, her istekte değil."""
         tenant = seo.tenant()
         active = sa.and_(PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True))
         with seo.engine().connect() as c:
             books = c.execute(sa.select(sa.func.count()).select_from(CRM_BOOKS).where(CRM_BOOKS.c.tenant_id == tenant)).scalar() or 0
             if not books:
-                return {"books": 0, "state": seo.crm_state}
+                return {"books": 0}
             j = _crm_join()
             total = c.execute(sa.select(sa.func.count()).select_from(j).where(active)).scalar() or 0
             unmatched = c.execute(sa.select(sa.func.count()).select_from(j).where(active, CRM_BOOKS.c.ean.is_(None))).scalar() or 0
@@ -1328,12 +1391,26 @@ def register(app, runtime, authorize, session_user):
                 active, data["previewPdf"].as_string().isnot(None))).scalar() or 0
             video = c.execute(sa.select(sa.func.count()).select_from(j).where(
                 active, data["video"].as_string().isnot(None))).scalar() or 0
-            last = c.execute(sa.select(RUNS.c.finished_at).where(RUNS.c.tenant_id == tenant, RUNS.c.kind == "crm",
-                                                                  RUNS.c.error.is_(None))
-                             .order_by(RUNS.c.started_at.desc()).limit(1)).scalar()
         return {"books": books, "products": total, "unmatched": unmatched,
                 "rights": {k: rights.get(k, 0) for k in crm.RIGHTS}, "flags": flags,
-                "preview": preview, "video": video, "lastRead": iso(last), "state": seo.crm_state}
+                "preview": preview, "video": video}
+
+    def crm_counts() -> dict[str, Any]:
+        seo.engine()
+        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)])
+        return hazir.al(seo, "crm.summary", st, _crm_counts)
+
+    hazir.kaydet(seo, "crm.summary", crm_counts)
+
+    def _crm_summary() -> dict[str, Any]:
+        counts = crm_counts()
+        if not counts["books"]:
+            return {"books": 0, "state": seo.crm_state}
+        with seo.engine().connect() as c:
+            last = c.execute(sa.select(RUNS.c.finished_at).where(RUNS.c.tenant_id == seo.tenant(), RUNS.c.kind == "crm",
+                                                                  RUNS.c.error.is_(None))
+                             .order_by(RUNS.c.started_at.desc()).limit(1)).scalar()
+        return {**counts, "lastRead": iso(last), "state": seo.crm_state}
 
     @app.get("/api/v1/seo-geo/crm")
     def seo_crm(request: Request, filter: str = "", q: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:
@@ -1417,6 +1494,10 @@ def register(app, runtime, authorize, session_user):
     from . import features
 
     features.register(app, features.Ctx(seo=seo, gate=gate, approver=approver, authorize=authorize))
+    # Hazır hesaplar (hazir.py) gece işlerinin sonunda ısıtılır: T-soft/CRM/yorum okumaları bitince, arka planda.
+    hazir.mesgul(seo, lambda: bool(seo.state.get("running")))
+    hazir.mesgul(seo, lambda: bool(seo.crm_state.get("running")))
+    seo.nightly.append(("hazir", lambda: hazir.isit_arkada(seo)))
     # Sorgu bilgisi (2026-09-28): SEO & GEO okuma uçlarının cevabına «kaynaklar» (çalışan SQL + hesap) eklenir.
     from . import kaynak as sorgu_kaynak
 

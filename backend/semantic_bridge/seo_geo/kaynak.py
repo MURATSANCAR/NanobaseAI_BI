@@ -10,8 +10,11 @@ Dış servisten gelen rakamlar (Search Console, Bing, T-soft, YouTube, hız öl�
 ölçümleri) gece okumasında portal tablosuna yazılır; SQL'i yoktur — hesap metninde kaynağın adı yazar. CRM'den gelen
 tabloların (kitap kartı, yazar, biyografi kaynağı, özel günler) asıl CRM sorgusu `origin` olarak eklenir.
 
-Önbellekten dönen uçta (ör. yapay zekâ kaynakları, yarışan sayfalar) o istekte okuma olmaz: son hesaplamada çalışan
-sorgular gösterilir ve açıklamada «önbellekten» yazar. Hiç okuması olmayan uçta kayıt kurulamaz; pencere nedenini yazar.
+Önbellekten dönen uçta (ör. yapay zekâ kaynakları) o istekte okuma olmaz: son hesaplamada çalışan sorgular gösterilir ve
+açıklamada «önbellekten» yazar. Hiç okuması olmayan uçta kayıt kurulamaz; pencere nedenini yazar.
+
+Hazır hesaptan (`hazir.py`, `semantic_seo_hazir`) dönen uçta istekte çalışan okumalar girdi damgası ve hazır kaydın
+okumasıdır; hesabı kuran okumalar (ürün, Search Console, CRM tabloları) o kaydın kökeni (`seo.hazir.<ad>`) olarak eklenir.
 """
 from __future__ import annotations
 
@@ -19,7 +22,7 @@ import json
 import logging
 import re
 import threading
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Sequence
 
 from semantic_bridge import provenance as P
 from semantic_bridge import sorgu_yakala as Y
@@ -90,6 +93,8 @@ TABLOLAR: dict[str, tuple[str, str]] = {
     "semantic_seo_worklist_state": ("İş listesi durumu", "Madde başına durum."),
     "semantic_seo_youtube": ("YouTube videoları", "Video başına YouTube kaydı ve denetim."),
     "semantic_web_authors": ("Doğrulanmış yazar kaydı", "Basın-web modülünün doğrulanmış yazar kaydı (Wikidata)."),
+    "semantic_seo_hazir": ("Hazır hesap", "Ekran hesabının son sonucu; girdi tablolarının damgası (satır sayısı + son yazım) "
+                                          "değişince yeniden hesaplanır. Hesaba giren okumalar kökende."),
 }
 
 GSC = "Search Console (gece okuması, son 28 gün): tıklama, gösterim, tıklama oranı = tıklama ÷ gösterim, ortalama sıra."
@@ -232,7 +237,8 @@ def _crm_origins(conf: Callable[[str], str]) -> dict[str, list[tuple[str, str, s
 
 
 def build(engine: Any, tenant: str, path: str, out: dict[str, Any], q: Y.Yakalanan,
-          conf: Optional[Callable[[str], str]] = None, cached: bool = False) -> P.Kaynaklar:
+          conf: Optional[Callable[[str], str]] = None, cached: bool = False,
+          hazir_adlari: Sequence[str] = ()) -> P.Kaynaklar:
     spec = spec_for(path)
     if spec is None:
         raise P.ProvenanceError("Bu uç için sorgu bilgisi tanımlı değil.")
@@ -240,7 +246,12 @@ def build(engine: Any, tenant: str, path: str, out: dict[str, Any], q: Y.Yakalan
     if not q.queries:
         raise P.ProvenanceError("Bu ekranın rakamları bu istekte veritabanından okunmadı (dış servis ya da bellek); "
                                 "sorgu bilgisi yok.")
-    b = Y.Kurucu(engine, tenant, q, prefix="seo", tablolar=TABLOLAR)
+    from .hazir import KOKEN
+
+    keys = [KOKEN + a for a in dict.fromkeys(hazir_adlari)]
+    b = Y.Kurucu(engine, tenant, q, prefix="seo", tablolar=TABLOLAR,
+                 koken={"semantic_seo_hazir": keys} if keys else None,
+                 koken_basliklari={KOKEN + a: f"Hazır hesabı kuran okuma ({a})" for a in hazir_adlari})
     if cached:
         for s in b.k.sources.values():
             s["description"] = ((s.get("description") or "") + " Önbellekten: bu sorgu son hesaplamada çalıştı.").strip()
@@ -307,8 +318,15 @@ class SorguBilgisiAraKatmani:
         async def keep(message: dict[str, Any]) -> None:
             messages.append(message)
 
-        with Y.yakala(engine) as q:
-            await self.app(scope, receive, keep)
+        from .hazir import OKUNAN
+
+        okunan: list[str] = []
+        token = OKUNAN.set(okunan)
+        try:
+            with Y.yakala(engine) as q:
+                await self.app(scope, receive, keep)
+        finally:
+            OKUNAN.reset(token)
         start = next((m for m in messages if m.get("type") == "http.response.start"), None)
         headers = list((start or {}).get("headers") or [])
         ctype = next((v for k, v in headers if k.lower() == b"content-type"), b"")
@@ -334,7 +352,7 @@ class SorguBilgisiAraKatmani:
                     q.extend(prev)
                     cached = True
             conf = getattr(self.seo, "conf", None)
-            data = P.bagla(data, lambda: build(engine, tenant, path, data, q, conf, cached))
+            data = P.bagla(data, lambda: build(engine, tenant, path, data, q, conf, cached, okunan))
             body = json.dumps(data, ensure_ascii=False, default=str, separators=(",", ":")).encode("utf-8")
         headers = [(k, v) for k, v in headers if k.lower() != b"content-length"] + [(b"content-length", str(len(body)).encode())]
         await send({**start, "headers": headers})

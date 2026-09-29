@@ -32,11 +32,11 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, rules
-from .cannibal import LINK_LABEL, same_title, title_tokens
-from .opportunities import fold, is_brand, path_key, source
+from . import connections, hazir, rules
+from .cannibal import EDITION_SIMILARITY, LINK_LABEL, same_title, title_tokens
+from .opportunities import OPPS, ensure_table as ensure_opps, fold, is_brand, path_key, source
 from .pages import _num
-from .store import LINKS, PRODUCTS, _md, iso, loads, now
+from .store import GSC, LINKS, PRODUCTS, _md, iso, loads, now
 
 #: Eşikler ekranda da gösterilir.
 MIN_IMPRESSIONS = 30             # bundan az gösterimli arama eşlenmez (28 günlük toplam)
@@ -142,8 +142,60 @@ def build_index(products: list[dict[str, Any]], link_pages: list[dict[str, Any]]
     by_author: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
     for a in authors.values():
         by_author[min(a["tokens"])].append(a)
-    return {"pages": pages, "books": books, "bookIndex": by_tok, "authors": list(authors.values()),
-            "authorIndex": by_author, "authorPage": author_page, "categories": categories}
+    index = {"pages": pages, "books": books, "bookIndex": by_tok, "authors": list(authors.values()),
+             "authorIndex": by_author, "authorPage": author_page, "categories": categories}
+    _edition_index(index)
+    _category_index(index)
+    return index
+
+
+def _edition_index(index: dict[str, Any]) -> dict[str, Any]:
+    """Satıştaki baskı araması için: satıştaki kitaplar çok satandan aza (eşitlikte kayıt sırası) ve kelime → sıra.
+    Eskiden her arama için bütün kitaplar yeniden sıralanıp adları yeniden köklenirdi (canlıda 87 sn)."""
+    if "activeBySales" not in index:
+        active = [b for b in sorted(index["books"], key=lambda x: -(x.get("sales") or 0)) if b.get("active", True)]
+        by_tok: dict[str, list[int]] = collections.defaultdict(list)
+        for pos, b in enumerate(active):
+            for t in b["tokens"]:
+                by_tok[t].append(pos)
+        index.update(activeBySales=active, editionIndex=by_tok, editionFit={})
+    return index
+
+
+def _category_index(index: dict[str, Any]) -> dict[str, Any]:
+    """Kategori adı kelimelerinden en küçüğü → kategorinin sırası (ad bütünüyle aramada geçiyorsa o kelime de geçer)."""
+    if "categoryIndex" not in index:
+        by_tok: dict[str, list[int]] = collections.defaultdict(list)
+        for pos, c in enumerate(index["categories"]):
+            by_tok[min(c["tokens"])].append(pos)
+        index["categoryIndex"] = by_tok
+    return index
+
+
+def active_edition(b: dict[str, Any], index: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Satışta olmayan kitabın satıştaki başka baskısı: aynı ad (kelime benzerliği ≥ EDITION_SIMILARITY), en çok satan.
+    `same_title` ile aynı ölçü; benzerlik eşiği sıfırdan büyük olduğundan en az bir ortak kelime şarttır, adaylar
+    yalnız o kelimelerin altındakilerdir. Sonuç kitap başına bir kez hesaplanır."""
+    _edition_index(index)
+    memo = index["editionFit"]
+    if b["id"] in memo:
+        return memo[b["id"]]
+    tb = b.get("tokens")
+    if tb is None:
+        tb = title_tokens(b.get("name"))
+    found = None
+    if tb:
+        active = index["activeBySales"]
+        for pos in sorted({p for t in tb for p in index["editionIndex"].get(t, ())}):
+            x = active[pos]
+            if x["id"] == b["id"]:
+                continue
+            tx = x["tokens"]
+            if len(tx & tb) / len(tx | tb) >= EDITION_SIMILARITY:
+                found = x
+                break
+    memo[b["id"]] = found
+    return found
 
 
 def _rest(q: set[str], used: set[str]) -> set[str]:
@@ -180,8 +232,12 @@ def match_author(q: set[str], index: dict[str, Any]) -> Optional[dict[str, Any]]
 
 
 def match_category(q: set[str], index: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Adı bütünüyle aramada geçen en uzun adlı kategori (eşitlikte listede önce gelen)."""
+    _category_index(index)
+    cats = index["categories"]
     best = None
-    for c in index["categories"]:
+    for pos in sorted({p for t in q for p in index["categoryIndex"].get(t, ())}):
+        c = cats[pos]
         if c["tokens"] <= q and (best is None or len(c["tokens"]) > len(best["tokens"])):
             best = c
     return best
@@ -230,8 +286,7 @@ def decide(intent: dict[str, Any], rank: dict[str, Any], index: dict[str, Any]) 
         b = intent["book"]
         fit = b
         if not b.get("active", True):  # satıştaki başka baskısı varsa o hedef
-            fit = next((x for x in sorted(index["books"], key=lambda x: -(x.get("sales") or 0))
-                        if x.get("active", True) and x["id"] != b["id"] and same_title(x.get("name"), b.get("name"))), None)
+            fit = active_edition(b, index)
             if not fit:
                 return "bosluk", None, f"Arama «{b.get('name')}» kitabını arıyor; kitap satışta değil ve satıştaki baskısı yok."
         fit_page = {"type": "product", "url": fit.get("url"), "name": fit.get("name"), "id": fit["id"]}
@@ -349,8 +404,6 @@ def csv_rows(items: list[dict[str, Any]], decisions: dict[str, dict[str, Any]]) 
 # ------------------------------------------------------------------ veri
 _ready: set[int] = set()
 _ready_lock = threading.Lock()
-_cache: dict[str, Any] = {"key": None, "data": None}
-_cache_lock = threading.Lock()
 
 
 def ensure(engine: sa.engine.Engine) -> None:
@@ -385,25 +438,23 @@ def load_index(seo) -> dict[str, Any]:
     return build_index(products, link_pages)
 
 
-def _stamp(seo) -> tuple:
-    tenant = seo.tenant()
-    with seo.engine().connect() as c:
-        p = c.execute(sa.select(sa.func.count(), sa.func.max(PRODUCTS.c.synced_at)).where(PRODUCTS.c.tenant_id == tenant)).first()
-        l = c.execute(sa.select(sa.func.count(), sa.func.max(LINKS.c.synced_at)).where(LINKS.c.tenant_id == tenant)).first()
-    return tuple(iso(x) if hasattr(x, "tzinfo") else x for x in (*p, *l))
+def compute(seo) -> dict[str, Any]:
+    """Hesabın kendisi (hazır kayda yazılır): Search Console sorgu+sayfa kırılımı × site sözlüğü."""
+    src = source(seo)
+    items = analyse(src["rows"], load_index(seo)) if src["from"] == "query_page" else []
+    return {"source": {k: v for k, v in src.items() if k != "rows"} | {"rowCount": len(src["rows"])}, "items": items}
+
+
+def stamp(seo) -> str:
+    """Girdiler: fırsat kırılımı (yoksa yalnız-sorgu önbelleği), ürünler, site sayfaları; site adresi."""
+    ensure_opps(seo.engine())
+    return hazir.damga(seo, [(OPPS, OPPS.c.saved_at, OPPS.c.kind == "query_page"),
+                             (GSC, GSC.c.saved_at, GSC.c.kind == "queries"),
+                             (PRODUCTS, PRODUCTS.c.synced_at), (LINKS, LINKS.c.synced_at)], ek=(_site(seo),))
 
 
 def computed(seo) -> dict[str, Any]:
-    src = source(seo)
-    key = (seo.tenant(), src["from"], src["savedAt"], _stamp(seo))
-    with _cache_lock:
-        if _cache["key"] == key and _cache["data"] is not None:
-            return _cache["data"]
-    items = analyse(src["rows"], load_index(seo)) if src["from"] == "query_page" else []
-    data = {"source": {k: v for k, v in src.items() if k != "rows"} | {"rowCount": len(src["rows"])}, "items": items}
-    with _cache_lock:
-        _cache.update(key=key, data=data)
-    return data
+    return hazir.al(seo, "keymap", stamp(seo), lambda: compute(seo))
 
 
 def decisions(seo) -> dict[str, dict[str, Any]]:
@@ -432,6 +483,7 @@ def _filter(items: list[dict[str, Any]], brand: str, q: str) -> list[dict[str, A
 
 def register(app, ctx) -> None:
     seo = ctx.seo
+    hazir.kaydet(seo, "keymap", lambda: computed(seo))
 
     @app.get("/api/v1/seo-geo/keymap")
     def seo_keymap(request: Request, kind: str = "yanlis", brand: str = "0", q: str = "", start: int = 0,

@@ -108,11 +108,13 @@ INTENT = [re.compile(p) for p in (
     r"\b(cocuklar|gencler|ogrenciler|yetiskinler|kadinlar|anneler|babalar) icin",
 )]
 _NAV = re.compile(r"\btimas\b|\bwww\b|\.com\b")
+#: INTENT kalıplarının tek düzenli ifadede birleşimi: «herhangi biri uyuyor mu» aynı cevap, tek tarama.
+_INTENT_ANY = re.compile("|".join(f"(?:{p.pattern})" for p in INTENT))
 
 
 def is_list_intent(query: str) -> bool:
     q = norm(query)
-    return bool(q) and not _NAV.search(q) and any(p.search(q) for p in INTENT)
+    return bool(q) and not _NAV.search(q) and bool(_INTENT_ANY.search(q))
 
 
 def core_terms(text: str) -> list[tuple[str, str]]:
@@ -158,13 +160,40 @@ def _similar(a: set[str], b: set[str]) -> bool:
     return len(small) >= 2 and small <= big and len(big) - len(small) <= 1
 
 
+class _ExcludeIndex:
+    """Yazar adı kök kümeleri: konu kelimeleri bir adla aynıysa ya da (en az iki kelimeyse) bir adın içindeyse konu
+    değildir. Eskiden her sorgu bütün adlarla karşılaştırılırdı; burada kelime → ad dizininden bakılır (aynı sonuç)."""
+
+    def __init__(self, names: list[set[str]]) -> None:
+        self.names = [frozenset(n) for n in names if n]
+        self.exact = set(self.names)
+        self.by_word: dict[str, list[int]] = {}
+        for i, n in enumerate(self.names):
+            for w in n:
+                self.by_word.setdefault(w, []).append(i)
+
+    def hit(self, words: set[str]) -> bool:
+        if frozenset(words) in self.exact:
+            return True
+        if len(words) < 2:
+            return False
+        lists = [self.by_word.get(w) for w in words]
+        if not all(lists):
+            return False
+        return any(words <= self.names[i] for i in min(lists, key=len))
+
+
 def cluster(items: list[dict[str, Any]], exclude: Optional[list[set[str]]] = None) -> list[dict[str, Any]]:
     """Sorgu/soru → konu. `items`: {text, impressions, clicks, position, source}. Gösterimi yüksek olan kümenin
     başı olur; aynı sayılar (yaş) ve ≥%60 kelime örtüşmesi aynı konu sayılır. `exclude`: yazar adlarının kök
     kümeleri; konu kelimeleri bir yazarın adıysa ("sabahattin ali kitapları") konu değil, yazar sayfasının işidir.
     Yayınevi adı dışarıda bırakılmaz: "Timaş Çocuk" yüzünden "çocuk kitapları" düşerdi."""
-    exclude = exclude or []
+    excluded = _ExcludeIndex(exclude or [])
     clusters: list[dict[str, Any]] = []
+    # Aynı konu yalnız aynı sayı ve yaş kümesinde olabilir; kelimeli sorgu ancak ortak kelimesi olan kümeye benzer
+    # (_similar: Jaccard ≥ 0,6 ya da en az iki kelimelik alt küme — ikisi de ortak kelime ister). Adaylar bu dizinden
+    # gelir, kuruluş sırasıyla denenir: sonuç bütün kümeleri sırayla denemekle aynı (eskiden sorgu × küme; 31 sn).
+    groups: dict[tuple[frozenset[str], Any], dict[str, Any]] = {}
     for it in sorted(items, key=lambda x: (-(x.get("impressions") or 0), x["text"])):
         terms = core_terms(it["text"])
         core = {s for s, _ in terms}
@@ -173,15 +202,28 @@ def cluster(items: list[dict[str, Any]], exclude: Optional[list[set[str]]] = Non
         # Yalnız okul/yaş taşıyan sorgu ("lise kitapları") da konudur: kitap yaşla seçilir.
         if not words and not rng:
             continue
-        if words and any(words == name or (len(words) >= 2 and words <= name) for name in exclude if name):
+        if words and excluded.hit(words):
             continue
         nums = {s for s in core if s.isdigit()}
-        for c in clusters:
-            if c["_nums"] == nums and c["_ages"] == rng and (_similar(words, c["_words"]) or not words and not c["_words"]):
-                c["queries"].append(it)
-                break
+        g = groups.setdefault((frozenset(nums), rng), {"empty": None, "byWord": {}})
+        target = None
+        if words:
+            for i in sorted({i for w in words for i in g["byWord"].get(w, ())}):
+                if _similar(words, clusters[i]["_words"]):
+                    target = i
+                    break
         else:
-            clusters.append({"_words": words, "_nums": nums, "_ages": rng, "_terms": terms, "queries": [it]})
+            target = g["empty"]
+        if target is not None:
+            clusters[target]["queries"].append(it)
+            continue
+        idx = len(clusters)
+        clusters.append({"_words": words, "_nums": nums, "_ages": rng, "_terms": terms, "queries": [it]})
+        if words:
+            for w in words:
+                g["byWord"].setdefault(w, []).append(idx)
+        else:
+            g["empty"] = idx
     out = []
     for c in clusters:
         head = c["queries"][0]
@@ -535,8 +577,8 @@ class GuideDecision(BaseModel):
 def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde, modülün düzeni böyle
     from fastapi.responses import HTMLResponse
 
-    from . import EAN, _image
-    from .store import CRM_BOOKS, PRODUCTS, QUESTIONS
+    from . import EAN, _image, hazir
+    from .store import CRM_BOOKS, GSC, PRODUCTS, QUESTIONS
 
     seo = ctx.seo
     run: dict[str, Any] = {"running": False, "done": 0, "failed": 0, "skipped": 0, "startedAt": None,
@@ -584,12 +626,26 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde, modülün d�
             cache[tenant] = (stamp, books, excl)
         return books, excl
 
-    def all_topics() -> list[dict[str, Any]]:
+    def topics_now() -> dict[str, Any]:
+        """Hesabın kendisi (hazır kayda yazılır): Search Console sorguları + izlenen sorular → konular; yazar adları
+        katalogdan (aktif ürün + CRM kartı)."""
         g = seo.gsc("queries") or {}
         with eng().connect() as c:
             qs = [r[0] for r in c.execute(sa.select(QUESTIONS.c.text).where(QUESTIONS.c.tenant_id == seo.tenant()))]
         _, excl = catalog()
-        return topics(g.get("rows") or [], qs, excl)
+        return {"search": {"start": g.get("start"), "end": g.get("end"), "savedAt": g.get("savedAt")},
+                "topics": topics(g.get("rows") or [], qs, excl)}
+
+    def topics_data() -> dict[str, Any]:
+        eng()
+        st = hazir.damga(seo, [(GSC, GSC.c.saved_at, GSC.c.kind == "queries"), (QUESTIONS, QUESTIONS.c.created_at),
+                               (PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)])
+        return hazir.al(seo, "guides.topics", st, topics_now)
+
+    def all_topics() -> list[dict[str, Any]]:
+        return topics_data()["topics"]
+
+    hazir.kaydet(seo, "guides.topics", topics_data)
 
     def topic_by_key(key: str) -> dict[str, Any]:
         t = next((t for t in all_topics() if t["key"] == key), None)
@@ -692,10 +748,10 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde, modülün d�
     @app.get("/api/v1/seo-geo/guides/topics")
     def guide_topics(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:
         ctx.gate(request)
-        ts, drafts = all_topics(), drafts_by_topic()
-        g = seo.gsc("queries") or {}
+        data, drafts = topics_data(), drafts_by_topic()
+        ts = data["topics"]
         page = ts[max(0, start):max(0, start) + max(1, limit)]
-        return {"total": len(ts), "start": start, "search": {"start": g.get("start"), "end": g.get("end"), "savedAt": g.get("savedAt")},
+        return {"total": len(ts), "start": start, "search": data["search"],
                 "items": [{**t, "draft": drafts.get(t["key"])} for t in page], "run": run}
 
     @app.get("/api/v1/seo-geo/guides/topics/{key}/books")
