@@ -81,13 +81,15 @@ def _client(engine, monkeypatch, perms: set[str]):
     monkeypatch.setattr(src, "runner", lambda path: FakeRun())
     app = FastAPI()
     conf = {"SHIPPING_LOGO_CARRIER_CODES": "ARAS KARGO=320.9"}
-    shipping_api.register(app, {
+    cache = shipping_api.register(app, {
         "auth": lambda r: (engine, TN, "ayse", "Ayşe"), "require_caller": lambda r: None, "can": lambda u, k: k in perms,
         "is_admin": lambda u: False, "audit": lambda *a, **k: None, "conf": lambda k, d="": conf.get(k, d),
         "engine": lambda: engine, "tenant": lambda: TN, "logo_file": lambda: "", "crm_file": lambda: "",
         "llm": lambda p: None, "send_mail": lambda *a: "ok",
     })
-    return TestClient(app)
+    client = TestClient(app)
+    client.kargo_cache = cache        # hız testleri belleği eskitir / arka plan işini bekler
+    return client
 
 
 def _check(out: dict) -> dict:
@@ -198,3 +200,128 @@ def test_old_snapshot_goes_live_and_run_due_refreshes_it(engine, monkeypatch):
     timer = _client(engine, monkeypatch, set())
     assert timer.post("/api/v1/shipping/run-due?gorev=anlik").json()["anlik"]["ok"] is True
     assert _no_crm(engine, monkeypatch, set()).get("/api/v1/shipping/overview").status_code == 200
+
+
+# ------------------------------------------------------------------ hız, 2. tur (2026-09-29)
+
+MUTABAKAT = {COST, "sayfa:kargo-mutabakat"}
+
+
+def _last_month() -> str:
+    return (S.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+
+
+@pytest.fixture
+def file_engine(tmp_path):
+    """Dosyadaki SQLite: arka plan tazelemesi istekle aynı anda okur; bellek içi tek bağlantı paylaşılmasın."""
+    e = open_store(f"sqlite:///{tmp_path / 'kargo.db'}").engine
+    S._ready.discard(id(e))
+    S.ensure(e)
+    return e
+
+
+def _expire(c, seconds: float = 3600) -> None:
+    """Bellekteki değerlerin süresini doldurur (5 dk / 30 dk beklemeden)."""
+    for e in c.kargo_cache._data.values():
+        e.at -= seconds
+
+
+def test_unpack_text_is_the_same_as_unpack():
+    import uuid
+    from datetime import time as dtime
+    from decimal import Decimal
+
+    v = [{"a": datetime(2026, 9, 1, 8, 30, 15, 120), "b": date(2026, 9, 1), "c": Decimal("12.50"), "d": uuid.UUID(ORDER),
+          "e": dtime(10, 5), "f": b"\x00\x01", "g": (1, ("x", date(2026, 1, 2))), "h": None, "i": 1.25, "j": True,
+          "k": "Ç", "l": [1, [2, {"m": (Decimal("1.5"),)}]]}]
+    text = json.dumps(S.pack(v), ensure_ascii=False)
+    assert S.unpack_text(text) == S.unpack(json.loads(text)) == v
+
+
+def test_expired_memory_answers_at_once_and_does_not_reopen_the_same_snapshot(file_engine, monkeypatch):
+    """Süresi dolan değer: istek beklemez (CRM'e ya da görüntüye gitmez), arkada denetlenir; tablodaki görüntü bellektekiyle
+    aynıysa yeniden açılmaz (eskiden 5 dakikada bir ≈8 MB görüntü istek içinde açılıp dizin yeniden kuruluyordu)."""
+    import time as _t
+
+    engine = file_engine
+    c = _client(engine, monkeypatch, {COST})
+    before = {}
+    for p in SCREENS:
+        before[p] = _numbers(c.get("/api/v1/shipping" + p).json())
+        c.kargo_cache.idle()
+    monkeypatch.setattr(src, "runner", lambda path: Boom())             # CRM'e gidilirse 503 olurdu
+    opened: list[int] = []
+    real = S.unpack_text
+    monkeypatch.setattr(S, "unpack_text", lambda t: (opened.append(1), real(t))[1])
+    _expire(c)
+    for p in SCREENS:
+        r = c.get("/api/v1/shipping" + p)
+        assert r.status_code == 200 and _numbers(r.json()) == before[p], p     # eski hesap = yeni hesap
+        _check(r.json())
+        c.kargo_cache.idle()
+    assert opened == []
+    assert all(_t.monotonic() - e.at < 60 for e in c.kargo_cache._data.values() if e.persist)
+
+
+def test_newer_snapshot_is_opened_in_the_background_with_its_index(file_engine, monkeypatch):
+    """Zamanlayıcı yeni görüntü yazdıysa istek eldekini alır; yenisi ve gönderi kaydı dizini arkada hazırlanır, sonraki
+    istek dizini yeniden kurmaz."""
+    import time as _t
+
+    engine = file_engine
+    c = _client(engine, monkeypatch, set())
+    old = c.get("/api/v1/shipping/waiting").json()["toplam"]
+    key = S.snapshot_key("index")
+    snap = S.snapshot_read(engine, TN, key, 45)
+    irs = (S.today() - timedelta(days=8)).strftime("%d.%m.%Y")
+    _t.sleep(0.01)
+    S.snapshot_write(engine, TN, key, snap["deger"] + [cargo(9, irs=irs)], snap["sorgular"])   # zamanlayıcı yazdı
+    monkeypatch.setattr(src, "runner", lambda path: Boom())
+    built: list[int] = []
+    real = S.CargoIndex
+
+    class Counting(real):
+        def __init__(self, *a, **k):
+            built.append(1)
+            super().__init__(*a, **k)
+    monkeypatch.setattr(S, "CargoIndex", Counting)
+    _expire(c)
+    assert c.get("/api/v1/shipping/waiting").json()["toplam"] == old          # beklemeden, eldeki
+    c.kargo_cache.idle()
+    assert built == [1]                                                        # dizin arkada kuruldu
+    r = c.get("/api/v1/shipping/waiting")
+    assert r.status_code == 200 and r.json()["toplam"] == old + 1 and built == [1]
+    _check(r.json())
+
+
+def test_opening_list_and_reconcile_come_from_the_snapshot(engine, monkeypatch):
+    """Gönderi listesinin açılış sayfası ve mutabakat da görüntüde: yeni süreç CRM/Logo'ya gitmeden aynı cevabı verir;
+    sorgu bilgisinde görüntü okuması ve kökeni (mutabakatta Logo faturası ve gönderi kaydı). Arama görüntüye yazılmaz."""
+    live = _client(engine, monkeypatch, MUTABAKAT)
+    paths = ["/shipments", "/reconcile?ay=" + _last_month()]
+    before = {}
+    for p in paths:
+        before[p] = live.get("/api/v1/shipping" + p).json()
+        live.kargo_cache.idle()
+    c = _no_crm(engine, monkeypatch, MUTABAKAT)
+    for p in paths:
+        r = c.get("/api/v1/shipping" + p)
+        assert r.status_code == 200, (p, r.text)
+        out = r.json()
+        assert _numbers(out) == _numbers(before[p]), p
+        k = _check(out)
+        snaps = [s for sid, s in k["sources"].items() if sid.endswith(".anlik")]
+        assert snaps and all(s["connection"] == "portal" and s["origin"] for s in snaps), p
+    rec = c.get("/api/v1/shipping/reconcile?ay=" + _last_month()).json()["kaynaklar"]
+    origin = rec["sources"]["kargo.reconcile.anlik"]["origin"]
+    assert any(o.startswith("kargo.index.") for o in origin) and any("logo_kargo_fatura" in o for o in origin)
+    assert c.get("/api/v1/shipping/shipments?q=SP-1").status_code == 503      # arama canlı okunur
+
+
+def test_run_due_writes_the_opening_list_and_last_month_reconcile(engine, monkeypatch):
+    timer = _client(engine, monkeypatch, set())
+    out = timer.post("/api/v1/shipping/run-due?gorev=anlik").json()
+    assert out["anlik"]["ok"] and out["anlikListe"]["ok"] and out["anlikMutabakat"]["ok"], out
+    c = _no_crm(engine, monkeypatch, MUTABAKAT)
+    assert c.get("/api/v1/shipping/shipments").status_code == 200
+    assert c.get("/api/v1/shipping/reconcile?ay=" + _last_month()).status_code == 200

@@ -8102,6 +8102,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("stok", priority),
         "m12": lambda: getattr(app.state, "production", None), "costs": lambda: getattr(app.state, "pricing_costs", None),
+        "system_ready": lambda: state["rt"] is not None,
     })
 
     # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
@@ -8177,6 +8178,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "logo_file": lambda: rt().settings.connection_file,
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("kargo", priority), "send_mail": _shipping_send_mail,
+        "system_ready": lambda: state["rt"] is not None,
     })
 
     from semantic_bridge import editorial_studio_library  # kapak arşivi: T-soft + CRM beslemesi, kategori ağacı

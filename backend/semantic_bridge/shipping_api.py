@@ -20,9 +20,10 @@ Model çağrıları LLM kapısından: `llm(priority)` → `rt.llm_for("kargo", �
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 
 from fastapi import HTTPException, Request
@@ -46,6 +47,17 @@ LIST_PAGE = 50
 XLSX = S.XLSX_MIME
 
 
+class _Entry:
+    """Bellekteki okuma: değer, onu dolduran sorgular, doğrulandığı an (monotonic) ve değerin anı (`snap_at`: eşit olduğu
+    görüntünün yazılma anı; görüntüye yazılmadıysa kaynaktan okunduğu an)."""
+
+    __slots__ = ("val", "runs", "at", "snap_at", "persist")
+
+    def __init__(self, val: Any, runs: list[dict[str, Any]], snap_at: Optional[datetime], persist: bool) -> None:
+        self.val, self.runs, self.snap_at, self.persist = val, runs, snap_at, persist
+        self.at = time.monotonic()
+
+
 class _Cache:
     """Süreli bellek (5 dk) + ağır okumalarda portal anlık görüntüsü (`S.SNAPSHOTS`). Aynı anahtarı iki iş parçacığı
     birlikte okumaz. Her okumanın çalıştırdığı sorgular değerle birlikte saklanır; önbellekten ya da görüntüden dönen
@@ -54,45 +66,117 @@ class _Cache:
     `persist=True` okumada sıra: bellek → görüntü (`SHIPPING_SNAPSHOT_MAX_MIN` dakikadan tazeyse; zamanlayıcı 15 dakikada
     bir yeniler) → CRM (sonuç görüntüye yazılır). Görüntüden dönen değer okumanın dönüşünün aynısıdır; sorgu bilgisinde
     görüntü okuması (portal) ve kökeni olarak zamanlayıcıda çalışan CRM metni görünür. «Yenile» (`fresh`) her zaman CRM'e
-    gider. Görüntü okunamaz ya da yazılamazsa ekran canlı okumayla çalışır (rakam düşmez)."""
+    gider. Görüntü okunamaz ya da yazılamazsa ekran canlı okumayla çalışır (rakam düşmez).
+
+    Hız, 2. tur (2026-09-29): bellekteki değerin süresi dolunca istek artık beklemez — eldeki değer hemen döner, arkada
+    denetlenir: tablodaki görüntü aynıysa (yazılma anı, gövdesiz ucuz sorgu) değer yeniden açılmaz; daha yeni görüntü varsa
+    arkada açılır (≈8 MB gönderi kaydı ve dizini eskiden 5 dakikada bir istek içinde yeniden açılıp kuruluyordu, `/overview`
+    4,4 sn); görüntü de eskidiyse kaynak arkada okunur. İstek yalnız bellekte hiç değer yokken bekler (köprü yeni kalktı ve
+    açılış hazırlığı bitmedi). Türetilmiş değer (gönderi kaydı dizini) de yeni okumayla birlikte arkada kurulur (`prepare`)."""
 
     def __init__(self, store: Optional[Callable[[], tuple[Any, str, int]]] = None) -> None:
-        self._data: dict[Any, tuple[float, Any]] = {}
-        self._runs: dict[Any, list[dict[str, Any]]] = {}
+        self._data: dict[Any, _Entry] = {}
         self._locks: dict[Any, threading.Lock] = {}
-        self._derived: dict[str, tuple[Any, Any]] = {}
+        self._derived: dict[str, list[tuple[Any, Any]]] = {}
+        self._bg: dict[Any, threading.Thread] = {}
         self._guard = threading.Lock()
         self._store = store
 
-    def get(self, key: Any, ttl: float, load: Callable[[], Any], fresh: bool = False, persist: bool = False) -> Any:
+    @staticmethod
+    def _tag(key: Any) -> str:
+        return key[0] if isinstance(key, tuple) else key
+
+    def get(self, key: Any, ttl: float, load: Callable[[], Any], fresh: bool = False, persist: bool = False,
+            prepare: Optional[Callable[[Any], Any]] = None) -> Any:
         with self._guard:
             lock = self._locks.setdefault(key, threading.Lock())
+            hit = self._data.get(key)
+        if hit is not None and not fresh:
+            if time.monotonic() - hit.at >= ttl:
+                self._revalidate(key, ttl, load, persist, prepare, hit)
+            src.note(hit.runs)
+            return hit.val
         with lock:
             hit = self._data.get(key)
-            if hit and not fresh and time.monotonic() - hit[0] < ttl:
-                src.note(self._runs.get(key) or [])
-                return hit[1]
-            tag = key[0] if isinstance(key, tuple) else key
+            if hit is not None and not fresh:          # bu istek beklerken başka bir istek okudu
+                src.note(hit.runs)
+                return hit.val
+            tag = self._tag(key)
             if persist and not fresh:
                 snap = self._snapshot(key, tag)
                 if snap is not None:
-                    val, runs = snap
-                    self._data[key] = (time.monotonic(), val)
-                    self._runs[key] = runs
+                    val, runs, snap_at = snap
+                    self._data[key] = _Entry(val, runs, snap_at, persist)
                     src.note(runs)
                     return val
-            t0 = time.monotonic()
-            with src.collect() as got:
-                val = load()
-            for r in got:
-                r.setdefault("tag", tag)
-            self._data[key] = (time.monotonic(), val)
-            self._runs[key] = list(got)
-            if persist:
-                self._save(key, val, list(got), int((time.monotonic() - t0) * 1000))
+            val, runs, snap_at = self._live(key, tag, load, persist)
+            self._data[key] = _Entry(val, runs, snap_at, persist)
             return val
 
-    def _snapshot(self, key: Any, tag: str) -> Optional[tuple[Any, list[dict[str, Any]]]]:
+    def _live(self, key: Any, tag: str, load: Callable[[], Any], persist: bool) -> tuple[Any, list[dict[str, Any]], Any]:
+        t0 = time.monotonic()
+        with src.collect() as got:
+            val = load()
+        for r in got:
+            r.setdefault("tag", tag)
+        runs = list(got)
+        written = self._save(key, val, runs, int((time.monotonic() - t0) * 1000)) if persist else None
+        # Değerin anı: yazıldıysa görüntünün yazılma anı (tablodaki bununla eşit), yazılamadıysa okuma anı — tablodaki
+        # daha eski bir görüntü bellekteki taze değerin yerine geçmez.
+        return val, runs, written or datetime.now(timezone.utc)
+
+    def _revalidate(self, key: Any, ttl: float, load: Callable[[], Any], persist: bool,
+                    prepare: Optional[Callable[[Any], Any]], hit: _Entry) -> None:
+        """Süresi dolan değer arkada tazelenir; istek eldekini alır. Aynı anahtar için tek arka plan işi."""
+        with self._guard:
+            running = self._bg.get(key)
+            if running is not None and running.is_alive():
+                return
+
+            def run() -> None:
+                try:
+                    self._renew(key, ttl, load, persist, prepare, hit)
+                except Exception as e:  # noqa: BLE001 — eski değer ekranda kalır, bir dakika sonra yeniden denenir
+                    log.warning("kargo: %s arkada tazelenemedi: %s", self._tag(key), e)
+                    hit.at = time.monotonic() - ttl + 60
+            t = threading.Thread(target=run, daemon=True, name=f"kargo-tazele-{self._tag(key)}")
+            self._bg[key] = t
+        t.start()
+
+    def _renew(self, key: Any, ttl: float, load: Callable[[], Any], persist: bool,
+               prepare: Optional[Callable[[Any], Any]], hit: _Entry) -> None:
+        with self._guard:
+            lock = self._locks.setdefault(key, threading.Lock())
+        tag = self._tag(key)
+        with lock:
+            cur = self._data.get(key)
+            if cur is not None and cur is not hit and time.monotonic() - cur.at < ttl:
+                return                                   # bu arada başka biri tazeledi («Yenile», zamanlayıcı)
+            if persist and self._store is not None:
+                try:
+                    engine, tenant, max_min = self._store()
+                    at = S.snapshot_at(engine, tenant, S.snapshot_key(key)) if max_min > 0 else None
+                except Exception as e:  # noqa: BLE001
+                    log.info("kargo: görüntü anı okunamadı (%s): %s", key, e)
+                    at, max_min = None, 0
+                usable = at is not None and datetime.now(timezone.utc) - at <= timedelta(minutes=max_min)
+                if usable and cur is not None and cur.snap_at is not None and at <= cur.snap_at:
+                    cur.at = time.monotonic()            # tablodaki görüntü bellektekinden yeni değil: yeniden açılmaz
+                    return
+                if usable:
+                    snap = self._snapshot(key, tag)
+                    if snap is not None:
+                        val, runs, snap_at = snap
+                        if prepare is not None:
+                            prepare(val)                 # türetilmiş değer değer yerine konmadan kurulur
+                        self._data[key] = _Entry(val, runs, snap_at, persist)
+                        return
+            val, runs, snap_at = self._live(key, tag, load, persist)
+            if prepare is not None:
+                prepare(val)
+            self._data[key] = _Entry(val, runs, snap_at, persist)
+
+    def _snapshot(self, key: Any, tag: str) -> Optional[tuple[Any, list[dict[str, Any]], Any]]:
         if self._store is None:
             return None
         try:
@@ -102,34 +186,54 @@ class _Cache:
             if snap is None:
                 return None
             runs = [{**r, "tag": r.get("tag") or tag, "anlik": True} for r in snap["sorgular"]]
+            # Görüntü okuması, içindeki her okumanın etiketiyle kökenlenir (ör. mutabakat görüntüsündeki gönderi kaydı).
+            tags = list(dict.fromkeys([tag] + [r["tag"] for r in runs]))
             runs.append({"name": "portal_anlik", "conn": "portal", "sql": PV.portal_sql(snap["stmt"], engine), "rows": 1,
-                         "ms": int((time.monotonic() - t0) * 1000), "at": time.time(), "tag": tag,
+                         "ms": int((time.monotonic() - t0) * 1000), "at": time.time(), "tag": tag, "tags": tags,
                          "alindi": snap["alindi"].astimezone(S.TZ).strftime("%d.%m.%Y %H:%M")})
-            return snap["deger"], runs
+            return snap["deger"], runs, snap["alindi"]
         except Exception as e:  # noqa: BLE001 — görüntü yoksa canlı okunur
             log.warning("kargo: anlık görüntü okunamadı (%s): %s", key, e)
             return None
 
-    def _save(self, key: Any, val: Any, runs: list[dict[str, Any]], ms: int) -> None:
+    def _save(self, key: Any, val: Any, runs: list[dict[str, Any]], ms: int) -> Any:
         if self._store is None:
-            return
+            return None
         try:
             engine, tenant, max_min = self._store()
             if max_min > 0:
-                S.snapshot_write(engine, tenant, S.snapshot_key(key), val, runs, ms)
+                return S.snapshot_write(engine, tenant, S.snapshot_key(key), val, runs, ms)
         except Exception as e:  # noqa: BLE001 — görüntü yazılamazsa ekran canlı okumayla çalışır
             log.warning("kargo: anlık görüntü yazılamadı (%s): %s", key, e)
+        return None
 
     def derived(self, name: str, base: Any, build: Callable[[], Any]) -> Any:
-        """`base` (bellekteki okuma) değişmedikçe aynı türetilmiş değer (ör. kargo kaydı dizini) yeniden kurulmaz."""
+        """`base` (bellekteki okuma) değişmedikçe aynı türetilmiş değer (ör. kargo kaydı dizini) yeniden kurulmaz. Son iki
+        okumanınki tutulur: yenisi arkada kurulurken eskisini almış istek dizini yeniden kurmaz."""
         with self._guard:
-            hit = self._derived.get(name)
-        if hit is not None and hit[0] is base:
-            return hit[1]
+            hits = list(self._derived.get(name) or [])
+        for b, v in hits:
+            if b is base:
+                return v
         val = build()
         with self._guard:
-            self._derived[name] = (base, val)
+            keep = [x for x in self._derived.get(name) or [] if x[0] is not base]
+            self._derived[name] = (keep + [(base, val)])[-2:]
         return val
+
+    def prune(self, tag: str, max_age: float) -> None:
+        """Görüntüye yazılmayan (ör. arama sonucu) ve `max_age` saniyedir tazelenmeyen değerler bellekten atılır."""
+        now = time.monotonic()
+        with self._guard:
+            for k in [k for k, e in self._data.items() if self._tag(k) == tag and not e.persist and now - e.at > max_age]:
+                del self._data[k]
+
+    def idle(self, timeout: float = 30.0) -> None:
+        """Arka plan tazelemelerinin bitmesini bekler (testler için)."""
+        with self._guard:
+            threads = list(self._bg.values())
+        for t in threads:
+            t.join(timeout)
 
     def clear(self) -> None:
         with self._guard:
@@ -140,7 +244,8 @@ class _Cache:
 def register(app: Any, deps: dict[str, Any]) -> _Cache:
     """app.py'de bağlanır. `deps`: auth(request) → (engine, tenant, user, display) · require_caller(request) · can(user, key) ·
     is_admin(user) · audit(engine, user, action, kind, id, title, detail) · conf(key, default) · engine() · tenant() ·
-    logo_file() · crm_file() · llm(priority) → LLM kapısı istemcisi ya da None · send_mail(subject, text, to, attachments)."""
+    logo_file() · crm_file() · llm(priority) → LLM kapısı istemcisi ya da None · send_mail(subject, text, to, attachments) ·
+    system_ready() → çalışma ortamı kuruldu mu (isteğe bağlı; varsa köprü açılışında görüntüler arkada belleğe alınır)."""
     auth, require_caller, can, is_admin, audit, conf = (deps[k] for k in ("auth", "require_caller", "can", "is_admin", "audit", "conf"))
 
     def cfg() -> dict[str, Any]:
@@ -211,7 +316,8 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
 
     def index(fresh: bool = False) -> S.CargoIndex:
         c = cfg()
-        raw = cache.get("index", TTL, lambda: src.read_cargo_rows(crm(), c["schema"]), fresh, persist=True)
+        raw = cache.get("index", TTL, lambda: src.read_cargo_rows(crm(), c["schema"]), fresh, persist=True,
+                        prepare=lambda v: cache.derived("index", v, lambda: S.CargoIndex(v, c)))
         return cache.derived("index", raw, lambda: S.CargoIndex(raw, c))
 
     def since(c: dict[str, Any]) -> date:
@@ -320,27 +426,39 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
 
     # ------------------------------------------------------------------ gönderiler
 
-    @app.get(P + "/shipments")
-    def shipping_shipments(request: Request, q: str = "", firma: str = "", durum: str = "hepsi", sayfa: int = 0) -> dict[str, Any]:
-        engine, tenant, _, _ = ctx(request)
-        c = cfg()
+    def shipment_rows(c: dict[str, Any], qs: str, firma: str, durum: str, page: int, fresh: bool = False) -> list[dict[str, Any]]:
+        """Gönderi arama/listesi sayfası (CRM, sayfalı sorgu). Aramasız ve firmasız ilk sayfa (ekranın açılışı) anlık
+        görüntüdedir (zamanlayıcı «hepsi»yi 15 dakikada bir yeniler); diğerleri 5 dakika bellekte, süresi dolunca eldeki
+        sayfa döner ve arkada yeniden okunur. Anahtar koşulun kendisidir (pencere günü dahil)."""
         conds = []
-        qs = q.strip()
         if qs:
-            conds.append(call(src.search_where, qs))
+            conds.append(src.search_where(qs))
         else:
             conds.append(f"s.new_siparistarihi >= '{since(c).isoformat()}'")
         if firma:
-            conds.append(f"s.new_kargofirmasiid = '{call(src.guid, firma)}'")
+            conds.append(f"s.new_kargofirmasiid = '{src.guid(firma)}'")
         if durum == "sevk":
             conds.append(f"CAST(s.statuscode AS int) IN ({src.ints(c['shippedStatuses'])})")
         elif durum in src.STATUS_GROUPS:
             conds.append(f"CAST(s.statuscode AS int) IN ({src.ints(src.STATUS_GROUPS[durum])})")
         elif durum != "hepsi":
             raise HTTPException(400, detail={"code": "SHIPPING", "message": "Durum hepsi, depoda, kutulandi ya da sevk olmalı."})
+        cond = " AND ".join(f"({x})" for x in conds)
+        opening = not qs and not firma and page == 0
+        if not opening:
+            cache.prune("shipments", 30 * 60)
+        return cache.get(("shipments", cond, page), TTL,
+                         lambda: src.read_orders(crm(), c["schema"], cond, offset=page * LIST_PAGE, size=LIST_PAGE),
+                         fresh, persist=opening)
+
+    @app.get(P + "/shipments")
+    def shipping_shipments(request: Request, q: str = "", firma: str = "", durum: str = "hepsi", sayfa: int = 0) -> dict[str, Any]:
+        engine, tenant, _, _ = ctx(request)
+        c = cfg()
+        qs = q.strip()
         page = max(0, int(sayfa))
         with src.collect() as runs:
-            rows = call(src.read_orders, crm(), c["schema"], " AND ".join(f"({x})" for x in conds), offset=page * LIST_PAGE, size=LIST_PAGE)
+            rows = call(shipment_rows, c, qs, firma, durum, page)
             cars = call(carriers)
         more = len(rows) > LIST_PAGE
         items = [S.order_view(r, cars, S.today()) for r in rows[:LIST_PAGE]]
@@ -544,13 +662,22 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
         out["kargoVeri"] = idx.freshness(c, S.today())
         return out
 
+    def reconcile(month: str, fresh: bool = False) -> dict[str, Any]:
+        """Ayın mutabakatı: Logo (kargo faturası, sevk irsaliyesi, veri sonu) + CRM (ayın sevkiyatları) + gönderi kaydı.
+        Eskiden 5 dakikalık bellek boşalınca istek içinde yeniden okunuyordu (9 sn). Artık anlık görüntüde (zamanlayıcı
+        geçen ayı 15 dakikada bir yeniler; başka ay ilk açılışta okunup yazılır); süresi dolan değer arkada tazelenir."""
+        return cache.get(("reconcile", month), TTL, lambda: reconcile_data(month), fresh, persist=True)
+
+    def last_month() -> str:
+        return (S.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+
     @app.get(P + "/reconcile")
     def shipping_reconcile(request: Request, ay: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         need(user, F_COST, "Kargo maliyeti görme")
         month = ay or (S.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
         with src.collect() as runs:
-            out = dict(call(lambda: cache.get(("reconcile", month), TTL, lambda: reconcile_data(month))))
+            out = dict(call(reconcile, month))
         return PV.bagla(out, lambda: K.for_reconcile(engine, tenant, out, runs, kdeps()))
 
     @app.post(P + "/reconcile/summary")
@@ -558,7 +685,7 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
         engine, _, user, _ = ctx(request)
         need(user, F_COST, "Kargo maliyeti görme")
         month = ay or (S.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
-        rec = call(lambda: cache.get(("reconcile", month), TTL, lambda: reconcile_data(month)))
+        rec = call(reconcile, month)
         facts = {"ay": rec["ay"], "firmalar": [{k: i[k] for k in ("firma", "gonderi", "crmTutar", "mukerrer", "mukerrerTutar",
                                                                   "tutarOkunamayan", "logoEslendi", "logoKdvHaric", "farkKdvHaric")}
                                               for i in rec["items"]],
@@ -671,7 +798,7 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
             need(user, PAGE_RECONCILE, "Kargo mutabakatı")
             need(user, F_COST, "Kargo maliyeti görme")
             month = ay or (asof.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
-            rec = call(lambda: cache.get(("reconcile", month), TTL, lambda: reconcile_data(month)))
+            rec = call(reconcile, month)
             rows, cols = rec["items"], S.RECONCILE_COLUMNS
             note = f"Ay {rec['ay']}. " + " ".join(rec["notlar"])
         data = S.xlsx(S.EXPORTS[liste], cols, rows, note)
@@ -707,6 +834,17 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
             except Exception as e:  # noqa: BLE001 — görüntü yenilenemese de günlük/haftalık/aylık işler koşar
                 log.warning("kargo: anlık görüntü yenilenemedi: %s", e)
                 out["anlik"] = {"hata": str(e)[:300]}
+            # Ekranın açılış sayfası (gönderi listesi, «hepsi») ve geçen ayın mutabakatı da görüntüde (hız, 2. tur):
+            # biri düşse öbürü ve günlük hat görüntüsü etkilenmez.
+            for name, fn in (("anlikListe", lambda: shipment_rows(c, "", "", "hepsi", 0, True)),
+                             ("anlikMutabakat", lambda: reconcile(last_month(), True))):
+                t0 = time.monotonic()
+                try:
+                    fn()
+                    out[name] = {"ok": True, "ms": int((time.monotonic() - t0) * 1000)}
+                except Exception as e:  # noqa: BLE001
+                    log.warning("kargo: %s görüntüsü yenilenemedi: %s", name, e)
+                    out[name] = {"hata": str(e)[:300]}
         if gorev in ("gunluk",) or (not gorev and S.due(now, c["dailyAt"], S.meta_get(engine, tenant, "gunluk"))):
             if not refreshed:
                 cache.clear()
@@ -749,5 +887,32 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
             except (src.SourceError, S.ShippingError) as e:
                 out["aylik"] = {"hata": str(e)}
         return out or {"bekleyen": "zamanı gelen iş yok"}
+
+    # Köprü açılışı: günlük hat, gönderi listesinin açılış sayfası ve geçen ayın mutabakatı anlık görüntüden belleğe
+    # alınır, gönderi kaydı dizini kurulur (ilk açan kişi görüntünün açılmasını beklemesin). Görüntü yoksa ya da eskiyse bu
+    # iş kaynağı okur (ilk istek de okuyacaktı). Çalışma ortamı kurulmadan dokunulmaz; testte arka plan işi yok.
+    ready = deps.get("system_ready")
+    warm_on = os.environ.get("SHIPPING_WARM", "1").strip().lower() not in ("0", "false", "no", "off")
+    if ready and warm_on and "PYTEST_CURRENT_TEST" not in os.environ:
+        def _warm() -> None:
+            for _ in range(360):
+                if ready():
+                    break
+                time.sleep(5)
+            else:
+                return
+            t = time.monotonic()
+            try:
+                engine, tenant = deps["engine"](), deps["tenant"]()
+                S.ensure(engine)
+                c = cfg()
+                overview_data(engine, tenant, None, False)
+                shipment_rows(c, "", "", "hepsi", 0)
+                reconcile(last_month())
+                log.info("kargo: açılışta görüntüler belleğe alındı (%d ms)", int((time.monotonic() - t) * 1000))
+            except Exception as e:  # noqa: BLE001 — ilk istek okur
+                log.warning("kargo: açılışta hazırlık yapılamadı: %s", e)
+
+        threading.Thread(target=_warm, name="shipping-warm", daemon=True).start()
 
     return cache

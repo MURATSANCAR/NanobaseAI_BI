@@ -550,6 +550,9 @@ def test_stale_read_takes_a_newer_one_from_the_table(engine, tmp_path, monkeypat
     svc.model(engine, T)
     assert reads == [1]
     store.read_put(engine, T, raw_live(_t.time()))   # tur yeni okumayı yazdı
+    first = svc.model(engine, T)                     # eldeki model hemen döner, yenisi arkada kurulur (2. tur)
+    assert first["readAt"] == old["at"]
+    svc.idle()
     m = svc.model(engine, T)
     assert reads == [1] and m["readAt"] > old["at"] and not svc.refreshing()
 
@@ -565,6 +568,8 @@ def test_production_cards_do_not_block_and_arrive_later(engine, tmp_path, monkey
     monkeypatch.setattr(svc, "read", lambda: raw_live(_t.time()))
     assert svc.model(engine, T)["byCode"]["B-BIT"]["uretim"] is None
     ready["v"] = True
+    svc.model(engine, T)                  # üretim okuması geldi: model arkada yeniden kurulur, istek eldekini alır
+    svc.idle()
     assert svc.model(engine, T)["byCode"]["B-BIT"]["uretim"]["kartId"] == "c1"
 
     class NoRead:
@@ -582,3 +587,138 @@ def test_production_cards_do_not_block_and_arrive_later(engine, tmp_path, monkey
             "costs": lambda: None}
     api_svc = stock_api.register(FastAPI(), deps)
     assert api_svc.m12_ready() is False and api_svc.m12_cards(engine, T) == []
+
+
+# ------------------------------------------------------------------ hız, 2. tur (2026-09-29): model istekte kurulmaz
+
+
+def _counting_svc(tmp_path, builds: list, delay: float = 0.0) -> S.Service:
+    """Her model kurulumunda üretim kartları bir kez istenir: sayaç kurulum sayısıdır."""
+    import time as _t
+
+    def cards(e, t):
+        builds.append(1)
+        if delay:
+            _t.sleep(delay)
+        return []
+    return _svc(tmp_path, m12_cards=cards)
+
+
+def _no_source():
+    raise AssertionError("kaynak okunmamalı")
+
+
+def test_concurrent_requests_share_one_model_build(engine, tmp_path, monkeypatch):
+    """Aynı anda gelen istekler (/names + /items) modeli ayrı ayrı kurmaz: tek kurulum, aynı model."""
+    import threading
+    import time as _t
+
+    store.read_put(engine, T, raw_live(_t.time()))
+    builds: list = []
+    svc = _counting_svc(tmp_path, builds, delay=0.3)
+    monkeypatch.setattr(svc, "read", _no_source)
+    got: list = []
+    threads = [threading.Thread(target=lambda: got.append(svc.model(engine, T))) for _ in range(5)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(10)
+    assert len(got) == 5 and len(builds) == 1 and all(m is got[0] for m in got)
+
+
+def test_new_read_does_not_block_the_request_and_gives_the_same_model(engine, tmp_path, monkeypatch):
+    """Yeni okuma gelince istek eldeki modeli hemen alır; arkada kurulan model, aynı okumadan istek içinde kurulan
+    (eski yol) modelle birebir aynı (eski hesap = yeni hesap)."""
+    import time as _t
+
+    first = raw_live(_t.time())
+    store.read_put(engine, T, first)
+    builds: list = []
+    svc = _counting_svc(tmp_path, builds)
+    monkeypatch.setattr(svc, "read", _no_source)
+    m1 = svc.model(engine, T)
+    newer = raw_live(first["at"] + 1)
+    newer["balances"]["B-BIT"]["bakiye"] = 90.0
+    svc._adopt(newer)                                    # gece turu yeni okumayı yazdı, bellekte
+    builds_before = len(builds)
+    t0 = _t.monotonic()
+    again = svc.model(engine, T)
+    assert again is m1 and _t.monotonic() - t0 < 1.0      # eldeki model, beklemeden
+    svc.idle()
+    m2 = svc.model(engine, T)
+    assert m2["readAt"] == first["at"] + 1 and m2["byCode"]["B-BIT"]["bakiye"] == 90.0
+    assert len(builds) == builds_before + 1
+    same = S.build(newer, SETTINGS, store.approved_thresholds(engine, T), [], {})
+    same["movementWindow"] = newer.get("movementWindow")
+    assert _same(m2) == _same(same)
+
+
+def test_threshold_approval_rebuilds_before_the_next_answer(engine, tmp_path):
+    """Eşik onayı modeli düşürür: sonraki cevap onaylı eşikle gelir (eski modeli görmez)."""
+    import time as _t
+
+    store.read_put(engine, T, raw_live(_t.time()))
+    svc = _svc(tmp_path)
+    assert svc.model(engine, T)["byCode"]["B-BIT"]["esik"] is None
+    t = store.save_threshold(engine, T, "ayse", {"stokKodu": "B-BIT", "guvenlikGun": 20})
+    store.decide_threshold(engine, T, "ayse", t["id"], True, None)
+    svc.invalidate()
+    assert svc.model(engine, T)["byCode"]["B-BIT"]["esik"]["guvenlikGun"] == 20
+
+
+def test_finished_read_is_not_restarted_at_once(engine, tmp_path, monkeypatch):
+    """Okuma 5 dakikadan uzun sürünce biter bitmez «eski» sayılıyordu ve ekran açık kaldıkça kaynak durmadan okunuyordu:
+    kendiliğinden yeniden okuma, önceki okuma bittikten 5 dakika sonra."""
+    import time as _t
+
+    svc = _svc(tmp_path)
+    reads: list[int] = []
+    monkeypatch.setattr(svc, "read", lambda: (reads.append(1), raw_live(_t.time() - S.TTL - 30))[1])   # uzun okuma
+    svc.model(engine, T)
+    svc.model(engine, T)
+    assert reads == [1] and not svc.refreshing()
+    with svc._lock:
+        svc._raw["_done"] = _t.time() - S.TTL - 1
+    svc.model(engine, T)
+    svc.idle()
+    assert reads == [1, 1]
+
+
+def test_warm_prepares_the_model_from_the_table_without_the_source(engine, tmp_path, monkeypatch):
+    import time as _t
+
+    builds: list = []
+    svc = _counting_svc(tmp_path, builds)
+    monkeypatch.setattr(svc, "read", _no_source)
+    assert svc.warm(engine, T) is False                 # tabloda okuma yok: kaynağa gidilmez
+    store.read_put(engine, T, raw_live(_t.time()))
+    assert svc.warm(engine, T) is True and len(builds) == 1
+    svc.model(engine, T)
+    assert len(builds) == 1                              # istek hazır modeli aldı
+
+
+def test_names_and_items_answers_are_the_old_calculation(engine, monkeypatch):
+    """Arama kutusu listesi ve süzgeçli liste model başına bir kez hesaplanır; cevap eski hesapla birebir."""
+    c, _, svc = _client(engine, monkeypatch, set())
+    h = {"x-user": "a"}
+    m = svc.model(engine, T)
+    old_names = [{"value": i["stokKodu"], "label": f"{i['ad'] or i['stokKodu']} · {i['stokKodu']}"}
+                 for i in sorted(m["items"], key=lambda i: S.fold(i["ad"] or i["stokKodu"]))]
+    for _ in range(2):
+        r = c.get("/api/v1/stock/names", headers=h)
+        assert r.status_code == 200 and r.headers["content-type"].startswith("application/json")
+        assert r.json() == {"items": old_names}
+    cases = [{}, {"q": "bit"}, {"q": "TİMAŞ"}, {"q": "yazar a"}, {"durum": "bitecek,fazla"}, {"sira": "ad"},
+             {"sira": "bakiye"}, {"sira": "hiz"}, {"yayinevi": "Timaş"}, {"depo": "2"}, {"durum": "pasif"}]
+    for p in cases:
+        for _ in range(2):                                # ikinci istek hafızadan
+            out = c.get("/api/v1/stock/items", params=p, headers=h).json()
+            args = {"q": "", "yayinevi": "", "depo": "", "durum": "", "sira": "gun", **p}
+            old = S.filter_items(m, **args)               # eski yol: satır başına sadeleştirme
+            assert [i["stokKodu"] for i in out["items"]] == [i["stokKodu"] for i in old[:50]], p
+            assert out["total"] == len(old), p
+            assert out["yayinevleri"] == sorted({i["yayinevi"] for i in m["items"] if i["yayinevi"]}, key=S.fold)
+    assert c.get("/api/v1/stock/items", params={"depo": "x"}, headers=h).status_code == 400
+    folded = {i["stokKodu"]: S.search_text(i) for i in m["items"]}
+    for q in ("bit", "kitap yazar", "b-y", "zzz"):
+        assert S.filter_items(m, q=q, folded=folded) == S.filter_items(m, q=q)
