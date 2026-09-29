@@ -44,9 +44,10 @@ const CONTENT: ScreenInfoMap = {
       '«Fırsatlar»: ortalama sırası 4–15 arasında kalan ve çok gösterilip az tıklanan aramalar listelenir.',
       'Ek tıklama tahmini sektör ortalamasından değil, sitenin kendi tıklama oranlarından hesaplanır.',
       '«Değişikliğin etkisi»: onaylanan metin sitede ilk görüldüğü günden önceki ve sonraki 28 gün karşılaştırılır; sonuç yayından 31 gün sonra çıkar.',
-      'Search Console’dan yalnız okunur; hiçbir yere yazılmaz.',
+      'Aynı iki pencerede sayfaya Google aramasından gelen ziyaret, satış ve ciro da Google Analytics’ten eklenir.',
+      'Search Console ve Google Analytics’ten yalnız okunur; hiçbir yere yazılmaz.',
     ],
-    data: 'Google Search Console ve T-soft ürünleri',
+    data: 'Google Search Console, Google Analytics ve T-soft ürünleri',
     refresh: 'Her gece',
     jobs: [
       { name: 'Fırsat okuması', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Son 28 günün arama ve sayfa kırılımı Search Console’dan okunur.' },
@@ -516,6 +517,26 @@ const CONTENT: ScreenInfoMap = {
       '«Şimdi oku» ile Merchant durumunu hemen yenileyin.',
       'Sorun türüne tıklayıp ilgili ürünleri süzün.',
       '«Besleme dosyasını indir» ile Google’a yüklenecek dosyayı alın.',
+    ],
+  },
+
+  'seo-aramadan-satisa': {
+    summary:
+      'Google aramasından gelen ziyaretin sepete, satışa ve ciroya ne kadar dönüştüğü; sayfa ve kitap bazında. Ziyaret alıp satmayan ve sert düşen sayfalar için ne yapılacağı ayrıntılı iş kartlarıyla yazılır.',
+    how: [
+      'Google Analytics’ten son 28 günün ve önceki 28 günün organik ziyaret, sepete ekleme, satış ve cirosu okunur; Search Console tıklaması aynı sayfanın satırına eklenir.',
+      'Giriş sayfası belirlenemeyen ziyaretler ayrı satırda durur, sayfalara dağıtılmaz. Sayfa, adresi üzerinden T-soft’taki kitaba bağlanır.',
+      '«Trafik yüksek, satış yok» ve «sert düştü» eşikleri sabit sayı değil, sitenin kendi verisinden hesaplanır (ürün sayfalarının üst çeyreği, sitenin dönüşüm oranı ve genel değişim).',
+      'Bir satırı açınca olası nedenler kart olarak çıkar: stok, arama görünürlüğü, teknik sorun, Google dizini, zengin sonuç, Google Alışveriş, ürün metni, sepet ve ödeme adımı. Her kartta kanıt, mevcut → önerilen değer, adımlar, sorumlu ve hesabıyla birlikte beklenen etki vardır.',
+      'Hiçbir sisteme yazılmaz; kartlar ilgili ekrana ve iş listesine yönlendirir. Zeki AI özeti yalnız kartlardaki rakamlarla yazılır.',
+    ],
+    data: 'Google Analytics, Search Console, T-soft ürünleri, teknik tarama, Google taraması, Google Merchant ve ürün denetimi',
+    refresh: 'Günde bir (ekran açıldığında son okuma 24 saatten eskiyse hemen); isterseniz «Şimdi oku»',
+    jobs: [{ name: 'Analytics okuması', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Organik ziyaret, sepet, satış ve ciro sayfa bazında yeniden okunur; satışsız ve düşen sayfalar iş listesine düşer.' }],
+    actions: [
+      'Süzgeçlerle yalnız ürün sayfalarını, satışsız yüksek trafiği ya da sert düşenleri görün; ciroya, ziyarete, dönüşüme ya da tıklamaya göre sıralayın.',
+      'Bir satırı açıp nedenleri ve yapılacak işleri okuyun; kart düğmeleriyle öneri üretme, teknik sorun ya da Google Alışveriş ekranına geçin.',
+      '«Listeyi indir» ile sayfaları yapılacak iş, sorumlu ve beklenen etkiyle birlikte alın.',
     ],
   },
 

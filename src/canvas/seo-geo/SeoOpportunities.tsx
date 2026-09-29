@@ -390,6 +390,7 @@ function ImpactList() {
                       <th>Sıra <SeoInfo k={r.data?.kaynaklar} label="Sıra" /></th>
                       <th><ExplainLabel label="Site geneli">Aynı dönemlerde bütün sitenin tıklama ve gösterim değişimi. Mevsim ya da genel trafik etkisini görmek için karşılaştırma ölçüsüdür.</ExplainLabel></th>
                       <th><ExplainLabel label="Siteye göre">Kitabın tıklama değişiminden site genelindeki değişim çıkarılır. Artıysa kitap siteden daha iyi gitmiş demektir; değişikliğin gerçek etkisine en yakın ölçü budur.</ExplainLabel></th>
+                      <th><ExplainLabel label="Google’dan satış">Aynı önce/sonra pencerelerinde bu sayfaya Google aramasından gelen ziyaret, satış ve ciro (Google Analytics). Pencere dolunca ölçülür.</ExplainLabel></th>
                       <th>Durum</th>
                     </tr>
                   </thead>
@@ -444,9 +445,26 @@ function ImpactRow({ i }: { i: ImpactItem }) {
           <td className="num">
             <Tone good={sign(i.netClicksPct)}>{signed(i.netClicksPct, 'puan', 0)}</Tone>
           </td>
+          <td className="num" style={{ fontSize: 12 }}>
+            {i.ga4?.before && i.ga4.after ? (
+              <>
+                <div>
+                  {fmt(i.ga4.before.revenue)} ₺ → {fmt(i.ga4.after.revenue)} ₺
+                </div>
+                <div style={{ fontSize: 11 }}>
+                  <Tone good={sign(i.ga4.delta?.revenue)}>ciro {signed(i.ga4.delta?.revenue)}</Tone>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--sg-muted)' }}>
+                  ziyaret {fmt(i.ga4.before.sessions)} → {fmt(i.ga4.after.sessions)} · satış {fmt(i.ga4.before.purchases)} → {fmt(i.ga4.after.purchases)}
+                </div>
+              </>
+            ) : (
+              <span style={{ color: 'var(--sg-muted)' }}>{i.ga4?.error ? 'Ölçülemedi' : '—'}</span>
+            )}
+          </td>
         </>
       ) : (
-        <td colSpan={6} style={{ fontSize: 12, color: 'var(--sg-muted)' }}>
+        <td colSpan={7} style={{ fontSize: 12, color: 'var(--sg-muted)' }}>
           {note}
           {i.error && <div style={{ color: '#9b1c24' }}>Son ölçüm denemesi: {i.error}</div>}
         </td>

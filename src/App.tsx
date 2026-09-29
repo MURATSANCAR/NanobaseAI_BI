@@ -240,6 +240,7 @@ const SeoKeymap = lazy(() => import('@/canvas/seo-geo/SeoKeymap'));
 const SeoQuestionSuggest = lazy(() => import('@/canvas/seo-geo/SeoQuestionSuggest'));
 const SeoYoutube = lazy(() => import('@/canvas/seo-geo/SeoYoutube'));
 const SeoShopping = lazy(() => import('@/canvas/seo-geo/SeoShopping'));
+const SeoSearchToSales = lazy(() => import('@/canvas/seo-geo/SeoSearchToSales'));
 const SeoMonthly = lazy(() => import('@/canvas/seo-geo/SeoMonthly'));
 const SeoWatch = lazy(() => import('@/canvas/seo-geo/SeoWatch'));
 const SeoSources = lazy(() => import('@/canvas/seo-geo/SeoSources'));
@@ -552,6 +553,7 @@ export default function App() {
             <Route path="seo-geo/soru-onerileri" element={<SeoQuestionSuggest />} />
             <Route path="seo-geo/youtube" element={<SeoYoutube />} />
             <Route path="seo-geo/alisveris" element={<SeoShopping />} />
+            <Route path="seo-geo/aramadan-satisa" element={<SeoSearchToSales />} />
             <Route path="seo-geo/aylik-rapor" element={<SeoMonthly />} />
             <Route path="seo-geo/izleme" element={<SeoWatch />} />
             <Route path="seo-geo/kaynaklar" element={<SeoSources />} />

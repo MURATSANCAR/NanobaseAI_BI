@@ -86,6 +86,7 @@ SOURCES: dict[str, str] = {
     "zengin_sonuc": "Zengin sonuç hataları",
     "site_haritasi": "Site haritaları (Google)",
     "merchant": "Google Merchant ürün sorunları",
+    "ga4": "Aramadan satış fırsatları",
     "haklar": "CRM hakları",
     "crm_durum": "CRM yayın durumu",
     "takvim": "Sezon takvimi",
@@ -856,6 +857,60 @@ def src_merchant(env: Env) -> list[dict[str, Any]]:
     return out
 
 
+def ga4_item(it: dict[str, Any], cards: list[dict[str, Any]], sales: Optional[float]) -> dict[str, Any]:
+    """Aramadan satış: bayraklı sayfa başına tek madde; ayrıntıda bulunan nedenler (eylem kartları) sırayla."""
+    from urllib.parse import quote
+
+    from .ga4 import FLAGS
+
+    name = it.get("title") or it["path"]
+    labels = [FLAGS[f] for f in it["flags"] if f in FLAGS]
+    top = cards[0] if cards else None
+    parts = [f"{it['path']}: son 28 gün {_n(it['cur']['sessions'])} organik ziyaret, {_n(it['cur']['carts'])} sepete ekleme, "
+             f"{_n(it['cur']['purchases'])} satış, {_n(it['cur']['revenue'])} ₺ ciro (önceki 28 gün {_n(it['prev']['sessions'])} "
+             f"ziyaret, {_n(it['prev']['revenue'])} ₺)."]
+    for i, c in enumerate(cards, 1):
+        parts.append(f"{i}) {c['title']} — {c['ownerLabel']}. {c['why']}"
+                     + (f" Adımlar: " + " ".join(f"{j}. {s}" for j, s in enumerate(c["steps"], 1)) if c["steps"] else "")
+                     + (f" Beklenen etki: {c['impact']['formula']}." if c.get("impact") else ""))
+    severity = "yüksek" if ("dusen_ciro" in it["flags"] or (top and top["severity"] in ("kritik", "yüksek"))) else "orta"
+    group = ("ga4_satissiz", "Aramadan satış: trafiği yüksek, satışı olmayan sayfalar") if "satissiz" in it["flags"] else \
+        ("ga4_dusen", "Aramadan satış: organik ziyareti ya da satışı sert düşen sayfalar")
+    link = f"/seo-geo/aramadan-satisa?sayfa={quote(it['path'], safe='/')}"
+    item = make_item("ga4", f"sayfa:{it['key']}", top["owner"] if top else "icerik",
+                     f"Aramadan satış: {name} — {', '.join(labels)}", " ".join(parts), severity, link,
+                     product_id=it.get("productId"), sales=sales, impressions=it.get("impressions"), group=group)
+    if top and top.get("impact"):  # beklenen ₺ etkisi önceliğe eklenir (kartla aynı hesap)
+        item["impact"], item["impactBasis"] = max(item["impact"], top["priority"]), top["priorityBasis"]
+    return item
+
+
+def src_ga4(env: Env) -> list[dict[str, Any]]:
+    """Google Analytics: satışsız yüksek trafik ve sert düşen organik sayfalar, nedenleriyle (ga4_actions kartları)."""
+    from . import ga4, ga4_actions as act
+
+    if not env.has(ga4.PAGES):
+        return []
+    with env.eng.connect() as c:
+        rows = c.execute(sa.select(ga4.PAGES).where(ga4.PAGES.c.tenant_id == env.tenant, ga4.PAGES.c.flags != "",
+                                                    ga4.PAGES.c.kind != "belirsiz")).mappings().all()
+    if not rows:
+        return []
+    snap = ga4.read_snap(env.eng, env.tenant) or {}
+    seo = env.seo
+    ctx = act.Context(env.eng, env.tenant, seo.conf, snap.get("thresholds") or {},
+                      seo.conf("SEO_SITE_URL") or "https://timas.com.tr")
+    items = [ga4.page_view(r) for r in rows]
+    out = []
+    for i in range(0, len(items), 400):
+        chunk = items[i:i + 400]
+        ctx.preload(chunk)
+        for it in chunk:
+            p = env.products().get(it.get("productId") or "")
+            out.append(ga4_item(it, act.cards(it, ctx, detail=False), p["sales"] if p else None))
+    return out
+
+
 RIGHTS_ITEMS = {"eksik": ("yüksek", "Hak eksik"), "yok": ("orta", "Sözleşme kaydı yok"), "incele": ("orta", "Hak incelenmeli")}
 FLAG_TEXT = {"bizim_degil": "artık bizim ürünümüz değil", "cekildi": "satıştan çekildi", "geri_istendi": "geri istendi",
              "devredildi": "hakları devredildi", "iptal": "iptal edilmiş"}
@@ -1186,6 +1241,7 @@ COLLECTORS: list[tuple[str, Callable[[Env], list[dict[str, Any]]]]] = [
     ("zengin_sonuc", src_rich_results),
     ("site_haritasi", src_gsc_sitemaps),
     ("merchant", src_merchant),
+    ("ga4", src_ga4),
     ("haklar", src_rights),
     ("crm_durum", src_crm_status),
     ("takvim", src_seasons),

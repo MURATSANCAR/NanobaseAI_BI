@@ -69,6 +69,13 @@ export type ImpactItem = {
   control: { before: Metrics; after: Metrics; delta: Delta | null } | null;
   /** Ürünün tıklama değişimi eksi site genelinin tıklama değişimi (yüzde puan). */
   netClicksPct: number | null;
+  /** Aynı pencerelerde Google Analytics organik ziyaret/satış/ciro (ölçülmediyse null). */
+  ga4?: {
+    before: { sessions: number; purchases: number; revenue: number } | null;
+    after: { sessions: number; purchases: number; revenue: number } | null;
+    delta: { sessions: number | null; purchases: number | null; revenue: number | null } | null;
+    error: string | null;
+  } | null;
 };
 export type ImpactRunState = { running: boolean; startedAt: string | null; finishedAt: string | null; applied: number; measured: number; failed: number; error: string | null };
 export type Impact = {

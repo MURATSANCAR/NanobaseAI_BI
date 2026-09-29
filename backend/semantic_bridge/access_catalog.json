@@ -555,6 +555,11 @@
       "label": "Google Alışveriş hazırlığı"
     },
     {
+      "key": "sayfa:seo-aramadan-satisa",
+      "area": "pazarlama",
+      "label": "Aramadan satışa"
+    },
+    {
       "key": "sayfa:seo-aylik",
       "area": "pazarlama",
       "label": "Aylık rapor"

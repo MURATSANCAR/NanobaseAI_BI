@@ -265,6 +265,35 @@
   set kart listesi 9. Uyarılar test sunucusundakilerle aynı türde (kayıtsız kimlikli uçlar, timasai rolünde olmayan İK
   zorunlu eğitim, bilerek metin kalan kod kolonları).
 - **Kurulum sırası tamam:** main → test sunucusu (kabul 146/0, ekran 136/0) → müşteri VM'i (152/0).
+## 2026-09-29 (gece) — SEO & GEO «Aramadan satışa»: Google Analytics organik huni, sayfa bazında eylem kartları
+
+- **İstek (kullanıcı):** Google Analytics'i SEO & GEO'ya bağla; Search Console tıklaması → organik oturum → sepete ekleme →
+  satış → ciro, sayfa/kitap bazında. Ek istekler: satmayan/düşen sayfanın nedenini mevcut veriden kuralla bul; sonuç kısa rozet
+  değil, ayrıntılı eylem kartı olsun (ne yapılmalı, kanıt, mevcut → önerilen, adımlar, sorumlu, hesabıyla beklenen etki).
+- **Okuma (`seo_geo/ga4.py`):** Analytics Data API `runReport` (2026-09-29 mülk 347043165'te canlı doğrulanan boyut/ölçüler);
+  organik giriş sayfası × 5 ölçü iki dönem (son 28 gün, önceki 28 gün), kanal × 5 ölçü, organik günlük seri 90 gün. Sayfalama
+  `limit` 100000 + `offset`, `rowCount`'a kadar; Google erken keserse hata (sessiz eksik yok). Search Console sayfa satırları aynı
+  uzunlukta iki dönem (3 gün geride) yol üzerinden eklenir. `(not set)` ayrı satır, sayfalara dağıtılmaz. Yol → T-soft SeoLink
+  eşlemesi (eşlenen/eşlenemeyen sayılır). Günde bir: gece işi, süreç içi döngü, ekran açılınca 24 saatten eskiyse, «Şimdi oku».
+  `GA4_PROPERTY_ID` boşsa sessiz. Hata metninden belirteç `merchant.safe` ile silinir.
+- **Bayraklar veriden:** «trafik yüksek, satış yok» = ürün sayfalarının organik oturum üst çeyreği ve sitenin dönüşümüyle beklenen
+  satış ≥ 3 (Poisson ~%5), satış 0; «sert düştü» = önceki dönem üst çeyrekte, site geneli değişime göre beklenenin %60'ının altı
+  ve fark 2√beklenen'den büyük (satış için önceki ≥ 3 satış).
+- **Eylem kartları (`seo_geo/ga4_actions.py`, model yok):** stok/satışta değil (benzer kitaplar ekranının stoktaki ilk üç adayı →
+  301 önerisi), arama görünürlüğü düşüşü (tıklama/sıra önce→şimdi), teknik tarama sorunları, Google dizini, zengin sonuç eksik
+  alanları (hangi T-soft alanından dolar), Merchant sorunları (çözüm, alan, yardım bağlantısı), ürün metni (mevcut başlık/meta/
+  açıklama ve kural sınırları → mevcut Zeki AI önerisi ya da «Öneri üret»), sepete eklenmeme (fiyat/açıklama/görsel/stok kontrol
+  listesi), sepet/ödeme adımı; başka neden yoksa genel inceleme kartı. Beklenen etki formülüyle kartta (ör. oturum × organik
+  dönüşüm × ortalama sipariş − bugünkü ciro); öncelik = iş listesi etki puanı + beklenen ₺ puanı. Zeki AI özeti
+  `zeki_text.interpret` ile yalnız kart olgularından; olguda olmayan sayı varsa özet gösterilmez.
+- **Ekran ve bağlar:** `SeoSearchToSales.tsx` (`/seo-geo/aramadan-satisa`, menü «Aramadan satışa», yetki `sayfa:seo-aramadan-satisa`):
+  KPI (değişim ve organik ciro payı), huni, günlük ziyaret/ciro grafiği, kanal tablosu, süzgeçli/sıralı sayfa tablosu, satır açılınca
+  kartlar, CSV (kart başlığı + sorumlu + beklenen etki). İş listesi kaynağı `ga4` («Aramadan satış fırsatları», sayfa başına madde,
+  ayrıntıda kartlar), kitap karnesinin «Arama performansı» bölümüne organik oturum/satış/ciro, SEO özetine organik ciro kartı,
+  değişiklik etkisi tablosuna aynı pencerelerde Analytics önce/sonra (`semantic_seo_ga4_impact`).
+- **Testler:** `test_seo_ga4.py` (ayrıştırma, sayfalama, yol + Search Console birleşimi, ürün eşleme, özet/değişim, `(not set)`,
+  eşikler, her kart türü, Zeki AI sayı denetimi, iş listesi kaynağı, etki ölçümü, belirteç sızmaz, yetki kuralları). Mac'te
+  koşturulmadı (proje kuralı); yalnız `py_compile`. Test sunucusunda koşulmalı; canlı veriyle eşikler ve kart sayısı denetlenmeli.
 
 ## 2026-09-29 (13:20) — Excel indirme: düzeltmeler test sunucusunda, set kart listesi ekranı da denendi
 
