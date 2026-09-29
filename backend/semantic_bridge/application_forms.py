@@ -80,7 +80,8 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) in _ready:
             return
         apps.ensure(engine)
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 

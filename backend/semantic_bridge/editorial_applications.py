@@ -287,7 +287,7 @@ def ensure(engine: sa.engine.Engine) -> None:
             return
         from semantic_layer.store import schema_stamp
 
-        def setup() -> None:
+        def install() -> None:
             _md.create_all(engine, checkfirst=True)
             # 2026-09-29: sayfa tahmini boş olabilir (Google Formundan gelen başvuru). Var olan tabloda kısıt kalkar;
             # veri değişmez. SQLite (testler) tabloyu her seferinde yeni kurar.
@@ -295,7 +295,7 @@ def ensure(engine: sa.engine.Engine) -> None:
                 with engine.begin() as c:
                     c.execute(sa.text("ALTER TABLE semantic_editorial_applications ALTER COLUMN page_estimate DROP NOT NULL"))
 
-        schema_stamp.run(engine, list(_md.sorted_tables), setup)
+        schema_stamp.run(engine, list(_md.sorted_tables), install)
         _ready.add(id(engine))
 
 
