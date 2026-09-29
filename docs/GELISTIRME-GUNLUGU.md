@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Yetkiler «Bağ ekle»: arama bütün türlerde
+
+- **Şikâyet (kullanıcı):** Yönetim → Yetkiler'de bir kişiye yetki vermek için ad arandı, kişi gelmedi.
+- **Ölçüldü:** Test sunucusunda AD okuması sağlam — `Directory.list_people` 216 etkin kişi / 2,4 sn, 140 grup, 44 OU; köprü ve ön yüz main ile aynı (md5). Sorun ekranda: «Bağ ekle» varsayılan olarak «AD grubu» sekmesinde açılıyor, arama yalnız o sekmenin listesinde çalışıyor; kişi adı yazılınca «Eşleşen yok». Sekme değiştirince arama da siliniyordu.
+- **Düzeltme (`admin/AccessAdmin.tsx` `BindingPicker`):** bir şey yazılınca dört tür de okunur (`useQueries`, 5 dk bellek), her sekmede eşleşme sayısı görünür; sonuçsuz sekmede «Kişi: 2 eşleşme» gibi geçiş düğmesi çıkar; sekme değişince arama korunur; kutu metni «Kişi, AD grubu, birim ya da CRM rolü ara».
+
 ## 2026-09-29 (09:30) — Logo kaynağı canlı prod 192.168.0.25; eski .155 tanımları kaldırılıyor, firma izin listesi
 
 - **Karar (kullanıcı):** Logo'da yedek (.155, `AISERVER`, 17.08.2026'da donmuş) kullanılmayacak; her şey prod'dan. .155'e giden URL/port/IP tanımları yedeksiz silinir.
