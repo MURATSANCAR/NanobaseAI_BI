@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (19:00) — Müşteri VM'ine main `21b298253`: yazar başvuru formları VM'de, 3.013 başvuru
+
+- **Kullanıcı onayı:** «hadi». VM'deki son kurulum `134b8b79` (17:50) → `21b298253`'ün atası (geri sarma yok), arada 15 commit (başvuru formları, stüdyo, İK, sohbet; hepsi test sunucusunda doğrulanmış), çakışma işareti 0. CRM pasif süzgeci, Görevlerim/Masam, editör atama, haklar-lisans, yazar giriş süzgeci ve kişi kartı düzeltmesi zaten `134b8b79` ile VM'deydi.
+- **Ön denetim:** `git archive` → `/tmp/bi-main-21b29825`, `._*` 0, köprü arşivden yüklendi (2.447 yol). VM'de servis hesabı anahtarı Yönetim ayarında girili (değer okunmadı); `BASVURU_FORM_SHEETS` girili değil → varsayılan üç tablo.
+- **Kurulum:** `systemd-run vm-deploy-21b29825` (`/tmp/vm-deploy-21b29825.log`) **EXIT 0**; bridge/jobs/login/web yeni imajla, db ayakta; `bi_var` 7 → 7; oturumsuz kapılar 302/200/401; `._*` 0; `application_forms.py` ve `editorial_applications_api.py` konteynerde main ile md5 aynı; `page_estimate` boş olabilir. Sürüm kaydı id 17 (codeSha «bilinmiyor»; «127.0.0.1:8795'e yazılamadı» uyarısı önceki kurulumlarda da var).
+- **İlk form turu:** VM iş çalıştırıcısı `timas-basvuru-form`'u kaçırılan tur olarak kurulumdan hemen sonra koştu: Çocuk 1.897, Genç 277, İlk Gençlik 839 = **3.013** (test sunucusu ve tablolarla aynı). VM Başvurular listesi öncesinde boştu. Sonraki turlar 15 dakikada bir.
+
 ## 2026-09-29 — ZEKI AI CHAT tam yerel ağ: paralel audit, kalıcı çıkış engeli ve gerçek kabul
 
 - Kullanıcı açıkça **“Tam yerel: tüm dış servis çıkışlarını engelle”** seçti. Üç paralel denetim kaynak/bağımlılık, canlı ayar/cron ve tarayıcı yollarını inceledi. Sabit üretici servisleri kapalıydı; dinamik URL/oEmbed/webhook/Deno, wildcard CSP ve Google STUN açıkları bulundu.
