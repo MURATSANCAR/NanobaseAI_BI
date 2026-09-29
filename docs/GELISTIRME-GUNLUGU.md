@@ -8,6 +8,11 @@
 - **Tarayıcı testi** (görünmez tarayıcı, portal, timasai kısa oturumu, silindi): liste ve form yanıtlı başvuru, 390/1280, taşma 0, hata 0.
 - **Testte bulunan ve düzeltilen:** (1) hazır cevap katmanı ilk açılışı yavaş süren durum ucunu içe aktarma öncesi hâliyle saklamıştı → panel «henüz okunmadı» diyordu; durum ucu önbellek dışı. (2) Katman `run-due` yollarını görmediği için zamanlayıcının yazması listeyi düşürmüyordu → zamanlayıcı yeni/değişen yanıtta Başvurular'ın hazır cevaplarını kendisi düşürür (başka modüllerin run-due'larına dokunulmadı). (3) «Son okuma» ve «Gönderildi» UTC saatini yazıyordu → yerel saat.
 - **Zamanlayıcı:** `timas-basvuru-form.timer` açıldı (15 dk). Müşteri VM'ine kurulmadı.
+## 2026-09-29 (18:00) — Müşteri VM'inde fotoğraf okuma açık; HEIC yükle → oku → karşılaştır VM'de de geçti
+
+- **Neden:** Kullanıcı «erişim açalım» dedi. VM köprüsünden `https://85.111.30.227/editor/cards/v1/read` 405 dönüyordu (GPU genel nginx beyaz listesinde yok).
+- **Yapılan:** `deploy/tt-gpu/editor-ingress/add-read-route.py` yazıldı (mevcut yol betikleriyle aynı üç kat koruma: `customer_sources.ALLOW`, gizli başlık, yalnız POST; gövde sınırsız, 960 sn; `nginx -t` düşerse geri alır). GPU'da koşunca `nginx -t` düştü: yol birkaç dakika önce başka bir kurulumla işaretsiz eklenmişti (aynı koruma, `limit_except POST`) → betik dosyayı geri aldı, zarar yok; betik artık işaretsiz yolu da «zaten var» sayar.
+- **Doğrulama (VM):** köprünün kendi `doc_read.remote_read`'i ile yazılı görsel 0,3 sn'de okundu (güven %99,6, metin birebir). Ekranın yolundan tam zincir (VM giriş konteynerinde 15 dk timasai oturumu, web üzerinden): HEIC açık, yükleme 201, okuma hazır, altı madde başlığının altısı, arşive karşı 200 (7 madde), belge silindi, oturum silindi, geçici fotoğraf silindi. İlk iki deneme başka oturumların VM kurulumlarına (`fa37a769`, `134b8b79`; ikisi de bu işin düzeltmelerini içeriyor) denk geldi; üçüncüsü ön kapının `Origin` denetimine takıldı (betik eksiği — tarayıcı başlığı gönderir; ekranda sorun yok).
 
 ## 2026-09-29 (gece) — Personel silinince izin verisi sahipsiz kalmıyor; silme yerine pasife alma (arşiv)
 
