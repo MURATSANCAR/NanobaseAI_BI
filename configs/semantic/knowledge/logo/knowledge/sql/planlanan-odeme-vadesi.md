@@ -12,5 +12,5 @@ tags:
 
 Planlanan ödeme vadesi: satış faturasının ödeme planı satırındaki vade tarihi (PAYTRANS.DATE_,
 MODULENR 4, SIGN 0) ile fatura tarihi arasındaki gün farkının ortalaması. Gerçekleşen tahsilat
-süresinden farklıdır: bu, anlaşılan vadedir; o, paranın gerçekten geldiği gündür. «Tahsilat vademiz», «ortalama
-vade», «vade günümüz» bu ölçüyü ister; DSO (bakiye ÷ satış × gün) değil.
+süresinden farklıdır: bu, anlaşılan vadedir; o, paranın gerçekten geldiği gündür. «Vade» anlaşılan süredir;
+DSO (bakiye ÷ satış × gün) paranın geldiği süreye yaklaşımdır — ikisi ayrı ölçüdür.
