@@ -461,3 +461,31 @@ def test_okur_ozeti_damga_degismedikce_bellekten(monkeypatch):
     iz2 = {x["tur"]: x["sayi"] for x in p.izin_sagligi("t1")}
     assert n["izin"] == 2 and iz2["celiski_email"] == 2       # eski damganın rakamı gösterilmez
 
+
+# ------------------------------------------------------------------ M18 reklam: CRM kitap listesi
+
+
+def test_reklam_kitap_listesi_eski_hesap_yeni_hesap_ve_bellek():
+    from semantic_bridge import ads_sources as S
+
+    fake = SayanCrm({"Eşleştirme için kitap kartları": [
+        {"kitap_id": "0F8FAD5B-D9CB-469F-A165-70867728950E", "stok_kodu": "15201.0001", "ad": "Deniz", "ean": "978", "yazar": "Ayşe",
+         "durum": "SD - Satış dışı"},
+        {"kitap_id": "7C9E6679-7425-40DE-944B-E07FC1F90AE7", "stok_kodu": "15201.0002", "ad": "Fener", "ean": None, "yazar": None,
+         "durum": None},
+        {"kitap_id": "8C9E6679-7425-40DE-944B-E07FC1F90AE7", "stok_kodu": "15201.0001", "ad": "Kopya", "ean": None, "yazar": None,
+         "durum": None}]})
+    crm = S.Crm(lambda: "Timas_MSCRM.dbo", lambda: fake)
+    got = crm.books(["SD"])
+    # eski hesap: aynı satırlardan (ilk stok kodu kalır, «satış dışı» durum etiketinin ilk kelimesinden)
+    assert [(b["stokKodu"], b["ad"], b["satisDisi"]) for b in got] == [("15201.0001", "Deniz", True), ("15201.0002", "Fener", False)]
+    assert crm.books(["SD"]) == got and fake.say("kitap kartları") == 1          # 30 dk içinde CRM okunmaz
+    b = crm._bellekler[S.CRM_TTL]
+    _eskit(b, "books", S.CRM_TTL + 60)
+    t0 = time.monotonic()
+    assert crm.books(["SD"]) == got and time.monotonic() - t0 < 0.5              # süre doldu: eldeki hemen
+    assert _bekle(lambda: fake.say("kitap kartları") == 2)                       # CRM arkada okundu
+    assert _sakin(b, "books")
+    crm.books(["SD"], fresh=True)
+    assert fake.say("kitap kartları") == 3                                       # «fresh» kaynağı bekler
+
