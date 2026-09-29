@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (15:20) — Sözleşme karşılaştırma: telefon fotoğrafı (HEIC) desteği kuruldu
+
+- **Neden:** Faz 3'te HEIC yüklemesi paket kurulu değilse açık hatayla reddediliyordu; paket, müşteri VM'inin temel işlemcisi (SSE4.2/POPCNT/AVX yok) nedeniyle ayrı onaya bırakılmıştı. Kullanıcı ölçümü ve kurulumu onayladı.
+- **Ölçüm (VM işlemcisi):** köprü imajından açılan, iş bitince silinen geçici konteynerde `pillow-heif` 1.8.0: içe aktarma, kodlama, çözme ve uygulamanın `heic_to_jpeg`'i çalıştı. Gerçek iPhone fotoğrafıyla denenemedi: sabah CRM'de 9 olan sözleşme eki şimdi 1 (yalnız PDF), HEIC ekler CRM'den kalkmış.
+- **Değişiklik:** `backend/semantic_bridge/requirements.txt` → `pillow-heif>=1.1` (başka paket değişmiyor; test sunucusunda kuru koşu yalnız `pillow_heif` ekledi).
+- **Test sunucusu:** pakete kuruldu (Pillow 12.3.0 aynı). Uygulama yolu (çözme → JPEG) 0,4 sn. Not: bu sunucuda HEIC **kodlama** (x265) asılı kalıyor, 4 çekirdekle sınırlasa da — uygulama kodlama kullanmaz; deneme örneği VM'de üretildi.
+- **Müşteri VM'i:** bağımlılık dosyası (md5 main ile eş) kondu, köprü imajı yeniden derlendi; konteynerde HEIC açık, sayfa 200, veri uçları oturumsuz 401, 10 dk'da hata kaydı 0, `._*` 0. Bağımlılık katmanı baştan kurulduğu için `uvicorn` 0.53 → 0.54 (VM'de `starlette` zaten 1.7.0'dı; test sunucusunda 1.6.0 / 0.52.4 — sürümler `>=` ile yazılı, sabitlenmiş değil).
+
 ## 2026-09-29 (15:00) — KDV %0 / telif varsayılanı (`c9ad5e2b`) test sunucusu ve müşteri VM'inde
 
 - **Test sunucusu:** `CalcPane.tsx` ve `help.ts` sunucuda önceki main hâlindeydi (md5), yerleştirildi; `index-DPaAEmv0.js`. Görünmez tarayıcı (timasai kısa oturum, silindi): yeni kitapta ve Mükemmeliyetçi Kişilik'te KDV «0», telif tabanı «Brüt — kapak fiyatı», doğuşu «Baskıdan ödeme — basılan adet»; sayfa hatası 0.
