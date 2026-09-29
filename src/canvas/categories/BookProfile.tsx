@@ -7,7 +7,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, fmtDate, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import {
-  categoriesApi, fmtInt, fmtProb, showValue, STATUS_TONE,
+  categoriesApi, fmtDay, fmtInt, fmtProb, showValue, STATUS_TONE,
   type BookDetail, type FieldKey, type FieldValue, type ProfileField,
 } from './api';
 import { CategoriesFrame, Confidence, ROOT, useMeta } from './parts';
@@ -74,7 +74,7 @@ export default function BookProfile() {
                   {b.crm.yayincilikStatusu ? ` · ${b.crm.yayincilikStatusu}` : ''}
                 </p>
                 <p className="mt-0.5 text-[12px] font-semibold text-canvas-muted">
-                  Son {meta.data?.thresholds.priorityMonths ?? 24} ay net satış <span className="font-mono tabular-nums text-canvas-ink">{fmtInt(b.priority)}</span> adet
+                  Son {b.priorityWindow?.months ?? meta.data?.thresholds.priorityMonths ?? 24} ay{b.priorityWindow?.end ? ` (${fmtDay(b.priorityWindow.end)} tarihine kadar)` : ''} net satış <span className="font-mono tabular-nums text-canvas-ink">{fmtInt(b.priority)}</span> adet
                   <SqlInfo k={kaynakOf(book.data)} alan="_hepsi" label="Kitabın sayıları" className="mx-0.5" /> · Editör {b.crm.editor?.name ?? '—'} · Yayın yönetmeni {b.crm.yonetmen?.name ?? '—'}
                 </p>
               </div>

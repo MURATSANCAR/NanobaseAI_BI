@@ -149,6 +149,14 @@ def test_resolution_is_deterministic_and_respects_brand(engine):
     assert C.resolve(ctx, b5)["nodeId"] is None
 
 
+def test_book_detail_says_which_logo_window_the_priority_covers(engine):
+    """«Son N ay» puanı son eşitlemenin penceresiyle hesaplanır; ekran bitiş tarihini bu pencereden yazar."""
+    _seed(engine)
+    _tree(engine)
+    d = C.book_detail(engine, T, "B1")
+    assert d["priority"] == 500 and d["priorityWindow"] == {"start": "2024-08-17", "end": "2026-08-17", "months": 24}
+
+
 def test_findings_rules(engine):
     _seed(engine)
     _tree(engine)

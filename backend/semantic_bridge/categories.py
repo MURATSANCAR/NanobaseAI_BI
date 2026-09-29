@@ -1353,7 +1353,9 @@ def book_detail(engine: sa.engine.Engine, tenant: str, book_id: str) -> dict[str
             FINDINGS.c.tenant_id == tenant, FINDINGS.c.book_id == r["book_id"]).order_by(FINDINGS.c.status)).mappings()]
     return {**_row_out(r, ctx), "fields": fields, "fieldDefs": FIELDS, "crm": snap, "resolution": {
         **res, "path": ctx.path(res["nodeId"]), "candidatePaths": [ctx.path(n) for n in res["candidates"]]},
-        "events": events, "findingsList": finds, "tree": ctx.tree}
+        "events": events, "findingsList": finds, "tree": ctx.tree,
+        # Öncelik puanının hesaplandığı Logo penceresi (son eşitlemedeki; ayar sonradan değişse de puan bununla).
+        "priorityWindow": {k: (meta_get(engine, tenant, "priority", {}) or {}).get(k) for k in ("start", "end", "months")}}
 
 
 def _log(c: Any, tenant: str, book_id: str, field: str, old: Any, new: Any, action: str, user: str,

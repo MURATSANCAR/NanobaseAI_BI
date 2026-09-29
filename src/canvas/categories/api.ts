@@ -219,6 +219,7 @@ export type BookDetail = BookRow & {
   tree: TreeInfo | null;
   canDecide: boolean;
   modelCalls?: number;
+  priorityWindow?: { start?: string | null; end?: string | null; months?: number | null };
 };
 
 export type BookText = { ozet: string | null; spot: string | null; anahtarMetin: string | null; tanitim: string | null; oneCikan: string | null; sayfa: number | null; ilkYayin: string | null };

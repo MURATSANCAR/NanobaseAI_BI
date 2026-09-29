@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Ekran sayıları Logo (.25) ve CRM (.28) ile aynı anda denetlendi; kitap profili penceresi ekranda
+
+- **İstek (kullanıcı):** «verilere bakarken logo ve crm tarafını paralel bak». Önceki doğrulama yalnız portal önbelleğine (semantic_*) bakıyordu. Tek sunucu betiği, iki iş parçacığı (Logo `LOGODATABASEN`, CRM `CRMDATBASE`), 21 sn, salt okuma.
+- **Logo — Amazon yurtdışı:** önbellek (okunma 29.09 01:10 UTC) ↔ canlı Logo 2025–2026 cari×ay **27/27 aynı**, yıl toplamları kuruşuna eş (2025: 6.100.825,03 ₺; 2026: 1.991.930,10 ₺); canlıda da Eylül'de yurtdışı satış yok, «Oca–Ağu» ve geçen yıl aynı dönem 4.701.844,95 ₺ doğru. Önbellek meta'sındaki «veri sonu 17.08» eski kopyadan kalma etiket (canlı veri sonu 29.09); gece okumasıyla düzelir.
+- **Logo — kitap profili önceliği:** son eşitleme (29.09 00:40 UTC, .25 geçişinden önce) penceresi 2024-08-17 – 2026-08-17; canlı pencere 2024-09-29 – 2026-09-29. 9.084 stok kodlu kitabın **4.676'sı** canlıdan >0,5 adet farklı. Çift sayım değil (411 yalnız 2026, 211 yalnız 2021–25 tarihli; ay kırılımıyla bakıldı): fark okul sezonu — örn. 15201.01.6781 Ağustos'ta çıkmış, canlı 76.472 (Ağu) + 71.837 (Eyl) = 148.309, profilde 17.08'e kadarki 72.612. Hesap doğru, veri eski; gece eşitlemesi canlı pencereyle yeniler. **Ekran düzeltmesi:** «Son 24 ay» etiketi puanın hangi tarihe kadar olduğunu söylemiyordu → kitap ayrıntısına `priorityWindow` (son eşitlemenin penceresi), etiket «Son 24 ay (17 Ağu 2026 tarihine kadar)».
+- **CRM:** kitap profili kümesi = CRM etkin kitap **9.090 = 9.090**, iki yönde fark 0. Amazon konsinye siparişi (tip 14) önbellekte de canlıda da boş. Telif Satış hak satırı önbellek 3.792 / canlı ham 3.802 (ham satır birleştirmeden önce; bu işin kapsamı dışında). Başvuruların ve destek içgörüsünün CRM proje/kişi bağı yok (denetlenecek bağ 0). Trendyol siparişi CRM/Logo'dan değil panel dosyasından gelir — kaynak karşılaştırması yok.
+- **Test (sunucu kopyası `/tmp/claude-sayilar2`):** 4 dosyanın sunucu hâli main; pytest kategoriler 20 geçti (yeni: ayrıntı pencereyi taşır), `tsc -b` 0, `vite build` geçti, `._*` 0.
+
 ## 2026-09-29 (öğleden sonra, 2) — `window.confirm` kullanan 4 ekran onay penceresine taşındı; onay adımı test sunucusunda
 
 - **Taşınan (kullanıcı onayıyla):** hak kaydı silme (`rights/RightsScreen.tsx`), terim silme (`translation/TermBank.tsx`), çeviri belleği dosyası kaldırma (`translation/MemoryBank.tsx`), çeviri işini silme (`translation/TranslationScreen.tsx`). Hepsi `AskSheet`; metin kaydı adıyla, dil çiftiyle ve «geri alınamaz» diye anar. Hatanın satırda/ekranda yazıldığı üçünde pencere `onSettled`'te kapanır ki hata görünsün. Doğrulama (geçici dizin): `tsc` 0, vitest 45 dosya / 251 test.
@@ -7,7 +15,6 @@
 - **Tıklayarak deneme yapılamadı:** timasai kısa oturumu açıldı, ama oturumla veri arayan istek izin denetiminde reddedildi; deneme orada durdu, oturum silindi (1 satır, kalan 0). İlk bakışta kargo kararı, kapasite ve terim listeleri boştu, yani çoğu ekranda denemek için önce kayıt açmak gerekecek. Pencerenin kendisi 320/1280 px'te ayrıca ölçülmüştü (önceki giriş).
 - **Başka oturumdan kalan test verisi:** Yayın kurulunda timasai'nin 29.09 07:24'te açtığı «TEST-Otomatik sınama kurulu» (planlı, 2 gündem maddesi, 2 oy) duruyor. Bu oturumun işi değil; dokunulmadı.
 - **Kurulmadı:** müşteri VM'i.
-
 ## 2026-09-29 — Sadeleştirme turunda bulunan yanıltıcı sayılar: dördünde hesap, ikisinde etiket düzeldi
 
 - **İstek (kullanıcı):** sabah turunda yalnız açıklaması düzeltilen 6 sayı için «etiket mi hesap mı» kararı koda bakarak verilsin (iş kararı Claude'da).
