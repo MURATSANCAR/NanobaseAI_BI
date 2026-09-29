@@ -1,9 +1,9 @@
-/* Ekran bilgi kutusu. Ekran başına ilk girişte bir kez ya da elle açılır (ara sıra): 200 ms giriş, 150 ms çıkış,
+/* Ekran bilgi kutusu: «Bu ekran» düğmesinin altından açılan küçük kutu (köken sağ üst). Ara sıra açılır: 200 ms giriş, 150 ms çıkış,
    yalnız opacity + transform. Kapanınca visibility geçiş bitiminde gizlenir ki odak ve tıklama almasın. */
 .si-panel {
   opacity: 0;
   transform: translateY(-6px) scale(0.985);
-  transform-origin: top left;
+  transform-origin: top right;
   visibility: hidden;
   pointer-events: none;
   transition:

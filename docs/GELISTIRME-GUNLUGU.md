@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (22:35) — Ekran bilgi kutusu küçültüldü, kapatması kolaylaştı
+
+- **Neden:** kullanıcı «çok yer kaplıyor, kapatması zor» dedi. Kutu ilk girişte 600 px genişlik, ~560 px yükseklikte bütün metni (maddeler, veri, güncelleme, arka plan işleri, yapılabilecekler) açıp ekranın üstünü 15 sn örtüyordu; Esc yalnız odak kutudayken çalışıyor, dışarı tıklamak kapatmıyordu.
+- **Şimdi:** kutu «Bu ekran» düğmesinin altında sağa yaslı 380 px açılır (köken sağ üst). Kendiliğinden açılışta yalnız başlık + özet + «Nasıl çalışır →» (8 sn). Elle açılışta özet + maddeler; veri/güncelleme/işler/yapılabilecekler «Ayrıntılar» altında katlı. Büyük başlık etiketi ve alt not kalktı; kapat düğmesi 36 px. Dışarı tıklama ve Esc her yerden kapatır.
+- Dosyalar: `src/canvas/screenInfo/ScreenInfo.tsx`, `screenInfo.css`, `src/canvas/stitch/Shell.tsx` (yorum). İçerik ve test değişmedi (5/5).
+
 ## 2026-09-29 (22:15) — Müşteri VM'ine `411dd7be9`: hız 4, hazır cevap diski, Zeki kapı; katalog VM'de de yazıldı
 
 - **Ön denetim:** VM'deki son kurulum `1c615b80` ⊂ `411dd7be9` (geriye sarma yok); çakışma işareti 0; arşiv test sunucusunda açılıp `semantic_bridge.app` yüklendi.

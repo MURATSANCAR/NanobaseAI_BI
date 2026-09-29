@@ -99,7 +99,7 @@ export default function Shell({
   const crumbGroup = active ? (active.group.id === 'kampus' ? null : active.group.label) : head.section;
   const crumbItem = active ? active.item.label : head.crumb;
 
-  // Ekran bilgi kutusu: ilk girişte başlığın altında açılır, 15 sn sonra kapanır; «Bu ekran» düğmesi yeniden açar.
+  // Ekran bilgi kutusu: ilk girişte «Bu ekran» düğmesinin altında kısa özet açılır, 8 sn sonra kapanır; düğme tam metni açar.
   const screenInfo = useScreenInfo(active?.item.id, loc.pathname);
 
   // Ham veritabanı adlarının ekrandaki Türkçe yazımı (katalog haritası); her ekran aynı önbellekten okur.

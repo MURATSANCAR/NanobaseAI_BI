@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarClock, Database, Info, RefreshCw, X } from 'lucide-react';
+import { CalendarClock, ChevronRight, Database, Info, RefreshCw, X } from 'lucide-react';
 import type { ScreenInfo, ScreenInfoMap } from './types';
 import './screenInfo.css';
 
-/** Kendiliğinden açılan kutunun ekranda kaldığı süre; fare üstündeyken ya da odak içerideyken sayım durur. */
-export const AUTO_CLOSE_MS = 15_000;
+/** Kendiliğinden açılan kısa kutunun ekranda kaldığı süre; fare üstündeyken ya da odak içerideyken sayım durur. */
+export const AUTO_CLOSE_MS = 8_000;
 const SEEN_KEY = 'timas.screenInfo.seen';
 
 // İçerik ayrı parça: yüzlerce ekranın metni kabuğun ilk yüklemesine binmesin.
@@ -45,6 +45,8 @@ export type ScreenInfoState = {
   auto: boolean;
   toggle: () => void;
   close: () => void;
+  /** Kendiliğinden açılan kısa kutuyu tam metne açar (geri sayım durur). */
+  expand: () => void;
 };
 
 /** Kabuk bir kez çağırır; düğme ve kutu aynı durumu paylaşır. */
@@ -82,7 +84,8 @@ export function useScreenInfo(itemId: string | undefined, pathname: string): Scr
     setOpen((v) => !v);
   }, []);
   const close = useCallback(() => setOpen(false), []);
-  return { info, open, auto, toggle, close };
+  const expand = useCallback(() => setAuto(false), []);
+  return { info, open, auto, toggle, close, expand };
 }
 
 /** Başlık çubuğundaki «Bu ekran» düğmesi. İçeriği olmayan ekranda görünmez. */
@@ -103,22 +106,33 @@ export function ScreenInfoButton({ s }: { s: ScreenInfoState }) {
   );
 }
 
-/** Başlığın altındaki bilgi kutusu. */
+/** «Bu ekran» düğmesinin altında açılan küçük kutu. İlk girişte kendiliğinden yalnız özet görünür; ayrıntı
+ *  (veri, güncelleme, arka plan işleri, yapılabilecekler) katlı durur. Dışarı tıklamak ya da Esc kapatır. */
 export function ScreenInfoPanel({ s, title }: { s: ScreenInfoState; title?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { info, open, auto, close } = s;
+  const { info, open, auto, close, expand } = s;
 
-  // Esc, odak kutunun içindeyken kapatır.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && ref.current?.contains(document.activeElement)) close();
+      if (e.key === 'Escape') close();
+    };
+    // Düğmeye basış toggle'a kalır; yoksa aynı tıklama önce kapatıp sonra yeniden açardı.
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (!t || ref.current?.contains(t) || t.closest('[aria-controls="screen-info"]')) return;
+      close();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown, true);
+    };
   }, [open, close]);
 
   if (!info) return null;
+  const hasDetails = !!(info.data || info.refresh || info.jobs?.length || info.actions?.length);
   return (
     <aside
       id="screen-info"
@@ -126,102 +140,98 @@ export function ScreenInfoPanel({ s, title }: { s: ScreenInfoState; title?: stri
       aria-label="Bu ekran nasıl çalışır"
       aria-hidden={!open}
       data-open={open}
-      className="si-panel print:hidden absolute z-30 left-3 right-3 top-16 sm:left-5 sm:right-auto sm:top-[84px] lg:left-7 sm:w-[min(600px,calc(100%-40px))]"
+      className="si-panel print:hidden absolute z-30 left-3 right-3 top-[60px] sm:left-auto sm:right-5 sm:top-[68px] lg:right-7 sm:w-[380px]"
     >
       <div className="glass-panel shadow-glass-float rounded-2xl overflow-hidden">
-        <div className="max-h-[min(62dvh,560px)] overflow-y-auto px-4 pt-3.5 pb-4 sm:px-5">
-          <div className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet/10 text-violet">
-              <Info aria-hidden className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-muted">Bu ekran nasıl çalışır?</div>
-              {title && <div className="text-[15px] font-extrabold leading-tight text-ink">{title}</div>}
-            </div>
+        <div className="max-h-[min(60dvh,460px)] overflow-y-auto px-4 pt-3 pb-3.5">
+          <div className="flex items-center gap-2">
+            <Info aria-hidden className="h-4 w-4 shrink-0 text-violet" />
+            <div className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-ink">{title || 'Bu ekran'}</div>
             <button
               type="button"
               onClick={close}
               tabIndex={open ? 0 : -1}
-              aria-label="Bilgi kutusunu kapat"
-              className="si-close -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-slate-100 hover:text-ink"
+              aria-label="Kapat"
+              title="Kapat (Esc)"
+              className="si-close -mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-slate-100 hover:text-ink"
             >
               <X aria-hidden className="h-4 w-4" />
             </button>
           </div>
 
-          <p className="mt-2.5 text-[13px] leading-relaxed text-ink">{info.summary}</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-ink/90">{info.summary}</p>
 
-          {info.how.length > 0 && (
-            <ul className="mt-2.5 space-y-1.5">
-              {info.how.map((h) => (
-                <li key={h} className="flex gap-2 text-[12.5px] leading-snug text-ink/90">
-                  <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-violet/60" />
-                  <span>{h}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {(info.data || info.refresh) && (
-            <dl className="mt-3 grid gap-1.5 rounded-xl bg-slate-50/80 px-3 py-2.5 text-[12px] sm:grid-cols-2 sm:gap-3">
-              {info.data && (
-                <div className="flex gap-2">
-                  <Database aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />
-                  <div>
-                    <dt className="font-bold text-ink">Veri</dt>
-                    <dd className="text-muted">{info.data}</dd>
-                  </div>
-                </div>
+          {auto ? (
+            <button
+              type="button"
+              onClick={expand}
+              tabIndex={open ? 0 : -1}
+              className="mt-2 text-[12px] font-bold text-violet hover:underline"
+            >
+              Nasıl çalışır →
+            </button>
+          ) : (
+            <>
+              {info.how.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {info.how.map((h) => (
+                    <li key={h} className="flex gap-2 text-[12px] leading-snug text-ink/85">
+                      <span aria-hidden className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-violet/70" />
+                      <span>{h}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
-              {info.refresh && (
-                <div className="flex gap-2">
-                  <RefreshCw aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />
-                  <div>
-                    <dt className="font-bold text-ink">Güncelleme</dt>
-                    <dd className="text-muted">{info.refresh}</dd>
+
+              {hasDetails && (
+                <details className="si-details group mt-2.5 border-t border-slate-200/70 pt-2">
+                  <summary className="flex cursor-pointer list-none items-center gap-1 text-[12px] font-bold text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+                    <ChevronRight aria-hidden className="h-3.5 w-3.5 transition-transform duration-150 group-open:rotate-90" />
+                    Ayrıntılar
+                  </summary>
+                  <div className="mt-2 space-y-2 text-[12px] leading-snug">
+                    {info.data && (
+                      <div className="flex gap-2">
+                        <Database aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />
+                        <div><span className="font-bold text-ink">Veri: </span><span className="text-muted">{info.data}</span></div>
+                      </div>
+                    )}
+                    {info.refresh && (
+                      <div className="flex gap-2">
+                        <RefreshCw aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />
+                        <div><span className="font-bold text-ink">Güncelleme: </span><span className="text-muted">{info.refresh}</span></div>
+                      </div>
+                    )}
+                    {info.jobs?.map((j) => (
+                      <div key={j.name + j.when} className="flex gap-2">
+                        <CalendarClock aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />
+                        <div>
+                          <span className="font-bold text-ink">{j.name}</span>
+                          <span className="text-violet"> · {j.when}</span>
+                          <div className="text-muted">{j.what}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {info.actions && info.actions.length > 0 && (
+                      <ul className="space-y-0.5 pt-0.5">
+                        {info.actions.map((a) => (
+                          <li key={a} className="flex gap-2 text-ink/85">
+                            <span aria-hidden className="text-violet">→</span>
+                            <span>{a}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                </div>
+                </details>
               )}
-            </dl>
+            </>
           )}
-
-          {info.jobs && info.jobs.length > 0 && (
-            <section className="mt-3">
-              <h3 className="flex items-center gap-1.5 text-[12px] font-bold text-ink">
-                <CalendarClock aria-hidden className="h-3.5 w-3.5 text-muted" /> Arka planda kendiliğinden
-              </h3>
-              <ul className="mt-1.5 space-y-1.5">
-                {info.jobs.map((j) => (
-                  <li key={j.name + j.when} className="rounded-lg border border-slate-200/70 bg-white/60 px-2.5 py-1.5 text-[12px] leading-snug">
-                    <span className="font-bold text-ink">{j.name}</span>
-                    <span className="text-violet"> · {j.when}</span>
-                    <div className="text-muted">{j.what}</div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {info.actions && info.actions.length > 0 && (
-            <section className="mt-3">
-              <h3 className="text-[12px] font-bold text-ink">Burada neler yapabilirsiniz</h3>
-              <ul className="mt-1 space-y-1">
-                {info.actions.map((a) => (
-                  <li key={a} className="flex gap-2 text-[12.5px] leading-snug text-ink/90">
-                    <span aria-hidden className="text-violet">→</span>
-                    <span>{a}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <p className="mt-3 text-[11px] text-muted">Bu kutuyu sağ üstteki «Bu ekran» düğmesiyle istediğiniz zaman yeniden açabilirsiniz.</p>
         </div>
         {/* Geri sayım: yalnız kendiliğinden açıldığında; bitince kutu kapanır. */}
         {open && auto && (
-          <div className="h-[3px] bg-violet/10" aria-hidden>
-            <div className="si-countdown h-full bg-violet/60" style={{ animationDuration: `${AUTO_CLOSE_MS}ms` }} onAnimationEnd={close} />
+          <div className="h-0.5 bg-violet/10" aria-hidden>
+            <div className="si-countdown h-full bg-violet/50" style={{ animationDuration: `${AUTO_CLOSE_MS}ms` }} onAnimationEnd={close} />
           </div>
         )}
       </div>
