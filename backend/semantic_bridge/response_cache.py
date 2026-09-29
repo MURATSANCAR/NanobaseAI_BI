@@ -246,7 +246,8 @@ class ResponseCache:
             try:
                 meta = json.loads(meta_path.read_text())
                 key = tuple(meta["key"])
-                if now - float(meta.get("asked", 0)) > KEEP_SECONDS:
+                # Saklanmayacak yol (sonradan dışarıda bırakılmış): eski kayıt yüklenip arkada sürekli tazelenmez.
+                if now - float(meta.get("asked", 0)) > KEEP_SECONDS or not cacheable_path(str(key[1])):
                     self._unlink(key)
                     self.stats["dropped"] += 1
                     continue

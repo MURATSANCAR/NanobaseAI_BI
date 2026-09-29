@@ -151,6 +151,15 @@ def test_ready_answers_survive_a_restart_without_cookies(tmp_path):
     assert list(tmp_path.iterdir()) == [] and RC.ResponseCache(str(tmp_path)).get(key) is None
 
 
+def test_disk_answer_of_a_path_excluded_later_is_not_loaded(tmp_path):
+    """Yol sonradan saklanmayanlara alındıysa diskteki eski kayıt yüklenmez (arkada her turda tazelenmez) ve silinir."""
+    key = ("ayse", "/api/v1/editorial/contracts/compare/meta", "")
+    first = RC.ResponseCache(str(tmp_path))
+    first.put(key, b'{"n": 1}', [("content-type", "application/json")], 200, 2.0, {})
+    again = RC.ResponseCache(str(tmp_path))
+    assert again.get(key) is None and again.due() == [] and list(tmp_path.glob("*.meta.json")) == []
+
+
 def test_disk_answers_of_another_code_version_are_stale(tmp_path, monkeypatch):
     """Kurulumdan sonra eski kodun diskteki hazır cevabı kaybolmaz ama bayattır: hemen gelir, arkada yeniden üretilir."""
     key = ("ayse", "/api/v1/stock/overview", "")
