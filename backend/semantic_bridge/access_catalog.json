@@ -678,6 +678,42 @@
       "label": "CRM veri sağlığı"
     },
     {
+      "key": "sayfa:ik-anasayfa",
+      "area": "ik",
+      "label": "İK ana sayfası"
+    },
+    {
+      "key": "sayfa:ik-profilim",
+      "area": "ik",
+      "label": "Profilim (özlük kaydım)"
+    },
+    {
+      "key": "sayfa:ik-rehber",
+      "area": "ik",
+      "label": "Personel rehberi"
+    },
+    {
+      "key": "sayfa:ik-duyurular",
+      "area": "ik",
+      "label": "Şirket içi duyurular"
+    },
+    {
+      "key": "sayfa:ik-evrak",
+      "area": "ik",
+      "label": "Evrak deposu ve evrak talebi"
+    },
+    {
+      "key": "sayfa:ik-sss",
+      "area": "ik",
+      "label": "İK sık sorulan sorular"
+    },
+    {
+      "key": "sayfa:ik-yonetim",
+      "area": "ik",
+      "label": "İK yönetimi (özlük, portal içeriği, alanlar)",
+      "explicit": true
+    },
+    {
       "key": "sayfa:ik-ise-alim",
       "area": "ik",
       "label": "İşe alım panosu",
@@ -2405,6 +2441,47 @@
       "page": "sayfa:kurumsal-iliskiler",
       "label": "Gizli notları okuma",
       "hint": "Başkalarının «yalnız ben ve katılımcılar» işaretli temas notlarının metnini görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.ozluk-gor",
+      "area": "ik",
+      "page": "sayfa:ik-yonetim",
+      "label": "Personel özlük kartlarını görme",
+      "hint": "İK yönetimi › Personel: liste ve kart (hassas olmayan alanlar); İK ana sayfasındaki kadro sayıları",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.ozluk-duzenle",
+      "area": "ik",
+      "page": "sayfa:ik-yonetim",
+      "label": "Personel özlük kaydını düzenleme",
+      "hint": "Personel ekleme/düzeltme, belge yükleme, Excel'den aktarma ve Excel'e verme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.ozluk-hassas",
+      "area": "ik",
+      "page": "sayfa:ik-yonetim",
+      "label": "Hassas özlük verisi",
+      "hint": "T.C. kimlik no, IBAN, adres, sağlık (kan grubu, engel), yakın bilgisi ve özlük belgelerini görme/yazma; kaydı belgeleriyle silme",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.portal-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-yonetim",
+      "label": "İK portal içeriği",
+      "hint": "Duyuru, evrak deposu, evrak talepleri, yemek listesi ve sık sorulan sorular",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.alan-ayar",
+      "area": "ik",
+      "page": "sayfa:ik-yonetim",
+      "label": "Personel alanları ve listeler",
+      "hint": "Alan adı, seçenekleri, zorunluluk, sayfa görünürlüğü, hassas işareti; evrak tipi ve kategori listeleri",
       "explicit": true
     },
     {

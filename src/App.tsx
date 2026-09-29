@@ -126,6 +126,15 @@ const CandidateDrawer = lazy(() => import('@/canvas/hr/recruit/CandidateDrawer')
 const PositionEditor = lazy(() => import('@/canvas/hr/recruit/PositionEditor'));
 const HrTemplatesScreen = lazy(() => import('@/canvas/hr/recruit/TemplatesScreen'));
 const HrRecordsScreen = lazy(() => import('@/canvas/hr/records/HrRecordsScreen'));
+const HrHome = lazy(() => import('@/canvas/hr/portal/HrHome'));
+const HrProfile = lazy(() => import('@/canvas/hr/portal/Profile'));
+const HrDirectory = lazy(() => import('@/canvas/hr/portal/Directory'));
+const HrPosts = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.PostsPage })));
+const HrBirthdays = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.BirthdaysPage })));
+const HrMenu = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.MenuPage })));
+const HrDocs = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.DocsPage })));
+const HrFaq = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.FaqPage })));
+const HrAdmin = lazy(() => import('@/canvas/hr/portal/admin/HrAdmin'));
 const MyLearning = lazy(() => import('@/canvas/hr/learning/MyLearning'));
 const LearningDashboard = lazy(() => import('@/canvas/hr/learning/LearningDashboard'));
 const LearningCourses = lazy(() => import('@/canvas/hr/learning/CoursesScreen'));
@@ -365,6 +374,16 @@ export default function App() {
             <Route path="ik/pozisyonlar" element={<PositionEditor />} />
             <Route path="ik/belgeler" element={<HrTemplatesScreen />} />
             <Route path="ik/kayitlar" element={<HrRecordsScreen />} />
+            {/* İK personel portalı (/api/v1/hr/portal): İK ana sayfası, Profilim, rehber, duyuru, doğum günü, yemek, evrak, SSS, İK yönetimi. */}
+            <Route path="ik" element={<HrHome />} />
+            <Route path="ik/profilim" element={<HrProfile />} />
+            <Route path="ik/rehber" element={<HrDirectory />} />
+            <Route path="ik/duyurular" element={<HrPosts />} />
+            <Route path="ik/dogum-gunleri" element={<HrBirthdays />} />
+            <Route path="ik/yemek" element={<HrMenu />} />
+            <Route path="ik/evrak" element={<HrDocs />} />
+            <Route path="ik/sss" element={<HrFaq />} />
+            <Route path="ik/yonetim" element={<HrAdmin />} />
             {/* M43 Depo ve stok (Lojistik): stok, kitap stok kartı, bitecekler, fazla stok, güvenlik stoku, Logo–CRM farkı,
                 aktarım hataları, depo hattı (/api/v1/stock). */}
             <Route path="stok" element={<StockHome />} />

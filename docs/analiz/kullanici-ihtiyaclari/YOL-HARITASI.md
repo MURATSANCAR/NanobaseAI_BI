@@ -18,7 +18,7 @@ Kaynak: kullanıcıyla «Yol haritamız» oturumu. Ayrıntı: bu klasördeki ana
    - Dijital ve müşteri: M38, M37, M34, M35, M36, M39.
    - Platform ve lojistik: M42, M40, M41, M43, M44, M52.
    - Yönetim: DYK (bütün modüllerin göstergeleri; en son).
-   - İK: M57, M55, M56, M58.
+   - İK: M57, M55, M56, M58; personel portalı (2026-09-29); sonra M60 izin yönetimi + İK e-posta bildirimleri (F1: bildirim kuyruğu + evrak talebi bildirimi + izin talep/onay/bakiye; F2: ekip takvimi, hakediş gece işi, bordro listesi).
 
 ## Sonraya bırakılanlar (açık notlar)
 

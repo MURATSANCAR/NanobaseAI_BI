@@ -375,12 +375,81 @@ const CONTENT: ScreenInfoMap = {
     refresh: 'Anlık',
     actions: ['Aksiyon ekleyin (yetkiyle).', 'Aksiyonun durumunu ve notunu güncelleyin.'],
   },
+  'ik-anasayfa': {
+    summary: 'İnsan Kaynakları’nın giriş sayfası: profiliniz, personel rehberi, duyurular, doğum günleri, yemek listesi, evrak ve sık sorulan sorular. İK yetkilisi kadro özetini de görür.',
+    how: [
+      'Kutucuklar yetkinize göre görünür; performans, eğitim ve anket kutucukları o sayfa size açıksa çıkar.',
+      'Doğum günleri bugün ve önümüzdeki 7 günü, duyurular en yeni üçünü gösterir.',
+      'İK özeti yalnız özlük kaydını görme yetkisi olana görünür; rakamlar İK’nın girdiği özlük kayıtlarındandır.',
+      'Çalışma izni ve askerlik tecili bitişi, ayardaki gün sayısı kadar önce «Yaklaşan tarihler»e düşer.',
+    ],
+    data: 'İK’nın özlük kayıtları, duyurular, yemek listesi ve evrak talepleri',
+    refresh: 'Sayfayı her açtığınızda',
+  },
+  'path:/ik/dogum-gunleri': {
+    summary: 'Aktif çalışanların doğum günleri, ay ay.',
+    how: ['Yalnız gün ve ay görünür; yaş ve doğum yılı gösterilmez.', 'Liste İK’nın özlük kaydındaki doğum tarihinden gelir.'],
+    data: 'İK’nın özlük kayıtları',
+  },
+  'path:/ik/yemek': {
+    summary: 'Şirket yemekhanesinin iki haftalık menüsü.',
+    how: ['Menüyü İK her hafta girer; girilmeyen gün boş görünür.', 'Bugünün menüsü İK ana sayfasında da görünür.'],
+    data: 'İK’nın girdiği yemek listesi',
+  },
+  'ik-profilim': {
+    summary: 'İK’daki özlük kaydınızın size açık bölümü ve dosyanıza yüklenmiş belgeler.',
+    how: [
+      'Hangi bilginin burada görüneceğini İK alan ayarlarından belirler.',
+      'Sayfa portal hesabınızla ya da şirket e-postanızla eşleşen kaydı gösterir.',
+      'Yanlış bir bilgi varsa Evrak talebi ekranından not bırakın ya da İK ile görüşün; buradan değiştirilmez.',
+    ],
+    data: 'İK’nın özlük kaydı',
+  },
+  'ik-rehber': {
+    summary: 'Aktif çalışanların departman, unvan ve iletişim bilgileri.',
+    how: [
+      'Departmana göre gruplanır; ada, unvana, ekibe ve dahili numaraya göre aranır.',
+      'Rehberde yalnız İK’nın «rehber» işaretlediği alanlar görünür; hassas bilgi hiç görünmez.',
+      'E-postaya dokununca e-posta, şirket hattına dokununca arama açılır.',
+    ],
+    data: 'İK’nın özlük kayıtları',
+  },
+  'ik-duyurular': {
+    summary: 'İK’nın yayımladığı şirket içi duyurular: etkinlik, işe giriş, kutlama ve genel duyurular.',
+    how: ['En yeni duyuru en üstte.', 'İleri tarihli duyuru yayın günü kendiliğinden görünür.'],
+    data: 'İK’nın yayımladığı duyurular',
+  },
+  'ik-evrak': {
+    summary: 'İK formlarını ve rehberlerini indirin; çalışma belgesi, bordro, hizmet dökümü gibi belgeleri İK’dan isteyin.',
+    how: [
+      'Talebiniz İK’nın kuyruğuna düşer; durumunu (bekliyor, hazırlanıyor, hazır) buradan izlersiniz.',
+      'İK henüz ele almadıysa talebinizi geri alabilirsiniz.',
+      'Portal belgeyi kendiliğinden göndermez; İK seçtiğiniz teslim şekliyle iletir.',
+    ],
+    data: 'İK’nın evrak deposu ve evrak talepleri',
+  },
+  'ik-sss': {
+    summary: 'İzin, ücret, çalışma düzeni ve eğitim hakkında İK’nın cevapları.',
+    how: ['Kategoriye göre gruplanır; soruya dokununca cevap açılır.', 'Soru ve cevabı arayabilirsiniz.'],
+    data: 'İK’nın yazdığı sorular',
+  },
+  'ik-yonetim': {
+    summary: 'Personel özlük kayıtlarını ve belgelerini girin, Excel’den yükleyin; duyuru, evrak, yemek listesi, sık sorulan sorular ve alan ayarlarını yönetin.',
+    how: [
+      'Excel yüklemesi önce önizleme gösterir; personel no ile eşleşir, boş hücre var olan bilgiyi silmez, hatalı satır varken hiçbir şey yazılmaz.',
+      'T.C. kimlik, IBAN, adres, sağlık ve belgeler yalnız «Hassas özlük verisi» yetkisiyle görünür; yönetici bile bu yetkiyi rolüyle alır.',
+      'Kart açma, belge indirme ve Excel’e aktarma İK erişim kaydına düşer.',
+      'Alanlar sekmesinde her alanın adı, seçenekleri, zorunluluğu ve hangi sayfada görüneceği ayarlanır.',
+    ],
+    data: 'İK’nın özlük kayıtları ve portal içeriği',
+    refresh: 'Siz kaydedince',
+  },
   'ik-kayitlar': {
     summary:
       'İK modüllerinin ortak kaydı: çalışan ve birim listesi, aydınlatma metinleri, açık rıza, saklama süreleri ve imha tutanakları, İK erişim kaydı.',
     how: [
       'Çalışan ve birim listesi CRM ve Active Directory’den öneri olarak gelir, İK onaylayınca yazılır; CRM’e hiçbir şey yazılmaz.',
-      'T.C. kimlik no, adres, ücret ve sağlık bilgisi tutulmaz; bilgisayar kullanmayan çalışan elle eklenir.',
+      'Bu listede T.C. kimlik no, adres, ücret ve sağlık bilgisi tutulmaz (özlük dosyası İK yönetiminde); bilgisayar kullanmayan çalışan elle eklenir.',
       'Saklama süresi veri türü başına girilir; süre girilmemiş türde imha yapılmaz.',
       'İK kişisel veri yetkileri portal yöneticisine kendiliğinden verilmez; rol bağlamak değişiklik kaydına düşer.',
     ],

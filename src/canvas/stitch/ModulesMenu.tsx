@@ -101,7 +101,7 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Altyapı & Destek': { to: '/sistem-durumu', hint: 'Sistem durumu, olaylar ve zamanlanmış işler' },
   'Bayi & Kitapçı Risk Yönetimi': { to: '/bayi-risk', hint: 'Günlük risk skoru, alacak yaşlandırması, limit önerisi ve risk brifi' },
   'Müşteri & Pazar': { to: '/musteri-iliskileri', hint: 'Cari değeri, kayıp riski, CRM veri sağlığı, kurumsal e-posta, pazar ve rakip' },
-  'İnsan Kaynakları': { to: '/ik/performansim', hint: 'Performansım, anketlerim, öneri kutusu, işe alım ve KVKK kayıtları' },
+  'İnsan Kaynakları': { to: '/ik', hint: 'İK ana sayfası: profilim, rehber, duyurular, evrak, yemek listesi; İK yönetimi ve kadro özeti' },
   'Dijital & Topluluk': { to: '/e-ticaret', hint: 'E-ticaret platform durumu, farklar, huni, kampanyalar, dijital yayın ve okurlar' },
   'Platform Yönetimi': { to: '/kanallar', hint: 'Kanal karnesi, pazar yerleri, D2C, Trendyol ve Amazon' },
   Lojistik: { to: '/stok', hint: 'Depo ve stok, kargo hattı, tedarik ve baskı yükü, tedarikçiler' },

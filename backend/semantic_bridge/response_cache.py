@@ -78,6 +78,8 @@ NEVER_PREFIXES = (
     # Sözleşme karşılaştırmanın kendi disk görüntüsü ve arka plan yenilemesi var (CRM'i yeniden oku, kurlar); ikinci
     # önbellek yenilenen görüntüyü 07:00/12:00'ye kadar gizliyordu (2026-09-29 kabulünde bulundu).
     "/api/v1/editorial/contracts/compare",
+    # İK personel portalı: kişisel veri diske yazılmasın; kart açılışı her seferinde erişim kaydına düşsün.
+    "/api/v1/hr/portal/",
 )
 #: Yolun herhangi bir yerinde geçen parça → hiç saklanmaz (yoklama, ilerleme, dosya).
 NEVER_PARTS = re.compile(
