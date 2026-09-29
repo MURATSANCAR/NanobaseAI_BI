@@ -489,3 +489,47 @@ def test_reklam_kitap_listesi_eski_hesap_yeni_hesap_ve_bellek():
     crm.books(["SD"], fresh=True)
     assert fake.say("kitap kartları") == 3                                       # «fresh» kaynağı bekler
 
+
+# ------------------------------------------------------------------ M24 katalog ve bülten: rapor
+
+
+def test_bulten_raporu_crm_kampanyalari_bellekten(portal, monkeypatch):
+    from types import SimpleNamespace
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from semantic_bridge import admin as admin_mod
+    from semantic_bridge import board as board_mod
+    from semantic_bridge import catalogs_api as CA
+    from semantic_bridge import catalogs_sources as S
+
+    cid = "5A1B2C3D-1111-2222-3333-444455556666"
+    fake = SayanCrm({
+        "obs_kampanyagonderimleriBase": [{"kampanya": cid, "gonderim": 10, "okunan": 4, "tiklanan": 1, "son": "2026-09-01"}],
+        "FROM Timas_MSCRM.dbo.CampaignBase": [{"id": cid, "ad": "Eylül bülteni", "tur": 2, "durum": 0, "baslangic": "2026-09-01",
+                                               "toplam": 10, "okunan": 4, "tiklanan": 1, "kara_liste": 0}]})
+    monkeypatch.setattr(CA.S, "runner", lambda path: fake)
+    monkeypatch.setattr(admin_mod, "conf", lambda k, d="": d)
+    monkeypatch.setattr(board_mod, "session_of", lambda cookie, **kw: ("ayse", "Ayşe"))
+    rt = SimpleNamespace(store=SimpleNamespace(engine=portal), settings=SimpleNamespace(tenant_id="t1", connection_file="/yok"))
+    app = FastAPI()
+    CA.register(app, lambda: rt, lambda r: None, lambda u, k: True)
+    c = TestClient(app)
+    h = {"cookie": "timas_session=a"}
+    r1 = c.get("/api/v1/catalog-newsletter/report", headers=h).json()
+    eski = S.read_campaigns(SayanCrm(fake.cevap), "Timas_MSCRM.dbo")         # eski uç: her istekte bu çağrı
+    assert r1["crm"] == eski and r1["crm"][0]["gonderimKaydi"] == 10 and not r1["kaynaklar"].get("error")
+    assert fake.say("CampaignBase") == 1
+    assert c.get("/api/v1/catalog-newsletter/report", headers=h).json()["crm"] == eski and fake.say("CampaignBase") == 1
+    y = {**h, "x-data-refresh": "1"}
+    assert c.get("/api/v1/catalog-newsletter/report", headers=y).json()["crm"] == eski
+    assert fake.say("CampaignBase") == 1                                          # 60 sn'den genç: yeniden okunmaz
+    from semantic_bridge import hizli_bellek as HB
+
+    _eskit(HB.KAYIT["katalog.crm-kampanya"], "Timas_MSCRM.dbo", 120)
+    t0 = time.monotonic()
+    assert c.get("/api/v1/catalog-newsletter/report", headers=y).json()["crm"] == eski
+    assert time.monotonic() - t0 < 1.5
+    assert _bekle(lambda: fake.say("CampaignBase") == 2)                          # «Verileri yenile»: arkada okundu
+
