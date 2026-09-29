@@ -5,14 +5,21 @@ carries the portal's signed-in AD user in `X-Editor` so the Editor records a per
 rather than "the portal".
 """
 from __future__ import annotations
+import hashlib
+import io
 import json
+import logging
 import os
+import queue
 import re
 import threading
 import time
 import urllib.parse
 import uuid
+from pathlib import Path
 import httpx
+
+log=logging.getLogger(__name__)
 
 
 def _headers():
@@ -28,12 +35,28 @@ def _headers():
     return base,headers,os.environ.get('EDITOR_CATALOG_CA_FILE','')
 
 
+# Kart servisine giden okumalar tek, açık tutulan bağlantı havuzundan (CA dosyası başına bir istemci). Önceden her istek
+# yeni istemci kuruyordu: internet üzerinden (TT GPU nginx) her kapak için yeniden TLS el sıkışması, listede onlarca kapak
+# birden istendiğinde istek başına 4–5 sn (2026-09-29 ölçümü). httpx.Client iş parçacıkları arasında paylaşılabilir.
+_clients: dict[str, httpx.Client] = {}
+_clients_lock = threading.Lock()
+
+
+def _client(ca: str) -> httpx.Client:
+    with _clients_lock:
+        c = _clients.get(ca or '')
+        if c is None or c.is_closed:
+            c = httpx.Client(timeout=20, verify=ca or True, follow_redirects=False,
+                             limits=httpx.Limits(max_connections=16, max_keepalive_connections=8, keepalive_expiry=60))
+            _clients[ca or ''] = c
+        return c
+
+
 def request(path: str):
     base,headers,ca=_headers()
-    with httpx.Client(timeout=20,verify=ca or True,follow_redirects=False) as client:
-        r=client.get(base+path,headers=headers)
-        r.raise_for_status()
-        return r
+    r=_client(ca).get(base+path,headers=headers)
+    r.raise_for_status()
+    return r
 
 
 def request_json(method: str, path: str, json=None, editor: str=''):
@@ -73,21 +96,311 @@ def page(book_id: str, page_no: int, width: int = 0):
     return r.content,mime
 
 
-# Kısa süreli katalog belleği: sohbet listesi her soru satırı için kitap kimliği çözer; kart servisine
-# satır başına gitmemek için liste 60 sn tutulur. Yalnız kimlik çözümü bu belleği kullanır.
+# Katalog belleği. Kart servisi kataloğu kitap başına birkaç sorguyla kurar ve internet üzerinden gelir: tek okuma
+# 9–10 sn (2026-09-29). Liste bellekte ve diskte (`EDITORIAL_CARDS_CACHE_DIR`) durur; editoryal masanın beş dakikalık
+# turu (`catalogue_refresh`) tazeler, köprü yeniden başlayınca diskteki son liste hemen okunur.
+# - Kimlik çözümü (`catalogue_cached`): 60 sn'den eskiyse bekleyerek tazeler (önceki davranış).
+# - Ekran listesi (`catalogue_snapshot`): elindekini hemen verir; 60 sn'den eskiyse arkada tazeler. «Yenile» beklenir.
 _CATALOGUE_TTL=60.0
 _catalogue_cache={'items':None,'at':0.0}
 _catalogue_lock=threading.Lock()
+_catalogue_busy=threading.Lock()
+
+
+def cache_root():
+    """Kart belleğinin klasörü; açılamazsa None (yalnız bellekte çalışılır)."""
+    d=os.environ.get('EDITORIAL_CARDS_CACHE_DIR','/data/nanobaseai/bi/var/editorial-cards')
+    try:
+        p=Path(d)
+        (p/'covers').mkdir(parents=True,exist_ok=True,mode=0o700)
+        return p
+    except OSError:
+        return None
+
+
+def _atomic_write(path: Path, data: bytes) -> None:
+    tmp=path.with_name('.'+path.name+'.'+uuid.uuid4().hex+'.tmp')
+    try:
+        with open(tmp,'wb') as f:
+            f.write(data)
+        os.chmod(tmp,0o600)
+        os.replace(tmp,path)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def _catalogue_load_disk():
+    root=cache_root()
+    if root is None: return None
+    try:
+        value=json.loads((root/'catalogue.json').read_text())
+        if isinstance(value,dict) and isinstance(value.get('items'),list):
+            return value['items'],float(value.get('at') or 0)
+    except (OSError,ValueError):
+        pass
+    return None
+
+
+def _catalogue_store(items) -> None:
+    now=time.time()
+    with _catalogue_lock:
+        _catalogue_cache['items'],_catalogue_cache['at']=list(items),now
+    root=cache_root()
+    if root is not None:
+        try:
+            _atomic_write(root/'catalogue.json',json.dumps({'items':items,'at':now},ensure_ascii=False,default=str).encode())
+        except OSError:
+            pass
+
+
+def _catalogue_current():
+    """Bellekteki (yoksa diskteki) liste ve zamanı; hiç yoksa (None, 0)."""
+    with _catalogue_lock:
+        if _catalogue_cache['items'] is not None:
+            return list(_catalogue_cache['items']),_catalogue_cache['at']
+    disk=_catalogue_load_disk()
+    if disk is None: return None,0.0
+    with _catalogue_lock:
+        if _catalogue_cache['items'] is None:
+            _catalogue_cache['items'],_catalogue_cache['at']=list(disk[0]),disk[1]
+    return list(disk[0]),disk[1]
+
+
+def catalogue_refresh():
+    """Kart servisinden bütün liste (bekler); belleğe ve diske yazar, kapakları arkada hazırlatır."""
+    items=catalogue()
+    _catalogue_store(items)
+    warm_covers(items)
+    return items
+
+
+def _catalogue_refresh_later() -> None:
+    if not _catalogue_busy.acquire(blocking=False):
+        return
+    def run():
+        try:
+            catalogue_refresh()
+        except Exception:  # noqa: BLE001 — eski liste korunur, sonraki açılışta yeniden denenir
+            log.warning('kitap kartları arkada tazelenemedi', exc_info=True)
+        finally:
+            _catalogue_busy.release()
+    threading.Thread(target=run,daemon=True,name='editorial-catalogue').start()
 
 
 def catalogue_cached():
-    with _catalogue_lock:
-        fresh=_catalogue_cache['items'] is not None and time.monotonic()-_catalogue_cache['at']<_CATALOGUE_TTL
-        if fresh: return list(_catalogue_cache['items'])
-    items=catalogue()
-    with _catalogue_lock:
-        _catalogue_cache['items'],_catalogue_cache['at']=list(items),time.monotonic()
+    items,at=_catalogue_current()
+    if items is not None and time.time()-at<_CATALOGUE_TTL:
+        return items
+    return catalogue_refresh()
+
+
+def catalogue_snapshot(fresh: bool=False):
+    """Ekran listesi: elindeki liste hemen döner (eskiyse arkada tazelenir); hiç yoksa ya da «Yenile» ise beklenir."""
+    if fresh:
+        return catalogue_refresh()
+    items,at=_catalogue_current()
+    if items is None:
+        return catalogue_refresh()
+    if time.time()-at>=_CATALOGUE_TTL:
+        _catalogue_refresh_later()
     return items
+
+
+# ------------------------------------------------------------------ kapak belleği (küçük boy, diskte)
+# Kart servisi kapağı kitabın tam boy sayfa render'ı olarak verir (çoğu PNG, MB'larca); ekranda en geniş kapak 112 px.
+# Köprü kapağı bir kez alır, `COVER_WIDTH` genişliğe küçültür (WebP; Pillow yoksa olduğu gibi) ve diske yazar. Sonraki
+# istek diskten döner. `COVER_TTL`'den eski kayıt yine hemen döner, arkada koşullu istekle (If-None-Match /
+# If-Modified-Since → 304) doğrulanır: editörün yüklediği yeni kapak en geç birkaç dakika sonra görünür. Kapağı
+# olmayan kitap da (404) kaydedilir; katalogda kapağı yok görünen kitap için kart servisine hiç gidilmez.
+COVER_TTL=300.0
+COVER_WIDTH=int(os.environ.get('EDITORIAL_COVER_WIDTH','360') or 360)
+_COVER_MIMES=('image/png','image/jpeg','image/webp')
+_covers_mem: dict[str, tuple[dict, bytes]] = {}
+_covers_lock=threading.Lock()
+_cover_queue: 'queue.Queue[str]' = queue.Queue()
+_cover_pending: set[str] = set()
+_cover_workers: list[threading.Thread] = []
+COVER_WORKERS=4
+
+
+def _cover_paths(identifier: str):
+    root=cache_root()
+    if root is None: return None
+    return root/'covers'/(identifier+'.json'),root/'covers'/(identifier+'.bin')
+
+
+def _cover_load(identifier: str):
+    paths=_cover_paths(identifier)
+    if paths is None:
+        with _covers_lock:
+            hit=_covers_mem.get(identifier)
+        return (dict(hit[0]),hit[1]) if hit else (None,b'')
+    meta_path,bin_path=paths
+    try:
+        meta=json.loads(meta_path.read_text())
+    except (OSError,ValueError):
+        return None,b''
+    if meta.get('state')!='ok':
+        return meta,b''
+    try:
+        return meta,bin_path.read_bytes()
+    except OSError:
+        return None,b''
+
+
+def _cover_save(identifier: str, meta: dict, data: bytes=b'') -> None:
+    paths=_cover_paths(identifier)
+    if paths is None:
+        with _covers_lock:
+            _covers_mem[identifier]=(dict(meta),data)
+        return
+    meta_path,bin_path=paths
+    try:
+        if meta.get('state')=='ok':
+            _atomic_write(bin_path,data)
+        _atomic_write(meta_path,json.dumps(meta).encode())
+    except OSError:
+        with _covers_lock:
+            _covers_mem[identifier]=(dict(meta),data)
+
+
+def shrink_cover(data: bytes, mime: str, width: int=0):
+    """Kapağın en fazla `width` px genişlikte kopyası (WebP; Pillow'da WebP yoksa JPEG). Pillow yoksa, görsel
+    okunamazsa ya da küçültmek kazandırmıyorsa özgün bayt döner."""
+    width=width or COVER_WIDTH
+    try:
+        from PIL import Image, features
+    except ImportError:
+        return data,mime
+    try:
+        with Image.open(io.BytesIO(data)) as im:
+            im.load()
+            if im.width>width:
+                im=im.resize((width,max(1,round(im.height*width/im.width))),Image.Resampling.LANCZOS)
+            alpha='A' in im.getbands() or im.mode=='P'
+            buf=io.BytesIO()
+            if features.check('webp'):
+                im=im.convert('RGBA' if alpha else 'RGB')
+                im.save(buf,'WEBP',quality=82,method=4)
+                out_mime='image/webp'
+            else:
+                if alpha:
+                    rgba=im.convert('RGBA')
+                    bg=Image.new('RGB',rgba.size,(255,255,255))
+                    bg.paste(rgba,mask=rgba.getchannel('A'))
+                    im=bg
+                else:
+                    im=im.convert('RGB')
+                im.save(buf,'JPEG',quality=85,optimize=True,progressive=True)
+                out_mime='image/jpeg'
+    except Exception:  # noqa: BLE001 — küçültülemeyen kapak olduğu gibi sunulur
+        log.info('kapak küçültülemedi',exc_info=True)
+        return data,mime
+    small=buf.getvalue()
+    return (small,out_mime) if len(small)<len(data) else (data,mime)
+
+
+def _cover_fetch(identifier: str, meta):
+    """Kart servisinden kapak; elde doğrulanmış kopya varsa koşullu istek. Dönen (meta, bayt).
+    Ağ/sunucu hatası yükseltilir (kayıt değiştirilmez)."""
+    base,headers,ca=_headers()
+    h=dict(headers)
+    if meta and meta.get('state')=='ok':
+        if meta.get('upstreamEtag'): h['If-None-Match']=meta['upstreamEtag']
+        if meta.get('upstreamModified'): h['If-Modified-Since']=meta['upstreamModified']
+    r=_client(ca).get(base+'/v1/books/'+identifier+'/cover',headers=h)
+    now=time.time()
+    if r.status_code==304 and meta and meta.get('state')=='ok':
+        return dict(meta,checkedAt=now),None
+    if r.status_code==404:
+        return {'state':'missing','checkedAt':now},b''
+    r.raise_for_status()
+    mime=r.headers.get('content-type','').split(';')[0]
+    if mime not in _COVER_MIMES or len(r.content)>15*1024*1024:
+        return {'state':'missing','checkedAt':now},b''
+    data,out_mime=shrink_cover(r.content,mime)
+    return {'state':'ok','mime':out_mime,'etag':'"'+hashlib.sha256(data).hexdigest()[:24]+'"',
+            'upstreamEtag':r.headers.get('etag'),'upstreamModified':r.headers.get('last-modified'),
+            'checkedAt':now,'bytes':len(data),'sourceBytes':len(r.content)},data
+
+
+def _cover_refresh(identifier: str, meta, data: bytes):
+    new_meta,new_data=_cover_fetch(identifier,meta)
+    if new_data is None:          # 304: bayt aynı, yalnız doğrulama zamanı
+        _cover_save(identifier,new_meta,data)
+        return new_meta,data
+    _cover_save(identifier,new_meta,new_data)
+    return new_meta,new_data
+
+
+def _cover_worker() -> None:
+    while True:
+        identifier=_cover_queue.get()
+        try:
+            meta,data=_cover_load(identifier)
+            if meta is None or meta.get('fromCatalogue') or time.time()-float(meta.get('checkedAt') or 0)>=COVER_TTL:
+                _cover_refresh(identifier,None if meta is not None and meta.get('state')!='ok' else meta,data)
+        except Exception:  # noqa: BLE001 — eski kayıt korunur; sonraki istekte yeniden denenir
+            log.info('kapak arkada doğrulanamadı: %s',identifier,exc_info=True)
+        finally:
+            with _covers_lock:
+                _cover_pending.discard(identifier)
+            _cover_queue.task_done()
+
+
+def _cover_later(identifier: str) -> None:
+    with _covers_lock:
+        if identifier in _cover_pending:
+            return
+        _cover_pending.add(identifier)
+        while len(_cover_workers)<COVER_WORKERS:
+            t=threading.Thread(target=_cover_worker,daemon=True,name=f'editorial-cover-{len(_cover_workers)}')
+            _cover_workers.append(t)
+            t.start()
+    _cover_queue.put(identifier)
+
+
+def warm_covers(cards) -> None:
+    """Katalog turunda: kapağı olmayan kitap «yok» diye kaydedilir (kart servisine gidilmez); kapağı olan ve elde
+    olmayan ya da doğrulaması eskiyen kapak arkada hazırlanır. Ekran açıldığında kapaklar diskten gelir."""
+    now=time.time()
+    for c in cards or []:
+        try:
+            identifier=str(uuid.UUID(str(c.get('id'))))
+        except (ValueError,TypeError,AttributeError):
+            continue
+        meta,_=_cover_load(identifier)
+        if not c.get('cover'):
+            if meta is None or meta.get('state')!='missing':
+                _cover_save(identifier,{'state':'missing','checkedAt':now,'fromCatalogue':True})
+            continue
+        if meta is None or meta.get('fromCatalogue') or now-float(meta.get('checkedAt') or 0)>=COVER_TTL:
+            _cover_later(identifier)
+
+
+def cover_thumb(book_id: str):
+    """Listelerdeki kapak: (bayt, mime, etag). Kapak yoksa KeyError. Elde kayıt varsa hemen döner (eskiyse arkada
+    doğrulanır); ilk kez istenen kapak beklenir."""
+    identifier=str(uuid.UUID(book_id))
+    meta,data=_cover_load(identifier)
+    if meta is not None and meta.get('fromCatalogue') and meta.get('state')=='missing':
+        meta=None if _catalogue_says_cover(identifier) else meta
+    if meta is None:
+        meta,data=_cover_refresh(identifier,None,b'')
+    elif time.time()-float(meta.get('checkedAt') or 0)>=COVER_TTL:
+        _cover_later(identifier)
+    if meta.get('state')!='ok':
+        raise KeyError(book_id)
+    return data,meta['mime'],meta['etag']
+
+
+def _catalogue_says_cover(identifier: str) -> bool:
+    """Bellekteki katalog bu kitabın kapağı olduğunu söylüyor mu (katalog, «yok» kaydından yeniyse)."""
+    items,_=_catalogue_current()
+    for c in items or []:
+        if str(c.get('id') or '').lower()==identifier:
+            return bool(c.get('cover'))
+    return False
 
 
 def _card_names(card):
@@ -132,7 +445,7 @@ def find_by_crm(title: str, isbn: str=''):
     wanted_isbn=_digits(isbn)
     wanted_title=(title or '').strip().casefold()
     if not wanted_isbn and not wanted_title: return None
-    cards=catalogue()
+    cards=catalogue_cached()
     def crm(c): return c.get('publisher') or {}
     if wanted_isbn:
         hit=[c for c in cards if _digits(crm(c).get('isbn'))==wanted_isbn]

@@ -4632,7 +4632,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             from semantic_bridge import editorial_cards, editorial_books
             if not editorial_books.configured():
                 return {"items": [], "configured": False, "loading": False, "at": time.time()}
-            cards = editorial_cards.catalogue()
+            # Aynı okuma kitap kartı listesinin belleğini (/ask/catalog) ve kapak belleğini de tazeler.
+            cards = editorial_cards.catalogue_refresh()
             titles = list(dict.fromkeys(c["title"] for c in cards if c.get("contentAvailable") and c.get("title")))
             return {"items": titles, "configured": True, "loading": False, "at": time.time()}
 
@@ -6515,11 +6516,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/ask/catalog")
     def editorial_ask_catalog(request: Request) -> dict[str, Any]:
         """Kitap kartları (kimlik, ad, kapak var/yok, yayınevi kaydı): sohbet çipleri ve kitap detayı kapağı
-        buradan kimlik bulup `covers/{id}` ucunu çağırır. {qid} ucundan önce tanımlı."""
+        buradan kimlik bulup `covers/{id}` ucunu çağırır. {qid} ucundan önce tanımlı. Liste köprünün belleğinden
+        (editoryal masa turu beş dakikada bir, açılışta 60 sn'den eskiyse arkada tazeler); «Yenile» kart servisini bekler."""
         _books(request)
         from semantic_bridge import editorial_cards
         try:
-            return {"items": [editorial_cards.public_card(c) for c in editorial_cards.catalogue()]}
+            cards = editorial_cards.catalogue_snapshot(fresh=FORCE_FRESH.get())
+            return {"items": [editorial_cards.public_card(c) for c in cards]}
         except Exception as e:
             raise HTTPException(502, "Kitap kartları alınamadı.") from e
 
@@ -6712,15 +6715,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         """Kitap listelerindeki kapak. Bir listede onlarca kapak birden istenir; `no-cache` her ekran açılışında hepsini
         yeniden istetiyor, kapağı olmayan kitabın 404'ü de her seferinde tekrarlanıyordu (kitap tasarım listesinde 20
         kapağın 14'ü 404, ikinci açılışta 429). Bulunan ve bulunamayan kapak 5 dk tarayıcıda kalır; editörün yüklediği
-        yeni kapak en geç 5 dk sonra görünür."""
+        yeni kapak en geç 5 dk sonra görünür.
+
+        2026-09-29: kapak her istekte kart servisinden (internet, tam boy sayfa render'ı) çekiliyordu, istek başına 4–5 sn.
+        Artık köprünün diskindeki küçük boy kopyadan döner (`editorial_cards.cover_thumb`); ETag ile 5 dk sonraki
+        tarayıcı doğrulaması 304 alır, süre dolunca tarayıcı eldekini gösterip arkada doğrular."""
         _books(request)
         from semantic_bridge import editorial_cards
-        cache = {"Cache-Control": "private, max-age=300"}
+        cache = {"Cache-Control": "private, max-age=300, stale-while-revalidate=86400"}
         try:
-            data, mime = editorial_cards.cover(book_id)
-            return Response(content=data, media_type=mime, headers=cache)
-        except Exception:
+            data, mime, etag = editorial_cards.cover_thumb(book_id)
+        except KeyError:
             raise HTTPException(404, "Kapak görseli bulunamadı.", headers=cache) from None
+        except Exception:
+            # Kart servisine ulaşılamadı: bulunamadı diye tarayıcıda saklanmaz, sonraki açılış yeniden dener.
+            raise HTTPException(404, "Kapak görseli bulunamadı.", headers={"Cache-Control": "private, no-store"}) from None
+        headers = dict(cache, ETag=etag)
+        if etag in [t.strip() for t in request.headers.get("if-none-match", "").split(",")]:
+            return Response(status_code=304, headers=headers)
+        return Response(content=data, media_type=mime, headers=headers)
 
     @app.get("/api/v1/editorial/ask/pages/{book_id}/{page_no}")
     def editorial_book_page(book_id: str, page_no: int, request: Request, w: int = 0):
