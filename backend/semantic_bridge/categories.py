@@ -1795,6 +1795,16 @@ def decide_tag(engine: sa.engine.Engine, tenant: str, actor: str, tag: str, stat
 
 
 def overview(engine: sa.engine.Engine, tenant: str, me_crm_id: Optional[str]) -> dict[str, Any]:
+    """Özet ekranı: herkes için aynı kısım (`overview_ortak`) + kişinin onayını bekleyenler (`my_pending`)."""
+    out = overview_ortak(engine, tenant)
+    out["mine"] = my_pending(engine, tenant, me_crm_id)
+    return out
+
+
+def overview_ortak(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+    """Özetin kişiye bağlı olmayan kısmı: bütün etkin profillerin CRM kopyası okunup sayılır (ağır kısım). `mine`
+    yeri boş bırakılır (anahtar sırası `overview` ile aynı kalsın); kişiye özel sayı `my_pending` ile doldurulur.
+    Köprü bunu süreç belleğinde tutar ve profil/ağaç/kural yazan her uçta düşürür (`categories_api`)."""
     P = PROFILES.c
     with engine.connect() as c:
         rows = c.execute(sa.select(PROFILES.c.status, PROFILES.c.crm_snapshot_json, PROFILES.c.priority_score,
@@ -1843,7 +1853,7 @@ def overview(engine: sa.engine.Engine, tenant: str, me_crm_id: Optional[str]) ->
                      "labels": {k: d["label"] for k, d in RULE_DEFS.items()}},
         "tree": {"inForce": live, "draft": dr}, "sync": sync, "priority": pr,
         "tsoft": {"syncedAt": ts.get("syncedAt"), "products": ts.get("products"), "categories": len(ts.get("categories") or {})},
-        "mine": my_pending(engine, tenant, me_crm_id), "crmDiff": {"rows": diff["total"], "stale": diff["stale"], "books": diff["books"]},
+        "mine": None, "crmDiff": {"rows": diff["total"], "stale": diff["stale"], "books": diff["books"]},
         "thresholds": thresholds(),
     }
 

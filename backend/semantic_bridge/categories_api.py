@@ -29,6 +29,7 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import categories as C
 from semantic_bridge import categories_kaynak as CK
+from semantic_bridge import hizli_bellek as HB
 from semantic_bridge import provenance as PV
 from semantic_bridge import sorgu_izi as IZ
 from semantic_bridge import categories_propose as CP
@@ -37,6 +38,15 @@ from semantic_bridge import categories_sources as src
 log = logging.getLogger("semantic.categories.api")
 
 CRM_FILE_DEFAULT = "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"
+
+#: Kişinin CRM kullanıcısı (portal hesabı → CRM `SystemUserId`) en çok bu kadar saniyede bir CRM'den yeniden okunur.
+#: Okuma arkadadır; ekran eldeki değeri (süreç belleği, yoksa portal tablosundaki son okuma) beklemeden alır.
+KISI_TAZE = 600
+#: Özetin herkes için aynı kısmı (bütün etkin profillerin CRM kopyası okunup sayılır): profil/ağaç/kural/eşitleme yazan
+#: her yerde düşer ve arkada yeniden hesaplanır. Yazma dışında zamanla değişen tek sayı «N günden eski CRM farkı»dır:
+#: taze pencereden sonra eldeki değer hemen döner, aynı anda arkada yeniden hesaplanır.
+OZET_TAZE = 60
+OZET_BAYAT = 12 * 3600
 
 
 class Job:
@@ -63,8 +73,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     from semantic_bridge import board as board_mod
 
     job = Job()
-    me_cache: dict[str, tuple[float, Optional[str]]] = {}
     stats_cache: dict[tuple, dict[str, Any]] = {}
+    # Hız (2026-09-29): ekranı açan kişi canlı CRM'i ve bütün profillerin taranmasını beklemesin.
+    kisi_bellek = HB.Bellek("kategori.crm-kisi", taze=float("inf"), en_cok=4096)
+    ozet_bellek = HB.Bellek("kategori.ozet", taze=OZET_TAZE, bayat=OZET_BAYAT, en_cok=16)
 
     def crm_file() -> str:
         return os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", CRM_FILE_DEFAULT)
@@ -76,8 +88,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             out = fn()
         if not isinstance(out, dict):
             return out
+        return kaynak_bagla(engine, tenant, out, ran, prefix=prefix, title=title, text=text, skip=skip, crm=crm, logo=logo)
+
+    def kaynak_bagla(engine, tenant: str, out: dict[str, Any], ran: list, *, prefix: str, title: str, text: str,
+                     skip: tuple = (), crm: bool = True, logo: bool = True, description: str = "") -> dict[str, Any]:
+        """`ran`: rakamları üreten portal okumaları (bellekten gelen kısımda onu hesaplayan okumanın ifadeleri)."""
         dbs = (PV.connection_database(rt().settings.connection_file), PV.connection_database(crm_file()))
         return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix=prefix, title=title, text=text, skip=skip,
+                                               description=description,
                                                origin=lambda k: CK.origin(k, engine, tenant, *dbs, crm=crm, logo=logo)))
 
     def schema() -> str:
@@ -111,24 +129,78 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     def audit(engine, user, action, kind, oid, title, detail=None) -> None:
         admin_mod.audit(engine, user, action, kind, oid, title, detail)
+        if kind != "category_export":
+            # Her yazma ucu işini yazdıktan sonra buraya gelir: özet belleği düşer, arkada yeniden hesaplanır.
+            yazildi(engine, rt().settings.tenant_id)
+
+    def _kisi_meta_key(user: str) -> Optional[str]:
+        key = "crm_me:" + (user or "").strip().lower()
+        return key if len(key) <= 60 else None   # tablo anahtarı 60 karakter; uzun hesap adı yalnız süreç belleğinde
+
+    def _kisi_canli(engine, tenant: str, user: str) -> dict[str, Any]:
+        """CRM'den okur (`editorial_assign.crm_me`, yeni bağlantı) ve portal tablosuna yazar (köprü yeniden kalkınca
+        kişi CRM'i beklemesin). CRM okunamazsa hata yükselir: eldeki değer kalır, hiç yoksa çağıran None verir."""
+        from semantic_bridge import editorial_assign as M2
+
+        run = src.runner(crm_file())
+        me = M2.crm_me(schema(), lambda sql: {"records": run(sql)}, user)
+        v = {"id": (me or {}).get("id"), "at": time.time()}
+        key = _kisi_meta_key(user)
+        if key:
+            try:
+                C.meta_set(engine, tenant, key, v)
+            except Exception as e:  # noqa: BLE001 — yazılamazsa bellekte kalır
+                log.info("kategori: %s için CRM kullanıcısı saklanamadı: %s", user, e)
+        return v
+
+    def _kisi_kayitli(engine, tenant: str, user: str) -> Optional[dict[str, Any]]:
+        key = _kisi_meta_key(user)
+        if not key:
+            return None
+        try:
+            v = C.meta_get(engine, tenant, key)
+        except Exception:  # noqa: BLE001 — tablo okunamazsa CRM'den okunur
+            return None
+        return v if isinstance(v, dict) and "at" in v else None
 
     def me_crm(user: str) -> Optional[str]:
-        """Portal hesabı → CRM kullanıcısı (kartın editör / yayın yönetmeni alanıyla karşılaştırmak için). 10 dk bellek."""
-        hit = me_cache.get(user.lower())
-        if hit and time.monotonic() - hit[0] < 600:
-            return hit[1]
-        uid: Optional[str] = None
-        try:
-            from semantic_bridge import editorial_assign as M2
+        """Portal hesabı → CRM kullanıcısı (kartın editör / yayın yönetmeni alanıyla karşılaştırmak için).
 
-            run = src.runner(crm_file())
-            me = M2.crm_me(schema(), lambda sql: {"records": run(sql)}, user)
-            uid = (me or {}).get("id")
+        Sıra: süreç belleği → portal tablosundaki son okuma (`semantic_category_meta`, `crm_me:<hesap>`) → canlı CRM.
+        Değer `KISI_TAZE` saniyeden eskiyse eldeki döner ve CRM arkada yeniden okunur (eski davranış: 10 dk bellek,
+        süresi dolunca ekran CRM'i bekliyordu). Hiç değer yokken CRM okunamazsa None («benim kitaplarım» boş)."""
+        r = rt()
+        engine, tenant = r.store.engine, r.settings.tenant_id
+        acct = (tenant, (user or "").strip().lower())
+        try:
+            C.ensure(engine)
+            v = kisi_bellek.al(acct, lambda: _kisi_kayitli(engine, tenant, user) or _kisi_canli(engine, tenant, user))
         except Exception as e:  # noqa: BLE001 — CRM okunamazsa «benim kitaplarım» boş kalır
             log.info("kategori: %s için CRM kullanıcısı okunamadı: %s", user, e)
-            return hit[1] if hit else None
-        me_cache[user.lower()] = (time.monotonic(), uid)
-        return uid
+            return None
+        if time.time() - float(v.get("at") or 0) >= KISI_TAZE:
+            kisi_bellek.isit(acct, lambda: _kisi_canli(engine, tenant, user))
+        return v.get("id")
+
+    # ------------------------------------------------------------------ özet belleği
+
+    def ozet_anahtari(engine, tenant: str) -> tuple:
+        # Eşikler (ekrandan değişebilir) anahtarda: «N günden eski» sayısı ve çıktıdaki eşikler onlara bağlı.
+        return (id(engine), tenant, tuple(sorted(C.thresholds().items())))
+
+    def ozet_hesapla(engine, tenant: str) -> dict[str, Any]:
+        """Özetin ortak kısmı + onu üreten portal okumaları (sorgu bilgisi bellekten dönen değerde de bu okumadır)."""
+        with IZ.izle(engine) as ran:
+            out = C.overview_ortak(engine, tenant)
+        return {"out": out, "ran": list(ran)}
+
+    def yazildi(engine, tenant: str) -> None:
+        """Profil, ağaç, eşleme, kural, bulgu ya da eşitleme yazıldı: özet düşer ve beklemeden arkada yeniden hesaplanır."""
+        ozet_bellek.dusur()
+        try:
+            ozet_bellek.isit(ozet_anahtari(engine, tenant), lambda: ozet_hesapla(engine, tenant))
+        except Exception as e:  # noqa: BLE001 — ısıtılamazsa sonraki açılış hesaplar
+            log.info("kategori: özet ısıtılamadı: %s", e)
 
     def everyone(user: str) -> bool:
         return can(user, "ozellik:kategori.herkesinki")
@@ -164,6 +236,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         info.update({"at": res["at"], "result": res, "ms": int((time.monotonic() - t0) * 1000)})
         C.meta_set(engine, tenant, "sync", info)
         stats_cache.clear()
+        yazildi(engine, tenant)
         return info
 
     def start_sync(engine, tenant: str, actor: str) -> bool:
@@ -219,6 +292,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         calls = p.calls - before
         out = C.store_proposal(engine, tenant, row["book_id"], props, actor, reset=reset,
                                call_ids=[f"{C.iso(C.now())}:{calls}"] if calls else None)
+        ozet_bellek.dusur()   # profil durumu değişti (toplu öneride kitap başına; ısıtma işin sonunda)
         out["modelCalls"] = calls
         return out
 
@@ -270,14 +344,20 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     @app.get("/api/v1/categories/overview")
     def categories_overview(request: Request) -> dict[str, Any]:
+        """Ortak kısım süreç belleğinden (yazmada düşer; «Verileri yenile» yeniden hesaplatır), kişinin bekleyenleri her
+        istekte kendi sorgusuyla. Sorgu bilgisi: ortak kısmı hesaplayan portal okumaları + bu isteğin okuması."""
         engine, tenant, user, _ = ctx(request)
-
-        def read() -> dict[str, Any]:
-            out = C.overview(engine, tenant, me_crm(user))
-            out["job"] = job.status()
-            return out
-        return izli(engine, tenant, read, prefix="portal.kategori.ozet", title="Kategori ağacı özeti", text=CK.F_OZET,
-                    skip=("job",))
+        uid = me_crm(user)
+        c = ozet_bellek.al(ozet_anahtari(engine, tenant), lambda: ozet_hesapla(engine, tenant),
+                           zorla=request.headers.get("x-data-refresh") == "1")
+        with IZ.izle(engine) as ran:
+            mine = C.my_pending(engine, tenant, uid)
+        out = dict(c["out"])   # bellekteki sözlük değişmesin
+        out["mine"] = mine
+        out["job"] = job.status()
+        return kaynak_bagla(engine, tenant, out, [*c["ran"], *ran], prefix="portal.kategori.ozet",
+                            title="Kategori ağacı özeti", text=CK.F_OZET, skip=("job",),
+                            description="Bu özeti hesaplayan okuma (profil, ağaç ya da eşitleme yazılınca yeniden koşar).")
 
     @app.get("/api/v1/categories/status")
     def categories_status(request: Request) -> dict[str, Any]:
@@ -290,7 +370,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         from semantic_bridge import kampus_kaynak as KK
         from semantic_bridge import sorgu_izi as IZ
 
-        return IZ.izli(engine, lambda: C.my_pending(engine, tenant, me_crm(user)), prefix="portal.kampus.kategori",
+        uid = me_crm(user)   # izlemenin dışında: kişi eşlemesinin okuması sorgu bilgisine girmesin
+        return IZ.izli(engine, lambda: C.my_pending(engine, tenant, uid), prefix="portal.kampus.kategori",
                        title="Onayınızı bekleyen kitap profilleri", text=KK.F_ZIL)
 
     @app.post("/api/v1/categories/refresh")
@@ -324,6 +405,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if propose:
             sec = budget or int(C.fsetting("CATEGORY_BATCH_SECONDS", 3600))
             out["propose"] = run_batch(engine, tenant, float(sec))
+            yazildi(engine, tenant)
         C.meta_set(engine, tenant, "last_run", {"at": C.iso(C.now()), **{k: v for k, v in out.items() if k != "sync"}})
         return out
 
@@ -475,11 +557,12 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/categories/books/{book_id}")
     def categories_book(book_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
+        mine = me_crm(user)   # izlemenin dışında: kişi eşlemesinin okuması sorgu bilgisine girmesin
 
         def read() -> dict[str, Any]:
             out = call(C.book_detail, engine, tenant, book_id)
             row = C.get_profile(engine, tenant, book_id)
-            out["canDecide"] = can(user, "ozellik:kategori.profil-onay") and C.can_decide(row, me_crm(user), everyone(user))
+            out["canDecide"] = can(user, "ozellik:kategori.profil-onay") and C.can_decide(row, mine, everyone(user))
             return out
         return izli(engine, tenant, read, prefix="portal.kategori.kitap", title="Kitap profili", text=CK.F_KITAP)
 
