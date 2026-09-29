@@ -4,6 +4,8 @@
 - `model`: saf hesap (birim maliyetin tek sahibi; M10/M12/M46 buradan çağırır).
 - `sources` + `data`: Logo/CRM'den salt okunur anlık görüntü ve üstündeki hesaplar.
 - `store`: analizler, onaylar, elle girilen pazar fiyatları, varsayılanlar, toplu zam teklifleri (kendi tablolarımız).
+- `dagitim`: dağıtımcı kataloğundan (M39 Başarı/D&R tabloları) kategori fiyat dağılımı; ortanca tek tıkla pazar
+  fiyatı olarak eklenir, `recommend()`'e o yoldan girer.
 - `cost_provider`: öbür modüllere (M32, M33, M53) kitap birim maliyeti — onaylı analiz → Logo gerçekleşen → yok.
 
 CRM'e, Logo'ya, e-ticarete yazılmaz. Uçlar `/api/v1/pricing/*`; sayfa `sayfa:fiyatlama`, yazma `ozellik:fiyatlama.yaz`,
@@ -398,6 +400,29 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         audit(engine, user, "approve" if body.get("decision") == "onay" else "reject", "pricing_analysis", aid,
               out["title"], {"rol": S.APPROVERS.get(role), "surum": out["version"], "durum": out["statusLabel"]})
         return out
+
+    # ---- dağıtımcı kataloğundan pazar fiyatı (M39 portal tabloları; Logo görüntüsü gerekmez)
+    @app.get("/api/v1/pricing/distributor")
+    def pricing_distributor(request: Request, code: str = "", kategori: str = "", pages: Optional[float] = None,
+                            kapak: str = "") -> dict[str, Any]:
+        """Kitabın kategorisinde TİMAŞ dışı başlıkların liste fiyatı dağılımı. `kategori` verilirse o Başarı kategorisi
+        (tam yol ya da üst kategori); sayfa ve kapak verilmezse kitabın künyesinden."""
+        from semantic_bridge.pricing import dagitim as DG
+        engine, tenant, _, _ = ses(request)
+        snap = snaps.get()
+        det = D.book_detail(snap, code) if (snap and code) else None
+        spec = (det or {}).get("spec") or {}
+        out = DG.suggest(engine, tenant, code=code or None, kategori=kategori.strip() or None,
+                         library=((det or {}).get("book") or {}).get("library"),
+                         pages=pages if pages and pages > 0 else spec.get("pages"), kapak=kapak or spec.get("binding"))
+        return P.bagla(out, lambda: K.for_distributor(engine, tenant, out))
+
+    @app.get("/api/v1/pricing/distributor/categories")
+    def pricing_distributor_categories(request: Request) -> dict[str, Any]:
+        from semantic_bridge.pricing import dagitim as DG
+        engine, tenant, _, _ = ses(request)
+        out = DG.categories(engine, tenant)
+        return P.bagla(out, lambda: K.for_distributor_categories(engine, tenant, out))
 
     # ---- pazar fiyatları
     @app.post("/api/v1/pricing/market", status_code=201)

@@ -119,6 +119,12 @@
 - **Telif varsayılanı:** kitaptan ve yeni kitaptan **kapak fiyatı × basılan adet** (`royaltyBase: kapak`, `royaltyOn: baski`); CRM sözleşme türü «Telif» bölümünün açıklamasında yazar, seçimle değiştirilir. Bilgi metinleri (KDV, telif tabanı/doğuşu, kapak fiyatı, telif) buna göre.
 - **Mükemmeliyetçi Kişilik −%19:** hesap son baskının adediyle (10. baskı, 500 adet, 06.08.2026); 800 adetlik iç fire 500 adette basılanın 1,6 katı. Şablon küçük baskı için değil; küçük baskı Excel'i gelince eklenecek.
 - **Bekleyen sorular:** muhasebe — kâğıt alışındaki KDV maliyet mi (sistem ve Excel kâğıdı KDV hariç alıyor); yönetim — dolaylı gider telife uygulanacak mı; üretim — küçük baskı Excel'i.
+## 2026-09-29 (akşam, 4) — Fiyatlama: dağıtımcı kataloğundan pazar fiyatı önerisi
+
+- **Neden:** rakip/pazar fiyatı yalnız elle giriliyordu; Başarı kataloğu (234 bin başlık) kategori fiyat dağılımını hazır veriyor.
+- **Köprü:** `pricing/dagitim.py` — kitabın Başarı kategorisinde TİMAŞ grubu dışı, son görüntüde bulunan, fiyatlı başlıkların liste fiyatı ortanca/çeyrekleri ve n (`model.quantile`, emsal bandıyla aynı hesap), ₺/sayfa ortancası, aynı barkodun D&R satış ÷ D&R liste oranı (sitelerden silinmiş hariç); süzgeçsiz ve son iki basım yılı. Sayfa ±%20 ve kapak sınıfı (karton/sert/fleksi/tel) ancak en az 5 başlık kalırsa daraltır, kalmazsa ekran yazar. Kategori: kitabın kendi Başarı kaydı (Logo barkodu ↔ stok kodu) → CRM kitaplık adının katlanmış ad eşleşmesi → kullanıcının seçimi (`/distributor/categories`). Uçlar `GET /api/v1/pricing/distributor`, `GET /api/v1/pricing/distributor/categories`; sorgu bilgisi `kaynak.for_distributor*` (portal kümesi + Başarı/D&R okumaları köken).
+- **Ekran:** Fiyatlama › Kitap hesabı'nda «Dağıtımcı kataloğundaki fiyatlar» kutusu (yeni sayfa yok); kaynak tarihi GG.AA.YYYY; «Pazar fiyatı olarak ekle» ortancayı mevcut `POST /market` ile «Rakip ve pazar fiyatları»na yazar → `recommend()` emsal bandına ve onaya giden analize girer (hesap tek yerde, `model.py`).
+- **Test:** `test_pricing_dagitim.py` (yüzdelik, süzgeç, boş küme, kategori çözümü, sorgu bilgisi). Mac'te koşturulmadı; koordinatör test sunucusunda koşturacak.
 
 ## 2026-09-29 (akşam, 3) — Sadeleştirme turunda bulunan 11 mantık hatası düzeldi
 

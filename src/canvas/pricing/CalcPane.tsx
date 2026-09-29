@@ -32,6 +32,7 @@ import { CALC_HELP as CH, FORM_HELP } from './help';
 import { CostGroups, Lines, MobileBar, ResultCard, setters } from './CostForm';
 import type { Kaynaklar } from '../components/sqlInfo';
 import MarketPrices from './MarketPrices';
+import DistributorPrices from './DistributorPrices';
 import { Explain } from '../components/Explain';
 
 /** Ekrandaki girdiler: baskı hizmeti ve kâğıt ayrı kutularda, hesaba toplamları gider. */
@@ -494,6 +495,15 @@ export default function CalcPane({ ov }: { ov: Overview }) {
           )}
           {!ov.me.canWrite && <Note tone="info">Hesap sizde görünür; analizi kaydetmek ve onaya göndermek «Fiyat analizi hazırlama» yetkisi ister.</Note>}
 
+          <DistributorPrices
+            code={code ?? analysis.data?.stockCode ?? null}
+            pages={spec.pages}
+            binding={spec.binding}
+            analysisId={aid}
+            crmBookId={book.data?.book.id ?? analysis.data?.crmBookId ?? null}
+            canWrite={ov.me.canWrite}
+            readOnly={readOnly}
+          />
           {aid && analysis.data && <MarketPrices analysis={analysis.data} canWrite={ov.me.canWrite} />}
         </>
       )}
