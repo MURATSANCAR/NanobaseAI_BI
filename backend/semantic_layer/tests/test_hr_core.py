@@ -84,6 +84,24 @@ def test_hr_endpoint_rules():
     assert not [k for _, _, k in A.FEATURE_RULES if k.startswith("ozellik:ik.")]
 
 
+def test_employee_record_is_full_only_for_records_role():
+    """Eğitim/işe alım/belgeler sayfasıyla gelen kişi seçicinin rehber alanlarını alır; giriş/çıkış tarihi, hesap ve
+    kaynak kimlikleri yalnız kayıtları yöneten İK'da (çalışan düzenleme ya da Çalışan ve KVKK kayıtları sayfası)."""
+    from semantic_bridge import hr_api
+
+    trainer = H.Who(user="egitmen", display="E", admin=False, keys=frozenset({"sayfa:ik-egitim"}))
+    records = H.Who(user="ik", display="I", admin=False, keys=frozenset({"sayfa:ik-kayitlar"}))
+    editor = H.Who(user="ik2", display="I2", admin=False, keys=frozenset({"ozellik:ik.calisan-yonet"}))
+    assert not hr_api.sees_full_record(trainer)
+    assert hr_api.sees_full_record(records) and hr_api.sees_full_record(editor)
+    full = {"id": "e1", "username": "ayse", "adGuid": "g1", "crmSystemUserId": "u1", "displayName": "Ayşe", "unitId": "b1",
+            "unitName": "Editörya", "managerId": "e0", "title": "Editör", "startDate": "2020-01-01", "endDate": None,
+            "status": "aktif", "statusLabel": "Etkin", "source": {"title": "crm"}, "updatedBy": "ik", "updatedAt": None}
+    view = hr_api.directory_view(full)
+    assert set(view) == {"id", "displayName", "unitId", "unitName", "title", "status", "statusLabel"}
+    assert "startDate" not in view and "username" not in view and "crmSystemUserId" not in view
+
+
 # ------------------------------------------------------------------ çalışan önerisi
 
 
