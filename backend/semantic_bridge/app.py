@@ -4600,13 +4600,23 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return IZ_mod.izlenir(prefix, title, text, engine=lambda: rt().store.engine,
                               dbs=lambda: SK.databases(rt().settings.connection_file), **kw)
 
+    # Önbellek parçasını dolduran CRM metinleri: uç, parçayı zaten okuduysa sorgu bilgisi için ikinci kez diskten
+    # okunmaz (yazar giriş parçası bütün projelerin olgularıdır, her okuma MB'larca JSON). Bağlam isteğe özeldir.
+    _PART_SQL: ContextVar[Optional[list]] = ContextVar("editorial_part_sql", default=None)
+
     def _intake_part_sql(out: Any) -> list:
+        seen = _PART_SQL.get()
+        if seen is not None:
+            return list(seen)
         try:
             return list(((app.state.editorial_intake.read().get("parts") or {}).get("intake") or {}).get("sql") or [])
         except Exception:  # noqa: BLE001
             return []
 
     def _home_parts_sql(out: Any) -> list:
+        seen = _PART_SQL.get()
+        if seen is not None:
+            return list(seen)
         return [x for part in ((out or {}).get("parts") or {}).values() if isinstance(part, dict)
                 for x in (part.get("sql") or [])]
 
@@ -4682,7 +4692,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if FORCE_FRESH.get():
             app.state.editorial_home.refresh(force=True)
         response.headers["Cache-Control"] = "private, no-store"
-        return dict(app.state.editorial_home.read(), works=works)
+        snap = app.state.editorial_home.read()
+        # Parçayı dolduran CRM metinleri ekrana ayrıca gitmez: sorgu bilgisine («i») bir kez girer (kaynaklar).
+        _PART_SQL.set([x for part in snap["parts"].values() if isinstance(part, dict) for x in (part.get("sql") or [])])
+        parts = {name: {k: v for k, v in part.items() if k != "sql"} if isinstance(part, dict) else part
+                 for name, part in snap["parts"].items()}
+        return dict(snap, parts=parts, works=works)
 
     # ------------------------------------------------------------------ yazar giriş süreci
     # Müşterinin 9 adımlık akışı. Dinleyici: CRM beş dakikada bir baştan okunur, sonuç diske yazılır
@@ -4759,12 +4774,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, _, is_admin = _intake_ctx(request)
         if FORCE_FRESH.get():
             app.state.editorial_intake.refresh(force=True)
-        snap, part = _intake_snapshot()
+        full = app.state.editorial_intake.read()          # tek okuma (önceden üç kez: pano, aralık, sorgu bilgisi)
+        part = full["parts"].get("intake") or {}
+        snap = part.get("data") or {}
+        _PART_SQL.set(list(part.get("sql") or []))
         response.headers["Cache-Control"] = "private, no-store"
         out = intake_mod.board(snap, intake_mod.all_marks(engine, tenant), user, today=_today(),
                                late_days=_int_conf("EDITORIAL_INTAKE_LATE_DAYS", 14), everyone=is_admin)
         return dict(out, loading="data" not in part, updatedAt=part.get("updatedAt"), error=part.get("error"),
-                    refreshIntervalSeconds=app.state.editorial_intake.read()["refreshIntervalSeconds"])
+                    refreshIntervalSeconds=full["refreshIntervalSeconds"])
 
     @app.get("/api/v1/editorial/intake/meetings")
     @_izle_ep('crm.editoryal.kurul', 'Yayın kurulu toplantıları',
@@ -8301,6 +8319,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return await call_next(request)
         finally:
             boot_mod.IN_REQUEST.reset(token)
+
+    # JSON cevapları gzip'li (istemci isterse, 1 KB üstü): CSV→Excel çeviricisinin hemen içinde, öteki katmanların dışında.
+    from semantic_bridge import gzip_json
+    gzip_json.install(app)
 
     # CSV indiren her uca Excel eşi: `bicim=xlsx` isteğinde CSV cevabı Excel'e çevrilir (en dış katman; kapı ve yetki aynı).
     # Açılış kapısından sonra eklenir ki en dışta kalsın: kapının «hazırlanıyor» cevabı JSON olduğu için çevrilmez.
