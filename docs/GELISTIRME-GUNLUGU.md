@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (öğleden sonra, 3) — Onay penceresi test sunucusunda tıklanarak denendi: 21/21
+
+- **Yol:** timasai 30 dk oturumu (silindi, kalan 0) + sunucuda görünmez tarayıcı, telefon 390 px. Test sunucusunda listeler boştu; her deneme için «ONAY-TESTİ» işaretli kayıt açıldı → silme düğmesi → pencere açıldı mı (alttan, tam genişlik, yatay taşma 0) → «Vazgeç» (kayıt duruyor mu, köprüden sorgulandı) → yeniden → onay → kayıt gitti mi.
+- **Geçen 7 silme:** matbaa kapasite kaydı, kargo kararı, terim, çeviri belleği dosyası (TMX), yayın kurulu oturumu («Oturumu sil»), ihale dosyası, ihale. Açılan 7 test kaydının hepsi onay penceresiyle silindi; kalan yok.
+- **Denenemeyen:** çeviri işi («Vazgeç» testi — iş listesi o anda boş döndü; nedenine bakmak izin denetiminde durdu), pozisyon kapatma (pozisyon silme ucu yok, test pozisyonu kalıcı kalırdı), panel yüklemesi, başvuru dosyası, kargo taslağı, hak kaydı (gerçek dosya/sipariş/kitap gerektirir). Bunlar derleme, tür denetimi ve ortak bileşenin aynı olmasıyla güvence altında; tıklanmadı.
+- **Kalan iz:** testin yazma işlemleri değişiklik kaydına (`semantic_audit`) timasai adıyla düştü (yaklaşık 14 satır: 7 açma + 7 silme). Silmek için veritabanı bilgisi gerekiyordu; okuması izin denetiminde reddedildi, satırlar duruyor.
+
 ## 2026-09-29 — Ekran sayıları Logo (.25) ve CRM (.28) ile aynı anda denetlendi; kitap profili penceresi ekranda
 
 - **İstek (kullanıcı):** «verilere bakarken logo ve crm tarafını paralel bak». Önceki doğrulama yalnız portal önbelleğine (semantic_*) bakıyordu. Tek sunucu betiği, iki iş parçacığı (Logo `LOGODATABASEN`, CRM `CRMDATBASE`), 21 sn, salt okuma.
