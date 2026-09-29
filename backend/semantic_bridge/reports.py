@@ -1141,6 +1141,11 @@ def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetche
             status = "ready" if rep.get("recipients") else "no_recipient"
         # Düzendeki bir kolon artık sonuçta yoksa dosya yine üretilir ama bu kayda yazılır.
         note = f"Not: şu kolonlar bu çalışmada sonuçta yoktu: {', '.join(dropped)}" if dropped else None
+        # ZEKI-54: soruda istenen ama bu kurulumda okunamayan kolon (ör. öteki sunucudaki yazar) raporun durum metninde.
+        omitted = [str(o.get("sentence")) for o in (((answer.get("semantic") or {}).get("query") or {}).get("omitted") or [])
+                   if isinstance(o, dict) and o.get("sentence")]
+        if omitted:
+            note = " ".join(([note] if note else []) + omitted)
         upd.update(sql=sql[:50000], last_file=str(path), last_rows=len(rows), last_status=status, last_error=note)
     except Exception as e:  # noqa: BLE001
         msg = str(e) if isinstance(e, ReportError) else f"Rapor üretilemedi: {str(e)[:400]}"

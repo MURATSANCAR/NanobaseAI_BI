@@ -2258,6 +2258,12 @@ class ExistingCompiler:
             # that reading: without it "alacak" was quietly answered as the sum of invoices issued.
             "## ÇÖZÜMLENEMEYEN TERİMLER (her biri için sorgunun EN BAŞINA -- yorum: '<kelime>' → <hangi tablo/kolon, hangi hesap> satırı yaz)\n"
             + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
+            # ZEKI-54: asked as a column, readable nowhere this statement can reach. Named so the model does
+            # not invent a reading for it (it turned "yazar" into a customer-code filter); the answer says so.
+            *(["## CEVABA ALINMAYAN KOLONLAR (bunlar için kolon, süzgeç ya da yorum YAZMA; cevap bunlarsız)\n"
+               + ", ".join(str(o.get("term")) for o in q.omitted)] if q.omitted else []),
+            *(["## KOLON OLARAK İSTENENLER (yorumunu SELECT'te kolon olarak göster; WHERE/HAVING süzgecine ÇEVİRME)\n"
+               + ", ".join(q.column_terms)] if q.column_terms else []),
             # The person spelled out the report they want, column by column. Without this the model
             # sees only the words and routinely turns a requested column into a filter — the channel
             # asked for as the first column comes back as a WHERE and never appears in the result.

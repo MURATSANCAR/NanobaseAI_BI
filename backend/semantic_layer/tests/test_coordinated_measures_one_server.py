@@ -99,6 +99,59 @@ def test_with_plans_on_the_same_phrase_stays_for_the_plan(catalog, profiles, mon
     assert "NEW_KITAPBASE" in {s.mapping.entity for s in sq.slots if s.mapping}, sq.explanation
 
 
+def test_with_plans_off_a_column_listed_among_columns_on_the_other_server_is_omitted_and_said(catalog, profiles, monkeypatch):
+    """ZEKI-54 (a): "… kanal kitap yazarı …" — sütunların arasında sayılan, yalnız CRM'de olan kolon modele
+    bırakılmaz (model onu bir süzgece çeviriyordu); cevap Logo'dan, kolon eklenmeden ve adıyla söylenerek."""
+    monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
+    sq = _two_server_world(catalog, profiles).resolve("2026 satılan adet kanal kitap yazarı", today=TODAY)
+    assert "NEW_KITAPBASE" not in {s.mapping.entity for s in list(sq.slots) + list(sq.group_by) if s.mapping}, sq.explanation
+    assert not any("yazar" in fold(str(w)) for w in sq.unresolved), sq.unresolved
+    sentences = {fold(o["term"]): o["sentence"] for o in sq.omitted}
+    assert "kitap yazari" in sentences, sq.omitted
+    assert "CRM verisinde" in sentences["kitap yazari"] and "eklenmedi" in sentences["kitap yazari"], sentences
+
+
+def test_a_word_beside_the_measure_keeps_its_old_reading(catalog, profiles, monkeypatch):
+    """Ölçünün yanında ("satılan adet ve kitap yazarı") kelime kolon listesinde değil: eski okuma (modele yorum)."""
+    monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
+    sq = _two_server_world(catalog, profiles).resolve("2026 satılan adet ve kitap yazarı", today=TODAY)
+    assert "kitap yazari" in sq.unresolved and not sq.omitted, (sq.unresolved, sq.omitted)
+
+
+def test_an_unplaced_word_listed_as_a_column_is_omitted_with_plans_off_and_held_as_a_column_with_plans_on(catalog, profiles, monkeypatch):
+    """ZEKI-54 (a): katalogda hiç karşılığı olmayan "yazar", kolon sırasında ("kanal yazar") istendi. Plan kapalı:
+    modele bırakılmaz, cevaba alınmaz, söylenir. Plan açık: modele kalır ama kapı onu kolon olarak tutar."""
+    r = _sales_world(catalog, profiles)
+    monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
+    sq = r.resolve("2026 satılan adet kanal yazar", today=TODAY)
+    assert "yazar" not in sq.unresolved, sq.unresolved
+    assert [fold(o["term"]) for o in sq.omitted] == ["yazar"], sq.omitted
+    assert "eklenmedi" in sq.omitted[0]["sentence"]
+    monkeypatch.setenv("SEMANTIC_FEDERATED", "1")
+    sq = r.resolve("2026 satılan adet kanal yazar", today=TODAY)
+    assert "yazar" in sq.unresolved and "yazar" in sq.column_terms and not sq.omitted, (sq.unresolved, sq.column_terms)
+
+
+def test_the_gate_refuses_a_column_the_model_turned_into_a_filter():
+    """ZEKI-54 (b): kolon olarak istenen terimin yorumu, sorgunun satırları sabit bir değere daralttığı kolona
+    iniyorsa cevap reddedilir; aynı kolon yalnız gösteriliyorsa reddedilmez."""
+    from semantic_layer.history.sql_facts import parse_sql
+    from semantic_layer.runtime.audit import _columns_turned_into_filters
+    sq = SemanticQuery(question="dünkü satış adedi kanal kitap adı yazar", tenant_id=TENANT, datasource_id=DS)
+    sq.column_terms = ["yazar"]
+    filtered = ("-- yorum: 'yazar' → CLCARD.SPECODE = 'YAZARLAR' filtresi\n"
+                "SELECT cl.SPECODE AS yazar, SUM(s.AMOUNT) AS adet FROM STLINE s JOIN CLCARD cl ON cl.LOGICALREF = s.CLIENTREF "
+                "WHERE cl.SPECODE = 'YAZARLAR' GROUP BY cl.SPECODE")
+    found = _columns_turned_into_filters(sq, filtered, parse_sql(filtered))
+    assert found and found[0].kind == "column_filter" and "yazar" in found[0].text, found
+    shown = ("-- yorum: 'yazar' → CLCARD.SPECODE kolonu\n"
+             "SELECT cl.SPECODE AS yazar, SUM(s.AMOUNT) AS adet FROM STLINE s JOIN CLCARD cl ON cl.LOGICALREF = s.CLIENTREF "
+             "WHERE s.TRCODE IN (7, 8) GROUP BY cl.SPECODE")
+    assert _columns_turned_into_filters(sq, shown, parse_sql(shown)) == []
+    sq.column_terms = []
+    assert _columns_turned_into_filters(sq, filtered, parse_sql(filtered)) == []
+
+
 def test_measures_on_two_servers_are_refused_before_any_model_call_when_plans_are_off(profiles, monkeypatch):
     from semantic_layer.runtime.compiler import ExistingCompiler
     crm = _crm_book()

@@ -1023,6 +1023,9 @@ class Runtime:
                 note += " " + str(sq.period_scope.get("note") or "")
             if note:
                 note = " " + note
+        if sq is not None and getattr(sq, "omitted", None):
+            # ZEKI-54: istenen ama bu cevaba alınamayan kolon, cevabın kendisinde düz cümleyle söylenir.
+            note += " " + " ".join(str(o.get("sentence") or "") for o in sq.omitted if o.get("sentence"))
         if result.get('truncated'):
             note += " Sonuç sınırda kesildi; toplam satır sayısı bilinmiyor."
         if not (result.get("records") or []) and not int(result.get("totalRows") or 0):

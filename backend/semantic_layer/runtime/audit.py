@@ -1120,6 +1120,63 @@ def _strict_default() -> bool:
     return os.environ.get("SEMANTIC_GATE_STRICT", "").strip().lower() in ("1", "true", "on", "yes")
 
 
+def _literal_restricted_columns(tree: exp.Expression) -> set[str]:
+    """Columns a WHERE/HAVING compares with a constant (=, <>, IN, LIKE): the ones that narrow the rows to
+    chosen values. A join key or a column compared with another column is not one."""
+    out: set[str] = set()
+
+    def constant(node: Optional[exp.Expression]) -> bool:
+        if node is None:
+            return False
+        node = node.unnest() if hasattr(node, "unnest") else node
+        return isinstance(node, (exp.Literal, exp.Null, exp.Boolean)) or (
+            isinstance(node, (exp.Tuple, exp.Array)) and all(constant(e) for e in node.expressions))
+
+    for clause in list(tree.find_all(exp.Where)) + list(tree.find_all(exp.Having)):
+        for cmp in clause.find_all(exp.EQ, exp.NEQ, exp.Like, exp.ILike, exp.In):
+            if isinstance(cmp, exp.In):
+                col = _bare_column(cmp.this)
+                if col is not None and cmp.expressions and all(constant(e) for e in cmp.expressions):
+                    out.add(col.name.upper())
+                continue
+            left, right = _bare_column(cmp.left), _bare_column(cmp.right)
+            if left is not None and right is None and constant(cmp.right):
+                out.add(left.name.upper())
+            elif right is not None and left is None and constant(cmp.left):
+                out.add(right.name.upper())
+    return out
+
+
+def _columns_turned_into_filters(sq: SemanticQuery, sql: str, tree: exp.Expression) -> list[Unmet]:
+    """ZEKI-54, the gate's own line: a term the person asked to SEE (`sq.column_terms`) whose `-- yorum:`
+    reading lands on a column the statement then narrows to chosen values. "'yazar' → CLCARD.SPECODE =
+    'YAZARLAR'" returned two rows where every book was asked for — a filter nobody requested, under the name
+    of a column. Refused with the reason; the one repair a model answer gets is told to show it instead."""
+    terms = list(getattr(sq, "column_terms", None) or [])
+    if not terms:
+        return []
+    from semantic_layer.normalize import fold as _f, stem as _s
+    restricted = _literal_restricted_columns(tree)
+    if not restricted:
+        return []
+    out: list[Unmet] = []
+    for raw in re.findall(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$", sql or ""):
+        head, _, reading = raw.partition("→")
+        folded = _f(head or raw)
+        for term in terms:
+            t, root = _f(term), _s(term)
+            if not (t in folded or (root and root in folded)):
+                continue
+            named = {c.upper() for c in re.findall(r"\b[A-Za-z_]\w*\.\[?\"?([A-Za-z_]\w*)", reading or raw)}
+            hit = sorted(named & restricted)
+            if hit:
+                out.append(Unmet("column_filter",
+                                 f"'{term}' kolon olarak istendi; sorgu onu {', '.join(hit)} üzerinde bir süzgece çevirip satırları daralttı",
+                                 f"'{term}' için WHERE/HAVING süzgeci yazma: karşılığını SELECT'te kolon olarak göster; veride karşılığı "
+                                 f"yoksa -- yorum satırında bunu söyle ve o kolonu ekleme.", column=hit[0]))
+    return out
+
+
 def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, strict: Optional[bool] = None) -> list[Unmet]:
     """Every resolved requirement the SQL does not demonstrate. Empty means the answer may be served."""
     if sq.analytics:
@@ -1219,6 +1276,8 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             if not any(w in r or (root and root in r) for r in said):
                 out.append(Unmet("unresolved", f"'{word}' teriminin nasıl yorumlandığı yazılmadı",
                                  f"Sorgunun başına -- yorum: '{word}' → <hangi tablo/kolon, hangi hesap> satırı ekle."))
+
+    out += _columns_turned_into_filters(sq, sql, tree)
 
     # Words left to the model. Two things are required of each: the model said how it read the word
     # (a "-- yorum:" line naming it), and the answer restricts something beyond what the question's

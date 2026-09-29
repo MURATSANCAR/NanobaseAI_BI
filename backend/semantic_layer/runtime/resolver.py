@@ -1541,6 +1541,9 @@ class SemanticResolver:
             measured = {re.sub(r"^\w+\((?:\w+\.)?(\w+)\)$", r"\1", (s_.mapping.formula or "")).upper()
                         for s_ in sq.slots if s_.semantic_type == SemanticType.METRIC and s_.mapping and s_.status == "COMPOSED"}
             sq.group_by = [g for g in sq.group_by if not (g.mapping and g.mapping.column and g.mapping.column.upper() in measured)]
+        # ZEKI-54: a word nothing placed, standing where the person lists the columns they want to see.
+        # Read after the roles above are settled — the breakdowns it sits among are what says so.
+        self._unplaced_columns(sq, qf)
         # Default row scopes belong to the semantic contract too. Otherwise the
         # model fallback can omit cancelled/non-item exclusions while deterministic
         # SQL applies them, returning different totals for the same measure.
@@ -2665,10 +2668,34 @@ class SemanticResolver:
                 continue                                  # "kanal bazında": the grouping is the question's structure
             if not one_server and self._linked_across(lone.mapping.entity, homes_entities):
                 continue                                  # the catalog measured a bridge: the question may span both
+            if one_server and self._to_home_sense(lone, home):
+                sq.explanation.append(f"'{lone.term}' iki veritabanında da tanımlı; ölçünün tarafındaki "
+                                      f"{lone.mapping.entity}.{lone.mapping.column or ''} okunacak")
+                continue                                  # the same term, certified on the measure's side too
+            # Role, read before the slot is taken out: a label or value is a filter; a column or a table's own
+            # word the person lists among the columns, or groups by, is something they want to see. Beside a
+            # measure ("net ciro ve kâr") it is another figure and keeps the reading it always had.
+            shown = one_server and lone.semantic_type != SemanticType.DIMENSION_VALUE and (
+                (lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by")
+                or (lone.semantic_type in (SemanticType.COLUMN, SemanticType.ENTITY) and span and tuple(span) != (0, 0)
+                    and span[0] in self._column_role_positions(sq, qf, {span[0]: span[1]})))
+            if span and span[0] in counted_at:
+                shown = False                             # the measure itself reads this word
             if lone in sq.slots:
                 sq.slots.remove(lone)
             if lone in sq.group_by:
                 sq.group_by.remove(lone)
+            if shown:
+                # ZEKI-54: asked to be SEEN — a column, a breakdown, a table's own word — and it lives only on
+                # the other server. Handed to the model it came back as a filter the person never asked for
+                # ("'yazar' → CLCARD.SPECODE = 'YAZARLAR'": two rows instead of every book). Not handed over:
+                # the answer is read from the measure's database without it, and says so in plain words.
+                self._omit_column(sq, lone.term, self._source_of(lone.mapping.entity), metrics,
+                                  words=[qf.tokens[i] for i in range(*span)] if span and span[1] <= len(qf.tokens) else None)
+                continue
+            if one_server and self._absorbed_by_measure(
+                    sq, lone.term, metrics, [qf.tokens[i] for i in range(*span)] if span and span[1] <= len(qf.tokens) else None):
+                continue                                  # "satış bilgilerini" beside the sales measures: said already
             if span and span[0] < len(qf.tokens):
                 # One server: the whole phrase is the model's to read ("kitap adı", not "kitap").
                 word = " ".join(fold(t) for t in qf.tokens[span[0]:span[1]]) if one_server else fold(qf.tokens[span[0]])
@@ -2683,6 +2710,139 @@ class SemanticResolver:
                                   f"ölçü {home or 'ana veri tabanı'} verisinde"
                                   + (" ve bu kurulumda iki sunuculu sorgu kapalı" if one_server else "")
                                   + " → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
+
+    def _to_home_sense(self, slot: ResolvedSlot, home: str) -> bool:
+        """The same certified term read on the measure's own database, when the catalog holds it there too
+        ("kitap adı" on the CRM book and on the ERP item card): the slot takes that sense and stays."""
+        for alt in (slot.explain or {}).get("alternatives") or []:
+            ent = alt.get("entity")
+            if not ent or ent not in self.by_entity or self._source_of(ent) != home:
+                continue
+            slot.mapping = Mapping(concept_id=alt.get("conceptId") or "", entity=ent, table_pattern=alt.get("tablePattern") or "",
+                                   column=alt.get("column"), operator=alt.get("operator"), values=list(alt.get("values") or []),
+                                   formula=alt.get("formula"), extra=alt.get("extra") or {})
+            slot.concept_id = alt.get("conceptId")
+            slot.explain["chosen_by"] = f"ölçünün veritabanı ({home or 'ana veri tabanı'})"
+            return True
+        return False
+
+    def _source_label(self, src: Optional[str]) -> str:
+        """How a person names a database: "TIMAS_MSCRM" → "CRM" (the acronym under a vendor prefix, the same
+        reading `_source_name_words` makes), the connection's own database by its datasource ("logo" → "Logo")."""
+        if src is None:
+            return ""
+        if not src:
+            name = (self.datasource_id or "").strip()
+            return name[:1].upper() + name[1:] if name else "ana veri tabanı"
+        last = [p for p in re.split(r"[^0-9A-Za-z]+", src) if p][-1] if re.search(r"[0-9A-Za-z]", src) else src
+        for cut in (2, 1):
+            tail = last[cut:]
+            if len(tail) >= 3 and not set(tail.lower()) & set("aeiou"):
+                return tail.upper()
+        return last
+
+    def _omit_column(self, sq: SemanticQuery, term: str, src: Optional[str], metrics: list[ResolvedSlot],
+                     words: Optional[list[str]] = None) -> None:
+        """ZEKI-54: a term the person wants to SEE that this deployment cannot read in the same statement.
+
+        Not handed to the model (it turned "yazar" into a filter on a customer code) and not silently lost:
+        the answer is read without it and carries one plain sentence naming it. A phrase that only restates
+        the measure ("satış bilgileri" beside "satış tutarı") names no column of its own and is absorbed."""
+        if self._absorbed_by_measure(sq, term, metrics, words):
+            return
+        label = self._source_label(src)
+        if src is not None:
+            sentence = (f"‘{term}’ bilgisi {label} verisinde; bu kurulumda iki ayrı sunucudaki veri tek soruda "
+                        f"birleştirilmediği için cevaba eklenmedi.")
+        else:
+            sentence = f"‘{term}’ için bu veride tanımlı bir alan bulunamadı; cevaba eklenmedi."
+        if not any(o.get("term") == term for o in sq.omitted):
+            sq.omitted.append({"term": term, "source": src, "sentence": sentence})
+            sq.explanation.append(sentence)
+
+    @staticmethod
+    def _absorbed_by_measure(sq: SemanticQuery, term: str, metrics: list[ResolvedSlot], words: Optional[list[str]] = None) -> bool:
+        """A phrase that only restates the question's measure ("satış bilgileri" beside "satış tutarı"): a
+        measure word plus generic nouns. It names no column of its own and nothing is left to read — it is
+        accounted for, not missing. Needs a measure word: "kitapçı adı" is all generic nouns and is a column."""
+        toks = [fold(w) for w in (words or tokenize(term))]
+        measure_words = {stem(w) for m in metrics for w in tokenize(f"{m.term} {(m.explain or {}).get('canonical') or ''}")}
+
+        def generic(w: str) -> bool:
+            return (stem(w) in GENERIC_S or short_root(w) in GENERIC_S or stem(w) in STOPWORDS_S
+                    or any(len(g) >= 4 and w.startswith(g) for g in GENERIC_S))
+        if toks and any(stem(w) in measure_words for w in toks) and all(stem(w) in measure_words or generic(w) for w in toks):
+            if term not in sq.ignored:
+                sq.ignored.append(term)
+            sq.explanation.append(f"'{term}' ölçünün kendisini anlatıyor; ayrı bir kolon değil")
+            return True
+        return False
+
+    def _column_role_positions(self, sq: SemanticQuery, qf, positions: dict[int, int]) -> set[int]:
+        """Which of these spans (start → end) hold words the person asks to SEE — a column or a breakdown —
+        rather than words that narrow the rows. Read from the roles the resolver already assigned, never from
+        the word itself: the report frame's projection; a breakdown marker right after it ("yazar bazında");
+        or a place in a run of columns — directly after a column/breakdown slot (a Turkish modifier precedes
+        its noun, so a word after a column is not its qualifier), or before "ve/ile"/a comma that leads into
+        one. Beside a measure ("net ciro ve kâr") a word is another figure, not a column: that stays as it was."""
+        shown = [s for s in list(sq.slots) + list(sq.group_by)
+                 if s.mapping and getattr(s, "span", None) and tuple(s.span) != (0, 0)
+                 and tuple(s.span) not in {(a, b) for a, b in positions.items()}
+                 and s.semantic_type != SemanticType.DIMENSION_VALUE
+                 and (s.semantic_type in (SemanticType.COLUMN, SemanticType.ENTITY) or s in sq.group_by)]
+        ends = {s.span[1] for s in shown}
+        starts = {s.span[0] for s in shown}
+        projection = [fold(p) for p in sq.projection]
+        folded_q = fold(sq.question)
+        out: set[int] = set()
+        for k in sorted(positions):
+            end = positions[k]
+            words = " ".join(qf.tokens[k:end])
+            last = qf.tokens[end - 1] if 0 < end <= len(qf.tokens) else ""
+            nxt = qf.tokens[end] if end < len(qf.tokens) else ""
+            prev = k - 1
+            if prev >= 0 and qf.tokens[prev] in ("ve", "ile"):
+                prev -= 1
+            listed_before = (nxt in ("ve", "ile") and (end + 1) in starts) \
+                or (end in starts and bool(re.search(rf"\b{re.escape(last)}\s*,", folded_q)))
+            if (any(re.search(rf"\b{re.escape(words)}\b", p) for p in projection)
+                    or (nxt and (_GROUP_MARKERS.fullmatch(stem(nxt)) or _GROUP_MARKERS.fullmatch(nxt)))
+                    or (prev >= 0 and (prev + 1) in ends)
+                    or listed_before):
+                out.add(k)
+                ends.add(end)                     # the run continues through these words
+        return out
+
+    def _unplaced_columns(self, sq: SemanticQuery, qf) -> None:
+        """Words nothing in the catalog placed, asked for as columns. With one server per question they are
+        not handed to the model (`_omit_column`); with two-server plans they still are, and the gate holds the
+        model to reading them as columns, not filters (`sq.column_terms`). Qualifiers keep the 2026-09-16 rule."""
+        # Only words nothing placed. A qualifier (`model_qualifiers`) narrows the noun after it by definition and
+        # keeps the 2026-09-16 rule; its reading is still held to the column rule by the gate when it is one.
+        positions: dict[int, str] = {}
+        single = {fold(w) for w in sq.unresolved if " " not in str(w)}
+        for k, tok in enumerate(qf.tokens):
+            if tok in single:
+                positions[k] = tok
+        if not positions:
+            return
+        columns = self._column_role_positions(sq, qf, {k: k + 1 for k in positions})
+        if not columns:
+            return
+        one_server = not federated.plans_enabled()
+        metrics = [s for s in sq.slots if s.semantic_type == SemanticType.METRIC and s.mapping]
+        homes = {self._source_of(m.mapping.entity) for m in metrics}
+        # Where the word lives, when the tables' own names say it: "yazar" is a CRM table's word and no ERP
+        # table's. Only for the sentence the person reads — the word is omitted either way.
+        named_at = {k: src for k, src, _ents in self._source_hits(qf, set())}
+        for k in sorted(columns):
+            tok = positions[k]
+            if one_server:
+                sq.unresolved[:] = [w for w in sq.unresolved if fold(str(w)) != tok]
+                src = named_at.get(k)
+                self._omit_column(sq, tok, src if src is not None and src not in homes else None, metrics)
+            elif tok not in sq.column_terms:
+                sq.column_terms.append(tok)       # still the model's to read — as a column, never as a filter
 
     @staticmethod
     def _names_a_source(slot: ResolvedSlot) -> bool:

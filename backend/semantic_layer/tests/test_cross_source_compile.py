@@ -20,6 +20,7 @@ from semantic_layer.models import ColumnProfile, Mapping, SchemaProfile, Semanti
 from semantic_layer.conventions import Conventions
 from semantic_layer.runtime.compiler import DeterministicCompiler, Dialect
 from semantic_layer.runtime.resolver import SemanticResolver
+from semantic_layer.normalize import fold
 from semantic_layer.tests.conftest import DS, TENANT
 from semantic_layer.tests.test_runtime import _certify
 
@@ -86,19 +87,19 @@ def test_a_breakdown_read_from_the_other_database_is_not_written_as_one_statemen
     assert c.compile(sq, store) is None
 
 
-def test_with_plans_off_the_other_half_goes_to_the_model_and_is_still_not_dropped(store, profiles, monkeypatch):
-    """ZEKI-54: iki sunuculu plan kapalıyken öteki veritabanındaki kırılım kelimesi ölçünün tarafında modele
-    bırakılır (yorum satırıyla) — iki sunucuyu okuyan tek ifade hiç istenmez. Deterministik derleyici yine de
-    o kelimeyi düşürüp daha dar bir soruyu cevaplamaz: kelime çözümsüz kalır, derleme reddedilir."""
+def test_with_plans_off_the_other_half_is_answered_without_it_and_said(store, profiles, monkeypatch):
+    """ZEKI-54: iki sunuculu plan kapalıyken öteki veritabanındaki kırılım ("kanal bazında") modele BIRAKILMAZ —
+    model onu bir süzgece çeviriyordu. Soru ölçünün veritabanından cevaplanır, kırılım cevaba alınmaz ve bu,
+    terimin adıyla düz bir cümlede söylenir. İki sunucuyu okuyan tek ifade hiç istenmez."""
     monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
     allp = _world(store, profiles)
     r = SemanticResolver(store, TENANT, DS, allp)
-    c = DeterministicCompiler(allp, {}, "tsql")
     sq = r.resolve("kanal bazında kredi limiti", today=date(2026, 7, 20))
     assert "CLCARD" not in {s.mapping.entity for s in list(sq.slots) + list(sq.group_by) if s.mapping}, sq.explanation
-    assert "kanal" in sq.unresolved, (sq.unresolved, sq.explanation)
-    assert any("iki sunuculu sorgu kapalı" in e for e in sq.explanation), sq.explanation
-    assert c.compile(sq, store) is None
+    assert "kanal" not in sq.unresolved, (sq.unresolved, sq.explanation)
+    omitted = {fold(o["term"]): o["sentence"] for o in sq.omitted}
+    assert "kanal" in omitted and "iki ayrı sunucu" in omitted["kanal"] and "eklenmedi" in omitted["kanal"], sq.omitted
+    assert omitted["kanal"] in sq.explanation
 
 
 def test_a_measured_link_is_compared_with_its_cast_collation_and_period_meaning(store, profiles):
