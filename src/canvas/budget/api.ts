@@ -377,8 +377,15 @@ export const STATUS_TONE: Record<PlanStatus, 'ok' | 'warn' | 'muted' | 'violet'>
 };
 
 const dayFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const monthFmt = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+/** «2026-09-25» → «25 Eylül 2026». Ay değeri («2026-08», ör. tahmin başlangıcı) → «Ağustos 2026»; çözülemeyen değer
+ *  olduğu gibi döner — biçimlendirici hiçbir girdide ekranı düşürmez (2026-09-29: tahmin başlangıcı stok kartını
+ *  «Invalid time value» ile kırıyordu). */
 export function fmtDay(iso: string | null | undefined): string {
   if (!iso) return '—';
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-  return dayFmt.format(new Date(Date.UTC(y, m - 1, d)));
+  if (!y || !m || m < 1 || m > 12) return iso;
+  const t = new Date(Date.UTC(y, m - 1, d || 1));
+  if (Number.isNaN(t.getTime())) return iso;
+  return (d ? dayFmt : monthFmt).format(t);
 }
