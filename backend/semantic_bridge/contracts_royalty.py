@@ -115,7 +115,8 @@ def tcmb_rate(currency: str, on: date, fetch) -> Optional[dict[str, Any]]:
         status, text = fetch(TCMB_URL.format(ym=d.strftime("%Y%m"), dmy=d.strftime("%d%m%Y")))
         if status != 200 or not text:
             continue
-        m = _re.search(r'CurrencyCode="%s">(.*?)</Currency>' % _re.escape(currency), text, _re.S)
+        # 2016 öncesi dosyalarda öznitelik sırası farklı: `CurrencyCode="USD" Kod="USD">` (2026-09-29 ölçümü)
+        m = _re.search(r'CurrencyCode="%s"[^>]*>(.*?)</Currency>' % _re.escape(currency), text, _re.S)
         if not m:
             return None
         unit = _re.search(r"<Unit>([\d.]+)</Unit>", m.group(1))

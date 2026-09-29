@@ -7,6 +7,7 @@ import { Note, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { contractApi, metaOptions, type Terms } from './api';
 import TermsForm from './TermsForm';
+import TermsCheck from './compare/TermsCheck';
 import DocumentExtract from './DocumentExtract';
 import { extractApi, stillApplied, type Suggestion } from './extract';
 import { Field, errMsg } from './ui';
@@ -86,6 +87,7 @@ export default function NewContract() {
             }}
           />
           <TermsForm value={terms} onChange={setTerms} meta={m} lock={!m.can.edit} />
+          <TermsCheck terms={terms} />
           {create.error && <Note tone="err">{errMsg(create.error)}</Note>}
           {m.can.edit && !terms.title.trim() && <p className="px-1 text-[11.5px] text-canvas-muted">Taslağı açmak için sözleşme adını yazın.</p>}
           <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap justify-end gap-2 rounded-2xl bg-white/90 p-2 shadow-glass-float backdrop-blur">

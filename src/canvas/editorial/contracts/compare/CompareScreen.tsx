@@ -78,6 +78,11 @@ export default function CompareScreen() {
       {meta.isLoading && (
         <Note tone="info">CRM sözleşmeleri okunuyor; ilk açılışta 15–30 saniye sürebilir, sonra görüntü saklanır.</Note>
       )}
+      {meta.data && meta.data.kur.okunan < meta.data.kur.ay && (
+        <Note tone="info">
+          {`TL tutarlar dolara çevrilerek kıyaslanır; kurların ${meta.data.kur.okunan}/${meta.data.kur.ay} ayı okundu${meta.data.kur.okunuyor ? ', kalanı arka planda okunuyor' : ''}. Kuru okunmamış aydaki tutar kıyasa girmez.`}
+        </Note>
+      )}
       <Tabs
         value={tab}
         onChange={(v) => go(v)}

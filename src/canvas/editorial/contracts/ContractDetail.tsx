@@ -8,6 +8,7 @@ import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { contractApi, detailKey, downloadDocx, metaOptions, type Detail, type Meta, type Status, type Terms } from './api';
 import TermsForm from './TermsForm';
+import TermsCheck from './compare/TermsCheck';
 import DocumentExtract from './DocumentExtract';
 import { extractApi, stillApplied, type Suggestion } from './extract';
 import AddendaTab from './AddendaTab';
@@ -187,6 +188,7 @@ function EditSheet({ d, meta, onClose }: { d: Detail; meta: Meta; onClose: () =>
           />
         )}
         <TermsForm value={terms} onChange={setTerms} meta={meta} />
+        <div className="mt-3"><TermsCheck terms={terms} /></div>
       </div>
       {save.error && <div className="mt-3"><Note tone="err">{errMsg(save.error)}</Note></div>}
     </Sheet>

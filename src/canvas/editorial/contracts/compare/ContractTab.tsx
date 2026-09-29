@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRight, ExternalLink, Search } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ExternalLink, Search, TriangleAlert } from 'lucide-react';
 import { Note, Pill, field, nf } from '../../../admin/ui';
 import SqlInfo, { InfoLabel } from '../../../components/SqlInfo';
 import { Kpi, KpiRow, Panel, useDebounced } from '../../kit';
 import { day, errMsg } from '../ui';
-import { compareApi, type ClauseRow, type Detail, type Meta, type TextRow } from './api';
+import { compareApi, type ClauseRow, type Detail, type FormalCheck, type Meta, type TextRow } from './api';
 import { band, pct, periodOptions, statusTone, textTone, visibleClauses } from './compare';
 import { TONE } from './ScanTab';
+import { ReviewButton } from './Review';
 
 /**
  * Tek sözleşme: kıyas grubu (hangi ölçütle, kaç emsal, neyi gevşettik), madde madde değer ↔ emsal dağılımı ve
@@ -67,7 +68,7 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
                 <section key={g.id} className="mt-3">
                   <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{g.label}</h3>
                   <ul className="mt-1.5 divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white/85">
-                    {rows.map((c) => <ClauseLine key={c.key} c={c} />)}
+                    {rows.map((c) => <ClauseLine key={c.key} c={c} contractKey={d.subject.key} canReview={d.can.review} />)}
                   </ul>
                 </section>
               );
@@ -76,6 +77,7 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
               <p className="py-6 text-center text-[12.5px] text-canvas-muted">Bütün maddeler emsalle uyumlu. Hepsini görmek için süzgeci kaldırın.</p>
             )}
           </Panel>
+          {d.sekil.length > 0 && <Formal d={d} />}
           {d.texts.length > 0 && <Texts d={d} />}
           <History d={d} />
           <Peers d={d} />
@@ -197,15 +199,17 @@ function Head({ d, meta, years, onYears }: { d: Detail; meta: Meta; years: numbe
             <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{`Bu kayıtta bilinmeyen ölçüt: ${c.bilinmeyen.join(', ')} (kıyasa girmedi).`}</p>
           )}
           {!c.yeterli && <p className="mt-1 text-[11.5px] font-semibold text-rose-700">Bütün ölçütler gevşetildiği hâlde emsal az; kararlar temkinli okunmalı.</p>}
+          {c.kur && <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{c.kur}</p>}
         </div>
       </div>
     </Panel>
   );
 }
 
-function ClauseLine({ c }: { c: ClauseRow }) {
+function ClauseLine({ c, contractKey, canReview }: { c: ClauseRow; contractKey: string; canReview: boolean }) {
   const tone = statusTone(c.status);
-  const b = c.kind !== 'secim' && c.kind !== 'bayrak' ? band(c) : null;
+  const b = c.kind !== 'secim' && c.kind !== 'bayrak' ? band({ ...c, value: c.kind === 'tutar' ? c.kiyas ?? null : c.value }) : null;
+  const deviates = ['yuksek', 'dusuk', 'nadir', 'nadir-madde', 'eksik'].includes(c.status);
   return (
     <li className="grid gap-2 p-3 text-[12.5px] sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] sm:gap-4">
       <div className="min-w-0">
@@ -213,8 +217,13 @@ function ClauseLine({ c }: { c: ClauseRow }) {
           <span className="font-bold">{c.label}</span>
           <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${TONE[tone]}`}>{c.statusLabel}</span>
         </div>
-        <div className="mt-1 font-mono text-[15px] font-bold tabular-nums">{c.valueLabel}</div>
+        <div className="mt-1 break-words font-mono text-[15px] font-bold tabular-nums">{c.valueLabel}</div>
         {c.reason && <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{c.reason}</p>}
+        {(deviates || c.inceleme) && (
+          <div className="mt-1.5">
+            <ReviewButton contractKey={contractKey} clause={c.key} title={c.label} value={c.valueLabel} current={c.inceleme} can={canReview} />
+          </div>
+        )}
       </div>
       <div className="min-w-0">
         {b ? (
@@ -238,6 +247,7 @@ function ClauseLine({ c }: { c: ClauseRow }) {
           {c.kind === 'secim' || c.kind === 'bayrak'
             ? `${nf.format(c.n)} emsal`
             : `${nf.format(c.dolu ?? 0)}/${nf.format(c.n)} emsalde dolu`}
+          {c.kind === 'tutar' && c.valueLabel.includes('≈') && ` · kıyas ${c.kiyasBirim ?? 'USD'} üzerinden`}
         </p>
       </div>
     </li>
@@ -265,6 +275,45 @@ function Band({ c, b, tone }: { c: ClauseRow; b: NonNullable<ReturnType<typeof b
   );
 }
 
+function Formal({ d }: { d: Detail }) {
+  const bad = d.sekil.filter((x) => !x.ok);
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-[15px] font-extrabold">
+          <InfoLabel k={d.kaynaklar} alan="sekil[]" label="Şekil denetimi">Şekil denetimi</InfoLabel>
+        </h2>
+        <span className={`rounded-md px-2 py-0.5 text-[11.5px] font-bold ${bad.length ? TONE.err : TONE.ok}`}>
+          {bad.length ? `${bad.length} eksik` : 'Eksik yok'}
+        </span>
+      </div>
+      <p className="mt-0.5 text-[11.5px] text-canvas-muted">Kaydın taşıması gereken şartlar. Hukuki görüş değildir; kayıt denetimidir.</p>
+      <ul className="mt-2 divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white/85">
+        {d.sekil.map((x) => <FormalLine key={x.id} x={x} contractKey={d.subject.key} canReview={d.can.review} />)}
+      </ul>
+    </Panel>
+  );
+}
+
+function FormalLine({ x, contractKey, canReview }: { x: FormalCheck; contractKey: string; canReview: boolean }) {
+  const Icon = x.ok ? CheckCircle2 : TriangleAlert;
+  return (
+    <li className="flex gap-2.5 p-3 text-[12.5px]">
+      <Icon aria-hidden className={`mt-0.5 h-4 w-4 shrink-0 ${x.ok ? 'text-emerald-600' : 'text-rose-600'}`} />
+      <div className="min-w-0">
+        <div className="font-bold">{x.label}</div>
+        {x.detail && <div className="text-[12px] text-rose-700">{x.detail}</div>}
+        <div className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">{x.law}</div>
+        {!x.ok && (
+          <div className="mt-1.5">
+            <ReviewButton contractKey={contractKey} clause={`sekil:${x.id}`} title={x.label} value={x.detail ?? 'Eksik'} current={x.inceleme} can={canReview} />
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
 function Texts({ d }: { d: Detail }) {
   return (
     <Panel>
@@ -273,23 +322,33 @@ function Texts({ d }: { d: Detail }) {
       </h2>
       <p className="mt-0.5 text-[11.5px] text-canvas-muted">CRM'deki açıklama alanları; başka sözleşmelerde birebir ya da çok benzer geçip geçmediği.</p>
       <ul className="mt-2 space-y-2">
-        {d.texts.map((t) => <TextLine key={t.key} t={t} />)}
+        {d.texts.map((t) => <TextLine key={t.key} t={t} contractKey={d.subject.key} canReview={d.can.review} />)}
       </ul>
     </Panel>
   );
 }
 
-function TextLine({ t }: { t: TextRow }) {
+function TextLine({ t, contractKey, canReview }: { t: TextRow; contractKey: string; canReview: boolean }) {
   return (
     <li className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-bold">{t.label}</span>
         <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${TONE[textTone(t.status)]}`}>{t.statusLabel}</span>
+        {t.sinif && (
+          <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-bold text-violet-800" title="Haklar ve lisanslar ekranındaki sınıf">
+            {`Hak kısıtı: ${t.sinif.ad}${t.sinif.durum === 'onayli' ? ' (onaylı)' : ''}`}
+          </span>
+        )}
         <span className="text-[11px] text-canvas-muted">
           {t.toplam === 0 ? 'Başka hiçbir sözleşmede yok' : `${nf.format(t.birebir)} sözleşmede birebir, ${nf.format(t.benzer)} sözleşmede benzeri`}
         </span>
       </div>
       <p className="mt-1.5 whitespace-pre-wrap break-words leading-snug">{t.text}</p>
+      {(t.status === 'ozgun' || t.inceleme) && (
+        <div className="mt-1.5">
+          <ReviewButton contractKey={contractKey} clause={`not:${t.key}`} title={t.label} value={t.text.slice(0, 160)} current={t.inceleme} can={canReview} />
+        </div>
+      )}
       {t.ornekler.length > 0 && (
         <details className="mt-2">
           <summary className="min-h-11 cursor-pointer text-[12px] font-bold text-canvas-violet sm:min-h-0">Benzer metinler</summary>

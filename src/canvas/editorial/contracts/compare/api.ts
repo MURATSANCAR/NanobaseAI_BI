@@ -4,7 +4,20 @@ import { call, qs } from '../api';
 
 /** Sözleşme karşılaştırma: köprü uçları /api/v1/editorial/contracts/compare/* (model yok, CRM'e yazma yok). */
 
-export type Status = 'olagan' | 'yuksek' | 'dusuk' | 'nadir' | 'nadir-madde' | 'eksik' | 'emsal-az' | 'yok';
+export type Status = 'olagan' | 'yuksek' | 'dusuk' | 'nadir' | 'nadir-madde' | 'eksik' | 'emsal-az' | 'kur-yok' | 'yok';
+export type ReviewStatus = 'uygun' | 'istisna' | 'crm-duzelt' | 'hukuk';
+/** Bulgunun incelemesi: `stale` = CRM'deki değer inceleme anından sonra değişti; `open` = bulgu hâlâ açık iş. */
+export type Review = {
+  status: ReviewStatus;
+  statusLabel: string;
+  stale: boolean;
+  open: boolean;
+  note?: string | null;
+  owner?: string | null;
+  by?: string | null;
+  at?: string | null;
+};
+export type FormalCheck = { id: string; label: string; ok: boolean; detail: string | null; law: string; inceleme?: Review | null };
 export type TextStatus = 'ozgun' | 'az' | 'kalip';
 export type View = { okunduAn: string | null; yenileniyor: boolean };
 
@@ -18,7 +31,10 @@ export type Meta = {
   belgeTurleri: Record<string, string>;
   belgeDurumlari: Record<string, string>;
   gorunum: View;
-  can: { upload: boolean };
+  incelemeDurumlari: Record<ReviewStatus, string>;
+  sekilDenetimleri: Record<string, { ad: string; dayanak: string }>;
+  kur: { ay: number; okunan: number; okunuyor: boolean };
+  can: { upload: boolean; review: boolean; export: boolean };
   kaynaklar?: Kaynaklar;
 };
 
@@ -37,16 +53,20 @@ export type ScanItem = {
   emsal: number;
   gevsetilen: string[];
   yeterli: boolean;
-  sapmalar: Array<{ key: string; label: string; status: Status; statusLabel: string; valueLabel: string }>;
-  ozgunNotlar: Array<{ key: string; label: string }>;
+  agreement: string;
+  sapmalar: Array<{ key: string; label: string; status: Status; statusLabel: string; valueLabel: string; inceleme: Review | null }>;
+  ozgunNotlar: Array<{ key: string; label: string; inceleme: Review | null }>;
+  sekilEksik: Array<{ id: string; label: string; inceleme: Review | null }>;
+  acikBulgu: number;
 };
 export type Scan = {
   items: ScanItem[];
   total: number;
   page: number;
   pageSize: number;
-  ozet: { sozlesme: number; anlasma: number; sapan: number; ozgun: number; emsalYetersiz: number };
+  ozet: { sozlesme: number; anlasma: number; sapan: number; ozgun: number; sekil: number; emsalYetersiz: number };
   maddeler: Array<{ key: string; label: string; sayi: number }>;
+  sekilSayim: Array<{ id: string; label: string; sayi: number }>;
   gorunum: View;
   ayar: { yil: number };
   kaynaklar?: Kaynaklar;
@@ -58,7 +78,8 @@ export type ScanQuery = {
   bolum?: number;
   yilDen?: number;
   yilE?: number;
-  only?: 'sapan' | 'ozgun' | 'hepsi-sapma' | 'hepsi';
+  only?: 'sapan' | 'ozgun' | 'sekil' | 'hepsi-sapma' | 'hepsi';
+  acik?: boolean;
   madde?: string;
   aktif?: boolean;
   enAz?: number;
@@ -93,6 +114,10 @@ export type ClauseRow = {
   enAzAd?: string;
   enCokAd?: string;
   enSik?: Top[];
+  /** Tutar maddesinde kıyasın birimi (TL sözleşmede başlangıç ayı kuruyla USD) ve değeri. */
+  kiyas?: number | null;
+  kiyasBirim?: string | null;
+  inceleme?: Review | null;
 };
 export type TextRow = {
   key: string;
@@ -104,6 +129,8 @@ export type TextRow = {
   benzer: number;
   toplam: number;
   ornekler: Array<{ id: string; no: string; alan: string; alanAd: string; metin: string; benzerlik: number }>;
+  sinif?: { kod: string; ad: string; durum: string | null };
+  inceleme?: Review | null;
 };
 export type Criteria = {
   boyutlar: Array<{ id: string; ad: string; deger: string | null }>;
@@ -114,6 +141,7 @@ export type Criteria = {
   sozlesme: number;
   yeterli: boolean;
   yil: number;
+  kur?: string | null;
 };
 export type Detail = {
   subject: {
@@ -136,6 +164,7 @@ export type Detail = {
   criteria: Criteria;
   groups: Array<{ id: string; label: string; clauses: ClauseRow[] }>;
   texts: TextRow[];
+  sekil: FormalCheck[];
   sayim: { sapan: number; uyumlu: number; emsalAz: number; ozgunNot: number };
   peers: Array<{ id: string; no: string; kitap: string; yazar: string; yil: number | null; kopya: number }>;
   history: {
@@ -147,6 +176,7 @@ export type Detail = {
   warnings: string[];
   gorunum: View;
   ayar: { yil: number; emsal: number; esikYuzde: number };
+  can: { review: boolean };
   kaynaklar?: Kaynaklar;
 };
 export type Found = { items: Array<{ id: string; no: string; kitap: string; yazar: string; yil: number | null; kopya: number; odeme: string | null }>; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
@@ -206,6 +236,12 @@ export const compareApi = {
   scan: (p: ScanQuery) =>
     call<Scan>(`${B}/scan${qs({ ...p, aktif: p.aktif || undefined } as Record<string, string | number | boolean | undefined>)}`, { timeout: 180_000 }),
   search: (q: string, page = 0) => call<Found>(`${B}/search${qs({ q, page })}`),
+  scanCsvUrl: (p: ScanQuery) =>
+    `${ENGINE_BASE}/api/v1/editorial/contracts${B}/scan.csv${qs({ ...p, page: undefined, aktif: p.aktif || undefined, acik: p.acik || undefined } as Record<string, string | number | boolean | undefined>)}`,
+  terms: (terms: unknown) => call<Omit<Detail, 'peers'>>(`${B}/terms`, { method: 'POST', body: { terms }, timeout: 120_000 }),
+  reviewSave: (b: { key: string; clause: string; status: ReviewStatus; note?: string; owner?: string }) =>
+    call<Review>(`${B}/reviews`, { method: 'POST', body: b }),
+  reviewDelete: (key: string, clause: string) => call<{ ok: boolean }>(`${B}/reviews${qs({ key, clause })}`, { method: 'DELETE' }),
   contract: (key: string, yil?: number) => call<Detail>(`${B}/contract/${enc(key)}${qs({ yil })}`, { timeout: 180_000 }),
   documents: () => call<{ items: Doc[]; crmHata: string | null; can: { upload: boolean }; kaynaklar?: Kaynaklar }>(`${B}/documents`),
   read: (ref: string) => call<Doc | { ref: string; status: DocStatus }>(`${B}/documents/read`, { method: 'POST', body: { ref } }),

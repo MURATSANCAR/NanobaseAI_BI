@@ -8,13 +8,16 @@ sorgu bilgisi vardır. Veri küçük ve uydurmadır; gerçek CRM kabulü test su
 """
 from __future__ import annotations
 
+import pytest
+
 from semantic_bridge import access as A
 from semantic_bridge import contracts_compare as CC
 from semantic_bridge import contracts_compare_api as API
 from semantic_bridge import contracts_compare_docs as CD
 from semantic_bridge import provenance as P
 
-COLS = ["id", "no", "ana", "statuscode", "bas", "bit", "kitap", "yazar"] + list(CC.DIMS.values()) + [c.key for c in CC.CLAUSES]
+COLS = (["id", "no", "ana", "statuscode", "bas", "bit", "kitap", "yazar"] + list(CC.DIMS.values()) + [c.key for c in CC.CLAUSES]
+        + list(CC.META_COLS))
 
 
 def gid(n: int) -> str:
@@ -25,7 +28,8 @@ def row(n: int, *, ana: int | None = None, year: int = 2024, tip: int = 5, odeme
         **vals) -> list:
     base = {"id": gid(n), "no": f"S{n}", "ana": ("{" + gid(ana).upper() + "}") if ana else None, "statuscode": 100000000,
             "bas": f"{year}-01-15T00:00:00", "bit": None, "kitap": f"Kitap {n}", "yazar": f"Yazar {n}",
-            "new_SozlesmeTipi": tip, "new_TelifTipi": odeme, "new_sozlesmeparabirimi": para, "new_ilgilidepartman": bolum}
+            "new_SozlesmeTipi": tip, "new_TelifTipi": odeme, "new_sozlesmeparabirimi": para, "new_ilgilidepartman": bolum,
+            "kitapsay": 1, "ulkevar": 1}
     for c in CC.CLAUSES:
         base[c.key] = 1 if c.key in ("new_cogaltmahakki", "new_yaymahakki") else None
     base.update(vals)
@@ -41,9 +45,13 @@ def data(rows: list[list], parties: dict | None = None) -> dict:
                         "new_odemesekli": {"3": "Banka", "1": "Çek"}}}
 
 
-def portfolio(extra: list[list] | None = None, n: int = 40, **kw) -> CC.Portfolio:
-    rows = [row(i, new_Telif=10, new_OdemeSekli=3, new_VadeAY=120) for i in range(1, n + 1)]
-    return CC.Portfolio(data(rows + (extra or []), **kw))
+RATES = {"2024-01": {"kur": 30.0, "gun": "2023-12-29", "kaynak": "TCMB döviz alış"},
+         "2021-01": {"kur": 7.5, "gun": "2020-12-31", "kaynak": "TCMB döviz alış"}}
+
+
+def portfolio(extra: list[list] | None = None, n: int = 40, rates: dict | None = None, **kw) -> CC.Portfolio:
+    rows = [row(i, new_Telif=10, new_OdemeSekli=3, new_VadeAY=120, new_SozlesmeSuresiYil=5) for i in range(1, n + 1)]
+    return CC.Portfolio(data(rows + (extra or []), **kw), RATES if rates is None else rates)
 
 
 CFG = CC.Cfg(min_peers=20, rare=0.05, years=5)
@@ -281,3 +289,111 @@ def test_every_number_on_scan_and_contract_has_a_source():
     out.update({"subject": CC.subject_head(port, s), "history": CC.history(port, s), "ayar": {"yil": 5, "emsal": 20}})
     out = P.ekle(out, API.kaynak_contract(port, "Timas_MSCRM.dbo."))
     assert P.uncovered_numbers(out, API.NOT_RAKAM) == [] and P.problems(out) == []
+
+
+# ------------------------------------------------------------------ Faz 1: kur, şekil, inceleme, taslak, liste
+
+
+def test_tl_amounts_are_compared_in_dollars_at_start_month():
+    # 2021'de 30.000 TL (7,5 → 4.000 USD) ile 2024'te 120.000 TL (30 → 4.000 USD) aynı gerçek tutar
+    old = [row(700 + i, year=2021, new_sozlesmeavanstutari=30000) for i in range(30)]
+    port = portfolio(old + [row(99, year=2024, new_sozlesmeavanstutari=120000)], n=0)
+    c = clause(CC.compare(port, subj(port, 99), CC.Cfg(min_peers=20, rare=0.05, years=5)), "new_sozlesmeavanstutari")
+    assert c["status"] == "olagan" and c["kiyas"] == 4000.0 and c["medyan"] == 4000.0
+    assert "≈ 4.000 USD (Ocak 2024 kuru 30)" in c["valueLabel"] and c["medyanAd"].endswith("USD")
+
+
+def test_missing_rate_is_not_judged():
+    old = [row(700 + i, new_sozlesmeavanstutari=30000) for i in range(30)]
+    port = portfolio(old + [row(99, year=2023, new_sozlesmeavanstutari=120000)], n=0)
+    out = CC.compare(port, subj(port, 99), CC.Cfg(min_peers=20, rare=0.05, years=5))
+    c = clause(out, "new_sozlesmeavanstutari")
+    assert c["status"] == "kur-yok" and "kuru okunamadı" in c["valueLabel"]
+
+
+def test_rates_fill_from_tcmb_file_and_old_lira_is_scaled(tmp_path):
+    xml = ('<Tarih_Date><Currency CrossOrder="0" Kod="USD" CurrencyCode="USD"><Unit>1</Unit>'
+           '<ForexBuying>{}</ForexBuying></Currency></Tarih_Date>')
+    seen = []
+
+    def fetch(url):
+        seen.append(url)
+        if "200301" in url:   # 2016 öncesi biçim: öznitelik sırası farklı, eski lira
+            return 200, ('<Tarih_Date><Currency CrossOrder="0" CurrencyCode="USD" Kod="USD"><Unit>1</Unit>'
+                         '<ForexBuying>1650000</ForexBuying></Currency></Tarih_Date>')
+        if "01012024" in url or "31122023" in url:
+            return 200, xml.format("29.8")
+        return 404, ""
+
+    r = CC.Rates(lambda: str(tmp_path), fetch)
+    assert r.fill("t1", ["2003-01", "2024-01"]) == 2
+    got = r.load("t1")
+    assert got["2003-01"]["kur"] == 1.65 and got["2024-01"]["kur"] == 29.8
+    assert r.missing("t1", {"2003-01", "2024-01", "2025-05"}) == ["2025-05"]
+
+
+def test_formal_checks_follow_contract_type():
+    parties = {gid(99): [["p1", "A"]], gid(98): [["p2", "B"]]}
+    port = portfolio([row(99, new_SozlesmeSuresiYil=5, kitapsay=1, new_Telif=10),
+                      row(98, kitapsay=0, new_cogaltmahakki=0, new_yaymahakki=0),
+                      row(97, tip=1, new_SozlesmeSuresiYil=5, kitapsay=1, new_Telif=10, ulkevar=0)], parties=parties)
+    ok = {x["id"]: x["ok"] for x in CC.formal(port, subj(port, 99))}
+    assert ok == {"hak": True, "sure": True, "baslangic": True, "tarih": True, "taraf": True, "kitap": True, "ucret": True}
+    bad = {x["id"]: x["ok"] for x in CC.formal(port, subj(port, 98))}
+    assert not bad["hak"] and not bad["sure"] and not bad["kitap"] and not bad["ucret"] and bad["taraf"]
+    sat = {x["id"]: x["ok"] for x in CC.formal(port, subj(port, 97))}
+    assert "hak" not in sat and sat["ulke"] is False and sat["taraf"] is False
+    row_ = next(r for r in port.scan(CFG)["rows"] if port.entries[r["e"]].id == gid(98))
+    assert set(row_["sekil"]) == {"hak", "sure", "kitap", "ucret"}
+    page = CC.scan_page(port, CFG, only="sekil")
+    assert {i["id"] for i in page["items"]} >= {gid(98), gid(97)} and page["ozet"]["sekil"] >= 2
+
+
+def test_review_closes_finding_until_value_changes():
+    from semantic_bridge import contracts_compare_store as ST
+
+    port = portfolio([row(99, new_Telif=18, new_OdemeSekli=3, new_VadeAY=120, new_SozlesmeSuresiYil=5)],
+                     parties={gid(99): [["p1", "A"]]})
+    e = port.entry_of[gid(99)]
+    review = {"status": "istisna", "statusLabel": "", "closed": True, "valueSig": ST.sig(18.0), "note": "çok satan yazar"}
+    rows = CC.scan_rows(port, CFG, reviews={(e.agreement, "new_Telif"): review}, unreviewed=True)
+    assert gid(99) not in {x[1].id for x in rows}
+    stale = dict(review, valueSig=ST.sig(15.0))
+    rows = CC.scan_rows(port, CFG, reviews={(e.agreement, "new_Telif"): stale}, unreviewed=True)
+    it = CC.scan_item(port, *next(x for x in rows if x[1].id == gid(99)))
+    assert it["sapmalar"][0]["inceleme"]["stale"] is True and it["acikBulgu"] == 1
+
+
+def test_review_store_validates(tmp_path):
+    import sqlalchemy as sa
+    from semantic_bridge import contracts_compare_store as ST
+
+    eng = sa.create_engine(f"sqlite:///{tmp_path}/r.db")
+    with pytest.raises(ST.StoreError):
+        ST.save_review(eng, "t", "u", agreement="a", clause="new_Telif", value_sig="1", status="yok")
+    with pytest.raises(ST.StoreError):
+        ST.save_review(eng, "t", "u", agreement="a", clause="new_Telif", value_sig="1", status="hukuk")
+    out = ST.save_review(eng, "t", "u", agreement="a", clause="new_Telif", value_sig="1", status="hukuk", owner="hukuk birimi")
+    out = ST.save_review(eng, "t", "v", agreement="a", clause="new_Telif", value_sig="1", status="uygun", note="tamam")
+    assert out["status"] == "uygun" and out["by"] == "v" and len(ST.reviews(eng, "t")) == 1
+    ST.delete_review(eng, "t", "a", "new_Telif")
+    assert ST.reviews(eng, "t") == {}
+
+
+def test_csv_has_every_filtered_row():
+    port = portfolio([row(99, new_Telif=18), row(98, new_Telif=19)])
+    text = CC.scan_csv(port, CFG, only="sapan")
+    lines = [l for l in text.lstrip("\ufeff").splitlines() if l]
+    assert lines[0].startswith("Sözleşme no;") and len(lines) == 1 + len(CC.scan_rows(port, CFG, only="sapan"))
+
+
+def test_draft_terms_are_checked_without_saving():
+    port = portfolio()
+    terms = {"kind": "telif-alis", "paymentType": "satis", "currency": "TRY", "rates": {"karton": 18}, "start": "2026-02-01",
+             "parties": [{"name": "Yeni Yazar"}], "books": [], "title": "Taslak", "rights": {}, "years": None,
+             "openEnded": False, "advance": None}
+    s = CC.subject_from_terms("taslak", "taslak", "Taslak", terms)
+    out = CC.compare(port, s, CFG)
+    assert clause(out, "new_Telif")["status"] == "yuksek"
+    fails = {x["id"] for x in out["sekil"] if not x["ok"]}
+    assert {"hak", "sure", "kitap"} <= fails
