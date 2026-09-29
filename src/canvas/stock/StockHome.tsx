@@ -13,7 +13,7 @@ import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { gunText, n0, stockApi, tl, type DagitimIsaret, type StockState } from './api';
 import ItemList from './ItemList';
-import { BookCell, Chips, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { BookCell, Chips, DagitimTazelikLine, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
 import { RULES } from './rules';
 
 /** M43 açılış (/stok): dört gösterge, kitap sor, bugün ilgilenilecekler, stok listesi (süzgeçler adreste). */
@@ -185,6 +185,7 @@ export default function StockHome() {
               </Explain>
               <SqlInfo k={o.kaynaklar} alan="durumlar" label="Durum sayaçları" />
             </div>
+            {list.data?.dagitim && <DagitimTazelikLine t={list.data.dagitim.tazelik} />}
             {list.data?.dagitim && (
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1">

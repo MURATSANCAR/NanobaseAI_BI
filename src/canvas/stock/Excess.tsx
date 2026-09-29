@@ -7,7 +7,7 @@ import { fmtDay } from '../budget/api';
 import { n0, stockApi, tl, type Item } from './api';
 import SqlInfo from '../components/SqlInfo';
 import ItemList from './ItemList';
-import { Chips, DataDay, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { Chips, DagitimTazelikLine, DataDay, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
 import { EmptyHint, Explain } from '../components/Explain';
 import { RULES } from './rules';
 import { SuggestionActions } from './decisions';
@@ -96,6 +96,7 @@ export default function Excess() {
         {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
         {q.isLoading && <Loading what="Fazla stok" />}
         {d && !d.items.length && <EmptyHint title="Bu türde kitap yok" why="Seçili türe giren kitap bulunmadı; başka bir türü seçebilir ya da «Hepsi»ne dönebilirsiniz." />}
+        {!!d?.items.length && d.dagitim && <div className="mb-2"><DagitimTazelikLine t={d.dagitim.tazelik} /></div>}
         {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'hiz', 'gun', 'devir', 'sonHareket', 'net12', 'durum', 'dagitim', 'deger']} action={action} />}
         {d && <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={(p) => set('sayfa', String(p))} />}
       </Panel>

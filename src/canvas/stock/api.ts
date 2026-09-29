@@ -94,8 +94,11 @@ export type Dagitim = {
   isaret: DagitimIsaret | null;
   isaretEtiket?: string;
 };
+/** Kaynağın kendi damgası (okuma saatimiz değil) ve yaşı; `bayat` ise ekran «N gündür yenilenmedi» der. */
+export type DagitimTazelik = Record<'basari' | 'dr', { ad: string; tarih: string | null; yasGun: number | null; bayat: boolean }> & { bayatGun: number };
 export type DagitimOzet = {
   pencere: { bas: string; son: string } | null;
+  tazelik?: DagitimTazelik;
   sonGoruntu: { basari: string | null; dr: string | null };
   isaretler: Partial<Record<DagitimIsaret, number>>;
   etiketler: Record<DagitimIsaret, string>;
@@ -294,9 +297,9 @@ export const stockApi = {
   addNote: (code: string, text: string) => send<Note>('POST', `/items/${enc(code)}/notes`, { not: text }),
   deleteNote: (id: string) => send<{ ok: boolean }>('DELETE', `/notes/${enc(id)}`),
   runningOut: (f: { gun?: number; sayfa?: number; kartsiz?: boolean }) =>
-    send<Page<Item> & { gun: number; baskiSuresi: number; baskiSuresiKaynak: string; guvenlikGun: number; veriSonu: string | null }>('GET', `/running-out${qs(f)}`),
+    send<Page<Item> & { dagitim?: DagitimOzet | null; gun: number; baskiSuresi: number; baskiSuresiKaynak: string; guvenlikGun: number; veriSonu: string | null }>('GET', `/running-out${qs(f)}`),
   excess: (f: { tur?: string; sayfa?: number }) =>
-    send<Page<Item> & { toplamAdet: number; deger: Value; fazlaGun: number; hareketPenceresi: [string, string] | null; veriSonu: string | null }>('GET', `/excess${qs(f)}`),
+    send<Page<Item> & { dagitim?: DagitimOzet | null; toplamAdet: number; deger: Value; fazlaGun: number; hareketPenceresi: [string, string] | null; veriSonu: string | null }>('GET', `/excess${qs(f)}`),
   diff: (f: { sinif?: string; sayfa?: number }) =>
     send<Page<Item> & { siniflar: Array<{ key: DiffClass; label: string; adet: number }>; veriSonu: string | null; not: string }>('GET', `/diff${qs(f)}`),
   transfers: (f: { tur?: string; sinif?: string; sayfa?: number }) =>

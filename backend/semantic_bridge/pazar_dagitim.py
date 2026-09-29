@@ -211,6 +211,8 @@ def settings() -> dict[str, Any]:
             # İki görüntü arası bundan uzunsa (ör. zamanlayıcı aylarca durmuşsa) çıkış/giriş hesaplanmaz: uzun aralıkta
         # gelip giden stok görünmez, tek bir dev «çıkış» ay serisini bozardı.
         "aralikGun": int(f("PAZAR_DAGITIM_ARALIK_GUN", 35)),
+        # Kaynağın kendi damgası bundan eskiyse ekran «N gündür yenilenmedi» uyarısını turuncu yazar.
+        "bayatGun": int(f("PAZAR_DAGITIM_BAYAT_GUN", 2)),
     }
 
 
@@ -742,6 +744,25 @@ def run_all(engine: sa.engine.Engine, tenant: str, run: Runner, firms: dict[int,
     return out
 
 
+def freshness(engine: sa.engine.Engine, tenant: str, today: Optional[date] = None) -> dict[str, Any]:
+    """Kaynak başına son görüntünün kaynak damgası ve yaşı (gün). Ekran her yerde «… kataloğu GG.AA.YYYY tarihli» yazar;
+    yaş `bayatGun`'ü aşarsa «N gündür yenilenmedi» uyarısı. Damga kaynağın kendi `tarih` kolonudur, okuma saatimiz değil."""
+    S = SNAPS.c
+    with engine.connect() as c:
+        rows = c.execute(sa.select(S.kaynak, sa.func.max(S.tarih)).where(S.tenant_id == tenant).group_by(S.kaynak)).all()
+    last = {k: d for k, d in rows}
+    t = today or datetime.now(timezone.utc).date()
+    lim = settings()["bayatGun"]
+    out: dict[str, Any] = {}
+    for k in KAYNAK:
+        d = last.get(k)
+        yas = (t - d).days if d else None
+        out[k] = {"ad": KAYNAK[k], "tarih": d.isoformat() if d else None, "yasGun": yas,
+                  "bayat": yas is not None and yas > lim}
+    out["bayatGun"] = lim
+    return out
+
+
 # ================================================================================ stok ekranlarına bağlantı
 
 #: Stok satırındaki işaret: TİMAŞ'ta stok varken dağıtımcının kitapçıya gösterdiği durum.
@@ -830,6 +851,7 @@ def attach_stock(engine: sa.engine.Engine, tenant: str, items: list[dict[str, An
         it["dagitim"] = out
     return {"pencere": {"bas": win[0].isoformat(), "son": win[1].isoformat()} if win else None,
             "sonGoruntu": {k: v.isoformat() if v else None for k, v in last.items()}, "isaretler": dict(counts),
+            "tazelik": freshness(engine, tenant),
             "etiketler": ISARET, "not": NOTLAR["endeks"]}
 
 
@@ -846,6 +868,7 @@ def summary(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     win = stretch(engine, tenant)
     last = {k: max(processed(engine, tenant, k), default=None) for k in KAYNAK}
     base = {"sonGoruntu": {k: v.isoformat() if v else None for k, v in last.items()}, "not": NOTLAR["endeks"],
+            "tazelik": freshness(engine, tenant),
             "timasNot": NOTLAR["timas"],
             "kalibrasyon": meta_get(engine, tenant, "kalibrasyon")}
     if not win:

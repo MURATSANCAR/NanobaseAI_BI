@@ -252,7 +252,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             rows = [i for i in rows if not i["uretim"]]
         pg = S.page_of(rows, sayfa)
         pg["items"], _ = with_cost(user, pg["items"])
-        out = {**pg, "gun": days, "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"],
+        out = {**pg, "dagitim": m.get("dagitim"), "gun": days, "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"],
                "guvenlikGun": m["settings"]["safetyDays"], "veriSonu": m["dataEnd"]}
         return PV.bagla(out, lambda: K.for_running_out(engine, tenant, m, out, kdeps(user)))
 
@@ -269,7 +269,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         for i in pg["items"]:
             o = sug.get(i["stokKodu"])
             i["oneri"] = {"id": o["id"], "hedef": o["hedef"], "hedefEtiket": o["hedefEtiket"], "gerekce": o["gerekce"]} if o else None
-        out = {**pg, "toplamAdet": sum(i["bakiye"] for i in rows), "deger": value, "fazlaGun": m["settings"]["excessDays"],
+        out = {**pg, "dagitim": m.get("dagitim"), "toplamAdet": sum(i["bakiye"] for i in rows), "deger": value,
+               "fazlaGun": m["settings"]["excessDays"],
                "hareketPenceresi": m.get("movementWindow"), "veriSonu": m["dataEnd"]}
         return PV.bagla(out, lambda: K.for_excess(engine, tenant, m, out, kdeps(user)))
 

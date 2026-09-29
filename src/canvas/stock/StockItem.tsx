@@ -11,7 +11,7 @@ import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { fmtDay } from '../budget/api';
 import { gunText, n0, n1, stockApi, tl, type ItemDetail, type Suggestion } from './api';
-import { DataDay, Empty, Loading, SourcesButton, StatePill, StockFrame, num } from './parts';
+import { DagitimTazelikLine, DataDay, Empty, Loading, SourcesButton, StatePill, StockFrame, num } from './parts';
 import { RULES } from './rules';
 import { SuggestionActions } from './decisions';
 
@@ -345,6 +345,7 @@ function Distributor({ it }: { it: ItemDetail }) {
       <h2 className="mb-2 text-[13px] font-extrabold">
         <InfoLabel k={it.kaynaklar} alan="dagitim" label="Dağıtımcı bilgisi">Dağıtımcı ve perakende</InfoLabel>
       </h2>
+      <div className="mb-2"><DagitimTazelikLine t={oz?.tazelik} /></div>
       {d.isaret && (
         <div className="mb-3 rounded-xl bg-amber-50 p-3 text-[12px] font-semibold text-amber-900">
           {d.isaretEtiket}
@@ -363,7 +364,7 @@ function Distributor({ it }: { it: ItemDetail }) {
         <Fact k="D&R fiyatı · liste" v={r?.drFiyat ? `${tl(r.drFiyat)} · ${r.fiyat ? tl(r.fiyat) : '—'}` : '—'} ks={it.kaynaklar} a="dagitim" />
       </dl>
       <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
-        Son görüntü: Başarı {day(oz?.sonGoruntu.basari)} · D&amp;R {day(oz?.sonGoruntu.dr)}. D&amp;R sitelerinde 999 ve üstü stok sayım değildir, gösterilmez. Çıkış, Başarı deposundaki düşüşlerin toplamıdır:
+        D&amp;R sitelerinde 999 ve üstü stok sayım değildir, gösterilmez. Çıkış, Başarı deposundaki düşüşlerin toplamıdır:
         kitapçılara çıkış, okura satış değil; görüntüler arasında gelip giden stok görünmediği için gerçek adedin altındadır.
       </p>
     </Panel>

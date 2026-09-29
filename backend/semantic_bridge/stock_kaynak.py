@@ -301,6 +301,7 @@ def for_items(engine: Any, tenant: str, m: dict[str, Any], out: dict[str, Any], 
     f["total"] = h(st.k, "liste", "Liste = süzgece (durum, yayınevi, ambar, arama) uyan kitaplar; toplam kitap sayısı, "
                                   "sayfa başına 50 satır. Durum kuralı: " + F_DURUM, [f.get("items[].bakiye"),
                                                                                        f.get("items[].satisHizi")])
+    f["dagitim"] = f.get("items[].dagitim")          # işaret sayaçları ve kaynak tarihi (dağıtımcı özeti)
     bind(st.k, f)
     return st.k
 
@@ -314,7 +315,7 @@ def for_running_out(engine: Any, tenant: str, m: dict[str, Any], out: dict[str, 
                                     "gününün altına inen kitaplar (en önce biten başta). " + F_GUN,
                    [f.get("items[].gun"), f.get("items[].kritikGun")]),
         "gun": st.settings("STOCK_RUNOUT_DAYS"), "baskiSuresi": f.get("items[].kritikGun"),
-        "guvenlikGun": f.get("items[].kritikGun"),
+        "guvenlikGun": f.get("items[].kritikGun"), "dagitim": f.get("items[].dagitim"),
     })
     bind(st.k, f)
     return st.k
@@ -334,7 +335,7 @@ def for_excess(engine: Any, tenant: str, m: dict[str, Any], out: dict[str, Any],
     sug = k.portal("stok.portal.oneriFazla", "Açık fazla stok önerileri", store.suggestions_stmt(tenant, tur="fazla"), engine,
                    description="Gece işinin yazdığı açık öneriler (hedef modül ve gerekçe).")
     f.update({"total": ex, "toplamAdet": ex, "fazlaGun": st.settings("STOCK_EXCESS_DAYS", "STOCK_DEAD_DAYS"),
-              "items[].oneri": h(k, "oneri", F_ONERI, [sug])})
+              "items[].oneri": h(k, "oneri", F_ONERI, [sug]), "dagitim": f.get("items[].dagitim")})
     if rows_cost:
         f["deger"] = f.get("items[].stokDegeri")
     bind(k, f)
@@ -382,7 +383,7 @@ def for_item(engine: Any, tenant: str, m: dict[str, Any], out: dict[str, Any], d
     f = st.item_fields("", cost_codes=[code] if "stokDegeri" in out else None, logo_db=deps.get("logo_db"))
     f.update({
         "raflar": h(k, "raf", F_RAF, st.s("crm_raf_stok", "crm_depo")),
-        "uretimKartlari": f.get("uretim"),
+        "uretimKartlari": f.get("uretim"), "dagitimOzet": f.get("dagitim"),
         "esikler": k.portal("stok.portal.esikKitap", "Kitabın eşik kayıtları", store.thresholds_stmt(tenant, "", [code]), engine,
                             description="Taslak, onaylı, reddedilmiş ve arşivlenmiş eşikler."),
         "esikOnerisi": h(k, "esikOneri", F_ESIK_ONERI, [f.get("satisHizi"), f.get("kritikGun"),

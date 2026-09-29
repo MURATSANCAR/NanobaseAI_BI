@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 import type { Kaynaklar } from '../components/sqlInfo';
+import type { DagitimTazelik } from '../stock/api';
 
 /** M39 Pazar araştırması ve rekabet: köprü uçları /api/v1/pazar/*. Portal CRM'e ve Logo'ya yazmaz; dış tarama yok. */
 
@@ -314,6 +315,7 @@ export type DagitimSummary = {
   timasToplam?: number;
   timasMarkalar?: string[];
   timasNot: string;
+  tazelik?: DagitimTazelik;
   kategoriler: Array<{ kategori: string; cikis: number; timasCikis: number; timasPay: number | null; kategoriPay: number | null }>;
   yayinevleri: Array<{ sira: number; yayinevi: string; cikis: number; timas: boolean; pay: number | null }>;
   aylar: Array<{ ay: string; cikis: number; timasCikis: number }>;

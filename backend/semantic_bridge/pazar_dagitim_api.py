@@ -95,7 +95,7 @@ def register(app: Any, deps: dict[str, Any]) -> Job:
     @app.get(B + "/status")
     def dagitim_status(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return {**D.status(engine, tenant), "job": job.status(),
+        return {**D.status(engine, tenant), "tazelik": D.freshness(engine, tenant), "job": job.status(),
                 "canRefresh": bool(is_admin(user) or can(user, F_REFRESH)), "notlar": D.NOTLAR}
 
     def summary_sources(engine: Any, tenant: str, out: dict[str, Any]) -> PV.Kaynaklar:

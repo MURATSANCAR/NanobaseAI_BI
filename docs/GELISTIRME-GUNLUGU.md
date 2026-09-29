@@ -77,6 +77,8 @@
 - **Pazar › Özet:** «Dağıtımcı nabzı» paneli (kategori / yayınevi / ay; TİMAŞ grubu payı; «pazar payı değil» notu).
 - **D&R belgesiyle bulunan:** `deleted`=site silinmesi (Prefix B2B sürebilir), site ve B2B stoğu ayrı, site stoğunda yer tutucu (999, 500.000…), kaynakta 17. sayfa (20.000 ürün) eksik; Başarı `rc/pc/rn` sayfalama.
 - **Arşiv:** önce 20 görüntü içe alındı, kullanıcı kararıyla iş durduruldu ve o satırlar silindi (portalın kendi tablosu; kaynağa dokunulmadı). İlk gerçek görüntü 2026-09-25 (Başarı 234.681, D&R 385.932 başlık); kaynak o günden beri yenilenmedi.
+- **Kaynak tarihi ekranda (kullanıcı isteği):** Stok, Bitecekler, Fazla stok, kitap detayı ve Pazar paneli «Başarı Dağıtım kataloğu GG.AA.YYYY tarihli · D&R kataloğu …» satırını gösterir; kaynağın kendi damgası `PAZAR_DAGITIM_BAYAT_GUN` (2) günden eskiyse turuncu «N gündür yenilenmedi» (`D.freshness`, sorgu bilgisine bağlı).
+- **VM:** müşteri VM'i zaten .25'te (bağlantı dosyası, `SEMANTIC_FIRMS`, .25:1433 açık — 29.09 salt okuma denetimi); bağlantı değişikliği gerekmez, sıradan kurulum yeterli.
 - **Doğrulama:** sunucuda birim testleri 73 geçti (`test_pazar_dagitim.py` yeni, stok/erişim/sorgu bilgisi); `tsc -b` temiz. Yan köprü (:8788, `timasai` 15 dk oturumu, sonra silindi) gerçek veriyle: baskısı yok 514, tükenmiş 1.121 — kaynağa doğrudan SQL referansıyla birebir (fazla 0, eksik 0). Canlıya kurulum main'e merge'den sonra.
 ## 2026-09-29 (gece) — İK personel portalı: İK ana sayfası, özlük kaydı ve İK yönetimi
 

@@ -6,6 +6,7 @@ import { Panel } from '../editorial/kit';
 import SqlInfo from '../components/SqlInfo';
 import { Explain } from '../components/Explain';
 import { fmtDay, fmtInt, fmtPct, pazarApi } from './api';
+import { DagitimTazelikLine } from '../stock/parts';
 
 /** Pazar › Özet: dağıtımcı nabzı. Başarı Dağıtım kataloğunun görüntüleri arasındaki depo düşüşünden çıkış endeksi —
  *  kategori (TİMAŞ payıyla), yayınevi sırası, ay. Kitapçılara çıkıştır; okura satış ya da pazar payı diye yazılmaz. */
@@ -50,10 +51,10 @@ export default function DistributorPulse() {
           ))}
         </div>
       </div>
+      {d && <div className="mt-2"><DagitimTazelikLine t={d.tazelik} /></div>}
       {d?.pencere && (
         <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">
-          Başarı Dağıtım kataloğu, {fmtDay(d.pencere.bas)} – {fmtDay(d.pencere.son)} görüntüleri. Son okuma: Başarı{' '}
-          {d.sonGoruntu.basari ? fmtDay(d.sonGoruntu.basari) : '—'} · D&amp;R {d.sonGoruntu.dr ? fmtDay(d.sonGoruntu.dr) : '—'}.
+          Başarı Dağıtım kataloğu, {fmtDay(d.pencere.bas)} – {fmtDay(d.pencere.son)} görüntüleri.
           {kal?.katsayi && kal.korelasyonCikis !== null
             ? ` TİMAŞ kitaplarında Logo sevkiyle sıralama tutarlılığı ${fmtPct(kal.korelasyonCikis * 100, 0)}; adet olarak endeks gerçeğin yaklaşık ${kal.katsayi.toLocaleString('tr-TR')}’te biri.`
             : ''}

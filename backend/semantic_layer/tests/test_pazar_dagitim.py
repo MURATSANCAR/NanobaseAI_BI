@@ -228,3 +228,12 @@ def test_attach_stock_no_flag_for_non_timas_brand(engine):
     items = [{"stokKodu": "TARCIN-1", "bakiye": 40.0}]
     D.attach_stock(engine, T, items)
     assert items[0]["dagitim"]["basari"]["durum"] == "Baskısı Yok" and items[0]["dagitim"]["isaret"] is None
+
+
+def test_freshness_reports_source_date_and_staleness(engine, monkeypatch):
+    monkeypatch.setenv("PAZAR_DAGITIM_BAYAT_GUN", "2")
+    _apply(engine, date(2026, 9, 25), [_b("9780000000001", 1)])
+    f = D.freshness(engine, T, today=date(2026, 9, 29))
+    assert f["basari"] == {"ad": "Başarı Dağıtım kataloğu", "tarih": "2026-09-25", "yasGun": 4, "bayat": True}
+    assert f["dr"]["tarih"] is None and f["dr"]["bayat"] is False
+    assert D.freshness(engine, T, today=date(2026, 9, 26))["basari"]["bayat"] is False
