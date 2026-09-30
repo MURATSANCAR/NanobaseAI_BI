@@ -268,7 +268,7 @@ def run(args):
     if args.apply:
         setting = chat.call('GET', 'settings/UI_Allow_room_names_with_special_chars')
         if not setting.get('value'):
-            chat.call('POST', 'settings/UI_Allow_room_names_with_special_chars', {'value': True})
+            raise SyncError('Enable room display names through the deployment environment before synchronization')
     for team_id in sorted(set(desired) | set(owned_rooms)):
         team = desired.get(team_id)
         if team is None:
