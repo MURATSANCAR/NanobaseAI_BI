@@ -2934,6 +2934,46 @@ export const documentApi = {
   },
 };
 
+/** Portaldan okutulan kitap: aşama iş akışının adımından türetilir (teknik ad taşımaz); `listed` kitap Kitaba sor'da. */
+export type BookRead = {
+  id: string;
+  title: string;
+  pages: number | null;
+  status: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+  phase: { n: number; of: number; label: string };
+  failed: boolean;
+  requested_by: string;
+  created_at: string;
+  finished_at: string | null;
+  listed?: boolean;
+  already_read?: boolean;
+};
+
+export const bookReadApi = {
+  list: () => send<{ items: BookRead[] }>('GET', '/api/v1/editorial/ask/read', undefined, 30_000),
+  /** Ham PDF gövdesi (belge yüklemesiyle aynı yol): köprü diske akıtır, editör motorunun gelen kutusuna gönderir. */
+  upload: async (file: File, title = '') => {
+    const q = qs({ filename: file.name, title: title.trim() || undefined });
+    const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/ask/read${q}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: file,
+      signal: AbortSignal.timeout(1_800_000),
+    });
+    if (res.status === 401 || res.status === 403) {
+      authBlocked = true;
+      throw new EngineAuthError();
+    }
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { detail?: string | { message?: string } } | null;
+      const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
+      throw new Error(deskUploadErrorText(res.status, file.size, msg));
+    }
+    return (await res.json()) as BookRead;
+  },
+};
+
 /** Soru sorulabilen (okunmuş) kitaplar; motordan gelir, köprüde kısa süre önbellekte tutulur. */
 export const readableBooksApi = {
   list: () => send<{ items: string[]; at: number | null; configured: boolean; loading: boolean }>('GET', '/api/v1/editorial/ask/books', undefined, 30_000),

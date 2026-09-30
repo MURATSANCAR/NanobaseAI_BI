@@ -14,6 +14,7 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import SearchBox from './SearchBox';
 import { fmtDay } from './translation/parts';
 import AskBox from './AskBox';
+import BookReadPanel from './BookRead';
 import MyTasks from './MyTasks';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
@@ -473,6 +474,7 @@ export default function EditorialHome() {
             <TranslationDesk />
           </div>
           <div className="space-y-3">
+            <BookReadPanel />
             <AskBox />
             {side}
           </div>
@@ -493,6 +495,7 @@ export default function EditorialHome() {
           <MyTasks />
 
           {/* Sohbet açılışta üstte kalır (kullanıcı kararı 09-22); dosyası olan editörde işlerin altına iner. */}
+          <BookReadPanel />
           <AskBox />
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-4">

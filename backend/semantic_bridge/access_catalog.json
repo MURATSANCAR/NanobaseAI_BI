@@ -1372,6 +1372,13 @@
       "hint": "İnceleme kuyruğunda onay, ret, düzeltme"
     },
     {
+      "key": "ozellik:kitap.okut",
+      "area": "editoryal",
+      "page": "sayfa:editoryal",
+      "label": "Kitap okutma",
+      "hint": "PDF yükleyip Zeki AI'a okutma; bitince Kitaba sor'a girer"
+    },
+    {
       "key": "ozellik:yazar-giris.herkesinki",
       "area": "editoryal",
       "page": "sayfa:yazar-giris",

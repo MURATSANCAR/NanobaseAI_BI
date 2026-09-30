@@ -6344,6 +6344,50 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return part.get("data") or {"items": [], "at": None, "configured": books_mod.configured(),
                                     "loading": not bool(part.get("error")), "error": part.get("error")}
 
+    # ---------------------------------------------------------- kitap okutma (Kitaba sor'un üstündeki yükleme alanı)
+    @app.put("/api/v1/editorial/ask/read")
+    async def editorial_book_read(request: Request, filename: str = "", title: str = "") -> dict[str, Any]:
+        """Kitap PDF'i yükle ve okut: ZEKİ AI sayfaları, resimleri, karakterleri ve olayları okur; bitince kitap
+        «Kitaba sor» listesine girer. Gövde ham dosya (belge yüklemesiyle aynı yol, diske akar). Yükleyen = oturum."""
+        engine, _tenant, user, _admin = await run_in_threadpool(_books, request)
+        from semantic_bridge import editorial_cards
+        incoming = await _desk_receive(request)
+        if not incoming.size:
+            incoming.discard()
+            raise HTTPException(status_code=400, detail={"code": "EDITORIAL_DESK", "message": "Dosya boş."})
+        try:
+            out = await run_in_threadpool(editorial_cards.book_read_upload, incoming.open(), filename, title, user)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Kitap okumaya gönderilemedi.")
+        finally:
+            incoming.discard()                      # kalıcı kopya editör motorunun gelen kutusunda
+        admin_mod.audit(engine, user, "upload", "editorial_book_read", out.get("id"), out.get("title") or filename,
+                        {"bytes": incoming.size, "alreadyRead": bool(out.get("already_read"))})
+        return out
+
+    @app.get("/api/v1/editorial/ask/read")
+    def editorial_book_reads(request: Request) -> dict[str, Any]:
+        """Okutulan kitaplar ve okuma aşaması: kişi kendi okuttuklarını, yönetici hepsini görür. Okuması biten kitap
+        soru listesinde yoksa liste beklemeden arkada tazelenir; `listed` kitabın soru sorulabilir olduğunu söyler."""
+        _engine, _tenant, user, is_admin = _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            out = editorial_cards.book_read_jobs(user, is_admin)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Okutulan kitaplar motordan alınamadı.")
+        part = app.state.editorial_home.read()["parts"].get("readableBooks", {})
+        listed = set((part.get("data") or {}).get("items") or [])
+        stale = False
+        for item in out.get("items") or []:
+            item["listed"] = item.get("title") in listed
+            done = item.get("status") == "SUCCEEDED" and item.get("finished_at")
+            if done and not item["listed"] and datetime.fromisoformat(item["finished_at"]).timestamp() > part.get("updatedAt", 0):
+                stale = True
+        if stale:
+            threading.Thread(target=app.state.editorial_home.refresh_part, args=("readableBooks",),
+                             name="editorial-readable-books", daemon=True).start()
+        return out
+
     @app.get("/api/v1/editorial/proofing")
     @_izle_ep('portal.masa.bulgular', 'Son okuma bulguları',
                'Zeki AI bulguları: uyarı ve hata sayısı denetim servisinin raporundan (bulgu başına bir satır); sayılar raporun kendisidir, model sayı üretmez.', dis_adi='Son okuma denetim servisi (kitap başına rapor)')

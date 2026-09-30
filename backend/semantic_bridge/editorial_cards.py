@@ -738,6 +738,24 @@ def document_upload(data, filename: str, title: str, audience: str, age_from, ag
         return r.json()
 
 
+# ------------------------------------------------------------------ kitap okutma (kart servisi /v1/books/read)
+def book_read_upload(data, filename: str, title: str, user: str) -> dict:
+    """Kitap PDF'i kart servisine gider; orada gelen kutusuna yazılır ve okuma işi başlar. Yükleyen = oturum.
+    `data`: açık dosya (köprü gövdeyi diske akıtır; kitap yüzlerce MB olabilir, belleğe alınmaz)."""
+    base,headers,ca=_headers()
+    headers['X-Editor']=user[:200]
+    with httpx.Client(timeout=httpx.Timeout(1800, connect=30),verify=ca or True,follow_redirects=False) as client:
+        r=client.post(base+'/v1/books/read',headers=headers,data={'title':title or ''},
+                      files={'file':(filename or 'kitap.pdf',data,'application/pdf')})
+        r.raise_for_status()
+        return r.json()
+
+
+def book_read_jobs(user: str, see_all: bool) -> dict:
+    """Portaldan okutulan kitaplar: kişi kendi okuttuklarını, yönetici hepsini görür."""
+    return request('/v1/books/read'+('' if see_all else '?requested_by='+urllib.parse.quote(user))).json()
+
+
 def documents(user: str, see_all: bool) -> dict:
     """Belgeler: kişi kendi yüklediklerini, yönetici hepsini görür."""
     path='/v1/documents'+('' if see_all else '?uploaded_by='+urllib.parse.quote(user))

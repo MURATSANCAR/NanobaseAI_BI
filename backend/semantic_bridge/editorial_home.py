@@ -97,6 +97,24 @@ class EditorialHomeSnapshots:
             except Exception:
                 log.exception('Editorial view warm-up failed: %s', view.get('name'))
 
+    def refresh_part(self, name):
+        """Tek parçayı hemen yeniden kurar (ör. okuması biten kitap soru listesine beş dakika beklemeden girsin).
+        Aynı parça zaten kuruluyorsa beklemez, döner; hata son başarılı kaydı bozmaz."""
+        build = self.builders().get(name)
+        if build is None:
+            return
+        root = self.directory()
+        with (root / (name + '.lock')).open('a') as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return
+            path = root / (name + '.json')
+            try:
+                self.save(path, {'data': build(), 'updatedAt': time.time(), 'error': None})
+            except Exception:
+                log.exception('Editorial home part refresh failed: %s; preserving last success', name)
+
     def refresh(self, force=False):
         root = self.directory()
         with (root / 'refresh.lock').open('a') as lock:
