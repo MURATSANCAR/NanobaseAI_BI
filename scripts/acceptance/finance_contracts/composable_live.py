@@ -6,8 +6,9 @@ Derived output aliases may come from the plan, but their operations and operands
 must match the independently specified case before any alias is accepted.
 """
 import argparse
+import calendar
 from collections import Counter
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 import fcntl
 import hashlib
@@ -26,6 +27,19 @@ import urllib.request
 from zoneinfo import ZoneInfo
 
 REFERENCE_DATE = "2026-09-30"
+
+
+class ReferenceDateChanged(RuntimeError):
+    pass
+
+
+def require_reference_day(reference_date):
+    if date.fromisoformat(reference_date).isoformat()!=reference_date:
+        raise ValueError("Reference date must be canonical YYYY-MM-DD")
+    actual=datetime.now(ZoneInfo("Europe/Istanbul")).date().isoformat()
+    if actual!=reference_date:
+        raise ReferenceDateChanged(f"Istanbul day {actual} differs from explicit reference date {reference_date}; stop without shifting the oracle")
+
 REFERENCE_RETRIES = []
 REFERENCE_CONTEXT = {}
 EXACT_COUNT_COLUMNS = frozenset({"sold_quantity", "net_quantity", "invoice_count", "record_count",
@@ -64,7 +78,13 @@ def sales_sql(start, end, metrics, dimension=None, having=None, limit=None):
     return sql
 
 
-def cases():
+def cases(reference_date=REFERENCE_DATE):
+    anchor=date.fromisoformat(reference_date)
+    month_index=anchor.year*12+anchor.month-1-3
+    back_year,back_month=divmod(month_index,12);back_month+=1
+    three_month_start=date(back_year,back_month,min(anchor.day,calendar.monthrange(back_year,back_month)[1])).isoformat()
+    tomorrow=(anchor+timedelta(days=1)).isoformat()
+
     out = []
     def add(question, metrics, dimension=None, start="2026-09-01", end="2026-10-01", **extra):
         row = dict(id=f"CP{len(out)+1:03d}", question=question, source="logo", metrics=metrics,
@@ -91,10 +111,10 @@ def cases():
     ]:
         condition = {">":"büyük","<":"küçük",">=":"büyük veya eşit"}[op]
         add(f"Eylül 2026'da {label} {threshold} değerinden {condition} olan {noun}, toplamlarıyla listele.",[metric],dimension,having=[metric,op,threshold])
-    add("Son üç ayın KDV hariç, iadeler düşülmüş net satışını ay ay göster; bugünden üç takvim ayı geriye git, bugün de dahil olsun.",["net_sales"],"month",start="2026-06-30",end="2026-10-01",relative=True)
-    add("Bu yılın üçüncü çeyreğinde KDV hariç iade düşülmüş net satış toplamımız ne kadar?",["net_sales"],start="2026-07-01",end="2026-10-01",relative=True)
-    add("Son otuz günde KDV hariç iade düşülmüş net satış ve iade tutarını göster; bugün de dahil olsun.",["net_sales","return_amount"],relative=True)
-    add("Dünkü KDV hariç net satış ve satılan adet toplamını göster.",["net_sales","sold_quantity"],start="2026-09-29",end="2026-09-30",relative=True)
+    add("Son üç ayın KDV hariç, iadeler düşülmüş net satışını ay ay göster; bugünden üç takvim ayı geriye git, bugün de dahil olsun.",["net_sales"],"month",start=three_month_start,end=tomorrow,relative=True)
+    add("Bu yılın üçüncü çeyreğinde KDV hariç iade düşülmüş net satış toplamımız ne kadar?",["net_sales"],start=f"{anchor.year:04d}-07-01",end=f"{anchor.year:04d}-10-01",relative=True)
+    add("Son otuz günde KDV hariç iade düşülmüş net satış ve iade tutarını göster; bugün de dahil olsun.",["net_sales","return_amount"],start=(anchor-timedelta(days=29)).isoformat(),end=tomorrow,relative=True)
+    add("Dünkü KDV hariç net satış ve satılan adet toplamını göster.",["net_sales","sold_quantity"],start=(anchor-timedelta(days=1)).isoformat(),end=anchor.isoformat(),relative=True)
     add("Eylül 2026'da KDV hariç net satışı en yüksek ilk beş kanalı tutarlarıyla göster.",["net_sales"],"channel",limit=5)
     add("Eylül 2026'da satılan kitap adedi en yüksek ilk on günü adetleriyle göster.",["sold_quantity"],"day",limit=10)
     add("Eylül 2026'da KDV hariç iade tutarı en yüksek ilk üç kanalı listele.",["return_amount"],"channel",limit=3)
@@ -542,19 +562,18 @@ def save(path,value):path.write_text(json.dumps(value,ensure_ascii=False,default
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument("--out",required=True);p.add_argument("--only",default="");p.add_argument("--base",default="http://127.0.0.1:8795");args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument("--out",required=True);p.add_argument("--only",default="");p.add_argument("--base",default="http://127.0.0.1:8795");p.add_argument("--reference-date",default=REFERENCE_DATE);args=p.parse_args()
     if sys.platform!="linux" or not ROOT.is_dir() or not Path("/proc").is_dir():raise SystemExit("Remote test-server execution only; local runs prohibited")
     if not args.base.startswith("http://127.0.0.1:"):raise SystemExit("Use the connected test server's loopback API")
+    require_reference_day(args.reference_date)
     os.umask(0o077)
     lock=open("/tmp/finance-composable-live.lock","a")
     try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     except BlockingIOError:raise SystemExit("Another acceptance run is active")
     out=Path(args.out);out.mkdir(parents=True,exist_ok=True)
     if (out/"report.json").exists():raise SystemExit("Use a fresh evidence directory")
-    selected=[c for c in cases() if not args.only or c["id"] in args.only.split(",")]
+    selected=[c for c in cases(args.reference_date) if not args.only or c["id"] in args.only.split(",")]
     if not selected:raise SystemExit("No cases selected")
-    if any(c.get("relative") for c in selected) and str(datetime.now(ZoneInfo("Europe/Istanbul")).date())!=REFERENCE_DATE:
-        raise SystemExit("Natural-date cases require 2026-09-30; do not silently shift acceptance dates")
     session=None;digest=None;conns={};results=[];counts=Counter();threads={};before=manifest();removed=0
     def interrupt(signum,frame):raise KeyboardInterrupt(f"Signal {signum}")
     signal.signal(signal.SIGTERM,interrupt)
@@ -566,8 +585,11 @@ def main():
         session.execute("INSERT INTO sessions(token,username,expires) VALUES(?,?,?)",(digest,"timasai",time.time()+900));session.commit()
         headers={"Content-Type":"application/json","X-Semantic-Caller":env.get("SEMANTIC_CALLER_TOKEN",""),"Cookie":("__Secure-timas_session" if login.get("COOKIE_SECURE","1")!="0" else "timas_session")+"="+token}
         def call(path,body=None):
+            require_reference_day(args.reference_date)
             req=urllib.request.Request(args.base+path,data=json.dumps(body).encode() if body is not None else None,headers=headers)
-            with urllib.request.urlopen(req,timeout=180) as response:return json.load(response)
+            with urllib.request.urlopen(req,timeout=180) as response:result=json.load(response)
+            require_reference_day(args.reference_date)
+            return result
         sources={c["source"] for c in selected}
         cross_dimensions="cross_dimensions" in sources
         if cross_dimensions:sources=(sources-{"cross_dimensions"})|{"logo","crm"}
@@ -576,9 +598,10 @@ def main():
         for case in selected:
             if manifest()!=before:
                 raise RuntimeError("Deployed code changed; acceptance stopped before another question")
-            item={**case,"started":time.time()};stop=False
+            item={**case,"started":time.time(),"referenceDate":args.reference_date};stop=False
             retry_offset=len(REFERENCE_RETRIES)
             try:
+                require_reference_day(args.reference_date)
                 if case.get("followup") and case["thread"] not in threads:raise RuntimeError("Follow-up prerequisite did not produce a conversation")
                 session.execute("UPDATE sessions SET expires=? WHERE token=?",(time.time()+900,digest));session.commit()
                 REFERENCE_CONTEXT.clear();REFERENCE_CONTEXT.update(caseId=case["id"],source=case["source"],phase="before_api")
@@ -602,19 +625,21 @@ def main():
                     structural=[error for error in errors if not data_dependent_error(error)]
                     item["status"]="FAIL" if structural else "UNVERIFIED"
                     if structural:item["structuralErrorsDespiteSourceChange"]=structural
+                require_reference_day(args.reference_date)
             except Exception as exc:
                 structural=[error for error in item.get("errors",[]) if not data_dependent_error(error)]
                 item["status"]="FAIL" if structural else "UNVERIFIED"
                 item["error"]=type(exc).__name__+": "+str(exc)[:500]
                 if structural:item["structuralErrorsDespiteReferenceFailure"]=structural
-                stop=isinstance(exc,(TimeoutError,urllib.error.URLError))
+                stop=isinstance(exc,(TimeoutError,urllib.error.URLError,ReferenceDateChanged))
+                if isinstance(exc,ReferenceDateChanged):item["referenceDayChanged"]=True
             item["referenceRetries"]=REFERENCE_RETRIES[retry_offset:]
             item["elapsedSeconds"]=round(time.time()-item["started"],2)
             save(out/(case["id"]+".json"),item);counts[item["status"]]+=1
             results.append({k:item[k] for k in ("id","status","errors","error","elapsedSeconds") if k in item})
             print(json.dumps(results[-1],ensure_ascii=False),flush=True)
             if len(results)%10==0:print("BATCH",len(results),dict(counts),flush=True)
-            if stop:print("STOP: API unavailable or request may still run; do not duplicate workload",flush=True);break
+            if stop:print("STOP: reference day changed or API unavailable; preserve evidence and do not duplicate workload",flush=True);break
     except BaseException as exc:
         counts["UNVERIFIED"]+=1;results.append(dict(id="ENVIRONMENT",status="UNVERIFIED",error=type(exc).__name__+": "+str(exc)[:500]))
     finally:
@@ -629,7 +654,7 @@ def main():
             finally:session.close()
         after=manifest()
         if before!=after:counts["UNVERIFIED"]+=1;results.append(dict(id="CODE_CHANGED",status="UNVERIFIED"))
-        report=dict(referenceDate=REFERENCE_DATE,api=args.base,executionEnvironment="connected test server",counts=dict(counts),results=results,planned=len(selected),completed=len([r for r in results if r["id"].startswith("CP")]),sessionsDeleted=removed,sourceWrites=0,codeBefore=before,codeAfter=after,codeStable=before==after,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),referenceRetries=REFERENCE_RETRIES,referenceRetryIsProductRecoveryEvidence=False)
+        report=dict(referenceDate=args.reference_date,api=args.base,executionEnvironment="connected test server",counts=dict(counts),results=results,planned=len(selected),completed=len([r for r in results if r["id"].startswith("CP")]),sessionsDeleted=removed,sourceWrites=0,codeBefore=before,codeAfter=after,codeStable=before==after,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),referenceRetries=REFERENCE_RETRIES,referenceRetryIsProductRecoveryEvidence=False)
         save(out/"report.json",report);print("FINAL",dict(counts),"sessionsDeleted",removed,flush=True)
         fcntl.flock(lock,fcntl.LOCK_UN);lock.close()
     return 1 if counts["FAIL"] or counts["UNVERIFIED"] or report["completed"]!=len(selected) else 0

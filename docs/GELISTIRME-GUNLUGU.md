@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Kabul koşularında açık referans günü
+
+- composable_live/logo_reports_live `--reference-date` varsayılan2026-09-30; aktif İstanbul günü eşleşmeli. CP017–20 bağımsız takvim hesapları seçili güne bağlandı, sabitEylül soruları aynıdır. Logo yalnız LR004'bugün açık' itibarıyla/gecikme günü güncellenir; tarihsel stok/yaşlandırma günleri ve sipariş oluşum aralığı korunur.
+- Her soru ve API öncesi/sonrası gün kontrol edilir. Gün değişimi UNVERIFIED ve durma sebebidir; önceden görülen yapısal hata FAIL kalır. Oturumfinallytemizliği korunur. Rapor/tekilkanıtlarda seçili gün ve koşucu hash'i kaydedilir.
+- Bu, başarısız ürün çıktısına uydurulmuş referans değildir: aynı30Eylülvarsayılanının bağımsız dönemleri değişmedi. Yeni günün koşusu eski günün aynı veri karşılaştırması diye sunulmaz. Yerel ürün testi yok.
+
 ## 2026-09-30 — Geniş gerçek kabul ve sınırlı reasoning pilotu
 
 - 991c7d4a0: Logo11 `logo-r1` 4PASS/6FAIL/1PARTIAL_REFERENCE_MATCH. Stok güncel/geçmiş ve ödeme geçti;2025stok kısmi kaynak sınırıyla referansa uydu. Açık sipariş tarih ayrıştırması, bakiye/döviz/alış rapor seçimi ve maliyet/kapama sınırının özel açıklaması başarısız. Yaşlandırma/kâr sayısı uydurulmadı; genel unsupported özel kaynak kanıtının yerine geçmedi.

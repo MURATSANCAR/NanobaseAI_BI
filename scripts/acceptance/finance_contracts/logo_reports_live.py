@@ -57,7 +57,7 @@ def seed(reader):
             "purchase_book":str(purchase[0]["CODE"]).strip() if purchase else None}
 
 
-def cases(anchors):
+def cases(anchors, reference_date=AS_OF):
     book=anchors["book"];payer=anchors["payer"];order=anchors["order_book"];purchase=anchors["purchase_book"];previous=anchors["previous_book"]
     common=["stock_ref","book_code","book_name","warehouse_no"]
     stock_fields=common+["onhand","source_quantity","movement_quantity","reconciliation"]
@@ -65,7 +65,7 @@ def cases(anchors):
         dict(id="LR001",mode="stock",question=f"Logo'da stok kodu {book} olan kitabın 30 Eylül 2026 sonu itibarıyla bütün depolardaki stok miktarlarını göster. Kaynak stokla hareket toplamı uzlaşmıyorsa kesin miktar verme.",book=book,as_of=AS_OF,columns=stock_fields,keys=["stock_ref","warehouse_no"]),
         dict(id="LR002",mode="stock",question=f"Logo'da stok kodu {book} olan kitabın 16 Ocak 2026 sonu stok miktarını depo depo göster.",book=book,as_of="2026-01-16",columns=stock_fields,keys=["stock_ref","warehouse_no"]),
         dict(id="LR003",mode="stock_history",question=f"Logo'da stok kodu {book} olan kitabın 1 Eylül 2026 dahil, 8 Eylül 2026 hariç hareket olan günlerdeki stok değişimini ve gün sonu stoğunu depo bazında ver.",book=book,start=START,end="2026-09-08",as_of="2026-09-07",columns=common+["day","daily_change","onhand","source_quantity","movement_quantity","reconciliation"],keys=["stock_ref","warehouse_no","day"]),
-        dict(id="LR004",mode="open_orders",question=f"Logo'da stok kodu {order} olan kitabın 2026 başından 30 Eylül 2026 sonuna kadar verilmiş, bugün açık duran satış sipariş satırlarını göster. Sipariş, sevk ve kalan adet; satır birimi, vade, gecikme ve oransal kalan net tutar da olsun. Stok tahsisi yapma.",book=order,start="2026-01-01",end=END,as_of=AS_OF,columns=["source_period","order_line_ref","order_number","order_date","book_code","book_name","customer_code","customer_name","warehouse_no","unit_ref","ordered_quantity","shipped_quantity","remaining_quantity","remaining_base_quantity","remaining_net_amount_proportional","due_date","overdue_days"],keys=["source_period","order_line_ref"],requires="order_book"),
+        dict(id="LR004",mode="open_orders",question=f"Logo'da stok kodu {order} olan kitabın 2026 başından 30 Eylül 2026 sonuna kadar verilmiş, bugün açık duran satış sipariş satırlarını göster. Sipariş, sevk ve kalan adet; satır birimi, vade, gecikme ve oransal kalan net tutar da olsun. Stok tahsisi yapma.",book=order,start="2026-01-01",end=END,as_of=reference_date,columns=["source_period","order_line_ref","order_number","order_date","book_code","book_name","customer_code","customer_name","warehouse_no","unit_ref","ordered_quantity","shipped_quantity","remaining_quantity","remaining_base_quantity","remaining_net_amount_proportional","due_date","overdue_days"],keys=["source_period","order_line_ref"],requires="order_book"),
         dict(id="LR005",mode="customer_balances",question=f"Logo'da cari kodu {payer} için Eylül 2026 başlangıç bakiyesi, ay içi borç ve alacak hareketi toplamları ve ay sonu bakiyesini göster. Fatura yaşlandırması istemiyorum.",customer=payer,start=START,end=END,columns=["customer_code","customer_name","tax_number","opening_balance","period_debits","period_credits","closing_balance","unverified_sign_rows"],keys=["customer_code","customer_name","tax_number"],requires="payer"),
         dict(id="LR006",mode="payment_movements",question=f"Logo'da cari kodu {payer} için Eylül 2026 müşteri ödeme hareketlerini nakit, banka, çek, senet ve kart türlerine ayır; her türün hareket sayısı ve tutarı olsun. Çek ve senet teslimini nakit sayma.",customer=payer,start=START,end=END,columns=["customer_code","customer_name","payment_code","payment_type","movement_count","payment_amount"],keys=["customer_code","customer_name","payment_code"],requires="payer"),
         dict(id="LR007",mode="currencies",question="Logo'da Eylül 2026 satış ve iade faturalarını işlem para birimine göre ayır. Fatura sayısı, iade düşülmüş yerel fatura genel toplamı ve özgün işlem para birimi genel toplamı olsun; farklı dövizleri toplama, tanımlanamayan para birimini tahmin etme.",start=START,end=END,columns=["currency_id","currency_code","invoice_count","local_invoice_net","original_invoice_net"],keys=["currency_id","currency_code"]),
@@ -124,7 +124,7 @@ def reference(reader,case):
             qty=D(r["AMOUNT"])-D(r["SHIPPEDAMOUNT"])
             main=qty if r["UINFO1"] is not None and r["UINFO1"]>0 and r["UINFO1"]==r["UINFO2"] else None
             due=str(r["DUEDATE"])[:10] if r["DUEDATE"] and str(r["DUEDATE"])[:10]>="1900-01-01" else None
-            rows.append(dict(source_period="411/01",order_line_ref=r["LOGICALREF"],order_number=r["FICHENO"],order_date=str(r["DATE_"])[:10],book_code=str(r["book_code"]).strip(),book_name=r["book_name"],customer_code=r["customer_code"],customer_name=r["customer_name"],warehouse_no=r["SOURCEINDEX"],unit_ref=r["UOMREF"],ordered_quantity=r["AMOUNT"],shipped_quantity=r["SHIPPEDAMOUNT"],remaining_quantity=qty,remaining_base_quantity=main,remaining_net_amount_proportional=D(r["LINENET"])*qty/D(r["AMOUNT"]),due_date=due,overdue_days=max(0,(date.fromisoformat(AS_OF)-date.fromisoformat(due)).days) if due else None))
+            rows.append(dict(source_period="411/01",order_line_ref=r["LOGICALREF"],order_number=r["FICHENO"],order_date=str(r["DATE_"])[:10],book_code=str(r["book_code"]).strip(),book_name=r["book_name"],customer_code=r["customer_code"],customer_name=r["customer_name"],warehouse_no=r["SOURCEINDEX"],unit_ref=r["UOMREF"],ordered_quantity=r["AMOUNT"],shipped_quantity=r["SHIPPEDAMOUNT"],remaining_quantity=qty,remaining_base_quantity=main,remaining_net_amount_proportional=D(r["LINENET"])*qty/D(r["AMOUNT"]),due_date=due,overdue_days=max(0,(date.fromisoformat(case["as_of"])-date.fromisoformat(due)).days) if due else None))
             partial|=main is None
         return rows,partial
     if mode in ("customer_balances","payment_movements"):
@@ -211,9 +211,9 @@ def compare(case,answer,whole,expected,partial):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument("--out",required=True);parser.add_argument("--only",default="");parser.add_argument("--base",default="http://127.0.0.1:8795");args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument("--out",required=True);parser.add_argument("--only",default="");parser.add_argument("--base",default="http://127.0.0.1:8795");parser.add_argument("--reference-date",default=AS_OF);args=parser.parse_args()
     if sys.platform!="linux" or not transport.ROOT.is_dir():raise SystemExit("Remote connected test-server runs only")
-    if str(datetime.now(ZoneInfo("Europe/Istanbul")).date())!=AS_OF:raise SystemExit("Corpus dates require2026-09-30; do not silently alter current order-state reference")
+    transport.require_reference_day(args.reference_date)
     if not args.base.startswith("http://127.0.0.1:"):raise SystemExit("Loopback test-server API required")
     os.umask(0o077);lock=open('/tmp/finance-composable-live.lock','a')
     try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -228,21 +228,25 @@ def main():
         if env.get('FINANCE_QUERY_MODE')!='contract':raise RuntimeError("Contract mode not active")
         conn=transport.connect('/data/nanobaseai/bi/secrets/logo-mssql-connection.json');reader=Reader(conn)
         anchors=seed(reader);transport.save(out/'reference-anchors.json',dict(anchors=anchors,queries=reader.evidence))
-        selected=[c for c in cases(anchors) if not args.only or c['id'] in args.only.split(',')]
+        selected=[c for c in cases(anchors,args.reference_date) if not args.only or c['id'] in args.only.split(',')]
         if not selected:raise RuntimeError("No selected cases")
         session=sqlite3.connect(login.get('SESSION_DB','/var/lib/timas-login/sessions.sqlite'))
         token=secrets.token_urlsafe(32);digest=hashlib.sha256(token.encode()).hexdigest()
         session.execute('INSERT INTO sessions(token,username,expires) VALUES(?,?,?)',(digest,'timasai',time.time()+900));session.commit()
         headers={'Content-Type':'application/json','X-Semantic-Caller':env.get('SEMANTIC_CALLER_TOKEN',''),'Cookie':('__Secure-timas_session' if login.get('COOKIE_SECURE','1')!='0' else 'timas_session')+'='+token}
         def call(path,body=None):
+            transport.require_reference_day(args.reference_date)
             req=urllib.request.Request(args.base+path,data=json.dumps(body).encode() if body is not None else None,headers=headers)
-            with urllib.request.urlopen(req,timeout=180) as response:return json.load(response)
+            with urllib.request.urlopen(req,timeout=180) as response:result=json.load(response)
+            transport.require_reference_day(args.reference_date)
+            return result
         expected_hash=hashlib.sha256(json.dumps({k.rsplit('/',1)[-1]:v for k,v in before.items() if '/finance_query/' in k},sort_keys=True).encode()).hexdigest()
         for case in selected:
             if transport.manifest()!=before:
                 raise RuntimeError("Deployed code changed; acceptance stopped before another question")
-            item={**case,'started':time.time()};stop=False;offset=len(transport.REFERENCE_RETRIES)
+            item={**case,'started':time.time(),'referenceDate':args.reference_date};stop=False;offset=len(transport.REFERENCE_RETRIES)
             try:
+                transport.require_reference_day(args.reference_date)
                 if case.get('requires') and not anchors.get(case['requires']):raise RuntimeError('No real source anchor for this case')
                 session.execute('UPDATE sessions SET expires=? WHERE token=?',(time.time()+900,digest));session.commit()
                 transport.REFERENCE_CONTEXT.clear();transport.REFERENCE_CONTEXT.update(caseId=case['id'],phase='before_api',source='logo')
@@ -260,16 +264,18 @@ def main():
                         item['referenceChanged']=True
                         structural=[e for e in errors if not transport.data_dependent_error(e)]
                         item['status']='FAIL' if structural else 'UNVERIFIED'
+                transport.require_reference_day(args.reference_date)
             except Exception as exc:
                 structural=[e for e in item.get('errors',[]) if not transport.data_dependent_error(e)]
                 item['status']='FAIL' if structural else 'UNVERIFIED';item['error']=type(exc).__name__+': '+str(exc)[:500]
-                stop=isinstance(exc,(TimeoutError,urllib.error.URLError))
+                stop=isinstance(exc,(TimeoutError,urllib.error.URLError,transport.ReferenceDateChanged))
+                if isinstance(exc,transport.ReferenceDateChanged):item['referenceDayChanged']=True
             item['referenceRetries']=transport.REFERENCE_RETRIES[offset:];item['elapsedSeconds']=round(time.time()-item['started'],2)
             transport.save(out/(case['id']+'.json'),item);counts[item['status']]+=1
             results.append({k:item[k] for k in ('id','status','errors','error','elapsedSeconds') if k in item})
             print(json.dumps(results[-1],ensure_ascii=False),flush=True)
             if len(results)%10==0:print('BATCH',len(results),dict(counts),flush=True)
-            if stop:print('STOP: timed out request may still execute; no duplicate run',flush=True);break
+            if stop:print('STOP: reference day changed or request unavailable; preserve evidence, no duplicate run',flush=True);break
     except BaseException as exc:
         counts['UNVERIFIED']+=1;results.append(dict(id='ENVIRONMENT',status='UNVERIFIED',error=type(exc).__name__+': '+str(exc)[:500]))
     finally:
@@ -283,7 +289,7 @@ def main():
             finally:session.close()
         after=transport.manifest()
         if before!=after:counts['UNVERIFIED']+=1;results.append(dict(id='CODE_CHANGED',status='UNVERIFIED'))
-        report=dict(api=args.base,executionEnvironment='connected real test server',referenceDate=AS_OF,counts=dict(counts),results=results,planned=len(selected),completed=sum(r['id'].startswith('LR') for r in results),codeStable=before==after,codeBefore=before,codeAfter=after,sessionsDeleted=removed,sourceWrites=0,boundaryPassIsNumericAcceptance=False,partialReferenceMatchIsFullAcceptance=False,referenceRetryIsProductRecoveryEvidence=False,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+        report=dict(api=args.base,executionEnvironment='connected real test server',referenceDate=args.reference_date,counts=dict(counts),results=results,planned=len(selected),completed=sum(r['id'].startswith('LR') for r in results),codeStable=before==after,codeBefore=before,codeAfter=after,sessionsDeleted=removed,sourceWrites=0,boundaryPassIsNumericAcceptance=False,partialReferenceMatchIsFullAcceptance=False,referenceRetryIsProductRecoveryEvidence=False,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
         transport.save(out/'report.json',report);print('FINAL',dict(counts),'sessionsDeleted',removed,flush=True)
         fcntl.flock(lock,fcntl.LOCK_UN);lock.close()
     return 1 if counts['FAIL'] or counts['UNVERIFIED'] or counts['PARTIAL_REFERENCE_MATCH'] or report['completed']!=len(selected) else 0
