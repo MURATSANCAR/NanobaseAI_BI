@@ -90,7 +90,7 @@ def cross_reference(conns):
         key=r["code"].strip().casefold()
         if key in index:raise RuntimeError("independent CRM reference has duplicate key")
         index[key]=r
-    raw=query(conns["logo"],"SELECT I.CODE book_code,I.NAME book_name,C.SPECODE2 channel,L.TRCODE,L.AMOUNT,L.LINENET FROM dbo.LG_411_01_STLINE L LEFT JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=L.STOCKREF LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE L.CANCELLED=0 AND L.LINETYPE=0 AND L.INVOICEREF<>0 AND L.TRCODE IN (2,3,7,8,9) AND L.DATE_>='20260929' AND L.DATE_<'20260930'")
+    raw=query(conns["logo"],"SELECT I.CODE book_code,I.NAME book_name,C.SPECODE2 channel,L.TRCODE,L.AMOUNT,L.LINENET FROM dbo.LG_411_01_STLINE L LEFT JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=L.STOCKREF LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE L.CANCELLED=0 AND L.LINETYPE=0 AND L.INVOICEREF<>0 AND L.TRCODE IN (7,8,9) AND L.DATE_>='20260929' AND L.DATE_<'20260930'")
     groups={}
     for r in raw:
         code=(r["book_code"] or "").strip();book=index.get(code.casefold(),{})
@@ -147,7 +147,9 @@ def main():
     conns={};results=[];counts=Counter()
     try:
         for source in ("logo","crm"):conns[source]=connect(f"/data/nanobaseai/bi/secrets/{source}-mssql-connection.json")
+        stopped=False
         for case in cases():
+            if stopped:break
             if args.only and case["id"] not in args.only.split(","):continue
             for repeat in range(args.repeat):
                 session.execute("UPDATE sessions SET expires=? WHERE token=?",(time.time()+900,digest));session.commit()
@@ -167,7 +169,7 @@ def main():
                 print(json.dumps({"id":case["id"],"repeat":repeat+1,"status":d["status"],"errors":d.get("errors"),"seconds":round(time.time()-d["started"],1)},ensure_ascii=False),flush=True)
                 if len(results)%10==0:print("BATCH",len(results),dict(counts),flush=True)
                 if d.get("error","").startswith("TimeoutError"):
-                    print("STOP: timed out request may still be running; no duplicate workload",flush=True);break
+                    print("STOP: timed out request may still be running; no duplicate workload",flush=True);stopped=True;break
     finally:
         for c in conns.values():c.close()
         removed=session.execute("DELETE FROM sessions WHERE token=?",(digest,)).rowcount;session.commit();session.close()

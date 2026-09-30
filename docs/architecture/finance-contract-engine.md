@@ -46,6 +46,9 @@ her cevaba ve kayıt izine yazılır; canlı eski katalog değişiklikleri bu ta
   `new_yayinciid` 2.541. Stok kodunda aktif çoğulluk bulunmadı (her yürütmede tekrar kontrol edilir).
 - Yazar kırılımı `new_yazartext` kitap künyesi metnidir, kişi/telif kimliği değildir.
   Yazar kişi sayısı ise `ContactBase.statecode=0 AND new_yazarmi=1`; aynı kavram gibi birleştirilmez.
+- `scripts/acceptance/finance_contracts/schema.py`, gerçek fiziksel şemayı, yayımlanmış Dynamics
+  alan etiketlerini/açıklamalarını ve lookup ilişkilerini salt okunur dışarı alır. Sözlük eski
+  semantik katalogdan üretilmez. Web belgesi ile kuruma özel metadata ayrı kanıt olarak tutulur.
 
 ## Kabul ve bilinen kapsam
 

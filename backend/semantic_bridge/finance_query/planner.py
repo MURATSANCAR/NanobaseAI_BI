@@ -32,6 +32,10 @@ def claims(question: str) -> bool:
                 or (re.search(r"\bcrm\w*", q) and re.search(r"\b(say\w*|kac|adet\w*)\b", q)))
 
 
+def follows(question: str) -> bool:
+    return bool(re.search(r"\b(peki|aynisini|bunu|bunlari|bu sonucu|bu tabloyu|bir de|onceki)\b", fold(question)))
+
+
 def _json(text):
     raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
     try:
@@ -46,6 +50,8 @@ def _json(text):
 def build(question, llm, previous=None):
     today = datetime.now(ZoneInfo("Europe/Istanbul")).date()
     periods, grain = dates(question, today)
+    if previous and follows(question) and not periods:
+        periods = tuple(tuple(p) for p in previous.get("plan", {}).get("periods", ()))
     if len(periods) > 3:
         raise ContractError("Tek soruda en fazla üç dönem karşılaştırılabilir.")
     if llm is None:
@@ -134,7 +140,8 @@ def build(question, llm, previous=None):
         "Soruda istenmeyen kırılım, unutulan dönem/koşul/ölçü, yanlış sayım birimi varsa ok=false. "
         "Özel isim veya sıfat filtreye dönüşmemişse reddet. Veri veya SQL üretme. "
         "Genel tahsilat sözleşmesinin çek/senet dahil tanımı açıklamada gösterilecektir.\n" + json.dumps(CONTRACT, ensure_ascii=False)},
-        {"role": "user", "content": json.dumps({"question": question, "plan": data, "periods": periods}, ensure_ascii=False)}], max_tokens=600))
+        {"role": "user", "content": json.dumps({"question": question, "plan": data, "periods": periods,
+                                                "previous": previous if follows(question) else None}, ensure_ascii=False)}], max_tokens=600))
     if review.get("ok") is not True or review.get("missing"):
         raise ContractError("Sorunun bütün koşulları plana taşınamadı: " + "; ".join(map(str, review.get("missing") or ["ölçü/kırılım uyumu"])))
     return Plan(metrics, dims, periods, tuple(filters), kind, limit, order, data.get("descending", True))
