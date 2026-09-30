@@ -92,10 +92,33 @@ def _output_contracts():
         "book_detail": _output_record("book_id with at least one missing field", "book", fields="missing_fields missing_count missing_core_fields core_missing_count record_age_days")}, bookdates+" record_age_days uses as_of minus CreatedOn local date.")
     add("duplicate_isbn duplicate_book_code duplicate_title title_variants", {
         "candidate": _output_record("book_id in matching-field candidate group", "book", fields="matching_field matching_value candidate_count decision")}, bookdates,
-        "Candidate listing and side-by-side source fields are supported without a mandatory gap for candidate-only requests. NO computed different-work/different-edition/possible-duplicate partition; work identity is unproven and decision is uniform. If the question requires such a partition, this capability cannot fully satisfy it: reject that requirement or explicitly preserve it as an unverified partial-answer gap; never mark it complete merely because comparison fields exist.")
+        "No mandatory runtime gap for this candidate report. Non-claims below describe prohibitions the report respects; they are not missing requested outputs.")
+    for name in ("duplicate_isbn","duplicate_book_code","duplicate_title","title_variants"):
+        contracts[name].update(
+            supported={"candidate_listing": True, "raw_fields_side_by_side": True,
+                       "comparison_fields": ["book_id","book_name","isbn","book_code","author_ids","author_names","author_text","edition_count","first_print_date","last_print_date","last_publication_date","publisher_id","publisher"],
+                       "original_and_matching_key": True, "preserves_distinct_record_ids": True,
+                       "uniform_candidate_caution": True},
+            non_claims={"asserts_same_work": False, "definitive_duplicate": False,
+                        "auto_merge": False, "work_identity_proven": False,
+                        "meaning": "These false assertions fulfill 'do not assume/declare/merge' prohibitions. They do not require a gap or make a candidate-only comparison incomplete."},
+            unsupported_requested_operations={"identity_partition": "not_computed",
+                        "different_work_vs_possible_duplicate_classes": "not_computed",
+                        "same_work_different_edition_verdict": "not_computed",
+                        "applies_only_when": "User affirmatively requires this classification or verdict; not when the user prohibits asserting it.",
+                        "review_action": "A mandatory uncomputed partition cannot be marked complete. Reject it or explicitly carry its unverified gap in a valid partial-answer plan. Raw side-by-side comparison alone does not compute a partition."})
     basic = {"book_detail": _output_record("book_id", "book"), "publisher_summary": _output_record("publisher_id among selected findings", "publisher")}
     add("author_link_gaps multi_author_books", basic, bookdates)
     add("author_text_mismatch", {**basic, "book_detail": _output_record("book_id", "book", fields="comparison")}, bookdates)
+    contracts["author_text_mismatch"].update(
+        supported={"raw_author_text_and_linked_contact_ids_side_by_side": True,
+                   "comparison_fields": ["book_id","author_text","author_ids","author_names","comparison"],
+                   "preserves_distinct_source_ids": True,
+                   "normalized_text_comparison": "Single linked author: exact name equality excluded, normalized equality labelled spelling candidate. Multiple authors: exact normalized delimited-name set equality excluded; remaining differences remain candidates."},
+        non_claims={"person_identity_merge": False, "auto_merge": False,
+                    "name_similarity_proves_same_person": False,
+                    "meaning": "Distinct Contact IDs remain distinct even when names match. Publisher counts group books, not person identities. A prohibition on merging people is respected and is not a missing operation."},
+        unsupported_requested_operations={"resolve_pseudonym_or_person_identity_from_text": "not_computed"})
     add("duplicate_authors authors_without_books", {"person_detail": _output_record("active author Contact person_id", "person")})
     pubauthors = _output_record("publisher_id", "publisher", fields="author_count contact_field_present_count shared_author_ids")
     add("publisher_author_coverage", {"publisher_summary": pubauthors}, bookdates)
@@ -181,7 +204,8 @@ def describe_crm_report_output(report):
         records[kind] = {"grain": spec["grain"], "fields": list(dict.fromkeys(fields))}
     return {"report": report, "description": REPORTS[report], "record_types": records,
             "date_semantics": contract["date_semantics"], "gaps": contract["gaps"],
-            "common": CRM_REPORT_OUTPUT_CONTRACTS["common"]}
+            "common": CRM_REPORT_OUTPUT_CONTRACTS["common"],
+            **{key:contract[key] for key in ("supported","non_claims","unsupported_requested_operations") if key in contract}}
 
 
 def validate_crm_report(raw):

@@ -239,6 +239,16 @@ soru, bu raporla tam karşılanmış sayılamaz; eksik ayrım reddedilmeli veya 
 kısmi cevap boşluğu olarak taşınmalıdır. Kaynak alanlarının varlığı, kimlik
 kanıtının veya sınıflandırmanın yerine geçmez.
 
+Aday ailesinin yapılandırılmış çıktı sözleşmesi bu ayrımı üç bölümde taşır:
+`supported` ham alanların yan yana karşılaştırılmasını ve aday listesini,
+`non_claims` aynı eser/kesin mükerrer/otomatik birleştirme iddialarının
+kurulmadığını, `unsupported_requested_operations` ise yalnız olumlu olarak
+istenirse eksik sayılacak kimlik sınıflandırmasını belirtir. `non_claims` kullanıcı
+yasağına uyulduğu anlamına gelir; zorunlu eksik çıktı veya otomatik çalışma zamanı
+`gap` değildir. Örneğin "kesin mükerrer deme" sınıflandırma isteği değildir;
+"farklı eserlerle olası mükerrerleri ayır" ise mevcut aday raporunun hesaplamadığı
+zorunlu bir işlemdir.
+
 İletişim raporundaki `contact_field_present_count`, e-posta VEYA telefon/cep
 alanlarından biri dolu olan benzersiz kişi sayısıdır. Gerçek ulaşılabilirlik,
 teslim edilebilirlik veya her kanalın ayrı toplamı değildir. `has_email` ve

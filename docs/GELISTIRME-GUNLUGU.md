@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — CRM aday raporlarında yasak ve talep ayrımı
+
+- c36bba10d ile CRM-R3 ilk10:8 FULL_ANSWER_PASS,2 FAIL. CR002 'kesin mükerrer deme', CR007 'kişileri birleştirme' yasakları denetçi tarafından istenen işlem sayıldı; her biri tek planlama hatası, sonraki eksikresult kontrolleri aynı hatanın sonucu.
+- Aday raporlarının supported/non_claims/unsupported_requested_operations sözleşmeleri ayrıldı: ham alanların yan yana sunulması desteklenir, kesin eser/baskı/mükerrer hükmü kurulmaz, olumlu istenen sınıflandırma yapılmamışsa tam sayılmaz. author_text_mismatch gerçek kişi kimliklerini korur; normalize metin benzerliği kimlik birleştirmesi değildir.
+- Planlayıcıdaki bütün kaynak sınırlarının otomatik runtimegap olduğu yönündeki yanlış ifade kaldırıldı. Yalnız gerçekten üretilen gap eksikliği bildirir; yapılmayan iddia kullanıcının yasağına uyumu gösterebilir. CX048 zorunlu sınıflandırma eksikliği hâlâ reddedilir/açık kısmi kapsam gerekir. Hesap/SQL değişmedi, düzeltmeler yeni canlı kabul bekler.
+
 ## 2026-09-30 — UI bağımsız referans değişimi sınıflaması
 
 - Bölümlü UI kabulünde değişen canlı referansın yalnız satır/değer farkı UNVERIFIED olur; aynı resultId CSV, yapısal ve tarayıcı hataları FAIL kalır. Sabit referansın toleransı değiştirilmedi. Önceden yakalanmış hata sonraki referans bağlantı hatasında kaybolmaz. Belge: docs/reports/sections-ui-reference-drift-20260930.md. UI canlı koşusu henüz yapılmadı.
