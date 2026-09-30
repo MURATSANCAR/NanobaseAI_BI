@@ -254,6 +254,36 @@ alanlarından biri dolu olan benzersiz kişi sayısıdır. Gerçek ulaşılabili
 teslim edilebilirlik veya her kanalın ayrı toplamı değildir. `has_email` ve
 `has_phone` da yalnız alan doluluğunu gösterir; mevcut çıktı notu bu sınırı açıklar.
 
+## Değişiklik geçmişi sözleşmesinin açık sınırı
+
+`book_change_history` için yapılandırılmış `supported` bilgisi güncel aktif
+kitapların **son ModifiedOn** dönem kohortunu ve bu kitapların aynı dönemdeki
+aktif baskı/fiyat snapshotlarını tarif eder. `non_claims`, snapshotların eski/yeni
+audit olmadığını, ModifiedOn'un değişen alanı kanıtlamadığını, yayıncı tarihçesi
+ve değişiklik nedeninin çözülmediğini belirtir. Bu raporun mevcut koşulsuz tarihçe
+`gap` davranışı korunur.
+
+"Doğrulayamadığını belirt" koşuluyla istenen desteklenen liste ve açık tarihçe
+boşluğu kısmi cevap olabilir. Bu, zorunlu eski/yeni zaman çizelgesini veya farklı
+bir nüfus filtresini karşılamaz: dönemde herhangi bir kez değişmiş bütün kitaplar,
+son ModifiedOn'u döneme giren kitaplarla aynı küme değildir. Sözleşme açıklaması
+hesapları veya kaynak okumalarını değiştirmez.
+
+## İş planlarında nüfus ve işaret ayrımı
+
+`work_due.population_contract` bütün dönem işlerini ve geçmiş terminli açık
+işleri kapsar; `missing_owner`/`missing_stage` yalnız işarettir. `work_due_missing`
+ise gelecek dönem nüfusunu bu iki eksiklikten en az biriyle süzer, geçmiş terminli
+açık işleri yine korur. "Eksiklerini belirt" ifadesi tek başına tam atamalı işleri
+çıkarma izni değildir. Bağımsız CR022 ve CR032 bu iki nüfusu ayrı karşılaştırır;
+kabul koşucusunun beklentileri dar rapora uydurulmaz.
+
+`work_stage_history` güncel açık işleri ve mevcut aşamayı sunar, koşulsuz tarihçe
+boşluğu taşır. Son değiştirme tarihini aşamaya giriş saymama yasağına uyar.
+Kullanıcı mevcut işleri ve doğrulanamayan kısmı açıkça isterse bu kısmi çıktı
+uygundur; yalnız üç aydan uzun bekleyen nüfus veya sayısal bekleme süresi zorunlu
+istenmişse tarihçe boşluğu bunların yerine geçmez.
+
 ## Kabul koşucusunun kapsamı
 
 `scripts/acceptance/finance_contracts/crm_reports_live.py` 33 rapor ailesini gerçek

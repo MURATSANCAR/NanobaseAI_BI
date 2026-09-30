@@ -136,12 +136,49 @@ def _output_contracts():
     add("book_change_history", {
         "modified_book": _output_record("book_id", "book"),
         "history_snapshot": _output_record("history_id", fields="history_id book_id recorded_at edition_count vat_inclusive_price")}, "Required start/end selects book ModifiedOn; snapshots additionally require their CreatedOn in same range and book in modified-book set.", "Always UNVERIFIED_DEFINITION: price/print snapshots and ModifiedOn do not decode old/new changes or reasons.")
+    contracts["book_change_history"].update(
+        supported={"current_modified_on_cohort": True,
+                   "cohort_definition": "Current active books whose latest ModifiedOn falls in requested [start,end); not every book ever changed during the period.",
+                   "actual_print_price_snapshots": True,
+                   "snapshot_definition": "Active print/price history rows whose CreatedOn falls in the same interval AND whose book belongs to the selected ModifiedOn cohort.",
+                   "explicit_runtime_history_gap": True},
+        non_claims={"snapshots_are_old_new_audit": False,
+                    "ModifiedOn_proves_which_field_changed": False,
+                    "publisher_history_proven": False,
+                    "change_reason_proven": False,
+                    "meaning": "These unasserted claims respect instructions not to invent changes. The existing runtime gap explicitly discloses the missing audit evidence."},
+        unsupported_requested_operations={"full_old_new_timeline": "not_computed",
+                    "field_change_reason": "not_computed",
+                    "all_books_changed_at_any_time_in_period": "not_computed",
+                    "review_action": "If the user permits missing history to be disclosed, the supported cohort/snapshots plus the mandatory runtime gap may form a partial answer. An unconditional old/new timeline remains unsupported. A gap NEVER substitutes for a requested different population filter; latest ModifiedOn cohort is not a full historical event cohort."})
     add("duplicate_customer_tax customers_without_contacts", {"customer_detail": _output_record("customer_id; ordered updated_at oldest first", "customer")})
     add("contact_multiple_customers", {"relationship": _output_record("person_id + customer_id + relationship_type", fields="person_id person_name customer_id customer_name relationship_type customer_count decision")})
     add("customer_geography", {"city_distribution": _output_record("raw_city + normalized_city + region + territory_id", fields="raw_city normalized_city region territory_id record_count normalized_city_total")}, gaps="Always UNVERIFIED_DEFINITION: text normalization is not official city/region identity or hierarchy.")
     add("work_due", {"work_detail": _output_record("work_id", "work")}, "Required start/end: includes overdue due_date before as_of OR due_date in [start,end); overdue is independent of requested range.")
     add("work_due_missing", {"work_detail": _output_record("work_id", "work")}, "Required start/end: overdue due_date before as_of OR due_date in [start,end) AND missing_owner/missing_stage. Overdue rows include all open work regardless of missing fields.")
     add("work_stage_history", {"work_detail": _output_record("work_id", "work")}, "Current open plans; no period filter. as_of only determines overdue.", "Always UNVERIFIED_DEFINITION: stage entry/exit dates and days in stage unknown; ModifiedOn is not stage entry.")
+    contracts["work_due"]["population_contract"] = {
+        "mode": "all_due_rows_with_missing_flags",
+        "requires_explicit_subset_request": False,
+        "predicate": "open_active_book_work AND (due_date < as_of OR start <= due_date < end)",
+        "missing_owner_or_stage_filters_population": False,
+        "missing_flags": ["missing_owner","missing_stage"],
+        "selection_intent": "List all due work and flag missing assignments. Asking to show/indicate missing fields does not request exclusion of complete work."}
+    contracts["work_due_missing"]["population_contract"] = {
+        "mode": "upcoming_missing_subset_plus_all_overdue",
+        "requires_explicit_subset_request": True,
+        "predicate": "open_active_book_work AND (due_date < as_of OR (start <= due_date < end AND (missing_owner OR missing_stage)))",
+        "missing_owner_or_stage_filters_population": True,
+        "overdue_requires_missing_fields": False,
+        "selection_intent": "Requires a positive request for the missing-assignment subset among upcoming work. Never substitute this subset when the user requests all due work with missing fields indicated."}
+    contracts["work_stage_history"].update(
+        supported={"current_open_book_work": True, "current_stage_and_assignment_fields": True,
+                   "explicit_runtime_stage_history_gap": True},
+        non_claims={"ModifiedOn_is_stage_entry": False, "stage_wait_duration_proven": False,
+                    "meaning": "The instruction not to infer stage entry from last modification is respected; no entry/duration is fabricated."},
+        unsupported_requested_operations={"stage_entry_exit_timeline": "not_computed",
+                    "days_in_stage": "not_computed", "over_three_months_stage_filter": "not_computed",
+                    "review_action": "Current work plus explicit mandatory history gap can satisfy an explicit request to show current work and disclose unverifiable waiting time. It cannot satisfy an unconditional demand for the three-month filtered population or numeric waiting duration."})
     contractrecord = {"contract_detail": _output_record("book_id + contract_id", "contract")}
     precedence = "Relevant revised_end_date, renewal_end_date or termination_date adds UNVERIFIED_DEFINITION: no legal precedence/effective-end calculation."
     add("contract_expiry", contractrecord, "Required start/end: any main end, revised end, renewal end or termination in interval, OR main end missing. Start_date output is contract start, not filter start.", precedence)
@@ -205,7 +242,7 @@ def describe_crm_report_output(report):
     return {"report": report, "description": REPORTS[report], "record_types": records,
             "date_semantics": contract["date_semantics"], "gaps": contract["gaps"],
             "common": CRM_REPORT_OUTPUT_CONTRACTS["common"],
-            **{key:contract[key] for key in ("supported","non_claims","unsupported_requested_operations") if key in contract}}
+            **{key:contract[key] for key in ("supported","non_claims","unsupported_requested_operations","population_contract") if key in contract}}
 
 
 def validate_crm_report(raw):

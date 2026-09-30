@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — CRM nüfus ve tarihçe kapsamı
+
+- CRM-R3 c36bba10d koşusunda CR022 gerçek kapsam hatası: bütün işleri ve eksik bayraklarını isteyen soruda yalnız eksik atamalı gelecek işler seçildi. `population_contract` bütün kayıt/altküme ayrımını ve ilk N–bayrak filtre sırasını planlama/denetimde açıklar. Bağımsız referans değiştirilmedi.
+- CR013/CR023 kullanıcı açıkça doğrulanamayan tarihçeyi belirtmeye izin verdiği halde eski-yeni alan veya aşama süresi zorunlu tutuldu. Gerçek snapshot/güncel iş ve zorunlu kaynak boşluğu ayrı tanımlandı; tarihsel nüfus, üç ay aşama filtresi veya sayısal bekleme süresi hesaplandı sayılmaz.
+- Paralel kanıt incelemesi: `docs/reports/logo-aging-profit-computability-20260930.md`. PAYTRANS örnekleri kapama alt kümesini, sıfır OUTCOST örnekleri gerçek sıfır maliyeti kanıtlamaz. FIFO, TOTAL−PAID, son alış maliyeti varsayılmadı. Yeni DB/API koşusu yapılmadı.
+- Bu commitin ürün değişiklikleri henüz canlı doğrulanmadı; mevcut CRM-R3 bitene kadar yayın değiştirilmez. Yerel ürün testi ve kaynak veriye yazma yok.
+
 ## 2026-09-30 — CRM aday raporlarında yasak ve talep ayrımı
 
 - c36bba10d ile CRM-R3 ilk10:8 FULL_ANSWER_PASS,2 FAIL. CR002 'kesin mükerrer deme', CR007 'kişileri birleştirme' yasakları denetçi tarafından istenen işlem sayıldı; her biri tek planlama hatası, sonraki eksikresult kontrolleri aynı hatanın sonucu.
