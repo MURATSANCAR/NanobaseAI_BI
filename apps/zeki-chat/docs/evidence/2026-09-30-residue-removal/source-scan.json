@@ -1,0 +1,11 @@
+{
+  "sourceVersion": "c1f548205",
+  "textFiles": 9260,
+  "excluded": "docs, symlinks, non-text",
+  "terms": [
+    "@rocket.chat/onboarding-ui",
+    "apihub.us.document360.io",
+    "update-version-durability"
+  ],
+  "matches": []
+}
