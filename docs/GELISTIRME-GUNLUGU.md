@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — CRM gerçek kabul ve talebe dayalı ret kanıtı
+
+- CRM-R3 c36bba10d tamamlandı:33/33,20 FULL_ANSWER_PASS,8 BOUNDARY_PASS,5 FAIL; kod sabit,1geçici oturum silindi,kaynak yazma0. Her sorunun tam API sonucu ve bağımsız öncesi/sonrası referansı `/data/nanobaseai/bi/acceptance/finance-expanded-20260930/crm-r3/` altında.
+- c056bede9 test kurulumu17dosya hash eşleşmesi/healthOK/AppleDouble0. Hedef tekrarında CR002 tam,CR013 sınır,CR022 tam geçti; CR007 yine soruda istenmeyen kimlik çözümünü eksik saydı. Tekrardaki diğer sonuçlar koşu sonunda kaydedilecek.
+- Kaynak raporu denetiminde her missing için birebir question_quote, olumlu talep/ihlal edilen yasak türü ve sözleşme uyuşmazlığı zorunlu. Eksik yetenek listesi kullanıcı talebi yerine geçmez. Kanıtsız karar PASS yapılmaz; PLAN_INVALID ve aynı sınırlı onarım korunur. Yeni şema gerçek model/API kabulü bekliyor.
+- 3.081 nesnenin tamamı korundu;3.050 inceleme açık.400özel nesne için keşif sırası hazır, iş anlamı kabulü değil. Kalıcı kanıtlar reviews/crm-coverage altında; rapor kapsam belgesine sınırlar işlendi.
+
 ## 2026-09-30 — CRM nüfus ve tarihçe kapsamı
 
 - CRM-R3 c36bba10d koşusunda CR022 gerçek kapsam hatası: bütün işleri ve eksik bayraklarını isteyen soruda yalnız eksik atamalı gelecek işler seçildi. `population_contract` bütün kayıt/altküme ayrımını ve ilk N–bayrak filtre sırasını planlama/denetimde açıklar. Bağımsız referans değiştirilmedi.

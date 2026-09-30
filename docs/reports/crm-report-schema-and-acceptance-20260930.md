@@ -317,3 +317,26 @@ sudo -n /data/nanobaseai/bi/semantic-venv/bin/python -u \
 Referans günü canlı planlayıcının İstanbul günüyle aynı değilse koşucu durur;
 tarihleri sessizce değiştirmez. Bu belgede henüz koşu sonucu veya üretim kabulü
 iddiası yoktur.
+
+
+## Tam nesne envanteri ve açık keşif kuyruğu
+
+30 Eylül 2026 17:57:47 UTC envanteri 3.081 fiziksel tablo/görünüm ve 90.399
+kolon içerir. Mevcut 33 raporun 31 doğrudan tablo / 161 alan kapsamı dışında
+**3.050 nesne UNREVIEWED** kalır; gereksiz veya eşdeğer sayılmaz. Bunların
+400'ü metadata ile özel `new_*` varlıklarına, 332'si kullanılan tablolara fiziksel
+FK ile bağlanır. Bu iki küme birbirini dışlayan sayılar değildir.
+
+400 özel nesnenin tamamı korunarak yalnız keşif önceliği oluşturuldu: kitap–eser
+103, sözleşme–hak–royalty 17, iş–proje 45, kişi–müşteri 101, diğer 134.
+Gruplar ad/etiket/ilişki ipucudur, iş anlamı kabulü değildir. Genel Owner ve
+Activity RegardingObjectId bağları öncelik kanıtı yapılmadı. View/Base/Extension
+eşdeğerliği kanıtlanmadığı için ad benzerliğiyle nesneler birleştirilmedi.
+`NY_CRM_SIPARISLER` ve `NY_CRM_Siparisler` gibi fiziksel kimliklerin harf büyüklüğü korundu.
+
+Kanıtlar test sunucusunda
+`/data/nanobaseai/bi/acceptance/finance-expanded-20260930/reviews/crm-coverage/`:
+`coverage-matrix.csv/json`, `unreviewed-custom-entities.csv/json`,
+`discovery-priority.csv`, `DISCOVERY-PRIORITY.md`. Metadata envanteri SHA-256:
+`ee26a27cc48bd6fa7d5d631453d4a75025c61517705e2602ea0927e341fe9a8e`.
+Bu öncelik çalışmasında yeni DB/API veya ürün testi yoktur.

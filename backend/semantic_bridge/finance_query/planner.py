@@ -892,8 +892,32 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     else:
         capabilities = {"mode":report["mode"], "description":LOGO_REPORT_CAPABILITIES[report["mode"]],
                         "output_contract":describe_logo_report_output(report["mode"])}
+    source_review_schema = {
+        "type": "object", "additionalProperties": False,
+        "required": ["ok", "missing", "missing_evidence"],
+        "properties": {
+            **REVIEW_SCHEMA["properties"],
+            "missing_evidence": {"type":"array", "items": {
+                "type":"object", "additionalProperties":False,
+                "required":["question_quote", "requirement_kind", "contract_mismatch"],
+                "properties": {
+                    "question_quote":{"type":"string"},
+                    "requirement_kind":{"type":"string", "enum":["positive_request", "violated_prohibition"]},
+                    "contract_mismatch":{"type":"string"},
+                },
+            }},
+        },
+    }
     review = _object(llm, [{"role": "system", "content":
-        "Kullanıcı sorusuyla seçilen kaynak raporunun ilan edilmiş yeteneğini karşılaştır. Yalnız ok/missing JSON. "
+        "Kullanıcı sorusuyla seçilen kaynak raporunun ilan edilmiş yeteneğini karşılaştır. Yalnız ok/missing/missing_evidence JSON. "
+        "Her missing öğesi için aynı sırada bir missing_evidence üret: question_quote özgün question içinden "
+        "kesintisiz birebir alıntı, requirement_kind olumlu istekse positive_request veya rapor gerçekten bir yasağı "
+        "ihlal ediyorsa violated_prohibition, contract_mismatch bu talebin seçili sözleşmeyle somut uyuşmazlığıdır. "
+        "Capabilities yalnız yetenek kanıtıdır, kullanıcı talebi kaynağı değildir. unsupported_requested_operations "
+        "anahtarını soru istemeden missing'e taşıma. Bir işlemin yasaklanmasını o işlemin olumlu talebi diye alıntılama. "
+        "Aday alanları karşılaştırma talebi otomatik kimlik çözümü veya kesin karar talebi değildir. "
+        "Yasağa uyulmuyorsa hangi gerçek çıktı/iddianın yasağı ihlal ettiğini kanıtla; yalnız yapamadığı işlemi "
+        "listeleyen non_claims veya unsupported açıklaması ihlal değildir. ok=true için iki liste de boş olmalı. "
         "Rapor adı benziyor diye hesap yapılmış sayma: istenen tarih, nüfus koşulu, kırılım, ölçü, kimlik ve "
         "ayrıntı bağları capabilities ile gerçekten sağlanmalı. Eksik tanımı veya farklı nüfusu sessiz kabul etme. "
         "output_contract varsa hangi kolonların hangi kayıt türünde ve kayıt düzeyinde üretildiğini oradan denetle. "
@@ -919,10 +943,21 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         "İstenen filtre/altküme eksikliği ise bağımsız ek hesap sınırı değildir: geniş filtresiz nüfusu doğru cevap sayma. "
         "zorunlu sayısal cevabın yerine salt gap tam cevap değildir."},
         {"role": "user", "content": json.dumps({"question": question, "report": report, "capabilities": capabilities,
-        "parsedPeriods": periods, "referenceDate": str(today)}, ensure_ascii=False)}], 1800, REVIEW_SCHEMA, "source_report_review", trace)
+        "parsedPeriods": periods, "referenceDate": str(today)}, ensure_ascii=False)}], 2400, source_review_schema, "source_report_review", trace)
     if trace is not None:
         trace.append({"stage":"source_report_review", "output":review})
-    if review.get("ok") is not True or review.get("missing"):
+    missing = review.get("missing") or []
+    evidence = review.get("missing_evidence")
+    if (not isinstance(evidence, list) or len(evidence) != len(missing)
+            or (review.get("ok") is True) != (len(missing) == 0)
+            or any(not isinstance(item, dict)
+                   or not isinstance(item.get("question_quote"), str)
+                   or not item["question_quote"].strip() or item["question_quote"] not in question
+                   or item.get("requirement_kind") not in {"positive_request", "violated_prohibition"}
+                   or not isinstance(item.get("contract_mismatch"), str)
+                   or not item["contract_mismatch"].strip() for item in evidence)):
+        raise ContractError("Kaynak raporu denetimi, kararını kullanıcının gerçek koşullarıyla tutarlı biçimde kanıtlamadı.", code="PLAN_INVALID")
+    if review.get("ok") is not True or missing:
         # This rejects the selected plan, not every capability in the contract.
         # The root may replan once; the same report/metric guards run again.
         raise ContractError("Seçilen kaynak raporu sorunun tüm koşullarını karşılamıyor: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")
