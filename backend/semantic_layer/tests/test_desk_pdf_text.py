@@ -115,7 +115,8 @@ def test_unrecoverable_private_use_is_counted_not_hidden() -> None:
     p = _Pdf()
     tu = p.stream("", cmap({0x41: "\ue000", 0x42: "A"}))
     f = p.obj(f"<< /Type /Font /Subtype /Type1 /BaseFont /X /Encoding /WinAnsiEncoding /ToUnicode {tu} 0 R >>")
-    body = "\n".join("BT /F1 12 Tf 1 0 0 1 50 {} Tm <4142424242> Tj ET".format(500 - 14 * i) for i in range(3))
+    # satırlar birbirinden farklı: aynı kısa satır üç kez tekrarlansa sayfa üst bilgisi sayılıp atılırdı
+    body = "\n".join("BT /F1 12 Tf 1 0 0 1 50 {} Tm <41{}> Tj ET".format(500 - 14 * i, "42" * (3 + i)) for i in range(3))
     s = st.pdf_structure(reader(p.build([body], {"F1": f})))
     assert s.unreadable_chars == 3
     assert s.report()["unreadable_chars"] == 3
