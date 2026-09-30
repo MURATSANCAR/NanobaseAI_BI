@@ -2937,27 +2937,33 @@ class SemanticResolver:
                 continue
             for c, maps in senses:
                 for src in {self._source_of(m.entity) for m in maps if m.entity and m.entity in self.by_entity}:
-                    heads.setdefault(parts[-1], []).append((c, src))
+                    heads.setdefault(parts[-1], []).append((c, src, maps))
         for tok in words:
             st = stem(fold(str(tok)))
             # A generic noun ("tarih", "kod", "ad") ends certified phrases on both servers and names no one column.
             if len(st) < 3 or st in GENERIC_S or st in STOPWORDS_S or st in METRIC_VOCAB_S:
                 continue
             senses = heads.get(st) or []
-            if not senses or any(src == home for _, src in senses):
+            if not senses or any(src == home for _, src, _m in senses):
                 continue                                   # nothing to name, or readable on the measure's side
-            theirs: dict[str, list[tuple[Any, str]]] = {}
-            for c, src in senses:
+            theirs: dict[str, list[tuple[Any, str, list]]] = {}
+            for c, src, maps in senses:
                 if c.semantic_type in (SemanticType.METRIC, SemanticType.DEFAULT_FILTER):
                     continue                               # a figure or a row scope is not a column to show
-                theirs.setdefault(src, []).append((c, c.term))
+                theirs.setdefault(src, []).append((c, c.term, maps))
             if not theirs:
                 continue
-            src, found = max(theirs.items(), key=lambda kv: len({t for _, t in kv[1]}))
+            src, found = max(theirs.items(), key=lambda kv: len({t for _, t, _m in kv[1]}))
             # The sentence names the column the person most likely meant, not every label ending in the word
-            # ("etkin yazarlar", "imza günü yazarı" are values): the column concepts, the shortest term first.
-            cols = sorted({t for c, t in found if c.semantic_type == SemanticType.COLUMN}, key=lambda t: (len(t.split()), t))
-            names = cols[:1] or sorted({t for _, t in found}, key=lambda t: (len(t.split()), t))[:1]
+            # ("etkin yazarlar", "imza günü yazarı" are values): a column concept, first the one the catalog measured a
+            # bridge for toward the measure's tables (the book's author, through the item code), then the shortest term.
+            home_entities = {m.mapping.entity for m in metrics}
+            def bridged(maps) -> bool:
+                return any(self._linked_across(e, home_entities)
+                           for mp in maps for e in {mp.entity} | self._mapping_tables(mp) if e)
+            ranked = sorted(((not bridged(maps), c.semantic_type != SemanticType.COLUMN, len(t.split()), t)
+                             for c, t, maps in found), key=lambda r: r)
+            names = [ranked[0][3]]
             for bucket in (sq.unresolved, sq.requested_breakdowns, sq.column_terms):
                 bucket[:] = [w for w in bucket if w != tok]
             sq.breakdown_paths = [p for p in sq.breakdown_paths if p.get("word") != tok]

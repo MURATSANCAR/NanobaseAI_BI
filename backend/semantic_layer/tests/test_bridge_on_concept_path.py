@@ -30,7 +30,7 @@ def _p(name, cols, rels=(), pk=None):
                          primary_key=[pk] if pk else [], row_count=1000, relationships=list(rels))
 
 
-def _world(store, profiles, *, with_path: bool):
+def _world(store, profiles, *, with_path: bool, bare: bool = True, rival: bool = False):
     items = next(p for p in profiles if p.entity == "ITEMS")
     items.relationships = list(items.relationships or []) + [{
         "column": "CODE", "ref_entity": "BOOKBASE", "ref_column": "StockCode", "ref_schema": CRM, "ref_pattern": "BOOKBASE",
@@ -50,7 +50,10 @@ def _world(store, profiles, *, with_path: bool):
     extra = {"conditions": ["PARTBASE.STATECODE IN (0)", "BOOKBASE.STATECODE IN (0)"], "path": PATH} if with_path else {}
     _certify(store, "kitap yazari", SemanticType.COLUMN,
              Mapping(concept_id="", entity="PERSONBASE", table_pattern="PERSONBASE", column="FULLNAME", operator="COLUMN", extra=extra),
-             synonyms=["yazar"])
+             synonyms=["yazar"] if bare else ["yazar adi"])
+    if rival:   # aynı baş kelimeyle biten, bağa ulaşmayan ikinci bir kolon kavramı (canlıda «ana yazar»)
+        _certify(store, "ana yazar", SemanticType.COLUMN,
+                 Mapping(concept_id="", entity="PERSONBASE", table_pattern="PERSONBASE", column="FULLNAME", operator="COLUMN"))
     EvidenceEngine(store, min_support=3).run(TENANT, DS, allp)
     return allp
 
@@ -91,3 +94,13 @@ def test_with_plans_off_the_author_is_left_out_and_said(store, profiles, monkeyp
     sq = SemanticResolver(store, TENANT, DS, allp).resolve("dünkü satış tutarı kitap adı yazar", today=TODAY)
     assert _author(sq) is None, sq.explanation
     assert any(fold(o["term"]) == "yazar" for o in sq.omitted), (sq.omitted, sq.unresolved, sq.explanation)
+
+
+def test_with_plans_off_the_note_names_the_column_the_bridge_reaches(store, profiles, monkeypatch):
+    """Çıplak «yazar» tanımsız; CRM'de «yazar»la biten iki kolon kavramı var. Not, ölçünün tablolarına ölçülmüş bağla
+    ulaşanı («kitap yazari», kitap kartı üzerinden) anar — alfabetik ilk olanı («ana yazar») değil."""
+    monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
+    allp = _world(store, profiles, with_path=True, bare=False, rival=True)
+    sq = SemanticResolver(store, TENANT, DS, allp).resolve("dünkü satış tutarı kitap adı yazar", today=TODAY)
+    sentence = next((o["sentence"] for o in sq.omitted if fold(o["term"]) == "yazar"), "")
+    assert "kitap yazari" in fold(sentence) and "ana yazar" not in fold(sentence), (sq.omitted, sq.explanation)
