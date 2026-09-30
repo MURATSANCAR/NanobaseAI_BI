@@ -265,6 +265,10 @@ def run(args):
             tracked['disabledBySync'] = True
             report['disabledUsers'] += 1
             save()
+    if args.apply:
+        setting = chat.call('GET', 'settings/UI_Allow_room_names_with_special_chars')
+        if not setting.get('value'):
+            chat.call('POST', 'settings/UI_Allow_room_names_with_special_chars', {'value': True})
     for team_id in sorted(set(desired) | set(owned_rooms)):
         team = desired.get(team_id)
         if team is None:
