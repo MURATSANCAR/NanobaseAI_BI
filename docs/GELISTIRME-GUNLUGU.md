@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Logo gerçek deadlock bulgusu ve sınırlı SELECT tekrarı
+
+- 19:03:35 FC44 API sorgusu SQL Server 1205 (lock / communication buffer), ardından FC45 bağımsız referansı aynı 1205 ile durdu. Sayı uydurulmadı. Önceki dönem yanlış retleri son kodda 12 bağımsız yürütmede geçti.
+- Yeni motor yalnız SQLSTATE 40001/42000 + native (1205) için salt okunur SELECT en fazla 3 deneme yapar; kısa artan/rastgele bekleme, her hata/deneme hash ve koduyla semantic.readRetries içinde. Başka hata ve üçüncü başarısız deneme gizlenmez. Bağımsız referans kendi sınırlı 1205 tekrarını ayrı kaydeder. Kaynak veri/DB ayarı değiştirilmedi.
+- Logo SQL sürümü 13.0.6300.2, READ_COMMITTED_SNAPSHOT kapalı ve SNAPSHOT OFF. system_health deadlock grafiği okuması yetki 297 ile reddedildi; karşı kilit sahibini tespit etme DOĞRULANAMADI. Kanıt deadlock-diagnostics.json. Microsoft: https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/mssqlserver-1205-database-engine-error .
+- Doğal 1205 tekrarında kurtarma dalı ayrıca gözlenmedikçe bu dalın canlı hata kabulü iddia edilmez; yapay deadlock veya yerel test yok. Yeni sürüm tam kapıda yeniden ölçülecek.
+
 ## 2026-09-30 — Netleştirme ekranının durum dili
 
 - Mobil gerçek ekran incelemesinde teknik CLARIFICATION etiketi ve veri okunmadığı halde 0 satır/kolon göründü. Türkçe durum etiketi ve okunmamış değerlerde çizgi gösterilir. Hesap/SQL değişmedi; güncel arayüz yeniden derlenip gerçek portal akışıyla doğrulanacak.

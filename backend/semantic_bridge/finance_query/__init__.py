@@ -39,7 +39,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
     plan = None
     sql = None
     state = {"engine": "finance_contract_v1", "contractHash": CONTRACT_HASH, "engineCodeHash": ENGINE_HASH,
-             "legacyCatalogUsed": False, "legacySqlFallback": False}
+             "legacyCatalogUsed": False, "legacySqlFallback": False, "readRetries": engine.read_retries}
 
     def record(kind, summary, result=None, error=None):
         return runtime.store.log_query(runtime.settings.tenant_id, runtime.settings.datasource_id, question,

@@ -10,6 +10,7 @@ from decimal import Decimal
 import hashlib
 import json
 import os
+import random
 import re
 import time
 
@@ -35,6 +36,7 @@ class Executor:
         self.runs = []
         self.notes = []
         self.source_periods = []
+        self.read_retries = []
         self._crm_status = {}
 
     def read(self, sql, *, metadata=False, source="logo"):
@@ -55,12 +57,28 @@ class Executor:
             # Every business CRM read below explicitly applies this engine's positive status contract.
             conn = getattr(conn, "inner", conn)
         t = time.monotonic()
-        cols, rows, truncated = conn.execute(sql, MAX_ROWS)
+        for attempt in range(3):
+            try:
+                cols, rows, truncated = conn.execute(sql, MAX_ROWS)
+                break
+            except Exception as exc:
+                args = getattr(exc, "args", ())
+                # SQL Server explicitly rolled back a deadlock victim. Only
+                # this known transient error may repeat this read-only SELECT.
+                if not args or args[0] not in ("40001", "42000") or "(1205)" not in str(exc):
+                    raise
+                delay = (0.25 * (2 ** attempt) + random.uniform(0, 0.15)) if attempt < 2 else None
+                self.read_retries.append({"source": source, "sqlSha256": hashlib.sha256(sql.encode()).hexdigest(),
+                                          "failedAttempt": attempt + 1, "errorCode": 1205,
+                                          "retryAfterMs": round(delay * 1000) if delay is not None else None})
+                if delay is None:
+                    raise
+                time.sleep(delay)
         ms = round((time.monotonic() - t) * 1000)
         if truncated:
             raise ContractError("Tam sonuç okuma sınırını aştı; eksik sonuç cevap olarak sunulmadı.")
         if not metadata:
-            self.runs.append({"source": source, "sql": sql, "rows": len(rows), "dbMs": ms})
+            self.runs.append({"source": source, "sql": sql, "rows": len(rows), "dbMs": ms, "attempts": attempt + 1})
         return rows
 
     def partitions(self, start, end):

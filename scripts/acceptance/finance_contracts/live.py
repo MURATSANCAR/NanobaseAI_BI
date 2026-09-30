@@ -20,6 +20,8 @@ import urllib.error
 
 import pyodbc
 
+REFERENCE_RETRIES = []
+
 
 def environment(unit):
     pid = subprocess.check_output(["systemctl", "show", unit, "-p", "MainPID", "--value"], text=True).strip()
@@ -36,6 +38,17 @@ def connect(path):
 
 
 def query(conn, sql):
+    for attempt in range(3):
+        try:
+            return query_once(conn, sql)
+        except pyodbc.Error as exc:
+            if "(1205)" not in str(exc) or attempt == 2:
+                raise
+            REFERENCE_RETRIES.append({"sqlSha256": hashlib.sha256(sql.encode()).hexdigest(), "attempt": attempt+1, "code": 1205})
+            time.sleep(0.4 * (attempt+1))
+
+
+def query_once(conn, sql):
     cur=conn.cursor()
     try:
         cur.execute(sql)
@@ -234,7 +247,7 @@ def main():
             results.append({"id":"CODE_CHANGED","status":"UNVERIFIED","error":"Deployed source changed during acceptance"})
         report={"counts":dict(counts),"passedKinds":dict(passed),"results":results,"sessionsDeleted":removed,"sourceWrites":0,"api":args.base,
                 "codeBefore":before,"codeAfter":after,"codeStable":before==after,
-                "runnerSha256":hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+                "runnerSha256":hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "referenceRetries": REFERENCE_RETRIES}
         (out/"report.json").write_text(json.dumps(report,ensure_ascii=False,default=str,indent=2));print("FINAL",dict(counts),"sessionsDeleted",removed,flush=True)
     return 1 if counts["FAIL"] or counts["UNVERIFIED"] or not results else 0
 

@@ -101,3 +101,7 @@ Metadata bu değişiklikte düzenlenmez; dump geri yüklemesi diğer modüllerin
 yalnız ayrı kurtarma veritabanına yapılır.
 
 Durum: motor test sunucusunda etkin, VPN geri geldi. İlk 80 soruda 79 geçiş ve satış tutarı tanımında 1 belirsizlik. Son sözleşmede çıplak satış tutarı netleştirme ister; eski FC03 vaka olarak korunur, iki açık anlam için FC101/102 eklendi. Yeni sürüm kabulü ayrıca koşulacak. Yedek doğrulaması tamamlandı: 13.119.667.444 bayt PG dump, SHA256 `4b4a4abcd343c44474bf606450ab1cecb0689628789a88572cbdacd697166e1d`; tam `pg_restore --file=/dev/null` geçti, kaynak DB'ye geri yükleme yapılmadı. Kod/servis/arayüz arşivleri manifest ile doğrulandı. Yerel test veya müşteri VM kurulumu yok.
+
+## Geçici veritabanı hatası
+
+Gerçek 1205 deadlock hem API hem bağımsız referansta yakalandı (30 Eylül 19:03). SQL Server kurban işlemi geri alır; resmi çözüm yeniden denemeyi içerir: [Microsoft 1205](https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/mssqlserver-1205-database-engine-error). Yalnız salt okunur SELECT ve native 1205/uyumlu SQLSTATE için toplam üç deneme; kısa artan rastgele bekleme, kaydedilen hata kodu/SQL hash/deneme, tükenmede dürüst kaynak hatası. Genel hata, zaman aşımı veya yazma yeniden denenmez. Bu mekanizma DBA'nın kilit döngüsünü çözmesinin yerine geçmez. system_health kaydına mevcut hesabın yetkisi yok (297); kilitleyen diğer işlemin kök nedeni belirlenemedi.
