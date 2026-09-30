@@ -187,6 +187,13 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Önce doğrulanmış ölçüleri, sonra logoReportCapabilities/crmReportCapabilities raporlarını değerlendir. "
               "Yalnız hiçbir dalın karşılamadığı koşulu uncovered'a yaz; kâr/maliyet/yaşlandırma gibi adları sırf sözcük diye reddetme, "
               "capabilities içindeki hesap tanımı ve kaynak sınırlarını uygula. Ham SQL veya yeni alan adı üretme. "
+              "Kaynak niyetini istenen ölçü ve alanların anlamıyla belirle: CRM adının geçmesi tek başına Logo satışını yasaklamaz. "
+              "Logo hareket ölçüsü ile CRM kimlik/kalite alanları birlikte isteniyorsa bunları gerçekten birlikte sağlayan yeteneği seç; "
+              "yalnız satışın kitap kırılımı ISBN, kişi-yazar bağlantısı veya başka kalite alanlarının çıktısı değildir. "
+              "Yalnız CRM kayıt/alan isteğini ise Logo finans ölçüsüyle değiştirme. "
+              "Negatif talimatları otomatik uncovered yapma: kimlik seçme/atama veya varsayım yasağının mevcut "
+              "kaynak sözleşmesindeki gerçek garantiyle korunup korunmadığını denetle. Garanti yoksa sınırı açık belirt; "
+              "yasaklanan davranışı gerçekleştirme, talimatı da yok sayma. "
               "Tek raporun output_contracts kayıt türleri istenen özet ve detayı zaten içeriyorsa tek rapor kullan. "
               "Yalnız tek raporun karşılamadığı farklı kırılımlar/bağımsız kaynak bölümleri gerekiyorsa sections kullan (en fazla 4 yaprak). "
               "Her section title, anlamı koruyan question ve tek leaf plan içerir; leaf plan iç içe sections içermez. "
@@ -362,8 +369,6 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError("Bu kaynak ölçülerinin ortak kayıt düzeyi henüz tanımlı değil.")
     family = "sales" if "sales" in families else sorted(families)[0]
     q = fold(question)
-    if re.search(r"\bcrm\w*", q) and not family.startswith("crm_") and not (set(dims) | {f.get("dimension") for f in data.get("filters", []) if isinstance(f, dict)}) & {"author", "publisher", "subbrand", "author_group"}:
-        raise ContractError("Soru CRM kaynağını istiyor; seçilen finans ölçüsü Logo'da. Kaynak kapsamını netleştirin.")
     if re.search(r"\bfatura\w*\s+(say\w*|adet\w*)", q) and "invoice_count" not in metrics:
         raise ContractError("Fatura sayımı belge anahtarıyla yapılmalıdır; plan bu koşulu sağlamıyor.")
     if "tahsil" in q and "collections" not in metrics:
@@ -480,6 +485,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                 "ilk_n": limit, "sıralama_ölçüsü": METRICS[order].label if order in METRICS else order, "azalan": data.get("descending", True)}
     review = _object(llm, [{"role": "system", "content":
         "Soru-plan uyumunu denetle. Yalnız {\"ok\":true|false,\"missing\":[...]}. "
+        "Kaynak uygunluğunu ölçü tanımları, sonuç nüfusunun kaynak_aileleri ve gerçek çıktı kolonlarıyla denetle. "
+        "CRM adının geçmesi Logo satış ölçüsünü tek başına geçersiz kılmaz; karma isteklerde her kaynaktan istenen "
+        "ölçü ve alan gerçekten bulunmalıdır. Yalnız CRM kart/sayım isteğinin yerine Logo finans ölçüsü koymayı reddet. "
+        "Künye kırılımı seçilmesi ayrıca istenen kalite alanlarının veya kişi bağlantılarının üretildiğini kanıtlamaz. "
         "Sana yürütülecek planın Türkçe iş anlamı veriliyor. Soruda istenmeyen kırılım, "
         "unutulan dönem/özel isim/koşul/ölçü veya yanlış sayım birimi varsa ok=false. "
         "İstenmeyen ek hesap ve pay kolonlarını da reddet. Yüzde fark isteğinde A/B*100 ile (A-B)/B*100 farklıdır; "

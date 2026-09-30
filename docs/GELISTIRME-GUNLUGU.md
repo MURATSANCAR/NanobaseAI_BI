@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Exact100 geniş ilk koşu tamamlandı ve karma kaynak düzeltmesi
+
+- Sabit7ca8c1b54 ile gerçek API/Logo/CRM exact100:21 ANSWER_UNVERIFIED,2 PARTIAL_UNVERIFIED,16 PLAN_ERROR,44 UNSUPPORTED,17 NEEDS_CLARIFICATION;100/100 yürütüldü,1 oturum silindi, kaynak yazımı0. Kanıt complex100-expanded-r1. Tam sayısal doğru cevap kabulü0; HTTP/SQL başarısı doğruluk değildir. CRM30 ve Logo35 cevaplarının bağımsız anlam incelemesi yapıldı; CX048/055 eksik işlemi tam cevap sayma sorunları korundu.
+- Karma sorulardaki erken CRM sözcük vetosu kaldırıldı. Kaynak uygunluğu mevcut katı anlam denetiminde gerçek kaynak aileleri/ölçü/çıktı kolonlarıyla sınanır; CRM-only isteği Logo ölçüsüyle değiştirme yasaktır. Negatif kimlik atama/varsayım talimatı yalnız gerçek sözleşme garantisiyle karşılanır; otomatik unsupported yapılmaz. Yeni gerçek kabul bekliyor.
+- Metadata kapsam matrisi:3081 nesne/90399kolon,31 DIRECT_REPORT_SOURCE/3050 UNREVIEWED;400metadata-bağlı özelvarlıkadayı. Bunların varlığı destek veya ilgisizlik hükmü değildir. View/Base/Extension eşdeğerliği dependency kanıtı olmadan varsayılmadı.
+
 ## 2026-09-30 — Görüşme görevi ile serbest nottaki iş ayrımı
 
 - CX063 gerçek cevap boş bağlı görev özeti; bu, serbest görüşme notlarında aynı işin tekrarlanmadığını kanıtlamaz. open_author_actions sözleşmesinde yalnız açık görev kimliği/ilişki listesi olduğu, same_task_reference_count sabit1 alanının not tekrarı sayısı olmadığı ve not içeriği eşleştirmesinin hesaplanmadığı açıklandı. Hesap değişmedi; zorunlu anlamsal tekrar ayrımı tam karşılanmış sayılamaz. Gerçek yeni kabul bekliyor.
