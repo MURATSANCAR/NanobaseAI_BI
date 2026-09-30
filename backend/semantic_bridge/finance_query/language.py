@@ -49,6 +49,7 @@ def next_month(d):
 def dates(question, today):
     q = normalize_numbers(question)
     hits = []
+    rolling_windows = []
     def add(a, b, lo, hi):
         if lo >= hi:
             raise ContractError("Tarih aralığının başlangıcı bitişinden önce olmalı.")
@@ -70,9 +71,19 @@ def dates(question, today):
             if free(m):
                 d = date(int(m[1]), MONTHS[m[2]], 1); add(*m.span(), d, next_month(d))
         quarter = date(today.year, ((today.month - 1) // 3) * 3 + 1, 1)
+        ordinals = {"birinci": 1, "ikinci": 2, "ucuncu": 3, "dorduncu": 4}
+        year_phrase = r"(?:20\d{2}(?:'?(?:nin|in))?(?:\s+yil(?:in)?in)?|(?:bu|gecen|onceki)\s+(?:yilin|senenin))"
+        ordinal = r"(?:birinci|ikinci|ucuncu|dorduncu|[1-4]\.?)"
+        for m in re.finditer(r"\b(" + year_phrase + r")\s+(" + ordinal + r")\s+ceyre[kg]\w*", q):
+            if not free(m): continue
+            y = int(m[1][:4]) if m[1][:4].isdigit() else today.year - int(m[1].startswith(("gecen", "onceki")))
+            n = ordinals[m[2]] if m[2] in ordinals else int(m[2].rstrip("."))
+            start = date(y, (n-1)*3+1, 1)
+            add(*m.span(), start, shift_month(start, 3))
         for m in re.finditer(r"\bson\s+(?:tamamlanan\s+)?(\d+)\s+(?:tamamlanmis\s+)?(ay|gun)\w*", q):
             if not free(m): continue
             n = int(m[1])
+            rolling_windows.append(m.span())
             if not 1 <= n <= (120 if m[2] == "ay" else 3660): raise ValueError()
             if m[2] == "ay":
                 start = shift_month(today, -n)
@@ -86,10 +97,10 @@ def dates(question, today):
         for m in re.finditer(r"\b(?:yilbasindan|sene basindan|bu yilin basindan)\s+(?:bugune|simdiye)(?:\s+kadar)?", q):
             if free(m): add(*m.span(), date(today.year, 1, 1), today+timedelta(days=1))
         relatives = [
-            (r"\bbu ceyrek\w*", quarter, shift_month(quarter, 3)),
-            (r"\b(?:gecen|onceki) ceyrek\w*", shift_month(quarter, -3), quarter),
-            (r"\b(bugun\w*)", today, today+timedelta(days=1)),
-            (r"\b(dun|1 onceki gun\w*|1 onceki gune\w*)\b", today-timedelta(days=1), today),
+            (r"\bbu ceyre[kg]\w*", quarter, shift_month(quarter, 3)),
+            (r"\b(?:gecen|onceki) ceyre[kg]\w*", shift_month(quarter, -3), quarter),
+            (r"\b(bugun(?:un|ku|de)?)\b", today, today+timedelta(days=1)),
+            (r"\b(dun(?:ku|un)?|1 onceki gun\w*|1 onceki gune\w*)\b", today-timedelta(days=1), today),
             (r"\b(bu ay\w*)", today.replace(day=1), next_month(today)),
             (r"\b(gecen ay\w*|onceki ay\w*)", (today.replace(day=1)-timedelta(days=1)).replace(day=1), today.replace(day=1)),
             (r"\b(bu yil\w*|bu sene\w*)", date(today.year,1,1), date(today.year+1,1,1)),
@@ -97,6 +108,8 @@ def dates(question, today):
         ]
         for pattern, a, b in relatives:
             for m in re.finditer(pattern,q):
+                if m.group().startswith("bugun") and rolling_windows and re.match(r"\s*(?:de\s+)?dahil\b", q[m.end():]):
+                    continue  # inclusion qualifier of the rolling interval, not another period
                 if free(m): add(*m.span(),a,b)
         for m in re.finditer(r"\bson\s+(\d+)\s+gun\w*",q):
             if free(m):

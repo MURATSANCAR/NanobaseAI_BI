@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 from datetime import date
 import json
+import hashlib
 import re
 from zoneinfo import ZoneInfo
 from datetime import datetime, timezone
@@ -48,13 +49,44 @@ def _json(text):
     return data
 
 
-def _object(llm, messages, max_tokens, schema, name):
-    choice = llm.complete(messages, max_tokens=max_tokens, stream=False,
-                          body={"response_format": {"type": "json_schema", "json_schema": {
-                              "name": name, "strict": True, "schema": schema}}})
-    if choice.get("finish_reason") == "length":
-        raise ContractError("Soru planının model yanıtı kesildi; eksik planla hesap yapılmadı.", code="PLAN_INVALID")
-    return _json((choice.get("message") or {}).get("content") or "")
+def _object(llm, messages, max_tokens, schema, name, trace=None):
+    """One bounded format retry; an incomplete plan never reaches the executor."""
+    request_messages = list(messages)
+    for attempt in range(2):
+        budget = min(max_tokens * (attempt + 1), 7200)
+        choice = llm.complete(request_messages, max_tokens=budget, stream=False,
+                              body={"max_tokens": budget, "temperature": 0.0,
+                                    "chat_template_kwargs": {"enable_thinking": False},
+                                    "response_format": {"type": "json_schema", "json_schema": {
+                                        "name": name, "strict": True, "schema": schema}}})
+        message = choice.get("message") or {}
+        content = message.get("content") or ""
+        reasoning = message.get("reasoning_content") or message.get("reasoning") or ""
+        event = {"stage": "model_response", "schema": name, "attempt": attempt + 1,
+                 "maxTokens": budget, "finishReason": choice.get("finish_reason"),
+                 "contentChars": len(content), "reasoningChars": len(reasoning),
+                 "contentSha256": hashlib.sha256(content.encode()).hexdigest(),
+                 "thinkingRequested": False}
+        if trace is not None:
+            trace.append(event)
+        if choice.get("finish_reason") == "length":
+            error = ContractError("Soru planının model yanıtı kesildi; eksik planla hesap yapılmadı.", code="PLAN_INVALID")
+        else:
+            try:
+                return _json(content)
+            except ContractError as exc:
+                error = exc
+        event["formatError"] = str(error)
+        # Retain only an explicitly JSON-shaped answer prefix, never a reasoning transcript.
+        stripped = re.sub(r"^```(?:json)?\s*", "", content.strip())
+        if stripped.startswith("{"):
+            event["partialJsonPreview"] = stripped[:1600]
+        if attempt == 0:
+            request_messages = [*messages, {"role": "system", "content":
+                "Önceki deneme geçerli ve tamamlanmış JSON üretemedi. Aynı soruyu ve aynı sözleşmeyi "
+                "yeniden değerlendir. Yalnız şemaya uyan tek JSON nesnesi üret; düşünce metni veya Markdown yazma. "
+                "Sorunun koşullarını atlama; eksikleri ve belirsizlikleri yalnız verilen şemanın izin verdiği alanlarla bildir."}]
+    raise error
 
 
 def build(question, llm, previous=None, trace=None):
@@ -86,7 +118,11 @@ def build(question, llm, previous=None, trace=None):
               "scale yalnız 1 veya 100; difference için 1, percent_change için 100. Pay/payda belirsizse clarification iste. "
               "Dönem farkı veya büyüme comparison ile yapılır: target-base veya (target-base)/base*100; "
               "base_period ve target_period parsedPeriods içindeki sıfır tabanlı indekslerdir. Sadece iki dönem kullan. "
+              "comparison seçildiğinde derived MUTLAKA boş [] ve metrics yalnız comparison.metric içeren tek öğeli listedir. "
+              "Dönem farkı/yüzde değişimini derived alanında tekrar üretme: derived aynı satırın iki farklı ölçüsünü, "
+              "comparison ise aynı ölçünün farklı dönemlerini işler. İkisi birlikte isteniyorsa kapsam desteklenmiyor. "
               "Türetilmiş alanlara benzersiz küçük harf ASCII id ver; order_by ve having bu id'yi kullanabilir. "
+              "Yalnız kullanıcının çıktı olarak istediği türetilmiş değerleri ekle; yüzde hesabının ara fark adımı ayrıca gösterilmesi istenmediyse ikinci kolon değildir. "
               "having agregasyon sonrası sayısal koşullardır; value noktalı ondalık string, binlik ayraç yok. "
               "CRM kart listesi, gruplu sayımı ve eksik alanları crm dalıyla planla; bu dalda metrics/dimensions boş, "
               "derived/having boş ve comparison null olmalı. CRM'de tarih filtresi kart created_at/updated_at tarihidir, "
@@ -102,8 +138,24 @@ def build(question, llm, previous=None, trace=None):
               "Filtreden geçen özel isimler filters'a aynen yazılır; anlamlı sıfatlar kaybolamaz. "
               "Top N yalnız açıkça istenirse. Önceki plan yalnız açık takip sorularında bağlamdır.\n"
               + json.dumps({"contract": CONTRACT, "output": schema, "parsedPeriods": periods,
-                            "parsedGrain": grain, "previous": previous, "crmCapabilities": CRM_CAPABILITIES}, ensure_ascii=False))
-    data = _object(llm, [{"role": "system", "content": prompt}, {"role": "user", "content": question}], 3600, PLAN_SCHEMA, "finance_plan")
+                            "parsedGrain": grain, "referenceDate": str(today), "previous": previous, "crmCapabilities": CRM_CAPABILITIES}, ensure_ascii=False))
+    plan_messages = [{"role": "system", "content": prompt}, {"role": "user", "content": question}]
+    data = _object(llm, plan_messages, 3600, PLAN_SCHEMA, "finance_plan", trace)
+    structural_error = comparison_shape_error(data)
+    if structural_error:
+        if trace is not None:
+            trace.append({"stage": "plan_rejected", "output": data, "reason": structural_error})
+        repair = {"role": "system", "content":
+            "Plan doğrulayıcısı önceki planı reddetti: " + structural_error +
+            " Soruyu aynı sözleşmeyle baştan planla. İstenen anlamı veya koşulları silme. "
+            "Dönem farkı/yüzdesi için yalnız comparison kullan; aynı işlemi derived ile çoğaltma. "
+            "Kullanıcı gerçekten hem satır içi hesap hem dönem karşılaştırması istiyorsa uncovered ile bildir. "
+            "Yalnız şemaya uyan JSON döndür."}
+        data = _object(llm, [*plan_messages, repair], 3600, PLAN_SCHEMA, "finance_plan_repair", trace)
+        if comparison_shape_error(data):
+            if trace is not None:
+                trace.append({"stage": "plan_rejected", "output": data, "reason": comparison_shape_error(data)})
+            raise ContractError(comparison_shape_error(data), code="PLAN_INVALID")
     if trace is not None:
         trace.append({"stage": "plan", "output": data})
     if set(data) - set(schema):
@@ -140,8 +192,8 @@ def build(question, llm, previous=None, trace=None):
             "Plan filtre sınırları UTCye dönüştürülmüştür; kullanıcı UTC demediyse parsedPeriods Türkiye yerel tarihleridir. "
             "Pasif kayıtları hariç tutmak desteklenir, pasifleri dahil etmek desteklenmez."},
             {"role": "user", "content": json.dumps({"question": question, "plan": crm,
-             "capabilities": CRM_CAPABILITIES, "parsedPeriods": periods,
-             "previous": previous}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "crm_review")
+             "capabilities": CRM_CAPABILITIES, "parsedPeriods": periods, "referenceDate": str(today),
+             "previous": previous}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "crm_review", trace)
         if trace is not None: trace.append({"stage": "review", "output": review})
         if review.get("ok") is not True or review.get("missing"):
             raise ContractError("CRM sorusunun bütün koşulları plana taşınamadı: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")
@@ -217,9 +269,10 @@ def build(question, llm, previous=None, trace=None):
     result_grain = [DIMENSIONS[d] for d in dims]
     if len(periods) > 1 and not comparison:
         result_grain.insert(0, "Dönem: her tarih aralığı ayrı sonuç satırı/grubudur; dönem başlangıcı ve bitişi ayrı kolonlarda gösterilir. Tarih aralıkları birbirine eklenmez veya aynı satırda birleştirilmez.")
-    readable = {"ölçüler": [{"id": m, "ad": METRICS[m].label, "tanım": METRICS[m].definition} for m in metrics],
+    readable = {"referenceDate": str(today), "ölçüler": [{"id": m, "ad": METRICS[m].label, "tanım": METRICS[m].definition} for m in metrics],
                 "sonuç_kırılımları": result_grain, "koşullar": conditions,
                 "birleştirme_güvencesi": CONTRACT["joins"],
+                "ölçü_aileleri_birleşimi": CONTRACT["family_merge"],
                 "tam_sonuç_güvencesi": "Bütün kaynak satırları okunur; teknik sınırda kesilen cevap sunulmaz. Yalnız açık ilk N isteği sonuç kümesini sınırlar. Aktif CRM eşleşmesi bulunamayan Logo satırları NULL künye ile korunur, ölçü toplamları birleşim öncesi ve sonrası kontrol edilir.",
                 "türetilmiş_hesaplar": [asdict(d) for d in derived], "sonuç_süzgeçleri": [asdict(h) for h in having],
                 "dönem_karşılaştırması": asdict(comparison) if comparison else None,
@@ -235,7 +288,7 @@ def build(question, llm, previous=None, trace=None):
         "aktif CRM süzgeci kapsam hatası değildir. Kitap adedi toplam miktardır; kitap kırılımı şart değildir. "
         "Genel tahsilatta çek/senet dahil tanım cevapta açıklanacaktır."},
         {"role": "user", "content": json.dumps({"question": question, "plan": readable,
-                                                "previous": previous if follows(question) else None}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "finance_review")
+                                                "previous": previous if follows(question) else None}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "finance_review", trace)
     if trace is not None:
         trace.append({"stage": "review", "output": review})
     if review.get("ok") is not True or review.get("missing"):
@@ -334,3 +387,16 @@ def validate_crm_dates(crm, question, periods):
         # Dynamics stores UTC in SQL datetime columns, without a timezone suffix.
         f["value"] = utc.replace(tzinfo=None).isoformat(timespec="seconds")
     return {**crm, "filters": filters}
+
+
+def comparison_shape_error(data):
+    comparison = data.get("comparison")
+    if not comparison:
+        return None
+    if not isinstance(comparison, dict):
+        return "Dönem karşılaştırması nesne olmalıdır."
+    if data.get("derived"):
+        return "Dönem karşılaştırmasında derived boş olmalıdır; aynı dönem hesabı iki kez tanımlanamaz."
+    if data.get("metrics") != [comparison.get("metric")]:
+        return "Dönem karşılaştırmasında metrics yalnız comparison.metric değerini içermelidir."
+    return None

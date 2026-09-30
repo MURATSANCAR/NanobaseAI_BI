@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import random
 import secrets
 import signal
 import sqlite3
@@ -25,6 +26,10 @@ import urllib.request
 from zoneinfo import ZoneInfo
 
 REFERENCE_DATE = "2026-09-30"
+REFERENCE_RETRIES = []
+REFERENCE_CONTEXT = {}
+EXACT_COUNT_COLUMNS = frozenset({"sold_quantity", "net_quantity", "invoice_count", "record_count",
+                                 "missing_isbn", "missing_book_code", "missing_author"})
 ROOT = Path("/data/nanobaseai/bi/frontend/backend")
 ST = "dbo.LG_411_01_STLINE S"
 MEASURES = {
@@ -147,6 +152,25 @@ def connect(path):
 
 def query(conn,sql):
     if not sql.lstrip().upper().startswith(("SELECT ","WITH ")): raise ValueError("Reference is not a SELECT/CTE")
+    for attempt in range(1,4):
+        try:
+            return query_once(conn,sql)
+        except Exception as exc:
+            args=getattr(exc,"args",())
+            if not args or args[0] not in ("40001","42000") or "(1205)" not in str(exc):
+                raise
+            delay=random.uniform(1,3) if attempt<3 else None
+            REFERENCE_RETRIES.append({**REFERENCE_CONTEXT,
+                "observedAtUtc":datetime.now(ZoneInfo("UTC")).isoformat(),
+                "sqlSha256":hashlib.sha256(sql.encode()).hexdigest(),
+                "sqlState":args[0],"errorCode":1205,"failedAttempt":attempt,
+                "retryAfterMs":round(delay*1000) if delay is not None else None,
+                "error":str(exc)[:600],"execution":"independent_reference_not_product_api"})
+            if delay is None:raise
+            time.sleep(delay)
+
+
+def query_once(conn,sql):
     cur=conn.cursor()
     try:
         cur.execute(sql); cols=[x[0] for x in cur.description]; rows=cur.fetchmany(250001)
@@ -182,6 +206,61 @@ def reference(case,conn):
         a,b=base.get(key),target.get(key)
         rows.append(dict(zip(keys,key),base_period_start=case["periods"][0][0],base_period_end_exclusive=case["periods"][0][1],target_period_start=case["periods"][1][0],target_period_end_exclusive=case["periods"][1][1],base_value=a,target_value=b,__derived=calculate(spec["op"],b,a)))
     return rows
+
+
+def numeric_tolerance(column, derived_alias=None):
+    if column == "__derived" or derived_alias is not None and column == derived_alias:
+        return Decimal("0.000001")
+    return Decimal("0") if column in EXACT_COUNT_COLUMNS else Decimal("0.01")
+
+
+def references_equal(case, before, after):
+    """Ignore float serialization noise, never hide row/key/column/NULL changes.
+
+    Uses the same per-column numeric tolerance as the API comparison. Matching
+    bracketing reads is a stability check, not a database snapshot guarantee.
+    """
+    if len(before) != len(after):
+        return False
+    def indexed(rows):
+        result = {}
+        for row in rows:
+            if any(key not in row for key in case["keys"]):
+                raise ValueError("Missing reference identity column")
+            identity = tuple(row[key] for key in case["keys"])
+            if identity in result:
+                raise ValueError("Duplicate reference row identity")
+            result[identity] = row
+        return result
+    left, right = indexed(before), indexed(after)
+    if set(left) != set(right):
+        return False
+    for identity, first in left.items():
+        second = right[identity]
+        if set(first) != set(second):
+            return False
+        for column, a in first.items():
+            b = second[column]
+            if a is None or b is None:
+                if a is not b:
+                    return False
+            elif isinstance(a, (Decimal, int, float)) and isinstance(b, (Decimal, int, float)):
+                av, bv = Decimal(str(a)), Decimal(str(b))
+                if not av.is_finite() or not bv.is_finite():
+                    return False
+                if abs(av - bv) > numeric_tolerance(column):
+                    return False
+            elif type(a) is not type(b) or a != b:
+                return False
+    return True
+
+
+def data_dependent_error(message):
+    # Only discrepancies that changing source rows/values can explain may be
+    # demoted to UNVERIFIED. Capability, plan, schema and result-delivery failures
+    # remain FAIL even if the surrounding live reference also changed.
+    return message.startswith(("Numeric mismatch:", "NULL mismatch:", "Value mismatch:",
+                               "Row count ", "Row identity set differs"))
 
 
 def compare(case,answer,whole,expected):
@@ -232,8 +311,7 @@ def compare(case,answer,whole,expected):
                 if av is None or bv is None:
                     if av!=bv:errors.append(f"NULL mismatch: {col}")
                 elif isinstance(bv,(Decimal,int,float)):
-                    exact_counts={"sold_quantity","net_quantity","invoice_count","record_count","missing_isbn","missing_book_code","missing_author"}
-                    tolerance=Decimal("0.000001") if col==alias else Decimal("0") if col in exact_counts else Decimal("0.01")
+                    tolerance=numeric_tolerance(col, alias)
                     if abs(Decimal(str(av))-Decimal(str(bv)))>tolerance:errors.append(f"Numeric mismatch: {col}")
                 elif av!=bv:errors.append(f"Value mismatch: {col}")
     except Exception as exc:errors.append(str(exc))
@@ -279,9 +357,11 @@ def main():
         for source in {c["source"] for c in selected}:conns[source]=connect(f"/data/nanobaseai/bi/secrets/{source}-mssql-connection.json")
         for case in selected:
             item={**case,"started":time.time()};stop=False
+            retry_offset=len(REFERENCE_RETRIES)
             try:
                 if case.get("followup") and case["thread"] not in threads:raise RuntimeError("Follow-up prerequisite did not produce a conversation")
                 session.execute("UPDATE sessions SET expires=? WHERE token=?",(time.time()+900,digest));session.commit()
+                REFERENCE_CONTEXT.clear();REFERENCE_CONTEXT.update(caseId=case["id"],source=case["source"],phase="before_api")
                 expected=reference(case,conns[case["source"]]);item["reference"]=expected
                 body={"question":case["question"],"sampleSize":7}
                 if case.get("thread") in threads:body["threadId"]=threads[case["thread"]]
@@ -294,12 +374,20 @@ def main():
                 if answer.get("semantic",{}).get("engineCodeHash")!=expected_hash:errors.append("Loaded engine hash differs from deployed files")
                 item["errors"]=errors;item["status"]="FAIL" if errors else "PASS"
                 # If live source changed between reference and API, do not claim a mismatch or pass.
+                REFERENCE_CONTEXT["phase"]="after_api"
                 after_ref=reference(case,conns[case["source"]]);item["referenceAfter"]=after_ref
-                canonical=lambda rows:sorted(json.dumps(r,sort_keys=True,default=str) for r in rows)
-                if canonical(expected)!=canonical(after_ref):item["status"]="UNVERIFIED";item["referenceChanged"]=True
+                if not references_equal(case,expected,after_ref):
+                    item["referenceChanged"]=True
+                    structural=[error for error in errors if not data_dependent_error(error)]
+                    item["status"]="FAIL" if structural else "UNVERIFIED"
+                    if structural:item["structuralErrorsDespiteSourceChange"]=structural
             except Exception as exc:
-                item["status"]="UNVERIFIED";item["error"]=type(exc).__name__+": "+str(exc)[:500]
+                structural=[error for error in item.get("errors",[]) if not data_dependent_error(error)]
+                item["status"]="FAIL" if structural else "UNVERIFIED"
+                item["error"]=type(exc).__name__+": "+str(exc)[:500]
+                if structural:item["structuralErrorsDespiteReferenceFailure"]=structural
                 stop=isinstance(exc,TimeoutError) or isinstance(exc,urllib.error.URLError) and isinstance(exc.reason,TimeoutError)
+            item["referenceRetries"]=REFERENCE_RETRIES[retry_offset:]
             item["elapsedSeconds"]=round(time.time()-item["started"],2)
             save(out/(case["id"]+".json"),item);counts[item["status"]]+=1
             results.append({k:item[k] for k in ("id","status","errors","error","elapsedSeconds") if k in item})
@@ -320,7 +408,7 @@ def main():
             finally:session.close()
         after=manifest()
         if before!=after:counts["UNVERIFIED"]+=1;results.append(dict(id="CODE_CHANGED",status="UNVERIFIED"))
-        report=dict(referenceDate=REFERENCE_DATE,api=args.base,executionEnvironment="connected test server",counts=dict(counts),results=results,planned=len(selected),completed=len([r for r in results if r["id"].startswith("CP")]),sessionsDeleted=removed,sourceWrites=0,codeBefore=before,codeAfter=after,codeStable=before==after,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+        report=dict(referenceDate=REFERENCE_DATE,api=args.base,executionEnvironment="connected test server",counts=dict(counts),results=results,planned=len(selected),completed=len([r for r in results if r["id"].startswith("CP")]),sessionsDeleted=removed,sourceWrites=0,codeBefore=before,codeAfter=after,codeStable=before==after,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),referenceRetries=REFERENCE_RETRIES,referenceRetryIsProductRecoveryEvidence=False)
         save(out/"report.json",report);print("FINAL",dict(counts),"sessionsDeleted",removed,flush=True)
         fcntl.flock(lock,fcntl.LOCK_UN);lock.close()
     return 1 if counts["FAIL"] or counts["UNVERIFIED"] or report["completed"]!=len(selected) else 0

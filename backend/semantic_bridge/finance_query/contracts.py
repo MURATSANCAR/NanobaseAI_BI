@@ -42,6 +42,7 @@ CONTRACT = {"version": "2.0", "metrics": {k: asdict(v) for k, v in METRICS.items
             "dimensions": DIMENSIONS,
             "sources": "Tek şirket. SEMANTIC_FIRMS kapsamı ile L_CAPIPERIOD dönemleri; çakışmada tahmin yok.",
             "joins": "Logo ITEMS.CODE -> CRM new_kitapBase.new_stokkodu; aktif anahtar tekilliği zorunlu. LEFT JOIN; ölçüler çoğalmaz. Eşleşmeyen satışlar NULL CRM alanlarıyla korunur ve toplam kontrol edilir.",
+            "family_merge": "Satış/fatura/tahsilat farklı aileleri ortak müşteri/kanal/gün/ay/yıl kırılımında önce ayrı ayrı toplanır, bütün anahtarların birleşimi korunur (FULL OUTER). Yalnız bir ailede hareketi olan kırılım kaybolmaz; diğer ailenin tam okunmuş dönemde olmayan hareketi 0 olur. Ham hareket tabloları birbirine JOIN edilmez.",
             "operations": "Toplulaştırma sonrası açık pay/paydalı oran, fark, yüzde değişim ve hesap sonucu filtresi. Sıfır veya eksik payda NULL; dönem eşleşmesi yoksa değer sıfır varsayılmaz. Limit en son uygulanır."}
 CONTRACT_HASH = hashlib.sha256(json.dumps(CONTRACT, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 

@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Birleşebilir motor ilk canlı koşu ve düzeltmeler
+
+- e789243ae test sunucusu gerçek API/Logo/CRM, 34 senaryo: ilk koşucu sınıflaması 7 PASS, 3 FAIL, 24 UNVERIFIED; 1 geçici timasai oturumu silindi. Kaynakta gerçek satış değişimi ve referans1205 yanında koşucunun float metnini tam eşit sayması doğrulanamayanları artırdı; bu tur kabul değildir.
+- Genel düzeltmeler: dönem karşılaştırmasının gereksiz derived tekrarı için sınırlı plan onarımı, düşünme kapalı/JSON bütçesi, günlük dil dönem sınırı/çeyrek/dünkü, CRM sayım kırılımı yinelenen kolonlarının kayıpsız normalize edilmesi; aileler arası FULL OUTER toplam güvencesinin plana açıklanması.
+- Referans koşucusu sayısal toleransı ortak kullanır, yalnız gerçek1205 için üç deneme yapar; kaynak değişimi plan/kolon hatasını gizleyemez. Referans retry ürün kurtarma kabulü değildir. Aynı34 soru yeni kodda yeniden koşulacak.
+
 ## 2026-09-30 (20:30) — Müşteri Jira hataları (ZEKI) kapandı: VM'de ZEKI-54/26 doğrulandı, ZEKI-28 test sunucusunda
 
 - **VM kataloğu (kullanıcı çalıştırdı):** Logo `LG_211/411_ITEMS.CODE` ↔ CRM `new_kitapBase.new_StokKodu` bağı (eklenen 2) ve «kitap yazarı» (`sem_480be8b7d621`, CERTIFIED, eş anlamlı yalnız «yazar adı»; çıplak «yazar» yok).

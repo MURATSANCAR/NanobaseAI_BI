@@ -31,7 +31,7 @@ CRM_CAPABILITIES = {
     "entities": {"book": "Aktif kitap kartları", "author": "Aktif Contact yazar kişiler (new_yazarmi=1)",
                  "customer": "Aktif müşteri durumundaki Account kayıtları"},
     "fields": {k: {"entity": v[0], "type": v[2], "meaning": v[3]} for k, v in FIELDS.items()},
-    "modes": {"list": "fields kolonlarını listele", "count": "group_by kırılımında record_count; kırılım boşsa tek sayı",
+    "modes": {"list": "fields kolonlarını listele", "count": "group_by kırılımında record_count; kırılım boşsa tek sayı. fields boş olmalıdır; group_by zaten sonuç kolonlarını içerir",
               "quality": "fields içindeki metin alanları için NULL/boş sayıları: missing_<field>, ayrıca record_count"},
     "rules": ["Yalnız mevcut aktif kayıtlar; tarihsel aktiflik, silinmiş/pasif kayıt, satış, randevu veya sözleşme kapsamı yok.",
               "Yazar künye metni ile Contact kişiler arasında bağlantı yok; kitabın kişi kimliği veya telif ilişkisi uydurulmaz.",
@@ -81,7 +81,12 @@ def validate_crm_plan(raw):
     if p["mode"] == "list" and (not p["fields"] or p["group_by"]):
         raise ContractError("CRM liste planında kolonlar gerekli; gruplama kullanılamaz.")
     if p["mode"] == "count" and p["fields"]:
-        raise ContractError("CRM sayımında liste kolonları yerine kırılım kullanılmalıdır.")
+        # A grouping column is already projected by the count plan. Accept its
+        # redundant listing without changing either grain or output columns;
+        # never drop an additional requested field that is not grouped.
+        if not set(p["fields"]).issubset(p["group_by"]):
+            raise ContractError("CRM sayımında liste kolonları yerine kırılım kullanılmalıdır.")
+        p["fields"] = []
     if p["mode"] == "quality" and (not p["fields"] or any(FIELDS[f][2] != "text" for f in p["fields"])):
         raise ContractError("Eksik alan sayımı yalnız açıkça seçilen metin alanları için tanımlıdır.")
     if "publisher" in p["group_by"] and "publisher_id" not in p["group_by"]:
