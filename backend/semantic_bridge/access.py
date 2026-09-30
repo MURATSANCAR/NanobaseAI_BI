@@ -1102,7 +1102,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
     # Kitap okutma (Kitaba sor): PDF gelen kutusuna yazılır, GPU'da uzun okuma işi başlar.
-    (frozenset({"PUT"}), r"^/api/v1/editorial/ask/read$", "ozellik:kitap.okut"),
+    (frozenset({"PUT", "DELETE"}), r"^/api/v1/editorial/ask/read(/[^/]+)?$", "ozellik:kitap.okut"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
     # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur. ZEKİ kalite tahmini
     # (POST …/jobs/{iş}/qe) da model harcar ama işin inceleyenine de açıktır: «ceviri.yonet YA DA inceleyen» burada

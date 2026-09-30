@@ -2079,6 +2079,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r.start_refresher()
         app.state.financial_audit.start()
         app.state.editorial_home.start()
+        # Kitap okutma giden kutusu: köprü yeniden başladıysa bekleyen PDF'ler gönderilmeye devam eder.
+        from semantic_bridge import editorial_book_reads
+        editorial_book_reads.kick()
         app.state.editorial_intake.start()
         app.state.editorial_pending.start()
         app.state.author_snapshots.start()
@@ -6347,46 +6350,52 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # ---------------------------------------------------------- kitap okutma (Kitaba sor'un üstündeki yükleme alanı)
     @app.put("/api/v1/editorial/ask/read")
     async def editorial_book_read(request: Request, filename: str = "", title: str = "") -> dict[str, Any]:
-        """Kitap PDF'i yükle ve okut: ZEKİ AI sayfaları, resimleri, karakterleri ve olayları okur; bitince kitap
-        «Kitaba sor» listesine girer. Gövde ham dosya (belge yüklemesiyle aynı yol, diske akar). Yükleyen = oturum."""
+        """Kitap PDF'i yükle ve okut: dosya köprünün giden kutusuna alınır, hemen «Gönderiliyor» döner; editör
+        motoruna gönderim ve okuma kuyruğu arkada (editorial_book_reads). Toplu yüklemede her dosya ayrı istektir.
+        Gövde ham dosya (belge yüklemesiyle aynı yol, diske akar). Yükleyen = oturum."""
         engine, _tenant, user, _admin = await run_in_threadpool(_books, request)
-        from semantic_bridge import editorial_cards
+        from semantic_bridge import editorial_book_reads as reads_mod
         incoming = await _desk_receive(request)
-        if not incoming.size:
-            incoming.discard()
-            raise HTTPException(status_code=400, detail={"code": "EDITORIAL_DESK", "message": "Dosya boş."})
         try:
-            out = await run_in_threadpool(editorial_cards.book_read_upload, incoming.open(), filename, title, user)
-        except Exception as e:  # noqa: BLE001
-            _doc_error(e, "Kitap okumaya gönderilemedi.")
+            if not incoming.size:
+                raise HTTPException(status_code=400, detail={"code": "EDITORIAL_DESK", "message": "Dosya boş."})
+            out = await run_in_threadpool(reads_mod.accept, incoming, filename, title, user)
+        except reads_mod.Rejected as e:
+            raise HTTPException(status_code=422, detail={"code": "BOOK_READ", "message": str(e)}) from e
         finally:
-            incoming.discard()                      # kalıcı kopya editör motorunun gelen kutusunda
-        admin_mod.audit(engine, user, "upload", "editorial_book_read", out.get("id"), out.get("title") or filename,
-                        {"bytes": incoming.size, "alreadyRead": bool(out.get("already_read"))})
+            incoming.discard()                      # giden kutusuna taşındıysa silinmez (stored)
+        admin_mod.audit(engine, user, "upload", "editorial_book_read", out["id"], out["title"], {"bytes": incoming.size})
         return out
 
     @app.get("/api/v1/editorial/ask/read")
     def editorial_book_reads(request: Request) -> dict[str, Any]:
-        """Okutulan kitaplar ve okuma aşaması: kişi kendi okuttuklarını, yönetici hepsini görür. Okuması biten kitap
-        soru listesinde yoksa liste beklemeden arkada tazelenir; `listed` kitabın soru sorulabilir olduğunu söyler."""
+        """Okutulan kitaplar: giden kutusu + kuyruk + okuma aşaması; kişi kendi okuttuklarını, yönetici hepsini görür.
+        Motor okunamazsa son liste döner (`stale`), hata dönmez. Okuması biten kitap soru listesinde yoksa liste
+        beklemeden arkada tazelenir; `listed` kitabın soru sorulabilir olduğunu söyler."""
         _engine, _tenant, user, is_admin = _books(request)
-        from semantic_bridge import editorial_cards
-        try:
-            out = editorial_cards.book_read_jobs(user, is_admin)
-        except Exception as e:  # noqa: BLE001
-            _doc_error(e, "Okutulan kitaplar motordan alınamadı.")
+        from semantic_bridge import editorial_book_reads as reads_mod, editorial_cards
+        out = reads_mod.listing(user, is_admin, lambda: editorial_cards.book_read_jobs(user, is_admin))
         part = app.state.editorial_home.read()["parts"].get("readableBooks", {})
         listed = set((part.get("data") or {}).get("items") or [])
         stale = False
-        for item in out.get("items") or []:
+        for item in out["items"]:
             item["listed"] = item.get("title") in listed
-            done = item.get("status") == "SUCCEEDED" and item.get("finished_at")
+            done = item.get("state") == "hazir" and item.get("finished_at")
             if done and not item["listed"] and datetime.fromisoformat(item["finished_at"]).timestamp() > part.get("updatedAt", 0):
                 stale = True
         if stale:
             threading.Thread(target=app.state.editorial_home.refresh_part, args=("readableBooks",),
                              name="editorial-readable-books", daemon=True).start()
         return out
+
+    @app.delete("/api/v1/editorial/ask/read/{item_id}")
+    def editorial_book_read_dismiss(item_id: str, request: Request) -> dict[str, Any]:
+        """Okunamayan (motorun reddettiği) satırı listeden kaldırır; gönderimi süren satır kaldırılmaz."""
+        _engine, _tenant, user, is_admin = _books(request)
+        from semantic_bridge import editorial_book_reads as reads_mod
+        if not reads_mod.dismiss(item_id.removeprefix("gonder-"), user, is_admin):
+            raise HTTPException(404, "Kaldırılacak satır yok.")
+        return {"ok": True}
 
     @app.get("/api/v1/editorial/proofing")
     @_izle_ep('portal.masa.bulgular', 'Son okuma bulguları',

@@ -2934,44 +2934,69 @@ export const documentApi = {
   },
 };
 
-/** Portaldan okutulan kitap: aşama iş akışının adımından türetilir (teknik ad taşımaz); `listed` kitap Kitaba sor'da. */
+/** Okutulan kitabın durumu: gonderiliyor (köprünün giden kutusunda) → sirada → okunuyor → hazir; yeniden = düştü,
+ *  kendiliğinden yeniden deneniyor; okunamadi = dosya okunamaz ya da deneme hakkı bitti. Aşama teknik ad taşımaz. */
+export type BookReadState = 'gonderiliyor' | 'sirada' | 'okunuyor' | 'hazir' | 'yeniden' | 'okunamadi';
 export type BookRead = {
   id: string;
   title: string;
   pages: number | null;
-  status: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+  status: string;
+  state: BookReadState;
   phase: { n: number; of: number; label: string };
+  /** Sırada bekleyenin önünde kaç kitap var (okunan dahil). */
+  ahead: number | null;
+  attempt: number;
+  attempts: number;
   failed: boolean;
+  /** Gönderiliyor: motora o an ulaşılamıyor, köprü yeniden deniyor. */
+  waiting?: boolean;
+  message?: string | null;
   requested_by: string;
   created_at: string;
   finished_at: string | null;
   listed?: boolean;
-  already_read?: boolean;
 };
 
 export const bookReadApi = {
-  list: () => send<{ items: BookRead[] }>('GET', '/api/v1/editorial/ask/read', undefined, 30_000),
-  /** Ham PDF gövdesi (belge yüklemesiyle aynı yol): köprü diske akıtır, editör motorunun gelen kutusuna gönderir. */
-  upload: async (file: File, title = '') => {
-    const q = qs({ filename: file.name, title: title.trim() || undefined });
-    const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/ask/read${q}`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      body: file,
-      signal: AbortSignal.timeout(1_800_000),
-    });
-    if (res.status === 401 || res.status === 403) {
-      authBlocked = true;
-      throw new EngineAuthError();
-    }
-    if (!res.ok) {
-      const j = (await res.json().catch(() => null)) as { detail?: string | { message?: string } } | null;
-      const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
-      throw new Error(deskUploadErrorText(res.status, file.size, msg));
-    }
-    return (await res.json()) as BookRead;
-  },
+  list: () => send<{ items: BookRead[]; stale?: boolean }>('GET', '/api/v1/editorial/ask/read', undefined, 30_000),
+  dismiss: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/editorial/ask/read/${encodeURIComponent(id)}`, undefined, 30_000),
+  /** Ham PDF gövdesi; köprü diske akıtır ve giden kutusuna alır (motora gönderim arkada). İlerleme için XHR.
+   *  Hata: `status` 0 = bağlantı koptu (yeniden denenebilir), 4xx = dosya/izin (kalıcı), 5xx = sunucu (denenebilir). */
+  upload: (file: File, title: string, onProgress: (share: number) => void) =>
+    new Promise<BookRead>((resolve, reject) => {
+      const x = new XMLHttpRequest();
+      x.open('PUT', `${ENGINE_BASE}/api/v1/editorial/ask/read${qs({ filename: file.name, title: title.trim() || undefined })}`);
+      x.withCredentials = true;
+      x.timeout = 1_800_000;
+      x.setRequestHeader('Content-Type', 'application/octet-stream');
+      x.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(e.loaded / e.total);
+      };
+      const fail = (status: number, msg?: string | null) => reject(Object.assign(new Error(msg || deskUploadErrorText(status, file.size, null)), { status }));
+      x.onerror = () => fail(0, 'Bağlantı koptu.');
+      x.ontimeout = () => fail(0, 'Bağlantı zaman aşımına uğradı.');
+      x.onload = () => {
+        if (x.status === 401) {
+          authBlocked = true;
+          reject(new EngineAuthError());
+          return;
+        }
+        let j: { detail?: string | { message?: string } } | null = null;
+        try {
+          j = JSON.parse(x.responseText);
+        } catch {
+          j = null;
+        }
+        if (x.status >= 200 && x.status < 300) {
+          resolve(j as unknown as BookRead);
+          return;
+        }
+        const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
+        fail(x.status, deskUploadErrorText(x.status, file.size, msg));
+      };
+      x.send(file);
+    }),
 };
 
 /** Soru sorulabilen (okunmuş) kitaplar; motordan gelir, köprüde kısa süre önbellekte tutulur. */

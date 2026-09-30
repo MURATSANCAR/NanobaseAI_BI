@@ -227,6 +227,17 @@ services:
       postgres: {condition: service_healthy}
       temporal: {condition: service_healthy}
 
+  # Portaldan kitap okutma kuyruğu (editor.portal_books): GPU'da okuma yokken sıradaki kitabı başlatır, düşen
+  # okumayı EDITOR_READ_ATTEMPTS denemeye kadar yeniden sıraya koyar. Aynı anda tek kitap okunur.
+  book-queue:
+    <<: *py
+    profiles: [analysis]
+    container_name: editor-book-queue
+    command: ["python", "-m", "editor.portal_books", "consume"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      temporal: {condition: service_healthy}
+
   rebuild:
     <<: *py
     profiles: [analysis]

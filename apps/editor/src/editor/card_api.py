@@ -280,66 +280,36 @@ async def document_upload(file: UploadFile = File(...), title: str = Form(defaul
 @app.post('/v1/books/read')
 async def book_read_upload(file: UploadFile = File(...), title: str = Form(default=''),
                            x_editor: str = Header(default='')):
-    """Editörün yüklediği kitap PDF'i gelen kutusuna yazılır ve okuma işi başlar (`editorctl analyze` ile aynı iş).
-    Aynı içerik daha önce okunduysa yeni kitap açılmaz. İsteyen = X-Editor (köprü oturumdan verir).
-    Depo bu serviste salt okunur; yalnız gelen kutusu ve kitap klasörü yazılabilir bağlıdır (docker-compose)."""
+    """Editörün yüklediği kitap PDF'i gelen kutusuna yazılır ve okuma kuyruğuna girer; okumayı kuyruk servisi
+    (editor-book-queue) GPU boşalınca başlatır. Aynı içerik okunmuş/sırada/okunuyorsa yeni iş açılmaz.
+    İsteyen = X-Editor (köprü oturumdan verir). Depo bu serviste salt okunur; yalnız gelen kutusu ve kitap
+    klasörü yazılabilir bağlıdır (docker-compose). 422 = dosyanın kendisi okunamaz (köprü yeniden göndermez)."""
     from starlette.concurrency import run_in_threadpool
-    from . import document, jobs, portal_books as PB
+    from . import portal_books as PB
     from .config import settings
     who=(x_editor or '').strip()
     if not who:
         raise HTTPException(400,'Yükleyen (X-Editor) eksik.')
     name=PB.title_of(title,file.filename or '')
     try:
-        foundation.assert_enabled()
         file_name,size=await run_in_threadpool(PB.save,file.file,settings().inbox,file.filename or 'kitap.pdf',title)
-        info=await run_in_threadpool(document.inspect_book,file_name,name)
     except PB.UploadError as e:
         raise HTTPException(422,str(e)) from None
-    except RuntimeError as e:
-        raise HTTPException(503,'Kitap okuma şu an bakımda; birazdan yeniden deneyin.') from e
-    except Exception as e:  # pymupdf: bozuk ya da şifreli PDF
-        raise HTTPException(422,'PDF açılamadı; dosya bozuk ya da parolalı olabilir.') from e
-    done=db.one("SELECT j.id FROM ed.analysis_job j WHERE j.book_version_id=%s AND j.status='SUCCEEDED'"
-                " ORDER BY j.created_at DESC LIMIT 1",info['book_version_id'])
-    if done:
-        return {**_read_job(str(done['id'])),'already_read':True,'bytes':size}
     try:
-        job=await jobs.start_analysis_job(file_name,name,requested_by=PB.PREFIX+who[:200])
-    except RuntimeError as e:
-        raise HTTPException(503,'Kitap okuma şu an bakımda; birazdan yeniden deneyin.') from e
-    except Exception as e:  # iş kuyruğuna ulaşılamadı; dosya gelen kutusunda kalır, yeniden yükleme aynı kitabı bulur
-        raise HTTPException(503,'Okuma başlatılamadı; birazdan yeniden deneyin.') from e
-    return {**_read_job(job['job_id']),'already_read':False,'bytes':size}
-
-def _read_job(job_id: str) -> dict:
-    rows=_read_jobs("j.id=%s",(job_id,))
-    if not rows:
-        raise HTTPException(404,'job not found')
-    return rows[0]
-
-def _read_jobs(where: str, args: tuple) -> list[dict]:
-    from . import portal_books as PB
-    with foundation.read_snapshot() as c:
-        rows=c.execute("SELECT j.id, j.status, j.step, j.error, j.requested_by, j.created_at, j.finished_at,"
-                       " b.title, bv.page_count FROM ed.analysis_job j JOIN ed.book_version bv ON bv.id=j.book_version_id"
-                       " JOIN ed.book b ON b.id=bv.book_id WHERE "+where+" ORDER BY j.created_at DESC",
-                       args).fetchall()
-    iso=lambda t: t.isoformat() if t else None
-    return [{'id':str(r['id']),'title':r['title'],'pages':r['page_count'],'status':r['status'],
-             'phase':PB.phase(r['step'],r['status']),'failed':r['status'] in ('FAILED','CANCELLED'),
-             'requested_by':(r['requested_by'] or '').removeprefix(PB.PREFIX),
-             'created_at':iso(r['created_at']),'finished_at':iso(r['finished_at'])} for r in rows]
+        import pymupdf
+        pymupdf.open(settings().inbox/file_name).close()
+    except Exception:
+        raise HTTPException(422,'PDF açılamadı; dosya bozuk ya da parolalı olabilir.') from None
+    q=await run_in_threadpool(PB.enqueue,file_name,name,who)
+    rows=[r for r in PB.listing(who) if r['id']==q['job_id']] or [{'id':q['job_id'],'title':name}]
+    return {**rows[0],'already':q['already'],'bytes':size}
 
 @app.get('/v1/books/read')
 def book_read_jobs(requested_by: str = Query(default='')):
-    """Portaldan okutulan kitaplar (yeniden eskiye, hepsi); `requested_by` verilirse yalnız onunkiler.
-    Hata metni dönmez: iş akışının hatası teknik ad taşır, ekran yalnız «okunamadı» der."""
+    """Portaldan okutulan kitaplar ve kuyruktaki yeri (yeniden eskiye, hepsi); `requested_by` verilirse yalnız
+    onunkiler. Hata metni dönmez: iş akışının hatası teknik ad taşır, ekran yalnız durumu söyler."""
     from . import portal_books as PB
-    who=requested_by.strip()
-    if who:
-        return {'items':_read_jobs("j.requested_by=%s",(PB.PREFIX+who,))}
-    return {'items':_read_jobs("j.requested_by LIKE %s",(PB.PREFIX+'%',))}
+    return {'items':PB.listing(requested_by),'attempts':PB.ATTEMPTS}
 
 @app.get('/v1/documents')
 def document_list(uploaded_by: str = Query(default='')):

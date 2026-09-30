@@ -48,3 +48,32 @@ def test_save_rejects_and_leaves_no_partial(tmp_path, data, filename, msg):
     with pytest.raises(PB.UploadError, match=msg):
         PB.save(io.BytesIO(data), tmp_path, filename, "")
     assert list(tmp_path.iterdir()) == []
+
+
+def _row(status, attempt=1, workflow_id=None, jid="j1"):
+    return {"id": jid, "status": status, "step": None, "workflow_id": workflow_id, "requested_by": "portal:ayse",
+            "created_at": None, "finished_at": None, "attempt": attempt, "title": "Kitap", "page_count": 32,
+            "submitted_at": None}
+
+
+@pytest.mark.parametrize("status,attempt,wf,state", [
+    ("QUEUED", 1, None, "sirada"),
+    ("QUEUED", 1, "book-analysis-j1", "okunuyor"),
+    ("RUNNING", 1, "book-analysis-j1", "okunuyor"),
+    ("SUCCEEDED", 2, "book-analysis-j1", "hazir"),
+    ("FAILED", 1, "book-analysis-j1", "yeniden"),
+    ("FAILED", PB.ATTEMPTS, "book-analysis-j1", "okunamadi"),
+    ("CANCELLED", 1, "book-analysis-j1", "okunamadi"),
+])
+def test_item_state(status, attempt, wf, state):
+    it = PB.item(_row(status, attempt, wf), [], 0)
+    assert it["state"] == state
+    assert it["failed"] == (state == "okunamadi")
+    assert it["requested_by"] == "ayse"
+
+
+def test_item_counts_books_ahead_including_the_running_one():
+    waiting = ["a", "j1", "b"]
+    assert PB.item(_row("QUEUED"), waiting, busy=1)["ahead"] == 2
+    assert PB.item(_row("QUEUED"), waiting, busy=0)["ahead"] == 1
+    assert PB.item(_row("RUNNING", workflow_id="w"), waiting, busy=1)["ahead"] is None

@@ -740,8 +740,9 @@ def document_upload(data, filename: str, title: str, audience: str, age_from, ag
 
 # ------------------------------------------------------------------ kitap okutma (kart servisi /v1/books/read)
 def book_read_upload(data, filename: str, title: str, user: str) -> dict:
-    """Kitap PDF'i kart servisine gider; orada gelen kutusuna yazılır ve okuma işi başlar. Yükleyen = oturum.
-    `data`: açık dosya (köprü gövdeyi diske akıtır; kitap yüzlerce MB olabilir, belleğe alınmaz)."""
+    """Kitap PDF'i kart servisine gider; orada gelen kutusuna yazılır ve okuma kuyruğuna girer. Yükleyen = oturum.
+    `data`: açık dosya (giden kutusundaki kopya; kitap yüzlerce MB olabilir, belleğe alınmaz). Çağıran:
+    editorial_book_reads gönderici (422 kalıcı ret, başka her hata yeniden denenir)."""
     base,headers,ca=_headers()
     headers['X-Editor']=user[:200]
     with httpx.Client(timeout=httpx.Timeout(1800, connect=30),verify=ca or True,follow_redirects=False) as client:
