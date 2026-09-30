@@ -13,4 +13,24 @@ Kullanıcı talebi: “eski kataloğu sil”. Kapsam eski soru–kolon eşleşti
 
 ## Canlı durum
 
-Hazırlık tamamlandı; dağıtım, katalog silme ve gerçek DB/API kabulü henüz yapılmadı. Yeni iş sorularının destek kapsamı bu kaldırmayla genişlemiş sayılmaz.
+Test sunucusunda tamamlandı. Tutarlı yedek tam `pg_restore` okumasından geçti; SHA256 `2495799f838b90003012bc12dfe441cb40b045594cc156cb2484eced7f3e8068`.
+
+Yedek: `/data/nanobaseai/bi/backups/retired-legacy-catalog-20260930-zstd/legacy-catalog.dump`; aynı dizinde `backup.json`, `retirement.json`.
+
+| Tablo | Silinen kayıt |
+|---|---:|
+| sl_mapping | 6624 |
+| sl_evidence | 13517 |
+| sl_counter_evidence | 436 |
+| sl_candidate | 4441 |
+| sl_concept | 6624 |
+| sl_catalog_version | 70586 |
+| sl_vocabulary | 41152 |
+| sl_suggestion | 54 |
+| **Toplam** | **143434** |
+
+Sekiz tabloda emekliye ayrılan kapsamın kalan kayıt sayısı 0. Fiziksel profiller4259 ve annotation7 korundu. Dört yeniden-yazma engeli etkin; eski semantic-worker/vocabulary zamanlayıcıları kapalı. Bağımsız iş kataloğu zamanlayıcısına dokunulmadı.
+
+Gerçek API/veritabanı duman kabulü20/20: kapsam boşluğu, profiller, trigger, yeniden yazmanın reddi, eski uçların410 cevabı, sağlık ve giriş cevapları. Kanıt `/tmp/codex-retire-catalog-20260930/smoke.json`; geçici timasai oturumu1 silindi. Kaynak Logo/CRM kayıtlarına yazılmadı.
+
+Silme öncesi yeni motorun12 temel gerçek cevap referansı12/12 geçti. Katalog emekliliğinin20 kontrolü yeni kapsamın veya100 karmaşık sorunun doğru cevaplandığını göstermez. Kapsam genişletmesinin kabulü ayrı ve henüz bekliyor.

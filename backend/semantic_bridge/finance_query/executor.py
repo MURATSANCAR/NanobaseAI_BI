@@ -19,6 +19,7 @@ import sqlglot
 from sqlglot import exp
 from .contracts import METRICS, ContractError
 from . import operations
+from .result_metadata import describe_columns, calculation_definitions
 
 MAX_ROWS = 250_000
 CRM = "[Timas_MSCRM].[dbo]"
@@ -42,6 +43,8 @@ class Executor:
         self._crm_status = {}
         self.output_fields = []
         self.coverage_complete = True
+        self.section_results = []
+        self.gaps = []
 
     def read(self, sql, *, metadata=False, source="logo"):
         statements = sqlglot.parse(sql, read="tsql")
@@ -161,6 +164,57 @@ class Executor:
         return books
 
     def execute(self, plan):
+        if getattr(plan, "sections", ()):
+            self.gaps.extend(getattr(plan, "gaps", ()))
+            overview = []
+            for index, leaf in enumerate(plan.sections):
+                child = Executor(self.rt)
+                title = leaf.section_title or f"Bölüm {index+1}"
+                section = {"title": title, "index": index, "status": "COMPLETE", "columns": [], "records": [], "totalRows": 0, "truncated": False}
+                try:
+                    records = child.execute(leaf)
+                    if sum(s["totalRows"] for s in self.section_results) + len(records) > MAX_ROWS:
+                        raise ContractError("Rapor bölümleri tam sonuç sınırını aşıyor; dönem veya kapsam daraltılmalı.")
+                    fields = list(records[0]) if records else child.output_fields
+                    numeric = set(getattr(child, "numeric_fields", ())) | set(leaf.metrics)
+                    if leaf.comparison:
+                        numeric -= set(leaf.metrics)
+                    if any(set(row) != set(fields) for row in records) or not numeric <= set(fields):
+                        raise ContractError("Rapor bölümünün kolonları hesap sözleşmesini sağlamıyor.", code="SOURCE_CONTRACT_VIOLATION")
+                    section.update(records=records, totalRows=len(records), columns=describe_columns(leaf, fields, numeric))
+                    if child.gaps or not child.coverage_complete:
+                        section["status"] = "PARTIAL"
+                        section["gaps"] = child.gaps
+                        self.gaps.extend({**gap, "reason": title + ": " + gap["reason"]} for gap in child.gaps)
+                        if not child.gaps:
+                            self.gaps.append({"status": "INCOMPLETE_SOURCE_COVERAGE", "reason": title + ": kaynak eşleşmelerinin bir kısmı eksik; bölümün veri notlarına bakın."})
+                except ContractError as exc:
+                    section.update(status=exc.code, explanation=str(exc))
+                    self.gaps.append({"status": exc.code, "reason": title + ": " + str(exc)})
+                finally:
+                    self.runs.extend(child.runs)
+                    self.read_retries.extend(child.read_retries)
+                    self.source_periods.extend(child.source_periods)
+                    self.notes.extend(title + ": " + n for n in child.notes)
+                    self.coverage_complete &= child.coverage_complete
+                section["sourceExecutions"] = child.runs
+                section["sourceComplete"] = child.coverage_complete and not section.get("explanation")
+                section["dataNotes"] = [{"message": n, "severity": "info" if child.coverage_complete else "warn"} for n in dict.fromkeys(child.notes)]
+                section["dataCoverage"] = child.source_periods
+                section["definitions"] = calculation_definitions(leaf)
+                self.section_results.append(section)
+                overview.append({"section": title, "status": section["status"], "row_count": section["totalRows"]})
+            if self.gaps:
+                self.coverage_complete = False
+            self.output_fields = ["section", "status", "row_count"]
+            self.numeric_fields = {"row_count"}
+            return overview
+        if getattr(plan, "crm_report", None):
+            from .crm_reports import execute_crm_report
+            return self.report_result(execute_crm_report(self, plan.crm_report))
+        if getattr(plan, "logo_report", None):
+            from .logo_reports import execute_logo_report
+            return self.report_result(execute_logo_report(self, plan.logo_report))
         if getattr(plan, "crm", None):
             from .crm_query import execute_crm_plan
             return execute_crm_plan(self, plan.crm)
@@ -216,6 +270,7 @@ class Executor:
             if not totals and not group_fields:
                 totals[()] = {m: Decimal(0) for m in plan.metrics}
             rows = operations.derived(list(totals.values()), plan.derived)
+            rows = operations.analytics(rows, getattr(plan, "analytics", ()), plan.metrics, group_fields)
             period_rows.append(rows)
             if plan.comparison:
                 continue
@@ -229,9 +284,28 @@ class Executor:
                                   "target_period_start", "target_period_end_exclusive", "base_value", "target_value", plan.comparison.id]
         else:
             self.output_fields = (["period_start", "period_end_exclusive"] if len(plan.periods)>1 else []) + group_fields + list(plan.metrics) + [d.id for d in plan.derived]
+            for spec in getattr(plan, "analytics", ()):
+                self.output_fields += [spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct")] if spec["op"] == "contribution" else ["row_kind"]
         if plan.derived or plan.comparison:
             self.notes.append("Oran veya yüzde değişim hesabında sıfır/eksik payda boş gösterilir; dönemde bulunmayan kırılım sıfır varsayılmaz.")
+        self.numeric_fields = {k for k in self.output_fields if k in plan.metrics or k in {d.id for d in plan.derived}}
+        if plan.comparison:
+            self.numeric_fields.update(("base_value", "target_value", plan.comparison.id))
+        for spec in getattr(plan, "analytics", ()):
+            if spec["op"] == "contribution":
+                self.numeric_fields.update(spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct"))
         return [{k: float(v) if isinstance(v, Decimal) else v for k, v in r.items()} for r in answer]
+
+    def report_result(self, result):
+        if isinstance(result, list):
+            return result
+        self.output_fields = result.get("output_fields", [])
+        self.numeric_fields = set(result.get("numeric_fields", []))
+        self.notes.extend(result.get("notes", []))
+        self.gaps.extend(result.get("gaps", []))
+        if self.gaps:
+            self.coverage_complete = False
+        return result["records"]
 
     @staticmethod
     def matches(value, op, wanted):

@@ -15,6 +15,13 @@
 - Kaynak (canlı sayfada ölçüldü): iki sütunlu ızgaranın mobil şablonu yoktu → örtük `auto` iz en geniş içeriğin min-content'ine uzadı. O içerik AskBox'taki okunmuş kitap şeridi (`overflow-x-auto`, 1.767 px); editör tablosu da (min 440 px) tek başına 466 px'e uzatırdı. BookReadPanel'in etkisi yok.
 - Düzeltme: `EditorialHome.tsx` iki ızgaraya `grid-cols-1` (yönetici ve editör dalı), `AskBox.tsx` kitap şeridine `[contain:inline-size]` (şerit kendi içinde kayar, kitap sayısı sütunu genişletmez; BookScreen'deki kullanım da korunur).
 - Doğrulama yayından önce canlı sayfaya aynı kural `<style>` ile eklenerek: önce/sonra `main` scrollWidth = clientWidth → 320: 1.794→296, 390: 1.794→366, 768: 1.810→616, 1440: 1.288 değişmedi (ızgara 832+440, şerit 397 px içinde kayıyor).
+## 2026-09-30 — Logo–CRM kapsam ve tam sonuç genişlemesi (kabul bekliyor)
+
+- Kullanıcı tablo kaçmamasını ve kapsam tamamlanınca toplu kabul istedi. Paralel fiziksel envanter, Logo, CRM ve ortak plan çalışması; metadata varlığı ile doğrulanmış iş anlamı ayrıldı.
+- Logo stok/sipariş/bakiye/ödeme/döviz/alış, fatura belge denetimleri;30 CRM rapor ailesi; gerçek kimlikli çapraz eşleşme, pay/ilkN+kalan ve çok bölümlü cevap eklendi. Arayüz bölümün tüm satırlarını ve eksik kapsam notlarını CSV ile sunar.
+- Kâr, ödeme kapaması, geçmiş durum ve sözleşme önceliği için kaynak kanıtı eksikleri açık bırakıldı; tahmini maliyet/FIFO/tarihçe uygulanmadı. Ürün testleri henüz bu geniş sürümde çalıştırılmadı; önce main, sonra eksiksiz test sunucusu kurulumu ve gerçek API/bağımsız DB kabulü.
+- Eski katalog143434kayıt yedekli silindi; kapsamda0kaldı.4259profil/7annotationkorundu, emeklilik kontrolleri20/20,1geçici oturum silindi.
+- Önceki34r2 koşusu başka oturumun köprü yeniden başlatmasıyla34DOĞRULANAMADI; sonuç korundu, başarı sayılmadı.
 
 ## 2026-09-30 — Birleşebilir motor ilk canlı koşu ve düzeltmeler
 

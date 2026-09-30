@@ -1,40 +1,34 @@
-# Günlük dil soruları için birleşebilir hesap motoru
+# Birleşebilir Logo–CRM soru motoru
 
-30 Eylül 2026 — Kullanıcının paralel inceleme talebi sonrası geliştirme planı. Bu belge uygulanmış yetenek veya canlı kabul iddiası değildir.
+30 Eylül 2026 — Aşağıdaki genişleme uygulanıyor; canlı kabul sonuçları ayrıca sürüm ve kanıtla raporlanır. Tablonun metadata içinde bulunması, bütün iş anlamlarının desteklendiği anlamına gelmez.
 
-## Teşhis
+## Kaynak ve plan sınırı
 
-Eski katalog fallback kaldırılması yanlış kaynağa sapmayı durdurur; yeni motorun hesap kapsamını büyütmez. Mevcut finance_query planı 11 ölçü, 8 kırılım ve tek ölçü ailesiyle sınırlıdır. Şema doğrulaması kolon varlığı kontrolüdür, genel alan/ilişki keşfi değildir. CRM tarafı üç güncel sayım; tek çapraz eşleşme kitap stok kodudur. Yazar künye metni kişi veya hak sahibi kimliği sayılamaz.
+Eski semantik katalog fiziksel olarak yedeklenip kaldırıldı. Model eski SQL örneklerini kullanmaz ve fiziksel SQL yazmaz. İsteği kapalı ölçü, varlık ve işlem sözleşmelerine çevirir. Her kaynak SELECT'i gerçek kolonlar ve kullanıcı veri yetkisiyle doğrulanır. CRM aktiflik süzgeci bağlantıda uygulanır; işin yayımlı aktif durumları ayrıca metadata ile çözülür.
 
-Statik incelemede yürütücüde bulunduğu halde planlayıcının reddedebildiği durumlar: CRM kaynak bağımlılığında filtrelerin göz ardı edilmesi; “ilk on” ifadesinde rakam aranması; takip sorusunda önceki doğrulanmış filtrenin yeniden söylenmesinin beklenmesi. Bunlar canlı yeniden üretim ve bağımsız referans olmadan düzeltilmiş kabul edilmez.
+Tek şirket vardır. Logo teknik kodları ayrı şirket değildir. `L_CAPIPERIOD` ve doğrulanmış kaynak kapsamı istenen zaman aralığını boşluksuz ve örtüşmesiz karşılamalıdır; aksi durumda toplam engellenir. Stok bakiyesi farklı yıl yedekleri toplanarak bulunmaz.
 
-## Hedef
+## Uygulanan hesap kapsamı
 
-Model fiziksel SQL veya tahmini tablo ilişkisi üretmez. Kullanıcı isteğini doğrulanmış varlık, ölçü ve işlemlerden oluşan tipli plana çevirir. Bir ölçü/işlem eklendiğinde birçok ifade birleşimsel olarak desteklenir; soru kimliğine özel üretim kuralı eklenmez.
+- Temel satış, iade, adet, fatura ve tahsilat ölçüleri; müşteri/kitap/kanal/tarih ve güncel CRM künye kırılımları.
+- Oran, fark, dönem değişimi, hesap sonucu filtresi, ilk N; toplam içindeki pay/kümülatif pay, ilk N ve kalan grubunun toplamı.
+- Satış satırı, fatura başlığı, ödeme hareketi ayrı toplulaştırılır; ortak müşteri/kanal/tarih düzeyinde birleştirilir. Fatura tutarı kitap satırlarına çoğaltılmaz.
+- Logo stok/stok tarihi, açık alış-satış siparişi, dönem cari hareket bakiyesi, ödeme türü, işlem ve yerel para, alış fiyatı raporları. Stok miktarı görünüm ile bağımsız hareket toplamı uyuşmadığında kesin rakam verilmez.
+- Fatura başlık–satır tutar farkı, benzer belge adayları, bağlantısız hareket, müşteri başına fatura ortalaması/medyanı. Benzerlik kesin mükerrerlik veya hata hükmü değildir.
+- CRM kitap kalitesi, yinelenen kod/ISBN/ad, kitap–kişi gerçek yazar bağları, çok yazarlı kitaplar, yayıncı/alt marka/iletişim, müşteri vergi/kişi/coğrafya ilişkileri, yayın/kayıt tarihleri, editör ataması, sözleşme, iş planı ve randevuya bağlı açık görev raporları.
+- Logo kitap kodu–CRM stok kodu ve müşteri vergi numarası eşleşme kanıtı. Eşleşmeyen veya çoğul eşleşen kayıtların tutarları korunur. Ad benzerliği kimlik kabul edilmez; çok yazarlı satış kişi sayısıyla çoğaltılmaz.
+- En çok4 bağımsız bölümden oluşan rapor. Kullanıcının her koşulu plan bölümü veya açık eksik kapsam kaydıyla eşlenir; yapılamayan filtre atılıp daha geniş nüfusla cevap verilmez.
 
-Plan sırası: kaynak okuma → filtre → kayıt düzeyine göre toplulaştırma → doğrulanmış kimlikle zenginleştirme → türetme/oran/dönem karşılaştırması → hesap sonucu filtresi → sıralama → limit. İşlemler gerektiğinde alt planlara ayrılır. Mali hareket tabloları doğrudan birbirine JOIN edilmez; aynı ortak düzeye toplandıktan sonra birleştirilir.
+## İş tanımı ve kaynak eksikleri
 
-Her düğüm kullanıcı ifadesi dayanağı, kaynak bağımlılığı, kayıt düzeyi, anahtar, para/birim, NULL/sıfır davranışı, tanım sürümü ve sonuç kolonlarını taşır. Doğrulayıcı tüm kullanıcı koşullarının karşılandığını, ilişki tekilliğini, tutar korunumunu ve dönem uyumunu denetler.
+Gerçek maliyet/iade maliyeti doğrulanmadığından alış fiyatından kâr üretilmez. PAYTRANS alanının varlığı, fatura–ödeme kapamasını kanıtlamaz; FIFO veya TOTAL−PAID varsayımıyla kesin yaşlandırma hesaplanmaz. Sözleşme revizyon/yenileme önceliği, geçmiş yayınevi değişim zamanları, iş aşamasına giriş anı ve denetim alanlarının çözümü kanıtlanmadan kesin tarihçe üretilmez. Vergi numarası metni ülke/kimlik türü doğrulanmadan kesin tüzel kişi kimliği değildir.
 
-## Geliştirme dilimleri
+Her böyle boşluk `gaps` alanında açıklanır. Destek eksikliği, gerçek kullanıcı belirsizliği, kaynak sözleşmesi hatası ve erişim hatası ayrı statülerdir. Kısmen okunabilen rapor `PARTIAL_ANSWER`; kaynak eksikliği başarı sayılmaz. Bölüm sonuçları, notlar, tanımlar ve kaynak kapsamı aynı `resultId` altında saklanır; arayüzde ayrı bölüm ve tam CSV olarak açılır.
 
-1. **Doğru durum ve mevcut yetenekler:** gerçek kullanıcı belirsizliği, desteklenmeyen özellik, doğrulanmamış iş tanımı, erişilemeyen kaynak ve geçersiz plan ayrı statülerdir. Kaynak bağımlılığı ölçü+kırılım+filtre üzerinden bulunur. Doğal sayı, göreli dönem ve takip bağlamı tipli girdiler olur. Eksik yetenek “soruyu netleştir” diye gizlenmez.
-2. **Mevcut ölçülerden birleşik hesap:** aynı ölçü ailesinde fark, açık tanımlı oran, dönem değişimi, sonuç eşiği ve ilk N. Decimal ve tanımlı sıfır payda politikası kullanılır. Birbirinden bağımsız ölçü ailelerini birleştirmek ayrı plan düğümü gerektirir.
-3. **CRM varlık okuma:** liste, kırılım, filtre, tarih semantiği. MetadataSchema ve StringMapBase üzerinden canlı etiket/ilişki/durum kanıtı; her uygun varlık için zorunlu aktif kayıt kapsamı. Kitap–kişi–eser katılımı–sözleşme ilişkileri gerçek kimliklerle doğrulanır.
-4. **Logo operasyonları ve kaynaklararası plan:** stok, sipariş, alacak/tahsilat ve sözleşme süreçleri. İlişki başına 1:1/1:N/N:N, eşleşmeyen/çoğalan kayıt ve ölçü korunum kanıtı gerekir. Ad benzerliği kimlik kanıtı değildir.
-5. **İş tanımı gerektiren hesaplar:** kâr, yaşlandırma, kur, hedef ve tahmin. Kaynak/maliyet/vade/kapama/payda tanımı doğrulanmadan varsayımla sonuç üretilmez.
+## Dosyalar
 
-## Dosya sorumlulukları
+`planner.py`, `model_schema.py`, `language.py` tipli plan/doğal tarih/koşul denetimi; `contracts.py` temel ölçüler; `operations.py` Decimal işlemler; `executor.py` kaynak okuma/aktiflik/şema/dönem/tutar korunumu; `crm_reports.py`, `logo_reports.py`, `invoice_reports.py`, `cross_reports.py` kapalı rapor sözleşmeleri; `result_metadata.py` ortak etiket/birim/formüller. Kaynak envanteri raporları kabul kanıtıdır, eski katalog yerine tahmini ilişki kaynağı değildir.
 
-- `scripts/acceptance/finance_contracts/schema.py`: eski katalogdan bağımsız canlı fiziksel ve Dynamics metadata kanıtını genişletir.
-- Yeni `finance_query/source_manifest.py`: tek şirket, yedek tarihi, işlem dönemi, esas kaynak ve örtüşme politikasını taşır. Teknik kodlar ayrı şirket değildir.
-- Yeni `entities.py`, `relationships.py`: varlık kimliği, kayıt düzeyi, aktiflik ve kanıtlı ilişkiler.
-- `contracts.py`: ölçü tanımı, birim, toplama davranışı, dönem anlamı ve kanıt referansı.
-- Yeni `errors.py`, `plan.py`; `model_schema.py`, `planner.py`: tipli durum ve işlem planı, bütün istek koşullarının doğrulanması.
-- `executor.py`: izinli salt SELECT, kaynak bazlı önce toplulaştırma, tutar koruyan birleştirme ve Decimal türetmeler.
+## Gerçek kabul kapısı
 
-## Kabul kapısı
-
-Yalnız test sunucusundaki gerçek API ve bağlı Logo/CRM kullanılır. Aynı yürütmenin resultId tam sonucu bağımsız doğrudan kaynak hesabıyla satır, kolon, değer, NULL, tekillik ve kesilme açısından karşılaştırılır. Günlük dil varyantları, çok turlu sorular ve geliştirmede kullanılmamış sorular eklenir. Mevcut 100 karmaşık soru geniş regresyondur; destek dışı cevaplar tam doğru cevap sayılmaz.
-
-Rapor kategorileri: doğru tam cevap / doğru netleştirme / destek dışı / yanlış cevap / doğrulanamadı. Her 10 soruda sayılar açıklanır. Kod, kaynak manifesti ve hesap tanımı hashleri kaydedilir. Kaynağa yazma ve yerel test yapılmaz.
+Yerel test yoktur. Test sunucusunun gerçek API'sinin aynı yürütmedeki tam sonucu, bağlı Logo/CRM üzerindeki bağımsız SELECT/hesapla karşılaştırılır: kolon kimlikleri, tüm satırlar, anahtar, NULL/sıfır, sayısal değer ve kesilme. 100 karmaşık günlük dil sorusu geniş regresyondur; bir SQL'in çalışması doğru cevap kabulü değildir. Kapsam/sınır kontrolleri tam cevap başarısından ayrı sayılır. Kod hashleri ve oturum temizliği kaydedilir; yayın değişirse önceki kabul yeni sürüme taşınmaz.

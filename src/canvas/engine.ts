@@ -156,10 +156,20 @@ export function ask(question: string): Promise<AskAnswer> {
 
 export type StoredAskResult = {
   id: string;
-  columns: Array<{ name: string; type: string; label?: string }>;
+  columns: Array<{ name: string; type: string; label?: string; unit?: string }>;
   records: Array<Record<string, unknown>>;
   totalRows: number;
   truncated: boolean;
+  sections?: Array<{
+    title: string; index: number; status: string; explanation?: string;
+    columns: StoredAskResult['columns']; records: Array<Record<string, unknown>>;
+    totalRows: number; truncated: boolean;
+    dataNotes?: Array<{ message: string; severity?: string }>;
+    definitions?: string[]; sourceComplete?: boolean;
+  }>;
+  gaps?: Array<{ status: string; reason: string }>;
+  dataNotes?: Array<{ message: string; severity?: string }>;
+  definitions?: string[]; sourceComplete?: boolean;
 };
 
 /** Aynı yürütmenin tamamını okur; SQL tekrar çalıştırılmaz. */
@@ -173,6 +183,9 @@ export async function getAskResult(id: string): Promise<StoredAskResult> {
   const result = await response.json() as StoredAskResult;
   if (result.id !== id || result.truncated || !Array.isArray(result.records) || result.records.length !== result.totalRows) {
     throw new Error('Sonucun tamamı doğrulanamadı; eksik veri indirilemez.');
+  }
+  if (result.sections?.some(s => s.truncated || !Array.isArray(s.records) || s.records.length !== s.totalRows)) {
+    throw new Error('Rapor bölümlerinin tamamı doğrulanamadı; eksik veri indirilemez.');
   }
   return result;
 }

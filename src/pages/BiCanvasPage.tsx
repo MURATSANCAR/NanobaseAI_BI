@@ -195,7 +195,7 @@ export default function BiCanvasPage() {
         result: !asking && !askErr && answer?.resultId && !answer.truncated
           ? { id: answer.resultId, totalRows: answer.totalRows ?? answer.rowCount ?? rows } : undefined,
         m2: { label: 'Kolon:', value: answer?.columns ? String(answer.columns.length) : '—' },
-        m3: { label: 'Durum:', value: asking ? 'Hesaplanıyor' : answer?.type === 'CLARIFICATION' ? 'Netleştirme gerekiyor' : answer?.type === 'TEXT_TO_SQL' ? 'Yanıt hazır' : 'Sonuç alınamadı' },
+        m3: { label: 'Durum:', value: asking ? 'Hesaplanıyor' : answer?.type === 'CLARIFICATION' ? 'Netleştirme gerekiyor' : answer?.type === 'PARTIAL_ANSWER' ? 'Kısmi rapor · eksikler belirtiliyor' : answer?.type === 'TEXT_TO_SQL' ? 'Yanıt hazır' : 'Sonuç alınamadı' },
         note: queued > 0 ? `${queued} soru sırada` : d.main.note,
         board: !asking && answer?.sql && (answer.records?.length ?? 0) > 0 ? { ...board, onAdd: (): void => void addToBoard() } : undefined,
         timing: !asking && answer?.records ? answer : null,

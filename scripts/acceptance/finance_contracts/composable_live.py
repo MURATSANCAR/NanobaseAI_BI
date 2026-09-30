@@ -128,7 +128,44 @@ def cases():
     ]
     for question,sql,columns,keys in mixed_cases:
         out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="logo",referenceSql=sql,columns=columns,keys=keys,periods=[["2026-09-01","2026-10-01"]],mixedFamily=True))
+    # Independent analytic references use SQL window/UNION semantics, not product helpers.
+    base_sql = sales_sql("2026-09-01", "2026-10-01", ["net_sales", "return_amount"], "channel")
+    ordered = "net_sales DESC,CASE WHEN channel IS NULL THEN 1 ELSE 0 END DESC,channel COLLATE Latin1_General_100_BIN2 DESC"
+    top_cte = "WITH base AS (" + base_sql + "), ranked AS (SELECT *,ROW_NUMBER() OVER(ORDER BY " + ordered + ") rn FROM base), selected AS (SELECT channel,net_sales,return_amount,CAST(N'Detay' AS nvarchar(16)) row_kind FROM ranked WHERE rn<=3 UNION ALL SELECT NULL,SUM(net_sales),SUM(return_amount),N'Kalan' FROM ranked WHERE rn>3 HAVING COUNT(*)>0) "
+    contribution_columns = ["__contribution_group_total", "__contribution_share_pct", "__contribution_cumulative_pct"]
+    def contribution_select(table):
+        return "SELECT *,SUM(net_sales) OVER() __contribution_group_total,100.0*net_sales/NULLIF(SUM(net_sales) OVER(),0) __contribution_share_pct,100.0*SUM(net_sales) OVER(ORDER BY " + ordered + " ROWS UNBOUNDED PRECEDING)/NULLIF(SUM(net_sales) OVER(),0) __contribution_cumulative_pct FROM " + table
+    analytic_cases = [
+        ("Eylül 2026 için kanallara göre KDV hariç iadeler düşülmüş net satış ve iade tutarını göster. Her kanalın net satış payını, azalan net satış sırasında kümülatif payını ve genel net satış toplamını da ayrı kolonlara koy. Negatifleri koru.",
+         "WITH base AS (" + base_sql + ") " + contribution_select("base"),
+         ["channel", "net_sales", "return_amount", *contribution_columns], ["channel"],
+         [dict(op="contribution",metric="net_sales",group_by=[],limit=None,label="")]),
+        ("Eylül 2026 için net satışı en yüksek ilk üç kanalı ve kalan kanalların toplamını göster. KDV hariç iadeler düşülmüş net satış ile iade tutarı ayrı olsun, negatifleri koru. Satır türünde ilk üç için Detay, diğerlerinin toplamı için Kalan yaz.",
+         top_cte + "SELECT channel,net_sales,return_amount,row_kind FROM selected",
+         ["channel", "net_sales", "return_amount", "row_kind"], ["row_kind", "channel"],
+         [dict(op="top_remainder",metric="net_sales",group_by=[],limit=3,label="Kalan")]),
+        ("Eylül 2026 için KDV hariç iadeler düşülmüş net satışı en yüksek ilk üç kanal ve Kalan satırı olsun; iade tutarını da göster. Önce ilk üç ve kalan toplamını oluştur, sonra bu satırların net satış payını, azalan sıradaki kümülatif payını ve genel toplamı hesapla. Satır türleri Detay ve Kalan olsun.",
+         top_cte + contribution_select("selected"),
+         ["channel", "net_sales", "return_amount", "row_kind", *contribution_columns], ["row_kind", "channel"],
+         [dict(op="top_remainder",metric="net_sales",group_by=[],limit=3,label="Kalan"),dict(op="contribution",metric="net_sales",group_by=[],limit=None,label="")]),
+    ]
+    for question,sql,columns,keys,analytics_spec in analytic_cases:
+        out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="logo",referenceSql=sql,columns=columns,keys=keys,periods=[["2026-09-01","2026-10-01"]],analytics=analytics_spec))
+    mixed_sql = "WITH invoices AS (SELECT C.SPECODE2 channel,SUM(I.NETTOTAL) invoice_amount,COUNT_BIG(*) invoice_count FROM dbo.LG_411_01_INVOICE I LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=I.CLIENTREF WHERE " + invoice_where + " GROUP BY C.SPECODE2), payments AS (SELECT C.SPECODE2 channel,SUM(L.AMOUNT) collections FROM dbo.LG_411_01_CLFLINE L JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE " + collection_where + " GROUP BY C.SPECODE2) SELECT COALESCE(I.channel,P.channel) channel,COALESCE(I.invoice_amount,0) invoice_amount,COALESCE(I.invoice_count,0) invoice_count,COALESCE(P.collections,0) collections FROM invoices I FULL OUTER JOIN payments P ON I.channel=P.channel OR I.channel IS NULL AND P.channel IS NULL"
+    out.append(dict(id=f"CP{len(out)+1:03d}",question="Eylül 2026'da kanallara göre satış faturalarının genel toplamını, fatura sayısını ve müşteri ödeme hareketlerini ayrı kolonlarda göster. Nakit, banka, çek, senet ve kart dahil; yalnız bir tarafta hareketi olan kanallar kalsın.",source="logo",referenceSql=mixed_sql,columns=["channel","invoice_amount","invoice_count","collections"],keys=["channel"],periods=[["2026-09-01","2026-10-01"]],mixedFamily=True))
+    def leaf(metrics, dimension):
+        return dict(source="logo",metrics=metrics,dimensions=[dimension],keys=[dimension],columns=[dimension,*metrics],periods=[["2026-09-01","2026-10-01"]],referenceSql=sales_sql("2026-09-01","2026-10-01",metrics,dimension))
+    for question, children in [
+        ("Eylül 2026'nın KDV hariç iadeler düşülmüş net satışını iki ayrı rapor bölümünde ver: birinci bölüm kanallara göre, ikinci bölüm gün gün olsun. Her iki bölüm tüm satırları içersin; ilk N sınırı istemiyorum.", [leaf(["net_sales"],"channel"),leaf(["net_sales"],"day")]),
+        ("Eylül 2026 için iki bağımsız tablo hazırla: kanallara göre KDV hariç iadeler düşülmüş net satış ve iade tutarı birinci tabloda; gün gün iadeler düşülmeden satılan kitap adedi ikinci tabloda olsun. Tüm satırları ver.", [leaf(["net_sales","return_amount"],"channel"),leaf(["sold_quantity"],"day")]),
+    ]:
+        out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="logo",sections=children,columns=["section","status","row_count"],keys=["section"],periods=[],referenceSql="SELECT 1 ignored"))
+    mixed_summary = dict(source="logo",metrics=["net_sales","invoice_count","collections"],dimensions=[],keys=[],columns=["net_sales","invoice_count","collections"],periods=[["2026-09-01","2026-10-01"]],referenceSql=mixed_cases[0][1])
+    out.append(dict(id=f"CP{len(out)+1:03d}",question="Eylül 2026 için iki ayrı bölüm hazırla. Genel özette KDV hariç iadeler düşülmüş net satış toplamı, satış faturası sayısı ve nakit, havale, çek, senet, kart dahil müşteri ödeme hareketleri toplamı olsun. İkinci bölümde sadece kanallara göre aynı net satış tutarı bulunsun; tüm kanalları göster.",source="logo",sections=[mixed_summary,leaf(["net_sales"],"channel")],columns=["section","status","row_count"],keys=["section"],periods=[],referenceSql="SELECT 1 ignored"))
     for case in out:
+        if case.get("sections"):
+            case["referenceQueries"] = [child["referenceSql"] for child in case["sections"]]
+            continue
         case["referenceQueries"] = ([sales_sql(a,b,[case["comparison"]["metric"]],case["keys"][0] if case["keys"] else None) for a,b in case["periods"]]
                                     if case.get("comparison") else [case["referenceSql"]])
     return out
@@ -190,6 +227,8 @@ def calculate(op,left,right,scale=1):
 
 
 def reference(case,conn):
+    if case.get("sections"):
+        return {"sections": [reference(child,conn) for child in case["sections"]]}
     if not case.get("comparison"):
         rows=query(conn,case["referenceSql"])
         if case.get("derived"):
@@ -209,6 +248,8 @@ def reference(case,conn):
 
 
 def numeric_tolerance(column, derived_alias=None):
+    if column.startswith("__contribution_") or column.endswith(("_share_pct", "_cumulative_pct")):
+        return Decimal("0.000001")
     if column == "__derived" or derived_alias is not None and column == derived_alias:
         return Decimal("0.000001")
     return Decimal("0") if column in EXACT_COUNT_COLUMNS else Decimal("0.01")
@@ -220,6 +261,8 @@ def references_equal(case, before, after):
     Uses the same per-column numeric tolerance as the API comparison. Matching
     bracketing reads is a stability check, not a database snapshot guarantee.
     """
+    if case.get("sections"):
+        return all(references_equal(child, a, b) for child,a,b in zip(case["sections"], before["sections"], after["sections"]))
     if len(before) != len(after):
         return False
     def indexed(rows):
@@ -244,6 +287,9 @@ def references_equal(case, before, after):
             if a is None or b is None:
                 if a is not b:
                     return False
+            elif isinstance(a, bool) or isinstance(b, bool):
+                if type(a) is not bool or type(b) is not bool or a is not b:
+                    return False
             elif isinstance(a, (Decimal, int, float)) and isinstance(b, (Decimal, int, float)):
                 av, bv = Decimal(str(a)), Decimal(str(b))
                 if not av.is_finite() or not bv.is_finite():
@@ -259,6 +305,8 @@ def data_dependent_error(message):
     # Only discrepancies that changing source rows/values can explain may be
     # demoted to UNVERIFIED. Capability, plan, schema and result-delivery failures
     # remain FAIL even if the surrounding live reference also changed.
+    if message.startswith("Section[") and "]: " in message:
+        return data_dependent_error(message.split("]: ", 1)[1])
     return message.startswith(("Numeric mismatch:", "NULL mismatch:", "Value mismatch:",
                                "Row count ", "Row identity set differs"))
 
@@ -276,6 +324,8 @@ def compare(case,answer,whole,expected):
     if preview!=actual[:len(preview)] or answer.get("shownRows")!=len(preview):errors.append("Preview differs from stored execution")
     columns=list(case["columns"])
     plan=answer.get("semantic",{}).get("plan",{})
+    if case.get("sections"):
+        return errors + compare_sections(case, answer, whole, expected)
     if case["source"]=="logo" and plan.get("periods")!=case["periods"]:
         errors.append("Resolved time coverage differs from independently fixed periods")
     alias=None
@@ -292,6 +342,18 @@ def compare(case,answer,whole,expected):
         columns=case["keys"]+["base_period_start","base_period_end_exclusive","target_period_start","target_period_end_exclusive","base_value","target_value",alias]
     if alias:
         expected=[{(alias if k=="__derived" else k):v for k,v in row.items()} for row in expected]
+    if case.get("analytics"):
+        found=plan.get("analytics",[])
+        if len(found)!=len(case["analytics"]):return errors+["Analytic operation count differs from independent specification"]
+        mapping={}
+        for actual_op, required in zip(found,case["analytics"]):
+            if not all(actual_op.get(k)==v for k,v in required.items()):
+                return errors+["Analytic operation/metric/group/limit differs from independent specification"]
+            if required["op"]=="contribution":
+                for suffix in ("_group_total","_share_pct","_cumulative_pct"):
+                    mapping["__contribution"+suffix]=actual_op["id"]+suffix
+        columns=[mapping.get(k,k) for k in columns]
+        expected=[{mapping.get(k,k):v for k,v in row.items()} for row in expected]
     if set(c.get("name") for c in whole.get("columns",[]))!=set(columns):errors.append("Column identity mismatch")
     if len(actual)!=len(expected):errors.append(f"Row count {len(actual)} != {len(expected)}")
     def indexed(rows):
@@ -310,12 +372,52 @@ def compare(case,answer,whole,expected):
                 av,bv=a[key].get(col),b[key].get(col)
                 if av is None or bv is None:
                     if av!=bv:errors.append(f"NULL mismatch: {col}")
+                elif isinstance(av,bool) or isinstance(bv,bool):
+                    if type(av) is not bool or type(bv) is not bool or av is not bv:
+                        errors.append(f"Value mismatch: {col} (boolean)")
                 elif isinstance(bv,(Decimal,int,float)):
                     tolerance=numeric_tolerance(col, alias)
                     if abs(Decimal(str(av))-Decimal(str(bv)))>tolerance:errors.append(f"Numeric mismatch: {col}")
                 elif av!=bv:errors.append(f"Value mismatch: {col}")
     except Exception as exc:errors.append(str(exc))
     return errors[:20]
+
+
+def compare_sections(case,answer,whole,expected):
+    errors=[]
+    actual=whole.get("sections",[])
+    plans=answer.get("semantic",{}).get("plan",{}).get("sections",[])
+    if len(actual)!=len(case["sections"]) or len(plans)!=len(actual):
+        return ["Section count differs from independent specification"]
+    if whole.get("gaps") or answer.get("gaps"):
+        errors.append("Unexpected partial gaps in fully specified section report")
+    if {c.get("name") for c in whole.get("columns",[])} != set(case["columns"]):
+        errors.append("Section overview column identity mismatch")
+    overview=whole.get("records",[])
+    if len(overview)!=len(actual) or any(row.get("section")!=section.get("title") or row.get("status")!=section.get("status") or row.get("row_count")!=section.get("totalRows") for row,section in zip(overview,actual)):
+        errors.append("Section overview differs from its stored datasets")
+    if answer.get("sections")!=actual:
+        errors.append("Preview section datasets differ from stored execution")
+    used=set()
+    for expected_index, child in enumerate(case["sections"]):
+        matches=[i for i,p in enumerate(plans) if set(p.get("metrics",[]))==set(child["metrics"]) and p.get("dimensions")==child["dimensions"]]
+        if len(matches)!=1 or matches[0] in used:
+            errors.append(f"Section[{expected_index}]: Unique independent metric/grain section not found")
+            continue
+        index=matches[0];used.add(index);dataset=actual[index]
+        if dataset.get("status")!="COMPLETE":
+            errors.append(f"Section[{expected_index}]: Expected COMPLETE, received {dataset.get('status')}")
+        if not dataset.get("definitions"):
+            errors.append(f"Section[{expected_index}]: Calculation definitions missing")
+        if dataset.get("sourceComplete") is not True:
+            errors.append(f"Section[{expected_index}]: Complete source coverage not declared")
+        # Reuse strict cell/column comparison, without inventing a second execution.
+        child_answer={"type":"TEXT_TO_SQL","resultId":answer["resultId"],"rowCount":dataset.get("totalRows"),
+                      "records":dataset.get("records",[]),"shownRows":len(dataset.get("records",[])),
+                      "semantic":{"plan":plans[index]}}
+        child_whole={**dataset,"id":answer["resultId"]}
+        errors.extend(f"Section[{expected_index}]: "+e for e in compare(child,child_answer,child_whole,expected["sections"][expected_index]))
+    return errors
 
 
 def manifest():

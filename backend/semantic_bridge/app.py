@@ -835,6 +835,8 @@ class Runtime:
                 "truncated": bool(result.get("truncated")),
                 "dataCoverage": result.get("dataCoverage", []), "dataNotes": result.get("dataNotes", []),
                 "comparison": result.get("comparison"),
+                "sections": result.get("sections", []), "gaps": result.get("gaps", []),
+                "definitions": result.get("definitions", []), "sourceComplete": result.get("sourceComplete"),
             }
             for old_id, old in list(self._results.items()):
                 if time.time() - old['at'] > self._result_ttl:
@@ -2384,7 +2386,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"id": result_id, "columns": snap["columns"], "records": snap["records"],
                 "totalRows": snap["totalRows"], "truncated": snap["truncated"],
                 "question": snap["question"], "sql": snap["sql"], "computedAt": snap.get("computedAt", snap["at"]),
-                "dataCoverage": snap.get("dataCoverage", []), "comparison": snap.get("comparison")}
+                "dataCoverage": snap.get("dataCoverage", []), "comparison": snap.get("comparison"),
+                "sections": snap.get("sections", []), "gaps": snap.get("gaps", []),
+                "definitions": snap.get("definitions", []), "sourceComplete": snap.get("sourceComplete"),
+                "dataNotes": snap.get("dataNotes", [])}
 
     from semantic_bridge import chat_mention
     chat_mention.install(app, rt, _gate_for_user)

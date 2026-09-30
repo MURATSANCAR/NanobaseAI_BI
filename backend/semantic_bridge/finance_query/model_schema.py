@@ -45,3 +45,45 @@ REVIEW_SCHEMA = obj({"ok": {"type": "boolean"}, "missing": {"type": "array", "it
 from .crm_query import CRM_PLAN_SCHEMA
 PLAN_SCHEMA["properties"]["crm"] = {"anyOf": [{"type": "null"}, CRM_PLAN_SCHEMA]}
 PLAN_SCHEMA["required"].append("crm")
+
+from copy import deepcopy
+from .logo_reports import LOGO_REPORT_SCHEMA
+from .crm_reports import CRM_REPORT_SCHEMA
+
+ANALYTIC_SCHEMA = obj({
+    "op": {"type": "string", "enum": ["contribution", "top_remainder"]},
+    "metric": {"type": "string", "enum": list(METRICS)},
+    "group_by": {"type": "array", "items": {"type": "string"}},
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+    "limit": {"anyOf": [{"type": "null"}, {"type": "integer", "minimum": 1, "maximum": 100}]},
+    "label": {"type": "string"},
+})
+for field, schema in {
+    "logo_report": {"anyOf": [{"type": "null"}, LOGO_REPORT_SCHEMA]},
+    "crm_report": {"anyOf": [{"type": "null"}, CRM_REPORT_SCHEMA]},
+    "analytics": {"type": "array", "maxItems": 3, "items": ANALYTIC_SCHEMA},
+}.items():
+    PLAN_SCHEMA["properties"][field] = schema
+    PLAN_SCHEMA["required"].append(field)
+
+# Finite nesting: root can hold leaves, but leaves cannot hold more sections.
+LEAF_PLAN_SCHEMA = deepcopy(PLAN_SCHEMA)
+GAP_SCHEMA = obj({
+    "status": {"type": "string", "enum": ["UNSUPPORTED_CAPABILITY", "NEEDS_CLARIFICATION"]},
+    "reason": {"type": "string", "minLength": 1, "maxLength": 1200},
+})
+for field, schema in {
+    "sections": {"type": "array", "maxItems": 4, "items": obj({
+        "title": {"type": "string", "minLength": 1, "maxLength": 120},
+        "question": {"type": "string", "minLength": 1, "maxLength": 3000},
+        "plan": LEAF_PLAN_SCHEMA,
+    })},
+    "gaps": {"type": "array", "maxItems": 20, "items": GAP_SCHEMA},
+    "coverage": {"type": "array", "maxItems": 30, "items": obj({
+        "requirement": {"type": "string", "minLength": 1, "maxLength": 1200},
+        "sections": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 3}},
+        "gap_index": {"anyOf": [{"type": "null"}, {"type": "integer", "minimum": 0, "maximum": 19}]},
+    })},
+}.items():
+    PLAN_SCHEMA["properties"][field] = schema
+    PLAN_SCHEMA["required"].append(field)

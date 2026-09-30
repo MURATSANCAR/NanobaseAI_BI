@@ -3,6 +3,48 @@ from decimal import Decimal, InvalidOperation
 from .contracts import ContractError
 
 
+def analytics(rows, specs, metrics, group_fields):
+    """Aggregate-level analytics. Every remainder preserves signed totals."""
+    for spec in specs:
+        groups = {}
+        keys = spec.get("group_by", [])
+        for row in rows:
+            groups.setdefault(tuple(row.get(k) for k in keys), []).append(row)
+        output = []
+        metric = spec["metric"]
+        for key, members in groups.items():
+            members = sorted(members, key=lambda r:(decimal(r.get(metric)) or Decimal(0), str(tuple(r.get(k) for k in group_fields))), reverse=True)
+            if spec["op"] == "contribution":
+                total = sum((decimal(r.get(metric)) or Decimal(0) for r in members), Decimal(0))
+                running = Decimal(0)
+                for row in members:
+                    value = decimal(row.get(metric))
+                    running += value or Decimal(0)
+                    output.append({**row, spec["id"]+"_group_total": total,
+                                   spec["id"]+"_share_pct": None if total == 0 or value is None else value/total*100,
+                                   spec["id"]+"_cumulative_pct": None if total == 0 else running/total*100})
+            elif spec["op"] == "top_remainder":
+                limit = spec["limit"]
+                group_output = [{**row, "row_kind": "Detay"} for row in members[:limit]]
+                rest = members[limit:]
+                if rest:
+                    remainder = {k: None for k in rest[0]}
+                    remainder.update(dict(zip(keys, key)))
+                    remainder.update({m:sum((decimal(r.get(m)) or Decimal(0) for r in rest),Decimal(0)) for m in metrics})
+                    remainder["row_kind"] = spec.get("label") or "Kalan"
+                    group_output.append(remainder)
+                for metric_id in metrics:
+                    before = sum((decimal(row.get(metric_id)) or Decimal(0) for row in members), Decimal(0))
+                    after = sum((decimal(row.get(metric_id)) or Decimal(0) for row in group_output), Decimal(0))
+                    if before != after:
+                        raise ContractError("İlk N ve kalan ayrımında ölçü toplamı değişti.", code="SOURCE_CONTRACT_VIOLATION")
+                output.extend(group_output)
+            else:
+                raise ContractError("Analitik işlem tanımlı değil.", code="PLAN_INVALID")
+        rows = output
+    return rows
+
+
 def decimal(value):
     if value is None:
         return None

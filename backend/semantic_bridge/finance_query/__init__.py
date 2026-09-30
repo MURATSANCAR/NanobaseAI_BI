@@ -9,10 +9,16 @@ from pathlib import Path
 import time
 import uuid
 
-from .contracts import CONTRACT_HASH, METRICS, ContractError
+from .contracts import CONTRACT_HASH as BASE_CONTRACT_HASH, METRICS, ContractError
 from .planner import follows, build
 from .executor import Executor
+from .result_metadata import describe_columns, calculation_definitions
 from .crm_query import CRM_CAPABILITIES
+from .crm_reports import CRM_REPORT_CAPABILITIES
+from .logo_reports import LOGO_REPORT_CAPABILITIES
+
+CONTRACT_HASH = hashlib.sha256(json.dumps({"base": BASE_CONTRACT_HASH, "crm": CRM_CAPABILITIES,
+    "crmReports": CRM_REPORT_CAPABILITIES, "logoReports": LOGO_REPORT_CAPABILITIES}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 log = logging.getLogger(__name__)
 ENGINE_HASH = hashlib.sha256(json.dumps({p.name: hashlib.sha256(p.read_bytes()).hexdigest()
@@ -81,37 +87,24 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         numeric = set(plan.metrics) | {d.id for d in plan.derived}
         if plan.comparison:
             numeric = {"base_value", "target_value", plan.comparison.id}
-        if plan.crm:
+        if plan.crm or getattr(plan, "sections", ()) or getattr(plan, "logo_report", None) or getattr(plan, "crm_report", None):
             numeric = set(getattr(engine, "numeric_fields", []))
+        for spec in getattr(plan, "analytics", ()):
+            if spec["op"] == "contribution":
+                numeric.update(spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct"))
         if any(set(row) != set(fields) for row in rows) or any(m not in fields for m in numeric):
             raise ContractError("Cevabın kolonları ölçü sözleşmesini sağlamıyor.", code="SOURCE_CONTRACT_VIOLATION")
-        columns = [{"name": k, "type": "float" if k in numeric else "str",
-                    **({"label": METRICS[k].label, "unit": METRICS[k].unit} if k in METRICS else {})} for k in fields]
-        labels = {}
-        calculations = []
-        for d in plan.derived:
-            left, right = METRICS[d.left], METRICS[d.right]
-            unit = "%" if d.op == "percent_change" or d.op == "ratio" and d.scale == 100 else left.unit if d.op == "difference" else "oran" if left.unit == right.unit else left.unit + "/" + right.unit
-            label = f"{left.label} / {right.label}" if d.op == "ratio" else f"{left.label} − {right.label}" if d.op == "difference" else f"{left.label}, {right.label} bazına göre değişim"
-            labels[d.id] = {"label": label, "unit": unit}
-            formula = f"{d.left}/{d.right}×{d.scale:g}" if d.op == "ratio" else f"{d.left}−{d.right}" if d.op == "difference" else f"({d.left}−{d.right})/{d.right}×100"
-            calculations.append(f"{label}: {formula} ({unit}).")
-        if plan.comparison:
-            cmp = plan.comparison
-            metric = METRICS[cmp.metric]
-            labels.update(base_value={"label": "Baz dönem " + metric.label, "unit": metric.unit}, target_value={"label": "Karşılaştırılan dönem " + metric.label, "unit": metric.unit})
-            labels[cmp.id] = {"label": "Dönem farkı" if cmp.op == "difference" else "Dönem değişimi", "unit": metric.unit if cmp.op == "difference" else "%"}
-            calculations.append("Dönem hesabı: " + ("karşılaştırılan − baz." if cmp.op == "difference" else "(karşılaştırılan − baz) / baz × 100 (%)."))
-        for col in columns:
-            col.update(labels.get(col["name"], {}))
+        columns = describe_columns(plan, fields, numeric)
+        labels = {column["name"]: column for column in columns}
+        definition_items = calculation_definitions(plan)
         sql = "\n\n".join("-- " + run["source"] + "\n" + run["sql"] for run in engine.runs)
         notes = list(dict.fromkeys(engine.notes))
         if "author" in plan.dimensions:
             notes.append("Yazar kırılımı kitap künyesindeki yazar metnidir; kişi kimliği ve telif sahipliği çıkarımı yapılmaz.")
-        definitions = " ".join([*(METRICS[m].definition for m in plan.metrics), *calculations])
+        definitions = " ".join(definition_items)
         def label(k):
             return labels.get(k, {}).get("label", METRICS[k].label if k in METRICS else k)
-        if len(rows) == 1 and not plan.dimensions and not plan.crm:
+        if len(rows) == 1 and not plan.dimensions and not plan.crm and not engine.section_results:
             summary = " · ".join(f"{label(k)}: {_tr(v)} {labels.get(k, {}).get('unit', METRICS[k].unit if k in METRICS else '')}".strip() for k,v in rows[0].items())
         else:
             limit = plan.crm.get("limit") if plan.crm else plan.limit
@@ -122,22 +115,33 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
             summary += " Hesap tanımı: " + definitions
         if notes:
             summary += " Veri notu: " + " ".join(notes)
+        kind = "PARTIAL_ANSWER" if engine.gaps or not engine.coverage_complete else "TEXT_TO_SQL"
+        if engine.section_results:
+            summary = f"{len(engine.section_results)} rapor bölümü hazır. " + " · ".join(f"{s['title']}: {s['totalRows']} satır" if s["status"] == "COMPLETE" else f"{s['title']}: tamamlanamadı" for s in engine.section_results)
+        if engine.gaps:
+            summary += " Kesin cevaplanamayan kısımlar: " + " · ".join(g["reason"] for g in engine.gaps)
+        state["gaps"] = engine.gaps
         rid = uuid.uuid4().hex
         result = {"id": rid, "columns": columns, "records": rows, "totalRows": len(rows), "truncated": False,
                   "physicalSql": sql, "computedAt": time.time(), "cached": False,
                   "dbMs": sum(x["dbMs"] for x in engine.runs),
                   "dataNotes": [{"message": n, "severity": "info" if engine.coverage_complete else "warn"} for n in notes],
-                  "dataCoverage": engine.source_periods}
+                  "dataCoverage": engine.source_periods, "definitions": definition_items,
+                  "sourceComplete": engine.coverage_complete}
+        if engine.section_results:
+            result["sections"] = engine.section_results
+        result["gaps"] = engine.gaps
         progress("presenting")
-        runtime.attach_widget(result, question)
+        if not engine.section_results:
+            runtime.attach_widget(result, question)
         runtime.remember_result(result, question=question, sql=sql)
-        qid = record("TEXT_TO_SQL", summary, result)
+        qid = record(kind, summary, result)
         if not hasattr(runtime, "_finance_plans"):
             runtime._finance_plans = OrderedDict()
         runtime._finance_plans[context_key] = {"question": question, "plan": plan.to_dict()}
         while len(runtime._finance_plans)>200:
             runtime._finance_plans.popitem(last=False)
-        return {**result, "type": "TEXT_TO_SQL", "sql": sql, "resultId": rid, "summary": summary,
+        return {**result, "type": kind, "sql": sql, "resultId": rid, "summary": summary,
                 "records": rows[:max(1,min(sample_size,500))], "shownRows": min(len(rows),max(1,min(sample_size,500))),
                 "rowCount": len(rows), "threadId": thread_id, "queryId": qid, "semantic": state,
                 "answerQuality": {"contractChecked": True, "independentlyVerified": False,
