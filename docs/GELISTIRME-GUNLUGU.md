@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Model şeması derleyici uyumu
+
+- 0f0230c0c R5 kabulünde4 soru planlama HTTP400 ile durdu; kaynak yürütmesi başlamadı. İlk hata sistematik olduğu için koşu durduruldu,1 oturum silindi. Başarı sayılmadı.
+- Model şema derleyicisi kısmi anyOf dallarında items tanımını üst nesneden alamadı. Her dal kendi tam kapalı nesne/dizi tanımını taşıyacak şekilde dönüştürüldü; kaynak alanları ve tüm çalışma zamanı kontrolleri korundu. Ortak yapraklar $defs ile paylaşılır. Yeni gerçek API kabulü bekliyor.
+- Üretici açıklaması: [XGrammar strict mode](https://xgrammar.mlc.ai/docs/latest/api/python/grammar.html), şemada belirtilmemiş properties/items alanlarını kapatır. Sunucu logundaki minItems/prefixItems HTTP400 somut uyumsuzluk kanıtıdır.
+
 ## 2026-09-30 — CRM alan sözleşmeleri ve plan dallarının yapısal ayrımı
 
 - Güncel CRM31 raporunda31 fiziksel tablo/161 tablo-kolon çifti metadata ile eşlendi, eksik0. İlk23/115 dar kapsam korunup geniş harita belgelendi. Tablo/kolon varlığı iş doğruluğu değildir.

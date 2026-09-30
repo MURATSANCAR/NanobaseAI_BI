@@ -88,54 +88,65 @@ for field, schema in {
     PLAN_SCHEMA["properties"][field] = schema
     PLAN_SCHEMA["required"].append(field)
 
-# Constrain branch choice during generation, before semantic validation. Root
-# properties/required/additionalProperties remain the single authoritative shape;
-# each anyOf branch only narrows those properties, without dropping invalid data.
+# Every alternative is a complete closed object. The model grammar compiler
+# does not reliably intersect sibling properties with partial anyOf constraints.
 _EMPTY_ARRAY = {"type": "array", "maxItems": 0}
 _NULL = {"type": "null"}
-_EMPTY_TEXT = {"type": "string", "maxLength": 0}
 _EXECUTION_ARRAYS = ("metrics", "dimensions", "filters", "derived", "having", "analytics")
 _SOURCE_BRANCHES = ("crm", "logo_report", "crm_report")
 
 
-def _leaf_choices():
-    choices = []
-    # Metric computation is the only branch with root arithmetic and dimensions.
-    choices.append({"type": "object", "properties": {
-        **{key: deepcopy(_NULL) for key in _SOURCE_BRANCHES},
-        "metrics": {"type": "array", "minItems": 1},
-    }})
-    # Each source/report carries its own fields, limits and conditions. Two
-    # selected sources cannot silently masquerade as one leaf.
+def _closed_variant(base, changes):
+    properties = deepcopy(base["properties"])
+    for key, change in changes.items():
+        existing = properties[key]
+        if change.get("type") == "object" and "anyOf" in existing:
+            # Selecting a source branch must retain its full nested properties.
+            existing = next(value for value in existing["anyOf"] if value.get("type") == "object")
+        if change.get("type") == "null":
+            properties[key] = {"type":"null"}
+        else:
+            properties[key] = {**deepcopy(existing), **deepcopy(change)}
+    return obj(properties)
+
+
+def _leaf_variants(base):
+    alternatives = [_closed_variant(base, {
+        **{key: _NULL for key in _SOURCE_BRANCHES},
+        "metrics": {"type":"array", "minItems":1},
+    })]
     for selected in _SOURCE_BRANCHES:
-        choices.append({"type": "object", "properties": {
-            **{key: deepcopy(_EMPTY_ARRAY) for key in _EXECUTION_ARRAYS},
-            **{key: {"type": "object"} if key == selected else deepcopy(_NULL) for key in _SOURCE_BRANCHES},
-            **{key: deepcopy(_NULL) for key in ("comparison", "limit", "order_by")},
-        }})
-    # A boundary response is allowed without executable metrics; the existing
-    # validator still requires an actual clarification/unsupported explanation.
-    choices.append({"type": "object", "properties": {
-        **{key: deepcopy(_EMPTY_ARRAY) for key in _EXECUTION_ARRAYS},
-        **{key: deepcopy(_NULL) for key in (*_SOURCE_BRANCHES, "comparison", "limit", "order_by")},
-    }})
-    return choices
+        alternatives.append(_closed_variant(base, {
+            **{key:_EMPTY_ARRAY for key in _EXECUTION_ARRAYS},
+            **{key:{"type":"object"} if key == selected else _NULL for key in _SOURCE_BRANCHES},
+            **{key:_NULL for key in ("comparison","limit","order_by")},
+        }))
+    alternatives.append(_closed_variant(base, {
+        **{key:_EMPTY_ARRAY for key in _EXECUTION_ARRAYS},
+        **{key:_NULL for key in (*_SOURCE_BRANCHES,"comparison","limit","order_by")},
+    }))
+    return alternatives
 
 
-LEAF_PLAN_SCHEMA["anyOf"] = _leaf_choices()
-_single_choices = _leaf_choices()
-for choice in _single_choices:
-    choice["properties"].update({key: deepcopy(_EMPTY_ARRAY) for key in ("sections", "gaps", "coverage")})
-_composite_choice = {"type": "object", "properties": {
-    **{key: deepcopy(_EMPTY_ARRAY) for key in (*_EXECUTION_ARRAYS, "uncovered")},
-    **{key: deepcopy(_NULL) for key in (*_SOURCE_BRANCHES, "comparison", "limit", "order_by")},
-    "clarification": deepcopy(_EMPTY_TEXT),
-    "sections": {"type": "array", "minItems": 1, "maxItems": 4},
-    "coverage": {"type": "array", "minItems": 1, "maxItems": 30},
-}}
-PLAN_SCHEMA["anyOf"] = [*_single_choices, _composite_choice]
-# A coverage entry targets section(s) OR a gap, never neither or both.
-PLAN_SCHEMA["properties"]["coverage"]["items"]["anyOf"] = [
-    {"type": "object", "properties": {"sections": {"type": "array", "minItems": 1}, "gap_index": deepcopy(_NULL)}},
-    {"type": "object", "properties": {"sections": deepcopy(_EMPTY_ARRAY), "gap_index": {"type": "integer", "minimum": 0, "maximum": 19}}},
-]
+_leaf_definition = {"anyOf":_leaf_variants(LEAF_PLAN_SCHEMA)}
+# Share the complete leaf alternatives rather than copying their source schemas
+# into every root alternative. References resolve in the final request document.
+PLAN_SCHEMA["properties"]["sections"]["items"]["properties"]["plan"] = {"$ref":"#/$defs/leaf_plan"}
+_coverage_base = PLAN_SCHEMA["properties"]["coverage"]["items"]
+PLAN_SCHEMA["properties"]["coverage"]["items"] = {"anyOf":[
+    _closed_variant(_coverage_base, {"sections":{"type":"array","minItems":1},"gap_index":_NULL}),
+    _closed_variant(_coverage_base, {"sections":_EMPTY_ARRAY,"gap_index":{"type":"integer","minimum":0,"maximum":19}}),
+]}
+# The integer coverage variant replaces (rather than intersects) the nullable
+# source union; its complete type is explicit for constrained decoding.
+PLAN_SCHEMA["properties"]["coverage"]["items"]["anyOf"][1]["properties"]["gap_index"] = {"type":"integer","minimum":0,"maximum":19}
+_single_base = _closed_variant(PLAN_SCHEMA,{key:_EMPTY_ARRAY for key in ("sections","gaps","coverage")})
+_root_alternatives = _leaf_variants(_single_base)
+_root_alternatives.append(_closed_variant(PLAN_SCHEMA,{
+    **{key:_EMPTY_ARRAY for key in (*_EXECUTION_ARRAYS,"uncovered")},
+    **{key:_NULL for key in (*_SOURCE_BRANCHES,"comparison","limit","order_by")},
+    "clarification":{"type":"string","maxLength":0},
+    "sections":{"type":"array","minItems":1,"maxItems":4},
+    "coverage":{"type":"array","minItems":1,"maxItems":30},
+}))
+PLAN_SCHEMA = {"type":"object", "anyOf":_root_alternatives, "$defs":{"leaf_plan":_leaf_definition}}
