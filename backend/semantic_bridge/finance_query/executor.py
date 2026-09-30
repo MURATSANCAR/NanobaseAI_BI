@@ -35,6 +35,7 @@ class Executor:
         self.runs = []
         self.notes = []
         self.source_periods = []
+        self._crm_status = {}
 
     def read(self, sql, *, metadata=False, source="logo"):
         statements = sqlglot.parse(sql, read="tsql")
@@ -49,6 +50,10 @@ class Executor:
         conn = self.rt.crm_connector if source == "crm" else self.rt.connector
         if conn is None:
             raise ContractError("İstenen veri kaynağının bağlantısı tanımlı değil.")
+        if source == "crm":
+            # Keep the transport pool and its concurrency gate, not the legacy SQL rewriter.
+            # Every business CRM read below explicitly applies this engine's positive status contract.
+            conn = getattr(conn, "inner", conn)
         t = time.monotonic()
         cols, rows, truncated = conn.execute(sql, MAX_ROWS)
         ms = round((time.monotonic() - t) * 1000)
@@ -93,14 +98,33 @@ class Executor:
             raise ContractError("Kaynak şema sözleşmeyle uyuşmuyor: " + ", ".join(missing))
         return found
 
+    def crm_status(self, table, alias):
+        from .language import fold
+        if table not in self._crm_status:
+            entity = {"new_kitapBase": "new_kitap", "ContactBase": "contact",
+                      "AccountBase": "account", "new_markaBase": "new_marka"}[table]
+            rows = self.read("SELECT DISTINCT M.AttributeValue AS code,M.Value AS label FROM "
+                "[Timas_MSCRM].dbo.StringMapBase M JOIN [Timas_MSCRM].MetadataSchema.Entity E "
+                "ON E.ObjectTypeCode=M.ObjectTypeCode AND E.ComponentState=0 "
+                "WHERE M.AttributeName='statuscode' AND M.LangId=1055 AND E.LogicalName=" + literal(entity),
+                metadata=True, source="crm")
+            accepted = {"aktif musteri"} if table == "AccountBase" else {"aktif", "etkin"}
+            codes = sorted({int(r["code"]) for r in rows if fold(r["label"]).strip() in accepted})
+            if not codes:
+                raise ContractError("CRM'nin yayımlanmış durum açıklamalarında istenen aktif kayıt tanımı bulunamadı.")
+            self._crm_status[table] = codes
+        return f"{alias}.statecode=0 AND {alias}.statuscode IN (" + ",".join(map(str,self._crm_status[table])) + ")"
+
     def crm_books(self):
-        self.verify_schema({"new_kitapBase": ["new_stokkodu", "new_name", "new_yazartext", "new_yayineviid", "statecode"],
-                            "new_markaBase": ["new_markaId", "new_name", "statecode"]}, "crm")
+        self.verify_schema({"new_kitapBase": ["new_stokkodu", "new_name", "new_yazartext", "new_yayineviid", "statecode", "statuscode"],
+                            "new_markaBase": ["new_markaId", "new_name", "statecode", "statuscode"]}, "crm")
+        book_active = self.crm_status("new_kitapBase", "k")
+        publisher_active = self.crm_status("new_markaBase", "m")
         rows = self.read(f"SELECT LTRIM(RTRIM(k.new_stokkodu)) AS book_code, k.new_name AS book_name, "
                          f"NULLIF(LTRIM(RTRIM(k.new_yazartext)), '') AS author, m.new_name AS publisher "
                          f"FROM {CRM}.new_kitapBase k LEFT JOIN {CRM}.new_markaBase m "
-                         "ON m.new_markaId=k.new_yayineviid AND m.statecode=0 "
-                         "WHERE k.statecode=0 AND NULLIF(LTRIM(RTRIM(k.new_stokkodu)), '') IS NOT NULL", source="crm")
+                         f"ON m.new_markaId=k.new_yayineviid AND {publisher_active} "
+                         f"WHERE {book_active} AND NULLIF(LTRIM(RTRIM(k.new_stokkodu)), '') IS NOT NULL", source="crm")
         books = {}
         for row in rows:
             key = str(row["book_code"]).strip().casefold()
@@ -112,11 +136,10 @@ class Executor:
     def execute(self, plan):
         family = METRICS[plan.metrics[0]].family
         if family.startswith("crm_"):
-            table, where = {"crm_books": ("new_kitapBase", "statecode=0"),
-                            "crm_authors": ("ContactBase", "statecode=0 AND new_yazarmi=1"),
-                            "crm_customers": ("AccountBase", "statecode=0")}[family]
-            self.verify_schema({table: ["statecode"] + (["new_yazarmi"] if family == "crm_authors" else [])}, "crm")
-            rows = self.read(f"SELECT COUNT_BIG(*) AS [{plan.metrics[0]}] FROM {CRM}.[{table}] WHERE {where}", source="crm")
+            table = {"crm_books": "new_kitapBase", "crm_authors": "ContactBase", "crm_customers": "AccountBase"}[family]
+            self.verify_schema({table: ["statecode", "statuscode"] + (["new_yazarmi"] if family == "crm_authors" else [])}, "crm")
+            where = self.crm_status(table, "r") + (" AND r.new_yazarmi=1" if family == "crm_authors" else "")
+            rows = self.read(f"SELECT COUNT_BIG(*) AS [{plan.metrics[0]}] FROM {CRM}.[{table}] r WHERE {where}", source="crm")
             return rows
         enrichment = bool((set(plan.dimensions) | {d for d, _, _ in plan.filters}) & {"author", "publisher"})
         books = self.crm_books() if enrichment else {}

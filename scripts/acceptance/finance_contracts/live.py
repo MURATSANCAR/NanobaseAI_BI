@@ -56,9 +56,9 @@ def cases():
     add("29 Eylül 2026 tarihinde toptan satış faturası sayısı kaçtır?","logo",f"SELECT COUNT(*) invoice_count FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE=8 AND {day}",["invoice_count"])
     add("29 Eylül 2026 tarihinde perakende satış tutarı ne kadar?","logo",f"SELECT COALESCE(SUM(NETTOTAL),0) invoice_amount FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE=7 AND {day}",["invoice_amount"])
     add("29 Eylül 2026 tarihinde kanal bazında satılan kitap adedi kaçtır?","logo",f"SELECT C.SPECODE2 channel,SUM(S.AMOUNT) sold_quantity FROM dbo.LG_411_01_STLINE S LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (7,8) AND S.{day.replace(' AND DATE_', ' AND S.DATE_')} GROUP BY C.SPECODE2",["channel","sold_quantity"],["channel"])
-    add("CRM’de aktif kitap kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_books FROM dbo.new_kitapBase WHERE statecode=0",["active_books"])
-    add("CRM’de aktif yazar kişi kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_authors FROM dbo.ContactBase WHERE statecode=0 AND new_yazarmi=1",["active_authors"])
-    add("CRM'de aktif cari kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_customers FROM dbo.AccountBase WHERE statecode=0",["active_customers"])
+    add("CRM’de aktif kitap kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_books FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1",["active_books"])
+    add("CRM’de aktif yazar kişi kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_authors FROM dbo.ContactBase WHERE statecode=0 AND statuscode=1 AND new_yazarmi=1",["active_authors"])
+    add("CRM'de aktif cari kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_customers FROM dbo.AccountBase WHERE statecode=0 AND statuscode=100000000",["active_customers"])
     for kind,code in [("toptan",8),("perakende",7)]:
         add(f"Eylül 2026 {kind} satış fatura toplamı nedir?","logo",f"SELECT COALESCE(SUM(NETTOTAL),0) invoice_amount FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE={code} AND DATE_>='20260901' AND DATE_<'20261001'",["invoice_amount"])
     add("Eylül 2026 müşterilerden tahsilat toplamı nedir?","logo","SELECT COALESCE(SUM(L.AMOUNT),0) collections FROM dbo.LG_411_01_CLFLINE L JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE C.CODE LIKE '120%' AND L.CANCELLED=0 AND L.SIGN=1 AND L.TRCODE IN (1,20,61,62,70) AND L.DATE_>='20260901' AND L.DATE_<'20261001'",["collections"])
@@ -118,7 +118,7 @@ def cases():
 
 
 def cross_reference(conns):
-    cards=query(conns["crm"],"SELECT LTRIM(RTRIM(K.new_stokkodu)) code,K.new_yazartext author,M.new_name publisher FROM dbo.new_kitapBase K LEFT JOIN dbo.new_markaBase M ON M.new_markaId=K.new_yayineviid AND M.statecode=0 WHERE K.statecode=0 AND NULLIF(LTRIM(RTRIM(K.new_stokkodu)),'') IS NOT NULL")
+    cards=query(conns["crm"],"SELECT LTRIM(RTRIM(K.new_stokkodu)) code,K.new_yazartext author,M.new_name publisher FROM dbo.new_kitapBase K LEFT JOIN dbo.new_markaBase M ON M.new_markaId=K.new_yayineviid AND M.statecode=0 AND M.statuscode=1 WHERE K.statecode=0 AND K.statuscode=1 AND NULLIF(LTRIM(RTRIM(K.new_stokkodu)),'') IS NOT NULL")
     index={}
     for r in cards:
         key=r["code"].strip().casefold()
@@ -169,7 +169,7 @@ def compare(case, answer, whole, reference):
 
 def code_manifest():
     root=Path('/data/nanobaseai/bi/frontend/backend')
-    files=[root/'semantic_bridge/app.py',*sorted((root/'semantic_bridge/finance_query').glob('*.py'))]
+    files=[root/'semantic_bridge/app.py',root/'semantic_layer/runtime/llm_queue.py',*sorted((root/'semantic_bridge/finance_query').glob('*.py'))]
     return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files if p.is_file()}
 
 

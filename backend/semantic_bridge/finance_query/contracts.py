@@ -26,9 +26,9 @@ METRICS = {
     "invoice_count": Metric("invoice", "Fatura sayısı", "belge", "COUNT_BIG(*)", "İptal edilmemiş satış fatura başlıkları; satırlar değil INVOICE belgeleri (7/8/9)."),
     "invoice_amount": Metric("invoice", "Fatura toplamı", "TRY", "SUM(f.NETTOTAL)", "İptal edilmemiş satış faturası NETTOTAL; fatura toplamı, satır net cirosu değildir."),
     "collections": Metric("collection", "Müşteri ödeme hareketleri", "TRY", "SUM(f.AMOUNT)", "120 müşteri carileri, iptal olmayan alacak hareketleri SIGN=1; nakit/havale/çek/senet/kart (1,20,61,62,70). Çek/senet teslimi dahil, yalnız nakit tahsil değildir."),
-    "active_books": Metric("crm_books", "Aktif kitap kaydı", "kayıt", "COUNT_BIG(*)", "CRM new_kitapBase statecode=0 kitap kartları."),
-    "active_authors": Metric("crm_authors", "Aktif yazar kişi kaydı", "kişi", "COUNT_BIG(*)", "CRM ContactBase statecode=0 ve new_yazarmi=1 kişi kartları; ayrı yazar sözlüğü sayısı değildir."),
-    "active_customers": Metric("crm_customers", "Aktif cari kaydı", "kayıt", "COUNT_BIG(*)", "CRM AccountBase statecode=0 cari kartları."),
+    "active_books": Metric("crm_books", "Aktif kitap kaydı", "kayıt", "COUNT_BIG(*)", "CRM kitap kartı statecode=0 ve kurum metadata etiketinde Aktif/Etkin durum nedeni; Pasif etiketli kartlar hariç."),
+    "active_authors": Metric("crm_authors", "Aktif yazar kişi kaydı", "kişi", "COUNT_BIG(*)", "CRM kişi kartı statecode=0, Etkin durum nedeni ve new_yazarmi=1; ayrı yazar sözlüğü sayısı değildir."),
+    "active_customers": Metric("crm_customers", "Aktif müşteri kaydı", "kayıt", "COUNT_BIG(*)", "CRM AccountBase statecode=0 ve Aktif Müşteri durum nedeni; potansiyel, pasif, arşiv ve sorunlu müşteri statüleri dahil değildir."),
 }
 DIMENSIONS = {
     "book": "Kitap stok kodu ve adı (aynı adlı farklı kitaplar birleştirilmez)",
@@ -38,7 +38,7 @@ DIMENSIONS = {
     "publisher": "CRM kitap kartının new_yayineviid ilişkisindeki aktif marka/yayınevi",
     "day": "İşlem günü", "month": "İşlem yılı ve ayı", "year": "İşlem yılı",
 }
-CONTRACT = {"version": "1.0", "metrics": {k: asdict(v) for k, v in METRICS.items()},
+CONTRACT = {"version": "1.1", "metrics": {k: asdict(v) for k, v in METRICS.items()},
             "dimensions": DIMENSIONS,
             "sources": "Tek şirket. SEMANTIC_FIRMS kapsamı ile L_CAPIPERIOD dönemleri; çakışmada tahmin yok.",
             "joins": "Logo ITEMS.CODE -> CRM new_kitapBase.new_stokkodu; aktif anahtar tekilliği zorunlu. LEFT JOIN; ölçüler çoğalmaz."}

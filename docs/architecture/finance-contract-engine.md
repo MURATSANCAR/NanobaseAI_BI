@@ -49,7 +49,20 @@ farkı kabul koşucusunda ayrıca reddedilir.
   `new_Yazar` dolu 3.072, aktif Contact eşleşmesi 2.140. `new_yayineviid` aktif marka eşleşmesi 9.253;
   `new_yayinciid` 2.541. Stok kodunda aktif çoğulluk bulunmadı (her yürütmede tekrar kontrol edilir).
 - Yazar kırılımı `new_yazartext` kitap künyesi metnidir, kişi/telif kimliği değildir.
-  Yazar kişi sayısı ise `ContactBase.statecode=0 AND new_yazarmi=1`; aynı kavram gibi birleştirilmez.
+  Yazar kişi sayısı ise aktif durum nedenli `ContactBase` ve `new_yazarmi=1`; aynı kavram gibi birleştirilmez.
+- VPN geri geldikten sonra bağımsız metadata okuması: `new_yayineviid` = "Yayın Evi",
+  `new_yayinciid` = "Yayın Evi Alt Marka", ikisi de `new_marka`; `new_yazartext` = "Yazar",
+  `new_Yazar` = "Z - Yazar" (contact), `new_yazarid` = "X - Yazar" (new_yazar).
+- İlk gerçek kapı 2/10 geçti; 4 tür-denetçisi yanlış reddi, 1 JSON biçimi reddi ve 3 CRM referans
+  tanımı uyuşmazlığı çıktı. Bağımsız `StringMapBase` okuması `statecode=0` içinde 4.234 kitap ve
+  1.716 yazar kişide durum nedeninin "Pasif" olduğunu gösterdi. Kitap/kişi `statuscode=1`;
+  müşteri "Aktif Müşteri" `statuscode=100000000` (11.904). Potansiyel, arşiv ve sorunlu müşteri
+  bu ölçüye dahil değil. Referans SQL'ler bu doğrudan metadata kanıtıyla düzeltildi, API sayısına
+  uydurulmadı. Önceki yalnız-statecode tanımı geçersizdir.
+- Yeni CRM SQL'i eski bağlantı yeniden-yazıcısından geçmez; havuz/yük sınırı korunur.
+  Kendi pozitif aktif etiket sözleşmesini gerçek CRM metadata'sından okur; statecode ve statuscode
+  koşulları kaydedilen fiziksel SQL'de görünür. Model JSON çıkışı aynı kabul kuyruğundan zorlanır;
+  tür-denetçisi `sale_kind` alanının koşul karşılığını bilir.
 - `scripts/acceptance/finance_contracts/schema.py`, gerçek fiziksel şemayı, yayımlanmış Dynamics
   alan etiketlerini/açıklamalarını ve lookup ilişkilerini salt okunur dışarı alır. Sözlük eski
   semantik katalogdan üretilmez. Web belgesi ile kuruma özel metadata ayrı kanıt olarak tutulur.
@@ -58,7 +71,8 @@ farkı kabul koşucusunda ayrıca reddedilir.
 
 Yeni bağımsız koşucu `scripts/acceptance/finance_contracts/live.py` yalnız Linux test sunucusunda,
 gerçek API ve doğrudan pyodbc referansı ile çalışır. Üretim derleyicisini veya eski SQL'leri içe aktarmaz.
-100 yeni soru; tam kolon kimliği, tüm anahtarlar/satırlar, sayı/NULL ve kesilme karşılaştırması; büyük sonuç,
+100 yeni soru (91 tam cevap, 9 kapsam sınırı); tam kolon kimliği, tüm anahtarlar/satırlar,
+sayı/NULL ve kesilme karşılaştırması; büyük sonuç,
 kanal/kitap kırılımı, yıllık kaynak değişimi, gün/ay, boş dönem, yanlış kaynak ve dürüst netleştirme.
 Kaynaklar salt okunur. Var olan timasai hesabının 15 dk oturumu finally'de silinir. Her 10 sonuç raporlanır.
 Sayısal tam cevap geçişleri (`fullAnswer`) ve kapsam dışı isteği doğru durdurma (`boundary`) ayrı sayılır.
@@ -81,4 +95,7 @@ değiştiyse önce yedek arşivden ayrı dizine çıkarıp manifesti doğrula; c
 Metadata bu değişiklikte düzenlenmez; dump geri yüklemesi diğer modüllerin yeni verilerini sileceğinden
 yalnız ayrı kurtarma veritabanına yapılır.
 
-Durum: kodlama; canlı kabul henüz yapılmadı. `main` → test sunucusu → kabul sırası zorunludur.
+Durum: kod main'de; test sunucusunda derleme/sözdizimi kontrolü yapıldı, motor etkinleştirilmedi.
+VPN 17:42:21'de auth dosyası eksikliğiyle kapandı; yeni motorla gerçek soru yürütme sayısı 0.
+İki ön kontrol eski motora soru göndermedi, açılan 2 geçici timasai oturumu silindi.
+Canlı kabul **DOĞRULANAMADI**. `main` → test sunucusu tam kurulum → gerçek kabul sırası zorunludur.

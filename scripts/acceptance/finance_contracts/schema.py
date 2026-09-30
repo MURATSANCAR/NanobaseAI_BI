@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 from live import connect, query
 
 
-def collect():
+def collect(sources=("logo", "crm")):
     evidence = {"collectedAt": datetime.now(timezone.utc).isoformat(), "sources": {}}
-    for source in ("logo", "crm"):
+    for source in sources:
         conn = connect(f"/data/nanobaseai/bi/secrets/{source}-mssql-connection.json")
         try:
             if source == "logo":
@@ -25,6 +25,7 @@ def collect():
             rows = query(conn, "SELECT TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION,DATA_TYPE,IS_NULLABLE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,NUMERIC_SCALE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND (" + predicate + ") ORDER BY TABLE_NAME,ORDINAL_POSITION")
             item = {"columns": rows}
             if source == "crm":
+                item["statusLabels"] = query(conn, "SELECT DISTINCT E.LogicalName entity,M.AttributeName attribute,M.AttributeValue code,M.Value label,M.LangId language FROM dbo.StringMapBase M JOIN MetadataSchema.Entity E ON E.ObjectTypeCode=M.ObjectTypeCode AND E.ComponentState=0 WHERE E.LogicalName IN ('new_kitap','contact','account','new_marka') AND M.AttributeName IN ('statecode','statuscode') AND M.LangId=1055 ORDER BY E.LogicalName,M.AttributeName,M.AttributeValue")
                 # ComponentState=0 is published metadata, separate from business-record statecode.
                 item["fieldLabels"] = query(conn, "SELECT E.LogicalName entity,E.BaseTableName,A.LogicalName attribute,A.PhysicalName,A.ReferencedEntityObjectTypeCode,L.LanguageId,L.ObjectColumnName,L.Label FROM MetadataSchema.Entity E JOIN MetadataSchema.Attribute A ON A.EntityId=E.EntityId AND A.ComponentState=0 LEFT JOIN MetadataSchema.LocalizedLabel L ON L.ObjectId=A.AttributeId AND L.ComponentState=0 AND L.LanguageId IN (1055,1033) WHERE E.ComponentState=0 AND E.LogicalName IN ('new_kitap','contact','account','new_marka','new_satishedefleri') ORDER BY E.LogicalName,A.LogicalName,L.LanguageId,L.ObjectColumnName")
                 item["relationships"] = query(conn, "SELECT R.Name relationship,E.LogicalName sourceEntity,A.LogicalName sourceAttribute,T.LogicalName targetEntity,B.LogicalName targetAttribute FROM MetadataSchema.Relationship R JOIN MetadataSchema.Entity E ON E.EntityId=R.ReferencingEntityId AND E.ComponentState=0 JOIN MetadataSchema.Attribute A ON A.AttributeId=R.ReferencingAttributeId AND A.ComponentState=0 JOIN MetadataSchema.Entity T ON T.EntityId=R.ReferencedEntityId AND T.ComponentState=0 JOIN MetadataSchema.Attribute B ON B.AttributeId=R.ReferencedAttributeId AND B.ComponentState=0 WHERE R.ComponentState=0 AND E.LogicalName IN ('new_kitap','contact','account','new_marka','new_satishedefleri') ORDER BY E.LogicalName,A.LogicalName")
@@ -43,8 +44,9 @@ if __name__ == "__main__":
         raise SystemExit("Run only on the real test server")
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", required=True)
+    parser.add_argument("--source", choices=("logo", "crm"))
     args = parser.parse_args()
     os.umask(0o077)
-    evidence = collect()
+    evidence = collect((args.source,) if args.source else ("logo", "crm"))
     Path(args.out).write_text(json.dumps(evidence, ensure_ascii=False, default=str, indent=2))
     print(json.dumps({s: {"columns": len(v["columns"]), "sha256": v["sha256"]} for s,v in evidence["sources"].items()}))

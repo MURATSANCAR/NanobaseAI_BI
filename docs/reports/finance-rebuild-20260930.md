@@ -35,7 +35,7 @@ Mimari, alan kaynakları, desteklenen ölçüler ve geri dönüş:
 
 ## Kabul durumu
 
-- Eski sorgulardan bağımsız 100 yeni soru ve referans hesapları hazırlandı.
+- Eski sorgulardan bağımsız 100 yeni soru hazırlandı: 91 tam cevap/referans hesabı, 9 kapsam sınırı.
 - Sayısal tam cevaplar, kapsam dışı isteğe doğru sınır koyma ve doğrulanamayan durumlar ayrı raporlanır.
 - Tam sonuç API kimliğiyle alınır; tüm satır/kolon/değer/NULL/kesilme karşılaştırılır.
 - Test sunucusunda `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas npm run build` tamamlandı.
@@ -43,6 +43,8 @@ Mimari, alan kaynakları, desteklenen ölçüler ve geri dönüş:
   bağlantıları `08S01 / Adaptive Server unavailable` ile başarısız oldu; rota artık tun0 üzerinden değil.
 - Yeni motor etkinleştirilmedi. Gerçek API + Logo/CRM kabulü ve yeni cevapların mobil tablo/dışa aktarım
   akışı **DOĞRULANAMADI**. Yerel test veya müşteri VM kurulumu yapılmadı.
+- İki kabul ön kontrolünde yeni motor kapalı olduğu için eski motora soru gönderilmedi;
+  toplam 2 geçici timasai oturumu silindi. Gerçek soru yürütme sayısı 0, kaynak yazma 0.
 - Tam Git geçmişi bundle yedeği doğrulandı. Canlı PostgreSQL/kod/ayar yedeği tamamlanma ve bütünlük
   kontrolü bekliyor; bu madde yedek bitince güncellenecek.
 
