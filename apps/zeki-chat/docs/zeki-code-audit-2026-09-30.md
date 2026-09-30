@@ -1,5 +1,17 @@
 # ZEKI AI CHAT — ayrıntılı kod incelemesi, 2026-09-30
 
+## Denetim sonrası temizlik
+
+Kullanıcının silme talebiyle `c1f548205` kaynak sürümünde:
+
+- `.github/actions/update-version-durability/` bütün dosyalarıyla silindi.
+- `@rocket.chat/onboarding-ui` bağımlılığı, importları ve lockfile kayıtları kaldırıldı. Yönetici/kuruluş adımları yerel `packages/ui-client/src/views/setupWizard/components/` bileşenlerini kullanır. Kullanılmayan ek react-hook-form sürümü de kaldırıldı.
+- `fetchMarketplaceApps.ts` içindeki abonelik/lisans/fiyat/kullanıcı kotası şemaları ve bulut jetonu isteği silindi; katalog yerel boş liste döndürür.
+- NPS varsayılanı kapalı yapıldı; dağıtımda zaten kapalıydı.
+- Giriş yetkisi/parola, özel uygulama kaynağı/modül ve Node/Mongo uyumluluk kontrolleri korunur. Diğer harici UI paketleri, protokol kimliği, hedef engelleme listeleri ve geçiş referansları bu değişikliğin kapsamı değildir.
+
+Aşağıdaki ilk denetim kaydı tarihsel kanıttır; güncel silme sonrası durum değildir. Sunucu kabul sonuçları tamamlanınca bu bölümde kaydedilir.
+
 İncelenen kaynak: `ebc692820489fb95701a98575ae4dc58df9a4881`.
 Çalışan imaj salt okunur sorguyla doğrulandı: `zeki-ai-chat:8.5.3-157d9f6a8`.
 
