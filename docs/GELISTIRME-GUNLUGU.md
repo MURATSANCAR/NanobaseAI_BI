@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — UI bağımsız referans değişimi sınıflaması
+
+- Bölümlü UI kabulünde değişen canlı referansın yalnız satır/değer farkı UNVERIFIED olur; aynı resultId CSV, yapısal ve tarayıcı hataları FAIL kalır. Sabit referansın toleransı değiştirilmedi. Önceden yakalanmış hata sonraki referans bağlantı hatasında kaybolmaz. Belge: docs/reports/sections-ui-reference-drift-20260930.md. UI canlı koşusu henüz yapılmadı.
+
 ## 2026-09-30 — Gerçek R8 denetleyici bağlamı düzeltmeleri
 
 - CP007–010 doğru dönem karşılaştırmasının base_value/target_value kolonlarını denetçi yok saydı. Karşılaştırmanın gerçek çıktı sözleşmesi (iki tarih aralığı, ayrı değer kolonları, yön/formül/NULL) eklendi; kaynak metrics listesi nihai kolon listesi olarak sunulmaz. Hesap ve kapı değişmedi.
