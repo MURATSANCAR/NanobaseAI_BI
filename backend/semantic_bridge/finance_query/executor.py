@@ -163,6 +163,43 @@ class Executor:
             books[key] = row
         return books
 
+    def crm_dimension_books(self, plan):
+        requested = set(plan.dimensions) | {d for d, _, _ in plan.filters}
+        if not requested & {"subbrand", "author_group"}:
+            return self.crm_books()
+        from .crm_reports import Sources
+        import json
+        sources = Sources(self)
+        cards = sources.books()
+        links = sources.author_links() if "author_group" in requested else {}
+        people = sources.people() if "author_group" in requested else {}
+        incomplete_authors = set()
+        if "author_group" in requested:
+            broken = self.read("SELECT DISTINCT L.new_Kitap AS book_id FROM " + CRM + ".new_eserkatilimBase L JOIN " + CRM + ".new_katilimcitipiBase R ON R.new_katilimcitipiId=L.new_katilimciTipi AND R.statecode=0 AND LTRIM(RTRIM(R.new_name))=N'Yazar' LEFT JOIN " + CRM + ".ContactBase C ON C.ContactId=L.new_Katilimsaglayan AND " + self.crm_status("ContactBase", "C") + " WHERE L.statecode=0 AND C.ContactId IS NULL", source="crm")
+            incomplete_authors = {str(r["book_id"]).strip().lower() for r in broken if r["book_id"]}
+            if incomplete_authors:
+                self.coverage_complete = False
+                self.gaps.append(f"{len(incomplete_authors)} kitapta Yazar katılımının aktif kişi kimliği çözülemedi; kısmi kişi kümesi tam grup sayılmadı, satış boş yazar grubunda korundu.")
+        books, ambiguous = {}, set()
+        for bid, card in cards.items():
+            code = str(card.get("book_code") or "").strip().casefold()
+            if not code:
+                continue
+            if code in books or code in ambiguous:
+                books.pop(code, None)
+                ambiguous.add(code)
+                continue
+            ids = sorted(links.get(bid, ())) if bid not in incomplete_authors else []
+            books[code] = {**card, "author":card.get("author_text"),
+                "subbrand_id": str(card["subbrand_id"]).lower() if card.get("subbrand") and card.get("subbrand_id") else None,
+                "author_group_ids": json.dumps(ids, ensure_ascii=False) if ids else None,
+                "author_group_names": json.dumps([people[pid].get("person_name") for pid in ids], ensure_ascii=False) if ids else None}
+        if ambiguous:
+            self.coverage_complete = False
+            self.gaps.append(f"{len(ambiguous)} stok kodu birden çok aktif CRM kitabına bağlı; bu kodların satışları korunur, CRM kırılımları boş bırakılır.")
+        self.notes.append("Alt marka ve yazar kişi grubu güncel CRM ilişkileridir; geçmiş dönem ilişki tarihçesi olarak yorumlanmaz. Ortak yazarlı kitap satışı kişi grubunda bir kez sayılır.")
+        return books
+
     def execute(self, plan):
         if getattr(plan, "sections", ()):
             self.gaps.extend(getattr(plan, "gaps", ()))
@@ -225,26 +262,26 @@ class Executor:
             where = self.crm_status(table, "r") + (" AND r.new_yazarmi=1" if family == "crm_authors" else "")
             rows = self.read(f"SELECT COUNT_BIG(*) AS [{plan.metrics[0]}] FROM {CRM}.[{table}] r WHERE {where}", source="crm")
             return rows
-        enrichment = bool((set(plan.dimensions) | {d for d, _, _ in plan.filters}) & {"author", "publisher"})
-        books = self.crm_books() if enrichment else {}
+        enrichment = bool((set(plan.dimensions) | {d for d, _, _ in plan.filters}) & {"author", "publisher", "subbrand", "author_group"})
+        books = self.crm_dimension_books(plan) if enrichment else {}
         answer = []
         period_rows = []
         group_fields = []
         for d in plan.dimensions:
-            group_fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else [d])
+            group_fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else ["subbrand_id", "subbrand"] if d == "subbrand" else ["author_group_ids", "author_group_names"] if d == "author_group" else [d])
         for start, end in plan.periods:
             partials = []
             for a, b, firm, period in self.partitions(date.fromisoformat(start), date.fromisoformat(end)):
                 partials.extend(self.aggregate_families(plan, a, b, firm, period, enrichment))
             before = {m: sum((number(r[m]) for r in partials), Decimal(0)) for m in plan.metrics}
             missing = 0
-            empty_fields = {field: 0 for field in ("author", "publisher") if field in plan.dimensions}
+            empty_fields = {field: 0 for field in ("author", "publisher", "subbrand", "author_group_ids") if field in group_fields}
             for row in partials:
                 if enrichment:
                     card = books.get(str(row.get("book_code") or "").strip().casefold())
                     if card is None:
                         missing += 1
-                    for field in ("author", "publisher"):
+                    for field in ("author", "publisher", "subbrand_id", "subbrand", "author_group_ids", "author_group_names"):
                         row[field] = card.get(field) if card else None
                         if field in empty_fields and not row[field]:
                             empty_fields[field] += 1
@@ -257,10 +294,10 @@ class Executor:
             for field, count in empty_fields.items():
                 if count:
                     self.coverage_complete = False
-                    label = "yazar künyesi" if field == "author" else "yayınevi"
+                    label = {"author":"yazar künyesi", "publisher":"yayınevi", "subbrand":"alt marka", "author_group_ids":"gerçek yazar kişi grubu"}[field]
                     self.notes.append(f"{count} satış kırılımında {label} bilgisi bulunamadı; değer tahmin edilmedi.")
             # Enrichment filters explicitly narrow the population, after conservation was checked.
-            selected = [r for r in partials if all(self.matches(r.get(d), op, value) for d, op, value in plan.filters if d in ("author", "publisher"))]
+            selected = [r for r in partials if all(self.matches(r.get(d), op, value) for d, op, value in plan.filters if d in ("author", "publisher", "subbrand"))]
             totals = {}
             for r in selected:
                 key = tuple(r.get(d) for d in group_fields)
@@ -402,7 +439,7 @@ class Executor:
             codes = "(8,3)" if plan.sale_kind == "wholesale" and family == "sales" else "(7,2)" if family == "sales" else "(8)" if plan.sale_kind == "wholesale" else "(7)"
             conditions.append("f.TRCODE IN " + codes)
         for dim, op, value in plan.filters:
-            if dim in ("author", "publisher"):
+            if dim in ("author", "publisher", "subbrand"):
                 continue
             exprs = {"book": ["i.CODE", "i.NAME"], "customer": ["c.CODE", "c.DEFINITION_"], "channel": ["c.SPECODE2"]}[dim]
             if op == "contains":

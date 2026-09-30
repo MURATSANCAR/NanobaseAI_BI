@@ -11,7 +11,7 @@ PLAN_SCHEMA = obj({
     "dimensions": {"type": "array", "items": {"type": "string", "enum": list(DIMENSIONS)}},
     "sale_kind": {"type": "string", "enum": ["all", "wholesale", "retail"]},
     "filters": {"type": "array", "items": obj({
-        "dimension": {"type": "string", "enum": ["book", "channel", "customer", "author", "publisher"]},
+        "dimension": {"type": "string", "enum": ["book", "channel", "customer", "author", "publisher", "subbrand"]},
         "op": {"type": "string", "enum": ["eq", "contains"]},
         "value": {"type": "string"},
     })},

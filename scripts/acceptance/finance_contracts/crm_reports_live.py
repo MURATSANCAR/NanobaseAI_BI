@@ -62,6 +62,7 @@ def cases():
         ("appointments_with_actions", "30 Eylül 2026 dahil 14 Ekim 2026 hariç randevusu olan aktif yazarların önceki randevularından kimliğiyle bağlı açık görevlerini tarih sırasıyla hazırlık listesi olarak göster.", "2026-09-30", "2026-10-14"),
         ("publisher_completeness", "CRM yayın evlerine göre aktif kitap sayısını ve güncel ISBN, kişi-yazar bağı, ilk baskı, son yayın ve alt marka alanlarının doluluk yüzdelerini göster. Kitap listesindeki eksikleri de ekle.", None, None),
         ("publisher_history", "CRM aktif kitaplarının bugünkü ve önceki yayın evi alanlarını göster. Geçmiş yayın evi ilişkisinin tarih aralığı yoksa geçmiş sınıflandırmayı doğrulanmış sayma.", None, None),
+        ("contract_revision_evidence", "CRM'de aktif kitaplara bağlı aktif sözleşmelerin Ana Sözleşme Id metnini göster: kendi kimliğine, başka aktif sözleşmeye ve aktif karşılığı bulunamayan kimliğe gidenleri ayır. Başlangıç, bitiş, revize, yenileme, fesih ve ek protokol tarihlerini ve ek protokol bayraklarını ayrı göster. Hukuki öncelik varsayma, PDF logunu değişiklik geçmişi sayma.", None, None),
     ]
     return [dict(id=f"CR{i:03d}",report=r,question=q,start=a,end=b) for i,(r,q,a,b) in enumerate(data,1)]
 
@@ -309,6 +310,20 @@ def expected_activities(o,c):
 def expected_contracts(o,c):
     books=o.books();people=o.people();authorlinks=o.authors()
     contracts=unique(o.get("contracts","SELECT new_sozlesmeId contract_id,new_name contract_number,new_SozlesmeBaslangicTarihi start_date,new_SozlesmeBitisTarihi end_date,new_revizebitistarihi revised_end_date,new_yenilemebaslangictarihi renewal_start_date,new_yenilemebitistarihi renewal_end_date,new_fesihtarihi termination_date,new_suresizsozlesme indefinite_flag FROM dbo.new_sozlesmeBase WHERE statecode=0"),"contract_id")
+    revisions={}
+    if c["report"]=="contract_revision_evidence":
+        # SQL-side identity classification is independent of the application's
+        # UUID parser/dictionary lookup. Never infer precedence from this link.
+        revisions=unique(o.get("revisions","""SELECT C.new_sozlesmeId contract_id,C.new_anasozlesmeid parent_contract_text,
+ C.new_ekprotokoltarihi protocol_date,C.new_ekprotokolbitist protocol_end_date,C.new_EkProtokolyeni is_addendum,C.new_ekprotokolsurelimi addendum_time_limited,
+ CONVERT(varchar(36),TRY_CONVERT(uniqueidentifier,NULLIF(LTRIM(RTRIM(C.new_anasozlesmeid)),''))) parent_contract_id,
+ CASE WHEN NULLIF(LTRIM(RTRIM(C.new_anasozlesmeid)),'') IS NULL THEN 'NOT_RECORDED'
+ WHEN TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid) IS NULL THEN 'INVALID_UUID_TEXT'
+ WHEN TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid)=C.new_sozlesmeId THEN 'SELF_REFERENCE'
+ WHEN P.new_sozlesmeId IS NOT NULL THEN 'OTHER_ACTIVE_RECORD' ELSE 'ACTIVE_PARENT_NOT_FOUND' END parent_reference_status,
+ P.new_name parent_contract_number FROM dbo.new_sozlesmeBase C LEFT JOIN dbo.new_sozlesmeBase P
+ ON P.new_sozlesmeId=TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid) AND P.statecode=0 WHERE C.statecode=0"""),"contract_id")
+        for r in revisions.values():r["parent_match_basis"]="UUID metin eşitliği; yayımlı lookup/ebeveyn önceliği değildir"
     links=o.get("contractbooks","SELECT DISTINCT L.new_sozlesmeid contract_id,L.new_kitapid book_id FROM dbo.new_new_sozlesme_new_kitapBase L JOIN dbo.new_sozlesmeBase C ON C.new_sozlesmeId=L.new_sozlesmeid AND C.statecode=0 JOIN dbo.new_kitapBase B ON B.new_kitapId=L.new_kitapid AND B.statecode=0 AND B.statuscode=1")
     bybook=defaultdict(set)
     for r in links:bybook[identity(r["book_id"])].add(identity(r["contract_id"]))
@@ -325,7 +340,7 @@ def expected_contracts(o,c):
  LEFT JOIN dbo.new_sozlesmetaraftipiBase T ON T.new_sozlesmetaraftipiId=P.new_TarafTipi AND T.statecode=0
  WHERE P.statecode=0 AND (P.new_kisi IS NULL OR C.ContactId IS NOT NULL) AND (P.new_Firma IS NULL OR A.AccountId IS NOT NULL)"""):
         parties[identity(r["contract_id"])].append(r)
-    rows=[];bounds=[]
+    rows=[];bounds=["scope_interpretation_unverified"] if c["report"]=="contract_overlap" else ["contract_revision_priority_unverified"] if c["report"]=="contract_revision_evidence" else []
     for bid,ids in bybook.items():
         if c["report"]=="contract_overlap":
             ordered=sorted(ids)
@@ -343,7 +358,8 @@ def expected_contracts(o,c):
             for cid in ids:
                 d=contracts[cid]
                 if c["report"]=="contract_expiry" and d["end_date"] and not any(in_window(d[f],c) for f in ("end_date","revised_end_date","renewal_end_date","termination_date")):continue
-                rows.append(dict(record_type="contract_detail",book_id=bid,book_name=books[bid]["book_name"],**d,**{n:pack(sorted(scopes[n][cid])) for n in scopes},parties=pack(parties[cid]),author_people=pack([dict(person_id=i,person_name=people[i]["person_name"]) for i in sorted(authorlinks[bid])]),end_date_status="Bitiş tarihi mevcut" if d["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"))
+                data=dict(d);data.update(revisions.get(cid,{}))
+                rows.append(dict(record_type="contract_detail",book_id=bid,book_name=books[bid]["book_name"],**data,**{n:pack(sorted(scopes[n][cid])) for n in scopes},parties=pack(parties[cid]),author_people=pack([dict(person_id=i,person_name=people[i]["person_name"]) for i in sorted(authorlinks[bid])]),end_date_status="Bitiş tarihi mevcut" if d["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"))
     relevant={identity(r.get("contract_id")) for r in rows}|{identity(r.get("other_contract_id")) for r in rows}
     if any(d["revised_end_date"] or d["renewal_end_date"] or d["termination_date"] for cid,d in contracts.items() if cid in relevant):bounds.append("unverified_contract_date_precedence")
     return rows,sorted(set(bounds))

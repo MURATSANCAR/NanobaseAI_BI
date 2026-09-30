@@ -53,3 +53,5 @@ Bu tek kayda özel üretim kuralı değildir. Ürün kodu bütün istenen anahta
 ## Kabul hazırlığı
 
 `scripts/acceptance/finance_contracts/logo_reports_live.py` uzak sunucu için bağımsız gerçek kaynak satırlarından referans üretir; ürün SQL'ini veya derleyicisini import etmez. Aynı resultId'nin tam sonucu, kolonlar, kimlikler, sayısallar, NULL ve önizleme karşılaştırılır. Para biriminde/stockta doğrulanmış kısmın eşleşmesi `PARTIAL_REFERENCE_MATCH`; yaşlandırma/kâr sınırı `BOUNDARY_PASS` olarak ayrıca sayılır. Bunlar tam sayısal iş kabulü değildir. Tek ortak flock ve mevcut timasai hesabının 15 dakikalık temizlenen oturumu kullanılır. Bu koşucu bu çalışma sırasında çalıştırılmadı.
+
+Kalıcı test sunucusu kanıt kopyası: `/data/nanobaseai/bi/acceptance/finance-expanded-20260930/schema/`.

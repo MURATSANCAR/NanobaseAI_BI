@@ -4,11 +4,39 @@ from .contracts import METRICS
 LABELS = {
     "book_code": "Stok kodu", "book_name": "Kitap adı", "customer_code": "Müşteri kodu",
     "customer_name": "Müşteri adı", "channel": "Satış kanalı", "author": "Yazar künyesi",
+    "subbrand_id": "Alt marka kimliği", "subbrand": "Alt marka",
+    "author_group_ids": "Ortak yazar kişi kimlikleri", "author_group_names": "Ortak yazar adları",
     "publisher": "Yayınevi", "day": "Gün", "month": "Ay", "year": "Yıl",
     "period_start": "Dönem başlangıcı", "period_end_exclusive": "Dönem sonu (hariç)",
     "base_period_start": "Baz dönem başlangıcı", "base_period_end_exclusive": "Baz dönem sonu (hariç)",
     "target_period_start": "Karşılaştırılan dönem başlangıcı", "target_period_end_exclusive": "Karşılaştırılan dönem sonu (hariç)",
     "section": "Bölüm", "status": "Durum", "row_count": "Satır sayısı", "row_kind": "Satır türü",
+    "match_status": "Eşleşme durumu", "logo_codes": "Logo kodları", "logo_names": "Logo adları",
+    "crm_book_ids": "CRM kitap kimlikleri", "crm_book_names": "CRM kitap adları",
+    "crm_customer_ids": "CRM müşteri kimlikleri", "crm_customer_names": "CRM müşteri adları",
+    "crm_address_regions": "CRM adres bölgesi", "crm_sales_territories": "CRM satış bölgesi",
+    "crm_countries": "CRM ülkeleri", "tax_number": "Vergi numarası",
+    "author_ids": "Yazar kişi kimlikleri", "author_names": "Yazar adları",
+    "shared_authors": "Birden çok yazarlı", "missing_fields": "Eksik alanlar", "name_difference": "Ad farkı",
+    "net_sales": "KDV hariç net satış", "return_amount": "KDV hariç iade tutarı", "sold_quantity": "Satılan miktar",
+    "invoice_id": "Fatura kayıt kimliği", "invoice_number": "Fatura numarası", "invoice_date": "Fatura tarihi",
+    "invoice_count": "Fatura sayısı", "invoice_total": "Fatura genel toplamı", "invoice_mean": "Fatura ortalaması",
+    "invoice_median": "Fatura medyanı", "invoice_vat": "Fatura KDV tutarı", "header_excluding_vat": "Başlık KDV hariç tutar",
+    "material_line_net": "Malzeme satırları net tutarı", "material_lines": "Malzeme satırı sayısı",
+    "other_lines": "Diğer satır sayısı", "other_line_net": "Diğer satırlar net tutarı",
+    "difference_from_material_net": "Başlık ve malzeme toplamı farkı", "source_code": "Teknik kaynak kodu",
+    "source_period": "Teknik kaynak dönemi", "finding": "İnceleme bulgusu", "line_id": "Hareket kimliği",
+    "movement_date": "Hareket tarihi", "amount": "Tutar", "warehouse_no": "Depo numarası",
+    "onhand": "Stok miktarı", "source_quantity": "Kaynak stok miktarı", "movement_quantity": "Hareketlerden stok",
+    "reconciliation": "Uzlaştırma", "daily_change": "Günlük stok değişimi", "unit_ref": "Birim kimliği",
+    "order_number": "Sipariş numarası", "order_date": "Sipariş tarihi", "ordered_quantity": "Sipariş miktarı",
+    "shipped_quantity": "Sevk miktarı", "remaining_quantity": "Kalan miktar", "remaining_base_quantity": "Ana birimde kalan",
+    "remaining_net_amount_proportional": "Oransal kalan net tutar", "due_date": "Vade tarihi", "overdue_days": "Gecikme günü",
+    "opening_balance": "Dönem başı bakiyesi", "period_debits": "Dönem borç hareketleri", "period_credits": "Dönem alacak hareketleri",
+    "closing_balance": "Dönem sonu bakiyesi", "payment_type": "Ödeme türü", "payment_amount": "Ödeme hareketi tutarı",
+    "movement_count": "Hareket sayısı", "currency_code": "Para birimi", "local_invoice_net": "Yerel para net fatura toplamı",
+    "original_invoice_net": "İşlem para biriminde net fatura toplamı", "purchase_quantity": "Alış miktarı",
+    "purchase_net_amount": "Net alış tutarı", "weighted_unit_purchase_price": "Ağırlıklı birim alış fiyatı",
 }
 
 
@@ -70,6 +98,10 @@ def calculation_definitions(plan):
             definitions.append(f"{METRICS[spec['metric']].label} payı: ölçü / aynı grubun tam toplamı × 100; kümülatif pay azalan ölçü sırasında hesaplanır. Negatif değerler korunur, sıfır toplamın oranı boştur.")
         else:
             definitions.append(f"Her grupta {METRICS[spec['metric']].label} sırasına göre ilk {spec['limit']} öğe ve kalanların işaretli toplamı; aynı öğe iki kez sayılmaz.")
+    if "author_group" in plan.dimensions:
+        definitions.append("Yazar grubu aktif Yazar katılımındaki gerçek kişi kimlikleri kümesidir; satış her ortak gruba bir kez yazılır, kişi başına çoğaltılmaz. Güncel CRM ilişkisi kullanılır.")
+    if "subbrand" in plan.dimensions:
+        definitions.append("Alt marka new_yayinciid ile bağlı aktif Marka kimliğidir; alternatif alt marka alanıyla veya geçmiş dönem yayıncı kimliğiyle karıştırılmaz.")
     if "author" in plan.dimensions:
         definitions.append("Yazar kırılımı kitap künyesindeki metindir; kişi kimliği veya telif sahipliği değildir.")
     if getattr(plan, "logo_report", None):

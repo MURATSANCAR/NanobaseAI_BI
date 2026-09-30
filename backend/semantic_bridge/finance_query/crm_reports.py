@@ -40,8 +40,9 @@ REPORTS = {
     "work_due": "Aktif iptal olmayan açık kitap iş planları, tahmini bitiş ve sorumlu/aşama eksikleri; geçmiş termin ve istenen gelecek dönem ayrı.",
     "work_stage_history": "Aktif açık kitap iş planları ve mevcut aşama; aşamaya giriş tarihçesi kanıtlanmadığı için bekleme gününü uydurmadan gap.",
     "contract_expiry": "Aktif kitap-sözleşme bağlarında start/end aralığındaki sözleşme bitişi; boş bitiş ayrı. Yenileme/revize/fesih ayrı, otomatik satış yasağı yok.",
-    "contract_overlap": "Aynı kitap sözleşmeleri tarih/hak/dil/bölge kesişimi; eksik kapsam/tarih kesin çakışma olmaz.",
+    "contract_overlap": "Aynı kitap sözleşmeleri tarih/hak/dil/bölge/ülke ham kayıt kesişim adayları; eksik kapsam/tarih kesin çakışma olmaz. Ülke ve bölge listelerinin birlikte AND/OR anlamı kanıtlanmadığından kapsam yorumu her zaman açık gap'tir; hukuki çakışma doğruluğu iddiası yok.",
     "contract_author_roles": "Sözleşme tarafı Contact/Account kimliği ve taraf tipi, kitap kişi-yazar bağlarından ayrı; yazar=hak sahibi varsayılmaz.",
+    "contract_revision_evidence": "Aktif kitaplara bağlı aktif sözleşmelerin Ana Sözleşme Id metni ve UUID eşitlik kanıtı: boş/geçersiz/kendi kimliği/başka aktif kayıt/aktif karşılık yok. Başlangıç, bitiş, revize, yenileme, fesih ve doğrulanmış Ek Protokol tarih/bayrakları ayrı. Ana Id metni lookup değildir, soy ağacı veya hukuki öncelik kurulmaz; sözleşme logundaki PDF yolu alan değişiklik tarihçesi sayılmaz. Hukuki öncelik doğrulanmadığı için açık gap içerir.",
     "open_author_actions": "start/end döneminde randevusundan doğmuş hâlâ açık görevler; yazar randevu katılımcı kimliği ve task.new_randevuid üzerinden bağlanır.",
     "appointments_with_actions": "start/end gelecek randevusu olan aktif yazarların önceki randevularından kalan açık görevleri; tekrarlanan iş kimliği çoğalmaz.",
     "publisher_completeness": "Yayıncı kitap sayısı ve ISBN/kişi-yazar bağı/ilk baskı/son yayın/altmarka doluluk yüzdeleri; tarih alanları ayrı.",
@@ -294,8 +295,24 @@ def _customer_reports(s,p,out):
 
 
 def _contract_reports(s,p,out):
+    if p["report"]=="contract_overlap":
+        _gap(out,"Kapsam yorumu doğrulanamadı (scope_interpretation_unverified): sözleşmedeki ülke ve bölge listelerinin birlikte AND/OR anlamı veya ülke-bölge hiyerarşisi kanıtlanmadı. Gösterilenler ham kayıt kesişim adaylarıdır; kesin hak çakışması ya da çakışma yokluğu değildir.")
     books=s.books(); people=s.people(); links=s.author_links()
     contracts=s.keyed(s.rows("new_sozlesmeBase",{"contract_id":"new_sozlesmeId","contract_number":"new_name","start_date":"new_SozlesmeBaslangicTarihi","end_date":"new_SozlesmeBitisTarihi","revised_end_date":"new_revizebitistarihi","renewal_start_date":"new_yenilemebaslangictarihi","renewal_end_date":"new_yenilemebitistarihi","termination_date":"new_fesihtarihi","indefinite_flag":"new_suresizsozlesme"}),"contract_id")
+    revision_fields={}
+    if p["report"]=="contract_revision_evidence":
+        revision_fields=s.keyed(s.rows("new_sozlesmeBase",{"contract_id":"new_sozlesmeId","parent_contract_text":"new_anasozlesmeid","protocol_date":"new_ekprotokoltarihi","protocol_end_date":"new_ekprotokolbitist","is_addendum":"new_EkProtokolyeni","addendum_time_limited":"new_ekprotokolsurelimi"}),"contract_id")
+        for cid,r in revision_fields.items():
+            raw=_text(r["parent_contract_text"]);parent=None
+            if raw is None:status="NOT_RECORDED"
+            else:
+                try:parent=str(UUID(raw))
+                except ValueError:status="INVALID_UUID_TEXT"
+                else:status="SELF_REFERENCE" if parent==cid else "OTHER_ACTIVE_RECORD" if parent in contracts else "ACTIVE_PARENT_NOT_FOUND"
+            r.update(parent_contract_id=parent,parent_reference_status=status,
+                     parent_contract_number=contracts.get(parent,{}).get("contract_number"),
+                     parent_match_basis="UUID metin eşitliği; yayımlı lookup/ebeveyn önceliği değildir")
+        _gap(out,"Sözleşme revizyon kanıtı kayıtlı alanları gösterir; Ana Sözleşme Id lookup olmayan metindir. Öz referans, aktif karşılığı bulunamayan UUID veya ek protokol bayrağı hukuki geçerlilik/öncelik belirlemez. Revize, yenileme, fesih ve protokol tarihlerinin yürürlük önceliği doğrulanmadı; PDF yolları alan değişikliği tarihçesi sayılmadı.")
     bybook=defaultdict(set)
     for r in s.rows("new_new_sozlesme_new_kitapBase",{"contract_id":"new_sozlesmeid","book_id":"new_kitapid"},"1=1"):
         if _key(r["contract_id"]) in contracts and _key(r["book_id"]) in books: bybook[_key(r["book_id"])].add(_key(r["contract_id"]))
@@ -333,7 +350,7 @@ def _contract_reports(s,p,out):
             for cid in sorted(cids):
                 c=contracts[cid]
                 if p["report"]=="contract_expiry" and c["end_date"] and not any(_within(c[f],p) for f in ("end_date","revised_end_date","renewal_end_date","termination_date")): continue
-                rows.append({"record_type":"contract_detail", "book_id":bid,"book_name":b["book_name"], **c, **{n:_json(sorted(scopes[n][cid])) for n in scopes},"parties":_json(parties[cid]),"author_people":_json([{"person_id":pid,"person_name":people[pid]["person_name"]} for pid in sorted(links.get(bid,set()))]),"end_date_status":"Bitiş tarihi mevcut" if c["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"})
+                rows.append({"record_type":"contract_detail", "book_id":bid,"book_name":b["book_name"], **c, **revision_fields.get(cid,{}), **{n:_json(sorted(scopes[n][cid])) for n in scopes},"parties":_json(parties[cid]),"author_people":_json([{"person_id":pid,"person_name":people[pid]["person_name"]} for pid in sorted(links.get(bid,set()))]),"end_date_status":"Bitiş tarihi mevcut" if c["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"})
     out["notes"].append("Sözleşme tarafı ve kitap yazarı ayrı rollerdir. Yenileme/revize/fesih kayıtları gösterilir; hukuki geçerlilik veya satış yasağı çıkarılmaz.")
     relevant_ids={_key(r.get("contract_id")) for r in rows} | {_key(r.get("other_contract_id")) for r in rows}
     if any(c["revised_end_date"] or c["renewal_end_date"] or c["termination_date"] for cid,c in contracts.items() if cid in relevant_ids):

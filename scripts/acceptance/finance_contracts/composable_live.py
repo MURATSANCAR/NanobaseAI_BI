@@ -162,6 +162,11 @@ def cases():
         out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="logo",sections=children,columns=["section","status","row_count"],keys=["section"],periods=[],referenceSql="SELECT 1 ignored"))
     mixed_summary = dict(source="logo",metrics=["net_sales","invoice_count","collections"],dimensions=[],keys=[],columns=["net_sales","invoice_count","collections"],periods=[["2026-09-01","2026-10-01"]],referenceSql=mixed_cases[0][1])
     out.append(dict(id=f"CP{len(out)+1:03d}",question="Eylül 2026 için iki ayrı bölüm hazırla. Genel özette KDV hariç iadeler düşülmüş net satış toplamı, satış faturası sayısı ve nakit, havale, çek, senet, kart dahil müşteri ödeme hareketleri toplamı olsun. İkinci bölümde sadece kanallara göre aynı net satış tutarı bulunsun; tüm kanalları göster.",source="logo",sections=[mixed_summary,leaf(["net_sales"],"channel")],columns=["section","status","row_count"],keys=["section"],periods=[],referenceSql="SELECT 1 ignored"))
+    # Cross-source identity dimensions: independent SQL plus Python aggregation.
+    for dim, cols, question in [
+        ("subbrand", ["subbrand_id","subbrand"], "Eylül 2026 net satış tutarını CRM new_yayinciid ile bağlı güncel alt marka kimliği ve adına göre göster; eşleşmeyenleri boş grupta koru."),
+        ("author_group", ["author_group_ids","author_group_names"], "Eylül 2026 net satış tutarını aktif gerçek Yazar katılımındaki kişi kimlikleri ortak grubuna göre göster. Çok yazarlı kitabı bir grupta bir kez say; kişilere dağıtma, eşleşmeyenleri boş grupta koru.")]:
+        out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="cross_dimensions",crossDimension=dim,metrics=["net_sales"],dimensions=[dim],columns=[*cols,"net_sales"],keys=cols,periods=[["2026-09-01","2026-10-01"]],allowCoverageGap=True,referenceSql="SELECT LTRIM(RTRIM(I.CODE)) book_code,COALESCE(SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.LINENET ELSE S.LINENET END),0) net_sales FROM dbo.LG_411_01_STLINE S LEFT JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=S.STOCKREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY LTRIM(RTRIM(I.CODE))"))
     for case in out:
         if case.get("sections"):
             case["referenceQueries"] = [child["referenceSql"] for child in case["sections"]]
@@ -226,7 +231,37 @@ def calculate(op,left,right,scale=1):
     raise ValueError("Unknown independent operation")
 
 
+def dimension_reference(case, conns):
+    sales = query(conns["logo"], case["referenceSql"])
+    # Published status labels define the existing active-card contract.
+    def active(entity, alias):
+        return f"{alias}.statecode=0 AND {alias}.statuscode IN (SELECT M.AttributeValue FROM dbo.StringMapBase M JOIN MetadataSchema.Entity E ON E.ObjectTypeCode=M.ObjectTypeCode AND E.ComponentState=0 WHERE E.LogicalName='{entity}' AND M.AttributeName='statuscode' AND M.LangId=1055 AND M.Value IN (N'Aktif',N'Etkin'))"
+    cards = query(conns["crm"], "SELECT K.new_kitapId book_id,K.new_stokkodu book_code,M.new_markaId subbrand_id,M.new_name subbrand FROM dbo.new_kitapBase K LEFT JOIN dbo.new_markaBase M ON M.new_markaId=K.new_yayinciid AND " + active("new_marka","M") + " WHERE " + active("new_kitap","K"))
+    people = query(conns["crm"], "SELECT DISTINCT L.new_Kitap book_id,C.ContactId person_id,C.FullName person_name FROM dbo.new_eserkatilimBase L JOIN dbo.ContactBase C ON C.ContactId=L.new_Katilimsaglayan AND " + active("contact","C") + " JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=L.new_katilimciTipi AND R.statecode=0 AND LTRIM(RTRIM(R.new_name))=N'Yazar' WHERE L.statecode=0") if case["crossDimension"]=="author_group" else []
+    broken = query(conns["crm"], "SELECT DISTINCT L.new_Kitap book_id FROM dbo.new_eserkatilimBase L JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=L.new_katilimciTipi AND R.statecode=0 AND LTRIM(RTRIM(R.new_name))=N'Yazar' LEFT JOIN dbo.ContactBase C ON C.ContactId=L.new_Katilimsaglayan AND " + active("contact","C") + " WHERE L.statecode=0 AND C.ContactId IS NULL") if case["crossDimension"]=="author_group" else []
+    incomplete={str(r["book_id"]).lower() for r in broken if r["book_id"]}
+    links={}
+    for r in people: links.setdefault(str(r["book_id"]).lower(),{})[str(r["person_id"]).lower()]=r["person_name"]
+    bycode={}
+    for r in cards: bycode.setdefault(str(r["book_code"] or "").strip().casefold(),[]).append(r)
+    totals={}
+    for row in sales:
+        candidates=bycode.get(str(row["book_code"] or "").strip().casefold(),[])
+        key=(None,None)
+        if len(candidates)==1:
+            card=candidates[0]
+            if case["crossDimension"]=="subbrand":key=(str(card["subbrand_id"]).lower() if card["subbrand_id"] and card["subbrand"] else None,card["subbrand"])
+            else:
+                authors=links.get(str(card["book_id"]).lower(),{}) if str(card["book_id"]).lower() not in incomplete else {}
+                ids=sorted(authors)
+                if ids:key=(json.dumps(ids,ensure_ascii=False),json.dumps([authors[i] for i in ids],ensure_ascii=False))
+        totals[key]=totals.get(key,Decimal(0))+Decimal(str(row["net_sales"]))
+    return [dict(zip(case["keys"],key),net_sales=value) for key,value in totals.items()]
+
+
 def reference(case,conn):
+    if case.get("crossDimension"):
+        return dimension_reference(case,conn)
     if case.get("sections"):
         return {"sections": [reference(child,conn) for child in case["sections"]]}
     if not case.get("comparison"):
@@ -313,7 +348,9 @@ def data_dependent_error(message):
 
 def compare(case,answer,whole,expected):
     errors=[]
-    if answer.get("type")!="TEXT_TO_SQL":return ["Expected full answer, received "+str(answer.get("type"))+": "+str(answer.get("explanation",""))[:350]]
+    if answer.get("type") not in ({"TEXT_TO_SQL","PARTIAL_ANSWER"} if case.get("allowCoverageGap") else {"TEXT_TO_SQL"}):return ["Expected full answer, received "+str(answer.get("type"))+": "+str(answer.get("explanation",""))[:350]]
+    if answer.get("type")=="PARTIAL_ANSWER" and not answer.get("dataNotes"):
+        errors.append("Partial answer must disclose source coverage gaps")
     rid=answer.get("resultId")
     if not rid or whole.get("id")!=rid:errors.append("Stored full result identity differs from same execution")
     actual=whole.get("records")
@@ -326,8 +363,13 @@ def compare(case,answer,whole,expected):
     plan=answer.get("semantic",{}).get("plan",{})
     if case.get("sections"):
         return errors + compare_sections(case, answer, whole, expected)
-    if case["source"]=="logo" and plan.get("periods")!=case["periods"]:
+    if case["source"] in {"logo","cross_dimensions"} and plan.get("periods")!=case["periods"]:
         errors.append("Resolved time coverage differs from independently fixed periods")
+    if case.get("crossDimension"):
+        if plan.get("dimensions")!=case["dimensions"] or plan.get("metrics")!=case["metrics"]:
+            errors.append("Identity dimension or metric differs from independent specification")
+        if plan.get("gaps") or plan.get("filters") or plan.get("limit") or plan.get("sections"):
+            errors.append("Cross dimension request was narrowed or partially omitted by planner")
     alias=None
     spec=case.get("derived")
     if spec:
@@ -456,7 +498,11 @@ def main():
         def call(path,body=None):
             req=urllib.request.Request(args.base+path,data=json.dumps(body).encode() if body is not None else None,headers=headers)
             with urllib.request.urlopen(req,timeout=180) as response:return json.load(response)
-        for source in {c["source"] for c in selected}:conns[source]=connect(f"/data/nanobaseai/bi/secrets/{source}-mssql-connection.json")
+        sources={c["source"] for c in selected}
+        cross_dimensions="cross_dimensions" in sources
+        if cross_dimensions:sources=(sources-{"cross_dimensions"})|{"logo","crm"}
+        for source in sources:conns[source]=connect(f"/data/nanobaseai/bi/secrets/{source}-mssql-connection.json")
+        if cross_dimensions:conns["cross_dimensions"]={"logo":conns["logo"],"crm":conns["crm"]}
         for case in selected:
             item={**case,"started":time.time()};stop=False
             retry_offset=len(REFERENCE_RETRIES)
@@ -474,7 +520,7 @@ def main():
                 if answer.get("semantic",{}).get("engine")!="finance_contract_v1":errors.append("Wrong engine/source routing")
                 expected_hash=hashlib.sha256(json.dumps({k.rsplit('/',1)[-1]:v for k,v in before.items() if '/finance_query/' in k},sort_keys=True).encode()).hexdigest()
                 if answer.get("semantic",{}).get("engineCodeHash")!=expected_hash:errors.append("Loaded engine hash differs from deployed files")
-                item["errors"]=errors;item["status"]="FAIL" if errors else "PASS"
+                item["errors"]=errors;item["status"]="FAIL" if errors else "PARTIAL_REFERENCE_MATCH" if answer.get("type")=="PARTIAL_ANSWER" else "PASS"
                 # If live source changed between reference and API, do not claim a mismatch or pass.
                 REFERENCE_CONTEXT["phase"]="after_api"
                 after_ref=reference(case,conns[case["source"]]);item["referenceAfter"]=after_ref
@@ -499,7 +545,7 @@ def main():
     except BaseException as exc:
         counts["UNVERIFIED"]+=1;results.append(dict(id="ENVIRONMENT",status="UNVERIFIED",error=type(exc).__name__+": "+str(exc)[:500]))
     finally:
-        for conn in conns.values():
+        for conn in (value for value in conns.values() if not isinstance(value,dict)):
             try:conn.close()
             except Exception:pass
         if session is not None:

@@ -79,9 +79,31 @@ sessizce düşürülmez.
 Bu sınırlar `gaps` ile taşınır. Böyle raporlar kısmi cevap olabilir; tam iş doğruluğu
 veya sayısal kabul başarısı olarak sayılmamalıdır.
 
+Sonraki kontrollü tarihçe incelemesi, şirket/kitap/sözleşme denetiminin açık olduğunu
+ve aktif kaynak kayıtlarına bağlı gerçek audit olaylarının bulunduğunu gösterdi.
+Bir kitap yayıncı alanı güncellemesi de mevcut. Ancak SDK eski/yeni değer
+çözümlemesi henüz doğrulanmadı; rapora yeni bir tarihsel hesap eklenmedi.
+Sözleşme log metinlerinin büyük bölümü PDF yolu olduğundan bu tablo alan değişikliği
+geçmişi kabul edilmedi. Ek kanıtlar test sunucusunda
+`/tmp/codex-crm-history-20260930/discovery.json` ve `discovery2.json` dosyalarındadır.
+
+`contract_overlap` raporu, hiç aday çıkmasa bile `scope_interpretation_unverified`
+açıklamasını taşıyan `UNVERIFIED_DEFINITION` boşluğu üretir. Bunun bağımsız kabulü
+yalnız `BOUNDARY_PASS` olabilir; ülke/bölge anlamı kanıtlanmadan koşulsuz bir
+"çakışma yok" veya kesin çakışma cevabı verilemez.
+
+`contract_revision_evidence` yalnız kayıtlı revizyon kanıtını gösterir:
+`new_anasozlesmeid` **nvarchar(100)** metindir; yayımlanmış lookup değildir.
+UUID eşitliği boş, geçersiz metin, öz referans, başka aktif kayıt ve aktif karşılığı
+bulunamayan değer olarak ayrılır. `new_EkProtokolyeni`, `new_ekprotokolsurelimi`,
+`new_ekprotokoltarihi`, `new_ekprotokolbitist` alanları ayrı sunulur. Etiketi
+"Ek Protokol (hatalı)" olan `new_ekprotokol` kullanılmaz. Eski/yeni audit decoder,
+otomatik sözleşme soy ağacı veya tarihlerin hukuki öncelik hesabı eklenmemiştir.
+Bu rapor da açık tanım boşluğu taşır ve en fazla `BOUNDARY_PASS` alabilir.
+
 ## Kabul koşucusu
 
-`scripts/acceptance/finance_contracts/crm_reports_live.py` 30 rapor ailesini gerçek
+`scripts/acceptance/finance_contracts/crm_reports_live.py` 31 rapor ailesini gerçek
 uygulama `/api/v1/ask` akışıyla ve aynı `resultId` üzerinden saklanan tam sonuçla
 karşılaştırmak üzere hazırlanmıştır. Ürün modülünü import etmez; üretilmiş SQL'i
 referans diye yeniden çalıştırmaz. Bağımsız sabit SQL'ler gerçek CRM'den kayıtları

@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Kapsam dondurma ve bağımsız kabul hazırlığı
+
+- CRM tarihçe gerçek kayıtlarla ayrıca incelendi: ana sözleşme kimliği metindir; kendine/başka aktif sözleşmeye/aktif karşılığı bulunamayan kimliğe eşitlik ayrı. Yenileme389, fesih843, ek protokol tarihi24 aktif sözleşmede bulundu.31.rapor bu alanları ayrı gösterir; hukuki öncelik ve tipli eski/yeni audit çözümü doğrulanmış sayılmaz.
+- Ortak motora güncel alt marka ve kişi UUID kümesinden ortak yazar grubu eklendi. Künye metni ayrı; çoğul stok eşleşmesi/eksik kişi bağı boş grupta ve açık kaynak notuyla tutulur, satış fan-out yapmaz.
+- Çapraz kaynakta yalnız iade olan kayıt satışsız grubundan düşmez; seçilen müşteri kodunun tutarı aynı vergili bütün kartların toplamı diye gösterilmez. Çoklu CRM kitap eşleşmesi çok yazarlı tek kitap sayılmaz.
+- Uzak kabul hazırlığı:43 ortak motor,31 CRM,10 Logo,3 belge/çapraz kaynak; ayrıca tam100 günlük dil sorusu, gerçek bölüm/CSV mobil akışı. Kısmi referans eşleşmesi ve sınır doğrulaması tam cevap PASS sayılmaz. Yerel test yok. Ana sürüm yayınlandıktan sonra gerçek API/bağımsız DB koşulacak.
+- Metadata/audit kanıtları kalıcı `/data/nanobaseai/bi/acceptance/finance-expanded-20260930/schema/` altında; katalog emekliliği kanıtı ayrı `/data/nanobaseai/bi/acceptance/legacy-catalog-retirement-20260930/` altında korundu.
+
 ## 2026-09-30 — Kitap okut: Kitaba sor'un üstünden toplu yükleme, okuma kuyruğu, kendini onarma
 
 - **İstek:** okutulacak kitabı portaldan yüklemek (önce yalnız GPU'da `editorctl analyze`); toplu yükleme, kuyruk, «asla hata vermesin», durumlar ekranda.

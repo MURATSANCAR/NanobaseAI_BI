@@ -113,7 +113,7 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
     if llm is None:
         raise ContractError("Soru planlayıcısına şu anda ulaşılamıyor.", code="SOURCE_UNAVAILABLE")
     schema = {"metrics": ["contract metric ID"], "dimensions": [], "sale_kind": "all|wholesale|retail",
-              "filters": [{"dimension": "book|channel|customer|author|publisher", "op": "eq|contains", "value": "sorudaki değer"}],
+              "filters": [{"dimension": "book|channel|customer|author|publisher|subbrand", "op": "eq|contains", "value": "sorudaki değer"}],
               "limit": None, "order_by": None, "descending": True, "derived": [], "having": [], "comparison": None, "crm": None, "logo_report": None, "crm_report": None, "analytics": [],
               "sections": [], "gaps": [], "coverage": [], "uncovered": [], "clarification": ""}
     from .crm_query import CRM_CAPABILITIES
@@ -253,7 +253,7 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
         raise ContractError("Bu kaynak ölçülerinin ortak kayıt düzeyi henüz tanımlı değil.")
     family = "sales" if "sales" in families else sorted(families)[0]
     q = fold(question)
-    if re.search(r"\bcrm\w*", q) and not family.startswith("crm_") and not (set(dims) | {f.get("dimension") for f in data.get("filters", []) if isinstance(f, dict)}) & {"author", "publisher"}:
+    if re.search(r"\bcrm\w*", q) and not family.startswith("crm_") and not (set(dims) | {f.get("dimension") for f in data.get("filters", []) if isinstance(f, dict)}) & {"author", "publisher", "subbrand", "author_group"}:
         raise ContractError("Soru CRM kaynağını istiyor; seçilen finans ölçüsü Logo'da. Kaynak kapsamını netleştirin.")
     if re.search(r"\bfatura\w*\s+(say\w*|adet\w*)", q) and "invoice_count" not in metrics:
         raise ContractError("Fatura sayımı belge anahtarıyla yapılmalıdır; plan bu koşulu sağlamıyor.")
@@ -263,7 +263,7 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
         raise ContractError("Hangi dönemi hesaplayayım? Tarih aralığını belirtin.", code="NEEDS_CLARIFICATION")
     if family.startswith("crm_") and (periods or dims):
         raise ContractError("CRM kayıt sayımı güncel aktif kayıtları kapsar; tarihli veya kırılımlı sayım ayrıca tanımlanmalıdır.")
-    if families & {"invoice", "collection"} and set(dims) & {"book", "author", "publisher"}:
+    if families & {"invoice", "collection"} and set(dims) & {"book", "author", "publisher", "subbrand", "author_group"}:
         raise ContractError("Belge/ödeme toplamı kitaplara dağıtılamaz; kitap için satış satırı ölçüsü seçin.")
     kind = data.get("sale_kind", "all")
     if kind not in ("all", "wholesale", "retail"):
@@ -279,12 +279,12 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
         if not isinstance(f, dict) or set(f) != {"dimension", "op", "value"}:
             raise ContractError("Süzgeç biçimi doğrulanamadı.", code="PLAN_INVALID")
         dim, op, val = f["dimension"], f["op"], f["value"]
-        if dim not in ("book", "channel", "customer", "author", "publisher") or op not in ("eq", "contains") or not isinstance(val, str) or not 1 <= len(val) <= 200:
+        if dim not in ("book", "channel", "customer", "author", "publisher", "subbrand") or op not in ("eq", "contains") or not isinstance(val, str) or not 1 <= len(val) <= 200:
             raise ContractError("Süzgeç sözleşme dışında.")
         inherited = previous and follows(question) and [dim, op, val] in [list(f) for f in previous.get("plan", {}).get("filters", [])]
         if fold(val) not in source_q and not inherited:
             raise ContractError("Süzgeç değeri soruda bulunamadı; modelin eklediği değerle hesap yapılmaz.")
-        if family.startswith("crm_") or (families != {"sales"} and dim in ("book", "author", "publisher")):
+        if family.startswith("crm_") or (families != {"sales"} and dim in ("book", "author", "publisher", "subbrand", "author_group")):
             raise ContractError("Bu süzgeç ölçünün kayıt düzeyine uygulanamaz.")
         filters.append((dim, op, val))
     limit = data.get("limit")
@@ -343,7 +343,7 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
 def validate_operations(data, metrics, dims, periods, analytic_ids=()):
     """Validate composable math without permitting model supplied expressions."""
     known = set(metrics) | set(analytic_ids)
-    reserved = set(DIMENSIONS) | {"book_code", "book_name", "customer_code", "customer_name",
+    reserved = set(DIMENSIONS) | {"subbrand_id", "author_group_ids", "author_group_names","book_code", "book_name", "customer_code", "customer_name",
         "period_start", "period_end_exclusive", "base_value", "target_value",
         "base_period_start", "base_period_end_exclusive", "target_period_start", "target_period_end_exclusive"}
     if len(data.get("derived") or []) > 8 or len(data.get("having") or []) > 8:
@@ -453,7 +453,7 @@ def validate_analytics(raw, metrics, dims, periods, question):
         raise ContractError("Pay/kümülatif/ilk N kalan hesabı tek dönem üzerinde yapılır; dönemleri ayrı bölümlere ayırın.")
     fields = []
     for d in dims:
-        fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else [d])
+        fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else ["subbrand_id", "subbrand"] if d == "subbrand" else ["author_group_ids", "author_group_names"] if d == "author_group" else [d])
     result, identifiers = [], set(metrics) | set(fields)
     seen_contribution = False
     for op in raw:
