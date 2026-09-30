@@ -99,12 +99,16 @@ def _question_plan_schema(question):
     return schema, spans
 
 
+class PlanGenerationExhausted(ContractError):
+    """No complete JSON plan exists; semantic replanning cannot repair it."""
+
+
 def _object(llm, messages, max_tokens, schema, name, trace=None):
     """One bounded format retry; an incomplete plan never reaches the executor."""
     request_messages = list(messages)
     thinking_requested = name == "finance_plan"
     for attempt in range(2):
-        budget = 8192 if thinking_requested else min(max_tokens * (attempt + 1), 14400)
+        budget = 8192 if name == "finance_plan" else min(max_tokens * (attempt + 1), 14400)
         # Some model chat templates allow system instructions only once, first.
         # Both structural and JSON-format repairs add trusted system guidance;
         # merge those without promoting any user content to system authority.
@@ -138,6 +142,11 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
             trace.append(event)
         if choice.get("finish_reason") == "length":
             error = ContractError("Soru planının model yanıtı kesildi; eksik planla hesap yapılmadı.", code="PLAN_INVALID")
+            if thinking_requested and attempt == 0:
+                # The provider completed this request. Retry JSON generation without
+                # reasoning; never do this after a transport timeout or exception.
+                thinking_requested = False
+                event["nextAttemptThinkingRequested"] = False
         else:
             try:
                 return _json(content)
@@ -153,7 +162,7 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
                 "Önceki deneme geçerli ve tamamlanmış JSON üretemedi. Aynı soruyu ve aynı sözleşmeyi "
                 "yeniden değerlendir. Yalnız şemaya uyan tek JSON nesnesi üret; düşünce metni veya Markdown yazma. "
                 "Sorunun koşullarını atlama; eksikleri ve belirsizlikleri yalnız verilen şemanın izin verdiği alanlarla bildir."}]
-    raise error
+    raise PlanGenerationExhausted(str(error), code="PLAN_INVALID") from error
 
 
 def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _source_question=None):
@@ -164,7 +173,7 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
     try:
         return _build(question, llm, previous, trace, _data=_data, _depth=_depth, _source_question=_source_question)
     except ContractError as exc:
-        if exc.code != "PLAN_INVALID" or _depth or _data is not None or llm is None:
+        if isinstance(exc, PlanGenerationExhausted) or exc.code != "PLAN_INVALID" or _depth or _data is not None or llm is None:
             raise
         reason = str(exc)
         rejected_plan = next((event["output"] for event in reversed(trace) if event.get("stage") == "plan" and event.get("depth") == 0 and isinstance(event.get("output"), dict)), None)

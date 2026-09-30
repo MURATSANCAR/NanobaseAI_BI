@@ -364,6 +364,7 @@ def expected_contracts(o,c):
  LEFT JOIN dbo.ContactBase C ON C.ContactId=E.new_Katilimsaglayan AND C.statecode=0 AND C.statuscode=1
  WHERE E.statecode=0 AND (R.new_katilimcitipiId IS NULL OR NULLIF(LTRIM(RTRIM(R.new_name)),'') IS NULL OR
  (LOWER(LTRIM(RTRIM(R.new_name)))='yazar' AND C.ContactId IS NULL))""")}
+    if c["report"] in {"contract_author_differences", "contract_author_roles", "contract_expiry", "contract_revision_evidence"}:
         incomplete_parties={identity(r["contract_id"]) for r in o.get("party_identity_gaps", """SELECT DISTINCT P.new_sozlesmeid contract_id
  FROM dbo.new_sozlesmetarafiBase P
  LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND C.statecode=0 AND C.statuscode=1
@@ -407,6 +408,8 @@ def expected_contracts(o,c):
                         data.update(role_comparison="CONTACT_ID_SETS_DIFFER" if mismatch else "CONTACT_ID_SETS_EQUAL",author_only_ids=pack(sorted(authors-counterpart)),party_only_ids=pack(sorted(counterpart-authors)))
                 rows.append(dict(record_type="contract_detail",book_id=bid,book_name=books[bid]["book_name"],**data,**{n:pack(sorted(scopes[n][cid])) for n in scopes},parties=pack(parties[cid]),author_people=pack([dict(person_id=i,person_name=people[i]["person_name"]) for i in sorted(authorlinks[bid])]),end_date_status="Bitiş tarihi mevcut" if d["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"))
     relevant={identity(r.get("contract_id")) for r in rows}|{identity(r.get("other_contract_id")) for r in rows}
+    if c["report"] in {"contract_author_roles", "contract_expiry", "contract_revision_evidence"} and relevant.intersection(incomplete_parties):
+        bounds.append("incomplete_active_party_identity")
     if any(d["revised_end_date"] or d["renewal_end_date"] or d["termination_date"] for cid,d in contracts.items() if cid in relevant):bounds.append("unverified_contract_date_precedence")
     return rows,sorted(set(bounds))
 
@@ -505,6 +508,11 @@ def compare(c,answer,whole,ref,expected_hash):
     if answer.get("type")!=expected_type:errors.append("Expected "+expected_type+", received "+str(answer.get("type")))
     gaps=whole.get("gaps") or answer.get("gaps") or state.get("gaps") or []
     if ref["boundaries"] and not gaps:errors.append("Required explicit gap flags missing")
+    if "incomplete_active_party_identity" in ref["boundaries"]:
+        if not any(g.get("status")=="INCOMPLETE_SOURCE_COVERAGE" for g in gaps):
+            errors.append("Unresolved active party identities require an explicit source coverage gap")
+        if whole.get("sourceComplete") is not False or answer.get("sourceComplete") is not False:
+            errors.append("Unresolved active party identities incorrectly marked source complete")
     if not answer.get("resultId") or whole.get("id")!=answer["resultId"]:errors.append("Stored execution identity mismatch")
     overview=whole.get("records");rows=dataset.get("records")
     if not isinstance(rows,list) or not isinstance(overview,list):return errors+["Full stored records missing"]

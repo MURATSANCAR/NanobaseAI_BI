@@ -571,6 +571,8 @@ def _contract_reports(s,p,out):
                 rows.append({"record_type":"contract_detail", **comparison, "book_id":bid,"book_name":b["book_name"], **c, **revision_fields.get(cid,{}), **{n:_json(sorted(scopes[n][cid])) for n in scopes},"parties":_json(parties[cid]),"author_people":_json([{"person_id":pid,"person_name":people[pid]["person_name"]} for pid in sorted(links.get(bid,set()))]),"end_date_status":"Bitiş tarihi mevcut" if c["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"})
     out["notes"].append("Sözleşme tarafı ve kitap yazarı ayrı rollerdir. Yenileme/revize/fesih kayıtları gösterilir; hukuki geçerlilik veya satış yasağı çıkarılmaz.")
     relevant_ids={_key(r.get("contract_id")) for r in rows} | {_key(r.get("other_contract_id")) for r in rows}
+    if p["report"] in {"contract_author_roles", "contract_expiry", "contract_revision_evidence"} and relevant_ids & incomplete_parties:
+        _gap(out,"Çıktıdaki bazı sözleşmelerin aktif taraf kayıtlarında kişi/kurum bağı aktif kaynak kümesinde çözülemedi; gösterilen taraf listelerinin tamlığı doğrulanamadı. Pasif kişi veya kurum bilgisi kullanılmadı.", status="INCOMPLETE_SOURCE_COVERAGE")
     if any(c["revised_end_date"] or c["renewal_end_date"] or c["termination_date"] for cid,c in contracts.items() if cid in relevant_ids):
         _gap(out,"Revize, yenileme veya fesih tarihinin ana sözleşme süresine önceliği kanıtlanmadı; bu rapor kayıtlı ana tarihleri gösterir, kesin yürürlük kararı vermez.")
 

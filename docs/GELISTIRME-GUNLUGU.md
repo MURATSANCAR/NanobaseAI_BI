@@ -1,5 +1,18 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — CRM sözleşme tarafı kapsamındaki sessiz eksiklik
+
+- Paralel statik incelemede aktif taraf kaydının kişi/kurum bağı aktif kaynak kümesinde çözülemediğinde taraf listesinden düştüğü, fakat roles/expiry raporlarında bu eksikliğin her zaman açıklanmadığı bulundu. Roles/expiry/revision raporlarında yalnız çıktıya giren sözleşmeler için INCOMPLETE_SOURCE_COVERAGE eklenir. Pasif kayıt bilgisi getirilmez; kapsam dışı sözleşmeler sonucu kısmi yapmaz.
+- Bağımsız CRM kabul koşucusunun mevcut LEFT JOIN anti-join denetimi bu üç rapora genişletildi. Özel kapsam gap'i ve hem API hem saklanan sonuçta sourceComplete=false zorunlu; başka tarihçe gap'inin bu hatayı gizlemesine izin verilmez. Referans kayıt ve değer hesapları değişmedi.
+- Planın açık gaps bilgisi Executor başlangıcında coverage_complete=false yapar; yalnız plan kaynaklı boşluğu olan bölümün PARTIAL ve sourceComplete=true çelişkisi engellenir.
+- 3.081 nesne/90.399 kolon metadata envanteridir. 31 tablo/161 alan doğrudan rapor kapsamıdır; 400 özel nesne adayı incelenmemiş 3.050 nesnenin altkümesidir. Hiçbiri sayısal kabul veya bütün CRM tablosu iş anlamı doğrulaması değildir. Değişikliklerin gerçek API kabulü bekler.
+
+## 2026-10-01 — Tamamlanamayan model planında gereksiz yeniden denemeler
+
+- ee93925d8 gerçek API hibrit pilotu: CP020 PASS 30,04 saniye; CR023 FAIL 199,58 saniye. CR023 dört kez 8.192 token sınırına ulaştı, hiçbir tam JSON üretmedi; eksik plan yürütülmedi. Her koşunun bir kısa ömürlü oturumu silindi; kaynak yazma yok.
+- İlk plan çağrısı tamamlanıp `length` dönerse mevcut ikinci biçim denemesi aynı kapalı şemayla reasoning kapalı çalışır. Token sınırı artırılmaz. Üretim denemeleri tükenince iç `PlanGenerationExhausted` hatası anlamsal yeniden planlama başlatmaz; dış PLAN_INVALID korunur. Tam planın semantik reddi tek yeniden planlama hakkını korur.
+- Taşıma/zaman aşımı hatası sonrası ek çağrı açılmaz. Şema, anlam doğrulaması ve eksik planı yürütmeme kapıları korunur. Yeni kod gerçek API tekrar kabulü bekler; yerel ürün testi yapılmadı.
+
 ## 2026-10-01 — Reasoning pilotunun gecikmesi ve yalnız planlamaya daraltma
 
 -30ba7a447 CP020 yeni1Ekimreferansıyla PASS96.46s:ilkplannet_sales+sold_quantity doğru;28.1s plan,23.7s4096tokenkesilen denetim,41.6s8192tokenyeniden denetim. GerçekreasoningChars>0; ham düşünce kaydedilmedi. Farklıreferansgününü öncekiaynısayısalveri AB saymıyoruz.

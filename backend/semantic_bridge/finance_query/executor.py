@@ -202,6 +202,8 @@ class Executor:
 
     def execute(self, plan):
         self.gaps.extend(getattr(plan, "gaps", ()))
+        if self.gaps:
+            self.coverage_complete = False
         if getattr(plan, "sections", ()):
             overview = []
             for index, leaf in enumerate(plan.sections):
