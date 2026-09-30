@@ -106,13 +106,14 @@ def test_a_word_read_as_a_value_is_not_taken_out(store, profiles, monkeypatch):
     assert "yazar" not in _omitted(sq), sq.omitted
 
 
-def test_a_word_whose_reading_the_source_rule_handed_over_is_not_taken_out(store, profiles, monkeypatch):
-    """«yazar» CRM'de bir DIMENSION_VALUE'ya çözüldü; kaynak kuralı onu ölçünün tarafında modele bıraktı. Kelimenin
-    bir okuması var — baş kelime kuralı onu cevaptan çıkarmaz, eski yol aynen kalır."""
+def test_a_column_word_the_source_rule_handed_over_is_still_taken_out(store, profiles, monkeypatch):
+    """«yazar» CRM'de bir DIMENSION_VALUE'ya (etiket) çözüldü ve kaynak kuralı onu modele bıraktı — ama kelime kolon
+    listesinde duruyor, orada süzgeç değil. Test sunucusunda (2026-09-30) model bu durumda müşteri adını yazar diye
+    yazdı: kelime yine cevaptan çıkar ve söylenir."""
     monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
     sq = _world(store, profiles, crm_value=True).resolve(QUESTION, today=TODAY)
-    assert "yazar" not in _omitted(sq), sq.omitted
-    assert "yazar" in [fold(w) for w in sq.unresolved], (sq.unresolved, sq.explanation)
+    assert "yazar" in _omitted(sq), (sq.omitted, sq.unresolved, sq.explanation)
+    assert "yazar" not in [fold(w) for w in sq.unresolved], (sq.unresolved, sq.explanation)
 
 
 def test_a_head_also_certified_on_the_measures_side_is_left_to_the_model(store, profiles, monkeypatch):

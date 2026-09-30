@@ -2913,11 +2913,14 @@ class SemanticResolver:
         Derived from the other side's certified vocabulary (terms and synonyms, their last word), never from a list.
         Not applied when plans are on (A044 as before), when the word is also the head of a concept certified on the
         measure's side (the model may read it there), when the catalog gave the word a reading that the source
-        rule handed over (`handed`), or to a generic noun ("tarih", "ad") that ends phrases on every server."""
+        rule handed over as a filter (a word among the columns is taken all the same), or to a generic noun ("tarih", "ad") that ends phrases on every server."""
         if federated.plans_enabled():
             return
+        # A word the source rule handed over (a CRM label such as ContactBase.Description = 'Yazar ') is still taken
+        # when it stands among the columns: there it was never a filter, and the model placed it on the measure's
+        # database (the customer's name as the author, ZEKI-54 acceptance 2026-09-30). As a filter it stays handed.
         words = [w for w in dict.fromkeys(list(sq.requested_breakdowns) + list(sq.column_terms))
-                 if w in sq.unresolved and " " not in str(w) and fold(str(w)) not in handed]
+                 if w in sq.unresolved and " " not in str(w)]
         if not words:
             return
         metrics = [s for s in sq.slots if s.semantic_type == SemanticType.METRIC and s.mapping is not None
@@ -2943,15 +2946,18 @@ class SemanticResolver:
             senses = heads.get(st) or []
             if not senses or any(src == home for _, src in senses):
                 continue                                   # nothing to name, or readable on the measure's side
-            theirs: dict[str, list[str]] = {}
+            theirs: dict[str, list[tuple[Any, str]]] = {}
             for c, src in senses:
                 if c.semantic_type in (SemanticType.METRIC, SemanticType.DEFAULT_FILTER):
                     continue                               # a figure or a row scope is not a column to show
-                theirs.setdefault(src, []).append(c.term)
+                theirs.setdefault(src, []).append((c, c.term))
             if not theirs:
                 continue
-            src, names = max(theirs.items(), key=lambda kv: len(set(kv[1])))
-            names = list(dict.fromkeys(names))
+            src, found = max(theirs.items(), key=lambda kv: len({t for _, t in kv[1]}))
+            # The sentence names the column the person most likely meant, not every label ending in the word
+            # ("etkin yazarlar", "imza günü yazarı" are values): the column concepts, the shortest term first.
+            cols = sorted({t for c, t in found if c.semantic_type == SemanticType.COLUMN}, key=lambda t: (len(t.split()), t))
+            names = cols[:1] or sorted({t for _, t in found}, key=lambda t: (len(t.split()), t))[:1]
             for bucket in (sq.unresolved, sq.requested_breakdowns, sq.column_terms):
                 bucket[:] = [w for w in bucket if w != tok]
             sq.breakdown_paths = [p for p in sq.breakdown_paths if p.get("word") != tok]
