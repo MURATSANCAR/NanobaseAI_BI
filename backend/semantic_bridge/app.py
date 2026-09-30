@@ -2276,7 +2276,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                                  "version": SEMANTIC_LAYER_VERSION, "profiles": None,
                                  "llm": bool(r.llm) if r is not None else None, "db": bool(r.connector) if r is not None else None,
                                  "pid": os.getpid(), "boot": view, "responseCache": app.state.response_cache.view()})
-        return JSONResponse({"status": "ok", "ready": True, "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats(), "boot": view, "responseCache": app.state.response_cache.view()})
+        return JSONResponse({"status": "ok", "ready": True, "queryEngine": "finance_contract_v1", "legacyCatalogRetired": True, "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats(), "boot": view, "responseCache": app.state.response_cache.view()})
 
     @app.get("/api/v1/engine")
     def engine_status() -> dict[str, Any]:

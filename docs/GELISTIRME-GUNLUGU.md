@@ -9,6 +9,8 @@
 - **VM ağacı (`/tmp/bi-vm-zeki54`, test sunucusu):** VM'deki `eb406f48b` + ZEKI-54 (2) + ZEKI-26 (2) commit; main'deki başka oturumun finans motoru (5 commit) bilerek alınmadı. `._*` 0, çakışma 0, köprü yükleniyor. VM kurulumu ve VM kataloğu (bağ + kavram, çıplak «yazar» yok) izin denetiminde — kullanıcı çalıştıracak.
 ## 2026-09-30 — Eski katalog kaldırma: kod ve yedekli silme hazırlığı
 
+- Sağlık ucu yeni motoru ve legacyCatalogRetired durumunu açıklar; mevcut watchdog boş eski kataloğu tek başına arıza saymaz. Gerçek cevap kontrolü korunur.
+
 - Kullanıcı eski kataloğun silinmesini istedi. 100 karmaşık sorunun gerçek API koşusunda eski akışın CRM randevusunu Logo çek çıkışı diye sorguladığı görüldü; tam cevap kabulü0/100.
 - Runtime.ask eski katalog/LLM SQL fallback kodu kaldırıldı. Yeni motorda FINANCE_QUERY_MODE ve kelime kapısı geri dönüş yolu kaldırıldı; portalın bağımsız kapalı planı korunuyor. Eski kural, SQL örneği ve dil havuzu yüklemesi kapatıldı.
 - Silme betiği sekiz sl_* katalog tablosunu tutarlı PG snapshot ve zstd sıkıştırma ile yedekler, pg_restore tam okumasını ve SHA256 doğrular, sadece mevcut tenant/datasource kapsamını siler; eski üreticilerin tekrar yazmasını PG trigger engeller. Kaynak Logo/CRM, raw schema, annotation, query/audit geçmişi korunur.

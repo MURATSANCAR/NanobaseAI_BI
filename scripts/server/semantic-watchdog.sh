@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Watchdog for the Semantic Bridge: proves the service can still answer, not just that the port is open.
-# A bridge that is up but serving an empty catalog, or that lost its database connection, is production
-# down — the check therefore looks at the catalog and at a real question, and restarts once before alerting.
+# Checks raw schema readiness and a real answer; retired term catalogs are intentionally empty.
 set -uo pipefail
 PORT="${SEMANTIC_BRIDGE_PORT:-8795}"
 UNIT="${SEMANTIC_UNIT:-nanobase-semantic-bridge.service}"
@@ -51,7 +50,10 @@ fi
 certified="$(printf '%s' "$health" | python3 -c 'import json,sys; print((json.load(sys.stdin).get("catalog") or {}).get("CERTIFIED", 0))' 2>/dev/null || echo 0)"
 profiles="$(printf '%s' "$health" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("profiles", 0))' 2>/dev/null || echo 0)"
 [[ "${profiles:-0}" -gt 0 ]] || fail "no schema profiles — the pipeline has never completed"
-[[ "${certified:-0}" -gt 0 ]] || fail "catalog holds no certified concept — answers would fall back to the model for everything"
+retired="$(printf '%s' "$health" | python3 -c 'import json,sys; print(int(json.load(sys.stdin).get("legacyCatalogRetired", False)))' 2>/dev/null || echo 0)"
+if [[ "$retired" != "1" ]]; then
+  [[ "${certified:-0}" -gt 0 ]] || fail "catalog holds no certified concept"
+fi
 
 # One real question end to end. Deterministic answers cost nothing; this is the actual product promise.
 ask="$(curl -fsS -m 60 -H 'Content-Type: application/json' \
@@ -63,7 +65,7 @@ ask="$(curl -fsS -m 60 -H 'Content-Type: application/json' \
 if printf '%s' "$ask" | grep -q '"type": *"DATA_SOURCE_UNAVAILABLE"'; then
   fail "the data source is unreachable — the bridge is healthy, the database it reads is not"
 fi
-printf '%s' "$ask" | grep -q '"type": *"TEXT_TO_SQL"' || fail "the bridge could not answer a catalog question: $(printf '%s' "$ask" | head -c 200)"
+printf '%s' "$ask" | grep -q '"type": *"TEXT_TO_SQL"' || fail "the bridge could not answer a data question: $(printf '%s' "$ask" | head -c 200)"
 
 log "healthy: ${profiles} profiles, ${certified} certified concepts"
 report true "sağlıklı: ${profiles} tablo profili, ${certified} sertifikalı terim"
