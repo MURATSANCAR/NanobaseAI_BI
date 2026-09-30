@@ -837,17 +837,23 @@ def build_composite(data, question, llm, previous, trace, today, depth):
 
 def source_report_intents(question, periods, today, llm, trace):
     text_type = {"type":"string"}
+    _, source_spans = _question_plan_schema(question)
+    intent_ids = [f"i{index}" for index in range(1, 25)]
     intent_fields = {
-        "id":text_type, "question_quote":text_type, "affirmative_meaning":text_type,
+        "id":{"type":"string", "enum":intent_ids},
+        "question_quote":{"type":"string", "enum":source_spans}, "affirmative_meaning":text_type,
         "speech_act":{"type":"string", "enum":["request", "prohibition", "conditional_primary", "fallback"]},
-        "condition_quote":text_type, "primary_id":{"type":["string", "null"]},
+        "condition_quote":{"type":"string", "enum":["", *source_spans]},
+        "primary_id":{"type":["string", "null"], "enum":[None, *intent_ids]},
     }
     schema = {"type":"object", "additionalProperties":False, "required":["intents"], "properties":{
         "intents":{"type":"array", "minItems":1, "maxItems":24, "items":{
             "type":"object", "additionalProperties":False, "required":list(intent_fields), "properties":intent_fields}}}}
     parsed = _object(llm, [{"role":"system", "content":
         "Yalnız sorunun dilsel iş koşullarını çözümle; herhangi bir sistem yeteneği veya rapor seçme. "
-        "Her tarih/nüfus/alan/hesap/çıktı isteğini ve yasağı intents içine al. id benzersiz olsun. "
+        "Her tarih/nüfus/alan/hesap/çıktı isteğini ve yasağı intents içine al. id i1..i24 arasından benzersiz olsun. "
+        "Alıntıları şemanın özgün soru parçalarından seç; bütün soru güvenli bir alıntı seçeneğidir. "
+        "Aynı alıntı farklı iş koşullarını taşıyorsa ayrı intentler aynı alıntıyı kullanabilir; koşulları birleştirip kaybetme. "
         "question_quote özgün sorudan kesintisiz birebir alıntıdır; affirmative_meaning korunması gereken "
         "sonucu açık olumlu cümleyle ifade eder. Olumsuz emirle isim-fiili cümledeki görevinden ayır: "
         "prohibition, yasak işlemin yapılmasını istemez; korunacak durumu ifade et. "
@@ -858,13 +864,14 @@ def source_report_intents(question, periods, today, llm, trace):
         "Kullanıcı söylemeden fallback üretme; birden çok şartı atlama. Yalnız şemalı JSON."},
         {"role":"user", "content":json.dumps({"question":question,"parsedPeriods":periods,"referenceDate":str(today)},ensure_ascii=False)}],
         2400, schema, "source_report_intents", trace)
+    if trace is not None: trace.append({"stage":"source_report_intents", "output":parsed})
     intents = parsed.get("intents")
     if not isinstance(intents, list) or not 1 <= len(intents) <= 24:
         raise ContractError("Kaynak raporu niyet çözümü geçersiz.", code="PLAN_INVALID")
     by_id = {}
     for item in intents:
         if (not isinstance(item, dict) or set(item) != set(intent_fields)
-                or not isinstance(item["id"], str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}",item["id"])
+                or not isinstance(item["id"], str) or item["id"] not in intent_ids
                 or item["id"] in by_id or item["speech_act"] not in {"request","prohibition","conditional_primary","fallback"}
                 or any(not isinstance(item[k], str) or not item[k].strip() for k in ("question_quote","affirmative_meaning"))
                 or item["question_quote"] not in question or not isinstance(item["condition_quote"], str)):
@@ -879,7 +886,6 @@ def source_report_intents(question, periods, today, llm, trace):
         if item["speech_act"] == "fallback" and (not isinstance(item["primary_id"], str)
                 or item["primary_id"] not in by_id or by_id[item["primary_id"]]["speech_act"] != "conditional_primary"):
             raise ContractError("Kaynak raporu alternatif isteği asıl koşula bağlanamadı.", code="PLAN_INVALID")
-    if trace is not None: trace.append({"stage":"source_report_intents", "output":parsed})
     return by_id
 
 
@@ -942,13 +948,14 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         capabilities = {"mode":report["mode"], "description":LOGO_REPORT_CAPABILITIES[report["mode"]],
                         "output_contract":describe_logo_report_output(report["mode"])}
     intents = source_report_intents(question, periods, today, llm, trace)
+    _, source_spans = _question_plan_schema(question)
     source_review_schema = {
         "type": "object", "additionalProperties": False,
         "required": ["intent_checks", "intent_extraction_complete", "ok", "missing", "missing_evidence"],
         "properties": {
             "intent_checks":{"type":"array", "items":{"type":"object", "additionalProperties":False,
                 "required":["intent_id","status","contract_evidence"], "properties":{
-                    "intent_id":{"type":"string"}, "status":{"type":"string","enum":["satisfied","fallback_used","not_applicable","missing"]},
+                    "intent_id":{"type":"string", "enum":list(intents)}, "status":{"type":"string","enum":["satisfied","fallback_used","not_applicable","missing"]},
                     "contract_evidence":{"type":"string"}}}},
             "intent_extraction_complete":{"type":"boolean"},
             **REVIEW_SCHEMA["properties"],
@@ -956,8 +963,8 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
                 "type":"object", "additionalProperties":False,
                 "required":["intent_id", "question_quote", "requirement_kind", "contract_mismatch"],
                 "properties": {
-                    "intent_id":{"type":"string"},
-                    "question_quote":{"type":"string"},
+                    "intent_id":{"type":"string", "enum":list(intents)},
+                    "question_quote":{"type":"string", "enum":source_spans},
                     "requirement_kind":{"type":"string", "enum":["positive_request", "violated_prohibition"]},
                     "contract_mismatch":{"type":"string"},
                 },

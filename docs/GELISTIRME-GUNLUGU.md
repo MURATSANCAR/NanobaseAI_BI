@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Niyet alıntısı ve kimliği kapalı seçim
+
+- 404a21578 CRM-R6 CR007 niyetin özgün soruya bağlanması kontrolünde durdu. Hatalı parsed niyet doğrulamadan sonra kaydedildiğinden ayrıntı izi yoktu; hata sonucu başarıya çevrilmedi.
+- Niyet id/primary_id i1..i24 enumundan, alıntılar özgün tam soru ve gerçek cümle parçalarından seçilir. Denetçi de yalnız çıkarılmış intent kimliklerini seçer. Ayrı koşullar aynı alıntıya bağlı olabilir; alıntıyı paraphrase etme zorunluluğu yoktur. Literal kaynak ve benzersiz kimlik doğrulamaları korunur.
+- Parsed niyet trace doğrulama öncesine taşındı. Model/ürün kabulü yeni kurulumdan sonra yapılacak; yerel test yok.
+
 ## 2026-09-30 — Kaynak yeteneğinden bağımsız dilsel niyet
 
 - 693d6b60a CRM-R5 hedef5:2 FULL_ANSWER_PASS,2 BOUNDARY_PASS,1 FAIL;1geçici oturum silindi,kaynak yazma0. CR023 düzeldi;CR007'de denetçi 'kişileri birleştirme' olumsuz emrini olumlu talep diye etiketledi. Groundedquote bulunması tek başına dilsel doğruluk kanıtı olmadı.
