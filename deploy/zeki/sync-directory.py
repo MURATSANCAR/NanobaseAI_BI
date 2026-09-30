@@ -196,6 +196,15 @@ def run(args):
             if marker in owned_rooms:
                 raise SyncError('Duplicate managed CRM team rooms')
             owned_rooms[marker] = room
+    for key, person in active.items():
+        user = existing.get(key)
+        tracked = state['users'].get(key)
+        if user and (user.get('type') == 'bot' or user['_id'] == config['user_id']):
+            raise SyncError('AD account collides with a protected chat account')
+        if tracked and (tracked['guid'] != person['guid'] or (user and tracked['id'] != user['_id'])):
+            raise SyncError('Managed identity changed; manual review required')
+        if not person['guid']:
+            raise SyncError('AD identity missing')
     report = {'apply': args.apply, 'activeAD': len(active), 'missingAccounts': sum(k not in existing for k in active),
               'crmTeams': len(desired), 'nonemptyTeams': sum(bool(t['members']) for t in desired.values()),
               'unmatchedCRMMemberships': unmatched, 'createdUsers': 0, 'updatedUsers': 0, 'disabledUsers': 0,
@@ -212,12 +221,14 @@ def run(args):
             user = chat.call('POST', 'users.create', {
                 'username': person['username'], 'name': person['name'],
                 'email': f"{person['username']}@{config.get('email_domain', 'timas.local')}",
-                'password': secrets.token_urlsafe(48), 'roles': ['user'], 'verified': True,
+                'password': 'Z!7a' + secrets.token_urlsafe(48), 'roles': ['user'], 'verified': True,
                 'requirePasswordChange': False, 'sendWelcomeEmail': False, 'joinDefaultChannels': True})['user']
             existing[key] = user
             state['users'][key] = {'id': user['_id'], 'guid': person['guid'], 'disabledBySync': False}
             report['createdUsers'] += 1
             save()
+            if report['createdUsers'] % 25 == 0:
+                print(json.dumps({'progress': 'accounts', 'created': report['createdUsers']}), flush=True)
         if user and (user.get('type') == 'bot' or user['_id'] == config['user_id']):
             raise SyncError('AD account collides with a protected chat account')
         if user and not user.get('active', True):
