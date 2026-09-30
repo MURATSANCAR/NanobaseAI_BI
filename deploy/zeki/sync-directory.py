@@ -231,7 +231,7 @@ def run(args):
         if not user and args.apply:
             user = chat.call('POST', 'users.create', {
                 'username': person['chatUsername'], 'name': person['name'],
-                'email': f"{person['username']}@{config.get('email_domain', 'timas.local')}",
+                'email': f"{person['chatUsername']}@{config.get('email_domain', 'timas.local')}",
                 'password': 'Z!7a' + secrets.token_urlsafe(48), 'roles': ['user'], 'verified': True,
                 'requirePasswordChange': False, 'sendWelcomeEmail': False, 'joinDefaultChannels': True})['user']
             existing[key] = user

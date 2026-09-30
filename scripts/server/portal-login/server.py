@@ -45,8 +45,8 @@ CHAT_FILE = os.environ.get('CHAT_CONFIG_FILE', '/etc/nanobase/zeki-chat.json')
 DESTEK_URL = os.environ.get('DESTEK_URL', 'https://portal.nanobase.ai:8446').rstrip('/')
 DESTEK_SSO_FILE = os.environ.get('DESTEK_SSO_FILE', '/etc/nanobase/destek-sso.key')
 DESTEK_TOKEN_TTL = 60
-# sAMAccountName characters only: nothing here can widen the LDAP filter.
-ACCOUNT = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+# AD account names may contain Turkish letters and ampersands; LDAP values are escaped below.
+ACCOUNT = re.compile(r"^[\w .&'-]{1,64}$")
 # Yönetim uçlarının jetonu (köprüyle aynı). Boşsa /admin/* kapalıdır.
 ADMIN_TOKEN = os.environ.get('LOGIN_ADMIN_TOKEN', '')
 # Giriş servisindeki olay kopyasının ömrü; uzun süreli kayıt köprünün tablosunda, kendi saklama süresiyle durur.
@@ -164,6 +164,7 @@ def ad_verify(username, password):
     try:
         from ldap3 import NONE, NTLM, SUBTREE, Connection, Server
         from ldap3.core.exceptions import LDAPException
+        from ldap3.utils.conv import escape_filter_chars
         ensure_md4()
     except ImportError as exc:
         raise DirectoryUnavailable(f'ldap3 missing: {exc}')
@@ -175,7 +176,7 @@ def ad_verify(username, password):
         if not lookup.bind():
             raise DirectoryUnavailable('service account bind refused')
         try:
-            lookup.search(config['base_dn'], ACTIVE_PERSON.format(account), SUBTREE,
+            lookup.search(config['base_dn'], ACTIVE_PERSON.format(escape_filter_chars(account)), SUBTREE,
                           attributes=['sAMAccountName', 'displayName'], size_limit=2)
             if len(lookup.entries) != 1:
                 return UNKNOWN_ACCOUNT
@@ -231,6 +232,8 @@ def chat_account_name(account):
     """Keep reserved chat names out of AD provisioning without granting extra privileges."""
     if account.lower() in {'admin', 'administrator', 'system', 'user', 'all', 'here'}:
         return 'ad-' + account.lower()
+    if not re.fullmatch(r'[0-9a-zA-Z-_.]+', account):
+        return 'ad-' + hashlib.sha256(account.lower().encode('utf-8')).hexdigest()[:20]
     return account
 
 
