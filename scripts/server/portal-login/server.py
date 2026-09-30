@@ -227,6 +227,13 @@ def chat_call(config, method, path, query=None, body=None):
         raise ChatUnavailable(type(exc).__name__)
 
 
+def chat_account_name(account):
+    """Keep reserved chat names out of AD provisioning without granting extra privileges."""
+    if account.lower() in {'admin', 'administrator', 'system', 'user', 'all', 'here'}:
+        return 'ad-' + account.lower()
+    return account
+
+
 def chat_login_token(account, display):
     """Makes sure the portal user exists in the chat under the same account name, then returns a login token.
 
@@ -236,6 +243,7 @@ def chat_login_token(account, display):
     config = chat_config()
     if not config:
         raise ChatUnavailable('no chat configuration')
+    account = chat_account_name(account)
     found = chat_call(config, 'GET', 'users.info', {'username': account})
     user = found.get('user') if found.get('success') else None
     if not user:

@@ -81,7 +81,7 @@ def read_ad(portal_path):
             key = username.lower()
             if key in rows:
                 raise SyncError('Ambiguous AD account')
-            rows[key] = {'username': username, 'name': str(scalar(attrs.get('displayName')) or username),
+            rows[key] = {'username': username, 'chatUsername': portal.chat_account_name(username), 'name': str(scalar(attrs.get('displayName')) or username),
                          'guid': guid(attrs.get('objectGUID')),
                          'active': not (int(scalar(attrs.get('userAccountControl')) or 0) & 2)}
         if conn.result.get('result') != 0 or not rows:
@@ -187,7 +187,16 @@ def run(args):
         desired[team_id]['members'].add(key)
     config = json.loads(Path(args.chat).read_text())
     chat = Chat(config)
-    existing = {u['username'].lower(): u for u in chat.pages('users.list', 'users') if u.get('username')}
+    chat_users = {u['username'].lower(): u for u in chat.pages('users.list', 'users') if u.get('username')}
+    aliases = [u['chatUsername'].lower() for u in active.values()]
+    if len(set(aliases)) != len(aliases):
+        raise SyncError('Reserved AD account alias collides with another AD account')
+    existing = {key: chat_users[u['chatUsername'].lower()] for key, u in ad.items()
+                if u['chatUsername'].lower() in chat_users}
+    by_id = {u['_id']: u for u in chat_users.values()}
+    for key, tracked in state['users'].items():
+        if key not in ad and tracked['id'] in by_id:
+            existing[key] = by_id[tracked['id']]
     rooms = chat.pages('groups.listAll', 'groups')
     owned_rooms = {}
     for room in rooms:
@@ -203,6 +212,8 @@ def run(args):
             raise SyncError('AD account collides with a protected chat account')
         if tracked and (tracked['guid'] != person['guid'] or (user and tracked['id'] != user['_id'])):
             raise SyncError('Managed identity changed; manual review required')
+        if person['chatUsername'].lower() != key and user and not tracked:
+            raise SyncError('Reserved AD alias already exists without a managed identity')
         if not person['guid']:
             raise SyncError('AD identity missing')
     report = {'apply': args.apply, 'activeAD': len(active), 'missingAccounts': sum(k not in existing for k in active),
@@ -219,7 +230,7 @@ def run(args):
             raise SyncError('AD account identity changed; manual review required')
         if not user and args.apply:
             user = chat.call('POST', 'users.create', {
-                'username': person['username'], 'name': person['name'],
+                'username': person['chatUsername'], 'name': person['name'],
                 'email': f"{person['username']}@{config.get('email_domain', 'timas.local')}",
                 'password': 'Z!7a' + secrets.token_urlsafe(48), 'roles': ['user'], 'verified': True,
                 'requirePasswordChange': False, 'sendWelcomeEmail': False, 'joinDefaultChannels': True})['user']
@@ -265,7 +276,7 @@ def run(args):
             continue
         if args.apply and not room:
             room = chat.call('POST', 'groups.create', {'name': team['name'],
-                'members': [active[k]['username'] for k in sorted(keys)],
+                'members': [active[k]['chatUsername'] for k in sorted(keys)],
                 'extraData': {'zekiCrmTeamId': team_id, 'description': 'CRM ekip üyeliğine göre eşitlenen şirket içi sohbet.'}})['group']
             owned_rooms[team_id] = room
             state['groups'][team_id] = {'id': room['_id'], 'members': sorted(keys)}
