@@ -355,7 +355,36 @@ def data_dependent_error(message):
                                "Row count ", "Row identity set differs"))
 
 
+# Independent algebraic identities, never learned from model output or values.
+# Same raw sales-line population: positive sales (7/8/9) minus returns (2/3).
+DERIVED_BASE_EQUIVALENCES = {
+    ("difference", "sales_amount", "return_amount", 1): "net_sales",
+}
+
+
+def equivalent_base_metric(case, plan, specification):
+    key = tuple(specification.get(k) for k in ("op", "left", "right", "scale"))
+    metric = DERIVED_BASE_EQUIVALENCES.get(key)
+    if not metric or case.get("source") != "logo":
+        return None
+    required = {specification["left"], specification["right"], metric}
+    metrics = plan.get("metrics", [])
+    expected_dimensions = case.get("dimensions", case.get("keys", []))
+    if len(metrics) != len(required) or set(metrics) != required:
+        return None
+    if plan.get("sale_kind") != "all" or plan.get("filters") != [] or case.get("filters"):
+        return None
+    if plan.get("dimensions") != expected_dimensions or plan.get("periods") != case.get("periods"):
+        return None
+    if any(plan.get(k) for k in ("derived", "comparison", "having", "analytics", "crm", "crm_report", "logo_report", "sections", "gaps", "coverage")):
+        return None
+    if plan.get("limit") is not None or case.get("limit") or case.get("having") or case.get("analytics") or case.get("comparison"):
+        return None
+    return metric
+
+
 def compare(case,answer,whole,expected):
+    case.pop("acceptedEquivalence", None)
     errors=[]
     if answer.get("type") not in ({"TEXT_TO_SQL","PARTIAL_ANSWER"} if case.get("allowCoverageGap") else {"TEXT_TO_SQL"}):return ["Expected full answer, received "+str(answer.get("type"))+": "+str(answer.get("explanation",""))[:350]]
     if answer.get("type")=="PARTIAL_ANSWER" and not answer.get("dataNotes"):
@@ -383,8 +412,14 @@ def compare(case,answer,whole,expected):
     spec=case.get("derived")
     if spec:
         matches=[d for d in plan.get("derived",[]) if all(d.get(k)==v for k,v in spec.items())]
-        if len(matches)!=1:return errors+["Derived operation/operands/scale differ from independent specification"]
-        alias=matches[0].get("id");columns.append(alias)
+        if len(matches)==1:
+            alias=matches[0].get("id")
+        else:
+            alias=equivalent_base_metric(case,plan,spec)
+            if alias is None:return errors+["Derived operation/operands/scale differ from independent specification"]
+            case["acceptedEquivalence"]={"operation":dict(spec),"baseMetric":alias,
+                "reason":"Independent identity on identical unfiltered all-sales line population; full result values still compared with raw-reference subtraction."}
+        columns.append(alias)
     if case.get("comparison"):
         spec=case["comparison"]; found=plan.get("comparison") or {}
         if not all(found.get(k)==v for k,v in spec.items()) or plan.get("periods")!=case["periods"]:
@@ -528,6 +563,7 @@ def main():
                 if case.get("thread") and answer.get("threadId"):threads[case["thread"]]=answer["threadId"]
                 whole=call("/api/v1/result/"+answer["resultId"]) if answer.get("resultId") else answer;item["fullResult"]=whole
                 errors=compare(case,answer,whole,expected)
+                if case.get("acceptedEquivalence"):item["acceptedEquivalence"]=case["acceptedEquivalence"]
                 if answer.get("semantic",{}).get("engine")!="finance_contract_v1":errors.append("Wrong engine/source routing")
                 expected_hash=hashlib.sha256(json.dumps({k.rsplit('/',1)[-1]:v for k,v in before.items() if '/finance_query/' in k},sort_keys=True).encode()).hexdigest()
                 if answer.get("semantic",{}).get("engineCodeHash")!=expected_hash:errors.append("Loaded engine hash differs from deployed files")

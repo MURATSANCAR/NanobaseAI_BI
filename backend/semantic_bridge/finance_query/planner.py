@@ -130,6 +130,16 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError("Satış tutarıyla fatura genel toplamını mı, iskonto sonrası KDV hariç satış satırı toplamını mı istiyorsunuz?", code="NEEDS_CLARIFICATION")
     today = datetime.now(timezone.utc if re.search(r"\butc\b", q) else ZoneInfo("Europe/Istanbul")).date()
     periods, grain = dates(question, today)
+    inherited_period = False
+    if _depth and not periods and _source_question:
+        source_periods, _ = dates(_source_question, today)
+        if len(source_periods) == 1:
+            periods = source_periods
+            inherited_period = True
+            if trace is not None:
+                trace.append({"stage":"section_period_inherited", "periods":periods, "basis":"single_original_question_period"})
+        elif source_periods:
+            raise ContractError("Bölüm sorusu ana sorudaki birden çok dönemden hangisini kullandığını belirtmiyor.", code="PLAN_INVALID")
     if previous and follows(question) and not periods:
         periods = tuple(tuple(p) for p in previous.get("plan", {}).get("periods", ()))
     if len(periods) > 3:
@@ -153,6 +163,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Tek raporun output_contracts kayıt türleri istenen özet ve detayı zaten içeriyorsa tek rapor kullan. "
               "Yalnız tek raporun karşılamadığı farklı kırılımlar/bağımsız kaynak bölümleri gerekiyorsa sections kullan (en fazla 4 yaprak). "
               "Her section title, anlamı koruyan question ve tek leaf plan içerir; leaf plan iç içe sections içermez. "
+              "Her bölüm sorusu ortak dönemi ve o bölüme ait özel koşulları korumalıdır; tek ortak dönem deterministik miras alınabilir, farklı dönemler bölüm sorusunda açık olmalıdır. "
               "Root sections doluyken metrics/dimensions/filters/derived/having/analytics boş; crm/logo_report/crm_report/comparison/limit/order_by null, uncovered boş liste ve clarification boş metin olsun. Kök bölüm planlarından alan miras almaz. "
               "YALNIZ sections dolu olan bölümlü kökte her bağımsız isteği coverage'a özgün sorudan harfi harfine kesintisiz alınmış requirement metniyle bağla; büyük/küçük harf, noktalama ve ekleri değiştirme. Özet veya section question metni alıntı yerine geçmez. sections sıfır tabanlı bölüm indeksleri, "
               "gap_index gaps içindeki eksik kapsam indeksidir. Bir koşul ya gerçek bölüme ya açık gaps kaydına bağlanır. "
@@ -295,7 +306,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if len(set(dims)) != len(dims) or any(d not in DIMENSIONS for d in dims):
         raise ContractError("İstenen kırılım doğrulanmış sözleşmede bulunamadı.")
     if grain and grain not in dims:
-        raise ContractError("İstenen zaman kırılımı plana taşınmadı.")
+        raise ContractError("İstenen zaman kırılımı plana taşınmadı.", code="PLAN_INVALID")
     families = {METRICS[m].family for m in metrics}
     if len(families) != 1 and not families <= {"sales", "invoice", "collection"}:
         raise ContractError("Bu kaynak ölçülerinin ortak kayıt düzeyi henüz tanımlı değil.")
@@ -390,7 +401,8 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         else:
             analytic_meanings.append({"işlem":"ilk N ve kalan", "kapsam":scope, "ölçü":metric_meaning(spec["metric"]),
                 "ilk_n":spec["limit"], "kalan":"Seçilmeyen bütün öğeler ölçü toplamları korunarak tek satır olur", "kalan_etiketi":spec["label"]})
-    readable = {"referenceDate": str(today), "ölçüler": [{"id": m, "ad": METRICS[m].label, "tanım": METRICS[m].definition} for m in metrics],
+    readable = {"referenceDate": str(today), "metrics": list(metrics),
+                "metric_definitions": {m: {"ad": METRICS[m].label, "tanım": METRICS[m].definition, "ayrı_çıktı_kolonu": True} for m in metrics},
                 "tarih_anlamı": "Son N ay/yıl, bugünün gün numarası korunarak N takvim birimi geriye gidilen hareketli aralıktır; hedef ayda gün yoksa ay sonu kullanılır ve bugün dahildir. Son tamamlanan N ay/yıl ise tamamlanmış takvim dönemleridir. Bunlar aynı aralık değildir. En yüksek/en çok gibi ölçü sırasındaki ilk N gün bütün istenen dönemden seçilen N sonuç satırıdır; ayın kronolojik ilk N günü değildir.",
                 "uygulanan_tarih_aralıkları": [{"başlangıç_dahil":a,"bitiş_hariç":b, "son_gün_dahil":str(date.fromisoformat(b)-timedelta(days=1)), "gün_sayısı":(date.fromisoformat(b)-date.fromisoformat(a)).days} for a,b in periods],
                 "referenceDate_anlamı": "Yalnız göreli tarihleri çözme çıpası; mutlak tarih isteğinin yerine geçen sorgu tarihi değildir",
@@ -398,6 +410,15 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                 "sonuç_kırılımları": result_grain, "koşullar": conditions, "operand_anlamları": operand_meanings,
                 "birleştirme_güvencesi": CONTRACT["joins"],
                 "ölçü_aileleri_birleşimi": CONTRACT["family_merge"],
+                "sonuç_nüfusu": {
+                    "süzgeç_öncesi_birleşim": {"işlem":"FULL OUTER" if len(families)>1 else "tek kaynak ailesi",
+                        "kaynak_aileleri":sorted(families), "anahtarlar":list(dims),
+                        "tek_ailede_hareketi_olan_anahtarlar":"bu aşamada korunur",
+                        "hareketi_olup_net_toplamı_sıfır_olan_anahtarlar":"bu aşamada korunur",
+                        "diğer_ailede_hareket_olmayan_ölçü":0},
+                    "sonraki_having": {"bağlaç":"AND", "koşullar":[asdict(h) for h in having],
+                        "etki":"Her koşulu sağlamayan satır silinir; birleşimde korunması nihai sonuçta kalmasını garanti etmez. Boş koşul listesi satır silmez."},
+                    "son_limit":limit},
                 "tam_sonuç_güvencesi": "Bütün kaynak satırları okunur; teknik sınırda kesilen cevap sunulmaz. Yalnız açık ilk N isteği sonuç kümesini sınırlar. Aktif CRM eşleşmesi bulunamayan Logo satırları NULL künye ile korunur, ölçü toplamları birleşim öncesi ve sonrası kontrol edilir.",
                 "analitik_işlemler": analytic_meanings, "türetilmiş_hesaplar": [asdict(d) for d in derived], "sonuç_süzgeçleri": [asdict(h) for h in having],
                 "dönem_karşılaştırması": asdict(comparison) if comparison else None,
@@ -421,6 +442,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         "Oranda pay ve paydayı ayrı ad öbekleri olarak denetle; her birinin kullanıcıdaki "
         "anlamını kendi operand tanımıyla karşılaştır, sonra yönü ve ölçeği kontrol et. "
         "İstenen ara toplamlar ayrı ölçü kolonlarında sunuluyorsa karşılanmıştır. "
+        "metrics listesi seçilmiş ve ayrı çıktı kolonlarında gösterilecek temel ölçülerin tam kimlik listesidir; "
+        "metric_definitions aynı kimliklerin iş anlamlarını verir. Listede bulunan bir ölçüyü eksik diye bildirme; "
+        "yanlış tanım/kapsam varsa onu somut belirt. Bir ölçünün tanımında başka ölçünün kavramı geçmesi o diğer "
+        "ölçüyü ayrı kolon yapmaz: ayrı kolon varlığı metrics listesinden, anlam uyumu tanımlardan denetlenir. "
         "Koşullar listesinde yazan koşul uygulanmaktadır; hayali bir teknik alanda ayrıca aranmaz. "
         "Teknik alan adı, SQL, TRCODE veya filters anahtarı talep etme. Yalnız kullanıcı sorusundan "
         "gerçekten eksik kalan iş koşulunu missing'e yaz. Varsayılan sıralama ve kurum kuralı olan "
@@ -429,11 +454,15 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         "Tarih koşulunu yalnız uygulanan_tarih_aralıkları ile denetle; referenceDate göreli çözüm çıpasıdır, "
         "ölçü tanımındaki işlem kodları takvim ayları değildir. "
         "Yüzde fark, açık formülde (sol-sağ)/sağ*100 ile sağlanır; aynı ara fark için ikinci bir işlem şart değildir. "
-        "Yalnız bir kaynakta hareketi olan grupların korunması FULL OUTER birleşim anlamında karşılanır; "
-        "bu nüfusu korumak ek having/sonuç süzgeci gerektirmez. "
+        "Bölüm sharedPeriodContext içeriyorsa dönem ana sorudaki tek açık aralıktan alınmıştır; bölüm kısaltmasında tarihin tekrar yazılmaması eksik dönem değildir. "
+        "Sonuç nüfusundaki anahtar varlığı ile tutarın sıfırdan farklı olması ayrı şeylerdir; hareketi olup neti sıfır gün de gerçek hareket günüdür. "
+        "FULL OUTER yalnız süzgeç öncesi anahtar birleşimini garanti eder. Sonraki having koşullarını AND olarak "
+        "tek taraflı/sıfır doldurulmuş satırlara uygula; bunları eleyen koşul varsa nihai korunma iddiasını reddet. "
+        "Having boşsa bu aşamada tek taraflı gruplar korunur; onları korumak için ek sıfırdan farklı filtresi gerekmez. "
         "Contribution kolonlarında cumulative_pct mevcutsa kümülatif pay hesaplanmaktadır; ayrıca bir işlem adı arama."},
         {"role": "user", "content": json.dumps({"question": question, "plan": readable,
-                                                "previous": previous if follows(question) else None}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "finance_review", trace)
+                                                "previous": previous if follows(question) else None,
+                                                "sharedPeriodContext": {"originalQuestion":source_question,"inheritedPeriods":periods} if inherited_period else None}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "finance_review", trace)
     if trace is not None:
         trace.append({"stage": "review", "output": review})
     if review.get("ok") is not True or review.get("missing"):
@@ -725,6 +754,10 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         "zorunlu sayısal cevabın yerine salt gap tam cevap değildir."},
         {"role": "user", "content": json.dumps({"question": question, "report": report, "capabilities": capabilities,
         "parsedPeriods": periods, "referenceDate": str(today)}, ensure_ascii=False)}], 1800, REVIEW_SCHEMA, "source_report_review", trace)
+    if trace is not None:
+        trace.append({"stage":"source_report_review", "output":review})
     if review.get("ok") is not True or review.get("missing"):
-        raise ContractError("Kaynak raporu sorunun tüm koşullarını karşılamıyor: " + "; ".join(review.get("missing") or []), code="UNSUPPORTED_CAPABILITY")
+        # This rejects the selected plan, not every capability in the contract.
+        # The root may replan once; the same report/metric guards run again.
+        raise ContractError("Seçilen kaynak raporu sorunun tüm koşullarını karşılamıyor: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")
     return Plan((), (), periods, **{branch: report})

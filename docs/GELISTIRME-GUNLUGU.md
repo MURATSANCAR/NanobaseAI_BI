@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — R6 gerçek kabul ve kapsam onarımı
+
+- ec8e20098, gerçek API/bağımsız Logo–CRM referansıyla45 soru:30 PASS,7 FAIL,8 UNVERIFIED;1 geçici oturum silindi. Kaynak değişen8 cevap başarı sayılmadı. Kanıt: test sunucusu finance-expanded-20260930/composable-r6.
+- Mevcut ölçünün denetçi tarafından eksik sayılması için kanonik ölçü kimlikleri ayrı sunulur. Yanlış kaynak raporu ve eksik zaman kırılımı tek sınırlı yeniden planlamaya girer. Bölüm yalnız ana sorudaki tek kesin dönemi devralır; çoklu dönem tahmin edilmez.
+- FULL OUTER kapsamı yalnız HAVING öncesidir; gerçek AND koşullarının tek taraflı/sıfır satırları elemesi ayrıca denetlenir.
+- CP005 kapısı aynı filtresiz satış nüfusunda satış−iade=net satış bağımsız cebir eşdeğerliğini kabul eder; tam kolon/satır/değer referansı korunur. Önceki başarısız kanıt değiştirilmedi. Yeni sürüm gerçek kabulü bekliyor; genel başarı iddiası yok.
+
 ## 2026-09-30 — Model şeması derleyici uyumu
 
 - 0f0230c0c R5 kabulünde4 soru planlama HTTP400 ile durdu; kaynak yürütmesi başlamadı. İlk hata sistematik olduğu için koşu durduruldu,1 oturum silindi. Başarı sayılmadı.
