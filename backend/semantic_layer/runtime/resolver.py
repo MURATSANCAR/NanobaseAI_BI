@@ -2686,7 +2686,8 @@ class SemanticResolver:
                 continue
             if not one_server and lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by":
                 continue                                  # "kanal bazında": the grouping is the question's structure
-            if not one_server and self._linked_across(lone.mapping.entity, homes_entities):
+            if not one_server and any(self._linked_across(e, homes_entities)
+                                      for e in {lone.mapping.entity} | self._mapping_tables(lone.mapping)):
                 continue                                  # the catalog measured a bridge: the question may span both
             if one_server and self._to_home_sense(lone, home):
                 sq.explanation.append(f"'{lone.term}' iki veritabanında da tanımlı; ölçünün tarafındaki "
@@ -2950,6 +2951,19 @@ class SemanticResolver:
                     if self.conventions.join_path(candidate, other):
                         return True
         return False
+
+    def _mapping_tables(self, mapping: Optional[Mapping]) -> set[str]:
+        """Tables a concept reads on its own source besides its mapped one: those its conditions name and its
+        declared join path (`extra.path`, «A.X = B.Y; …») walks through. A book's author sits on the person
+        card, two joins from the book card that the ERP's item code was measured against (ZEKI-54); the bridge
+        is on the concept's own path, not on its column's table. Only tables of the mapped table's source."""
+        if mapping is None:
+            return set()
+        extra = mapping.extra or {}
+        text = " ".join([str(c) for c in extra.get("conditions") or []] + [str(extra.get("path") or "")])
+        home = self._source_of(mapping.entity)
+        names = {m.group(1).upper() for m in re.finditer(r"\b([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_]", text)}
+        return {n for n in names if n in self.by_entity and self._source_of(n) == home} - {str(mapping.entity).upper()}
 
     def _bridge_landings(self, entity: str) -> set[str]:
         """Tables on the other source that a measured cross-source relationship ties `entity` to."""
