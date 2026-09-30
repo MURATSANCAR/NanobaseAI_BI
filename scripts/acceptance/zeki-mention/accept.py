@@ -88,11 +88,13 @@ elif sys.argv[1] == 'cleanup':
     # API deletes whole temporary source room. Only delete newly created DM if every message is ours.
     counts = {'rooms': 0, 'messages': 0, 'tokens': 0, 'queue': 0}
     for rid in state['rooms']:
-        admin.call('POST', 'rooms.delete', {'roomId': rid}); counts['rooms'] += 1
+        exists = mongo('print(JSON.stringify(db.zeki_room.countDocuments({_id:' + json.dumps(rid) + '})));')
+        if exists:
+            admin.call('POST', 'rooms.delete', {'roomId': rid}); counts['rooms'] += 1
     for mid in replies:
         msg = mongo('print(JSON.stringify(db.zeki_message.findOne({_id:' + json.dumps(mid) + '},{rid:1})));')
         if msg:
-            admin.call('POST', 'chat.delete', {'roomId': msg['rid'], 'msgId': mid, 'asUser': True})
+            admin.call('POST', 'chat.delete', {'roomId': msg['rid'], 'msgId': mid})
             counts['messages'] += 1
     if not state.get('existingDM'):
         dm = mongo('print(JSON.stringify(db.zeki_room.findOne({t:"d",uids:{$all:[' +
