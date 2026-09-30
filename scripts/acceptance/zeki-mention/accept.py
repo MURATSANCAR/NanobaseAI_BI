@@ -91,6 +91,14 @@ elif sys.argv[1] == 'cleanup':
         exists = mongo('print(JSON.stringify(db.zeki_room.countDocuments({_id:' + json.dumps(rid) + '})));')
         if exists:
             admin.call('POST', 'rooms.delete', {'roomId': rid}); counts['rooms'] += 1
+    if not state.get('existingDM'):
+        dm = mongo('print(JSON.stringify(db.zeki_room.findOne({t:"d",uids:{$all:[' +
+                   json.dumps(state['userId']) + ',"zeki.bot"]}},{_id:1})));')
+        if dm:
+            others = mongo('print(JSON.stringify(db.zeki_message.countDocuments({rid:' + json.dumps(dm['_id']) +
+                           ',_id:{$nin:' + json.dumps(replies) + '}})));')
+            if others == 0:
+                admin.call('POST', 'rooms.delete', {'roomId': dm['_id']}); counts['rooms'] += 1
     for mid in replies:
         msg = mongo('print(JSON.stringify(db.zeki_message.findOne({_id:' + json.dumps(mid) + '},{rid:1})));')
         if msg:
