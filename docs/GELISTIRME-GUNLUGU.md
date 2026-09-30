@@ -22,6 +22,8 @@
 - Kâr, ödeme kapaması, geçmiş durum ve sözleşme önceliği için kaynak kanıtı eksikleri açık bırakıldı; tahmini maliyet/FIFO/tarihçe uygulanmadı. Ürün testleri henüz bu geniş sürümde çalıştırılmadı; önce main, sonra eksiksiz test sunucusu kurulumu ve gerçek API/bağımsız DB kabulü.
 - Eski katalog143434kayıt yedekli silindi; kapsamda0kaldı.4259profil/7annotationkorundu, emeklilik kontrolleri20/20,1geçici oturum silindi.
 - Önceki34r2 koşusu başka oturumun köprü yeniden başlatmasıyla34DOĞRULANAMADI; sonuç korundu, başarı sayılmadı.
+- **Test sunucusu (21:15):** sunucu `frontend/src` = main~1 (md5, yalnız 2 fazladan kampüs görseli), iki dosya konup `/tmp/claude-sleepy/dist`'e derlendi (tsc 0, vite 0). Yayından önce canlı derleme (`claude-kitapokut`, 20:53) ile karşılaştırıldı: karma adları normalize edilince yalnız `AskBox`/`EditorialHome` parçaları ve CSS'teki tek `[contain:inline-size]` kuralı farklı — başka oturumun işi geri alınmadı. `cockpit/dist` → `index-DP-GsOwR.js` / `index-xcgIJx5I.css`, `._*` 0. Eklemesiz ölçüm: 320/390/768/1440'ta `main` scrollWidth = clientWidth (296/366/616/1288). O an `ask/books` boş döndüğü için şerit sayfada yoktu; aynı sınıflarla 30 düğmelik (4.916 px) şerit eklenince `main` 351'de kaldı, şerit 324 px içinde kaydı.
+- **Müşteri VM'i:** henüz kurulmadı (kullanıcı onayı bekliyor).
 
 ## 2026-09-30 — Birleşebilir motor ilk canlı koşu ve düzeltmeler
 
