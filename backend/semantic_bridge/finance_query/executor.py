@@ -176,10 +176,10 @@ class Executor:
         incomplete_authors = set()
         if "author_group" in requested:
             broken = self.read("SELECT DISTINCT L.new_Kitap AS book_id FROM " + CRM + ".new_eserkatilimBase L JOIN " + CRM + ".new_katilimcitipiBase R ON R.new_katilimcitipiId=L.new_katilimciTipi AND R.statecode=0 AND LTRIM(RTRIM(R.new_name))=N'Yazar' LEFT JOIN " + CRM + ".ContactBase C ON C.ContactId=L.new_Katilimsaglayan AND " + self.crm_status("ContactBase", "C") + " WHERE L.statecode=0 AND C.ContactId IS NULL", source="crm")
-            incomplete_authors = {str(r["book_id"]).strip().lower() for r in broken if r["book_id"]}
+            incomplete_authors = {str(r["book_id"]).strip().lower() for r in broken if r["book_id"]} & set(cards)
             if incomplete_authors:
                 self.coverage_complete = False
-                self.gaps.append(f"{len(incomplete_authors)} kitapta Yazar katılımının aktif kişi kimliği çözülemedi; kısmi kişi kümesi tam grup sayılmadı, satış boş yazar grubunda korundu.")
+                self.gaps.append({"status": "INCOMPLETE_SOURCE_COVERAGE", "reason": f"{len(incomplete_authors)} aktif kitapta Yazar katılımının aktif kişi kimliği çözülemedi; kısmi kişi kümesi tam grup sayılmadı, satış boş yazar grubunda korundu."})
         books, ambiguous = {}, set()
         for bid, card in cards.items():
             code = str(card.get("book_code") or "").strip().casefold()
@@ -196,7 +196,7 @@ class Executor:
                 "author_group_names": json.dumps([people[pid].get("person_name") for pid in ids], ensure_ascii=False) if ids else None}
         if ambiguous:
             self.coverage_complete = False
-            self.gaps.append(f"{len(ambiguous)} stok kodu birden çok aktif CRM kitabına bağlı; bu kodların satışları korunur, CRM kırılımları boş bırakılır.")
+            self.gaps.append({"status": "AMBIGUOUS_SOURCE_IDENTITY", "reason": f"{len(ambiguous)} stok kodu birden çok aktif CRM kitabına bağlı; bu kodların satışları korunur, CRM kırılımları boş bırakılır."})
         self.notes.append("Alt marka ve yazar kişi grubu güncel CRM ilişkileridir; geçmiş dönem ilişki tarihçesi olarak yorumlanmaz. Ortak yazarlı kitap satışı kişi grubunda bir kez sayılır.")
         return books
 
