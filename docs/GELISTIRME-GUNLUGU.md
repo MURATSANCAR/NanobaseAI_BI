@@ -8,6 +8,12 @@
 - **ZEKI-28 (test sunucusu):** `zeki-chat` ve `zeki-ingress` `TZ=Europe/Istanbul` (saat +03:00), `OVERWRITE_SETTING_Default_Timezone_For_Reporting=custom`, `…Default_Custom_Timezone=Europe/Istanbul`, Node saat dilimi Europe/Istanbul (sohbet oturumunun kurulumu main'deki ayarı almış). `zeki-mongo` UTC'de kaldı (yalnız günlük saati; veri UTC saklanır). VM'de sohbet kurulu değil.
 - **Temizlik:** yan köprü durduruldu, anahtarlı geçici ortam dosyası, timasai test oturumu, VM'e kopyalanan plan/betik, `/tmp/claude-zeki`, `/tmp/bi-vm-*` silindi.
 - **Jira durumu:** 22 kayıt kodla kapandı ve doğrulandı; ZEKI-27 örneği «Rabia Elif Özcan Beydemir» CRM'de etkin kişi değil (müşteriye sorulacak); ZEKI-37/59/60 kod işi değil (59: T-soft'a yazma yasak). Jira'daki durumlar değiştirilmedi.
+## 2026-09-30 — Birleşebilir sorgu motoru: ilk uygulama
+
+- Kullanıcı onay beklemeden çalışır final istedi. Paralel kod/şema/kabul çalışması: günlük dil dönemleri ve yazıyla sayılar, takip filtreleri, CRM filtre kaynağı, tipli türetilmiş hesaplar/HAVING/dönem farkı, ortak kırılımda ayrı mali aile toplulaştırması.
+- CRM canlı yayımlı metadata ISBN13 ve kitap–yayıncı bağını doğruladı; aktif kart liste/sayım/eksik alan planı eklendi. Yazar künye metni kişi kimliği sayılmaz.
+- Hatalar destek dışı/gerçek netleştirme/geçersiz plan/kaynak sözleşmesi olarak ayrıldı; hata yolunda yürütme ve deadlock retry kanıtı korunur.
+- Yeni bağımsız gerçek API/DB kabul koşucusu eklendi. Yerel test yok; main sonrası uzak kabul bekliyor. Katalog yedekli fiziksel silmesi ayrı çalışan süreçte sürüyor.
 
 ## 2026-09-30 — ZEKI-54 tamam (plan kapalı modda gerçek veriyle), ZEKI-26 yükleme üst sınırı 300 MB; VM ağacı hazır
 

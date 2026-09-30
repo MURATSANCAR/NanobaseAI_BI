@@ -5,6 +5,7 @@ aggregate has a declared grain, and cross-source enrichment is many-to-one or fa
 """
 from __future__ import annotations
 from collections import defaultdict
+from dataclasses import replace
 from datetime import date, timedelta
 from decimal import Decimal
 import hashlib
@@ -17,6 +18,7 @@ import time
 import sqlglot
 from sqlglot import exp
 from .contracts import METRICS, ContractError
+from . import operations
 
 MAX_ROWS = 250_000
 CRM = "[Timas_MSCRM].[dbo]"
@@ -38,6 +40,7 @@ class Executor:
         self.source_periods = []
         self.read_retries = []
         self._crm_status = {}
+        self.output_fields = []
 
     def read(self, sql, *, metadata=False, source="logo"):
         statements = sqlglot.parse(sql, read="tsql")
@@ -51,17 +54,22 @@ class Executor:
             self.rt._check_data_scope(sql)
         conn = self.rt.crm_connector if source == "crm" else self.rt.connector
         if conn is None:
-            raise ContractError("İstenen veri kaynağının bağlantısı tanımlı değil.")
+            raise ContractError("İstenen veri kaynağının bağlantısı tanımlı değil.", code="SOURCE_UNAVAILABLE")
         if source == "crm":
             # Keep the transport pool and its concurrency gate, not the legacy SQL rewriter.
             # Every business CRM read below explicitly applies this engine's positive status contract.
             conn = getattr(conn, "inner", conn)
         t = time.monotonic()
+        evidence = {"source": source, "sql": sql, "sqlSha256": hashlib.sha256(sql.encode()).hexdigest(),
+                    "startedAt": time.time(), "status": "running", "rows": 0, "dbMs": 0}
+        if not metadata:
+            self.runs.append(evidence)
         for attempt in range(3):
             try:
                 cols, rows, truncated = conn.execute(sql, MAX_ROWS)
                 break
             except Exception as exc:
+                evidence.update(status="failed", attempts=attempt+1, dbMs=round((time.monotonic()-t)*1000))
                 args = getattr(exc, "args", ())
                 # SQL Server explicitly rolled back a deadlock victim. Only
                 # this known transient error may repeat this read-only SELECT.
@@ -70,6 +78,7 @@ class Executor:
                 delay = (0.25 * (2 ** attempt) + random.uniform(0, 0.15)) if attempt < 2 else None
                 self.read_retries.append({"source": source, "sqlSha256": hashlib.sha256(sql.encode()).hexdigest(),
                                           "failedAttempt": attempt + 1, "errorCode": 1205,
+                                          "occurredAt": time.time(), "sqlState": args[0],
                                           "retryAfterMs": round(delay * 1000) if delay is not None else None})
                 if delay is None:
                     raise
@@ -77,8 +86,7 @@ class Executor:
         ms = round((time.monotonic() - t) * 1000)
         if truncated:
             raise ContractError("Tam sonuç okuma sınırını aştı; eksik sonuç cevap olarak sunulmadı.")
-        if not metadata:
-            self.runs.append({"source": source, "sql": sql, "rows": len(rows), "dbMs": ms, "attempts": attempt + 1})
+        evidence.update(status="complete", rows=len(rows), dbMs=ms, attempts=attempt+1)
         return rows
 
     def partitions(self, start, end):
@@ -113,7 +121,7 @@ class Executor:
         found = {(r["TABLE_NAME"].lower(), r["COLUMN_NAME"].lower()): r["DATA_TYPE"] for r in rows}
         missing = [f"{t}.{c}" for t, cols in tables.items() for c in cols if (t.lower(), c.lower()) not in found]
         if missing:
-            raise ContractError("Kaynak şema sözleşmeyle uyuşmuyor: " + ", ".join(missing))
+            raise ContractError("Kaynak şema sözleşmeyle uyuşmuyor: " + ", ".join(missing), code="SOURCE_CONTRACT_VIOLATION")
         return found
 
     def crm_status(self, table, alias):
@@ -152,6 +160,9 @@ class Executor:
         return books
 
     def execute(self, plan):
+        if getattr(plan, "crm", None):
+            from .crm_query import execute_crm_plan
+            return execute_crm_plan(self, plan.crm)
         family = METRICS[plan.metrics[0]].family
         if family.startswith("crm_"):
             table = {"crm_books": "new_kitapBase", "crm_authors": "ContactBase", "crm_customers": "AccountBase"}[family]
@@ -162,10 +173,14 @@ class Executor:
         enrichment = bool((set(plan.dimensions) | {d for d, _, _ in plan.filters}) & {"author", "publisher"})
         books = self.crm_books() if enrichment else {}
         answer = []
+        period_rows = []
+        group_fields = []
+        for d in plan.dimensions:
+            group_fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else [d])
         for start, end in plan.periods:
             partials = []
             for a, b, firm, period in self.partitions(date.fromisoformat(start), date.fromisoformat(end)):
-                partials.extend(self.aggregate(plan, family, a, b, firm, period, enrichment))
+                partials.extend(self.aggregate_families(plan, a, b, firm, period, enrichment))
             before = {m: sum((number(r[m]) for r in partials), Decimal(0)) for m in plan.metrics}
             missing = 0
             empty_fields = {field: 0 for field in ("author", "publisher") if field in plan.dimensions}
@@ -189,9 +204,6 @@ class Executor:
                     self.notes.append(f"{count} satış kırılımında {label} bilgisi bulunamadı; değer tahmin edilmedi.")
             # Enrichment filters explicitly narrow the population, after conservation was checked.
             selected = [r for r in partials if all(self.matches(r.get(d), op, value) for d, op, value in plan.filters if d in ("author", "publisher"))]
-            group_fields = []
-            for d in plan.dimensions:
-                group_fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else [d])
             totals = {}
             for r in selected:
                 key = tuple(r.get(d) for d in group_fields)
@@ -200,13 +212,22 @@ class Executor:
                     item[m] += number(r[m])
             if not totals and not group_fields:
                 totals[()] = {m: Decimal(0) for m in plan.metrics}
-            rows = list(totals.values())
-            rows.sort(key=lambda r: (number(r[plan.order_by]), str(tuple(r.get(k) for k in group_fields))), reverse=plan.descending)
-            if plan.limit:
-                rows = rows[:plan.limit]
+            rows = operations.derived(list(totals.values()), plan.derived)
+            period_rows.append(rows)
+            if plan.comparison:
+                continue
+            rows = operations.finish(rows, plan, group_fields)
             if len(plan.periods) > 1:
                 rows = [{"period_start": start, "period_end_exclusive": end, **r} for r in rows]
             answer.extend(rows)
+        if plan.comparison:
+            answer = operations.finish(operations.compare(period_rows, plan, group_fields), plan, group_fields)
+            self.output_fields = [*group_fields, "base_period_start", "base_period_end_exclusive",
+                                  "target_period_start", "target_period_end_exclusive", "base_value", "target_value", plan.comparison.id]
+        else:
+            self.output_fields = (["period_start", "period_end_exclusive"] if len(plan.periods)>1 else []) + group_fields + list(plan.metrics) + [d.id for d in plan.derived]
+        if plan.derived or plan.comparison:
+            self.notes.append("Oran veya yüzde değişim hesabında sıfır/eksik payda boş gösterilir; dönemde bulunmayan kırılım sıfır varsayılmaz.")
         return [{k: float(v) if isinstance(v, Decimal) else v for k, v in r.items()} for r in answer]
 
     @staticmethod
@@ -214,6 +235,35 @@ class Executor:
         from .language import fold
         a, b = fold(str(value or "")), fold(wanted)
         return a == b if op == "eq" else b in a
+
+    def aggregate_families(self, plan, start, end, firm, period, enrichment):
+        families = {}
+        for metric in plan.metrics:
+            families.setdefault(METRICS[metric].family, []).append(metric)
+        if len(families) == 1:
+            return self.aggregate(plan, next(iter(families)), start, end, firm, period, enrichment)
+        if not set(families) <= {"sales", "invoice", "collection"}:
+            raise ContractError("Bu kaynak aileleri aynı kayıt düzeyinde birleştirilemiyor.")
+        dims = set(plan.dimensions) | {d for d, _, _ in plan.filters}
+        if enrichment or dims - {"customer", "channel", "day", "month", "year"}:
+            raise ContractError("Fatura ve tahsilat tutarı kitap satırlarına dağıtılamaz; ortak müşteri veya dönem kırılımı gerekir.")
+        joined = {}
+        keys = None
+        for family, metrics in families.items():
+            partial = replace(plan, metrics=tuple(metrics))
+            rows = self.aggregate(partial, family, start, end, firm, period, False)
+            for row in rows:
+                row_keys = tuple(k for k in row if k not in metrics)
+                if keys is None:
+                    keys = row_keys
+                if row_keys != keys:
+                    raise ContractError("Hesap ailelerinin ortak kırılım kolonları uyuşmuyor.", code="SOURCE_CONTRACT_VIOLATION")
+                key = tuple(row[k] for k in keys)
+                target = joined.setdefault(key, {**{k:row[k] for k in keys}, **{m:Decimal(0) for m in plan.metrics}})
+                for metric in metrics:
+                    target[metric] += number(row[metric])
+        self.notes.append("Satış satırı, fatura başlığı ve ödeme hareketleri ayrı hesaplandı; ortak kırılımda birleştirildi. Dönemde hareketi olmayan ölçü 0 gösterilir.")
+        return list(joined.values())
 
     def aggregate(self, plan, family, start, end, firm, period, enrichment):
         suffix = {"sales": "STLINE", "invoice": "INVOICE", "collection": "CLFLINE"}[family]

@@ -12,6 +12,7 @@ import uuid
 from .contracts import CONTRACT_HASH, METRICS, ContractError
 from .planner import follows, build
 from .executor import Executor
+from .crm_query import CRM_CAPABILITIES
 
 log = logging.getLogger(__name__)
 ENGINE_HASH = hashlib.sha256(json.dumps({p.name: hashlib.sha256(p.read_bytes()).hexdigest()
@@ -35,9 +36,14 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
     plan = None
     sql = None
     state = {"engine": "finance_contract_v1", "contractHash": CONTRACT_HASH, "engineCodeHash": ENGINE_HASH,
+             "crmContractHash": hashlib.sha256(json.dumps(CRM_CAPABILITIES, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
              "legacyCatalogUsed": False, "legacySqlFallback": False, "readRetries": engine.read_retries}
 
     def record(kind, summary, result=None, error=None):
+        nonlocal sql
+        state["sourcePeriods"] = engine.source_periods
+        state["executions"] = engine.runs
+        sql = "\n\n".join("-- " + run["source"] + "\n" + run["sql"] for run in engine.runs) or None
         return runtime.store.log_query(runtime.settings.tenant_id, runtime.settings.datasource_id, question,
             sql=sql, compiler="finance_contract_v1", catalog_version=None, resolved=state,
             executed=result is not None, row_count=result.get("totalRows") if result else None,
@@ -62,28 +68,36 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         state["sourcePeriods"] = engine.source_periods
         state["executions"] = engine.runs
         fields = list(rows[0]) if rows else []
-        if not rows:
+        if not rows and engine.output_fields:
+            fields = engine.output_fields
+        elif not rows:
             for d in plan.dimensions:
                 fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else [d])
             if len(plan.periods)>1:
                 fields = ["period_start", "period_end_exclusive", *fields]
             fields += list(plan.metrics)
-        if any(set(row) != set(fields) for row in rows) or any(m not in fields for m in plan.metrics):
-            raise ContractError("Cevabın kolonları ölçü sözleşmesini sağlamıyor.")
-        columns = [{"name": k, "type": "float" if k in plan.metrics else "str",
+        numeric = set(plan.metrics) | {d.id for d in plan.derived}
+        if plan.comparison:
+            numeric = {"base_value", "target_value", plan.comparison.id}
+        if plan.crm:
+            numeric = set(getattr(engine, "numeric_fields", []))
+        if any(set(row) != set(fields) for row in rows) or any(m not in fields for m in numeric):
+            raise ContractError("Cevabın kolonları ölçü sözleşmesini sağlamıyor.", code="SOURCE_CONTRACT_VIOLATION")
+        columns = [{"name": k, "type": "float" if k in numeric else "str",
                     **({"label": METRICS[k].label, "unit": METRICS[k].unit} if k in METRICS else {})} for k in fields]
         sql = "\n\n".join("-- " + run["source"] + "\n" + run["sql"] for run in engine.runs)
         notes = list(dict.fromkeys(engine.notes))
         if "author" in plan.dimensions:
             notes.append("Yazar kırılımı kitap künyesindeki yazar metnidir; kişi kimliği ve telif sahipliği çıkarımı yapılmaz.")
         definitions = " ".join(METRICS[m].definition for m in plan.metrics)
-        if len(rows) == 1 and not plan.dimensions and len(plan.periods)==1 or len(rows)==1 and not plan.periods:
-            summary = " · ".join(f"{METRICS[m].label}: {_tr(rows[0][m])} {METRICS[m].unit}" for m in plan.metrics)
+        if len(rows) == 1 and not plan.dimensions and not plan.crm:
+            summary = " · ".join(f"{METRICS[k].label if k in METRICS else k}: {_tr(v)}" for k,v in rows[0].items())
         else:
             summary = f"{len(rows)} satır. " + (f"İstenen ilk {plan.limit} sonuç gösteriliyor. " if plan.limit else "")
             if rows:
                 summary += "İlk satır: " + " · ".join(f"{METRICS[k].label if k in METRICS else k}: {_tr(v)}" for k,v in rows[0].items())
-        summary += " Hesap tanımı: " + definitions
+        if definitions:
+            summary += " Hesap tanımı: " + definitions
         if notes:
             summary += " Veri notu: " + " ".join(notes)
         rid = uuid.uuid4().hex
@@ -108,8 +122,11 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
                                   "sourceComplete": not notes, "contractHash": CONTRACT_HASH}}
     except ContractError as exc:
         message = str(exc)
-        qid = record("CLARIFICATION", message, error=message)
-        return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "needs_clarification": True,
+        status = exc.code
+        kind = "CLARIFICATION" if status == "NEEDS_CLARIFICATION" else status
+        state["outcome"] = status
+        qid = record(kind, message, error=message)
+        return {"id": uuid.uuid4().hex, "type": kind, "needs_clarification": status == "NEEDS_CLARIFICATION",
                 "explanation": message, "threadId": thread_id, "semantic": state, "queryId": qid}
     except Exception as exc:
         from semantic_bridge import access
