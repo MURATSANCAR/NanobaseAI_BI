@@ -9,6 +9,7 @@
 - **VM ağacı (`/tmp/bi-vm-zeki54`, test sunucusu):** VM'deki `eb406f48b` + ZEKI-54 (2) + ZEKI-26 (2) commit; main'deki başka oturumun finans motoru (5 commit) bilerek alınmadı. `._*` 0, çakışma 0, köprü yükleniyor. VM kurulumu ve VM kataloğu (bağ + kavram, çıplak «yazar» yok) izin denetiminde — kullanıcı çalıştıracak.
 ## 2026-09-30 — Eski katalog kaldırma: kod ve yedekli silme hazırlığı
 
+- Eski resolve/explain/certify/kavram onayı/sözlük yazma-üretme uçları yetki kontrolünden sonra410 LEGACY_CATALOG_RETIRED döner. Geri bildirim artık eski minerı beslediğini iddia etmez.
 - Sağlık ucu yeni motoru ve legacyCatalogRetired durumunu açıklar; mevcut watchdog boş eski kataloğu tek başına arıza saymaz. Gerçek cevap kontrolü korunur.
 
 - Kullanıcı eski kataloğun silinmesini istedi. 100 karmaşık sorunun gerçek API koşusunda eski akışın CRM randevusunu Logo çek çıkışı diye sorguladığı görüldü; tam cevap kabulü0/100.

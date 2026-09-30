@@ -2460,21 +2460,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if body.validated is None:
             raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "validated ya da verdict gerekli."})
         ok = rt().store.mark_validated(body.queryId, body.validated)
-        return {"ok": ok, "queryId": body.queryId, "validated": body.validated, "note": "validated pairs feed the History Miner on the next pipeline run"}
+        return {"ok": ok, "queryId": body.queryId, "validated": body.validated, "note": "Geri bildirim geçmişe kaydedildi; eski katalog öğrenmesi kapalı."}
 
     # --- semantic
     @app.post("/api/v1/semantic/resolve")
     def resolve(body: AskIn) -> dict[str, Any]:
-        r = rt()
-        sq = r.resolver.resolve(body.question)
-        det = r.router.deterministic
-        plan_ok, reason = det.plan(sq) if det else (None, "no deterministic compiler")
-        out = det.compile(sq, r.store) if det and plan_ok else None
-        return {"query": sq.to_dict(), "deterministic": {"ok": out is not None, "reason": reason, "sql": out.sql if out else None, "explain": out.explain if out else []}}
+        raise HTTPException(status_code=410, detail={"code": "LEGACY_CATALOG_RETIRED",
+            "message": "Eski semantik katalog kaldırıldı; bu işlem artık kullanılmıyor."})
 
     @app.get("/api/v1/semantic/explain")
     def explain(term: str) -> dict[str, Any]:
-        return rt().resolver.explain_term(term)
+        raise HTTPException(status_code=410, detail={"code": "LEGACY_CATALOG_RETIRED",
+            "message": "Eski semantik katalog kaldırıldı; bu işlem artık kullanılmıyor."})
 
     @app.get("/api/v1/semantic/gaps")
     def semantic_gaps(days: int = 30, limit: int = 50) -> dict[str, Any]:
@@ -2493,12 +2490,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def semantic_status() -> dict[str, Any]:
         r = rt()
         s = r.settings
-        return {"ok": True, "engine": "semantic-layer", "version": SEMANTIC_LAYER_VERSION, "status": r.store.status_counts(s.tenant_id, s.datasource_id), "certifiedByType": r.store.type_counts(s.tenant_id, s.datasource_id), "catalogVersion": r.store.latest_version(s.tenant_id, s.datasource_id), "profiles": len(r.profiles), "queries": r.store.query_stats(s.tenant_id, s.datasource_id), "unresolved": dict(list(r.store.list_unresolved_terms(s.tenant_id, s.datasource_id).items())[:30]), "recall": s.recall_enabled, "strictMiss": s.strict_miss}
+        return {"ok": True, "engine": "finance_contract_v1", "legacyCatalogRetired": True, "version": SEMANTIC_LAYER_VERSION, "status": r.store.status_counts(s.tenant_id, s.datasource_id), "certifiedByType": r.store.type_counts(s.tenant_id, s.datasource_id), "catalogVersion": r.store.latest_version(s.tenant_id, s.datasource_id), "profiles": len(r.profiles), "queries": r.store.query_stats(s.tenant_id, s.datasource_id), "unresolved": dict(list(r.store.list_unresolved_terms(s.tenant_id, s.datasource_id).items())[:30]), "recall": False, "strictMiss": s.strict_miss}
 
     @app.post("/api/v1/semantic/certify")
     def certify(request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
         _require_admin(request)
-        return rt().certify(note=str((body or {}).get("note") or "api certify"))
+        raise HTTPException(status_code=410, detail={"code": "LEGACY_CATALOG_RETIRED",
+            "message": "Eski semantik katalog kaldırıldı; bu işlem artık kullanılmıyor."})
 
     @app.get("/api/v1/llm/queue")
     def llm_queue() -> dict[str, Any]:
@@ -2710,87 +2708,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.post("/api/v1/semantic/concepts/{concept_id}/review")
     def review_concept(concept_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        """A person's yes or no on one proposed term.
-
-        The evidence engine can propose and can measure, but there are terms only the business can
-        settle: whether "iskonto" means this column and this code, whether a word is worth having at
-        all. Those proposals sit as candidates until somebody looks, and on this deployment a hundred
-        and ninety-five of them were sitting while questions were being refused for want of the very
-        words they define.
-
-        A yes is recorded as human evidence, not as a bare status change, so the next engine run can
-        see who decided and does not undo it. A no is a rejection with the same standing: the term
-        stops being proposed rather than coming back every night.
-        """
         _require_admin(request)
-        _admin_gate(request)
-        r = rt()
-        s = r.settings
-        decision = str((body or {}).get("decision") or "").strip().upper()
-        if decision not in ("APPROVE", "REJECT", "CORRECT"):
-            raise HTTPException(status_code=400, detail={"code": "BAD_DECISION",
-                                                         "message": "decision APPROVE, REJECT ya da CORRECT olmalı"})
-        bundle = r.store.concept_bundle(concept_id)
-        if not bundle:
-            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
-        who = str((body or {}).get("by") or request.headers.get("X-User") or _actor(request))
-        note = str((body or {}).get("note") or "")
-        if decision != "CORRECT" or note.strip():
-            admin_mod.audit(r.store.engine, who, {"APPROVE": "approve", "REJECT": "reject", "CORRECT": "correct"}[decision],
-                            "term", concept_id, bundle["concept"].get("term"),
-                            {k: v for k, v in {"note": note, "column": (body or {}).get("column")}.items() if v})
-        eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
-        if decision == "APPROVE":
-            # Two writes, and both matter. The evidence row is the audit trail — who said so, when,
-            # in what words. The human_certify call is what makes the decision hold: the engine reads
-            # `human_certified_by` when it re-scores, and a concept without that marker is re-judged
-            # on its evidence every night and quietly demoted no matter who approved it.
-            r.store.add_evidence(Evidence(concept_id, EvidenceType.HUMAN_ANNOTATION, f"portal:{who}",
-                                          support_count=1, weight=1.0,
-                                          payload={"snippet": note or "portalden onaylandı", "by": who}))
-            eng.human_certify(concept_id, who, reason=note)
-        elif decision == "CORRECT":
-            # "Neither of your two buttons." A reviewer who can see the term is wrong usually knows
-            # what is right, and that sentence is the most valuable thing this screen can collect —
-            # more than the rejection. So a correction does three things: it retires the wrong
-            # reading, it keeps the person's own words where the model reads them, and, when they
-            # point at the right column, it certifies that instead. Anything less throws the
-            # knowledge away and asks them again tomorrow.
-            if not note.strip():
-                raise HTTPException(status_code=400, detail={"code": "NOTE_REQUIRED",
-                                                             "message": "düzeltme için açıklama gerekli"})
-            bundle_maps = bundle.get("mappings") or []
-            entity = str((body or {}).get("entity") or (bundle_maps[0].get("entity") if bundle_maps else ""))
-            column = str((body or {}).get("column") or "").strip().upper()
-            pattern = bundle_maps[0].get("table_pattern") if bundle_maps else ""
-            prof = r.resolver.by_entity.get(entity)
-            if column and (prof is None or prof.column(column) is None):
-                raise HTTPException(status_code=400, detail={"code": "NO_SUCH_COLUMN",
-                                                             "message": f"{entity} tablosunda {column} yok"})
-            eng.human_reject(concept_id, who, reason=f"düzeltildi: {note}")
-            said_of = column or None
-            r.add_annotation(prof.table_pattern if prof else pattern, said_of, note, who)
-            fixed = None
-            if column:
-                term = str((body or {}).get("term") or bundle["concept"]["term"])
-                m = SLMapping("", entity, prof.table_pattern, column=column)
-                c2, _ = r.store.upsert_concept(s.tenant_id, s.datasource_id, term,
-                                               bundle["concept"]["semantic_type"], mapping=m,
-                                               status=ConceptStatus.CANDIDATE)
-                r.store.add_evidence(Evidence(c2.id, EvidenceType.HUMAN_ANNOTATION, f"portal:{who}",
-                                              support_count=1, weight=1.0,
-                                              payload={"snippet": note, "by": who, "corrects": concept_id}))
-                eng.human_certify(c2.id, who, reason=note)
-                fixed = c2.id
-            return {"ok": True, "concept_id": concept_id, "status": decision, "corrected_to": fixed,
-                    "certified": r.store.status_counts(s.tenant_id, s.datasource_id)}
-        else:
-            eng.human_reject(concept_id, who, reason=note)
-        # No rebuild here on purpose: certifying moves the catalog fingerprint, and the runtime's own
-        # version check reloads on the next question. Rebuilding per click would cost seconds each
-        # time, and a reviewer works through a queue of them.
-        return {"ok": True, "concept_id": concept_id, "status": decision,
-                "certified": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id)}
+        raise HTTPException(status_code=410, detail={"code": "LEGACY_CATALOG_RETIRED",
+            "message": "Eski semantik katalog kaldırıldı; bu işlem artık kullanılmıyor."})
 
     # A term nobody ever used and no query ever ran is not yet worth a person's minute. Logo's own
     # field labels alone produce hundreds of fragments — "islem gerceklestik ay" — and a queue made
@@ -2845,46 +2765,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.post("/api/v1/semantic/vocabulary/{row_id}/decide")
     def vocabulary_decide(row_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        from semantic_layer import vocabulary
         _require_admin(request)
-        r = rt()
-        who = str((body or {}).get("by") or request.headers.get("X-User") or _actor(request))
-        decision = str((body or {}).get("decision") or "").strip().upper()
-        try:
-            eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
-            out = vocabulary.decide(r.store, r.settings, r.profiles, eng, row_id, decision, who, str((body or {}).get("note") or ""))
-        except KeyError:
-            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail={"code": "BAD_DECISION", "message": str(e)})
-        admin_mod.audit(r.store.engine, who, "approve" if decision == "APPROVE" else "reject", "synonym", row_id, None, body)
-        return out
+        raise HTTPException(status_code=410, detail={"code": "LEGACY_CATALOG_RETIRED",
+            "message": "Eski semantik katalog kaldırıldı; bu işlem artık kullanılmıyor."})
 
     @app.post("/api/v1/semantic/vocabulary")
     def vocabulary_add(request: Request, body: dict[str, Any]) -> dict[str, Any]:
-        """A person's own word for a field. Theirs from the first moment: approved, attached, and
-        never touched by generation afterwards."""
-        from semantic_layer import vocabulary
         _require_admin(request)
-        r = rt()
-        who = str(body.get("by") or request.headers.get("X-User") or _actor(request))
-        entity, term = str(body.get("entity") or ""), str(body.get("term") or "")
-        if not entity or not term.strip():
-            raise HTTPException(status_code=422, detail={"code": "EMPTY", "message": "entity ve term gerekli"})
-        eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
-        out = vocabulary.add_human(r.store, r.settings, r.profiles, eng, entity, body.get("column"), term, who, body.get("examples"))
-        admin_mod.audit(r.store.engine, who, "create", "synonym", out["id"], term, {"entity": entity, "column": body.get("column")})
-        return out
+        raise HTTPException(status_code=410, detail={"code": "LEGACY_CATALOG_RETIRED",
+            "message": "Eski semantik katalog kaldırıldı; bu işlem artık kullanılmıyor."})
 
     @app.post("/api/v1/semantic/vocabulary/generate")
     def vocabulary_generate(request: Request, body: dict[str, Any]) -> dict[str, Any]:
-        """Ask now for one field (or a whole table) instead of waiting for the timer."""
         _require_admin(request)
-        entity = str(body.get("entity") or "")
-        if not entity:
-            raise HTTPException(status_code=422, detail={"code": "EMPTY", "message": "entity gerekli"})
-        started = rt().generate_vocabulary(entity, body.get("column"))
-        return {"started": started}
+        raise HTTPException(status_code=410, detail={"code": "LEGACY_CATALOG_RETIRED",
+            "message": "Eski semantik katalog kaldırıldı; bu işlem artık kullanılmıyor."})
 
     @app.get("/api/v1/semantic/review")
     def review_queue(request: Request, limit: int = 100, source: str = "used") -> dict[str, Any]:
