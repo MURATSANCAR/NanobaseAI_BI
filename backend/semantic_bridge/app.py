@@ -1163,6 +1163,13 @@ class Runtime:
         timings: dict[str, int] = {}
         thread_id = thread_id or uuid.uuid4().hex
 
+        # Independent finance engine: no legacy resolver, catalog voting or SQL fallback.
+        # The existing API authentication/data authorization and result transport remain in force.
+        from semantic_bridge.finance_query import answer as finance_answer
+        contract_answer = finance_answer(self, question, thread_id, sample_size, execute, report, username)
+        if contract_answer is not None:
+            return contract_answer
+
         def _log(*, sql, compiler, catalog_version, executed, resolved=None, answer_type=None,
                  answer_summary=None, error=None, row_count=None, latency_ms=None,
                  result_fingerprint=None, result_json=None, gate=None) -> str:

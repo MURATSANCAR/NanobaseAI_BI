@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Finans soru akışının bağımsız sözleşme motoruyla yeniden kurulması
+
+- Kullanıcı eski yapıyı yedekleyip sıfırdan yazılmasını, eski sorgu/kataloğun kullanılmamasını istedi. Git bundle doğrulandı; canlı DB/kod/ayar yedeği sürüyor.
+- Yeni tarih/plan/sözleşme/kaynak seçimi/yürütme paketi; sadece doğrulanmış metric/dimension kimlikleri, gerçek şema, dönem çakışmasında ret, CRM stok kodunda tekillik ve toplam koruması.
+- Web kaynakları ve canlı alan ölçümleri mimari belgesinde. Kapsam dışı mali tanımlar dürüst netleştirme; eski SQL yoluna düşüş yok.
+- Yeni bağımsız kabul koşucusu gerçek test sunucusu için hazırlandı. Henüz çalıştırılmadı; üretim kabulü DOĞRULANAMADI.
+
 **2026-09-30 — Zeki bot mention canlı (test sunucusu):** `@zeki.bot` → etkin AD kimliği / mevcut Zeki yetki kapıları → sorana özel bot cevabı. `zeki-mention.service` enabled/active; kalıcı kuyruk, yeniden başlatmada çift yanıt yok. Gerçek API–Mongo metin eşitliği, mobil kutudan mention ve 320/390/768/1440 px geçti. Perakende satış 54.754.171,34 bağımsız Logo ile eşleşti. Fatura sayımı ortak katalogda yanlış tane seçti (1.436.023 / referans 27.425): katalog sorunu açık, bot `count_cue` ile türetilmiş ölçüyü rakam olarak yayımlamıyor; gerçek tekrar geçti. 6 geçici oda/12 chat jetonu/1 portal oturumu temizlendi; 218 gerçek hesap korundu. Müşteri VM ve yerel test yok. Ayrıntı/kanıt: `docs/ZEKI-CHAT-MENTIONS.md`.
 
 **2026-09-30 — AD sohbet rehberi / CRM ekipleri canlı:** 216 etkin AD hesabı görünür (215 yeni normal kullanıcı; toplam 218 hesap). 25 etkin CRM ekibinden AD üyesi olan 12 özel grup oluşturuldu; üyelikler bağımsız AD/CRM sorgusu + gerçek API + Mongo ile 12/12 eşleşti. 1 eşleşmeyen üyelik/13 boş ekip aktarılmadı. `zeki-directory-sync.timer` 15 dk; tekrar koşu 0 yeni kayıt/üyelik değişikliği. Ayrılmış/özel karakterli AD adları SSO ile ortak eşlenir, ekranda AD görünen adı kullanılır. Dört genişlikte gerçek kişi araması ve dış ağ kontrolleri geçti; 3 geçici portal oturumu/9 chat jetonu temizlendi. CRM/AD salt okunur, müşteri VM kurulumu yok. Rapor/işletim: `docs/ZEKI-CHAT-DIRECTORY.md`; kaynak `deploy/zeki/sync-directory.py`.
