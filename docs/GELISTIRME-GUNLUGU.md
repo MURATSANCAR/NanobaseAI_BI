@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Gerçek R8 denetleyici bağlamı düzeltmeleri
+
+- CP007–010 doğru dönem karşılaştırmasının base_value/target_value kolonlarını denetçi yok saydı. Karşılaştırmanın gerçek çıktı sözleşmesi (iki tarih aralığı, ayrı değer kolonları, yön/formül/NULL) eklendi; kaynak metrics listesi nihai kolon listesi olarak sunulmaz. Hesap ve kapı değişmedi.
+- CP019 doğru son30gün aralığı yine reddedildi; dahil son gün/ertesi gün hariç sınırının uygulanan SQL dönemi olduğu açıklandı, tarih hesabı değiştirilmedi.
+- CP034 ilk planında HAVING boş ve doğruydu; denetçi gereksiz OR filtresi istedi, onarım AND filtreyle nüfusu bozdu. Gruplu kaynak anahtarı varlığı, net0 ve HAVING etkisi ortak açık sözleşmeye bağlandı. Kullanıcı eşikleri silinmez; model önerisi SQL talimatı olarak uygulanmaz.
+- CP041 ilk plan gerçekten bölüm eksikliği taşıdı; onarılan iki bölüm doğruyken yaprak denetçi kendi kapsamını karıştırdı. Yaprak/ana soru bağlamı ayrıldı; bütün soru denetimi korunur. Tüm düzeltmeler yeni canlı kabul bekler; çalışan R8 kanıtı yeni kodu doğrulamaz.
+
 ## 2026-09-30 — Exact100 geniş ilk koşu tamamlandı ve karma kaynak düzeltmesi
 
 - Sabit7ca8c1b54 ile gerçek API/Logo/CRM exact100:21 ANSWER_UNVERIFIED,2 PARTIAL_UNVERIFIED,16 PLAN_ERROR,44 UNSUPPORTED,17 NEEDS_CLARIFICATION;100/100 yürütüldü,1 oturum silindi, kaynak yazımı0. Kanıt complex100-expanded-r1. Tam sayısal doğru cevap kabulü0; HTTP/SQL başarısı doğruluk değildir. CRM30 ve Logo35 cevaplarının bağımsız anlam incelemesi yapıldı; CX048/055 eksik işlemi tam cevap sayma sorunları korundu.

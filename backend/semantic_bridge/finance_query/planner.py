@@ -15,6 +15,24 @@ from .contracts import CONTRACT, METRICS, DIMENSIONS, ContractError
 from .model_schema import PLAN_SCHEMA, REVIEW_SCHEMA
 
 
+GROUPED_FAMILY_POPULATION = {
+    "applies_to": "Ortak boyutlarda birden çok Logo hareket ailesinin gruplu sonucu",
+    "input_keys": "Her kaynak ailesinde kaynak/tarih filtrelerinden geçen hareketlerin gerçek grup anahtarları",
+    "union": "key_exists_in_family_1 OR key_exists_in_family_2 OR ...",
+    "generated_empty_calendar_keys": False,
+    "absent_family_metric": 0,
+    "zero_metric_proves_absence": False,
+    "having_logic": "AND; [] bütün birleşim anahtarlarını korur; kullanıcı tarafından istenen sayısal eşikler ayrıca uygulanır",
+    "truth_table_before_having": [
+        {"key_in_A": True, "key_in_B": False, "included": True},
+        {"key_in_A": False, "key_in_B": True, "included": True},
+        {"key_in_A": True, "key_in_B": True, "included": True},
+        {"key_in_A": False, "key_in_B": False, "included": False},
+    ],
+    "nonzero_filter_is_not_existence": "Neti sıfır olan gerçek hareket grubu vardır; tutar!=0 OR başka_tutar!=0 dahi bu grubu yanlış eleyebilir. İki !=0 HAVING koşulu AND olduğundan tek taraflı grupları da eler.",
+}
+
+
 @dataclass(frozen=True)
 class Plan:
     metrics: tuple[str, ...]
@@ -259,7 +277,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Birden çok Logo family ölçüsü yalnız customer/channel/day/month/year ortak kırılımlarında birleştirilebilir; her aile önce ayrı toplanır. CRM count aileleri karıştırılmaz. Kayıt sayısına ürün kırılımı uydurma. "
               "Filtreden geçen özel isimler filters'a aynen yazılır; anlamlı sıfatlar kaybolamaz. "
               "Top N yalnız açıkça istenirse. Önceki plan yalnız açık takip sorularında bağlamdır.\n"
-              + json.dumps({"contract": CONTRACT, "output": schema, "parsedPeriods": periods,
+              + json.dumps({"contract": CONTRACT, "groupedFamilyPopulation": GROUPED_FAMILY_POPULATION, "output": schema, "parsedPeriods": periods,
                             "parsedGrain": grain, "referenceDate": str(today), "previous": previous, "crmCapabilities": CRM_CAPABILITIES, "crmReportCapabilities": CRM_REPORT_CAPABILITIES,
                             "logoReportCapabilities": LOGO_REPORT_CAPABILITIES, "logoReportOutputContracts": LOGO_REPORT_COMPACT_OUTPUT_CONTRACTS}, ensure_ascii=False))
     guided_schema, coverage_spans = _question_plan_schema(source_question)
@@ -271,6 +289,9 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
             " Asıl kullanıcı sorusunu yukarıdaki aynı sözleşme ve şemayla bir kez onar. Önceki plan aşağıda verilir; doğrulanmış kabul edilmiş plan değildir. "
             "Hata yalnız şekil/kapsam haritasındaysa anlamı karşılayan yürütme dalını ve hesapları koru; sadece biçim hatası yüzünden başka yeteneğe geçme. "
             "Hata iş anlamındaysa ilgili hesap/dalı düzelt; yanlış anlamı koruma. "
+            "Denetim hata açıklamasındaki teknik çözüm önerisini sorgusuz uygulama: asıl koşulu kaynak sözleşmesiyle yeniden denetle. "
+            "Kaynakta anahtar varlığı OR birleşimi, ölçülerin sıfırdan farklı olmasıyla aynı değildir; groupedFamilyPopulation "
+            "doğruluk tablosunu kullan. HAVING yalnız kullanıcı tarafından istenen gerçek sayısal kısıtları ifade eder; bu kısıtları kaldırma. "
             "Hiçbir koşulu çıkarma, soruyu değiştirme, başarısız koşulu saklamak için gap üretme. "
             "Onarım da bütün doğrulayıcılardan ve bağımsız anlam denetiminden geçecektir. "
             "Bölümlü kökte yürütme alanları boş/null; yalnız sections/gaps/coverage dolabilir. "
@@ -444,6 +465,29 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
             "sıfır_payda": "ratio ve percent_change için sağ operand sıfırsa NULL: hesaplanamaz, sıfır yüzde değildir",
 
         })
+    comparison_output = None
+    if comparison:
+        base_period = periods[comparison.base_period]
+        target_period = periods[comparison.target_period]
+        comparison_output = {
+            "metric": metric_meaning(comparison.metric),
+            "row_dimensions": list(dims),
+            "columns": {
+                "base_value": {"metric": comparison.metric, "period_index": comparison.base_period,
+                               "start_inclusive": base_period[0], "end_exclusive": base_period[1]},
+                "target_value": {"metric": comparison.metric, "period_index": comparison.target_period,
+                                 "start_inclusive": target_period[0], "end_exclusive": target_period[1]},
+                "base_period_start": base_period[0], "base_period_end_exclusive": base_period[1],
+                "target_period_start": target_period[0], "target_period_end_exclusive": target_period[1],
+                comparison.id: {"op": comparison.op, "formula": {
+                    "difference": "target_value - base_value",
+                    "percent_change": "(target_value - base_value) / base_value * 100",
+                }[comparison.op]},
+            },
+            "population": "İki dönemin kırılım anahtarlarının birleşimi; eksik dönem operandı NULL, gerçek sıfır korunur. Sonraki HAVING ve limit ayrıca uygulanır.",
+            "null_semantics": "Operand eksikse hesap NULL; percent_change için base_value sıfırsa hesap NULL.",
+            "meaning": "İki dönem ölçüsü ayrı base_value ve target_value çıktı kolonlarıdır; hesap kolonu bunlara ek olarak üretilir. metrics bu hesapların kaynak ölçüsüdür, nihai kolonların tamamı değildir.",
+        }
     analytic_meanings = []
     for spec in analytics:
         scope = "bütün sonuç satırları" if not spec["group_by"] else "aynı " + ", ".join(spec["group_by"]) + " değerindeki satırlar"
@@ -456,8 +500,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         else:
             analytic_meanings.append({"işlem":"ilk N ve kalan", "kapsam":scope, "ölçü":metric_meaning(spec["metric"]),
                 "ilk_n":spec["limit"], "kalan":"Seçilmeyen bütün öğeler ölçü toplamları korunarak tek satır olur", "kalan_etiketi":spec["label"]})
-    readable = {"referenceDate": str(today), "metrics": list(metrics),
-                "metric_definitions": {m: {"ad": METRICS[m].label, "tanım": METRICS[m].definition, "ayrı_çıktı_kolonu": True} for m in metrics},
+    readable = {"referenceDate": str(today), "metrics": list(metrics), "source_metrics": list(metrics),
+                "metric_definitions": {m: {"ad": METRICS[m].label, "tanım": METRICS[m].definition,
+                    "ayrı_çıktı_kolonu": comparison is None,
+                    "value_columns": ["base_value", "target_value"] if comparison else [m]} for m in metrics},
                 "dimensions": list(dims),
                 "dimension_definitions": {d: {"meaning": DIMENSIONS[d], "output_columns":
                     ["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else
@@ -469,6 +515,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                 "sonuç_kırılımları": result_grain, "koşullar": conditions, "operand_anlamları": operand_meanings,
                 "birleştirme_güvencesi": CONTRACT["joins"],
                 "ölçü_aileleri_birleşimi": CONTRACT["family_merge"],
+                "grouped_family_population_contract": GROUPED_FAMILY_POPULATION if len(families) > 1 and dims else None,
                 "sonuç_nüfusu": {
                     "süzgeç_öncesi_birleşim": {"işlem":"FULL OUTER" if len(families)>1 else "tek kaynak ailesi",
                         "kaynak_aileleri":sorted(families), "anahtarlar":list(dims),
@@ -481,10 +528,15 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                 "tam_sonuç_güvencesi": "Bütün kaynak satırları okunur; teknik sınırda kesilen cevap sunulmaz. Yalnız açık ilk N isteği sonuç kümesini sınırlar. Aktif CRM eşleşmesi bulunamayan Logo satırları NULL künye ile korunur, ölçü toplamları birleşim öncesi ve sonrası kontrol edilir.",
                 "analitik_işlemler": analytic_meanings, "türetilmiş_hesaplar": [asdict(d) for d in derived], "sonuç_süzgeçleri": [asdict(h) for h in having],
                 "dönem_karşılaştırması": asdict(comparison) if comparison else None,
+                "comparison_output_contract": comparison_output,
                 "işlem_tanımları": "ratio=left/right*scale; difference=left-right; percent_change=(left-right)/right*100. Dönem comparison: target-base, yüzde için base payda. Sıfır payda ve eksik değer NULL.",
                 "ilk_n": limit, "sıralama_ölçüsü": METRICS[order].label if order in METRICS else order, "azalan": data.get("descending", True)}
     review = _object(llm, [{"role": "system", "content":
         "Soru-plan uyumunu denetle. Yalnız {\"ok\":true|false,\"missing\":[...]}. "
+        "reviewScope.kind=section ise yalnız currentSectionQuestion içindeki bu bölümün hesap ve koşullarını denetle. "
+        "Ana sorudaki bölüm sayısı/sırası bu tek yaprağın içinde yeniden bölüm üretme şartı değildir; bütün bölümleri "
+        "ayrı composite_review denetler. originalQuestion yalnız ortak dönem/aynı ölçü gibi göndermelerin anlamını "
+        "çözmek içindir; diğer bölümlerin ölçü veya kırılımını bu yaprağa taşıma. Bu bölümün istenen koşullarını atlama. "
         "Kaynak uygunluğunu ölçü tanımları, sonuç nüfusunun kaynak_aileleri ve gerçek çıktı kolonlarıyla denetle. "
         "CRM adının geçmesi Logo satış ölçüsünü tek başına geçersiz kılmaz; karma isteklerde her kaynaktan istenen "
         "ölçü ve alan gerçekten bulunmalıdır. Yalnız CRM kart/sayım isteğinin yerine Logo finans ölçüsü koymayı reddet. "
@@ -505,28 +557,47 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         "Oranda pay ve paydayı ayrı ad öbekleri olarak denetle; her birinin kullanıcıdaki "
         "anlamını kendi operand tanımıyla karşılaştır, sonra yönü ve ölçeği kontrol et. "
         "İstenen ara toplamlar ayrı ölçü kolonlarında sunuluyorsa karşılanmıştır. "
-        "metrics listesi seçilmiş ve ayrı çıktı kolonlarında gösterilecek temel ölçülerin tam kimlik listesidir; "
-        "metric_definitions aynı kimliklerin iş anlamlarını verir. Listede bulunan bir ölçüyü eksik diye bildirme; "
-        "yanlış tanım/kapsam varsa onu somut belirt. Bir ölçünün tanımında başka ölçünün kavramı geçmesi o diğer "
-        "ölçüyü ayrı kolon yapmaz: ayrı kolon varlığı metrics listesinden, anlam uyumu tanımlardan denetlenir. "
+        "metrics ve source_metrics seçilmiş kaynak ölçülerinin kimlikleridir; metric_definitions iş anlamlarını ve "
+        "value_columns gerçek değer kolonlarını verir. Karşılaştırma yoksa her temel ölçü kendi kimliğiyle ayrı kolondur; "
+        "karşılaştırma varsa kaynak ölçüsü kendi adıyla çıktı kolonu değildir, iki dönem değeri base_value/target_value kolonlarındadır. "
+        "Kolon varlığını value_columns ve comparison_output_contract üzerinden, anlam uyumunu tanımlardan denetle. "
+        "Bir ölçünün tanımında başka ölçünün kavramı geçmesi o diğer ölçüyü ayrı kolon yapmaz; yanlış tanım/kapsamı somut belirt. "
         "dimensions gerçek sonuç kırılımlarının tam kimlik listesidir; dimension_definitions çıktı kimlik/ad kolonlarını gösterir. "
         "Seçilmiş kırılımı yok sayma; ayrıca istenen ayrı özet, katkı hesabı veya farklı kırılım düzeyini bununla karıştırma. "
-        "Ürün/müşteri başına yüzde değişimler toplam mutlak değişime katkı tutarları değildir; istenen mutlak fark/katkı veya toplam uzlaştırması yoksa reddet. "
+        "comparison_output_contract varsa nihai dönem kolonlarını oradan denetle: base_value ve target_value "
+        "ilan edilmiş iki dönemin ayrı ölçü tutarlarıdır; hesap kolonunun formülü aynı satırdaki bu operandlara uygulanır. "
+        "Bu kolonların ayrıca metrics/derived içinde tekrarını isteme; dönem yönü, ölçü tanımı ve gerçek formül yanlışsa reddet. "
+        "Sadece iki dönem farkı/değişimi istenmesi ayrıca katkı dağılımı veya toplam uzlaştırması talebi değildir. "
+        "Ürün/müşteri başına yüzde değişimler toplam mutlak değişime katkı tutarları değildir; kullanıcı ayrıca "
+        "mutlak katkı veya toplam uzlaştırması istiyorsa bu hesaplar gerçekten bulunmalıdır. "
         "Koşullar listesinde yazan koşul uygulanmaktadır; hayali bir teknik alanda ayrıca aranmaz. "
         "Teknik alan adı, SQL, TRCODE veya filters anahtarı talep etme. Yalnız kullanıcı sorusundan "
         "gerçekten eksik kalan iş koşulunu missing'e yaz. Varsayılan sıralama ve kurum kuralı olan "
         "aktif CRM süzgeci kapsam hatası değildir. Kitap adedi toplam miktardır; kitap kırılımı şart değildir. "
         "Genel tahsilatta çek/senet dahil tanım cevapta açıklanacaktır. "
+        "uygulanan_tarih_aralıkları modelin eklemesi gereken bir öneri değil, yürütmenin her kaynak sorgusuna "
+        "uyguladığı çözümlenmiş tarih filtreleridir. başlangıç_dahil <= işlem tarihi < bitiş_hariç uygulanır; "
+        "son_gün_dahil aynı aralığın kullanıcı takvimindeki son günüdür. Dahil son gün ile ertesi gün hariç sınırı "
+        "aynı nüfusu tarif eder; aralığı ikinci bir filters girdisi veya tarih çıktı kolonu olmadığı için eksik sayma. "
+        "gün_sayısı aralıktaki takvim günü sayısıdır; sorunun gün adedi ve bugün dahil şartını bu somut sınırlarla denetle. "
+        "Gerçek tarih uyuşmazlığı varsa istenen sınır ile uygulanan sınırın hangisinin farklı olduğunu belirt. "
         "Tarih koşulunu yalnız uygulanan_tarih_aralıkları ile denetle; referenceDate göreli çözüm çıpasıdır, "
         "ölçü tanımındaki işlem kodları takvim ayları değildir. "
         "Yüzde fark, açık formülde (sol-sağ)/sağ*100 ile sağlanır; aynı ara fark için ikinci bir işlem şart değildir. "
         "Bölüm sharedPeriodContext içeriyorsa dönem ana sorudaki tek açık aralıktan alınmıştır; bölüm kısaltmasında tarihin tekrar yazılmaması eksik dönem değildir. "
         "Sonuç nüfusundaki anahtar varlığı ile tutarın sıfırdan farklı olması ayrı şeylerdir; hareketi olup neti sıfır gün de gerçek hareket günüdür. "
+        "grouped_family_population_contract gerçek kaynak anahtarlarının birleşimidir; boş takvim günleri üretilmez. "
+        "Bu nedenle en az bir kaynakta hareketi olan gruplar için ayrıca OR sayısal filtresi isteme; "
+        "kaynak varlığının OR doğruluk tablosunu net tutarların sıfırdan farklılığıyla değiştirme. "
+        "Kullanıcı ayrıca sayısal eşik istemişse o farklı koşulun doğru uygulanmasını yine denetle. "
         "FULL OUTER yalnız süzgeç öncesi anahtar birleşimini garanti eder. Sonraki having koşullarını AND olarak "
         "tek taraflı/sıfır doldurulmuş satırlara uygula; bunları eleyen koşul varsa nihai korunma iddiasını reddet. "
         "Having boşsa bu aşamada tek taraflı gruplar korunur; onları korumak için ek sıfırdan farklı filtresi gerekmez. "
         "Contribution kolonlarında cumulative_pct mevcutsa kümülatif pay hesaplanmaktadır; ayrıca bir işlem adı arama."},
         {"role": "user", "content": json.dumps({"question": question, "plan": readable,
+                                                "reviewScope": {"kind":"section" if _depth else "whole_question",
+                                                                "currentSectionQuestion":question,
+                                                                "originalQuestion":source_question if _depth else None},
                                                 "previous": previous if follows(question) else None,
                                                 "sharedPeriodContext": {"originalQuestion":source_question,"inheritedPeriods":periods} if inherited_period else None}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "finance_review", trace)
     if trace is not None:
