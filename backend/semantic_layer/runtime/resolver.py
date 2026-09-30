@@ -823,6 +823,22 @@ class SemanticResolver:
                 replacement = self._slot_from_senses(slot.explain["normalized"], slot.term, values, slot.span)
                 if replacement:
                     hits[pos] = replacement
+
+        # 2h) a code the person wrote is the definition: "mal alım (TRCODE 1)", "Perakende (TRCODE 7)".
+        #     The catalog's reading of the word on that column (perakende = 2, 7; fatura = 2, 3, 7, 8, 9)
+        #     is a default for when nobody says; kept beside the code, it demanded values the question had
+        #     just excluded, and a correct answer was refused (golden, 2026-09-30). The words stay
+        #     consumed — they are the label of the code, not another thing to place.
+        explicit_cols = {s.mapping.column.upper() for s in hits
+                         if s.status == "EXPLICIT" and s.mapping and s.mapping.column}
+        if explicit_cols:
+            for slot in list(hits):
+                m = slot.mapping
+                if (slot.status != "EXPLICIT" and slot.semantic_type == SemanticType.DIMENSION_VALUE
+                        and m and m.column and m.column.upper() in explicit_cols):
+                    hits.remove(slot)
+                    sq.explanation.append(f"'{slot.term}' için katalogdaki {m.column} = {', '.join(map(str, m.values))} "
+                                          f"yerine soruda açıkça yazılan kod kullanıldı")
         sq.slots = hits
         # 3) primary entity → choose among alternatives on other slots
         primary = self._primary_entity(hits)
@@ -1137,6 +1153,9 @@ class SemanticResolver:
                     sq.explanation.append(f"'{slot.term}' filtresi katalogdaki eşdeğerlik tanımıyla ölçünün tablosuna bağlandı: {target}.{binding['column']}")
                     bindings = self.conventions.filter_bindings(slot.mapping)
                 slot.explain["equivalent_bindings"] = bindings
+                determined = self.conventions.determined_by(slot.mapping) if hasattr(self.conventions, "determined_by") else []
+                if determined:
+                    slot.explain["determined_by"] = determined
         # A qualitative price judgment needs a business definition, not a
         # similarly named numeric column or a threshold invented by the model.
         price_rank: Optional[bool] = None

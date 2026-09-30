@@ -16,6 +16,17 @@
 
 **2026-09-30 — Sohbet kod kalıntısı temizliği:** kullanılmayan Document360 action silindi; onboarding-ui bağımlılığı yerel yönetici/kuruluş formlarıyla değiştirildi; marketplace katalog okuyucusu lisans/fiyat/kota şeması yerine yerel boş liste döndürür; NPS varsayılan kapalı. Test sunucusunda `zeki-ai-chat:8.5.3-c1f548205` kuruldu: derleme, 118.310 imaj dosyasında paket/action yokluğu, gerçek API–Mongo mesaj eşitliği, boş yerel katalog, dört sohbet ekranı genişliği ve ağ kontrolleri geçti. 1 portal oturumu/4 sohbet jetonu temizlendi. Yeni kurulum formları ve yeni yönetici oluşturma **DOĞRULANAMADI**; mevcut kurulum değiştirilmedi. Rapor: `apps/zeki-chat/docs/zeki-code-audit-2026-09-30.md`.
 
+## 2026-09-30 — Kalite kapısı: «kapıdan geçen doğru SQL» 0,81 → 0,57; üç sınıf
+
+- **Belirti:** doğru tabloya ulaşma düzeldikten sonra kapı yalnız «kapıdan geçen doğru SQL» ölçütünde KALDI veriyordu: golden'daki 5 doğru cevap reddediliyordu. Taban 09-15'te kaydedilmişti; katalog 09-16'da «perakende», «mal alım», «satış faturası» gibi değer kavramlarıyla büyüdü, bu sınıflar o zaman açığa çıktı.
+- **1 — soruda yazılan kod tanımı ezer** (`resolver.py` adım 2h): «mal alım (TRCODE 1)», «Perakende (TRCODE 7)». Kişi kodu açıkça yazmışken katalogdaki okuma (perakende = 2, 7; fatura = 2, 3, 7, 8, 9) da aynı kolonda kalıyor, kapı sorunun dışladığı değerleri istiyordu. Aynı kolonda açık kod varsa o kolondaki katalog değer slotları düşer (kelimeler tüketilmiş kalır), açıklamaya yazılır.
+- **2 — belirleyen kolon** (`equivalences.yml` `determined_columns` + `Conventions.determined_by` + `audit._filter_proven`): «satış faturası» = `INVOICE.GRPCODE = 2`, doğru cevap `TRCODE IN (7, 8, 9)`. Canlı Logo'da ölçüldü (09-30, LG_411_01 ve LG_211_01): her TRCODE tek bir GRPCODE taşır (1, 4, 6 → 1; 2, 3, 7, 8, 9 → 2; irsaliyede 11–51 → 3). Belirleyen kolondaki kısıt, tuttuğu her kod istenen gruba düşüyorsa belirlenen kolonu kanıtlar; ölçülmemiş kod ya da grup dışı kod kanıt değildir.
+- **3 — golden cevabın yorumu:** «maliyetlendirilmiş» katalogda yok; kapı sözleşmesi modelden `-- yorum:` satırı ister. Golden SQL bu satırı taşımıyordu (sözleşme tabandan sonra geldi); cevaba `-- yorum: 'maliyetlendirilmiş' → OUTCOST <> 0 …` eklendi (SQL aynı).
+- **Ölçüm koşulu:** `golden-eval.py` bilgi paketini (equivalences, kurallar) ölçülen ağacın kendi `configs/semantic/knowledge/<ad>` klasöründen okur; önce canlı sunucunun kopyasını okuyordu, ağacın kendi beyanları hiç sayılmıyordu.
+- **Testler:** `test_runtime.py` — açık kod katalog okumasını ezer; belirleyen kolon kanıtlar (grup dışı ve ölçülmemiş kod kanıtlamaz); Logo belirlemeleri yalnız kolonlar varsa yüklenir.
+- **Doğrulama (test sunucusu, `git archive` 182e7f97e, `._*` 0):** 5 vakanın beşi kapıdan geçti. Kalite kapısı **GEÇTİ**: doğru tabloya ulaşma 1,0, kapıdan geçen doğru SQL 0,81 (= taban), yanlış kabul 0, tablo kaçırmayan 39, cevaplanamaz 6 → 5. Tam `semantic_layer/tests` **4.710 geçti, 0 düştü** (dünkü `test_kopru_acilis` düşüşleri main'de giderilmiş).
+- Dal: `kapi-geri-cagirma` (main'e taşınmadı).
+
 ## 2026-09-30 — Sohbet ayrıntılı kod ve çalışan imaj denetimi
 
 - Kaynak `ebc692820`, canlı imaj `157d9f6a8`; 7.922 kaynak dosyası, 419 bağımlılık JS dosyası seçili göstergelerle tarandı.

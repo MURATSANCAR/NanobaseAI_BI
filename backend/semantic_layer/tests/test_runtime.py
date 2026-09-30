@@ -289,6 +289,54 @@ def test_model_sql_that_contradicts_a_certified_fact_is_caught(catalog, profiles
     assert audit_sql(sq, "SELECT SUM(INVOICE.NETTOTAL) FROM LG_411_01_INVOICE AS INVOICE") == []
 
 
+def test_a_code_written_in_the_question_replaces_the_catalog_reading_of_its_word(catalog, profiles):
+    """«Toptan (TRCODE 7)»: kişi kodu yazdı; katalogdaki «toptan = 8» varsayılandır, sorunun dışladığı değeri
+    istemez. İkisi birlikte durunca doğru cevap reddediliyordu (golden, 2026-09-30)."""
+    from semantic_layer.runtime.audit import audit_sql, unmet_obligations
+
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Toptan (TRCODE 7) satış tutarı ne kadar?", today=date(2026, 7, 20))
+    on_trcode = [s for s in sq.filters if s.mapping and (s.mapping.column or "").upper() == "TRCODE"]
+    assert on_trcode and all(s.status == "EXPLICIT" for s in on_trcode), sq.to_dict()
+    sql = "SELECT SUM(INVOICE.NETTOTAL) FROM LG_411_01_INVOICE AS INVOICE WHERE INVOICE.TRCODE IN (7)"
+    assert audit_sql(sq, sql) == []
+    assert not [u for u in unmet_obligations(sq, sql) if "toptan" in u.lower()]
+    # without the code the catalog's reading stands
+    assert audit_sql(r.resolve("Toptan satış tutarı ne kadar?", today=date(2026, 7, 20)), sql)
+
+
+def test_a_restriction_on_the_determining_column_proves_the_determined_one():
+    """«satış faturası» GRPCODE = 2; cevap TRCODE IN (7, 8, 9) tutuyor. Veride her TRCODE tek bir GRPCODE'a
+    düşer (ölçüldü): bu kodların hepsi grup 2'dir, cevap istenen satırların dışına çıkmaz."""
+    from semantic_layer.models import Mapping, ResolvedSlot, SemanticQuery, SemanticType
+    from semantic_layer.runtime.audit import unmet_obligations
+
+    det = [{"column": "TRCODE", "map": {"1": "1", "4": "1", "2": "2", "3": "2", "7": "2", "8": "2", "9": "2"}, "reason": "ölçüldü"}]
+    m = Mapping(concept_id="c", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE", column="GRPCODE", operator="IN", values=["2"])
+    slot = ResolvedSlot(term="satis faturasi", semantic_type=SemanticType.DIMENSION_VALUE, status="CERTIFIED",
+                        concept_id="c", mapping=m, explain={"determined_by": det})
+    sq = SemanticQuery(question="satış faturası başına ortalama tutar", tenant_id=TENANT, datasource_id=DS, slots=[slot])
+    base = "SELECT AVG(i.NETTOTAL) FROM LG_411_01_INVOICE i WHERE i.CANCELLED = 0 AND i.TRCODE IN ({})"
+    assert not [u for u in unmet_obligations(sq, base.format("7, 8, 9")) if "satis faturasi" in u]
+    assert [u for u in unmet_obligations(sq, base.format("7, 8, 1")) if "satis faturasi" in u]   # 1 is a purchase
+    assert [u for u in unmet_obligations(sq, base.format("7, 99")) if "satis faturasi" in u]     # unmeasured code
+    slot.explain = {}
+    assert [u for u in unmet_obligations(sq, base.format("7, 8, 9")) if "satis faturasi" in u]
+
+
+def test_logo_determined_columns_load_only_where_the_columns_exist(profiles):
+    from semantic_layer.conventions import Conventions
+    from semantic_layer.models import Mapping
+    from semantic_layer.tests.conftest import PROJECT
+
+    conv = Conventions.from_profiles(profiles)
+    conv.load_equivalences(PROJECT / "equivalences.yml")
+    m = Mapping(concept_id="c", entity="INVOICE", table_pattern="x", column="GRPCODE", operator="IN", values=["2"])
+    has = conv.has("INVOICE", "GRPCODE") and conv.has("INVOICE", "TRCODE")
+    assert bool(conv.determined_by(m)) == has
+    assert conv.determined_by(Mapping(concept_id="c", entity="INVOICE", table_pattern="x", column="TRCODE", operator="IN", values=["2"])) == []
+
+
 def test_gaps_endpoint_reports_what_users_asked_for(catalog, profiles, logo_connector, settings):
     """Every question the bridge serves records what it could not place. Those terms are the portal's
     work queue — a word here is not a bug, it is a part of the business nobody has written down."""

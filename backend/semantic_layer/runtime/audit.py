@@ -919,6 +919,17 @@ def _filter_proven(m, slot, occ: list[_Occurrence], tree, scope) -> bool:
     own = [o for o in occ if _same_entity(o.entity, entity)]
     if own and all(holds(o, column, compatible, expected) for o in own):
         return True
+    # Written on the column that determines this one ("satış faturası" is GRPCODE = 2; the answer keeps
+    # TRCODE IN (7, 8, 9), and every one of those is GRPCODE 2 in the data): the same rows or fewer of
+    # them, never rows outside the requested set.
+    if own and op in ("=", "IN"):
+        for det in slot.explain.get("determined_by", []):
+            by, mapped = det["column"].upper(), det["map"]
+            def implies(o: _Occurrence) -> bool:
+                return any(p.column.upper() == by and p.operator.upper() in ("=", "IN") and _values(p)
+                           and all(mapped.get(v) in expected for v in _values(p)) for p in o.preds)
+            if all(implies(o) for o in own):
+                return True
     if not own:
         # The header is not read; its lines are, and the line carries the header's column under the
         # same name (Logo writes TRCODE on the order line as on the order). `LG_ORFLINE.TRCODE IN (1)`

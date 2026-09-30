@@ -58,6 +58,12 @@ def main(argv: list[str]) -> int:
     # recorded without it (2026-09-29). Set here, after the caller's environment, nothing can override it.
     os.environ["SEMANTIC_TABLE_SELECTOR"] = args.selector
     os.environ["SEMANTIC_LLM"] = "0"
+    # The knowledge pack (equivalences, rules) is part of what is measured: a tree under test read the
+    # live server's copy and its own declarations never counted. The same-named pack in this tree wins.
+    pack = os.environ.get("SEMANTIC_KNOWLEDGE_DIR", "")
+    own = Path(__file__).resolve().parents[2] / "configs" / "semantic" / "knowledge" / Path(pack).name if pack else None
+    if own is not None and own.is_dir():
+        os.environ["SEMANTIC_KNOWLEDGE_DIR"] = str(own)
 
     from semantic_layer.config import SemanticSettings
     from semantic_layer.store.catalog_store import open_store
