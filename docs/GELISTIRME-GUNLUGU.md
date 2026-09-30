@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Görüşme görevi ile serbest nottaki iş ayrımı
+
+- CX063 gerçek cevap boş bağlı görev özeti; bu, serbest görüşme notlarında aynı işin tekrarlanmadığını kanıtlamaz. open_author_actions sözleşmesinde yalnız açık görev kimliği/ilişki listesi olduğu, same_task_reference_count sabit1 alanının not tekrarı sayısı olmadığı ve not içeriği eşleştirmesinin hesaplanmadığı açıklandı. Hesap değişmedi; zorunlu anlamsal tekrar ayrımı tam karşılanmış sayılamaz. Gerçek yeni kabul bekliyor.
+
 ## 2026-09-30 — Aday listesi ile eser kimliği sınıflandırması ayrımı
 
 - Exact100 CX048 gerçek çıktısında2909candidate tek ortak karar etiketiyle dönmüş; kullanıcıdaki farklı eser/olası mükerrer ayrımı hesaplanmadığı halde TEXT_TO_SQL/sourceComplete=true idi. Bu tam cevap başarısı sayılmadı.
