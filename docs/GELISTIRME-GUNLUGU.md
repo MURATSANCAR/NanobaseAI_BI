@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Kaynak yeteneğinden bağımsız dilsel niyet
+
+- 693d6b60a CRM-R5 hedef5:2 FULL_ANSWER_PASS,2 BOUNDARY_PASS,1 FAIL;1geçici oturum silindi,kaynak yazma0. CR023 düzeldi;CR007'de denetçi 'kişileri birleştirme' olumsuz emrini olumlu talep diye etiketledi. Groundedquote bulunması tek başına dilsel doğruluk kanıtı olmadı.
+- Kaynak raporlarında ek bir sınırlı çağrı yalnız soru/dönemi görerek istek/yasak/koşullu asıl talep/izinli alternatif ayrımını yapar; yetenek listesi bu aşamada gösterilmez. Her alıntı ve koşul özgün soruya, alternatif asıl kimliğe bağlıdır. Son denetim özgün soru + tüm niyetler + gerçek sözleşmeyi karşılaştırır; bozuk/eksik çözüm failclosed.
+- İzin verilen alternatif kullanılmışsa yapılmayan asıl talep Plan.gaps olarak korunur. Executor bu boşlukları artık tek raporda da taşır; alternatif çıktı sessiz tam kabul edilmez. Hedefsoru/kitap özel istisnası yok.
+- Yeni dilsel akış ve model JSON şeması canlı yeniden kabul bekliyor. Yerel ürün testi yapılmadı.
+
 ## 2026-09-30 — CRM gerçek kabul ve talebe dayalı ret kanıtı
 
 - CRM-R3 c36bba10d tamamlandı:33/33,20 FULL_ANSWER_PASS,8 BOUNDARY_PASS,5 FAIL; kod sabit,1geçici oturum silindi,kaynak yazma0. Her sorunun tam API sonucu ve bağımsız öncesi/sonrası referansı `/data/nanobaseai/bi/acceptance/finance-expanded-20260930/crm-r3/` altında.

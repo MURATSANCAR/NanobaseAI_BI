@@ -834,6 +834,55 @@ def build_composite(data, question, llm, previous, trace, today, depth):
     return Plan((), (), (), sections=tuple(plans), gaps=tuple(gaps), coverage=tuple(coverage))
 
 
+
+def source_report_intents(question, periods, today, llm, trace):
+    text_type = {"type":"string"}
+    intent_fields = {
+        "id":text_type, "question_quote":text_type, "affirmative_meaning":text_type,
+        "speech_act":{"type":"string", "enum":["request", "prohibition", "conditional_primary", "fallback"]},
+        "condition_quote":text_type, "primary_id":{"type":["string", "null"]},
+    }
+    schema = {"type":"object", "additionalProperties":False, "required":["intents"], "properties":{
+        "intents":{"type":"array", "minItems":1, "maxItems":24, "items":{
+            "type":"object", "additionalProperties":False, "required":list(intent_fields), "properties":intent_fields}}}}
+    parsed = _object(llm, [{"role":"system", "content":
+        "Yalnız sorunun dilsel iş koşullarını çözümle; herhangi bir sistem yeteneği veya rapor seçme. "
+        "Her tarih/nüfus/alan/hesap/çıktı isteğini ve yasağı intents içine al. id benzersiz olsun. "
+        "question_quote özgün sorudan kesintisiz birebir alıntıdır; affirmative_meaning korunması gereken "
+        "sonucu açık olumlu cümleyle ifade eder. Olumsuz emirle isim-fiili cümledeki görevinden ayır: "
+        "prohibition, yasak işlemin yapılmasını istemez; korunacak durumu ifade et. "
+        "Koşulsuz talepler request; koşula bağlı asıl hesap conditional_primary; kullanıcı izin vermişse "
+        "alternatif çıktı fallback ve primary_id bağlı asıl intent kimliği olur. Diğer primary_id null. "
+        "conditional_primary/fallback condition_quote özgün koşulun birebir alıntısıdır; diğerlerinde boş metin. "
+        "Koşullu A mümkün değilse B ve eksikliği açıklama ilişkisini koru; A'yı koşulsuz zorunluya dönüştürme. "
+        "Kullanıcı söylemeden fallback üretme; birden çok şartı atlama. Yalnız şemalı JSON."},
+        {"role":"user", "content":json.dumps({"question":question,"parsedPeriods":periods,"referenceDate":str(today)},ensure_ascii=False)}],
+        2400, schema, "source_report_intents", trace)
+    intents = parsed.get("intents")
+    if not isinstance(intents, list) or not 1 <= len(intents) <= 24:
+        raise ContractError("Kaynak raporu niyet çözümü geçersiz.", code="PLAN_INVALID")
+    by_id = {}
+    for item in intents:
+        if (not isinstance(item, dict) or set(item) != set(intent_fields)
+                or not isinstance(item["id"], str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}",item["id"])
+                or item["id"] in by_id or item["speech_act"] not in {"request","prohibition","conditional_primary","fallback"}
+                or any(not isinstance(item[k], str) or not item[k].strip() for k in ("question_quote","affirmative_meaning"))
+                or item["question_quote"] not in question or not isinstance(item["condition_quote"], str)):
+            raise ContractError("Kaynak raporu niyeti özgün soruya bağlanamadı.", code="PLAN_INVALID")
+        conditional = item["speech_act"] in {"conditional_primary","fallback"}
+        if (conditional and (not item["condition_quote"].strip() or item["condition_quote"] not in question)
+                or not conditional and item["condition_quote"]
+                or item["speech_act"] != "fallback" and item["primary_id"] is not None):
+            raise ContractError("Kaynak raporu koşullu niyet bağı geçersiz.", code="PLAN_INVALID")
+        by_id[item["id"]] = item
+    for item in intents:
+        if item["speech_act"] == "fallback" and (not isinstance(item["primary_id"], str)
+                or item["primary_id"] not in by_id or by_id[item["primary_id"]]["speech_act"] != "conditional_primary"):
+            raise ContractError("Kaynak raporu alternatif isteği asıl koşula bağlanamadı.", code="PLAN_INVALID")
+    if trace is not None: trace.append({"stage":"source_report_intents", "output":parsed})
+    return by_id
+
+
 def build_report(data, question, llm, periods, today, trace, source_question=None):
     from .logo_reports import validate_logo_report, LOGO_REPORT_CAPABILITIES, describe_logo_report_output
     from .crm_reports import validate_crm_report, CRM_REPORT_CAPABILITIES, describe_crm_report_output
@@ -892,15 +941,22 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     else:
         capabilities = {"mode":report["mode"], "description":LOGO_REPORT_CAPABILITIES[report["mode"]],
                         "output_contract":describe_logo_report_output(report["mode"])}
+    intents = source_report_intents(question, periods, today, llm, trace)
     source_review_schema = {
         "type": "object", "additionalProperties": False,
-        "required": ["ok", "missing", "missing_evidence"],
+        "required": ["intent_checks", "intent_extraction_complete", "ok", "missing", "missing_evidence"],
         "properties": {
+            "intent_checks":{"type":"array", "items":{"type":"object", "additionalProperties":False,
+                "required":["intent_id","status","contract_evidence"], "properties":{
+                    "intent_id":{"type":"string"}, "status":{"type":"string","enum":["satisfied","fallback_used","not_applicable","missing"]},
+                    "contract_evidence":{"type":"string"}}}},
+            "intent_extraction_complete":{"type":"boolean"},
             **REVIEW_SCHEMA["properties"],
             "missing_evidence": {"type":"array", "items": {
                 "type":"object", "additionalProperties":False,
-                "required":["question_quote", "requirement_kind", "contract_mismatch"],
+                "required":["intent_id", "question_quote", "requirement_kind", "contract_mismatch"],
                 "properties": {
+                    "intent_id":{"type":"string"},
                     "question_quote":{"type":"string"},
                     "requirement_kind":{"type":"string", "enum":["positive_request", "violated_prohibition"]},
                     "contract_mismatch":{"type":"string"},
@@ -909,7 +965,15 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         },
     }
     review = _object(llm, [{"role": "system", "content":
-        "Kullanıcı sorusuyla seçilen kaynak raporunun ilan edilmiş yeteneğini karşılaştır. Yalnız ok/missing/missing_evidence JSON. "
+        "Önce intents içindeki her koşulu intent_checks ile seçili sözleşmeye bağla, sonra genel karar ver. "
+        "Her intent_id tam bir kez bulunmalı; contract_evidence gerçek çıktı/nüfus/iddia kanıtını açıklamalı. "
+        "Özgün question hâlâ yetkilidir: extraction bir koşulu atlamış veya anlamını bozmuşsa intent_extraction_complete=false ver; kabul etme. "
+        "prohibition korunacak durumdur; unsupported işlem yapılamıyor diye ihlal değildir. "
+        "Koşullu asıl işlem gerçekten desteklenmiyorsa yalnız kullanıcının izin verdiği bağlı fallback karşılanıp "
+        "asıl işlemin hesaplanmadığı açıkça sunuluyorsa primary için fallback_used yaz; asıl işlem satisfied değildir. "
+        "Asıl koşullu işlem gerçekten sağlanıyorsa bağlı fallback için not_applicable ver; başka hiçbir koşulu bu etiketle atlama. "
+        "Koşulsuz zorunlu hesabı fallback ile değiştirme. missing_evidence.intent_id yalnız missing durumuna bağlanır. "
+        "Kullanıcı sorusuyla seçilen kaynak raporunun ilan edilmiş yeteneğini karşılaştır. Yalnız şemalı JSON. "
         "Her missing öğesi için aynı sırada bir missing_evidence üret: question_quote özgün question içinden "
         "kesintisiz birebir alıntı, requirement_kind olumlu istekse positive_request veya rapor gerçekten bir yasağı "
         "ihlal ediyorsa violated_prohibition, contract_mismatch bu talebin seçili sözleşmeyle somut uyuşmazlığıdır. "
@@ -942,10 +1006,26 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         "rapor ve ilan edilmiş hesap eksikliği birlikte değerlendirilir; koşullu olmayan zorunlu hesap eksikliği kabul edilmez. "
         "İstenen filtre/altküme eksikliği ise bağımsız ek hesap sınırı değildir: geniş filtresiz nüfusu doğru cevap sayma. "
         "zorunlu sayısal cevabın yerine salt gap tam cevap değildir."},
-        {"role": "user", "content": json.dumps({"question": question, "report": report, "capabilities": capabilities,
-        "parsedPeriods": periods, "referenceDate": str(today)}, ensure_ascii=False)}], 2400, source_review_schema, "source_report_review", trace)
+        {"role": "user", "content": json.dumps({"question": question, "intents":list(intents.values()), "report": report, "capabilities": capabilities,
+        "parsedPeriods": periods, "referenceDate": str(today)}, ensure_ascii=False)}], 3600, source_review_schema, "source_report_review", trace)
     if trace is not None:
         trace.append({"stage":"source_report_review", "output":review})
+    checks = review.get("intent_checks")
+    if (review.get("intent_extraction_complete") is not True or not isinstance(checks,list)
+            or len(checks) != len(intents) or any(not isinstance(c,dict) or c.get("intent_id") not in intents
+                or c.get("status") not in {"satisfied","fallback_used","not_applicable","missing"}
+                or not isinstance(c.get("contract_evidence"),str) or not c["contract_evidence"].strip() for c in checks)
+            or len({c["intent_id"] for c in checks}) != len(intents)):
+        raise ContractError("Kaynak raporu denetimi bütün özgün koşulları kanıtlamadı.", code="PLAN_INVALID")
+    check_map = {c["intent_id"]:c for c in checks}
+    for check in checks:
+        intent = intents[check["intent_id"]]
+        if check["status"] == "not_applicable" and (intent["speech_act"] != "fallback"
+                or check_map[intent["primary_id"]]["status"] != "satisfied"):
+            raise ContractError("Uygulanmayan koşul izinli alternatif değil.", code="PLAN_INVALID")
+        if check["status"] == "fallback_used" and (intents[check["intent_id"]]["speech_act"] != "conditional_primary"
+                or not any(i["primary_id"] == check["intent_id"] and check_map[i["id"]]["status"] == "satisfied" for i in intents.values())):
+            raise ContractError("Koşullu hesap yerine izinli alternatif kanıtlanmadı.", code="PLAN_INVALID")
     missing = review.get("missing") or []
     evidence = review.get("missing_evidence")
     if (not isinstance(evidence, list) or len(evidence) != len(missing)
@@ -953,12 +1033,20 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
             or any(not isinstance(item, dict)
                    or not isinstance(item.get("question_quote"), str)
                    or not item["question_quote"].strip() or item["question_quote"] not in question
-                   or item.get("requirement_kind") not in {"positive_request", "violated_prohibition"}
+                   or item.get("intent_id") not in intents
+                   or item.get("requirement_kind") != ("violated_prohibition" if intents.get(item.get("intent_id"),{}).get("speech_act") == "prohibition" else "positive_request")
                    or not isinstance(item.get("contract_mismatch"), str)
                    or not item["contract_mismatch"].strip() for item in evidence)):
         raise ContractError("Kaynak raporu denetimi, kararını kullanıcının gerçek koşullarıyla tutarlı biçimde kanıtlamadı.", code="PLAN_INVALID")
+    if {item["intent_id"] for item in evidence} != {c["intent_id"] for c in checks if c["status"] == "missing"}:
+        raise ContractError("Eksik kapsam niyet kanıtlarıyla uyuşmuyor.", code="PLAN_INVALID")
     if review.get("ok") is not True or missing:
         # This rejects the selected plan, not every capability in the contract.
         # The root may replan once; the same report/metric guards run again.
         raise ContractError("Seçilen kaynak raporu sorunun tüm koşullarını karşılamıyor: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")
-    return Plan((), (), periods, **{branch: report})
+    fallback_gaps = tuple({
+        "status": "UNSUPPORTED_CAPABILITY",
+        "reason": "İstenen: " + intents[check["intent_id"]]["question_quote"]
+                  + " — Bu hesap doğrulanmadı; kullanıcının istediği alternatif sunuldu.",
+    } for check in checks if check["status"] == "fallback_used")
+    return Plan((), (), periods, gaps=fallback_gaps, **{branch: report})

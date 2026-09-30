@@ -201,8 +201,8 @@ class Executor:
         return books
 
     def execute(self, plan):
+        self.gaps.extend(getattr(plan, "gaps", ()))
         if getattr(plan, "sections", ()):
-            self.gaps.extend(getattr(plan, "gaps", ()))
             overview = []
             for index, leaf in enumerate(plan.sections):
                 child = Executor(self.rt)
