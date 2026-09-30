@@ -28,23 +28,23 @@ def pick(data: dict[str, Any]) -> str | None:
     return u if u.startswith("https://") else None
 
 
-def by_stock_code(engine: Any, tenant: str, codes: Iterable[str | None]) -> dict[str, str]:
-    """{stok kodu: kapak adresi}; eşleşmeyen kod sözlükte yoktur."""
+def by_stock_code(engine: Any, tenant: str, codes: Iterable[str | None]) -> dict[str, dict[str, Any]]:
+    """{stok kodu: {"cover": kapak adresi ya da None, "name": sitedeki ürün adı}}; eşleşmeyen kod sözlükte yoktur."""
     from semantic_bridge.seo_geo.store import PRODUCTS, loads
 
     want = sorted({c.strip() for c in codes if c and c.strip()})
-    out: dict[str, str] = {}
+    out: dict[str, dict[str, Any]] = {}
     if not want:
         return out
     try:
         with engine.connect() as c:
             for i in range(0, len(want), CHUNK):
-                rows = c.execute(sa.select(PRODUCTS.c.code, PRODUCTS.c.data_json).where(
+                rows = c.execute(sa.select(PRODUCTS.c.code, PRODUCTS.c.name, PRODUCTS.c.data_json).where(
                     PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.code.in_(want[i:i + CHUNK]))).all()
-                for code, data in rows:
-                    url = pick(loads(data, {}))
-                    if url and code not in out:
-                        out[code] = url
+                for code, name, data in rows:
+                    hit = {"cover": pick(loads(data, {})), "name": " ".join((name or "").split()) or None}
+                    if code not in out or (hit["cover"] and not out[code]["cover"]):
+                        out[code] = hit
     except Exception:  # noqa: BLE001 — SEO modülü kurulu değilse kapaksız
         log.info("kapak: T-soft ürün kaydı okunamadı", exc_info=True)
     return out

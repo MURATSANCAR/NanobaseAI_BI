@@ -302,7 +302,7 @@ def test_new_prints_for_campus_are_real_recent_book_prints():
     ]
     out = P.new_prints(cards, now, 30)
     assert [x["title"] for x in out] == ["İkinci", "Aynı gün", "Birinci"]
-    assert out[0] == {"cardId": "2", "bookId": "b2", "title": "İkinci", "stockCode": None, "printNo": 3, "firstPrint": False,
+    assert out[0] == {"cardId": "2", "bookId": "b2", "title": "İkinci", "titleFromBook": True, "stockCode": None, "printNo": 3, "firstPrint": False,
                       "day": "2026-09-25", "depot": "2026-09-25"}
     assert [x["title"] for x in P.new_prints(cards, now, 5)] == ["İkinci"]
     assert all("qty" not in x for x in out)                                 # herkese açık uç: adet/maliyet yok
@@ -318,7 +318,8 @@ def test_settings_defaults_and_bounds():
 
 
 def test_new_print_covers_come_from_the_web_product_by_stock_code():
-    """Kapak T-soft ürün kaydından (ürün kodu = stok kodu); küçük boy önce, yalnız https, eşleşmeyen kapaksız."""
+    """Kapak T-soft ürün kaydından (ürün kodu = stok kodu); küçük boy önce, yalnız https, başka kiracı ve eşleşmeyen yok.
+    Ürün adı da döner: üretim kartında kitap adı boşsa (kart adı «2.-BASKI») Kampüs satırı bu adı yazar."""
     import json
     from datetime import datetime, timezone
 
@@ -340,5 +341,6 @@ def test_new_print_covers_come_from_the_web_product_by_stock_code():
                  rules="", data_json=json.dumps({"ImageUrls": [img]}), synced_at=at),
         ])
     got = BC.by_stock_code(e, "t", ["115201.01.6677", "115201.01.0001", "115201.01.9999", None, ""])
-    assert got == {"115201.01.6677": "https://site/1-K.jpg"}
+    assert got == {"115201.01.6677": {"cover": "https://site/1-K.jpg", "name": "A"},
+                   "115201.01.0001": {"cover": None, "name": "B"}}                # adı var, https görseli yok
     assert BC.by_stock_code(e, "t", []) == {}

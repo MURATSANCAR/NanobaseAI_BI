@@ -989,9 +989,12 @@ class Service:
         items = new_prints(cards, now, days)
         from semantic_bridge import book_covers
 
-        covers = book_covers.by_stock_code(engine, tenant, (i["stockCode"] for i in items))
+        web = book_covers.by_stock_code(engine, tenant, (i["stockCode"] for i in items))
         for i in items:
-            i["cover"] = covers.get(i["stockCode"] or "")
+            w = web.get(i["stockCode"] or "") or {}
+            i["cover"] = w.get("cover")
+            if not i.pop("titleFromBook") and w.get("name"):  # kartta kitap adı yoksa kart adı «2.-BASKI» olur
+                i["title"] = w["name"]
         return {"items": items, "days": days, "ready": True,
                 "asOf": datetime.fromtimestamp(snap["at"], TZ).isoformat(timespec="seconds")}
 
@@ -1149,6 +1152,7 @@ def new_prints(cards: list[dict[str, Any]], now: date, days: int) -> list[dict[s
         if not day or day < since or day > now:
             continue
         out.append({"cardId": c.get("id"), "bookId": c.get("bookId"), "title": c.get("bookTitle") or c.get("name"),
+                    "titleFromBook": bool(c.get("bookTitle")),
                     "stockCode": (c.get("stockCode") or "").strip() or None, "printNo": c.get("printNo"), "firstPrint": bool(c.get("firstPrint")), "day": day.isoformat(),
                     "depot": (act.get("depo") or {}).get("day")})
     out.sort(key=lambda x: _fold(x["title"]))
