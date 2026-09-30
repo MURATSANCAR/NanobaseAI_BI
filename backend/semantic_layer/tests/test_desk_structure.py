@@ -259,3 +259,28 @@ def test_translation_source_streams_without_cap(engine, tmp_path):
     assert os.listdir(os.path.join(tmp_path, ".incoming")) == []
     path, _ = T.source_path(engine, TENANT, "editor", False, out["jobId"])
     assert open(path, "rb").read() == src
+
+
+def test_upload_over_the_configured_limit_is_refused_early_and_in_plain_words(monkeypatch, tmp_path):
+    """ZEKI-26, kullanıcı kararı 2026-09-30: tek dosyanın üst sınırı Yönetim ayarı (varsayılan 300 MB). Bildirilen boy
+    sınırı aşıyorsa hiç yazılmaz; bildirilmemişse akış sırasında durur ve yarım dosya kalmaz."""
+    import asyncio
+    import pytest
+    from semantic_bridge import admin as admin_mod
+    from semantic_bridge import editorial_desk as desk
+
+    monkeypatch.setenv("EDITORIAL_DIR", str(tmp_path))
+    monkeypatch.setattr(admin_mod, "conf", lambda key, default="": "1" if key == "EDITORIAL_UPLOAD_MAX_MB" else default)
+
+    async def body(n):
+        for _ in range(n):
+            yield b"x" * (512 * 1024)
+
+    with pytest.raises(desk.DeskError) as e:
+        asyncio.run(desk.receive(body(1), expected=3 * 1024 * 1024))
+    assert e.value.status == 413 and "üst sınır 1 MB" in str(e.value)
+    with pytest.raises(desk.DeskError):
+        asyncio.run(desk.receive(body(4), expected=0))          # bildirilmemiş: 2 MB akarken durur
+    assert not [p for p in (tmp_path / ".incoming").iterdir() if p.suffix == ".part"]
+    ok = asyncio.run(desk.receive(body(1), expected=512 * 1024))
+    assert ok.size == 512 * 1024

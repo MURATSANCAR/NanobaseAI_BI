@@ -936,7 +936,7 @@ def job_detail(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, 
 
 def upload_source(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, job_id: str,
                   filename: str, data: "desk.Blob") -> dict[str, Any]:
-    """Kaynak metin: boyut tavanı yok (ZEKI-26); diske akmış yükleme (`desk.Incoming`) kopyalanmadan yerine taşınır."""
+    """Kaynak metin: üst sınır `desk._max_upload_bytes` (ZEKI-26, Yönetim ayarı); diske akmış yükleme (`desk.Incoming`) kopyalanmadan yerine taşınır."""
     if not desk._size(data):
         raise TranslationError("Dosya boş.")
     segs = segment(paragraphs(filename, data))

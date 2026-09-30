@@ -219,12 +219,32 @@ def _sweep_incoming(folder: str) -> None:
         pass
 
 
+def _max_upload_bytes() -> int:
+    """Tek dosyanın üst sınırı (Yönetim → `EDITORIAL_UPLOAD_MAX_MB`, varsayılan 300; 0 = sınır yok). Kullanıcı kararı
+    2026-09-30 (ZEKI-26): PDF okunurken bellek dosya boyuyla büyür; müşteri VM'inin belleği 7 GB."""
+    try:
+        from semantic_bridge import admin as admin_mod
+        mb = float(admin_mod.conf("EDITORIAL_UPLOAD_MAX_MB") or 300)
+    except Exception:  # noqa: BLE001 — ayar okunamazsa varsayılan
+        mb = 300.0
+    return max(0, int(mb * 1024 * 1024))
+
+
+def _check_size(size: int) -> None:
+    limit = _max_upload_bytes()
+    if limit and size > limit:
+        raise DeskError(f"Dosya {size / 1048576:,.0f} MB; bu kurulumda tek dosya için üst sınır "
+                        f"{limit / 1048576:,.0f} MB. Dosyayı küçültün (ör. görselleri sıkıştırarak) ya da "
+                        f"sistem yöneticisinden sınırı yükseltmesini isteyin.".replace(",", "."), 413)
+
+
 async def receive(chunks: AsyncIterator[bytes], expected: int = 0) -> Incoming:
-    """İstek gövdesini parça parça diske yazar (eser klasörüyle aynı disk: kayıtta kopyalanmaz, taşınır). Boyut
-    tavanı yok; yalnız disk dolacaksa hem başta (bildirilen boy) hem akış sırasında durur."""
+    """İstek gövdesini parça parça diske yazar (eser klasörüyle aynı disk: kayıtta kopyalanmaz, taşınır). Tek dosyanın
+    üst sınırı `_max_upload_bytes` (bildirilen boy başta, gerçek boy akış sırasında); disk dolacaksa da durur."""
     folder = _incoming_dir()
     os.makedirs(folder, exist_ok=True)
     _sweep_incoming(folder)
+    _check_size(max(0, expected))
     _check_space(folder, max(0, expected))
     fd, path = tempfile.mkstemp(dir=folder, suffix=".part")
     h, size, checked = hashlib.sha256(), 0, 0
@@ -233,9 +253,10 @@ async def receive(chunks: AsyncIterator[bytes], expected: int = 0) -> Incoming:
             async for chunk in chunks:
                 if not chunk:
                     continue
+                size += len(chunk)
+                _check_size(size)
                 f.write(chunk)
                 h.update(chunk)
-                size += len(chunk)
                 if size - checked >= 256 * 1024 * 1024:
                     _check_space(folder, 0)
                     checked = size

@@ -5909,8 +5909,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"ok": True}
 
     async def _desk_receive(request: Request) -> Any:
-        """Yükleme gövdesi belleğe alınmaz, diske akar (ZEKI-26: kitap PDF'i yüzlerce MB olabilir). Boyut tavanı yok;
-        disk dolacaksa 507 ve düz Türkçe mesaj."""
+        """Yükleme gövdesi belleğe alınmaz, diske akar (ZEKI-26: kitap PDF'i yüzlerce MB olabilir). Tek dosya üst sınırı
+        Yönetim → `EDITORIAL_UPLOAD_MAX_MB` (varsayılan 300, kullanıcı kararı 2026-09-30): aşarsa 413 ve düz Türkçe mesaj,
+        bildirilen boy baştan denetlenir; disk dolacaksa 507."""
         try:
             expected = int(request.headers.get("content-length") or 0)
         except ValueError:
@@ -6109,7 +6110,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.put("/api/v1/editorial/translation/jobs-from-file")
     async def tr_job_from_file(request: Request, filename: str = "", sourceLang: str = "en", targetLang: str = "tr") -> dict[str, Any]:
         engine, tenant, user, see_all = await run_in_threadpool(_tr, request)
-        data = await _desk_receive(request)          # ZEKI-26: diske akar, boyut tavanı yok
+        data = await _desk_receive(request)          # ZEKI-26: diske akar; üst sınır Yönetim → EDITORIAL_UPLOAD_MAX_MB
         try:
             out = await run_in_threadpool(_tr_call, tr_mod.create_from_file, engine, tenant, user, see_all, filename, data,
                                           sourceLang, targetLang)
@@ -6123,7 +6124,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.put("/api/v1/editorial/translation/jobs/{job_id}/source")
     async def tr_job_source(job_id: str, request: Request, filename: str = "") -> dict[str, Any]:
         engine, tenant, user, see_all = await run_in_threadpool(_tr, request)
-        data = await _desk_receive(request)          # ZEKI-26: diske akar, boyut tavanı yok
+        data = await _desk_receive(request)          # ZEKI-26: diske akar; üst sınır Yönetim → EDITORIAL_UPLOAD_MAX_MB
         try:
             out = await run_in_threadpool(_tr_call, tr_mod.upload_source, engine, tenant, user, see_all, job_id, filename, data)
         finally:

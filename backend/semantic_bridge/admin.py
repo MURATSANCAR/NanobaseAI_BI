@@ -190,6 +190,11 @@ SPEC: list[dict[str, Any]] = [
      "help": "Bu tarihten sonra CRM'de açılan projelerin olası yazarları (henüz yazar rolüyle eseri yoksa) aday havuzunda listelenir (YYYY-AA-GG)"},
     {"key": "WEB_WATCH_ENABLED", "group": "crm", "label": "Basın ve web taraması", "type": "bool", "default": "0",
      "help": "Açıkken yazarlar ve kitapları haber akışlarında, sözlükte ve açık bilgi tabanında her gece taranır. Müşteri ortamında kapalı (2026-09-24 kararı)"},
+    # ZEKI-26 (kullanıcı kararı 2026-09-30): yükleme akışlıdır ama PDF okunurken bellek dosya boyuyla büyür (test sunucusu:
+    # 300 MB → ~0,6 GB, 1 GB → ~2,7 GB); müşteri VM'inde 7 GB bellek var. Sınır büyük ama VM'i zorlamayan bir değer.
+    {"key": "EDITORIAL_UPLOAD_MAX_MB", "group": "crm", "label": "Kitap/belge yükleme üst sınırı (MB)", "type": "int", "default": "300",
+     "help": "Redaksiyon, Son Okuma ve Çeviri'ye yüklenen tek dosyanın en büyük boyutu. Büyük PDF okunurken sunucu belleği dosya "
+             "boyutuyla artar; sunucunun belleğine göre ayarlayın. 0 = sınır yok"},
     {"key": "EDITORIAL_INTAKE_LATE_DAYS", "group": "crm", "label": "Gecikme sınırı (gün)", "type": "int", "default": "14",
      "help": "Bir adım bu kadar günden uzun beklerse panoda gecikti olarak işaretlenir"},
     # Yayın kurulu: toplam karar skoru (misyon, yayıncılık, ticari puanların ortalaması) → skor önerisi.
