@@ -297,8 +297,14 @@ async def book_read_upload(file: UploadFile = File(...), title: str = Form(defau
         raise HTTPException(422,str(e)) from None
     try:
         import pymupdf
-        pymupdf.open(settings().inbox/file_name).close()
+        with pymupdf.open(settings().inbox/file_name) as doc:
+            if doc.needs_pass:
+                raise ValueError('parolalı')
+            if doc.page_count<1:
+                raise ValueError('sayfasız')
     except Exception:
+        # Okunamayan dosya gelen kutusunda kalmaz: kuyruk komutu (editorctl queue) onu yeniden denemesin.
+        (settings().inbox/file_name).unlink(missing_ok=True)
         raise HTTPException(422,'PDF açılamadı; dosya bozuk ya da parolalı olabilir.') from None
     q=await run_in_threadpool(PB.enqueue,file_name,name,who)
     rows=[r for r in PB.listing(who) if r['id']==q['job_id']] or [{'id':q['job_id'],'title':name}]
