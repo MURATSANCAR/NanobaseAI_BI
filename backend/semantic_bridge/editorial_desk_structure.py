@@ -464,13 +464,19 @@ def _first_letter(text: str) -> str:
     return next((c for c in text if c.isalpha()), "")
 
 
-def in_sentence(run: list[Line], nxt: Optional[Line]) -> bool:
+_SENTENCE_END = re.compile(r"[.!?…:»”\"’')\]]\s*$")
+
+
+def in_sentence(run: list[Line], prev: Optional[Line], nxt: Optional[Line]) -> bool:
     """Büyük puntolu satır dizisi cümlenin parçası mı (resimli kitapta vurgu yazısı): dizinin içinde virgül/noktalı
-    virgülle biten satır var ya da dizi virgülle bitiyor, dizi küçük harfle başlıyor, ya da hemen ardından (en çok bir
-    sayfa sonra) gelen satır küçük harfle başlıyor. Bölüm başlığı cümlenin ortasında durmaz."""
+    virgülle biten satır var ya da dizi virgülle bitiyor, dizi küçük harfle başlıyor, ya da önceki satır cümleyi
+    bitirmeden kalmış ve sonraki satır (en çok bir sayfa ötede) küçük harfle sürüyor. Bölüm başlığı cümlenin ortasında
+    durmaz; önceki bölüm cümleyle bittiyse küçük harfle başlayan gövde tek başına başlığı süs yazısı yapmaz."""
     if any(re.search(r"[,;]\s*$", ln.text) for ln in run) or _first_letter(run[0].text).islower():
         return True
-    return nxt is not None and nxt.page - run[-1].page <= 1 and _first_letter(nxt.text).islower()
+    open_before = prev is not None and run[0].page - prev.page <= 1 and not _SENTENCE_END.search(prev.text)
+    return (open_before and nxt is not None and nxt.page - run[-1].page <= 1
+            and _first_letter(nxt.text).islower())
 
 
 def _by_typography(lines: list[Line], thr: float) -> Optional[list[tuple[str, str]]]:
@@ -487,7 +493,7 @@ def _by_typography(lines: list[Line], thr: float) -> Optional[list[tuple[str, st
         j = i
         while j < len(lines) and big_line(lines[j]):
             j += 1
-        if in_sentence(lines[i:j], lines[j] if j < len(lines) else None):
+        if in_sentence(lines[i:j], lines[i - 1] if i else None, lines[j] if j < len(lines) else None):
             inline.update(range(i, j))
         i = j
     ids = {id(lines[k]) for k in inline}

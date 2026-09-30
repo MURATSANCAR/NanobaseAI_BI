@@ -96,7 +96,7 @@ def test_decorative_glyphs_mapped_to_private_use_are_read_from_glyph_names() -> 
     """Başlık fontu: ToUnicode alternatif harfleri PUA'ya eşliyor; /Differences glifin adını taşıyor."""
     p = _Pdf()
     f1 = p.helvetica()
-    tu = p.stream("", cmap({1: "", 2: "", 3: "", 4: "", 5: "K"}))
+    tu = p.stream("", cmap({1: "\ue000", 2: "\ue001", 3: "\ue002", 4: "\ue003", 5: "K"}))
     deco = p.obj(f"<< /Type /Font /Subtype /Type1 /BaseFont /Deco /Encoding << /Type /Encoding /Differences "
                  f"[1 /B.alt4 /A.alt2 /L.alt3 /Idotaccent.alt3 /K] >> /ToUnicode {tu} 0 R >>")
     # ToUnicode'u olmayan font: okuyucu bilmediği adı olduğu gibi yazıyordu («/quoteleft.alt2»)
@@ -105,7 +105,7 @@ def test_decorative_glyphs_mapped_to_private_use_are_read_from_glyph_names() -> 
     data = p.build(["BT /F2 20 Tf 1 0 0 1 50 500 Tm <0102030405> Tj ET\n"
                     "BT /F3 12 Tf 1 0 0 1 50 400 Tm <1E> Tj (Kalp) Tj ET"], {"F1": f1, "F2": deco, "F3": bare})
     before = "".join(pg.extract_text() for pg in reader(data).pages)
-    assert "" in before and "quoteleft.alt2" in before
+    assert "\ue000" in before and "quoteleft.alt2" in before
     after = text_of(data)
     assert "BALİK" in after and "‘Kalp" in after
     assert pt.unreadable(after) == 0
@@ -113,9 +113,9 @@ def test_decorative_glyphs_mapped_to_private_use_are_read_from_glyph_names() -> 
 
 def test_unrecoverable_private_use_is_counted_not_hidden() -> None:
     p = _Pdf()
-    tu = p.stream("", cmap({1: "", 2: "A"}))
-    f = p.obj(f"<< /Type /Font /Subtype /Type1 /BaseFont /X /ToUnicode {tu} 0 R >>")
-    body = " ".join(["BT /F1 12 Tf 1 0 0 1 50 {} Tm <0102020202> Tj ET".format(500 - 14 * i) for i in range(3)])
+    tu = p.stream("", cmap({0x41: "\ue000", 0x42: "A"}))
+    f = p.obj(f"<< /Type /Font /Subtype /Type1 /BaseFont /X /Encoding /WinAnsiEncoding /ToUnicode {tu} 0 R >>")
+    body = "\n".join("BT /F1 12 Tf 1 0 0 1 50 {} Tm <4142424242> Tj ET".format(500 - 14 * i) for i in range(3))
     s = st.pdf_structure(reader(p.build([body], {"F1": f})))
     assert s.unreadable_chars == 3
     assert s.report()["unreadable_chars"] == 3
@@ -131,16 +131,16 @@ def _ttf_with_dotted_i() -> tuple[bytes, list[str]]:
         return pen.glyph()
 
     def composite(*names: str):
-        pen = TTGlyphPen(None)
+        pen = TTGlyphPen(glyphs)
         for n in names:
             pen.addComponent(n, (1, 0, 0, 1, 0, 0))
         return pen.glyph()
 
     order = [".notdef", "I", "dotaccent", "Idotaccent", "circumflex", "Icircumflex", "dotlessi", "i"]
     glyphs = {".notdef": rect(0, 0, 400, 700), "I": rect(50, 0, 150, 700), "dotaccent": rect(60, 760, 140, 840),
-              "Idotaccent": composite("I", "dotaccent"), "circumflex": rect(0, 760, 240, 840),
-              "Icircumflex": composite("I", "circumflex"), "dotlessi": rect(50, 0, 150, 500),
-              "i": composite("dotlessi", "dotaccent")}
+              "circumflex": rect(0, 760, 240, 840), "dotlessi": rect(50, 0, 150, 500)}
+    glyphs.update(Idotaccent=composite("I", "dotaccent"), Icircumflex=composite("I", "circumflex"),
+                  i=composite("dotlessi", "dotaccent"))
     fb = fb_mod.FontBuilder(1000, isTTF=True)
     fb.setupGlyphOrder(order)
     fb.setupCharacterMap({0x49: "I"})
@@ -249,8 +249,12 @@ def test_two_columns_keep_drawing_order() -> None:
 def test_display_type_inside_a_sentence_is_not_a_heading() -> None:
     """Resimli kitap: «Poor hen, THE MONSTER'S NAME heard that day.» — büyük punto cümlenin parçası."""
     run = [st.Line(1, "THE MONSTER'S", 30.0), st.Line(1, "NAME", 30.0)]
-    assert st.in_sentence(run, st.Line(1, "heard that day.", 12.0))
-    assert st.in_sentence([st.Line(1, "The stone rolled,", 30.0), st.Line(1, "rolled...", 30.0)], None)
-    assert st.in_sentence([st.Line(1, "lar! Vzzzz.", 30.0)], st.Line(1, "Then", 12.0))
-    assert not st.in_sentence([st.Line(1, "BALIK TUTMAYI OGRET...", 30.0)], st.Line(1, "Bana balik", 12.0))
-    assert not st.in_sentence([st.Line(1, "The Old Fisherman", 30.0)], st.Line(2, "“Good morning.”", 12.0))
+    assert st.in_sentence(run, st.Line(1, "Poor hen,", 12.0), st.Line(1, "heard that day.", 12.0))
+    assert st.in_sentence([st.Line(1, "The stone rolled,", 30.0), st.Line(1, "rolled...", 30.0)], None, None)
+    assert st.in_sentence([st.Line(1, "lar! Vzzzz.", 30.0)], None, st.Line(1, "Then", 12.0))
+    assert not st.in_sentence([st.Line(1, "BALIK TUTMAYI OGRET...", 30.0)], st.Line(0, "bitti.", 12.0),
+                              st.Line(1, "Bana balik", 12.0))
+    assert not st.in_sentence([st.Line(1, "The Old Fisherman", 30.0)], None, st.Line(2, "\u201cGood morning.\u201d", 12.0))
+    # önceki bölüm cümleyle bitmiş: küçük harfle başlayan gövde tek başına başlığı süs yazısı yapmaz
+    assert not st.in_sentence([st.Line(1, "Cocukluk", 20.0)], st.Line(0, "herkes ona bakti.", 11.0),
+                              st.Line(1, "elma armut kiraz", 11.0))
