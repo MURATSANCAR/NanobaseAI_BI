@@ -2749,6 +2749,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 "question": snap["question"], "sql": snap["sql"], "computedAt": snap.get("computedAt", snap["at"]),
                 "dataCoverage": snap.get("dataCoverage", []), "comparison": snap.get("comparison")}
 
+    from semantic_bridge import chat_mention
+    chat_mention.install(app, rt, _gate_for_user)
+
     @app.post("/api/v1/ask")
     def ask(body: AskIn, request: Request) -> dict[str, Any]:
         _require_caller(request)

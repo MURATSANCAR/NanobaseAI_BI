@@ -1,5 +1,7 @@
 # Geliştirme Günlüğü
 
+**2026-09-30 — Zeki bot mention bağlantısı (kod):** açık `@zeki.bot` mesajı host kuyruğundan mevcut Zeki AI motoruna, etkin AD kimliği ve mevcut özellik/veri yetkileriyle gider. Varsayılan yanıt sorana özel bot sohbetindedir; diğer oda mesajları modele taşınmaz. Kalıcı/idempotent cevap, servis anahtarlı yerel uç, üç saniyelik okuma döngüsü. Canlı kabul henüz DOĞRULANAMADI. Ayrıntı: `docs/ZEKI-CHAT-MENTIONS.md`.
+
 **2026-09-30 — AD sohbet rehberi / CRM ekipleri canlı:** 216 etkin AD hesabı görünür (215 yeni normal kullanıcı; toplam 218 hesap). 25 etkin CRM ekibinden AD üyesi olan 12 özel grup oluşturuldu; üyelikler bağımsız AD/CRM sorgusu + gerçek API + Mongo ile 12/12 eşleşti. 1 eşleşmeyen üyelik/13 boş ekip aktarılmadı. `zeki-directory-sync.timer` 15 dk; tekrar koşu 0 yeni kayıt/üyelik değişikliği. Ayrılmış/özel karakterli AD adları SSO ile ortak eşlenir, ekranda AD görünen adı kullanılır. Dört genişlikte gerçek kişi araması ve dış ağ kontrolleri geçti; 3 geçici portal oturumu/9 chat jetonu temizlendi. CRM/AD salt okunur, müşteri VM kurulumu yok. Rapor/işletim: `docs/ZEKI-CHAT-DIRECTORY.md`; kaynak `deploy/zeki/sync-directory.py`.
 ## 2026-09-30 — Kampüs: Önemli günler CRM'den, örnek doğum günleri, matbaadan çıkanlara kapak
 
