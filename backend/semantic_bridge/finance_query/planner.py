@@ -1024,18 +1024,26 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     intents = source_report_intents(question, periods, today, llm, trace)
     permissions = source_answer_permissions(question, intents, llm, trace)
     _, source_spans = _question_plan_schema(question)
+    def check_variant(intent_ids, statuses, permission_id):
+        properties = {
+            "intent_id":{"type":"string", "enum":intent_ids},
+            "status":{"type":"string", "enum":statuses},
+            "permission_id":({"type":"null"} if permission_id is None else {"type":"string","enum":[permission_id]}),
+            "contract_evidence":{"type":"string"},
+            "population_preserved":{"type":"boolean"},
+        }
+        return {"type":"object", "additionalProperties":False,
+                "required":list(properties), "properties":properties}
+    check_variants = [check_variant(list(intents), ["satisfied","not_applicable","missing"], None)]
+    check_variants.extend(check_variant([permission["applies_to"]], ["unverified_with_permission"], permission_id)
+                          for permission_id,permission in permissions.items())
     source_review_schema = {
         "type": "object", "additionalProperties": False,
-        "required": ["intent_checks", "intent_extraction_complete", "ok", "missing", "missing_evidence"],
+        "required": ["intent_checks", "intent_extraction_complete", "missing", "missing_evidence"],
         "properties": {
-            "intent_checks":{"type":"array", "items":{"type":"object", "additionalProperties":False,
-                "required":["intent_id","status","contract_evidence","permission_id","population_preserved"], "properties":{
-                    "permission_id":{"type":["string","null"], "enum":[None,*permissions]},
-                    "population_preserved":{"type":"boolean"},
-                    "intent_id":{"type":"string", "enum":list(intents)}, "status":{"type":"string","enum":["satisfied","unverified_with_permission","not_applicable","missing"]},
-                    "contract_evidence":{"type":"string"}}}},
+            "intent_checks":{"type":"array", "items":{"anyOf":check_variants}},
             "intent_extraction_complete":{"type":"boolean"},
-            **REVIEW_SCHEMA["properties"],
+            "missing":REVIEW_SCHEMA["properties"]["missing"],
             "missing_evidence": {"type":"array", "items": {
                 "type":"object", "additionalProperties":False,
                 "required":["intent_id", "question_quote", "requirement_kind", "contract_mismatch"],
@@ -1049,7 +1057,8 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         },
     }
     review = _object(llm, [{"role": "system", "content":
-        "Önce intents içindeki her koşulu intent_checks ile seçili sözleşmeye bağla, sonra genel karar ver. "
+        "Önce intents içindeki her koşulu intent_checks ile seçili sözleşmeye bağla. Genel ok alanı üretme; "
+        "uygunluk bütün koşul durumları, extraction bütünlüğü ve eksik kanıtlarından uygulama tarafından belirlenir. "
         "Her intent_id tam bir kez bulunmalı; contract_evidence gerçek çıktı/nüfus/iddia kanıtını açıklamalı. "
         "answer_permissions koşulsuz af değildir: sadece bağlı analysis doğrulanamıyorsa ve açık izin gerçekten bu hesaba "
         "uzanıyorsa unverified_with_permission + permission_id ver. Bağlı substitute_intents gerçekten satisfied olmalı. "
@@ -1072,7 +1081,7 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         "anahtarını soru istemeden missing'e taşıma. Bir işlemin yasaklanmasını o işlemin olumlu talebi diye alıntılama. "
         "Aday alanları karşılaştırma talebi otomatik kimlik çözümü veya kesin karar talebi değildir. "
         "Yasağa uyulmuyorsa hangi gerçek çıktı/iddianın yasağı ihlal ettiğini kanıtla; yalnız yapamadığı işlemi "
-        "listeleyen non_claims veya unsupported açıklaması ihlal değildir. ok=true için iki liste de boş olmalı. "
+        "listeleyen non_claims veya unsupported açıklaması ihlal değildir. Eksik koşul yoksa missing ve missing_evidence boş olmalı; kısmi izinle sunulan hesap missing değil unverified_with_permission durumudur. "
         "Rapor adı benziyor diye hesap yapılmış sayma: istenen tarih, nüfus koşulu, kırılım, ölçü, kimlik ve "
         "ayrıntı bağları capabilities ile gerçekten sağlanmalı. Eksik tanımı veya farklı nüfusu sessiz kabul etme. "
         "output_contract varsa hangi kolonların hangi kayıt türünde ve kayıt düzeyinde üretildiğini oradan denetle. "
@@ -1137,7 +1146,6 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     missing = review.get("missing") or []
     evidence = review.get("missing_evidence")
     if (not isinstance(evidence, list) or len(evidence) != len(missing)
-            or (review.get("ok") is True) != (len(missing) == 0)
             or any(not isinstance(item, dict)
                    or not isinstance(item.get("question_quote"), str)
                    or not item["question_quote"].strip() or item["question_quote"] not in question
@@ -1148,7 +1156,7 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         raise ContractError("Kaynak raporu denetimi, kararını kullanıcının gerçek koşullarıyla tutarlı biçimde kanıtlamadı.", code="PLAN_INVALID")
     if {item["intent_id"] for item in evidence} != {c["intent_id"] for c in checks if c["status"] == "missing"}:
         raise ContractError("Eksik kapsam niyet kanıtlarıyla uyuşmuyor.", code="PLAN_INVALID")
-    if review.get("ok") is not True or missing:
+    if missing:
         # This rejects the selected plan, not every capability in the contract.
         # The root may replan once; the same report/metric guards run again.
         raise ContractError("Seçilen kaynak raporu sorunun tüm koşullarını karşılamıyor: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")

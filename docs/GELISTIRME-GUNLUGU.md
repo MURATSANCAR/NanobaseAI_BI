@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Kısmi denetim kararının şemada tutarlı olması
+
+- 9a6457d44 CRM-R10 yedi soru tamamlandı: 6 BOUNDARY_PASS, 1 FAIL (CR023); sourceWrites=0, bir geçici oturum silindi. CR030 ve CR033 boş karar onarımıyla yeniden geçtiler. Tam cevap/genel CRM kabulü değildir.
+- 5c8bd7324 CR023 tekil kontrolü FAIL 118,99 saniye. İkinci planda açık izin p1 doğru çıkarıldı; kaynak denetçisi açıklamasında p1'i kabul edip status=unverified_with_permission seçti, ancak permission_id=null ve global ok=false üretti. Çelişkili çıktı yürütülmedi; oturum silindi.
+- Kaynak denetimi artık kapalı anyOf seçenekleriyle her izinli kısmi durumu gerçek permission_id ve ilgili intent_id'ye bağlar. Normal durumlarda permission_id null olmalıdır. Genel ok alanı kaldırıldı; karar bütün intentlerin tekil kapsanması, extraction bütünlüğü, nüfus/izin/alternatif korumaları ve missing/kanıt eşitliğinden türetilir. Her eksik koşul ret, izinli doğrulanamayan hesap zorunlu gap/PARTIAL kalır.
+- Bağımsız ikinci kod incelemesi mevcut kapıların korunduğunu doğruladı; modelin yanlış satisfied değerlendirmesi riskini sayısal kabul saymadı. Yeni şemanın gerçek model/API uyumu ve karşıt senaryoların kabulü henüz bekliyor. Yerel ürün testi yapılmadı.
+
 ## 2026-10-01 — Kısmi cevap için tek izin çözümleme aşaması
 
 - 9a6457d44 CRM-R10 CR023 FAIL 87,98 saniye: plan doğru raporu seçse de aynı çağrıdaki niyet/izin çözümü izin listesini boş bıraktı, denetçi geçersiz eski fallback_used üretti. Çelişkili karar yürütülmedi. CR013 ve CR024 aynı sürümde yeniden BOUNDARY_PASS; koşunun kalanı sürüyor.
