@@ -267,13 +267,15 @@ def _orders(executor, spec):
     else:
         firm, period = _point(executor, spec["as_of"])
         parts = [(None, as_of + timedelta(days=1), firm, period)]
-    out=[]; bad=0
+    out=[]; bad=0; orphan_headers=0
     for start, end, firm, period in parts:
         line, header, items, clients = _table(firm,period,"ORFLINE"), _table(firm,period,"ORFICHE"), f"LG_{firm}_ITEMS", f"LG_{firm}_CLCARD"
         _check(executor, {line: ["LOGICALREF","ORDFICHEREF","STOCKREF","CLIENTREF","TRCODE","LINETYPE","CANCELLED","CLOSED","AMOUNT","SHIPPEDAMOUNT","LINENET","UOMREF","UINFO1","UINFO2","SOURCEINDEX","DUEDATE","DATE_"],header:["LOGICALREF","FICHENO","CANCELLED"],items:["LOGICALREF","CODE","NAME"],clients:["LOGICALREF","CODE","DEFINITION_"]}, [(line,c) for c in ("AMOUNT","SHIPPEDAMOUNT","LINENET")])
         scope=f" AND O.DATE_>={literal(start)}" if start else ""
         if spec["warehouse_no"] is not None:scope+=f" AND O.SOURCEINDEX={spec['warehouse_no']}"
         if spec["overdue_only"]:scope+=f" AND O.DUEDATE<{literal(as_of)} AND O.DUEDATE>='19000101'"
+        orphan=executor.read(f"SELECT COUNT_BIG(*) missing_headers FROM dbo.[{line}] O LEFT JOIN dbo.[{header}] H ON H.LOGICALREF=O.ORDFICHEREF LEFT JOIN dbo.[{items}] I ON I.LOGICALREF=O.STOCKREF LEFT JOIN dbo.[{clients}] C ON C.LOGICALREF=O.CLIENTREF WHERE H.LOGICALREF IS NULL AND O.CANCELLED=0 AND O.CLOSED=0 AND O.LINETYPE=0 AND O.TRCODE={1 if spec['order_kind']=='sales' else 2} AND O.AMOUNT>O.SHIPPEDAMOUNT AND O.DATE_<{literal(end)}{scope}{_code_filter(spec)}{_customer_filter(spec)}")
+        orphan_headers+=int(orphan[0]["missing_headers"])
         rows=executor.read(f"SELECT O.LOGICALREF order_line_ref,H.FICHENO order_number,CONVERT(varchar(10),O.DATE_,23) order_date,LTRIM(RTRIM(I.CODE)) book_code,I.NAME book_name,C.CODE customer_code,C.DEFINITION_ customer_name,O.SOURCEINDEX warehouse_no,O.UOMREF unit_ref,O.UINFO1 unit_factor_1,O.UINFO2 unit_factor_2,O.AMOUNT ordered_quantity,O.SHIPPEDAMOUNT shipped_quantity,O.AMOUNT-O.SHIPPEDAMOUNT remaining_quantity,O.LINENET line_net_amount,CASE WHEN O.DUEDATE>='19000101' THEN CONVERT(varchar(10),O.DUEDATE,23) END due_date FROM dbo.[{line}] O JOIN dbo.[{header}] H ON H.LOGICALREF=O.ORDFICHEREF LEFT JOIN dbo.[{items}] I ON I.LOGICALREF=O.STOCKREF LEFT JOIN dbo.[{clients}] C ON C.LOGICALREF=O.CLIENTREF WHERE O.CANCELLED=0 AND H.CANCELLED=0 AND O.CLOSED=0 AND O.LINETYPE=0 AND O.TRCODE={1 if spec['order_kind']=='sales' else 2} AND O.AMOUNT>O.SHIPPEDAMOUNT AND O.DATE_<{literal(end)}{scope}{_code_filter(spec)}{_customer_filter(spec)}")
         for row in rows:
             row["source_period"]=f"{firm}/{period}"
@@ -284,6 +286,7 @@ def _orders(executor, spec):
             out.append(row)
     fields=["source_period","order_line_ref","order_number","order_date","book_code","book_name","customer_code","customer_name","warehouse_no","unit_ref","ordered_quantity","shipped_quantity","remaining_quantity","remaining_base_quantity","remaining_net_amount_proportional","due_date","overdue_days"]
     gaps=[_gap("ORDER_UNITS",f"{bad} sipariş satırının ana birim dönüşümü doğrulanamadı; satır birimi miktarı korundu.")] if bad else []
+    if orphan_headers:gaps.append(_gap("ORDER_HEADER_MISSING",f"{orphan_headers} açık sipariş satırının başlık kaydı bulunamadı; başlık iptal durumu doğrulanamadığından doğrulanmış listeye katılmadı."))
     return _result(out,fields,["ordered_quantity","shipped_quantity","remaining_quantity","remaining_base_quantity","remaining_net_amount_proportional","overdue_days"], ["Kalan tutar satır net tutarının kalan miktar oranıdır; yeni fatura veya tahsilat değildir. Stok siparişlere tahsis edilmedi.","Tarihsiz açık sipariş listesi seçilen kaynak döneminin açık satırlarını kapsar; önceki yedekte kalmış devredilmemiş siparişler ayrıca doğrulanmalıdır."],gaps)
 
 
