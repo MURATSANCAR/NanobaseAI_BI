@@ -156,7 +156,8 @@ def build(question, llm, previous=None, trace=None):
         raise ContractError("İstenen sıralama sınırı doğrulanamadı.")
     if limit is not None and (not re.search(r"\b" + str(limit) + r"\b", q) or not re.search(r"\b(ilk|en cok|en az|en yuksek|en dusuk)\b", q)):
         raise ContractError("Soruda açıkça istenmeyen bir sonuç sınırı uygulanamaz.")
-    order = data.get("order_by") or metrics[0]
+    wants_order = bool(re.search(r"\b(sirala\w*|artan|azalan|en cok|en az|en yuksek|en dusuk|ilk)\b", q))
+    order = (data.get("order_by") or metrics[0]) if wants_order else metrics[0]
     if order not in metrics or type(data.get("descending", True)) is not bool:
         raise ContractError("Sıralama ölçüsü doğrulanamadı.")
     # The reviewer reads expanded business meaning, not implementation slot placement.

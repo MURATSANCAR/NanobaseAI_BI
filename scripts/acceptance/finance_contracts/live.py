@@ -118,9 +118,9 @@ def cases():
                      "2026 brüt kâr tutarı nedir?"):
         add(question,None,None,[]);out[-1]["expected"]="clarify"
     add("29 Eylül 2026 tarihinde perakende satış faturalarının genel toplamı ne kadar?", "logo",
-        f"SELECT COALESCE(SUM(NETTOTAL),0) invoice_amount FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE=7 AND {day}", ["invoice_amount"])
+        "SELECT COALESCE(SUM(NETTOTAL),0) invoice_amount FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE=7 AND DATE_>='20260929' AND DATE_<'20260930'", ["invoice_amount"])
     add("29 Eylül 2026 tarihinde perakende satışın KDV hariç satır toplamı ne kadar?", "logo",
-        f"SELECT COALESCE(SUM(LINENET),0) sales_amount FROM dbo.LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND INVOICEREF<>0 AND TRCODE=7 AND {day}", ["sales_amount"])
+        "SELECT COALESCE(SUM(LINENET),0) sales_amount FROM dbo.LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND INVOICEREF<>0 AND TRCODE=7 AND DATE_>='20260929' AND DATE_<'20260930'", ["sales_amount"])
     return out
 
 

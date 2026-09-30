@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Finans ikinci tam turunun bulguları
+
+- 102 soruda 99 geçiş, 1 ret (FC95 model net_sales yanında alakasız active_books sıralaması seçti), 2 DOĞRULANAMADI (FC101/102 bağımsız referanstaki day değişkeni döngüde ezilmişti, API çağrısı yapılmadı). Geçmiş kanıt korunuyor.
+- Açık sıralama istenmediyse varsayılan ölçü uygulama tarafından seçilir; istenen sıralama hâlâ sözleşmeyle denetlenir. Son iki bağımsız SQL tarih koşulu düzeltildi. Son sürüm yeniden ölçülecek; başarısız koşu kabul sayılmıyor.
+
 ## 2026-09-30 — Zeki cevabında netleştirme açıklaması görünür
 
 - API CLARIFICATION cevabında summary yerine explanation döndürüyor; Genel Bakış ekranı bu metni atlıyordu. Özet yoksa gerçek açıklama gösterilir; olmayan tabloya yönlendirme kaldırıldı.
