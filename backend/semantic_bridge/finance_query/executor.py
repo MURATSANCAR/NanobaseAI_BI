@@ -41,6 +41,7 @@ class Executor:
         self.read_retries = []
         self._crm_status = {}
         self.output_fields = []
+        self.coverage_complete = True
 
     def read(self, sql, *, metadata=False, source="logo"):
         statements = sqlglot.parse(sql, read="tsql")
@@ -197,9 +198,11 @@ class Executor:
             if before != after:
                 raise ContractError("Kaynaklar birleştirildiğinde ölçü toplamları değişti; cevap engellendi.")
             if missing:
+                self.coverage_complete = False
                 self.notes.append(f"{missing} satış kırılımında aktif CRM kitap eşleşmesi yok; künye alanları boş bırakıldı, satışlar korunuyor.")
             for field, count in empty_fields.items():
                 if count:
+                    self.coverage_complete = False
                     label = "yazar künyesi" if field == "author" else "yayınevi"
                     self.notes.append(f"{count} satış kırılımında {label} bilgisi bulunamadı; değer tahmin edilmedi.")
             # Enrichment filters explicitly narrow the population, after conservation was checked.

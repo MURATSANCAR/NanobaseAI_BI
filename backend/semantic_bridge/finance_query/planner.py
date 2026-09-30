@@ -5,7 +5,7 @@ from datetime import date
 import json
 import re
 from zoneinfo import ZoneInfo
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .language import fold, dates, normalize_numbers
 from .plan_types import DerivedMetric, MetricPredicate, PeriodComparison
@@ -63,7 +63,7 @@ def build(question, llm, previous=None, trace=None):
     # model sampling pick between header NETTOTAL and line LINENET.
     if re.search(r"\bsatis\w*\s+(?:tutar\w*|toplam\w*)", q) and not re.search(r"\b(kdv|fatura\w*|net|satir\w*)\b", q):
         raise ContractError("Satış tutarıyla fatura genel toplamını mı, iskonto sonrası KDV hariç satış satırı toplamını mı istiyorsunuz?", code="NEEDS_CLARIFICATION")
-    today = datetime.now(ZoneInfo("Europe/Istanbul")).date()
+    today = datetime.now(timezone.utc if re.search(r"\butc\b", q) else ZoneInfo("Europe/Istanbul")).date()
     periods, grain = dates(question, today)
     if previous and follows(question) and not periods:
         periods = tuple(tuple(p) for p in previous.get("plan", {}).get("periods", ()))
@@ -90,7 +90,8 @@ def build(question, llm, previous=None, trace=None):
               "having agregasyon sonrası sayısal koşullardır; value noktalı ondalık string, binlik ayraç yok. "
               "CRM kart listesi, gruplu sayımı ve eksik alanları crm dalıyla planla; bu dalda metrics/dimensions boş, "
               "derived/having boş ve comparison null olmalı. CRM'de tarih filtresi kart created_at/updated_at tarihidir, "
-              "geçmişte aktif kayıt sayısı değildir. crm kullanmıyorsan null döndür. "
+              "geçmişte aktif kayıt sayısı değildir. CRM tarih süzgeçleri bir tarih alanında gte başlangıç, lt bitiş olmalıdır; "
+              "değerler parsedPeriods sınırlarını aynen kullanır, sunucu Türkiye saatini UTCye dönüştürür (kullanıcı UTC dediyse UTC kalır). crm kullanmıyorsan null döndür. "
               "kitap adedi toplam miktardır: kitap kelimesi geçti diye book kırılımı EKLEME. "
               "Yalnız 'bazında/göre/her/hangi/listele/en çok' gibi istenen kırılımı ekle. "
               "Fatura sayısı invoice_count; stok hareketi sayısı değildir. Fatura genel toplamı invoice_amount; "
@@ -112,13 +113,14 @@ def build(question, llm, previous=None, trace=None):
         reason = str(data.get("clarification") or "; ".join(map(str, missing)))
         raise ContractError("Bu kapsam için doğrulanmış hesap tanımı eksik: " + reason[:600],
                             code="NEEDS_CLARIFICATION" if data.get("clarification") else "UNSUPPORTED_CAPABILITY")
-    if re.search(r"\bpasif\w*", q):
+    if requests_passive_records(question):
         raise ContractError("Bu kurulumda pasif CRM kayıtları cevaplara dahil edilmez.")
     if data.get("crm") is not None:
         from .crm_query import validate_crm_plan
         if any(data.get(k) for k in ("metrics", "dimensions", "derived", "having", "comparison", "filters")):
             raise ContractError("CRM kart planı ile finans hesap planı aynı dalda karıştırılamaz.", code="PLAN_INVALID")
         crm = validate_crm_plan(data["crm"])
+        crm = validate_crm_dates(crm, question, periods)
         crm_limit = crm.get("limit")
         if crm_limit is not None and (not re.search(r"\b" + str(crm_limit) + r"\b", normalize_numbers(question)) or not re.search(r"\b(ilk|en cok|en az|en yuksek|en dusuk)\b", q)):
             raise ContractError("CRM sorusunda istenmeyen sonuç sınırı uygulanamaz.", code="PLAN_INVALID")
@@ -134,14 +136,16 @@ def build(question, llm, previous=None, trace=None):
             "sıralama veya kırılım varsa reddet. Kullanıcı istemeden limit ve koşul eklenemez. "
             "Aktif CRM zorunlu kurum koşuludur; geçmiş durum veya finans tutarı kart sayımıyla yanıtlanamaz. "
             "Filtreler AND ile birleşir; OR isteği karşılanamaz. author künye metnidir, kişi kimliği değildir. "
-            "created_at UTC kart oluşturma tarihidir, yayın tarihi değildir. Pasif kayıt isteği yanıtlanamaz."},
+            "created_at UTC kart oluşturma tarihidir, updated_at değiştirme tarihidir; yayın veya satış tarihi değildir. "
+            "Plan filtre sınırları UTCye dönüştürülmüştür; kullanıcı UTC demediyse parsedPeriods Türkiye yerel tarihleridir. "
+            "Pasif kayıtları hariç tutmak desteklenir, pasifleri dahil etmek desteklenmez."},
             {"role": "user", "content": json.dumps({"question": question, "plan": crm,
              "capabilities": CRM_CAPABILITIES, "parsedPeriods": periods,
              "previous": previous}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "crm_review")
         if trace is not None: trace.append({"stage": "review", "output": review})
         if review.get("ok") is not True or review.get("missing"):
             raise ContractError("CRM sorusunun bütün koşulları plana taşınamadı: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")
-        return Plan((), (), (), crm=crm)
+        return Plan((), (), periods, crm=crm)
     metrics = tuple(data.get("metrics") or ())
     dims = tuple(data.get("dimensions") or ())
     if len(periods) > 1 and grain is None:
@@ -289,3 +293,44 @@ def validate_operations(data, metrics, dims, periods):
             raise ContractError("Hesap sonrası süzgecin sayısal değeri geçersiz.", code="PLAN_INVALID") from None
         having.append(MetricPredicate(raw["metric"], raw["op"], str(value)))
     return tuple(derived), tuple(having), comparison
+
+
+def requests_passive_records(question):
+    """Do not mistake explicit passive exclusions for requests to read passive rows."""
+    q = fold(question)
+    passive = r"\bpasif\w*"
+    nouns = r"(?:\s+(?:olan|kayit\w*|kitap\w*|yazar\w*|musteri\w*|cari\w*)){0,3}"
+    q = re.sub(passive + r"\s+olmayan\w*", "", q)
+    exclusions = r"(?:dahil\s+etme(?:yin|yiniz)?|cikar(?:in|iniz|alim)?|sayma(?:yin|yiniz)?|alma(?:yin|yiniz)?|disla(?:yin|yiniz)?|haric(?:\s+tut(?:un|unuz)?)?(?!\s+tutma)|disinda)\b"
+    q = re.sub(passive + nouns + r"\s+" + exclusions, "", q)
+    return bool(re.search(passive, q))
+
+
+def validate_crm_dates(crm, question, periods):
+    """Bind model date filters to parsed boundaries and the requested time zone."""
+    filters = [dict(f) for f in crm.get("filters", [])]
+    temporal = [f for f in filters if f["field"] in {"created_at", "updated_at"}]
+    if not temporal:
+        if periods:
+            raise ContractError("CRM tarih isteği kayıt oluşturma/değiştirme alanına güvenle bağlanamadı.", code="PLAN_INVALID")
+        return crm
+    if len(periods) != 1 or len(temporal) != 2 or len({f["field"] for f in temporal}) != 1 or {f["op"] for f in temporal} != {"gte", "lt"}:
+        raise ContractError("CRM tarih süzgeci tek oluşturma/değiştirme alanında bir başlangıç ve bitiş aralığı olmalıdır.")
+    zone = timezone.utc if re.search(r"\butc\b", fold(question)) else ZoneInfo("Europe/Istanbul")
+    for f in temporal:
+        boundary = periods[0][0 if f["op"] == "gte" else 1]
+        local = datetime.fromisoformat(boundary).replace(tzinfo=zone)
+        utc = local.astimezone(timezone.utc)
+        try:
+            supplied = datetime.fromisoformat(str(f["value"]).replace("Z", "+00:00"))
+        except ValueError:
+            raise ContractError("CRM tarih sınırı geçerli değil.", code="PLAN_INVALID") from None
+        if supplied.tzinfo is None:
+            valid = supplied in (local.replace(tzinfo=None), utc.replace(tzinfo=None))
+        else:
+            valid = supplied.astimezone(timezone.utc) == utc
+        if not valid:
+            raise ContractError("CRM tarih sınırı sorudan çözümlenen dönemle uyuşmuyor.", code="PLAN_INVALID")
+        # Dynamics stores UTC in SQL datetime columns, without a timezone suffix.
+        f["value"] = utc.replace(tzinfo=None).isoformat(timespec="seconds")
+    return {**crm, "filters": filters}

@@ -20,6 +20,8 @@ ENGINE_HASH = hashlib.sha256(json.dumps({p.name: hashlib.sha256(p.read_bytes()).
 
 
 def _tr(value):
+    if value is None:
+        return "Değer yok / hesaplanamadı"
     if isinstance(value, (float, int)):
         return f"{value:,.2f}".replace(",", "~").replace(".", ",").replace("~", ".")
     return str(value)
@@ -85,17 +87,37 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
             raise ContractError("Cevabın kolonları ölçü sözleşmesini sağlamıyor.", code="SOURCE_CONTRACT_VIOLATION")
         columns = [{"name": k, "type": "float" if k in numeric else "str",
                     **({"label": METRICS[k].label, "unit": METRICS[k].unit} if k in METRICS else {})} for k in fields]
+        labels = {}
+        calculations = []
+        for d in plan.derived:
+            left, right = METRICS[d.left], METRICS[d.right]
+            unit = "%" if d.op == "percent_change" or d.op == "ratio" and d.scale == 100 else left.unit if d.op == "difference" else "oran" if left.unit == right.unit else left.unit + "/" + right.unit
+            label = f"{left.label} / {right.label}" if d.op == "ratio" else f"{left.label} − {right.label}" if d.op == "difference" else f"{left.label}, {right.label} bazına göre değişim"
+            labels[d.id] = {"label": label, "unit": unit}
+            formula = f"{d.left}/{d.right}×{d.scale:g}" if d.op == "ratio" else f"{d.left}−{d.right}" if d.op == "difference" else f"({d.left}−{d.right})/{d.right}×100"
+            calculations.append(f"{label}: {formula} ({unit}).")
+        if plan.comparison:
+            cmp = plan.comparison
+            metric = METRICS[cmp.metric]
+            labels.update(base_value={"label": "Baz dönem " + metric.label, "unit": metric.unit}, target_value={"label": "Karşılaştırılan dönem " + metric.label, "unit": metric.unit})
+            labels[cmp.id] = {"label": "Dönem farkı" if cmp.op == "difference" else "Dönem değişimi", "unit": metric.unit if cmp.op == "difference" else "%"}
+            calculations.append("Dönem hesabı: " + ("karşılaştırılan − baz." if cmp.op == "difference" else "(karşılaştırılan − baz) / baz × 100 (%)."))
+        for col in columns:
+            col.update(labels.get(col["name"], {}))
         sql = "\n\n".join("-- " + run["source"] + "\n" + run["sql"] for run in engine.runs)
         notes = list(dict.fromkeys(engine.notes))
         if "author" in plan.dimensions:
             notes.append("Yazar kırılımı kitap künyesindeki yazar metnidir; kişi kimliği ve telif sahipliği çıkarımı yapılmaz.")
-        definitions = " ".join(METRICS[m].definition for m in plan.metrics)
+        definitions = " ".join([*(METRICS[m].definition for m in plan.metrics), *calculations])
+        def label(k):
+            return labels.get(k, {}).get("label", METRICS[k].label if k in METRICS else k)
         if len(rows) == 1 and not plan.dimensions and not plan.crm:
-            summary = " · ".join(f"{METRICS[k].label if k in METRICS else k}: {_tr(v)}" for k,v in rows[0].items())
+            summary = " · ".join(f"{label(k)}: {_tr(v)} {labels.get(k, {}).get('unit', METRICS[k].unit if k in METRICS else '')}".strip() for k,v in rows[0].items())
         else:
-            summary = f"{len(rows)} satır. " + (f"İstenen ilk {plan.limit} sonuç gösteriliyor. " if plan.limit else "")
+            limit = plan.crm.get("limit") if plan.crm else plan.limit
+            summary = f"{len(rows)} satır. " + (f"İstenen ilk {limit} sonuç gösteriliyor. " if limit else "")
             if rows:
-                summary += "İlk satır: " + " · ".join(f"{METRICS[k].label if k in METRICS else k}: {_tr(v)}" for k,v in rows[0].items())
+                summary += "İlk satır: " + " · ".join(f"{label(k)}: {_tr(v)}" for k,v in rows[0].items())
         if definitions:
             summary += " Hesap tanımı: " + definitions
         if notes:
@@ -104,7 +126,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         result = {"id": rid, "columns": columns, "records": rows, "totalRows": len(rows), "truncated": False,
                   "physicalSql": sql, "computedAt": time.time(), "cached": False,
                   "dbMs": sum(x["dbMs"] for x in engine.runs),
-                  "dataNotes": [{"message": n, "severity": "warn"} for n in notes],
+                  "dataNotes": [{"message": n, "severity": "info" if engine.coverage_complete else "warn"} for n in notes],
                   "dataCoverage": engine.source_periods}
         progress("presenting")
         runtime.attach_widget(result, question)
@@ -119,7 +141,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
                 "records": rows[:max(1,min(sample_size,500))], "shownRows": min(len(rows),max(1,min(sample_size,500))),
                 "rowCount": len(rows), "threadId": thread_id, "queryId": qid, "semantic": state,
                 "answerQuality": {"contractChecked": True, "independentlyVerified": False,
-                                  "sourceComplete": not notes, "contractHash": CONTRACT_HASH}}
+                                  "sourceComplete": engine.coverage_complete, "contractHash": CONTRACT_HASH}}
     except ContractError as exc:
         message = str(exc)
         status = exc.code

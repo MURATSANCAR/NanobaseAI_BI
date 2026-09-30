@@ -10,6 +10,8 @@
 - **Jira durumu:** 22 kayıt kodla kapandı ve doğrulandı; ZEKI-27 örneği «Rabia Elif Özcan Beydemir» CRM'de etkin kişi değil (müşteriye sorulacak); ZEKI-37/59/60 kod işi değil (59: T-soft'a yazma yasak). Jira'daki durumlar değiştirilmedi.
 ## 2026-09-30 — Birleşebilir sorgu motoru: ilk uygulama
 
+- Statik entegrasyon düzeltmesi: türetilmiş kolon formül/birimleri, NULL gösterimi, bilgilendirme notundan ayrı kaynak kapsamı, CRM Top N açıklaması, pasif hariç tutma isteği ve İstanbul takvim sınırlarının CRM UTC kayıt zamanına dönüşümü.
+
 - Kullanıcı onay beklemeden çalışır final istedi. Paralel kod/şema/kabul çalışması: günlük dil dönemleri ve yazıyla sayılar, takip filtreleri, CRM filtre kaynağı, tipli türetilmiş hesaplar/HAVING/dönem farkı, ortak kırılımda ayrı mali aile toplulaştırması.
 - CRM canlı yayımlı metadata ISBN13 ve kitap–yayıncı bağını doğruladı; aktif kart liste/sayım/eksik alan planı eklendi. Yazar künye metni kişi kimliği sayılmaz.
 - Hatalar destek dışı/gerçek netleştirme/geçersiz plan/kaynak sözleşmesi olarak ayrıldı; hata yolunda yürütme ve deadlock retry kanıtı korunur.
