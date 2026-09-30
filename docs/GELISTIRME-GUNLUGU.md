@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Netleştirme ekranının durum dili
+
+- Mobil gerçek ekran incelemesinde teknik CLARIFICATION etiketi ve veri okunmadığı halde 0 satır/kolon göründü. Türkçe durum etiketi ve okunmamış değerlerde çizgi gösterilir. Hesap/SQL değişmedi; güncel arayüz yeniden derlenip gerçek portal akışıyla doğrulanacak.
+
 ## 2026-09-30 — Dönem karşılaştırmasının denetleme sözleşmesi
 
 - FC95 üç bağımsız tekrarda aynı yanlış ret: dönem başlangıç/bitiş kolonları uygulamada otomatik ekleniyor, denetleyici yalnız kullanıcı kırılımlarını gördüğü için ayrı dönem satırlarını eksik sanıyordu. Genişletilmiş iş planı artık bu üretilen dönem kırılımını da açıkça anlatır; aralıklar birbiriyle birleştirilmez. Yeni sürümde tekrar ve tam kabul gereklidir.
