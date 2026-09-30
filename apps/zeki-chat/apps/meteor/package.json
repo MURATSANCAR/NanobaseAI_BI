@@ -124,7 +124,6 @@
 		"@zeki.chat/omni-core": "workspace:^",
 		"@zeki.chat/omni-core-ee": "workspace:^",
 		"@zeki.chat/omnichannel-services": "workspace:^",
-		"@rocket.chat/onboarding-ui": "^0.36.2",
 		"@zeki.chat/password-policies": "workspace:^",
 		"@zeki.chat/patch-injection": "workspace:^",
 		"@zeki.chat/pdf-worker": "workspace:^",

@@ -8631,26 +8631,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rocket.chat/onboarding-ui@npm:^0.36.2, @rocket.chat/onboarding-ui@npm:~0.36.2":
-  version: 0.36.2
-  resolution: "@rocket.chat/onboarding-ui@npm:0.36.2"
-  dependencies:
-    i18next: "npm:~23.4.9"
-    react-hook-form: "npm:~7.54.2"
-  peerDependencies:
-    "@rocket.chat/fuselage": "*"
-    "@rocket.chat/fuselage-hooks": "*"
-    "@rocket.chat/icons": "*"
-    "@rocket.chat/layout": "*"
-    "@rocket.chat/logo": "*"
-    "@rocket.chat/styled": "*"
-    react: "*"
-    react-dom: "*"
-    react-i18next: "*"
-  checksum: 10/2201758c345332158bb1dc0b3627cc15f220c600731348b78bc187f8cc93c232b4efdbaed63603ea554170613ba04e734d3bc616546ad618913a07721e913d0d
-  languageName: node
-  linkType: hard
-
 "@rocket.chat/prettier-config@npm:~0.31.25":
   version: 0.31.25
   resolution: "@rocket.chat/prettier-config@npm:0.31.25"
@@ -14372,7 +14352,6 @@ __metadata:
     "@rocket.chat/logo": "portal:../../deploy/zeki/logo"
     "@rocket.chat/memo": "npm:~0.31.25"
     "@rocket.chat/mp3-encoder": "npm:^0.31.26"
-    "@rocket.chat/onboarding-ui": "npm:^0.36.2"
     "@rocket.chat/string-helpers": "npm:~0.32.0"
     "@rocket.chat/styled": "npm:^0.33.0"
     "@slack/bolt": "npm:^3.22.0"
@@ -15310,7 +15289,6 @@ __metadata:
     "@rocket.chat/icons": "npm:~0.47.0"
     "@rocket.chat/layout": "npm:^0.34.2"
     "@rocket.chat/logo": "portal:../../deploy/zeki/logo"
-    "@rocket.chat/onboarding-ui": "npm:~0.36.2"
     "@rocket.chat/styled": "npm:^0.33.0"
     "@storybook/react": "npm:^8.6.18"
     "@storybook/react-webpack5": "npm:^8.6.18"

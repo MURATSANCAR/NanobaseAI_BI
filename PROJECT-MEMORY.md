@@ -1,5 +1,7 @@
 # NanobaseAI BI — Proje Belleği
 
+**2026-09-30 — Sohbet kod kalıntısı temizliği:** kullanılmayan Document360 action silindi; onboarding-ui bağımlılığı yerel yönetici/kuruluş formlarıyla değiştirildi; marketplace katalog okuyucusu lisans/fiyat/kota şeması yerine yerel boş liste döndürür; NPS varsayılan kapalı. Sunucu derleme ve gerçek kabul henüz **DOĞRULANAMADI**.
+
 **Sohbet kod denetimi (2026-09-30):** 7.922 kaynak metni ve canlı imajdaki 18 üretici namespace paket konumunda 419 JS dosyası seçili göstergelerle incelendi. İncelenen yollarda gizli lisans/kota/uzaktan kapanma bulunmadı; kullanılmayan Document360 yayın action'ı, onboarding-ui bulut/deneme bileşenleri ve marketplace lisans şemaları hâlâ var. Logo konumu yerel ikame. Davranış değiştirilmedi; mutlak temizlik iddiası yok. Rapor: `apps/zeki-chat/docs/zeki-code-audit-2026-09-30.md`.
 
 

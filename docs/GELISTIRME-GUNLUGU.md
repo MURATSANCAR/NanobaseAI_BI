@@ -1,5 +1,7 @@
 # Geliştirme Günlüğü
 
+**2026-09-30 — Sohbet kod kalıntısı temizliği:** kullanılmayan Document360 action silindi; onboarding-ui bağımlılığı yerel yönetici/kuruluş formlarıyla değiştirildi; marketplace katalog okuyucusu lisans/fiyat/kota şeması yerine yerel boş liste döndürür; NPS varsayılan kapalı. Sunucu derleme ve gerçek kabul henüz **DOĞRULANAMADI**.
+
 ## 2026-09-30 — Sohbet ayrıntılı kod ve çalışan imaj denetimi
 
 - Kaynak `ebc692820`, canlı imaj `157d9f6a8`; 7.922 kaynak dosyası, 419 bağımlılık JS dosyası seçili göstergelerle tarandı.

@@ -330,7 +330,7 @@ export const createGeneralSettings = async () => {
 			});
 		});
 		await this.section('NPS', async function () {
-			await this.add('NPS_survey_enabled', true, {
+			await this.add('NPS_survey_enabled', false, {
 				type: 'boolean',
 			});
 		});

@@ -1,5 +1,4 @@
-// Zeki: deep import keeps the package's cloud/registration pages out of the client bundle.
-import AdminInfoPage from '@rocket.chat/onboarding-ui/dist/cjs/pages/AdminInfoPage';
+import AdminInfoPage from '../components/AdminInfoPage';
 import { escapeRegExp } from '@rocket.chat/string-helpers';
 import { useSetting, useVerifyPassword, usePasswordPolicy, usePasswordPolicyOptions } from '@zeki.chat/ui-contexts';
 import type { ReactElement, ComponentProps } from 'react';
@@ -63,7 +62,7 @@ const AdminInfoStep = (): ReactElement => {
 	};
 
 	const handleSubmit: ComponentProps<typeof AdminInfoPage>['onSubmit'] = async (data) => {
-		void registerAdminUser(data);
+		await registerAdminUser(data);
 	};
 
 	return (
