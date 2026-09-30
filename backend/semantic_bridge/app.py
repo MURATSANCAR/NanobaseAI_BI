@@ -226,8 +226,8 @@ class Runtime:
         # Profiller burada okunmaz: `rebuild()` ilk iş olarak okuyor. Eskiden ikisi de okuyordu — 4.874 profil her
         # açılışta iki kez (hız 2. tur, 2026-09-29).
         _t = time.perf_counter()
-        self.rules_text = self._load_rules()
-        self.pairs = load_project_pairs(settings.project_dir) if settings.project_dir else []
+        self.rules_text = ""  # retired legacy SQL/rule knowledge pack
+        self.pairs = []  # retired historical question-to-SQL recall
         self.boot_timings["bilgi-paketi"] = round(time.perf_counter() - _t, 3)
         # SQL dili katalogdan değil bağlantıdan gelir; ekran uçları (settings.dialect) katalog beklemeden okur.
         if not settings.dialect:
@@ -330,8 +330,6 @@ class Runtime:
         if version != self._catalog_version:
             log.info("catalog changed (%s → %s) — reloading profiles", self._catalog_version, version)
             self.rebuild()
-        elif file_stamp(os.environ.get("SEMANTIC_LANGUAGE_POOL")) != getattr(self, "_language_pool_stamp", None):
-            self._reload_language_pool_in_background()
 
     def _reload_language_pool_in_background(self) -> None:
         """A published pool of ~180k phrases takes the better part of a minute to validate and index.
@@ -341,7 +339,7 @@ class Runtime:
             return
         self._pool_loading = True
         from semantic_layer.runtime.language_pool import LanguagePool, file_stamp
-        pool_path = os.environ.get("SEMANTIC_LANGUAGE_POOL")
+        pool_path = None  # retired legacy term-to-column candidate pool
         stamp = file_stamp(pool_path)
         profiles, existing = self.profiles, self.existing
 
@@ -548,7 +546,7 @@ class Runtime:
             log.debug("annotations unavailable: %s", e)
         mark("portal-aciklamalari")
         from semantic_layer.runtime.language_pool import LanguagePool, file_stamp
-        pool_path = os.environ.get("SEMANTIC_LANGUAGE_POOL")
+        pool_path = None  # retired legacy term-to-column candidate pool
         self._language_pool_stamp = file_stamp(pool_path)
         try:
             self.language_pool = LanguagePool.load(pool_path, self.profiles, s.datasource_id,
@@ -1157,408 +1155,37 @@ class Runtime:
         return resp
 
     def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None) -> dict[str, Any]:
+        """The retired semantic catalog is never a conversational SQL fallback."""
+        from semantic_bridge import chat_scope, chat_portal
+        from semantic_bridge.finance_query import answer as finance_answer
+
         report = progress or (lambda stage: None)
         report("understanding")
-        t0 = time.perf_counter()
-        timings: dict[str, int] = {}
         thread_id = thread_id or uuid.uuid4().hex
-
-        # Independent finance engine: no legacy resolver, catalog voting or SQL fallback.
-        # The existing API authentication/data authorization and result transport remain in force.
-        from semantic_bridge.finance_query import answer as finance_answer
-        contract_answer = finance_answer(self, question, thread_id, sample_size, execute, report, username)
-        if contract_answer is not None:
-            return contract_answer
-
-        def _log(*, sql, compiler, catalog_version, executed, resolved=None, answer_type=None,
-                 answer_summary=None, error=None, row_count=None, latency_ms=None,
-                 result_fingerprint=None, result_json=None, gate=None) -> str:
-            """Promt izleyici kaydı: her dal buradan geçer, böylece kim sordu / ne cevap döndü / kapı
-            ne dedi tek yerde ve eksiksiz yazılır (bkz. sl_query_log, /api/v1/admin/prompts)."""
-            return self.store.log_query(
-                self.settings.tenant_id, self.settings.datasource_id, question,
-                sql=sql, compiler=compiler, catalog_version=catalog_version,
-                resolved=(resolved if resolved is not None else {}), executed=executed,
-                row_count=row_count, latency_ms=latency_ms, error=error,
-                result_fingerprint=result_fingerprint, username=username, thread_id=thread_id,
-                answer_type=answer_type, answer_summary=answer_summary,
-                result_json=result_json, gate_json=gate)
-        thread = self.threads.setdefault(thread_id, [])
-        # a long-lived process must not accumulate every conversation it ever served
-        if len(self.threads) > 200:
-            for stale in list(self.threads)[:-100]:
-                self.threads.pop(stale, None)
-                self.thread_plans.pop(stale, None)
-        from semantic_bridge import chat_scope
-        # Kimlik/model sorusu ve selam modelsiz ayrılır: cevap sabit metindir, model adı sızmaz.
         scope = chat_scope.classify(question)
-        if scope.is_intro:
-            qid = _log(sql=None, compiler="intro", catalog_version=None, executed=False,
-                       answer_type="MODULE_INTRO", answer_summary=scope.reply, gate={"chatScope": scope.to_dict()})
-            return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": scope.reply, "threadId": thread_id, "timings": timings, "queryId": qid}
-        self.ensure_fresh()
-        t = time.perf_counter()
-        from semantic_layer.runtime.conversation import compose_followup, bind_followup_value
-        effective_question, context_error = compose_followup(question, self.thread_plans.get(thread_id))
-        if context_error:
-            qid = _log(sql=None, compiler="clarification", catalog_version=None, executed=False,
-                       answer_type="CLARIFICATION", answer_summary=context_error)
-            return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": context_error,
-                    "threadId": thread_id, "timings": timings, "queryId": qid}
-        sq = self.resolver.resolve(effective_question)
-        sq.language_candidates = self.language_pool.search(effective_question)
-        sq.language_pool_hash = self.language_pool.content_hash
-        from semantic_layer.runtime.context_scope import extract_scope
-        sq.context_scope, scope_errors = extract_scope(effective_question, getattr(self.settings, "pattern_labels", []), self.profiles)
-        sq.clarification.extend(scope_errors)
-        scope_args = {"scope": sq.context_scope} if sq.context_scope else {}
-        # Certified data concepts are positive evidence of a BI request. Only unplaced
-        # questions need the conversational classifier; unknown terms remain eligible.
-        # 2026-09-28: kapsam şirketin bütün modülleri. Sınıflandırıcı ret yalnız kimlik ve şirket dışı
-        # sohbette verir; şirket sorusunun konusu sohbete verisi bağlanmamış bir alansa tahmin yerine
-        # «henüz veri bağlı değil» denir (chat_topics.json, yönetim ayarı CHAT_CONNECTED_TOPICS).
-        # Güçlü kanıt = sertifikalı kavram; kelime içi tahmin ya da veride geçen bir değer tek başına iş sorusu saymaz.
-        # 2026-09-28 (sohbete modül verisi): konusu portalın kendi modül tablolarında olan soru (chat_topics.json `portal`)
-        # chat_portal'dan cevaplanır. Portal alanının ayırt edici kelimesi geçen soru («risk kaydı», «lansman», «bülten»)
-        # Logo/CRM'de güçlü bir kavrama yerleşse de sınıflandırıcıya sorulur; o durumda yalnız portal konusu yönü değiştirir,
-        # başka her karar eskisi gibi Logo/CRM hattında kalır.
-        from semantic_bridge import chat_portal
-        evidence = chat_scope.has_business_evidence(sq.slots)
-        # Portal kelimesi sertifikalı bir Logo/CRM öbeğinin içindeyse («ortalama sepet tutarı» ⊃ «sepet») ayırt edici değil.
-        if not evidence or chat_portal.mentions_portal(question, covered=chat_scope.strong_phrases(sq.slots)):
-            scope = chat_scope.classify(question, self.llm_for("chat"),
-                                        has_context=bool(self.thread_plans.get(thread_id)))
-            if not scope.is_intro and scope.connected and chat_portal.serves(scope.topic):
-                return self._answer_portal(question, scope, sq, thread_id, timings, username, sample_size, _log)
-        if not evidence:
-            if scope.is_intro:
-                qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
-                           resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=scope.reply,
-                           gate={"chatScope": scope.to_dict()})
-                return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                        "explanation": scope.reply, "threadId": thread_id, "timings": timings, "queryId": qid}
-            if scope.not_connected:
-                reason = scope.reply
-                qid = _log(sql=None, compiler="topic", catalog_version=sq.catalog_version, executed=False,
-                           resolved=sq.to_dict(), error=reason, answer_type="DATA_UNAVAILABLE",
-                           answer_summary=reason, gate={"chatScope": scope.to_dict()})
-                return {"id": uuid.uuid4().hex, "type": "DATA_UNAVAILABLE", "explanation": reason,
-                        "chatScope": scope.to_dict(), "threadId": thread_id, "timings": timings,
-                        "semantic": {"query": sq.to_dict(), "chatScope": scope.to_dict()}, "queryId": qid}
-        if self.thread_plans.get(thread_id) is not None and getattr(self, "existing", None) is not None:
-            bind_followup_value(question, sq, self.thread_plans[thread_id], self.existing.probe,
-                                self.existing.columns, self.conventions)
-        if effective_question != question:
-            sq.explanation.append(f"Konuşma bağlamıyla tamamlanan soru: {effective_question}")
-        timings["resolve_ms"] = int((time.perf_counter() - t) * 1000)
-        if any(c["status"] == "OUTSIDE_OBSERVED" for c in sq.data_coverage):
-            reason = " ".join(e for e in sq.explanation if "gözlenen veri kapsamı dışında" in e)
-            qid = _log(sql=None, compiler="coverage", catalog_version=sq.catalog_version,
-                       resolved=sq.to_dict(), executed=False, error=reason,
-                       answer_type="DATA_UNAVAILABLE", answer_summary=reason,
-                       gate={"dataCoverage": list(sq.data_coverage)})
-            return {"id": uuid.uuid4().hex, "type": "DATA_UNAVAILABLE", "explanation": reason,
-                    "threadId": thread_id, "timings": timings, "semantic": {"query": sq.to_dict()}, "queryId": qid}
-        # Before anything is compiled: a comparison whose current period is still open is cut where the
-        # measure's own data ends, and the earlier period at the same relative day. Both compilers and
-        # the gate then read the aligned periods; nothing has to be rewritten afterwards.
-        t = time.perf_counter()
-        self._align_same_period(sq, scope_args)
-        timings["same_period_ms"] = int((time.perf_counter() - t) * 1000)
-        t = time.perf_counter()
-        compiled = self.router.compile(sq, self.store, thread, recall=(lambda q: self.recall(q, exclude_nl)) if (exclude_nl and self.settings.recall_enabled) else None)
-        timings["compile_ms"] = int((time.perf_counter() - t) * 1000)
-        if compiled.llm_ms:
-            timings["llm_ms"] = compiled.llm_ms
-        queued = {}
-        if isinstance(self.llm, QueuedLlm) and self.llm.last_wait_ms:
-            timings["queue_wait_ms"] = self.llm.last_wait_ms
-            queued = {"waitedMs": self.llm.last_wait_ms, "aheadOnArrival": self.llm.last_ahead}
-        semantic = {"query": sq.to_dict(), "compiler": compiled.compiler, "certified": compiled.certified, "explain": compiled.explain, "catalogVersion": compiled.catalog_version}
-        if queued:
-            semantic["queue"] = queued
-        if compiled.compiler == "incomplete":
-            reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(compiled.explain)
-            if sq.unresolved:
-                # The gate's objection is the symptom; a word the catalog cannot place is the cause.
-                # Lead with what the person can act on: which word, and where the data may sit.
-                hints = [c for c in (sq.candidates or []) if c.get("term") in sq.unresolved]
-                where = "; ".join(f"'{c['term']}' → " + ", ".join(f"{e}.{c['column']}" for e in (c.get("entities") or [])[:2]) for c in hints[:3])
-                reason = (f"'{', '.join(sq.unresolved[:3])}' katalogda tanımlı bir kavram değil; bu yüzden üretilen sorgu doğrulanamadı. "
-                          + (f"Şemada karşılığı olabilecek kolonlar: {where}. " if where else "")
-                          + "Terimi Veri Sözlüğü'nden tanımlarsanız soru cevaplanır. Kapı gerekçesi: " + "; ".join(compiled.explain))
-            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                       resolved=sq.to_dict(), executed=False, error=reason,
-                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason,
-                       gate={"explain": list(compiled.explain)})
-            return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "explanation": reason,
-                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        if compiled.compiler == "clarification":
-            reason = " ".join(compiled.explain)
-            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                       resolved=sq.to_dict(), executed=False,
-                       answer_type="CLARIFICATION", answer_summary=reason,
-                       gate={"explain": list(compiled.explain)})
-            thread.extend([{"role": "user", "content": question}, {"role": "assistant", "content": reason}])
-            return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "needs_clarification": True,
-                    "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        if compiled.plan is not None:
-            return self._answer_plan(question, sq, compiled, semantic, thread, thread_id, timings, t0,
-                                     sample_size, scope_args, report, execute)
-        if not compiled.sql:
-            reason = "; ".join(compiled.explain)[:500]
-            if sq.out_of_scope:
-                reason = next((e for e in sq.explanation if "kapsamı dışında" in e), reason)
-            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
-                       answer_type="NON_SQL_QUERY", answer_summary=reason, gate={"explain": list(compiled.explain)})
-            return {"id": uuid.uuid4().hex, "type": "NON_SQL_QUERY", "explanation": reason or "Model bu soru için SQL üretmedi.", "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        sql = repair_qualifiers_sql(strip_trailing_semicolon(compiled.sql))
-        ok, why = validate_sql(sql)
-        if not ok:
-            reason = f"Guardrail: {why}"
-            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
-                       answer_type="SQL_INVALID", answer_summary=reason, gate={"guardrail": why})
-            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        # What the question asked for and the statement does not deliver. Checked for every query,
-        # certified or not: a comparison is built by the deterministic compiler too, and a single
-        # period returned for "geçen yıla göre" is a complete-looking answer to a different question.
-        unmet = unmet_obligations(sq, sql, sources=self.router.gate_sources())
-        if unmet:
-            reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(unmet)
-            log.warning("obligation unmet q=%r %s sql=%s", question[:80], unmet, " ".join(sql.split())[:1500])
-            semantic["unmetObligations"] = unmet
-            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
-                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason, gate={"unmetObligations": list(unmet)})
-            return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "sql": sql, "explanation": reason,
-                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
 
-        # The prompt asks the model to honour the certified catalog; this is where we check that it did.
-        # A query that contradicts a certified fact answers a different question than the one asked.
-        if not compiled.certified:
-            contradictions = audit_sql(sq, sql, conventions=self.conventions)
-            if contradictions:
-                semantic["catalogAudit"] = contradictions
-                reason = "Üretilen SQL sertifikalı katalogla çelişiyor: " + "; ".join(contradictions)
-                log.warning("catalog audit refused q=%r %s", question[:80], contradictions)
-                qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
-                           answer_type="SQL_INVALID", answer_summary=reason, gate={"catalogAudit": list(contradictions)})
-                return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        repairs = 0
-        error: Optional[str] = None
-        critic_notes: list[dict] = []
-        if self.connector is not None:
-            sql = critic.prefer_base_tables(sql, self.profiles, self.settings.dialect or "tsql")
-            for attempt in range(3):
-                try:
-                    # Read the query against what the catalog already knows *before* asking the
-                    # database. A column the model invented or a join it mis-keyed is the catalog's
-                    # to catch, with a message the model can repair against — not a raw driver error
-                    # ("Invalid column name 'AMOUNT'") that the person should never be shown. The
-                    # reviewer never executes and fails open on anything it cannot read, so running it
-                    # first only moves *where* a catalog-visible fault is caught, from the database to
-                    # here; the dry_run below still catches everything the catalog cannot see.
-                    found = critic.review(sql, self.profiles, self.settings.dialect or "tsql",
-                                          names=self.store.entity_terms(self.settings.tenant_id, self.settings.datasource_id))
-                    critic_notes = [f.to_dict() for f in found]
-                    blocking = [f for f in found if f.severity == "block"]
-                    if blocking:
-                        log.warning("critic refused q=%r %s", question[:80], [f.kind for f in blocking])
-                        if attempt == 2 or self.existing is None or compiled.compiler == "deterministic":
-                            # Out of attempts, or the SQL came from the deterministic compiler — which
-                            # builds from the catalog rather than guessing, so a finding against it is
-                            # this system's own bug and rewriting it with a model would hide that.
-                            error = "; ".join(f.message for f in blocking)
-                            break
-                        repairs += 1
-                        fixed = self.existing.repair(sq, sql, "; ".join(f.message for f in blocking), thread)
-                        if not fixed:
-                            error = "; ".join(f.message for f in blocking)
-                            break
-                        sql = strip_trailing_semicolon(fixed)
-                        continue
-                    # The catalog is satisfied; now the database confirms the query parses and runs.
-                    # The fan-out that inflates a SUM was judged above, before anything ran.
-                    self.dry_run(self._physical(sql, self._asked_period(sq), **scope_args))
-                    error = None
-                    break
-                except Exception as e:  # noqa: BLE001
-                    error = str(e)[:1500]
-                    if is_connection_error(e):
-                        # The database went away. No rewrite of this SQL can help, and telling the user
-                        # their question was invalid would send them looking in the wrong place.
-                        log.error("data source unreachable q=%r err=%s", question[:80], error[:300])
-                        _ds_msg = "Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
-                        qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=f"data source unreachable: {error}",
-                                   answer_type="DATA_SOURCE_UNAVAILABLE", answer_summary=_ds_msg)
-                        return {"id": uuid.uuid4().hex, "type": "DATA_SOURCE_UNAVAILABLE", "sql": sql,
-                                "explanation": _ds_msg,
-                                "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
-                    log.warning("dry_run failed (attempt %d) q=%r err=%s", attempt + 1, question[:80], error[:300])
-                    if attempt == 2 or self.existing is None or compiled.compiler == "deterministic":
-                        break
-                    repairs += 1
-                    fixed = self.existing.repair(sq, sql, error, thread)
-                    if not fixed:
-                        break
-                    sql = strip_trailing_semicolon(fixed)
-        if critic_notes:
-            semantic["critic"] = critic_notes
-        if error:
-            # A query the reviewer stopped is a different thing from one the database rejected, and
-            # the person is owed the difference: the first has an explanation they can act on, the
-            # second is a fault. Both refuse — neither returns a number nobody can trust.
-            blocked = any(n.get("severity") == "block" for n in critic_notes)
-            # A reviewer's finding is written to be read by a person and points at something they can
-            # act on, so it is shown as-is. A raw database error is a fault in the generated SQL, not
-            # a fact about the question, and its provider text ("Invalid column name 'AMOUNT'", driver
-            # codes, fragments of the statement) must never surface as the answer: the person is told,
-            # honestly, that no trustworthy answer could be produced. The raw error stays in the log
-            # and the gate for whoever operates the deployment.
-            explanation = error if blocked else (
-                "Bu soruya güvenilir bir cevap üretilemedi: üretilen sorgu veritabanında çalışmadı. "
-                "Soru bir sorun içermiyorsa biraz daha belirginleştirmeyi ya da az sonra tekrar denemeyi deneyin.")
-            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=error,
-                       answer_type="SQL_INVALID", answer_summary=explanation, gate={"critic": critic_notes} if critic_notes else None)
-            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": explanation, "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
-        # Repairs can remove filters or period predicates. Validate the exact final
-        # statement, including previews; never trust the pre-repair verdict.
-        final_problems = unmet_obligations(sq, sql, sources=self.router.gate_sources()) + audit_sql(sq, sql, conventions=self.conventions)
-        semantic["query"] = sq.to_dict()
-        if final_problems:
-            reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(final_problems)
-            # The refused statement is the evidence a refusal is judged by.
-            log.warning("obligation unmet after repair q=%r %s sql=%s", question[:80], final_problems, " ".join(sql.split())[:1500])
-            semantic["unmetObligations"] = final_problems
-            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                       resolved=sq.to_dict(), executed=False, error=reason,
-                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason, gate={"unmetObligations": list(final_problems)})
-            return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "explanation": reason,
-                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        if not execute or self.connector is None:
-            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False,
-                       answer_type="TEXT_TO_SQL", answer_summary="(sorgu üretildi, çalıştırılmadı)")
-            return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq), **scope_args), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
-        t = time.perf_counter()
-        try:
-            # Executed once, whole. The client is shown a page of it; the export needs all of it, and
-            # asking twice would be a second execution against data that can have moved.
-            report("querying")
-            result = self.run_complete(sql, self._asked_period(sq), **scope_args)
-        except Exception as e:  # noqa: BLE001
-            from semantic_bridge import access as access_mod
-            if isinstance(e, access_mod.DataScopeError):
-                qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(),
-                           executed=False, error=str(e), answer_type="NOT_PERMITTED", answer_summary=str(e))
-                return {"id": uuid.uuid4().hex, "type": "NOT_PERMITTED", "explanation": str(e),
-                        "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-            err = str(e)[:800]
-            down = is_connection_error(e)
-            slow = is_query_timeout(e)
-            limit = getattr(self.connector, "query_timeout", "?")
-            if down:
-                log.error("data source unreachable during execution q=%r err=%s", question[:80], err[:300])
-            elif slow:
-                log.warning("query timeout (%ss) q=%r", limit, question[:80])
-            _exec_msg = ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
-                         if down else
-                         (f"Sorgu veritabanında {limit} saniyede bitmedi; soru doğru, veri büyük. Dönemi ya da kapsamı daraltın ya da yeniden deneyin."
-                          if slow else f"Sorgu çalıştırılamadı: {err}"))
-            _type = "DATA_SOURCE_UNAVAILABLE" if down else ("QUERY_TIMEOUT" if slow else "SQL_INVALID")
-            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False,
-                       error=(f"data source unreachable: {err}" if down else (f"query timeout: {err}" if slow else err)),
-                       answer_type=_type, answer_summary=_exec_msg)
-            return {"id": uuid.uuid4().hex,
-                    "type": _type, "sql": sql,
-                    "explanation": _exec_msg,
-                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        sql, result = self._retry_documented_empty(sq, sql, result, compiled, thread, scope_args, semantic)
-        timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
-        report("presenting")
-        from semantic_bridge.presentation import presentation_spec
-        result["presentation"] = presentation_spec(sql, result, sq, compiled.compiler)
-        result["dataCoverage"] = list(sq.data_coverage)
-        result["comparison"] = sq.comparison
-        self.attach_widget(result, question)
-        self.remember_result(result, question=question, sql=sql)
-        shown = list(result["records"])[: max(1, int(sample_size or 50))]
-        data_end = None
-        from semantic_layer.runtime.column_facts import nothing_came_back
-        if nothing_came_back(result.get("records") or [], int(result.get("totalRows") or 0)):
-            t = time.perf_counter()
-            data_end = self._data_end_hint(sq, effective_question, scope_args)
-            timings["data_end_ms"] = int((time.perf_counter() - t) * 1000)
-            if data_end:
-                # Tarihli açıklama, tarihsiz "bitiyor olabilir" notunun yerini alır.
-                sq.explanation[:] = [e for e in sq.explanation if "bu dönemden önce bitiyor" not in e]
-                sq.explanation.append(data_end["note"])
-        t = time.perf_counter()
-        summary = self.summarize(question, sql, result, sq)
-        # What a ratio was measured against is part of the answer, not of the log: a share taken over
-        # "contracts that have a party row" reads as a share of all contracts unless it is said.
-        base_notes = [n["message"] for n in critic_notes if n.get("kind") == "RATIO_BASE" and n.get("severity") == "warn"]
-        if base_notes:
-            summary = (summary + " Not: " + " ".join(dict.fromkeys(base_notes))).strip()
-        timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
-        fp = result.get("resultFingerprint") or result_fingerprint([c["name"] for c in result["columns"]], result["records"])
-        # Kullanıcı kararı: tam sonuç (tüm satırlar) kaydın içinde durur, böylece incelerken neyin
-        # döndüğünü birebir görürüz. Motorun satır tavanı zaten kesiyor; devasa kaçaklar _cap_result'la
-        # düşürülür. Kapı kararları (eleştiri) da promtla birlikte saklanır.
-        stored_result = {"columns": result["columns"], "records": list(result["records"]),
-                         "totalRows": result["totalRows"], "truncated": result.get("truncated"),
-                         # Sorgu bilgisi: kayıttaki sql_text mantıksaldır; veritabanında koşan metin ve süresi burada.
-                         "physicalSql": result.get("physicalSql"), "dbMs": result.get("dbMs")}
-        gate = {k: semantic[k] for k in ("critic", "unmetObligations", "catalogAudit") if k in semantic} or None
-        if result.get("dataNotes"):
-            gate = {**(gate or {}), "dataNotes": result["dataNotes"]}
-        qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(),
-                   executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000),
-                   result_fingerprint=fp, answer_type="TEXT_TO_SQL", answer_summary=summary,
-                   result_json=stored_result, gate=gate)
-        self.thread_plans[thread_id] = sq
-        thread.append({"role": "user", "content": question})
-        thread.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
-        del thread[:-12]
-        log.info("ask ok compiler=%s certified=%s rows=%d timings=%s q=%r", compiled.compiler, compiled.certified, result["totalRows"], timings, question[:80])
-        return {
-            "id": result["id"],
-            "type": "TEXT_TO_SQL",
-            "sql": sql,
-            "physicalSql": result.get("physicalSql"),
-            "summary": summary,
-            # The rows this answer was computed from, carried with it. The client used to re-send the
-            # SQL to /run_sql to fill its table, and that second execution went out without the
-            # period: a question spanning years read one table instead of the union, so the summary
-            # said one number and the table under it showed another. It also ran the query twice and
-            # ran it for answers that had already been refused. One execution, one set of rows,
-            # everything downstream — table, chart, export — reads these.
-            "resultId": result["id"],
-            "presentation": result.get("presentation"),
-            "comparison": result.get("comparison"),
-            "dataCoverage": result.get("dataCoverage", []), "dataNotes": result.get("dataNotes", []),
-            # Boş cevapta dönem veriden sonra kaldıysa: son gün ve aynı sorunun o güne kurulmuş hâli.
-            "dataEnd": data_end,
-            # «Neden?»: ölçü katalogda toplanabilir bir satış satırı ölçüsü ve soruda dönem varsa ayrıştırılabilir.
-            "neden": _variance_hint(sq),
-            "columns": result["columns"],
-            "records": shown,
-            "shownRows": len(shown),
-            "truncated": result.get("truncated"),
-            "cached": result.get("cached"),
-            "ageSec": result.get("ageSec"),
-            "computedAt": result.get("computedAt"),
-            "dbMs": result.get("dbMs"),
-            "widget": result.get("widget"),
-            "threadId": thread_id,
-            "rowCount": result["totalRows"],
-            "totalRows": result["totalRows"],
-            "latency_ms": int((time.perf_counter() - t0) * 1000),
-            "repairs": repairs,
-            "timings": timings,
-            "recallExcluded": bool(exclude_nl),
-            "semantic": semantic,
-            "queryId": qid,
-        }
+        def record(**values):
+            gate = values.pop("gate", None)
+            resolved = values.pop("resolved", {})
+            return self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question,
+                username=username, thread_id=thread_id, resolved=resolved, gate_json=gate, **values)
+
+        if scope.is_intro:
+            qid = record(sql=None, compiler="intro", catalog_version=None, executed=False,
+                         answer_type="MODULE_INTRO", answer_summary=scope.reply)
+            return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
+                    "explanation": scope.reply, "threadId": thread_id, "queryId": qid}
+        # Portal modules have their own closed plans and authorization. They do not
+        # use the retired Logo/CRM term-to-column catalog either.
+        if execute and chat_portal.mentions_portal(question):
+            scope = chat_scope.classify(question, self.llm_for("chat"), has_context=False)
+            if not scope.is_intro and scope.connected and chat_portal.serves(scope.topic):
+                sq = SemanticQuery(question=question, tenant_id=self.settings.tenant_id,
+                                   datasource_id=self.settings.datasource_id)
+                return self._answer_portal(question, scope, sq, thread_id, {}, username, sample_size, record)
+        # Every remaining data question reaches the new planner, including words
+        # such as alışveriş, randevu and bağlı kişi that the old keyword gate missed.
+        return finance_answer(self, question, thread_id, sample_size, execute, report, username)
 
     def _retry_documented_empty(self, sq, sql, result, compiled, thread, scope_args, semantic):
         """An empty answer whose cause the knowledge pack documents, on a column the statement actually uses: the

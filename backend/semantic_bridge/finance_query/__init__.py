@@ -10,7 +10,7 @@ import time
 import uuid
 
 from .contracts import CONTRACT_HASH, METRICS, ContractError
-from .planner import claims, follows, build
+from .planner import follows, build
 from .executor import Executor
 
 log = logging.getLogger(__name__)
@@ -25,12 +25,8 @@ def _tr(value):
 
 
 def answer(runtime, question, thread_id, sample_size, execute, progress, username):
-    if os.environ.get("FINANCE_QUERY_MODE", "off") != "contract":
-        return None
     context_key = (username, thread_id)
     previous = getattr(runtime, "_finance_plans", {}).get(context_key)
-    if not claims(question) and not (previous and follows(question)):
-        return None
     if not follows(question):
         previous = None
     # Follow-up context belongs only to the new engine, never a legacy semantic plan.

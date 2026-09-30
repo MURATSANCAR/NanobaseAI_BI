@@ -7,6 +7,12 @@
 - **ZEKI-26 (kullanıcı kararı: 1 GB değil, VM'i zorlamayan büyük sınır):** Yönetim → `EDITORIAL_UPLOAD_MAX_MB`, varsayılan 300 (ondalık MB). Ölçüm: 300 MB PDF köprü belleğini ~0,6 GB, 1 GB ~2,7 GB artırdı; VM 7 GB, ~1 GB boş. Portal üzerinden: 401 MB → 2,3 sn'de 413 «Dosya 401 MB; bu kurulumda tek dosya için üst sınır 300 MB …»; 200 MB → yüklendi (15 bölüm). Test eseri, 3 oturum satırı, test PDF'leri silindi.
 - **Test:** tam set 4.747 geçti; tek hata `test_access::test_every_bridge_route_has_a_rule` main'de de var (başka oturumun `/api/v1/chat/mention-answer` ucu).
 - **VM ağacı (`/tmp/bi-vm-zeki54`, test sunucusu):** VM'deki `eb406f48b` + ZEKI-54 (2) + ZEKI-26 (2) commit; main'deki başka oturumun finans motoru (5 commit) bilerek alınmadı. `._*` 0, çakışma 0, köprü yükleniyor. VM kurulumu ve VM kataloğu (bağ + kavram, çıplak «yazar» yok) izin denetiminde — kullanıcı çalıştıracak.
+## 2026-09-30 — Eski katalog kaldırma: kod ve yedekli silme hazırlığı
+
+- Kullanıcı eski kataloğun silinmesini istedi. 100 karmaşık sorunun gerçek API koşusunda eski akışın CRM randevusunu Logo çek çıkışı diye sorguladığı görüldü; tam cevap kabulü0/100.
+- Runtime.ask eski katalog/LLM SQL fallback kodu kaldırıldı. Yeni motorda FINANCE_QUERY_MODE ve kelime kapısı geri dönüş yolu kaldırıldı; portalın bağımsız kapalı planı korunuyor. Eski kural, SQL örneği ve dil havuzu yüklemesi kapatıldı.
+- Silme betiği dokuz sl_* katalog tablosunu tutarlı PG snapshot ile yedekler, pg_restore tam okumasını ve SHA256 doğrular, sadece mevcut tenant/datasource kapsamını siler; eski üreticilerin tekrar yazmasını PG trigger engeller. Kaynak Logo/CRM, raw schema, annotation, query/audit geçmişi korunur.
+- Yerel test yok. Main sonrası test sunucusu dağıtımı, fiziksel silme ve gerçek API kabulü bekliyor.
 
 ## 2026-09-30 — Kitaba sor: test soruları silindi (test sunucusu)
 
