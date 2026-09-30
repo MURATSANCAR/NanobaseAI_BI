@@ -36,7 +36,7 @@
 - **Ölçüm koşulu:** `golden-eval.py` bilgi paketini (equivalences, kurallar) ölçülen ağacın kendi `configs/semantic/knowledge/<ad>` klasöründen okur; önce canlı sunucunun kopyasını okuyordu, ağacın kendi beyanları hiç sayılmıyordu.
 - **Testler:** `test_runtime.py` — açık kod katalog okumasını ezer; belirleyen kolon kanıtlar (grup dışı ve ölçülmemiş kod kanıtlamaz); Logo belirlemeleri yalnız kolonlar varsa yüklenir.
 - **Doğrulama (test sunucusu, `git archive` 182e7f97e, `._*` 0):** 5 vakanın beşi kapıdan geçti. Kalite kapısı **GEÇTİ**: doğru tabloya ulaşma 1,0, kapıdan geçen doğru SQL 0,81 (= taban), yanlış kabul 0, tablo kaçırmayan 39, cevaplanamaz 6 → 5. Tam `semantic_layer/tests` **4.710 geçti, 0 düştü** (dünkü `test_kopru_acilis` düşüşleri main'de giderilmiş).
-- Dal: `kapi-geri-cagirma` (main'e taşınmadı).
+- **main'e taşındı** (`499ca44f9`). **Test sunucusuna kuruldu (09-30 17:27):** canlı ağaçtaki 9 dosyanın md5'i önce main'in değişiklik öncesi sürümüyle karşılaştırıldı (başka oturumun işi yoktu); değişen 7 dosya (`conventions.py`, `audit.py`, `resolver.py`, `equivalences.yml`, `test_runtime.py`, `golden-eval.py`, `golden-timas.json`) `git archive` ile kondu, `._*` 0, 9 dosya main ile birebir; `nanobase-semantic-bridge` yeniden başlatıldı, 17:30'da `ready:true` (4.259 profil). Canlı kodla 5 vaka kapıdan geçti; canlı ağaçta kalite kapısı **GEÇTİ** (recall 1,0, kapı recall 0,81 = taban). Müşteri VM'ine kurulmadı.
 
 ## 2026-09-30 — Sohbet ayrıntılı kod ve çalışan imaj denetimi
 
