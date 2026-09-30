@@ -11,7 +11,7 @@
 
 - Kullanıcı eski kataloğun silinmesini istedi. 100 karmaşık sorunun gerçek API koşusunda eski akışın CRM randevusunu Logo çek çıkışı diye sorguladığı görüldü; tam cevap kabulü0/100.
 - Runtime.ask eski katalog/LLM SQL fallback kodu kaldırıldı. Yeni motorda FINANCE_QUERY_MODE ve kelime kapısı geri dönüş yolu kaldırıldı; portalın bağımsız kapalı planı korunuyor. Eski kural, SQL örneği ve dil havuzu yüklemesi kapatıldı.
-- Silme betiği dokuz sl_* katalog tablosunu tutarlı PG snapshot ile yedekler, pg_restore tam okumasını ve SHA256 doğrular, sadece mevcut tenant/datasource kapsamını siler; eski üreticilerin tekrar yazmasını PG trigger engeller. Kaynak Logo/CRM, raw schema, annotation, query/audit geçmişi korunur.
+- Silme betiği sekiz sl_* katalog tablosunu tutarlı PG snapshot ve zstd sıkıştırma ile yedekler, pg_restore tam okumasını ve SHA256 doğrular, sadece mevcut tenant/datasource kapsamını siler; eski üreticilerin tekrar yazmasını PG trigger engeller. Kaynak Logo/CRM, raw schema, annotation, query/audit geçmişi korunur.
 - Yerel test yok. Main sonrası test sunucusu dağıtımı, fiziksel silme ve gerçek API kabulü bekliyor.
 
 ## 2026-09-30 — Kitaba sor: test soruları silindi (test sunucusu)

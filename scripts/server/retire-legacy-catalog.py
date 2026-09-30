@@ -48,7 +48,7 @@ def main():
     archive = out / "legacy-catalog.dump"
     url = engine.url
     pg_env = dict(os.environ, PGPASSWORD=url.password or "")
-    base = ["pg_dump", "-Fc", "--no-owner", "--no-acl", "-h", url.host or "localhost",
+    base = ["pg_dump", "-Fc", "-Z", "zstd:1", "--no-owner", "--no-acl", "-h", url.host or "localhost",
             "-p", str(url.port or 5432), "-U", url.username or "", "-d", url.database or "",
             "-f", str(archive)]
     # Freeze only these catalog tables while exporting; shared raw schema and audit
