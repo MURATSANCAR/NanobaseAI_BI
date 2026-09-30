@@ -720,6 +720,8 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         "ancak mevcut alan başka tarihsel anlamın, filtrenin, ilişkinin veya hesaplamanın kanıtı değildir. "
         "Capabilitieste açık kaynak eksikleri kullanıcıya ayrı gap olarak dönebilir; olmayan veri hesaplandı sayılamaz. "
         "Kullanıcı özellikle varsa/bilinmiyorsa/hesaplanamayanı belirt diyorsa açık gap bu koşulu karşılar; "
+        "Varsayma, doğrulanmış sayma, tahmin etme gibi ifadeler veri üretme isteği değil iddia sınırıdır: "
+        "rapor o iddiayı kurmadan mevcut alanları verip eksikliği açık gap ile belirtiyorsa sınır korunmuştur. "
         "zorunlu sayısal cevabın yerine salt gap tam cevap değildir."},
         {"role": "user", "content": json.dumps({"question": question, "report": report, "capabilities": capabilities,
         "parsedPeriods": periods, "referenceDate": str(today)}, ensure_ascii=False)}], 1800, REVIEW_SCHEMA, "source_report_review", trace)
