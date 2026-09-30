@@ -398,8 +398,9 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
         </div>
 
         <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/70 bg-white/95 px-3 pb-3 pt-2.5 backdrop-blur sm:px-5 sm:pb-4">
+          {/* contain:inline-size — şerit kendi içinde kayar, kitap sayısı üst sütunu genişletmez. */}
           {!bookTitle && readable.length > 0 && (
-            <div className="zk-scroll mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            <div className="zk-scroll mb-2 flex items-center gap-1.5 overflow-x-auto [contain:inline-size] pb-0.5">
               <BookOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
               {readable.map((t) => {
                 const card = findCatalogCard(cards, t);

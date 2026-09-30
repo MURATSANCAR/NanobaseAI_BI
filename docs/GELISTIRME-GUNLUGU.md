@@ -9,6 +9,12 @@
 - **Kurulum:** main `998472bdd`. GPU tek sürüm `releases/998472bd`, 10 servis `0.15.9-998472bd` (book-queue dahil), imajda test 33/33. Test sunucusu: 10 dosya md5 ile (hepsi özellik öncesiyle aynıydı) kuruldu, köprü yeniden başlatıldı (ready), arayüz sunucuda `tsc -b` + vite, `index-ByPv3Vga.js` yayında.
 - **Doğrulama:** birim testler editör 20/20, giden kutusu 6/6, yetki 25/26 (kalan `/api/v1/chat/mention-answer` kuralsız — başka işin, önceden de düşüyordu). Canlı hat (köprü kodu → tünel → GPU): PDF olmayan dosya köprüde ret; bozuk PDF GPU'da 422 → satır «Okunamadı» + kaldırılabildi; GPU gelen kutusunda artık 0. Tarayıcıda panel görünüyor, `GET …/ask/read` 200, konsol hatasız. Başarılı okuma yolu (kuyruk → okuma → Kitaba sor) gerçek kitapla henüz DOĞRULANMADI: test verisi bırakmamak için ilk gerçek yüklemede izlenecek.
 - **Açık:** müşteri VM'ine kurulmadı — TT GPU nginx beyaz listesine `/editor/cards/v1/books/read` location'ı (POST, gövde sınırsız, uzun süre) + VM kurulumu gerekir. Editoryal ana sayfa 375 px'te sütun 1.794 px genişliyor (panelden bağımsız, önceden var).
+## 2026-09-30 — Masam (editoryal ana sayfa) mobilde yana kayıyordu
+
+- Belirti: 375 px'te `main` scrollWidth 1.794 / clientWidth 351; yönetici görünümünde her bölüm (Kitap okut, Kitaba sor, tablo, takvim) 1.794 px.
+- Kaynak (canlı sayfada ölçüldü): iki sütunlu ızgaranın mobil şablonu yoktu → örtük `auto` iz en geniş içeriğin min-content'ine uzadı. O içerik AskBox'taki okunmuş kitap şeridi (`overflow-x-auto`, 1.767 px); editör tablosu da (min 440 px) tek başına 466 px'e uzatırdı. BookReadPanel'in etkisi yok.
+- Düzeltme: `EditorialHome.tsx` iki ızgaraya `grid-cols-1` (yönetici ve editör dalı), `AskBox.tsx` kitap şeridine `[contain:inline-size]` (şerit kendi içinde kayar, kitap sayısı sütunu genişletmez; BookScreen'deki kullanım da korunur).
+- Doğrulama yayından önce canlı sayfaya aynı kural `<style>` ile eklenerek: önce/sonra `main` scrollWidth = clientWidth → 320: 1.794→296, 390: 1.794→366, 768: 1.810→616, 1440: 1.288 değişmedi (ızgara 832+440, şerit 397 px içinde kayıyor).
 
 ## 2026-09-30 — Birleşebilir motor ilk canlı koşu ve düzeltmeler
 

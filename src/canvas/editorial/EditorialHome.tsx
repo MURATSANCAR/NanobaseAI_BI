@@ -464,8 +464,10 @@ export default function EditorialHome() {
       )}
 
       {all ? (
-        /* Yönetici: özet tablo solda, sohbet ve takvim sağda; ikisi de ilk ekranda görünür. */
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-start lg:gap-4">
+        /* Yönetici: özet tablo solda, sohbet ve takvim sağda; ikisi de ilk ekranda görünür.
+           grid-cols-1: tek sütunda iz minmax(0,1fr) olsun; yoksa örtük «auto» iz en geniş içeriğe (kitap şeridi,
+           editör tablosu) uzar ve 375 px'te bütün sütun 1.794 px olur. */
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-start lg:gap-4">
           <div className="space-y-3">
             {d && <EditorTable items={d.items} todo={todo} k={kaynakOf(intake.data)} />}
             <MyTasks />
@@ -498,7 +500,7 @@ export default function EditorialHome() {
           <BookReadPanel />
           <AskBox />
 
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-4">
             <div className="space-y-3">
               {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} k={kaynakOf(intake.data)} />}
               {works.data && <Desk works={desk} user={works.data.user} k={kaynakOf(home.data)} />}
