@@ -228,6 +228,22 @@ JSON kişi kümesi farkları ve yayıncı toplamları bağımsız kaynak okumala
 karşılaştırılır. Bu değişiklikler için henüz gerçek API/DB kabul sonucu yoktur;
 yerel ürün testi çalıştırılmadı.
 
+## Aday grupları ile kimlik sınıflandırmasının sınırı
+
+`duplicate_title`, `duplicate_isbn`, `duplicate_book_code` ve `title_variants`
+ayrıntılardaki alanları yan yana gösterir; farklı eser / farklı baskı / olası
+mükerrer şeklinde hesaplanmış bir sınıflandırma üretmez. `decision` bütün adaylara
+aynı uyarıyı verir. Yalnız aday ve karşılaştırma alanı isteyen sorular bu nedenle
+otomatik kısmi cevaba çevrilmez. Buna karşılık sınıfları gerçekten ayırmayı isteyen
+soru, bu raporla tam karşılanmış sayılamaz; eksik ayrım reddedilmeli veya açık bir
+kısmi cevap boşluğu olarak taşınmalıdır. Kaynak alanlarının varlığı, kimlik
+kanıtının veya sınıflandırmanın yerine geçmez.
+
+İletişim raporundaki `contact_field_present_count`, e-posta VEYA telefon/cep
+alanlarından biri dolu olan benzersiz kişi sayısıdır. Gerçek ulaşılabilirlik,
+teslim edilebilirlik veya her kanalın ayrı toplamı değildir. `has_email` ve
+`has_phone` da yalnız alan doluluğunu gösterir; mevcut çıktı notu bu sınırı açıklar.
+
 ## Kabul koşucusunun kapsamı
 
 `scripts/acceptance/finance_contracts/crm_reports_live.py` 33 rapor ailesini gerçek

@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Aday listesi ile eser kimliği sınıflandırması ayrımı
+
+- Exact100 CX048 gerçek çıktısında2909candidate tek ortak karar etiketiyle dönmüş; kullanıcıdaki farklı eser/olası mükerrer ayrımı hesaplanmadığı halde TEXT_TO_SQL/sourceComplete=true idi. Bu tam cevap başarısı sayılmadı.
+- CRM çıktı sözleşmesi aynı ISBN/kod/başlık aday listesiyle eser/baskı kimliği ayrımının farklı yetenek olduğunu açıklar. Zorunlu sınıflandırma yoksa ret veya açık kısmi kapsam gerekir; yalnız aday listesi isteyen soruya yapay belirsizlik eklenmez. İsimden eser kimliği üretilmez. Hesap/SQL değişmedi, yeni gerçek kabul bekliyor.
+- CX050 gerçek notu iletişim alanının doluluğunun ulaşılabilirlik garantisi olmadığını zaten söylüyor; alan sözleşmesinde de herhangi iletişim kanalı doluluğu ile kanal başına sayım/gerçek ulaşılabilirlik ayrıldı.
+
 ## 2026-09-30 — Çıktı sözleşmeleri ve CRM kapsam açıkları
 
 - R7 onarım tekrarı7 soruda4 FAIL/3 UNVERIFIED;1 oturum silindi. CP005 parasal farkın5.4e-6 TL hassasiyet farkını1e-6 eşikle reddeden kabul hatası ayrıldı: bağımsız birim tablosu para farkını0.01 TL, miktarı1e-6, sayımı tam eşitlik, oranı1e-6 karşılaştırır; ham referans/kolon/satır kontrolleri korunur. Önceki kanıt değişmedi.

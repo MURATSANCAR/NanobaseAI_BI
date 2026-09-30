@@ -17,9 +17,9 @@ from .contracts import ContractError
 
 REPORTS = {
     "book_quality": "Aktif kitapların ISBN/stok kodu/yayıncı/kişi yazar bağı/ilk baskı/son yayın/altmarka eksikleri; aynı kartta eksiklerin birlikte listesi ve yayıncı toplamları. start/end varsa CreatedOn aralığı.",
-    "duplicate_isbn": "Boş olmayan aynı güncel ISBN'deki kitaplar; kimlik, ad, baskı sayısı/tarihleri, yayıncı; kesin mükerrer hükmü yok.",
-    "duplicate_book_code": "Boş olmayan aynı stok kodundaki kitaplar, baskı bilgisi ve kimlikleri; eser bağı tahmin edilmez.",
-    "duplicate_title": "Aynı başlıklı kitapların yazar/ISBN/baskı/yayıncı karşılaştırması, otomatik eser birleştirme yok.",
+    "duplicate_isbn": "Boş olmayan aynı güncel ISBN kitap adayları; kimlik, ad, baskı sayısı/tarihleri ve yayıncı yan yana. Farklı eser/farklı baskı/olası mükerrer sınıfları hesaplanmaz; decision tüm adaylarda aynı uyarıdır, kimlik kanıtı değildir.",
+    "duplicate_book_code": "Boş olmayan aynı stok kodu kitap adayları, ad/ISBN/baskı/yayıncı alanları yan yana. Farklı eser veya başka baskı sınıfları hesaplanmaz; decision tüm adaylarda aynı uyarıdır. Bilinmeyeni belirtmek desteklenir, kesin eser bağı çıkarılmaz.",
+    "duplicate_title": "Aynı başlıklı kitap adaylarının yazar/ISBN/baskı/yayıncı alanları yan yana gösterilir. Farklı eserler ile olası mükerrerleri ayıran hesaplanmış sınıflandırma yok; tüm candidate satırlarında decision aynı genel uyarıdır. Alanların varlığı ayrımın yapılmış olduğu anlamına gelmez.",
     "title_variants": "Yalnız boşluk/noktalama/büyük-küçük harf farkıyla benzeşen başlık önerileri; kimlik eşleştirmesi değildir.",
     "author_link_gaps": "Yazar künye metni dolu, aktif Yazar rolünde aktif Contact bağlantısı olmayan kitaplar; kitap/yayıncı sayıları.",
     "author_text_mismatch": "Contact yazar adları ile kitap künye metninin birebir/normalize farkları; farklı kişiler otomatik birleşmez, müstear olasılığı açıklanır.",
@@ -91,7 +91,8 @@ def _output_contracts():
         "publisher_summary": _output_record("publisher_id", "publisher", fields=quality),
         "book_detail": _output_record("book_id with at least one missing field", "book", fields="missing_fields missing_count missing_core_fields core_missing_count record_age_days")}, bookdates+" record_age_days uses as_of minus CreatedOn local date.")
     add("duplicate_isbn duplicate_book_code duplicate_title title_variants", {
-        "candidate": _output_record("book_id in matching-field candidate group", "book", fields="matching_field matching_value candidate_count decision")}, bookdates)
+        "candidate": _output_record("book_id in matching-field candidate group", "book", fields="matching_field matching_value candidate_count decision")}, bookdates,
+        "Candidate listing and side-by-side source fields are supported without a mandatory gap for candidate-only requests. NO computed different-work/different-edition/possible-duplicate partition; work identity is unproven and decision is uniform. If the question requires such a partition, this capability cannot fully satisfy it: reject that requirement or explicitly preserve it as an unverified partial-answer gap; never mark it complete merely because comparison fields exist.")
     basic = {"book_detail": _output_record("book_id", "book"), "publisher_summary": _output_record("publisher_id among selected findings", "publisher")}
     add("author_link_gaps multi_author_books", basic, bookdates)
     add("author_text_mismatch", {**basic, "book_detail": _output_record("book_id", "book", fields="comparison")}, bookdates)
@@ -140,6 +141,9 @@ CRM_REPORT_OUTPUT_CONTRACTS = {
         "dates": "Naive source datetimes interpreted as UTC; filters/group dates use Europe/Istanbul, start inclusive/end exclusive. Output datetimes retain source ISO representation.",
         "limits": "Explicit limit slices completed report rows; no per-group top-N or hidden projection. Unrequested filters/sorts/aggregations are not implied by available fields.",
         "field_meanings": {
+            "decision": "For duplicate_isbn/duplicate_book_code/duplicate_title/title_variants candidate rows, the same caution is emitted for every candidate. It is NOT a per-record identity classification, comparison verdict or different-work-vs-duplicate partition.",
+            "matching_field/matching_value/candidate_count": "Candidate group key and multiplicity only; neither shared key nor count establishes work/edition identity.",
+            "contact_field_present_count": "Distinct active people with a nonblank email OR phone/mobile field. Not a verified reachable-person count, deliverability measure, or per-channel total.",
             "isbn": "Current ISBN13, not old ISBN.", "first_print_date": "First print date", "last_publication_date": "Last publication date", "created_at": "CRM creation time", "updated_at": "CRM modification time, not field-specific history",
             "author_ids/author_names": "JSON arrays of distinct active Contact IDs/names through active Yazar participation; author_text is separate book imprint text.",
             "books": "JSON array of book_id/book_name objects", "contacts": "JSON array of person_id/person_name objects",
