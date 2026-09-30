@@ -83,7 +83,7 @@ def _output_contracts():
     def add(names, records, dates="No date filtering; current active population.", gaps="No mandatory gap; source/identity checks still apply."):
         for name in names.split():
             contracts[name] = {"record_types": records, "date_semantics": dates, "gaps": gaps}
-    bookdates = "Optional start/end selects book CreatedOn in Istanbul [start,end); sorted CreatedOn then book_id. Does not select publication dates."
+    bookdates = "Optional start/end selects book CreatedOn in Istanbul [start,end). Base book population is ordered CreatedOn then book_id; candidate grouping or summary/detail output can reorder records, so no arbitrary global result sort is implied. Does not select publication dates."
     quality = "multiple_core_missing_book_count " + " ".join(prefix+f for prefix in ("missing_", "filled_pct_") for f in ("isbn","book_code","publisher","author_link","first_print_date","last_publication_date","subbrand"))
     add("book_quality publisher_completeness", {
         "publisher_summary": _output_record("publisher_id", "publisher", fields=quality),
