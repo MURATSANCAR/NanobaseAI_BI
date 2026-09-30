@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Finans yeni motoru: gerçek kabul ve kapanış kanıtı
+
+- Son arka uç be31c7817 / arayüz 53e8e4e93; gerçek test sunucusu API + Logo/CRM bağımsız referansı: **102/102 PASS (92 tam hesap, 10 sınır)**. Kod koşu boyunca sabit. 92 farklı resultId; tam satır/kolon/anahtar/değer/NULL/kesilme ve önizleme eşliği geçti.
+- Son portal akışı aynı motor hash'iyle geçti: 1.345 tam satır, bütün CSV, ikinci sayfa, netleştirme görünür; 320/390/768/1440 px taşma yok. İlgili 13 kaynak dosyası main ile SHA256 eş, Mac artığı 0.
+- Tüm kayıtlı ön kontrol/API/UI koşularının **17 geçici timasai oturumu silindi**. Yeni kullanıcı/pano/rapor oluşturulmadı, kontrol edilen uydurma kişi adları yok. timasai sorgu geçmişi korundu. CRM/T-soft'a yazma ve yerel test yok.
+- Git bundle + canlı kod/arayüz/ayar + 13.119.667.444 bayt PG dump hash/arşiv/tam pg_restore okuması doğrulandı; gerçek DB'ye geri yükleme yapılmadı.
+- Açık: 1205 gerçek kilitlenmesi önceki turda görüldü; sınırlı tekrar kurulu, son turda 1205 olmadığı için otomatik kurtarma dalının doğal hata kabulü DOĞRULANAMADI. system_health grafiğine yetki yok (297); karşı kilit sahibi ve kalıcı DB çözümü için DBA kaydı gerekir. Kâr/yaşlandırma/hedef/kur dönüşümü kapsam dışı. Bu oturum müşteri VM dağıtımı/kabulü yapmadı; diğer oturumun f9fc01aa VM dağıtımı son be31c7817 kabulü yerine geçmez.
+- Rapor + 102 soru: `docs/reports/finance-rebuild-20260930.md`; JSON kanıt/koşu geçmişi ve dosya hash'leri aynı dizinde. Ham kanıt `/data/nanobaseai/bi/acceptance/finance-contracts-20260930/release-102/`, UI `ui-release/`. Eski başarısız koşular korundu.
+
 ## 2026-09-30 — Logo gerçek deadlock bulgusu ve sınırlı SELECT tekrarı
 
 - 19:03:35 FC44 API sorgusu SQL Server 1205 (lock / communication buffer), ardından FC45 bağımsız referansı aynı 1205 ile durdu. Sayı uydurulmadı. Önceki dönem yanlış retleri son kodda 12 bağımsız yürütmede geçti.

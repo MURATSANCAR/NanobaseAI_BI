@@ -100,7 +100,7 @@ değiştiyse önce yedek arşivden ayrı dizine çıkarıp manifesti doğrula; c
 Metadata bu değişiklikte düzenlenmez; dump geri yüklemesi diğer modüllerin yeni verilerini sileceğinden
 yalnız ayrı kurtarma veritabanına yapılır.
 
-Durum: motor test sunucusunda etkin, VPN geri geldi. İlk 80 soruda 79 geçiş ve satış tutarı tanımında 1 belirsizlik. Son sözleşmede çıplak satış tutarı netleştirme ister; eski FC03 vaka olarak korunur, iki açık anlam için FC101/102 eklendi. Yeni sürüm kabulü ayrıca koşulacak. Yedek doğrulaması tamamlandı: 13.119.667.444 bayt PG dump, SHA256 `4b4a4abcd343c44474bf606450ab1cecb0689628789a88572cbdacd697166e1d`; tam `pg_restore --file=/dev/null` geçti, kaynak DB'ye geri yükleme yapılmadı. Kod/servis/arayüz arşivleri manifest ile doğrulandı. Yerel test veya müşteri VM kurulumu yok.
+Durum: son arka uç be31c7817, arayüz 53e8e4e93 test sunucusunda kurulu. Aynı kodla 102/102 (92 tam cevap, 10 sınır) geçti; 92 farklı tam sonuç kimliği, UI 1.345 satır/CSV/netleştirme/dört genişlik doğrulandı. 17 geçici timasai oturumu temizlendi. Yedek tam okuma/hash doğrulaması tamamlandı. Tüm finans iş tanımları veya müşteri üretim kabulü iddia edilmez; soru bazlı sonuçlar ve açık deadlock teşhisi [raporda](../reports/finance-rebuild-20260930.md).
 
 ## Geçici veritabanı hatası
 
