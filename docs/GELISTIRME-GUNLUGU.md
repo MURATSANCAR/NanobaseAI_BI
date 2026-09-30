@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Kısmi cevap için tek izin çözümleme aşaması
+
+- 9a6457d44 CRM-R10 CR023 FAIL 87,98 saniye: plan doğru raporu seçse de aynı çağrıdaki niyet/izin çözümü izin listesini boş bıraktı, denetçi geçersiz eski fallback_used üretti. Çelişkili karar yürütülmedi. CR013 ve CR024 aynı sürümde yeniden BOUNDARY_PASS; koşunun kalanı sürüyor.
+- Niyet çözümü artık yalnız request/prohibition ve anlam rolüdür. Açık kısmi cevap izni, yetenekleri görmeyen ayrı küçük source_answer_permissions çağrısında özgün soru ve niyet kimlikleriyle çözülür; biçim denemesi başına 1.600 token, reasoning kapalı. Yalnız analysis/request hedefleri ve output/request alternatifleri kapalı şemada seçilebilir. Böyle bir çift yoksa izin yoktur ve ek çağrı yapılmaz.
+- Eski conditional_primary/fallback/primary_id yetki yolu ve fallback_used durumu kaldırıldı. Tek izin mekanizması özgün alıntı, ilgili analiz, karşılanan alternatif ve korunmuş nüfus şartını arar. not_applicable yalnız izinli alternatifin asıl hesabı sağlandığında kullanılabilir. Yasak speech_act=prohibition ise yanlış role rağmen korunur; izin hedefi veya atlanabilir çıktı olamaz.
+- Background refresh 00:28:47 doğal 1205 olayı ayrı yoldadır; finans motorundaki sınırlı retry buraya uygulanmıyor. Çağrı zinciri, stale cache etkisi ve DBA grafiği eksikliği deadlock raporuna eklendi. Bu tur background ürün kodunu değiştirmedi.
+- Yeni planlayıcı canlı kabul bekler; yerel ürün testi yok. Önceki sürüm geçişleri yeni sürüme taşınmaz.
+
 ## 2026-10-01 — Kullanıcının açık kısmi cevap iznini ilgili hesaba bağlama
 
 - 5b68f9546 CRM-R9 devam ederken CR013 368 satırla BOUNDARY_PASS; CR024 999 satırla BOUNDARY_PASS. CR024 bağımsız anti-join gerçek eksik aktif taraf bağını buldu; yeni özel INCOMPLETE_SOURCE_COVERAGE ve sourceComplete=false hem API hem saklanan sonuçta doğrulandı. Bu iki geçiş sürüme aittir, bütün CRM kabulü değildir.
