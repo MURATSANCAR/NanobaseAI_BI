@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Eski kitaplarda güncel fiyat ↔ bizim hesap; kur elle girilebilir
+
+- Kullanıcı: yeni kitapta yaptığımız fiyat hesabını eski kitaplarda da görmek, kitabın şu anki fiyatıyla bizim hesapladığımız fiyatı yan yana. Eski «Backlist revizyonu» yalnız maliyet/fiyat oranı hedefi aşan kitapları, «Kitap hesabı»ndan farklı bir formülle gösteriyordu.
+- «Eski kitap fiyatları» sekmesi yeniden: fiyatı olan bütün kitaplar, «Kitap hesabı»nın aynı zinciriyle (`pricing/karsilastir.py`), fark ₺/%, durum sekmeleri, arama, en az satış, CSV/Excel, satırdan kitabın hesabına geçiş. Toplu fiyat teklifi bu hesaptan dondurulur; eski oran yöntemi (`data.backlist`) kaldırıldı. «Kitap hesabı»nda önerinin altına güncel fiyata göre fark eklendi.
+- Kullanıcı (iş sırasında): kur Logo'dan geliyor ama elle de girilebilsin. Fiyat listesine «Kur: Logo faturalarından / Elle girilen kur» seçimi; form ve karşılaştırma aynı seçimi kullanır. Kitap başına kur kutusu formda duruyor.
+- Hız: bütün kitaplar ~15 sn → arka planda hesap + girdilerin parmak iziyle önbellek; emsal havuzu bir kez kurulur.
+- Kabul test sunucusunda gerçek görüntü (29.09 09:56), portal DB ve CRM ile (`scripts/acceptance/M9-eski-kitap/kabul.py`): 60/60 OK — 50 kitapta ekran zinciriyle aynı fiyat/maliyet/adet/marj, güncel fiyat = CRM, 5.692/5.692 kitap listede. İlk koşu hata buldu: iadesi fazla 231 kitap «en az satış» boşken düşüyordu (düzeltildi). Fiyat listesi K5 sonunda varsayılana döndü.
+- Açık: canlı fiyatlama görüntüsü 30.09 17:39'da Logo kilitlenmesiyle (deadlock 1205) yenilenemedi; ekran 29.09 verisinde. Hesap adedi son CRM üretim kaydından geldiği için küçük/büyük baskılı kitaplarda öneri uç değer alıyor.
+
 **2026-09-30 — Özel sohbet grubu izolasyonu canlı doğrulandı:** mevcut timasai yalnız chat `user` rolünde; 12 CRM grubu özel, üye olmadığı 11 gruba bilgi/liste erişimi yok. API 25/25 + kendini davet/ikinci gönderim 2/2 + üyelik kaldırıldıktan sonra aynı token okuma/yazma 4/4 geçti; Mongo yetkisiz mesaj/üyelik 0. 320/390/768/1440 px aramada gizli, doğrudan URL oda bulunamadı, mesaj kutusu yok. Mali İşler’deki 3 etkin üye aynı `user` rolünde. 2 geçici oda/5 chat jetonu/1 portal oturumu/5 çöp kaydı temizlendi; 218 hesap korundu. Kullanıcı kararı: AD kapatma ve bot veri rolleri ayrı; portal Herkes rolü hâlâ tüm veri alanlarını açıyor. Üretim yetki yaması gerekmedi. Rapor: `docs/ZEKI-CHAT-GROUP-ACCESS.md`.
 
 ## 2026-09-30 — Finans soru akışının bağımsız sözleşme motoruyla yeniden kurulması
