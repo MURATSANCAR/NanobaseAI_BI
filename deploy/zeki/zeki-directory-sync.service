@@ -1,0 +1,19 @@
+[Unit]
+Description=ZEKI AI CHAT AD accounts and CRM private teams
+After=network-online.target docker.service timas-login.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=PYTHONPATH=/data/nanobaseai/bi/frontend/backend
+ExecStart=/data/nanobaseai/bi/semantic-venv/bin/python /opt/timas-login/sync-directory.py --apply
+StateDirectory=zeki-directory-sync
+StateDirectoryMode=0700
+UMask=0077
+TimeoutStartSec=15min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/zeki-directory-sync

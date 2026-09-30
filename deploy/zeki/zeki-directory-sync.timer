@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh ZEKI AI CHAT company directory and CRM team memberships
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=15min
+RandomizedDelaySec=30s
+Unit=zeki-directory-sync.service
+
+[Install]
+WantedBy=timers.target
