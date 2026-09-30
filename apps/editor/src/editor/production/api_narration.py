@@ -11,6 +11,11 @@
                                           document?: {name, data(b64)}} → {workflow, job, recording}  (X-Editor;
                                          insan kaydı: narration_human.py, Temporal HumanRecording; ret 400
                                          RECORDING_REJECTED, dosya sınırı STUDIO_UPLOAD_MB → 413 TOO_LARGE)
+    GET  narration/recordings/{rid}/document  yüklemenin izin belgesi (PDF/PNG/JPEG, Content-Disposition: inline)
+    POST narration/realign               {pages: [pid]} → {workflow, job, pages}  (X-Editor; metni düzeltilen insan
+                                         kayıtlı sayfada kelimeler kayda yeniden yerleşir, ses aynı kalır; Temporal
+                                         HumanRealign; insan kaydı olmayan sayfa 400 RECORDING_REJECTED, güncel sayfalar
+                                         atlanır, hiçbiri kalmazsa 400 NOTHING)
     GET  narration/pages/{pid}           sayfanın blokları, kelimeleri ve (güncelse) zamanları
     GET  narration/pages/{pid}/audio     sayfanın sesi (audio/mpeg, Range destekli)
     POST narration/read                  {text} → okunuş (sözlük ve Türkçe kurallarıyla; model yok)
@@ -228,7 +233,8 @@ async def narration_run(job: str, body: Run, by: str = Depends(_editor)) -> dict
     if not pids:
         if any(by_id[p]["status"] == "stale" for p in human):
             raise _Err(400, "NOTHING", "Yapay sesle üretilecek sayfa yok. Güncel olmayan sayfaların sesi insan kaydı: "
-                                       "yeni kaydı yükleyin ya da sayfada «Yapay sesle değiştir»i seçin.")
+                                       "«Kelimeleri kayda yeniden yerleştir»i seçin, yeni kaydı yükleyin ya da "
+                                       "sayfada «Yapay sesle değiştir»i seçin.")
         raise _Err(400, "NOTHING", "Seslendirilecek sayfa yok; bütün sayfalar güncel.")
     if not await N.available():
         raise N.VoiceUnavailable("kapalı")
@@ -460,6 +466,69 @@ async def narration_recording(job: str, body: RecordingIn, by: str = Depends(_ed
         await asyncio.to_thread(H.mark, d, rec["id"], status="fail", error=msg)
         raise HTTPException(503, msg) from None
     return {"workflow": wf, "job": jid, "recording": H.public(rec)}
+
+
+class RealignIn(BaseModel):
+    pages: list[str] = Field(min_length=1)
+
+
+@router.post(P + "/realign")
+@_guard
+async def narration_realign(job: str, body: RealignIn, by: str = Depends(_editor)) -> dict:
+    """Metni düzeltilen insan kayıtlı sayfalarda kelimeleri kayda yeniden yerleştirir (kayıt yeniden yüklenmez; ses ve
+    süresi değişmez). Yalnız insan kayıtlı ve «güncel değil» sayfalar; güncel olanlar atlanır. İş Temporal'da
+    (HumanRealign); durum `GET narration`'daki `job` (kind narration, mode realign; reddedilen sayfalar `rejected`)."""
+    from .api import _temporal
+    from .flow import QUEUE
+    d = _dir(job)
+    if _running(d):
+        raise _Err(409, "BUSY", "Bu kitapta seslendirme sürüyor; bitince yeniden deneyin.")
+    for p in body.pages:
+        if not PID.match(p):
+            raise HTTPException(404, "sayfa yok")
+    rows = await asyncio.to_thread(N.status, d)
+    by_id = {r["id"]: r for r in rows}
+    unknown = [p for p in body.pages if p not in by_id]
+    if unknown:
+        raise HTTPException(404, "sayfa yok: " + ", ".join(unknown))
+    not_human = [by_id[p]["no"] for p in body.pages if not by_id[p].get("human")]
+    if not_human:
+        raise _rejected("Kelimeler yalnız insan kaydına yerleştirilir; sesi insan kaydı olmayan sayfa: "
+                        + ", ".join(str(n) for n in not_human) + ".")
+    pids = [p for p in dict.fromkeys(body.pages) if by_id[p]["status"] == "stale"]
+    if not pids:
+        raise _Err(400, "NOTHING", "Seçili sayfaların kelimeleri kayıtla zaten güncel.")
+    if not await N.available():                      # kelime zamanları ses servisinin hizalayıcısıyla çıkar
+        raise N.VoiceUnavailable("kapalı")
+    jid = plan_mod.new_id("j")
+    wf = f"studio-{job}-hiza-{jid}"
+    plan_mod.job_record(d, jid, kind="narration", mode="realign", status="queued", pages=pids,
+                        progress=[0, len(pids)], by=by, workflow=wf)
+    try:
+        await (await _temporal()).start_workflow("HumanRealign", args=[job, jid, pids, by], id=wf, task_queue=QUEUE)
+    except Exception as e:  # noqa: BLE001
+        msg = f"İş kuyruğuna ulaşılamadı: {type(e).__name__}"
+        plan_mod.job_record(d, jid, status="fail", error=msg)
+        raise HTTPException(503, msg) from None
+    return {"workflow": wf, "job": jid, "pages": len(pids)}
+
+
+@router.get(P + "/recordings/{rid}/document")
+@_guard
+async def narration_recording_document(job: str, rid: str) -> Response:
+    """Yüklemenin izin belgesi (PDF/PNG/JPEG), tarayıcıda açılır (inline)."""
+    from . import narration_human as H
+    d = _dir(job)
+    try:
+        path, mime, _name = H.document(d, rid)
+    except KeyError:
+        raise HTTPException(404, "kayıt yok") from None
+    except FileNotFoundError:
+        raise HTTPException(404, "Bu kaydın izin belgesi dosya olarak yüklenmedi") from None
+    ext = {"application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg"}.get(mime, "bin")
+    return FileResponse(path, media_type=mime, headers={
+        "Content-Disposition": f'inline; filename="izin-belgesi-{rid}.{ext}"', "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff"})
 
 
 # ------------------------------------------------------------------ Kampüs sesli bülteni (bulletin.py)

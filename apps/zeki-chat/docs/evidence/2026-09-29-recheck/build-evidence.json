@@ -1,0 +1,6 @@
+{
+  "codeVersion": "9b12e38",
+  "buildStatus": "20:52:36 packages\n20:52:41 meteor bundle\n20:54:07 docker image zeki-ai-chat:8.5.3-9b12e38\n20:58:57 DONE (no restart)\n",
+  "serverOnly": true,
+  "localTestsRun": false
+}

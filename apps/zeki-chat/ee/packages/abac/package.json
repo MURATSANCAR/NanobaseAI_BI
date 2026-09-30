@@ -1,0 +1,49 @@
+{
+	"name": "@zeki.chat/abac",
+	"version": "0.2.1",
+	"private": true,
+	"description": "ZEKI AI CHAT - Attribute Based Access Control (ABAC) support utilities",
+	"main": "./dist/index.js",
+	"typings": "./dist/index.d.ts",
+	"files": [
+		"/dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"dev": "tsc --watch --preserveWatchOutput",
+		"lint": "eslint .",
+		"lint:fix": "eslint --fix .",
+		"test": "jest",
+		"testunit": "jest",
+		"typecheck": "tsc --noEmit --skipLibCheck"
+	},
+	"config": {
+		"mongodbMemoryServer": {
+			"downloadDir": "../../../node_modules/.cache/mongodb-memory-server",
+			"preferGlobalPath": false
+		}
+	},
+	"volta": {
+		"extends": "../../../package.json"
+	},
+	"dependencies": {
+		"@zeki.chat/core-services": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/logger": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/server-fetch": "workspace:^",
+		"@zeki.chat/tools": "workspace:^",
+		"mem": "^8.1.1",
+		"mongodb": "6.10.0",
+		"p-limit": "3.1.0"
+	},
+	"devDependencies": {
+		"@zeki.chat/tsconfig": "workspace:*",
+		"@types/jest": "~30.0.0",
+		"@types/node": "~22.19.17",
+		"eslint": "~9.39.4",
+		"jest": "~30.2.0",
+		"mongodb-memory-server": "^10.1.4",
+		"typescript": "~5.9.3"
+	}
+}

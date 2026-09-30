@@ -26,6 +26,8 @@ from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
 
+from semantic_bridge import hizli_bellek as HB
+from semantic_bridge import sorgu_yakala as Y
 from semantic_bridge.channels import mapping as M
 from semantic_bridge.channels import store as S
 from semantic_bridge.channels.sources import BOOK_METRICS, KANAL_PREFIX, METRICS
@@ -208,7 +210,10 @@ def _sum(rows: Iterable[Any], key: Callable[[Any], Optional[str]], weights: dict
 # ------------------------------------------------------------------ karne
 
 
-def scorecard(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, ay: Optional[int] = None) -> dict[str, Any]:
+def scorecard(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, ay: Optional[int] = None,
+              dagitim: bool = False) -> dict[str, Any]:
+    """`dagitim`: karne ekranı için «dağıtımcı ve perakende» bloğu (`dagitimci`) da kurulur; D2C, rapor ve e-ticaret
+    özetleri yalnız platform toplamlarını kullandığı için kurmaz."""
     p = period(engine, tenant, yil, ay)
     y, ly = p["yil"], p["yil"] - 1
     need_read(engine, tenant, [y])
@@ -273,6 +278,78 @@ def scorecard(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, 
                    "d2cPay": next((x["payEticaret"] for x in items if x["platform"] == M.D2C), None)},
         "platformDisi": {"grupSayisi": len(groups.get("degil", ())), "donem": derive(degil) if degil else None},
         "kanallar": benchmark,
+        **({"dagitimci": dagitimci(engine, tenant, p, by_p.get("dr"))} if dagitim else {}),
+    }
+
+
+# ------------------------------------------------------------------ dağıtımcı ve perakende: kanalda bekleyen stok
+
+
+def period_days(p: dict[str, Any]) -> tuple[date, date]:
+    """Dönemin gün aralığı [1 Ocak, son gün]: veri sonunun ayı seçiliyse veri sonu, değilse ayın son günü."""
+    y, a = p["yil"], p["ay"]
+    end = date(y, a, calendar.monthrange(y, a)[1])
+    if p.get("veriSonu"):
+        vs = date.fromisoformat(p["veriSonu"])
+        if vs.year == y and vs.month == a:
+            end = vs
+    return date(y, 1, 1), end
+
+
+def _dagitimci_satis(engine: sa.engine.Engine, tenant: str, p: dict[str, Any], code: Optional[str],
+                     yil: int) -> Optional[dict[str, Any]]:
+    """Dağıtımcı carisinin dönem sell-in'i (yıl okumasından); okunmamışsa ya da cari kodu değiştiyse None."""
+    from semantic_bridge.channels.refresh import DAGITIMCI_META
+
+    m = S.meta_get(engine, tenant, f"{DAGITIMCI_META}{yil}")
+    if not code or m.get("cari") != code or "rows" not in m:
+        return None
+    acc = zero()
+    w = _window(p, yil)
+    for r in m["rows"]:
+        wt = w.get(int(r.get("ay") or 0))
+        if wt:
+            add(acc, r, wt)
+    return derive(acc)
+
+
+def dagitimci(engine: sa.engine.Engine, tenant: str, p: dict[str, Any],
+              dr_metrics: Optional[dict[str, float]] = None) -> dict[str, Any]:
+    """Karnenin «dağıtımcı ve perakende» bloğu: kanala satış (Logo sell-in) yanında kanalda bekleyen stok (M39
+    dağıtımcı katalogları, TİMAŞ grubu, son görüntü) ve Başarı deposundan çıkış (iki görüntü birikince).
+
+    - Başarı Dağıtım: sell-in = ayardaki Başarı carisine faturalı satış − iade (kanal okumasında ayrıca okunur, platform
+      toplamlarına girmez); stok = Başarı deposu.
+    - D&R: sell-in = karnedeki D&R platformu; stok = Prefix B2B stoğu ve D&R + İdefix site stoğu.
+    Stok kaynağı okunmamışsa ya da hata verirse karne düşmez; blok nedeni yazar."""
+    from semantic_bridge.channels.sources import dagitimci_cari
+
+    code = dagitimci_cari()
+    kart = S.meta_get(engine, tenant, "dagitimci_kart")
+    y = p["yil"]
+    satis = _dagitimci_satis(engine, tenant, p, code, y)
+    has_ly = (y - 1) in _read_years(engine, tenant)
+    gecen = _dagitimci_satis(engine, tenant, p, code, y - 1) if has_ly else None
+    bas, son = period_days(p)
+    stok: Optional[dict[str, Any]] = None
+    hata = None
+    try:
+        from semantic_bridge import pazar_dagitim as PD
+
+        stok = PD.kanal_stok(engine, tenant, bas=bas, son=son)
+    except Exception as e:  # noqa: BLE001 — dağıtımcı stoğu karneyi düşürmez
+        hata = f"Dağıtımcı katalogları okunamadı: {str(e)[:160]}"
+    dr_sell = derive(dr_metrics) if dr_metrics else None
+    return {
+        "basari": {"label": "Başarı Dağıtım", "cari": code, "unvan": kart.get("unvan") if kart.get("cari") == code else None,
+                   "kanalaSatis": satis, "gecenYil": gecen,
+                   "degisim": change(satis["netCiro"], gecen["netCiro"]) if satis and gecen else None,
+                   "satisOkundu": satis is not None, "stok": (stok or {}).get("basari"),
+                   "cikis": (stok or {}).get("cikis"), "cikisNot": (stok or {}).get("cikisNot")},
+        "dr": {"label": platform_label("dr"), "platform": "dr", "kanalaSatis": dr_sell, "stok": (stok or {}).get("dr")},
+        "donem": {"bas": bas.isoformat(), "son": son.isoformat()},
+        "sonGoruntu": (stok or {}).get("sonGoruntu"), "hata": hata,
+        "notlar": {"endeks": (stok or {}).get("not"), "timas": (stok or {}).get("timasNot"), "dr": (stok or {}).get("drNot")},
     }
 
 
@@ -326,12 +403,51 @@ def channel(engine: sa.engine.Engine, tenant: str, platform: str, yil: Optional[
            "hedef": targets_by_platform(engine, tenant, p, mp).get(platform)}
     if unit_costs is not None:
         out["donem"]["m9"] = m9_fill(engine, tenant, platform, p, mp, unit_costs)
+    if platform == "dr":
+        # D&R: kanalda bekleyen stok (Prefix B2B ve site stoğu, TİMAŞ grubu) sell-in'in yanında.
+        try:
+            from semantic_bridge import pazar_dagitim as PD
+
+            ks = PD.kanal_stok(engine, tenant)
+            out["dagitimStok"] = {"dr": ks.get("dr"), "sonGoruntu": ks.get("sonGoruntu"), "not": ks.get("drNot"),
+                                  "timasNot": ks.get("timasNot"), "hata": None}
+        except Exception as e:  # noqa: BLE001 — stok okunamazsa kanal detayı düşmez
+            out["dagitimStok"] = {"dr": None, "hata": f"D&R kataloğu okunamadı: {str(e)[:160]}"}
     return out
 
 
-def _book_rows(engine: sa.engine.Engine, tenant: str, yil: int) -> list[Any]:
+def _book_rows(engine: sa.engine.Engine, tenant: str, yil: int, groups: Optional[list[str]] = None,
+               months: Optional[Iterable[int]] = None) -> list[Any]:
+    """Grup × kitap × ay önbelleği. `groups` verilirse yalnız o grupların satırları, `months` verilirse yalnız o aylar
+    (hız, 2026-09-29: tek platformun kitap listesi yılın bütün e-ticaret satırlarını okuyup Python'da süzüyordu, Amazon
+    kitap listesi 4,3 sn). Süzgeç hesabın zaten atladığı satırları okumaz; sonuç aynı."""
+    t = S.BOOK_MONTHS
+    q = sa.select(t).where(t.c.tenant_id == tenant, t.c.yil == yil)
+    if months is not None:
+        q = q.where(t.c.ay.in_(sorted({int(m) for m in months})))
     with engine.connect() as c:
-        return c.execute(sa.select(S.BOOK_MONTHS).where(S.BOOK_MONTHS.c.tenant_id == tenant, S.BOOK_MONTHS.c.yil == yil)).all()
+        if groups is None:
+            return c.execute(q).all()
+        out: list[Any] = []
+        for i in range(0, len(groups), 500):
+            out += c.execute(q.where(t.c.grup.in_(groups[i:i + 500]))).all()
+        return out
+
+
+def _platform_groups(mp: Mapping, platform: str) -> Optional[list[str]]:
+    """`mp.platform(grup) == platform` olan gruplar: onaylı cari kodları ve platforma eşlenen kanal kodları
+    (`#K:<kod>`). Eşlenmemiş sütun (onaysız her grup) önceden sayılamaz: None → bütün satırlar okunur, Python süzer."""
+    if platform == M.UNMAPPED:
+        return None
+    out = {g for g, p in mp.amap.items() if p == platform and not g.startswith(KANAL_PREFIX)}
+    out |= {KANAL_PREFIX + k for k, p in mp.kmap.items() if p == platform}
+    return sorted(out)
+
+
+def _platform_book_rows(engine: sa.engine.Engine, tenant: str, yil: int, mp: Mapping, platform: str,
+                        weights: dict[int, float]) -> list[Any]:
+    """Platformun, ağırlığı olan aylardaki kitap satırları (`_book_sum` ağırlıksız ayı ve başka platformu zaten atlar)."""
+    return _book_rows(engine, tenant, yil, _platform_groups(mp, platform), [m for m, w in weights.items() if w])
 
 
 def _book_sum(rows: Iterable[Any], weights: dict[int, float], keep: Callable[[Any], bool]) -> dict[str, dict[str, float]]:
@@ -358,7 +474,8 @@ def _book_view(code: str, m: dict[str, float], name: str) -> dict[str, Any]:
 def m9_fill(engine: sa.engine.Engine, tenant: str, platform: str, p: dict[str, Any], mp: Mapping,
             unit_costs: Callable[[list[str]], dict[str, dict[str, Any]]]) -> dict[str, Any]:
     """Maliyetsiz satırları M9 birim maliyetiyle tamamlar. Birim maliyeti bilinmeyen kitap dışarıda kalır ve sayılır."""
-    books = _book_sum(_book_rows(engine, tenant, p["yil"]), _window(p, p["yil"]), lambda r: mp.platform(r.grup) == platform)
+    w = _window(p, p["yil"])
+    books = _book_sum(_platform_book_rows(engine, tenant, p["yil"], mp, platform, w), w, lambda r: mp.platform(r.grup) == platform)
     need = sorted(k for k, v in books.items() if v["maliyetsiz_adet"] > 0)
     costs = unit_costs(need) if need else {}
     base_c = sum(v["maliyetli_ciro"] for v in books.values())
@@ -390,7 +507,8 @@ def books(engine: sa.engine.Engine, tenant: str, platform: str, yil: Optional[in
     p = period(engine, tenant, yil, ay)
     need_read(engine, tenant, [p["yil"]])
     mp = Mapping(engine, tenant)
-    agg = _book_sum(_book_rows(engine, tenant, p["yil"]), _window(p, p["yil"]), lambda r: mp.platform(r.grup) == platform)
+    w = _window(p, p["yil"])
+    agg = _book_sum(_platform_book_rows(engine, tenant, p["yil"], mp, platform, w), w, lambda r: mp.platform(r.grup) == platform)
     names = S.book_names(engine, tenant, list(agg))
     rows = [_book_view(k, v, names.get(k, "")) for k, v in agg.items()]
     rows = _search(rows, q)
@@ -413,7 +531,7 @@ def returns(engine: sa.engine.Engine, tenant: str, platform: str, yil: Optional[
     agg: dict[str, dict[str, float]] = {}
     for yy in years:
         wts = {m: 1.0 for (y2, m) in span if y2 == yy}
-        part = _book_sum(_book_rows(engine, tenant, yy), wts, lambda r: mp.platform(r.grup) == platform)
+        part = _book_sum(_platform_book_rows(engine, tenant, yy, mp, platform, wts), wts, lambda r: mp.platform(r.grup) == platform)
         for k, v in part.items():
             cur = agg.setdefault(k, {kk: 0.0 for kk in BOOK_METRICS})
             for kk in BOOK_METRICS:
@@ -449,6 +567,52 @@ def matrix(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, ay:
     bir platformun net adedine göre. Sayfa 100 satır; hepsi sayfalanarak görülür (sessiz tavan yok)."""
     p = period(engine, tenant, yil, ay)
     need_read(engine, tenant, [p["yil"]])
+    key = (id(engine), tenant, p["yil"], p["ay"], p["gunPayi"], _girdi_damgasi(engine, tenant, p["yil"]))
+    base = _MATRIS.al(key, lambda: _matrix_base(engine, tenant, p))
+    Y.aktar(base["queries"])                     # sorgu bilgisi: matrisi kuran okumalar (bellekten gelse de)
+    words = M.fold(q).split()
+    rows = [r for r, t in zip(base["rows"], base["fold"]) if all(w in t for w in words)] if words else list(base["rows"])
+    cols = [c["platform"] for c in base["columns"]]
+    if sort and sort in cols:
+        rows.sort(key=lambda r: (-(r["kanallar"].get(sort, {}).get("net", 0.0)), r["stokKodu"]))
+    return _page(rows, page, {"period": p, "columns": base["columns"], "sort": sort if sort in cols else ""}, size)
+
+
+#: Matris hesabı (hız 4. tur, 2026-09-29): yılın kitap × grup × ay satırları (≈46 bin) her açılışta okunup platformlara
+#: dağıtılıyordu (tek başına 0,8–1 sn, eşzamanlı açılışta 3–10 sn). Sonuç girdilerin damgasına bağlı süreçte tutulur;
+#: arama, sıralama ve sayfa istekte. Damga değişmedikçe aynı girdi aynı matrisi verir; değişince ilk istek yeniden kurar.
+_MATRIS = HB.Bellek("kanal.matris", taze=float("inf"), en_cok=16)
+
+
+def _girdi_damgasi(engine: sa.engine.Engine, tenant: str, yil: int) -> str:
+    """Matrise giren tabloların tek sorguda damgası: Logo okuma kaydı (meta: okuma turu, veri sonu), eşleme ayarları
+    (kanal kodu → platform), onaylı cari eşlemesi, yılın kitap satırı sayısı ve kitap adları. Okuma turu meta'yı, eşleme
+    kararı onaylı cariyi (onay anı / sayı) ya da ayarı günceller. Onaysız aday satırları (Zeki AI önerisi, sürekli
+    yazılır) matrise girmediği için damgaya da girmez."""
+    def cnt(t: sa.Table, *cond: Any) -> Any:
+        return sa.select(sa.func.count()).select_from(t).where(t.c.tenant_id == tenant, *cond).scalar_subquery()
+
+    def mx(col: Any, t: sa.Table, *cond: Any) -> Any:
+        return sa.select(sa.func.max(col)).where(t.c.tenant_id == tenant, *cond).scalar_subquery()
+
+    A = S.ACCOUNTS
+    ok = A.c.durum == "onayli"
+    stmt = sa.select(cnt(S.META), mx(S.META.c.updated_at, S.META), cnt(S.SETTINGS), mx(S.SETTINGS.c.guncellendi, S.SETTINGS),
+                     cnt(A, ok), mx(A.c.onay_tarihi, A, ok), mx(A.c.platform, A, ok),
+                     cnt(S.BOOK_MONTHS, S.BOOK_MONTHS.c.yil == yil), cnt(S.BOOKS))
+    with Y.ayri(), engine.connect() as c:          # damga okuması sorgu bilgisine girmez (rakam üretmez)
+        row = c.execute(stmt).first()
+    return json.dumps([str(v) for v in (row or ())])
+
+
+def _matrix_base(engine: sa.engine.Engine, tenant: str, p: dict[str, Any]) -> dict[str, Any]:
+    with Y.ayri(engine) as yq:
+        base = _matrix_rows(engine, tenant, p)
+    base["queries"] = list(yq.queries)
+    return base
+
+
+def _matrix_rows(engine: sa.engine.Engine, tenant: str, p: dict[str, Any]) -> dict[str, Any]:
     mp = Mapping(engine, tenant)
     w = _window(p, p["yil"])
     cells: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))
@@ -474,13 +638,9 @@ def matrix(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, ay:
         vals = {k: {"alim": round(s, 2), "iade": round(i, 2), "net": round(s - i, 2)} for k, (s, i) in per.items()}
         total = sum(v["net"] for v in vals.values())
         rows.append({"stokKodu": code, "ad": names.get(code, ""), "toplam": round(total, 2), "kanallar": vals})
-    rows = _search(rows, q)
-    if sort and sort in cols:
-        rows.sort(key=lambda r: (-(r["kanallar"].get(sort, {}).get("net", 0.0)), r["stokKodu"]))
-    else:
-        rows.sort(key=lambda r: (-r["toplam"], r["stokKodu"]))
-    return _page(rows, page, {"period": p, "columns": [{"platform": k, "label": platform_label(k), "net": round(totals[k], 2)} for k in cols],
-                              "sort": sort if sort in cols else ""}, size)
+    rows.sort(key=lambda r: (-r["toplam"], r["stokKodu"]))          # varsayılan sıra; platform sırası istekte
+    return {"rows": rows, "fold": [M.fold(f"{r['stokKodu']} {r.get('ad') or ''}") for r in rows],
+            "columns": [{"platform": k, "label": platform_label(k), "net": round(totals[k], 2)} for k in cols]}
 
 
 # ------------------------------------------------------------------ hedef ↔ gerçekleşen
@@ -667,7 +827,8 @@ def sell_in_books(engine: sa.engine.Engine, tenant: str, platform: str, months: 
     out: dict[str, float] = defaultdict(float)
     for yy in sorted({y for y, _ in months}):
         wts = {m: 1.0 for (y2, m) in months if y2 == yy}
-        for code, v in _book_sum(_book_rows(engine, tenant, yy), wts, lambda r: mp.platform(r.grup) == platform).items():
+        for code, v in _book_sum(_platform_book_rows(engine, tenant, yy, mp, platform, wts), wts,
+                                 lambda r: mp.platform(r.grup) == platform).items():
             out[code] += v["satis_adet"] - v["iade_adet"]
     return dict(out)
 

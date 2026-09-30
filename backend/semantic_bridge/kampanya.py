@@ -292,7 +292,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if key in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(key)
 
 
@@ -1405,11 +1406,37 @@ def candidates(engine: sa.engine.Engine, st: dict[str, Any], tenant: str, *, cid
                     "hak": b.get("hak"), "puan": round(score, 3), "gerekce": _sentence("; ".join(reasons))})
     out.sort(key=lambda x: (-x["puan"], -(x["stokAy"] or 0), x["stok"]))
     page = max(0, int(page))
-    return {"items": out[page * PAGE_SIZE:(page + 1) * PAGE_SIZE], "total": len(out), "page": page, "pageSize": PAGE_SIZE,
+    shown = out[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]
+    dr_tarih = attach_dr(engine, tenant, shown)
+    return {"items": shown, "total": len(out), "page": page, "pageSize": PAGE_SIZE, "drTarih": dr_tarih,
             "kurallar": chosen, "esikler": {"stokAy": st["stokAy"], "dususPct": st["dususPct"], "hizAy": months,
                                             "sezonOncesiGun": st["sezonOncesiGun"], "marjMinPct": st["adayMarjMinPct"],
                                             "indirim": ind},
             "sezonlar": sorted(set(seasons.values())), "dataEnd": meta_get(engine, "data_end").get("date")}
+
+
+def attach_dr(engine: sa.engine.Engine, tenant: str, rows: list[dict[str, Any]]) -> Optional[str]:
+    """Aday satırlarına D&R'nin güncel fiyatı (M39 D&R kataloğu, son görüntü, barkod eşleşmesi): `dr` = {liste, satış
+    fiyatı, indirim, site durumu} ya da None; `drUyari` = «D&R zaten %X indirimde» (sitede satışta ve indirim ≥ %1).
+    Katalog okunmadıysa ya da okunamazsa satırlar `dr: None` alır, aday listesi düşmez. Dönen: görüntü tarihi."""
+    for r in rows:
+        r["dr"], r["drUyari"] = None, None
+    if not rows:
+        return None
+    try:
+        from semantic_bridge import pazar_dagitim as PD
+
+        got = PD.dr_fiyatlari(engine, tenant, codes=[r["stok"] for r in rows], eans=[r.get("ean") for r in rows])
+    except Exception as e:  # noqa: BLE001 — D&R bilgisi aday listesini düşürmez
+        log.info("kampanya: D&R fiyatı eklenemedi: %s", e)
+        return None
+    for r in rows:
+        info = got["kod"].get(r["stok"]) or got["ean"].get(PD.barkod(r.get("ean")) or "")
+        if not info:
+            continue
+        r["dr"] = {k: info[k] for k in ("fiyat", "drFiyat", "indirim", "durum", "siteSatista", "katalogda", "son")}
+        r["drUyari"] = PD.dr_uyari(info)
+    return got["tarih"]
 
 
 # ------------------------------------------------------------------------------------------ sonuç

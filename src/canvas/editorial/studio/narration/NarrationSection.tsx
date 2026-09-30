@@ -6,7 +6,7 @@ import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
 import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
 import ExpressionEditor from './ExpressionEditor';
-import HumanRecordingUpload from './HumanRecordingUpload';
+import HumanRecordingUpload, { RightsProof } from './HumanRecordingUpload';
 import LexiconEditor from './LexiconEditor';
 import ReadAlong from './ReadAlong';
 import SoundEffects from './SoundEffects';
@@ -18,6 +18,7 @@ import {
   type NarrationOverview, type NarrationPageRow,
 } from './api';
 import { StudioInfo } from '../shared';
+import { EmptyHint, Explain } from '../../../components/Explain';
 
 /** Stüdyoda «Sesli okuma»: kitap Türkçe seslendirilir, e-kitapta okunan kelime vurgulanır. Sayfa sayfa dinleme ve
  *  okunan kelime vurgulu önizleme, anlatıcı ve karakter sesleri, telaffuz sözlüğü, yeniden üretim. Sayfalar sayfa
@@ -69,7 +70,7 @@ export default function NarrationSection({ jobId }: { jobId: string }) {
             Sesli okuma
             <StudioInfo label="Sesli okuma" what="Sayfa ve ses sayıları seslendirme kaydından." />
           </h2>
-          <p className="text-[11.5px] text-canvas-muted">Kitap Türkçe seslendirilir; e-kitapta okunan kelime vurgulanır.</p>
+          <p className="text-[11.5px] text-canvas-muted">Kitabı Zeki AI Türkçe seslendirir; e-kitapta okunan kelime vurgulanır. Sayfaları buradan dinleyip sesleri seçersiniz.</p>
         </div>
         {d && <Summary d={d} />}
       </div>
@@ -115,13 +116,17 @@ function Summary({ d }: { d: NarrationOverview }) {
 }
 
 function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refresh: () => void }) {
-  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  // Seslendirme, insan kaydı ve ses/sözlük/ifade düzenleme «Kitap tasarımında üretim ve düzenleme» ister; rolde yoksa
+  // düğmeler çıkmaz, sesler dinlenir.
   const canProduce = useCan('tasarim.uret');
   const job = d.job;
   const running = !!job && (job.status === 'queued' || job.status === 'running');
   // insan kayıtlı güncel olmayan sayfalar yapay sesle üretilmez (yeni kayıt ya da açık «Yapay sesle değiştir»)
   const todo = d.summary.missing + d.summary.stale - (d.summary.human_stale ?? 0);
   const human = job?.mode === 'human';
+  const realigning = job?.mode === 'realign';
+  // metni düzeltilen insan kayıtlı sayfalar: kayıt aynı kalır, kelimeler yeni metne göre kayda yerleştirilir
+  const humanStale = useMemo(() => d.pages.filter((p) => p.human && p.status === 'stale').map((p) => p.id), [d.pages]);
   const player = usePlayer();
 
   // İş bitince sayfa kayıtları yenilenir (ekrandaki sayfa yeni zamanlarla gelir).
@@ -134,6 +139,10 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
   const run = useMutation({
     mutationFn: (v: { pages: string[] | null; force?: boolean; replaceHuman?: boolean }) =>
       narrationApi.run(jobId, v.pages, v.force, v.replaceHuman),
+    onSuccess: refresh,
+  });
+  const realign = useMutation({
+    mutationFn: (pages: string[]) => narrationApi.realign(jobId, pages),
     onSuccess: refresh,
   });
   const sample = useMutation({
@@ -166,16 +175,31 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
       )}
       {job?.status === 'fail' && (human
         ? <Note tone="err">İnsan kaydı işlenemedi{job.error ? `: ${job.error}` : ''}</Note>
-        : <Note tone="err">Seslendirme yarıda kaldı{job.error ? `: ${job.error}` : ''}. «Seslendir» ile kalan sayfalar üretilir.</Note>)}
-      {(run.error || sample.error) && <Note tone="err">{errText(run.error || sample.error, 'İşlem yapılamadı.')}</Note>}
+        : realigning
+          ? <Note tone="err">Kelimeler kayda yerleştirilemedi{job.error ? `: ${job.error}` : ''}</Note>
+          : <Note tone="err">Seslendirme yarıda kaldı{job.error ? `: ${job.error}` : ''}. «Seslendir» ile kalan sayfalar üretilir.</Note>)}
+      {job?.status === 'done' && realigning && !!job.rejected?.length && (
+        <Note tone="err">
+          Bazı sayfaların kelimeleri kayda yerleştirilemedi, bu sayfalar değişmedi: {job.rejected.map((r) => r.error).join(' ')}
+        </Note>
+      )}
+      {(run.error || realign.error || sample.error) && <Note tone="err">{errText(run.error || realign.error || sample.error, 'İşlem yapılamadı.')}</Note>}
 
       {canProduce && <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={gradientBtn} disabled={!d.available || running || run.isPending || todo === 0}
           onClick={() => run.mutate({ pages: null })}
           title={todo ? 'Sesi olmayan ve güncel olmayan sayfalar seslendirilir' : 'Bütün sayfalar güncel'}>
           {running || run.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Volume2 className="h-4 w-4" aria-hidden />}
-          {running ? (job?.status === 'queued' ? 'Sırada…' : human ? 'İnsan kaydı işleniyor…' : 'Seslendiriliyor…') : todo ? `Seslendir (${todo} sayfa)` : 'Bütün sayfalar güncel'}
+          {running ? (job?.status === 'queued' ? 'Sırada…' : human ? 'İnsan kaydı işleniyor…' : realigning ? 'Kelimeler yerleştiriliyor…' : 'Seslendiriliyor…') : todo ? `Seslendir (${todo} sayfa)` : 'Bütün sayfalar güncel'}
         </button>
+        {!running && humanStale.length > 0 && (
+          <button type="button" className={ghostBtn} disabled={!d.available || realign.isPending}
+            onClick={() => realign.mutate(humanStale)}
+            title="Kayıtlar aynı kalır; kelimeler düzeltilmiş metne göre kayıtta yeniden bulunur">
+            {realign.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Mic className="h-4 w-4" aria-hidden />}
+            Kelimeleri kayda yeniden yerleştir ({humanStale.length} sayfa)
+          </button>
+        )}
         {!running && d.summary.done > 0 && (
           <button type="button" className={ghostBtn} disabled={!d.available || run.isPending}
             onClick={() => { if (window.confirm(`Bütün sayfalar baştan seslendirilsin mi? Mevcut sesler yenileriyle değişir.${d.summary.human ? ' İnsan kayıtlı sayfalara dokunulmaz.' : ''}`)) run.mutate({ pages: null, force: true }); }}>
@@ -189,14 +213,17 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
           <span className="text-[11.5px] text-canvas-muted">
             {job.status === 'queued' ? 'Sırada; önceki stüdyo işi bitince başlar.'
               : human ? ((job.progress?.[0] ?? 0) === 0 ? 'Kelimeler kayda yerleştiriliyor…' : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfanın sesi yazıldı`)
-                : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa seslendirildi`}
+                : realigning ? `Kelimeler kayda yerleştiriliyor: ${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa`
+                  : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa seslendirildi`}
+            {' '}İş arka planda sürer; sayfadan ayrılabilirsiniz, döndüğünüzde ilerleme burada görünür.
           </span>
         </div>
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
-        <Listen jobId={jobId} d={d} running={running} regenBusy={run.isPending} onUploaded={refresh}
-          onRegen={canProduce ? (pid, replaceHuman) => run.mutate({ pages: [pid], replaceHuman }) : undefined} />
+        <Listen jobId={jobId} d={d} running={running} regenBusy={run.isPending || realign.isPending} onUploaded={refresh}
+          onRegen={canProduce ? (pid, replaceHuman) => run.mutate({ pages: [pid], replaceHuman }) : undefined}
+          onRealign={canProduce ? (pid) => realign.mutate([pid]) : undefined} />
         <div className="flex min-w-0 flex-col gap-4">
           <Voices jobId={jobId} d={d} onPlay={play} playing={player.playing} onSaved={refresh} />
           <div className="h-px bg-slate-200/80" />
@@ -209,12 +236,14 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
 }
 
 // ---------------------------------------------------------------- dinle
-function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
+function Listen({ jobId, d, running, onRegen, onRealign, regenBusy, onUploaded }: {
   jobId: string; d: NarrationOverview; running: boolean; onRegen?: (pid: string, replaceHuman?: boolean) => void; regenBusy: boolean;
-  onUploaded: () => void;
+  onRealign?: (pid: string) => void; onUploaded: () => void;
 }) {
   const readable = useMemo(() => d.pages.filter((p) => p.status !== 'empty'), [d.pages]);
-  const [pid, setPid] = useState<string | null>(null);
+  // İlk sayfa ilk çizimde seçili (ilk hazır sayfa, yoksa ilk okunur sayfa); sonra sayfa listesi değişince aşağıdaki etki
+  // düzeltir. Etkiyi beklemek sayfa düğmelerini bir çizim boyunca seçimsiz gösteriyordu.
+  const [pid, setPid] = useState<string | null>(() => (readable.find((p) => p.status === 'done') ?? readable[0])?.id ?? null);
   const [auto, setAuto] = useState(false);            // sayfa bitince sonraki hazır sayfaya geç
   const [isPlaying, setIsPlaying] = useState(false);
   const [t, setT] = useState(0);
@@ -232,6 +261,9 @@ function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
   const page = pq.data;
   const done = row?.status === 'done' && page?.status === 'done';
   const src = done ? narrationApi.audioUrl(jobId, row!.id, page?.at) : undefined;
+  // insan kayıtlı sayfanın yüklemesi: izin belgesi ve belge numarası rozetin yanında gösterilir
+  const uploadId = row?.human ? page?.human?.upload : undefined;
+  const recording = uploadId ? d.recordings?.items.find((r) => r.id === uploadId) ?? null : null;
 
   // Sayfa değişince: otomatik geçişte yeni sayfa kendiliğinden çalar.
   useEffect(() => {
@@ -258,16 +290,20 @@ function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[13px] font-extrabold">Sayfa sayfa dinle</h3>
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Sayfa sayfa dinle
+          <Explain label="Sayfa durumları">Nokta rengi sayfanın sesini gösterir: yeşil hazır, sarı güncel değil (metin, ses ya da sözlük sonradan değişti; yeniden üretilmeli), gri henüz seslendirilmedi. Mikrofon simgesi sayfanın sesinin insan kaydı olduğunu gösterir.</Explain>
+        </h3>
         {row && (
           <span className="flex flex-wrap items-center justify-end gap-1.5 text-[11.5px] text-canvas-muted">
             {row.human && <HumanBadge owner={row.owner} />}
+            {recording && <RightsProof jobId={jobId} rec={recording} />}
             {STATUS[row.status].text}{row.estimated ? ' · bazı kelime zamanları tahmini' : ''}
           </span>
         )}
       </div>
       {readable.length === 0 ? (
-        <p className="text-[12.5px] text-canvas-muted">Kitapta okunacak metin yok.</p>
+        <EmptyHint title="Okunacak metin yok" why="Kitabın sayfalarında seslendirilecek yazı bulunamadı. Sayfa düzeninde sayfalara metin ekleyince burada sayfa sayfa listelenir." />
       ) : (
         <>
           <ul className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Sayfalar">
@@ -308,6 +344,13 @@ function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
                   onClick={() => setUpload((u) => !u)} title="Seslendirmenin okuduğu kayıt bu sayfanın sesi olur">
                   <Mic className="h-4 w-4" aria-hidden /><span>İnsan kaydı yükle</span>
                 </button>
+                {row.human && row.status === 'stale' && onRealign && (
+                  <button type="button" className={ghostBtn} disabled={!d.available || running || regenBusy}
+                    onClick={() => onRealign(row.id)}
+                    title="Kayıt ve süresi aynı kalır; kelimeler düzeltilmiş metne göre kayıtta yeniden bulunur">
+                    <Mic className="h-4 w-4" aria-hidden /><span>Kelimeleri kayda yeniden yerleştir</span>
+                  </button>
+                )}
                 {row.human ? (
                   <button type="button" className={ghostBtn} disabled={!d.available || running || regenBusy}
                     onClick={() => { if (window.confirm('Bu sayfanın insan kaydı yapay sesle değiştirilsin mi? Kayıt dosyası saklı kalır; yeniden yükleyerek geri dönebilirsiniz.')) onRegen(row.id, true); }}
@@ -332,7 +375,7 @@ function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
           )}
           {row && row.status !== 'done' && (
             <p className="text-[11.5px] text-canvas-muted">
-              {row.status === 'stale' && row.human ? 'Bu sayfanın metni insan kaydından sonra değişti; kayıt eski metne göre. Yeni kaydı yükleyin ya da «Yapay sesle değiştir»i seçin.'
+              {row.status === 'stale' && row.human ? 'Bu sayfanın metni insan kaydından sonra değişti; kelime zamanları eski metne göre. Küçük bir düzeltmeyse «Kelimeleri kayda yeniden yerleştir»i seçin: kayıt aynı kalır, yalnız kelimelerin kayıttaki yeri yeni metne göre bulunur (metin kayıttan çok farklıysa sayfa değişmez). Metin yeniden okunduysa yeni kaydı yükleyin ya da «Yapay sesle değiştir»i seçin.'
                 : row.status === 'stale' ? 'Bu sayfanın metni, sesi ya da sözlüğü değişti; aşağıdaki metin yeni hâlidir. Yeniden üretince vurgulu dinlenir.'
                   : 'Bu sayfa henüz seslendirilmedi; metin okunacağı biçimde gösteriliyor.'}
             </p>
@@ -372,17 +415,23 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
   const clean = Object.fromEntries(Object.entries(chars).filter(([, v]) => v));
   const dirty = JSON.stringify([narrator, clean]) !== JSON.stringify([d.settings.narrator, Object.fromEntries(Object.entries(d.settings.characters ?? {}).filter(([, v]) => v))]);
   const save = useMutation({ mutationFn: () => narrationApi.saveSettings(jobId, { narrator, characters: clean }), onSuccess: onSaved });
+  // Ses seçimi ve örnek dinleme (GPU) «Kitap tasarımında üretim ve düzenleme» ister; yoksa seçimler yalnız görünür.
+  const canEdit = useCan('tasarim.uret');
 
   // Kütüphanedeki «dinle»: her ses aynı kısa cümleyi okur (sunucu ses başına bir kez üretir).
   const listen = (voice: string, key: string) => onPlay(SAMPLE, voice, key);
 
   return (
     <div className="flex flex-col gap-2.5">
-      <h3 className="text-[13px] font-extrabold">Sesler</h3>
+      <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+        Sesler
+        <Explain label="Sesler">Anlatıcı sesi kitabın düz metnini, karakter sesleri o karakterin konuşma balonlarını okur. Seçimi kaydedince sesi değişen sayfalar «güncel değil» olur; «Seslendir» ile yenilenir. Oynat düğmesi kısa bir örnek cümle okur.</Explain>
+      </h3>
+      <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-2.5 border-0 p-0">
       <div className="flex flex-col gap-1">
         <label htmlFor="narration-narrator" className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Anlatıcı</label>
         <VoicePicker id="narration-narrator" label="Anlatıcı" value={narrator} voices={d.voices} groups={d.groups}
-          onChange={setNarrator} onPlay={listen} playing={playing} canPlay={d.available} />
+          onChange={setNarrator} onPlay={listen} playing={playing} canPlay={d.available && canEdit} />
       </div>
       {d.speakers.length > 0 && (
         <div className="flex flex-col gap-1.5">
@@ -392,21 +441,22 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
               <label htmlFor={`narration-char-${i}`} className="flex min-h-10 items-center truncate text-[12.5px] font-bold" title={name}>{name}</label>
               <VoicePicker id={`narration-char-${i}`} label={`${name} sesi`} value={chars[name] ?? ''} voices={d.voices} groups={d.groups}
                 allowNarrator onChange={(v) => setChars((c) => ({ ...c, [name]: v }))}
-                onPlay={(voice, key) => onPlay(`Merhaba, ben ${name}.`, voice, key)} playing={playing} canPlay={d.available} />
+                onPlay={(voice, key) => onPlay(`Merhaba, ben ${name}.`, voice, key)} playing={playing} canPlay={d.available && canEdit} />
             </div>
           ))}
           {d.settings.source === 'auto' && Object.keys(d.settings.characters ?? {}).length > 0 && (
-            <p className="text-[11px] text-canvas-muted">Karakter sesleri tariflerine göre önerildi; değiştirebilirsiniz.</p>
+            <p className="text-[11px] text-canvas-muted">Karakter sesleri tariflerine göre önerildi{canEdit ? '; değiştirebilirsiniz' : ''}.</p>
           )}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-2">
+      </fieldset>
+      {canEdit && <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={gradientBtn} disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
           {dirty ? 'Sesleri kaydet' : 'Kaydedildi'}
         </button>
         {dirty && <span className="text-[11px] text-canvas-muted">Ses değişen sayfalar yeniden seslendirilir.</span>}
-      </div>
+      </div>}
       {save.error && <p className="text-[12px] text-rose-700">{errText(save.error, 'Kaydedilemedi.')}</p>}
       <VoiceUpload onChanged={onSaved} />
     </div>

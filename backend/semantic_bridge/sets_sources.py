@@ -123,8 +123,8 @@ def num(v: Any) -> Optional[float]:
 def strip_html(v: Any, limit: int = 1000) -> Optional[str]:
     if v is None:
         return None
-    s = re.sub(r"<[^>]+>", " ", str(v)).replace("&nbsp;", " ").replace("&amp;", "&")
-    return clean(s, limit)
+    from semantic_bridge.crm_text import rich_line   # ZEKI-23: bütün HTML varlıkları (&rsquo;, &Scedil;…) çözülür
+    return clean(rich_line(v) or "", limit)
 
 
 def current_firm(firms: dict[int, str]) -> str:

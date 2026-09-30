@@ -16,3 +16,6 @@ pycryptodome>=3.19
 # ZEKİ AI sohbetinin PDF dışa aktarımı (editorial_export.py): nanobase_api/budget_export ile aynı üretici.
 # Türkçe harfler için imajda bir Unicode TTF gerekir (DejaVu: bridge.Dockerfile'da fonts-dejavu-core).
 fpdf2>=2.7.5
+# Sözleşme karşılaştırma: telefon fotoğrafı (HEIC) → JPEG, sonra metin okuma. Müşteri VM'inin temel işlemcisinde
+# (SSE4.2/AVX yok) 2026-09-29'da geçici konteynerde denendi: içe aktarma, kodlama, çözme çalışıyor.
+pillow-heif>=1.1

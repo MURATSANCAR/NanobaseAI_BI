@@ -302,7 +302,7 @@ def test_new_prints_for_campus_are_real_recent_book_prints():
     ]
     out = P.new_prints(cards, now, 30)
     assert [x["title"] for x in out] == ["İkinci", "Aynı gün", "Birinci"]
-    assert out[0] == {"cardId": "2", "bookId": "b2", "title": "İkinci", "printNo": 3, "firstPrint": False,
+    assert out[0] == {"cardId": "2", "bookId": "b2", "title": "İkinci", "titleFromBook": True, "stockCode": None, "printNo": 3, "firstPrint": False,
                       "day": "2026-09-25", "depot": "2026-09-25"}
     assert [x["title"] for x in P.new_prints(cards, now, 5)] == ["İkinci"]
     assert all("qty" not in x for x in out)                                 # herkese açık uç: adet/maliyet yok
@@ -315,3 +315,32 @@ def test_settings_defaults_and_bounds():
     assert s["filesDay"] == 28 and s["escalateDays"] == 7 and s["monthsBefore"] == 1 and s["staleDays"] == 180
     assert s["newPrintsDays"] == 30
     assert s["historyFrom"] == date(P.today().year - 2, 1, 1).isoformat()
+
+
+def test_new_print_covers_come_from_the_web_product_by_stock_code():
+    """Kapak T-soft ürün kaydından (ürün kodu = stok kodu); küçük boy önce, yalnız https, başka kiracı ve eşleşmeyen yok.
+    Ürün adı da döner: üretim kartında kitap adı boşsa (kart adı «2.-BASKI») Kampüs satırı bu adı yazar."""
+    import json
+    from datetime import datetime, timezone
+
+    from semantic_bridge import book_covers as BC
+    from semantic_bridge.seo_geo.store import PRODUCTS, ensure
+    from semantic_layer.store.catalog_store import open_store
+
+    e = open_store("sqlite://").engine
+    ensure(e)
+    img = {"ImageUrl": "https://site/Data/1.jpg", "Small": "https://site/1-K.jpg", "Medium": "https://site/1-O.jpg"}
+    at = datetime(2026, 9, 29, tzinfo=timezone.utc)
+    with e.begin() as c:
+        c.execute(PRODUCTS.insert(), [
+            dict(tenant_id="t", product_id="1", code="115201.01.6677", name="A", active=True, score=90, issues_json="[]",
+                 rules="", data_json=json.dumps({"ImageUrls": [img]}), synced_at=at),
+            dict(tenant_id="t", product_id="2", code="115201.01.0001", name="B", active=True, score=90, issues_json="[]",
+                 rules="", data_json=json.dumps({"ImageUrls": [{"Small": "http://duz/1.jpg"}]}), synced_at=at),
+            dict(tenant_id="u", product_id="3", code="115201.01.9999", name="C", active=True, score=90, issues_json="[]",
+                 rules="", data_json=json.dumps({"ImageUrls": [img]}), synced_at=at),
+        ])
+    got = BC.by_stock_code(e, "t", ["115201.01.6677", "115201.01.0001", "115201.01.9999", None, ""])
+    assert got == {"115201.01.6677": {"cover": "https://site/1-K.jpg", "name": "A"},
+                   "115201.01.0001": {"cover": None, "name": "B"}}                # adı var, https görseli yok
+    assert BC.by_stock_code(e, "t", []) == {}

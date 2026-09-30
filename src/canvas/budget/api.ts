@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { normalizeTrNumber } from '../components/trNumber';
 
 /** M46 Bütçe ekranının köprü uçları: /api/v1/budget/*. */
 
@@ -349,7 +350,7 @@ export function fmtShort(v: number | null | undefined): string {
 export function parseNum(s: string): number | null {
   const t = s.trim().replace(/\s/g, '').replace(/₺|%/g, '');
   if (!t) return null;
-  const norm = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t;
+  const norm = normalizeTrNumber(t);
   const n = Number(norm);
   return Number.isFinite(n) ? n : null;
 }
@@ -376,8 +377,15 @@ export const STATUS_TONE: Record<PlanStatus, 'ok' | 'warn' | 'muted' | 'violet'>
 };
 
 const dayFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const monthFmt = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+/** «2026-09-25» → «25 Eylül 2026». Ay değeri («2026-08», ör. tahmin başlangıcı) → «Ağustos 2026»; çözülemeyen değer
+ *  olduğu gibi döner — biçimlendirici hiçbir girdide ekranı düşürmez (2026-09-29: tahmin başlangıcı stok kartını
+ *  «Invalid time value» ile kırıyordu). */
 export function fmtDay(iso: string | null | undefined): string {
   if (!iso) return '—';
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-  return dayFmt.format(new Date(Date.UTC(y, m - 1, d)));
+  if (!y || !m || m < 1 || m > 12) return iso;
+  const t = new Date(Date.UTC(y, m - 1, d || 1));
+  if (Number.isNaN(t.getTime())) return iso;
+  return (d ? dayFmt : monthFmt).format(t);
 }

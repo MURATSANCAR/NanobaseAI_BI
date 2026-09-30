@@ -5,10 +5,11 @@ kitapta aynı yayınevinin en son okunmuş künyesi. Alanlar ana modelle çıkar
 kaynak metinde birebir aranır; bulunmayan değer kullanılmaz. Kaynağı olmayan alan uydurulmaz, «—»
 basılır, ön kontrol (`MISSING`) basımı durdurur; ekranda elle tamamlanır (`set_fields`).
 
-Başka kitabın künyesinden yalnız yayınevine ait alanlar (adres, sertifika, matbaa…) alınır; kişi
-alanları (yayın yönetmeni, editör) yalnız kitabın kendi künyesinden gelir. Baskı bilgisi yeni baskıya
+Başka kitabın künyesinden yalnız yayınevine ait alanlar (adres, sertifika, matbaa…) alınır; kitaba ait
+alanlar (yayın yönetmeni, editör, dizi, telif) yalnız kitabın kendi künyesinden gelir — telif cümlesi hak
+sahibini (yazar/özgün yayıncı) adlandırır, başka kitabınki bu kitaba yazılmaz. Baskı bilgisi yeni baskıya
 aittir, her zaman elle girilir. Resimler ve tasarım bu sistemin işidir; künyede öyle yazılır, özgün
-kitabın çizeri ya da tasarımcısı yazılmaz.
+kitabın çizeri ya da tasarımcısı yazılmaz; ürün/teknoloji adı yazılmaz, «ZEKİ AI» yazılır.
 
 Yazar tanıtımı hikâye dışı sayfalardan aynı yolla bulunur; metin birebir eşleşmezse kullanılmaz.
 """
@@ -22,10 +23,13 @@ from .manuscript import Manuscript
 
 MISSING = "—"
 IMAGE_CREDIT = "Yapay zekâ ile üretilmiştir (ZEKİ AI)"   # model/ürün adı ekrana ve kitaba yazılmaz
-DESIGN_CREDIT = "NanobaseAI Editör · Kitap Tasarım Stüdyosu"
+DESIGN_CREDIT = "Yapay zekâ ile tasarlanmıştır (ZEKİ AI)"   # Resimler satırıyla aynı dil; ürün adı basılmaz
+OWN_SOURCE = "kitabın künyesi"
 PUBLISHER_FIELDS = ("YAYINEVI", "ADRES", "TELEFON", "EPOSTA", "SERTIFIKA", "MATBAA", "MATBAA_SERTIFIKA",
-                    "MATBAA_ADRES", "TELIF")
-PERSON_FIELDS = ("YAYIN_YONETMENI", "PROJE_EDITORU", "EDITOR", "DIZI")
+                    "MATBAA_ADRES")
+# Kitaba ait alanlar: yalnız kitabın kendi künyesinden. Başka kitabın künyesinden gelmiş (eski işlerde kayıtlı)
+# değer de basılmaz (`usable`).
+PERSON_FIELDS = ("YAYIN_YONETMENI", "PROJE_EDITORU", "EDITOR", "DIZI", "TELIF")
 KUNYE_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["fields"], "properties": {
     "fields": {"type": "array", "items": {"type": "object", "additionalProperties": False,
                                           "required": ["field", "value", "quote"],
@@ -88,8 +92,16 @@ async def kunye_fields(ms: Manuscript, llm) -> dict:
                 continue
             if _norm(f["quote"]) in _norm(text) and _norm(f["value"]) in _norm(f["quote"]):
                 found[f["field"]] = {"value": f["value"].strip(), "quote": f["quote"],
-                                     "source": "kitabın künyesi" if is_own else f"yayınevinin son künyesi ({gid})"}
+                                     "source": OWN_SOURCE if is_own else f"yayınevinin son künyesi ({gid})"}
     return found
+
+
+def usable(f: dict) -> dict:
+    """Basılabilir alanlar: kitaba ait alan (`PERSON_FIELDS`) yalnız kitabın kendi künyesinden okunduysa kalır.
+    Eski işlerin front.json'ında başka kitabın künyesinden alınmış telif vb. kayıtlı olabilir; yeniden dizilince
+    düşer, «—» basılır."""
+    return {k: v for k, v in (f or {}).items()
+            if k not in PERSON_FIELDS or (v or {}).get("source") == OWN_SOURCE}
 
 
 def kunye(ms: Manuscript, f: dict, manual: dict | None = None) -> list[list[str]]:
@@ -97,6 +109,7 @@ def kunye(ms: Manuscript, f: dict, manual: dict | None = None) -> list[list[str]
     el yazmasından (editörün düzeltmesi oraya yazılır); editör yazarı bilerek boş bıraktıysa «Yazar» satırı yok."""
     from .manuscript import author_cleared
     m = manual or {}
+    f = usable(f)
 
     def v(label, key=None, fallback=None):
         return m.get(label) or (f.get(key, {}).get("value") if key else None) or fallback or MISSING

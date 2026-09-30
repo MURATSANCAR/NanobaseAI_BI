@@ -2,13 +2,14 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Search } from 'lucide-react';
+import { Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, RIGHTS_LABEL, RIGHTS_TONE, dateTime, fmt, seoApi, type CrmFilter, type CrmRights } from './api';
 import CrmPanel from './CrmPanel';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { EmptyHint, Explain } from '../components/Explain';
+import SeoPager from './SeoPager';
 
 const PAGE = 40;
 const RIGHTS_ORDER: CrmRights[] = ['eksik', 'incele', 'yok', 'var', 'koruma_disi', 'set', 'kitap_degil'];
@@ -151,19 +152,7 @@ export default function SeoRights() {
                   </button>
                 ))}
               </div>
-              {total > PAGE && (
-                <div className="sg-pager" style={{ marginTop: 12 }}>
-                  <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                    <ChevronLeft size={16} aria-hidden />
-                  </button>
-                  <span className="sg-mono">
-                    {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-                  </span>
-                  <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                    <ChevronRight size={16} aria-hidden />
-                  </button>
-                </div>
-              )}
+              <SeoPager start={start} total={total} size={PAGE} onChange={setStart} />
             </section>
 
             <section aria-label="Seçilen kitap">

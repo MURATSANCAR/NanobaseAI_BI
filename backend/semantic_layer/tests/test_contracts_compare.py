@@ -332,6 +332,25 @@ def test_rates_fill_from_tcmb_file_and_old_lira_is_scaled(tmp_path):
     assert r.missing("t1", {"2003-01", "2024-01", "2025-05"}) == ["2025-05"]
 
 
+def test_snapshot_written_by_older_version_is_reread(tmp_path):
+    """Kurulumdan sonra önceki sürümün yazdığı görüntü (yeni kolonlar yok) yaşına bakılmadan yeniden okunur."""
+    import json as _json
+    calls = []
+
+    def reader():
+        calls.append(1)
+        return data([row(i, new_Telif=10) for i in range(1, 4)])
+
+    snaps = CC.Snapshots(lambda: str(tmp_path), reader, fetch=lambda url: (404, ""))
+    old = data([row(1, new_Telif=10)])
+    snaps.path("t1").write_text(_json.dumps(old), encoding="utf-8")        # «format» yok = eski sürüm
+    port = snaps.get("t1", CFG)
+    assert calls == [1] and len(port.entry_of) == 3
+    assert _json.loads(snaps.path("t1").read_text(encoding="utf-8"))["format"] == CC.SNAPSHOT_FORMAT
+    snaps.get("t1", CFG)
+    assert calls == [1]                                                       # güncel biçim yeniden okunmaz
+
+
 def test_formal_checks_follow_contract_type():
     parties = {gid(99): [["p1", "A"]], gid(98): [["p2", "B"]]}
     port = portfolio([row(99, new_SozlesmeSuresiYil=5, kitapsay=1, new_Telif=10),

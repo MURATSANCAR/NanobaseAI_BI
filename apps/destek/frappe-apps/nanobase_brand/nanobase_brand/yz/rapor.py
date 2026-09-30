@@ -73,7 +73,7 @@ def _publish(title: str, html: str, subject: str) -> str:
 			frappe.sendmail(recipients=recipients, subject=subject, message=html, reference_doctype="Note",
 							reference_name=note.name)
 		except frappe.OutgoingEmailError:
-			frappe.log_error(title="NanobaseAI raporu e-postayla gönderilemedi (giden e-posta hesabı yok)")
+			frappe.log_error(title="ZEKİ AI raporu e-postayla gönderilemedi (giden e-posta hesabı yok)")
 	frappe.db.commit()
 	return note.name
 
@@ -83,7 +83,7 @@ def daily_sla_risk() -> str | None:
 	rows = sla_risk(24)
 	if not rows:
 		return None
-	title = f"NanobaseAI SLA riski — {format_datetime(now_datetime(), 'dd.MM.yyyy')}"
+	title = f"ZEKİ AI SLA riski — {format_datetime(now_datetime(), 'dd.MM.yyyy')}"
 	html = f"<h3>SLA riskindeki kayıtlar ({len(rows)})</h3>" + _risk_table(rows)
 	return _publish(title, html, title)
 
@@ -138,10 +138,10 @@ def weekly(days: int = 7) -> str:
 			raw = ""
 		comment, source, foreign = sayi.yorum_sec(raw, olgular + [subjects], kural)
 		if foreign:
-			frappe.log_error(title="NanobaseAI haftalık yorumu olgularla tutmadı; kural metni kullanıldı",
+			frappe.log_error(title="ZEKİ AI haftalık yorumu olgularla tutmadı; kural metni kullanıldı",
 							 message="Olgu dışı sayılar: " + ", ".join(foreign))
 	comment_html = "".join(f"<li>{escape_html(line)}</li>" for line in comment)
-	heading = "NanobaseAI yorumu" if source == "model" else "Kurala göre özet"
+	heading = "ZEKİ AI yorumu" if source == "model" else "Kurala göre özet"
 	risk = sla_risk(24)
 	period = f"{format_datetime(since, 'dd.MM.yyyy')} – {format_datetime(now_datetime(), 'dd.MM.yyyy')}"
 	html = (
@@ -154,7 +154,7 @@ def weekly(days: int = 7) -> str:
 		+ (f"<h4>{heading}</h4><ul>{comment_html}</ul>" if comment_html else "")
 		+ f"<h4>SLA riskindeki açık kayıtlar ({len(risk)})</h4>" + _risk_table(risk)
 	)
-	title = f"NanobaseAI haftalık destek raporu — {period}"
+	title = f"ZEKİ AI haftalık destek raporu — {period}"
 	return _publish(title, html, title)
 
 

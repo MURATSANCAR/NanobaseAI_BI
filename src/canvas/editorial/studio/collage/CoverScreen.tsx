@@ -15,10 +15,7 @@ import { Explain } from '../../../components/Explain';
 
 /** Kapak ekranı: kapak tarzı seçimi (resimli / kolaj / tipografik) ve kolaj kapağın ayarları. Kolajda fotoğraf
  *  adayları (ZEKİ AI üretir ya da editör yükler), «başka düzen», etiket şeritleri ve ön kapak önizlemesi.
- *  ZEKİ AI'ın ürettiği fotoğrafla kurulan kolaj ticari kullanım izni gelene kadar taslaktır; ekranda yazılır.
  *  Hareket yalnız basış geri bildirimi (ortak `press`); yeni animasyon yok. */
-
-const DRAFT = 'Taslak — ticari kullanım izni bekleniyor';
 
 const STYLES: { key: CoverStyle; title: string; help: string; Icon: typeof ImageIcon }[] = [
   { key: 'illustrated', title: 'Resimli', help: 'Kitabın üslubunda çizilmiş kapak resmi, üstünde başlık ve yazar.', Icon: ImageIcon },
@@ -35,6 +32,9 @@ export default function CoverScreen() {
   const q = useCollage(jobId);
   const v = q.data;
   const settings = useQuery({ queryKey: ['studio', 'settings'], queryFn: collageApi.settings, staleTime: 10 * 60_000 });
+  // Tarz, fotoğraf, düzen ve şerit değiştirmek «Kitap tasarımında üretim ve düzenleme», PDF indirmek «Dışa aktarma» ister.
+  const canEdit = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
 
   const put = (next: CollageView) => {
     qc.setQueryData(collageKey(jobId), next);
@@ -57,7 +57,7 @@ export default function CoverScreen() {
       aside={
         <div className="flex flex-wrap items-center gap-2">
           <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/studyo`}><ArrowLeft className="h-4 w-4" aria-hidden />Sayfa stüdyosu</Link>
-          {job.data?.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapağı indir (PDF)</a>}
+          {canExport && job.data?.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapağı indir (PDF)</a>}
         </div>
       }>
       {body}
@@ -77,10 +77,13 @@ export default function CoverScreen() {
       <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-4">
         <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
           <Panel>
-            <div className={label} id="kapak-tarzi">Kapak tarzı</div>
+            <div className="flex items-center gap-1">
+              <div className={label} id="kapak-tarzi">Kapak tarzı</div>
+              <Explain label="Kapak tarzı">Seçtiğiniz tarz hemen uygulanır ve ön kapak yeniden kurulur; birkaç saniye sürebilir. Tarz değiştirmek hiçbir şeyi silmez: kolaj fotoğrafları ve adayları, seçtiğiniz fotoğraf, düzen ve başlık şeritleri ile resimli kapağın resmi saklanır; eski tarza döndüğünüzde kaldığınız yerden devam edersiniz.</Explain>
+            </div>
             <div role="radiogroup" aria-labelledby="kapak-tarzi" className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {STYLES.map(({ key, title: t, help, Icon }) => (
-                <button key={key} type="button" role="radio" aria-checked={current === key} disabled={pending}
+                <button key={key} type="button" role="radio" aria-checked={current === key} disabled={pending || !canEdit}
                   onClick={() => current !== key && style.mutate(key)}
                   className={`min-h-[72px] rounded-2xl border p-3 text-left disabled:opacity-60 ${press} ${current === key ? 'border-canvas-violet bg-violet-50/60 ring-2 ring-canvas-violet/25' : 'border-slate-200 bg-white/70'}`}>
                   <span className="flex items-center gap-1.5 text-[13.5px] font-extrabold"><Icon className="h-4 w-4 text-canvas-violet" aria-hidden />{t}</span>
@@ -93,8 +96,8 @@ export default function CoverScreen() {
                 Kapak resmi henüz yok. <Link className="font-bold text-canvas-violet underline" to={`/kitap-tasarim/${jobId}/studyo`}>Sayfa stüdyosunda</Link> kapak resmini üretin.
               </p>
             )}
-            {current === 'collage' && !v.selected && (
-              <p className="mt-2 text-[12px] text-canvas-muted">Kolaj için bir fotoğraf seçin: ZEKİ AI'dan aday isteyin ya da kendi fotoğrafınızı yükleyin.</p>
+            {canEdit && current === 'collage' && !v.selected && (
+              <p className="mt-2 text-[12px] text-canvas-muted">Kolaj için bir fotoğraf seçin: Zeki AI'dan aday isteyin ya da kendi fotoğrafınızı yükleyin.</p>
             )}
           </Panel>
 
@@ -103,12 +106,6 @@ export default function CoverScreen() {
               <div className={label}>Ön kapak</div>
               {pending && <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-canvas-violet"><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />Kapak yenileniyor…</span>}
             </div>
-            {current === 'collage' && v.draft && (
-              <div role="status" className="mt-2 flex items-start gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[12.5px] font-bold text-amber-800">
-                <span className="min-w-0 flex-1">{DRAFT}</span>
-                <Explain label="Taslak kapak">ZEKİ AI'ın ürettiği fotoğrafla kurulan kolaj, ticari kullanım izni gelene kadar taslaktır ve basılmamalıdır. Kendi yüklediğiniz fotoğraf taslak sayılmaz.</Explain>
-              </div>
-            )}
             <div className="mx-auto mt-2 w-full max-w-[520px]">
               {v.built ? (
                 <Img src={collageApi.previewUrl(jobId, 1040, rev)} alt="Ön kapak önizlemesi" fallback="Kapak henüz kurulmadı"
@@ -144,7 +141,8 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
   onSelect: (id: string) => void; onLayout: (n: number | null) => void; onLabels: (l: string[] | null) => void;
   onUpload: (f: File) => void; uploading: boolean; onGenerate: (count: number, direction: string) => void; generating: boolean;
 }) {
-  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  // Aday üretmek (GPU), fotoğraf seçmek/yüklemek, düzen ve şerit «Kitap tasarımında üretim ve düzenleme» ister;
+  // rolde yoksa düğmeler çıkmaz, kolaj yalnız görüntülenir.
   const canProduce = useCan('tasarim.uret');
   const [direction, setDirection] = useState('');
   const running = !!v.job && (v.job.status === 'queued' || v.job.status === 'running');
@@ -159,45 +157,49 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
           <ul className="mt-2 grid grid-cols-3 gap-2">
             {v.photos.map((p, i) => (
               <li key={p.id} className="min-w-0">
-                <button type="button" onClick={() => p.id !== v.selected && onSelect(p.id)} disabled={pending}
+                <button type="button" onClick={() => p.id !== v.selected && onSelect(p.id)} disabled={pending || !canProduce}
                   aria-pressed={p.id === v.selected} aria-label={`Aday ${i + 1}${p.source === 'editor' ? ' (yüklenen)' : ''}`}
                   className={`relative block w-full overflow-hidden rounded-xl border bg-white ${press} ${p.id === v.selected ? 'border-canvas-violet ring-2 ring-canvas-violet/40' : 'border-slate-200'}`}>
                   <Img src={collageApi.photoUrl(jobId, p.id, 320)} alt="" fallback={`${i + 1}`} className="aspect-[4/5] w-full object-cover grayscale" />
-                  <span className={`absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${p.draft ? 'bg-amber-100 text-amber-800' : 'bg-white/90 text-canvas-ink'}`}>
-                    {p.draft ? 'Taslak' : p.source === 'editor' ? 'Yüklenen' : 'ZEKİ AI'}
+                  <span className="absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-canvas-ink">
+                    {p.source === 'editor' ? 'Yüklenen' : 'Zeki AI'}
                   </span>
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-[12px] text-canvas-muted">Henüz fotoğraf yok. {canProduce ? '«3 aday üret» ile ZEKİ AI\'dan fotoğraf isteyin ya da kendi fotoğrafınızı yükleyin.' : 'Kendi fotoğrafınızı aşağıdan yükleyin.'}</p>
+          <p className="mt-2 text-[12px] text-canvas-muted">Henüz fotoğraf yok.{canProduce ? ' «3 aday üret» ile Zeki AI\'dan fotoğraf isteyin ya da kendi fotoğrafınızı yükleyin.' : ''}</p>
         )}
         {sel && !sel.overflow && sel.cut_note && <p className="mt-2 text-[11.5px] text-canvas-muted">{sel.cut_note} Kesim düz yırtık kâğıt olarak kuruldu.</p>}
 
-        <label className="mt-3 flex flex-col gap-1">
-          <span className={label}>Fotoğrafta ne olsun? (isteğe bağlı)</span>
-          <textarea value={direction} onChange={(e) => setDirection(e.target.value)} rows={2} maxLength={1200}
-            placeholder="Ör. deniz kıyısında, elinde uçurtma tutan bir çocuk"
-            className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-base outline-none focus:border-canvas-violet sm:text-[13px]" />
-        </label>
+        {canProduce && (
+          <label className="mt-3 flex flex-col gap-1">
+            <span className={label}>Fotoğrafta ne olsun? (isteğe bağlı)</span>
+            <textarea value={direction} onChange={(e) => setDirection(e.target.value)} rows={2} maxLength={1200}
+              placeholder="Ör. deniz kıyısında, elinde uçurtma tutan bir çocuk"
+              className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-base outline-none focus:border-canvas-violet sm:text-[13px]" />
+          </label>
+        )}
         <div className="mt-2 flex flex-col gap-2">
           {canProduce && <button type="button" className={gradientBtn} disabled={running || otherBusy || generating}
             onClick={() => onGenerate(3, direction)}>
             {running ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
             {running ? (v.job?.status === 'queued' ? 'Sırada…' : `Hazırlanıyor… ${v.job?.done ?? 0}/${v.job?.total ?? 3}`) : '3 aday üret'}
           </button>}
+          {/* Yükleme gizlenmez: yetki yoksa alan kilitli görünür ve gereken yetkiyi yazar (FileDrop `feature`). */}
           <FileDrop
             size="sm"
             title="Fotoğraf yükle"
-            hint="Yüklediğiniz fotoğraf taslak sayılmaz."
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
             maxBytes={uploadMb ? uploadMb * MB : undefined}
             busy={uploading}
+            feature="tasarim.uret"
             onPick={onUpload}
           />
         </div>
-        {otherBusy && <p className="mt-1 text-[11.5px] text-canvas-muted">Bu kitapta başka bir resim çiziliyor; bitince aday üretimi açılır.</p>}
+        {canProduce && otherBusy && <p className="mt-1 text-[11.5px] text-canvas-muted">Bu kitapta başka bir resim çiziliyor; bitince aday üretimi açılır.</p>}
+        {running && <p className="mt-1 text-[11.5px] text-canvas-muted">Adaylar arka planda hazırlanır; sayfadan ayrılabilirsiniz, bitince burada görünür.</p>}
         {v.job?.status === 'fail' && v.job.error && <Note tone="err">Aday üretilemedi: {v.job.error}</Note>}
         {v.scene?.why && <p className="mt-2 text-[11.5px] italic leading-snug text-canvas-muted">Konu seçimi: {v.scene.why}</p>}
       </Panel>
@@ -208,20 +210,22 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
           <span className="font-mono text-[11px] text-canvas-muted">düzen {v.layout + 1}</span>
         </div>
         <p className="mt-1 text-[11.5px] text-canvas-muted">Aynı kitap her zaman aynı düzeni verir; «Başka düzen» yırtık kenarı, lekeleri ve etiketlerin yerini değiştirir.</p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        {canProduce && <div className="mt-2 flex flex-wrap gap-2">
           <button type="button" className={`${ghostBtn} flex-1 whitespace-nowrap`} disabled={pending || !v.selected || v.layout === 0} onClick={() => onLayout(v.layout - 1)}>Önceki düzen</button>
           <button type="button" className={`${gradientBtn} flex-[2] whitespace-nowrap`} disabled={pending || !v.selected} onClick={() => onLayout(null)}>
             <Shuffle className="h-4 w-4" aria-hidden />Başka düzen
           </button>
-        </div>
+        </div>}
       </Panel>
 
-      <LabelsEditor v={v} pending={pending} onSave={onLabels} />
+      <LabelsEditor v={v} pending={pending} onSave={onLabels} readOnly={!canProduce} />
     </div>
   );
 }
 
-function LabelsEditor({ v, pending, onSave }: { v: CollageView; pending: boolean; onSave: (l: string[] | null) => void }) {
+function LabelsEditor({ v, pending, onSave, readOnly }: {
+  v: CollageView; pending: boolean; onSave: (l: string[] | null) => void; readOnly?: boolean;
+}) {
   const shown = v.labels ?? v.label_lines ?? v.auto_labels ?? [];
   const [lines, setLines] = useState<string[]>(shown);
   const key = shown.join('\n');
@@ -246,23 +250,23 @@ function LabelsEditor({ v, pending, onSave }: { v: CollageView; pending: boolean
         {lines.map((ln, i) => (
           <li key={i} className="flex min-w-0 items-center gap-1.5">
             <span className="w-5 shrink-0 text-right font-mono text-[11px] text-canvas-muted">{i + 1}</span>
-            <input value={ln} maxLength={300} aria-label={`Şerit ${i + 1}`}
+            <input value={ln} maxLength={300} aria-label={`Şerit ${i + 1}`} readOnly={readOnly}
               onChange={(e) => setLines((ls) => ls.map((x, j) => (j === i ? e.target.value : x)))}
               className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 font-mono text-base outline-none focus:border-canvas-violet sm:text-[13px]" />
-            <button type="button" aria-label={`Şerit ${i + 1}'i kaldır`} disabled={lines.length <= 1}
+            {!readOnly && <button type="button" aria-label={`Şerit ${i + 1}'i kaldır`} disabled={lines.length <= 1}
               onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-canvas-muted disabled:opacity-40 ${press}`}>
               <X className="h-4 w-4" aria-hidden />
-            </button>
+            </button>}
           </li>
         ))}
       </ul>
-      <div className="mt-2 flex flex-wrap gap-2">
+      {!readOnly && <div className="mt-2 flex flex-wrap gap-2">
         <button type="button" className={ghostBtn} onClick={() => setLines((ls) => [...ls, ''])}><Plus className="h-4 w-4" aria-hidden />Şerit ekle</button>
         <button type="button" className={ghostBtn} disabled={pending || !v.labels} onClick={() => onSave(null)}>Başlıktan otomatik böl</button>
         <button type="button" className={`${gradientBtn} ml-auto`} disabled={pending || !dirty || lines.some((x) => !x.trim())}
           onClick={() => onSave(lines.map((x) => x.trim()))}>Şeritleri kaydet</button>
-      </div>
+      </div>}
     </Panel>
   );
 }

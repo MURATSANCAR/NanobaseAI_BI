@@ -97,7 +97,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 
@@ -253,14 +254,20 @@ def index_ad(entries: Any) -> dict[str, dict[str, Any]]:
 
 
 class Directory:
-    """CRM (+AD) listesini kısa süre bellekte tutar: rehber her açılışta yeniden okumasın."""
+    """CRM (+AD) listesi: kişiden bağımsız, ortak bellekte (`hizli_kaynak`; hız 4. tur, 2026-09-29).
 
-    def __init__(self, ttl: float = 300.0):
+    Eskiden 5 dakika bellekteydi; süresi dolunca ya da köprü yeniden başlayınca profilini/rehberi açan kişi CRM kullanıcı
+    tablosunu (soğuk sunucuda 7–9 sn) ve AD'nin bütün kişi aramasını (2–3 sn) bekliyordu (`me/profile` 15,9 sn). Şimdi
+    `ttl` (300 sn) tazelik penceresidir; eskiyse eldeki liste hemen döner, CRM + AD arkada bir kez okunur (tek uçuş).
+    `kalici` verilirse son okuma portal tablosunda da durur (köprü yeniden başlayınca da beklenmez). «Yenile» (`fresh`)
+    kaynağı bekler. Kişiye göre seçim (profil = kendi satırı) bellekteki listede yapılır."""
+
+    def __init__(self, ttl: float = 300.0, kalici: Any = None):
+        from semantic_bridge import hizli_kaynak as HK
+
         self.ttl = ttl
         self._lock = threading.Lock()
-        self._at = 0.0
-        self._key = ""
-        self._rows: list[dict[str, Any]] = []
+        self._bellek = HK.bellek("kisi.rehber", ttl, en_cok=8, kalici=kalici)
         self.ad_checked = False
         #: Son CRM okumasının veritabanı süresi (dbMs/cached/computedAt); ölçülmediyse dbMs None.
         self._db: dict[str, Any] = {"dbMs": None, "cached": False, "computedAt": None}
@@ -273,13 +280,33 @@ class Directory:
             db["cached"] = True
         return db
 
+    def read(self, schema: str, run: Callable[[str], dict[str, Any]], *, fresh: bool = False,
+             ad: Optional[Callable[[], Optional[dict[str, dict[str, Any]]]]] = None,
+             max_idle_days: int = 0) -> tuple[dict[str, Any], float]:
+        """(okuma, okunma anı). Okuma: `rows`, `adChecked`, `truncated`, `db` (o okumanın CRM süresi)."""
+        key = directory_sql(schema) + f"\n-- idle:{max_idle_days}"
+        val = self._bellek.al(key, lambda: self._read(schema, run, ad, max_idle_days), zorla=fresh)
+        at = self._bellek.an(key) or time.time()
+        with self._lock:
+            self.ad_checked = bool(val.get("adChecked"))
+            self._db = dict(val.get("db") or {})
+        return val, at
+
     def rows(self, schema: str, run: Callable[[str], dict[str, Any]], *, fresh: bool = False,
              ad: Optional[Callable[[], Optional[dict[str, dict[str, Any]]]]] = None,
              max_idle_days: int = 0) -> tuple[list[dict[str, Any]], float]:
-        sql = directory_sql(schema) + f"\n-- idle:{max_idle_days}"
-        with self._lock:
-            if not fresh and self._key == sql and time.time() - self._at < self.ttl:
-                return self._rows, self._at
+        val, at = self.read(schema, run, fresh=fresh, ad=ad, max_idle_days=max_idle_days)
+        return val["rows"], at
+
+    def isit(self, schema: str, run: Callable[[str], dict[str, Any]], *,
+             ad: Optional[Callable[[], Optional[dict[str, dict[str, Any]]]]] = None, max_idle_days: int = 0) -> bool:
+        """Köprü açılışı: liste tazeyse (bellekte ya da tabloda) bir şey yapmaz, değilse arkada okunur."""
+        key = directory_sql(schema) + f"\n-- idle:{max_idle_days}"
+        return self._bellek.isit_gerekirse(key, lambda: self._read(schema, run, ad, max_idle_days))
+
+    @staticmethod
+    def _read(schema: str, run: Callable[[str], dict[str, Any]],
+              ad: Optional[Callable[[], Optional[dict[str, dict[str, Any]]]]], max_idle_days: int) -> dict[str, Any]:
         res = run(directory_sql(schema))
         rows = [_crm_person(r) for r in res.get("records") or []]
         rows = [r for r in rows if r["username"] and r["name"]]
@@ -301,12 +328,11 @@ class Directory:
                     continue                      # hiç/uzun süredir giriş yok: ortak ya da kullanılmayan hesap
                 kept.append(_with_ad(r, rec))
             rows = kept
-        with self._lock:
-            self._rows, self._at, self._key = rows, time.time(), sql
-            self.ad_checked = directory is not None
-            self._db = {"dbMs": res.get("dbMs"), "cached": bool(res.get("cached")),
-                        "computedAt": res.get("computedAt")}
-        return rows, self._at
+        return {"rows": rows, "adChecked": directory is not None, "truncated": bool(res.get("truncated")),
+                "db": {"dbMs": res.get("dbMs"), "cached": bool(res.get("cached")), "computedAt": res.get("computedAt")},
+                # Sorgu bilgisi: CRM'de koşan metin (liste bellekten ya da tablodan verilse de gösterilir).
+                "sorgu": {"sql": res.get("physicalSql"), "rows": res.get("totalRows"), "ms": res.get("dbMs"),
+                          "at": res.get("computedAt")}}
 
 
 def _with_ad(person: dict[str, Any], ad: dict[str, Any]) -> dict[str, Any]:

@@ -10,9 +10,17 @@ virgül), kısa biçim `*:0/15`, ve `OnBootSec` + `OnUnitActiveSec` aralıkları
 sunucusunun saat dilimi). `Persistent=true` işler konteyner kapalıyken kaçırdıkları son turu açılışta bir kez koşar;
 ilk kurulumda (durum dosyası yokken) geçmiş turlar koşulmaz — 1 çekirdekli VM'e onlarca iş birden binmesin.
 
+Bir birimde birden çok `ExecStart` varsa (Type=oneshot) hepsi dosyadaki sırayla koşar: biri hata verirse sonrakiler
+koşmaz, `-` önekli satırın hatası yok sayılır (systemd kuralı); boş `ExecStart=` önceki satırları siler. Aynı birim
+(ve örnek) bir turu bitirmeden yeniden tetiklenirse ikinci tur koşmaz, systemd'nin etkinleşmekte olan birime katılması gibi.
+
 VM'de bilerek koşmayanlar `JOBS_EXCLUDE` (varsayılan: basın/web taraması — kullanıcı kararı 2026-09-25; Zeki AI
-kalite kapıları — iç ölçüm, test dosyaları ister). Köprüye `curl` ile gitmeyen servis (betik) desteklenmez, günlüğe
-yazılır. Ana ekran özeti ayrı döngüdür (METRICS_EVERY_SEC).
+kalite kapıları — iç ölçüm, test dosyaları ister). Köprüye `curl` ya da `kopru-cagir.sh` ile gitmeyen servis (betik)
+desteklenmez, günlüğe yazılır. Ana ekran özeti ayrı döngüdür (METRICS_EVERY_SEC).
+
+Köprü çağrısı `scripts/server/kopru-cagir.sh` ile aynı kuralla (`call_bridge`): köprü hazır olana kadar beklenir; yalnız
+işin başlamadığı (bağlanamadı, 502/503) ya da köprüyle birlikte öldüğü (bağlantı koptu ve köprünün pid'i değişti)
+durumda yeniden denenir. Toplam bekleme JOBS_BRIDGE_WAIT_SEC (varsayılan 900 sn).
 """
 from __future__ import annotations
 
@@ -24,6 +32,8 @@ import re
 import runpy
 import threading
 import time
+import http.client
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -37,6 +47,8 @@ SCHEDULE_DIR = os.environ.get("SCHEDULE_DIR", "/app/jobs/schedule")
 STATE_FILE = os.environ.get("JOBS_STATE", "/data/metrics/jobs-state.json")
 TZ = ZoneInfo(os.environ.get("JOBS_TZ", "Europe/Istanbul"))
 EXCLUDE = [p.strip() for p in os.environ.get("JOBS_EXCLUDE", "timas-web-watch,timas-model-quality-*").split(",") if p.strip()]
+BRIDGE_WAIT = float(os.environ.get("JOBS_BRIDGE_WAIT_SEC", "900"))
+RETRY_DELAY = float(os.environ.get("JOBS_RETRY_DELAY_SEC", "5"))
 
 DAYS = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
 
@@ -149,15 +161,31 @@ def parse_span(text: str) -> int:
 
 # ------------------------------------------------------------------------------------------------ dosyalar
 @dataclass
+class Step:
+    """Birimin tek `ExecStart` satırı."""
+    path: str                      # köprü yolu (sorgu dahil)
+    timeout: int
+    ignore_failure: bool = False   # `ExecStart=-…`: hatası birimi düşürmez, sonraki satır koşar
+
+
+@dataclass
 class Job:
     name: str                      # zamanlayıcı adı (timas-stock)
     label: str                     # servis açıklaması
-    path: str                      # köprü yolu (sorgu dahil)
-    timeout: int
+    path: str                      # ilk adımın köprü yolu (sorgu dahil)
+    timeout: int                   # ilk adımın zaman aşımı
     calendars: list[Calendar] = field(default_factory=list)
     boot: int = 0
     every: int = 0
     persistent: bool = False
+    steps: list[Step] = field(default_factory=list)   # bütün ExecStart satırları, dosyadaki sırayla
+    unit: str = ""                 # birim + örnek (timas-dealers@gunluk); aynı birimin iki turu üst üste binmez
+
+    def __post_init__(self) -> None:
+        if not self.steps:
+            self.steps = [Step(self.path, self.timeout)]
+        if not self.unit:
+            self.unit = self.name
 
     def describe(self) -> str:
         if self.calendars:
@@ -185,7 +213,29 @@ def _ini(path: str) -> dict[str, list[str]]:
 
 
 # Yalnız köprü (8795): başka bir servise giden çağrı VM'de köprüye yöneltilmesin.
-_CURL = re.compile(r"curl\b(?P<opts>.*?)[\"']?http://127\.0\.0\.1:8795(?P<path>/api/[^\"'\s]+)")
+_CURL = re.compile(r"(?:curl|kopru-cagir(?:\.sh)?)\b(?P<opts>.*?)[\"']?http://127\.0\.0\.1:8795(?P<path>/api/[^\"'\s]+)")
+
+
+_PREFIX = re.compile(r"^([-@:+!]*)(.*)$", re.S)
+
+
+def parse_step(line: str) -> Step:
+    """ExecStart değeri → adım. Önekler systemd'deki gibi: `-` hatayı yok sayar; `@ : + !` VM'de anlamsız, atılır."""
+    m = _PREFIX.match(line.strip())
+    prefix, rest = (m.group(1), m.group(2)) if m else ("", line)
+    path, timeout = parse_exec(rest)
+    return Step(path=path, timeout=timeout, ignore_failure="-" in prefix)
+
+
+def exec_lines(values: list[str]) -> list[str]:
+    """Birimdeki ExecStart değerleri → koşulacak satırlar. Boş `ExecStart=` öncekileri siler (systemd kuralı)."""
+    out: list[str] = []
+    for v in values:
+        if v:
+            out.append(v)
+        else:
+            out.clear()
+    return out
 
 
 def parse_exec(line: str) -> tuple[str, int]:
@@ -215,11 +265,16 @@ def load_jobs(directory: str, exclude: Optional[list[str]] = None) -> tuple[list
             if m:
                 unit, inst = f"{m.group(1)}.service", m.group(2)
             s = _ini(os.path.join(directory, unit))
-            execs = [x for x in s.get("ExecStart", []) if x]
+            execs = exec_lines(s.get("ExecStart", []))
             if not execs:
                 raise ValueError(f"{unit}: ExecStart yok")
-            path, timeout = parse_exec(execs[-1].replace("%i", inst))
-            job = Job(name=name, label=(s.get("Description") or [name])[0], path=path, timeout=timeout,
+            try:
+                steps = [parse_step(x.replace("%i", inst)) for x in execs]
+            except ValueError as e:
+                raise ValueError(f"{unit}: {e}") from None
+            job = Job(name=name, label=(s.get("Description") or [name])[0], path=steps[0].path,
+                      timeout=steps[0].timeout, steps=steps,
+                      unit=f"{unit[:-len('@.service')]}@{inst}" if inst else unit[:-len(".service")],
                       calendars=[parse_calendar(c) for c in t.get("OnCalendar", [])],
                       boot=parse_span((t.get("OnBootSec") or ["0"])[0]),
                       every=parse_span((t.get("OnUnitActiveSec") or ["0"])[0]),
@@ -273,16 +328,116 @@ def report(job: Job, ok: bool, detail: str = "") -> None:
         print(f"{job.name}: sistem durumuna bildirilemedi: {e}", flush=True)
 
 
-def run(job: Job) -> None:
-    started = datetime.now(TZ)
+def _bridge_pid() -> Optional[int]:
+    """Köprü hazırsa süreç kimliği (bilinmiyorsa 0); hazır değilse None. Eski köprü (`boot` alanı yok): `status: ok`."""
     try:
-        out = _post(job.path, {}, job.timeout)
-        print(f"{job.name}: {str(out)[:300]}", flush=True)
-        report(job, True)
-    except Exception as e:  # noqa: BLE001 — bir tur patlarsa bir sonraki denenir
-        print(f"{job.name} başarısız: {e}", flush=True)
-        report(job, False, f"{type(e).__name__}: {e}")
-    _write_state(job.name, started)
+        with urllib.request.urlopen(f"{BRIDGE}/health", timeout=5) as res:
+            h = json.load(res)
+    except Exception:  # noqa: BLE001 — cevap yok
+        return None
+    boot = h.get("boot")
+    if (boot is not None and not boot.get("runtimeReady")) or (boot is None and h.get("status") != "ok"):
+        return None
+    try:
+        return int(h.get("pid") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _wait_ready(deadline: float) -> Optional[int]:
+    pause = 2.0
+    while True:
+        pid = _bridge_pid()
+        if pid is not None:
+            return pid
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(pause)
+        pause = min(pause + 2.0, 10.0)
+
+
+def call_bridge(path: str, timeout: int, budget: Optional[float] = None):
+    """Köprüye tur çağrısı: hazır olmasını bekle; aynı işi iki kez koşturmadan yalnız «başlamadı» hatalarında dene."""
+    deadline = time.monotonic() + (BRIDGE_WAIT if budget is None else budget)
+    pid = _wait_ready(deadline)
+    if pid is None:
+        raise ConnectionError("köprü hazır olmadı")
+    delay = RETRY_DELAY
+    attempt = 1
+    while True:
+        try:
+            return _post(path, {}, timeout)
+        except urllib.error.HTTPError as e:
+            if e.code not in (502, 503):
+                raise
+            why: str = f"HTTP {e.code}"
+        except urllib.error.URLError as e:
+            # urllib bunu yalnız istek gönderilirken verir (bağlanamadı, ad çözülemedi — köprü kapsayıcısı yeniden
+            # başlıyor): istek köprüye ulaşmadı, iş başlamadı. Cevap beklerken zaman aşımı URLError değildir, denenmez.
+            why = f"bağlanamadı ({e.reason})"
+        except (http.client.RemoteDisconnected, ConnectionResetError) as e:
+            # Cevap gelmeden bağlantı koptu: köprü yeniden başladıysa iş onunla öldü; başlamadıysa iş sürüyor olabilir.
+            now = _wait_ready(deadline)
+            if now is None or now == pid:
+                raise
+            why = f"bağlantı koptu, köprü yeniden başladı ({type(e).__name__})"
+        if time.monotonic() + delay > deadline:
+            raise ConnectionError(f"köprü çağrısı bekleme süresi içinde başarılamadı: {why}")
+        print(f"{path}: deneme {attempt}: {why} — {delay:.0f} sn sonra yeniden", flush=True)
+        time.sleep(delay)
+        new = _wait_ready(deadline)
+        if new is None:
+            raise ConnectionError(f"köprü hazır olmadı: {why}")
+        pid = new
+        delay = min(delay * 2, 60.0)
+        attempt += 1
+
+
+_unit_locks: dict[str, threading.Lock] = {}
+_unit_locks_guard = threading.Lock()
+
+
+def _unit_lock(unit: str) -> threading.Lock:
+    with _unit_locks_guard:
+        return _unit_locks.setdefault(unit, threading.Lock())
+
+
+def run(job: Job) -> bool:
+    """Birimin bütün ExecStart adımlarını sırayla koşar (Type=oneshot). Dönüş: tur başarılı mı.
+
+    Adım hata verirse sonrakiler koşmaz; `-` önekli adımın hatası yok sayılır ve sıradaki koşar. Aynı birim hâlâ
+    koşuyorsa bu tetik atlanır: iş iki kez koşmaz."""
+    lock = _unit_lock(job.unit)
+    if not lock.acquire(blocking=False):
+        print(f"{job.name}: {job.unit} hâlâ koşuyor, bu tetik atlandı", flush=True)
+        return False
+    try:
+        started = datetime.now(TZ)
+        ok, notes = True, []
+        many = len(job.steps) > 1
+        for i, st in enumerate(job.steps, 1):
+            tag = f"{job.name} [{i}/{len(job.steps)}] {st.path}" if many else job.name
+            try:
+                out = call_bridge(st.path, st.timeout)   # köprü hazır olana kadar bekler, «başlamadı» hatasında dener
+                print(f"{tag}: {str(out)[:300]}", flush=True)
+            except Exception as e:  # noqa: BLE001 — bir tur patlarsa bir sonraki tetikte yeniden denenir
+                err = f"{type(e).__name__}: {e}"
+                if st.ignore_failure:
+                    print(f"{tag} başarısız (yok sayıldı, «-»): {err}", flush=True)
+                    notes.append(f"{st.path} başarısız (yok sayıldı): {err}")
+                    continue
+                print(f"{tag} başarısız: {err}", flush=True)
+                notes.append(f"{st.path} başarısız: {err}" if many else err)
+                rest = [s.path for s in job.steps[i:]]
+                if rest:
+                    notes.append("koşmadı: " + ", ".join(rest))
+                ok = False
+                break
+        report(job, ok, "; ".join(notes))
+        _write_state(job.name, started)
+        return ok
+    finally:
+        lock.release()
 
 
 def _sleep_until(at: datetime) -> None:
@@ -333,7 +488,8 @@ def main() -> None:
     for n, why in skipped:
         print(f"  - {n}: {why}", flush=True)
     for j in jobs:
-        print(f"  + {j.name}: {j.describe()} → {j.path}", flush=True)
+        print(f"  + {j.name}: {j.describe()} → {' → '.join(('-' if st.ignore_failure else '') + st.path for st in j.steps)}",
+              flush=True)
     state = _read_state()
     first_deploy = not os.path.exists(STATE_FILE)
     if first_deploy:  # ilk kurulum: bugünkü geçmiş turları koşma; bundan sonrası takvimle

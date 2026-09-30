@@ -233,7 +233,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 
@@ -1414,12 +1415,14 @@ def _brief(r: Any) -> dict[str, Any]:
             "guncelleme": iso(r.updated_at), "onaylayan": r.approved_by, "onayZamani": iso(r.approved_at)}
 
 
-def create_brief(engine: sa.engine.Engine, tenant: str, user: str, book: dict[str, Any], note: Any) -> dict[str, Any]:
+def create_brief(engine: sa.engine.Engine, tenant: str, user: str, book: dict[str, Any], note: Any,
+                 manual: bool = False) -> dict[str, Any]:
+    """`manual`: Zeki AI'sız, boş metinli taslak açılır; metni kişi yazar (`update_brief`). Yoksa iş kuyruğa girer."""
     bid = uid()
     with engine.begin() as c:
         c.execute(BRIEFS.insert().values(id=bid, tenant_id=tenant, crm_book_id=book.get("kitapId"), stok_kodu=book["stokKodu"],
-                                         book_name=book.get("ad"), request_note=one_line(note, 1000), status="hazirlaniyor",
-                                         created_by=user, created_at=now()))
+                                         book_name=book.get("ad"), request_note=one_line(note, 1000),
+                                         status="taslak" if manual else "hazirlaniyor", created_by=user, created_at=now()))
     return get_brief(engine, tenant, bid)
 
 
@@ -1466,8 +1469,11 @@ def update_brief(engine: sa.engine.Engine, tenant: str, user: str, bid: str, bod
             raise AdsError("Brief metni boş olamaz.")
         vals.update(body=text_[:60000], status="taslak", approved_by=None, approved_at=None)
     if body.get("onayla"):
-        if b["durum"] not in ("taslak",) and "metin" not in vals:
+        new_text = "body" in vals   # bu istekte metin de yazıldı (metin `body` kolonunda saklanır)
+        if b["durum"] not in ("taslak",) and not new_text:
             raise AdsError("Yalnız taslak brief onaylanır.", 409)
+        if not new_text and not (b["metin"] or "").strip():
+            raise AdsError("Boş brief onaylanamaz; önce metni yazın.")
         vals.update(status="onayli", approved_by=user, approved_at=now())
     if not vals:
         raise AdsError("Değişiklik yok.")

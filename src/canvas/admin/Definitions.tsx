@@ -62,6 +62,7 @@ function DeleteBtn({ onDelete, pending }: { onDelete: () => void; pending: boole
 
 const LAST_REPORT: Record<string, { label: string; tone: 'ok' | 'warn' | 'err' | 'muted' }> = {
   sent: { label: 'Gönderildi', tone: 'ok' },
+  ready: { label: 'Dosya hazır · e-posta planlanan saatte', tone: 'muted' },
   no_smtp: { label: 'E-posta ayarı yok', tone: 'warn' },
   no_recipient: { label: 'Alıcı yok', tone: 'muted' },
   failed: { label: 'Hata', tone: 'err' },

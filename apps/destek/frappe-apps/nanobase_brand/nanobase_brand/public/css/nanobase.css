@@ -1,4 +1,4 @@
-/* NanobaseAI teması — masaüstü (/app, /desk) ve web sayfaları (/login).
+/* ZEKİ AI teması — masaüstü (/app, /desk) ve web sayfaları (/login).
    Değerler portalın kanvas dilinden: tailwind.config.js `canvas` jetonları ve
    src/canvas/canvas.css. Destek ekranının (/helpdesk) karşılığı:
    helpdesk/desk/src/nanobase-theme.css — bir değeri değiştiren ikisini birden değiştirir. */
@@ -162,7 +162,7 @@ body[data-path="login"] .app-logo {
 	font-variant-numeric: tabular-nums;
 }
 
-/* Kenar çubuğu başlığı: çalışma alanının baş harfi yerine NanobaseAI simgesi */
+/* Kenar çubuğu başlığı: çalışma alanının baş harfi yerine ZEKİ AI simgesi */
 .header-logo .icon-container:has(> .desktop-alphabet) {
 	background: url("/assets/nanobase_brand/images/logo-mark.svg") center / cover no-repeat !important;
 }

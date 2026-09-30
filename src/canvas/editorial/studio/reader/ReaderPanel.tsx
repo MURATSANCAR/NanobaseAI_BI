@@ -5,8 +5,10 @@ import type { PlanPage } from '../../../engine';
 import { Note, btnGhost, btnPrimary, errText } from '../../../admin/ui';
 import type { EditorCtx } from '../InspectorPanel';
 import { Progress } from '../shared';
+import { Explain } from '../../../components/Explain';
 import { FRONT, pollWhilePreparing, preparing, readerApi, type ReaderDecision, type ReaderFlag, type ReaderInfo, type ReaderRun, type RunSummary, type TurnItem } from './api';
 import { findSpan, replaceTarget, targetText } from './textEdit';
+import { useCan } from '../../../useAdmin';
 
 /** Okur paneli: «Çocuk gözüyle» (ZEKİ AI metni kitabın okur yaşında okur, takıldığı yerleri işaretler) ve resimli
  *  kitapta «Sayfa çevirme» (çift sayfanın son cümlesi merak uyandırıyor mu). Öneriyi uygulamak metni değiştirir ve
@@ -101,6 +103,9 @@ function RunHeader({ info, summary, run, starting, onStart, onResume, startLabel
   const s = run ?? summary;
   const running = s?.status === 'running';
   const stuck = s && (s.status === 'interrupted' || s.status === 'failed' || s.status === 'partial');
+  // Okumayı başlatmak/sürdürmek (model harcar) «Kitap tasarımında üretim ve düzenleme» ister.
+  const canEdit = useCan('tasarim.uret');
+  if (!canEdit && !s) return <p className="text-[12.5px] text-canvas-muted">Bu kitap henüz okunmadı.</p>;
   return (
     <div className="flex flex-col gap-2 rounded-2xl bg-violet-50/60 p-3">
       {s && (
@@ -117,7 +122,7 @@ function RunHeader({ info, summary, run, starting, onStart, onResume, startLabel
           <span className="text-[11.5px] text-canvas-muted">{s.progress[0]} / {s.progress[1]} {what} okundu. Okuma sürerken düzenlemeye devam edebilirsiniz.</span>
         </div>
       )}
-      <div className="flex flex-wrap gap-2">
+      {canEdit && <div className="flex flex-wrap gap-2">
         {!running && (
           <button type="button" className={btnPrimary} disabled={starting} onClick={onStart}>
             {starting ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
@@ -125,7 +130,7 @@ function RunHeader({ info, summary, run, starting, onStart, onResume, startLabel
           </button>
         )}
         {stuck && s && <button type="button" className={btnGhost} onClick={() => onResume(s.id)}><RotateCcw className="h-4 w-4" aria-hidden />Kalan yerden sürdür</button>}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -141,10 +146,24 @@ function Suggest({ from, to }: { from: string; to: string }) {
 function useDecisions(job: string, rid: string | undefined) {
   const [local, setLocal] = useState<Record<string, ReaderDecision | null>>({});
   useEffect(() => setLocal({}), [rid]);
+  // İşaret hemen değişir; sunucu reddederse önceki hâline döner (arada aynı işarete başka karar verildiyse ona dokunulmaz).
   const decide = async (fid: string, decision: ReaderDecision) => {
     if (!rid) return;
-    setLocal((l) => ({ ...l, [fid]: decision === 'open' ? null : decision }));
-    await readerApi.decide(job, rid, fid, decision);
+    const next = decision === 'open' ? null : decision;
+    const had = fid in local;
+    const prev = local[fid];
+    setLocal((l) => ({ ...l, [fid]: next }));
+    try {
+      await readerApi.decide(job, rid, fid, decision);
+    } catch (e) {
+      setLocal((l) => {
+        if (l[fid] !== next) return l;
+        const n = { ...l };
+        if (had) n[fid] = prev; else delete n[fid];
+        return n;
+      });
+      throw e;
+    }
   };
   return { local, decide };
 }
@@ -158,6 +177,23 @@ function edit(ctx: EditorCtx, ref: ItemRef, from: string, to: string): PlanPage 
   return replaceTarget(page, ref.target, ref.id, span[0], span[1], to);
 }
 
+/** Karar sunucuda kaydedilemediyse metin değişikliğini güncel sayfada tersine çevirir. Öneri metni kendi yerinde aynen
+ *  duruyorsa geri alınır (aradaki başka düzenlemeler kalır); o yer bu arada değiştiyse dokunulmaz ve false döner. */
+function revertEdit(ctxNow: EditorCtx, ref: ItemRef, applied: { from: string; to: string }, fid: string): boolean {
+  const back = edit(ctxNow, ref, applied.to, applied.from);
+  if (!back) return false;
+  ctxNow.setPage(back, `okur:${fid}:geri`);
+  return true;
+}
+
+function failText(why: string, reverted: boolean | null): string {
+  const head = `Karar kaydedilemedi${why ? ` (${why})` : ''}; `;
+  if (reverted === null) return `${head}işaret eski hâline döndü. Yeniden deneyin.`;
+  return reverted
+    ? `${head}metindeki değişiklik de geri alındı, işaret eski hâline döndü. Yeniden deneyin.`
+    : `${head}işaret eski hâline döndü, ama o yerdeki metin bu arada değiştiği için değişiklik kendiliğinden geri alınamadı. Gerekirse Ctrl/Cmd+Z ile geri alın.`;
+}
+
 // ------------------------------------------------------------------ çocuk gözüyle
 function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo }: {
   ctx: EditorCtx; info: ReaderInfo; run: ReaderRun | null; summary: RunSummary | null; starting: boolean;
@@ -167,6 +203,9 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
   const [focus, setFocus] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const { local, decide } = useDecisions(ctx.job, run?.id);
+  // Karar düşerse metni güncel sayfada geri almak için; await sonrası `ctx` eski kalır.
+  const ctxRef = useRef(ctx);
+  ctxRef.current = ctx;
   const flags = run?.flags ?? [];
   const pageId = ctx.page?.id ?? null;
   const onPage = flags.filter((f) => f.page === pageId);
@@ -175,32 +214,37 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
 
   const act = async (f: ReaderFlag, what: 'apply' | 'unapply' | 'dismiss' | 'reopen') => {
     setMsg(null);
+    let applied: { from: string; to: string } | null = null;
     try {
       if (what === 'apply' || what === 'unapply') {
-        const p = what === 'apply' ? edit(ctx, f, f.quote, f.replacement) : edit(ctx, f, f.replacement, f.quote);
+        applied = what === 'apply' ? { from: f.quote, to: f.replacement } : { from: f.replacement, to: f.quote };
+        const p = edit(ctx, f, applied.from, applied.to);
         if (!p) { setMsg('Bu yerdeki metin değişmiş; öneri uygulanamadı.'); return; }
         ctx.setPage(p, `okur:${f.fid}`);
         await decide(f.fid, what === 'apply' ? 'applied' : 'open');
       } else {
         await decide(f.fid, what === 'dismiss' ? 'dismissed' : 'open');
       }
-    } catch (e) { setMsg(errText(e, 'Karar kaydedilemedi; metindeki değişiklik kaydedildi.')); }
+    } catch (e) {
+      setMsg(failText(errText(e, '') ?? '', applied ? revertEdit(ctxRef.current, f, applied, f.fid) : null));
+    }
   };
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12.5px] leading-snug text-canvas-muted">
-        ZEKİ AI metni <b className="text-canvas-ink">{age ?? '?'} yaşındaki bir okur</b> gibi okur ve takıldığı yerleri işaretler
+        Zeki AI metni <b className="text-canvas-ink">{age ?? '?'} yaşındaki bir okur</b> gibi okur ve takıldığı yerleri işaretler
         {info.band ? ` (kitabın okur yaşı ${band(info.band)}; en küçüğüne göre)` : ''}. Her sayfa {info.passes} kez birbirinden bağımsız okunur;
         yalnız okumaların çoğunluğunda geçen işaret gösterilir.
+        {' '}<Explain label="Öneriyi uygulama">«Öneriyi uygula» sayfadaki metni hemen değiştirir ve sayfa düzeniyle birlikte kendiliğinden kaydedilir. Kartta «Geri al» ile, ya da Ctrl/Cmd+Z ve sürüm geçmişinden geri dönebilirsiniz. «Yoksay» metne dokunmaz, yalnız işareti kapatır.</Explain>
       </p>
       <RunHeader info={info} summary={summary} run={run} starting={starting} onStart={onStart} onResume={onResume}
         startLabel="Çocuk gözüyle oku" what="sayfa" />
       {msg && <Note tone="warn">{msg}</Note>}
       {run && run.status !== 'running' && run.stats && (
         <p className="text-[11.5px] text-canvas-muted">
-          {run.stats.shown} işaret gösteriliyor · okumalarda {run.stats.raw} işaret çıktı, metinde birebir bulunamayan {run.stats.dropped} tanesi atıldı
-          {run.stats.refuted ? `, resim/konuşan iddiası ayrıca sınanıp doğrulanmayan ${run.stats.refuted} tanesi düştü` : ''}.
+          {run.stats.shown} işaret gösteriliyor. Okumalarda toplam {run.stats.raw} işaret çıktı; alıntısı metinde aynen bulunamayan {run.stats.dropped} tanesi
+          {run.stats.refuted ? ` ve resim ya da konuşan kişiyle ilgili olup ikinci denetimde doğrulanmayan ${run.stats.refuted} tanesi` : ''} gösterilmiyor.
         </p>
       )}
       {run && (
@@ -305,6 +349,7 @@ function FlagCard({ ctx, f, decision, focused, onFocus, act, compact }: {
   const here = findSpan(text, f.quote, f.start, f.end);
   const applied = decision === 'applied';
   const stale = !applied && !here;
+  const canEdit = useCan('tasarim.uret');   // öneriyi uygulamak metni değiştirir; yoksayma karar kaydı yazar
   return (
     <div ref={ref} onClick={onFocus}
       className={`rounded-2xl border bg-white p-3 text-[12.5px] ${focused ? 'border-canvas-violet ring-2 ring-violet-200' : 'border-slate-200'} ${decision === 'dismissed' ? 'opacity-60' : ''}`}>
@@ -321,22 +366,22 @@ function FlagCard({ ctx, f, decision, focused, onFocus, act, compact }: {
         {applied && (
           <>
             <span className="inline-flex items-center gap-1 text-[12px] font-bold text-emerald-700"><Check className="h-4 w-4" aria-hidden />Uygulandı</span>
-            <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'unapply'); }}>Geri al</button>
+            {canEdit && <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'unapply'); }}>Geri al</button>}
           </>
         )}
         {decision === 'dismissed' && (
           <>
             <span className="text-[12px] font-bold text-canvas-muted">Yoksayıldı</span>
-            <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'reopen'); }}>Geri al</button>
+            {canEdit && <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'reopen'); }}>Geri al</button>}
           </>
         )}
         {!decision && stale && <span className="text-[12px] font-semibold text-amber-800">Bu yerdeki metin okumadan sonra değişti.</span>}
-        {!decision && !stale && f.replacement && (
+        {canEdit && !decision && !stale && f.replacement && (
           <button type="button" className={btnPrimary} onClick={(e) => { e.stopPropagation(); act(f, 'apply'); }}>
             <Check className="h-4 w-4" aria-hidden />Öneriyi uygula
           </button>
         )}
-        {!decision && (
+        {canEdit && !decision && (
           <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'dismiss'); }}>
             <X className="h-4 w-4" aria-hidden />Yoksay
           </button>
@@ -365,6 +410,9 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
 }) {
   const [msg, setMsg] = useState<string | null>(null);
   const { local, decide } = useDecisions(ctx.job, run?.id);
+  const canEdit = useCan('tasarim.uret');   // kabul metni değiştirir, ret karar kaydı yazar
+  const ctxRef = useRef(ctx);
+  ctxRef.current = ctx;
   const spreads = run?.spreads ?? [];
   const weak = spreads.filter((x) => x.status === 'suggested' || x.status === 'no_fix');
   const strong = spreads.filter((x) => x.status === 'strong');
@@ -372,24 +420,29 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
 
   const act = async (x: TurnItem, what: 'accept' | 'unaccept' | 'reject' | 'reopen') => {
     setMsg(null);
+    let applied: { from: string; to: string } | null = null;
     try {
       if ((what === 'accept' || what === 'unaccept') && x.replacement) {
-        const p = what === 'accept' ? edit(ctx, x, x.quote, x.replacement) : edit(ctx, x, x.replacement, x.quote);
+        applied = what === 'accept' ? { from: x.quote, to: x.replacement } : { from: x.replacement, to: x.quote };
+        const p = edit(ctx, x, applied.from, applied.to);
         if (!p) { setMsg('Bu sayfanın son cümlesi değişmiş; öneri uygulanamadı.'); return; }
         ctx.setPage(p, `okur:${x.fid}`);
         await decide(x.fid, what === 'accept' ? 'accepted' : 'open');
       } else {
         await decide(x.fid, what === 'reject' ? 'rejected' : 'open');
       }
-    } catch (e) { setMsg(errText(e, 'Karar kaydedilemedi; metindeki değişiklik kaydedildi.')); }
+    } catch (e) {
+      setMsg(failText(errText(e, '') ?? '', applied ? revertEdit(ctxRef.current, x, applied, x.fid) : null));
+    }
   };
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12.5px] leading-snug text-canvas-muted">
-        Resimli kitapta okur her çift sayfanın sonunda sayfayı çevirir. ZEKİ AI her çift sayfanın son cümlesinin
+        Resimli kitapta okur her çift sayfanın sonunda sayfayı çevirir. Zeki AI her çift sayfanın son cümlesinin
         «sonra ne oldu?» merakı uyandırıp uyandırmadığına bakar; güçlü değilse soru, yarım kalan eylem, ses sözcüğü ya da
         «ama…» gibi bir kalıpla yeni cümle önerir. Güçlü sayfa sonuna öneri yapılmaz.
+        {' '}<Explain label="Kabul et / Reddet">«Kabul et» sayfanın son cümlesini önerilenle değiştirir ve kendiliğinden kaydedilir; «Geri al» ile ya da Ctrl/Cmd+Z ile eski cümleye dönersiniz. «Reddet» metne dokunmaz. «merak» rozeti sayfa sonunun gücünü gösterir: güçlü, orta ya da zayıf.</Explain>
       </p>
       <RunHeader info={info} summary={summary} run={run} starting={starting} onStart={onStart} onResume={onResume}
         startLabel="Sayfa sonlarını değerlendir" what="çift sayfa" />
@@ -417,25 +470,25 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
                   <p className="mt-1.5"><span className="font-bold">{x.technique_label ?? 'Öneri'}: </span><Suggest from={x.quote} to={x.replacement} /></p>
                   {x.reason && <p className="mt-1 leading-snug text-canvas-muted">{x.reason}</p>}
                 </>
-              ) : <p className="mt-1.5 text-canvas-muted">ZEKİ AI bu sayfa sonu için anlamı koruyan bir cümle öneremedi.</p>}
+              ) : <p className="mt-1.5 text-canvas-muted">Zeki AI bu sayfa sonu için anlamı koruyan bir cümle öneremedi; isterseniz cümleyi kendiniz düzenleyin.</p>}
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 {dec === 'accepted' && (
                   <>
                     <span className="inline-flex items-center gap-1 text-[12px] font-bold text-emerald-700"><Check className="h-4 w-4" aria-hidden />Kabul edildi</span>
-                    <button type="button" className={btnGhost} onClick={() => act(x, 'unaccept')}>Geri al</button>
+                    {canEdit && <button type="button" className={btnGhost} onClick={() => act(x, 'unaccept')}>Geri al</button>}
                   </>
                 )}
                 {dec === 'rejected' && (
                   <>
                     <span className="text-[12px] font-bold text-canvas-muted">Reddedildi</span>
-                    <button type="button" className={btnGhost} onClick={() => act(x, 'reopen')}>Geri al</button>
+                    {canEdit && <button type="button" className={btnGhost} onClick={() => act(x, 'reopen')}>Geri al</button>}
                   </>
                 )}
                 {!dec && stale && <span className="text-[12px] font-semibold text-amber-800">Bu sayfanın son cümlesi değişti.</span>}
-                {!dec && !stale && x.status === 'suggested' && (
+                {canEdit && !dec && !stale && x.status === 'suggested' && (
                   <button type="button" className={btnPrimary} onClick={() => act(x, 'accept')}><Check className="h-4 w-4" aria-hidden />Kabul et</button>
                 )}
-                {!dec && <button type="button" className={btnGhost} onClick={() => act(x, 'reject')}><X className="h-4 w-4" aria-hidden />Reddet</button>}
+                {canEdit && !dec && <button type="button" className={btnGhost} onClick={() => act(x, 'reject')}><X className="h-4 w-4" aria-hidden />Reddet</button>}
               </div>
             </div>
           );

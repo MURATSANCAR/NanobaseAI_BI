@@ -377,9 +377,10 @@ const CONTENT: ScreenInfoMap = {
       "Satış hızı ve tükenme süresi Baskı Öneri raporuyla aynı hesaptır; yeterlilik = stok ÷ günlük satış.",
       "Süreler Logo verisinin bittiği güne göre hesaplanır; veri günü ekranın üstünde yazar.",
       "Kitaplar stokta yok, bitecek, yeterli, fazla, hareketsiz ya da satışı yok diye ayrılır.",
+      "Dağıtımcıda kolonu Başarı Dağıtım ve D&R kataloglarını barkodla bağlar; bizde stok varken Başarı «baskısı yok» diyorsa ya da deposu boşsa işaretlenir.",
       "Logo'ya, CRM'e ve T-soft'a hiçbir şey yazılmaz.",
     ],
-    data: "Logo stok bakiyesi, hareketler, satış ve bekleyen siparişler; CRM raf stoğu ve üretim kartları",
+    data: "Logo stok bakiyesi, hareketler, satış ve bekleyen siparişler; CRM raf stoğu ve üretim kartları; Başarı Dağıtım ve D&R katalogları",
     refresh: "Okuma 5 dakika saklanır, eskiyince arka planda tazelenir; her sabah 06:30'da gece fotoğrafı alınır.",
     jobs: [
       {
@@ -404,7 +405,7 @@ const CONTENT: ScreenInfoMap = {
       "Baskı süresi Üretim yönetiminde ölçülen gerçek sürelerden gelir; ölçüm yoksa varsayılan süre kullanılır ve bu yazılır.",
       "Açık üretim kartı olmayan kritik kitap için her sabah «baskı tekrarı değerlendirilsin» önerisi açılır.",
     ],
-    data: "Logo stok ve satış; CRM üretim kartları ve bekleyen siparişler",
+    data: "Logo stok ve satış; CRM üretim kartları ve bekleyen siparişler; Başarı Dağıtım ve D&R katalogları (dağıtımcı stoğu ve durumu)",
     refresh: "Liste 5 dakikada bir tazelenir; öneriler her sabah 06:30'da üretilir.",
     jobs: [
       {
@@ -426,7 +427,7 @@ const CONTENT: ScreenInfoMap = {
       "Zeki AI her kitap için eritme yönü önerir; emin olmadığında karar size bırakılır.",
       "Öneriler gece üretilir; yetişmeyenler bir sonraki sabaha kalır.",
     ],
-    data: "Logo stok, hareket ve son 12 ay satış",
+    data: "Logo stok, hareket ve son 12 ay satış; Başarı Dağıtım ve D&R katalogları (dağıtımcı stoğu ve durumu)",
     refresh: "Her sabah 06:30'da yeni öneriler üretilir.",
     jobs: [
       {
@@ -600,6 +601,23 @@ const CONTENT: ScreenInfoMap = {
       },
     ],
     actions: ["Ay seçip firma bazında farkları inceleyin.", "Mutabakatı Excel olarak alın."],
+  },
+
+  'kargo-maliyet': {
+    summary: "Yılın kargo ve nakliye gideri, cironun yüzde kaçı olduğu ve bir gönderinin yaklaşık maliyeti; kargo firması, pazar yeri ve nakliyeci kırılımıyla.",
+    how: [
+      "Gider, Logo'daki alınan hizmet faturalarında kargo ve nakliye kodlu satırların KDV hariç toplamıdır; hangi kodların sayıldığı yönetim ayarındadır.",
+      "Hem müşterimiz olup hem bize kargo faturası kesen firma, aynı vergi numarasından «pazar yeri» olarak bulunur; carisi ayarda tanımlı olan «kargo firması», kalanı «nakliye ve diğer» sayılır.",
+      "Gönderi sayısı satış irsaliyesindeki taşıyıcı kodundan gelir; kodu boş olan mağaza satışları sayılmaz.",
+      "Kargo faturaları toplu kesildiği için gönderi başı maliyet dönem toplamlarının oranıdır, yaklaşıktır.",
+    ],
+    data: "Logo alınan hizmet faturaları, satış irsaliyeleri ve satış faturaları; CRM kargo firması adları",
+    refresh: "Okuma 5 dakika saklanır; «Verileri yenile» Logo'yu yeniden okur.",
+    actions: [
+      "Yıl seçin; aylık gideri ve taşıyıcılara göre gönderileri karşılaştırın.",
+      "Eşlenmemiş taşıyıcının Logo carisini mutabakat ekranındaki aday carilerden bulun.",
+      "Tedarikçi tablosunu Excel olarak alın (yetkiyle).",
+    ],
   },
 
   tedarik: {

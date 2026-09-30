@@ -25,8 +25,8 @@ from urllib.parse import unquote, urlsplit
 import sqlalchemy as sa
 from fastapi import HTTPException, Request
 
-from . import connections
-from .store import PRODUCTS, PROPOSALS, TARGETS, _md, dumps, iso, loads, now
+from . import connections, hazir
+from .store import GSC, PRODUCTS, PROPOSALS, TARGETS, _md, dumps, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -53,8 +53,6 @@ KINDS = ("yakin", "dusuk_tiklama")
 
 _ready: set[int] = set()
 _ready_lock = threading.Lock()
-_cache: dict[str, Any] = {"key": None, "data": None}
-_cache_lock = threading.Lock()
 
 
 def ensure_table(engine: sa.engine.Engine) -> None:
@@ -224,21 +222,30 @@ def source(seo) -> dict[str, Any]:
 
 
 def computed(seo) -> dict[str, Any]:
+    """Hazır hesaptan (girdiler değişmediyse). Girdiler: sorgu+sayfa kırılımı, yoksa yalnız-sorgu önbelleği. Eskiden her
+    istekte kırılımın bütün JSON'u açılır, ancak ondan sonra süreç belleğine bakılırdı (11 sn)."""
+    ensure_table(seo.engine())
+    st = hazir.damga(seo, [(OPPS, OPPS.c.saved_at, OPPS.c.kind == "query_page"),
+                           (GSC, GSC.c.saved_at, GSC.c.kind == "queries")])
+    return hazir.al(seo, "opportunities", st, lambda: compute(seo))
+
+
+def compute(seo) -> dict[str, Any]:
     src = source(seo)
-    key = (seo.tenant(), src["from"], src["savedAt"])
-    with _cache_lock:
-        if _cache["key"] == key and _cache["data"] is not None:
-            return _cache["data"]
     curve = ctr_curve(src["rows"])
     items = classify(src["rows"], curve)
-    data = {"source": {k: v for k, v in src.items() if k != "rows"} | {"rowCount": len(src["rows"])},
+    return {"source": {k: v for k, v in src.items() if k != "rows"} | {"rowCount": len(src["rows"])},
             "curve": [{"position": b, **v} for b, v in sorted(curve.items())], "items": items, "totals": totals(items)}
-    with _cache_lock:
-        _cache.update(key=key, data=data)
-    return data
 
 
 def product_map(seo) -> dict[str, dict[str, str]]:
+    """Adres anahtarı → ürün (kimlik, ad), hazır hesaptan: eskiden her sayfa isteğinde bütün ürün JSON'u açılırdı."""
+    seo.engine()
+    return hazir.al(seo, "opportunities.products", hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at)]),
+                    lambda: build_product_map(seo))
+
+
+def build_product_map(seo) -> dict[str, dict[str, str]]:
     """Adres anahtarı → ürün (kimlik, ad). T-soft `SeoLink` ürünün sitedeki yoludur."""
     link = sa.cast(PRODUCTS.c.data_json, sa.JSON)["SeoLink"].as_string()
     with seo.engine().connect() as c:
@@ -273,6 +280,8 @@ def _err(status: int, message: str) -> HTTPException:
 
 def register(app, ctx) -> None:
     seo = ctx.seo
+    hazir.kaydet(seo, "opportunities", lambda: computed(seo))
+    hazir.kaydet(seo, "opportunities.products", lambda: product_map(seo))
 
     def nightly() -> None:
         if connections.service_account_email():

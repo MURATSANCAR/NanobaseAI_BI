@@ -34,7 +34,7 @@ log = logging.getLogger("semantic.channels.amazon.api")
 
 R = "/api/v1/channels/amazon"
 PAGES = {"amazon": "sayfa:amazon", "konsinye": "sayfa:amazon-konsinye", "yurtdisi": "sayfa:amazon-yurtdisi",
-         "taslaklar": "sayfa:amazon-taslaklar"}
+         "taslaklar": "sayfa:amazon-taslaklar", "mutabakat": "sayfa:amazon-mutabakat"}
 F_DRAFT = "ozellik:amazon.taslak"
 F_PARAM = "ozellik:amazon.parametre"
 F_DECIDE = "ozellik:amazon.pazar-karar"

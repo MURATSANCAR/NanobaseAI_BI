@@ -39,6 +39,16 @@ class Finding:
         return {"kind": self.kind, "severity": self.severity, "message": self.message}
 
 
+_PLACEHOLDER = re.compile(r"\{[^}]*\}")
+_PATTERN_KEY = "PATTERN:"
+
+
+def _pattern_key(pattern: str) -> str:
+    """`LG_{firm}_{period}_CLFLINE` (katalog) ile `LG_{n0}_{n1}_CLFLINE` (logical_table) aynı tablo kalıbıdır:
+    yer tutucunun adı değil yeri önemlidir."""
+    return _PATTERN_KEY + _PLACEHOLDER.sub("{}", (pattern or "").upper())
+
+
 def _profiles_by_name(profiles: list[SchemaProfile]) -> tuple[dict[str, SchemaProfile], dict[str, SchemaProfile]]:
     by_table: dict[str, SchemaProfile] = {}
     by_entity: dict[str, SchemaProfile] = {}
@@ -46,8 +56,55 @@ def _profiles_by_name(profiles: list[SchemaProfile]) -> tuple[dict[str, SchemaPr
         by_table[p.table_name.upper()] = p
         by_table[f"{p.schema_name}_{p.table_name}".upper()] = p
         by_table[f"{p.schema_name}.{p.table_name}".upper()] = p
+        # Yıl/firma kopyası (LG_211_01_CLFLINE ↔ profil LG_411_01_CLFLINE): adı tutmayan tablo önce KALIBIYLA
+        # aranır. Varlık adına düşmek ancak ondan sonra — varlık adı çakışabilir (LG_…_CLFLINE ile başka bir
+        # CLFLINE görünümü), ve o zaman ilk görülen profil sorgudaki tablonun yerine okunuyordu.
+        if "{" in (p.table_pattern or ""):
+            by_table.setdefault(_pattern_key(p.table_pattern), p)
         by_entity.setdefault(p.entity, p)
     return by_table, by_entity
+
+
+def prefer_base_tables(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> str:
+    """A bare Logo name the catalog gave to a view, read with the columns only the base table has.
+
+    Two relations can claim one logical name: Logo's reporting view `LV_191_01_CLFLINE` (13 columns) became
+    entity `CLFLINE`, and the ledger it summarises — `LG_411_01_CLFLINE`, 130 columns — became `LG_CLFLINE`
+    (17 such pairs, 2026-09-29: CLFLINE, KSLINES, STFICHE, ORFICHE, BNFLINE …). The model writes the Logo table
+    name it knows, `FROM CLFLINE l … l.AMOUNT`, and was refused for a column "the table does not have".
+    Decided by the statement's own columns: where every column read through that alias exists in `LG_<name>`
+    and not all of them in `<name>`, the base table is what was meant. A statement that reads only the view's
+    columns keeps the view. Fails open: anything unreadable returns the statement unchanged."""
+    try:
+        tree = sqlglot.parse_one(sql, read=dialect)
+        root = build_scope(tree)
+    except Exception:  # noqa: BLE001
+        return sql
+    if root is None:
+        return sql
+    by_table, by_entity = _profiles_by_name(profiles)
+    changed = False
+    try:
+        for scope in root.traverse():
+            selected = scope.selected_sources
+            for alias, (_node, source) in selected.items():
+                if not isinstance(source, exp.Table) or not source.name:
+                    continue
+                name = source.name
+                if by_table.get(name.upper()) or name.upper().startswith("LG_"):
+                    continue                        # a physical name, or already the base table's label
+                cur, base = by_entity.get(name.upper()), by_entity.get("LG_" + name.upper())
+                if cur is None or base is None or cur is base or not base.columns or not cur.columns:
+                    continue
+                cols = {c.name.upper() for c in scope.columns
+                        if c.name and c.name != "*" and ((c.table or "").upper() == str(alias).upper()
+                                                         or (not c.table and len(selected) == 1))}
+                if cols and all(base.column(c) for c in cols) and not all(cur.column(c) for c in cols):
+                    source.set("this", exp.to_identifier("LG_" + name))
+                    changed = True
+    except Exception:  # noqa: BLE001
+        return sql
+    return tree.sql(dialect=dialect) if changed else sql
 
 
 def _resolve(node: exp.Table, by_table: dict, by_entity: dict) -> Optional[SchemaProfile]:
@@ -56,8 +113,28 @@ def _resolve(node: exp.Table, by_table: dict, by_entity: dict) -> Optional[Schem
     prof = by_table.get(key.upper()) or by_table.get(raw.upper())
     if prof is None:
         lt = logical_table(raw)
-        prof = by_entity.get(lt.entity)
+        prof = by_table.get(_pattern_key(lt.table_pattern)) if "{" in lt.table_pattern else None
+        if prof is None:
+            prof = by_entity.get(lt.entity)
     return prof
+
+
+def _resolved_exactly(node: exp.Table, prof: SchemaProfile) -> bool:
+    """Sorgudaki tablo bu profile adıyla, varlık adıyla ya da kalıbıyla mı bağlandı — yoksa bir fiziksel adın
+    sayıları atılıp kalan varlık adı tahminiyle mi (LG_211_01_CLFLINE → «CLFLINE» → başka bir tablo)?"""
+    raw = (node.name or "").upper()
+    names = {prof.table_name.upper(), f"{prof.schema_name}_{prof.table_name}".upper(),
+             f"{prof.schema_name}.{prof.table_name}".upper(), (prof.entity or "").upper()}
+    if raw in names or (((node.db or "") + "_" + raw).upper() in names):
+        return True
+    lt = logical_table(node.name or "")
+    return "{" in lt.table_pattern and _pattern_key(lt.table_pattern) == _pattern_key(prof.table_pattern)
+
+
+def _bare_of(entity: str) -> str:
+    """Bir tablonun iki katalog yazımı (CLFLINE / LG_CLFLINE) tek ad."""
+    e = (entity or "").upper()
+    return e[3:] if e.startswith("LG_") else e
 
 
 @dataclass(frozen=True)
@@ -421,6 +498,51 @@ def _mismatched_keys(tree: exp.Expression, by_table: dict, by_entity: dict, dial
     return out
 
 
+#: Köprü tablosu (barkod, birim) anahtar tablosunun satırı başına en çok bu kadar satır taşır. Ölçülen satır
+#: sayılarından okunur; fazlası bir hareket tablosudur ve kırılım anahtarı olsa bile grubu çoğaltır.
+_BRIDGE_ROWS_PER_KEY = 2.0
+
+
+def _grouping_bridge(select: exp.Select, summed: set[str], others: set[str], rels: dict[str, "_Rel"],
+                     many_of: dict[str, set[str]]) -> bool:
+    """Aynı anahtara bağlı ikinci çoklu ilişki (`others`) bu SELECT'te yalnız kırılımın anahtarı mı?
+
+    Satış satırı ↔ ürün ↔ barkod: barkod tablosu toplanan hiçbir şeye girmiyor, GROUP BY'da duruyor. O zaman
+    her grup tek bir barkod satırıdır ve satış satırı o grupta bir kez sayılır — şişme yok. Ama bu yalnız
+    köprü tablosu gerçekten küçükse doğrudur: GROUP BY'da bir hareket tablosunun tarihi dururken (sipariş
+    satırı toplamı, stok satırının tarihine göre) aynı gün birden çok stok satırı siparişi yine çoğaltır.
+    Üç şart, üçü de ölçülen profilden: (1) ilişki hiçbir toplamaya girmiyor, GROUP BY'da kolonu var;
+    (2) satır sayısı anahtar tablosunun satırı başına ≤ 2; (3) gruplanan kolonu sayılabilir küçük bir kod
+    kümesi değil (enum değil) — kod kümesi aynı anahtarda tekrar eder. Bilinmeyen bir şey varsa False."""
+    group = select.args.get("group")
+    if group is None or not others:
+        return False
+    grouped: dict[str, set[str]] = {}
+    for g in group.expressions:
+        for c in g.find_all(exp.Column):
+            if c.table:
+                grouped.setdefault(c.table.upper(), set()).add(c.name.upper())
+    in_aggregates = {(c.table or "").upper() for agg in select.find_all(exp.AggFunc) if _in_scope(agg, select)
+                     for c in agg.find_all(exp.Column)}
+    for b in others:
+        rb = rels.get(b)
+        if rb is None or rb.profile is None or b in in_aggregates or not grouped.get(b):
+            return False
+        keys = [k for k, manys in many_of.items() if b in manys and manys & summed]
+        if not keys:
+            return False
+        for k in keys:
+            rk = rels.get(k)
+            kr = rk.profile.row_count if rk is not None and rk.profile is not None else None
+            br = rb.profile.row_count
+            if not kr or br is None or br > _BRIDGE_ROWS_PER_KEY * kr:
+                return False
+        cols = [rb.profile.column(n) for n in grouped[b]]
+        if not any(col is not None and not col.is_enum() for col in cols):
+            return False
+    return True
+
+
 def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
            names: Optional[dict[str, set[str]]] = None) -> list[Finding]:
     """Findings about `sql`, most serious first. Empty when there is nothing to say or nothing to read.
@@ -433,6 +555,9 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
         except Exception:  # noqa: BLE001
             return []
     by_table, by_entity = _profiles_by_name(profiles)
+    same_entity: dict[str, list[SchemaProfile]] = {}          # LG_ önekiyle ve öneksiz aynı ad
+    for p in profiles:
+        same_entity.setdefault(_bare_of(p.entity), []).append(p)
     findings: list[Finding] = []
     try:
         root = build_scope(tree)
@@ -606,6 +731,15 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                         findings.append(Finding("FANOUT", "warn",
                             f"{agg.sql(dialect=dialect)}: {who} satırları join'de tekrarlanıyor; ortalama ince "
                             f"tarafın satır sayısıyla ağırlıklı. {who} başına ortalama isteniyorsa önce o seviyede topla."))
+                    elif aliases & chasm and _grouping_bridge(select, aliases, chasm - aliases, rels, many_of):
+                        # 2026-09-29 tam kapı A023: satış satırı ↔ ürün ↔ barkod. Barkod tablosu ölçüye bir şey
+                        # katmıyor, yalnız kırılımın anahtarı: her grup tek barkod satırıdır, satış satırı o grupta
+                        # bir kez sayılır. Yine de söylenir — aynı ürünün iki satırında aynı değer varsa tekrar eder.
+                        others = ", ".join(sorted(rels[a].entity for a in (chasm - aliases) if a in rels))
+                        findings.append(Finding("FANOUT", "warn",
+                            f"{agg.sql(dialect=dialect)}: {who} satırları {others} ile aynı anahtara bağlı; {others} "
+                            f"yalnız kırılım anahtarı olarak okunduğu için her grupta bir kez sayılır. Aynı anahtarda "
+                            f"{others} değeri tekrarlanırsa o grup çoğalır."))
                     elif aliases & chasm:
                         others = ", ".join(sorted(rels[a].entity for a in (chasm - aliases) if a in rels)) or "diğer ilişki"
                         findings.append(Finding("FANOUT", "block",
@@ -698,6 +832,7 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
         # correct answer became a refusal (Q66 gerilemesi).
         aliased = {a.alias_or_name.upper() for a in tree.find_all(exp.Alias) if a.alias_or_name}
         aliased |= {c.alias_or_name.upper() for c in tree.find_all(exp.CTE) if c.alias_or_name}
+        nodes = {str(a).upper(): s for a, s in scope.sources.items() if isinstance(s, exp.Table)}
         for c in select.find_all(exp.Column):
             if not _in_scope(c, select) or c.name == "*":
                 continue
@@ -707,7 +842,17 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
             if prof is None or not prof.columns:
                 continue
             if prof.column(c.name) is None:
-                findings.append(Finding("UNKNOWN_COLUMN", "block",
+                # 2026-09-29 tam kapı B019: «CLFLINE tablosunda AMOUNT adında kolon yok» — Logo cari hareketinde
+                # AMOUNT vardır. Tablo yalnız fiziksel addan TAHMİNLE bağlandıysa (sayıları atılıp kalan varlık adı,
+                # LG_211_01_CLFLINE → «CLFLINE» görünümü) okunan profil başka bir tablonun olabilir: aynı adı (LG_ önekli
+                # ya da öneksiz) taşıyan profillerden biri kolonu taşıyorsa ret yok, hiçbiri taşımıyorsa uyarı. Tablo
+                # adıyla, varlık adıyla ya da kalıbıyla bağlandıysa ret aynen: çıplak «CLFLINE» (görünüm) + taban tablonun
+                # kolonu, eleştirmenden önce `prefer_base_tables` ile LG_CLFLINE'a çevrilir; çevrilmemişse ret doğrudur.
+                node = nodes.get((c.table or "").upper()) if c.table else (next(iter(nodes.values())) if len(nodes) == 1 else None)
+                exact = node is not None and _resolved_exactly(node, prof)
+                if not exact and any(p.column(c.name) is not None for p in same_entity.get(_bare_of(prof.entity), ())):
+                    continue
+                findings.append(Finding("UNKNOWN_COLUMN", "block" if exact else "warn",
                     f"{prof.entity} tablosunda {c.name} adında kolon yok."))
 
     findings += _mismatched_keys(tree, by_table, by_entity, dialect)

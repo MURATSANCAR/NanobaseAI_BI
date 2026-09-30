@@ -269,8 +269,8 @@ def test_feature_rules_match_the_actions_not_the_reads():
     assert f("DELETE", "/api/v1/alerts/a1") == ["ozellik:uyari.kural"] and f("GET", "/api/v1/alerts/a1/events") == []
     assert f("POST", "/api/v1/editorial/studio/jobs") == ["ozellik:tasarim.uret"]
     assert f("POST", "/api/v1/editorial/studio/jobs/j1/art/k/regenerate") == ["ozellik:tasarim.uret"]
-    assert f("POST", "/api/v1/editorial/studio/jobs/j1/art/k/approve") == []
-    assert f("POST", "/api/v1/editorial/studio/jobs/j1/kunye") == []
+    assert f("POST", "/api/v1/editorial/studio/jobs/j1/art/k/approve") == ["ozellik:tasarim.uret"]
+    assert f("POST", "/api/v1/editorial/studio/jobs/j1/kunye") == ["ozellik:tasarim.uret"]
     assert f("GET", "/api/v1/financial-audit/lines") == ["ozellik:denetim.detay"]
     assert f("POST", "/api/v1/seo-geo/questions/measure") == ["ozellik:seo.calistir"]
     assert f("POST", "/api/v1/seo-geo/proposals/p1/decide") == []          # onay ucun içinde (açıkça verilen)
@@ -286,6 +286,112 @@ def test_feature_rules_match_the_actions_not_the_reads():
     assert f("POST", "/api/v1/seo-geo/indexnow/submit") == []              # onay ucun içinde
     keys = {k for _, _, k in A.FEATURE_RULES}
     assert keys <= A.all_keys() - A.explicit_keys()
+
+
+_STUDIO_READS_BY_POST = {"/api/v1/editorial/studio/jobs/{job}/plan/prepare",      # sayfa düzeni ekranının açılışı
+                         "/api/v1/editorial/studio/jobs/{job}/narration/read"}     # metnin okunuşu, kayıt yok
+_STUDIO_ADMIN_ONLY = {("DELETE", "/api/v1/editorial/studio/voices/{vid}"),          # ucun içinde yalnız yönetici
+                      ("POST", "/api/v1/editorial/studio/library/refresh")}
+_STUDIO_EXPORTS = {"/api/v1/editorial/studio/jobs/{job}/pdf/{kind}", "/api/v1/editorial/studio/jobs/{job}/age/pdf",
+                   "/api/v1/editorial/studio/jobs/{job}/plan/versions/report", "/api/v1/editorial/studio/jobs/{job}/epub/file",
+                   "/api/v1/editorial/studio/jobs/{job}/marketing/product/export",
+                   "/api/v1/editorial/studio/jobs/{job}/marketing/social/zip",
+                   "/api/v1/editorial/studio/jobs/{job}/marketing/guide/pdf"}
+
+
+def _sample(path: str) -> str:
+    import re
+    return re.sub(r"\{[^}]+\}", "x1", path.replace("{path:path}", "OEBPS/p1.xhtml"))
+
+
+def test_every_studio_write_needs_the_studio_permission(monkeypatch, store, settings):
+    """Stüdyonun her yazma ucu (pazarlama kiti, e-kitap, ses kütüphanesi, efekt, ifade, insan kaydı, boyama, kolaj,
+    künye, sayfa planı…) `tasarim.uret` ister; okumalar yalnız sayfa kuralına, indirmeler `veri.disa-aktar`a bağlı.
+    Yeni bir stüdyo yazma ucu eklenince kural kendiliğinden kapsar; okuma gibi davranan POST bu listeye yazılır."""
+    app, _ = _app(monkeypatch, store, settings)
+    writes, bad = 0, []
+    for r in app.routes:
+        path = getattr(r, "path", "")
+        if not path.startswith("/api/v1/editorial/studio"):
+            continue
+        for m in sorted(getattr(r, "methods", None) or ()):
+            if m in ("HEAD", "OPTIONS"):
+                continue
+            got = A.features_for(m, _sample(path))
+            if m == "GET":
+                want = ["ozellik:veri.disa-aktar"] if path in _STUDIO_EXPORTS else []
+            elif path in _STUDIO_READS_BY_POST or (m, path) in _STUDIO_ADMIN_ONLY:
+                want = []
+            else:
+                want, writes = ["ozellik:tasarim.uret"], writes + 1
+            if got != want:
+                bad.append(f"{m} {path}: {got} (beklenen {want})")
+    assert bad == []
+    assert writes >= 75            # stüdyonun yazma uçları gerçekten tarandı (2026-09-29: 80)
+
+
+def test_studio_gate_keeps_viewers_read_only(monkeypatch, store, settings):
+    """Yalnız sayfası olan rol stüdyoyu görür ama pazarlama/e-kitap/ses/efekt yazamaz, dosya indiremez; yetkisi
+    eklenince aynı istek kapıdan geçer."""
+    app, _ = _app(monkeypatch, store, settings)
+    client = TestClient(app, raise_server_exceptions=False)   # kapıdan geçen istek testte stüdyo servisine ulaşamaz
+    engine = store.engine
+    A.ensure(engine, TENANT)
+    _narrow_everyone(engine)
+    rid = A.save_role(engine, TENANT, "zekiai", {"name": "Tasarım izleyici", "perms": ["sayfa:kitap-tasarim"]})["id"]
+    A.add_binding(engine, TENANT, "zekiai", rid, {"type": "user", "subject": "ayse"})
+    A.invalidate()
+    a = {"cookie": "timas_session=a", "origin": "http://testserver"}
+    calls = [("PUT", "/api/v1/editorial/studio/jobs/j1/marketing/back-cover", {"text": "x"}),
+             ("POST", "/api/v1/editorial/studio/jobs/j1/epub", {"layout": "auto"}),
+             ("POST", "/api/v1/editorial/studio/voices", {}),
+             ("POST", "/api/v1/editorial/studio/jobs/j1/sfx/suggest", {}),
+             ("PUT", "/api/v1/editorial/studio/jobs/j1/narration/pages/p1/expression", {"items": []}),
+             ("GET", "/api/v1/editorial/studio/jobs/j1/epub/file", None)]
+    for m, p, body in calls:
+        r = client.request(m, p, json=body, headers=a)
+        assert r.status_code == 403 and r.json()["detail"]["message"] == "Bu işlem rolünüzde yok.", (m, p)
+    assert client.get("/api/v1/editorial/studio/jobs/j1/marketing", headers=a).status_code != 403
+    A.save_role(engine, TENANT, "zekiai", {"name": "Tasarım izleyici", "perms": [
+        "sayfa:kitap-tasarim", "ozellik:tasarim.uret", "ozellik:veri.disa-aktar"]}, rid)
+    A.invalidate()
+    for m, p, body in calls:
+        assert client.request(m, p, json=body, headers=a).status_code != 403, (m, p)
+
+
+def test_single_social_image_download_needs_the_export_permission(monkeypatch, store, settings):
+    """Tek sosyal görselin görüntülenmesi ve indirilmesi aynı yolda (`…/social/{sid}` ve `?download=1`): kapı yola
+    baktığı için ayıramaz, indirme ucun içinde `veri.disa-aktar` ister; görüntüleme yalnız sayfa yetkisiyle kalır."""
+    from semantic_bridge import editorial_studio_marketing as esm
+
+    app, client = _app(monkeypatch, store, settings)
+    got: list[dict] = []
+
+    def fake_fetch(job, sub, params=None):
+        got.append(dict(params or {}))
+        return b"png", "image/png", None
+
+    monkeypatch.setattr(esm, "fetch", fake_fetch)
+    engine = store.engine
+    A.ensure(engine, TENANT)
+    _narrow_everyone(engine)
+    rid = A.save_role(engine, TENANT, "zekiai", {"name": "Tasarım izleyici", "perms": ["sayfa:kitap-tasarim"]})["id"]
+    A.add_binding(engine, TENANT, "zekiai", rid, {"type": "user", "subject": "ayse"})
+    A.invalidate()
+    a = {"cookie": "timas_session=a"}
+    url = "/api/v1/editorial/studio/jobs/j1/marketing/social/s_0123abcd"
+    view = client.get(url + "?w=640", headers=a)
+    assert view.status_code == 200 and "attachment" not in view.headers.get("content-disposition", "")
+    denied = client.get(url + "?download=1", headers=a)
+    assert denied.status_code == 403 and denied.json()["detail"]["message"] == "Bu işlem rolünüzde yok."
+    assert got == [{"w": 640}]                    # yetkisiz indirme stüdyo servisine hiç gitmedi
+    A.save_role(engine, TENANT, "zekiai", {"name": "Tasarım izleyici", "perms": [
+        "sayfa:kitap-tasarim", "ozellik:veri.disa-aktar"]}, rid)
+    A.invalidate()
+    ok = client.get(url + "?download=1", headers=a)
+    assert ok.status_code == 200 and "attachment" in ok.headers["content-disposition"]
+    assert got[-1] == {"download": "1"}
+    assert client.get(url + "?download=1", headers={"cookie": "timas_session=z"}).status_code == 200   # yönetici
 
 
 def test_feature_gate_in_the_bridge(monkeypatch, store, settings):

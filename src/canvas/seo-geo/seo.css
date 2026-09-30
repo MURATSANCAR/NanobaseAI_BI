@@ -85,6 +85,32 @@
 .sg-filter:active { transform: scale(.97) }
 .sg-filter[aria-pressed="true"] { background: var(--sg-ink); color: #fff; border-color: var(--sg-ink) }
 .sg-filter .sg-mono { font-size: 11px; opacity: .7 }
+.sg-filter:disabled { opacity: .45; cursor: default }
+
+/* Tarih aralığı (ZEKI-50): hazır aralıklar, özel aralık, karşılaştırma. Telefonda alt alta, sayfa yana taşmaz. */
+.sg-range { display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.sg-range-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; min-width: 0 }
+.sg-range-custom { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; min-width: 0 }
+.sg-range-custom label, .sg-range-compare { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 10.5px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: #8b8098 }
+.sg-range-custom input, .sg-range-compare select {
+  min-height: 44px; min-width: 0; max-width: 100%; padding: 0 12px; border: 1px solid var(--sg-line); border-radius: 13px; background: #fff;
+  font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--sg-ink);
+}
+.sg-range-custom input:focus-visible, .sg-range-compare select:focus-visible { border-color: #c9b8ef; box-shadow: 0 0 0 3px #aa87e833 }
+.sg-range-help { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--sg-muted) }
+.sg-range-shown { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 10px; font-size: 12px; color: var(--sg-muted) }
+.sg-range-shown strong { color: var(--sg-ink); font-variant-numeric: tabular-nums }
+.sg-range-gone { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-size: 12px; font-weight: 650; color: var(--sg-text); cursor: pointer }
+.sg-range-gone input { width: 18px; height: 18px; accent-color: var(--sg-violet) }
+.sg-delta { font-weight: 700; color: var(--sg-muted) }
+.sg-delta.up { color: #0f7a51 }
+.sg-delta.down { color: #c2361b }
+.sg-delta.new { font-family: inherit; font-size: 11px; color: #5b3fd6 }
+.sg-row-gone td { color: var(--sg-muted) }
+@media (max-width: 767px) {
+  .sg-range-custom, .sg-range-custom label, .sg-range-compare { flex: 1 1 100% }
+  .sg-range-custom input, .sg-range-compare select { width: 100% }
+}
 
 .sg-search { display: flex; align-items: center; gap: 8px; min-height: 44px; max-height: 44px; box-sizing: border-box; flex: 1 1 240px; padding: 0 12px; border: 1px solid var(--sg-line); border-radius: 13px; background: #fff; color: var(--sg-muted) }
 /* flex-basis 240px alt alta dizilen kapsayıcıda yüksekliğe dönüşüyordu (iş listesi, satıştan kalkan): kutu 44 px'te kalır. */
@@ -102,7 +128,8 @@
 .sg-item-name { font-size: 13px; font-weight: 750; color: var(--sg-ink); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
 .sg-item-meta { margin-top: 3px; font-size: 11px; color: var(--sg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .sg-item-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px }
-.sg-pager { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--sg-muted) }
+.sg-pager { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--sg-muted) }
+.sg-pager-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px }
 
 .sg-issues { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) }
 .sg-issue { padding: 12px 14px; border-radius: 16px; background: #fff8f6; border: 1px solid #ffe2da }

@@ -10,6 +10,8 @@ import {
   type SfxAmbience, type SfxCue, type SfxOverview, type SfxPage, type SfxSound,
 } from './sfxApi';
 import { StudioInfo } from '../shared';
+import { useCan } from '../../../useAdmin';
+import { EmptyHint, Explain } from '../../../components/Explain';
 
 /** Sesli okumada efekt sesleri: Zeki AI sayfa metninden yansıma sözcükleri («vak vak», «güm»), sesi olan olayları
  *  («kapı gıcırdadı») ve sahne ortamını bulur; her ipucu havuzdan en uygun sesle eşleşir. Editör her ipucunda sesi
@@ -28,6 +30,9 @@ const MIX: Record<string, { dot: string; text: string }> = {
 
 export default function SoundEffects({ jobId, narrationReady }: { jobId: string; narrationReady: boolean }) {
   const qc = useQueryClient();
+  // Açma/kapama, öneri, karıştırma ve sayfa efektlerini değiştirmek «Kitap tasarımında üretim ve düzenleme» ister;
+  // yoksa efektler ve efektli ses yalnız görüntülenip dinlenir.
+  const canEdit = useCan('tasarim.uret');
   const q = useSfx(jobId);
   const d = q.data;
   const refresh = () => qc.invalidateQueries({ queryKey: ['studio', 'sfx', jobId] });
@@ -44,14 +49,15 @@ export default function SoundEffects({ jobId, narrationReady }: { jobId: string;
             Efekt sesleri
             <StudioInfo label="Efekt sesleri" what="Efekt sayısı sayfalara yerleşmiş efektler; kütüphanedeki ses sayısı efekt kütüphanesinden." />
           </h3>
-          <p className="text-[11.5px] text-canvas-muted">Patlama, vak vak, rüzgâr, ateş… Anlatımın altına, kelimenin yanına yerleşir.</p>
+          <p className="text-[11.5px] text-canvas-muted">Patlama, vak vak, rüzgâr, ateş… Zeki AI metindeki sesleri bulur; seçtiğiniz efekt anlatımın altında, kelimenin okunduğu anda çalar.</p>
         </div>
-        {d && <Toggle jobId={jobId} d={d} onDone={refresh} />}
+        {d && (canEdit ? <Toggle jobId={jobId} d={d} onDone={refresh} />
+          : <span className="text-[12px] font-bold text-canvas-muted">{d.settings.enabled ? 'Efektler açık' : 'Efektler kapalı'}</span>)}
       </div>
       {err?.code === 'NO_LIBRARY' ? <Note tone="info">{err.message}</Note>
         : q.error ? <Note tone="err">{errText(q.error, 'Efekt sesleri okunamadı.')}</Note>
           : !d ? <div className="py-4 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>
-            : <Body jobId={jobId} d={d} refresh={refresh} narrationReady={narrationReady} />}
+            : <Body jobId={jobId} d={d} refresh={refresh} narrationReady={narrationReady} canEdit={canEdit} />}
     </section>
   );
 }
@@ -62,7 +68,9 @@ function Toggle({ jobId, d, onDone }: { jobId: string; d: SfxOverview; onDone: (
   return <Switch label={on ? 'Efektler açık' : 'Efektler kapalı'} checked={on} onChange={(v) => { if (!m.isPending) m.mutate(v); }} />;
 }
 
-function Body({ jobId, d, refresh, narrationReady }: { jobId: string; d: SfxOverview; refresh: () => void; narrationReady: boolean }) {
+function Body({ jobId, d, refresh, narrationReady, canEdit }: {
+  jobId: string; d: SfxOverview; refresh: () => void; narrationReady: boolean; canEdit: boolean;
+}) {
   const running = d.run.state === 'running';
   const wasRunning = useRef(running);
   const qc = useQueryClient();
@@ -86,6 +94,7 @@ function Body({ jobId, d, refresh, narrationReady }: { jobId: string; d: SfxOver
           {d.run.state === 'failed' && <Note tone="err">{d.run.error ?? 'İş yarıda kaldı.'}</Note>}
           {(suggest.error || mixAll.error) && <Note tone="err">{errText(suggest.error || mixAll.error, 'İşlem yapılamadı.')}</Note>}
           <div className="flex flex-wrap items-center gap-2">
+            {canEdit && <>
             <button type="button" className={gradientBtn} disabled={running || suggest.isPending || unsuggested === 0}
               onClick={() => suggest.mutate(false)} title="Zeki AI sayfaları okuyup efekt önerir">
               {running && d.run.kind !== 'mix' ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
@@ -102,6 +111,7 @@ function Body({ jobId, d, refresh, narrationReady }: { jobId: string; d: SfxOver
                 <Wand2 className="h-4 w-4" aria-hidden />Yeniden öner
               </button>
             )}
+            </>}
             <button type="button" className={ghostBtn} aria-expanded={browse} onClick={() => setBrowse((b) => !b)}>
               <AudioLines className="h-4 w-4" aria-hidden />Kütüphane
             </button>
@@ -109,12 +119,12 @@ function Body({ jobId, d, refresh, narrationReady }: { jobId: string; d: SfxOver
           {running && (
             <div className="flex flex-col gap-1">
               <Progress value={d.run.done ?? 0} total={d.run.total ?? 0} />
-              <span className="text-[11.5px] text-canvas-muted">{d.run.done ?? 0}/{d.run.total ?? 0} sayfa {d.run.kind === 'mix' ? 'karıştırıldı' : 'okundu'}</span>
+              <span className="text-[11.5px] text-canvas-muted">{d.run.done ?? 0}/{d.run.total ?? 0} sayfa {d.run.kind === 'mix' ? 'karıştırıldı' : 'okundu'} · İş arka planda sürer; sayfadan ayrılabilirsiniz.</span>
             </div>
           )}
-          {!narrationReady && <Note tone="info">Efektli ses, sayfanın anlatımı hazır olunca karıştırılır. Efektleri şimdiden seçebilirsiniz.</Note>}
+          {!narrationReady && <Note tone="info">Efektli ses, sayfanın anlatımı hazır olunca karıştırılır.{canEdit ? ' Efektleri şimdiden seçebilirsiniz.' : ''}</Note>}
           {browse && <SoundEffectsLibrary onClose={() => setBrowse(false)} />}
-          <PageEditor jobId={jobId} d={d} refresh={refresh} />
+          <PageEditor jobId={jobId} d={d} refresh={refresh} canEdit={canEdit} />
           <Credits d={d} />
         </>
       )}
@@ -123,7 +133,7 @@ function Body({ jobId, d, refresh, narrationReady }: { jobId: string; d: SfxOver
 }
 
 // ---------------------------------------------------------------- sayfa
-function PageEditor({ jobId, d, refresh }: { jobId: string; d: SfxOverview; refresh: () => void }) {
+function PageEditor({ jobId, d, refresh, canEdit }: { jobId: string; d: SfxOverview; refresh: () => void; canEdit: boolean }) {
   const [pid, setPid] = useState<string | null>(null);
   useEffect(() => {
     if (!pid || !d.pages.some((p) => p.id === pid)) setPid((d.pages.find((p) => p.active || p.ambience) ?? d.pages[0])?.id ?? null);
@@ -132,7 +142,7 @@ function PageEditor({ jobId, d, refresh }: { jobId: string; d: SfxOverview; refr
   const stamp = `${row?.mix ?? ''}-${row?.cues ?? ''}-${row?.suggested ?? ''}-${d.run.state}`;
   const pq = useSfxPage(jobId, pid, stamp);
 
-  if (d.pages.length === 0) return <p className="text-[12.5px] text-canvas-muted">Kitapta okunacak metin yok.</p>;
+  if (d.pages.length === 0) return <EmptyHint title="Okunacak metin yok" why="Efekt, sayfadaki yazıya bağlanır. Sayfa düzeninde sayfalara metin ekleyince sayfalar burada listelenir." />;
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
       <ul className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Sayfalar">
@@ -148,7 +158,7 @@ function PageEditor({ jobId, d, refresh }: { jobId: string; d: SfxOverview; refr
         ))}
       </ul>
       {pq.error ? <Note tone="err">{errText(pq.error, 'Sayfa okunamadı.')}</Note>
-        : pq.data && pid ? <PageBody key={`${pid}-${stamp}`} jobId={jobId} pid={pid} page={pq.data} onSaved={refresh} />
+        : pq.data && pid ? <PageBody key={`${pid}-${stamp}`} jobId={jobId} pid={pid} page={pq.data} onSaved={refresh} canEdit={canEdit} />
           : <div className="py-4 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
     </div>
   );
@@ -156,7 +166,9 @@ function PageEditor({ jobId, d, refresh }: { jobId: string; d: SfxOverview; refr
 
 type Sel = { block: string; a: number; b: number } | null;
 
-function PageBody({ jobId, pid, page, onSaved }: { jobId: string; pid: string; page: SfxPage; onSaved: () => void }) {
+function PageBody({ jobId, pid, page, onSaved, canEdit }: {
+  jobId: string; pid: string; page: SfxPage; onSaved: () => void; canEdit: boolean;
+}) {
   const qc = useQueryClient();
   const [cues, setCues] = useState<SfxCue[]>(page.cues.filter((c) => c.kind !== 'ortam'));
   const [amb, setAmb] = useState<SfxAmbience | null>(page.ambience);
@@ -182,6 +194,7 @@ function PageBody({ jobId, pid, page, onSaved }: { jobId: string; pid: string; p
   }, [cues]);
 
   const clickWord = (block: string, i: number) => {
+    if (!canEdit) return;
     if (sel && sel.block === block && sel.a === sel.b && i !== sel.a) setSel({ block, a: Math.min(sel.a, i), b: Math.max(sel.a, i) });
     else setSel({ block, a: i, b: i });
   };
@@ -211,7 +224,7 @@ function PageBody({ jobId, pid, page, onSaved }: { jobId: string; pid: string; p
     <div className="flex min-w-0 flex-col gap-3">
       {/* sayfa metni: efekt olan kelimeler işaretli; kelimeye dokunarak seçip yeni efekt eklenir */}
       <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-3">
-        <p className="mb-1.5 text-[11px] text-canvas-muted">Yeni efekt için kelimeye dokunun (iki kelimeye dokunursanız arası seçilir).</p>
+        <p className="mb-1.5 text-[11px] text-canvas-muted">{canEdit ? 'Yeni efekt için kelimeye dokunun (iki kelimeye dokunursanız arası seçilir).' : 'Efekt olan kelimeler işaretli.'}</p>
         <div className="flex flex-col gap-2 text-[14px] leading-7">
           {page.blocks.map((b) => (
             <p key={b.id} className={b.kind === 'bubble' ? 'italic' : ''}>
@@ -250,8 +263,12 @@ function PageBody({ jobId, pid, page, onSaved }: { jobId: string; pid: string; p
           pickedId={picker.target === 'amb' ? amb?.chosen : cues.find((c) => c.id === picker.target)?.chosen} />
       )}
 
+      <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
       <div className="flex min-w-0 flex-col gap-2">
-        <h4 className="text-[12.5px] font-extrabold">Efektler {cues.length ? `(${cues.length})` : ''}</h4>
+        <h4 className="flex items-center gap-1 text-[12.5px] font-extrabold">
+          Efektler {cues.length ? `(${cues.length})` : ''}
+          <Explain label="Efektler">Her satır, metindeki bir kelimeye bağlı bir efekttir. Numaralı adaylardan birini dinleyip seçin; «Zeki AI %…» önerinin ne kadar emin olduğunu gösterir. «Kelimeyle birlikte» efekti kelime okunurken, «Hemen ardından» kelimeden sonra çaldırır. Değişiklikler «Sayfayı kaydet»e basınca geçerli olur.</Explain>
+        </h4>
         {cues.length === 0 && <p className="text-[12px] text-canvas-muted">{page.suggested ? 'Zeki AI bu sayfada efekt önermedi.' : 'Bu sayfa henüz önerilmedi.'}</p>}
         <ul className="flex flex-col gap-2">
           {cues.map((c) => (
@@ -264,8 +281,10 @@ function PageBody({ jobId, pid, page, onSaved }: { jobId: string; pid: string; p
 
       <Ambience amb={amb} sounds={sounds} preview={preview} onChange={setAmb}
         onSearch={() => setPicker({ target: 'amb', query: amb?.query || '', en: amb?.query_en || '', kind: 'ortam' })} />
+      </fieldset>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-3">
+        {canEdit && <>
         <button type="button" className={gradientBtn} disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
           {dirty ? 'Sayfayı kaydet' : 'Kaydedildi'}
@@ -275,9 +294,12 @@ function PageBody({ jobId, pid, page, onSaved }: { jobId: string; pid: string; p
           {mix.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
           Bu sayfayı karıştır
         </button>
+        </>}
         <span className="flex items-center gap-1.5 text-[11.5px] text-canvas-muted">
           <span className={`inline-block h-2 w-2 rounded-full ${MIX[page.mix.state].dot}`} aria-hidden />{MIX[page.mix.state].text}
+          <Explain label="Karıştırma">Karıştırma, seçilen efektleri sayfanın anlatım sesiyle tek ses dosyasında birleştirir; anlatım yeniden seslendirilmez. Önce «Sayfayı kaydet», sonra «Bu sayfayı karıştır». Sayfa henüz seslendirilmediyse efektli ses anlatım hazır olunca karıştırılabilir.</Explain>
         </span>
+        {dirty && <span className="w-full text-[11px] text-canvas-muted">Kaydedilmemiş değişiklik var; karıştırmadan önce sayfayı kaydedin.</span>}
       </div>
       {(save.error || mix.error) && <Note tone="err">{errText(save.error || mix.error, 'İşlem yapılamadı.')}</Note>}
       {mixUrl && <MixPlayer url={mixUrl} placements={page.mix.meta?.placements ?? []} />}
@@ -361,7 +383,10 @@ function Ambience({ amb, sounds, preview, onChange, onSearch }: {
     <div className="flex min-w-0 flex-col gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-2.5">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <Trees className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
-        <h4 className="text-[12.5px] font-extrabold">Ortam sesi</h4>
+        <h4 className="flex items-center gap-1 text-[12.5px] font-extrabold">
+          Ortam sesi
+          <Explain label="Ortam sesi">Sahnenin arka plan sesi (orman, yağmur, kalabalık…). Sayfa boyunca çok düşük çalar, girişte ve çıkışta yumuşakça açılıp kapanır. «Bölümün bütün sayfaları» seçilirse aynı bölümdeki sayfalarda da çalar.</Explain>
+        </h4>
         <span className="min-w-0 truncate text-[11.5px] text-canvas-muted">
           {amb ? `${amb.query || 'seçildi'}${amb.from_page ? ' · bölümden' : ''}` : 'Sayfa boyunca çok düşük, girişte ve çıkışta yumuşak'}
         </span>

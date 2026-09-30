@@ -440,7 +440,7 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
   uzunluk `templates/marketing/measure.typ` ile cover.typ'nin arka kapak bloğuyla aynı dizgide ölçülür — cover.typ'nin
   arka kapak bloğu değişirse measure.typ de değişir.
 - Ürün sayfası SEO'ya `SeoGeo.external_proposal` ile «hazir» öneri olarak düşer; T-soft'a yazım yok.
-- Sosyal görseller modelsiz (Pillow); model üretimi görsel kullanan görsel `draft` (ekranda uyarı, dosya adı TASLAK-).
+- Sosyal görseller modelsiz (Pillow); model üretimi görsel kullanan görsel de normal çıktı (görsel modelin ticari lisansı 2026-09-29'da alındı; `draft` alanı, uyarı ve TASLAK- öneki kaldırıldı).
 
 ## G: Seri karakter kartı (2026-09-25)
 Kullanıcı sözü: "Aynı karakter serinin her kitabında aynı görünsün diye karakterin görünüşü ve renkleri bir kez kaydedilir,
@@ -479,7 +479,7 @@ her görselde kullanılır." Motor `production/characters.py`, uçlar `productio
   kenarla yeniden ikileme. Çıktı 1 bit PNG (yalnız siyah/beyaz), 600 dpi.
 - **Çizgi (görsel model, isteğe bağlı):** `POST coloring/art/{a_…}/redraw` → `ColoringRedraw` (GPU, busy, bitince
   `_release_if_idle`), kaynağın renkli resmi düzenleme ucuna «boyama sayfası» istemiyle, dönen çizgi `lineart.clean_drawn`
-  ile aynı baskı kuralına. Yeni sürüm `mode: "lineart-model"`; ekranda «taslak» (lisans ticari değil). Boyama işinde
+  ile aynı baskı kuralına. Yeni sürüm `mode: "lineart-model"`; ekranda kaynak etiketi «ZEKİ AI çizgisi» (`model: true`), taslak değil. Boyama işinde
   «Düzelt / Farklı üret» ile gelen sürüm de `add_version` kancasında (`coloring.after_version`) ikilenir; artplan üslubu
   çizgi üslubudur.
 - **Sayfalar (plan.json doğrudan kurulur):** her resim için [kısa cümle | boyama] çifti (boyama sağ sayfada, güvenli alanda
@@ -527,8 +527,8 @@ resimsiz kitapta tipografik). Motor `production/collage.py`, uçlar `production/
   `prompts/production_collage_scene.md`; editörün yönlendirmesi eklenebilir), görsel model bir çağrıda 3 tohumla aday
   üretir (Temporal `CollagePhotos`, busy.json, bitince görsel model bırakılır). Negatif istem kolaja özel: «blurry, low
   quality» gibi analog görünümle çelişen terim yok. (b) Editörün fotoğrafı (`PUT collage/upload`, fotoğraf yükleme yolu:
-  EXIF yönü, sRGB, üst veri silinir; STUDIO_UPLOAD_MB). Model fotoğrafıyla kurulan kolajda ekranda «Taslak — ticari
-  kullanım izni bekleniyor»; editörün fotoğrafında yok.
+  EXIF yönü, sRGB, üst veri silinir; STUDIO_UPLOAD_MB). Model fotoğrafıyla kurulan kolaj da basılabilir
+  (görsel modelin ticari lisansı 2026-09-29'da alındı; eski «Taslak» uyarısı kaldırıldı).
 - **Taşan figür:** figürün maskesinden (üst şeridin tonuyla anahtarlama, ufka bağlı bölge; ufuk yoksa fon dışı her şey);
   kesimin üst kenarı maskeden hesaplanır (elle oran yok). Üst şerit düz değilse taşma yapılmaz, nedeni ekranda.
 - **Belirlenimcilik:** tohum = sha256(başlık, düzen no); aynı kitap + düzen + fotoğraf → bayt bayt aynı ön kapak.

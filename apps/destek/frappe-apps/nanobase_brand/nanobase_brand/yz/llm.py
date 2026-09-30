@@ -1,4 +1,4 @@
-"""Model çağrısı: panelin kullandığı NanobaseAI modeli (Flow Model), LLM kapısı üzerinden.
+"""Model çağrısı: panelin kullandığı ZEKİ AI modeli (Flow Model), LLM kapısı üzerinden.
 
 Öncelik kapıda sıra önceliğidir: 0 etkileşimli (temsilci bekliyor), 2 arka plan (sınıflama, rapor).
 """
@@ -11,7 +11,7 @@ import re
 import frappe
 import requests
 
-MODEL_DOC = "NanobaseAI"
+MODEL_DOC = "ZEKİ AI"
 INTERACTIVE, BACKGROUND = 0, 2
 _THINK = re.compile(r"<think>.*?</think>", re.S)
 

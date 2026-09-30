@@ -4,6 +4,8 @@ import { Loader2, Play, Plus, Save, Trash2, Wand2 } from 'lucide-react';
 import { errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, press } from '../shared';
 import { narrationApi, type LexEntry } from './api';
+import { useCan } from '../../../useAdmin';
+import { Explain } from '../../../components/Explain';
 
 /** Telaffuz sözlüğü: editör yazılışı ve okunuşu girer («Timaş → tımaş»). İki kapsam: bu kitap ve yayınevi (bütün
  *  kitaplar); aynı kelime ikisinde de varsa kitabınki geçerlidir. Kelime ek alabilir: «Timaş'ın» da düzelir.
@@ -25,6 +27,9 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
   playing: string | null;
 }) {
   const qc = useQueryClient();
+  // Sözlüğü yazmak ve okunuşu sesle dinlemek (GPU) «Kitap tasarımında üretim ve düzenleme» ister; «Nasıl okunur?»
+  // yalnız metin döndürdüğü için herkese açık.
+  const canEdit = useCan('tasarim.uret');
   const [scope, setScope] = useState<Scope>('job');
   const [draft, setDraft] = useState<Record<Scope, Row[]>>({ job: rows(lexicon.job), publisher: rows(lexicon.publisher) });
   const [probe, setProbe] = useState('');
@@ -45,6 +50,10 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
 
   const list = draft[scope];
   const dirty = useMemo(() => dirtyOf(list, lexicon[scope]), [list, lexicon, scope]);
+  // Yalnız bir alanı dolu satır sunucuya gitmez; sessizce düşmesin diye kayıt durdurulur ve satır işaretlenir.
+  const noSay = list.filter((r) => r.word.trim() && !r.say.trim());
+  const noWord = list.filter((r) => !r.word.trim() && r.say.trim());
+  const incomplete = noSay.length + noWord.length > 0;
   const save = useMutation({
     mutationFn: () => narrationApi.saveLexicon(jobId, scope, list.filter((r) => r.word.trim() && r.say.trim())),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['studio', 'narration', jobId] }),
@@ -61,8 +70,11 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[13px] font-extrabold">Telaffuz sözlüğü</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Telaffuz sözlüğü
+          <Explain label="Telaffuz sözlüğü">Seslendirmenin yanlış okuduğu kelimeler için yazılışı ve nasıl okunacağını girin (ör. «Timaş» → «tımaş»). Ekleme, düzeltme ve silme «Sözlüğü kaydet»e basınca geçerli olur; kelimenin geçtiği sayfalar «güncel değil» olur ve yeniden seslendirilir.</Explain>
+        </h3>
         <div role="tablist" aria-label="Sözlük kapsamı" className="inline-flex rounded-xl bg-slate-100 p-0.5">
           {([['job', 'Bu kitap'], ['publisher', 'Yayınevi']] as const).map(([k, t]) => (
             <button key={k} type="button" role="tab" aria-selected={scope === k} onClick={() => setScope(k)}
@@ -77,39 +89,59 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
         {' '}Kelime ek alsa da düzelir («Timaş» → «Timaş'ın»).
       </p>
 
+      {list.length === 0 && (
+        <p className="rounded-xl border border-dashed border-slate-200 px-3 py-2.5 text-[12px] leading-snug text-canvas-muted">
+          {scope === 'job' ? 'Bu kitap için' : 'Yayınevi için'} henüz kelime yok. Yanlış okunan bir ad ya da kısaltma varsa «Kelime ekle» ile yazılışını ve okunuşunu girin.
+        </p>
+      )}
       {list.length > 0 && (
         <ul className="flex flex-col gap-1.5">
-          {list.map((r) => (
+          {list.map((r) => {
+            const missWord = !r.word.trim() && !!r.say.trim();
+            const missSay = !!r.word.trim() && !r.say.trim();
+            return (
             <li key={r.key} className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-1.5">
-              <input aria-label="Yazılış" placeholder="Yazılış" value={r.word} maxLength={120}
-                onChange={(e) => set(r.key, { word: e.target.value })} className={input} />
-              <input aria-label="Okunuş" placeholder="Okunuş" value={r.say} maxLength={240}
-                onChange={(e) => set(r.key, { say: e.target.value })} className={input} />
-              <button type="button" aria-label={`${r.word || 'Kelime'} okunuşunu dinle`} title="Dinle"
+              <input aria-label="Yazılış" placeholder="Yazılış" value={r.word} maxLength={120} aria-invalid={missWord || undefined} readOnly={!canEdit}
+                onChange={(e) => set(r.key, { word: e.target.value })} className={`${input} ${missWord ? '!border-amber-400' : ''}`} />
+              <input aria-label="Okunuş" placeholder="Okunuş" value={r.say} maxLength={240} aria-invalid={missSay || undefined} readOnly={!canEdit}
+                onChange={(e) => set(r.key, { say: e.target.value })} className={`${input} ${missSay ? '!border-amber-400' : ''}`} />
+              {canEdit && <button type="button" aria-label={`${r.word || 'Kelime'} okunuşunu dinle`} title="Dinle"
                 disabled={!r.say.trim() || !!playing} onClick={() => onPlay(r.say, narrator, `lex-${r.key}`)}
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-canvas-violet disabled:opacity-40 ${press}`}>
                 {playing === `lex-${r.key}` ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-              </button>
-              <button type="button" aria-label={`${r.word || 'Satırı'} sil`} title="Sil" onClick={() => del(r.key)}
+              </button>}
+              {canEdit && <button type="button" aria-label={`${r.word || 'Satırı'} sil`} title="Sil" onClick={() => del(r.key)}
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-canvas-muted hover:text-rose-600 ${press}`}>
                 <Trash2 className="h-4 w-4" aria-hidden />
-              </button>
+              </button>}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
-      <div className="flex flex-wrap gap-2">
+      {!canEdit && list.length === 0 && <p className="text-[12px] text-canvas-muted">Sözlükte kelime yok.</p>}
+      {canEdit && <div className="flex flex-wrap gap-2">
         <button type="button" className={ghostBtn} onClick={add}><Plus className="h-4 w-4" aria-hidden />Kelime ekle</button>
-        <button type="button" className={gradientBtn} disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
+        <button type="button" className={gradientBtn} disabled={!dirty || incomplete || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
           {dirty ? 'Sözlüğü kaydet' : 'Kaydedildi'}
         </button>
-      </div>
+      </div>}
+      {canEdit && incomplete && (
+        <p className="text-[12px] leading-snug text-amber-800">
+          {noSay.length > 0 && <>Okunuşu boş satırlar kaydedilmez: {noSay.map((r) => `«${r.word.trim()}»`).join(', ')}. </>}
+          {noWord.length > 0 && <>Yazılışı boş satırlar kaydedilmez: {noWord.map((r) => `«${r.say.trim()}»`).join(', ')}. </>}
+          Kaydetmek için bu satırları tamamlayın ya da silin.
+        </p>
+      )}
       {save.error && <p className="text-[12px] text-rose-700">{errText(save.error, 'Kaydedilemedi.')}</p>}
 
       <form className="mt-1 flex flex-col gap-1.5 rounded-2xl bg-slate-50/80 p-2.5"
         onSubmit={(e) => { e.preventDefault(); if (probe.trim()) read.mutate(probe.trim()); }}>
-        <label htmlFor="narration-probe" className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Nasıl okunur?</label>
+        <span className="flex items-center gap-1">
+          <label htmlFor="narration-probe" className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Nasıl okunur?</label>
+          <Explain label="Nasıl okunur?">Bir cümle yazıp «Göster»e basın; seslendirmenin sayıları, kısaltmaları ve sözlükteki kelimeleri nasıl okuyacağı yazıyla gösterilir. Oynat düğmesi anlatıcı sesiyle dinletir. Kitaba bir şey kaydedilmez.</Explain>
+        </span>
         <div className="flex gap-1.5">
           <input id="narration-probe" value={probe} maxLength={300} onChange={(e) => { setProbe(e.target.value); setProbeOut(null); }}
             placeholder="Ör. Dr. Ahmet 1923'te 2. kata çıktı." className={input} />
@@ -120,11 +152,11 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
         {probeOut != null && (
           <div className="flex items-start gap-2">
             <p className="flex-1 text-[13px] leading-snug text-canvas-ink">{probeOut || '—'}</p>
-            <button type="button" aria-label="Okunuşu dinle" disabled={!probeOut || !!playing}
+            {canEdit && <button type="button" aria-label="Okunuşu dinle" disabled={!probeOut || !!playing}
               onClick={() => onPlay(probe.trim(), narrator, 'probe')}
               className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-canvas-violet disabled:opacity-40 ${press}`}>
               {playing === 'probe' ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-            </button>
+            </button>}
           </div>
         )}
         {read.error && <p className="text-[12px] text-rose-700">{errText(read.error, 'Okunuş alınamadı.')}</p>}

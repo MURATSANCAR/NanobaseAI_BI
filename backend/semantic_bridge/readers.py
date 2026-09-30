@@ -183,7 +183,8 @@ def ensure(engine: sa.engine.Engine) -> None:
             return
         from semantic_bridge import readers_segments as seg  # noqa: F401 — segment/yükleme tabloları aynı MetaData'da değil
         from semantic_bridge import readers_imports as imp  # noqa: F401
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         seg.ensure_tables(engine)
         imp.ensure_tables(engine)
         _ready.add(key)

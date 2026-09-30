@@ -1,0 +1,36 @@
+{
+  "checkedConfigurationFiles": 12,
+  "configurationHits": [],
+  "containers": [
+    {
+      "name": "zeki-chat",
+      "image": "zeki-ai-chat:8.5.3-6c6d214d4",
+      "vendorEnvKeys": [],
+      "networks": [
+        "zeki-local"
+      ],
+      "running": true
+    },
+    {
+      "name": "zeki-mongo",
+      "image": "mongo:8.0",
+      "vendorEnvKeys": [],
+      "networks": [
+        "zeki-local"
+      ],
+      "running": true
+    },
+    {
+      "name": "zeki-ingress",
+      "image": "nginx@sha256:d10753d9289b8e3f884386351f73554ce72b631378949deddd75e83ee296c427",
+      "vendorEnvKeys": [],
+      "networks": [
+        "zeki-ingress",
+        "zeki-local"
+      ],
+      "running": true
+    }
+  ],
+  "valuesExposed": false,
+  "passed": true
+}

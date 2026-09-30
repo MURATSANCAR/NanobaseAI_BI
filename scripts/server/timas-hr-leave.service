@@ -1,0 +1,10 @@
+[Unit]
+Description=İzin yönetimi (M60): yıllık izin hakedişi (başlangıçtan sonraki yıldönümleri) + onay bekleyen talepler için günlük tek hatırlatma
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/hr/leave/run-due). İlk koşu hakediş başlangıç gününü yazar (geçmiş yıllar açılış Excel'iyle girilir).
+# İlk kez elle koşturulur: systemctl start timas-hr-leave.service
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 290 -X POST "http://127.0.0.1:8795/api/v1/hr/leave/run-due"

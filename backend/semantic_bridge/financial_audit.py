@@ -84,8 +84,8 @@ def register(app, runtime, authorize):
                 r = runtime()
 
                 def run(sql):
-                    with getattr(r, '_engine_lock', None) or threading.Lock():
-                        _cols, rows, _truncated = r.connector.execute(sql, 10000)
+                    # Köprünün Logo bağlantı havuzu: kendi bağlantısını alır, sunucu sınırına uyar.
+                    _cols, rows, _truncated = r.connector.execute(sql, 10000)
                     return rows
                 firms[year] = resolve_firm(run, year)
             return firms[year]
@@ -370,14 +370,40 @@ def register(app, runtime, authorize):
             raise HTTPException(404, 'Rapor bulunamadı.')
         return json.loads(path.read_text())
 
+    #: Rapor özeti dosyası → (mtime_ns, boyut, içerik). Hız 4. tur (2026-09-29): arşivde 1.000'i aşkın rapor var; her
+    #: açılışta hepsi yeniden açılıp çözülüyordu. Dosya değişmedikçe (değişim anı + boyut) çözülmüş içerik kullanılır;
+    #: liste ve sıra her istekte klasörden okunur (silinen rapor düşer, yeni rapor eklenir).
+    meta_cache: dict[str, tuple[int, int, dict]] = {}
+
+    def runs_listing():
+        root = archive_root()
+        # Bütün arşiv döner (sessiz tavan yok); seçici yazarak arar ve listeyi pencereleyerek çizer.
+        found = []
+        if root.exists():
+            with os.scandir(root) as it:
+                for e in it:
+                    if e.name.endswith('.meta.json') and e.is_file():
+                        st = e.stat()
+                        found.append((st.st_mtime, e.name, st.st_mtime_ns, st.st_size, e.path))
+        found.sort(key=lambda x: x[0], reverse=True)
+        items = []
+        for _mt, name, mt_ns, size, path in found:
+            hit = meta_cache.get(name)
+            if hit is None or hit[0] != mt_ns or hit[1] != size:
+                hit = (mt_ns, size, json.loads(Path(path).read_text()))
+                meta_cache[name] = hit
+            items.append(dict(hit[2]))
+        for gone in set(meta_cache) - {f[1] for f in found}:
+            meta_cache.pop(gone, None)
+        return {'items':items, 'total':len(items)}
+
+    from . import hizli_kaynak as HK
+    HK.acilista('denetim.arsiv', runs_listing)   # köprü açılışında özet dosyaları bir kez okunur
+
     @app.get('/api/v1/financial-audit/runs')
     def list_runs(request: Request):
         authorize(request)
-        root = archive_root()
-        # Bütün arşiv döner (sessiz tavan yok); seçici yazarak arar ve listeyi pencereleyerek çizer.
-        files = sorted(root.glob('*.meta.json'), key=lambda p:p.stat().st_mtime, reverse=True) if root.exists() else []
-        items = [json.loads(p.read_text()) for p in files]
-        return {'items':items, 'total':len(items)}
+        return runs_listing()
 
     @app.get('/api/v1/financial-audit/runs/{run_id}')
     def saved_run(request: Request, run_id: str):

@@ -1,10 +1,11 @@
 import { useId, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader2, Mic, X } from 'lucide-react';
+import { FileText, Loader2, Mic, X } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, secs } from '../shared';
 import { narrationApi, type HumanRecording, type NarrationOverview } from './api';
 import { FileDrop } from '../../../components/FileDrop';
+import { Explain } from '../../../components/Explain';
 
 /** «İnsan kaydı yükle»: yayınevinin seslendirmenine okuttuğu kayıt sayfanın sesi olur. Yapay ses üretilmez; kelime
  *  zamanları kayıttan çıkarılır (okurken vurgu, sesli e-kitap, efekt karışımı aynen çalışır). Bir dosya bir sayfayı ya
@@ -54,7 +55,7 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
       document: doc ? { name: doc.name, data: await b64(doc) } : null,
     }),
     onSuccess: () => {
-      setOk('Kayıt alındı; kelimeler kayda yerleştiriliyor. Bitince sayfa «İnsan sesi» olarak dinlenir.');
+      setOk('Kayıt alındı; kelimeler kayda yerleştiriliyor. Bu arka planda sürer; bitince sayfa «İnsan sesi» olarak dinlenir.');
       setAudio(null); setDoc(null); setReference(''); setConfirm(false);
       onDone();
     },
@@ -79,7 +80,7 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
       <form className="flex flex-col gap-2.5" onSubmit={(e) => { e.preventDefault(); if (ready) send.mutate(); }}>
         <div className="flex flex-col gap-1">
           <span className={labelCls}>Ses kaydı</span>
-          <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} picked={audio}
+          <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} picked={audio} feature="tasarim.uret"
             onPick={(file) => { setOk(null); setAudio(file); }} />
           {audioErr && <span className="text-[12px] text-rose-700">{audioErr}</span>}
         </div>
@@ -105,14 +106,17 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
           <p className="text-[11.5px] text-canvas-muted">Seçilen sayfalardan {replacing} tanesinin şimdiki sesi bu kayıtla değişir.</p>
         )}
         <fieldset className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-2.5">
-          <legend className="px-1 text-[11px] font-bold uppercase tracking-wide text-amber-800">Hak beyanı (zorunlu)</legend>
+          <legend className="flex items-center gap-1 px-1 text-[11px] font-bold uppercase tracking-wide text-amber-800">
+            Hak beyanı (zorunlu)
+            <Explain label="Hak beyanı">Kaydı kitapta kullanabilmek için okuyan kişinin izni belgelenir. Okuyanın adı, izin belgesi ya da belge numarası ve onay kutusu olmadan kayıt yüklenmez; beyan kayıtla birlikte saklanır.</Explain>
+          </legend>
           <label htmlFor={`${f}-owner`} className="flex flex-col gap-1">
             <span className={labelCls}>Kaydı okuyan kişi</span>
             <input id={`${f}-owner`} className={inputCls} value={owner} maxLength={120} onChange={(e) => setOwner(e.target.value)} placeholder="Ad soyad" />
           </label>
           <div className="flex flex-col gap-1">
             <span className={labelCls}>İzin belgesi</span>
-            <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} />
+            <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} feature="tasarim.uret" />
             {docErr && <span className="text-[12px] text-rose-700">{docErr}</span>}
           </div>
           <label htmlFor={`${f}-ref`} className="flex flex-col gap-1">
@@ -137,7 +141,7 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
         {send.error && <Note tone="err">{errText(send.error, 'Kayıt yüklenemedi.')}</Note>}
         {ok && <Note tone="ok">{ok}</Note>}
       </form>
-      {!!info?.items.length && <Recent items={info.items} d={d} />}
+      {!!info?.items.length && <Recent jobId={jobId} items={info.items} d={d} />}
     </div>
   );
 }
@@ -146,7 +150,23 @@ const STATE: Record<HumanRecording['status'], string> = {
   queued: 'Sırada', running: 'İşleniyor', done: 'Hazır', fail: 'İşlenemedi',
 };
 
-function Recent({ items, d }: { items: HumanRecording[]; d: NarrationOverview }) {
+/** İnsan kaydının hak kanıtı: yüklenen izin belgesi (yeni sekmede açılır) ve/ya da girilen belge numarası. */
+export function RightsProof({ jobId, rec }: { jobId: string; rec: HumanRecording }) {
+  if (!rec.document && !rec.reference) return null;
+  return (
+    <>
+      {rec.document && (
+        <a href={narrationApi.recordingDocumentUrl(jobId, rec.id)} target="_blank" rel="noopener noreferrer"
+          className="inline-flex min-h-10 items-center gap-1 rounded-lg px-1.5 font-bold text-canvas-violet underline">
+          <FileText className="h-3.5 w-3.5" aria-hidden />İzin belgesi
+        </a>
+      )}
+      {rec.reference && <span className="min-w-0 break-words">Belge: {rec.reference}</span>}
+    </>
+  );
+}
+
+function Recent({ jobId, items, d }: { jobId: string; items: HumanRecording[]; d: NarrationOverview }) {
   const no = (id: string) => d.pages.find((p) => p.id === id)?.no;
   const span = (r: HumanRecording) => {
     const a = no(r.pages[0]);
@@ -169,6 +189,9 @@ function Recent({ items, d }: { items: HumanRecording[]; d: NarrationOverview })
               </span>
             </span>
             {r.file && <span className="block truncate text-canvas-muted">{r.file}</span>}
+            {(r.document || r.reference) && (
+              <span className="flex flex-wrap items-center gap-x-2 text-canvas-muted"><RightsProof jobId={jobId} rec={r} /></span>
+            )}
             {r.status === 'fail' && r.error && <span className="block text-rose-700">{r.error}</span>}
           </li>
         ))}

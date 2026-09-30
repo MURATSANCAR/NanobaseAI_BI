@@ -143,6 +143,8 @@ function CrmCandidates({ onOpen }: { onOpen: (t: PanelTarget) => void }) {
           </li>
         ))}
       </ul>
+      {/* ZEKI-29: uzun listenin altında da sayfa numaraları ve önceki/sonraki. */}
+      <Pager page={page} pageSize={data?.pageSize ?? 50} total={data?.total ?? 0} shown={data?.items.length ?? 0} loading={list.isLoading} fetching={list.isFetching} db={data?.db} onPage={setPage} placement="bottom" />
     </Panel>
   );
 }

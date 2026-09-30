@@ -29,6 +29,7 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import ads as A
+from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import ads_kaynak as K
 from semantic_bridge import pazarlama_kaynak as PK
 from semantic_bridge import provenance as PV
@@ -142,6 +143,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def data_end(engine, tenant) -> Optional[date]:
         v = A.meta_get(engine, tenant, "logo").get("veriSonu")
         return date.fromisoformat(v) if v else None
+
+    def isit() -> None:
+        """Köprü açılışında CRM kitap listesi arkada okunur: reklam özetini ilk açan CRM'i beklemesin."""
+        if HK.sqlite_mi(rt().store.engine):
+            return
+        crm.books(st()["offSaleStatus"])
+
+    HK.acilista("reklam.kitaplar", isit)
 
     def crm_map(s: dict[str, Any], warnings: list[str]) -> dict[str, dict[str, Any]]:
         try:
@@ -594,9 +603,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         book = next((b for b in books if b["stokKodu"] == stok), None)
         if not book:
             raise HTTPException(status_code=404, detail={"code": "ADS", "message": "Bu stok kodunda CRM'de etkin kitap kartı yok."})
-        b = call(A.create_brief, engine, tenant, user, book, body.get("not"))
-        audit(engine, user, "create", "ads_brief", b["id"], b["kitapAdi"], {"stok": stok, "istek": b["istek"]})
-        pool.submit(brief_job, tenant, b["id"], stok, b["istek"])
+        manual = body.get("elle") is True          # elle yazılacak boş taslak: Zeki AI'a gitmez, model bağlı olmasa da açılır
+        b = call(A.create_brief, engine, tenant, user, book, body.get("not"), manual=manual)
+        audit(engine, user, "create", "ads_brief", b["id"], b["kitapAdi"], {"stok": stok, "istek": b["istek"], "elle": manual})
+        if not manual:
+            pool.submit(brief_job, tenant, b["id"], stok, b["istek"])
         return b
 
     @app.get(R + "/briefs/{bid}")

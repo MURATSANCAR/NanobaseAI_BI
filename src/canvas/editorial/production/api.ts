@@ -222,7 +222,18 @@ export const productionApi = {
 
 /** Kampüs «Matbaadan yeni çıkanlar»: son `days` günde baskısı gerçekleşen kitaplar (yeniden eskiye). */
 export type NewPrints = {
-  items: Array<{ cardId: string; bookId: string | null; title: string | null; printNo: number | null; firstPrint: boolean; day: string; depot: string | null }>;
+  items: Array<{
+    cardId: string;
+    bookId: string | null;
+    title: string | null;
+    stockCode?: string | null;
+    printNo: number | null;
+    firstPrint: boolean;
+    day: string;
+    depot: string | null;
+    /** T-soft ürün görseli (stok koduyla); ürün sitede yoksa null. */
+    cover?: string | null;
+  }>;
   days: number;
   ready: boolean;
   asOf: string | null;

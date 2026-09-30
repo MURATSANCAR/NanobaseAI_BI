@@ -1,5 +1,10 @@
 import {
   Activity,
+  CalendarCheck2,
+  IdCard,
+  FolderOpen,
+  CircleHelp,
+  Settings2,
   Headset,
   Server,
   Handshake,
@@ -47,6 +52,7 @@ import {
   Truck,
   PackageSearch,
   ReceiptText,
+  HandCoins,
   Scale,
   Gavel,
   Waypoints,
@@ -323,6 +329,7 @@ export const NAV: NavGroup[] = [
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'SEO ve GEO izleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'SEO ve GEO izleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'SEO ve GEO izleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },
+      { id: 'seo-aramadan-satisa', label: 'Aramadan satışa', to: '/seo-geo/aramadan-satisa', icon: ShoppingCart, section: 'SEO ve GEO izleme', hint: 'Google’dan gelen ziyaretin sepete, satışa ve ciroya dönüşü; satmayan ve düşen sayfalar', keywords: ['analytics', 'organik', 'ciro', 'dönüşüm', 'sepet', 'huni'] },
       { id: 'seo-bing', label: 'Bing ve IndexNow', to: '/seo-geo/bing', icon: Radar, section: 'SEO ve GEO izleme', hint: 'Bing arama verisi ve değişen sayfaların bildirimi', keywords: ['bing', 'indexnow', 'chatgpt'] },
       { id: 'seo-rakip', label: 'Rakipler', to: '/seo-geo/rakipler', icon: Swords, section: 'SEO ve GEO izleme', hint: 'Aynı kitap aramasında rakip sitelerin Google sırası', keywords: ['rakip', 'd&r', 'kitapyurdu'] },
       { id: 'seo-izleme', label: 'İzleme ve rapor', to: '/seo-geo/izleme', icon: BellRing, section: 'SEO ve GEO izleme', hint: 'Tıklama düşüşü, 404, robots ve yapay zekâ uyarıları; haftalık rapor', keywords: ['uyarı', 'rapor', 'izleme'] },
@@ -525,10 +532,12 @@ export const NAV: NavGroup[] = [
       { id: 'trendyol-urunler', label: 'Ürün, stok ve fiyat', to: '/trendyol/urunler', icon: ArrowLeftRight, section: 'Trendyol', hint: 'Trendyol stoğu ↔ depo stoğu, Trendyol fiyatı ↔ liste ve site fiyatı', keywords: ['stok farkı', 'fiyat farkı', 'barkod', 'trendyol'] },
       { id: 'trendyol-siparisler', label: 'Sipariş ve iade', to: '/trendyol/siparisler', icon: Truck, section: 'Trendyol', hint: 'Bekleyen ve geciken paketler, iade nedenleri, kitap bazında iade oranı', keywords: ['sipariş', 'paket', 'kargo', 'iade', 'trendyol'] },
       { id: 'trendyol-sorular', label: 'Soru ve yorum', to: '/trendyol/sorular', icon: MessageCircleQuestion, section: 'Trendyol', hint: 'Cevapsız müşteri soruları, düşük puanlı yorumlar ve Zeki AI yanıt taslağı', keywords: ['soru', 'yorum', 'puan', 'yanıt', 'trendyol'] },
+      { id: 'trendyol-mutabakat', label: 'Mutabakat ve hakediş', to: '/trendyol/mutabakat', icon: GitCompareArrows, section: 'Trendyol', hint: 'Panel sipariş ve iadesi ↔ Logo faturası; hakediş, kesinti ve ödeme ↔ Logo', keywords: ['mutabakat', 'hakediş', 'kesinti', 'komisyon', 'eksik fatura', 'fazla fatura', 'ekstre', 'trendyol'] },
       { id: 'amazon', label: 'Amazon ve yurtdışı', to: '/amazon', icon: ShoppingBag, section: 'Amazon ve yurtdışı', hint: 'Amazon carileri, faturalı satış, konsinye, yurtdışı satış ve satılmış haklar özeti', keywords: ['amazon', 'yurtdışı', 'uluslararası', 'ihracat'] },
       { id: 'amazon-konsinye', label: 'Konsinye', to: '/amazon/konsinye', icon: BookCopy, section: 'Amazon ve yurtdışı', hint: 'Faturalanmamış sevk − iade irsaliyesi: Amazon konsinyede kalan adet', keywords: ['konsinye', 'irsaliye', 'amazon', 'kalan'] },
       { id: 'amazon-yurtdisi', label: 'Yurtdışı satış ve haklar', to: '/amazon/yurtdisi', icon: Globe, section: 'Amazon ve yurtdışı', hint: 'Ülke ve cari bazında yurtdışı satış, döviz; satılmış yabancı haklar; pazar değerlendirme kartı ve parametreler', keywords: ['yurtdışı', 'ülke', 'döviz', 'telif satış', 'hak', 'pazar'] },
       { id: 'amazon-taslaklar', label: 'Listeleme taslakları', to: '/amazon/taslaklar', icon: Languages, section: 'Amazon ve yurtdışı', hint: 'Hedef pazar için başlık, açıklama, A+ metni ve çeviri brief\'i taslağı (Zeki AI; gönderim yok)', keywords: ['listeleme', 'a+', 'brief', 'çeviri', 'yerelleştirme'] },
+      { id: 'amazon-mutabakat', label: 'Mutabakat ve hakediş', to: '/amazon/mutabakat', icon: GitCompareArrows, section: 'Amazon ve yurtdışı', hint: 'Amazon sipariş ve iade raporu ↔ Logo faturası; ödeme raporu, kesinti ve tahsilat ↔ Logo', keywords: ['mutabakat', 'hakediş', 'settlement', 'kesinti', 'eksik fatura', 'amazon'] },
     ],
   },
   {
@@ -557,6 +566,7 @@ export const NAV: NavGroup[] = [
       },
       { id: 'kargo-firmalar', label: 'Firma karnesi', to: '/kargo/firmalar', icon: Scale, section: 'Kargo', hint: 'Kargo firmalarının gönderi, teslim süresi, iade ve desi başı maliyeti; şehir kırılımı ve karar kaydı', keywords: ['kargo firması', 'karne', 'desi', 'teslim süresi', 'iade oranı', 'kurye', 'bölge'] },
       { id: 'kargo-mutabakat', label: 'Kargo mutabakatı', to: '/kargo/mutabakat', icon: ReceiptText, section: 'Kargo', hint: 'Logo kargo faturası ile kargo kaydı toplamı, mükerrer takip no, Logo sevk ↔ CRM sevkiyat eşleşmesi', keywords: ['mutabakat', 'kargo faturası', 'fark', 'mükerrer'] },
+      { id: 'kargo-maliyet', label: 'Kargo maliyeti', to: '/kargo/maliyet', icon: HandCoins, section: 'Kargo', hint: 'Kargo ve nakliye gideri, cironun yüzdesi, taşıyıcı ve pazar yeri başına yaklaşık gönderi maliyeti', keywords: ['kargo maliyeti', 'kargo gideri', 'nakliye', 'gönderi başı', 'ciro oranı', 'pazar yeri kargosu', 'posta ve kargo'] },
       { id: 'tedarik', label: 'Tedarik özeti', to: '/tedarik', icon: Gauge, section: 'Tedarik', hint: 'Ay × matbaa yükü, eşik aşımı, kağıt, ödeme ve maliyet özeti', keywords: ['tedarik', 'baskı planı', 'matbaa', 'tedarik zinciri'] },
       { id: 'tedarik-yuk', label: 'Baskı yükü', to: '/tedarik/yuk', icon: Factory, section: 'Tedarik', hint: 'Ay × matbaa yükü, kapasite, çakışma ve yük dengeleme önerisi', also: ['/tedarik/kapasite'], keywords: ['matbaa yükü', 'kapasite', 'çakışma', 'yığılma', 'dengeleme', 'forma'] },
       { id: 'tedarik-kagit', label: 'Kağıt ve malzeme', to: '/tedarik/kagit', icon: Layers, section: 'Tedarik', hint: 'Açık kartların aylık kağıt ihtiyacı, alım zamanı ve alış fiyatı', keywords: ['kağıt', 'kağıt ihtiyacı', 'ton', 'gramaj', 'kağıtçı', 'bristol'] },
@@ -663,6 +673,16 @@ export const NAV: NavGroup[] = [
     icon: Contact,
     explicit: true,
     items: [
+      // Personel portalı (eski AppSheet): ana sayfa, Profilim, rehber, duyuru, evrak, SSS herkese; İK yönetimi açıkça verilir.
+      { id: 'ik-anasayfa', label: 'İK ana sayfası', to: '/ik', icon: House, section: 'Personel portalı', hint: 'Kutucuklar, doğum günleri, son duyurular, bugünün menüsü; İK yetkilisine kadro sayıları', also: ['/ik/dogum-gunleri', '/ik/yemek'], keywords: ['ik', 'insan kaynakları', 'personel portalı', 'doğum günü', 'yemek listesi', 'menü'] },
+      { id: 'ik-profilim', label: 'Profilim', to: '/ik/profilim', icon: IdCard, section: 'Personel portalı', hint: 'Özlük bilgilerim ve belgelerim', keywords: ['profil', 'özlük', 'bilgilerim', 'belgelerim'] },
+      { id: 'ik-izin', label: 'İzinlerim', to: '/ik/izin', icon: CalendarCheck2, section: 'Personel portalı', hint: 'Yıllık izin bakiyem, izin talebi, geçmiş ve belge', keywords: ['izin', 'yıllık izin', 'bakiye', 'rapor', 'mazeret', 'ücretsiz izin'] },
+      { id: 'ik-izin-ekip', label: 'Ekibimin izinleri', to: '/ik/izin/ekip', icon: CalendarRange, section: 'Personel portalı', hint: 'Onayımı bekleyen izin talepleri, ekip takvimi ve çakışma', keywords: ['izin onayı', 'ekip takvimi', 'kim izinde'] },
+      { id: 'ik-rehber', label: 'Personel rehberi', to: '/ik/rehber', icon: BookUser, section: 'Personel portalı', hint: 'Departman, unvan, e-posta, şirket hattı ve dahili no', keywords: ['rehber', 'dahili', 'telefon', 'e-posta', 'kim'] },
+      { id: 'ik-duyurular', label: 'Şirket içi duyurular', to: '/ik/duyurular', icon: Megaphone, section: 'Personel portalı', hint: 'Etkinlik, işe giriş ve genel duyurular', keywords: ['duyuru', 'etkinlik', 'haber'] },
+      { id: 'ik-evrak', label: 'Evrak', to: '/ik/evrak', icon: FolderOpen, section: 'Personel portalı', hint: 'Evrak deposu (formlar, rehberler) ve evrak talebi (çalışma belgesi, bordro…)', keywords: ['evrak', 'form', 'çalışma belgesi', 'bordro', 'hizmet dökümü', 'talep'] },
+      { id: 'ik-sss', label: 'Sık sorulan sorular', to: '/ik/sss', icon: CircleHelp, section: 'Personel portalı', hint: 'İzin, ücret, çalışma düzeni, eğitim', keywords: ['sss', 'soru', 'izin', 'maaş'] },
+      { id: 'ik-yonetim', label: 'İK yönetimi', to: '/ik/yonetim', icon: Settings2, section: 'Personel portalı', hint: 'Personel özlük kaydı ve belgeleri, Excel aktarma, duyuru, evrak talepleri, yemek listesi, SSS, alanlar', keywords: ['özlük', 'personel girişi', 'excel', 'alan ayarı', 'yönetici paneli'] },
       { id: 'ik-ise-alim', label: 'İşe alım panosu', to: '/ik/ise-alim', icon: ClipboardList, section: 'İşe alım', hint: 'Başvurular aşamalarıyla, aday kartı, kanıtlı özgeçmiş özeti ve mülakat notları', keywords: ['aday', 'başvuru', 'özgeçmiş', 'cv', 'mülakat', 'işe alım', 'ik'] },
       { id: 'ik-pozisyonlar', label: 'Pozisyonlar', to: '/ik/pozisyonlar', icon: BriefcaseBusiness, section: 'İşe alım', hint: 'Pozisyon kartı, yetkinlikler, ilan taslağı, mülakat soru seti ve onay', keywords: ['kadro', 'ilan', 'yetkinlik', 'pozisyon'] },
       { id: 'ik-belgeler', label: 'Belgeler', to: '/ik/belgeler', icon: FileText, section: 'İşe alım', hint: 'İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları', keywords: ['şablon', 'teklif mektubu', 'ret mektubu'] },
@@ -793,6 +813,18 @@ export function matchActive(groups: NavGroup[], pathname: string, search = ''): 
     }
   }
   return best ? { group: best.group, item: best.item } : null;
+}
+
+/** Ana modülün giriş ekranı: modülün, açılınca sol menüde yine bu modülü gösteren ilk ekranı. Başka modülde daha
+ *  uzun eşleşen bir öğeye düşen adres (ör. Fiyatlama'daki «Baskı önerisi» /yonetim-raporlari altında) atlanır ki
+ *  kişi tıkladığı modülün menüsünü görsün. Kampüs gibi tek ekranlı modülde `to`; uygun ekran yoksa null. */
+export function groupEntry(groups: NavGroup[], group: NavGroup): string | null {
+  if (group.to) return group.to;
+  for (const item of group.items) {
+    const [path, params] = splitTo(item.to);
+    if (matchActive(groups, path, params.toString())?.group.id === group.id) return item.to;
+  }
+  return null;
 }
 
 /** Bir bağlantı adresinin (sorgu parçası dahil) rolle açılan menü sayfası; Kampüs, Yönetim ve menü dışı adreste null. */

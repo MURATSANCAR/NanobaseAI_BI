@@ -1,4 +1,4 @@
-# NanobaseAI Destek imajı: çatı + telephony (üst kaynaktan, sabit sürüm)
+# ZEKİ AI imajı: çatı + telephony (üst kaynaktan, sabit sürüm)
 # + depodaki markalı helpdesk, flow ve nanobase_brand.
 # Yapı frappe_docker images/layered/Containerfile'ı izler; fark, uygulamaların
 # git'ten değil bu depodan (apps/destek/frappe-apps) gelmesi.
@@ -32,7 +32,7 @@ COPY --chown=frappe:frappe frappe-apps/flow apps/flow
 COPY --chown=frappe:frappe frappe-apps/nanobase_brand apps/nanobase_brand
 
 # Kurulum sırası önemli: nanobase_brand en sonda — şablon ve çeviri önceliği ondadır.
-# simge.py çatının ve Helpdesk'in logo/simge/açılış görsellerini NanobaseAI simgesiyle değiştirir.
+# simge.py çatının ve Helpdesk'in logo/simge/açılış görsellerini ZEKİ AI simgesiyle değiştirir.
 # Yalnız ön yüz derleme bağımlılıkları silinir; çatının node_modules'u canlı bildirim
 # servisi (socketio.js) için çalışma anında gerekir.
 # compile-po-to-mo çevirileri derledikten sonra site önbelleğini temizlemek için --site ister;

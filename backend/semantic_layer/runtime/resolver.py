@@ -24,6 +24,7 @@ from semantic_layer.normalize import (
     METRIC_VOCAB_S,
     normalize_term,
     MODIFIERS_S,
+    STOPWORDS,
     STOPWORDS_S,
     cardinal,
     derived_forms,
@@ -33,6 +34,7 @@ from semantic_layer.normalize import (
     is_negative,
     is_inflection_of,
     is_participle,
+    is_verb_form,
     number_role,
     short_root,
     stem,
@@ -46,6 +48,7 @@ from dataclasses import replace
 from datetime import timedelta
 
 from semantic_layer.runtime.temporal import describe
+from semantic_layer.runtime import federated
 from semantic_layer.store.catalog_store import CatalogStore
 
 # Words the LLM handles from schema context; never reported as "unresolved" (they are entities, not values).
@@ -84,6 +87,9 @@ _DEGREE_ADVERBS = frozenset("tamamen tumuyle butunuyle hala halen henuz gercekte
 _COMPARATORS = frozenset("altinda altindaki alti ustunde ustundeki ustu uzerinde uzerindeki uzeri "
                          "asagisinda dusuk asan asani".split())
 _BREAKDOWN_CUES = frozenset("bazinda bazli basina gore kiriliminda kirilimli ozelinde".split())
+#: Yalnız kırılım isteyen işaretler. «göre» (geçen yıla göre, hedefe göre) ve «başına» (kişi başına) karşılaştırma ya da
+#: oran da kurar; bir kırılımın düştüğü onlardan okunmaz.
+_EXPLICIT_BREAKDOWN = frozenset("bazinda bazli kiriliminda kirilimli ozelinde".split())
 _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo kart karti".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
 # Bir aday, ikincisinden bu kadar önde olmalı ki "tek belirgin aday" sayılsın.
@@ -143,6 +149,9 @@ _COUNT_CUE = re.compile(r"\b(kac|kacar|tane|adedi|adet|sayisi|sayilari|sayilariy
 # quantity twin ("satılan adet"), not its amount. Matched on the folded word itself; "tane" stays a count cue.
 _QUANTITY_WORD = re.compile(r"(adet|adedi|adedini|aded|miktar|miktari|miktarini|miktarlari)")
 _QUANTITY_ROOTS = ("adet", "aded", "miktar")
+# The amount/count head of a measure name ("satış TUTARI", "fatura SAYISI"): with a unit word, the heads a second
+# coordinated measure is written with when its subject is left out ("satış tutarı ve adedi").
+_AMOUNT_HEAD = re.compile(r"(tutar|tutari|tutarini|tutarlari|tutarlarini|sayi|sayisi|sayisini|sayilari|sayilarini)")
 # Words that name the amount side of a measure or glue a participle; they carry no subject of their own.
 _QUANTITY_NEUTRAL = frozenset("toplam toplami tutar tutari deger degeri bedel bedeli edilen olan yapilan".split())
 # "kaç kalem / kaç satır": the unit asked for is the line itself, whatever document key the concept counts by.
@@ -291,6 +300,35 @@ def _inflects(token: str, root: str) -> bool:
         return True
     return bool(root) and root[-1] in soft and is_inflection_of(token, root[:-1] + soft[root[-1]])
 
+
+
+
+_QUESTION_PARTICLE = re.compile(r"^m[iu](s[iu]n|y[iu]z|d[iu]r|s[iu]n[iu]z)?$")
+
+
+def _subject_position(tokens: list[str]) -> int:
+    """Position of the last content word — in a Turkish question, the head of what is asked about
+    ("…telif sözleşmeleri hangileri?" → sözleşmeleri). -1 when every word is a particle or stopword."""
+    for k in range(len(tokens) - 1, -1, -1):
+        w = fold(tokens[k])
+        if w and w not in STOPWORDS and not _QUESTION_PARTICLE.match(w):
+            return k
+    return -1
+
+
+def _temporal_positions(tokens: list[str], temporal) -> set[int]:
+    """Token positions of the time expressions the resolver read ("bu yil" → {1, 2})."""
+    out: set[int] = set()
+    toks = [fold(x) for x in tokens]
+    for t in temporal or []:
+        words = [w for w in fold(getattr(t, "text", "") or "").split() if w]
+        n = len(words)
+        if not n:
+            continue
+        for i in range(len(toks) - n + 1):
+            if toks[i:i + n] == words:
+                out.update(range(i, i + n))
+    return out
 
 class SemanticResolver:
     def _whole_scope(self, sq: SemanticQuery, cue: str, text: str, today: Optional[date] = None) -> bool:
@@ -544,6 +582,10 @@ class SemanticResolver:
             hits.append(slot)
             consumed.update(range(i, j))
 
+        # 1b) a certified measure whose name the question splits: "etkinliklere harcadığımız toplam gider" names
+        #     "etkinlik gideri"; the generic "gider" matched on its own and the record word went elsewhere.
+        self._split_measure_names(qf, hits, consumed, index, sq)
+
         # 2) explicit physical codes in the question: "(TRCODE 8)" / "TRCODE 7,8,9"
         for col, values in qf.explicit_codes:
             # "net ciro 2025": CIRO may also be a physical column, but here it
@@ -596,8 +638,16 @@ class SemanticResolver:
         # 2b) profile-backed literal values: a token that *is* a value of a certified column
         #     ("KITAPCI" ∈ CLCARD.SPECODE2 profile) — the column meaning is certified, the value is observed.
         literal: dict[tuple[str, str], list[tuple[int, int, str]]] = {}
+        # A word that opens a breakdown ("yazar bazında", "müşteriye göre", "kitap başına") names what the answer is
+        # broken down BY, never one value to filter on — wherever else in the sentence it recurs ("… en pahalı beş
+        # yazar kim?"). 2026-09-29 tam kapı A044: "yazar" was read as the observed value 'Yazar ' of a CRM contact
+        # description column; the breakdown vanished, a filter nobody asked for took its place and one NULL row came back.
+        breakdown_words = {stem(qf.tokens[k - 1]) for k in range(1, len(qf.tokens))
+                           if fold(qf.tokens[k]) in _BREAKDOWN_CUES}
         for i, j, _ in sorted(qf.terms, key=lambda t: (-(t[1] - t[0]), t[0])):
             if any(k in consumed for k in range(i, j)):
+                continue
+            if j - i == 1 and stem(qf.tokens[i]) in breakdown_words:
                 continue
             phrase = " ".join(qf.tokens[i:j])
             found_values = self._value_index.get(phrase) or self._value_index.get(" ".join(stem(t) for t in qf.tokens[i:j])) or []
@@ -663,6 +713,10 @@ class SemanticResolver:
         #      certified quantity measure whose own words are the measure's words ("satış" ↔ "satılan adet",
         #      "iade" ↔ "iade adedi"). None → the question is asked back, never answered with the amount.
         self._quantity_twins(question, qf, hits, consumed, index, sq)
+
+        # 2d3) "satış tutarı ve adedi" / "satış adedi ve tutarı": the second of two coordinated measure heads
+        #      carries the first one's subject, written once. Read as that measure and added beside the first.
+        self._coordinated_heads(question, qf, hits, consumed, index, sq)
 
         # 2f) "iade hariç toplam ciro": the label is named in order to be left out. Read as a filter it
         #     asked for the returns alone, and the gate refused every statement that did what was asked.
@@ -1201,6 +1255,12 @@ class SemanticResolver:
         #     nobody wrote down, not about something this deployment has no answer for.
         self._from_data(sq, index, qf, consumed)
 
+        # 6a2) "yazar bazında": a breakdown was asked for and nothing placed it. It is not grammar to ignore — the
+        #      answer would be one total under a per-author question. The word stays in front of the model as an
+        #      undefined term, the gate refuses an answer that groups by nothing, and when a sibling certified measure
+        #      (same name family) can reach the breakdown, that measure is read instead (with a scope note).
+        self._requested_breakdowns(sq, qf, hits, consumed, index)
+
         # 6b2) "kdvli iade tutarı": a word that only ever occurs in the names of certified measures, sitting
         #      on a measure it does not name. Sent on as an undefined word, the model wrote its own formula —
         #      "2026 ağustos kdvli satış tutarı" came back as 161,4 Mn, 87,9 Mn and 171,1 Mn on four asks.
@@ -1482,6 +1542,9 @@ class SemanticResolver:
             measured = {re.sub(r"^\w+\((?:\w+\.)?(\w+)\)$", r"\1", (s_.mapping.formula or "")).upper()
                         for s_ in sq.slots if s_.semantic_type == SemanticType.METRIC and s_.mapping and s_.status == "COMPOSED"}
             sq.group_by = [g for g in sq.group_by if not (g.mapping and g.mapping.column and g.mapping.column.upper() in measured)]
+        # ZEKI-54: a word nothing placed, standing where the person lists the columns they want to see.
+        # Read after the roles above are settled — the breakdowns it sits among are what says so.
+        self._unplaced_columns(sq, qf)
         # Default row scopes belong to the semantic contract too. Otherwise the
         # model fallback can omit cancelled/non-item exclusions while deterministic
         # SQL applies them, returning different totals for the same measure.
@@ -2019,26 +2082,9 @@ class SemanticResolver:
             words = self._content_words(" ".join(qf.tokens[lead[0].span[0]:measure.span[1]] if lead else qf.tokens[measure.span[0]:measure.span[1]]))
             if not words:
                 continue
-            twins = []
-            for key, c, maps, their_words in self._quantity_measures(index):
-                theirs = self._content_words(their_words)
-                if theirs and all(any(self._same_word(a, b) for b in theirs) for a in words) \
-                        and all(any(self._same_word(b, a) for a in words) for b in theirs):
-                    if c.id not in {t[1].id for t in twins}:
-                        twins.append((key, c, maps))
-            same_entity = [t for t in twins if any(mp.entity == m.entity for mp in t[2])]
-            twins = same_entity or twins
             span = (min(measure.span[0], lead[0].span[0] if lead else measure.span[0], k), max(measure.span[1], k + 1))
             phrase = " ".join(qf.tokens[span[0]:span[1]])
-            # Several concepts under one certified phrase ("satılan adet" names both "adet" and "satılan adet"):
-            # the twin is what that phrase resolves to when asked for directly — one reading, not a question.
-            keys = {key for key, _, _ in twins}
-            slot = None
-            if len(keys) == 1:
-                key = next(iter(keys))
-                senses = [(c, [mp for mp in maps if mp.entity == m.entity] or maps) for c, maps in index.get(key) or []
-                          if c.semantic_type == SemanticType.METRIC and c.id in {t[1].id for t in twins}]
-                slot = self._slot_from_senses(key, phrase, senses, span) if senses else None
+            slot, twins = self._twin_slot(words, m.entity, phrase, span, index)
             if slot is not None:
                 c = next(t[1] for t in twins if t[1].id == slot.concept_id)
                 slot.explain["source"] = "quantity_twin"
@@ -2059,6 +2105,101 @@ class SemanticResolver:
                 f"Hangisini kastediyorsunuz — ‘{measure.term}’ tutarını mı, yoksa bir adet ölçüsünü mü?")
             sq.explanation.append(f"'{tok}' adet soruyor; '{measure.term}' ölçüsünün adet karşılığı "
                                   f"{'belirsiz' if twins else 'katalogda yok'} — tutar verilmedi")
+
+    def _twin_slot(self, words: list[str], entity: str, phrase: str, span: tuple[int, int], index: dict) -> tuple[Optional[ResolvedSlot], list]:
+        """The certified quantity measure whose own content words are `words` ("satış" ↔ "satılan adet"), on
+        `entity` when it has one there: (slot, twins). The slot is None when there is no twin or the twins sit
+        under more than one certified phrase — a choice, which the caller asks back."""
+        twins = []
+        for key, c, maps, their_words in self._quantity_measures(index):
+            theirs = self._content_words(their_words)
+            if theirs and all(any(self._same_word(a, b) for b in theirs) for a in words) \
+                    and all(any(self._same_word(b, a) for a in words) for b in theirs):
+                if c.id not in {t[1].id for t in twins}:
+                    twins.append((key, c, maps))
+        same_entity = [t for t in twins if any(mp.entity == entity for mp in t[2])]
+        twins = same_entity or twins
+        # Several concepts under one certified phrase ("satılan adet" names both "adet" and "satılan adet"):
+        # the twin is what that phrase resolves to when asked for directly — one reading, not a question.
+        keys = {key for key, _, _ in twins}
+        slot = None
+        if len(keys) == 1:
+            key = next(iter(keys))
+            senses = [(c, [mp for mp in maps if mp.entity == entity] or maps) for c, maps in index.get(key) or []
+                      if c.semantic_type == SemanticType.METRIC and c.id in {t[1].id for t in twins}]
+            slot = self._slot_from_senses(key, phrase, senses, span) if senses else None
+        return slot, twins
+
+    def _coordinated_heads(self, question: str, qf, hits: list, consumed: set, index: dict, sq: SemanticQuery) -> None:
+        """"satış tutarı ve adedi", "satış adedi ve tutarı", "fatura sayısı ve tutarı": two measures that share
+        their subject, the subject written once. Turkish drops it from the second head, and the second head
+        alone — a bare "adedi" or "tutarı" — matched nothing: it was neither consumed nor reported, so the
+        question was answered with the first measure only, one column, as if it had asked for one figure
+        (ZEKI-47; the order of the two heads decided which one survived).
+
+        The second head takes the first measure's own words minus that measure's head ("satış" of "satış
+        tutarı") and is read as that phrase: a quantity head through the same certified-twin rule as "satış
+        adedi" (`_twin_slot`), any other head as the certified measure the phrase names, on the first
+        measure's table when it has one there. It is ADDED beside the first; nothing is replaced. When the
+        phrase names no certified measure, or several, the question is asked back — never answered with half.
+        Only a head directly after "ve"/"ile" or a comma that follows a measure of two or more words ending
+        in a head: "ciro, adet ve iade" (one-word measure, list items) is not an elided subject."""
+        folded_q = fold(question)
+
+        def is_head(word: str) -> bool:
+            return bool(_QUANTITY_WORD.fullmatch(word) or _AMOUNT_HEAD.fullmatch(word))
+
+        for k, tok in enumerate(qf.tokens):
+            head = fold(tok)
+            if k in consumed or k == 0 or not is_head(head):
+                continue
+            if fold(qf.tokens[k - 1]) in ("ve", "ile"):
+                end = k - 1
+            elif re.search(rf"\b{re.escape(fold(qf.tokens[k - 1]))}\s*,\s*{re.escape(head)}\b", folded_q):
+                end = k
+            else:
+                continue
+            measure = next((h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.span
+                            and h.span[1] == end and h.span[1] - h.span[0] >= 2), None)
+            if measure is None or not is_head(fold(qf.tokens[measure.span[1] - 1])):
+                continue
+            subject = [t for t in qf.tokens[measure.span[0]:measure.span[1] - 1] if fold(t) not in _QUANTITY_NEUTRAL]
+            if not subject:
+                continue
+            span, phrase = (k, k + 1), " ".join(subject + [tok])
+            entity = measure.mapping.entity
+            slot, found = None, []
+            if _QUANTITY_WORD.fullmatch(head):
+                words = self._content_words(" ".join(subject))
+                if words:
+                    slot, twins = self._twin_slot(words, entity, phrase, span, index)
+                    found = sorted({c.term for _, c, _ in twins})
+            else:
+                key = normalize_term(" ".join(subject + [tok]))
+                senses = [(c, maps) for c, maps in (index.get(key) or []) if c.semantic_type == SemanticType.METRIC and maps]
+                here = [(c, [mp for mp in maps if mp.entity == entity]) for c, maps in senses]
+                senses = [(c, maps) for c, maps in here if maps] or senses
+                found = sorted({c.term for c, _ in senses})
+                if len({c.id for c, _ in senses}) == 1:
+                    slot = self._slot_from_senses(key, phrase, senses, span)
+            consumed.add(k)
+            if slot is not None and slot.concept_id != measure.concept_id:
+                slot.explain["source"] = "coordinated_head"
+                slot.explain["why"] = f"'{tok}' '{measure.term}' ile aynı öznenin ikinci ölçüsü → '{phrase}'"
+                hits.append(slot)
+                sq.explanation.append(f"'{measure.term} ve {tok}': iki ölçü istendi → '{measure.term}' ve "
+                                      f"'{(slot.explain or {}).get('canonical') or phrase}'")
+                continue
+            if slot is not None:
+                continue            # the same measure named twice: one figure
+            if phrase not in sq.unhandled:
+                sq.unhandled.append(phrase)
+            sq.clarification.append(
+                f"‘{measure.term}’ ile birlikte ‘{phrase}’ de istendi; katalogda "
+                + (f"birden çok karşılığı var: {', '.join(found)}. Hangisini kastediyorsunuz?" if found
+                   else "bu adla tanımlı bir ölçü yok. Hangi ölçüyü kastediyorsunuz?"))
+            sq.explanation.append(f"'{tok}' '{measure.term}' ile birlikte ikinci ölçü olarak istendi; "
+                                  f"'{phrase}' {'belirsiz' if found else 'katalogda yok'} — yarım cevap verilmedi")
 
     def _slot_from_senses(self, key: str, surface: str, senses: list[tuple[Concept, list[Mapping]]], span: tuple[int, int]) -> Optional[ResolvedSlot]:
         usable = [(c, maps) for c, maps in senses if maps]
@@ -2352,6 +2493,10 @@ class SemanticResolver:
             # faturalar" placed only the CRM's "fiyat listesi", and the shortcut carried a question
             # about invoices to the database that has none, without the invoices ever being counted.
             covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
+            # The words of a time expression are the question's period, not a thing it names: "bu yıl"
+            # voted for the ERP through a consultant report called AHMET_YILLARA_GÖRE_SATIS and carried a
+            # question about CRM royalty contracts to the other database (A019, 2026-09-29).
+            covered |= _temporal_positions(qf.tokens, sq.temporal)
             plain_votes, plain_named = self._source_votes(qf, covered)
             if len(column_homes) == 1 and not elsewhere and not (set(plain_votes) - column_homes):
                 homes = column_homes
@@ -2363,6 +2508,7 @@ class SemanticResolver:
             # phrase) say which database the question is about.
             votes, named = dict(plain_votes), list(plain_named)
             plain = dict(votes)
+            subject = _subject_position(qf.tokens)
             # A certified phrase names its database as surely as a table's own word does: "fiziki
             # arşivde emanete verilmiş" is three CRM things, and the plain "kayıtlar" beside them is
             # one ERP word, not the question's subject.
@@ -2373,13 +2519,70 @@ class SemanticResolver:
                     # a phrase or a table's own word is a full voice; a lone word is half of one — two
                     # of them weigh what one deliberate phrase does, and one alone decides nothing
                     # against a table the question names in plain words
-                    votes[src] = votes.get(src, 0) + (1 if self._names_a_source(s_) else 0.5)
+                    # A certified phrase for a table itself, when it is what the question asks about ("…telif
+                    # sözleşmeleri hangileri?"), is both voices at once — a deliberate phrase *and* the
+                    # table's own word — and it outweighs a plain word whose stem only resembles some report
+                    # table's name on the other side. Only as the subject: "ISBN listesinde stok kartıyla
+                    # eşleşmemiş yayın numaraları" names the ERP item card as a complement, and weighting it
+                    # carried a CRM question to the ERP (A095, 2026-09-29).
+                    span_len = s_.span[1] - s_.span[0]
+                    head = s_.semantic_type == SemanticType.ENTITY and span_len >= 2 and s_.span[0] <= subject < s_.span[1]
+                    weight = 2 if head else (1 if self._names_a_source(s_) else 0.5)
+                    votes[src] = votes.get(src, 0) + weight
             ranked = sorted(votes.items(), key=lambda kv: -kv[1])
             homes = {ranked[0][0]} if ranked and (len(ranked) == 1 or ranked[0][1] >= 2 * ranked[1][1]) else set()
             if not homes and ranked and votes.get("", 0) == ranked[0][1] and plain.get("", 0) > 0:
                 homes = {""}                   # a tie with a table's own word on the ERP side goes to the connection's own database
             if len(homes) == 1:
                 sq.source_hint = next(iter(homes))
+        if metrics and len(homes) == 1 and all(getattr(m, "span", None) and m.span[1] - m.span[0] == 1 for m in metrics):
+            # One generic measure word against a question that plainly names the other database: "Etkinliklere
+            # harcadığımız toplam gider bütçenin neresinde duruyor?" — "gider" is certified on the ERP ledger,
+            # while "etkinlik" is a CRM table's own word and "bütçe" answers only to CRM tables. The measure
+            # decided alone, the CRM words were handed over as "left to the model", and the ERP's total expense
+            # was served as event spending (B064, 2026-09-29). A one-word measure is one voice; two independent
+            # words that answer only to the other side, with a clear margin, decide instead.
+            # Counted by distinct table, not by word ("etkinlik … etkinlik sonrası" is one CRM thing), and only
+            # where the other side can itself say what the measure says: the CRM event table carries an
+            # expense column, so "gider" is answerable there; it carries no sales or revenue column, so
+            # "etkinlik sonrası satış / ciro" stays a two-database question (A072, B094).
+            mhome = next(iter(homes))
+            covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
+            covered |= _temporal_positions(qf.tokens, sq.temporal)
+            # source → {voice: tables}; a voice is one plain word or one table a certified phrase names
+            named_by: dict[str, dict[str, set[str]]] = {}
+            for k, src, ents in self._source_hits(qf, covered):
+                named_by.setdefault(src, {})[f"w{k}"] = set(ents)
+            for s_ in sq.slots:
+                if s_ in metrics or s_.mapping is None or not s_.mapping.entity or s_.semantic_type == SemanticType.DEFAULT_FILTER:
+                    continue
+                if s_.status == "CERTIFIED" and getattr(s_, "span", None) and self._names_a_source(s_):
+                    named_by.setdefault(self._source_of(s_.mapping.entity), {})[s_.mapping.entity] = {s_.mapping.entity}
+            forms = {f for m in metrics for w in fold(m.term).split() for f in (stem(w), short_root(w)) if f and len(f) >= 4}
+
+            def says_measure(voices: dict[str, set[str]]) -> bool:
+                for ent in {e for ents in voices.values() for e in ents}:
+                    prof = self.by_entity.get(ent)
+                    if prof is not None and any(f in fold(c.name) for c in prof.columns for f in forms):
+                        return True
+                return False
+
+            rivals = sorted(((src, voices) for src, voices in named_by.items() if src != mhome), key=lambda kv: -len(kv[1]))
+            mine = len(named_by.get(mhome, {})) + len(metrics)
+            if rivals and len(rivals[0][1]) >= 2 and len(rivals[0][1]) >= 2 * mine and says_measure(rivals[0][1]):
+                rivals = [(rivals[0][0], len(rivals[0][1]))]
+                other = rivals[0][0]
+                homes = {other}
+                sq.source_hint = other
+                sq.explanation.append(f"tek kelimelik ölçü ({', '.join(m.term for m in metrics)}) {mhome or 'ana veri tabanı'} tarafında; "
+                                      f"soru {other or 'ana veri tabanı'} tarafında {int(rivals[0][1])} şey adlandırıyor → o kaynak seçildi")
+                for m in metrics:
+                    if m in sq.slots:
+                        sq.slots.remove(m)
+                    word = fold(m.term)
+                    if word and word not in sq.unresolved:
+                        sq.unresolved.append(word)
+                metrics = []
         if len(homes) > 1:
             # Measures on both sides: "sevkiyatlarda liste fiyatı üzerinden indirim" names an ERP
             # measure by one word and two CRM things by phrase. The side the question names more
@@ -2431,16 +2634,28 @@ class SemanticResolver:
         homes_entities |= {s.mapping.entity for s in list(sq.slots) + list(sq.group_by)
                            if s.mapping is not None and s.mapping.entity and s.semantic_type != SemanticType.DEFAULT_FILTER
                            and self._source_of(s.mapping.entity) == home}
+        # ZEKI-54: every exemption below keeps a word on the other database because a two-server plan can
+        # read it there. Where plans are off (SEMANTIC_FEDERATED≠1) nothing can: kept, the word made the
+        # compiler show the model both databases and ask for one statement, and whether the answer was
+        # a statement joining both servers (refused at run time) or one that quietly dropped the word
+        # was the model's coin toss — a scheduled report failed on some mornings and not on others.
+        # There the word is handed to the model to read on the measure's side, like any lone word, and
+        # the person sees that reading. A measure on the other side is the question's own figure and is
+        # never handed over: it stays, and the compiler says the question needs two servers.
+        one_server = not federated.plans_enabled()
         for lone in {id(s): s for s in others}.values():
-            if self._source_of(lone.mapping.entity) in named:
-                continue          # the question named this database by name: it is meant to be read
             span = getattr(lone, "span", None)
             if lone.semantic_type == SemanticType.METRIC and (lone.explain or {}).get("source") == "count_cue":
                 sq.slots.remove(lone)                     # a count composed on the other source's table
                 continue
-            if not span or span[1] - span[0] > 2:
+            if one_server:
+                if lone.semantic_type == SemanticType.METRIC:
+                    continue
+            elif self._source_of(lone.mapping.entity) in named:
+                continue          # the question named this database by name: it is meant to be read
+            elif not span or span[1] - span[0] > 2:
                 continue                                  # a certified phrase of three or more words is meant
-            if span[1] - span[0] >= 2 and lone.status == "CERTIFIED" \
+            elif span[1] - span[0] >= 2 and lone.status == "CERTIFIED" \
                     and lone.semantic_type in (SemanticType.METRIC, SemanticType.COLUMN) \
                     and not any(span[0] <= c < span[1] for c in counted_at):
                 # A deliberate two-word certified measure or column names its own subject: "telif
@@ -2450,22 +2665,206 @@ class SemanticResolver:
                 # that database. A lone word or a two-word value *filter* is still passed over below;
                 # only a certified analytical axis of two or more words is kept here.
                 continue
-            if lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by":
+            if not one_server and lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by":
                 continue                                  # "kanal bazında": the grouping is the question's structure
-            if self._linked_across(lone.mapping.entity, homes_entities):
+            if not one_server and self._linked_across(lone.mapping.entity, homes_entities):
                 continue                                  # the catalog measured a bridge: the question may span both
+            if one_server and self._to_home_sense(lone, home):
+                sq.explanation.append(f"'{lone.term}' iki veritabanında da tanımlı; ölçünün tarafındaki "
+                                      f"{lone.mapping.entity}.{lone.mapping.column or ''} okunacak")
+                continue                                  # the same term, certified on the measure's side too
+            # Role, read before the slot is taken out: a label or value is a filter; a column or a table's own
+            # word the person lists among the columns, or groups by, is something they want to see. Beside a
+            # measure ("net ciro ve kâr") it is another figure and keeps the reading it always had.
+            shown = one_server and lone.semantic_type != SemanticType.DIMENSION_VALUE and (
+                (lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by")
+                or (lone.semantic_type in (SemanticType.COLUMN, SemanticType.ENTITY) and span and tuple(span) != (0, 0)
+                    and span[0] in self._column_role_positions(sq, qf, {span[0]: span[1]})))
+            if span and span[0] in counted_at:
+                shown = False                             # the measure itself reads this word
             if lone in sq.slots:
                 sq.slots.remove(lone)
             if lone in sq.group_by:
                 sq.group_by.remove(lone)
-            word = fold(qf.tokens[span[0]]) if span[0] < len(qf.tokens) else fold(lone.term)
-            if span[0] in counted_at:
+            if shown:
+                # ZEKI-54: asked to be SEEN — a column, a breakdown, a table's own word — and it lives only on
+                # the other server. Handed to the model it came back as a filter the person never asked for
+                # ("'yazar' → CLCARD.SPECODE = 'YAZARLAR'": two rows instead of every book). Not handed over:
+                # the answer is read from the measure's database without it, and says so in plain words.
+                self._omit_column(sq, lone.term, self._source_of(lone.mapping.entity), metrics,
+                                  words=[qf.tokens[i] for i in range(*span)] if span and span[1] <= len(qf.tokens) else None)
+                continue
+            if one_server and self._absorbed_by_measure(
+                    sq, lone.term, metrics, [qf.tokens[i] for i in range(*span)] if span and span[1] <= len(qf.tokens) else None):
+                continue                                  # "satış bilgilerini" beside the sales measures: said already
+            if span and span[0] < len(qf.tokens):
+                # One server: the whole phrase is the model's to read ("kitap adı", not "kitap").
+                word = " ".join(fold(t) for t in qf.tokens[span[0]:span[1]]) if one_server else fold(qf.tokens[span[0]])
+            else:
+                word = fold(lone.term)
+            if span and span[0] in counted_at:
                 word = ""                                 # the measure already reads this word; it is not missing
             if word and word not in sq.unresolved:
                 sq.unresolved.append(word)
             where = f"{lone.mapping.entity}.{lone.mapping.column}" if lone.mapping.column else lone.mapping.entity
             sq.explanation.append(f"'{lone.term}' katalogda {self._source_of(lone.mapping.entity) or 'ana veri tabanı'} tarafında {where} olarak tanımlı; "
-                                  f"ölçü {home or 'ana veri tabanı'} verisinde → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
+                                  f"ölçü {home or 'ana veri tabanı'} verisinde"
+                                  + (" ve bu kurulumda iki sunuculu sorgu kapalı" if one_server else "")
+                                  + " → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
+
+    def _to_home_sense(self, slot: ResolvedSlot, home: str) -> bool:
+        """The same certified term read on the measure's own database, when the catalog holds it there too
+        ("kitap adı" on the CRM book and on the ERP item card): the slot takes that sense and stays."""
+        for alt in (slot.explain or {}).get("alternatives") or []:
+            ent = alt.get("entity")
+            if not ent or ent not in self.by_entity or self._source_of(ent) != home:
+                continue
+            slot.mapping = Mapping(concept_id=alt.get("conceptId") or "", entity=ent, table_pattern=alt.get("tablePattern") or "",
+                                   column=alt.get("column"), operator=alt.get("operator"), values=list(alt.get("values") or []),
+                                   formula=alt.get("formula"), extra=alt.get("extra") or {})
+            slot.concept_id = alt.get("conceptId")
+            slot.explain["chosen_by"] = f"ölçünün veritabanı ({home or 'ana veri tabanı'})"
+            return True
+        return False
+
+    def _source_label(self, src: Optional[str]) -> str:
+        """How a person names a database: "TIMAS_MSCRM" → "CRM" (the acronym under a vendor prefix, the same
+        reading `_source_name_words` makes), the connection's own database by its datasource ("logo" → "Logo")."""
+        if src is None:
+            return ""
+        if not src:
+            name = (self.datasource_id or "").strip()
+            return name[:1].upper() + name[1:] if name else "ana veri tabanı"
+        last = [p for p in re.split(r"[^0-9A-Za-z]+", src) if p][-1] if re.search(r"[0-9A-Za-z]", src) else src
+        for cut in (2, 1):
+            tail = last[cut:]
+            if len(tail) >= 3 and not set(tail.lower()) & set("aeiou"):
+                return tail.upper()
+        return last
+
+    def _omit_column(self, sq: SemanticQuery, term: str, src: Optional[str], metrics: list[ResolvedSlot],
+                     words: Optional[list[str]] = None) -> None:
+        """ZEKI-54: a term the person wants to SEE that this deployment cannot read in the same statement.
+
+        Not handed to the model (it turned "yazar" into a filter on a customer code) and not silently lost:
+        the answer is read without it and carries one plain sentence naming it. A phrase that only restates
+        the measure ("satış bilgileri" beside "satış tutarı") names no column of its own and is absorbed."""
+        if self._absorbed_by_measure(sq, term, metrics, words):
+            return
+        label = self._source_label(src)
+        if src is not None:
+            sentence = (f"‘{term}’ bilgisi {label} verisinde; bu kurulumda iki ayrı sunucudaki veri tek soruda "
+                        f"birleştirilmediği için cevaba eklenmedi.")
+        else:
+            sentence = f"‘{term}’ için bu veride tanımlı bir alan bulunamadı; cevaba eklenmedi."
+        if not any(o.get("term") == term for o in sq.omitted):
+            sq.omitted.append({"term": term, "source": src, "sentence": sentence})
+            sq.explanation.append(sentence)
+
+    @staticmethod
+    def _absorbed_by_measure(sq: SemanticQuery, term: str, metrics: list[ResolvedSlot], words: Optional[list[str]] = None) -> bool:
+        """A phrase that only restates the question's measure ("satış bilgileri" beside "satış tutarı"): a
+        measure word plus generic nouns. It names no column of its own and nothing is left to read — it is
+        accounted for, not missing. Needs a measure word: "kitapçı adı" is all generic nouns and is a column."""
+        toks = [fold(w) for w in (words or tokenize(term))]
+        measure_words = {stem(w) for m in metrics for w in tokenize(f"{m.term} {(m.explain or {}).get('canonical') or ''}")}
+
+        def generic(w: str) -> bool:
+            return (stem(w) in GENERIC_S or short_root(w) in GENERIC_S or stem(w) in STOPWORDS_S
+                    or any(len(g) >= 4 and w.startswith(g) for g in GENERIC_S))
+        if toks and any(stem(w) in measure_words for w in toks) and all(stem(w) in measure_words or generic(w) for w in toks):
+            if term not in sq.ignored:
+                sq.ignored.append(term)
+            sq.explanation.append(f"'{term}' ölçünün kendisini anlatıyor; ayrı bir kolon değil")
+            return True
+        return False
+
+    def _column_role_positions(self, sq: SemanticQuery, qf, positions: dict[int, int]) -> set[int]:
+        """Which of these spans (start → end) hold words the person asks to SEE — a column or a breakdown —
+        rather than words that narrow the rows. Read from the roles the resolver already assigned, never from
+        the word itself: the report frame's projection; a breakdown marker right after it ("yazar bazında");
+        or a place in a run of columns — directly after a column/breakdown slot (a Turkish modifier precedes
+        its noun, so a word after a column is not its qualifier), or before "ve/ile"/a comma that leads into
+        one. Beside a measure ("net ciro ve kâr") a word is another figure, not a column: that stays as it was."""
+        shown = [s for s in list(sq.slots) + list(sq.group_by)
+                 if s.mapping and getattr(s, "span", None) and tuple(s.span) != (0, 0)
+                 and tuple(s.span) not in {(a, b) for a, b in positions.items()}
+                 and s.semantic_type != SemanticType.DIMENSION_VALUE
+                 # A grouping the resolver added for a top-N ("en çok ciro yapan on kanal") is bookkeeping, not
+                 # a column the person listed: a word after it ("…on kanal, kâr ile") is another figure.
+                 and (s.explain or {}).get("role") != "rank_group_by"
+                 and (s.semantic_type in (SemanticType.COLUMN, SemanticType.ENTITY) or s in sq.group_by)]
+        ends = {s.span[1] for s in shown}
+        starts = {s.span[0] for s in shown}
+        projection = [fold(p) for p in sq.projection]
+        folded_q = fold(sq.question)
+        out: set[int] = set()
+        for k in sorted(positions):
+            end = positions[k]
+            words = " ".join(qf.tokens[k:end])
+            last = qf.tokens[end - 1] if 0 < end <= len(qf.tokens) else ""
+            nxt = qf.tokens[end] if end < len(qf.tokens) else ""
+            prev = k - 1
+            if prev >= 0 and qf.tokens[prev] in ("ve", "ile"):
+                prev -= 1
+            listed_before = (nxt in ("ve", "ile") and (end + 1) in starts) \
+                or (end in starts and bool(re.search(rf"\b{re.escape(last)}\s*,", folded_q)))
+            if (any(re.search(rf"\b{re.escape(words)}\b", p) for p in projection)
+                    or (nxt and (_GROUP_MARKERS.fullmatch(stem(nxt)) or _GROUP_MARKERS.fullmatch(nxt)))
+                    or (prev >= 0 and (prev + 1) in ends)
+                    or listed_before):
+                out.add(k)
+                ends.add(end)                     # the run continues through these words
+        return out
+
+    def _unplaced_columns(self, sq: SemanticQuery, qf) -> None:
+        """Words nothing in the catalog placed, asked for as columns: undefined terms the model places, a
+        breakdown the answer must carry, and a column the gate will not let become a filter (`sq.column_terms`).
+        Qualifiers keep the 2026-09-16 rule."""
+        # Only words nothing placed. A qualifier (`model_qualifiers`) narrows the noun after it by definition and
+        # keeps the 2026-09-16 rule; its reading is still held to the column rule by the gate when it is one.
+        positions: dict[int, str] = {}
+        single = {fold(w) for w in sq.unresolved if " " not in str(w)}
+        # A noun that is also a verb form ("yazar": writer / writes) was set aside by step 6 as grammar and never
+        # reached `unresolved`: in a list of columns it vanished without a word. Only such a word — ignored as a
+        # verb, not a generic head ("bilgilerini"), not a polite request ("yazar mısın"), not a record verb.
+        covered = {i for s in list(sq.slots) + list(sq.group_by) if getattr(s, "span", None) for i in range(*s.span)}
+        ignored = {fold(w) for w in sq.ignored if " " not in str(w)}
+        verbish: set[int] = set()
+        for k, tok in enumerate(qf.tokens):
+            if k in covered:
+                continue
+            if tok in single:
+                positions[k] = tok
+                continue
+            nxt = qf.tokens[k + 1] if k + 1 < len(qf.tokens) else ""
+            st = stem(tok)
+            if (tok in ignored and is_verb_form(tok) and not _REQUEST_PARTICLE.fullmatch(nxt)
+                    and tok not in (_RECORD_VERBS | _RECORD_CONVERBS)
+                    and not ({st, short_root(tok)} & (GENERIC_S | STOPWORDS_S | MODIFIERS_S | METRIC_VOCAB_S))):
+                positions[k] = tok
+                verbish.add(k)
+        if not positions:
+            return
+        columns = self._column_role_positions(sq, qf, {k: k + 1 for k in positions})
+        if not columns:
+            return
+        # Nothing in the catalog places these words on either server, so there is no "other server" to name and
+        # no reason to take them from the model: the A044 path (2026-09-29, `_requested_breakdowns`) — the word
+        # stays an undefined term the model places, the answer must group by it, and the gate holds the model to
+        # reading it as a column, never as a filter. Plans on or off alike. Only a word *certified on the other
+        # server* is taken out of the answer (`_keep_to_one_source` → `_omit_column`).
+        for k in sorted(columns):
+            tok = positions[k]
+            if k in verbish:
+                sq.ignored[:] = [w for w in sq.ignored if fold(str(w)) != tok]
+                sq.explanation.append(f"'{tok}' kolonların arasında sayıldı: fiil değil, istenen bir kolon")
+            if tok not in sq.unresolved:
+                sq.unresolved.append(tok)
+            if tok not in sq.requested_breakdowns:
+                sq.requested_breakdowns.append(tok)
+            if tok not in sq.column_terms:
+                sq.column_terms.append(tok)
 
     @staticmethod
     def _names_a_source(slot: ResolvedSlot) -> bool:
@@ -2488,6 +2887,14 @@ class SemanticResolver:
         vote the wrong way. One vote per word, for a source whose tables alone answer to it."""
         votes: dict[str, int] = {}
         named: list[str] = []
+        for _k, src, ents in self._source_hits(qf, covered):
+            votes[src] = votes.get(src, 0) + 1
+            named += ents
+        return votes, named
+
+    def _source_hits(self, qf, covered: set[int]) -> list[tuple[int, str, list[str]]]:
+        """Each plain word that answers to the tables of exactly one source: (position, source, tables)."""
+        out: list[tuple[int, str, list[str]]] = []
         for k, tok in enumerate(qf.tokens):
             if k in covered or not is_domain_candidate(tok) or _COUNT_CUE.fullmatch(fold(tok)):
                 continue
@@ -2499,9 +2906,8 @@ class SemanticResolver:
                 hit.setdefault(self._source_of(prof.entity), []).append(prof.entity)
             if len(hit) == 1:
                 src, ents = next(iter(hit.items()))
-                votes[src] = votes.get(src, 0) + 1
-                named += ents
-        return votes, named
+                out.append((k, src, ents))
+        return out
 
     def _linked_across(self, entity: str, others: set[str]) -> bool:
         """Has the catalog measured a cross-source relationship between `entity` and any of `others`?"""
@@ -3112,6 +3518,263 @@ class SemanticResolver:
                 f"‘{phrase}’ katalogda tanımlı bir ölçü değil. ‘{tok}’ şu tanımlı ölçülerde geçiyor: "
                 f"{', '.join(names)}. Hangisini kastediyorsunuz?")
             sq.explanation.append(f"'{tok}' bir ölçü niteleyicisi; '{measure.term}' ile birlikte tanımlı değil — model formül yazmadı")
+
+    def _requested_breakdowns(self, sq: SemanticQuery, qf: Any, hits: list[ResolvedSlot], consumed: set[int],
+                              index: dict) -> None:
+        """Words right before an explicit breakdown marker ("yazar bazında") that no slot placed."""
+        placed_group_ends = {s.span[1] for s in sq.group_by if s.span}
+        words = []
+        for k in range(1, len(qf.tokens)):
+            if fold(qf.tokens[k]) not in _EXPLICIT_BREAKDOWN:
+                continue
+            w = k - 1
+            tok = qf.tokens[w]
+            if w in consumed or (w + 1) in placed_group_ends or tok.isdigit() or stem(tok) in STOPWORDS_S \
+                    or stem(tok) in _TIME_WORDS or short_root(tok) in _TIME_WORDS:
+                continue
+            if any(h.span and h.span[0] <= w < h.span[1] for h in hits):
+                continue
+            words.append(tok)
+        if not words:
+            return
+        sq.requested_breakdowns = list(dict.fromkeys(words))
+        for tok in sq.requested_breakdowns:
+            if tok in sq.ignored:
+                sq.ignored.remove(tok)
+            if tok not in sq.unresolved:
+                sq.unresolved.append(tok)
+        sq.explanation.append("istenen kırılım yerleşmedi: " + ", ".join(f"'{w}' bazında" for w in sq.requested_breakdowns)
+                              + " — sessizce düşürülmez; cevap gruplamalı ya da açıkça reddedilmeli")
+        self._breakdown_sibling_measure(sq, hits, index)
+        self._record_breakdown_paths(sq, hits, index)
+
+    def _relationship_graph(self) -> None:
+        """Catalog relationships as declared FK edges: (holder entity, column) → (referenced entity, column)."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        if getattr(self, "_rel_graph_for", None) is self.profiles:
+            return
+        fks: dict[str, list[tuple[str, str, str]]] = {}          # holder → [(column, ref entity, ref column)]
+        for p in self.profiles:
+            for r in p.relationships or []:
+                a, b = bare(p.entity), bare(str(r.get("ref_entity") or ""))
+                if a and b and a != b:
+                    fks.setdefault(a, []).append((str(r.get("column") or ""), b, str(r.get("ref_column") or "")))
+        self._rel_fks, self._rel_graph_for = fks, self.profiles
+
+    def _join_paths(self, start: str, goals: set[str]) -> list[tuple[str, list[tuple[str, str, str, str]]]]:
+        """Every way the catalog joins `start` to a goal entity: the table itself; one declared key either way; or a
+        LINK table that holds a key to both (the N:N shape — «etkinlik ↔ kişi»). A table merely referenced by both
+        (system user, business unit — every CRM record's owner) is not a link: through it everything reaches
+        everything, and the path says nothing about the question."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        self._relationship_graph()
+        start = bare(start)
+        out: list[tuple[str, list[tuple[str, str, str, str]]]] = []
+        if start in goals:
+            out.append((start, []))
+        for col, ref, rcol in self._rel_fks.get(start, []):            # start.key → goal
+            if ref in goals:
+                out.append((ref, [(start, col, ref, rcol)]))
+        for holder, keys in self._rel_fks.items():
+            to_start = [(c, rc) for c, r, rc in keys if r == start]
+            if not to_start:
+                continue
+            if holder in goals:                                          # goal.key → start
+                out += [(holder, [(start, rc, holder, c)]) for c, rc in to_start]
+            for c2, goal, rc2 in keys:                                    # start ← link → goal
+                if goal in goals and goal != start and holder not in goals:
+                    out += [(goal, [(start, rc, holder, c), (holder, c2, goal, rc2)]) for c, rc in to_start]
+        return out
+
+    def _reach(self, entity: str, hops: int = 2) -> set[str]:
+        """Entities joinable from `entity` the way `_join_paths` joins (itself, a declared key, a link table)."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        self._relationship_graph()
+        start = bare(entity)
+        seen = {start} | {ref for _, ref, _ in self._rel_fks.get(start, [])}
+        for holder, keys in self._rel_fks.items():
+            if any(r == start for _, r, _ in keys):
+                seen.add(holder)
+                seen |= {r for _, r, _ in keys}
+        return seen
+
+    @staticmethod
+    def _values_all_missing(col) -> bool:
+        """The column's complete observed value list holds nothing but «none» (a probed code column). A sample-based
+        null ratio is not used — 20 sampled rows called a 60 % filled column empty."""
+        return col is not None and bool(col.top_values) and all(str(v).strip() in ("", "None", "NULL") for v, _ in col.top_values)
+
+    def _breakdown_targets(self, words: list[str], index: dict) -> tuple[list[tuple[str, str, str]], list[str]]:
+        """(columns, entities) the certified vocabulary names with one of `words`: a COLUMN concept carrying the word,
+        an ENTITY concept whose name ENDS with it («yazar etkinliği» names an event, not an author)."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        stems = {stem(w) for w in words}
+        cols, ents = [], []
+        for key, senses in index.items():
+            if not stems & set(key.split()):
+                continue
+            for c, maps in senses:
+                for m in maps:
+                    if not m.entity:
+                        continue
+                    if c.semantic_type == SemanticType.ENTITY and key.split()[-1] in stems:
+                        ents.append(bare(m.entity))
+                    elif c.semantic_type == SemanticType.COLUMN and m.column:
+                        prof = self.by_entity.get(m.entity)
+                        if prof is not None and self._values_all_missing(prof.column(m.column)):
+                            continue
+                        cols.append((bare(m.entity), m.column, c.term))
+        return list(dict.fromkeys(cols)), list(dict.fromkeys(ents))
+
+    def _record_breakdown_paths(self, sq: SemanticQuery, hits: list[ResolvedSlot], index: dict) -> None:
+        """For the measure finally read: every catalog join to a table that carries each requested breakdown word, with
+        those columns. Which one the question means is the model's reading to state; a join key the profile sample saw
+        only empty is marked, so the knowledge pack's note on it can be weighed."""
+        metric = next((h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.mapping.entity), None)
+        if metric is None:
+            return
+        by_bare = {re.sub(r"^LG_", "", e.upper()): p for e, p in self.by_entity.items()}
+
+        def sample_empty(ent: str, col: str) -> bool:
+            # Only a reference (key) column, never probed for values, whose whole profile sample was empty. Weak on its
+            # own (a sample), so it orders and labels a path — it never removes one.
+            cp = by_bare.get(ent).column(col) if by_bare.get(ent) else None
+            return cp is not None and bool(cp.ref_entity) and not cp.top_values and (cp.null_ratio or 0) >= 0.999
+
+        for word in sq.requested_breakdowns:
+            cols, ents = self._breakdown_targets([word], index)
+            goals = {e for e, _, _ in cols} | set(ents)
+            found = []
+            for end, path in self._join_paths(metric.mapping.entity, goals):
+                here = [list(c) for c in cols if c[0] == end]
+                sparse = [f"{e}.{c}" for a, ac, b, bc in path for e, c in ((a, ac), (b, bc)) if sample_empty(e, c)]
+                if not path:
+                    sparse += [f"{e}.{c}" for e, c, _ in here if sample_empty(e, c)]
+                found.append(({"word": word, "path": [list(e) for e in path], "columns": here,
+                               "sampleEmptyKeys": list(dict.fromkeys(sparse))}, bool(sparse), len(path), end))
+            # A path through a key the sample saw empty goes last: the first listed is what a reader tries first.
+            for entry, *_ in sorted(found, key=lambda x: (x[1], x[2], x[3])):
+                sq.breakdown_paths.append(entry)
+
+    def _breakdown_sibling_measure(self, sq: SemanticQuery, hits: list[ResolvedSlot], index: dict) -> None:
+        """The measure read cannot reach the breakdown asked for, a sibling certified measure (the same name family:
+        its name carries every word of the one read, or it was narrowed away from this very name) can: read the sibling.
+
+        2026-09-29 (A044 sınıfı): «etkinlik giderleri yazar bazında» reads the ledger's event/fair expense, which has
+        no author; the CRM event-card expense — narrowed from «etkinlik gideri» when the ledger took the name — reaches
+        the author through the event↔contact link table. What the breakdown word names is read from the certified
+        vocabulary (COLUMN/ENTITY concepts carrying the word), never from a list. Exactly one reachable sibling, or
+        nothing changes and the word stays undefined (an honest refusal)."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        metrics = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.concept_id]
+        if len(metrics) != 1:
+            return
+        metric = metrics[0]
+        cols, ents = self._breakdown_targets(list(sq.requested_breakdowns), index)
+        targets = {e for e, _, _ in cols} | set(ents)
+        if not targets or self._reach(metric.mapping.entity) & targets:
+            return
+        key = str((metric.explain or {}).get("normalized") or normalize_term(metric.term))
+        family = set(key.split())
+        siblings: dict[str, tuple] = {}
+        for k, senses in index.items():
+            for c, maps in senses:
+                if c.semantic_type != SemanticType.METRIC or c.id == metric.concept_id or not maps:
+                    continue
+                narrowed = normalize_term(str(((c.explain or {}).get("narrowed_from") or {}).get("term") or ""))
+                if narrowed != key and not family <= set(c.normalized_term.split()):
+                    continue
+                if self._reach(maps[0].entity) & targets:
+                    siblings.setdefault(c.id, (c, maps))
+        if len(siblings) != 1:
+            return
+        c, maps = next(iter(siblings.values()))
+        slot = self._slot_from_senses(c.normalized_term, metric.term, [(c, maps)], metric.span)
+        if slot is None:
+            return
+        slot.status = "INFERRED"
+        note = (f"'{metric.term}' kırılım için '{c.term}' ({maps[0].entity}) olarak okundu: "
+                f"'{(metric.explain or {}).get('canonical') or metric.term}' ({metric.mapping.entity}) "
+                f"{', '.join(sq.requested_breakdowns)} kırılımına ulaşamıyor. Kapsam: yalnız '{c.term}' kaydının dolu "
+                f"olduğu satırlar; toplam, asıl ölçüden farklı olabilir.")
+        slot.explain = {**(slot.explain or {}), "source": "breakdown_family", "why": note,
+                        "replaced": (metric.explain or {}).get("canonical") or metric.term}
+        hits[hits.index(metric)] = slot
+        sq.slots = hits
+        sq.explanation.append(note)
+        # The default year was stamped for the measure just replaced; it stays only if the sibling is dated too.
+        if sq.temporal and all((t.params or {}).get("default") for t in sq.temporal):
+            dated = (self.conventions.time_column(slot.mapping.entity)
+                     and not (slot.mapping.extra or {}).get("undated")
+                     and not (slot.mapping.extra or {}).get("state_measure"))
+            if not dated:
+                sq.temporal = []
+                sq.explanation.append("varsayılan dönem geri alındı: kırılıma ulaşan ölçünün tarihi yok → tüm kayıtlar")
+
+    #: How far back the record word of a split measure name may sit ("etkinliklere harcadığımız toplam gider": 3).
+    _SPLIT_NAME_REACH = 3
+
+    def _split_measure_names(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int], index: dict,
+                             sq: SemanticQuery) -> None:
+        """A generic measure word that, together with a record word a few words before it, is the name of ANOTHER
+        certified measure: that measure is the one asked for.
+
+        2026-09-29 tam kapı B064: "Etkinliklere harcadığımız toplam gider" — "gider" matched the generic ledger
+        expense measure (every 7xx account) on its own, "etkinliklere" went to the CRM event table and was then left
+        to the model as an other-server word; the model guessed which ledger lines were about events. The catalog
+        certifies "etkinlik gideri" (the event/fair expense accounts of the ledger — the system of record for money
+        spent): both of its words are in the question, in order, with only words between that belong to nothing.
+        Greedy matching reads adjacent words only and could not see it.
+
+        Kept narrow on purpose: the words between must be unplaced (a relative verb, "toplam"); the record word
+        must be unplaced or a one-word ENTITY (of any table — the certified name decides where the measure lives);
+        exactly one certified measure must carry that name. The slot is INFERRED — the name was put together."""
+        reach = self._SPLIT_NAME_REACH
+        for slot in [h for h in hits if h.semantic_type == SemanticType.METRIC and h.span and h.mapping]:
+            i, j = slot.span
+            if j - i > 2 or slot not in hits:
+                continue
+            head = [w for w in qf.tokens[i:j] if fold(w) != "toplam"] or list(qf.tokens[i:j])
+            found = None
+            for t in range(i - 1, max(-1, i - 1 - reach), -1):        # nearest record word first
+                between = range(t + 1, i)
+                if any(k in consumed for k in between):
+                    break                                          # another reading sits in between: not one name
+                owner = next((h for h in hits if h is not slot and h.span and h.span[0] <= t < h.span[1]), None)
+                if t in consumed and (owner is None or owner.semantic_type != SemanticType.ENTITY
+                                      or owner.span != (t, t + 1) or not owner.mapping):
+                    continue
+                phrase = " ".join([qf.tokens[t], *head])
+                senses = index.get(normalize_term(phrase)) or self._by_root(index).get(_rooted(phrase)) or []
+                senses = [(c, maps) for c, maps in senses if c.semantic_type == SemanticType.METRIC and maps]
+                if len({c.id for c, _ in senses}) != 1 or senses[0][0].id == slot.concept_id:
+                    continue
+                # The record word may be an ENTITY of another table: "etkinlik" names the CRM event table, while
+                # what was spent on events is booked in the ledger (system of record). The certified name decides.
+                found = (t, phrase, senses, owner)
+                break
+            if found is None:
+                continue
+            t, phrase, senses, owner = found
+            named = self._slot_from_senses(normalize_term(phrase), phrase, senses, (t, j))
+            if named is None:
+                continue
+            named.status = "INFERRED"
+            named.confidence = min(named.confidence, 0.8)
+            named.explain = {**(named.explain or {}), "source": "split_measure_name",
+                             "why": f"'{qf.tokens[t]} … {' '.join(qf.tokens[i:j])}' ayrık yazılmış ölçü adı → "
+                                    f"'{senses[0][0].term}' (genel '{slot.term}' değil)"}
+            hits.remove(slot)
+            if owner is not None:
+                hits.remove(owner)
+            hits.append(named)
+            consumed.update(range(t, j))
+            sq.explanation.append(named.explain["why"])
 
     def _metric_over_filter(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int], index: dict) -> Optional[ResolvedSlot]:
         """A certified measure named around a free measure word, on a table the question already reads.

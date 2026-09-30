@@ -24,6 +24,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
 from semantic_bridge import events as E
+from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import events_kaynak as K
 from semantic_bridge import events_sources as src
 from semantic_bridge import provenance as PV
@@ -195,7 +196,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     crm_connect() / logo_connect() → salt okunur bağlantı · llm(priority) → LLM kapısı istemcisi ya da None ·
     system() → (engine, tenant) · require_caller(request) (zamanlayıcı jetonu)."""
     auth, can, is_admin, audit, conf, fresh = (deps[k] for k in ("auth", "can", "is_admin", "audit", "conf", "fresh"))
-    source = src.Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo")
+    source = src.Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo",
+                        motor=deps.get("system"))
     svc = Service(source, deps.get("llm") or (lambda _p: None))
 
     def fair_out(engine, tenant: str, fid: str) -> dict[str, Any]:
@@ -257,12 +259,37 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                        "canEdit": allowed(user, "ozellik:etkinlik.duzenle"), "canApprove": allowed(user, "ozellik:etkinlik.onay"),
                        "canAwards": allowed(user, "ozellik:odul.duzenle"), "canExport": allowed(user, "ozellik:veri.disa-aktar")}}
 
+    def durt(key: tuple) -> None:
+        """«Verileri yenile» (X-Data-Refresh): ekran bekletilmez, CRM okuması arkada yenilenir."""
+        if fresh():
+            nudge = getattr(source, "durt", None)
+            if nudge is not None:
+                nudge(key)
+
+    def year_key(y: int) -> tuple:
+        return ("events", date(y, 1, 1), date(y + 1, 1, 1))
+
+    def isit() -> None:
+        """Köprü açılışında tip listesi ve bu yılın etkinlikleri arkada okunur (ilk açan CRM'i beklemesin)."""
+        engine, _tenant = deps["system"]()
+        if HK.sqlite_mi(engine):
+            return
+        source.types()
+        t = E.today()
+        years = {t.year} | {y for y, _a, _b in src.year_slices(t, t + timedelta(days=E.settings()["agendaDays"] + 1))}
+        for y in sorted(years):            # takvimin yılı + Kampüs ajandasının penceresine düşen yıllar
+            source.events(date(y, 1, 1), date(y + 1, 1, 1))
+
+    HK.acilista("etkinlik.crm", isit)
+
     @app.get(f"{P}/calendar")
     def events_calendar(request: Request, year: Optional[int] = None, classes: str = "", unmapped: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         cls = [c for c in classes.split(",") if c in E.CLASSES] if classes else E.settings()["defaultClasses"]
         y = year_of(year)
-        return PV.bagla(call(svc.calendar, engine, tenant, y, cls, bool(unmapped), fresh()), lambda: K.for_calendar(engine, tenant, y))
+        out = call(svc.calendar, engine, tenant, y, cls, bool(unmapped), False)
+        durt(year_key(y))
+        return PV.bagla(out, lambda: K.for_calendar(engine, tenant, y))
 
     @app.get(f"{P}/upcoming")
     def events_upcoming(request: Request) -> dict[str, Any]:
@@ -280,13 +307,18 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
 
     @app.get(f"{P}/me/agenda")
     def events_agenda(request: Request) -> dict[str, Any]:
-        """Kampüs «Önemli günler ve ajanda»: yalnız kişinin kendi kayıtları (sayfa yetkisi gerekmez)."""
+        """Kampüs «Önemli günler ve ajanda»: kişinin kendi kayıtları + herkese aynı özel gün, resmî tatil ve doğum günleri
+        (`agenda_days`; sayfa yetkisi gerekmez)."""
         engine, tenant, user, _ = ctx(request)
         days = E.settings()["agendaDays"]
         t = E.today()
         warnings = []
         try:
-            crm = source.events(t, t + timedelta(days=days + 1), fresh())
+            # Hız 4. tur: kişi başına pencere okuması yerine takvim yılı okumaları (ortak bellek + tablo, açılışta
+            # ısıtılır) süzülür; «Verileri yenile» ekranı bekletmez, yıl okumaları arkada yenilenir.
+            crm = source.window_events(t, t + timedelta(days=days + 1))
+            for y, _a, _b in src.year_slices(t, t + timedelta(days=days + 1)):
+                durt(year_key(y))
         except Exception as e:  # noqa: BLE001
             log.info("events agenda: CRM okunamadı: %s", e)
             crm = []
@@ -296,9 +328,13 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         from semantic_bridge import soru_kaynak as SK
         from semantic_bridge import sorgu_izi as IZ
 
+        from semantic_bridge import agenda_days as AD
+
         with IZ.izle(engine) as ran:
             out = call(E.agenda, engine, tenant, user, crm, t, days)
+            out.update(AD.important_days(engine, tenant, t, days))
         out["warnings"] = warnings
+        out["canSeasons"] = allowed(user, "sayfa:seo-takvim")
         out["canOpen"] = allowed(user, "sayfa:etkinlikler")
 
         def extra(k: PV.Kaynaklar) -> list[str]:
@@ -307,7 +343,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             except Exception:  # noqa: BLE001 — CRM şeması tanımlı değilse yalnız portal kayıtları
                 return []
         return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.kampus.ajanda", title="Ajanda",
-                                               text=KK.F_AJANDA, extra=extra, skip=("days",)))
+                                               text=KK.F_AJANDA, extra=extra, skip=("days", "importantDays", "birthdays")))
 
     @app.post(f"{P}/run-due")
     def events_run_due(request: Request) -> dict[str, Any]:
@@ -344,7 +380,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/type-map")
     def events_type_map(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        types = call(source.types, fresh())
+        types = call(source.types, False)
+        durt(("types",))
         rows = E.type_rows(types, E.type_map(engine, tenant))
         out = {"items": rows, "classes": E.CLASSES, "job": dict(svc.job),
                "counts": {"total": len(rows), "decided": sum(1 for r in rows if r["class"]),

@@ -120,9 +120,7 @@ class NtlmLDAPSettings(LDAPSettings):
 			if not ok:
 				frappe.throw(_("Invalid username or password"))
 			user = self.create_or_update_user(self.convert_ldap_entry_to_dict(entry), groups=groups)
-			ensure_agent(user)
-			ensure_admin(user, sam)
-			ensure_team(user, _department(entry))
+			rol_uygula(user, sam, _department(entry))
 			return user
 		finally:
 			conn.unbind()
@@ -145,9 +143,7 @@ class NtlmLDAPSettings(LDAPSettings):
 			entry = conn.entries[0]
 			groups = self.fetch_ldap_groups(entry, conn)
 			user = self.create_or_update_user(self.convert_ldap_entry_to_dict(entry), groups=groups)
-			ensure_agent(user)
-			ensure_admin(user, str(entry[self.ldap_username_field].value))
-			ensure_team(user, _department(entry))
+			rol_uygula(user, str(entry[self.ldap_username_field].value), _department(entry))
 			return user
 		finally:
 			conn.unbind()
@@ -186,18 +182,36 @@ def ensure_admin(user, account: str) -> None:
 			user.add_roles(*missing)
 
 
+def rol_uygula(user, account: str, department: str) -> None:
+	"""2026-09-29 rol modeli (yz/temsilci.py): BT birimi ve yöneticiler temsilci, diğerleri talep eden."""
+	from nanobase_brand.yz.temsilci import talep_eden_yap, temsilci_mi
+
+	ensure_admin(user, account)
+	if temsilci_mi(account, department, user):
+		ensure_agent(user)
+		ensure_team(user, department)
+	else:
+		talep_eden_yap(user)
+
+
 def ensure_agent(user) -> None:
-	"""AD'den gelen kişi temsilcidir: HD Agent kaydı yoksa açılır, pasifse bırakılır (yönetici kararı)."""
-	if not frappe.db.exists("DocType", "HD Agent") or frappe.db.exists("HD Agent", user.name):
+	"""Temsilci: masa kullanıcısı (System User) ve HD Agent kaydı; kayıt pasifse bırakılır (yönetici kararı)."""
+	if not frappe.db.exists("DocType", "HD Agent"):
 		return
-	frappe.get_doc(
-		{
-			"doctype": "HD Agent",
-			"user": user.name,
-			"agent_name": user.full_name or user.first_name or user.name,
-			"is_active": 1,
-		}
-	).insert(ignore_permissions=True)
+	if user.user_type != "System User":
+		frappe.db.set_value("User", user.name, "user_type", "System User")
+	if not frappe.db.exists("HD Agent", user.name):
+		frappe.get_doc(
+			{
+				"doctype": "HD Agent",
+				"user": user.name,
+				"agent_name": user.full_name or user.first_name or user.name,
+				"is_active": 1,
+			}
+		).insert(ignore_permissions=True)
+	# Kullanıcı kaydı yukarıda veritabanında değişti (tip, temsilci rolü): elimizdeki kopya tazelenir, yoksa ardından
+	# gelen rol eklemesi eski kopyayı kaydetmeye çalışıp TimestampMismatchError verir (2026-09-29 eşitleme).
+	user.reload()
 
 
 def _department(entry) -> str:

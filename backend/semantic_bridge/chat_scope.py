@@ -230,6 +230,18 @@ def has_business_evidence(slots: Iterable[Any]) -> bool:
     return False
 
 
+def strong_phrases(slots: Iterable[Any]) -> list[str]:
+    """Güçlü kanıt olan yerleşimlerin soru öbekleri (has_business_evidence ile aynı ölçüt). Portal anahtar kelimesi
+    bu öbeklerden birinin içindeyse ayırt edici sayılmaz (chat_portal.mentions_portal)."""
+    out: list[str] = []
+    for s in slots:
+        if getattr(s, "mapping", None) is None or getattr(s, "semantic_type", None) == "DEFAULT_FILTER":
+            continue
+        if str(getattr(s, "status", "") or "").upper() in STRONG_STATUSES and str(getattr(s, "term", "") or "").strip():
+            out.append(str(s.term))
+    return out
+
+
 def classify(question: str, llm=None, *, has_context: bool = False,
              connected: Optional[Iterable[str]] = None) -> Scope:
     """Mesajın niyeti ve konusu.

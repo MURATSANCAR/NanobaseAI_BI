@@ -9,6 +9,8 @@ import AltTextList from './AltTextList';
 import EpubPreview from './EpubPreview';
 import { epubApi, isbnOk, useEpub, type EpubAudioInfo, type EpubCheck, type EpubView, type EpubWant } from './api';
 import { StudioInfo } from '../shared';
+import { useCan } from '../../../useAdmin';
+import { Explain } from '../../../components/Explain';
 
 /** Stüdyonun «E-kitap» bölümü: aynı sayfa planından e-kitap. Biçim (otomatik öneriyle), ses (sesli e-kitap: okurken
  *  dinle, okunan kelime vurgulu — yalnız bütün sayfaların sesi hazırken; değilse uyarı ve eksik sesleri üretme), e-ISBN,
@@ -42,6 +44,9 @@ function CheckResult({ check }: { check: EpubCheck }) {
           {n ? `E-kitap denetimi: ${n} hata${w ? `, ${w} uyarı` : ''}` : w ? `E-kitap denetimi geçti · ${w} uyarı` : 'E-kitap denetimi geçti'}
         </span>
         <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10.5px] font-bold">{kind}</span>
+        <Explain label={kind}>{check.full
+          ? 'E-kitap dosyası, e-kitap standardının bütün kurallarına göre denetlendi. Hatalar giderilmeden dosya satış sitelerince reddedilebilir; uyarılar çoğunlukla yayını engellemez.'
+          : 'Yalnız dosyanın yapısı denetlendi. Standardın bütün kurallarına göre tam denetim bu kurulumda açık değil.'}</Explain>
       </div>
       {check.note && <p className="text-[11.5px] text-canvas-muted">{check.note}</p>}
       {issues.length > 0 && (
@@ -119,7 +124,10 @@ function Eisbn({ jobId, v }: { jobId: string; v: EpubView }) {
   const dirty = clean !== (v.meta.eisbn ?? '');
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={`eisbn-${jobId}`} className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">e-ISBN</label>
+      <span className="flex items-center gap-1">
+        <label htmlFor={`eisbn-${jobId}`} className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">e-ISBN</label>
+        <Explain label="e-ISBN">E-kitabın kendi kitap numarası; basılı kitabın ISBN'inden ayrıdır ve e-kitap dosyasının künyesine yazılır. Kaydettikten sonra e-kitabı yeniden üretin.</Explain>
+      </span>
       <div className="flex gap-2">
         <input id={`eisbn-${jobId}`} value={val} onChange={(e) => setVal(e.target.value)} inputMode="numeric" autoComplete="off"
           placeholder="978-…" aria-invalid={bad} aria-describedby={`eisbn-help-${jobId}`}
@@ -139,6 +147,9 @@ function Eisbn({ jobId, v }: { jobId: string; v: EpubView }) {
 
 export default function EpubSection({ jobId }: { jobId: string }) {
   const qc = useQueryClient();
+  // Üretim, biçim, e-ISBN ve eksik sesler «Kitap tasarımında üretim ve düzenleme»; dosyayı indirmek «Dışa aktarma» ister.
+  const canEdit = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const q = useEpub(jobId);
   const v = q.data;
   const [want, setWant] = useState<EpubWant>('auto');
@@ -180,14 +191,14 @@ export default function EpubSection({ jobId }: { jobId: string }) {
               Basılı kitabın sayfa düzeninden e-kitap dosyası hazırlanır: metin seçilebilir ve sesli okunabilir, görsellere görme engelli okurlar için açıklama (alt metin) eklenir, yazı tipleri dosyanın içindedir.
             </p>
           </div>
-          {r && v.status !== 'running' && (
+          {canExport && r && v.status !== 'running' && (
             <a className={ghostBtn} href={epubApi.fileUrl(jobId)} download>
               <Download className="h-4 w-4" aria-hidden />E-kitabı indir <span className="font-semibold text-canvas-muted">· {mb(r.size)}</span>
             </a>
           )}
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[1fr_300px]">
+        {canEdit && <div className="grid gap-3 lg:grid-cols-[1fr_300px]">
           <div role="radiogroup" aria-label="E-kitap biçimi" className="grid gap-2 sm:grid-cols-3">
             {options.map(([k, t, help]) => (
               <button key={k} type="button" role="radio" aria-checked={want === k} onClick={() => setWant(k)}
@@ -199,24 +210,26 @@ export default function EpubSection({ jobId }: { jobId: string }) {
             ))}
           </div>
           <Eisbn jobId={jobId} v={v} />
-        </div>
+        </div>}
 
-        <AudioChoice jobId={jobId} info={v.audio} on={withAudio} setOn={setAudioChoice} />
+        {canEdit && <AudioChoice jobId={jobId} info={v.audio} on={withAudio} setOn={setAudioChoice} />}
 
+        {!canEdit && !r && !working && <p className="text-[12px] text-canvas-muted">Bu kitabın e-kitabı henüz üretilmedi.</p>}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button type="button" className={`${gradientBtn} sm:w-auto`} disabled={working || build.isPending} onClick={() => build.mutate()}>
+          {canEdit && <button type="button" className={`${gradientBtn} sm:w-auto`} disabled={working || build.isPending} onClick={() => build.mutate()}>
             {working || build.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <BookOpen className="h-4 w-4" aria-hidden />}
             {working ? (v.status === 'queued' ? 'Sırada…' : 'Üretiliyor…') : r ? 'E-kitabı yeniden üret' : 'E-kitap üret'}
-          </button>
+          </button>}
           {working && (
             <div className="flex min-w-0 flex-1 flex-col gap-1" aria-live="polite">
               <span className="text-[12px] font-semibold text-canvas-muted">
                 {v.status === 'queued' ? 'Sırada: süren bir iş bitince başlar.' : `${STEP[v.step ?? ''] ?? 'Hazırlanıyor'}${total ? ` · ${n}/${total}` : ''}`}
+                {' '}· Arka planda sürer; sayfadan ayrılabilirsiniz.
               </span>
               {v.status === 'running' && total > 0 && <Progress value={n} total={total} />}
             </div>
           )}
-          {!working && v.stale && <Note tone="warn">E-kitap son değişikliklerden önce üretildi; yeniden üretin.</Note>}
+          {!working && v.stale && <Note tone="warn">E-kitap son değişikliklerden önce üretildi{canEdit ? '; yeniden üretin' : ''}.</Note>}
         </div>
 
         {build.error && <Note tone="err">{errText(build.error, 'Başlatılamadı.')}</Note>}
@@ -233,7 +246,7 @@ export default function EpubSection({ jobId }: { jobId: string }) {
                 <dd className="font-bold">{r.audio?.on ? `Sesli · ${secs(r.audio.duration)}${r.audio.narrators.length ? ` · ${r.audio.narrators.join(', ')}` : ''}` : 'Sessiz'}</dd>
                 <dt className="text-canvas-muted">e-ISBN</dt><dd className="font-bold">{r.eisbn ? isbnFmt(r.eisbn) : 'yok'}</dd>
                 <dt className="text-canvas-muted">Yazı tipleri</dt>
-                <dd className="font-bold">{[...new Set(r.fonts.filter((f) => f.embedded).map((f) => f.family))].join(', ') || 'okuyucunun'}</dd>
+                <dd className="font-bold">{[...new Set(r.fonts.filter((f) => f.embedded).map((f) => f.family))].join(', ') || 'okurun cihazındaki yazı tipi'}</dd>
               </dl>
               {r.warnings.length > 0 && (
                 <ul className="flex flex-col gap-1">
@@ -253,7 +266,7 @@ export default function EpubSection({ jobId }: { jobId: string }) {
           )}
           {v.has_plan && (
             <button type="button" className={ghostBtn} aria-expanded={alts} onClick={() => setAlts((a) => !a)}>
-              Alt metinler
+              Alt metinleri gözden geçir
               {v.alt.review > 0 && <span className="rounded-full bg-amber-100 px-1.5 text-[11px] font-bold text-amber-800">{v.alt.review}</span>}
             </button>
           )}

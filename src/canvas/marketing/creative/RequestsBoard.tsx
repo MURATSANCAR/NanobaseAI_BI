@@ -47,7 +47,6 @@ export function RequestCard({ r }: { r: CreativeRequest }) {
         <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold">
           {!!c.onayli && <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-emerald-700">{c.onayli} onaylı</span>}
           {!!c.bekleyen && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-amber-800">{c.bekleyen} bekleyen</span>}
-          {!!c.taslak && <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-canvas-ink">{c.taslak} lisans taslağı</span>}
         </div>
       ) : null}
       <div className="mt-2 truncate text-[11px] text-canvas-muted">İsteyen {r.isteyenAd || r.isteyen}{r.atanan ? ` · atanan ${r.atanan}` : ''}</div>

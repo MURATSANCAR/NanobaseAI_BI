@@ -1,0 +1,14 @@
+{
+	"$schema": "https://unpkg.com/@changesets/config@2.3.0/schema.json",
+	"changelog": ["@zeki.chat/release-changelog", { "repo": "ZekiChat/ZEKI AI CHAT" }],
+	"commit": false,
+	"fixed": [["@zeki.chat/meteor", "@zeki.chat/core-typings", "@zeki.chat/rest-typings"]],
+	"linked": [],
+	"access": "public",
+	"baseBranch": "develop",
+	"updateInternalDependencies": "patch",
+	"ignore": [],
+	"___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+		"onlyUpdatePeerDependentsWhenOutOfRange": true
+	}
+}

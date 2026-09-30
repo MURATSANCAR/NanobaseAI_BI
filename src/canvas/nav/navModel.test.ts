@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { NAV, flatItems, matchActive, needsPagePermission, railView, recentGroupLabel, scoreText, visibleNav } from './navModel';
+import { NAV, flatItems, groupEntry, matchActive, needsPagePermission, railView, recentGroupLabel, scoreText, visibleNav } from './navModel';
 import { RECENT_KEEP, cleanNavState, pushRecent } from './navState';
 
 const user = { isAdmin: false, isEditor: false };
@@ -114,6 +114,18 @@ describe('İnsan Kaynakları (açıkça verilen sayfalar)', () => {
     expect(itemIds(visibleNav(user, {}, new Set(['sayfa:ik-egitimlerim'])))).toEqual(['kampus', 'ik-egitimlerim']);
   });
 
+  it('personel portalı: /ik ana sayfa; doğum günleri ve yemek listesi ana sayfayı, İK yönetimi kendi öğesini etkin yapar', () => {
+    const g = visibleNav(admin, {});
+    expect(matchActive(g, '/ik')?.item.id).toBe('ik-anasayfa');
+    expect(matchActive(g, '/ik/dogum-gunleri')?.item.id).toBe('ik-anasayfa');
+    expect(matchActive(g, '/ik/yemek')?.item.id).toBe('ik-anasayfa');
+    expect(matchActive(g, '/ik/yonetim')?.item.id).toBe('ik-yonetim');
+    expect(matchActive(g, '/ik/izin')?.item.id).toBe('ik-izin');
+    expect(matchActive(g, '/ik/izin/ekip')?.item.id).toBe('ik-izin-ekip');
+    expect(matchActive(g, '/ik/egitim/rehberler')?.item.id).toBe('ik-egitim');
+    expect(itemIds(visibleNav(user, {}, new Set(['sayfa:ik-anasayfa', 'sayfa:ik-profilim'])))).toEqual(['kampus', 'ik-anasayfa', 'ik-profilim']);
+  });
+
   it('aday kartı işe alım panosunu etkin yapar', () => {
     const g = visibleNav(admin, {});
     expect(matchActive(g, '/ik/ise-alim/aday/aday_1')?.item.id).toBe('ik-ise-alim');
@@ -181,6 +193,9 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/kanallar/eslesme')).toBe('kanal-eslesme');
     expect(at('/trendyol/vitrin')).toBe('trendyol'); // M40 vitrin/haftalık/yükleme sekmeleri → Trendyol mağazası
     expect(at('/trendyol/urunler')).toBe('trendyol-urunler');
+    expect(at('/trendyol/model')).toBe('trendyol'); // Aşama 0 satış modeli → Trendyol mağazası sekmesi
+    expect(at('/trendyol/mutabakat')).toBe('trendyol-mutabakat');
+    expect(at('/amazon/mutabakat')).toBe('amazon-mutabakat');
     expect(at('/amazon/konsinye')).toBe('amazon-konsinye');
     expect(at('/amazon/taslaklar')).toBe('amazon-taslaklar');
     expect(at('/e-ticaret')).toBe('eticaret'); // M34 platform durumu
@@ -191,6 +206,7 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/kargo/hatalar')).toBe('kargo');
     expect(at('/kargo/firmalar')).toBe('kargo-firmalar');
     expect(at('/kargo/mutabakat')).toBe('kargo-mutabakat');
+    expect(at('/kargo/maliyet')).toBe('kargo-maliyet');
     expect(at('/stok/15201.01.0001')).toBe('stok'); // M43 kitap stok kartı → Stok
     expect(at('/stok/bitecekler')).toBe('stok-bitecekler');
     expect(at('/stok/depo-hatti')).toBe('stok-depo-hatti');
@@ -407,5 +423,27 @@ describe('yetki kataloğu alanları menüyle aynı', () => {
     expect([...used].filter((a) => !areaIds.includes(a))).toEqual([]);
     expect(areaIds.filter((a) => a !== 'ortak' && a !== 'kampus' && ![...used].includes(a))).toEqual([]);
     expect(areaIds.includes('kayitlar')).toBe(false);
+  });
+});
+
+describe('ana modül giriş ekranı (Kampüs kutuları)', () => {
+  it('her ana modülün giriş ekranı sol menüde yine o modülü açar', () => {
+    for (const g of NAV) {
+      const to = groupEntry(NAV, g);
+      expect(to, g.id).not.toBeNull();
+      const [path, q = ''] = to!.split('?');
+      expect(matchActive(NAV, path, q)?.group.id, g.id).toBe(g.id);
+      if (g.id !== 'kampus') expect(railView(visibleNav(admin, { webWatch: true }), g.id).kind).toBe('module');
+    }
+  });
+  it('rolde görünmeyen ekrana gitmez: modülde kişinin açabildiği ilk ekran', () => {
+    const only = visibleNav(user, {}, new Set(['sayfa:uretim', 'sayfa:telif-sozlesme']));
+    expect(groupEntry(only, only.find((x) => x.id === 'uretim-fiyat')!)).toBe('/uretim');
+    expect(groupEntry(only, only.find((x) => x.id === 'editoryal')!)).toBe('/telif-sozlesme');
+  });
+  it('başka modülde daha uzun eşleşen ekranı atlar', () => {
+    const finans = NAV.find((x) => x.id === 'finans')!;
+    const stolen = { ...finans, items: [{ ...finans.items[0], id: 'x', to: '/stok/fark' }, ...finans.items] };
+    expect(groupEntry([...NAV.filter((x) => x.id !== 'finans'), stolen], stolen)).toBe(finans.items[0].to);
   });
 });

@@ -21,7 +21,7 @@
           "
         >
           <div class="text-base-medium leading-none text-ink-gray-9 truncate">
-            {{ config.brandName || "NanobaseAI" }}
+            {{ config.brandName || "ZEKİ AI" }}
           </div>
           <div class="mt-1 text-sm text-ink-gray-7">
             {{ authStore.userName }}

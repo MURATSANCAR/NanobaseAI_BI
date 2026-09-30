@@ -1,0 +1,11 @@
+[Unit]
+Description=Yazar başvuru formları: Google E-Tablo yanıtlarını okur, her yeni yanıtı Başvurular'da açar
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/editorial/applications/forms/run-due); bu birim yalnız çağırır. Tablolar servis hesabıyla
+# yalnız okunur, Google'a hiçbir şey yazılmaz. Tablo tanımlı değilse köprü sessizce geçer.
+# İlk kez elle koşturulur: systemctl start timas-basvuru-form.service (bellek: run-it-before-it-runs-itself).
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 600 -X POST "http://127.0.0.1:8795/api/v1/editorial/applications/forms/run-due"

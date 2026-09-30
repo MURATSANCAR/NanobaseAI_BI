@@ -11,6 +11,7 @@ açar. Kutuda eski e-postalar (bildirimler, iç yazışma) var; hesap ilk açıl
 Kaydederken sistem SMTP ve IMAP'e giriş yapıp dener; yanlış şifre kurulumu durdurur.
 """
 
+import email.utils
 import imaplib
 import json
 import re
@@ -21,14 +22,50 @@ from frappe.email.doctype.email_account.email_account import get_max_email_uid
 from frappe.utils import cint
 from helpdesk.overrides.email_account import CustomEmailAccount
 
-ACCOUNT = "NanobaseAI Destek"
+ACCOUNT = "ZEKİ AI"
 FOLDER = "INBOX"
 START_KEY = "nb_eposta_baslangic_uid::"
 # IMAP'te «UID n:*» kutuda n'den büyük e-posta yokken son e-postayı döndürür; üst sınır sayıyla verilir.
 UID_MAX = 4294967295
 
 
+# Otomatik e-posta (bildirim, bülten, otomatik yanıt, teslim hatası) kayıt açmaz. Standart başlıklara bakılır:
+# Auto-Submitted (RFC 3834), Precedence bulk/list/junk, liste başlıkları; gönderen noreply/mailer-daemon ise de atlanır.
+# 2026-09-29: zeki@ kutusuna gelen Jira ve Google Analytics bildirimleri kayıt açmıştı.
+OTOMATIK_GONDEREN = re.compile(r"^([^@]*(no-?reply|do-?not-?reply|donotreply)[^@]*|mailer-daemon|postmaster|bounces?([+._-][^@]*)?|notifications?([+._-][^@]*)?)@", re.I)
+
+
+def otomatik_mi(mail) -> str | None:
+	"""Otomatik e-postaysa nedenini döndürür, değilse None."""
+	h = mail.mail
+	auto = (h.get("Auto-Submitted") or "").strip().lower()
+	if auto and auto != "no":
+		return "Auto-Submitted"
+	if (h.get("Precedence") or "").strip().lower() in ("bulk", "list", "junk"):
+		return "Precedence"
+	if h.get("List-Id") or h.get("List-Unsubscribe"):
+		return "liste"
+	if (h.get("X-Auto-Response-Suppress") or "").strip().lower() in ("all", "oof"):
+		return "otomatik yanıt"
+	# Çatı göndereni «Yanıtla» adresinden alır (Drive paylaşım bildiriminde paylaşan kişi); asıl «From» da bakılır.
+	asil = email.utils.parseaddr(h.get("From") or "")[1]
+	if OTOMATIK_GONDEREN.match(asil or "") or OTOMATIK_GONDEREN.match(mail.from_email or ""):
+		return "gönderen"
+	return None
+
+
 class NanobaseEmailAccount(CustomEmailAccount):
+	def get_inbound_mails(self):
+		mails = super().get_inbound_mails()
+		kalan = []
+		for m in mails:
+			neden = otomatik_mi(m)
+			if neden:
+				frappe.logger("nanobase_eposta").info(f"otomatik e-posta atlandı ({neden}): uid {m.uid}")
+			else:
+				kalan.append(m)
+		return kalan
+
 	def build_email_sync_rule(self):
 		rule = super().build_email_sync_rule()
 		start = cint(frappe.db.get_default(START_KEY + self.name))

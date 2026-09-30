@@ -25,8 +25,16 @@ def test_paths_and_keys():
               "/api/v1/reports/run-due", "/api/v1/people/ayse/photo", "/health", "/api/v1/editorial/ask/covers/abc"):
         assert not RC.cacheable_path(p), p
     assert RC.cacheable_path("/api/v1/people")
+    # Kitaba sor: soru ve soru listesi hiç saklanmaz (bekleyen cevap donuyordu); kitap listesi/katalog saklanabilir.
+    assert not RC.cacheable_path("/api/v1/editorial/ask")
+    assert not RC.cacheable_path("/api/v1/editorial/ask/20437294592646eaa80ea7ed088aa08b")
+    assert RC.cacheable_path("/api/v1/editorial/ask/books")
+    assert RC.cacheable_path("/api/v1/editorial/ask/catalog")
     assert RC.module_of("/api/v1/seo-geo/products/1/propose") == "/api/v1/seo-geo"
     assert RC.module_of("/api/v1/editorial/contracts/records/9") == "/api/v1/editorial/contracts"
+    # Redaksiyon: dosya kaldırma ve dosyadan eser, eser uçlarının hazır cevaplarını düşürür.
+    assert RC.module_of("/api/v1/editorial/files/abc/remove") == "/api/v1/editorial/works"
+    assert RC.module_of("/api/v1/editorial/works-from-file") == "/api/v1/editorial/works"
     assert RC.norm_query("b=2&a=1&_=99&refresh=true") == "a=1&b=2"
 
 
@@ -151,6 +159,15 @@ def test_ready_answers_survive_a_restart_without_cookies(tmp_path):
     assert list(tmp_path.iterdir()) == [] and RC.ResponseCache(str(tmp_path)).get(key) is None
 
 
+def test_disk_answer_of_a_path_excluded_later_is_not_loaded(tmp_path):
+    """Yol sonradan saklanmayanlara alındıysa diskteki eski kayıt yüklenmez (arkada her turda tazelenmez) ve silinir."""
+    key = ("ayse", "/api/v1/editorial/contracts/compare/meta", "")
+    first = RC.ResponseCache(str(tmp_path))
+    first.put(key, b'{"n": 1}', [("content-type", "application/json")], 200, 2.0, {})
+    again = RC.ResponseCache(str(tmp_path))
+    assert again.get(key) is None and again.due() == [] and list(tmp_path.glob("*.meta.json")) == []
+
+
 def test_disk_answers_of_another_code_version_are_stale(tmp_path, monkeypatch):
     """Kurulumdan sonra eski kodun diskteki hazır cevabı kaybolmaz ama bayattır: hemen gelir, arkada yeniden üretilir."""
     key = ("ayse", "/api/v1/stock/overview", "")
@@ -246,3 +263,22 @@ def test_after_restart_stale_entry_is_refreshed_with_internal_identity(tmp_path)
     r = asyncio.run(run())
     assert r.status_code == 200 and counters["n"] == 1
     assert json.loads(cache.get(key).body)["n"] == 1 and not RC.is_stale(cache.get(key).at)
+
+
+def test_disk_dir_live_port_only():
+    """Yan köprü (başka port) canlı klasöre yazmaz; açık klasör her zaman geçerli (2026-09-29, geri gelen test kaydı)."""
+    live = ["uvicorn", "semantic_bridge.app:app", "--host", "127.0.0.1", "--port", "8795"]
+    side = ["uvicorn", "semantic_bridge.app:app", "--host", "127.0.0.1", "--port", "8801"]
+    assert RC.disk_dir({}, live) == RC.LIVE_DIR
+    assert RC.disk_dir({}, ["uvicorn", "x:app", "--port=8795"]) == RC.LIVE_DIR
+    assert RC.disk_dir({}, side) is None
+    assert RC.disk_dir({"RESPONSE_CACHE_DIR": "/tmp/x"}, side) == "/tmp/x"
+    assert RC.disk_dir({"RESPONSE_CACHE_LIVE_PORT": "8801"}, side) == RC.LIVE_DIR
+    assert RC.disk_dir({}, ["pytest"]) == RC.LIVE_DIR    # port yok, test dışı süreç: eski davranış
+    assert RC.disk_dir({"PYTEST_CURRENT_TEST": "t"}, live) is None     # test süreci canlı klasöre yazmaz
+
+
+def test_tests_never_touch_the_live_cache_folder():
+    """Testler canlı klasöre yazmaz (conftest her teste geçici klasör verir)."""
+    import os
+    assert "/data/nanobaseai" not in os.environ.get("RESPONSE_CACHE_DIR", "")

@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "connections": 6,
+  "existingAccount": "timasai",
+  "messages": 6,
+  "sendWindowMs": 5,
+  "completionMs": 4137,
+  "messagesMatchIndependentMongo": true
+}

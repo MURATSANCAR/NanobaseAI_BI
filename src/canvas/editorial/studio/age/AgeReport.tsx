@@ -8,6 +8,8 @@ import { ghostBtn, gradientBtn, press, Progress } from '../shared';
 import { ageApi, type AgeCheck, type AgeFinding, type AgeLevel, type AgeView, type AgeWord, type Decision, type PageRef } from './api';
 import './age.css';
 import { StudioInfo } from '../shared';
+import { useCan } from '../../../useAdmin';
+import { EmptyHint, Explain } from '../../../components/Explain';
 
 /** Yaş uygunluğu raporu (sözleşme: apps/editor/src/editor/production/age_report.py). Sayfa stüdyosunun üst
  *  şeridinde tek düğme; rapor yan sayfada açılır. Kelime düzeyi, cümle uzunluğu, hassas içerik ve okul/MEB
@@ -69,6 +71,10 @@ export default function AgeReportEntry({ jobId }: { jobId: string }) {
 function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeView | undefined; error: unknown; onNavigate: () => void }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  // Rapor çıkarma, karar ve metne uygulama «Kitap tasarımında üretim ve düzenleme», PDF «Dışa aktarma» ister. Yetkisi
+  // olmayan rapor ve kararları görür; karar düğmeleri pasif kalır (kararın durumunu da gösterdikleri için).
+  const canEdit = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const [tab, setTab] = useState<Tab>('bulgu');
   const set = (v: AgeView) => qc.setQueryData(['studio', 'age', jobId], (old: AgeView | undefined) => ({ ...old, ...v }));
   const run = useMutation({
@@ -124,24 +130,27 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5">
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={gradientBtn} disabled={running || run.isPending} onClick={() => run.mutate()}>
+          {canEdit && <button type="button" className={gradientBtn} disabled={running || run.isPending} onClick={() => run.mutate()}>
             {running || run.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
-            {running ? 'Çıkarılıyor…' : rep ? 'Raporu yenile' : 'Raporu çıkar'}
-          </button>
-          {rep && <a className={ghostBtn} href={ageApi.pdfUrl(jobId)}><Download className="h-4 w-4" aria-hidden />PDF indir</a>}
+            {running ? 'Rapor hazırlanıyor…' : rep ? 'Raporu yenile' : 'Raporu çıkar'}
+          </button>}
+          {canExport && rep && <a className={ghostBtn} href={ageApi.pdfUrl(jobId)}><Download className="h-4 w-4" aria-hidden />PDF indir</a>}
         </div>
         {running && (
           <div className="mt-3 rounded-2xl border border-violet-100 bg-white/80 p-3" role="status" aria-live="polite">
             <div className="text-[12.5px] font-bold">{st?.step || 'Hazırlanıyor'}{st?.total ? ` · ${st.done}/${st.total}` : ''}</div>
             {!!st?.total && <div className="mt-2"><Progress value={st.done ?? 0} total={st.total} /></div>}
-            <p className="mt-1.5 text-[11.5px] text-canvas-muted">ZEKİ AI her pasajı ve seyrek kelimeyi tek tek okuyor; ekranı kapatabilirsiniz, rapor çıkınca burada olur.</p>
+            <p className="mt-1.5 text-[11.5px] text-canvas-muted">Zeki AI her pasajı ve seyrek kelimeyi tek tek okuyor; uzun kitapta birkaç dakika sürebilir. Ekranı kapatabilirsiniz, rapor çıkınca burada olur.</p>
           </div>
         )}
         {st?.state === 'failed' && <div className="mt-3"><Note tone="err">{st.error}</Note></div>}
         {err && <div className="mt-3"><Note tone="err">{err}</Note></div>}
         {!view && !error && <div className="mt-6 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-canvas-violet motion-reduce:animate-none" aria-hidden /></div>}
         {view && !rep && !running && st?.state !== 'failed' && (
-          <p className="mt-4 text-[13px] text-canvas-muted">Henüz rapor yok. «Raporu çıkar» kitabın güncel metnini (sayfa düzeni varsa oradaki metni) hedef yaşa göre ölçer.</p>
+          <div className="mt-4">
+            <EmptyHint title="Henüz rapor yok"
+              why={canEdit ? '«Raporu çıkar» kitabın güncel metnini (sayfa düzeni varsa oradaki metni) hedef yaşa göre ölçer: kelime düzeyi, cümle uzunluğu, hassas içerik ve okul ölçütleri. Metne dokunmaz.' : 'Raporu kitap tasarımında üretim yetkisi olan biri çıkarır.'} />
+          </div>
         )}
 
         {rep && (
@@ -156,10 +165,10 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
               ))}
             </div>
             <div className="mt-3" role="tabpanel">
-              {tab === 'bulgu' && <Findings items={findings} goto={goto} decide={decide.mutate} busy={decide.isPending} />}
-              {tab === 'kelime' && <Words rep={rep} goto={goto} decide={decide.mutate} apply={apply.mutate} busy={decide.isPending || apply.isPending} applied={apply.data} />}
+              {tab === 'bulgu' && <Findings items={findings} goto={goto} decide={decide.mutate} busy={decide.isPending || !canEdit} />}
+              {tab === 'kelime' && <Words rep={rep} goto={goto} decide={decide.mutate} apply={apply.mutate} busy={decide.isPending || apply.isPending || !canEdit} applied={apply.data} canEdit={canEdit} />}
               {tab === 'olcut' && <Checks items={rep.checks} goto={goto} />}
-              {tab === 'liste' && <Checklist view={view!} decide={decide.mutate} busy={decide.isPending} />}
+              {tab === 'liste' && <Checklist view={view!} decide={decide.mutate} busy={decide.isPending || !canEdit} readOnly={!canEdit} />}
             </div>
             <Sources view={view!} />
           </>
@@ -200,7 +209,10 @@ function DecisionLine({ d }: { d: Decision | undefined }) {
   return <p className="mt-1 text-[11px] text-canvas-muted">{t[d.state] ?? d.state} · {d.by} · {when(d.at)}{d.note ? ` · “${d.note}”` : ''}</p>;
 }
 
-type Decide = (v: { kind: 'finding' | 'word' | 'check'; id: string; state: string | null; note?: string; choice?: Record<string, string> }) => void;
+type Decide = (
+  v: { kind: 'finding' | 'word' | 'check'; id: string; state: string | null; note?: string; choice?: Record<string, string> },
+  opts?: { onSuccess?: () => void; onError?: () => void },
+) => void;
 
 function Toggle({ on, children, onClick, disabled, tone = 'violet' }: { on: boolean; children: ReactNode; onClick: () => void; disabled?: boolean; tone?: 'violet' | 'ok' | 'bad' }) {
   const onCls = tone === 'ok' ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : tone === 'bad' ? 'border-rose-400 bg-rose-50 text-rose-800' : 'border-canvas-violet bg-violet-50 text-canvas-violet';
@@ -213,7 +225,7 @@ function Toggle({ on, children, onClick, disabled, tone = 'violet' }: { on: bool
 }
 
 function Findings({ items, goto, decide, busy }: { items: AgeFinding[]; goto: (p: { pid: string | null }) => void; decide: Decide; busy: boolean }) {
-  if (!items.length) return <p className="text-[13px] text-canvas-muted">Sayfa düzeyinde bulgu yok.</p>;
+  if (!items.length) return <EmptyHint title="Sayfa düzeyinde bulgu yok" why="Hiçbir sayfada uzun cümle, hedef yaşa göre zor sayfa ya da hassas içerik bulunmadı. Kelimeler ve okul ölçütleri için diğer sekmelere bakın." />;
   return (
     <ul className="flex flex-col gap-2">
       {items.map((f) => {
@@ -242,9 +254,9 @@ function Findings({ items, goto, decide, busy }: { items: AgeFinding[]; goto: (p
   );
 }
 
-function Words({ rep, goto, decide, apply, busy, applied }: {
+function Words({ rep, goto, decide, apply, busy, applied, canEdit }: {
   rep: NonNullable<AgeView['report']>; goto: (p: { pid: string | null }) => void; decide: Decide;
-  apply: (v: { lemma: string; form: string; to: string }) => void; busy: boolean; applied?: { count: number };
+  apply: (v: { lemma: string; form: string; to: string }) => void; busy: boolean; applied?: { count: number }; canEdit: boolean;
 }) {
   const ws = rep.word_stats;
   if (!ws.reference) return <p className="text-[13px] text-canvas-muted">Bu yaş bandı için kelime derlemi yok; seyrek kelime listesi çıkarılmadı.</p>;
@@ -252,15 +264,16 @@ function Words({ rep, goto, decide, apply, busy, applied }: {
     <div>
       <p className="text-[12px] leading-snug text-canvas-muted">
         Bu yaş için yayımlanmış {ws.books} kitabın en çok {ws.K} tanesinde geçen kökler seyrek sayılır. Kitapta {rep.words.length} seyrek kök; içerik sözcükleri içindeki payı {pct(ws.rare_share)}
-        {ws.rare_share_p95 != null ? ` (bant kitaplarında %95’lik sınır ${pct(ws.rare_share_p95)})` : ''}. Öneriyi onaylamak metni değiştirmez; «Metne uygula» sayfa düzenindeki metne yazar.
+        {ws.rare_share_p95 != null ? ` (bu yaştaki kitapların %95’inde bu pay ${pct(ws.rare_share_p95)} ya da altında)` : ''}. Öneriyi onaylamak metni değiştirmez; «Metne uygula» sayfa düzenindeki metne yazar.
+        {' '}<Explain label="Metne uygula">Onayladığınız sade karşılık, kelimenin o biçiminin kitaptaki bütün geçişlerine yazılır ve sayfalar yeniden dizilir. Bu panelden geri alınmaz; gerekirse sayfa düzenindeki sürüm geçmişinden önceki hâline dönün. Yalnız sayfa düzeni kurulmuş kitapta çıkar.</Explain>
       </p>
       {applied && <div className="mt-2"><Note tone="ok">{applied.count} yerde değiştirildi; sayfalar yeniden diziliyor.</Note></div>}
       <ul className="mt-2 flex flex-col gap-2">
-        {rep.words.map((w) => <WordCard key={w.lemma} w={w} goto={goto} decide={decide} apply={apply} busy={busy} canApply={rep.text_source === 'plan'} />)}
+        {rep.words.map((w) => <WordCard key={w.lemma} w={w} goto={goto} decide={decide} apply={apply} busy={busy} canApply={canEdit && rep.text_source === 'plan'} />)}
       </ul>
       {!!ws.unknown?.length && (
         <details className="mt-3 rounded-2xl border border-slate-200 bg-white/70 p-3 text-[12px]">
-          <summary className="cursor-pointer font-bold">Sözlükte çözümlenemeyen {ws.unknown.length} biçim (kelime düzeyine katılmadı)</summary>
+          <summary className="cursor-pointer font-bold">Sözlükte bulunamayan {ws.unknown.length} kelime biçimi (kelime düzeyi hesabına katılmadı)</summary>
           <p className="mt-1.5 break-words leading-relaxed text-canvas-muted">{ws.unknown.map((u) => `${u.form} (${u.pages.join(', ')})`).join(' · ')}</p>
         </details>
       )}
@@ -347,8 +360,12 @@ function Checks({ items, goto }: { items: AgeCheck[]; goto: (p: { pid: string | 
   );
 }
 
-function Checklist({ view, decide, busy }: { view: AgeView; decide: Decide; busy: boolean }) {
+function Checklist({ view, decide, busy, readOnly }: { view: AgeView; decide: Decide; busy: boolean; readOnly?: boolean }) {
   const [notes, setNotes] = useState<Record<string, string>>({});
+  // Karar verildikten sonra yazılan not aynı karar çağrısıyla (durum değişmeden) kaydedilir.
+  const [noteSave, setNoteSave] = useState<Record<string, 'saving' | 'ok' | 'err'>>({});
+  const mark = (id: string, v: 'saving' | 'ok' | 'err' | null) =>
+    setNoteSave((m) => { const n = { ...m }; if (v) n[id] = v; else delete n[id]; return n; });
   return (
     <div>
       <p className="text-[12px] leading-snug text-canvas-muted">Otomatik denetlenemeyen maddeler. İşaretleyen kişi ve zaman rapora ve PDF’e yazılır.</p>
@@ -356,17 +373,36 @@ function Checklist({ view, decide, busy }: { view: AgeView; decide: Decide; busy
         {view.checklist.map((c) => {
           const s = c.decision?.state;
           const note = notes[c.id] ?? c.decision?.note ?? '';
+          // Sunucu notu boşlukları sadeleştirerek saklar; karşılaştırma da öyle.
+          const noteDirty = !!s && note.split(/\s+/).filter(Boolean).join(' ') !== (c.decision?.note ?? '');
+          const saveNote = () => {
+            if (!s || !noteDirty || busy) return;
+            mark(c.id, 'saving');
+            decide({ kind: 'check', id: c.id, state: s, note }, { onSuccess: () => mark(c.id, 'ok'), onError: () => mark(c.id, 'err') });
+          };
+          const ns = noteSave[c.id];
           return (
             <li key={c.id} className="rounded-2xl border border-slate-200 bg-white/90 p-3">
               <p className="text-[13px] font-bold leading-snug">{c.title}</p>
               <p className="mt-0.5 text-[11px] text-canvas-muted">Kaynak: {c.source}</p>
-              <input value={note} onChange={(e) => setNotes((n) => ({ ...n, [c.id]: e.target.value }))} maxLength={500}
+              <input value={note} onChange={(e) => { setNotes((n) => ({ ...n, [c.id]: e.target.value })); if (ns !== 'saving') mark(c.id, null); }} maxLength={500} readOnly={readOnly}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveNote(); } }}
                 placeholder="Not (isteğe bağlı)" aria-label={`${c.title} notu`}
                 className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12.5px] outline-none focus:border-canvas-violet" />
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Toggle on={s === 'ok'} tone="ok" disabled={busy} onClick={() => decide({ kind: 'check', id: c.id, state: s === 'ok' ? null : 'ok', note })}>Uygun</Toggle>
                 <Toggle on={s === 'not_ok'} tone="bad" disabled={busy} onClick={() => decide({ kind: 'check', id: c.id, state: s === 'not_ok' ? null : 'not_ok', note })}>Uygun değil</Toggle>
+                {noteDirty && (
+                  <button type="button" disabled={busy} onClick={saveNote}
+                    className={`inline-flex min-h-9 items-center gap-1 rounded-xl border border-canvas-violet bg-white px-3 text-[12px] font-bold text-canvas-violet disabled:opacity-50 ${press}`}>
+                    {ns === 'saving' && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />}
+                    Notu kaydet
+                  </button>
+                )}
               </div>
+              <p className="sr-only" role="status" aria-live="polite">{ns === 'ok' ? 'Not kaydedildi.' : ''}</p>
+              {ns === 'ok' && !noteDirty && <p className="mt-1 text-[11px] font-semibold text-emerald-700" aria-hidden>Not kaydedildi.</p>}
+              {ns === 'err' && <p className="mt-1 text-[11px] font-semibold text-rose-700" role="alert">Not kaydedilemedi; «Notu kaydet» ile yeniden deneyin.</p>}
               <DecisionLine d={c.decision} />
             </li>
           );

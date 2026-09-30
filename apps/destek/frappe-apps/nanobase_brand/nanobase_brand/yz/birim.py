@@ -2,9 +2,8 @@
 
 Kaydı açanın e-posta adresi AD'de aranır (mail, userPrincipalName, proxyAddresses; iç alan adında hesap adı);
 birim AD «department» alanıdır, boşsa kişiye en yakın OU (Timaş'ta birim OU'dadır — ldap_ntlm._department).
-Birim kayda yazılır (`nb_talep_birimi`). Aynı adlı (etkin) destek ekibi varsa ve kayıtta ekip seçilmemişse kayıt o
-ekibe gider; bu, yapay zekânın ekip önerisinden önce gelir. Eşleşen ekip yoksa yalnız birim görünür — ekip AD birim
-adıyla açıldığı gün yönlendirme kendiliğinden başlar (ekipler yöneticinin kararı; burada ekip açılmaz).
+Birim kayda yazılır (`nb_talep_birimi`); şirket içi talebin işaretidir (BT kategorileriyle sınıflanır). Ekip ataması
+burada yapılmaz (2026-09-29 rol modeli: talepleri BT çözer, yz/cozum.py).
 AD'de bulunmayan (şirket dışı) gönderende birim boş kalır.
 """
 
@@ -30,7 +29,7 @@ def bul(email: str | None) -> str:
 		dep = _ara(ldap, email)
 	except Exception:
 		# AD'ye ulaşılamadı: sonuç önbelleğe yazılmaz, sonraki kayıtta yeniden denenir.
-		frappe.log_error(title="NanobaseAI: talep edenin birimi AD'de aranamadı")
+		frappe.log_error(title="ZEKİ AI: talep edenin birimi AD'de aranamadı")
 		return ""
 	frappe.cache.set_value(CACHE + email, dep, expires_in_sec=CACHE_SECONDS)
 	return dep
@@ -78,6 +77,6 @@ def uygula(doc) -> dict:
 		return out
 	if doc.get("nb_talep_birimi") != birim:
 		doc.nb_talep_birimi = out["nb_talep_birimi"] = birim
-	if not doc.agent_group and (team := ekip(birim)):
-		doc.agent_group = out["agent_group"] = team
+	# 2026-09-29 rol modeli: talepleri BT çözer; ekip talep edenin biriminden değil otomatik çözüm akışından
+	# (yz/cozum.py) gelir. Birim kayıtta bilgi olarak kalır.
 	return out

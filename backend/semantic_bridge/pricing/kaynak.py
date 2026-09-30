@@ -336,3 +336,70 @@ def for_form(engine: Any, tenant: str, snap: Optional[dict[str, Any]], out: dict
                                        "yoksa fiyat listesindeki kur.", [t] + kur)
     k.alanlar(fields)
     return k
+
+
+# ------------------------------------------------------------------ dağıtımcı kataloğundan pazar fiyatı
+
+
+def _dagitim_kaynak(k: P.Kaynaklar) -> tuple[str, str]:
+    """Portal tablosunu dolduran Başarı ve D&R okumaları (M39, her gün; güncel hâl portalda tutulur)."""
+    from semantic_bridge import pazar_dagitim as PD
+
+    b = k.sorgu("pazar.dagitim.basari", "Başarı Dağıtım kataloğu", "logo", PD.SQL_BASARI,
+                description="Başarı'nın güncel kataloğu; her gün okunur, portalda güncel hâli tutulur.")
+    d = k.sorgu("pazar.dagitim.dr", "D&R kataloğu", "logo", PD.SQL_DR,
+                description="D&R'nin güncel kataloğu (liste ve satış fiyatı, site durumu); her gün okunur.")
+    return b, d
+
+
+def _kategori_listesi(k: P.Kaynaklar, engine: Any, tenant: str, tarih: str, b: str) -> str:
+    from datetime import date as _date
+
+    from semantic_bridge.pricing import dagitim as DG
+
+    return k.portal("portal.fiyat.dagitimKategori", "Başarı kategorileri (TİMAŞ dışı)",
+                    DG.categories_stmt(tenant, _date.fromisoformat(tarih)), engine,
+                    description="Son görüntüde fiyatlı, TİMAŞ grubu dışı başlık sayısı, kategori başına.", origin=[b])
+
+
+def for_distributor(engine: Any, tenant: str, out: dict[str, Any]) -> P.Kaynaklar:
+    """`/distributor`: kategori kümesi (portal), kitabın kendi Başarı kaydı ve kategori listesi; hesap `dagitim.py`."""
+    from datetime import date as _date
+
+    from semantic_bridge.pricing import dagitim as DG
+
+    src = out.get("kaynak") or {}
+    k = P.Kaynaklar(data_end=src.get("basari"))
+    b, d = _dagitim_kaynak(k)
+    kat = out.get("kategori") or {}
+    ins = [b, d]
+    fields: dict[str, str] = {}
+    if src.get("basari"):
+        kat_ins = [_kategori_listesi(k, engine, tenant, src["basari"], b)]
+        if out.get("kod"):
+            kat_ins.append(k.portal("portal.fiyat.dagitimKendi", "Kitabın kendi Başarı kaydı",
+                                    DG.own_stmt(tenant, out["kod"]), engine,
+                                    description="Logo barkodu ↔ stok kodu eşleşmesiyle kitabın Başarı başlığı.", origin=[b]))
+        fields["kategori"] = k.hesap("dagitim.kategori", DG.F_KATEGORI, kat_ins)
+        if kat.get("secili"):
+            tb = _date.fromisoformat(src["basari"])
+            td = _date.fromisoformat(src["dr"]) if src.get("dr") else None
+            ins = [k.portal("portal.fiyat.dagitim", "Dağıtımcı kataloğu: kategori kümesi",
+                            DG.rows_stmt(tenant, kat["secili"], tb, td), engine,
+                            description="Seçilen kategorideki TİMAŞ dışı, fiyatlı başlıklar ve aynı barkodun D&R satırı; "
+                                        "sayfa, kapak ve basım yılı süzgeçleri bu satırlar üstünde uygulanır.",
+                            origin=[b, d])]
+    f = k.hesap("dagitim", DG.F_DAGITIM, ins)
+    fields.update({"tum": f, "sonYillar": f, "suzgec": f, "kume": f})
+    k.alanlar(fields)
+    return k
+
+
+def for_distributor_categories(engine: Any, tenant: str, out: dict[str, Any]) -> P.Kaynaklar:
+    k = P.Kaynaklar(data_end=out.get("tarih"))
+    b, _ = _dagitim_kaynak(k)
+    ins = [b] + ([_kategori_listesi(k, engine, tenant, out["tarih"], b)] if out.get("tarih") else [])
+    k.alanlar({"items[]": k.hesap("dagitim.kategoriler", "Başlık sayısı = son Başarı görüntüsünde TİMAŞ grubu dışı, "
+                                                         "liste fiyatı sıfırdan büyük başlıklar; üst kategori satırı "
+                                                         "alt kategorilerinin toplamıdır.", ins)})
+    return k

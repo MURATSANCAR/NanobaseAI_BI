@@ -1,0 +1,12 @@
+{
+	"name": "@zeki.chat/logo",
+	"version": "0.32.5",
+	"description": "ZEKI AI CHAT logo (drop-in replacement for the vendor logo package)",
+	"private": true,
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"peerDependencies": {
+		"react": "*"
+	}
+}

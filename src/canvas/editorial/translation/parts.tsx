@@ -179,7 +179,8 @@ export function PersonField({ value, onChange, placeholder }: { value: PersonPic
   );
 }
 
-/** Köprüdeki sınır (editorial_translation.MAX_BYTES). */
+/** XLIFF/TMX içe aktarmanın köprüdeki sınırı (editorial_translation.MAX_BYTES). Kaynak metinde tavan yok (ZEKI-26):
+ *  kaynak yükleme alanları `maxBytes={0}` verir. */
 export const TRANSLATION_MAX_BYTES = 120 * MB;
 
 /** Panel içi yükleme: ortak FileDrop'un ince sarmalayıcısı (sürükle-bırak, tür/boyut reddi, yetki kilidi orada).
@@ -205,6 +206,7 @@ export function FileButton<T>({
   disabledReason?: ReactNode;
   /** Gereken işlem yetkisi (`ozellik:` öneksiz); yoksa alan kilitli görünür, gizlenmez. */
   feature?: string;
+  /** Bayt sınırı; 0 = tavan yok (kaynak metin). */
   maxBytes?: number;
   hint?: ReactNode;
 }) {
@@ -212,7 +214,7 @@ export function FileButton<T>({
     <FileDrop<T>
       size={tone === 'hero' ? 'lg' : tone === 'primary' ? 'sm' : 'button'}
       accept={accept}
-      maxBytes={maxBytes}
+      maxBytes={maxBytes || undefined}
       title={children}
       hint={hint}
       feature={feature}

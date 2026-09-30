@@ -38,6 +38,11 @@ TABLOLAR: dict[str, tuple[str, str]] = {
     "semantic_seo_merchant_items": ("Merchant ürünleri", "Son okumada Google Merchant'taki her ürün ve durumu."),
     "semantic_seo_merchant": ("Merchant okuması", "Son Merchant okumasının özeti."),
     "semantic_seo_merchant_hist": ("Merchant geçmişi", "Her okumada durum sayıları (eğilim için)."),
+    "semantic_seo_ga4_pages": ("Aramadan satışa sayfaları", "Google Analytics organik giriş sayfası × iki dönem, Search Console tıklaması ve bayraklar."),
+    "semantic_seo_ga4_channels": ("Kanal ölçüleri", "Google Analytics kanal başına oturum, sepet, satış, ciro (iki dönem)."),
+    "semantic_seo_ga4_daily": ("Organik günlük seri", "Google Analytics organik oturum ve ciro, son 90 gün."),
+    "semantic_seo_ga4": ("Google Analytics okuması", "Son okumanın özeti ve eşikleri."),
+    "semantic_seo_ga4_impact": ("Değişikliğin Analytics etkisi", "Onaylı önerinin sayfası: önce/sonra organik oturum, satış, ciro."),
     "semantic_seo_gsc_sitemaps": ("Site haritası okuması", "Search Console'dan okunan site haritaları ve özet (son okuma)."),
     "semantic_seo_gsc_sitemaps_hist": ("Site haritası geçmişi", "Her okumada harita başına sayılar (artışı görmek için)."),
     "semantic_seo_gsc": ("Search Console verisi", "Search Console'dan gece okunan günlük/sorgu/sayfa raporu (son 28 gün)."),
@@ -191,6 +196,14 @@ SPECS: list[tuple[str, str, str]] = [
                                      "eklenen adres, hata ve uyarı sayısı; artış = son iki okumanın farkı."),
     (r"merchant", "merchant", f"Google Merchant ürün durumu (6 saatte bir okunur): onaylı/onaylanmayan/sınırlı/bekleyen ve "
                               f"sorun türü başına ürün sayısı; ürün eşlemesi {TSOFT}ndan barkodla."),
+    (r"ga4/pages", "aramadanSatisSayfa", "Google Analytics (günde bir okunur): organik giriş sayfası başına oturum, sepete "
+                                        "ekleme, satış, ciro — son 28 gün ve önceki 28 gün; dönüşüm = satış ÷ oturum; Search "
+                                        f"Console tıklaması yol üzerinden; ürün eşlemesi {TSOFT}ndan. Eylem kartları öteki "
+                                        "modüllerin tablolarından kuralla."),
+    (r"ga4/page", "aramadanSatisKart", "Sayfa: Google Analytics organik ölçüleri ve eylem kartları (stok, arama, teknik, "
+                                       "dizin, zengin sonuç, Merchant, ürün metni, sepet/ödeme kuralları)."),
+    (r"ga4", "aramadanSatis", "Google Analytics (günde bir okunur): organik oturum, sepete ekleme, satış, ciro; önceki 28 "
+                              "güne göre değişim; organik pay = organik ÷ bütün kanallar; huni tıklaması Search Console'dan."),
     (r"monthly", "aylik", "Aylık rapor: ayın Search Console tıklama, gösterim, oran, sıra; önceki ay ve geçen yıl aynı ayla "
                           "fark; puanı ≥ 80 olan çok satanların payı; karar, teknik sorun ve anılma sayıları."),
 ]

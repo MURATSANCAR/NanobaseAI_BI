@@ -208,6 +208,42 @@ class Sessions(unittest.TestCase):
         self.request('/logout', 'POST', headers={'Cookie': headers['Set-Cookie'].split(';')[0], 'Origin': login.ORIGIN})
         self.assertEqual([r[2] for r in self.events()], ['ok', 'logout'])
 
+    def test_chat_presence_counts_people_not_system_accounts(self):
+        login._presence.update(at=0.0, value=None)
+        config = {'url': 'http://chat', 'user_id': 'svc', 'token': 't', 'admin_username': 'zekiadmin'}
+        users = [
+            {'_id': 'svc', 'username': 'zekiservis', 'status': 'online'},
+            {'_id': 'zeki.bot', 'username': 'zeki.bot', 'status': 'online'},
+            {'_id': 'rocket.cat', 'username': 'zeki.bot', 'status': 'online'},
+            {'_id': 'adm', 'username': 'zekiadmin', 'status': 'online'},
+            {'_id': 'a', 'username': 'zeynep', 'name': 'Zeynep Ak', 'status': 'away'},
+            {'_id': 'b', 'username': 'ali', 'name': 'Ali Can', 'status': 'online'},
+            {'_id': 'c', 'username': 'can', 'name': 'Can Er', 'status': 'offline'},
+        ]
+        self.assertEqual(self.request('/chat-presence')[0], 401)
+        cookie = {'Cookie': self.login()[1]['Set-Cookie'].split(';')[0]}
+        with patch.object(login, 'chat_config', return_value=None):
+            self.assertEqual(self.request('/chat-presence', headers=cookie)[:3:2], (404, {'configured': False}))
+        with patch.object(login, 'chat_config', return_value=config), \
+                patch.object(login, 'chat_call', return_value={'success': True, 'users': users}) as call:
+            status, _, data = self.request('/chat-presence', headers=cookie)
+            self.assertEqual(status, 200)
+            self.assertEqual(data['online'], 2)
+            self.assertEqual([p['username'] for p in data['people']], ['ali', 'zeynep'])
+            self.request('/chat-presence', headers=cookie)
+            self.assertEqual(call.call_count, 1)
+        login._presence.update(at=0.0, value=None)
+        with patch.object(login, 'chat_config', return_value=config), \
+                patch.object(login, 'chat_call', side_effect=login.ChatUnavailable('URLError')):
+            self.assertEqual(self.request('/chat-presence', headers=cookie)[0], 503)
+
+    def test_chat_sso_never_signs_in_as_the_bot(self):
+        config = {'url': 'http://chat', 'user_id': 'svc', 'token': 't', 'sso_secret': 's'}
+        bot = {'success': True, 'user': {'_id': 'rocket.cat', 'username': 'zeki.bot', 'type': 'bot', 'active': True}}
+        with patch.object(login, 'chat_config', return_value=config), patch.object(login, 'chat_call', return_value=bot) as call:
+            self.assertIsNone(login.chat_login_token('zeki.bot', 'Zeki'))
+            self.assertEqual(call.call_count, 1)
+
 
 class FakeChat:
     """Sohbet sunucusunun servis hesabıyla çağrılan REST uçlarının sahtesi: kullanıcılar, roller, dil."""

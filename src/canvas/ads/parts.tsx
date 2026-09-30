@@ -51,7 +51,7 @@ export function AdsFrame({ title, lead, meta, aside, children }: { title: string
               </div>
               {aside && <div className="w-full shrink-0 lg:w-[460px]">{aside}</div>}
             </header>
-            <nav aria-label="Reklam bölümleri" className="-mx-1 overflow-x-auto px-1">
+            <nav aria-label="Reklam bölümleri" className="overflow-x-auto">
               <div className="flex w-max min-w-full gap-1 rounded-2xl bg-slate-100 p-1">
                 {SECTIONS.map((s) => (
                   <NavLink key={s.to} to={keep ? `${s.to}?${keep}` : s.to} end={s.end}

@@ -38,11 +38,11 @@
   <SettingsModal v-model="showSettingsModal" />
   <ShortcutsModal v-model="showShortcutsModal" />
   <HelpModal
-    v-if="showHelpModal"
+    v-if="false && showHelpModal"
     v-model="showHelpModal"
     v-model:articles="articles"
     appName="helpdesk"
-    title="NanobaseAI"
+    title="ZEKİ AI"
     :logo="logo"
     docsLink=""
     :afterSkip="(step: string) => capture('onboarding_step_skipped_' + step)"
@@ -198,6 +198,7 @@ const showPermissionNoticeBanner = computed(() => {
 
 const showOnboardingBanner = computed(() => {
   return (
+    false &&
     !isCustomerPortal.value &&
     !isOnboardingStepsCompleted.value &&
     authStore.isManager

@@ -6,13 +6,14 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { STATUS_TONE, fmtInt, fmtPct, pazarApi, type MapRow, type MapStatus } from './api';
-import { CategorySelect, Stat, useMeta } from './parts';
+import { CategorySelect, Stat, useMeta, useRakipKaynak } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import { EmptyHint } from '../components/Explain';
 import { kaynakOf } from '../components/kaynakOf';
 
 /** Kategori eşlemesi: rakip kaydındaki serbest metin kategori → TİMAŞ kategorisi. Önce ad eşleşmesi, sonra Zeki AI
- *  kapalı küme seçimi (olasılıkla) önerir; karar insanda. «Karşılığı yok» da bir karardır. */
+ *  kapalı küme seçimi (olasılıkla) önerir; karar insanda. «Karşılığı yok» da bir karardır. Liste, sayaçlar ve «Zeki AI
+ *  önersin» üstteki kaynak seçiciye bağlıdır: Başarı kataloğunun «üst > alt» kategorileri ya da CRM ham kategorileri. */
 const TABS: Array<{ key: string; label: string }> = [
   { key: 'oneri', label: 'Öneri' },
   { key: 'belirsiz', label: 'Emin değil' },
@@ -26,19 +27,22 @@ export default function CategoryMap() {
   const qc = useQueryClient();
   const meta = useMeta();
   const can = !!meta.data?.me.canMap;
+  const src = useRakipKaynak();
+  const basari = src.kaynak === 'basari';
   const [durum, setDurum] = useState('oneri');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);
   const dq = useDebounced(q, 300);
   const list = useQuery({
-    queryKey: ['pazar', 'map', durum, dq, page],
-    queryFn: () => pazarApi.categoryMap({ durum, q: dq, page }),
-    enabled: ENGINE_ENABLED,
+    queryKey: ['pazar', 'map', src.kaynak, durum, dq, page],
+    queryFn: () => pazarApi.categoryMap({ durum, q: dq, page, kaynak: src.kaynak }),
+    enabled: ENGINE_ENABLED && src.ready,
     placeholderData: keepPreviousData,
     refetchInterval: (qq) => (qq.state.data?.job.running ? 5000 : false),
   });
   const running = !!list.data?.job.running;
   const was = useRef(false);
+  useEffect(() => setPage(0), [src.kaynak]);
   useEffect(() => {
     if (was.current && !running) {
       const j = list.data?.job;
@@ -59,7 +63,7 @@ export default function CategoryMap() {
     onError: (e) => toast.error(errText(e, 'Karar kaydedilemedi.') ?? ''),
   });
   const suggest = useMutation({
-    mutationFn: () => pazarApi.suggestMap(),
+    mutationFn: () => pazarApi.suggestMap(undefined, src.kaynak),
     onSuccess: (r) => {
       if (!r.queued) toast.message('Öneri bekleyen kategori yok.');
       else if (!r.started) toast.message('Öneri işi zaten sürüyor.');
@@ -74,7 +78,7 @@ export default function CategoryMap() {
     <div className="flex flex-col gap-3 lg:gap-4">
       {d && (
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Onaylı kapsam" />} label="Onaylı kapsam" value={d.coverage.records ? fmtPct(d.coverage.approved / d.coverage.records, 0) : '—'} help={`${fmtInt(d.coverage.approved)} / ${fmtInt(d.coverage.records)} rakip kaydı`} />
+          <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Onaylı kapsam" />} label="Onaylı kapsam" value={d.coverage.records ? fmtPct(d.coverage.approved / d.coverage.records, 0) : '—'} help={`${fmtInt(d.coverage.approved)} / ${fmtInt(d.coverage.records)} ${basari ? 'Başarı başlığı' : 'rakip kaydı'}`} />
           <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Onay bekleyen" />} label="Onay bekleyen" value={fmtInt((d.counts.oneri ?? 0) + (d.counts.belirsiz ?? 0))} help={`${fmtInt(d.counts.belirsiz ?? 0)} tanesinde Zeki AI emin değil`} />
           <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Öneri bekleyen" />} label="Öneri bekleyen" value={fmtInt(d.counts.yeni ?? 0)} help="Henüz önerisi yazılmamış ham kategori" />
           <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Karşılığı yok" />} label="Karşılığı yok" value={fmtInt(d.coverage.noMatch)} help="Timaş kategorisinde karşılığı olmadığı onaylanan kayıt" />
@@ -97,7 +101,7 @@ export default function CategoryMap() {
               </button>
             ))}
           </div>
-          <input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} className={`${field} min-w-0 flex-1 sm:max-w-xs`} placeholder="Ham kategori ara" />
+          <input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} className={`${field} min-w-0 flex-1 sm:max-w-xs`} placeholder={basari ? 'Başarı kategorisi ara (üst > alt)' : 'Ham kategori ara'} />
           {can && (
             <div className="flex flex-wrap gap-2 sm:ml-auto">
               {byName.length > 0 && (
@@ -142,9 +146,9 @@ function MapItem({ row, can, categories, busy, onDecide }: {
     <li className="flex flex-col gap-2 py-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[13px] font-bold">{row.ham}</span>
+          <span className="min-w-0 break-words text-[13px] font-bold">{row.ad ?? row.ham}</span>
           <Pill tone={STATUS_TONE[row.durum]}>{row.durumAd}</Pill>
-          <span className="font-mono text-[11px] tabular-nums text-canvas-muted">{fmtInt(row.kayit)} kayıt</span>
+          <span className="font-mono text-[11px] tabular-nums text-canvas-muted">{fmtInt(row.kayit)} {row.kaynak === 'basari' ? 'başlık' : 'kayıt'}</span>
         </div>
         {row.ornekler && row.ornekler.length > 0 && <div className="mt-0.5 truncate text-[11.5px] text-canvas-muted">Örnek: {row.ornekler.join(' · ')}</div>}
         <div className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">

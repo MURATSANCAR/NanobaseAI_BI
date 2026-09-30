@@ -1,4 +1,4 @@
-"""Yapay zekâ panelinin modelini kurar: NanobaseAI modeli, LLM kapısının OpenAI uyumlu girişi.
+"""Yapay zekâ panelinin modelini kurar: ZEKİ AI modeli, LLM kapısının OpenAI uyumlu girişi.
 
 Kurulum betiği çağırır:
     echo '{"base_url": "...", "api_key": "..."}' | bench --site destek execute nanobase_brand.ai.ensure_model
@@ -12,7 +12,7 @@ import sys
 import frappe
 
 PROVIDER = "openai"
-TITLE = "NanobaseAI"
+TITLE = "ZEKİ AI"
 MODEL = "nanobaseAI"
 # Uç LLM kapısıdır: model adı ve düşünme ayarı köprüden gelir. Başlık, sırada modülün adıyla
 # görünmesi için (nginx de aynı başlığı koyar).

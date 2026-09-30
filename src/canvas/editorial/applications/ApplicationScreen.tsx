@@ -8,6 +8,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label, nf } 
 import SearchSelect from '../../components/SearchSelect';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
 import { fmtDay, usePeopleOptions } from '../authors/shared';
+import { stamp } from '../../format';
 import { applicationsApi, boardApi, type AppDetail, type AppFile } from './api';
 import { AskSheet } from '../../budget/parts';
 import ApplicationForm from './ApplicationForm';
@@ -348,7 +349,7 @@ function Dossier({ a }: { a: AppDetail }) {
       {row('Özet', a.summary)}
       <div className="grid gap-2.5 sm:grid-cols-3">
         {row('Hedef kitle', [a.audienceLabel, a.ageFrom != null || a.ageTo != null ? `${a.ageFrom ?? ''}–${a.ageTo ?? ''} yaş` : null].filter(Boolean).join(', ') || null)}
-        {row('Sayfa tahmini', nf.format(a.pageEstimate))}
+        {row('Sayfa tahmini', a.pageEstimate != null ? nf.format(a.pageEstimate) : 'Girilmemiş')}
         <div className="flex items-end"><SqlInfo k={kaynakOf(a)} alan="_hepsi" label="Başvuru dosyasının sayıları" /></div>
         {row('Tür', a.genre)}
         {row('Kategori', a.categoryName)}
@@ -440,7 +441,7 @@ function CrmLink({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
         `Proje adı: ${a.title}`,
         `Olası yazar: ${a.authorName}`,
         a.categoryName && `Kitaplık: ${a.categoryName}`,
-        `Tahmini sayfa: ${a.pageEstimate}`,
+        a.pageEstimate != null && `Tahmini sayfa: ${a.pageEstimate}`,
         a.series && `Seri: ${a.series}`,
         `Proje fikri: ${a.summary.split('\n')[0].slice(0, 300)}`,
         `Oluşturma kanalı: ${a.channelLabel}`,
@@ -532,6 +533,45 @@ function History({ a }: { a: AppDetail }) {
   );
 }
 
+/** Başvuru yazar başvuru formundan geldiyse formun bütün cevapları. Tablo yalnız okunur; bağlantılar (CV, eser
+ *  dosyası) Google Drive'da açılır ve yalnız o dosyaya erişimi olan kişi görebilir. */
+function FormAnswers({ form }: { form: NonNullable<AppDetail['form']> }) {
+  const link = (v: string) => /^https?:\/\//.test(v);
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-[15px] font-extrabold">Form yanıtları</h2>
+        <a href={form.sheetUrl} target="_blank" rel="noreferrer" className="text-[12px] font-bold text-canvas-violet hover:underline">
+          {form.sheetTitle ?? 'Yanıt tablosu'}
+        </a>
+      </div>
+      <p className="mt-0.5 text-[11.5px] text-canvas-muted">
+        {/* Form zamanları UTC gelir; yerel saatle yazılır (dateTime metni olduğu gibi keser). */}
+        {form.receivedAt ? `Gönderildi ${stamp(Date.parse(form.receivedAt))}` : 'Gönderim zamanı yok'}
+        {form.updatedAt ? ` · tabloda ${stamp(Date.parse(form.updatedAt))} tarihinde değişti` : ''}
+      </p>
+      <dl className="mt-2 grid gap-x-4 gap-y-2 text-[12.5px] sm:grid-cols-2">
+        {form.answers
+          .filter((x) => x.value)
+          .map((x) => (
+            <div key={x.key} className={x.value.length > 80 ? 'sm:col-span-2' : ''}>
+              <dt className={label}>{x.label}</dt>
+              <dd className="mt-0.5 whitespace-pre-line break-words leading-snug">
+                {link(x.value) ? (
+                  <a href={x.value} target="_blank" rel="noreferrer" className="font-semibold text-canvas-violet underline">
+                    Google Drive'da aç
+                  </a>
+                ) : (
+                  x.value
+                )}
+              </dd>
+            </div>
+          ))}
+      </dl>
+    </Panel>
+  );
+}
+
 export default function ApplicationScreen() {
   const { id = '' } = useParams();
   const meta = useAppMeta();
@@ -580,6 +620,7 @@ export default function ApplicationScreen() {
                 <Files a={a} canWrite={canWrite} />
               </div>
             </Panel>
+            {a.form && <FormAnswers form={a.form} />}
             <EvaluationPanel app={a} editable={canEvaluate} />
             <ReportPanel appId={a.id} canWrite={canWrite} status={a.status} />
           </div>

@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import DbTimingBadge, { type DbTiming } from '../DbTiming';
 import { btnGhost, nf } from '../admin/ui';
 import { Explain } from '../components/Explain';
+import PageNumbers, { revealListTop } from '../components/PageNumbers';
 
 /** Editoryal Süreç (M1–M8) ekranlarının ortak parçaları. */
 
@@ -127,11 +128,20 @@ export function KpiRow({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">{children}</div>;
 }
 
+/** `min-w-0`: ızgara hücresinde içindeki geniş tablo (TableWrap, min 640px) kolonu genişletmesin; tablo kendi
+ *  kutusunda kaysın, yandaki paneller kırpılmasın. */
 export function Panel({ children }: { children: ReactNode }) {
-  return <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">{children}</section>;
+  return <section className="glass-panel min-w-0 rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">{children}</section>;
 }
 
-/** Sayfa aralığı, veritabanı süresi ve önceki/sonraki düğmeleri. */
+/**
+ * Sayfa aralığı, veritabanı süresi, sayfa numaraları ve önceki/sonraki düğmeleri (ZEKI-29). Toplam kayıt sayısı hep
+ * yazar, bütün sayfalara numarayla gidilir; veri kesilmez.
+ *
+ * Sayfa değişince listenin kutusunun başı ekrana gelir (alttan «Sonraki»ye basan kişi yeni sayfanın ortasında kalmasın).
+ * `placement="bottom"`: listenin üstünde de sayfalayıcı olan ekranlarda alttaki ikinci kopya; tek sayfalık listede
+ * çıkmaz, veritabanı süresini tekrarlamaz.
+ */
 export function Pager({
   page,
   pageSize,
@@ -141,6 +151,7 @@ export function Pager({
   fetching,
   db,
   onPage,
+  placement = 'top',
 }: {
   page: number;
   pageSize: number;
@@ -150,24 +161,33 @@ export function Pager({
   fetching: boolean;
   db?: DbTiming | null;
   onPage: (p: number) => void;
+  placement?: 'top' | 'bottom';
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const count = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
+  if (placement === 'bottom' && count <= 1) return null;
   const from = page * pageSize + 1;
   const range = total ? `${nf.format(from)}–${nf.format(from + shown - 1)} / ${nf.format(total)}` : loading ? 'Okunuyor…' : 'Kayıt yok';
   const last = (page + 1) * pageSize >= total;
+  const go = (p: number) => {
+    onPage(p);
+    revealListTop(ref.current);
+  };
   return (
-    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+    <div ref={ref} className="mt-3 flex flex-wrap items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold text-canvas-muted">
         {fetching && <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />}
         <span className="font-mono tabular-nums">{range}</span>
-        <DbTimingBadge timing={db ?? null} />
+        {placement === 'top' && <DbTimingBadge timing={db ?? null} />}
       </div>
-      <div className="flex gap-1.5">
-        <button type="button" className={btnGhost} disabled={page === 0 || fetching} onClick={() => onPage(Math.max(0, page - 1))}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button type="button" className={`${btnGhost} !px-2.5 sm:!px-3.5`} aria-label="Önceki sayfa" disabled={page === 0 || fetching} onClick={() => go(Math.max(0, page - 1))}>
           <ChevronLeft aria-hidden className="h-4 w-4" />
-          Önceki
+          <span className="hidden sm:inline">Önceki</span>
         </button>
-        <button type="button" className={btnGhost} disabled={last || fetching} onClick={() => onPage(page + 1)}>
-          Sonraki
+        <PageNumbers page={page} count={count} onPage={go} disabled={fetching} />
+        <button type="button" className={`${btnGhost} !px-2.5 sm:!px-3.5`} aria-label="Sonraki sayfa" disabled={last || fetching} onClick={() => go(page + 1)}>
+          <span className="hidden sm:inline">Sonraki</span>
           <ChevronRight aria-hidden className="h-4 w-4" />
         </button>
       </div>

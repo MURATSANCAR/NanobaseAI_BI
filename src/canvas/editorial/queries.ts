@@ -1,5 +1,5 @@
 import { keepPreviousData, queryOptions, type QueryClient } from '@tanstack/react-query';
-import { ENGINE_ENABLED, assignApi, contractsApi, contributorsApi, editorsApi, intakeApi } from '../engine';
+import { ENGINE_ENABLED, assignApi, contractsApi, contributorsApi, editorsApi, intakeApi, type ContractTerm } from '../engine';
 import { editorialHomeOptions } from './homeQuery';
 
 /**
@@ -44,11 +44,11 @@ export const intakeAgendaOptions = (day: string) =>
 export const contractsSummaryOptions = () =>
   queryOptions({ queryKey: ['editorial', 'contracts', 'summary'], queryFn: contractsApi.summary, enabled: ENGINE_ENABLED });
 
-export const contractsListOptions = (q: string, status: string, kind: string, expiring: boolean, order: string, page: number) =>
+export const contractsListOptions = (q: string, status: string, kind: string, expiring: boolean, order: string, page: number, term: ContractTerm | '' = '') =>
   queryOptions({
-    queryKey: ['editorial', 'contracts', q, status, kind, expiring, order, page],
+    queryKey: ['editorial', 'contracts', q, status, kind, expiring, order, term, page],
     queryFn: () =>
-      contractsApi.list({ q, status: status ? Number(status) : undefined, kind: kind ? Number(kind) : undefined, expiring, order, page }),
+      contractsApi.list({ q, status: status ? Number(status) : undefined, kind: kind ? Number(kind) : undefined, expiring, order, term, page }),
     enabled: ENGINE_ENABLED,
     placeholderData: keepPreviousData,
   });
@@ -67,13 +67,21 @@ export const projectsListOptions = (q: string, editor: string, status: string, s
 export const roleFacetsOptions = () =>
   queryOptions({ queryKey: ['editorial', 'roles'], queryFn: contributorsApi.roles, enabled: ENGINE_ENABLED });
 
-export const contributorsListOptions = (roles: string[], q: string, order: string, page: number) =>
+/** `lang`: kaynak dil süzgeci (dil kimliği ya da «Belirtilmemiş»); `langs`: satırda kişinin kaynak dilleri (çevirmenler). */
+export const contributorsListOptions = (roles: string[], q: string, order: string, page: number, lang = '', langs = false) =>
   queryOptions({
-    queryKey: ['editorial', 'contributors', roles, q, order, page],
-    queryFn: () => contributorsApi.list({ roles, q, order, page }),
+    queryKey: ['editorial', 'contributors', roles, q, order, page, lang, langs],
+    queryFn: () => contributorsApi.list({ roles, q, order, page, lang, langs }),
     enabled: ENGINE_ENABLED,
     placeholderData: keepPreviousData,
   });
+
+/** Kaynak dil süzgecinin seçenekleri (dil başına kişi, dili girilmemiş kişi). */
+export const languageFacetsOptions = (roles: string[]) =>
+  queryOptions({ queryKey: ['editorial', 'contributors', 'languages', roles], queryFn: () => contributorsApi.languages(roles), enabled: ENGINE_ENABLED });
+
+/** Kaynak dil süzgeci ve satırdaki diller yalnız çevirmenlerde (çeviri sözleşmesinde çevirinin dili girilir). */
+export const LANGUAGE_ROLES = CONTRIBUTOR_ROLES.translators;
 
 /** Ön yüklenen liste bu süre taze sayılır: sayfa yenilense de yeniden istenmez. */
 const PREFETCH_FRESH_MS = 5 * 60_000;
@@ -118,7 +126,9 @@ export async function prefetchEditorialLists(qc: QueryClient, username: string):
     () => qc.prefetchQuery({ ...contractsSummaryOptions(), ...fresh }),
     () => qc.prefetchQuery({ ...contractsListOptions('', '', '', false, 'bitis', 0), ...fresh }),
     () => qc.prefetchQuery({ ...roleFacetsOptions(), ...fresh }),
-    ...Object.values(CONTRIBUTOR_ROLES).map((roles) => () => qc.prefetchQuery({ ...contributorsListOptions(roles, '', 'son', 0), ...fresh })),
+    ...Object.values(CONTRIBUTOR_ROLES).map(
+      (roles) => () => qc.prefetchQuery({ ...contributorsListOptions(roles, '', 'son', 0, '', roles === LANGUAGE_ROLES), ...fresh }),
+    ),
     // Editör listesi özetten gelen varsayılana (başlangıç yılı) bağlı.
     () =>
       qc

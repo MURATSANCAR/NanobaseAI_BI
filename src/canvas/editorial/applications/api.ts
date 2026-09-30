@@ -60,7 +60,7 @@ export type AppListItem = {
   categoryName: string | null;
   channelLabel: string;
   receivedOn: string;
-  pageEstimate: number;
+  pageEstimate: number | null;
   evaluator: string | null;
   evaluatorName: string | null;
   mine: boolean;
@@ -199,6 +199,36 @@ export type AppDetail = Omit<AppListItem, 'evaluation' | 'session' | 'files' | '
   letters: Letter[];
   board: BoardHistory[];
   report: ReportState;
+  /** Başvuru yazar başvuru formundan geldiyse formun bütün cevapları (Google E-Tablo, yalnız okunur). */
+  form?: AppFormAnswers | null;
+};
+
+export type AppFormAnswers = {
+  sheetTitle: string | null;
+  formRowId: string;
+  answers: Array<{ key: string; label: string; value: string }>;
+  receivedAt: string | null;
+  importedAt: string | null;
+  updatedAt: string | null;
+  sheetUrl: string;
+};
+export type FormSheetRun = {
+  sheetId: string;
+  title: string | null;
+  rows?: number;
+  new?: number;
+  existing?: number;
+  updated?: number;
+  skipped?: number;
+  problems?: string[];
+  error?: string;
+};
+export type FormsStatus = {
+  configured: number;
+  sheets: Array<{ sheetId: string; title: string | null; applications: number }>;
+  lastRun: { at: string; sheets: FormSheetRun[]; new: number; errors: number } | null;
+  lastRunBy: string | null;
+  canSync: boolean;
 };
 
 export type MarketBook = { id: string | null; title: string | null; author: string | null; series: string | null; code: string; firstPublish: string; firstYear: number; sold: boolean };
@@ -281,7 +311,7 @@ export type AgendaItem = {
   authorName: string;
   categoryName: string | null;
   evaluatorName: string | null;
-  pageEstimate: number;
+  pageEstimate: number | null;
   appStatus: AppStatus;
   position: number;
   decision: BoardDecision | null;
@@ -325,6 +355,8 @@ export const applicationsApi = {
       60_000,
     ),
   create: (b: AppInput) => send<AppDetail>('POST', A, b, 30_000),
+  forms: () => send<FormsStatus>('GET', `${A}/forms`, undefined, 30_000),
+  syncForms: () => send<{ at: string; sheets: FormSheetRun[]; new: number; errors: number }>('POST', `${A}/forms/sync`, {}, 180_000),
   get: (id: string) => send<AppDetail>('GET', `${A}/${enc(id)}`, undefined, 60_000),
   update: (id: string, b: AppInput) => send<AppDetail>('PATCH', `${A}/${enc(id)}`, b, 30_000),
   upload: (id: string, kind: string, file: File) => putFile<AppFile>(`${A}/${enc(id)}/files?kind=${enc(kind)}`, file),

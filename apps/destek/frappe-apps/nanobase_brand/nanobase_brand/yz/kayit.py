@@ -28,7 +28,7 @@ ACIK_DURUMLAR = ("Open", "Replied", "Paused")
 MAX_METIN = 12000
 
 KIMLIK = (
-	"Sen NanobaseAI'sin, bir müşteri destek ekibinin asistanısın. Kendinden ve altyapıdan bahsetme, "
+	"Sen ZEKİ AI'sın, bir müşteri destek ekibinin asistanısın. Kendinden ve altyapıdan bahsetme, "
 	"model ya da ürün adı verme. Yalnız verilen bilgiye dayan, bilmediğini uydurma."
 )
 
@@ -122,7 +122,7 @@ def classify(ticket: str) -> dict:
 	try:
 		out = sinif.oner(doc, text, types, priorities, teams, DUYGULAR)
 	except llm.ModelUnavailable:
-		frappe.log_error(title=f"NanobaseAI sınıflama: {ticket}")
+		frappe.log_error(title=f"ZEKİ AI sınıflama: {ticket}")
 		if birim_alanlari:
 			frappe.db.set_value("HD Ticket", ticket, birim_alanlari, update_modified=False)
 			frappe.db.commit()
@@ -149,7 +149,7 @@ def classify(ticket: str) -> dict:
 		# Atama kuralı çalışamazsa (ör. ekipte temsilci yok, üst kaynakta boş listede IndexError) sınıflama
 		# kaybolmasın: alanlar kancasız yazılır, atama yapılmaz.
 		frappe.db.rollback()
-		frappe.log_error(title=f"NanobaseAI sınıflama: atama kuralı çalışmadı ({ticket})")
+		frappe.log_error(title=f"ZEKİ AI sınıflama: atama kuralı çalışmadı ({ticket})")
 		frappe.db.set_value("HD Ticket", ticket, {
 			**applied, "nb_duygu": doc.nb_duygu, "nb_yz_not": doc.nb_yz_not,
 			"nb_talep_birimi": doc.get("nb_talep_birimi")}, update_modified=False)
@@ -162,7 +162,7 @@ def classify(ticket: str) -> dict:
 	if duygu:
 		parts.append(f"duygu: {duygu}")
 	if parts:
-		_activity(ticket, "NanobaseAI sınıflandırdı — " + ", ".join(parts))
+		_activity(ticket, "ZEKİ AI sınıflandırdı — " + ", ".join(parts))
 	frappe.db.commit()
 	return {**applied, "duygu": duygu}
 
@@ -231,6 +231,8 @@ def draft_reply(ticket: str) -> dict:
 		"- Yalnız aşağıdaki bilgi bankası parçalarına ve yazışmaya dayan; bilgi yoksa uydurma, "
 		"netleştirmek için soru sor ya da ekibin inceleyeceğini söyle.\n"
 		"- Tarih, fiyat, iade/garanti sözü verme; bilgi bankasında açıkça yoksa yazma.\n"
+		"- Müşteriye iç sistemlerden (bilgi bankası, kayıt sistemi, yapay zekâ) söz etme.\n"
+		"- Yapılmamış bir işi yapılmış gibi yazma («ilettim», «inceledik» değil; «inceleyeceğiz» gibi).\n"
 		"- Köşeli parantezli yer tutucuları ([ad 1], [e-posta 1] gibi) gerekiyorsa aynen yaz, değiştirme.\n"
 		"- Selamlama ile başla; imza satırı yazma (temsilci ekler).\n"
 		"- Düz metin; paragraflar arasında boş satır.\n\n"
@@ -254,7 +256,7 @@ def draft_reply(ticket: str) -> dict:
 			sources.append({"tur": "makale", "ad": name, "baslik": frappe.db.get_value("HD Article", name, "title")})
 		elif dt == "HD Ticket" and name and str(name) != str(ticket):
 			sources.append({"tur": "kayit", "ad": name, "baslik": frappe.db.get_value("HD Ticket", name, "subject")})
-	_activity(ticket, "NanobaseAI yanıt taslağı hazırladı")
+	_activity(ticket, "ZEKİ AI yanıt taslağı hazırladı")
 	return {"html": html, "kaynaklar": sources}
 
 
@@ -296,7 +298,7 @@ def article_draft(ticket: str) -> dict:
 		"author": frappe.session.user,
 		"category": category[0] if category else None,
 	}).insert()
-	_activity(ticket, f"NanobaseAI makale taslağı oluşturdu: {article.name}")
+	_activity(ticket, f"ZEKİ AI makale taslağı oluşturdu: {article.name}")
 	return {"name": article.name, "title": article.title}
 
 
@@ -310,7 +312,9 @@ def _applied(ticket: str, limit_chars: int = 2500) -> str:
 		parts.append(f"[Çözüm notu] {_text(doc.resolution_details, 1500)}")
 	for c in frappe.get_all(
 		"Communication",
-		filters={"reference_doctype": "HD Ticket", "reference_name": ticket, "sent_or_received": "Sent"},
+		# Otomatik öneri e-postası (yz/cozum.py) BT'nin çözümü sayılmaz: kendi önerisinden öğrenmesin.
+		filters={"reference_doctype": "HD Ticket", "reference_name": ticket, "sent_or_received": "Sent",
+				 "content": ["not like", "%nb-otomatik-oneri%"]},
 		fields=["content"], order_by="creation desc", limit=3,
 	):
 		parts.append(f"[Temsilci] {_text(c.content, 800)}")

@@ -1,0 +1,754 @@
+{
+  "filesScanned": 7922,
+  "nonPackageVendorMatches": [
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/api/server/v1/im.ts",
+      "line": 2,
+      "text": "* Docs: https://github.com/RocketChat/developer-docs/blob/master/reference/api/rest-api/endpoints/team-collaboration-endpoints/im-endpoints"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/apps/server/bridges/activation.ts",
+      "line": 16,
+      "text": "// View https://github.com/RocketChat/Rocket.Chat/pull/29180 for details"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/apps/server/bridges/activation.ts",
+      "line": 22,
+      "text": "// View https://github.com/RocketChat/Rocket.Chat/pull/29180 for details"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/authentication/server/startup/index.js",
+      "line": 467,
+      "text": "* user does login in Rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/invites/server/functions/findOrCreateInvite.ts",
+      "line": 16,
+      "text": "// Zeki: invite links are always local; the go.rocket.chat deep link was removed."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/lib/server/functions/notifications/email.js",
+      "line": 117,
+      "text": "// Zeki: go.rocket.chat deep links removed; the email links to this workspace."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/livechat/server/roomAccessValidator.compatibility.ts",
+      "line": 93,
+      "text": "// This opens the ability for rocketcat to upload files to a livechat room without being included in it :)"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/livechat/server/roomAccessValidator.compatibility.ts",
+      "line": 94,
+      "text": "// Worst case, someone manages to log in as rocketcat lol"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/oauth2-server-config/server/oauth/oauth2-server.ts",
+      "line": 17,
+      "text": "// https://github.com/RocketChat/rocketchat-oauth2-server/blob/e758fd7ef69348c7ceceabe241747a986c32d036/model.coffee#L27-L27"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/push/server/push.ts",
+      "line": 233,
+      "text": "// Zeki: the ZEKI AI CHAT push gateway (gateway.rocket.chat) was removed; only direct APNs/FCM are used."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/utils/lib/getURL.ts",
+      "line": 6,
+      "text": "// Zeki: go.rocket.chat deep links were removed; every generated URL points to this workspace only."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/app/utils/lib/getURL.ts",
+      "line": 29,
+      "text": "// Zeki: `cloud` used to build a go.rocket.chat deep link; it now yields the local absolute URL."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/client/lib/utils/isVendorUrl.ts",
+      "line": 1,
+      "text": "const vendorDomains = ['rocket.chat', 'rocketchat.github.io', 'rocketchat.atlassian.net'];"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/client/lib/utils/isVendorUrl.ts",
+      "line": 12,
+      "text": "return /^\\/rocketchat(?:\\/|$)/.test(pathname);"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/client/lib/utils/isVendorUrl.ts",
+      "line": 14,
+      "text": "return hostname === 'api.github.com' && /^\\/(?:repos|orgs|users)\\/rocketchat(?:\\/|$)/.test(pathname);"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/client/views/admin/users/UsersTable/UsersTable.stories.tsx",
+      "line": 18,
+      "text": "emails: [{ address: 'example@rocket.chat', verified: true }],"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/client/views/admin/users/UsersTable/UsersTable.stories.tsx",
+      "line": 28,
+      "text": "emails: [{ address: 'john@rocket.chat', verified: true }],"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/client/views/admin/users/UsersTable/UsersTable.stories.tsx",
+      "line": 38,
+      "text": "emails: [{ address: 'sarah@rocket.chat', verified: true }],"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/client/views/admin/users/UsersTable/UsersTable.stories.tsx",
+      "line": 48,
+      "text": "emails: [{ address: 'mike@rocket.chat', verified: false }],"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/client/views/admin/users/UsersTable/UsersTable.stories.tsx",
+      "line": 58,
+      "text": "emails: [{ address: 'emma@rocket.chat', verified: true }],"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/apps/communication/rest.ts",
+      "line": 123,
+      "text": "// Zeki: the incompatible-version modal linked to marketplace.rocket.chat; it now returns no URL."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/apps/communication/rest.ts",
+      "line": 191,
+      "text": "// Zeki: marketplace purchase/subscription links removed (no cloud token, no marketplace.rocket.chat)."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/apps/communication/rest.ts",
+      "line": 397,
+      "text": "// Zeki: app-request links sent requester/admin data to marketplace.rocket.chat; the route is disabled."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/apps/index.ts",
+      "line": 1,
+      "text": "// Zeki: marketplace sync cron and app-request notification cron were removed (no calls to marketplace.rocket.chat)."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/apps/marketplace/MarketplaceAPIClient.ts",
+      "line": 4,
+      "text": "* Zeki: the ZEKI AI CHAT Marketplace (marketplace.rocket.chat) is permanently disconnected."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/apps/marketplace/appInstall.ts",
+      "line": 14,
+      "text": "// Zeki: install/update/uninstall events are never reported to marketplace.rocket.chat."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/services/Dockerfile",
+      "line": 58,
+      "text": "# add dist/ folder from tsc so we don't need to add all rocket.chat repo"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/settings/outlookCalendar.ts",
+      "line": 49,
+      "text": "*\t'rocket.chat': {"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/settings/outlookCalendar.ts",
+      "line": 51,
+      "text": "*\t\tExchange_Url: 'https://owa.dev.rocket.chat/',"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/ee/server/settings/outlookCalendar.ts",
+      "line": 52,
+      "text": "*\t\tOutlook_Url: 'https://owa.dev.rocket.chat/owa/#path=/calendar'"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/packages/zekichat-livechat/assets/demo.html",
+      "line": 6,
+      "text": "<!-- Access: http://localhost:3000/packages/rocketchat_livechat/assets/demo.html -->"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/packages/zekichat-livechat/plugin/build.sh",
+      "line": 23,
+      "text": "# change to lowercase so all injected junk from rocket.chat is not sent: https://github.com/meteorhacks/meteor-inject-initial/blob/master/lib/inject-core.js#L10"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/packages/zekichat-mongo-config/server/index.js",
+      "line": 10,
+      "text": "// FIX For TLS error see more here https://github.com/RocketChat/Rocket.Chat/issues/9316"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/packages/zekichat-version/plugin/compile-version.js",
+      "line": 10,
+      "text": "// Zeki: supported versions are never fetched from releases.rocket.chat at build time."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/server/lib/ldap/Connection.ts",
+      "line": 800,
+      "text": "// https://github.com/RocketChat/Rocket.Chat/issues/2035"
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/server/services/nps/service.ts",
+      "line": 49,
+      "text": "// Zeki: NPS results are never sent to ZEKI AI CHAT (nps.rocket.chat). Any open/expired survey is simply closed locally."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/server/settings/general.ts",
+      "line": 188,
+      "text": "// Zeki: 'DeepLink_Url' (go.rocket.chat) removed; links always point to this workspace."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/server/settings/general.ts",
+      "line": 363,
+      "text": "// Zeki: 'Update' section (Update_EnableChecker / releases.rocket.chat version check) removed."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/server/settings/oauth.ts",
+      "line": 408,
+      "text": "// Zeki: the ZEKI AI CHAT OAuth proxy (oauth-proxy.rocket.chat) and its settings were removed."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/server/settings/push.ts",
+      "line": 25,
+      "text": "// Zeki: Push_enable_gateway / Push_gateway (gateway.rocket.chat) removed; direct APNs/FCM only."
+    },
+    {
+      "file": "apps/zeki-chat/apps/meteor/server/startup/serverRunning.ts",
+      "line": 99,
+      "text": "// const link = 'https://go.rocket.chat/i/mongodb-deprecated';"
+    },
+    {
+      "file": "apps/zeki-chat/deploy/zeki/clean-vendor-notices.cjs",
+      "line": 22,
+      "text": "if (!(/^@rocket\\.chat\\//.test(pkg.name || '') || ['rocket.chat', 'rocketchat-services'].includes(pkg.name))) continue;"
+    },
+    {
+      "file": "apps/zeki-chat/deploy/zeki/migrate-owned-identity.cjs",
+      "line": 13,
+      "text": "const legacySetting = 'LDAP_Groups_To_Rocket_Chat_Teams';"
+    },
+    {
+      "file": "apps/zeki-chat/deploy/zeki/migrate-owned-identity.cjs",
+      "line": 34,
+      "text": "next = next.replaceAll('RocketChat', 'ZekiChat').replaceAll('Rocket_Chat', 'Zeki_Chat').replaceAll(legacyPrefix, 'zeki_').replaceAll(legacyBot, 'zeki.bot').replaceAll('your-rocket-chat', 'your-chat');"
+    },
+    {
+      "file": "apps/zeki-chat/ee/packages/federation-matrix/docker-compose/traefik/dynamic_conf.yml",
+      "line": 7,
+      "text": "# rocket.chat rc1 (container)"
+    },
+    {
+      "file": "apps/zeki-chat/ee/packages/federation-matrix/src/api/_matrix/rooms.ts",
+      "line": 193,
+      "text": "// TODO: https://rocketchat.atlassian.net/browse/FDR-152 -> Implement logic to handle custom room types"
+    },
+    {
+      "file": "apps/zeki-chat/ee/packages/federation-matrix/src/helpers/getUsernameServername.ts",
+      "line": 5,
+      "text": "* if the serverName is the same as the serverName in the mxid, return only the username (rocket.chat regular username)"
+    },
+    {
+      "file": "apps/zeki-chat/ee/packages/federation-matrix/src/helpers/getUsernameServername.ts",
+      "line": 11,
+      "text": "// if the serverName is the same as the serverName in the mxid, return only the username (rocket.chat regular username)"
+    },
+    {
+      "file": "apps/zeki-chat/ee/packages/media-calls/src/server/MediaCallServer.ts",
+      "line": 163,
+      "text": "// On new calls, force the caller type to be 'user' (since the call is being created in rocket.chat first)"
+    },
+    {
+      "file": "apps/zeki-chat/ee/packages/media-calls/src/server/MediaCallServer.ts",
+      "line": 187,
+      "text": "// The callee contact type will determine if the call is going to go through SIP or directly to another rocket.chat user"
+    },
+    {
+      "file": "apps/zeki-chat/ee/packages/omnichannel-services/src/OmnichannelTranscript.ts",
+      "line": 477,
+      "text": "// Rocket.cat is the goat"
+    },
+    {
+      "file": "apps/zeki-chat/fuselage.sh",
+      "line": 110,
+      "text": "cd ./node_modules/@rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/fuselage.sh",
+      "line": 120,
+      "text": "cd ./apps/meteor/node_modules/@rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/accessors/IModifyCreator.ts",
+      "line": 41,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/BlockBuilder.ts",
+      "line": 49,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 15,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 24,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 33,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 43,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 50,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 58,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 66,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 76,
+      "text": "ZEKICHAT = 'rocket.chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 85,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 97,
+      "text": "*      `engine: Array<\"rocket.chat\" | \"omnichannel\">` specifies what engine should"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Blocks.ts",
+      "line": 99,
+      "text": "*          \"rocket.chat\" for regular ZEKI AI CHAT engine"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 4,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 16,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 24,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 31,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 52,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 64,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 73,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 82,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 91,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 98,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Elements.ts",
+      "line": 108,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Objects.ts",
+      "line": 2,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Objects.ts",
+      "line": 10,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/uikit/blocks/Objects.ts",
+      "line": 26,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/users/IPostUserLoggedIn.ts",
+      "line": 11,
+      "text": "* user logged into Rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/users/IPostUserLoggedOut.ts",
+      "line": 11,
+      "text": "* user logout from the Rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/users/IPostUserStatusChanged.ts",
+      "line": 11,
+      "text": "* user changes his status on Rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps-engine/src/definition/videoConfProviders/IVideoConfProvider.ts",
+      "line": 31,
+      "text": "// Optional function to run when a video conference from this provider is changed by rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps/deno-runtime/lib/accessors/builders/BlockBuilder.ts",
+      "line": 54,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps/src/server/ProxiedApp.ts",
+      "line": 82,
+      "text": "// we really need to receive a logger from rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/packages/apps/src/server/accessors/ModifyCreator.ts",
+      "line": 73,
+      "text": "* @deprecated please prefer the rocket.chat/ui-kit components"
+    },
+    {
+      "file": "apps/zeki-chat/packages/core-typings/src/IUser.ts",
+      "line": 107,
+      "text": "* https://developer.rocket.chat/v1/docs/configuring-iframe-auth"
+    },
+    {
+      "file": "apps/zeki-chat/packages/core-typings/src/IUser.ts",
+      "line": 114,
+      "text": "* loginToken is used for route login 'https://your-rocket.chat/login-token/:token' \"one time login\" feature"
+    },
+    {
+      "file": "apps/zeki-chat/packages/ddp-client/src/DDPSDK.ts",
+      "line": 86,
+      "text": "* const sdk = DDPSDK.create('wss://open.rocket.chat/websocket');"
+    },
+    {
+      "file": "apps/zeki-chat/packages/ddp-client/src/DDPSDK.ts",
+      "line": 136,
+      "text": "* const sdk = await DDPSDK.createAndConnect('wss://open.rocket.chat/websocket');"
+    },
+    {
+      "file": "apps/zeki-chat/packages/fuselage-ui-kit/src/stories/payloads/conditional.ts",
+      "line": 7,
+      "text": "engine: ['rocket.chat'],"
+    },
+    {
+      "file": "apps/zeki-chat/packages/fuselage-ui-kit/src/surfaces/createSurfaceRenderer.tsx",
+      "line": 13,
+      "text": "engine: 'rocket.chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/livechat/src/components/Header/Header.stories.tsx",
+      "line": 121,
+      "text": "<HeaderSubTitle>guilherme.gazzo@rocket.chat</HeaderSubTitle>"
+    },
+    {
+      "file": "apps/zeki-chat/packages/livechat/src/components/Header/Header.stories.tsx",
+      "line": 145,
+      "text": "<HeaderSubTitle>guilherme.gazzo@rocket.chat</HeaderSubTitle>"
+    },
+    {
+      "file": "apps/zeki-chat/packages/livechat/src/components/Header/Header.stories.tsx",
+      "line": 181,
+      "text": "<HeaderSubTitle>guilherme.gazzo@rocket.chat</HeaderSubTitle>"
+    },
+    {
+      "file": "apps/zeki-chat/packages/livechat/src/components/Header/Header.stories.tsx",
+      "line": 209,
+      "text": "<HeaderSubTitle>guilherme.gazzo@rocket.chat</HeaderSubTitle>"
+    },
+    {
+      "file": "apps/zeki-chat/packages/livechat/src/components/Screen/stories.tsx",
+      "line": 34,
+      "text": "email: 'guilherme.gazzo@rocket.chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/livechat/src/components/Screen/stories.tsx",
+      "line": 62,
+      "text": "email: 'guilherme.gazzo@rocket.chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/livechat/src/routes/Chat/stories.tsx",
+      "line": 27,
+      "text": "email: 'guilherme.gazzo@rocket.chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/media-signaling/src/definition/media/IMediaStreamWrapper.ts",
+      "line": 60,
+      "text": "* indicates if the audio track is not receiving audio from the system or network; beyond what the rocket.chat client can control"
+    },
+    {
+      "file": "apps/zeki-chat/packages/media-signaling/src/definition/media/IMediaStreamWrapper.ts",
+      "line": 65,
+      "text": "* indicates if the audio track is enabled by the rocket.chat client (aka not muted by the user nor placed on hold)"
+    },
+    {
+      "file": "apps/zeki-chat/packages/media-signaling/src/lib/media/MediaStreamTrackWrapper.ts",
+      "line": 28,
+      "text": "* enabled is a flag that determines if the rocket.chat client wants this track to be enabled"
+    },
+    {
+      "file": "apps/zeki-chat/packages/message-parser/src/grammar.pegjs",
+      "line": 330,
+      "text": "* Reference: [ZEKI AI CHAT Website](https://rocket.chat), [](https://rocket.chat), <rocket.chat|ZEKI AI CHAT Website>"
+    },
+    {
+      "file": "apps/zeki-chat/packages/message-parser/src/grammar.pegjs",
+      "line": 331,
+      "text": "* Image: ![](https://rocket.chat/logo.png)"
+    },
+    {
+      "file": "apps/zeki-chat/packages/message-parser/src/grammar.pegjs",
+      "line": 438,
+      "text": "* e.g: contact@rocket.chat"
+    },
+    {
+      "file": "apps/zeki-chat/packages/message-parser/src/grammar.pegjs",
+      "line": 455,
+      "text": "* e.g: rocket.chat, https://rocket.chat,"
+    },
+    {
+      "file": "apps/zeki-chat/packages/node-poplib/CHANGELOG.md",
+      "line": 7,
+      "text": "- ([#38989](https://github.com/RocketChat/Rocket.Chat/pull/38989)) chore(eslint): Upgrades ESLint and its configuration"
+    },
+    {
+      "file": "apps/zeki-chat/packages/node-poplib/CHANGELOG.md",
+      "line": 13,
+      "text": "- ([#38989](https://github.com/RocketChat/Rocket.Chat/pull/38989)) chore(eslint): Upgrades ESLint and its configuration"
+    },
+    {
+      "file": "apps/zeki-chat/packages/node-poplib/CHANGELOG.md",
+      "line": 19,
+      "text": "- ([#31138](https://github.com/RocketChat/Rocket.Chat/pull/31138)) feat(uikit): Move `@zeki.chat/ui-kit` package to the main monorepo"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/src/checkVendorDestination.ts",
+      "line": 1,
+      "text": "const blockedDomains = ['rocket.chat', 'rocketchat.github.io', 'rocketchat.atlassian.net'];"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/src/checkVendorDestination.ts",
+      "line": 24,
+      "text": "? /^\\/rocketchat(?:\\/|$)/.test(pathname)"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/src/checkVendorDestination.ts",
+      "line": 25,
+      "text": ": /^\\/(?:repos|orgs|users)\\/rocketchat(?:\\/|$)/.test(pathname);"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 6,
+      "text": "'https://rocket.chat/',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 7,
+      "text": "'https://cloud.rocket.chat/api',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 8,
+      "text": "'https://a.b.rocket.chat/api',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 9,
+      "text": "'https://CLOUD.ROCKET.CHAT.:443/api',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 10,
+      "text": "'https://%63loud.rocket.chat/api',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 11,
+      "text": "'https://user:password@cloud.rocket.chat/api',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 12,
+      "text": "'https://rocketchat.github.io/',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 13,
+      "text": "'https://rocketchat.atlassian.net/',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 14,
+      "text": "'https://github.com/RocketChat/Rocket.Chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 15,
+      "text": "'https://github.com/%52ocketChat/Rocket.Chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 16,
+      "text": "'https://raw.githubusercontent.com/RocketChat/Rocket.Chat/main/package.json',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 17,
+      "text": "'https://codeload.github.com/RocketChat/Rocket.Chat/zip/main',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 18,
+      "text": "'https://api.github.com/repos/RocketChat/Rocket.Chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 19,
+      "text": "'https://api.github.com/orgs/RocketChat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 26,
+      "text": "'https://rocket.chat.example.org/',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+      "line": 27,
+      "text": "'https://example.org/rocket.chat',"
+    },
+    {
+      "file": "apps/zeki-chat/packages/ui-kit/src/rendering/Conditions.ts",
+      "line": 2,
+      "text": "engine?: 'rocket.chat' | 'livechat';"
+    }
+  ],
+  "domains": {
+    "owa.dev.rocket.chat": [
+      [
+        "apps/zeki-chat/apps/meteor/ee/server/settings/outlookCalendar.ts",
+        51
+      ],
+      [
+        "apps/zeki-chat/apps/meteor/ee/server/settings/outlookCalendar.ts",
+        52
+      ]
+    ],
+    "go.rocket.chat": [
+      [
+        "apps/zeki-chat/apps/meteor/server/startup/serverRunning.ts",
+        99
+      ]
+    ],
+    "rocketchat.atlassian.net": [
+      [
+        "apps/zeki-chat/ee/packages/federation-matrix/src/api/_matrix/rooms.ts",
+        193
+      ],
+      [
+        "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+        13
+      ]
+    ],
+    "developer.rocket.chat": [
+      [
+        "apps/zeki-chat/packages/core-typings/src/IUser.ts",
+        107
+      ]
+    ],
+    "your-rocket.chat": [
+      [
+        "apps/zeki-chat/packages/core-typings/src/IUser.ts",
+        114
+      ]
+    ],
+    "your.rocketserver.com": [
+      [
+        "apps/zeki-chat/packages/livechat/README.md",
+        54
+      ]
+    ],
+    "rocket.chat": [
+      [
+        "apps/zeki-chat/packages/message-parser/src/grammar.pegjs",
+        330
+      ],
+      [
+        "apps/zeki-chat/packages/message-parser/src/grammar.pegjs",
+        330
+      ],
+      [
+        "apps/zeki-chat/packages/message-parser/src/grammar.pegjs",
+        331
+      ],
+      [
+        "apps/zeki-chat/packages/message-parser/src/grammar.pegjs",
+        455
+      ],
+      [
+        "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+        6
+      ]
+    ],
+    "cloud.rocket.chat": [
+      [
+        "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+        7
+      ]
+    ],
+    "a.b.rocket.chat": [
+      [
+        "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+        8
+      ]
+    ],
+    "rocketchat.github.io": [
+      [
+        "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+        12
+      ]
+    ],
+    "rocket.chat.example.org": [
+      [
+        "apps/zeki-chat/packages/server-fetch/verify-vendor-destinations.cjs",
+        26
+      ]
+    ]
+  },
+  "installHooks": [
+    [
+      "apps/zeki-chat/apps/meteor/package.json",
+      "prepare",
+      "node playwright.prepare.mjs"
+    ]
+  ]
+}

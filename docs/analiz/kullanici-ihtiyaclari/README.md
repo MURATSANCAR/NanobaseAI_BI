@@ -55,6 +55,7 @@ Büyüklük: S ≤1 gün, M 1–2 gün, L 3+ gün (belgenin kendi tahmini).
 | [M57-egitim-gelisim.md](M57-egitim-gelisim.md) | M57 — Eğitim ve Gelişim Yönetimi | — |
 | [M58-calisan-deneyimi-baglilik.md](M58-calisan-deneyimi-baglilik.md) | M58 — Çalışan Deneyimi ve Bağlılık | — |
 | [M59-bayi-risk-performans.md](M59-bayi-risk-performans.md) | M59 — Kitapçı/Bayi Risk ve Performans Yönetimi | L |
+| [M60-izin-yonetimi-ve-ik-bildirimleri.md](M60-izin-yonetimi-ve-ik-bildirimleri.md) | M60 — İzin Yönetimi ve İK Bildirimleri (İK modülü içinde) | L |
 
 ## Ortak işler (modüllerden önce)
 

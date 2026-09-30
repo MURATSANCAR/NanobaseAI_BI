@@ -9,6 +9,7 @@ import Sheet from '../studio/reader/Sheet';
 import SqlInfo from '../../components/SqlInfo';
 import { productionApi, type Milestone, type ProdDetail, type Suggestion } from './api';
 import { Chain, POINTS, SOURCE_LABEL, STAGE_TONE, daysText, fmtDay, fmtMoney, fmtUnit, invalidateProduction, useProductionMeta } from './shared';
+import { Explain } from '../../components/Explain';
 
 /** Üretim kartı: takvim (plan / gerçekleşen / kaynak), matbaa seçim raporu, Logo'da gerçekleşen, baskı dosyaları,
  *  kalite ve notlar. CRM'e yazılmaz; burada girilen her şey portal kaydıdır ve kimin girdiği yazar. */
@@ -412,18 +413,19 @@ export default function CardSheet({ id, onClose }: { id: string | null; onClose:
                 ['Öncelik', c.priority ?? '—'],
                 ['Sorumlu editör', c.editor ?? '—'],
                 ['Grafiker', c.designer ?? '—'],
-                ['Bandrol', c.bandrol ?? '—'],
+                ['Bandrol durumu', c.bandrol ?? '—', undefined, 'Kitabın Kültür ve Turizm Bakanlığı bandrolünün alınıp alınmadığı: Alındı, Alınmadı ya da Bandrolsüz. CRM üretim kartındaki «Bandrol Durumu» alanından okunur.'],
                 ['Kesin adet', c.qty !== null ? nf.format(c.qty) : '—', 'qty'],
                 ['Depoya giren', c.logoQty !== null ? `${nf.format(c.logoQty)} adet` : '—', 'logoQty'],
                 ['Satış fiyatı', fmtMoney(c.coverPrice), 'coverPrice'],
                 ['Baskı bedeli', fmtMoney(c.price), 'price'],
                 ['Adet başı baskı', fmtUnit(c.unitPrice), 'unitPrice'],
                 ['Faturalanan adet', c.costQty !== null ? nf.format(c.costQty) : '—', 'costQty'],
-              ] as Array<[string, string, string?]>
-            ).map(([k, v, alan]) => (
+              ] as Array<[string, string, string?, string?]>
+            ).map(([k, v, alan, tip]) => (
               <div key={k} className="min-w-0">
                 <dt className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
                   {k}
+                  {tip && <Explain label={k}>{tip}</Explain>}
                   {alan && <SqlInfo k={c.kaynaklar} alan={alan} label={k} />}
                 </dt>
                 <dd className="break-words font-semibold">{v}</dd>

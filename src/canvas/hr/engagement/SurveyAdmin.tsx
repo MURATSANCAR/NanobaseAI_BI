@@ -8,8 +8,9 @@ import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDay, fmtDateTime } from '../hrApi';
 import { HrFrame, Tabs } from '../parts';
 import { InfoLabel } from '../../components/SqlInfo';
-import { SURVEY_TONE, engApi, type EngMeta, type Survey, type Template } from './engApi';
+import { SURVEY_TONE, engApi, type EngMeta, type QType, type Question, type Survey, type Template } from './engApi';
 import { EmptyHint } from '../../components/Explain';
+import { BlockedReason, ItemCard, TextRows, localId, makeKey, moveAt, tidy, type Row } from '../ListEditor';
 
 /** M58 Anket yönetimi (İK): şablonlar (ikinci kişi onaylar), anket açma, gösterim eşiği (kendiliğinden konmaz, İK girer;
  *  yalnız yükseltilir), birim kırılımı (eşik şart), basılı kodlar, kapanış ve birim sonucunu paylaşma. */
@@ -198,17 +199,79 @@ function Templates({ meta }: { meta: EngMeta }) {
   );
 }
 
-function TemplateSheet({ t, meta, starters, onClose }: { t: Template | null; meta: EngMeta; starters: Record<string, { title: string; questions: unknown[] }>; onClose: () => void }) {
+/** Cevap biçimleri; anlamı anket formundaki (SurveyForm) ve sunucudaki (hr_engagement.QTYPES) karşılığıyla aynı. */
+const Q_TYPES: { value: QType; label: string; hint: string }[] = [
+  { value: 'likert5', label: 'Katılım (1–5)', hint: 'Çalışan «Kesinlikle katılmıyorum»dan «Kesinlikle katılıyorum»a beş basamaktan birini seçer. Soruyu bir yargı cümlesi olarak yazın.' },
+  { value: 'enps', label: 'Tavsiye puanı (0–10)', hint: 'Çalışan 0 (hiç önermem) ile 10 (kesinlikle öneririm) arasında puan verir. Ankette en çok bir tane olur.' },
+  { value: 'secim', label: 'Seçenekli', hint: 'Çalışan yazdığınız seçeneklerden birini seçer. En az iki seçenek gerekir.' },
+  { value: 'acik', label: 'Açık uçlu', hint: 'Çalışan kendi cümleleriyle yazar; adlar ve iletişim bilgileri otomatik gizlenir.' },
+];
+const isQType = (v: string): v is QType => Q_TYPES.some((x) => x.value === v);
+
+/** Düzenlenen soru. `key`/`orig` sunucudan ya da başlangıç şablonundan gelen soruda dolu; yeni soruda boş. */
+type QDraft = { id: string; key: string | null; orig: Record<string, unknown> | null; text: string; type: string; options: Row[] };
+
+function toQDrafts(qs: Question[]): QDraft[] {
+  const seen = new Set<string>();
+  return qs.map((q) => {
+    const key = typeof q.key === 'string' && q.key ? q.key : null;
+    const id = key && !seen.has(key) ? `soru-${key}` : localId();
+    if (key) seen.add(key);
+    return {
+      id, key, orig: { ...q }, text: String(q.text ?? ''), type: String(q.type ?? ''),
+      options: (Array.isArray(q.options) ? q.options : []).map((o) => ({ id: localId(), text: String(o) })),
+    };
+  });
+}
+
+/** Sunucunun `_clean_questions` kurallarının (hr_engagement.py) istemci karşılığı + aynı seçeneğin iki kez yazılması. */
+function checkQuestions(ds: QDraft[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  const add = (id: string, m: string) => { (out[id] ??= []).push(m); };
+  const firstWithKey = new Map<string, number>();
+  let enps = -1;
+  ds.forEach((d, i) => {
+    if (!tidy(d.text)) add(d.id, 'Soru metnini yazın.');
+    if (!isQType(d.type)) add(d.id, 'Cevap biçimini seçin.');
+    if (d.type === 'secim') {
+      const opts = d.options.map((o) => tidy(o.text)).filter(Boolean);
+      if (opts.length < 2) add(d.id, 'Seçenekli soru en az iki dolu seçenek ister.');
+      if (new Set(opts).size !== opts.length) add(d.id, 'Aynı seçenek iki kez yazılmış.');
+    }
+    if (d.type === 'enps') {
+      if (enps >= 0) add(d.id, `Ankette en çok bir tavsiye puanı sorusu olur; ${enps + 1}. soru zaten bu biçimde.`);
+      else enps = i;
+    }
+    if (d.key) {
+      const j = firstWithKey.get(d.key);
+      if (j !== undefined) add(d.id, `Bu soru ${j + 1}. soruyla aynı kimliği taşıyor; sonuçlar karışmasın diye birini silip yeniden ekleyin.`);
+      else firstWithKey.set(d.key, i);
+    }
+  });
+  return out;
+}
+
+/** Gönderilen dizi öncekiyle aynı biçimde: var olan sorunun bilinmeyen alanları korunur, yalnız düzenlenen alanlar yazılır. */
+function buildQuestions(ds: QDraft[]): Record<string, unknown>[] {
+  const taken = new Set(ds.map((d) => d.key).filter((k): k is string => !!k));
+  return ds.map((d, i) => {
+    const q: Record<string, unknown> = { ...(d.orig ?? {}), key: d.key ?? makeKey(d.text, `s${i + 1}`, taken), text: tidy(d.text), type: d.type };
+    if (d.type === 'secim') q.options = d.options.map((o) => tidy(o.text)).filter(Boolean);
+    else delete q.options;
+    return q;
+  });
+}
+
+function TemplateSheet({ t, meta, starters, onClose }: { t: Template | null; meta: EngMeta; starters: Record<string, { title: string; questions: Question[] }>; onClose: () => void }) {
   const qc = useQueryClient();
   const [kind, setKind] = useState(t?.kind ?? 'baglilik');
   const [title, setTitle] = useState(t?.title ?? '');
-  const [text, setText] = useState(t ? JSON.stringify(t.questions, null, 2) : '');
+  const [drafts, setDrafts] = useState<QDraft[]>(() => toQDrafts(t?.questions ?? []));
+  const [focusId, setFocusId] = useState<string | null>(null);
   const done = () => { void qc.invalidateQueries({ queryKey: ['hr', 'eng', 'templates'] }); onClose(); };
   const save = useMutation({
     mutationFn: () => {
-      let questions: unknown;
-      try { questions = JSON.parse(text); } catch { throw new Error('Soru metni bozuk; tırnak, virgül ve parantezleri kontrol edin.'); }
-      const b = { kind, title, questions };
+      const b = { kind, title, questions: buildQuestions(drafts) };
       return t ? engApi.updateTemplate(t.id, b) : engApi.createTemplate(b);
     },
     onSuccess: (x) => { toast.success(x.state === 'taslak' ? 'Kaydedildi; yürürlüğe girmesi için onaya gönderin.' : 'Kaydedildi.'); done(); },
@@ -220,6 +283,23 @@ function TemplateSheet({ t, meta, starters, onClose }: { t: Template | null; met
     onError: (e) => toast.error(errText(e, 'İşlem yapılamadı.')),
   });
   const starter = starters[kind];
+  const problems = checkQuestions(drafts);
+  const firstBad = drafts.findIndex((d) => problems[d.id]?.length);
+  const blocked = !title.trim() ? 'Şablona bir ad verin.'
+    : !drafts.length ? 'En az bir soru ekleyin.'
+    : firstBad >= 0 ? `${firstBad + 1}. soru: ${problems[drafts[firstBad].id][0]}`
+    : null;
+  const patch = (id: string, p: Partial<QDraft>) => setDrafts((ds) => ds.map((d) => (d.id === id ? { ...d, ...p } : d)));
+  const addQuestion = () => {
+    const id = localId();
+    setFocusId(id);
+    setDrafts((ds) => [...ds, { id, key: null, orig: null, text: '', type: 'likert5', options: [] }]);
+  };
+  const loadStarter = () => {
+    if (!starter) return;
+    setDrafts(toQDrafts(starter.questions));
+    if (!title.trim()) setTitle(starter.title);
+  };
   return (
     <Sheet open modal wide onClose={onClose} title={t ? t.title : 'Yeni şablon'} subtitle="Sorular değişince sürüm artar ve şablon yeniden onay ister. Onaylayan, onaya gönderen kişi olamaz.">
       <div className="flex flex-col gap-3">
@@ -229,23 +309,56 @@ function TemplateSheet({ t, meta, starters, onClose }: { t: Template | null; met
           </label>
           <label className="flex flex-col gap-1"><span className={labelCls}>Ad</span><input className={field} value={title} onChange={(e) => setTitle(e.target.value)} /></label>
         </div>
-        <label className="flex flex-col gap-1">
-          <span className={labelCls}>Sorular (örnek yapıyı koruyarak düzenleyin)</span>
-          <span className="text-[11px] leading-snug text-canvas-muted">
-            text = soru metni; type = enps (0–10 tavsiye), likert5 (1–5 katılım), secim (seçenekli) ya da acik (açık uçlu); options = seçenekler.
-            Boşsa «Başlangıç sorularını yükle» ile hazır bir örnekten başlayın.
-          </span>
-          <textarea className={`${field} min-h-[300px] font-mono text-[12px]`} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
-        </label>
-        {starter && !text.trim() && (
-          <div className="flex justify-start"><button type="button" className={btnGhost} onClick={() => { setText(JSON.stringify(starter.questions, null, 2)); if (!title) setTitle(starter.title); }}>Başlangıç sorularını yükle</button></div>
-        )}
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className={labelCls}>Sorular{drafts.length ? ` · ${drafts.length}` : ''}</span>
+          {drafts.length === 0 ? (
+            <EmptyHint title="Henüz soru yok"
+              why={starter ? 'Bu türün hazır sorularıyla başlayıp düzenleyebilir ya da «Soru ekle» ile kendiniz yazabilirsiniz.' : '«Soru ekle» ile ilk soruyu yazın.'}
+              action={starter ? <button type="button" className={btnGhost} onClick={loadStarter}>Başlangıç sorularını yükle</button> : undefined} />
+          ) : (
+            <ol className="flex min-w-0 flex-col gap-2">
+              {drafts.map((d, i) => {
+                const known = isQType(d.type);
+                const hint = Q_TYPES.find((x) => x.value === d.type)?.hint;
+                return (
+                  <ItemCard key={d.id} label={`${i + 1}. soru`} index={i} total={drafts.length} problems={problems[d.id] ?? []}
+                    onMove={(dir) => setDrafts((ds) => moveAt(ds, i, dir))} onRemove={() => setDrafts((ds) => ds.filter((x) => x.id !== d.id))}>
+                    <label className="flex flex-col gap-1">
+                      <span className={labelCls}>Soru metni</span>
+                      <textarea className={`${field} min-h-[72px] resize-y`} rows={2} maxLength={400} value={d.text} autoFocus={d.id === focusId}
+                        onChange={(e) => patch(d.id, { text: e.target.value })} />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className={labelCls}>Cevap biçimi</span>
+                      <select className={field} value={known ? d.type : ''}
+                        onChange={(e) => patch(d.id, { type: e.target.value, ...(e.target.value === 'secim' && !d.options.length ? { options: [{ id: localId(), text: '' }, { id: localId(), text: '' }] } : {}) })}>
+                        {!known && <option value="" disabled>Seçin</option>}
+                        {Q_TYPES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+                      </select>
+                      {hint && <span className="text-[11.5px] leading-snug text-canvas-muted">{hint}</span>}
+                    </label>
+                    {d.type === 'secim' && (
+                      <div className="flex flex-col gap-1">
+                        <span className={labelCls}>Seçenekler</span>
+                        <TextRows rows={d.options} onChange={(options) => patch(d.id, { options })} noun="seçenek" addLabel="Seçenek ekle" placeholder="Seçenek metni" maxLength={120} />
+                      </div>
+                    )}
+                  </ItemCard>
+                );
+              })}
+            </ol>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={btnGhost} onClick={addQuestion}><Plus aria-hidden className="h-4 w-4" />Soru ekle</button>
+          </div>
+        </div>
+        {blocked && <BlockedReason id="sablon-kaydet-engel">{blocked}</BlockedReason>}
         <div className="flex flex-wrap justify-end gap-2">
           {t?.state === 'taslak' && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('submit')}>Onaya gönder</button>}
           {t?.state === 'onayda' && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('reject')}>Geri gönder</button>}
           {t?.state === 'onayda' && <button type="button" className={btnPrimary} disabled={act.isPending} onClick={() => act.mutate('approve')}>Onayla</button>}
           {t && t.state !== 'arsiv' && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('archive')}>Arşivle</button>}
-          <button type="button" className={btnPrimary} disabled={save.isPending || !title.trim() || !text.trim()} onClick={() => save.mutate()}>Kaydet</button>
+          <button type="button" className={btnPrimary} disabled={save.isPending || !!blocked} aria-describedby={blocked ? 'sablon-kaydet-engel' : undefined} onClick={() => save.mutate()}>Kaydet</button>
         </div>
       </div>
     </Sheet>

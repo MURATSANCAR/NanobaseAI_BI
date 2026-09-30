@@ -15,7 +15,8 @@ Sayfa düzeni: her resim için sol sayfada hikâyeden kısa cümle, sağ sayfada
 
 Çizgiyi görsel modelle yeniden çizdirme (`redraw`, `ColoringRedraw` GPU işi): kaynağın renkli resmi görsel modele
 «boyama sayfası çizgisi» istemiyle verilir, dönen çizgi aynı baskı kuralından geçer (lineart.clean_drawn), yeni sürüm
-olur. Görsel modelin lisansı ticari değildir: model çizgisi ekranda «taslak» diye işaretlenir.
+olur. Model çizgisi de basılabilir çıktıdır (görsel modelin ticari lisansı 2026-09-29'da alındı); ekranda yalnız
+kaynağı (ZEKİ AI / otomatik) yazılır.
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ FILE = "coloring.json"
 STEPS = [("kaynak", "Kaynak kitap"), ("cizgi", "Çizgi hatları"), ("cumleler", "Kısa cümleler"),
          ("etkinlik", "Etkinlik sayfaları"), ("kapak", "Kapak"), ("dizgi", "Dizgi (PDF)"),
          ("on_kontrol", "Ön baskı denetimi")]
-MODEL_MODES = {"lineart-model", "fix", "new"}          # görsel modelin çizdiği sürümler: taslak
+MODEL_MODES = {"lineart-model", "fix", "new"}          # görsel modelin çizdiği sürümler (ekranda kaynak etiketi)
 TITLE_SUFFIX = {"coloring": "Boyama Kitabı", "coloring_activities": "Boyama ve Etkinlik Kitabı"}
 LINE_STYLE = ("Black-and-white coloring book line art for children: bold, smooth, uniform black outlines, closed "
               "shapes, pure white inside, no color, no gray, no shading, no texture.")
@@ -679,7 +680,7 @@ def assemble(d: Path, src: Path, arts: list[dict], have: dict, cz: dict, assets:
 
 # ------------------------------------------------------------------ ekran
 def view(d: Path) -> dict:
-    """Boyama işinin ekrandaki özeti: kaynak, cümleler (onay), etkinlikler, taslak (model) çizgiler."""
+    """Boyama işinin ekrandaki özeti: kaynak, cümleler (onay), etkinlikler, çizgiler (`model`: görsel modelin çizdiği)."""
     job = studio.read(d, "job.json") or {}
     cz = studio.read(d, FILE) or {}
     pl = plan_mod.load(d) or {"pages": []}
@@ -705,11 +706,11 @@ def view(d: Path) -> dict:
         arts.append({"aid": a["aid"], "no": no_of.get(a["aid"]), "source_no": a.get("no"),
                      "versions": len(pg.get("versions", [])), "selected": pg.get("selected"),
                      "approved": pg.get("approved", False), "method": v.get("mode"),
-                     "draft": v.get("mode") in MODEL_MODES, "regions": (a.get("info") or {}).get("regions")})
+                     "model": v.get("mode") in MODEL_MODES, "regions": (a.get("info") or {}).get("regions")})
     return {"kind": "derived", "derived_from": job.get("derived_from"), "options": job.get("coloring"),
             "sentences": sentences, "activities": [{k: a.get(k) for k in ("kind", "title", "info")}
                                                    for a in cz.get("activities") or []],
-            "arts": arts, "drafts": [a["no"] for a in arts if a["draft"]], "filler": cz.get("filler", 0),
+            "arts": arts, "filler": cz.get("filler", 0),
             "state": studio.read(d, "state.json")}
 
 
@@ -756,7 +757,7 @@ def set_sentences(d: Path, items: list[dict], by: str) -> dict:
 
 async def redraw(d: Path, aid: str, by: str) -> dict:
     """Çizgiyi görsel modelle yeniden çizdirir (GPU): kaynağın renkli resmi + «boyama sayfası» istemi; dönen çizgi
-    baskı kuralından geçer, yeni sürüm olur (seçili, onayı düşer). Taslak: görsel modelin lisansı ticari değil."""
+    baskı kuralından geçer, yeni sürüm olur (seçili, onayı düşer)."""
     import random
 
     from .images import Painter
@@ -785,7 +786,7 @@ async def redraw(d: Path, aid: str, by: str) -> dict:
     path = d / "resim" / f"cizgi-{aid}.v{v}.png"
     await asyncio.to_thread(_write_png, path, res.image)
     (d / "resim" / f"cizgi-{aid}.v{v}.ham.png").write_bytes(png)
-    studio.add_version(d, aid, str(path), mode="lineart-model", prompt="ZEKİ AI ile yeniden çizildi (taslak)",
+    studio.add_version(d, aid, str(path), mode="lineart-model", prompt="ZEKİ AI ile yeniden çizildi",
                        seed=seed, by=by, dpi=res.info["dpi"])
     await asyncio.to_thread(studio.rebuild, d)
     return {"aid": aid, "v": v, "info": res.info}

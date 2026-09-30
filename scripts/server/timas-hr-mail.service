@@ -1,0 +1,8 @@
+[Unit]
+Description=İK e-posta kuyruğu: bekleyen bildirimleri gönderir (yalnız HR_MAIL_MODE=gonder iken satır oluşur; şirket içi alıcı)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 290 -X POST "http://127.0.0.1:8795/api/v1/hr/mail/run-due"

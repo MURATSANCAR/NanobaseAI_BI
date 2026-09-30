@@ -9,7 +9,7 @@ COUNT), PDF metni bu betikte ayrıca okunur (pypdf), köprü veritabanı doğrud
       satır); emsal sayısı, dolu sayısı, «bu değer ya da üstü/altı» sayısı, medyan ve %10/%90 (PERCENTILE_CONT) uçla aynı
   K4  seçim/bayrak farklı madde: aynı değeri taşıyan emsal sayısı SQL sayımıyla aynı
   K5  özgün not: aynı metin (kırpılmış, küçük harf) başka anlaşmada yok (SQL); kalıp not ≥ eşik anlaşmada var
-  K6  aynı hak sahibi: taraf tablosundan (SQL) aynı kişi/firmanın öbür sözleşmeleri uçtakiyle aynı küme
+  K6  aynı hak sahibi: taraf tablosundan (SQL) aynı kişi/firmanın öbür anlaşmaları uçtakiyle aynı küme (anlaşma düzeyinde)
   K7  tek ödeme tutarı: sözleşme sayfası (M6) `new_TekdemeTutari`'nı okuyor (düzeltme), 3 tek ödemeli sözleşmede SQL = uç
   K8  belge arşivi: CRM ek sayısı (SQL) = arşivdeki CRM eki; PDF okunur, her maddenin metni betiğin kendi okuduğu PDF
       metninde (katlanmış) geçer
@@ -488,18 +488,23 @@ def main() -> None:
                    " AND COALESCE(new_kisi, new_Firma) IS NOT NULL")
         if pids:
             ids = ", ".join(f"'{r['p']}'" for r in pids)
-            others = run(f"SELECT DISTINCT LOWER(CAST(s.new_sozlesmeId AS varchar(40))) AS id FROM {P}new_sozlesmetarafiBase t JOIN {P}new_sozlesmeBase s"
+            others = run(f"SELECT DISTINCT LOWER(CAST(s.new_sozlesmeId AS varchar(40))) AS id,"
+                         f" LOWER(COALESCE(NULLIF(REPLACE(REPLACE(s.new_anasozlesmeid, '{{', ''), '}}', ''), ''), CAST(s.new_sozlesmeId AS varchar(40)))) AS k"
+                         f" FROM {P}new_sozlesmetarafiBase t JOIN {P}new_sozlesmeBase s"
                          f" ON s.new_sozlesmeId = t.new_sozlesmeid WHERE t.statecode = 0 AND s.statecode = 0 AND COALESCE(t.new_kisi, t.new_Firma) IN ({ids})"
                          f" AND LOWER(COALESCE(NULLIF(REPLACE(REPLACE(s.new_anasozlesmeid, '{{', ''), '}}', ''), ''), CAST(s.new_sozlesmeId AS varchar(40)))) <> '{row['k']}'")
             want = {r["id"] for r in others}
-            got_ids: set[str] = set()
-            for h in d["history"]["items"]:
-                got_ids.add(h["id"])
-            # uç her anlaşma kopyası kümesini tek satırda verir; SQL bütün kopyaları: uçtaki her satır SQL kümesinde olmalı,
-            # SQL kümesindeki her kimlik uçtaki bir satırın anlaşmasına düşmeli
-            covered = all(i in want for i in got_ids)
-            ok(f"K6 {it['no']} aynı hak sahibi", covered and (len(want) == 0) == (len(got_ids) == 0),
-               f"uç {len(got_ids)} satır / SQL {len(want)} sözleşme kaydı")
+            want_ag = {r["k"] for r in others}
+            got_ids = {h["id"] for h in d["history"]["items"]}
+            # Uç her anlaşmayı (kopyalarıyla) tek satırda, ana kaydın kimliğiyle verir; taraf ise yalnız bir kopyada olabilir.
+            # Karşılaştırma anlaşma düzeyinde: uçtaki her satırın anlaşması SQL'in anlaşma kümesinde, küme uçla aynı.
+            got_ag = set()
+            if got_ids:
+                got_ag = {r["k"] for r in run(
+                    f"SELECT LOWER(COALESCE(NULLIF(REPLACE(REPLACE(new_anasozlesmeid, '{{', ''), '}}', ''), ''), CAST(new_sozlesmeId AS varchar(40)))) AS k"
+                    f" FROM {P}new_sozlesmeBase WHERE statecode = 0 AND LOWER(CAST(new_sozlesmeId AS varchar(40))) IN ({', '.join(repr(i) for i in got_ids)})")}
+            ok(f"K6 {it['no']} aynı hak sahibi", got_ag == want_ag,
+               f"uç {len(got_ag)} anlaşma / SQL {len(want_ag)} anlaşma ({len(want)} sözleşme kaydı)")
     ok("K3/K4 kapsam", checked_num + checked_cat > 0, f"{checked_num} sayısal, {checked_cat} seçim/bayrak maddesi SQL ile denetlendi")
 
     # K7 tek ödeme (M6 sözleşme sayfası)
@@ -513,8 +518,9 @@ def main() -> None:
     # K8 belge arşivi
     st, docs = http("GET", B + "/documents")
     check_provenance("belgeler", docs)
-    n_crm = run(f"SELECT COUNT(*) AS n FROM {P}AnnotationBase a WHERE a.IsDocument = 1 AND a.ObjectTypeCode = "
-                f"(SELECT ObjectTypeCode FROM {P}EntityView WHERE Name = 'new_sozlesme')")[0]["n"]
+    # Yalnız etkin sözleşmenin ekleri (kullanıcı kuralı 2026-09-29: durum nedeni «Pasif» olan hiçbir ekranda yok; bağlantı süzer).
+    n_crm = run(f"SELECT COUNT(*) AS n FROM {P}AnnotationBase a JOIN {P}new_sozlesmeBase s ON s.new_sozlesmeId = a.ObjectId"
+                f" WHERE a.IsDocument = 1 AND a.ObjectTypeCode = (SELECT ObjectTypeCode FROM {P}EntityView WHERE Name = 'new_sozlesme')")[0]["n"]
     crm_docs = [x for x in docs["items"] if x["kind"] == "crm"]
     ok("K8 CRM ek sayısı", len(crm_docs) == n_crm, f"uç {len(crm_docs)} / SQL {n_crm}")
     pdf = next((x for x in crm_docs if (x["filename"] or "").lower().endswith(".pdf")), None)

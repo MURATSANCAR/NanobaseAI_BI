@@ -1,0 +1,75 @@
+{
+  "observedAt": "2026-09-29T20:31:53.932133+00:00",
+  "image": "zeki-ai-chat:8.5.3-6c6d214d4",
+  "imageId": "sha256:4a3ae4a7f07f48b263eb3c86136ef47e952688db53022202e28e199922859494",
+  "codeVersion": "6c6d214d4",
+  "configCommit": "6c6d214d4",
+  "settingsApi": {
+    "API_Embed": false,
+    "Push_enable": false,
+    "Site_Name": "ZEKI AI CHAT",
+    "VoIP_TeamCollab_Ice_Servers": "",
+    "Zeki_Local_Only": true
+  },
+  "settingsIndependentMongo": {
+    "API_Embed": false,
+    "Push_enable": false,
+    "Site_Name": "ZEKI AI CHAT",
+    "VoIP_TeamCollab_Ice_Servers": "",
+    "Zeki_Local_Only": true
+  },
+  "settingsMatch": true,
+  "network": {
+    "name": "zeki-local",
+    "internal": true,
+    "ipv6": false,
+    "members": [
+      "zeki-chat",
+      "zeki-ingress",
+      "zeki-mongo"
+    ],
+    "ipam": [
+      {
+        "Subnet": "172.20.0.0/16",
+        "IPRange": "",
+        "Gateway": "172.20.0.1"
+      }
+    ]
+  },
+  "volumes": {
+    "zeki-chat": [
+      {
+        "Type": "volume",
+        "Name": "zeki_zeki-uploads",
+        "Source": "/data/docker/volumes/zeki_zeki-uploads/_data",
+        "Destination": "/app/uploads",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    ],
+    "zeki-mongo": [
+      {
+        "Type": "volume",
+        "Name": "zeki_zeki-mongo-config",
+        "Source": "/data/docker/volumes/zeki_zeki-mongo-config/_data",
+        "Destination": "/data/configdb",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      },
+      {
+        "Type": "volume",
+        "Name": "zeki_zeki-mongo-data",
+        "Source": "/data/docker/volumes/zeki_zeki-mongo-data/_data",
+        "Destination": "/data/db",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    ]
+  }
+}

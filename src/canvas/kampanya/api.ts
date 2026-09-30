@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { normalizeTrNumber } from '../components/trNumber';
 
 /** M35 E-ticaret kampanya yönetimi: köprü uçları /api/v1/kampanya/*. Kampanya hiçbir platforma, T-soft'a ya da CRM'e
  *  gönderilmez; onaydan sonra ekip elle kurar ve «Elle kurdum» diye işaretler. */
@@ -175,12 +176,18 @@ export type Candidate = {
   hak: string | null;
   puan: number;
   gerekce: string;
+  /** D&R kataloğunun son görüntüsü (barkod eşleşmesi): liste ve satış fiyatı, indirim; eşleşme yoksa null. */
+  dr?: { fiyat: number | null; drFiyat: number | null; indirim: number | null; durum: string | null; siteSatista: boolean; katalogda: boolean; son: string | null } | null;
+  /** «D&R zaten %X indirimde» (sitede satışta ve indirim en az %1). */
+  drUyari?: string | null;
 };
 export type Candidates = Page<Candidate> & {
   kurallar: string[];
   esikler: { stokAy: number; dususPct: number; hizAy: number; sezonOncesiGun: number; marjMinPct: number | null; indirim: number };
   sezonlar: string[];
   dataEnd: string | null;
+  /** D&R kataloğunun son görüntü tarihi; hiç okunmadıysa null. */
+  drTarih?: string | null;
 };
 
 export type BookHit = { stok: string; ad: string | null; yazar: string | null; ean: string | null; stokAdet: number; liste: number | null; adet12: number };
@@ -347,7 +354,7 @@ export function pctToRatio(s: string): number | null {
 export function parseMoney(s: string): number | null {
   const t = s.replace(/[₺\s]/g, '');
   if (!t) return null;
-  const norm = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t;
+  const norm = normalizeTrNumber(t);
   const n = Number(norm);
   return Number.isFinite(n) && n > 0 ? n : null;
 }

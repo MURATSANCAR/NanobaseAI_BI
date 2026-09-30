@@ -11,7 +11,8 @@ import {
 import { Loading, Note, btnGhost, btnPrimary, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { useStudioJob } from './StudioFlow';
-import { ghostBtn } from './shared';
+import { Img, ghostBtn } from './shared';
+import { useCan } from '../../useAdmin';
 import { usePlanSync, type Conflict, type SyncState } from './autosave';
 import { usePhotoUploads } from './uploads';
 import { applyLayout, hash, hasText, preset, r1, safeRect, same, stable, uid } from './planModel';
@@ -178,6 +179,9 @@ export default function PlanEditor() {
   const { sync, state } = usePlanSync(job);
   const plan = state.plan;
   const server = state.server;
+  // Sayfa düzenini değiştirmek «Kitap tasarımında üretim ve düzenleme» ister. Rolde yoksa sayfalar sunucudaki
+  // önizlemeleriyle gezilir; ekle/sil/sırala, tuval, düzenleme sekmeleri, geri al ve klavye kısayolları çıkmaz.
+  const canEdit = useCan('tasarim.uret');
   const interactive = useInteractive();
   const [search] = useSearchParams();
   // ?sayfa=<kimlik>: yaş uygunluğu raporundaki bulgudan gelince o sayfa açılır (yoksa ilk sayfa)
@@ -362,6 +366,7 @@ export default function PlanEditor() {
 
   // ---------------------------------------------------------------- klavye
   useEffect(() => {
+    if (!canEdit) return undefined;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       const typing = !!t?.closest?.('input, textarea, select, [contenteditable="true"]');
@@ -392,12 +397,12 @@ export default function PlanEditor() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [page, sel, sync]);
+  }, [page, sel, sync, canEdit]);
 
   // ---------------------------------------------------------------- kütüphaneden tuvale sürükleme
   const pointer = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
   const keyboard = useSensor(KeyboardSensor);
-  const sensors = useSensors(...(interactive ? [pointer, keyboard] : []));
+  const sensors = useSensors(...(interactive && canEdit ? [pointer, keyboard] : []));
   const onDragStart = (e: DragStartEvent) => setDragGid((e.active.data.current as { gid?: string } | undefined)?.gid ?? null);
   const onDragEnd = (e: DragEndEvent) => {
     setDragGid(null);
@@ -426,8 +431,8 @@ export default function PlanEditor() {
 
   const aside = (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      {plan && <StatusPill s={state} />}
-      {plan && (
+      {plan && canEdit && <StatusPill s={state} />}
+      {plan && canEdit && (
         <>
           <button type="button" className={ghostBtn} onClick={() => sync.undoStep()} disabled={!state.canUndo} title="Geri al (Ctrl/Cmd+Z)" aria-label="Geri al"><Undo2 className="h-4 w-4" aria-hidden /></button>
           <button type="button" className={ghostBtn} onClick={() => sync.redoStep()} disabled={!state.canRedo} title="Yinele (Shift+Ctrl/Cmd+Z)" aria-label="Yinele"><Redo2 className="h-4 w-4" aria-hidden /></button>
@@ -472,7 +477,7 @@ export default function PlanEditor() {
           <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-[148px_minmax(0,1fr)_minmax(320px,380px)] lg:gap-4">
             <Panel>
               <PageStrip plan={plan} current={pageId} onSelect={setPageId} onReorder={(ids) => sync.setOrder(ids)} onAdd={addPage} onDelete={deletePage}
-                thumb={(p) => previewOf(p, 200)} pendingIds={pendingIds} interactive={interactive} />
+                thumb={(p) => previewOf(p, 200)} pendingIds={pendingIds} interactive={interactive} readOnly={!canEdit} />
             </Panel>
 
             <Panel>
@@ -485,7 +490,12 @@ export default function PlanEditor() {
                 </div>
                 <button type="button" className={ghostBtn} disabled={index >= plan.pages.length - 1} onClick={() => setPageId(plan.pages[index + 1].id)} aria-label="Sonraki sayfa"><ChevronRight className="h-4 w-4" aria-hidden /></button>
               </div>
-              {page ? (
+              {page && !canEdit ? (
+                <div className="mx-auto w-full" style={{ maxWidth: `max(260px, calc((100dvh - 250px) * ${ratio}))` }}>
+                  <Img src={previewOf(page, 900)} alt={`Sayfa ${index + 1}`} fallback="Sayfa henüz dizilmedi"
+                    className="block w-full rounded-md shadow-md" />
+                </div>
+              ) : page ? (
                 <div className="mx-auto w-full" style={{ maxWidth: `max(260px, calc((100dvh - 250px) * ${ratio}))` }}>
                   <PageCanvas
                     job={job} plan={plan} page={page} previewSrc={(w) => previewOf(page, w)} dirty={page !== serverPage}
@@ -493,18 +503,24 @@ export default function PlanEditor() {
                     interactive={interactive} suggestions={suggestions} onFiles={upload} onDropShape={addShape}
                   />
                 </div>
-              ) : <EmptyHint title="Bu kitapta henüz sayfa yok" why="Sayfalar şeridindeki «Ekle» ile ilk sayfayı ekleyin." />}
+              ) : <EmptyHint title="Bu kitapta henüz sayfa yok" why={canEdit ? 'Sayfalar şeridindeki «Ekle» ile ilk sayfayı ekleyin.' : 'Sayfa eklendiğinde burada görünür.'} />}
               <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
                 <span className="mr-2 inline-block h-0 w-4 border-t border-dashed border-canvas-coral align-middle" />kesim çizgisi
                 <Explain label="Kesim çizgisi" className="ml-0.5">Kâğıdın matbaada kesileceği yer. Dışındaki şerit taşma payıdır ve kesilip atılır; resmi bu paya kadar uzatırsanız kenarda beyaz çizgi kalmaz.</Explain>
                 <span className="mx-2 inline-block h-0 w-4 border-t border-dashed border-canvas-violet align-middle" />güvenli alan
                 <Explain label="Güvenli alan" className="ml-0.5">Yazı ve önemli ayrıntılar bu çizginin içinde kalmalı; dışı kesimde kayabilir ya da cilt tarafında kaybolabilir.</Explain>
-                {interactive
-                  ? ' · Sürükleyin, köşeden boyutlandırın (Shift: oran korunur, Alt: yapışmasız); ok tuşları 1 mm, Shift ile 5 mm.'
-                  : ' · Telefonda tuval yalnız görüntülenir; ögeye dokunup sağdaki alanlardan düzenleyin.'}
+                {!canEdit ? ''
+                  : interactive
+                    ? ' · Sürükleyin, köşeden boyutlandırın (Shift: oran korunur, Alt: yapışmasız); ok tuşları 1 mm, Shift ile 5 mm.'
+                    : ' · Telefonda tuval yalnız görüntülenir; ögeye dokunup sağdaki alanlardan düzenleyin.'}
               </p>
             </Panel>
 
+            {!canEdit ? (
+              <Panel>
+                <Note tone="info">Sayfa düzenini değiştirmek rolünüzde yok: sayfaları gezip önizleyebilirsiniz. Düzenleme için yöneticiden «Kitap tasarımında üretim ve düzenleme» yetkisini isteyin.</Note>
+              </Panel>
+            ) : (
             <Panel>
               <div role="tablist" aria-label="Düzenleme bölümleri" className="-mx-1 mb-3 flex gap-1 overflow-x-auto px-1 pb-1">
                 {TABS.map((t) => (
@@ -540,6 +556,7 @@ export default function PlanEditor() {
                 )}
               </div>
             </Panel>
+            )}
           </div>
           <DragOverlay dropAnimation={null}>
             {dragGid ? (

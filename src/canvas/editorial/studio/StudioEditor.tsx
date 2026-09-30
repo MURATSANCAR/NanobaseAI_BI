@@ -73,8 +73,10 @@ export default function StudioEditor() {
   }, [d, current, key]);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['studio', 'job', jobId] });
-  // Görsel üretmek GPU harcar: «Kitap tasarımında üretim». Yoksa seçim ve onay sürer, üretim düğmeleri çıkmaz.
+  // Üretim, sürüm seçimi ve onay «Kitap tasarımında üretim ve düzenleme» ister; yoksa ekran yalnız görüntülenir.
+  // Dosya indirme «Dışa aktarma» ister.
   const canProduce = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const regen = useMutation({
     mutationFn: (v: { variants: number; mode: Mode }) => studioApi.regenerate(jobId, key!, v.mode, prompt, v.variants),
     onSuccess: () => { setPrompt(''); refresh(); },
@@ -114,9 +116,9 @@ export default function StudioEditor() {
           </Link>
           <CharactersEntry jobId={jobId} />
           <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/kapak`} title="Kapak tarzı: resimli, kolaj ya da tipografik"><BookImage className="h-4 w-4" aria-hidden />Kapak tarzı</Link>
-          <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}><Download className="h-4 w-4" aria-hidden />İç sayfalar</a>
-          {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapak</a>}
-          {d.files['baski-ic'] ? (
+          {canExport && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}><Download className="h-4 w-4" aria-hidden />İç sayfalar</a>}
+          {canExport && d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapak</a>}
+          {!canExport ? null : d.files['baski-ic'] ? (
             <a className={gradientBtn} href={studioApi.pdfUrl(jobId, 'baski-ic')} title="Matbaa dosyası: renkler baskıya (CMYK) çevrilmiş, kesim işaretli">
               <Download className="h-4 w-4" aria-hidden />Baskı PDF'i
             </a>
@@ -129,7 +131,7 @@ export default function StudioEditor() {
               <Explain label="Baskıya hazır değil">Bütün resimler onaylanıp ön baskı denetimi geçince matbaaya gidecek baskı PDF'i (renkleri baskıya çevrilmiş, kesim işaretli) kendiliğinden üretilir ve buradan indirilir.</Explain>
             </span>
           )}
-          {d.files['baski-kapak'] && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'baski-kapak')}><Download className="h-4 w-4" aria-hidden />Baskı kapağı</a>}
+          {canExport && d.files['baski-kapak'] && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'baski-kapak')}><Download className="h-4 w-4" aria-hidden />Baskı kapağı</a>}
         </div>
       }
     >
@@ -211,11 +213,11 @@ export default function StudioEditor() {
               <ul className="mt-1.5 flex gap-2 overflow-x-auto pb-1">
                 {art.versions.map((v) => (
                   <li key={v.v} className="w-[132px] shrink-0">
-                    <button type="button" onClick={() => select.mutate(v.v)} disabled={v.v === art.selected || select.isPending}
+                    <button type="button" onClick={() => select.mutate(v.v)} disabled={!canProduce || v.v === art.selected || select.isPending}
                       className={`group relative block w-full overflow-hidden rounded-xl border ${press} ${v.v === art.selected ? 'border-canvas-violet ring-2 ring-canvas-violet/30' : 'border-slate-200'}`}>
                       <Img src={studioApi.artUrl(jobId, key!, v.v, 264)} alt={`Sürüm ${v.v}`} fallback={`v${v.v}`} className="aspect-[4/3] w-full object-cover" />
                       <span className="absolute left-1 top-1 rounded bg-black/55 px-1.5 font-mono text-[10px] text-white">v{v.v}</span>
-                      {v.v !== art.selected && <span className="absolute inset-x-0 bottom-0 bg-canvas-violet/90 py-0.5 text-center text-[11px] font-bold text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">Bunu kullan</span>}
+                      {canProduce && v.v !== art.selected && <span className="absolute inset-x-0 bottom-0 bg-canvas-violet/90 py-0.5 text-center text-[11px] font-bold text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">Bunu kullan</span>}
                     </button>
                     <div className="mt-0.5 truncate text-[10.5px] text-canvas-muted" title={v.prompt}>{v.mode === 'fix' ? 'Düzeltme' : v.v === 1 ? 'İlk çizim' : 'Yeni çizim'}{v.prompt ? `: ${v.prompt}` : ''}</div>
                   </li>
@@ -237,9 +239,10 @@ export default function StudioEditor() {
                   {missing ? 'Resim yok' : art?.approved ? `Onaylı${art.approved_by ? ` · ${art.approved_by}` : ''}` : 'Onay bekliyor'}
                 </span>
               </div>
-              {missing && <Note tone="warn">Bu sayfanın resmi çizilemedi. «Yeni resim çiz» ile yeniden deneyin; isterseniz ne görmek istediğinizi yazın.</Note>}
+              {missing && <Note tone="warn">Bu sayfanın resmi çizilemedi.{canProduce ? ' «Yeni resim çiz» ile yeniden deneyin; isterseniz ne görmek istediğinizi yazın.' : ''}</Note>}
               {sel && <Img src={studioApi.artUrl(jobId, key!, sel.v, 760)} alt="Seçili resim" fallback="resim" className="w-full rounded-xl border border-slate-200" />}
 
+              {canProduce && <>
               <div role="radiogroup" aria-label="Üretim yolu" className="grid grid-cols-2 gap-2">
                 {([['fix', 'Düzelt', 'Seçili resmi temel alır, yalnız yazdığınız değişikliği yapar', Wand2],
                    ['new', 'Farklı çiz', 'Sayfanın metninden sıfırdan yeni bir resim çizer', Sparkles]] as const).map(([m, t, help, Icon]) => (
@@ -269,6 +272,7 @@ export default function StudioEditor() {
                     className={`rounded-full border border-slate-200 bg-white/80 px-2.5 py-1 text-[11.5px] ${press}`}>+ {s}</button>
                 ))}
               </div>
+              </>}
 
               {sceneChars.length > 0 && (
                 <div>
@@ -300,7 +304,7 @@ export default function StudioEditor() {
                   </button>
                 )}
               </div>}
-              {busyAny && !busyHere && <p className="text-[11.5px] text-canvas-muted">Başka bir resim çiziliyor ({d.busy?.key === 'kapak' ? 'kapak' : `sayfa ${d.busy?.key}`}); o bitince bu resim için çizim açılır.</p>}
+              {canProduce && busyAny && !busyHere && <p className="text-[11.5px] text-canvas-muted">Başka bir resim çiziliyor ({d.busy?.key === 'kapak' ? 'kapak' : `sayfa ${d.busy?.key}`}); o bitince bu resim için çizim açılır.</p>}
               {busyHere && <p className="text-[11.5px] text-canvas-muted">Resim çizilirken sayfadan ayrılabilirsiniz; bitince yeni sürüm burada seçili olarak görünür ve onayınızı bekler.</p>}
 
               {page?.scene && (
@@ -311,7 +315,7 @@ export default function StudioEditor() {
                 </blockquote>
               )}
 
-              {art && (
+              {art && canProduce && (
                 <button type="button" onClick={() => approve.mutate(!art.approved)} disabled={approve.isPending || busyHere}
                   className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border-2 px-4 text-[13px] font-bold ${press} ${art.approved ? 'border-slate-200 bg-white text-canvas-muted' : 'border-emerald-500 bg-white text-emerald-700'}`}>
                   <Check className="h-4 w-4" aria-hidden />{art.approved ? 'Onayı geri al' : 'Onayla'}

@@ -34,6 +34,7 @@ const PAGES = [
   { ad: 'pazarlama-plani-gecmis', yol: async (req) => `pazarlama/plan/${(await api(req, '/marketing/plans')).items[0].id}?sekme=onay` },
   // Kart listesi yalnız portalda açılan sette çıkar (CRM'den gelen sette yok).
   { ad: 'set-kart-listesi', yol: async (req) => {
+    if (process.env.SET_ID) return `pazarlama/set-hediye/set/${process.env.SET_ID}`;
     const s = (await api(req, '/marketing/sets?durum=kart-bekliyor,satista')).items.find((x) => x.kaynak !== 'crm');
     if (!s) throw new Error('VERİ YOK: portalda açılmış, kart bekleyen/satışta set yok (CRM setinde kart listesi bölümü yok)');
     return `pazarlama/set-hediye/set/${s.id}`;
@@ -62,7 +63,8 @@ async function grab(ctl, file) {
   return { dosya: to, onerilenAd: dl.suggestedFilename(), url: dl.url().startsWith('blob:') ? 'blob' : dl.url().replace(BASE, '') };
 }
 
-for (const p of PAGES) {
+const ONLY = (process.env.ONLY || '').split(',').filter(Boolean);
+for (const p of PAGES.filter((x) => !ONLY.length || ONLY.includes(x.ad))) {
   const t0 = Date.now();
   errors.length = 0;
   try {

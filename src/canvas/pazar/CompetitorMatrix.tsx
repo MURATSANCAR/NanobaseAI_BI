@@ -5,18 +5,20 @@ import { Download, Eye, EyeOff, FileSpreadsheet, Link2, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Pager, Panel, useDebounced } from '../editorial/kit';
-import { fmtDay, fmtInt, fmtNum, fmtPct, fmtTl, pazarApi, type MatrixRow } from './api';
-import { CategorySelect, Stat, useCategories, useMeta } from './parts';
+import { fmtDay, fmtInt, fmtNum, fmtPct, fmtTl, pazarApi, type MatrixRow, type RakipKaynak } from './api';
+import { CategorySelect, Stat, useCategories, useMeta, useRakipKaynak } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 import { xlsxUrl } from '../components/excel';
 
 /** Rakipler: yayınevi × kategori fiyat, sayfa ve format matrisi (TİMAŞ satırları aynı ölçülerle), izlenen rakipler,
- *  seçilen yayınevinin kayıtları. Kategori süzgeci yalnız eşlemesi onaylı rakip kayıtlarını sayar. */
+ *  seçilen yayınevinin kayıtları. Rakip satırları seçilen kaynaktan (Başarı kataloğu ya da CRM rakip kayıtları).
+ *  Kategori süzgeci yalnız eşlemesi onaylı rakip kayıtlarını sayar. */
 export default function CompetitorMatrix() {
   const qc = useQueryClient();
   const meta = useMeta();
   const cats = useCategories();
+  const src = useRakipKaynak();
   const [kategori, setKategori] = useState('');
   const [sayfaMin, setSayfaMin] = useState('');
   const [sayfaMax, setSayfaMax] = useState('');
@@ -28,8 +30,8 @@ export default function CompetitorMatrix() {
   const dyq = useDebounced(yq, 300);
   const dMin = useDebounced(sayfaMin, 400);
   const dMax = useDebounced(sayfaMax, 400);
-  const filter = { kategori, oneri, sayfaMin: Number(dMin) || '', sayfaMax: Number(dMax) || '', yayinevi: dyq, izlenen } as const;
-  const m = useQuery({ queryKey: ['pazar', 'matrix', filter], queryFn: () => pazarApi.matrix(filter), enabled: ENGINE_ENABLED, placeholderData: keepPreviousData });
+  const filter = { kategori, oneri, sayfaMin: Number(dMin) || '', sayfaMax: Number(dMax) || '', yayinevi: dyq, izlenen, kaynak: src.kaynak } as const;
+  const m = useQuery({ queryKey: ['pazar', 'matrix', filter], queryFn: () => pazarApi.matrix(filter), enabled: ENGINE_ENABLED && src.ready, placeholderData: keepPreviousData });
   const wl = useQuery({ queryKey: ['pazar', 'watchlist'], queryFn: pazarApi.watchlist, enabled: ENGINE_ENABLED });
   const watchOf = (y: string) => (wl.data?.items ?? []).find((w) => w.yayinevi === y && (w.kategoriId ?? '') === kategori);
 
@@ -151,8 +153,10 @@ export default function CompetitorMatrix() {
               {all ? 'İlk 40 yayınevini göster' : `Tümünü göster (${fmtInt(d.rows.length)} yayınevi)`}
             </button>
           )}
-          <p className="text-[11.5px] leading-snug text-canvas-muted">{d.note} Medyan ve çeyrekler fiyatı girilmiş kayıtlardan.</p>
-          {picked && <PublisherBooks yayinevi={picked} kategori={kategori} onClose={() => setPicked(null)} />}
+          <p className="text-[11.5px] leading-snug text-canvas-muted">
+            {d.note} Medyan ve çeyrekler fiyatı girilmiş kayıtlardan.{d.yeniNot ? ` ${d.yeniNot}` : ''}
+          </p>
+          {picked && <PublisherBooks yayinevi={picked} kategori={kategori} kaynak={d.kaynak ?? src.kaynak} onClose={() => setPicked(null)} />}
         </>
       )}
     </div>
@@ -225,11 +229,12 @@ function MatrixTable({ rows, newDays, watched, onWatch, onPick, picked, k }: {
   );
 }
 
-function PublisherBooks({ yayinevi, kategori, onClose }: { yayinevi: string; kategori: string; onClose: () => void }) {
+function PublisherBooks({ yayinevi, kategori, kaynak, onClose }: { yayinevi: string; kategori: string; kaynak: RakipKaynak; onClose: () => void }) {
   const [page, setPage] = useState(0);
+  const basari = kaynak === 'basari';
   const q = useQuery({
-    queryKey: ['pazar', 'competitors', yayinevi, kategori, page],
-    queryFn: () => pazarApi.competitors({ yayinevi, kategori, page }),
+    queryKey: ['pazar', 'competitors', kaynak, yayinevi, kategori, page],
+    queryFn: () => pazarApi.competitors({ yayinevi, kategori, page, kaynak }),
     enabled: ENGINE_ENABLED,
     placeholderData: keepPreviousData,
   });
@@ -258,11 +263,12 @@ function PublisherBooks({ yayinevi, kategori, onClose }: { yayinevi: string; kat
                 )}
               </div>
               <div className="text-[11.5px] text-canvas-muted">
-                {[b.yazarlar, b.kategoriHam, b.cilt, b.dil].filter(Boolean).join(' · ')}
+                {[b.yazarlar, b.kategoriHam, b.cilt, b.dil, basari && b.basimYili ? `${b.basimYili} basımı` : null].filter(Boolean).join(' · ')}
               </div>
             </div>
             <div className="shrink-0 text-[11.5px] text-canvas-muted sm:text-right">
-              <span className="font-mono text-[12.5px] font-bold tabular-nums text-canvas-ink">{fmtTl(b.fiyat)}</span> · {b.sayfa ? `${fmtInt(b.sayfa)} s.` : 's. —'} · CRM {fmtDay(b.olusturma)}
+              <span className="font-mono text-[12.5px] font-bold tabular-nums text-canvas-ink">{fmtTl(b.fiyat)}</span> · {b.sayfa ? `${fmtInt(b.sayfa)} s.` : 's. —'} ·{' '}
+              {basari ? <>Başarı deposu {fmtInt(b.stok)}</> : <>CRM {fmtDay(b.olusturma)}</>}
             </div>
           </li>
         ))}
@@ -271,7 +277,9 @@ function PublisherBooks({ yayinevi, kategori, onClose }: { yayinevi: string; kat
         <Pager page={page} pageSize={q.data.pageSize} total={q.data.total} shown={q.data.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={setPage} />
       )}
       <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
-        «Satış adedi» alanlarının CRM'deki anlamı bilinmediği için gösterilmez ve hiçbir hesapta kullanılmaz.
+        {basari
+          ? 'Başarı Dağıtım kataloğunun son görüntüsü: fiyat liste fiyatıdır, stok dağıtımcı deposudur (okura satış değildir).'
+          : "«Satış adedi» alanlarının CRM'deki anlamı bilinmediği için gösterilmez ve hiçbir hesapta kullanılmaz."}
       </p>
     </Panel>
   );

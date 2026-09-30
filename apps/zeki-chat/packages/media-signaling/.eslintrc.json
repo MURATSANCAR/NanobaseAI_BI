@@ -1,0 +1,4 @@
+{
+	"extends": ["@zeki.chat/eslint-config"],
+	"ignorePatterns": ["dist"]
+}

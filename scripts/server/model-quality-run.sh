@@ -19,9 +19,9 @@ BASELINE="${MQ_RESOLVER_BASELINE:-tests/text2sql/resolver-baseline-set100.json}"
 GOLD="${MQ_ANSWER_GOLD:-tests/text2sql/answers-set100.json}"
 REPEAT="${MQ_ANSWER_REPEAT:-3}"
 LOCK="${MQ_LOCK:-/tmp/timas-model-quality.lock}"
-H=(-H "X-Semantic-Caller: ${SEMANTIC_CALLER_TOKEN:-}")
 
-due() { curl -fsS -m 300 -X POST "${H[@]}" "${BRIDGE}/api/v1/model-quality/run-due?kind=$1"; }
+# Köprü yeniden başlarken beklenir, yalnız «iş başlamadı» hatalarında yeniden denenir (kopru-cagir.sh).
+due() { KOPRU_AD="model-quality-$1" "$ROOT/scripts/server/kopru-cagir.sh" -m 300 -X POST "${BRIDGE}/api/v1/model-quality/run-due?kind=$1"; }
 
 resolver() {  # $1: istek kimliği (boş olabilir)
   local req=(); [[ -n "${1:-}" ]] && req=(--request "$1")

@@ -8,7 +8,7 @@ Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörd
 
 Pazarlama planlarının (M15–M18) istediği görsel ve metin içeriğini üretir, onaylatır ve arşivler: sosyal medya görseli ve story, reklam banner'ları (farklı boyutlar), e-bülten başlık görseli, web kampanya banner'ı; reklam başlığı ve metni, sosyal medya açıklaması ve hashtag, 30–60 saniyelik video senaryosu, influencer brief'i. Her iş en az iki varyantla (A/B) gelir; tasarım ekibi görsel kaliteyi, pazarlama mesajı onaylar; onaylı varlıklar kitap ve kampanyaya bağlı, sürümlü bir arşivde durur (iş tanımı: K2 «ZEKİ üretir / tasarım onaylar», K2 «ZEKİ yazar / ekip onaylar»).
 
-**Mevcut kodla örtüşme — yeniden yazılmayacak:** Kitap Tasarım Stüdyosu'nun «Pazarlama kiti» (studio J) bugün stüdyoda işi olan kitap için arka kapak yazısı, e-ticaret ürün sayfası (SEO'ya öneri), sosyal medya görselleri (kare 1080×1080, dikey 1080×1920, yatay 1200×628; kaynak kapak / iç sayfa resmi / alıntı; efekt düz/gölge/kontur/patlama/gökkuşağı; paletten renk; modelsiz dizim) ve öğretmen okuma kılavuzu üretiyor; her çıktı editör onayı istiyor, onaysız indirilemiyor, model üretimi görsel kullanan görsel «taslak — ticari kullanım izni bekleniyor» etiketli ve dosya adı `TASLAK-` ile başlıyor. M19 bu motoru **genişletir**: stüdyo işi olmayan kitaplar, reklam/banner boyutları, metin varyantları, iki aşamalı onay, kitaplar arası arşiv.
+**Mevcut kodla örtüşme — yeniden yazılmayacak:** Kitap Tasarım Stüdyosu'nun «Pazarlama kiti» (studio J) bugün stüdyoda işi olan kitap için arka kapak yazısı, e-ticaret ürün sayfası (SEO'ya öneri), sosyal medya görselleri (kare 1080×1080, dikey 1080×1920, yatay 1200×628; kaynak kapak / iç sayfa resmi / alıntı; efekt düz/gölge/kontur/patlama/gökkuşağı; paletten renk; modelsiz dizim) ve öğretmen okuma kılavuzu üretiyor; her çıktı editör onayı istiyor, onaysız indirilemiyor (model üretimi görsel için eski «taslak»/`TASLAK-` kuralı kalktı: görsel modelin ticari lisansı 2026-09-29'da alındı). M19 bu motoru **genişletir**: stüdyo işi olmayan kitaplar, reklam/banner boyutları, metin varyantları, iki aşamalı onay, kitaplar arası arşiv.
 
 TİMAŞ'ın bugünkü sorunu: her kampanya görseli grafik ekibince tek tek hazırlanıyor (varsayım: masaüstü tasarım programlarıyla), boyut çoğaltma (aynı görselin 6–10 formatı) zaman alıyor, metinler dağınık (CRM kitap kartında sosyal medya metni ve hashtag alanı var), onaylı son sürümün nerede olduğu belirsiz.
 
@@ -97,7 +97,7 @@ TİMAŞ'ın bugünkü sorunu: her kampanya görseli grafik ekibince tek tek haz�
 - Görür: `sayfa:pazarlama-icerik`.
 - Talep açar: `ozellik:icerik.talep`. Üretir/düzenler: `ozellik:icerik.uret`; model ile görsel üretimi ayrıca mevcut `ozellik:tasarim.uret` ister (GPU harcar).
 - Tasarım onayı: `ozellik:icerik.tasarim-onay` (explicit). Mesaj onayı: `ozellik:icerik.mesaj-onay` (explicit). Aynı kişi iki onayı birden veremez.
-- Arşivden indirme: `ozellik:veri.disa-aktar` gerektirmez (asıl iş), `sayfa:pazarlama-icerik` yeter; taslak (lisans bekleyen) varlık `TASLAK-` adıyla iner.
+- Arşivden indirme: `ozellik:veri.disa-aktar` gerektirmez (asıl iş), `sayfa:pazarlama-icerik` yeter; dosya adında `TASLAK-` öneki yok.
 
 ## 6. Veri
 
@@ -120,7 +120,7 @@ TİMAŞ'ın bugünkü sorunu: her kampanya görseli grafik ekibince tek tek haz�
 
 ## 8. Kısıtlar
 
-- **Görsel modelin lisansı ticari kullanıma izin vermiyor** (bellek): model üretimi görsel kullanan her varlık «taslak — ticari kullanım izni bekleniyor» etiketli, dosya adı `TASLAK-`; mesaj ve tasarım onayı alsa bile «yayına hazır» sayılmaz. Modelsiz dizim (kapak + şablon + yazı) bu kısıta takılmaz.
+- **Görsel modelin lisansı** (güncelleme 2026-09-29): ticari lisans alındı; model üretimi görsel kullanan varlık da iki onayı alınca «yayına hazır», taslak etiketi ve `TASLAK-` öneki yok.
 - **Ekranda teknoloji adı yok**: «Zeki AI görsel üretimi».
 - **Dış kanala yayın yok**: M19 üretir ve arşivler; yayın M21/M22'de ve insan eliyle.
 - **CRM'e yazma yok**: iş tanımındaki «Dynamics CRM kampanyasına bağlantılı» arşiv bağı köprünün kendi tablosunda; CRM kitap kartına işlenecek sosyal medya metni «CRM'e işlenecek» listesinde.
@@ -142,7 +142,7 @@ TİMAŞ'ın bugünkü sorunu: her kampanya görseli grafik ekibince tek tek haz�
 **Sonraki sürüm**
 - Ana tasarımda düzenleme (başlık konumu, kaynak görsel kırpma) ve bütün boyutlara yayma — kullanıcıya düzenleme paneli.
 - Varyant performansı (M21/M22 bağlanınca hangi varyant daha iyi).
-- Model görsel üretimi ticari izin gelince «onaylı» olabilir.
+- (Kalktı 2026-09-29: model görseli artık onaylanınca yayına hazır.)
 
 **Mevcut kodda yeniden kullanılacaklar**
 - `apps/editor/src/editor/production/marketing.py`: `render_social`, `social_sources`, `source_image`, `palette_colors`, `_draw_headline`, `_fit`, `add_social`, `approve_social`, `social_zip`, `product_*`, `gen_back`, `digest`, `in_book`/`clean_quote` (alıntı doğrulama), `log_event` (onay kaydı).
@@ -165,7 +165,7 @@ TİMAŞ'ın bugünkü sorunu: her kampanya görseli grafik ekibince tek tek haz�
 - Grafik ekibinin boyut çoğaltmaya harcadığı iş (talep başına elle düzeltilen format sayısı) — azalma.
 - Zeki AI metin varyantlarından düzeltmesiz onaylananların oranı; yasaklı kalıp yakalanma sayısı.
 - Onaylı varlıkların %100'ünün bir kitaba ve (varsa) plana bağlı olması; arşivden yeniden kullanım sayısı.
-- Teknoloji adı taraması 0; lisans bekleyen varlığın «onaylı/yayına hazır» görünme sayısı 0.
+- Teknoloji adı taraması 0; dosya adında `TASLAK-` öneki 0.
 
 ## 12. Uzman gözüyle en iyi sistem
 
@@ -251,7 +251,7 @@ Dosyalar: `MARKETING_ASSETS_DIR` (öntanım `/data/nanobaseai/bi/var/marketing-a
 3. **Kapak**: stüdyo işi olan kitapta üretilen görseldeki kapak kaynağı stüdyonun ön kapak kırpmasıyla aynı (`_cover_front` çıktısının özeti); stüdyo işi olmayanda `kapak_url`'den indirilen dosyanın özeti iş klasöründe kayıtlı.
 4. **Alıntı**: alıntı içeren her varlıkta alıntı kaynağında (`in_book` normalleştirmesiyle) bulunur; bulunmayan varyant üretilmez ve sayısı yazılır.
 5. **Sayaç ve yasaklı kalıp**: platform sınırını aşan metin varyantı 0; yasaklı kalıp listesindeki bir ifadeyi içeren varyant «uyarı» durumunda.
-6. **Onay**: aynı kişi tasarım ve mesaj onayını birlikte veremez (409); `icerik.tasarim-onay` olmayan 403; her onay `semantic_audit`'te; model görseli onaylı olsa da indirilen adı `TASLAK-` ile başlar.
+6. **Onay**: aynı kişi tasarım ve mesaj onayını birlikte veremez (409); `icerik.tasarim-onay` olmayan 403; her onay `semantic_audit`'te; indirilen adda `TASLAK-` öneki yok (lisans alındı, 2026-09-29).
 7. **Arşiv**: `SELECT COUNT(*) FROM semantic_mkt_assets WHERE stok_kodu = '<kod>' AND mesaj_onay IS NOT NULL` = arşiv ekranında o kitabın onaylı varlık sayısı; zip'teki dosya sayısı aynı.
 8. **Teknoloji adı**: ekran ve iner dosya adlarında model/ürün adı taraması 0.
 9. **Kitapsız iş**: stüdyo işi olmayan bir backlist kitabında kare/dikey/yatay üretimi GPU görsel modeli açılmadan tamamlanır (gateway kaydında görsel model devri yok).

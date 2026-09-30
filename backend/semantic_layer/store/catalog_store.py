@@ -105,8 +105,15 @@ class CatalogStore:
 
     # ------------------------------------------------------------------ infra
     def create_all(self) -> None:
-        S.create_all(self.engine)
-        self._add_missing_columns()
+        # Sürüm damgası (`schema_stamp`): tablo tanımları son kurulumdan beri değişmediyse köprü açılışında
+        # her tablo için katalog sorgusu ve kolon listesi okunmaz. Kolon eklenince tanım değişir, adım yeniden koşar.
+        from semantic_layer.store import schema_stamp
+
+        def install() -> None:
+            S.create_all(self.engine)
+            self._add_missing_columns()
+
+        schema_stamp.run(self.engine, S.metadata.sorted_tables, install, name="sl_store")
 
     def _add_missing_columns(self) -> None:
         """Add columns that the table definition has gained but an existing table lacks.

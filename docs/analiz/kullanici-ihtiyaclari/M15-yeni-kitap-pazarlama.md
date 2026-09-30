@@ -146,7 +146,7 @@ Rol ↔ kişi eşlemesi veride zayıf: CRM `SystemUser` unvan/birim alanları ne
 - **Logo'ya yazma yok.** Logo yalnız gerçekleşmiş satış için okunur (satış = faturalı satır, net ciro = LINENET).
 - **T-soft'a yazma yasak**: ürün sayfası metni yalnız SEO modülüne öneri olarak düşer.
 - **Web kazıma yok**: iş tanımındaki «web scraper + Amazon/Trendyol API» rakip verisi yapılmaz; rakip bilgisi CRM rakip kitap tablosundan. Müşteri VM'inde basın/web taraması kapalı.
-- **Ekranda teknoloji adı yok**: «Zeki AI». Görsel modelin ürettiği görseller ticari izin gelene kadar «taslak — ticari kullanım izni bekleniyor» etiketli (stüdyo kuralı).
+- **Ekranda teknoloji adı yok**: «Zeki AI». Görsel modelin ürettiği görseller normal çıktıdır (görsel modelin ticari lisansı 2026-09-29'da alındı; taslak etiketi yok).
 - **Demo veri yok, sayı tavanı yok** («top 20 emsal» değil; bütün emsaller, sıralı).
 - **Veri sonu**: Logo .155 kopyası 2026-08-17'de bitiyor; karnedeki her Logo rakamının yanında «veri sonu» tarihi yazılır.
 - **Hukuki/KVKK**: reklam metninde kanıtsız üstünlük iddiası («en çok satan», «bir numara») yazılmaz — Zeki AI taslağında yasaklı kalıp listesi; iddia varsa kanıt (Logo sırası) gösterilir; hukuk birimine doğrulatılmalı (**varsayım**: Ticari Reklam ve Haksız Ticari Uygulamalar Yönetmeliği kapsamı). Yazar fotoğrafı ve alıntı kullanım hakkı sözleşmeye (M6) bağlı. Basın/influencer listesindeki kişisel veriler CRM'den okunur, dışa aktarım yetkiyle.

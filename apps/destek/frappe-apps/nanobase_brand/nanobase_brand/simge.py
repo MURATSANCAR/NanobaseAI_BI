@@ -1,4 +1,4 @@
-"""NanobaseAI simgesini PNG olarak çizer ve üst kaynağın marka görsellerinin yerine koyar.
+"""ZEKİ AI simgesini PNG olarak çizer ve üst kaynağın marka görsellerinin yerine koyar.
 
 İmaj derlenirken (builder aşaması, `bench build`ten önce) koşar:
     ./env/bin/python apps/nanobase_brand/nanobase_brand/simge.py apps
@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw
 CORAL = (0xFF, 0x6B, 0x4A)
 VIOLET = (0x7C, 0x5C, 0xFF)
 # logo-mark.svg'deki N yolu (118×118 kutuda)
-N_POINTS = [(34, 88), (34, 30), (46, 30), (72, 67), (72, 30), (84, 30), (84, 88), (72, 88), (46, 51), (46, 88)]
+Z_POINTS = [(32, 30), (86, 30), (86, 41), (48, 77), (86, 77), (86, 88), (32, 88), (32, 77), (70, 41), (32, 41)]
 BOX = 118
 RADIUS = 28
 
@@ -36,7 +36,7 @@ def mark(size: int, *, rounded: bool = True) -> Image.Image:
 	ImageDraw.Draw(mask).rounded_rectangle((0, 0, s - 1, s - 1), radius=r, fill=255)
 	img.paste(grad, (0, 0), mask)
 	k = s / BOX
-	ImageDraw.Draw(img).polygon([(x * k, y * k) for x, y in N_POINTS], fill=(255, 255, 255, 255))
+	ImageDraw.Draw(img).polygon([(x * k, y * k) for x, y in Z_POINTS], fill=(255, 255, 255, 255))
 	return img.resize((size, size), Image.LANCZOS)
 
 

@@ -4,15 +4,23 @@ import { toast } from 'sonner';
 import { Check as CheckIcon, Download, History, ImagePlus, Lightbulb, Pencil, Undo2, X } from 'lucide-react';
 import { Note, btnGhost, btnPrimary, errText, field, label } from '../../admin/ui';
 import { Img } from '../../editorial/studio/shared';
+import { EmptyHint } from '../../components/Explain';
 import { creativeApi, type Asset, type Meta, type RequestDetail, type VisualSetting } from './api';
-import { ApprovalLine, Block, DraftBadge, JobBar, chip, smallBtn } from './parts';
+import { ApprovalLine, Block, JobBar, chip, smallBtn } from './parts';
 import { invalidateCreative } from './useMeta';
+import { AskSheet } from '../../budget/parts';
 
 /** Orta sütun: görsel varyantlar. Bir varyant = aynı dizim ayarı (kapak/iç sayfa/alıntı, başlık, renk, efekt) bütün
  *  biçimlerde. «Düzenle» ayarı değiştirip varyantın bütün biçimlerini yeni sürümle yeniden dizer (tek tasarım → her boyut). */
 
 const VISUAL: Record<string, string> = { cover: 'Kapak', page: 'İç sayfa', quote: 'Alıntı kartı' };
 const EFFECTS: Record<string, string> = { plain: 'Düz', shadow: 'Gölge', outline: 'Dış çizgi', burst: 'Patlama', rainbow: 'Renkli harf' };
+const VISUAL_HELP: Record<string, string> = {
+  cover: 'Kitabın kapağı, üstünde isteğe bağlı yazı.',
+  page: 'Kitabın iç sayfasından bir resim; yalnız stüdyoda hazırlanmış kitaplarda vardır.',
+  quote: 'Kitaptan bir cümle, renkli zemin üstünde.',
+};
+const hint = 'text-[11px] font-medium leading-snug text-canvas-muted';
 
 function EditVariant({ a, palette, sources, quotes, onDone }: {
   a: Asset; palette: string[]; sources: Array<{ key: string; label: string; kind: string }>; quotes: string[]; onDone: () => void;
@@ -22,29 +30,33 @@ function EditVariant({ a, palette, sources, quotes, onDone }: {
   const [v, setV] = useState<VisualSetting>({ ...s });
   const run = useMutation({
     mutationFn: () => creativeApi.reviseVisual(a.id, { ...v, tumFormatlar: true }),
-    onSuccess: (r) => { toast.success(`${r.hedef} biçim yeniden diziliyor.`); onDone(); return invalidateCreative(qc); },
+    onSuccess: (r) => { toast.success(`${r.hedef} biçim yeni ayarla yeniden hazırlanıyor; bitince yeni sürüm olarak görünür.`); onDone(); return invalidateCreative(qc); },
   });
   const pickable = sources.filter((x) => (v.visual === 'cover' ? x.kind === 'cover' : v.visual === 'page' ? x.kind !== 'cover' : false));
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-canvas-violet/30 bg-violet-50/40 p-2.5">
+      <p className={hint}>Bu varyantın ayarını değiştirin; varyanttaki bütün biçimler aynı ayarla yeniden hazırlanır. Her biçim yeni bir sürüm olur; eski sürüm geçmişte kalır.</p>
+      <span className={label}>Görsel türü</span>
       <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Görsel türü">
         {Object.entries(VISUAL).map(([k, t]) => (
           <button key={k} type="button" role="radio" aria-checked={v.visual === k} className={chip(v.visual === k)}
             onClick={() => setV((o) => ({ ...o, visual: k as VisualSetting['visual'], source: k === 'cover' ? 'kapak' : undefined }))}>{t}</button>
         ))}
       </div>
+      <span className={hint}>{VISUAL_HELP[v.visual] ?? ''}</span>
       {v.visual === 'page' && (
         <label className="flex flex-col gap-1"><span className={label}>İç sayfa görseli</span>
           <select className={field} value={v.source ?? ''} onChange={(e) => setV((o) => ({ ...o, source: e.target.value }))}>
-            <option value="">Seçin</option>
+            <option value="">İç sayfa resmi seçin</option>
             {pickable.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
           </select>
-          {pickable.length === 0 && <span className="text-[11px] text-canvas-muted">Bu işte iç sayfa görseli yok (yalnız stüdyoda dizilen kitaplarda).</span>}
+          {pickable.length === 0 && <span className={hint}>Bu kitapta seçilecek iç sayfa resmi yok; iç sayfa resimleri yalnız Kitap Tasarım Stüdyosu'nda hazırlanan kitaplarda gelir. «Kapak» ya da «Alıntı kartı»nı deneyin.</span>}
         </label>
       )}
       {v.visual === 'quote' ? (
-        <label className="flex flex-col gap-1"><span className={label}>Alıntı · kaynakta birebir geçmeli</span>
-          <textarea className={field} rows={3} value={v.quote ?? ''} onChange={(e) => setV((o) => ({ ...o, quote: e.target.value }))} maxLength={2000} />
+        <label className="flex flex-col gap-1"><span className={label}>Alıntı *</span>
+          <textarea className={field} rows={3} value={v.quote ?? ''} onChange={(e) => setV((o) => ({ ...o, quote: e.target.value }))} maxLength={2000} placeholder="Ör. kitaptan kısa, etkileyici bir cümle; aşağıdaki listeden seçebilirsiniz" />
+          <span className={hint}>Kitapta birebir geçen cümle olmalı; kitapta bulunmayan alıntı sorunlu işaretlenir ve mesaj onayı verilemez.</span>
           {quotes.length > 0 && (
             <ul className="flex max-h-36 flex-col gap-1 overflow-y-auto pr-1">
               {quotes.map((q) => (
@@ -57,7 +69,8 @@ function EditVariant({ a, palette, sources, quotes, onDone }: {
       ) : (
         <>
           <label className="flex flex-col gap-1"><span className={label}>Görsel üstü yazı</span>
-            <input className={field} value={v.headline ?? ''} onChange={(e) => setV((o) => ({ ...o, headline: e.target.value }))} maxLength={300} /></label>
+            <input className={field} value={v.headline ?? ''} onChange={(e) => setV((o) => ({ ...o, headline: e.target.value }))} maxLength={300} placeholder="Ör. Yeni baskısı raflarda (boş bırakılabilir)" /></label>
+          <span className={label}>Yazı efekti</span>
           <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Yazı efekti">
             {Object.entries(EFFECTS).map(([k, t]) => (
               <button key={k} type="button" role="radio" aria-checked={(v.effect ?? 'plain') === k} className={chip((v.effect ?? 'plain') === k)}
@@ -78,11 +91,11 @@ function EditVariant({ a, palette, sources, quotes, onDone }: {
           </div>
         </div>
       )}
-      {run.error && <Note tone="err">{errText(run.error, 'Yeniden dizilemedi.')}</Note>}
+      {run.error && <Note tone="err">{errText(run.error, 'Görseller yeniden hazırlanamadı. Biraz sonra yeniden deneyin.')}</Note>}
       <div className="flex flex-wrap justify-end gap-2">
         <button type="button" className={btnGhost} onClick={onDone}>Vazgeç</button>
         <button type="button" className={btnPrimary} disabled={run.isPending || (v.visual === 'page' && !v.source) || (v.visual === 'quote' && !v.quote?.trim())}
-          onClick={() => run.mutate()}>Bütün biçimleri yeniden diz</button>
+          onClick={() => run.mutate()}>Bütün biçimleri bu ayarla yeniden hazırla</button>
       </div>
     </div>
   );
@@ -92,11 +105,12 @@ export function AssetActions({ a, meta, onVersions }: { a: Asset; meta: Meta | u
   const qc = useQueryClient();
   const me = meta?.me;
   const done = () => invalidateCreative(qc);
-  const fail = (e: unknown) => toast.error(errText(e, 'İşlem yapılamadı.') ?? 'İşlem yapılamadı.');
+  const fail = (e: unknown) => toast.error(errText(e, 'İşlem yapılamadı. Sayfayı yenileyip yeniden deneyin.') ?? 'İşlem yapılamadı.');
   const approve = useMutation({ mutationFn: (s: 'tasarim' | 'mesaj') => creativeApi.approve(a.id, s), onSuccess: done, onError: fail });
   const withdraw = useMutation({ mutationFn: (s: 'tasarim' | 'mesaj') => creativeApi.withdraw(a.id, s), onSuccess: done, onError: fail });
   const reject = useMutation({ mutationFn: (n: string) => creativeApi.reject(a.id, n), onSuccess: done, onError: fail });
   const busy = approve.isPending || withdraw.isPending || reject.isPending;
+  const [rejecting, setRejecting] = useState(false);
   const mine = (x: { by: string } | null) => !!x && !!me && (me.admin || x.by.toLowerCase() === me.username.toLowerCase());
   const hatali = a.dogrulama?.durum === 'hata';
   return (
@@ -115,13 +129,15 @@ export function AssetActions({ a, meta, onVersions }: { a: Asset; meta: Meta | u
         <button type="button" className={smallBtn()} disabled={busy} onClick={() => withdraw.mutate('tasarim')}><Undo2 className="h-4 w-4" aria-hidden />Tasarım onayını geri al</button>
       )}
       {!a.red && (me?.tasarimOnay || me?.mesajOnay) && (
-        <button type="button" className={smallBtn('err')} disabled={busy} onClick={() => {
-          const n = window.prompt('Ret nedeni (talep edene görünür):');
-          if (n && n.trim()) reject.mutate(n.trim());
-        }}><X className="h-4 w-4" aria-hidden />Reddet</button>
+        <button type="button" className={smallBtn('err')} disabled={busy} onClick={() => setRejecting(true)}><X className="h-4 w-4" aria-hidden />Reddet</button>
       )}
       {a.onayli && <a className={smallBtn()} href={creativeApi.downloadUrl(a.id)}><Download className="h-4 w-4" aria-hidden />İndir</a>}
       {a.surum > 1 && <button type="button" className={smallBtn()} onClick={() => onVersions(a)}><History className="h-4 w-4" aria-hidden />v{a.surum}</button>}
+      <AskSheet open={rejecting} title={a.tur === 'gorsel' ? 'Görseli reddet' : 'Metni reddet'}
+        message="Ret nedenini yazın; talebi açan kişi bu notu görür. Neden yazılmadan reddedilmez."
+        input="Ret nedeni *" required confirm="Reddet" danger busy={reject.isPending}
+        onClose={() => setRejecting(false)}
+        onConfirm={(n) => reject.mutate(n, { onSuccess: () => setRejecting(false) })} />
     </div>
   );
 }
@@ -146,7 +162,7 @@ export default function VisualPanel({ r, meta, onVersions }: { r: RequestDetail;
 
   const produce = useMutation({
     mutationFn: () => creativeApi.produce(r.id, { formatlar: formats }),
-    onSuccess: () => { toast.success('Dizim başladı.'); return invalidateCreative(qc); },
+    onSuccess: () => { toast.success('Görseller hazırlanıyor; bitince aşağıda varyant olarak görünür.'); return invalidateCreative(qc); },
   });
   const suggest = useMutation({ mutationFn: () => creativeApi.headlines(r.id), onSuccess: (x) => setHeads(x.items.map((i) => i.metin)) });
   const setHeadline = useMutation({
@@ -165,12 +181,13 @@ export default function VisualPanel({ r, meta, onVersions }: { r: RequestDetail;
     <Block title={`Görseller (${visuals.length})`} aside={
       me?.uret ? (
         <button type="button" className={btnPrimary} disabled={running || produce.isPending || formats.length === 0} onClick={() => produce.mutate()}>
-          <ImagePlus className="h-4 w-4" aria-hidden />{visuals.length ? 'Yeni varyantları diz' : 'Görselleri diz'}
+          <ImagePlus className="h-4 w-4" aria-hidden />{visuals.length ? 'Yeni varyantları hazırla' : 'Görselleri hazırla'}
         </button>
       ) : null}>
       {me?.uret && (
         <div className="flex flex-col gap-1.5">
-          <span className={label}>Bu dizimde biçimler</span>
+          <span className={label}>Hazırlanacak biçimler</span>
+          <span className={hint}>Her seçili biçim için tam ölçüsünde bir görsel gelir; talepte istenen biçimler seçili başlar. En az biri seçili olmalı.</span>
           <div className="flex flex-wrap gap-1.5">
             {allFormats.map((x) => (
               <button key={x.key} type="button" aria-pressed={formats.includes(x.key)} className={chip(formats.includes(x.key))}
@@ -190,14 +207,15 @@ export default function VisualPanel({ r, meta, onVersions }: { r: RequestDetail;
               ))}
             </div>
           )}
-          {suggest.error && <Note tone="err">{errText(suggest.error, 'Öneri alınamadı.')}</Note>}
+          {heads.length > 0 && <span className={hint}>Birine dokunun: görsel üstü yazı olarak kaydedilir ve sonraki hazırlamada A varyantında kullanılır.</span>}
+          {suggest.error && <Note tone="err">{errText(suggest.error, 'Zeki AI öneri veremedi. Biraz sonra yeniden deneyin.')}</Note>}
         </div>
       )}
-      {produce.error && <Note tone="err">{errText(produce.error, 'Dizim başlatılamadı.')}</Note>}
-      <JobBar job={job} what="Görsel dizimi" k={r.kaynaklar} />
+      {produce.error && <Note tone="err">{errText(produce.error, 'Görseller hazırlanamadı. Biraz sonra yeniden deneyin.')}</Note>}
+      <JobBar job={job} what="Görsel hazırlama" k={r.kaynaklar} />
 
       {groups.length === 0 && !running && (
-        <p className="text-[12.5px] text-canvas-muted">Henüz görsel yok. Biçimleri seçip «Görselleri diz»e basın; her biçim tam piksel ölçüsünde gelir.</p>
+        <EmptyHint title="Henüz görsel yok" why={me?.uret ? 'Yukarıdan biçimleri seçip «Görselleri hazırla»ya basın; her biçim tam ölçüsünde gelir.' : 'Görselleri üretim yetkisi olan ekip hazırlar; hazırlanınca burada görünür.'} />
       )}
       {groups.map(([letter, items]) => {
         const s = items[0].ayar;
@@ -239,7 +257,6 @@ export default function VisualPanel({ r, meta, onVersions }: { r: RequestDetail;
                   </div>
                   <ApprovalLine a={a} />
                   {a.red?.not && <p className="text-[11.5px] text-red-700">Ret notu: {a.red.not}</p>}
-                  {a.taslakLisans && <DraftBadge />}
                   <AssetActions a={a} meta={meta} onVersions={onVersions} />
                 </li>
               ))}

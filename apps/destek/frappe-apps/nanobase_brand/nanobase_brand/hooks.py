@@ -1,7 +1,7 @@
 app_name = "nanobase_brand"
-app_title = "NanobaseAI"
-app_publisher = "NanobaseAI"
-app_description = "NanobaseAI marka katmanı"
+app_title = "ZEKİ AI"
+app_publisher = "ZEKİ AI"
+app_description = "ZEKİ AI marka katmanı"
 app_email = "destek@nanobase.ai"
 app_license = "agpl-3.0"
 
@@ -31,7 +31,10 @@ website_context = {
 }
 
 # Ayarlar her göçte yeniden yazılır; ekrandan elle değiştirilen marka alanı
-# bir sonraki kurulumda NanobaseAI'ye döner (bilinçli: marka tek yerden gelir).
+# bir sonraki kurulumda ZEKİ AI'ya döner (bilinçli: marka tek yerden gelir).
+# Marka adı değişince (2026-09-29 NanobaseAI → ZEKİ AI) eski adlı kayıtlar göçten önce taşınır: Flow kendi göçünde
+# yeni adla ikinci bir asistan açmasın.
+before_migrate = ["nanobase_brand.install.eski_adlar"]
 after_install = "nanobase_brand.install.apply"
 after_migrate = ["nanobase_brand.install.apply"]
 
@@ -41,6 +44,10 @@ doc_events = {
 		"after_insert": "nanobase_brand.yz.kanca.on_ticket_insert",
 		"on_update": "nanobase_brand.yz.kanca.on_ticket_update",
 	},
+	# Otomatik çözüm önerisinden sonra talep edenin yanıtı (yz/cozum.py).
+	"Communication": {
+		"after_insert": "nanobase_brand.yz.kanca.on_communication_insert",
+	},
 }
 
 scheduler_events = {
@@ -48,5 +55,8 @@ scheduler_events = {
 		# Hafta içi 08:30: SLA riskindeki kayıtlar; pazartesi 08:00: haftalık rapor
 		"30 8 * * 1-5": ["nanobase_brand.yz.rapor.daily_sla_risk"],
 		"0 8 * * 1": ["nanobase_brand.yz.rapor.weekly"],
+		# Öneriye süresinde yanıt gelmeyen kayıt BT'ye (saat başı); BT temsilcileri AD'den (her sabah).
+		"5 * * * *": ["nanobase_brand.yz.cozum.zaman_asimi"],
+		"15 6 * * *": ["nanobase_brand.yz.temsilci.esitle"],
 	},
 }

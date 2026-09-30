@@ -152,6 +152,37 @@ export type AnalysisHead = {
 };
 export type Analysis = AnalysisHead & { kaynaklar?: Kaynaklar; specs: Spec & { title?: string }; inputs: Inputs; result: CalcResult | null; history: Approval[]; market: MarketPrice[] };
 
+/** Dağıtımcı kataloğundaki (Başarı) TİMAŞ dışı başlıkların fiyat özeti; köprü `pricing/dagitim.py`. */
+export type DistStats = {
+  n: number; p25: number | null; median: number | null; p75: number | null;
+  perPage: { median: number | null; n: number };
+  /** D&R satış fiyatı ÷ D&R liste fiyatı ortancası (sitelerden silinmemiş ürünler). */
+  dr: { ratioMedian: number | null; n: number };
+};
+export type DistCategory = { kategori: string; ust: string; alt: string | null; n: number; puan?: number };
+export type Distributor = {
+  kaynaklar?: Kaynaklar;
+  hazir: boolean;
+  kod: string | null;
+  kaynak: { basari: string | null; dr: string | null; basariEtiket: string; drEtiket: string };
+  not: string;
+  mesaj?: string | null;
+  /** «Dağıtımcı kataloğundan (n başlık, GG.AA.YYYY)». */
+  etiket: string | null;
+  kume: number;
+  kategori: {
+    secili: string | null; yol: 'secim' | 'kendi' | 'ad' | 'yok'; aciklama: string; kitaplik: string | null;
+    kendi: { barkod: string; kategori: string; sayfa: number | null; kapak: string | null; fiyat: number | null; son: string | null } | null;
+    adaylar: DistCategory[];
+  } | null;
+  suzgec: {
+    sayfa: number | null; sayfaAralik: [number, number] | null; sayfaUygulandi: boolean; kapak: string | null; kapakSinifi: string | null;
+    kapakUygulandi: boolean; notlar: string[];
+  } | null;
+  tum: DistStats | null;
+  sonYillar: (DistStats & { yillar: number[] }) | null;
+};
+
 export type MarketPrice = { id: string; analysisId: string | null; crmBookId: string | null; title: string; publisher: string | null; channel: string | null;
   price: number; pages: number | null; url: string | null; seenOn: string | null; createdBy: string; createdAt: string };
 
@@ -279,6 +310,10 @@ export const pricingApi = {
   archive: (id: string) => send<Analysis>('POST', `/analyses/${enc(id)}/archive`),
   decide: (id: string, b: { role: ApproverRole; decision: 'onay' | 'ret'; note: string; version: number }) =>
     send<Analysis>('POST', `/analyses/${enc(id)}/decide`, b),
+  distributor: (p: { code?: string | null; kategori?: string | null; pages?: number | null; kapak?: string | null }) =>
+    send<Distributor>('GET', `/distributor${qs(p)}`),
+  distributorCategories: () =>
+    send<{ tarih: string | null; items: DistCategory[]; not: string; kaynaklar?: Kaynaklar }>('GET', '/distributor/categories'),
   addMarket: (b: Record<string, unknown>) => send<{ id: string }>('POST', '/market', b),
   deleteMarket: (id: string) => send<{ ok: boolean }>('DELETE', `/market/${enc(id)}`),
   saveDefaults: (b: Partial<Defaults>) => send<Defaults>('PUT', '/defaults', b),

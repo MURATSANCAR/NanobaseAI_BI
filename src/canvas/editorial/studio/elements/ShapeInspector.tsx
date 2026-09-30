@@ -47,6 +47,7 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
   const hasText = item ? item.text : !!value.runs?.length;
   const strokeW = value.stroke_w ?? item?.stroke_w ?? 0.6;
   const opacity = value.opacity ?? 1;
+  const removeHint = useId();
 
   return (
     <div className={`flex min-w-0 flex-col gap-3 ${className}`}>
@@ -54,7 +55,7 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
         <Thumb src={elementsApi.previewUrl(jobId, value.kind, 128, style?.value, rev)} alt="" fallback={name} className="h-14 w-14 shrink-0 rounded-xl border border-slate-200" />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-[15px] font-extrabold">{style?.label ?? name}</h2>
-          <p className="text-[11.5px] text-canvas-muted">Süs / şekil · katman {value.z}</p>
+          <p className="text-[11.5px] text-canvas-muted">Süs / şekil · katman {value.z} · değişiklikler kendiliğinden kaydedilir</p>
         </div>
       </div>
 
@@ -74,10 +75,15 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
             </>
           )}
           {onRemove && (
-            <button type="button" onClick={onRemove}
+            <button type="button" onClick={onRemove} aria-describedby={removeHint}
               className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white/80 px-3.5 text-[13px] font-bold text-rose-700 ${press}`}>
               <Trash2 className="h-4 w-4" aria-hidden />Sayfadan kaldır
             </button>
+          )}
+          {onRemove && (
+            <p id={removeHint} className="w-full text-[11.5px] text-canvas-muted">
+              Kaldırdığınız şekli Ctrl/Cmd+Z ya da «Geri al» düğmesiyle geri getirebilirsiniz.
+            </p>
           )}
         </div>
       )}
@@ -89,7 +95,8 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
         </Section>
       )}
 
-      <Section title="Renkler">
+      <Section title="Renkler" explain="İlk renk düğmesi «otomatik»tir: renk kitabın paletinden gelir ve palet değişince kendiliğinden güncellenir. Başka bir renk seçerseniz o renk sabit kalır.">
+
         <Field label="Dolgu">
           <ColorChips label="Dolgu rengi" value={value.fill ?? null} swatches={sw} auto={auto(item ? item.roles.fill : 'soft')} onChange={(hex) => set({ fill: hex })} />
         </Field>
@@ -122,7 +129,7 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
         </Section>
       )}
 
-      <Section title="Konum ve boyut">
+      <Section title="Konum ve boyut" explain="Şeklin sayfadaki yeri ve ölçüsü, milimetre olarak. Değeri yazıp Enter'a basın ya da kutudan çıkın. Geniş ekranda tuvalde sürükleyerek de değiştirebilirsiniz.">
         <BoxFields box={value.box} onChange={(box) => set({ box })} />
       </Section>
 
@@ -133,7 +140,7 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
         <div className="flex flex-wrap gap-1.5">
           <Toggle label="Aynala" checked={!!value.flip} onChange={(flip) => set({ flip })} />
           <button type="button" className={ghostBtn} disabled={!value.rotate} onClick={() => set({ rotate: 0 })}>
-            <RotateCcw className="h-4 w-4" aria-hidden />Düz
+            <RotateCcw className="h-4 w-4" aria-hidden />Düzelt (0°)
           </button>
         </div>
         {value.flip && hasText && <p className="text-[11px] text-canvas-muted">Aynalamada şekil döner; üstündeki yazı düz okunur.</p>}

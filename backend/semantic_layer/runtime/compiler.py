@@ -23,7 +23,7 @@ from datetime import timedelta
 from typing import Any, Callable, Optional, Protocol
 
 from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
-from semantic_layer.naming import is_shadow_copy, physical_name, source_rank
+from semantic_layer.naming import is_shadow_copy, logical_table, physical_name, source_rank
 from semantic_layer.runtime import federated, periods
 from semantic_layer.normalize import fold
 from semantic_layer.store.catalog_store import CatalogStore
@@ -145,6 +145,52 @@ def _is_additive(formula: Optional[str]) -> bool:
 def _parse_cond_column(key: str) -> Optional[tuple[str, str]]:
     m = re.match(r"^(\w+)\.(\w+)\s", key.strip())
     return (m.group(1), m.group(2).upper()) if m else None
+
+
+def exclude_groups(mapping: Optional[Mapping]) -> list[dict]:
+    """Bir ölçünün «hariç grup» koşulları (katalog eşlemesi `extra.exclude_groups`), doğrulanmış biçimde.
+
+    Her biri {"key": "ACCFICHEREF", "column": "ACCOUNTCODE", "like": ["7_1%"], "why": "yansıtma fişi"}: aynı `key`
+    değerini taşıyan satırlardan biri `column LIKE <desen>` ise o gruptaki BÜTÜN satırlar ölçüden çıkar. Satır koşulu
+    («bu satırın hesabı 760») bunu anlatamaz: yıl sonu yansıtma/kapanış fişinin 760 satırı sıradan bir 760 alacağına
+    benzer, onu ayıran fişin ÖBÜR satırıdır (7x1 yansıtma hesabı). Soruya özel değil: yansıtmalı her gider ölçüsü, ya da
+    grup düzeyinde her dışlama («iadesi olan faturalar hariç») aynı biçimi kullanır."""
+    out = []
+    for g in ((mapping.extra or {}).get("exclude_groups") or []) if mapping is not None else []:
+        if not isinstance(g, dict):
+            continue
+        key, col = str(g.get("key") or ""), str(g.get("column") or "")
+        pats = [str(x) for x in (g.get("like") or []) if str(x)]
+        if re.fullmatch(r"\w+", key) and re.fullmatch(r"\w+", col) and pats and all("'" not in x for x in pats):
+            out.append({"key": key.upper(), "column": col.upper(), "like": pats, "why": str(g.get("why") or "")})
+    return out
+
+
+def exclude_group_sql(group: dict, source: str, alias: str, d: "Dialect", *, hx: str = "nb_hx0",
+                      firm_col: Optional[str] = None) -> tuple[str, str]:
+    """Hariç grup, anti-join olarak: (JOIN metni, satırı tutan koşul).
+
+        LEFT JOIN (SELECT nb_g.key FROM <aynı kaynak> AS nb_g WHERE nb_g.col LIKE … GROUP BY nb_g.key) AS hx
+               ON hx.key = alias.key
+        … hx.key IS NULL
+
+    Neden NOT EXISTS değil: koşul bir ölçünün kendi kapsamı olarak toplama ifadesinin İÇİNE de yazılabilir
+    (SUM(CASE WHEN … THEN …)); SQL Server toplama ifadesinde alt sorguya izin vermez (hata 130), SQLite verir. Anti-join'de
+    toplamanın içinde yalnız `hx.key IS NULL` kalır — iki yerde de çalışır. GROUP BY: türetilmiş tablo anahtarında tekildir,
+    birleştirme satır çoğaltmaz (eleştirmen de öyle okur)."""
+    k, c = d.q(group["key"]), d.q(group["column"])
+    likes = " OR ".join(f"nb_g.{c} LIKE '{p}'" for p in group["like"])
+    fk = f", nb_g.{d.q(firm_col)}" if firm_col else ""
+    on_firm = f" AND {hx}.{d.q(firm_col)} = {alias}.{d.q(firm_col)}" if firm_col else ""
+    join = (f"LEFT JOIN (SELECT nb_g.{k}{fk} FROM {source} AS nb_g WHERE ({likes}) GROUP BY nb_g.{k}{fk}) AS {hx} "
+            f"ON {hx}.{k} = {alias}.{k}{on_firm}")
+    return join, f"{hx}.{k} IS NULL"
+
+
+def _ent_key(name: str) -> str:
+    """Entity name as the gate compares it (audit._ent): no second-source prefix, no "LG_"."""
+    from semantic_layer.runtime.audit import _ent
+    return _ent(name)
 
 
 def _snake(term: str) -> str:
@@ -569,6 +615,9 @@ class DeterministicCompiler:
                 cond = _parse_cond_column(key)
                 if cond and cond[0] == entity:
                     used.add(cond[1])
+            if s_.mapping and s_.mapping.entity == entity:
+                for g in exclude_groups(s_.mapping):
+                    used.update((g["key"], g["column"]))
         for m in self._default_filters(entity):
             if m.column:
                 used.add(m.column)
@@ -820,6 +869,22 @@ class DeterministicCompiler:
                     explain.append(f"varsayılan filtre (birleştirme içinde): {m.entity}.{m.column} {m.operator} {m.values}")
             kind = "LEFT " if plan.join_kinds.get((ent,col,ref_ent,ref_col)) == "LEFT" else ""
             sql += f"\n{kind}JOIN {j_source} AS {joined} ON {on}"
+        group += self._card_keys(plan, group, explain, by_firm)
+        # Grup düzeyinde dışlama (hariç fiş): aynı kaynağı ikinci kez okuyan anti-join (toplama içinde alt sorgu yok).
+        # Ölçülerin hepsi aynı dışlamayı taşımıyorsa tek WHERE'e yazılamaz (öbür ölçüyü de daraltırdı) — o zaman bu
+        # derleyici yazmaz, model yazar ve kapı dışlamayı arar.
+        excl = [tuple(json.dumps(g, sort_keys=True) for g in exclude_groups(m.mapping)) for m in plan.metrics]
+        if any(excl):
+            if len(set(excl)) != 1:
+                log.debug("deterministic compile refused: metrics differ in excluded groups")
+                return None
+            for n, g in enumerate(exclude_groups(plan.metrics[0].mapping)):
+                join_sql, keep = exclude_group_sql(g, source, alias, d, hx=f"nb_hx{n}",
+                                                   firm_col=_FIRM_COL if by_firm else None)
+                sql += f"\n{join_sql}"
+                where.append(keep)
+                explain.append(f"hariç grup: aynı {g['key']} içinde {g['column']} LIKE {g['like']} satırı olanlar"
+                               + (f" ({g['why']})" if g['why'] else ""))
         if where:
             sql += "\nWHERE " + "\n  AND ".join(where)
         if group:
@@ -834,6 +899,39 @@ class DeterministicCompiler:
         return CompiledQuery(sql=sql, compiler=self.name, tables=tables, catalog_version=q.catalog_version, explain=explain, certified=True)
 
     # -- helpers
+    def _card_keys(self, plan: "_Plan", group: list[str], explain: list[str], by_firm: bool) -> list[str]:
+        """Kırılım bir kartın ADIYLA isteniyorsa kartın anahtarı da gruba girer: aynı adı taşıyan iki kart tek satıra
+        birleşmesin. 2026-09-29 tam kapı C015: iade oranı müşteri adına göre gruplanıyordu, canlıda aynı adlı iki cari
+        tek satır oldu (2.401 / 2.402) ve ikisinin sevk ile iadesi toplanıp tek oran verildi. İş kararı: kart bazında
+        anahtarla grupla (bilgi belgesi C015).
+
+        Yalnız kaydın KENDİ ADI olan kolonda: katalog eşlemesi `record_label` taşıyan COLUMN kavramı («müşteri» →
+        CLCARD.DEFINITION_, «kitap» → ITEMS.NAME). Bir niteliğe göre kırılımda («müşteri grubu», «şehir», «segment»)
+        anahtar eklemek sonucu kart kart böler — bu yüzden kolon tipinden ya da genişliğinden tahmin edilmez;
+        işaret katalog betiğiyle (scripts/catalog-authoring/2026-09-29-kayit-adi-kolonlari.py) yazılır.
+
+        Anahtar, olgudan karta giden katalog ilişkisinin hedef kolonudur (fact.CLIENTREF → CLCARD.LOGICALREF): ad
+        anahtara bağlı olduğundan eklemek hiçbir grubu birleştirmez, yalnız aynı adlı ayrı kartları ayırır; seçime
+        (SELECT) girmez, sonucun kolonları değişmez. Birden çok firma/yıl kopyası birlikte okunuyorsa eklenmez: kart
+        anahtarı kopyalar arasında aynı kalmayabilir (ITEMS'ta 71 kart), orada adla birleşme doğru olandır."""
+        if by_firm:
+            return []
+        d = self.d
+        added: list[str] = []
+        for s in plan.group_cols:
+            ent = s.mapping.entity
+            if ent == plan.entity or not (s.mapping.extra or {}).get("record_label"):
+                continue
+            edge = next((j for j in plan.joins if j[2] == ent and j[0] != ent), None)
+            if edge is None or edge[3].upper() == (s.mapping.column or "").upper():
+                continue
+            key = f"{ent}.{d.q(edge[3])}"
+            if key in group or key in added:
+                continue
+            added.append(key)
+            explain.append(f"grup anahtarı: '{s.term}' adıyla birlikte {ent}.{edge[3]} (aynı adlı kartlar ayrı kalır)")
+        return added
+
     def _join(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
         return self.conventions.join_path(entity, other)
 
@@ -1551,7 +1649,36 @@ class ExistingCompiler:
     def _plans_enabled(q: SemanticQuery) -> bool:
         """Two-server plans are written only when the question needs both databases and the runtime
         that executes plans is deployed (SEMANTIC_FEDERATED=1)."""
-        return len(q.sources) > 1 and os.environ.get("SEMANTIC_FEDERATED", "0") == "1"
+        return len(q.sources) > 1 and federated.plans_enabled()
+
+    def _unrunnable_on_one_server(self, q: SemanticQuery) -> Optional[str]:
+        """The sentence to refuse with when this question cannot be one statement on one server; else None.
+
+        ZEKI-54: with two-server plans off, a question whose certified readings the resolver left on
+        both databases was still handed to the model with both databases' tables and asked for ONE
+        statement. What came back depended on the model's pick: sometimes a statement on one server
+        (the other half silently dropped), sometimes one that joins both — which no server runs
+        ("Logo ve CRM artik ayri sunucularda"). The resolver already hands every other-database word
+        it can to the model to read on the measure's side; what is still placed on two sides here is
+        the question's own measures (or nothing decided a side), and that is refused, deterministically,
+        in words that name what sits where. A tie in the search vote alone places nothing and is left
+        as it was: the model reads one side's tables there."""
+        if len(q.sources) <= 1 or federated.plans_enabled():
+            return None
+        placed: dict[str, list[str]] = {}
+        for s in list(q.slots) + list(q.group_by):
+            if s.mapping is None or not s.mapping.entity or s.mapping.entity not in self.by_entity \
+                    or s.semantic_type == SemanticType.DEFAULT_FILTER:
+                continue
+            words = placed.setdefault(self.source_of(s.mapping.entity), [])
+            if s.term and s.term not in words:
+                words.append(s.term)
+        if len(placed) < 2:
+            return None
+        parts = "; ".join(f"{src or 'ana veri tabanı'}: " + ", ".join(f"'{w}'" for w in words)
+                          for src, words in sorted(placed.items()))
+        return ("Bu soru iki ayrı sunucudaki veriyi birlikte istiyor (" + parts + "). Bu kurulumda iki sunuculu "
+                "sorgu açık değil; tek sorguda birleştirilemez. Soruyu tek veri kaynağındaki bilgilerle sorun.")
 
     def source_of(self, entity: str) -> str:
         """The database a table lives in, as the catalog spells its schema ("Timas_MSCRM.dbo" →
@@ -2041,15 +2168,41 @@ class ExistingCompiler:
                 continue
             if m.formula:
                 cond = "; ".join((m.extra or {}).get("conditions") or [])
-                lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else "") + self._basis(m.formula))
+                excl = "; ".join(f"aynı {g['key']} içinde {g['column']} LIKE {' / '.join(g['like'])} satırı olan grup "
+                                 f"TAMAMEN hariç: LEFT JOIN (SELECT {g['key']} FROM {m.entity} WHERE {g['column']} LIKE "
+                                 f"'{g['like'][0]}' GROUP BY {g['key']}) HX ON HX.{g['key']} = <takma ad>.{g['key']} ve "
+                                 f"HX.{g['key']} IS NULL (WHERE'de ya da toplamanın CASE'inde; toplama içine alt sorgu YAZMA)"
+                                 + (f" — {g['why']}" if g['why'] else "")
+                                 for g in exclude_groups(m))
+                lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else "")
+                             + (f" (hariç: {excl})" if excl else "") + self._basis(m.formula))
             elif m.values:
                 lines.append(f"- '{s.term}' = {m.entity}.{m.column} {m.operator} ({', '.join(m.values)}) [{s.status}]")
             elif m.column:
-                lines.append(f"- '{s.term}' = {m.entity}.{m.column} kolonu" + self._basis(f"{m.entity}.{m.column}"))
+                # Kaydın kendi adı (katalogda record_label): kırılımda aynı adlı iki kayıt tek satıra birleşmesin.
+                label = (" — kaydın adı; kırılımda kaydın anahtarıyla BİRLİKTE grupla (aynı adlı kayıtlar ayrı kalır)"
+                         if (m.extra or {}).get("record_label") else "")
+                lines.append(f"- '{s.term}' = {m.entity}.{m.column} kolonu" + label + self._basis(f"{m.entity}.{m.column}"))
         for t in q.temporal:
             if t.start and t.end:
                 lines.append(f"- dönem '{t.text}' = DATE_ >= '{t.start.isoformat()}' AND DATE_ < '{t.end.isoformat()}'")
         return "\n".join(lines) or "(yok)"
+
+    @staticmethod
+    def breakdown_block(q: SemanticQuery) -> str:
+        lines = []
+        for p in getattr(q, "breakdown_paths", None) or []:
+            joins = " ; ".join(f"{a}.{ac} = {b}.{bc}" for a, ac, b, bc in p.get("path") or []) or "(aynı tablo)"
+            cols = ", ".join(f"{e}.{c} ('{t}')" for e, c, t in p.get("columns") or []) or "(tablonun kendisi)"
+            line = f"- '{p['word']}' bazında: bağlantı {joins}; kelimeyi taşıyan kolonlar: {cols}"
+            if p.get("sampleEmptyKeys"):
+                line += ("; DİKKAT örneklemde boş görünen anahtar/kolon: " + ", ".join(p["sampleEmptyKeys"])
+                         + " — bu yol büyük olasılıkla boş döner (bilgi paketindeki notuna bak)")
+            lines.append(line)
+        if lines:
+            lines.append("Yollar dolu görünenden boş görünene doğru sıralı. Hangisini okuduğunu -- yorum satırında yaz; "
+                         "boş bir anahtarla bağlanan kırılım boş döner.")
+        return "\n".join(lines)
 
     def _basis(self, expression: str) -> str:
         """Documented basis of every column the expression touches ("KDV hariç", "birim maliyet").
@@ -2077,6 +2230,14 @@ class ExistingCompiler:
         entities = self.narrow(q, self.relevant_entities(q, recalled), report=report)
         if self._plans_enabled(q):
             entities = self._with_bridges(q, entities)
+        # The tables a requested breakdown is reached through (resolver: breakdown_paths) are shown even when retrieval
+        # did not rank them — a link table is never what a question's words name.
+        path_entities = [e for p in (getattr(q, "breakdown_paths", None) or []) for edge in p.get("path") or []
+                         for e in (edge[0], edge[2])]
+        if path_entities:
+            by_bare = {re.sub(r"^LG_", "", k.upper()): k for k in self.by_entity}
+            extra = [by_bare[e] for e in dict.fromkeys(path_entities) if e in by_bare]
+            entities = list(entities) + [e for e in extra if e not in set(entities)]
         language_hits = [h for h in self.language_pool.search(q.question)
                          if all(c["entity"] in entities for c in h["columns"])] if self.language_pool else []
         ctx = [
@@ -2097,9 +2258,17 @@ class ExistingCompiler:
             # that reading: without it "alacak" was quietly answered as the sum of invoices issued.
             "## ÇÖZÜMLENEMEYEN TERİMLER (her biri için sorgunun EN BAŞINA -- yorum: '<kelime>' → <hangi tablo/kolon, hangi hesap> satırı yaz)\n"
             + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
+            # ZEKI-54: asked as a column, readable nowhere this statement can reach. Named so the model does
+            # not invent a reading for it (it turned "yazar" into a customer-code filter); the answer says so.
+            *(["## CEVABA ALINMAYAN KOLONLAR (bunlar için kolon, süzgeç ya da yorum YAZMA; cevap bunlarsız)\n"
+               + ", ".join(str(o.get("term")) for o in q.omitted)] if q.omitted else []),
+            *(["## KOLON OLARAK İSTENENLER (yorumunu SELECT'te kolon olarak göster; WHERE/HAVING süzgecine ÇEVİRME)\n"
+               + ", ".join(q.column_terms)] if q.column_terms else []),
             # The person spelled out the report they want, column by column. Without this the model
             # sees only the words and routinely turns a requested column into a filter — the channel
             # asked for as the first column comes back as a WHERE and never appears in the result.
+            *(["## İSTENEN KIRILIM YOLU (ölçünün tablosundan katalog ilişkileriyle; GROUP BY bu yoldan kurulur)\n"
+               + self.breakdown_block(q)] if getattr(q, "breakdown_paths", None) else []),
             "## İSTENEN KOLONLAR (bu sırayla, SELECT'te hepsi bulunmalı)\n" + (
                 "\n".join(f"{i}. {c}" for i, c in enumerate(q.projection, 1)) if q.projection else "(belirtilmedi)"),
             # What those words look like in the data, where they turned out to be values. A term the
@@ -2239,6 +2408,11 @@ class ExistingCompiler:
             return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
                                  explain=[self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
                                  certified=False, refusal="NO_FITTING_TABLE")
+        if (two_servers := self._unrunnable_on_one_server(q)) is not None:
+            log.info("two servers, plans off — refusing q=%r sources=%s", q.question[:80], q.sources)
+            return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
+                                 explain=[two_servers], llm_ms=int((time.perf_counter() - t0) * 1000),
+                                 certified=False, refusal="TWO_SERVERS")
         text = self.llm.chat(messages)
         ms = int((time.perf_counter() - t0) * 1000)
         if self._plans_enabled(q):
@@ -2461,6 +2635,16 @@ class CompilerRouter:
         if readings:
             out.explain = [f"yorum: {r}" for r in readings] + [e for e in out.explain if not str(e).startswith("yorum: ")]
         gaps = admitted_gaps(readings)
+        # A part the knowledge pack itself documents as absent ("etkinliklere bağlı bir bütçe tablosu yoktur … toplam
+        # verilir ve bütçenin tanımlı olmadığı söylenir", Kural C21) is not an admission that the answer is short: it
+        # is the documented answer. The operator's sentence is shown beside the model's reading; anything else the
+        # model says it could not do still refuses. 2026-09-29 tam kapı B064 (altın: answer).
+        rules = getattr(self.existing, "rules_text", "") if self.existing is not None else ""
+        documented = {g: caveat_for(g, rules, absence_only=True) for g in gaps} if rules else {}
+        documented = {g: why for g, why in documented.items() if why}
+        if documented:
+            gaps = [g for g in gaps if g not in documented]
+            out.explain = list(out.explain) + [f"belgelenmiş yokluk: {why}" for why in dict.fromkeys(documented.values())]
         if gaps:
             # Served, it is a number for a question nobody asked, with the admission buried in a comment. Refused,
             # the person reads what is missing in the model's own words — the honest answer.
@@ -2500,9 +2684,15 @@ class CompilerRouter:
         profiles = getattr(existing, "profiles", []) if existing is not None else []
         context = getattr(existing, "context", {}) if existing is not None else {}
         dialect = getattr(existing, "dialect", "tsql") if existing is not None else "tsql"
-        problems = federated.check_plan(plan, profiles, context, dialect)
+        placed = {s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity}
+        problems = federated.check_plan(plan, profiles, context, dialect, placed=placed)
         if problems:
             return problems
+        # A one-part plan on a question whose two halves nothing joins (check_plan accepted it only then):
+        # the DEFAULT year was stamped because of a dated measure on the server this plan does not read.
+        # Nobody asked for that year, and the resolver withdraws it the same way when the source rule
+        # drops the dated measure. A period the person wrote stays an obligation.
+        unread_default = self._unread_default_period(q, plan) if len(plan.parts) == 1 else set()
         # Each part is an ordinary statement on its own server, and goes wrong the ordinary way: a
         # header total summed across its lines comes out multiplied. The single-statement path is
         # reviewed for that after its dry run; a part that skipped the review returned a revenue
@@ -2521,10 +2711,30 @@ class CompilerRouter:
         unmet_sets = []
         for text in [p.sql for p in plan.parts] + [plan.final]:
             try:
-                unmet_sets.append({u.text for u in gate_report(q, head + text, sources=sources)})
+                unmet_sets.append({u.text for u in gate_report(q, head + text, sources=sources)
+                                   if not (u.kind == "period" and _ent_key(u.entity) in unread_default)})
             except Exception:  # noqa: BLE001
                 continue
         return sorted(set.intersection(*unmet_sets)) if unmet_sets else []
+
+    #: The resolver's own words when it stamped the default period (resolver._resolve, «dönem belirtilmedi →
+    #: varsayılan … uygulandı»); the gate tooling reads the same sentence (DEFAULT_PERIOD_APPLIED).
+    _DEFAULT_PERIOD_NOTE = "dönem belirtilmedi → varsayılan"
+
+    def _unread_default_period(self, q: SemanticQuery, plan: "federated.Plan") -> set[str]:
+        """Entities the default period was bound to that no part of the plan reads — empty unless the period is
+        the resolver's default (not asked)."""
+        if not any(self._DEFAULT_PERIOD_NOTE in str(e) for e in (q.explanation or [])):
+            return set()
+        binding = getattr(q, "temporal_binding", None) or {}
+        bound = [binding] + list(binding.get("also") or []) if binding else []
+        read: set[str] = set()
+        for part in plan.parts:
+            try:
+                read |= {_ent_key(logical_table(t.name).entity) for t in federated._tables(part.sql, "tsql")}
+            except Exception:  # noqa: BLE001 — an unreadable part is refused elsewhere; nothing is excused here
+                return set()
+        return {_ent_key(b.get("entity", "")) for b in bound if b.get("entity") and _ent_key(b["entity"]) not in read}
 
     def _gate_plan(self, q: SemanticQuery, out: CompiledQuery, thread) -> CompiledQuery:
         problems = self.plan_problems(q, out.plan)

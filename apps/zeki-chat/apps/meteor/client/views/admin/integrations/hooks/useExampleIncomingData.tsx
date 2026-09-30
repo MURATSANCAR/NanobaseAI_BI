@@ -1,0 +1,32 @@
+import type { INewIncomingIntegration } from '@zeki.chat/core-typings';
+import { useAbsoluteUrl } from '@zeki.chat/ui-contexts';
+import { useMemo } from 'react';
+
+type UseExampleDataParams = {
+	additionalFields: Partial<INewIncomingIntegration>;
+	url: string;
+};
+
+export function useExampleData({
+	additionalFields,
+	url,
+}: UseExampleDataParams): [integrationObj: Partial<INewIncomingIntegration>, curl: string] {
+	const imageUrl = useAbsoluteUrl()('/images/integration-attachment-example.png');
+	return useMemo(() => {
+		const exampleData = {
+			...additionalFields,
+			text: 'Example message',
+			attachments: [
+				{
+					title: 'ZEKI AI CHAT',
+					title_link: 'https://example.invalid',
+					text: 'ZEKI AI CHAT, your workspace chat',
+					image_url: imageUrl,
+					color: '#764FA5',
+				},
+			],
+		};
+
+		return [exampleData, `curl -X POST -H 'Content-Type: application/json' --data '${JSON.stringify(exampleData)}' ${url}`];
+	}, [additionalFields, url, imageUrl]);
+}

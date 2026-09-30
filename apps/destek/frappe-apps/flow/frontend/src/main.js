@@ -118,7 +118,7 @@ class FlowPanel {
 		frappe.ui.keys.add_shortcut({
 			shortcut: "ctrl+i",
 			action: () => this.toggle(),
-			description: __("Toggle NanobaseAI panel"),
+			description: __("Toggle ZEKİ AI panel"),
 			ignore_inputs: true,
 		});
 	}

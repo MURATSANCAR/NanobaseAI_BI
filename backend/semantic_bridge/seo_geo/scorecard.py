@@ -393,6 +393,27 @@ def s_google(b: Book) -> dict[str, Any]:
     return section("google", b.pid, status, label, facts, actions)
 
 
+def ga4_facts(b: Book) -> list[tuple[str, Any]]:
+    """Google Analytics (aramadan satışa): ürüne eşlenen giriş sayfalarının son 28 gün organik oturum/sepet/satış/ciro."""
+    try:
+        from . import ga4
+
+        t = ga4.product_totals(b.eng, b.tenant, b.pid)
+    except Exception as e:  # noqa: BLE001 — okuma yoksa satır yok
+        log.info("seo scorecard ga4 %s: %s", b.pid, e)
+        return []
+    if not t:
+        return []
+    c, p = t["cur"], t["prev"]
+    ch = ga4.pct(c["revenue"], p["revenue"])
+    out = [("Google’dan gelen ziyaret (Google Analytics, 28 gün)",
+            f"{num(c['sessions'])} oturum · {num(c['carts'])} sepete ekleme · {num(c['purchases'])} satış"),
+           ("Google’dan gelen ciro (28 gün)", f"{num(c['revenue'])} ₺" + (f" ({ch:+.0f}% önceki 28 güne göre)" if ch is not None else ""))]
+    if t["flags"]:
+        out.append(("Aramadan satış uyarısı", ", ".join(ga4.FLAGS.get(f, f) for f in t["flags"])))
+    return out
+
+
 def s_arama(b: Book) -> dict[str, Any]:
     from . import impact, opportunities as opps
 
@@ -443,6 +464,7 @@ def s_arama(b: Book) -> dict[str, Any]:
                       (f"Tıklama {d['clicksPct']:+.0f}%" if d and d.get("clicksPct") is not None else
                        {"olculuyor": "Ölçülüyor", "veri_yok": "Veri yok", "bekliyor": "Sitede bekleniyor"}.get(
                            last_impact["status"], last_impact["status"]))))
+    facts += ga4_facts(b)
     summary = (f"{num(clicks)} tıklama, {num(impr)} gösterim" + (f", ortalama {num(pos, 1)}. sıra" if pos else "")
                if impr else "Son 28 günde Google’da gösterim yok")
     return section("arama", b.pid, status, summary, facts, actions, extra={"queries": queries})

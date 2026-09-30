@@ -1,0 +1,80 @@
+{
+  "sessions": {
+    "issued": 51,
+    "allPresent": true,
+    "firstStillAuthenticated": true
+  },
+  "settings": {
+    "DirectMesssage_maxUsers": -1,
+    "FileUpload_MaxFileSize": -1,
+    "Message_AllowConvertLongMessagesToAttachment": false,
+    "Message_MaxAllowedSize": -1,
+    "RetentionPolicy_Enabled": false
+  },
+  "negativeBodies": {
+    "chat.sendMessage": 400,
+    "chat.postMessage": 400,
+    "dm.create": 400,
+    "rooms.saveDraft": 400,
+    "rooms.media/missing": 403,
+    "rooms.mediaConfirm/missing/missing": 403
+  },
+  "message": {
+    "characters": 44806,
+    "sha256": "26a0465ebb637062a12bb85cc607750868f7eba4b0a8dd89bd665d732708572f",
+    "apiMatchesIndependentMongo": true
+  },
+  "postMessage": {
+    "characters": 44806,
+    "matchesMongo": true
+  },
+  "draft": {
+    "characters": 44806,
+    "mongoType": "str",
+    "saved": true
+  },
+  "authenticatedBurst": {
+    "requests": 25,
+    "statuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ]
+  },
+  "upload": {
+    "bytes": 191866880,
+    "source": "actual tracked application source archive",
+    "sha256": "4617756964d51f68672b1a7f3921e4cf00a90985c39dbe586203024039086e1d",
+    "apiMatchesMongoSize": true,
+    "downloadMatchesOriginal": true,
+    "descriptionCharacters": 44806,
+    "confirmed": true
+  },
+  "groupOverEight": {
+    "status": "NOT_VERIFIED",
+    "reason": "Only three existing chat accounts; no invented users created."
+  },
+  "passed": true
+}

@@ -212,6 +212,52 @@ export type Decision = {
   closedAt: string | null;
 };
 
+/** Dağıtımcı kataloğunda benzer kitaplar (kitap kartında bağlam bilgisi; tahmine girmez). */
+export type MarketCounts = {
+  baslik: number;
+  bilinen: number;
+  bilinmeyen: number;
+  ilk: number;
+  ikinci: number;
+  ucVeUstu: number;
+  ikinciyeUlasan: number | null;
+  ucuncuyeUlasan: number | null;
+};
+
+export type MarketTitle = {
+  barkod: string;
+  ad: string | null;
+  yazar: string | null;
+  yayinevi: string | null;
+  basimYili: number | null;
+  baski: number;
+  fiyat: number | null;
+  sayfa: number | null;
+};
+
+export type Market = {
+  durum: 'hazir' | 'okunmadi' | 'kategori_yok';
+  kaynak: { ad: string; tarih: string | null; kaynakZamani: string | null; ilkGoruntu: string | null };
+  kosul: { sayfa: number | null; sayfaAlt: number | null; sayfaUst: number | null; sayfaPay: number; timasHaric: boolean };
+  kategori: {
+    secili: string | null;
+    yontem: 'secim' | 'kitap_kaydi' | 'tur_eslesmesi' | null;
+    yontemEtiket: string | null;
+    adaylar: string[];
+    tur: string | null;
+    hata?: string;
+  };
+  notlar: { baglam: string; baski: string; cikis: string; ilkYil: string };
+  kume?: { baslik: number; fiyatli: number; fiyatMedyan: number | null };
+  baskilar?: MarketCounts & { yillar: number[]; yilBazinda: Array<MarketCounts & { yil: number }> };
+  enCokBasilan?: MarketTitle[];
+  cikis?: { toplam: number | null; pencere: { bas: string; son: string } | null; not: string };
+  ilkYilHizi?: { deger: number | null; not: string };
+  kaynaklar?: Kaynaklar;
+};
+
+export type MarketCategory = { kategori: string; ust: string; alt: string; baslik: number };
+
 const P = '/api/v1/management/first-print';
 
 export class NotReadyError extends Error {}
@@ -254,6 +300,9 @@ export const firstPrintApi = {
     call<Decision>('/decisions', 'POST', body),
   approve: (id: string, role: 'satis' | 'uretim') => call<Decision>(`/decisions/${id}/approve`, 'POST', { role }),
   withdraw: (id: string) => call<Decision>(`/decisions/${id}/withdraw`, 'POST'),
+  market: (p: { code?: string; pages?: number | null; genre?: string | null; kategori?: string }) =>
+    call<Market>(`/market${qs({ code: p.code, pages: p.pages ? String(p.pages) : undefined, genre: p.genre || undefined, kategori: p.kategori || undefined })}`),
+  marketCategories: () => call<{ tarih: string | null; items: MarketCategory[] }>('/market/categories'),
 };
 
 // ---- biçim

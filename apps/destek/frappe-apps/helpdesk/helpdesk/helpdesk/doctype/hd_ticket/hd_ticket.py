@@ -189,7 +189,7 @@ class HDTicket(Document):
             self.send_acknowledgement_email()
 
     def capture_ticket_created_telemetry_events(self):
-        if self.subject == "NanobaseAI'ye hoş geldiniz":
+        if self.subject == "ZEKİ AI'ya hoş geldiniz":
             return
 
         capture_event("ticket_created")
@@ -699,7 +699,7 @@ class HDTicket(Document):
         from_email_id = from_email.get("email_id") if from_email else None
         email_account_name = from_email.get("email_account") if from_email else None
         sender = from_email_id or frappe.session.user
-        recipients = to
+        recipients = to or self.raised_by
 
         sender_email = None
         if not skip_email_workflow:

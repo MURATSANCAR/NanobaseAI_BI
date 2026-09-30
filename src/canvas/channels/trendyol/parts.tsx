@@ -12,6 +12,8 @@ const SECTIONS: ReadonlyArray<Section> = [
   { to: '/trendyol/urunler', label: 'Ürün, stok, fiyat', page: 'urunler' },
   { to: '/trendyol/siparisler', label: 'Sipariş ve iade', page: 'siparisler' },
   { to: '/trendyol/sorular', label: 'Soru ve yorum', page: 'sorular' },
+  { to: '/trendyol/model', label: 'Satış modeli', page: 'trendyol' },
+  { to: '/trendyol/mutabakat', label: 'Mutabakat ve hakediş', page: 'mutabakat' },
   { to: '/trendyol/vitrin', label: 'Vitrin önerisi', page: 'trendyol' },
   { to: '/trendyol/haftalik', label: 'Haftalık rapor', page: 'trendyol' },
   { to: '/trendyol/yukle', label: 'Dosya yükle', page: 'trendyol' },

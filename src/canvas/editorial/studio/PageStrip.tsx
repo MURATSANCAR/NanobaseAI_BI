@@ -18,7 +18,7 @@ const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 const reduceMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export default function PageStrip({
-  plan, current, onSelect, onReorder, onAdd, onDelete, thumb, pendingIds, interactive,
+  plan, current, onSelect, onReorder, onAdd, onDelete, thumb, pendingIds, interactive, readOnly = false,
 }: {
   plan: Plan;
   current: string | null;
@@ -29,6 +29,8 @@ export default function PageStrip({
   thumb: (p: PlanPage) => string | null;
   pendingIds: Set<string>;
   interactive: boolean;
+  /** Rolde düzenleme yoksa: yalnız gezinme; ekle, sil ve sürükleyerek sıralama çıkmaz. */
+  readOnly?: boolean;
 }) {
   const [ask, setAsk] = useState<{ id: string; no: number } | null>(null);
   const sensors = useSensors(
@@ -49,10 +51,10 @@ export default function PageStrip({
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Sayfalar · {plan.pages.length}</span>
-        <button type="button" onClick={() => onAdd(current)} title="Seçili sayfanın arkasına boş sayfa ekle"
+        {!readOnly && <button type="button" onClick={() => onAdd(current)} title="Seçili sayfanın arkasına boş sayfa ekle"
           className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-white/80 px-2 text-[11.5px] font-bold text-canvas-violet transition-transform duration-150 ease-out active:scale-[0.97]">
           <Plus className="h-3.5 w-3.5" aria-hidden />Ekle
-        </button>
+        </button>}
       </div>
       {eight && (
         <div className="flex items-start gap-1.5 rounded-xl bg-amber-50 px-2 py-1.5 text-[11px] font-semibold leading-snug text-amber-800" role="status">
@@ -66,7 +68,7 @@ export default function PageStrip({
           <ol className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 lg:max-h-[calc(100dvh-220px)] lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:pr-1">
             {plan.pages.map((p, i) => (
               <Thumb key={p.id} page={p} no={i + 1} on={p.id === current} src={thumb(p)} pending={pendingIds.has(p.id)}
-                interactive={interactive}
+                interactive={interactive && !readOnly} readOnly={readOnly}
                 onSelect={() => onSelect(p.id)} onAdd={() => onAdd(p.id)} onDelete={() => setAsk({ id: p.id, no: i + 1 })} />
             ))}
           </ol>
@@ -85,8 +87,8 @@ export default function PageStrip({
   );
 }
 
-function Thumb({ page, no, on, src, pending, interactive, onSelect, onAdd, onDelete }: {
-  page: PlanPage; no: number; on: boolean; src: string | null; pending: boolean; interactive: boolean;
+function Thumb({ page, no, on, src, pending, interactive, readOnly, onSelect, onAdd, onDelete }: {
+  page: PlanPage; no: number; on: boolean; src: string | null; pending: boolean; interactive: boolean; readOnly: boolean;
   onSelect: () => void; onAdd: () => void; onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -127,7 +129,7 @@ function Thumb({ page, no, on, src, pending, interactive, onSelect, onAdd, onDel
             </div>
           )}
         </button>
-        <div className={`mt-1 flex justify-between gap-1 ${on ? '' : 'lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100'}`}>
+        {!readOnly && <div className={`mt-1 flex justify-between gap-1 ${on ? '' : 'lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100'}`}>
           <button type="button" onClick={onAdd} title="Arkasına boş sayfa ekle" aria-label={`Sayfa ${no} arkasına boş sayfa ekle`}
             className="inline-flex h-7 flex-1 items-center justify-center rounded-md bg-slate-100 text-canvas-ink hover:bg-slate-200">
             <Plus className="h-3.5 w-3.5" aria-hidden />
@@ -136,7 +138,7 @@ function Thumb({ page, no, on, src, pending, interactive, onSelect, onAdd, onDel
             className="inline-flex h-7 flex-1 items-center justify-center rounded-md bg-slate-100 text-rose-600 hover:bg-rose-50">
             <Trash2 className="h-3.5 w-3.5" aria-hidden />
           </button>
-        </div>
+        </div>}
       </div>
     </li>
   );

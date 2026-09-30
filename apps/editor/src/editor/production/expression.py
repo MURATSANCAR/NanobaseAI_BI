@@ -73,7 +73,7 @@ TABLE: dict[str, dict] = {
     "korku":     {"method": None, "style": None, "rate": 0.94, "before_ms": 250, "after": 1.35},
     "nese":      {"method": None, "style": None, "rate": 1.04, "before_ms": 0, "after": 0.9},
     "fisilti":   {"method": "talimat", "style": "whispering, very soft and breathy",
-                  "rate": 1.15, "before_ms": 300, "after": 1.4},
+                  "rate": 1.15, "before_ms": 300, "after": 1.4, "gain_db": -10.0, "gain_tone_db": -5.0},
     "uzuntu":    {"method": "ornek", "style": "sad, slow, low and soft voice",
                   "target": (-3, -5.0), "rate": 1.0, "before_ms": 200, "after": 1.5},
     "ofke":      {"method": None, "style": None, "rate": 1.05, "before_ms": 0, "after": 0.85},
@@ -326,6 +326,12 @@ def apply(d: Path, pg: dict, units: list, plist: list) -> tuple[list, list | Non
                 extra["rate"] = row["rate"]
             if row["before_ms"] and key != prev_key:
                 extra["pause_before_ms"] = row["before_ms"]
+            # Düzey (2026-09-28 ölçümü, docs/analiz/sesli-okuma-erkek-anlatici-ve-kisa-fisilti.md): talimat yolu 5+ kelimede
+            # çoğu kez yalnız «alçak ses» veriyor (enerji −5…−6,5 dB; gerçek fısıltı −15 dB), kısa parçada ton hiç yok.
+            # Üretimden sonra kısılır: tonlu parçada kalan fark, tonsuzda tamamı. Anlaşılırlığı değiştirmez.
+            g = row.get("gain_tone_db") if extra["tone"] else row.get("gain_db")
+            if g:
+                extra["gain_db"] = g
         nxt = plist[j + 1] if j + 1 < len(plist) else None
         if (nxt is None or key_of(nxt)[0] != key) and row["after"] != 1.0:
             p.pause_ms = int(round(p.pause_ms * row["after"]))
@@ -358,7 +364,7 @@ async def prepare(body: dict, plist: list) -> None:
             elif row["style"]:
                 # talimat yolu; metinsiz referanslı (yüklenmiş) ses zaten referans-yalnız klonla okunur
                 seg.update(style=row["style"], clone="ref")
-        for k in ("rate", "pause_before_ms"):
+        for k in ("rate", "pause_before_ms", "gain_db"):
             if k in ex:
                 seg[k] = ex[k]
 

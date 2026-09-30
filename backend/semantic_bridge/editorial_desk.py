@@ -1,7 +1,8 @@
 """Editoryal masa: M3 Redaksiyon ve M5 Son Okuma. CRM'de karşılığı olmayan iki modülün kendi kayıtları.
 
 Bir **eser dosyası** (work) bir kitabın masadaki işidir; isteğe bağlı olarak bir CRM projesine bağlanır.
-- M3: metin dosyası (DOCX / TXT / PDF) yüklenir → bölümlere ayrılır → her bölümün ölçüleri hesaplanır
+- M3: metin dosyası (DOCX / TXT / PDF) yüklenir → kitabın kendi bölüm yapısına göre ayrılır (yapı bulunamazsa
+  «parça»; editorial_desk_structure.py) → her bölümün ölçüleri hesaplanır
   (Ateşman okunabilirlik, cümle uzunluğu, hece/kelime…) → model yazım ve üslup önerisi çıkarır → editör
   öneriyi kabul/ret eder (kabul metne işlenir) → bölüm onaylanır. İlk hâl saklanır; fark ondan hesaplanır.
 - M5: prova PDF'i yüklenir → otomatik ön kontrol (sayfa, ebat, yazı tipi gömme, görsel renk uzayı, ISBN
@@ -9,7 +10,9 @@ Bir **eser dosyası** (work) bir kitabın masadaki işidir; isteğe bağlı olar
   oturumlarıyla, o PDF'in SHA-256'sına imza atar. Yeni prova imzaları sıfırlar.
 
 Dosyalar diskte (`EDITORIAL_DIR`), kayıtlar `semantic_editorial_*` tablolarında. Erişim: eseri açan, üyeler,
-imzacılar ve yöneticiler. Matbaaya/ERP'ye gönderim, InDesign yaması, e-imza/KEP yoktur; üretilmez.
+imzacılar ve yöneticiler. Yükleme gövdesi belleğe alınmaz, diske akar (`receive`); dosya boyutu için sayı tavanı yoktur,
+yalnız diskte yer kalmayacaksa reddedilir (ZEKI-26). Yanlış yüklenen dosya kaldırılır ama silinmez: kayıt ve dosya iz
+olarak kalır (`removed_at`), etkin sürüm bir öncekine döner (ZEKI-45). Matbaaya/ERP'ye gönderim, InDesign yaması, e-imza/KEP yoktur; üretilmez.
 """
 from __future__ import annotations
 
@@ -21,14 +24,18 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 import threading
+import time
 import uuid
 import zipfile
 from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from typing import Any, AsyncIterator, Callable, Optional, Union
 from xml.etree import ElementTree
 
 import sqlalchemy as sa
+
+from semantic_bridge import editorial_desk_structure as structure_mod
 
 log = logging.getLogger("semantic.editorial_desk")
 _md = sa.MetaData()
@@ -62,6 +69,9 @@ FILES = sa.Table(
     sa.Column("report_json", sa.Text, nullable=False, default="{}"),
     sa.Column("uploaded_by", sa.String(120), nullable=False),
     sa.Column("uploaded_at", sa.DateTime(timezone=True), nullable=False),
+    # Kaldırılan sürüm (ZEKI-45): kayıt ve dosya iz olarak kalır, etkin sürüm sayılmaz.
+    sa.Column("removed_at", sa.DateTime(timezone=True)),
+    sa.Column("removed_by", sa.String(120)),
 )
 CHAPTERS = sa.Table(
     "semantic_editorial_chapters", _md, _col_id(),
@@ -123,7 +133,6 @@ MANUAL_CHECKS = (
     ("layout", "Yetim/dul satır ve kırık hece kontrolü yapıldı"),
 )
 
-MAX_BYTES = 120 * 1024 * 1024
 _ready: set[int] = set()
 _lock = threading.Lock()
 
@@ -136,12 +145,138 @@ class DeskError(ValueError):
         self.status = status
 
 
+class Incoming:
+    """Diske akıtılmış yükleme (ZEKI-26): gövde belleğe alınmaz; boyut ve SHA-256 akarken hesaplanır. Kayıt olunca
+    dosya yerine taşınır (`stored`); olmazsa `discard` geçici dosyayı siler."""
+
+    def __init__(self, path: str, size: int, sha256: str):
+        self.path, self.size, self.sha256 = path, size, sha256
+        self.stored = False
+        self._handles: list[Any] = []
+
+    def open(self):
+        f = open(self.path, "rb")
+        self._handles.append(f)
+        return f
+
+    def read(self) -> bytes:
+        with open(self.path, "rb") as f:
+            return f.read()
+
+    def discard(self) -> None:
+        for f in self._handles:
+            try:
+                f.close()
+            except OSError:
+                pass
+        self._handles.clear()
+        if not self.stored:
+            try:
+                os.unlink(self.path)
+            except FileNotFoundError:
+                pass
+
+
+Blob = Union[bytes, Incoming]
+
+
+def _size(data: Blob) -> int:
+    return data.size if isinstance(data, Incoming) else len(data)
+
+
+def _sha(data: Blob) -> str:
+    return data.sha256 if isinstance(data, Incoming) else hashlib.sha256(data).hexdigest()
+
+
+def _incoming_dir() -> str:
+    return os.path.join(_root(), ".incoming")
+
+
+def _reserve_bytes() -> int:
+    """Yükleme diske yazılırken sunucuda bırakılacak boş yer. Dosya boyutu sınırı değil: diskin dolup başka
+    işlerin (veritabanı, günlük) durmasını önler."""
+    try:
+        return max(0, int(float(os.environ.get("EDITORIAL_DISK_RESERVE_MB", "2048")) * 1024 * 1024))
+    except ValueError:
+        return 2048 * 1024 * 1024
+
+
+def _check_space(folder: str, coming: int) -> None:
+    free = shutil.disk_usage(folder).free
+    if free - coming < _reserve_bytes():
+        raise DeskError("Sunucuda bu dosya için yer kalmadı; sistem yöneticisine bildirin.", 507)
+
+
+def _sweep_incoming(folder: str) -> None:
+    """Yarıda kalmış (bağlantısı kopmuş, servis yeniden başlamış) yüklemelerin bir günden eski artıkları."""
+    limit = time.time() - 86400
+    try:
+        for name in os.listdir(folder):
+            p = os.path.join(folder, name)
+            if name.endswith(".part") and os.path.getmtime(p) < limit:
+                os.unlink(p)
+    except OSError:
+        pass
+
+
+async def receive(chunks: AsyncIterator[bytes], expected: int = 0) -> Incoming:
+    """İstek gövdesini parça parça diske yazar (eser klasörüyle aynı disk: kayıtta kopyalanmaz, taşınır). Boyut
+    tavanı yok; yalnız disk dolacaksa hem başta (bildirilen boy) hem akış sırasında durur."""
+    folder = _incoming_dir()
+    os.makedirs(folder, exist_ok=True)
+    _sweep_incoming(folder)
+    _check_space(folder, max(0, expected))
+    fd, path = tempfile.mkstemp(dir=folder, suffix=".part")
+    h, size, checked = hashlib.sha256(), 0, 0
+    try:
+        with os.fdopen(fd, "wb") as f:
+            async for chunk in chunks:
+                if not chunk:
+                    continue
+                f.write(chunk)
+                h.update(chunk)
+                size += len(chunk)
+                if size - checked >= 256 * 1024 * 1024:
+                    _check_space(folder, 0)
+                    checked = size
+    except BaseException:
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+        raise
+    return Incoming(path, size, h.hexdigest())
+
+
 def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+
+        def install() -> None:
+            _md.create_all(engine, checkfirst=True)
+            _add_missing_columns(engine)
+
+        schema_stamp.run(engine, _md.sorted_tables, install, extra="files.removed")
         _ready.add(id(engine))
+
+
+def _add_missing_columns(engine: sa.engine.Engine) -> None:
+    """`create_all` var olan tabloya kolon eklemez; sonradan gelen kolonlar burada eklenir."""
+    try:
+        have = {c["name"] for c in sa.inspect(engine).get_columns(FILES.name)}
+    except Exception:  # noqa: BLE001 — tablo henüz yoksa create_all zaten kurdu
+        return
+    for col in ("removed_at", "removed_by"):
+        if col in have:
+            continue
+        ddl = FILES.c[col].type.compile(dialect=engine.dialect)
+        try:
+            with engine.begin() as conn:
+                conn.execute(sa.text(f"ALTER TABLE {FILES.name} ADD COLUMN {col} {ddl}"))
+        except Exception as e:  # noqa: BLE001 — yarışta başkası eklemiş olabilir
+            log.warning("editorial files: %s kolonu eklenemedi: %s", col, e)
 
 
 def _now() -> datetime:
@@ -202,10 +337,10 @@ def atesman_band(score: Optional[float]) -> Optional[str]:
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 
-def _docx_paragraphs(data: bytes) -> list[tuple[str, bool]]:
+def _docx_paragraphs(data: "Blob") -> list[tuple[str, bool]]:
     """(metin, başlık mı) çiftleri. Başlık: Word'ün başlık stili (Heading/Başlık/Title)."""
     try:
-        with zipfile.ZipFile(io.BytesIO(data)) as z:
+        with zipfile.ZipFile(data.path if isinstance(data, Incoming) else io.BytesIO(data)) as z:
             xml = z.read("word/document.xml")
     except (zipfile.BadZipFile, KeyError) as e:
         raise DeskError("DOCX dosyası okunamadı.") from e
@@ -219,44 +354,32 @@ def _docx_paragraphs(data: bytes) -> list[tuple[str, bool]]:
     return out
 
 
-def _pdf_reader(data: bytes):
+def _pdf_reader(data: "Blob"):
     try:
         from pypdf import PdfReader
     except ImportError as e:  # pragma: no cover
-        raise DeskError("PDF okuyucu (pypdf) sunucuda kurulu değil.", 503) from e
+        raise DeskError("PDF okuyucu sunucuda kurulu değil.", 503) from e
     try:
-        return PdfReader(io.BytesIO(data))
+        # Diske akmış yüklemede dosya tanıtıcısı verilir: okuyucu sayfaları gerektikçe okur, dosyanın tamamı belleğe alınmaz.
+        return PdfReader(data.open() if isinstance(data, Incoming) else io.BytesIO(data))
     except Exception as e:  # noqa: BLE001
         raise DeskError("PDF dosyası okunamadı.") from e
 
 
-def paragraphs_of(filename: str, data: bytes) -> list[tuple[str, bool]]:
+def structure_of(filename: str, data: "Blob") -> "structure_mod.Structure":
+    """Metnin bölümleri, kitabın kendi yapısından (editorial_desk_structure.py). Parça adlandırması yapı yoksa."""
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     if ext == "docx":
-        return _docx_paragraphs(data)
+        try:
+            return structure_mod.docx_structure(data.path if isinstance(data, Incoming) else data)
+        except (zipfile.BadZipFile, ValueError, ElementTree.ParseError) as e:
+            raise DeskError("DOCX dosyası okunamadı.") from e
     if ext == "pdf":
-        text = "\n".join((page.extract_text() or "") for page in _pdf_reader(data).pages)
-    elif ext in ("txt", "md"):
-        text = data.decode("utf-8-sig", errors="replace")
-    else:
-        raise DeskError("Metin dosyası DOCX, TXT ya da PDF olmalı.")
-    return [(ln.strip(), False) for ln in text.splitlines() if ln.strip()]
-
-
-def split_chapters(paras: list[tuple[str, bool]]) -> list[tuple[str, str]]:
-    """Başlık stili olan ya da bölüm başlığı biçimindeki kısa satırdan bölünür; başlık yoksa tek bölüm."""
-    chapters: list[tuple[str, list[str]]] = []
-    for text, styled in paras:
-        heading = styled or (len(text) <= 90 and bool(_HEADING.match(text)))
-        if heading and (not chapters or chapters[-1][1]):
-            chapters.append((text[:300], []))
-        elif heading and chapters:
-            chapters[-1] = (f"{chapters[-1][0]} — {text}"[:300], [])
-        else:
-            if not chapters:
-                chapters.append(("Giriş", []))
-            chapters[-1][1].append(text)
-    return [(t, "\n".join(body)) for t, body in chapters if body]
+        return structure_mod.pdf_structure(_pdf_reader(data))
+    if ext in ("txt", "md"):
+        raw = data.read() if isinstance(data, Incoming) else data
+        return structure_mod.text_structure(raw.decode("utf-8-sig", errors="replace"), _HEADING)
+    raise DeskError("Metin dosyası DOCX, TXT ya da PDF olmalı.")
 
 
 def diff_ops(a: str, b: str) -> list[dict[str, str]]:
@@ -297,22 +420,31 @@ def _work(conn: sa.Connection, tenant: str, work_id: str, user: str, admin: bool
 
 
 def _latest(conn: sa.Connection, work_id: str, kind: str) -> Any:
-    return conn.execute(sa.select(FILES).where(FILES.c.work_id == work_id, FILES.c.kind == kind)
+    """Etkin (kaldırılmamış) son sürüm."""
+    return conn.execute(sa.select(FILES).where(FILES.c.work_id == work_id, FILES.c.kind == kind, FILES.c.removed_at.is_(None))
                         .order_by(FILES.c.version.desc())).first()
 
 
-def _store(work_id: str, kind: str, version: int, filename: str, data: bytes) -> tuple[str, str]:
-    if not data:
+def _next_version(conn: sa.Connection, work_id: str, kind: str) -> int:
+    """Sürüm numarası kaldırılanlar dahil artar: kaldırılan sürümün dosyası ve adı yerinde kalır, üstüne yazılmaz."""
+    top = conn.execute(sa.select(sa.func.max(FILES.c.version)).where(FILES.c.work_id == work_id, FILES.c.kind == kind)).scalar()
+    return int(top or 0) + 1
+
+
+def _store(work_id: str, kind: str, version: int, filename: str, data: Blob) -> str:
+    if not _size(data):
         raise DeskError("Dosya boş.")
-    if len(data) > MAX_BYTES:
-        raise DeskError("Dosya 120 MB sınırını aşıyor.", 413)
     ext = re.sub(r"[^a-z0-9]", "", filename.lower().rsplit(".", 1)[-1])[:8] if "." in filename else "bin"
     folder = os.path.join(_root(), work_id)
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, f"{kind}-v{version}.{ext}")
-    with open(path, "wb") as f:
-        f.write(data)
-    return path, hashlib.sha256(data).hexdigest()
+    if isinstance(data, Incoming):
+        os.replace(data.path, path)          # aynı disk: kopya yok
+        data.path, data.stored = path, True
+    else:
+        with open(path, "wb") as f:
+            f.write(data)
+    return path
 
 
 # ---------------------------------------------------------------------------------------------- eserler
@@ -351,17 +483,15 @@ def delete_empty_work(engine: sa.engine.Engine, tenant: str, work_id: str) -> No
 
 
 def create_from_file(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, kind: str,
-                     filename: str, data: bytes) -> dict[str, Any]:
+                     filename: str, data: Blob) -> dict[str, Any]:
     """Tek adımda yeni eser + ilk dosya: eser adı dosya adından gelir (sonra düzeltilir). Yükleme reddedilirse
     (okunamayan metin, PDF olmayan prova, boş dosya) açılan eser geri alınır; yarım kayıt kalmaz."""
     if kind not in ("manuscript", "proof"):
         raise DeskError("Dosya türü manuscript ya da proof olmalı.")
     if not str(filename or "").strip():
         raise DeskError("Dosya adı gerekli.")
-    if not data:
+    if not _size(data):
         raise DeskError("Dosya boş.")
-    if len(data) > MAX_BYTES:
-        raise DeskError("Dosya 120 MB sınırını aşıyor.", 413)
     work = create_work(engine, tenant, user, {"title": title_from_filename(filename)})
     try:
         fn = upload_manuscript if kind == "manuscript" else upload_proof
@@ -392,9 +522,18 @@ def update_work(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, w
                 _write_auto_checks(conn, work_id, proof, values["isbn"])
 
 
-def list_works(engine: sa.engine.Engine, tenant: str, user: str, admin: bool) -> list[dict[str, Any]]:
+def list_works(engine: sa.engine.Engine, tenant: str, user: str, admin: bool,
+               title: Optional[str] = None) -> list[dict[str, Any]]:
+    """Kişinin gördüğü eserler. `title` verilirse yalnız bu adı taşıyanlar (büyük/küçük harf ve baştaki/sondaki
+    boşluk farkı hariç, Python'un kuralıyla); özet (dosya, bölüm, imza okumaları) yalnız onlar için kurulur.
+    Kitap 360 bunu kullanır: bütün eserlerin özetini kurup sonra süzmek eser başına dört okuma demekti."""
+    wanted = title.strip().lower() if title is not None else None
     with engine.connect() as conn:
         rows = conn.execute(sa.select(WORKS).where(WORKS.c.tenant_id == tenant).order_by(WORKS.c.created_at.desc())).all()
+        if wanted is not None:
+            rows = [w for w in rows if wanted and (w.title or "").strip().lower() == wanted]
+            if not rows:
+                return []
         signer_of = {r.work_id for r in conn.execute(sa.select(SIGNATURES.c.work_id).where(
             sa.func.lower(SIGNATURES.c.username) == user.lower())).all()}
         out = []
@@ -425,33 +564,58 @@ def _file(f: Any) -> Optional[dict[str, Any]]:
     if f is None:
         return None
     return {"id": f.id, "version": f.version, "filename": f.filename, "bytes": int(f.bytes), "sha256": f.sha256,
-            "uploadedBy": f.uploaded_by, "uploadedAt": _iso(f.uploaded_at), "report": json.loads(f.report_json or "{}")}
+            "uploadedBy": f.uploaded_by, "uploadedAt": _iso(f.uploaded_at), "report": json.loads(f.report_json or "{}"),
+            "removedAt": _iso(f.removed_at), "removedBy": f.removed_by}
 
 
 # ---------------------------------------------------------------------------------------------- M3
 
 def upload_manuscript(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, work_id: str,
-                      filename: str, data: bytes) -> dict[str, Any]:
-    chapters = split_chapters(paragraphs_of(filename, data))
+                      filename: str, data: Blob) -> dict[str, Any]:
+    if not _size(data):
+        raise DeskError("Dosya boş.")
+    found = structure_of(filename, data)
+    chapters = found.chapters
     if not chapters:
         raise DeskError("Dosyada okunabilir metin bulunamadı.")
+    sha = _sha(data)
     with engine.begin() as conn:
         _work(conn, tenant, work_id, user, admin)
         prev = _latest(conn, work_id, "manuscript")
-        version = (prev.version if prev is not None else 0) + 1
-        path, sha = _store(work_id, "manuscript", version, filename, data)
         if prev is not None and prev.sha256 == sha:
             raise DeskError("Bu dosya son sürümle aynı; yeni sürüm açılmadı.", 409)
+        version = _next_version(conn, work_id, "manuscript")
+        path = _store(work_id, "manuscript", version, filename, data)
         total = metrics("\n".join(body for _, body in chapters))
         file_id = _new()
         conn.execute(sa.insert(FILES).values(
-            id=file_id, work_id=work_id, kind="manuscript", version=version, filename=filename[:300], bytes=len(data),
+            id=file_id, work_id=work_id, kind="manuscript", version=version, filename=filename[:300], bytes=_size(data),
             sha256=sha, path=path, uploaded_by=user, uploaded_at=_now(),
-            report_json=json.dumps({"chapters": len(chapters), "words": total["words"], "atesman": total["atesman"]})))
+            report_json=json.dumps({"chapters": len(chapters), "words": total["words"], "atesman": total["atesman"],
+                                    **found.report()})))
         for i, (title, body) in enumerate(chapters, 1):
             conn.execute(sa.insert(CHAPTERS).values(id=_new(), work_id=work_id, file_id=file_id, no=i, title=title,
                                                     original=body, current=body, status="bekliyor", review_state="yok"))
-    return {"fileId": file_id, "version": version, "chapters": len(chapters)}
+    return {"fileId": file_id, "version": version, "chapters": len(chapters), "unit": found.unit, "structure": found.source}
+
+
+def remove_file(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, file_id: str) -> dict[str, Any]:
+    """Yüklenen sürümü kaldırır (ZEKI-45): kayıt, dosya, bölümler ve kararlar iz olarak kalır; etkin sürüm bir
+    öncekine döner (yoksa eser «metin yüklenmedi» olur). Prova kaldırılırsa o provaya atılan imzalar düşer."""
+    with engine.begin() as conn:
+        f = conn.execute(sa.select(FILES).where(FILES.c.id == file_id).with_for_update()).first()
+        if f is None:
+            raise DeskError("Dosya bulunamadı.", 404)
+        _work(conn, tenant, f.work_id, user, admin)
+        if f.removed_at is not None:
+            raise DeskError("Bu sürüm zaten kaldırılmış.", 409)
+        conn.execute(sa.update(FILES).where(FILES.c.id == file_id).values(removed_at=_now(), removed_by=user))
+        if f.kind == "proof":
+            conn.execute(sa.update(SIGNATURES).where(SIGNATURES.c.file_id == file_id)
+                         .values(file_id=None, sha256=None, signed_at=None))
+        now = _latest(conn, f.work_id, f.kind)
+        return {"workId": f.work_id, "kind": f.kind, "version": f.version, "filename": f.filename,
+                "activeVersion": now.version if now is not None else None}
 
 
 def chapters(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, work_id: str) -> dict[str, Any]:
@@ -472,7 +636,8 @@ def chapters(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, work
                           "rejected": counts.get((c.id, "red"), 0), "changed": c.current != c.original})
         files = conn.execute(sa.select(FILES).where(FILES.c.work_id == work_id, FILES.c.kind == "manuscript")
                              .order_by(FILES.c.version.desc())).all()
-        return {"work": _work_summary(conn, w), "chapters": items, "versions": [_file(f) for f in files]}
+        return {"work": _work_summary(conn, w), "chapters": items, "versions": [_file(f) for f in files],
+                "activeFileId": ms.id if ms is not None else None}
 
 
 def chapter(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, chapter_id: str) -> dict[str, Any]:
@@ -640,7 +805,7 @@ def isbn13_ok(isbn: str) -> bool:
     return len(d) == 13 and (10 - sum(int(ch) * (1 if i % 2 == 0 else 3) for i, ch in enumerate(d[:12])) % 10) % 10 == int(d[12])
 
 
-def preflight(data: bytes) -> dict[str, Any]:
+def preflight(data: Blob) -> dict[str, Any]:
     """PDF'ten okunabilen baskı öncesi gerçekler. Ölçülemeyen şey (yerleşik DPI, taşma, yetim satır) raporlanmaz."""
     reader = _pdf_reader(data)
     sizes: dict[str, int] = {}
@@ -719,17 +884,20 @@ def _write_auto_checks(conn: sa.Connection, work_id: str, proof: Any, isbn: Opti
                                               passed=passed, evidence=evidence))
 
 
-def upload_proof(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, work_id: str, filename: str, data: bytes) -> dict[str, Any]:
+def upload_proof(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, work_id: str, filename: str, data: Blob) -> dict[str, Any]:
     if not filename.lower().endswith(".pdf"):
         raise DeskError("Prova dosyası PDF olmalı.")
+    if not _size(data):
+        raise DeskError("Dosya boş.")
     report = preflight(data)
+    sha = _sha(data)
     with engine.begin() as conn:
         w = _work(conn, tenant, work_id, user, admin)
         prev = _latest(conn, work_id, "proof")
-        version = (prev.version if prev is not None else 0) + 1
-        path, sha = _store(work_id, "proof", version, filename, data)
         if prev is not None and prev.sha256 == sha:
             raise DeskError("Bu dosya son provayla aynı; yeni sürüm açılmadı.", 409)
+        version = _next_version(conn, work_id, "proof")
+        path = _store(work_id, "proof", version, filename, data)
         if prev is not None:
             old = json.loads(prev.report_json or "{}")
             a, b = old.get("pageHashes") or [], report["pageHashes"]
@@ -737,7 +905,7 @@ def upload_proof(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, 
                                 "changedPages": [i + 1 for i in range(min(len(a), len(b))) if a[i] != b[i]]}
         file_id = _new()
         conn.execute(sa.insert(FILES).values(id=file_id, work_id=work_id, kind="proof", version=version, filename=filename[:300],
-                                             bytes=len(data), sha256=sha, path=path, report_json=json.dumps(report),
+                                             bytes=_size(data), sha256=sha, path=path, report_json=json.dumps(report),
                                              uploaded_by=user, uploaded_at=_now()))
         proof = conn.execute(sa.select(FILES).where(FILES.c.id == file_id)).first()
         _write_auto_checks(conn, work_id, proof, w.isbn)
@@ -753,12 +921,14 @@ def proof_state(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, w
         w = _work(conn, tenant, work_id, user, admin)
         files = conn.execute(sa.select(FILES).where(FILES.c.work_id == work_id, FILES.c.kind == "proof")
                              .order_by(FILES.c.version.desc())).all()
-        proof = files[0] if files else None
+        proof = next((f for f in files if f.removed_at is None), None)
         checks = conn.execute(sa.select(CHECKS).where(CHECKS.c.file_id == (proof.id if proof is not None else ""))
                               .order_by(CHECKS.c.auto.desc(), CHECKS.c.label)).all()
         sigs = conn.execute(sa.select(SIGNATURES).where(SIGNATURES.c.work_id == work_id).order_by(SIGNATURES.c.role)).all()
         versions = []
         for f in files:
+            if f.removed_at is not None:
+                continue        # son okuma ekranı versions[0]'ı etkin prova sayar; kaldırılan sürüm listelenmez
             item = _file(f)
             item["report"].pop("pageHashes", None)
             versions.append(item)

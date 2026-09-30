@@ -18,6 +18,7 @@ import re
 import secrets
 import sqlite3
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -57,8 +58,8 @@ CHAT_DEFAULT_LANGUAGES = ('', 'en')
 DESTEK_URL = os.environ.get('DESTEK_URL', 'https://portal.nanobase.ai:8446').rstrip('/')
 DESTEK_SSO_FILE = os.environ.get('DESTEK_SSO_FILE', '/etc/nanobase/destek-sso.key')
 DESTEK_TOKEN_TTL = 60
-# sAMAccountName characters only: nothing here can widen the LDAP filter.
-ACCOUNT = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+# AD account names may contain Turkish letters and ampersands; LDAP values are escaped below.
+ACCOUNT = re.compile(r"^[\w .&'-]{1,64}$")
 # Yönetim uçlarının jetonu (köprüyle aynı). Boşsa /admin/* kapalıdır.
 ADMIN_TOKEN = os.environ.get('LOGIN_ADMIN_TOKEN', '')
 # Giriş servisindeki olay kopyasının ömrü; uzun süreli kayıt köprünün tablosunda, kendi saklama süresiyle durur.
@@ -180,6 +181,7 @@ def ad_verify(username, password):
     try:
         from ldap3 import NONE, NTLM, SUBTREE, Connection, Server
         from ldap3.core.exceptions import LDAPException
+        from ldap3.utils.conv import escape_filter_chars
         ensure_md4()
     except ImportError as exc:
         raise DirectoryUnavailable(f'ldap3 missing: {exc}')
@@ -191,7 +193,7 @@ def ad_verify(username, password):
         if not lookup.bind():
             raise DirectoryUnavailable('service account bind refused')
         try:
-            lookup.search(config['base_dn'], ACTIVE_PERSON.format(account), SUBTREE,
+            lookup.search(config['base_dn'], ACTIVE_PERSON.format(escape_filter_chars(account)), SUBTREE,
                           attributes=['sAMAccountName', 'displayName'], size_limit=2)
             if len(lookup.entries) != 1:
                 return UNKNOWN_ACCOUNT
@@ -243,6 +245,7 @@ def chat_call(config, method, path, query=None, body=None):
         raise ChatUnavailable(type(exc).__name__)
 
 
+<<<<<<< HEAD
 def portal_can_manage_chat(session_token):
     """Kişinin portal yetkisinde CHAT_ADMIN_FEATURE var mı: True / False; okunamadıysa None (o zaman rol değişmez).
 
@@ -316,6 +319,18 @@ def chat_sync_language(config, user, account):
 
 
 def chat_login_token(account, display, session_token=None):
+=======
+def chat_account_name(account):
+    """Keep reserved chat names out of AD provisioning without granting extra privileges."""
+    if account.lower() in {'admin', 'administrator', 'system', 'user', 'all', 'here'}:
+        return 'ad-' + account.lower()
+    if not re.fullmatch(r'[0-9a-zA-Z-_.]+', account):
+        return 'ad-' + hashlib.sha256(account.lower().encode('utf-8')).hexdigest()[:20]
+    return account
+
+
+def chat_login_token(account, display):
+>>>>>>> 2311edca724978df711242afca7bd41240960db9
     """Makes sure the portal user exists in the chat under the same account name, then returns a login token.
 
     The chat never sees a password: accounts are created with a random one that nobody knows, and the
@@ -326,6 +341,7 @@ def chat_login_token(account, display, session_token=None):
     config = chat_config()
     if not config:
         raise ChatUnavailable('no chat configuration')
+    account = chat_account_name(account)
     found = chat_call(config, 'GET', 'users.info', {'username': account})
     user = found.get('user') if found.get('success') else None
     if not user:
@@ -342,7 +358,8 @@ def chat_login_token(account, display, session_token=None):
         user = created.get('user') if created.get('success') else None
         if not user:
             raise ChatUnavailable(f"user create refused: {created.get('errorType') or created.get('error')}")
-    elif not user.get('active', True):
+    elif not user.get('active', True) or user.get('type') == 'bot' or user.get('_id') in CHAT_BOT_IDS:
+        # Sohbetin kendi botu (zeki.bot) bir AD hesabının adını taşısa bile kimse onun yerine girmez.
         return None
     elif user.get('name') != display:
         chat_call(config, 'POST', 'users.update', body={'userId': user['_id'], 'data': {'name': display}})
@@ -360,6 +377,43 @@ def chat_login_token(account, display, session_token=None):
     if not token:
         raise ChatUnavailable(f"token refused: {issued.get('errorType') or issued.get('error')}")
     return token
+
+
+# Kampüs'teki sohbet kartı her açık ekranda yarım dakikada bir sorar; sohbete giden istek bu süre içinde bir tanedir.
+PRESENCE_TTL = 15
+# Sohbetin kendi hesapları (yerleşik bot, kurulum yöneticisi) kişi sayılmaz. Botun kimliği ve kullanıcı adı 'zeki.bot';
+# kimlik göçü (apps/zeki-chat/deploy/zeki/migrate-owned-identity.cjs) koşmamış veritabanında kimlik hâlâ eski adıyla durur.
+CHAT_BOT_IDS = {'zeki.bot', 'rocket.cat'}
+CHAT_SYSTEM_ACCOUNTS = {'zeki.bot', 'rocket.cat'}
+PRESENCE_ORDER = {'online': 0, 'busy': 1, 'away': 2}
+_presence = {'at': 0.0, 'value': None}
+_presence_lock = threading.Lock()
+
+
+def chat_presence():
+    """Sohbette şu an çevrimdışı olmayan kişiler: {online, people:[{username, name, status}]}.
+
+    Yapılandırma yoksa None (bu kurulumda sohbet yok). Sohbet cevap vermezse ChatUnavailable."""
+    config = chat_config()
+    if not config:
+        return None
+    with _presence_lock:
+        if _presence['value'] is not None and time.time() - _presence['at'] < PRESENCE_TTL:
+            return _presence['value']
+        found = chat_call(config, 'GET', 'users.presence')
+        if not found.get('success'):
+            raise ChatUnavailable(f"presence refused: {found.get('errorType') or found.get('error')}")
+        skip = CHAT_SYSTEM_ACCOUNTS | {str(config.get('admin_username') or '').lower()}
+        people = [
+            {'username': u['username'], 'name': u.get('name') or u['username'], 'status': u.get('status')}
+            for u in found.get('users') or []
+            if u.get('username') and u.get('_id') != config.get('user_id') and u.get('_id') not in CHAT_BOT_IDS and u['username'].lower() not in skip
+            and u.get('status') in PRESENCE_ORDER
+        ]
+        people.sort(key=lambda p: (PRESENCE_ORDER[p['status']], p['name'].casefold()))
+        value = {'online': len(people), 'people': people}
+        _presence.update(at=time.time(), value=value)
+        return value
 
 
 def b64url(raw):
@@ -517,6 +571,18 @@ class Handler(BaseHTTPRequestHandler):
             if not token:
                 return self.reply(403)
             return self.reply(200, {'loginToken': token})
+        if self.path == '/chat-presence':
+            # Kampüs sohbet kartı: kaç kişi çevrimiçi. Yalnız portal oturumu olan görür.
+            if not session(self.headers.get('Cookie', '')):
+                return self.reply(401)
+            try:
+                found = chat_presence()
+            except ChatUnavailable as exc:
+                print(f'timas-login: chat presence unavailable ({exc})', file=sys.stderr, flush=True)
+                return self.reply(503, {'error': 'Sohbet şu an cevap vermiyor.'})
+            if found is None:
+                return self.reply(404, {'configured': False})
+            return self.reply(200, found)
         self.reply(404)
 
     def do_POST(self):

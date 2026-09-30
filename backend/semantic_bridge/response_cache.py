@@ -18,10 +18,23 @@ Kural:
   kaydedilen şey eski cevapla görünmez.
 - Hiç saklanmayanlar: sohbet/soru, SQL, sonuç dosyası, model, yetki, yönetim, kişisel tercih/profil, kutlama, oda,
   zamanlayıcı uçları, durum/ilerleme yoklamaları, dosya/görsel/PDF/dışa aktarma.
-Kayıtlar bellekte ve diskte (`RESPONSE_CACHE_DIR`, klasör 0700, köprü kullanıcısının): köprü yeniden başlayınca
+Kayıtlar bellekte ve diskte (`RESPONSE_CACHE_DIR`, klasör 0700, köprü kullanıcısının; verilmezse canlı klasör yalnız canlı
+porttan açılan köprünün — yan köprüler yalnız bellekte, `disk_dir`): köprü yeniden başlayınca
 (test sunucusunda günde onlarca kez) hazır cevaplar kaybolmaz. Diske yalnız cevap gövdesi ve başlıkları yazılır; isteğin
 çerezi (arkada yeniden üretmek için gereken) yalnız bellekte durur — yeniden başlatmadan sonra bayat kayıt ilk açılışta,
 o kişinin kendi isteğiyle arkada tazelenir.
+
+Isıtma (hız 2. tur, 2026-09-29): bir ekranı hayatında ilk kez açan kişinin hazır cevabı yoktu. Her gün
+`WARM_TIMES` (varsayılan 07:00) sonrasında, son 3 günde gelmiş her kişi için son 3 günde herhangi birinin açtığı (en az
+`WARM_MIN_PEOPLE` kişinin; varsayılan 1) yavaş uçlardan kişinin henüz hazır cevabı olmayanlar, o kişinin iç kimliğiyle
+arkada üretilir. Kişiler arası paylaşım yoktur: her cevap kişinin kendi oturumuyla, kendi yetkisi ve veri kapsamıyla
+üretilir ve yalnız onun anahtarına yazılır. (Paylaşım 2026-09-29'da incelendi, yapılmadı: ekran uçlarının hemen hepsi
+kişiyi ilk satırda oturumdan okuyor ve cevabı kişiye göre değiştirebiliyor — «benim bekleyenlerim», temsilci/bölge
+süzgeci, işlem düğmeleri —; bu satır süzgeçleri CRM sahipliğinden uç içinde kuruluyor, `access.py`'de beyan edilmiyor;
+aynı yetki kümesi aynı satırları garanti etmez, gövdede ad aramak kişiye özel sayıyı yakalamaz.) Yük: tek sıra, en çok `WARM_CONCURRENCY` (varsayılan 1) eşzamanlı istek;
+sayfa kapısı önceden sorulur (`may_open`; kişinin göremediği sayfa denenmez, güvenlik kaydına 403 düşmez); hızlı çıkan ya
+da açılamayan uç 3 gün yeniden denenmez; kişinin kendisi açmadığı ısıtılmış cevap 12:00 tazelemesine girmez ve «kaç kişi
+açtı» sayısına katılmaz (`Entry.real`). Köprü ısıtma saatinden 3 saatten geç kalkarsa o günün ısıtması yapılmaz.
 """
 from __future__ import annotations
 
@@ -32,6 +45,7 @@ import logging
 import os
 import re
 import secrets
+import sys
 import threading
 import time
 from collections import OrderedDict
@@ -51,12 +65,24 @@ REFRESH_TIMES: tuple[tuple[int, int], ...] = tuple(
                                   os.environ.get("RESPONSE_CACHE_REFRESH_TIMES", "07:00,12:00").split(",") if t.strip()))
 
 
-def last_refresh(now: Optional[float] = None) -> float:
-    """Şu andan önceki en son tazeleme saatinin zamanı (epoch)."""
+def _times(env: str, default: str) -> tuple[tuple[int, int], ...]:
+    return tuple((int(h), int(m)) for h, m in (t.strip().split(":") for t in os.environ.get(env, default).split(",")
+                                                if t.strip()))
+
+
+#: Isıtma saatleri (İstanbul): RESPONSE_CACHE_WARM_TIMES="07:00"; boş bırakılırsa ısıtma kapalı.
+WARM_TIMES = _times("RESPONSE_CACHE_WARM_TIMES", "07:00")
+WARM_CONCURRENCY = max(1, int(os.environ.get("RESPONSE_CACHE_WARM_CONCURRENCY", "1") or 1))
+WARM_MIN_PEOPLE = max(1, int(os.environ.get("RESPONSE_CACHE_WARM_MIN_PEOPLE", "1") or 1))
+WARM_LATE = 3 * 3600
+
+
+def last_refresh(now: Optional[float] = None, times: Optional[tuple[tuple[int, int], ...]] = None) -> float:
+    """Şu andan önceki en son tazeleme saatinin zamanı (epoch). `times` verilirse o saatler (ısıtma)."""
     now = time.time() if now is None else now
     today = datetime.fromtimestamp(now, TZ).date()
     slots = [datetime(d.year, d.month, d.day, h, m, tzinfo=TZ).timestamp()
-             for d in (today - timedelta(days=1), today) for h, m in REFRESH_TIMES]
+             for d in (today - timedelta(days=1), today) for h, m in (REFRESH_TIMES if times is None else times)]
     return max(t for t in slots if t <= now)
 
 
@@ -78,13 +104,23 @@ NEVER_PREFIXES = (
     # Sözleşme karşılaştırmanın kendi disk görüntüsü ve arka plan yenilemesi var (CRM'i yeniden oku, kurlar); ikinci
     # önbellek yenilenen görüntüyü 07:00/12:00'ye kadar gizliyordu (2026-09-29 kabulünde bulundu).
     "/api/v1/editorial/contracts/compare",
+    # İK personel portalı: kişisel veri diske yazılmasın; kart açılışı her seferinde erişim kaydına düşsün.
+    "/api/v1/hr/portal/",
+    "/api/v1/hr/leave/",
+    # Başvuru formlarının okuma durumu: ilk açılış tablo kurulumuyla yavaş sürüp içe aktarma öncesi cevap saklanmıştı
+    # (2026-09-29 tarayıcı testinde bulundu); durum ucu hep kaynaktan okunur.
+    "/api/v1/editorial/applications/forms",
 )
 #: Yolun herhangi bir yerinde geçen parça → hiç saklanmaz (yoklama, ilerleme, dosya).
+#: Kitaba sor soru/cevap uçları (`/editorial/ask`, `/editorial/ask/<soru>`) sohbettir: ilk yoklama yavaş gelince
+#: «bekliyor» cevabı saklanıyor, ekran cevabı tazeleme saatine kadar göremiyordu (2026-09-29 ZEKI-43 kabulünde bulundu).
+#: Kitap listesi, katalog, sayfa ve kapak uçları bu kurala girmez.
 NEVER_PARTS = re.compile(
-    r"(run-due|/status$|/progress|/jobs|/stream|export|/file$|/image$|/pdf|/photo|/download|/cover|/covers/|/snapshot$|"
+    r"(/editorial/ask(/[0-9a-f]{32})?$|run-due|/status$|/progress|/jobs|/stream|export|/file$|/image$|/pdf|/photo|/download|/cover|/covers/|/snapshot$|"
     r"\.(xlsx|csv|pdf|docx|png|jpe?g|webp|svg|zip|epub|mp3|wav)$)", re.I)
 
 REVALIDATE_HEADER = "x-swr-revalidate"
+WARM_HEADER = "x-swr-warm"          # ısıtma isteği (gizli değerle): üretilen kayıt «kişi açmadı» diye işaretlenir
 
 
 def _code_version() -> str:
@@ -105,8 +141,49 @@ def _code_version() -> str:
 CODE_VERSION = _code_version()
 
 
+#: Canlı köprünün hazır cevap klasörü ve portu (nginx'in baktığı; test sunucusunda systemd, VM'de Docker, ikisi de 8795).
+LIVE_DIR = "/data/nanobaseai/bi/var/response-cache"
+LIVE_PORT = "8795"
+
+
+def _argv_port(argv: Optional[list[str]] = None) -> Optional[str]:
+    args = list(sys.argv if argv is None else argv)
+    for i, a in enumerate(args):
+        if a == "--port" and i + 1 < len(args):
+            return args[i + 1]
+        if a.startswith("--port="):
+            return a.split("=", 1)[1]
+    return None
+
+
+def disk_dir(env: Optional[dict[str, str]] = None, argv: Optional[list[str]] = None) -> Optional[str]:
+    """Hazır cevapların diske yazılacağı klasör; None → yalnız bellek.
+
+    Açık `RESPONSE_CACHE_DIR` her zaman geçerlidir. Verilmemişse canlı klasör YALNIZ canlı porttan
+    (`RESPONSE_CACHE_LIVE_PORT`, varsayılan 8795) açılan köprünündür: aynı sunucuda kabul/ölçüm için açılan yan köprüler
+    (8788, 8797, 8798, 8799, 8801 …; köprü ortam dosyasının kopyasıyla) canlı klasörü açılışta belleğe alıp tazeleyerek geri
+    yazıyordu — silinen test kaydı (timasai) böyle geri geldi, başka kod sürümünün cevabı canlıya karıştı (2026-09-29)."""
+    env = os.environ if env is None else env
+    explicit = (env.get("RESPONSE_CACHE_DIR") or "").strip()
+    if explicit:
+        return explicit
+    if env.get("PYTEST_CURRENT_TEST"):
+        return None          # test süreci canlı klasöre yazmaz (people.json'a ayse/mehmet/zekiai düşüyordu, 2026-09-29)
+    port = _argv_port(argv)
+    if port is not None and port != (env.get("RESPONSE_CACHE_LIVE_PORT") or LIVE_PORT):
+        log.info("response cache: yan köprü (port %s) — hazır cevaplar yalnız bellekte, canlı klasöre yazılmaz", port)
+        return None
+    return LIVE_DIR
+
+
 def cacheable_path(path: str) -> bool:
     return path.startswith("/api/v1/") and not path.startswith(NEVER_PREFIXES) and not NEVER_PARTS.search(path)
+
+
+#: Aynı veriyi farklı yoldan yazan editoryal uçlar: yazma, okuyan modülün hazır cevaplarını düşürmeli. Redaksiyonda
+#: dosya kaldırma (`/editorial/files/<id>/remove`) ve dosyadan yeni eser (`/editorial/works-from-file`) eser uçlarını
+#: (`/editorial/works…`) değiştirir; ayrı modül sayılınca kaldırılan dosya ekranda kalıyordu (ZEKI-45 kabulü, 2026-09-29).
+EDITORIAL_SAME_DATA = {"files": "works", "works-from-file": "works"}
 
 
 def module_of(path: str) -> str:
@@ -115,7 +192,7 @@ def module_of(path: str) -> str:
     if len(parts) < 3:
         return path
     if parts[2] == "editorial" and len(parts) >= 4:
-        return "/" + "/".join(parts[:4])
+        return "/" + "/".join(parts[:3] + [EDITORIAL_SAME_DATA.get(parts[3], parts[3])])
     return "/" + "/".join(parts[:3])
 
 
@@ -134,6 +211,13 @@ class Entry:
     asked: float
     replay: dict[str, str] = field(default_factory=dict)   # yeniden üretmek için isteğin başlıkları (yalnız bellekte)
     busy: bool = False
+    real: bool = True      # kişi bu cevabı kendisi istedi (False: yalnız ısıtıldı, henüz açmadı)
+    size: int = -1                  # gövde boyu (bayt); diskten gelen kayıtta gövde okunmadan bilinir
+    path: Optional[str] = None      # gövdesi henüz okunmamış kaydın dosyası (açılışta gövdeler okunmaz)
+
+    def __post_init__(self) -> None:
+        if self.size < 0:
+            self.size = len(self.body)
 
 
 class ResponseCache:
@@ -143,11 +227,20 @@ class ResponseCache:
         self.secret = secrets.token_hex(16)
         self.enabled = True
         self.stats = {"hit": 0, "stale": 0, "miss": 0, "stored": 0, "revalidated": 0, "dropped": 0, "invalidated": 0,
-                      "loaded": 0}
+                      "loaded": 0, "warmed": 0, "warmSkipped": 0}
         self.dir: Optional[Path] = None
         #: Kişi → oturumun kimlik alanları (hesap adı, görünen ad). Arka plan tazelemesi çerez yerine bunu iç kimlikle
         #: kullanır: köprü yeniden başlasa da 07:00/12:00 tazelemesi herkes için çalışır. Çerez/parola yazılmaz.
         self.people: dict[str, dict[str, str]] = {}
+        #: Kişi → gerçek oturumla son geldiği an (ısıtma yalnız son 3 günde gelenler için).
+        self.seen: dict[str, float] = {}
+        self._seen_saved: dict[str, float] = {}
+        #: Isıtması denenip saklanmayan (hızlı çıkan, sayfası kapalı, hata veren) anahtar → an; 3 gün yeniden denenmez.
+        self._warm_skips: dict[tuple[str, str, str], float] = {}
+        #: Sayfa kapısının kararı (app.py bağlar): (kişi, yol) → açabilir mi. Yoksa ısıtma yapılmaz.
+        self.may_open: Optional[Any] = None
+        self.warm_round: Optional[Any] = None     # install() bağlar: async (plan) → ısıtma turu
+        self.warm_done = 0.0
         if directory:
             try:
                 self.dir = Path(directory)
@@ -157,6 +250,7 @@ class ResponseCache:
             except OSError as e:          # disk yoksa yalnız bellekte çalışır
                 log.warning("response cache: disk kullanılamıyor (%s): %s", directory, e)
                 self.dir = None
+        self._load_warm()
 
     # ---- iç kimlik (arka plan tazelemesi; yalnız bu süreçte bilinen gizli değerle)
     INTERNAL_PREFIX = "timas_session=swr."
@@ -170,26 +264,34 @@ class ResponseCache:
             data = json.loads(p.read_text()) if p and p.exists() else {}
             self.people = {str(k): {"username": str(v.get("username") or k), "displayName": str(v.get("displayName") or "")}
                            for k, v in data.items() if isinstance(v, dict)}
-        except (OSError, ValueError):
-            self.people = {}
+            self.seen = {str(k): float(v.get("seen") or 0) for k, v in data.items() if isinstance(v, dict)}
+            self._seen_saved = dict(self.seen)
+        except (OSError, ValueError, TypeError):
+            self.people, self.seen, self._seen_saved = {}, {}, {}
 
-    def remember(self, session: Optional[dict[str, Any]]) -> None:
-        """Gerçek oturumla gelen kişinin kimlik alanları (değiştiyse diske yazılır)."""
+    def remember(self, session: Optional[dict[str, Any]], now: Optional[float] = None) -> None:
+        """Gerçek oturumla gelen kişinin kimlik alanları ve son geliş anı (kimlik değiştiyse ya da son yazılan geliş
+        bir saatten eskiyse diske yazılır)."""
         user = str((session or {}).get("username") or "").strip()
         if not user:
             return
+        now = time.time() if now is None else now
+        k = user.lower()
         row = {"username": user, "displayName": str(session.get("displayName") or "").strip()}
-        if self.people.get(user.lower()) == row:
+        self.seen[k] = now
+        if self.people.get(k) == row and now - self._seen_saved.get(k, 0.0) < 3600:
             return
-        self.people[user.lower()] = row
+        self.people[k] = row
         p = self._people_path()
         if p is None:
             return
         try:
+            data = {u: {**r, "seen": self.seen.get(u, 0.0)} for u, r in self.people.items()}
             tmp = p.with_name(p.name + f".{secrets.token_hex(4)}.tmp")
-            tmp.write_text(json.dumps(self.people, ensure_ascii=False))
+            tmp.write_text(json.dumps(data, ensure_ascii=False))
             os.chmod(tmp, 0o600)
             os.replace(tmp, p)
+            self._seen_saved = {u: self.seen.get(u, 0.0) for u in self.people}
         except OSError as err:
             log.info("response cache: kişi kaydı yazılamadı: %s", err)
 
@@ -218,7 +320,7 @@ class ResponseCache:
             return
         base = self.dir / self._name(key)
         meta = {"key": list(key), "headers": e.headers, "status": e.status, "at": e.at, "seconds": e.seconds, "asked": e.asked,
-                "code": CODE_VERSION}
+                "code": CODE_VERSION, "real": e.real}
         try:
             for suffix, data in ((".body", e.body), (".meta.json", json.dumps(meta, ensure_ascii=False).encode())):
                 tmp = base.with_name(base.name + suffix + f".{secrets.token_hex(4)}.tmp")
@@ -246,17 +348,21 @@ class ResponseCache:
             try:
                 meta = json.loads(meta_path.read_text())
                 key = tuple(meta["key"])
-                if now - float(meta.get("asked", 0)) > KEEP_SECONDS:
+                # Saklanmayacak yol (sonradan dışarıda bırakılmış): eski kayıt yüklenip arkada sürekli tazelenmez.
+                if now - float(meta.get("asked", 0)) > KEEP_SECONDS or not cacheable_path(str(key[1])):
                     self._unlink(key)
                     self.stats["dropped"] += 1
                     continue
                 other_code = meta.get("code") != CODE_VERSION     # başka kod sürümü: son tazeleme saatinden eski sayılır
-                body = meta_path.with_name(meta_path.name[: -len(".meta.json")] + ".body").read_bytes()
-                rows.append((float(meta.get("asked", 0)), key, Entry(body, [tuple(h) for h in meta["headers"]], int(meta["status"]),
+                # Hız (2026-09-29): açılışta yalnız künye okunur; gövde (toplam yüzlerce MB olabilir) ilk istendiğinde.
+                body_path = meta_path.with_name(meta_path.name[: -len(".meta.json")] + ".body")
+                size = body_path.stat().st_size
+                rows.append((float(meta.get("asked", 0)), key, Entry(b"", [tuple(h) for h in meta["headers"]], int(meta["status"]),
                                                                      min(float(meta["at"]), last_refresh(now) - 1) if other_code
                                                                      else float(meta["at"]),
                                                                      float(meta.get("seconds", 0)),
-                                                                     float(meta.get("asked", 0)))))
+                                                                     float(meta.get("asked", 0)),
+                                                                     real=bool(meta.get("real", True)), size=size, path=str(body_path))))
             except (OSError, ValueError, KeyError):
                 continue
         for _, key, e in sorted(rows, key=lambda r: r[0]):
@@ -265,26 +371,44 @@ class ResponseCache:
 
     # ---- kayıtlar
     def get(self, key: tuple[str, str, str]) -> Optional[Entry]:
+        """Kişinin kendi isteği: kayıt «istendi» sayılır (son istenme anı, `real`)."""
         with self._lock:
             e = self._items.get(key)
+            if e is not None and e.path is not None:
+                try:
+                    e.body = Path(e.path).read_bytes()
+                    e.size, e.path = len(e.body), None
+                except OSError:                    # dosya gitmiş: kayıt da gider
+                    del self._items[key]
+                    return None
             if e is not None:
                 e.asked = time.time()
+                e.real = True
                 self._items.move_to_end(key)
             return e
 
+    def peek(self, key: tuple[str, str, str]) -> Optional[Entry]:
+        """Kaydı istenme anına dokunmadan okur (tazeleme ve ısıtma: kimse açmadıysa kayıt 3 günde düşsün)."""
+        with self._lock:
+            return self._items.get(key)
+
     def put(self, key: tuple[str, str, str], body: bytes, headers: list[tuple[str, str]], status: int, seconds: float,
-            replay: dict[str, str]) -> None:
+            replay: dict[str, str], origin: str = "real") -> None:
+        """`origin`: real (kişinin isteği), revalidate (arka plan tazelemesi), warm (ısıtma — kişi henüz açmadı)."""
         now = time.time()
         gone_keys = []
         with self._lock:
             old = self._items.get(key)
-            entry = Entry(body, headers, status, now, seconds, old.asked if old else now, replay)
+            # Arka plan tazelemesi istenme anını uzatmaz (kimse açmıyorsa kayıt 3 günde düşer).
+            asked = old.asked if (origin == "revalidate" and old is not None) else now
+            real = origin == "real" or (old.real if old is not None else origin != "warm")
+            entry = Entry(body, headers, status, now, seconds, asked, replay, real=real)
             self._items[key] = entry
             self._items.move_to_end(key)
-            total = sum(len(e.body) for e in self._items.values())
+            total = sum(e.size for e in self._items.values())
             while total > MAX_TOTAL and len(self._items) > 1:      # en uzun süredir istenmeyen düşer
                 k, gone = self._items.popitem(last=False)
-                total -= len(gone.body)
+                total -= gone.size
                 gone_keys.append(k)
             self.stats["stored"] += 1
         for k in gone_keys:
@@ -318,12 +442,83 @@ class ResponseCache:
                     del self._items[k]
                     forgotten.append(k)
                     continue
-                # Çerezi olmayan (yeniden başlatmadan diskten gelen) kayıt kişinin bir sonraki açılışında tazelenir.
                 # Çerezi bellekte olmayan (yeniden başlatmadan diskten gelen) kayıt iç kimlikle tazelenir.
-                if not e.busy and (e.replay or k[0] in self.people) and is_stale(e.at, now):
+                # Yalnız ısıtılmış, kişinin henüz açmadığı kayıt tazelenmez (ertesi ısıtma yeniler; açarsa arkada tazelenir).
+                if not e.busy and e.real and (e.replay or k[0] in self.people) and is_stale(e.at, now):
                     out.append((k, e))
         for k in forgotten:
             self._unlink(k)
+        return out
+
+    # ---- ısıtma (ilk kez açan kişi beklemesin)
+    def _warm_path(self) -> Optional[Path]:
+        return self.dir / "warm.json" if self.dir is not None else None
+
+    def _load_warm(self) -> None:
+        """Son yapılan ısıtma saati diskten; hiç yoksa şu anki son saat (yeni kurulum ilk turu ertesi saatte yapar)."""
+        p = self._warm_path()
+        try:
+            if p is not None and p.exists():
+                self.warm_done = float(json.loads(p.read_text()).get("slot") or 0)
+                return
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+        self.warm_done = last_refresh(None, WARM_TIMES) if WARM_TIMES else 0.0
+
+    def warm_slot_due(self, now: Optional[float] = None) -> Optional[float]:
+        """Yapılmamış ısıtma saati (en çok `WARM_LATE` geç kalınmış) ya da None."""
+        if not WARM_TIMES:
+            return None
+        now = time.time() if now is None else now
+        slot = last_refresh(now, WARM_TIMES)
+        if slot <= self.warm_done or now - slot > WARM_LATE:
+            return None
+        return slot
+
+    def warm_mark(self, slot: float) -> None:
+        self.warm_done = slot
+        p = self._warm_path()
+        if p is None:
+            return
+        try:
+            tmp = p.with_name(p.name + f".{secrets.token_hex(4)}.tmp")
+            tmp.write_text(json.dumps({"slot": slot}))
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, p)
+        except OSError as err:
+            log.info("response cache: ısıtma saati yazılamadı: %s", err)
+
+    def warm_skip(self, key: tuple[str, str, str], now: Optional[float] = None) -> None:
+        self._warm_skips[key] = time.time() if now is None else now
+        self.stats["warmSkipped"] += 1
+
+    def warm_plan(self, now: Optional[float] = None, min_people: Optional[int] = None) -> list[tuple[str, str, str]]:
+        """Isıtılacak (kişi, yol, sorgu) sırası. Uçlar: son 3 günde en az `min_people` kişinin kendisi açtığı saklanmış
+        cevaplar (çok açılan önce). Kişiler: son 3 günde gerçek oturumla gelen ve iç kimliği bilinenler. Kişinin kendi
+        kaydı varsa (ısıtılmış olup bayatlamamışsa da) atlanır; son 3 günde denenip saklanmayan anahtar atlanır."""
+        now = time.time() if now is None else now
+        need = WARM_MIN_PEOPLE if min_people is None else max(1, int(min_people))
+        with self._lock:
+            items = list(self._items.items())
+        opened: dict[tuple[str, str], set[str]] = {}
+        for (u, p, q), e in items:
+            if e.real and now - e.asked <= KEEP_SECONDS:
+                opened.setdefault((p, q), set()).add(u)
+        have = dict(items)
+        self._warm_skips = {k: t for k, t in self._warm_skips.items() if now - t <= KEEP_SECONDS}
+        people = sorted(u for u in self.people if now - self.seen.get(u, 0.0) <= KEEP_SECONDS)
+        out: list[tuple[str, str, str]] = []
+        for (p, q), users in sorted(opened.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+            if len(users) < need or not cacheable_path(p):
+                continue
+            for u in people:
+                key = (u, p, q)
+                e = have.get(key)
+                if e is not None and (e.real or not is_stale(e.at, now)):
+                    continue
+                if key in self._warm_skips:
+                    continue
+                out.append(key)
         return out
 
     def mark(self, key: tuple[str, str, str], busy: bool) -> bool:
@@ -336,8 +531,8 @@ class ResponseCache:
 
     def view(self) -> dict[str, Any]:
         with self._lock:
-            return {"entries": len(self._items), "bytes": sum(len(e.body) for e in self._items.values()),
-                    "enabled": self.enabled, **self.stats}
+            return {"entries": len(self._items), "bytes": sum(e.size for e in self._items.values()),
+                    "enabled": self.enabled, "warmDone": self.warm_done, **self.stats}
 
 
 def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any, session_of: Any = None) -> None:
@@ -374,23 +569,68 @@ def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any, session_
                 "x-forwarded-proto", "host", "origin", "referer")
         return {k: v for k, v in request.headers.items() if k.lower() in keep}
 
-    async def _revalidate(key: tuple[str, str, str], headers: dict[str, str]) -> None:
+    async def _fetch(key: tuple[str, str, str], headers: dict[str, str], *, warm: bool = False) -> int:
+        """Ucu uygulamanın içinden (sayfa kapısı dahil) kişinin kimliğiyle çağırır; ara katman cevabı saklar."""
         import httpx
+        url = key[1] + (("?" + key[2]) if key[2] else "")
+        h = {**headers, REVALIDATE_HEADER: cache.secret}
+        if warm:
+            h[WARM_HEADER] = cache.secret
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://bridge.internal", timeout=1800) as client:
+            res = await client.get(url, headers=h)
+        return res.status_code
+
+    async def _revalidate(key: tuple[str, str, str], headers: dict[str, str]) -> None:
         if not cache.mark(key, True):
             return
         try:
-            url = key[1] + (("?" + key[2]) if key[2] else "")
-            transport = httpx.ASGITransport(app=app)
-            async with httpx.AsyncClient(transport=transport, base_url="http://bridge.internal", timeout=1800) as client:
-                res = await client.get(url, headers={**headers, REVALIDATE_HEADER: cache.secret})
-            if res.status_code in (401, 403):
+            status = await _fetch(key, headers)
+            if status in (401, 403):
                 cache.drop(key)     # oturum düştü ya da yetki değişti: kayıt bırakılır
-            elif res.status_code == 200:
+            elif status == 200:
                 cache.stats["revalidated"] += 1
         except Exception as e:  # noqa: BLE001 — eski kayıt korunur, sonraki turda yeniden denenir
             log.info("response cache: %s arkada tazelenemedi: %s", key[1], e)
         finally:
             cache.mark(key, False)
+
+    async def _warm(key: tuple[str, str, str]) -> None:
+        """Kişinin henüz hazır cevabı olmayan ucu onun iç kimliğiyle üretir. Sayfa kapısı önceden sorulur."""
+        if not enabled():
+            return
+        before = cache.peek(key)
+        if before is not None and (before.real or not is_stale(before.at)):
+            return                                  # bu arada kişi kendisi açtı ya da zaten hazır
+        try:
+            ok = bool(await asyncio.get_running_loop().run_in_executor(None, cache.may_open, key[0], key[1]))
+        except Exception as e:  # noqa: BLE001 — yetki okunamadıysa denenmez
+            log.info("response cache: %s için %s sayfa kararı okunamadı: %s", key[0], key[1], e)
+            ok = False
+        if not ok:
+            cache.warm_skip(key)
+            return
+        try:
+            await _fetch(key, _internal_headers(key[0]), warm=True)
+        except Exception as e:  # noqa: BLE001 — sonraki gün yeniden denenir
+            log.info("response cache: %s ısıtılamadı: %s", key[1], e)
+        after = cache.peek(key)
+        if after is not None and after is not before:
+            cache.stats["warmed"] += 1
+        else:
+            cache.warm_skip(key)                    # hızlı çıktı, açılamadı ya da hata: 3 gün denenmez
+
+    async def _warm_round(plan: list[tuple[str, str, str]]) -> None:
+        """Tek sıra; en çok `WARM_CONCURRENCY` istek aynı anda (işçiler aynı sıradan çeker)."""
+        it = iter(plan)
+
+        async def worker() -> None:
+            for key in it:
+                await _warm(key)
+
+        await asyncio.gather(*(worker() for _ in range(WARM_CONCURRENCY)))
+
+    cache.warm_round = _warm_round        # teşhis ve test: bir planı hemen ısıtır
 
     started_loop: list[bool] = []
 
@@ -399,6 +639,7 @@ def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any, session_
         if not started_loop:          # köprü lifespan kullandığı için startup olayı çalışmaz; ilk istekte başlar
             started_loop.append(True)
             asyncio.get_running_loop().create_task(_loop())
+            asyncio.get_running_loop().create_task(_warm_loop())
         path, method = request.url.path, request.method.upper()
         if not enabled() or not cacheable_path(path):
             return await call_next(request)
@@ -415,6 +656,7 @@ def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any, session_
         if key is None:
             return await call_next(request)
         revalidating = request.headers.get(REVALIDATE_HEADER) == cache.secret
+        warming = revalidating and request.headers.get(WARM_HEADER) == cache.secret
         asked_refresh = str(request.query_params.get("refresh", "")).lower() in ("1", "true", "evet")
         force = revalidating or asked_refresh or request.headers.get("x-data-refresh") == "1"
         if not force:
@@ -446,10 +688,11 @@ def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any, session_
             body += chunk if isinstance(chunk, bytes) else chunk.encode()
         seconds = time.monotonic() - started
         headers = [(k, v) for k, v in response.headers.items() if k.lower() != "content-length"]
-        slow_enough = seconds >= SLOW_SECONDS or (revalidating and cache.get(key) is not None) or \
-            (force and cache.get(key) is not None)
+        # peek: tazeleme ve ısıtma kaydın «istenme» anını uzatmaz.
+        slow_enough = seconds >= SLOW_SECONDS or (force and cache.peek(key) is not None)
         if slow_enough and len(body) <= MAX_BODY:
-            cache.put(key, body, headers, response.status_code, seconds, _replay_headers(request))
+            cache.put(key, body, headers, response.status_code, seconds, _replay_headers(request),
+                      origin="warm" if warming else ("revalidate" if revalidating else "real"))
         out = Response(content=body, status_code=response.status_code, media_type=None)
         for k, v in headers:
             out.headers.append(k, v)
@@ -466,4 +709,22 @@ def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any, session_
                     await _revalidate(key, e.replay or _internal_headers(key[0]))
             except Exception:  # noqa: BLE001 — tazeleyici durmasın
                 log.exception("response cache: arka plan turu hata verdi")
+
+    async def _warm_loop() -> None:
+        while True:
+            await asyncio.sleep(30)
+            try:
+                if not enabled() or cache.may_open is None:
+                    continue
+                slot = cache.warm_slot_due()
+                if slot is None:
+                    continue
+                cache.warm_mark(slot)          # önce işaret: tur uzun sürse de aynı saat ikinci kez başlamaz
+                plan = cache.warm_plan()
+                log.info("response cache: ısıtma başladı, %d kişi×uç", len(plan))
+                await _warm_round(plan)
+                log.info("response cache: ısıtma bitti (ısıtılan %d, atlanan %d)", cache.stats["warmed"],
+                         cache.stats["warmSkipped"])
+            except Exception:  # noqa: BLE001 — ısıtıcı durmasın
+                log.exception("response cache: ısıtma turu hata verdi")
 

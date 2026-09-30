@@ -1,0 +1,16 @@
+{
+  "apiCount": 1,
+  "mongoCount": 1,
+  "fieldsCompared": [
+    "_id",
+    "rid",
+    "msg",
+    "uid",
+    "username",
+    "name",
+    "ts",
+    "attachments"
+  ],
+  "fullResultMatches": true,
+  "resultSha256": "4e26058d1715295cf6ae45427a693c9e10857a2e3942aacc9d2bb709a467b345"
+}

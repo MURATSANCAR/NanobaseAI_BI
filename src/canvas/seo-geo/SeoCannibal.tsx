@@ -3,12 +3,13 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain } from '../components/Explain';
 import { Term, TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 /** Yarışan sayfalar: /api/v1/seo-geo/cannibal. Search Console'un sorgu+sayfa kırılımından; yalnız okunur. */
 
@@ -271,20 +272,7 @@ function Group({ i, k }: { i: Item; k?: Kaynaklar | null }) {
 }
 
 function Pager({ start, total, onChange }: { start: number; total: number; onChange: (n: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => onChange(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => onChange(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+  return <SeoPager start={start} total={total} size={PAGE} onChange={onChange} />;
 }
 
 function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {

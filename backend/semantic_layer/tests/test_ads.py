@@ -488,6 +488,18 @@ def test_brief_lifecycle(engine):
     assert len(A.list_briefs(engine, T, "B1")) == 2
 
 
+def test_manual_brief_opens_empty_draft(engine):
+    b = A.create_brief(engine, T, "ayse", {"stokKodu": "B2", "ad": "Kitap", "kitapId": "k2"}, "lansman", manual=True)
+    assert b["durum"] == "taslak" and b["metin"] is None and b["istek"] == "lansman" and b["denetim"] is None
+    with pytest.raises(A.AdsError):
+        A.update_brief(engine, T, "ayse", b["id"], {"onayla": True})           # boş brief onaylanmaz
+    b = A.update_brief(engine, T, "ayse", b["id"], {"metin": "Hedef kitle: yetişkin okur"})
+    assert b["durum"] == "taslak" and b["metin"] == "Hedef kitle: yetişkin okur"
+    b = A.update_brief(engine, T, "ayse", b["id"], {"onayla": True})
+    assert b["durum"] == "onayli" and b["onaylayan"] == "ayse"
+    assert A.fail_stale_briefs(engine) == 0                                    # elle açılan taslak kuyrukta beklemez
+
+
 # ------------------------------------------------------------------ ayarlar ve yetki
 
 
@@ -594,3 +606,17 @@ def test_endpoints_import_link_and_explicit_approval(monkeypatch, store, setting
     assert put.status_code == 200 and put.json()["degisen"] == 1
     xl = client.get("/api/v1/ads/report/export.xlsx?frm=2026-09-01&to=2026-09-02", headers=a)
     assert xl.status_code == 200 and xl.content[:2] == b"PK"
+
+
+def test_manual_brief_endpoint_skips_model(monkeypatch, store, settings):
+    _, client, jobs = _app(monkeypatch, store, settings)
+    a = {"cookie": "timas_session=a"}
+    r = client.post("/api/v1/ads/briefs", json={"stokKodu": "15201.0001", "not": "lansman ayı", "elle": True}, headers=a)
+    assert r.status_code == 201, r.text
+    b = r.json()
+    assert b["durum"] == "taslak" and b["metin"] is None and b["kitapAdi"] == "Kayıp Zamanın İzinde" and jobs == []
+    assert client.patch(f"/api/v1/ads/briefs/{b['id']}", json={"onayla": True}, headers=a).status_code == 400
+    saved = client.patch(f"/api/v1/ads/briefs/{b['id']}", json={"metin": "Ana mesaj: …", "onayla": True}, headers=a)
+    assert saved.status_code == 200 and saved.json()["durum"] == "onayli"
+    ai = client.post("/api/v1/ads/briefs", json={"stokKodu": "15201.0002"}, headers=a)
+    assert ai.status_code == 201 and ai.json()["durum"] == "hazirlaniyor" and [j[0] for j in jobs] == ["brief_job"]

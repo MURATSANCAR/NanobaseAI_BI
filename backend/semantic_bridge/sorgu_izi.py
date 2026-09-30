@@ -63,6 +63,18 @@ def izle(engine: Any) -> Iterator[list]:
             outer.extend(ran)
 
 
+@contextmanager
+def disarida() -> Iterator[None]:
+    """Blok içindeki okumalar izlenmez (portal ve Logo/CRM): rakam üretmeyen yardımcı okuma — ör. kişinin CRM
+    kullanıcısını bulan eşleme — ekranın sorgu bilgisine girmesin. Bloktan çıkınca dıştaki izleme sürer."""
+    t1, t2 = _REC.set(None), _EXT.set(None)
+    try:
+        yield
+    finally:
+        _EXT.reset(t2)
+        _REC.reset(t1)
+
+
 def kaynak(engine: Any, ran: list, out: Any, *, prefix: str, title: str, text: str, skip: tuple = (),
            extra: Optional[Callable[[P.Kaynaklar], list[str]]] = None, description: str = "",
            fields: Optional[Callable[[P.Kaynaklar, str], dict[str, str]]] = None,
@@ -130,6 +142,42 @@ def dis(connection: str, sql: str, *, rows: Optional[int] = None, ms: Optional[i
         import time as _t
 
         rec.append({"connection": connection, "sql": sql, "rows": rows, "ms": ms, "at": _t.time()})
+
+
+def birlikte(*isler: Callable[[], Any]) -> list[Any]:
+    """Birbirini beklemeyen okumaları aynı anda koşturur, sonuçları verilen sırayla döner (2026-09-29, Kitap 360).
+
+    Her iş çağıranın bağlamının kopyasında koşar (izleme, veri alanı, «Verileri yenile» gibi ContextVar'lar geçer);
+    yakaladığı portal ve Logo/CRM okumaları ayrı listede tutulur ve iş bitince **verilen sırayla** çağıranın
+    izine eklenir — sorgu bilgisinin kimlik sırası koşunun hangi okumanın önce bittiğine bağlı olmaz. Bir iş hata
+    verirse diğerleri bitince ilk hata (verilen sırayla) çağırana gider. Tek iş varsa iş parçacığı açılmaz."""
+    if len(isler) <= 1:
+        return [f() for f in isler]
+    from concurrent.futures import ThreadPoolExecutor
+
+    def kos(f: Callable[[], Any]) -> tuple[Any, Optional[BaseException], list, list]:
+        dis_: list = []
+        ic: list = []
+        _EXT.set(dis_ if _EXT.get() is not None else None)
+        _REC.set(ic if _REC.get() is not None else None)
+        try:
+            return f(), None, dis_, ic
+        except BaseException as e:  # noqa: BLE001 — çağırana sırayla iletilir
+            return None, e, dis_, ic
+
+    with ThreadPoolExecutor(max_workers=len(isler), thread_name_prefix="birlikte") as ex:
+        futs = [ex.submit(contextvars.copy_context().run, kos, f) for f in isler]
+        sonuc = [f.result() for f in futs]
+    dis_dis, ic_dis = _EXT.get(), _REC.get()
+    for _, _, dis_, ic in sonuc:
+        if dis_dis is not None:
+            dis_dis.extend(dis_)
+        if ic_dis is not None:
+            ic_dis.extend(ic)
+    for _, hata, _, _ in sonuc:
+        if hata is not None:
+            raise hata
+    return [s[0] for s in sonuc]
 
 
 def dis_kaydet(k: P.Kaynaklar, got: list, prefix: str, title: str, logo_db: Optional[str], crm_db: Optional[str],

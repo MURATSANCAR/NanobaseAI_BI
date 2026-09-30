@@ -86,7 +86,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 
@@ -194,8 +195,56 @@ def _pending_where(*, statuses: Iterable[int], since_year: int, q: str = "", cat
 
 
 def pending_count_sql(schema: str, **flt: Any) -> str:
+    """Süzgece uyan editörsüz proje sayısı. Birleştirilen tablolar (kitaplık, marka, kullanıcı, kişi) birincil
+    anahtarla bağlanır, satır çoğaltmaz; yalnız aramada kişi adı (`a.FullName`) gerektiği için o zaman bağlanır."""
     p = _prefix(schema)
-    return f"SELECT COUNT(*) AS n{_project_from(p)} WHERE {_pending_where(**flt)}"
+    if str(flt.get("q") or "").strip():
+        return f"SELECT COUNT(*) AS n{_project_from(p)} WHERE {_pending_where(**flt)}"
+    return f"SELECT COUNT(*) AS n FROM {p}new_projeBase j WHERE {_pending_where(**flt)}"
+
+
+# ------------------------------------------------------------------ editörsüz projeler: beş dakikalık tur
+# Ekran (/editor-atama) açılışta üç CRM sorgusu koşturuyordu (sayı, sayfa, durum sayaçları): köprünün tek CRM
+# bağlantısında sırayla 11,6 sn (2026-09-29). Tur (EditorialHomeSnapshots, 5 dk; «Yenile» hemen) ilk açılış
+# kapsamındaki (arama yok, varsayılan yıl) bütün editörsüz etkin projeleri ekranla aynı sırada bir kez okur; uç
+# durum/kategori süzgecini, sayfayı ve sayaçları bu listeden hesaplar. Aramalı ya da başka yıllı görünüm canlı okunur.
+
+def pending_all_sql(schema: str, since_year: int) -> str:
+    """Turun tek okuması: süzgeçsiz (durum ve kategori uçta) editörsüz etkin projeler, sayfa sorgusuyla aynı sıra."""
+    p = _prefix(schema)
+    return (
+        f"SELECT {_project_cols()}{_project_from(p)} WHERE {_pending_where(statuses=[], since_year=since_year)}"
+        " ORDER BY COALESCE(j.new_yayinkuruluonaytarihi, j.ModifiedOn) DESC, j.new_projeId"
+    )
+
+
+def pending_snapshot(rows: Iterable[dict[str, Any]], since_year: int) -> dict[str, Any]:
+    return {"sinceYear": int(since_year), "items": [project_row(r) for r in rows]}
+
+
+def pending_from_snapshot(snapshot: dict[str, Any], *, statuses: Iterable[int], category: str = "",
+                          page: int = 0) -> tuple[int, list[dict[str, Any]], list[dict[str, Any]]]:
+    """(toplam, sayfa, durum sayaçları) — canlı sorgularla aynı sonuç: sayı = `pending_count_sql`, sayfa =
+    `pending_list_sql` (liste zaten sayfa sırasında; süzmek sırayı bozmaz), sayaçlar = `pending_facets_sql` (durum
+    ve kategori süzgecinden bağımsız, ilk açılış yılı)."""
+    items = list(snapshot.get("items") or [])
+    codes = {int(c) for c in statuses}
+    rows = [x for x in items if x.get("statusCode") in codes] if codes else items
+    if category:
+        kind, _, cid = category.partition(":")
+        key = {"kitaplik": "kitaplik", "marka": "marka"}.get(kind)
+        if not key:
+            raise AssignError("Kategori süzgeci geçerli değil.")
+        want = _id(cid, "Kategori")
+        rows = [x for x in rows if ((x.get(key) or {}).get("id") or "").upper() == want]
+    start = max(0, int(page)) * PAGE_SIZE
+    counts: dict[int, dict[str, Any]] = {}
+    for x in items:
+        f = counts.setdefault(int(x.get("statusCode") or 0), {"code": int(x.get("statusCode") or 0),
+                                                              "label": x.get("status"), "count": 0})
+        f["count"] += 1
+    facets = sorted(counts.values(), key=lambda f: (-f["count"], f["code"]))
+    return len(rows), rows[start:start + PAGE_SIZE], facets
 
 
 def pending_list_sql(schema: str, page: int, **flt: Any) -> str:
@@ -278,7 +327,14 @@ def crm_me(schema: str, run: Callable[[str], dict[str, Any]], username: str) -> 
     """Oturumdaki kişinin CRM kullanıcısı; bulunamazsa None. Birden çok satırdan etkin olan seçilir."""
     if not (username or "").strip():
         return None
-    rows = run(me_sql(schema, username)).get("records") or []
+    return crm_me_from_rows(run(me_sql(schema, username)).get("records") or [], username)
+
+
+def crm_me_from_rows(rows: list[dict[str, Any]], username: str) -> Optional[dict[str, Any]]:
+    """`crm_me`'nin seçim kuralı: `me_sql`'in döndürdüğü satırlardan hesap kısmı kişininkiyle aynı olanlar, etkin
+    olan önce, aynı durumda okunma sırası. Saklanmış eşleme (`crm_kisi`) de bu fonksiyonu çağırır (kural tek yerde)."""
+    if not (username or "").strip():
+        return None
     acct = username.strip().lower()
     hits = [r for r in rows
             if ((_s(r.get("DomainName")) or "").rsplit("\\", 1)[-1].split("@", 1)[0]).lower() == acct]

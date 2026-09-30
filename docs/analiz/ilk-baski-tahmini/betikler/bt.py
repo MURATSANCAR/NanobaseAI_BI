@@ -1,8 +1,7 @@
 """M10 geçmiş sınama (ön çalışma): ayar seçimi 2021-07…2023-12 lansmanları, sınama 2024-01+ lansmanları.
-Koşturma: python bt.py [fit]  (data.pkl gerekir; tahmin servisi 127.0.0.1:8793)"""
+Koşturma: python bt.py [fit]  (data.json.z gerekir; tahmin servisi 127.0.0.1:8793)"""
 import json
 import math
-import pickle
 import sys
 import time
 import urllib.request
@@ -11,8 +10,9 @@ from datetime import date, datetime, timedelta
 
 sys.path.insert(0, "/tmp/claude-m10/stage")
 from semantic_bridge.management import ilk_baski_model as M  # noqa: E402
+from semantic_bridge import typed_json as TJ  # noqa: E402
 
-d = pickle.load(open("/tmp/claude-m10/data.pkl", "rb"))
+d = TJ.unpack(open("/tmp/claude-m10/data.json.z", "rb").read())
 son = d["logo_son_fatura"]["records"][0]["son_fatura"]
 son = son if isinstance(son, (date, datetime)) else datetime.fromisoformat(str(son)[:19])
 son = son.date() if isinstance(son, datetime) else son

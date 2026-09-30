@@ -499,6 +499,7 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
             <FileButton
               accept=".docx,.txt,.md,.pdf"
               feature="ceviri.yonet"
+              maxBytes={0}
               run={(f) => translationApi.uploadSource(j.id, f)}
               disabled={drafting || !manage}
               disabledReason={drafting ? 'Zeki AI taslağı sürerken kaynak değiştirilemez.' : 'Kaynağı işi açan kişi ya da yetkili yönetici yükler.'}
@@ -708,6 +709,7 @@ function TranslationDrop({ onCreated }: { onCreated: (id: string) => void }) {
           tone="hero"
           accept=".docx,.txt,.md,.pdf"
           feature="ceviri.yonet"
+          maxBytes={0}
           disabled={same}
           disabledReason="Kaynak ve hedef dil aynı olamaz."
           hint="Yeni çeviri işi dosya adından açılır, metin cümle segmentlerine bölünür; adı, çevirmeni ve teslim tarihini sonra düzeltirsiniz."

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, Check, Loader2, Palette, PenLine, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Check, Loader2, Palette, PenLine, RotateCcw, Sparkles } from 'lucide-react';
 import { studioApi, type StudioJob } from '../../../engine';
 import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
@@ -9,6 +9,7 @@ import { Img, Progress, ghostBtn, gradientBtn, press } from '../shared';
 import { coloringApi, useColoring, type ColoringDerived, type ColoringKind, type ColoringMode, type ColoringSource } from './api';
 import { useCan } from '../../../useAdmin';
 import { StudioInfo } from '../shared';
+import { Explain } from '../../../components/Explain';
 
 /** Boyama / etkinlik kitabı: kaynak kitabın stüdyo sayfasında «üret» kartı ve türetilmiş işlerin ilerlemesi;
  *  boyama işinin kendi sayfasında kısa cümle onayı, çizgilerin yöntemi ve «ZEKİ AI ile yeniden çiz».
@@ -111,7 +112,7 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
                       {k === 'spot_difference' && on && (
                         <label className="flex items-center gap-1 text-[11.5px] text-canvas-muted">
                           Fark
-                          <input type="number" min={1} max={20} value={diffs} onChange={(e) => setDiffs(Math.max(1, Number(e.target.value) || 1))}
+                          <input type="number" min={1} max={20} value={diffs} onChange={(e) => setDiffs(Math.min(20, Math.max(1, Math.round(Number(e.target.value)) || 1)))}
                             className="h-9 w-14 rounded-lg border border-slate-200 bg-white px-2 text-[13px] text-canvas-ink" />
                         </label>
                       )}
@@ -131,7 +132,7 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
           )}
 
           <div role="radiogroup" aria-label="Kısa cümleler" className="flex flex-wrap gap-2 text-[12px]">
-            {([['model', `Kısa cümleleri ZEKİ AI önersin (en çok ${v.caption_words} kelime, siz onaylarsınız)`], ['rule', 'Metnin ilk cümlesinden kısalt']] as const).map(([c, t]) => (
+            {([['model', `Kısa cümleleri Zeki AI önersin (en çok ${v.caption_words} kelime, siz onaylarsınız)`], ['rule', 'Metnin ilk cümlesinden kısalt']] as const).map(([c, t]) => (
               <button key={c} type="button" role="radio" aria-checked={captions === c} onClick={() => setCaptions(c)}
                 className={`min-h-10 rounded-full border px-3 text-left ${press} ${captions === c ? 'border-canvas-violet bg-violet-50/70 font-bold text-canvas-violet' : 'border-slate-200 bg-white/80'}`}>{t}</button>
             ))}
@@ -146,7 +147,7 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
             </button>}
             <button type="button" className={ghostBtn} onClick={() => setOpen(false)}>Vazgeç</button>
           </div>
-          <p className="text-[11px] text-canvas-muted">Çizgiler resimlerden otomatik çıkarılır (ZEKİ AI çizmez); birkaç dakika sürer. Yeni kitap ayrı bir iş olarak açılır, sayfa düzeni ekranında düzenlenir.</p>
+          <p className="text-[11px] text-canvas-muted">Çizgiler resimlerden otomatik çıkarılır (Zeki AI çizmez); birkaç dakika sürer, arka planda çalışır. Yeni kitap ayrı bir iş olarak açılır, sayfa düzeni ekranında düzenlenir; bu kitaba dokunulmaz.</p>
         </div>
       )}
 
@@ -165,8 +166,8 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
                     </div>
                   </div>
                   <div className="flex gap-1.5">
-                    <Link className={ghostBtn} to={`/kitap-tasarim/${j.id}`}>İlerleme</Link>
-                    {!run && <Link className={ghostBtn} to={`/kitap-tasarim/${j.id}/studyo`}>Aç<ArrowRight className="h-4 w-4" aria-hidden /></Link>}
+                    <Link className={ghostBtn} to={`/kitap-tasarim/${j.id}`}>İlerlemeyi gör</Link>
+                    {!run && <Link className={ghostBtn} to={`/kitap-tasarim/${j.id}/studyo`}>Stüdyoda aç<ArrowRight className="h-4 w-4" aria-hidden /></Link>}
                   </div>
                 </div>
                 {run && (
@@ -186,10 +187,10 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
 }
 
 // ---------------------------------------------------------------- boyama işi: cümleler, çizgiler
-const SOURCE_TEXT: Record<string, string> = { model: 'ZEKİ AI önerisi', kural: 'Metinden kısaltıldı', editor: 'Editör yazdı' };
+const SOURCE_TEXT: Record<string, string> = { model: 'Zeki AI önerisi', kural: 'Metinden kısaltıldı', editor: 'Editör yazdı' };
 
 function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
-  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  // Çizim (GPU) ve cümle düzeltme/onayı «Kitap tasarımında üretim ve düzenleme» ister; rolde yoksa düğme çıkmaz.
   const canProduce = useCan('tasarim.uret');
   const qc = useQueryClient();
   const refresh = () => {
@@ -219,7 +220,10 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
           <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><Palette className="h-4 w-4 text-canvas-violet" aria-hidden />Boyama kitabı<StudioInfo label="Boyama" what="Onaylı cümle ÷ bütün kısa cümleler, boyama kaydından." /></h2>
           <p className="mt-0.5 text-[12px] text-canvas-muted">
             Kaynak: <Link className="font-bold underline" to={`/kitap-tasarim/${v.derived_from}/studyo`}>özgün kitap</Link>
-            {v.filler > 0 && ` · forma katı için ${v.filler} «kendi resmini çiz» sayfası eklendi`}
+            {v.filler > 0 && <>
+              {` · forma katı için ${v.filler} «kendi resmini çiz» sayfası eklendi `}
+              <Explain label="Forma katı">Matbaa kitabı belirli sayıda sayfalık tabakalar (forma) hâlinde basar. Sayfa sayısı bu katı tamamlasın diye boş kalacak yerlere okurun kendi resmini çizeceği sayfalar eklenir.</Explain>
+            </>}
           </p>
         </div>
         {v.sentences.length > 0 && (
@@ -233,18 +237,10 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
       {v.state?.error && !running && (
         <div className="mt-2">
           <Note tone="err">
-            Hat durdu: {v.state.error}{' '}
+            Üretim durdu: {v.state.error}{' '}
             {canProduce && <button type="button" className="font-bold underline" disabled={retry.isPending} onClick={() => retry.mutate()}>
               <RotateCcw className="mr-1 inline h-3.5 w-3.5" aria-hidden />Kaldığı yerden yeniden dene
             </button>}
-          </Note>
-        </div>
-      )}
-      {v.drafts.length > 0 && (
-        <div className="mt-2">
-          <Note tone="warn">
-            <AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden />
-            Taslak: {v.drafts.filter(Boolean).map((n) => `${n}. sayfa`).join(', ')} çizgisi ZEKİ AI ile yeniden çizildi. Bu çizgiler ticari basıma uygun değildir; basımdan önce otomatik çıkarılan çizgiye dönün ya da çizerin elinden geçirin.
           </Note>
         </div>
       )}
@@ -253,7 +249,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <section className="mt-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kısa cümleler · boyama sayfasının karşısında</h3>
-            {waiting.length > 0 && (
+            {canProduce && waiting.length > 0 && (
               <button type="button" className={ghostBtn} disabled={save.isPending}
                 onClick={() => save.mutate(waiting.map((s) => ({ aid: s.aid, approved: true })))}>
                 <Check className="h-4 w-4" aria-hidden />Tümünü onayla
@@ -271,11 +267,11 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                     {s.approved ? <span className="font-bold text-emerald-700">Onaylı</span> : <span className="font-bold text-amber-700">Onay bekliyor</span>}
                   </div>
                   <div className="mt-1 flex flex-col gap-1.5 sm:flex-row">
-                    <input value={val} maxLength={400} aria-label={`${s.no ?? ''}. sayfanın cümlesi`}
+                    <input value={val} maxLength={400} aria-label={`${s.no ?? ''}. sayfanın cümlesi`} readOnly={!canProduce}
                       onChange={(e) => setDrafts((d) => ({ ...d, [s.aid]: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === 'Enter' && dirty) save.mutate([{ aid: s.aid, text: val.trim() }]); }}
+                      onKeyDown={(e) => { if (canProduce && e.key === 'Enter' && dirty) save.mutate([{ aid: s.aid, text: val.trim() }]); }}
                       className="min-h-10 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[13px] outline-none focus:border-canvas-violet" />
-                    <div className="flex gap-1.5">
+                    {canProduce && <div className="flex gap-1.5">
                       {dirty && (
                         <button type="button" className={ghostBtn} disabled={save.isPending || !val.trim()}
                           onClick={() => save.mutate([{ aid: s.aid, text: val.trim() }])}>Kaydet</button>
@@ -285,7 +281,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                         className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border-2 px-3 text-[12.5px] font-bold ${press} ${s.approved ? 'border-slate-200 bg-white text-canvas-muted' : 'border-emerald-500 bg-white text-emerald-700'}`}>
                         <Check className="h-4 w-4" aria-hidden />{s.approved ? 'Onayı geri al' : 'Onayla'}
                       </button>
-                    </div>
+                    </div>}
                   </div>
                   {s.original && s.original !== s.text && (
                     <details className="mt-1 text-[11.5px] text-canvas-muted">
@@ -304,7 +300,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <section className="mt-3">
           <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Boyama çizgileri</h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
-            Çizgi resimden otomatik çıkarılır. Yetmezse «ZEKİ AI ile yeniden çiz» yeni sürüm üretir (taslak); sürümler ve onay yukarıdaki sayfa gezgininde.
+            Çizgi resimden otomatik çıkarılır. Yetmezse «Zeki AI ile yeniden çiz» yeni sürüm üretir; eski çizgi silinmez, sürümler ve onay yukarıdaki sayfa gezgininde.
           </p>
           <ul className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             {v.arts.map((a) => {
@@ -316,14 +312,14 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                     : <div className="aspect-[4/3] w-full rounded-md bg-slate-100" />}
                   <div className="flex items-center justify-between gap-1 text-[11px]">
                     <span className="font-mono text-canvas-muted">{a.no ? `s. ${a.no}` : '—'}</span>
-                    <span className={`rounded-full px-1.5 py-0.5 font-bold ${a.draft ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-canvas-muted'}`}>
-                      {a.draft ? 'ZEKİ AI · taslak' : 'Otomatik çizgi'}
+                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-bold text-canvas-muted">
+                      {a.model ? 'Zeki AI çizgisi' : 'Otomatik çizgi'}
                     </span>
                   </div>
                   {canProduce && <button type="button" disabled={gpuBusy || running || redraw.isPending} onClick={() => redraw.mutate(a.aid)}
                     className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-bold disabled:opacity-50 ${press}`}>
                     {here ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <PenLine className="h-4 w-4" aria-hidden />}
-                    {here ? (v.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : 'ZEKİ AI ile yeniden çiz'}
+                    {here ? (v.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : 'Zeki AI ile yeniden çiz'}
                   </button>}
                 </li>
               );

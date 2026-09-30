@@ -1,7 +1,46 @@
 # Kitap pazarı veri kaynağı — `API_URUN_DB` (Logo prod .25): uçtan uca inceleme ve ekran kullanım haritası
 
+> §0 günceldir; §1–§10 ilk inceleme (arşiv dahil) olarak durur.
+
 Ölçüm: 2026-09-29. Bütün rakamlar test sunucusundan `zekiai` hesabıyla doğrudan SQL ile (`connector_from_file`, köprü env'i,
 `OPTION (MAXDOP 2)` — .25 canlı ERP) alındı. Betikler oturum çalışma klasöründeydi (`/tmp/claude-kpazar/derin{1,2,3}.py`).
+
+## 0. Güncelleme (2026-09-29 akşam) — kullanılan kaynaklar ve kurulan yapı
+
+**Kullanıcı kararı:** müşteri yalnız `basari_list`, `prefix_list` ve `urun_list` görünümünü kullanıyor; diğerleri
+(`urun_list_BACKUP` arşivi, `LOGO_TARCIN_ITEM_LIST`, `urun_raf`, `LOGO_TO_BASARI`, `URUN_LIST_TO_LOGO`) dikkate alınmaz.
+Aşağıdaki §4–§5'teki arşiv ölçümleri (2025 çıkış endeksi, korelasyon 0,92–0,94, ×3,0) **yöntemin sınaması olarak
+kalır, üründe kullanılmaz**; üründeki endeks portalın kendi gece görüntülerinden oluşur (en az iki görüntü gerekir).
+
+**`urun_list` = `basari_list` ∪ `prefix_list`** (`UNION ALL`): Başarı satırları «Tedarikci: Başarı Dağıtım», Prefix
+satırları «Tedarikci: Prefix»; marka boş; Prefix'te stok = `available_stock` (site stoğu, 386.124/386.124), fiyat =
+`list_price`, kategori/yazar/durum/D&R fiyatı yok. Portal ayrıntıyı kaybetmemek için iki tabloyu doğrudan okur.
+
+**D&R alanlarının anlamı** (D&R Prefix servis belgesi «Xml-Service», kullanıcı verdi; veriyle karşılaştırıldı):
+
+| Alan | Anlam | Veride |
+|---|---|---|
+| `deleted` | 1 = D&R ve İdefix sitelerinden silinmiş | 382.203 satır 1; bunların 153.167'si Prefix B2B'de hâlâ satışta (1,53 M adet) |
+| `sale_status_code` | Siteler: 0 satışa açık, 1 stokta yok, 4 satış dışı | silinmişlerde hep 4; etkinlerde 0 |
+| `available_stock` | D&R + İdefix sitelerinin toplam stoğu | 999 (1.092), 500.000, 10.000.014 gibi yer tutucular var → ≥999 saklanmaz |
+| `b2bstock` + `prefix_sale_status` | Prefix B2B stoğu ve durumu (0 stokta yok, 1 satışa açık) | 155 bin başlıkta stok |
+| `dr_price` / `list_price` | D&R satış fiyatı / liste fiyatı | ortalama %80 |
+| `row_num` | servis sayfa satır no (sayfa = 20.000) | üst sınır 406.124, satır 386.124 → **17. sayfa (320.001–340.000) yazılmamış** |
+| API'de olup tabloda olmayan | yazar/kişiler, Prefix indirimli fiyat ve oranı, ürün özellikleri, görsel, teslim süresi | — |
+
+Başarı'daki `rc`, `pc`, `rn` iş verisi değil: kaynağın bildirdiği toplam kayıt, sayfa, satır no (2026-09-25:
+234.841 bildirildi, 234.705 yazıldı).
+
+**Kurulan (dal `claude/kitap-pazari-arastirmasi-db-61a1b8`):** `backend/semantic_bridge/pazar_dagitim.py` +
+`pazar_dagitim_api.py` (`/api/v1/pazar/dagitim/*`), tablolar `semantic_pazar_dagitim_{titles,obs,snapshots,barkod,meta}`
+(yalnız değişen satır), zamanlayıcı `timas-pazar-dagitim.timer` (06:15). Ekranlar (yeni sayfa yok, kullanıcı kararı):
+Stok listesinde «Dağıtımcıda» kolonu ve süzgeci (Başarı'da baskısı yok görünen / tükenmiş), Bitecekler ve Fazla stokta
+kolon, kitap detayında «Dağıtımcı ve perakende» kutusu; Pazar › Özet'te «Dağıtımcı nabzı» (kategori / yayınevi / ay,
+TİMAŞ grubu payı; iki görüntü birikene kadar boş). İşaret yalnız TİMAŞ grubunda (başlıklarının ≥%80'i TİMAŞ Logo'sunda
+kartı olan marka; dağıttığı başka şirket markaları dahil, perakendede satılan tek tük kitap hariç).
+
+**Gerçek veri kabulü (yan köprü :8788, gerçek oturum, 2026-09-29):** baskısı yok görünen **514**, Başarı'da tükenmiş
+**1.121** kitap; kaynağa doğrudan SQL ile bağımsız referans: 514/514 ve 1.121/1.121, fazla 0, eksik 0.
 
 ## 1. Özet
 

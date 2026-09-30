@@ -9,6 +9,7 @@
 import type { DbTiming } from './DbTiming';
 import type { Kaynaklar } from './components/sqlInfo';
 import { httpErrorText } from './httpError';
+import { fmtSize } from './components/fileDropRules';
 
 const RAW_BASE = (import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '';
 export const ENGINE_BASE = RAW_BASE.replace(/\/$/, '');
@@ -536,6 +537,12 @@ export const displayWordsApi = {
   get: () => get<{ words: Record<string, string>; version: string }>('/api/v1/semantic/display-words', 30_000),
 };
 
+/** CRM varlık/alan adı → CRM'in kendi Türkçe etiketi (başlık çevirici bunu kuraldan önce kullanır). */
+export const crmNamesApi = {
+  get: () =>
+    get<{ entities: Record<string, string>; attributes: Record<string, string>; version: string }>('/api/v1/semantic/crm-names', 60_000),
+};
+
 export const boardApi = {
   load: () => send<{ user: string; cards: BoardCardDto[]; kaynaklar?: Kaynaklar }>('GET', '/api/v1/board', undefined, 30_000),
   save: (cards: unknown[]) => send<{ user: string; cards: BoardCardDto[] }>('PUT', '/api/v1/board', { cards }, 30_000),
@@ -566,7 +573,8 @@ export const boardApi = {
 export type ReportRecurrence = 'daily' | 'weekly' | 'monthly' | 'once';
 export type ReportFormat = 'xlsx' | 'csv';
 export type ReportStatus = 'active' | 'paused' | 'done';
-export type ReportLastStatus = 'sent' | 'no_smtp' | 'no_recipient' | 'failed' | null;
+/** `ready`: dosya hazırlandı, e-posta zamanlanan saatte gidecek (plan onayındaki ilk dosya). */
+export type ReportLastStatus = 'sent' | 'ready' | 'no_smtp' | 'no_recipient' | 'failed' | null;
 export type ColumnFormat = 'auto' | 'text' | 'number' | 'money' | 'percent' | 'date';
 /** Kişinin ekranda kurduğu kolon düzeni; `key` motorun verdiği kaynak kolon adıdır. Sıra dizinin sırasıdır. */
 export type ReportColumn = { key: string; label: string; hidden: boolean; format: ColumnFormat };
@@ -670,7 +678,9 @@ export const reportsApi = {
   create: (b: ReportInput) => send<ReportDto>('POST', '/api/v1/reports', b, 30_000),
   update: (id: string, b: Partial<ReportInput>) => send<ReportDto>('PATCH', `/api/v1/reports/${encodeURIComponent(id)}`, b, 30_000),
   remove: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/reports/${encodeURIComponent(id)}`, undefined, 30_000),
-  run: (id: string) => send<ReportDto>('POST', `/api/v1/reports/${encodeURIComponent(id)}/run`, {}, 600_000),
+  /** `send: false` dosyayı hazırlar, e-posta göndermez; gönderim zamanlanan saatte olur. */
+  run: (id: string, opts: { send?: boolean } = {}) =>
+    send<ReportDto>('POST', `/api/v1/reports/${encodeURIComponent(id)}/run${opts.send === false ? '?send=false' : ''}`, {}, 600_000),
   fileUrl: (id: string) => `${ENGINE_BASE}/api/v1/reports/${encodeURIComponent(id)}/file`,
 };
 
@@ -1241,6 +1251,10 @@ export type IntakeCard = {
   modifiedOn: string | null;
   createdOn: string | null;
   mine: boolean;
+  /** CRM projesindeki «Yayınevi» (marka); girilmemişse null. */
+  brand?: string | null;
+  /** CRM proje türü etiketi (Editoryal, Pazarlama, Satış). */
+  projectType?: string | null;
 };
 export type IntakeStepDef = { no: number; title: string; waiting: string; owner: string; markable: string | null };
 export type IntakePhase = { no: number; title: string; lead: string; steps: Array<{ no: number; title: string }>; count: number; late: number };
@@ -1309,7 +1323,15 @@ export type IntakeAgendaItem = {
   project: string | null;
   author: string | null;
   editor: string | null;
+  /** Editör raporu tamam: CRM «İç rapor» = Tamamlandı ya da portalda «Rapor bitti» işareti. */
   report: boolean;
+  reportSource: 'crm' | 'portal' | null;
+  /** Portalda «Rapor bitti» işaretini koyan kişi. */
+  reportBy: string | null;
+  /** CRM «İç rapor» = İstendi (henüz tamamlanmamış). */
+  reportRequested: boolean;
+  /** Projenin CRM'deki ek dosya sayısı; okunamadıysa null. */
+  files: number | null;
   decisionCode: number | null;
   decision: string | null;
   note: string | null;
@@ -1329,7 +1351,7 @@ export const intakeApi = {
   unmark: (id: string, step: number) => send<{ ok: boolean }>('DELETE', `/api/v1/editorial/intake/${encodeURIComponent(id)}/marks/${step}`, undefined, 30_000),
   meetings: () => send<{ items: IntakeMeeting[] }>('GET', '/api/v1/editorial/intake/meetings', undefined, 60_000),
   agenda: (day: string) =>
-    send<{ date: string; items: IntakeAgendaItem[]; opinionsVisible: boolean }>('GET', `/api/v1/editorial/intake/meetings/${encodeURIComponent(day)}`, undefined, 60_000),
+    send<{ date: string; items: IntakeAgendaItem[]; opinionsVisible: boolean; filesRead?: boolean }>('GET', `/api/v1/editorial/intake/meetings/${encodeURIComponent(day)}`, undefined, 60_000),
 };
 
 // ------------------------------------------------------------ basın ve web (açık RSS + Wikidata)
@@ -1432,7 +1454,8 @@ export type Contract = {
   stage: string | null;
   daysLeft: number | null;
   modifiedOn: string | null;
-  books: Array<{ id: string | null; title: string }>;
+  /** Aynı kitap kartı bir kez gelir; aynı adı taşıyan farklı kartlar stok koduyla ayrılır. */
+  books: Array<{ id: string | null; title: string; stockCode?: string | null; isbn?: string | null }>;
   parties: ContractParty[];
   /** Portalda düzenlenmişse portal kaydının durumu ve CRM'e işlenmemiş fark sayısı. */
   portal?: { id: string; status: string; statusLabel: string; updatedAt: string; diff: number } | null;
@@ -1447,11 +1470,15 @@ export type ContractSummary = {
   warnDays: number;
   avgRoyalty: number | null;
   avgRoyaltyOver: number;
+  /** Süre süzgecindeki sayılar: süresi devam eden, bitmiş, süresiz ya da bitişi girilmemiş (eski özet taşımayabilir). */
+  terms?: Record<ContractTerm, number>;
   statuses: ContractFacet[];
   kinds: ContractFacet[];
   db?: DbTiming | null;
 };
-export type ContractQuery = { q?: string; status?: number; kind?: number; expiring?: boolean; order?: string; page?: number };
+/** Süre süzgeci: devam = bitişi bugün ya da sonra, bitmis = bitişi geçmiş, suresiz = süresiz ya da bitişi girilmemiş. */
+export type ContractTerm = 'devam' | 'bitmis' | 'suresiz';
+export type ContractQuery = { q?: string; status?: number; kind?: number; expiring?: boolean; order?: string; term?: ContractTerm | ''; page?: number };
 
 /** M6 Telif & Sözleşme: CRM'deki sözleşme portföyü (salt okunur). */
 export const contractsApi = {
@@ -1459,13 +1486,22 @@ export const contractsApi = {
   list: (p: ContractQuery) =>
     send<ContractPage>(
       'GET',
-      `/api/v1/editorial/contracts${qs({ q: p.q, status: p.status, kind: p.kind, expiring: p.expiring ? 'true' : undefined, order: p.order, page: p.page })}`,
+      `/api/v1/editorial/contracts${qs({ q: p.q, status: p.status, kind: p.kind, expiring: p.expiring ? 'true' : undefined, order: p.order, term: p.term || undefined, page: p.page })}`,
       undefined,
       60_000,
     ),
 };
 
-export type Contributor = { id: string; name: string | null; works: number; recentWorks: number; last: string | null; roles: Array<{ role: string; works: number }> };
+export type Contributor = {
+  id: string;
+  name: string | null;
+  works: number;
+  recentWorks: number;
+  last: string | null;
+  roles: Array<{ role: string; works: number }>;
+  /** Sözleşmelerinde girilen kaynak diller (yalnız çevirmen listesi ister). */
+  languages?: string[];
+};
 export type ContributorPage = {
   items: Contributor[];
   total: number;
@@ -1477,12 +1513,28 @@ export type ContributorPage = {
   kaynaklar?: Kaynaklar;
 };
 export type RoleFacet = { role: string; records: number; people: number };
+/** Kaynak dil süzgeci: sözleşmedeki «orijinal dil» alanından; `unspecified` = hiçbir sözleşmesinde dil girilmemiş kişi. */
+export type LanguageFacets = { items: Array<{ id: string; name: string; people: number }>; unspecified: number; db?: DbTiming | null; kaynaklar?: Kaynaklar };
+/** Kaynak dil süzgecinde «Belirtilmemiş» seçeneğinin değeri. */
+export const LANG_NONE = 'yok';
 export type PersonDetail = {
   id: string;
   name: string | null;
   bio: string | null;
   works: Array<{ bookId: string | null; title: string | null; role: string | null; on: string | null }>;
-  contracts: Array<{ id: string; no: string | null; status: string | null; kind: string | null; start: string | null; end: string | null; royalty: number | null; share: number | null } & CrmRightsFields>;
+  contracts: Array<{
+    id: string;
+    no: string | null;
+    code?: string | null;
+    status: string | null;
+    kind: string | null;
+    start: string | null;
+    end: string | null;
+    royalty: number | null;
+    share: number | null;
+    /** Sözleşmeye bağlı eserler (CRM sözleşme–kitap bağı); sözleşmenin başlığı yerine bunlar yazılır. */
+    books?: Array<{ id: string | null; title: string }>;
+  } & CrmRightsFields>;
   projects: Array<{ id: string; name: string | null; status: string | null; text: string | null; on: string | null; editor: string | null }>;
   truncated: boolean;
   db?: DbTiming | null;
@@ -1492,8 +1544,14 @@ export type PersonDetail = {
 /** M7 / M8 / M4: esere katkı verenler (yazar, çizer, çevirmen…), CRM eser katılım kayıtlarından. */
 export const contributorsApi = {
   roles: () => send<{ items: RoleFacet[]; db?: DbTiming | null; kaynaklar?: Kaynaklar }>('GET', '/api/v1/editorial/contributors/roles', undefined, 60_000),
-  list: (p: { roles: string[]; q?: string; order?: string; page?: number }) =>
-    send<ContributorPage>('GET', `/api/v1/editorial/contributors${qs({ roles: p.roles.join('|'), q: p.q, order: p.order, page: p.page })}`, undefined, 60_000),
+  list: (p: { roles: string[]; q?: string; order?: string; page?: number; lang?: string; langs?: boolean }) =>
+    send<ContributorPage>(
+      'GET',
+      `/api/v1/editorial/contributors${qs({ roles: p.roles.join('|'), q: p.q, order: p.order, page: p.page, lang: p.lang || undefined, langs: p.langs ? 'true' : undefined })}`,
+      undefined,
+      60_000,
+    ),
+  languages: (roles: string[]) => send<LanguageFacets>('GET', `/api/v1/editorial/contributors/languages${qs({ roles: roles.join('|') })}`, undefined, 60_000),
   person: (id: string) => send<PersonDetail>('GET', `/api/v1/editorial/contributors/${encodeURIComponent(id)}`, undefined, 60_000),
 };
 
@@ -1765,6 +1823,45 @@ export type AuthorRelated = {
   run: { at: string | null; orders: number; linesMatched: number; lines: number; pairs: number } | null;
   kaynaklar?: Kaynaklar;
 };
+/** Pazarda bu yazar: Başarı Dağıtım kataloğundaki kitapları (barkodla doğrulanan + ad eşleşmesi; ad eşleşmesi bağlanmaz). */
+export type AuthorPazarBook = {
+  barkod: string;
+  ad: string | null;
+  yayinevi: string | null;
+  ustKategori: string | null;
+  durum: string | null;
+  baskiNo: number | null;
+  fiyat: number | null;
+  basimYili: number | null;
+  timas: boolean;
+  dogrulandi: boolean;
+  drde: boolean;
+  cikis: number | null;
+};
+export type AuthorPazarGroup = { kitap: number; satista: number; baskisiYok: number; diger: number; dogrulanan: number };
+export type AuthorPazar = {
+  kaynak: string;
+  tarih: string | null;
+  kaynakZamani: string | null;
+  ad: string;
+  not: string;
+  okundu: boolean;
+  kitaplar: AuthorPazarBook[];
+  adlar: string[];
+  belirsiz: boolean;
+  nedenler: string[];
+  dogrulanan?: number;
+  kitapListesi?: boolean;
+  timas?: AuthorPazarGroup;
+  diger?: AuthorPazarGroup;
+  yayinevleri?: Array<{ yayinevi: string; kitap: number; satista: number; timas: boolean }>;
+  enYuksekBaski?: { baski: number; ad: string | null; yayinevi: string | null } | null;
+  fiyat?: { enDusuk: number; orta: number; enYuksek: number; kitap: number } | null;
+  drdeOlan?: number;
+  cikis?: { bas: string; son: string; timas: number; diger: number } | null;
+  cikisNot?: string | null;
+  kaynaklar?: Kaynaklar;
+};
 export type AuthorSimilar = {
   cards: Array<{ id: string; name: string; stage: string; stageLabel: string | null; archived: boolean; crmContactId: string | null }>;
   crm: Array<{ crmContactId: string; name: string | null; author: boolean; cardId: string | null }>;
@@ -1796,6 +1893,8 @@ export const authorsApi = {
     send<AuthorHeatmap>('GET', `${A}/heatmap${qs({ scope: p.scope, q: p.q, order: p.order, page: p.page })}`, undefined, 180_000),
   related: (contactId: string, page = 0) =>
     send<AuthorRelated>('GET', `${A}/related/${encodeURIComponent(contactId)}${qs({ page })}`, undefined, 30_000),
+  pazar: (p: { contactId?: string | null; name?: string | null }) =>
+    send<AuthorPazar>('GET', `${A}/pazar${qs({ kisi: p.contactId || undefined, ad: p.name || undefined })}`, undefined, 60_000),
   agenda: (scope: string, days = 30) => send<AuthorAgenda>('GET', `${A}/agenda${qs({ scope, days })}`, undefined, 30_000),
   createMeeting: (b: AuthorMeetingInput) => send<AuthorMeeting>('POST', `${A}/meetings`, b, 30_000),
   updateMeeting: (id: string, b: AuthorMeetingInput) => send<AuthorMeeting>('PATCH', `${A}/meetings/${encodeURIComponent(id)}`, b, 30_000),
@@ -1943,7 +2042,14 @@ export type DeskFile = {
     fullSignatures?: boolean;
     trimBoxMissing?: number;
     versus?: { version: number; pageDelta: number; changedPages: number[] };
+    /** Metnin nasıl ayrıldığı (ZEKI-44): bolum = kitabın kendi bölümleri, parca = yapı bulunamadı, eşit parçalar. */
+    unit?: 'bolum' | 'parca';
+    /** outline | typography | toc | styles | markdown | pattern | pieces */
+    structure?: string;
   };
+  /** Kaldırılan sürüm (ZEKI-45): kayıt ve dosya iz olarak kalır, etkin sürüm sayılmaz. */
+  removedAt?: string | null;
+  removedBy?: string | null;
 };
 export type Work = {
   id: string;
@@ -2023,13 +2129,24 @@ export type ProofState = {
   blocking: { failed: number; open: number; unsigned: number };
 };
 
+/** Kitap/belge yüklemesinin (eser metni, prova, belge incelemesi, çeviri kaynağı) hata cümlesi. Kapıdaki gövde sınırı (413) sunucu açıklaması taşımaz; kişi ham
+ *  sayı yerine dosyasının boyutunu ve ne yapacağını görür (ZEKI-26). */
+export function deskUploadErrorText(status: number, size: number, message?: string | null): string {
+  if (message) return message;
+  if (status === 413)
+    return `Dosya ${fmtSize(size)}; sunucunun yükleme kapısı bu boyutu henüz kabul etmiyor. Sistem yöneticisine bildirin (413).`;
+  if (status === 507) return `Sunucuda bu dosya için yer kalmadı; sistem yöneticisine bildirin (${status}).`;
+  return httpErrorText(status);
+}
+
 const upload = async (path: string, file: File) => {
   const res = await fetch(`${ENGINE_BASE}${path}${path.includes('?') ? '&' : '?'}filename=${encodeURIComponent(file.name)}`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/octet-stream' },
     body: file,
-    signal: AbortSignal.timeout(600_000),
+    // Yüzlerce MB'lık kitap PDF'i: yükleme ve bölümleme birlikte (kapıdaki süre 30 dk).
+    signal: AbortSignal.timeout(1_800_000),
   });
   if (res.status === 401 || res.status === 403) {
     authBlocked = true;
@@ -2037,9 +2154,9 @@ const upload = async (path: string, file: File) => {
   }
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } } | null;
-    throw new Error(j?.detail?.message || httpErrorText(res.status));
+    throw new Error(deskUploadErrorText(res.status, file.size, j?.detail?.message));
   }
-  return (await res.json()) as { fileId: string; version: number };
+  return (await res.json()) as { fileId: string; version: number; unit?: 'bolum' | 'parca' };
 };
 
 /** M3 ve M5: eser dosyaları, metin/prova sürümleri, öneriler, kontroller, imzalar. */
@@ -2052,7 +2169,16 @@ export const deskApi = {
   /** Dosyadan yeni eser: ad dosya adından, tek istekte eser + ilk metin/prova sürümü (liste boşken yükleme alanı). */
   createFromFile: (kind: 'manuscript' | 'proof', file: File) =>
     upload(`/api/v1/editorial/works-from-file?kind=${kind}`, file) as Promise<{ fileId: string; version: number; workId: string; title: string }>,
-  chapters: (id: string) => send<{ work: Work; chapters: ChapterRow[]; versions: DeskFile[] }>('GET', `/api/v1/editorial/works/${encodeURIComponent(id)}/chapters`, undefined, 60_000),
+  chapters: (id: string) =>
+    send<{ work: Work; chapters: ChapterRow[]; versions: DeskFile[]; activeFileId?: string | null }>('GET', `/api/v1/editorial/works/${encodeURIComponent(id)}/chapters`, undefined, 60_000),
+  /** Yüklenen sürümü kaldırır (ZEKI-45); silinmez, iz olarak kalır, etkin sürüm bir öncekine döner. */
+  removeFile: (id: string) =>
+    send<{ workId: string; kind: string; version: number; filename: string; activeVersion: number | null }>(
+      'POST',
+      `/api/v1/editorial/files/${encodeURIComponent(id)}/remove`,
+      {},
+      30_000,
+    ),
   chapter: (id: string) => send<ChapterDetail>('GET', `/api/v1/editorial/chapters/${encodeURIComponent(id)}`, undefined, 60_000),
   review: (id: string) => send<{ ok: boolean }>('POST', `/api/v1/editorial/chapters/${encodeURIComponent(id)}/review`, {}, 60_000),
   approve: (id: string, approve: boolean) => send<{ ok: boolean }>('POST', `/api/v1/editorial/chapters/${encodeURIComponent(id)}/approval`, { approve }, 30_000),
@@ -2196,7 +2322,8 @@ export async function putFile<T>(path: string, file: File): Promise<T> {
     credentials: 'include',
     headers: { 'Content-Type': 'application/octet-stream' },
     body: file,
-    signal: AbortSignal.timeout(600_000),
+    // Kaynak metin kitap boyunda olabilir (ZEKI-26): yükleme ve segmentleme birlikte, kapıdaki süre 30 dk.
+    signal: AbortSignal.timeout(1_800_000),
   });
   if (res.status === 403) {
     const j = (await res.json().catch(() => null)) as { detail?: { code?: string; message?: string } } | null;
@@ -2211,7 +2338,7 @@ export async function putFile<T>(path: string, file: File): Promise<T> {
   }
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } } | null;
-    throw new Error(j?.detail?.message || httpErrorText(res.status));
+    throw new Error(deskUploadErrorText(res.status, file.size, j?.detail?.message));
   }
   return (await res.json()) as T;
 }
@@ -2500,6 +2627,14 @@ export type BookQuestion = {
   /** Kart kimliği: kitap adı kataloğa tam eşleşince köprü ekler; sayfa rozetlerinin görsel önizlemesi buna bağlıdır.
    *  Yoksa rozet düz metin kalır (önizleme yok). */
   bookId?: string | null;
+  /** Sayfa atıflarının kitabı (ZEKI-43): aday kitaplar (katalogdaki adlarıyla), varsayılan kitap ve cevap bittiğinde
+   *  denetlenen «bu sayfa bu kitapta var mı». Rozet, metinde kendinden önce anılan kitaba bağlanır; yoksa önceki
+   *  davranış (bütün rozetler `bookId`). Çözüm: editorial/citations.ts. */
+  citations?: {
+    books: { id: string; title?: string | null; names: string[] }[];
+    defaultId: string | null;
+    pages?: Record<string, Record<string, boolean>>;
+  } | null;
   cards?: BookCard[];
   cardError?: string | null;
   cardMatch?: string | null;
@@ -2741,7 +2876,8 @@ export const documentApi = {
       credentials: 'include',
       headers: { 'Content-Type': 'application/octet-stream' },
       body: file,
-      signal: AbortSignal.timeout(600_000),
+      // Belge kitap boyunda olabilir (ZEKI-26): köprü diske akıtıp kart servisine gönderir, kapıdaki süre 30 dk.
+      signal: AbortSignal.timeout(1_800_000),
     });
     if (res.status === 401 || res.status === 403) {
       authBlocked = true;
@@ -2750,7 +2886,7 @@ export const documentApi = {
     if (!res.ok) {
       const j = (await res.json().catch(() => null)) as { detail?: string | { message?: string } } | null;
       const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
-      throw new Error(msg || httpErrorText(res.status));
+      throw new Error(deskUploadErrorText(res.status, file.size, msg));
     }
     return (await res.json()) as DocumentItem;
   },

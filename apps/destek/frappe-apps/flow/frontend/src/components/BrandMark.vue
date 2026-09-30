@@ -9,7 +9,7 @@ defineProps({ size: { type: Number, default: 18 } });
 		viewBox="0 0 118 118"
 		class="shrink-0"
 		role="img"
-		aria-label="NanobaseAI"
+		aria-label="ZEKİ AI"
 	>
 		<defs>
     <linearGradient id="nb-flow-g" x1="0" y1="1" x2="1" y2="0">
@@ -18,6 +18,6 @@ defineProps({ size: { type: Number, default: 18 } });
     </linearGradient>
   </defs>
   <rect width="118" height="118" rx="28" fill="url(#nb-flow-g)"/>
-  <path d="M34 88V30h12l26 37V30h12v58H72L46 51v37z" fill="#fff"/>
+  <path d="M32 30h54v11L48 77h38v11H32V77l38-36H32z" fill="#fff"/>
 	</svg>
 </template>

@@ -1,0 +1,23 @@
+{
+  "modified": [
+    "apps/meteor/.storybook/decorators.tsx",
+    "apps/meteor/public/fonts/zekichat.woff2",
+    "docker-compose-ci.yml",
+    "docker-compose-local.yml",
+    "ee/packages/federation-matrix/docker-compose.test.yml",
+    "ee/packages/federation-matrix/tests/scripts/run-integration-tests.sh",
+    "ee/packages/federation-matrix/README.md",
+    "ee/packages/omnichannel-services/src/OmnichannelTranscript.ts",
+    "apps/meteor/ee/app/livechat-enterprise/server/lib/QueueInactivityMonitor.ts",
+    "apps/meteor/ee/tests/unit/apps/livechat-enterprise/server/lib/QueueInactivityMonitor.spec.ts",
+    "apps/meteor/server/features/EmailInbox/EmailInbox_Outgoing.ts"
+  ],
+  "deleted": [
+    ".gitpod/.gitpod.yml",
+    "apps/meteor/scalingo.json",
+    "apps/meteor/example-pm2.json",
+    "apps/meteor/example-ecosystem.json",
+    "apps/meteor/.openshift/zeki-chat-ephemeral.json",
+    "apps/meteor/.openshift/zeki-chat-persistent.json"
+  ]
+}

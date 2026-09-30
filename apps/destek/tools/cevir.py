@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bir .po dosyasındaki boş Türkçe çevirileri NanobaseAI modeliyle doldurur.
+"""Bir .po dosyasındaki boş Türkçe çevirileri ZEKİ AI modeliyle doldurur.
 
 Model LLM kapısından gider (arka plan önceliği, modül `destek-ceviri`): BI'ın
 etkileşimli sorularının önüne geçmez. Test sunucusunda koşar:
@@ -13,7 +13,7 @@ Kurallar:
 - Yer tutucular ({0}, {name}, %s, %(x)s), HTML etiketleri, baştaki/sondaki boşluk ve
   satır sonları birebir korunmalı; tutmayan cevap bir kez yeniden sorulur, yine
   tutmazsa girdi boş kalır (İngilizce görünür) ve rapora yazılır.
-- Ürün/teknoloji adı ekrana çıkmaz: çatı ve ürün adları → NanobaseAI.
+- Ürün/teknoloji adı ekrana çıkmaz: çatı ve ürün adları → ZEKİ AI.
 - Her parti bitince dosya diske yazılır; yarıda kalan koşu kaldığı yerden devam eder.
 """
 
@@ -39,7 +39,7 @@ Terim sözlüğü (tutarlı kullan):
 - Assignment Rule → Atama Kuralı; Escalation → Yükseltme
 - Doctype/DocType → Belge Türü; Record → Kayıt; Field → Alan; Workspace → Çalışma Alanı
 - Desk → Masaüstü; Portal → Portal; Dashboard → Pano; Report → Rapor
-- Frappe, Frappe Framework, Helpdesk (ürün adı), Flow (ürün adı), ERPNext dışı ürün adları → NanobaseAI
+- Frappe, Frappe Framework, Helpdesk (ürün adı), Flow (ürün adı), ERPNext dışı ürün adları → ZEKİ AI
 - E-posta, e-posta hesabı; Settings → Ayarlar
 """
 
@@ -51,7 +51,7 @@ SYSTEM = (
 	"etiketlerini aynen koru; sıraları cümleye göre değişebilir ama hiçbiri silinmez ya da eklenmez.\n"
 	"2. Baştaki/sondaki boşlukları ve satır sonlarını koru.\n"
 	"3. Kod, alan adı, URL, e-posta, dosya yolu, `backtick` içi metin çevrilmez.\n"
-	"4. Frappe, Helpdesk ve Flow ürün adları NanobaseAI olur.\n"
+	"4. Frappe, Helpdesk ve Flow ürün adları ZEKİ AI olur.\n"
 	"5. Yalnız istenen JSON'u döndür, açıklama yazma.\n\n" + GLOSSARY
 )
 
@@ -102,7 +102,7 @@ def valid(src: str, dst: str) -> bool:
 		return False
 	if shape(src) != shape(dst):
 		return False
-	# Kaynakta marka adı yokken çeviriye girmesin; varsa NanobaseAI'ye dönmüş olmalı.
+	# Kaynakta marka adı yokken çeviriye girmesin; varsa ZEKİ AI'ya dönmüş olmalı.
 	return not BRAND_LEAK.search(dst)
 
 

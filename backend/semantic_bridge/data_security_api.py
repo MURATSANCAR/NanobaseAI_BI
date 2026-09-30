@@ -341,7 +341,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         """Zamanlayıcı (5 dk): giriş olayları, kurallar, uyarı e-postası; günde bir kez saklama ve günlük özet.
         `?zorla=gunluk` günlük kısmı hemen koşturur (ilk koşu elle yapılır)."""
         require_caller(request)
-        from semantic_bridge.budget_api import _send_mail
+        from semantic_bridge import ic_bildirim as IB
 
         r = rt()
         engine, tenant, ds = r.store.engine, r.settings.tenant_id, r.settings.datasource_id
@@ -361,17 +361,17 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         mail = "bos"
         if new:
             if cfg["recipients"]:
-                mail = _send_mail(f"Portal güvenlik uyarısı: {len(new)} yeni", D.alert_text(new, link()), cfg["recipients"])
+                mail = IB.send(D.alert_notice(new, link(), now), cfg["recipients"])
             else:
                 mail = "alici_yok"
             D.mark_mailed(engine, [a["id"] for a in new], mail)
         out: dict[str, Any] = {"giris": pull, "yeniUyari": len(new), "eposta": mail, "gunluk": None}
         if zorla == "gunluk" or D.daily_due(engine, now, cfg):
             retention = D.run_retention(engine, engine, tenant, ds, now=now)
-            digest = D.digest_text(engine, engine, tenant, ds, now)
+            digest = D.digest_notice(engine, engine, tenant, ds, now, link())
             dmail = "bos"
             if digest:
-                dmail = _send_mail("Portal güvenlik: günlük erişim özeti", digest, cfg["recipients"]) if cfg["recipients"] else "alici_yok"
+                dmail = IB.send(digest, cfg["recipients"]) if cfg["recipients"] else "alici_yok"
             D.mark_daily(engine, now)
             out["gunluk"] = {"saklama": retention, "ozet": dmail}
         return out

@@ -272,7 +272,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if engine in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(engine)
 
 
@@ -315,7 +316,8 @@ def _num(v: Any, what: str, *, integer: bool = False, positive: bool = False) ->
 
 
 def settings(conf: Callable[[str], str]) -> dict[str, Any]:
-    """Ayarlar ekran > env. Varsayılan eşik yok: girilmediyse ekran «ayarlanmadı» der."""
+    """Ayarlar ekran > env. Gizlilik eşiği boşsa 5 kişi (KVKK: küçük birimde kişi belli olmasın; müşteri VM'ine İK açılırken
+    boş ayarla birleştirme yapılmıyordu, 2026-09-29). «0» yazılırsa birleştirme bilerek kapalıdır."""
     def num(key: str) -> Optional[int]:
         try:
             n = int((conf(key) or "").strip())
@@ -323,9 +325,14 @@ def settings(conf: Callable[[str], str]) -> dict[str, Any]:
             return None
         return n if n > 0 else None
 
-    return {"alertDays": num("HR_LEARNING_ALERT_DAYS"), "minGroup": num("HR_PRIVACY_MIN_GROUP"),
+    raw = (conf("HR_PRIVACY_MIN_GROUP") or "").strip()
+    min_group = DEFAULT_MIN_GROUP if not raw else num("HR_PRIVACY_MIN_GROUP")
+    return {"alertDays": num("HR_LEARNING_ALERT_DAYS"), "minGroup": min_group,
             "accounts": parse_accounts(conf("HR_TRAINING_ACCOUNTS") or "")}
 
+
+#: Gizlilik eşiği girilmemişse kullanılan en küçük grup (kişi).
+DEFAULT_MIN_GROUP = 5
 
 _ACCOUNT = re.compile(r"^[0-9][0-9A-Za-z.\-]{0,39}$")
 

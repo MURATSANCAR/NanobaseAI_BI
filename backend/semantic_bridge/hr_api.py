@@ -30,6 +30,19 @@ F_EMPLOYEES = "ozellik:ik.calisan-yonet"
 F_KVKK = "ozellik:ik.kvkk-yonet"
 F_ACCESS_LOG = "ozellik:ik.erisim-kaydi"
 F_EXPORT = "ozellik:ik.disa-aktar"
+PAGE_RECORDS = "sayfa:ik-kayitlar"
+
+# Çalışan kaydının tamamını (giriş/çıkış tarihi, ayrılanlar, hesap ve kaynak kimlikleri) yalnız kayıtları yöneten
+# İK görür. Başka İK sayfasıyla gelen (eğitim, işe alım, belgeler) yalnız kişi seçicinin rehber alanlarını alır.
+DIRECTORY_FIELDS = ("id", "displayName", "unitId", "unitName", "title", "status", "statusLabel")
+
+
+def sees_full_record(who: H.Who) -> bool:
+    return who.can(F_EMPLOYEES, PAGE_RECORDS)
+
+
+def directory_view(e: dict[str, Any]) -> dict[str, Any]:
+    return {k: e.get(k) for k in DIRECTORY_FIELDS}
 
 # Sorgu bilgisi formülleri (hr_kaynak): kural metni, kişi adı ya da sayı içermez.
 F_CALISAN = ("Çalışan listesi = portal çalışan kaydı (CRM ∩ Active Directory eşitlemesiyle ya da İK'nın elle girdiği), "
@@ -160,9 +173,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     @app.get(P + "/employees")
     def hr_employees(request: Request, status: str = "aktif", q: str = "", unit: str = "") -> dict[str, Any]:
-        engine, tenant, _ = ctx(request)
+        engine, tenant, who = ctx(request)
+        full = sees_full_record(who)
         with HK.capture(engine) as got:
-            items = H.list_employees(engine, tenant, status=status, q=q, unit_id=unit)
+            # Kayıt yetkisi olmayan yalnız etkin çalışanların rehber alanlarını alır; arama da yalnız o alanlarda.
+            items = H.list_employees(engine, tenant, status=status if full else "aktif", q=q if full else "", unit_id=unit)
+        if not full:
+            needle = (q or "").strip().casefold()
+            items = [directory_view(e) for e in items
+                     if not needle or needle in f"{e['displayName']} {e['title']} {e['unitName'] or ''}".casefold()]
         out = {"items": items, "total": len(items)}
         return hr.kaynak(out, got, "calisan", {"total": ("calisanSay", F_CALISAN), "items[]": ("calisan", F_CALISAN)})
 
@@ -178,6 +197,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def hr_employee(eid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who = ctx(request)
         out = call(H.get_employee, engine, tenant, eid)
+        if not sees_full_record(who):
+            if out.get("status") != "aktif":
+                raise HTTPException(status_code=404, detail={"code": "HR", "message": "Çalışan kaydı bulunamadı."})
+            out = directory_view(out)
         H.log_access(engine, tenant, who.user, "calisan", eid, "goruntule")
         return out
 

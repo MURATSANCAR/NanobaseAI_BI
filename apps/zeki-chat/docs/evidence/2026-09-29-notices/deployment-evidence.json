@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-09-29T15:08:34.299984+00:00",
+  "image": "zeki-ai-chat:8.5.3-84bac94",
+  "imageId": "sha256:abaec1cb92bcc2996d79aebfc8ff88dc06f748b87bcc8534775cabcd1fc5ece3",
+  "codeVersion": "84bac94",
+  "running": true,
+  "api": "http://127.0.0.1:4000/api/v1/settings.public?_id=Site_Name",
+  "database": "zeki",
+  "setting": "Site_Name",
+  "apiValue": "ZEKI AI CHAT",
+  "independentMongoValue": "ZEKI AI CHAT",
+  "expected": "ZEKI AI CHAT",
+  "matches": true
+}

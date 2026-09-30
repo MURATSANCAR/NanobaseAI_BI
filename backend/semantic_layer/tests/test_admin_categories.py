@@ -9,7 +9,7 @@ from __future__ import annotations
 from semantic_bridge import admin as AD
 
 APPROVED = {
-    "baglanti": {"database", "crm", "directory", "people", "access"},
+    "baglanti": {"database", "crm", "directory", "people", "access", "basvuru_form"},
     "zeki": {"llm", "chat", "model_quality", "studio", "zeki_ortak", "voice"},
     "eposta": {"email", "delivery", "mailbox"},
     "pazarlama": {"marketing", "creative", "ads", "social", "influencer", "catalog", "relations", "sets"},

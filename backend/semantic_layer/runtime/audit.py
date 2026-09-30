@@ -627,6 +627,12 @@ def _bindings(sq: SemanticQuery) -> list[dict]:
     return [b] + list(b.get("also") or [])
 
 
+def _binding_read(binding: dict, occ: list[_Occurrence]) -> bool:
+    """Does the statement read the bound entity or any declared equivalent of it?"""
+    names = [binding.get("entity", "")] + [a.get("entity", "") for a in binding.get("alternatives") or []]
+    return any(_same_entity(o.entity, n) for o in occ for n in names if n)
+
+
 def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) -> bool:
     """Every source of the bound entity is read for exactly this period on the declared date
     column — its own, or a declared equivalent one it is joined to in the same SELECT."""
@@ -1114,6 +1120,63 @@ def _strict_default() -> bool:
     return os.environ.get("SEMANTIC_GATE_STRICT", "").strip().lower() in ("1", "true", "on", "yes")
 
 
+def _literal_restricted_columns(tree: exp.Expression) -> set[str]:
+    """Columns a WHERE/HAVING compares with a constant (=, <>, IN, LIKE): the ones that narrow the rows to
+    chosen values. A join key or a column compared with another column is not one."""
+    out: set[str] = set()
+
+    def constant(node: Optional[exp.Expression]) -> bool:
+        if node is None:
+            return False
+        node = node.unnest() if hasattr(node, "unnest") else node
+        return isinstance(node, (exp.Literal, exp.Null, exp.Boolean)) or (
+            isinstance(node, (exp.Tuple, exp.Array)) and all(constant(e) for e in node.expressions))
+
+    for clause in list(tree.find_all(exp.Where)) + list(tree.find_all(exp.Having)):
+        for cmp in clause.find_all(exp.EQ, exp.NEQ, exp.Like, exp.ILike, exp.In):
+            if isinstance(cmp, exp.In):
+                col = _bare_column(cmp.this)
+                if col is not None and cmp.expressions and all(constant(e) for e in cmp.expressions):
+                    out.add(col.name.upper())
+                continue
+            left, right = _bare_column(cmp.left), _bare_column(cmp.right)
+            if left is not None and right is None and constant(cmp.right):
+                out.add(left.name.upper())
+            elif right is not None and left is None and constant(cmp.left):
+                out.add(right.name.upper())
+    return out
+
+
+def _columns_turned_into_filters(sq: SemanticQuery, sql: str, tree: exp.Expression) -> list[Unmet]:
+    """ZEKI-54, the gate's own line: a term the person asked to SEE (`sq.column_terms`) whose `-- yorum:`
+    reading lands on a column the statement then narrows to chosen values. "'yazar' → CLCARD.SPECODE =
+    'YAZARLAR'" returned two rows where every book was asked for — a filter nobody requested, under the name
+    of a column. Refused with the reason; the one repair a model answer gets is told to show it instead."""
+    terms = list(getattr(sq, "column_terms", None) or [])
+    if not terms:
+        return []
+    from semantic_layer.normalize import fold as _f, stem as _s
+    restricted = _literal_restricted_columns(tree)
+    if not restricted:
+        return []
+    out: list[Unmet] = []
+    for raw in re.findall(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$", sql or ""):
+        head, _, reading = raw.partition("→")
+        folded = _f(head or raw)
+        for term in terms:
+            t, root = _f(term), _s(term)
+            if not (t in folded or (root and root in folded)):
+                continue
+            named = {c.upper() for c in re.findall(r"\b[A-Za-z_]\w*\.\[?\"?([A-Za-z_]\w*)", reading or raw)}
+            hit = sorted(named & restricted)
+            if hit:
+                out.append(Unmet("column_filter",
+                                 f"'{term}' kolon olarak istendi; sorgu onu {', '.join(hit)} üzerinde bir süzgece çevirip satırları daralttı",
+                                 f"'{term}' için WHERE/HAVING süzgeci yazma: karşılığını SELECT'te kolon olarak göster ve GROUP BY'a koy; "
+                                 f"ölçünün tablosundan bu kolona ulaşılamıyorsa NO_SQL yaz ve neden ulaşılamadığını söyle.", column=hit[0]))
+    return out
+
+
 def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, strict: Optional[bool] = None) -> list[Unmet]:
     """Every resolved requirement the SQL does not demonstrate. Empty means the answer may be served."""
     if sq.analytics:
@@ -1126,6 +1189,12 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         return [Unmet("parse", "sorgu ayrıştırılamadı; soru koşulları doğrulanamadı", "Geçerli tek bir SELECT yaz.")]
     try:
         occ = _occurrences(tree, sources)
+        # The anti-join side of a measure's excluded groups reads the measure's table only to find the groups to
+        # drop; its rows are not the answer's rows, and the period, filters and scope of the question are not owed
+        # on it (compiler.exclude_group_sql).
+        hx = _exclusion_join_aliases(sq, tree)
+        if hx:
+            occ = [o for o in occ if (o.root_alias or "").upper() not in hx]
     except OptimizeError as e:
         # Two sources under one alias in the same scope (`… AS d JOIN … AS d`): no reading of which table a
         # condition belongs to is possible. A refusal with the reason goes back for the one repair every model
@@ -1156,6 +1225,12 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         for binding in _bindings(sq):
             for period in sq.temporal:
                 p = _period_dict(period)
+                if (p.get("params") or {}).get("default") and not _binding_read(binding, occ):
+                    # The resolver's DEFAULT year (nobody asked for it) bounds the dated measure's rows; an answer that
+                    # reads neither that table nor a declared equivalent has nothing it bounds. Same rule for one
+                    # statement and for a plan (2026-09-29: Q40 answered by a CRM-only plan passed, the same reading
+                    # written as one CRM statement was refused). A period the person wrote stays an obligation.
+                    continue
                 if not _period_proven(p, binding, dated, tree):
                     text = getattr(period, "text", None) or p.get("text") or f"{p.get('start')}–{p.get('end')}"
                     out.append(Unmet("period", f"'{text}' dönemi doğru tarih sütununda doğrulanamadı" + _opaque_note(occ, binding['entity']),
@@ -1201,6 +1276,8 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             if not any(w in r or (root and root in r) for r in said):
                 out.append(Unmet("unresolved", f"'{word}' teriminin nasıl yorumlandığı yazılmadı",
                                  f"Sorgunun başına -- yorum: '{word}' → <hangi tablo/kolon, hangi hesap> satırı ekle."))
+
+    out += _columns_turned_into_filters(sq, sql, tree)
 
     # Words left to the model. Two things are required of each: the model said how it read the word
     # (a "-- yorum:" line naming it), and the answer restricts something beyond what the question's
@@ -1393,6 +1470,22 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                                      f"{slot.mapping.entity} tablosunu LEFT JOIN ile bağla: LEFT JOIN {slot.mapping.entity} ON {expression} "
                                      f"(INNER JOIN, {slot.mapping.entity} kaydı olmayan satırları düşürür)."))
 
+    out += _excluded_groups_unmet(sq, tree, occ)
+    # «X bazında» asked and not placed: the answer must group by something — one total under a per-X question is a
+    # different question (2026-09-29, A044 sınıfı). Checked always, not only in strict mode.
+    # One reason per fault: a breakdown the model turned into a filter ("'yazar' → SPECODE = 'YAZARLAR'") is already
+    # refused above as a column made a filter, with the repair that also restores the grouping; saying "groups by
+    # nothing" about the same words again only gives the repair two instructions for one mistake.
+    filtered_words = {w for w in (getattr(sq, "requested_breakdowns", None) or [])
+                      if any(u.kind == "column_filter" and f"'{w}'" in u.text for u in out)}
+    if getattr(sq, "requested_breakdowns", None) and isinstance(tree, exp.Select) \
+            and not set(sq.requested_breakdowns) <= filtered_words and not any(
+            s.args.get("group") is not None for s in tree.find_all(exp.Select)):
+        words = ", ".join(f"'{w}'" for w in sq.requested_breakdowns)
+        out.append(Unmet("grain", f"{words} bazında kırılım istendi; sorgu hiçbir şeye göre gruplamıyor",
+                         f"Sonucu {words} bazında grupla (GROUP BY); bu kırılıma ölçünün tablosundan ulaşılamıyorsa "
+                         f"NO_SQL yaz ve neden ulaşılamadığını söyle."))
+
     if not strict:
         return out + _closing(sq, tree, occ)
 
@@ -1434,6 +1527,71 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                              f"Ölçüye göre {'azalan' if sq.order_desc else 'artan'} sırala ve {sq.limit} satırla sınırla."))
 
     return out + _closing(sq, tree, occ)
+
+
+def _group_proof(node: exp.Expression, entity: str, g: dict) -> bool:
+    """This subquery reads `entity`, names the group key and the tested column, and tests the declared pattern."""
+    if not any(_same_entity(logical_table(t.name).entity, entity) for t in node.find_all(exp.Table)):
+        return False
+    cols = {c.name.upper() for c in node.find_all(exp.Column)}
+    pats = {str(like.expression.this) for like in node.find_all(exp.Like) if isinstance(like.expression, exp.Literal)}
+    return g["key"] in cols and g["column"] in cols and bool(pats & set(g["like"]))
+
+
+def _anti_join_sources(tree: exp.Expression) -> list[tuple[str, exp.Expression]]:
+    """(alias, subquery) for every LEFT JOIN of a derived table whose key is tested `IS NULL` somewhere in the
+    statement — in a WHERE or inside an aggregate's CASE."""
+    nulls = {((c.table or "").upper(), c.name.upper()) for i in tree.find_all(exp.Is)
+             if isinstance(i.expression, exp.Null) and isinstance((c := i.this), exp.Column)}
+    out = []
+    for join in tree.find_all(exp.Join):
+        src = join.this
+        if (join.side or "").upper() != "LEFT" or not isinstance(src, exp.Subquery) or not src.alias:
+            continue
+        alias = src.alias.upper()
+        if any(t == alias for t, _ in nulls):
+            out.append((alias, src))
+    return out
+
+
+def _exclusion_join_aliases(sq: SemanticQuery, tree: exp.Expression) -> set[str]:
+    from semantic_layer.runtime.compiler import exclude_groups
+    wanted = [(m.mapping.entity, g) for m in sq.metrics if m.mapping for g in exclude_groups(m.mapping)]
+    if not wanted:
+        return set()
+    return {alias for alias, src in _anti_join_sources(tree) if any(_group_proof(src, e, g) for e, g in wanted)}
+
+
+def _excluded_groups_unmet(sq: SemanticQuery, tree: exp.Expression, occ) -> list[Unmet]:
+    """A measure that excludes whole groups (katalog `exclude_groups`: «aynı fişte 7x1 yansıtma satırı olan fiş hariç»)
+    must say so in the statement: a NOT EXISTS / NOT IN subquery, or an anti-join (LEFT JOIN of a derived table whose
+    key is tested IS NULL), reads the measure's own table, ties on the group key and tests the column with the declared
+    pattern. Checked whenever the statement reads the measure's table — a year-end reflection voucher left in zeroes a
+    closed year's expense and nothing on screen shows it."""
+    from semantic_layer.runtime.compiler import exclude_groups
+    out: list[Unmet] = []
+    subqueries = []
+    for node in tree.find_all(exp.Not):
+        inner = node.this.this if isinstance(node.this, exp.Paren) else node.this
+        if isinstance(inner, (exp.Exists, exp.In)):
+            subqueries.append(inner)
+    anti = _anti_join_sources(tree)
+    for metric in sq.metrics:
+        m = metric.mapping
+        groups = exclude_groups(m)
+        if not groups or not any(_same_entity(o.entity, m.entity) for o in occ):
+            continue
+        for g in groups:
+            if not any(_group_proof(n, m.entity, g) for n in subqueries) and \
+                    not any(_group_proof(src, m.entity, g) for _, src in anti):
+                pats = " / ".join(g["like"])
+                out.append(Unmet("filter", f"'{metric.term}' ölçüsünün hariç tuttuğu gruplar dışlanmadı: aynı {g['key']} içinde "
+                                 f"{g['column']} LIKE {pats} satırı olanlar" + (f" ({g['why']})" if g["why"] else ""),
+                                 f"{m.entity} kaynağına anti-join ekle: LEFT JOIN (SELECT {g['key']} FROM {m.entity} WHERE "
+                                 f"{g['column']} LIKE '{g['like'][0]}' GROUP BY {g['key']}) HX ON HX.{g['key']} = <takma ad>.{g['key']}"
+                                 f" ve HX.{g['key']} IS NULL (WHERE'de ya da toplamanın CASE'inde; toplama içine alt sorgu yazma).",
+                                 m.entity, g["key"]))
+    return out
 
 
 def _closing(sq, tree, occ=None) -> list[Unmet]:

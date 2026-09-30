@@ -1,0 +1,91 @@
+{
+  "apply": true,
+  "activeAD": 216,
+  "missingAccounts": 0,
+  "crmTeams": 25,
+  "nonemptyTeams": 12,
+  "unmatchedCRMMemberships": 1,
+  "createdUsers": 0,
+  "updatedUsers": 0,
+  "disabledUsers": 0,
+  "createdGroups": 12,
+  "renamedGroups": 0,
+  "invitedMembers": 0,
+  "removedMembers": 0,
+  "blockedAccounts": 0,
+  "groups": [
+    {
+      "teamId": "02c53f24-de8d-e511-bb16-00155d031a5b",
+      "name": "Tüm Kullanılar",
+      "members": 18,
+      "roomId": "6abcb5430e1c6a5c522439ae"
+    },
+    {
+      "teamId": "06db86ff-8708-e411-9b7d-00155d001518",
+      "name": "Satış",
+      "members": 17,
+      "roomId": "6abcb5440e1c6a5c522439c2"
+    },
+    {
+      "teamId": "0d7e9fb5-0ef0-e311-92ee-00155d001518",
+      "name": "Mali İşler",
+      "members": 3,
+      "roomId": "6abcb5440e1c6a5c522439d5"
+    },
+    {
+      "teamId": "0fb55a22-d31c-e511-bd22-00155d031a4f",
+      "name": "İdari İşler",
+      "members": 1,
+      "roomId": "6abcb5440e1c6a5c522439da"
+    },
+    {
+      "teamId": "1bad1dee-7d83-e311-a308-00155d008403",
+      "name": "Üretim",
+      "members": 2,
+      "roomId": "6abcb5440e1c6a5c522439dd"
+    },
+    {
+      "teamId": "3593a309-0579-e311-aa04-00155d008403",
+      "name": "Editörya",
+      "members": 13,
+      "roomId": "6abcb5440e1c6a5c522439e1"
+    },
+    {
+      "teamId": "5d50ddfe-267b-eb11-8134-00155d001579",
+      "name": "Teelif Satış",
+      "members": 1,
+      "roomId": "6abcb5440e1c6a5c522439f0"
+    },
+    {
+      "teamId": "67290577-bd3b-e311-b4fe-00155d008403",
+      "name": "Timaş CRM",
+      "members": 105,
+      "roomId": "6abcb5440e1c6a5c522439f3"
+    },
+    {
+      "teamId": "6e7d0038-b67c-eb11-8134-00155d001579",
+      "name": "Telif Satış Ekibi",
+      "members": 1,
+      "roomId": "6abcb5440e1c6a5c52243a5e"
+    },
+    {
+      "teamId": "c07a8d14-d31c-e511-bd22-00155d031a4f",
+      "name": "Lojistik",
+      "members": 2,
+      "roomId": "6abcb5440e1c6a5c52243a61"
+    },
+    {
+      "teamId": "d55e81fa-2236-e711-9f6b-00155d000c50",
+      "name": "Bilgiişlem",
+      "members": 1,
+      "roomId": "6abcb5440e1c6a5c52243a65"
+    },
+    {
+      "teamId": "fcce57dd-7d83-e311-a308-00155d008403",
+      "name": "Pazarlama",
+      "members": 2,
+      "roomId": "6abcb5440e1c6a5c52243a68"
+    }
+  ],
+  "completedAt": "2026-09-30T07:07:49Z"
+}

@@ -87,8 +87,12 @@ class Maske:
 		return _signature(s, self)
 
 	def geri(self, text: str | None) -> str:
-		"""Model metnindeki yer tutucuları gerçek değerle doldurur (yalnız o kaydı görme yetkisi olan temsilciye)."""
-		return _PH.sub(lambda m: self._by_ph.get(m.group(0).casefold(), m.group(0)), str(text or ""))
+		"""Model metnindeki yer tutucuları gerçek değerle doldurur (yalnız o kaydı görme yetkisi olan temsilciye).
+		Karşılığı olmayan yer tutucu modelin uydurmasıdır (2026-09-29: maskelenecek ad yokken «Merhaba [ad 1],»):
+		silinir, önündeki boşluk ve ardından gelen fazla boşluk toplanır."""
+		s = _PH.sub(lambda m: self._by_ph.get(m.group(0).casefold(), "\0"), str(text or ""))
+		s = re.sub(r"[ \t]*\x00[ \t]*(?=[,.;:!?])", "", s)
+		return re.sub(r"[ \t]*\x00", "", s)
 
 	@staticmethod
 	def genel(text: str | None) -> str:

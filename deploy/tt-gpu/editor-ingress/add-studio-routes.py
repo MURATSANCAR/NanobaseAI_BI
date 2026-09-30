@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28; kapak arşivi 09-28; sesli okumada insan kaydı 09-28) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28; kapak arşivi 09-28; sesli okumada insan kaydı 09-28; insan kaydında kelimeleri yeniden yerleştirme ve izin belgesi 09-29) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -22,6 +22,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from customer_sources import ALLOW  # noqa: E402 — müşteri kaynak adresleri tek yerde
+
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 orig = open(P, encoding="utf-8").read()
 if "EDITOR-BITTI" not in orig:
@@ -29,7 +32,7 @@ if "EDITOR-BITTI" not in orig:
     sys.exit(1)
 UPLOAD_MB = int(os.environ.get("STUDIO_UPLOAD_MB", "60"))
 gate = re.search(r'\$http_x_editor_gate != "([^"]+)"', orig).group(1)
-guard = f'''        allow 85.105.0.0/16; deny all;
+guard = f'''        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}'''
 JOB = "[0-9]{14}[0-9a-f]{6}"
 KEY = "[0-9]{1,4}|kapak|a_[0-9a-f]{8}"
@@ -371,8 +374,10 @@ if "EDITOR-STUDYO-PAZARLAMA-IS" not in s:
     s = s.replace("    # EDITOR-BITTI", mis + "    # EDITOR-BITTI", 1)
     changes.append("kitapsız pazarlama işi yolları (gövde 36 MB)")
 
-# 9) Kapak arşivi (api_library.py). Müşteri VM'i yalnız okur; besleme (POST items/fetch) test sunucusundan tünelle
-# gelir, bu yüzden dışarı açılmaz. Süzgeçler (kategori, arama, kitle, sıra, sayfa, genişlik) sorgu parametresidir.
+# 9) Kapak arşivi (api_library.py). Müşteri VM'i yalnız okur (köprüde STUDIO_LIBRARY_FEED=0); besleme (POST
+# items/retain/fetch) test sunucusundan tünelle gelir, bu yüzden dışarı açılmaz. Süzgeçler (kategori, arama, kitle,
+# sıra, sayfa, genişlik) sorgu parametresidir. 2026-09-28 08:44'te GPU'da kuruldu (09-29 yoklaması: yol 403 = IP
+# süzgeci devrede, `library/items` 200+HTML = varsayılan siteye düşüyor, dışarı açık değil).
 if "EDITOR-STUDYO-KUTUPHANE" not in s:
     CID = "[a-z]{2,10}-[A-Za-z0-9_.-]{1,60}"
     kut = ("    # EDITOR-STUDYO-KUTUPHANE  (kapak arsivi: kategori agaci, liste, gorsel)\n"
@@ -391,6 +396,18 @@ if "EDITOR-STUDYO-INSANKAYDI" not in s:
                    f"\n        client_max_body_size {rec_mb}m;", timeout=300))
     s = s.replace("    # EDITOR-BITTI", insan + "    # EDITOR-BITTI", 1)
     changes.append(f"sesli okuma insan kaydı yolu (gövde {rec_mb} MB)")
+
+# 11) İnsan kaydında kelimeleri kayda yeniden yerleştirme (09-29; POST, gövde yalnız sayfa listesi, iş Temporal'da) ve
+#     yüklemenin izin belgesi (GET, PDF/PNG/JPEG). Kayıt kimliği `r` + 10 onaltılık (narration_human.UID).
+#     Düzenli ifadeli location'da proxy_pass yolu yakalanan parçayla ve $is_args$args ile verilir.
+if "EDITOR-STUDYO-INSANHIZA" not in s:
+    hiza = ("    # EDITOR-STUDYO-INSANHIZA  (insan kaydinda kelimeleri yeniden yerlestirme ve izin belgesi)\n"
+            + loc(f"jobs/({JOB})/narration/(realign)", "POST", "jobs/$1/narration/$2$is_args$args",
+                  "\n        client_max_body_size 1m;", timeout=60)
+            + loc(f"jobs/({JOB})/narration/recordings/(r[0-9a-f]{{10}})/document", "GET",
+                  "jobs/$1/narration/recordings/$2/document$is_args$args", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", hiza + "    # EDITOR-BITTI", 1)
+    changes.append("insan kaydında kelimeleri yeniden yerleştirme ve izin belgesi yolları")
 
 if s == orig:
     print("zaten var (güncel)")

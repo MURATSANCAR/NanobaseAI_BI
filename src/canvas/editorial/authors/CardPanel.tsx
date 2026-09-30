@@ -17,6 +17,7 @@ import Sheet from '../studio/reader/Sheet';
 import MeetingForm, { type MeetingMode, type MeetingTarget } from './MeetingForm';
 import CardForm from './CardForm';
 import GrowthSection from './GrowthSection';
+import MarketSection from './MarketSection';
 import SqlInfo from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
 import { BAND, HeatPill, TRACE, cellClass, lastMonths, daysAgo, downloadIcs, fmtDay, invalidateAuthors, monthLabel, useAuthorsMeta } from './shared';
@@ -452,6 +453,8 @@ export function RelationBody({ target, months, onOpenCard, compact }: { target: 
           Satış gelişimi, sadakat ve Zeki AI önerisi
         </Link>
       )}
+
+      {!compact && name && <MarketSection contactId={detail?.crmContactId || target.crm?.id || null} name={name} />}
 
       {(detail?.crmContactId || target.crm?.id) && (
         <RelatedAuthors contactId={(detail?.crmContactId || target.crm?.id) as string} compact={compact} />

@@ -5,6 +5,8 @@ import { Note, errText } from '../../../admin/ui';
 import { press } from '../shared';
 import { marketingApi, type GuideBody, type MarketingView } from './api';
 import { Approval, Generate, Lines, Section, field, ghostBtn, label, tidy } from './parts';
+import { useCan } from '../../../useAdmin';
+import { EmptyHint } from '../../../components/Explain';
 
 function clean(g: GuideBody): GuideBody {
   return {
@@ -20,6 +22,9 @@ const PHASES = [['before', 'Okumadan önce'], ['during', 'Okurken'], ['after', '
 
 export default function GuideTab({ jobId, v, refresh }: { jobId: string; v: MarketingView; refresh: () => void }) {
   const gd = v.guide;
+  // Düzeltme ve onay «Kitap tasarımında üretim ve düzenleme», PDF indirme «Dışa aktarma» ister.
+  const canEdit = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const [g, setG] = useState<GuideBody | null>(gd.guide);
   useEffect(() => setG(gd.guide), [gd.guide]);
   const dirty = !!g && !!gd.guide && JSON.stringify(clean(g)) !== JSON.stringify(gd.guide);
@@ -41,8 +46,13 @@ export default function GuideTab({ jobId, v, refresh }: { jobId: string; v: Mark
       </p>
       {err && <Note tone="err">{err}</Note>}
       {gd.notes.map((n) => <Note key={n} tone="info">{n}</Note>)}
+      {!g && v.tasks.guide?.status !== 'running' && !gen.isPending && (
+        <EmptyHint title="Henüz öğretmen kılavuzu yok"
+          why="Zeki AI kitabı okuyup özet, değerler, kazanımlar, bölüm bölüm sorular, kelime çalışması ve etkinlik önerileri yazar. Üretince burada düzenler, onaylayınca PDF olarak indirirsiniz." />
+      )}
       {g && (
         <>
+          <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
           <Section title="Kılavuz" aside={<Approval approved={approvedNow ? gd.approved : null} />}>
             <label className="flex flex-col gap-1">
               <span className={label}>Kitabın özeti · paragrafları boş satırla ayırın</span>
@@ -83,26 +93,27 @@ export default function GuideTab({ jobId, v, refresh }: { jobId: string; v: Mark
             </ul>
           </Section>
 
-          <Section title="Kelime çalışması">
+          <Section title="Kelime çalışması" explain="Kitapta geçen, okurun yaşına göre zor olabilecek kelimeler ve kitaptaki cümlesi. Kelimenin kendisi kitaptaki biçimiyle kalır; anlamını düzeltebilir ya da satırı kaldırabilirsiniz.">
+
             <ul className="flex min-w-0 flex-col gap-2">
               {g.vocabulary.map((w, i) => (
                 <li key={i} className="grid min-w-0 gap-1.5 rounded-xl border border-slate-200 bg-white/70 p-2 sm:grid-cols-[minmax(0,10rem)_1fr_auto]">
                   <input className={`${field} font-bold`} aria-label={`Kelime ${i + 1}`} value={w.word} readOnly title="Kelime kitapta geçtiği biçimiyle kalır" />
                   <input className={field} aria-label={`Anlamı ${i + 1}`} value={w.meaning}
                     onChange={(e) => set('vocabulary', g.vocabulary.map((x, j) => (j === i ? { ...x, meaning: e.target.value } : x)))} />
-                  <button type="button" className={ghostBtn} aria-label={`${w.word} sil`} onClick={() => set('vocabulary', g.vocabulary.filter((_, j) => j !== i))}>
+                  {canEdit && <button type="button" className={ghostBtn} aria-label={`${w.word} sil`} onClick={() => set('vocabulary', g.vocabulary.filter((_, j) => j !== i))}>
                     <Trash2 className="h-4 w-4" aria-hidden />
-                  </button>
+                  </button>}
                   <p className="break-words text-[11.5px] italic text-canvas-muted sm:col-span-3">“{w.sentence}”</p>
                 </li>
               ))}
             </ul>
           </Section>
 
-          <Section title="Etkinlik önerileri" aside={
+          <Section title="Etkinlik önerileri" aside={canEdit ? (
             <button type="button" className={ghostBtn} onClick={() => set('activities', [...g.activities, { title: '', steps: '', duration: '' }])}>
               <Plus className="h-4 w-4" aria-hidden />Etkinlik ekle
-            </button>}>
+            </button>) : undefined}>
             <ul className="flex min-w-0 flex-col gap-2">
               {g.activities.map((a, i) => (
                 <li key={i} className="grid min-w-0 gap-1.5 rounded-xl border border-slate-200 bg-white/70 p-2 sm:grid-cols-[1fr_9rem_auto]">
@@ -110,24 +121,25 @@ export default function GuideTab({ jobId, v, refresh }: { jobId: string; v: Mark
                     onChange={(e) => set('activities', g.activities.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
                   <input className={field} placeholder="Süre" aria-label={`Süre ${i + 1}`} value={a.duration}
                     onChange={(e) => set('activities', g.activities.map((x, j) => (j === i ? { ...x, duration: e.target.value } : x)))} />
-                  <button type="button" className={ghostBtn} aria-label={`Etkinlik ${i + 1} sil`} onClick={() => set('activities', g.activities.filter((_, j) => j !== i))}>
+                  {canEdit && <button type="button" className={ghostBtn} aria-label={`Etkinlik ${i + 1} sil`} onClick={() => set('activities', g.activities.filter((_, j) => j !== i))}>
                     <Trash2 className="h-4 w-4" aria-hidden />
-                  </button>
+                  </button>}
                   <textarea className={`${field} sm:col-span-3`} rows={3} placeholder="Uygulama adımları" aria-label={`Adımlar ${i + 1}`} value={a.steps}
                     onChange={(e) => set('activities', g.activities.map((x, j) => (j === i ? { ...x, steps: e.target.value } : x)))} />
                 </li>
               ))}
             </ul>
           </Section>
+          </fieldset>
 
           <div className="flex flex-wrap gap-2">
-            <button type="button" className={ghostBtn} disabled={!dirty || busy} onClick={() => save.mutate()}><Save className="h-4 w-4" aria-hidden />Kaydet</button>
-            <button type="button" disabled={busy || approvedNow} onClick={() => approve.mutate()}
+            {canEdit && <button type="button" className={ghostBtn} disabled={!dirty || busy} onClick={() => save.mutate()}><Save className="h-4 w-4" aria-hidden />Kaydet</button>}
+            {canEdit && <button type="button" disabled={busy || approvedNow} onClick={() => approve.mutate()}
               className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border-2 border-emerald-500 bg-white px-4 text-[13px] font-bold text-emerald-700 disabled:opacity-50 ${press}`}>
               <Check className="h-4 w-4" aria-hidden />{approve.isPending ? 'PDF diziliyor…' : approvedNow ? 'Onaylandı' : 'Onayla ve PDF diz'}
-            </button>
-            {approvedNow && gd.pdf && (
-              <a className={ghostBtn} href={marketingApi.guidePdfUrl(jobId)}><FileDown className="h-4 w-4" aria-hidden />Kılavuz PDF'i</a>
+            </button>}
+            {canExport && approvedNow && gd.pdf && (
+              <a className={ghostBtn} href={marketingApi.guidePdfUrl(jobId)}><FileDown className="h-4 w-4" aria-hidden />Kılavuz PDF'ini indir</a>
             )}
           </div>
         </>

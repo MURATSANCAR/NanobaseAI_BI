@@ -153,6 +153,24 @@ JOBS = sa.Table(
     _ts("finished_at"),
 )
 
+#: Pasife alınan kişisel veri (ör. silinen özlük kaydı ve ona bağlı izin satırları). Hukuki süreçte kanıt kaybolmasın diye
+#: satır silinmez, buraya taşınır: kaynak tablo, kaynak satırın bütün kolonları (bayt kolonu `blob`'da), kim, ne zaman.
+#: Hiçbir ekran, rehber, bakiye ya da bordro listesi bu tabloyu okumaz; geri getirme ve imha ayrı iştir.
+ARCHIVE = sa.Table(
+    "semantic_hr_archive", _md,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
+    sa.Column("batch_id", sa.String(40), nullable=False, index=True),   # bir silme işlemi
+    sa.Column("subject_id", sa.String(40), nullable=False, index=True), # kimin verisi (ör. özlük kaydı kimliği)
+    sa.Column("source_table", sa.String(80), nullable=False),
+    sa.Column("source_id", sa.String(80)),
+    sa.Column("reason", sa.String(40), nullable=False),               # personel_silindi | vekil_bosaltildi
+    sa.Column("row_json", sa.Text, nullable=False),
+    sa.Column("blob", sa.LargeBinary),
+    sa.Column("archived_by", sa.String(120), nullable=False),
+    _ts("archived_at", nullable=False),
+)
+
 #: Kurulmuş veritabanları. Kimlik (id) değil zayıf başvuru: çöpe giden motorun kimliği yenisine verilirse tablo kurulmadan kalmasın.
 _ready: "weakref.WeakSet[sa.engine.Engine]" = weakref.WeakSet()
 _lock = threading.Lock()
@@ -192,7 +210,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if engine in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(engine)
 
 
@@ -842,6 +861,42 @@ def access_log(engine: sa.engine.Engine, tenant: str, *, subject_id: str = "", u
     items = [{"id": r.id, "at": iso(r.at), "username": r.username, "subjectType": r.subject_type, "subjectId": r.subject_id,
               "action": r.action, "purpose": r.purpose or ""} for r in rows[:limit]]
     return {"items": items, "hasMore": len(rows) > limit, "next": items[-1]["id"] if len(rows) > limit else None}
+
+
+# ------------------------------------------------------------------ pasife alma (arşiv)
+
+
+@dataclass
+class Archiver:
+    """Bir işlemde (`c`) satırları `semantic_hr_archive`'e taşır: önce kopyalar, sonra kaynak tablodan siler."""
+
+    c: sa.engine.Connection
+    tenant: str
+    batch_id: str
+    subject_id: str
+    actor: str
+    reason: str = "personel_silindi"
+    at: datetime = field(default_factory=now)
+
+    def note(self, source_table: str, source_id: Optional[str], data: dict[str, Any], reason: Optional[str] = None,
+             blob: Optional[bytes] = None) -> None:
+        self.c.execute(ARCHIVE.insert().values(
+            tenant_id=self.tenant, batch_id=self.batch_id, subject_id=self.subject_id, source_table=source_table[:80],
+            source_id=None if source_id is None else str(source_id)[:80], reason=(reason or self.reason)[:40],
+            row_json=dump({k: iso(v) if isinstance(v, (date, datetime)) else v for k, v in data.items()}), blob=blob,
+            archived_by=self.actor[:120], archived_at=self.at))
+
+    def move(self, table: sa.Table, *where: Any) -> int:
+        """`where`'e uyan satırları arşive taşır; taşınan satır sayısını döner."""
+        pk = next(iter(table.primary_key.columns), None)
+        rows = self.c.execute(sa.select(table).where(*where)).mappings().all()
+        for r in rows:
+            data = {k: v for k, v in r.items() if not isinstance(v, (bytes, bytearray, memoryview))}
+            blob = next((bytes(v) for v in r.values() if isinstance(v, (bytes, bytearray, memoryview))), None)
+            self.note(table.name, None if pk is None else r[pk.name], data, blob=blob)
+        if rows:
+            self.c.execute(table.delete().where(*where))
+        return len(rows)
 
 
 # ------------------------------------------------------------------ imha

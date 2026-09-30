@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -147,17 +147,19 @@ function NoteField({ label, value, disabled, onChange, rewriteId }: { label: str
     onSuccess: (x) => setHint(x.text),
     onError: (e) => toast.error(errText(e, 'Zeki AI yeniden yazamadı.')),
   });
+  // Etiket yalnız metin alanını hedefler: düğmeler <label> içinde olursa etikete dokunmak düğmeye basmak olur.
+  const id = useId();
   return (
-    <label className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1">
       <span className="flex items-center justify-between gap-2">
-        <span className={labelCls}>{label}</span>
+        <label htmlFor={id} className={labelCls}>{label}</label>
         {rewriteId && !disabled && value.trim() && (
           <button type="button" className="inline-flex min-h-9 items-center gap-1 text-[11.5px] font-bold text-canvas-violet hover:underline" disabled={rw.isPending} onClick={() => rw.mutate()}>
             <Sparkles aria-hidden className="h-3.5 w-3.5" />{rw.isPending ? 'Yazıyor…' : 'Zeki AI ile somutlaştır'}
           </button>
         )}
       </span>
-      <textarea className={`${field} min-h-[90px]`} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
+      <textarea id={id} className={`${field} min-h-[90px]`} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
       {hint !== null && (
         <div className="rounded-xl bg-canvas-violet/5 p-2.5 text-[12.5px]">
           <div className="whitespace-pre-wrap break-words">{hint}</div>
@@ -168,7 +170,7 @@ function NoteField({ label, value, disabled, onChange, rewriteId }: { label: str
           <div className="mt-1 text-[11px] text-canvas-muted">Adlar ve iletişim bilgileri Zeki AI'a gönderilmeden gizlendi; yeni olay eklenmez.</div>
         </div>
       )}
-    </label>
+    </div>
   );
 }
 

@@ -257,5 +257,140 @@ def test_endpoints_upload_and_run_skip_human_pages(job, monkeypatch):
 
 def test_workflow_and_activity_are_registered():
     from editor.production.flow import ACTIVITIES, WORKFLOWS
-    assert "HumanRecording" in {getattr(w, "__temporal_workflow_definition").name for w in WORKFLOWS}
-    assert "production_human_recording" in {getattr(a, "__temporal_activity_definition").name for a in ACTIVITIES}
+    wfs = {getattr(w, "__temporal_workflow_definition").name for w in WORKFLOWS}
+    acts = {getattr(a, "__temporal_activity_definition").name for a in ACTIVITIES}
+    assert {"HumanRecording", "HumanRealign"} <= wfs
+    assert {"production_human_recording", "production_human_realign"} <= acts
+
+
+# ------------------------------------------------------------------ kelimeleri kayda yeniden yerleştirme (09-29)
+def test_mostly_missing_is_the_majority_of_words():
+    assert H.mostly_missing(0, 1) and H.mostly_missing(4, 9)            # 5/9 bulunamadı
+    assert not H.mostly_missing(5, 10) and not H.mostly_missing(9, 9)  # yarısı bulundu: yerleştirilir
+    assert not H.mostly_missing(0, 0)
+
+
+def _edit_p3(job, text: str) -> None:
+    from editor.production import studio
+    pl = studio.read(job, "plan.json")
+    pl["pages"][2]["text"]["blocks"][0]["runs"][0]["text"] = text
+    studio.write(job, "plan.json", pl)
+
+
+def _human_pages(job, monkeypatch):
+    monkeypatch.setattr(N, "_call", _fake_aligner([], 6.0))
+    rec = _stage(job, ["p_1", "p_3"], document=(b"%PDF-1.4 izin", "izin.pdf"))
+    asyncio.run(H.apply(job, rec["id"], "editör"))
+    return rec
+
+
+@ffmpeg
+def test_realign_keeps_the_recording_and_updates_word_times(job, monkeypatch):
+    rec = _human_pages(job, monkeypatch)
+    before = N.page_record(job, "p_3")
+    audio = N.audio_path(job, "p_3").read_bytes()
+    _edit_p3(job, "Ertesi sabah güneş doğdu. Elif bahçeye yürüdü.")
+    assert {r["id"]: r["status"] for r in N.status(job)}["p_3"] == "stale"
+
+    calls = []
+    monkeypatch.setattr(N, "_call", _fake_aligner(calls, before["duration"]))
+    res = asyncio.run(H.realign(job, "p_3", "düzelten"))
+    assert len(calls) == 1 and calls[0]["format"] == "none" and "segments" not in calls[0]
+    u3, p3, _ = N.page_input(job, studio_page(job, "p_3"))
+    assert calls[0]["words"] == [s for p in p3 for k in p.words for s in u3[p.unit].words[k].say]
+    assert any("yürüdü" in s for s in calls[0]["words"])
+    assert res["aligned"] == [len(calls[0]["words"])] * 2
+
+    after = N.page_record(job, "p_3")
+    st = {r["id"]: r for r in N.status(job)}
+    assert st["p_3"]["status"] == "done" and st["p_3"]["human"] and st["p_3"]["owner"] == "Ayşe Okur"
+    assert after["source"] == "human" and after["human"] == before["human"] and after["human"]["upload"] == rec["id"]
+    assert after["duration"] == before["duration"] and after["audio"] == before["audio"]     # kayıt ve süre aynı
+    assert N.audio_path(job, "p_3").read_bytes() == audio
+    assert after["text_hash"] != before["text_hash"] and after["realigned"]["by"] == "düzelten"
+    words = [w["text"] for bl in after["blocks"] for w in bl["words"]]
+    assert any("yürüdü" in t for t in words)
+    assert all(bl["voice"] == "" for bl in after["blocks"])
+    ends = [w["end"] for bl in after["blocks"] for w in bl["words"] if w["start"] is not None]
+    assert ends == sorted(ends) and all(0 <= e <= after["duration"] + 0.05 for e in ends)
+    assert N.page_view(job, "p_3")["status"] == "done"
+
+
+def studio_page(job, pid):
+    from editor.production import plan as plan_mod
+    return plan_mod._page(plan_mod.load(job), pid)
+
+
+@ffmpeg
+def test_realign_refuses_when_most_words_are_not_in_the_recording(job, monkeypatch):
+    _human_pages(job, monkeypatch)
+    _edit_p3(job, "Bambaşka bir metin yazıldı buraya, hiç okunmamış kelimelerle dolu.")
+    before = N.page_record(job, "p_3")
+    # ilk kelime bulunur, gerisi bulunamaz: çoğunluk kayıtta yok
+    monkeypatch.setattr(N, "_call", _fake_aligner([], before["duration"], missing=set(range(1, 100))))
+    with pytest.raises(H.RecordingError, match="metin kayıttan çok farklı.*kaydı yeniden yükleyin"):
+        asyncio.run(H.realign(job, "p_3", "düzelten"))
+    assert N.page_record(job, "p_3") == before                          # sayfa kaydına dokunulmadı
+    assert {r["id"]: r["status"] for r in N.status(job)}["p_3"] == "stale"
+    # yalnız insan kaydına: sesi insan kaydı olmayan sayfa reddedilir
+    for p in (N.audio_path(job, "p_1"), N.ses_dir(job) / "sayfa" / "p_1.json"):
+        p.unlink()
+    with pytest.raises(H.RecordingError, match="insan kaydı değil"):
+        asyncio.run(H.realign(job, "p_1", "düzelten"))
+
+
+@ffmpeg
+def test_realign_pages_reports_rejected_pages_and_continues(job, monkeypatch):
+    _human_pages(job, monkeypatch)
+    _edit_p3(job, "Ertesi sabah güneş doğdu. Elif bahçeye yürüdü.")
+    monkeypatch.setattr(N, "_call", _fake_aligner([], 3.0))
+    prog = []
+    res = asyncio.run(H.realign_pages(job, ["p_1", "p_3"], "düzelten", lambda i, n: prog.append((i, n))))
+    assert prog == [(1, 2), (2, 2)] and [p["page"] for p in res["pages"]] == ["p_1", "p_3"] and res["rejected"] == []
+    monkeypatch.setattr(N, "_call", _fake_aligner([], 3.0, missing=set(range(100))))
+    res = asyncio.run(H.realign_pages(job, ["p_3"], "düzelten"))
+    assert res["pages"] == [] and res["rejected"][0]["page"] == "p_3" and "çok farklı" in res["rejected"][0]["error"]
+
+
+@ffmpeg
+def test_endpoints_realign_and_document(job, monkeypatch):
+    pytest.importorskip("fastapi")
+    from editor.production import plan as P
+    rec = _human_pages(job, monkeypatch)
+    c, h, started = _client(job, monkeypatch)
+    url = f"/v1/studio/jobs/{job.name}/narration"
+
+    # izin belgesi: tarayıcıda açılır (inline), doğru tür
+    r = c.get(f"{url}/recordings/{rec['id']}/document", headers=h)
+    assert r.status_code == 200 and r.headers["content-type"].startswith("application/pdf")
+    assert r.headers["content-disposition"].startswith("inline") and r.content == b"%PDF-1.4 izin"
+    assert c.get(f"{url}/recordings/r0000000000/document", headers=h).status_code == 404
+    assert c.get(f"{url}/recordings/../document", headers=h).status_code == 404
+    ref_only = _stage(job, ["p_1"])                                      # yalnız belge numarası
+    assert c.get(f"{url}/recordings/{ref_only['id']}/document", headers=h).status_code == 404
+    items = {i["id"]: i for i in c.get(url, headers=h).json()["recordings"]["items"]}
+    assert items[rec["id"]]["document"] is True and items[ref_only["id"]]["reference"] == "Sözleşme 2026/7"
+
+    # güncel sayfada yapılacak iş yok; insan kaydı olmayan sayfa reddedilir
+    r = c.post(url + "/realign", headers=h, json={"pages": ["p_3"]})
+    assert r.status_code == 400 and r.json()["code"] == "NOTHING"
+    _edit_p3(job, "Ertesi sabah güneş doğdu. Elif bahçeye yürüdü.")
+    for p in (N.audio_path(job, "p_1"), N.ses_dir(job) / "sayfa" / "p_1.json"):
+        p.unlink()
+    r = c.post(url + "/realign", headers=h, json={"pages": ["p_1", "p_3"]})
+    assert r.status_code == 400 and r.json()["code"] == "RECORDING_REJECTED"
+    assert c.post(url + "/realign", headers=h, json={"pages": ["p_9"]}).status_code == 404
+    assert c.post(url + "/realign", headers=h, json={"pages": []}).status_code == 422
+    assert c.post(url + "/realign", json={"pages": ["p_3"]},
+                  headers={"Authorization": "Bearer k"}).status_code == 400          # X-Editor şart
+
+    r = c.post(url + "/realign", headers=h, json={"pages": ["p_3"]})
+    assert r.status_code == 200, r.text
+    name, args = started[-1]
+    assert name == "HumanRealign" and args[2] == ["p_3"] and args[3] == "sinama"
+    jr = next(j for j in P.jobs(job) if j["id"] == args[1])
+    assert jr["kind"] == "narration" and jr["mode"] == "realign" and jr["status"] == "queued"
+    assert c.get(url, headers=h).json()["job"]["mode"] == "realign"
+    # iş sürerken ikinci istek ve seslendirme reddedilir
+    assert c.post(url + "/realign", headers=h, json={"pages": ["p_3"]}).json()["code"] == "BUSY"
+    assert c.post(url + "/run", headers=h, json={"pages": None}).json()["code"] == "BUSY"

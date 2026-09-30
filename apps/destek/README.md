@@ -1,7 +1,7 @@
-# NanobaseAI Destek (apps/destek)
+# ZEKİ AI (apps/destek)
 
 BI'dan ayrı çalışan destek modülü: müşteri destek kayıtları (Helpdesk), bilgi bankası, müşteri
-portalı ve masaüstünde yapay zekâ paneli (Flow). Ekranda her yerde ad **NanobaseAI**, logo ve renkler
+portalı ve masaüstünde yapay zekâ paneli (Flow). Ekranda her yerde ad **ZEKİ AI**, logo ve renkler
 portalın kanvas diliyle aynı.
 
 | Parça | Kaynak | Sürüm |
@@ -37,7 +37,7 @@ telif başlıkları korunur, yalnız ekrandaki ürün adları değişir.
   Ekip: kişinin AD birimi (alan, yoksa OU) aynı adlı etkin destek ekibiyle eşleşirse girişte o ekibe eklenir
   (Türkçe harf/aksan duyarsız: «Satış» = «Satis»). Birim listesi: `nanobase_brand.ldap_ntlm.ad_departments`.
   Yerel yönetici hesabı (Administrator) şifresi `/etc/nanobase/destek-admin.txt` (root, 600), `/login?sso=0`'dan.
-- Model: NanobaseAI modeli, **LLM kapısından**: panel `https://portal.nanobase.ai/destek-llm/v1` (nginx
+- Model: ZEKİ AI modeli, **LLM kapısından**: panel `https://portal.nanobase.ai/destek-llm/v1` (nginx
   `deploy/nginx-destek-llm.conf`, Bearer anahtarı `/etc/nanobase/destek-llm.key`) → köprünün OpenAI uyumlu girişi
   `/api/v1/llm/openai/v1/chat/completions` (`backend/semantic_bridge/llm_openai.py`). Her çağrı `sl_llm_queue`
   sırasından kiralık alır (modül `destek`, etkileşimli öncelik); BI soruları ve gece işleriyle aynı slotları paylaşır.
@@ -49,14 +49,14 @@ Model çağrılarının hepsi LLM kapısından (`/destek-llm/v1`, modül `destek
 | Özellik | Nerede | Davranış |
 |---|---|---|
 | Sınıflama | yeni kayıt (arka plan, `yz/kanca.py` → `kayit.classify`) | tür, öncelik, ekip, müşteri duygusu; yalnız boş ya da sistem varsayılanındaki alan, yalnız tanımlı değer; kayıt geçmişine not. Atama kuralı çalışamazsa alanlar yine yazılır |
-| Özet | temsilci ekranı → «NanobaseAI» → Özetle | 3 satır: istek, yapılan, sıradaki adım |
+| Özet | temsilci ekranı → «ZEKİ AI» → Özetle | 3 satır: istek, yapılan, sıradaki adım |
 | Yanıt taslağı | «Yanıt taslağı hazırla» | bilgi bankası + çözülen kayıtlardan; yanıt kutusuna eklenir, temsilci gönderir; dayanak bağlantıları |
 | Benzer geçmiş kayıtlar | «Benzer geçmiş kayıtlar» → Bul | bilgi bankasında anlamca en yakın çözülmüş kayıtlar (yoksa aynı türden); her biri için DB'deki çözüm notu + temsilci yanıtlarından «uygulanan çözüm», ilgisizler elenir, en çok 3 maddelik önerilen yol. Kayıt çözülünce bilgi bankasına hemen girer |
 | Makale taslağı | çözülen kayıtta | kişisel verisiz taslak makale (`HD Article`, Taslak, `nb_kaynak_kayit`) |
 | SLA riski | hafta içi 08:30 | riskteki açık kayıtlar → Not + «Agent Manager» e-postası |
 | Haftalık rapor | pazartesi 08:00 (elle `yz.rapor.weekly_now`) | sayılar veritabanından, 5 maddelik yorum modelden |
 
-Bilgi bankası «NanobaseAI Destek Bilgisi»: yayımlanmış makaleler + çözülen kayıtlar (Flow günlük eşitleme); gömme BI'ın
+Bilgi bankası «ZEKİ AI Bilgi Bankası»: yayımlanmış makaleler + çözülen kayıtlar (Flow günlük eşitleme); gömme BI'ın
 gömme servisi (`bge-m3`, 1024 boyut) — kapının `/embeddings` aktarıcısı. Temsilci paneli
 `helpdesk/desk/src/components/ticket-agent/NanobaseAIPanel.vue` (marka.py ile kenar çubuğuna eklenir).
 Giden e-posta: Gmail `zeki@timas.com.tr` (BI ile aynı hesap, uygulama şifresi köprünün yönetim ayarlarından; `nanobase_brand/eposta.py`), yalnız gönderim. Hesap yoksa raporlar yalnız Not olarak kalır.
@@ -70,7 +70,14 @@ git archive main apps/destek | ssh nanobase-direct 'rm -rf ~/destek-src && mkdir
 ssh nanobase-direct "~/destek-src/apps/destek/scripts/install.sh ~/destek-src/apps/destek $(git rev-parse main)"
 ```
 
-`install.sh` imajı `nanobase-destek:<sürüm>-<sha8>` adıyla derler, `.env` yoksa üretir, yığını kaldırır,
+Müşteri VM'i (192.168.0.55): imaj test sunucusunda derlenir, `docker save | gzip -1 | ssh timas-vm "gunzip | docker load"`
+ile taşınır; kaynak `git archive` ile `/home/ai/destek-src`'ye açılır, sonra VM'de (ai kullanıcısı):
+
+```bash
+env DESTEK_DIR=/home/ai/destek PUBLIC_URL=http://192.168.0.55:8446 LLM_BASE=http://web:8447/destek-llm/v1 LLM_KEY_FILE=/home/ai/destek/secrets/llm.key ADMIN_FILE=/home/ai/destek/secrets/admin.txt AD_FILE=/home/ai/bi-docker/infra/docker/bi/secrets/ad/timas-ad.json SSO_FILE=/home/ai/bi-docker/infra/docker/bi/secrets/destek/destek-sso.key SSO_GROUP= BRIDGE_ENV=/home/ai/bi-docker/infra/docker/bi/.env COMPOSE_EXTRA=compose.bi-net.yaml SITE_CONFIG_EXTRA=nb_bilgi_bankasi_kapali=1 SMTP_FILE=/home/ai/destek/secrets/smtp.json bash /home/ai/destek-src/apps/destek/scripts/install.sh /home/ai/destek-src/apps/destek <sha>
+```
+
+`install.sh` imajı `nanobase-destek:<sürüm>-<içerik özeti>` adıyla derler (özet Containerfile + frappe-apps; imaj varsa derlemez), `.env` yoksa üretir, yığını kaldırır,
 site yoksa kurar (helpdesk + flow + nanobase_brand; telephony bağımlılık olarak), varsa `migrate` koşar,
 marka/bölge ayarlarını ve modeli yazar; sonda ping, imaj, `DESTEK_CODE_VERSION` ve `._*` sayısını basar.
 Veri volume'larda durur, kurulum silmez.
@@ -83,8 +90,8 @@ Veri volume'larda durur, kurulum silmez.
 - Tema: masaüstü ve giriş sayfası `nanobase_brand/public/css/nanobase.css`; destek ekranı
   `helpdesk/desk/src/nanobase-theme.css`; yapay zekâ paneli `flow/frontend/src/styles/nanobase.css`.
   Birincil düğme mor `#7C5CFF`, yazı DM Sans / başlık Plus Jakarta Sans, kenar çubuğu ve giriş zemini portalın mesh'i.
-- `nanobase_brand/install.py` her göçte: uygulama adı NanobaseAI, logo/simge, dil Türkçe, saat dilimi
-  İstanbul, tarih `gg.aa.yyyy`, para TRY, kullanım verisi (telemetri) kapalı, web alt bilgisi NanobaseAI.
+- `nanobase_brand/install.py` her göçte: uygulama adı ZEKİ AI, logo/simge, dil Türkçe, saat dilimi
+  İstanbul, tarih `gg.aa.yyyy`, para TRY, kullanım verisi (telemetri) kapalı, web alt bilgisi ZEKİ AI.
 - Kaldırılanlar: üreticinin destek/belge/bulut menü satırları, üretici posta hizmeti seçeneği, ERPNext
   sekmesi (kayıt sistemi Logo), karşılama kaydındaki üretici videoları.
 - Dış bağlantı yok: üretici belge bağlantıları, belge düğmeleri, yardım merkezi ve e-posta sağlayıcılarının yardım
@@ -94,7 +101,7 @@ Veri volume'larda durur, kurulum silmez.
 
 Site dili Türkçe. Çeviri katmanları (sonraki öncekini ezer): çatı → helpdesk → flow → nanobase_brand.
 `nanobase_brand/locale/tr.po` marka çevirileri ve çatının eksiklerini taşır. Eksik çeviriler
-`tools/cevir.py` ile NanobaseAI modelinden (LLM kapısı, arka plan önceliği) doldurulur; yer tutucu ve
+`tools/cevir.py` ile ZEKİ AI modelinden (LLM kapısı, arka plan önceliği) doldurulur; yer tutucu ve
 HTML etiketi tutmayan çeviri yazılmaz.
 
 ## Üst sürüme geçiş
@@ -105,4 +112,5 @@ HTML etiketi tutmayan çeviri yazılmaz.
 
 ## Açık işler
 
-- Müşteri VM'ine kurulmadı.
+
+- Talep eden (BT dışı AD kullanıcısı) portal ekranı `/helpdesk/my-tickets` uçtan uca sınanmadı.

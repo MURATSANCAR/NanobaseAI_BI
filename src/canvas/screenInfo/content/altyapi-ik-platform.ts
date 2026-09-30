@@ -375,12 +375,102 @@ const CONTENT: ScreenInfoMap = {
     refresh: 'Anlık',
     actions: ['Aksiyon ekleyin (yetkiyle).', 'Aksiyonun durumunu ve notunu güncelleyin.'],
   },
+  'ik-anasayfa': {
+    summary: 'İnsan Kaynakları’nın giriş sayfası: profiliniz, personel rehberi, duyurular, doğum günleri, yemek listesi, evrak ve sık sorulan sorular. İK yetkilisi kadro özetini de görür.',
+    how: [
+      'Kutucuklar yetkinize göre görünür; performans, eğitim ve anket kutucukları o sayfa size açıksa çıkar.',
+      'Doğum günleri bugün ve önümüzdeki 7 günü, duyurular en yeni üçünü gösterir.',
+      'İK özeti yalnız özlük kaydını görme yetkisi olana görünür; rakamlar İK’nın girdiği özlük kayıtlarındandır.',
+      'Çalışma izni ve askerlik tecili bitişi, ayardaki gün sayısı kadar önce «Yaklaşan tarihler»e düşer.',
+    ],
+    data: 'İK’nın özlük kayıtları, duyurular, yemek listesi ve evrak talepleri',
+    refresh: 'Sayfayı her açtığınızda',
+  },
+  'path:/ik/dogum-gunleri': {
+    summary: 'Aktif çalışanların doğum günleri, ay ay.',
+    how: ['Yalnız gün ve ay görünür; yaş ve doğum yılı gösterilmez.', 'Liste İK’nın özlük kaydındaki doğum tarihinden gelir.'],
+    data: 'İK’nın özlük kayıtları',
+  },
+  'path:/ik/yemek': {
+    summary: 'Şirket yemekhanesinin iki haftalık menüsü.',
+    how: ['Menüyü İK her hafta girer; girilmeyen gün boş görünür.', 'Bugünün menüsü İK ana sayfasında da görünür.'],
+    data: 'İK’nın girdiği yemek listesi',
+  },
+  'ik-profilim': {
+    summary: 'İK’daki özlük kaydınızın size açık bölümü ve dosyanıza yüklenmiş belgeler.',
+    how: [
+      'Hangi bilginin burada görüneceğini İK alan ayarlarından belirler.',
+      'Sayfa portal hesabınızla ya da şirket e-postanızla eşleşen kaydı gösterir.',
+      'Yanlış bir bilgi varsa Evrak talebi ekranından not bırakın ya da İK ile görüşün; buradan değiştirilmez.',
+    ],
+    data: 'İK’nın özlük kaydı',
+  },
+  'ik-izin': {
+    summary: 'Yıllık izin bakiyeniz, izin talebi ve geçmişiniz. Talep yöneticinize gider; kararı e-postayla ve burada görürsünüz.',
+    how: [
+      'Tarihleri seçince düşecek gün sayısı hemen hesaplanır; hafta sonu ve resmî tatiller sayılmaz, arife yarım gündür.',
+      'Bakiye açılış bakiyesi, yıllık hakediş, kullanım ve iadelerin toplamıdır.',
+      'Bekleyen talebi geri alabilirsiniz; onaylı izni başlamadan iptal ederseniz günler iade edilir.',
+      'Rapor gibi belge isteyen izinde belgeyi talebi açtıktan sonra yüklersiniz; yöneticiniz izin türünü görmez.',
+    ],
+    data: 'İK’nın özlük kaydı, izin türleri, resmî tatil takvimi ve izin defteri',
+    jobs: [{ name: 'Yıllık izin hakedişi', when: 'Her gece 02:10', what: 'İşe giriş yıldönümü gelen çalışana yıllık izin gününü deftere yazar.' }],
+  },
+  'ik-izin-ekip': {
+    summary: 'Yöneticisi olduğunuz çalışanların izin talepleri, ay takvimi ve aynı günlere yığılan izin uyarısı.',
+    how: [
+      'Onayladığınız yıllık izin çalışanın bakiyesinden düşer; ret gerekçesini çalışan görür.',
+      'Rapor ve doğum izni takvimde yalnız «izin» diye görünür.',
+      'Ekibin ayardaki oranı ya da fazlası aynı gün izinliyse uyarı çıkar.',
+    ],
+    data: 'Özlük kayıtlarındaki yönetici bilgisi ve izin talepleri',
+    jobs: [{ name: 'Onay hatırlatması', when: 'Her gece 02:10', what: 'Ayardaki iş günü kadar bekleyen talepler için yöneticiye günde bir e-posta yazar.' }],
+  },
+  'ik-rehber': {
+    summary: 'Aktif çalışanların departman, unvan ve iletişim bilgileri.',
+    how: [
+      'Departmana göre gruplanır; ada, unvana, ekibe ve dahili numaraya göre aranır.',
+      'Rehberde yalnız İK’nın «rehber» işaretlediği alanlar görünür; hassas bilgi hiç görünmez.',
+      'E-postaya dokununca e-posta, şirket hattına dokununca arama açılır.',
+    ],
+    data: 'İK’nın özlük kayıtları',
+  },
+  'ik-duyurular': {
+    summary: 'İK’nın yayımladığı şirket içi duyurular: etkinlik, işe giriş, kutlama ve genel duyurular.',
+    how: ['En yeni duyuru en üstte.', 'İleri tarihli duyuru yayın günü kendiliğinden görünür.'],
+    data: 'İK’nın yayımladığı duyurular',
+  },
+  'ik-evrak': {
+    summary: 'İK formlarını ve rehberlerini indirin; çalışma belgesi, bordro, hizmet dökümü gibi belgeleri İK’dan isteyin.',
+    how: [
+      'Talebiniz İK’nın kuyruğuna düşer; durumunu (bekliyor, hazırlanıyor, hazır) buradan izlersiniz.',
+      'İK henüz ele almadıysa talebinizi geri alabilirsiniz.',
+      'Portal belgeyi kendiliğinden göndermez; İK seçtiğiniz teslim şekliyle iletir.',
+    ],
+    data: 'İK’nın evrak deposu ve evrak talepleri',
+  },
+  'ik-sss': {
+    summary: 'İzin, ücret, çalışma düzeni ve eğitim hakkında İK’nın cevapları.',
+    how: ['Kategoriye göre gruplanır; soruya dokununca cevap açılır.', 'Soru ve cevabı arayabilirsiniz.'],
+    data: 'İK’nın yazdığı sorular',
+  },
+  'ik-yonetim': {
+    summary: 'Personel özlük kayıtlarını ve belgelerini girin, Excel’den yükleyin; duyuru, evrak, yemek listesi, sık sorulan sorular ve alan ayarlarını yönetin.',
+    how: [
+      'Excel yüklemesi önce önizleme gösterir; personel no ile eşleşir, boş hücre var olan bilgiyi silmez, hatalı satır varken hiçbir şey yazılmaz.',
+      'T.C. kimlik, IBAN, adres, sağlık ve belgeler yalnız «Hassas özlük verisi» yetkisiyle görünür; yönetici bile bu yetkiyi rolüyle alır.',
+      'Kart açma, belge indirme ve Excel’e aktarma İK erişim kaydına düşer.',
+      'Alanlar sekmesinde her alanın adı, seçenekleri, zorunluluğu ve hangi sayfada görüneceği ayarlanır.',
+    ],
+    data: 'İK’nın özlük kayıtları ve portal içeriği',
+    refresh: 'Siz kaydedince',
+  },
   'ik-kayitlar': {
     summary:
       'İK modüllerinin ortak kaydı: çalışan ve birim listesi, aydınlatma metinleri, açık rıza, saklama süreleri ve imha tutanakları, İK erişim kaydı.',
     how: [
       'Çalışan ve birim listesi CRM ve Active Directory’den öneri olarak gelir, İK onaylayınca yazılır; CRM’e hiçbir şey yazılmaz.',
-      'T.C. kimlik no, adres, ücret ve sağlık bilgisi tutulmaz; bilgisayar kullanmayan çalışan elle eklenir.',
+      'Bu listede T.C. kimlik no, adres, ücret ve sağlık bilgisi tutulmaz (özlük dosyası İK yönetiminde); bilgisayar kullanmayan çalışan elle eklenir.',
       'Saklama süresi veri türü başına girilir; süre girilmemiş türde imha yapılmaz.',
       'İK kişisel veri yetkileri portal yöneticisine kendiliğinden verilmez; rol bağlamak değişiklik kaydına düşer.',
     ],
@@ -548,8 +638,9 @@ const CONTENT: ScreenInfoMap = {
       'Platform, Cari eşleme ekranında onaylanan cari eşlemesiyle belirlenir; eşleme değişince karne hemen güncellenir.',
       'Hedef, CRM satış hedefi bölgesinden gelir; maliyet, marj ve simülasyon yalnız marj yetkisiyle görünür.',
       'Maliyeti girilmemiş satırlar marja sessizce katılmaz; sayısı ve cirosu yanında yazılır.',
+      'Başarı Dağıtım ve D&R’de kanala satışın yanında kanalda bekleyen TİMAŞ stoğu durur (katalogların son görüntüsü); Başarı deposundan kitapçılara çıkış en az iki günlük görüntü birikince hesaplanır, okura satış değildir.',
     ],
-    data: 'Logo faturalı satış ve iade satırları, CRM satış hedefleri ve siparişleri, onaylı cari eşlemesi',
+    data: 'Logo faturalı satış ve iade satırları, CRM satış hedefleri ve siparişleri, onaylı cari eşlemesi, Başarı ve D&R katalogları',
     refresh: 'Her gece 04:00; «Veriyi yenile» ile hemen',
     jobs: [
       { name: 'Kanal okuması', when: 'Her gece 04:00', what: 'Logo kanal satışlarını ve CRM hedef ve siparişlerini tazeler, cari eşleme adaylarını üretir.' },
@@ -664,6 +755,29 @@ const CONTENT: ScreenInfoMap = {
     data: 'Trendyol satıcı panelinden indirilen dosyalar',
     actions: ['Dosya yükleyin (yetkiyle).', 'Yanlış yüklemeyi silin (yetkiyle; Trendyol’a bir şey gönderilmez).'],
   },
+  'trendyol-mutabakat': {
+    summary: 'Trendyol sipariş ve iadeleri Logo faturalarıyla karşılaştırılır: faturası kesilmemiş sipariş, fazla fatura, tutar farkı; hakediş dosyasındaki kesinti ve ödeme Logo’da nasıl görünüyor.',
+    how: [
+      'Sipariş ve iade dosyaları «Dosya yükle» sekmesinden, hesap ekstresi / hakediş dosyası bu ekrandan yüklenir.',
+      'Panel sipariş numarasının Logo faturasının hangi alanında geçtiği veriden bulunur; bulunamazsa pazar yeri carisinin faturalarında aynı kitap, adet ve gün aranır.',
+      'Kesinti Logo’da bulunamazsa ekran bunu yazar; rakam uydurulmaz.',
+      'Trendyol’a, Logo’ya ya da CRM’e hiçbir şey yazılmaz.',
+    ],
+    data: 'Trendyol sipariş, iade ve hakediş dosyaları; Logo faturaları, hizmet satırları ve cari hareketleri',
+    refresh: 'Dosya yükleyince ve «Veriyi yenile»ye basınca',
+    actions: ['Hakediş dosyası yükleyin (yetkiyle).', 'Eksik ve fazla faturaları süzüp Excel’e aktarın.', 'Kesinti ve ödemeyi Logo ile karşılaştırın.'],
+  },
+  'path:/trendyol/model': {
+    summary: 'Trendyol’da nasıl sattığımız Logo’dan ölçülür: kendi mağaza, toptan, konsinye ya da belirsiz; sonuç kanıtlarıyla yazılır.',
+    how: [
+      'Pazar yeri carileri unvandaki platform adıyla, cari eşlemesiyle ya da kanal koduyla bulunur; koda yazılmış cari yoktur.',
+      'Fatura türleri, faturalanmamış sevk, platformdan alınan hizmet faturaları ve para hareketleri salt okuma ile sayılır.',
+      'Kanıt yetmezse ya da birden fazla modelin izi varsa ekran «belirsiz» der.',
+    ],
+    data: 'Logo faturaları, irsaliyeler, hizmet satırları, cari hareketleri; CRM firma kartları ve siparişleri',
+    refresh: '«Veriyi yenile»ye basınca',
+    actions: ['Logo’dan yeniden ölçün.', 'Eksik cariyi Cari eşleme ekranında platforma bağlayın.'],
+  },
   'trendyol-sorular': {
     summary: 'Cevapsız müşteri soruları ve düşük puanlı yorumlar; Zeki AI yanıt taslağı yazar, yanıtı siz panelden verirsiniz.',
     how: [
@@ -694,6 +808,29 @@ const CONTENT: ScreenInfoMap = {
       'Amazon kitap listesini inceleyip Excel’e aktarın.',
       'Satıcı panelinden indirdiğiniz satış raporunu (Excel ya da CSV) yükleyin; kanalın son tüketiciye sattığı adet kanal karnesinde görünür.',
     ],
+  },
+  'amazon-mutabakat': {
+    summary: 'Amazon sipariş ve iade raporu Logo faturalarıyla, ödeme (settlement) raporundaki kesinti ve ödeme Logo’daki kayıtla karşılaştırılır.',
+    how: [
+      'Sipariş, iade ve ödeme raporlarını Amazon panelinden indirip bu ekrana yükleyin; alıcı adı ve adres kolonları okunmaz.',
+      'Panel sipariş numarasının Logo faturasının hangi alanında geçtiği veriden bulunur; bulunamazsa Amazon carisinin faturalarında aynı kitap, adet ve gün aranır.',
+      'Kesinti ya da tahsilat Logo’da bulunamazsa ekran bunu yazar; rakam uydurulmaz.',
+      'Amazon hesabına, Logo’ya ya da CRM’e hiçbir şey yazılmaz.',
+    ],
+    data: 'Amazon sipariş, iade ve ödeme raporları; Logo faturaları, hizmet satırları ve cari hareketleri',
+    refresh: 'Dosya yükleyince ve «Veriyi yenile»ye basınca',
+    actions: ['Rapor yükleyin (yetkiyle).', 'Eksik ve fazla faturaları süzüp Excel’e aktarın.'],
+  },
+  'path:/amazon/model': {
+    summary: 'Amazon Türkiye’de nasıl sattığımız Logo’dan ölçülür: kendi mağaza, toptan, konsinye ya da belirsiz; sonuç kanıtlarıyla yazılır.',
+    how: [
+      'Amazon carileri unvandaki platform adıyla, cari eşlemesiyle ya da kanal koduyla bulunur; koda yazılmış cari yoktur.',
+      'Fatura türleri, faturalanmamış sevk, platformdan alınan hizmet faturaları ve para hareketleri salt okuma ile sayılır.',
+      'Kanıt yetmezse ya da birden fazla modelin izi varsa ekran «belirsiz» der.',
+    ],
+    data: 'Logo faturaları, irsaliyeler, hizmet satırları, cari hareketleri; CRM firma kartları ve siparişleri',
+    refresh: '«Veriyi yenile»ye basınca',
+    actions: ['Logo’dan yeniden ölçün.', 'Eksik cariyi Cari eşleme ekranında platforma bağlayın.'],
   },
   'amazon-konsinye': {
     summary: 'Amazon konsinyede kalan adet, kitap bazında: faturalanmamış satış irsaliyesi eksi faturalanmamış iade irsaliyesi.',

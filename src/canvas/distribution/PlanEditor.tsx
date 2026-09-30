@@ -484,7 +484,12 @@ function LineRow({ plan, ln, editable, tracked, onSaved }: { plan: Plan; ln: Lin
         <div className="min-w-0 md:flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="break-words text-[12.5px] font-bold">{ln.unvan}</span>
-            {ln.dagilimCarisi && <Pill tone="violet">Dağılım carisi</Pill>}
+            {ln.dagilimCarisi && (
+              <span className="inline-flex items-center gap-0.5">
+                <Pill tone="violet">Dağılım carisi</Pill>
+                <Explain label="Dağılım carisi">CRM'de cari kartında «Dağılım Durumu Göster» alanı «Evet» olan müşteri. Geçmiş satışı olmasa da ilk dağılım planına kendiliğinden eklenir; önerilen adedi yoksa 0 ile gelir.</Explain>
+              </span>
+            )}
             {ln.elle && <Pill tone="warn">Elle</Pill>}
           </div>
           <div className="text-[11px] text-canvas-muted">

@@ -90,12 +90,12 @@ msgstr "<div class=\"ql-editor read-mode\"><p>Sorununuzun iyi çözüldüğünü
 #. Header text in the Helpdesk Workspace
 #: helpdesk/helpdesk/workspace/helpdesk/helpdesk.json
 msgid "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">Visit Helpdesk</a></span>"
-msgstr "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">NanobaseAI'yi Ziyaret Et</a></span>"
+msgstr "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">ZEKİ AI'yı Ziyaret Et</a></span>"
 
 #. Paragraph text in the Helpdesk Workspace
 #: helpdesk/helpdesk/workspace/helpdesk/helpdesk.json
 msgid "<span class=\"h4\">Helpdesk Configuration<br></span>"
-msgstr "<span class=\"h4\">NanobaseAI Yapılandırması<br></span>"
+msgstr "<span class=\"h4\">ZEKİ AI Yapılandırması<br></span>"
 
 #: desk/src/pages/ticket/TicketNew.vue:69
 msgid "A short description"
@@ -1226,7 +1226,7 @@ msgstr "Yapılandır"
 
 #: desk/src/components/Settings/Telephony/ExotelSettings.vue:3
 msgid "Configure your Exotel settings for Helpdesk."
-msgstr "NanobaseAI için Exotel ayarlarınızı yapılandırın."
+msgstr "ZEKİ AI için Exotel ayarlarınızı yapılandırın."
 
 #: desk/src/components/Settings/Telephony/Telephony.vue:100
 msgid "Configure your Exotel telephony integration settings here"
@@ -1234,7 +1234,7 @@ msgstr "Exotel telekomünikasyon entegrasyon ayarlarınızı buradan yapılandı
 
 #: desk/src/components/Settings/Telephony/TwilioSettings.vue:3
 msgid "Configure your Twilio settings for Helpdesk."
-msgstr "NanobaseAI için Twilio ayarlarınızı yapılandırın."
+msgstr "ZEKİ AI için Twilio ayarlarınızı yapılandırın."
 
 #: desk/src/components/Settings/Telephony/Telephony.vue:76
 msgid "Configure your Twilio telephony integration settings here"
@@ -2229,7 +2229,7 @@ msgstr "Form"
 
 #: desk/src/components/layouts/Sidebar.vue:637
 msgid "Frappe Helpdesk Mobile"
-msgstr "NanobaseAI Mobil"
+msgstr "ZEKİ AI Mobil"
 
 #. Option for the 'Workday' (Select) field in DocType 'HD Service Day'
 #. Option for the 'Weekly Off' (Select) field in DocType 'HD Service Holiday
@@ -2337,184 +2337,184 @@ msgstr "Kullanıcıları kayıtlardan önce makalelere yönlendirin."
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_agent/hd_agent.json
 msgid "HD Agent"
-msgstr "NanobaseAI Temsilci"
+msgstr "ZEKİ AI Temsilci"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_agent_status/hd_agent_status.json
 msgid "HD Agent Status"
-msgstr "NanobaseAI Temsilci Durumu"
+msgstr "ZEKİ AI Temsilci Durumu"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_article/hd_article.json
 msgid "HD Article"
-msgstr "NanobaseAI Makale"
+msgstr "ZEKİ AI Makale"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_article_category/hd_article_category.json
 msgid "HD Article Category"
-msgstr "NanobaseAI Makale Kategorisi"
+msgstr "ZEKİ AI Makale Kategorisi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_article_feedback/hd_article_feedback.json
 msgid "HD Article Feedback"
-msgstr "NanobaseAI Makale Geri Bildirimi"
+msgstr "ZEKİ AI Makale Geri Bildirimi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_comment_reaction/hd_comment_reaction.json
 msgid "HD Comment Reaction"
-msgstr "NanobaseAI Yorum Tepkisi"
+msgstr "ZEKİ AI Yorum Tepkisi"
 
 #. Name of a role
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_article/hd_article.json helpdesk/helpdesk/doctype/hd_article_category/hd_article_category.json helpdesk/helpdesk/doctype/hd_article_feedback/hd_article_feedback.json helpdesk/helpdesk/doctype/hd_customer/hd_customer.json helpdesk/helpdesk/doctype/hd_form_script/hd_form_script.json helpdesk/helpdesk/doctype/hd_team/hd_team.json helpdesk/helpdesk/doctype/hd_ticket_feedback_option/hd_ticket_feedback_option.json helpdesk/helpdesk/doctype/hd_ticket_priority/hd_ticket_priority.json helpdesk/helpdesk/doctype/hd_ticket_status/hd_ticket_status.json helpdesk/helpdesk/doctype/hd_ticket_template/hd_ticket_template.json helpdesk/helpdesk/doctype/hd_ticket_type/hd_ticket_type.json
 msgid "HD Customer"
-msgstr "NanobaseAI Müşteri"
+msgstr "ZEKİ AI Müşteri"
 
 #. Name of a role
 #: helpdesk/helpdesk/doctype/hd_customer/hd_customer.json helpdesk/helpdesk/doctype/hd_ticket_priority/hd_ticket_priority.json
 msgid "HD Customer Manager"
-msgstr "NanobaseAI Müşteri Yöneticisi"
+msgstr "ZEKİ AI Müşteri Yöneticisi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_customer_member/hd_customer_member.json
 msgid "HD Customer Member"
-msgstr "NanobaseAI Müşteri Üyesi"
+msgstr "ZEKİ AI Müşteri Üyesi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_email_feedback/hd_email_feedback.json
 msgid "HD Email Feedback"
-msgstr "NanobaseAI E-posta Geri Bildirimi"
+msgstr "ZEKİ AI E-posta Geri Bildirimi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_field_layout/hd_field_layout.json
 msgid "HD Field Layout"
-msgstr "NanobaseAI Alan Düzeni"
+msgstr "ZEKİ AI Alan Düzeni"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_form_script/hd_form_script.json
 msgid "HD Form Script"
-msgstr "NanobaseAI Form Betiği"
+msgstr "ZEKİ AI Form Betiği"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_holiday/hd_holiday.json
 msgid "HD Holiday"
-msgstr "NanobaseAI Tatil"
+msgstr "ZEKİ AI Tatil"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_notification/hd_notification.json
 msgid "HD Notification"
-msgstr "NanobaseAI Bildirimi"
+msgstr "ZEKİ AI Bildirimi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_saved_reply/hd_saved_reply.json
 msgid "HD Saved Reply"
-msgstr "NanobaseAI Hazır Yanıt"
+msgstr "ZEKİ AI Hazır Yanıt"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_saved_reply_team/hd_saved_reply_team.json
 msgid "HD Saved Reply Team"
-msgstr "NanobaseAI Hazır Yanıt Ekibi"
+msgstr "ZEKİ AI Hazır Yanıt Ekibi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_service_day/hd_service_day.json
 msgid "HD Service Day"
-msgstr "NanobaseAI Hizmet Günü"
+msgstr "ZEKİ AI Hizmet Günü"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_service_holiday_list/hd_service_holiday_list.json helpdesk/helpdesk/doctype/hd_service_holiday_list/hd_service_holiday_list_calendar.js:20
 msgid "HD Service Holiday List"
-msgstr "NanobaseAI Hizmet Tatil Listesi"
+msgstr "ZEKİ AI Hizmet Tatil Listesi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement.json
 msgid "HD Service Level Agreement"
-msgstr "NanobaseAI Hizmet Seviyesi Anlaşması"
+msgstr "ZEKİ AI Hizmet Seviyesi Anlaşması"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_service_level_priority/hd_service_level_priority.json
 msgid "HD Service Level Priority"
-msgstr "NanobaseAI Hizmet Seviyesi Önceliği"
+msgstr "ZEKİ AI Hizmet Seviyesi Önceliği"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_settings/hd_settings.json
 msgid "HD Settings"
-msgstr "NanobaseAI Ayarları"
+msgstr "ZEKİ AI Ayarları"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_stopword/hd_stopword.json
 msgid "HD Stopword"
-msgstr "NanobaseAI Durdurulan Kelime"
+msgstr "ZEKİ AI Durdurulan Kelime"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_synonym/hd_synonym.json
 msgid "HD Synonym"
-msgstr "NanobaseAI Eş Anlamlı"
+msgstr "ZEKİ AI Eş Anlamlı"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_synonyms/hd_synonyms.json
 msgid "HD Synonyms"
-msgstr "NanobaseAI Eş Anlamlılar"
+msgstr "ZEKİ AI Eş Anlamlılar"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_team/hd_team.json
 msgid "HD Team"
-msgstr "NanobaseAI Ekibi"
+msgstr "ZEKİ AI Ekibi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_team_member/hd_team_member.json
 msgid "HD Team Member"
-msgstr "NanobaseAI Ekip Üyesi"
+msgstr "ZEKİ AI Ekip Üyesi"
 
 #. Name of a DocType
 #. Label of the ticket (Link) field in DocType 'HD Ticket Activity'
 #: helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement_dashboard.py:7 helpdesk/helpdesk/doctype/hd_ticket/hd_ticket.json helpdesk/helpdesk/doctype/hd_ticket_activity/hd_ticket_activity.json
 msgid "HD Ticket"
-msgstr "NanobaseAI Kaydı"
+msgstr "ZEKİ AI Kaydı"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_ticket_activity/hd_ticket_activity.json
 msgid "HD Ticket Activity"
-msgstr "NanobaseAI Kayıt Aktivitesi"
+msgstr "ZEKİ AI Kayıt Aktivitesi"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_ticket_comment/hd_ticket_comment.json
 msgid "HD Ticket Comment"
-msgstr "NanobaseAI Kayıt Yorumu"
+msgstr "ZEKİ AI Kayıt Yorumu"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_ticket_feedback_option/hd_ticket_feedback_option.json
 msgid "HD Ticket Feedback Option"
-msgstr "NanobaseAI Kayıt Geri Bildirim Seçeneği"
+msgstr "ZEKİ AI Kayıt Geri Bildirim Seçeneği"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_ticket_priority/hd_ticket_priority.json
 msgid "HD Ticket Priority"
-msgstr "NanobaseAI Kayıt Önceliği"
+msgstr "ZEKİ AI Kayıt Önceliği"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_ticket_status/hd_ticket_status.json
 msgid "HD Ticket Status"
-msgstr "NanobaseAI Kayıt Durumu"
+msgstr "ZEKİ AI Kayıt Durumu"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_ticket_template/hd_ticket_template.json
 msgid "HD Ticket Template"
-msgstr "NanobaseAI Kayıt Şablonu"
+msgstr "ZEKİ AI Kayıt Şablonu"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_ticket_template_field/hd_ticket_template_field.json
 msgid "HD Ticket Template Field"
-msgstr "NanobaseAI Kayıt Şablonu Alanı"
+msgstr "ZEKİ AI Kayıt Şablonu Alanı"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_ticket_type/hd_ticket_type.json
 msgid "HD Ticket Type"
-msgstr "NanobaseAI Kayıt Türü"
+msgstr "ZEKİ AI Kayıt Türü"
 
 #. Name of a DocType
 #: helpdesk/helpdesk/doctype/hd_view/hd_view.json
 msgid "HD View"
-msgstr "NanobaseAI Görünüm"
+msgstr "ZEKİ AI Görünüm"
 
 #. Label of the headings_weight (Int) field in DocType 'HD Settings'
 #: helpdesk/helpdesk/doctype/hd_settings/hd_settings.json
@@ -2531,17 +2531,17 @@ msgstr "Yardım"
 
 #: helpdesk/config/desktop.py:11
 msgid "HelpDesk"
-msgstr "NanobaseAI"
+msgstr "ZEKİ AI"
 
 #. Name of a Workspace
 #: helpdesk/helpdesk/workspace/helpdesk/helpdesk.json
 msgid "Helpdesk"
-msgstr "NanobaseAI"
+msgstr "ZEKİ AI"
 
 #. Label of a Card Break in the Helpdesk Workspace
 #: helpdesk/helpdesk/workspace/helpdesk/helpdesk.json
 msgid "Helpdesk Reports"
-msgstr "NanobaseAI Raporları"
+msgstr "ZEKİ AI Raporları"
 
 #: helpdesk/helpdesk/doctype/hd_service_holiday_list/hd_service_holiday_list.js:53
 msgid "Here, your weekly offs are pre-populated based on the previous selections. You can add more rows to also add public and national holidays individually."
@@ -3313,7 +3313,7 @@ msgstr "Yeni ve eski başlık aynı olamaz"
 
 #: desk/src/components/erpnext-integration/ERPNextIntegrationSettings.vue:86
 msgid "New and updated customers sync automatically between Helpdesk and ERPNext."
-msgstr "Yeni ve güncellenen müşteriler NanobaseAI ile ERPNext arasında otomatik olarak eşitlenir."
+msgstr "Yeni ve güncellenen müşteriler ZEKİ AI ile ERPNext arasında otomatik olarak eşitlenir."
 
 #: desk/src/components/Settings/NewTeamModal.vue:4
 msgid "New team"
@@ -3345,7 +3345,7 @@ msgstr "{0} için e-posta hesabı bulunamadı"
 
 #: helpdesk/api/agent.py:41
 msgid "No HD Agent record for current user"
-msgstr "Mevcut kullanıcı için NanobaseAI Temsilci kaydı yok"
+msgstr "Mevcut kullanıcı için ZEKİ AI Temsilci kaydı yok"
 
 #: desk/src/components/Settings/Holiday/HolidayList.vue:20
 msgid "No Holiday list found"
@@ -4999,7 +4999,7 @@ msgstr "Müşterileri Eşitle"
 
 #: helpdesk/helpdesk/doctype/erpnext_hd_settings/erpnext_hd_settings.js:22
 msgid "Sync all customers between ERPNext and Helpdesk? The sync runs in the background and can take a few minutes depending on the number of customers."
-msgstr "ERPNext ve NanobaseAI arasındaki tüm müşterileri eşitlemek ister misiniz? Eşitleme arka planda çalışır ve müşteri sayısına bağlı olarak birkaç dakika sürebilir."
+msgstr "ERPNext ve ZEKİ AI arasındaki tüm müşterileri eşitlemek ister misiniz? Eşitleme arka planda çalışır ve müşteri sayısına bağlı olarak birkaç dakika sürebilir."
 
 #: desk/src/components/erpnext-integration/ERPNextIntegrationSettings.vue:216
 msgid "Sync completed successfully"
@@ -5007,7 +5007,7 @@ msgstr "Eşitleme başarıyla tamamlandı"
 
 #: desk/src/components/erpnext-integration/ERPNextIntegrationSettings.vue:3 desk/src/components/erpnext-integration/ERPNextIntegrationSettings.vue:39
 msgid "Sync customers between Helpdesk and ERPNext."
-msgstr "NanobaseAI ve ERPNext arasındaki müşterileri eşitleyin."
+msgstr "ZEKİ AI ve ERPNext arasındaki müşterileri eşitleyin."
 
 #: desk/src/components/erpnext-integration/ERPNextIntegrationSettings.vue:120
 msgid "Sync now"
@@ -6139,8 +6139,8 @@ msgid "1 time"
 msgstr "1 kez"
 
 #: helpdesk/helpdesk/workspace/helpdesk/helpdesk.json
-msgid "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">NanobaseAI destek ekranı</a></span>"
-msgstr "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">NanobaseAI destek ekranı</a></span>"
+msgid "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">ZEKİ AI destek ekranı</a></span>"
+msgstr "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">ZEKİ AI destek ekranı</a></span>"
 
 #: desk/src/pages/PersonaForm.vue:218
 msgid "A friend or colleague"
@@ -6275,8 +6275,8 @@ msgid "Call contact"
 msgstr "Kişiye ara"
 
 #: desk/src/components/Settings/InviteAgents.vue:172
-msgid "Can manage all aspects of NanobaseAI."
-msgstr "NanobaseAI'nin tüm yönlerini yönetebilir."
+msgid "Can manage all aspects of ZEKİ AI."
+msgstr "ZEKİ AI'ın tüm yönlerini yönetebilir."
 
 #: desk/src/components/command-palette/CommandPalette.vue:261
 msgid "Clear"
@@ -6295,12 +6295,12 @@ msgid "Commented"
 msgstr "Yorum yaptı"
 
 #: desk/src/components/Settings/Telephony/ExotelSettings.vue:3
-msgid "Configure your Exotel settings for NanobaseAI."
-msgstr "NanobaseAI için Exotel ayarlarınızı yapılandırın."
+msgid "Configure your Exotel settings for ZEKİ AI."
+msgstr "ZEKİ AI için Exotel ayarlarınızı yapılandırın."
 
 #: desk/src/components/Settings/Telephony/TwilioSettings.vue:3
-msgid "Configure your Twilio settings for NanobaseAI."
-msgstr "NanobaseAI için Twilio ayarlarınızı yapılandırın."
+msgid "Configure your Twilio settings for ZEKİ AI."
+msgstr "ZEKİ AI için Twilio ayarlarınızı yapılandırın."
 
 #: desk/src/pages/PersonaForm.vue:230
 msgid "Connect my support email"
@@ -6491,16 +6491,16 @@ msgid "How big is your support team?"
 msgstr "Destek ekibiniz ne kadar büyük?"
 
 #: desk/src/pages/PersonaForm.vue:209
-msgid "How did you hear about NanobaseAI?"
-msgstr "NanobaseAI hakkında nereden duydunuz?"
+msgid "How did you hear about ZEKİ AI?"
+msgstr "ZEKİ AI hakkında nereden duydunuz?"
 
 #: desk/src/pages/PersonaForm.vue:144
 msgid "How do your customers currently contact your support team?"
 msgstr "Müşterileriniz şu anda destek ekibinizle nasıl iletişim kuruyor?"
 
 #: desk/src/pages/PersonaForm.vue:162
-msgid "How would you like your customers to create support tickets in NanobaseAI?"
-msgstr "Müşterilerinizin NanobaseAI'da destek kaydı oluşturmasını nasıl istersiniz?"
+msgid "How would you like your customers to create support tickets in ZEKİ AI?"
+msgstr "Müşterilerinizin ZEKİ AI'da destek kaydı oluşturmasını nasıl istersiniz?"
 
 #: desk/src/pages/PersonaForm.vue:172
 msgid "I'm not sure yet"
@@ -6987,8 +6987,8 @@ msgid "The assistant is unavailable right now. Please try again shortly."
 msgstr "Asistan şu anda kullanılamıyor. Lütfen birazdan tekrar deneyin."
 
 #: desk/src/components/Questionnaire.vue:25
-msgid "This helps us personalize your NanobaseAI experience."
-msgstr "Bu, NanobaseAI deneyiminizi kişiselleştirmemize yardımcı olur."
+msgid "This helps us personalize your ZEKİ AI experience."
+msgstr "Bu, ZEKİ AI deneyiminizi kişiselleştirmemize yardımcı olur."
 
 #: desk/src/pages/PersonaForm.vue:169
 msgid "Through a support portal"
@@ -7091,8 +7091,8 @@ msgid "Web form"
 msgstr "Web formu"
 
 #: desk/src/pages/PersonaForm.vue:239
-msgid "Welcome to NanobaseAI"
-msgstr "NanobaseAI'ye hoş geldiniz"
+msgid "Welcome to ZEKİ AI"
+msgstr "ZEKİ AI'ya hoş geldiniz"
 
 #: desk/src/pages/PersonaForm.vue:122
 msgid "What do you currently use to manage customer support?"
@@ -7107,8 +7107,8 @@ msgid "What makes support hard right now?"
 msgstr "Şu anda desteği zorlaştıran şey nedir?"
 
 #: desk/src/pages/PersonaForm.vue:227
-msgid "What would you like to do first in NanobaseAI?"
-msgstr "NanobaseAI'de ilk olarak ne yapmak istersiniz?"
+msgid "What would you like to do first in ZEKİ AI?"
+msgstr "ZEKİ AI'da ilk olarak ne yapmak istersiniz?"
 
 #: desk/src/pages/PersonaForm.vue:177
 msgid "What's your biggest support challenge today?"

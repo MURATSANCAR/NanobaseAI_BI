@@ -327,7 +327,18 @@ def register(app, ctx) -> None:
                 .select_from(_join()).where(*cond)
                 .order_by(IMPACT.c.applied_at.desc().nullslast(), PROPOSALS.c.decided_at.desc().nullslast(), PROPOSALS.c.id)
                 .offset(max(0, start)).limit(max(1, limit))).mappings().all()
-        return {"total": total, "start": start, "items": [_item(dict(r), site) for r in rows],
+        items = [_item(dict(r), site) for r in rows]
+        # Aynı pencerelerde organik Analytics (oturum/satış/ciro): ga4.py okumasında ölçülür; yoksa alan boş.
+        try:
+            from . import ga4
+
+            got = ga4.impact_for(eng, tenant, [i["proposalId"] for i in items])
+        except Exception as e:  # noqa: BLE001 — Analytics ölçümü yoksa Search Console etkisi yine döner
+            log.warning("seo impact ga4: %s", e)
+            got = {}
+        for i in items:
+            i["ga4"] = got.get(i["proposalId"])
+        return {"total": total, "start": start, "items": items,
                 "summary": {"counts": {s: counts.get(s, 0) for s in STATUSES},
                             "connected": bool(connections.service_account_email()),
                             "windowDays": DAYS, "lagDays": LAG, "state": state}}

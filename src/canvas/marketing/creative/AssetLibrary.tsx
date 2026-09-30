@@ -8,7 +8,7 @@ import { Pager, Panel, useDebounced } from '../../editorial/kit';
 import { Img } from '../../editorial/studio/shared';
 import { copyText } from '../../editorial/studio/marketing/parts';
 import { creativeApi, fmtDay } from './api';
-import { ApprovalLine, DraftBadge, smallBtn } from './parts';
+import { ApprovalLine, smallBtn } from './parts';
 import { useCreativeMeta } from './useMeta';
 import SqlInfo from '../../components/SqlInfo';
 import { EmptyHint } from '../../components/Explain';
@@ -94,7 +94,6 @@ export default function AssetLibrary({ params, update }: { params: URLSearchPara
             </span>
             <span className="text-[11px] text-canvas-muted">{a.mesajOnay ? `Onay ${fmtDay(a.mesajOnay.at)}` : `Üretim ${fmtDay(a.olusturma)}`}</span>
             <ApprovalLine a={a} />
-            {a.taslakLisans && <DraftBadge />}
             <div className="flex flex-wrap gap-1.5">
               {a.onayli && <a className={smallBtn()} href={creativeApi.downloadUrl(a.id)} title={a.dosyaAdi}><Download className="h-4 w-4" aria-hidden />İndir</a>}
               {a.tur === 'metin' && (

@@ -1,0 +1,17 @@
+{
+  "before": {
+    "users": 3,
+    "messages": 1,
+    "rooms": 1
+  },
+  "after": {
+    "users": 3,
+    "messages": 1,
+    "rooms": 1
+  },
+  "matches": true,
+  "newTestUsers": 0,
+  "portalSessionsRemovedTotal": 3,
+  "chatTokensRemovedTotal": 12,
+  "remainingTestAuthFiles": 0
+}

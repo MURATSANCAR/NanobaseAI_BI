@@ -18,6 +18,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import application_forms as forms_mod
 from semantic_bridge import editorial_applications as mod
 from semantic_bridge import editorial_applications_market as mkt
 from semantic_bridge import sorgu_izi as IZ
@@ -39,7 +40,8 @@ _cat_lock = threading.Lock()
 
 def register(app, deps: dict[str, Any]) -> None:
     """deps: session(request)→(engine, tenant, user, display) · can(user, key) · audit · conf ·
-    connection_files()→{"logo","crm"} · run(sql)→run_sql sonucu · person(schema, run, contact_id)."""
+    connection_files()→{"logo","crm"} · run(sql)→run_sql sonucu · person(schema, run, contact_id) ·
+    require_caller(request) ve engine_tenant()→(engine, tenant) (çerezsiz zamanlayıcı uçları)."""
     session: Callable[[Request], tuple[Any, str, str, str]] = deps["session"]
     can: Callable[[str, str], bool] = deps["can"]
     audit = deps["audit"]
@@ -47,6 +49,9 @@ def register(app, deps: dict[str, Any]) -> None:
     connection_files = deps["connection_files"]
     run_catalog = deps["run"]
     person = deps["person"]
+    require_caller = deps["require_caller"]
+    engine_tenant: Callable[[], tuple[Any, str]] = deps["engine_tenant"]
+    invalidate: Callable[[str], Any] = deps.get("invalidate") or (lambda prefix: 0)
     runner = mkt.ReportRunner()
     state = {"reset": set()}
 
@@ -150,10 +155,60 @@ def register(app, deps: dict[str, Any]) -> None:
         audit(engine, user, "create", "application", out["id"], f"{out['no']} {out['title']}", {"yazar": out["authorName"]})
         return out
 
+    # ------------------------------------------------------------------------------ Google Formu yanıtları
+    # Yazar başvuru formlarının yanıt tabloları servis hesabıyla okunur, her yanıt bir kez başvuru olur
+    # (application_forms.py). Bu yollar `/{app_id}`'den önce kayıtlı olmalı: yoksa «forms» başvuru kimliği sanılır.
+
+    def forms_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except forms_mod.FormError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "APPLICATION_FORMS", "message": str(e)}) from e
+
+    def forms_sync(engine, tenant, actor: str) -> dict[str, Any]:
+        from semantic_bridge.seo_geo import connections as google
+        return forms_call(forms_mod.sync, engine, tenant, conf("BASVURU_FORM_SHEETS"),
+                          lambda scopes: google.google_token(scopes), actor=actor)
+
+    @app.get(A + "/forms")
+    def applications_forms(request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        return dict(forms_call(forms_mod.status, engine, tenant, conf("BASVURU_FORM_SHEETS")),
+                    canSync=can(user, "ozellik:basvuru.yaz"))
+
+    @app.post(A + "/forms/sync")
+    def applications_forms_sync(request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        out = forms_sync(engine, tenant, user)
+        if out["new"]:
+            audit(engine, user, "create", "application_form", None, f"{out['new']} başvuru formdan alındı",
+                  {s.get("title") or s["sheetId"]: s.get("new", 0) for s in out["sheets"]})
+        return out
+
+    @app.post(A + "/forms/run-due")
+    def applications_forms_run_due(request: Request) -> dict[str, Any]:
+        """Zamanlayıcı (timas-basvuru-form, 15 dakikada bir). Tablo tanımlı değilse sessizce geçer."""
+        require_caller(request)
+        engine, tenant = engine_tenant()
+        mod.ensure(engine)
+        if not forms_mod.sheet_ids(conf("BASVURU_FORM_SHEETS")):
+            return {"skipped": "başvuru formu tablosu tanımlı değil"}
+        out = forms_sync(engine, tenant, forms_mod.ACTOR)
+        if out["new"] or any(s.get("updated") for s in out["sheets"]):
+            # Hazır cevap katmanı `run-due` yollarını hiç görmediği için bu yazma Başvurular'ın hazır cevaplarını kendisi
+            # düşürmez; düşürülmezse yeni başvuru bir sonraki 07:00/12:00 tazelemesine kadar listede görünmezdi.
+            invalidate("/api/v1/editorial/applications")
+        if out["new"]:
+            audit(engine, forms_mod.ACTOR, "create", "application_form", None, f"{out['new']} başvuru formdan alındı",
+                  {s.get("title") or s["sheetId"]: s.get("new", 0) for s in out["sheets"]})
+        return out
+
     @app.get(A + "/{app_id}")
     def applications_detail(app_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(mod.detail, engine, tenant, user, app_id, can_see_names=names(user))
+        out = call(mod.detail, engine, tenant, user, app_id, can_see_names=names(user))
+        out["form"] = forms_mod.answers_for(engine, tenant, out["id"])
+        return out
 
     @app.patch(A + "/{app_id}")
     def applications_update(app_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:

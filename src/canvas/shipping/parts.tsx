@@ -15,6 +15,7 @@ const LINKS = [
   { to: '/kargo/bekleyen', label: 'Teslim bekleyen' },
   { to: '/kargo/firmalar', label: 'Firma karnesi', need: 'firmalar' as const },
   { to: '/kargo/mutabakat', label: 'Mutabakat', need: 'mutabakat' as const },
+  { to: '/kargo/maliyet', label: 'Kargo maliyeti', need: 'maliyetSayfa' as const },
 ];
 
 export function ShippingFrame({ title, lead, crumb, detail, back, aside, meta, children }: {

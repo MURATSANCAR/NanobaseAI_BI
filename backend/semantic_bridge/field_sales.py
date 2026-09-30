@@ -196,7 +196,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 
@@ -843,14 +844,25 @@ def _close(conn: Any) -> None:
 
 
 class Source:
-    """CRM + Logo bağlantıları (okuma başına açılıp kapanır). CRM tahsilat okuması 5 dk bellekte (ekran + hafif tur)."""
+    """CRM + Logo bağlantıları (okuma başına açılıp kapanır). CRM tahsilat okuması 5 dk bellekte (ekran + hafif tur).
+
+    Hız (2026-09-29): «Bugün» (`/field/today`) her açılışta 5,1 sn sürüyordu — öncelik sırası gece turunda hazır
+    olmasına karşın uç CRM tahsilat onay akışını (`crm_collections_sql`) ve CRM kullanıcılarını (`crm_users_sql`) 5 dk'lık
+    bellek dolunca istek içinde yeniden okuyordu (hafif tur 15 dk'da bir tazeliyor, arada ekranı açan CRM'i bekliyordu).
+    Bu iki liste okuması artık «eskiyse hemen ver, arkada yenile»: 5 dk taze, `FIELD_CRM_STALE_SEC` (varsayılan 6 saat)
+    bayat sınırı; hafif tur ve «yenile» (`fresh`) eskisi gibi CRM'i bekler. Cari başına okumalar (brifing) değişmedi."""
 
     TTL = 300
+    #: Liste okumaları (tahsilat akışı, kullanıcılar) bu yaşa kadar eldeki değerle hemen döner, yenisi arkada okunur.
+    STALE = max(TTL, int(os.environ.get("FIELD_CRM_STALE_SEC", "21600") or 21600))
 
     def __init__(self, crm_connect: Callable[[], Any], logo_connect: Callable[[], Any]):
+        from semantic_bridge.hizli_bellek import Bellek
+
         self._crm, self._logo = crm_connect, logo_connect
         self._lock = threading.Lock()
         self._cache: dict[str, tuple[float, Any, list[dict[str, Any]]]] = {}
+        self._lists = Bellek("saha.crm-liste", taze=self.TTL, bayat=self.STALE, en_cok=64)
 
     def crm(self, fn: Callable[[Callable[[str], list[dict[str, Any]]]], Any]) -> Any:
         conn = self._crm()
@@ -881,13 +893,31 @@ class Source:
                     self._cache.pop(k, None)
         return val
 
+    def listed(self, key: str, fresh: bool, fn: Callable[[], Any]) -> Any:
+        """Liste okuması: taze → bellekten; bayat → bellekten + arkada yeniden okuma; yok/`fresh` → beklenir. Okumada
+        çalışan metin değerle saklanır ve her dönüşte kaydedilir (sorgu bilgisi, `cached` ile aynı sözleşme)."""
+        def read() -> tuple[Any, list[dict[str, Any]]]:
+            prev = getattr(_REC, "sink", None)
+            sink: list[dict[str, Any]] = []
+            _REC.sink = sink
+            try:
+                val = fn()
+            finally:
+                _REC.sink = prev
+            return val, sink
+
+        val, reads = self._lists.al(key, read, zorla=fresh)
+        _record(reads)
+        return val
+
     def collections(self, settings: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
         since = today() - timedelta(days=settings["collectionDays"])
-        return self.cached(f"crm-collections:{since}", fresh, lambda: self.crm(
+        return self.listed(f"crm-collections:{settings['schema']}:{since}", fresh, lambda: self.crm(
             lambda run: src.lower_keys(run(src.crm_collections_sql(settings["schema"], since)))))
 
     def users(self, settings: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
-        return self.cached("crm-users", fresh, lambda: self.crm(lambda run: src.lower_keys(run(src.crm_users_sql(settings["schema"])))))
+        return self.listed(f"crm-users:{settings['schema']}", fresh,
+                           lambda: self.crm(lambda run: src.lower_keys(run(src.crm_users_sql(settings["schema"])))))
 
 
 def logo_calendar(run: Callable[[str], list[dict[str, Any]]], now: date) -> dict[str, Any]:

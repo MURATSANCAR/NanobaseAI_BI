@@ -150,6 +150,7 @@ CATEGORIES: dict[str, str] = {
 SEVERITIES: dict[str, tuple[str, int]] = {"kucuk": ("Küçük", 1), "buyuk": ("Büyük", 5), "kritik": ("Kritik", 25)}
 DONE = ("cevrildi", "onaylandi")
 
+#: XLIFF ve TMX içe aktarma sınırı (çeviri belleği dosyaları). Kaynak metinde tavan yok (ZEKI-26, upload_source).
 MAX_BYTES = 120 * 1024 * 1024
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -168,7 +169,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 
@@ -377,7 +379,7 @@ def pdf_lines(pages: list[list[str]]) -> list[str]:
     return lines
 
 
-def paragraphs(filename: str, data: bytes) -> list[tuple[str, bool]]:
+def paragraphs(filename: str, data: "desk.Blob") -> list[tuple[str, bool]]:
     """(paragraf, başlık mı). DOCX stil başlığını, TXT boş satırı, PDF satır birleştirmeyi kullanır."""
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     if ext == "docx":
@@ -397,7 +399,8 @@ def paragraphs(filename: str, data: bytes) -> list[tuple[str, bool]]:
                                    "PDF ya da DOCX yükleyin; taranmış sayfalar okunmaz.")
         return _join_lines(pdf_lines(pages))
     if ext in ("txt", "md"):
-        text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+        raw = data.read() if isinstance(data, desk.Incoming) else data
+        text = raw.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
         if ext == "md":
             # Markdown başlığı (# …) kendi paragrafıdır.
             text = re.sub(r"^(#{1,6}\s+.+)$", r"\n\1\n", text, flags=re.M)
@@ -750,7 +753,7 @@ def create_job(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str,
     return {"id": row["id"], "title": row["title"]}
 
 
-def create_from_file(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, filename: str, data: bytes,
+def create_from_file(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, filename: str, data: "desk.Blob",
                      source_lang: str, target_lang: str) -> dict[str, Any]:
     """Tek adımda yeni çeviri işi + kaynak metin: iş adı dosya adından gelir (sonra düzeltilir), dil çifti
     yükleme alanındaki seçimden. Kaynak reddedilirse (boş, okunamayan metin, büyük dosya) açılan iş silinir."""
@@ -758,10 +761,8 @@ def create_from_file(engine: sa.engine.Engine, tenant: str, user: str, see_all: 
 
     if not str(filename or "").strip():
         raise TranslationError("Dosya adı gerekli.")
-    if not data:
+    if not desk._size(data):
         raise TranslationError("Dosya boş.")
-    if len(data) > MAX_BYTES:
-        raise TranslationError("Dosya 120 MB sınırını aşıyor.", 413)
     job = create_job(engine, tenant, user, {"title": title_from_filename(filename),
                                             "sourceLang": source_lang, "targetLang": target_lang})
     try:
@@ -934,15 +935,14 @@ def job_detail(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, 
 # ============================================================================================ kaynak
 
 def upload_source(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, job_id: str,
-                  filename: str, data: bytes) -> dict[str, Any]:
-    if not data:
+                  filename: str, data: "desk.Blob") -> dict[str, Any]:
+    """Kaynak metin: boyut tavanı yok (ZEKI-26); diske akmış yükleme (`desk.Incoming`) kopyalanmadan yerine taşınır."""
+    if not desk._size(data):
         raise TranslationError("Dosya boş.")
-    if len(data) > MAX_BYTES:
-        raise TranslationError("Dosya 120 MB sınırını aşıyor.", 413)
     segs = segment(paragraphs(filename, data))
     if not segs:
         raise TranslationError("Dosyada okunabilir metin bulunamadı.")
-    sha = hashlib.sha256(data).hexdigest()
+    sha = desk._sha(data)
     with engine.begin() as conn:
         job = _job(conn, tenant, job_id, user, see_all)
         if not _roles(job, user, see_all)["manage"]:
@@ -965,8 +965,12 @@ def upload_source(engine: sa.engine.Engine, tenant: str, user: str, see_all: boo
         folder = os.path.join(_root(), job_id)
         os.makedirs(folder, exist_ok=True)
         path = os.path.join(folder, f"source-v{version}.{ext}")
-        with open(path, "wb") as f:
-            f.write(data)
+        if isinstance(data, desk.Incoming):
+            os.replace(data.path, path)          # aynı disk (EDITORIAL_DIR): kopya yok
+            data.path, data.stored = path, True
+        else:
+            with open(path, "wb") as f:
+                f.write(data)
         conn.execute(sa.delete(ERRORS).where(ERRORS.c.job_id == job_id))
         conn.execute(sa.delete(SEGMENTS).where(SEGMENTS.c.job_id == job_id))
         kept = 0
@@ -987,7 +991,7 @@ def upload_source(engine: sa.engine.Engine, tenant: str, user: str, see_all: boo
             rows.append(row)
         conn.execute(sa.insert(SEGMENTS), rows)
         conn.execute(sa.update(JOBS).where(JOBS.c.id == job_id).values(
-            source_version=version, source_filename=filename[:300], source_sha256=sha, source_bytes=len(data),
+            source_version=version, source_filename=filename[:300], source_sha256=sha, source_bytes=desk._size(data),
             source_path=path, completed_at=None))
     chapters = len({s["chapter"] for s in segs})
     return {"version": version, "segments": len(segs), "chapters": chapters, "words": sum(s["words"] for s in segs), "carried": kept}

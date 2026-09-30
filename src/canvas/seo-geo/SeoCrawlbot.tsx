@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
+import { ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
@@ -9,6 +9,7 @@ import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 import { Term, termText } from './terms';
+import SeoPager from './SeoPager';
 
 const PAGE = 40;
 
@@ -121,21 +122,8 @@ const pct = (v: number | null | undefined) => (v == null ? '—' : `%${fmt(v * 1
 const ago = (d: number | null) => (d == null ? 'Hiç taranmamış' : d === 0 ? 'Bugün' : `${fmt(d)} gün önce`);
 const shortUrl = (u: string) => u.replace(/^https?:\/\/[^/]+/, '') || '/';
 
-function Pager({ start, total, onChange }: { start: number; total: number; onChange: (s: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => onChange(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => onChange(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+function Pager({ start, total, onChange }: { start: number; total: number; onChange: (n: number) => void }) {
+  return <SeoPager start={start} total={total} size={PAGE} onChange={onChange} />;
 }
 
 function Bars({ rows, total }: { rows: Array<{ key: string; label: string; count: number; tone?: Tone }>; total: number }) {

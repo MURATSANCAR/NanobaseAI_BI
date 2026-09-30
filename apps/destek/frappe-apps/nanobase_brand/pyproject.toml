@@ -1,7 +1,7 @@
 [project]
 name = "nanobase_brand"
-authors = [{ name = "NanobaseAI" }]
-description = "NanobaseAI marka katmanı: logo, tema, marka çevirileri ve kurulum ayarları"
+authors = [{ name = "ZEKİ AI" }]
+description = "ZEKİ AI marka katmanı: logo, tema, marka çevirileri ve kurulum ayarları"
 requires-python = ">=3.14"
 readme = "README.md"
 license = "AGPL-3.0-or-later"

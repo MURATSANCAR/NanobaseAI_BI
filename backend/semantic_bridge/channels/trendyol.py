@@ -187,7 +187,8 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) in _ready:
             return
         S.ensure(engine)
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 
@@ -341,14 +342,14 @@ def _gross(price: Optional[float], kdv_dahil: Optional[bool], kdv: float) -> Opt
     return price if kdv_dahil or not kdv else price * (1 + kdv)
 
 
-def stock_rows(engine: sa.engine.Engine, tenant: str, st: dict[str, Any]) -> list[dict[str, Any]]:
+def stock_rows(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], books: Optional[Books] = None) -> list[dict[str, Any]]:
     """Ürün listesi × depo stoğu. Fark türleri:
     - `trendyolda-var-depoda-yok`: satışa açık (ya da durum bilinmiyor), Trendyol stoğu > 0, depo ≤ 0 (iptal/puan riski)
     - `depoda-var-kapali`: depo ≥ en az depo stoğu ama Trendyol'da kapalı ya da stok 0 (kaçan satış)
     - `trendyol-fazla`: Trendyol stoğu depodan fazla (depo > 0)
     - `eslesmedi`: barkod Logo'da bir kitaba bağlanamadı
     """
-    b = Books(engine, tenant)
+    b = books or Books(engine, tenant)
     out = []
     for r in _rows(engine, PRODUCTS, tenant):
         code = b.code(r.barkod, r.satici_stok_kodu)
@@ -376,8 +377,9 @@ STOCK_DIFFS = {"trendyolda-var-depoda-yok": "Trendyol'da satışta, depoda yok",
                "trendyol-fazla": "Trendyol stoğu depodan fazla", "eslesmedi": "Barkod Logo'da bulunamadı"}
 
 
-def stock_diff(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], fark: str = "", q: str = "", p: int = 0) -> dict[str, Any]:
-    rows = stock_rows(engine, tenant, st)
+def stock_diff(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], fark: str = "", q: str = "", p: int = 0,
+               books: Optional[Books] = None) -> dict[str, Any]:
+    rows = stock_rows(engine, tenant, st, books)
     counts = {k: sum(1 for r in rows if r["fark"] == k) for k in STOCK_DIFFS}
     sel = [r for r in rows if (r["fark"] == fark if fark else r["fark"] is not None)]
     sel = PC.search(sel, q, ("ad", "barkod", "stokKodu"))
@@ -479,9 +481,9 @@ def _day(v: str) -> Optional[date]:
 
 
 def orders(engine: sa.engine.Engine, tenant: str, durum: str = "", bas: str = "", bit: str = "", q: str = "", p: int = 0,
-           now: Optional[datetime] = None) -> dict[str, Any]:
+           now: Optional[datetime] = None, books: Optional[Books] = None) -> dict[str, Any]:
     now = now or datetime.now()
-    b = Books(engine, tenant)
+    b = books or Books(engine, tenant)
     a, z = _day(bas), _day(bit)
     rows = [r for r in _rows(engine, ORDERS, tenant) if _between(r.siparis_tarihi, a, z)]
     by_status: dict[str, dict[str, float]] = defaultdict(lambda: {"paket": 0, "adet": 0.0, "tutar": 0.0})
@@ -534,8 +536,9 @@ def rule_class(text: str) -> Optional[str]:
     return hits[0] if len(hits) == 1 else None
 
 
-def claims(engine: sa.engine.Engine, tenant: str, bas: str = "", bit: str = "", sinif: str = "", q: str = "", p: int = 0) -> dict[str, Any]:
-    b = Books(engine, tenant)
+def claims(engine: sa.engine.Engine, tenant: str, bas: str = "", bit: str = "", sinif: str = "", q: str = "", p: int = 0,
+           books: Optional[Books] = None) -> dict[str, Any]:
+    b = books or Books(engine, tenant)
     a, z = _day(bas), _day(bit)
     rows = [r for r in _rows(engine, CLAIMS, tenant) if _between(r.tarih, a, z)]
     sold: dict[str, float] = defaultdict(float)
@@ -626,9 +629,9 @@ def classify_claims(engine: sa.engine.Engine, tenant: str, llm: Any, st: dict[st
 
 
 def questions(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], cevapsiz: bool = False, q: str = "", p: int = 0,
-              now: Optional[datetime] = None) -> dict[str, Any]:
+              now: Optional[datetime] = None, books: Optional[Books] = None) -> dict[str, Any]:
     now = now or datetime.now()
-    b = Books(engine, tenant)
+    b = books or Books(engine, tenant)
     rows = _rows(engine, QUESTIONS, tenant)
     items = []
     for r in rows:
@@ -647,8 +650,9 @@ def questions(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], cevapsi
                    bilinmeyen=sum(1 for r in rows if r.cevaplandi is None), esikSaat=st["soruSaat"])
 
 
-def reviews(engine: sa.engine.Engine, tenant: str, max_puan: Optional[float] = None, q: str = "", p: int = 0) -> dict[str, Any]:
-    b = Books(engine, tenant)
+def reviews(engine: sa.engine.Engine, tenant: str, max_puan: Optional[float] = None, q: str = "", p: int = 0,
+            books: Optional[Books] = None) -> dict[str, Any]:
+    b = books or Books(engine, tenant)
     rows = _rows(engine, REVIEWS, tenant)
     by_book: dict[str, dict[str, Any]] = {}
     items = []
@@ -805,12 +809,13 @@ def weekly(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], bitis: str
         end = max(ds).date() if ds else now.date()
     start = end - timedelta(days=6)
     a, z = start.isoformat(), end.isoformat()
-    o = orders(engine, tenant, bas=a, bit=z, now=now)
-    cl = claims(engine, tenant, bas=a, bit=z)
-    qs = questions(engine, tenant, st, now=now)
-    rv = reviews(engine, tenant)
+    b = Books(engine, tenant)      # barkod/Logo/ad sözlükleri bir kez (hız 4. tur: eskiden her alt hesapta yeniden, 6 kez)
+    o = orders(engine, tenant, bas=a, bit=z, now=now, books=b)
+    cl = claims(engine, tenant, bas=a, bit=z, books=b)
+    qs = questions(engine, tenant, st, now=now, books=b)
+    rv = reviews(engine, tenant, books=b)
     week_reviews = [r for r in _rows(engine, REVIEWS, tenant) if r.tarih and a <= r.tarih.date().isoformat() <= z]
-    sd = stock_diff(engine, tenant, st)
+    sd = stock_diff(engine, tenant, st, books=b)
     out = {
         "bas": a, "bit": z,
         "siparis": {"paket": o["paketSayisi"], "adet": o["adet"], "tutar": o["tutar"], "geciken": o["geciken"],
@@ -834,10 +839,11 @@ def weekly(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], bitis: str
 
 def overview(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], wholesale: Optional[dict[str, Any]], now: Optional[datetime] = None) -> dict[str, Any]:
     now = now or datetime.now()
-    sd = stock_diff(engine, tenant, st)
-    qs = questions(engine, tenant, st, now=now)
-    rv = reviews(engine, tenant)
-    o = orders(engine, tenant, now=now)
+    b = Books(engine, tenant)      # bir kez (hız 4. tur: eskiden dört alt hesapta ayrı ayrı)
+    sd = stock_diff(engine, tenant, st, books=b)
+    qs = questions(engine, tenant, st, now=now, books=b)
+    rv = reviews(engine, tenant, books=b)
+    o = orders(engine, tenant, now=now, books=b)
     with engine.connect() as c:
         n_prod = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(PRODUCTS.c.tenant_id == tenant)).scalar() or 0
         n_open = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(PRODUCTS.c.tenant_id == tenant,

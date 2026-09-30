@@ -2,12 +2,13 @@ import type { ReactNode } from 'react';
 import { useState, type CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { RIGHTS_LABEL, RIGHTS_TONE, call, dateTime, fmt, qs, scoreTone, type CrmRights } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import SeoPager from './SeoPager';
 
 /** Sezon takvimi: /api/v1/seo-geo/seasons. Yaklaşan özel günler (CRM + hareketli günler), bağlı kitaplar ve
  *  sayfalarının hazırlığı; geçen yılın arama artışı Search Console'dan. Hiçbir yere yazılmaz. */
@@ -503,20 +504,7 @@ function DayBooks({ id, onBack }: { id: string; onBack: () => void }) {
 }
 
 function Pager({ start, total, onChange }: { start: number; total: number; onChange: (n: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => onChange(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => onChange(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+  return <SeoPager start={start} total={total} size={PAGE} onChange={onChange} />;
 }
 
 function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {

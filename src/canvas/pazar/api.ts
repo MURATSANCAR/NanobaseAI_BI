@@ -1,7 +1,14 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+import type { DagitimTazelik } from '../stock/api';
 
 /** M39 Pazar araştırması ve rekabet: köprü uçları /api/v1/pazar/*. Portal CRM'e ve Logo'ya yazmaz; dış tarama yok. */
+
+/** Rakip kaynağı: Başarı Dağıtım kataloğu (Timaş grubu dışı başlıklar) ya da CRM «Rakip Kitap» kayıtları. Uçların
+ *  parametresiz varsayılanı `crm`; Pazar ekranı `basari`'yı varsayılan gönderir. */
+export type RakipKaynak = 'basari' | 'crm';
+export type RakipKaynakRow = { kaynak: RakipKaynak; ad: string; tarih: string | null; kayit: number; hazir: boolean };
 
 export type Job = { running: boolean; step: string | null; startedAt: string | null; finishedAt: string | null; error: string | null; result?: unknown };
 export type Jobs = { kaynak: Job; eslesme: Job; cikarim: string[] };
@@ -20,6 +27,7 @@ export type Meta = {
   modelVar: boolean;
   jobs: Jobs;
   sellIn: string;
+  rakipKaynaklar?: RakipKaynakRow[];
 };
 
 export type Freshness = {
@@ -37,6 +45,12 @@ export type Freshness = {
   ownSalesAt: string | null;
   dataEnd: string | null;
   note: string;
+  kaynak?: RakipKaynak;
+  kaynakAd?: string;
+  /** Başarı: kataloğun kendi tarihi (kaynak kendi üstüne yazar). */
+  katalogTarihi?: string | null;
+  goruntu?: number;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Category = { id: string; ad: string; ustId: string | null; yol: string; kaynak: 'kitaplik' | 'agac' };
@@ -94,6 +108,10 @@ export type Matrix = {
   eslenmemis: number | null;
   newDays: number;
   note: string;
+  kaynak?: RakipKaynak;
+  kaynakAd?: string;
+  katalogTarihi?: string | null;
+  yeniNot?: string | null;
 };
 
 export type Competitor = {
@@ -117,12 +135,21 @@ export type Competitor = {
   olusturma: string | null;
   degisme: string | null;
   emsalBagi: boolean;
+  kaynak?: RakipKaynak;
+  /** Başarı: dağıtımcı deposundaki stok (okura satış değil). */
+  stok?: number | null;
+  basimYili?: number | null;
 };
 export type Paged<T> = { items: T[]; total: number; page: number; pageSize: number };
 
 export type MapStatus = 'yeni' | 'oneri' | 'belirsiz' | 'onaylandi' | 'reddedildi';
 export type MapRow = {
+  /** Eşleme anahtarı (kararda geri gönderilir); Başarı'da «basari:» önekli. */
   ham: string;
+  /** Ekranda görünen ham kategori. */
+  ad?: string;
+  kaynak?: RakipKaynak;
+  kaynakAd?: string;
   kayit: number;
   durum: MapStatus;
   durumAd: string;
@@ -145,6 +172,7 @@ export type MapList = Paged<MapRow> & {
   categories: Category[];
   statusLabels: Record<MapStatus, string>;
   job: Job;
+  kaynak?: RakipKaynak | null;
 };
 
 export type Comparable = {
@@ -165,6 +193,8 @@ export type Comparable = {
   ilkYayin?: string | null;
   zeki?: { sinif: string | null; olasilik: number | null; puan: number };
   gerekce: string[];
+  kaynak?: RakipKaynak;
+  basimYili?: number | null;
 };
 export type Comparables = {
   query: { q: string; crmKitapId: string | null; kategoriId: string | null; kategoriYol: string | null; sayfa: number | null; fiyat: number | null; base: { ad: string; stokKodu: string | null } | null };
@@ -175,6 +205,9 @@ export type Comparables = {
   salesYear: number | null;
   stopped: string | null;
   note: string;
+  kaynak?: RakipKaynak;
+  kaynakAd?: string;
+  katalogTarihi?: string | null;
 };
 export type OwnBookHit = { crmId: string; ad: string; yazar: string | null; stokKodu: string | null; marka: string | null };
 
@@ -255,6 +288,7 @@ export type Overview = {
   ownBooks: number;
   publishers: number;
   mapping: { counts: Partial<Record<MapStatus, number>>; coverage: { records: number; approved: number; noMatch: number } };
+  mappingBasari?: { counts: Partial<Record<MapStatus, number>>; coverage: { records: number; approved: number; noMatch: number } };
   own: OwnMarket;
   figures: Figure[];
   pendingFigures: number;
@@ -301,26 +335,45 @@ export const qs = (o: Record<string, string | number | boolean | undefined | nul
 };
 const enc = encodeURIComponent;
 
-export type MatrixFilter = { kategori?: string; oneri?: boolean; sayfaMin?: number | ''; sayfaMax?: number | ''; yayinevi?: string; izlenen?: boolean };
+export type MatrixFilter = { kategori?: string; oneri?: boolean; sayfaMin?: number | ''; sayfaMax?: number | ''; yayinevi?: string; izlenen?: boolean; kaynak?: RakipKaynak };
+
+/** Dağıtımcı nabzı (Başarı Dağıtım kataloğu görüntüleri): çıkış endeksi, kitapçılara çıkış; okura satış ya da pazar payı değil. */
+export type DagitimSummary = {
+  pencere: { bas: string; son: string } | null;
+  sonGoruntu: { basari: string | null; dr: string | null };
+  not: string;
+  kalibrasyon: { eslesen: number; logoNet: number; cikis: number; korelasyonCikis: number | null; katsayi: number | null; bas: string; son: string } | null;
+  toplam?: number;
+  timasToplam?: number;
+  timasMarkalar?: string[];
+  timasNot: string;
+  tazelik?: DagitimTazelik;
+  kategoriler: Array<{ kategori: string; cikis: number; timasCikis: number; timasPay: number | null; kategoriPay: number | null }>;
+  yayinevleri: Array<{ sira: number; yayinevi: string; cikis: number; timas: boolean; pay: number | null }>;
+  aylar: Array<{ ay: string; cikis: number; timasCikis: number }>;
+  kaynaklar?: Kaynaklar;
+};
 
 export const pazarApi = {
+  dagitimSummary: () => send<DagitimSummary>('GET', '/dagitim/summary'),
   meta: () => send<Meta>('GET', '/meta'),
   overview: () => send<Overview>('GET', '/overview'),
-  freshness: () => send<Freshness>('GET', '/freshness'),
+  freshness: (kaynak?: RakipKaynak) => send<Freshness>('GET', `/freshness${qs({ kaynak })}`),
   status: () => send<Jobs>('GET', '/status'),
   refresh: () => send<Jobs & { started: boolean }>('POST', '/refresh', {}),
   categories: () => send<{ items: Category[]; source: string | null; note: string | null }>('GET', '/categories'),
   publishers: () => send<{ items: Array<{ ad: string; kitap: number }> }>('GET', '/publishers'),
-  competitors: (f: { yayinevi?: string; kategori?: string; q?: string; durum?: string; page?: number }) => send<Paged<Competitor>>('GET', `/competitors${qs(f)}`),
+  competitors: (f: { yayinevi?: string; kategori?: string; q?: string; durum?: string; page?: number; kaynak?: RakipKaynak }) =>
+    send<Paged<Competitor> & { kaynak?: RakipKaynak; kaynakAd?: string; katalogTarihi?: string | null }>('GET', `/competitors${qs(f)}`),
   matrix: (f: MatrixFilter) => send<Matrix>('GET', `/matrix${qs(f)}`, undefined, 180_000),
   matrixCsvUrl: (f: MatrixFilter) => `${ENGINE_BASE}${B}/matrix/export.csv${qs(f)}`,
   ownMarket: (boyut: Dimension, yil?: number) => send<OwnMarket>('GET', `/own-market${qs({ boyut, yil })}`),
   ownBooks: (q: string) => send<{ items: OwnBookHit[]; limit: number; note: string | null }>('GET', `/own-books${qs({ q })}`),
-  categoryMap: (f: { durum?: string; q?: string; page?: number }) => send<MapList>('GET', `/category-map${qs(f)}`),
+  categoryMap: (f: { durum?: string; q?: string; page?: number; kaynak?: RakipKaynak }) => send<MapList>('GET', `/category-map${qs(f)}`),
   decideMap: (items: Array<{ ham: string; karar: 'onayla' | 'duzelt' | 'reddet'; kategoriId?: string | null; not?: string }>) =>
     send<{ decided: Array<{ ham: string; durum: MapStatus; kategoriId: string | null; kategoriYol: string | null }>; errors: Array<{ ham: string; neden: string }> }>('POST', '/category-map/decision', { items }),
-  suggestMap: (hams?: string[]) => send<{ started: boolean; queued: number; job: Job }>('POST', '/category-map/suggest', { hams }),
-  comparables: (body: { q?: string; crmKitapId?: string; kategoriId?: string; sayfa?: number; fiyat?: number }) =>
+  suggestMap: (hams?: string[], kaynak?: RakipKaynak) => send<{ started: boolean; queued: number; job: Job }>('POST', '/category-map/suggest', { hams, kaynak }),
+  comparables: (body: { q?: string; crmKitapId?: string; kategoriId?: string; sayfa?: number; fiyat?: number; kaynak?: RakipKaynak }) =>
     send<Comparables>('POST', '/comparables', body, 600_000),
   watchlist: () => send<{ items: Watch[] }>('GET', '/watchlist'),
   addWatch: (yayinevi: string, kategoriId?: string | null) => send<Watch>('POST', '/watchlist', { yayinevi, kategoriId: kategoriId || null }),
@@ -377,6 +430,16 @@ export const fmtDay = (iso: string | null | undefined) => {
   const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
   return Number.isNaN(d.getTime()) ? iso : dayFmt.format(d);
 };
+
+/** «GG.AA.YYYY» (kaynak seçicideki katalog tarihi). */
+export const fmtDmy = (iso: string | null | undefined) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? '');
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : '—';
+};
+
+/** Kaynak seçicideki ad: Başarı kataloğun kendi tarihiyle. */
+export const rakipKaynakLabel = (r: Pick<RakipKaynakRow, 'kaynak' | 'tarih' | 'hazir'>) =>
+  r.kaynak === 'basari' ? `Başarı Dağıtım kataloğu (${r.hazir && r.tarih ? fmtDmy(r.tarih) : 'henüz okunmadı'})` : 'CRM rakip kayıtları';
 
 /** Geçen ay (YYYY-AA): aylık özetin varsayılan dönemi. */
 export function lastMonth(now = new Date()): string {

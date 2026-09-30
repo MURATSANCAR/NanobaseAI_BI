@@ -17,6 +17,7 @@ from semantic_bridge import okur_sources as src
 from semantic_bridge import pazarlama_kaynak as PK
 from semantic_bridge import provenance as P
 from semantic_bridge import readers as R
+from semantic_bridge import readers_core as RC
 from semantic_bridge import readers_kaynak as RK
 
 #: Rakam olmayan sayılar: ayarlar, sürüm, yıl listesi (seçim kutusu), yıl.
@@ -63,7 +64,14 @@ def _core(k: P.Kaynaklar, engine: Any, tenant: str) -> list[str]:
 
 def _envanter(k: P.Kaynaklar, engine: Any, tenant: str, core: list[str]) -> str:
     sync = k.portal("okur.tur", "Okuma turu ve kaynak tazeliği", R.sync_stmt(tenant), engine)
-    return k.hesap("envanter", F_ENVANTER, core + [sync])
+    iys = k.portal("okur.iys", "İYS kaynağından izinli okurlar", RC.iys_ok_stmt(tenant), engine,
+                   description="Okur verisi değişmedikçe (okuma turu damgası) süreç belleğinden; yalnız okur kimliği sayılır.")
+    return k.hesap("envanter", F_ENVANTER, core + [iys, sync])
+
+
+def _celiski(k: P.Kaynaklar, engine: Any, tenant: str) -> str:
+    return k.portal("okur.izin.celiski", "Kanal başına izin çelişkisi (etkin okur)", RC.conflicts_stmt(tenant), engine,
+                    description="Okur × kanal başına hem «izinli» hem «ret» kanıtı; okur verisi değişmedikçe süreç belleğinden.")
 
 
 def _trend(k: P.Kaynaklar, engine: Any, tenant: str, since: Optional[str], until: Optional[str]) -> str:
@@ -92,7 +100,7 @@ def for_overview(engine: Any, tenant: str, out: dict[str, Any], since: str) -> P
     inv = _envanter(k, engine, tenant, core)
     prev = k.portal("topluluk.izin.onceki", "Önceki gece izin çelişkisi toplamı",
                     O.consent_previous_stmt(tenant, O.today().isoformat()), engine)
-    izin = k.hesap("izin", F_IZIN, core + [prev])
+    izin = k.hesap("izin", F_IZIN, core + [_celiski(k, engine, tenant), prev])
     segs = k.portal("topluluk.segment.say", "Durum başına segment sayısı", O.segment_counts_stmt(tenant), engine)
     progs = out.get("yaklasanProgramlar") or []
     prog = _programs(k, engine, tenant, O.due_programs_stmt(tenant, 30), (p.get("segmentId") for p in progs),
@@ -109,7 +117,7 @@ def for_consent(engine: Any, tenant: str) -> P.Kaynaklar:
     core = _core(k, engine, tenant)
     prev = k.portal("topluluk.izin.onceki", "Önceki gece izin çelişkisi toplamı",
                     O.consent_previous_stmt(tenant, O.today().isoformat()), engine)
-    ref = k.hesap("izin", F_IZIN, core + [prev])
+    ref = k.hesap("izin", F_IZIN, core + [_celiski(k, engine, tenant), prev])
     k.alanlar({"items": ref, "toplam": ref, "onceki": prev})
     return k
 

@@ -10,8 +10,8 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as l
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { fmtDay } from '../budget/api';
-import { gunText, n0, n1, stockApi, tl, type Suggestion } from './api';
-import { DataDay, Empty, Loading, SourcesButton, StatePill, StockFrame, num } from './parts';
+import { gunText, n0, n1, stockApi, tl, type ItemDetail, type Suggestion } from './api';
+import { DagitimTazelikLine, DataDay, Empty, Loading, SourcesButton, StatePill, StockFrame, num } from './parts';
 import { RULES } from './rules';
 import { SuggestionActions } from './decisions';
 
@@ -79,7 +79,7 @@ export default function StockItem() {
               info={<SqlInfo k={it.kaynaklar} alan="satisHizi" label="Aylık satış hızı" />} />
           </KpiRow>
 
-          <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
             <Panel>
               <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="raflar" label="Depo ve raf adetleri">Depo ve raf</InfoLabel></h2>
               <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -166,6 +166,8 @@ export default function StockItem() {
                 )}
               </div>
             </Panel>
+
+            {it.dagitim && (it.dagitim.basari || it.dagitim.dr) && <Distributor it={it} />}
 
             <Panel>
               <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="uretimKartlari" label="Açık üretim kartları">Üretim (baskı tekrarı)</InfoLabel></h2>
@@ -270,7 +272,7 @@ export default function StockItem() {
             )}
           </Panel>
 
-          <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
             <Panel>
               <h2 className="mb-2 text-[13px] font-extrabold">Sayım ve düzeltme notları</h2>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -328,6 +330,44 @@ export default function StockItem() {
         </>
       )}
     </StockFrame>
+  );
+}
+
+/** Dağıtımcı ve perakende: Başarı kataloğunda durum, depo, fiyat, iskonto, çıkış endeksi; D&R B2B stoğu ve fiyatları. */
+function Distributor({ it }: { it: ItemDetail }) {
+  const d = it.dagitim!;
+  const b = d.basari;
+  const r = d.dr;
+  const oz = it.dagitimOzet;
+  const day = (v: string | null | undefined) => (v ? fmtDay(v) : '—');
+  return (
+    <Panel>
+      <h2 className="mb-2 text-[13px] font-extrabold">
+        <InfoLabel k={it.kaynaklar} alan="dagitim" label="Dağıtımcı bilgisi">Dağıtımcı ve perakende</InfoLabel>
+      </h2>
+      <div className="mb-2"><DagitimTazelikLine t={oz?.tazelik} /></div>
+      {d.isaret && (
+        <div className="mb-3 rounded-xl bg-amber-50 p-3 text-[12px] font-semibold text-amber-900">
+          {d.isaretEtiket}
+          {b?.durumTarihi ? ` · ${fmtDay(b.durumTarihi)} görüntüsünden beri` : ''}. Bizde Logo stoğu {n0(it.bakiye)}.
+        </div>
+      )}
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12.5px]">
+        <Fact k="Başarı durumu" v={b ? (b.katalogda ? b.durum ?? '—' : `katalogda yok (son ${day(b.son)})`) : 'Başarı’da yok'} />
+        <Fact k="Başarı deposu" v={b ? n0(b.stok) : '—'} ks={it.kaynaklar} a="dagitim" />
+        <Fact k="Başarı fiyatı · iskonto" v={b?.fiyat ? `${tl(b.fiyat)} · %${n0(b.iskonto)}` : '—'} ks={it.kaynaklar} a="dagitim" />
+        <Fact k={oz?.pencere ? `Başarı çıkışı (${fmtDay(oz.pencere.bas)}–${fmtDay(oz.pencere.son)})` : 'Başarı çıkışı'}
+          v={b?.cikis === null || b?.cikis === undefined ? '—' : n0(b.cikis)} ks={it.kaynaklar} a="dagitim" />
+        <Fact k="D&R Prefix (B2B) stoğu" v={r ? (r.katalogda ? n0(r.stok) : `katalogda yok (son ${day(r.son)})`) : 'D&R’de yok'} ks={it.kaynaklar} a="dagitim" />
+        <Fact k="D&R ve İdefix site stoğu" v={r?.katalogda ? (r.siteStok === null ? 'sayı yok' : n0(r.siteStok)) : '—'} ks={it.kaynaklar} a="dagitim" />
+        <Fact k="D&R durumu" v={r?.durum ?? '—'} />
+        <Fact k="D&R fiyatı · liste" v={r?.drFiyat ? `${tl(r.drFiyat)} · ${r.fiyat ? tl(r.fiyat) : '—'}` : '—'} ks={it.kaynaklar} a="dagitim" />
+      </dl>
+      <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
+        D&amp;R sitelerinde 999 ve üstü stok sayım değildir, gösterilmez. Çıkış, Başarı deposundaki düşüşlerin toplamıdır:
+        kitapçılara çıkış, okura satış değil; görüntüler arasında gelip giden stok görünmediği için gerçek adedin altındadır.
+      </p>
+    </Panel>
   );
 }
 

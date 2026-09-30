@@ -62,7 +62,8 @@ _lock = threading.Lock()
 def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) not in _ready:
-            _md.create_all(engine, checkfirst=True)
+            from semantic_layer.store import schema_stamp
+            schema_stamp.create_all(_md, engine)
             _ready.add(id(engine))
 
 
@@ -424,6 +425,14 @@ def register(app, runtime: Callable, gate: Callable[[Request], str], reports) ->
             fail(e)
         _audit(engine, user, "withdraw", out)
         return out
+
+    # Kitap kartındaki «Pazardaki benzer kitaplar (dağıtımcı kataloğu)»: bağlam bilgisi, tahmine girmez.
+    def _book_of(code: str):
+        _, eng = store.load()
+        return eng.ds.books.get(code) if eng is not None else None
+
+    from semantic_bridge.management import ilk_baski_pazar as IBP
+    IBP.register(app, PREFIX, gate, db, _book_of)
 
     def _audit(engine, user: str, action: str, d: dict) -> None:
         try:

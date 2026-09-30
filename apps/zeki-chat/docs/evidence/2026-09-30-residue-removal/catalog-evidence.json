@@ -1,0 +1,6 @@
+{
+  "endpoint": "/api/apps/marketplace",
+  "status": 200,
+  "body": [],
+  "emptyCatalog": true
+}

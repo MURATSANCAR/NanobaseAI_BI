@@ -268,7 +268,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if key in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(key)
 
 
@@ -521,10 +522,25 @@ def _ind_out(r: Any) -> dict[str, Any]:
             "aktif": bool(d["aktif"]), "surum": d["surum"], "guncelleyen": d["guncelleyen"], "guncelleme": _iso(d["guncelleme"])}
 
 
+#: Önceki sürümlerin hazır açıklamaları (iç hesap kodu taşıyordu). Kayıttaki açıklama bunlardan biriyle birebir aynıysa
+#: kimse değiştirmemiştir; yeni hazır metne çevrilir. Elle yazılmış açıklamaya dokunulmaz.
+LEGACY_ACIKLAMA: dict[str, tuple[str, ...]] = {
+    "kasa_banka": ("Veri son günü itibarıyla 100 + 102 hesap bakiyesi.",),
+    "vadesi_gecmis_alacak": ("13 haftalık nakit tablosunun vade dağılımı (FIFO yaklaşımı).",),
+}
+
+
 def seed_library(engine: sa.engine.Engine, tenant: str, library: Iterable[dict[str, Any]] = S.LIBRARY) -> int:
-    """Hazır tanımları eksikse ekler (var olanın eşiğine, sahibine, adına dokunmaz). Eklenen sayısı."""
+    """Hazır tanımları eksikse ekler (var olanın eşiğine, sahibine, adına dokunmaz). Eklenen sayısı. Eski hazır açıklaması
+    değiştirilmeden duran göstergenin açıklaması yeni hazır metne çevrilir (`LEGACY_ACIKLAMA`)."""
     added = 0
+    library = list(library)
     with engine.begin() as c:
+        for g in library:
+            old = LEGACY_ACIKLAMA.get(g["kod"])
+            if old and g.get("aciklama"):
+                c.execute(INDICATORS.update().where(INDICATORS.c.tenant_id == tenant, INDICATORS.c.kod == g["kod"],
+                                                    INDICATORS.c.aciklama.in_(old)).values(aciklama=g["aciklama"]))
         have = {r[0] for r in c.execute(sa.select(INDICATORS.c.kod).where(INDICATORS.c.tenant_id == tenant))}
         for g in library:
             if g["kod"] in have:

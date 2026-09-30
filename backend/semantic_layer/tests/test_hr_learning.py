@@ -341,7 +341,8 @@ def test_spend_sql_definition_and_account_setting():
     for bad in ("153.01", "770'; DROP", "abc"):
         with pytest.raises(H.HrError):
             L.parse_accounts(bad)
-    assert L.settings(lambda k: "")["alertDays"] is None and L.settings(lambda k: "")["minGroup"] is None
+    assert L.settings(lambda k: "")["alertDays"] is None and L.settings(lambda k: "")["minGroup"] == L.DEFAULT_MIN_GROUP
+    assert L.settings(lambda k: "0" if k == "HR_PRIVACY_MIN_GROUP" else "")["minGroup"] is None
 
 
 def test_api_module_imports_request_at_module_level():

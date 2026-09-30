@@ -91,6 +91,8 @@ export default function PendingTab() {
           </li>
         ))}
       </ul>
+      {/* ZEKI-29: uzun listenin altında da sayfa numaraları ve önceki/sonraki. */}
+      <Pager page={page} pageSize={d?.pageSize ?? 50} total={d?.total ?? 0} shown={d?.items.length ?? 0} loading={list.isLoading} fetching={list.isFetching} db={d?.db} onPage={setPage} placement="bottom" />
     </Panel>
   );
 }

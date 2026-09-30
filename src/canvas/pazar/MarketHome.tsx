@@ -12,6 +12,7 @@ import { BriefView } from './BriefEditor';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 import { Explain } from '../components/Explain';
+import DistributorPulse from './DistributorPulse';
 
 /** Özet: yönetim özeti, TİMAŞ iç göstergeleri (Logo, sell-in), onaylı sektör rakamları, eşleme kapsamı. Telefonda okunur. */
 export default function MarketHome({ overview, loading, error }: { overview?: Overview; loading: boolean; error: unknown }) {
@@ -127,6 +128,7 @@ export default function MarketHome({ overview, loading, error }: { overview?: Ov
       </div>
 
       <OwnMarketPanel initial={o.own} k={kaynakOf(o)} />
+      <DistributorPulse />
 
       {canRivals && (
         <Panel>

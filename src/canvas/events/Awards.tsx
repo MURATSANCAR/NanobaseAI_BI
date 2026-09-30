@@ -5,6 +5,7 @@ import { ExternalLink, Pencil, Plus, Trash2, Trophy } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
@@ -30,7 +31,7 @@ export default function Awards() {
       qc.setQueryData(['ev', 'awards'], (old: { items: Award[] } | undefined) => ({ ...(old ?? { statuses: {}, today: '' }), items: d.items }));
       qc.invalidateQueries({ queryKey: ['ev', 'upcoming'] });
     },
-    onError: (e) => toast.error(errText(e, 'İşlem yapılamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'İşlem yapılamadı. Sayfayı yenileyip yeniden deneyin.') ?? ''),
   });
   const m = meta.data;
   const can = !!m?.me.canAwards;
@@ -66,8 +67,9 @@ export default function Awards() {
           onRemoveEntry={(eid) => run.mutate(() => evApi.removeEntry(eid))} />
       ))}
       <AwardForm open={editing !== null} initial={editing === 'new' ? null : editing} busy={run.isPending} onClose={() => setEditing(null)}
+        remindDays={m?.settings.awardRemindDays}
         onSave={(b) => run.mutate(() => (editing && editing !== 'new' ? evApi.updateAward(editing.id, b) : evApi.createAward(b)), {
-          onSuccess: () => { setEditing(null); toast.success('Kaydedildi.'); },
+          onSuccess: () => { setEditing(null); toast.success(editing && editing !== 'new' ? 'Ödül kaydedildi.' : 'Ödül deftere eklendi; başvuracağınız kitapları kartından ekleyin.'); },
         })} />
       <AskSheet open={!!removing} title="Ödülü sil" danger
         message={<>«{removing?.name}» ve {removing?.entries.length ?? 0} başvuru kaydı kalıcı olarak silinir.</>}
@@ -113,10 +115,12 @@ function AwardCard({ a, statuses, can, busy, onEdit, onRemove, onAdd, onPatch, o
       <ul className="flex flex-col divide-y divide-slate-100">
         {a.entries.map((e) => <EntryRow key={e.id} e={e} statuses={statuses} can={can} busy={busy} onPatch={onPatch} onRemove={onRemoveEntry} />)}
       </ul>
-      {a.entries.length === 0 && <p className="text-[12.5px] text-canvas-muted">Başvuru kaydı yok.</p>}
+      {a.entries.length === 0 && (
+        <EmptyHint title="Bu ödüle başvuru kaydı yok" why={can ? 'Başvuracağınız kitabı aşağıdaki arama kutusundan ekleyin; durumunu «Aday»dan «Kazandı»ya kadar buradan izlersiniz.' : 'Henüz bu ödüle kitap eklenmedi.'} />
+      )}
       {can && (
         <div className="relative mt-2">
-          <input className={field} value={q} placeholder="Başvuruya kitap ekle: ad ya da stok kodu" onChange={(e) => setQ(e.target.value)} />
+          <input type="search" aria-label={`${a.name} başvurusuna kitap ekle`} className={field} value={q} placeholder="Başvuruya kitap ekle: ör. kitap adı ya da stok kodu" onChange={(e) => setQ(e.target.value)} />
           {dq.trim().length >= 2 && hits.data && (
             <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[260px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
               {hits.data.items.map((b) => (
@@ -129,8 +133,8 @@ function AwardCard({ a, statuses, can, busy, onEdit, onRemove, onAdd, onPatch, o
                   </button>
                 </li>
               ))}
-              {hits.data.items.length === 0 && <li className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kitap yok.</li>}
-              {hits.data.total > hits.data.shown && <li className="px-3 py-2 text-[11px] text-canvas-muted">{hits.data.total} eşleşmenin ilk {hits.data.shown}'i.</li>}
+              {hits.data.items.length === 0 && <li className="px-3 py-2 text-[12px] text-canvas-muted">Bu aramayla kitap bulunamadı; adı kısaltın ya da stok kodunu deneyin.</li>}
+              {hits.data.total > hits.data.shown && <li className="px-3 py-2 text-[11px] text-canvas-muted">{hits.data.total} eşleşmenin ilk {hits.data.shown}'i gösteriliyor; aradığınız yoksa aramayı daraltın.</li>}
             </ul>
           )}
         </div>
@@ -175,7 +179,8 @@ function EntryRow({ e, statuses, can, busy, onPatch, onRemove }: {
       </div>
       {openText && (
         <div className="flex flex-col gap-1.5">
-          <textarea className={`${field} min-h-[120px]`} value={text} readOnly={!can} onChange={(x) => setText(x.target.value)} />
+          <textarea aria-label={`${e.bookName} başvuru metni`} className={`${field} min-h-[120px]`} value={text} readOnly={!can} onChange={(x) => setText(x.target.value)}
+            placeholder="Ör. Başvuru formuna yazdığınız kitap tanıtımı ve gerekçe. Sonraki yıl aynı ödüle başvururken buradan kopyalayabilirsiniz." />
           {can && (
             <div className="flex justify-end">
               <button type="button" className={btnPrimary} disabled={busy || text === (e.text ?? '')} onClick={() => onPatch(e.id, { text })}>Metni kaydet</button>
@@ -187,9 +192,10 @@ function EntryRow({ e, statuses, can, busy, onPatch, onRemove }: {
   );
 }
 
-function AwardForm({ open, initial, busy, onClose, onSave }: {
-  open: boolean; initial: Award | null; busy: boolean; onClose: () => void; onSave: (b: Partial<Award>) => void;
+function AwardForm({ open, initial, busy, remindDays, onClose, onSave }: {
+  open: boolean; initial: Award | null; busy: boolean; remindDays?: number[]; onClose: () => void; onSave: (b: Partial<Award>) => void;
 }) {
+  const hint = 'text-[11px] font-medium leading-snug text-canvas-muted';
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [organizer, setOrganizer] = useState('');
@@ -209,29 +215,36 @@ function AwardForm({ open, initial, busy, onClose, onSave }: {
   }, [open, initial]);
   const badUrl = url.trim() !== '' && !/^https?:\/\//.test(url.trim());
   return (
-    <Sheet open={open} modal onClose={onClose} title={initial ? 'Ödülü düzenle' : 'Yeni ödül'} subtitle="Bilgiyi ödülün kendi duyurusundan girin.">
+    <Sheet open={open} modal onClose={onClose} title={initial ? 'Ödülü düzenle' : 'Yeni ödül'} subtitle="Takip edeceğiniz bir ödülü deftere ekler. Bilgiyi ödülün kendi duyurusundan girin; başvuracağınız kitapları kayıttan sonra ödül kartından eklersiniz. Yalnız ödül adı zorunlu.">
       <form className="flex flex-col gap-3" onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim() || badUrl) return;
         onSave({ name: name.trim(), category: category.trim() || null, organizer: organizer.trim() || null, deadline: deadline || null,
           url: url.trim() || null, conditions: conditions.trim() || null, recurring });
       }}>
-        <label className="flex flex-col gap-1"><span className={labelCls}>Ad</span><input className={field} value={name} onChange={(e) => setName(e.target.value)} required /></label>
+        <label className="flex flex-col gap-1"><span className={labelCls}>Ödül adı *</span><input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ör. Yılın Çocuk Kitabı Ödülü" required /></label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1"><span className={labelCls}>Kategori</span><input className={field} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="ör. çocuk edebiyatı" /></label>
-          <label className="flex flex-col gap-1"><span className={labelCls}>Düzenleyen</span><input className={field} value={organizer} onChange={(e) => setOrganizer(e.target.value)} /></label>
-          <label className="flex flex-col gap-1"><span className={labelCls}>Son başvuru</span><input type="date" className={field} value={deadline} onChange={(e) => setDeadline(e.target.value)} /></label>
-          <label className="flex min-h-11 items-center gap-2 self-end text-[12.5px] font-bold">
-            <input type="checkbox" className="h-4 w-4" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
-            Her yıl tekrarlanır
+          <label className="flex flex-col gap-1"><span className={labelCls}>Kategori</span><input className={field} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ör. çocuk edebiyatı" /></label>
+          <label className="flex flex-col gap-1"><span className={labelCls}>Düzenleyen</span><input className={field} value={organizer} onChange={(e) => setOrganizer(e.target.value)} placeholder="Ör. dernek, vakıf ya da belediye adı" /></label>
+          <label className="flex flex-col gap-1">
+            <span className={labelCls}>Son başvuru tarihi</span>
+            <input type="date" className={field} value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+            <span className={hint}>Kartta kalan gün bu tarihe göre sayılır{remindDays?.length ? `; ${remindDays.join(' ve ')} gün kala «Takvim» ekranındaki hatırlatmalara düşer` : ''}.</span>
           </label>
+          <div className="flex flex-col justify-end gap-0.5">
+            <label className="flex min-h-11 items-center gap-2 text-[12.5px] font-bold">
+              <input type="checkbox" className="h-4 w-4 shrink-0" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
+              Her yıl tekrarlanır
+            </label>
+            <span className={hint}>Kartta «her yıl» yazar; yeni yılın son başvuru tarihini kendiniz güncellersiniz.</span>
+          </div>
         </div>
-        <label className="flex flex-col gap-1"><span className={labelCls}>Duyuru bağlantısı</span><input className={field} value={url} inputMode="url" onChange={(e) => setUrl(e.target.value)} placeholder="https://" /></label>
-        {badUrl && <Note tone="err">Bağlantı http:// ya da https:// ile başlamalı.</Note>}
-        <label className="flex flex-col gap-1"><span className={labelCls}>Koşullar</span><textarea className={`${field} min-h-[120px]`} value={conditions} onChange={(e) => setConditions(e.target.value)} /></label>
+        <label className="flex flex-col gap-1"><span className={labelCls}>Duyuru bağlantısı</span><input className={field} value={url} inputMode="url" onChange={(e) => setUrl(e.target.value)} placeholder="Ör. https://www.odulsitesi.org/2027-basvuru" /><span className={hint}>Karttaki dış bağlantı simgesi bu adresi açar.</span></label>
+        {badUrl && <Note tone="err">Bağlantı http:// ya da https:// ile başlamalı. Adresi tarayıcının adres çubuğundan kopyalayıp yapıştırın.</Note>}
+        <label className="flex flex-col gap-1"><span className={labelCls}>Koşullar</span><textarea className={`${field} min-h-[120px]`} value={conditions} onChange={(e) => setConditions(e.target.value)} placeholder="Ör. Son iki yılda yayımlanmış ilk baskılar; 5 basılı nüsha ve başvuru formu posta ile gönderilir." /><span className={hint}>Kartta «Koşullar» altında açılır.</span></label>
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Vazgeç</button>
-          <button type="submit" className={btnPrimary} disabled={!name.trim() || badUrl || busy}>Kaydet</button>
+          <button type="submit" className={btnPrimary} disabled={!name.trim() || badUrl || busy}>{initial ? 'Değişiklikleri kaydet' : 'Ödülü deftere ekle'}</button>
         </div>
       </form>
     </Sheet>

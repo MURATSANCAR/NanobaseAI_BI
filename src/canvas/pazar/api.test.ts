@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { donemLabel, fmtGrowth, fmtPct, lastMonth, qs } from './api';
+import { donemLabel, fmtDmy, fmtGrowth, fmtPct, lastMonth, qs, rakipKaynakLabel } from './api';
 import { permissionItemFor } from '../nav/navModel';
 
 describe('pazar biçimleri', () => {
@@ -8,6 +8,16 @@ describe('pazar biçimleri', () => {
     expect(lastMonth(new Date(2026, 8, 28))).toBe('2026-08');
     expect(donemLabel('2026-08')).toBe('Ağustos 2026');
     expect(donemLabel('2026-13')).toBe('2026-13');
+  });
+
+  it('rakip kaynağı adı: Başarı kataloğun kendi tarihiyle (GG.AA.YYYY)', () => {
+    expect(fmtDmy('2026-09-25')).toBe('25.09.2026');
+    expect(fmtDmy('2026-09-25T06:15:00+00:00')).toBe('25.09.2026');
+    expect(fmtDmy(null)).toBe('—');
+    expect(rakipKaynakLabel({ kaynak: 'basari', tarih: '2026-09-25', hazir: true })).toBe('Başarı Dağıtım kataloğu (25.09.2026)');
+    expect(rakipKaynakLabel({ kaynak: 'basari', tarih: null, hazir: false })).toBe('Başarı Dağıtım kataloğu (henüz okunmadı)');
+    expect(rakipKaynakLabel({ kaynak: 'crm', tarih: '2026-09-28', hazir: true })).toBe('CRM rakip kayıtları');
+    expect(qs({ kaynak: 'basari', kategori: '' })).toBe('?kaynak=basari');
   });
 
   it('büyüme ve pay', () => {

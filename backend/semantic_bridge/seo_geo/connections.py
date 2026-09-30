@@ -190,7 +190,7 @@ def tsoft_test() -> tuple[bool, str]:
 
 # ------------------------------------------------------------------------------------------------ Google
 
-_GTOKEN: dict[str, Any] = {"token": None, "exp": 0.0, "key": ""}
+_GTOKENS: dict[str, dict[str, Any]] = {}  # «hesap|kapsam» → belirteç ve bitiş
 _glock = threading.Lock()
 #: Merchant API'nin tek kapsamı `content`tir (salt okuma kapsamı yok); bu modül Merchant'a yalnız GET gönderir.
 SCOPES = ("https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly "
@@ -240,16 +240,20 @@ def _sign(key_pem: str, payload: bytes) -> bytes:
             pass
 
 
-def google_token() -> str:
+def google_token(scopes: Optional[str] = None) -> str:
+    """Servis hesabı belirteci. `scopes` verilmezse SEO kapsamları; başka modül (ör. başvuru formları, yalnız
+    okuma) kendi kapsamını ister ve belirteci ayrı saklanır."""
     info = _service_account()
+    scopes = scopes or SCOPES
     # Kapsam değişince eski belirteç kullanılmasın: anahtar hesap + kapsam.
-    cache_key = f"{info['client_email']}|{SCOPES}"
+    cache_key = f"{info['client_email']}|{scopes}"
     with _glock:
-        if _GTOKEN["token"] and _GTOKEN["key"] == cache_key and _GTOKEN["exp"] - 60 > time.time():
-            return _GTOKEN["token"]
+        cached = _GTOKENS.get(cache_key)
+        if cached and cached["exp"] - 60 > time.time():
+            return cached["token"]
         now = int(time.time())
         head = _b64(json.dumps({"alg": "RS256", "typ": "JWT"}).encode())
-        claims = _b64(json.dumps({"iss": info["client_email"], "scope": SCOPES,
+        claims = _b64(json.dumps({"iss": info["client_email"], "scope": scopes,
                                   "aud": info.get("token_uri") or "https://oauth2.googleapis.com/token",
                                   "iat": now, "exp": now + 3600}).encode())
         unsigned = f"{head}.{claims}".encode()
@@ -260,9 +264,8 @@ def google_token() -> str:
         if resp.status_code != 200:
             raise ConnectionError_(f"Google belirteci alınamadı: {resp.text[:200]}")
         body = resp.json()
-        _GTOKEN.update(token=body["access_token"], exp=time.time() + int(body.get("expires_in", 3600)),
-                       key=cache_key)
-        return _GTOKEN["token"]
+        _GTOKENS[cache_key] = {"token": body["access_token"], "exp": time.time() + int(body.get("expires_in", 3600))}
+        return body["access_token"]
 
 
 def _google(method: str, url: str, body: Optional[dict[str, Any]] = None) -> dict[str, Any]:

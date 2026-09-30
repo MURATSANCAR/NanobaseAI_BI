@@ -1,0 +1,547 @@
+{
+  "database": "zeki",
+  "collections": [
+    {
+      "name": "_queue",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "_raix_push_app_tokens",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "instances",
+      "documents": 2,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "meteor_accounts_loginServiceConfiguration",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "meteor_oauth_pendingCredentials",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "meteor_oauth_pendingRequestTokens",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "migrations",
+      "documents": 2,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "omnichannel_auto_close_on_hold_scheduler",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "omnichannel_queue_inactivity_monitor",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "omnichannel_scheduler",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "users",
+      "documents": 3,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "usersSessions",
+      "documents": 1,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki__trash",
+      "documents": 18,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_abac_attributes",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_analytics",
+      "documents": 2,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_apps_logs",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_apps_persistence",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_apps_scheduler",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_avatars",
+      "documents": 1,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_avatars.chunks",
+      "documents": 1,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_avatars.files",
+      "documents": 1,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_banner",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_banner_dismiss",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_calendar_event",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_call_history",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_canned_response",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_credential_tokens",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_cron",
+      "documents": 7,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_cron_history",
+      "documents": 10165,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_custom_emoji",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_custom_sounds",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_custom_user_status",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_email_inbox",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_email_message_history",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_export_operations",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_federation_events_staging",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_federation_keys",
+      "documents": 2,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_federation_locks",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_federation_room_events",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_import",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_import_data",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_integration_history",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_integrations",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_agent_activity",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_business_hours",
+      "documents": 1,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_contact",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_custom_field",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_department",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_department_agents",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_inquiry",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_priority",
+      "documents": 5,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_tag",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_trigger",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_unit_monitors",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_livechat_visitor",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_media_call_channels",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_media_call_negotiations",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_media_calls",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_message",
+      "documents": 1,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_message_reads",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_moderation_reports",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_notification_queue",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_nps",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_nps_vote",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_oauth_access_tokens",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_oauth_apps",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_oauth_auth_codes",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_oauth_refresh_tokens",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_oembed_cache",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_omnichannel_service_level_agreements",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_permissions",
+      "documents": 1158,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_read_receipts",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_read_receipts_archive",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_roles",
+      "documents": 15,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_room",
+      "documents": 1,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_saml_used_assertions",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_server_events",
+      "documents": 120,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_sessions",
+      "documents": 106,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_settings",
+      "documents": 1002,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_statistics",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_subscription",
+      "documents": 1,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_team",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_team_member",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_uploads",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_uploads.chunks",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_uploads.files",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_user_data_files",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_video_conference",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_webdav_accounts",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    },
+    {
+      "name": "zeki_workspace_credentials",
+      "documents": 0,
+      "fieldHits": {},
+      "settingIds": []
+    }
+  ],
+  "totalDocuments": 12615,
+  "valuesExposed": false
+}

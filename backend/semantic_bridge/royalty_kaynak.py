@@ -66,7 +66,7 @@ F_AVANS = ("Avans portföyü son hesaplanan koşudan: avans = sözleşmedeki ava
 F_ACILIS = ("Avans açılış bakiyesi elle girilir: tutar (o tarihte telifle kapanmamış kalan avans), tarih, gerekçe ve giren; "
             "yeni giriş öncekini geçersiz kılar, geçmiş durur.")
 F_YENILEME = ("Yenilemeler: CRM'de etkin, süreli ve bitişi seçilen pencerede (bugün ile bugün + N gün arası; «bitişi geçmiş» "
-              "seçiminde bugünden önce) olan bütün tür sözleşmeler. Kalan gün = bitiş − bugün. Yenilenme sıklığı, imha süresi "
+              "seçiminde bugünden önce) olan bütün tür sözleşmeler. Kalan gün = bitiş − bugün. Yenilenme sıklığı, yayınlanmazsa fesih süresi "
               "ve avans CRM kartından. Karar portalda girilir; bitiş CRM'de değiştiyse eski karar geçersiz sayılır. Sayılar: "
               "penceredeki sözleşme sayısı (süzgeçten sonra) ve karara göre sayılar (süzgeçten önce).")
 F_ONERI = ("Zeki AI önerisi yalnız olgulara dayanır. Olgular: CRM sözleşme kartı (bitiş, yenilenme sıklığı) ve kitapların "

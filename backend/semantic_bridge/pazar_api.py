@@ -12,6 +12,12 @@ Zamanlayıcı (`timas-pazar.timer`, pazartesi 05:30) yalnız `POST /api/v1/pazar
 TİMAŞ kitapları, Logo iç göstergeleri, yeni ham kategoriler için eşleme önerisi (süre bütçesiyle; bitmeyen sonraki
 tura kalır), tazelik uyarısı ve ayın ilk haftasında geçen ayın özet taslağı. Dış tarama yok.
 
+Rakip kaynağı: `freshness`, `publishers`, `competitors`, `matrix(+export)`, `comparables` (gövdede) `kaynak=crm|basari`
+alır, varsayılan `crm` (fiyatlama ve yayın kurulu ekranları parametresiz çağırır; davranışları değişmez). `category-map`
+ve `category-map/suggest` `kaynak` boşsa iki kaynağı birlikte işler. Başarı ham kategorileri eşleme tablosuna Başarı'nın
+yeni görüntüsü geldiğinde yazılır (`P.sync_basari_categories`; kaynak yenilemede zorla). `meta.rakipKaynaklar` seçicinin
+satırlarıdır (Başarı kataloğunun kendi tarihi).
+
 Model çağrıları LLM kapısından: `rt.llm_for("pazar", …)` — eşleme önerisi, rapor çıkarımı ve özet düşük öncelikli
 (`BATCH`), emsal sıralaması ekranda beklendiği için `NORMAL`. `LlmClient` doğrudan kurulmaz. CRM'e ve Logo'ya yazılmaz.
 """
@@ -95,7 +101,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         return admin_mod.conf("CRM_SCHEMA") or "Timas_MSCRM.dbo"
 
     def izli(engine, tenant: str, fn, *, prefix: str, title: str, text: str, skip: tuple = (), crm: bool = True,
-             logo: bool = True, rapor: bool = False, key: str = "kaynaklar"):
+             logo: bool = True, rapor: bool = False, key: str = "kaynaklar", basari: bool = False,
+             crm_rakip: Optional[bool] = None):
         """Sorgu bilgisi: uçta koşan portal okumaları + anlık görüntüyü dolduran asıl CRM/Logo sorguları. Özet
         uçlarının kendi `kaynaklar` listesi olduğundan onlarda kayıt `sorguBilgisi` anahtarına yazılır."""
         with IZ.izle(engine) as ran:
@@ -103,7 +110,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if not isinstance(out, dict):
             return out
         dbs = (PV.connection_database(rt().settings.connection_file), PV.connection_database(crm_file()))
-        org = None if rapor else (lambda k: PK.origin(k, engine, tenant, *dbs, crm=crm, logo=logo))
+        org = None if rapor else (lambda k: PK.origin(k, engine, tenant, *dbs, crm=crm, logo=logo, basari=basari,
+                                                                  crm_rakip=crm_rakip))
         extra = (lambda k: [k.hesap("rapor", "Rakam yüklenen raporun sayfasından okunur.", dis=PK.RAPOR_DIS)]) if rapor else None
 
         def build():
@@ -161,6 +169,17 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         except src.SourceError as e:
             raise HTTPException(status_code=503, detail={"code": "PAZAR_SOURCE", "message": str(e)}) from e
 
+    def kaynak_of(kaynak: str) -> str:
+        return call(P.check_kaynak, kaynak)
+
+    def basari_ready(engine, tenant: str) -> None:
+        """Başarı ham kategorileri eşleme tablosunda mı (yeni görüntü geldiyse yazılır). Sorgu izinin dışında koşar;
+        hata ekranı düşürmez (liste bir önceki hâliyle kalır)."""
+        try:
+            P.sync_basari_categories(engine, tenant)
+        except Exception as e:  # noqa: BLE001
+            log.warning("pazar: Başarı kategorileri eşlemeye yazılamadı: %s", e)
+
     def need(user: str, key: str, what: str) -> None:
         if not can(user, key):
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": f"{what} rolünüzde yok."})
@@ -198,11 +217,17 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             errors["logo"] = str(e)[:300]
             log.warning("pazar: Logo okunamadı: %s", e)
         step("Köprü tablolarına yazılıyor")
-        return P.apply_snapshot(engine, tenant, competitors=comp, own_books=own, links=links, kitaplik=kitaplik,
+        out = P.apply_snapshot(engine, tenant, competitors=comp, own_books=own, links=links, kitaplik=kitaplik,
                                 own_sales=own_sales, actor=actor, errors=errors,
                                 okuma={"crmSchema": schema(), "blurbChars": st["blurbChars"],
                                        "crmRows": {"competitors": len(comp), "ownBooks": len(own), "links": len(links),
                                                    "kitaplik": len(kitaplik)}})
+        step("Başarı Dağıtım kataloğunun kategorileri eşlemeye yazılıyor")
+        try:
+            out["basariKategori"] = P.sync_basari_categories(engine, tenant, force=True)
+        except Exception as e:  # noqa: BLE001 — Başarı okunamazsa CRM anlık görüntüsü yine yazılmıştır
+            out["basariKategori"] = {"error": str(e)[:300]}
+        return out
 
     def jobs() -> dict[str, Any]:
         return {"kaynak": sync_job.status(), "eslesme": suggest_job.status(),
@@ -223,7 +248,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 "categorySource": snap.get("categorySource"), "categoryNote": snap.get("categoryNote"),
                 "olcu": P.OLCU, "mapStatus": P.MAP_STATUS, "figureStatus": P.FIGURE_STATUS, "briefStatus": P.BRIEF_STATUS,
                 "reportStatus": P.REPORT_STATUS, "dimensions": P.DIMENSIONS, "similarity": P.SIMILARITY,
-                "modelVar": llm(None) is not None, "jobs": jobs(), "sellIn": P.SELL_IN_NOTE}
+                "modelVar": llm(None) is not None, "jobs": jobs(), "sellIn": P.SELL_IN_NOTE,
+                "rakipKaynaklar": P.rakip_sources(engine, tenant)}
 
     @app.get(B + "/overview")
     def pazar_overview(request: Request) -> dict[str, Any]:
@@ -232,10 +258,12 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                     title="Pazar özeti", text=PK.F_OZET, skip=("jobs",))
 
     @app.get(B + "/freshness")
-    def pazar_freshness(request: Request) -> dict[str, Any]:
+    def pazar_freshness(request: Request, kaynak: str = "crm") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return izli(engine, tenant, lambda: P.freshness(engine, tenant), prefix="portal.pazar.tazelik", title="Tazelik",
-                    text=PK.F_TAZELIK, logo=False, skip=("staleDays",))
+        k = kaynak_of(kaynak)
+        return izli(engine, tenant, lambda: P.freshness(engine, tenant, k), prefix="portal.pazar.tazelik", title="Tazelik",
+                    text=PK.texts(k)["tazelik"], logo=False, crm=k == "crm", basari=k == "basari",
+                    skip=("staleDays",))
 
     @app.get(B + "/status")
     def pazar_status(request: Request) -> dict[str, Any]:
@@ -265,6 +293,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 out["sync"] = sync(engine, tenant, "sistem")
             except Exception as e:  # noqa: BLE001
                 out["sync"] = {"error": str(e)[:400]}
+        basari_ready(engine, tenant)
         try:
             sec = float(budget or P.settings()["batchSeconds"])
             out["suggest"] = P.suggest_mapping(engine, tenant, P.to_suggest(engine, tenant), chooser(True), "Zeki AI (zamanlayıcı)", sec)
@@ -303,39 +332,47 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     # ------------------------------------------------------------------ rakipler ve matris
 
     @app.get(B + "/publishers")
-    def pazar_publishers(request: Request) -> dict[str, Any]:
+    def pazar_publishers(request: Request, kaynak: str = "crm") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return izli(engine, tenant, lambda: {"items": P.publishers(engine, tenant)}, prefix="portal.pazar.yayinevleri",
-                    title="Yayınevleri", text=PK.F_MATRIS, logo=False)
+        k = kaynak_of(kaynak)
+        return izli(engine, tenant, lambda: {"items": call(P.publishers, engine, tenant, k), "kaynak": k},
+                    prefix="portal.pazar.yayinevleri", title="Yayınevleri", text=PK.texts(k)["matris"], logo=False,
+                    basari=k == "basari")
 
     @app.get(B + "/competitors")
     def pazar_competitors(request: Request, yayinevi: str = "", kategori: str = "", q: str = "", durum: str = "",
-                          page: int = 0) -> dict[str, Any]:
+                          page: int = 0, kaynak: str = "crm") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
+        k = kaynak_of(kaynak)
         return izli(engine, tenant, lambda: call(P.competitors, engine, tenant, yayinevi=yayinevi, kategori=kategori, q=q,
-                                                 durum=durum, page=max(0, page)),
-                    prefix="portal.pazar.rakipler", title="Rakip kitaplar", text=PK.F_RAKIP, logo=False,
-                    skip=("page", "size", "pageSize"))
+                                                 durum=durum, page=max(0, page), kaynak=k),
+                    prefix="portal.pazar.rakipler", title="Rakip kitaplar", text=PK.texts(k)["rakip"], logo=False,
+                    basari=k == "basari", skip=("page", "size", "pageSize"))
 
-    def _matrix(engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen):
+    def _matrix(engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen, kaynak="crm"):
         return call(P.matrix, engine, tenant, kategori=kategori, include_suggested=oneri, sayfa_min=sayfaMin or None,
-                    sayfa_max=sayfaMax or None, yayinevi_q=yayinevi, watch_only=izlenen)
+                    sayfa_max=sayfaMax or None, yayinevi_q=yayinevi, watch_only=izlenen, kaynak=kaynak)
 
     @app.get(B + "/matrix")
     async def pazar_matrix(request: Request, kategori: str = "", oneri: bool = False, sayfaMin: int = 0, sayfaMax: int = 0,
-                           yayinevi: str = "", izlenen: bool = False) -> dict[str, Any]:
+                           yayinevi: str = "", izlenen: bool = False, kaynak: str = "crm") -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
+        k = kaynak_of(kaynak)
+        if k == "basari":
+            await run_in_threadpool(basari_ready, engine, tenant)
         return await run_in_threadpool(lambda: izli(
-            engine, tenant, lambda: _matrix(engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen),
-            prefix="portal.pazar.matris", title="Rakip matrisi", text=PK.F_MATRIS, logo=False))
+            engine, tenant, lambda: _matrix(engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen, k),
+            prefix="portal.pazar.matris", title="Rakip matrisi", text=PK.texts(k)["matris"], logo=False,
+            basari=k == "basari"))
 
     @app.get(B + "/matrix/export.csv")
     def pazar_matrix_export(request: Request, kategori: str = "", oneri: bool = False, sayfaMin: int = 0, sayfaMax: int = 0,
-                            yayinevi: str = "", izlenen: bool = False) -> Response:
+                            yayinevi: str = "", izlenen: bool = False, kaynak: str = "crm") -> Response:
         engine, tenant, user, _ = ctx(request)
-        m = _matrix(engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen)
+        m = _matrix(engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen, kaynak_of(kaynak))
         audit(engine, user, "run", "pazar_export", kategori or None, "Rakip fiyat ve format matrisi (CSV)",
-              {"satir": len(m["rows"]) + len(m["timas"]), "kategori": (m.get("kategori") or {}).get("yol")})
+              {"satir": len(m["rows"]) + len(m["timas"]), "kategori": (m.get("kategori") or {}).get("yol"),
+               "kaynak": m["kaynakAd"]})
         return Response(P.matrix_csv(m), media_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": 'attachment; filename="rakip-matrisi.csv"'})
 
@@ -358,12 +395,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     # ------------------------------------------------------------------ kategori eşlemesi
 
     @app.get(B + "/category-map")
-    def pazar_category_map(request: Request, durum: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
+    def pazar_category_map(request: Request, durum: str = "", q: str = "", page: int = 0, kaynak: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return izli(engine, tenant, lambda: {**P.category_map(engine, tenant, durum=durum, q=q, page=max(0, page)),
-                                             "job": suggest_job.status()},
-                    prefix="portal.pazar.esleme", title="Kategori eşlemesi", text=PK.F_ESLEME, logo=False,
-                    skip=("job", "page", "pageSize", "size"))
+        k = kaynak_of(kaynak) if kaynak else ""
+        if k != "crm":
+            basari_ready(engine, tenant)
+        return izli(engine, tenant, lambda: {**call(P.category_map, engine, tenant, durum=durum, q=q, page=max(0, page),
+                                                    kaynak=k), "job": suggest_job.status()},
+                    prefix="portal.pazar.esleme", title="Kategori eşlemesi",
+                    text=PK.texts(k)["esleme"] if k else PK.F_ESLEME + " " + PK.F_ESLEME_BASARI, logo=False,
+                    basari=k != "crm", crm_rakip=k != "basari", skip=("job", "page", "pageSize", "size"))
 
     @app.post(B + "/category-map/decision")
     def pazar_category_decision(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -381,12 +422,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def pazar_category_suggest(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         hams = [str(x) for x in (body.get("hams") or []) if str(x).strip()] or None
-        todo = P.to_suggest(engine, tenant, hams)
+        k = kaynak_of(str(body.get("kaynak"))) if body.get("kaynak") else ""
+        if k != "crm":
+            basari_ready(engine, tenant)
+        todo = P.to_suggest(engine, tenant, hams, k)
         if not todo:
             return {"started": False, "queued": 0, "job": suggest_job.status()}
         fn = chooser(True)
         started = suggest_job.start(lambda: P.suggest_mapping(engine, tenant, todo, fn, user, float(P.settings()["batchSeconds"])))
-        audit(engine, user, "run", "pazar_map", None, "Rakip kategori eşleme önerisi", {"started": started, "kuyruk": len(todo)})
+        audit(engine, user, "run", "pazar_map", None, "Rakip kategori eşleme önerisi",
+              {"started": started, "kuyruk": len(todo), "kaynak": P.RAKIP_KAYNAK.get(k) if k else "hepsi"})
         return {"started": started, "queued": len(todo), "job": suggest_job.status()}
 
     # ------------------------------------------------------------------ emsal
@@ -403,10 +448,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 res = BS.similar_books(engine, tenant, metin=q, n=n)
             return res
 
+        k = kaynak_of(str(body.get("kaynak") or "crm"))
+        if k == "basari":
+            await run_in_threadpool(basari_ready, engine, tenant)
         out = await run_in_threadpool(lambda: izli(engine, tenant, lambda: call(P.comparables, engine, tenant, body, chooser(False), neighbors),
-                                                   prefix="portal.pazar.emsal", title="Emsal arama", text=PK.F_EMSAL))
+                                                   prefix="portal.pazar.emsal", title="Emsal arama", text=PK.texts(k)["emsal"],
+                                                   basari=k == "basari"))
         audit(engine, user, "run", "pazar_comparables", body.get("crmKitapId"), "Emsal arama",
-              {"q": str(body.get("q") or "")[:120], "rakip": len(out["rakip"]), "timas": len(out["timas"]), **out["counts"]})
+              {"q": str(body.get("q") or "")[:120], "rakip": len(out["rakip"]), "timas": len(out["timas"]), **out["counts"],
+               "kaynak": P.RAKIP_KAYNAK[k]})
         return out
 
     # ------------------------------------------------------------------ izlenen rakipler

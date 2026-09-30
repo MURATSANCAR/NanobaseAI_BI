@@ -29,6 +29,7 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import categories as C
 from semantic_bridge import categories_kaynak as CK
+from semantic_bridge import crm_kisi as KISI
 from semantic_bridge import hizli_bellek as HB
 from semantic_bridge import provenance as PV
 from semantic_bridge import sorgu_izi as IZ
@@ -163,14 +164,26 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             return None
         return v if isinstance(v, dict) and "at" in v else None
 
+    def kisi_okuyucu() -> tuple[str, Any]:
+        return schema(), src.runner(crm_file())
+
     def me_crm(user: str) -> Optional[str]:
         """Portal hesabı → CRM kullanıcısı (kartın editör / yayın yönetmeni alanıyla karşılaştırmak için).
 
-        Sıra: süreç belleği → portal tablosundaki son okuma (`semantic_category_meta`, `crm_me:<hesap>`) → canlı CRM.
-        Değer `KISI_TAZE` saniyeden eskiyse eldeki döner ve CRM arkada yeniden okunur (eski davranış: 10 dk bellek,
-        süresi dolunca ekran CRM'i bekliyordu). Hiç değer yokken CRM okunamazsa None («benim kitaplarım» boş)."""
+        Hız 2. tur: önce bütün CRM kullanıcılarının saklanmış eşlemesi (`crm_kisi`: gece eşitlemesinde tek sorgu,
+        gündüz 10 dk'dan eskiyse arkada yenilenir; kural `editorial_assign.crm_me` ile aynı). Eşleme cevap veremezse
+        (hiç okunmamış ve CRM kapalı, ya da hesap adı eşlemeye uygun değil) eski yol: süreç belleği → portal
+        tablosundaki son kişi okuması (`semantic_category_meta`, `crm_me:<hesap>`) → canlı CRM; değer `KISI_TAZE`
+        saniyeden eskiyse eldeki döner ve CRM arkada yeniden okunur. Hiç değer yokken CRM okunamazsa None."""
         r = rt()
         engine, tenant = r.store.engine, r.settings.tenant_id
+        try:
+            found = KISI.bul(engine, tenant, user, kisi_okuyucu)
+            return found.get("id") if found else None
+        except KISI.Bilinmiyor:
+            pass
+        except Exception as e:  # noqa: BLE001 — saklanmış eşleme yoksa ve CRM okunamıyorsa eski yol denenir
+            log.info("kategori: CRM kullanıcı eşlemesi okunamadı (%s), kişi başına okumaya dönülüyor: %s", user, e)
         acct = (tenant, (user or "").strip().lower())
         try:
             C.ensure(engine)
@@ -214,6 +227,13 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         job.step("CRM kitap kartları okunuyor")
         crm = src.read_crm(schema(), src.runner(crm_file()))
         info["crm"] = {"books": len(crm["books"]), "ms": int((time.monotonic() - t0) * 1000), "schema": schema()}
+        job.step("CRM kullanıcıları okunuyor (kişi eşlemesi)")
+        try:
+            # Ekranı açan kişinin CRM kullanıcısı istek anında CRM'i beklemesin: herkes tek sorguda (crm_kisi).
+            info["kisiler"] = KISI.oku(engine, tenant, kisi_okuyucu)
+        except Exception as e:  # noqa: BLE001 — eşitleme durmaz; eldeki eşleme kalır
+            info["kisiler"] = {"error": str(e)[:300]}
+            log.warning("kategori: CRM kullanıcı eşlemesi okunamadı: %s", e)
         priority = None
         job.step("Logo satışları okunuyor (öncelik puanı)")
         try:

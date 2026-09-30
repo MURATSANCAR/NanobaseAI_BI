@@ -2,12 +2,12 @@
 hata kalıbı stüdyonun öteki uçlarıyla aynı (Bearer; yazanlarda X-Editor; iş kuyruğu Temporal `editor-production`).
 
     GET  /v1/studio/jobs/{job}/coloring                  kaynak kitapta: yapılabilir etkinlikler, türetilmiş işler;
-                                                         boyama işinde: kısa cümleler, etkinlikler, taslak çizgiler
+                                                         boyama işinde: kısa cümleler, etkinlikler, çizgiler
     POST /v1/studio/jobs/{job}/coloring                  {mode, activities:[{kind, source?, count?}], captions}
                                                          → yeni boyama işi {id, workflow}; kaynak iş değişmez
     POST /v1/studio/jobs/{job}/coloring/retry            boyama işini kaldığı yerden yeniden koşar
     POST /v1/studio/jobs/{job}/coloring/sentences        {items:[{aid, text?, approved?}]} kısa cümle düzelt/onayla
-    POST /v1/studio/jobs/{job}/coloring/art/{aid}/redraw çizgiyi görsel modelle yeniden çiz (GPU işi, taslak)
+    POST /v1/studio/jobs/{job}/coloring/art/{aid}/redraw çizgiyi görsel modelle yeniden çiz (GPU işi)
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ async def coloring_sentences(job: str, body: Sentences, by: str = Depends(api.ed
 
 @router.post(C + "/art/{aid}/redraw")
 async def coloring_redraw(job: str, aid: str, by: str = Depends(api.editor)) -> dict:
-    """Çizgiyi görsel modelle yeniden çizdirir (GPU işi; sırada iş varsa bekler). Sonuç yeni sürümdür ve taslaktır."""
+    """Çizgiyi görsel modelle yeniden çizdirir (GPU işi; sırada iş varsa bekler). Sonuç yeni sürümdür."""
     d = api._dir(job)
     if not coloring.is_coloring(d):
         raise HTTPException(400, "Bu iş bir boyama kitabı değil")

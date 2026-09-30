@@ -20,8 +20,6 @@ export type CollagePhoto = {
   note?: string | null;
   overflow: boolean;
   cut_note?: string | null;
-  /** Model fotoğrafı: ticari kullanım izni gelene kadar taslak. */
-  draft: boolean;
 };
 
 export type CollageJob = {
@@ -37,7 +35,6 @@ export type CollageView = {
   layout: number;
   photos: CollagePhoto[];
   selected: string | null;
-  draft: boolean;
   labels: string[] | null;
   auto_labels: string[] | null;
   auto_labels_error: string | null;

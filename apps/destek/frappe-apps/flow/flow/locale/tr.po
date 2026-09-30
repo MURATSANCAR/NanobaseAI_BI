@@ -40,7 +40,7 @@ msgstr "<code>main</code>, <code>*args</code> veya <code>**kwargs</code> kabul e
 
 #: flow/flow/workspace/flow/flow.json
 msgid "<span class=\"h4\"><b>Flow</b></span>"
-msgstr "<span class=\"h4\"><b>NanobaseAI</b></span>"
+msgstr "<span class=\"h4\"><b>ZEKİ AI</b></span>"
 
 #: flow/flow/workspace/flow/flow.json
 msgid "<span class=\"h4\"><b>Manage</b></span>"
@@ -92,7 +92,7 @@ msgstr "Ajanlar"
 
 #: flow/flow/doctype/flow_agent/flow_agent.json
 msgid "Agents created by Frappe and protected from deletion."
-msgstr "NanobaseAI tarafından oluşturulan ve silinmeye karşı korunan ajanlar."
+msgstr "ZEKİ AI tarafından oluşturulan ve silinmeye karşı korunan ajanlar."
 
 #: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_session/flow_session.json
 msgid "All"
@@ -354,7 +354,7 @@ msgstr "Dosya eklenemedi"
 
 #: frontend/src/components/EmptyState.vue:30
 msgid "Create and enable a Flow Model with your provider credentials."
-msgstr "Sağlayıcı bilgilerinizle bir NanobaseAI Modeli oluşturup etkinleştirin."
+msgstr "Sağlayıcı bilgilerinizle bir ZEKİ AI Modeli oluşturup etkinleştirin."
 
 #: flow/tools/builtins.py:336
 msgid ""
@@ -496,7 +496,7 @@ msgstr "Asistanın kod çalıştırabilmesi için site yapılandırmanızda Sunu
 
 #: frontend/src/components/EmptyState.vue:37
 msgid "Enable a Flow Agent (Flow Agent is created automatically once a model exists)."
-msgstr "Bir NanobaseAI Ajanı etkinleştirin (model eklenince ajan kendiliğinden oluşur)."
+msgstr "Bir ZEKİ AI Ajanı etkinleştirin (model eklenince ajan kendiliğinden oluşur)."
 
 #: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_knowledge_base/flow_knowledge_base.json flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_provider/flow_provider.json flow/flow/doctype/flow_tool/flow_tool.json flow/flow/doctype/flow_trigger/flow_trigger.json
 msgid "Enabled"
@@ -668,59 +668,59 @@ msgstr "Akış Bilgi Kaynağı"
 
 #: flow/flow/doctype/flow_model/flow_model.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
 msgid "Flow Model"
-msgstr "NanobaseAI Modeli"
+msgstr "ZEKİ AI Modeli"
 
 #: flow/flow/doctype/flow_agent/flow_agent.json
 msgid "Flow Model used to drive this agent."
-msgstr "Bu ajanı çalıştırmak için kullanılan NanobaseAI Modeli."
+msgstr "Bu ajanı çalıştırmak için kullanılan ZEKİ AI Modeli."
 
 #: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
 msgid "Flow Model used to embed chunks and queries. Its Model ID must be an embedding model, e.g. <code>openai/text-embedding-3-small</code>."
-msgstr "Parçaları ve sorguları gömmek için kullanılan NanobaseAI Modeli. Model Kimliği bir gömme modeli olmalıdır, örn. <code>openai/text-embedding-3-small</code>."
+msgstr "Parçaları ve sorguları gömmek için kullanılan ZEKİ AI Modeli. Model Kimliği bir gömme modeli olmalıdır, örn. <code>openai/text-embedding-3-small</code>."
 
 #: flow/flow/doctype/flow_agent/flow_agent.py:97 flow/flow/doctype/flow_session/flow_session.py:75 flow/knowledge/embedder.py:55
 msgid "Flow Model {0} is disabled."
-msgstr "NanobaseAI Modeli {0} devre dışı bırakıldı."
+msgstr "ZEKİ AI Modeli {0} devre dışı bırakıldı."
 
 #: flow/flow/doctype/flow_provider/flow_provider.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
 msgid "Flow Provider"
-msgstr "NanobaseAI Sağlayıcısı"
+msgstr "ZEKİ AI Sağlayıcısı"
 
 #: flow/flow/doctype/flow_run/flow_run.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
 msgid "Flow Run"
-msgstr "NanobaseAI Çalıştırma"
+msgstr "ZEKİ AI Çalıştırma"
 
 #: flow/flow/doctype/flow_session/flow_session.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
 msgid "Flow Session"
-msgstr "NanobaseAI Oturumu"
+msgstr "ZEKİ AI Oturumu"
 
 #: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
 msgid "Flow Session Attachment"
-msgstr "NanobaseAI Oturumu Eki"
+msgstr "ZEKİ AI Oturumu Eki"
 
 #: flow/flow/doctype/flow_session_message/flow_session_message.json
 msgid "Flow Session Message"
-msgstr "NanobaseAI Oturumu Mesajı"
+msgstr "ZEKİ AI Oturumu Mesajı"
 
 #: flow/flow/doctype/flow_tool/flow_tool.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
 msgid "Flow Tool"
-msgstr "NanobaseAI Aracı"
+msgstr "ZEKİ AI Aracı"
 
 #: flow/flow/doctype/flow_agent/flow_agent.json
 msgid "Flow Tools this agent can call. Defaults to the three primitives (describe, read, execute) on creation."
-msgstr "Bu ajanın çağırabileceği NanobaseAI Araçları. Oluşturulurken varsayılan olarak üç temel işlev (tanımla, oku, çalıştır) kullanılır."
+msgstr "Bu ajanın çağırabileceği ZEKİ AI Araçları. Oluşturulurken varsayılan olarak üç temel işlev (tanımla, oku, çalıştır) kullanılır."
 
 #: flow/flow/doctype/flow_trigger/flow_trigger.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
 msgid "Flow Trigger"
-msgstr "NanobaseAI Tetikleyici"
+msgstr "ZEKİ AI Tetikleyici"
 
 #: flow/flow/doctype/flow_run/flow_run.json
 msgid "Flow Trigger that started this run, when source is Trigger."
-msgstr "Kaynak Tetikleyici olduğunda bu çalıştırmayı başlatan NanobaseAI Tetikleyici."
+msgstr "Kaynak Tetikleyici olduğunda bu çalıştırmayı başlatan ZEKİ AI Tetikleyici."
 
 #: frontend/src/store.js:76
 msgid "Flow failed to load. Refresh the page to retry."
-msgstr "NanobaseAI yüklenemedi. Tekrar denemek için sayfayı yenileyin."
+msgstr "ZEKİ AI yüklenemedi. Tekrar denemek için sayfayı yenileyin."
 
 #: flow/flow/doctype/flow_session/flow_session.json
 msgid "Full chat transcript across all runs in this conversation."
@@ -1036,7 +1036,7 @@ msgstr "Model kimliği. Bir Sağlayıcı bağlıysa yalnız model adını seçin
 
 #: flow/flow/doctype/flow_provider/flow_provider.json
 msgid "LiteLLM provider name, e.g. <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>gemini</code>. Any Flow Model whose Model ID starts with this provider uses these credentials unless it sets its own."
-msgstr "Sağlayıcı adı, ör. <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>gemini</code>. Model kimliği bu sağlayıcıyla başlayan her NanobaseAI Modeli, kendi bilgisi yoksa bu bilgileri kullanır."
+msgstr "Sağlayıcı adı, ör. <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>gemini</code>. Model kimliği bu sağlayıcıyla başlayan her ZEKİ AI Modeli, kendi bilgisi yoksa bu bilgileri kullanır."
 
 #: frontend/src/components/Composer.vue:54
 msgid "Loading…"
@@ -1056,7 +1056,7 @@ msgstr "Maksimum iterasyon en az 1 olmalıdır."
 
 #: flow/flow/doctype/flow_model/flow_model.json
 msgid "Max input tokens. Auto-detected from the model on save; managed by Flow, not user-editable. 0 = unknown."
-msgstr "En fazla girdi belirteci. Kaydederken modelden otomatik algılanır; NanobaseAI yönetir, elle değiştirilemez. 0 = bilinmiyor."
+msgstr "En fazla girdi belirteci. Kaydederken modelden otomatik algılanır; ZEKİ AI yönetir, elle değiştirilemez. 0 = bilinmiyor."
 
 #: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
 msgid "Maximum characters per chunk."
@@ -1147,8 +1147,8 @@ msgid "Model Not Permitted"
 msgstr "Model İzin Verilmiyor"
 
 #: frontend/src/components/EmptyState.vue:55 frontend/src/components/PanelHeader.vue:16
-msgid "NanobaseAI"
-msgstr "NanobaseAI"
+msgid "ZEKİ AI"
+msgstr "ZEKİ AI"
 
 #: frontend/src/components/PanelHeader.vue:21
 msgid "New chat"
@@ -1492,7 +1492,7 @@ msgstr "Bağlantıyı test etmeden önce belgeyi kaydedin."
 
 #: flow/flow/doctype/flow_session/flow_session.json
 msgid "Saved Flow Agent driving this conversation. Empty for sessions driven by a code-defined agent."
-msgstr "Bu sohbeti yürüten kayıtlı NanobaseAI Ajanı. Kodla tanımlanan ajanın yürüttüğü oturumlarda boştur."
+msgstr "Bu sohbeti yürüten kayıtlı ZEKİ AI Ajanı. Kodla tanımlanan ajanın yürüttüğü oturumlarda boştur."
 
 #: frontend/src/components/FeedbackBar.vue:57
 msgid "Saved to agent memory."
@@ -1731,8 +1731,8 @@ msgid "Title"
 msgstr "Başlık"
 
 #: frontend/src/main.js:121
-msgid "Toggle NanobaseAI panel"
-msgstr "NanobaseAI panelini aç/kapat"
+msgid "Toggle ZEKİ AI panel"
+msgstr "ZEKİ AI panelini aç/kapat"
 
 #: flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_run/flow_run_detail.html:19
 msgid "Token Usage"
@@ -1760,7 +1760,7 @@ msgstr "Araçlar"
 
 #: flow/flow/doctype/flow_tool/flow_tool.json
 msgid "Tools created by Frappe and protected from deletion."
-msgstr "NanobaseAI'nin oluşturduğu, silinmeye karşı korunan araçlar."
+msgstr "ZEKİ AI'ın oluşturduğu, silinmeye karşı korunan araçlar."
 
 #: flow/flow/doctype/flow_run/flow_run_detail.html:21
 msgid "Total"
@@ -1918,7 +1918,7 @@ msgstr "Evet"
 
 #: flow/flow/doctype/flow_agent/flow_agent.py:92
 msgid "You are not permitted to use Flow Model {0}."
-msgstr "NanobaseAI Modeli {0} için yetkiniz yok."
+msgstr "ZEKİ AI Modeli {0} için yetkiniz yok."
 
 #: flow/flow/doctype/flow_trigger/flow_trigger.json
 msgid "after_insert"

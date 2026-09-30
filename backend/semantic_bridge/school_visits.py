@@ -201,8 +201,9 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        SAHA_ZIYARET.metadata.create_all(engine, tables=[SAHA_ZIYARET], checkfirst=True)   # M30 önce kurduysa dokunmaz
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(SAHA_ZIYARET.metadata, engine, tables=[SAHA_ZIYARET])   # M30 önce kurduysa dokunmaz
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 

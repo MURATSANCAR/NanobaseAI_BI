@@ -8,8 +8,10 @@ import { FOLDED_ROWS, dayLabel, printLabel, shouldShow, visibleRows } from './ne
 
 /**
  * Kampüs «Matbaadan yeni çıkanlar»: M12 üretim kartlarından son N günde (Yönetim ayarı PRODUCTION_NEW_PRINTS_DAYS,
- * varsayılan 30) baskısı gerçekleşen kitaplar. Kaynak hazır değilse, okunamazsa ya da pencerede baskı yoksa bölüm
- * hiç görünmez (örnek içerik gösterilmez). Adet ve maliyet gelmez; üretim sayfası yetkisi olana ekrana bağlantı.
+ * varsayılan 30) baskısı gerçekleşen kitaplar; gün Logo giriş fişi > CRM > portal kaydından. Kapak T-soft ürün görseli
+ * (stok koduyla, `book_covers.py`); sitede olmayan kitapta adın baş harfleriyle düz bir kapak kutusu çizilir. Kaynak hazır
+ * değilse, okunamazsa ya da pencerede baskı yoksa bölüm hiç görünmez (örnek içerik gösterilmez). Adet ve maliyet gelmez;
+ * üretim sayfası yetkisi olana ekrana bağlantı.
  */
 export default function NewPrintsCard({ canOpenProduction }: { canOpenProduction: boolean }) {
   const [expanded, setExpanded] = useState(false);
@@ -38,18 +40,17 @@ export default function NewPrintsCard({ canOpenProduction }: { canOpenProduction
           {data.items.length} baskı · {data.days} gün
         </span>
       </div>
-      <ul className="flex flex-col divide-y divide-slate-100">
+      <ul className="grid grid-cols-3 gap-x-3 gap-y-4">
         {rows.map((b) => (
-          <li key={b.cardId} className="flex min-h-11 items-center justify-between gap-3 py-2">
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-ink" title={b.title ?? undefined}>
-                {b.title ?? 'Adsız kitap'}
-              </p>
-              <p className="text-[11px] text-muted">
-                <span className={b.firstPrint ? 'font-semibold text-violet' : 'font-semibold text-emerald-700'}>{printLabel(b)}</span>
-              </p>
-            </div>
-            <span className="kp-mono shrink-0 text-[11px] text-muted">{dayLabel(b.day)}</span>
+          <li key={b.cardId} className="min-w-0">
+            <Cover title={b.title} src={b.cover ?? null} />
+            <p className="mt-1.5 line-clamp-2 text-[11px] font-bold leading-snug text-ink" title={b.title ?? undefined}>
+              {b.title ?? 'Adsız kitap'}
+            </p>
+            <p className="mt-0.5 flex items-center justify-between gap-1 text-[10px]">
+              <span className={b.firstPrint ? 'font-semibold text-violet' : 'font-semibold text-emerald-700'}>{printLabel(b)}</span>
+              <span className="kp-mono shrink-0 text-muted">{dayLabel(b.day)}</span>
+            </p>
           </li>
         ))}
       </ul>
@@ -64,7 +65,7 @@ export default function NewPrintsCard({ canOpenProduction }: { canOpenProduction
             {expanded ? 'Daha az göster' : `Tümünü göster (+${hidden})`}
           </button>
         ) : (
-          <span className="text-[11px] text-muted">Baskı günü üretim kaydından.</span>
+          <span className="text-[11px] text-muted">Baskı günü üretim kaydından, kapak web sitesinden.</span>
         )}
         {canOpenProduction && (
           <Link
@@ -76,5 +77,35 @@ export default function NewPrintsCard({ canOpenProduction }: { canOpenProduction
         )}
       </div>
     </section>
+  );
+}
+
+/** Kitap kapağı: 2:3 oran, görsel yoksa ya da yüklenemezse adın baş harfleriyle düz kutu (sahte kapak üretilmez). */
+function Cover({ title, src }: { title: string | null; src: string | null }) {
+  const [failed, setFailed] = useState(false);
+  const initials = (title ?? '?')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toLocaleUpperCase('tr-TR'))
+    .join('');
+  return (
+    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-md bg-gradient-to-br from-violet/15 to-sky-100 shadow-sm ring-1 ring-black/5">
+      {src && !failed ? (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span className="kp-display absolute inset-0 grid place-items-center text-lg font-bold text-violet/60" aria-hidden>
+          {initials}
+        </span>
+      )}
+    </div>
   );
 }

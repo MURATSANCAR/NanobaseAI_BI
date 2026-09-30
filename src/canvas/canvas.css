@@ -291,6 +291,13 @@
 .pano-frame[data-drag] * {
   user-select: none;
 }
+/* Kart (kanvas düğümü ya da pano kartı) sürüklenirken belgenin hiçbir yeri seçilmesin; bırakınca kalkar.
+   Kabuk artık bütün sayfayı seçilemez yapmıyor, metin seçilip kopyalanıyor (ZEKI-30, components/dragText.ts). */
+html[data-dragging],
+html[data-dragging] * {
+  -webkit-user-select: none;
+  user-select: none;
+}
 /* Tutamaç: parmakla sürüklerken sayfa kaymasın. */
 .pano-handle {
   touch-action: none;
@@ -749,6 +756,20 @@ button.zk-page-ref--live:focus-visible {
 }
 @media (pointer: coarse) {
   button.zk-page-ref--live { padding-block: 0.2em; }
+}
+/* Kaynaksız atıf: sayfa o kitapta yok. Kesik çizgi + soluk renk; renk tek başına anlam taşımaz (çizgi de değişir). */
+button.zk-page-ref--missing {
+  border-style: dashed;
+  border-color: #d6d3e0;
+  background: #f7f7fa;
+  color: #8a8799;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.zk-page-ref--missing:hover,
+  button.zk-page-ref--missing[aria-expanded='true'] {
+    border-color: #b9b5c8;
+    background: #f1f0f5;
+  }
 }
 
 /* Sayfa önizlemesi: rozetin üstünde (yer yoksa altında) küçük bir kart. Tooltip ölçüsü: 150 ms giriş,

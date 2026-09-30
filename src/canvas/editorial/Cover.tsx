@@ -12,6 +12,9 @@ export default function Cover({ id, alt, className = '' }: { id: string; alt: st
       alt={alt}
       loading="lazy"
       decoding="async"
+      // Özgün en/boy oranı (2:3): görsel gelmeden yer ayrılır, liste kaymaz. Görünen boyu `className` belirler.
+      width={96}
+      height={144}
       onError={() => setFailed(true)}
       className={`shrink-0 rounded-md border border-slate-200/80 bg-slate-100 object-cover ${className}`}
     />

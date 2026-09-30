@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Check } from 'lucide-react';
 import { press } from '../shared';
+import { Explain } from '../../../components/Explain';
 import type { Swatch } from './model';
 
 /** Panellerin ortak denetimleri. Hepsi dokunmaya uygun (≥ 40 px hedef), etiketli ve klavyeyle kullanılır.
@@ -8,11 +9,11 @@ import type { Swatch } from './model';
 
 export const sectionTitle = 'text-[11px] font-bold uppercase tracking-wide text-canvas-muted';
 
-export function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
+export function Section({ title, children, aside, explain }: { title: string; children: ReactNode; aside?: ReactNode; explain?: ReactNode }) {
   return (
     <section className="flex flex-col gap-2 border-t border-slate-200/70 pt-3 first:border-t-0 first:pt-0">
       <div className="flex items-center justify-between gap-2">
-        <h3 className={sectionTitle}>{title}</h3>
+        <h3 className={`${sectionTitle} flex items-center gap-1`}>{title}{explain && <Explain label={title}>{explain}</Explain>}</h3>
         {aside}
       </div>
       {children}

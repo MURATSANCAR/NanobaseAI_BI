@@ -57,11 +57,14 @@ def test_every_check_keeps_the_contract():
 
 
 def test_labels_read_without_importing_checks():
+    # Etiket okuması denetim modüllerini yüklememeli. Süreçte önce koşan başka bir test (ör. metin bütçesi) bu modülleri
+    # zaten yüklemiş olabilir; bu yüzden bütün süreç değil, yalnız okumanın kendisinin yüklediği modüller sayılır.
+    before = {m for m in sys.modules if m.startswith("editor.proofing.")}
     labels = _load_labels_module().labels()
     expected = {f.stem: _constants_and_run(f)[0]["LABEL"] for f in check_modules()}
     assert labels == expected
-    # denetim modüllerinden hiçbiri yüklenmedi
-    assert not any(m.startswith("editor.proofing.") for m in sys.modules)
+    loaded = {m for m in sys.modules if m.startswith("editor.proofing.")} - before
+    assert not loaded, sorted(loaded)
 
 
 def test_no_book_specific_page_numbers_in_rules():

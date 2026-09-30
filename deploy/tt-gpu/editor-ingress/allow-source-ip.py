@@ -9,6 +9,7 @@ istekleri 403 aldı. Adres yalnız /32 olarak eklenir.
 """
 import ipaddress
 import os
+import re
 import subprocess
 import sys
 
@@ -19,13 +20,16 @@ anchor = "allow 85.105.0.0/16;"
 new_line = f"allow {net}; {anchor}"
 if anchor not in s:
     print("müşteri ağı satırı bulunamadı"); sys.exit(1)
-if new_line in s:
-    print("zaten var"); sys.exit(0)
-out = s.replace(anchor, new_line)
+# Her yol ayrı denetlenir: adres bir yolda varsa öteki yollar da var sayılmaz. Eski sürüm «zaten var» deyip çıkıyordu;
+# 2026-09-25'ten sonra kurulan 99 yol adresi hiç almadı (VM'de stüdyo ekranları 403).
+out = re.sub(rf"(?<!allow {re.escape(net)}; ){re.escape(anchor)}", new_line, s)
+missing = s.count(anchor) - s.count(new_line)
+if out == s:
+    print(f"zaten var ({s.count(new_line)} yolda)"); sys.exit(0)
 open(P, "w", encoding="utf-8").write(out)
 t = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
 if t.returncode != 0:
     open(P, "w", encoding="utf-8").write(s)
     print("nginx -t DÜŞTÜ, dosya eski hâline döndü:\n", t.stderr); sys.exit(1)
 subprocess.run(["systemctl", "reload", "nginx"], check=True)
-print(f"{out.count(new_line)} yola {net} eklendi, nginx reload tamam")
+print(f"{missing} yola {net} eklendi (toplam {out.count(new_line)}), nginx reload tamam")

@@ -33,7 +33,9 @@ MODULES = ("impact", "opportunities", "bing", "tech", "speed", "competitors", "e
            # 2026-09-28: Search Console site haritası durumu (hata/uyarı/son okuma, 6 saatte bir)
            "gsc_sitemaps",
            # 2026-09-28: Google Merchant Center ürün durumu (onaylı/onaylanmayan/sınırlı, ürün sorunları; 6 saatte bir)
-           "merchant")
+           "merchant",
+           # 2026-09-29: Google Analytics aramadan satışa (organik oturum → sepet → satış → ciro, sayfa bazında; günde bir)
+           "ga4")
 
 
 @dataclass

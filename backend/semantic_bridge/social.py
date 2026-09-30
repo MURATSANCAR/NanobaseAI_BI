@@ -183,7 +183,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 
@@ -320,7 +321,6 @@ def settings(conf: Callable[[str], str]) -> dict[str, Any]:
         "limits": limits,
         "tagLimits": tag_limits,
         "claims": lst("SOCIAL_BANNED_CLAIMS"),
-        "licensePending": (conf("SOCIAL_STUDIO_LICENSE_PENDING") or "1").strip().lower() not in ("0", "false", "hayir", "off"),
         "defaultHour": (conf("SOCIAL_DEFAULT_HOUR") or "10:00").strip()[:5] or "10:00",
         "minProb": 0.70,
         "minMargin": 0.30,
@@ -501,9 +501,6 @@ def warnings(p: dict[str, Any], acc: Optional[dict[str, Any]], st: dict[str, Any
     tl = st["tagLimits"].get(plat or "")
     if tl and tag_count(p.get("hashtags")) > tl:
         out.append({"kod": "etiket", "metin": f"{tag_count(p.get('hashtags'))} etiket; {PLATFORMS.get(plat, plat)} en çok {tl} kabul eder."})
-    if st.get("licensePending") and any(a.get("tip") == "studio" for a in p.get("assets") or []):
-        out.append({"kod": "lisans", "metin": "Stüdyo görseli: yapay zekâ ile üretilmiş görselin ticari kullanım lisansı "
-                                              "bekleniyor; paylaşım kararı sizindir."})
     if p["status"] not in ("yayinlandi", "iptal") and p.get("plannedAt"):
         try:
             when = datetime.strptime(p["plannedAt"], "%Y-%m-%d %H:%M").replace(tzinfo=TZ)
@@ -1414,9 +1411,6 @@ def package_zip(post: dict[str, Any], fetch: Callable[[dict[str, Any]], Optional
         readme = ["Yayına hazır paket: onaylı metin, etiketler ve görseller.",
                   "Paylaşımı ekip kendi hesabından yapar; portal hiçbir sosyal medya hesabına kendiliğinden gönderim yapmaz.",
                   "Paylaştıktan sonra portalda gönderiyi «Yayınlandı» işaretleyip bağlantısını girin."]
-        if st.get("licensePending") and any(a.get("tip") == "studio" for a in post.get("assets") or []):
-            readme.append("Stüdyo görseli: yapay zekâ ile üretilmiş görselin ticari kullanım lisansı bekleniyor; "
-                          "paylaşım kararı sizindir.")
         z.writestr("OKUBENI.txt", "\n".join(readme + ([""] + notes if notes else [])) + "\n")
     return buf.getvalue()
 

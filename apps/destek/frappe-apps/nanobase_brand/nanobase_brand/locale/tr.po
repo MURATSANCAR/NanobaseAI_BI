@@ -1,4 +1,4 @@
-# NanobaseAI marka çevirileri. Son kurulan uygulama olduğu için aynı msgid'li
+# ZEKİ AI marka çevirileri. Son kurulan uygulama olduğu için aynı msgid'li
 # Helpdesk, Flow ve çatı çevirilerinin üstüne yazar.
 msgid ""
 msgstr ""
@@ -10,40 +10,40 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "Helpdesk"
-msgstr "NanobaseAI"
+msgstr "ZEKİ AI"
 
 msgid "Helpdesk Reports"
-msgstr "NanobaseAI Raporları"
+msgstr "ZEKİ AI Raporları"
 
 msgid "<span class=\"h4\">Helpdesk Configuration<br></span>"
-msgstr "<span class=\"h4\">NanobaseAI Ayarları<br></span>"
+msgstr "<span class=\"h4\">ZEKİ AI Ayarları<br></span>"
 
-msgid "Can manage all aspects of NanobaseAI."
-msgstr "NanobaseAI'nin tüm alanlarını yönetebilir."
+msgid "Can manage all aspects of ZEKİ AI."
+msgstr "ZEKİ AI'ın tüm alanlarını yönetebilir."
 
-msgid "Configure your Exotel settings for NanobaseAI."
-msgstr "NanobaseAI için Exotel ayarlarınızı yapın."
+msgid "Configure your Exotel settings for ZEKİ AI."
+msgstr "ZEKİ AI için Exotel ayarlarınızı yapın."
 
-msgid "Configure your Twilio settings for NanobaseAI."
-msgstr "NanobaseAI için Twilio ayarlarınızı yapın."
+msgid "Configure your Twilio settings for ZEKİ AI."
+msgstr "ZEKİ AI için Twilio ayarlarınızı yapın."
 
-msgid "NanobaseAI Mobile"
-msgstr "NanobaseAI Mobil"
+msgid "ZEKİ AI Mobile"
+msgstr "ZEKİ AI Mobil"
 
-msgid "This helps us personalize your NanobaseAI experience."
-msgstr "Bu bilgi NanobaseAI deneyiminizi size göre ayarlamamıza yardımcı olur."
+msgid "This helps us personalize your ZEKİ AI experience."
+msgstr "Bu bilgi ZEKİ AI deneyiminizi size göre ayarlamamıza yardımcı olur."
 
-msgid "How would you like your customers to create support tickets in NanobaseAI?"
-msgstr "Müşterileriniz NanobaseAI'de destek kaydını nasıl açsın?"
+msgid "How would you like your customers to create support tickets in ZEKİ AI?"
+msgstr "Müşterileriniz ZEKİ AI'da destek kaydını nasıl açsın?"
 
-msgid "What would you like to do first in NanobaseAI?"
-msgstr "NanobaseAI'de ilk ne yapmak istersiniz?"
+msgid "What would you like to do first in ZEKİ AI?"
+msgstr "ZEKİ AI'da ilk ne yapmak istersiniz?"
 
-msgid "Welcome to NanobaseAI"
-msgstr "NanobaseAI'ye hoş geldiniz"
+msgid "Welcome to ZEKİ AI"
+msgstr "ZEKİ AI'ya hoş geldiniz"
 
-msgid "How did you hear about NanobaseAI?"
-msgstr "NanobaseAI'yi nereden duydunuz?"
+msgid "How did you hear about ZEKİ AI?"
+msgstr "ZEKİ AI'yı nereden duydunuz?"
 
 msgid "A partner or consultant"
 msgstr "Bir iş ortağı ya da danışman"
@@ -55,16 +55,16 @@ msgid "Login to Frappe Cloud"
 msgstr "Bulut hesabına giriş"
 
 msgid "Frappe Framework"
-msgstr "NanobaseAI"
+msgstr "ZEKİ AI"
 
 msgid "Frappe"
-msgstr "NanobaseAI"
+msgstr "ZEKİ AI"
 
 msgid "Flow"
-msgstr "NanobaseAI"
+msgstr "ZEKİ AI"
 
 msgid "Flow Agent"
-msgstr "NanobaseAI Ajanı"
+msgstr "ZEKİ AI Ajanı"
 
 msgid "Flow Agent Tool"
 msgstr "Ajan Aracı"
@@ -76,16 +76,16 @@ msgid "Flow Agent Memory"
 msgstr "Ajan Belleği"
 
 msgid "Flow Model"
-msgstr "NanobaseAI Modeli"
+msgstr "ZEKİ AI Modeli"
 
 msgid "Flow Provider"
 msgstr "Model Sağlayıcısı"
 
 msgid "Flow Tool"
-msgstr "NanobaseAI Aracı"
+msgstr "ZEKİ AI Aracı"
 
 msgid "Flow Trigger"
-msgstr "NanobaseAI Tetikleyicisi"
+msgstr "ZEKİ AI Tetikleyicisi"
 
 msgid "Flow Knowledge Base"
 msgstr "Bilgi Bankası"
@@ -111,8 +111,8 @@ msgstr "Oturum Eki"
 msgid "Flow Run"
 msgstr "Çalıştırma Kaydı"
 
-msgid "Toggle NanobaseAI panel"
-msgstr "NanobaseAI panelini aç/kapat"
+msgid "Toggle ZEKİ AI panel"
+msgstr "ZEKİ AI panelini aç/kapat"
 
 msgid "Ask about your data, draft records, or run a task."
 msgstr "Verinizi sorun, kayıt taslağı hazırlatın ya da bir iş yaptırın."
@@ -124,10 +124,10 @@ msgid "The assistant needs a few things configured first:"
 msgstr "Asistanın önce birkaç ayara ihtiyacı var:"
 
 msgid "Create and enable a Flow Model with your provider credentials."
-msgstr "Sağlayıcı bilgilerinizle bir NanobaseAI Modeli oluşturup etkinleştirin."
+msgstr "Sağlayıcı bilgilerinizle bir ZEKİ AI Modeli oluşturup etkinleştirin."
 
 msgid "Enable a Flow Agent (Flow Agent is created automatically once a model exists)."
-msgstr "Bir NanobaseAI Ajanı etkinleştirin (model eklenince ajan kendiliğinden oluşur)."
+msgstr "Bir ZEKİ AI Ajanı etkinleştirin (model eklenince ajan kendiliğinden oluşur)."
 
 msgid "Enable Server Scripts in your site config so the assistant can run code."
 msgstr "Asistanın kod çalıştırabilmesi için site ayarlarında sunucu betiklerini açın."
@@ -145,16 +145,16 @@ msgid "Close (Ctrl+I)"
 msgstr "Kapat (Ctrl+I)"
 
 msgid "Flow failed to load. Refresh the page to retry."
-msgstr "NanobaseAI yüklenemedi. Yeniden denemek için sayfayı yenileyin."
+msgstr "ZEKİ AI yüklenemedi. Yeniden denemek için sayfayı yenileyin."
 
 msgid "Flow Model {0} is disabled."
-msgstr "NanobaseAI Modeli {0} devre dışı."
+msgstr "ZEKİ AI Modeli {0} devre dışı."
 
 msgid "Flow Agent {0} is disabled."
-msgstr "NanobaseAI Ajanı {0} devre dışı."
+msgstr "ZEKİ AI Ajanı {0} devre dışı."
 
 msgid "You are not permitted to use Flow Model {0}."
-msgstr "NanobaseAI Modeli {0} için yetkiniz yok."
+msgstr "ZEKİ AI Modeli {0} için yetkiniz yok."
 
 msgid "Set an embedding model in Flow Knowledge Settings first."
 msgstr "Önce Bilgi Bankası Ayarları'nda bir gömme modeli seçin."
@@ -163,7 +163,7 @@ msgid "Knowledge store is not initialized. Configure Flow Knowledge Settings and
 msgstr "Bilgi deposu hazır değil. Bilgi Bankası Ayarları'nı yapın ve bir kaynak ekleyin."
 
 msgid "The {0} agent is missing. Create a Flow Model first to auto-provision it."
-msgstr "{0} ajanı yok. Kendiliğinden oluşması için önce bir NanobaseAI Modeli ekleyin."
+msgstr "{0} ajanı yok. Kendiliğinden oluşması için önce bir ZEKİ AI Modeli ekleyin."
 
 msgid ""
 "<a href=\"https://docs.frappe.io/framework/user/en/api/rest#1-token-based-authentication\" target=\"_blank\">\n"
@@ -657,10 +657,10 @@ msgid "Forum"
 msgstr "Forum"
 
 msgid "Frappe Framework Version"
-msgstr "NanobaseAI Çerçeve Sürümü"
+msgstr "ZEKİ AI Çerçeve Sürümü"
 
 msgid "Frappe no longer uses Gravatar because it can disclose hashed email addresses to a third-party service. To fully stop this behavior, existing Gravatar image URLs must be deleted."
-msgstr "NanobaseAI, hash'lenmiş e-posta adreslerini üçüncü taraf bir hizmete ifşa edebileceği için artık Gravatar kullanmıyor. Bu davranışı tamamen durdurmak için mevcut Gravatar görüntü URL'lerinin silinmesi gerekir."
+msgstr "ZEKİ AI, hash'lenmiş e-posta adreslerini üçüncü taraf bir hizmete ifşa edebileceği için artık Gravatar kullanmıyor. Bu davranışı tamamen durdurmak için mevcut Gravatar görüntü URL'lerinin silinmesi gerekir."
 
 msgid "Full name is required."
 msgstr "Ad soyad zorunludur."
@@ -1063,10 +1063,10 @@ msgid "Only users with one of these roles can send SMS. Leave empty to allow onl
 msgstr "SMS gönderme yetkisi yalnızca bu rollerden birine sahip kullanıcılarda bulunur. Yalnızca Sistem Yöneticisi'ne izin vermek için boş bırakın."
 
 msgid "Open Frappe CRM"
-msgstr "NanobaseAI CRM'yi Aç"
+msgstr "ZEKİ AI CRM'yi Aç"
 
 msgid "Open Frappe Helpdesk"
-msgstr "NanobaseAI Masaüstü Yardımını Aç"
+msgstr "ZEKİ AI Masaüstü Yardımını Aç"
 
 msgid "Open Global Search"
 msgstr "Genel Aramayı Aç"
@@ -1498,7 +1498,7 @@ msgid "View Documentation"
 msgstr "Belgelendirmeyi Görüntüle"
 
 msgid "Visit Frappe Support Portal"
-msgstr "NanobaseAI Destek Portalını Ziyaret Et"
+msgstr "ZEKİ AI Destek Portalını Ziyaret Et"
 
 msgid "Wait for it to finish. Deleting the lock file {} will not release the lock."
 msgstr "Tamamlanmasını bekleyin. Kilit dosyasını {} silmek kilidi kaldırmaz."
@@ -2080,7 +2080,7 @@ msgid "Send SMS Rate Limit (per hour)"
 msgstr "SMS Gönderme Hız Sınırı (saat başına)"
 
 msgid "Sends OTPs over email using Frappe's configured outgoing Email Account, independent of Twilio."
-msgstr "Twilio'dan bağımsız olarak, NanobaseAI'nin yapılandırılmış giden E-posta Hesabı üzerinden e-posta ile OTP gönderir."
+msgstr "Twilio'dan bağımsız olarak, ZEKİ AI'ın yapılandırılmış giden E-posta Hesabı üzerinden e-posta ile OTP gönderir."
 
 msgid "Sent"
 msgstr "Gönderildi"
@@ -2411,9 +2411,9 @@ msgstr "Hata"
 msgid "Unspecified"
 msgstr "Belirtilmemiş"
 
-# Çatının Türkçesinde adı geçen metinler (ekranda NanobaseAI görünür, dış adres yok).
+# Çatının Türkçesinde adı geçen metinler (ekranda ZEKİ AI görünür, dış adres yok).
 msgid "&copy; Frappe Technologies Pvt. Ltd. and contributors"
-msgstr "&copy; NanobaseAI"
+msgstr "&copy; ZEKİ AI"
 
 msgid "Failed to request login to Frappe Cloud"
 msgstr "Bulut hesabına giriş isteği başarısız oldu"
@@ -2422,16 +2422,16 @@ msgid "For help see <a href=\"https://frappeframework.com/docs/user/en/guides/po
 msgstr "Yardım için sistem yöneticinize başvurun."
 
 msgid "Frappe Mail"
-msgstr "NanobaseAI Posta"
+msgstr "ZEKİ AI Posta"
 
 msgid "Frappe Mail OAuth Error"
-msgstr "NanobaseAI Posta OAuth hatası"
+msgstr "ZEKİ AI Posta OAuth hatası"
 
 msgid "Frappe Mail Site"
-msgstr "NanobaseAI Posta sitesi"
+msgstr "ZEKİ AI Posta sitesi"
 
 msgid "Frappe Support"
-msgstr "NanobaseAI Destek"
+msgstr "ZEKİ AI"
 
 msgid "Frappe page builder using components"
 msgstr "Bileşenlerle sayfa oluşturucu"
@@ -2440,26 +2440,376 @@ msgid "Please visit https://frappecloud.com/docs/sites/migrate-an-existing-site#
 msgstr "Ayrıntı için sistem yöneticinize başvurun."
 
 msgid "Starting Frappe ..."
-msgstr "NanobaseAI başlatılıyor..."
+msgstr "ZEKİ AI başlatılıyor..."
 
 msgid "Switch to Frappe CRM"
-msgstr "NanobaseAI CRM'ye geç"
+msgstr "ZEKİ AI CRM'ye geç"
 
 msgid "Update from Frappe Cloud"
 msgstr "Buluttan güncelle"
 
 msgid "Validate Frappe Mail Settings"
-msgstr "NanobaseAI Posta ayarlarını doğrula"
+msgstr "ZEKİ AI Posta ayarlarını doğrula"
 
 msgid "Welcome to Frappe!"
-msgstr "NanobaseAI'ye hoş geldiniz!"
+msgstr "ZEKİ AI'ya hoş geldiniz!"
 
 msgid "Search"
 msgstr "Ara"
 
 msgid "A Frappe Framework instance can function as an OAuth Client, Resource, or Authorization server. This DocType contains settings related to all three."
-msgstr "NanobaseAI; OAuth istemcisi, kaynak ya da yetkilendirme sunucusu olarak çalışabilir. Bu ekran üçünün ayarlarını içerir."
+msgstr "ZEKİ AI; OAuth istemcisi, kaynak ya da yetkilendirme sunucusu olarak çalışabilir. Bu ekran üçünün ayarlarını içerir."
 
 # Temsilci panelinde talep edenin AD birimi (yz/birim.py).
 msgid "Requester's unit"
 msgstr "Talep edenin birimi"
+
+# 2026-09-29 uçtan uca sınama: Destek ekranlarında çevirisi olmayan 122 metin (model, çeviri hattı; gözden geçirildi).
+msgid "(advanced search)"
+msgstr "(gelişmiş arama)"
+
+msgid "API Key is required"
+msgstr "API Anahtarı gerekli"
+
+msgid "API Secret is required"
+msgstr "API Gizli Anahtarı gerekli"
+
+msgid "Account name"
+msgstr "Hesap adı"
+
+msgid "Account name is required"
+msgstr "Hesap adı gerekli"
+
+msgid "Add comment"
+msgstr "Yorum ekle"
+
+msgid "Already assigned to {0}"
+msgstr "Zaten {0} kişisine atandı"
+
+msgid "App Settings"
+msgstr "Uygulama Ayarları"
+
+msgid "Applying \"{0}\" discards the reply you have now, along with its {1} action(s)."
+msgstr "\"{0}\" uygulandığında, şu anki yanıtınız ve {1} işlemi silinir."
+
+msgid "Are you sure you want to delete {0} item(s)?"
+msgstr "{0} öğesini silmek istediğinize emin misiniz?"
+
+msgid "Article has been successfully moved."
+msgstr "Makale başarıyla taşındı."
+
+msgid "Assign agent"
+msgstr "Temsilci ata"
+
+msgid "Assign to"
+msgstr "Şuna ata"
+
+msgid "At least one email address is required"
+msgstr "En az bir e-posta adresi gerekli"
+
+msgid "At least one email address must be marked as primary"
+msgstr "En az bir e-posta adresi birincil olarak işaretlenmeli"
+
+msgid "At least one priority is required."
+msgstr "En az bir öncelik gerekli."
+
+msgid "Change type"
+msgstr "Türü değiştir"
+
+msgid "Clear filters"
+msgstr "Filtreleri temizle"
+
+msgid "Contact created"
+msgstr "Kişi oluşturuldu"
+
+msgid "Contact created and invited"
+msgstr "Kişi oluşturuldu ve davet edildi"
+
+msgid "Contact has no email address to invite"
+msgstr "Davet edilecek e-posta adresi bulunmuyor"
+
+msgid "Contact updated"
+msgstr "Kişi güncellendi"
+
+msgid "Copy ticket ID"
+msgstr "Kayıt kimliğini kopyala"
+
+msgid "Copy ticket link"
+msgstr "Kayıt bağlantısını kopyala"
+
+msgid "Could not load {0}"
+msgstr "{0} yüklenemedi"
+
+msgid "Could not update status."
+msgstr "Durum güncellenemedi."
+
+msgid "Create ticket \"{0}\""
+msgstr "\"{0}\" kaydını oluştur"
+
+msgid "Email Domain or manual server settings are required"
+msgstr "E-posta alan adı veya manuel sunucu ayarları gerekli"
+
+msgid "Email ID is required"
+msgstr "E-posta kimliği gerekli"
+
+msgid "Email address is required"
+msgstr "E-posta adresi gerekli"
+
+msgid "Exotel error: {0}"
+msgstr "Exotel hatası: {0}"
+
+msgid "Filter by priority"
+msgstr "Önceliğe göre filtrele"
+
+msgid "Filter by status"
+msgstr "Duruma göre filtrele"
+
+msgid "First name is required"
+msgstr "Ad gerekli"
+
+msgid "Go to next ticket (Shift + >)"
+msgstr "Sonraki kayda git (Shift + >)"
+
+msgid "Go to previous ticket (Shift + <)"
+msgstr "Önceki kayda git (Shift + <)"
+
+msgid "Go to ticket #{0}"
+msgstr "#{0} kaydına git"
+
+msgid "If enabled, all outgoing emails will be sent from this account. Note: Only one account can be default outgoing."
+msgstr "Etkinleştirilirse, tüm giden e-postalar bu hesaptan gönderilir. Not: Sadece bir hesap varsayılan giden olabilir."
+
+msgid "If enabled, all replies to your company (eg: replies@yourcompany.com) will come to this account. Note: Only one account can be default incoming."
+msgstr "Etkinleştirilirse, şirketinize gelen tüm yanıtlar (ör: replies@yourcompany.com) bu hesaba yönlendirilir. Not: Sadece bir hesap varsayılan gelen olabilir."
+
+msgid "If enabled, outgoing emails can be sent from this account."
+msgstr "Etkinleştirilirse, giden e-postalar bu hesaptan gönderilebilir."
+
+msgid "If enabled, tickets can be created from the incoming emails on this account."
+msgstr "Etkinleştirilirse, bu hesaptaki gelen e-postalardan kayıtlar oluşturulabilir."
+
+msgid "In 1 hour"
+msgstr "1 saat içinde"
+
+msgid "In 1 minute"
+msgstr "1 dakika içinde"
+
+msgid "In 1 year"
+msgstr "1 yıl içinde"
+
+msgid "In {0} days"
+msgstr "{0} gün içinde"
+
+msgid "In {0} hours"
+msgstr "{0} saat içinde"
+
+msgid "In {0} minutes"
+msgstr "{0} dakika içinde"
+
+msgid "In {0} months"
+msgstr "{0} ay içinde"
+
+msgid "In {0} weeks"
+msgstr "{0} hafta içinde"
+
+msgid "In {0} years"
+msgstr "{0} yıl içinde"
+
+msgid "Incoming Port"
+msgstr "Gelen Port"
+
+msgid "Incoming Server (IMAP/POP)"
+msgstr "Gelen Sunucu (IMAP/POP)"
+
+msgid "Invalid email ID"
+msgstr "Geçersiz e-posta kimliği"
+
+msgid "Invalid email address: {0}"
+msgstr "Geçersiz e-posta adresi: {0}"
+
+msgid "Invitation email resent successfully"
+msgstr "Davet e-postası başarıyla yeniden gönderildi"
+
+msgid "Invitation sent"
+msgstr "Davet gönderildi"
+
+msgid "Just now"
+msgstr "Az önce"
+
+msgid "Keyboard shortcuts"
+msgstr "Klavye kısayolları"
+
+msgid "Last seen {0}"
+msgstr "Son görülme {0}"
+
+msgid "Merge ticket"
+msgstr "Kaydı birleştir"
+
+msgid "My settings"
+msgstr "Ayarlarım"
+
+msgid "New article"
+msgstr "Yeni makale"
+
+msgid "New ticket"
+msgstr "Yeni kayıt"
+
+msgid "No results for \"{0}\""
+msgstr "\"{0}\" için sonuç yok"
+
+msgid "No system user is linked with this contact"
+msgstr "Bu kişiyle ilişkili bir sistem kullanıcısı yok"
+
+msgid "Outgoing Port"
+msgstr "Giden Port"
+
+msgid "Outgoing Server (SMTP)"
+msgstr "Giden Sunucu (SMTP)"
+
+msgid "Password is required"
+msgstr "Şifre zorunludur"
+
+msgid "Phone Numbers"
+msgstr "Telefon Numaraları"
+
+msgid "Remove tag"
+msgstr "Etiketi kaldır"
+
+msgid "Remove tags"
+msgstr "Etiketleri kaldır"
+
+msgid "Reply to ticket"
+msgstr "Kayda yanıt ver"
+
+msgid "Reset password email sent successfully"
+msgstr "Şifre sıfırlama e-postası başarıyla gönderildi"
+
+msgid "SLA Policies"
+msgstr "SLA Politikaları"
+
+msgid "SLA policy name is required."
+msgstr "SLA politikası adı zorunludur."
+
+msgid "Search for \"{0}\""
+msgstr "\"{0}\" için ara"
+
+msgid "Set availability"
+msgstr "Müsaitliği ayarla"
+
+msgid "Set priority"
+msgstr "Önceliği ayarla"
+
+msgid "Set team"
+msgstr "Ekip ayarla"
+
+msgid "Set ticket type"
+msgstr "Kayıt türünü ayarla"
+
+
+
+
+
+
+
+
+
+
+
+
+
+msgid "Show tickets assigned to me"
+msgstr "Bana atanan kayıtları göster"
+
+msgid "Status updated successfully."
+msgstr "Durum başarıyla güncellendi."
+
+msgid "Support / Sales"
+msgstr "Destek / Satış"
+
+msgid "Switch view"
+msgstr "Görünümü değiştir"
+
+msgid "The agent who sends the reply"
+msgstr "Yanıtı gönderen temsilci"
+
+msgid "Ticket #{0} copied"
+msgstr "Kayıt #{0} kopyalandı"
+
+msgid "Ticket URL copied"
+msgstr "Kayıt URL'si kopyalandı"
+
+msgid "Tickets you've recently worked on or viewed"
+msgstr "Yakın zamanda üzerinde çalıştığınız veya görüntülediğiniz kayıtlar"
+
+msgid "Twilio error: {0}"
+msgstr "Twilio hatası: {0}"
+
+msgid "Upload profile picture"
+msgstr "Profil fotoğrafı yükle"
+
+msgid "Use SSL for Incoming"
+msgstr "Gelen için SSL kullan"
+
+msgid "Use SSL for Outgoing"
+msgstr "Giden için SSL kullan"
+
+msgid "Use TLS for Incoming"
+msgstr "Gelen için TLS kullan"
+
+msgid "Use TLS for Outgoing"
+msgstr "Giden için TLS kullan"
+
+msgid "You haven't received any feedback yet"
+msgstr "Henüz geri bildirim almadınız"
+
+msgid "a value"
+msgstr "bir değer"
+
+msgid "example.com"
+msgstr "example.com"
+
+msgid "imap.example.com"
+msgstr "imap.example.com"
+
+msgid "in {0} M"
+msgstr "{0} ay içinde"
+
+msgid "in {0} d"
+msgstr "{0} gün içinde"
+
+msgid "in {0} h"
+msgstr "{0} saat içinde"
+
+msgid "in {0} m"
+msgstr "{0} dakika içinde"
+
+msgid "in {0} w"
+msgstr "{0} hafta içinde"
+
+msgid "in {0} y"
+msgstr "{0} yıl içinde"
+
+msgid "john.doe@example.com"
+msgstr "john.doe@example.com"
+
+msgid "johndoe@example.com"
+msgstr "johndoe@example.com"
+
+msgid "tickets"
+msgstr "kayıtlar"
+
+msgid "updated"
+msgstr "güncellendi"
+
+msgid "{0} does not have a phone number, set one to call them."
+msgstr "{0} telefon numarasına sahip değil, aramak için bir tane belirleyin."
+
+msgid "{0} filter(s) applied"
+msgstr "{0} filtre uygulandı"
+
+# Ayar sekmesi «Agents»: yapay zekâ panelinin çevirisi («Ajanlar») sonradan yüklenip ezerdi; masada «Temsilciler».
+msgid "Agents"
+msgstr "Temsilciler"
+
+msgid "Default"
+msgstr "Varsayılan"

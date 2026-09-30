@@ -20,8 +20,8 @@ kalıyor (2025-06 sonrası 2.393 tekrar kartının 33'ünde depo, 100'ünde bask
 eski). Kart açılışından 30 günden eski «gerçekleşen» tarih önceki baskınındır, bu karta sayılmaz.
 
 CRM ve Logo yalnız okunur, köprünün kendi salt okunur bağlantılarıyla (yönetim raporları ve SEO/GEO'daki gibi).
-Bir okuma ≈ 45 sn sürer (2026-09-28: CRM 10 sn, Logo 33 sn). Son okuma diskte kalır (`PRODUCTION_CACHE_DIR`) ve istek onu
-hemen alır; 5 dakikadan eskiyse yenisi arka planda okunur. İstek yalnız hiç okuma yokken (ilk kurulum, okuma sorguları
+Bir okuma ≈ 45 sn sürer (2026-09-28: CRM 10 sn, Logo 33 sn). Son okuma diskte kalır (`PRODUCTION_CACHE_DIR`, türleri koruyan
+JSON; pickle değil) ve istek onu hemen alır; 5 dakikadan eskiyse yenisi arka planda okunur. İstek yalnız hiç okuma yokken (ilk kurulum, okuma sorguları
 değişti) ya da «Verileri yenile»de (X-Data-Refresh) kaynağı bekler.
 
 Kartların kurulması (okuma + portal kayıtları → birleştirme, plan, gecikme) ve özet de süreç belleğindedir
@@ -34,7 +34,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import pickle
 import re
 import statistics
 import threading
@@ -53,6 +52,7 @@ from semantic_layer.firm_scope import firm_in_scope
 from semantic_bridge import hizli_bellek as HB
 from semantic_bridge import production_plan as plan_mod
 from semantic_bridge import production_store as store
+from semantic_bridge import typed_json as TJ
 from semantic_bridge.production_plan import KEYS, MILESTONES, STAGES, parse_day
 from semantic_bridge.production_store import ProductionError
 
@@ -309,6 +309,12 @@ class Source:
         self.on_new: Optional[Callable[[dict[str, Any]], None]] = None
 
     def _file(self) -> Path:
+        """Türleri koruyan JSON + zlib (`typed_json`; 2026-09-29'a kadar pickle'dı). Pickle okunurken kod çalıştırabilir:
+        klasöre yazabilen biri köprüde kod çalıştırırdı. Eski `snapshot.pkl` hiç açılmaz; ilk okumada kaynaktan okunur
+        ve yeni kayıt yazılınca silinir."""
+        return self._cache_dir() / "snapshot.json.z"
+
+    def _legacy_file(self) -> Path:
         return self._cache_dir() / "snapshot.pkl"
 
     def _current(self) -> Optional[dict[str, Any]]:
@@ -317,9 +323,8 @@ class Source:
             if self._snap is None and not self._disk_tried:
                 self._disk_tried = True
                 try:
-                    with self._file().open("rb") as f:
-                        saved = pickle.load(f)
-                    if saved.get("shape") == SHAPE:
+                    saved = TJ.unpack(self._file().read_bytes())
+                    if isinstance(saved, dict) and saved.get("shape") == SHAPE:
                         self._snap, self._at = saved["snap"], float(saved["at"])
                 except FileNotFoundError:
                     pass
@@ -335,12 +340,19 @@ class Source:
         tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            with tmp.open("wb") as f:
-                pickle.dump({"shape": SHAPE, "at": at, "snap": snap}, f, protocol=pickle.HIGHEST_PROTOCOL)
+            tmp.write_bytes(TJ.pack({"shape": SHAPE, "at": at, "snap": snap}))
             os.replace(tmp, path)
-        except OSError as e:
+        except (OSError, TypeError, ValueError) as e:          # TypeError: typed_json'un tanımadığı tür (okuma bellekte kalır)
             log.warning("production: okuma diske yazılamadı (%s): %s", path, e)
-            tmp.unlink(missing_ok=True)
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
+            return
+        try:
+            self._legacy_file().unlink(missing_ok=True)        # eski pickle: açılmadan silinir
+        except OSError:
+            pass
 
     def _refresh(self, asked: float) -> dict[str, Any]:
         """Kaynağı okur; bu istekten sonra başlamış bir okuma bittiyse onu kullanır."""
@@ -767,6 +779,10 @@ class Service:
         with self._lock:
             self._baglam[(id(engine), tenant)] = (id(engine), tenant, entries, settings)
             son = self._son.get(yan)
+            if son is None and not fresh:
+                # Gün değişti (hız 4. tur): aynı kayıt ve ayarlarla dünün kartları varsa bugünkü kurulana kadar onlar
+                # gösterilir, bugünkü arkada kurulur (günün ilk açılışı kart kurulumunu beklemez).
+                son = self._son.get(yan[:4] + ((now - timedelta(days=1)).isoformat(),))
         if not fresh and self._kartlar.an(key) is None and son is not None and son[0] != key \
                 and self._kartlar.an(son[0]) is not None:
             self._isit(key, hesap, snap, now)
@@ -970,7 +986,16 @@ class Service:
         if snap is None:
             return {"items": [], "days": days, "ready": False, "asOf": None}
         cards, snap, _ = self._okumanin_kartlari(engine, tenant, snap, False, now)
-        return {"items": new_prints(cards, now, days), "days": days, "ready": True,
+        items = new_prints(cards, now, days)
+        from semantic_bridge import book_covers
+
+        web = book_covers.by_stock_code(engine, tenant, (i["stockCode"] for i in items))
+        for i in items:
+            w = web.get(i["stockCode"] or "") or {}
+            i["cover"] = w.get("cover")
+            if not i.pop("titleFromBook") and w.get("name"):  # kartta kitap adı yoksa kart adı «2.-BASKI» olur
+                i["title"] = w["name"]
+        return {"items": items, "days": days, "ready": True,
                 "asOf": datetime.fromtimestamp(snap["at"], TZ).isoformat(timespec="seconds")}
 
 
@@ -1127,7 +1152,8 @@ def new_prints(cards: list[dict[str, Any]], now: date, days: int) -> list[dict[s
         if not day or day < since or day > now:
             continue
         out.append({"cardId": c.get("id"), "bookId": c.get("bookId"), "title": c.get("bookTitle") or c.get("name"),
-                    "printNo": c.get("printNo"), "firstPrint": bool(c.get("firstPrint")), "day": day.isoformat(),
+                    "titleFromBook": bool(c.get("bookTitle")),
+                    "stockCode": (c.get("stockCode") or "").strip() or None, "printNo": c.get("printNo"), "firstPrint": bool(c.get("firstPrint")), "day": day.isoformat(),
                     "depot": (act.get("depo") or {}).get("day")})
     out.sort(key=lambda x: _fold(x["title"]))
     out.sort(key=lambda x: x["day"], reverse=True)
@@ -1146,8 +1172,23 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     source = Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA"),
                     lambda: parse_day(settings()["historyFrom"]) or date(today().year - 2, 1, 1))
     svc = Service(source, settings, deps.get("studio_jobs"))
+    from semantic_bridge import hizli_kaynak as HK
     from semantic_bridge import production_kaynak as K
     from semantic_bridge import provenance as PV
+
+    def isit() -> None:
+        """Köprü açılışı (hız 4. tur): diskteki son okumadan bugünün kartları ve özeti arkada kurulur — üretim özetini
+        ilk açan kişi kart kurulumunu (5.600 kart) beklemesin. Okuma eskiyse kaynak ayrıca arkada okunur (`peek`)."""
+        system = deps.get("system")
+        if system is None:
+            return
+        engine, tenant = system()
+        if HK.sqlite_mi(engine):
+            return
+        store.ensure(engine)
+        svc.overview(engine, tenant)
+
+    HK.acilista("uretim.kartlar", isit)
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)
@@ -1283,7 +1324,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
 
     @app.get(f"{P}/new-prints")
     def production_new_prints(request: Request) -> dict[str, Any]:
-        """Kampüs «Matbaadan yeni çıkanlar» (oturum yeter): kitap adı, baskı no ve gün; adet ve maliyet yok."""
+        """Kampüs «Matbaadan yeni çıkanlar» (oturum yeter): kitap adı, baskı no, gün ve kapak (T-soft, stok koduyla);
+        adet ve maliyet yok."""
         engine, tenant, _, _ = ctx(request)
         return call(svc.new_prints, engine, tenant)
 

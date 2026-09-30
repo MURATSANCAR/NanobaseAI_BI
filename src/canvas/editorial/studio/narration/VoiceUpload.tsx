@@ -4,7 +4,8 @@ import { FileText, Loader2, Trash2, Upload } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, secs } from '../shared';
 import { useVoiceLibrary, voicesApi, type NarrationVoice, type VoiceLibrary } from './api';
-import { FileDrop } from '../../../components/FileDrop';
+import { FileDrop, useFeatureAllowed } from '../../../components/FileDrop';
+import { Explain } from '../../../components/Explain';
 
 /** «Ses yükle»: yayınevinin kendi seslendirmeninin kaydını, kullanım hakkı belgesiyle ses kütüphanesine ekler.
  *  Hak beyanı zorunlu (onay kutusu, sesin sahibi, izin belgesi dosyası ya da belge numarası). Kayıt tarayıcıda çözülür
@@ -125,6 +126,8 @@ function Uploaded({ v, group, canRemove, busy, onRemove }: { v: NarrationVoice; 
 
 function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) {
   const f = useId();
+  // Ses yüklemek «Kitap tasarımında üretim ve düzenleme» ister; yoksa yükleme alanları kilitli görünür (gizlenmez).
+  const canUpload = useFeatureAllowed('tasarim.uret');
   const [audio, setAudio] = useState<{ file: File; wav: Blob; seconds: number } | null>(null);
   const [audioErr, setAudioErr] = useState<string | null>(null);
   const [decoding, setDecoding] = useState(false);
@@ -169,12 +172,17 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
     },
   });
   const short = audio && audio.seconds < lib.limits.min_sec;
-  const long = audio && audio.seconds > lib.limits.max_sec + 10;
+  // Sunucu baştaki ve sondaki sessizliği kırpıp kalan süreyi max_sec ile karşılaştırır. Kırpılmış süre tarayıcıda
+  // bilinmez; toplam süre sınırı aşıyorsa uyarılır (sessizlik payı varsa kayıt yine de kabul edilebilir).
+  const long = audio && audio.seconds > lib.limits.max_sec;
 
   return (
     <form className="flex flex-col gap-2.5" onSubmit={(e) => { e.preventDefault(); if (ready) send.mutate(); }}>
       <div>
-        <h4 className="text-[13px] font-extrabold">Ses yükle</h4>
+        <h4 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Ses yükle
+          <Explain label="Ses yükle">Seslendirmeninizin kısa bir okuma kaydını yüklersiniz; bu ses kütüphaneye eklenir ve anlatıcı ya da karakter sesi olarak seçilebilir. Kayıt süre, gürültü ve ses seviyesi yönünden denetlenir; uygun değilse nedeni yazılır.</Explain>
+        </h4>
         <p className="text-[11.5px] leading-snug text-canvas-muted">
           Kendi seslendirmeninizin {lib.limits.min_sec}–{lib.limits.max_sec} sn'lik düz okuma kaydı (wav, mp3, m4a, ogg). Sessiz
           ortamda, müziksiz. Yalnız kullanım hakkı yayınevinize ait sesler yüklenir.
@@ -182,9 +190,9 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
       </div>
       <div className="flex flex-col gap-1">
         <span className={labelCls}>Ses kaydı</span>
-        <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} busy={decoding}
+        <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} busy={decoding} feature="tasarim.uret"
           picked={audio?.file} onPick={(file) => void pickAudio(file)} />
-        {audio && <span className="text-[11.5px] text-canvas-muted">{secs(audio.seconds)} kayıt{short ? ' — kısa görünüyor; en az 30 sn konuşma gerekir' : long ? ' — uzun görünüyor; en çok 60 sn konuşma kabul edilir' : ''}</span>}
+        {audio && <span className="text-[11.5px] text-canvas-muted">{secs(audio.seconds)} kayıt{short ? ` — kısa görünüyor; en az ${lib.limits.min_sec} sn konuşma gerekir` : long ? ` — uzun görünüyor; baştaki ve sondaki sessizlik çıkınca en çok ${lib.limits.max_sec} sn konuşma kabul edilir` : ''}</span>}
         {audioErr && <span className="text-[12px] text-rose-700">{audioErr}</span>}
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
@@ -211,7 +219,7 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
         </label>
         <div className="flex flex-col gap-1">
           <span className={labelCls}>İzin belgesi</span>
-          <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} />
+          <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} feature="tasarim.uret" />
           {docErr && <span className="text-[12px] text-rose-700">{docErr}</span>}
         </div>
         <label htmlFor={`${f}-ref`} className="flex flex-col gap-1">
@@ -224,7 +232,7 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
         </label>
       </fieldset>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" className={gradientBtn} disabled={!ready || send.isPending}>
+        <button type="submit" className={gradientBtn} disabled={!ready || send.isPending || !canUpload}>
           {send.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
           {send.isPending ? 'Yükleniyor…' : 'Kütüphaneye ekle'}
         </button>

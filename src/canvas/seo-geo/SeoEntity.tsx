@@ -2,12 +2,13 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, CircleHelp, Copy, ExternalLink, Loader2, RefreshCw, Search, X } from 'lucide-react';
+import { Check, CircleHelp, Copy, ExternalLink, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { RIGHTS_LABEL, call, dateTime, fmt, qs, type CrmRights } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 import { Term } from './terms';
+import SeoPager from './SeoPager';
 
 type AuthorStatus = 'wikipedia' | 'wikidata' | 'yok' | 'belirsiz' | 'bekliyor';
 type GbCheck = 'isbn' | 'rights' | 'status' | 'cover' | 'pdf';
@@ -524,20 +525,7 @@ function GoogleBooks({ filter, setFilter }: { filter: string; setFilter: (v: str
 }
 
 function Pager({ start, total, setStart }: { start: number; total: number; setStart: (n: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+  return <SeoPager start={start} total={total} size={PAGE} onChange={setStart} />;
 }
 
 function Kpi({ label, value, note, tone, info, explain }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode; explain?: ReactNode }) {

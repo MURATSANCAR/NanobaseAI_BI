@@ -37,6 +37,7 @@ import httpx
 import sqlalchemy as sa
 from fastapi import HTTPException, Request
 
+from . import hazir
 from .store import LINKS, PRODUCTS, _md, dumps, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo.crawlbot")
@@ -582,7 +583,7 @@ def inspect_url(url: str, site: str) -> dict[str, Any]:
         except httpx.HTTPError as e:
             raise InspectError("net", f"Google'a ulaşılamadı: {type(e).__name__}") from None
         if resp.status_code == 401 and attempt == 0:
-            connections._GTOKEN["token"] = None  # süresi dolmuş belirteç: bir kez yenile
+            connections._GTOKENS.clear()  # süresi dolmuş belirteç: bir kez yenile
             continue
         if resp.status_code == 403:
             raise InspectError("permission", f"Search Console erişimi reddetti: servis hesabı "
@@ -691,6 +692,12 @@ def register(app, ctx) -> None:
 
     # ---------------------------------------------------------------- denetim
     def product_info() -> dict[str, dict[str, Any]]:
+        """Ürün → {ad, aktif, satış, adres}, hazır hesaptan: eskiden her istekte bütün ürünlerin JSON'u açılırdı."""
+        eng()
+        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at)], ek=(site(),))
+        return hazir.al(seo, "crawlbot.products", st, build_product_info)
+
+    def build_product_info() -> dict[str, dict[str, Any]]:
         from . import SALES
 
         with eng().connect() as c:
@@ -816,8 +823,12 @@ def register(app, ctx) -> None:
         finally:
             istate.update(running=False, finishedAt=iso(now()))
             ilock.release()
+            try:
+                stored_rows()      # tur bitti: denetim kayıtlarının hazır hesabı yenilenir, ekranı açan beklemez
+            except Exception:  # noqa: BLE001
+                log.exception("crawlbot hazır ısıtma")
 
-    def load_rows() -> list[dict[str, Any]]:
+    def build_rows() -> list[dict[str, Any]]:
         with eng().connect() as c:
             rows = c.execute(sa.select(INSPECT).where(INSPECT.c.tenant_id == seo.tenant())).mappings().all()
         out = []
@@ -828,6 +839,33 @@ def register(app, ctx) -> None:
             if d.get("last_crawl") is not None and d["last_crawl"].tzinfo is None:
                 d["last_crawl"] = d["last_crawl"].replace(tzinfo=timezone.utc)
             out.append(d)
+        return out
+
+    def stored_rows() -> list[dict[str, Any]]:
+        """Denetim kayıtları (JSON'u açılmış) hazır hesaptan; girdi damgası kayıt sayısı + son denetim zamanı."""
+        eng()
+        st = hazir.damga(seo, [(INSPECT, INSPECT.c.inspected_at)])
+        return hazir.al(seo, "crawlbot.rows", st, build_rows)
+
+    conv: dict[str, Any] = {"src": None, "rows": None}
+    conv_lock = threading.Lock()
+
+    def load_rows() -> list[dict[str, Any]]:
+        """Hazır kayıttaki tarihler metindir: ekrana giden hesap (gün farkı, sıra) eskisi gibi tarih nesnesiyle yapılsın
+        diye geri çevrilir. Çeviri aynı kayıt için bir kez yapılır; satırlar salt okunur kullanılır."""
+        src = stored_rows()
+        with conv_lock:
+            if conv["src"] is src:
+                return conv["rows"]
+        out = []
+        for d in src:
+            r = dict(d)
+            for k in ("last_crawl", "inspected_at"):
+                if isinstance(r.get(k), str):
+                    r[k] = datetime.fromisoformat(r[k])
+            out.append(r)
+        with conv_lock:
+            conv.update(src=src, rows=out)
         return out
 
     # ---------------------------------------------------------------- botlar
@@ -953,6 +991,9 @@ def register(app, ctx) -> None:
                 "topPaths": [{"path": k, "count": v} for k, v in sorted(paths_total.items(), key=lambda kv: -kv[1])[:TOP_PATHS]],
                 "topPathsLimit": TOP_PATHS}
 
+    hazir.kaydet(seo, "crawlbot.products", product_info)
+    hazir.kaydet(seo, "crawlbot.rows", stored_rows)
+
     # ---------------------------------------------------------------- uçlar
     @app.get("/api/v1/seo-geo/crawlbot")
     def crawlbot_summary(request: Request) -> dict[str, Any]:
@@ -988,7 +1029,7 @@ def register(app, ctx) -> None:
             raise _err(400, "Bilinmeyen süzgeç.")
         at = datetime.now(timezone.utc)
         prods = product_info()
-        rows = load_rows()
+        rows = list(load_rows())      # hazır kaydın satırları: sıralama kopyada
         if kind:
             rows = [r for r in rows if r["kind"] == kind]
         if filter == "not_indexed":

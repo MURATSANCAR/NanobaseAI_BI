@@ -6,6 +6,7 @@ import { Panel } from '../kit';
 import { Img, ghostBtn, gradientBtn } from './shared';
 import { readableText } from '../../components/readableName';
 import { Explain } from '../../components/Explain';
+import { useCan } from '../../useAdmin';
 
 /** Künye: sistem kitabın kendi künyesinden (alıntıyla) doldurur; kaynağı olmayan alan «—» kalır ve ön baskı
  *  denetimi durur. Editör eksik ya da değişecek alanı burada yazar; kaydedince iç sayfa yeniden dizilir.
@@ -36,8 +37,8 @@ function SourceLine({ row }: { row: StudioKunyeRow }) {
 }
 
 /** Kitap adı / yazar: tam genişlik, telefonda 16 px (odakta sayfa büyümesin). */
-function BookField({ row, value, onChange, error, extra }: {
-  row: StudioKunyeRow; value: string; onChange: (v: string) => void; error?: string; extra?: ReactNode;
+function BookField({ row, value, onChange, error, extra, readOnly }: {
+  row: StudioKunyeRow; value: string; onChange: (v: string) => void; error?: string; extra?: ReactNode; readOnly?: boolean;
 }) {
   const id = useId();
   const label = row.field === 'title' ? 'Kitap adı' : 'Yazar';
@@ -52,6 +53,7 @@ function BookField({ row, value, onChange, error, extra }: {
         value={value}
         placeholder={row.field === 'title' ? 'Kitabın adı' : row.none ? 'Yazarsız basılacak' : 'Eksik — yazın'}
         onChange={(e) => onChange(e.target.value)}
+        readOnly={readOnly}
         aria-invalid={!!error}
         aria-describedby={error ? `${id}-err` : undefined}
         className="mt-1 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[16px] font-bold outline-none focus:border-canvas-violet sm:text-[13.5px]"
@@ -66,6 +68,8 @@ export default function KunyePanel({ jobId, front, rev = '', hasCover = false }:
   jobId: string; front: NonNullable<StudioJob['front']>; rev?: string; hasCover?: boolean;
 }) {
   const qc = useQueryClient();
+  // Künyeyi değiştirmek «Kitap tasarımında üretim ve düzenleme» ister; yoksa alanlar yalnız okunur.
+  const canEdit = useCan('tasarim.uret');
   const [edit, setEdit] = useState<Record<string, string>>({});
   const [book, setBook] = useState<StudioBookEdit>({});
   const [done, setDone] = useState<StudioKunyeResult | null>(null);
@@ -123,18 +127,19 @@ export default function KunyePanel({ jobId, front, rev = '', hasCover = false }:
         </span>
       </div>
       <p className="text-[11.5px] text-canvas-muted">
-        Alanlar kitabın kendi künyesinden alındı; kaynağı bulunamayan alanı siz yazın. Kutusu olmayan satırlar (resim, tasarım) otomatik doldurulur.
+        Alanlar kitabın kendi künyesinden alındı{canEdit ? '; kaynağı bulunamayan alanı siz yazın' : ''}. Kutusu olmayan satırlar (resim, tasarım) otomatik doldurulur.
         {missing ? ' Eksik alan kalırsa ön baskı denetimi geçmez.' : ''}
       </p>
 
       {titleRow && authorRow && (
         <div className="mt-2 grid gap-2 md:grid-cols-2">
-          <BookField row={titleRow} value={titleValue} onChange={(v) => setField('title', v)} error={titleError} />
+          <BookField row={titleRow} value={titleValue} onChange={(v) => setField('title', v)} error={titleError} readOnly={!canEdit} />
           <BookField
             row={authorRow}
             value={authorValue}
             onChange={(v) => setField('author', v)}
-            extra={(authorRow.missing && book.author === undefined) ? (
+            readOnly={!canEdit}
+            extra={(canEdit && authorRow.missing && book.author === undefined) ? (
               <button type="button" className="text-[11.5px] font-bold text-canvas-violet underline-offset-2 hover:underline"
                 onClick={() => setBook((b) => ({ ...b, author: '' }))}>
                 Yazarsız bas
@@ -154,7 +159,7 @@ export default function KunyePanel({ jobId, front, rev = '', hasCover = false }:
           <div key={r.label} className={`grid grid-cols-[minmax(92px,130px)_minmax(0,1fr)] items-center gap-2 rounded-xl px-2.5 py-1.5 ${r.missing ? 'bg-amber-50/80' : 'bg-white/70'}`}>
             <dt className="text-[11.5px] font-bold text-canvas-muted">{r.label}</dt>
             <dd className="min-w-0">
-              {r.editable ? (
+              {r.editable && canEdit ? (
                 <input
                   value={edit[r.label] ?? (r.missing ? '' : r.value)}
                   placeholder={r.missing ? 'Eksik — yazın' : ''}
@@ -199,7 +204,7 @@ export default function KunyePanel({ jobId, front, rev = '', hasCover = false }:
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap justify-end gap-2">
+      {canEdit && <div className="mt-3 flex flex-wrap justify-end gap-2">
         {dirty && !save.isPending && (
           <button type="button" className={ghostBtn} onClick={() => { setEdit({}); setBook({}); }}>Vazgeç</button>
         )}
@@ -207,7 +212,7 @@ export default function KunyePanel({ jobId, front, rev = '', hasCover = false }:
           onClick={() => save.mutate({ fields: edit, book })}>
           {save.isPending ? (bookDirty ? 'Yeniden diziliyor…' : 'Kaydediliyor…') : 'Künyeyi kaydet'}
         </button>
-      </div>
+      </div>}
     </Panel>
   );
 }

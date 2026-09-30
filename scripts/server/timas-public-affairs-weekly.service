@@ -6,4 +6,4 @@ After=nanobase-semantic-bridge.service
 Type=oneshot
 EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # Alıcı REL_ALERT_RECIPIENTS (iç adresler); boşsa e-posta gitmez. Kişilere ve kurumlara hiçbir e-posta gitmez.
-ExecStart=/bin/sh -c 'curl -fsS -m 900 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" "http://127.0.0.1:8795/api/v1/public-affairs/run-due?weekly=1"'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 900 -X POST "http://127.0.0.1:8795/api/v1/public-affairs/run-due?weekly=1"

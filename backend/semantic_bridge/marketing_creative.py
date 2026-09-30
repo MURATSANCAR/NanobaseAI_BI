@@ -15,8 +15,8 @@ kişi kendisi yükler):
   da elle). Sürümlüdür: düzeltme yeni satır açar (`surum`+1, `onceki_id`), eskisi `guncel=False` kalır. Onay iki
   aşamalıdır: görselde önce tasarım (`icerik.tasarim-onay`), sonra mesaj (`icerik.mesaj-onay`); metinde yalnız mesaj.
   Aynı kişi aynı varlıkta iki onayı birden veremez. Arşivde «onaylı» = `mesaj_onay` dolu, güncel, reddedilmemiş.
-- **Lisans taslağı**: görselinde model üretimi resim olan varlık (`taslak_lisans`) iki onayı alsa da «yayına hazır»
-  sayılmaz; indirilen dosyanın adı `TASLAK-` ile başlar (görsel modelin ticari kullanım izni yok).
+- Model üretimi resim içeren görsel de onaylanınca yayına hazırdır (görsel modelin ticari lisansı 2026-09-29'da alındı;
+  eski `taslak_lisans` kolonu tabloda kalır, hep False yazılır, okunmaz).
 - **Marka kiti** (`semantic_mkt_creative_brand`, sürümlü) ve **yasaklı kalıp** listesi (`semantic_mkt_creative_banned`).
 - **İş** (`semantic_mkt_creative_jobs`): arka plan üretimleri (görsel dizimi, metin varyantları) ve durumu.
 
@@ -87,7 +87,7 @@ ASSETS = sa.Table(
     sa.Column("studio_ref", sa.String(80)),                                 # <iş>/<sid>
     sa.Column("metin", sa.Text),
     sa.Column("kaynak", sa.String(24), nullable=False),                     # studio-kit | studio-marketing-job | zeki | elle
-    sa.Column("taslak_lisans", sa.Boolean, nullable=False, default=False),
+    sa.Column("taslak_lisans", sa.Boolean, nullable=False, default=False),  # eski lisans işareti: hep False, okunmaz
     sa.Column("dogrulama_json", sa.Text),
     sa.Column("ayar_json", sa.Text),                                        # görselin dizim ayarı (yeniden dizim için)
     sa.Column("genislik", sa.Integer),
@@ -219,7 +219,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 
@@ -636,9 +637,9 @@ def _request_view(r: dict[str, Any], counts: Optional[dict[str, int]] = None) ->
 
 
 def counts_stmt(tenant: str, ids: list[str]):
-    """Taleplerin güncel varlıkları: görsel / metin, onaylı, bekleyen, reddedilen, taslak lisanslı sayısı buradan."""
+    """Taleplerin güncel varlıkları: görsel / metin, onaylı, bekleyen, reddedilen sayısı buradan."""
     return (sa.select(ASSETS.c.request_id, ASSETS.c.tur, ASSETS.c.tasarim_onay, ASSETS.c.mesaj_onay,
-                      ASSETS.c.red_zaman, ASSETS.c.taslak_lisans)
+                      ASSETS.c.red_zaman)
             .where(ASSETS.c.tenant_id == tenant, ASSETS.c.request_id.in_(ids), ASSETS.c.guncel.is_(True)))
 
 
@@ -648,8 +649,7 @@ def _counts(conn, tenant: str, ids: list[str]) -> dict[str, dict[str, int]]:
     rows = conn.execute(counts_stmt(tenant, ids)).mappings().all()
     out: dict[str, dict[str, int]] = {}
     for a in rows:
-        c = out.setdefault(a["request_id"], {"gorsel": 0, "metin": 0, "onayli": 0, "bekleyen": 0, "reddedilen": 0,
-                                             "taslak": 0})
+        c = out.setdefault(a["request_id"], {"gorsel": 0, "metin": 0, "onayli": 0, "bekleyen": 0, "reddedilen": 0})
         c[a["tur"]] += 1
         if a["red_zaman"] is not None:
             c["reddedilen"] += 1
@@ -657,8 +657,6 @@ def _counts(conn, tenant: str, ids: list[str]) -> dict[str, dict[str, int]]:
             c["onayli"] += 1
         else:
             c["bekleyen"] += 1
-        if a["taslak_lisans"]:
-            c["taslak"] += 1
     return out
 
 
@@ -833,13 +831,11 @@ def _slug(s: str) -> str:
 
 
 def file_name(a: dict[str, Any], title: Optional[str]) -> str:
-    """İndirilen ad: `[TASLAK-]kitap-adi_bicim_1080x1080_A_v2.png` (metinde `…_platform_tur_A_v1.txt`). Model üretimi
-    görsel içeren varlıkta TASLAK- öneki ticari kullanım izni gelene kadar düşmez."""
-    pre = "TASLAK-" if a.get("taslakLisans") else ""
+    """İndirilen ad: `kitap-adi_bicim_1080x1080_A_v2.png` (metinde `…_platform_tur_A_v1.txt`)."""
     if a["tur"] == "gorsel":
         fmt = re.sub(r"-\d+x\d+$", "", a.get("format") or "gorsel")
-        return f"{pre}{_slug(title or '')}_{fmt}_{a.get('genislik')}x{a.get('yukseklik')}_{a['varyant']}_v{a['surum']}.png"
-    return f"{pre}{_slug(title or '')}_{a.get('format') or 'metin'}_{a.get('metinTuru') or 'metin'}_{a['varyant']}_v{a['surum']}.txt"
+        return f"{_slug(title or '')}_{fmt}_{a.get('genislik')}x{a.get('yukseklik')}_{a['varyant']}_v{a['surum']}.png"
+    return f"{_slug(title or '')}_{a.get('format') or 'metin'}_{a.get('metinTuru') or 'metin'}_{a['varyant']}_v{a['surum']}.txt"
 
 
 def _asset_view(a: dict[str, Any], title: Optional[str] = None) -> dict[str, Any]:
@@ -848,7 +844,7 @@ def _asset_view(a: dict[str, Any], title: Optional[str] = None) -> dict[str, Any
          "format": a["format"], "formatAdi": FORMATS.get(a["format"] or "", a["format"]) if a["tur"] == "gorsel"
          else CHANNELS.get(a["format"] or "", a["format"]), "metinTuru": a["metin_turu"],
          "metinTuruAdi": TEXT_KINDS.get(a["metin_turu"] or "", a["metin_turu"]), "varyant": a["varyant"],
-         "metin": a["metin"], "kaynak": a["kaynak"], "taslakLisans": bool(a["taslak_lisans"]),
+         "metin": a["metin"], "kaynak": a["kaynak"],
          "dogrulama": _loads(a["dogrulama_json"], None), "ayar": _loads(a["ayar_json"], None),
          "genislik": a["genislik"], "yukseklik": a["yukseklik"], "sha256": a["sha256"], "surum": a["surum"],
          "oncekiId": a["onceki_id"], "guncel": bool(a["guncel"]), "studioRef": a["studio_ref"],
@@ -857,14 +853,14 @@ def _asset_view(a: dict[str, Any], title: Optional[str] = None) -> dict[str, Any
          "red": {"by": a["red_eden"], "at": _iso(a["red_zaman"]), "not": a["red_notu"]} if a["red_zaman"] else None,
          "etiketler": _loads(a["etiketler"], []), "kullanildi": _loads(a["kullanildi_json"], []),
          "olusturan": a["olusturan"], "olusturma": _iso(a["olusturma"]), "onayli": approved,
-         "yayinaHazir": approved and not a["taslak_lisans"]}
+         "yayinaHazir": approved}
     v["dosyaAdi"] = file_name(v, title)
     return v
 
 
 def add_asset(engine, tenant: str, user: str, rid: str, *, tur: str, varyant: str, kaynak: str,
               fmt: Optional[str] = None, metin_turu: Optional[str] = None, metin: Optional[str] = None,
-              dosya: Optional[bytes] = None, studio_ref: Optional[str] = None, taslak: bool = False,
+              dosya: Optional[bytes] = None, studio_ref: Optional[str] = None,
               dogrulama: Optional[dict] = None, ayar: Optional[dict] = None, size: Optional[tuple[int, int]] = None,
               onceki: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """Yeni varlık (ya da `onceki`nin yeni sürümü). Görsel dosyası `assets_dir()/<id>.png` olarak saklanır."""
@@ -890,7 +886,7 @@ def add_asset(engine, tenant: str, user: str, rid: str, *, tur: str, varyant: st
         c.execute(ASSETS.insert().values(
             id=aid, tenant_id=tenant, request_id=rid, stok_kodu=req["stok_kodu"], tur=tur, kanal=req["kanal"],
             format=fmt, metin_turu=metin_turu, varyant=varyant, dosya_yolu=str(path) if path else None,
-            studio_ref=studio_ref, metin=metin, kaynak=kaynak, taslak_lisans=bool(taslak),
+            studio_ref=studio_ref, metin=metin, kaynak=kaynak, taslak_lisans=False,
             dogrulama_json=_dumps(dogrulama) if dogrulama is not None else None,
             ayar_json=_dumps(ayar) if ayar is not None else None, genislik=size[0] if size else None,
             yukseklik=size[1] if size else None, sha256=sha, surum=(onceki["surum"] + 1) if onceki else 1,
@@ -1160,17 +1156,14 @@ def build_zip(title: str, rows: list[dict[str, Any]]) -> bytes:
                 z.write(p, name)
             else:
                 z.writestr(name, (r["metin"] or "") + "\n")
-        if any(r["taslak_lisans"] for r in rows):
-            z.writestr("OKUYUN.txt", "TASLAK- ile başlayan görsellerde Zeki AI ile çizilmiş resim var; ticari kullanım "
-                                     "izni gelene kadar yayımlanmaz.\n")
     return buf.getvalue()
 
 
 def contract_assets(engine, tenant: str, *, stok: str = "", kanal: str = "", page: int = 0) -> dict[str, Any]:
-    """M21/M22/M24'ün okuduğu sözleşme: onaylı ve yayına hazır varlıklar (taslak lisanslılar ayrı işaretli)."""
+    """M21/M22/M24'ün okuduğu sözleşme: onaylı ve yayına hazır varlıklar."""
     out = archive(engine, tenant, stok=stok, kanal=kanal, durum="onayli", page=page)
     keep = ("id", "requestId", "stokKodu", "kitapAdi", "tur", "kanal", "format", "metinTuru", "varyant", "metin",
-            "genislik", "yukseklik", "surum", "taslakLisans", "yayinaHazir", "dosyaAdi", "mesajOnay", "etiketler")
+            "genislik", "yukseklik", "surum", "yayinaHazir", "dosyaAdi", "mesajOnay", "etiketler")
     return {**out, "items": [{k: v.get(k) for k in keep} for v in out["items"]]}
 
 

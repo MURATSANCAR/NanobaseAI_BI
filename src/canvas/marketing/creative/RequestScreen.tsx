@@ -12,7 +12,7 @@ import { STATE_TONE, creativeApi, fmtDay, type Asset } from './api';
 import BriefPanel from './BriefPanel';
 import VisualPanel from './VisualPanel';
 import TextPanel from './TextPanel';
-import { ApprovalLine, Checks, DraftBadge } from './parts';
+import { ApprovalLine, Checks } from './parts';
 import { invalidateCreative, useCreativeMeta } from './useMeta';
 
 /** Talep ekranı: solda brief ve kaynaklar, ortada görsel varyantlar (biçim × varyant), sağda metin varyantları.
@@ -35,7 +35,6 @@ function Versions({ a, onClose }: { a: Asset | null; onClose: () => void }) {
               : <p className="whitespace-pre-line text-[12.5px] leading-snug">{x.metin}</p>}
             {x.tur === 'metin' && <Checks c={x.dogrulama} />}
             <ApprovalLine a={x} />
-            {x.taslakLisans && <DraftBadge />}
           </li>
         ))}
       </ul>
@@ -62,7 +61,6 @@ export default function RequestScreen() {
     onError: (e) => toast.error(errText(e, 'Değiştirilemedi.') ?? ''),
   });
   const approved = r?.varliklar.filter((a) => a.onayli).length ?? 0;
-  const drafts = r?.varliklar.filter((a) => a.onayli && a.taslakLisans).length ?? 0;
 
   const aside = r ? (
     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -99,9 +97,6 @@ export default function RequestScreen() {
       {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Talep okunamadı.')}</Note>}
-      {drafts > 0 && (
-        <Note tone="warn">{drafts} onaylı görselde Zeki AI ile çizilmiş resim var: ticari kullanım izni gelene kadar yayına hazır sayılmaz, dosya adı TASLAK- ile iner.</Note>
-      )}
       {r && (
         <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,420px)] xl:items-start lg:gap-4">
           <BriefPanel r={r} meta={meta.data} />

@@ -1,6 +1,6 @@
 <template>
   <SettingsLayoutBase
-    :description="__('Configure your Twilio settings for NanobaseAI.')"
+    :description="__('Configure your Twilio settings for ZEKİ AI.')"
     :back-label="__('Twilio')"
     :on-back="goBack"
     :dirty="isDirty.twilio"

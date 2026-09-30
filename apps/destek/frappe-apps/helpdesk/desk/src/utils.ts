@@ -868,24 +868,24 @@ export function shortDuration(target: string | Date): string {
   const seconds = Math.abs(dayjs(target).diff(dayjs(), "second"));
   if (seconds >= YEAR) {
     const years = Math.floor(seconds / YEAR);
-    return `${years} ${years === 1 ? "year" : "years"}`;
+    return `${years} yıl`;
   }
   if (seconds >= MONTH) {
     const months = Math.floor(seconds / MONTH);
-    return `${months} ${months === 1 ? "month" : "months"}`;
+    return `${months} ay`;
   }
   if (seconds >= DAY) {
     const days = Math.floor(seconds / DAY);
     const hours = Math.floor((seconds % DAY) / HOUR);
-    const dayLabel = `${days} ${days === 1 ? "day" : "days"}`;
-    return hours ? `${dayLabel} ${hours}h` : dayLabel;
+    const dayLabel = `${days} gün`;
+    return hours ? `${dayLabel} ${hours} sa` : dayLabel;
   }
   if (seconds >= HOUR) {
     const hours = Math.floor(seconds / HOUR);
     const minutes = Math.floor((seconds % HOUR) / MINUTE);
-    return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
+    return minutes ? `${hours} sa ${minutes} dk` : `${hours} sa`;
   }
-  return `${Math.floor(seconds / MINUTE)}m`;
+  return `${Math.floor(seconds / MINUTE)} dk`;
 }
 
 export function buildPercentageChange(

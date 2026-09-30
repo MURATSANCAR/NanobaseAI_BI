@@ -5,7 +5,7 @@ limit_req_zone $binary_remote_addr zone=timas_login:10m rate=20r/m;
 limit_req_zone $binary_remote_addr zone=timas_ask:10m rate=6r/m;
 limit_req_zone $binary_remote_addr zone=timas_api:10m rate=120r/m;
 limit_req_zone $binary_remote_addr zone=timas_studio_img:10m rate=600r/m;
-# NanobaseAI Destek (8446): şifre alan giriş uçları, IP başına dakikada 10 (test sunucusundaki vhost'la aynı).
+# ZEKİ AI Destek (8446): şifre alan giriş uçları, IP başına dakikada 10 (test sunucusundaki vhost'la aynı).
 limit_req_zone $binary_remote_addr zone=destek_login:10m rate=10r/m;
 
 server {
@@ -201,6 +201,51 @@ server {
         client_max_body_size 201M;
     }
 
+    # Stüdyo sesli okuma yüklemeleri: ses kütüphanesine kayıt («Ses yükle») ve kitabın insan kaydı (tam kitap
+    # tek dosya olabilir). Köprü 250 MB'a kadar kabul eder (test sunucusu: deploy/nanobase-direct/add-studio-voice-size.py);
+    # genel API gövde sınırı 10 MB.
+    location ~ "^/timas/api/v1/editorial/studio/(voices|jobs/[0-9a-f]{20}/narration/recordings)$" {
+        if ($request_method !~ ^(GET|POST)$) { return 405; }
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        limit_req zone=timas_api burst=30 nodelay;
+        limit_req_status 429;
+        rewrite ^/timas/api/(.*)$ /api/$1 break;
+        proxy_pass http://bridge:8795;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_request_buffering off;
+        proxy_read_timeout 900s;
+        proxy_send_timeout 900s;
+        client_max_body_size 251M;
+    }
+
+    # Editoryal kitap/belge yüklemesi (ZEKI-26): redaksiyon eser metni ve son okuma provası, son okuma «Belge yükle
+    # ve incelet», çeviri kaynak metni. Kitap PDF'i yüzlerce MB olabilir; genel API gövde sınırı (10 MB) bu uçlarda
+    # 413 veriyordu. Boyut tavanı yok (0): köprü gövdeyi diske akıtır, yalnız disk dolacaksa reddeder. Gövde nginx'te
+    # tamponlanmaz; büyük PDF'in bölümlenmesi dakikalar sürebilir. Aynı yollardaki GET'ler (prova durumu, belge
+    # listesi, kaynak indirme) de buradan geçer; yöntem denetimi köprüdedir.
+    location ~ "^/timas/api/v1/editorial/(works-from-file|works/[0-9a-f]{32}/(manuscript|proof)|documents|translation/jobs-from-file|translation/jobs/[0-9a-f]{32}/source)$" {
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        limit_req zone=timas_api burst=30 nodelay;
+        limit_req_status 429;
+        rewrite ^/timas/api/(.*)$ /api/$1 break;
+        proxy_pass http://bridge:8795;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_request_buffering off;
+        proxy_read_timeout 1800s;
+        proxy_send_timeout 1800s;
+        client_max_body_size 0;
+    }
+
     # M19 Pazarlama görsel ve metin: varlık önizlemeleri ve dosyaları (talep ekranı ve arşiv bir açılışta onlarca görsel ister).
     location ~ "^/timas/api/v1/marketing/creative/(assets/[0-9a-f]{32}/file|requests/MC-[0-9]{4}-[0-9]{4,}/cover|brand/files/[0-9a-f]{32})$" {
         if ($request_method != GET) { return 405; }
@@ -280,7 +325,7 @@ server {
 }
 
 # ---------------------------------------------------------------------------------------------------------------
-# NanobaseAI Destek (apps/destek) — müşteri VM'inde ön kapı :8446 (HTTP, iç ağ). Destek kapsayıcısı bi_net'e
+# ZEKİ AI Destek (apps/destek) — müşteri VM'inde ön kapı :8446 (HTTP, iç ağ). Destek kapsayıcısı bi_net'e
 # `destek-frontend` adıyla bağlanır (apps/destek/docker/compose.bi-net.yaml). Ad istek anında çözülür: Destek kurulu
 # değilse yalnız bu port 502 verir, BI etkilenmez. Test sunucusunda bu işi nginx vhost'u yapar
 # (apps/destek/deploy/nginx-destek-8446.conf); iki yer aynı kuralları taşır.

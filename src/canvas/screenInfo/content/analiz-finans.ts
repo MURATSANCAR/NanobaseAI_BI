@@ -10,6 +10,7 @@ const CONTENT: ScreenInfoMap = {
       "Rehber, CRM'deki etkin kullanıcılardan gelir; ad, birim ya da dahiliyle anında aranır.",
       "«Bugün» özeti uyarılarınızı, onay kuyruklarınızı ve ajandanızı yetkinize göre toplar; Zeki AI bunu üç cümleyle özetler.",
       "Ajanda kartı yalnız sorumlusu olduğunuz etkinlik ve görevleri gösterir; «Matbaadan yeni çıkanlar» yalnız son günlerde basılan kitap varsa görünür.",
+      "İK kartları herkese aynıdır: duyurular, doğum günleri ve iş yıldönümleri (yaş yok), aramıza katılanlar, bugün izinde olanlar (izin türü yok); «Bugün» özetindeki İK maddeleri ise yalnız sizin kaydınızdan, yöneticiyseniz yalnız ekibinizden gelir.",
     ],
     data: "CRM kullanıcı kayıtları ve kişi profilleri, portalın kendi modülleri (ajanda, oda, eğitim, üretim), Logo satış verisi",
     refresh: "Sayfa açıldığında okunur; toplantı odalarının durumu 30 saniyede bir tazelenir.",
@@ -31,7 +32,7 @@ const CONTENT: ScreenInfoMap = {
       "Dönem verinin bittiği tarihten sonraysa Zeki AI soruyu verinin son dönemine göre cevaplar ve bunu belirtir.",
     ],
     data: "Logo satış ve iade faturaları (yıl bazında), Zeki AI'ın onaylı ölçü tanımları",
-    refresh: "Göstergeler 3 dakikada bir yeniden hesaplanır ve ekran kendiliğinden tazelenir.",
+    refresh: "Özet sunucuda 3 dakikada bir hazırlanır; açık ekran her gün 07:00 ve 12:00'de kendiliğinden tazelenir, «Verileri yenile» ile istediğiniz an güncellenir.",
     jobs: [
       { name: "Gösterge özeti", when: "3 dakikada bir", what: "Yılın satış göstergelerini Logo'dan okuyup ekran için hazırlar." },
     ],
@@ -116,7 +117,7 @@ const CONTENT: ScreenInfoMap = {
       "Aylık özeti Zeki AI taslak olarak yazar; her madde bir kaynağa bağlıdır ve sayısı kaynakla tutmayan madde kabul edilmez.",
       "Özet, yazan ya da gönderen dışında bir yetkili onaylayınca kurula gider.",
     ],
-    data: "Logo faturalı satış satırları, CRM kitap ve rakip kitap kayıtları, yüklenen sektör raporlarının onaylı rakamları",
+    data: "Logo faturalı satış satırları, CRM kitap ve rakip kitap kayıtları, yüklenen sektör raporlarının onaylı rakamları; Başarı Dağıtım kataloğu görüntüleri (dağıtımcı nabzı)",
     refresh: "Kaynaklar her pazartesi 05:30'da yeniden okunur; ekranın üstündeki şerit rakip verisinin yaşını gösterir.",
     jobs: [
       { name: "Haftalık kaynak okuma", when: "Her pazartesi 05:30", what: "CRM ve Logo'yu okur, yeni rakip kategorileri için eşleme önerir, veri eskiyse e-postayla haber verir." },

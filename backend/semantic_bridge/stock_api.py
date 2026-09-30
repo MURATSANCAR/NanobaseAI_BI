@@ -15,7 +15,10 @@ açık önerileri; `GET /pick-line` sipariş hazırlık hattını (M44 lojistik 
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
+import threading
 import time
 from datetime import timedelta
 from typing import Any, Optional
@@ -46,7 +49,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
     can(user, key) · is_admin(user) · audit(engine, user, action, kind, id, title, detail) · conf(key, default) ·
     fresh() · logo_file() / crm_file() → bağlantı dosyası · llm(priority) → LLM kapısı ya da None ·
     engine() / tenant() → zamanlayıcı ucunun veritabanı ve kiracısı · m12() → M12 servisi (isteğe bağlı) ·
-    costs() → M9 birim maliyet sağlayıcısı (isteğe bağlı)."""
+    costs() → M9 birim maliyet sağlayıcısı (isteğe bağlı) · system_ready() → çalışma ortamı kuruldu mu (isteğe bağlı;
+    varsa köprü açılışında model tablodaki son okumadan arkada hazırlanır)."""
     from semantic_bridge import budget_sources as bsrc
     from semantic_bridge.budget_api import _send_mail
 
@@ -72,6 +76,29 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
     svc = S.Service(lambda: bsrc.runner(deps["logo_file"]()), lambda: bsrc.runner(deps["crm_file"]()),
                     lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo", settings, m12_cards, bsrc.read_forecast,
                     m12_ready=m12_ready)
+
+    # Köprü açılışı: tablodaki son okumadan model arkada (ilk açan kişi modeli beklemesin). Çalışma ortamı kurulmadan
+    # dokunulmaz; okuma yoksa kaynağa gidilmez (ilk istek ya da gece turu okur). Testte arka plan işi yok.
+    ready = deps.get("system_ready")
+    warm_on = os.environ.get("STOCK_WARM", "1").strip().lower() not in ("0", "false", "no", "off")
+    if ready and warm_on and "PYTEST_CURRENT_TEST" not in os.environ:
+        def _warm() -> None:
+            for _ in range(360):
+                if ready():
+                    break
+                time.sleep(5)
+            else:
+                return
+            try:
+                engine, tenant = deps["engine"](), deps["tenant"]()
+                store.ensure(engine)
+                t = time.monotonic()
+                if svc.warm(engine, tenant):
+                    log.info("stock: açılışta model hazır (%d ms)", int((time.monotonic() - t) * 1000))
+            except Exception as e:  # noqa: BLE001 — ilk istek kurar
+                log.warning("stock: açılışta model hazırlanamadı: %s", e)
+
+        threading.Thread(target=_warm, name="stock-warm", daemon=True).start()
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)
@@ -180,25 +207,36 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         return PV.bagla(ov, lambda: K.for_overview(engine, tenant, m, ov, kdeps(user)))
 
     @app.get(f"{P}/names")
-    def stock_names(request: Request) -> dict[str, Any]:
-        """Kitap arama kutusu: bütün kitaplar (tavan yok; kutu sanal liste çizer)."""
+    def stock_names(request: Request) -> Response:
+        """Kitap arama kutusu: bütün kitaplar (tavan yok; kutu sanal liste çizer). Liste ve JSON gövdesi model başına bir
+        kez hazırlanır (bütün kitapların sıralanması ve yazılması her istekte tekrarlanmaz)."""
         engine, tenant, _, _ = ctx(request)
         m = model(engine, tenant)
-        return {"items": [{"value": i["stokKodu"], "label": f"{i['ad'] or i['stokKodu']} · {i['stokKodu']}"}
-                          for i in sorted(m["items"], key=lambda i: S.fold(i["ad"] or i["stokKodu"]))]}
+
+        def body() -> bytes:
+            items = [{"value": i["stokKodu"], "label": f"{i['ad'] or i['stokKodu']} · {i['stokKodu']}"}
+                     for i in sorted(m["items"], key=lambda i: S.fold(i["ad"] or i["stokKodu"]))]
+            return json.dumps({"items": items}, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        return Response(svc.memo(m, "names", body), media_type="application/json")
 
     @app.get(f"{P}/items")
     def stock_items(request: Request, q: str = "", yayinevi: str = "", depo: str = "", durum: str = "", sira: str = "gun",
-                    sayfa: int = 0) -> dict[str, Any]:
+                    sayfa: int = 0, dagitim: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         m = model(engine, tenant)
-        rows = call(S.filter_items, m, q=q[:200], yayinevi=yayinevi[:200], depo=depo[:10], durum=durum[:80],
-                    sira=sira if sira in S.LIST_SORTS else "gun")
+        args = {"q": q[:200], "yayinevi": yayinevi[:200], "depo": depo[:10], "durum": durum[:80],
+                "sira": sira if sira in S.LIST_SORTS else "gun", "dagitim": dagitim[:20]}
+        # Süzgeç sonucu model başına bir kez (liste değiştirilmez; sayfa yeni liste); arama metni de model başına.
+        folded = svc.memo(m, "arama", lambda: {i["stokKodu"]: S.search_text(i) for i in m["items"]}) if args["q"] else None
+        rows = call(svc.memo, m, ("items",) + tuple(sorted(args.items())),
+                    lambda: S.filter_items(m, folded=folded, **args))
         pg = S.page_of(rows, sayfa)
         pg["items"], _ = with_cost(user, pg["items"])
-        pg["yayinevleri"] = sorted({i["yayinevi"] for i in m["items"] if i["yayinevi"]}, key=S.fold)
+        pg["yayinevleri"] = list(svc.memo(m, "yayinevleri",
+                                          lambda: sorted({i["yayinevi"] for i in m["items"] if i["yayinevi"]}, key=S.fold)))
         pg["ambarlar"] = m["warehouses"]
         pg["veriSonu"] = m["dataEnd"]
+        pg["dagitim"] = m.get("dagitim")      # işaret sayaçları, pencere, son görüntü tarihleri (M39 dağıtımcı)
         return PV.bagla(pg, lambda: K.for_items(engine, tenant, m, pg, kdeps(user)))
 
     @app.get(f"{P}/items/{{stok_kodu}}")
@@ -222,7 +260,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
                 "oneriler": store.list_suggestions(engine, tenant, stok=k, durum="")["items"],
                 "gecmis": store.snapshots(engine, tenant, k), "veriSonu": m["dataEnd"], "baskiSuresi": m["lead"],
                 "baskiSuresiKaynak": m["leadSource"], "hareketPenceresi": m.get("movementWindow"),
-                "tahminBaslangic": m.get("forecastStart")}
+                "tahminBaslangic": m.get("forecastStart"), "dagitimOzet": m.get("dagitim")}
         return PV.bagla(out, lambda: K.for_item(engine, tenant, m, out, kdeps(user)))
 
     @app.post(f"{P}/items/{{stok_kodu}}/notes", status_code=201)
@@ -251,7 +289,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             rows = [i for i in rows if not i["uretim"]]
         pg = S.page_of(rows, sayfa)
         pg["items"], _ = with_cost(user, pg["items"])
-        out = {**pg, "gun": days, "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"],
+        out = {**pg, "dagitim": m.get("dagitim"), "gun": days, "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"],
                "guvenlikGun": m["settings"]["safetyDays"], "veriSonu": m["dataEnd"]}
         return PV.bagla(out, lambda: K.for_running_out(engine, tenant, m, out, kdeps(user)))
 
@@ -268,7 +306,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         for i in pg["items"]:
             o = sug.get(i["stokKodu"])
             i["oneri"] = {"id": o["id"], "hedef": o["hedef"], "hedefEtiket": o["hedefEtiket"], "gerekce": o["gerekce"]} if o else None
-        out = {**pg, "toplamAdet": sum(i["bakiye"] for i in rows), "deger": value, "fazlaGun": m["settings"]["excessDays"],
+        out = {**pg, "dagitim": m.get("dagitim"), "toplamAdet": sum(i["bakiye"] for i in rows), "deger": value,
+               "fazlaGun": m["settings"]["excessDays"],
                "hareketPenceresi": m.get("movementWindow"), "veriSonu": m["dataEnd"]}
         return PV.bagla(out, lambda: K.for_excess(engine, tenant, m, out, kdeps(user)))
 
@@ -535,7 +574,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         out["sureSn"] = int(time.monotonic() - started)
         store.meta_set(engine, tenant, "son-kosu", {**out, "bitis": store.iso(store.now())})
         store.meta_set(engine, tenant, "bulten", {"metin": text, "kaynak": how, "veriSonu": m["dataEnd"]})
-        svc.invalidate()
+        # Model düşürülmez: bu tur modeli yeni okumayla zaten kurdu; fotoğraf, öneri ve mesaj sınıfı modelde değil (uçlar
+        # onları istekte portaldan okur). Eskiden düşürülüyordu ve sabah ilk açan kişi modelin kurulmasını bekliyordu.
         return out
 
     @app.get(f"{P}/bulletin")

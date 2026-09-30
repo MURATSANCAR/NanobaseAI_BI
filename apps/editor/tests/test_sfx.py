@@ -358,3 +358,102 @@ def test_rule_cue_when_model_misses_strong_sound(job):
     assert sfx._rule_cues(u, other, hints, 3) == []                   # aynı ses fiili sayfada zaten ipucu
     assert sfx.strong_hints([N.Unit("b2", "para", None, "anlatici-kadin", "Top yere düştü.",
                                     N.read("Top yere düştü."))]) == []
+
+
+# ------------------------------------------------------------------ 2026-09-29: sesi çıkaran ve üst üste binme
+def test_voice_person_from_voice_identity():
+    """Kişi sesin kimliğinden (ad, not, tarif) — kitaptan bağımsız; bilinmeyen ses bilgi vermez."""
+    got = {v: sfx.voice_person(v) for v in ("anlatici-kadin", "canli-erkek-radyo", "anlatici-erkek", "cocuk-kiz",
+                                             "cocuk-erkek", "yasli-kadin", "masal-erkek-dede", "masal-kadin-anne")}
+    assert got == {"anlatici-kadin": "kadın", "canli-erkek-radyo": "erkek", "anlatici-erkek": "erkek",
+                   "cocuk-kiz": "kız çocuğu", "cocuk-erkek": "erkek çocuğu", "yasli-kadin": "yaşlı kadın",
+                   "masal-erkek-dede": "yaşlı erkek", "masal-kadin-anne": "kadın"}
+    assert sfx.voice_person("yok-boyle-ses") is None and sfx.voice_person(None) is None
+
+
+def test_pick_prompt_carries_who_makes_the_human_sound(pool):
+    """Kadın anlatıcının okuduğu yerde iç çekiş, kız karakterin balonundaki «Tüh!»: seçim istemi sesi çıkaranın
+    cinsiyetini/yaşını taşır, insan sesinde tutması gerektiğini söyler; istem sürümü artar."""
+    t, b = "Kız derin bir iç çekti.", "Tüh!"
+    units = [N.Unit("b1", "para", None, "anlatici-kadin", t, N.read(t)),
+             N.Unit("k1", "bubble", "Elif", "cocuk-kiz", b, N.read(b)),
+             N.Unit("k2", "bubble", "Can", "canli-erkek-radyo", b, N.read(b))]
+    cands = [{"id": "x1", "title": "male sigh", "source": "kenney", "dur": 1.0},
+             {"id": "x2", "title": "female sigh", "source": "kenney", "dur": 1.0}]
+    # anlatımda okuyan anlatıcı sesi çıkaran değildir: kişi satırı yok (kişiyi metin söyler)
+    assert sfx.block_speaker(units, "b1") is None
+    nar = sfx.pick_prompt({"quote": "iç çekti", "query": "iç çekiş"}, cands, sfx.block_speaker(units, "b1"))
+    assert "Sesi çıkaran" not in nar
+    assert "adayın cinsiyeti ve yaşı sesi çıkaranla tutmalı" in nar and "A) male sigh" in nar
+    bub = sfx.pick_prompt({"quote": "Tüh", "query": "hayal kırıklığı iç çekişi"}, cands, sfx.block_speaker(units, "k1"))
+    assert "Sesi çıkaran: kız çocuğu («Elif» konuşuyor)." in bub
+    assert "Sesi çıkaran: erkek («Can» konuşuyor)." in sfx.pick_prompt({"quote": "Tüh"}, cands,
+                                                                        sfx.block_speaker(units, "k2"))
+    assert "Sesi çıkaran" not in sfx.pick_prompt({"quote": "Tüh"}, cands, None)   # bilinmiyorsa satır yok
+    # ipucu okumasında da her bloğun okuyan sesi görünür (tarif cinsiyet/yaşla yazılsın)
+    prompt, _ = sfx._page_prompt(units)
+    assert "[b1] Kız derin" in prompt and "[k1] (Elif · konuşan ses: kız çocuğu) Tüh!" in prompt
+
+    class Llm:
+        def __init__(self):
+            self.msgs, self.refs = [], []
+
+        async def choose(self, alias, messages, choices, *, prompt=None, **kw):
+            self.msgs.append(messages[0]["content"])
+            self.refs.append((prompt.name, prompt.version) if prompt else None)
+            return {"B": 0.9, "A": 0.05, "X": 0.05}, 0
+
+    llm = Llm()
+    ranked, fit = asyncio.run(sfx.rerank(llm, {"quote": "Tüh"}, cands, sfx.block_speaker(units, "k1")))
+    assert [r["id"] for r in ranked] == ["x2", "x1"] and fit == 0.95
+    assert "Sesi çıkaran: kız çocuğu" in llm.msgs[0] and llm.refs[0] == ("sfx.pick", "5")
+
+
+def test_suggest_page_gives_no_person_for_narration_text(job, pool, monkeypatch):
+    """Anlatım metnindeki ipucunda okuyan anlatıcı sesi çıkaran sayılmaz (kişiyi metin söyler): seçime kişi gitmez."""
+    async def fake_read(llm, units, pid, t):
+        return [{"blok": "b1", "alinti": "vak vak", "tur": "yansima", "kategori": "ordek", "tarif": "ördek vaklıyor",
+                 "tarif_en": "duck quacking", "yer": "birlikte"}]
+    monkeypatch.setattr(sfx, "_read_page", fake_read)
+
+    async def no_translate(text):
+        return None
+    monkeypatch.setattr(sfx, "translate", no_translate)
+    seen = []
+
+    async def fake_rerank(llm, cue, cands, who=None):
+        seen.append(who)
+        return cands, 0.9
+    monkeypatch.setattr(sfx, "rerank", fake_rerank)
+    asyncio.run(sfx.suggest_page(job, "p_1", "editör", llm=object()))
+    assert seen and all(w is None for w in seen)
+
+
+def test_back_to_back_effects_do_not_overlap(pool):
+    """«pat» için uzun düşme sesi 3 sn sonraki «güm»ün başında biter; aynı anda sayılacak kadar yakın iki efektte
+    öncekinin en kısa hali FX_MIN_SEC (sesin kendisi daha kısaysa kendi süresi); sonuncusu kısalmaz."""
+    words = [{"i": i, "start": s, "end": s + 0.3} for i, s in enumerate((0.0, 3.0, 3.2, 8.0))]
+    nrec = {"blocks": [{"id": "b1", "words": words}]}
+
+    def cue(cid, sid, w, place="birlikte"):
+        return {"id": cid, "chosen": pool[sid], "block": "b1", "words": [w, w], "place": place, "gain_db": 0.0,
+                "quote": cid}
+    # sıra karışık verilir: yerleşim başlangıca göre sıralanır
+    pl = sfx.plan_placements(nrec, [cue("ordek2", "ordek", 3), cue("gum", "kapi", 1), cue("ordek1", "ordek", 2),
+                                    cue("pat", "ruzgar", 0)])
+    got = [(p["quote"], p["start"], p["length"], bool(p.get("trimmed"))) for p in pl]
+    assert got == [("pat", 0.0, 3.0, True),                             # 4 sn (FX_MAX_SEC) → 3 sn
+                   ("gum", 3.0, sfx.FX_MIN_SEC, True),                  # 0,2 sn sonra yenisi: en az FX_MIN_SEC
+                   ("ordek1", 3.2, 1.2, False),                         # sonraki 4,8 sn uzakta: kendi süresi
+                   ("ordek2", 8.0, 1.2, False)]
+    for a, b in zip(pl, pl[1:]):
+        assert a["start"] + a["length"] <= b["start"] or a["length"] == sfx.FX_MIN_SEC
+    assert sfx.MIX_VERSION >= 3                                         # eski karışımlar yeniden yapılır
+
+
+def test_stretched_word_is_a_sound_only_as_a_standalone_exclamation():
+    t = "Aslan çoook korkmuştu. Güüüümmmm! O günleriiii hatırladı."
+    u = [N.Unit("b1", "para", None, "anlatici-kadin", t, N.read(t))]
+    assert sfx.strong_hints(u) == ["Güüüümmmm"]
+    assert "çoook" not in sfx.sound_hints(u) and "günleriiii" not in sfx.sound_hints(u)
+    assert "Güüüümmmm" in sfx.sound_hints(u)

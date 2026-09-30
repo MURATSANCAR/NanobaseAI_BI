@@ -8,4 +8,4 @@ EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # Mantık köprüde (/api/v1/tenders/run-due); bu birim yalnız çağırır. Hatırlatma tek özet e-postayla iç ekibe
 # (TENDER_ALERT_RECIPIENTS) gider, kuruma gönderim yok. İlan içe alma yalnız TENDER_WATCH_ENABLED=1 ile (ikinci sürüm).
 # İlk kez elle koşturulur: systemctl start timas-tenders.service (bellek: run-it-before-it-runs-itself).
-ExecStart=/bin/sh -c 'curl -fsS -m 1790 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/tenders/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 1790 -X POST "http://127.0.0.1:8795/api/v1/tenders/run-due"

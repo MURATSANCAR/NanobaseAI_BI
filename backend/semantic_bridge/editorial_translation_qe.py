@@ -74,7 +74,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         with engine.begin() as conn:
             conn.execute(sa.update(RUNS).where(RUNS.c.state == "calisiyor").values(
                 state="hata", note="Servis yeniden başladı; kalan segmentler için tahmini yeniden başlatın."))

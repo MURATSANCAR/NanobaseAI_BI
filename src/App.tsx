@@ -92,6 +92,7 @@ const ShippingErrors = lazy(() => import('@/canvas/shipping/Errors'));
 const ShippingWaiting = lazy(() => import('@/canvas/shipping/Waiting'));
 const ShippingCarriers = lazy(() => import('@/canvas/shipping/Carriers'));
 const ShippingReconcile = lazy(() => import('@/canvas/shipping/Reconcile'));
+const ShippingCost = lazy(() => import('@/canvas/shipping/Cost'));
 const SupplyHome = lazy(() => import('@/canvas/supply/SupplyHome'));
 const SupplyLoad = lazy(() => import('@/canvas/supply/Load'));
 const SupplyPaper = lazy(() => import('@/canvas/supply/Paper'));
@@ -126,6 +127,17 @@ const CandidateDrawer = lazy(() => import('@/canvas/hr/recruit/CandidateDrawer')
 const PositionEditor = lazy(() => import('@/canvas/hr/recruit/PositionEditor'));
 const HrTemplatesScreen = lazy(() => import('@/canvas/hr/recruit/TemplatesScreen'));
 const HrRecordsScreen = lazy(() => import('@/canvas/hr/records/HrRecordsScreen'));
+const HrHome = lazy(() => import('@/canvas/hr/portal/HrHome'));
+const HrProfile = lazy(() => import('@/canvas/hr/portal/Profile'));
+const HrDirectory = lazy(() => import('@/canvas/hr/portal/Directory'));
+const HrPosts = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.PostsPage })));
+const HrBirthdays = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.BirthdaysPage })));
+const HrMenu = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.MenuPage })));
+const HrDocs = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.DocsPage })));
+const HrFaq = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.FaqPage })));
+const HrAdmin = lazy(() => import('@/canvas/hr/portal/admin/HrAdmin'));
+const HrMyLeave = lazy(() => import('@/canvas/hr/leave/MyLeave'));
+const HrTeamLeave = lazy(() => import('@/canvas/hr/leave/TeamLeave'));
 const MyLearning = lazy(() => import('@/canvas/hr/learning/MyLearning'));
 const LearningDashboard = lazy(() => import('@/canvas/hr/learning/LearningDashboard'));
 const LearningCourses = lazy(() => import('@/canvas/hr/learning/CoursesScreen'));
@@ -229,6 +241,7 @@ const SeoKeymap = lazy(() => import('@/canvas/seo-geo/SeoKeymap'));
 const SeoQuestionSuggest = lazy(() => import('@/canvas/seo-geo/SeoQuestionSuggest'));
 const SeoYoutube = lazy(() => import('@/canvas/seo-geo/SeoYoutube'));
 const SeoShopping = lazy(() => import('@/canvas/seo-geo/SeoShopping'));
+const SeoSearchToSales = lazy(() => import('@/canvas/seo-geo/SeoSearchToSales'));
 const SeoMonthly = lazy(() => import('@/canvas/seo-geo/SeoMonthly'));
 const SeoWatch = lazy(() => import('@/canvas/seo-geo/SeoWatch'));
 const SeoSources = lazy(() => import('@/canvas/seo-geo/SeoSources'));
@@ -253,12 +266,16 @@ const TrendyolQuestions = lazy(() => import('@/canvas/channels/trendyol/Question
 const TrendyolShowcase = lazy(() => import('@/canvas/channels/trendyol/Showcase'));
 const TrendyolWeekly = lazy(() => import('@/canvas/channels/trendyol/Weekly'));
 const TrendyolImports = lazy(() => import('@/canvas/channels/trendyol/Imports'));
+const TrendyolModel = lazy(() => import('@/canvas/channels/trendyol/Model'));
+const TrendyolReconcile = lazy(() => import('@/canvas/channels/trendyol/Reconcile'));
 const AmazonHome = lazy(() => import('@/canvas/channels/amazon/AmazonHome'));
 const AmazonConsignment = lazy(() => import('@/canvas/channels/amazon/Consignment'));
 const AmazonInternational = lazy(() => import('@/canvas/channels/amazon/International'));
 const AmazonRights = lazy(() => import('@/canvas/channels/amazon/Rights'));
 const AmazonDrafts = lazy(() => import('@/canvas/channels/amazon/Drafts'));
 const AmazonMarketCards = lazy(() => import('@/canvas/channels/amazon/MarketCards'));
+const AmazonModel = lazy(() => import('@/canvas/channels/amazon/Model'));
+const AmazonReconcile = lazy(() => import('@/canvas/channels/amazon/Reconcile'));
 
 function RouteFallback() {
   return (
@@ -322,13 +339,14 @@ export default function App() {
             <Route path="sistem-durumu" element={<SystemStatusScreen />} />
             {/* M49 Veri güvenliği (Altyapı ve destek): giriş/erişim kaydı, uyarılar, hijyen, envanter, saklama (/api/v1/data-security). */}
             <Route path="veri-guvenligi" element={<DataSecurityScreen />} />
-            {/* M44 Lojistik ve kargo: günlük hat, gönderi kartı, hatalar, teslim bekleyen, firma karnesi, mutabakat (/api/v1/shipping). */}
+            {/* M44 Lojistik ve kargo: günlük hat, gönderi kartı, hatalar, teslim bekleyen, firma karnesi, mutabakat, kargo maliyeti (/api/v1/shipping). */}
             <Route path="kargo" element={<ShippingHome />} />
             <Route path="kargo/gonderi/:id" element={<ShippingShipment />} />
             <Route path="kargo/hatalar" element={<ShippingErrors />} />
             <Route path="kargo/bekleyen" element={<ShippingWaiting />} />
             <Route path="kargo/firmalar" element={<ShippingCarriers />} />
             <Route path="kargo/mutabakat" element={<ShippingReconcile />} />
+            <Route path="kargo/maliyet" element={<ShippingCost />} />
             {/* M52 Tedarik ve baskı (Lojistik) */}
             <Route path="tedarik" element={<SupplyHome />} />
             <Route path="tedarik/yuk" element={<SupplyLoad />} />
@@ -365,6 +383,19 @@ export default function App() {
             <Route path="ik/pozisyonlar" element={<PositionEditor />} />
             <Route path="ik/belgeler" element={<HrTemplatesScreen />} />
             <Route path="ik/kayitlar" element={<HrRecordsScreen />} />
+            {/* İK personel portalı (/api/v1/hr/portal): İK ana sayfası, Profilim, rehber, duyuru, doğum günü, yemek, evrak, SSS, İK yönetimi. */}
+            <Route path="ik" element={<HrHome />} />
+            <Route path="ik/profilim" element={<HrProfile />} />
+            <Route path="ik/rehber" element={<HrDirectory />} />
+            <Route path="ik/duyurular" element={<HrPosts />} />
+            <Route path="ik/dogum-gunleri" element={<HrBirthdays />} />
+            <Route path="ik/yemek" element={<HrMenu />} />
+            <Route path="ik/evrak" element={<HrDocs />} />
+            <Route path="ik/sss" element={<HrFaq />} />
+            <Route path="ik/yonetim" element={<HrAdmin />} />
+            {/* M60 İzin yönetimi (/api/v1/hr/leave): İzinlerim, Ekibimin izinleri; İK sekmeleri İK yönetiminde. */}
+            <Route path="ik/izin" element={<HrMyLeave />} />
+            <Route path="ik/izin/ekip" element={<HrTeamLeave />} />
             {/* M43 Depo ve stok (Lojistik): stok, kitap stok kartı, bitecekler, fazla stok, güvenlik stoku, Logo–CRM farkı,
                 aktarım hataları, depo hattı (/api/v1/stock). */}
             <Route path="stok" element={<StockHome />} />
@@ -479,12 +510,16 @@ export default function App() {
             <Route path="trendyol/vitrin" element={<TrendyolShowcase />} />
             <Route path="trendyol/haftalik" element={<TrendyolWeekly />} />
             <Route path="trendyol/yukle" element={<TrendyolImports />} />
+            <Route path="trendyol/model" element={<TrendyolModel />} />
+            <Route path="trendyol/mutabakat" element={<TrendyolReconcile />} />
             <Route path="amazon" element={<AmazonHome />} />
             <Route path="amazon/konsinye" element={<AmazonConsignment />} />
             <Route path="amazon/yurtdisi" element={<AmazonInternational />} />
             <Route path="amazon/haklar" element={<AmazonRights />} />
             <Route path="amazon/pazarlar" element={<AmazonMarketCards />} />
             <Route path="amazon/taslaklar" element={<AmazonDrafts />} />
+            <Route path="amazon/model" element={<AmazonModel />} />
+            <Route path="amazon/mutabakat" element={<AmazonReconcile />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />
@@ -528,6 +563,7 @@ export default function App() {
             <Route path="seo-geo/soru-onerileri" element={<SeoQuestionSuggest />} />
             <Route path="seo-geo/youtube" element={<SeoYoutube />} />
             <Route path="seo-geo/alisveris" element={<SeoShopping />} />
+            <Route path="seo-geo/aramadan-satisa" element={<SeoSearchToSales />} />
             <Route path="seo-geo/aylik-rapor" element={<SeoMonthly />} />
             <Route path="seo-geo/izleme" element={<SeoWatch />} />
             <Route path="seo-geo/kaynaklar" element={<SeoSources />} />

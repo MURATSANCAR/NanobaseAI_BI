@@ -40,7 +40,9 @@ log = logging.getLogger("semantic.sorgu_yakala")
 _ACTIVE: ContextVar[tuple["Yakalanan", ...]] = ContextVar("sorgu_yakala_active", default=())
 _LISTENING: set[int] = set()
 _LOCK = threading.Lock()
-_READ = re.compile(r"^\s*(\(\s*)*(select|with)\b", re.I)
+#: Okuma: baştaki SQL açıklamaları (`-- …` satırı, `/* … */`) atlanır — `channels/sql/*.sql` şablonları açıklamayla
+#: başlar; önceden bu okumalar kayda hiç girmiyordu (2026-09-29).
+_READ = re.compile(r"^\s*(?:(?:--[^\n]*(?:\n|$)|/\*.*?\*/)\s*)*(\(\s*)*(select|with)\b", re.I | re.S)
 _TABLES = re.compile(r"\b(?:from|join)\s+(?:[\"`\[]?\w+[\"`\]]?\.)?[\"`\[]?(\w+)[\"`\]]?", re.I)
 _PYFORMAT = re.compile(r"%\((\w+)\)s|%%|%s")
 
@@ -164,6 +166,25 @@ def yakala(*engines: Any) -> Iterator[Yakalanan]:
         _ACTIVE.reset(token)
 
 
+@contextmanager
+def ayri(*engines: Any) -> Iterator[Yakalanan]:
+    """Bellekte saklanacak bir hesabın okumaları yalnız bu kayda yazılır, isteğin açık yakalamasına düşmez (hız 4. tur).
+    Saklanan sorgular her istekte `aktar` ile isteğin yakalamasına eklenir: sorgu bilgisi hesap bellekten gelse de
+    rakamı üreten okumayı gösterir, ilk istekte «2 kez çalıştı» yazmaz."""
+    token = _ACTIVE.set(())
+    try:
+        with yakala(*engines) as q:
+            yield q
+    finally:
+        _ACTIVE.reset(token)
+
+
+def aktar(queries: Iterable[dict[str, Any]]) -> None:
+    """Saklanmış okumaları (bkz. `ayri`) şu an açık yakalamalara ekler."""
+    for y in _ACTIVE.get():
+        y.extend(queries)
+
+
 def baslat(*engines: Any) -> tuple[Yakalanan, Any]:
     """`with` bloğuna sığmayan uzun işler (yenileme) için: yakalamayı başlatır; `bitir(token)` ile kapatılır."""
     for e in engines:
@@ -232,7 +253,8 @@ def ensure(engine: Any) -> None:
     with _LOCK:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(id(engine))
 
 

@@ -1,0 +1,23 @@
+[Unit]
+Description=Zeki AI explicit mention answers
+After=network-online.target docker.service nanobase-semantic-bridge.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=PYTHONPATH=/data/nanobaseai/bi/frontend/backend
+ExecStart=/data/nanobaseai/bi/semantic-venv/bin/python /opt/timas-login/mention-worker.py
+Restart=on-failure
+RestartSec=15
+StateDirectory=zeki-mention
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/zeki-mention
+
+[Install]
+WantedBy=multi-user.target

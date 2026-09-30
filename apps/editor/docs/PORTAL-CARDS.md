@@ -14,6 +14,11 @@ servis salt okumadır. `GET .../proofing` cevabında her bulguya `id` + geçerli
 katalog çıktısından gelir. Eski `book_card.summary` kullanılmaz; migration henüz yoksa alanlar eksik döner.
 PDF sayfası kapak diye sunulmaz. Kaynak dosyası yalnız Editor storage altında okunur.
 
+**Sohbet sayfa atıfı (2026-09-29, ZEKI-43):** köprü cevap bittiğinde her atıfın kitabını metinden çözer
+(atıftan önce en son anılan kitap, yoksa seçili kitap) ve `/v1/books/{id}/pages/{n}?w=48` ile o sayfanın o kitapta
+olup olmadığını denetler; sonuç soru kaydında (`citations`) durur. Kart servisinde değişiklik yoktur. Motor cevapta
+yalnız son metni döndürdüğü için «kanıt aramasından gelen sayfa» köprüde görülemez; denetim sayfanın varlığıdır.
+
 Test sunucusuna özel loopback tünel: `editor-cards-tunnel.service`, CPU :18889 → GPU :19141.
 SSH kullanıcısının izin verilen portlarına yalnız 18889 eklenir. Mevcut model tüneli değiştirilmez.
 Bağımsız `EDITOR_CARDS_KEY`, GPU `secrets/cards.env` içinde tutulur. Köprüde `EDITOR_CATALOG_BASE`

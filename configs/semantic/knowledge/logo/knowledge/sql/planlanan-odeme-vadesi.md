@@ -7,9 +7,10 @@ sql: SELECT AVG(CAST(DATEDIFF(day, i."DATE_", p."DATE_") AS float)) AS planlanan
 source: user
 tags:
 - source:enrich
-- is-teyidi-bekliyor:2026-09-16
+- karar:2026-09-29
 ---
 
 Planlanan ödeme vadesi: satış faturasının ödeme planı satırındaki vade tarihi (PAYTRANS.DATE_,
 MODULENR 4, SIGN 0) ile fatura tarihi arasındaki gün farkının ortalaması. Gerçekleşen tahsilat
-süresinden farklıdır: bu, anlaşılan vadedir; o, paranın gerçekten geldiği gündür.
+süresinden farklıdır: bu, anlaşılan vadedir; o, paranın gerçekten geldiği gündür. «Vade» anlaşılan süredir;
+DSO (bakiye ÷ satış × gün) paranın geldiği süreye yaklaşımdır — ikisi ayrı ölçüdür.
