@@ -307,7 +307,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
 
     @app.get(f"{P}/me/agenda")
     def events_agenda(request: Request) -> dict[str, Any]:
-        """Kampüs «Önemli günler ve ajanda»: yalnız kişinin kendi kayıtları (sayfa yetkisi gerekmez)."""
+        """Kampüs «Önemli günler ve ajanda»: kişinin kendi kayıtları + herkese aynı özel gün, resmî tatil ve doğum günleri
+        (`agenda_days`; sayfa yetkisi gerekmez)."""
         engine, tenant, user, _ = ctx(request)
         days = E.settings()["agendaDays"]
         t = E.today()
@@ -327,9 +328,13 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         from semantic_bridge import soru_kaynak as SK
         from semantic_bridge import sorgu_izi as IZ
 
+        from semantic_bridge import agenda_days as AD
+
         with IZ.izle(engine) as ran:
             out = call(E.agenda, engine, tenant, user, crm, t, days)
+            out.update(AD.important_days(engine, tenant, t, days))
         out["warnings"] = warnings
+        out["canSeasons"] = allowed(user, "sayfa:seo-takvim")
         out["canOpen"] = allowed(user, "sayfa:etkinlikler")
 
         def extra(k: PV.Kaynaklar) -> list[str]:
@@ -338,7 +343,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             except Exception:  # noqa: BLE001 — CRM şeması tanımlı değilse yalnız portal kayıtları
                 return []
         return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.kampus.ajanda", title="Ajanda",
-                                               text=KK.F_AJANDA, extra=extra, skip=("days",)))
+                                               text=KK.F_AJANDA, extra=extra, skip=("days", "importantDays", "birthdays")))
 
     @app.post(f"{P}/run-due")
     def events_run_due(request: Request) -> dict[str, Any]:

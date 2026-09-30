@@ -986,7 +986,13 @@ class Service:
         if snap is None:
             return {"items": [], "days": days, "ready": False, "asOf": None}
         cards, snap, _ = self._okumanin_kartlari(engine, tenant, snap, False, now)
-        return {"items": new_prints(cards, now, days), "days": days, "ready": True,
+        items = new_prints(cards, now, days)
+        from semantic_bridge import book_covers
+
+        covers = book_covers.by_stock_code(engine, tenant, (i["stockCode"] for i in items))
+        for i in items:
+            i["cover"] = covers.get(i["stockCode"] or "")
+        return {"items": items, "days": days, "ready": True,
                 "asOf": datetime.fromtimestamp(snap["at"], TZ).isoformat(timespec="seconds")}
 
 
@@ -1143,7 +1149,7 @@ def new_prints(cards: list[dict[str, Any]], now: date, days: int) -> list[dict[s
         if not day or day < since or day > now:
             continue
         out.append({"cardId": c.get("id"), "bookId": c.get("bookId"), "title": c.get("bookTitle") or c.get("name"),
-                    "printNo": c.get("printNo"), "firstPrint": bool(c.get("firstPrint")), "day": day.isoformat(),
+                    "stockCode": (c.get("stockCode") or "").strip() or None, "printNo": c.get("printNo"), "firstPrint": bool(c.get("firstPrint")), "day": day.isoformat(),
                     "depot": (act.get("depo") or {}).get("day")})
     out.sort(key=lambda x: _fold(x["title"]))
     out.sort(key=lambda x: x["day"], reverse=True)
@@ -1314,7 +1320,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
 
     @app.get(f"{P}/new-prints")
     def production_new_prints(request: Request) -> dict[str, Any]:
-        """Kampüs «Matbaadan yeni çıkanlar» (oturum yeter): kitap adı, baskı no ve gün; adet ve maliyet yok."""
+        """Kampüs «Matbaadan yeni çıkanlar» (oturum yeter): kitap adı, baskı no, gün ve kapak (T-soft, stok koduyla);
+        adet ve maliyet yok."""
         engine, tenant, _, _ = ctx(request)
         return call(svc.new_prints, engine, tenant)
 

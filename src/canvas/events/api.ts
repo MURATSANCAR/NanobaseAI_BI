@@ -217,6 +217,22 @@ export type AgendaItem = {
   status?: string;
 };
 
+/** Kampüs ajandasının herkese aynı kısmı (`agenda_days.py`): CRM özel günü, resmî tatil, doğum günü. */
+export type ImportantDay = {
+  kind: 'ozelgun' | 'tatil' | 'dogum';
+  id: string;
+  title: string;
+  day: string;
+  startsOn?: string;
+  endsOn?: string;
+  daysLeft: number;
+  precision?: 'kesin' | 'yaklasik' | 'hafta';
+  books?: number;
+  holiday?: boolean;
+  half?: boolean;
+  where?: string | null;
+};
+
 export type BookHit = { id: string | null; stokKodu: string | null; ad: string | null; yazar: string | null; ilkYayin: string | null };
 
 const B = '/api/v1/events';
@@ -277,7 +293,18 @@ export const evApi = {
   upcoming: () => send<Upcoming>('GET', '/upcoming'),
   crmEvents: (p: { frm: string; to: string; cls?: string; q?: string; page?: number }) =>
     send<{ items: CrmEvent[]; total: number; page: number; pageSize: number; from: string; to: string; kaynaklar?: Kaynaklar }>('GET', `/crm-events${qs(p)}`, undefined, 180_000),
-  agenda: () => send<{ today: string; until: string; items: AgendaItem[]; total: number; warnings: string[]; canOpen: boolean }>('GET', '/me/agenda'),
+  agenda: () =>
+    send<{
+      today: string;
+      until: string;
+      items: AgendaItem[];
+      total: number;
+      importantDays?: ImportantDay[];
+      birthdays?: ImportantDay[];
+      warnings: string[];
+      canOpen: boolean;
+      canSeasons?: boolean;
+    }>('GET', '/me/agenda'),
   typeMap: () => send<{ items: TypeRow[]; classes: Record<ClassKey, string>; job: Job; counts: { total: number; decided: number; suggested: number }; kaynaklar?: Kaynaklar }>('GET', '/type-map', undefined, 180_000),
   setTypes: (items: Array<{ id: string; class: ClassKey | null }>) => send<{ changed: number }>('PUT', '/type-map', { items }),
   suggestTypes: (all = false) => send<Job>('POST', `/type-map/suggest${qs({ hepsi: all ? 1 : 0 })}`),
