@@ -5,6 +5,7 @@ Use fresh output directories; do not mix answers from different code versions.
 """
 import argparse
 from collections import Counter
+from datetime import datetime
 import fcntl
 import hashlib
 import json
@@ -17,6 +18,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from zoneinfo import ZoneInfo
 
 from composable_live import ROOT, environment, connect, query, manifest, save
 
@@ -31,7 +33,10 @@ def main():
     out=Path(args.out)
     if out.exists() and any(out.iterdir()):raise SystemExit("Use a fresh evidence directory")
     out.mkdir(parents=True,exist_ok=True)
-    content=Path(args.questions).read_bytes();questions=json.loads(content)["questions"]
+    content=Path(args.questions).read_bytes();question_pack=json.loads(content);questions=question_pack["questions"]
+    reference_date=question_pack["referenceDate"]
+    if str(datetime.now(ZoneInfo("Europe/Istanbul")).date())!=reference_date:
+        raise SystemExit("Reference date differs from live planner date; review relative-date expectations explicitly")
     if len(questions)!=100 or len({x["id"] for x in questions})!=100:raise SystemExit("Expected the exact 100 unique cases")
     if args.only:questions=[x for x in questions if x["id"] in args.only.split(",")]
     before=manifest();results=[];counts=Counter();session=None;digest=None;removed=0
@@ -58,6 +63,8 @@ def main():
         call("/health")
         engine_hash=hashlib.sha256(json.dumps({k.rsplit('/',1)[-1]:v for k,v in before.items() if '/finance_query/' in k},sort_keys=True).encode()).hexdigest()
         for case in questions:
+            if str(datetime.now(ZoneInfo("Europe/Istanbul")).date())!=reference_date:
+                raise RuntimeError("Local date changed; acceptance stopped before relative questions could silently shift")
             if manifest()!=before:raise RuntimeError("Deployed code changed; acceptance stopped before another question")
             session.execute("UPDATE sessions SET expires=? WHERE token=?",(time.time()+900,digest));session.commit()
             item={**case,"started":time.time()};stop=False
