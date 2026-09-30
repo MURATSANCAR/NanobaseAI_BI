@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "viewports": [
+    {
+      "width": 320,
+      "scrollWidth": 320,
+      "legacyText": false,
+      "requireAvailable": "function",
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 390,
+      "scrollWidth": 390,
+      "legacyText": false,
+      "requireAvailable": "function",
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 768,
+      "scrollWidth": 768,
+      "legacyText": false,
+      "requireAvailable": "function",
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "legacyText": false,
+      "requireAvailable": "function",
+      "errors": [],
+      "outside": []
+    }
+  ]
+}

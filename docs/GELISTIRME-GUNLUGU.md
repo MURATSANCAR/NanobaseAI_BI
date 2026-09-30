@@ -1,6 +1,6 @@
 # Geliştirme Günlüğü
 
-**2026-09-30 — Sohbet kod kalıntısı temizliği:** kullanılmayan Document360 action silindi; onboarding-ui bağımlılığı yerel yönetici/kuruluş formlarıyla değiştirildi; marketplace katalog okuyucusu lisans/fiyat/kota şeması yerine yerel boş liste döndürür; NPS varsayılan kapalı. Sunucu derleme ve gerçek kabul henüz **DOĞRULANAMADI**.
+**2026-09-30 — Sohbet kod kalıntısı temizliği:** kullanılmayan Document360 action silindi; onboarding-ui bağımlılığı yerel yönetici/kuruluş formlarıyla değiştirildi; marketplace katalog okuyucusu lisans/fiyat/kota şeması yerine yerel boş liste döndürür; NPS varsayılan kapalı. Test sunucusunda `zeki-ai-chat:8.5.3-c1f548205` kuruldu: derleme, 118.310 imaj dosyasında paket/action yokluğu, gerçek API–Mongo mesaj eşitliği, boş yerel katalog, dört sohbet ekranı genişliği ve ağ kontrolleri geçti. 1 portal oturumu/4 sohbet jetonu temizlendi. Yeni kurulum formları ve yeni yönetici oluşturma **DOĞRULANAMADI**; mevcut kurulum değiştirilmedi. Rapor: `apps/zeki-chat/docs/zeki-code-audit-2026-09-30.md`.
 
 ## 2026-09-30 — Sohbet ayrıntılı kod ve çalışan imaj denetimi
 

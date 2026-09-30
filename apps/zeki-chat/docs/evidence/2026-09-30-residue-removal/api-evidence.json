@@ -1,0 +1,14 @@
+{
+  "realAPI": "channels.history",
+  "reference": "zeki MongoDB zeki_message GENERAL",
+  "messages": 1,
+  "matchesMongo": true,
+  "contentSha256": "4c49669543821da4645e4bd705b7829fea48d68dacfc4903c9ddd6394ef5759f",
+  "counts": {
+    "users": 3,
+    "rooms": 1,
+    "messages": 1,
+    "uploads": 0
+  },
+  "siteName": true
+}
