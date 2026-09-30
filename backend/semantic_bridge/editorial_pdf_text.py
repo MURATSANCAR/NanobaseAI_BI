@@ -11,6 +11,13 @@ InDesign çıktılarında iki kusur ölçüldü (2026-09-30, «Altın Kalpli Bal
    Fontun kendi çizimi kanıttır: glif, gövdenin üstünde ayrı, yaklaşık yuvarlak bir işaret taşıyorsa noktalıdır
    (I → İ, ı → i). Şapka (Î) geniş olduğu için noktadan ayrılır; yalnız «I» ve «ı» eşlemesine dokunulur.
 
+3. **Eski tip «Türkçeleştirilmiş» font** (2026-09-30, 26 kitaplık kabul seti): Ş/İ/ş harfleri başka karakterlerin
+   yerine konmuş («G‹R‹» + özel alan karakteri = GİRİŞ). Aynı fontta doğru eşlenmiş ikizi varsa çizim birebir aynıdır → ikizin harfi;
+   yoksa çizim «harf + altta tek parça» ise çengelli harftir (s → ş, c → ç).
+4. **Simge fontu** (Wingdings, Webdings, Dingbats): madde işaretleri özel alana eşli; metinde «•» olur.
+5. **Harf tablosu olmayan CID font** (ToUnicode yok, Identity kodlama): kod glif numarasıdır, harf değildir; okuyucu
+   anlamsız harf üretir («在哪里» → «ࡏ䬟ཬ»). Bu metin okunamadı («�») sayılır (`no_text_mapping`).
+
 Onarım yalnız bellekteki okuyucu nesnesinde yapılır (dosya değişmez); kitaba ya da fonta özel kural yoktur. Fontun
 verisinden çıkmayan harf onarılmaz, özel alan karakteri olarak kalır ve sayılır (`unreadable_chars`).
 """
@@ -35,7 +42,7 @@ def is_pua(ch: str) -> bool:
 
 
 def unreadable(text: str) -> int:
-    return sum(1 for ch in text if is_pua(ch))
+    return sum(1 for ch in text if is_pua(ch) or ch == "\ufffd")
 
 
 def glyph_unicode(name: str) -> Optional[str]:
@@ -260,6 +267,130 @@ def repair_dotted_i(font: Any) -> int:
     return fixed
 
 
+# ---------------------------------------------------------------------------------------------- 3) ikiz glif
+
+def _contours(glyf: Any, name: str) -> list[tuple[tuple[int, int], ...]]:
+    """Glifin konturları (bileşik glif açılmış hâliyle), her biri nokta dizisi."""
+    coords, ends, _ = glyf[name].getCoordinates(glyf)
+    pts = [(int(x), int(y)) for x, y in coords]
+    out, start = [], 0
+    for end in ends:
+        out.append(tuple(pts[start:end + 1]))
+        start = end + 1
+    return out
+
+
+_BELOW = {"s": "ş", "S": "Ş", "c": "ç", "C": "Ç"}
+
+
+def repair_by_twin_glyphs(font: Any) -> int:
+    """CID TrueType font: harf olmayan (özel alan, «‹» gibi) karaktere eşli glifin çizimi, harfe eşli bir glifle
+    birebir aynıysa o harftir; özel alana eşli glif «harf + temel çizginin altında tek kontur» ise çengelli harftir."""
+    if str(font.get("/Subtype")) != "/Type0" or font.get("/ToUnicode") is None:
+        return 0
+    try:
+        desc = font["/DescendantFonts"][0].get_object()
+    except Exception:  # noqa: BLE001
+        return 0
+    if str(desc.get("/Subtype")) != "/CIDFontType2" or str(desc.get("/CIDToGIDMap", "/Identity")) != "/Identity":
+        return 0
+    fd = _obj(desc.get("/FontDescriptor"))
+    ff = fd.get("/FontFile2") if fd is not None else None
+    if ff is None:
+        return 0
+    cur, width = _current(font)
+    odd = {c: u for c, u in cur.items() if len(u) == 1 and not u.isalpha() and (is_pua(u) or u in "‹›\ufffd")}
+    if not odd or not width:
+        return 0
+    try:
+        from fontTools.ttLib import TTFont
+        tt = TTFont(io.BytesIO(ff.get_object().get_data()))
+        glyf, order = tt["glyf"], tt.getGlyphOrder()
+        slack = tt["head"].unitsPerEm * 0.03       # çengelin tepesi harfin tabanına biraz girebilir
+    except Exception as e:  # noqa: BLE001
+        log.info("ikiz glif denetimi atlandı: %s", e)
+        return 0
+
+    def shape(code: int) -> Optional[list]:
+        if code >= len(order):
+            return None
+        try:
+            c = _contours(glyf, order[code])
+        except Exception:  # noqa: BLE001
+            return None
+        return c or None
+
+    letters = {c: u for c, u in cur.items() if len(u) == 1 and u.isalpha()}
+    by_shape: dict[tuple, str] = {}
+    for c, u in letters.items():
+        sh = shape(c)
+        if sh:
+            by_shape.setdefault(tuple(sh), u)
+    new = dict(cur)
+    fixed = 0
+    for code, u in odd.items():
+        sh = shape(code)
+        if not sh:
+            continue
+        twin = by_shape.get(tuple(sh))
+        if twin:
+            new[code] = twin
+            fixed += 1
+            continue
+        if not is_pua(u) or len(sh) < 2:
+            continue
+        for k, extra in enumerate(sh):          # bir kontur çıkınca bir harfin çizimi kalıyor mu, çıkan altta mı
+            if max(p[1] for p in extra) > slack:
+                continue
+            base = by_shape.get(tuple(sh[:k] + sh[k + 1:]))
+            if base in _BELOW:
+                new[code] = _BELOW[base]
+                fixed += 1
+                break
+    if fixed:
+        _set_cmap(font, new, width)
+    return fixed
+
+
+# ---------------------------------------------------------------------------------------------- 4) simge, 5) tablosuz
+
+_SYMBOL_FONT = re.compile(r"(?i)wingding|webding|dingbat")
+
+
+def repair_symbol_font(font: Any) -> int:
+    """Simge fontunun özel alana eşli karakterleri madde işaretidir: «•»."""
+    if not _SYMBOL_FONT.search(str(font.get("/BaseFont") or "")):
+        return 0
+    cur, width = _current(font)
+    if not width:
+        return 0
+    new = {c: ("•" if any(is_pua(ch) for ch in u) else u) for c, u in cur.items()}
+    fixed = sum(1 for c in cur if new[c] != cur[c])
+    if fixed:
+        _set_cmap(font, new, width)
+    return fixed
+
+
+def lacks_letter(font: Any, ch: str) -> bool:
+    """Fontun harf tablosunda ya da kodlama farklarındaki glif adlarında bu harf yok mu."""
+    try:
+        cur, _ = _current(font)
+        if ch in cur.values():
+            return False
+        return not any(glyph_unicode(n) == ch for n in _differences(font).values())
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def no_text_mapping(font: Any) -> bool:
+    """Type0 font, Identity kodlama, ToUnicode yok: kodlar glif numarasıdır, metin çıkarılamaz."""
+    try:
+        return (str(font.get("/Subtype")) == "/Type0" and font.get("/ToUnicode") is None
+                and str(font.get("/Encoding")) in ("/Identity-H", "/Identity-V"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 # ---------------------------------------------------------------------------------------------- okuyucu
 
 def _obj(x: Any) -> Any:
@@ -292,16 +423,18 @@ def repair_reader(reader: Any) -> dict[str, int]:
     """Okuyucunun bütün fontlarını yerinde onarır. Aynı okuyucuda ikinci çağrı bir şey değiştirmez."""
     if getattr(reader, "_zeki_text_repaired", None) is not None:
         return reader._zeki_text_repaired
-    stats = {"glyph_names": 0, "dotted_i": 0}
+    stats = {"glyph_names": 0, "dotted_i": 0, "twin_glyphs": 0, "symbols": 0}
     seen: set = set()
     for page in reader.pages:
         try:
             for font in _fonts(page.get("/Resources"), seen):
                 stats["glyph_names"] += repair_by_glyph_names(font)
+                stats["twin_glyphs"] += repair_by_twin_glyphs(font)
                 stats["dotted_i"] += repair_dotted_i(font)
+                stats["symbols"] += repair_symbol_font(font)
         except Exception as e:  # noqa: BLE001 — bir sayfanın fontu okunamazsa diğerleri onarılır
             log.info("font onarımı atlandı: %s", e)
-    if stats["glyph_names"] or stats["dotted_i"]:
+    if any(stats.values()):
         log.info("pdf metin katmanı onarıldı: %s", stats)
     reader._zeki_text_repaired = stats
     return stats

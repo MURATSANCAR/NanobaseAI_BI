@@ -252,10 +252,120 @@ def test_display_type_inside_a_sentence_is_not_a_heading() -> None:
     run = [st.Line(1, "THE MONSTER'S", 30.0), st.Line(1, "NAME", 30.0)]
     assert st.in_sentence(run, st.Line(1, "Poor hen,", 12.0), st.Line(1, "heard that day.", 12.0))
     assert st.in_sentence([st.Line(1, "The stone rolled,", 30.0), st.Line(1, "rolled...", 30.0)], None, None)
-    assert st.in_sentence([st.Line(1, "lar! Vzzzz.", 30.0)], None, st.Line(1, "Then", 12.0))
+    assert st.in_sentence([st.Line(1, "lar! Vzzzz.", 30.0)], st.Line(1, "geliyor-", 12.0), st.Line(1, "Then", 12.0))
+    # iki satırlık başlığın ilk satırı virgülle bitebilir; küçük harfle başlayan başlık da vardır
+    assert not st.in_sentence([st.Line(1, "BAHAR GELMIS,", 14.0), st.Line(1, "DUNYA DUMDUZ OYSA", 14.0)],
+                              st.Line(0, "boyledir.", 11.5), st.Line(1, "Bahar geldi.", 11.5))
+    assert not st.in_sentence([st.Line(1, "birinci bolum BABAM VE YILDIZ SARAYI", 20.0)],
+                              st.Line(0, "bitti.", 11.0), st.Line(1, "Babam", 11.0))
     assert not st.in_sentence([st.Line(1, "BALIK TUTMAYI OGRET...", 30.0)], st.Line(0, "bitti.", 12.0),
                               st.Line(1, "Bana balik", 12.0))
     assert not st.in_sentence([st.Line(1, "The Old Fisherman", 30.0)], None, st.Line(2, "\u201cGood morning.\u201d", 12.0))
     # önceki bölüm cümleyle bitmiş: küçük harfle başlayan gövde tek başına başlığı süs yazısı yapmaz
     assert not st.in_sentence([st.Line(1, "Cocukluk", 20.0)], st.Line(0, "herkes ona bakti.", 11.0),
                               st.Line(1, "elma armut kiraz", 11.0))
+
+
+# ---------------------------------------------------------------------------------------------- 26 kitaplık kabul seti
+
+def test_short_narrow_lines_and_hyphens_join() -> None:
+    """Dar sütun (resim yanı): bütün satırlar kısa; küçük harfle süren satır aynı cümledir, heceleme birleşir."""
+    lines = ["Birkac dakika gecti.", "Karni agriyormusca-", "sina kivranmaya bas-", "ladi. Yerinde duramiyordu.",
+             "Uzun bir satir burada duruyor ve paragrafin olcusunu belirliyor tam olarak."]
+    assert st.reflow(lines).split("\n")[:2] == ["Birkac dakika gecti.",
+                                                 "Karni agriyormuscasina kivranmaya basladi. Yerinde duramiyordu."]
+
+
+def _lines(*texts: str) -> list:
+    return [st.Line(0, t, 11.0, y=500 - 14 * i, x=40) for i, t in enumerate(texts)]
+
+
+def test_spaced_line_end_hyphen_is_syllable_break_when_book_has_no_spaced_dash() -> None:
+    lines = st.mend_spaced_hyphens(_lines("uyumak yerine sosyal med -", "yada vakit harcadiniz", "annem kalkip mut -",
+                                          "fağa gitti."))
+    assert [ln.text for ln in lines][::2] == ["uyumak yerine sosyal med-", "annem kalkip mut-"]
+
+
+def test_spaced_line_end_hyphen_uses_book_vocabulary_when_book_uses_spaced_dash() -> None:
+    lines = _lines("masraflarin buyuk bir kismi - ki bunu bil - sonra kismi geldi,", "kisminin buyuk kismi -",
+                   "masraflarin sayisi ve niteligi,", "uykulu ve şaş -", "kın gozlerle bakti, sonra şaşkın kaldi.",
+                   "yine masraflarin ve kismi - ki bu da - yetti.")
+    out = [ln.text for ln in st.mend_spaced_hyphens(lines)]
+    assert out[1].endswith("kismi -")            # iki parça da kelime, birleşik hâli yok: ara çizgisi
+    assert out[3].endswith("şaş-")               # birleşik hâli («şaşkın») kitapta geçiyor: heceleme
+
+
+def test_private_use_letter_resolved_from_book_vocabulary() -> None:
+    pua = "\uf002"
+    lines = _lines(f"Sevgi Nasil A{pua}ka Donu{pua}ur?", f"A{pua}k Acilari Payla{pua}anlara Gelir",
+                   "Bu kitapta ask degil aşk yazilir; aşka donuşur, paylaşanlara gelir.",
+                   f"B\uf003LINMEZ {pua}EY")
+    out = [ln.text for ln in st.resolve_private_letters(lines)]
+    assert out[0] == "Sevgi Nasil Aşka Donuşur?" and out[1] == "Aşk Acilari Paylaşanlara Gelir"
+    assert "\uf003" in out[3]                    # sözlükte karşılığı olmayan karakter kalır, okunamadı sayılır
+    assert out[3].endswith("ŞEY")                 # büyük harfli kelimede büyük hâli
+
+
+def test_dialog_and_quote_lines_are_not_headings_or_title_continuations() -> None:
+    p = _Pdf()
+    f1 = p.helvetica()
+    pages = []
+    for n in range(1, 4):
+        body = [f"BT /F1 12 Tf 1 0 0 1 40 {420 - 14 * k} Tm (Part {n} line {k} {LONG}.) Tj ET" for k in range(6)]
+        pages.append("\n".join([f"BT /F1 24 Tf 1 0 0 1 40 500 Tm (TITLE NUMBER {n}) Tj ET",
+                                f"BT /F1 18 Tf 1 0 0 1 40 470 Tm (\"Big quoted line {n}) Tj ET"] + body))
+    pages.append("\n".join(["BT /F1 24 Tf 1 0 0 1 40 500 Tm (- China?) Tj ET"]
+                           + [f"BT /F1 12 Tf 1 0 0 1 40 {420 - 14 * k} Tm (Tail line {k} {LONG}.) Tj ET" for k in range(6)]))
+    s = st.pdf_structure(reader(p.build(pages, {"F1": f1})))
+    assert [t for t, _ in s.chapters] == ["TITLE NUMBER 1", "TITLE NUMBER 2", "TITLE NUMBER 3"]
+
+
+def test_smaller_title_line_above_the_chapter_number_joins_the_title() -> None:
+    p = _Pdf()
+    f1 = p.helvetica()
+    pages = []
+    for n in range(1, 4):
+        body = [f"BT /F1 12 Tf 1 0 0 1 40 {400 - 14 * k} Tm (Part {n} line {k} {LONG}.) Tj ET" for k in range(6)]
+        pages.append("\n".join([f"BT /F1 18 Tf 1 0 0 1 40 520 Tm (UPPER TITLE {n}) Tj ET",
+                                f"BT /F1 28 Tf 1 0 0 1 40 500 Tm (CHAPTER {n}) Tj ET",
+                                f"BT /F1 18 Tf 1 0 0 1 40 480 Tm (LOWER TITLE) Tj ET"] + body))
+    s = st.pdf_structure(reader(p.build(pages, {"F1": f1})))
+    assert [t for t, _ in s.chapters] == [f"CHAPTER {n} — UPPER TITLE {n} LOWER TITLE" for n in (1, 2, 3)]
+
+
+def test_font_without_text_mapping_is_unreadable_not_garbage() -> None:
+    """Harf tablosu olmayan CID font (resimdeki Çince yazı): anlamsız harf yerine «�»."""
+    p = _Pdf()
+    f1 = p.helvetica()
+    desc = p.obj("<< /Type /Font /Subtype /CIDFontType0 /BaseFont /Koz /CIDSystemInfo << /Registry (Adobe) "
+                 "/Ordering (Japan1) /Supplement 6 >> /FontDescriptor << /Type /FontDescriptor /FontName /Koz "
+                 "/Flags 4 /FontBBox [0 0 1000 1000] /ItalicAngle 0 /Ascent 900 /Descent -100 /CapHeight 700 "
+                 "/StemV 80 >> >>")
+    cid = p.obj(f"<< /Type /Font /Subtype /Type0 /BaseFont /Koz /Encoding /Identity-H /DescendantFonts [{desc} 0 R] >>")
+    ops = [f"BT /F1 12 Tf 1 0 0 1 40 {500 - 14 * k} Tm (Line {k} {LONG}.) Tj ET" for k in range(3)]
+    ops.append("BT /F2 30 Tf 1 0 0 1 40 300 Tm <084F4B1F0F6C> Tj ET")
+    s = st.pdf_structure(reader(p.build(["\n".join(ops)], {"F1": f1, "F2": cid})))
+    text = "\n".join(b for _, b in s.chapters)
+    assert "\ufffd\ufffd\ufffd" in text and "\u084f" not in text and s.unreadable_chars == 3
+
+
+def test_symbol_font_bullets() -> None:
+    p = _Pdf()
+    tu = p.stream("", cmap({0xD8: "\uf0d8"}))
+    wing = p.obj(f"<< /Type /Font /Subtype /Type1 /BaseFont /ABCDEF+Wingdings-Regular /ToUnicode {tu} 0 R >>")
+    f1 = p.helvetica()
+    data = p.build(["BT /F2 12 Tf 1 0 0 1 40 500 Tm <D8> Tj /F1 12 Tf ( Madde) Tj ET"], {"F1": f1, "F2": wing})
+    assert text_of(data).strip() == "• Madde"
+
+
+def test_small_l_standing_in_for_dotless_i() -> None:
+    """Fontunda ı olmayan başlık: dizgici ı yerine küçültülmüş «l» basmış (iki kez: dolgu + kontur)."""
+    p = _Pdf()
+    f1 = p.helvetica()
+    ops = ["BT /F1 28 Tf 1 0 0 1 100 500 Tm (Bal) Tj ET", "BT /F1 20 Tf 1 0 0 1 140.5 500 Tm (l) Tj ET",
+           "BT /F1 20 Tf 1 0 0 1 140.5 500 Tm (l) Tj ET", "BT /F1 28 Tf 1 0 0 1 145 500 Tm (\\370k) Tj ET",
+           "BT /F1 28 Tf 1 0 0 1 100 460 Tm (Normal l harfi kalir) Tj ET"]
+    ops += [f"BT /F1 12 Tf 1 0 0 1 40 {400 - 14 * k} Tm (Line {k} {LONG}.) Tj ET" for k in range(3)]
+    s = st.pdf_structure(reader(p.build(["\n".join(ops)], {"F1": f1})))
+    text = "\n".join(f"{t}\n{b}" for t, b in s.chapters)
+    assert "Balıøk" in text and "Normal l harfi" in text

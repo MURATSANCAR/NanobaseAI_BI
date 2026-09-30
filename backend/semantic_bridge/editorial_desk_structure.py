@@ -173,6 +173,11 @@ def _mult(m: list[float], n: list[float]) -> list[float]:
 
 
 _IDENTITY = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+#: Fontunda ı olmayan başlıkta dizgici ı yerine küçültülmüş «l» basar («Bal» 28 pt + «l» 20 pt + «ğ» 28 pt = Balığ…):
+#: kelimenin içinde, önceki harflerin bu oranından küçük tek «l», font ı taşımıyorsa ı'dır.
+_SMALL_L = 0.85
+#: Latin, Yunan, Kiril ve genel noktalama dışı yazı: harf tablosu olmayan fontun ürettiği anlamsız karakter işareti.
+_NON_LATIN = re.compile(r"[\u0590-\u1fff\u2c00-\u2dff\u3000-\ud7ff\uf900-\ufaff]")
 #: Sayfa kutusunun kenarından bu kadar (pt) dışarıda başlayan metin sayfada görünmez.
 _BOX_SLACK = 2.0
 #: Kenara asılan satır sonu tiresi ayrı metin nesnesidir; okuyucu önüne kendi boşluğunu ekler (« -»). Önceki parça
@@ -213,6 +218,8 @@ def pdf_lines(reader: Any) -> list[Line]:
         cur: dict[str, Any] = {"parts": [], "sizes": Counter(), "bold": 0, "chars": 0, "y": None, "x": None}
         box = _page_box(page)
         printed: set[tuple[str, float, float]] = set()
+        unmapped: dict[int, bool] = {}
+        no_i: dict[int, bool] = {}
         first = len(out)
 
         def flush(pno: int = pno, cur: dict[str, Any] = cur) -> None:
@@ -220,7 +227,7 @@ def pdf_lines(reader: Any) -> list[Line]:
             if text:
                 size = cur["sizes"].most_common(1)[0][0] if cur["sizes"] else 0.0
                 out.append(Line(pno, text, size, cur["bold"] * 2 > cur["chars"], cur["y"], x=cur["x"]))
-            cur.update(parts=[], sizes=Counter(), bold=0, chars=0, y=None, x=None)
+            cur.update(parts=[], sizes=Counter(), bold=0, chars=0, y=None, x=None, last_size=None)
 
         def visit(text: Any, cm: Any, tm: Any, font: Any, font_size: Any, cur: dict[str, Any] = cur,
                   flush: Callable[[], None] = flush) -> None:
@@ -248,6 +255,20 @@ def pdf_lines(reader: Any) -> list[Line]:
                 printed.add(key)
             if _HANGING_HYPHEN.fullmatch(text) and re.search(r"[^\W_]$", "".join(cur["parts"])):
                 text = text[1:]
+            if font is not None:
+                if id(font) not in unmapped:
+                    unmapped[id(font)] = pdf_text.no_text_mapping(font)
+                if unmapped[id(font)] and _NON_LATIN.search(text):
+                    # harf tablosu olmayan CID font: okuyucu glif numarasını harf sanmış, okunamadı yazılır
+                    text = re.sub(r"[^\s]", "\ufffd", text)
+            if (text in ("l", " l") and size and cur.get("last_size") and size <= _SMALL_L * cur["last_size"]
+                    and re.search(r"[^\W\d_]$", "".join(cur["parts"])) and font is not None):
+                if id(font) not in no_i:
+                    no_i[id(font)] = pdf_text.lacks_letter(font, "ı")
+                if no_i[id(font)]:
+                    text = "ı"                # ı'sı olmayan fontta dizgicinin küçültülmüş «l»si (okuyucu boşluğu atılır)
+            elif text.strip() and size:
+                cur["last_size"] = size
             try:
                 bold = bool(font is not None and _BOLD.search(str(font.get("/BaseFont") or "")))
             except Exception:  # noqa: BLE001
@@ -357,7 +378,9 @@ def join_drop_caps(lines: list[Line], body: float) -> list[Line]:
 
 def reflow(lines: list[str]) -> str:
     """PDF'in görsel satırlarını paragrafa birleştirir: satır cümle sonuyla bitmiyorsa ve tam satır boyundaysa
-    sonraki satır aynı paragraftır; satır sonu tirelemesi («keli-/me») kaldırılır; konuşma çizgisi yeni paragraftır."""
+    sonraki satır aynı paragraftır; satır sonu tirelemesi («keli-/me») kaldırılır; konuşma çizgisi yeni paragraftır.
+    Küçük harfle süren satır kısa satırdan sonra da aynı cümledir (dar sütun, resmin yanına dökülen metin: satırların
+    hepsi kısa); heceleme tiresi satır boyundan önce denetlenir («kal-» + «kanı»)."""
     if not lines:
         return ""
     lens = sorted(len(x) for x in lines)
@@ -368,12 +391,14 @@ def reflow(lines: list[str]) -> str:
         if not buf:
             buf = last = ln
             continue
-        ends = bool(re.search(r"[.!?…:»”\"]\s*$", last)) or len(last) < full or bool(re.match(r"^[—–-]\s", ln))
-        if ends:
+        lower_next = ln[:1].isalpha() and ln[:1].islower()
+        dialog = bool(re.match(r"^[—–-]\s", ln))
+        closed = bool(re.search(r"[.!?…:»”\"]\s*$", last))
+        if lower_next and re.search(r"[^\W\d_][-\u00ad\u2010]$", last):
+            buf = buf[:-1] + ln
+        elif closed or dialog or (len(last) < full and not lower_next):
             out.append(buf)
             buf = ln
-        elif re.search(r"[^\W\d_]-$", last) and ln[:1].islower():
-            buf = buf[:-1] + ln
         else:
             buf = f"{buf} {ln}"
         last = ln
@@ -468,20 +493,27 @@ _SENTENCE_END = re.compile(r"[.!?…:»”\"’')\]]\s*$")
 
 
 def in_sentence(run: list[Line], prev: Optional[Line], nxt: Optional[Line]) -> bool:
-    """Büyük puntolu satır dizisi cümlenin parçası mı (resimli kitapta vurgu yazısı): dizinin içinde virgül/noktalı
-    virgülle biten satır var ya da dizi virgülle bitiyor, dizi küçük harfle başlıyor, ya da önceki satır cümleyi
-    bitirmeden kalmış ve sonraki satır (en çok bir sayfa ötede) küçük harfle sürüyor. Bölüm başlığı cümlenin ortasında
-    durmaz; önceki bölüm cümleyle bittiyse küçük harfle başlayan gövde tek başına başlığı süs yazısı yapmaz."""
-    if any(re.search(r"[,;]\s*$", ln.text) for ln in run) or _first_letter(run[0].text).islower():
-        return True
+    """Büyük puntolu satır dizisi cümlenin parçası mı (resimli kitapta vurgu yazısı): önceki satır cümleyi bitirmeden
+    kalmış ve dizi ya da ardından gelen satır (en çok bir sayfa ötede) küçük harfle sürüyor, ya da dizi virgülle bitip
+    küçük harfle sürüyor. Bölüm başlığı cümlenin ortasında durmaz. Tek başına virgül kanıt değildir («BAHAR GELMİŞ, /
+    DÜNYA DÜMDÜZ OYSA» iki satırlık başlık); küçük harfle başlamak da değildir («birinci bölüm BABAM VE YILDIZ
+    SARAYI»); önceki bölüm cümleyle bittiyse küçük harfle başlayan gövde başlığı süs yazısı yapmaz. Dizinin kendi
+    içinde virgülden sonra küçük harfle süren satır da cümledir."""
     open_before = prev is not None and run[0].page - prev.page <= 1 and not _SENTENCE_END.search(prev.text)
-    return (open_before and nxt is not None and nxt.page - run[-1].page <= 1
-            and _first_letter(nxt.text).islower())
+    lower_after = nxt is not None and nxt.page - run[-1].page <= 1 and _first_letter(nxt.text).islower()
+    if open_before and (lower_after or _first_letter(run[0].text).islower()):
+        return True
+    # dizinin içinde virgülle biten satırı küçük harfle süren satır izliyor («Taş yuvarlandı, / yuvarlandı, / …»)
+    if any(re.search(r"[,;]\s*$", a.text) and _first_letter(b.text).islower() for a, b in zip(run, run[1:])):
+        return True
+    return bool(re.search(r"[,;]\s*$", run[-1].text)) and lower_after
 
 
 def _by_typography(lines: list[Line], thr: float) -> Optional[list[tuple[str, str]]]:
     def big_line(ln: Line) -> bool:
         letters = len(_WORD.findall(ln.text))
+        if re.match(r"[—–-]\s", ln.text):
+            return False                 # konuşma çizgisiyle başlayan satır (büyük puntolu diyalog) başlık değildir
         return ln.size >= thr and len(ln.text) <= 150 and (letters >= 1 and len(re.sub(r"\W", "", ln.text)) >= 2
                                                              or bool(re.fullmatch(r"\W*(\d{1,3}|[IVXLC]{1,7})\W*", ln.text)))
     inline: set[int] = set()
@@ -510,24 +542,60 @@ def _by_typography(lines: list[Line], thr: float) -> Optional[list[tuple[str, st
     level = next((s for s in sizes if len(pages_of[s]) >= 3), None) or next((s for s in sizes if len(pages_of[s]) >= 2), None)
     if level is None:
         return None
-    units: list[tuple[str, str, int]] = []
+    units: list[tuple[str, str, int, float]] = []
+    # Bölüm puntosundan küçük başlık satırı bölüm satırının hemen üstünde durabilir («OSMANLI MERKEZ VE TAŞRA» /
+    # «BÖLÜM 1» / «MÜLKÎ-MALÎ İDARESİNDE»): aynı sayfada başlık gelirse onun devamıdır, gelmezse gövdedir.
+    pre: list[Line] = []
+
+    def flush_pre() -> None:
+        units.extend((p.text, "body", p.page, p.size) for p in pre)
+        pre.clear()
+
+    above: list[Line] = []               # başlığın üstündeki satırlar: başlık satırları bitince devam olarak eklenir
     prev: Optional[Line] = None
+    prev_head = False
     for ln in lines:
+        head_line = headish(ln) and ln.size >= level - 0.25 and not (ln.size > level + 0.25 and len(pages_of[ln.size]) < 2)
+        if not (head_line and prev_head and prev is not None and prev.page == ln.page and prev.size == ln.size):
+            units.extend((p.text, "cont", p.page, p.size) for p in above)
+            above.clear()
         if headish(ln) and ln.size > level + 0.25 and len(pages_of[ln.size]) < 2:
             # Bölüm puntosundan büyük ve yalnız bir sayfada geçen satır (kapaktaki kitap adı) bölüm değildir.
-            units.append((ln.text, "body", ln.page))
-        elif headish(ln) and ln.size >= level - 0.25:
+            flush_pre()
+            units.append((ln.text, "body", ln.page, ln.size))
+        elif head_line:
             # Aynı sayfada aynı puntoda art arda satır: kırılmış tek başlık, boşlukla birleşir.
-            if prev is not None and units and units[-1][1] == "head" and prev.page == ln.page and prev.size == ln.size:
-                units[-1] = (f"{units[-1][0]} {ln.text}", "head", ln.page)
+            if prev_head and prev is not None and prev.page == ln.page and prev.size == ln.size:
+                units[-1] = (f"{units[-1][0]} {ln.text}", "head", ln.page, ln.size)
             else:
-                units.append((ln.text, "head", ln.page))
+                above = [p for p in pre if p.page == ln.page]
+                pre[:] = [p for p in pre if p.page != ln.page]
+                flush_pre()
+                units.append((ln.text, "head", ln.page, ln.size))
+        elif headish(ln) and (_first_letter(ln.text).islower() or re.match(r"[“\"‘'«—–-]", ln.text)):
+            # küçük harfle, tırnakla ya da konuşma çizgisiyle başlayan büyük satır başlığın devamı değildir
+            # (konuşma balonu, büyük puntolu alıntı)
+            flush_pre()
+            units.append((ln.text, "body", ln.page, ln.size))
+        elif headish(ln) and units and units[-1][1] in ("head", "cont") and not pre:
+            units.append((ln.text, "cont", ln.page, ln.size))
         elif headish(ln):
-            units.append((ln.text, "cont" if units and units[-1][1] in ("head", "cont") else "body", ln.page))
+            if pre and pre[-1].page != ln.page:
+                flush_pre()
+            pre.append(ln)
         else:
-            units.append((ln.text, "body", ln.page))
-        prev = ln
-    chapters = assemble(units, reflow)
+            flush_pre()
+            units.append((ln.text, "body", ln.page, ln.size))
+        prev, prev_head = ln, head_line
+    units.extend((p.text, "cont", p.page, p.size) for p in above)
+    flush_pre()
+    merged: list[tuple[str, str, int, float]] = []
+    for u in units:                      # aynı sayfada aynı puntoda art arda devam satırları tek ad parçası
+        if merged and u[1] == "cont" and merged[-1][1] == "cont" and merged[-1][2:] == u[2:]:
+            merged[-1] = (f"{merged[-1][0]} {u[0]}", "cont", u[2], u[3])
+        else:
+            merged.append(u)
+    chapters = assemble(merged, reflow)
     pages = len({ln.page for ln in lines})
     if len(chapters) < 2 or (pages >= 20 and len(chapters) > pages * 0.8):
         return None                     # neredeyse her sayfa «bölüm»: tipografi bölüm değil sayfa düzeni söylüyor
@@ -597,12 +665,95 @@ def _by_pattern(lines: list[Line]) -> Optional[list[tuple[str, str]]]:
     return out if len(out) >= 2 else None
 
 
+_SPACED_HYPHEN_END = re.compile(r"([^\W\d_]+) [-\u00ad\u2010]$")
+_MID_DASH = re.compile(r"[^\W\d_] [-\u2010] [^\W\d_]")
+
+
+def mend_spaced_hyphens(lines: list[Line]) -> list[Line]:
+    """Satır «med -» diye bitip sonraki «yada» diye küçük harfle sürüyorsa tire ya satır sonu hecelemesidir (okuyucu
+    kenara asılan tirenin önüne boşluk koymuş) ya da gerçek konuşma/ara çizgisidir («kısmının - masrafların»). Konum
+    ayırt etmez; kitabın kendi yazımı eder: kitap satır ortasında boşluklu çizgi («kelime - kelime») kullanmıyorsa satır
+    sonundakiler hecelemedir. Kullanıyorsa kitabın sözlüğüne bakılır (parçaların kendisi sayılmaz): birleşik hâl
+    kitapta geçiyorsa heceleme («şaşkın»); geçmiyor ve iki parça da kelimeyse çizgi; değilse heceleme.
+    Heceleme ise boşluk atılır, satır birleşirken tire düşer."""
+    pairs = [(a, b, m) for a, b in zip(lines, lines[1:])
+             if (m := _SPACED_HYPHEN_END.search(a.text)) and 0 <= b.page - a.page <= 1
+             and b.text[:1].isalpha() and b.text[:1].islower()]
+    if not pairs:
+        return lines
+    uses_dash = sum(1 for ln in lines if _MID_DASH.search(ln.text)) * 10 >= len(pairs)
+    vocab: Counter = Counter()
+    if uses_dash:                        # hece parçaları sözlüğe girmez: tireyle biten satırın son, sonrakinin ilk kelimesi
+        cut_last = {id(a) for a in lines if re.search(r"[-\u00ad\u2010]$", a.text)}
+        cut_first = {id(b) for a, b in zip(lines, lines[1:]) if id(a) in cut_last}
+        for ln in lines:
+            words = _WORD.findall(ln.text)
+            if id(ln) in cut_last and words:
+                words = words[:-1]
+            if id(ln) in cut_first and words:
+                words = words[1:]
+            vocab.update(tr_lower(w) for w in words)
+    for a, b, m in pairs:
+        right = _WORD.match(b.text)
+        if uses_dash and right:
+            left_w, right_w = tr_lower(m.group(1)), tr_lower(right.group(0))
+            if not vocab[left_w + right_w] and vocab[left_w] >= 1 and vocab[right_w] >= 1:
+                continue                 # birleşik hâli kitapta yok, iki parça da kelime: ara çizgisi
+        a.text = a.text[:m.end(1)] + "-"
+    return lines
+
+
+_PUA_WORD = re.compile(r"(?:[^\W\d_]|[\ue000-\uf8ff])*[\ue000-\uf8ff](?:[^\W\d_]|[\ue000-\uf8ff])*")
+#: Eski «Türkçeleştirilmiş» fontların başka karakterin yerine koyduğu harfler (küçük hâlleriyle).
+_TR_SPECIAL = "şğıiçöüâîû"
+#: Bir özel alan karakterinin harfe çevrilmesi için en az bu kadar kelimede tutması ve ikinci adayın en az bu katı olması.
+PUA_MIN_HITS = 2
+PUA_MARGIN = 2
+
+
+def resolve_private_letters(lines: list[Line]) -> list[Line]:
+    """Fontun verisinden onarılamayan özel alan karakteri, eski tip Türkçe fontta bir Türkçe harfin yerini tutar
+    («A?k», «Dönü?ür» — ? özel alan karakteri). Kitabın kendi sözlüğü karar verir: karakterin yerine her aday harf konur, oluşan
+    kelimenin kitabın başka yerinde (özel karaktersiz) geçtiği kelime sayılır; açık farkla kazanan harf yazılır (büyük
+    harfli kelimede büyük hâli). Kazanan yoksa karakter kalır ve okunamadı sayılır."""
+    tokens: dict[str, list[str]] = {}
+    for ln in lines:
+        for w in _PUA_WORD.findall(ln.text):
+            for ch in {c for c in w if pdf_text.is_pua(c)}:
+                tokens.setdefault(ch, []).append(w)
+    if not tokens:
+        return lines
+    vocab = Counter(tr_lower(w) for ln in lines for w in _WORD.findall(ln.text))
+    upper = {"i": "İ", "ı": "I"}
+    chosen: dict[str, str] = {}
+    for ch, words in tokens.items():
+        scorable = [w for w in words if sum(pdf_text.is_pua(c) for c in w) == 1 and len(w) >= 3]
+        score = sorted(((sum(1 for w in scorable if vocab[tr_lower(w.replace(ch, cand))]), cand) for cand in _TR_SPECIAL),
+                       reverse=True)
+        if score and score[0][0] >= PUA_MIN_HITS and score[0][0] >= PUA_MARGIN * max(score[1][0], 0.5):
+            chosen[ch] = score[0][1]
+    if not chosen:
+        return lines
+
+    def fix(m: re.Match) -> str:
+        w = m.group(0)
+        letters = [c for c in w if c.isalpha()]
+        caps = bool(letters) and all(c.isupper() for c in letters)
+        return "".join((upper.get(chosen[c], chosen[c].upper()) if caps else chosen[c]) if c in chosen else c for c in w)
+
+    for ln in lines:
+        if any(c in chosen for c in ln.text):
+            ln.text = _PUA_WORD.sub(fix, ln.text)
+    log.info("özel alan karakteri kitabın sözlüğüyle çözüldü: %s", {hex(ord(k)): v for k, v in chosen.items()})
+    return lines
+
+
 def pdf_structure(reader: Any) -> Structure:
     pdf_text.repair_reader(reader)
     raw = pdf_lines(reader)
     body = body_size(raw)
     thr = head_threshold(body)
-    lines = join_drop_caps(drop_furniture(raw, thr), body)
+    lines = resolve_private_letters(mend_spaced_hyphens(join_drop_caps(drop_furniture(raw, thr), body)))
     bad = sum(pdf_text.unreadable(ln.text) for ln in lines)
     if bad:
         log.warning("pdf metninde onarılamayan %s karakter kaldı", bad)
