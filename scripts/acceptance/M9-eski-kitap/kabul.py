@@ -244,7 +244,7 @@ def main() -> int:
         record("K5 kur elle", "OK" if elle_ok and fc.get("kur") == {"USD": 60.0, "EUR": 70.0} else "FARK",
                put=r.status_code, form_kur=fc.get("kur"), liste_kur=e.get("kur"), liste_hazir=e.get("ready"))
         bad = c.put("/api/v1/pricing/form/tariff", json={"kurKaynak": "banka"})
-        record("K5 geçersiz kur kaynağı reddedilir", "OK" if bad.status_code == 400 else "FARK", durum=bad.status_code)
+        record("K5 geçersiz kur kaynağı reddedilir", "OK" if bad.status_code == 400 else "FARK", http=bad.status_code)
         c.put("/api/v1/pricing/form/tariff", json={"kurKaynak": "logo"})
         s2 = c.get("/api/v1/pricing/form/setup", params={"kitap": one["code"]}).json()
         lk = {k: v["rate"] for k, v in (snap.get("kur") or {}).items() if v.get("rate")}
@@ -262,7 +262,7 @@ def main() -> int:
 
     # K6
     r = c.post("/api/v1/pricing/proposals", json={"title": "", "codes": []})
-    record("K6 boş teklif reddedilir", "OK" if r.status_code == 400 else "FARK", durum=r.status_code)
+    record("K6 boş teklif reddedilir", "OK" if r.status_code == 400 else "FARK", http=r.status_code)
     return finish(args.out)
 
 
