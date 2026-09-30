@@ -52,7 +52,10 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
 
     try:
         progress("understanding")
-        plan = build(question, runtime.llm_for("finance"), previous)
+        state["planning"] = []
+        model = runtime.llm_for("finance")
+        state["model"] = getattr(getattr(model, "llm", model), "model", None)
+        plan = build(question, model, previous, state["planning"])
         state["plan"] = plan.to_dict()
         if not execute:
             message = "Finans soru planı hazır; veri okunmadı."

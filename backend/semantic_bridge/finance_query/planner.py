@@ -9,6 +9,7 @@ from datetime import datetime
 
 from .language import fold, dates
 from .contracts import CONTRACT, METRICS, DIMENSIONS, ContractError
+from .model_schema import PLAN_SCHEMA, REVIEW_SCHEMA
 
 
 @dataclass(frozen=True)
@@ -47,15 +48,16 @@ def _json(text):
     return data
 
 
-def _object(llm, messages, max_tokens):
+def _object(llm, messages, max_tokens, schema, name):
     choice = llm.complete(messages, max_tokens=max_tokens, stream=False,
-                          body={"response_format": {"type": "json_object"}})
+                          body={"response_format": {"type": "json_schema", "json_schema": {
+                              "name": name, "strict": True, "schema": schema}}})
     if choice.get("finish_reason") == "length":
         raise ContractError("Soru planının model yanıtı kesildi; eksik planla hesap yapılmadı.")
     return _json((choice.get("message") or {}).get("content") or "")
 
 
-def build(question, llm, previous=None):
+def build(question, llm, previous=None, trace=None):
     today = datetime.now(ZoneInfo("Europe/Istanbul")).date()
     periods, grain = dates(question, today)
     if previous and follows(question) and not periods:
@@ -83,7 +85,9 @@ def build(question, llm, previous=None):
               "Top N yalnız açıkça istenirse. Önceki plan yalnız açık takip sorularında bağlamdır.\n"
               + json.dumps({"contract": CONTRACT, "output": schema, "parsedPeriods": periods,
                             "parsedGrain": grain, "previous": previous}, ensure_ascii=False))
-    data = _object(llm, [{"role": "system", "content": prompt}, {"role": "user", "content": question}], 2400)
+    data = _object(llm, [{"role": "system", "content": prompt}, {"role": "user", "content": question}], 2400, PLAN_SCHEMA, "finance_plan")
+    if trace is not None:
+        trace.append({"stage": "plan", "output": data})
     if set(data) - set(schema):
         raise ContractError("Soru planında sözleşme dışı alan var.")
     missing = data.get("uncovered") or []
@@ -146,17 +150,27 @@ def build(question, llm, previous=None):
     order = data.get("order_by") or metrics[0]
     if order not in metrics or type(data.get("descending", True)) is not bool:
         raise ContractError("Sıralama ölçüsü doğrulanamadı.")
-    # A separate reading of the plan must account for the entire user's request, not SQL syntax.
+    # The reviewer reads expanded business meaning, not implementation slot placement.
+    conditions = [f"{a} dahil, {b} hariç tarih aralığı" for a,b in periods]
+    if family in ("sales", "invoice"):
+        conditions.append({"all": "Tüm satış türleri", "wholesale": "Yalnız toptan satış", "retail": "Yalnız perakende satış"}[kind])
+    conditions.extend(f"{DIMENSIONS[d]}: {v!r} {'değerine eşit' if op=='eq' else 'değerini içeren'}" for d,op,v in filters)
+    readable = {"ölçüler": [{"ad": METRICS[m].label, "tanım": METRICS[m].definition} for m in metrics],
+                "sonuç_kırılımları": [DIMENSIONS[d] for d in dims], "koşullar": conditions,
+                "ilk_n": limit, "sıralama_ölçüsü": METRICS[order].label, "azalan": data.get("descending", True)}
     review = _object(llm, [{"role": "system", "content":
         "Soru-plan uyumunu denetle. Yalnız {\"ok\":true|false,\"missing\":[...]}. "
-        "Soruda istenmeyen kırılım, unutulan dönem/koşul/ölçü, yanlış sayım birimi varsa ok=false. "
-        "Özel isim veya sıfat filtreye dönüşmemişse reddet. Veri veya SQL üretme. "
-        "sale_kind=wholesale toptan TRCODE=8 koşuludur (net satır ölçüsünde iade 3 dahil); "
-        "sale_kind=retail perakende TRCODE=7 koşuludur (net satır ölçüsünde iade 2 dahil). "
-        "Bu tür koşulları ayrıca filters içinde arama; filters yalnız boyut değerleri içindir. "
-        "Genel tahsilat sözleşmesinin çek/senet dahil tanımı açıklamada gösterilecektir.\n" + json.dumps(CONTRACT, ensure_ascii=False)},
-        {"role": "user", "content": json.dumps({"question": question, "plan": data, "periods": periods,
-                                                "previous": previous if follows(question) else None}, ensure_ascii=False)}], 1400)
+        "Sana yürütülecek planın Türkçe iş anlamı veriliyor. Soruda istenmeyen kırılım, "
+        "unutulan dönem/özel isim/koşul/ölçü veya yanlış sayım birimi varsa ok=false. "
+        "Koşullar listesinde yazan koşul uygulanmaktadır; hayali bir teknik alanda ayrıca aranmaz. "
+        "Teknik alan adı, SQL, TRCODE veya filters anahtarı talep etme. Yalnız kullanıcı sorusundan "
+        "gerçekten eksik kalan iş koşulunu missing'e yaz. Varsayılan sıralama ve kurum kuralı olan "
+        "aktif CRM süzgeci kapsam hatası değildir. Kitap adedi toplam miktardır; kitap kırılımı şart değildir. "
+        "Genel tahsilatta çek/senet dahil tanım cevapta açıklanacaktır."},
+        {"role": "user", "content": json.dumps({"question": question, "plan": readable,
+                                                "previous": previous if follows(question) else None}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "finance_review")
+    if trace is not None:
+        trace.append({"stage": "review", "output": review})
     if review.get("ok") is not True or review.get("missing"):
         raise ContractError("Sorunun bütün koşulları plana taşınamadı: " + "; ".join(map(str, review.get("missing") or ["ölçü/kırılım uyumu"])))
     return Plan(metrics, dims, periods, tuple(filters), kind, limit, order, data.get("descending", True))

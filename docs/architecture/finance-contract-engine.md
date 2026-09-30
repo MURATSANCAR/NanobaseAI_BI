@@ -63,6 +63,11 @@ farkı kabul koşucusunda ayrıca reddedilir.
   Kendi pozitif aktif etiket sözleşmesini gerçek CRM metadata'sından okur; statecode ve statuscode
   koşulları kaydedilen fiziksel SQL'de görünür. Model JSON çıkışı aynı kabul kuyruğundan zorlanır;
   tür-denetçisi `sale_kind` alanının koşul karşılığını bilir.
+- İkinci 10 soruluk koşu 6 geçti / 4 başarısız: aktif kitap 9.380, aktif yazar kişi 660,
+  gerçek Aktif Müşteri 11.904 bağımsız referansla eşleşti. Kalan biçim/yanlış-ret hataları için
+  JSON Schema sunucuya gönderiliyor; denetçi teknik slot yerleşimi yerine genişletilmiş Türkçe
+  planı okuyor. Model kimliği ve plan/denetçi JSON çıktıları cevap izinde tutuluyor.
+  JSON Schema taşıma biçimi: https://docs.vllm.ai/en/stable/examples/features/structured_outputs/
 - `scripts/acceptance/finance_contracts/schema.py`, gerçek fiziksel şemayı, yayımlanmış Dynamics
   alan etiketlerini/açıklamalarını ve lookup ilişkilerini salt okunur dışarı alır. Sözlük eski
   semantik katalogdan üretilmez. Web belgesi ile kuruma özel metadata ayrı kanıt olarak tutulur.

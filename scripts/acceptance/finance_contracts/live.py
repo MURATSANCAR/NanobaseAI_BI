@@ -169,7 +169,7 @@ def compare(case, answer, whole, reference):
 
 def code_manifest():
     root=Path('/data/nanobaseai/bi/frontend/backend')
-    files=[root/'semantic_bridge/app.py',root/'semantic_layer/runtime/llm_queue.py',*sorted((root/'semantic_bridge/finance_query').glob('*.py'))]
+    files=sorted(p for p in root.rglob('*.py') if not {'tests','__pycache__'} & set(p.relative_to(root).parts))
     return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files if p.is_file()}
 
 
