@@ -34,9 +34,14 @@ F_EMSAL = ("Emsal kitaplar: son 12 ayda Logo'da baskı faturası olan, sayfa say
 F_GERCEK = ("Gerçekleşen: basılan adet ve baskı bedeli matbaa faturalarından; satılan adet, net satış ve Logo birim "
             "maliyeti satış satırlarından; kapak fiyatı CRM'den; maliyet ÷ fiyat = Logo birim maliyeti ÷ (kapak ÷ "
             "(1 + KDV)). " + F_NET)
-F_BACKLIST = ("Fiyat revizyonu adayı: oran = (son baskı birim bedeli + güncel kâğıt) ÷ kapak fiyatı (KDV hariç). Hedef "
-              "oran verilmezse son 12 ayda ilk baskısı yapılan kitapların ortanca oranı. Oranı hedefin üstünde olan ve "
-              "son iki yılda satışı olan kitaba hedefi tutturan fiyat (5 ₺'ye yukarı) önerilir.")
+F_KARSILASTIR = ("Eski kitap karşılaştırması: güncel fiyat = CRM kitap kartındaki KDV dahil kapak fiyatı. Bizim hesap = «Kitap "
+                 "hesabı»nda kitap seçildiğinde çıkan önerilen kapak fiyatı, bütün kitaplar için aynı zincirle: CRM + Logo "
+                 "öneri girdileri, basım Excel'indeki maliyet formu (baskı adedi son CRM üretim kaydından, kâğıt Logo "
+                 "alışından, kur fiyat listesindeki seçime göre Logo faturalarından ya da elle), serbest çalışan tutarları ve "
+                 "elle girilen pazar fiyatları; öneri = hedef marjı tutan maliyet alt sınırı ile emsal ortancasının büyüğü "
+                 "(KDV dahil, 5 ₺'ye yukarı). Fark = bizim hesap − güncel fiyat; % = bizim hesap ÷ güncel fiyat − 1. «Yeni» = "
+                 "ilk yayını (yoksa ilk matbaa faturası) son 12 ayda. Satış (2 yıl) = bu yıl ve geçen yılın Logo faturalı "
+                 "satış adedi.")
 F_ONAY = "Analiz ve teklifler portalda saklanır; rakamlar hesaplandığı andaki sonuçtur (sürümüyle)."
 
 
@@ -259,13 +264,17 @@ def for_actuals(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[s
     return k
 
 
-def for_backlist(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[str]) -> P.Kaynaklar:
+def for_compare(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[str]) -> P.Kaynaklar:
     k = _new(snap)
-    ref = k.hesap("backlist", F_BACKLIST + " " + F_KAGIT,
-                  snap_sources(k, snap, ["logo_baski", "logo_kagit", "crm_kitap", "crm_baski", "logo_satis"], logo_db, crm_db))
-    k.alanlar({"rows[]": ref, "count": ref, "target": ref, "measuredTarget": ref, "freshBooks": ref, "candidates": ref,
-               "secim": k.hesap("secim", "Seçilen = tabloda işaretlenen kitap sayısı; ortalama artış = seçilen kitapların "
-                                         "önerilen artış oranlarının aritmetik ortalaması (ekranda hesaplanır).", [ref])})
+    ref = k.hesap("karsilastir", F_KARSILASTIR + " " + F_FORM + " " + F_SENARYO + " " + F_EMSAL,
+                  snap_sources(k, snap, ["crm_kitap", "crm_baski", "crm_secenek", "logo_baski", "logo_kagit", "logo_kur",
+                                         "logo_satis", "logo_kanal", "logo_nakliye"], logo_db, crm_db))
+    k.alanlar({"rows[]": ref, "count": ref, "total": ref, "counts": ref, "avgDiffPct": ref, "kur": ref, "targetMargin": ref,
+               "newHidden": ref, "logoKur": ref,
+               "seconds": k.hesap("hazirlik", "Karşılaştırmanın son hesaplanma süresi (saniye) ve başladığı an; yalnız hesap "
+                                             "durumunu anlatır.", [ref]), "startedAt": "hesap:hazirlik",
+               "secim": k.hesap("secim", "Seçilen = tabloda işaretlenen kitap sayısı; ortalama değişim = seçilen kitapların "
+                                         "fark yüzdelerinin aritmetik ortalaması (ekranda hesaplanır).", [ref])})
     return k
 
 
@@ -294,8 +303,8 @@ def for_proposals(engine: Any, tenant: str, pid: Optional[str] = None) -> P.Kayn
     k = P.Kaynaklar()
     stmt = S.proposal_stmt(tenant, pid) if pid else S.proposals_stmt(tenant)
     p = k.portal("portal.fiyat.teklif", "Fiyat revizyonu teklifleri", stmt, engine,
-                 description="Teklif anında backlist listesinden seçilen kitaplar ve hedef oran (sunucuda hesaplanmış).")
-    ref = k.hesap("teklif", F_ONAY + " " + F_BACKLIST, [p])
+                 description="Teklif anında eski kitap karşılaştırmasından seçilen kitaplar ve hesabın girdileri (sunucuda hesaplanmış).")
+    ref = k.hesap("teklif", F_ONAY + " " + F_KARSILASTIR, [p])
     k.alanlar({"items[]": ref, "params": ref, "count": ref})
     return k
 

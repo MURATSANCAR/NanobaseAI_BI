@@ -465,6 +465,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             <Results
               r={calc.data}
               chosenQty={form.chosenQty ?? null}
+              current={code ? book.data?.book.price : null}
               onPickPrice={(p) => {
                 if (readOnly) return;
                 st.set({ fiyat: p });
@@ -649,7 +650,7 @@ function BookFacts({ b }: { b: BookDetail }) {
   );
 }
 
-function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: number | null; onPickPrice: (p: number) => void }) {
+function Results({ r, chosenQty, onPickPrice, current }: { r: CalcResult; chosenQty: number | null; onPickPrice: (p: number) => void; current?: number | null }) {
   const s = r.summary;
   const rec = r.recommendation;
   const comp = r.comparables;
@@ -664,9 +665,19 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
             value={tl0(rec.price)}
             note={
               rec.price ? (
-                <button type="button" className="font-bold text-canvas-violet hover:underline" onClick={() => onPickPrice(rec.price!)}>
-                  Bu fiyatı kullan
-                </button>
+                <>
+                  {current ? (
+                    <span className="block">
+                      Güncel {tl0(current)} ·{' '}
+                      <span className={rec.price > current ? 'font-bold text-amber-700' : rec.price < current ? 'font-bold text-emerald-700' : ''}>
+                        {rec.price === current ? 'aynı' : `${rec.price > current ? '+' : '−'}%${(Math.abs(rec.price / current - 1) * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}`}
+                      </span>
+                    </span>
+                  ) : null}
+                  <button type="button" className="font-bold text-canvas-violet hover:underline" onClick={() => onPickPrice(rec.price!)}>
+                    Bu fiyatı kullan
+                  </button>
+                </>
               ) : (
                 rec.floorReason
               )

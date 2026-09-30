@@ -907,6 +907,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/budget/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|refresh)$",
      "ozellik:butce.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/budget/plans/[^/]+/export\.csv$", "ozellik:veri.disa-aktar"),
+    (frozenset({"GET"}), r"^/api/v1/pricing/compare\.csv$", "ozellik:veri.disa-aktar"),
     # M45 Finansal raporlar: nakit sekmesi ve uçları, vergi takvimi yazma, sapma notu, dışa aktarma. Hesap eşlemesi kararı
     # (`finans.esleme`) ve ay kapanışı (`finans.kapanis`) açıkça verilir, ucun içinde denetlenir.
     (frozenset({"GET", "POST"}), r"^/api/v1/finance/cash(/.*)?$", "ozellik:finans.nakit"),

@@ -5,8 +5,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, TableWrap, btnGhost, btnPrimary, errText, fmtDate, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import SqlInfo, { type FieldHelp } from '../components/SqlInfo';
-import { num, pricingApi, type Tariff } from './api';
-import { NumField } from './parts';
+import { day, num, pricingApi, type Tariff } from './api';
+import { NumField, Select } from './parts';
 
 /** Matbaa ve malzeme fiyat listesi: basım Excel'indeki fiyatların portaldaki hâli. Değiştirmek «Fiyat analizi hazırlama» ister. */
 
@@ -36,6 +36,7 @@ export default function TariffPanel() {
     onSuccess: (out) => {
       setT(out);
       qc.invalidateQueries({ queryKey: ['pricing', 'form'] });
+      qc.invalidateQueries({ queryKey: ['pricing', 'compare'] });
     },
   });
   const can = !!setup.data?.canWrite;
@@ -73,10 +74,24 @@ export default function TariffPanel() {
       {save.error && <div className="mt-2"><Note tone="err">{errText(save.error, 'Kaydedilemedi.')}</Note></div>}
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <NumField label="1 dolar" suffix="₺" disabled={!can} value={t.kur.USD} onChange={(v) => up({ kur: { ...t.kur, USD: v ?? t.kur.USD } })}
-          info={i(help('Logo\'da dolar faturası yoksa ya da ekranda kur yazılmadıysa kullanılan dolar kuru.', { excel: 'J56.' }), '1 dolar')} />
-        <NumField label="1 euro" suffix="₺" disabled={!can} value={t.kur.EUR} onChange={(v) => up({ kur: { ...t.kur, EUR: v ?? t.kur.EUR } })}
-          info={i(help('Logo\'da euro faturası yoksa ya da ekranda kur yazılmadıysa kullanılan euro kuru.', { excel: 'J57.' }), '1 euro')} />
+        <div className="col-span-2 sm:col-span-3 xl:col-span-2">
+          <Select<'logo' | 'elle'>
+            label="Kur"
+            disabled={!can}
+            value={t.kurKaynak ?? 'logo'}
+            onChange={(v) => up({ kurKaynak: v })}
+            options={[
+              { value: 'logo', label: 'Logo faturalarından' },
+              { value: 'elle', label: 'Elle girilen kur' },
+            ]}
+            info={i(help('Bütün hesapların (kitap hesabı, eski kitap karşılaştırması) kullandığı dolar ve euro kuru. «Logo faturalarından»: Logo\'da o dövizle kesilen en son günün faturalarındaki kur; o dövizle fatura yoksa yandaki kur. «Elle girilen kur»: her zaman yandaki kur.', { excel: 'J56, J57.' }), 'Kur')}
+            hint={logoKurText(setup.data?.logoKur)}
+          />
+        </div>
+        <NumField label={t.kurKaynak === 'elle' ? '1 dolar (elle)' : '1 dolar (Logo\'da yoksa)'} suffix="₺" digits={4} disabled={!can} value={t.kur.USD} onChange={(v) => up({ kur: { ...t.kur, USD: v ?? t.kur.USD } })}
+          info={i(help('Kur «Elle» seçiliyse bütün hesaplarda kullanılan dolar kuru; «Logo» seçiliyse yalnız Logo\'da dolar faturası yokken.', { excel: 'J56.' }), '1 dolar')} />
+        <NumField label={t.kurKaynak === 'elle' ? '1 euro (elle)' : '1 euro (Logo\'da yoksa)'} suffix="₺" digits={4} disabled={!can} value={t.kur.EUR} onChange={(v) => up({ kur: { ...t.kur, EUR: v ?? t.kur.EUR } })}
+          info={i(help('Kur «Elle» seçiliyse bütün hesaplarda kullanılan euro kuru; «Logo» seçiliyse yalnız Logo\'da euro faturası yokken.', { excel: 'J57.' }), '1 euro')} />
         <NumField label="Vade farkı (aylık)" suffix="%" disabled={!can} value={t.vade.oran} onChange={(v) => up({ vade: { ...t.vade, oran: v ?? 0 } })}
           info={i(help('Logo\'da alışı olmayan kâğıdın ton fiyatına eklenen vade farkı: aylık oran × vade süresi (5 × 6 = %30).', { excel: 'P7 (oran), P8 (süre), Q8 (fark).' }), 'Vade farkı')} />
         <NumField label="Vade süresi" suffix="ay" digits={0} disabled={!can} value={t.vade.ay} onChange={(v) => up({ vade: { ...t.vade, ay: v ?? 0 } })}
@@ -158,4 +173,11 @@ export default function TariffPanel() {
       </details>
     </Panel>
   );
+}
+
+/** Logo'daki son döviz faturalarının kuru (seçimin altında bilgi olarak). */
+function logoKurText(k: Partial<Record<'USD' | 'EUR', { rate: number; date: string | null }>> | undefined): string {
+  const f = (c: 'USD' | 'EUR', sym: string) => (k?.[c] ? `1 ${sym} = ${k[c]!.rate.toLocaleString('tr-TR', { maximumFractionDigits: 4 })} ₺ (${day(k[c]!.date)})` : null);
+  const parts = [f('USD', '$'), f('EUR', '€')].filter(Boolean);
+  return parts.length ? `Logo: ${parts.join(' · ')}` : 'Logo\'da döviz faturası yok.';
 }
