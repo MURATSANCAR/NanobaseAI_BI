@@ -45,7 +45,8 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
     sql = None
     state = {"engine": "finance_contract_v1", "contractHash": CONTRACT_HASH, "engineCodeHash": ENGINE_HASH,
              "crmContractHash": hashlib.sha256(json.dumps(CRM_CAPABILITIES, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
-             "legacyCatalogUsed": False, "legacySqlFallback": False, "readRetries": engine.read_retries}
+             "legacyCatalogUsed": False, "legacySqlFallback": False, "readRetries": engine.read_retries,
+             "stage": "planning"}
 
     def record(kind, summary, result=None, error=None):
         nonlocal sql
@@ -71,8 +72,10 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
             message = "Finans soru planı hazır; veri okunmadı."
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": message,
                     "threadId": thread_id, "semantic": state, "queryId": record("CLARIFICATION", message)}
+        state["stage"] = "source_execution"
         progress("executing")
         rows = engine.execute(plan)
+        state["stage"] = "result_processing"
         state["sourcePeriods"] = engine.source_periods
         state["executions"] = engine.runs
         fields = list(rows[0]) if rows else []
@@ -135,6 +138,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         if not engine.section_results and not plan.logo_report and not plan.crm_report:
             runtime.attach_widget(result, question)
         runtime.remember_result(result, question=question, sql=sql)
+        state["stage"] = "complete"
         qid = record(kind, summary, result)
         if not hasattr(runtime, "_finance_plans"):
             runtime._finance_plans = OrderedDict()
@@ -151,6 +155,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         status = exc.code
         kind = "CLARIFICATION" if status == "NEEDS_CLARIFICATION" else status
         state["outcome"] = status
+        state["failureStage"] = state["stage"]
         qid = record(kind, message, error=message)
         return {"id": uuid.uuid4().hex, "type": kind, "needs_clarification": status == "NEEDS_CLARIFICATION",
                 "explanation": message, "threadId": thread_id, "semantic": state, "queryId": qid}
@@ -159,7 +164,19 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         if isinstance(exc, access.DataScopeError):
             raise
         log.exception("finance contract question failed")
-        message = "Finans cevabı doğrulanamadı; kaynak bağlantısı veya sözleşme yürütmesi tamamlanamadı."
-        qid = record("DATA_SOURCE_UNAVAILABLE", message, error=type(exc).__name__ + ": " + str(exc)[:600])
-        return {"id": uuid.uuid4().hex, "type": "DATA_SOURCE_UNAVAILABLE", "explanation": message,
+        phase = state["stage"]
+        if phase == "planning":
+            kind = "PLAN_INVALID"
+            message = "Finans sorusunun planlama veya model hizmeti işlemi tamamlanamadı; veri kaynaklarına sorgu gönderilmedi."
+        elif phase == "source_execution":
+            kind = "DATA_SOURCE_UNAVAILABLE"
+            message = "Finans cevabı doğrulanamadı; veri kaynağını okuma veya hesap yürütme işlemi tamamlanamadı."
+        else:
+            kind = "PLAN_INVALID"
+            message = "Finans sonucu hazırlanırken doğrulama tamamlanamadı; sonuç sunulmadı."
+        state["outcome"] = kind
+        state["failureStage"] = phase
+        # Details remain in restricted server logs, never the user-visible query record.
+        qid = record(kind, message, error=message)
+        return {"id": uuid.uuid4().hex, "type": kind, "explanation": message,
                 "threadId": thread_id, "semantic": state, "queryId": qid}

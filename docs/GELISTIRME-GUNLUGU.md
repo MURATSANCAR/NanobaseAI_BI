@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Yeniden planlama mesaj sırası ve kesilen kabul
+
+- c768a365e gerçek API koşusu: ilk30 soruda26 PASS,3 FAIL,1 UNVERIFIED; sonraki CP031 PASS. CP001/002/019 kaynak hatası değil, yeniden planlama sırasında kullanıcıdan sonra system mesajı yüzünden model HTTP400 verdi. Güvenilen system yönergeleri baştaki tek mesajda birleştirildi; kullanıcı içeriğinin yetkisi yükseltilmedi.
+- CP007 sırasında Logo toplamı değişti; API son bağımsız referansla eşleşti, koşu yine UNVERIFIED tutuldu. Köprü başka işlemle yeniden başladığında koşu durduruldu;1 geçici oturum silindi. Sonraki kabulde API erişimi veya kod değişimi ilk tespitte koşuyu durdurur. Yeni sürümün gerçek kabulü bekliyor.
+
 ## 2026-09-30 — Editör motorundaki okunmuş kitaplar silindi (kullanıcı isteği)
 
 - Kullanıcı: «okuduğumuz kitapları da sil, herşeyi sil». TT GPU editör motorunda `TRUNCATE ed.book CASCADE` (46 tablo: 25 kitap, 5.016 sayfa, 58 okuma işi, 581 bin model çağrısı…), arama dizini (`editor_catalog_v1`, `editor_passages_v1`), `storage/books` (25 klasör, 2 GB), `storage/inbox` (25 PDF), rapor ve eski kabul/deneme klasörleri. Kalıcı silme kullanıcı tarafından çalıştırıldı (klasörler root'a ait olduğu için ikinci adım sudo ile). Yedek alınmadı.

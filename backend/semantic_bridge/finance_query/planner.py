@@ -1,7 +1,7 @@
 """Natural language -> closed typed plan. Never natural language -> executable SQL."""
 from __future__ import annotations
 from dataclasses import dataclass, asdict, replace
-from datetime import date
+from datetime import date, timedelta
 import json
 import hashlib
 import re
@@ -61,7 +61,13 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
     request_messages = list(messages)
     for attempt in range(2):
         budget = min(max_tokens * (attempt + 1), 14400)
-        choice = llm.complete(request_messages, max_tokens=budget, stream=False,
+        # Some model chat templates allow system instructions only once, first.
+        # Both structural and JSON-format repairs add trusted system guidance;
+        # merge those without promoting any user content to system authority.
+        system_parts = [m["content"] for m in request_messages if m.get("role") == "system"]
+        ordered_messages = ([{"role": "system", "content": "\n\n".join(system_parts)}] if system_parts else [])
+        ordered_messages.extend(m for m in request_messages if m.get("role") != "system")
+        choice = llm.complete(ordered_messages, max_tokens=budget, stream=False,
                               body={"max_tokens": budget, "temperature": 0.0,
                                     "chat_template_kwargs": {"enable_thinking": False},
                                     "response_format": {"type": "json_schema", "json_schema": {
@@ -162,6 +168,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "oranlar kalan satırı oluşturulduktan sonra yeniden hesaplanır. "
               "Uyumlu ortak kırılımdaki ölçülerle derived işlemleri serbest: ratio=left/right*scale; difference=left-right; "
               "percent_change=(left-right)/right*100. Operandlar temel ölçü IDsidir; gerekli tüm operandları metrics'e ekle. "
+              "A, B'nin yüzde kaçı veya A/B yüzde oranı isteği ratio(left=A,right=B,scale=100) işlemidir; bu soruda fark çıkarılmaz. "
               "A tutarı B tutarından yüzde kaç farklı sorusu percent_change(left=A,right=B,scale=100) gerektirir; A/B*100 buna eşit değildir. "
               "Farkı B'ye böl isteğinde ara farkı ayrıca göstermesi istenmediyse difference+ratio üretme, tek percent_change üret. "
               "Kullanıcı sadece ilk N ve kalan istemişse contribution ekleme; pay/kümülatif pay ayrı istek gerektirir. "
@@ -363,7 +370,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                 "ilk_n":spec["limit"], "kalan":"Seçilmeyen bütün öğeler ölçü toplamları korunarak tek satır olur", "kalan_etiketi":spec["label"]})
     readable = {"referenceDate": str(today), "ölçüler": [{"id": m, "ad": METRICS[m].label, "tanım": METRICS[m].definition} for m in metrics],
                 "tarih_anlamı": "Son N ay/yıl, bugünün gün numarası korunarak N takvim birimi geriye gidilen hareketli aralıktır; hedef ayda gün yoksa ay sonu kullanılır ve bugün dahildir. Son tamamlanan N ay/yıl ise tamamlanmış takvim dönemleridir. Bunlar aynı aralık değildir. En yüksek/en çok gibi ölçü sırasındaki ilk N gün bütün istenen dönemden seçilen N sonuç satırıdır; ayın kronolojik ilk N günü değildir.",
-                "uygulanan_tarih_aralıkları": [{"başlangıç_dahil":a,"bitiş_hariç":b} for a,b in periods],
+                "uygulanan_tarih_aralıkları": [{"başlangıç_dahil":a,"bitiş_hariç":b, "son_gün_dahil":str(date.fromisoformat(b)-timedelta(days=1)), "gün_sayısı":(date.fromisoformat(b)-date.fromisoformat(a)).days} for a,b in periods],
                 "referenceDate_anlamı": "Yalnız göreli tarihleri çözme çıpası; mutlak tarih isteğinin yerine geçen sorgu tarihi değildir",
                 "teknik_kod_anlamı": "Ölçü tanımlarındaki TRCODE, SIGN ve 7/8/9, 2/3 gibi sayılar işlem türü kodlarıdır; ay/gün/yıl veya tarih filtresi değildir",
                 "sonuç_kırılımları": result_grain, "koşullar": conditions, "operand_anlamları": operand_meanings,

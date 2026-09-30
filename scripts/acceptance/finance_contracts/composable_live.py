@@ -513,6 +513,8 @@ def main():
         for source in sources:conns[source]=connect(f"/data/nanobaseai/bi/secrets/{source}-mssql-connection.json")
         if cross_dimensions:conns["cross_dimensions"]={"logo":conns["logo"],"crm":conns["crm"]}
         for case in selected:
+            if manifest()!=before:
+                raise RuntimeError("Deployed code changed; acceptance stopped before another question")
             item={**case,"started":time.time()};stop=False
             retry_offset=len(REFERENCE_RETRIES)
             try:
@@ -543,14 +545,14 @@ def main():
                 item["status"]="FAIL" if structural else "UNVERIFIED"
                 item["error"]=type(exc).__name__+": "+str(exc)[:500]
                 if structural:item["structuralErrorsDespiteReferenceFailure"]=structural
-                stop=isinstance(exc,TimeoutError) or isinstance(exc,urllib.error.URLError) and isinstance(exc.reason,TimeoutError)
+                stop=isinstance(exc,(TimeoutError,urllib.error.URLError))
             item["referenceRetries"]=REFERENCE_RETRIES[retry_offset:]
             item["elapsedSeconds"]=round(time.time()-item["started"],2)
             save(out/(case["id"]+".json"),item);counts[item["status"]]+=1
             results.append({k:item[k] for k in ("id","status","errors","error","elapsedSeconds") if k in item})
             print(json.dumps(results[-1],ensure_ascii=False),flush=True)
             if len(results)%10==0:print("BATCH",len(results),dict(counts),flush=True)
-            if stop:print("STOP: request may still run; do not duplicate workload",flush=True);break
+            if stop:print("STOP: API unavailable or request may still run; do not duplicate workload",flush=True);break
     except BaseException as exc:
         counts["UNVERIFIED"]+=1;results.append(dict(id="ENVIRONMENT",status="UNVERIFIED",error=type(exc).__name__+": "+str(exc)[:500]))
     finally:
