@@ -102,13 +102,9 @@ def _question_plan_schema(question):
 def _object(llm, messages, max_tokens, schema, name, trace=None):
     """One bounded format retry; an incomplete plan never reaches the executor."""
     request_messages = list(messages)
-    thinking_requested = name in {
-        "finance_plan", "finance_review", "crm_review", "composite_review",
-        "source_report_intents", "source_report_review",
-    }
+    thinking_requested = name == "finance_plan"
     for attempt in range(2):
-        budget = (min(max(4096, max_tokens) * (attempt + 1), 8192) if thinking_requested
-                  else min(max_tokens * (attempt + 1), 14400))
+        budget = 8192 if thinking_requested else min(max_tokens * (attempt + 1), 14400)
         # Some model chat templates allow system instructions only once, first.
         # Both structural and JSON-format repairs add trusted system guidance;
         # merge those without promoting any user content to system authority.

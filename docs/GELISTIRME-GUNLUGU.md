@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Reasoning pilotunun gecikmesi ve yalnız planlamaya daraltma
+
+-30ba7a447 CP020 yeni1Ekimreferansıyla PASS96.46s:ilkplannet_sales+sold_quantity doğru;28.1s plan,23.7s4096tokenkesilen denetim,41.6s8192tokenyeniden denetim. GerçekreasoningChars>0; ham düşünce kaydedilmedi. Farklıreferansgününü öncekiaynısayısalveri AB saymıyoruz.
+-CR023244.2sHTTPtimeout→UNVERIFIED;1geçici oturum silindi. Yeni ağır koşu başlatılmadı. Model logu6400planlength→8192stop,4096intentlength→8192length; tekrootrepairsonrasıaynı8boundedçağrı00:07:19'da son8192lengthilebitti. Sayısal/tamcevap kabulü yok.
+- Servisin `/v1/models` bilgisi pilot sırasında Qwen/Qwen3.8-27B-FP8 rootundan /model ve book-director+nanobaseAI aliaslarına değişti. Repo aynımodelailesini tarifetse de canlı ağırlık/sunum eşdeğerliği kanıtlanmadı; bu koşu yalnızayarın nedenselABüstünlüğünü kanıtlamaz. Manifest reasoning-model-manifest.json altında.
+- Yeni hibritpilot thinkingyalnızfinance_plan,ilk/ikinci denemede8192cap; niyet/denetim çağrıları önceki thinkingfalsebütçelerinde. Tüm güvenlik/semantik kapılar,2format/1rootrepair sınırları ve süreölçümü korunur. Üretim/tamkabul iddiası yok; gerçekAPIyenidenkontrolbekler.
+
 ## 2026-10-01 — Açık yıl başlangıcı ve gün bitişi aralığı
 
 - Logo LR004'ün doğruJan1–Oct1 planı, deterministic parser'ın2026bütünyıl+30Eylültek gün üretmesi yüzünden reddedildi. `YYYY [yılının] başından DD Ay YYYY sonuna kadar/dahil` açık uçları tek dahil-bitiş aralığında birleştirilir.
