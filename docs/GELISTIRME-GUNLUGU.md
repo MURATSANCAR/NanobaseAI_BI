@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — CRM alan sözleşmeleri ve plan dallarının yapısal ayrımı
+
+- Güncel CRM31 raporunda31 fiziksel tablo/161 tablo-kolon çifti metadata ile eşlendi, eksik0. İlk23/115 dar kapsam korunup geniş harita belgelendi. Tablo/kolon varlığı iş doğruluğu değildir.
+- CRM raporlarının gerçek kayıt türü, alanı, satır düzeyi, tarih anlamı ve zorunlu eksikleri ortak8 alan kümesiyle açıklandı; anlam denetçisi yalnız seçilen raporun açılmış çıktı sözleşmesini okur. Hesap/SQL değişmedi.
+- CRM canlı önkoşuda doğru raporla gereksiz coverage, aynı yaprakta iki kaynak dalı ve onarımda dal kaybı görüldü. Üretim JSON şeması tek/bölümlü ve tek-yaprak kaynaklarını birbirini dışlayacak şekilde daraltıldı; doğrulayıcılar korunur. Onarım reddedilen kök planı görür; çocuk plan kök yerine kullanılamaz.
+- Geçmiş Logo stok iş tarihi ile rapor referansı ayrıldı; geçmiş yıl kaynağı için LR011 eklendi. Sipariş ana birim katsayısı pozitif olmalı. Stok bağımsız referansı dönemden önceki uzlaşmazlığı da kısmî sonuçta korur.
+- Gerçek CR022 sorusunda başlangıç dahil/bitiş hariç aralığının iki ayrı gün sayıldığı bulundu; genel açık/kapalı uç ayrıştırması düzeltildi. Tarihli CRM ve geçmiş stok vakaları yeni sürümde tekrar koşulacak.
+- Yeni sürüm henüz canlı kabul edilmedi. Devam eden CRM koşusu b26fde7e5 sürümüne aittir. Sonraki yayın için45 ortak,31 CRM,11 Logo,3 belge/çapraz, büyük bölümlü mobil CSV ve100 karmaşık soru kabulü planlı; eski sürüm sonucu yeni sürüme taşınmaz.
+
 ## 2026-09-30 — Yeniden planlama mesaj sırası ve kesilen kabul
 
 - c768a365e gerçek API koşusu: ilk30 soruda26 PASS,3 FAIL,1 UNVERIFIED; sonraki CP031 PASS. CP001/002/019 kaynak hatası değil, yeniden planlama sırasında kullanıcıdan sonra system mesajı yüzünden model HTTP400 verdi. Güvenilen system yönergeleri baştaki tek mesajda birleştirildi; kullanıcı içeriğinin yetkisi yükseltilmedi.

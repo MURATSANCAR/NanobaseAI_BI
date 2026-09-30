@@ -106,9 +106,10 @@ def validate_logo_report(raw):
         expected_end = date.fromisoformat(spec["as_of"]) + timedelta(days=1)
         if not spec["lookback_days"] or spec["end"] != str(expected_end) or spec["start"] != str(expected_end - timedelta(days=spec["lookback_days"])):
             raise ContractError("Stok tarihinden önceki satış penceresi başlangıç/bitiş tarihleriyle uyuşmuyor.")
-    if spec["as_of"] and spec["mode"] not in ("stock", "stock_history", "open_orders", "aging", "profit"):
-        if not spec["end"] or spec["as_of"] != str(date.fromisoformat(spec["end"]) - timedelta(days=1)):
-            raise ContractError("Raporun itibarıyla tarihi işlem dönemi bitişiyle uyuşmuyor.")
+    if spec["mode"] == "stock_history" and spec["as_of"] != str(date.fromisoformat(spec["end"]) - timedelta(days=1)):
+        raise ContractError("Stok geçmişinin itibarıyla tarihi, bitiş tarihinden önceki son gün olmalı; çelişen tarihler sessizce seçilemez.")
+    # In the other modes start/end select the transaction population; as_of is
+    # only the report reference date and must not replace that historical range.
     if spec["mode"] in INVOICE_REPORTS and any(spec[key] is not None for key in ("book_code", "customer_code", "warehouse_no", "order_by")):
         raise ContractError("Bu fatura raporunda kod/depo filtresi veya özel sıralama henüz doğrulanmadı; koşul sessizce atlanmadı.")
     if spec["book_code"] and spec["mode"] not in ("stock", "stock_history", "open_orders", "purchase_prices", "profit", "cross_book_sales_quality"):
@@ -281,7 +282,7 @@ def _orders(executor, spec):
             row["source_period"]=f"{firm}/{period}"
             row["remaining_net_amount_proportional"]=_d(row["line_net_amount"])*_d(row["remaining_quantity"])/_d(row["ordered_quantity"]) if _d(row["ordered_quantity"])>0 else None
             row["overdue_days"]=max(0,(as_of-date.fromisoformat(row["due_date"])).days) if row["due_date"] else None
-            row["remaining_base_quantity"]=_d(row["remaining_quantity"]) if row["unit_factor_1"] and row["unit_factor_1"]==row["unit_factor_2"] else None
+            row["remaining_base_quantity"]=_d(row["remaining_quantity"]) if row["unit_factor_1"] is not None and row["unit_factor_1"]>0 and row["unit_factor_1"]==row["unit_factor_2"] else None
             if row["remaining_base_quantity"] is None:bad+=1
             out.append(row)
     fields=["source_period","order_line_ref","order_number","order_date","book_code","book_name","customer_code","customer_name","warehouse_no","unit_ref","ordered_quantity","shipped_quantity","remaining_quantity","remaining_base_quantity","remaining_net_amount_proportional","due_date","overdue_days"]

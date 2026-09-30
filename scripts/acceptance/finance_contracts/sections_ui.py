@@ -19,7 +19,12 @@ out=Path(sys.argv[1]);out.mkdir(parents=True,exist_ok=False)
 lock=open("/tmp/finance-composable-live.lock","a");fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 session=None;digest=None;report={"status":"UNVERIFIED","sourceWrites":0};before=gate.manifest()
 try:
-    case=next(c for c in gate.cases() if c.get("sections"))
+    case=dict(id="UI_SECTIONS_FULL",question="Eylül 2026 KDV hariç iadeler düşülmüş net satışını iki ayrı tabloda göster: ilk tablo kitap kodu ve kitap adına göre, ikinci tablo kanallara göre olsun. Her iki tablonun bütün satırlarını ver; ilk N sınırı istemiyorum.",
+        source="logo",columns=["section","status","row_count"],keys=["section"],periods=[],sections=[
+            dict(source="logo",metrics=["net_sales"],dimensions=["book"],columns=["book_code","book_name","net_sales"],keys=["book_code","book_name"],periods=[["2026-09-01","2026-10-01"]],
+                referenceSql="SELECT LTRIM(RTRIM(I.CODE)) book_code,I.NAME book_name,SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.LINENET ELSE S.LINENET END) net_sales FROM dbo.LG_411_01_STLINE S LEFT JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=S.STOCKREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY LTRIM(RTRIM(I.CODE)),I.NAME"),
+            dict(source="logo",metrics=["net_sales"],dimensions=["channel"],columns=["channel","net_sales"],keys=["channel"],periods=[["2026-09-01","2026-10-01"]],referenceSql=gate.sales_sql("2026-09-01","2026-10-01",["net_sales"],"channel")),
+        ])
     login=gate.environment("timas-login")
     session=sqlite3.connect(login.get("SESSION_DB","/var/lib/timas-login/sessions.sqlite"))
     token=secrets.token_urlsafe(32);digest=hashlib.sha256(token.encode()).hexdigest()
@@ -30,6 +35,8 @@ try:
     subprocess.run(["node",str(Path(__file__).with_name("ui.cjs"))],env={**os.environ,"FINANCE_UI_TOKEN":token,"FINANCE_UI_OUT":str(out),"FINANCE_UI_QUESTION":case["question"]},check=True,timeout=480)
     answer=json.loads((out/"answer.json").read_text());full=json.loads((out/"full.json").read_text())
     errors=gate.compare(case,answer,full,expected)
+    if not any(len(section)>50 for section in expected["sections"]):
+        raise RuntimeError("Real source did not exercise section pagination")
     for index,section in enumerate(full.get("sections",[])):
         with (out/f"section-{index}.csv").open(encoding="utf-8-sig",newline="") as stream:exported=list(csv.reader(stream,delimiter=";"))
         if len(exported)!=len(section["records"])+1:errors.append("CSV row count mismatch")

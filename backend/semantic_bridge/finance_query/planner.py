@@ -105,19 +105,22 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
 def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _source_question=None):
     # At most one semantic/structural replan for the complete user request.
     # Leaves propagate their rejection to the root rather than multiplying retries.
+    if trace is None:
+        trace = []
     try:
         return _build(question, llm, previous, trace, _data=_data, _depth=_depth, _source_question=_source_question)
     except ContractError as exc:
         if exc.code != "PLAN_INVALID" or _depth or _data is not None or llm is None:
             raise
         reason = str(exc)
+        rejected_plan = next((event["output"] for event in reversed(trace) if event.get("stage") == "plan" and event.get("depth") == 0 and isinstance(event.get("output"), dict)), None)
         if trace is not None:
             trace.append({"stage":"bounded_plan_repair", "attempt":1, "reason":reason})
         return _build(question, llm, previous, trace, _depth=0,
-                      _source_question=_source_question, _repair_error=reason)
+                      _source_question=_source_question, _repair_error=reason, _repair_plan=rejected_plan)
 
 
-def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _source_question=None, _repair_error=None):
+def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _source_question=None, _repair_error=None, _repair_plan=None):
     q = fold(question)
     source_question = _source_question or question
     source_q = fold(source_question)
@@ -147,15 +150,21 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Önce doğrulanmış ölçüleri, sonra logoReportCapabilities/crmReportCapabilities raporlarını değerlendir. "
               "Yalnız hiçbir dalın karşılamadığı koşulu uncovered'a yaz; kâr/maliyet/yaşlandırma gibi adları sırf sözcük diye reddetme, "
               "capabilities içindeki hesap tanımı ve kaynak sınırlarını uygula. Ham SQL veya yeni alan adı üretme. "
-              "Tek soruda farklı kırılımlar/özet+detay/bağımsız kaynak bölümleri gerekiyorsa sections kullan (en fazla 4 yaprak). "
+              "Tek raporun output_contracts kayıt türleri istenen özet ve detayı zaten içeriyorsa tek rapor kullan. "
+              "Yalnız tek raporun karşılamadığı farklı kırılımlar/bağımsız kaynak bölümleri gerekiyorsa sections kullan (en fazla 4 yaprak). "
               "Her section title, anlamı koruyan question ve tek leaf plan içerir; leaf plan iç içe sections içermez. "
               "Root sections doluyken metrics/dimensions/filters/derived/having/analytics boş; crm/logo_report/crm_report/comparison/limit/order_by null, uncovered boş liste ve clarification boş metin olsun. Kök bölüm planlarından alan miras almaz. "
               "YALNIZ sections dolu olan bölümlü kökte her bağımsız isteği coverage'a özgün sorudan harfi harfine kesintisiz alınmış requirement metniyle bağla; büyük/küçük harf, noktalama ve ekleri değiştirme. Özet veya section question metni alıntı yerine geçmez. sections sıfır tabanlı bölüm indeksleri, "
               "gap_index gaps içindeki eksik kapsam indeksidir. Bir koşul ya gerçek bölüme ya açık gaps kaydına bağlanır. "
               "Bağımsız eksik işi gaps ile açık belirt; bir filtrenin yapılamamasını gaps diyerek atıp filtresiz geniş sonuç üretme. "
               "gaps varsa kök uncovered/clarification boş kalır; tam cevap iddiası kurulmaz. Tek hesap, tek CRM raporu veya tek Logo raporunda sections=[], gaps=[], coverage=[] zorunludur; olmayan bölüm0 için kapsam kaydı üretme. "
+              "Seçilen raporun output_contracts içinde açıklanan kaynak sınırları yürütmede otomatik gap olarak sunulur; bunları tek planın kök gaps/coverage dizilerine kopyalama. "
               "logo_report/crm_report dalı seçildiğinde diğer yürütme dalları ve hesap dizileri boş/null olmalı. "
-              "Raporda as_of referans tarihidir; kullanıcı tarih aralığı istemediyse start/end null kalır, as_of yüzünden aralık uydurma. "
+              "CRM ve Logo diğer raporlarda as_of bugün referansıdır. Logo stock/stock_history/open_orders/aging için as_of iş tarihidir. "
+              "stock_history as_of=end tarihinden bir gün önce; stock as_of sorudaki tek stok günü veya tarih yoksa bugün. "
+              "Noktasal stok günü start/end filtresi değildir; stock start/end yalnız ayrıca istenmiş satış hız penceresinde kullanılır. "
+              "open_orders tarih aralığı sipariş tarihi, as_of gecikme değerlendirme tarihidir; geçmiş durum yeteneği ayrıca doğrulanmalıdır. "
+              "Kullanıcı tarih aralığı istemediyse start/end null kalır, as_of yüzünden aralık uydurma. "
               "analytics contribution: tek dönemde metric payı, azalan kümülatif pay ve grup toplamı; group_by çıktı boyut alanları. "
               "analytics top_remainder: her grupta açıkça istenen ilk N + kalan ölçü toplamı, negatifler korunur. "
               "contribution için id ver, limit null ve label boş; top_remainder için limit ve label ver, id boş olmayan özgünkimlik. "
@@ -181,7 +190,12 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Türetilmiş alanlara benzersiz küçük harf ASCII id ver; order_by ve having bu id'yi kullanabilir. "
               "Yalnız kullanıcının çıktı olarak istediği türetilmiş değerleri ekle; yüzde hesabının ara fark adımı ayrıca gösterilmesi istenmediyse ikinci kolon değildir. "
               "having agregasyon sonrası sayısal koşullardır; value noktalı ondalık string, binlik ayraç yok. "
-              "CRM kart listesi, gruplu sayımı ve eksik alanları crm dalıyla planla; bu dalda metrics/dimensions boş, "
+              "CRM basit kart listesi, gruplu sayımı ve eksik alanları crm dalıyla planla; ilişkili detay, mükerrer grupların üyeleri veya basit dalda bulunmayan alanlar için karşılayan crm_report yeteneğini seç. "
+              "Basit crm.mode=list bütün kartlar listesidir; having_min_count yalnız gruplu count için geçerlidir, mükerrer üyelerin detayını seçmez. "
+              "Basit CRM group_by ham alan değerlerini gruplar: created_at/updated_at zaman damgasına göre grup ay/gün/yıl grubu değildir. "
+              "İstenen takvim dilimini üreten output_contract alanına sahip raporu seç; zaman damgası ile ay kırılımını karşılanmış sayma. "
+              "İsimle gruplarken yayınevi gibi varlıkların kimliği de bulunmalıdır; aynı adlı farklı kimlikleri birleştirme. "
+              "crm dalında metrics/dimensions boş, "
               "derived/having boş ve comparison null olmalı. CRM'de tarih filtresi kart created_at/updated_at tarihidir, "
               "geçmişte aktif kayıt sayısı değildir. CRM tarih süzgeçleri bir tarih alanında gte başlangıç, lt bitiş olmalıdır; "
               "değerler parsedPeriods sınırlarını aynen kullanır, sunucu Türkiye saatini UTCye dönüştürür (kullanıcı UTC dediyse UTC kalır). crm kullanmıyorsan null döndür. "
@@ -201,15 +215,23 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if _repair_error:
         plan_messages.append({"role":"system", "content":
             "Önceki plan yapısal/anlamsal doğrulamadan geçmedi: " + _repair_error +
-            " Asıl kullanıcı sorusunu yukarıdaki aynı sözleşme ve şemayla bir kez yeniden planla. "
+            " Asıl kullanıcı sorusunu yukarıdaki aynı sözleşme ve şemayla bir kez onar. Önceki plan aşağıda verilir; doğrulanmış kabul edilmiş plan değildir. "
+            "Hata yalnız şekil/kapsam haritasındaysa anlamı karşılayan yürütme dalını ve hesapları koru; sadece biçim hatası yüzünden başka yeteneğe geçme. "
+            "Hata iş anlamındaysa ilgili hesap/dalı düzelt; yanlış anlamı koruma. "
             "Hiçbir koşulu çıkarma, soruyu değiştirme, başarısız koşulu saklamak için gap üretme. "
             "Onarım da bütün doğrulayıcılardan ve bağımsız anlam denetiminden geçecektir. "
             "Bölümlü kökte yürütme alanları boş/null; yalnız sections/gaps/coverage dolabilir. "
+            "Bölümsüz tek yürütmede sections/gaps/coverage üçü de boş olmalıdır; raporun kendi kaynak eksikleri yürütmede ayrıca açıklanır. "
             "Coverage requirement özgün sorudan harfi harfine kesintisiz alıntıdır; normalleştirme veya özetleme yapma. "
             "Sıralanan öğeleri analytics.group_by içine alma; group_by yalnız bağımsız sıralama/pay üst gruplarıdır."})
+        if _repair_plan is not None:
+            plan_messages.extend([
+                {"role":"assistant", "content":json.dumps(_repair_plan, ensure_ascii=False)},
+                {"role":"user", "content":"Yukarıdaki önceki planı bildirilen doğrulama hatasına göre onar. İlk kullanıcı sorusunun bütün koşullarını koru; yalnız geçerli plan JSON döndür."},
+            ])
     data = dict(_data) if _data is not None else _object(llm, plan_messages, 6400, PLAN_SCHEMA, "finance_plan", trace)
     if trace is not None:
-        trace.append({"stage": "plan", "output": data})
+        trace.append({"stage": "plan", "depth": _depth, "output": data})
     structural_error = comparison_shape_error(data)
     if structural_error:
         raise ContractError(structural_error, code="PLAN_INVALID")
@@ -570,7 +592,7 @@ def validate_analytics(raw, metrics, dims, periods, question):
 
 def build_composite(data, question, llm, previous, trace, today, depth):
     from .crm_query import CRM_CAPABILITIES
-    from .crm_reports import CRM_REPORT_CAPABILITIES
+    from .crm_reports import CRM_REPORT_CAPABILITIES, describe_crm_report_output
     from .logo_reports import LOGO_REPORT_CAPABILITIES
     if depth or not isinstance(data["sections"], list) or not 1 <= len(data["sections"]) <= 4:
         raise ContractError("Bölümlü plan en fazla dört yaprak içerebilir; iç içe rapor desteklenmez.", code="PLAN_INVALID")
@@ -616,11 +638,15 @@ def build_composite(data, question, llm, previous, trace, today, depth):
         "karşılanmalı ya da açık gaps kaydında eksik olarak anlatılmalı. Kapsam haritasındaki iddia tek başına kanıt değildir; "
         "bölüm planını ve soru ifadesini karşılaştır. Bölümün sorusu ana sorunun anlamını daraltamaz/genişletemez. "
         "Bir nüfus filtresi/kimlik bağlantısı eksikken bağımsızmış gibi ayırıp filtresiz sonuç sunmak YANLIŞTIR. "
+        "selectedReportOutputs seçilmiş raporların gerçek çıktı alanlarını, kayıt düzeyini ve tarih anlamını açıklar. "
+        "Bir raporun yerleşik özet/filtre/hesap çıktısı ayrıca metrics/dimensions/having alanında tekrarlanmak zorunda değildir. "
+        "Ancak farklı nüfusa ait rapor aynı özet kolonlarına sahip diye istenen altkümenin özeti sayılamaz. "
         "Kaynak doğruluğu/kayıt bağlantısı/aynı toplam şartlarını atlama. Özet ve detay ayrı bölümler olabilir, "
         "fakat henüz yapılmayan bölüm arası karşılaştırma veya neden-sonuç çıkarımını yapılıyormuş sayma. "
         "Eksik kalan hesaplar açık gaps olduğunda kısmî rapor kabul edilir; tam cevap kabul edilmez. JSON ok/missing."},
         {"role": "user", "content": json.dumps({"question": question, "referenceDate": str(today),
          "sections": [{"question": raw["question"], "plan": p.to_dict()} for raw,p in zip(data["sections"],plans)],
+         "selectedReportOutputs": {p.crm_report["report"]: describe_crm_report_output(p.crm_report["report"]) for p in plans if p.crm_report},
          "gaps": gaps, "coverage": coverage, "contract": CONTRACT, "crmCapabilities": CRM_CAPABILITIES,
          "crmReportCapabilities": CRM_REPORT_CAPABILITIES, "logoReportCapabilities": LOGO_REPORT_CAPABILITIES}, ensure_ascii=False)}], 2400, REVIEW_SCHEMA, "composite_review", trace)
     if review.get("ok") is not True or review.get("missing"):
@@ -630,21 +656,44 @@ def build_composite(data, question, llm, previous, trace, today, depth):
 
 def build_report(data, question, llm, periods, today, trace, source_question=None):
     from .logo_reports import validate_logo_report, LOGO_REPORT_CAPABILITIES
-    from .crm_reports import validate_crm_report, CRM_REPORT_CAPABILITIES
+    from .crm_reports import validate_crm_report, CRM_REPORT_CAPABILITIES, describe_crm_report_output
     branch = "logo_report" if data.get("logo_report") is not None else "crm_report"
     if any(data.get(k) for k in ("metrics", "dimensions", "filters", "derived", "having", "analytics", "comparison", "crm", "limit", "order_by")):
         raise ContractError("Kaynak raporu dalı ile ölçü planı karıştırılamaz.", code="PLAN_INVALID")
     raw = data[branch]
-    if isinstance(raw, dict) and "as_of" in raw and raw["as_of"] is None:
-        raw = {**raw, "as_of": str(today)}
+    if isinstance(raw, dict):
+        raw = dict(raw)
+        mode = raw.get("mode") if branch == "logo_report" else None
+        expected_as_of = str(today)
+        if mode == "stock_history":
+            pair = (raw.get("start"), raw.get("end"))
+            if pair not in periods:
+                raise ContractError("Stok geçmişi dönemi sorudan çözümlenen dönemle uyuşmuyor.", code="PLAN_INVALID")
+            expected_as_of = str(date.fromisoformat(pair[1]) - timedelta(days=1))
+        elif mode == "stock" and periods:
+            single_days = [a for a,b in periods if (date.fromisoformat(b)-date.fromisoformat(a)).days == 1]
+            if len(single_days) == 1:
+                expected_as_of = single_days[0]
+            elif not single_days and type(raw.get("lookback_days")) is int and raw["lookback_days"] > 0 and (raw.get("start"), raw.get("end")) == (str(today+timedelta(days=1-raw["lookback_days"])), str(today+timedelta(days=1))) and (raw.get("start"), raw.get("end")) in periods:
+                expected_as_of = str(today)
+            else:
+                raise ContractError("Noktasal stok için tek bir gün açıkça belirtilmelidir; dönem içindeki stok hareketi ayrı rapordur.", code="NEEDS_CLARIFICATION")
+        elif mode in {"open_orders", "aging"} and raw.get("as_of"):
+            allowed = {str(today)} | {a for a,b in periods if (date.fromisoformat(b)-date.fromisoformat(a)).days == 1}
+            if raw["as_of"] not in allowed:
+                raise ContractError("İtibarıyla tarihi sorudaki tek gün veya bugünün referans tarihiyle uyuşmuyor.", code="PLAN_INVALID")
+            expected_as_of = raw["as_of"]
+        if raw.get("as_of") is not None and raw["as_of"] != expected_as_of:
+            raise ContractError("Raporun itibarıyla tarihi istenen iş tarihiyle uyuşmuyor.", code="PLAN_INVALID")
+        if raw.get("as_of") is None:
+            raw["as_of"] = expected_as_of
+            if trace is not None:
+                trace.append({"stage":"report_date_resolved", "mode":mode or branch, "as_of":expected_as_of,
+                              "basis":"period_end_minus_one" if mode == "stock_history" else "explicit_point_day" if mode == "stock" and periods else "reference_date"})
     report = (validate_logo_report if branch == "logo_report" else validate_crm_report)(raw)
-    if "as_of" in report and report["as_of"] is None:
-        report = {**report, "as_of": str(today)}
     for key in ("customer_code", "book_code"):
         if report.get(key) and fold(str(report[key])) not in fold(source_question or question):
             raise ContractError("Kaynak raporu kod filtresi kullanıcının asıl sorusunda bulunamadı.", code="PLAN_INVALID")
-    if report.get("as_of") and str(report["as_of"]) != str(today):
-        raise ContractError("Kaynak raporunun değerleme tarihi geçerli referans tarihiyle uyuşmuyor.", code="PLAN_INVALID")
     start, end = report.get("start"), report.get("end")
     if branch == "crm_report" and (start or end) and re.search(r"\butc\b", fold(question)):
         raise ContractError("Bu CRM raporu İstanbul takvim dönemlerini kullanır; açık UTC aralığı bu rapor dalında henüz tanımlı değil.")
@@ -653,11 +702,22 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     limit = report.get("limit")
     if limit is not None and (not re.search(r"\b" + str(limit) + r"\b", normalize_numbers(question)) or not re.search(r"\b(ilk|en cok|en buyuk|en yuksek|en dusuk|en az)\b", fold(question))):
         raise ContractError("Kaynak raporunda soruda istenmeyen sınır kullanılamaz.", code="PLAN_INVALID")
-    capabilities = LOGO_REPORT_CAPABILITIES if branch == "logo_report" else CRM_REPORT_CAPABILITIES
+    if branch == "crm_report":
+        capabilities = {
+            "report": report["report"],
+            "description": CRM_REPORT_CAPABILITIES["reports"][report["report"]],
+            "rules": CRM_REPORT_CAPABILITIES["rules"],
+            "output_contract": describe_crm_report_output(report["report"]),
+        }
+    else:
+        capabilities = LOGO_REPORT_CAPABILITIES
     review = _object(llm, [{"role": "system", "content":
         "Kullanıcı sorusuyla seçilen kaynak raporunun ilan edilmiş yeteneğini karşılaştır. Yalnız ok/missing JSON. "
         "Rapor adı benziyor diye hesap yapılmış sayma: istenen tarih, nüfus koşulu, kırılım, ölçü, kimlik ve "
         "ayrıntı bağları capabilities ile gerçekten sağlanmalı. Eksik tanımı veya farklı nüfusu sessiz kabul etme. "
+        "output_contract varsa hangi kolonların hangi kayıt türünde ve kayıt düzeyinde üretildiğini oradan denetle. "
+        "Kısa rapor açıklamasında bir kolonun adı geçmemesi, açık çıktı sözleşmesinde bulunan alanı eksik yapmaz; "
+        "ancak mevcut alan başka tarihsel anlamın, filtrenin, ilişkinin veya hesaplamanın kanıtı değildir. "
         "Capabilitieste açık kaynak eksikleri kullanıcıya ayrı gap olarak dönebilir; olmayan veri hesaplandı sayılamaz. "
         "Kullanıcı özellikle varsa/bilinmiyorsa/hesaplanamayanı belirt diyorsa açık gap bu koşulu karşılar; "
         "zorunlu sayısal cevabın yerine salt gap tam cevap değildir."},

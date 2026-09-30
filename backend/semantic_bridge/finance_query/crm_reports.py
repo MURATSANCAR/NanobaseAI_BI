@@ -59,6 +59,113 @@ CRM_REPORT_SCHEMA = {"type": "object", "additionalProperties": False, "required"
     "start": {"anyOf": [{"type": "string"}, {"type": "null"}]}, "end": {"anyOf": [{"type": "string"}, {"type": "null"}]},
     "as_of": {"type": "string"}, "limit": {"anyOf": [{"type": "integer", "minimum": 1, "maximum": 1000}, {"type": "null"}]}}}
 
+# Output vocabulary follows Sources and the record builders below. These are
+# capability descriptions, not projections: selecting a report does not remove
+# any existing result field. Shared sets keep the planning prompt bounded.
+_OUTPUT_FIELDSETS = {
+    "book": "book_id book_code book_name isbn author_text publisher_id publisher subbrand_id subbrand alternate_subbrand_id alternate_subbrand first_print_date last_publication_date edition_count last_print_date created_at updated_at editor_id project_editor_id publishing_director_id owner_id previous_publisher_id book_project_id project_card_id author_count author_ids author_names".split(),
+    "publisher": "publisher_id publisher book_count".split(),
+    "person": "person_id person_name created_at updated_at book_count books publisher_ids has_email has_phone".split(),
+    "customer": "customer_id customer_name tax_number territory_id territory primary_contact_id created_at updated_at city region country active_contact_count contacts".split(),
+    "contract": "book_id book_name contract_id contract_number start_date end_date revised_end_date renewal_start_date renewal_end_date termination_date indefinite_flag rights languages regions countries parties author_people end_date_status".split(),
+    "revision": "parent_contract_text protocol_date protocol_end_date is_addendum addendum_time_limited parent_contract_id parent_reference_status parent_contract_number parent_match_basis".split(),
+    "work": "work_id work_name project_id owner_id stage_id due_date actual_end work_state cancelled created_at updated_at project_name stage_name books overdue missing_owner missing_stage".split(),
+    "action": "person_id person_name task_id task_subject owner_id due_date".split(),
+}
+
+
+def _output_record(grain, *fieldsets, fields=""):
+    return {"grain": grain, "fieldsets": list(fieldsets), "fields": fields.split()}
+
+
+def _output_contracts():
+    contracts = {}
+    def add(names, records, dates="No date filtering; current active population.", gaps="No mandatory gap; source/identity checks still apply."):
+        for name in names.split():
+            contracts[name] = {"record_types": records, "date_semantics": dates, "gaps": gaps}
+    bookdates = "Optional start/end selects book CreatedOn in Istanbul [start,end); sorted CreatedOn then book_id. Does not select publication dates."
+    quality = "multiple_core_missing_book_count " + " ".join(prefix+f for prefix in ("missing_", "filled_pct_") for f in ("isbn","book_code","publisher","author_link","first_print_date","last_publication_date","subbrand"))
+    add("book_quality publisher_completeness", {
+        "publisher_summary": _output_record("publisher_id", "publisher", fields=quality),
+        "book_detail": _output_record("book_id with at least one missing field", "book", fields="missing_fields missing_count missing_core_fields core_missing_count record_age_days")}, bookdates+" record_age_days uses as_of minus CreatedOn local date.")
+    add("duplicate_isbn duplicate_book_code duplicate_title title_variants", {
+        "candidate": _output_record("book_id in matching-field candidate group", "book", fields="matching_field matching_value candidate_count decision")}, bookdates)
+    basic = {"book_detail": _output_record("book_id", "book"), "publisher_summary": _output_record("publisher_id among selected findings", "publisher")}
+    add("author_link_gaps multi_author_books", basic, bookdates)
+    add("author_text_mismatch", {**basic, "book_detail": _output_record("book_id", "book", fields="comparison")}, bookdates)
+    add("duplicate_authors authors_without_books", {"person_detail": _output_record("active author Contact person_id", "person")})
+    pubauthors = _output_record("publisher_id", "publisher", fields="author_count contact_field_present_count shared_author_ids")
+    add("publisher_author_coverage", {"publisher_summary": pubauthors}, bookdates)
+    add("author_contact_coverage", {"person_detail": _output_record("active author Contact person_id", "person"), "publisher_summary": pubauthors}, "Person details cover all active author Contacts and all active book links; optional start/end restricts only publisher summaries by book CreatedOn.")
+    add("subbrand_consistency", {"book_detail": _output_record("book_id with alt-brand but unresolved active main publisher", "book", fields="finding")}, bookdates, "Always UNVERIFIED_DEFINITION: alt-brand to main publisher hierarchy unverified.")
+    datesrecord = {"book_detail": _output_record("book_id", "book", fields="missing_fields created_after_first_print last_publication_before_first_print")}
+    add("publication_dates", datesrecord, bookdates)
+    add("publisher_history", datesrecord, bookdates, "Always UNVERIFIED_DEFINITION: previous publisher Account and current publisher Marka do not establish historical validity intervals.")
+    add("catalog_additions", {"month_summary": _output_record("Istanbul creation month + publisher_id", "publisher", fields="created_month")}, "Required start/end selects book CreatedOn; created_month is Istanbul creation month, not publication month.")
+    add("editor_assignments", {
+        "assignment_detail": _output_record("book_id + role", fields="book_id book_name role person_id person_name user_disabled identity_status"),
+        "assignment_summary": _output_record("role + person_id + person_name", fields="role person_id person_name book_count")}, bookdates)
+    add("book_change_history", {
+        "modified_book": _output_record("book_id", "book"),
+        "history_snapshot": _output_record("history_id", fields="history_id book_id recorded_at edition_count vat_inclusive_price")}, "Required start/end selects book ModifiedOn; snapshots additionally require their CreatedOn in same range and book in modified-book set.", "Always UNVERIFIED_DEFINITION: price/print snapshots and ModifiedOn do not decode old/new changes or reasons.")
+    add("duplicate_customer_tax customers_without_contacts", {"customer_detail": _output_record("customer_id; ordered updated_at oldest first", "customer")})
+    add("contact_multiple_customers", {"relationship": _output_record("person_id + customer_id + relationship_type", fields="person_id person_name customer_id customer_name relationship_type customer_count decision")})
+    add("customer_geography", {"city_distribution": _output_record("raw_city + normalized_city + region + territory_id", fields="raw_city normalized_city region territory_id record_count normalized_city_total")}, gaps="Always UNVERIFIED_DEFINITION: text normalization is not official city/region identity or hierarchy.")
+    add("work_due", {"work_detail": _output_record("work_id", "work")}, "Required start/end: includes overdue due_date before as_of OR due_date in [start,end); overdue is independent of requested range.")
+    add("work_stage_history", {"work_detail": _output_record("work_id", "work")}, "Current open plans; no period filter. as_of only determines overdue.", "Always UNVERIFIED_DEFINITION: stage entry/exit dates and days in stage unknown; ModifiedOn is not stage entry.")
+    contractrecord = {"contract_detail": _output_record("book_id + contract_id", "contract")}
+    precedence = "Relevant revised_end_date, renewal_end_date or termination_date adds UNVERIFIED_DEFINITION: no legal precedence/effective-end calculation."
+    add("contract_expiry", contractrecord, "Required start/end: any main end, revised end, renewal end or termination in interval, OR main end missing. Start_date output is contract start, not filter start.", precedence)
+    add("contract_author_roles", contractrecord, gaps=precedence)
+    add("contract_revision_evidence", {"contract_detail": _output_record("book_id + contract_id", "contract", "revision")}, gaps="Always UNVERIFIED_DEFINITION: UUID text equality gives parent evidence only, not legal precedence or revision chronology. PDF log paths are not old/new history.")
+    add("contract_overlap", {"contract_pair": _output_record("book_id + ordered contract_id/other_contract_id pair", fields="book_id book_name contract_id other_contract_id scope_status scope_intersections")}, "No period filter. Pairwise recorded main start/end dates inclusive; missing scope/dates remains an uncertain candidate.", "Always UNVERIFIED_DEFINITION scope_interpretation_unverified: country/region AND/OR and legal overlap unverified, even when no candidates. Additional missing-scope/precedence gaps possible.")
+    add("open_author_actions", {"open_action": _output_record("person_id + task_id + meeting_id", "action", fields="meeting_id meeting_start same_task_reference_count")}, "Required start/end selects originating meeting ScheduledStart; task must still be open now, not as of historical date.")
+    add("appointments_with_actions", {"appointment_preparation": _output_record("appointment_id + person_id + task_id", "action", fields="appointment_id appointment_start appointment_subject prior_meeting_id prior_meeting_start")}, "Required start/end selects upcoming open/scheduled appointment; linked open task originates from strictly earlier meeting. Ordered appointment start.")
+    return contracts
+
+
+CRM_REPORT_OUTPUT_CONTRACTS = {
+    "fieldsets": _OUTPUT_FIELDSETS,
+    "reports": _output_contracts(),
+    "common": {
+        "record_type": "Discriminates row grain; mixed row types are not additive. Returned columns are union of present row fields; absent cells are null.",
+        "empty": {"record_type": "summary", "fields": ["record_type", "record_count", "report"], "record_count": 0},
+        "dates": "Naive source datetimes interpreted as UTC; filters/group dates use Europe/Istanbul, start inclusive/end exclusive. Output datetimes retain source ISO representation.",
+        "limits": "Explicit limit slices completed report rows; no per-group top-N or hidden projection. Unrequested filters/sorts/aggregations are not implied by available fields.",
+        "field_meanings": {
+            "isbn": "Current ISBN13, not old ISBN.", "first_print_date": "First print date", "last_publication_date": "Last publication date", "created_at": "CRM creation time", "updated_at": "CRM modification time, not field-specific history",
+            "author_ids/author_names": "JSON arrays of distinct active Contact IDs/names through active Yazar participation; author_text is separate book imprint text.",
+            "books": "JSON array of book_id/book_name objects", "contacts": "JSON array of person_id/person_name objects",
+            "rights/languages/regions/countries": "JSON arrays of [id,name] scope pairs; absence does not mean unrestricted rights.",
+            "parties": "JSON objects: party_id,contract_id,person_id,account_id,party_type_id,person_name,account_name,party_type; legal party role is separate from authorship.",
+            "author_people": "JSON array person_id/person_name; book author link, not automatic rights holder.",
+            "scope_intersections": "JSON object rights/languages/regions/countries with intersecting [id,name] pairs; candidate evidence only.",
+            "region": "CustomerAddress StateOrProvince text; distinct from business TerritoryId/territory.",
+            "parent_reference_status": "NOT_RECORDED / INVALID_UUID_TEXT / SELF_REFERENCE / OTHER_ACTIVE_RECORD / ACTIVE_PARENT_NOT_FOUND; no passive parent record loaded.",
+            "missing_core_fields/core_missing_count": "Missing among isbn,book_code,publisher only; missing_fields/missing_count also include dates,subbrand,author_link.",
+            "filled_pct_*": "Percent of publisher books with field/active author link present, not external validity verification.",
+            "has_email/has_phone": "Field present boolean; actual address/number not in person_detail and reachability not proven.",
+        },
+    },
+}
+CRM_REPORT_CAPABILITIES["output_contracts"] = CRM_REPORT_OUTPUT_CONTRACTS
+
+
+def describe_crm_report_output(report):
+    """Expand only the selected report for semantic review; no source values."""
+    contract = CRM_REPORT_OUTPUT_CONTRACTS["reports"].get(report)
+    if contract is None:
+        raise ContractError("Bilinmeyen CRM rapor çıktı sözleşmesi.", code="PLAN_INVALID")
+    records = {}
+    for kind, spec in contract["record_types"].items():
+        fields = ["record_type"]
+        for name in spec["fieldsets"]: fields.extend(_OUTPUT_FIELDSETS[name])
+        fields.extend(spec["fields"])
+        records[kind] = {"grain": spec["grain"], "fields": list(dict.fromkeys(fields))}
+    return {"report": report, "description": REPORTS[report], "record_types": records,
+            "date_semantics": contract["date_semantics"], "gaps": contract["gaps"],
+            "common": CRM_REPORT_OUTPUT_CONTRACTS["common"]}
+
 
 def validate_crm_report(raw):
     if not isinstance(raw, dict) or set(raw) != set(CRM_REPORT_SCHEMA["properties"]) or raw.get("kind") != "crm_report" or raw.get("report") not in REPORTS:

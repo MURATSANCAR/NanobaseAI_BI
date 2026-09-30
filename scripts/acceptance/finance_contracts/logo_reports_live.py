@@ -47,17 +47,18 @@ def seed(reader):
     # Source record2 is a labelled acceptance anchor from bounded field research,
     # never a production rule. Its current code is read rather than hard-coded.
     book=reader.read("SELECT CODE FROM dbo.LG_411_ITEMS WHERE LOGICALREF=2")
+    previous_book=reader.read("SELECT CODE FROM dbo.LG_211_ITEMS WHERE LOGICALREF=2")
     if len(book)!=1:raise RuntimeError("Observed stock reference2 is no longer uniquely available")
     payer=reader.read("SELECT TOP(1) C.CODE FROM dbo.LG_411_01_CLFLINE L JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE C.CODE LIKE '120%' AND L.CANCELLED=0 AND L.SIGN=1 AND L.TRCODE IN (1,20,61,62,70) AND L.DATE_>='20260901' AND L.DATE_<'20261001' ORDER BY L.LOGICALREF DESC")
     order=reader.read("SELECT TOP(1) I.CODE FROM dbo.LG_411_01_ORFLINE O JOIN dbo.LG_411_01_ORFICHE H ON H.LOGICALREF=O.ORDFICHEREF JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=O.STOCKREF WHERE O.TRCODE=1 AND O.LINETYPE=0 AND O.CANCELLED=0 AND H.CANCELLED=0 AND O.CLOSED=0 AND O.AMOUNT>O.SHIPPEDAMOUNT AND O.DATE_>='20260101' AND O.DATE_<'20261001' ORDER BY O.LOGICALREF DESC")
     purchase=reader.read("SELECT TOP(1) I.CODE FROM dbo.LG_411_01_STLINE S JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=S.STOCKREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.TRCODE=1 AND S.INVOICEREF<>0 AND S.DATE_>='20260901' AND S.DATE_<'20261001' ORDER BY S.LOGICALREF DESC")
-    return {"book":str(book[0]["CODE"]).strip(),"payer":payer[0]["CODE"] if payer else None,
+    return {"book":str(book[0]["CODE"]).strip(),"previous_book":str(previous_book[0]["CODE"]).strip() if len(previous_book)==1 else None,"payer":payer[0]["CODE"] if payer else None,
             "order_book":str(order[0]["CODE"]).strip() if order else None,
             "purchase_book":str(purchase[0]["CODE"]).strip() if purchase else None}
 
 
 def cases(anchors):
-    book=anchors["book"];payer=anchors["payer"];order=anchors["order_book"];purchase=anchors["purchase_book"]
+    book=anchors["book"];payer=anchors["payer"];order=anchors["order_book"];purchase=anchors["purchase_book"];previous=anchors["previous_book"]
     common=["stock_ref","book_code","book_name","warehouse_no"]
     stock_fields=common+["onhand","source_quantity","movement_quantity","reconciliation"]
     out=[
@@ -71,18 +72,21 @@ def cases(anchors):
         dict(id="LR008",mode="purchase_prices",question=f"Logo'da stok kodu {purchase} olan kitabın Eylül 2026 faturalı alışlarını tedarikçi, satır birimi, işlem para birimi ve ay bazında göster. Alış miktarı, KDV hariç net alış tutarı ve ağırlıklı birim alış fiyatı olsun; bunu satılan mal maliyeti sayma.",book=purchase,start=START,end=END,columns=["book_code","book_name","supplier_code","supplier_name","month","unit_source","unit_ref","unit_factor_1","unit_factor_2","transaction_currency_id","purchase_quantity","purchase_net_amount","weighted_unit_purchase_price"],keys=["book_code","book_name","supplier_code","supplier_name","month","unit_source","unit_ref","unit_factor_1","unit_factor_2","transaction_currency_id"],requires="purchase_book"),
         dict(id="LR009",mode="aging",question="Logo'da 30 Eylül 2026 itibarıyla kesin açık alacak yaşlandırmasını gerçek fatura ödeme kapama kayıtlarıyla çıkar; FIFO veya yalnız toplam borçtan tahmin etme.",as_of=AS_OF,boundary="PAYMENT_CLOSURE_UNVERIFIED"),
         dict(id="LR010",mode="profit",question="Logo'da Eylül 2026 için gerçek satılan mal maliyeti ve iade maliyetiyle kesin brüt kârı hesapla; son alış fiyatını gerçek maliyet yerine kullanma.",start=START,end=END,boundary="ACTUAL_COST_UNVERIFIED"),
+        dict(id="LR011",mode="stock_history",question=f"Logo'da stok kodu {previous} olan kitabın 1 Aralık 2025 dahil, 1 Ocak 2026 hariç hareket olan günlerdeki stok değişimini ve gün sonu stoğunu depo bazında göster. Son stok günü 31 Aralık 2025 olsun; bugünkü stoğu kullanma.",book=previous,start="2025-12-01",end="2026-01-01",as_of="2025-12-31",reference_firm="211",columns=common+["day","daily_change","onhand","source_quantity","movement_quantity","reconciliation"],keys=["stock_ref","warehouse_no","day"],requires="previous_book"),
     ]
     return out
 
 
 def stock_reference(reader,case):
     history=case["mode"]=="stock_history"
+    firm=case.get("reference_firm","411")
+    if firm not in ("211","411"):raise RuntimeError("Unverified reference source")
     end=case.get("end") or str(date.fromisoformat(case["as_of"])+timedelta(days=1))
-    cards=reader.read("SELECT LOGICALREF,CODE,NAME FROM dbo.LG_411_ITEMS WHERE LTRIM(RTRIM(CODE))="+quote(case["book"]))
+    cards=reader.read(f"SELECT LOGICALREF,CODE,NAME FROM dbo.LG_{firm}_ITEMS WHERE LTRIM(RTRIM(CODE))="+quote(case["book"]))
     if len(cards)!=1:raise RuntimeError("Reference book code no longer unique")
     item=cards[0];ref=int(item["LOGICALREF"])
-    source=reader.read(f"SELECT INVENNO,CONVERT(varchar(10),DATE_,23) DAY_,ONHAND FROM dbo.LV_411_01_STINVTOT WHERE STOCKREF={ref} AND INVENNO>=0 AND DATE_<{quote(end)}")
-    movements=reader.read(f"SELECT SOURCEINDEX,CONVERT(varchar(10),DATE_,23) DAY_,IOCODE,AMOUNT,UINFO1,UINFO2 FROM dbo.LG_411_01_STLINE WHERE STOCKREF={ref} AND SOURCEINDEX>=0 AND LINETYPE=0 AND CANCELLED=0 AND DATE_<{quote(end)}")
+    source=reader.read(f"SELECT INVENNO,CONVERT(varchar(10),DATE_,23) DAY_,ONHAND FROM dbo.LV_{firm}_01_STINVTOT WHERE STOCKREF={ref} AND INVENNO>=0 AND DATE_<{quote(end)}")
+    movements=reader.read(f"SELECT SOURCEINDEX,CONVERT(varchar(10),DATE_,23) DAY_,IOCODE,AMOUNT,UINFO1,UINFO2 FROM dbo.LG_{firm}_01_STLINE WHERE STOCKREF={ref} AND SOURCEINDEX>=0 AND LINETYPE=0 AND CANCELLED=0 AND DATE_<{quote(end)}")
     vendor=defaultdict(Decimal);ledger=defaultdict(Decimal);bad=set()
     for r in source:vendor[(r["INVENNO"],r["DAY_"] if history else None)]+=D(r["ONHAND"])
     for r in movements:
@@ -90,9 +94,10 @@ def stock_reference(reader,case):
         direction={1:1,2:1,3:-1,4:-1}.get(r["IOCODE"])
         if direction is None or r["UINFO1"] is None or r["UINFO2"] is None or r["UINFO1"]<=0 or r["UINFO1"]!=r["UINFO2"]:bad.add(key)
         ledger[key]+=D(r["AMOUNT"])*(direction or 0)
-    output=[];running=defaultdict(Decimal);poisoned=set()
+    output=[];running=defaultdict(Decimal);poisoned=set();unreconciled=set()
     for key in sorted(set(vendor)|set(ledger),key=lambda k:(k[0],str(k[1] or ""))):
         wh,day=key;v=vendor[key];m=ledger[key];good=key not in bad and abs(v-m)<=Decimal("0.000001")
+        if not good:unreconciled.add(key)
         row=dict(stock_ref=ref,book_code=case["book"],book_name=item["NAME"],warehouse_no=wh,onhand=v if good else None,source_quantity=v,movement_quantity=m,reconciliation="MATCHED" if good else "UNVERIFIED")
         if history:
             if not good:poisoned.add(wh)
@@ -100,7 +105,11 @@ def stock_reference(reader,case):
             row.update(day=day,daily_change=v if good else None,onhand=None if wh in poisoned else running[wh])
             if day is None or not case["start"]<=day<case["end"]:continue
         output.append(row)
-    return output, bool(bad or any(r["reconciliation"]!="MATCHED" for r in output))
+    # Opening history contributes to every closing stock, even if its daily row
+    # is outside the requested display interval. Keep its source gap visible.
+    if case.get("reference_firm")=="211" and not output:
+        raise RuntimeError("Historical source anchor has no movement days in the requested period; historical acceptance is unverified")
+    return output, bool(unreconciled)
 
 
 def reference(reader,case):
@@ -113,7 +122,7 @@ def reference(reader,case):
         for r in reader.read(sql):
             if r["header_ref"] is None:partial=True;continue
             qty=D(r["AMOUNT"])-D(r["SHIPPEDAMOUNT"])
-            main=qty if r["UINFO1"] and r["UINFO1"]==r["UINFO2"] else None
+            main=qty if r["UINFO1"] is not None and r["UINFO1"]>0 and r["UINFO1"]==r["UINFO2"] else None
             due=str(r["DUEDATE"])[:10] if r["DUEDATE"] and str(r["DUEDATE"])[:10]>="1900-01-01" else None
             rows.append(dict(source_period="411/01",order_line_ref=r["LOGICALREF"],order_number=r["FICHENO"],order_date=str(r["DATE_"])[:10],book_code=str(r["book_code"]).strip(),book_name=r["book_name"],customer_code=r["customer_code"],customer_name=r["customer_name"],warehouse_no=r["SOURCEINDEX"],unit_ref=r["UOMREF"],ordered_quantity=r["AMOUNT"],shipped_quantity=r["SHIPPEDAMOUNT"],remaining_quantity=qty,remaining_base_quantity=main,remaining_net_amount_proportional=D(r["LINENET"])*qty/D(r["AMOUNT"]),due_date=due,overdue_days=max(0,(date.fromisoformat(AS_OF)-date.fromisoformat(due)).days) if due else None))
             partial|=main is None
@@ -230,6 +239,8 @@ def main():
             with urllib.request.urlopen(req,timeout=180) as response:return json.load(response)
         expected_hash=hashlib.sha256(json.dumps({k.rsplit('/',1)[-1]:v for k,v in before.items() if '/finance_query/' in k},sort_keys=True).encode()).hexdigest()
         for case in selected:
+            if transport.manifest()!=before:
+                raise RuntimeError("Deployed code changed; acceptance stopped before another question")
             item={**case,'started':time.time()};stop=False;offset=len(transport.REFERENCE_RETRIES)
             try:
                 if case.get('requires') and not anchors.get(case['requires']):raise RuntimeError('No real source anchor for this case')
@@ -252,7 +263,7 @@ def main():
             except Exception as exc:
                 structural=[e for e in item.get('errors',[]) if not transport.data_dependent_error(e)]
                 item['status']='FAIL' if structural else 'UNVERIFIED';item['error']=type(exc).__name__+': '+str(exc)[:500]
-                stop=isinstance(exc,TimeoutError) or isinstance(exc,urllib.error.URLError) and isinstance(exc.reason,TimeoutError)
+                stop=isinstance(exc,(TimeoutError,urllib.error.URLError))
             item['referenceRetries']=transport.REFERENCE_RETRIES[offset:];item['elapsedSeconds']=round(time.time()-item['started'],2)
             transport.save(out/(case['id']+'.json'),item);counts[item['status']]+=1
             results.append({k:item[k] for k in ('id','status','errors','error','elapsedSeconds') if k in item})

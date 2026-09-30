@@ -165,6 +165,27 @@ def dates(question, today):
             raise ContractError("Ayın ilk günleri 1 ile 31 arasında olmalıdır.", code="NEEDS_CLARIFICATION")
         hits = [(a,b,lo,min(hi,lo+timedelta(days=n))) if lo.day == 1 and hi == next_month(lo) else (a,b,lo,hi) for a,b,lo,hi in hits]
     hits.sort()
+    # Explicit inclusive/exclusive endpoints are a single interval, independent
+    # of prose such as "dönemde" or "aralıkta". Never add the excluded end day.
+    bounded_hits = []
+    index = 0
+    while index < len(hits):
+        left = hits[index]
+        if index + 1 < len(hits):
+            right = hits[index + 1]
+            left_marker = re.fullmatch(r"\s*(dahil|haric)\s*(?:(?:ile|ve)|[-–,;])?\s*", q[left[1]:right[0]])
+            right_marker = re.match(r"\s*(dahil|haric)\b", q[right[1]:])
+            if left_marker and right_marker and left[3]-left[2] == timedelta(days=1) and right[3]-right[2] == timedelta(days=1):
+                lo = left[2] + (timedelta(days=1) if left_marker[1] == "haric" else timedelta(0))
+                hi = right[2] + (timedelta(days=1) if right_marker[1] == "dahil" else timedelta(0))
+                if lo >= hi:
+                    raise ContractError("Açık tarih aralığının başlangıcı bitişinden önce olmalı.", code="NEEDS_CLARIFICATION")
+                bounded_hits.append((left[0], right[1]+right_marker.end(), lo, hi))
+                index += 2
+                continue
+        bounded_hits.append(left)
+        index += 1
+    hits = bounded_hits
     for i, (a,b,lo,hi) in enumerate(hits):
         if re.search(r"(?:gecen|onceki) yil\w*\s+ayni\s+(?:aralik|aralig|donem|ay)", q[a:]) and lo == date(today.year-1,1,1) and hi == date(today.year,1,1):
             anchors = [h for j,h in enumerate(hits) if j != i and h[2].year == today.year]

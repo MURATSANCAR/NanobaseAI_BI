@@ -505,6 +505,8 @@ def main():
             with urllib.request.urlopen(req,timeout=240) as response:return json.load(response)
         conn=connect("/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
         for c in selected:
+            if manifest()!=before:
+                raise RuntimeError("Deployed code changed; acceptance stopped before another question")
             item=dict(c,started=time.time());stop=False
             try:
                 session.execute("UPDATE sessions SET expires=? WHERE token=?",(time.time()+900,digest));session.commit()
@@ -523,12 +525,12 @@ def main():
             except Exception as exc:
                 structural=[x for x in item.get("errors",[]) if not x.startswith(("Row count ","Row identity set differs","Numeric mismatch:","Value mismatch:"))]
                 item["status"]="FAIL" if structural else "UNVERIFIED";item["error"]=type(exc).__name__+": "+str(exc)[:500]
-                stop=isinstance(exc,TimeoutError) or isinstance(exc,urllib.error.URLError) and isinstance(exc.reason,TimeoutError)
+                stop=isinstance(exc,(TimeoutError,urllib.error.URLError))
             item["elapsedSeconds"]=round(time.time()-item["started"],2);save(out/(c["id"]+".json"),item)
             counts[item["status"]]+=1;results.append({k:item[k] for k in ("id","report","status","errors","error","elapsedSeconds") if k in item})
             print(json.dumps(results[-1],ensure_ascii=False),flush=True)
             if len(results)%10==0:print("BATCH",len(results),dict(counts),flush=True)
-            if stop:print("STOP: request may still run; no duplicate workload",flush=True);break
+            if stop:print("STOP: API unavailable or request may still run; no duplicate workload",flush=True);break
     except BaseException as exc:
         counts["UNVERIFIED"]+=1;results.append(dict(id="ENVIRONMENT",status="UNVERIFIED",error=type(exc).__name__+": "+str(exc)[:400]))
     finally:

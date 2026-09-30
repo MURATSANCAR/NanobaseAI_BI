@@ -4,7 +4,7 @@
 
 ## Kaynak ve plan sınırı
 
-Eski semantik katalog fiziksel olarak yedeklenip kaldırıldı. Model eski SQL örneklerini kullanmaz ve fiziksel SQL yazmaz. İsteği kapalı ölçü, varlık ve işlem sözleşmelerine çevirir. Her kaynak SELECT'i gerçek kolonlar ve kullanıcı veri yetkisiyle doğrulanır. CRM aktiflik süzgeci bağlantıda uygulanır; işin yayımlı aktif durumları ayrıca metadata ile çözülür.
+Eski semantik katalog fiziksel olarak yedeklenip kaldırıldı. Model eski SQL örneklerini kullanmaz ve fiziksel SQL yazmaz. İsteği kapalı ölçü, varlık ve işlem sözleşmelerine çevirir. Üretim şemasında tek ölçü/CRM/rapor dalı ile bölümlü plan birbirini dışlar; yaprak plan birden fazla yürütme dalı taşıyamaz. Tek raporun yerleşik özet/detay alanları için gereksiz ikinci bölüm kurulmaz. CRM raporları ortak alan kümeleri ve seçili raporun açılmış çıktı sözleşmesiyle denetlenir; mevcut kolon, doğrulanmamış tarihsel anlamın yerine geçmez. Her kaynak SELECT'i gerçek kolonlar ve kullanıcı veri yetkisiyle doğrulanır. CRM aktiflik süzgeci bağlantıda uygulanır; işin yayımlı aktif durumları ayrıca metadata ile çözülür.
 
 Tek şirket vardır. Logo teknik kodları ayrı şirket değildir. `L_CAPIPERIOD` ve doğrulanmış kaynak kapsamı istenen zaman aralığını boşluksuz ve örtüşmesiz karşılamalıdır; aksi durumda toplam engellenir. Stok bakiyesi farklı yıl yedekleri toplanarak bulunmaz.
 
@@ -27,7 +27,7 @@ Her böyle boşluk `gaps` alanında açıklanır. Destek eksikliği, gerçek kul
 
 ## Dosyalar
 
-`planner.py`, `model_schema.py`, `language.py` tipli plan/doğal tarih/koşul denetimi; `contracts.py` temel ölçüler; `operations.py` Decimal işlemler; `executor.py` kaynak okuma/aktiflik/şema/dönem/tutar korunumu; `crm_reports.py`, `logo_reports.py`, `invoice_reports.py`, `cross_reports.py` kapalı rapor sözleşmeleri; `result_metadata.py` ortak etiket/birim/formüller. Kaynak envanteri raporları kabul kanıtıdır, eski katalog yerine tahmini ilişki kaynağı değildir.
+`planner.py`, `model_schema.py`, `language.py` tipli plan/doğal tarih/koşul denetimi; `contracts.py` temel ölçüler; `operations.py` Decimal işlemler; `executor.py` kaynak okuma/aktiflik/şema/dönem/tutar korunumu; `crm_reports.py`, `logo_reports.py`, `invoice_reports.py`, `cross_reports.py` kapalı rapor sözleşmeleri; `result_metadata.py` ortak etiket/birim/formüller. Kaynak envanteri raporları metadata kanıtıdır, eski katalog yerine tahmini ilişki kaynağı veya iş doğruluğu kabulü değildir.
 
 ## Gerçek kabul kapısı
 

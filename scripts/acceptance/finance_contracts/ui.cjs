@@ -55,6 +55,11 @@ const path = require('node:path');
         sectionChecks.push({ index, width, status: section.status, rows: section.totalRows, ...size });
       }
       if (['COMPLETE', 'PARTIAL'].includes(section.status)) {
+        if (section.totalRows > 50) {
+          await page.getByRole('button', { name: 'Sonraki', exact: true }).click();
+          await page.getByRole('dialog').getByText(`2 / ${Math.ceil(section.totalRows / 50)}`, { exact: true }).waitFor();
+          await page.getByRole('button', { name: 'Önceki', exact: true }).click();
+        }
         const pending = page.waitForEvent('download');
         await page.getByRole('button', { name: 'CSV indir', exact: true }).click();
         await (await pending).saveAs(path.join(out, `section-${index}.csv`));
