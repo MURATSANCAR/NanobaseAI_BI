@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Kitap okut: yükleme arka planda, sayfadan bağımsız
+
+- **İstek:** yükleme bitsin diye kişi ekranda beklemesin; okuma arka planda sürsün.
+- **Ne yapıldı:** yükleme sırası bileşenden çıktı, portal boyunca yaşayan tek depoya taşındı (`src/canvas/editorial/bookReadUploads.ts`, Stüdyo fotoğraf yüklemesiyle aynı kalıp). Dosya seçilince cihaz deposuna da yazılır (IndexedDB `zeki-studyo-sayfa` v3, yeni depo `kitap`; sürüm değişince açık bağlantı kapanır); sekme kapanır ya da sayfa yenilenirse portal açılınca kapanmış sekmenin kaydı devralınır ve yükleme sürer (Web Locks). Bağlantı/oturum/sunucu hatası 1→60 sn arayla, tavansız yeniden denenir; kalıcı ret (PDF değil, çok büyük, yetki) satırda kalır, dosya cihazdan silinir. Her sayfada sağ altta `BookUploadDock` (`RequireTimasSession` içinde): «n kitap yükleniyor · %x», bağlantı bekleniyor, yüklenemedi; «Gör» editoryal sayfaya götürür. Sunucuya ulaşan dosyadan sonrası zaten köprü + GPU'da, tarayıcıdan bağımsız. İlerleme çubuğu animasyon ölçütüyle gözden geçirildi (doğrusal eğri, yalnız transform, azaltılmış harekette kapalı).
+- **Kurulum:** main `63fe11964`; test sunucusunda 5 arayüz dosyası md5 ile kuruldu, sunucuda `tsc -b` + vite, `index-CD7Z-FdG.js` yayında.
+- **Doğrulama (canlı portal, tarayıcı):** bozuk PDF bırakıldı → «Gönderiliyor» → GPU reddi → «Okunamadı — PDF açılamadı…» → kaldırıldı. İçeriği PDF olmayan dosya → «Yüklenemedi», Kampüs sayfasına geçince köşede «1 kitap yüklenemedi», «Gör» → satır kaldırıldı; cihaz deposunda 0 kayıt, sunucu giden kutusunda 0 dosya. Başarılı okumanın bütün yolu gerçek kitapla hâlâ DOĞRULANMADI.
+
 ## 2026-09-30 — Kapsam dondurma ve bağımsız kabul hazırlığı
 
 - CRM tarihçe gerçek kayıtlarla ayrıca incelendi: ana sözleşme kimliği metindir; kendine/başka aktif sözleşmeye/aktif karşılığı bulunamayan kimliğe eşitlik ayrı. Yenileme389, fesih843, ek protokol tarihi24 aktif sözleşmede bulundu.31.rapor bu alanları ayrı gösterir; hukuki öncelik ve tipli eski/yeni audit çözümü doğrulanmış sayılmaz.
