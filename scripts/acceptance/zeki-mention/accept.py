@@ -45,7 +45,8 @@ if sys.argv[1] == 'create':
                                  json.dumps(user['_id']) + ',"zeki.bot"]}},{_id:1})));')
     save(state)
     for label, question in [('plain', 'Bu mesaj botu etiketlemiyor.'), ('intro', '@zeki.bot Merhaba'),
-                            ('empty', '@zeki.bot'), ('data', '@zeki.bot 2026 toptan satış faturası sayısı')]:
+                            ('empty', '@zeki.bot'), ('data', '@zeki.bot 2026 toptan satış faturası sayısı'),
+                            ('amount', '@zeki.bot 2026 perakende satış tutarı')]:
         mid = 'accept' + secrets.token_hex(12)
         state['messages'].append({'id': mid, 'label': label}); save(state)
         api.call('POST', 'chat.sendMessage', {'message': {'_id': mid, 'rid': room['_id'], 'msg': question}})
@@ -74,8 +75,10 @@ elif sys.argv[1] == 'check':
             else:
                 row['passed'] = bool(job and job[0] == 'sent' and reply and reply['u']['_id'] == 'zeki.bot'
                                      and reply['rid'] != state['rooms'][0] and reply['msg'] == job[1])
-                if item['label'] in ('intro', 'data'):
+                if item['label'] in ('intro', 'data', 'amount'):
                     row['passed'] = row['passed'] and bool(job[2])
+                if item['label'] == 'data':
+                    row['passed'] = row['passed'] and 'Sayım birimini güvenle doğrulayamadığım' in job[1]
             rows.append(row)
     result = {'passed': all(r['passed'] for r in rows), 'checks': rows,
               'unauthenticatedStatus': state['unauthenticatedStatus']}

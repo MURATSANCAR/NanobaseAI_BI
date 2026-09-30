@@ -60,6 +60,13 @@ def valid_context(context):
 
 def text_answer(answer):
     # Never expose SQL/internal prompts or invent an answer on engine failure.
+    slots = ((answer.get('semantic') or {}).get('query') or {}).get('slots') or []
+    if any(s.get('semanticType') == 'METRIC' and
+           (s.get('explain') or {}).get('source') == 'count_cue' for s in slots):
+        # Generic count inference can select line grain for a document-count question.
+        # Do not publish that number as a verified measure; no question/table-specific exceptions.
+        return ('Sayım birimini güvenle doğrulayamadığım için bu rakamı paylaşmıyorum. '
+                'Bu soru için veri tanımı netleştirilmeli.\n\nSorgu kaydı: ' + str(answer.get('queryId') or '—'))
     text = answer.get('summary') or answer.get('explanation')
     if not isinstance(text, str) or not text.strip():
         return 'Bu soru için yanıt oluşturulamadı. Lütfen sorunuzu yeniden yazın.'
