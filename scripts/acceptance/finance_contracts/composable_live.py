@@ -291,11 +291,37 @@ def reference(case,conn):
     return rows
 
 
-def numeric_tolerance(column, derived_alias=None):
-    if column.startswith("__contribution_") or column.endswith(("_share_pct", "_cumulative_pct")):
+# Units are specified independently of application result metadata. A monetary
+# subtraction remains money; a ratio/percentage has its own numeric precision.
+REFERENCE_METRIC_UNITS = {
+    "sales_amount":"TRY", "net_sales":"TRY", "return_amount":"TRY",
+    "invoice_amount":"TRY", "collections":"TRY",
+    "sold_quantity":"quantity", "net_quantity":"quantity", "invoice_count":"count",
+}
+
+
+def numeric_tolerance(column, derived_alias=None, case=None):
+    case = case or {}
+    unit_tolerance = {"TRY":Decimal("0.01"), "quantity":Decimal("0.000001"), "count":Decimal("0")}
+    if column.endswith(("_share_pct", "_cumulative_pct")):
         return Decimal("0.000001")
     if column == "__derived" or derived_alias is not None and column == derived_alias:
+        spec = case.get("derived") or case.get("comparison") or {}
+        if spec.get("op") == "difference":
+            left = spec.get("left", spec.get("metric"))
+            right = spec.get("right", spec.get("metric"))
+            unit = REFERENCE_METRIC_UNITS.get(left)
+            if unit and unit == REFERENCE_METRIC_UNITS.get(right):
+                return unit_tolerance[unit]
         return Decimal("0.000001")
+    if column in {"base_value", "target_value"} and case.get("comparison"):
+        return unit_tolerance.get(REFERENCE_METRIC_UNITS.get(case["comparison"]["metric"]), Decimal("0.000001"))
+    if column.endswith("_group_total"):
+        contributions = [op for op in case.get("analytics",[]) if op["op"] == "contribution"]
+        if len(contributions) == 1:
+            return unit_tolerance.get(REFERENCE_METRIC_UNITS.get(contributions[0]["metric"]), Decimal("0.000001"))
+    if column in REFERENCE_METRIC_UNITS:
+        return unit_tolerance[REFERENCE_METRIC_UNITS[column]]
     return Decimal("0") if column in EXACT_COUNT_COLUMNS else Decimal("0.01")
 
 
@@ -338,7 +364,7 @@ def references_equal(case, before, after):
                 av, bv = Decimal(str(a)), Decimal(str(b))
                 if not av.is_finite() or not bv.is_finite():
                     return False
-                if abs(av - bv) > numeric_tolerance(column):
+                if abs(av - bv) > numeric_tolerance(column, case=case):
                     return False
             elif type(a) is not type(b) or a != b:
                 return False
@@ -462,7 +488,7 @@ def compare(case,answer,whole,expected):
                     if type(av) is not bool or type(bv) is not bool or av is not bv:
                         errors.append(f"Value mismatch: {col} (boolean)")
                 elif isinstance(bv,(Decimal,int,float)):
-                    tolerance=numeric_tolerance(col, alias)
+                    tolerance=numeric_tolerance(col, alias, case)
                     if abs(Decimal(str(av))-Decimal(str(bv)))>tolerance:errors.append(f"Numeric mismatch: {col}")
                 elif av!=bv:errors.append(f"Value mismatch: {col}")
     except Exception as exc:errors.append(str(exc))

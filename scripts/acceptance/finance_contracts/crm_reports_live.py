@@ -63,6 +63,8 @@ def cases():
         ("publisher_completeness", "CRM yayın evlerine göre aktif kitap sayısını ve güncel ISBN, kişi-yazar bağı, ilk baskı, son yayın ve alt marka alanlarının doluluk yüzdelerini göster. Kitap listesindeki eksikleri de ekle.", None, None),
         ("publisher_history", "CRM aktif kitaplarının bugünkü ve önceki yayın evi alanlarını göster. Geçmiş yayın evi ilişkisinin tarih aralığı yoksa geçmiş sınıflandırmayı doğrulanmış sayma.", None, None),
         ("contract_revision_evidence", "CRM'de aktif kitaplara bağlı aktif sözleşmelerin Ana Sözleşme Id metnini göster: kendi kimliğine, başka aktif sözleşmeye ve aktif karşılığı bulunamayan kimliğe gidenleri ayır. Başlangıç, bitiş, revize, yenileme, fesih ve ek protokol tarihlerini ve ek protokol bayraklarını ayrı göster. Hukuki öncelik varsayma, PDF logunu değişiklik geçmişi sayma.", None, None),
+        ("work_due_missing", "30 Eylül 2026 dahil 30 Ekim 2026 hariç tahmini bitişi olan açık CRM kitap işlerinden sorumlusu veya aşaması eksik olanları listele. Geçmiş terminli bütün açık işleri de ayrıca ayır.", "2026-09-30", "2026-10-30"),
+        ("contract_author_differences", "CRM'de kitap yazar Contact kimlikleriyle sözleşmenin Contact taraf kimlikleri farklı olan kitap-sözleşmeleri listele. Kurum tarafları veya eksik kişi bağları karşılaştırılamıyorsa ayrı belirt; isimden eşleştirme yapma ve yazarı hak sahibi varsayma.", None, None),
     ]
     return [dict(id=f"CR{i:03d}",report=r,question=q,start=a,end=b) for i,(r,q,a,b) in enumerate(data,1)]
 
@@ -203,12 +205,22 @@ def expected_books(o,c,asof):
                 rows.append(dict(record_type="publisher_summary",publisher_id=pub,publisher=group[0]["publisher"],book_count=len(group),author_count=len(ids),contact_field_present_count=sum(bool(text(people[i]["email"]) or text(people[i]["phone"]) or text(people[i]["mobile"])) for i in ids),shared_author_ids=pack(sorted(i for i in ids if sum(i in x for x in sets.values())>1))))
     elif report=="subbrand_consistency":
         rows=[dict(record_type="book_detail",**detail(b),finding="Alt marka atanmış, aktif ana yayıncı çözülemedi") for b in selected if (b["subbrand_id"] or b["alternate_subbrand_id"]) and not b["publisher"]]
+        totals=Counter((identity(b["publisher_id"]),b["publisher"]) for b in selected if (b["subbrand_id"] or b["alternate_subbrand_id"]) and not b["publisher"])
+        rows.extend(dict(record_type="publisher_summary",publisher_id=key[0],publisher=key[1],book_count=value) for key,value in totals.items())
         boundaries.append("unproven_subbrand_parent")
     elif report=="catalog_additions":
         counts=Counter((str(localday(b["created_at"]))[:7],identity(b["publisher_id"]),b["publisher"]) for b in selected if b["created_at"])
         rows=[dict(record_type="month_summary",created_month=k[0],publisher_id=k[1],publisher=k[2],book_count=n) for k,n in counts.items()]
     elif report in {"publication_dates","publisher_history"}:
-        for b in selected:rows.append(dict(record_type="book_detail",**detail(b),missing_fields=pack(missing(b)),created_after_first_print=bool(b["created_at"] and b["first_print_date"] and localday(b["created_at"])>localday(b["first_print_date"])),last_publication_before_first_print=bool(b["last_publication_date"] and b["first_print_date"] and localday(b["last_publication_date"])<localday(b["first_print_date"]))))
+        for b in selected:
+            faults=missing(b)
+            chronology={"created_after_first_print":bool(b["created_at"] and b["first_print_date"] and localday(b["created_at"])>localday(b["first_print_date"])),"last_publication_before_first_print":bool(b["last_publication_date"] and b["first_print_date"] and localday(b["last_publication_date"])<localday(b["first_print_date"]))}
+            rows.append(dict(record_type="book_detail",**detail(b),missing_fields=pack(faults),**chronology))
+            if report=="publication_dates":
+                if any(chronology.values()):rows.append(dict(record_type="chronology_signal",**detail(b),missing_fields=pack(faults),**chronology))
+                for field in ["first_print_date","last_publication_date"]:
+                    if faults and b[field] is not None and localday(b[field])<=asof:
+                        rows.append(dict(record_type="arrived_missing",**detail(b),missing_fields=pack(faults),date_basis=field,recorded_date=b[field]))
         if report=="publisher_history":boundaries.append("unproven_publisher_validity_history")
     elif report=="editor_assignments":
         users=unique(o.get("users","SELECT SystemUserId user_id,FullName user_name,IsDisabled is_disabled FROM dbo.SystemUserBase"),"user_id");counts=Counter()
@@ -270,6 +282,8 @@ def expected_work(o,c,asof):
         if not bids:continue
         overdue=bool(w["due_date"] and localday(w["due_date"])<asof)
         if c["report"]=="work_due" and not (overdue or in_window(w["due_date"],c)):continue
+        if c["report"]=="work_due_missing":
+            if not overdue and (not in_window(w["due_date"],c) or (bool(w["owner_id"]) and identity(w["stage_id"]) in stages)):continue
         rows.append(dict(record_type="work_detail",**w,books=pack([dict(book_id=bid,book_name=books[bid]["book_name"]) for bid in sorted(bids)]),overdue=overdue,missing_owner=not bool(w["owner_id"]),missing_stage=identity(w["stage_id"]) not in stages))
     return rows,["stage_entry_history_not_verified"] if c["report"]=="work_stage_history" else []
 
@@ -340,6 +354,22 @@ def expected_contracts(o,c):
  LEFT JOIN dbo.new_sozlesmetaraftipiBase T ON T.new_sozlesmetaraftipiId=P.new_TarafTipi AND T.statecode=0
  WHERE P.statecode=0 AND (P.new_kisi IS NULL OR C.ContactId IS NOT NULL) AND (P.new_Firma IS NULL OR A.AccountId IS NOT NULL)"""):
         parties[identity(r["contract_id"])].append(r)
+    incomplete_authors=set();incomplete_parties=set()
+    if c["report"]=="contract_author_differences":
+        # Independent anti-join coverage probes: the already filtered visible
+        # sets cannot prove that all active relationships resolved.
+        incomplete_authors={identity(r["book_id"]) for r in o.get("author_identity_gaps", """SELECT DISTINCT E.new_Kitap book_id
+ FROM dbo.new_eserkatilimBase E
+ LEFT JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=E.new_katilimciTipi AND R.statecode=0
+ LEFT JOIN dbo.ContactBase C ON C.ContactId=E.new_Katilimsaglayan AND C.statecode=0 AND C.statuscode=1
+ WHERE E.statecode=0 AND (R.new_katilimcitipiId IS NULL OR NULLIF(LTRIM(RTRIM(R.new_name)),'') IS NULL OR
+ (LOWER(LTRIM(RTRIM(R.new_name)))='yazar' AND C.ContactId IS NULL))""")}
+        incomplete_parties={identity(r["contract_id"]) for r in o.get("party_identity_gaps", """SELECT DISTINCT P.new_sozlesmeid contract_id
+ FROM dbo.new_sozlesmetarafiBase P
+ LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND C.statecode=0 AND C.statuscode=1
+ LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND A.statecode=0
+ WHERE P.statecode=0 AND ((P.new_kisi IS NOT NULL AND C.ContactId IS NULL)
+ OR (P.new_Firma IS NOT NULL AND A.AccountId IS NULL))""")}
     rows=[];bounds=["scope_interpretation_unverified"] if c["report"]=="contract_overlap" else ["contract_revision_priority_unverified"] if c["report"]=="contract_revision_evidence" else []
     for bid,ids in bybook.items():
         if c["report"]=="contract_overlap":
@@ -352,13 +382,29 @@ def expected_contracts(o,c):
                     intersections={n:scopes[n][cid] & scopes[n][zid] for n in scopes}
                     overlaps=known and localday(a["start_date"])<=localday(z["end_date"]) and localday(z["start_date"])<=localday(a["end_date"])
                     if known and not (overlaps and intersections["rights"] and intersections["languages"] and (intersections["regions"] or intersections["countries"])):continue
-                    rows.append(dict(record_type="contract_pair",book_id=bid,book_name=books[bid]["book_name"],contract_id=cid,other_contract_id=zid,scope_status="Tarih ve kayıtlı hak/dil/bölge kesişim adayı" if known else "DOĞRULANAMADI: tarih veya kapsam eksik",scope_intersections=pack({n:sorted(v) for n,v in intersections.items()})))
+                    interval=[None,None]
+                    if all(x for x in [a["start_date"],z["start_date"],a["end_date"],z["end_date"]]):
+                        starts=sorted([localday(a["start_date"]),localday(z["start_date"])])
+                        ends=sorted([localday(a["end_date"]),localday(z["end_date"])])
+                        if starts[1]<=ends[0]:interval=[starts[1].isoformat(),ends[0].isoformat()]
+                    rows.append(dict(record_type="contract_pair",book_id=bid,book_name=books[bid]["book_name"],contract_id=cid,other_contract_id=zid,scope_status="Tarih ve kayıtlı hak/dil/bölge kesişim adayı" if known else "DOĞRULANAMADI: tarih veya kapsam eksik",scope_intersections=pack({n:sorted(v) for n,v in intersections.items()}),contract_start_date=a["start_date"],contract_end_date=a["end_date"],other_start_date=z["start_date"],other_end_date=z["end_date"],overlap_start_date=interval[0],overlap_end_date=interval[1]))
                     if not known:bounds.append("missing_contract_scope_or_dates")
         else:
             for cid in ids:
                 d=contracts[cid]
                 if c["report"]=="contract_expiry" and d["end_date"] and not any(in_window(d[f],c) for f in ("end_date","revised_end_date","renewal_end_date","termination_date")):continue
                 data=dict(d);data.update(revisions.get(cid,{}))
+                if c["report"]=="contract_author_differences":
+                    authors=authorlinks[bid]
+                    counterpart={identity(r["person_id"]) for r in parties[cid] if r["person_id"]}
+                    untyped=bid in incomplete_authors or cid in incomplete_parties or not authors or not parties[cid] or any(r["account_id"] or not r["person_id"] for r in parties[cid])
+                    if untyped:
+                        bounds.append("unverified_role_identity_comparison")
+                        data.update(role_comparison="UNVERIFIED_IDENTITY_TYPES_OR_MISSING",author_only_ids=None,party_only_ids=None)
+                    else:
+                        mismatch=bool(authors.symmetric_difference(counterpart))
+                        if c["report"]=="contract_author_differences" and not mismatch:continue
+                        data.update(role_comparison="CONTACT_ID_SETS_DIFFER" if mismatch else "CONTACT_ID_SETS_EQUAL",author_only_ids=pack(sorted(authors-counterpart)),party_only_ids=pack(sorted(counterpart-authors)))
                 rows.append(dict(record_type="contract_detail",book_id=bid,book_name=books[bid]["book_name"],**data,**{n:pack(sorted(scopes[n][cid])) for n in scopes},parties=pack(parties[cid]),author_people=pack([dict(person_id=i,person_name=people[i]["person_name"]) for i in sorted(authorlinks[bid])]),end_date_status="Bitiş tarihi mevcut" if d["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"))
     relevant={identity(r.get("contract_id")) for r in rows}|{identity(r.get("other_contract_id")) for r in rows}
     if any(d["revised_end_date"] or d["renewal_end_date"] or d["termination_date"] for cid,d in contracts.items() if cid in relevant):bounds.append("unverified_contract_date_precedence")
@@ -369,7 +415,7 @@ def reference(conn,c,asof):
     oracle=Oracle(conn)
     if c["report"] in {"duplicate_customer_tax","customers_without_contacts","contact_multiple_customers","customer_geography"}:rows,bounds=expected_customers(oracle,c)
     elif c["report"].startswith("contract_"):rows,bounds=expected_contracts(oracle,c)
-    elif c["report"] in {"work_due","work_stage_history"}:rows,bounds=expected_work(oracle,c,asof)
+    elif c["report"] in {"work_due","work_due_missing","work_stage_history"}:rows,bounds=expected_work(oracle,c,asof)
     elif c["report"] in {"open_author_actions","appointments_with_actions"}:rows,bounds=expected_activities(oracle,c)
     else:rows,bounds=expected_books(oracle,c,asof)
     if not rows:rows=[dict(record_type="summary",record_count=0,report=c["report"])]
@@ -377,7 +423,7 @@ def reference(conn,c,asof):
     return dict(records=[{k:r.get(k) for k in columns} for r in rows],columns=columns,boundaries=bounds,queries=oracle.sql)
 
 
-JSON_COLUMNS={"author_ids","author_names","missing_fields","missing_core_fields","books","publisher_ids","shared_author_ids","contacts","rights","languages","regions","countries","parties","author_people","scope_intersections"}
+JSON_COLUMNS={"author_ids","author_names","missing_fields","missing_core_fields","books","publisher_ids","shared_author_ids","contacts","rights","languages","regions","countries","parties","author_people","scope_intersections","author_only_ids","party_only_ids"}
 UUID_PATTERN=re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
@@ -401,6 +447,7 @@ def row_identity(row):
     kind=row["record_type"]
     keys={
         "publisher_summary":["publisher_id"],"book_detail":["book_id"],"candidate":["book_id"],"person_detail":["person_id"],
+        "arrived_missing":["book_id","date_basis"],"chronology_signal":["book_id"],
         "modified_book":["book_id"],"history_snapshot":["history_id"],"customer_detail":["customer_id"],
         "relationship":["person_id","customer_id","relationship_type"],"city_distribution":["raw_city","normalized_city","region","territory_id"],
         "month_summary":["created_month","publisher_id"],"assignment_detail":["book_id","role"],"assignment_summary":["role","person_id"],

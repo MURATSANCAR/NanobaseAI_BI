@@ -27,17 +27,19 @@ REPORTS = {
     "multi_author_books": "Birden fazla benzersiz aktif Contact yazar bağı olan kitaplar; kitap bir kez, yazar sayısı ayrı.",
     "authors_without_books": "Aktif yazar Contact olup aktif kitap-Yazar rolü bağlantısı olmayan kişiler; ilişki yokluğu çalışma yokluğu değildir.",
     "publisher_author_coverage": "Yayıncı başına kitap ve benzersiz aktif kişi yazar sayısı, yayıncılar arası ortak kişiler; kimlikler korunur.",
-    "subbrand_consistency": "İki gerçek alt marka alanını ayrı göster; ana yayıncı boşluğu ve çözülemeyen ilişkiler. Altmarka→ana yayıncı bağı kanıtlanmadığından tutarsızlık hükmü gap.",
+    "subbrand_consistency": "İki gerçek alt marka alanını ayrı göster; kitap ayrıntısı ve yayıncı kimliği bazında eksik ana yayıncı toplamları. Altmarka→ana yayıncı bağı kanıtlanmadığından tutarsızlık hükmü gap.",
     "book_change_history": "Dönemde değişmiş kitaplar ve mevcut baskı/fiyat tarihçe kayıtları; genel eski-yeni alan ve yayıncı tarihçesi kanıtlanmadığında gap.",
     "author_contact_coverage": "Aktif kişi yazarların telefon/e-posta alanı doluluk göstergesi, yayıncı başına benzersiz kimlik sayımı; gerçek ulaşılabilirlik iddiası yok.",
     "duplicate_customer_tax": "Boş olmayan aynı vergi numarasındaki aktif müşteri kimlikleri ve aktif kişi bağlantıları; otomatik müşteri birleşmesi yok.",
     "customers_without_contacts": "Aktif müşteri kartlarına parent/primary/N:N ilişkileriyle bağlı aktif kişi yokluğu; son güncelleme sıralaması.",
     "contact_multiple_customers": "Aktif kişinin birden çok aktif müşteriyle kimlikli ilişkileri, ilişki yolu; hata hükmü yok.",
     "customer_geography": "Şehir ham/normalize dağılımı ve kayıtlı bölge; şehir-bölge referans uyumluluğu kanıtlanmadığında gap.",
-    "publication_dates": "İlk Baskı Tarihi, Son Yayın Tarihi ve CreatedOn ayrı; geçmiş tarih/eksik bilgi ve tarih sırası sinyalleri. Tek yayın tarihi seçimi yapılmaz.",
+    "publication_dates": "İlk Baskı Tarihi, Son Yayın Tarihi ve CreatedOn ayrı. Tüm kitap ayrıntısı yanında as_of itibarıyla tarihi gelmiş ve eksik alanı bulunan kitaplar her tarih türü için ayrı arrived_missing; tarih sırası sinyalleri ayrı chronology_signal. Tek yayın tarihi seçimi yapılmaz.",
     "catalog_additions": "start/end CreatedOn aralığında İstanbul ayı ve yayıncı bazında katalog kayıt eklenme sayısı; yayın tarihi değildir.",
     "editor_assignments": "Kitap Editor, Proje Editörü, yayın yönetmeni, sahip alanları ayrı ve kimlikli; kişi/rol başına kitap sayısı; atanamayanlar dahil.",
     "work_due": "Aktif iptal olmayan açık kitap iş planları, tahmini bitiş ve sorumlu/aşama eksikleri; geçmiş termin ve istenen gelecek dönem ayrı.",
+    "work_due_missing": "İstenen gelecek dönem içindeki açık kitap işlerinden sorumlu veya aktif aşaması eksik olanları göster; geçmiş terminli tüm açık işleri overdue ile ayrıca ayır.",
+    "contract_author_differences": "Kitap yazarlarıyla sözleşme Contact taraflarının kimlik kümeleri farklı olan kitap-sözleşmeleri göster. Account tarafı, eksik taraf/yazar veya karışık tür varsa karşılaştırılamadı satırı ve açık gap; isimden kimlik kurma.",
     "work_stage_history": "Aktif açık kitap iş planları ve mevcut aşama; aşamaya giriş tarihçesi kanıtlanmadığı için bekleme gününü uydurmadan gap.",
     "contract_expiry": "Aktif kitap-sözleşme bağlarında start/end aralığındaki sözleşme bitişi; boş bitiş ayrı. Yenileme/revize/fesih ayrı, otomatik satış yasağı yok.",
     "contract_overlap": "Aynı kitap sözleşmeleri tarih/hak/dil/bölge/ülke ham kayıt kesişim adayları; eksik kapsam/tarih kesin çakışma olmaz. Ülke ve bölge listelerinin birlikte AND/OR anlamı kanıtlanmadığından kapsam yorumu her zaman açık gap'tir; hukuki çakışma doğruluğu iddiası yok.",
@@ -97,9 +99,11 @@ def _output_contracts():
     pubauthors = _output_record("publisher_id", "publisher", fields="author_count contact_field_present_count shared_author_ids")
     add("publisher_author_coverage", {"publisher_summary": pubauthors}, bookdates)
     add("author_contact_coverage", {"person_detail": _output_record("active author Contact person_id", "person"), "publisher_summary": pubauthors}, "Person details cover all active author Contacts and all active book links; optional start/end restricts only publisher summaries by book CreatedOn.")
-    add("subbrand_consistency", {"book_detail": _output_record("book_id with alt-brand but unresolved active main publisher", "book", fields="finding")}, bookdates, "Always UNVERIFIED_DEFINITION: alt-brand to main publisher hierarchy unverified.")
+    add("subbrand_consistency", {"book_detail": _output_record("book_id with alt-brand but unresolved active main publisher", "book", fields="finding"), "publisher_summary": _output_record("publisher_id among findings; null remains separate", "publisher")}, bookdates, "Always UNVERIFIED_DEFINITION: alt-brand to main publisher hierarchy unverified.")
     datesrecord = {"book_detail": _output_record("book_id", "book", fields="missing_fields created_after_first_print last_publication_before_first_print")}
-    add("publication_dates", datesrecord, bookdates)
+    add("publication_dates", {**datesrecord,
+        "arrived_missing": _output_record("book_id + date_basis with date<=as_of and missing metadata", "book", fields="missing_fields date_basis recorded_date"),
+        "chronology_signal": _output_record("book_id with at least one chronology signal", "book", fields="missing_fields created_after_first_print last_publication_before_first_print")}, bookdates+" Separate arrived_missing rows compare first_print_date and last_publication_date independently to as_of; neither is silently chosen as a universal publication date.")
     add("publisher_history", datesrecord, bookdates, "Always UNVERIFIED_DEFINITION: previous publisher Account and current publisher Marka do not establish historical validity intervals.")
     add("catalog_additions", {"month_summary": _output_record("Istanbul creation month + publisher_id", "publisher", fields="created_month")}, "Required start/end selects book CreatedOn; created_month is Istanbul creation month, not publication month.")
     add("editor_assignments", {
@@ -112,13 +116,16 @@ def _output_contracts():
     add("contact_multiple_customers", {"relationship": _output_record("person_id + customer_id + relationship_type", fields="person_id person_name customer_id customer_name relationship_type customer_count decision")})
     add("customer_geography", {"city_distribution": _output_record("raw_city + normalized_city + region + territory_id", fields="raw_city normalized_city region territory_id record_count normalized_city_total")}, gaps="Always UNVERIFIED_DEFINITION: text normalization is not official city/region identity or hierarchy.")
     add("work_due", {"work_detail": _output_record("work_id", "work")}, "Required start/end: includes overdue due_date before as_of OR due_date in [start,end); overdue is independent of requested range.")
+    add("work_due_missing", {"work_detail": _output_record("work_id", "work")}, "Required start/end: overdue due_date before as_of OR due_date in [start,end) AND missing_owner/missing_stage. Overdue rows include all open work regardless of missing fields.")
     add("work_stage_history", {"work_detail": _output_record("work_id", "work")}, "Current open plans; no period filter. as_of only determines overdue.", "Always UNVERIFIED_DEFINITION: stage entry/exit dates and days in stage unknown; ModifiedOn is not stage entry.")
     contractrecord = {"contract_detail": _output_record("book_id + contract_id", "contract")}
     precedence = "Relevant revised_end_date, renewal_end_date or termination_date adds UNVERIFIED_DEFINITION: no legal precedence/effective-end calculation."
     add("contract_expiry", contractrecord, "Required start/end: any main end, revised end, renewal end or termination in interval, OR main end missing. Start_date output is contract start, not filter start.", precedence)
+    role_record={"contract_detail": _output_record("book_id + contract_id", "contract", fields="role_comparison author_only_ids party_only_ids")}
     add("contract_author_roles", contractrecord, gaps=precedence)
+    add("contract_author_differences", role_record, gaps=precedence+" Only complete nonempty Contact sets compared: equal sets omitted, unequal sets retained. Any unresolved active author participation/role or contract party prevents comparison even if the visible subset matches. Account/mixed/missing identity sets retained as unverified with gap, never name-matched.")
     add("contract_revision_evidence", {"contract_detail": _output_record("book_id + contract_id", "contract", "revision")}, gaps="Always UNVERIFIED_DEFINITION: UUID text equality gives parent evidence only, not legal precedence or revision chronology. PDF log paths are not old/new history.")
-    add("contract_overlap", {"contract_pair": _output_record("book_id + ordered contract_id/other_contract_id pair", fields="book_id book_name contract_id other_contract_id scope_status scope_intersections")}, "No period filter. Pairwise recorded main start/end dates inclusive; missing scope/dates remains an uncertain candidate.", "Always UNVERIFIED_DEFINITION scope_interpretation_unverified: country/region AND/OR and legal overlap unverified, even when no candidates. Additional missing-scope/precedence gaps possible.")
+    add("contract_overlap", {"contract_pair": _output_record("book_id + ordered contract_id/other_contract_id pair", fields="book_id book_name contract_id other_contract_id scope_status scope_intersections contract_start_date contract_end_date other_start_date other_end_date overlap_start_date overlap_end_date")}, "No period filter. Pairwise recorded main start/end dates inclusive; missing scope/dates remains an uncertain candidate.", "Always UNVERIFIED_DEFINITION scope_interpretation_unverified: country/region AND/OR and legal overlap unverified, even when no candidates. Additional missing-scope/precedence gaps possible.")
     add("open_author_actions", {"open_action": _output_record("person_id + task_id + meeting_id", "action", fields="meeting_id meeting_start same_task_reference_count")}, "Required start/end selects originating meeting ScheduledStart; task must still be open now, not as of historical date.")
     add("appointments_with_actions", {"appointment_preparation": _output_record("appointment_id + person_id + task_id", "action", fields="appointment_id appointment_start appointment_subject prior_meeting_id prior_meeting_start")}, "Required start/end selects upcoming open/scheduled appointment; linked open task originates from strictly earlier meeting. Ordered appointment start.")
     return contracts
@@ -140,6 +147,10 @@ CRM_REPORT_OUTPUT_CONTRACTS = {
             "parties": "JSON objects: party_id,contract_id,person_id,account_id,party_type_id,person_name,account_name,party_type; legal party role is separate from authorship.",
             "author_people": "JSON array person_id/person_name; book author link, not automatic rights holder.",
             "scope_intersections": "JSON object rights/languages/regions/countries with intersecting [id,name] pairs; candidate evidence only.",
+            "overlap_start_date/overlap_end_date": "Intersection of recorded main contract dates in Istanbul days, inclusive; null if either date missing or intervals disjoint; not effective legal validity.",
+            "role_comparison": "CONTACT_ID_SETS_EQUAL / CONTACT_ID_SETS_DIFFER / UNVERIFIED_IDENTITY_TYPES_OR_MISSING; compares only nonempty Contact sets, not legal ownership.",
+            "author_only_ids/party_only_ids": "JSON Contact ID set differences when comparable; null for Account/mixed/missing identities.",
+            "arrived_missing": "Same book may appear once per first_print_date/last_publication_date; date_basis identifies which recorded date arrived. Not additional unique books.",
             "region": "CustomerAddress StateOrProvince text; distinct from business TerritoryId/territory.",
             "parent_reference_status": "NOT_RECORDED / INVALID_UUID_TEXT / SELF_REFERENCE / OTHER_ACTIVE_RECORD / ACTIVE_PARENT_NOT_FOUND; no passive parent record loaded.",
             "missing_core_fields/core_missing_count": "Missing among isbn,book_code,publisher only; missing_fields/missing_count also include dates,subbrand,author_link.",
@@ -180,7 +191,7 @@ def validate_crm_report(raw):
         raise ContractError("CRM rapor aralığı başlangıç/bitiş gerektirir.", code="PLAN_INVALID")
     if raw["limit"] is not None and (type(raw["limit"]) is not int or not 1 <= raw["limit"] <= 1000):
         raise ContractError("CRM rapor sınırı geçersiz.", code="PLAN_INVALID")
-    if raw["report"] in {"catalog_additions", "contract_expiry", "open_author_actions", "appointments_with_actions", "book_change_history", "work_due"} and not raw["start"]:
+    if raw["report"] in {"catalog_additions", "contract_expiry", "open_author_actions", "appointments_with_actions", "book_change_history", "work_due", "work_due_missing"} and not raw["start"]:
         raise ContractError("CRM raporu için tarih aralığı gerekli.", code="NEEDS_CLARIFICATION")
     return dict(raw)
 
@@ -236,14 +247,20 @@ class Sources:
         return self.cache["people"]
     def author_links(self):
         if "links" in self.cache: return self.cache["links"]
-        roles = {k for k, r in self.keyed(self.rows("new_katilimcitipiBase", {"id":"new_katilimcitipiId", "name":"new_name"}), "id").items() if _norm(r["name"]) == "yazar"}
+        role_records = self.keyed(self.rows("new_katilimcitipiBase", {"id":"new_katilimcitipiId", "name":"new_name"}), "id")
+        roles = {k for k, r in role_records.items() if _norm(r["name"]) == "yazar"}
         if not roles: raise ContractError("CRM katılım tipi sözlüğünde aktif Yazar rolü bulunamadı.", code="SOURCE_CONTRACT_VIOLATION")
         books, people = self.books(), self.people()
         links = self.rows("new_eserkatilimBase", {"link_id":"new_eserkatilimId", "book_id":"new_Kitap", "person_id":"new_Katilimsaglayan", "role_id":"new_katilimciTipi"})
         bybook = defaultdict(set)
+        incomplete=set()
         for r in links:
             bid, pid = _key(r["book_id"]), _key(r["person_id"])
-            if bid in books and pid in people and _key(r["role_id"]) in roles: bybook[bid].add(pid)
+            role=_key(r["role_id"])
+            if bid in books and (role not in role_records or not _text(role_records[role]["name"]) or (role in roles and pid not in people)):
+                incomplete.add(bid)
+            if bid in books and pid in people and role in roles: bybook[bid].add(pid)
+        self.cache["author_link_incomplete"] = incomplete
         self.cache["links"] = bybook
         return bybook
     def customers(self):
@@ -350,6 +367,8 @@ def _book_reports(s, p, out):
     elif report=="subbrand_consistency":
         for b in selected:
             if (b["subbrand_id"] or b["alternate_subbrand_id"]) and not b["publisher"]: rows.append({"record_type":"book_detail", **detail(b), "finding":"Alt marka atanmış, aktif ana yayıncı çözülemedi"})
+        counts=Counter((_key(r["publisher_id"]),r["publisher"]) for r in rows)
+        rows.extend({"record_type":"publisher_summary","publisher_id":key[0],"publisher":key[1],"book_count":count} for key,count in counts.items())
         _gap(out,"İki alt marka alanı ayrı varlıklardır; yayımlı şemada bu alanlardan ana yayıncıya doğrulanmış ilişki bulunmadığından ilişki tutarlılığı kesin değerlendirilemedi.")
     elif report in {"publication_dates","catalog_additions","publisher_history"}:
         if report=="catalog_additions":
@@ -359,7 +378,14 @@ def _book_reports(s, p, out):
         else:
             for b in selected:
                 m=missing(b)
-                rows.append({"record_type":"book_detail",**detail(b),"missing_fields":_json(m), "created_after_first_print":bool(b["created_at"] and b["first_print_date"] and _day(b["created_at"])>_day(b["first_print_date"])), "last_publication_before_first_print":bool(b["last_publication_date"] and b["first_print_date"] and _day(b["last_publication_date"])<_day(b["first_print_date"]))})
+                row={"record_type":"book_detail",**detail(b),"missing_fields":_json(m), "created_after_first_print":bool(b["created_at"] and b["first_print_date"] and _day(b["created_at"])>_day(b["first_print_date"])), "last_publication_before_first_print":bool(b["last_publication_date"] and b["first_print_date"] and _day(b["last_publication_date"])<_day(b["first_print_date"]))}
+                rows.append(row)
+                if report=="publication_dates":
+                    if row["created_after_first_print"] or row["last_publication_before_first_print"]:
+                        rows.append({**row,"record_type":"chronology_signal"})
+                    for basis in ("first_print_date","last_publication_date"):
+                        if m and b[basis] and str(_day(b[basis]))<=p["as_of"]:
+                            rows.append({"record_type":"arrived_missing",**detail(b),"missing_fields":_json(m),"date_basis":basis,"recorded_date":b[basis]})
             if report=="publisher_history": _gap(out,"Önceki yayıncı alanı Account, bugünkü yayıncı Marka varlığıdır; tarihsel geçerlilik aralığı kanıtlanmadı. Geçmiş satış için güncel sınıflama kullanıldığı açıkça belirtilmelidir.")
             else: out["notes"].append("Tarih sırası inceleme sinyalidir; ilk baskıdan sonra CRM kaydı açılması tek başına hata değildir.")
     elif report=="editor_assignments":
@@ -430,12 +456,15 @@ def _contract_reports(s,p,out):
             if _key(r["scope_id"]) in labels: values[_key(r["contract_id"])].add((_key(r["scope_id"]),labels[_key(r["scope_id"])]["name"]))
         scopes[name]=values
     parties=defaultdict(list)
+    incomplete_parties=set()
     partyrows=s.rows("new_sozlesmetarafiBase",{"party_id":"new_sozlesmetarafiId","contract_id":"new_sozlesmeid","person_id":"new_kisi","account_id":"new_Firma","party_type_id":"new_TarafTipi"})
     types=s.keyed(s.rows("new_sozlesmetaraftipiBase",{"id":"new_sozlesmetaraftipiId","name":"new_name"}),"id")
     accounts=s.keyed(s.rows("AccountBase",{"account_id":"AccountId","account_name":"Name"},"r.statecode=0"),"account_id")
     for r in partyrows:
         pid,aid=_key(r["person_id"]),_key(r["account_id"])
-        if (pid and pid not in people) or (aid and aid not in accounts): continue
+        if (pid and pid not in people) or (aid and aid not in accounts):
+            incomplete_parties.add(_key(r["contract_id"]))
+            continue
         parties[_key(r["contract_id"])].append({**r,"person_name":people.get(pid,{}).get("person_name"),"account_name":accounts.get(aid,{}).get("account_name"),"party_type":types.get(_key(r["party_type_id"]),{}).get("name")})
     rows=out["records"]
     for bid,cids in sorted(bybook.items()):
@@ -451,13 +480,28 @@ def _contract_reports(s,p,out):
                     intersections={n:set(scopes[n][cid]) & set(scopes[n][other]) for n in scopes}
                     spatial_overlap=bool(intersections["regions"] or intersections["countries"])
                     if known and not (timeover and intersections["rights"] and intersections["languages"] and spatial_overlap): continue
-                    rows.append({"record_type":"contract_pair","book_id":bid,"book_name":b["book_name"],"contract_id":cid,"other_contract_id":other,"scope_status":"Tarih ve kayıtlı hak/dil/bölge kesişim adayı" if known else "DOĞRULANAMADI: tarih veya kapsam eksik", "scope_intersections":_json({n:sorted(v) for n,v in intersections.items()})})
+                    dates_known=all(a[f] and z[f] for f in ("start_date","end_date"))
+                    overlap_start=max(_day(a["start_date"]),_day(z["start_date"])) if dates_known else None
+                    overlap_end=min(_day(a["end_date"]),_day(z["end_date"])) if dates_known else None
+                    valid_interval=dates_known and overlap_start<=overlap_end
+                    rows.append({"record_type":"contract_pair","book_id":bid,"book_name":b["book_name"],"contract_id":cid,"other_contract_id":other,"scope_status":"Tarih ve kayıtlı hak/dil/bölge kesişim adayı" if known else "DOĞRULANAMADI: tarih veya kapsam eksik", "scope_intersections":_json({n:sorted(v) for n,v in intersections.items()}),
+                        "contract_start_date":a["start_date"],"contract_end_date":a["end_date"],"other_start_date":z["start_date"],"other_end_date":z["end_date"],
+                        "overlap_start_date":str(overlap_start) if valid_interval else None,"overlap_end_date":str(overlap_end) if valid_interval else None})
                     if not known: _gap(out,"Bazı sözleşme çiftlerinde tarih/hak/dil/bölge eksik; eksik kapsam sınırsız kabul edilmedi.")
         else:
             for cid in sorted(cids):
                 c=contracts[cid]
                 if p["report"]=="contract_expiry" and c["end_date"] and not any(_within(c[f],p) for f in ("end_date","revised_end_date","renewal_end_date","termination_date")): continue
-                rows.append({"record_type":"contract_detail", "book_id":bid,"book_name":b["book_name"], **c, **revision_fields.get(cid,{}), **{n:_json(sorted(scopes[n][cid])) for n in scopes},"parties":_json(parties[cid]),"author_people":_json([{"person_id":pid,"person_name":people[pid]["person_name"]} for pid in sorted(links.get(bid,set()))]),"end_date_status":"Bitiş tarihi mevcut" if c["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"})
+                comparison={}
+                if p["report"]=="contract_author_differences":
+                    authors=set(links.get(bid,set())); party_people={_key(r["person_id"]) for r in parties[cid] if r["person_id"]}
+                    complete=bid not in s.cache["author_link_incomplete"] and cid not in incomplete_parties
+                    comparable=complete and bool(authors and parties[cid]) and all(r["person_id"] and not r["account_id"] for r in parties[cid])
+                    status=("CONTACT_ID_SETS_EQUAL" if authors==party_people else "CONTACT_ID_SETS_DIFFER") if comparable else "UNVERIFIED_IDENTITY_TYPES_OR_MISSING"
+                    if not comparable: _gap(out,"Sözleşme tarafı-yazar karşılaştırması: kurum/karışık kimlik, çözülemeyen aktif katılım rolü veya eksik/çözülemeyen aktif kişi bağı nedeniyle Contact kimlik kümelerinin tamlığı kanıtlanamadı; isimden kişi/kurum eşleşmesi yapılmadı.")
+                    if p["report"]=="contract_author_differences" and status=="CONTACT_ID_SETS_EQUAL": continue
+                    comparison={"role_comparison":status,"author_only_ids":_json(sorted(authors-party_people)) if comparable else None,"party_only_ids":_json(sorted(party_people-authors)) if comparable else None}
+                rows.append({"record_type":"contract_detail", **comparison, "book_id":bid,"book_name":b["book_name"], **c, **revision_fields.get(cid,{}), **{n:_json(sorted(scopes[n][cid])) for n in scopes},"parties":_json(parties[cid]),"author_people":_json([{"person_id":pid,"person_name":people[pid]["person_name"]} for pid in sorted(links.get(bid,set()))]),"end_date_status":"Bitiş tarihi mevcut" if c["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"})
     out["notes"].append("Sözleşme tarafı ve kitap yazarı ayrı rollerdir. Yenileme/revize/fesih kayıtları gösterilir; hukuki geçerlilik veya satış yasağı çıkarılmaz.")
     relevant_ids={_key(r.get("contract_id")) for r in rows} | {_key(r.get("other_contract_id")) for r in rows}
     if any(c["revised_end_date"] or c["renewal_end_date"] or c["termination_date"] for cid,c in contracts.items() if cid in relevant_ids):
@@ -478,7 +522,10 @@ def _work_reports(s,p,out):
         project=_key(r["project_id"])
         if project not in projects or not projectbooks[project]: continue
         late=bool(r["due_date"] and str(_day(r["due_date"]))<p["as_of"])
-        if p["report"]=="work_due" and not (late or _within(r["due_date"],p)): continue
+        in_window=_within(r["due_date"],p)
+        missing_assignment=not bool(r["owner_id"]) or _key(r["stage_id"]) not in stages
+        if p["report"]=="work_due" and not (late or in_window): continue
+        if p["report"]=="work_due_missing" and not (late or (in_window and missing_assignment)): continue
         out["records"].append({"record_type":"work_detail",**r,"project_name":projects[project]["project_name"],"stage_name":stages.get(_key(r["stage_id"]),{}).get("stage_name"),"books":_json([{"book_id":bid,"book_name":books[bid]["book_name"]} for bid in sorted(projectbooks[project])]),"overdue":late,"missing_owner":not bool(r["owner_id"]),"missing_stage":_key(r["stage_id"]) not in stages})
     if p["report"]=="work_stage_history": _gap(out,"Aşamaya giriş ve çıkış tarihçesi kanıtlanmadı. ModifiedOn aşama başlangıcı sayılmadı; üç aydan uzun aynı aşamada bekleme süresi doğrulanamadı.")
 
@@ -526,7 +573,7 @@ def execute_crm_report(executor, raw):
     s=Sources(executor); r=p["report"]
     if r in {"duplicate_customer_tax","customers_without_contacts","contact_multiple_customers","customer_geography"}: _customer_reports(s,p,out)
     elif r.startswith("contract_"): _contract_reports(s,p,out)
-    elif r in {"work_due","work_stage_history"}: _work_reports(s,p,out)
+    elif r in {"work_due","work_due_missing","work_stage_history"}: _work_reports(s,p,out)
     elif r in {"open_author_actions","appointments_with_actions"}: _activity_reports(s,p,out)
     else: _book_reports(s,p,out)
     total=len(out["records"])

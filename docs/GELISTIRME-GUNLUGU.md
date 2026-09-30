@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Çıktı sözleşmeleri ve CRM kapsam açıkları
+
+- R7 onarım tekrarı7 soruda4 FAIL/3 UNVERIFIED;1 oturum silindi. CP005 parasal farkın5.4e-6 TL hassasiyet farkını1e-6 eşikle reddeden kabul hatası ayrıldı: bağımsız birim tablosu para farkını0.01 TL, miktarı1e-6, sayımı tam eşitlik, oranı1e-6 karşılaştırır; ham referans/kolon/satır kontrolleri korunur. Önceki kanıt değişmedi.
+- Planlayıcıya kalite sayacının girdi filtresi olmadığı ve toplam+alan başına eksik sayılarının tek quality çıktısında bulunduğu açıklandı. Kırılım kimlikleri ve gerçek kolonları ayrı sunulur. FULL OUTER öncesi/sonrası filtre ayrımı ilk plan çağrısında da açıklanır.
+- Coverage alıntıları özgün soru ve özgün cümle/noktalıvirgül parçaları enumuyla sınırlandı; birleşik/parafraz alıntı üretilemez. Tam kapsam denetimi korunur. Teknik eksiklik netleştirme değildir; somut kullanıcı tercihi için soru sorulur.
+- Logo raporlarının gerçek alanı, kayıt düzeyi, tarih anlamı ve eksikleri açık sözleşmeye bağlandı. Geçersiz order_by kaynak okunmadan PLAN_INVALID olur. Stok/transfer/istatistik yetenekleri ile bilinmeyen maliyet/kapama/kimlik aynı sayılmaz.
+- CRM33 rapor: yayıncı sorun özeti, tarihi gelmiş eksik kitap kesişimi, açık iş eksiklik filtresi, iki sözleşmenin tarihleri/kesişimi ve Contact taraf-yazar farkı. Eksik aktif ilişki uçlarında görünür altküme tam sayılmaz; fark karşılaştırması UNVERIFIED kalır. Mevcut genel iş/rol raporları korunur, bağımsız CRM seti33 oldu.
+- Değişiklikler gerçek API/DB yeniden kabulü bekler. Devam eden complex100-expanded-r1 sürümü7ca8c1b54 sabit tutulur; eski koşu yeni kodun kanıtı değildir.
+
 ## 2026-09-30 — Doğal 1205 teknik toparlanma kanıtı
 
 - Tamamlanan R6 CP043: ürün Logo1205 ilk deneme,360ms bekleme,aynı SQL hashinde ikinci deneme complete/5275 ham satır. Aynı resultId tam sonucu224 satır/kesilme yok. Bir doğal olayda teknik toparlanma gözlendi.

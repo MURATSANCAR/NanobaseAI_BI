@@ -194,9 +194,43 @@ göstermez. Ortak boş-sonuç satırı, karışık satır türlerinde NULL alanl
 limit davranışı da sözleşmede belirtilir. Statik bildirim kapsamı 31/31'dir;
 planlayıcı davranışının gerçek API kabulü ayrıca gerekir.
 
+## Ayrı çıktı ve filtre kapsamının genişletilmesi
+
+İlk 31 genel rapora `work_due_missing` ve `contract_author_differences` eklendi;
+rapor/çıktı sözleşmesi ve bağımsız koşucu şimdi 33 aileyi kapsar. Önceki
+`work_due` tüm dönem işlerini, `contract_author_roles` tüm kayıtlı tarafları
+sunmaya devam eder. Yeni yetenekler soru kimliğine veya soru metnine bağlı değildir.
+
+- `subbrand_consistency`, kitap bulgularının yayıncı kimliği başına sayısını da
+  verir. Boş kimlik ve çözülemeyen farklı kimlikler birleştirilmez; doğrulanmamış
+  altmarka hiyerarşisi yine açık tanım boşluğudur.
+- `publication_dates`, mevcut bütün kitap ayrıntısını korur. Ayrıca `as_of`
+  itibarıyla ilk baskı veya son yayın tarihi gelmiş ve alan eksikliği bulunan
+  kayıtları `arrived_missing` türünde, `date_basis` ile ayrı ayrı verir. Tarih
+  sırası sinyalleri `chronology_signal` türündedir. Aynı kitap birden çok türde
+  ve iki tarih temeliyle bulunabilir; satır sayısı benzersiz kitap sayısı değildir.
+  Kontrol edilen eksik alanlar görünürdür; kurumsal zorunluluk kararı varsayılmaz.
+- `work_due_missing`, gelecek dönem işlerine sorumlu veya aktif aşama eksikliği
+  koşulunu uygular. Geçmiş terminli açık işleri eksiklik şartından bağımsız korur;
+  `overdue` bunları ayırır. Kullanılan tarih tahmini iş-planı bitişidir.
+- `contract_overlap`, her iki sözleşmenin ham başlangıç/bitiş alanlarını ve
+  İstanbul takviminde kayıtlı ana tarihlerin kesişim başlangıç/bitişini verir.
+  Eksik veya kesişmeyen tarihlerde kesişim NULL'dır; hukuki geçerlilik ve
+  ülke/bölge yorumunun doğrulanmamış olması değişmez.
+- `contract_author_differences`, yalnız dolu ve karşılaştırılabilir Contact
+  kimlik kümelerini kıyaslar; eşit kümeleri çıkarır. Account/karışık tür veya
+  eksik bağlarda satır `UNVERIFIED_IDENTITY_TYPES_OR_MISSING` ve açık gap ile
+  korunur. İsim eşleştirmesi, yazar=hak sahibi veya kurum=kişi varsayımı yoktur.
+
+Bağımsız koşucuda eski CR001–CR031 kimlikleri korundu; CR032 eksik atamalı işleri,
+CR033 taraf-yazar kimlik farklarını kapsar. Yeni satır kimlikleri, tarih kesişimi,
+JSON kişi kümesi farkları ve yayıncı toplamları bağımsız kaynak okumalarıyla
+karşılaştırılır. Bu değişiklikler için henüz gerçek API/DB kabul sonucu yoktur;
+yerel ürün testi çalıştırılmadı.
+
 ## Kabul koşucusunun kapsamı
 
-`scripts/acceptance/finance_contracts/crm_reports_live.py` 31 rapor ailesini gerçek
+`scripts/acceptance/finance_contracts/crm_reports_live.py` 33 rapor ailesini gerçek
 uygulama `/api/v1/ask` akışıyla ve aynı `resultId` üzerinden saklanan tam sonuçla
 karşılaştırmak üzere hazırlanmıştır. Ürün modülünü import etmez; üretilmiş SQL'i
 referans diye yeniden çalıştırmaz. Bağımsız sabit SQL'ler gerçek CRM'den kayıtları

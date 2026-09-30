@@ -50,6 +50,85 @@ LOGO_REPORT_CAPABILITIES = {
 }
 
 
+# Declared output vocabulary, not an instruction to project, join, or allocate
+# records. The planner must use real output IDs rather than dimension nicknames.
+_STOCK_FIELDS = "stock_ref book_code book_name warehouse_no onhand source_quantity movement_quantity reconciliation".split()
+_STOCK_SALES_FIELDS = "lookback_days recent_net_quantity last_sale_date estimated_days_cover".split()
+_CROSS_FIELDS = "match_status logo_codes logo_names net_sales return_amount sold_quantity".split()
+_REPORT_FIELDS = {
+    "stock": _STOCK_FIELDS,
+    "stock_history": _STOCK_FIELDS + ["day", "daily_change"],
+    "open_orders": "source_period order_line_ref order_number order_date book_code book_name customer_code customer_name warehouse_no unit_ref ordered_quantity shipped_quantity remaining_quantity remaining_base_quantity remaining_net_amount_proportional due_date overdue_days".split(),
+    "customer_balances": "customer_code customer_name tax_number opening_balance period_debits period_credits closing_balance unverified_sign_rows".split(),
+    "payment_movements": "customer_code customer_name payment_code payment_type movement_count payment_amount".split(),
+    "currencies": "currency_id currency_code invoice_count local_invoice_net original_invoice_net".split(),
+    "purchase_prices": "book_code book_name supplier_code supplier_name month unit_source unit_ref unit_factor_1 unit_factor_2 transaction_currency_id purchase_quantity purchase_net_amount weighted_unit_purchase_price".split(),
+    "invoice_statistics": "customer_code customer_name invoice_count invoice_total invoice_mean invoice_median".split(),
+    "invoice_duplicates": "invoice_id invoice_number invoice_date customer_code customer_name invoice_total line_fingerprint material_groups same_content_candidates finding source_code".split(),
+    "invoice_reconciliation": "invoice_id invoice_number invoice_date customer_code customer_name invoice_total invoice_vat header_excluding_vat header_expenses header_discounts header_additional_discounts header_additional_expenses material_lines material_line_net other_lines other_line_net difference_from_material_net source_code".split(),
+    "orphan_invoice_lines": "invoice_id invoice_number invoice_date customer_code customer_name amount finding line_id movement_date source_code".split(),
+    "cross_book_sales_quality": _CROSS_FIELDS + "book_code crm_book_ids crm_book_names publisher author_ids author_names shared_authors missing_fields name_difference".split(),
+    "cross_customer_sales_quality": _CROSS_FIELDS + "tax_number crm_customer_ids crm_customer_names crm_address_regions crm_sales_territories crm_countries missing_fields name_difference".split(),
+    "aging": [], "profit": [],
+}
+_REPORT_GRAINS = {
+    "stock": "stock_ref + warehouse_no; not a customer or publisher aggregate",
+    "stock_history": "stock_ref + warehouse_no + movement day; running closing stock includes earlier movements",
+    "open_orders": "source_period + order_line_ref; customer_code/customer_name identify each line, not a customer subtotal",
+    "customer_balances": "customer_code + customer_name + tax_number",
+    "payment_movements": "customer_code + customer_name + payment_code",
+    "currencies": "currency_id + currency_code; different currencies are never added",
+    "purchase_prices": "book + supplier + month + source-local unit identity/factors + transaction_currency_id",
+    "invoice_statistics": "customer_code + customer_name; statistics over invoice headers",
+    "invoice_duplicates": "source_code + invoice_id; candidate, not a duplicate verdict",
+    "invoice_reconciliation": "source_code + invoice_id with an unexplained material-net difference",
+    "orphan_invoice_lines": "invoice or movement identity distinguished by finding; neither implies fraud",
+    "cross_book_sales_quality": "Logo stock code; multiple CRM identities retained as arrays without copying sales",
+    "cross_customer_sales_quality": "nonempty tax string or unresolved Logo identity; not proven legal-entity identity",
+    "aging": "no numeric records; verified closure definition unavailable",
+    "profit": "no numeric records; verified actual cost definition unavailable",
+}
+_REPORT_DETAILS = {
+    "stock": {
+        "dates": "as_of is requested stock day; optional start/end must exactly equal [as_of+1-lookback_days,as_of+1).",
+        "options": "lookback_days adds recent_net_quantity, last_sale_date, estimated_days_cover. shortage requires explicit coverage_days; covers onhand / (net quantity / all lookback calendar days), returns deducted and zero-sale days included. transfers selects products with one observed depot positive and another observed depot nonpositive; lookback_days may accompany transfers. No observed depot row is not assumed zero.",
+        "gaps": "Unreconciled movement/unit yields NULL stock. last_sale_date is ONLY within lookback, not all-history last sale. No stock valuation cost, incoming orders, reservations or order allocation. Optional cost request can be marked unavailable without fabricating cost, but this helper does not itself emit a requested-cost gap.",
+    },
+    "stock_history": {"dates": "start/end is requested history [start,end); as_of must equal end-1. Only movement days returned; empty dates require carrying previous closing value, not treating missing as zero.", "gaps": "One source period only; no unverified backup carry-forward bridge. Earlier unreconciled movements invalidate subsequent closing stock. No dense-calendar stockout duration calculation."},
+    "open_orders": {"dates": "as_of must be today for verified open state; historical/future state returns explicit gap. Optional start/end filters ORDER DATE, not due_date. overdue_only selects due_date before as_of.", "gaps": "Line detail includes customer identity, due/overdue and remaining values. Sort customer_code or customer_name, never customer. Remaining amount is proportional line net; not payment/actual invoice. No customer subtotal, stock allocation or shared-stock sufficiency calculation."},
+    "customer_balances": {"dates": "start/end transaction period; all earlier source-period movements contribute opening balance.", "gaps": "Single source period only. Net account balance is not open-invoice or overdue debt. Unknown debit/credit sign invalidates that customer's numeric balance."},
+    "payment_movements": {"dates": "start/end movement date.", "gaps": "Cheque/promissory delivery is not realized cash. No bank/cash reconciliation or invoice closure allocation."},
+    "currencies": {"dates": "start/end invoice date; two periods can be shown as separate labelled sections, but no automatic cross-section change calculation.", "gaps": "NETTOTAL/TRNET are invoice general totals, not VAT-exclusive net sales. Unknown currency/original amount stays NULL. Currency grouping does not remove local currency or prove FX-only filtering."},
+    "purchase_prices": {"dates": "start/end purchase movement date, grouped by month.", "gaps": "LINENET-based purchase prices are not COGS. Transaction-currency grouping does not convert LINENET to original currency or separate FX effects. No period-change attribution."},
+    "invoice_statistics": {"dates": "start/end sales invoice date. Separate period sections can show mean/median/count for each period without inventing a joined change calculation.", "gaps": "Sales invoices 7/8/9 before returns; NETTOTAL includes invoice taxes. Default descending invoice_total; arbitrary custom sort unsupported."},
+    "invoice_duplicates": {"dates": "start/end invoice date.", "gaps": "Same header and material fingerprint only; no final duplicate verdict. Custom filters/sorts unsupported."},
+    "invoice_reconciliation": {"dates": "start/end invoice date; all linked child rows considered regardless of their dates.", "gaps": "Always explicit unexplained-allocation gap; raw expenses/discounts do not prove causal reconciliation or rounding. Custom filters/sorts unsupported."},
+    "orphan_invoice_lines": {"dates": "start/end invoice date for headers and movement date for orphan lines.", "gaps": "Faturasiz movement not automatically error. Finding explains whether line measure can include it, but no independent total-contribution reconciliation. Custom filters/sorts unsupported."},
+    "cross_book_sales_quality": {"dates": "start/end Logo sales movement date, CURRENT active CRM classification.", "gaps": "Default population has sales/return movements; not all current book cards. no_sales is only matched Logo/CRM identities with no sale activity in selected period; not never-sold history or CreatedOn cohort. For TopN quality, match_status=all preserves sales ranking; missing_fields filters before limit. No author allocation or historical publisher assignment."},
+    "cross_customer_sales_quality": {"dates": "start/end Logo sales movement date, CURRENT active CRM classification.", "gaps": "Sales only, no balance/collections/owner/contact-quality computation. Address region differs from sales territory. no_sales excludes unmatched CRM identities and lacks previous-year comparison. Tax-string equality retains a legal-identity definition gap."},
+    "aging": {"dates": "as_of requested valuation date.", "gaps": "PAYMENT_CLOSURE_UNVERIFIED; no TOTAL-PAID/FIFO fabricated as actual closure."},
+    "profit": {"dates": "Requested transaction period if supplied.", "gaps": "ACTUAL_COST_UNVERIFIED; no purchase/sale price substituted for cost."},
+}
+LOGO_REPORT_OUTPUT_CONTRACTS = {
+    mode: {"fields": fields, "grain": _REPORT_GRAINS[mode], **_REPORT_DETAILS[mode],
+           "optional_fields": _STOCK_SALES_FIELDS if mode == "stock" else [],
+           "allowed_order_by": [] if mode in INVOICE_REPORTS else fields + (_STOCK_SALES_FIELDS if mode == "stock" else [])}
+    for mode, fields in _REPORT_FIELDS.items()
+}
+LOGO_REPORT_COMPACT_OUTPUT_CONTRACTS = {
+    mode: {"fields": contract["fields"], "optional_fields": contract["optional_fields"], "grain": contract["grain"]}
+    for mode, contract in LOGO_REPORT_OUTPUT_CONTRACTS.items()
+}
+
+
+def describe_logo_report_output(mode):
+    if mode not in LOGO_REPORT_OUTPUT_CONTRACTS:
+        raise ContractError("Logo çıktı sözleşmesi tanımlı değil.", code="PLAN_INVALID")
+    return {**LOGO_REPORT_OUTPUT_CONTRACTS[mode],
+            "limits": "Explicit user limit only; applied after filtering/sorting. Available columns do not imply new joins, subtotals or cohort computations.",
+            "empty": "Ordinary empty reports retain declared columns. Source-boundary early returns can have no numeric columns plus explicit gap."}
+
+
 def validate_logo_report(raw):
     if not isinstance(raw, dict) or set(raw) - {"mode", *DEFAULTS}:
         raise ContractError("Logo rapor planının alanları doğrulanamadı.")
@@ -71,6 +150,11 @@ def validate_logo_report(raw):
     for key in ("customer_code", "book_code", "order_by"):
         if spec[key] is not None and (not isinstance(spec[key], str) or not 1 <= len(spec[key]) <= 120):
             raise ContractError("Logo raporunun kod/sıralama alanı geçerli değil.")
+    allowed_order = set(LOGO_REPORT_OUTPUT_CONTRACTS[spec["mode"]]["allowed_order_by"])
+    if spec["mode"] == "stock" and not spec["lookback_days"]:
+        allowed_order -= set(_STOCK_SALES_FIELDS)
+    if spec["order_by"] is not None and spec["order_by"] not in allowed_order:
+        raise ContractError("Logo raporunun sıralama alanı çıktı sözleşmesinde yok; kullanılabilir alanlar: " + ", ".join(sorted(allowed_order)), code="PLAN_INVALID")
     for key, lo, hi in (("warehouse_no", 0, 32767), ("lookback_days", 1, 3660), ("coverage_days", 1, 3660), ("limit", 1, 5000)):
         if spec[key] is not None and (type(spec[key]) is not int or not lo <= spec[key] <= hi):
             raise ContractError("Logo raporunun sayısal sınırı geçerli değil.")
