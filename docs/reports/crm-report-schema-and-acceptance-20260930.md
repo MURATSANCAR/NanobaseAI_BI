@@ -5,6 +5,26 @@ eski semantik kataloğa başvurmadan doğrudan bağlı `Timas_MSCRM` metadata ka
 incelendi. Bu belge **canlı API kabul sonucu değildir**. Kabul koşucusu hazırdır;
 bu çalışma sırasında ürün testi veya dağıtım yapılmamıştır.
 
+## 1 Ekim: metadata ile hesap kapsamını ayıran düzeltme
+
+Paralel kod incelemesinde aktif sözleşme tarafının kişi/kurum bağlantısı
+çözülemediğinde bazı raporlarda taraf listesinin sessiz eksilebildiği bulundu.
+`5b68f9546` sürümünde `contract_author_roles`, `contract_expiry` ve
+`contract_revision_evidence`, yalnız çıktıya giren ilgili sözleşmeler için
+`INCOMPLETE_SOURCE_COVERAGE` bildirir. Pasif kişi/kurum bilgisi açılmaz;
+dönem veya çıktı dışındaki eksiklikler sonucu kısmi yapmaz.
+
+Bağımsız kabul referansı mevcut LEFT JOIN anti-join sorgusuyla bu eksikliği
+ayrı denetler; özel kapsam gap'i ve API ile saklanan tam sonuçta
+`sourceComplete=false` zorunludur. Başka bir tarihçe açıklaması bu kontrolün
+yerine geçmez. Plan kaynaklı açık boşluklar da bölümün kapsam durumuna taşınır.
+Yeni tablo veya alan eklenmedi: **31 tablo / 161 alan** metadata kapsamı aynıdır.
+5b68f9546 sürümünün CR024 gerçek API kontrolünde 999 satır bağımsız
+referansla eşleşti; anti-join gerçek eksik aktif taraf bağını buldu ve yeni
+özel gap/API+saklanan sonuç sourceComplete=false kontrolü geçti
+(**BOUNDARY_PASS**, tam cevap değildir). Diğer ilgili senaryoların koşusu
+sürüyor; sonraki planlayıcı değişiklikleri yeniden kabul gerektirir.
+
 ## Tam envanter
 
 Test sunucusundaki kanıt:

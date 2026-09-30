@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Kullanıcının açık kısmi cevap iznini ilgili hesaba bağlama
+
+- 5b68f9546 CRM-R9 devam ederken CR013 368 satırla BOUNDARY_PASS; CR024 999 satırla BOUNDARY_PASS. CR024 bağımsız anti-join gerçek eksik aktif taraf bağını buldu; yeni özel INCOMPLETE_SOURCE_COVERAGE ve sourceComplete=false hem API hem saklanan sonuçta doğrulandı. Bu iki geçiş sürüme aittir, bütün CRM kabulü değildir.
+- CR023 134,29 saniyede FAIL: ilk kesilen plan reasoning kapalı ikinci denemede doğru raporu seçti; ancak denetçi kullanıcının açık bilinmeyeni göster iznini asıl araştırmaya bağlayamadı. Sonraki anlamsal onarım boş JSON/kesilme ile bitti.
+- Yeni answer_permissions, yalnız özgün soru alıntısıyla belirtilmiş izni ilgili analysis niyetine ve istenen alternatif çıktılara bağlar. Denetçi nüfusun korunduğunu kanıtlamalı; nüfus/tarih/kimlik/ilk N/yasak koşullarının tamamı sağlanmadan izin kullanılamaz. Hesap gerçekleşmiş sayılmaz; zorunlu gap ve PARTIAL üretilir. İzin yoksa davranış değişmez.
+- Tamamlanmış ilk reasoning yanıtının boş/bozuk JSON olması halinde de mevcut ikinci biçim denemesi reasoning kapalıdır. Transport hatası sonrası tekrar açılmaz. Yerel ürün testi yok; yeni değişikliklerin canlı kabulü bekliyor.
+
 ## 2026-10-01 — CRM sözleşme tarafı kapsamındaki sessiz eksiklik
 
 - Paralel statik incelemede aktif taraf kaydının kişi/kurum bağı aktif kaynak kümesinde çözülemediğinde taraf listesinden düştüğü, fakat roles/expiry raporlarında bu eksikliğin her zaman açıklanmadığı bulundu. Roles/expiry/revision raporlarında yalnız çıktıya giren sözleşmeler için INCOMPLETE_SOURCE_COVERAGE eklenir. Pasif kayıt bilgisi getirilmez; kapsam dışı sözleşmeler sonucu kısmi yapmaz.

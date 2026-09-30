@@ -152,6 +152,9 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
                 return _json(content)
             except ContractError as exc:
                 error = exc
+        if thinking_requested and attempt == 0:
+            thinking_requested = False
+            event["nextAttemptThinkingRequested"] = False
         event["formatError"] = str(error)
         # Retain only an explicitly JSON-shaped answer prefix, never a reasoning transcript.
         stripped = re.sub(r"^```(?:json)?\s*", "", content.strip())
@@ -864,12 +867,22 @@ def source_report_intents(question, periods, today, llm, trace):
         "id":{"type":"string", "enum":intent_ids},
         "question_quote":{"type":"string", "enum":source_spans}, "affirmative_meaning":text_type,
         "speech_act":{"type":"string", "enum":["request", "prohibition", "conditional_primary", "fallback"]},
+        "role":{"type":"string", "enum":["analysis", "output", "population", "date", "identity_link", "ranking", "prohibition"]},
         "condition_quote":{"type":"string", "enum":["", *source_spans]},
         "primary_id":{"type":["string", "null"], "enum":[None, *intent_ids]},
     }
-    schema = {"type":"object", "additionalProperties":False, "required":["intents"], "properties":{
+    permission_fields = {
+        "id":{"type":"string", "enum":[f"p{i}" for i in range(1,9)]},
+        "question_quote":{"type":"string", "enum":source_spans},
+        "applies_to":{"type":"string", "enum":intent_ids},
+        "substitute_intents":{"type":"array", "minItems":1, "maxItems":24, "items":{"type":"string", "enum":intent_ids}},
+    }
+    schema = {"type":"object", "additionalProperties":False, "required":["intents","answer_permissions"], "properties":{
         "intents":{"type":"array", "minItems":1, "maxItems":24, "items":{
-            "type":"object", "additionalProperties":False, "required":list(intent_fields), "properties":intent_fields}}}}
+            "type":"object", "additionalProperties":False, "required":list(intent_fields), "properties":intent_fields}},
+        "answer_permissions":{"type":"array", "maxItems":8, "items":{
+            "type":"object", "additionalProperties":False, "required":list(permission_fields), "properties":permission_fields}}}}
+
     parsed = _object(llm, [{"role":"system", "content":
         "Yalnız sorunun dilsel iş koşullarını çözümle; herhangi bir sistem yeteneği veya rapor seçme. "
         "Her tarih/nüfus/alan/hesap/çıktı isteğini ve yasağı intents içine al. id i1..i24 arasından benzersiz olsun. "
@@ -887,7 +900,13 @@ def source_report_intents(question, periods, today, llm, trace):
         "Koşullu yasak prohibition kalır; şartlı olması yasak işlemi olumlu isteğe çevirmez. "
         "Koşul ve alternatif izin sonraki cümlede bulunabilir; bütün sorudaki bağlantıları koru, cümleleri bağımsız taleplere bölerek anlamı değiştirme. "
         "Koşullu A mümkün değilse B ve eksikliği açıklama ilişkisini koru; A'yı koşulsuz zorunluya dönüştürme. "
-        "Kullanıcı söylemeden fallback üretme; birden çok şartı atlama. Yalnız şemalı JSON."},
+        "Her intent role anlamını korusun: hesap/araştırma analysis; çıktı output; nüfus/tarih/kimlik bağlantısı/ilk N "
+        "koşulları population/date/identity_link/ranking. Hesabın içinde seçim koşulu varsa bunları ayrı intentlere de taşı. "
+        "answer_permissions yalnız kullanıcının açıkça doğrulanamayan hesabı belirtip mevcut/alternatif çıktıyı sunmaya izin "
+        "verdiği durumdur; yoksa []. Her izin question_quote ile kanıtlanır; applies_to ilgili analysis intenti, substitute_intents "
+        "gerçekten istenen alternatif çıktı intentleridir. İzin sonraki cümlede olabilir; yalnız ilgili hesaba bağla. "
+        "İzin nüfus/tarih/kimlik/ilk N kısıtını atlama yetkisi değildir; analysis diye yanlış etiketleme. "
+        "Kullanıcı söylemeden fallback veya kısmi cevap izni üretme; birden çok şartı atlama. Yalnız şemalı JSON."},
         {"role":"user", "content":json.dumps({"question":question,"parsedPeriods":periods,"referenceDate":str(today)},ensure_ascii=False)}],
         2400, schema, "source_report_intents", trace)
     if trace is not None: trace.append({"stage":"source_report_intents", "output":parsed})
@@ -898,6 +917,7 @@ def source_report_intents(question, periods, today, llm, trace):
     for item in intents:
         if (not isinstance(item, dict) or set(item) != set(intent_fields)
                 or not isinstance(item["id"], str) or item["id"] not in intent_ids
+                or item["role"] not in {"analysis","output","population","date","identity_link","ranking","prohibition"}
                 or item["id"] in by_id or item["speech_act"] not in {"request","prohibition","conditional_primary","fallback"}
                 or any(not isinstance(item[k], str) or not item[k].strip() for k in ("question_quote","affirmative_meaning"))
                 or item["question_quote"] not in question or not isinstance(item["condition_quote"], str)):
@@ -912,7 +932,24 @@ def source_report_intents(question, periods, today, llm, trace):
         if item["speech_act"] == "fallback" and (not isinstance(item["primary_id"], str)
                 or item["primary_id"] not in by_id or by_id[item["primary_id"]]["speech_act"] != "conditional_primary"):
             raise ContractError("Kaynak raporu alternatif isteği asıl koşula bağlanamadı.", code="PLAN_INVALID")
-    return by_id
+    permissions = parsed.get("answer_permissions")
+    if not isinstance(permissions,list) or len(permissions)>8:
+        raise ContractError("Kısmi cevap izinleri geçersiz.", code="PLAN_INVALID")
+    permission_map = {}
+    for permission in permissions:
+        if (not isinstance(permission,dict) or set(permission)!=set(permission_fields)
+                or permission.get("id") not in [f"p{i}" for i in range(1,9)] or permission["id"] in permission_map
+                or not isinstance(permission.get("question_quote"),str) or not permission["question_quote"].strip()
+                or permission["question_quote"] not in question
+                or permission.get("applies_to") not in by_id
+                or by_id[permission["applies_to"]]["role"] != "analysis"
+                or by_id[permission["applies_to"]]["speech_act"] not in {"request","conditional_primary"}
+                or not isinstance(permission.get("substitute_intents"),list) or not permission["substitute_intents"]
+                or any(not isinstance(i,str) or i not in by_id or i==permission["applies_to"] for i in permission["substitute_intents"])
+                or len(set(permission["substitute_intents"])) != len(permission["substitute_intents"])):
+            raise ContractError("Kısmi cevap izni özgün hesap ve alternatife bağlanamadı.", code="PLAN_INVALID")
+        permission_map[permission["id"]] = permission
+    return by_id, permission_map
 
 
 def build_report(data, question, llm, periods, today, trace, source_question=None):
@@ -973,15 +1010,17 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     else:
         capabilities = {"mode":report["mode"], "description":LOGO_REPORT_CAPABILITIES[report["mode"]],
                         "output_contract":describe_logo_report_output(report["mode"])}
-    intents = source_report_intents(question, periods, today, llm, trace)
+    intents, permissions = source_report_intents(question, periods, today, llm, trace)
     _, source_spans = _question_plan_schema(question)
     source_review_schema = {
         "type": "object", "additionalProperties": False,
         "required": ["intent_checks", "intent_extraction_complete", "ok", "missing", "missing_evidence"],
         "properties": {
             "intent_checks":{"type":"array", "items":{"type":"object", "additionalProperties":False,
-                "required":["intent_id","status","contract_evidence"], "properties":{
-                    "intent_id":{"type":"string", "enum":list(intents)}, "status":{"type":"string","enum":["satisfied","fallback_used","not_applicable","missing"]},
+                "required":["intent_id","status","contract_evidence","permission_id","population_preserved"], "properties":{
+                    "permission_id":{"type":["string","null"], "enum":[None,*permissions]},
+                    "population_preserved":{"type":"boolean"},
+                    "intent_id":{"type":"string", "enum":list(intents)}, "status":{"type":"string","enum":["satisfied","fallback_used","unverified_with_permission","not_applicable","missing"]},
                     "contract_evidence":{"type":"string"}}}},
             "intent_extraction_complete":{"type":"boolean"},
             **REVIEW_SCHEMA["properties"],
@@ -1000,6 +1039,12 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     review = _object(llm, [{"role": "system", "content":
         "Önce intents içindeki her koşulu intent_checks ile seçili sözleşmeye bağla, sonra genel karar ver. "
         "Her intent_id tam bir kez bulunmalı; contract_evidence gerçek çıktı/nüfus/iddia kanıtını açıklamalı. "
+        "answer_permissions koşulsuz af değildir: sadece bağlı analysis doğrulanamıyorsa ve açık izin gerçekten bu hesaba "
+        "uzanıyorsa unverified_with_permission + permission_id ver. Bağlı substitute_intents gerçekten satisfied olmalı. "
+        "contract_evidence kaynak eksikliğini, alternatif çıktıyı ve asıl hesabın yapılmadığını açıkla; runtime bunu gap olarak sunar. "
+        "population_preserved ancak raporun gerçek predicate/dönem/kimlik/ilk N nüfusu soruyla aynıysa true; "
+        "izin bu koşullardan hiçbirini kaldırmaz. Rol etiketlerini özgün sorudan ayrıca doğrula; yanlış analysis etiketi kabul edilmez. "
+        "Bu durum dışında permission_id null; desteklenmeyen asıl hesabı satisfied diye gösterme. "
         "Özgün question hâlâ yetkilidir: extraction bir koşulu atlamış veya anlamını bozmuşsa intent_extraction_complete=false ver; kabul etme. "
         "prohibition korunacak durumdur; unsupported işlem yapılamıyor diye ihlal değildir. "
         "Koşullu asıl işlem gerçekten desteklenmiyorsa yalnız kullanıcının izin verdiği bağlı fallback karşılanıp "
@@ -1039,20 +1084,30 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
         "rapor ve ilan edilmiş hesap eksikliği birlikte değerlendirilir; koşullu olmayan zorunlu hesap eksikliği kabul edilmez. "
         "İstenen filtre/altküme eksikliği ise bağımsız ek hesap sınırı değildir: geniş filtresiz nüfusu doğru cevap sayma. "
         "zorunlu sayısal cevabın yerine salt gap tam cevap değildir."},
-        {"role": "user", "content": json.dumps({"question": question, "intents":list(intents.values()), "report": report, "capabilities": capabilities,
+        {"role": "user", "content": json.dumps({"question": question, "intents":list(intents.values()), "answer_permissions":list(permissions.values()), "report": report, "capabilities": capabilities,
         "parsedPeriods": periods, "referenceDate": str(today)}, ensure_ascii=False)}], 3600, source_review_schema, "source_report_review", trace)
     if trace is not None:
         trace.append({"stage":"source_report_review", "output":review})
     checks = review.get("intent_checks")
     if (review.get("intent_extraction_complete") is not True or not isinstance(checks,list)
             or len(checks) != len(intents) or any(not isinstance(c,dict) or c.get("intent_id") not in intents
-                or c.get("status") not in {"satisfied","fallback_used","not_applicable","missing"}
+                or c.get("status") not in {"satisfied","fallback_used","unverified_with_permission","not_applicable","missing"}
                 or not isinstance(c.get("contract_evidence"),str) or not c["contract_evidence"].strip() for c in checks)
             or len({c["intent_id"] for c in checks}) != len(intents)):
         raise ContractError("Kaynak raporu denetimi bütün özgün koşulları kanıtlamadı.", code="PLAN_INVALID")
     check_map = {c["intent_id"]:c for c in checks}
     for check in checks:
         intent = intents[check["intent_id"]]
+        if check["status"] == "unverified_with_permission":
+            permission = permissions.get(check.get("permission_id"))
+            if (not permission or permission["applies_to"] != check["intent_id"] or intent["role"] != "analysis"
+                    or check.get("population_preserved") is not True
+                    or any(check_map[i]["status"] != "satisfied" for i in permission["substitute_intents"])
+                    or any(check_map[i]["status"] != "satisfied" for i,x in intents.items()
+                           if x["role"] in {"population","date","identity_link","ranking","prohibition"})):
+                raise ContractError("Kısmi cevap izni nüfus ve alternatif çıktı koşullarını korumuyor.", code="PLAN_INVALID")
+        elif check.get("permission_id") is not None:
+            raise ContractError("Kısmi cevap izni yanlış denetim durumuna bağlandı.", code="PLAN_INVALID")
         if check["status"] == "not_applicable" and (intent["speech_act"] != "fallback"
                 or check_map[intent["primary_id"]]["status"] != "satisfied"):
             raise ContractError("Uygulanmayan koşul izinli alternatif değil.", code="PLAN_INVALID")
@@ -1080,6 +1135,8 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     fallback_gaps = tuple({
         "status": "UNSUPPORTED_CAPABILITY",
         "reason": "İstenen: " + intents[check["intent_id"]]["question_quote"]
-                  + " — Bu hesap doğrulanmadı; kullanıcının istediği alternatif sunuldu.",
-    } for check in checks if check["status"] == "fallback_used")
+                  + " — Bu hesap doğrulanmadı; kullanıcının istediği alternatif sunuldu."
+                  + (" İzin: " + permissions[check["permission_id"]]["question_quote"]
+                     if check["status"] == "unverified_with_permission" else ""),
+    } for check in checks if check["status"] in {"fallback_used", "unverified_with_permission"})
     return Plan((), (), periods, gaps=fallback_gaps, **{branch: report})
