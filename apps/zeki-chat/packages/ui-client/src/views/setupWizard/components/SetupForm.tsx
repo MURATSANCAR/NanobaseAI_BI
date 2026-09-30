@@ -16,7 +16,7 @@ export const SetupForm = ({ title, currentStep, stepCount, onSubmit, onBackButto
 	onSubmit: (data: FormData) => Promise<void>;
 	onBackButtonClick?: () => void;
 }) => {
-	const { t } = useTranslation('translation');
+	const { t } = useTranslation('core');
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState('');
 	const submit = async (event: FormEvent<HTMLFormElement>) => {

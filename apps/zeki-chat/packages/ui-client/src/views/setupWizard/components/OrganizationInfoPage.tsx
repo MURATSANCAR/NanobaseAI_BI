@@ -9,7 +9,7 @@ type Props = {
 	onSubmit: (data: OrganizationData) => Promise<void>; onBackButtonClick?: () => void;
 };
 const OrganizationInfoPage = ({ initialValues, organizationIndustryOptions, organizationSizeOptions, countryOptions, onSubmit, ...steps }: Props) => {
-	const { t } = useTranslation('translation');
+	const { t } = useTranslation('core');
 	const submit = async (form: FormData) => {
 		await onSubmit({ organizationName: String(form.get('organizationName') || '').trim(), organizationIndustry: String(form.get('organizationIndustry') || ''), organizationSize: String(form.get('organizationSize') || ''), country: String(form.get('country') || '') });
 	};
@@ -19,7 +19,7 @@ const OrganizationInfoPage = ({ initialValues, organizationIndustryOptions, orga
 			{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
 		</select>
 	</Field>;
-	return <SetupForm title={t('Organization')} {...steps} onSubmit={submit}>
+	return <SetupForm title={t('onboarding.form.organizationInfoForm.title')} {...steps} onSubmit={submit}>
 		<Field label={t('Name')}><input name='organizationName' defaultValue={initialValues.organizationName} autoComplete='organization' required style={controlStyle} /></Field>
 		{select('organizationIndustry', t('Industry'), organizationIndustryOptions)}
 		{select('organizationSize', t('Size'), organizationSizeOptions)}
