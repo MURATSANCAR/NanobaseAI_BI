@@ -167,6 +167,15 @@ def cases():
         ("subbrand", ["subbrand_id","subbrand"], "Eylül 2026 net satış tutarını CRM new_yayinciid ile bağlı güncel alt marka kimliği ve adına göre göster; eşleşmeyenleri boş grupta koru."),
         ("author_group", ["author_group_ids","author_group_names"], "Eylül 2026 net satış tutarını aktif gerçek Yazar katılımındaki kişi kimlikleri ortak grubuna göre göster. Çok yazarlı kitabı bir grupta bir kez say; kişilere dağıtma, eşleşmeyenleri boş grupta koru.")]:
         out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="cross_dimensions",crossDimension=dim,metrics=["net_sales"],dimensions=[dim],columns=[*cols,"net_sales"],keys=cols,periods=[["2026-09-01","2026-10-01"]],allowCoverageGap=True,referenceSql="SELECT LTRIM(RTRIM(I.CODE)) book_code,COALESCE(SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.LINENET ELSE S.LINENET END),0) net_sales FROM dbo.LG_411_01_STLINE S LEFT JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=S.STOCKREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY LTRIM(RTRIM(I.CODE))"))
+    # Modifier-scope regressions: opposite operand order and different fact grains.
+    add("Eylül 2026'da iadeler düşülmeden satılan adedi, iadeler düşüldükten sonraki net satılan adede böl. İki adet toplamını ayrı kolonlarda ver; oran yüzde değil katsayı olsun.",
+        ["sold_quantity","net_quantity"], derived=dict(op="ratio",left="sold_quantity",right="net_quantity",scale=1))
+    out.append(dict(id=f"CP{len(out)+1:03d}",
+        question="Eylül 2026 için iki ayrı kayıt kümesinden toplam hesapla: pay, iptal edilmemiş satış faturalarının KDV dahil genel toplamı; payda, satış satırlarından iadeler düşülmüş KDV hariç net satış tutarı olsun. Fatura başlıklarını satış satırlarıyla çoğaltmadan ayrı ayrı topla. Aynı tek satırda iki toplamı ve payın paydaya oranını katsayı olarak göster; yüzdeye çevirme.",
+        source="logo",metrics=["invoice_amount","net_sales"],dimensions=[],keys=[],columns=["invoice_amount","net_sales"],
+        periods=[["2026-09-01","2026-10-01"]],mixedFamily=True,
+        derived=dict(op="ratio",left="invoice_amount",right="net_sales",scale=1),
+        referenceSql="WITH invoice_totals AS (SELECT COALESCE(SUM(I.NETTOTAL),0) invoice_amount FROM dbo.LG_411_01_INVOICE I WHERE "+invoice_where+"), sales_totals AS ("+sales_sql("2026-09-01","2026-10-01",["net_sales"])+") SELECT I.invoice_amount,S.net_sales FROM invoice_totals I CROSS JOIN sales_totals S"))
     for case in out:
         if case.get("sections"):
             case["referenceQueries"] = [child["referenceSql"] for child in case["sections"]]

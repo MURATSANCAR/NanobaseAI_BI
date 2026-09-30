@@ -132,7 +132,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
             result["sections"] = engine.section_results
         result["gaps"] = engine.gaps
         progress("presenting")
-        if not engine.section_results:
+        if not engine.section_results and not plan.logo_report and not plan.crm_report:
             runtime.attach_widget(result, question)
         runtime.remember_result(result, question=question, sql=sql)
         qid = record(kind, summary, result)

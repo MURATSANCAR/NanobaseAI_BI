@@ -97,6 +97,21 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
 
 
 def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _source_question=None):
+    # At most one semantic/structural replan for the complete user request.
+    # Leaves propagate their rejection to the root rather than multiplying retries.
+    try:
+        return _build(question, llm, previous, trace, _data=_data, _depth=_depth, _source_question=_source_question)
+    except ContractError as exc:
+        if exc.code != "PLAN_INVALID" or _depth or _data is not None or llm is None:
+            raise
+        reason = str(exc)
+        if trace is not None:
+            trace.append({"stage":"bounded_plan_repair", "attempt":1, "reason":reason})
+        return _build(question, llm, previous, trace, _depth=0,
+                      _source_question=_source_question, _repair_error=reason)
+
+
+def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _source_question=None, _repair_error=None):
     q = fold(question)
     source_question = _source_question or question
     source_q = fold(source_question)
@@ -128,21 +143,28 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
               "capabilities içindeki hesap tanımı ve kaynak sınırlarını uygula. Ham SQL veya yeni alan adı üretme. "
               "Tek soruda farklı kırılımlar/özet+detay/bağımsız kaynak bölümleri gerekiyorsa sections kullan (en fazla 4 yaprak). "
               "Her section title, anlamı koruyan question ve tek leaf plan içerir; leaf plan iç içe sections içermez. "
-              "Root sections doluyken metrics/dimensions/filters/derived/having/analytics boş, crm/logo_report/crm_report/comparison null olsun. "
-              "Her bağımsız isteği coverage'a sorudan aynen alınmış requirement metniyle bağla; sections sıfır tabanlı bölüm indeksleri, "
+              "Root sections doluyken metrics/dimensions/filters/derived/having/analytics boş; crm/logo_report/crm_report/comparison/limit/order_by null, uncovered boş liste ve clarification boş metin olsun. Kök bölüm planlarından alan miras almaz. "
+              "YALNIZ sections dolu olan bölümlü kökte her bağımsız isteği coverage'a özgün sorudan harfi harfine kesintisiz alınmış requirement metniyle bağla; büyük/küçük harf, noktalama ve ekleri değiştirme. Özet veya section question metni alıntı yerine geçmez. sections sıfır tabanlı bölüm indeksleri, "
               "gap_index gaps içindeki eksik kapsam indeksidir. Bir koşul ya gerçek bölüme ya açık gaps kaydına bağlanır. "
               "Bağımsız eksik işi gaps ile açık belirt; bir filtrenin yapılamamasını gaps diyerek atıp filtresiz geniş sonuç üretme. "
-              "gaps varsa kök uncovered/clarification boş kalır; tam cevap iddiası kurulmaz. Normal tek plan için sections/gaps/coverage boş. "
+              "gaps varsa kök uncovered/clarification boş kalır; tam cevap iddiası kurulmaz. Tek hesap, tek CRM raporu veya tek Logo raporunda sections=[], gaps=[], coverage=[] zorunludur; olmayan bölüm0 için kapsam kaydı üretme. "
               "logo_report/crm_report dalı seçildiğinde diğer yürütme dalları ve hesap dizileri boş/null olmalı. "
               "Raporda as_of referans tarihidir; kullanıcı tarih aralığı istemediyse start/end null kalır, as_of yüzünden aralık uydurma. "
               "analytics contribution: tek dönemde metric payı, azalan kümülatif pay ve grup toplamı; group_by çıktı boyut alanları. "
               "analytics top_remainder: her grupta açıkça istenen ilk N + kalan ölçü toplamı, negatifler korunur. "
               "contribution için id ver, limit null ve label boş; top_remainder için limit ve label ver, id boş olmayan özgünkimlik. "
+              "Analitik group_by sonuç boyutlarının kopyası değildir: sıralamanın/payın her biri için yeniden başladığı üst gruptur. "
+              "Bütün sonuç satırları içinde ilk N veya toplam payı için group_by=[] kullan; sıralanan öğenin alanlarını group_by içine koyma. "
+              "Örneğin her müşteri için ürünler sıralanıyorsa grup müşteri alanları, öğe ürün alanlarıdır. "
+              "Contribution tek işlemle hem satır payını hem kümülatif payı hem grup toplamını üretir; ayrı kümülatif işlem isteme. "
               "analytics farklı dönemleri karıştırmaz; dönemler arasında gerekiyorsa ayrısections kullan. "
               "İlk N ve kalanla birlikte pay isteniyorsa analytics sırası top_remainder, ardından contribution olmalıdır; "
               "oranlar kalan satırı oluşturulduktan sonra yeniden hesaplanır. "
               "Uyumlu ortak kırılımdaki ölçülerle derived işlemleri serbest: ratio=left/right*scale; difference=left-right; "
               "percent_change=(left-right)/right*100. Operandlar temel ölçü IDsidir; gerekli tüm operandları metrics'e ekle. "
+              "A tutarı B tutarından yüzde kaç farklı sorusu percent_change(left=A,right=B,scale=100) gerektirir; A/B*100 buna eşit değildir. "
+              "Farkı B'ye böl isteğinde ara farkı ayrıca göstermesi istenmediyse difference+ratio üretme, tek percent_change üret. "
+              "Kullanıcı sadece ilk N ve kalan istemişse contribution ekleme; pay/kümülatif pay ayrı istek gerektirir. "
               "scale yalnız 1 veya 100; difference için 1, percent_change için 100. Pay/payda belirsizse clarification iste. "
               "Dönem farkı veya büyüme comparison ile yapılır: target-base veya (target-base)/base*100; "
               "base_period ve target_period parsedPeriods içindeki sıfır tabanlı indekslerdir. Sadece iki dönem kullan. "
@@ -169,24 +191,21 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
                             "parsedGrain": grain, "referenceDate": str(today), "previous": previous, "crmCapabilities": CRM_CAPABILITIES, "crmReportCapabilities": CRM_REPORT_CAPABILITIES,
                             "logoReportCapabilities": LOGO_REPORT_CAPABILITIES}, ensure_ascii=False))
     plan_messages = [{"role": "system", "content": prompt}, {"role": "user", "content": question}]
+    if _repair_error:
+        plan_messages.append({"role":"system", "content":
+            "Önceki plan yapısal/anlamsal doğrulamadan geçmedi: " + _repair_error +
+            " Asıl kullanıcı sorusunu yukarıdaki aynı sözleşme ve şemayla bir kez yeniden planla. "
+            "Hiçbir koşulu çıkarma, soruyu değiştirme, başarısız koşulu saklamak için gap üretme. "
+            "Onarım da bütün doğrulayıcılardan ve bağımsız anlam denetiminden geçecektir. "
+            "Bölümlü kökte yürütme alanları boş/null; yalnız sections/gaps/coverage dolabilir. "
+            "Coverage requirement özgün sorudan harfi harfine kesintisiz alıntıdır; normalleştirme veya özetleme yapma. "
+            "Sıralanan öğeleri analytics.group_by içine alma; group_by yalnız bağımsız sıralama/pay üst gruplarıdır."})
     data = dict(_data) if _data is not None else _object(llm, plan_messages, 6400, PLAN_SCHEMA, "finance_plan", trace)
-    structural_error = comparison_shape_error(data)
-    if structural_error and _data is None:
-        if trace is not None:
-            trace.append({"stage": "plan_rejected", "output": data, "reason": structural_error})
-        repair = {"role": "system", "content":
-            "Plan doğrulayıcısı önceki planı reddetti: " + structural_error +
-            " Soruyu aynı sözleşmeyle baştan planla. İstenen anlamı veya koşulları silme. "
-            "Dönem farkı/yüzdesi için yalnız comparison kullan; aynı işlemi derived ile çoğaltma. "
-            "Kullanıcı gerçekten hem satır içi hesap hem dönem karşılaştırması istiyorsa uncovered ile bildir. "
-            "Yalnız şemaya uyan JSON döndür."}
-        data = _object(llm, [*plan_messages, repair], 3600, PLAN_SCHEMA, "finance_plan_repair", trace)
-        if comparison_shape_error(data):
-            if trace is not None:
-                trace.append({"stage": "plan_rejected", "output": data, "reason": comparison_shape_error(data)})
-            raise ContractError(comparison_shape_error(data), code="PLAN_INVALID")
     if trace is not None:
         trace.append({"stage": "plan", "output": data})
+    structural_error = comparison_shape_error(data)
+    if structural_error:
+        raise ContractError(structural_error, code="PLAN_INVALID")
     if set(data) - set(schema):
         raise ContractError("Soru planında sözleşme dışı alan var.", code="PLAN_INVALID")
     if requests_passive_records(question):
@@ -313,12 +332,45 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
     result_grain = [DIMENSIONS[d] for d in dims]
     if len(periods) > 1 and not comparison:
         result_grain.insert(0, "Dönem: her tarih aralığı ayrı sonuç satırı/grubudur; dönem başlangıcı ve bitişi ayrı kolonlarda gösterilir. Tarih aralıkları birbirine eklenmez veya aynı satırda birleştirilmez.")
+    # Operand meanings remain local: a qualifier on a denominator is not a
+    # population-wide instruction for every metric in the same sentence.
+    operand_meanings = []
+    metric_meaning = lambda key: {"id": key, "ad": METRICS[key].label, "tanım": METRICS[key].definition}
+    for calculation in derived:
+        operand_meanings.append({
+            "hesap": calculation.id, "işlem": calculation.op, "ölçek": calculation.scale,
+            "sol_operand": metric_meaning(calculation.left),
+            "sağ_operand": metric_meaning(calculation.right),
+            "açık_formül": {
+                "ratio": f"{calculation.left} / {calculation.right} × {calculation.scale:g}",
+                "difference": f"{calculation.left} − {calculation.right}",
+                "percent_change": f"({calculation.left} − {calculation.right}) / {calculation.right} × 100",
+            }[calculation.op],
+            "sıfır_payda": "ratio ve percent_change için sağ operand sıfırsa NULL: hesaplanamaz, sıfır yüzde değildir",
+
+        })
+    analytic_meanings = []
+    for spec in analytics:
+        scope = "bütün sonuç satırları" if not spec["group_by"] else "aynı " + ", ".join(spec["group_by"]) + " değerindeki satırlar"
+        if spec["op"] == "contribution":
+            analytic_meanings.append({"işlem":"pay ve kümülatif pay", "ölçü":metric_meaning(spec["metric"]), "kapsam":scope,
+                "kolonlar": {spec["id"]+"_group_total": "kapsamdaki ölçü toplamı",
+                             spec["id"]+"_share_pct": "satır ölçüsü / kapsam toplamı × 100",
+                             spec["id"]+"_cumulative_pct": "ölçü azalan sırada bu satıra kadar biriken ölçü / kapsam toplamı × 100"},
+                "sıfır_toplam":"oran NULL", "negatif_değerler":"korunur"})
+        else:
+            analytic_meanings.append({"işlem":"ilk N ve kalan", "kapsam":scope, "ölçü":metric_meaning(spec["metric"]),
+                "ilk_n":spec["limit"], "kalan":"Seçilmeyen bütün öğeler ölçü toplamları korunarak tek satır olur", "kalan_etiketi":spec["label"]})
     readable = {"referenceDate": str(today), "ölçüler": [{"id": m, "ad": METRICS[m].label, "tanım": METRICS[m].definition} for m in metrics],
-                "sonuç_kırılımları": result_grain, "koşullar": conditions,
+                "tarih_anlamı": "Son N ay/yıl, bugünün gün numarası korunarak N takvim birimi geriye gidilen hareketli aralıktır; hedef ayda gün yoksa ay sonu kullanılır ve bugün dahildir. Son tamamlanan N ay/yıl ise tamamlanmış takvim dönemleridir. Bunlar aynı aralık değildir. En yüksek/en çok gibi ölçü sırasındaki ilk N gün bütün istenen dönemden seçilen N sonuç satırıdır; ayın kronolojik ilk N günü değildir.",
+                "uygulanan_tarih_aralıkları": [{"başlangıç_dahil":a,"bitiş_hariç":b} for a,b in periods],
+                "referenceDate_anlamı": "Yalnız göreli tarihleri çözme çıpası; mutlak tarih isteğinin yerine geçen sorgu tarihi değildir",
+                "teknik_kod_anlamı": "Ölçü tanımlarındaki TRCODE, SIGN ve 7/8/9, 2/3 gibi sayılar işlem türü kodlarıdır; ay/gün/yıl veya tarih filtresi değildir",
+                "sonuç_kırılımları": result_grain, "koşullar": conditions, "operand_anlamları": operand_meanings,
                 "birleştirme_güvencesi": CONTRACT["joins"],
                 "ölçü_aileleri_birleşimi": CONTRACT["family_merge"],
                 "tam_sonuç_güvencesi": "Bütün kaynak satırları okunur; teknik sınırda kesilen cevap sunulmaz. Yalnız açık ilk N isteği sonuç kümesini sınırlar. Aktif CRM eşleşmesi bulunamayan Logo satırları NULL künye ile korunur, ölçü toplamları birleşim öncesi ve sonrası kontrol edilir.",
-                "analitik_işlemler": list(analytics), "türetilmiş_hesaplar": [asdict(d) for d in derived], "sonuç_süzgeçleri": [asdict(h) for h in having],
+                "analitik_işlemler": analytic_meanings, "türetilmiş_hesaplar": [asdict(d) for d in derived], "sonuç_süzgeçleri": [asdict(h) for h in having],
                 "dönem_karşılaştırması": asdict(comparison) if comparison else None,
                 "işlem_tanımları": "ratio=left/right*scale; difference=left-right; percent_change=(left-right)/right*100. Dönem comparison: target-base, yüzde için base payda. Sıfır payda ve eksik değer NULL.",
                 "ilk_n": limit, "sıralama_ölçüsü": METRICS[order].label if order in METRICS else order, "azalan": data.get("descending", True)}
@@ -326,11 +378,31 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
         "Soru-plan uyumunu denetle. Yalnız {\"ok\":true|false,\"missing\":[...]}. "
         "Sana yürütülecek planın Türkçe iş anlamı veriliyor. Soruda istenmeyen kırılım, "
         "unutulan dönem/özel isim/koşul/ölçü veya yanlış sayım birimi varsa ok=false. "
+        "İstenmeyen ek hesap ve pay kolonlarını da reddet. Yüzde fark isteğinde A/B*100 ile (A-B)/B*100 farklıdır; "
+        "farkın ayrı kolonda bulunması yanlış oran kolonunu düzeltmez. Analitik kapsamı da denetle: bütün satırlara göre "
+        "pay istenmişken her tek satırı kendi grubunda yüzde yüz yapan group_by doğru değildir. "
+        "Her niteleyiciyi dilbilgisel olarak bağlı olduğu ölçüye, döneme veya oran operandına uygula. "
+        "Aynı sorudaki ölçüler farklı tanımlara sahip olabilir; bir ölçüye bağlı dahil/hariç, "
+        "düşülmüş/düşülmeden, vergi dahil/hariç veya adet/tutar nitelemesini diğer ölçülere yayma. "
+        "Yalnız tümü/her iki ölçü gibi açık ortak kapsam varsa niteleyiciyi ortak uygula. "
+        "Göreli tarihte referenceDate ve tarih_anlamı sözleşmesini kullan. Bugünden N takvim ayı "
+        "geriye gitmek ay başına yuvarlama değildir; tamamlanmış ay isteğiyle karıştırma. "
+        "Ölçüye göre sıralamada ilk N gün sonuç limitidir; açık ayın ilk N günü nitelemesi "
+        "olmadan tarih aralığını ayın başlangıcındaki N güne daraltma. "
+        "Oranda pay ve paydayı ayrı ad öbekleri olarak denetle; her birinin kullanıcıdaki "
+        "anlamını kendi operand tanımıyla karşılaştır, sonra yönü ve ölçeği kontrol et. "
+        "İstenen ara toplamlar ayrı ölçü kolonlarında sunuluyorsa karşılanmıştır. "
         "Koşullar listesinde yazan koşul uygulanmaktadır; hayali bir teknik alanda ayrıca aranmaz. "
         "Teknik alan adı, SQL, TRCODE veya filters anahtarı talep etme. Yalnız kullanıcı sorusundan "
         "gerçekten eksik kalan iş koşulunu missing'e yaz. Varsayılan sıralama ve kurum kuralı olan "
         "aktif CRM süzgeci kapsam hatası değildir. Kitap adedi toplam miktardır; kitap kırılımı şart değildir. "
-        "Genel tahsilatta çek/senet dahil tanım cevapta açıklanacaktır."},
+        "Genel tahsilatta çek/senet dahil tanım cevapta açıklanacaktır. "
+        "Tarih koşulunu yalnız uygulanan_tarih_aralıkları ile denetle; referenceDate göreli çözüm çıpasıdır, "
+        "ölçü tanımındaki işlem kodları takvim ayları değildir. "
+        "Yüzde fark, açık formülde (sol-sağ)/sağ*100 ile sağlanır; aynı ara fark için ikinci bir işlem şart değildir. "
+        "Yalnız bir kaynakta hareketi olan grupların korunması FULL OUTER birleşim anlamında karşılanır; "
+        "bu nüfusu korumak ek having/sonuç süzgeci gerektirmez. "
+        "Contribution kolonlarında cumulative_pct mevcutsa kümülatif pay hesaplanmaktadır; ayrıca bir işlem adı arama."},
         {"role": "user", "content": json.dumps({"question": question, "plan": readable,
                                                 "previous": previous if follows(question) else None}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "finance_review", trace)
     if trace is not None:

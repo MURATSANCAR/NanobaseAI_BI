@@ -92,14 +92,14 @@ def dates(question, today):
             n = ordinals[m[2]] if m[2] in ordinals else int(m[2].rstrip("."))
             start = date(y, (n-1)*3+1, 1)
             add(*m.span(), start, shift_month(start, 3))
-        for m in re.finditer(r"\bson\s+(?:tamamlanan\s+)?(\d+)\s+(?:tamamlanmis\s+)?(ay|gun|hafta|yil)\w*", q):
+        for m in re.finditer(r"\bson\s+(?:tamamlanan\s+)?(\d+)\s+(?:tamamlanmis\s+)?(?:(?:tam\s+)?takvim\s+)?(ay|gun|hafta|yil)\w*", q):
             if not free(m): continue
             n = int(m[1])
             rolling_windows.append(m.span())
             if not 1 <= n <= ({"ay": 120, "yil": 10, "hafta": 520, "gun": 3660}[m[2]]): raise ValueError()
             if m[2] in ("ay", "yil"):
                 start = shift_month(today, -n * (12 if m[2] == "yil" else 1))
-                if re.search(r"tamamlanan|tamamlanmis|tam takvim", q):
+                if re.search(r"tamamlanan|tamamlanmis|tam takvim", m[0]):
                     if m[2] == "yil": start = date(today.year-n, 1, 1)
                     add(*m.span(), start, today.replace(month=1, day=1) if m[2] == "yil" else today.replace(day=1))
                 else:
@@ -154,7 +154,12 @@ def dates(question, today):
         raise ContractError("Tarih geçerli değil; gün, ay ve yılı kontrol edin.") from None
     # "Each month's first N days" clips full month windows without adding a period.
     first_days = re.search(r"\bilk\s+(\d+)\s+gun\w*", q)
-    if first_days:
+    # "Highest-selling first N days" is a ranking, not the month's opening
+    # calendar days. Explicit possessive calendar scope wins when both occur.
+    calendar_first_days = bool(first_days and re.search(
+        r"(?:ayin|ayinin|aylarin|aylarinin|her ayin)\s*$", q[:first_days.start()]))
+    ranked_days = bool(re.search(r"\b(?:en\s+(?:yuksek|dusuk|cok|az)|azalan|artan|sirala\w*)\b", q))
+    if first_days and (calendar_first_days or not ranked_days):
         n = int(first_days[1])
         if not 1 <= n <= 31:
             raise ContractError("Ayın ilk günleri 1 ile 31 arasında olmalıdır.", code="NEEDS_CLARIFICATION")
