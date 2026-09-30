@@ -55,6 +55,9 @@ def cases():
     add("29 Eylül 2026 tarihinde satılan kitap adedi kaçtır?","logo",f"SELECT COALESCE(SUM(AMOUNT),0) sold_quantity FROM dbo.LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND INVOICEREF<>0 AND TRCODE IN (7,8) AND {day}",["sold_quantity"])
     add("29 Eylül 2026 tarihinde toptan satış faturası sayısı kaçtır?","logo",f"SELECT COUNT(*) invoice_count FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE=8 AND {day}",["invoice_count"])
     add("29 Eylül 2026 tarihinde perakende satış tutarı ne kadar?","logo",f"SELECT COALESCE(SUM(NETTOTAL),0) invoice_amount FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE=7 AND {day}",["invoice_amount"])
+    # Original wording has two valid business meanings; preserve it as a boundary
+    # regression rather than silently replacing the expected number with the API's.
+    out[-1].update(source=None, referenceSql=None, columns=[], expected="clarify")
     add("29 Eylül 2026 tarihinde kanal bazında satılan kitap adedi kaçtır?","logo",f"SELECT C.SPECODE2 channel,SUM(S.AMOUNT) sold_quantity FROM dbo.LG_411_01_STLINE S LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (7,8) AND S.{day.replace(' AND DATE_', ' AND S.DATE_')} GROUP BY C.SPECODE2",["channel","sold_quantity"],["channel"])
     add("CRM’de aktif kitap kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_books FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1",["active_books"])
     add("CRM’de aktif yazar kişi kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_authors FROM dbo.ContactBase WHERE statecode=0 AND statuscode=1 AND new_yazarmi=1",["active_authors"])
@@ -114,6 +117,10 @@ def cases():
                      "Eylül 2026 yalnız nakit tahsilat toplamını ver.",
                      "2026 brüt kâr tutarı nedir?"):
         add(question,None,None,[]);out[-1]["expected"]="clarify"
+    add("29 Eylül 2026 tarihinde perakende satış faturalarının genel toplamı ne kadar?", "logo",
+        f"SELECT COALESCE(SUM(NETTOTAL),0) invoice_amount FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE=7 AND {day}", ["invoice_amount"])
+    add("29 Eylül 2026 tarihinde perakende satışın KDV hariç satır toplamı ne kadar?", "logo",
+        f"SELECT COALESCE(SUM(LINENET),0) sales_amount FROM dbo.LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND INVOICEREF<>0 AND TRCODE=7 AND {day}", ["sales_amount"])
     return out
 
 

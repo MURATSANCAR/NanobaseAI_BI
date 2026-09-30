@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Satış tutarında sessiz varsayım kaldırıldı
+
+- Gerçek FC03 kapısı iki farklı hesabı ortaya çıkardı: KDV hariç satır 227.547,69 TL, fatura genel toplamı 232.275,81 TL. İlk sorunun ifadesi ikisini ayırmıyordu; varsayılan iş tanımı kararı gelene kadar netleştirme istenir. Başarısız geçmiş korunur; yeni FC101/102 açık ifadelerinin bağımsız referansları eklenir.
+- 102 soru: 92 tam cevap + 10 sınır. Değişen planlayıcı önceki geçişlerle doğrulanmış sayılmaz; yeni sürüm yeniden koşulacaktır.
+
 ## 2026-09-30 — Finans gerçek veri kabulü ve tam sonuç görünümü (devam ediyor)
 
 - VPN geri geldi; Logo/CRM salt okunur bağlantıları doğrulandı. Yedekler hash, arşiv okuma ve PG dökümünün tam çözülmesiyle doğrulandı.

@@ -76,7 +76,7 @@ farkı kabul koşucusunda ayrıca reddedilir.
 
 Yeni bağımsız koşucu `scripts/acceptance/finance_contracts/live.py` yalnız Linux test sunucusunda,
 gerçek API ve doğrudan pyodbc referansı ile çalışır. Üretim derleyicisini veya eski SQL'leri içe aktarmaz.
-100 yeni soru (91 tam cevap, 9 kapsam sınırı); tam kolon kimliği, tüm anahtarlar/satırlar,
+102 yeni soru (92 tam cevap, 10 kapsam sınırı); tam kolon kimliği, tüm anahtarlar/satırlar,
 sayı/NULL ve kesilme karşılaştırması; büyük sonuç,
 kanal/kitap kırılımı, yıllık kaynak değişimi, gün/ay, boş dönem, yanlış kaynak ve dürüst netleştirme.
 Kaynaklar salt okunur. Var olan timasai hesabının 15 dk oturumu finally'de silinir. Her 10 sonuç raporlanır.
@@ -100,7 +100,4 @@ değiştiyse önce yedek arşivden ayrı dizine çıkarıp manifesti doğrula; c
 Metadata bu değişiklikte düzenlenmez; dump geri yüklemesi diğer modüllerin yeni verilerini sileceğinden
 yalnız ayrı kurtarma veritabanına yapılır.
 
-Durum: kod main'de; test sunucusunda derleme/sözdizimi kontrolü yapıldı, motor etkinleştirilmedi.
-VPN 17:42:21'de auth dosyası eksikliğiyle kapandı; yeni motorla gerçek soru yürütme sayısı 0.
-İki ön kontrol eski motora soru göndermedi, açılan 2 geçici timasai oturumu silindi.
-Canlı kabul **DOĞRULANAMADI**. `main` → test sunucusu tam kurulum → gerçek kabul sırası zorunludur.
+Durum: motor test sunucusunda etkin, VPN geri geldi. İlk 80 soruda 79 geçiş ve satış tutarı tanımında 1 belirsizlik. Son sözleşmede çıplak satış tutarı netleştirme ister; eski FC03 vaka olarak korunur, iki açık anlam için FC101/102 eklendi. Yeni sürüm kabulü ayrıca koşulacak. Yedek doğrulaması tamamlandı: 13.119.667.444 bayt PG dump, SHA256 `4b4a4abcd343c44474bf606450ab1cecb0689628789a88572cbdacd697166e1d`; tam `pg_restore --file=/dev/null` geçti, kaynak DB'ye geri yükleme yapılmadı. Kod/servis/arayüz arşivleri manifest ile doğrulandı. Yerel test veya müşteri VM kurulumu yok.

@@ -58,6 +58,11 @@ def _object(llm, messages, max_tokens, schema, name):
 
 
 def build(question, llm, previous=None, trace=None):
+    q = fold(question)
+    # A bare amount has two observed, different accounting answers. Never let
+    # model sampling pick between header NETTOTAL and line LINENET.
+    if re.search(r"\bsatis\w*\s+(?:tutar\w*|toplam\w*)", q) and not re.search(r"\b(kdv|fatura\w*|net|satir\w*)\b", q):
+        raise ContractError("Satış tutarıyla fatura genel toplamını mı, iskonto sonrası KDV hariç satış satırı toplamını mı istiyorsunuz?")
     today = datetime.now(ZoneInfo("Europe/Istanbul")).date()
     periods, grain = dates(question, today)
     if previous and follows(question) and not periods:
@@ -76,8 +81,8 @@ def build(question, llm, previous=None, trace=None):
               "para birimi dönüşümü ve özel koşulları uncovered'a yaz. "
               "kitap adedi toplam miktardır: kitap kelimesi geçti diye book kırılımı EKLEME. "
               "Yalnız 'bazında/göre/her/hangi/listele/en çok' gibi istenen kırılımı ekle. "
-              "Fatura sayısı invoice_count; stok hareketi sayısı değildir. Perakende/toptan satış tutarı, "
-              "kitap kırılımı yoksa invoice_amount; ciro veya KDV hariç satır tutarı net_sales/sales_amount. "
+              "Fatura sayısı invoice_count; stok hareketi sayısı değildir. Fatura genel toplamı invoice_amount; "
+              "KDV hariç satış satırı toplamı sales_amount; iade düşülmüş net satış veya ciro net_sales. "
               "Aktif CRM yazar sayısı active_authors, kitap sayısı active_books. Pasif istek yasaktır. "
               "Genel tahsilat collections; nakit/banka/çek türü ayrıca seçildiyse desteklenmeyen daraltma say. "
               "Birden çok metric aynı family içinde olmalı. Kayıt sayısına ürün kırılımı uydurma. "
