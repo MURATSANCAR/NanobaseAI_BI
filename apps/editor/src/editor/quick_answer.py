@@ -20,7 +20,7 @@ import re
 import unicodedata
 from typing import Any
 
-from . import budget, foundation, llm
+from . import budget, foundation, llm, read_model
 
 log = logging.getLogger("editor.quick_answer")
 
@@ -35,7 +35,7 @@ SYSTEM = f"""Sen ZEKİ AI'sın; Timaş'ın kitap asistanısın. Türkçe, sade v
 
 Yalnız aşağıdaki KAYITLAR bölümündeki bilgiyi kullan; genel bilgiden kitap ayrıntısı ekleme, sayfa uydurma.
 Kitaptan her bilgide kaynağını [s.N] biçiminde yaz; N kayıtta o bilginin yanında yazan sayfadır.
-Karakterin tanıtım sayfasını, özelliğinin kanıtı gibi gösterme: özellik için olay/metin parçasının sayfasını kullan.
+Karakterin özelliği için tanımın yanında yazan sayfayı ya da olay/metin parçasının sayfasını ver; «adı ilk» sayfasını özellik kanıtı gibi gösterme. «Tanım sayfası yok» yazan tanımı sayfasız anlat.
 Kitapta olmadığı kayıtlardan açıkça anlaşılan bilgi için cevaba birebir «{NOT_FOUND}» ile başla ve kısaca açıkla.
 Kayıtlar soruyu cevaplamaya yetmiyorsa ama kitabın sayfalarını ayrıca okumak cevabı bulabilirse, başka hiçbir şey
 yazmadan yalnız {DEEPER} yaz.
@@ -108,16 +108,18 @@ def card_block(b: dict, c, *, full: bool) -> tuple[str, list[str]]:
         head.append("Temalar: " + "; ".join(f"{t['theme']}: {t['text']} [{_pages(t.get('pages'))}]"
                                            for t in b["themes"]))
     chars = c.execute(
-        "SELECT canonical_name, aliases, description, first_page, identity_status, kind FROM ed.character"
+        "SELECT canonical_name, aliases, description, first_page, identity_status, kind, traits FROM ed.character"
         " WHERE generation_id=%s AND identity_status<>'UNCERTAIN' ORDER BY first_page NULLS LAST, canonical_name",
         (gid,)).fetchall()
     if chars:
-        head.append("Karakterler (ilk göründüğü sayfa):")
+        head.append("Karakterler (adın ilk geçtiği sayfa; tanımın kaynağı ayrı yazılı):")
         for ch in chars:
             alias = f" (diğer adları: {', '.join(ch['aliases'])})" if ch["aliases"] else ""
             unsure = " — kimliği kesinleşmedi" if ch["identity_status"] != "CONFIRMED" else ""
-            desc = f": {ch['description']}" if ch["description"] else ""
-            first = f" [ilk s.{ch['first_page']}]" if ch["first_page"] else ""
+            src = read_model.description_pages(ch)
+            desc = (f": {ch['description']} [{_pages(src)}]" if src else f": {ch['description']} [tanım sayfası yok]") \
+                if ch["description"] else ""
+            first = f" [adı ilk s.{ch['first_page']}]" if ch["first_page"] else ""
             head.append(f"- {ch['canonical_name']}{alias}{first}{unsure}{desc}")
     if not full:
         if b["key_events"]:
