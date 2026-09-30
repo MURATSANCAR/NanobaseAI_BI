@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Kitaba sor: hızlı yol, düşünme kapalı, soru motoru sadeleşti
+
+- **İstek:** «elimizdeki verinin cevabı bile çok geç geliyor» + okumalar doğru mu.
+- **Ölçüm (VM 40 soru, silinmeden önceki defter, Hermes `state.db`):** basit soru 10–30 sn, karşılaştırma 3–6 dk, 1 zaman aşımı (609 sn), 7 hata. Soru başı Hermes 5–16 model çağrısı, 6–31 araç çağrısı, 35–480 bin girdi token; araçlar `tool_search/tool_call` köprüsünün arkasındaydı ve model köprüyü sık yanlış çağırıyordu (eksik argüman, «Local tools require one entry…», `list_books limit 25>20`), 16 tur sınırı doluyor, bağlam sıkıştırılıyordu; her cevaptan sonra «self-improvement review» aynı kartta beceri yamıyordu (`book-comparison` becerisini kendisi yazmıştı); düşünme açık, tek soruda 18 bin düşünme token'ı.
+- **Okuma kalitesi (aynı ölçüm):** 25 kitabın 5'i adım «8/15 Karakter kimlikleri»nde düşmüş ama listede görünüyordu; 20'sinin hepsi PARTIAL / NEEDS_REVIEW / BLOCKED. Karakter adları metinde geçiyor (~650'de 5 yok), ama kimlik birleştirme (bebek Anna → Maria'nın takma adı), karakter tanımına tanıtım sayfasının atfı, yazar ve yazarın köpeğinin karakter sayılması görüldü. Düzeltmeler ayrı iş (okuma hattı). Kullanıcı aynı akşam başka oturumdan GPU defterini bilerek sildi; yeni kitaplar yeniden okunacak.
+- **Ne yapıldı:** kart servisine `POST /v1/books/ask` (`editor/quick_answer.py`): soruda adı geçen (ya da seçili) kitabın kartı, karakterleri, olayları ve soruya en yakın metin parçaları tek bağlama konur, düşünme kapalı tek model çağrısı; bağlam boyu modelin sunulan bağlamından, sığmayan olay sayısı bağlamda yazılı. Kayıt yetmezse model `[[DERIN_OKUMA]]` der, köprü soruyu eski sohbet ajanına verir; hızlı yolun hatası soruyu düşürmez (`editorial_books.ask`). Seçili kitapta kart seçimi (kütüphane düzeyi) çalışmaz — «bu kitabı önerir misin» artık «kartı aşağıda» dönmez. Gateway etkileşimli istemcilerde `enable_thinking=false` (`editor/chat_params.py`, `EDITOR_CHAT_THINKING=1` geri alır). Hermes: `tools.tool_search: off`, `auxiliary.background_review.enabled: false`. `editor-cards` taşma istemcisi (GPU 1 analizdeyken GPU 0 eşi).
+- **Test:** editör tam set GPU imajında 626 geçti / 59 atlandı / 0 hata; köprü 20/20; yetki testinde tek hata `/api/v1/chat/mention-answer` kuralı, bu işten önce de vardı.
+
 ## 2026-09-30 — Kitap okut: yükleme arka planda, sayfadan bağımsız
 
 - **İstek:** yükleme bitsin diye kişi ekranda beklemesin; okuma arka planda sürsün.
