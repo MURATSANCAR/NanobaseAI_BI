@@ -1533,7 +1533,7 @@ class SemanticResolver:
         if sq.unhandled:
             sq.explanation.append("karşılanamayan niteleyiciler: " + ", ".join(sq.unhandled))
         metrics_before = [s_ for s_ in sq.slots if s_.semantic_type == SemanticType.METRIC and s_.mapping]
-        self._keep_to_one_source(sq, qf)
+        handed_over = self._keep_to_one_source(sq, qf)
         # The default year was put on a measure the source rule has since handed to the model (an ERP
         # word in a CRM question): with no dated measure left, the year is a restriction nobody asked for.
         if default_applied and metrics_before and any(m not in sq.slots for m in metrics_before) and not any(s_.semantic_type == SemanticType.METRIC and s_.mapping and s_.status in ("CERTIFIED", "INFERRED")
@@ -1564,6 +1564,9 @@ class SemanticResolver:
         # ZEKI-54: a word nothing placed, standing where the person lists the columns they want to see.
         # Read after the roles above are settled — the breakdowns it sits among are what says so.
         self._unplaced_columns(sq, qf)
+        # ZEKI-54: of those, a word that is the head of a concept certified only on the other server ("yazar" of
+        # CRM's "kitap yazarı") is that server's column. With plans off it is left out and said, not placed by the model.
+        self._other_source_heads(sq, index, handed_over)
         # Default row scopes belong to the semantic contract too. Otherwise the
         # model fallback can omit cancelled/non-item exclusions while deterministic
         # SQL applies them, returning different totals for the same measure.
@@ -2475,7 +2478,7 @@ class SemanticResolver:
                 entities.add(entity)
         return entities
 
-    def _keep_to_one_source(self, sq: SemanticQuery, qf) -> None:
+    def _keep_to_one_source(self, sq: SemanticQuery, qf) -> set[str]:
         """The measure decides which database a question reads; a single word certified on the other
         one does not pull that database in.
 
@@ -2485,7 +2488,10 @@ class SemanticResolver:
         reads, and the question was refused. Where every measure sits in one source, a one-word column
         slot from the other source is handed to the model to read within the measure's source, under
         a `-- yorum` line the person sees. A multi-word certified phrase is deliberate and stays; so
-        does everything when the measures themselves span both databases, or there is no measure."""
+        does everything when the measures themselves span both databases, or there is no measure.
+
+        Returns the words it handed to the model: they had a reading in the catalog, only not on this side."""
+        handed: set[str] = set()
         metrics = [s for s in sq.slots if s.mapping is not None and s.mapping.entity and s.semantic_type == SemanticType.METRIC
                    and (s.explain or {}).get("source") != "count_cue"]
         homes = {self._source_of(m.mapping.entity) for m in metrics}
@@ -2601,6 +2607,8 @@ class SemanticResolver:
                     word = fold(m.term)
                     if word and word not in sq.unresolved:
                         sq.unresolved.append(word)
+                    if word:
+                        handed.add(word)
                 metrics = []
         if len(homes) > 1:
             # Measures on both sides: "sevkiyatlarda liste fiyatı üzerinden indirim" names an ERP
@@ -2635,7 +2643,7 @@ class SemanticResolver:
             sq.explanation.append(
                 f"soru kaynağı kendi adıyla söylüyor → {named[0] or 'ana veri tabanı'} verisi okunacak")
         if len(homes) != 1:
-            return
+            return handed
         home = next(iter(homes))
         # The word the home measure was read from cannot, in the same question, also name a column on
         # the other database: those are two readings of the same word, and the question settled it by
@@ -2726,11 +2734,14 @@ class SemanticResolver:
                 word = ""                                 # the measure already reads this word; it is not missing
             if word and word not in sq.unresolved:
                 sq.unresolved.append(word)
+            if word:
+                handed.add(word)
             where = f"{lone.mapping.entity}.{lone.mapping.column}" if lone.mapping.column else lone.mapping.entity
             sq.explanation.append(f"'{lone.term}' katalogda {self._source_of(lone.mapping.entity) or 'ana veri tabanı'} tarafında {where} olarak tanımlı; "
                                   f"ölçü {home or 'ana veri tabanı'} verisinde"
                                   + (" ve bu kurulumda iki sunuculu sorgu kapalı" if one_server else "")
                                   + " → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
+        return handed
 
     def _to_home_sense(self, slot: ResolvedSlot, home: str) -> bool:
         """The same certified term read on the measure's own database, when the catalog holds it there too
@@ -2763,17 +2774,20 @@ class SemanticResolver:
         return last
 
     def _omit_column(self, sq: SemanticQuery, term: str, src: Optional[str], metrics: list[ResolvedSlot],
-                     words: Optional[list[str]] = None) -> None:
+                     words: Optional[list[str]] = None, concepts: Optional[list[str]] = None) -> None:
         """ZEKI-54: a term the person wants to SEE that this deployment cannot read in the same statement.
 
         Not handed to the model (it turned "yazar" into a filter on a customer code) and not silently lost:
         the answer is read without it and carries one plain sentence naming it. A phrase that only restates
-        the measure ("satış bilgileri" beside "satış tutarı") names no column of its own and is absorbed."""
+        the measure ("satış bilgileri" beside "satış tutarı") names no column of its own and is absorbed.
+        `concepts`: the certified names the word was read as, when it is not one itself ("yazar" → kitap yazarı)."""
         if self._absorbed_by_measure(sq, term, metrics, words):
             return
         label = self._source_label(src)
+        named = [c for c in dict.fromkeys(concepts or []) if fold(c) != fold(term)]
+        shown = f"‘{term}’ ({', '.join(named)})" if named else f"‘{term}’"
         if src is not None:
-            sentence = (f"‘{term}’ bilgisi {label} verisinde; bu kurulumda iki ayrı sunucudaki veri tek soruda "
+            sentence = (f"{shown} bilgisi {label} verisinde; bu kurulumda iki ayrı sunucudaki veri tek soruda "
                         f"birleştirilmediği için cevaba eklenmedi.")
         else:
             sentence = f"‘{term}’ için bu veride tanımlı bir alan bulunamadı; cevaba eklenmedi."
@@ -2885,6 +2899,67 @@ class SemanticResolver:
                 sq.requested_breakdowns.append(tok)
             if tok not in sq.column_terms:
                 sq.column_terms.append(tok)
+
+    def _other_source_heads(self, sq: SemanticQuery, index: dict, handed: set[str]) -> None:
+        """ZEKI-54, plans off: a column word nothing placed that is the head of a concept certified on the other server.
+
+        "dünkü satış tutarı kitap adı yazar": the bare "yazar" is not in the catalog (a bare synonym broke payment
+        questions, where the word reads the ERP's author account group), but CRM's certified "kitap yazarı" ends in
+        it. On the A044 path the model placed it on the measure's database and wrote the customer's name as the
+        author — a wrong answer the gate had no reason to stop. Asked as a column (a requested breakdown or a
+        column term) and left unresolved, such a word is the other server's column: with no plan to read it, the
+        answer is read without it and says so, like a certified term of that server (`_omit_column`).
+
+        Derived from the other side's certified vocabulary (terms and synonyms, their last word), never from a list.
+        Not applied when plans are on (A044 as before), when the word is also the head of a concept certified on the
+        measure's side (the model may read it there), when the catalog gave the word a reading that the source
+        rule handed over (`handed`), or to a generic noun ("tarih", "ad") that ends phrases on every server."""
+        if federated.plans_enabled():
+            return
+        words = [w for w in dict.fromkeys(list(sq.requested_breakdowns) + list(sq.column_terms))
+                 if w in sq.unresolved and " " not in str(w) and fold(str(w)) not in handed]
+        if not words:
+            return
+        metrics = [s for s in sq.slots if s.semantic_type == SemanticType.METRIC and s.mapping is not None
+                   and s.mapping.entity and (s.explain or {}).get("source") != "count_cue"]
+        homes = {self._source_of(m.mapping.entity) for m in metrics}
+        if len(homes) != 1:
+            return
+        home = next(iter(homes))
+        # certified head → [(concept, source)]: the last word of each certified term and synonym, stemmed
+        heads: dict[str, list[tuple[Any, str]]] = {}
+        for key, senses in index.items():
+            parts = normalize_term(str(key)).split()
+            if not parts:
+                continue
+            for c, maps in senses:
+                for src in {self._source_of(m.entity) for m in maps if m.entity and m.entity in self.by_entity}:
+                    heads.setdefault(parts[-1], []).append((c, src))
+        for tok in words:
+            st = stem(fold(str(tok)))
+            # A generic noun ("tarih", "kod", "ad") ends certified phrases on both servers and names no one column.
+            if len(st) < 3 or st in GENERIC_S or st in STOPWORDS_S or st in METRIC_VOCAB_S:
+                continue
+            senses = heads.get(st) or []
+            if not senses or any(src == home for _, src in senses):
+                continue                                   # nothing to name, or readable on the measure's side
+            theirs: dict[str, list[str]] = {}
+            for c, src in senses:
+                if c.semantic_type in (SemanticType.METRIC, SemanticType.DEFAULT_FILTER):
+                    continue                               # a figure or a row scope is not a column to show
+                theirs.setdefault(src, []).append(c.term)
+            if not theirs:
+                continue
+            src, names = max(theirs.items(), key=lambda kv: len(set(kv[1])))
+            names = list(dict.fromkeys(names))
+            for bucket in (sq.unresolved, sq.requested_breakdowns, sq.column_terms):
+                bucket[:] = [w for w in bucket if w != tok]
+            sq.breakdown_paths = [p for p in sq.breakdown_paths if p.get("word") != tok]
+            sq.explanation.append(
+                f"'{tok}' katalogda tek başına tanımlı değil; {self._source_label(src)} tarafında sertifikalı "
+                f"{', '.join(repr(n) for n in names)} kavramının baş kelimesi, ölçü {self._source_label(home)} verisinde "
+                f"ve bu kurulumda iki sunuculu sorgu kapalı → modele bırakılmadı")
+            self._omit_column(sq, str(tok), src, metrics, words=[str(tok)], concepts=names)
 
     @staticmethod
     def _names_a_source(slot: ResolvedSlot) -> bool:
