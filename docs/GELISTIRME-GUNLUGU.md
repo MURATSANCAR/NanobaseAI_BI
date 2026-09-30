@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Dönem karşılaştırmasının denetleme sözleşmesi
+
+- FC95 üç bağımsız tekrarda aynı yanlış ret: dönem başlangıç/bitiş kolonları uygulamada otomatik ekleniyor, denetleyici yalnız kullanıcı kırılımlarını gördüğü için ayrı dönem satırlarını eksik sanıyordu. Genişletilmiş iş planı artık bu üretilen dönem kırılımını da açıkça anlatır; aralıklar birbiriyle birleştirilmez. Yeni sürümde tekrar ve tam kabul gereklidir.
+
 ## 2026-09-30 — Finans ikinci tam turunun bulguları
 
 - 102 soruda 99 geçiş, 1 ret (FC95 model net_sales yanında alakasız active_books sıralaması seçti), 2 DOĞRULANAMADI (FC101/102 bağımsız referanstaki day değişkeni döngüde ezilmişti, API çağrısı yapılmadı). Geçmiş kanıt korunuyor.

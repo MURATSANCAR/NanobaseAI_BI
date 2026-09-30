@@ -165,8 +165,11 @@ def build(question, llm, previous=None, trace=None):
     if family in ("sales", "invoice"):
         conditions.append({"all": "Tüm satış türleri", "wholesale": "Yalnız toptan satış", "retail": "Yalnız perakende satış"}[kind])
     conditions.extend(f"{DIMENSIONS[d]}: {v!r} {'değerine eşit' if op=='eq' else 'değerini içeren'}" for d,op,v in filters)
+    result_grain = [DIMENSIONS[d] for d in dims]
+    if len(periods) > 1:
+        result_grain.insert(0, "Dönem: her tarih aralığı ayrı sonuç satırı/grubudur; dönem başlangıcı ve bitişi ayrı kolonlarda gösterilir. Tarih aralıkları birbirine eklenmez veya aynı satırda birleştirilmez.")
     readable = {"ölçüler": [{"ad": METRICS[m].label, "tanım": METRICS[m].definition} for m in metrics],
-                "sonuç_kırılımları": [DIMENSIONS[d] for d in dims], "koşullar": conditions,
+                "sonuç_kırılımları": result_grain, "koşullar": conditions,
                 "ilk_n": limit, "sıralama_ölçüsü": METRICS[order].label, "azalan": data.get("descending", True)}
     review = _object(llm, [{"role": "system", "content":
         "Soru-plan uyumunu denetle. Yalnız {\"ok\":true|false,\"missing\":[...]}. "
