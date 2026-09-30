@@ -62,6 +62,7 @@ if sys.argv[1] == 'create':
     print(json.dumps({'sent': len(state['messages']), 'unauthenticatedStatus': 401}))
 elif sys.argv[1] == 'check':
     state = json.loads((BASE / 'accept-state.json').read_text())
+    api = d.Chat({'url': config['url'], 'user_id': state['userId'], 'token': state['tokens'][0]})
     rows = []
     with sqlite3.connect('/var/lib/zeki-mention/queue.sqlite') as db:
         for item in state['messages']:
@@ -70,11 +71,15 @@ elif sys.argv[1] == 'check':
             reply = mongo('print(JSON.stringify(db.zeki_message.findOne({_id:' + json.dumps(reply_id) +
                           '},{_id:1,rid:1,msg:1,u:1})));')
             row = {'label': item['label'], 'job': job, 'reply': reply}
+            if reply:
+                shown = api.call('GET', 'chat.getMessage', msgId=reply['_id'])['message']
+                row['apiMatchesMongo'] = shown['msg'] == reply['msg'] and shown['rid'] == reply['rid']
             if item['label'] == 'plain':
                 row['passed'] = job is None and reply is None
             else:
                 row['passed'] = bool(job and job[0] == 'sent' and reply and reply['u']['_id'] == 'zeki.bot'
-                                     and reply['rid'] != state['rooms'][0] and reply['msg'] == job[1])
+                                     and reply['rid'] != state['rooms'][0] and reply['msg'] == job[1]
+                                     and row.get('apiMatchesMongo'))
                 if item['label'] in ('intro', 'data', 'amount'):
                     row['passed'] = row['passed'] and bool(job[2])
                 if item['label'] == 'data':
