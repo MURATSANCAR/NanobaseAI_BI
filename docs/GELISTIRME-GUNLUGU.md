@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — ZEKI-54 tamam (plan kapalı modda gerçek veriyle), ZEKI-26 yükleme üst sınırı 300 MB; VM ağacı hazır
+
+- **ZEKI-54 katalog (test sunucusu, kullanıcı çalıştırdı):** Logo `LG_211/411_ITEMS.CODE` ↔ CRM `new_kitapBase.new_StokKodu` ölçülmüş bağı (CRM stok kodu tekrarı 0; 2025+ satılan 11.548 kodun 4.471'i CRM kitabı, 3.962'si yazarlı) ve «kitap yazarı» kavramı (sem_acc0b72f4f2c, CONTACTBASE.FullName, eser katılımı rol «Yazar»). Çıplak «yazar» eş anlamlısı denendi, 1.000 soruluk kapıda 40 okuma değişti — ödeme/hakediş sorularında Logo «YAZARLAR» cari grubu ve CRM «Yazar» etiketi okuması bozuldu → geri alındı (kalan: kitabın yazarı, yazar adı).
+- **ZEKI-54 kod (`209161809` → `777719eec`):** (1) ölçülmüş bağ kavramın koşul/yol tablolarında da aranır (yazar kişi kartında, bağ kitap kartında); (2) plan kapalıyken öteki sunucudaki sertifikalı kavramın baş kelimesi olan kolon kelimesi modele bırakılmaz; (3) kolon listesindeki kelime öteki sunucuda bir etikete çözülüp devredilse de cevaptan çıkar; (4) not ölçülmüş bağa ulaşan kolon kavramını anar. Plan kapalı yan köprü, canlı Logo, müşterinin sorusu 3/3 aynı: kitap adı/kanal/yayınevi/tutar/adet, «‘yazar’ (kitap yazarı) bilgisi CRM verisinde; … eklenmedi»; tam sonuç 2.108 satır, 8.746.411,69 ₺ / 69.304 adet — doğrudan Logo referansıyla birebir. Plan açık (test sunucusu) soru artık başka oturumun `finance_query` planlayıcısından geçiyor («plana taşınamadı», dürüst ret).
+- **ZEKI-26 (kullanıcı kararı: 1 GB değil, VM'i zorlamayan büyük sınır):** Yönetim → `EDITORIAL_UPLOAD_MAX_MB`, varsayılan 300 (ondalık MB). Ölçüm: 300 MB PDF köprü belleğini ~0,6 GB, 1 GB ~2,7 GB artırdı; VM 7 GB, ~1 GB boş. Portal üzerinden: 401 MB → 2,3 sn'de 413 «Dosya 401 MB; bu kurulumda tek dosya için üst sınır 300 MB …»; 200 MB → yüklendi (15 bölüm). Test eseri, 3 oturum satırı, test PDF'leri silindi.
+- **Test:** tam set 4.747 geçti; tek hata `test_access::test_every_bridge_route_has_a_rule` main'de de var (başka oturumun `/api/v1/chat/mention-answer` ucu).
+- **VM ağacı (`/tmp/bi-vm-zeki54`, test sunucusu):** VM'deki `eb406f48b` + ZEKI-54 (2) + ZEKI-26 (2) commit; main'deki başka oturumun finans motoru (5 commit) bilerek alınmadı. `._*` 0, çakışma 0, köprü yükleniyor. VM kurulumu ve VM kataloğu (bağ + kavram, çıplak «yazar» yok) izin denetiminde — kullanıcı çalıştıracak.
+
 ## 2026-09-30 — Kitaba sor: test soruları silindi (test sunucusu)
 
 - Kullanıcı isteği: editoryal «Kitaba sor» alanındaki test verileri silinsin.
