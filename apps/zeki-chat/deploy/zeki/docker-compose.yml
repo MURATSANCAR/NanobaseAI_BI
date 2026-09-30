@@ -51,6 +51,7 @@ services:
       OVERWRITE_SETTING_Site_Name: ZEKI AI CHAT
       # CRM team display names retain Turkish letters and spaces; room handles are normalized internally.
       OVERWRITE_SETTING_UI_Allow_room_names_with_special_chars: "true"
+      OVERWRITE_SETTING_UI_Use_Real_Name: "true"
       # Workspace language. The client uses it before the browser language; people without their own choice
       # (and, once, those left on English) get it from the portal sign-in. There is no separate
       # "default user language" setting in this version: an unset user.language follows this one.
