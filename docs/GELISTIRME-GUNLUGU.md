@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Geniş gerçek kabul ve sınırlı reasoning pilotu
+
+- 991c7d4a0: Logo11 `logo-r1` 4PASS/6FAIL/1PARTIAL_REFERENCE_MATCH. Stok güncel/geçmiş ve ödeme geçti;2025stok kısmi kaynak sınırıyla referansa uydu. Açık sipariş tarih ayrıştırması, bakiye/döviz/alış rapor seçimi ve maliyet/kapama sınırının özel açıklaması başarısız. Yaşlandırma/kâr sayısı uydurulmadı; genel unsupported özel kaynak kanıtının yerine geçmedi.
+- `documents-r1` 2PASS/1FAIL: fatura istatistiği ve yetim satırlar geçti; çapraz eşleşmeyen kitap isteği yanlış plan dalına gitti. `composable-r10-relative` 3PASS/1FAIL: CP020 net satış+satılan adet yerine netadet seçti; bağımsız sabit93.258'e karşı92.508. Tutar doğru, cevap yanlış.
+- `sections-ui-r1`:320/390/768/1440px tarayıcı kontrolleri geçti; istenen iki ayrı tablo yerine tek18.569satırlı sonuç nedeniyle ürünFAIL. Bir sonuçtamlığı/browsergeçişi bölümlü rapor kabulü değildir. Yukarıdaki herkoşuda1geçici timasai oturumu silindi, kaynak yazma0.
+- `complex100-expanded-r2-target`:CX048 hâlâ2.909aynıkararlı aday, sınıflandırma yapılmadan TEXT_TO_SQL; bağımsız semantik inceleme başarısız. CX05523.037satır:9.380detay+8.475tarihigelmişeksik+5.182tarihsırasısinyali; sayısal tam kabul verilmedi.1oturum silindi.
+- Canlı `/v1/models` nanobaseAI root=`Qwen/Qwen3.8-27B-FP8`,maxcontext131072. Finans kararlarının tamamı thinkingfalse çalışıyordu. Yeni pilot yalnız finance_query._object altıkarar çağrısında thinkingtrue ister, çağrıbaşı4096–8192token;2biçim/1kök onarımı ve lengthfailclosed korunur. Ham düşünce kaydı yok; gerçekreasoningChars,süre,finishReason ve hash kaydedilir. Prompt/şema değişmedi; üstünlük varsayılmadı, gerçekAPIpilotbekler. Diğer modüllerin model ayarı değişmez.
+
 ## 2026-09-30 — Koşullu yasak ve araştırma anlamı
 
 - 618a0958a CRM-R7 hedef5:CR002/CR007/CR022 FULL_ANSWER_PASS,CR013 BOUNDARY_PASS,CR023 FAIL;1geçici oturum silindi. CR007 artık kişi birleştirme yasağını doğru ayırıp bağımsız tam sonuçla eşleşti.

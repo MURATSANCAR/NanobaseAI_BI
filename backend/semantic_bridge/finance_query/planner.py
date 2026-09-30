@@ -5,6 +5,7 @@ from datetime import date, timedelta
 import json
 import hashlib
 import re
+from time import perf_counter
 from zoneinfo import ZoneInfo
 from datetime import datetime, timezone
 
@@ -101,19 +102,34 @@ def _question_plan_schema(question):
 def _object(llm, messages, max_tokens, schema, name, trace=None):
     """One bounded format retry; an incomplete plan never reaches the executor."""
     request_messages = list(messages)
+    thinking_requested = name in {
+        "finance_plan", "finance_review", "crm_review", "composite_review",
+        "source_report_intents", "source_report_review",
+    }
     for attempt in range(2):
-        budget = min(max_tokens * (attempt + 1), 14400)
+        budget = (min(max(4096, max_tokens) * (attempt + 1), 8192) if thinking_requested
+                  else min(max_tokens * (attempt + 1), 14400))
         # Some model chat templates allow system instructions only once, first.
         # Both structural and JSON-format repairs add trusted system guidance;
         # merge those without promoting any user content to system authority.
         system_parts = [m["content"] for m in request_messages if m.get("role") == "system"]
         ordered_messages = ([{"role": "system", "content": "\n\n".join(system_parts)}] if system_parts else [])
         ordered_messages.extend(m for m in request_messages if m.get("role") != "system")
-        choice = llm.complete(ordered_messages, max_tokens=budget, stream=False,
-                              body={"max_tokens": budget, "temperature": 0.0,
-                                    "chat_template_kwargs": {"enable_thinking": False},
-                                    "response_format": {"type": "json_schema", "json_schema": {
-                                        "name": name, "strict": True, "schema": schema}}})
+        started = perf_counter()
+        try:
+            choice = llm.complete(ordered_messages, max_tokens=budget, stream=False,
+                                  body={"max_tokens": budget, "temperature": 0.0,
+                                        "chat_template_kwargs": {"enable_thinking": thinking_requested},
+                                        "response_format": {"type": "json_schema", "json_schema": {
+                                            "name": name, "strict": True, "schema": schema}}})
+        except Exception:
+            if trace is not None:
+                trace.append({"stage":"model_response", "schema":name, "attempt":attempt + 1,
+                              "maxTokens":budget, "thinkingRequested":thinking_requested,
+                              "elapsedSeconds":round(perf_counter() - started, 3),
+                              "finishReason":"request_failed", "reasoningChars":0, "contentChars":0})
+            raise
+        elapsed = perf_counter() - started
         message = choice.get("message") or {}
         content = message.get("content") or ""
         reasoning = message.get("reasoning_content") or message.get("reasoning") or ""
@@ -121,7 +137,7 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
                  "maxTokens": budget, "finishReason": choice.get("finish_reason"),
                  "contentChars": len(content), "reasoningChars": len(reasoning),
                  "contentSha256": hashlib.sha256(content.encode()).hexdigest(),
-                 "thinkingRequested": False}
+                 "thinkingRequested": thinking_requested, "elapsedSeconds": round(elapsed, 3)}
         if trace is not None:
             trace.append(event)
         if choice.get("finish_reason") == "length":
