@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Editör motorundaki okunmuş kitaplar silindi (kullanıcı isteği)
+
+- Kullanıcı: «okuduğumuz kitapları da sil, herşeyi sil». TT GPU editör motorunda `TRUNCATE ed.book CASCADE` (46 tablo: 25 kitap, 5.016 sayfa, 58 okuma işi, 581 bin model çağrısı…), arama dizini (`editor_catalog_v1`, `editor_passages_v1`), `storage/books` (25 klasör, 2 GB), `storage/inbox` (25 PDF), rapor ve eski kabul/deneme klasörleri. Kalıcı silme kullanıcı tarafından çalıştırıldı (klasörler root'a ait olduğu için ikinci adım sudo ile). Yedek alınmadı.
+- Korunan: kapak kütüphanesi (6.816), prompt sürümleri, çalışma ayarı, redaksiyon belgeleri, Stüdyo işleri. CRM'den gelen kitap kartları okunmuş kitaba bağlı olduğu için onlar da gitti.
+- Sonuç: kitap 0, okuma işi 0, depo boş; köprünün Kitaba sor kitap listesi 0. Test sunucusundaki `timasai` Kitaba sor soruları (55) aynı gün ayrıca silinmişti.
+
 ## 2026-09-30 — Kitaba sor: hızlı yol, düşünme kapalı, soru motoru sadeleşti
 
 - **İstek:** «elimizdeki verinin cevabı bile çok geç geliyor» + okumalar doğru mu.
