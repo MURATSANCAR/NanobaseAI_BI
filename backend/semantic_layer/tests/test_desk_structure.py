@@ -277,8 +277,8 @@ def test_upload_over_the_configured_limit_is_refused_early_and_in_plain_words(mo
             yield b"x" * (512 * 1024)
 
     with pytest.raises(desk.DeskError) as e:
-        asyncio.run(desk.receive(body(1), expected=3 * 1024 * 1024))
-    assert e.value.status == 413 and "üst sınır 1 MB" in str(e.value)
+        asyncio.run(desk.receive(body(1), expected=3_000_000))
+    assert e.value.status == 413 and "Dosya 3 MB" in str(e.value) and "üst sınır 1 MB" in str(e.value)
     with pytest.raises(desk.DeskError):
         asyncio.run(desk.receive(body(4), expected=0))          # bildirilmemiş: 2 MB akarken durur
     assert not [p for p in (tmp_path / ".incoming").iterdir() if p.suffix == ".part"]

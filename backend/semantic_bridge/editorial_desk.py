@@ -227,14 +227,14 @@ def _max_upload_bytes() -> int:
         mb = float(admin_mod.conf("EDITORIAL_UPLOAD_MAX_MB") or 300)
     except Exception:  # noqa: BLE001 — ayar okunamazsa varsayılan
         mb = 300.0
-    return max(0, int(mb * 1024 * 1024))
+    return max(0, int(mb * 1_000_000))          # ondalık MB: bilgisayarın dosya boyutuyla aynı birim
 
 
 def _check_size(size: int) -> None:
     limit = _max_upload_bytes()
     if limit and size > limit:
-        raise DeskError(f"Dosya {size / 1048576:,.0f} MB; bu kurulumda tek dosya için üst sınır "
-                        f"{limit / 1048576:,.0f} MB. Dosyayı küçültün (ör. görselleri sıkıştırarak) ya da "
+        raise DeskError(f"Dosya {size / 1_000_000:,.0f} MB; bu kurulumda tek dosya için üst sınır "
+                        f"{limit / 1_000_000:,.0f} MB. Dosyayı küçültün (ör. görselleri sıkıştırarak) ya da "
                         f"sistem yöneticisinden sınırı yükseltmesini isteyin.".replace(",", "."), 413)
 
 
