@@ -1,0 +1,27 @@
+{
+  "temporaryRooms": 0,
+  "temporaryMessages": 0,
+  "accounts": 218,
+  "testRoles": [
+    "user"
+  ],
+  "accounting": {
+    "private": true,
+    "ordinaryMembers": 3,
+    "allActive": true,
+    "roleSets": [
+      [
+        "user"
+      ],
+      [
+        "user"
+      ],
+      [
+        "user"
+      ]
+    ]
+  },
+  "image": "zeki-ai-chat:8.5.3-c1f548205",
+  "scriptSha256": "da241fb8f71593833c816c1443e7f1d5cf669aa212fcf63fba00469abac0d689",
+  "temporarySecretsRemoved": true
+}

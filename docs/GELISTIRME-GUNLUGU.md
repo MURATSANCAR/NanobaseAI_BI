@@ -1,5 +1,7 @@
 # Geliştirme Günlüğü
 
+**2026-09-30 — Özel sohbet grubu izolasyonu canlı doğrulandı:** mevcut timasai yalnız chat `user` rolünde; 12 CRM grubu özel, üye olmadığı 11 gruba bilgi/liste erişimi yok. API 25/25 + kendini davet/ikinci gönderim 2/2 + üyelik kaldırıldıktan sonra aynı token okuma/yazma 4/4 geçti; Mongo yetkisiz mesaj/üyelik 0. 320/390/768/1440 px aramada gizli, doğrudan URL oda bulunamadı, mesaj kutusu yok. Mali İşler’deki 3 etkin üye aynı `user` rolünde. 2 geçici oda/5 chat jetonu/1 portal oturumu/5 çöp kaydı temizlendi; 218 hesap korundu. Kullanıcı kararı: AD kapatma ve bot veri rolleri ayrı; portal Herkes rolü hâlâ tüm veri alanlarını açıyor. Üretim yetki yaması gerekmedi. Rapor: `docs/ZEKI-CHAT-GROUP-ACCESS.md`.
+
 ## 2026-09-30 — Finans soru akışının bağımsız sözleşme motoruyla yeniden kurulması
 
 - Kullanıcı eski yapıyı yedekleyip sıfırdan yazılmasını, eski sorgu/kataloğun kullanılmamasını istedi. Git bundle doğrulandı; canlı DB/kod/ayar yedeği sürüyor.

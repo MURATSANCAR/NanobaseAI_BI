@@ -1,0 +1,28 @@
+{
+  "sameTokenUsed": true,
+  "remainingSubscription": 0,
+  "passed": true,
+  "checks": [
+    {
+      "endpoint": "groups.info",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "endpoint": "groups.history",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "endpoint": "chat.getMessage",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "endpoint": "chat.sendMessage",
+      "status": 400,
+      "storedMessages": 0,
+      "passed": true
+    }
+  ]
+}

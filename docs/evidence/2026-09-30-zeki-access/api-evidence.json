@@ -1,0 +1,149 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "label": "CRM groups private",
+      "passed": true,
+      "groupCount": 12
+    },
+    {
+      "label": "Nonmember groups absent from list",
+      "passed": true,
+      "forbiddenCount": 11
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Tüm Kullanılar",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Satış",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Mali İşler",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "İdari İşler",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Üretim",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Editörya",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Teelif Satış",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Telif Satış Ekibi",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Lojistik",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Bilgiişlem",
+      "status": 400
+    },
+    {
+      "label": "CRM nonmember group info",
+      "passed": true,
+      "group": "Pazarlama",
+      "status": 400
+    },
+    {
+      "label": "Denied groups.info",
+      "passed": true,
+      "status": 400,
+      "error": "error-room-not-found"
+    },
+    {
+      "label": "Denied rooms.info",
+      "passed": true,
+      "status": 400,
+      "error": "Not Allowed"
+    },
+    {
+      "label": "Denied groups.history",
+      "passed": true,
+      "status": 400,
+      "error": "error-room-not-found"
+    },
+    {
+      "label": "Denied groups.members",
+      "passed": true,
+      "status": 400,
+      "error": "error-room-not-found"
+    },
+    {
+      "label": "Denied groups.messages",
+      "passed": true,
+      "status": 400,
+      "error": "error-room-not-found"
+    },
+    {
+      "label": "Denied chat.search",
+      "passed": true,
+      "status": 400,
+      "error": null
+    },
+    {
+      "label": "Global group administration denied",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "label": "Empty write rejected chat.sendMessage",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "label": "Empty write rejected chat.postMessage",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "label": "Nonmember send rejected without DB write",
+      "passed": true,
+      "status": 400,
+      "storedMessages": 0
+    },
+    {
+      "label": "Member send accepted and persisted",
+      "passed": true,
+      "status": 200,
+      "storedMessages": 1
+    },
+    {
+      "label": "Member reads own message",
+      "passed": true,
+      "status": 200
+    }
+  ]
+}

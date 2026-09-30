@@ -1,0 +1,19 @@
+{
+  "checks": [
+    {
+      "endpoint": "groups.invite",
+      "status": 400,
+      "passed": true,
+      "error": "error-not-allowed"
+    },
+    {
+      "endpoint": "chat.postMessage",
+      "status": 400,
+      "passed": true,
+      "error": "error-not-allowed"
+    }
+  ],
+  "unauthorizedSubscriptions": 0,
+  "unauthorizedMessages": 0,
+  "passed": true
+}
