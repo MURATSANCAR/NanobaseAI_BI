@@ -191,7 +191,9 @@ export default function BiCanvasPage() {
           : askErr
             ? `“${askErr}.”`
             : `“${answer?.summary ? readableText(answer.summary) : 'Zeki AI bu soru için özet yazmadı; tablodaki sonuca bakın.'}”`,
-        m1: { label: 'Satır:', value: String(rows) },
+        m1: { label: 'Toplam satır:', value: String(answer?.totalRows ?? answer?.rowCount ?? rows) },
+        result: !asking && !askErr && answer?.resultId && !answer.truncated
+          ? { id: answer.resultId, totalRows: answer.totalRows ?? answer.rowCount ?? rows } : undefined,
         m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
         m3: { label: 'Tip:', value: answer?.type ?? '—' },
         note: queued > 0 ? `${queued} soru sırada` : d.main.note,

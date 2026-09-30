@@ -115,6 +115,7 @@ export type StitchCanvasData = {
     timing?: DbTiming | null;
   };
   main: {
+    result?: { id: string; totalRows: number };
     info?: CardInfo;
     /** Özetin dayandığı SQL; cevap görünümünde motorun ürettiği sorgu. */
     sql?: string;

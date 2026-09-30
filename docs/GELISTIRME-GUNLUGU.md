@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Finans gerçek veri kabulü ve tam sonuç görünümü (devam ediyor)
+
+- VPN geri geldi; Logo/CRM salt okunur bağlantıları doğrulandı. Yedekler hash, arşiv okuma ve PG dökümünün tam çözülmesiyle doğrulandı.
+- Gerçek CRM durum etiketleriyle aktif kitap 9.380, yazar 660, aktif müşteri 11.904. Eski örtük durum süzgeci yeni hesap tanımlarına taşınmadı.
+- Model planı/denetimi JSON Schema ile sınırlı; denetleyici teknik slot yerine Türkçe genişletilmiş iş anlamını okuyor. İlk 30 soru: 29 başarılı, perakende satış tutarında satır/fatura toplamı belirsizliği açık. Kabul sürüyor.
+- Cevap ekranında toplam satır sayısı; aynı resultId üzerinden tam tablo, sayfalama ve tüm satırların CSV aktarımı eklendi. Test sunucusunda gerçek tarayıcı/bağımsız referans koşucusu hazırlandı; bu arayüz henüz doğrulanmadı.
+- İki bağlantı ön kontrolü ve dört tamamlanmış soru koşusunda 6 geçici timasai oturumu temizlendi; devam eden koşu kendi oturumunu sonunda silecek. Kaynak DB yazımı ve yerel test yok.
+
 ## 2026-09-30 — Eski kitaplarda güncel fiyat ↔ bizim hesap; kur elle girilebilir
 
 - Kullanıcı: yeni kitapta yaptığımız fiyat hesabını eski kitaplarda da görmek, kitabın şu anki fiyatıyla bizim hesapladığımız fiyatı yan yana. Eski «Backlist revizyonu» yalnız maliyet/fiyat oranı hedefi aşan kitapları, «Kitap hesabı»ndan farklı bir formülle gösteriyordu.

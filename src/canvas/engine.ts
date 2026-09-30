@@ -110,6 +110,9 @@ export async function engineInfo(): Promise<EngineInfo> {
 
 export type AskAnswer = DbTiming & {
   id?: string;
+  resultId?: string;
+  totalRows?: number;
+  truncated?: boolean;
   /** Soru kaydının kimliği (sl_query_log): cevabın altındaki «Doğru / Kısmen / Yanlış» bununla yazılır (M50). */
   queryId?: string;
   type?: string;
@@ -149,6 +152,29 @@ export type AnswerInterpretation = {
 /** Doğal dil sorusu. Motor SQL üretir, çalıştırır ve özetler. */
 export function ask(question: string): Promise<AskAnswer> {
   return post<AskAnswer>('/api/v1/ask', { question, language: 'TR', execute: true, sampleSize: 50 }, 180_000);
+}
+
+export type StoredAskResult = {
+  id: string;
+  columns: Array<{ name: string; type: string; label?: string }>;
+  records: Array<Record<string, unknown>>;
+  totalRows: number;
+  truncated: boolean;
+};
+
+/** Aynı yürütmenin tamamını okur; SQL tekrar çalıştırılmaz. */
+export async function getAskResult(id: string): Promise<StoredAskResult> {
+  const response = await fetch(`${ENGINE_BASE}/api/v1/result/${encodeURIComponent(id)}`, {
+    credentials: 'include', signal: AbortSignal.timeout(60_000),
+  });
+  if (response.status === 401 || response.status === 403) throw new EngineAuthError();
+  if (response.status === 410) throw new Error('Bu sonucun saklama süresi doldu. Soruyu yeniden sorun.');
+  if (!response.ok) throw new Error(httpErrorText(response.status));
+  const result = await response.json() as StoredAskResult;
+  if (result.id !== id || result.truncated || !Array.isArray(result.records) || result.records.length !== result.totalRows) {
+    throw new Error('Sonucun tamamı doğrulanamadı; eksik veri indirilemez.');
+  }
+  return result;
 }
 
 /** Tablonun ait olduğu iş sistemi: Logo ERP ya da CRM. Motor şemadan belirler. */
