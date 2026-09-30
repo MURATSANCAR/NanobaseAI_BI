@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Doğal 1205 teknik toparlanma kanıtı
+
+- Tamamlanan R6 CP043: ürün Logo1205 ilk deneme,360ms bekleme,aynı SQL hashinde ikinci deneme complete/5275 ham satır. Aynı resultId tam sonucu224 satır/kesilme yok. Bir doğal olayda teknik toparlanma gözlendi.
+- CP043 sayısal kabulü kaynak değişimi nedeniyle UNVERIFIED, kaynak kimlik eksikleri nedeniyle PARTIAL_ANSWER; tam cevap başarısı değildir. Kilitleyen diğer işlem için DBA XML hâlâ gerekli. 163 vaka ve referans retry ayrımı: docs/reports/finance-deadlock-evidence-20260930.md.
+
 ## 2026-09-30 — R6 gerçek kabul ve kapsam onarımı
 
 - ec8e20098, gerçek API/bağımsız Logo–CRM referansıyla45 soru:30 PASS,7 FAIL,8 UNVERIFIED;1 geçici oturum silindi. Kaynak değişen8 cevap başarı sayılmadı. Kanıt: test sunucusu finance-expanded-20260930/composable-r6.
