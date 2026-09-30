@@ -28,8 +28,8 @@ class Plan:
 
 def claims(question: str) -> bool:
     q = fold(question)
-    return bool(re.search(r"\b(satis\w*|satilan|ciro\w*|fatura\w*|tahsil\w*|alacak\w*|kar|kari|karimiz\w*|karlilik\w*|maliyet\w*|bakiye\w*|nakit\w*|butce\w*|finans\w*|iade\w*)\b", q)
-                or (re.search(r"\bcrm\w*", q) and re.search(r"\b(say\w*|kac|adet\w*)\b", q)))
+    return bool(re.search(r"\b(satis\w*|satilan|ciro\w*|fatura\w*|tahsil\w*|alacak\w*|borc\w*|odeme\w*|kar|kari|karimiz\w*|karlilik\w*|maliyet\w*|bakiye\w*|nakit\w*|butce\w*|finans\w*|iade\w*|crm\w*|logo)\b", q)
+                or (re.search(r"\b(kitap\w*|yazar\w*|cari\w*)", q) and re.search(r"\b(say\w*|kac)\b", q)))
 
 
 def follows(question: str) -> bool:
@@ -88,6 +88,8 @@ def build(question, llm, previous=None):
         raise ContractError("İstenen finansal ölçü doğrulanmış sözleşmede bulunamadı.")
     if len(set(dims)) != len(dims) or any(d not in DIMENSIONS for d in dims):
         raise ContractError("İstenen kırılım doğrulanmış sözleşmede bulunamadı.")
+    if grain and grain not in dims:
+        raise ContractError("İstenen zaman kırılımı plana taşınmadı.")
     families = {METRICS[m].family for m in metrics}
     if len(families) != 1:
         raise ContractError("Bu ölçüler farklı kayıt düzeylerinde; aynı sonuçta güvenle birleştirilmeleri henüz tanımlı değil.")
@@ -131,6 +133,8 @@ def build(question, llm, previous=None):
     limit = data.get("limit")
     if limit is not None and (type(limit) is not int or not 1 <= limit <= 1000 or not dims):
         raise ContractError("İstenen sıralama sınırı doğrulanamadı.")
+    if limit is not None and (not re.search(r"\b" + str(limit) + r"\b", q) or not re.search(r"\b(ilk|en cok|en az|en yuksek|en dusuk)\b", q)):
+        raise ContractError("Soruda açıkça istenmeyen bir sonuç sınırı uygulanamaz.")
     order = data.get("order_by") or metrics[0]
     if order not in metrics or type(data.get("descending", True)) is not bool:
         raise ContractError("Sıralama ölçüsü doğrulanamadı.")

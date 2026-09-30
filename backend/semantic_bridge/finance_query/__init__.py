@@ -24,7 +24,8 @@ def _tr(value):
 def answer(runtime, question, thread_id, sample_size, execute, progress, username):
     if os.environ.get("FINANCE_QUERY_MODE", "off") != "contract":
         return None
-    previous = getattr(runtime, "_finance_plans", {}).get(thread_id)
+    context_key = (username, thread_id)
+    previous = getattr(runtime, "_finance_plans", {}).get(context_key)
     if not claims(question) and not (previous and follows(question)):
         return None
     if not follows(question):
@@ -95,7 +96,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         qid = record("TEXT_TO_SQL", summary, result)
         if not hasattr(runtime, "_finance_plans"):
             runtime._finance_plans = OrderedDict()
-        runtime._finance_plans[thread_id] = {"question": question, "plan": plan.to_dict()}
+        runtime._finance_plans[context_key] = {"question": question, "plan": plan.to_dict()}
         while len(runtime._finance_plans)>200:
             runtime._finance_plans.popitem(last=False)
         return {**result, "type": "TEXT_TO_SQL", "sql": sql, "resultId": rid, "summary": summary,

@@ -54,9 +54,12 @@ her cevaba ve kayıt izine yazılır; canlı eski katalog değişiklikleri bu ta
 
 Yeni bağımsız koşucu `scripts/acceptance/finance_contracts/live.py` yalnız Linux test sunucusunda,
 gerçek API ve doğrudan pyodbc referansı ile çalışır. Üretim derleyicisini veya eski SQL'leri içe aktarmaz.
-30 soru; tam kolon kimliği, tüm anahtarlar/satırlar, sayı/NULL ve kesilme karşılaştırması; büyük sonuç,
+100 yeni soru; tam kolon kimliği, tüm anahtarlar/satırlar, sayı/NULL ve kesilme karşılaştırması; büyük sonuç,
 kanal/kitap kırılımı, yıllık kaynak değişimi, gün/ay, boş dönem, yanlış kaynak ve dürüst netleştirme.
 Kaynaklar salt okunur. Var olan timasai hesabının 15 dk oturumu finally'de silinir. Her 10 sonuç raporlanır.
+Sayısal tam cevap geçişleri (`fullAnswer`) ve kapsam dışı isteği doğru durdurma (`boundary`) ayrı sayılır.
+Koşu başında/sonunda canlı kaynak hash'leri alınır; kod değişirse o koşuya sürüm kabulü verilmez.
+Yeni motor etkin değilse koşucu eski motora hiçbir soru göndermez.
 
 İlk sözleşme: satış/net satış/iade tutarı, satılan/net adet, fatura sayısı/toplamı, müşteri ödeme
 hareketleri, aktif CRM kitap/yazar/cari sayıları. Kâr, kesin yaşlandırma, bütçe-hedef, döviz dönüşümü

@@ -127,6 +127,7 @@ class Executor:
                 partials.extend(self.aggregate(plan, family, a, b, firm, period, enrichment))
             before = {m: sum((number(r[m]) for r in partials), Decimal(0)) for m in plan.metrics}
             missing = 0
+            empty_fields = {field: 0 for field in ("author", "publisher") if field in plan.dimensions}
             for row in partials:
                 if enrichment:
                     card = books.get(str(row.get("book_code") or "").strip().casefold())
@@ -134,11 +135,17 @@ class Executor:
                         missing += 1
                     for field in ("author", "publisher"):
                         row[field] = card.get(field) if card else None
+                        if field in empty_fields and not row[field]:
+                            empty_fields[field] += 1
             after = {m: sum((number(r[m]) for r in partials), Decimal(0)) for m in plan.metrics}
             if before != after:
                 raise ContractError("Kaynaklar birleştirildiğinde ölçü toplamları değişti; cevap engellendi.")
             if missing:
                 self.notes.append(f"{missing} satış kırılımında aktif CRM kitap eşleşmesi yok; künye alanları boş bırakıldı, satışlar korunuyor.")
+            for field, count in empty_fields.items():
+                if count:
+                    label = "yazar künyesi" if field == "author" else "yayınevi"
+                    self.notes.append(f"{count} satış kırılımında {label} bilgisi bulunamadı; değer tahmin edilmedi.")
             # Enrichment filters explicitly narrow the population, after conservation was checked.
             selected = [r for r in partials if all(self.matches(r.get(d), op, value) for d, op, value in plan.filters if d in ("author", "publisher"))]
             group_fields = []
