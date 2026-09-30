@@ -161,8 +161,11 @@ class BookUploads {
         } catch (e) {
           const status = e instanceof EngineAuthError ? 401 : ((e as { status?: number }).status ?? 0);
           if (!transient(status)) {
+            // Kalıcı ret: satır bu oturumda cümlesiyle kalır; dosya cihaz deposundan silinir, yenilemede yeniden gönderilmez.
             it.status = 'failed';
             it.error = e instanceof Error ? e.message : 'Dosya yüklenemedi.';
+            this.blobs.delete(it.key);
+            await idbDelete(STORE_BOOK, it.key).catch(() => undefined);
             this.emit();
             continue;
           }
