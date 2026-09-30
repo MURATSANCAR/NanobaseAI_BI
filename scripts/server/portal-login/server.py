@@ -245,7 +245,6 @@ def chat_call(config, method, path, query=None, body=None):
         raise ChatUnavailable(type(exc).__name__)
 
 
-<<<<<<< HEAD
 def portal_can_manage_chat(session_token):
     """Kişinin portal yetkisinde CHAT_ADMIN_FEATURE var mı: True / False; okunamadıysa None (o zaman rol değişmez).
 
@@ -318,8 +317,6 @@ def chat_sync_language(config, user, account):
         db.execute('INSERT OR REPLACE INTO chat_language (username, language, at) VALUES (?, ?, ?)', (key, CHAT_LANGUAGE, time.time()))
 
 
-def chat_login_token(account, display, session_token=None):
-=======
 def chat_account_name(account):
     """Keep reserved chat names out of AD provisioning without granting extra privileges."""
     if account.lower() in {'admin', 'administrator', 'system', 'user', 'all', 'here'}:
@@ -329,8 +326,7 @@ def chat_account_name(account):
     return account
 
 
-def chat_login_token(account, display):
->>>>>>> 2311edca724978df711242afca7bd41240960db9
+def chat_login_token(account, display, session_token=None):
     """Makes sure the portal user exists in the chat under the same account name, then returns a login token.
 
     The chat never sees a password: accounts are created with a random one that nobody knows, and the
