@@ -101,6 +101,10 @@ def build(question, llm, previous=None, trace=None):
         raise ContractError("Bu kapsam için doğrulanmış hesap tanımı eksik: " + reason[:600])
     metrics = tuple(data.get("metrics") or ())
     dims = tuple(data.get("dimensions") or ())
+    if len(periods) > 1 and grain is None:
+        # Comparison rows already carry period_start/end. Without an explicit
+        # within-period time grain, a model-added month/year changes the answer.
+        dims = tuple(d for d in dims if d not in ("day", "month", "year"))
     if not metrics or len(set(metrics)) != len(metrics) or any(m not in METRICS for m in metrics):
         raise ContractError("İstenen finansal ölçü doğrulanmış sözleşmede bulunamadı.")
     if len(set(dims)) != len(dims) or any(d not in DIMENSIONS for d in dims):

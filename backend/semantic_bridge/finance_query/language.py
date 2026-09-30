@@ -67,5 +67,5 @@ def dates(question, today):
     hits.sort()
     if len(hits)==2 and re.search(r"\barasi\w*|\baraligi\w*",q):
         hits=[(hits[0][0],hits[1][1],hits[0][2],hits[1][3])]
-    grain = next((g for g,p in [("month",r"\baylik\b|\bay ay\b|\bay(?:lar)? bazinda\b"),("day",r"\bgunluk\b|\bgun bazinda\b"),("year",r"\byil(?:lar)? bazinda\b")] if re.search(p,q)),None)
+    grain = next((g for g,p in [("month",r"\baylik\b|\bay ay\b|\bay(?:lar)? bazinda\b|\baylara gore\b"),("day",r"\bgunluk\b|\bgun gun\b|\bgun(?:ler)? bazinda\b|\bgunlere gore\b"),("year",r"\byillik\b|\byil yil\b|\byil(?:lar)? bazinda\b|\byillara gore\b")] if re.search(p,q)),None)
     return tuple(dict.fromkeys((str(a),str(b)) for _,_,a,b in hits)),grain

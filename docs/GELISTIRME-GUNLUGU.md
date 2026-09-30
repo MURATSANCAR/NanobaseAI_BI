@@ -3,6 +3,7 @@
 ## 2026-09-30 — Satış tutarında sessiz varsayım kaldırıldı
 
 - Gerçek FC03 kapısı iki farklı hesabı ortaya çıkardı: KDV hariç satır 227.547,69 TL, fatura genel toplamı 232.275,81 TL. İlk sorunun ifadesi ikisini ayırmıyordu; varsayılan iş tanımı kararı gelene kadar netleştirme istenir. Başarısız geçmiş korunur; yeni FC101/102 açık ifadelerinin bağımsız referansları eklenir.
+- İlk 100 turunda 95 geçiş/5 başarısız: FC03 tanım, FC93–96 gereksiz month kolonu. Açık iç-dönem zaman kırılımı istenmeyen çok dönem karşılaştırmasında yalnız dönem başlangıç/bitiş anahtarları korunur.
 - 102 soru: 92 tam cevap + 10 sınır. Değişen planlayıcı önceki geçişlerle doğrulanmış sayılmaz; yeni sürüm yeniden koşulacaktır.
 
 ## 2026-09-30 — Finans gerçek veri kabulü ve tam sonuç görünümü (devam ediyor)
