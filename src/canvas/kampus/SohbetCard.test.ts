@@ -39,4 +39,21 @@ describe('SohbetCard', () => {
     expect(html).toContain('0 kişi çevrimiçi');
     expect(html).toContain('Şu an sohbette çevrimiçi kimse yok');
   });
+
+  it('kendisini üste, sonra çevrimiçi → meşgul → uzakta dizer; 5 yüzden fazlası «+N»', () => {
+    const people = [
+      { username: 'u1', name: 'Uzak Bir', status: 'away' },
+      { username: 'm1', name: 'Meşgul Bir', status: 'busy' },
+      { username: 'c1', name: 'Çevrim Bir', status: 'online' },
+      { username: 'ali', name: 'Ali Can', status: 'away' },
+      { username: 'c2', name: 'Çevrim İki', status: 'online' },
+      { username: 'c3', name: 'Çevrim Üç', status: 'online' },
+    ];
+    const html = render({ online: 6, people });
+    const order = ['Ali Can', 'Çevrim Bir', 'Çevrim İki', 'Çevrim Üç', 'Meşgul Bir', 'Uzak Bir'].map((n) => html.lastIndexOf(`>${n}<`));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(html).toContain('+1');
+    expect(html).toContain('3 çevrimiçi');
+    expect(html).toContain('2 uzakta');
+  });
 });
