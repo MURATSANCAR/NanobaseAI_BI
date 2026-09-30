@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "viewports": [
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "importedAccountFound": true,
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 320,
+      "scrollWidth": 320,
+      "importedAccountFound": true,
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 390,
+      "scrollWidth": 390,
+      "importedAccountFound": true,
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 768,
+      "scrollWidth": 768,
+      "importedAccountFound": true,
+      "errors": [],
+      "outside": []
+    }
+  ]
+}

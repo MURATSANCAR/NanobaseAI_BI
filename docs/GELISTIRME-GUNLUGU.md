@@ -1,6 +1,6 @@
 # Geliştirme Günlüğü
 
-**2026-09-30 — AD sohbet rehberi / CRM ekip eşitlemesi (hazırlık):** kullanıcı tüm etkin AD hesaplarının görünmesini ve CRM ekiplerine göre varsayılan grupları istedi. `deploy/zeki/sync-directory.py` AD/CRM salt okuma → yerel sohbet API; özel CRM grupları, kimlik eşlemesi, tekrar çalıştırmada çoğaltmama, 15 dk ürün zamanlayıcısı. Kaynaklar tam okunmadan yazmaz. Gerçek kurulum/kabul henüz **DOĞRULANAMADI**.
+**2026-09-30 — AD sohbet rehberi / CRM ekipleri canlı:** 216 etkin AD hesabı görünür (215 yeni normal kullanıcı; toplam 218 hesap). 25 etkin CRM ekibinden AD üyesi olan 12 özel grup oluşturuldu; üyelikler bağımsız AD/CRM sorgusu + gerçek API + Mongo ile 12/12 eşleşti. 1 eşleşmeyen üyelik/13 boş ekip aktarılmadı. `zeki-directory-sync.timer` 15 dk; tekrar koşu 0 yeni kayıt/üyelik değişikliği. Ayrılmış/özel karakterli AD adları SSO ile ortak eşlenir, ekranda AD görünen adı kullanılır. Dört genişlikte gerçek kişi araması ve dış ağ kontrolleri geçti; 3 geçici portal oturumu/9 chat jetonu temizlendi. CRM/AD salt okunur, müşteri VM kurulumu yok. Rapor/işletim: `docs/ZEKI-CHAT-DIRECTORY.md`; kaynak `deploy/zeki/sync-directory.py`.
 ## 2026-09-30 — Kampüs: Önemli günler CRM'den, örnek doğum günleri, matbaadan çıkanlara kapak
 
 - **Neden:** kullanıcı «Önemli Günler & Ajanda» kartının boş göründüğünü, CRM ya da başka yerden doldurulmasını; ardından «şimdilik örnek doğum günleri» ve «matbaadan çıkanlar gerçek veriden, kapak fotoğraflarıyla» istedi.
