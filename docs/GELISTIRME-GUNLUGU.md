@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Kitaba sor: test soruları silindi (test sunucusu)
+
+- Kullanıcı isteği: editoryal «Kitaba sor» alanındaki test verileri silinsin.
+- Test sunucusunda `semantic_editorial_questions` tablosundaki 55 satırın hepsi `timasai` test hesabınındı (2026-09-21 → 09-29); `username='timasai'` ile silindi, kalan 0. Tabloya bağlı başka tablo yok; kitaplar editör motorunda durur, onlara dokunulmadı. Yedek alınmadı.
+- Müşteri VM'inde (.55) aynı tabloya bakmak izin denetimine takıldı; VM'deki sorular okunmadı, silinmedi (orada gerçek kullanıcı soruları da var).
+
 ## 2026-09-30 — Finans yeni motoru: gerçek kabul ve kapanış kanıtı
 
 - Son arka uç be31c7817 / arayüz 53e8e4e93; gerçek test sunucusu API + Logo/CRM bağımsız referansı: **102/102 PASS (92 tam hesap, 10 sınır)**. Kod koşu boyunca sabit. 92 farklı resultId; tam satır/kolon/anahtar/değer/NULL/kesilme ve önizleme eşliği geçti.
