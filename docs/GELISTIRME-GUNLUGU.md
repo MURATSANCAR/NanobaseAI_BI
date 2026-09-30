@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 (20:30) — Müşteri Jira hataları (ZEKI) kapandı: VM'de ZEKI-54/26 doğrulandı, ZEKI-28 test sunucusunda
+
+- **VM kataloğu (kullanıcı çalıştırdı):** Logo `LG_211/411_ITEMS.CODE` ↔ CRM `new_kitapBase.new_StokKodu` bağı (eklenen 2) ve «kitap yazarı» (`sem_480be8b7d621`, CERTIFIED, eş anlamlı yalnız «yazar adı»; çıplak «yazar» yok).
+- **VM kodu:** ZEKI-54'ün son hâli başka oturumun 19:0x tam main kurulumuyla (`f9fc01aa`) gitmişti. ZEKI-26 için `f9fc01aa` + `27805dff6`/`edfbf6e0d` ağacı kuruldu (kullanıcı çalıştırdı): 5 servis ayakta, `bi_var` 7 → 7, kapılar 302/200/401, VM `._*` 0; konteynerde `editorial_desk.py` ve `resolver.py` main ile md5 aynı. İlk hazırlanan `eb406f48b` tabanlı ağaç VM'i geri saracağı için iptal edildi. **Sürüm kaydı yazılamadı** (test sunucusu köprüsü 401 — betik root dışı çalıştı; VM köprüsü 422 — sürüm metni `f9fc01aa+ZEKI26(edfbf6e0d)` biçime uymuyor); bir sonraki tam main kurulumu doğru kaydı yazar.
+- **VM doğrulaması (köprü konteyneri, canlı Logo .25):** müşterinin ZEKI-54 sorusu 2/2 aynı — kitap adı, kanal, yayınevi, tutar, adet; 2.640 satır, 11.870.438,69 ₺ / 93.258 adet = doğrudan `LG_411_01_STLINE` referansı birebir (2021-25 yedeğinde o gün 0 satır); not «‘yazar’ (kitap yazarı) bilgisi CRM verisinde; … eklenmedi»; iki sunucuyu okuyan tek SQL yok. ZEKI-26 üst sınırı VM'de 300.000.000 bayt.
+- **ZEKI-28 (test sunucusu):** `zeki-chat` ve `zeki-ingress` `TZ=Europe/Istanbul` (saat +03:00), `OVERWRITE_SETTING_Default_Timezone_For_Reporting=custom`, `…Default_Custom_Timezone=Europe/Istanbul`, Node saat dilimi Europe/Istanbul (sohbet oturumunun kurulumu main'deki ayarı almış). `zeki-mongo` UTC'de kaldı (yalnız günlük saati; veri UTC saklanır). VM'de sohbet kurulu değil.
+- **Temizlik:** yan köprü durduruldu, anahtarlı geçici ortam dosyası, timasai test oturumu, VM'e kopyalanan plan/betik, `/tmp/claude-zeki`, `/tmp/bi-vm-*` silindi.
+- **Jira durumu:** 22 kayıt kodla kapandı ve doğrulandı; ZEKI-27 örneği «Rabia Elif Özcan Beydemir» CRM'de etkin kişi değil (müşteriye sorulacak); ZEKI-37/59/60 kod işi değil (59: T-soft'a yazma yasak). Jira'daki durumlar değiştirilmedi.
+
 ## 2026-09-30 — ZEKI-54 tamam (plan kapalı modda gerçek veriyle), ZEKI-26 yükleme üst sınırı 300 MB; VM ağacı hazır
 
 - **ZEKI-54 katalog (test sunucusu, kullanıcı çalıştırdı):** Logo `LG_211/411_ITEMS.CODE` ↔ CRM `new_kitapBase.new_StokKodu` ölçülmüş bağı (CRM stok kodu tekrarı 0; 2025+ satılan 11.548 kodun 4.471'i CRM kitabı, 3.962'si yazarlı) ve «kitap yazarı» kavramı (sem_acc0b72f4f2c, CONTACTBASE.FullName, eser katılımı rol «Yazar»). Çıplak «yazar» eş anlamlısı denendi, 1.000 soruluk kapıda 40 okuma değişti — ödeme/hakediş sorularında Logo «YAZARLAR» cari grubu ve CRM «Yazar» etiketi okuması bozuldu → geri alındı (kalan: kitabın yazarı, yazar adı).
