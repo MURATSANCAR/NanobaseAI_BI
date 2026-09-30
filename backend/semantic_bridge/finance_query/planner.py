@@ -409,7 +409,9 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         # Comparison rows already carry period_start/end. Without an explicit
         # within-period time grain, a model-added month/year changes the answer.
         dims = tuple(d for d in dims if d not in ("day", "month", "year"))
-    if not metrics or len(set(metrics)) != len(metrics) or any(m not in METRICS for m in metrics):
+    if not metrics:
+        raise ContractError("Model hiçbir hesap veya kaynak raporu seçmedi; desteklenmeyen koşul veya netleştirme gerekçesi de bildirmedi.", code="PLAN_INVALID")
+    if len(set(metrics)) != len(metrics) or any(m not in METRICS for m in metrics):
         raise ContractError("İstenen finansal ölçü doğrulanmış sözleşmede bulunamadı.")
     if len(set(dims)) != len(dims) or any(d not in DIMENSIONS for d in dims):
         raise ContractError("İstenen kırılım doğrulanmış sözleşmede bulunamadı.")
