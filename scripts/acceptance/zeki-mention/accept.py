@@ -74,6 +74,8 @@ elif sys.argv[1] == 'check':
             else:
                 row['passed'] = bool(job and job[0] == 'sent' and reply and reply['u']['_id'] == 'zeki.bot'
                                      and reply['rid'] != state['rooms'][0] and reply['msg'] == job[1])
+                if item['label'] in ('intro', 'data'):
+                    row['passed'] = row['passed'] and bool(job[2])
             rows.append(row)
     result = {'passed': all(r['passed'] for r in rows), 'checks': rows,
               'unauthenticatedStatus': state['unauthenticatedStatus']}

@@ -40,6 +40,6 @@ def install(app, runtime, gate):
         if not question:
             raise HTTPException(422, 'Soru boş.')
         # Each request has its own context: no other member's previous answer enters this prompt.
-        thread = 'chat-' + hashlib.sha256((user + ':' + body.messageId).encode()).hexdigest()
+        thread = 'chat-' + hashlib.sha256((user + ':' + body.messageId).encode()).hexdigest()[:48]
         with access.acting_as(user):
             return runtime().ask(question, thread_id=thread, sample_size=50, execute=True, username=user)
