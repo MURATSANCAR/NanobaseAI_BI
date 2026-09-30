@@ -185,6 +185,9 @@ class Executor:
         needed[table] += {"sales": ["LINETYPE", "INVOICEREF", "STOCKREF", "CLIENTREF", "LINENET", "AMOUNT"],
                           "invoice": ["LOGICALREF", "NETTOTAL", "CLIENTREF"],
                           "collection": ["CLIENTREF", "AMOUNT", "SIGN"]}[family]
+        quantities = set(plan.metrics) & {"sold_quantity", "net_quantity"}
+        if quantities:
+            needed[table] += ["UINFO1", "UINFO2"]
         if book:
             needed[item_table] = ["LOGICALREF", "CODE", "NAME"]
         if client:
@@ -206,6 +209,11 @@ class Executor:
                 labels[d] = expression
         select = [f"{expr} AS [{name}]" for name, expr in labels.items()]
         select += [f"COALESCE({METRICS[m].expression},0) AS [{m}]" for m in plan.metrics]
+        if quantities:
+            unit_codes = "2,3,7,8" if "net_quantity" in quantities else "7,8"
+            select.append("COALESCE(SUM(CASE WHEN f.TRCODE IN (" + unit_codes + ") AND "
+                          "(f.UINFO1 IS NULL OR f.UINFO2 IS NULL OR f.UINFO1<=0 OR f.UINFO1<>f.UINFO2) "
+                          "THEN 1 ELSE 0 END),0) AS [_unverified_quantity_units]")
         sql = "SELECT " + ", ".join(select) + f" FROM dbo.[{table}] f"
         if book:
             sql += f" LEFT JOIN dbo.[{item_table}] i ON i.LOGICALREF=f.STOCKREF"
@@ -238,4 +246,10 @@ class Executor:
         sql += " WHERE " + " AND ".join(conditions)
         if labels:
             sql += " GROUP BY " + ", ".join(labels.values())
-        return self.read(sql)
+        rows = self.read(sql)
+        if quantities:
+            if any(number(row.get("_unverified_quantity_units")) for row in rows):
+                raise ContractError("Satış miktarlarında farklı veya eksik birim dönüşümü var; işlem miktarı kitap adedi gibi sunulamaz. Birim sözleşmesi doğrulanmalıdır.")
+            for row in rows:
+                row.pop("_unverified_quantity_units", None)
+        return rows

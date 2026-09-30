@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import os
+from pathlib import Path
 import time
 import uuid
 
@@ -13,6 +14,8 @@ from .planner import claims, follows, build
 from .executor import Executor
 
 log = logging.getLogger(__name__)
+ENGINE_HASH = hashlib.sha256(json.dumps({p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+    for p in Path(__file__).parent.glob("*.py")}, sort_keys=True).encode()).hexdigest()
 
 
 def _tr(value):
@@ -35,7 +38,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
     engine = Executor(runtime)
     plan = None
     sql = None
-    state = {"engine": "finance_contract_v1", "contractHash": CONTRACT_HASH,
+    state = {"engine": "finance_contract_v1", "contractHash": CONTRACT_HASH, "engineCodeHash": ENGINE_HASH,
              "legacyCatalogUsed": False, "legacySqlFallback": False}
 
     def record(kind, summary, result=None, error=None):
@@ -44,7 +47,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
             executed=result is not None, row_count=result.get("totalRows") if result else None,
             latency_ms=round((time.monotonic()-started)*1000), error=error, username=username,
             thread_id=thread_id, answer_type=kind, answer_summary=summary,
-            result_json=result, gate_json={"contractHash": CONTRACT_HASH, "contractChecked": result is not None,
+            result_json=result, gate_json={"contractHash": CONTRACT_HASH, "engineCodeHash": ENGINE_HASH, "contractChecked": result is not None,
                                          "independentlyVerified": False})
 
     try:

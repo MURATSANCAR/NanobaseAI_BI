@@ -161,7 +161,7 @@ def compare(case, answer, whole, reference):
                 av,bv=a[key].get(col),b[key].get(col)
                 if av is None or bv is None:
                     if av!=bv:problems.append(f"null mismatch {col}")
-                elif abs(Decimal(str(av))-Decimal(str(bv)))>Decimal("0.01"):
+                elif abs(Decimal(str(av))-Decimal(str(bv)))>Decimal("0.000000001" if col in ("sold_quantity","net_quantity","invoice_count","active_books","active_authors","active_customers") else "0.01"):
                     problems.append(f"value mismatch {col}: {av} != {bv}")
     except Exception as exc:problems.append(str(exc))
     return problems[:15]
@@ -185,6 +185,7 @@ def main():
         req=urllib.request.Request(args.base+path,data=json.dumps(body).encode() if body is not None else None,headers=headers)
         with urllib.request.urlopen(req,timeout=180) as res:return json.load(res)
     conns={};results=[];counts=Counter();passed=Counter();before=code_manifest()
+    expected_engine_hash=hashlib.sha256(json.dumps({k.rsplit('/',1)[-1]:v for k,v in before.items() if '/finance_query/' in k},sort_keys=True).encode()).hexdigest()
     try:
         if env.get("FINANCE_QUERY_MODE")!="contract":
             raise RuntimeError("New contract engine is not active; no question sent to the legacy engine")
@@ -203,6 +204,7 @@ def main():
                     whole=call("/api/v1/result/"+a["resultId"]) if a.get("resultId") else a;d["fullResult"]=whole
                     errors=compare(case,a,whole,ref)
                     if a.get("semantic",{}).get("engine")!="finance_contract_v1":errors.append("legacy engine used")
+                    if a.get("semantic",{}).get("engineCodeHash")!=expected_engine_hash:errors.append("running engine code differs from deployed source")
                     d["errors"]=errors;d["status"]="FAIL" if errors else "PASS"
                 except Exception as exc:
                     d["status"]="UNVERIFIED";d["error"]=type(exc).__name__+": "+str(exc)[:500]

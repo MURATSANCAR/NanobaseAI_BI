@@ -22,6 +22,8 @@ döner. Finans dışı portal işlevlerinin yeniden yazımı bu değişikliğin 
 3. `SEMANTIC_FIRMS` kaynak kapsamı ∩ canlı `L_CAPIPERIOD`. Aynı şirketin yıllık kaynaklarıdır.
    Dönem boşluğu/örtüşmesi varsa durulur; en büyük kod/ilk tablo veya örnek MIN/MAX ile kaynak seçilmez.
 4. Gerçek `INFORMATION_SCHEMA.COLUMNS` ile kolon ve mali değer türleri denetlenir.
+   Adet ölçüsünde `UINFO1/UINFO2` farklı, eksik veya geçersizse işlem miktarı kitap adedi diye
+   sunulmaz; birim sözleşmesi netleştirilir. Stok kartlarının iş kapsamı ayrıca iş kabulü gerektirir.
 5. SQL yalnız sabit sözleşme ifadeleri ve kaçırılmış literal değerlerden oluşur. Model SQL gönderemez.
 6. Satışlar gereken düzeyde toplanır. CRM eşlemesi aktif stok kodunda tekil olmalıdır; çoklu anahtarda
    sorgu durur. LEFT birleştirme öncesi/sonrası mali toplamlar korunur. Eksik künye açık veri notudur.
@@ -30,6 +32,8 @@ döner. Finans dışı portal işlevlerinin yeniden yazımı bu değişikliğin 
 `contractChecked` teknik sözleşme denetimidir; `independentlyVerified=false` canlı bağımsız kabulün yerine
 geçmez. Eski `certified=true` anlam karışıklığı yeni cevaba taşınmaz. Kod içindeki tanımların hash'i
 her cevaba ve kayıt izine yazılır; canlı eski katalog değişiklikleri bu tanımları değiştirmez.
+`engineCodeHash` çalışan süreçte yüklenmiş yeni motorun kaynak dosyalarını bağlar; disk ile süreç
+farkı kabul koşucusunda ayrıca reddedilir.
 
 ## Alan anlamı ve kaynak kanıtı
 
