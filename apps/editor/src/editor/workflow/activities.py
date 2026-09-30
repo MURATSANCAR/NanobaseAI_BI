@@ -131,7 +131,17 @@ async def extract_chunk(generation_id: str, chunk: list[int]) -> dict:
 
 @activity.defn
 async def resolve_identity(generation_id: str) -> dict:
-    return await knowledge.resolve_character_identity(generation_id)
+    # On the last attempt the policy allows, a failure that would otherwise be retried leaves
+    # the mentions unresolved and asks the editor instead of ending the reading.
+    from .workflows import RETRY
+    final = activity.info().attempt >= (RETRY.maximum_attempts or 1)
+    return await knowledge.resolve_character_identity(generation_id, final_attempt=final)
+
+
+@activity.defn
+async def identity_unresolved(generation_id: str, error: str) -> dict:
+    """The workflow's last resort when resolve_identity itself could not finish."""
+    return await _t(knowledge.identity_unresolved, generation_id, error)
 
 
 @activity.defn
@@ -295,6 +305,6 @@ async def rebuild_outputs(generation_id: str) -> dict:
 
 
 ALL = [proofreading, rebuild_outputs, event_actors, detect_contradictions, queue_contradictions, book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
-       persist_visual, text_chunks, extract_chunk, resolve_identity, continuity_checks, verify_modality,
+       persist_visual, text_chunks, extract_chunk, resolve_identity, identity_unresolved, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

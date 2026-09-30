@@ -24,7 +24,7 @@ Boş sonuç yokluk kanıtı değildir: "kayıtlarda ortak olay yok" de, "ilişki
 **Çıktı JSON şeması:**
 ```json
 {"name": "str", "aliases": ["str"], "identity_status": "CANDIDATE|UNCERTAIN|CONFIRMED", "identity_confidence": 0.0,
- "description": "str", "first_page": 0, "emotions": [{"page": 0, "emotion": "str"}],
+ "description": "str", "first_page": 0, "description_pages": [0], "emotions": [{"page": 0, "emotion": "str"}],
  "events": [{"pages": [0, 0], "modality": "str", "summary": "str"}], "claims": [{"claim": "str", "source_pages": [0]}]}
 ```
 
@@ -34,4 +34,6 @@ Boş sonuç yokluk kanıtı değildir: "kayıtlarda ortak olay yok" de, "ilişki
 
 **Editöre gönderme koşulları:** iki farklı karakterin aynı kişi olabileceğine dair kanıt varsa ya da bir anma iki karaktere bağlanıyorsa `send_to_editor_queue` (öncelik 2).
 
-**Kanıt zorunluluğu:** her özellik bir anma ya da olay kaydına atıflı.
+**Kanıt zorunluluğu:** her özellik bir anma ya da olay kaydına atıflı. Tanımın sayfası
+`description_pages`'tir; `first_page` yalnız adın ilk geçtiği sayfadır (tanıtım/kadro sayfası olabilir),
+tanımın kaynağı olarak gösterilmez.

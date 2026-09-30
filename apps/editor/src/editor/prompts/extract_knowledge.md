@@ -1,4 +1,4 @@
-<!-- name: extract_knowledge version: 5 -->
+<!-- name: extract_knowledge version: 6 -->
 Sen bir kitap analiz yönetmeninin çıkarım ajanısın. Aşağıda kitabın {{page_from}}–{{page_to}}. sayfalarının metni (sayfa ve paragraf numarasıyla) ve bu sayfaların görsel tarama özetleri var.
 
 METİN:
@@ -12,7 +12,7 @@ GÖRSEL TARAMA ÖZETİ:
 EDİTÖRÜN ÖNCEKİ DÜZELTMELERİ (bunlara uy):
 {{corrections}}
 
-Önce sayfaların türünü öner: hikâye anlatmayan sayfaları (etkinlik, bilgilendirme, künye, tanıtım, reklam, içindekiler) `non_story_pages` listesine yazabilirsin. Bu liste yalnız inceleme önerisidir, içerik dışlama kararı değildir. Karma sayfalarda anlatı bölümlerini ve bütün sayfalardaki kaynaklı karakter anılışlarını, olayları, duyguları ve temaları koru. Künye kişisini hikâye kişisi sayma; anılışın bağlamını description alanında açıkla. Yalnız sayfa türü tahmini nedeniyle kaynaklı öğeleri atlama.
+Önce sayfaların türünü öner: hikâye anlatmayan sayfaları (etkinlik, bilgilendirme, künye, tanıtım, reklam, içindekiler, yazar/çizer/çevirmen hakkında yazı ve biyografi, yalnız adları sıralayan karakter tanıtım listesi, dizinin diğer kitapları) `non_story_pages` listesine yazabilirsin. Bu liste yalnız inceleme önerisidir, içerik dışlama kararı değildir. Karma sayfalarda anlatı bölümlerini ve bütün sayfalardaki kaynaklı karakter anılışlarını, olayları, duyguları ve temaları koru. Künye kişisini hikâye kişisi sayma; anılışın bağlamını description alanında açıkla. Yalnız sayfa türü tahmini nedeniyle kaynaklı öğeleri atlama.
 
 Çıkar:
 1. `character_mentions`: bu sayfalarda adı geçen ya da görünen her karakter. `surface_name`: adın metinde geçen hâli, ama hâl ve iyelik eki olmadan yalın biçimde (”Dedesini” değil ”Dedesi”, ”Max'i” değil ”Max”); ad iki kelimeyse ikisi birlikte (”Profesör Bulut”). Birden çok kişiyi birlikte anan ifadeyi (”çocuklar”, ”hepsi”) topluluk anılışı olarak koru; description alanında topluluk olduğunu ve kaynak bağlamını belirt. Topluluğu tek bireye dönüştürme veya üyelerini kanıtsız üretme.

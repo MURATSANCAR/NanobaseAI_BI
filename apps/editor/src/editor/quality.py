@@ -364,6 +364,12 @@ def _alias_defects(generation_id: str) -> list[dict]:
                 out.append({"character": r["canonical_name"], "alias": a,
                             "reason": naming.NOT_A_PROPER_NAME,
                             "share": naming.proper_share(a, text)})
+    # an alias no page of the book writes together with another name of the character
+    stored = [{"person": True, "reject_reason": None, "canonical": r["canonical_name"],
+               "aliases": list(r["aliases"] or []), "dropped": []} for r in rows]
+    for r, v in zip(rows, naming.screen_shared_evidence(stored, idx.raw)):
+        out += [{"character": r["canonical_name"], "alias": d["name"], "reason": d["reason"],
+                 "pages": d["pages"]} for d in v["dropped"]]
     return out
 
 
@@ -557,11 +563,14 @@ def create_analysis_report(generation_id: str, kind: str = "ANALYSIS",
             md += [f"### {ch['title']} (s.{ch['page_from']}–{ch['page_to']})",
                    *[f"- {r['claim']} {_cite(r['source_pages'])}" for r in rows], ""]
             content["chapters"].append({**ch, "sentences": rows})
-    chars = q("SELECT canonical_name, aliases, description, identity_status, identity_confidence, first_page"
+    chars = q("SELECT canonical_name, aliases, description, identity_status, identity_confidence, first_page,"
+              " coalesce(traits->'description_pages', '[]'::jsonb) AS description_pages"
               " FROM character WHERE generation_id=%s ORDER BY first_page")
-    md += ["## Karakterler", "| Karakter | Diğer adlar | Kimlik | Güven | İlk sayfa |", "|---|---|---|---|---|",
+    md += ["## Karakterler", "| Karakter | Diğer adlar | Kimlik | Güven | İlk sayfa | Tanım sayfası |",
+           "|---|---|---|---|---|---|",
            *[f"| {c['canonical_name']} | {', '.join(c['aliases'])} | {c['identity_status']} | "
-             f"{c['identity_confidence']:.2f} | {c['first_page']} |" for c in chars], ""]
+             f"{c['identity_confidence']:.2f} | {c['first_page']} | "
+             f"{', '.join(map(str, c['description_pages'] or [])) or '-'} |" for c in chars], ""]
     content["characters"] = chars
     tl = build_timeline(generation_id)
     md += ["## Zaman çizelgesi (yalnız gerçekleşmiş olaylar)",

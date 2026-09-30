@@ -102,7 +102,7 @@ class BookFullAnalysis:
             chunks = await self.act("text_chunks", gid, timeout=SHORT)
             ext, failures["extract"] = await self.fan_out("extract_chunk", chunks, gid)
             await self.step(8, "Karakter kimlikleri")
-            ident = await self.act("resolve_identity", gid)
+            ident = await self._identity(gid, failures)
             await self.step(9, "Olay kipleri")
             mod = await self.act("verify_modality", gid)
             mrg = await self.act("merge_events", gid)
@@ -220,7 +220,7 @@ class BookFullAnalysis:
             chunks = await self.act("text_chunks", gid, timeout=SHORT)
             ext, failures["extract"] = await self.fan_out("extract_chunk", chunks, gid)
             await self.step(8, "Karakter kimlikleri")
-            ident = await self.act("resolve_identity", gid)
+            ident = await self._identity(gid, failures)
             await self.step(9, "Olay kipleri")
             mod = await self.act("verify_modality", gid)
             mrg = await self.act("merge_events", gid)
@@ -282,6 +282,22 @@ class BookFullAnalysis:
         finally:
             await workflow.execute_activity("release_models", args=[[]], start_to_close_timeout=SHORT,
                                             retry_policy=RETRY)
+
+    async def _identity(self, gid: str, failures: dict) -> dict:
+        """Step 8. Five books ended here on 2026-09-23/24 («Activity task failed»: an identity
+        request over the model's context). The activity now falls back to smaller windows and,
+        when nothing can be read, to the editor's queue (knowledge.resolve_character_identity).
+        This is the last resort for what it cannot catch — a timeout, a crash after every
+        retry: the mentions stay unresolved, the editor gets the question, the book goes on.
+        On success nothing here adds a command; a replayed history that ended here before this
+        branch existed has no marker and fails exactly as it did."""
+        try:
+            return await self.act("resolve_identity", gid)
+        except ActivityError as e:
+            if not workflow.patched("identity-never-ends-reading-v1"):
+                raise
+            failures["identity"] = [str(e.cause or e)[:500]]
+            return await self.act("identity_unresolved", gid, failures["identity"][0], timeout=SHORT)
 
     async def _visual_phase(self, gid: str, ident: dict, tv: dict, key_pages: list,
                             failures: dict) -> tuple[dict, dict, dict]:

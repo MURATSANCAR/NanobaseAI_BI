@@ -82,6 +82,9 @@ IDENTITY = obj({
     "characters": arr(obj({
         "canonical_name": STR, "kind": KIND, "sex": SEX, "age_band": AGE_BAND,
         "entity_scope": {"type": "string", "enum": ["INDIVIDUAL", "COLLECTIVE", "CONCEPT", "UNKNOWN"]},
+        # in the world the book tells, or only on a page about the book (author's note, imprint);
+        # the code accepts ABOUT_THE_BOOK only for a person named nowhere but the book's edges
+        "book_role": {"type": "string", "enum": ["STORY", "ABOUT_THE_BOOK"]},
         "aliases": arr(STR), "description": STR,
         "mention_ids": arr(STR, 1), "merge_basis": STR, "identity_confidence": NUM})),
     "unresolved_mention_ids": arr(STR),

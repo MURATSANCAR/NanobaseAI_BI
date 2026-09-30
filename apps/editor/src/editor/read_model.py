@@ -97,12 +97,28 @@ def actors(gid: str) -> list[dict]:
 
 
 
+def description_pages(ch: dict) -> list[int]:
+    """The pages a character's description rests on (knowledge.resolve_character_identity,
+    naming.description_pages), best first. `first_page` is only where the name first appears —
+    in a picture book often a cast page with nothing but names — so it is never the citation
+    for what the description says. Characters read before this field existed have none."""
+    return [int(p) for p in ((ch.get('traits') or {}).get('description_pages') or [])]
+
+
 def characters(snap: dict, ids=None) -> list[dict]:
     claims = {r['id']: r for r in snap['claims']}
-    return [{k: ch[k] for k in ('id', 'canonical_name', 'aliases', 'identity_status', 'identity_confidence', 'first_page')} | {
-        'description': claims[ch['claim_id']]['claim'] if ch.get('claim_id') in claims else None,
-        'description_available': ch.get('claim_id') in claims}
-        for ch in snap['characters'] if ids is None or ch['id'] in ids]
+    out = []
+    for ch in snap['characters']:
+        if ids is not None and ch['id'] not in ids:
+            continue
+        pages = description_pages(ch)
+        out.append({k: ch[k] for k in ('id', 'canonical_name', 'aliases', 'identity_status', 'identity_confidence', 'first_page')} | {
+            'description': claims[ch['claim_id']]['claim'] if ch.get('claim_id') in claims else None,
+            'description_available': ch.get('claim_id') in claims,
+            # cite THIS for the description; first_page = where the name first appears
+            'description_page': pages[0] if pages else None,
+            'description_pages': pages})
+    return out
 
 
 def character_history(gid: str, name: str) -> dict:
