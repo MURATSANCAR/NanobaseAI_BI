@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "queryId": "q_13d95c335a78",
+  "actual": 54754171.34000009,
+  "reference": 54754171.34000006,
+  "columnMapping": {
+    "satis_tutari": "retail_sales"
+  },
+  "actualRows": 1,
+  "referenceRows": 1,
+  "truncated": false,
+  "actualSql": "SELECT SUM(INVOICE.[NETTOTAL]) AS satis_tutari\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (7)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'",
+  "referenceSql": "SELECT SUM(NETTOTAL) AS retail_sales FROM dbo.LG_411_01_INVOICE WHERE TRCODE = 7 AND DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED = 0",
+  "replyContainsActual": true,
+  "queryActor": "timasai"
+}

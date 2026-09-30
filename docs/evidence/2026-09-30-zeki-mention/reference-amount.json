@@ -1,0 +1,16 @@
+{
+  "sql": "SELECT SUM(NETTOTAL) AS retail_sales FROM dbo.LG_411_01_INVOICE WHERE TRCODE = 7 AND DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED = 0",
+  "columns": [
+    {
+      "name": "retail_sales",
+      "type": "float"
+    }
+  ],
+  "rows": [
+    {
+      "retail_sales": 54754171.34000006
+    }
+  ],
+  "truncated": false,
+  "source": "connected live Logo"
+}
