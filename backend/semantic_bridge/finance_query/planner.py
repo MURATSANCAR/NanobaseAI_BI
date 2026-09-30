@@ -1096,22 +1096,30 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
             or len({c["intent_id"] for c in checks}) != len(intents)):
         raise ContractError("Kaynak raporu denetimi bütün özgün koşulları kanıtlamadı.", code="PLAN_INVALID")
     check_map = {c["intent_id"]:c for c in checks}
+    protected_roles = {"population", "date", "identity_link", "ranking", "prohibition"}
+    protected_preserved = all(
+        check_map[i]["status"] == "satisfied" and check_map[i].get("population_preserved") is True
+        for i, intent in intents.items() if intent["role"] in protected_roles)
     for check in checks:
         intent = intents[check["intent_id"]]
+        if (intent["role"] in protected_roles and check["status"] == "satisfied"
+                and check.get("population_preserved") is not True):
+            raise ContractError("Karşılandığı belirtilen zorunlu nüfus/tarih/kimlik/sıralama veya yasak koşulu korunmadı.", code="PLAN_INVALID")
         if check["status"] == "unverified_with_permission":
             permission = permissions.get(check.get("permission_id"))
             if (not permission or permission["applies_to"] != check["intent_id"] or intent["role"] != "analysis"
                     or check.get("population_preserved") is not True
                     or any(check_map[i]["status"] != "satisfied" for i in permission["substitute_intents"])
-                    or any(check_map[i]["status"] != "satisfied" for i,x in intents.items()
-                           if x["role"] in {"population","date","identity_link","ranking","prohibition"})):
+                    or not protected_preserved):
                 raise ContractError("Kısmi cevap izni nüfus ve alternatif çıktı koşullarını korumuyor.", code="PLAN_INVALID")
         elif check.get("permission_id") is not None:
             raise ContractError("Kısmi cevap izni yanlış denetim durumuna bağlandı.", code="PLAN_INVALID")
         if check["status"] == "not_applicable" and (intent["speech_act"] != "fallback"
                 or check_map[intent["primary_id"]]["status"] != "satisfied"):
             raise ContractError("Uygulanmayan koşul izinli alternatif değil.", code="PLAN_INVALID")
-        if check["status"] == "fallback_used" and (intents[check["intent_id"]]["speech_act"] != "conditional_primary"
+        if check["status"] == "fallback_used" and (intent["speech_act"] != "conditional_primary"
+                or intent["role"] != "analysis" or check.get("population_preserved") is not True
+                or not protected_preserved
                 or not any(i["primary_id"] == check["intent_id"] and check_map[i["id"]]["status"] == "satisfied" for i in intents.values())):
             raise ContractError("Koşullu hesap yerine izinli alternatif kanıtlanmadı.", code="PLAN_INVALID")
     missing = review.get("missing") or []
