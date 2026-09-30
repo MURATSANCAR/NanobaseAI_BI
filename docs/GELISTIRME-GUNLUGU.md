@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Açık yıl başlangıcı ve gün bitişi aralığı
+
+- Logo LR004'ün doğruJan1–Oct1 planı, deterministic parser'ın2026bütünyıl+30Eylültek gün üretmesi yüzünden reddedildi. `YYYY [yılının] başından DD Ay YYYY sonuna kadar/dahil` açık uçları tek dahil-bitiş aralığında birleştirilir.
+- Yalın yılbaşlangıcı sessiz tek güne çevrilmez; stok kodu bu vakada tarih değildir. Bağımsız 'bugün' dönemini silmez, as_of ile ölçü döneminin mevcut ayrımı korunur. Başka gerçek karşılaştırma dönemleri kaybolmaz.
+- Yalnız language.py değişti; aktif reasoning pilotuna henüz kurulmadı. Yerel ürün testi yok; LR004 gerçekAPItekrarı bekler.
+
 ## 2026-09-30 — Kabul koşularında açık referans günü
 
 - composable_live/logo_reports_live `--reference-date` varsayılan2026-09-30; aktif İstanbul günü eşleşmeli. CP017–20 bağımsız takvim hesapları seçili güne bağlandı, sabitEylül soruları aynıdır. Logo yalnız LR004'bugün açık' itibarıyla/gecikme günü güncellenir; tarihsel stok/yaşlandırma günleri ve sipariş oluşum aralığı korunur.

@@ -126,6 +126,18 @@ def dates(question, today):
                 start = date(today.year, MONTHS[m[1]], 1); add(*m.span(), start, next_month(start))
         for m in re.finditer(r"\b(?:yilbasindan|sene basindan|bu yilin basindan)\s+(?:bugune|simdiye)(?:\s+kadar)?", q):
             if free(m): add(*m.span(), date(today.year, 1, 1), today+timedelta(days=1))
+        # A year-start endpoint is January 1, not the whole year. Retain its
+        # textual marker so a following explicit day can close the interval;
+        # a separate "today open" condition remains a separate point in time.
+        for m in re.finditer(r"\b(20\d{2})(?:'?(?:nin|in))?(?:\s+yil(?:inin|in|i)?)?\s+basindan\b", q):
+            following_day = any(
+                b >= m.end() and not q[m.end():a].strip()
+                and hi-lo == timedelta(days=1)
+                and re.match(r"\s*(?:gunu(?:nun)?\s+)?(?:sonuna\s+kadar|dahil)\b", q[b:])
+                for a,b,lo,hi in hits if a >= m.end())
+            if free(m) and following_day:
+                start = date(int(m[1]), 1, 1)
+                add(*m.span(), start, start+timedelta(days=1))
         relatives = [
             (r"\bbu ceyre[kg]\w*", quarter, shift_month(quarter, 3)),
             (r"\b(?:gecen|onceki) ceyre[kg]\w*", shift_month(quarter, -3), quarter),
@@ -173,6 +185,14 @@ def dates(question, today):
         left = hits[index]
         if index + 1 < len(hits):
             right = hits[index + 1]
+            year_start = re.search(r"\bbasindan$", q[left[0]:left[1]])
+            through_day = re.match(r"\s*(?:gunu(?:nun)?\s+)?(?:sonuna\s+kadar|dahil)\b", q[right[1]:])
+            if year_start and through_day and not q[left[1]:right[0]].strip() and left[3]-left[2] == timedelta(days=1) and right[3]-right[2] == timedelta(days=1):
+                if left[2] >= right[3]:
+                    raise ContractError("Açık tarih aralığının başlangıcı bitişinden önce olmalı.", code="NEEDS_CLARIFICATION")
+                bounded_hits.append((left[0], right[1]+through_day.end(), left[2], right[3]))
+                index += 2
+                continue
             left_marker = re.fullmatch(r"\s*(dahil|haric)\s*(?:(?:ile|ve)|[-–,;])?\s*", q[left[1]:right[0]])
             right_marker = re.match(r"\s*(dahil|haric)\b", q[right[1]:])
             if left_marker and right_marker and left[3]-left[2] == timedelta(days=1) and right[3]-right[2] == timedelta(days=1):
