@@ -1,37 +1,25 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, X } from 'lucide-react';
-import { ENGINE_ENABLED, EngineAuthError, bookReadApi, type BookRead } from '../engine';
+import { ENGINE_ENABLED, bookReadApi, type BookRead } from '../engine';
 import { Note, Pill, field, label, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import { FileDrop } from '../components/FileDrop';
 import { fmtSize } from '../components/fileDropRules';
 import { ShowMoreButton, useShowMore } from '../components/ShowMore';
+import { UploadBar as Bar } from './BookUploadDock';
+import { useBookUploads, type BookUpload } from './bookReadUploads';
 import { Panel } from './kit';
 
-/** Kitap okut (Kitaba sor'un üstü): editör bir ya da birçok PDF bırakır. Dosyalar tarayıcıdan sırayla yüklenir
- *  (kopan bağlantı kendiliğinden yeniden denenir), köprünün giden kutusuna alınır, oradan okuma kuyruğuna geçer;
- *  ZEKİ AI aynı anda tek kitap okur, düşen okumayı kendisi yeniden dener. Her kitabın durumu satırında yazar:
- *  Yükleniyor → Gönderiliyor → Sırada (önünde n kitap) → Okunuyor (aşama) → Kitaba sor'da. Kalıcı olan tek
- *  sorun dosyanın kendisidir (PDF değil, bozuk, parolalı); o da satırda sade cümleyle yazar. */
+/** Kitap okut (Kitaba sor'un üstü): editör bir ya da birçok PDF bırakır ve istediği sayfaya geçebilir. Yükleme
+ *  sayfadan bağımsız sürer (bookReadUploads; her sayfada köşedeki gösterge), dosya cihazda da tutulur, sekme
+ *  kapanırsa portal açılınca kaldığı yerden devam eder. Sunucuya ulaşan dosya köprünün giden kutusundan okuma
+ *  kuyruğuna geçer; ZEKİ AI aynı anda tek kitap okur, düşen okumayı kendisi yeniden dener. Her kitabın durumu
+ *  satırında yazar: Yükleniyor → Gönderiliyor → Sırada (önünde n kitap) → Okunuyor (aşama) → Kitaba sor'da. Kalıcı
+ *  olan tek sorun dosyanın kendisidir (PDF değil, bozuk, parolalı); o da satırda sade cümleyle yazar. */
 
 type Tone = 'ok' | 'warn' | 'err' | 'muted' | 'violet';
 
-/** Tarayıcıdaki yükleme sırası: sayfa açıkken dosya elde tutulur, gönderilene kadar yeniden denenir. */
-type Local = {
-  key: string;
-  file: File;
-  title: string;
-  state: 'bekliyor' | 'yukleniyor' | 'baglanti' | 'reddedildi';
-  share: number;
-  tries: number;
-  nextAt: number;
-  message?: string;
-};
-
-const RETRY = [5_000, 15_000, 30_000, 60_000];
-/** Yeniden denenebilir: bağlantı yok (0), zaman aşımı, çok istek, sunucu/kapı hatası. 4xx'in geri kalanı kalıcıdır. */
-const transient = (status: number) => status === 0 || status === 408 || status === 429 || status >= 500;
 const moving = (b: BookRead) => b.state === 'gonderiliyor' || b.state === 'sirada' || b.state === 'okunuyor' || b.state === 'yeniden';
 /** Okuması bitti ama soru listesine henüz girmedi: köprü listeyi arkada tazeler, ekran kısa aralıkla yeniden sorar. */
 const joining = (b: BookRead) => b.state === 'hazir' && !b.listed;
@@ -55,18 +43,6 @@ function serverState(b: BookRead): { tone: Tone; text: string; note?: string } {
   }
 }
 
-function Bar({ share, label: aria }: { share: number; label: string }) {
-  return (
-    <div className="h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label={aria} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(share * 100)}>
-      {/* Genişlik değil ölçek: yalnız transform canlanır. */}
-      <div
-        className="h-full w-full origin-left rounded-full bg-gradient-to-r from-canvas-coral to-canvas-violet transition-transform duration-300 ease-out motion-reduce:transition-none"
-        style={{ transform: `scaleX(${Math.max(0.04, Math.min(1, share))})` }}
-      />
-    </div>
-  );
-}
-
 function Shell({ title, pill, children, onClose }: { title: string; pill: { tone: Tone; text: string }; children?: ReactNode; onClose?: () => void }) {
   return (
     <li className="rounded-xl border border-slate-100 bg-white/85 px-2.5 py-2 text-[12px]">
@@ -85,26 +61,26 @@ function Shell({ title, pill, children, onClose }: { title: string; pill: { tone
   );
 }
 
-function LocalRow({ l, onClose }: { l: Local; onClose: () => void }) {
+function LocalRow({ l, onClose }: { l: BookUpload; onClose: () => void }) {
   const pill: { tone: Tone; text: string } =
-    l.state === 'yukleniyor'
+    l.status === 'uploading'
       ? { tone: 'violet', text: `Yükleniyor %${Math.round(l.share * 100)}` }
-      : l.state === 'baglanti'
+      : l.status === 'retrying'
         ? { tone: 'muted', text: 'Bağlantı bekleniyor' }
-        : l.state === 'reddedildi'
+        : l.status === 'failed'
           ? { tone: 'err', text: 'Yüklenemedi' }
           : { tone: 'muted', text: 'Yükleme sırasında' };
   return (
-    <Shell title={l.title || l.file.name} pill={pill} onClose={l.state === 'reddedildi' ? onClose : undefined}>
-      {l.state === 'yukleniyor' && (
+    <Shell title={l.title || l.name} pill={pill} onClose={l.status === 'failed' ? onClose : undefined}>
+      {l.status === 'uploading' && (
         <div className="mt-1.5">
-          <Bar share={l.share} label={`${l.file.name} yükleniyor`} />
+          <Bar share={l.share} label={`${l.name} yükleniyor`} />
         </div>
       )}
       <span className="mt-0.5 block text-[11px] text-canvas-muted">
-        {fmtSize(l.file.size)}
-        {l.state === 'baglanti' ? ' · Bağlantı kopunca yükleme kendiliğinden yeniden denenir; bu sekmeyi kapatmayın.' : ''}
-        {l.state === 'reddedildi' && l.message ? ` · ${l.message}` : ''}
+        {fmtSize(l.size)}
+        {l.error ? ` · ${l.error}` : ''}
+        {!l.stored && l.status !== 'failed' ? ' · Dosya cihaza kaydedilemedi; yükleme bitene kadar bu sekmeyi kapatmayın.' : ''}
       </span>
     </Shell>
   );
@@ -136,8 +112,7 @@ function ServerRow({ b, onClose }: { b: BookRead; onClose?: () => void }) {
 export default function BookReadPanel() {
   const qc = useQueryClient();
   const [title, setTitle] = useState('');
-  const [local, setLocal] = useState<Local[]>([]);
-  const [tick, setTick] = useState(0);
+  const { uploads, items: local } = useBookUploads();
   const list = useQuery({
     queryKey: ['editorial', 'bookReads'],
     queryFn: bookReadApi.list,
@@ -151,49 +126,8 @@ export default function BookReadPanel() {
   });
   const items = list.data?.items ?? [];
 
-  // Tarayıcı sırası: aynı anda tek dosya yüklenir (sunucuyu ve bağlantıyı boğmaz); kopan yükleme beklenip yeniden denenir.
-  const running = useRef(false);
-  useEffect(() => {
-    if (running.current) return;
-    const now = Date.now();
-    const next = local.find((l) => (l.state === 'bekliyor' || l.state === 'baglanti') && l.nextAt <= now);
-    if (!next) {
-      const wait = local.filter((l) => l.state === 'baglanti').map((l) => l.nextAt - now);
-      if (!wait.length) return;
-      const t = window.setTimeout(() => setTick((n) => n + 1), Math.max(500, Math.min(...wait)));
-      return () => window.clearTimeout(t);
-    }
-    running.current = true;
-    const set = (patch: Partial<Local>) => setLocal((xs) => xs.map((l) => (l.key === next.key ? { ...l, ...patch } : l)));
-    set({ state: 'yukleniyor', share: 0 });
-    bookReadApi
-      .upload(next.file, next.title, (share) => set({ share }))
-      .then(async () => {
-        setLocal((xs) => xs.filter((l) => l.key !== next.key));
-        await qc.invalidateQueries({ queryKey: ['editorial', 'bookReads'] });
-      })
-      .catch((e: unknown) => {
-        const status = e instanceof EngineAuthError ? 401 : ((e as { status?: number }).status ?? 0);
-        const message = e instanceof EngineAuthError ? 'Oturum kapanmış; sayfayı yenileyip yeniden girin.' : e instanceof Error ? e.message : undefined;
-        if (transient(status)) set({ state: 'baglanti', tries: next.tries + 1, nextAt: Date.now() + RETRY[Math.min(next.tries, RETRY.length - 1)] });
-        else set({ state: 'reddedildi', message });
-      })
-      .finally(() => {
-        running.current = false;
-        setTick((n) => n + 1);
-      });
-  }, [local, tick, qc]);
-
-  // Yüklenmemiş dosya varken sekme kapatılırsa tarayıcı uyarır (dosya henüz sunucuda değil).
-  const unsent = local.some((l) => l.state !== 'reddedildi');
-  useEffect(() => {
-    if (!unsent) return;
-    const warn = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [unsent]);
+  // Bir dosya sunucuya ulaşınca liste hemen tazelenir (satır «Gönderiliyor» olarak görünür).
+  useEffect(() => uploads.onSent(() => void qc.invalidateQueries({ queryKey: ['editorial', 'bookReads'] })), [uploads, qc]);
 
   // Bir kitap Kitaba sor listesine girince sohbetin kitap listesi de tazelenir.
   const listed = items.filter((b) => b.listed).map((b) => b.id).join(',');
@@ -204,11 +138,18 @@ export default function BookReadPanel() {
     void qc.invalidateQueries({ queryKey: ['editorial', 'readableBooks'] });
   }, [listed, qc]);
 
-  const pick = (file: File) =>
-    setLocal((xs) => {
-      const one = xs.length === 0 && title.trim();
-      return [...xs, { key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file, title: one ? title.trim() : '', state: 'bekliyor', share: 0, tries: 0, nextAt: 0 }];
+  // Seçilen dosyalar (toplu seçimde hepsi) tek seferde sıraya girer; tek dosyada yazılan ad kullanılır.
+  const pending = useRef<File[]>([]);
+  const pick = (file: File) => {
+    pending.current.push(file);
+    if (pending.current.length > 1) return;
+    queueMicrotask(() => {
+      const files = pending.current;
+      pending.current = [];
+      void uploads.add(files, title);
+      setTitle('');
     });
+  };
 
   const dismiss = async (id: string) => {
     try {
@@ -220,7 +161,7 @@ export default function BookReadPanel() {
 
   const more = useShowMore(items, 5);
   const counts = {
-    sirada: items.filter((b) => b.state === 'sirada' || b.state === 'gonderiliyor').length + local.filter((l) => l.state !== 'reddedildi').length,
+    sirada: items.filter((b) => b.state === 'sirada' || b.state === 'gonderiliyor').length + local.filter((l) => l.status !== 'failed').length,
     okunuyor: items.filter((b) => b.state === 'okunuyor' || b.state === 'yeniden').length,
   };
   return (
@@ -232,7 +173,7 @@ export default function BookReadPanel() {
           multiple
           feature="kitap.okut"
           title="Kitap okut"
-          hint="Bir ya da birçok kitabın PDF'ini bırakın. ZEKİ AI kitapları sırayla okur: sayfalar, resimler, karakterler ve olaylar. Biten kitap Kitaba sor'a girer. Okuma uzun sürebilir; yükleme bitince bu sayfadan ayrılabilirsiniz."
+          hint="Bir ya da birçok kitabın PDF'ini bırakın. ZEKİ AI kitapları sırayla okur: sayfalar, resimler, karakterler ve olaylar. Biten kitap Kitaba sor'a girer. Yükleme ve okuma arka planda sürer; hemen başka sayfaya geçebilirsiniz, ilerleme köşede görünür."
           onPick={pick}
         />
         <details className="rounded-2xl border border-slate-100 bg-white/70 px-3 py-2">
@@ -257,7 +198,7 @@ export default function BookReadPanel() {
             </h3>
             <ul className="mt-1.5 space-y-1" aria-label="Okutulan kitaplar">
               {local.map((l) => (
-                <LocalRow key={l.key} l={l} onClose={() => setLocal((xs) => xs.filter((x) => x.key !== l.key))} />
+                <LocalRow key={l.key} l={l} onClose={() => uploads.remove(l.key)} />
               ))}
               {more.shown.map((b) => (
                 <ServerRow key={b.id} b={b} onClose={b.state === 'okunamadi' && b.id.startsWith('gonder-') ? () => void dismiss(b.id) : undefined} />
