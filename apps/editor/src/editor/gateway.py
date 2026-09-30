@@ -33,6 +33,8 @@ from docker.types import DeviceRequest, Ulimit
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from .chat_params import without_thinking
+
 log = logging.getLogger("editor.gateway")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -68,6 +70,10 @@ OVERFLOW_ALIAS = os.environ.get("EDITOR_OVERFLOW_ALIAS", "book-director")
 OVERFLOW_URL = os.environ.get("EDITOR_OVERFLOW_URL", "").rstrip("/")
 OVERFLOW_MODEL = os.environ.get("EDITOR_OVERFLOW_MODEL", "")
 OVERFLOW_CLIENTS = {c.strip() for c in os.environ.get("EDITOR_OVERFLOW_CLIENTS", "").split(",") if c.strip()}
+
+# Etkileşimli sohbet (EDITOR_OVERFLOW_CLIENTS) düşünme kapalı çalışır (editor.chat_params). Analiz işçisinin
+# istekleri değişmez; istemci kendisi açıkça isterse ona uyulur. EDITOR_CHAT_THINKING=1 eski davranışa döner.
+CHAT_THINKING = os.environ.get("EDITOR_CHAT_THINKING", "0").strip() == "1"
 
 
 @dataclass
@@ -468,6 +474,9 @@ async def proxy(path: str, req: Request):
             a.last_used = time.time()
 
     try:
+        if (path == "chat/completions" and not CHAT_THINKING and _client_name(req)
+                and without_thinking(payload)):
+            body = json.dumps(payload).encode()
         if await _should_overflow(a, req):
             # Aynı modelin GPU 0'daki eşi; yalnız sunulan ad farklı, gövdedeki model adı ona çevrilir.
             log.info("overflow %s → %s (gpu %s busy, client %s)", a.name, OVERFLOW_URL, a.gpu, _client_name(req))

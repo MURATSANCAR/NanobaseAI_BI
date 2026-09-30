@@ -105,7 +105,7 @@ EOF
   grep -q '^EDITOR_OVERFLOW_URL=' "$ROOT/secrets/editor.env" || cat >> "$ROOT/secrets/editor.env" <<'EOV'
 EDITOR_OVERFLOW_URL=http://172.17.0.1:8001
 EDITOR_OVERFLOW_MODEL=nanobaseAI
-EDITOR_OVERFLOW_CLIENTS=editor-hermes
+EDITOR_OVERFLOW_CLIENTS=editor-hermes,editor-cards
 EOV
   render "$APP/deploy/temporal/server.yaml.tpl" "$ROOT/temporal/server.yaml"
   chmod 644 "$ROOT/temporal/server.yaml"

@@ -34,6 +34,18 @@ app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None,dependencies=[Depends(
 def book_cards():
     return {'items':cards(),'read_only':True}
 
+@app.post('/v1/books/ask')
+async def book_ask(body: dict = Body(...)):
+    """Kitaba sor hızlı yolu (editor.quick_answer): kayıttan tek model çağrısı. handled=false ise köprü soruyu
+    sohbet ajanına verir. Salt okunur; defterde yazma yok."""
+    from . import quick_answer
+    history = body.get('history') if isinstance(body.get('history'), list) else None
+    try:
+        return await quick_answer.answer(str(body.get('question') or ''), (str(body.get('bookTitle') or '') or None),
+                                         history)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
 @app.get('/v1/books/{book_id}/cover')
 def book_cover(book_id: UUID):
     try:

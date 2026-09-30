@@ -15,7 +15,9 @@ auxiliary:
   title_generation: {provider: custom, model: book-director, base_url: http://editor-gateway:8000/v1, api_key: "${EDITOR_GATEWAY_KEY}"}
   approval: {provider: custom, model: book-director, base_url: http://editor-gateway:8000/v1, api_key: "${EDITOR_GATEWAY_KEY}"}
   mcp: {provider: custom, model: book-director, base_url: http://editor-gateway:8000/v1, api_key: "${EDITOR_GATEWAY_KEY}"}
-  background_review: {provider: custom, model: book-director, base_url: http://editor-gateway:8000/v1, api_key: "${EDITOR_GATEWAY_KEY}"}
+  # Off: after every answer Hermes ran a "self-improvement review" on the same model/card, patching
+  # book skills by itself and holding the card while the next question waited (measured 2026-09-30).
+  background_review: {enabled: false, provider: custom, model: book-director, base_url: http://editor-gateway:8000/v1, api_key: "${EDITOR_GATEWAY_KEY}"}
   memory_query_rewrite: {provider: custom, model: book-director, base_url: http://editor-gateway:8000/v1, api_key: "${EDITOR_GATEWAY_KEY}"}
 
 # Conversational clients receive only bounded current-revision read tools.
@@ -27,6 +29,12 @@ mcp_servers:
     timeout: 300
     connect_timeout: 30
     trust: full
+
+# The chat server has seven small read tools; hiding them behind tool_search/tool_call bridges
+# made every question spend extra turns on discovery and malformed bridge calls (2026-09-30:
+# 5-16 model calls per question). They are sent to the model directly.
+tools:
+  tool_search: {enabled: "off"}
 
 # API has no producer, delegation, cron, memory or filesystem tools.
 platform_toolsets:

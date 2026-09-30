@@ -455,7 +455,9 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                     elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
             return
         from . import editorial_cards
-        selection = editorial_cards.card_answer(q, book_title, chat) if not history else None
+        # Kart seçimi kütüphane düzeyinde kitap arayan soru içindir; bir kitap seçiliyken soru o kitap
+        # hakkındadır (09-28: «bu kitabı önerir misin» sorusuna «kartı aşağıda» dönüyordu).
+        selection = editorial_cards.card_answer(q, book_title, chat) if not history and not book_title else None
         if selection is not None:
             done = _now()
             with engine.begin() as conn:
@@ -463,6 +465,30 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                     status="bitti", answer=selection['answer'], card_selection=selection, not_found=False,
                     elapsed_ms=int((done-started).total_seconds()*1000), finished_at=done))
             return
+        # Hızlı yol: kitabın kayıtlarından tek model çağrısı (saniyeler). Kayıt yetmezse ya da yol kapalıysa
+        # soru sohbet ajanına (dakikalar) düşer; hızlı yolun hatası soruyu düşürmez.
+        with engine.begin() as conn:
+            conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(status="calisiyor"))
+        started = _now()
+        quick = None
+        try:
+            quick = editorial_cards.quick_answer(q, book_title, history)
+        except Exception as e:  # noqa: BLE001
+            log.info("editorial quick answer unavailable, falling back: %s", str(e)[:200])
+        if quick and quick.get("handled") and quick.get("answer"):
+            answer = plain(scrub(quick["answer"]) or quick["answer"]) or quick["answer"]
+            done = _now()
+            not_found = answer.lstrip().startswith(NOT_FOUND)
+            citations = _citations_checked(q, book_title, answer)
+            with engine.begin() as conn:
+                conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(
+                    status="bitti", answer=answer, error=None, not_found=not_found, citations=citations,
+                    graph=(editorial_cards.character_graph(q, book_title, answer, chat)
+                           if not not_found else None),
+                    elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
+            return
+        if quick is not None:
+            log.info("editorial quick answer declined (%s); asking the book agent", quick.get("reason"))
         # Motor tek modelle çalışır; sıraya girilir. Bekleyen soru «bekliyor» kalır, koşan «çalışıyor».
         with _gate:
             with engine.begin() as conn:
