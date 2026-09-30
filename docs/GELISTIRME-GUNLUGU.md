@@ -1,6 +1,13 @@
 # Geliştirme Günlüğü
 
 **2026-09-30 — AD sohbet rehberi / CRM ekip eşitlemesi (hazırlık):** kullanıcı tüm etkin AD hesaplarının görünmesini ve CRM ekiplerine göre varsayılan grupları istedi. `deploy/zeki/sync-directory.py` AD/CRM salt okuma → yerel sohbet API; özel CRM grupları, kimlik eşlemesi, tekrar çalıştırmada çoğaltmama, 15 dk ürün zamanlayıcısı. Kaynaklar tam okunmadan yazmaz. Gerçek kurulum/kabul henüz **DOĞRULANAMADI**.
+## 2026-09-30 — Kampüs: Önemli günler CRM'den, örnek doğum günleri, matbaadan çıkanlara kapak
+
+- **Neden:** kullanıcı «Önemli Günler & Ajanda» kartının boş göründüğünü, CRM ya da başka yerden doldurulmasını; ardından «şimdilik örnek doğum günleri» ve «matbaadan çıkanlar gerçek veriden, kapak fotoğraflarıyla» istedi.
+- **Ölçüm (test sunucusu):** `semantic_seo_seasons_days` 102 gün (93 CRM `new_ozelgunlerBase` + kural günleri), 816 kitap bağı, 09-29 gece okuması; `semantic_hr_holidays` 0, fuar/görev 0 — kart bu yüzden boştu. CRM `new_kitapBase`: 9.380 etkin kitabın 5.383'ünde `new_resimurl` var ama göreli yol (`guid\dosya.jpg`); T-soft ürün kaydı 6.816, `ProductCode` = stok kodu, görsel adresleri https.
+- **Ajanda:** `agenda_days.py` → özel gün (tarih kuralı/CRM haftası; tarihi bilinmeyen gün girmez), resmî tatil (aynı adlı özel güne birleşir, kesin gün öne geçer), doğum günü (İK). Kart üç bölüm: Ajandam / Önemli günler (5 + «+N gün daha», Sezon takvimi bağlantısı yetkiye göre) / Doğum günleri (3). Gerçek doğum günü yokken «örnek» etiketli 3 satır.
+- **Matbaadan çıkanlar:** `new_prints` satırına `stockCode` ve `cover` (T-soft, `book_covers.by_stock_code`); kart 3 sütun kapak rafı, görsel yoksa/yüklenemezse baş harfli düz kutu.
+- **Test (test sunucusunda):** pytest 73/73 (yeni `test_agenda_days.py`, kapak testi), `tsc -b` hatasız, vitest kampus 12/12.
 
 **2026-09-30 — Sohbet kod kalıntısı temizliği:** kullanılmayan Document360 action silindi; onboarding-ui bağımlılığı yerel yönetici/kuruluş formlarıyla değiştirildi; marketplace katalog okuyucusu lisans/fiyat/kota şeması yerine yerel boş liste döndürür; NPS varsayılan kapalı. Test sunucusunda `zeki-ai-chat:8.5.3-c1f548205` kuruldu: derleme, 118.310 imaj dosyasında paket/action yokluğu, gerçek API–Mongo mesaj eşitliği, boş yerel katalog, dört sohbet ekranı genişliği ve ağ kontrolleri geçti. 1 portal oturumu/4 sohbet jetonu temizlendi. Yeni kurulum formları ve yeni yönetici oluşturma **DOĞRULANAMADI**; mevcut kurulum değiştirilmedi. Rapor: `apps/zeki-chat/docs/zeki-code-audit-2026-09-30.md`.
 
