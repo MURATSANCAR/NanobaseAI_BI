@@ -13,6 +13,12 @@ tutan (en az iki bölüm çıkaran) kullanılır:
 Hiçbiri tutmazsa metin, sayfa aralığıyla anılan **parça**lara ayrılır ve ekranda «bölüm» denmez (`unit="parca"`).
 PDF'te sayfa üst/alt bilgisi (sayfa kenarında tekrarlanan satır) ve tek başına sayfa numarası gövdeden atılır; görsel
 satır sonları paragraf içinde birleştirilir, cümle ölçüleri satır sonunda kesilmez. Kitaba özel kural yoktur.
+
+PDF okuma kusurları (2026-09-30, iki InDesign çıktısında ölçüldü): fontun yanlış harf eşlemesi `editorial_pdf_text`
+ile onarılır; sayfa kutusunun dışındaki metin (çift sayfa düzeninde komşu sayfaya taşan yazı, sayfa dışında unutulmuş
+künye kopyası) okunmaz; kenara asılan satır sonu tiresine okuyucunun eklediği boşluk atılır («birlik -» → «birlik-»);
+büyük ilk harf (drop cap) kelimesine yapışır («Y» + «aşlı» → «Yaşlı»); cümlenin ortasındaki büyük puntolu süs yazısı
+(«İşte zavallı tavuk, KOCA GUYUK'UN KORKUNÇ ADINI ilk defa o gün duydu.») bölüm başlığı sayılmaz.
 """
 from __future__ import annotations
 
@@ -26,6 +32,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 from xml.etree import ElementTree
 
+from semantic_bridge import editorial_pdf_text as pdf_text
+
 log = logging.getLogger("semantic.editorial_desk_structure")
 
 #: Yapı bulunamayınca bir parçanın hedef büyüklüğü (kelime). Sınır değil: parça paragraf sınırında kesilir.
@@ -37,13 +45,18 @@ LEAD = "Bölümlerden önce"
 class Structure:
     chapters: list[tuple[str, str]]
     source: str
+    #: Fontun verisinden onarılamayan, metne özel alan (PUA) karakteri olarak giren harf sayısı.
+    unreadable_chars: int = 0
 
     @property
     def unit(self) -> str:
         return "parca" if self.source == "pieces" else "bolum"
 
     def report(self) -> dict[str, Any]:
-        return {"structure": self.source, "unit": self.unit}
+        out: dict[str, Any] = {"structure": self.source, "unit": self.unit}
+        if self.unreadable_chars:
+            out["unreadable_chars"] = self.unreadable_chars
+        return out
 
 
 @dataclass
@@ -55,6 +68,7 @@ class Line:
     y: Optional[float] = None
     kind: str = "body"        # body | head | cont
     extra: dict[str, Any] = field(default_factory=dict)
+    x: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------------------------- ortak
@@ -158,34 +172,87 @@ def _mult(m: list[float], n: list[float]) -> list[float]:
             m[4] * n[0] + m[5] * n[2] + n[4], m[4] * n[1] + m[5] * n[3] + n[5]]
 
 
+_IDENTITY = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+#: Sayfa kutusunun kenarından bu kadar (pt) dışarıda başlayan metin sayfada görünmez.
+_BOX_SLACK = 2.0
+#: Kenara asılan satır sonu tiresi ayrı metin nesnesidir; okuyucu önüne kendi boşluğunu ekler (« -»). Önceki parça
+#: harfle/rakamla bitiyorsa boşluk PDF'te yoktur (yazarın boşluğu önceki parçanın sonunda olurdu).
+_HANGING_HYPHEN = re.compile(r" [-\u00ad\u2010]")
+
+
+def _page_box(page: Any) -> Optional[tuple[float, float, float, float]]:
+    try:
+        b = page.cropbox
+        x0, y0, x1, y1 = (float(v) for v in (b[0], b[1], b[2], b[3]))
+        return min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)
+    except Exception:  # noqa: BLE001 — kutu okunamazsa konum süzgeci uygulanmaz
+        return None
+
+
+def reading_order(lines: list[Line], width: float) -> list[Line]:
+    """Bir sayfanın satırları yukarıdan aşağıya. PDF metni çizim sırasıyla verir; InDesign bölüm başlığını ya da büyük
+    ilk harfi sayfanın metninden sonra çizebilir (başlık bir önceki bölüme, ilk satırlar başlığın önüne düşüyordu).
+    Konumu bilinmeyen satır varsa ya da sayfa çok sütunluysa (aynı yükseklikte, sayfa genişliğinin dörtte birinden
+    uzak iki uzun satır) çizim sırası korunur. Aynı yükseklikteki satırlar çizim sırasında kalır."""
+    if len(lines) < 2 or any(ln.y is None for ln in lines):
+        return lines
+    for i, a in enumerate(lines):
+        for b in lines[i + 1:]:
+            if (len(a.text) > 20 and len(b.text) > 20 and a.x is not None and b.x is not None
+                    and abs(a.y - b.y) < 0.5 * max(a.size, b.size, 1.0) and abs(a.x - b.x) > 0.25 * width):
+                return lines
+    return sorted(lines, key=lambda ln: -ln.y)
+
+
 def pdf_lines(reader: Any) -> list[Line]:
-    """Sayfa sayfa satırlar ve her satırın puntosu, kalınlığı, dikey konumu (metin çıkarıcının ziyaretçisiyle)."""
+    """Sayfa sayfa satırlar ve her satırın puntosu, kalınlığı, dikey konumu (metin çıkarıcının ziyaretçisiyle).
+    Başlangıcı sayfa kutusunun dışında kalan metin ve aynı konuma ikinci kez basılan aynı metin (dolgu + kontur)
+    atlanır; konumu olmayan parça (okuyucunun kendi eklediği boşluk ve satır sonu) süzülmez."""
     out: list[Line] = []
     for pno, page in enumerate(reader.pages):
-        cur: dict[str, Any] = {"parts": [], "sizes": Counter(), "bold": 0, "chars": 0, "y": None}
+        cur: dict[str, Any] = {"parts": [], "sizes": Counter(), "bold": 0, "chars": 0, "y": None, "x": None}
+        box = _page_box(page)
+        printed: set[tuple[str, float, float]] = set()
+        first = len(out)
 
         def flush(pno: int = pno, cur: dict[str, Any] = cur) -> None:
             text = re.sub(r"\s+", " ", "".join(cur["parts"])).strip()
             if text:
                 size = cur["sizes"].most_common(1)[0][0] if cur["sizes"] else 0.0
-                out.append(Line(pno, text, size, cur["bold"] * 2 > cur["chars"], cur["y"]))
-            cur.update(parts=[], sizes=Counter(), bold=0, chars=0, y=None)
+                out.append(Line(pno, text, size, cur["bold"] * 2 > cur["chars"], cur["y"], x=cur["x"]))
+            cur.update(parts=[], sizes=Counter(), bold=0, chars=0, y=None, x=None)
 
         def visit(text: Any, cm: Any, tm: Any, font: Any, font_size: Any, cur: dict[str, Any] = cur,
                   flush: Callable[[], None] = flush) -> None:
             if not text:
                 return
+            text = str(text)
             try:
                 m = _mult([float(v) for v in tm], [float(v) for v in cm])
                 size = round(abs(float(font_size or 0)) * math.hypot(m[2], m[3]) * 2) / 2
                 y: Optional[float] = m[5]
+                placed = any(abs(a - b) > 1e-9 for a, b in zip(m, _IDENTITY))
             except Exception:  # noqa: BLE001 — konum okunamazsa punto bilinmiyor sayılır
-                size, y = 0.0, None
+                size, y, placed = 0.0, None, False
+            if placed and box is not None and text.strip() and not (
+                    box[0] - _BOX_SLACK <= m[4] <= box[2] + _BOX_SLACK and box[1] - _BOX_SLACK <= m[5] <= box[3] + _BOX_SLACK):
+                text = "\n" * text.count("\n")       # sayfada görünmeyen metin; satır sonları korunur
+                if not text:
+                    return
+            if placed and text.strip():
+                key = (text.strip(), round(m[4], 1), round(m[5], 1))
+                if key in printed:
+                    text = "\n" * text.count("\n")
+                    if not text:
+                        return
+                printed.add(key)
+            if _HANGING_HYPHEN.fullmatch(text) and re.search(r"[^\W_]$", "".join(cur["parts"])):
+                text = text[1:]
             try:
                 bold = bool(font is not None and _BOLD.search(str(font.get("/BaseFont") or "")))
             except Exception:  # noqa: BLE001
                 bold = False
-            for i, part in enumerate(str(text).split("\n")):
+            for i, part in enumerate(text.split("\n")):
                 if i:
                     flush()
                 cur["parts"].append(part)
@@ -198,12 +265,20 @@ def pdf_lines(reader: Any) -> list[Line]:
                         cur["bold"] += n
                     if cur["y"] is None:
                         cur["y"] = y
+                        cur["x"] = m[4] if y is not None else None
 
         try:
             page.extract_text(visitor_text=visit)
         except Exception as e:  # noqa: BLE001 — okunamayan sayfa atlanır, kitabın geri kalanı ayrılır
             log.warning("pdf sayfa %s okunamadı: %s", pno + 1, e)
         flush()
+        rotated = False
+        try:
+            rotated = int(page.get("/Rotate", 0) or 0) % 360 != 0
+        except Exception:  # noqa: BLE001
+            pass
+        if not rotated and box is not None:
+            out[first:] = reading_order(out[first:], box[2] - box[0])
     return out
 
 
@@ -238,6 +313,44 @@ def drop_furniture(lines: list[Line], thr: float) -> list[Line]:
         if i in edges and ln.size < thr:
             if _PAGE_NO.match(ln.text) or (len(ln.text) <= 90 and seen[key(ln.text)] >= 3):
                 continue
+        out.append(ln)
+    return out
+
+
+_DROP_CAP = re.compile(r"[“\"‘'«(]?[A-ZÇĞİÖŞÜÂÎÛ]")
+
+
+def join_drop_caps(lines: list[Line], body: float) -> list[Line]:
+    """Tek büyük harften (ve isteğe bağlı açılış tırnağından) oluşan satır, aynı sayfada küçük harfle başlayan satırın
+    ilk harfidir: «Y» + «aşlı balıkçı» → «Yaşlı balıkçı». Büyük harf birkaç satır boyunca iner: konum biliniyorsa
+    taban çizgisinden harf boyu kadar yukarıdaki en üst satır, bilinmiyorsa bir sonraki satır. Gövde puntosunda tek
+    harf (sözlükteki «A» ara başlığı, «O» zamiri) ve büyük harfle başlayan satıra yapıştırma yoktur."""
+    def lower_start(ln: Line) -> bool:
+        return ln.text[:1].isalpha() and ln.text[:1].islower()
+
+    drop: set[int] = set()
+    prefix: dict[int, str] = {}
+    for i, ln in enumerate(lines):
+        big = not ln.size or not body or ln.size >= body * 1.3
+        if not big or not _DROP_CAP.fullmatch(ln.text):
+            continue
+        target: Optional[int] = None
+        if ln.y is not None and ln.size:
+            near = [k for k, o in enumerate(lines) if k != i and k not in prefix and o.page == ln.page and o.y is not None
+                    and ln.y - 2 <= o.y <= ln.y + ln.size * 1.2 and lower_start(o)
+                    and (ln.x is None or o.x is None or o.x >= ln.x)]
+            target = max(near, key=lambda k: lines[k].y) if near else None
+        if target is None and i + 1 < len(lines) and lines[i + 1].page == ln.page and lower_start(lines[i + 1]):
+            target = i + 1
+        if target is not None:
+            drop.add(i)
+            prefix[target] = ln.text
+    out: list[Line] = []
+    for k, ln in enumerate(lines):
+        if k in drop:
+            continue
+        if k in prefix:
+            ln = Line(ln.page, prefix[k] + ln.text, ln.size, ln.bold, ln.y, ln.kind, dict(ln.extra), ln.x)
         out.append(ln)
     return out
 
@@ -347,11 +460,40 @@ def _by_outline(reader: Any, lines: list[Line]) -> Optional[list[tuple[str, str]
     return assemble(units, reflow)
 
 
+def _first_letter(text: str) -> str:
+    return next((c for c in text if c.isalpha()), "")
+
+
+def in_sentence(run: list[Line], nxt: Optional[Line]) -> bool:
+    """Büyük puntolu satır dizisi cümlenin parçası mı (resimli kitapta vurgu yazısı): dizinin içinde virgül/noktalı
+    virgülle biten satır var ya da dizi virgülle bitiyor, dizi küçük harfle başlıyor, ya da hemen ardından (en çok bir
+    sayfa sonra) gelen satır küçük harfle başlıyor. Bölüm başlığı cümlenin ortasında durmaz."""
+    if any(re.search(r"[,;]\s*$", ln.text) for ln in run) or _first_letter(run[0].text).islower():
+        return True
+    return nxt is not None and nxt.page - run[-1].page <= 1 and _first_letter(nxt.text).islower()
+
+
 def _by_typography(lines: list[Line], thr: float) -> Optional[list[tuple[str, str]]]:
-    def headish(ln: Line) -> bool:
+    def big_line(ln: Line) -> bool:
         letters = len(_WORD.findall(ln.text))
         return ln.size >= thr and len(ln.text) <= 150 and (letters >= 1 and len(re.sub(r"\W", "", ln.text)) >= 2
                                                              or bool(re.fullmatch(r"\W*(\d{1,3}|[IVXLC]{1,7})\W*", ln.text)))
+    inline: set[int] = set()
+    i = 0
+    while i < len(lines):
+        if not big_line(lines[i]):
+            i += 1
+            continue
+        j = i
+        while j < len(lines) and big_line(lines[j]):
+            j += 1
+        if in_sentence(lines[i:j], lines[j] if j < len(lines) else None):
+            inline.update(range(i, j))
+        i = j
+    ids = {id(lines[k]) for k in inline}
+
+    def headish(ln: Line) -> bool:
+        return big_line(ln) and id(ln) not in ids
     big = [ln for ln in lines if headish(ln)]
     if not big:
         return None
@@ -450,9 +592,20 @@ def _by_pattern(lines: list[Line]) -> Optional[list[tuple[str, str]]]:
 
 
 def pdf_structure(reader: Any) -> Structure:
+    pdf_text.repair_reader(reader)
     raw = pdf_lines(reader)
-    thr = head_threshold(body_size(raw))
-    lines = drop_furniture(raw, thr)
+    body = body_size(raw)
+    thr = head_threshold(body)
+    lines = join_drop_caps(drop_furniture(raw, thr), body)
+    bad = sum(pdf_text.unreadable(ln.text) for ln in lines)
+    if bad:
+        log.warning("pdf metninde onarılamayan %s karakter kaldı", bad)
+    st = _pdf_split(reader, lines, thr)
+    st.unreadable_chars = bad
+    return st
+
+
+def _pdf_split(reader: Any, lines: list[Line], thr: float) -> Structure:
     for source, fn in (("outline", lambda: _by_outline(reader, lines)), ("typography", lambda: _by_typography(lines, thr)),
                        ("toc", lambda: _by_toc(lines)), ("pattern", lambda: _by_pattern(lines))):
         try:
