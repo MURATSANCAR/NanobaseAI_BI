@@ -31573,15 +31573,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-hook-form@npm:~7.54.2":
-  version: 7.54.2
-  resolution: "react-hook-form@npm:7.54.2"
-  peerDependencies:
-    react: ^16.8.0 || ^17 || ^18 || ^19
-  checksum: 10/b156d15b6246c76d0275e5722d9056014693e014d0e3dec06e44bf2672ee549aaba4366de5144d18c4cab29e631f3b2b84269d4fd5727ca17aad9b970fde6960
-  languageName: node
-  linkType: hard
-
 "react-i18next@npm:~13.2.2":
   version: 13.2.2
   resolution: "react-i18next@npm:13.2.2"
