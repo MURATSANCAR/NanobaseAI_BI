@@ -189,7 +189,8 @@ def select(res: dict, *, q: str = "", status: str = "", new: bool = False, min_s
     for r in res["rows"]:
         if not new and r["new"]:
             continue
-        if (r.get("sold2y") or 0) < min_sold:
+        # İadesi satışından çok olan kitabın 2 yıllık adedi eksi olabilir; süzgeç yalnız yazıldığında uygulanır.
+        if min_sold > 0 and (r.get("sold2y") or 0) < min_sold:
             continue
         if needle and needle not in D.fold(r["name"]) and needle not in D.fold(r["code"]) and needle not in D.fold(r.get("author")):
             continue
