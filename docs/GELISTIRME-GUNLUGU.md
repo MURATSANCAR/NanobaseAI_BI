@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Koşullu yasak ve araştırma anlamı
+
+- 618a0958a CRM-R7 hedef5:CR002/CR007/CR022 FULL_ANSWER_PASS,CR013 BOUNDARY_PASS,CR023 FAIL;1geçici oturum silindi. CR007 artık kişi birleştirme yasağını doğru ayırıp bağımsız tam sonuçla eşleşti.
+- CR023 koşullu prohibition geçerli özgün condition_quote üretti; önceki guard yalnız primary/fallback için koşul kabul ederek bunu yanlış reddetti. Request/prohibition için kaynakta bulunan koşula izin verilir; primary/fallback için koşul zorunlu, fallback bağlı kimlik doğrulaması korunur.
+- Niyetin olumlu anlatımı araştırmanın sonucunu olumlu varsaymaz: 'olup olmadığını araştır' var olduğunu tespit et talebi değildir. Koşullu alternatif izni sonraki cümledeyse bütün soru bağlamı korunur. İşe/soruya özel istisna yok; yeni canlı kabul bekler.
+
 ## 2026-09-30 — Niyet alıntısı ve kimliği kapalı seçim
 
 - 404a21578 CRM-R6 CR007 niyetin özgün soruya bağlanması kontrolünde durdu. Hatalı parsed niyet doğrulamadan sonra kaydedildiğinden ayrıntı izi yoktu; hata sonucu başarıya çevrilmedi.

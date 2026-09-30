@@ -855,11 +855,16 @@ def source_report_intents(question, periods, today, llm, trace):
         "Alıntıları şemanın özgün soru parçalarından seç; bütün soru güvenli bir alıntı seçeneğidir. "
         "Aynı alıntı farklı iş koşullarını taşıyorsa ayrı intentler aynı alıntıyı kullanabilir; koşulları birleştirip kaybetme. "
         "question_quote özgün sorudan kesintisiz birebir alıntıdır; affirmative_meaning korunması gereken "
-        "sonucu açık olumlu cümleyle ifade eder. Olumsuz emirle isim-fiili cümledeki görevinden ayır: "
+        "işlemi veya korunacak durumu açık olumlu cümleyle ifade eder; araştırmanın sonucunun olumlu olduğunu iddia etmez. "
+        "Bir durumun var olup olmadığını araştırma isteğini durum vardır/tespit edilir sonucuna dönüştürme; "
+        "kanıt kontrolü ve varsa/yoksa/bilinmiyorsa ayrımı korunmalıdır. Olumsuz emirle isim-fiili cümledeki görevinden ayır: "
         "prohibition, yasak işlemin yapılmasını istemez; korunacak durumu ifade et. "
         "Koşulsuz talepler request; koşula bağlı asıl hesap conditional_primary; kullanıcı izin vermişse "
         "alternatif çıktı fallback ve primary_id bağlı asıl intent kimliği olur. Diğer primary_id null. "
-        "conditional_primary/fallback condition_quote özgün koşulun birebir alıntısıdır; diğerlerinde boş metin. "
+        "conditional_primary/fallback condition_quote özgün koşulun birebir alıntısıdır ve zorunludur. "
+        "request/prohibition da koşula bağlı olabilir: koşul varsa condition_quote birebir alıntısı, yoksa boş metin olur. "
+        "Koşullu yasak prohibition kalır; şartlı olması yasak işlemi olumlu isteğe çevirmez. "
+        "Koşul ve alternatif izin sonraki cümlede bulunabilir; bütün sorudaki bağlantıları koru, cümleleri bağımsız taleplere bölerek anlamı değiştirme. "
         "Koşullu A mümkün değilse B ve eksikliği açıklama ilişkisini koru; A'yı koşulsuz zorunluya dönüştürme. "
         "Kullanıcı söylemeden fallback üretme; birden çok şartı atlama. Yalnız şemalı JSON."},
         {"role":"user", "content":json.dumps({"question":question,"parsedPeriods":periods,"referenceDate":str(today)},ensure_ascii=False)}],
@@ -877,8 +882,8 @@ def source_report_intents(question, periods, today, llm, trace):
                 or item["question_quote"] not in question or not isinstance(item["condition_quote"], str)):
             raise ContractError("Kaynak raporu niyeti özgün soruya bağlanamadı.", code="PLAN_INVALID")
         conditional = item["speech_act"] in {"conditional_primary","fallback"}
-        if (conditional and (not item["condition_quote"].strip() or item["condition_quote"] not in question)
-                or not conditional and item["condition_quote"]
+        if (conditional and not item["condition_quote"].strip()
+                or item["condition_quote"] and item["condition_quote"] not in question
                 or item["speech_act"] != "fallback" and item["primary_id"] is not None):
             raise ContractError("Kaynak raporu koşullu niyet bağı geçersiz.", code="PLAN_INVALID")
         by_id[item["id"]] = item
