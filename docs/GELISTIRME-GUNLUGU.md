@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Zeki cevabında netleştirme açıklaması görünür
+
+- API CLARIFICATION cevabında summary yerine explanation döndürüyor; Genel Bakış ekranı bu metni atlıyordu. Özet yoksa gerçek açıklama gösterilir; olmayan tabloya yönlendirme kaldırıldı.
+- Tam sonuç/CSV, gerçek 1.345 satır ve 320/390/768/1440 px ile geçti. Netleştirmenin gerçek portalda görünmesi de tarayıcı kabulüne eklendi; bu son arayüz değişikliğinin kabulü henüz koşulmadı.
+
 ## 2026-09-30 — Satış tutarında sessiz varsayım kaldırıldı
 
 - Gerçek FC03 kapısı iki farklı hesabı ortaya çıkardı: KDV hariç satır 227.547,69 TL, fatura genel toplamı 232.275,81 TL. İlk sorunun ifadesi ikisini ayırmıyordu; varsayılan iş tanımı kararı gelene kadar netleştirme istenir. Başarısız geçmiş korunur; yeni FC101/102 açık ifadelerinin bağımsız referansları eklenir.

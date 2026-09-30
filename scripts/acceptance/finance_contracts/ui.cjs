@@ -42,7 +42,15 @@ const path = require('node:path');
       if (!(await page.getByRole('dialog').innerText()).includes('2 /')) throw new Error('Second result page not shown');
     }
     await page.getByRole('button', { name: 'Kapat', exact: true }).click();
-    fs.writeFileSync(path.join(out, 'browser.json'), JSON.stringify({ checks, resultId: answer.resultId, totalRows: full.totalRows, previewRows: answer.records.length, sourceWrites: 0 }, null, 2));
+    const clarificationPage = await context.newPage();
+    await clarificationPage.setViewportSize({ width: 320, height: 1000 });
+    const clarificationPromise = clarificationPage.waitForResponse(r => r.url().endsWith('/api/v1/ask') && r.request().method() === 'POST', { timeout: 240000 });
+    await clarificationPage.goto('https://portal.nanobase.ai/timas/genel-bakis?soru=' + encodeURIComponent('29 Eylül 2026 tarihinde perakende satış tutarı ne kadar?'), { waitUntil: 'domcontentloaded' });
+    const clarification = await (await clarificationPromise).json();
+    if (clarification.type !== 'CLARIFICATION') throw new Error('Ambiguous amount was answered without clarification');
+    await clarificationPage.getByText(clarification.explanation, { exact: false }).first().waitFor();
+    await clarificationPage.screenshot({ path: path.join(out, 'clarification-320.png'), fullPage: true });
+    fs.writeFileSync(path.join(out, 'browser.json'), JSON.stringify({ checks, clarificationVisible: true, resultId: answer.resultId, totalRows: full.totalRows, previewRows: answer.records.length, sourceWrites: 0 }, null, 2));
     console.log(JSON.stringify({ browser: 'PASS', rows: full.totalRows, widths: checks.map(x => x.width) }));
   } finally { await browser.close(); }
 })().catch(error => { console.error(error.message); process.exitCode = 1; });

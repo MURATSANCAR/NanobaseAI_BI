@@ -190,7 +190,7 @@ export default function BiCanvasPage() {
           ? `“${PHASES[phase]}…”`
           : askErr
             ? `“${askErr}.”`
-            : `“${answer?.summary ? readableText(answer.summary) : 'Zeki AI bu soru için özet yazmadı; tablodaki sonuca bakın.'}”`,
+            : `“${answer?.summary || answer?.explanation ? readableText(answer.summary || answer.explanation || '') : 'Bu soru için gösterilebilir bir cevap bulunamadı.'}”`,
         m1: { label: 'Toplam satır:', value: String(answer?.totalRows ?? answer?.rowCount ?? rows) },
         result: !asking && !askErr && answer?.resultId && !answer.truncated
           ? { id: answer.resultId, totalRows: answer.totalRows ?? answer.rowCount ?? rows } : undefined,

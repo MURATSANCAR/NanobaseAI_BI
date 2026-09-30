@@ -33,20 +33,24 @@ Tanımsız koşul sessizce atılmaz; eski sorgu üreticisine dönülmez.
 Mimari, alan kaynakları, desteklenen ölçüler ve geri dönüş:
 [Finans sözleşme motoru](../architecture/finance-contract-engine.md).
 
-## Kabul durumu
+## Yedek
 
-- Eski sorgulardan bağımsız 100 yeni soru hazırlandı: 91 tam cevap/referans hesabı, 9 kapsam sınırı.
-- Sayısal tam cevaplar, kapsam dışı isteğe doğru sınır koyma ve doğrulanamayan durumlar ayrı raporlanır.
-- Tam sonuç API kimliğiyle alınır; tüm satır/kolon/değer/NULL/kesilme karşılaştırılır.
-- Test sunucusunda `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas npm run build` tamamlandı.
-- 17:42:21'de VPN, `/run/timas-vpn-crv.auth` bulunamadığı için kapandı. Logo ve CRM yeni SQL
-  bağlantıları `08S01 / Adaptive Server unavailable` ile başarısız oldu; rota artık tun0 üzerinden değil.
-- Yeni motor etkinleştirilmedi. Gerçek API + Logo/CRM kabulü ve yeni cevapların mobil tablo/dışa aktarım
-  akışı **DOĞRULANAMADI**. Yerel test veya müşteri VM kurulumu yapılmadı.
-- İki kabul ön kontrolünde yeni motor kapalı olduğu için eski motora soru gönderilmedi;
-  toplam 2 geçici timasai oturumu silindi. Gerçek soru yürütme sayısı 0, kaynak yazma 0.
-- Tam Git geçmişi bundle yedeği doğrulandı. Canlı PostgreSQL/kod/ayar yedeği tamamlanma ve bütünlük
-  kontrolü bekliyor; bu madde yedek bitince güncellenecek.
+- Git geçmişi: `/Users/msancar/.codex/backups/nonobase-finance-20260930/repository.bundle`, `git bundle verify` başarılı.
+- Test sunucusu: `/data/nanobaseai/bi/backups/finance-contracts-20260930/`; metadata DB, kod, gerçek sunulan arayüz, servis/ortam ayarları ve hash manifesti.
+- PostgreSQL dökümü 13.119.667.444 bayt. Bütün arşivlerin hash/okuma denetimi ve `pg_restore --file=/dev/null` tamamlandı. Müşterinin Logo/CRM veritabanlarının tamamının yedeği değildir.
 
-Bu rapor yeni motorun üretime hazır olduğu anlamına gelmez. VPN erişimi, yayımlanmış CRM metadata
-doğrulaması, tam test sunucusu kurulumu ve gerçek kabul koşuları tamamlanmalıdır.
+## Gerçek kabul
+
+Yerel test çalıştırılmadı. Test sunucusunda gerçek `/api/v1/ask` cevabının `resultId` ile saklanan tüm sonucu, aynı Logo/CRM kaynakları üzerinde yeni yazılmış bağımsız pyodbc hesaplarıyla karşılaştırıldı. Eski SQL, katalog ve üretim derleyicisi referansa aktarılmadı. CRM/T-soft'a yazılmadı.
+
+İlk VPN kesintisinden sonra kullanıcı bağlantıyı geri açtı. Yeni motor `FINANCE_QUERY_MODE=contract` ile etkin. İlk denemelerde JSON biçimi ve denetleyicinin yanlış retleri düzeltildi. CRM metadata'sı, statecode=0 içinde “Pasif” statuscode kayıtlarının bulunduğunu kanıtladı; sayım tanımları gerçek durum etiketleriyle bağlandı. Aktif kitap 9.380, aktif yazar kişi 660, “Aktif Müşteri” 11.904; potansiyel/arşiv/sorunlu müşteri bu son tanıma dahil değil.
+
+100 soruluk ilk tam tur 95 başarılı / 5 başarısızdı. FC03 “perakende satış tutarı” ifadesi iki hesabı ayırmıyordu: 227.547,69 TL KDV hariç satır toplamı ve 232.275,81 TL fatura toplamı. Kullanıcı iş tanımını seçene kadar soru netleştirilir; eski hata saklandı, beklenen sayı API'ye uydurulmadı. FC93–96'da dönem tutarları eşleşti fakat model gereksiz “ay” kolonu üretti. Açık iç-dönem kırılımı istenmeyen karşılaştırmada dönem başlangıç/bitiş anahtarları yeterlidir; plan düzeltildi.
+
+Son sürüm (`21551baad`) için 102 soru: 92 tam cevap + 10 kapsam sınırı. **Koşu sürüyor; nihai sayı henüz verilmedi.** Önceki sürüm geçişleri bu sürüme aktarılmaz. Soru bazında kaynak, bağımsız SQL, tüm sonuç, plan, model adı, sözleşme/kod hash'i ve hata raporu sunucuda `/tmp/claude-finance-contracts-20260930/final-102/` altında.
+
+Gerçek portal tam sonuç/CSV kabulü geçti: 1.345 satırın tümü bağımsız Logo ile eşleşti, 50 satır önizleme sınırı dışa aktarıma taşınmadı. 320/390/768/1440 px: sayfa taşması yok, tablo kendi içinde kayar; sayfa 2 ve bütün CSV kontrol edildi. Kanıt `ui-1/report.json`, dört ekran görüntüsü, API cevabı/tam sonuç/CSV. Bu koşunun 1 geçici timasai oturumu silindi.
+
+## Sınırlar
+
+Bu sınırlı sözleşme bütün finans sorularının veya muhasebe iş tanımlarının uzman kabulü değildir. Kâr/maliyet, kesin alacak yaşlandırması, bütçe/hedef, döviz dönüşümü, oran ve desteklenmeyen özel koşullar netleştirme döndürür. Tahsilat tanımı çek/senet teslimini de içerir; nakit tahsilat diye sunulmaz. Yazar kırılımı kitap künyesi metnidir, telif hak sahibi kimliği değildir. Müşteri VM'ine bu değişiklik kurulmadı.
