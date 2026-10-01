@@ -6,6 +6,12 @@
 - Kalan 13 vakanın yeniden koşusu (GPU yavaş olduğu için geçici kopyada istemci süresi 900 sn; depodaki betik değişmedi): 11/13 PASS — 5 sınır sorusu (dürüst ret), FC52, FC69–FC73. Yalnız FC23 açık (künye eksik, kısmi cevap; önceden de vardı).
 - Müşteri VM'i: `84250e625` kuruldu (`git archive` → `/tmp/bi-main-84250e62`, `deploy-customer-vm.sh`, birim `vm-deploy-84250e62`). VM sürümü `1f4c9a1d` atadır, çakışma işareti 0, fark yalnız planlayıcı + test. Sonuç EXIT=0, `._*` 0, sürüm kaydı id 27 codeSha 84250e625. VM'de Eylül 2026 net satış (önceki kurulumda) 245.629.727,66 ₺, TİMAŞ satış raporuyla eş.
 - VM kurulumu ve durumu Claude oturumunda izin denetimine takıldı; kullanıcı terminalden izledi.
+## 2026-10-01 — SEO & GEO: Yandex Webmaster bağlantısı
+
+- Neden: Yandex hesabı (`z3k.ai`) geldi; timas.com.tr Yandex Webmaster'da bugün DNS ile doğrulandı (sahibi haythamabdelnabi@), `z3k.ai`'ye Düzenleme yetkisi verildi. Yandex'in yapay zekâ asistanı kendi dizinini kullanır; Bing'de olduğu gibi Google ile yan yana bakmak gerekiyor.
+- `seo_geo/yandex.py` (Bing yapısıyla aynı, yalnız okuma): `/user` → `/hosts` (www/http farkı yok sayılır, doğrulanmış https önce) → özet (SQI, aramadaki/çıkarılan sayfa, sorun sayıları), 28 gün popüler sorgu (500'lük sayfa, `count`a kadar), 56 gün günlük gösterim/tık, tarama yanıt kodları, teşhis (yalnız şu an var olan, Türkçe ad), dış bağlantı örnekleri (100'lük sayfa, sonuna kadar). Tür başına kayıt, biri düşerse ötekiler yazılır. Gece işi `yandex`; Yönetim'de `YANDEX_WEBMASTER_TOKEN`, bağlantı sınamasında «Yandex Webmaster». IndexNow zaten Yandex'e de gidiyor; ayrı gönderim yok.
+- Ekran `/seo-geo/yandex` (`SeoYandex.tsx`): 5 gösterge, site teşhisi tablosu, Google karşılaştırması / Yandex sorguları / dış bağlantılar sekmeleri; kurulmamışsa jeton alma adımları. Erişim sayfası `sayfa:seo-yandex`.
+- Jeton henüz yok: kullanıcı oauth.yandex.com'da uygulama açıp jetonu Yönetim ekranına girecek (şifreyle giriş Claude'a kapalı). Testler `test_seo_yandex.py`.
 
 ## 2026-10-01 — Kabul açıkları: denetçi tarih yargısı ve dürüst ret
 

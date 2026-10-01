@@ -228,6 +228,7 @@ const SeoSchema = lazy(() => import('@/canvas/seo-geo/SeoSchema'));
 const SeoRights = lazy(() => import('@/canvas/seo-geo/SeoRights'));
 const SeoOpportunities = lazy(() => import('@/canvas/seo-geo/SeoOpportunities'));
 const SeoBing = lazy(() => import('@/canvas/seo-geo/SeoBing'));
+const SeoYandex = lazy(() => import('@/canvas/seo-geo/SeoYandex'));
 const SeoTech = lazy(() => import('@/canvas/seo-geo/SeoTech'));
 const SeoCompetitors = lazy(() => import('@/canvas/seo-geo/SeoCompetitors'));
 const SeoEntity = lazy(() => import('@/canvas/seo-geo/SeoEntity'));
@@ -550,6 +551,7 @@ export default function App() {
             <Route path="seo-geo/crm-haklar" element={<SeoRights />} />
             <Route path="seo-geo/firsatlar" element={<SeoOpportunities />} />
             <Route path="seo-geo/bing" element={<SeoBing />} />
+            <Route path="seo-geo/yandex" element={<SeoYandex />} />
             <Route path="seo-geo/teknik" element={<SeoTech />} />
             <Route path="seo-geo/rakipler" element={<SeoCompetitors />} />
             <Route path="seo-geo/kimlik" element={<SeoEntity />} />

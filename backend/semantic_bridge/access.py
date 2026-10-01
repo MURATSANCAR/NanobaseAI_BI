@@ -477,7 +477,7 @@ OPEN = "open"        # oturum yeter (ortak uçlar; kendi kontrolü varsa o da ge
 OWN = "own"          # uç kendi yetkisini denetler (yönetim, yetki)
 SYSTEM = "system"    # yalnız zamanlayıcı/betik (çerezsiz) ya da yönetici
 
-_SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-rakip", "seo-ai", "seo-sayfalar",
+_SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-yandex", "seo-rakip", "seo-ai", "seo-sayfalar",
                                    "seo-yonlendirme", "seo-teknik", "seo-kimlik", "seo-rehber", "seo-sema", "seo-llms",
                                    "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti",
                                    "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa",

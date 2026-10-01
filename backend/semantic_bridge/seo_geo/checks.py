@@ -171,6 +171,15 @@ def _bing() -> tuple[str, str]:
     return "ok", f"Anahtar geçerli: {mine[0]} Bing hesabında kayıtlı."
 
 
+def _yandex() -> tuple[str, str]:
+    from .yandex import YandexError, resolve_host
+    try:
+        _, _, url = resolve_host(_conf("YANDEX_WEBMASTER_TOKEN"), _site())
+    except YandexError as e:
+        return "err", str(e)
+    return "ok", f"Jeton geçerli: {url} Yandex hesabında doğrulanmış."
+
+
 def _indexnow() -> tuple[str, str]:
     key = _conf("INDEXNOW_KEY")
     url = f"{_site()}/{key}.txt"
@@ -229,6 +238,7 @@ def seo_parts() -> list[Part]:
     for label, key, fn in (("Google API anahtarı", "GOOGLE_API_KEY", _google_key),
                            ("YouTube", "YOUTUBE_API_KEY", _youtube),
                            ("Bing Webmaster", "BING_WEBMASTER_API_KEY", _bing),
+                           ("Yandex Webmaster", "YANDEX_WEBMASTER_TOKEN", _yandex),
                            ("IndexNow", "INDEXNOW_KEY", _indexnow),
                            ("Google arama sonucu (SerpAPI)", "SERPAPI_KEY", _serpapi),
                            ("Cloudflare", "CLOUDFLARE_API_TOKEN", _cloudflare)):

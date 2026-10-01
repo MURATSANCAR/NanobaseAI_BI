@@ -81,6 +81,26 @@ const CONTENT: ScreenInfoMap = {
     ],
   },
 
+  'seo-yandex': {
+    summary:
+      'Yandex’teki arama verisi Google ile yan yana; Yandex dizinindeki sayfa sayısı, tarama yanıtları, Yandex’in site teşhisi ve dış bağlantı örnekleri.',
+    how: [
+      'Yandex Webmaster verisi yalnız okunur; Yandex’e hiçbir şey gönderilmez.',
+      'Aynı aramaların Google ve Yandex’teki sırası yan yana konur; Yandex’te çok geride olanlar süzülebilir.',
+      'Değişen kitap sayfalarının bildirimi Bing ekranındaki IndexNow ile yapılır; o bildirim Yandex’e de gider.',
+    ],
+    data: 'Yandex Webmaster ve Google Search Console',
+    refresh: 'Her gece',
+    jobs: [
+      { name: 'Yandex okuması', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Yandex’ten sorgu, günlük trafik, dizin, tarama yanıtları, teşhis ve dış bağlantılar okunur.' },
+    ],
+    actions: [
+      'Sekmeler arasında Google karşılaştırması, Yandex sorguları ve dış bağlantıları inceleyin.',
+      '«Yandex’ten yeniden oku» ile gece beklemeden yenileyin.',
+      'Site teşhisindeki sorunları site yöneticisine iletin.',
+    ],
+  },
+
   'seo-rakip': {
     summary:
       'Çok satan kitaplarımız Google’da «kitap adı + yazar» diye arandığında timas.com.tr ve rakip siteler kaçıncı sırada; sonuçta alışveriş kutusu, yapay zekâ özeti ya da bilgi paneli var mı.',

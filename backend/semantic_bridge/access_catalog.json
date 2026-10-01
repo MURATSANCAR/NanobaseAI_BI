@@ -425,6 +425,11 @@
       "label": "Bing ve IndexNow"
     },
     {
+      "key": "sayfa:seo-yandex",
+      "area": "pazarlama",
+      "label": "Yandex"
+    },
+    {
       "key": "sayfa:seo-rakip",
       "area": "pazarlama",
       "label": "Rakipler"

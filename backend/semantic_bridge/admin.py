@@ -271,6 +271,9 @@ SPEC: list[dict[str, Any]] = [
     {"key": "BING_WEBMASTER_API_KEY", "group": "seo", "label": "Bing Webmaster API anahtarı", "type": "secret", "default": "",
      "help": "bing.com/webmasters → Ayarlar → API erişimi. ChatGPT'nin web araması büyük ölçüde Bing dizinine dayanır; "
              "Bing'deki sorgu, tıklama ve tarama sorunları buradan okunur. Yalnız okuma"},
+    {"key": "YANDEX_WEBMASTER_TOKEN", "group": "seo", "label": "Yandex Webmaster jetonu", "type": "secret", "default": "",
+     "help": "oauth.yandex.com'da «webmaster:hostinfo» izinli bir uygulama açılır, jeton Yandex Webmaster'a yetkili "
+             "hesapla alınır. Yandex'teki sorgu, dizin, site teşhisi ve dış bağlantılar buradan okunur. Yalnız okuma"},
     {"key": "INDEXNOW_KEY", "group": "seo", "label": "IndexNow anahtarı", "type": "secret", "default": "",
      "help": "8–128 harf/rakam. Aynı adla bir metin dosyası sitenin köküne konmalı (https://timas.com.tr/<anahtar>.txt, "
              "içinde yalnız anahtar); dosyayı site yöneticisi koyar. Dosya doğrulanınca değişen sayfalar Bing ve "

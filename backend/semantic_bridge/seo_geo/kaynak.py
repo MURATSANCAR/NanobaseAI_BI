@@ -57,6 +57,7 @@ TABLOLAR: dict[str, tuple[str, str]] = {
     "semantic_seo_backlink_snaps": ("Gelen bağlantı anlık görüntüleri", "Okuma başına toplam sayılar."),
     "semantic_seo_backlinks": ("Gelen bağlantılar", "Sayfaya bağlantı veren dış adresler."),
     "semantic_seo_bing": ("Bing verisi", "Bing Webmaster'dan okunan sorgu/sayfa/trafik/tarama raporları."),
+    "semantic_seo_yandex": ("Yandex verisi", "Yandex Webmaster'dan okunan sorgu/trafik/dizin/teşhis/bağlantı raporları."),
     "semantic_seo_bios": ("Biyografi taslakları", "Yazar biyografisi taslakları ve kararları."),
     "semantic_seo_bios_src": ("Biyografi kaynağı", "CRM'den okunan yazar–kitap bağı ve özgeçmiş uzunlukları."),
     "semantic_seo_botstats": ("Bot istatistikleri", "Tarayıcı bot istekleri (günlük)."),
@@ -133,6 +134,10 @@ SPECS: list[tuple[str, str, str]] = [
     (r"bing/list/[^/]+", "bingListe", "Bing Webmaster (gece okuması): sorgu/sayfa satırları — tıklama, gösterim, sıra; "
                                        "Search Console ile yan yana."),
     (r"bing", "bing", "Bing Webmaster (gece okuması): sorgu, sayfa, günlük trafik, tarama istatistiği ve sorunları."),
+    (r"yandex/list/[^/]+", "yandexListe", "Yandex Webmaster (gece okuması): sorgu satırları — tıklama, gösterim, sıra "
+                                           "(son 28 gün); Search Console ile yan yana; dış bağlantı örnekleri."),
+    (r"yandex", "yandex", "Yandex Webmaster (gece okuması): sorgu, günlük trafik, dizindeki sayfa, tarama yanıt kodları, "
+                          "site teşhisi."),
     (r"indexnow", "indexnow", "IndexNow: bildirilen adres sayıları ve son bildirimler (günlük)."),
     (r"tech/robots", "robots", "robots.txt denetimi: yapay zekâ botları için izin/engel satırları (teknik taramanın okuması)."),
     (r"tech/sitemaps", "sitemap", "Site haritaları: adres sayıları ve sorunlar (teknik taramanın okuması)."),
