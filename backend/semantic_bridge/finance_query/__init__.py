@@ -104,7 +104,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         numeric = set(plan.metrics) | {d.id for d in plan.derived}
         if plan.comparison:
             numeric = {"base_value", "target_value", plan.comparison.id}
-        if plan.crm or getattr(plan, "sections", ()) or getattr(plan, "logo_report", None) or getattr(plan, "crm_report", None) or getattr(plan, "relational_query", None):
+        if plan.crm or getattr(plan, "sections", ()) or getattr(plan, "logo_report", None) or getattr(plan, "crm_report", None) or getattr(plan, "relational_query", None) or getattr(plan, "passive_count", None):
             numeric = set(getattr(engine, "numeric_fields", []))
         for spec in getattr(plan, "analytics", ()):
             if spec["op"] == "contribution":
@@ -153,7 +153,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
             result["sections"] = engine.section_results
         result["gaps"] = engine.gaps
         progress("presenting")
-        if not engine.section_results and not plan.logo_report and not plan.crm_report and not plan.relational_query:
+        if not engine.section_results and not plan.logo_report and not plan.crm_report and not plan.relational_query and not plan.passive_count:
             runtime.attach_widget(result, planned)
         runtime.remember_result(result, question=planned, sql=sql)
         state["stage"] = "complete"

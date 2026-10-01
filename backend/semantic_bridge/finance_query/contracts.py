@@ -39,6 +39,7 @@ METRICS = {
     "sold_quantity": Metric("sales", "Satılan adet", "adet", "SUM(CASE WHEN f.TRCODE IN (7,8) THEN f.AMOUNT ELSE 0 END)", "Faturalı malzeme satırı; perakende/toptan 7/8, iadeler düşülmeden miktar; hizmet 9 hariç."),
     "net_quantity": Metric("sales", "Net satılan adet", "adet", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN -f.AMOUNT WHEN f.TRCODE IN (7,8) THEN f.AMOUNT ELSE 0 END)", "Faturalı malzeme; 7/8 miktarı eksi 2/3 iade miktarı."),
     "return_amount": Metric("sales", "İade tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN f.VATMATRAH ELSE 0 END)", "İptal edilmemiş faturalı malzeme iadesi; KDV matrahı (iskonto sonrası, KDV hariç), pozitif gösterim; dönem fatura tarihine göre."),
+    "accounting_net_sales": Metric("ledger", "Muhasebe net satışı", "TRY", "SUM(f.CREDIT-f.DEBIT) [600-602, 610-612]", "Muhasebe fiş satırları (EMFLINE, iptal olmayan fiş): 600-602 brüt satış hesaplarının alacak-borç bakiyesi ile 610-612 satış indirim ve iade hesaplarının bakiyesi toplamı; gelir tablosu net satışı. Hizmet satışı, kargo ve diğer satış gelirleri ile iskonto fiyat farkları dahil; dönem sonu kapanış (FINANCE_CLOSE_ACCOUNTS) ve yansıtma (7x1) hesabı içeren fişler hariç (M45 kuralı); dönem fiş satırı tarihine göre; yalnız gün/ay/yıl kırılımı."),
     "invoice_count": Metric("invoice", "Fatura sayısı", "belge", "SUM(CASE WHEN f.TRCODE IN (7,8,9) THEN 1 ELSE 0 END)", "İptal edilmemiş satış faturası başlıkları (perakende, toptan, hizmet); satış iadesi faturaları dahil değildir. Satırlar değil fatura belgeleri sayılır (7/8/9)."),
     "return_invoice_count": Metric("invoice", "İade faturası sayısı", "belge", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN 1 ELSE 0 END)", "İptal edilmemiş satış iadesi faturası başlıkları (perakende ve toptan iade); fatura sayısına dahil edilmez (2/3)."),
     "invoice_count_with_returns": Metric("invoice", "Fatura sayısı (iadeler dahil)", "belge", "SUM(CASE WHEN f.TRCODE IN (2,3,7,8,9) THEN 1 ELSE 0 END)", "Satış faturası sayısı ile satış iadesi faturası sayısının toplamı; yalnız iadeler açıkça istendiğinde kullanılır (2/3/7/8/9)."),
@@ -66,7 +67,7 @@ DIMENSIONS = {
     "author_group": "Aktif Yazar katılım rolüyle bağlı gerçek kişi UUID kümesi; ortak yazarlı kitabın satışı kümede bir kez sayılır, kişilere dağıtılmaz",
     "day": "İşlem günü (satışta fatura tarihi)", "month": "İşlem yılı ve ayı (satışta fatura tarihi)", "year": "İşlem yılı (satışta fatura tarihi)",
 }
-CONTRACT = {"version": "2.1", "metrics": {k: asdict(v) for k, v in METRICS.items()},
+CONTRACT = {"version": "2.2", "metrics": {k: asdict(v) for k, v in METRICS.items()},
             "dimensions": DIMENSIONS,
             "sources": "Tek şirket. SEMANTIC_FIRMS kapsamı ile L_CAPIPERIOD dönemleri; çakışmada tahmin yok.",
             "joins": "Logo ITEMS.CODE -> CRM new_kitapBase.new_stokkodu; aktif anahtar tekilliği zorunlu; alt marka/kişi grubu kırılımında çoğul kodlar eşleştirilmeden NULL ve kapsam açıklamasıyla korunur. LEFT JOIN; ölçüler çoğalmaz. Eşleşmeyen satışlar NULL CRM alanlarıyla korunur ve toplam kontrol edilir.",

@@ -212,3 +212,59 @@ def test_relational_project_book_uses_stock_card_relation():
     main = business_sql(crm)[-1]
     assert "[root].[new_stakkarti]=[j1].[new_kitapId]" in main
     assert "project_book" not in ENTITY_REGISTRY
+
+
+# ---------------------------------------------------------------- açık pasif isteği: yalnız sayı (karar 2026-10-01)
+
+from semantic_bridge.finance_query import planner as PL
+
+
+class NoModel:
+    def complete(self, *a, **kw):
+        raise AssertionError("pasif sayımı için model planı çağrılmaz")
+
+
+@pytest.mark.parametrize("question,kind", [
+    ("pasif müşteriler kaç tane", "customer"),
+    ("pasife alınmış carileri listele", "customer"),
+    ("inaktif yazar sayısı", "author"),
+    ("pasif sözleşmeler", "contract"),
+    ("kaç pasif kitap var", "book"),
+])
+def test_explicit_passive_request_becomes_a_count_plan_without_a_model_call(question, kind):
+    plan = PL.build(question, NoModel())
+    assert plan.passive_count == kind and plan.metrics == () and plan.dimensions == ()
+
+
+def test_passive_request_without_a_record_kind_asks_which_one():
+    with pytest.raises(ContractError) as e:
+        PL.build("pasif kayıtları göster", NoModel())
+    assert e.value.code == "NEEDS_CLARIFICATION" and "listelenmez" in str(e.value)
+
+
+def test_passive_exclusions_are_not_passive_requests():
+    assert not PL.requests_passive_records("pasif olmayan müşteri sayısı")
+    assert not PL.requests_passive_records("pasif müşterileri hariç tut, aktif müşteri sayısı")
+
+
+def test_passive_count_reads_only_one_number_with_the_inverse_rule():
+    ex, crm = executor()
+    rows = ex.passive_count("author")
+    assert rows and set(rows[0]) == {"passive_records"} and ex.output_fields == ["passive_records"]
+    sql = business_sql(crm)[-1]
+    assert sql.startswith("SELECT COUNT_BIG(*) AS [passive_records]") and "[ContactBase] r WHERE NOT (" in sql
+    assert "r.statecode = 0" in sql and "r.new_yazarmi=1" in sql
+    assert "listelenmez" in ex.notes[-1]
+
+
+def test_passive_exemption_refuses_anything_but_a_single_count():
+    ex, crm = executor()
+    with pytest.raises(ContractError) as e:
+        ex.read("SELECT r.name FROM [Timas_MSCRM].[dbo].[AccountBase] r WHERE r.statecode = 1", source="crm", passive_count=True)
+    assert e.value.code == "SOURCE_CONTRACT_VIOLATION"
+    with pytest.raises(ContractError):
+        ex.read("SELECT COUNT(*) n, MAX(r.name) m FROM [Timas_MSCRM].[dbo].[AccountBase] r", source="crm", passive_count=True)
+    with pytest.raises(ContractError):
+        ex.read("SELECT COUNT(*) n FROM [Timas_MSCRM].[dbo].[AccountBase] r JOIN [Timas_MSCRM].[dbo].[ContactBase] c ON 1=1",
+                source="crm", passive_count=True)
+    assert business_sql(crm) == [], "reddedilen sorgu kaynağa gitmez"

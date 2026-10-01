@@ -59,6 +59,8 @@ class Plan:
     gaps: tuple[dict, ...] = ()
     coverage: tuple[dict, ...] = ()
     notes: tuple[str, ...] = ()
+    #: Açık pasif kayıt isteği: kayıt türü (customer/book/author/contract). Liste yok, yalnız sayı (kurum kuralı).
+    passive_count: str | None = None
 
     def to_dict(self):
         return asdict(self)
@@ -266,6 +268,10 @@ def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _so
 
 def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _source_question=None, _repair_error=None, _repair_plan=None):
     q = fold(question)
+    if requests_passive_records(question):
+        # Kurum kuralı (2026-09-29): pasif CRM kaydı hiçbir ekranda listelenmez. Açık istekte yalnız sayısı verilir;
+        # model planına gerek yok (karar 2026-10-01).
+        return passive_count_plan(question)
     source_question = _source_question or question
     source_q = fold(source_question)
     # A bare amount has two observed, different accounting answers. Never let
@@ -384,6 +390,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Yalnız 'bazında/göre/her/hangi/listele/en çok' gibi istenen kırılımı ekle. "
               "Fatura sayısı invoice_count; stok hareketi sayısı değildir ve iade faturası içermez. İade faturası sayısı return_invoice_count; "
               "invoice_count_with_returns yalnız kullanıcı iadelerin dahil edilmesini açıkça isterse. Fatura genel toplamı invoice_amount; "
+              "Muhasebe, defter ya da gelir tablosu net satışı istenirse accounting_net_sales (yalnız day/month/year kırılımı, süzgeçsiz); "
               "KDV hariç satış satırı toplamı sales_amount; iade düşülmüş net satış veya ciro net_sales. "
               "Kırılımsız ve filtresiz güncel aktif CRM yazar sayısı active_authors, kitap sayısı active_books, müşteri sayısı active_customers ölçüsünü kullanır; bu basit sayımlarda crm null kalır. Pasif istek yasaktır. "
               "Genel tahsilat collections; nakit/banka/çek türü ayrıca seçildiyse desteklenmeyen daraltma say. "
@@ -424,8 +431,6 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError(structural_error, code="PLAN_INVALID")
     if set(data) - set(schema):
         raise ContractError("Soru planında sözleşme dışı alan var.", code="PLAN_INVALID")
-    if requests_passive_records(question):
-        raise ContractError("Bu kurulumda pasif CRM kayıtları cevaplara dahil edilmez.")
     if data.get("sections"):
         return build_composite(data, question, llm, previous, trace, today, _depth)
     if data.get("gaps") or data.get("coverage"):
@@ -502,10 +507,18 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if grain and grain not in dims:
         raise ContractError("İstenen zaman kırılımı plana taşınmadı.", code="PLAN_INVALID")
     families = {METRICS[m].family for m in metrics}
+    if "ledger" in families and len(families) > 1:
+        raise ContractError("Muhasebe net satışı satış satırı ölçüleriyle aynı hesapta birleştirilemez; ayrı sorun.")
     if len(families) != 1 and not families <= {"sales", "invoice", "collection"}:
         raise ContractError("Bu kaynak ölçülerinin ortak kayıt düzeyi henüz tanımlı değil.")
     family = "sales" if "sales" in families else sorted(families)[0]
     q = fold(question)
+    if "ledger" in families:
+        # Defterde kanal/müşteri/kitap yok; satış satırıyla aynı satırda toplanamaz (karar 2026-10-01).
+        if set(dims) - {"day", "month", "year"} or data.get("filters"):
+            raise ContractError("Muhasebe net satışı yalnız dönem kırılımıyla verilir; kanal, müşteri ve kitap için net satış tutarını sorun.")
+    elif re.search(r"\b(muhasebe\w*|gelir tablosu\w*|defter\w*)\b", q) and re.search(r"\bnet\s+(satis|ciro)\w*", q):
+        raise ContractError("Muhasebe/gelir tablosu net satışı sorusu accounting_net_sales ölçüsünü kullanmalıdır.")
     if re.search(r"\bfatura\w*\s+(say\w*|adet\w*)", q) and not set(metrics) & INVOICE_COUNT_METRICS:
         raise ContractError("Fatura sayımı belge anahtarıyla yapılmalıdır; plan bu koşulu sağlamıyor.")
     if "tahsil" in q and "collections" not in metrics:
@@ -794,10 +807,26 @@ def validate_operations(data, metrics, dims, periods, analytic_ids=()):
     return tuple(derived), tuple(having), comparison
 
 
+#: Pasif sayımının kayıt türleri: sorudaki sözcük → yürütücünün kayıt türü.
+PASSIVE_KINDS = ((r"\b(?:musteri|cari|firma)\w*", "customer"), (r"\bsozlesme\w*", "contract"),
+                 (r"\byazar\w*", "author"), (r"\bkitap\w*", "book"))
+
+
+def passive_count_plan(question):
+    """Açık pasif kayıt isteği → tek kayıt türünün pasif sayısı. Tür belirsizse netleştirme sorulur."""
+    q = fold(question)
+    kinds = list(dict.fromkeys(kind for pattern, kind in PASSIVE_KINDS if re.search(pattern, q)))
+    if len(kinds) != 1:
+        raise ContractError("Pasif kayıtlar kurum kuralı gereği listelenmez; yalnız sayıları verilebilir. Hangi kayıt "
+                            "türünün (müşteri, kitap, yazar ya da sözleşme) pasif sayısını istediğinizi yazın.",
+                            code="NEEDS_CLARIFICATION")
+    return Plan(metrics=(), dimensions=(), periods=(), passive_count=kinds[0])
+
+
 def requests_passive_records(question):
     """Do not mistake explicit passive exclusions for requests to read passive rows."""
     q = fold(question)
-    passive = r"\bpasif\w*"
+    passive = r"\b(?:pasif|inaktif|inactive)\w*"
     nouns = r"(?:\s+(?:olan|kayit\w*|kitap\w*|yazar\w*|musteri\w*|cari\w*)){0,3}"
     q = re.sub(passive + r"\s+olmayan\w*", "", q)
     exclusions = r"(?:dahil\s+etme(?:yin|yiniz)?|cikar(?:in|iniz|alim)?|sayma(?:yin|yiniz)?|alma(?:yin|yiniz)?|disla(?:yin|yiniz)?|haric(?:\s+tut(?:un|unuz)?)?(?!\s+tutma)|disinda)\b"
@@ -1330,7 +1359,8 @@ def plan_from_dict(data):
                 data.get("crm"), data.get("logo_report"), data.get("crm_report"), data.get("relational_query"),
                 tuple(dict(a) for a in items("analytics")), tuple(plan_from_dict(s) for s in items("sections")),
                 data.get("section_title"), tuple(dict(g) for g in items("gaps")),
-                tuple(dict(c) for c in items("coverage")), tuple(items("notes")))
+                tuple(dict(c) for c in items("coverage")), tuple(items("notes")),
+                passive_count=data.get("passive_count"))
 
 
 def _with_returns(plan):

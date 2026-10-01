@@ -23,7 +23,7 @@ from semantic_bridge.finance_query.result_metadata import return_invoice_note
 SEPT = (("2026-09-01", "2026-10-01"),)
 COLUMNS = ("CANCELLED DATE_ TRCODE LOGICALREF NETTOTAL CLIENTREF CODE DEFINITION_ SPECODE2 LINETYPE INVOICEREF "
            "STOCKREF LINENET VATMATRAH AMOUNT UINFO1 UINFO2 NAME SIGN FICHENO TRCURR TRNET FIRMNR CURTYPE CURCODE ORDFICHEREF "
-           "CLOSED SHIPPEDAMOUNT UOMREF SOURCEINDEX DUEDATE").split()
+           "CLOSED SHIPPEDAMOUNT UOMREF SOURCEINDEX DUEDATE DEBIT CREDIT ACCFICHEREF ACCOUNTREF").split()
 
 
 class Connector:
@@ -265,7 +265,7 @@ def sales_answer(sql):
 
 def test_sales_amounts_use_the_vat_base_and_the_invoice_date():
     engine, rows, sql = run(Plan(("net_sales", "sales_amount", "return_amount"), ("month",), SEPT), sales_answer)
-    sales = [s for s in sql if "_STLINE" in s]
+    sales = [s for s in sql if "_STLINE" in s and "611%" not in s]
     assert sales, sql
     for s in sales:
         assert "VATMATRAH" in s and "LINENET" not in s
@@ -304,3 +304,55 @@ def test_sale_without_an_active_card_stays_a_gap(monkeypatch):
     engine.execute(Plan(("sales_amount",), ("book", "author"), SEPT))
     assert not engine.coverage_complete
     assert any("aktif CRM kitap eşleşmesi yok" in n for n in engine.notes)
+
+
+# Karar 2026-10-01: muhasebe net satışı defterden (600–602 − 610–612), yalnız dönem kırılımı; satış tutarı cevabında
+# ayrı faturayla verilen iskonto fiyat farkı (hizmet kartı 611…) not olarak.
+def ledger_answer(sql):
+    return [{"month": "2026-09", "accounting_net_sales": 250.0}] if "EMFLINE" in sql else []
+
+
+def test_accounting_net_sales_reads_the_ledger_without_closing_and_transfer_fiches():
+    engine, rows, sql = run(Plan(("accounting_net_sales",), ("month",), SEPT), ledger_answer)
+    assert rows == [{"month": "2026-09", "accounting_net_sales": 250.0}]
+    ledger = [s for s in sql if "EMFLINE" in s]
+    assert len(ledger) == 1
+    s = ledger[0]
+    assert "SUM(f.CREDIT-f.DEBIT)" in s and "LEFT(a.CODE,3) IN ('600','601','602','610','611','612')" in s
+    assert "JOIN dbo.[LG_411_01_EMFICHE] h ON h.LOGICALREF=f.ACCFICHEREF" in s and "h.CANCELLED=0" in s
+    assert "NOT EXISTS" in s and "'690'" in s and "'711'" in s, "kapanış ve yansıtma fişleri M45 kuralıyla hariç"
+    assert "f.DATE_>='2026-09-01'" in s and "CONVERT(varchar(7),f.DATE_,23)" in s
+
+
+class NoModel:
+    def complete(self, *a, **kw):
+        raise AssertionError("bu testte model çağrılmaz")
+
+
+@pytest.mark.parametrize("question,data,expect", [
+    ("Eylül 2026 kanallara göre muhasebe net satışı", {"metrics": ["accounting_net_sales"], "dimensions": ["channel"]}, "yalnız dönem"),
+    ("Eylül 2026 muhasebe net satışı ve net satış", {"metrics": ["accounting_net_sales", "net_sales"], "dimensions": []}, "birleştirilemez"),
+    ("Eylül 2026 gelir tablosu net satışı", {"metrics": ["net_sales"], "dimensions": []}, "accounting_net_sales"),
+])
+def test_accounting_net_sales_plan_rules(question, data, expect):
+    from semantic_bridge.finance_query.planner import build
+    with pytest.raises(ContractError) as e:
+        build(question, NoModel(), None, [], _data=data)
+    assert expect in str(e.value)
+
+
+def price_answer(sql):
+    if "611%" in sql:
+        return [{"discount": 1234.5}]
+    return [{"channel": "KITAPCI", "net_sales": 100.0, "sold_quantity": 5.0, "_unverified_quantity_units": 0}]
+
+
+def test_sales_answer_carries_the_separately_invoiced_price_difference():
+    engine, rows, sql = run(Plan(("net_sales",), ("channel",), SEPT, filters=(("channel", "eq", "KITAPCI"),)), price_answer)
+    note = [s for s in sql if "611%" in s]
+    assert len(note) == 1 and "f.LINETYPE=4" in note[0] and "h.DATE_>='2026-09-01'" in note[0] and "c.SPECODE2=N'KITAPCI'" in note[0]
+    assert any("iskonto fiyat farkı 1.234,50 TL" in n for n in engine.notes)
+    assert engine.source_periods == [{"start": "2026-09-01", "end": "2026-10-01", "sourceCode": "411", "periodCode": "01"}], \
+        "not okuması kapsamı ikinci kez yazmaz"
+    engine, _, _ = run(Plan(("sold_quantity",), ("channel",), SEPT), price_answer)
+    assert not any("fiyat farkı" in n for n in engine.notes), "adet cevabında not yok"

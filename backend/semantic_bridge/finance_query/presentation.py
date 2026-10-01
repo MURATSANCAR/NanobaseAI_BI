@@ -151,6 +151,10 @@ PUBLIC_DEFINITIONS = {
     "net_sales": "Faturalı satış satırlarının iskonto sonrası, KDV hariç tutarından satış iadelerinin düşülmüş hâli.",
     "sold_quantity": "Faturalı toptan ve perakende satış satırlarındaki miktar; iadeler düşülmez, hizmet satırları dahil değildir.",
     "net_quantity": "Faturalı toptan ve perakende satış miktarından satış iadesi miktarının düşülmüş hâli.",
+    "accounting_net_sales": "Muhasebe defterindeki net satış (gelir tablosu): 600–602 brüt satış hesaplarından 610–612 satış "
+                            "indirim ve iade hesaplarının düşülmüş hâli. Hizmet satışı, kargo ve diğer satış gelirleri ile "
+                            "iskonto fiyat farkları dahildir; dönem sonu kapanış ve yansıtma fişleri hariçtir. Yalnız dönem "
+                            "kırılımıyla verilir; kitap ve kanal analizi için net satış tutarı kullanılır.",
     "return_amount": "İptal edilmemiş satış iadesi faturalarının satır tutarı; iskonto sonrası, KDV hariç, pozitif gösterilir.",
     "invoice_count": "İptal edilmemiş satış faturalarının sayısı (toptan, perakende ve hizmet); iade faturaları dahil değildir, satırlar değil belgeler sayılır.",
     "return_invoice_count": "İptal edilmemiş satış iadesi faturalarının sayısı (toptan ve perakende iade); satırlar değil belgeler sayılır.",

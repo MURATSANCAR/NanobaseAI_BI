@@ -14,6 +14,7 @@ def _readable(identifier):
     return words[:1].upper() + words[1:]
 
 LABELS = {
+    "passive_records": "Pasif kayıt sayısı",
     "book_code": "Stok kodu", "book_name": "Kitap adı", "customer_code": "Müşteri kodu",
     "customer_name": "Müşteri adı", "channel": "Satış kanalı", "author": "Yazar künyesi",
     "subbrand_id": "Alt marka kimliği", "subbrand": "Alt marka",

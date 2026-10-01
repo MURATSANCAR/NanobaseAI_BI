@@ -77,7 +77,7 @@ class Executor:
         # Return invoices measured beside an invoice count: [{start, end, returnInvoiceCount}].
         self.return_invoice_counts = []
 
-    def read(self, sql, *, metadata=False, source="logo"):
+    def read(self, sql, *, metadata=False, source="logo", passive_count=False):
         statements = sqlglot.parse(sql, read="tsql")
         if len(statements) != 1 or not isinstance(statements[0], exp.Select) or any(
             node.key in {"insert", "update", "delete", "merge", "create", "drop", "alter", "into", "command"}
@@ -95,7 +95,9 @@ class Executor:
             # must be the executed SQL, and the rewriter passes unparsable SQL unfiltered. The same
             # passive-record rule is written into every query (crm_active) and verified here, fail closed.
             conn = getattr(conn, "inner", conn)
-            if not metadata:
+            if passive_count and not self.single_count(statements[0]):
+                raise ContractError("Pasif kayıt sayımı yalnız tek bir sayı döndürebilir.", code="SOURCE_CONTRACT_VIOLATION")
+            if not metadata and not passive_count:
                 eligible, passive = self.crm_policy()
                 missing = active_rule.missing(sql, eligible, passive)
                 if missing:
@@ -181,6 +183,35 @@ class Executor:
                 raise ContractError("CRM pasif kayıt kuralının tablo listesi okunamadı.", code="SOURCE_UNAVAILABLE")
             self._crm_policy = (eligible, passive)
         return self._crm_policy
+
+    @staticmethod
+    def single_count(select):
+        """Pasif sayımının tek izinli biçimi: tek tablo, tek COUNT ifadesi, gruplama ve birleşim yok (kayıt dönmez)."""
+        exprs = select.expressions
+        return (len(exprs) == 1 and isinstance(exprs[0].unalias(), exp.Count) and not select.args.get("group")
+                and not select.args.get("joins") and len(list(select.find_all(exp.Table))) == 1)
+
+    #: Pasif sayımının kayıt türleri → CRM tablosu, ekran adı, türe özgü sabit koşul.
+    PASSIVE_KINDS = {"customer": ("AccountBase", "müşteri", ""), "book": ("new_kitapBase", "kitap", ""),
+                     "author": ("ContactBase", "yazar", " AND r.new_yazarmi=1"), "contract": ("new_sozlesmeBase", "sözleşme", "")}
+
+    def passive_count(self, kind):
+        """Kurum kuralı: pasif CRM kaydı listelenmez; açık istekte yalnız sayısı. Pasif = aktif kuralının tersi
+        (statecode≠0 ya da «Pasif…/Inactive…» durum nedeni), okuma kapısındaki tanımın aynısı."""
+        if kind not in self.PASSIVE_KINDS:
+            raise ContractError("Pasif sayımı bu kayıt türü için tanımlı değil.")
+        table, label, extra = self.PASSIVE_KINDS[kind]
+        self.verify_schema({table: ["statecode", "statuscode"] + (["new_yazarmi"] if kind == "author" else [])}, "crm")
+        eligible, passive = self.crm_policy()
+        if table.lower() not in eligible:
+            raise ContractError("Bu kayıt türünde aktif/pasif durumu tutulmuyor.")
+        where = f"NOT ({active_rule.predicate(table, 'r', passive)}){extra}"
+        rows = self.read(f"SELECT COUNT_BIG(*) AS [passive_records] FROM {CRM}.[{table}] r WHERE {where}",
+                         source="crm", passive_count=True)
+        self.output_fields, self.numeric_fields = ["passive_records"], {"passive_records"}
+        self.notes.append(f"Pasif {label} kayıtları kurum kuralı gereği listelenmez; yalnız sayısı verilir. "
+                          "Sayı kayıtların bugünkü durumudur, pasife alınma tarihi sorgulanmaz.")
+        return [{"passive_records": int(rows[0]["passive_records"] or 0) if rows else 0}]
 
     def crm_active(self, table, alias):
         """User rule: no passive CRM record anywhere (LEFT targets too). '1=1' for tables without statecode."""
@@ -308,6 +339,8 @@ class Executor:
             self.output_fields = ["section", "status", "row_count"]
             self.numeric_fields = {"row_count"}
             return overview
+        if getattr(plan, "passive_count", None):
+            return self.passive_count(plan.passive_count)
         if getattr(plan, "relational_query", None):
             from .relational_executor import execute_relational_query
             return self.report_result(execute_relational_query(self, plan.relational_query))
@@ -404,6 +437,8 @@ class Executor:
             self.output_fields = (["period_start", "period_end_exclusive"] if len(plan.periods)>1 else []) + group_fields + list(plan.metrics) + [d.id for d in plan.derived]
             for spec in getattr(plan, "analytics", ()):
                 self.output_fields += [spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct")] if spec["op"] == "contribution" else ["row_kind"]
+        if family == "sales" and set(plan.metrics) & {"net_sales", "sales_amount"}:
+            self.price_difference_note(plan)
         if plan.derived or plan.comparison:
             self.notes.append("Oran veya yüzde değişim hesabında sıfır/eksik payda boş gösterilir; dönemde bulunmayan kırılım sıfır varsayılmaz.")
         if returns_probe:
@@ -475,7 +510,73 @@ class Executor:
         self.notes.append("Satış satırı, fatura başlığı ve ödeme hareketleri ayrı hesaplandı; ortak kırılımda birleştirildi. Dönemde hareketi olmayan ölçü 0 gösterilir.")
         return list(joined.values())
 
+    def price_difference_note(self, plan):
+        """Müşteriye ayrı faturayla verilen iskonto fiyat farkı (hizmet kartı 611…): muhasebede satış indirimi, kitap
+        satırına bağlı değil. Satış tutarı bunu içermez; aynı dönem ve müşteri/kanal süzgeciyle tutarı nota yazılır
+        (karar 2026-10-01). İade faturasında indirim (+), satış faturasında geri alım (−)."""
+        total = Decimal(0)
+        coverage = list(self.source_periods)    # aynı dönemler cevabın kapsamında zaten yazılı
+        for start, end in plan.periods:
+            for a, b, firm, period in self.partitions(date.fromisoformat(start), date.fromisoformat(end)):
+                line, header = f"LG_{firm}_{period}_STLINE", f"LG_{firm}_{period}_INVOICE"
+                srv, client = f"LG_{firm}_SRVCARD", f"LG_{firm}_CLCARD"
+                self.verify_schema({line: ["LINETYPE", "INVOICEREF", "STOCKREF", "CLIENTREF", "VATMATRAH", "TRCODE", "CANCELLED"],
+                                    header: ["LOGICALREF", "DATE_", "CANCELLED"], srv: ["LOGICALREF", "CODE"],
+                                    client: ["LOGICALREF", "CODE", "DEFINITION_", "SPECODE2"]}, "logo")
+                conditions = ["f.CANCELLED=0", "h.CANCELLED=0", "f.LINETYPE=4", "f.INVOICEREF<>0", "f.TRCODE IN (2,3,7,8,9)",
+                              f"h.DATE_>='{a}'", f"h.DATE_<'{b}'", "s.CODE LIKE '611%'"]
+                if plan.sale_kind != "all":
+                    conditions.append("f.TRCODE IN " + ("(8,3)" if plan.sale_kind == "wholesale" else "(7,2)"))
+                for dim, op, value in plan.filters:
+                    if dim not in ("customer", "channel"):
+                        continue
+                    exprs = {"customer": ["c.CODE", "c.DEFINITION_"], "channel": ["c.SPECODE2"]}[dim]
+                    if op == "contains":
+                        escaped = value.replace("~", "~~").replace("%", "~%").replace("_", "~_").replace("[", "~[")
+                        pred = [f"{e} LIKE {literal('%' + escaped + '%')} ESCAPE '~'" for e in exprs]
+                    else:
+                        pred = [f"{e}={literal(value)}" for e in exprs]
+                    conditions.append("(" + " OR ".join(pred) + ")")
+                rows = self.read("SELECT ISNULL(SUM(CASE WHEN f.TRCODE IN (2,3) THEN f.VATMATRAH ELSE -f.VATMATRAH END),0) AS [discount]"
+                                 f" FROM dbo.[{line}] f JOIN dbo.[{header}] h ON h.LOGICALREF=f.INVOICEREF"
+                                 f" JOIN dbo.[{srv}] s ON s.LOGICALREF=f.STOCKREF LEFT JOIN dbo.[{client}] c ON c.LOGICALREF=f.CLIENTREF"
+                                 " WHERE " + " AND ".join(conditions))
+                total += sum((number(r.get("discount")) for r in rows), Decimal(0))
+        self.source_periods = coverage
+        if abs(total) >= 1:
+            amount = f"{total:,.2f}".replace(",", "~").replace(".", ",").replace("~", ".")
+            where = "kitap satırına bağlı olmadığı için kitap kırılımına dağıtılamaz" if ("book" in plan.dimensions or any(d == "book" for d, _, _ in plan.filters)) else "müşteri bazında ayrı faturayla kesilir"
+            self.notes.append(f"Bu dönemde ayrı faturayla verilen iskonto fiyat farkı {amount} TL (muhasebede satış indirimi) bu satış "
+                              f"tutarına dahil değildir; {where}. Muhasebe net satışı bu farkları içerir.")
+
+    def aggregate_ledger(self, plan, start, end, firm, period):
+        """Muhasebe net satışı: fiş satırında 600–602 ve 610–612 alacak − borç. Kapanış ve yansıtma hesabı içeren fişler
+        M45 gelir tablosuyla aynı kuralla dışarıda (finance_sources); dönem fiş satırı tarihi."""
+        from semantic_bridge.finance_sources import close_accounts, yansitma_accounts
+        line, fiche, acc = f"LG_{firm}_{period}_EMFLINE", f"LG_{firm}_{period}_EMFICHE", f"LG_{firm}_EMUHACC"
+        types = self.verify_schema({line: ["ACCFICHEREF", "ACCOUNTREF", "DEBIT", "CREDIT", "DATE_", "CANCELLED"],
+                                    fiche: ["LOGICALREF", "CANCELLED"], acc: ["LOGICALREF", "CODE"]}, "logo")
+        for col in ("DEBIT", "CREDIT"):
+            if types[line.lower(), col.lower()] not in {"decimal", "numeric", "float", "real", "money", "smallmoney"}:
+                raise ContractError("Muhasebe tutar alanının veri türü sözleşmeyle uyuşmuyor.")
+        labels = {d: e for d, e in {"day": "CONVERT(varchar(10),f.DATE_,23)", "month": "CONVERT(varchar(7),f.DATE_,23)",
+                                    "year": "YEAR(f.DATE_)"}.items() if d in plan.dimensions}
+        excluded = close_accounts()[:-1] + "," + yansitma_accounts()[1:]
+        select = [f"{e} AS [{d}]" for d, e in labels.items()]
+        select.append("ISNULL(SUM(f.CREDIT-f.DEBIT),0) AS [accounting_net_sales]")
+        sql = ("SELECT " + ", ".join(select) + f" FROM dbo.[{line}] f JOIN dbo.[{fiche}] h ON h.LOGICALREF=f.ACCFICHEREF"
+               f" JOIN dbo.[{acc}] a ON a.LOGICALREF=f.ACCOUNTREF"
+               f" WHERE f.CANCELLED=0 AND h.CANCELLED=0 AND f.DATE_>='{start}' AND f.DATE_<'{end}'"
+               " AND LEFT(a.CODE,3) IN ('600','601','602','610','611','612')"
+               f" AND NOT EXISTS (SELECT 1 FROM dbo.[{line}] k JOIN dbo.[{acc}] ka ON ka.LOGICALREF=k.ACCOUNTREF"
+               f" WHERE k.ACCFICHEREF=f.ACCFICHEREF AND k.CANCELLED=0 AND LEFT(ka.CODE,3) IN {excluded})")
+        if labels:
+            sql += " GROUP BY " + ", ".join(labels.values())
+        return self.read(sql)
+
     def aggregate(self, plan, family, start, end, firm, period, enrichment):
+        if family == "ledger":
+            return self.aggregate_ledger(plan, start, end, firm, period)
         suffix = {"sales": "STLINE", "invoice": "INVOICE", "collection": "CLFLINE"}[family]
         table = f"LG_{firm}_{period}_{suffix}"
         item_table, client_table = f"LG_{firm}_ITEMS", f"LG_{firm}_CLCARD"
