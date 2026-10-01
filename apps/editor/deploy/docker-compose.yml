@@ -228,7 +228,7 @@ services:
       temporal: {condition: service_healthy}
 
   # Portaldan kitap okutma kuyruğu (editor.portal_books): GPU'da okuma yokken sıradaki kitabı başlatır, düşen
-  # okumayı EDITOR_READ_ATTEMPTS denemeye kadar yeniden sıraya koyar. Aynı anda tek kitap okunur.
+  # okumayı EDITOR_READ_ATTEMPTS denemeye kadar yeniden sıraya koyar. Aynı anda EDITOR_READ_PARALLEL (vars. 2) kitap okunur.
   book-queue:
     <<: *py
     profiles: [analysis]

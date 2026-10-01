@@ -74,6 +74,7 @@ def test_item_state(status, attempt, wf, state):
 
 def test_item_counts_books_ahead_including_the_running_one():
     waiting = ["a", "j1", "b"]
+    assert PB.item(_row("QUEUED"), waiting, busy=2)["ahead"] == 3
     assert PB.item(_row("QUEUED"), waiting, busy=1)["ahead"] == 2
     assert PB.item(_row("QUEUED"), waiting, busy=0)["ahead"] == 1
     assert PB.item(_row("RUNNING", workflow_id="w"), waiting, busy=1)["ahead"] is None
