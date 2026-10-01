@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 (sabah) — 26 kitap yeniden okutma, paralel kontrol, Kitaba sor düzeltmeleri (sürüyor)
+
+- 26 PDF (test sunucusu `kabul/redaksiyon-pdf`, sha256 26/26 yerel ile eş) portalın kitap okutma ucundan kuyruğa verildi; Levent (360 MB) 300 MB portal sınırına takıldı, sınır değiştirilmeden köprünün editör çağrısıyla gönderildi.
+- `0e7650145`: nginx kitap okutma yolu (`ask/read`) 10 MB genel API sınırına düşüyordu (9 kitap 413) → editoryal yükleme konumuna eklendi; test sunucusunda kurulu, VM şablonu main'de (VM'e kurulmadı).
+- `98eebacb7`: okuma kuyruğu aynı anda 2 kitap (`EDITOR_READ_PARALLEL`, kullanıcı kararı). `eca46f4af`: okuma isteği GPU 0'daki eşe taşar (BI'ın kendi yükü ≤2, en çok 8; kullanıcı kararı). İkisi GPU'da canlı (gateway/book-queue/cards `0.15.9-eca46f4a`, worker `19e0d723` — kod farkı yalnız bu iki dosya). Gateway yeniden başlatması süren Rüzgâr okumasının son okuma adımını baştan koşturdu (~20 dk); okuma sürerken gateway yeniden başlatılmamalı.
+- Ölçüm (Çiçekçi Kadın): 13.946 model çağrısı, 1 M çıktı token, 89 dk; süre son okuma (kelime çeşitliliği 20,6 dk, mekân 8,9 dk) ve doğrulamada (critic 42 çağrı × 7 dk). Bütün kitabı veren denetimler yetişkin romanda da «resimli çocuk kitabı» talimatıyla koşuyor (Rüzgâr 974 çağrı) — ayrı verim işi.
+- Kitaba sor gerçek kabul (Çiçekçi, 14 soru, ajanın bağımsız anahtarı): 10 doğru, 2 yarım, 2 yanlış. `b4285f884`: kapsam sınıflandırıcısı seçili kitabı görür (yangın soruları «kitap dışı» sanılıyordu) → test köprüsünde kurulu, yeniden soruldu 5/5 (2 kitap sorusu doğru, 3 kitap dışı soru reddedildi). Sonuç 12/14 + 2 yarım (bölüm adı, ana fikir). Her cevaptaki «kaynaklı taslak» notu SOUL.md kuralı — kullanıcı kararı bekliyor. Okuma sürerken Kitaba sor GPU 1'de model değiş tokuşu yapıyor (kanıt arama ilk denemede 237 sn sonra düştü).
+- Bölüm bulma (okumanın kendisi): `knowledge.chapters_from_pages` 26 kitabın çoğunda yanlış (Babam 150, Duvarları 199 bölüm; Çiçekçi'de yazar adı tek bölüm). Dizgi tabanlı aday kural (punto + bölüm başı boşluğu + başlık sayfası + sayfa başlığı ayıklama) ölçüldü: Çiçekçi 8, Zavallı 32 (kısım+bölüm), Levent 11, Böcekleri, Duvarları, Darwin, Dallar doğru. Aday kod ve ölçüm düzeneği henüz depoda değil (oturum çalışma klasöründe `yeni_bolum5.py`, `bolum_olc3.py`); kalan: künye/ithaf/reklam sayfaları, resimli kitapta konuşma balonu, Aile'de ana bölüm; sonra `document.page_headings` + `chapters_from_pages(pages, headings, title)` olarak taşınıp outputs.capture'a bağlanacak, okunmuş kitaplar yeniden çıktı üretecek.
+- Paralel kontrol: 21/26 kitabın bağımsız cevap anahtarı (ajanlar) çıkarıldı; resimli 5 kitabınki sürüyor.
+
 ## 2026-10-01 — Dönem kuralı: yıl yazılmamışsa güncel yıl, geçmiş yıl yalnız açıkça istenirse
 
 - Kullanıcı kararı: yılsız ay/gün her zaman güncel yıl (ay henüz gelmemiş olsa bile); geçen ay, dün/geçen gün, önceki çeyrek, geçen hafta bugüne göre. 2021–2025 kopyaları yalnız yıl yazılınca ya da göreli geçmiş/karşılaştırma istenince okunur.
