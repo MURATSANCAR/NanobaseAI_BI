@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 (akşam) — «Neden?», uyarı nedeni ve beklenen aralık finans motoruna bağlandı
+
+- Sorun: eski semantik katalog emekli olunca (`074f3ff26`, kullanıcı kararı) `variance.py` ölçüyü hâlâ eski çözücüden (`r.resolver.resolve`) arıyordu; katalog boş olduğu için «Neden?» ayrıştırması, uyarı bildirimindeki neden, beklenen aralık ve eşik önerisi «katalogda ölçü yok» dönüyordu. Yeni motorun cevabında `neden` ipucu olmadığından sohbetteki «Neden?» düğmesi de hiç görünmüyordu. Uyarının eşik değeri (`r.ask`) zaten yeni motordaydı.
+- Çözüm: ayrıştırma finans planını okur — sohbet cevabında sorgu kaydındaki `resolved_json.plan` (yeniden planlanmaz), pano kartı/uyarıda soru `finance_query.planner.build` ile (gün başına bir kez, bellek önbelleği). Plan kanal/cari/kitap ve gün kırılımıyla, iki dönem için finans yürütücüsünde (`Executor`) koşar; ölçü tanımı, filtre, satış türü, yıl kopyaları ve okuma kapısı sohbetle birebir, `variance.py` artık SQL yazmaz. Yalnız toplanabilir satış ölçüleri (`sales` ailesi: satış/net satış/iade tutarı, satılan/net adet); fatura sayısı, oran, CRM ve rapor planları nedenle reddedilir. Finans cevabına `neden` ipucu eklendi (`finance_query/__init__.py`). Karşı dönem, kırpma, beklenen aralık ve anlatım hesapları değişmedi.
+- Değişen: `variance.py`, `variance_api.py`, `app.py` (uyarı beklenen aralığı/nedeni/öneri), `finance_query/__init__.py`, `test_zeki_fark.py` (plan tabanlı), `scripts/acceptance/zeki-fark/kabul.py` (referans VATMATRAH + fatura tarihi).
+- Doğrulama (test sunucusu, Logo .25, yalnız SELECT): doğrudan yürütücü 18/18 — 2026 Ocak–Eylül 1.149.046.714,02 = `V_SatisRaporu_411`; 2025 aynı dönem 761.558.064,68 = bağımsız SQL; kanal/cari/kitap kalem farkları toplamı = net fark (387,5 Mn); KURUM süzgeciyle aynı; Eylül beklenen aralığı mevsimsel 160–342 Mn. Yan köprü (8798, aday ağaç, timasai 15 dk oturumu) uçtan uca 11/11: sohbet cevabı `neden.ok`, kayıttan ayrıştırma = görünüm, Zeki AI anlatımı, sorudan (planlayıcı) ayrıştırma = görünüm, fatura sayısı reddi, uyarı eşik önerisi + okuma kaydı. Tam test seti: 5.240 geçti, 18 başarısız/10 hata — değişiklik öncesi ağaçla birebir aynı liste.
+- Ara olay: TİMAŞ VPN'i 16:52'de «fatal error» ile kapanmıştı (tun0 yok, .25:1433'e yol yok); ilk uçtan uca koşu bu yüzden kaldı, kullanıcı VPN'i açınca geçti.
+- Temizlik: yan köprü durduruldu, anahtarsız ortam kopyası silindi, 2 timasai oturum satırı (eklenen/silinen) ve 2 sorgu kaydı (`q_bec7e99d7541`, `q_3e611427c946`) silindi; değişiklik kaydında timasai «fark» satırları 9520–9521 kurala göre duruyor.
+
 ## 2026-10-01 — Finans kararları üç ortamda: kabul tamam, VM kuruldu
 
 - Denetçi düzeltmesinin ilk hâli (yalnız `tarih_kaynağı` ipucu) canlıda yetmedi: FC54/FC66'da denetçi doğru «Aralık 2026» aralığını yine Kasım/Ocak diye yeniden yazdı. `84250e625`: dönem sorudan kurallı çözüldüyse denetçi somut tarih görmez. Sonra FC54/FC66 2'şer tekrarla 4/4 PASS.
