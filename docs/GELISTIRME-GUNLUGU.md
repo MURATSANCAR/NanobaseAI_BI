@@ -5,6 +5,12 @@
 - VM 03:56'da çekirdek güncellemesiyle yeniden başlamış (7.0.0-34); konteynerler 30 Eylül kurulumundan, anlık görüntüye dönüş yok. Tünel kapalıydı, kullanıcı açtı; `/timas/` 200, köprü hazır (5.023 sertifikalı).
 - VM köprüsünde `POST /api/v1/it-ops/watchdog` 500: `semantic_itops_jobs.every` VARCHAR(40), M19 işinin takvimi 43 karakter. `278a3e0c4`: kolon 200, var olan Postgres tablosu `it_ops.ensure` içinde ALTER ile genişler.
 - Test sunucusu: yalnız `it_ops.py` (md5 kontrollü) + köprü yeniden başlatma, kolon 200. VM: VM'in tam kod sürümü kayıtlı değil (son kurulum kaydı 29.09 `411dd7be`, imaj 30.09) ve main 80 commit önde → yalnız bu dosya `docker cp` ile `bi-bridge-1`'e kondu + konteyner yeniden başlatıldı, kolon 200. Konteyner yeniden oluşturulursa düzeltme bir sonraki tam VM kurulumuyla (main'de) gelir.
+## 2026-10-01 — Karar: satış tutarı KDV matrahı, dönem fatura tarihi
+
+- Kullanıcı sordu «muhasebede doğrusu ne»; öneri kabul edildi. Satış/net satış/iade tutarı `STLINE.VATMATRAH` (satır + fatura geneli iskonto sonrası, KDV hariç), satırın dönemi faturanın tarihi (`INVOICE.DATE_`). Gerekçe: 610 iskontolar net satışı azaltır, defter ve KDV beyannamesi fatura tarihine bakar, TİMAŞ'ın Power BI satış raporu da öyle.
+- Ölçüm (Logo .25, 2026): 414 faturada iskonto ayrı satırda duruyor, LINENET görmüyor (iade faturalarında 128 bin ₺'ye varan); VATMATRAH + hizmet + diğer satırlar fatura başlığıyla (NETTOTAL−TOTALVAT) birebir. Satırların %18'inde satır günü ≠ fatura günü; ay kayması Mayıs→Haziran ve Temmuz→Ağustos 2'şer Mn ₺.
+- Değişen: `contracts.py` (sözleşme 2.1), `executor.aggregate` (satış ailesi faturaya JOIN, tarih/kırılım `h.DATE_`), `cross_reports.py`, kokpit `timas-metrics-build.py` kitap/iade listeleri, bağımsız kabul referansı (`K-NET-MATRAH`, `K-DONEM-FATURA`, `sales_from`). Diğer modüllerin (kampanya, müşteri, finansal raporlar…) LINENET kullanımı bu işin dışında.
+- Doğrulama: test sunucusunda finans testleri 460/460. Yeni motor gerçek Logo'da TİMAŞ satış raporu görünümüyle kuruşu kuruşuna eş: Eylül 2026 245.630.018,91; Haziran 107.612.165,74 (eski hesap +2,14 Mn); Ocak–Eylül 1.147.946.394,88.
 
 ## 2026-10-01 — Karar: aktif müşteri yalnız «Aktif Müşteri» durumu
 
