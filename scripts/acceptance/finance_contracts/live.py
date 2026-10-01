@@ -82,8 +82,7 @@ def cases(variant="decision"):
     add("29 Eylül 2026 tarihinde kanal bazında satılan kitap adedi kaçtır?","logo",sales("411","2026-09-29","2026-09-30",["sold_quantity"],["channel"],require_trcodes=(7,8,9)),["channel","sold_quantity"],["channel"])
     add("CRM’de aktif kitap kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_books FROM dbo.new_kitapBase K WITH (NOLOCK) WHERE "+active("new_kitapBase","K"),["active_books"])
     add("CRM’de aktif yazar kişi kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_authors FROM dbo.ContactBase P WITH (NOLOCK) WHERE "+active("ContactBase","P")+" AND P.new_yazarmi=1",["active_authors"])
-    # K-CRM-PASIF: yalnız 'Pasif…' durum nedeni düşer; potansiyel/arşiv/sorunlu müşteri pasif değildir
-    # (ürün yalnız 'Aktif Müşteri' sayar → bu vakada TANIM_FARKI beklenir).
+    # K-CRM-MUSTERI (2026-10-01): aktif müşteri yalnız 'Aktif Müşteri' durum nedeni; ürünle aynı tanım.
     add("CRM'de aktif cari kaydı sayısı kaçtır?","crm","SELECT COUNT(*) active_customers FROM dbo.AccountBase A WITH (NOLOCK) WHERE "+active("AccountBase","A"),["active_customers"])
     for kind,code in [("toptan",8),("perakende",7)]:
         add(f"Eylül 2026 {kind} satış fatura toplamı nedir?","logo",f"SELECT COALESCE(SUM(NETTOTAL),0) invoice_amount FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE={code} AND DATE_>='20260901' AND DATE_<'20261001'",["invoice_amount"])
@@ -173,9 +172,15 @@ def cross_reference(conns, variant="decision"):
     return list(groups.values())
 
 
+HONEST_BOUNDARY_TYPES = ("CLARIFICATION", "UNSUPPORTED_CAPABILITY")
+
+
 def compare(case, answer, whole, reference):
     if case.get("expected")=="clarify":
-        return [] if answer.get("type")=="CLARIFICATION" else ["expected honest clarification"]
+        # Boundary: an honest boundary is a clarification question or a refusal that shows no
+        # numbers (UNSUPPORTED_CAPABILITY). Any answer carrying rows is a failure.
+        honest=answer.get("type") in HONEST_BOUNDARY_TYPES and not answer.get("records")
+        return [] if honest else ["expected honest clarification or refusal without numbers"]
     if answer.get("type")!="TEXT_TO_SQL":return ["expected answer: "+str(answer.get("explanation") or answer.get("error"))]
     problems=[]
     if whole.get("truncated"):problems.append("full result truncated")

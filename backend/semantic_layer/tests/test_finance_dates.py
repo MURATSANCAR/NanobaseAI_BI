@@ -98,3 +98,44 @@ def test_no_year_never_reaches_past_copies():
                      "geçen ay", "dün", "önceki çeyrek", "geçen hafta", "bu yıl", "Aralık ayı"):
         for start, _ in periods(question + " net satış"):
             assert start >= "2026-01-01", (question, start)
+
+
+# 2026-10-01 canlı kabul FC54/FC66: denetçi «Aralık 2026» aralığını (henüz gelmemiş ay) yanlış sanıp
+# doğru planı reddetti. Dönemi model seçmez; sorudaki ifadeden kurallı çözüldüyse denetçiye söylenir.
+class _ReviewSpy:
+    def __init__(self):
+        self.review = None
+
+    def complete(self, messages, **kw):
+        import json as _json
+        name = kw["body"]["response_format"]["json_schema"]["name"]
+        if name == "finance_review":
+            self.review = _json.loads(messages[-1]["content"])
+            content = '{"ok": true, "missing": []}'
+        else:
+            raise AssertionError(name)
+        return {"message": {"content": content}, "finish_reason": "stop"}
+
+
+def _plan_data(**extra):
+    data = {"metrics": ["net_sales"], "dimensions": [], "sale_kind": "all", "filters": [], "limit": None,
+            "order_by": None, "descending": True, "derived": [], "having": [], "comparison": None, "crm": None,
+            "logo_report": None, "crm_report": None, "relational_query": None, "analytics": [], "sections": [],
+            "gaps": [], "coverage": [], "uncovered": [], "clarification": ""}
+    data.update(extra)
+    return data
+
+
+def test_reviewer_is_told_a_written_future_month_was_parsed_by_rule():
+    from semantic_bridge.finance_query.planner import build
+    spy = _ReviewSpy()
+    plan = build("Aralık 2026 net satış tutarı nedir?", spy, _data=_plan_data())
+    assert plan.periods == (("2026-12-01", "2027-01-01"),)
+    assert spy.review["plan"]["tarih_kaynağı"] == "sorudaki_ifadeden_kurallı_çözüm"
+
+
+def test_default_period_is_not_marked_as_parsed_from_the_question():
+    from semantic_bridge.finance_query.planner import build
+    spy = _ReviewSpy()
+    build("Net satış tutarı nedir?", spy, _data=_plan_data())
+    assert spy.review["plan"]["tarih_kaynağı"] is None

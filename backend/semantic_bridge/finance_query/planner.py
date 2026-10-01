@@ -592,6 +592,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                     ["subbrand_id", "subbrand"] if d == "subbrand" else ["author_group_ids", "author_group_names"] if d == "author_group" else [d]} for d in dims},
                 "tarih_anlamı": "Son N ay/yıl, bugünün gün numarası korunarak N takvim birimi geriye gidilen hareketli aralıktır; hedef ayda gün yoksa ay sonu kullanılır ve bugün dahildir. Son tamamlanan N ay/yıl ise tamamlanmış takvim dönemleridir. Bunlar aynı aralık değildir. En yüksek/en çok gibi ölçü sırasındaki ilk N gün bütün istenen dönemden seçilen N sonuç satırıdır; ayın kronolojik ilk N günü değildir.",
                 "uygulanan_tarih_aralıkları": [{"başlangıç_dahil":a,"bitiş_hariç":b, "son_gün_dahil":str(date.fromisoformat(b)-timedelta(days=1)), "gün_sayısı":(date.fromisoformat(b)-date.fromisoformat(a)).days} for a,b in periods],
+                # The model never chooses dates: periods come from the rule-based parser. When the
+                # question's own wording produced them, the reviewer must not re-judge the range
+                # (it rejected "Aralık 2026" as wrong because the month is still ahead of today).
+                "tarih_kaynağı": "sorudaki_ifadeden_kurallı_çözüm" if periods and tuple(map(tuple, periods)) == tuple(map(tuple, dates(question, today)[0])) else None,
                 "referenceDate_anlamı": "Yalnız göreli tarihleri çözme çıpası; mutlak tarih isteğinin yerine geçen sorgu tarihi değildir",
                 "teknik_kod_anlamı": "Ölçü tanımlarındaki TRCODE, SIGN ve 7/8/9, 2/3 gibi sayılar işlem türü kodlarıdır; ay/gün/yıl veya tarih filtresi değildir",
                 "sonuç_kırılımları": result_grain, "koşullar": conditions, "operand_anlamları": operand_meanings,
@@ -664,6 +668,8 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         "aynı nüfusu tarif eder; aralığı ikinci bir filters girdisi veya tarih çıktı kolonu olmadığı için eksik sayma. "
         "gün_sayısı aralıktaki takvim günü sayısıdır; sorunun gün adedi ve bugün dahil şartını bu somut sınırlarla denetle. "
         "Gerçek tarih uyuşmazlığı varsa istenen sınır ile uygulanan sınırın hangisinin farklı olduğunu belirt. "
+        "tarih_kaynağı sorudaki_ifadeden_kurallı_çözüm ise aralık sorudaki dönem ifadesinden kurallı ayrıştırıcıyla "
+        "çözülmüştür ve doğrudur; henüz gelmemiş ay/yıl da olsa tarih aralığı uyuşmazlığı yazma, yalnız diğer koşulları denetle. "
         "Tarih koşulunu yalnız uygulanan_tarih_aralıkları ile denetle; referenceDate göreli çözüm çıpasıdır, "
         "ölçü tanımındaki işlem kodları takvim ayları değildir. "
         "Yüzde fark, açık formülde (sol-sağ)/sağ*100 ile sağlanır; aynı ara fark için ikinci bir işlem şart değildir. "
