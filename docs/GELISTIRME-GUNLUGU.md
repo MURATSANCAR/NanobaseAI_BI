@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Kabul açıkları: denetçi tarih yargısı ve dürüst ret
+
+- FC54/FC66: model denetçisi «Aralık 2026» aralığını (bugünden ileride) yanlış sanıp doğru planı reddetti («Aralık yerine Kasım olmalı»). Dönemi model hiç seçmiyor, kurallı ayrıştırıcı çözüyor; `planner._build` denetçiye `tarih_kaynağı=sorudaki_ifadeden_kurallı_çözüm` veriyor ve bu durumda tarih uyuşmazlığı yazmamasını söylüyor. Varsayılan dönem (yılbaşından bugüne) bu işareti taşımaz. Testler: `test_finance_dates.py` +2.
+- `live.py` sınır vakaları: rakam göstermeyen dürüst ret (`UNSUPPORTED_CAPABILITY`) da netleştirme gibi geçer; satır taşıyan cevap FAIL kalır. Önceki 5 FAIL (2027 tarihi, pasif kayıt, dolar çevirisi, kesin vadesi geçmiş alacak, satış hedefi) bu sınıftandı.
+- Gözlem (değiştirilmedi): finans planının ilk denemesi düşünme açık ve 8.192 token bütçeli; GPU yavaşken 645 sn sürüp kesiliyor, ikinci deneme düşünmesiz 18 sn. Süre sınırı ya da düşünme kapatma ayrı karar.
+- Test sunucusunda 462/462. Kurulum ve canlı kabul aşağıda.
+
 ## 2026-10-01 — Satış tanımı kararları test sunucusunda: kurulum ve gerçek API kabulü
 
 - Kurulum (test sunucusu, `main` f14dc357f): 5 `finance_query` dosyası + kokpit `/opt/timas-metrics/build.py`; önce sunucu kopyalarının önceki main ile aynı olduğu (yabancı yama yok) md5 ile doğrulandı. Köprü yeniden başladı, health 200, Mac artığı 0, kokpit üreticisi elle koştu (başarılı).
