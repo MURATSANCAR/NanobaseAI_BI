@@ -2,7 +2,9 @@
 
 Only logical IDs are planner inputs; physical identifiers and predicates here
 are reviewed constants. Metadata is not business/API acceptance. Runtime must
-verify schema and apply every entity active predicate, including LEFT targets.
+verify schema and apply every entity active predicate, including LEFT targets,
+AND the shared passive-record rule (statecode=0, no Pasif/Inactive status reason)
+on every table that has statecode (relational_executor + executor.crm_active).
 """
 
 SCHEMA_PROVENANCE = {'crm_inventory_20260930_r2': {'artifact': 'crm-coverage/inventory-source.json',
@@ -654,6 +656,13 @@ ENTITY_REGISTRY = {'book': {'table': 'new_kitapBase',
                                          'sql_type': 'nvarchar',
                                          'nullable': True,
                                          'sum_allowed': False},
+                        'stock_card_id': {'column': 'new_stakkarti',
+                                          'type': 'identity',
+                                          'sql_type': 'uniqueidentifier',
+                                          'nullable': True,
+                                          'sum_allowed': False,
+                                          'semantics': "Project's book (Stok Kartı); with book.project_card_id/book_project_id "
+                                                       'this is the book-project link'},
                         'statecode': {'column': 'statecode',
                                       'type': 'number',
                                       'sql_type': 'int',
@@ -695,30 +704,7 @@ ENTITY_REGISTRY = {'book': {'table': 'new_kitapBase',
                    'active_predicate': '{alias}.[statecode]=0',
                    'predicate_columns': ['statecode'],
                    'provenance': 'crm_inventory_20260930_r2',
-                   'semantic_notes': []},
- 'project_book': {'table': 'new_new_proje_new_kitapBase',
-                  'schema': 'dbo',
-                  'primary_key': 'link_id',
-                  'grain': 'one physical source record',
-                  'fields': {'link_id': {'column': 'new_new_proje_new_kitapId',
-                                         'type': 'identity',
-                                         'sql_type': 'uniqueidentifier',
-                                         'nullable': False,
-                                         'sum_allowed': False},
-                             'project_id': {'column': 'new_projeid',
-                                            'type': 'identity',
-                                            'sql_type': 'uniqueidentifier',
-                                            'nullable': False,
-                                            'sum_allowed': False},
-                             'book_id': {'column': 'new_kitapid',
-                                         'type': 'identity',
-                                         'sql_type': 'uniqueidentifier',
-                                         'nullable': False,
-                                         'sum_allowed': False}},
-                  'active_predicate': '1=1',
-                  'predicate_columns': [],
-                  'provenance': 'crm_inventory_20260930_r2',
-                  'semantic_notes': []}}
+                   'semantic_notes': []}}
 
 RELATION_REGISTRY = {'work_project_id_to_project': {'left_entity': 'work',
                                 'right_entity': 'project',
@@ -730,16 +716,6 @@ RELATION_REGISTRY = {'work_project_id_to_project': {'left_entity': 'work',
                                 'provenance': 'new_new_proje_new_isplani_projeid',
                                 'semantic_note': 'Physical FK to unique PK; active endpoint may be '
                                                  'unresolved. Reverse traversal can multiply grain.'},
- 'project_book_project_id_to_project': {'left_entity': 'project_book',
-                                        'right_entity': 'project',
-                                        'left_field': 'project_id',
-                                        'right_field': 'project_id',
-                                        'cardinality': 'many_to_one',
-                                        'nullable': False,
-                                        'target_unique': True,
-                                        'provenance': 'new_new_proje_new_kitapOne',
-                                        'semantic_note': 'Physical FK to unique PK; active endpoint may be '
-                                                         'unresolved. Reverse traversal can multiply grain.'},
  'book_book_project_id_to_project': {'left_entity': 'book',
                                      'right_entity': 'project',
                                      'left_field': 'book_project_id',
@@ -760,6 +736,16 @@ RELATION_REGISTRY = {'work_project_id_to_project': {'left_entity': 'work',
                                      'provenance': 'new_new_proje_new_kitap_projekarti',
                                      'semantic_note': 'Physical FK to unique PK; active endpoint may be '
                                                       'unresolved. Reverse traversal can multiply grain.'},
+ 'project_stock_card_id_to_book': {'left_entity': 'project',
+                                   'right_entity': 'book',
+                                   'left_field': 'stock_card_id',
+                                   'right_field': 'book_id',
+                                   'cardinality': 'many_to_one',
+                                   'nullable': True,
+                                   'target_unique': True,
+                                   'provenance': 'new_new_kitap_new_proje_stakkarti',
+                                   'semantic_note': 'Physical FK to unique PK; active endpoint may be '
+                                                    'unresolved. Reverse traversal can multiply grain.'},
  'contract_book_contract_id_to_contract': {'left_entity': 'contract_book',
                                            'right_entity': 'contract',
                                            'left_field': 'contract_id',
@@ -836,16 +822,6 @@ RELATION_REGISTRY = {'work_project_id_to_project': {'left_entity': 'work',
                                                                           'endpoint may be unresolved. '
                                                                           'Reverse traversal can multiply '
                                                                           'grain.'},
- 'project_book_book_id_to_book': {'left_entity': 'project_book',
-                                  'right_entity': 'book',
-                                  'left_field': 'book_id',
-                                  'right_field': 'book_id',
-                                  'cardinality': 'many_to_one',
-                                  'nullable': False,
-                                  'target_unique': True,
-                                  'provenance': 'new_new_proje_new_kitapTwo',
-                                  'semantic_note': 'Physical FK to unique PK; active endpoint may be '
-                                                   'unresolved. Reverse traversal can multiply grain.'},
  'participation_book_id_to_book': {'left_entity': 'participation',
                                    'right_entity': 'book',
                                    'left_field': 'book_id',
@@ -929,5 +905,7 @@ EXCLUDED_RELATIONSHIPS = {'contract_parent_text': 'Text UUID does not prove look
  'work_identity': 'Title/ISBN similarity is not work/edition identity.',
  'contract_scope_precedence': 'Country-region AND/OR and legal priority unverified.',
  'reverse_fanout': 'Reverse traversal and inferred many-to-many joins forbidden in initial compiler.',
- 'unknown_edges': 'No edge without physical FK and unique target PK evidence.'}
+ 'unknown_edges': 'No edge without physical FK and unique target PK evidence.',
+ 'project_book_nn': 'new_new_proje_new_kitap N:N is not the book project (2026-10-01: 14 of 722 active pairs '
+                    'match the card lookups); use book.project_card_id/book_project_id or project.stock_card_id.'}
 

@@ -17,12 +17,14 @@ import time
 
 import sqlglot
 from sqlglot import exp
+from semantic_layer.runtime import crm_active as active_rule
 from .contracts import METRICS, TRANSACTION_CODES, ContractError, codes_sql
 from . import operations
 from .result_metadata import describe_columns, calculation_definitions, return_invoice_note
 
 MAX_ROWS = 250_000
-CRM = "[Timas_MSCRM].[dbo]"
+CRM_DB = "Timas_MSCRM"
+CRM = f"[{CRM_DB}].[dbo]"
 
 
 def literal(value):
@@ -67,6 +69,7 @@ class Executor:
         self.source_periods = []
         self.read_retries = []
         self._crm_status = {}
+        self._crm_policy = None
         self.output_fields = []
         self.coverage_complete = True
         self.section_results = []
@@ -88,9 +91,16 @@ class Executor:
         if conn is None:
             raise ContractError("İstenen veri kaynağının bağlantısı tanımlı değil.", code="SOURCE_UNAVAILABLE")
         if source == "crm":
-            # Keep the transport pool and its concurrency gate, not the legacy SQL rewriter.
-            # Every business CRM read below explicitly applies this engine's positive status contract.
+            # Keep the transport pool and its concurrency gate, not the legacy SQL rewriter: evidence SQL
+            # must be the executed SQL, and the rewriter passes unparsable SQL unfiltered. The same
+            # passive-record rule is written into every query (crm_active) and verified here, fail closed.
             conn = getattr(conn, "inner", conn)
+            if not metadata:
+                eligible, passive = self.crm_policy()
+                missing = active_rule.missing(sql, eligible, passive)
+                if missing:
+                    raise ContractError("CRM okumasında pasif kayıt kuralı uygulanmamış: " + ", ".join(missing),
+                                        code="SOURCE_CONTRACT_VIOLATION")
         t = time.monotonic()
         evidence = {"source": source, "sql": sql, "sqlSha256": hashlib.sha256(sql.encode()).hexdigest(),
                     "startedAt": time.time(), "status": "running", "rows": 0, "dbMs": 0}
@@ -156,6 +166,27 @@ class Executor:
             raise ContractError("Kaynak şema sözleşmeyle uyuşmuyor: " + ", ".join(missing), code="SOURCE_CONTRACT_VIOLATION")
         return found
 
+    def crm_policy(self):
+        """Tables with statecode and their 'Pasif…/Inactive…' status reasons, from live CRM metadata."""
+        if self._crm_policy is None:
+            wrapper = self.rt.crm_connector
+            eligible, passive = frozenset(), {}
+            if isinstance(wrapper, active_rule.ActiveOnly):
+                eligible, passive = wrapper.eligible(), dict(wrapper._passive)
+            if not eligible or not passive:
+                # The wrapper degrades silently on metadata errors; this engine re-reads and fails closed.
+                eligible = frozenset(str(r["name"]).lower() for r in self.read(active_rule.tables_sql(CRM_DB), metadata=True, source="crm") if r.get("name"))
+                passive = {k: v for k, v in active_rule.passive_codes(self.read(active_rule.passive_sql(CRM_DB), metadata=True, source="crm")).items() if k in eligible}
+            if not eligible:
+                raise ContractError("CRM pasif kayıt kuralının tablo listesi okunamadı.", code="SOURCE_UNAVAILABLE")
+            self._crm_policy = (eligible, passive)
+        return self._crm_policy
+
+    def crm_active(self, table, alias):
+        """User rule: no passive CRM record anywhere (LEFT targets too). '1=1' for tables without statecode."""
+        eligible, passive = self.crm_policy()
+        return active_rule.predicate(table, alias, passive) if table.lower() in eligible else "1=1"
+
     def crm_status(self, table, alias):
         from .language import fold
         if table not in self._crm_status:
@@ -203,7 +234,7 @@ class Executor:
         people = sources.people() if "author_group" in requested else {}
         incomplete_authors = set()
         if "author_group" in requested:
-            broken = self.read("SELECT DISTINCT L.new_Kitap AS book_id FROM " + CRM + ".new_eserkatilimBase L JOIN " + CRM + ".new_katilimcitipiBase R ON R.new_katilimcitipiId=L.new_katilimciTipi AND R.statecode=0 AND LTRIM(RTRIM(R.new_name))=N'Yazar' LEFT JOIN " + CRM + ".ContactBase C ON C.ContactId=L.new_Katilimsaglayan AND " + self.crm_status("ContactBase", "C") + " WHERE L.statecode=0 AND C.ContactId IS NULL", source="crm")
+            broken = self.read("SELECT DISTINCT L.new_Kitap AS book_id FROM " + CRM + ".new_eserkatilimBase L JOIN " + CRM + ".new_katilimcitipiBase R ON R.new_katilimcitipiId=L.new_katilimciTipi AND " + self.crm_active("new_katilimcitipiBase", "R") + " AND LTRIM(RTRIM(R.new_name))=N'Yazar' LEFT JOIN " + CRM + ".ContactBase C ON C.ContactId=L.new_Katilimsaglayan AND " + self.crm_status("ContactBase", "C") + " WHERE " + self.crm_active("new_eserkatilimBase", "L") + " AND C.ContactId IS NULL", source="crm")
             incomplete_authors = {str(r["book_id"]).strip().lower() for r in broken if r["book_id"]} & set(cards)
             if incomplete_authors:
                 self.coverage_complete = False

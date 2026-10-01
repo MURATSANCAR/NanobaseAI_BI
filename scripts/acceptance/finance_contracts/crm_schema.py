@@ -62,14 +62,14 @@ def inventory():
     bytable = {}
     for row in cols:
         bytable.setdefault(row["TABLE_NAME"].lower(), set()).add(row["COLUMN_NAME"].lower())
-    used = {"new_kitapbase", "new_markabase", "new_yaynevialtmarkabase", "contactbase", "accountbase", "new_eserkatilimbase", "new_katilimcitipibase", "new_contact_accountbase", "new_sozlesmebase", "new_sozlesmetarafibase", "new_sozlesmetaraftipibase", "new_new_sozlesme_new_kitapbase", "new_new_hak_new_sozlesmebase", "new_new_sozlesme_new_dilbase", "new_new_sozlesme_new_blgebase", "new_new_sozlesme_new_ulkebase", "new_hakbase", "new_dilbase", "new_blgebase", "new_ulkebase", "new_isplanibase", "new_projebase", "new_new_proje_new_kitapbase", "new_projeasamalaribase", "activitypointerbase", "activitypartybase", "taskbase", "appointmentbase", "new_kitapgecmisibase", "systemuserbase", "customeraddressbase", "territorybase"}
+    used = {"new_kitapbase", "new_markabase", "new_yaynevialtmarkabase", "contactbase", "accountbase", "new_eserkatilimbase", "new_katilimcitipibase", "new_contact_accountbase", "new_sozlesmebase", "new_sozlesmetarafibase", "new_sozlesmetaraftipibase", "new_new_sozlesme_new_kitapbase", "new_new_sozlesme_new_dilbase", "new_new_sozlesme_new_blgebase", "new_new_sozlesme_new_ulkebase", "new_dilbase", "new_blgebase", "new_ulkebase", "new_isplanibase", "new_projebase", "new_projeasamalaribase", "activitypointerbase", "activitypartybase", "taskbase", "appointmentbase", "new_kitapgecmisibase", "systemuserbase", "customeraddressbase", "new_adresbase", "new_illerbase", "new_firmablgesibase", "territorybase"}
     result["reportTableBindings"] = {
         "book_quality_duplicate_publication": ["new_kitapBase","new_markaBase","new_yaynevialtmarkaBase","new_eserkatilimBase","new_katilimcitipiBase","ContactBase"],
         "author_identity_coverage": ["ContactBase","new_eserkatilimBase","new_katilimcitipiBase","new_kitapBase"],
-        "customer_identity_geography": ["AccountBase","ContactBase","new_contact_accountBase","CustomerAddressBase","TerritoryBase"],
-        "contract_scope_and_parties": ["new_sozlesmeBase","new_new_sozlesme_new_kitapBase","new_sozlesmetarafiBase","new_sozlesmetaraftipiBase","new_new_hak_new_sozlesmeBase","new_hakBase","new_new_sozlesme_new_dilBase","new_dilBase","new_new_sozlesme_new_blgeBase","new_blgeBase","new_new_sozlesme_new_ulkeBase","new_ulkeBase"],
+        "customer_identity_geography": ["AccountBase","ContactBase","new_contact_accountBase","new_adresBase","new_illerBase","new_firmablgesiBase","new_ulkeBase","CustomerAddressBase","TerritoryBase"],
+        "contract_scope_and_parties": ["new_sozlesmeBase","new_new_sozlesme_new_kitapBase","new_sozlesmetarafiBase","new_sozlesmetaraftipiBase","new_new_sozlesme_new_dilBase","new_dilBase","new_new_sozlesme_new_blgeBase","new_blgeBase","new_new_sozlesme_new_ulkeBase","new_ulkeBase"],
         "book_assignments": ["new_kitapBase","SystemUserBase"],
-        "work_due_stage": ["new_isplaniBase","new_projeBase","new_projeasamalariBase","new_new_proje_new_kitapBase","new_kitapBase"],
+        "work_due_stage": ["new_isplaniBase","new_projeBase","new_projeasamalariBase","new_kitapBase"],
         "author_meeting_actions": ["ActivityPointerBase","ActivityPartyBase","TaskBase","AppointmentBase","ContactBase"],
         "history_partial": ["new_kitapgecmisiBase","AuditBase"],
     }

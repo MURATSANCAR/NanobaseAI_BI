@@ -41,8 +41,10 @@ def _literal(value):
     if value["type"]=="identity": return "CONVERT(uniqueidentifier,"+_text(value["value"])+")"
     return _text(value["value"])
 
-def compile_relational_query(plan):
-    """Caller passes validate_relational_query output. No user SQL fragments accepted."""
+def compile_relational_query(plan, active=None):
+    """Caller passes validate_relational_query output. No user SQL fragments accepted.
+    active(entity, alias) adds the runtime passive-record rule to each registry predicate."""
+    active=active or _active
     plan=validate_relational_query(plan,"",date.today())
     aliases=alias_entities(plan);root=ENTITY_REGISTRY[plan["root"]]
     root_pk=_column({"alias":"root","field":root["primary_key"]},aliases)
@@ -72,8 +74,8 @@ def compile_relational_query(plan):
         left=_column({"alias":join["left_alias"],"field":relation["left_field"]},aliases)
         right=_column({"alias":join["alias"],"field":relation["right_field"]},aliases)
         sql+=(" LEFT JOIN " if join["kind"]=="left" else " INNER JOIN ")+_table(entity)+" AS "+_identifier(join["alias"])
-        sql+=" ON "+left+"="+right+" AND ("+_active(entity,join["alias"])+")"
-    predicates=["("+_active(root,"root")+")"]
+        sql+=" ON "+left+"="+right+" AND ("+active(entity,join["alias"])+")"
+    predicates=["("+active(root,"root")+")"]
     for predicate in plan["filters"]:
         col=_column(predicate["field"],aliases);op=predicate["op"];values=predicate["values"]
         if op in {"is_missing","not_missing"}:
@@ -106,10 +108,14 @@ def execute_relational_query(executor, plan):
     plan=validate_relational_query(plan,"",date.today())
     aliases=alias_entities(plan)
     entities={entity_id:ENTITY_REGISTRY[entity_id] for entity_id in aliases.values()}
+    def active(entity,alias):
+        # Registry template (reviewed definition) AND the shared passive-record rule, LEFT targets included.
+        rule=executor.crm_active(entity["table"],_identifier(alias))
+        return _active(entity,alias) if rule=="1=1" else "("+_active(entity,alias)+") AND ("+rule+")"
     required={}
     for entity in entities.values():
         columns={field["column"] for field in entity["fields"].values()}
-        columns.update(re.findall(r"\[([A-Za-z_][A-Za-z0-9_]*)\]",entity["active_predicate"]))
+        columns.update(re.findall(r"\]\.\[?([A-Za-z_][A-Za-z0-9_]*)",active(entity,"r")))
         required.setdefault(entity["table"],set()).update(columns)
     actual=executor.verify_schema(required,"crm")
     allowed={"text":{"varchar","nvarchar","char","nchar","text","ntext"},
@@ -122,11 +128,11 @@ def execute_relational_query(executor, plan):
             if physical not in allowed[field["type"]]:
                 raise ContractError("CRM alan türü kayıtlı sözleşmeyle uyuşmuyor.",code="SOURCE_CONTRACT_VIOLATION")
         pk=_identifier(entity["fields"][entity["primary_key"]]["column"])
-        check="SELECT TOP (1) r."+pk+" AS invalid_key FROM "+_table(entity)+" AS r WHERE "+_active(entity,"r")
+        check="SELECT TOP (1) r."+pk+" AS invalid_key FROM "+_table(entity)+" AS r WHERE ("+active(entity,"r")+")"
         check+=" GROUP BY r."+pk+" HAVING COUNT_BIG(*)>1 OR r."+pk+" IS NULL"
         if executor.read(check,source="crm"):
             raise ContractError("CRM anahtar tekilliği bozulmuş; çoğaltan ilişki yürütülmedi.",code="SOURCE_CONTRACT_VIOLATION")
-    sql,fields,numeric=compile_relational_query(plan)
+    sql,fields,numeric=compile_relational_query(plan,active)
     rows=executor.read(sql,source="crm")
     if len(rows)>MAX_RESULT_ROWS:
         raise ContractError("İlişkisel sonuç teknik sınırı aştı; kesilmiş sonuç sunulmadı.",code="SOURCE_CONTRACT_VIOLATION")
