@@ -1,4 +1,6 @@
 """Shared result-column meanings for standalone answers and report sections."""
+from datetime import date, timedelta
+
 from .contracts import METRICS
 
 LABELS = {
@@ -20,7 +22,9 @@ LABELS = {
     "shared_authors": "Birden çok yazarlı", "missing_fields": "Eksik alanlar", "name_difference": "Ad farkı",
     "net_sales": "KDV hariç net satış", "return_amount": "KDV hariç iade tutarı", "sold_quantity": "Satılan miktar",
     "invoice_id": "Fatura kayıt kimliği", "invoice_number": "Fatura numarası", "invoice_date": "Fatura tarihi",
-    "invoice_count": "Fatura sayısı", "invoice_total": "Fatura genel toplamı", "invoice_mean": "Fatura ortalaması",
+    "invoice_count": "Fatura sayısı", "return_invoice_count": "İade faturası sayısı",
+    "invoice_count_with_returns": "Fatura sayısı (iadeler dahil)",
+    "invoice_total": "Fatura genel toplamı", "invoice_mean": "Fatura ortalaması",
     "invoice_median": "Fatura medyanı", "invoice_vat": "Fatura KDV tutarı", "header_excluding_vat": "Başlık KDV hariç tutar",
     "material_line_net": "Malzeme satırları net tutarı", "material_lines": "Malzeme satırı sayısı",
     "other_lines": "Diğer satır sayısı", "other_line_net": "Diğer satırlar net tutarı",
@@ -38,6 +42,32 @@ LABELS = {
     "original_invoice_net": "İşlem para biriminde net fatura toplamı", "purchase_quantity": "Alış miktarı",
     "purchase_net_amount": "Net alış tutarı", "weighted_unit_purchase_price": "Ağırlıklı birim alış fiyatı",
 }
+
+
+RETURNS_FOLLOWUP_HINT = "iadeleri de ekle"
+
+
+def format_count(value):
+    return f"{int(value):,}".replace(",", ".")
+
+
+def return_invoice_note(counts, filtered=False):
+    """User-facing note for every invoice-count answer: returns measured, not included.
+
+    counts: [(start, end_exclusive, return_invoice_count)], one item per answered period.
+    Business language only; the follow-up phrase is the one scope_extension() recognises.
+    """
+    scope =" seçilen koşullarla" if filtered else ""
+    total = sum(int(n) for _, _, n in counts)
+    if not total:
+        where = "Bu dönemde" if len(counts) == 1 else "Seçilen dönemlerde"
+        return f"{where}{scope} iade faturası yok; fatura sayısı yalnız satış faturalarıdır."
+    hint = f" Eklemek için ‘{RETURNS_FOLLOWUP_HINT}’ yazabilirsiniz."
+    if len(counts) == 1:
+        return f"Bu dönemde{scope} {format_count(total)} iade faturası var; fatura sayısına dahil edilmedi." + hint
+    days = "; ".join(f"{date.fromisoformat(a):%d.%m.%Y}–{date.fromisoformat(b) - timedelta(days=1):%d.%m.%Y}: {format_count(n)}"
+                     for a, b, n in counts)
+    return f"Seçilen dönemlerde{scope} iade faturası sayısı — {days}. Bunlar fatura sayısına dahil edilmedi." + hint
 
 
 def _metadata(plan):

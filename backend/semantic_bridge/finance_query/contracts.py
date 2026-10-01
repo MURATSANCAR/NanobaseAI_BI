@@ -17,18 +17,39 @@ class Metric:
     definition: str
 
 
+# One invoice definition for the whole engine. User decision 2026-10-01: an invoice
+# count is sales invoices only (retail 7, wholesale 8, service 9); sales return
+# invoices (retail 2, wholesale 3) are a separate measure, added only on request.
+SALES_INVOICE_CODES = (7, 8, 9)
+RETURN_INVOICE_CODES = (2, 3)
+
+
+def codes_sql(codes):
+    return "(" + ",".join(map(str, sorted(codes))) + ")"
+
+
 METRICS = {
     "sales_amount": Metric("sales", "Satış tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (7,8,9) THEN f.LINENET ELSE 0 END)", "Faturalı malzeme satırı, iskonto sonrası KDV hariç; iadeler düşülmeden satış (7/8/9)."),
     "net_sales": Metric("sales", "Net satış tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN -f.LINENET ELSE f.LINENET END)", "Faturalı malzeme satırında satış (7/8/9) eksi iade (2/3); iskonto sonrası KDV hariç."),
     "sold_quantity": Metric("sales", "Satılan adet", "adet", "SUM(CASE WHEN f.TRCODE IN (7,8) THEN f.AMOUNT ELSE 0 END)", "Faturalı malzeme satırı; perakende/toptan 7/8, iadeler düşülmeden miktar; hizmet 9 hariç."),
     "net_quantity": Metric("sales", "Net satılan adet", "adet", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN -f.AMOUNT WHEN f.TRCODE IN (7,8) THEN f.AMOUNT ELSE 0 END)", "Faturalı malzeme; 7/8 miktarı eksi 2/3 iade miktarı."),
     "return_amount": Metric("sales", "İade tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN f.LINENET ELSE 0 END)", "İptal edilmemiş faturalı malzeme iadesi; LINENET, KDV hariç, pozitif gösterim."),
-    "invoice_count": Metric("invoice", "Fatura sayısı", "belge", "COUNT_BIG(*)", "İptal edilmemiş satış fatura başlıkları; satırlar değil INVOICE belgeleri (7/8/9)."),
-    "invoice_amount": Metric("invoice", "Fatura toplamı", "TRY", "SUM(f.NETTOTAL)", "İptal edilmemiş satış faturası NETTOTAL; fatura toplamı, satır net cirosu değildir."),
+    "invoice_count": Metric("invoice", "Fatura sayısı", "belge", "SUM(CASE WHEN f.TRCODE IN (7,8,9) THEN 1 ELSE 0 END)", "İptal edilmemiş satış faturası başlıkları (perakende, toptan, hizmet); satış iadesi faturaları dahil değildir. Satırlar değil fatura belgeleri sayılır (7/8/9)."),
+    "return_invoice_count": Metric("invoice", "İade faturası sayısı", "belge", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN 1 ELSE 0 END)", "İptal edilmemiş satış iadesi faturası başlıkları (perakende ve toptan iade); fatura sayısına dahil edilmez (2/3)."),
+    "invoice_count_with_returns": Metric("invoice", "Fatura sayısı (iadeler dahil)", "belge", "SUM(CASE WHEN f.TRCODE IN (2,3,7,8,9) THEN 1 ELSE 0 END)", "Satış faturası sayısı ile satış iadesi faturası sayısının toplamı; yalnız iadeler açıkça istendiğinde kullanılır (2/3/7/8/9)."),
+    "invoice_amount": Metric("invoice", "Fatura toplamı", "TRY", "SUM(CASE WHEN f.TRCODE IN (7,8,9) THEN f.NETTOTAL ELSE 0 END)", "İptal edilmemiş satış faturası NETTOTAL; iade faturaları düşülmez, fatura toplamı satır net cirosu değildir."),
     "collections": Metric("collection", "Müşteri ödeme hareketleri", "TRY", "SUM(f.AMOUNT)", "120 müşteri carileri, iptal olmayan alacak hareketleri SIGN=1; nakit/havale/çek/senet/kart (1,20,61,62,70). Çek/senet teslimi dahil, yalnız nakit tahsil değildir."),
     "active_books": Metric("crm_books", "Aktif kitap kaydı", "kayıt", "COUNT_BIG(*)", "CRM kitap kartı statecode=0 ve kurum metadata etiketinde Aktif/Etkin durum nedeni; Pasif etiketli kartlar hariç."),
     "active_authors": Metric("crm_authors", "Aktif yazar kişi kaydı", "kişi", "COUNT_BIG(*)", "CRM kişi kartı statecode=0, Etkin durum nedeni ve new_yazarmi=1; ayrı yazar sözlüğü sayısı değildir."),
     "active_customers": Metric("crm_customers", "Aktif müşteri kaydı", "kayıt", "COUNT_BIG(*)", "CRM AccountBase statecode=0 ve Aktif Müşteri durum nedeni; potansiyel, pasif, arşiv ve sorunlu müşteri statüleri dahil değildir."),
+}
+# Logo transaction types each metric reads; the executor's TRCODE scope is their union.
+TRANSACTION_CODES = {
+    "sold_quantity": {7, 8}, "net_quantity": {2, 3, 7, 8}, "sales_amount": {7, 8, 9},
+    "net_sales": {2, 3, 7, 8, 9}, "return_amount": {2, 3},
+    "invoice_count": set(SALES_INVOICE_CODES), "invoice_amount": set(SALES_INVOICE_CODES),
+    "return_invoice_count": set(RETURN_INVOICE_CODES),
+    "invoice_count_with_returns": set(SALES_INVOICE_CODES) | set(RETURN_INVOICE_CODES),
 }
 DIMENSIONS = {
     "book": "Kitap stok kodu ve adı (aynı adlı farklı kitaplar birleştirilmez)",

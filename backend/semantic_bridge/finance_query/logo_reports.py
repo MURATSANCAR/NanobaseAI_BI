@@ -8,8 +8,9 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
-from .contracts import ContractError
-from .executor import literal
+from .contracts import ContractError, RETURN_INVOICE_CODES, SALES_INVOICE_CODES, codes_sql
+from .executor import literal, logo_date_entered, logo_date_text, logo_entered_date
+from .result_metadata import format_count, return_invoice_note
 from .invoice_reports import INVOICE_REPORTS, execute as execute_invoice_report
 from .cross_reports import CROSS_REPORTS, execute as execute_cross_report
 
@@ -19,6 +20,10 @@ PAYMENTS = {"cash": 1, "bank": 20, "cheque": 61, "promissory_note": 62, "card": 
 DEFAULTS = dict(start=None, end=None, as_of=None, customer_code=None, book_code=None,
                 warehouse_no=None, order_kind="sales", overdue_only=False, lookback_days=None,
                 stock_filter="all", coverage_days=None, match_status="all", payment_types=[], limit=None, order_by=None, descending=True)
+# Set only by a deterministic follow-up on an earlier, already reviewed plan
+# (planner.apply_scope_extension); never part of the model's plan schema.
+EXTENSIONS = dict(include_returns=False)
+RETURNS_EXTENSIBLE = ("currencies", "invoice_statistics")
 LOGO_REPORT_SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {
@@ -43,7 +48,7 @@ LOGO_REPORT_CAPABILITIES = {
     "open_orders": "İptal edilmemiş, kapatılmamış satış/alış sipariş satırları; sipariş adedi, sevk edilen, kalan, vade/gecikme ve oransal kalan net tutar. Farklı birimler çevrilmez; ortak stok siparişlere mükerrer tahsis edilmez. Tarihler sipariş tarihi filtresidir, as_of gecikme tarihidir.",
     "customer_balances": "120 müşteri carilerinde kaynak dönemindeki borç/alacak hareketlerinden başlangıç ve bitiş bakiyesi; başlangıç öncesi tüm hareketler dahil. Bakiye fatura bazlı açık alacak veya yaşlandırma değildir. Yıllık devirlerin toplanması yasak.",
     "payment_movements": "Müşteri+ödeme türü bazında mevcut collections sözleşmesindeki nakit,banka,çek,senet,kart hareketlerini ayırır. Çek/senet teslimini gerçekleşmiş banka nakdi saymaz; banka mutabakatı veya fatura kapama sonucu değildir.",
-    "currencies": "İptal olmayan satış ve iade faturalarının işlem para birimi kodu bazında yerel NETTOTAL ve işlem TRNET toplamı, fatura sayısı. Dövizler birbirine eklenmez; yeniden kur dönüşümü yapılmaz. Kaynak kod0 için işlem para birimi belirsizse orijinal tutar NULL kalır.",
+    "currencies": "İptal olmayan satış ve iade faturalarının işlem para birimi kodu bazında iade düşülmüş yerel NETTOTAL ve işlem TRNET toplamı; fatura sayısı yalnız satış faturalarıdır, iade faturası sayısı ayrı kolondadır. Dövizler birbirine eklenmez; yeniden kur dönüşümü yapılmaz. Kaynak kod0 için işlem para birimi belirsizse orijinal tutar NULL kalır.",
     "purchase_prices": "Tedarikçi+malzeme+satır birimi+işlem para birimi+ay bazında gerçekleşmiş alış faturası satırları; net alış tutarı, miktar, ağırlıklı birim alış fiyatı. Bu alış fiyatı satılan mal maliyeti değildir; farklı birimler/para birimleri karıştırılmaz.",
     "aging": "PAYTRANS alanları fiziksel olarak mevcut olsa da gerçek kapama ilişkisi ve ödeme eşleşmesi kanıtlanmadan kesin yaşlandırma üretmez; typed gap döner. TOTAL-PAID veya FIFO otomatik varsayılmaz.",
     "profit": "Satılan mal maliyeti ve iade maliyeti semantiği doğrulanmadan kâr üretmez; typed gap döner. Son alış veya satış fiyatı maliyet yerine geçmez.",
@@ -61,7 +66,7 @@ _REPORT_FIELDS = {
     "open_orders": "source_period order_line_ref order_number order_date book_code book_name customer_code customer_name warehouse_no unit_ref ordered_quantity shipped_quantity remaining_quantity remaining_base_quantity remaining_net_amount_proportional due_date overdue_days".split(),
     "customer_balances": "customer_code customer_name tax_number opening_balance period_debits period_credits closing_balance unverified_sign_rows".split(),
     "payment_movements": "customer_code customer_name payment_code payment_type movement_count payment_amount".split(),
-    "currencies": "currency_id currency_code invoice_count local_invoice_net original_invoice_net".split(),
+    "currencies": "currency_id currency_code invoice_count return_invoice_count local_invoice_net original_invoice_net".split(),
     "purchase_prices": "book_code book_name supplier_code supplier_name month unit_source unit_ref unit_factor_1 unit_factor_2 transaction_currency_id purchase_quantity purchase_net_amount weighted_unit_purchase_price".split(),
     "invoice_statistics": "customer_code customer_name invoice_count invoice_total invoice_mean invoice_median".split(),
     "invoice_duplicates": "invoice_id invoice_number invoice_date customer_code customer_name invoice_total line_fingerprint material_groups same_content_candidates finding source_code".split(),
@@ -95,12 +100,12 @@ _REPORT_DETAILS = {
         "gaps": "Unreconciled movement/unit yields NULL stock. last_sale_date is ONLY within lookback, not all-history last sale. No stock valuation cost, incoming orders, reservations or order allocation. Optional cost request can be marked unavailable without fabricating cost, but this helper does not itself emit a requested-cost gap.",
     },
     "stock_history": {"dates": "start/end is requested history [start,end); as_of must equal end-1. Only movement days returned; empty dates require carrying previous closing value, not treating missing as zero.", "gaps": "One source period only; no unverified backup carry-forward bridge. Earlier unreconciled movements invalidate subsequent closing stock. No dense-calendar stockout duration calculation."},
-    "open_orders": {"dates": "as_of must be today for verified open state; historical/future state returns explicit gap. Optional start/end filters ORDER DATE, not due_date. overdue_only selects due_date before as_of.", "gaps": "Line detail includes customer identity, due/overdue and remaining values. Sort customer_code or customer_name, never customer. Remaining amount is proportional line net; not payment/actual invoice. No customer subtotal, stock allocation or shared-stock sufficiency calculation."},
+    "open_orders": {"dates": "as_of must be today for verified open state; historical/future state returns explicit gap. Optional start/end filters ORDER DATE, not due_date. overdue_only selects due_date before as_of. A due date that was not entered (empty/zero date) is NULL, never overdue.", "gaps": "Line detail includes customer identity, due/overdue and remaining values. Sort customer_code or customer_name, never customer. Remaining amount is proportional line net; not payment/actual invoice. No customer subtotal, stock allocation or shared-stock sufficiency calculation."},
     "customer_balances": {"dates": "start/end transaction period; all earlier source-period movements contribute opening balance.", "gaps": "Single source period only. Net account balance is not open-invoice or overdue debt. Unknown debit/credit sign invalidates that customer's numeric balance."},
     "payment_movements": {"dates": "start/end movement date.", "gaps": "Cheque/promissory delivery is not realized cash. No bank/cash reconciliation or invoice closure allocation."},
-    "currencies": {"dates": "start/end invoice date; two periods can be shown as separate labelled sections, but no automatic cross-section change calculation.", "gaps": "NETTOTAL/TRNET are invoice general totals, not VAT-exclusive net sales. Unknown currency/original amount stays NULL. Currency grouping does not remove local currency or prove FX-only filtering."},
+    "currencies": {"dates": "start/end invoice date; two periods can be shown as separate labelled sections, but no automatic cross-section change calculation.", "gaps": "NETTOTAL/TRNET are invoice general totals net of return invoices, not VAT-exclusive net sales. invoice_count is sales invoices only; return_invoice_count is separate. Unknown currency/original amount stays NULL. Currency grouping does not remove local currency or prove FX-only filtering."},
     "purchase_prices": {"dates": "start/end purchase movement date, grouped by month.", "gaps": "LINENET-based purchase prices are not COGS. Transaction-currency grouping does not convert LINENET to original currency or separate FX effects. No period-change attribution."},
-    "invoice_statistics": {"dates": "start/end sales invoice date. Separate period sections can show mean/median/count for each period without inventing a joined change calculation.", "gaps": "Sales invoices 7/8/9 before returns; NETTOTAL includes invoice taxes. Default descending invoice_total; arbitrary custom sort unsupported."},
+    "invoice_statistics": {"dates": "start/end sales invoice date. Separate period sections can show mean/median/count for each period without inventing a joined change calculation.", "gaps": "Sales invoices 7/8/9 before returns; return invoices are counted separately and reported as a note (columns only when returns were explicitly requested). NETTOTAL includes invoice taxes. Default descending invoice_total; arbitrary custom sort unsupported."},
     "invoice_duplicates": {"dates": "start/end invoice date.", "gaps": "Same header and material fingerprint only; no final duplicate verdict. Custom filters/sorts unsupported."},
     "invoice_reconciliation": {"dates": "start/end invoice date; all linked child rows considered regardless of their dates.", "gaps": "Always explicit unexplained-allocation gap; raw expenses/discounts do not prove causal reconciliation or rounding. Custom filters/sorts unsupported."},
     "orphan_invoice_lines": {"dates": "start/end invoice date for headers and movement date for orphan lines.", "gaps": "Faturasiz movement not automatically error. Finding explains whether line measure can include it, but no independent total-contribution reconciliation. Custom filters/sorts unsupported."},
@@ -109,9 +114,12 @@ _REPORT_DETAILS = {
     "aging": {"dates": "as_of requested valuation date.", "gaps": "PAYMENT_CLOSURE_UNVERIFIED; no TOTAL-PAID/FIFO fabricated as actual closure."},
     "profit": {"dates": "Requested transaction period if supplied.", "gaps": "ACTUAL_COST_UNVERIFIED; no purchase/sale price substituted for cost."},
 }
+_OPTIONAL_FIELDS = {"stock": _STOCK_SALES_FIELDS,
+                    "currencies": ["invoice_count_with_returns"],
+                    "invoice_statistics": ["return_invoice_count", "invoice_count_with_returns"]}
 LOGO_REPORT_OUTPUT_CONTRACTS = {
     mode: {"fields": fields, "grain": _REPORT_GRAINS[mode], **_REPORT_DETAILS[mode],
-           "optional_fields": _STOCK_SALES_FIELDS if mode == "stock" else [],
+           "optional_fields": _OPTIONAL_FIELDS.get(mode, []),
            "allowed_order_by": [] if mode in INVOICE_REPORTS else fields + (_STOCK_SALES_FIELDS if mode == "stock" else [])}
     for mode, fields in _REPORT_FIELDS.items()
 }
@@ -130,9 +138,11 @@ def describe_logo_report_output(mode):
 
 
 def validate_logo_report(raw):
-    if not isinstance(raw, dict) or set(raw) - {"mode", *DEFAULTS}:
+    if not isinstance(raw, dict) or set(raw) - {"mode", *DEFAULTS, *EXTENSIONS}:
         raise ContractError("Logo rapor planının alanları doğrulanamadı.")
-    spec = {**DEFAULTS, **raw}
+    spec = {**DEFAULTS, **EXTENSIONS, **raw}
+    if type(spec["include_returns"]) is not bool or spec["include_returns"] and spec.get("mode") not in RETURNS_EXTENSIBLE:
+        raise ContractError("İade faturası ekleme yalnız fatura sayısı içeren raporlara uygulanabilir.")
     if spec.get("mode") not in MODES:
         raise ContractError("Logo rapor türü doğrulanamadı.")
     for key in ("start", "end", "as_of"):
@@ -358,21 +368,25 @@ def _orders(executor, spec):
         _check(executor, {line: ["LOGICALREF","ORDFICHEREF","STOCKREF","CLIENTREF","TRCODE","LINETYPE","CANCELLED","CLOSED","AMOUNT","SHIPPEDAMOUNT","LINENET","UOMREF","UINFO1","UINFO2","SOURCEINDEX","DUEDATE","DATE_"],header:["LOGICALREF","FICHENO","CANCELLED"],items:["LOGICALREF","CODE","NAME"],clients:["LOGICALREF","CODE","DEFINITION_"]}, [(line,c) for c in ("AMOUNT","SHIPPEDAMOUNT","LINENET")])
         scope=f" AND O.DATE_>={literal(start)}" if start else ""
         if spec["warehouse_no"] is not None:scope+=f" AND O.SOURCEINDEX={spec['warehouse_no']}"
-        if spec["overdue_only"]:scope+=f" AND O.DUEDATE<{literal(as_of)} AND O.DUEDATE>='19000101'"
+        if spec["overdue_only"]:scope+=f" AND O.DUEDATE<{literal(as_of)} AND {logo_date_entered('O.DUEDATE')}"
         orphan=executor.read(f"SELECT COUNT_BIG(*) missing_headers FROM dbo.[{line}] O LEFT JOIN dbo.[{header}] H ON H.LOGICALREF=O.ORDFICHEREF LEFT JOIN dbo.[{items}] I ON I.LOGICALREF=O.STOCKREF LEFT JOIN dbo.[{clients}] C ON C.LOGICALREF=O.CLIENTREF WHERE H.LOGICALREF IS NULL AND O.CANCELLED=0 AND O.CLOSED=0 AND O.LINETYPE=0 AND O.TRCODE={1 if spec['order_kind']=='sales' else 2} AND O.AMOUNT>O.SHIPPEDAMOUNT AND O.DATE_<{literal(end)}{scope}{_code_filter(spec)}{_customer_filter(spec)}")
         orphan_headers+=int(orphan[0]["missing_headers"])
-        rows=executor.read(f"SELECT O.LOGICALREF order_line_ref,H.FICHENO order_number,CONVERT(varchar(10),O.DATE_,23) order_date,LTRIM(RTRIM(I.CODE)) book_code,I.NAME book_name,C.CODE customer_code,C.DEFINITION_ customer_name,O.SOURCEINDEX warehouse_no,O.UOMREF unit_ref,O.UINFO1 unit_factor_1,O.UINFO2 unit_factor_2,O.AMOUNT ordered_quantity,O.SHIPPEDAMOUNT shipped_quantity,O.AMOUNT-O.SHIPPEDAMOUNT remaining_quantity,O.LINENET line_net_amount,CASE WHEN O.DUEDATE>='19000101' THEN CONVERT(varchar(10),O.DUEDATE,23) END due_date FROM dbo.[{line}] O JOIN dbo.[{header}] H ON H.LOGICALREF=O.ORDFICHEREF LEFT JOIN dbo.[{items}] I ON I.LOGICALREF=O.STOCKREF LEFT JOIN dbo.[{clients}] C ON C.LOGICALREF=O.CLIENTREF WHERE O.CANCELLED=0 AND H.CANCELLED=0 AND O.CLOSED=0 AND O.LINETYPE=0 AND O.TRCODE={1 if spec['order_kind']=='sales' else 2} AND O.AMOUNT>O.SHIPPEDAMOUNT AND O.DATE_<{literal(end)}{scope}{_code_filter(spec)}{_customer_filter(spec)}")
+        rows=executor.read(f"SELECT O.LOGICALREF order_line_ref,H.FICHENO order_number,{logo_date_text('O.DATE_')} order_date,LTRIM(RTRIM(I.CODE)) book_code,I.NAME book_name,C.CODE customer_code,C.DEFINITION_ customer_name,O.SOURCEINDEX warehouse_no,O.UOMREF unit_ref,O.UINFO1 unit_factor_1,O.UINFO2 unit_factor_2,O.AMOUNT ordered_quantity,O.SHIPPEDAMOUNT shipped_quantity,O.AMOUNT-O.SHIPPEDAMOUNT remaining_quantity,O.LINENET line_net_amount,{logo_date_text('O.DUEDATE')} due_date FROM dbo.[{line}] O JOIN dbo.[{header}] H ON H.LOGICALREF=O.ORDFICHEREF LEFT JOIN dbo.[{items}] I ON I.LOGICALREF=O.STOCKREF LEFT JOIN dbo.[{clients}] C ON C.LOGICALREF=O.CLIENTREF WHERE O.CANCELLED=0 AND H.CANCELLED=0 AND O.CLOSED=0 AND O.LINETYPE=0 AND O.TRCODE={1 if spec['order_kind']=='sales' else 2} AND O.AMOUNT>O.SHIPPEDAMOUNT AND O.DATE_<{literal(end)}{scope}{_code_filter(spec)}{_customer_filter(spec)}")
         for row in rows:
             row["source_period"]=f"{firm}/{period}"
             row["remaining_net_amount_proportional"]=_d(row["line_net_amount"])*_d(row["remaining_quantity"])/_d(row["ordered_quantity"]) if _d(row["ordered_quantity"])>0 else None
-            row["overdue_days"]=max(0,(as_of-date.fromisoformat(row["due_date"])).days) if row["due_date"] else None
+            due=logo_entered_date(row["due_date"])
+            row["due_date"]=str(due) if due else None
+            row["overdue_days"]=max(0,(as_of-due).days) if due else None
             row["remaining_base_quantity"]=_d(row["remaining_quantity"]) if row["unit_factor_1"] is not None and row["unit_factor_1"]>0 and row["unit_factor_1"]==row["unit_factor_2"] else None
             if row["remaining_base_quantity"] is None:bad+=1
             out.append(row)
     fields=["source_period","order_line_ref","order_number","order_date","book_code","book_name","customer_code","customer_name","warehouse_no","unit_ref","ordered_quantity","shipped_quantity","remaining_quantity","remaining_base_quantity","remaining_net_amount_proportional","due_date","overdue_days"]
     gaps=[_gap("ORDER_UNITS",f"{bad} sipariş satırının ana birim dönüşümü doğrulanamadı; satır birimi miktarı korundu.")] if bad else []
     if orphan_headers:gaps.append(_gap("ORDER_HEADER_MISSING",f"{orphan_headers} açık sipariş satırının başlık kaydı bulunamadı; başlık iptal durumu doğrulanamadığından doğrulanmış listeye katılmadı."))
-    return _result(out,fields,["ordered_quantity","shipped_quantity","remaining_quantity","remaining_base_quantity","remaining_net_amount_proportional","overdue_days"], ["Kalan tutar satır net tutarının kalan miktar oranıdır; yeni fatura veya tahsilat değildir. Stok siparişlere tahsis edilmedi.","Tarihsiz açık sipariş listesi seçilen kaynak döneminin açık satırlarını kapsar; önceki yedekte kalmış devredilmemiş siparişler ayrıca doğrulanmalıdır."],gaps)
+    undated=sum(1 for row in out if row["due_date"] is None)
+    notes=[f"{format_count(undated)} sipariş satırında vade tarihi girilmemiş; bu satırlar gecikmiş sayılmadı, gecikme günü boş bırakıldı."] if undated else []
+    return _result(out,fields,["ordered_quantity","shipped_quantity","remaining_quantity","remaining_base_quantity","remaining_net_amount_proportional","overdue_days"], [*notes,"Kalan tutar satır net tutarının kalan miktar oranıdır; yeni fatura veya tahsilat değildir. Stok siparişlere tahsis edilmedi.","Tarihsiz açık sipariş listesi seçilen kaynak döneminin açık satırlarını kapsar; önceki yedekte kalmış devredilmemiş siparişler ayrıca doğrulanmalıdır."],gaps)
 
 
 def _balances(executor,spec):
@@ -413,21 +427,33 @@ def _currencies(executor,spec):
         for label in labels:
             if label["currency_id"] in mapping and mapping[label["currency_id"]]!=label["currency_code"]:raise ContractError("Para birimi kodunun açıklaması tekil değil.")
             mapping[label["currency_id"]]=label["currency_code"]
-        rows=executor.read(f"SELECT I.TRCURR currency_id,COUNT_BIG(*) invoice_count,SUM(CASE WHEN I.TRCODE IN (2,3) THEN -I.NETTOTAL ELSE I.NETTOTAL END) local_invoice_net,SUM(CASE WHEN I.TRCODE IN (2,3) THEN -I.TRNET ELSE I.TRNET END) original_invoice_net,SUM(CASE WHEN I.TRNET IS NULL OR (ABS(I.NETTOTAL)>0.000001 AND ABS(I.TRNET)<0.000001) THEN 1 ELSE 0 END) unverified_original_amounts FROM dbo.[{table}] I LEFT JOIN dbo.[{clients}] C ON C.LOGICALREF=I.CLIENTREF WHERE I.CANCELLED=0 AND I.TRCODE IN (2,3,7,8,9) AND I.DATE_>={literal(start)} AND I.DATE_<{literal(end)}{_customer_filter(spec)} GROUP BY I.TRCURR")
+        sales,returns=codes_sql(SALES_INVOICE_CODES),codes_sql(RETURN_INVOICE_CODES)
+        rows=executor.read(f"SELECT I.TRCURR currency_id,SUM(CASE WHEN I.TRCODE IN {sales} THEN 1 ELSE 0 END) invoice_count,SUM(CASE WHEN I.TRCODE IN {returns} THEN 1 ELSE 0 END) return_invoice_count,SUM(CASE WHEN I.TRCODE IN {returns} THEN -I.NETTOTAL ELSE I.NETTOTAL END) local_invoice_net,SUM(CASE WHEN I.TRCODE IN {returns} THEN -I.TRNET ELSE I.TRNET END) original_invoice_net,SUM(CASE WHEN I.TRNET IS NULL OR (ABS(I.NETTOTAL)>0.000001 AND ABS(I.TRNET)<0.000001) THEN 1 ELSE 0 END) unverified_original_amounts FROM dbo.[{table}] I LEFT JOIN dbo.[{clients}] C ON C.LOGICALREF=I.CLIENTREF WHERE I.CANCELLED=0 AND I.TRCODE IN {codes_sql(SALES_INVOICE_CODES+RETURN_INVOICE_CODES)} AND I.DATE_>={literal(start)} AND I.DATE_<{literal(end)}{_customer_filter(spec)} GROUP BY I.TRCURR")
         for row in rows:
             currency=mapping.get(row["currency_id"])
             key=(row["currency_id"],currency)
-            item=groups.setdefault(key,dict(currency_id=key[0],currency_code=key[1],invoice_count=0,local_invoice_net=Decimal(0),original_invoice_net=Decimal(0) if currency else None))
-            item["invoice_count"]+=row["invoice_count"];item["local_invoice_net"]+=_d(row["local_invoice_net"])
+            item=groups.setdefault(key,dict(currency_id=key[0],currency_code=key[1],invoice_count=0,return_invoice_count=0,local_invoice_net=Decimal(0),original_invoice_net=Decimal(0) if currency else None))
+            item["invoice_count"]+=row["invoice_count"];item["return_invoice_count"]+=row["return_invoice_count"];item["local_invoice_net"]+=_d(row["local_invoice_net"])
             if currency and not row["unverified_original_amounts"] and item["original_invoice_net"] is not None:
                 item["original_invoice_net"]+=_d(row["original_invoice_net"])
             else:
                 item["original_invoice_net"]=None
-                if not currency:unknown+=row["invoice_count"]
+                if not currency:unknown+=row["invoice_count"]+row["return_invoice_count"]
             missing_amount+=row["unverified_original_amounts"]
     gaps=[_gap("CURRENCY_IDENTITY",f"{unknown} faturada işlem para birimi üretici kod listesiyle eşleşmedi; özgün para birimi tutarı tahmin edilmedi.")] if unknown else []
     if missing_amount:gaps.append(_gap("CURRENCY_ORIGINAL_AMOUNT",f"{missing_amount} faturanın işlem para birimi tutarı boş veya yerel tutara karşılık sıfır; grup toplamı eksik özgün tutarla hesaplanmadı."))
-    return _result(groups.values(),["currency_id","currency_code","invoice_count","local_invoice_net","original_invoice_net"],["invoice_count","local_invoice_net","original_invoice_net"],["Tutarlar fatura genel toplamıdır; KDV hariç satış satırı cirosu değildir. NETTOTAL yerel, TRNET işlem para birimi alanından okunur; para birimleri arasında toplam/yeniden kur dönüşümü yapılmaz."],gaps)
+    fields=["currency_id","currency_code","invoice_count","return_invoice_count","local_invoice_net","original_invoice_net"]
+    notes=["Tutarlar iade faturaları düşülmüş fatura genel toplamıdır; KDV hariç satış satırı cirosu değildir. NETTOTAL yerel, TRNET işlem para birimi alanından okunur; para birimleri arasında toplam/yeniden kur dönüşümü yapılmaz."]
+    total=sum(item["return_invoice_count"] for item in groups.values())
+    if spec["include_returns"]:
+        for item in groups.values():item["invoice_count_with_returns"]=item["invoice_count"]+item["return_invoice_count"]
+        fields.insert(4,"invoice_count_with_returns")
+        notes.append(f"İade faturaları istendiği için iadeler dahil fatura sayısı kolonu eklendi; dönemde toplam {format_count(total)} iade faturası var.")
+    else:
+        notes.append(return_invoice_note([(spec["start"],spec["end"],total)],bool(spec["customer_code"])))
+    result=_result(groups.values(),fields,fields[2:],notes,gaps)
+    result["return_invoice_counts"]=[] if spec["include_returns"] else [{"start":spec["start"],"end":spec["end"],"returnInvoiceCount":total}]
+    return result
 
 
 def _purchases(executor,spec):

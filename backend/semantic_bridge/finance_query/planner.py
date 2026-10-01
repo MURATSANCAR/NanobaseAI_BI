@@ -1,6 +1,6 @@
 """Natural language -> closed typed plan. Never natural language -> executable SQL."""
 from __future__ import annotations
-from dataclasses import dataclass, asdict, replace
+from dataclasses import dataclass, asdict, fields as dataclass_fields, replace
 from datetime import date, timedelta
 import json
 import hashlib
@@ -60,6 +60,9 @@ class Plan:
 
     def to_dict(self):
         return asdict(self)
+
+
+INVOICE_COUNT_METRICS = {"invoice_count", "return_invoice_count", "invoice_count_with_returns"}
 
 
 def follows(question: str) -> bool:
@@ -308,7 +311,8 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "değerler parsedPeriods sınırlarını aynen kullanır, sunucu Türkiye saatini UTCye dönüştürür (kullanıcı UTC dediyse UTC kalır). crm kullanmıyorsan null döndür. "
               "kitap adedi toplam miktardır: kitap kelimesi geçti diye book kırılımı EKLEME. "
               "Yalnız 'bazında/göre/her/hangi/listele/en çok' gibi istenen kırılımı ekle. "
-              "Fatura sayısı invoice_count; stok hareketi sayısı değildir. Fatura genel toplamı invoice_amount; "
+              "Fatura sayısı invoice_count; stok hareketi sayısı değildir ve iade faturası içermez. İade faturası sayısı return_invoice_count; "
+              "invoice_count_with_returns yalnız kullanıcı iadelerin dahil edilmesini açıkça isterse. Fatura genel toplamı invoice_amount; "
               "KDV hariç satış satırı toplamı sales_amount; iade düşülmüş net satış veya ciro net_sales. "
               "Kırılımsız ve filtresiz güncel aktif CRM yazar sayısı active_authors, kitap sayısı active_books, müşteri sayısı active_customers ölçüsünü kullanır; bu basit sayımlarda crm null kalır. Pasif istek yasaktır. "
               "Genel tahsilat collections; nakit/banka/çek türü ayrıca seçildiyse desteklenmeyen daraltma say. "
@@ -430,7 +434,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError("Bu kaynak ölçülerinin ortak kayıt düzeyi henüz tanımlı değil.")
     family = "sales" if "sales" in families else sorted(families)[0]
     q = fold(question)
-    if re.search(r"\bfatura\w*\s+(say\w*|adet\w*)", q) and "invoice_count" not in metrics:
+    if re.search(r"\bfatura\w*\s+(say\w*|adet\w*)", q) and not set(metrics) & INVOICE_COUNT_METRICS:
         raise ContractError("Fatura sayımı belge anahtarıyla yapılmalıdır; plan bu koşulu sağlamıyor.")
     if "tahsil" in q and "collections" not in metrics:
         raise ContractError("Tahsilat sorusu müşteri ödeme hareketleri sözleşmesini kullanmalıdır.")
@@ -1194,3 +1198,95 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
                      if check["status"] == "unverified_with_permission" else ""),
     } for check in checks if check["status"] == "unverified_with_permission")
     return Plan((), (), periods, gaps=fallback_gaps, **{branch: report})
+
+
+# --- "iadeleri de ekle": deterministic scope extension of an earlier invoice count ---
+# User decision 2026-10-01: invoice_count excludes return invoices and every such answer
+# says how many were left out. A short follow-up asking to include them re-runs the
+# earlier, already reviewed plan with the return columns; no new model plan is made.
+_RETURNS = re.compile(r"\biade\w*")
+# "say" only as an imperative: "iade faturası sayısı" is a new question, not an extension.
+_INCLUDE = re.compile(r"\b(ekle\w*|dahil\w*|kat(?!ma)\w*|birlikte|beraber|ilave\w*|hesaba|say(?:in|iniz|alim)?)\b")
+_EXCLUDE = re.compile(r"\b(haric\w*|cikar\w*|dus\w*|olmadan|olmaksizin|disinda|disla\w*|katma\w*|ekleme(?:den|yin)?|etme(?:den|yin)?)\b")
+_OTHER_MEASURE = re.compile(r"\b(satis\w*|ciro\w*|tutar\w*|tahsil\w*|stok\w*|siparis\w*|miktar\w*|adet\w*|bakiye\w*|odeme\w*|tl)\b")
+RETURNS_EXTENSION_NOTE = ("Önceki fatura sayısı iade faturaları eklenerek yeniden hesaplandı: satış faturası sayısı, "
+                          "iade faturası sayısı ve ikisinin toplamı ayrı gösterilir.")
+RETURNS_COMPARISON_NOTE = "Dönem karşılaştırması iadeler dahil fatura sayısıyla yeniden hesaplandı."
+RETURNS_CLARIFICATION = ("Hangi fatura sayısına ekleyeyim? İade faturalarının ekleneceği fatura sayısı sorusunu "
+                         "dönemiyle birlikte yazabilirsiniz.")
+
+
+def scope_extension(question, today=None):
+    """Recognise a follow-up that widens the previous answer's scope; None otherwise.
+
+    Today only {"include_returns": True}: "iadeleri de ekle", "iade faturalarını dahil et",
+    "iadelerle birlikte". A message with its own period or another measure is a new
+    question for the planner (which has invoice_count_with_returns), not an extension.
+    """
+    q = fold(question)
+    if not _RETURNS.search(q) or not _INCLUDE.search(q) or _EXCLUDE.search(q) or _OTHER_MEASURE.search(q):
+        return None
+    if dates(question, today or datetime.now(ZoneInfo("Europe/Istanbul")).date())[0]:
+        return None
+    return {"include_returns": True}
+
+
+def plan_from_dict(data):
+    """Rebuild a Plan from Plan.to_dict(), also after a JSON round trip (lists for tuples)."""
+    if not isinstance(data, dict) or set(data) - {f.name for f in dataclass_fields(Plan)}:
+        raise ContractError("Önceki soru planının biçimi doğrulanamadı.", code="PLAN_INVALID")
+    items = lambda key: data.get(key) or ()
+    metrics = tuple(items("metrics"))
+    if any(m not in METRICS for m in metrics):
+        raise ContractError("Önceki soru planındaki ölçü bu sözleşmede yok.", code="PLAN_INVALID")
+    comparison = data.get("comparison")
+    return Plan(metrics, tuple(items("dimensions")), tuple(tuple(p) for p in items("periods")),
+                tuple(tuple(f) for f in items("filters")), data.get("sale_kind", "all"), data.get("limit"),
+                data.get("order_by"), data.get("descending", True),
+                tuple(DerivedMetric(**d) for d in items("derived")),
+                tuple(MetricPredicate(**h) for h in items("having")),
+                PeriodComparison(**comparison) if comparison else None,
+                data.get("crm"), data.get("logo_report"), data.get("crm_report"), data.get("relational_query"),
+                tuple(dict(a) for a in items("analytics")), tuple(plan_from_dict(s) for s in items("sections")),
+                data.get("section_title"), tuple(dict(g) for g in items("gaps")),
+                tuple(dict(c) for c in items("coverage")), tuple(items("notes")))
+
+
+def _with_returns(plan):
+    """The same plan with return invoices added beside every invoice count, or None."""
+    from .logo_reports import RETURNS_EXTENSIBLE
+    if plan.sections:
+        leaves = [_with_returns(leaf) for leaf in plan.sections]
+        if not any(leaves):
+            return None
+        return replace(plan, sections=tuple(new or old for new, old in zip(leaves, plan.sections)))
+    if plan.logo_report and plan.logo_report.get("mode") in RETURNS_EXTENSIBLE:
+        return replace(plan, logo_report={**plan.logo_report, "include_returns": True},
+                       notes=tuple(dict.fromkeys((*plan.notes, RETURNS_EXTENSION_NOTE))))
+    if plan.comparison and plan.comparison.metric in ("invoice_count", "invoice_count_with_returns"):
+        return replace(plan, metrics=("invoice_count_with_returns",),
+                       comparison=replace(plan.comparison, metric="invoice_count_with_returns"),
+                       notes=tuple(dict.fromkeys((*plan.notes, RETURNS_COMPARISON_NOTE))))
+    if plan.comparison or "invoice_count" not in plan.metrics:
+        return None
+    metrics = []
+    for metric in plan.metrics:
+        metrics.append(metric)
+        if metric == "invoice_count":
+            metrics += [m for m in ("return_invoice_count", "invoice_count_with_returns") if m not in plan.metrics]
+    return replace(plan, metrics=tuple(metrics), notes=tuple(dict.fromkeys((*plan.notes, RETURNS_EXTENSION_NOTE))))
+
+
+def apply_scope_extension(previous, extension):
+    """Previous context ({"question","plan"} or a bare plan dict) + scope_extension() -> Plan.
+
+    Periods, filters, breakdowns, sale kind, order and limits of the previous plan are kept.
+    No usable previous invoice count -> NEEDS_CLARIFICATION, never a guessed plan.
+    """
+    if extension != {"include_returns": True}:
+        raise ContractError("Bu kapsam genişletmesi tanımlı değil.", code="PLAN_INVALID")
+    data = previous.get("plan", previous) if isinstance(previous, dict) else None
+    extended = _with_returns(plan_from_dict(data)) if data else None
+    if extended is None:
+        raise ContractError(RETURNS_CLARIFICATION, code="NEEDS_CLARIFICATION")
+    return extended
