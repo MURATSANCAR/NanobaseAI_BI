@@ -101,7 +101,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         labels = {column["name"]: column for column in columns}
         definition_items = calculation_definitions(plan)
         sql = "\n\n".join("-- " + run["source"] + "\n" + run["sql"] for run in engine.runs)
-        notes = list(dict.fromkeys(engine.notes))
+        notes = list(dict.fromkeys([*getattr(plan, "notes", ()), *engine.notes]))
         if "author" in plan.dimensions:
             notes.append("Yazar kırılımı kitap künyesindeki yazar metnidir; kişi kimliği ve telif sahipliği çıkarımı yapılmaz.")
         definitions = " ".join(definition_items)

@@ -46,7 +46,37 @@ def next_month(d):
     return date(d.year + (d.month == 12), d.month % 12 + 1, 1)
 
 
+MONTH_NAMES = "|".join(MONTHS)
+# A year reference that may own a following "ilk N ay" / "ilk yarı" phrase:
+# "2025", "2025'in", "2025 yılının", "bu yılın", "geçen senenin", "bir önceki yılın".
+YEAR_REF = (r"(?:(?P<y>20\d{2})(?:'?(?:n?in|un|nun))?(?:\s+yil(?:inin|inda|in|i)?)?"
+            r"|(?P<rel>bu|gecen|onceki|1 onceki)\s+(?:yil|sene)\w*)")
+FROM_SUFFIX = r"'?(?:dan|den|tan|ten)"
+SINCE = r"\s+(?:beri|bu yana|itibaren|bugune(?:\s+kadar)?)\b"
+
+
+def _year(match, today):
+    """Year named in YEAR_REF; without one, always the current year (user rule 2026-10-01)."""
+    if match.group("y"):
+        return int(match.group("y"))
+    if match.group("rel"):
+        return today.year - int(match.group("rel") != "bu")
+    return today.year
+
+
+def _is_december(q, end):
+    """"aralık" is also the noun "range": only month context makes it December."""
+    after = q[end:]
+    return bool(re.match(r"'|\s+ay\w*\b", after))
+
+
 def dates(question, today):
+    """Turkish period phrases -> half-open [start, end) date intervals.
+
+    Without a written year every month, day, week and quarter is anchored to the
+    current year / today; past year copies are read only when a year or a
+    relative past (geçen yıl, bir önceki yıl …) is written (user rule 2026-10-01).
+    """
     q = normalize_numbers(question)
     hits = []
     rolling_windows = []
@@ -54,34 +84,101 @@ def dates(question, today):
         if lo >= hi:
             raise ContractError("Tarih aralığının başlangıcı bitişinden önce olmalı.")
         hits.append((a, b, lo, hi))
-    month_names = "|".join(MONTHS)
+    month_names = MONTH_NAMES
+    def free(m):
+        return not any(m.start() < b and a < m.end() for a,b,_,_ in hits)
     try:
+        # Explicit ranges first, so their endpoints are never read as separate periods.
+        # "1-15 Mart [2026]"
+        for m in re.finditer(r"\b(\d{1,2})\s*[-–]\s*(\d{1,2})\s+(" + month_names + r")\w*(?:'\w*)?(?:\s+(20\d{2}))?\b", q):
+            year = int(m[4]) if m[4] else today.year
+            lo = date(year, MONTHS[m[3]], int(m[1])); hi = date(year, MONTHS[m[3]], int(m[2])) + timedelta(days=1)
+            add(*m.span(), lo, hi)
+        # "1 Ocak [2026] - 15 Mart [2026]", "1 Ocak'tan 15 Mart'a kadar", "1 Ocak ile 15 Mart arası"
+        day_range = (r"\b(\d{1,2})\s+(" + month_names + r")(?:\s+(20\d{2}))?"
+                     r"(\s*[-–]\s*|" + FROM_SUFFIX + r"\s+|\s+ile\s+)"
+                     r"(\d{1,2})\s+(" + month_names + r")(?:\s+(20\d{2}))?('?\w*)(\s+(?:kadar|arasi\w*|araligi\w*))?")
+        for m in re.finditer(day_range, q):
+            separator, tail = m[4].strip(), (m[9] or "").strip()
+            if (separator == "ile" and not tail.startswith(("arasi", "araligi"))) or (separator not in ("-", "–", "ile") and not tail):
+                continue  # "1 Ocak ile 15 Mart'ı karşılaştır" is two dates, not a range
+            if not free(m):
+                continue
+            end_year = int(m[7]) if m[7] else int(m[3]) if m[3] else today.year
+            start_year = int(m[3]) if m[3] else end_year
+            lo = date(start_year, MONTHS[m[2]], int(m[1])); hi = date(end_year, MONTHS[m[6]], int(m[5])) + timedelta(days=1)
+            add(m.start(), m.end(), lo, hi)
+        # "Ocak-Mart [2026]", "2026 Ocak-Mart", "Ocak'tan Mart'a kadar", "Ocak ile Mart arası"
+        month_range = (r"\b(?:(20\d{2})\s+)?(" + month_names + r")(\s*[-–]\s*|" + FROM_SUFFIX + r"\s+|\s+ile\s+)"
+                       r"(" + month_names + r")('?\w*)(?:\s+(20\d{2})(?:'?\w*)?)?(?:\s+ay\w*)?(\s+(?:kadar|arasi\w*|araligi\w*))?")
+        for m in re.finditer(month_range, q):
+            separator, tail = m[3].strip(), (m[7] or "").strip()
+            if (separator == "ile" and not tail.startswith(("arasi", "araligi"))) or (separator not in ("-", "–", "ile") and not tail):
+                continue
+            if not free(m):
+                continue
+            year = int(m[6] or m[1] or today.year)
+            first, last = MONTHS[m[2]], MONTHS[m[4]]
+            if first > last:
+                raise ContractError(f"{m[2].capitalize()}–{m[4].capitalize()} aralığı yıl değiştiriyor; hangi yıllar kastedildiğini yazın (örn. Ekim 2025 – Mart 2026).", code="NEEDS_CLARIFICATION")
+            add(*m.span(), date(year, first, 1), next_month(date(year, last, 1)))
+        # "Kasım'dan beri", "5 Mart'tan bu yana", "2021'den bugüne"
+        for m in re.finditer(r"\b(?:(\d{1,2})\s+)?(" + month_names + r")(?:\s+(20\d{2}))?" + FROM_SUFFIX + SINCE, q):
+            if not free(m): continue
+            year = int(m[3]) if m[3] else today.year
+            start = date(year, MONTHS[m[2]], int(m[1]) if m[1] else 1)
+            if start > today:
+                raise ContractError(f"{start:%d.%m.%Y} henüz gelmedi; hangi yılın tarihinden itibaren hesaplayayım?", code="NEEDS_CLARIFICATION")
+            add(*m.span(), start, today + timedelta(days=1))
+        for m in re.finditer(r"\b(20\d{2})" + FROM_SUFFIX + SINCE, q):
+            if free(m):
+                add(*m.span(), date(int(m[1]), 1, 1), today + timedelta(days=1))
         for m in re.finditer(r"\b(\d{1,2})\s+(" + month_names + r")\s+(20\d{2})\b", q):
+            if not free(m): continue
             d = date(int(m[3]), MONTHS[m[2]], int(m[1])); add(*m.span(), d, d + timedelta(days=1))
+        # Numeric day ranges: "01.01.2026 - 15.03.2026", "2026-01-01'den 2026-03-15'e kadar"
+        numeric = r"(?:(\d{1,2})[./](\d{1,2})[./](20\d{2})|(20\d{2})-(\d{2})-(\d{2}))"
+        def numeric_date(g):
+            return date(int(g[2]), int(g[1]), int(g[0])) if g[0] else date(int(g[3]), int(g[4]), int(g[5]))
+        for m in re.finditer(r"\b" + numeric + r"(\s*[-–]\s*|" + FROM_SUFFIX + r"\s+|\s+ile\s+)" + numeric + r"('?\w*)(\s+(?:kadar|arasi\w*|araligi\w*))?", q):
+            separator, tail = m[7].strip(), (m[15] or "").strip()
+            if (separator == "ile" and not tail.startswith(("arasi", "araligi"))) or (separator not in ("-", "–", "ile") and not tail):
+                continue
+            if free(m):
+                add(*m.span(), numeric_date(m.groups()[0:6]), numeric_date(m.groups()[7:13]) + timedelta(days=1))
         for m in re.finditer(r"\b(20\d{2})-(\d{2})-(\d{2})\b", q):
+            if not free(m): continue
             d = date(int(m[1]), int(m[2]), int(m[3])); add(*m.span(), d, d + timedelta(days=1))
         for m in re.finditer(r"\b(\d{1,2})[./](\d{1,2})[./](20\d{2})\b", q):
+            if not free(m): continue
             d = date(int(m[3]), int(m[2]), int(m[1])); add(*m.span(), d, d + timedelta(days=1))
-        def free(m):
-            return not any(m.start() < b and a < m.end() for a,b,_,_ in hits)
         for m in re.finditer(r"\b(" + month_names + r")\s+(20\d{2})\b", q):
             if free(m):
                 d = date(int(m[2]), MONTHS[m[1]], 1); add(*m.span(), d, next_month(d))
         for m in re.finditer(r"\b(20\d{2})\s+(" + month_names + r")\b", q):
             if free(m):
                 d = date(int(m[1]), MONTHS[m[2]], 1); add(*m.span(), d, next_month(d))
+        # A day and month without a year is that day of the current year: "5 Mart".
+        for m in re.finditer(r"\b(\d{1,2})\s+(" + month_names + r")\b", q):
+            if free(m):
+                d = date(today.year, MONTHS[m[2]], int(m[1])); add(*m.span(), d, d + timedelta(days=1))
         # Relative year belongs to the named month, not an additional whole-year period.
         month_suffix = r"(?:'?(?:da|de|ta|te|un|in|unda|inde))?"
-        for m in re.finditer(r"\b(bu|gecen|onceki)\s+(?:yil\w*|sene\w*)\s+(" + month_names + r")" + month_suffix + r"\b", q):
+        for m in re.finditer(r"\b(bu|gecen|onceki|1 onceki)\s+(?:yil\w*|sene\w*)\s+(" + month_names + r")" + month_suffix + r"\b", q):
             if free(m):
                 year = today.year - int(m[1] != "bu")
                 start = date(year, MONTHS[m[2]], 1); add(*m.span(), start, next_month(start))
-        for m in re.finditer(r"\b(?:((?:20\d{2})|bu yil\w*|bu sene\w*)\s+)?ilk\s+(\d+)\s+ay\w*", q):
+        # "2025'in ilk 3 ayı", "geçen yılın ilk 8 ayı": the year owns the window.
+        for m in re.finditer(r"\b(?:" + YEAR_REF + r"\s+)?ilk\s+(?P<n>\d+)\s+ay\w*", q):
             if free(m):
-                n = int(m[2])
+                n = int(m["n"])
                 if not 1 <= n <= 12: raise ValueError()
-                year = int(m[1]) if m[1] and m[1].isdigit() else today.year
-                start = date(year, 1, 1); add(*m.span(), start, shift_month(start, n))
+                start = date(_year(m, today), 1, 1); add(*m.span(), start, shift_month(start, n))
+        # Half years: "2026 ilk yarısı", "geçen yılın ikinci yarısı", "ilk yarıyıl".
+        for m in re.finditer(r"\b(?:" + YEAR_REF + r"\s+)?(?:yilin\s+)?(?P<half>ilk|birinci|ikinci|son)\s+yari(?:yil)?\w*", q):
+            if free(m):
+                start = date(_year(m, today), 1 if m["half"] in ("ilk", "birinci") else 7, 1)
+                add(*m.span(), start, shift_month(start, 6))
         quarter = date(today.year, ((today.month - 1) // 3) * 3 + 1, 1)
         ordinals = {"birinci": 1, "ikinci": 2, "ucuncu": 3, "dorduncu": 4}
         year_phrase = r"(?:20\d{2}(?:'?(?:nin|in))?(?:\s+yil(?:in)?in)?|(?:bu|gecen|onceki)\s+(?:yilin|senenin))"
@@ -122,7 +219,10 @@ def dates(question, today):
                 if not 1 <= n <= 520: raise ValueError()
                 add(*m.span(), today, today+timedelta(days=n*7))
         for m in re.finditer(r"\b(" + month_names + r")" + month_suffix + r"\b", q):
+            if m[1] == "aralik" and not _is_december(q, m.end(1)):
+                continue  # "aynı aralık", "hangi aralıkta": a range, not December
             if free(m):
+                # Always the current year, even for a month still ahead (user rule 2026-10-01).
                 start = date(today.year, MONTHS[m[1]], 1); add(*m.span(), start, next_month(start))
         for m in re.finditer(r"\b(?:yilbasindan|sene basindan|bu yilin basindan)\s+(?:bugune|simdiye)(?:\s+kadar)?", q):
             if free(m): add(*m.span(), date(today.year, 1, 1), today+timedelta(days=1))
@@ -138,16 +238,19 @@ def dates(question, today):
             if free(m) and following_day:
                 start = date(int(m[1]), 1, 1)
                 add(*m.span(), start, start+timedelta(days=1))
+        monday = today - timedelta(days=today.weekday())
         relatives = [
             (r"\bbu ceyre[kg]\w*", quarter, shift_month(quarter, 3)),
-            (r"\b(?:gecen|onceki) ceyre[kg]\w*", shift_month(quarter, -3), quarter),
+            (r"\b(?:gecen|onceki|1 onceki) ceyre[kg]\w*", shift_month(quarter, -3), quarter),
             (r"\b(bugun(?:un|ku|de)?)\b", today, today+timedelta(days=1)),
-            (r"\b(dun(?:ku|un)?|1 onceki gun\w*|1 onceki gune\w*)\b", today-timedelta(days=1), today),
+            (r"\b(dun(?:ku|un)?|gecen gun|1 onceki gun\w*|1 onceki gune\w*)\b", today-timedelta(days=1), today),
+            (r"\b(bu hafta\w*)", monday, monday+timedelta(days=7)),
+            (r"\b(gecen hafta\w*|onceki hafta\w*|1 onceki hafta\w*)", monday-timedelta(days=7), monday),
             (r"\b(bu ay\w*)", today.replace(day=1), next_month(today)),
             (r"\b(onumuzdeki ay\w*|gelecek ay\w*)", next_month(today.replace(day=1)), shift_month(today, 2)),
-            (r"\b(gecen ay\w*|onceki ay\w*)", (today.replace(day=1)-timedelta(days=1)).replace(day=1), today.replace(day=1)),
+            (r"\b(gecen ay\w*|onceki ay\w*|1 onceki ay\w*)", (today.replace(day=1)-timedelta(days=1)).replace(day=1), today.replace(day=1)),
             (r"\b(bu yil\w*|bu sene\w*)", date(today.year,1,1), date(today.year+1,1,1)),
-            (r"\b(gecen yil\w*|onceki yil\w*)", date(today.year-1,1,1), date(today.year,1,1)),
+            (r"\b(gecen yil\w*|onceki yil\w*|1 onceki yil\w*|gecen sene\w*|onceki sene\w*|1 onceki sene\w*)", date(today.year-1,1,1), date(today.year,1,1)),
         ]
         for pattern, a, b in relatives:
             for m in re.finditer(pattern,q):
@@ -162,7 +265,9 @@ def dates(question, today):
         for m in re.finditer(r"\b20\d{2}\b",q):
             if free(m):
                 y=int(m[0]);add(*m.span(),date(y,1,1),date(y+1,1,1))
-    except ValueError:
+    except ValueError as exc:
+        if isinstance(exc, ContractError):
+            raise  # a specific clarification, not an invalid calendar date
         raise ContractError("Tarih geçerli değil; gün, ay ve yılı kontrol edin.") from None
     # "Each month's first N days" clips full month windows without adding a period.
     first_days = re.search(r"\bilk\s+(\d+)\s+gun\w*", q)
@@ -207,7 +312,7 @@ def dates(question, today):
         index += 1
     hits = bounded_hits
     for i, (a,b,lo,hi) in enumerate(hits):
-        if re.search(r"(?:gecen|onceki) yil\w*\s+ayni\s+(?:aralik|aralig|donem|ay)", q[a:]) and lo == date(today.year-1,1,1) and hi == date(today.year,1,1):
+        if re.search(r"(?:gecen|onceki|1 onceki) (?:yil|sene)\w*\s+ayni\s+(?:aralik|aralig|donem|ay|tarih|ceyre)", q[a:]) and lo == date(today.year-1,1,1) and hi == date(today.year,1,1):
             anchors = [h for j,h in enumerate(hits) if j != i and h[2].year == today.year]
             if anchors:
                 base = anchors[0]

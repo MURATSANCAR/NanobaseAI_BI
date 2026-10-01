@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Dönem kuralı: yıl yazılmamışsa güncel yıl, geçmiş yıl yalnız açıkça istenirse
+
+- Kullanıcı kararı: yılsız ay/gün her zaman güncel yıl (ay henüz gelmemiş olsa bile); geçen ay, dün/geçen gün, önceki çeyrek, geçen hafta bugüne göre. 2021–2025 kopyaları yalnız yıl yazılınca ya da göreli geçmiş/karşılaştırma istenince okunur.
+- `finance_query/language.py`: gün aralığı ("1-15 Mart", "1 Ocak - 15 Mart 2026", "1 Ocak'tan 15 Mart'a kadar", "01.01.2026 - 15.03.2026"), ay aralığı ("Ocak-Mart", "Ocak ile Mart arası"; yıl değiştiren aralık netleştirme ister), yılsız gün ("5 Mart"), yıla bağlı ilk N ay ("2025'in ilk 3 ayı", "geçen yılın ilk 8 ayı"), yarıyıl, "…'den beri / bugüne" (gelecek ay netleştirme), geçen sene / bir önceki yıl / geçen hafta / bu hafta / geçen gün eklendi. "aralık" yalnız "Aralık ayı" ya da kesme işaretiyle ay sayılır; "aynı aralık" artık Aralık ayı eklemiyor. Netleştirme hataları genel "tarih geçerli değil" mesajına düşmüyor.
+- `planner.py`: dönem yazılmamış Logo ölçü sorusu "Hangi dönem?" diye sormak yerine yılbaşından bugüne hesaplanır; cevaba dönem notu, henüz gelmemiş dönem için ayrı not eklenir (`Plan.notes`). Denetçiye bunun kurum kuralı olduğu bildirilir.
+- Yeni `backend/semantic_layer/tests/test_finance_dates.py`: 47 vaka, test sunucusunda (canlı ağacın kopyası + değişen dosyalar) 47/47 geçti. Canlı API kabulü bu sürüm kurulunca koşulacak.
+
 ## 2026-10-01 — Soruya özel olmayan CRM ilişkisel plan
 
 - Kullanıcının yeni vurgusu üzerine üretim yolu test kimliği/örnek müşteri/tarihe özel dal açısından incelendi; böyle bir yönlendirme bulunmadı. Ancak CRM'nin 33 hazır rapor seçimine bağımlılığı genel niyet motoru sayılmadı. Aşamada bekleme sınırı açıklamasındaki sabit üç ay ifadesi genel süre koşuluna çevrildi.

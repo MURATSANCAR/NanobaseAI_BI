@@ -56,6 +56,7 @@ class Plan:
     section_title: str | None = None
     gaps: tuple[dict, ...] = ()
     coverage: tuple[dict, ...] = ()
+    notes: tuple[str, ...] = ()
 
     def to_dict(self):
         return asdict(self)
@@ -433,8 +434,17 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError("Fatura sayımı belge anahtarıyla yapılmalıdır; plan bu koşulu sağlamıyor.")
     if "tahsil" in q and "collections" not in metrics:
         raise ContractError("Tahsilat sorusu müşteri ödeme hareketleri sözleşmesini kullanmalıdır.")
+    period_notes = []
     if not family.startswith("crm_") and not periods:
-        raise ContractError("Hangi dönemi hesaplayayım? Tarih aralığını belirtin.", code="NEEDS_CLARIFICATION")
+        # User rule 2026-10-01: no written period means the current year to date;
+        # past year copies are read only when a year or past period is written.
+        periods = ((str(date(today.year, 1, 1)), str(today + timedelta(days=1))),)
+        period_notes.append(f"Soruda dönem belirtilmediği için {today.year} yılbaşından bugüne "
+                            f"(01.01.{today.year}–{today:%d.%m.%Y}) hesaplandı.")
+    if not family.startswith("crm_"):
+        for start, _ in periods:
+            if date.fromisoformat(start) > today:
+                period_notes.append(f"{date.fromisoformat(start):%d.%m.%Y} ile başlayan dönem henüz gelmedi; bu dönemde hareket olmaması beklenir.")
     if family.startswith("crm_") and (periods or dims):
         raise ContractError("CRM kayıt sayımı güncel aktif kayıtları kapsar; tarihli veya kırılımlı sayım ayrıca tanımlanmalıdır.")
     if families & {"invoice", "collection"} and set(dims) & {"book", "author", "publisher", "subbrand", "author_group"}:
@@ -569,7 +579,8 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                 "dönem_karşılaştırması": asdict(comparison) if comparison else None,
                 "comparison_output_contract": comparison_output,
                 "işlem_tanımları": "ratio=left/right*scale; difference=left-right; percent_change=(left-right)/right*100. Dönem comparison: target-base, yüzde için base payda. Sıfır payda ve eksik değer NULL.",
-                "ilk_n": limit, "sıralama_ölçüsü": METRICS[order].label if order in METRICS else order, "azalan": data.get("descending", True)}
+                "ilk_n": limit, "sıralama_ölçüsü": METRICS[order].label if order in METRICS else order, "azalan": data.get("descending", True),
+                "dönem_varsayımı": (period_notes[0] + " Bu kurum kuralıdır; istenmemiş koşul veya eksik dönem sayılmaz.") if period_notes and not dates(question, today)[0] else None}
     review = _object(llm, [{"role": "system", "content":
         "Soru-plan uyumunu denetle. Yalnız {\"ok\":true|false,\"missing\":[...]}. "
         "reviewScope.kind=section ise yalnız currentSectionQuestion içindeki bu bölümün hesap ve koşullarını denetle. "
@@ -643,7 +654,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         trace.append({"stage": "review", "output": review})
     if review.get("ok") is not True or review.get("missing"):
         raise ContractError("Sorunun bütün koşulları plana taşınamadı: " + "; ".join(map(str, review.get("missing") or ["ölçü/kırılım uyumu"])), code="PLAN_INVALID")
-    return Plan(metrics, dims, periods, tuple(filters), kind, limit, order, data.get("descending", True), derived, having, comparison, analytics=analytics)
+    return Plan(metrics, dims, periods, tuple(filters), kind, limit, order, data.get("descending", True), derived, having, comparison, analytics=analytics, notes=tuple(period_notes))
 
 
 def validate_operations(data, metrics, dims, periods, analytic_ids=()):
