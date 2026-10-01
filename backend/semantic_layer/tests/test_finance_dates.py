@@ -4,6 +4,7 @@ Yıl yazılmamışsa her ay, gün, hafta ve çeyrek güncel yıla / bugüne bağ
 yalnız yıl ya da göreli geçmiş (geçen yıl, bir önceki yıl …) yazılınca okunur.
 Beklenen aralıklar yarı açıktır: [başlangıç, bitiş). Bugün 2026-10-01 perşembe.
 """
+import json
 from datetime import date
 
 import pytest
@@ -132,6 +133,9 @@ def test_reviewer_is_told_a_written_future_month_was_parsed_by_rule():
     plan = build("Aralık 2026 net satış tutarı nedir?", spy, _data=_plan_data())
     assert plan.periods == (("2026-12-01", "2027-01-01"),)
     assert spy.review["plan"]["tarih_kaynağı"] == "sorudaki_ifadeden_kurallı_çözüm"
+    # No concrete range to re-judge (the reviewer rewrote December as November/January).
+    assert isinstance(spy.review["plan"]["uygulanan_tarih_aralıkları"], str)
+    assert "2026-12" not in json.dumps(spy.review["plan"]["uygulanan_tarih_aralıkları"])
 
 
 def test_default_period_is_not_marked_as_parsed_from_the_question():
@@ -139,3 +143,4 @@ def test_default_period_is_not_marked_as_parsed_from_the_question():
     spy = _ReviewSpy()
     build("Net satış tutarı nedir?", spy, _data=_plan_data())
     assert spy.review["plan"]["tarih_kaynağı"] is None
+    assert isinstance(spy.review["plan"]["uygulanan_tarih_aralıkları"], list)

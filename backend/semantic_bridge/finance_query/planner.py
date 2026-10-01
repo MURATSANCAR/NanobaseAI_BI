@@ -582,6 +582,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         else:
             analytic_meanings.append({"işlem":"ilk N ve kalan", "kapsam":scope, "ölçü":metric_meaning(spec["metric"]),
                 "ilk_n":spec["limit"], "kalan":"Seçilmeyen bütün öğeler ölçü toplamları korunarak tek satır olur", "kalan_etiketi":spec["label"]})
+    rule_parsed = bool(periods) and tuple(map(tuple, periods)) == tuple(map(tuple, dates(question, today)[0]))
     readable = {"referenceDate": str(today), "metrics": list(metrics), "source_metrics": list(metrics),
                 "metric_definitions": {m: {"ad": METRICS[m].label, "tanım": METRICS[m].definition,
                     "ayrı_çıktı_kolonu": comparison is None,
@@ -591,11 +592,13 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                     ["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else
                     ["subbrand_id", "subbrand"] if d == "subbrand" else ["author_group_ids", "author_group_names"] if d == "author_group" else [d]} for d in dims},
                 "tarih_anlamı": "Son N ay/yıl, bugünün gün numarası korunarak N takvim birimi geriye gidilen hareketli aralıktır; hedef ayda gün yoksa ay sonu kullanılır ve bugün dahildir. Son tamamlanan N ay/yıl ise tamamlanmış takvim dönemleridir. Bunlar aynı aralık değildir. En yüksek/en çok gibi ölçü sırasındaki ilk N gün bütün istenen dönemden seçilen N sonuç satırıdır; ayın kronolojik ilk N günü değildir.",
-                "uygulanan_tarih_aralıkları": [{"başlangıç_dahil":a,"bitiş_hariç":b, "son_gün_dahil":str(date.fromisoformat(b)-timedelta(days=1)), "gün_sayısı":(date.fromisoformat(b)-date.fromisoformat(a)).days} for a,b in periods],
                 # The model never chooses dates: periods come from the rule-based parser. When the
-                # question's own wording produced them, the reviewer must not re-judge the range
-                # (it rejected "Aralık 2026" as wrong because the month is still ahead of today).
-                "tarih_kaynağı": "sorudaki_ifadeden_kurallı_çözüm" if periods and tuple(map(tuple, periods)) == tuple(map(tuple, dates(question, today)[0])) else None,
+                # question's own wording produced them the reviewer gets no concrete range to
+                # re-judge: live acceptance 2026-10-01 showed it rewriting a correct "Aralık 2026"
+                # as November or January even when told the range was rule-parsed.
+                "uygulanan_tarih_aralıkları": "Sorudaki dönem ifadesi kurallı ayrıştırıcıyla çözüldü ve her kaynak sorgusuna birebir uygulanıyor; denetim dışı." if rule_parsed else
+                    [{"başlangıç_dahil":a,"bitiş_hariç":b, "son_gün_dahil":str(date.fromisoformat(b)-timedelta(days=1)), "gün_sayısı":(date.fromisoformat(b)-date.fromisoformat(a)).days} for a,b in periods],
+                "tarih_kaynağı": "sorudaki_ifadeden_kurallı_çözüm" if rule_parsed else None,
                 "referenceDate_anlamı": "Yalnız göreli tarihleri çözme çıpası; mutlak tarih isteğinin yerine geçen sorgu tarihi değildir",
                 "teknik_kod_anlamı": "Ölçü tanımlarındaki TRCODE, SIGN ve 7/8/9, 2/3 gibi sayılar işlem türü kodlarıdır; ay/gün/yıl veya tarih filtresi değildir",
                 "sonuç_kırılımları": result_grain, "koşullar": conditions, "operand_anlamları": operand_meanings,
@@ -668,8 +671,8 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         "aynı nüfusu tarif eder; aralığı ikinci bir filters girdisi veya tarih çıktı kolonu olmadığı için eksik sayma. "
         "gün_sayısı aralıktaki takvim günü sayısıdır; sorunun gün adedi ve bugün dahil şartını bu somut sınırlarla denetle. "
         "Gerçek tarih uyuşmazlığı varsa istenen sınır ile uygulanan sınırın hangisinin farklı olduğunu belirt. "
-        "tarih_kaynağı sorudaki_ifadeden_kurallı_çözüm ise aralık sorudaki dönem ifadesinden kurallı ayrıştırıcıyla "
-        "çözülmüştür ve doğrudur; henüz gelmemiş ay/yıl da olsa tarih aralığı uyuşmazlığı yazma, yalnız diğer koşulları denetle. "
+        "tarih_kaynağı sorudaki_ifadeden_kurallı_çözüm ise sorudaki dönem kurallı uygulanmıştır; tarih/dönem için missing yazma, "
+        "yalnız ölçü, kırılım, süzgeç ve diğer koşulları denetle. "
         "Tarih koşulunu yalnız uygulanan_tarih_aralıkları ile denetle; referenceDate göreli çözüm çıpasıdır, "
         "ölçü tanımındaki işlem kodları takvim ayları değildir. "
         "Yüzde fark, açık formülde (sol-sağ)/sağ*100 ile sağlanır; aynı ara fark için ikinci bir işlem şart değildir. "
