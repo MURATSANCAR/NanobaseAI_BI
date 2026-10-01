@@ -9,6 +9,9 @@
        TITLE     folded title equal to the CRM name / book name / product name
                  (folding: Turkish letters to ASCII, punctuation and dashes to spaces, so a
                  file-name title like «anne-terligi» equals «Anne Terliği»)
+       COMPACT   only when no title is equal: the same folded title with its spaces removed
+                 («Dijital Dünyada Ebeveyn Olmak» = «Dijital Dünyada E-beveyn Olmak»: a dash or
+                 space inside a word is spelling, not a different book)
        PARTIAL   only when nothing is equal: the editor title's words (at least two) open
                  the CRM title word by word, each word a prefix («kaybolan balinalar» →
                  «Kaybolan Balinaların Şarkısı»)
@@ -72,6 +75,11 @@ def fold(s: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", " ", s).strip()
 
 
+def compact(s: str | None) -> str:
+    """The folded title without spaces: «e-beveyn», «e beveyn» and «ebeveyn» are one spelling."""
+    return fold(s).replace(" ", "")
+
+
 def plain(s: str | None) -> str:
     """CRM rich-text fields hold HTML (<p>, &uuml;); the card shows plain paragraphs."""
     s = re.sub(r"(?i)<br\s*/?>|</(p|div|li)>", "\n", s or "")
@@ -119,6 +127,7 @@ def load_books(cur) -> list[dict]:
     books = cur.fetchall()
     for b in books:
         b["_titles"] = {t for t in (fold(b.get(k)) for k in ("new_name", "new_KitabnAd", "new_urunadi")) if t}
+        b["_compact"] = {t.replace(" ", "") for t in b["_titles"]}
         b["_isbns"] = {i for i in (norm_isbn(b.get("new_isbn13")), norm_isbn(b.get("new_isbn"))) if i}
     return books
 
@@ -143,6 +152,9 @@ def match(books: list[dict], isbns: list[str], title: str, authors: list[str] = 
         t = fold(title)
         how, rows = "TITLE", [b for b in books if t and t in b["_titles"]]
     if not rows:
+        c = compact(title)
+        how, rows = "COMPACT", [b for b in books if c and c in b["_compact"]]
+    if not rows:
         words = fold(title).split()
         how, rows = "PARTIAL", [b for b in books if any(_opens(words, x) for x in b["_titles"])]
     if not rows:
@@ -152,7 +164,7 @@ def match(books: list[dict], isbns: list[str], title: str, authors: list[str] = 
     if len(rows) == 1:
         return how, rows, ""
     # «X (Önceki Ebat)», «X?» and a record whose author was left empty are still book X.
-    same_title = len({fold(re.sub(r"\s*\([^)]*\)\s*$", "", b["new_name"])) for b in rows}) == 1
+    same_title = len({compact(re.sub(r"\s*\([^)]*\)\s*$", "", b["new_name"])) for b in rows}) == 1
     same_author = len({a for a in (fold(b.get("new_yazartext")) for b in rows) if a}) <= 1
     if same_title and same_author:
         rows.sort(key=lambda b: (b["new_projekarti"] is not None, b["ModifiedOn"]), reverse=True)
