@@ -173,7 +173,7 @@ export default function SocialPost() {
           </div>
           {p.note && p.status === 'taslak' && <Note tone="warn">Geri gönderme gerekçesi: {p.note}</Note>}
           {p.note && p.status === 'iptal' && <Note tone="err">İptal gerekçesi: {p.note}</Note>}
-          {(p.uyarilar ?? []).map((w) => <Note key={w.kod} tone={w.kod === 'lisans' ? 'info' : 'warn'}>{w.metin}</Note>)}
+          {(p.uyarilar ?? []).map((w) => <Note key={w.kod} tone="warn">{w.metin}</Note>)}
           {p.status === 'onayli' && editable && <Note tone="info">Onaylı gönderinin metnini, etiketini, hesabını ya da görselini değiştirirseniz onay düşer; yalnız saati değiştirmek onayı korur.</Note>}
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-4">

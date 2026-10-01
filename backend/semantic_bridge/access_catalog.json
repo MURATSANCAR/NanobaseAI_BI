@@ -1,5 +1,5 @@
 {
-  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Alanlar (areas) menünün ana modülleridir, aynı sırada ve aynı adla; sayfanın alanı öğenin menüdeki ana modülüdür (yalnız Yetkiler ekranındaki gruplama; yetkiyi değiştirmez). Kampüs sayfası her zaman açık; Yönetim'in ayar, onay ve sözlük ekranları yalnız yöneticide, burada yok (Yönetim alanında yalnız sayfa yetkisiyle açılan Kategori ağacı var). Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu ve alan eşleşmesini denetler. Özellik = sayfa içindeki işlem; 'explicit' olan özellik ve sayfalar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
+  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Alanlar (areas) menünün ana modülleridir, aynı sırada ve aynı adla; sayfanın alanı öğenin menüdeki ana modülüdür (yalnız Yetkiler ekranındaki gruplama; yetkiyi değiştirmez). Kampüs sayfası her zaman açık; Yönetim'in ayar, onay ve sözlük ekranları yalnız yöneticide, burada yok (Yönetim alanında yalnız sayfa yetkisiyle açılan Kategori ağacı var). Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu ve alan eşleşmesini denetler. Özellik = sayfa içindeki işlem; 'explicit' olan özellik ve sayfalar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler). 'everyone' işaretli sayfa bilerek «Herkes»e açıktır (İK personel portalının çalışan sayfaları: kişi yalnız kendi kaydını, ekibini ya da rehber alanlarını görür); İK alanında ne explicit ne everyone olan sayfa testte (test_hr_core.py) düşer.",
   "version": 2,
   "areas": [
     {
@@ -302,6 +302,11 @@
       "label": "Kargo mutabakatı"
     },
     {
+      "key": "sayfa:kargo-maliyet",
+      "area": "lojistik",
+      "label": "Kargo maliyeti"
+    },
+    {
       "key": "sayfa:pazarlama-yeni-kitap",
       "area": "pazarlama",
       "label": "Yeni kitap planı"
@@ -418,6 +423,11 @@
       "key": "sayfa:seo-bing",
       "area": "pazarlama",
       "label": "Bing ve IndexNow"
+    },
+    {
+      "key": "sayfa:seo-yandex",
+      "area": "pazarlama",
+      "label": "Yandex"
     },
     {
       "key": "sayfa:seo-rakip",
@@ -555,6 +565,11 @@
       "label": "Google Alışveriş hazırlığı"
     },
     {
+      "key": "sayfa:seo-aramadan-satisa",
+      "area": "pazarlama",
+      "label": "Aramadan satışa"
+    },
+    {
       "key": "sayfa:seo-aylik",
       "area": "pazarlama",
       "label": "Aylık rapor"
@@ -680,42 +695,50 @@
     {
       "key": "sayfa:ik-anasayfa",
       "area": "ik",
-      "label": "İK ana sayfası"
+      "label": "İK ana sayfası",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-profilim",
       "area": "ik",
-      "label": "Profilim (özlük kaydım)"
+      "label": "Profilim (özlük kaydım)",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-rehber",
       "area": "ik",
-      "label": "Personel rehberi"
+      "label": "Personel rehberi",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-duyurular",
       "area": "ik",
-      "label": "Şirket içi duyurular"
+      "label": "Şirket içi duyurular",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-evrak",
       "area": "ik",
-      "label": "Evrak deposu ve evrak talebi"
+      "label": "Evrak deposu ve evrak talebi",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-sss",
       "area": "ik",
-      "label": "İK sık sorulan sorular"
+      "label": "İK sık sorulan sorular",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-izin",
       "area": "ik",
-      "label": "İzinlerim"
+      "label": "İzinlerim",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-izin-ekip",
       "area": "ik",
-      "label": "Ekibimin izinleri"
+      "label": "Ekibimin izinleri",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-yonetim",
@@ -860,6 +883,11 @@
       "label": "Trendyol: soru ve yorum"
     },
     {
+      "key": "sayfa:trendyol-mutabakat",
+      "area": "platform",
+      "label": "Trendyol: satış/iade mutabakatı ve hakediş"
+    },
+    {
       "key": "sayfa:amazon",
       "area": "platform",
       "label": "Amazon ve yurtdışı: özet"
@@ -878,6 +906,11 @@
       "key": "sayfa:amazon-taslaklar",
       "area": "platform",
       "label": "Listeleme ve brief taslakları"
+    },
+    {
+      "key": "sayfa:amazon-mutabakat",
+      "area": "platform",
+      "label": "Amazon: satış/iade mutabakatı ve hakediş"
     },
     {
       "key": "sayfa:eticaret",
@@ -968,6 +1001,13 @@
       "area": "kampus",
       "label": "Toplantı odalarını yönetme",
       "hint": "Oda ekleme/kaldırma, başkasının rezervasyonunu iptal",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sohbet.yonet",
+      "area": "kampus",
+      "label": "Sohbet yönetimi",
+      "hint": "ZEKİ AI Sohbet'in yönetim ve ayar ekranları (kullanıcılar, kanallar, ayarlar); kişi sohbete her girişinde eşitlenir, portal yöneticilerinde açık",
       "explicit": true
     },
     {
@@ -1295,7 +1335,7 @@
       "area": "lojistik",
       "page": "sayfa:kargo-firmalar",
       "label": "Kargo maliyetini görme",
-      "hint": "Tutar, desi, desi ve sevk başı maliyet, kargo mutabakatı (Logo kargo faturası ↔ kargo kaydı)",
+      "hint": "Tutar, desi, desi ve sevk başı maliyet, kargo mutabakatı (Logo kargo faturası ↔ kargo kaydı), kargo maliyeti ekranı (gider, ciroya oranı, gönderi başı)",
       "explicit": true
     },
     {
@@ -1335,6 +1375,13 @@
       "page": "sayfa:editoryal",
       "label": "Kitap inceleme kararı",
       "hint": "İnceleme kuyruğunda onay, ret, düzeltme"
+    },
+    {
+      "key": "ozellik:kitap.okut",
+      "area": "editoryal",
+      "page": "sayfa:editoryal",
+      "label": "Kitap okutma",
+      "hint": "PDF yükleyip Zeki AI'a okutma; bitince Kitaba sor'a girer"
     },
     {
       "key": "ozellik:yazar-giris.herkesinki",
@@ -2800,7 +2847,7 @@
       "area": "platform",
       "page": "sayfa:trendyol",
       "label": "Trendyol panel dosyası yükleme",
-      "hint": "Ürün listesi, sipariş, iade, soru ve yorum dosyasını (Excel/CSV) yükleme ve silme; alıcı adı, adres, telefon gibi kolonlar içeri alınmaz"
+      "hint": "Ürün listesi, sipariş, iade, soru, yorum ve hesap ekstresi / hakediş dosyasını (Excel/CSV) yükleme ve silme; alıcı adı, adres, telefon gibi kolonlar içeri alınmaz"
     },
     {
       "key": "ozellik:trendyol.taslak",
@@ -2823,6 +2870,13 @@
       "page": "sayfa:amazon-taslaklar",
       "label": "Listeleme ve pazar kartı taslağı",
       "hint": "Tek kitap için hedef pazara listeleme, A+ ve çeviri brief'i taslağı; pazar değerlendirme kartı açma (Zeki AI; Amazon hesabına gönderilmez)"
+    },
+    {
+      "key": "ozellik:amazon.yukle",
+      "area": "platform",
+      "page": "sayfa:amazon-mutabakat",
+      "label": "Amazon panel dosyası yükleme",
+      "hint": "Amazon sipariş, iade ve ödeme (settlement) raporunu (Excel/CSV/TXT) yükleme ve silme; alıcı adı, adres, telefon gibi kolonlar içeri alınmaz"
     },
     {
       "key": "ozellik:amazon.parametre",

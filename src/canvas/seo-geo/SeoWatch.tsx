@@ -3,13 +3,14 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Send } from 'lucide-react';
+import { ExternalLink, Loader2, RefreshCw, Send } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { EmptyHint, Explain } from '../components/Explain';
 import { TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 /** İzleme ve rapor: öteki ekranların sakladığı veriden gece çıkarılan olaylar (tıklama düşüşü, 404 artışı, robots.txt,
  *  sitemap, yapay zekâ cevaplarından düşme, CRM yayın durumu, hız) ve haftalık rapor. */
@@ -205,7 +206,15 @@ function EventsTab({ status }: { status: 'open' | 'resolved' }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
               <span className={`sg-chip ${SEV_TONE[e.severity]}`}>{SEV_LABEL[e.severity]}</span>
               <span className="sg-chip">{e.kindLabel}</span>
-              {e.hold && <span className="sg-chip">Bilgi</span>}
+              {e.hold && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                  <span className="sg-chip">Bilgi</span>
+                  <Explain label="Bilgi">
+                    Süren bir sorun değil, bir kez olan bir değişikliğin bildirimidir (örneğin robots.txt metninin değişmesi).
+                    Görmeniz için son görüldüğü günden sonra 7 gün açık kalır, ardından kendiliğinden kapanır.
+                  </Explain>
+                </span>
+              )}
             </div>
             <h3 style={{ margin: 0, fontSize: 14.5, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{e.title}</h3>
             {e.detail && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, overflowWrap: 'anywhere' }}>{e.detail}</p>}
@@ -222,19 +231,7 @@ function EventsTab({ status }: { status: 'open' | 'resolved' }) {
           </article>
         ))}
       </div>
-      {total > PAGE && (
-        <div className="sg-pager" style={{ marginTop: 12 }}>
-          <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-            <ChevronLeft size={16} aria-hidden />
-          </button>
-          <span className="sg-mono">
-            {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-          </span>
-          <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-            <ChevronRight size={16} aria-hidden />
-          </button>
-        </div>
-      )}
+      <SeoPager start={start} total={total} size={PAGE} onChange={setStart} />
     </section>
   );
 }

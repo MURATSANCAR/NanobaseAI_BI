@@ -237,3 +237,21 @@ def test_freshness_reports_source_date_and_staleness(engine, monkeypatch):
     assert f["basari"] == {"ad": "Başarı Dağıtım kataloğu", "tarih": "2026-09-25", "yasGun": 4, "bayat": True}
     assert f["dr"]["tarih"] is None and f["dr"]["bayat"] is False
     assert D.freshness(engine, T, today=date(2026, 9, 26))["basari"]["bayat"] is False
+
+
+def test_edition_equal_to_print_year_is_unknown_and_cover_class_case_folds():
+    x = D.basari_row(_b("9780000000001", 1, baski="2018. Baskı") | {"basimyili": "2018", "kapak_turu": "karton Kapak"})
+    assert x["baski_no"] is None and x["basim_yili"] == 2018 and x["kapak"] == "Karton Kapak"
+    y = D.basari_row(_b("9780000000002", 1, baski="1122. Baskı") | {"basimyili": "2020", "kapak_turu": "ince kapak"})
+    assert y["baski_no"] == 1122 and y["kapak"] == "İnce Kapak"
+
+
+def test_normalize_classes_fixes_stored_rows(engine):
+    _apply(engine, date(2025, 1, 1), [_b("9780000000001", 1)])
+    with engine.begin() as c:
+        c.execute(D.TITLES.update().values(kapak="karton Kapak"))
+    assert D.normalize_classes(engine, T) == 1
+    with engine.connect() as c:
+        assert c.execute(sa.select(D.TITLES.c.kapak)).scalar() == "Karton Kapak"
+    assert D.normalize_classes(engine, T) == 0
+

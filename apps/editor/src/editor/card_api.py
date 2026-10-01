@@ -34,6 +34,18 @@ app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None,dependencies=[Depends(
 def book_cards():
     return {'items':cards(),'read_only':True}
 
+@app.post('/v1/books/ask')
+async def book_ask(body: dict = Body(...)):
+    """Kitaba sor hızlı yolu (editor.quick_answer): kayıttan tek model çağrısı. handled=false ise köprü soruyu
+    sohbet ajanına verir. Salt okunur; defterde yazma yok."""
+    from . import quick_answer
+    history = body.get('history') if isinstance(body.get('history'), list) else None
+    try:
+        return await quick_answer.answer(str(body.get('question') or ''), (str(body.get('bookTitle') or '') or None),
+                                         history)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
 @app.get('/v1/books/{book_id}/cover')
 def book_cover(book_id: UUID):
     try:
@@ -275,6 +287,47 @@ async def document_upload(file: UploadFile = File(...), title: str = Form(defaul
     except DR.DocumentError as e:
         raise HTTPException(422,str(e)) from None
     return {**row,'id':str(row['id']),'created_at':row['created_at'].isoformat()}
+
+# ------------------------------------------------------------------ portaldan kitap okutma (editor.portal_books)
+@app.post('/v1/books/read')
+async def book_read_upload(file: UploadFile = File(...), title: str = Form(default=''),
+                           x_editor: str = Header(default='')):
+    """Editörün yüklediği kitap PDF'i gelen kutusuna yazılır ve okuma kuyruğuna girer; okumayı kuyruk servisi
+    (editor-book-queue) GPU boşalınca başlatır. Aynı içerik okunmuş/sırada/okunuyorsa yeni iş açılmaz.
+    İsteyen = X-Editor (köprü oturumdan verir). Depo bu serviste salt okunur; yalnız gelen kutusu ve kitap
+    klasörü yazılabilir bağlıdır (docker-compose). 422 = dosyanın kendisi okunamaz (köprü yeniden göndermez)."""
+    from starlette.concurrency import run_in_threadpool
+    from . import portal_books as PB
+    from .config import settings
+    who=(x_editor or '').strip()
+    if not who:
+        raise HTTPException(400,'Yükleyen (X-Editor) eksik.')
+    name=PB.title_of(title,file.filename or '')
+    try:
+        file_name,size=await run_in_threadpool(PB.save,file.file,settings().inbox,file.filename or 'kitap.pdf',title)
+    except PB.UploadError as e:
+        raise HTTPException(422,str(e)) from None
+    try:
+        import pymupdf
+        with pymupdf.open(settings().inbox/file_name) as doc:
+            if doc.needs_pass:
+                raise ValueError('parolalı')
+            if doc.page_count<1:
+                raise ValueError('sayfasız')
+    except Exception:
+        # Okunamayan dosya gelen kutusunda kalmaz: kuyruk komutu (editorctl queue) onu yeniden denemesin.
+        (settings().inbox/file_name).unlink(missing_ok=True)
+        raise HTTPException(422,'PDF açılamadı; dosya bozuk ya da parolalı olabilir.') from None
+    q=await run_in_threadpool(PB.enqueue,file_name,name,who)
+    rows=[r for r in PB.listing(who) if r['id']==q['job_id']] or [{'id':q['job_id'],'title':name}]
+    return {**rows[0],'already':q['already'],'bytes':size}
+
+@app.get('/v1/books/read')
+def book_read_jobs(requested_by: str = Query(default='')):
+    """Portaldan okutulan kitaplar ve kuyruktaki yeri (yeniden eskiye, hepsi); `requested_by` verilirse yalnız
+    onunkiler. Hata metni dönmez: iş akışının hatası teknik ad taşır, ekran yalnız durumu söyler."""
+    from . import portal_books as PB
+    return {'items':PB.listing(requested_by),'attempts':PB.ATTEMPTS}
 
 @app.get('/v1/documents')
 def document_list(uploaded_by: str = Query(default='')):

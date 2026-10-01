@@ -84,7 +84,7 @@ JOBS = sa.Table(
     sa.Column("tenant_id", sa.String(80), primary_key=True),
     sa.Column("job", sa.String(120), primary_key=True),
     sa.Column("label", sa.String(200), nullable=False),
-    sa.Column("every", sa.String(40)),
+    sa.Column("every", sa.String(200)),  # systemd OnCalendar ifadesi 40'ı aşabiliyor (M19: 43)
     sa.Column("last_at", sa.DateTime(timezone=True)),
     sa.Column("next_at", sa.DateTime(timezone=True)),
     sa.Column("last_ok", sa.Boolean),
@@ -268,6 +268,12 @@ def ensure(engine: sa.engine.Engine) -> None:
             if "resolve_json" not in {c["name"] for c in sa.inspect(engine).get_columns(INCIDENTS.name)}:
                 with engine.begin() as c:
                     c.execute(sa.text(f"ALTER TABLE {INCIDENTS.name} ADD COLUMN resolve_json TEXT"))
+            # «every» 40 karakterdi; uzun takvim ifadesi işin kaydını düşürüyordu. SQLite uzunluk uygulamaz.
+            if engine.dialect.name == "postgresql":
+                every = next(c for c in sa.inspect(engine).get_columns(JOBS.name) if c["name"] == "every")
+                if (getattr(every["type"], "length", None) or 200) < 200:
+                    with engine.begin() as c:
+                        c.execute(sa.text(f"ALTER TABLE {JOBS.name} ALTER COLUMN every TYPE VARCHAR(200)"))
 
         # Sürüm damgası: tanım değişmediyse açılışta veritabanına sorulmaz (kolon eklenince tanım da değişir).
         from semantic_layer.store import schema_stamp
@@ -965,7 +971,7 @@ def due_digests(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], now: 
 def upsert_job(engine: sa.engine.Engine, tenant: str, job: str, *, label: str, source: str, every: Optional[str] = None,
                last_at: Optional[datetime] = None, next_at: Optional[datetime] = None, last_ok: Optional[bool] = None,
                last_error: Optional[str] = None, failed_count: Optional[int] = None, total_count: Optional[int] = None) -> None:
-    vals = {"label": label[:200], "every": every, "last_at": _aware(last_at), "next_at": _aware(next_at), "last_ok": last_ok,
+    vals = {"label": label[:200], "every": every[:200] if every else every, "last_at": _aware(last_at), "next_at": _aware(next_at), "last_ok": last_ok,
             "last_error": screen_text(last_error) if last_error else None, "failed_count": failed_count,
             "total_count": total_count, "source": source[:16], "updated_at": _now()}
     with engine.begin() as c:

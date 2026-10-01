@@ -46,6 +46,29 @@ function MonthlyChart({ d, k }: { d: ChannelDetail; k?: Kaynaklar }) {
   );
 }
 
+/** D&R: Logo'dan kanala satış yanında kanalda bekleyen TİMAŞ grubu stoğu (katalogun son görüntüsü). */
+function ChannelStock({ s, net, k }: { s: NonNullable<ChannelDetail['dagitimStok']>; net: number; k?: Kaynaklar }) {
+  const st = s.dr;
+  return (
+    <Panel>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kanalda bekleyen stok <SqlInfo k={k} alan="dagitimStok" label="Kanalda bekleyen stok" /></h2>
+      <p className="mb-2 text-[12px] text-canvas-muted">TİMAŞ grubu kitapların D&R kataloğundaki stoğu, kanala sattığımız adedin yanında. Kaynak geçmiş tutmaz; yalnız son görüntü bilinir.{s.not ? ` ${s.not}` : ''}</p>
+      {s.hata && <Note tone="warn">{s.hata}</Note>}
+      {!s.hata && !st && <Note tone="info">D&R kataloğu henüz okunmadı; görüntü her sabah alınır.</Note>}
+      {st && (
+        <Facts rows={[
+          ['Kanala satış, dönem (net adet)', fmtInt(net)],
+          ['Prefix B2B stoğu (TİMAŞ)', `${fmtInt(st.stok)} adet`],
+          ['D&R + İdefix site stoğu', st.siteStok != null ? `${fmtInt(st.siteStok)} adet` : '—'],
+          ['Stoklu başlık (B2B)', `${fmtInt(st.stokluBaslik)} / ${fmtInt(st.baslik)}`],
+          ['Site stoğu sayımı olan başlık', fmtInt(st.siteStokBilinen ?? 0)],
+          ['Görüntü tarihi', fmtDay(st.tarih)],
+        ]} />
+      )}
+    </Panel>
+  );
+}
+
 function BookLists({ platform, p, meta }: { platform: string; p: YM; meta: ChannelsMeta }) {
   const [tab, setTab] = useState<'kitaplar' | 'iadeler'>('kitaplar');
   const [q, setQ] = useState('');
@@ -443,6 +466,7 @@ export default function Channel() {
               {d.donem.m9 ? <> Birim maliyet modülüyle tamamlanınca marj {fmtPct(d.donem.m9.marj)} (kapsam {fmtPct(d.donem.m9.kapsam, 0)}); {d.donem.m9.bilinmeyenKitap} kitabın birim maliyeti bilinmiyor ({fmtMoney(d.donem.m9.bilinmeyenCiro)}).</> : !d.m9Bagli ? ' Birim maliyet modülü bu kurulumda bağlı değil.' : ''}
             </Note>
           )}
+          {d.dagitimStok && <ChannelStock s={d.dagitimStok} net={d.donem.netAdet} k={d.kaynaklar} />}
           <MonthlyChart d={d} k={d.kaynaklar} />
           <Panel>
             <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Cariler <SqlInfo k={d.kaynaklar} alan="cariler" label="Platformun carileri" /></h2>

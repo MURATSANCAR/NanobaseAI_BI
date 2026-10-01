@@ -1,9 +1,9 @@
 """Fark ayrıştırma uçları (`/api/v1/fark/*`): sohbet cevabının altındaki «Neden?» ve pano kartı.
 
 - `POST /api/v1/fark/ayristir` {queryId | question, karsi: gecen-yil|onceki-donem, boyutlar?, anlat?} → ayrıştırma +
-  anlatım. `queryId` sohbet cevabının kaydıdır: soru kaydedildiği hâliyle (konuşma bağlamı dahil) çözülmüş olarak okunur,
-  yeniden çözülmez; yalnız soran kişi (ya da yönetici) kullanır. `question` pano kartı ve uyarı içindir: soru çözümleyiciden
-  bağlamsız geçer. SQL köprünün `run_complete` yolundan koşar (yetki kapsamı, yıl kopyaları, önbellek sohbetle aynı).
+  anlatım. `queryId` sohbet cevabının kaydıdır: kayıttaki finans planı (konuşma bağlamı dahil) okunur, yeniden
+  planlanmaz; yalnız soran kişi (ya da yönetici) kullanır. `question` pano kartı ve uyarı içindir: soru finans
+  planlayıcısından bağlamsız geçer. Plan finans motorunun yürütücüsünde koşar (yetki, yıl kopyaları, ölçü tanımı sohbetle aynı).
 - `POST /api/v1/fark/ipucu` {queryId | question} → yalnız «ayrıştırılabilir mi» (SQL koşmaz).
 
 Rakamlar SQL'den; Zeki AI yalnız 2–3 cümle anlatır ve metindeki her sayı olgularla denetlenir. Her cevapta çalıştırılan
@@ -17,23 +17,13 @@ from typing import Any, Callable, Optional
 from fastapi import HTTPException, Request
 
 from semantic_bridge import variance as V
+from semantic_bridge.finance_query import ContractError, public_error
 
 log = logging.getLogger(__name__)
 
 
-def rows_of(r: Any, out: dict[str, Any]) -> list[dict[str, Any]]:
-    path = out.get("_result_file")
-    return r.result_files.read(path) if path else list(out.get("records") or [])
-
-
-def runner_for(r: Any) -> V.Runner:
-    def run(sql: str, period: Optional[tuple]) -> list[dict[str, Any]]:
-        return rows_of(r, r.run_complete(sql, period))
-    return run
-
-
 def logged_query(r: Any, query_id: str, user: Optional[str], is_admin: Callable[[str], bool]) -> dict[str, Any]:
-    """Sohbet kaydındaki çözüm (konuşma bağlamıyla). Başkasının kaydı okunmaz."""
+    """Sohbet kaydındaki çözüm durumu (finans planı `plan` alanında). Başkasının kaydı okunmaz."""
     import sqlalchemy as sa
     from semantic_layer.store import schema as S
 
@@ -54,14 +44,15 @@ def logged_query(r: Any, query_id: str, user: Optional[str], is_admin: Callable[
     return resolved or {}
 
 
-def resolve(r: Any, body: dict[str, Any], user: Optional[str], is_admin: Callable[[str], bool]) -> Any:
+def resolve(r: Any, body: dict[str, Any], user: Optional[str], is_admin: Callable[[str], bool]) -> Optional[dict[str, Any]]:
+    """Ayrıştırılacak finans planı: cevap kaydındaki ya da sorunun planlayıcıdan geçmiş hâli."""
     qid = str(body.get("queryId") or "").strip()
     if qid:
-        return logged_query(r, qid, user, is_admin)
+        return V.plan_of(logged_query(r, qid, user, is_admin))
     q = " ".join(str(body.get("question") or "").split())
     if not q:
         raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Cevap kaydı ya da soru gerekli."})
-    return r.resolver.resolve(q[:2000])
+    return V.plan_for_question(r, q)
 
 
 def register(app: Any, rt: Callable[[], Any], require_caller: Callable[[Request], Any], user_of: Callable[[Request], str],
@@ -80,13 +71,16 @@ def register(app: Any, rt: Callable[[], Any], require_caller: Callable[[Request]
         require_caller(request)
         user = user_of(request)
         r = rt()
-        sq = resolve(r, body, user, is_admin)
+        plan = resolve(r, body, user, is_admin)
         karsi = str(body.get("karsi") or "gecen-yil")
         dims = [str(x) for x in (body.get("boyutlar") or V.DEFAULT_DIMS)]
         try:
-            res = V.for_question(runner_for(r), sq, karsi=karsi, boyutlar=dims)
+            res = V.for_plan(V.executor_fetch(r), plan, karsi=karsi, boyutlar=dims)
         except V.VarianceError as e:
             return {"ok": False, "neden": str(e)}
+        except ContractError as e:    # kaynak kapsamı / sözleşme: motorun düz cümlesi (teknik ayrıntı kayıtta)
+            log.info("fark ayrıştırma sözleşme: %s", e)
+            return {"ok": False, "neden": public_error(e)}
         except Exception as e:  # noqa: BLE001 — yetki kapsamı ve kaynak hatası düz cümleyle
             from semantic_bridge import access as access_mod
 

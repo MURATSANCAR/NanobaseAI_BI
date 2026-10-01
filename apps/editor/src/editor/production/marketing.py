@@ -14,8 +14,7 @@ Her üretim taslaktır; editör düzeltir ve onaylar (kim, ne zaman kaydedilir, 
 indirilemez, kapağa uygulanamaz, SEO'ya öneri olarak gönderilemez. Onaydan sonra yapılan düzeltme onayı düşürür.
 
 Sosyal medya görselleri modelsiz dizilir (Pillow; kapak açılımından ön kapak, seçili iç sayfa resimleri, paletten
-renk). Model üretimi görsel kullanan görsel `draft` işaretlidir: ekranda «taslak — ticari kullanım izni bekleniyor»,
-indirilen dosyanın adı TASLAK- ile başlar.
+renk). Görsel modelin ürettiği resimler de basılabilir/yayımlanabilir çıktıdır (ticari lisans 2026-09-29'da alındı).
 
 Klasör `<iş>/pazarlama/`: isler.json (arka plan işleri), ozet.json, arka-kapak.json, urun.json, sosyal.json +
 sosyal/*.png, kilavuz.json + kilavuz/kilavuz.pdf, kayit.jsonl.
@@ -98,7 +97,6 @@ def quote_fits(template: str) -> bool:
     return min(w, h) >= QUOTE_MIN
 VISUALS = ("cover", "page", "quote")
 EFFECTS = ("plain", "shadow", "outline", "burst", "rainbow")
-DRAFT_NOTE = "Taslak — ticari kullanım izni bekleniyor"
 SOCIAL_ID = re.compile(r"^s_[0-9a-f]{8}$")
 GENRE_TR = {"RESIMLI_OYKU": "Resimli öykü", "ILK_OKUMA": "İlk okuma", "COCUK_ROMANI": "Çocuk romanı",
             "GENCLIK_ROMANI": "Gençlik romanı", "YETISKIN_ROMANI": "Roman", "OYKU_KITABI": "Öykü",
@@ -999,31 +997,29 @@ def _cover_front(d: Path, height: int):
 
 
 def social_sources(d: Path) -> list[dict]:
-    """Seçilebilir görseller: ön kapak, basılan iç sayfa resimleri (seçili sürüm), yüklenen fotoğraflar. `draft`:
-    görsel modelin ürettiği (ticari kullanım izni bekleniyor)."""
+    """Seçilebilir görseller: ön kapak, basılan iç sayfa resimleri (seçili sürüm), yüklenen fotoğraflar."""
     from . import plan as plan_mod
     out = []
     art = studio.selected_art(d)
     if (d / "kapak" / "kapak.pdf").exists() or cover_file(d).exists():
-        out.append({"key": "kapak", "label": "Ön kapak", "kind": "cover", "draft": "kapak" in art})
+        out.append({"key": "kapak", "label": "Ön kapak", "kind": "cover"})
     pl = plan_mod.load(d)
     if pl is not None:
         for no, aid in plan_mod.printed_art(pl):
             if aid in art:
-                out.append({"key": aid, "label": f"Sayfa {no} resmi", "kind": "art", "draft": True})
+                out.append({"key": aid, "label": f"Sayfa {no} resmi", "kind": "art"})
         for gid, a in (pl.get("assets") or {}).items():
             if a.get("kind") == "photo" and not a.get("derived_from"):
-                out.append({"key": gid, "label": a.get("name") or "Fotoğraf", "kind": "photo", "draft": False})
+                out.append({"key": gid, "label": a.get("name") or "Fotoğraf", "kind": "photo"})
             elif a.get("kind") == "figure":
-                out.append({"key": gid, "label": f"Figür: {a.get('prompt') or gid}"[:60], "kind": "figure",
-                            "draft": True})
+                out.append({"key": gid, "label": f"Figür: {a.get('prompt') or gid}"[:60], "kind": "figure"})
     else:
         try:
             printed = studio._pagemap(d).art_pages()
         except Exception:  # noqa: BLE001 - sayfa haritası yoksa iç resim yok
             printed = set()
         for key in sorted((k for k in art if k.isdigit() and int(k) in printed), key=int):
-            out.append({"key": key, "label": f"Sayfa {key} resmi", "kind": "art", "draft": True})
+            out.append({"key": key, "label": f"Sayfa {key} resmi", "kind": "art"})
     return out
 
 
@@ -1186,13 +1182,11 @@ def _render_compact(d: Path, img, sh: str, visual: str, source: str | None, head
         if not in_book(q, norm("\n".join(s.text for s in sections(d)))):
             raise ValueError("Bu alıntı kitabın metninde birebir geçmiyor; kitaptan aynen alın.")
         pic = _cover_front(d, 1200) if "kapak" in srcs else None
-        draft = bool(srcs["kapak"]["draft"]) if pic is not None else False
         text, fill = f"“{q}”", False
     else:
         key = source or ("kapak" if visual == "cover" else None)
         if not key or key not in srcs:
             raise ValueError("Görsel seçin (kapak ya da iç sayfa resmi).")
-        draft = bool(srcs[key]["draft"])
         pic = source_image(d, key, 1200)
         text, fill = headline, visual == "page"
 
@@ -1224,7 +1218,7 @@ def _render_compact(d: Path, img, sh: str, visual: str, source: str | None, head
                     _text_block(img, byline.split(" · ")[0], body, low, ink, int((bh - head_h) * 0.7))
         elif not _text_block(img, byline, body, (x0, m, W - m, H - m), ink, int(bh * 0.45)):
             _text_block(img, byline.split(" · ")[0], body, (x0, m, W - m, H - m), ink, int(bh * 0.6))
-        return img, draft
+        return img
 
     # stack
     inner = H - 2 * m
@@ -1244,7 +1238,7 @@ def _render_compact(d: Path, img, sh: str, visual: str, source: str | None, head
     box = (m, H - m - by_h, W - m, H - m)
     if not _text_block(img, byline, body, box, ink, int(by_h * 0.45)):
         _text_block(img, byline.split(" · ")[0], body, box, ink, int(by_h * 0.6))
-    return img, draft
+    return img
 
 
 def _cover_fit(im, w: int, h: int):
@@ -1254,7 +1248,7 @@ def _cover_fit(im, w: int, h: int):
 
 def render_social(d: Path, template: str, visual: str, source: str | None, headline: str, effect: str,
                   color: str | None, quote: str | None):
-    """Tek görsel (PNG, RGB). Dönen: (Image, draft). Yerleşim biçimin oranına göre (`shape`): kare ve dikeyde üstte
+    """Tek görsel (PNG, RGB). Yerleşim biçimin oranına göre (`shape`): kare ve dikeyde üstte
     başlık, ortada görsel, altta kitap adı/yazar; yatayda görsel solda (alıntıda kapak sağda), yazı öbür yarıda;
     şerit ve küçük reklam biçimleri `_render_compact`."""
     from PIL import Image, ImageDraw, ImageFilter
@@ -1310,10 +1304,7 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
             raise ValueError("Alıntı boş olamaz.")
         if not in_book(q, norm("\n".join(s.text for s in sections(d)))):
             raise ValueError("Bu alıntı kitabın metninde birebir geçmiyor; kitaptan aynen alın.")
-        draft = False
         cover = _cover_front(d, 1200) if "kapak" in srcs else None
-        if cover is not None:
-            draft = srcs["kapak"]["draft"]
         qf = style.subtitle
         if wide:
             cv = scaled(cover, W * 0.3, H - 2 * m) if cover else None
@@ -1337,12 +1328,11 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
         cx = (qbox[0] + qbox[2]) // 2
         dr.rectangle((cx - m, qbox[1] - m // 2, cx + m, qbox[1] - m // 2 + max(4, m // 6)), fill=_rgb(accents[0]))
         small("— " + byline, qbox[0], qbox[2], qbox[3] + m // 3)
-        return img, draft
+        return img
 
     key = source or ("kapak" if visual == "cover" else None)
     if not key or key not in srcs:
         raise ValueError("Görsel seçin (kapak ya da iç sayfa resmi).")
-    draft = srcs[key]["draft"]
     pic = source_image(d, key, 1800)
     if visual == "cover":
         if wide:
@@ -1365,7 +1355,7 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
                                int(W * 0.12))
             shadowed(cv, (W - cv.width) // 2, y)
             small(byline, m, W - m, H - m - by_h)
-        return img, draft
+        return img
 
     # visual == "page": resim zemini doldurur, yanda ya da altta yazı bandı
     if wide:
@@ -1382,21 +1372,21 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
             _draw_headline(img, headline, style.title, (m, H - band + m // 2, W - m, H - m - by_h - m // 3), effect,
                            accents, ink, int(band * 0.42))
         small(byline, m, W - m, H - m - by_h)
-    return img, draft
+    return img
 
 
 def social_view(d: Path) -> dict:
     st = _read(d, "sosyal.json", {"items": []})
-    return {"items": st["items"], "sources": social_sources(d), "palette": palette_colors(d),
+    items = [{k: v for k, v in it.items() if k != "draft"} for it in st["items"]]   # eski kayıtlarda lisans işareti
+    return {"items": items, "sources": social_sources(d), "palette": palette_colors(d),
             "templates": [{"key": k, "label": TEMPLATE_LABEL[k], "w": v[0], "h": v[1],
                            "group": TEMPLATE_GROUP.get(k, "diger"), "quote": quote_fits(k)} for k, v in TEMPLATES.items()],
-            "effects": list(EFFECTS), "draft_note": DRAFT_NOTE}
+            "effects": list(EFFECTS)}
 
 
 def add_social(d: Path, body: dict, by: str) -> dict:
-    img, draft = render_social(d, body.get("template", ""), body.get("visual", ""), body.get("source"),
-                               body.get("headline", ""), body.get("effect", "plain"), body.get("color"),
-                               body.get("quote"))
+    img = render_social(d, body.get("template", ""), body.get("visual", ""), body.get("source"),
+                        body.get("headline", ""), body.get("effect", "plain"), body.get("color"), body.get("quote"))
     sid = f"s_{secrets.token_hex(4)}"
     out = mdir(d) / "sosyal" / f"{sid}.png"
     out.parent.mkdir(exist_ok=True)
@@ -1404,12 +1394,12 @@ def add_social(d: Path, body: dict, by: str) -> dict:
     item = {"id": sid, "template": body["template"], "visual": body["visual"], "source": body.get("source"),
             "headline": (body.get("headline") or "").strip(), "effect": body.get("effect", "plain"),
             "color": (body.get("color") or "").upper() or None, "quote": clean_quote(body.get("quote") or "") or None,
-            "w": img.width, "h": img.height, "draft": draft, "by": by, "at": _now(), "approved": None}
+            "w": img.width, "h": img.height, "by": by, "at": _now(), "approved": None}
     with _io_lock:
         st = studio.read(mdir(d), "sosyal.json", {"items": []})
         st["items"].insert(0, item)
         studio.write(mdir(d), "sosyal.json", st)
-    log_event(d, by, "sosyal medya görseli dizildi", item=sid, draft=draft)
+    log_event(d, by, "sosyal medya görseli dizildi", item=sid)
     return item
 
 
@@ -1454,7 +1444,7 @@ def _file_name(d: Path, it: dict) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", ct.tr_upper(studio._manuscript(d).title).casefold()
                   .translate(str.maketrans("çğıöşüâîû", "cgiosuaiu"))).strip("-")[:40] or "kitap"
     kind = {"cover": "kapak", "page": "sayfa", "quote": "alinti"}[it["visual"]]
-    return f"{'TASLAK-' if it['draft'] else ''}{slug}-{kind}-{it['template']}-{it['id'][2:]}.png"
+    return f"{slug}-{kind}-{it['template']}-{it['id'][2:]}.png"
 
 
 def social_download(d: Path, sid: str) -> tuple[Path, str]:
@@ -1474,9 +1464,6 @@ def social_zip(d: Path) -> bytes:
             p = mdir(d) / "sosyal" / f"{it['id']}.png"
             if p.exists():
                 z.write(p, _file_name(d, it))
-        if any(it["draft"] for it in items):
-            z.writestr("OKUYUN.txt", "TASLAK- ile başlayan görsellerde görsel model üretimi resim var; ticari kullanım "
-                                     "izni gelene kadar yayımlanmaz.\n")
     return buf.getvalue()
 
 

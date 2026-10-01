@@ -1,0 +1,7 @@
+{
+  "version": "c1f548205",
+  "image": "zeki-ai-chat:8.5.3-c1f548205",
+  "previousImage": "zeki-ai-chat:8.5.3-157d9f6a8",
+  "ready": true,
+  "appleDouble": 0
+}

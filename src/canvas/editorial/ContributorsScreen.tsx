@@ -1,18 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BriefcaseBusiness, Search, X } from 'lucide-react';
-import { ENGINE_ENABLED, contributorsApi, freelanceApi, type Contributor, type PersonDetail } from '../engine';
+import { BriefcaseBusiness, ChevronDown, Search, X } from 'lucide-react';
+import { ENGINE_ENABLED, LANG_NONE, contributorsApi, freelanceApi, type Contributor, type PersonDetail } from '../engine';
 import { canSeePage, usePageAccess } from '../useAdmin';
-import { contributorsListOptions, roleFacetsOptions } from './queries';
+import { contributorsListOptions, languageFacetsOptions, roleFacetsOptions } from './queries';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { dateTime, pct, crmLabel } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import { WebSection } from './web/parts';
 import { RelationBody } from './authors/CardPanel';
 import SqlInfo from '../components/SqlInfo';
+import SearchSelect from '../components/SearchSelect';
 import { RightChips, RightsDetails } from './crmRights';
-import { EmptyHint } from '../components/Explain';
+import { EmptyHint, Explain } from '../components/Explain';
+import { groupWorks } from './personWorks';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -28,6 +30,8 @@ export type ContributorModule = {
   people: string;
   /** Kişi ayrıntısında M7 ilişki bölümü (randevu, görüşme notu, ısı). */
   relations?: boolean;
+  /** Kaynak dil süzgeci ve satırda kişinin kaynak dilleri (çevirmenler: sözleşmedeki orijinal dil alanından). */
+  languages?: boolean;
 };
 
 const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
@@ -38,16 +42,59 @@ const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
   return 'muted';
 };
 
-function Block({ title, count, info, children }: { title: string; count: number; info?: React.ReactNode; children: React.ReactNode }) {
+/** Açılır-kapanır bölüm (ZEKI-27). Başlıkta ad ve sayı her zaman görünür; içerik dokununca açılır. Sorgu bilgisi
+ *  düğmesi başlık düğmesinin dışında durur (düğme içinde düğme olmaz). İçerik anında açılır; yalnız ok döner. */
+function Block({ title, count, info, defaultOpen = false, children }: { title: string; count: number; info?: React.ReactNode; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = useId();
   return (
-    <section className="mt-4">
+    <section className="mt-3 border-t border-slate-100 pt-1">
       <h3 className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-extrabold">
-        {title}
-        <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(count)}</span>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls={id}
+          className="-mx-1 flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left hover:bg-slate-50 sm:min-h-8"
+        >
+          <span className="min-w-0 break-words">{title}</span>
+          <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(count)}</span>
+          <ChevronDown
+            aria-hidden
+            className={`ml-auto h-4 w-4 shrink-0 text-canvas-muted transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
         {info}
       </h3>
-      {children}
+      <div id={id} hidden={!open}>
+        {open && children}
+      </div>
     </section>
+  );
+}
+
+/** Eserler rol başlığı altında: «Yazar» önce, sonra bu ekranın rolleri, sonra diğerleri (bkz. `personWorks`). */
+function Works({ works, screenRoles }: { works: PersonDetail['works']; screenRoles: string[] }) {
+  const groups = useMemo(() => groupWorks(works, screenRoles), [works, screenRoles]);
+  if (!groups.length) return <p className="mt-1.5 text-[12px] text-canvas-muted">Eser katılım kaydı yok.</p>;
+  return (
+    <div className="zk-scroll mt-1 max-h-80 space-y-3 overflow-y-auto overscroll-contain pr-1">
+      {groups.map((g) => (
+        <div key={g.role}>
+          <div className="flex items-baseline gap-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            {g.role}
+            <span className="font-mono font-semibold normal-case tabular-nums">{nf.format(g.works.length)}</span>
+          </div>
+          <ul className="mt-0.5 space-y-1">
+            {g.works.map((w, i) => (
+              <li key={`${w.bookId}-${i}`} className="break-words">
+                {w.title || <span className="text-canvas-muted">Kitap bağlanmamış</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -98,7 +145,7 @@ function Relations({ p }: { p: PersonDetail }) {
   );
 }
 
-function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => void; relations?: boolean }) {
+function Detail({ p, onClose, relations, screenRoles }: { p: PersonDetail; onClose: () => void; relations?: boolean; screenRoles: string[] }) {
   return (
     <div className="text-[12.5px]">
       <div className="flex items-start justify-between gap-2">
@@ -112,16 +159,9 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
 
       {relations && <Relations p={p} />}
 
-      <Block title="Eserler" count={p.works.length} info={<SqlInfo k={p.kaynaklar} alan="sayac.eser" label="Eserler" />}>
+      <Block title="Eserler" count={p.works.length} defaultOpen info={<SqlInfo k={p.kaynaklar} alan="sayac.eser" label="Eserler" />}>
         {p.truncated && <p className="mt-1 text-[11px] text-canvas-muted">Liste çok uzun olduğu için kısaltıldı; eserlerin tamamı gösterilmiyor.</p>}
-        <ul className="mt-1.5 max-h-72 space-y-1 overflow-y-auto pr-1">
-          {p.works.map((w, i) => (
-            <li key={`${w.bookId}-${w.role}-${i}`} className="flex items-baseline justify-between gap-2">
-              <span className="min-w-0 break-words">{w.title || 'Kitap bağlanmamış'}</span>
-              <span className="shrink-0 text-[11px] text-canvas-muted">{w.role}</span>
-            </li>
-          ))}
-        </ul>
+        <Works works={p.works} screenRoles={screenRoles} />
       </Block>
 
       <WebSection kind="person" id={p.id} />
@@ -142,7 +182,12 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
           <ul className="zk-scroll mt-1.5 max-h-[28rem] space-y-2 overflow-y-auto overscroll-contain pr-1">
             {p.contracts.map((c) => (
               <li key={c.id} className="border-t border-slate-100 pt-1.5 first:border-t-0 first:pt-0">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                {c.books?.length ? (
+                  <div className="break-words font-semibold leading-snug">{c.books.map((b) => b.title).join(' · ')}</div>
+                ) : (
+                  <div className="text-[11.5px] text-canvas-muted">Sözleşmeye eser bağlanmamış</div>
+                )}
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <span className="font-mono text-[11.5px] tabular-nums">{c.no || '—'}</span>
                   {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
                   {c.kind && <span className="text-[11px] text-canvas-muted">{crmLabel(c.kind)}</span>}
@@ -177,7 +222,7 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
   );
 }
 
-function Row({ c, active, onOpen }: { c: Contributor; active: boolean; onOpen: () => void }) {
+function Row({ c, active, onOpen, languages }: { c: Contributor; active: boolean; onOpen: () => void; languages?: boolean }) {
   return (
     <li>
       <button
@@ -193,6 +238,11 @@ function Row({ c, active, onOpen }: { c: Contributor; active: boolean; onOpen: (
           <span className="mt-0.5 block text-[11px] leading-snug text-canvas-muted">
             {c.roles.map((r) => `${r.role} ${nf.format(r.works)}`).join(' · ')}
           </span>
+          {languages && (
+            <span className="mt-0.5 block text-[11px] leading-snug text-canvas-muted">
+              Kaynak dil: {c.languages?.length ? c.languages.join(', ') : 'belirtilmemiş'}
+            </span>
+          )}
         </span>
         <span className="shrink-0 text-right">
           <span className="block font-mono text-[15px] font-bold tabular-nums leading-none">{nf.format(c.works)}</span>
@@ -210,21 +260,33 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
   const [text, setText] = useState('');
   const [role, setRole] = useState('');
   const [order, setOrder] = useState('son');
+  const [lang, setLang] = useState('');
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState<string | null>(initialOpen ?? null);
   const q = useDebounced(text.trim(), 350);
   const roles = useMemo(() => (role ? [role] : m.roles), [role, m.roles]);
+  const withLang = !!m.languages;
 
-  useEffect(() => setPage(0), [q, role, order]);
+  useEffect(() => setPage(0), [q, role, order, lang]);
 
   const facets = useQuery({ ...roleFacetsOptions(), enabled: ENGINE_ENABLED && m.roles.length > 1 });
-  const list = useQuery(contributorsListOptions(roles, q, order, page));
+  const langFacets = useQuery({ ...languageFacetsOptions(m.roles), enabled: ENGINE_ENABLED && withLang });
+  const list = useQuery(contributorsListOptions(roles, q, order, page, withLang ? lang : '', withLang));
   const person = useQuery({ queryKey: ['editorial', 'person', open], queryFn: () => contributorsApi.person(open as string), enabled: ENGINE_ENABLED && !!open });
 
   const data = list.data;
   const items = data?.items ?? [];
   const roleOptions = (facets.data?.items ?? []).filter((f) => m.roles.includes(f.role));
-  const err = errText(list.error || person.error, 'Kayıtlar okunamadı.');
+  const langOptions = useMemo(() => {
+    const d = langFacets.data;
+    if (!d) return [];
+    return [
+      ...d.items.map((f) => ({ value: f.id, label: `${f.name} (${nf.format(f.people)})` })),
+      { value: LANG_NONE, label: `Belirtilmemiş (${nf.format(d.unspecified)})` },
+    ];
+  }, [langFacets.data]);
+  const filtered = !!(q || role || lang);
+  const err = errText(list.error || person.error || langFacets.error, 'Kayıtlar okunamadı.');
 
   return (
     <ModuleFrame route={m.route} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'} aside={aside}>
@@ -236,8 +298,8 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
           <Kpi
             label={m.people}
             value={nf.format(data.total)}
-            help={q || role ? 'Süzgece uyan kişi' : 'Eser katılım kaydı olan kişi'}
-            explain="CRM'de bu sekmenin rollerinden biriyle en az bir kitaba katılım kaydı olan kişi sayısı. Arama ya da rol seçiliyse yalnız uyanlar sayılır."
+            help={filtered ? 'Süzgece uyan kişi' : 'Eser katılım kaydı olan kişi'}
+            explain="CRM'de bu sekmenin rollerinden biriyle en az bir kitaba katılım kaydı olan kişi sayısı. Arama, rol ya da kaynak dil seçiliyse yalnız uyanlar sayılır."
             info={<SqlInfo k={data.kaynaklar} alan="total" label={m.people} />}
           />
           <Kpi
@@ -260,7 +322,11 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-start lg:gap-4">
         <Panel>
-          <div className={`grid gap-2 sm:grid-cols-2 ${m.roles.length > 1 ? 'lg:grid-cols-[minmax(0,1fr)_190px_170px]' : 'lg:grid-cols-[minmax(0,1fr)_170px]'}`}>
+          <div
+            className={`grid gap-2 sm:grid-cols-2 ${
+              m.roles.length > 1 || withLang ? 'lg:grid-cols-[minmax(0,1fr)_200px_170px]' : 'lg:grid-cols-[minmax(0,1fr)_170px]'
+            }`}
+          >
             <label className="relative block">
               <span className="sr-only">Kişi ara</span>
               <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
@@ -279,6 +345,25 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
                 <SqlInfo k={facets.data?.kaynaklar} alan="items[]" label="Rol başına kişi sayısı" />
               </div>
             )}
+            {withLang && (
+              <div className="flex min-w-0 items-center gap-1">
+                <SearchSelect
+                  label="Kaynak dil"
+                  placeholder="Tüm kaynak diller"
+                  options={langOptions}
+                  value={lang}
+                  onChange={setLang}
+                  disabled={!langFacets.data}
+                  className="min-w-0 flex-1"
+                />
+                <Explain label="Kaynak dil">
+                  Çevirinin yapıldığı dil, çevirmenin CRM sözleşmesindeki «orijinal dil» alanından okunur. Hiçbir sözleşmesinde bu
+                  alan dolu olmayan çevirmenler «Belirtilmemiş» grubundadır; dil başka bir kayıttan tahmin edilmez. İki dilden
+                  çeviri yapan kişi iki dilde de sayılır.
+                </Explain>
+                <SqlInfo k={langFacets.data?.kaynaklar} alan="items[]" label="Kaynak dil başına kişi sayısı" />
+              </div>
+            )}
             <select aria-label="Sıralama" value={order} onChange={(e) => setOrder(e.target.value)} className={field}>
               <option value="son">Son çalışan</option>
               <option value="eser">En çok eser</option>
@@ -289,16 +374,17 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
           {!list.isLoading && !items.length && !err && (
             <div className="mt-3">
               <EmptyHint
-                title={q || role ? 'Süzgece uyan kişi yok' : 'Bu sekmede kişi yok'}
-                why={q || role ? 'Adı farklı yazmayı deneyin ya da «Tüm roller»i seçin.' : 'CRM\'de bu rollerle eser katılım kaydı olan kişi bulunamadı.'}
+                title={filtered ? 'Süzgece uyan kişi yok' : 'Bu sekmede kişi yok'}
+                why={filtered ? 'Adı farklı yazmayı deneyin, «Tüm roller»i ya da «Tüm kaynak diller»i seçin.' : 'CRM\'de bu rollerle eser katılım kaydı olan kişi bulunamadı.'}
                 action={
-                  q || role ? (
+                  filtered ? (
                     <button
                       type="button"
                       className="min-h-9 rounded-xl bg-slate-100 px-3 text-[12px] font-extrabold hover:bg-slate-200"
                       onClick={() => {
                         setText('');
                         setRole('');
+                        setLang('');
                       }}
                     >
                       Süzgeçleri temizle
@@ -323,15 +409,17 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
           )}
           <ul className="mt-2 grid gap-2 xl:grid-cols-2">
             {items.map((c) => (
-              <Row key={c.id} c={c} active={sameId(c.id, open)} onOpen={() => setOpen(c.id)} />
+              <Row key={c.id} c={c} active={sameId(c.id, open)} onOpen={() => setOpen(c.id)} languages={withLang} />
             ))}
           </ul>
+          {/* ZEKI-29: uzun listenin altında da sayfa numaraları ve önceki/sonraki. */}
+          <Pager page={page} pageSize={data?.pageSize ?? 50} total={data?.total ?? 0} shown={items.length} loading={list.isLoading} fetching={list.isFetching} db={data?.db} onPage={setPage} placement="bottom" />
         </Panel>
 
         {/* Telefonda ayrıntı listenin üstüne gelir; masaüstünde sağda durur. */}
         {open && (
           <div className="order-first lg:sticky lg:top-0 lg:order-none">
-            <Panel>{person.data && sameId(person.data.id, open) ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} /> : <Loading />}</Panel>
+            <Panel>{person.data && sameId(person.data.id, open) ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} screenRoles={m.roles} /> : <Loading />}</Panel>
           </div>
         )}
       </div>

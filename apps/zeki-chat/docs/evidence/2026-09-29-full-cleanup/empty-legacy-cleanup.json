@@ -1,0 +1,465 @@
+{
+  "mode": "apply",
+  "removedEmptyCollections": [
+    "rocketchat_federation_events_staging",
+    "rocketchat_federation_locks"
+  ],
+  "plannedEmptyCollections": [
+    "rocketchat_federation_events_staging",
+    "rocketchat_federation_locks"
+  ],
+  "retainedCollections": 90,
+  "retainedContentMatches": true,
+  "collections": {
+    "_queue": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 5
+    },
+    "_raix_push_app_tokens": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "instances": {
+      "count": 1,
+      "sha256": "c60a49210f4f3bdde10ba560a0d64385fef1008635c91b3298a8f0410285ad9d",
+      "indexes": 2
+    },
+    "meteor_accounts_loginServiceConfiguration": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "meteor_oauth_pendingCredentials": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 4
+    },
+    "meteor_oauth_pendingRequestTokens": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "migrations": {
+      "count": 2,
+      "sha256": "5f08ccbab459ee4cc89ed824aaf3c00544f91bf75d5d7d0f5d94c27280f86298",
+      "indexes": 1
+    },
+    "omnichannel_auto_close_on_hold_scheduler": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "omnichannel_queue_inactivity_monitor": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "omnichannel_scheduler": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "users": {
+      "count": 3,
+      "sha256": "fe21ec44d93cc968da3f13c00d1561c653aee55bbffd99bf4719162bfbac1f75",
+      "indexes": 50
+    },
+    "usersSessions": {
+      "count": 1,
+      "sha256": "c4525ed5cd0d95fa0242f9a1173d0e7ea979698160b08793d3ddc06e4bc80e2c",
+      "indexes": 1
+    },
+    "zeki__trash": {
+      "count": 18,
+      "sha256": "5ac7d57de86586155bf0dcc883eace5353bdf2224f69c2351d16e57f690b7b62",
+      "indexes": 4
+    },
+    "zeki_abac_attributes": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_analytics": {
+      "count": 2,
+      "sha256": "2739fdc3310aa2a15c6c1d8cf152e24f4cac7752319af827da8516b6c81b2d17",
+      "indexes": 4
+    },
+    "zeki_apps_logs": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 4
+    },
+    "zeki_apps_persistence": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_apps_scheduler": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_avatars": {
+      "count": 1,
+      "sha256": "790e0558305a392164ec0f5f87bd572be771d794c15a721aeb4fa1683908c427",
+      "indexes": 6
+    },
+    "zeki_avatars.chunks": {
+      "count": 1,
+      "sha256": "beb338b0405d8d92b94111be8e9bd165c9345102b4cf8c0a9be895c6ba920cb1",
+      "indexes": 2
+    },
+    "zeki_avatars.files": {
+      "count": 1,
+      "sha256": "57da1cf86192248d53f3e349eb356a02c95552fa3b4b57aefe4037d4afb451a1",
+      "indexes": 2
+    },
+    "zeki_banner": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_banner_dismiss": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_calendar_event": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_call_history": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_canned_response": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_credential_tokens": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_cron": {
+      "count": 7,
+      "sha256": "741aa12cc4f2049705e88a2298c454ca2cadbce0fa9bd33b7caadedb9ec8ef9e",
+      "indexes": 2
+    },
+    "zeki_cron_history": {
+      "count": 10165,
+      "sha256": "d98b36631f727d5e2b08d84dcc3252a62839b99b33f7b8500bc7b6e1693a5d4e",
+      "indexes": 2
+    },
+    "zeki_custom_emoji": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 4
+    },
+    "zeki_custom_sounds": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_custom_user_status": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_email_inbox": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_email_message_history": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_export_operations": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_federation_events_staging": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_federation_keys": {
+      "count": 2,
+      "sha256": "0104d1d860e1f70f0760ac81a7cbbe3fbeb4901da8d4d79980a01be95a14c6a9",
+      "indexes": 1
+    },
+    "zeki_federation_locks": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_federation_room_events": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_import": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_import_data": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_integration_history": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_integrations": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_livechat_agent_activity": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_livechat_business_hours": {
+      "count": 1,
+      "sha256": "6facf516dd456507ff038e6af18aac79a7eb38fb524e4a3ea692fa86ad8e08d7",
+      "indexes": 1
+    },
+    "zeki_livechat_contact": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 12
+    },
+    "zeki_livechat_custom_field": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_livechat_department": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 8
+    },
+    "zeki_livechat_department_agents": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 5
+    },
+    "zeki_livechat_inquiry": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 13
+    },
+    "zeki_livechat_priority": {
+      "count": 5,
+      "sha256": "80cb6e9fba406dad553bc587c8b28b764f97d58fe8076de69ffbc80c6ff81795",
+      "indexes": 2
+    },
+    "zeki_livechat_tag": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_livechat_trigger": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_livechat_unit_monitors": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_livechat_visitor": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 10
+    },
+    "zeki_media_call_channels": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_media_call_negotiations": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_media_calls": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 4
+    },
+    "zeki_message": {
+      "count": 1,
+      "sha256": "ecb99b5dfe8c2579666d4ddf38bb18235843b0945383f66e0be36efbf465e732",
+      "indexes": 27
+    },
+    "zeki_message_reads": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_moderation_reports": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 5
+    },
+    "zeki_notification_queue": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 6
+    },
+    "zeki_nps": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_nps_vote": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_oauth_access_tokens": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 6
+    },
+    "zeki_oauth_apps": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_oauth_auth_codes": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 4
+    },
+    "zeki_oauth_refresh_tokens": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 4
+    },
+    "zeki_oembed_cache": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_omnichannel_service_level_agreements": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_permissions": {
+      "count": 1158,
+      "sha256": "8a2e09b9a3a677fc213a00abe7ff36baf4acf8c92207c2683575362575ea06ad",
+      "indexes": 2
+    },
+    "zeki_read_receipts": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 5
+    },
+    "zeki_read_receipts_archive": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 5
+    },
+    "zeki_roles": {
+      "count": 15,
+      "sha256": "84d100ffa21c64a7ac2141c528fe0d3a6ed6cff52ba6ed6a76ea9b056c2c1d65",
+      "indexes": 1
+    },
+    "zeki_room": {
+      "count": 1,
+      "sha256": "5d6930cf01ba83f744c23368cc98cfbe1da597b0fea427d28ef304b772c01e57",
+      "indexes": 44
+    },
+    "zeki_saml_used_assertions": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_server_events": {
+      "count": 119,
+      "sha256": "34497c28c8f6471a5e0b1a13d6611b5dafc42d16f1db1887ba5e31e8437db729",
+      "indexes": 3
+    },
+    "zeki_sessions": {
+      "count": 105,
+      "sha256": "30579c3cf3d732f93a5c4e0d92057eb8ec4dfba735f9ab068ae188a0fcee5420",
+      "indexes": 10
+    },
+    "zeki_settings": {
+      "count": 1002,
+      "sha256": "3fdddb0a8d6d6eeef75f3d9d81b8c2f3c66c7ce4513e94b74d291ab071269c6f",
+      "indexes": 1
+    },
+    "zeki_statistics": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_subscription": {
+      "count": 1,
+      "sha256": "aaec5bc631e790a04a5df3bd4854e25f4f52baa8efa164c259f1750612dc0403",
+      "indexes": 24
+    },
+    "zeki_team": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_team_member": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 3
+    },
+    "zeki_uploads": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 7
+    },
+    "zeki_uploads.chunks": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_uploads.files": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_user_data_files": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 5
+    },
+    "zeki_video_conference": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 4
+    },
+    "zeki_webdav_accounts": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    },
+    "zeki_workspace_credentials": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexes": 2
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "checks": [
+    {
+      "name": "real-mongo",
+      "connected": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "name": "vendor-dns",
+      "connected": false,
+      "error": "EAI_AGAIN",
+      "expected": false,
+      "passed": true
+    },
+    {
+      "name": "raw-node-vendor-https",
+      "connected": false,
+      "error": "fetch failed",
+      "expected": false,
+      "passed": true
+    },
+    {
+      "name": "direct-public-ipv4",
+      "connected": false,
+      "error": "ENETUNREACH",
+      "expected": false,
+      "passed": true
+    },
+    {
+      "name": "direct-public-ipv6",
+      "connected": false,
+      "error": "ENETUNREACH",
+      "expected": false,
+      "passed": true
+    },
+    {
+      "name": "host-proxy-detour",
+      "connected": false,
+      "error": "ECONNREFUSED",
+      "expected": false,
+      "passed": true
+    },
+    {
+      "name": "deno-direct-fetch",
+      "passed": true,
+      "result": "BLOCKED:TypeError",
+      "status": 0
+    }
+  ],
+  "allPassed": true,
+  "routes": "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \neth0\t000014AC\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0                                                                               \n",
+  "ipv6Routes": "00000000000000000000000000000000 00 00000000000000000000000000000000 00 00000000000000000000000000000000 ffffffff 00000001 00000000 00200200       lo\n00000000000000000000000000000001 80 00000000000000000000000000000000 00 00000000000000000000000000000000 00000000 00000004 00000000 80200001       lo\n00000000000000000000000000000000 00 00000000000000000000000000000000 00 00000000000000000000000000000000 ffffffff 00000001 00000000 00200200       lo\n"
+}

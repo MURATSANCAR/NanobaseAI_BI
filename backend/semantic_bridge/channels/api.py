@@ -58,6 +58,22 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     refresher = RF.Refresher(lambda: rt().store.engine, lambda: rt().settings.tenant_id, lambda: rt().settings.connection_file,
                              crm_file, lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo", conf)
 
+    def isit() -> None:
+        """Köprü açılışı (hız 4. tur): verinin son yılının kitap × kanal matrisi arkada kurulur (ilk açan beklemesin)."""
+        from semantic_bridge import hizli_kaynak as HK
+
+        r = rt()
+        if HK.sqlite_mi(r.store.engine):
+            return
+        S.ensure(r.store.engine)
+        try:
+            SC.matrix(r.store.engine, r.settings.tenant_id)
+        except SC.ChannelError:
+            pass                                    # yıl henüz okunmadı: ekran bunu kendisi söyler
+
+    from semantic_bridge import hizli_kaynak as _HK
+    _HK.acilista("kanal.matris", isit)
+
     def st() -> dict[str, Any]:
         return M.settings(conf)
 
@@ -191,8 +207,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def ch_scorecard(request: Request, yil: Optional[int] = None, ay: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as q:
-            out = view(user, await run_in_threadpool(call, SC.scorecard, engine, tenant, yil, ay))
-        return PV.bagla(out, lambda: K.for_scorecard(engine, tenant, out, q))
+            out = view(user, await run_in_threadpool(call, SC.scorecard, engine, tenant, yil, ay, dagitim=True))
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_scorecard(engine, tenant, out, q))
 
     @app.get(R + "/channel/{platform}")
     async def ch_channel(platform: str, request: Request, yil: Optional[int] = None, ay: Optional[int] = None) -> dict[str, Any]:
@@ -203,7 +219,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             out["imports"] = I.list_imports(engine, tenant, platform)
         out["m9Bagli"] = uc is not None
         out = view(user, out)
-        return PV.bagla(out, lambda: K.for_channel(engine, tenant, out, q))
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_channel(engine, tenant, out, q))
 
     @app.get(R + "/channel/{platform}/books")
     async def ch_books(platform: str, request: Request, yil: Optional[int] = None, ay: Optional[int] = None, q: str = "",
@@ -213,7 +229,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             sort = "netCiro"
         with Y.yakala(engine) as yq:
             out = view(user, await run_in_threadpool(call, SC.books, engine, tenant, platform, yil, ay, q, sort, page))
-        return PV.bagla(out, lambda: K.for_books(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_books(engine, tenant, out, yq))
 
     @app.get(R + "/channel/{platform}/returns")
     async def ch_returns(platform: str, request: Request, yil: Optional[int] = None, ay: Optional[int] = None,
@@ -221,7 +237,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as q:
             out = view(user, await run_in_threadpool(call, SC.returns, engine, tenant, platform, yil, ay, aylar, page))
-        return PV.bagla(out, lambda: K.for_returns(engine, tenant, out, q))
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_returns(engine, tenant, out, q))
 
     @app.get(R + "/matrix")
     async def ch_matrix(request: Request, yil: Optional[int] = None, ay: Optional[int] = None, q: str = "", page: int = 0,
@@ -229,14 +245,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, SC.matrix, engine, tenant, yil, ay, q, page, sort)
-        return PV.bagla(out, lambda: K.for_matrix(engine, tenant, out, yq))
+        # Sorgu bilgisi iş parçacığında: olay döngüsü eşzamanlı açılan diğer ekranları bekletmesin (hız 4. tur).
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_matrix(engine, tenant, out, yq))
 
     @app.get(R + "/targets")
     async def ch_targets(request: Request, yil: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as q:
             out = view(user, await run_in_threadpool(call, SC.targets, engine, tenant, yil, m46(engine, tenant)))
-        return PV.bagla(out, lambda: K.for_targets(engine, tenant, out, q))
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_targets(engine, tenant, out, q))
 
     @app.post(R + "/simulate")
     async def ch_simulate(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -247,7 +264,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if body.get("yorum"):
             model = llm()
             out["yorum"] = await run_in_threadpool(_comment, model, out) if model is not None else None
-        return PV.bagla(out, lambda: K.for_simulate(engine, tenant, out, q))
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_simulate(engine, tenant, out, q))
 
     @app.put(R + "/settings/ek-maliyet/{platform}")
     def ch_extra_cost(platform: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -366,7 +383,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as q:
             out = view(user, await run_in_threadpool(call, D.overview, engine, tenant, st(), yil, ay))
-        return PV.bagla(out, lambda: K.for_d2c(engine, tenant, out, q))
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_d2c(engine, tenant, out, q))
 
     @app.post(R + "/d2c/suggest", status_code=201)
     async def ch_d2c_suggest(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -454,7 +471,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             sell_in = await run_in_threadpool(SC.sell_in_books, engine, tenant, head["platform"], months) if months else {}
             out = await run_in_threadpool(call, I.sell_through, engine, tenant, iid, sell_in)
         out["kanalaSatisAylari"] = [f"{y}-{m:02d}" for y, m in months]
-        return PV.bagla(out, lambda: K.for_import(engine, tenant, out, q))
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_import(engine, tenant, out, q))
 
     @app.delete(R + "/imports/{iid}")
     def ch_import_delete(iid: str, request: Request) -> dict[str, Any]:

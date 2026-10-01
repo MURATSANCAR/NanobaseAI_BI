@@ -190,10 +190,12 @@ export default function BiCanvasPage() {
           ? `“${PHASES[phase]}…”`
           : askErr
             ? `“${askErr}.”`
-            : `“${answer?.summary ? readableText(answer.summary) : 'Zeki AI bu soru için özet yazmadı; tablodaki sonuca bakın.'}”`,
-        m1: { label: 'Satır:', value: String(rows) },
-        m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
-        m3: { label: 'Tip:', value: answer?.type ?? '—' },
+            : `“${answer?.summary || answer?.explanation ? readableText(answer.summary || answer.explanation || '') : 'Bu soru için gösterilebilir bir cevap bulunamadı.'}”`,
+        m1: { label: 'Toplam satır:', value: answer?.records ? String(answer.totalRows ?? answer.rowCount ?? rows) : '—' },
+        result: !asking && !askErr && answer?.resultId && !answer.truncated
+          ? { id: answer.resultId, totalRows: answer.totalRows ?? answer.rowCount ?? rows } : undefined,
+        m2: { label: 'Kolon:', value: answer?.columns ? String(answer.columns.length) : '—' },
+        m3: { label: 'Durum:', value: asking ? 'Hesaplanıyor' : answer?.type === 'CLARIFICATION' ? 'Netleştirme gerekiyor' : answer?.type === 'PARTIAL_ANSWER' ? 'Kısmi rapor · eksikler belirtiliyor' : answer?.type === 'TEXT_TO_SQL' ? 'Yanıt hazır' : 'Sonuç alınamadı' },
         note: queued > 0 ? `${queued} soru sırada` : d.main.note,
         board: !asking && answer?.sql && (answer.records?.length ?? 0) > 0 ? { ...board, onAdd: (): void => void addToBoard() } : undefined,
         timing: !asking && answer?.records ? answer : null,

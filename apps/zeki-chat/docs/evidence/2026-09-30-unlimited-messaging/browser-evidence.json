@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "viewports": [
+    {
+      "width": 320,
+      "scrollWidth": 320,
+      "legacyText": false,
+      "errors": [],
+      "outside": [],
+      "composerVisible": true
+    },
+    {
+      "width": 390,
+      "scrollWidth": 390,
+      "legacyText": false,
+      "errors": [],
+      "outside": [],
+      "composerVisible": true
+    },
+    {
+      "width": 768,
+      "scrollWidth": 768,
+      "legacyText": false,
+      "errors": [],
+      "outside": [],
+      "composerVisible": true
+    },
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "legacyText": false,
+      "errors": [],
+      "outside": [],
+      "composerVisible": true
+    }
+  ]
+}

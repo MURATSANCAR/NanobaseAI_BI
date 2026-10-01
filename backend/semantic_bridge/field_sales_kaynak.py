@@ -60,7 +60,7 @@ F_YASLANDIRMA = ("Bakiye = yıl başından cari hareketi borç − alacak (müş
                  "FIFO): bakiye carinin en yeni vade satırlarından geriye dağıtılır, eski satırlar ödenmiş sayılır; açık kalan "
                  "pay yaşına göre 1–30 / 31–60 / 61–90 / 90+ gün kovasına girer; vadesi gelmemiş ayrı; vade planına "
                  "dağıtılamayan bakiye «plansız». Logo'da ödeme kapama kullanılmadığı için yaklaşıktır.")
-F_SATIS = ("Net alım = faturalı satır (LINETYPE 0, fatura bağlı, iptal değil) Σ LINENET satış (7, 8, 9) − Σ LINENET iade "
+F_SATIS = ("Net alım = faturalı satır (LINETYPE 0, fatura bağlı, iptal değil) Σ VATMATRAH satış (7, 8, 9) − Σ VATMATRAH iade "
            "(2, 3). Yıl başından = bu yılın kopyasında 1 Ocak – veri sonu; geçen yılın aynı dönemi = önceki yılın kopyasında "
            "1 Ocak – veri sonunun bir yıl öncesi; geçen yıl toplam = önceki yılın tamamı; iade oranı = iade ÷ satış.")
 F_HEDEF = ("Cari hedefi: yürürlükteki bütçe planı varsa planın toplam hedef cirosu carilere önceki yıl net alım payıyla dağıtılır "

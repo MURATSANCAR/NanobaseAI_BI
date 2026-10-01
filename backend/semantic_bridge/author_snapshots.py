@@ -331,6 +331,14 @@ class AuthorSnapshots:
         `fresh` («Verileri yenile») kaynağı bekler. Dönen liste paylaşılır; çağıran değiştirmez."""
         return lambda sql: CANLI.al((tenant, sql), lambda: fetch_all(sql), zorla=fresh)
 
+    def books_of(self, contact_id: str) -> Optional[list[dict[str, Any]]]:
+        """Yazarın yazar rolüyle hazır kitap satırları (stok kodu, barkod); CRM parçası hazır değilse None."""
+        crm = self.part("crm")
+        if crm is None:
+            return None
+        cid = G._guid(contact_id)
+        return [b for b in crm["data"]["books"] if str(b.get("kisi") or "").strip("{}").lower() == cid]
+
     def growth_inputs(self, contact_id: str) -> Optional[dict[str, Any]]:
         """Bir yazarın hazır kitap satırları, sadakat izi ve satış okuyucusu; parçalar hazır değilse None."""
         crm, sales = self.part("crm"), self.part("sales")

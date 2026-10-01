@@ -90,6 +90,7 @@ export function dragDepth(depth: number, ev: 'enter' | 'leave' | 'drop'): number
  *  aynı olmalı (vitest denetler); yetkisi olmayan kişi alanı pasif görür ve hangi yetkinin gerektiğini okur. */
 export const UPLOAD_FEATURES: Record<string, string> = {
   'son-okuma.belge': 'Belge yükleyip inceletme',
+  'kitap.okut': 'Kitap okutma',
   'ceviri.yonet': 'Çeviri işi yönetme',
   'ceviri.terim': 'Terim bankası düzenleme',
   'basvuru.yaz': 'Başvuru kaydı ve editör raporu',
@@ -105,6 +106,7 @@ export const UPLOAD_FEATURES: Record<string, string> = {
   'okur.ice-aktar': 'Okur: etkinlik dosyası yükleme',
   'kanal.yukle': 'Panel dosyası yükleme',
   'trendyol.yukle': 'Trendyol panel dosyası yükleme',
+  'amazon.yukle': 'Amazon panel dosyası yükleme',
   'reklam.duzenle': 'Reklam verisi ve bağlar',
   'sosyal.duzenle': 'Sosyal medya takvimi düzenleme',
   'etkinlik.duzenle': 'Fuar ve etkinlik kartı hazırlama',

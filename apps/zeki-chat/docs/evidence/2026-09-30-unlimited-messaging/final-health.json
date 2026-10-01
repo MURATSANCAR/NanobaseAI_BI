@@ -1,0 +1,28 @@
+{
+  "gridfs": {
+    "files": 0,
+    "chunks": 0
+  },
+  "privateSessionFilesAbsent": true,
+  "containers": {
+    "zeki-chat": {
+      "image": "zeki-ai-chat:8.5.3-157d9f6a8",
+      "imageId": "sha256:97e91199a5e0daa1afcd73202bf427cd003a8fee95fa5766a7e699f1cbef50eb",
+      "running": true,
+      "restarts": 0
+    },
+    "zeki-mongo": {
+      "image": "mongo:8.0",
+      "imageId": "sha256:4968f22d0c6c10ef29952f3e807f62872ba22b3312f25803564fbfc08255efc2",
+      "running": true,
+      "restarts": 0
+    },
+    "zeki-ingress": {
+      "image": "nginx@sha256:d10753d9289b8e3f884386351f73554ce72b631378949deddd75e83ee296c427",
+      "imageId": "sha256:d10753d9289b8e3f884386351f73554ce72b631378949deddd75e83ee296c427",
+      "running": true,
+      "restarts": 0
+    }
+  },
+  "version": "157d9f6a8"
+}

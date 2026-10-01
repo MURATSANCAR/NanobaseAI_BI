@@ -1,0 +1,45 @@
+{
+	"name": "@zeki.chat/core-services",
+	"version": "0.14.1",
+	"private": true,
+	"main": "./dist/index.js",
+	"typings": "./dist/index.d.ts",
+	"files": [
+		"/dist"
+	],
+	"scripts": {
+		"build": "rm -rf dist && tsc",
+		"dev": "tsc --watch --preserveWatchOutput",
+		"lint": "eslint .",
+		"lint:fix": "eslint --fix .",
+		"test": "jest",
+		"testunit": "jest",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@zeki.chat/core-typings": "workspace:^",
+		"@rocket.chat/federation-sdk": "0.6.3",
+		"@zeki.chat/http-router": "workspace:^",
+		"@rocket.chat/icons": "~0.47.0",
+		"@zeki.chat/media-signaling": "workspace:^",
+		"@zeki.chat/message-parser": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/rest-typings": "workspace:^",
+		"@zeki.chat/tracing": "workspace:^",
+		"@zeki.chat/ui-kit": "workspace:~"
+	},
+	"devDependencies": {
+		"@zeki.chat/apps": "workspace:^",
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
+		"@types/jest": "~30.0.0",
+		"eslint": "~9.39.4",
+		"jest": "~30.2.0",
+		"mongodb": "6.16.0",
+		"prettier": "~3.3.3",
+		"typescript": "~5.9.3"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

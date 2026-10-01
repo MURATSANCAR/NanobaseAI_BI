@@ -679,6 +679,7 @@ bilgisi`), 5 ekran gerekçeli «rakam değil». Köprü: `stock_kaynak.py`, `sup
 | `/kargo/bekleyen` | Teslim bekleyen · gönderi listesi | Bekleyen gün, Desi, Tutar | `GET /api/v1/shipping/waiting` | `for_waiting` (`items[]`) | CRM | var, sorgu bilgisi |
 | `/kargo/firmalar` | Firma karnesi | KPI'lar ve kırılım tablosu | `GET /api/v1/shipping/carriers` | `for_carriers` | CRM + portal (il hedefi) + hesap | var, sorgu bilgisi |
 | `/kargo/mutabakat` | Kargo mutabakatı | KPI'lar, firma tablosu, Logo sevk ↔ CRM sevkiyat, cari adayları | `GET /api/v1/shipping/reconcile`, `/reconcile/candidates` | `for_reconcile`, `for_candidates` | CRM + Logo + hesap | var, sorgu bilgisi |
+| `/kargo/maliyet` | Kargo maliyeti | KPI'lar (gider, cironun yüzdesi, irsaliyeli gönderi, gönderi başı), aylık gider/oran ve aylık irsaliye grafikleri, taşıyıcı, pazar yeri ve tedarikçi tabloları | `GET /api/v1/shipping/cost` | `for_cost` (`logo_kargo_gider`, `logo_kargo_alici`, `logo_kargo_irsaliye`, `logo_net_ciro` + ayar kaydı + CRM kargo firması) | Logo + CRM + portal (ayar, anlık görüntü) + hesap | var, sorgu bilgisi |
 | `/ik/anket/k` | Anket formu (basılı kodla giriş) | — rakam değil (sayfa ilerleme göstergesi ekranın kendi hesabı, veri değil) | — | — | — | — |
 | `/ik/anket/k/:kod` | Anket formu (basılı kodla) | — rakam değil (sayfa ilerlemesi, kapanış tarihi) | — | — | — | — |
 | `/ik/anket/:token` | Anket formu (davet jetonuyla) | — rakam değil (sayfa ilerlemesi, kapanış tarihi) | — | — | — | — |

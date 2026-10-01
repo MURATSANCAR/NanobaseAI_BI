@@ -52,7 +52,9 @@ function VersionSelect({ id, label, value, onChange, jobs }: { id: string; label
 export default function ComparePanel({ job, goTo }: { job: string; goTo: (pid: string) => void }) {
   const list = useQuery({ queryKey: ['studio', 'versions', job], queryFn: () => versionsApi.list(job), staleTime: 10_000, retry: false,
     refetchInterval: pollWhilePreparing });
-  const [pair, setPair] = useState<[string, string] | null>(null);
+  // Sürüm listesi önbellekte varsa ilk çizimde varsayılan çift seçili; yoksa liste gelince aşağıdaki etki seçer
+  // (etkiyi beklemek bir çizim boyunca «ikinci sürüm yok» notunu gösteriyordu).
+  const [pair, setPair] = useState<[string, string] | null>(() => (list.data ? defaults(list.data.jobs, job) : null));
   useEffect(() => {
     if (!pair && list.data) setPair(defaults(list.data.jobs, job));
   }, [list.data, pair, job]);

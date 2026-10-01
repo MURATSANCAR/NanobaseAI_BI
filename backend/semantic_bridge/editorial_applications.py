@@ -63,7 +63,7 @@ APPS = sa.Table(
     sa.Column("audience", sa.String(20)),
     sa.Column("age_from", sa.Integer),
     sa.Column("age_to", sa.Integer),
-    sa.Column("page_estimate", sa.Integer, nullable=False),
+    sa.Column("page_estimate", sa.Integer),  # formdan gelen başvuruda boş (form sormuyor); ekrandan girişte zorunlu
     sa.Column("genre", sa.String(120)),
     sa.Column("category_id", sa.String(40)),
     sa.Column("category_name", sa.String(200)),
@@ -286,7 +286,16 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) in _ready:
             return
         from semantic_layer.store import schema_stamp
-        schema_stamp.create_all(_md, engine)
+
+        def install() -> None:
+            _md.create_all(engine, checkfirst=True)
+            # 2026-09-29: sayfa tahmini boş olabilir (Google Formundan gelen başvuru). Var olan tabloda kısıt kalkar;
+            # veri değişmez. SQLite (testler) tabloyu her seferinde yeni kurar.
+            if engine.dialect.name == "postgresql":
+                with engine.begin() as c:
+                    c.execute(sa.text("ALTER TABLE semantic_editorial_applications ALTER COLUMN page_estimate DROP NOT NULL"))
+
+        schema_stamp.run(engine, list(_md.sorted_tables), install)
         _ready.add(id(engine))
 
 

@@ -56,7 +56,8 @@ from . import sfx_library as L
 log = logging.getLogger(__name__)
 
 DIR = "ses/efekt"
-MIX_VERSION = 2                   # 2: efekt kuyruğu anlatım bitince kesilmiyor (kısma anahtarı uzatıldı)
+MIX_VERSION = 3                   # 2: efekt kuyruğu anlatım bitince kesilmiyor (kısma anahtarı uzatıldı);
+#                                   3: art arda iki anlık efekt üst üste binmiyor (öncekisi sonrakinin başında biter)
 ALIAS = "book-director"
 VOTES = 3
 VOTE_MIN = 2
@@ -72,6 +73,10 @@ FX_LUFS = -23.0                   # anlık efektin kendi düzeyi (anlatımdan ~3
 AMB_LUFS = -38.0                  # ortam sesi: anlatımın çok altında
 FX_MAX_SEC = 4.0                  # anlık efektin sayfaya giren en uzun kısmı (kuyruk yumuşak kısılır)
 FX_FADE = 0.25
+# Sonraki efekt yüzünden kısaltılan efektin en kısa hali: FX_FADE kadar tam düzeyde duyulur + FX_FADE kadar yumuşak
+# kısılır (daha kısası tık gibi duyulur, kısılma başlamadan biter). İki efekt neredeyse aynı anda başlıyorsa bu kadar
+# üst üste biner; sesin kendisi daha kısaysa kendi süresi geçerli.
+FX_MIN_SEC = 2 * FX_FADE
 AMB_FADE = 1.5
 DUCK = "threshold=0.03:ratio=8:attack=15:release=350:makeup=1"
 GAIN_RANGE = (-18.0, 12.0)
@@ -327,6 +332,11 @@ Kurallar:
 - Aynı ses sayfada tekrar ediyorsa yalnız ilk geçtiği yeri yaz.
 - «tarif»: kütüphanede aranacak sesin kısa Türkçe tarifi (ör. «ördek vaklıyor», «güçlü patlama», «çıtırdayan
   ateş», «uğuldayan rüzgâr»). «tarif_en»: aynı tarifin kısa İngilizce karşılığı (ör. "duck quacking").
+- İnsanın çıkardığı seste (iç çekiş, gülüş, kıkırdama, hapşırık, öksürük, çığlık, ağlama, esneme) tarife sesi çıkaranın
+  cinsiyetini ve yaşını yaz (ör. «kadın iç çekişi» / "woman sighing", «kız çocuğu kıkırdıyor» / "little girl
+  giggling") yalnız sesi çıkaran belliyse: metin söylüyorsa odur («aslan kahkaha attı» → aslan, «fil hapşırdı» → fil),
+  konuşma balonunda konuşan karakterdir. Anlatım metnini okuyan anlatıcının sesi, sesi çıkaran değildir; belli değilse
+  cinsiyet yazma.
 - «kategori»: listeden en uygun anahtar; hiçbiri uymuyorsa "diger".
 - «yer»: yansıma sözcükte ve anlık vuruşta "birlikte" (kelimeyle aynı anda); bir olayın sonucu olan seste
   (ör. kapı kapandı, düştü) "ardindan" (cümle o yeri okuyup bitirince).
@@ -361,6 +371,17 @@ STRONG_STEMS = ("havla", "miyavla", "mırla", "kükre", "gıdakla", "vakla", "ki
                 "uğulda", "patla")
 
 
+def _stretched_exclamation(u, k: int) -> bool:
+    """k. kelime harf uzatmalı ve tek başına ünlem mi: «Güüüümmmm!», «Happppşuuuu!». Cümle içindeki uzatma vurgudur
+    («çoook korkmuş», «o günleriiii»; 2026-09-29 dinleme: ikisine de efekt seçilmişti)."""
+    w = u.words[k]
+    if not _STRETCH.search(L.tr_lower(w.text)):
+        return False
+    ends = w.spoken.rstrip()[-1:] in "!?…" or w.text.rstrip("”\"»’'")[-1:] in "!?…"
+    starts = k == 0 or u.words[k - 1].spoken.rstrip()[-1:] in ".!?…:" or w.text[:1] in "“\"«‘'"
+    return ends and starts
+
+
 def strong_hints(units) -> list[str]:
     """`sound_hints`'in kural ipucu açacak kadar güçlü olanları: ikileme, tırnak + «diye», harf uzatması, güçlü ses
     fiili."""
@@ -372,10 +393,10 @@ def strong_hints(units) -> list[str]:
         for m in _SAID.finditer(u.text):
             if len(m.group(1).split()) <= 3:
                 out.append(m.group(1).strip(" ,.;:!?…"))
-        for w in u.words:
+        for k, w in enumerate(u.words):
             raw = w.text.strip(" ,.;:!?…\"'«»“”‘’()")
             f = L.tr_lower(raw)
-            if _STRETCH.search(f) or any(f.startswith(s) for s in STRONG_STEMS):
+            if _stretched_exclamation(u, k) or any(f.startswith(s) for s in STRONG_STEMS):
                 out.append(raw)
     return list(dict.fromkeys(x for x in out if x))
 
@@ -415,9 +436,9 @@ def sound_hints(units) -> list[str]:
         for m in _SAID.finditer(u.text):
             if len(m.group(1).split()) <= 3:
                 out.append(m.group(1).strip(" ,.;:!?…"))
-        for w in u.words:
+        for k, w in enumerate(u.words):
             f = L.tr_lower(w.text.strip(" ,.;:!?…\"'«»“”‘’()"))
-            if any(f.startswith(s) for s in SOUND_STEMS) or _STRETCH.search(f):
+            if any(f.startswith(s) for s in SOUND_STEMS) or _stretched_exclamation(u, k):
                 out.append(w.text.strip(" ,.;:!?…\"'«»“”‘’()"))
     return list(dict.fromkeys(x for x in out if x))
 
@@ -430,8 +451,11 @@ def _page_prompt(units) -> tuple[str, list[str]]:
     lines, ids = [], []
     for u in units:
         ids.append(u.id)
-        who = f" ({u.speaker})" if u.speaker else ""
-        lines.append(f"[{u.id}]{who} {u.text}")
+        # yalnız balonda konuşanın sesi söylenir; anlatım metnini okuyan anlatıcı sesi çıkaran değildir (2026-09-29:
+        # kadın anlatıcının okuduğu «aslan kahkaha attı»ya kadın kahkahası, «fil hapşırdı»ya kız hapşırığı seçiliyordu)
+        person = voice_person(u.voice) if u.kind == "bubble" else None
+        who = " · ".join(x for x in (u.speaker, f"konuşan ses: {person}" if person else None) if x)
+        lines.append(f"[{u.id}]{f' ({who})' if who else ''} {u.text}")
     hints = sound_hints(units)
     hint = ("\nMetinde ses olabilecek ifadeler (her birine ayrıca karar ver; efekt değilse alma): "
             + ", ".join(f"«{h}»" for h in hints) + "\n") if hints else ""
@@ -445,7 +469,7 @@ async def _read_page(llm, units, pid: str, temperature: float) -> list[dict]:
     item["properties"]["blok"] = {"type": "string", "enum": ids}
     schema = {"type": "object", "additionalProperties": False, "required": ["ipuclari"],
               "properties": {"ipuclari": {"type": "array", "items": item}}}
-    out, _ = await llm.chat(ALIAS, [{"role": "user", "content": prompt}], prompt=PromptRef("sfx.cues", "1"),
+    out, _ = await llm.chat(ALIAS, [{"role": "user", "content": prompt}], prompt=PromptRef("sfx.cues", "3"),
                             schema=schema, max_tokens=2500, temperature=temperature, thinking=False)
     return out.get("ipuclari") or []
 
@@ -516,16 +540,91 @@ def match(cue: dict, exclude: set[str] | None = None, k: int = CANDIDATES) -> li
     return res
 
 
+# ------------------------------------------------------------------ sesi çıkaran (insan sesi efektleri)
+# Sesin kimliğinden kişi: önce Türkçe ad ve not (tarifli seslerin adı «Kadın · …», «Küçük kız», «Yaşlı adam»;
+# kütüphaneye yüklenen sesin adını editör yazar), olmazsa İngilizce ses tarifi («A warm … woman …»). Tarifte ilk geçen
+# kişi sözcüğü sesin kendisidir; sonrakiler başkasını anlatır («… man … telling a story to small children»). Dil bilgisi,
+# kitaptan bağımsız; hiçbiri geçmiyorsa kişi bilinmez ve istemde yer almaz.
+_TR_CHILD = {"kız": "kız", "oğlan": "erkek", "çocuk": None, "bebek": None}
+_TR_FEMALE = {"kadın", "anne", "nine", "hanım", "teyze", "abla", "büyükanne", "anneanne", "babaanne", "kraliçe",
+              "prenses"}
+_TR_MALE = {"erkek", "adam", "baba", "dede", "bey", "amca", "dayı", "ağabey", "abi", "büyükbaba", "kral", "prens"}
+_TR_OLD = {"yaşlı", "nine", "dede", "büyükanne", "büyükbaba", "anneanne", "babaanne"}
+_EN_CHILD = {"girl": "kız", "boy": "erkek", "child": None, "kid": None}
+_EN_FEMALE = {"woman", "female", "lady", "mother", "mom", "grandmother", "granny", "actress", "queen", "princess"}
+_EN_MALE = {"man", "male", "father", "dad", "grandfather", "grandpa", "actor", "king", "prince"}
+_EN_OLD = {"elderly", "old", "grandmother", "grandfather", "granny", "grandpa", "sixties", "seventies", "eighties"}
+
+
+def _person(tokens: list[str], child: dict, female: set, male: set, old: set) -> str | None:
+    first = next((t for t in tokens if t in child or t in female or t in male), None)
+    if first is None:
+        return None
+    if first in child:
+        g = child[first]
+        if g is None:                                  # «çocuk»: cinsiyeti arkadan gelen sözcük söyler («erkek çocuk»)
+            g = "kız" if any(t in ("kız", "girl") for t in tokens) else \
+                "erkek" if any(t in ("erkek", "oğlan", "boy") for t in tokens) else None
+        return {"kız": "kız çocuğu", "erkek": "erkek çocuğu"}.get(g, "çocuk")
+    if first in male and any(t in child for t in tokens[tokens.index(first) + 1:][:1]):
+        return "erkek çocuğu"                          # «erkek çocuk»
+    base = "kadın" if first in female else "erkek"
+    return f"yaşlı {base}" if any(t in old for t in tokens) else base
+
+
+def voice_person(vid: str | None) -> str | None:
+    """Sesin kişisi: «kadın», «erkek», «yaşlı kadın», «yaşlı erkek», «kız çocuğu», «erkek çocuğu», «çocuk» ya da None."""
+    if not vid:
+        return None
+    from . import narration as N
+    try:
+        v = N.voice(vid)
+    except Exception:  # noqa: BLE001 — kaldırılmış/bilinmeyen ses: kişi bilinmez
+        return None
+    tr = re.findall(r"\w+", L.tr_lower(f"{v.get('label') or ''} {v.get('note') or ''}"))
+    return (_person(tr, _TR_CHILD, _TR_FEMALE, _TR_MALE, _TR_OLD)
+            or _person(re.findall(r"[a-z]+", (v.get("design") or "").lower()), _EN_CHILD, _EN_FEMALE, _EN_MALE, _EN_OLD))
+
+
+def block_speaker(units, block: str | None) -> dict | None:
+    """İpucunun bloğunu okuyan: balonda konuşan karakter (sesi), metinde anlatıcı. {person, speaker, narrator}."""
+    u = next((u for u in units if u.id == block), None)
+    if u is None:
+        return None
+    if u.kind != "bubble":                   # anlatım: okuyan anlatıcı sesi çıkaran değil; kişiyi metin söyler
+        return None
+    person = voice_person(u.voice)
+    if person is None:
+        return None
+    return {"person": person, "speaker": u.speaker, "narrator": False}
+
+
+def _who_line(who: dict | None) -> str:
+    if not who:
+        return ""
+    if who.get("narrator"):
+        src = (f"Sesi çıkaran: {who['person']} (bu yeri okuyan anlatıcı; metin sesi açıkça başka birine veriyorsa, "
+               "ör. «dede iç çekti», onunki geçerli).")
+    else:
+        name = f"«{who['speaker']}» konuşuyor" if who.get("speaker") else "balondaki söz"
+        src = f"Sesi çıkaran: {who['person']} ({name})."
+    return src + "\n"
+
+
 POOL_K = 16                       # aramanın Zeki AI'ye gösterdiği aday sayısı (seçim tek harf: A…P, X = hiçbiri);
 #                                   kapsama ölçümü docs/analiz/efekt-sesleri-kaynaklar.md §4 (8 ve 16 aday)
 _LETTERS = "ABCDEFGHIJKLMNOP"
 PICK = """Bir çocuk kitabının sesli okumasına efekt konacak. Metindeki yer: «{quote}». İstenen ses: «{q}» ({en}).
-Ses kütüphanesinde aramanın bulduğu adaylar (ad, klasör, etiketler, süre):
+{who}Ses kütüphanesinde aramanın bulduğu adaylar (ad, klasör, etiketler, süre):
 {rows}
 İstenen sese en uygun adayın harfini yaz. Eylem tutmalı: gülme için gülüş, hapşırma için hapşırık, düşme için düşme sesi;
 benzer ama başka bir eylem uygun değildir (gülen aslana kedi mırlaması gibi). Gülüş, hapşırık, öksürük, düşme gibi
 seslerde kaynağın birebir aynı olması gerekmez (filin hapşırığına bir hapşırık sesi uyar); ama bir hayvanın kendine özgü
-sesi (kükreme, havlama, miyav, vaklama) başka hayvanın sesiyle değiştirilemez. Hiçbiri uygun değilse X yaz. Yalnız tek harf."""
+sesi (kükreme, havlama, miyav, vaklama) başka hayvanın sesiyle değiştirilemez. İnsanın çıkardığı seste (iç çekiş, gülüş,
+kıkırdama, hapşırık, öksürük, çığlık, ağlama, esneme) adayın cinsiyeti ve yaşı sesi çıkaranla tutmalı: kadına ya da kıza
+erkek iç çekişi, çocuğa yetişkin kahkahası, erkeğe kadın çığlığı uygun değildir; adında ve etiketlerinde cinsiyet ya da
+yaş geçmeyen aday uygun olabilir. Hayvan ve nesne seslerinde sesi çıkaranın bu bilgisini yok say. Hiçbiri uygun değilse
+X yaz. Yalnız tek harf."""
 
 
 def _cand_line(letter: str, r: dict) -> str:
@@ -534,19 +633,26 @@ def _cand_line(letter: str, r: dict) -> str:
     return f"{letter}) {r['title']} | {full.get('group') or r.get('source')} | {tags} | {float(r.get('dur') or 0):.1f} sn"
 
 
-async def rerank(llm, cue: dict, cands: list[dict]) -> tuple[list[dict], float | None]:
+def pick_prompt(cue: dict, cands: list[dict], who: dict | None = None) -> str:
+    """Aday seçim istemi. `who`: ipucunun bloğunu okuyan ses (`block_speaker`); insan sesi efektinde cinsiyet/yaş."""
+    letters = _LETTERS[:len(cands)]
+    return PICK.format(quote=cue.get("quote", ""), q=cue.get("query", ""), en=cue.get("query_en", ""),
+                       who=_who_line(who), rows="\n".join(_cand_line(a, r) for a, r in zip(letters, cands)))
+
+
+async def rerank(llm, cue: dict, cands: list[dict], who: dict | None = None) -> tuple[list[dict], float | None]:
     """Aramanın ilk POOL_K adayını Zeki AI sıralar: kapalı kümede tek harf (A…P ya da X = hiçbiri), olasılıklar
     belirteç olasılığından (tek çağrı). Dönen: olasılığa göre sıralı adaylar ve «uygun ses var» olasılığı (1 − P(X)).
-    Model yoksa aramanın sırası korunur. Yalnız adın/klasörün/etiketin görüldüğü, sesin dinlenmediği bir seçimdir."""
+    Model yoksa aramanın sırası korunur. Yalnız adın/klasörün/etiketin görüldüğü, sesin dinlenmediği bir seçimdir.
+    `who`: sesi çıkaran (bloğu okuyan ses) — iç çekiş, gülüş gibi insan seslerinde cinsiyet ve yaş tutmalı."""
     if not cands:
         return [], 0.0
     from ..llm import PromptRef
     letters = _LETTERS[:len(cands)]
-    msg = PICK.format(quote=cue.get("quote", ""), q=cue.get("query", ""), en=cue.get("query_en", ""),
-                      rows="\n".join(_cand_line(a, r) for a, r in zip(letters, cands)))
+    msg = pick_prompt(cue, cands, who)
     try:
         probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": msg}], list(letters) + ["X"],
-                                    prompt=PromptRef("sfx.pick", "3"))
+                                    prompt=PromptRef("sfx.pick", "5"))
     except Exception:  # noqa: BLE001 — model yoksa aramanın sırası
         return cands, None
     order = sorted(range(len(cands)), key=lambda i: (-probs.get(letters[i], 0.0), i))
@@ -595,10 +701,11 @@ async def suggest_page(d: Path, pid: str, by: str, llm=None, keep_editor: bool =
         alts = c.pop("alts", None) or [(c["query"], c["query_en"])]
         if lib_ok:
             best = None
+            who = block_speaker(units, c["block"])   # sesi çıkaran: insan sesi efektinde cinsiyet/yaş tutmalı
             for q, en in alts:                       # okumaların tarifleri; en uygun sesi bulan tarif kalır
                 alt = {**c, "query": q, "query_en": en}
                 cands = await asyncio.to_thread(match, alt, None, POOL_K)
-                ranked, fit = await rerank(llm, alt, cands)
+                ranked, fit = await rerank(llm, alt, cands, who)
                 if best is None or (fit or 0) > (best[2] or 0):
                     best = (alt, ranked, fit)
                 if fit is not None and fit >= 0.8:
@@ -713,6 +820,9 @@ def _word_time(nrec: dict, block: str, words: list[int]) -> tuple[float, float] 
 
 
 def plan_placements(nrec: dict, cues: list[dict]) -> list[dict]:
+    """Anlık efektlerin sayfa sesindeki yeri ve uzunluğu (başlangıç sırasıyla). Bir efekt sonrakinin başlangıcını
+    geçiyorsa sonrakinin başında biter (en az FX_MIN_SEC; kuyruğu render'da FX_FADE ile yumuşak kısılır): «pat» için
+    4 sn'lik düşme sesi 3 sn sonraki «güm»ün altında sürmez."""
     out = []
     for c in cues:
         t = _word_time(nrec, c["block"], c["words"])
@@ -728,6 +838,12 @@ def plan_placements(nrec: dict, cues: list[dict]) -> list[dict]:
         out.append({"cue": c["id"], "sid": c["chosen"], "start": round(start, 3), "length": round(length, 3),
                     "gain_db": round(gain, 2), "place": c["place"], "quote": c["quote"], "title": row.get("title"),
                     "file": str(L.file_of(row))})
+    out.sort(key=lambda p: p["start"])
+    for cur, nxt in zip(out, out[1:]):
+        room = nxt["start"] - cur["start"]
+        if cur["length"] > room:
+            cur["length"] = round(min(cur["length"], max(room, FX_MIN_SEC)), 3)
+            cur["trimmed"] = True
     return out
 
 

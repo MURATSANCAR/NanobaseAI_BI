@@ -214,8 +214,31 @@ def ensure(engine: sa.engine.Engine) -> None:
         if engine in _ready:
             return
         PT.ensure(engine)
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(engine)
+
+
+def delete_person_rows(c: sa.engine.Connection, tenant: str, pid: str, arc: H.Archiver) -> dict[str, int]:
+    """Kişi silinirken (`hr_portal.delete_person`, aynı işlem) kişinin izin talepleri, onların geçmişi ve belgeleri (sağlık
+    raporu olabilir) ve bakiye defteri pasife alınır (arşive taşınır); başkasının talebinde vekil olarak anılışı boşaltılır,
+    eski değer arşive yazılır (talep kalır)."""
+    mine = sa.select(REQUESTS.c.id).where(REQUESTS.c.tenant_id == tenant, REQUESTS.c.person_id == pid)
+    nf = arc.move(FILES, FILES.c.tenant_id == tenant, FILES.c.request_id.in_(mine))
+    ne = arc.move(EVENTS, EVENTS.c.tenant_id == tenant, EVENTS.c.request_id.in_(mine))
+    nl = arc.move(LEDGER, LEDGER.c.tenant_id == tenant, LEDGER.c.person_id == pid)
+    nr = arc.move(REQUESTS, REQUESTS.c.tenant_id == tenant, REQUESTS.c.person_id == pid)
+    dep = [r.id for r in c.execute(sa.select(REQUESTS.c.id).where(REQUESTS.c.tenant_id == tenant, REQUESTS.c.deputy_person_id == pid))]
+    for rid in dep:
+        arc.note(REQUESTS.name, rid, {"id": rid, "deputy_person_id": pid}, reason="vekil_bosaltildi")
+    if dep:
+        c.execute(REQUESTS.update().where(REQUESTS.c.tenant_id == tenant, REQUESTS.c.id.in_(dep))
+                  .values(deputy_person_id=None, updated_at=now()))
+    return {"requests": nr, "events": ne, "files": nf, "ledger": nl, "deputyCleared": len(dep)}
+
+
+def register_hooks() -> None:
+    PT.register_person_cleanup(PT.PersonCleanup("izin", ensure, delete_person_rows))
 
 
 _seeded: set[tuple[int, str]] = set()

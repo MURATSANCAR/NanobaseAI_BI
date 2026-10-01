@@ -38,6 +38,8 @@ services:
       # Yönetim ekranı AD ayarını giriş servisiyle aynı dosyaya yazar.
       AD_CONFIG_FILE: /app/ad/timas-ad.json
       REPORT_DIR: /data/reports
+      # Kapak arşivi: VM beslemez, GPU'daki ortak arşivi GPU nginx'inin salt okunur yollarından okur (09-29 kararı).
+      STUDIO_LIBRARY_FEED: "0"
     volumes:
       - ./secrets/logo-mssql-connection.json:/app/secrets/logo-mssql-connection.json:ro
       - ./secrets/crm-mssql-connection.json:/app/secrets/crm-mssql-connection.json:ro
@@ -70,6 +72,13 @@ services:
       # Portal oturumuyla Destek'e tek tıkla giriş (/timas/auth/destek-sso): masa adresi ve ortak imza anahtarı.
       DESTEK_URL: ${DESTEK_URL:-}
       DESTEK_SSO_FILE: /app/destek/destek-sso.key
+      # ZEKİ AI Sohbet girişi (/timas/auth/chat-sso): yönetim rolü portal yetkisinden (ozellik:sohbet.yonet) okunur,
+      # köprüye kişinin kendi çereziyle sorulur. Dil tercihi boş/İngilizce olan kişi bir kez CHAT_LANGUAGE'e çekilir.
+      BRIDGE_URL: http://bridge:8795
+      SEMANTIC_CALLER_TOKEN: ${SEMANTIC_CALLER_TOKEN}
+      CHAT_ADMIN_FEATURE: ${CHAT_ADMIN_FEATURE:-ozellik:sohbet.yonet}
+      CHAT_ADMIN_ROLES: ${CHAT_ADMIN_ROLES:-admin}
+      CHAT_LANGUAGE: ${CHAT_LANGUAGE:-tr}
     volumes:
       - ./secrets/ad:/app/ad:ro
       - ./secrets/destek:/app/destek:ro

@@ -15,6 +15,11 @@ Anahtar kiracı + parametredir (kişiye özel sonuç kişi adını anahtara koym
 sözlük dönen değerin sığ kopyası verilir (uç `kaynaklar` gibi üst anahtar ekleyebilir); iç içe yapıyı değiştiren uç
 kendisi kopyalamalıdır. Yazma uçları `dusur()` ile ilgili anahtarları düşürür. Sayı tavanı yok: `en_cok` yalnız bellek
 koruması (en eski kullanılan düşer, sonuç kesilmez).
+
+Kalıcı katman (hız 4. tur, 2026-09-29): `kalici` verilirse (bkz. `hizli_kaynak.Kalici`) hesaplanan her değer portal
+tablosuna da yazılır; süreçte değeri olmayan anahtar ilk istendiğinde önce oradan okunur (köprü yeniden başlayınca kişi
+kaynağı beklemez, taze/bayat penceresi kaydın okunma anına göre işler). Kayıt okunamaz ya da yazılamazsa bellek eskisi
+gibi çalışır.
 """
 from __future__ import annotations
 
@@ -31,24 +36,30 @@ KAYIT: dict[str, "Bellek"] = {}
 
 
 class _Kayit:
-    __slots__ = ("deger", "an", "is_", "kilit")
+    __slots__ = ("deger", "an", "is_", "kilit", "diskte")
 
     def __init__(self) -> None:
         self.deger: Any = None
         self.an: float = 0.0          # 0 = hiç hesaplanmadı
         self.is_: bool = False        # arkada hesap sürüyor
         self.kilit = threading.Lock()  # beklenen hesap (tek uçuş)
+        self.diskte = False           # kalıcı kayda bir kez bakıldı
 
 
 class Bellek:
-    def __init__(self, ad: str, taze: float, bayat: Optional[float] = None, en_cok: int = 512) -> None:
+    def __init__(self, ad: str, taze: float, bayat: Optional[float] = None, en_cok: int = 512,
+                 kalici: Any = None) -> None:
         self.ad = ad
         self.taze = float(taze)
         self.bayat = float(bayat) if bayat is not None else float(taze)
         self.en_cok = int(en_cok)
+        #: `yukle(anahtar) -> (deger, an) | None` ve `yaz(anahtar, deger, an)` veren katman (hizli_kaynak.Kalici).
+        self.kalici = kalici
         self._k: "OrderedDict[Hashable, _Kayit]" = OrderedDict()
         self._lock = threading.Lock()
         self.sayac = {"isabet": 0, "bayat": 0, "hesap": 0, "arka": 0, "hata": 0}
+        #: Son `dusur` anı: bundan önce yazılmış kalıcı kayıt yüklenmez (düşürülen değer diskten geri gelmesin).
+        self._dusuldu = 0.0
         KAYIT[ad] = self
 
     # ------------------------------------------------------------------ iç
@@ -67,14 +78,37 @@ class Bellek:
     def _ver(deger: Any) -> Any:
         return dict(deger) if isinstance(deger, dict) else deger
 
-    def _hesapla(self, k: _Kayit, hesap: Callable[[], Any], istek_an: float) -> Any:
+    def _diskten(self, anahtar: Hashable, k: _Kayit) -> None:
+        """Süreçte değeri olmayan anahtar: kalıcı kayıt bir kez okunur (hata olursa kaynak beklenir)."""
+        if self.kalici is None or k.diskte or k.an:
+            return
+        with k.kilit:
+            if k.diskte or k.an:
+                return
+            k.diskte = True
+            try:
+                got = self.kalici.yukle(anahtar)
+            except Exception as e:  # noqa: BLE001 — kayıt okunamazsa kaynaktan okunur
+                log.warning("%s: kalıcı kayıt okunamadı (%r): %s", self.ad, anahtar, e)
+                return
+            if got is not None and not k.an and got[1] > self._dusuldu:
+                k.deger, k.an = got
+                self.sayac["kayit"] = self.sayac.get("kayit", 0) + 1
+
+    def _hesapla(self, k: _Kayit, hesap: Callable[[], Any], istek_an: float, anahtar: Hashable = None) -> Any:
         with k.kilit:
             if k.an and k.an >= istek_an:        # beklerken başka biri hesapladı
                 return k.deger
             deger = hesap()
             k.deger, k.an = deger, time.time()
+            k.diskte = True
             self.sayac["hesap"] += 1
-            return deger
+        if self.kalici is not None:
+            try:
+                self.kalici.yaz(anahtar, deger, k.an)
+            except Exception as e:  # noqa: BLE001 — kayıt yazılamasa da değer ekrana gider
+                log.warning("%s: kalıcı kayıt yazılamadı (%r): %s", self.ad, anahtar, e)
+        return deger
 
     def _arkada(self, anahtar: Hashable, k: _Kayit, hesap: Callable[[], Any]) -> None:
         with self._lock:
@@ -84,7 +118,7 @@ class Bellek:
 
         def run() -> None:
             try:
-                self._hesapla(k, hesap, time.time())
+                self._hesapla(k, hesap, time.time(), anahtar)
                 self.sayac["arka"] += 1
             except Exception as e:  # noqa: BLE001 — eski değer gösterilmeye devam eder
                 self.sayac["hata"] += 1
@@ -97,6 +131,8 @@ class Bellek:
     # ------------------------------------------------------------------ dış
     def al(self, anahtar: Hashable, hesap: Callable[[], Any], *, zorla: bool = False) -> Any:
         k = self._kayit(anahtar)
+        if not zorla:
+            self._diskten(anahtar, k)
         simdi = time.time()
         if not zorla and k.an:
             yas = simdi - k.an
@@ -108,15 +144,27 @@ class Bellek:
                 deger = k.deger
                 self._arkada(anahtar, k, hesap)
                 return self._ver(deger)
-        return self._ver(self._hesapla(k, hesap, simdi))
+        return self._ver(self._hesapla(k, hesap, simdi, anahtar))
 
     def isit(self, anahtar: Hashable, hesap: Callable[[], Any]) -> None:
         """Beklemeden arkada hesaplar (açılışta ya da tur sonunda ısıtma)."""
         self._arkada(anahtar, self._kayit(anahtar), hesap)
 
+    def isit_gerekirse(self, anahtar: Hashable, hesap: Callable[[], Any]) -> bool:
+        """Açılış ısıtması: değer (süreçte ya da kalıcı kayıtta) tazeyse bir şey yapmaz; değilse arkada hesaplar."""
+        k = self._kayit(anahtar)
+        self._diskten(anahtar, k)
+        if k.an and time.time() - k.an < self.taze:
+            return False
+        self._arkada(anahtar, k, hesap)
+        return True
+
     def yas(self, anahtar: Hashable) -> Optional[float]:
         with self._lock:
             k = self._k.get(anahtar)
+        if self.kalici is not None and (k is None or not k.an):
+            k = self._kayit(anahtar)
+            self._diskten(anahtar, k)
         return None if k is None or not k.an else time.time() - k.an
 
     def an(self, anahtar: Hashable) -> Optional[float]:
@@ -131,4 +179,5 @@ class Bellek:
             silinecek = [a for a in self._k if sart is None or sart(a)]
             for a in silinecek:
                 del self._k[a]
+            self._dusuldu = time.time()
         return len(silinecek)

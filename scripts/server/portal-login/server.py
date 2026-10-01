@@ -18,6 +18,7 @@ import re
 import secrets
 import sqlite3
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -38,14 +39,27 @@ TTL = 8 * 3600
 # Zeki AI chat: internal URL of the chat container, service account token and token secret. Root-owned, never committed.
 # {"url": "http://127.0.0.1:4000", "user_id": "...", "token": "...", "sso_secret": "...", "email_domain": "timas.local"}
 CHAT_FILE = os.environ.get('CHAT_CONFIG_FILE', '/etc/nanobase/zeki-chat.json')
+# Sohbet yönetimi portalın yetkisinden gelir: kişinin bu anahtarı varsa (portal yöneticisi ya da Yönetim › Yetkiler'de
+# bağlı bir rol) sohbet girişinde CHAT_ADMIN_ROLES verilir; anahtar kalkınca yalnız bu servisin verdiği rol geri alınır,
+# sohbette elle verilmiş rol olduğu gibi kalır. Anahtar boşsa eşitleme kapalıdır. Yetki köprünün /api/v1/access/me
+# ucundan, kişinin kendi oturum çereziyle okunur; köprü cevap vermezse hiçbir rol değişmez.
+CHAT_ADMIN_FEATURE = os.environ.get('CHAT_ADMIN_FEATURE', 'ozellik:sohbet.yonet').strip()
+CHAT_ADMIN_ROLES = tuple(r.strip() for r in os.environ.get('CHAT_ADMIN_ROLES', 'admin').split(',') if r.strip())
+BRIDGE_URL = os.environ.get('BRIDGE_URL', 'http://127.0.0.1:8795').rstrip('/')
+# Köprünün SEMANTIC_CALLER_TOKEN'ı (köprüde tanımlıysa şart). Root-owned ortam dosyasında durur.
+BRIDGE_CALLER_TOKEN = os.environ.get('SEMANTIC_CALLER_TOKEN', '')
+# Sohbet dili: dili boş ya da İngilizce olan kişinin tercihi ilk girişte bir kez buna çekilir; kişi sonra başka dil
+# seçerse dokunulmaz. Boşsa kapalı.
+CHAT_LANGUAGE = os.environ.get('CHAT_LANGUAGE', 'tr').strip()
+CHAT_DEFAULT_LANGUAGES = ('', 'en')
 # NanobaseAI Destek (ayrı site, ayrı port): portal oturumu olan kişi orada da otomatik girer.
 # Çerez Path=/timas/ olduğu için Destek onu göremez; tarayıcı buraya gelir, 60 sn'lik tek kullanımlık imzalı
 # jetonla Destek'e döner. Anahtar Destek sitesiyle ortak (site_config destek_sso_secret). Root-owned, never committed.
 DESTEK_URL = os.environ.get('DESTEK_URL', 'https://portal.nanobase.ai:8446').rstrip('/')
 DESTEK_SSO_FILE = os.environ.get('DESTEK_SSO_FILE', '/etc/nanobase/destek-sso.key')
 DESTEK_TOKEN_TTL = 60
-# sAMAccountName characters only: nothing here can widen the LDAP filter.
-ACCOUNT = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+# AD account names may contain Turkish letters and ampersands; LDAP values are escaped below.
+ACCOUNT = re.compile(r"^[\w .&'-]{1,64}$")
 # Yönetim uçlarının jetonu (köprüyle aynı). Boşsa /admin/* kapalıdır.
 ADMIN_TOKEN = os.environ.get('LOGIN_ADMIN_TOKEN', '')
 # Giriş servisindeki olay kopyasının ömrü; uzun süreli kayıt köprünün tablosunda, kendi saklama süresiyle durur.
@@ -73,6 +87,10 @@ def connection():
         db.execute('ALTER TABLE sessions ADD COLUMN created REAL')
     db.execute('CREATE TABLE IF NOT EXISTS login_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL, '
                'username TEXT NOT NULL, ok INTEGER NOT NULL, reason TEXT NOT NULL, addr TEXT, ua_hash TEXT)')
+    # Sohbette bu servisin verdiği roller (yalnız bunlar geri alınır) ve dil tercihi bir kez çekilmiş hesaplar.
+    db.execute('CREATE TABLE IF NOT EXISTS chat_roles (username TEXT NOT NULL, role TEXT NOT NULL, at REAL NOT NULL, '
+               'PRIMARY KEY (username, role))')
+    db.execute('CREATE TABLE IF NOT EXISTS chat_language (username TEXT PRIMARY KEY, language TEXT NOT NULL, at REAL NOT NULL)')
     return db
 
 
@@ -163,6 +181,7 @@ def ad_verify(username, password):
     try:
         from ldap3 import NONE, NTLM, SUBTREE, Connection, Server
         from ldap3.core.exceptions import LDAPException
+        from ldap3.utils.conv import escape_filter_chars
         ensure_md4()
     except ImportError as exc:
         raise DirectoryUnavailable(f'ldap3 missing: {exc}')
@@ -174,7 +193,7 @@ def ad_verify(username, password):
         if not lookup.bind():
             raise DirectoryUnavailable('service account bind refused')
         try:
-            lookup.search(config['base_dn'], ACTIVE_PERSON.format(account), SUBTREE,
+            lookup.search(config['base_dn'], ACTIVE_PERSON.format(escape_filter_chars(account)), SUBTREE,
                           attributes=['sAMAccountName', 'displayName'], size_limit=2)
             if len(lookup.entries) != 1:
                 return UNKNOWN_ACCOUNT
@@ -226,15 +245,99 @@ def chat_call(config, method, path, query=None, body=None):
         raise ChatUnavailable(type(exc).__name__)
 
 
-def chat_login_token(account, display):
+def portal_can_manage_chat(session_token):
+    """Kişinin portal yetkisinde CHAT_ADMIN_FEATURE var mı: True / False; okunamadıysa None (o zaman rol değişmez).
+
+    Köprü kişiyi aynı oturum çereziyle bu servisin /session ucundan tanır; portal yöneticisi her anahtarı taşır."""
+    if not CHAT_ADMIN_FEATURE or not session_token:
+        return None
+    headers = {'Cookie': f'{COOKIE}={session_token}'}
+    if BRIDGE_CALLER_TOKEN:
+        headers['X-Semantic-Caller'] = BRIDGE_CALLER_TOKEN
+    request = urllib.request.Request(BRIDGE_URL + '/api/v1/access/me', headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            data = json.loads(response.read() or b'{}')
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        print(f'timas-login: portal permissions unavailable ({type(exc).__name__})', file=sys.stderr, flush=True)
+        return None
+    perms = data.get('perms')
+    if not isinstance(perms, list):
+        return None
+    return bool(data.get('isAdmin')) or CHAT_ADMIN_FEATURE in perms
+
+
+def chat_sync_roles(config, user, account, can_manage):
+    """CHAT_ADMIN_ROLES'u portal yetkisiyle eşitler. Yalnız bu servisin verdiği rol geri alınır (chat_roles kaydı);
+    sohbette elle verilmiş rol kişide kalır. Bir çağrı başarısız olursa kayıt değişmez, sonraki girişte yeniden denenir."""
+    if can_manage is None or not CHAT_ADMIN_ROLES:
+        return
+    key = account.lower()
+    have = set(user.get('roles') or [])
+    with connection() as db:
+        managed = {r for (r,) in db.execute('SELECT role FROM chat_roles WHERE username=?', (key,))}
+    for role in CHAT_ADMIN_ROLES:
+        if can_manage and role not in have:
+            done = chat_call(config, 'POST', 'roles.addUserToRole', body={'roleId': role, 'username': user['username']})
+            if done.get('success'):
+                with connection() as db:
+                    db.execute('INSERT OR REPLACE INTO chat_roles (username, role, at) VALUES (?, ?, ?)', (key, role, time.time()))
+            else:
+                print(f"timas-login: chat role {role} not granted ({done.get('errorType') or done.get('error')})",
+                      file=sys.stderr, flush=True)
+        elif not can_manage and role in managed:
+            if role in have:
+                done = chat_call(config, 'POST', 'roles.removeUserFromRole', body={'roleId': role, 'username': user['username']})
+                if not done.get('success'):
+                    print(f"timas-login: chat role {role} not revoked ({done.get('errorType') or done.get('error')})",
+                          file=sys.stderr, flush=True)
+                    continue
+            with connection() as db:
+                db.execute('DELETE FROM chat_roles WHERE username=? AND role=?', (key, role))
+
+
+def chat_sync_language(config, user, account):
+    """Dili boş ya da İngilizce olan kişinin sohbet dili bir kez CHAT_LANGUAGE'e çekilir (chat_language kaydı);
+    kişi sonra kendi dilini seçerse bir daha dokunulmaz."""
+    if not CHAT_LANGUAGE:
+        return
+    key = account.lower()
+    with connection() as db:
+        if db.execute('SELECT 1 FROM chat_language WHERE username=?', (key,)).fetchone():
+            return
+    current = str(user.get('language') or '').strip().lower()
+    if current not in CHAT_DEFAULT_LANGUAGES and current != CHAT_LANGUAGE.lower():
+        return  # kişinin kendi seçtiği başka bir dil
+    if current != CHAT_LANGUAGE.lower():
+        done = chat_call(config, 'POST', 'users.setPreferences', body={'userId': user['_id'], 'data': {'language': CHAT_LANGUAGE}})
+        if not done.get('success'):
+            print(f"timas-login: chat language not set ({done.get('errorType') or done.get('error')})", file=sys.stderr, flush=True)
+            return
+    with connection() as db:
+        db.execute('INSERT OR REPLACE INTO chat_language (username, language, at) VALUES (?, ?, ?)', (key, CHAT_LANGUAGE, time.time()))
+
+
+def chat_account_name(account):
+    """Keep reserved chat names out of AD provisioning without granting extra privileges."""
+    if account.lower() in {'admin', 'administrator', 'system', 'user', 'all', 'here'}:
+        return 'ad-' + account.lower()
+    if not re.fullmatch(r'[0-9a-zA-Z-_.]+', account):
+        return 'ad-' + hashlib.sha256(account.lower().encode('utf-8')).hexdigest()[:20]
+    return account
+
+
+def chat_login_token(account, display, session_token=None):
     """Makes sure the portal user exists in the chat under the same account name, then returns a login token.
 
     The chat never sees a password: accounts are created with a random one that nobody knows, and the
     only way in is this token, which the portal issues to a browser that already holds a portal session.
+    Every enabled directory user who holds a portal session gets an account on first visit (no allow list).
+    On each sign-in the chat admin role follows the portal permission and the language preference is set once.
     """
     config = chat_config()
     if not config:
         raise ChatUnavailable('no chat configuration')
+    account = chat_account_name(account)
     found = chat_call(config, 'GET', 'users.info', {'username': account})
     user = found.get('user') if found.get('success') else None
     if not user:
@@ -251,15 +354,62 @@ def chat_login_token(account, display):
         user = created.get('user') if created.get('success') else None
         if not user:
             raise ChatUnavailable(f"user create refused: {created.get('errorType') or created.get('error')}")
-    elif not user.get('active', True):
+    elif not user.get('active', True) or user.get('type') == 'bot' or user.get('_id') in CHAT_BOT_IDS:
+        # Sohbetin kendi botu (zeki.bot) bir AD hesabının adını taşısa bile kimse onun yerine girmez.
         return None
     elif user.get('name') != display:
         chat_call(config, 'POST', 'users.update', body={'userId': user['_id'], 'data': {'name': display}})
-    issued = chat_call(config, 'POST', 'users.createToken', body={'userId': user['_id'], 'secret': config['sso_secret']})
+    # Rol ve dil eşitlemesi girişi durdurmaz: başarısızsa günlüğe yazılır, kişi yine girer.
+    try:
+        chat_sync_roles(config, user, account, portal_can_manage_chat(session_token))
+    except (ChatUnavailable, KeyError, sqlite3.Error) as exc:
+        print(f'timas-login: chat role sync skipped ({type(exc).__name__})', file=sys.stderr, flush=True)
+    try:
+        chat_sync_language(config, user, account)
+    except (ChatUnavailable, KeyError, sqlite3.Error) as exc:
+        print(f'timas-login: chat language sync skipped ({type(exc).__name__})', file=sys.stderr, flush=True)
+    issued =chat_call(config, 'POST', 'users.createToken', body={'userId': user['_id'], 'secret': config['sso_secret']})
     token = (issued.get('data') or {}).get('authToken')
     if not token:
         raise ChatUnavailable(f"token refused: {issued.get('errorType') or issued.get('error')}")
     return token
+
+
+# Kampüs'teki sohbet kartı her açık ekranda yarım dakikada bir sorar; sohbete giden istek bu süre içinde bir tanedir.
+PRESENCE_TTL = 15
+# Sohbetin kendi hesapları (yerleşik bot, kurulum yöneticisi) kişi sayılmaz. Botun kimliği ve kullanıcı adı 'zeki.bot';
+# kimlik göçü (apps/zeki-chat/deploy/zeki/migrate-owned-identity.cjs) koşmamış veritabanında kimlik hâlâ eski adıyla durur.
+CHAT_BOT_IDS = {'zeki.bot', 'rocket.cat'}
+CHAT_SYSTEM_ACCOUNTS = {'zeki.bot', 'rocket.cat'}
+PRESENCE_ORDER = {'online': 0, 'busy': 1, 'away': 2}
+_presence = {'at': 0.0, 'value': None}
+_presence_lock = threading.Lock()
+
+
+def chat_presence():
+    """Sohbette şu an çevrimdışı olmayan kişiler: {online, people:[{username, name, status}]}.
+
+    Yapılandırma yoksa None (bu kurulumda sohbet yok). Sohbet cevap vermezse ChatUnavailable."""
+    config = chat_config()
+    if not config:
+        return None
+    with _presence_lock:
+        if _presence['value'] is not None and time.time() - _presence['at'] < PRESENCE_TTL:
+            return _presence['value']
+        found = chat_call(config, 'GET', 'users.presence')
+        if not found.get('success'):
+            raise ChatUnavailable(f"presence refused: {found.get('errorType') or found.get('error')}")
+        skip = CHAT_SYSTEM_ACCOUNTS | {str(config.get('admin_username') or '').lower()}
+        people = [
+            {'username': u['username'], 'name': u.get('name') or u['username'], 'status': u.get('status')}
+            for u in found.get('users') or []
+            if u.get('username') and u.get('_id') != config.get('user_id') and u.get('_id') not in CHAT_BOT_IDS and u['username'].lower() not in skip
+            and u.get('status') in PRESENCE_ORDER
+        ]
+        people.sort(key=lambda p: (PRESENCE_ORDER[p['status']], p['name'].casefold()))
+        value = {'online': len(people), 'people': people}
+        _presence.update(at=time.time(), value=value)
+        return value
 
 
 def b64url(raw):
@@ -279,11 +429,16 @@ def safe_next(value):
     return value if value.startswith('/') and not value.startswith('//') and '\\' not in value else '/helpdesk'
 
 
-def session(cookie):
+def session_token(cookie):
     try:
-        cookies = SimpleCookie(cookie)
-        token = cookies[COOKIE].value
+        return SimpleCookie(cookie)[COOKIE].value
     except (KeyError, ValueError):
+        return None
+
+
+def session(cookie):
+    token = session_token(cookie)
+    if not token:
         return None
     with connection() as db:
         return db.execute('SELECT username, display FROM sessions WHERE token=? AND expires>?', (digest(token), time.time())).fetchone()
@@ -405,13 +560,25 @@ class Handler(BaseHTTPRequestHandler):
             if not row:
                 return self.reply(401)
             try:
-                token = chat_login_token(row[0], row[1] or row[0])
+                token = chat_login_token(row[0], row[1] or row[0], session_token(self.headers.get('Cookie', '')))
             except ChatUnavailable as exc:
                 print(f'timas-login: chat unavailable ({exc})', file=sys.stderr, flush=True)
                 return self.reply(503, {'error': 'Sohbet şu an kullanılamıyor.'})
             if not token:
                 return self.reply(403)
             return self.reply(200, {'loginToken': token})
+        if self.path == '/chat-presence':
+            # Kampüs sohbet kartı: kaç kişi çevrimiçi. Yalnız portal oturumu olan görür.
+            if not session(self.headers.get('Cookie', '')):
+                return self.reply(401)
+            try:
+                found = chat_presence()
+            except ChatUnavailable as exc:
+                print(f'timas-login: chat presence unavailable ({exc})', file=sys.stderr, flush=True)
+                return self.reply(503, {'error': 'Sohbet şu an cevap vermiyor.'})
+            if found is None:
+                return self.reply(404, {'configured': False})
+            return self.reply(200, found)
         self.reply(404)
 
     def do_POST(self):

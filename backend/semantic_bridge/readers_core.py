@@ -68,7 +68,13 @@ class Provider:
 
     def __init__(self, engine: Callable[[], sa.engine.Engine], tenant: Callable[[], str],
                  cfg: Callable[[], dict[str, Any]] = R.settings) -> None:
+        from semantic_bridge import hizli_kaynak as HK
+
         self._engine, self._tenant, self._cfg = engine, tenant, cfg
+        #: Kural alanları (damga + liste): süre yok, damga değişince arkada yenilenir; köprü açılınca tablodan.
+        self._alanlar = HK.bellek("okur.kural-alanlari", float("inf"), en_cok=16, kalici=HK.Kalici(
+            "okur.kural-alanlari", lambda: (self._engine(), self._tenant()),
+            bicim=repr([(k, f["label"], f["kind"], f["help"]) for k, f in S.FIELDS.items()]) + repr(S.OPS)))
 
     def _profiles(self, tenant: str) -> tuple[sa.engine.Engine, dict[str, Any], list[dict[str, Any]]]:
         engine, cfg = self._engine(), self._cfg()
@@ -162,8 +168,26 @@ class Provider:
         return S.explain(clean)
 
     def kural_alanlari(self) -> list[dict[str, Any]]:
-        _engine, _cfg, profs = self._profiles(self._tenant())
-        return S.field_catalog(profs)
+        """Segment kuralının alanları ve seçenekleri (okur ekranlarının `meta`'sı). Hız 4. tur (2026-09-29): bütün etkin
+        okurların profili (130 bin okur, 5–11 sn) her okuma turundan sonra ilk `meta` isteğinde kuruluyordu. Seçenek
+        listesi okur verisinin damgasına bağlı saklanır (süreçte + `semantic_hizli_okuma`); damga değiştiyse eldeki liste
+        hemen döner, yenisi arkada bir kez kurulur. Hiç yoksa beklenir (eski davranış)."""
+        tenant = self._tenant()
+        engine, cfg = self._engine(), self._cfg()
+        R.ensure(engine)
+        st = R.stamp(engine, tenant)
+        if st is None:
+            return S.field_catalog(R.profiles(engine, tenant, cfg))
+
+        def hesap() -> dict[str, Any]:
+            damga = R.stamp(engine, tenant)            # profiller bu damgayla kurulur
+            return {"damga": damga, "alanlar": S.field_catalog(R.profiles(engine, tenant, cfg))}
+
+        key: Hashable = ("alanlar", tenant, json.dumps(cfg, sort_keys=True, default=str))
+        val = self._alanlar.al(key, hesap)
+        if val.get("damga") != st:
+            self._alanlar.isit(key, hesap)             # okuma turu değişti: eldeki liste döner, yenisi arkada
+        return val["alanlar"]
 
 
 def register(app: Any, engine: Callable[[], sa.engine.Engine], tenant: Callable[[], str]) -> Provider:

@@ -25,6 +25,7 @@ Everything here is a pure function over strings: no database, no model, no book.
 
 from __future__ import annotations
 
+import math
 import re
 
 from . import ledger
@@ -198,6 +199,168 @@ def credit_role(name: str, quote: str, page: int | None, last_page: int) -> str 
     if len(labels) >= 2:
         return m.group(1)
     rest = _CREDIT.sub(" ", q.replace(n, " ")).split()
-    edge = page is not None and (page <= max(6, round(last_page * 0.08))
+    return m.group(1) if len(rest) <= 1 and edge_page(page, last_page) else None
+
+
+def edge_page(page: int | None, last_page: int) -> bool:
+    """Is this one of the book's first or last pages — where a book prints what is ABOUT it
+    (title, imprint, author and illustrator notes, other titles of the series) and not what is
+    IN it? The same bound `credit_role` has always used: the first max(6, 8%) pages, the last
+    max(4, 5%)."""
+    return page is not None and (page <= max(6, round(last_page * 0.08))
                                  or page > last_page - max(4, round(last_page * 0.05)))
-    return m.group(1) if len(rest) <= 1 and edge else None
+
+
+# ------------------------------------------------------------------ words and occurrences
+def words(text: str) -> list[str]:
+    """The words of a text as the comparisons below read them: ASCII-folded with Turkish case
+    rules, a suffix after an apostrophe a separate word («Anna’nın» -> anna, nin), a word broken
+    at a line end joined again («program- lı» -> programlı)."""
+    return _fold(ledger._HYPH.sub(r"\1\2", text or "")).split()
+
+
+def wkey(name: str) -> str:
+    """A written name as `words` reads it: «Anıl Basılı», «ANIL BASILI» and «Anil Basili» are one."""
+    return " ".join(words(name))
+
+
+def name_occurrences(pages: dict[int, str], names) -> dict[int, set[str]]:
+    """Which of `names` each page writes, as sets of `wkey(name)` (pages writing none are left out).
+
+    The page is read left to right and at every position the LONGEST name written there wins
+    and is consumed: the «Anna» inside «Anna Maria van Schurman» is that longer name's
+    occurrence, not a separate «Anna» (nor a separate «Maria»). Names match as whole words."""
+    seqs: dict[tuple[str, ...], str] = {}
+    for n in names:
+        w = tuple(words(n))
+        if w:
+            seqs.setdefault(w, " ".join(w))
+    by_first: dict[str, list[tuple[str, ...]]] = {}
+    for s in sorted(seqs, key=len, reverse=True):
+        by_first.setdefault(s[0], []).append(s)
+    out: dict[int, set[str]] = {}
+    for p, text in pages.items():
+        toks = words(text)
+        found: set[str] = set()
+        i = 0
+        while i < len(toks):
+            for s in by_first.get(toks[i], ()):
+                if tuple(toks[i:i + len(s)]) == s:
+                    found.add(seqs[s])
+                    i += len(s)
+                    break
+            else:
+                i += 1
+        if found:
+            out[p] = found
+    return out
+
+
+# ------------------------------------------------------------------ an alias needs a link in the book
+# Two written names are one person only where the book says so. The proposal's merge rule already
+# asks for it («kanıtı olmayan birleştirme yapma») and the cross-window join checks a verbatim quote
+# naming both sides; nothing checked it for the names of one proposal. Measured 2026-09-30: a novel's
+# narrator «Maria» received the alias «Anna» — a baby born on another page, whose name the book never
+# writes on any page that also writes «Maria» (the «Anna» of «Anna Maria van Schurman», a third
+# person, is that longer name's). A link needs, at the very least, one page that writes both names.
+NO_SHARED_EVIDENCE = "NO_SHARED_EVIDENCE"
+
+
+def screen_shared_evidence(verdicts: list[dict], pages: dict[int, str]) -> list[dict]:
+    """Refuse every alias the book never links to the character's other names.
+
+    `verdicts` is the output of `screen_group_names` (same order, same keys); `pages` maps a page
+    number to the page's text. An alias that shares a word with the canonical name («Bulut» of
+    «Profesör Bulut») is linked by its own form. Any other alias must be written on at least one
+    page together with a name already linked (the canonical, a form-linked alias, or an alias
+    linked this way — a chain «Mehmet» → «Memo» → «Memoş» holds). Each name counts only where it
+    is written as itself (`name_occurrences`: a name inside a longer name is the longer name's).
+
+    This is a necessary condition, not proof: a shared page does not make two names one person
+    (the proposal and its critic decide that); no shared page means nothing in the book joins
+    them. A refused alias is listed in `dropped` with reason NO_SHARED_EVIDENCE and the pages that
+    write it, so the caller returns the mentions that carried it to unresolved."""
+    people = [v for v in verdicts if v.get("person")]
+    occ = name_occurrences(pages, [n for v in people for n in [v["canonical"], *v["aliases"]]])
+    out = []
+    for v in verdicts:
+        if not v.get("person") or not v.get("aliases"):
+            out.append(v)
+            continue
+        own = set(words(v["canonical"]))
+        anchored = {wkey(v["canonical"])} | {wkey(a) for a in v["aliases"] if own & set(words(a))}
+        open_ = [a for a in v["aliases"] if wkey(a) not in anchored]
+        grew = True
+        while open_ and grew:
+            grew = False
+            for a in list(open_):
+                if any(wkey(a) in f and f & anchored for f in occ.values()):
+                    anchored.add(wkey(a))
+                    open_.remove(a)
+                    grew = True
+        refused = {wkey(a) for a in open_}
+        dropped = list(v.get("dropped") or []) + [
+            {"name": a, "reason": NO_SHARED_EVIDENCE, "mid": None, "cap": None, "share": None,
+             "pages": sorted(p for p, f in occ.items() if wkey(a) in f)[:20]} for a in open_]
+        out.append({**v, "aliases": [a for a in v["aliases"] if wkey(a) not in refused], "dropped": dropped})
+    return out
+
+
+# ------------------------------------------------------------------ pages about the book, not in it
+# An author's note («Gazetecilik mezunu … Köpek dostu Dali ile çimlerde yuvarlanmayı seviyor»), an
+# illustrator's note, a title page: the people there are the book's makers and their life, not
+# people of its story. Read as a story they became «Kitabın yazarı» and «yazarın köpeği» as
+# CONFIRMED characters (2026-09-30). Such a page is known two ways, neither a list of words:
+#   * a page role that says so — the extractor's NON_STORY suggestion or the editor's decision
+#     (FRONT_MATTER / NON_STORY); the suggestion never removes the page from the reading, it only
+#     decides that a person who appears on NO other page is not a person of the story;
+#   * one of the book's first or last pages (`edge_page`) that writes the full name of one of the
+#     book's contributors (the publisher's CRM record: authors, illustrators).
+PARATEXT_ONLY = "PARATEXT_ONLY"
+
+
+def paratext_pages(pages: dict[int, str], role_pages, contributors, last_page: int) -> set[int]:
+    """Pages about the book rather than in it (see above). A contributor's name counts only in
+    full and only with two or more words, so a one-word name the story also uses cannot turn a
+    story page into an author's page."""
+    out = {int(p) for p in role_pages}
+    names = [c for c in contributors or [] if len(words(c)) >= 2]
+    if names:
+        edge = {p: t for p, t in pages.items() if edge_page(p, last_page)}
+        out |= set(name_occurrences(edge, names))
+    return out
+
+
+# ------------------------------------------------------------------ which page a description rests on
+def description_pages(description: str, pages: dict[int, str], candidates, name_words: set[str],
+                      top: int = 3) -> list[int]:
+    """The pages among `candidates` (the character's own pages) whose text carries what the
+    description says, best first; empty when no page carries any of it.
+
+    A character's first page is where it is first NAMED — in a picture book often a cast page
+    that prints only the names («Somurtkan Hala Sirkenaz Bitirim Hürdeniz») — and it was cited
+    as the source of «Somurtkan Hala'nın torunu, planlı programlı», which the book says on pages
+    58 and 62 (2026-09-30). Here the description's own words are looked for on the pages:
+    names are left out (`name_words`: every name of every character — they say who, not what),
+    a word is compared by its first five letters (Turkish suffixes: torunu ~ torun, programlı ~
+    program), words shorter than four letters are ignored, and each word weighs by how rare it
+    is in the book (a word on every page says nothing about any page)."""
+    def stems(text: str) -> set[str]:
+        return {w[:5] for w in words(text) if len(w) >= 4 and w not in name_words}
+
+    want = stems(description)
+    if not want:
+        return []
+    page_stems = {p: stems(t) & want for p, t in pages.items()}
+    n = max(1, len(page_stems))
+    df: dict[str, int] = {}
+    for st in page_stems.values():
+        for s in st:
+            df[s] = df.get(s, 0) + 1
+    scored = []
+    for p in dict.fromkeys(candidates):
+        got = page_stems.get(p) or set()
+        score = sum(math.log((n + 1) / (df[s] + 1)) for s in got)
+        if score > 0:
+            scored.append((-score, p))
+    return [p for _, p in sorted(scored)[:top]]

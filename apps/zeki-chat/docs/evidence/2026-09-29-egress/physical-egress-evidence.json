@@ -1,0 +1,13 @@
+{
+  "interface": "eth0",
+  "durationSeconds": 10,
+  "filter": "dst host 1.1.1.1 and tcp dst port 80",
+  "deliberateProbe": "zeki-ingress wget http://1.1.1.1/",
+  "probeResult": "ECONNREFUSED",
+  "matchingPhysicalPackets": 0,
+  "captureStatus": [
+    "0 packets captured",
+    "0 packets received by filter",
+    "0 packets dropped by kernel"
+  ]
+}

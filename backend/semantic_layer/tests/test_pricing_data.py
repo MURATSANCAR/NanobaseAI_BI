@@ -137,7 +137,7 @@ def test_comparables_and_suggestion(snap):
     assert sug["printService"] is None and sug["printPerCopy"] == pytest.approx(sug["paper"]["perCopy"])
 
 
-def test_actuals_and_backlist(snap):
+def test_actuals_and_old_book_compare(snap):
     act = D.actuals(snap)
     one = next(r for r in act["rows"] if r["code"] == "15201.01.1")
     assert one["printed"] == 5000 and one["printCost"] == 40000 and one["sold"] == 2000
@@ -147,9 +147,22 @@ def test_actuals_and_backlist(snap):
     det = D.book_detail(snap, "15201.01.1")
     assert det["spec"]["pages"] == 200 and det["spec"]["binding"] == "Amerikan Cilt" and len(det["salesByYear"]) == 2
     assert D.book_detail(snap, "yok") is None
-    bl = D.backlist(snap, target_ratio=0.01)
-    assert bl["count"] >= 1 and all(r["proposed"] > r["price"] and r["proposed"] % 5 == 0 for r in bl["rows"])
-    assert D.backlist(snap, target_ratio=0.99)["count"] == 0
+    # Eski kitaplar: fiyatı olan her kitap listede (hesaplanamayan nedeniyle); bizim hesap «Kitap hesabı»nın önerisi.
+    from semantic_bridge.pricing import form as F
+    from semantic_bridge.pricing import karsilastir as KS
+    res = KS.compare_all(snap, defaults={"targetMargin": 0.15, "variableRate": 0.05, "overheadRate": 0.0, "sellThrough": 1.0,
+                                         "qtys": [1000, 2000, 3000, 5000], "channelMix": None},
+                         tariff=F.default_tariff(), kur=None, freelance={}, market={}, calculate=P.calculate)
+    priced = {c for c, b in snap["books"].items() if b.get("price")}
+    assert {r["code"] for r in res["rows"]} == priced
+    for r in res["rows"]:
+        assert r["status"] in KS.STATUS
+        if r["status"] == "hesaplanamadi":
+            assert r["reason"]
+        else:
+            assert r["diff"] == pytest.approx(r["ours"] - r["price"]) and r["ours"] % 5 == 0
+    sel = KS.select(res, new=True)
+    assert sel["total"] == len(res["rows"]) and sum(sel["counts"].values()) == sel["total"]
 
 
 def test_calculate_endpoint_logic(snap):

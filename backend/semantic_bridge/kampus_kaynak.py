@@ -20,8 +20,9 @@ F_ZIL = "Onay bekleyen sayısı: onayınızı bekleyen kayıtların sayımı."
 F_KUTLAMA = "Kutlamalar: size gelen, görülmemiş kutlama sayısı ve son 30 günün kayıtları; alkış duvarı son kayıtlar."
 F_ODA = "Toplantı odaları: şu an boş/dolu = şimdiki saatte rezervasyonu olmayan/olan oda sayısı."
 F_EGITIM = "Eğitimlerim: sizi bekleyen anket = doldurulmamış eğitim geri bildirimi sayısı."
-F_AJANDA = ("Ajanda: sizin önemli günleriniz, görevleriniz ve CRM etkinlikleri; «+N kayıt daha» = ilk 5'ten sonraki kayıt "
-            "sayısı.")
+F_AJANDA = ("Ajanda: sizin fuar, görev ve CRM etkinlikleriniz; önemli günler = CRM özel günleri (Sezon takviminin gece "
+            "okuması, tarih kuralı ya da CRM haftası) ve İK resmî tatilleri; doğum günleri İK kaydından (gün ve ay). "
+            "«+N kayıt daha» = ilk 5'ten sonraki kayıt sayısı.")
 
 
 def people_sources(k: P.Kaynaklar, schema: str, crm_db: Optional[str], last: dict[str, Any], rows: int,

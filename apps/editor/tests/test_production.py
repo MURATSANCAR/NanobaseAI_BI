@@ -153,6 +153,22 @@ def test_kunye_manual_and_missing():
     assert set(front.EDITABLE) >= {"Baskı", "Adres", "Editör"}
 
 
+def test_kunye_book_fields_only_from_own_kunye():
+    """ZEKI-56: başka kitabın künyesinden (yayınevinin son künyesi) gelen telif/editör basılmaz, «—» kalır;
+    yayınevi alanı oradan alınabilir. Tasarım satırında ürün adı yok."""
+    ms = _ms(1, 1, 1)
+    other = "yayınevinin son künyesi (g1)"
+    found = {"TELIF": {"value": "Copyright © Başka Yazar 2022", "quote": "", "source": other},
+             "EDITOR": {"value": "Başka Editör", "quote": "", "source": other},
+             "ADRES": {"value": "Bir Sokak No: 1", "quote": "", "source": other}}
+    d = dict((r[0], r[1]) for r in front.kunye(ms, found) if r[0])
+    assert d["Telif"] == front.MISSING and d["Editör"] == front.MISSING and d["Adres"] == "Bir Sokak No: 1"
+    own = {"TELIF": {"value": "© 2026 Yazar", "quote": "", "source": front.OWN_SOURCE}}
+    assert dict((r[0], r[1]) for r in front.kunye(ms, own) if r[0])["Telif"] == "© 2026 Yazar"
+    assert "TELIF" not in front.PUBLISHER_FIELDS and "TELIF" in front.PERSON_FIELDS
+    assert "nanobase" not in front.DESIGN_CREDIT.casefold() and "ZEKİ AI" in front.DESIGN_CREDIT
+
+
 # ------------------------------------------------------------------ resim boyutu
 def test_image_sizes(monkeypatch):
     from editor.production import images

@@ -644,7 +644,7 @@ def get_form_tariff(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
         row = c.execute(form_tariff_stmt(tenant)).mappings().first()
     saved = _j(row["values_json"], {}) if row else {}
-    return {**base, **saved, "updatedBy": row["updated_by"] if row else None,
+    return {**base, "kurKaynak": "logo", **saved, "updatedBy": row["updated_by"] if row else None,
             "updatedAt": _iso(row["updated_at"]) if row else None, "isDefault": not row}
 
 
@@ -659,10 +659,15 @@ def _pos(v: Any, what: str, allow_zero: bool = True) -> float:
 
 
 def save_form_tariff(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str, Any]) -> dict[str, Any]:
-    """Tarifenin değiştirilebilen kısımları: kur, vade, kâğıt fiyatları, kalem fiyatları, fire, dolaylı gider, kapak
-    ücretinin bölündüğü baskı sayısı, yayınevi iskontoları. Ebat ve klişe tabloları varsayılandan gelir."""
+    """Tarifenin değiştirilebilen kısımları: kur ve kaynağı (Logo faturaları ya da elle), vade, kâğıt fiyatları, kalem
+    fiyatları, fire, dolaylı gider, kapak ücretinin bölündüğü baskı sayısı, yayınevi iskontoları. Ebat ve klişe tabloları
+    varsayılandan gelir."""
     cur = get_form_tariff(engine, tenant)
-    out = {k: cur[k] for k in ("kur", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")}
+    out = {k: cur[k] for k in ("kur", "kurKaynak", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")}
+    if "kurKaynak" in body:
+        if body["kurKaynak"] not in ("logo", "elle"):
+            raise PricingError("Kur kaynağı «logo» ya da «elle» olmalı.")
+        out["kurKaynak"] = body["kurKaynak"]
     if "kur" in body:
         out["kur"] = {c: _pos((body["kur"] or {}).get(c, out["kur"][c]), f"{c} kuru", False) for c in ("USD", "EUR")}
     if "vade" in body:

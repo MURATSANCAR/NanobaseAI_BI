@@ -22,7 +22,7 @@ export type Meta = {
   me: { username: string; display: string | null; admin: boolean; talep: boolean; uret: boolean; tasarimOnay: boolean; mesajOnay: boolean; marka: boolean };
 };
 
-export type Counts = { gorsel: number; metin: number; onayli: number; bekleyen: number; reddedilen: number; taslak: number };
+export type Counts = { gorsel: number; metin: number; onayli: number; bekleyen: number; reddedilen: number };
 export type Cover = { kaynak?: string; url?: string | null; w?: number; h?: number; sha256?: string; gonderildi?: string | null; denenen?: string[]; dosyaAdi?: string | null };
 
 export type CreativeRequest = {
@@ -89,7 +89,6 @@ export type Asset = {
   varyant: string;
   metin: string | null;
   kaynak: string;
-  taslakLisans: boolean;
   dogrulama: Check | null;
   ayar: VisualSetting | null;
   genislik: number | null;
@@ -118,7 +117,7 @@ export type Job = {
   durum: 'suruyor' | 'bitti' | 'hata';
   ilerleme: [number, number, string?] | null;
   sonuc: { uretilen?: number; atlanan?: Array<{ varyant?: string; format?: string; neden: string }>; elenen?: Array<{ tur: string; neden: string; metin?: string }>; uyari?: number; kapak?: Cover;
-    palet?: string[]; kaynaklar?: Array<{ key: string; label: string; kind: string; draft: boolean }>; alintilar?: string[] } | null;
+    palet?: string[]; kaynaklar?: Array<{ key: string; label: string; kind: string }>; alintilar?: string[] } | null;
   hata: string | null;
   olusturan: string;
   baslangic: string;

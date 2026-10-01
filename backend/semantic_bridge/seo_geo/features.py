@@ -8,6 +8,7 @@
 - speed.py        PageSpeed Insights + CrUX: sayfa türü başına hız ve Core Web Vitals
 - competitors.py  aynı kitap aramasında rakip sitelerin Google sırası (SerpApi, aylık kota)
 - entity.py       kimlik: Wikidata, Organization sameAs, bilgi paneli hazırlığı
+- yandex.py       Yandex Webmaster (yalnız okuma): sorgu, dizin, teşhis, dış bağlantı; Google ile yan yana
 - guides.py       soruya cevap veren rehber/liste sayfası taslakları (ZEKİ AI yazar, insan onaylar; hiçbir yere gönderilmez)
 
 Kurallar: T-soft'a ve CRM'e yazma yok; ekranda model/teknoloji adı yok; sessiz sayı tavanı yok (kota ayarı hariç).
@@ -33,7 +34,11 @@ MODULES = ("impact", "opportunities", "bing", "tech", "speed", "competitors", "e
            # 2026-09-28: Search Console site haritası durumu (hata/uyarı/son okuma, 6 saatte bir)
            "gsc_sitemaps",
            # 2026-09-28: Google Merchant Center ürün durumu (onaylı/onaylanmayan/sınırlı, ürün sorunları; 6 saatte bir)
-           "merchant")
+           "merchant",
+           # 2026-09-29: Google Analytics aramadan satışa (organik oturum → sepet → satış → ciro, sayfa bazında; günde bir)
+           "ga4",
+           # 2026-10-01: Yandex Webmaster (sorgu, dizin, teşhis, dış bağlantı; gece okuması, yalnız okuma)
+           "yandex")
 
 
 @dataclass

@@ -1,7 +1,7 @@
 """Kapak tarzı ve kolaj kapak uçları (collage.py). api.py'de tek satırla bağlanır; yetki uygulamanın genel
 bağımlılığından (Bearer), yazanlarda X-Editor. Hepsi /v1/studio/jobs/{job}/collage altında:
 
-    GET  collage                          görünüm: tarz, adaylar, seçili, düzen, etiketler, iş durumu, taslak uyarısı
+    GET  collage                          görünüm: tarz, adaylar, seçili, düzen, etiketler, iş durumu
     PUT  collage/style      {style}       illustrated | collage | typographic → kapak yeniden kurulur
     POST collage/photos     {count, direction}  model adayları (GPU işi, Temporal CollagePhotos) → {workflow}
     PUT  collage/upload?filename=         ham gövde: editörün fotoğrafı (STUDIO_UPLOAD_MB; aşan 413 TOO_LARGE)
@@ -24,7 +24,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from . import collage
-from .api import Coded, _busy, _dir, _image, _start, editor, upload_mb
+from .api import Coded, _busy, _dir, _image, _preview, _start, editor, upload_mb
 
 router = APIRouter()
 C = "/v1/studio/jobs/{job}/collage"
@@ -154,6 +154,8 @@ def collage_photo(job: str, pid: str, w: int = Query(480, ge=0, le=2400)) -> Res
 def collage_preview(job: str, w: int = Query(900, ge=120, le=2400)) -> Response:
     d = _ready(job)
     try:
-        return _image(collage.front_preview(d, w), 0)
+        # Ön kapak zaten istenen genişlikte çizilir; ekrana aynı genişlikte WebP gider. Eskiden özgün PNG gidiyordu:
+        # 1040 px'te 1,6 MB, tünelden 3,3 sn (2026-09-29 ölçümü); öteki önizlemeler gibi WebP.
+        return _preview(collage.front_preview(d, w))
     except FileNotFoundError:
         raise HTTPException(404, "kapak henüz kurulmadı") from None

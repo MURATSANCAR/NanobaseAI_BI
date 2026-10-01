@@ -1,20 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Loader2, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
-import { fmtInt, fmtTl, pazarApi, type Comparable, type OwnBookHit } from './api';
-import { CategorySelect, useCategories, useMeta } from './parts';
+import { fmtDmy, fmtInt, fmtTl, pazarApi, type Comparable, type OwnBookHit } from './api';
+import { CategorySelect, useCategories, useMeta, useRakipKaynak } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 import { parseTrNumber } from '../components/trNumber';
 
-/** Emsal bul: kitap adı ya da konu (ya da bir TİMAŞ kitabından başla) → rakip ve TİMAŞ emsalleri, gerekçeleriyle.
+/** Emsal bul: kitap adı ya da konu (ya da bir TİMAŞ kitabından başla) → rakip (seçilen kaynaktan) ve TİMAŞ emsalleri,
+ *  gerekçeleriyle.
  *  Kurallı süzgeç (kategori, sayfa ±, fiyat ±) + ortak sözcük; ilk adayları Zeki AI «konu benzerliği» diye sınıflar. */
 export default function ComparablesScreen() {
   const meta = useMeta();
   const cats = useCategories();
+  const src = useRakipKaynak();
   const [q, setQ] = useState('');
   const [base, setBase] = useState<OwnBookHit | null>(null);
   const [bookQ, setBookQ] = useState('');
@@ -31,11 +33,15 @@ export default function ComparablesScreen() {
         kategoriId: kategori || undefined,
         sayfa: Number(sayfa) || undefined,
         fiyat: parseTrNumber(fiyat) || undefined,
+        kaynak: src.kaynak,
       }),
   });
+  // Kaynak değişince önceki kaynağın sonucu ekranda kalmaz.
+  const { reset } = run;
+  useEffect(() => reset(), [src.kaynak, reset]);
   const s = meta.data?.settings;
   const r = run.data;
-  const canRun = !!(q.trim() || base);
+  const canRun = !!(q.trim() || base) && src.ready;
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
       <Panel>
@@ -91,7 +97,10 @@ export default function ComparablesScreen() {
                   )}
                 </div>
               )}
-              <p className="text-[11px] leading-snug text-canvas-muted">Kitaptan başlanırsa kategorisi, sayfası, fiyatı ve arka kapağı süzgece girer; CRM'deki emsal bağları başa gelir.</p>
+              <p className="text-[11px] leading-snug text-canvas-muted">
+                Kitaptan başlanırsa kategorisi, sayfası, fiyatı ve arka kapağı süzgece girer
+                {src.kaynak === 'crm' ? "; CRM'deki emsal bağları başa gelir." : '. Başarı kataloğunda rakip başlığın tanıtım metni yoktur; benzerlik adı ve kategorisinden kurulur.'}
+              </p>
             </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -128,6 +137,7 @@ export default function ComparablesScreen() {
             {r.counts.zekiBenzemiyor > 0 && <> Zeki AI'ın «benzemiyor» dediği {fmtInt(r.counts.zekiBenzemiyor)} aday listeden çıkarıldı.</>}
             {r.stopped && <> {r.stopped}</>}
             {r.query.kategoriYol && <> Kategori: {r.query.kategoriYol}.</>}
+            {r.kaynakAd && <> Rakipler: {r.kaynakAd}{r.katalogTarihi ? ` (${fmtDmy(r.katalogTarihi)})` : ''}.</>}
           </Note>
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <ResultList title="Rakip emsaller" items={r.rakip} k={kaynakOf(r)} />

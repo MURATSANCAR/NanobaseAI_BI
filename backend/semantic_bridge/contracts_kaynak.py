@@ -29,10 +29,14 @@ F_OZET = ("Tek CRM sorgusunda etkin (statecode = 0) sözleşmeler sayılır. Yü
           "(Proje) ya da Aktif - Yenileme; yenilemede = Aktif - Yenileme; «N günde bitiyor» = yürürlükte, süresiz "
           "olmayan ve bitişi bugün ile bugün + N gün arasında olan; ortalama telif = yürürlükteki sözleşmelerde karton "
           "kapak telif oranı (new_Telif) sıfırdan büyük olanların ortalaması, yanındaki sayı bu oranı dolu sözleşme "
-          "sayısıdır. N (uyarı günü) Yönetim ayarıdır (EDITORIAL_CONTRACT_WARN_DAYS, varsayılan 60).")
+          "sayısıdır. N (uyarı günü) Yönetim ayarıdır (EDITORIAL_CONTRACT_WARN_DAYS, varsayılan 60). Süre süzgecindeki "
+          "sayılar: süresi devam eden = süresiz işaretli olmayan ve bitişi bugün ya da sonra; bitmiş = süresiz işaretli "
+          "olmayan ve bitişi bugünden önce; süresiz = süresiz işaretli ya da bitiş tarihi girilmemiş (üçü toplamı verir).")
 F_SECENEK = "Süzgeç seçeneğindeki sayı = o durumdaki (ya da tipteki) etkin CRM sözleşmesi sayısı."
 F_LISTE = ("Liste: süzgece uyan etkin CRM sözleşmeleri, sayfa başına 50 kayıt (toplam ayrı sayım sorgusundan). Kalan gün = "
-           "bitiş − bugün (CRM sorgusunda DATEDIFF). Telif oranları sözleşme kartındaki biçim oranlarıdır; avans "
+           "bitiş − bugün (CRM sorgusunda DATEDIFF). «Bitişi en yakın» sırası: önce süresi devam edenler (bitişi bugüne en "
+           "yakın olan başta), sonra bitmişler (en son biten başta), en sonda süresiz ya da bitişi girilmemiş olanlar. "
+           "Kitap adı bir kez yazılır; aynı adı taşıyan farklı kitap kartları stok koduyla ayrılır. Telif oranları sözleşme kartındaki biçim oranlarıdır; avans "
            "sözleşmedeki avans tutarı; taraf payı taraf kaydındaki ödeme payıdır (new_Odeme). Kitaplar ve taraflar "
            "yalnız bu sayfadaki sözleşmeler için okunur.")
 F_PORTAL_FARK = ("«Portalda» rozeti: sözleşme portalda düzenlenmişse portal kaydının durumu; «N fark» = portal şartları "
@@ -214,16 +218,18 @@ def for_summary(schema: str, out: dict[str, Any], engine: Any = None, hazir_an: 
                                    "Yönetim ekranında girilen uyarı günü; girilmediyse ortam değeri ya da 60."))
     f = k.hesap("ozet", F_OZET, inputs)
     k.alanlar({"total": f, "active": f, "renewal": f, "expiring": f, "avgRoyalty": f, "avgRoyaltyOver": f, "warnDays": f,
+               "terms": f,
                "db": ozet, "statuses[]": k.hesap("durumlar", F_SECENEK, [durum]), "kinds[]": k.hesap("tipler", F_SECENEK, [tip])})
     return k
 
 
 def for_page(engine: Any, tenant: str, schema: str, out: dict[str, Any], page: int, *, order: str = "bitis", q: str = "",
-             status: Optional[int] = None, kind: Optional[int] = None, expiring_days: Optional[int] = None) -> P.Kaynaklar:
+             status: Optional[int] = None, kind: Optional[int] = None, expiring_days: Optional[int] = None,
+             term: str = "") -> P.Kaynaklar:
     """`GET /api/v1/editorial/contracts`: CRM sözleşme listesinin sayfası (oranlar, avans, pay, kalan gün) ve portal rozeti."""
     k = P.Kaynaklar()
     db = crm_db(E._prefix(schema))
-    flt = {"q": q, "status": status, "kind": kind, "expiring_days": expiring_days}
+    flt = {"q": q, "status": status, "kind": kind, "expiring_days": expiring_days, "term": term}
     items = out.get("items") or []
     cnt = k.sorgu("sozlesme.crm.sayim", "CRM sözleşme sayısı (süzgece uyan)", "crm", E.count_sql(schema, **flt), database=db,
                   rows=1)

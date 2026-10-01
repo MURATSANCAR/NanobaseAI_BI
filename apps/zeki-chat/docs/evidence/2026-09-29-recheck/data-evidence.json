@@ -1,0 +1,19 @@
+{
+  "before": {
+    "users": 3,
+    "messages": 1,
+    "rooms": 1
+  },
+  "after": {
+    "users": 3,
+    "messages": 1,
+    "rooms": 1
+  },
+  "unchanged": true,
+  "sessionFilesRemaining": [],
+  "cleanup": {
+    "portal_sessions_removed": 1,
+    "chat_tokens_removed": 4,
+    "remaining_test_chat_tokens": 0
+  }
+}

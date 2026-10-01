@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, Check, Loader2, Palette, PenLine, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Check, Loader2, Palette, PenLine, RotateCcw, Sparkles } from 'lucide-react';
 import { studioApi, type StudioJob } from '../../../engine';
 import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
@@ -244,14 +244,6 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
           </Note>
         </div>
       )}
-      {v.drafts.length > 0 && (
-        <div className="mt-2">
-          <Note tone="warn">
-            <AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden />
-            Taslak: {v.drafts.filter(Boolean).map((n) => `${n}. sayfa`).join(', ')} çizgisi Zeki AI ile yeniden çizildi. Bu çizgiler ticari basıma uygun değildir; basımdan önce otomatik çıkarılan çizgiye dönün ya da çizerin elinden geçirin.
-          </Note>
-        </div>
-      )}
 
       {v.sentences.length > 0 && (
         <section className="mt-3">
@@ -308,7 +300,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <section className="mt-3">
           <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Boyama çizgileri</h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
-            Çizgi resimden otomatik çıkarılır. Yetmezse «Zeki AI ile yeniden çiz» yeni sürüm üretir (taslak); eski çizgi silinmez, sürümler ve onay yukarıdaki sayfa gezgininde.
+            Çizgi resimden otomatik çıkarılır. Yetmezse «Zeki AI ile yeniden çiz» yeni sürüm üretir; eski çizgi silinmez, sürümler ve onay yukarıdaki sayfa gezgininde.
           </p>
           <ul className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             {v.arts.map((a) => {
@@ -320,8 +312,8 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                     : <div className="aspect-[4/3] w-full rounded-md bg-slate-100" />}
                   <div className="flex items-center justify-between gap-1 text-[11px]">
                     <span className="font-mono text-canvas-muted">{a.no ? `s. ${a.no}` : '—'}</span>
-                    <span className={`rounded-full px-1.5 py-0.5 font-bold ${a.draft ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-canvas-muted'}`}>
-                      {a.draft ? 'Zeki AI · taslak' : 'Otomatik çizgi'}
+                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-bold text-canvas-muted">
+                      {a.model ? 'Zeki AI çizgisi' : 'Otomatik çizgi'}
                     </span>
                   </div>
                   {canProduce && <button type="button" disabled={gpuBusy || running || redraw.isPending} onClick={() => redraw.mutate(a.aid)}

@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "viewports": [
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "privateBotAnswerVisible": true,
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 320,
+      "scrollWidth": 320,
+      "privateBotAnswerVisible": true,
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 390,
+      "scrollWidth": 390,
+      "privateBotAnswerVisible": true,
+      "errors": [],
+      "outside": []
+    },
+    {
+      "width": 768,
+      "scrollWidth": 768,
+      "privateBotAnswerVisible": true,
+      "errors": [],
+      "outside": []
+    }
+  ]
+}

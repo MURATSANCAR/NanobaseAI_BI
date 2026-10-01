@@ -1,0 +1,16 @@
+{
+  "sql": "SELECT COUNT(*) AS invoice_count FROM dbo.LG_411_01_INVOICE WHERE TRCODE = 8 AND DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED = 0",
+  "columns": [
+    {
+      "name": "invoice_count",
+      "type": "int"
+    }
+  ],
+  "rows": [
+    {
+      "invoice_count": 27425
+    }
+  ],
+  "truncated": false,
+  "source": "connected live Logo"
+}

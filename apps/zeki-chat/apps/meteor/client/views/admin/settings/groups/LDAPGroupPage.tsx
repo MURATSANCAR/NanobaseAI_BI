@@ -1,0 +1,124 @@
+import type { ISetting } from '@zeki.chat/core-typings';
+import { Button, Box, TextInput, Field, FieldLabel, FieldRow } from '@rocket.chat/fuselage';
+import { useEffectEvent } from '@rocket.chat/fuselage-hooks';
+import { GenericModal } from '@zeki.chat/ui-client';
+import { useSetModal, useToastMessageDispatch, useSetting, useEndpoint } from '@zeki.chat/ui-contexts';
+import type { FormEvent } from 'react';
+import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import BaseGroupPage from './BaseGroupPage';
+import { useLdapSync } from '../../../../hooks/useLdapSync';
+import { useEditableSettings } from '../../EditableSettingsContext';
+
+type LDAPGroupPageProps = ISetting & {
+	onClickBack?: () => void;
+};
+
+function LDAPGroupPage({ _id, i18nLabel, onClickBack, ...group }: LDAPGroupPageProps) {
+	const { t } = useTranslation();
+	const dispatchToastMessage = useToastMessageDispatch();
+	const testConnection = useEndpoint('POST', '/v1/ldap.testConnection');
+	const testSearch = useEndpoint('POST', '/v1/ldap.testSearch');
+	const ldapEnabled = useSetting('LDAP_Enable');
+	const setModal = useSetModal();
+	const closeModal = useEffectEvent(() => setModal());
+	const handleSyncNow = useLdapSync();
+
+
+	const editableSettings = useEditableSettings(
+		useMemo(
+			() => ({
+				group: _id,
+			}),
+			[_id],
+		),
+	);
+
+	const changed = useMemo(() => editableSettings.some(({ changed }) => changed), [editableSettings]);
+
+	const handleTestConnectionButtonClick = async (): Promise<void> => {
+		try {
+			const { message } = await testConnection();
+			dispatchToastMessage({ type: 'success', message: t(message as Parameters<typeof t>[0]) });
+		} catch (error) {
+			error instanceof Error && dispatchToastMessage({ type: 'error', message: error });
+		}
+	};
+
+	const handleSearchTestButtonClick = async (): Promise<void> => {
+		try {
+			await testConnection();
+			let username = '';
+			const handleChangeUsername = (event: FormEvent<HTMLInputElement>): void => {
+				username = event.currentTarget.value;
+			};
+
+			const confirmSearch = async (): Promise<void> => {
+				try {
+					const { message } = await testSearch({ username });
+					dispatchToastMessage({ type: 'success', message: t(message as Parameters<typeof t>[0]) });
+				} catch (error) {
+					error instanceof Error && dispatchToastMessage({ type: 'error', message: error });
+				}
+			};
+
+			setModal(
+				<GenericModal
+					wrapperFunction={(props) => (
+						<Box
+							is='form'
+							onSubmit={(e: FormEvent) => {
+								e.preventDefault();
+								confirmSearch();
+							}}
+							{...props}
+						/>
+					)}
+					variant='info'
+					confirmText={t('Search')}
+					cancelText={t('Cancel')}
+					title={t('Test_LDAP_Search')}
+					onClose={closeModal}
+				>
+					<Field>
+						<Box display='flex'>
+							<FieldLabel>{t('LDAP_Username_To_Search')}</FieldLabel>
+						</Box>
+
+						<FieldRow>
+							<TextInput onChange={handleChangeUsername} />
+						</FieldRow>
+					</Field>
+				</GenericModal>,
+			);
+		} catch (error) {
+			error instanceof Error && dispatchToastMessage({ type: 'error', message: error });
+		}
+	};
+
+	return (
+		<BaseGroupPage
+			_id={_id}
+			i18nLabel={i18nLabel}
+			onClickBack={onClickBack}
+			{...group}
+			headerButtons={
+				<>
+					<Button disabled={!ldapEnabled || changed} onClick={handleTestConnectionButtonClick}>
+						{t('Test_Connection')}
+					</Button>
+					<Button disabled={!ldapEnabled || changed} onClick={handleSearchTestButtonClick}>
+						{t('Test_LDAP_Search')}
+					</Button>
+					<Button disabled={!ldapEnabled || changed} onClick={handleSyncNow}>
+						{t('LDAP_Sync_Now')}
+					</Button>
+					{/* Zeki: vendor LDAP documentation button removed */}
+				</>
+			}
+		/>
+	);
+}
+
+export default memo(LDAPGroupPage);

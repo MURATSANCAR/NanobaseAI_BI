@@ -1,0 +1,23 @@
+import { ServiceClassInternal } from '@zeki.chat/core-services';
+import type { IUserService } from '@zeki.chat/core-services';
+import { Users } from '@zeki.chat/models';
+
+import { getMaxLoginTokens } from '../../lib/getMaxLoginTokens';
+
+// TODO merge this service with Account service
+export class UserService extends ServiceClassInternal implements IUserService {
+	protected name = 'user';
+
+	async ensureLoginTokensLimit(uid: string): Promise<void> {
+		if (!Number.isFinite(getMaxLoginTokens())) {
+			return;
+		}
+		const [{ tokens } = { tokens: [] }] = await Users.findAllResumeTokensByUserId(uid);
+		if (tokens.length < getMaxLoginTokens()) {
+			return;
+		}
+
+		const oldestDate = tokens.reverse()[getMaxLoginTokens() - 1];
+		await Users.removeOlderResumeTokensByUserId(uid, oldestDate.when);
+	}
+}

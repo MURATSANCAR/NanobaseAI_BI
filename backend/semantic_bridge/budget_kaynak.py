@@ -14,8 +14,9 @@ from semantic_bridge import provenance as P
 
 # ------------------------------------------------------------------ formüller (ekranda okunur metin)
 
-F_NET = ("Net ciro = Σ LINENET (satış: TRCODE 7, 8, 9) − Σ LINENET (iade: TRCODE 2, 3); yalnız faturalı "
-         "(INVOICEREF ≠ 0) malzeme satırları (LINETYPE 0), iptaller hariç. Net adet aynı kuralla Σ AMOUNT.")
+F_NET = ("Net ciro = Σ VATMATRAH (satış: TRCODE 7, 8, 9) − Σ VATMATRAH (iade: TRCODE 2, 3); yalnız faturalı "
+         "(INVOICEREF ≠ 0) malzeme satırları (LINETYPE 0), iptaller hariç; dönem fatura tarihi. Net adet aynı kuralla "
+         "Σ AMOUNT.")
 F_GIDER = ("Gerçekleşen gider = 7 ile başlayan hesaplarda borç − alacak (muhasebe fiş satırı); yansıtma hesapları "
            "(7x1) ve dönem sonu kapanış satırları hariç. Departman = masraf merkezi; rakamla başlayan merkezler "
            "«kitap ve ürün bazlı merkezler» satırında toplanır.")

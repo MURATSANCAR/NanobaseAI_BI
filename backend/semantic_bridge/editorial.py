@@ -14,11 +14,10 @@ metin (arama) `_like` ile kaçışlanır; kimlikler GUID biçimine, kodlar tamsa
 """
 from __future__ import annotations
 
-import html
 import re
 from typing import Any, Callable, Optional
 
-from semantic_bridge import crm_rights
+from semantic_bridge import crm_rights, crm_text
 
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _GUID = re.compile(r"^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
@@ -63,8 +62,30 @@ def _guid(value: str) -> str:
     return value
 
 
+#: Süre süzgeci (ZEKI-20). Üçü bütün etkin sözleşmeleri örtüşmeden böler:
+#: - devam: süreli (süresiz işareti yok) ve bitişi bugün ya da sonra,
+#: - bitmis: süreli ve bitişi bugünden önce,
+#: - suresiz: CRM'de «süresiz» işaretli ya da bitiş tarihi girilmemiş. Süresiz işaretli sözleşmenin bitiş kolonunda
+#:   eski bir tarih kalabiliyor; o tarih bitiş sayılmaz (liste satırı da «Süresiz» yazar).
+TERMS = ("devam", "bitmis", "suresiz")
+_TIMED = "ISNULL(s.new_suresizsozlesme, 0) = 0"
+_TODAY = "CAST(GETDATE() AS date)"
+_TERM_SQL = {
+    "devam": f"({_TIMED} AND s.new_SozlesmeBitisTarihi >= {_TODAY})",
+    "bitmis": f"({_TIMED} AND s.new_SozlesmeBitisTarihi < {_TODAY})",
+    "suresiz": "(ISNULL(s.new_suresizsozlesme, 0) <> 0 OR s.new_SozlesmeBitisTarihi IS NULL)",
+}
+
+
+def _term(term: str) -> str:
+    sql = _TERM_SQL.get((term or "").strip())
+    if sql is None:
+        raise EditorialError("Bilinmeyen süre süzgeci.")
+    return sql
+
+
 def _where(p: str, *, q: str = "", status: Optional[int] = None, kind: Optional[int] = None,
-           expiring_days: Optional[int] = None) -> str:
+           expiring_days: Optional[int] = None, term: str = "") -> str:
     parts = ["s.statecode = 0"]
     if status is not None:
         parts.append(f"s.statuscode = {int(status)}")
@@ -72,6 +93,8 @@ def _where(p: str, *, q: str = "", status: Optional[int] = None, kind: Optional[
         parts.append(f"s.new_SozlesmeTipi = {int(kind)}")
     if expiring_days is not None:
         parts.append(_expiring(int(expiring_days)))
+    if (term or "").strip():
+        parts.append(_term(term))
     if q.strip():
         k = _like(q)
         parts.append(
@@ -106,7 +129,10 @@ def summary_sql(schema: str, warn_days: int) -> str:
         f" SUM(CASE WHEN s.statuscode = {RENEWAL_STATUS} THEN 1 ELSE 0 END) AS yenilemede,"
         f" SUM(CASE WHEN {_expiring(warn_days)} THEN 1 ELSE 0 END) AS yaklasan,"
         f" AVG(CASE WHEN s.statuscode IN ({active}) AND s.new_Telif > 0 THEN s.new_Telif END) AS ort_telif,"
-        f" SUM(CASE WHEN s.statuscode IN ({active}) AND s.new_Telif > 0 THEN 1 ELSE 0 END) AS telif_dolu"
+        f" SUM(CASE WHEN s.statuscode IN ({active}) AND s.new_Telif > 0 THEN 1 ELSE 0 END) AS telif_dolu,"
+        f" SUM(CASE WHEN {_TERM_SQL['devam']} THEN 1 ELSE 0 END) AS sure_devam,"
+        f" SUM(CASE WHEN {_TERM_SQL['bitmis']} THEN 1 ELSE 0 END) AS sure_bitmis,"
+        f" SUM(CASE WHEN {_TERM_SQL['suresiz']} THEN 1 ELSE 0 END) AS sure_suresiz"
         f" FROM {p}new_sozlesmeBase s WHERE s.statecode = 0"
     )
 
@@ -131,8 +157,13 @@ def count_sql(schema: str, **flt: Any) -> str:
 
 def list_sql(schema: str, page: int, *, order: str = "bitis", **flt: Any) -> str:
     p = _prefix(schema)
+    # «Bitişi en yakın» (ZEKI-20): önce süresi devam edenler (bugüne en yakın bitiş başta), sonra bitmişler (en son biten
+    # başta), en sonda süresiz / bitişi girilmemiş olanlar. Eskiden yalnız bitiş tarihine artan sıralanıyordu; en eski
+    # bitmiş sözleşmeler ve bitiş kolonunda eski tarih kalan süresiz sözleşmeler listenin başına geliyordu.
     by = {
-        "bitis": "CASE WHEN s.new_SozlesmeBitisTarihi IS NULL THEN 1 ELSE 0 END, s.new_SozlesmeBitisTarihi, s.new_sozlesmeId",
+        "bitis": (f"CASE WHEN {_TERM_SQL['devam']} THEN 0 WHEN {_TERM_SQL['bitmis']} THEN 1 ELSE 2 END,"
+                  f" CASE WHEN {_TERM_SQL['devam']} THEN s.new_SozlesmeBitisTarihi END,"
+                  f" CASE WHEN {_TERM_SQL['bitmis']} THEN s.new_SozlesmeBitisTarihi END DESC, s.new_sozlesmeId"),
         "yeni": "s.ModifiedOn DESC, s.new_sozlesmeId",
     }.get(order, "s.new_name, s.new_sozlesmeId")
     return (
@@ -153,9 +184,11 @@ def _in(ids: list[str]) -> str:
 
 
 def books_sql(schema: str, ids: list[str]) -> str:
+    """Sayfadaki sözleşmelerin kitap kartları. Stok kodu ve ISBN, aynı adı taşıyan farklı kitap kartlarını (başka baskı,
+    cilt ya da kart) ayırt etmek için okunur (ZEKI-21)."""
     p = _prefix(schema)
     return (
-        "SELECT sk.new_sozlesmeid, k.new_kitapId, k.new_name"
+        "SELECT sk.new_sozlesmeid, k.new_kitapId, k.new_name, k.new_StokKodu, k.new_isbn13"
         f" FROM {p}new_new_sozlesme_new_kitapBase sk JOIN {p}new_kitapBase k ON k.new_kitapId = sk.new_kitapid"
         f" WHERE sk.new_sozlesmeid IN ({_in(ids)}) ORDER BY k.new_name"
     )
@@ -197,10 +230,9 @@ def _date(v: Any) -> Optional[str]:
 
 
 def _plain(v: Any) -> Optional[str]:
-    """CRM zengin metin alanları HTML tutar (<p>, &uuml;); ekranda düz paragraflar gösterilir."""
-    t = re.sub(r"(?i)<br\s*/?>|</(p|div|li)>", "\n", str(v or ""))
-    t = html.unescape(re.sub(r"<[^>]+>", "", t)).replace("\xa0", " ")
-    return "\n".join(x for x in (re.sub(r"[ \t]+", " ", ln).strip() for ln in t.splitlines()) if x) or None
+    """CRM zengin metin alanları HTML tutar (<p>, &uuml;); ekranda düz paragraflar gösterilir (ortak kural
+    `crm_text.rich_text`)."""
+    return crm_text.rich_text(v)
 
 
 def _rates(r: dict[str, Any]) -> list[dict[str, Any]]:
@@ -239,6 +271,16 @@ def contract(r: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _add_book(books: list[dict[str, Any]], row: dict[str, Any]) -> None:
+    """Sözleşmenin kitabı (ZEKI-21). Aynı kitap kartı bir kez girer. Aynı adı taşıyan farklı kartlar (başka stok kodu)
+    ayrı kalır; ekran onları tek adın altında stok koduyla ayırır (kaç kart olduğu görünür, ad tekrarlanmaz)."""
+    bid = _s(row.get("new_kitapId"))
+    if bid and any((b.get("id") or "").lower() == bid.lower() for b in books):
+        return
+    books.append({"id": bid, "title": _s(row.get("new_name")), "stockCode": _s(row.get("new_StokKodu")),
+                  "isbn": _s(row.get("new_isbn13"))})
+
+
 def page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, *, order: str, **flt: Any) -> dict[str, Any]:
     """Bir sayfa sözleşme: kayıtlar, o sayfanın kitapları ve tarafları, süzgece uyan toplam sayı."""
     total = int(_n((run(count_sql(schema, **flt)).get("records") or [{}])[0].get("n")) or 0)
@@ -252,7 +294,7 @@ def page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, *, ord
         for b in run(books_sql(schema, ids)).get("records") or []:
             c = by_id.get(str(b.get("new_sozlesmeid") or "").lower())
             if c is not None and _s(b.get("new_name")):
-                c["books"].append({"id": _s(b.get("new_kitapId")), "title": _s(b.get("new_name"))})
+                _add_book(c["books"], b)
         for t in run(parties_sql(schema, ids)).get("records") or []:
             c = by_id.get(str(t.get("new_sozlesmeid") or "").lower())
             name = _s(t.get("kisi")) or _s(t.get("firma"))
@@ -276,6 +318,8 @@ def summary(schema: str, run: Callable[[str], dict[str, Any]], warn_days: int) -
         "warnDays": warn_days,
         "avgRoyalty": _n(r.get("ort_telif")),
         "avgRoyaltyOver": int(_n(r.get("telif_dolu")) or 0),
+        # Süre süzgecindeki sayılar (ZEKI-20); üçünün toplamı `total`.
+        "terms": {key: int(_n(r.get(f"sure_{key}")) or 0) for key in TERMS},
         "statuses": _facet(run(facet_sql(schema, "statuscode")), "statuscode"),
         "kinds": _facet(run(facet_sql(schema, "new_SozlesmeTipi")), "new_SozlesmeTipi"),
         "db": _timing(res),
@@ -392,7 +436,7 @@ def board_page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, 
         "id": _s(r.get("new_yayinkurulutoplantilariId")),
         "date": _date(r.get("new_toplantitarihi")),
         "decision": _s(r.get("statuscode")),
-        "note": _s(r.get("new_toplantikararnotu")),
+        "note": _plain(r.get("new_toplantikararnotu")),
         "royalty": _n(r.get("new_onerilenteliforani")) or None,
         "advance": _n(r.get("new_avansbedeli")) or None,
         "printRun": _s(r.get("new_Yaynkurulubaskiadedi")),
@@ -412,7 +456,7 @@ def board_page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, 
             opinion = {
                 "by": _s(g.get("yazan")), "verdict": _s(g.get("new_GenelKanaat")), "sales": _s(g.get("new_SatTahmini")),
                 "printRun": _s(g.get("new_lkBaskAdedinerisi")), "price": _n(g.get("new_Fiyatnerisi")) or None,
-                "month": _s(g.get("new_BaskAynerisi")), "text": _s(g.get("new_ProjeHakkndaDierGrler")),
+                "month": _s(g.get("new_BaskAynerisi")), "text": _plain(g.get("new_ProjeHakkndaDierGrler")),
                 "titleIdea": _s(g.get("new_simnerisi")), "on": _date(g.get("CreatedOn")),
             }
             for it in by_project.get(str(g.get("new_kitapprojesiid") or "").lower(), []):
@@ -435,7 +479,36 @@ def _roles(names: list[str]) -> str:
     return ", ".join(f"N'{n}'" for n in clean)
 
 
-def _contrib_from(p: str, roles: list[str], q: str) -> str:
+# Kaynak dil (ZEKI-22): kişinin taraf olduğu etkin CRM sözleşmelerindeki «Orjinal Dili» alanı
+# (`new_sozlesmeBase.new_orjinaldili` → `new_dilBase.new_name`; crm_rights ile aynı bağ, 2026-09-29 ölçümünde 14.863 etkin
+# sözleşmenin 2.097'sinde dolu ve hepsi eşleşiyor). Çeviri sözleşmesinde bu alan çevirinin yapıldığı dildir. Alan boşsa
+# kişi «Belirtilmemiş» grubundadır; dil kitaptan, yayınevinden ya da kişinin başka işinden çıkarılmaz (uydurma yok).
+# Sözleşmenin dil kapsamı (`new_new_sozlesme_new_dilBase`, hakkın verildiği diller) kaynak dil değildir; okunmaz.
+LANG_NONE = "yok"
+
+
+def _lang_links(p: str, person: str) -> str:
+    """Kişinin (`person` kolon ifadesi) kaynak dili girilmiş etkin sözleşmeleri: FROM … WHERE gövdesi (SELECT'siz)."""
+    return (
+        f" FROM {p}new_sozlesmetarafiBase ct"
+        f" JOIN {p}new_sozlesmeBase cs ON cs.new_sozlesmeId = ct.new_sozlesmeid"
+        f" JOIN {p}new_dilBase cd ON cd.new_dilId = cs.new_orjinaldili"
+        f" WHERE ct.new_kisi = {person} AND ct.statecode = 0 AND cs.statecode = 0"
+    )
+
+
+def _lang_filter(p: str, lang: str) -> str:
+    lang = (lang or "").strip()
+    if not lang:
+        return ""
+    if lang == LANG_NONE:
+        return f" AND NOT EXISTS (SELECT 1{_lang_links(p, 'k.ContactId')})"
+    if not _GUID.match(lang):
+        raise EditorialError("Dil seçimi geçerli değil.")
+    return f" AND EXISTS (SELECT 1{_lang_links(p, 'k.ContactId')} AND cd.new_dilId = '{lang}')"
+
+
+def _contrib_from(p: str, roles: list[str], q: str, lang: str = "") -> str:
     sql = (
         f" FROM {p}new_eserkatilimBase e"
         f" JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
@@ -444,26 +517,26 @@ def _contrib_from(p: str, roles: list[str], q: str) -> str:
     )
     if q.strip():
         sql += f" AND k.FullName LIKE N'%{_like(q)}%'"
-    return sql
+    return sql + _lang_filter(p, lang)
 
 
-def contributors_count_sql(schema: str, roles: list[str], q: str = "") -> str:
+def contributors_count_sql(schema: str, roles: list[str], q: str = "", lang: str = "") -> str:
     p = _prefix(schema)
     return (
         "SELECT COUNT(*) AS n, SUM(x.son12) AS son12_kisi, SUM(x.eser) AS katki FROM ("
         "SELECT k.ContactId, COUNT(DISTINCT e.new_Kitap) AS eser,"
         " MAX(CASE WHEN e.CreatedOn >= DATEADD(month, -12, GETDATE()) THEN 1 ELSE 0 END) AS son12"
-        f"{_contrib_from(p, roles, q)} GROUP BY k.ContactId) x"
+        f"{_contrib_from(p, roles, q, lang)} GROUP BY k.ContactId) x"
     )
 
 
-def contributors_list_sql(schema: str, roles: list[str], page: int, q: str = "", order: str = "son") -> str:
+def contributors_list_sql(schema: str, roles: list[str], page: int, q: str = "", order: str = "son", lang: str = "") -> str:
     p = _prefix(schema)
     by = {"son": "MAX(e.CreatedOn) DESC", "eser": "COUNT(DISTINCT e.new_Kitap) DESC", "ad": "k.FullName"}.get(order, "MAX(e.CreatedOn) DESC")
     return (
         "SELECT k.ContactId, k.FullName, COUNT(DISTINCT e.new_Kitap) AS eser, MAX(e.CreatedOn) AS son,"
         " COUNT(DISTINCT CASE WHEN e.CreatedOn >= DATEADD(month, -12, GETDATE()) THEN e.new_Kitap END) AS son12"
-        f"{_contrib_from(p, roles, q)} GROUP BY k.ContactId, k.FullName"
+        f"{_contrib_from(p, roles, q, lang)} GROUP BY k.ContactId, k.FullName"
         f" ORDER BY {by}, k.ContactId OFFSET {max(0, int(page)) * PAGE_SIZE} ROWS FETCH NEXT {PAGE_SIZE} ROWS ONLY"
     )
 
@@ -475,6 +548,36 @@ def contributor_roles_sql(schema: str, ids: list[str]) -> str:
         f" FROM {p}new_eserkatilimBase e JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
         f" WHERE e.statecode = 0 AND e.new_Katilimsaglayan IN ({_in(ids)})"
         " GROUP BY e.new_Katilimsaglayan, t.new_name ORDER BY COUNT(DISTINCT e.new_Kitap) DESC"
+    )
+
+
+def contributor_languages_sql(schema: str, ids: list[str]) -> str:
+    """Sayfadaki kişilerin sözleşmelerinde girilen kaynak diller (ZEKI-22)."""
+    p = _prefix(schema)
+    return (
+        "SELECT DISTINCT ct.new_kisi, cd.new_dilId, cd.new_name AS dil"
+        f" FROM {p}new_sozlesmetarafiBase ct"
+        f" JOIN {p}new_sozlesmeBase cs ON cs.new_sozlesmeId = ct.new_sozlesmeid"
+        f" JOIN {p}new_dilBase cd ON cd.new_dilId = cs.new_orjinaldili"
+        f" WHERE ct.statecode = 0 AND cs.statecode = 0 AND ct.new_kisi IN ({_in(ids)})"
+        " ORDER BY cd.new_name"
+    )
+
+
+def language_facet_sql(schema: str, roles: list[str]) -> str:
+    """Kaynak dil süzgecinin seçenekleri: dil başına, seçili rollerle eser kaydı olan ve sözleşmesinde o dil girilmiş
+    farklı kişi sayısı. Bir kişi birden çok dilde sayılabilir (iki dilden çeviri yapan)."""
+    p = _prefix(schema)
+    return (
+        "SELECT cd.new_dilId, cd.new_name AS dil, COUNT(DISTINCT k.ContactId) AS kisi"
+        f" FROM {p}new_eserkatilimBase e"
+        f" JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
+        f" JOIN {p}ContactBase k ON k.ContactId = e.new_Katilimsaglayan"
+        f" JOIN {p}new_sozlesmetarafiBase ct ON ct.new_kisi = k.ContactId AND ct.statecode = 0"
+        f" JOIN {p}new_sozlesmeBase cs ON cs.new_sozlesmeId = ct.new_sozlesmeid AND cs.statecode = 0"
+        f" JOIN {p}new_dilBase cd ON cd.new_dilId = cs.new_orjinaldili"
+        f" WHERE e.statecode = 0 AND t.new_name IN ({_roles(roles)})"
+        " GROUP BY cd.new_dilId, cd.new_name ORDER BY COUNT(DISTINCT k.ContactId) DESC, cd.new_name"
     )
 
 
@@ -508,7 +611,7 @@ def person_works_sql(schema: str, contact_id: str) -> str:
 def person_contracts_sql(schema: str, contact_id: str) -> str:
     p = _prefix(schema)
     return (
-        "SELECT s.new_sozlesmeId, s.new_name, s.statuscode, s.new_SozlesmeTipi, s.new_SozlesmeBaslangicTarihi,"
+        "SELECT s.new_sozlesmeId, s.new_name, s.new_SozlesmeKodu, s.statuscode, s.new_SozlesmeTipi, s.new_SozlesmeBaslangicTarihi,"
         f" s.new_SozlesmeBitisTarihi, s.new_Telif, t.new_Odeme, {crm_rights.columns('s')}"
         f" FROM {p}new_sozlesmetarafiBase t JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesmeid"
         f"{crm_rights.joins(p, 's')}"
@@ -527,9 +630,10 @@ def person_projects_sql(schema: str, contact_id: str) -> str:
 
 
 def contributors_page(schema: str, run: Callable[[str], dict[str, Any]], roles: list[str], page_no: int, *,
-                      q: str = "", order: str = "son") -> dict[str, Any]:
-    head = (run(contributors_count_sql(schema, roles, q)).get("records") or [{}])[0]
-    res = run(contributors_list_sql(schema, roles, page_no, q, order))
+                      q: str = "", order: str = "son", lang: str = "", langs: bool = False) -> dict[str, Any]:
+    """`lang`: kaynak dil süzgeci (dil kimliği ya da `LANG_NONE`); `langs`: satıra kişinin kaynak dillerini ekle."""
+    head = (run(contributors_count_sql(schema, roles, q, lang)).get("records") or [{}])[0]
+    res = run(contributors_list_sql(schema, roles, page_no, q, order, lang))
     items = [{
         "id": _s(r.get("ContactId")), "name": _s(r.get("FullName")), "works": int(_n(r.get("eser")) or 0),
         "recentWorks": int(_n(r.get("son12")) or 0), "last": _date(r.get("son")), "roles": [],
@@ -540,9 +644,26 @@ def contributors_page(schema: str, run: Callable[[str], dict[str, Any]], roles: 
             c = by_id.get(str(r.get("new_Katilimsaglayan") or "").lower())
             if c is not None and _s(r.get("rol")):
                 c["roles"].append({"role": _s(r.get("rol")), "works": int(_n(r.get("eser")) or 0)})
+        if langs:
+            for c in items:
+                c["languages"] = []
+            for r in run(contributor_languages_sql(schema, [c["id"] for c in items if c["id"]])).get("records") or []:
+                c = by_id.get(str(r.get("new_kisi") or "").lower())
+                name = _s(r.get("dil"))
+                if c is not None and name and name not in c["languages"]:
+                    c["languages"].append(name)
     return {"items": items, "total": int(_n(head.get("n")) or 0), "activePeople": int(_n(head.get("son12_kisi")) or 0),
             "contributions": int(_n(head.get("katki")) or 0), "page": max(0, int(page_no)), "pageSize": PAGE_SIZE,
             "db": _timing(res)}
+
+
+def language_facets(schema: str, run: Callable[[str], dict[str, Any]], roles: list[str]) -> dict[str, Any]:
+    """Kaynak dil süzgeci: dil başına kişi ve hiçbir sözleşmesinde kaynak dil girilmemiş kişi sayısı (ZEKI-22)."""
+    res = run(language_facet_sql(schema, roles))
+    none = (run(contributors_count_sql(schema, roles, "", LANG_NONE)).get("records") or [{}])[0]
+    return {"items": [{"id": _s(r.get("new_dilId")), "name": _s(r.get("dil")), "people": int(_n(r.get("kisi")) or 0)}
+                      for r in res.get("records") or [] if _s(r.get("new_dilId"))],
+            "unspecified": int(_n(none.get("n")) or 0), "db": _timing(res)}
 
 
 def role_facets(schema: str, run: Callable[[str], dict[str, Any]]) -> dict[str, Any]:
@@ -551,22 +672,47 @@ def role_facets(schema: str, run: Callable[[str], dict[str, Any]]) -> dict[str, 
                       for r in res.get("records") or []], "db": _timing(res)}
 
 
+def contract_book_ids(contracts: list[dict[str, Any]]) -> list[str]:
+    """Eser adları okunacak sözleşme kimlikleri (sırası sorgu bilgisinde aynı SQL'i kurmak için sabit)."""
+    return [c["id"] for c in contracts if c.get("id") and _GUID.match(str(c["id"]))]
+
+
+def _attach_contract_books(schema: str, run: Callable[[str], dict[str, Any]], contracts: list[dict[str, Any]]) -> None:
+    """ZEKI-27: sözleşme yalnız numarasıyla okunmuyor; sözleşmeye bağlı eserlerin adı yanına yazılır
+    (`new_new_sozlesme_new_kitapBase`, sözleşme listesiyle aynı bağ — `books_sql`). Okuduğumuz sözleşme alanlarında
+    başlık yok (`new_name` sözleşme numarası, `new_SozlesmeKodu` kodu); ekranda başlık yerine eser adları durur."""
+    ids = contract_book_ids(contracts)
+    if not ids:
+        return
+    by_id = {c["id"].lower(): c for c in contracts if c.get("id")}
+    for b in run(books_sql(schema, ids)).get("records") or []:
+        c = by_id.get(str(b.get("new_sozlesmeid") or "").lower())
+        title = _s(b.get("new_name"))
+        if c is not None and title and all(x["title"] != title for x in c["books"]):
+            c["books"].append({"id": _s(b.get("new_kitapId")), "title": title})
+
+
 def person(schema: str, run: Callable[[str], dict[str, Any]], contact_id: str) -> dict[str, Any]:
     head = (run(person_sql(schema, contact_id)).get("records") or [None])[0]
     if head is None:
         raise EditorialError("Kişi bulunamadı.", 404)
     works = run(person_works_sql(schema, contact_id))
+    contracts = _with_rights(schema, run, run(person_contracts_sql(schema, contact_id)).get("records") or [],
+                             lambda r: {"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")),
+                                        "code": _s(r.get("new_SozlesmeKodu")),
+                                        "status": _s(r.get("statuscode")), "kind": _s(r.get("new_SozlesmeTipi")),
+                                        "start": _date(r.get("new_SozlesmeBaslangicTarihi")),
+                                        "end": _date(r.get("new_SozlesmeBitisTarihi")),
+                                        "royalty": _n(r.get("new_Telif")) or None, "share": _n(r.get("new_Odeme")),
+                                        "books": []})
+    _attach_contract_books(schema, run, contracts)
     return {
         "id": _s(head.get("ContactId")), "name": _s(head.get("FullName")),
-        "bio": _s(head.get("new_kisaozgecmis")) or _s(head.get("new_ozgecmis")),
+        # ZEKI-23: özgeçmiş alanları Word'den yapıştırılmış HTML tutabilir; ekrana düz paragraf gider.
+        "bio": _plain(head.get("new_kisaozgecmis")) or _plain(head.get("new_ozgecmis")),
         "works": [{"bookId": _s(r.get("new_kitapId")), "title": _s(r.get("kitap")), "role": _s(r.get("rol")),
                    "on": _date(r.get("CreatedOn"))} for r in works.get("records") or []],
-        "contracts": _with_rights(schema, run, run(person_contracts_sql(schema, contact_id)).get("records") or [],
-                                  lambda r: {"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")),
-                                             "status": _s(r.get("statuscode")), "kind": _s(r.get("new_SozlesmeTipi")),
-                                             "start": _date(r.get("new_SozlesmeBaslangicTarihi")),
-                                             "end": _date(r.get("new_SozlesmeBitisTarihi")),
-                                             "royalty": _n(r.get("new_Telif")) or None, "share": _n(r.get("new_Odeme"))}),
+        "contracts": contracts,
         "projects": [{"id": _s(r.get("new_projeId")), "name": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
                       "text": _s(r.get("new_icerikdurumu")), "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor"))}
                      for r in run(person_projects_sql(schema, contact_id)).get("records") or []],
@@ -868,30 +1014,65 @@ def person_books(schema: str, run: Callable[[str], dict[str, Any]], contact_id: 
             "page": max(0, int(page_no)), "pageSize": PAGE_SIZE, "db": _timing(res)}
 
 
-def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dict[str, Any]:
-    res = run(book_sql(schema, book_id))
-    head = (res.get("records") or [None])[0]
-    if head is None:
-        raise EditorialError("Kitap bulunamadı.", 404)
-    projects = run(book_projects_sql(schema, book_id)).get("records") or []
-    # Kitabın konusu: web tanıtım metni > özet > eski özet > projenin tek cümlelik fikri.
-    summary, summary_from = next(((_plain(head.get(f)), f) for f in ("new_kitaptanitimwebmetni", "new_ozet", "new_kitabineskiozeti")
-                                  if _plain(head.get(f))), (None, None))
-    if summary is None:
-        summary, summary_from = next(((_plain(r.get("fikir")), "proje") for r in projects if _plain(r.get("fikir"))), (None, None))
-    contracts = _with_rights(schema, run, run(book_contracts_sql(schema, book_id)).get("records") or [], lambda r: {
+def _book_contracts(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> list[dict[str, Any]]:
+    """Kitabın sözleşmeleri, CRM hakları ve lisans kapsamıyla (kapsam sözleşmelere bağlı: aynı iş içinde sonra)."""
+    return _with_rights(schema, run, run(book_contracts_sql(schema, book_id)).get("records") or [], lambda r: {
         "id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")), "kind": _s(r.get("new_SozlesmeTipi")),
         "status": _s(r.get("statuscode")), "stage": _s(r.get("new_sozlesmestatusu")),
         "start": _date(r.get("new_SozlesmeBaslangicTarihi")), "end": _date(r.get("new_SozlesmeBitisTarihi")),
         "royalty": _n(r.get("new_Telif")),
         "daysLeft": None if _n(r.get("kalan_gun")) is None else int(_n(r.get("kalan_gun")))})
+
+
+def book_key(head: Optional[dict[str, Any]]) -> tuple[str, str]:
+    """Kitap kartının başka kaynaklarla eşleştiği ad ve ISBN (cevaptaki `title` / `isbn` ile aynı)."""
+    head = head or {}
+    return _s(head.get("new_name")) or "", _s(head.get("new_isbn13")) or _s(head.get("new_isbn")) or ""
+
+
+def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str,
+         on_head: Optional[Callable[[Optional[dict[str, Any]]], None]] = None) -> dict[str, Any]:
+    """Kitap 360. Kitap kartı ve ona bağlı beş okuma (proje, sözleşme + hakları, rol, kurul, üretim) birbirini
+    beklemez: aynı anda koşar (`sorgu_izi.birlikte`; sonuç ve sorgu bilgisi sırası sabit). 2026-09-29 ölçümü: sırayla
+    koşunca CRM beklemesi toplanıyordu. `on_head(kart satırı | None)`: kitap kartı okununca (diğer okumalar sürerken)
+    çağrılır; uç kitabın editör kartını beklemeden aramaya başlar."""
+    from semantic_bridge.sorgu_izi import birlikte
+
+    _guid(book_id)                         # geçersiz kimlik hiçbir okuma başlamadan 400 döner
+
+    def head_read() -> dict[str, Any]:
+        r: dict[str, Any] = {}
+        try:
+            r = run(book_sql(schema, book_id))
+            return r
+        finally:
+            if on_head is not None:
+                on_head((r.get("records") or [None])[0])
+
+    res, projects_res, contracts, roles_res, board_res, production_res = birlikte(
+        head_read,
+        lambda: run(book_projects_sql(schema, book_id)),
+        lambda: _book_contracts(schema, run, book_id),
+        lambda: run(book_roles_sql(schema, book_id)),
+        lambda: run(book_board_sql(schema, book_id)),
+        lambda: run(book_production_sql(schema, book_id)),
+    )
+    head = (res.get("records") or [None])[0]
+    if head is None:
+        raise EditorialError("Kitap bulunamadı.", 404)
+    projects = projects_res.get("records") or []
+    # Kitabın konusu: web tanıtım metni > özet > eski özet > projenin tek cümlelik fikri.
+    summary, summary_from = next(((_plain(head.get(f)), f) for f in ("new_kitaptanitimwebmetni", "new_ozet", "new_kitabineskiozeti")
+                                  if _plain(head.get(f))), (None, None))
+    if summary is None:
+        summary, summary_from = next(((_plain(r.get("fikir")), "proje") for r in projects if _plain(r.get("fikir"))), (None, None))
     roles: dict[str, list[dict[str, Any]]] = {}
-    for r in run(book_roles_sql(schema, book_id)).get("records") or []:
+    for r in roles_res.get("records") or []:
         role = _s(r.get("rol")) or "Diğer"
         roles.setdefault(role, []).append({"id": _s(r.get("ContactId")), "name": _s(r.get("ad"))})
     return {
-        "id": _s(head.get("new_kitapId")), "title": _s(head.get("new_name")),
-        "isbn": _s(head.get("new_isbn13")) or _s(head.get("new_isbn")), "ebookIsbn": _s(head.get("new_ekitapisbn")),
+        "id": _s(head.get("new_kitapId")), "title": book_key(head)[0] or None,
+        "isbn": book_key(head)[1] or None, "ebookIsbn": _s(head.get("new_ekitapisbn")),
         "pages": _n(head.get("new_sayfasayisi")), "size": _s(head.get("new_Ebat")),
         "price": _n(head.get("new_kdvdahilfiyat")) or _n(head.get("new_PerakendeBirimFiyat")),
         "printNo": _n(head.get("new_baskisayisi")), "printTotal": _n(head.get("new_baskitoplamadedi")),
@@ -912,14 +1093,14 @@ def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dic
                       "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor")), "idea": _plain(r.get("fikir"))}
                      for r in projects],
         "board": [{"id": _s(r.get("new_yayinkurulutoplantilariId")), "date": _date(r.get("new_toplantitarihi")),
-                   "decision": _s(r.get("statuscode")), "note": _s(r.get("new_toplantikararnotu")),
+                   "decision": _s(r.get("statuscode")), "note": _plain(r.get("new_toplantikararnotu")),
                    "royalty": _n(r.get("new_onerilenteliforani")), "printRun": _s(r.get("new_Yaynkurulubaskiadedi")),
                    "project": _s(r.get("proje"))}
-                  for r in run(book_board_sql(schema, book_id)).get("records") or []],
+                  for r in board_res.get("records") or []],
         "production": [{"id": _s(r.get("new_UretimId")), "on": _date(r.get("CreatedOn")),
                         "delivery": _date(r.get("new_uretimteslimtarihi")), "editorial": _date(r.get("new_editoryalhazirliktarihi")),
                         "firstText": _date(r.get("new_yazardangelenilkmetin")), "status": _s(r.get("statuscode")),
                         "editor": _s(r.get("sorumlu_editor")), "designer": _s(r.get("grafiker"))}
-                       for r in run(book_production_sql(schema, book_id)).get("records") or []],
+                       for r in production_res.get("records") or []],
         "db": _timing(res),
     }

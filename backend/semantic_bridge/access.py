@@ -477,11 +477,12 @@ OPEN = "open"        # oturum yeter (ortak uçlar; kendi kontrolü varsa o da ge
 OWN = "own"          # uç kendi yetkisini denetler (yönetim, yetki)
 SYSTEM = "system"    # yalnız zamanlayıcı/betik (çerezsiz) ya da yönetici
 
-_SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-rakip", "seo-ai", "seo-sayfalar",
+_SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-yandex", "seo-rakip", "seo-ai", "seo-sayfalar",
                                    "seo-yonlendirme", "seo-teknik", "seo-kimlik", "seo-rehber", "seo-sema", "seo-llms",
                                    "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti",
                                    "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa",
-                                   "seo-isler", "seo-karne", "seo-biyografi", "seo-sss", "seo-benzer", "seo-eslesme", "seo-soru", "seo-youtube", "seo-alisveris", "seo-aylik"))
+                                   "seo-isler", "seo-karne", "seo-biyografi", "seo-sss", "seo-benzer", "seo-eslesme", "seo-soru", "seo-youtube", "seo-alisveris", "seo-aylik",
+                                   "seo-aramadan-satisa"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kapak-arsivi", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
                                          "editor-atama", "serbest-calisanlar", "uretim"))
@@ -489,8 +490,9 @@ _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular
 _OKUR = frozenset(page(x) for x in ("okur-toplulugu", "okur-segmentler", "okur-programlar", "okur-yorumlar"))
 _CHANNELS = frozenset(page(x) for x in ("kanallar", "kanal-matris", "kanal-d2c", "kanal-eslesme"))
 _SUPPLY = frozenset(page(x) for x in ("tedarik", "tedarik-yuk", "tedarik-kagit", "tedarik-tedarikciler", "tedarik-maliyet"))
-_TRENDYOL = frozenset(page(x) for x in ("trendyol", "trendyol-urunler", "trendyol-siparisler", "trendyol-sorular"))
-_AMAZON = frozenset(page(x) for x in ("amazon", "amazon-konsinye", "amazon-yurtdisi", "amazon-taslaklar"))
+_TRENDYOL = frozenset(page(x) for x in ("trendyol", "trendyol-urunler", "trendyol-siparisler", "trendyol-sorular",
+                                        "trendyol-mutabakat"))
+_AMAZON = frozenset(page(x) for x in ("amazon", "amazon-konsinye", "amazon-yurtdisi", "amazon-taslaklar", "amazon-mutabakat"))
 
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
                                page("yazar-giris")}) | _SEO
@@ -632,6 +634,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/channels/trendyol/claims", frozenset({page("trendyol-siparisler")})),
     ("/api/v1/channels/trendyol/questions", frozenset({page("trendyol-sorular")})),
     ("/api/v1/channels/trendyol/reviews", frozenset({page("trendyol-sorular")})),
+    # Aşama 1: satış/iade mutabakatı ve hakediş (panel dosyası ↔ Logo). Aşama 0 model tespiti Trendyol sayfasında.
+    ("/api/v1/channels/trendyol/mutabakat", frozenset({page("trendyol-mutabakat")})),
     ("/api/v1/channels/trendyol/", frozenset({page("trendyol")})),
     # M41 Amazon ve yurtdışı (Logo + CRM, yalnız okuma).
     ("/api/v1/channels/amazon/run-due", SYSTEM),
@@ -645,6 +649,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/channels/amazon/params", frozenset({page("amazon-yurtdisi")})),
     ("/api/v1/channels/amazon/market-cards", frozenset({page("amazon-yurtdisi")})),
     ("/api/v1/channels/amazon/drafts", frozenset({page("amazon-taslaklar")})),
+    ("/api/v1/channels/amazon/mutabakat", frozenset({page("amazon-mutabakat")})),
     ("/api/v1/channels/amazon/", frozenset({page("amazon")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
@@ -808,12 +813,15 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/model-quality/feedback", OPEN),
     ("/api/v1/model-quality/", frozenset({page("zeki-kalite")})),
     # M44 Lojistik ve kargo. Günlük hat, gönderi kartı ve taslak `kargo`; firma karnesi ve karar `kargo-firmalar`;
-    # mutabakat `kargo-mutabakat`. Meta, iş eşikleri ve Excel üç sayfada da (liste türünün sayfası ucun içinde denetlenir).
+    # mutabakat `kargo-mutabakat`; kargo maliyeti ve onun Excel'i `kargo-maliyet`. Meta dört sayfada, iş eşikleri ve öbür
+    # Excel'ler üç sayfada da (liste türünün sayfası ucun içinde denetlenir).
     ("/api/v1/shipping/run-due", SYSTEM),
     ("/api/v1/shipping/carriers", frozenset({page("kargo-firmalar")})),
     ("/api/v1/shipping/decisions", frozenset({page("kargo-firmalar")})),
     ("/api/v1/shipping/reconcile", frozenset({page("kargo-mutabakat")})),
-    ("/api/v1/shipping/meta", frozenset({page("kargo"), page("kargo-firmalar"), page("kargo-mutabakat")})),
+    ("/api/v1/shipping/cost", frozenset({page("kargo-maliyet")})),
+    ("/api/v1/shipping/export/maliyet", frozenset({page("kargo-maliyet")})),
+    ("/api/v1/shipping/meta", frozenset({page("kargo"), page("kargo-firmalar"), page("kargo-mutabakat"), page("kargo-maliyet")})),
     ("/api/v1/shipping/settings", frozenset({page("kargo"), page("kargo-firmalar"), page("kargo-mutabakat")})),
     ("/api/v1/shipping/export/", frozenset({page("kargo"), page("kargo-firmalar"), page("kargo-mutabakat")})),
     ("/api/v1/shipping/", frozenset({page("kargo")})),
@@ -825,6 +833,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/public-affairs/", frozenset({page("kurumsal-iliskiler")})),
     # M1: başvuru dosyası ve kurul oturumu iki sayfada birlikte açılır (kurul üyesi başvurunun raporunu ve dosyasını,
     # başvuru ekranı oturum listesini okur).
+    ("/api/v1/editorial/applications/forms/run-due", SYSTEM),
     ("/api/v1/editorial/applications", frozenset({page("basvurular"), page("yayin-kurulu")})),
     ("/api/v1/editorial/board-sessions", frozenset({page("yayin-kurulu"), page("basvurular")})),
     # H4 Kurumsal e-posta. E-postayla gelen dosya başvurularını yazar giriş süreci ekranı da okur (sözleşme ucu).
@@ -898,6 +907,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/budget/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|refresh)$",
      "ozellik:butce.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/budget/plans/[^/]+/export\.csv$", "ozellik:veri.disa-aktar"),
+    (frozenset({"GET"}), r"^/api/v1/pricing/compare\.csv$", "ozellik:veri.disa-aktar"),
     # M45 Finansal raporlar: nakit sekmesi ve uçları, vergi takvimi yazma, sapma notu, dışa aktarma. Hesap eşlemesi kararı
     # (`finans.esleme`) ve ay kapanışı (`finans.kapanis`) açıkça verilir, ucun içinde denetlenir.
     (frozenset({"GET", "POST"}), r"^/api/v1/finance/cash(/.*)?$", "ozellik:finans.nakit"),
@@ -1070,6 +1080,10 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PUT"}), r"^/api/v1/channels/amazon/(drafts(/[^/]+)?|market-cards)$", "ozellik:amazon.taslak"),
     (frozenset({"POST"}), r"^/api/v1/channels/(trendyol|amazon)/cariler/ekle$", "ozellik:kanal.eslesme"),
     (frozenset({"GET"}), r"^/api/v1/channels/(trendyol|amazon)/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
+    # Aşama 1 panel dosyaları (hakediş; Amazon sipariş/iade raporu) ve mutabakat Excel'i.
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/channels/trendyol/mutabakat/dosyalar(/[^/]+)?$", "ozellik:trendyol.yukle"),
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/channels/amazon/mutabakat/dosyalar(/[^/]+)?$", "ozellik:amazon.yukle"),
+    (frozenset({"GET"}), r"^/api/v1/channels/(trendyol|amazon)/mutabakat/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
     # M36 Dijital yayın: platform durumu, platform tanımı, katalog okuması; satış raporu yükleme/eşleme/onay. Hak kararı
     # (`dijital.hak-karari`) ve dijital fiyat kararı (`dijital.fiyat-onay`) açıkça verilir, ucun içinde denetlenir.
     (frozenset({"PUT"}), r"^/api/v1/dijital/titles/[^/]+/listings/[^/]+$", "ozellik:dijital.durum-yaz"),
@@ -1087,6 +1101,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
+    # Kitap okutma (Kitaba sor): PDF gelen kutusuna yazılır, GPU'da uzun okuma işi başlar.
+    (frozenset({"PUT", "DELETE"}), r"^/api/v1/editorial/ask/read(/[^/]+)?$", "ozellik:kitap.okut"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
     # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur. ZEKİ kalite tahmini
     # (POST …/jobs/{iş}/qe) da model harcar ama işin inceleyenine de açıktır: «ceviri.yonet YA DA inceleyen» burada
@@ -1181,7 +1197,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # Kitap Tasarım Stüdyosu: işin altındaki her yazma (üretim, düzenleme, onay, yükleme; yeni uçlar da kendiliğinden)
     # «Kitap tasarımında üretim ve düzenleme» ister. Dışarıda kalan iki POST okumadır: `plan/prepare` sayfa düzeni
     # ekranının açılışı, `narration/read` metnin nasıl okunacağını döndürür. Ses kütüphanesine yükleme de aynı yetki;
-    # sesi kaldırma ve kapak arşivi beslemesi ucun içinde yalnız yönetici. İndirilen dosyalar `veri.disa-aktar`.
+    # sesi kaldırma ve kapak arşivi beslemesi ucun içinde yalnız yönetici. İndirilen dosyalar `veri.disa-aktar`;
+    # tek sosyal görselin indirmesi (`marketing/social/{sid}?download=1`) görüntülemeyle aynı yolda olduğundan ucun içinde.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}), _S + r"(/(?![^/]+/(plan/prepare|narration/read)$).*)?$",
      "ozellik:tasarim.uret"),
     (frozenset({"POST"}), r"^/api/v1/editorial/studio/voices$", "ozellik:tasarim.uret"),
@@ -1218,12 +1235,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      "ozellik:seo.calistir"),
     # Uzman özellikleri (2.–3. tur): taslak üretme «öneri üret»; okuma/tarama/yenileme, iş listesi durumu ve soru önerisi
     # kararı «çalıştır»; dosya indirme «dışa aktar». Onay/ret/gönderim uçları onay yetkisini kendi içinde ister.
-    (frozenset({"POST"}), r"^/api/v1/seo-geo/(guides|bios/[^/]+/draft|faq/[^/]+/draft)$", "ozellik:seo.oneri-uret"),
+    (frozenset({"POST"}), r"^/api/v1/seo-geo/(guides|bios/[^/]+/draft|faq/[^/]+/draft|ga4/page-summary)$", "ozellik:seo.oneri-uret"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/((authors-trust|backlinks|bing|bios|entity|opportunities|qsuggest|reviews|seasons"
-                          r"|similar|sunset|youtube|tech/sitemaps|gsc-sitemaps|merchant)/refresh|(competitors|crawlbot|impact|watch)/run|speed/run"
+                          r"|similar|sunset|youtube|tech/sitemaps|gsc-sitemaps|merchant|ga4)/refresh|(competitors|crawlbot|impact|watch)/run|speed/run"
                           r"|tech/crawl|monthly/build|worklist/[^/]+/status|qsuggest/[^/]+/(accept|reject))$",
      "ozellik:seo.calistir"),
-    (frozenset({"GET"}), r"^/api/v1/seo-geo/((worklist|similar|keymap|sunset)/export\.csv|video/(sitemap\.xml|theme-request\.md)"
+    (frozenset({"GET"}), r"^/api/v1/seo-geo/((worklist|similar|keymap|sunset|ga4)/export\.csv|video/(sitemap\.xml|theme-request\.md)"
                          r"|schema/theme-request\.md|(bios/drafts|guides)/[^/]+/export\.html|faq/export\.json|shopping/feed\.tsv"
                          r"|monthly/[^/]+\.pdf|watch/report/[^/]+\.html)$",
      "ozellik:veri.disa-aktar"),

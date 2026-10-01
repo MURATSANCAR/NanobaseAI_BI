@@ -28,6 +28,7 @@ Kaynak: kullanıcıyla «Yol haritamız» oturumu. Ayrıntı: bu klasördeki ana
 - Satıcı API (Trendyol Partner API, Amazon SP-API) erişimi ve okuma yetkisi kimde; verilebilir mi?
 - Pazar yeri carileri Logo'da hangi kodlarla duruyor; hangi carinin hangi platform olduğu kullanıcı onayıyla eşlenecek.
 - Karar gelene kadar: M40–M42 Logo cari satışı + panelden indirilen Excel yüklemesiyle çalışır; mağazaya hiçbir yazma yapılmaz.
+- 2026-09-29: kullanıcı işi başlattı; kodlama öncesi analiz ve karar soruları [../trendyol-amazon-satis-modeli.md](../trendyol-amazon-satis-modeli.md).
 
 ### Diğer açık konular
 - CRM `new_kargofirmasi` tablosunda kargo firması kullanıcı adı/parola/token/client secret alanları var — BT'ye iletilecek.

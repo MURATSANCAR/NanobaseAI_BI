@@ -55,7 +55,7 @@ def _num(value) -> float | None:
 def _close(a, b, tolerance: float) -> bool:
     x, y = _num(a), _num(b)
     if x is None or y is None:
-        return str(a or "").strip() == str(b or "").strip()
+        return _text(a).strip() == _text(b).strip()
     # Kuruş yuvarlaması büyük sayılarda kabul edilir; oranlarda (|değer| < 1) mutlak pay yoktur —
     # 0,01'lik sabit pay 0,1897 ile 0,1980'i "eşit" saymıştı.
     floor = 0.005 if min(abs(x), abs(y)) >= 1 else 1e-9
@@ -92,20 +92,46 @@ class Bridge:
         return answer
 
 
+def _text(v) -> str:
+    """Anahtar değerinin metni: yalnız yok (None) boştur — 0 bir anahtardır («baskı adedi 0» kademesi Q40'ta boş dizgeye
+    dönüp eşleşmiyordu, 2026-09-29)."""
+    if v is None:
+        return ""
+    n = _num(v) if not isinstance(v, (bool, str)) else None
+    if n is not None and float(n).is_integer():      # 0, 0.0, Decimal('0') aynı anahtar
+        return str(int(n))
+    return str(v)
+
+
+def _words(name: str) -> frozenset:
+    return frozenset(w for w in re.split(r"[^0-9a-zçğıöşü]+", str(name).lower()) if w)
+
+
 def _pick(row: dict, names):
-    """Kolon adı model koşusuna göre değişir (barkod / barcode_key): ilk bulunan aday."""
-    for name in ([names] if isinstance(names, str) else list(names or [])):
+    """Kolon adı model koşusuna göre değişir (barkod / barcode_key): ilk bulunan aday. Sıra: birebir ad; sonra aynı
+    kelime kümesi (`gider_toplam` = `toplam_gider`; model sözcük sırasını değiştirince «*» yedeği başka kolona —
+    `gider_butceli` — düşüyordu, Q63 2026-09-29); en son «*» / «$text» yedekleri."""
+    names = [names] if isinstance(names, str) else list(names or [])
+    plain = [n for n in names if n not in ("*", "$text")]
+    for name in plain:
+        if name in row:
+            return row[name]
+    for name in plain:
+        key = _words(name)
+        hit = next((k for k in row if _words(k) == key), None)
+        if key and hit is not None:
+            return row[hit]
+    for name in names:
         if name == "*":                       # tek değerli cevap: ilk sayısal kolon, adı ne olursa olsun
             return next((v for v in row.values() if _num(v) is not None and not isinstance(v, bool)), None)
         if name == "$text":                   # anahtar kolonu: ilk metin değeri, adı ne olursa olsun
             return next((v for v in row.values() if isinstance(v, str) and _num(v) is None), None)
-        if name in row:
-            return row[name]
     return None
 
 
 def _has(row: dict, names) -> bool:
-    return any(n in ("*", "$text") or n in row for n in ([names] if isinstance(names, str) else list(names or [])))
+    names = [names] if isinstance(names, str) else list(names or [])
+    return any(n in ("*", "$text") or n in row or any(_words(k) == _words(n) for k in row) for n in names)
 
 
 def kind_of(answer: dict) -> str:
@@ -192,8 +218,8 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
                     if want is not None and not any(_close(v, want, spec.get("tolerance", tolerance)) for v in cells):
                         problems.append(f"referans {column} = {want} cevapta yok")
         elif kind == "pairs":
-            want = {str(r.get(spec["reference_key"]) or "").strip(): r.get(spec["reference_value"]) for r in reference}
-            got = {str(_pick(r, spec["answer_key"]) or "").strip(): _pick(r, spec["answer_value"]) for r in records}
+            want = {_text(r.get(spec["reference_key"])).strip(): r.get(spec["reference_value"]) for r in reference}
+            got = {_text(_pick(r, spec["answer_key"])).strip(): _pick(r, spec["answer_value"]) for r in records}
             keys = list(want)[: int(spec.get("top", 10))]
             if spec.get("common_min"):
                 # Sıralama ölçütü meşru biçimde farklı olabilir (en çok satan: adet / tutar): değer,
@@ -210,7 +236,7 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
                     problems.append(f"'{key[:40]}': {got[key]}, referans {want[key]}")
         elif kind == "lookup":
             for row in records[: int(spec.get("top", 3))]:
-                key = re.sub(r"[^0-9A-Za-z._-]", "", str(_pick(row, spec["answer_key"]) or ""))
+                key = re.sub(r"[^0-9A-Za-z._-]", "", _text(_pick(row, spec["answer_key"])))
                 if not key:
                     problems.append(f"cevapta '{spec['answer_key']}' anahtarı yok")
                     break

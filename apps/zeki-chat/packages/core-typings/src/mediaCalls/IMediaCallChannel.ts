@@ -1,0 +1,23 @@
+import type { IZekiChatRecord } from '../IZekiChatRecord';
+import type { MediaCallActorType } from './IMediaCall';
+
+export interface IMediaCallChannel extends IZekiChatRecord {
+	callId: string;
+
+	contractId: string;
+
+	actorType: MediaCallActorType;
+
+	actorId: string;
+
+	role: 'caller' | 'callee';
+
+	state: 'none' | 'ringing' | 'joining' | 'active' | 'left';
+
+	// The moment when the user accepted the call or clicked on the join button
+	joinedAt?: Date;
+	// The moment when the user successfully joined the call or got bridged
+	activeAt?: Date;
+	// The moment when the user left the call or hanged up
+	leftAt?: Date;
+}

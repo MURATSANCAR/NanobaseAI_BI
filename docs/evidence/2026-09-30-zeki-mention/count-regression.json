@@ -1,0 +1,12 @@
+{
+  "originalBusinessStatus": "FAIL",
+  "question": "2026 toptan satış faturası sayısı",
+  "engineValue": 1436023,
+  "independentInvoiceCount": 27425,
+  "queryId": "q_d1fd80e122c4",
+  "actualSql": "SELECT COUNT(DISTINCT STLINE.[LOGICALREF]) AS kayit_sayisi\nFROM (SELECT [CANCELLED], [DATE_], [LOGICALREF], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [CANCELLED], [DATE_], [LOGICALREF], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[TRCODE] IN (8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+  "cause": "count_cue inferred STLINE grain instead of invoice grain",
+  "fixScope": "Bot withholds all count_cue metrics; shared catalogue unchanged",
+  "finalDelivery": "clarification without numeric result",
+  "catalogueCorrectionStatus": "OPEN"
+}

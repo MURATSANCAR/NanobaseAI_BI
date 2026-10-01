@@ -17,7 +17,7 @@ Köprü kitap kartlarıyla aynı adresi, anahtarı ve CA'yı kullanır (`editori
   varsayılan siteye düşer ve **200 + HTML** döner. `doc_read.remote_read` bunu yakalar ve «belge okuma servisi JSON
   dönmedi» diye yazar; sayfa «okunamadı» kalır. Aşağıdaki location eklenmeden VM'de taranmış belge okunmaz.
 
-## TT GPU nginx — eklenecek location (üretime bu oturumda UYGULANMADI)
+## TT GPU nginx — location (betik: `deploy/tt-gpu/editor-ingress/add-read-route.py`, 2026-09-29)
 
 Dosya: `/etc/nginx/sites-available/kitap-eczanesi` (depoda değil). Var olan `/editor/cards/v1/documents` bloğunun
 kalıbıyla (IP izni, gizli başlık denetimi, yöntem sınırı). Gizli başlığın adı ve değeri dosyadakiyle aynıdır; buraya

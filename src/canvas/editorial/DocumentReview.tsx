@@ -7,7 +7,6 @@ import { dateTime } from '../format';
 import { download } from '../board/export';
 import { useCan } from '../useAdmin';
 import { FileDrop } from '../components/FileDrop';
-import { MB } from '../components/fileDropRules';
 import { Panel } from './kit';
 import { ProofFindings } from './ProofFindings';
 import { WordMapPanel } from './WordMapPanel';
@@ -31,8 +30,6 @@ const AUDIENCE: Array<[string, string]> = [
 ];
 const busy = (xs: DocumentItem[] | undefined) => (xs ?? []).some((d) => d.status === 'QUEUED' || d.status === 'RUNNING');
 
-/** Köprüde belge için ayrı sınır yok; eser dosyasıyla aynı gövde sınırı (120 MB) yazılır ve uygulanır. */
-export const DOCUMENT_MAX_BYTES = 120 * MB;
 
 /** Belge incelemesinin yükleme alanı (son okuma sayfasının üstünde). Başlık, okur kitlesi ve yaş isteğe bağlı ve
  *  dosyadan ÖNCE doldurulur; dosya bırakılınca hemen yüklenir ve incelemeye girer — ayrı «gönder» adımı yok. Yetki
@@ -48,7 +45,6 @@ export function DocumentUpload({ onUploaded }: { onUploaded: (id: string) => voi
     <div className="space-y-2.5">
       <FileDrop<DocumentItem>
         accept={DOCUMENT_ACCEPT}
-        maxBytes={DOCUMENT_MAX_BYTES}
         feature="son-okuma.belge"
         title="Belge yükle ve incelet"
         hint="Zeki AI metinde kelime tekrarı, yazar tikleri, cümle başı, kalıp ifade ve yabancı sözcükleri inceler; çocuk/genç kitlede yaşa ağır sözcükleri de arar. Resim ve olay okunmaz."

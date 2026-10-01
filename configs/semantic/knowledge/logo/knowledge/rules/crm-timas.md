@@ -56,7 +56,8 @@ CRM kaynağı Dynamics CRM'dir; tablolar `*Base` ile biter (`NEW_SOZLESMEBASE`, 
 
 ## Kural C10 — Etkinlikler ve giderleri (NEW_ETKINLIKBASE)
 
-- **Etkinlik gideri** = `NEW_ETKINLIKBASE.new_ToplamEtkinlikGideri` (dolu olan sütun budur; `new_etkinlikgideri` ve `new_promosyontutari` hiç dolu değil). Yazar etkinlik telifi `new_YazarEtkinlikTelifi`.
+- **Etkinliklere harcanan toplam (etkinlik ve fuar gideri) Logo defterindedir** (2026-09-29 karar: gerçekleşmiş harcamanın kayıt sistemi Logo): katalog ölçüsü «etkinlik ve fuar gideri» = EMFLINE Σ(borç − alacak), iptal hariç, hesaplar 740.03, 760.44.444–446, 760.45, 760.47.470, 760.47.477, 770.44.444, 770.47.472; 2026 toplamı 4.831.871,56 ₺. Yıl sonu kapanış fişi bu hesapları sıfırlar: kapanmış bir yılın toplamı kapanış fişi dışlanarak okunur.
+- CRM'deki etkinlik kartı gideri `NEW_ETKINLIKBASE.new_ToplamEtkinlikGideri` (dolu olan sütun budur; `new_etkinlikgideri` ve `new_promosyontutari` hiç dolu değil) yalnız etkinlik/yazar bazında kırılım için okunur ve eksik bir alandır (2015–2016'da 28 kayıt, 9.275 ₺); toplam harcama sorusuna cevap değildir. Yazar etkinlik telifi `new_YazarEtkinlikTelifi`.
 - Etkinliğin **yazarı** N:N tablosundadır: `NEW_NEW_ETKINLIK_NEW_YAZARBASE (new_etkinlikid, new_yazarid) → NEW_YAZARBASE.new_name`; `new_lgiliYazar` (Contact) sütunu hiç dolu değil. "Yazar bazında etkinlik gideri" = yazar adı, etkinlik adedi (`COUNT(DISTINCT new_etkinlikId)`), `SUM(new_ToplamEtkinlikGideri)`; "en pahalı N yazar" = gidere göre azalan ilk N.
 - **Etkinliğin yazarı `new_new_etkinlik_contact` üzerinden bağlanır** (2026-09-21 canlı ölçüm): 9.012 bağ var, bağlı kişilerin 8.939'u (%99,2) `ContactBase.new_yazarmi = 1`. Yazar bazında gider hesaplanabilir. Eski uyarı yanlış tabloya bakıyordu: `new_new_etkinlik_new_yazar` gerçekten boştur, ama kullanılan bağ o değildir.
 - **Veri notu:** `new_ToplamEtkinlikGideri` neredeyse hiç dolu değil — 57.486 aktif etkinliğin toplam gideri 9.275 ₺. Yazar bazında dağılım üretilebilir (en yüksek: Mustafa Armağan 1.330 ₺) ama cevap bu alanın ne kadar dolu olduğunu söylemelidir.
@@ -118,7 +119,7 @@ CRM kaynağı Dynamics CRM'dir; tablolar `*Base` ile biter (`NEW_SOZLESMEBASE`, 
 
 ## Kural C21 — Bütçe kayıtları
 
-- Etkinliklere bağlı bir bütçe tablosu yoktur: `NEW_ETKINLIKBASE`'te bütçe sütunu yok; `NEW_BUTCEKALEMIBASE` (iş planı/iş emri bütçe kalemleri, 2013–2014) ve `NEW_PROMOSYONBUTCESIBASE` (promosyon bütçesi: `new_butce`, `new_kullanilanbutce`, `new_kalanbutce`; 2 kayıt, 2017/2020) etkinlikle ilişkili değildir. "Etkinlik giderleri bütçenin neresinde" sorusuna toplam etkinlik gideri verilir ve karşılaştırılacak bir etkinlik bütçesinin tanımlı olmadığı söylenir; promosyon bütçesi etkinlik bütçesi yerine kullanılmaz.
+- **Etkinlik bütçesi yoktur:** etkinlik bütçesi hiçbir kaynakta tanımlı değil — Logo'da bütçe modülü kullanılmıyor; CRM'de `NEW_ETKINLIKBASE`'te bütçe sütunu yok, `NEW_BUTCEKALEMIBASE` (iş planı/iş emri bütçe kalemleri, 2013–2014) ve `NEW_PROMOSYONBUTCESIBASE` (promosyon bütçesi: `new_butce`, `new_kullanilanbutce`, `new_kalanbutce`; 2 kayıt, 2017/2020) etkinlikle ilişkili değildir. "Etkinlik giderleri bütçenin neresinde" sorusuna toplam etkinlik ve fuar gideri (Logo defteri, bu yıl) verilir ve bütçe karşılaştırması yapılamaz, çünkü etkinlik bütçesi tanımlı değil — bu cevapta söylenir; promosyon bütçesi etkinlik bütçesi yerine kullanılmaz.
 
 ## Kural C22 — Telif ödemesi / tahakkuk (NEW_ODEMEBASE)
 

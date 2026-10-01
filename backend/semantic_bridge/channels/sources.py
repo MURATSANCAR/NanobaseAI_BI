@@ -5,7 +5,8 @@ SQL metinleri `channels/sql/*.sql` dosyalarındadır; M34 (pazar yeri sell-in) v
 (`L_CAPIPERIOD`, kopya yıllar atlanır). Yıllık firma tablosu yıl süzgeciyle okunur (211 kopyası 2021–2025'i tutar).
 
 Tanım (katalog ve M46 ile aynı): satış = faturalı (`INVOICEREF <> 0`) malzeme satırı (`LINETYPE 0`), TRCODE 7/8/9;
-iade = 2/3; net ciro = Σ LINENET (satış) − Σ LINENET (iade); iskonto = satır iskontosu (`LINETYPE 2`) TOTAL'i;
+iade = 2/3; net ciro = Σ VATMATRAH (satış) − Σ VATMATRAH (iade) (KDV matrahı, fatura geneli iskonto dahil; dönem
+fatura tarihi `INVOICE.DATE_` — karar 2026-10-01); iskonto = satır iskontosu (`LINETYPE 2`) TOTAL'i;
 maliyet yalnız `OUTCOST > 0` satırlarında `AMOUNT × OUTCOST`.
 """
 from __future__ import annotations
@@ -134,6 +135,22 @@ def read_kanal(run: Runner, firms: dict[int, str], year: int) -> list[dict[str, 
     for r in run(kanal_karne_sql(firm, year)):
         out.append({"yil": year, "ay": int(r["ay"]), "kanal": _s(r.get("kanal"))[:60] or "#YOK", **_metric_row(r, METRICS)})
     return out
+
+
+def dagitimci_cari() -> Optional[str]:
+    """Başarı Dağıtım'ın Logo cari kodu (M39 ayarı `PAZAR_DAGITIM_BASARI_CARI`). Kanal karnesinde dağıtımcıya satış
+    (sell-in) bu cariden, e-ticaret kapsamından ayrı okunur; platform toplamlarına girmez."""
+    try:
+        from semantic_bridge import pazar_dagitim as PD
+
+        return (PD.settings().get("basariCari") or "").strip() or None
+    except Exception:  # noqa: BLE001 — ayar okunamazsa dağıtımcı satırı okunmaz
+        return None
+
+
+def read_dagitimci(run: Runner, firms: dict[int, str], year: int, code: str) -> list[dict[str, Any]]:
+    """Dağıtımcı carisinin ay satırları: karnedeki cari × ay sorgusunun aynısı, kapsam yalnız bu cari."""
+    return [{"ay": r["ay"], **{k: r[k] for k in METRICS}} for r in read_cari(run, firms, year, scope_sql([], [code]), "C.CODE")]
 
 
 def read_cari(run: Runner, firms: dict[int, str], year: int, scope: str, grup: str) -> list[dict[str, Any]]:

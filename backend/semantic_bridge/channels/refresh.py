@@ -29,6 +29,8 @@ log = logging.getLogger("semantic.channels.refresh")
 #: Sorgu bilgisi: kanal tablolarını dolduran Logo/CRM sorguları (`semantic_query_origin`). Yıl okumaları yıl anahtarıyla
 #: (`kanal.okuma.2026`), kart/CRM/ad/barkod okumaları genel anahtarla saklanır; ekrandaki rakamın «asıl SQL»i budur.
 KOKEN_OKUMA = "kanal.okuma"
+#: Dağıtımcı (Başarı) carisinin yıl okuması: `dagitimci:<yıl>` = {"cari", "rows": [ay × ölçü]}.
+DAGITIMCI_META = "dagitimci:"
 
 
 def koken_yil(y: int) -> str:
@@ -171,6 +173,13 @@ class Refresher:
             sync = S.sync_accounts(engine, tenant, cards, crm_info)
             S.meta_set(engine, tenant, "cards", {"count": len(cards), **sync, "crmError": crm_err})
 
+            # Dağıtımcı (Başarı) carisi: kartı bir kez, satışı yıl yıl (karnede «kanalda bekleyen stok» yanındaki sell-in).
+            dcari = src.dagitimci_cari()
+            if dcari:
+                dk = src.read_cariler(logo, latest, src.scope_sql([], [dcari]))
+                S.meta_set(engine, tenant, "dagitimci_kart", {"cari": dcari, "unvan": dk[0]["unvan"] if dk else None,
+                                                              "bulundu": bool(dk)})
+
             codes: set[str] = set()
             for y in want:
                 with Y.yakala() as qy:
@@ -180,6 +189,10 @@ class Refresher:
                     car, ms2 = self._timed(lambda y=y: src.read_cari(logo, firms, y, sc["scopeSql"], sc["grupSql"]))
                     self.state["step"] = f"{y} kitap × kanal"
                     bok, ms3 = self._timed(lambda y=y: src.read_books(logo, firms, y, sc["scopeSql"], sc["grupSql"]))
+                    if dcari:
+                        self.state["step"] = f"{y} dağıtımcı satışları"
+                        S.meta_set(engine, tenant, f"{DAGITIMCI_META}{y}",
+                                   {"cari": dcari, "rows": src.read_dagitimci(logo, firms, y, dcari)})
                 Y.koken_yaz(engine, tenant, koken_yil(y), qy)
                 year_sql |= {x["sql"] for x in qy.queries}
                 S.replace_year(engine, tenant, S.KANAL_MONTHS, y, kan)

@@ -1,0 +1,83 @@
+{
+  "passed": true,
+  "activeAD": 216,
+  "mappedActiveAccounts": 216,
+  "createdManagedAccounts": 215,
+  "privateCRMGroups": 12,
+  "groups": [
+    {
+      "name": "Timaş CRM",
+      "crmActiveADMembers": 105,
+      "apiMembersIncludingServiceOwner": 106,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Tüm Kullanılar",
+      "crmActiveADMembers": 18,
+      "apiMembersIncludingServiceOwner": 19,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Satış",
+      "crmActiveADMembers": 17,
+      "apiMembersIncludingServiceOwner": 18,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Editörya",
+      "crmActiveADMembers": 13,
+      "apiMembersIncludingServiceOwner": 14,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Mali İşler",
+      "crmActiveADMembers": 3,
+      "apiMembersIncludingServiceOwner": 4,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Pazarlama",
+      "crmActiveADMembers": 2,
+      "apiMembersIncludingServiceOwner": 3,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Telif Satış Ekibi",
+      "crmActiveADMembers": 1,
+      "apiMembersIncludingServiceOwner": 2,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Teelif Satış",
+      "crmActiveADMembers": 1,
+      "apiMembersIncludingServiceOwner": 2,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Üretim",
+      "crmActiveADMembers": 2,
+      "apiMembersIncludingServiceOwner": 3,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Bilgiişlem",
+      "crmActiveADMembers": 1,
+      "apiMembersIncludingServiceOwner": 2,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "İdari İşler",
+      "crmActiveADMembers": 1,
+      "apiMembersIncludingServiceOwner": 2,
+      "matchesIndependentCRMAndMongo": true
+    },
+    {
+      "name": "Lojistik",
+      "crmActiveADMembers": 2,
+      "apiMembersIncludingServiceOwner": 3,
+      "matchesIndependentCRMAndMongo": true
+    }
+  ],
+  "newAccountsAreOrdinaryUsers": true,
+  "sourcesReadOnly": true
+}

@@ -38,7 +38,8 @@ export default function MarketPrices({ analysis, canWrite }: { analysis: Analysi
     <Panel>
       <h3 className="text-[14px] font-extrabold">Rakip ve pazar fiyatları</h3>
       <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">
-        Rakip yayınevlerinin ve e-ticaret sitelerinin fiyatları otomatik taranmaz; gördüğünüz fiyatı kaynağıyla yazın. Girilen fiyatlar emsal bandına eklenir.
+        Rakip yayınevlerinin ve e-ticaret sitelerinin fiyatları otomatik taranmaz; gördüğünüz fiyatı kaynağıyla yazın. Dağıtımcı kataloğunun ortancası yukarıdaki
+        kutudan tek tıkla eklenir. Girilen fiyatlar emsal bandına eklenir.
       </p>
       {analysis.market.length > 0 && (
         <div className="mt-2">

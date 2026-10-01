@@ -9,6 +9,8 @@ import { amazonApi, type AmazonMeta } from './api';
 
 const SECTIONS: ReadonlyArray<Section> = [
   { to: '/amazon', label: 'Özet', page: 'amazon', end: true },
+  { to: '/amazon/model', label: 'Satış modeli', page: 'amazon' },
+  { to: '/amazon/mutabakat', label: 'Mutabakat ve hakediş', page: 'mutabakat' },
   { to: '/amazon/konsinye', label: 'Konsinye', page: 'konsinye' },
   { to: '/amazon/yurtdisi', label: 'Yurtdışı satış', page: 'yurtdisi' },
   { to: '/amazon/haklar', label: 'Haklar ve diller', page: 'yurtdisi' },

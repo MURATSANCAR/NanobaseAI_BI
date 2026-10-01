@@ -13,7 +13,22 @@ export type SeoField = (typeof SEO_FIELDS)[number];
 export type Fields = Partial<Record<SeoField, string>>;
 
 export type SyncState = { running: boolean; kind: string | null; done: number; total: number | null; startedAt: string | null; error: string | null };
-export type SearchReport = { start: string | null; end: string | null; savedAt: string | null; rows: Array<{ keys: string[]; clicks: number; impressions: number; ctr: number; position: number }> };
+export type SearchRow = { keys: string[]; clicks: number; impressions: number; ctr: number; position: number };
+export type SearchReport = {
+  start: string | null;
+  end: string | null;
+  savedAt: string | null;
+  rows: SearchRow[];
+  /** ZEKI-50: `kayit` = gece saklanan özet, `google` = seçilen aralık için şimdi okundu. */
+  source?: 'kayit' | 'google' | null;
+  /** Tarih seçicinin sınırları: en yeni kesin gün, Google'ın tuttuğu en eski gün, saklanan aralık. */
+  bounds?: { latest: string; earliest: string; stored: { start: string; end: string; savedAt: string | null } | null };
+  /** Aralık kırpıldıysa ya da karşılaştırma yapılamadıysa nedeni. */
+  notes?: string[];
+  compare?: { kind: SearchCompare; start: string; end: string; savedAt: string | null; source: 'kayit' | 'google'; rows: SearchRow[] };
+};
+export type SearchCompare = 'onceki' | 'gecen_yil';
+export type SearchRange = { start?: string; end?: string; compare?: SearchCompare | '' };
 
 export type Overview = {
   products: number;
@@ -263,7 +278,11 @@ export const seoApi = {
     call<{ items: Array<{ id: string; status: string; result?: string; skipped?: boolean }> }>('proposals/bulk-approve', { method: 'POST', body: { ids, note }, timeout: 600_000 }),
   batch: (budget = 3600) => call<{ started: boolean }>(`proposals/batch?budget=${budget}`, { method: 'POST' }),
   history: (start = 0) => call<{ total: number; items: Proposal[] }>(`history?${qs({ start, limit: 50 })}`),
-  search: (kind: 'daily' | 'queries' | 'pages') => call<SearchReport>(`search/${kind}`),
+  search: (kind: 'daily' | 'queries' | 'pages', range: SearchRange = {}) => {
+    const q = qs({ start: range.start, end: range.end, compare: range.compare || undefined });
+    // Kayıtlı aralığın dışı Search Console'dan okunur; uzun aralıkta sorgu listesi birkaç sayfa sürebilir.
+    return call<SearchReport>(`search/${kind}${q ? `?${q}` : ''}`, { timeout: q ? 180_000 : 60_000 });
+  },
   searchRefresh: () => call<{ counts: Record<string, number> }>('search/refresh', { method: 'POST', timeout: 300_000 }),
   llms: () => call<{ llms: string; full: string; books: number; brands: number; authors: number; listedSellers: number; sellers: number; site: string; current: Record<string, { status: number | null; text?: string | null; error?: string }> }>('llms'),
   redirects: (p: { confidence?: string; status?: string; q?: string; start?: number; limit?: number }) =>

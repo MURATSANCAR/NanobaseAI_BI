@@ -3,7 +3,8 @@
 Tanımlar (mevcut ölçülerle aynı; kabul test sunucusunda doğrudan sorguyla karşılaştırılır):
 
 - **Satış satırı** = `STLINE`, `CANCELLED = 0`, `LINETYPE = 0`, `INVOICEREF <> 0` (faturalı), `TRCODE 7/8/9` satış,
-  `2/3` iade (eksi). **Net satış** = Σ `LINENET`; iskonto öncesi = Σ `TOTAL`; iskonto = fark. **Satılan malın
+  `2/3` iade (eksi). **Net satış** = Σ `VATMATRAH` (KDV matrahı, fatura geneli iskonto dahil; dönem fatura tarihi
+  `INVOICE.DATE_` — karar 2026-10-01); iskonto öncesi = Σ `TOTAL`; iskonto = fark. **Satılan malın
   maliyeti (Logo)** = Σ `AMOUNT × OUTCOST`, yalnız `OUTCOST <> 0` satırlar; maliyetsiz satırlar ayrı sayılır, marja
   katılmaz. Bu tanım M46 bütçe gerçekleşmesi ve kokpitteki satır seviyesi net ciro ile aynıdır.
 - **Muhasebe** = `EMFLINE` + `EMFICHE` (iki taraf da iptal değil) + `EMUHACC`. Gelir tablosu yalnız 6 ve 7 ile başlayan
@@ -175,25 +176,26 @@ _SALES_WHERE = "S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.T
 def _measures() -> str:
     return f"""SUM({_SIGN} * S.AMOUNT) AS adet,
   SUM({_SIGN} * S.TOTAL) AS brut,
-  SUM({_SIGN} * S.LINENET) AS net,
+  SUM({_SIGN} * S.VATMATRAH) AS net,
   SUM(CASE WHEN S.OUTCOST <> 0 THEN {_SIGN} * S.AMOUNT * S.OUTCOST ELSE 0 END) AS maliyet,
-  SUM(CASE WHEN S.OUTCOST <> 0 THEN {_SIGN} * S.LINENET ELSE 0 END) AS maliyetli_net,
+  SUM(CASE WHEN S.OUTCOST <> 0 THEN {_SIGN} * S.VATMATRAH ELSE 0 END) AS maliyetli_net,
   SUM(CASE WHEN S.OUTCOST = 0 THEN {_SIGN} * S.AMOUNT ELSE 0 END) AS maliyetsiz_adet,
-  SUM(CASE WHEN S.OUTCOST = 0 THEN {_SIGN} * S.LINENET ELSE 0 END) AS maliyetsiz_net"""
+  SUM(CASE WHEN S.OUTCOST = 0 THEN {_SIGN} * S.VATMATRAH ELSE 0 END) AS maliyetsiz_net"""
 
 
 def sales_month_sql(firm: str, year: int) -> str:
     """Ay ay fatura net satış, iade, iskonto ve maliyet kapsamı (mutabakat ve «yaklaşık» notları)."""
     return f"""
--- Faturalı satış satırları; iade eksi. Net = LINENET, iskonto öncesi = TOTAL.
-SELECT MONTH(S.DATE_) AS ay, {_measures()},
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE 0 END) AS satis_net,
-  SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END) AS iade_net,
+-- Faturalı satış satırları; iade eksi. Net = VATMATRAH, iskonto öncesi = TOTAL; dönem fatura tarihi.
+SELECT MONTH(SH.DATE_) AS ay, {_measures()},
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE 0 END) AS satis_net,
+  SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.VATMATRAH ELSE 0 END) AS iade_net,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN 1 ELSE 0 END) AS satis_satir,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) AND S.OUTCOST = 0 THEN 1 ELSE 0 END) AS maliyetsiz_satir
 FROM dbo.LG_{firm}_01_STLINE AS S
-WHERE {_SALES_WHERE} AND S.DATE_ >= '{year}0101' AND S.DATE_ < '{year + 1}0101'
-GROUP BY MONTH(S.DATE_)""".strip()
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
+WHERE {_SALES_WHERE} AND SH.DATE_ >= '{year}0101' AND SH.DATE_ < '{year + 1}0101'
+GROUP BY MONTH(SH.DATE_)""".strip()
 
 
 def sales_period_sql(firm: str, start: date, end: date) -> str:
@@ -201,7 +203,8 @@ def sales_period_sql(firm: str, start: date, end: date) -> str:
     return f"""
 SELECT {_measures()}
 FROM dbo.LG_{firm}_01_STLINE AS S
-WHERE {_SALES_WHERE} AND S.DATE_ >= '{_ymd(start)}' AND S.DATE_ < '{_ymd(end)}'""".strip()
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
+WHERE {_SALES_WHERE} AND SH.DATE_ >= '{_ymd(start)}' AND SH.DATE_ < '{_ymd(end)}'""".strip()
 
 
 def data_end_sql(firm: str) -> str:
@@ -216,35 +219,38 @@ def _kanal(col: str = "C.SPECODE2") -> str:
 def profit_items_sql(firm: str, year: int) -> str:
     """Kitap (stok kodu) × kanal (cari grup kodu) × ay."""
     return f"""
-SELECT MONTH(S.DATE_) AS ay, I.CODE AS stok_kodu, {_kanal()} AS kanal, {_measures()}
+SELECT MONTH(SH.DATE_) AS ay, I.CODE AS stok_kodu, {_kanal()} AS kanal, {_measures()}
 FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{firm}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 LEFT JOIN dbo.LG_{firm}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
-WHERE {_SALES_WHERE} AND S.DATE_ >= '{year}0101' AND S.DATE_ < '{year + 1}0101'
-GROUP BY MONTH(S.DATE_), I.CODE, {_kanal()}""".strip()
+WHERE {_SALES_WHERE} AND SH.DATE_ >= '{year}0101' AND SH.DATE_ < '{year + 1}0101'
+GROUP BY MONTH(SH.DATE_), I.CODE, {_kanal()}""".strip()
 
 
 def profit_clients_sql(firm: str, year: int) -> str:
     """Cari × kanal × ay."""
     return f"""
-SELECT MONTH(S.DATE_) AS ay, ISNULL(C.CODE, N'#YOK') AS cari_kodu, MAX(C.DEFINITION_) AS cari_adi,
+SELECT MONTH(SH.DATE_) AS ay, ISNULL(C.CODE, N'#YOK') AS cari_kodu, MAX(C.DEFINITION_) AS cari_adi,
   {_kanal()} AS kanal, {_measures()}
 FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 LEFT JOIN dbo.LG_{firm}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
-WHERE {_SALES_WHERE} AND S.DATE_ >= '{year}0101' AND S.DATE_ < '{year + 1}0101'
-GROUP BY MONTH(S.DATE_), ISNULL(C.CODE, N'#YOK'), {_kanal()}""".strip()
+WHERE {_SALES_WHERE} AND SH.DATE_ >= '{year}0101' AND SH.DATE_ < '{year + 1}0101'
+GROUP BY MONTH(SH.DATE_), ISNULL(C.CODE, N'#YOK'), {_kanal()}""".strip()
 
 
 def client_uncosted_sql(firm: str, year: int) -> str:
     """Yalnız maliyetsiz satırlar: cari × kitap × ay adedi (carinin yaklaşık maliyeti için; saklanmaz)."""
     return f"""
-SELECT MONTH(S.DATE_) AS ay, ISNULL(C.CODE, N'#YOK') AS cari_kodu, {_kanal()} AS kanal, I.CODE AS stok_kodu,
+SELECT MONTH(SH.DATE_) AS ay, ISNULL(C.CODE, N'#YOK') AS cari_kodu, {_kanal()} AS kanal, I.CODE AS stok_kodu,
   SUM({_SIGN} * S.AMOUNT) AS adet
 FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{firm}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 LEFT JOIN dbo.LG_{firm}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
-WHERE {_SALES_WHERE} AND S.OUTCOST = 0 AND S.DATE_ >= '{year}0101' AND S.DATE_ < '{year + 1}0101'
-GROUP BY MONTH(S.DATE_), ISNULL(C.CODE, N'#YOK'), {_kanal()}, I.CODE""".strip()
+WHERE {_SALES_WHERE} AND S.OUTCOST = 0 AND SH.DATE_ >= '{year}0101' AND SH.DATE_ < '{year + 1}0101'
+GROUP BY MONTH(SH.DATE_), ISNULL(C.CODE, N'#YOK'), {_kanal()}, I.CODE""".strip()
 
 
 # ------------------------------------------------------------------ SQL: nakit

@@ -24,7 +24,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, crm, geo, hazir, llms, pages, propose, redirects, rules, schema
+from . import connections, crm, geo, hazir, llms, pages, propose, redirects, rules, schema, search_range
 import hashlib
 
 from .store import CRM_BOOKS, GEO_RESULTS, GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, TARGETS, dumps, ensure, iso, loads, now
@@ -284,6 +284,65 @@ class SeoGeo:
             return None
         return {"start": r["start_date"], "end": r["end_date"], "savedAt": iso(r["saved_at"]),
                 "rows": loads(r["rows_json"], [])}
+
+    #: Search Console'dan okunan (saklananın dışındaki) aralıklar; bkz. search_range.RangeCache.
+    _gsc_ranges = search_range.RangeCache()
+
+    def _gsc_window(self, kind: str, w: search_range.Window, stored: Optional[dict[str, Any]]) -> dict[str, Any]:
+        """Aralığın satırları: saklananla aynıysa kayıttan, değilse Search Console'dan (yalnız okuma)."""
+        s, e = w.iso()
+        if stored and stored["start"] == s and stored["end"] == e:
+            return {"start": s, "end": e, "rows": stored["rows"], "savedAt": stored["savedAt"], "source": "kayit"}
+        rows, at = self._gsc_ranges.get((self.tenant(), kind, s, e),
+                                        lambda: connections.gsc_all(s, e, [search_range.DIMENSION[kind]]))
+        return {"start": s, "end": e, "rows": rows, "savedAt": at, "source": "google"}
+
+    def gsc_range(self, kind: str, start: Optional[str] = None, end: Optional[str] = None,
+                  compare: Optional[str] = None, today: Optional[date] = None) -> dict[str, Any]:
+        """ZEKI-50: saklanan 28 günlük özet ya da istenen aralık; istenirse karşılaştırma dönemiyle birlikte.
+
+        `bounds` ekranın tarih seçicisine sınırları verir: en yeni kesin gün, Google'ın tuttuğu en eski gün ve
+        saklanan aralık. Aralık saklananın dışındaysa Search Console'a gidilir; ulaşılamazsa bunu açıkça söyleyen
+        502 döner (saklanan aralık ekranda seçilebilir kalır)."""
+        today = today or date.today()
+        stored = self.gsc(kind)
+        bounds = {"latest": search_range.latest_final(today).isoformat(),
+                  "earliest": search_range.earliest_kept(today).isoformat(),
+                  "stored": {"start": stored["start"], "end": stored["end"], "savedAt": stored["savedAt"]} if stored else None}
+        try:
+            if start or end:
+                w = search_range.resolve(start, end, today)
+            elif stored:
+                w = search_range.Window(date.fromisoformat(stored["start"]), date.fromisoformat(stored["end"]))
+            else:
+                w = None
+            if compare and compare not in search_range.COMPARE:
+                raise search_range.RangeError(f"Bilinmeyen karşılaştırma: {compare!r}.")
+        except search_range.RangeError as ex:
+            raise _err(400, str(ex)) from None
+        if w is None:
+            return {"rows": [], "start": None, "end": None, "savedAt": None, "source": None, "bounds": bounds, "notes": []}
+        where = (f"kayıtlı aralık {stored['start']} – {stored['end']}" if stored else "kayıtlı aralık yok")
+        try:
+            out = self._gsc_window(kind, w, stored)
+        except connections.ConnectionError_ as ex:
+            raise _err(502, f"Bu aralık kayıtlı değil ({where}) ve Search Console'a şu an ulaşılamadı: {ex}") from None
+        out.update(bounds=bounds, notes=list(w.notes))
+        if compare:
+            p = search_range.previous(w, compare)
+            first = date.fromisoformat(bounds["earliest"])
+            if p.end < first:
+                out["notes"].append("Karşılaştırma dönemi Google'ın tuttuğu 16 aydan eski; karşılaştırma yapılamadı.")
+            else:
+                if p.start < first:
+                    out["notes"].append(f"Karşılaştırma dönemi {p.start.isoformat()} yerine {first.isoformat()} ile başlar: "
+                                        "Google 16 aydan eski veriyi tutmaz.")
+                    p.start = first
+                try:
+                    out["compare"] = {"kind": compare, **self._gsc_window(kind, p, stored)}
+                except connections.ConnectionError_ as ex:
+                    out["notes"].append(f"Karşılaştırma dönemi okunamadı: {ex}")
+        return out
 
     # ---------------------------------------------------------------- ürün
     def product_row(self, pid: str) -> dict[str, Any]:
@@ -1300,11 +1359,14 @@ def register(app, runtime, authorize, session_user):
         return {"total": total, "items": [{**_proposal_view(dict(r)), "productName": r["name"]} for r in rows]}
 
     @app.get("/api/v1/seo-geo/search/{kind}")
-    def seo_search(kind: str, request: Request) -> dict[str, Any]:
+    def seo_search(kind: str, request: Request, start: Optional[str] = None, end: Optional[str] = None,
+                   compare: Optional[str] = None) -> dict[str, Any]:
+        """Parametresiz: gece saklanan son 28 kesin gün (eski davranış). `start`/`end` (YYYY-AA-GG) ile başka aralık,
+        `compare=onceki|gecen_yil` ile karşılaştırma dönemi (ZEKI-50)."""
         gate(request)
         if kind not in ("daily", "queries", "pages"):
             raise _err(404, "Bilinmeyen rapor.")
-        return seo.gsc(kind) or {"rows": [], "start": None, "end": None, "savedAt": None}
+        return seo.gsc_range(kind, start, end, compare)
 
     @app.post("/api/v1/seo-geo/search/refresh")
     def seo_search_refresh(request: Request) -> dict[str, Any]:

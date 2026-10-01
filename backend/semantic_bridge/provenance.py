@@ -251,7 +251,7 @@ class Kaynaklar:
     # -- hesaplar
 
     def hesap(self, name: str, text: str, inputs: Iterable[str] = (), *, dis: Optional[str] = None) -> str:
-        """Python'da yapılan hesap: okunur formül (ör. «net = Σ LINENET (7,8,9) − Σ LINENET (2,3)») ve girdileri.
+        """Python'da yapılan hesap: okunur formül (ör. «net = Σ VATMATRAH (7,8,9) − Σ VATMATRAH (2,3)») ve girdileri.
         `dis`: rakam hiçbir veritabanı sorgusundan gelmiyorsa (anlık okunan destek masası, posta kutusu, yüklenen
         dosyanın ölçümü, tasarım servisi) kaynağın işlev adı; o zaman girdi boş olabilir ve pencere bunu yazar."""
         ins = [i for i in inputs if i]

@@ -1,0 +1,32 @@
+{
+	"name": "@zeki.chat/cron",
+	"version": "0.1.57",
+	"private": true,
+	"main": "./dist/index.js",
+	"typings": "./dist/index.d.ts",
+	"files": [
+		"/dist"
+	],
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.json",
+		"dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+		"lint": "eslint .",
+		"lint:fix": "eslint --fix ."
+	},
+	"dependencies": {
+		"@zeki.chat/agenda": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/logger": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/random": "workspace:^",
+		"mongodb": "6.16.0"
+	},
+	"devDependencies": {
+		"@zeki.chat/tsconfig": "workspace:*",
+		"eslint": "~9.39.4",
+		"typescript": "~5.9.3"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

@@ -9,6 +9,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from customer_sources import ALLOW  # noqa: E402 — müşteri kaynak adresleri tek yerde
+
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 s = open(P, encoding="utf-8").read()
 if "EDITOR-KARTLAR" in s:
@@ -17,14 +20,14 @@ if "EDITOR-KARTLAR" in s:
 gate = re.search(r'\$http_x_editor_gate != "([^"]+)"', s).group(1)
 block = f'''    # EDITOR-KARTLAR  (musteri VM -> kitap kartlari; salt okunur, yalniz GET, ayni uc kat koruma)
     location = /editor/cards/v1/books/cards {{
-        allow 85.105.0.0/16; deny all;
+        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}
         if ($request_method != GET) {{ return 405; }}
         proxy_pass http://127.0.0.1:19141/v1/books/cards;
         proxy_set_header Host $host;
     }}
     location ~ "^/editor/cards/v1/books/([0-9a-fA-F-]{{36}})/cover$" {{
-        allow 85.105.0.0/16; deny all;
+        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}
         if ($request_method != GET) {{ return 405; }}
         proxy_pass http://127.0.0.1:19141/v1/books/$1/cover;

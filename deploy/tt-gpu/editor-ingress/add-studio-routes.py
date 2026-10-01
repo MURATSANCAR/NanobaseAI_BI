@@ -22,6 +22,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from customer_sources import ALLOW  # noqa: E402 — müşteri kaynak adresleri tek yerde
+
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 orig = open(P, encoding="utf-8").read()
 if "EDITOR-BITTI" not in orig:
@@ -29,7 +32,7 @@ if "EDITOR-BITTI" not in orig:
     sys.exit(1)
 UPLOAD_MB = int(os.environ.get("STUDIO_UPLOAD_MB", "60"))
 gate = re.search(r'\$http_x_editor_gate != "([^"]+)"', orig).group(1)
-guard = f'''        allow 85.105.0.0/16; deny all;
+guard = f'''        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}'''
 JOB = "[0-9]{14}[0-9a-f]{6}"
 KEY = "[0-9]{1,4}|kapak|a_[0-9a-f]{8}"
@@ -371,8 +374,10 @@ if "EDITOR-STUDYO-PAZARLAMA-IS" not in s:
     s = s.replace("    # EDITOR-BITTI", mis + "    # EDITOR-BITTI", 1)
     changes.append("kitapsız pazarlama işi yolları (gövde 36 MB)")
 
-# 9) Kapak arşivi (api_library.py). Müşteri VM'i yalnız okur; besleme (POST items/fetch) test sunucusundan tünelle
-# gelir, bu yüzden dışarı açılmaz. Süzgeçler (kategori, arama, kitle, sıra, sayfa, genişlik) sorgu parametresidir.
+# 9) Kapak arşivi (api_library.py). Müşteri VM'i yalnız okur (köprüde STUDIO_LIBRARY_FEED=0); besleme (POST
+# items/retain/fetch) test sunucusundan tünelle gelir, bu yüzden dışarı açılmaz. Süzgeçler (kategori, arama, kitle,
+# sıra, sayfa, genişlik) sorgu parametresidir. 2026-09-28 08:44'te GPU'da kuruldu (09-29 yoklaması: yol 403 = IP
+# süzgeci devrede, `library/items` 200+HTML = varsayılan siteye düşüyor, dışarı açık değil).
 if "EDITOR-STUDYO-KUTUPHANE" not in s:
     CID = "[a-z]{2,10}-[A-Za-z0-9_.-]{1,60}"
     kut = ("    # EDITOR-STUDYO-KUTUPHANE  (kapak arsivi: kategori agaci, liste, gorsel)\n"

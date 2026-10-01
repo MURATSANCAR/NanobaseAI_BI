@@ -353,10 +353,26 @@ def _cover_bg(d: Path, style) -> str:
     return next((c for c in colors if contrast(c) >= 4.5), style.accent)
 
 
+def refresh_kunye(d: Path) -> dict | None:
+    """Künye satırlarını kayıtlı alanlardan ve elle girilenlerden yeniden türetir, değiştiyse yazar. Künye kuralı
+    değişince (ör. başka kitabın künyesinden gelmiş telif basılmaz, tasarım satırı) eski işler de bir sonraki
+    dizgide doğru künyeyle basılır; set_kunye ile aynı hesap."""
+    from . import front as front_mod
+    fr = read(d, "front.json")
+    if not fr or not (d / "manuscript.json").exists():
+        return fr
+    rows = front_mod.kunye(_manuscript(d), fr.get("kunye_fields") or {}, fr.get("manual") or {})
+    if rows != fr.get("kunye"):
+        fr["kunye"] = rows
+        write(d, "front.json", fr)
+    return fr
+
+
 def rebuild(d: Path) -> None:
     """Seçili sürümlerle iç sayfayı ve kapağı yeniden dizer (yerleşim değişmez), ön kontrolü yeniler. Sayfa planı
     varsa iç sayfa planın şablonuyla (plan.typ) dizilir; plan değişmez."""
     from . import plan as plan_mod
+    refresh_kunye(d)
     if plan_mod.exists(d):
         with plan_mod._locked(d):           # plan yazımıyla aynı dizgi klasörü: tek sıra
             plan_mod.build_pdf(d, plan_mod.load(d))

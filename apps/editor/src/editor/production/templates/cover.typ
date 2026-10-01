@@ -76,13 +76,30 @@
 
 // ---------------------------------------------------------------- arka kapak
 #place(top + left, rect(width: b + tw, height: H, fill: rgb(d.back.bg), stroke: none))
-#place(top + left, dx: b + d.safe * 1mm, dy: b + d.safe * 1mm + 4mm,
-  box(width: tw - 2 * d.safe * 1mm)[
-    #set par(leading: 0.62em, spacing: 1em, justify: false)
-    #text(font: d.heading_font, weight: 800, size: 17pt, fill: accent, d.title)
-    #v(5mm)
-    #text(size: 11.5pt, fill: rgb("#2a2622"))[#for p in d.back.paragraphs [#p #parbreak()]]
-  ])
+// Arka kapak yazısı yaş etiketinin/barkodun üstünde biter: önce punto küçülür (11,5 → 8,5), yine sığmazsa sondaki
+// paragraf (genelde basından alıntı) düşer. Yazı hiçbir zaman etiketin ya da barkodun altına girmez, kesilmez.
+#let back-body(paras, size) = [
+  #set par(leading: 0.62em, spacing: 1em, justify: false)
+  #text(font: d.heading_font, weight: 800, size: 17pt, fill: accent, d.title)
+  #v(5mm)
+  #text(size: size * 1pt, fill: rgb("#2a2622"))[#for p in paras [#p #parbreak()]]
+]
+#context {
+  let w = tw - 2 * d.safe * 1mm
+  let avail = th - 2 * d.safe * 1mm - 4mm - 34mm - 4mm   // etiketin üstü (−30 mm) ile arada 4 mm boşluk
+  let n = d.back.paragraphs.len()
+  let pick = none
+  for keep in range(n, -1, step: -1) {
+    for size in (11.5, 11, 10.5, 10, 9.5, 9, 8.5) {
+      if pick == none and measure(block(width: w, back-body(d.back.paragraphs.slice(0, keep), size))).height <= avail {
+        pick = (keep, size)
+      }
+    }
+  }
+  let (keep, size) = if pick == none { (0, 8.5) } else { pick }
+  place(top + left, dx: b + d.safe * 1mm, dy: b + d.safe * 1mm + 4mm,
+    block(width: w, back-body(d.back.paragraphs.slice(0, keep), size)))
+}
 #if d.back.age != none {
   place(top + left, dx: b + d.safe * 1mm, dy: b + th - d.safe * 1mm - 30mm,
     box(fill: accent, radius: 3mm, inset: (x: 3.5mm, y: 2mm),

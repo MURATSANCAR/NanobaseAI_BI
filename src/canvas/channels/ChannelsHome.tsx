@@ -9,8 +9,8 @@ import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { Explain } from '../components/Explain';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
-import { fmtDay, fmtMoney, fmtPct, fmtShort } from '../budget/api';
-import { channelsApi, coverageText, platformName, type ChannelsMeta, type PlatformCard, type Suggestion } from './api';
+import { fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort } from '../budget/api';
+import { channelsApi, coverageText, platformName, type ChannelsMeta, type Dagitimci, type PlatformCard, type Suggestion } from './api';
 import { AskSheet, ChannelsFrame, DataBar, Facts, PeriodPicker, deltaTone, signedPct, useChannelsMeta, usePeriod } from './parts';
 
 /** M42 kanal karnesi (/kanallar): platform kartları (kanala satış, iskonto, iade, marj, hedef), kanallar arası kıyas,
@@ -55,6 +55,75 @@ function PlatformTile({ c, canMargin, k }: { c: PlatformCard; canMargin: boolean
     </Link>
     <span className="absolute right-9 top-3.5 sm:top-4"><SqlInfo k={k} alan="platforms" label={`${c.label}: kanal ölçüleri`} /></span>
     </div>
+  );
+}
+
+/** Dağıtımcı ve perakende: Logo'dan kanala satış yanında kanalın deposunda / sitesinde bekleyen TİMAŞ grubu stoğu. */
+function DistributorStock({ g, k }: { g: Dagitimci; k?: Kaynaklar }) {
+  const b = g.basari;
+  const r = g.dr;
+  const none = !b.stok && !r.stok;
+  const sell = (m: Dagitimci['dr']['kanalaSatis']): Array<[string, string]> => m
+    ? [['Kanala satış (net adet)', fmtInt(m.netAdet)], ['Kanala satış (net ciro)', fmtMoney(m.netCiro)]]
+    : [['Kanala satış', '—']];
+  return (
+    <Panel>
+      <div className="flex items-center gap-1">
+        <h2 className="text-[15px] font-extrabold">Dağıtımcı ve perakendede bekleyen stok</h2>
+        <SqlInfo k={k} alan="dagitimci" label="Kanalda bekleyen stok" />
+        <Explain label="Kanalda bekleyen stok" title="Bu rakamlar ne?">
+          <span className="block"><b>Kanala satış:</b> Logo'da bu kanala kesilen satış faturaları eksi iadeler, seçilen dönemde. Kanalın okura sattığı değildir.</span>
+          <span className="block"><b>Bekleyen stok:</b> dağıtımcı ve perakende kataloglarının son görüntüsünde TİMAŞ grubu kitapların stoğu. Kaynak geçmiş tutmaz; yalnız bugünkü hâl bilinir.</span>
+          {g.notlar.endeks && <span className="block"><b>Depodan çıkış:</b> {g.notlar.endeks}</span>}
+          {g.notlar.timas && <span className="block"><b>TİMAŞ grubu:</b> {g.notlar.timas}</span>}
+          {g.notlar.dr && <span className="block"><b>D&R:</b> {g.notlar.dr}</span>}
+        </Explain>
+      </div>
+      <p className="mb-2 text-[12px] text-canvas-muted">
+        Kanala sattığımız ile kanalın deposunda ya da sitesinde bekleyen TİMAŞ kitapları yan yana. Stok, katalogların son görüntüsüdür; depodan çıkış kitapçılara çıkıştır, okura satış değildir.
+      </p>
+      {g.hata && <Note tone="warn">{g.hata}</Note>}
+      {!g.hata && none && <Note tone="info">Dağıtımcı ve D&R katalogları henüz okunmadı; görüntü her sabah alınır. Kanala satış yine aşağıda.</Note>}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2 rounded-xl bg-white/70 p-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1 text-[14px] font-extrabold">{b.label} <SqlInfo k={k} alan="dagitimci.basari.kanalaSatis" label="Başarı Dağıtım'a satış" /></div>
+            <div className="truncate text-[11px] font-semibold text-canvas-muted">{b.unvan ?? 'Dağıtımcı'}{b.cari ? ` · ${b.cari}` : ''}</div>
+          </div>
+          <Facts rows={[
+            ...sell(b.kanalaSatis),
+            ...(b.kanalaSatis ? ([['Geçen yıla göre', signedPct(b.degisim)]] as Array<[string, string]>) : []),
+            ['Başarı deposunda TİMAŞ stoğu', b.stok ? `${fmtInt(b.stok.stok)} adet` : '—'],
+            ['Stoklu başlık', b.stok ? `${fmtInt(b.stok.stokluBaslik)} / ${fmtInt(b.stok.baslik)}` : '—'],
+            ['Depodan kitapçılara çıkış', b.cikis ? `${fmtInt(b.cikis.cikis)} adet` : '—'],
+          ]} />
+          <p className="text-[11px] leading-snug text-canvas-muted">
+            {!b.cari ? 'Başarı Dağıtım cari kodu ayarlı değil; kanala satış okunamıyor. ' : !b.satisOkundu ? 'Başarı carisinin satışı bir sonraki «Veriyi yenile» ile okunur. ' : ''}
+            {b.stok && <>Stok {fmtDay(b.stok.tarih)} görüntüsü. </>}
+            {b.cikis ? <>Çıkış {fmtDay(b.cikis.bas)}–{fmtDay(b.cikis.son)} arasındaki görüntülerden.</> : b.cikisNot}
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 rounded-xl bg-white/70 p-3">
+          <div className="min-w-0">
+            <Link to={`/kanallar/${encodeURIComponent(r.platform)}`} className="inline-flex items-center gap-0.5 text-[14px] font-extrabold hover:text-canvas-violet">
+              {r.label}<ChevronRight aria-hidden className="h-4 w-4 text-canvas-muted" />
+            </Link>
+            <div className="text-[11px] font-semibold text-canvas-muted">Platform kartındaki kanala satış</div>
+          </div>
+          <Facts rows={[
+            ...sell(r.kanalaSatis),
+            ['Prefix B2B stoğu (TİMAŞ)', r.stok ? `${fmtInt(r.stok.stok)} adet` : '—'],
+            ['D&R + İdefix site stoğu', r.stok?.siteStok != null ? `${fmtInt(r.stok.siteStok)} adet` : '—'],
+            ['Stoklu başlık (B2B)', r.stok ? `${fmtInt(r.stok.stokluBaslik)} / ${fmtInt(r.stok.baslik)}` : '—'],
+          ]} />
+          <p className="text-[11px] leading-snug text-canvas-muted">
+            {!r.kanalaSatis && 'D&R platformuna eşlenmiş cari yok ya da dönemde satış yok. '}
+            {r.stok && <>Stok {fmtDay(r.stok.tarih)} görüntüsü; site stoğu {fmtInt(r.stok.siteStokBilinen ?? 0)} başlıkta sayım olarak var. </>}
+            Depodan çıkış D&R için henüz ölçülmüyor.
+          </p>
+        </div>
+      </div>
+    </Panel>
   );
 }
 
@@ -209,6 +278,7 @@ export default function ChannelsHome() {
               <SqlInfo k={d.kaynaklar} alan="platformDisi" label="Platform dışı cariler" className="ml-1" />
             </p>
           )}
+          {d.dagitimci && <DistributorStock g={d.dagitimci} k={d.kaynaklar} />}
 
           <Panel>
             <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kanallar arası kıyas <SqlInfo k={d.kaynaklar} alan="kanallar" label="Kanallar arası kıyas" /></h2>

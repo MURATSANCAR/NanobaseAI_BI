@@ -192,11 +192,11 @@ def test_product_page_limits_approval_and_export(tmp_path):
 
 
 @typeset_only
-def test_social_templates_draft_flag_quote_and_zip(tmp_path):
+def test_social_templates_quote_and_zip(tmp_path):
     from PIL import Image
     d = _setup(tmp_path)
     srcs = {s["key"]: s for s in mk.social_sources(d)}
-    assert srcs["kapak"]["draft"] and any(s["kind"] == "art" for s in srcs.values())
+    assert all("draft" not in s for s in srcs.values()) and any(s["kind"] == "art" for s in srcs.values())
     art = next(k for k, s in srcs.items() if s["kind"] == "art")
     pal = mk.palette_colors(d)
     quote = re.split(r"(?<=\.)\s+", mk.sections(d)[0].text)[0]
@@ -211,7 +211,7 @@ def test_social_templates_draft_flag_quote_and_zip(tmp_path):
                 it = mk.add_social(d, {"template": tpl, "visual": visual, "source": source, "effect": effect,
                                        "headline": "Yeni kitap çıktı!", "color": pal[1], "quote": quote}, "editör")
                 im = Image.open(mk.social_path(d, it["id"]))
-                assert im.size == (w, h) and it["draft"]
+                assert im.size == (w, h) and "draft" not in it
                 made.append(it)
     with pytest.raises(ValueError):
         mk.add_social(d, {"template": "kare", "visual": "quote", "quote": "Bu cümle kitapta yok."}, "editör")
@@ -224,9 +224,9 @@ def test_social_templates_draft_flag_quote_and_zip(tmp_path):
     mk.approve_social(d, made[0]["id"], True, "şef")
     mk.approve_social(d, made[1]["id"], True, "şef")
     path, name = mk.social_download(d, made[0]["id"])
-    assert name.startswith("TASLAK-") and path.exists()
+    assert not name.startswith("TASLAK-") and path.exists()   # lisans alındı: önek yok
     z = zipfile.ZipFile(io.BytesIO(mk.social_zip(d)))
-    assert len([n for n in z.namelist() if n.endswith(".png")]) == 2 and "OKUYUN.txt" in z.namelist()
+    assert len([n for n in z.namelist() if n.endswith(".png")]) == 2 and "OKUYUN.txt" not in z.namelist()
     mk.delete_social(d, made[-1]["id"], "editör")
     assert len(mk.social_view(d)["items"]) == len(made) - 1
 
@@ -321,7 +321,7 @@ def test_bookless_marketing_job_all_formats(tmp_path, monkeypatch):
     for tpl, (w, h) in mk.TEMPLATES.items():
         it = mk.add_social(d, {"template": tpl, "visual": "cover", "source": "kapak", "headline": "Yeni baskı!",
                                "effect": "plain", "color": "#112233"}, "sinama")
-        assert Image.open(mk.social_path(d, it["id"])).size == (w, h) and not it["draft"]
+        assert Image.open(mk.social_path(d, it["id"])).size == (w, h) and "draft" not in it
         made += 1
         if mk.quote_fits(tpl):
             it = mk.add_social(d, {"template": tpl, "visual": "quote", "quote": "Her kitap bir kapıdır.",

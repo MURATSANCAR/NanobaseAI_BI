@@ -1,0 +1,32 @@
+[
+  {
+    "setting": "Livechat_title",
+    "api_matches_mongo": true,
+    "matches_expected_branding": true,
+    "sha256": "f6a01879c6e695b12acf92019b83835dffa565a72713756ee46d31ee3c9851c0"
+  },
+  {
+    "setting": "Email_Header",
+    "api_matches_mongo": true,
+    "matches_expected_branding": true,
+    "sha256": "61ddad688ed1fa09d7defd7a9190f6b0b31d17729ae03edd3633e0da339245f0"
+  },
+  {
+    "setting": "Email_Footer",
+    "api_matches_mongo": true,
+    "matches_expected_branding": true,
+    "sha256": "7d84426e5b184e93a5ed067024bdb5febb3acdeaee2aecb3dea78e1243f19d7d"
+  },
+  {
+    "setting": "IRC_Description",
+    "api_matches_mongo": true,
+    "matches_expected_branding": true,
+    "sha256": "ce6b811774bc2358a9ac6c9d0743716df20e38766256c62216552fee1d7e4939"
+  },
+  {
+    "setting": "Site_Name",
+    "api_matches_mongo": true,
+    "matches_expected_branding": true,
+    "sha256": "f6a01879c6e695b12acf92019b83835dffa565a72713756ee46d31ee3c9851c0"
+  }
+]

@@ -794,7 +794,7 @@ def drop_alert(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], today:
 
 
 def logo_d2c(engine: sa.engine.Engine, tenant: str, yil: int, ay: int) -> dict[str, Any]:
-    """Logo'da timas.com.tr kanalına eşlenen carilerin net cirosu (M42 kanal karnesi, faturalı satır `LINENET`). Eşleme ya
+    """Logo'da timas.com.tr kanalına eşlenen carilerin net cirosu (M42 kanal karnesi, faturalı satır `VATMATRAH`). Eşleme ya
     da yıl okuması yoksa nedeni döner; bu modül Logo'ya ayrıca bağlanmaz."""
     try:
         from semantic_bridge.channels import mapping as M

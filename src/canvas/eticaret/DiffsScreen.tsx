@@ -20,8 +20,8 @@ export default function DiffsScreen() {
   return (
     <EticaretFrame
       title="Farklar"
-      lead="Sitedeki ürün ile CRM kartı ve Logo kaydı arasındaki her uyumsuzluk bir satırdır. Farkı T-soft'ta ya da CRM'de düzeltip «Düzeltildi» diye işaretleyin; ertesi gece doğrulanır. Bilerek bıraktığınız fark (ör. kampanya fiyatı) değerler değişmedikçe yeniden açılmaz."
-      source="Kaynak: site kaydı · CRM · Logo (kesim tarihiyle)"
+      lead="Sitedeki ürün ile CRM kartı ve Logo kaydı arasındaki her uyumsuzluk bir satırdır; «D&R fiyat farkı» TİMAŞ kitabının D&R'de sitemizden ucuz ya da farklı liste fiyatıyla satıldığını gösterir. Farkı T-soft'ta ya da CRM'de düzeltip «Düzeltildi» diye işaretleyin; ertesi gece doğrulanır. Bilerek bıraktığınız fark (ör. kampanya fiyatı) değerler değişmedikçe yeniden açılmaz."
+      source="Kaynak: site kaydı · CRM · Logo (kesim tarihiyle) · D&R kataloğu (son görüntü)"
     >
       {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}

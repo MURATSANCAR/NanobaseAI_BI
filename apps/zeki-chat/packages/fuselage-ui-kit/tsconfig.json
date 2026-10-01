@@ -1,0 +1,7 @@
+{
+	"extends": "@zeki.chat/tsconfig/client.json",
+	"compilerOptions": {
+		"erasableSyntaxOnly": true
+	},
+	"include": ["src", ".storybook/**/*", "jest.config.ts"]
+}

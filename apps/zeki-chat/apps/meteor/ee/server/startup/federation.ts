@@ -1,0 +1,90 @@
+import { api, FederationMatrix as FederationMatrixService } from '@zeki.chat/core-services';
+import { InstanceStatus } from '@zeki.chat/instance-status';
+import { Capabilities } from '@zeki.chat/capabilities';
+import { Logger } from '@zeki.chat/logger';
+
+import { settings } from '../../../app/settings/server';
+import { StreamerCentral } from '../../../server/modules/streamer/streamer.module';
+
+const logger = new Logger('Federation');
+
+let serviceEnabled = false;
+
+const isLocalOnly = () => process.env.ZEKI_LOCAL_ONLY === 'true' || settings.get('Zeki_Local_Only') === true;
+
+const configureFederation = async () => {
+	// only registers the typing listener if the service is enabled
+	serviceEnabled = !isLocalOnly() && (await Capabilities.hasModule('federation')) && settings.get('Federation_Service_Enabled');
+	if (!serviceEnabled) {
+		return;
+	}
+
+	try {
+		const { configureFederationMatrixSettings } = await import('@zeki.chat/federation-matrix');
+		configureFederationMatrixSettings({
+			instanceId: InstanceStatus.id(),
+			domain: settings.get('Federation_Service_Domain'),
+			signingKey: settings.get('Federation_Service_Matrix_Signing_Key'),
+			signingAlgorithm: settings.get('Federation_Service_Matrix_Signing_Algorithm'),
+			signingVersion: settings.get('Federation_Service_Matrix_Signing_Version'),
+			allowedEncryptedRooms: settings.get('Federation_Service_Join_Encrypted_Rooms'),
+			allowedNonPrivateRooms: settings.get('Federation_Service_Join_Non_Private_Rooms'),
+			processEDUTyping: settings.get('Federation_Service_EDU_Process_Typing'),
+			processEDUPresence: settings.get('Federation_Service_EDU_Process_Presence'),
+			processEDUReceipt: settings.get('Federation_Service_EDU_Process_Receipt'),
+		});
+	} catch (err) {
+		logger.error({ msg: 'Failed to start federation-matrix service', err });
+	}
+};
+
+export const startFederationService = async (): Promise<void> => {
+	// A disabled setting alone is insufficient: SDK initialization opens MongoDB,
+	// creates its own collections and schedules background event processing.
+	if (isLocalOnly()) {
+		return;
+	}
+
+	const { FederationMatrix, setupFederationMatrix } = await import('@zeki.chat/federation-matrix');
+	const { registerFederationRoutes } = await import('../api/federation');
+	api.registerService(new FederationMatrix());
+
+	await registerFederationRoutes();
+
+	// TODO move to service/setup?
+	StreamerCentral.on('broadcast', (name, eventName, args) => {
+		if (!serviceEnabled) {
+			return;
+		}
+
+		if (name === 'notify-room' && eventName.endsWith('user-activity')) {
+			const [rid] = eventName.split('/');
+			const [user, activity] = args;
+			void FederationMatrixService.notifyUserTyping(rid, user, activity.includes('user-typing'));
+		}
+	});
+
+	settings.watchMultiple(
+		[
+			'Federation_Service_Enabled',
+			'Federation_Service_Domain',
+			'Federation_Service_EDU_Process_Typing',
+			'Federation_Service_EDU_Process_Presence',
+			'Federation_Service_EDU_Process_Receipt',
+			'Federation_Service_Matrix_Signing_Key',
+			'Federation_Service_Matrix_Signing_Algorithm',
+			'Federation_Service_Matrix_Signing_Version',
+			'Federation_Service_Join_Encrypted_Rooms',
+			'Federation_Service_Join_Non_Private_Rooms',
+		],
+		async () => {
+			await configureFederation();
+		},
+	);
+
+	try {
+		await setupFederationMatrix();
+	} catch (err) {
+		logger.error({ msg: 'Failed to setup federation-matrix:', err });
+	}
+};

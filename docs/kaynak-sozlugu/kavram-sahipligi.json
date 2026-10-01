@@ -1,0 +1,3274 @@
+{
+  "uretildi": "2026-10-01",
+  "surum": "taslak-1",
+  "aciklama": "TİMAŞ iş kavramı → kaynak sahipliği taslağı. Sahip: gerçekleşmiş finansal/lojistik olay Logo; künye/ilişki/süreç CRM; ikisi gerekiyorsa karma; portal modül tabloları portal; hiçbir kaynakta yoksa yok. Motor karşılığı backend/semantic_bridge/finance_query (contracts METRICS/DIMENSIONS, logo_reports MODES, crm_reports REPORTS, cross_reports, invoice_reports) ve origin/main relational_contracts ENTITY_REGISTRY ile karşılaştırıldı.",
+  "kanit": [
+    "docs/kaynak-sozlugu/CRM-LOGO-KOPYA.md (2026-10-01 kopya ölçümü)",
+    "docs/kaynak-sozlugu/CRM.md, crm-sozluk-ozet.json (CRM metadata sözlüğü)",
+    "docs/TIMAS-IS-TANIMLARI.md",
+    "docs/TIMAS-IS-KARARLARI-BEKLEYEN.md",
+    "backend/semantic_bridge/chat_topics.json, chat_portal_areas.json",
+    "docs/kaynak-sozlugu/LOGO.md, logo-sozluk.json (2026-10-01 Logo sözlüğü)"
+  ],
+  "tablo_adi_kurali": "Logo: LG_FFF_ kart tablosu (firma), LG_FFF_DD_ hareket tablosu (firma+dönem); her yıl ayrı firma numarası (2026=411, 2025=211). CRM: *Base fiziksel tablo.",
+  "kopruler": {
+    "kitap": "LG_FFF_ITEMS.CODE ↔ new_kitapBase.new_stokkodu",
+    "musteri": "LG_FFF_CLCARD.TAXNR ↔ AccountBase.new_VergiNo",
+    "sevkiyat": "new_sevkiyat.new_logicalref ↔ LG_FFF_DD_STFICHE.LOGICALREF (yıl firması + tarih şart)",
+    "hedef": "new_satishedefleri.new_StokKodu ↔ ITEMS.CODE",
+    "kural": "Ad benzerliği kimlik değildir."
+  },
+  "bosluk_siniflari": {
+    "B01": "genel muhasebe ve vergi",
+    "B02": "banka, kasa ve nakit akışı",
+    "B03": "çek ve senet portföyü",
+    "B04": "vade, yaşlandırma, tahsil süresi",
+    "B05": "maliyet, kâr ve stok değeri",
+    "B06": "tedarikçi borcu ve satınalma toplamları",
+    "B07": "baskı ve üretim",
+    "B08": "kart ana verisi ve ticari koşul",
+    "B09": "Logo belge akışı (irsaliye, ambar fişi)",
+    "B10": "uygulanan iskonto",
+    "B11": "Logo satışında tanımsız kırılım",
+    "B12": "zaman şekli (hafta/çeyrek/rekor)",
+    "B13": "kohort, varlık-yokluk, pay sıralaması",
+    "B14": "döviz bakiyesi ve kur",
+    "B15": "belge düzeyi döküm ve kayıt izi",
+    "B16": "CRM sipariş süreci ve bekleyen ürün",
+    "B17": "CRM tahsilat kaydı",
+    "B18": "CRM müşteri, ziyaret, etkinlik, temsilci faaliyeti",
+    "B19": "satış hedefi ve hedef-gerçekleşen",
+    "B20": "kampanya, reklam, numune",
+    "B21": "kargo",
+    "B22": "telif, avans, hakediş, sözleşme parası/hakları",
+    "B23": "yayın kurulu, proje, yayın programı",
+    "B24": "CRM kitap sınıflaması ile Logo satışı",
+    "B25": "iki sistem mutabakatı",
+    "B26": "etki/ilişki analizi",
+    "B27": "tahmin ve senaryo",
+    "B28": "dış veri",
+    "B29": "motorda olmayan küçük/ölü CRM varlığı",
+    "B31": "mevcut ölçülerin birleşimi / eksik toplulaştırma",
+    "B32": "geçmiş tarihli durum / dönemler arası devir"
+  },
+  "kavramlar": [
+    {
+      "id": "net_ciro",
+      "kavram": "Net ciro",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE",
+        "LG_FFF_DD_INVOICE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "ciro",
+        "net satış",
+        "hasılat",
+        "satış geliri",
+        "ne kadar sattık (TL)",
+        "satış rakamı",
+        "iadeler düşülmüş satış",
+        "cirosu"
+      ],
+      "varsayilan_tanim": "Malzeme satırı (LINETYPE 0) LINENET: satış TRCODE 7/8/9 eksi iade 2/3; iptal hariç; iskonto sonrası KDV hariç.",
+      "karisma_riski": "CRM sipariş tutarı (new_siparis), CRM sevkiyat tutarı (Logo kopyası, sonradan fiyat düzeltmesini taşımaz), CRM kampanya 'Gerçekleşen Ciro', etkinlik 'gelir' alanı ciro değildir. INVOICE.NETTOTAL (KDV dahil fatura toplamı) ciro değildir. Muhasebe 600 hesabı ayrı kavramdır. 'Ciro edilen çek' çek devridir. LOGO.md: STLINE TRCODE 9 satırlarının hepsi hizmet (LINETYPE 4); motorun 7/8/9 + LINETYPE 0 koşulu 9'u fiilen dışlar. 2026-09'da satır net ciro 245,63 Mn, başlık NETTOTAL 245,56 Mn.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "net_sales"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 125,
+      "set_yol_dagilimi": {
+        "karma": 56,
+        "logo": 69
+      }
+    },
+    {
+      "id": "brut_satis",
+      "kavram": "Brüt satış (iade öncesi)",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "brüt satış",
+        "satış tutarı",
+        "iade öncesi satış",
+        "brüt ciro"
+      ],
+      "varsayilan_tanim": "LINENET, TRCODE 7/8/9; iadeler düşülmeden, iskonto sonrası KDV hariç.",
+      "karisma_riski": "Kullanıcı 'brüt' ile iskonto öncesi tutarı (TOTAL) da kastedebilir; GROSSTOTAL KDV içermez, TOTALVAT çıkarmak anlamsızdır.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "sales_amount"
+        ]
+      },
+      "bosluk_sinifi": "B10",
+      "set_soru_sayisi": 2,
+      "set_yol_dagilimi": {
+        "logo": 2
+      }
+    },
+    {
+      "id": "satilan_adet",
+      "kavram": "Satılan adet",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "kaç kitap sattık",
+        "satış adedi",
+        "adet",
+        "satış miktarı",
+        "net adet"
+      ],
+      "varsayilan_tanim": "STLINE AMOUNT, TRCODE 7/8 (hizmet 9 hariç); net adet = 7/8 miktarı − 2/3 iade miktarı.",
+      "karisma_riski": "CRM sipariş adedi, CRM sevkiyat/malzeme hareketi adedi (irsaliye kısmı Logo olayını ikinci kez sayar), CRM satış hedefi adedi, telife esas adet.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "sold_quantity",
+          "net_quantity"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 49,
+      "set_yol_dagilimi": {
+        "karma": 28,
+        "logo": 21
+      }
+    },
+    {
+      "id": "iade",
+      "kavram": "İade (satış iadesi)",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE",
+        "LG_FFF_DD_INVOICE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "iade",
+        "geri gelen",
+        "iade faturası",
+        "iadeler"
+      ],
+      "varsayilan_tanim": "İptal edilmemiş malzeme iadesi TRCODE 2/3 LINENET, pozitif gösterim.",
+      "karisma_riski": "CRM iade talebi/iade onayı (süreç), Logo iade irsaliyesi (STFICHE) ile fatura farklı belge; alış iadesi (TRCODE 6) ayrı kavram.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "return_amount"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 17,
+      "set_yol_dagilimi": {
+        "karma": 6,
+        "logo": 11
+      }
+    },
+    {
+      "id": "iade_orani",
+      "kavram": "İade oranı",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "iade oranı",
+        "iade yüzdesi",
+        "iadelerin ciroya oranı"
+      ],
+      "varsayilan_tanim": "Tutar: return_amount / sales_amount; adet: (sold_quantity − net_quantity) / sold_quantity. Payda açıkça söylenir.",
+      "karisma_riski": "Payda net ciro mu brüt satış mı, tutar mı adet mi belirsiz kalabilir.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "return_amount",
+          "sales_amount",
+          "operations:ratio"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 9,
+      "set_yol_dagilimi": {
+        "karma": 2,
+        "logo": 7
+      }
+    },
+    {
+      "id": "fatura_sayisi",
+      "kavram": "Fatura sayısı",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_INVOICE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "kaç fatura",
+        "fatura adedi",
+        "kesilen fatura"
+      ],
+      "varsayilan_tanim": "İptal edilmemiş satış faturası başlıkları, TRCODE 7/8/9 (satır değil).",
+      "karisma_riski": "İade faturası sayısı ayrıdır (motor saymaz); irsaliye, e-fatura/e-arşiv sayısı farklı kavram. Çelişki: motor 7/8/9 sayar (2026: 88.757), proje KPI'ı 2/3/7/8/9 (2026: 92.137); tanım kararı gerekli.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "invoice_count"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 4,
+      "set_yol_dagilimi": {
+        "karma": 1,
+        "logo": 3
+      }
+    },
+    {
+      "id": "fatura_tutari",
+      "kavram": "Fatura toplamı",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_INVOICE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "fatura tutarı",
+        "KDV dahil toplam",
+        "fatura toplamı",
+        "kesilen faturalar"
+      ],
+      "varsayilan_tanim": "İptal edilmemiş satış faturası NETTOTAL (genel toplam, vergiler dahil).",
+      "karisma_riski": "Net ciro (LINENET) ile karıştırılır; CRM sevkiyat 'fatura numarası' Logo faturasının kopyasıdır.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "invoice_amount",
+          "invoice_statistics"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 25,
+      "set_yol_dagilimi": {
+        "karma": 17,
+        "logo": 8
+      }
+    },
+    {
+      "id": "fatura_istatistigi",
+      "kavram": "Ortalama/medyan fatura, sepet",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_INVOICE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "ortalama fatura",
+        "sepet tutarı",
+        "ortalama sepet"
+      ],
+      "varsayilan_tanim": "Müşteri başına satış fatura başlığı NETTOTAL ortalaması/ortancası.",
+      "karisma_riski": "'Sepet' CRM sipariş başlığı ortalaması olarak da okunabilir (karar 2).",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "invoice_statistics"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 2,
+      "set_yol_dagilimi": {
+        "logo": 2
+      }
+    },
+    {
+      "id": "fatura_turu",
+      "kavram": "Fatura türü (toptan/perakende/hizmet/ihracat)",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_INVOICE.TRCODE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "toptan",
+        "perakende",
+        "hizmet faturası",
+        "ihracat faturası",
+        "vade farkı faturası"
+      ],
+      "varsayilan_tanim": "TRCODE 8 toptan, 7 perakende, 9 hizmet/diğer.",
+      "karisma_riski": "Kanal (SPECODE2) ile karıştırılır: 'perakende' kanal değeri de olabilir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "metric tanımlarında süzgeç olarak"
+        ]
+      },
+      "bosluk_sinifi": "B11",
+      "set_soru_sayisi": 4,
+      "set_yol_dagilimi": {
+        "logo": 4
+      }
+    },
+    {
+      "id": "fatura_kalitesi",
+      "kavram": "Fatura veri kalitesi (mükerrer, başlık-satır farkı, satırsız)",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_INVOICE",
+        "LG_FFF_DD_STLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "mükerrer fatura",
+        "satır toplamı tutmayan",
+        "sıfır tutarlı fatura",
+        "proforma"
+      ],
+      "varsayilan_tanim": "Aday üretir; kesin hüküm vermez.",
+      "karisma_riski": "Faturasız sevk tek başına hata değildir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "invoice_duplicates",
+          "invoice_reconciliation",
+          "orphan_invoice_lines"
+        ]
+      },
+      "bosluk_sinifi": "B15",
+      "set_soru_sayisi": 8,
+      "set_yol_dagilimi": {
+        "logo": 8
+      }
+    },
+    {
+      "id": "iskonto",
+      "kavram": "Uygulanan iskonto",
+      "alan": "satış",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE (LINETYPE 2)",
+        "LG_FFF_DD_INVOICE.TOTALDISCOUNTS"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "iskonto",
+        "ıskonto",
+        "indirim",
+        "indirim oranı",
+        "fatura altı indirim",
+        "satır iskontosu"
+      ],
+      "varsayilan_tanim": "Satır düzeyi: iskonto satırı (LINETYPE 2) TOTAL / malzeme satırı (LINETYPE 0) TOTAL.",
+      "karisma_riski": "CRM iskonto listesi (tanımlı oran), CRM sipariş iskontosu, kampanya net/ek iskontosu tanımdır, uygulanan değildir. APPROVAL alanından okuma reddedildi.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B10",
+      "set_soru_sayisi": 25,
+      "set_yol_dagilimi": {
+        "crm": 4,
+        "karma": 9,
+        "logo": 12
+      }
+    },
+    {
+      "id": "kanal",
+      "kavram": "Kanal / müşteri grubu",
+      "alan": "müşteri",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_CLCARD.SPECODE2"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "kanal",
+        "müşteri grubu",
+        "cari grubu",
+        "grup kodu",
+        "zincir",
+        "dağıtımcı",
+        "kitapçı",
+        "e-ticaret",
+        "online",
+        "okul kanalı"
+      ],
+      "varsayilan_tanim": "Logo cari kartı SPECODE2; boş kod 'Grup kodu boş'.",
+      "karisma_riski": "CRM müşteri tipi/firma tipi, CRM sipariş tipi (B2B, Pazaryeri, Okul Örneği), CRM satış hedefi bölgesi/BMT (D&R, Hepsiburada hesapları) ayrı sınıflamalardır. LOGO.md: SPECODE2 kartların %86'sında boş (cironun %2,5'i); yazım varyantları var (BAYI/BAYİ, YURTDIŞI/YURTDISI).",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "dimension:channel"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 15,
+      "set_yol_dagilimi": {
+        "crm": 1,
+        "karma": 2,
+        "logo": 12
+      }
+    },
+    {
+      "id": "musteri_logo",
+      "kavram": "Müşteri (Logo cari)",
+      "alan": "müşteri",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_CLCARD"
+      ],
+      "kopru": "CLCARD.TAXNR ↔ CRM AccountBase.new_VergiNo",
+      "es_anlamlilar": [
+        "müşteri",
+        "cari",
+        "bayi",
+        "firma",
+        "Kitapyurdu",
+        "D&R"
+      ],
+      "varsayilan_tanim": "Logo CLCARD CODE + DEFINITION_; satış/bakiye soruları buradan.",
+      "karisma_riski": "Aynı ad birden çok cari kartı olabilir; ad benzerliği kimlik değildir; CRM Account ayrı kayıttır.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "dimension:customer"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 14,
+      "set_yol_dagilimi": {
+        "logo": 14
+      }
+    },
+    {
+      "id": "musteri_crm",
+      "kavram": "Müşteri kaydı (CRM firma)",
+      "alan": "müşteri",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "AccountBase"
+      ],
+      "kopru": "AccountBase.new_VergiNo ↔ CLCARD.TAXNR",
+      "es_anlamlilar": [
+        "firma kaydı",
+        "kayıtlı müşteri",
+        "aktif müşteri",
+        "müşteri tipi",
+        "pasif müşteri"
+      ],
+      "varsayilan_tanim": "statecode=0 ve aktif durum nedeni (Aktif Müşteri); pasif kayıt hiçbir ekranda gösterilmez.",
+      "karisma_riski": "Logo cari kartıyla bire bir değildir (çoklu kart, vergi no boş).",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "active_customers",
+          "duplicate_customer_tax",
+          "customers_without_contacts",
+          "contact_multiple_customers"
+        ]
+      },
+      "bosluk_sinifi": "B18",
+      "set_soru_sayisi": 14,
+      "set_yol_dagilimi": {
+        "crm": 11,
+        "karma": 3
+      }
+    },
+    {
+      "id": "musteri_il",
+      "kavram": "Satışın ili / ülkesi",
+      "alan": "müşteri",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_CLCARD.CITY/COUNTRY"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "il",
+        "şehir",
+        "İstanbul",
+        "Anadolu",
+        "yurtdışı",
+        "ülke",
+        "ihracat"
+      ],
+      "varsayilan_tanim": "Logo cari kartı (fatura adresi) il/ülke alanı.",
+      "karisma_riski": "CRM adres ili (CustomerAddress 'Kullanılmayan Adres' / new_adres) ve CRM satış bölgesi farklıdır.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B11",
+      "set_soru_sayisi": 11,
+      "set_yol_dagilimi": {
+        "karma": 4,
+        "logo": 7
+      }
+    },
+    {
+      "id": "musteri_iletisim",
+      "kavram": "Müşteri iletişim ve coğrafya",
+      "alan": "müşteri",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "AccountBase",
+        "ContactBase",
+        "CustomerAddressBase",
+        "new_adresBase",
+        "new_illerBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "ilgili kişi",
+        "e-posta",
+        "telefon",
+        "adres",
+        "illere göre müşteri dağılımı"
+      ],
+      "varsayilan_tanim": "Aktif CRM kayıtlarında doluluk ve ham/normalize şehir.",
+      "karisma_riski": "Hangi adres tablosunun güncel olduğu doğrulanmadı; Logo fatura adresi ayrıdır.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "customer_geography",
+          "customers_without_contacts"
+        ]
+      },
+      "bosluk_sinifi": "B18",
+      "set_soru_sayisi": 4,
+      "set_yol_dagilimi": {
+        "crm": 2,
+        "karma": 2
+      }
+    },
+    {
+      "id": "satis_temsilcisi",
+      "kavram": "Satış temsilcisi",
+      "alan": "müşteri",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "LG_SLSMAN + INVOICE.SALESMANREF (Logo)",
+        "SystemUserBase, AccountBase.OwnerId, new_satishedefleri.new_BMT (CRM)"
+      ],
+      "kopru": "Yok: SystemUser ↔ Logo satış elemanı eşlemesi ölçülmedi; ad eşleme yasak.",
+      "es_anlamlilar": [
+        "temsilci",
+        "satış elemanı",
+        "BMT",
+        "saha ekibi",
+        "bölge müdürü"
+      ],
+      "varsayilan_tanim": "Ciro/tahsilat kırılımında Logo satış elemanı; ziyaret/sipariş/hedef sorularında CRM kullanıcısı.",
+      "karisma_riski": "İki sistemdeki temsilci kimlikleri farklı; BMT bazen kanal hesabıdır (Hepsiburada, D&R).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B11",
+      "set_soru_sayisi": 28,
+      "set_yol_dagilimi": {
+        "crm": 16,
+        "karma": 7,
+        "logo": 5
+      }
+    },
+    {
+      "id": "tahsilat",
+      "kavram": "Tahsilat (gerçekleşen)",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_CLFLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "tahsilat",
+        "tahsil edilen",
+        "para girişi",
+        "ödeme aldık",
+        "havale",
+        "çek alındı",
+        "POS"
+      ],
+      "varsayilan_tanim": "120 müşteri carileri, iptal olmayan alacak hareketleri SIGN=1; nakit/havale/çek/senet/kart (1,20,61,62,70).",
+      "karisma_riski": "Çek/senet teslimi nakit tahsil değildir; CRM new_tahsilat saha kaydıdır (onay süreci) — ayrı kavram.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "collections",
+          "payment_movements"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 25,
+      "set_yol_dagilimi": {
+        "karma": 9,
+        "logo": 16
+      }
+    },
+    {
+      "id": "tahsilat_crm",
+      "kavram": "CRM tahsilat kaydı (saha)",
+      "alan": "finans",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_tahsilatBase"
+      ],
+      "kopru": "Doğrulanmadı (Logo kopyası adayı; makbuz/slip no ya da vergi no adayı)",
+      "es_anlamlilar": [
+        "CRM'e girilen tahsilat",
+        "onay bekleyen tahsilat",
+        "sahadan toplanan tahsilat",
+        "makbuz"
+      ],
+      "varsayilan_tanim": "Onay Bekliyor / Onaylandı / Reddedildi / Logoya Aktarıldı statülü saha tahsilat kaydı.",
+      "karisma_riski": "Gerçekleşen tahsilat Logo'dadır; iki kaynağı toplamak çift sayar.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B17",
+      "set_soru_sayisi": 26,
+      "set_yol_dagilimi": {
+        "crm": 12,
+        "karma": 14
+      }
+    },
+    {
+      "id": "cari_bakiye",
+      "kavram": "Cari bakiye (müşteri)",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_CLFLINE",
+        "LG_FFF_CLCARD"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "bakiye",
+        "borcu",
+        "alacağımız",
+        "açık alacak (net)",
+        "ekstre",
+        "mutabakat bakiyesi"
+      ],
+      "varsayilan_tanim": "Kaynak dönemindeki borç/alacak hareketlerinden açılış ve kapanış bakiyesi (tek kaynak dönem).",
+      "karisma_riski": "Net bakiye fatura bazlı açık alacak ya da vadesi geçmiş borç değildir; yıllık devirler toplanmaz; CRM 'anlık risk' alanı ayrıdır.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "customer_balances"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 35,
+      "set_yol_dagilimi": {
+        "karma": 8,
+        "logo": 27
+      }
+    },
+    {
+      "id": "vade_yaslandirma",
+      "kavram": "Açık alacak, vade ve yaşlandırma",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_PAYTRANS",
+        "LG_FFF_DD_CLFLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "vadesi geçmiş",
+        "yaşlandırma",
+        "30/60/90 gün",
+        "açık kalem",
+        "gecikmiş alacak",
+        "vadesi gelecek"
+      ],
+      "varsayilan_tanim": "Kapanmamış ödeme planı satırları vade tarihine göre; kapama ilişkisi doğrulanmadan sayı üretilmez.",
+      "karisma_riski": "Net cari bakiye yaşlandırma değildir; TOTAL-PAID/FIFO varsayılamaz. LOGO.md: 2026 PAYTRANS 139.648 satırın 0'ında CROSSREF, 14'ünde PAID dolu; PAYTRANS.DATE_ vade tarihidir (işlem tarihi PROCDATE).",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "aging (typed gap)"
+        ]
+      },
+      "bosluk_sinifi": "B04",
+      "set_soru_sayisi": 24,
+      "set_yol_dagilimi": {
+        "karma": 5,
+        "logo": 19
+      }
+    },
+    {
+      "id": "tahsilat_suresi",
+      "kavram": "Tahsil süresi (DSO, ortalama tahsil günü)",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_PAYTRANS (CROSSREF)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "ortalama tahsilat vadesi",
+        "kaç günde tahsil",
+        "geç ödeyen",
+        "tahsil süresi",
+        "ödeme süresi"
+      ],
+      "varsayilan_tanim": "Planlanan: plan tarihi − fatura tarihi (kalem başına); gerçekleşen: kapatan ödeme tarihi − fatura tarihi.",
+      "karisma_riski": "2026'da kapama kaydı yok → gerçekleşen hesaplanamaz (karar 07); CRM müşteri vade tanımı ayrı. LOGO.md: 2026 PAYTRANS 139.648 satırın 0'ında CROSSREF, 14'ünde PAID dolu; PAYTRANS.DATE_ vade tarihidir (işlem tarihi PROCDATE).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B04",
+      "set_soru_sayisi": 17,
+      "set_yol_dagilimi": {
+        "karma": 6,
+        "logo": 11
+      }
+    },
+    {
+      "id": "risk_limiti",
+      "kavram": "Risk / kredi limiti",
+      "alan": "finans",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "LG_FFF_CLCARD / risk alanları (Logo)",
+        "AccountBase 'Kredi Limiti', new_siparis risk alanları (CRM)"
+      ],
+      "kopru": "Vergi no (müşteri)",
+      "es_anlamlilar": [
+        "risk limiti",
+        "kredi limiti",
+        "limit doluluk",
+        "risk blokesi"
+      ],
+      "varsayilan_tanim": "Finansal risk sorusunda Logo risk limiti; sipariş onay süreci sorusunda CRM 'Risk Limit Onayı'.",
+      "karisma_riski": "CRM kredi limiti ile Logo risk limiti farklı tanımlanabilir (K0822).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B08",
+      "set_soru_sayisi": 14,
+      "set_yol_dagilimi": {
+        "crm": 4,
+        "karma": 6,
+        "logo": 4
+      }
+    },
+    {
+      "id": "vade_tanimi",
+      "kavram": "Ödeme vadesi tanımı / ödeme planı",
+      "alan": "finans",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "LG_FFF_PAYPLANS, CLCARD.PAYMENTREF (Logo)",
+        "new_odemevadesiBase, AccountBase 'Vade Gün' (CRM)"
+      ],
+      "kopru": "new_odemevadesi 'Logo Kodu' alanı",
+      "es_anlamlilar": [
+        "vade",
+        "tanıdığımız vade",
+        "ödeme planı",
+        "peşin",
+        "vadeli"
+      ],
+      "varsayilan_tanim": "Fatura vadesi Logo ödeme planından; müşteri sözleşme vadesi CRM'den.",
+      "karisma_riski": "İki sistemde farklı tanımlı olabilir (K0855).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B08",
+      "set_soru_sayisi": 13,
+      "set_yol_dagilimi": {
+        "crm": 2,
+        "karma": 2,
+        "logo": 9
+      }
+    },
+    {
+      "id": "cek_senet",
+      "kavram": "Çek ve senet",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_CSCARD",
+        "LG_FFF_DD_CSTRANS",
+        "LG_FFF_DD_CSROLL"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "çek",
+        "senet",
+        "portföy",
+        "karşılıksız",
+        "protesto",
+        "ciro edilen çek",
+        "teminat",
+        "bordro"
+      ],
+      "varsayilan_tanim": "Portföy durumu CSCARD güncel statüsü; olay soruları CSTRANS hareketi.",
+      "karisma_riski": "'Ciro' çek devri anlamında; karşılıksız: olay mı güncel durum mu (karar 3); CRM tahsilat tipi Çek ayrı kayıt.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "payment_movements (çek teslim hareketi)"
+        ]
+      },
+      "bosluk_sinifi": "B03",
+      "set_soru_sayisi": 28,
+      "set_yol_dagilimi": {
+        "crm": 1,
+        "karma": 5,
+        "logo": 22
+      }
+    },
+    {
+      "id": "banka",
+      "kavram": "Banka hesabı ve hareketi",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_BNCARD",
+        "LG_FFF_DD_BNFLINE",
+        "LG_FFF_DD_BNFICHE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "banka bakiyesi",
+        "havale",
+        "EFT",
+        "POS",
+        "kredi",
+        "virman",
+        "mevduat"
+      ],
+      "varsayilan_tanim": "Banka hesap kartı bakiyesi ve hareketleri.",
+      "karisma_riski": "CRM new_bankahesabi (kişi/firma IBAN kartı) farklı kavram.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B02",
+      "set_soru_sayisi": 26,
+      "set_yol_dagilimi": {
+        "crm": 1,
+        "karma": 5,
+        "logo": 20
+      }
+    },
+    {
+      "id": "kasa",
+      "kavram": "Kasa",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_KSCARD",
+        "LG_FFF_DD_KSLINES"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "kasa",
+        "nakit",
+        "kasa defteri"
+      ],
+      "varsayilan_tanim": "Kasa kartı bakiyesi ve hareketleri.",
+      "karisma_riski": "Muhasebe 100 hesabı ile kasa modülü farklı olabilir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B02",
+      "set_soru_sayisi": 14,
+      "set_yol_dagilimi": {
+        "karma": 2,
+        "logo": 12
+      }
+    },
+    {
+      "id": "nakit_akisi",
+      "kavram": "Nakit akışı ve pozisyon",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "Banka/kasa/çek/ödeme planı tabloları"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "nakit pozisyonu",
+        "nakit girişi",
+        "ödeme sıkıntısı",
+        "beklenen tahsilat",
+        "ödeme takvimi"
+      ],
+      "varsayilan_tanim": "Gerçekleşen: banka+kasa hareketi; beklenen: vadesi gelen alacak/borç ve çekler.",
+      "karisma_riski": "Beklenen nakit tahmindir; CRM sözleşme ödeme takvimi ve planlı baskılar ayrı kaynaktır.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B02",
+      "set_soru_sayisi": 11,
+      "set_yol_dagilimi": {
+        "karma": 4,
+        "logo": 7
+      }
+    },
+    {
+      "id": "tedarikci_borc",
+      "kavram": "Tedarikçi borcu",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_CLFLINE (320 carileri)",
+        "LG_FFF_CLCARD"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "borcumuz",
+        "tedarikçiye borç",
+        "matbaa borcu",
+        "ödenecek",
+        "satıcılar"
+      ],
+      "varsayilan_tanim": "Satıcı carilerinin net bakiyesi ve vadesi.",
+      "karisma_riski": "Motor customer_balances yalnız 120 müşteri carilerini okur.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B06",
+      "set_soru_sayisi": 22,
+      "set_yol_dagilimi": {
+        "karma": 4,
+        "logo": 18
+      }
+    },
+    {
+      "id": "satinalma",
+      "kavram": "Satınalma (alış faturası)",
+      "alan": "tedarik",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_INVOICE (alış)",
+        "LG_FFF_DD_STLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "alış",
+        "satınalma",
+        "mal alımı",
+        "kâğıt alımı",
+        "hizmet alımı",
+        "matbaa faturası",
+        "alış iadesi"
+      ],
+      "varsayilan_tanim": "Gerçekleşmiş alış faturası satırları net tutarı.",
+      "karisma_riski": "Alış fiyatı SMM değildir; matbaa faturası baskı maliyetidir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "purchase_prices"
+        ]
+      },
+      "bosluk_sinifi": "B06",
+      "set_soru_sayisi": 21,
+      "set_yol_dagilimi": {
+        "karma": 4,
+        "logo": 17
+      }
+    },
+    {
+      "id": "alis_fiyati",
+      "kavram": "Alış birim fiyatı",
+      "alan": "tedarik",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE (alış)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "alış fiyatı",
+        "birim alış fiyatı"
+      ],
+      "varsayilan_tanim": "Tedarikçi+malzeme+birim+para birimi+ay ağırlıklı birim alış fiyatı.",
+      "karisma_riski": "Maliyet (SMM) yerine kullanılamaz.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "purchase_prices"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 1,
+      "set_yol_dagilimi": {
+        "logo": 1
+      }
+    },
+    {
+      "id": "acik_satinalma_siparisi",
+      "kavram": "Açık satınalma siparişi",
+      "alan": "tedarik",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_ORFICHE/ORFLINE (alış)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "açık satınalma siparişi",
+        "gelmemiş sipariş"
+      ],
+      "varsayilan_tanim": "İptal edilmemiş, kapanmamış alış sipariş satırları.",
+      "karisma_riski": "—",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "open_orders(order_kind=purchase)"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 2,
+      "set_yol_dagilimi": {
+        "logo": 2
+      }
+    },
+    {
+      "id": "siparis",
+      "kavram": "Satış siparişi (B2B/saha)",
+      "alan": "sipariş",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_siparisBase",
+        "new_siparissatiriBase"
+      ],
+      "kopru": "Sipariş → new_sevkiyat (new_siparisid) → new_sevkiyat.new_logicalref = LG_FFF_DD_STFICHE.LOGICALREF (yıl firması + tarih şart) → INVOICE",
+      "es_anlamlilar": [
+        "sipariş",
+        "girilen sipariş",
+        "sipariş aldık",
+        "sipariş tutarı",
+        "sipariş adedi"
+      ],
+      "varsayilan_tanim": "CRM sipariş (logo_oncesi_surec): Logo ORFICHE'de kopyası yok; cevap 'sipariş' diye etiketlenir, 'satış' denmez.",
+      "karisma_riski": "Logo ORFICHE ayrı akıştır (e-ticaret/perakende, TS1 önekli), CRM siparişiyle toplanmaz. TİMAŞ iş tanımı #15 (sipariş = Logo ORFICHE) 2026-10-01 ölçümüyle çelişiyor.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B16",
+      "set_soru_sayisi": 68,
+      "set_yol_dagilimi": {
+        "crm": 31,
+        "karma": 37
+      }
+    },
+    {
+      "id": "acik_siparis",
+      "kavram": "Açık / bekleyen sipariş",
+      "alan": "sipariş",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "new_siparis/new_siparissatiri açık statü (CRM, B2B)",
+        "LG_FFF_DD_ORFLINE CLOSED=0 (Logo, e-ticaret)"
+      ],
+      "kopru": "Toplanmaz; kaynak ayrı gösterilir",
+      "es_anlamlilar": [
+        "bekleyen sipariş",
+        "açık sipariş",
+        "sevk edilmemiş",
+        "termini geçmiş",
+        "kısmen sevk"
+      ],
+      "varsayilan_tanim": "B2B/saha için CRM açık sipariş; Logo ORFLINE (AMOUNT > SHIPPEDAMOUNT) yalnız e-ticaret/perakende akışı.",
+      "karisma_riski": "Motorun open_orders modu Logo ORFLINE okur → B2B bekleyen siparişleri görmez. CRM 'bekleyen ürün' ayrı kavram. Termin CRM'de boş (karar 1).",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "open_orders (yalnız Logo akışı)"
+        ]
+      },
+      "bosluk_sinifi": "B16",
+      "set_soru_sayisi": 25,
+      "set_yol_dagilimi": {
+        "crm": 14,
+        "karma": 11
+      }
+    },
+    {
+      "id": "bekleyen_urun",
+      "kavram": "Bekleyen ürün (karşılanamayan talep)",
+      "alan": "sipariş",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_bekleyenurunBase"
+      ],
+      "kopru": "new_urunid → product → new_kitap.new_stokkodu = ITEMS.CODE",
+      "es_anlamlilar": [
+        "bekleyen ürün",
+        "karşılanamayan",
+        "stok yokluğundan bekleyen",
+        "backorder"
+      ],
+      "varsayilan_tanim": "Stok yokken sipariş satırından düşen talep (Bekleyen / Siparişe Eklendi / İptal); satış değildir.",
+      "karisma_riski": "Bekleyen sipariş (açık sipariş) ile karıştırılır.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B16",
+      "set_soru_sayisi": 13,
+      "set_yol_dagilimi": {
+        "crm": 7,
+        "karma": 6
+      }
+    },
+    {
+      "id": "crm_siparis_sureci",
+      "kavram": "Sipariş süreci (onay, statü, tip, iptal nedeni)",
+      "alan": "sipariş",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_siparisBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "onay bekleyen",
+        "risk blokesi",
+        "iptal nedeni",
+        "sipariş tipi",
+        "ödeme şekli",
+        "kampanya kodu",
+        "faturalanmayı bekliyor",
+        "yolda"
+      ],
+      "varsayilan_tanim": "new_siparis.statuscode (satır statüsü anlamsız) ve tip/ödeme alanları.",
+      "karisma_riski": "Logo'da bu durumların karşılığı yok.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B16",
+      "set_soru_sayisi": 30,
+      "set_yol_dagilimi": {
+        "crm": 17,
+        "karma": 13
+      }
+    },
+    {
+      "id": "sevkiyat",
+      "kavram": "Sevkiyat (malzeme çıkışı)",
+      "alan": "lojistik",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STFICHE",
+        "LG_FFF_DD_STLINE (TRCODE 7/8, IOCODE 4)"
+      ],
+      "kopru": "CRM new_sevkiyat.new_logicalref = STFICHE.LOGICALREF",
+      "es_anlamlilar": [
+        "sevk",
+        "sevkiyat",
+        "gönderdik",
+        "sevk adedi"
+      ],
+      "varsayilan_tanim": "Logo malzeme çıkışı; CRM sevkiyatı aynı olayın kopyasıdır (yön CRM→Logo).",
+      "karisma_riski": "CRM sevkiyat ve malzeme hareketi Logo olayını ikinci kez sayar; TRCODE 25 depolar arası sevk müşteri sevki değildir. IOCODE STLINE'da çıkış 4, STFICHE'de çıkış 3 kodlanır.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "open_orders.shipped_quantity"
+        ]
+      },
+      "bosluk_sinifi": "B09",
+      "set_soru_sayisi": 15,
+      "set_yol_dagilimi": {
+        "crm": 6,
+        "karma": 8,
+        "logo": 1
+      }
+    },
+    {
+      "id": "irsaliye",
+      "kavram": "İrsaliye",
+      "alan": "lojistik",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STFICHE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "irsaliye",
+        "e-irsaliye",
+        "faturalanmamış irsaliye",
+        "alım irsaliyesi",
+        "iade irsaliyesi"
+      ],
+      "varsayilan_tanim": "Satış/alış/iade irsaliye fişleri ve fatura bağı.",
+      "karisma_riski": "CRM sevkiyat kaydı irsaliye kopyasıdır.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "orphan_invoice_lines"
+        ]
+      },
+      "bosluk_sinifi": "B09",
+      "set_soru_sayisi": 19,
+      "set_yol_dagilimi": {
+        "karma": 6,
+        "logo": 13
+      }
+    },
+    {
+      "id": "stok_miktari",
+      "kavram": "Stok miktarı",
+      "alan": "stok",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE (IOCODE)",
+        "stok toplam görünümleri"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "stok",
+        "depoda kaç adet",
+        "elde kalan",
+        "stoğu bitmek üzere",
+        "negatif stok"
+      ],
+      "varsayilan_tanim": "Giriş (IOCODE 1,2) − çıkış (3,4), yalnız cari yıl kopyası (açılış devri içinde).",
+      "karisma_riski": "CRM raf/lot/sayım defteri (malzeme hareketi, koli stoğu) depo operasyonudur; eski yıl kopyasıyla birleşim çift sayar. IOCODE STLINE'da çıkış 4, STFICHE'de çıkış 3 kodlanır.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "stock",
+          "stock_history"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 20,
+      "set_yol_dagilimi": {
+        "karma": 8,
+        "logo": 12
+      }
+    },
+    {
+      "id": "stok_degeri",
+      "kavram": "Stok değeri",
+      "alan": "stok",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE",
+        "maliyet alanları"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "stok değeri",
+        "kaç liralık mal",
+        "envanter değeri",
+        "ölü stok değeri"
+      ],
+      "varsayilan_tanim": "Stok miktarı × doğrulanmış birim maliyet.",
+      "karisma_riski": "Muhasebe 153 bakiyesi ayrı; maliyet tanımı doğrulanmadı.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B05",
+      "set_soru_sayisi": 13,
+      "set_yol_dagilimi": {
+        "logo": 13
+      }
+    },
+    {
+      "id": "stok_kapsami",
+      "kavram": "Stok devir hızı / gün kapsamı",
+      "alan": "stok",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "stok devir hızı",
+        "kaç günlük stok",
+        "stok kapsama",
+        "iki yıllık stok"
+      ],
+      "varsayilan_tanim": "Gün kapsamı = stok / son dönem günlük satış; devir hızı = dönem satış adedi / ortalama stok.",
+      "karisma_riski": "Devir hızı formülü (açılış+güncel)/2 motorda yok.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "stock(lookback_days, coverage_days)"
+        ]
+      },
+      "bosluk_sinifi": "B31",
+      "set_soru_sayisi": 9,
+      "set_yol_dagilimi": {
+        "karma": 2,
+        "logo": 7
+      }
+    },
+    {
+      "id": "ambar_hareketi",
+      "kavram": "Ambar fişleri (transfer, sayım, fire, hurda)",
+      "alan": "stok",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STFICHE (TRCODE 25/50/51/11/12)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "transfer",
+        "sayım farkı",
+        "fire",
+        "sarf",
+        "hurda",
+        "konsinye"
+      ],
+      "varsayilan_tanim": "Logo stok fişleri.",
+      "karisma_riski": "Sayım ve raf transferi gerçekte CRM depo defterinde (Logo TRCODE 50/51 neredeyse boş).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B09",
+      "set_soru_sayisi": 8,
+      "set_yol_dagilimi": {
+        "karma": 2,
+        "logo": 6
+      }
+    },
+    {
+      "id": "stok_karti",
+      "kavram": "Stok kartı ana verisi",
+      "alan": "stok",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_ITEMS",
+        "LG_FFF_ITMUNITA",
+        "LG_FFF_UNITBARCODE"
+      ],
+      "kopru": "ITEMS.CODE ↔ new_kitapBase.new_stokkodu",
+      "es_anlamlilar": [
+        "stok kartı",
+        "barkod",
+        "birim",
+        "KDV oranı",
+        "asgari stok",
+        "reçete"
+      ],
+      "varsayilan_tanim": "Logo malzeme kartı alanları.",
+      "karisma_riski": "CRM 'Stok Kartları' (new_kitap) künye kartıdır; ürün (product) ayrı.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B08",
+      "set_soru_sayisi": 11,
+      "set_yol_dagilimi": {
+        "karma": 2,
+        "logo": 9
+      }
+    },
+    {
+      "id": "kitap_kapsami",
+      "kavram": "'Kitap' kapsamı",
+      "alan": "stok",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "LG_FFF_ITEMS",
+        "new_kitapBase (tip)"
+      ],
+      "kopru": "ITEMS.CODE ↔ new_stokkodu",
+      "es_anlamlilar": [
+        "kitap",
+        "yayın",
+        "ürün",
+        "eser"
+      ],
+      "varsayilan_tanim": "Bugün bütün malzeme kartları; karar 4 bekliyor (yalnız kitap tipleri).",
+      "karisma_riski": "Ayraç, bandrol, kahve gibi kartlar 'en çok satan kitap' listesine girebilir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "dimension:book"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 4,
+      "set_yol_dagilimi": {
+        "logo": 4
+      }
+    },
+    {
+      "id": "kitap_kunyesi",
+      "kavram": "Kitap künyesi",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_kitapBase",
+        "new_kitapgecmisiBase"
+      ],
+      "kopru": "new_kitapBase.new_stokkodu ↔ ITEMS.CODE",
+      "es_anlamlilar": [
+        "kitap kartı",
+        "künye",
+        "baskı sayısı",
+        "sayfa",
+        "kapak",
+        "satış durumu"
+      ],
+      "varsayilan_tanim": "Aktif CRM kitap kartı (statecode=0, Aktif).",
+      "karisma_riski": "Logo ITEMS yalnız kod/ad; aynı adlı farklı kitaplar birleştirilmez.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "relational:book",
+          "book_quality",
+          "book_change_history"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 2,
+      "set_yol_dagilimi": {
+        "crm": 1,
+        "karma": 1
+      }
+    },
+    {
+      "id": "isbn",
+      "kavram": "ISBN",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_kitapBase.new_isbn13",
+        "new_isbnlistesiBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "ISBN",
+        "yayın numarası",
+        "ISBN listesi"
+      ],
+      "varsayilan_tanim": "Kitap kartındaki ISBN13; ISBN listesi ayrı varlık.",
+      "karisma_riski": "Logo barkodu ISBN'e benzeyebilir ama kimlik değildir.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "book_quality",
+          "duplicate_isbn"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 5,
+      "set_yol_dagilimi": {
+        "crm": 4,
+        "karma": 1
+      }
+    },
+    {
+      "id": "bandrol",
+      "kavram": "Bandrol",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_kitapBase 'Bandrol Durumu'",
+        "new_uretim 'Bandrol Yapışacak mı'"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "bandrol",
+        "bandrol stoğu",
+        "bandrol talebi"
+      ],
+      "varsayilan_tanim": "Kart/üretim alanları; bandrol alım gideri Logo'da.",
+      "karisma_riski": "Bandrol Logo'da malzeme kartı olabilir (karar 4 listesi).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B29",
+      "set_soru_sayisi": 3,
+      "set_yol_dagilimi": {
+        "crm": 2,
+        "karma": 1
+      }
+    },
+    {
+      "id": "yazar",
+      "kavram": "Yazar (kişi)",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "ContactBase (new_yazarmi)",
+        "new_eserkatilimBase (rol Yazar)"
+      ],
+      "kopru": "Satışa: eser katılımı → kitap → new_stokkodu ↔ ITEMS.CODE",
+      "es_anlamlilar": [
+        "yazar",
+        "müellif",
+        "kalem",
+        "yazarlarımız",
+        "yerli/yabancı yazar"
+      ],
+      "varsayilan_tanim": "Aktif Contact + aktif Yazar rolüyle eser katılımı; ortak yazarlı kitap satışı bölünmez.",
+      "karisma_riski": "Logo'da yazar alanı yok; new_yazartext künye metni kimlik değil; yazar ≠ telif hak sahibi; çevirmen/editör de katılımcıdır.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "active_authors",
+          "dimension:author",
+          "dimension:author_group",
+          "author_* raporları"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 31,
+      "set_yol_dagilimi": {
+        "crm": 13,
+        "karma": 18
+      }
+    },
+    {
+      "id": "eser_katilimi",
+      "kavram": "Eser katılımı ve roller",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_eserkatilimBase",
+        "new_katilimcitipiBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "çevirmen",
+        "editör",
+        "illüstratör",
+        "katılımcı",
+        "rol"
+      ],
+      "varsayilan_tanim": "Kitap + katılım sağlayan (Contact) + rol.",
+      "karisma_riski": "Account katılımcı Contact değildir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "relational:participation"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 5,
+      "set_yol_dagilimi": {
+        "crm": 5
+      }
+    },
+    {
+      "id": "yayinevi",
+      "kavram": "Yayınevi / marka",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_markaBase (new_kitap.new_yayineviid)"
+      ],
+      "kopru": "Satışa stok kodu üzerinden",
+      "es_anlamlilar": [
+        "yayınevi",
+        "marka",
+        "imprint"
+      ],
+      "varsayilan_tanim": "Kitap kartındaki aktif marka.",
+      "karisma_riski": "Önceki yayınevi alanı ayrı; Account olarak yayınevi (rakip/tedarikçi) farklı.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "dimension:publisher",
+          "publisher_*"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 0,
+      "set_yol_dagilimi": {}
+    },
+    {
+      "id": "alt_marka",
+      "kavram": "Alt marka",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_markaBase (new_yayinciid)",
+        "new_yaynevialtmarkaBase"
+      ],
+      "kopru": "Satışa stok kodu üzerinden",
+      "es_anlamlilar": [
+        "alt marka",
+        "imprint",
+        "seri markası"
+      ],
+      "varsayilan_tanim": "new_yayinciid aktif Marka.",
+      "karisma_riski": "İki alt marka alanı var; marka-alt marka hiyerarşisi kanıtlanmadı.",
+      "motor": {
+        "durum": "var",
+        "karsilik": [
+          "dimension:subbrand",
+          "subbrand_consistency"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 0,
+      "set_yol_dagilimi": {}
+    },
+    {
+      "id": "tur_kategori",
+      "kavram": "Tür / kategori / hedef kitle",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_turBase",
+        "new_kitaplikBase",
+        "new_urunkategorisiBase",
+        "new_kitapBase hedef yaş"
+      ],
+      "kopru": "Satışa stok kodu üzerinden",
+      "es_anlamlilar": [
+        "tür",
+        "kategori",
+        "çocuk kitabı",
+        "yetişkin",
+        "roman",
+        "kitaplık",
+        "set ürün",
+        "çeviri/telif kitap"
+      ],
+      "varsayilan_tanim": "CRM kitap sınıflamaları (alan seçimi doğrulanmalı).",
+      "karisma_riski": "Logo kart grup/özel kodu farklı sınıflama olabilir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B24",
+      "set_soru_sayisi": 13,
+      "set_yol_dagilimi": {
+        "crm": 4,
+        "karma": 8,
+        "logo": 1
+      }
+    },
+    {
+      "id": "dizi_seri",
+      "kavram": "Dizi / seri",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_diziBase",
+        "new_seriBase"
+      ],
+      "kopru": "Satışa stok kodu üzerinden",
+      "es_anlamlilar": [
+        "dizi",
+        "seri"
+      ],
+      "varsayilan_tanim": "Kitap kartındaki dizi/seri bağı.",
+      "karisma_riski": "—",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B24",
+      "set_soru_sayisi": 3,
+      "set_yol_dagilimi": {
+        "crm": 1,
+        "karma": 2
+      }
+    },
+    {
+      "id": "yayin_tarihi",
+      "kavram": "Yayın tarihi / yeni çıkan kitap",
+      "alan": "künye",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_kitapBase.new_ilkyayintarihi",
+        "new_sonyayintarihi"
+      ],
+      "kopru": "Satışa stok kodu üzerinden",
+      "es_anlamlilar": [
+        "yeni çıkan",
+        "bu yıl çıkan",
+        "ilk baskı tarihi",
+        "son yayın",
+        "eski kitap"
+      ],
+      "varsayilan_tanim": "İlk baskı tarihi (new_ilkyayintarihi); CreatedOn katalog eklenmesidir, yayın değildir.",
+      "karisma_riski": "Tek bir 'yayın tarihi' alanı kanıtlanmadı.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "publication_dates",
+          "catalog_additions"
+        ]
+      },
+      "bosluk_sinifi": "B24",
+      "set_soru_sayisi": 23,
+      "set_yol_dagilimi": {
+        "crm": 9,
+        "karma": 14
+      }
+    },
+    {
+      "id": "sozlesme",
+      "kavram": "Sözleşme",
+      "alan": "sözleşme",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_sozlesmeBase",
+        "new_sozlesmetarafiBase",
+        "new_new_sozlesme_new_kitapBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "sözleşme",
+        "kontrat",
+        "telif sözleşmesi",
+        "süresi dolacak",
+        "yenilenmemiş",
+        "imza"
+      ],
+      "varsayilan_tanim": "Aktif sözleşme (statecode=0, pasif hariç); başlangıç/bitiş/revize/yenileme/fesih ayrı.",
+      "karisma_riski": "Logo'da sözleşme yok; süresi dolan sözleşme otomatik satış yasağı değildir; ana sözleşme metin UUID'si soy ağacı değildir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "relational:contract",
+          "contract_expiry",
+          "contract_overlap",
+          "contract_author_roles",
+          "contract_revision_evidence",
+          "contract_author_differences"
+        ]
+      },
+      "bosluk_sinifi": "B22",
+      "set_soru_sayisi": 41,
+      "set_yol_dagilimi": {
+        "crm": 30,
+        "karma": 11
+      }
+    },
+    {
+      "id": "telif_orani",
+      "kavram": "Telif oranı / telif tanımı",
+      "alan": "sözleşme",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_sozlesmeBase (Karton K/E-Kitap/Yurtdışı Telif %)",
+        "new_teliftanimBase",
+        "new_hakBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "telif oranı",
+        "telif yüzdesi",
+        "kademeli telif",
+        "royalty"
+      ],
+      "varsayilan_tanim": "Sözleşme telif yüzdesi alanları ve telif tanımı kademeleri.",
+      "karisma_riski": "new_olasitelif (Olası Telif Oranı) önerilen oran değildir (Kural C11 çürüdü); yayın kurulu önerilen oranı ayrı.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B22",
+      "set_soru_sayisi": 13,
+      "set_yol_dagilimi": {
+        "crm": 11,
+        "karma": 2
+      }
+    },
+    {
+      "id": "telif_hakedis",
+      "kavram": "Telif hakedişi / tahakkuku",
+      "alan": "sözleşme",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "CRM telif oranı",
+        "LG_FFF_DD_STLINE net satış adedi/tutarı"
+      ],
+      "kopru": "new_new_sozlesme_new_kitap → new_kitap.new_stokkodu ↔ ITEMS.CODE",
+      "es_anlamlilar": [
+        "hakediş",
+        "telif tahakkuku",
+        "telif ödeyeceğiz",
+        "yazara düşen"
+      ],
+      "varsayilan_tanim": "Sözleşme telif oranı × telife esas net satış (iadeler düşülmüş); CRM'de hakediş tablosu yok (new_odeme 50 kayıt).",
+      "karisma_riski": "Ödenmiş telif (Logo) ile hakediş (hesap) ayrı; yazar = hak sahibi varsayılamaz.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B22",
+      "set_soru_sayisi": 35,
+      "set_yol_dagilimi": {
+        "crm": 5,
+        "karma": 30
+      }
+    },
+    {
+      "id": "avans",
+      "kavram": "Telif avansı",
+      "alan": "sözleşme",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "new_sozlesmeBase 'Avans Tutarı' (CRM)",
+        "yazar carisi avans hareketi (Logo)"
+      ],
+      "kopru": "Yazar carisi ↔ sözleşme tarafı: doğrulanmadı",
+      "es_anlamlilar": [
+        "avans",
+        "avans bakiyesi",
+        "avans mahsubu"
+      ],
+      "varsayilan_tanim": "Sözleşmedeki avans; ödenen avans Logo'da.",
+      "karisma_riski": "Avans mahsubu için satışa dayalı hakediş gerekir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B22",
+      "set_soru_sayisi": 10,
+      "set_yol_dagilimi": {
+        "crm": 3,
+        "karma": 7
+      }
+    },
+    {
+      "id": "dijital_hak",
+      "kavram": "Dijital ve yan haklar",
+      "alan": "sözleşme",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_sozlesmeBase (İletim Hakkı, E-Kitap, Sesli Kitap, Z-Kitap)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "e-kitap hakkı",
+        "sesli kitap hakkı",
+        "dijital hak",
+        "iletim hakkı"
+      ],
+      "varsayilan_tanim": "Yalnız Telif Alış sözleşmelerinde hak bayrakları.",
+      "karisma_riski": "Hak varlığı satış iznini tek başına kanıtlamaz.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B22",
+      "set_soru_sayisi": 1,
+      "set_yol_dagilimi": {
+        "crm": 1
+      }
+    },
+    {
+      "id": "hak_satisi",
+      "kavram": "Yurtdışı hak alım/satışı",
+      "alan": "sözleşme",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_sozlesmeBase (Telif Satış tipi)",
+        "new_new_sozlesme_new_ulkeBase",
+        "new_new_sozlesme_new_dilBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "hak satışı",
+        "yabancı hak",
+        "ajans",
+        "çeviri hakkı"
+      ],
+      "varsayilan_tanim": "Sözleşme tipi ve taraf tipine göre (karar 9).",
+      "karisma_riski": "Ülke-bölge AND/OR anlamı doğrulanmadı.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "contract_overlap"
+        ]
+      },
+      "bosluk_sinifi": "B22",
+      "set_soru_sayisi": 7,
+      "set_yol_dagilimi": {
+        "crm": 6,
+        "karma": 1
+      }
+    },
+    {
+      "id": "yazar_odemesi",
+      "kavram": "Yazara/serbest çalışana yapılan ödeme",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "Yazar/serbest çalışan carileri (CLFLINE)",
+        "telif gider hesapları (EMFLINE)"
+      ],
+      "kopru": "Cari ↔ CRM kişi: doğrulanmadı",
+      "es_anlamlilar": [
+        "telif ödemesi",
+        "yazara ödediğimiz",
+        "çevirmen ödemesi",
+        "stopaj"
+      ],
+      "varsayilan_tanim": "Logo'da muhasebeleşmiş ödeme ve gider.",
+      "karisma_riski": "CRM hakediş/sözleşme tutarı ödeme değildir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B01",
+      "set_soru_sayisi": 21,
+      "set_yol_dagilimi": {
+        "karma": 18,
+        "logo": 3
+      }
+    },
+    {
+      "id": "is_plani",
+      "kavram": "İş planı",
+      "alan": "süreç",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_isplaniBase",
+        "new_plansorumlulariBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "iş planı",
+        "görev",
+        "geciken iş",
+        "tamamlanma"
+      ],
+      "varsayilan_tanim": "Aktif iptal olmayan açık iş planları.",
+      "karisma_riski": "Modül 2025-12'den, plan sorumluları 2022-09'dan beri güncellenmiyor.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "work_due",
+          "work_due_missing",
+          "work_stage_history",
+          "relational:work"
+        ]
+      },
+      "bosluk_sinifi": "B23",
+      "set_soru_sayisi": 6,
+      "set_yol_dagilimi": {
+        "crm": 6
+      }
+    },
+    {
+      "id": "proje",
+      "kavram": "Proje / yayın programı",
+      "alan": "süreç",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_projeBase",
+        "new_projeasamalariBase",
+        "new_projegrBase"
+      ],
+      "kopru": "Proje ↔ kitap: new_kitap.new_projekarti / new_kitapprojesi (N:N ara tablo yanıltıcı)",
+      "es_anlamlilar": [
+        "proje",
+        "yayın programı",
+        "aşama",
+        "ön maliyet",
+        "proje bütçesi"
+      ],
+      "varsayilan_tanim": "Aktif proje kayıtları; aşama/statü alanları.",
+      "karisma_riski": "Logo proje kodu (gider kaydı) CRM projesi değildir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "relational:project",
+          "relational:project_stage"
+        ]
+      },
+      "bosluk_sinifi": "B23",
+      "set_soru_sayisi": 18,
+      "set_yol_dagilimi": {
+        "crm": 16,
+        "karma": 2
+      }
+    },
+    {
+      "id": "yayin_kurulu",
+      "kavram": "Yayın kurulu kararı",
+      "alan": "süreç",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_yayinkurulutoplantilariBase",
+        "new_projegrBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "yayın kurulu",
+        "kurul kararı",
+        "önerilen telif",
+        "önerilen fiyat",
+        "önerilen baskı adedi",
+        "onaylanan proje"
+      ],
+      "varsayilan_tanim": "Toplantı kararı (Kabul/Red/Bekleme/Geliştirme) ve öneri alanları.",
+      "karisma_riski": "Portal editoryal başvuru/kurul tabloları (semantic_editorial_*) ayrı; yönetim kurulu kararı (portal kurul) farklı kavram.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B23",
+      "set_soru_sayisi": 15,
+      "set_yol_dagilimi": {
+        "crm": 11,
+        "karma": 4
+      }
+    },
+    {
+      "id": "editor",
+      "kavram": "Editör",
+      "alan": "süreç",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_kitapBase (new_Editor, new_projeeditoru, new_yayinyonetmeni)",
+        "new_uretim.new_sorumlueditor"
+      ],
+      "kopru": "Satışa stok kodu üzerinden",
+      "es_anlamlilar": [
+        "editör",
+        "proje editörü",
+        "yayın yönetmeni"
+      ],
+      "varsayilan_tanim": "Rol alanları ayrı ve kimlikli.",
+      "karisma_riski": "Portal editör görevleri (semantic_editorial_tasks) ayrı.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "editor_assignments"
+        ]
+      },
+      "bosluk_sinifi": "B24",
+      "set_soru_sayisi": 4,
+      "set_yol_dagilimi": {
+        "crm": 2,
+        "karma": 2
+      }
+    },
+    {
+      "id": "randevu_gorev",
+      "kavram": "Randevu, görev, telefon",
+      "alan": "süreç",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "TaskBase",
+        "AppointmentBase",
+        "PhoneCallBase",
+        "ActivityPointerBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "randevu",
+        "görev",
+        "toplantı",
+        "telefon görüşmesi",
+        "açık aksiyon"
+      ],
+      "varsayilan_tanim": "Yazar randevusundan doğan açık görevler.",
+      "karisma_riski": "Randevu (33) ve telefon (21) kaydı ölü; görevlerin çoğu iş akışı üretimi.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "open_author_actions",
+          "appointments_with_actions"
+        ]
+      },
+      "bosluk_sinifi": "B29",
+      "set_soru_sayisi": 3,
+      "set_yol_dagilimi": {
+        "crm": 3
+      }
+    },
+    {
+      "id": "satis_hedefi",
+      "kavram": "Satış hedefi",
+      "alan": "hedef",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_satishedefleriBase"
+      ],
+      "kopru": "new_StokKodu = ITEMS.CODE (2026'da 68.327/68.327)",
+      "es_anlamlilar": [
+        "hedef",
+        "satış hedefi",
+        "bütçe hedefi",
+        "temsilci hedefi",
+        "bölge hedefi"
+      ],
+      "varsayilan_tanim": "Kitap × BMT × yıl aylık ADET hedefi (tutar yok); 2023-24 bölge × kitap.",
+      "karisma_riski": "'2000'/'1991' etiketli yıl kodları onaysız kullanılmaz; 114 tekrar eden anahtar; TL hedef yok.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B19",
+      "set_soru_sayisi": 12,
+      "set_yol_dagilimi": {
+        "crm": 11,
+        "karma": 1
+      }
+    },
+    {
+      "id": "hedef_gerceklesme",
+      "kavram": "Hedef-gerçekleşen",
+      "alan": "hedef",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "new_satishedefleriBase",
+        "LG_FFF_DD_STLINE"
+      ],
+      "kopru": "Kitap: new_StokKodu = ITEMS.CODE; BMT ↔ Logo satış elemanı/kanal: ölçülmedi",
+      "es_anlamlilar": [
+        "hedefin neresindeyiz",
+        "hedef tutturma",
+        "gerçekleşme oranı",
+        "hedefin gerisinde"
+      ],
+      "varsayilan_tanim": "Hedef adet ↔ Logo faturalı net adet, kitap düzeyinde.",
+      "karisma_riski": "Ciro hedefi sorulursa 'hedef yalnız adet' denmeli.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "sold_quantity",
+          "net_quantity"
+        ]
+      },
+      "bosluk_sinifi": "B19",
+      "set_soru_sayisi": 19,
+      "set_yol_dagilimi": {
+        "karma": 19
+      }
+    },
+    {
+      "id": "kampanya",
+      "kavram": "Kampanya",
+      "alan": "pazarlama",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_kampanyaBase",
+        "new_new_kampanya_account",
+        "new_new_kampanya_product",
+        "new_siparissatiri.new_kampanyaid"
+      ],
+      "kopru": "Sipariş satırı kampanyası → sevkiyat → Logo fatura",
+      "es_anlamlilar": [
+        "kampanya",
+        "kampanya iskontosu",
+        "kampanya cirosu",
+        "kampanya kodu"
+      ],
+      "varsayilan_tanim": "CRM kampanya kartı (planlanan/gerçekleşen ciro, net/ek iskonto).",
+      "karisma_riski": "Portal indirim kampanyaları (semantic_kampanya_*) ve Email/SMS kampanyası (campaign) ayrı; CRM 'gerçekleşen ciro' Logo cirosu değildir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B20",
+      "set_soru_sayisi": 16,
+      "set_yol_dagilimi": {
+        "crm": 8,
+        "karma": 8
+      }
+    },
+    {
+      "id": "etkinlik",
+      "kavram": "Etkinlik",
+      "alan": "pazarlama",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_etkinlikBase",
+        "new_new_etkinlik_contactBase",
+        "new_etkinliktipiBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "etkinlik",
+        "imza günü",
+        "söyleşi",
+        "fuar",
+        "okul buluşması"
+      ],
+      "varsayilan_tanim": "Planlandı/Tamamlandı/İptal; çoğunluğu satış ziyareti.",
+      "karisma_riski": "Etkinlik-yazar bağı (karar 5); etkinlik ≠ standart Appointment.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B18",
+      "set_soru_sayisi": 22,
+      "set_yol_dagilimi": {
+        "crm": 10,
+        "karma": 12
+      }
+    },
+    {
+      "id": "etkinlik_gideri",
+      "kavram": "Etkinlik gideri",
+      "alan": "pazarlama",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "Logo gider hesapları 740.03 / 760.45 / 760.47.470",
+        "new_etkinlik gider alanları (CRM)"
+      ],
+      "kopru": "Etkinlik ↔ gider fişi bağı yok",
+      "es_anlamlilar": [
+        "etkinlik gideri",
+        "fuar masrafı",
+        "konaklama ulaşım",
+        "yazar katılım ücreti"
+      ],
+      "varsayilan_tanim": "Gerçekleşen gider Logo hesapları (2026: 4,83 Mn ₺); etkinlik kırılımı CRM'den.",
+      "karisma_riski": "CRM gider alanı eksik (9.275 ₺); kapanış fişi 760'ı sıfırlar.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B18",
+      "set_soru_sayisi": 21,
+      "set_yol_dagilimi": {
+        "crm": 11,
+        "karma": 10
+      }
+    },
+    {
+      "id": "ziyaret_okul",
+      "kavram": "Müşteri/okul ziyareti",
+      "alan": "pazarlama",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_etkinlikBase (ziyaret şekli)",
+        "new_ziyaretyerleriBase (kurum/okul evreni)"
+      ],
+      "kopru": "Okul Account ↔ Logo cari: doğrulanmadı",
+      "es_anlamlilar": [
+        "ziyaret",
+        "okul ziyareti",
+        "saha ziyareti",
+        "görüşme"
+      ],
+      "varsayilan_tanim": "Ziyaret = etkinlik kaydı; new_ziyaretyerleri okul/kurum dizinidir (öğrenci sayısı vb.).",
+      "karisma_riski": "Ziyaret yerleri tablosu ziyaret kaydı değildir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B18",
+      "set_soru_sayisi": 35,
+      "set_yol_dagilimi": {
+        "crm": 23,
+        "karma": 12
+      }
+    },
+    {
+      "id": "reklam",
+      "kavram": "Reklam planı ve harcaması",
+      "alan": "pazarlama",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "new_reklamplaniBase (CRM, 71)",
+        "semantic_ads_* (portal dijital reklam)",
+        "Logo reklam gider hesabı"
+      ],
+      "kopru": "Reklam planı 'Fatura Numarası' alanı ↔ Logo fatura: doğrulanmadı",
+      "es_anlamlilar": [
+        "reklam",
+        "tanıtım bütçesi",
+        "mecra",
+        "reklam ajansı",
+        "sosyal medya reklamı"
+      ],
+      "varsayilan_tanim": "Plan/onay CRM; dijital harcama portal; gerçekleşen gider Logo.",
+      "karisma_riski": "Üç kaynak aynı adı taşır.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B20",
+      "set_soru_sayisi": 18,
+      "set_yol_dagilimi": {
+        "crm": 8,
+        "karma": 10
+      }
+    },
+    {
+      "id": "kargo",
+      "kavram": "Kargo",
+      "alan": "lojistik",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "Logo 760.34.342 kargo gideri / kargo firması faturası",
+        "new_kargobilgisiBase, new_kargotakipbilgisiBase (CRM)"
+      ],
+      "kopru": "Yok",
+      "es_anlamlilar": [
+        "kargo",
+        "gönderi",
+        "desi",
+        "teslim süresi",
+        "alıcı ödemeli"
+      ],
+      "varsayilan_tanim": "Maliyet Logo; gönderi ayrıntısı CRM (2024 tek seferlik Aras yüklemesi, tutar KDV hariç).",
+      "karisma_riski": "CRM kargo verisi güncel değil.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B21",
+      "set_soru_sayisi": 22,
+      "set_yol_dagilimi": {
+        "crm": 10,
+        "karma": 9,
+        "logo": 3
+      }
+    },
+    {
+      "id": "uretim_emri",
+      "kavram": "Üretim emri / basılan adet",
+      "alan": "üretim",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "PRODORD",
+        "LG_FFF_DD_STLINE TRCODE 13 (üretimden giriş), 12 (sarf)"
+      ],
+      "kopru": "CRM new_malzemehareketi.new_logouretimfisi = STFICHE.SPECODE",
+      "es_anlamlilar": [
+        "üretim emri",
+        "baskı yapıldı",
+        "basılan adet",
+        "üretimden giriş",
+        "sarf"
+      ],
+      "varsayilan_tanim": "Tamamlanmış üretim emri (STATUS 3) ve üretimden giriş.",
+      "karisma_riski": "CRM üretim kartı aynı baskının süreç kaydı; CRM malzeme hareketi üretim girişi kısmi kopya.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B07",
+      "set_soru_sayisi": 25,
+      "set_yol_dagilimi": {
+        "crm": 1,
+        "karma": 5,
+        "logo": 19
+      }
+    },
+    {
+      "id": "baski_karti",
+      "kavram": "Baskı/üretim kartı (matbaa, forma, kâğıt, cilt)",
+      "alan": "üretim",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_uretimBase"
+      ],
+      "kopru": "new_kitap → new_stokkodu; 'Logo Üretim Adeti' alanı",
+      "es_anlamlilar": [
+        "baskı",
+        "matbaa",
+        "forma",
+        "kâğıt cinsi",
+        "cilt",
+        "tiraj",
+        "baskı talebi",
+        "tekrar baskı"
+      ],
+      "varsayilan_tanim": "Aktif üretim kaydı ve statü (Editoryal Hazırlık … Depo Girişi).",
+      "karisma_riski": "Logo kopyası adayı; gerçekleşen adet/maliyet Logo'da.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B07",
+      "set_soru_sayisi": 40,
+      "set_yol_dagilimi": {
+        "crm": 23,
+        "karma": 16,
+        "portal": 1
+      }
+    },
+    {
+      "id": "baski_maliyeti",
+      "kavram": "Baskı maliyeti (gerçekleşen)",
+      "alan": "üretim",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "Komple Baskı alış faturası (SPECODE = stok kodu)",
+        "OUTCOST"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "baskı maliyeti",
+        "birim maliyet",
+        "matbaa faturası",
+        "en pahalı baskı"
+      ],
+      "varsayilan_tanim": "M9 pricing/model.py tek hesap; kâğıt Timaş'ın (15001) ayrı.",
+      "karisma_riski": "CRM üretim 'Toplam Maliyet' girilen/planlanan tutardır.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B07",
+      "set_soru_sayisi": 26,
+      "set_yol_dagilimi": {
+        "crm": 4,
+        "karma": 8,
+        "logo": 14
+      }
+    },
+    {
+      "id": "baski_onerisi",
+      "kavram": "Baskı önerisi",
+      "alan": "üretim",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_baskioneriBase (582)"
+      ],
+      "kopru": "Kitap → stok kodu",
+      "es_anlamlilar": [
+        "baskı öneri",
+        "önerilen baskı adedi"
+      ],
+      "varsayilan_tanim": "CRM öneri kaydı; ayrıca Baskı Öneri modülü (Power BI birebir).",
+      "karisma_riski": "İki kaynak farklı öneri üretebilir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B07",
+      "set_soru_sayisi": 5,
+      "set_yol_dagilimi": {
+        "crm": 4,
+        "karma": 1
+      }
+    },
+    {
+      "id": "maliyet_kar",
+      "kavram": "Satılan malın maliyeti ve kâr",
+      "alan": "karlılık",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE (AMOUNT × OUTCOST)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "kâr",
+        "brüt kâr",
+        "marj",
+        "kârlılık",
+        "zarar",
+        "SMM",
+        "katkı payı"
+      ],
+      "varsayilan_tanim": "Satır LINENET − AMOUNT × OUTCOST; satış artı, iade eksi.",
+      "karisma_riski": "Maliyet semantiği doğrulanmadı; son alış/satış fiyatı maliyet yerine geçmez; CRM 'senaryo kârı' ayrı. LOGO.md: 2026-09 satış satırlarının yalnız %0,8'inde OUTCOST dolu; güncel aylarda kâr hesaplanamaz.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "profit (typed gap)"
+        ]
+      },
+      "bosluk_sinifi": "B05",
+      "set_soru_sayisi": 34,
+      "set_yol_dagilimi": {
+        "karma": 15,
+        "logo": 19
+      }
+    },
+    {
+      "id": "fiyat_listesi",
+      "kavram": "Liste fiyatı",
+      "alan": "ticari koşul",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "LG_FFF_PRCLIST (Logo)",
+        "new_fiyatlistesiogesiBase, PriceLevel (CRM)"
+      ],
+      "kopru": "CRM fiyat listesi öğesi Logo ref alanı taşıyor (doğrulanmadı)",
+      "es_anlamlilar": [
+        "liste fiyatı",
+        "fiyat listesi",
+        "zam",
+        "satış fiyatı",
+        "kapak fiyatı"
+      ],
+      "varsayilan_tanim": "Fatura karşılaştırmasında Logo fiyat kartı; hangi liste: karar 8.",
+      "karisma_riski": "Aynı kitap için birden çok geçerli kanal listesi; faturayı listeye bağlayan alan yok.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B08",
+      "set_soru_sayisi": 23,
+      "set_yol_dagilimi": {
+        "crm": 7,
+        "karma": 5,
+        "logo": 11
+      }
+    },
+    {
+      "id": "iskonto_tanimi",
+      "kavram": "Tanımlı iskonto (iskonto listesi)",
+      "alan": "ticari koşul",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_iskontolistesiogeleriBase"
+      ],
+      "kopru": "Müşteri: vergi no",
+      "es_anlamlilar": [
+        "iskonto listesi",
+        "tanımlı iskonto",
+        "müşteri iskontosu"
+      ],
+      "varsayilan_tanim": "CRM iskonto listesi öğeleri.",
+      "karisma_riski": "Uygulanan iskonto Logo faturasındadır; Logo cari kartı indirim alanı da tanımdır.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B08",
+      "set_soru_sayisi": 11,
+      "set_yol_dagilimi": {
+        "crm": 6,
+        "karma": 4,
+        "logo": 1
+      }
+    },
+    {
+      "id": "rakip_kitap",
+      "kavram": "Rakip kitap",
+      "alan": "pazar",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_rakipkitapBase (30.415)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "rakip",
+        "rakip fiyatı",
+        "rakip yayınevi"
+      ],
+      "varsayilan_tanim": "CRM rakip kitap eşlemesi.",
+      "karisma_riski": "Portal dağıtımcı kataloğu (D&R/Başarı) ayrı pazar verisi.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B29",
+      "set_soru_sayisi": 10,
+      "set_yol_dagilimi": {
+        "crm": 7,
+        "karma": 3
+      }
+    },
+    {
+      "id": "muhasebe_fisi_mizan",
+      "kavram": "Muhasebe fişi, mizan, hesap",
+      "alan": "muhasebe",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_EMUHACC",
+        "LG_FFF_DD_EMFICHE",
+        "LG_FFF_DD_EMFLINE"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "mizan",
+        "fiş",
+        "mahsup",
+        "hesap bakiyesi",
+        "120",
+        "320",
+        "600",
+        "770",
+        "gelir tablosu"
+      ],
+      "varsayilan_tanim": "Genel muhasebe hareketleri ve hesap planı.",
+      "karisma_riski": "600 hesabı STLINE net cirosu ile aynı değildir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B01",
+      "set_soru_sayisi": 29,
+      "set_yol_dagilimi": {
+        "logo": 29
+      }
+    },
+    {
+      "id": "gider_masraf_merkezi",
+      "kavram": "Gider ve masraf merkezi",
+      "alan": "muhasebe",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_EMFLINE",
+        "LG_FFF_EMCENTER"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "gider",
+        "masraf",
+        "masraf merkezi",
+        "personel gideri",
+        "kira",
+        "pazarlama gideri",
+        "kargo gideri"
+      ],
+      "varsayilan_tanim": "7xx gider hesapları, masraf merkezi kırılımı.",
+      "karisma_riski": "CRM masraf/bütçe kayıtları plan veya talep olabilir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B01",
+      "set_soru_sayisi": 30,
+      "set_yol_dagilimi": {
+        "karma": 7,
+        "logo": 23
+      }
+    },
+    {
+      "id": "kdv_vergi",
+      "kavram": "KDV, BA/BS, stopaj, e-belge",
+      "alan": "muhasebe",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_INVOICE / STLINE vergi alanları",
+        "EMFLINE 191/391/360"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "KDV",
+        "matrah",
+        "BA",
+        "BS",
+        "stopaj",
+        "tevkifat",
+        "muhtasar",
+        "e-fatura",
+        "e-arşiv"
+      ],
+      "varsayilan_tanim": "Fatura vergi alanları ve vergi hesapları.",
+      "karisma_riski": "—",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B01",
+      "set_soru_sayisi": 21,
+      "set_yol_dagilimi": {
+        "karma": 2,
+        "logo": 19
+      }
+    },
+    {
+      "id": "doviz",
+      "kavram": "Döviz",
+      "alan": "finans",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_INVOICE (TRCURR, TRNET)",
+        "CLFLINE dövizli alanlar"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "döviz",
+        "euro",
+        "dolar",
+        "kur",
+        "kur farkı",
+        "dövizli"
+      ],
+      "varsayilan_tanim": "İşlem para birimi bazında; dövizler toplanmaz.",
+      "karisma_riski": "Sözleşme para birimi CRM'de ayrı.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "currencies"
+        ]
+      },
+      "bosluk_sinifi": "B14",
+      "set_soru_sayisi": 17,
+      "set_yol_dagilimi": {
+        "crm": 2,
+        "karma": 4,
+        "logo": 11
+      }
+    },
+    {
+      "id": "butce",
+      "kavram": "Bütçe",
+      "alan": "plan",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "new_butcekalemiBase, new_pazarlamamoduluBase (CRM)",
+        "semantic_mkt_month_budget (portal)"
+      ],
+      "kopru": "Yok",
+      "es_anlamlilar": [
+        "bütçe",
+        "pazarlama bütçesi",
+        "etkinlik bütçesi",
+        "proje bütçesi"
+      ],
+      "varsayilan_tanim": "Bütçe kaynağı soru başına netleştirilir; Logo'da bütçe yok.",
+      "karisma_riski": "set1000 'butce' konusundaki sorular çoğu gider-geçen yıl karşılaştırması.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B25",
+      "set_soru_sayisi": 6,
+      "set_yol_dagilimi": {
+        "crm": 3,
+        "karma": 3
+      }
+    },
+    {
+      "id": "personel_ik",
+      "kavram": "Personel (İK)",
+      "alan": "İK",
+      "sahip": "portal",
+      "birincil_tablolar": [
+        "İK modülü (sohbete kapalı)",
+        "Logo 335/770 personel hesapları"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "personel",
+        "işe alım",
+        "performans",
+        "SGK",
+        "kıdem"
+      ],
+      "varsayilan_tanim": "İK kayıtları sohbete bağlanmaz (closed); personel gideri muhasebe sorusudur (Logo).",
+      "karisma_riski": "Personel gider/borç hesapları finans sorusudur, İK değil.",
+      "motor": {
+        "durum": "portal",
+        "karsilik": [
+          "chat_topics:ik (closed)"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 6,
+      "set_yol_dagilimi": {
+        "logo": 6
+      }
+    },
+    {
+      "id": "destek_talebi",
+      "kavram": "Destek talebi / şikâyet",
+      "alan": "destek",
+      "sahip": "portal",
+      "birincil_tablolar": [
+        "semantic_support_*, semantic_mail_* (portal)",
+        "new_talepyonetimiBase (BT, ölü)",
+        "IncidentBase (34)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "destek talebi",
+        "şikâyet",
+        "çözüm süresi",
+        "açık talep"
+      ],
+      "varsayilan_tanim": "Portal müşteri hizmetleri alanı.",
+      "karisma_riski": "CRM talep yönetimi 2024-07'den beri ölü.",
+      "motor": {
+        "durum": "portal",
+        "karsilik": [
+          "chat_portal:musteri-destek, kurumsal-eposta"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 13,
+      "set_yol_dagilimi": {
+        "crm": 1,
+        "karma": 3,
+        "portal": 9
+      }
+    },
+    {
+      "id": "sosyal_medya_dijital",
+      "kavram": "Sosyal medya ve dijital reklam",
+      "alan": "pazarlama",
+      "sahip": "portal",
+      "birincil_tablolar": [
+        "semantic_social_*",
+        "semantic_ads_*"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "sosyal medya",
+        "dijital reklam",
+        "tıklama",
+        "ROAS"
+      ],
+      "varsayilan_tanim": "Portal alanları.",
+      "karisma_riski": "CRM reklam planı ayrı.",
+      "motor": {
+        "durum": "portal",
+        "karsilik": [
+          "chat_portal:sosyal-medya, reklam"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 2,
+      "set_yol_dagilimi": {
+        "karma": 1,
+        "portal": 1
+      }
+    },
+    {
+      "id": "kurul_karari",
+      "kavram": "Yönetim kurulu kararı",
+      "alan": "yönetim",
+      "sahip": "portal",
+      "birincil_tablolar": [
+        "semantic_kurul_*"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "yönetim kurulu",
+        "kurul aksiyonu"
+      ],
+      "varsayilan_tanim": "Portal kurul alanı.",
+      "karisma_riski": "Yayın kurulu (CRM) farklı.",
+      "motor": {
+        "durum": "portal",
+        "karsilik": [
+          "chat_portal:kurul"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 1,
+      "set_yol_dagilimi": {
+        "portal": 1
+      }
+    },
+    {
+      "id": "eticaret_pazaryeri",
+      "kavram": "E-ticaret sitesi ve pazar yeri",
+      "alan": "satış",
+      "sahip": "portal",
+      "birincil_tablolar": [
+        "semantic_commerce_*",
+        "semantic_trendyol_*",
+        "semantic_intl_*"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "site siparişi",
+        "Trendyol",
+        "Amazon",
+        "sepet terk"
+      ],
+      "varsayilan_tanim": "Portal alanları; finansal gerçekleşme yine Logo faturasında.",
+      "karisma_riski": "Logo ORFICHE e-ticaret siparişleri ile aynı olayın farklı görünümü olabilir.",
+      "motor": {
+        "durum": "portal",
+        "karsilik": [
+          "chat_portal:eticaret-*"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 0,
+      "set_yol_dagilimi": {}
+    },
+    {
+      "id": "dagitimci_katalog",
+      "kavram": "Dağıtımcı / perakende kataloğu",
+      "alan": "pazar",
+      "sahip": "portal",
+      "birincil_tablolar": [
+        "semantic_pazar_dagitim_titles (API_URUN_DB)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "D&R kataloğu",
+        "Başarı Dağıtım",
+        "baskısı yok",
+        "D&R fiyatı"
+      ],
+      "varsayilan_tanim": "Portal dağıtımcı katalog alanı.",
+      "karisma_riski": "D&R müşteri satışı Logo'dadır.",
+      "motor": {
+        "durum": "portal",
+        "karsilik": [
+          "chat_portal:dagitimci-katalog"
+        ]
+      },
+      "bosluk_sinifi": null,
+      "set_soru_sayisi": 0,
+      "set_yol_dagilimi": {}
+    },
+    {
+      "id": "kitap_kodu_koprusu",
+      "kavram": "Kitap köprüsü (Logo↔CRM)",
+      "alan": "köprü",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "LG_FFF_ITEMS.CODE",
+        "new_kitapBase.new_stokkodu"
+      ],
+      "kopru": "ITEMS.CODE ↔ new_stokkodu (aktif anahtar tekilliği zorunlu, LEFT JOIN, ölçü çoğalmaz)",
+      "es_anlamlilar": [
+        "eşleşmeyen kitap",
+        "CRM'de olmayan stok kartı"
+      ],
+      "varsayilan_tanim": "Çoğul CRM kartında satış dağıtılmaz; eşleşmeyen satış NULL CRM alanıyla korunur.",
+      "karisma_riski": "ISBN, barkod ya da ad eşleme kimlik değildir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "cross_book_sales_quality"
+        ]
+      },
+      "bosluk_sinifi": "B25",
+      "set_soru_sayisi": 13,
+      "set_yol_dagilimi": {
+        "crm": 1,
+        "karma": 12
+      }
+    },
+    {
+      "id": "musteri_koprusu",
+      "kavram": "Müşteri köprüsü (Logo↔CRM)",
+      "alan": "köprü",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "LG_FFF_CLCARD.TAXNR",
+        "AccountBase.new_VergiNo"
+      ],
+      "kopru": "Boş olmayan vergi no birebir metin eşitliği",
+      "es_anlamlilar": [
+        "eşleşmeyen müşteri",
+        "iki sistemde unvan farkı",
+        "vergi no farkı"
+      ],
+      "varsayilan_tanim": "Her vergi grubunun satışı bir kez.",
+      "karisma_riski": "Ad benzerliği/TC dönüşümü yok; vergi no farkını görmek için başka kimlik gerekir.",
+      "motor": {
+        "durum": "kismi",
+        "karsilik": [
+          "cross_customer_sales_quality"
+        ]
+      },
+      "bosluk_sinifi": "B25",
+      "set_soru_sayisi": 16,
+      "set_yol_dagilimi": {
+        "karma": 15,
+        "logo": 1
+      }
+    },
+    {
+      "id": "musteri_kohort",
+      "kavram": "Kohort / varlık-yokluk / pay sıralaması",
+      "alan": "analiz",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "LG_FFF_DD_STLINE",
+        "LG_FFF_CLCARD"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "yeni müşteri",
+        "kaybedilen müşteri",
+        "hiç satmayan",
+        "ilk kez",
+        "pareto",
+        "cironun %80'i"
+      ],
+      "varsayilan_tanim": "Dönemler arası varlık/yokluk ve kümülatif pay.",
+      "karisma_riski": "Kaç yıl kopyası okunacağı (karar 6).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B13",
+      "set_soru_sayisi": 21,
+      "set_yol_dagilimi": {
+        "crm": 3,
+        "karma": 1,
+        "logo": 17
+      }
+    },
+    {
+      "id": "tahmin",
+      "kavram": "Tahmin / senaryo",
+      "alan": "analiz",
+      "sahip": "yok",
+      "birincil_tablolar": [],
+      "kopru": null,
+      "es_anlamlilar": [
+        "bu hızla gidersek",
+        "beklenen",
+        "olursa ne olur",
+        "tahmini"
+      ],
+      "varsayilan_tanim": "Motor tahmin üretmez; ayrı tahmin modülü (TimesFM/baskı öneri) gerekir.",
+      "karisma_riski": "Tahmin gerçekleşen gibi sunulmamalı.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B27",
+      "set_soru_sayisi": 9,
+      "set_yol_dagilimi": {
+        "karma": 7,
+        "logo": 2
+      }
+    },
+    {
+      "id": "dis_veri",
+      "kavram": "Dış veri (enflasyon, dini takvim, pandemi)",
+      "alan": "analiz",
+      "sahip": "yok",
+      "birincil_tablolar": [],
+      "kopru": null,
+      "es_anlamlilar": [
+        "enflasyon",
+        "Ramazan",
+        "pandemi"
+      ],
+      "varsayilan_tanim": "Kaynak yok; dönem kullanıcıdan alınır.",
+      "karisma_riski": "—",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B28",
+      "set_soru_sayisi": 3,
+      "set_yol_dagilimi": {
+        "logo": 3
+      }
+    },
+    {
+      "id": "denetim_izi",
+      "kavram": "Denetim izi / kayıt meta",
+      "alan": "denetim",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "Logo CAPIBLOCK_* oluşturma/değiştirme alanları",
+        "CRM AuditBase, CreatedBy/ModifiedBy"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "kim değiştirdi",
+        "geriye dönük",
+        "mesai dışı",
+        "iptal edilen",
+        "seri boşluğu"
+      ],
+      "varsayilan_tanim": "Kaynak sistemin kayıt meta alanları.",
+      "karisma_riski": "ModifiedOn aşama girişi değildir.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B15",
+      "set_soru_sayisi": 19,
+      "set_yol_dagilimi": {
+        "crm": 2,
+        "karma": 3,
+        "logo": 14
+      }
+    },
+    {
+      "id": "sabit_kiymet",
+      "kavram": "Sabit kıymet / demirbaş",
+      "alan": "muhasebe",
+      "sahip": "logo",
+      "birincil_tablolar": [
+        "Logo sabit kıymet kayıtları",
+        "EMFLINE 25x/257/770 amortisman"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "demirbaş",
+        "amortisman",
+        "sabit kıymet"
+      ],
+      "varsayilan_tanim": "Muhasebe sabit kıymet hesapları.",
+      "karisma_riski": "CRM new_demirbaslar zimmet kaydıdır (107).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B01",
+      "set_soru_sayisi": 5,
+      "set_yol_dagilimi": {
+        "logo": 5
+      }
+    },
+    {
+      "id": "numune_bedelsiz",
+      "kavram": "Numune / bedelsiz / yazar nüshası",
+      "alan": "pazarlama",
+      "sahip": "karma",
+      "birincil_tablolar": [
+        "Logo bedelsiz fatura satırı / sarf fişi",
+        "CRM sipariş tipi (Okul Örneği, Öğretmen Örneği), new_hediyetalebi"
+      ],
+      "kopru": "Sevkiyat logicalref",
+      "es_anlamlilar": [
+        "numune",
+        "tanıtım kitabı",
+        "bedelsiz",
+        "yazar nüshası",
+        "promosyon"
+      ],
+      "varsayilan_tanim": "Gerçekleşen çıkış Logo; talep/amaç CRM.",
+      "karisma_riski": "Bedelsiz satırların maliyet/telif hesabına girmesi (karar 7).",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B20",
+      "set_soru_sayisi": 11,
+      "set_yol_dagilimi": {
+        "crm": 4,
+        "karma": 6,
+        "logo": 1
+      }
+    },
+    {
+      "id": "arsiv",
+      "kavram": "Fiziki arşiv",
+      "alan": "süreç",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "new_fizikiarsivBase (11.948)",
+        "new_fizikiarsivrafBase"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "arşiv",
+        "emanet",
+        "arşiv dosyası"
+      ],
+      "varsayilan_tanim": "Arşiv durumu ve emanet alan kişi.",
+      "karisma_riski": "Arşiv ürün/baskı kaydıdır; sözleşme dosyası alanı doğrulanmalı.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B29",
+      "set_soru_sayisi": 4,
+      "set_yol_dagilimi": {
+        "crm": 4
+      }
+    },
+    {
+      "id": "firsat_teklif",
+      "kavram": "Fırsat / teklif",
+      "alan": "satış",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "OpportunityBase (12)",
+        "QuoteBase (1)"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "fırsat",
+        "teklif",
+        "kazanma oranı"
+      ],
+      "varsayilan_tanim": "Pratikte kullanılmıyor.",
+      "karisma_riski": "Boş tablodan 'sıfır' cevabı veri eksiği olarak söylenmeli.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B29",
+      "set_soru_sayisi": 8,
+      "set_yol_dagilimi": {
+        "crm": 8
+      }
+    },
+    {
+      "id": "masraf_formu",
+      "kavram": "Saha masraf formu",
+      "alan": "finans",
+      "sahip": "yok",
+      "birincil_tablolar": [],
+      "kopru": null,
+      "es_anlamlilar": [
+        "masraf formu",
+        "masraf beyanı",
+        "saha masrafı"
+      ],
+      "varsayilan_tanim": "CRM sözlüğünde masraf formu varlığı bulunamadı; gerçekleşen masraf Logo gider hesaplarında.",
+      "karisma_riski": "Kaynak yokken sayı üretilmemeli.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B29",
+      "set_soru_sayisi": 7,
+      "set_yol_dagilimi": {
+        "crm": 5,
+        "karma": 2
+      }
+    },
+    {
+      "id": "kullanici_aktivitesi",
+      "kavram": "CRM kullanım / kayıt girişi",
+      "alan": "süreç",
+      "sahip": "crm",
+      "birincil_tablolar": [
+        "SystemUserBase",
+        "AuditBase",
+        "CreatedBy alanları"
+      ],
+      "kopru": null,
+      "es_anlamlilar": [
+        "CRM'i kullanmayan",
+        "kayıt sayısı",
+        "veri giren"
+      ],
+      "varsayilan_tanim": "Kullanıcı başına oluşturulan kayıt.",
+      "karisma_riski": "Servis hesapları (Timas CRM) süzülmeli.",
+      "motor": {
+        "durum": "yok",
+        "karsilik": []
+      },
+      "bosluk_sinifi": "B29",
+      "set_soru_sayisi": 3,
+      "set_yol_dagilimi": {
+        "crm": 3
+      }
+    }
+  ]
+}

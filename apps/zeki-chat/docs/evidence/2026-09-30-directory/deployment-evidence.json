@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-09-30T13:55:25.692940+00:00",
+  "sourceCommit": "0acf8c0bf",
+  "sha256": {
+    "sync-directory.py": "71e2eb0387238514b1bd9cf625e68365404c3427e93e27d288145b68e2a04aec",
+    "portal-login/server.py": "8fcda29d205e98c8a7b05e8882f9c4ca51d31a486758266fca5727094ed80fc2",
+    "docker-compose.yml": "0150b9d8f43195b2813dcaedab11b971302ce1d101c60ee5f54ee6cbfe19ab34",
+    "zeki-directory-sync.service": "e1fde19203360741e7fba35f64526856d3933bcd1984c9cfa281bccb2b9abd97",
+    "zeki-directory-sync.timer": "38fcdf674e1b795d2499dfe562d19a8c64081d433209a073493596582738a74b"
+  },
+  "timerEnabled": "enabled",
+  "timerActive": "active",
+  "sessionSecretsAbsent": true,
+  "database": {
+    "users": 218,
+    "privateGroups": 12,
+    "displayNames": true,
+    "roomDisplayNames": true
+  }
+}

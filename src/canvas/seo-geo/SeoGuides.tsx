@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Download, ExternalLink, Loader2, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { STATUS_LABEL, call, dateTime, fmt, qs, seoApi, type ProductDetail } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint } from '../components/Explain';
 import { Term, TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 /* ------------------------------------------------------------------ uçlar: /api/v1/seo-geo/guides/* */
 type GuideStatus = 'hazir' | 'onaylandi' | 'reddedildi';
@@ -218,19 +219,7 @@ export default function SeoGuides() {
               </div>
             </>
           )}
-          {total > PAGE && (
-            <div className="sg-pager" style={{ marginTop: 12 }}>
-              <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                <ChevronLeft size={16} aria-hidden />
-              </button>
-              <span className="sg-mono">
-                {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-              </span>
-              <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                <ChevronRight size={16} aria-hidden />
-              </button>
-            </div>
-          )}
+          <SeoPager start={start} total={total} size={PAGE} onChange={setStart} />
         </section>
 
         <section aria-label="Seçilen konu">
@@ -368,19 +357,7 @@ function TopicPanel({ topicKey, draft }: { topicKey: string; draft: GuideTopic['
             </label>
           ))}
         </div>
-        {tot > BOOK_PAGE && (
-          <div className="sg-pager" style={{ marginTop: 12 }}>
-            <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - BOOK_PAGE))} aria-label="Önceki kitaplar">
-              <ChevronLeft size={16} aria-hidden />
-            </button>
-            <span className="sg-mono">
-              {fmt(start + 1)}–{fmt(Math.min(tot, start + BOOK_PAGE))} / {fmt(tot)}
-            </span>
-            <button className="sg-button" disabled={start + BOOK_PAGE >= tot} onClick={() => setStart(start + BOOK_PAGE)} aria-label="Sonraki kitaplar">
-              <ChevronRight size={16} aria-hidden />
-            </button>
-          </div>
-        )}
+        <SeoPager start={start} total={tot} size={BOOK_PAGE} onChange={setStart} />
       </div>
 
       {activeDraft && <DraftPanel id={activeDraft} />}

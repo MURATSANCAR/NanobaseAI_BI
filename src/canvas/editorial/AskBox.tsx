@@ -9,6 +9,7 @@ import CharacterGraph from './CharacterGraph';
 import Cover from './Cover';
 import ChatExport from './ChatExport';
 import PageRef from './PagePeek';
+import { CiteCursor, citationsOf, pageStatus, splitCitations } from './citations';
 
 /** ZEKİ AI'ya kitap sorusu: sohbet görünümü. Cevap kitabın kendi metninden gelir, sayfa numarasıyla;
  *  Soru sunucuda kayıtlı kalır; ekranda yalnız bu açılışta gönderilen sorular gösterilir.
@@ -34,27 +35,42 @@ const QUEUED = ['ZEKİ AI sıradaki soruyu bitiriyor', 'Birazdan sizin sorunuza 
 
 const SUGGEST = ['hangi karakterler var?', 'hikâye nasıl başlıyor?', 'ana temalar neler?', 'önemli olaylar hangi sayfalarda?'];
 
-/** Cevabın ait olduğu kitap: kimlik varsa sayfa rozetleri görsel önizleme açar, yoksa düz rozet kalır. */
-type Book = { bookId?: string | null; bookTitle?: string | null };
+/** Cevabın kitap bilgisi: `citations` her atıfın kitabını çözer; yoksa tek `bookId` (önceki davranış). */
+type Book = Parameters<typeof citationsOf>[0];
 
-/** Sayfa atıflarını («s. 14», «[s.2]») küçük rozetlere çevirir. */
-function withPages(text: string, book: Book): ReactNode[] {
-  return text.split(/(\[?s\.\s?\d+(?:\s?[-–]\s?\d+)?\]?)/g).map((part, i) =>
-    /^\[?s\.\s?\d/.test(part) ? (
-      <PageRef key={i} label={part.replace(/[[\]]/g, '')} bookId={book.bookId} bookTitle={book.bookTitle} />
-    ) : (
-      <Fragment key={i}>{part}</Fragment>
-    ),
-  );
+/** Sayfa atıflarını küçük rozetlere çevirir. Gruptaki her sayfa ayrı rozettir («(s. 114, 127)» → iki rozet) ve
+ *  metinde kendinden önce anılan kitabın sayfasını açar (ZEKI-43). `cursor` metin sırasıyla okunur: bu işlev
+ *  cevabın parçaları için sırayla çağrılır (AnswerText her çizimde yeni bir imleç kurar). */
+function withPages(text: string, cursor: CiteCursor): ReactNode[] {
+  return splitCitations(text).map((seg, i) => {
+    if (seg.kind === 'text') {
+      cursor.read(seg.text);
+      return <Fragment key={i}>{seg.text}</Fragment>;
+    }
+    const bookId = cursor.current;
+    const bookTitle = cursor.title(bookId);
+    return (
+      <Fragment key={i}>
+        {seg.pieces.map((p, j) =>
+          'page' in p ? (
+            <PageRef key={j} label={p.label} page={p.page} bookId={bookId} bookTitle={bookTitle}
+              missing={pageStatus(cursor.c, bookId, p.page) === 'missing'} />
+          ) : (
+            <Fragment key={j}>{p.text}</Fragment>
+          ),
+        )}
+      </Fragment>
+    );
+  });
 }
 
 /** Satır içi vurgu: **kalın** modele başlık/isim ayırt ettirir; kalan metin ve sayfa rozetleri korunur. */
-function inline(text: string, book: Book): ReactNode[] {
+function inline(text: string, cursor: CiteCursor): ReactNode[] {
   return text.split(/(\*\*[^*\n]+\*\*)/g).map((part, i) =>
     /^\*\*[^*\n]+\*\*$/.test(part) ? (
-      <strong key={i} className="font-semibold text-canvas-ink">{withPages(part.slice(2, -2), book)}</strong>
+      <strong key={i} className="font-semibold text-canvas-ink">{withPages(part.slice(2, -2), cursor)}</strong>
     ) : (
-      <Fragment key={i}>{withPages(part, book)}</Fragment>
+      <Fragment key={i}>{withPages(part, cursor)}</Fragment>
     ),
   );
 }
@@ -65,6 +81,8 @@ const NUMBERED = /^\s*\d+[.)]\s+/;
 /** Cevabı bloklara ayırır: madde listesi, numaralı liste ve paragraf. Modelin sözü ve sayfa
  *  atıfları korunur; yalnız görünüm yapılandırılır (düz metin duvarı yerine okunur ritim). */
 function AnswerText({ text, book = {} }: { text: string; book?: Book }) {
+  // Metin baştan sona tek imleçle okunur: bir atıfın kitabı, kendinden önce en son anılan kitaptır.
+  const cursor = new CiteCursor(citationsOf(book));
   const blocks = text.split(/\r?\n[\t ]*\r?\n/).map((b) => b.trim()).filter(Boolean);
   return (
     <div className="zk-answer space-y-3">
@@ -78,7 +96,7 @@ function AnswerText({ text, book = {} }: { text: string; book?: Book }) {
               {lines.map((l, i) => (
                 <li key={i} className="flex gap-2.5">
                   <span aria-hidden className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-canvas-violet/60" />
-                  <span className="min-w-0">{inline(l.replace(BULLET, ''), book)}</span>
+                  <span className="min-w-0">{inline(l.replace(BULLET, ''), cursor)}</span>
                 </li>
               ))}
             </ul>
@@ -91,13 +109,13 @@ function AnswerText({ text, book = {} }: { text: string; book?: Book }) {
                 <li key={i} className="flex gap-2.5">
                   {/* Numara metinden: boş satırla ayrılmış «1) … 2) …» maddeleri ayrı bloklara düşer, sıra 1'den başlasaydı hepsi «1» olurdu. */}
                   <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-canvas-violet/10 text-[11px] font-bold text-canvas-violet">{l.match(/\d+/)?.[0] ?? i + 1}</span>
-                  <span className="min-w-0">{inline(l.replace(NUMBERED, ''), book)}</span>
+                  <span className="min-w-0">{inline(l.replace(NUMBERED, ''), cursor)}</span>
                 </li>
               ))}
             </ol>
           );
         }
-        return <p key={bi}>{inline(block, book)}</p>;
+        return <p key={bi}>{inline(block, cursor)}</p>;
       })}
     </div>
   );
@@ -380,8 +398,9 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
         </div>
 
         <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/70 bg-white/95 px-3 pb-3 pt-2.5 backdrop-blur sm:px-5 sm:pb-4">
+          {/* contain:inline-size — şerit kendi içinde kayar, kitap sayısı üst sütunu genişletmez. */}
           {!bookTitle && readable.length > 0 && (
-            <div className="zk-scroll mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            <div className="zk-scroll mb-2 flex items-center gap-1.5 overflow-x-auto [contain:inline-size] pb-0.5">
               <BookOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
               {readable.map((t) => {
                 const card = findCatalogCard(cards, t);

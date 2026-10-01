@@ -14,6 +14,7 @@ sayılır. Dış gönderim yalnız iç ekibe e-posta (`MODEL_QUALITY_RECIPIENTS`
 from __future__ import annotations
 
 import logging
+import os
 import re
 import smtplib
 import ssl
@@ -171,51 +172,78 @@ def register(app, deps: dict[str, Any]) -> Service:
                 "me": {"username": user, "display": display, "canRun": can(user, "ozellik:zeki-kalite.kosu"),
                        "canDecide": can(user, "ozellik:zeki-kalite.karar")}}
 
+    # Karne kişiden bağımsız hesaplanır (hız 4. tur, 2026-09-29): soru kaydının pencere satırları (≈10 bin), geri
+    # bildirim, SEO/çeviri/redaksiyon sayımları. Eskiden her açılışta yeniden kuruluyordu (tek başına 0,6 sn, ekran
+    # başka uçlarla aynı anda açılınca 5–8 sn). Şimdi ortak bellekte: `KARNE_TAZE` (120 sn) tazeyse hemen; eskiyse eldeki
+    # hemen + arkada yeniden hesap; «Verileri yenile» 60 sn'den eskiyse arkada; bu modülde yazma olunca düşer. Kişinin
+    # göremediği modül satırı (sayfa yetkisi) bellekteki sonuçtan her istekte ayrı süzülür.
+    from semantic_bridge import hizli_kaynak as HK
+
+    karne = HK.bellek("kalite.karne", float(os.environ.get("MODEL_QUALITY_SCORECARD_FRESH_SEC") or 120), en_cok=32)
+
+    def karne_hesap(engine, tenant: str, ds: str, d: int) -> Callable[[], dict[str, Any]]:
+        def build() -> dict[str, Any]:
+            # Sorgu bilgisi: karnenin koşan okumaları yakalanır (gösterilen = çalışan).
+            return IZ.izli(engine, lambda: _karne_raw(engine, tenant, ds, d), prefix="portal.kalite.karne",
+                           title="Kalite karnesi", text=F_KARNE, skip=("days",))
+        return build
+
+    def _karne_raw(engine, tenant: str, ds: str, d: int) -> dict[str, Any]:
+        now, since = src.window(d)
+        trend_since = min(since, now - timedelta(days=28))
+        runs = src.last_finished(engine, tenant)
+        rows: list[dict[str, Any]] = []
+
+        def safe(rid: str, label: str, page: Any, fn):
+            try:
+                rows.append(fn())
+            except Exception as e:  # noqa: BLE001
+                log.warning("model_quality: karne satırı %s okunamadı: %s", rid, e)
+                rows.append(MQ.unmeasured_row(rid, label, page, "okunamadı: " + str(e)[:160]))
+
+        safe("bi", "Soru-cevap (Zeki AI)", "genel-bakis", lambda: MQ.bi_row(
+            src.query_rows(engine, tenant, ds, trend_since), src.feedback_rows(engine, tenant, trend_since), runs,
+            now=now, since=since))
+        safe("seo", "SEO önerileri", "seo-urun", lambda: MQ.seo_row(src.seo_stats(engine, tenant, since)))
+        safe("ceviri", "Çeviri taslağı", "ceviri", lambda: MQ.translation_row(src.translation_stats(engine, tenant, since)))
+        safe("redaksiyon", "Redaksiyon önerileri", "redaksiyon", lambda: MQ.redaction_row(src.redaction_stats(engine, tenant, since)))
+        rows.append(MQ.unmeasured_row("son-okuma", "Son okuma denetimleri", "son-okuma",
+                                      "ölçülmedi — sonraki sürüm: editörün Doğru/Yanlış alarm kararlarından denetim başına isabet"))
+        rows.append(MQ.unmeasured_row("destek", "Destek talebi sınıflandırma", None,
+                                      "ölçülmedi — destek masasının talep sınıflandırması bağlandığında"))
+        latest = MQ.list_versions(engine, tenant, page=0, size=1)["items"]
+        return {"days": d, "rows": rows, "runs": runs, "version": latest[0] if latest else None,
+                "generatedAt": now.isoformat()}
+
+    def karne_gorunur(shared: dict[str, Any], user: str) -> dict[str, Any]:
+        """Kişinin sayfa yetkisine göre satırlar (yetkisi olmayan modülün satırı gösterilmez, sayısı yazılır)."""
+        seo_pages = ("sayfa:seo-urun", "sayfa:seo-geo")
+        visible = []
+        for r in shared["rows"]:
+            page = r.get("page")
+            ok = page is None or can(user, "sayfa:" + page) or (r["id"] == "seo" and any(can(user, p) for p in seo_pages))
+            if ok:
+                visible.append(r)
+        return {**shared, "rows": visible, "hidden": len(shared["rows"]) - len(visible)}
+
+    def karne_isit() -> None:
+        r = rt()
+        if HK.sqlite_mi(r.store.engine):
+            return
+        MQ.ensure(r.store.engine)
+        d = window_days()
+        karne.isit_gerekirse((r.settings.tenant_id, r.settings.datasource_id, d),
+                             karne_hesap(r.store.engine, r.settings.tenant_id, r.settings.datasource_id, d))
+
+    HK.acilista("kalite.karne", karne_isit)
+
     @app.get("/api/v1/model-quality/scorecard")
     async def mq_scorecard(request: Request, days: int | None = None) -> dict[str, Any]:
         engine, tenant, ds, user, _ = await run_in_threadpool(ctx, request)
         d = window_days(days)
-
-        def build() -> dict[str, Any]:
-            # Sorgu bilgisi: karnenin koşan okumaları yakalanır (gösterilen = çalışan).
-            return IZ.izli(engine, build_raw, prefix="portal.kalite.karne", title="Kalite karnesi", text=F_KARNE,
-                           skip=("days",))
-
-        def build_raw() -> dict[str, Any]:
-            now, since = src.window(d)
-            trend_since = min(since, now - timedelta(days=28))
-            runs = src.last_finished(engine, tenant)
-            rows: list[dict[str, Any]] = []
-
-            def safe(rid: str, label: str, page: Any, fn):
-                try:
-                    rows.append(fn())
-                except Exception as e:  # noqa: BLE001
-                    log.warning("model_quality: karne satırı %s okunamadı: %s", rid, e)
-                    rows.append(MQ.unmeasured_row(rid, label, page, "okunamadı: " + str(e)[:160]))
-
-            safe("bi", "Soru-cevap (Zeki AI)", "genel-bakis", lambda: MQ.bi_row(
-                src.query_rows(engine, tenant, ds, trend_since), src.feedback_rows(engine, tenant, trend_since), runs,
-                now=now, since=since))
-            safe("seo", "SEO önerileri", "seo-urun", lambda: MQ.seo_row(src.seo_stats(engine, tenant, since)))
-            safe("ceviri", "Çeviri taslağı", "ceviri", lambda: MQ.translation_row(src.translation_stats(engine, tenant, since)))
-            safe("redaksiyon", "Redaksiyon önerileri", "redaksiyon", lambda: MQ.redaction_row(src.redaction_stats(engine, tenant, since)))
-            rows.append(MQ.unmeasured_row("son-okuma", "Son okuma denetimleri", "son-okuma",
-                                          "ölçülmedi — sonraki sürüm: editörün Doğru/Yanlış alarm kararlarından denetim başına isabet"))
-            rows.append(MQ.unmeasured_row("destek", "Destek talebi sınıflandırma", None,
-                                          "ölçülmedi — destek masasının talep sınıflandırması bağlandığında"))
-            seo_pages = ("sayfa:seo-urun", "sayfa:seo-geo")
-            visible = []
-            for r in rows:
-                page = r.get("page")
-                ok = page is None or can(user, "sayfa:" + page) or (r["id"] == "seo" and any(can(user, p) for p in seo_pages))
-                if ok:
-                    visible.append(r)
-            latest = MQ.list_versions(engine, tenant, page=0, size=1)["items"]
-            return {"days": d, "rows": visible, "hidden": len(rows) - len(visible), "runs": runs,
-                    "version": latest[0] if latest else None, "generatedAt": now.isoformat()}
-
-        return await run_in_threadpool(build)
+        durt = request.headers.get("x-data-refresh") == "1"
+        shared = await run_in_threadpool(HK.oku, karne, (tenant, ds, d), karne_hesap(engine, tenant, ds, d), durt=durt)
+        return await run_in_threadpool(karne_gorunur, shared, user)
 
     # ------------------------------------------------------------------ koşular
 
@@ -317,6 +345,7 @@ def register(app, deps: dict[str, Any]) -> Service:
               {"bozulan": out["broken"], "duzelen": out["fixed"], "tally": out["tally"], "kirli": out["polluted"]})
         if out["broken"] > 0:
             threading.Thread(target=notify_broken, args=(out,), name="mq-broken-mail", daemon=True).start()
+        karne.dusur()                       # karnenin son koşu satırı değişti
         return out
 
     # ------------------------------------------------------------------ sürümler
@@ -347,6 +376,7 @@ def register(app, deps: dict[str, Any]) -> Service:
                                 note=body.get("note"), force=True)
         audit(engine, by, "create", "model_quality_version", str(out["id"]), f"Sürüm kaydı {str(code or '')[:12]}",
               {"kinds": out["kinds"], "env": env})
+        karne.dusur()                       # karnenin sürüm satırı değişti
         return out
 
     # ------------------------------------------------------------------ hata sınıfları
@@ -518,6 +548,7 @@ def register(app, deps: dict[str, Any]) -> Service:
                    is_admin=is_admin(user))
         if out["verdict"] == "yanlis":
             threading.Thread(target=repeat_alert, args=(engine, tenant, ds, row), name="mq-repeat", daemon=True).start()
+        karne.dusur()                       # karnenin geri bildirim sayıları değişti
         return out
 
     def repeat_alert(engine, tenant: str, ds: str, row: dict[str, Any]) -> None:

@@ -85,6 +85,8 @@ class ColumnIndex:
     VALUE_WEIGHT = 3.0
     #: Below this a hit says more about the corpus than about the question.
     MIN_SCORE = 1.0
+    #: Median search tokens per value above which a column holds prose, not labels (see `_is_prose`).
+    PROSE_TOKENS = 6
 
     #: Values collected for search only — everything a column holds, including what a prompt must
     #: never be shown. Written by backend/scripts/probe_column_values.py, read here and nowhere else.
@@ -126,9 +128,16 @@ class ColumnIndex:
                 # a single character of it goes into a prompt.
                 held = [v for v, _ in (col.meaningful_values() or [])]
                 held += extra.get(f"{prof.entity}.{col.name.upper()}", [])
+                # A value is a label — a channel, a customer, a title. A note, a reason, a summary is
+                # prose, and the everyday words inside it are not values that column holds: "yıl",
+                # "ayın", "durumda" sat in CRM contract notes and event-cancellation reasons, scored
+                # as value hits, and carried a question about nothing but a period to the CRM
+                # (2026-09-29). Prose is still searchable text; it just is not a value.
+                prose = self._is_prose(held)
                 for value in held:
                     for t in tokens(value):
-                        self.values[t].add(i)
+                        if not prose:
+                            self.values[t].add(i)
                         bag[t] += 1
                 if not bag:
                     continue
@@ -139,6 +148,15 @@ class ColumnIndex:
 
         self.avg_len = (sum(self.lengths) / len(self.lengths)) if self.lengths else 1.0
         self.n = max(1, len(self.docs))
+
+    @classmethod
+    def _is_prose(cls, held: list) -> bool:
+        """Whether a column's typical value is a sentence rather than a label. Measured on this catalog
+        (2026-09-29): of 13.364 columns with values, labels have a median of one or two search tokens
+        (a word and its stem), titles and transaction-type names up to six; above that sit only notes,
+        descriptions, summaries and integration messages."""
+        lengths = sorted(len(tokens(str(v))) for v in held if v)
+        return bool(lengths) and lengths[len(lengths) // 2] > cls.PROSE_TOKENS
 
     def _idf(self, term: str) -> float:
         df = self.df.get(term, 0)

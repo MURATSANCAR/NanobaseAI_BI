@@ -56,7 +56,7 @@ export default function PersonSheet({ id, meta, fields, people, onClose, onSaved
   });
   const del = useMutation({
     mutationFn: () => portalApi.deletePerson(id as string),
-    onSuccess: () => { setAskDelete(false); toast.success('Personel kaydı silindi.'); refresh(); onClose(); },
+    onSuccess: () => { setAskDelete(false); toast.success('Personel kaydı kaldırıldı; arşivde saklanıyor.'); refresh(); onClose(); },
     onError: (e) => toast.error(errText(e, 'Silinemedi.')),
     onSettled: () => setAskDelete(false),
   });
@@ -168,7 +168,7 @@ export default function PersonSheet({ id, meta, fields, people, onClose, onSaved
       )}
       {isNew && docFields.length > 0 && <p className="mt-4 text-[12px] text-canvas-muted">Belgeler, kayıt açıldıktan sonra bu karttan yüklenir.</p>}
       <AskSheet open={askDelete} title="Personel kaydını sil" danger confirm="Sil" busy={del.isPending}
-        message={<>«{p?.adSoyad}» ({p?.idNo}) kaydı ve yüklü {p?.files.length ?? 0} belgesi silinecek. Ayrılan çalışan için kaydı silmek yerine durumunu «Pasif» yapın. Bu işlem geri alınamaz.</>}
+        message={<>«{p?.adSoyad}» ({p?.idNo}) kaydı, yüklü {p?.files.length ?? 0} belgesi ve izin kayıtları bütün ekranlardan kaldırılacak; hukuki süreç için arşivde saklanır. Ayrılan çalışan için kaydı silmek yerine durumunu «Pasif» yapın. Ekrandan geri alınamaz.</>}
         onClose={() => setAskDelete(false)} onConfirm={() => del.mutate()} />
       <AskSheet open={!!askFile} title="Belgeyi sil" danger confirm="Sil" busy={delFile.isPending}
         message={<>«{askFile?.name}» silinecek. Bu işlem geri alınamaz.</>}

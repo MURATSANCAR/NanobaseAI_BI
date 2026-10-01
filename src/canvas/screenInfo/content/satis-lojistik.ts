@@ -603,6 +603,23 @@ const CONTENT: ScreenInfoMap = {
     actions: ["Ay seçip firma bazında farkları inceleyin.", "Mutabakatı Excel olarak alın."],
   },
 
+  'kargo-maliyet': {
+    summary: "Yılın kargo ve nakliye gideri, cironun yüzde kaçı olduğu ve bir gönderinin yaklaşık maliyeti; kargo firması, pazar yeri ve nakliyeci kırılımıyla.",
+    how: [
+      "Gider, Logo'daki alınan hizmet faturalarında kargo ve nakliye kodlu satırların KDV hariç toplamıdır; hangi kodların sayıldığı yönetim ayarındadır.",
+      "Hem müşterimiz olup hem bize kargo faturası kesen firma, aynı vergi numarasından «pazar yeri» olarak bulunur; carisi ayarda tanımlı olan «kargo firması», kalanı «nakliye ve diğer» sayılır.",
+      "Gönderi sayısı satış irsaliyesindeki taşıyıcı kodundan gelir; kodu boş olan mağaza satışları sayılmaz.",
+      "Kargo faturaları toplu kesildiği için gönderi başı maliyet dönem toplamlarının oranıdır, yaklaşıktır.",
+    ],
+    data: "Logo alınan hizmet faturaları, satış irsaliyeleri ve satış faturaları; CRM kargo firması adları",
+    refresh: "Okuma 5 dakika saklanır; «Verileri yenile» Logo'yu yeniden okur.",
+    actions: [
+      "Yıl seçin; aylık gideri ve taşıyıcılara göre gönderileri karşılaştırın.",
+      "Eşlenmemiş taşıyıcının Logo carisini mutabakat ekranındaki aday carilerden bulun.",
+      "Tedarikçi tablosunu Excel olarak alın (yetkiyle).",
+    ],
+  },
+
   tedarik: {
     summary: "Tedarik ve baskının özeti: ay × matbaa baskı yükü, eşik aşımı, bu ayın kağıt ihtiyacı, yaklaşan ödemeler ve maliyet eğilimi.",
     how: [

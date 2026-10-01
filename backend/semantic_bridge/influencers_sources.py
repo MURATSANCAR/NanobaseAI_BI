@@ -92,10 +92,8 @@ def _utc_bound(d: date) -> str:
 def _long(v: Any) -> Optional[str]:
     if v is None:
         return None
-    s = re.sub(r"<br\s*/?>|</p>", "\n", str(v), flags=re.I)
-    s = re.sub(r"<[^>]+>", "", s).replace("&nbsp;", " ").replace("&amp;", "&")
-    s = "\n".join(" ".join(x.split()) for x in s.splitlines())
-    return re.sub(r"\n{3,}", "\n\n", s).strip() or None
+    from semantic_bridge.crm_text import rich_text   # ZEKI-23: ortak kural, bütün HTML varlıkları çözülür
+    return rich_text(v, keep_blank=True)
 
 
 def _s(v: Any) -> Optional[str]:

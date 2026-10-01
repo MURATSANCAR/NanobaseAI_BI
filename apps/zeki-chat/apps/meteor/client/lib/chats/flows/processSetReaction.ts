@@ -1,0 +1,29 @@
+import type { IMessage } from '@zeki.chat/core-typings';
+
+import { emoji } from '../../../../app/emoji/client';
+import { runOptimisticSetReaction } from '../../../../app/reactions/client/methods/setReaction';
+import { callWithErrorHandling } from '../../utils/callWithErrorHandling';
+import type { ChatAPI } from '../ChatAPI';
+
+export const processSetReaction = async (chat: ChatAPI, { msg }: Pick<IMessage, 'msg'>): Promise<boolean> => {
+	const match = msg.trim().match(/^\+(:.*?:)$/m);
+	if (!match) {
+		return false;
+	}
+
+	const [, reaction] = match;
+	if (!emoji.list[reaction]) {
+		return false;
+	}
+
+	const lastMessage = await chat.data.findLastMessage();
+
+	if (!lastMessage) {
+		return false;
+	}
+
+	chat.composer?.clear();
+	runOptimisticSetReaction(reaction, lastMessage._id);
+	await callWithErrorHandling('setReaction', reaction, lastMessage._id);
+	return true;
+};

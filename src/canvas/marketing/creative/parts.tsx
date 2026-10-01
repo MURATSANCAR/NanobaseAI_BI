@@ -7,8 +7,6 @@ import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** Talep ekranının ortak parçaları. Hareket: yalnız mevcut basış küçülmesi ve ilerleme çubuğu. */
 
-export const DRAFT_NOTE = 'Taslak — ticari kullanım izni bekleniyor';
-
 export function Block({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
   return (
     <section className="glass-panel flex min-w-0 flex-col gap-3 rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
@@ -45,14 +43,6 @@ export function ApprovalLine({ a }: { a: Asset }) {
       {a.tur === 'gorsel' && step(a.tasarimOnay, 'Tasarım')}
       {step(a.mesajOnay, 'Mesaj')}
     </span>
-  );
-}
-
-export function DraftBadge() {
-  return (
-    <p className="flex items-start gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800">
-      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{DRAFT_NOTE}
-    </p>
   );
 }
 

@@ -66,6 +66,13 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
   const pubs = Object.keys(s.tariff.publishers);
   const o = s.origin;
   const logoKur = s.logoKur;
+  const kf = (v: number) => v.toLocaleString('tr-TR', { maximumFractionDigits: 4 });
+  // Boş kutuda hesabın kullandığı kur: fiyat listesinde «elle» seçildiyse listedeki, değilse Logo'nun son döviz faturası.
+  const kurHint = (c: 'USD' | 'EUR') => {
+    const lg = logoKur[c];
+    if (s.tariff.kurKaynak === 'elle') return `Boşsa fiyat listesindeki elle girilen kur: ${kf(s.tariff.kur[c])} ₺${lg ? ` (Logo ${day(lg.date)}: ${kf(lg.rate)} ₺)` : ''}`;
+    return lg ? `Logo faturaları ${day(lg.date)}: ${kf(lg.rate)} ₺` : `Logo'da fatura yok; fiyat listesi: ${kf(s.tariff.kur[c])} ₺`;
+  };
   return (
     <Group step={1} title="Kitap ve baskı">
       <Select<string>
@@ -90,8 +97,8 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
           suffix="₺"
           value={form.kur?.USD ?? null}
           onChange={(v) => set({ kur: { ...(form.kur ?? {}), USD: v } })}
-          placeholder={num(s.tariff.kur.USD)}
-          hint={logoKur.USD ? `Logo faturaları ${day(logoKur.USD.date)}: ${logoKur.USD.rate.toLocaleString('tr-TR')} ₺` : `Fiyat listesi: ${num(s.tariff.kur.USD)} ₺`}
+          placeholder={kf(s.tariff.kur.USD)}
+          hint={kurHint('USD')}
         />
         <NumField
           label="1 euro"
@@ -99,8 +106,8 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
           suffix="₺"
           value={form.kur?.EUR ?? null}
           onChange={(v) => set({ kur: { ...(form.kur ?? {}), EUR: v } })}
-          placeholder={num(s.tariff.kur.EUR)}
-          hint={logoKur.EUR ? `Logo faturaları ${day(logoKur.EUR.date)}: ${logoKur.EUR.rate.toLocaleString('tr-TR')} ₺` : `Fiyat listesi: ${num(s.tariff.kur.EUR)} ₺`}
+          placeholder={kf(s.tariff.kur.EUR)}
+          hint={kurHint('EUR')}
         />
       </More>
     </Group>

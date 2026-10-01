@@ -10,7 +10,10 @@ import { bookAskApi } from '../engine';
  *
  *  Konum: rozetin üstünde, ortalanmış; üstte yer yoksa altına, ekran kenarına taşarsa içeri kaydırılır.
  *  Görsel köprüden gelir (oturum çerezi otomatik); tarayıcı bir saat önbellekler, ikinci açılış anında.
- *  Kitap kimliği yoksa yalnız eski rozet çizilir (önizleme yok). */
+ *  Kitap kimliği yoksa yalnız eski rozet çizilir (önizleme yok).
+ *
+ *  Kaynaksız atıf (ZEKI-43): köprü sayfanın o kitapta olmadığını gördüyse rozet kesik çizgili ve soluk çizilir; aynı
+ *  etkileşimle açılan kart görsel yerine bunu söyler (dokunmatikte de okunur; yalnız `title` olsaydı okunmazdı). */
 
 const WIDTH = 240; // önizleme genişliği; dar ekranda viewport'a sığdırılır
 const GUTTER = 8; // ekran kenarına bırakılan boşluk
@@ -30,13 +33,21 @@ export function pageNumberOf(label: string): number | null {
   return Number.isFinite(n) && n >= 1 ? n : null;
 }
 
-export default function PageRef({ label, bookId, bookTitle }: { label: string; bookId?: string | null; bookTitle?: string | null }) {
-  const page = bookId ? pageNumberOf(label) : null;
+export default function PageRef({ label, page: pageNo, bookId, bookTitle, missing = false }: {
+  label: string;
+  /** Rozetin sayfası; verilmezse etiketteki ilk sayı. */
+  page?: number;
+  bookId?: string | null;
+  bookTitle?: string | null;
+  /** Köprü bu sayfanın bu kitapta olmadığını doğruladı: önizleme yerine «kaynaksız» bilgisi. */
+  missing?: boolean;
+}) {
+  const page = bookId ? (pageNo ?? pageNumberOf(label)) : null;
   if (!bookId || page === null) return <span className="zk-page-ref">{label}</span>;
-  return <PeekButton label={label} bookId={bookId} bookTitle={bookTitle ?? null} page={page} />;
+  return <PeekButton label={label} bookId={bookId} bookTitle={bookTitle ?? null} page={page} missing={missing} />;
 }
 
-function PeekButton({ label, bookId, bookTitle, page }: { label: string; bookId: string; bookTitle: string | null; page: number }) {
+function PeekButton({ label, bookId, bookTitle, page, missing }: { label: string; bookId: string; bookTitle: string | null; page: number; missing: boolean }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const pop = useRef<HTMLDivElement>(null);
@@ -139,8 +150,8 @@ function PeekButton({ label, bookId, bookTitle, page }: { label: string; bookId:
       <button
         ref={trigger}
         type="button"
-        className="zk-page-ref zk-page-ref--live"
-        aria-label={`Sayfa ${page}, önizleme`}
+        className={`zk-page-ref zk-page-ref--live${missing ? ' zk-page-ref--missing' : ''}`}
+        aria-label={missing ? `Sayfa ${page}, kaynak doğrulanamadı` : `Sayfa ${page}, önizleme`}
         aria-expanded={phase === 'open' || phase === 'pre'}
         aria-describedby={shown ? id : undefined}
         onMouseEnter={() => { if (finePointer()) openLater(); }}
@@ -177,7 +188,11 @@ function PeekButton({ label, bookId, bookTitle, page }: { label: string; bookId:
             <span>s. {page}</span>
             {bookTitle && <span className="zk-peek-title">{bookTitle}</span>}
           </div>
-          {failed ? (
+          {missing ? (
+            <p className="zk-peek-empty">
+              {bookTitle ? `«${bookTitle}» kitabında bu sayfa yok.` : 'Kitapta bu sayfa yok.'} Atıf kaynağa bağlanamadı.
+            </p>
+          ) : failed ? (
             <p className="zk-peek-empty">Sayfa görseli yok</p>
           ) : (
             <div className="zk-peek-frame" data-loaded={loaded || undefined} style={loaded ? undefined : { minHeight: Math.round((place?.width ?? WIDTH) * 1.41) }}>

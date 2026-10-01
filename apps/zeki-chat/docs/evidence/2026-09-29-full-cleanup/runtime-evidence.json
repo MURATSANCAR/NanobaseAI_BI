@@ -1,0 +1,88 @@
+{
+  "observedAt": "2026-09-29T20:32:00.725274+00:00",
+  "containers": {
+    "zeki-chat": {
+      "image": "zeki-ai-chat:8.5.3-6c6d214d4",
+      "dns": [
+        "127.0.0.1"
+      ],
+      "networks": [
+        "zeki-local"
+      ],
+      "running": true
+    },
+    "zeki-mongo": {
+      "image": "mongo:8.0",
+      "dns": [
+        "127.0.0.1"
+      ],
+      "networks": [
+        "zeki-local"
+      ],
+      "running": true
+    },
+    "zeki-ingress": {
+      "image": "nginx@sha256:d10753d9289b8e3f884386351f73554ce72b631378949deddd75e83ee296c427",
+      "dns": [
+        "127.0.0.1"
+      ],
+      "networks": [
+        "zeki-ingress",
+        "zeki-local"
+      ],
+      "running": true
+    }
+  },
+  "mongoExternalDns": {
+    "status": 0,
+    "output": "EXTERNAL_DNS_BLOCKED:EAI_AGAIN",
+    "error": ""
+  },
+  "ingressInternalDns": {
+    "status": 0,
+    "output": "Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\nNon-authoritative answer:\nName:\tzeki-chat\nAddress: 172.20.0.3\n\nNon-authoritative answer:",
+    "error": ""
+  },
+  "ingressExternalDns": {
+    "status": 1,
+    "output": "Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\n** server can't find cloud.rocket.chat: SERVFAIL\n\n** server can't find cloud.rocket.chat: SERVFAIL",
+    "error": ""
+  },
+  "ingressExternalHttp": {
+    "status": 1,
+    "output": "",
+    "error": "Connecting to 1.1.1.1 (1.1.1.1:80)\nwget: can't connect to remote host (1.1.1.1): Connection refused"
+  },
+  "rules": {
+    "iptables": {
+      "ZEKI-LOCAL-HOST": [
+        "-N ZEKI-LOCAL-HOST",
+        "-A ZEKI-LOCAL-HOST -m conntrack --ctstate RELATED,ESTABLISHED --ctdir REPLY -j RETURN",
+        "-A ZEKI-LOCAL-HOST -j REJECT --reject-with icmp-port-unreachable"
+      ],
+      "ZEKI-LOCAL-EGRESS": [
+        "-N ZEKI-LOCAL-EGRESS",
+        "-A ZEKI-LOCAL-EGRESS -m conntrack --ctstate RELATED,ESTABLISHED --ctdir REPLY -j RETURN",
+        "-A ZEKI-LOCAL-EGRESS -j REJECT --reject-with icmp-port-unreachable"
+      ]
+    },
+    "ip6tables": {
+      "ZEKI-LOCAL-HOST": [
+        "-N ZEKI-LOCAL-HOST",
+        "-A ZEKI-LOCAL-HOST -m conntrack --ctstate RELATED,ESTABLISHED --ctdir REPLY -j RETURN",
+        "-A ZEKI-LOCAL-HOST -j REJECT --reject-with icmp6-port-unreachable"
+      ],
+      "ZEKI-LOCAL-EGRESS": [
+        "-N ZEKI-LOCAL-EGRESS",
+        "-A ZEKI-LOCAL-EGRESS -m conntrack --ctstate RELATED,ESTABLISHED --ctdir REPLY -j RETURN",
+        "-A ZEKI-LOCAL-EGRESS -j REJECT --reject-with icmp6-port-unreachable"
+      ]
+    }
+  },
+  "service": {
+    "status": 0,
+    "output": "Before=shutdown.target docker.service multi-user.target\nAfter=systemd-journald.socket network-pre.target netfilter-persistent.service system.slice nftables.service ufw.service sysinit.target basic.target\nActiveState=active\nUnitFileState=enabled",
+    "error": ""
+  },
+  "allPassed": true
+}

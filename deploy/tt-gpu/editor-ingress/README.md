@@ -92,3 +92,9 @@ Geri alma: blok içindeki `# EDITOR-INCELEME` bölümünü sil, `sudo nginx -t &
 1. GPU: `EDITOR-BASLA … EDITOR-BITTI` bloğunu sil, `sudo nginx -t && sudo systemctl reload nginx`.
 2. İstenirse eski sertifikayı geri koy: `/data/ssl/cert.pem.bak.2026-09-21`, `key.pem.bak.2026-09-21`.
 3. Müşteri VM: `.env`'den `EDITOR_*` satırlarını sil, `docker compose up -d --force-recreate bridge`.
+
+## Portal belge okuma (2026-09-29)
+
+Taranmış PDF sayfası ve fotoğraf (sözleşme karşılaştırma HEIC dahil) kart servisinin `POST /v1/read` ucunda okunur
+(docs/analiz/ai-firsatlari/BELGE-OKUMA.md). Müşteri VM'i yol listede olmadığı için 405 alıyordu. GPU'da
+`sudo python3 add-read-route.py` (EDITOR-OKUMA bloğu; aynı üç kat koruma, yalnız POST, gövde sınırsız, 960 sn).

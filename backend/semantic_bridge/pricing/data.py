@@ -412,27 +412,19 @@ def sales_summary(snap: dict, code: str, years: Optional[list[str]] = None) -> d
     return tot
 
 
-def comparables(snap: dict, pages: Optional[float], binding: Optional[str] = None, months: int = COMPARABLE_MONTHS,
-                exclude: Optional[str] = None, band: float = PAGE_BAND) -> dict[str, Any]:
-    """Emsal kitaplar: son `months` ayda Logo'da baskı faturası olan, sayfa sayısı ±band içinde (ve cilt şekli
-    verildiyse aynı) kitaplar. Satırda son baskının adedi ve birim baskı bedeli, CRM'deki kapak fiyatı, Logo birim
-    maliyeti. Özet: fiyat çeyrekleri, sayfa başına baskı bedeli eğrisi (adet → birim), birim maliyet çeyrekleri."""
+def comparable_pool(snap: dict, months: int = COMPARABLE_MONTHS) -> list[dict]:
+    """Emsal adayları: son `months` ayda Logo'da baskı faturası olan bütün kitaplar, son baskının satırıyla. Sayfa ve
+    cilt süzgeci `comparables`'ta; toplu hesap (bütün kitaplar) havuzu bir kez kurup her kitapta yeniden kullanır."""
     end = snap.get("dataEnd") or date.today().isoformat()
     since = _months_before(end, months)
     books = snap.get("books") or {}
     rows = []
     for code, pr in (snap.get("prints") or {}).items():
-        if code == exclude:
-            continue
         recent = [p for p in pr if (p.get("date") or "") >= since]
         if not recent:
             continue
         pg = book_pages(snap, code)
-        if pages and (not pg or abs(pg - pages) > band * pages):
-            continue
         crm = latest_crm_print(snap, code)
-        if binding and (not crm or (crm.get("binding") or "") != binding):
-            continue
         last = recent[-1]
         # Aynı faturada kitabın birden çok satırı birleşik geldi; aynı gün iki faturayı ayrı baskı saymayız.
         b = books.get(code) or {}
@@ -442,6 +434,27 @@ def comparables(snap: dict, pages: Optional[float], binding: Optional[str] = Non
                      "printDate": last["date"], "printQty": last["qty"], "printUnit": last["unit"],
                      "printer": last.get("printer"), "price": price, "unitCost": s["unitCost"],
                      "publisher": b.get("publisher"), "library": b.get("library")})
+    return rows
+
+
+def comparables(snap: dict, pages: Optional[float], binding: Optional[str] = None, months: int = COMPARABLE_MONTHS,
+                exclude: Optional[str] = None, band: float = PAGE_BAND, pool: Optional[list[dict]] = None) -> dict[str, Any]:
+    """Emsal kitaplar: son `months` ayda Logo'da baskı faturası olan, sayfa sayısı ±band içinde (ve cilt şekli
+    verildiyse aynı) kitaplar. Satırda son baskının adedi ve birim baskı bedeli, CRM'deki kapak fiyatı, Logo birim
+    maliyeti. Özet: fiyat çeyrekleri, sayfa başına baskı bedeli eğrisi (adet → birim), birim maliyet çeyrekleri.
+    `pool`: aynı `months` ile kurulmuş `comparable_pool` (verilmezse burada kurulur)."""
+    end = snap.get("dataEnd") or date.today().isoformat()
+    since = _months_before(end, months)
+    rows = []
+    for r in pool if pool is not None else comparable_pool(snap, months):
+        if r["code"] == exclude:
+            continue
+        pg = r["pages"]
+        if pages and (not pg or abs(pg - pages) > band * pages):
+            continue
+        if binding and (r["binding"] or "") != binding:
+            continue
+        rows.append(r)
     rows.sort(key=lambda r: r["printDate"] or "", reverse=True)
     prices = [r["price"] for r in rows if r["price"]]
     per_page = [(r["printQty"], r["printUnit"] / r["pages"]) for r in rows if r["pages"] and r["printUnit"]]
@@ -473,12 +486,12 @@ def weighted_discount(snap: dict, mix: Optional[dict[str, float]] = None) -> Opt
     return round(1 - net / gross, 4) if gross > 0 else None
 
 
-def suggested_inputs(snap: dict, spec: dict, defaults: dict) -> dict[str, Any]:
+def suggested_inputs(snap: dict, spec: dict, defaults: dict, pool: Optional[list[dict]] = None) -> dict[str, Any]:
     """Bir kitabın hesap girdileri için veriden öneri. Her alanın yanında nereden geldiği (`origin`) yazılır."""
     pages = _f(spec.get("pages"))
     trim = parse_trim(spec.get("trim")) if spec.get("trim") else None
     gsm = _f(spec.get("gsm"))
-    comp = comparables(snap, pages, spec.get("binding") or None, exclude=spec.get("code"))
+    comp = comparables(snap, pages, spec.get("binding") or None, exclude=spec.get("code"), pool=pool)
     paper = paper_cost(snap, pages or 0, trim, gsm) if pages else None
     curve = comp.get("printCurvePerPage")
     a = b = None
@@ -567,50 +580,6 @@ def actuals(snap: dict, *, q: str = "", since_year: Optional[int] = None, sort: 
             "printed": sum(r["printed"] for r in rows), "sold": round(sum(r["sold"] for r in rows), 2),
             "margin": round(1 - tot_cogs / tot_net_costed, 4) if tot_net_costed > 0 else None,
             "sinceYear": since_year, "dataEnd": snap.get("dataEnd")}
-
-
-def backlist(snap: dict, *, target_ratio: Optional[float] = None, min_sold: float = 1.0, months: int = 12) -> dict[str, Any]:
-    """Fiyat revizyonu adayları: son baskının Logo birim bedeli + güncel kâğıt, kapak fiyatına (KDV hariç) oranı.
-    Hedef oran verilmezse son `months` ayda ilk baskısı yapılan kitapların ortanca oranı alınır (bugünkü
-    fiyatlama pratiği). Oranı hedefin üstünde olan kitaba hedefi tutturan fiyat önerilir (5 ₺'ye yukarı)."""
-    end = snap.get("dataEnd") or date.today().isoformat()
-    since = _months_before(end, months)
-    books = snap.get("books") or {}
-    cands = []
-    for code, pr in (snap.get("prints") or {}).items():
-        b = books.get(code)
-        if not b or not b.get("price") or not pr:
-            continue
-        last = pr[-1]
-        pages = book_pages(snap, code)
-        crm = latest_crm_print(snap, code)
-        paper = paper_cost(snap, pages, parse_trim(b.get("trim")), (crm or {}).get("gsm")) if pages else None
-        unit = last["unit"] + ((paper or {}).get("perCopy") or 0)
-        vat = b.get("vat") or 0
-        vat = vat / 100.0 if vat > 1 else vat
-        net_price = b["price"] / (1 + vat)
-        first_print = pr[0]["date"] or ""
-        s12 = sales_summary(snap, code, [end[:4], str(int(end[:4]) - 1)])
-        cands.append({"code": code, "name": b.get("name"), "publisher": b.get("publisher"), "price": b["price"],
-                      "vat": vat, "pages": pages, "lastPrintDate": last["date"], "lastPrintQty": last["qty"],
-                      "printUnit": last["unit"], "paperUnit": (paper or {}).get("perCopy"), "unit": round(unit, 4),
-                      "ratio": round(unit / net_price, 4) if net_price else None, "new": first_print >= since,
-                      "sold2y": s12["qty"], "avgNet": s12["avgNet"]})
-    fresh = [c["ratio"] for c in cands if c["new"] and c["ratio"]]
-    measured = M.quantile(fresh, 0.5)
-    target = target_ratio if target_ratio else measured
-    rows = []
-    if target:
-        for c in cands:
-            if c["new"] or not c["ratio"] or c["ratio"] <= target or (c["sold2y"] or 0) < min_sold:
-                continue
-            proposed = M.round_price(c["unit"] / target * (1 + c["vat"]))
-            if proposed <= c["price"]:
-                continue
-            rows.append({**c, "proposed": proposed, "increase": round(proposed / c["price"] - 1, 4)})
-    rows.sort(key=lambda r: -(r["ratio"] or 0))
-    return {"rows": rows, "count": len(rows), "target": target, "measuredTarget": measured, "freshBooks": len(fresh),
-            "candidates": len(cands), "since": since, "dataEnd": end}
 
 
 def book_detail(snap: dict, code: str) -> Optional[dict]:

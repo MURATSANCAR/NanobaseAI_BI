@@ -1,0 +1,15 @@
+services:
+  development-server:
+    name: ZEKI AI CHAT development server
+    description: Starts the ZEKI AI CHAT development server (yarn dsv)
+    triggeredBy:
+      - postDevcontainerStart
+      - manual
+    commands:
+      start: |
+        yarn
+        yarn dsv
+      ready: |
+        export ROOT_URL=$(gitpod environment port open 3000 --name "ZEKI AI CHAT application" | sed 's|https://||')
+        echo $ROOT_URL
+        gitpod environment port open 3000 --name "ZEKI AI CHAT application"

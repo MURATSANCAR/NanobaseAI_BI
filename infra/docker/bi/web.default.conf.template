@@ -223,6 +223,30 @@ server {
         client_max_body_size 251M;
     }
 
+    # Editoryal kitap/belge yüklemesi (ZEKI-26): redaksiyon eser metni ve son okuma provası, son okuma «Belge yükle
+    # ve incelet», çeviri kaynak metni. Kitap PDF'i yüzlerce MB olabilir; genel API gövde sınırı (10 MB) bu uçlarda
+    # 413 veriyordu. Boyut tavanı yok (0): köprü gövdeyi diske akıtır, yalnız disk dolacaksa reddeder. Gövde nginx'te
+    # tamponlanmaz; büyük PDF'in bölümlenmesi dakikalar sürebilir. Aynı yollardaki GET'ler (prova durumu, belge
+    # listesi, kaynak indirme) de buradan geçer; yöntem denetimi köprüdedir. «Kitaba sor»un üstündeki kitap okutma
+    # (`ask/read`) da kitap PDF'i taşır; 2026-10-01'e kadar listede yoktu, 10 MB üstü kitap 413 alıyordu.
+    location ~ "^/timas/api/v1/editorial/(works-from-file|works/[0-9a-f]{32}/(manuscript|proof)|documents|translation/jobs-from-file|translation/jobs/[0-9a-f]{32}/source|ask/read)$" {
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        limit_req zone=timas_api burst=30 nodelay;
+        limit_req_status 429;
+        rewrite ^/timas/api/(.*)$ /api/$1 break;
+        proxy_pass http://bridge:8795;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_request_buffering off;
+        proxy_read_timeout 1800s;
+        proxy_send_timeout 1800s;
+        client_max_body_size 0;
+    }
+
     # M19 Pazarlama görsel ve metin: varlık önizlemeleri ve dosyaları (talep ekranı ve arşiv bir açılışta onlarca görsel ister).
     location ~ "^/timas/api/v1/marketing/creative/(assets/[0-9a-f]{32}/file|requests/MC-[0-9]{4}-[0-9]{4,}/cover|brand/files/[0-9a-f]{32})$" {
         if ($request_method != GET) { return 405; }

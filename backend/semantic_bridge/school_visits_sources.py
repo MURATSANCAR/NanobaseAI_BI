@@ -266,16 +266,18 @@ def dealer_sales_sql(firm: str, since: date, until: date) -> str:
 
 
 def dealer_months_sql(firm: str, since: date, until: date) -> str:
-    """Cari kodu × ay: faturalı net adet ve net ciro (LINENET) — ziyaret sonrası dönüşüm karşılaştırması için."""
+    """Cari kodu × ay: faturalı net adet ve net ciro (VATMATRAH) — ziyaret sonrası dönüşüm karşılaştırması için."""
     f = _firm(firm)
     return (
-        "SELECT C.CODE AS cari_kodu, YEAR(S.DATE_) * 100 + MONTH(S.DATE_) AS ay,"
+        "SELECT C.CODE AS cari_kodu, YEAR(SH.DATE_) * 100 + MONTH(SH.DATE_) AS ay,"
         " SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,"
-        " SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro"
-        f" FROM dbo.LG_{f}_01_STLINE S JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
+        " SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro"
+        f" FROM dbo.LG_{f}_01_STLINE S"
+        f" JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0"
+        f" JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
         " WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)"
-        f" AND S.DATE_ >= '{since.isoformat()}' AND S.DATE_ < '{until.isoformat()}'"
-        " GROUP BY C.CODE, YEAR(S.DATE_) * 100 + MONTH(S.DATE_)"
+        f" AND SH.DATE_ >= '{since.isoformat()}' AND SH.DATE_ < '{until.isoformat()}'"
+        " GROUP BY C.CODE, YEAR(SH.DATE_) * 100 + MONTH(SH.DATE_)"
     )
 
 

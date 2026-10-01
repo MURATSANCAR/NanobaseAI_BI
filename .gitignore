@@ -34,3 +34,8 @@ backend/nanobase_semantic_bridge.env
 backend/var/
 *.semantic_layer.db
 .semantic_layer.db
+
+# Eski test sonuçları ve rapor çıktıları depoda tutulmaz (2026-09-29): arşiv test sunucusunda
+# /data/nanobaseai/arsiv/depo-disi/enduser-10000-ve-outputs-a1283c2c5.tar.gz
+/artifacts/enduser-10000/
+/outputs/

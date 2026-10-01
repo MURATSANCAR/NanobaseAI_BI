@@ -38,7 +38,7 @@ F_EKIP = ("Ekibim: kişi başına hedef sayısı ve değerlendirme durumu (döne
           "kaydında yöneticisi boş olan kişi sayısı.")
 F_HEDEF = "Hedefler: hedef değeri, birimi ve ağırlığı hedef kaydından; alt hedefler aynı kayıttan; ilerleme son ilerleme kaydı."
 F_ILERLEME_BEYAN = "Beyan edilen hedef: değer = son ilerleme kaydındaki değer; ilerleme % = kişinin girdiği oran."
-F_ILERLEME_SISTEM = ("Sistem ölçüsü: temsilcinin dönemdeki faturalı net satışı = Σ LINENET (7, 8, 9) − Σ LINENET (2, 3), "
+F_ILERLEME_SISTEM = ("Sistem ölçüsü: temsilcinin dönemdeki faturalı net satışı = Σ VATMATRAH (7, 8, 9) − Σ VATMATRAH (2, 3), "
                      "fatura temsilcisi = ölçü kodu, her yıl kendi Logo firmasından okunur; ilerleme % = değer ÷ hedef × 100.")
 F_DOLULUK = "Temsilci alanı doluluğu = temsilcisi dolu satış faturası ÷ bütün satış faturaları (7, 8, 9), iptaller hariç."
 F_DONEM = ("Değerlendirme dönemi durumu: katılımcı = dönemdeki değerlendirme; öz / yönetici değerlendirmesi tamamlanan sayı "

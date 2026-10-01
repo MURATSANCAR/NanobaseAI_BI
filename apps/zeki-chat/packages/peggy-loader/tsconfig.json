@@ -1,0 +1,7 @@
+{
+	"extends": "@zeki.chat/tsconfig/server.json",
+	"compilerOptions": {
+		"module": "esnext",
+	},
+	"include": ["src"]
+}

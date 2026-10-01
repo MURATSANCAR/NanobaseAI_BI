@@ -55,6 +55,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             return
         c = core()
         if c is not None:
+            c.rule_fields()                     # meta'nın kural alanları (tablodan; damga değiştiyse arkada kurulur)
             c.inventory(r.settings.tenant_id)
             c.consent(r.settings.tenant_id)
 

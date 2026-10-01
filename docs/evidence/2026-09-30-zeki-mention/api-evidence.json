@@ -1,0 +1,117 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "label": "plain",
+      "job": null,
+      "reply": null,
+      "passed": true
+    },
+    {
+      "label": "intro",
+      "job": [
+        "sent",
+        "Zeki AI — size özel yanıt\n\nBen Zeki AI; şirketinizin verileri ve modülleri hakkındaki sorulara cevap verebilirim.\n\nSorgu kaydı: q_2658de983ba3",
+        "q_2658de983ba3",
+        "6abd18d574ed9a0e471ff8af"
+      ],
+      "reply": {
+        "_id": "zekiaibea8c98c33ba2b37b92ee676ba24cfedcabdf1fe",
+        "rid": "6abd18d574ed9a0e471ff8af",
+        "msg": "Zeki AI — size özel yanıt\n\nBen Zeki AI; şirketinizin verileri ve modülleri hakkındaki sorulara cevap verebilirim.\n\nSorgu kaydı: q_2658de983ba3",
+        "u": {
+          "_id": "zeki.bot",
+          "username": "zeki.bot",
+          "name": "ZEKI AI CHAT"
+        }
+      },
+      "apiMatchesMongo": true,
+      "passed": true
+    },
+    {
+      "label": "empty",
+      "job": [
+        "sent",
+        "Zeki AI — size özel yanıt\n\nBana sormak istediğiniz soruyu @zeki.bot etiketinden sonra yazın.",
+        null,
+        "6abd18d574ed9a0e471ff8af"
+      ],
+      "reply": {
+        "_id": "zekiai50e585aec68a0d9d928cdf08c59541554d2eac1a",
+        "rid": "6abd18d574ed9a0e471ff8af",
+        "msg": "Zeki AI — size özel yanıt\n\nBana sormak istediğiniz soruyu @zeki.bot etiketinden sonra yazın.",
+        "u": {
+          "_id": "zeki.bot",
+          "username": "zeki.bot",
+          "name": "ZEKI AI CHAT"
+        }
+      },
+      "apiMatchesMongo": true,
+      "passed": true
+    },
+    {
+      "label": "data",
+      "job": [
+        "sent",
+        "Zeki AI — size özel yanıt\n\nSayım birimini güvenle doğrulayamadığım için bu rakamı paylaşmıyorum. Bu soru için veri tanımı netleştirilmeli.\n\nSorgu kaydı: q_c3df6659c1ae",
+        "q_c3df6659c1ae",
+        "6abd18d574ed9a0e471ff8af"
+      ],
+      "reply": {
+        "_id": "zekiai906d7a071e9e722d3423711a39651bbf79e0ec2a",
+        "rid": "6abd18d574ed9a0e471ff8af",
+        "msg": "Zeki AI — size özel yanıt\n\nSayım birimini güvenle doğrulayamadığım için bu rakamı paylaşmıyorum. Bu soru için veri tanımı netleştirilmeli.\n\nSorgu kaydı: q_c3df6659c1ae",
+        "u": {
+          "_id": "zeki.bot",
+          "username": "zeki.bot",
+          "name": "ZEKI AI CHAT"
+        }
+      },
+      "apiMatchesMongo": true,
+      "passed": true
+    },
+    {
+      "label": "amount",
+      "job": [
+        "sent",
+        "Zeki AI — size özel yanıt\n\nSatis tutari: 54.754.171,34\n\nSonuçlar:\n • satis_tutari: 54754171.34000009\n\nSorgu kaydı: q_13d95c335a78",
+        "q_13d95c335a78",
+        "6abd18d574ed9a0e471ff8af"
+      ],
+      "reply": {
+        "_id": "zekiai34fa53f81b359a7485155626f225487696aae0bd",
+        "rid": "6abd18d574ed9a0e471ff8af",
+        "msg": "Zeki AI — size özel yanıt\n\nSatis tutari: 54.754.171,34\n\nSonuçlar:\n • satis_tutari: 54754171.34000009\n\nSorgu kaydı: q_13d95c335a78",
+        "u": {
+          "_id": "zeki.bot",
+          "username": "zeki.bot",
+          "name": "ZEKI AI CHAT"
+        }
+      },
+      "apiMatchesMongo": true,
+      "passed": true
+    },
+    {
+      "label": "native",
+      "job": [
+        "sent",
+        "Zeki AI — size özel yanıt\n\nBen Zeki AI; şirketinizin verileri ve modülleri hakkındaki sorulara cevap verebilirim.\n\nSorgu kaydı: q_4a083f8c915e",
+        "q_4a083f8c915e",
+        "6abd18d574ed9a0e471ff8af"
+      ],
+      "reply": {
+        "_id": "zekiai5d700d9177a1949a6c9e8d0512ff1096cd473420",
+        "rid": "6abd18d574ed9a0e471ff8af",
+        "msg": "Zeki AI — size özel yanıt\n\nBen Zeki AI; şirketinizin verileri ve modülleri hakkındaki sorulara cevap verebilirim.\n\nSorgu kaydı: q_4a083f8c915e",
+        "u": {
+          "_id": "zeki.bot",
+          "username": "zeki.bot",
+          "name": "ZEKI AI CHAT"
+        }
+      },
+      "apiMatchesMongo": true,
+      "passed": true
+    }
+  ],
+  "unauthenticatedStatus": 401
+}

@@ -20,8 +20,8 @@ from semantic_bridge import field_sales_kaynak as FK
 from semantic_bridge import musteri as M
 from semantic_bridge import provenance as P
 
-F_DEGER = ("Değer (Logo günlük faturalı satır, iki yıl kopyası cari koduyla birleşir): net = Σ LINENET satış (7, 8, 9) − "
-           "Σ LINENET iade (2, 3). Son 12 ay = kesim − 364 gün … kesim; önceki 12 ay = ondan önceki 365 gün; bu yıl = 1 Ocak … "
+F_DEGER = ("Değer (Logo günlük faturalı satır, iki yıl kopyası cari koduyla birleşir): net = Σ VATMATRAH satış (7, 8, 9) − "
+           "Σ VATMATRAH iade (2, 3). Son 12 ay = kesim − 364 gün … kesim; önceki 12 ay = ondan önceki 365 gün; bu yıl = 1 Ocak … "
            "kesim (kesim = Logo verisinin bittiği gün). Değişim = son 12 ay ÷ önceki 12 ay − 1; iade oranı = iade ÷ satış; "
            "fatura = son 12 aydaki satış faturası sayısı.")
 F_ARALIK = ("Olağan alım aralığı = son 24 aydaki ardışık alım günleri arasındaki gün farkının medyanı (en az ayardaki sayıda alım "
@@ -207,7 +207,7 @@ def for_monthly(engine: Any, tenant: str, out: dict[str, Any], live_reads: list[
     ay = x.canli(live_reads).get("logo.aylik_cari") or []
     if not ay:
         raise P.ProvenanceError("Aylık alım okuması bu istekte kaydedilmedi.")
-    x.k.alanlar({"items": x.h("aylik", "Aylık net alım = ay başına Σ LINENET satış (7, 8, 9) − Σ LINENET iade (2, 3); yıl "
+    x.k.alanlar({"items": x.h("aylik", "Aylık net alım = ay başına Σ VATMATRAH satış (7, 8, 9) − Σ VATMATRAH iade (2, 3); yıl "
                               "kopyası pencereleri cari koduyla birleşir; son 24 ay, kesim ayına kadar.", ay)})
     return x.k
 

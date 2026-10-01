@@ -190,9 +190,22 @@ SPEC: list[dict[str, Any]] = [
      "help": "Bu tarihten sonra CRM'de açılan projelerin olası yazarları (henüz yazar rolüyle eseri yoksa) aday havuzunda listelenir (YYYY-AA-GG)"},
     {"key": "WEB_WATCH_ENABLED", "group": "crm", "label": "Basın ve web taraması", "type": "bool", "default": "0",
      "help": "Açıkken yazarlar ve kitapları haber akışlarında, sözlükte ve açık bilgi tabanında her gece taranır. Müşteri ortamında kapalı (2026-09-24 kararı)"},
+    # ZEKI-26 (kullanıcı kararı 2026-09-30): yükleme akışlıdır ama PDF okunurken bellek dosya boyuyla büyür (test sunucusu:
+    # 300 MB → ~0,6 GB, 1 GB → ~2,7 GB); müşteri VM'inde 7 GB bellek var. Sınır büyük ama VM'i zorlamayan bir değer.
+    {"key": "EDITORIAL_UPLOAD_MAX_MB", "group": "crm", "label": "Kitap/belge yükleme üst sınırı (MB)", "type": "int", "default": "300",
+     "help": "Redaksiyon, Son Okuma ve Çeviri'ye yüklenen tek dosyanın en büyük boyutu. Büyük PDF okunurken sunucu belleği dosya "
+             "boyutuyla artar; sunucunun belleğine göre ayarlayın. 0 = sınır yok"},
     {"key": "EDITORIAL_INTAKE_LATE_DAYS", "group": "crm", "label": "Gecikme sınırı (gün)", "type": "int", "default": "14",
      "help": "Bir adım bu kadar günden uzun beklerse panoda gecikti olarak işaretlenir"},
     # Yayın kurulu: toplam karar skoru (misyon, yayıncılık, ticari puanların ortalaması) → skor önerisi.
+    {"key": "BASVURU_FORM_SHEETS", "group": "basvuru_form", "label": "Yazar başvuru formu yanıt tabloları",
+     "type": "text",
+     # 2026-09-29: TİMAŞ'ın üç yaş grubu formu (Çocuk 0-9, Genç 11-14, İlk Gençlik 9-11), sahibi basvuru@timas.com.tr.
+     "default": "1wME0i1A8aVoMHfP_w-qnn6nwssM7i0CbSbD67m5uvEM 1yAvMQXw9_U5ZwMABMUJ1OYndM4Avh9V_xV4GdDQ3cQ0 "
+                "1Berv8Cy09X3r7WlSQtoD5oKlXE6tHPs-Cy62-VGFgqA",
+     "help": "Google E-Tablo bağlantıları ya da kimlikleri, boşluk ya da satırla ayrılmış. Her tablo "
+             "zeki-seo servis hesabıyla Görüntüleyici olarak paylaşılmalı. Yanıtlar 15 dakikada bir okunur, her yanıt bir "
+             "kez Başvurular'a düşer; tablolara hiçbir şey yazılmaz."},
     {"key": "EDITORIAL_BOARD_ACCEPT_SCORE", "group": "crm", "label": "Kurul: kabul skoru", "type": "int", "default": "70",
      "help": "Üyelerin ortalama toplam karar skoru bu değer ve üstündeyse skor önerisi «Kabul» olur (0–100)"},
     {"key": "EDITORIAL_BOARD_REVISE_SCORE", "group": "crm", "label": "Kurul: revizyon skoru", "type": "int", "default": "50",
@@ -258,6 +271,9 @@ SPEC: list[dict[str, Any]] = [
     {"key": "BING_WEBMASTER_API_KEY", "group": "seo", "label": "Bing Webmaster API anahtarı", "type": "secret", "default": "",
      "help": "bing.com/webmasters → Ayarlar → API erişimi. ChatGPT'nin web araması büyük ölçüde Bing dizinine dayanır; "
              "Bing'deki sorgu, tıklama ve tarama sorunları buradan okunur. Yalnız okuma"},
+    {"key": "YANDEX_WEBMASTER_TOKEN", "group": "seo", "label": "Yandex Webmaster jetonu", "type": "secret", "default": "",
+     "help": "oauth.yandex.com'da «webmaster:hostinfo» izinli bir uygulama açılır, jeton Yandex Webmaster'a yetkili "
+             "hesapla alınır. Yandex'teki sorgu, dizin, site teşhisi ve dış bağlantılar buradan okunur. Yalnız okuma"},
     {"key": "INDEXNOW_KEY", "group": "seo", "label": "IndexNow anahtarı", "type": "secret", "default": "",
      "help": "8–128 harf/rakam. Aynı adla bir metin dosyası sitenin köküne konmalı (https://timas.com.tr/<anahtar>.txt, "
              "içinde yalnız anahtar); dosyayı site yöneticisi koyar. Dosya doğrulanınca değişen sayfalar Bing ve "
@@ -502,7 +518,7 @@ SPEC: list[dict[str, Any]] = [
      "default": "gorsel,arka_kapak,yazar,kategori,site_gorsel",
      "help": "Virgülle: gorsel, arka_kapak, spot, yazar, kategori, anahtar_kelime, foy, site_gorsel. Boş olan «eksik kart» farkı açar"},
     {"key": "ECOM_ALERT_KINDS", "group": "eticaret", "label": "E-posta gönderilen fark türleri", "type": "text", "default": "hak,fiyat,stok",
-     "help": "Virgülle: hak, fiyat, stok, aktiflik, barkod, ad, eksik_kart. Fark ilk kez görüldüğünde bir kez bildirilir"},
+     "help": "Virgülle: hak, fiyat, perakende (D&R fiyat farkı), stok, aktiflik, barkod, ad, eksik_kart. Fark ilk kez görüldüğünde bir kez bildirilir"},
     {"key": "ECOM_ALERT_RECIPIENTS", "group": "eticaret", "label": "Fark bildirimi alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri (site sorumlusu). Boşsa e-posta gitmez; farklar ekranda durur"},
     {"key": "ECOM_WEEKLY_TO", "group": "eticaret", "label": "Haftalık özet alıcıları", "type": "text", "default": "",
@@ -1141,8 +1157,6 @@ SPEC: list[dict[str, Any]] = [
      "help": "Yalnız gün seçilen gönderinin saati (SS:DD)"},
     {"key": "SOCIAL_BANNED_CLAIMS", "group": "social", "label": "Ek yasaklı ifadeler", "type": "text", "default": "",
      "help": "Zeki AI taslağında geçerse cümlenin düşeceği ek ifadeler (virgülle). Kanıtsız üstünlük iddiaları zaten yasak"},
-    {"key": "SOCIAL_STUDIO_LICENSE_PENDING", "group": "social", "label": "Stüdyo görseli lisans uyarısı", "type": "bool",
-     "default": "1", "help": "Açıkken stüdyo görseli eklenen gönderide ve pakette «ticari kullanım lisansı bekleniyor» uyarısı durur"},
     # İşbirlikleri (M23: içerik üreticisi kayıt defteri, işbirliği panosu, ödeme listesi)
     {"key": "INFLUENCER_ALERT_RECIPIENTS", "group": "influencer", "label": "Hatırlatma alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç ekip e-posta adresleri (işbirliği sorumlusu). Yayın tarihi yaklaşan, bağlantısı girilmemiş, içerik onayı "
@@ -1231,7 +1245,7 @@ SPEC: list[dict[str, Any]] = [
      "help": "Sertifika geçerliliği bitmeden kaç gün önce «dolacak» sayılsın ve sabah özetine girsin. Boş: yalnız süresi dolmuş olanlar"},
     {"key": "HR_PRIVACY_MIN_GROUP", "group": "hr", "label": "Gizlilik eşiği (kişi)", "type": "text", "default": "",
      "help": "Kullanım haritasında bu sayıdan az çalışanı olan birimler birleştirilir; anket sonucu bu sayıdan az yanıtta "
-             "gösterilmez. Boş: birleştirme yok, ekran uyarır"},
+             "gösterilmez. Boş: 5 kişi. 0: birleştirme bilerek kapalı"},
     {"key": "HR_TRAINING_ACCOUNTS", "group": "hr", "label": "Eğitim gider hesapları (Logo)", "type": "text", "default": "",
      "help": "Virgülle 7'li gider hesap kodları; alt hesaplar dahil sayılır. Adayları Eğitim → Gider ekranı listeler (Mali İşler seçer)"},
     # İnsan kaynakları — M56 performans, M58 bağlılık
@@ -1331,8 +1345,14 @@ SPEC: list[dict[str, Any]] = [
     {"key": "SHIPPING_COD_NO_VALUES", "group": "shipping", "label": "Tahsilatlı kargo: «hayır» değerleri", "type": "text",
      "default": "hayır,hayir,yok,0,false,-", "help": "Tahsilatlı kargo alanında bu değerler tahsilatsız sayılır. Ölçülecek"},
     {"key": "SHIPPING_LOGO_CARRIER_CODES", "group": "shipping", "label": "Kargo firması → Logo cari kodları", "type": "text",
-     "default": "", "help": "Mutabakat için. Biçim: ARAS KARGO=320.01.001,320.01.002;MNG KARGO=320.01.003 (firma adı kargo "
-                            "kaydındaki gibi). Mutabakat ekranındaki «Aday cariler» listesinden seçilir"},
+     "default": "", "help": "Mutabakat ve kargo maliyeti için. Biçim: ARAS KARGO=320.01.001,320.01.002;MNG KARGO=320.01.003 "
+                            "(firma adı kargo kaydındaki ya da CRM kargo firmasındaki gibi; kargo maliyeti ekranı irsaliyedeki "
+                            "taşıyıcı kodunu da kabul eder). Mutabakat ekranındaki «Aday cariler» listesinden seçilir"},
+    {"key": "SHIPPING_COST_SERVICE_CODES", "group": "shipping", "label": "Kargo gideri hizmet kodları", "type": "text",
+     "default": "760.34.341,760.34.342,770.34.341",
+     "help": "Kargo maliyeti ekranı için. Virgülle Logo hizmet kartı kodları; alınan hizmet faturalarında bu kodlu satırların "
+             "tutarı (KDV hariç) kargo ve nakliye gideri sayılır. Varsayılan: posta ve kargo, satış nakliye, genel yönetim "
+             "posta ve kargo"},
     {"key": "SHIPPING_LOGO_CARRIER_HINTS", "group": "shipping", "label": "Aday cari ipuçları", "type": "text",
      "default": "KARGO,KURYE,LOJİSTİK,EXPRESS", "help": "Logo'da ünvanında bu sözcükler geçen hizmet faturası carileri aday olarak listelenir"},
     {"key": "SHIPPING_STALE_DAYS", "group": "shipping", "label": "Kargo kaydı eskime uyarısı (gün)", "type": "int", "default": "3",
@@ -1392,6 +1412,20 @@ SPEC: list[dict[str, Any]] = [
      "help": "new_siparisBase.new_siparistipi değeri"},
     {"key": "AMAZON_ULKE_TABLOSU", "group": "channels", "label": "CRM ülke varlığı", "type": "text", "default": "new_ulke",
      "help": "Telif Satış sözleşmesindeki «Telif Satılan Ülke» aramasının varlık adı (Base eki ve Id kolonu eklenir). Ölçülecek"},
+    # Trendyol/Amazon satış modeli (Aşama 0) ve mutabakat (Aşama 1) — başlangıç değerleri ölçülmemiştir
+    {"key": "PAZARYERI_MODEL_YIL", "group": "channels", "label": "Satış modeli: okunan yıl sayısı", "type": "int", "default": "2",
+     "help": "Satış modeli tespiti Logo'nun son verisinden geriye bu kadar yılı okur"},
+    {"key": "PAZARYERI_KONSINYE_GUN", "group": "channels", "label": "Satış modeli: konsinye günü", "type": "int", "default": "30",
+     "help": "Bu günden eski faturalanmamış sevk ya da sevkten bu kadar günden geç faturalanan sevk «konsinye izi» sayılır"},
+    {"key": "PAZARYERI_GUCLU_AY", "group": "channels", "label": "Satış modeli: güçlü kanıt için ay sayısı", "type": "int",
+     "default": "3", "help": "Modelin izi en az bu kadar farklı ayda görülürse kanıt «güçlü», azsa «zayıf» yazar"},
+    {"key": "PAZARYERI_BASKIN_PAY", "group": "channels", "label": "Satış modeli: baskın satış payı", "type": "text",
+     "default": "0.9", "help": "Kendi mağaza ile toptan/konsinye izi birlikteyse satış tutarının bu payından fazlası olan model "
+     "geçerli sayılır, öteki «yan iz» yazar (0,5–1)"},
+    {"key": "MUTABAKAT_TOLERANS_GUN", "group": "channels", "label": "Mutabakat: tarih toleransı (gün)", "type": "int",
+     "default": "15", "help": "Logo faturası panel tarihinden en çok bu kadar gün önce ya da sonra aranır"},
+    {"key": "MUTABAKAT_TUTAR_TOLERANS", "group": "channels", "label": "Mutabakat: tutar toleransı (₺)", "type": "text",
+     "default": "1", "help": "Panel tutarı ile Logo fatura tutarı (KDV dahil) arasındaki fark bundan küçükse «eşleşti»"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -1432,6 +1466,8 @@ GROUPS = [
      "help": "Portal girişi bu dizinle doğrulanır. Kaydedilen değer giriş servisinin dosyasına yazılır ve hemen geçerli olur."},
     {"id": "database", "category": "baglanti", "label": "Logo veritabanı (SQL Server)",
      "help": "Soruların cevabı bu bağlantıdan okunur. Kaydedilen değer bağlantı dosyasına yazılır ve bağlantı yeniden kurulur."},
+    {"id": "basvuru_form", "category": "baglanti", "label": "Yazar başvuru formları (Google)",
+     "help": "Yazar başvuru formlarının yanıt tabloları servis hesabıyla yalnız okunur; her yanıt Başvurular'da yeni başvuru olur."},
     {"id": "crm", "category": "baglanti", "label": "CRM (Dynamics)", "help": "CRM prod sunucusu 192.168.0.28 (CRMDATBASE); kendi bağlantısıyla okunur."},
     {"id": "people", "category": "baglanti", "label": "Kişi rehberi",
      "help": "Rehber CRM'deki etkin kullanıcılardan gelir, Active Directory ile kesiştirilir: AD'de devre dışı olanlar ve "
@@ -2576,7 +2612,7 @@ def _unit(name: str) -> dict[str, Any]:
 
 TIMERS = [
     {"unit": "timas-alerts.timer", "label": "Uyarı kontrolü", "every": "15 dk"},
-    {"unit": "timas-reports.timer", "label": "Planlı raporlar", "every": "5 dk"},
+    {"unit": "timas-reports.timer", "label": "Planlı raporlar", "every": "her dakika"},
     {"unit": "timas-board.timer", "label": "Pano kartı tazeleme", "every": "15 dk"},
     {"unit": "timas-seo.timer", "label": "SEO & GEO eşitlemesi", "every": "gece 03:00"},
     {"unit": "nanobase-semantic-worker.timer", "label": "Gece katalog taraması", "every": "gece"},

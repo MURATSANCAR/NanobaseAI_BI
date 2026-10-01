@@ -148,7 +148,7 @@ def test_budget_every_number_has_its_query(engine):
     assert logo["sql"].startswith("USE [TIGERDB];") and "LG_411_01_STLINE" in logo["sql"]
     assert "'2026-01-01'" in logo["sql"] and "'2027-01-01'" in logo["sql"] and logo["stats"]["rows"] == 40
     assert "logo.satis.2026" in k["sources"]["portal.satis"]["origin"]
-    assert "net" in k["formulas"]["gercek"]["text"].lower() and "LINENET" in k["formulas"]["gercek"]["text"]
+    assert "net" in k["formulas"]["gercek"]["text"].lower() and "VATMATRAH" in k["formulas"]["gercek"]["text"]
     assert k["fields"]["sirket"] == "hesap:sirket"
 
     for build in (
@@ -246,6 +246,18 @@ def snap():
     return D.Builder(run).build()
 
 
+def _compare_out(snap, engine):
+    """`/pricing/compare` cevabının şekli (uçtaki gibi: hesap sonucu + süzgeç özeti)."""
+    from semantic_bridge import pricing as PR
+    from semantic_bridge.pricing import form as FM
+    from semantic_bridge.pricing import karsilastir as KS
+    res = KS.compare_all(snap, defaults=PS.get_defaults(engine, T), tariff=FM.default_tariff(), kur=None, freelance={},
+                         market={}, calculate=PR.calculate)
+    return {"ready": True, "stale": False, "kur": FM.default_tariff()["kur"], "kurKaynak": "logo", "dataEnd": res["dataEnd"],
+            "since": res["since"], "targetMargin": res["targetMargin"], "seconds": res["seconds"], "offset": 0, "limit": 100,
+            **KS.select(res, new=True)}
+
+
 def test_pricing_every_number_has_its_query(engine, snap):
     from semantic_bridge import pricing as PR
 
@@ -282,7 +294,7 @@ def test_pricing_every_number_has_its_query(engine, snap):
                                           "qtys": [1000, 3000], "targetMargin": 0.1, "chosenQty": 3000}})
     _check(P.ekle(calc, PK.for_calc(snap, None, None)), ig)
     _check(P.ekle(D.actuals(snap), PK.for_actuals(snap, None, None)), ig + ("sinceYear",))
-    _check(P.ekle(D.backlist(snap), PK.for_backlist(snap, None, None)), ig)
+    _check(P.ekle(_compare_out(snap, engine), PK.for_compare(snap, None, None)), ig)
 
     a = PS.create_analysis(engine, T, "fiyatci", {"title": "Deneme", "stage": "tahmini", "inputs": {}, "specs": {}})
     lst = PS.list_analyses(engine, T)
@@ -352,7 +364,7 @@ def test_pricing_remaining_fields(engine, snap):
     ig = PK.NOT_RAKAM + ("offset", "limit", "dataEnd", "since", "until")
     k = _check(P.ekle(D.actuals(snap), PK.for_actuals(snap, None, None)), ig + ("sinceYear",))
     assert k["fields"]["gosterilen"] == "hesap:gosterilen"
-    k = _check(P.ekle(D.backlist(snap), PK.for_backlist(snap, None, None)), ig)
+    k = _check(P.ekle(_compare_out(snap, engine), PK.for_compare(snap, None, None)), ig)
     assert k["fields"]["secim"] == "hesap:secim"
 
     det = D.book_detail(snap, "15201.01.1")

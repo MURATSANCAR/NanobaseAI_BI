@@ -336,8 +336,8 @@ def test_etkinlik_takvimi_bellekten(ev_engine):
     r1 = c.get(f"/api/v1/events/calendar?year={y}&unmapped=1").json()
     assert r1["unmappedTypes"] == 2 and sorted(r1["events"], key=lambda e: e["id"])[0]["ad"] == "İmza günü"
     assert fake.say("new_BalangTarihi >=") == 1
-    anahtar = next(k for k in svc.source._bellek._k if k[0] == "events")
-    _eskit(svc.source._bellek, anahtar, 700)
+    anahtar = next(k for k in svc.source._yil._k if k[0] == "events")     # takvim yılı: ayrı (kalıcı) bellek
+    _eskit(svc.source._yil, anahtar, 700)
     r2 = c.get(f"/api/v1/events/calendar?year={y}&unmapped=1").json()
     assert r2["events"] == r1["events"] and r2["months"] == r1["months"]
     assert _bekle(lambda: fake.say("new_BalangTarihi >=") == 2)

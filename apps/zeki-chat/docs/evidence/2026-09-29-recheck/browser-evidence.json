@@ -1,0 +1,123 @@
+{
+  "results": [
+    {
+      "width": 320,
+      "authenticated": true,
+      "title": "Home - 1 unread message - ZEKI AI CHAT",
+      "scrollWidth": 320,
+      "vendorTextCount": 0,
+      "overflowing": [],
+      "errors": []
+    },
+    {
+      "width": 390,
+      "authenticated": true,
+      "title": "Home - 1 unread message - ZEKI AI CHAT",
+      "scrollWidth": 390,
+      "vendorTextCount": 0,
+      "overflowing": [],
+      "errors": []
+    },
+    {
+      "width": 768,
+      "authenticated": true,
+      "title": "Home - 1 unread message - ZEKI AI CHAT",
+      "scrollWidth": 768,
+      "vendorTextCount": 0,
+      "overflowing": [],
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "authenticated": true,
+      "title": "Home - 1 unread message - ZEKI AI CHAT",
+      "scrollWidth": 1440,
+      "vendorTextCount": 0,
+      "overflowing": [],
+      "errors": []
+    }
+  ],
+  "attemptedRequestHosts": [
+    "portal.nanobase.ai",
+    "rocket.chat"
+  ],
+  "forbiddenNetworkRequests": [],
+  "securityEvidence": {
+    "registration": {
+      "scope": "https://portal.nanobase.ai/timas/sohbet/",
+      "active": "https://portal.nanobase.ai/timas/sohbet/enc.js",
+      "controller": "https://portal.nanobase.ai/timas/sohbet/enc.js",
+      "updateViaCache": "none"
+    },
+    "redirectEvidence": {
+      "status": 302,
+      "location": "https://portal.nanobase.ai/timas/"
+    },
+    "workerProbes": {
+      "blocked": [
+        {
+          "kind": "external",
+          "rejected": true
+        },
+        {
+          "kind": "external",
+          "rejected": true
+        },
+        {
+          "kind": "credentials",
+          "rejected": true
+        }
+      ],
+      "localAccepted": true,
+      "localStatus": 200,
+      "redirectBlocked": true
+    },
+    "noCacheUse": true,
+    "documentPolicy": {
+      "status": 404,
+      "csp": "sandbox; default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline'; frame-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'",
+      "cacheControl": "no-store",
+      "nosniff": "nosniff",
+      "bodyBytes": 0,
+      "malformed": {
+        "status": 400,
+        "csp": "sandbox; default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline'; frame-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'",
+        "cacheControl": "no-store"
+      }
+    },
+    "workerGuardPresent": true,
+    "csp": "default-src 'self'; connect-src 'self' wss://portal.nanobase.ai; font-src 'self' data:; frame-src 'none'; img-src 'self' data: blob:; media-src 'self' data: blob:; script-src 'self' 'unsafe-eval' 'sha256-jqxtvDkBbRAl9Hpqv68WdNOieepg8tJSYu1xIy7zT34=' 'sha256-aui5xYk3Lu1dQcnsPlNZI+qDTdfzdUv3fzsw80VLJgw='; style-src 'self' 'unsafe-inline'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+    "workerStatus": 200,
+    "workerContentType": "application/javascript; charset=utf-8",
+    "workerSourceHasHandler": true,
+    "workerCsp": "default-src 'self'; connect-src 'self' wss://portal.nanobase.ai; font-src 'self' data:; frame-src 'none'; img-src 'self' data: blob:; media-src 'self' data: blob:; script-src 'self' 'unsafe-eval' 'sha256-jqxtvDkBbRAl9Hpqv68WdNOieepg8tJSYu1xIy7zT34=' 'sha256-aui5xYk3Lu1dQcnsPlNZI+qDTdfzdUv3fzsw80VLJgw='; style-src 'self' 'unsafe-inline'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+    "probes": {
+      "fetchBlocked": true,
+      "websocketBlocked": true,
+      "vendorLinkBlocked": true,
+      "sameOriginFrameBlocked": true,
+      "violations": [
+        {
+          "directive": "connect-src",
+          "blockedURI": "https://collector.rocket.chat/zeki-egress-probe"
+        },
+        {
+          "directive": "connect-src",
+          "blockedURI": "wss://open.rocket.chat/websocket"
+        },
+        {
+          "directive": "img-src",
+          "blockedURI": "https://rocket.chat/zeki-egress-probe.png"
+        },
+        {
+          "directive": "frame-src",
+          "blockedURI": "https://cloud.rocket.chat"
+        },
+        {
+          "directive": "frame-src",
+          "blockedURI": "https://portal.nanobase.ai/timas/"
+        }
+      ]
+    }
+  }
+}

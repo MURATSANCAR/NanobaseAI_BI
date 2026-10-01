@@ -33,6 +33,8 @@ from docker.types import DeviceRequest, Ulimit
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from .chat_params import without_thinking
+
 log = logging.getLogger("editor.gateway")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -62,12 +64,30 @@ def _upstream_path(path: str) -> str:
 # Taşma (kullanıcı kararı 2026-09-21): aynı model (Qwen3.8-27B-FP8) GPU 0'da BI için de açık. Etkileşimli
 # soru, yönetici model GPU 1'de kapalıyken ve kart analizle doluyken beklemek yerine o eşe gider; iki kopya
 # aynı ağırlık ve aynı sunum ayarıyla çalışır (bağlam 131072, qwen3 akıl yürütme ayrıştırıcısı, MTP).
-# Yalnız EDITOR_OVERFLOW_CLIENTS'taki konteynerlerden gelen istekler taşar; analiz işçisi taşmaz.
+# Yalnız EDITOR_OVERFLOW_CLIENTS'taki konteynerlerden gelen istekler bu kuralla taşar; analiz işçisi aşağıdaki
+# «analiz taşması» kuralıyla (yalnız GPU 0'da BI boşken) taşar.
 # Boş bırakılırsa taşma kapalıdır.
 OVERFLOW_ALIAS = os.environ.get("EDITOR_OVERFLOW_ALIAS", "book-director")
 OVERFLOW_URL = os.environ.get("EDITOR_OVERFLOW_URL", "").rstrip("/")
 OVERFLOW_MODEL = os.environ.get("EDITOR_OVERFLOW_MODEL", "")
 OVERFLOW_CLIENTS = {c.strip() for c in os.environ.get("EDITOR_OVERFLOW_CLIENTS", "").split(",") if c.strip()}
+
+# Analiz taşması (kullanıcı kararı 2026-10-01): kitap okuma yalnız GPU 1'deki tek kopyayı kullanıyordu ve
+# kitap başına ~1 M çıktı tokenıyla 80+ dk sürüyordu; GPU 0'daki eş aynı saatlerde boş duruyordu. Analiz
+# işçisinin isteği, yönetici model kapalıyken ya da eşteki kendi taşan isteklerimizden fazla iş taşırken
+# GPU 0'a gider — yalnız orada BI'ın kendi yükü (eşin çalışan + bekleyen istekleri eksi bizim taşanlar)
+# EDITOR_OVERFLOW_ANALYSIS_BI_MAX'ı aşmıyorsa ve aynı anda en çok EDITOR_OVERFLOW_ANALYSIS_CAP istek taşıyorsa.
+# BI modeli hiç kapatılmaz; BI isteği gelince yeni taşma durur, taşmış olanlar biter. CAP=0 kapalı.
+ANALYSIS_CAP = int(os.environ.get("EDITOR_OVERFLOW_ANALYSIS_CAP", "8") or 0)
+ANALYSIS_BI_MAX = int(os.environ.get("EDITOR_OVERFLOW_ANALYSIS_BI_MAX", "2") or 0)
+PEER_LOAD_TTL = 1.0
+_peer_load: tuple[float, int | None] = (0.0, None)
+overflow_inflight = 0          # GPU 0'a taşmış, henüz bitmemiş analiz istekleri
+overflow_total = 0
+
+# Etkileşimli sohbet (EDITOR_OVERFLOW_CLIENTS) düşünme kapalı çalışır (editor.chat_params). Analiz işçisinin
+# istekleri değişmez; istemci kendisi açıkça isterse ona uyulur. EDITOR_CHAT_THINKING=1 eski davranışa döner.
+CHAT_THINKING = os.environ.get("EDITOR_CHAT_THINKING", "0").strip() == "1"
 
 
 @dataclass
@@ -328,11 +348,45 @@ async def _overflow_ok() -> bool:
         return False
 
 
+async def peer_load() -> int | None:
+    """Eşin (GPU 0) çalışan + bekleyen istek sayısı, vLLM /metrics'ten; okunamazsa None. 1 sn önbellek."""
+    global _peer_load
+    now = time.time()
+    if now - _peer_load[0] < PEER_LOAD_TTL:
+        return _peer_load[1]
+    n: int | None = None
+    try:
+        r = await http.get(f"{OVERFLOW_URL}/metrics", timeout=3.0)
+        if r.status_code == 200:
+            n = 0
+            for line in r.text.splitlines():
+                if line.startswith(("vllm:num_requests_running{", "vllm:num_requests_waiting{")):
+                    n += int(float(line.rsplit(" ", 1)[1]))
+    except (httpx.HTTPError, ValueError):
+        n = None
+    _peer_load = (now, n)
+    return n
+
+
+async def _analysis_overflow(a: Alias) -> bool:
+    """Analiz isteği GPU 0'daki eşe gitsin mi? Yerelde yer varsa hayır; eşte BI meşgulse ya da sınır doluysa hayır."""
+    if ANALYSIS_CAP <= 0 or overflow_inflight >= ANALYSIS_CAP:
+        return False
+    local_up = _is_running(a) and await _healthy(a)
+    # Yerel kopya ayaktaysa yük dengelenir: yereldeki iş (bu istek hariç) eşe taşanlardan fazla değilse yerelde kalır.
+    if local_up and a.inflight - 1 <= overflow_inflight:
+        return False
+    load = await peer_load()
+    if load is None:
+        return False
+    return load - overflow_inflight <= ANALYSIS_BI_MAX
+
+
 async def _should_overflow(a: Alias, req: Request) -> bool:
     if not (OVERFLOW_URL and OVERFLOW_MODEL and a.name == OVERFLOW_ALIAS):
         return False
     if not _client_name(req):
-        return False                      # analiz işçisi ve diğerleri: hiçbir koşulda taşmaz
+        return await _analysis_overflow(a)  # analiz işçisi: yalnız GPU 0'da BI boşken
     if _is_running(a) and await _healthy(a):
         return False                      # yönetici model GPU 1'de açık: orada cevaplanır
     # Kapalı model de "meşgul"dür: soğuk açılış ~100 sn sürüyor (ölçüldü: "ana karakter kim"
@@ -441,6 +495,7 @@ async def models(req: Request) -> dict:
 
 @app.api_route("/v1/{path:path}", methods=["POST"])
 async def proxy(path: str, req: Request):
+    global overflow_inflight, overflow_total
     _auth(req)
     from .foundation import assert_enabled
     try:
@@ -459,18 +514,34 @@ async def proxy(path: str, req: Request):
         raise HTTPException(404, {"error": "unknown model", "models": sorted(ALIASES)})
     a.inflight += 1
     released = False
+    spilled = False
 
     def release() -> None:
+        global overflow_inflight
         nonlocal released
         if not released:
             released = True
-            a.inflight -= 1
+            if spilled:
+                overflow_inflight -= 1      # GPU 1'deki modeli meşgul saymaz (boşta durdurma kararı)
+            else:
+                a.inflight -= 1
             a.last_used = time.time()
 
     try:
+        if (path == "chat/completions" and not CHAT_THINKING and _client_name(req)
+                and without_thinking(payload)):
+            body = json.dumps(payload).encode()
         if await _should_overflow(a, req):
             # Aynı modelin GPU 0'daki eşi; yalnız sunulan ad farklı, gövdedeki model adı ona çevrilir.
-            log.info("overflow %s → %s (gpu %s busy, client %s)", a.name, OVERFLOW_URL, a.gpu, _client_name(req))
+            client = _client_name(req)
+            if not client:
+                spilled = True
+                a.inflight -= 1
+                overflow_inflight += 1
+                overflow_total += 1
+            if client or overflow_total % 100 == 1:
+                log.info("overflow %s → %s (gpu %s busy, client %s, analiz taşan %d/%d, toplam %d)", a.name,
+                         OVERFLOW_URL, a.gpu, client or "analiz", overflow_inflight, ANALYSIS_CAP, overflow_total)
             payload["model"] = OVERFLOW_MODEL
             body = json.dumps(payload).encode()
             url = f"{OVERFLOW_URL}{_upstream_path(path)}"
@@ -528,7 +599,9 @@ async def internal_status(req: Request) -> dict:
     now = time.time()
     return {"gpus": gpus, "models": {a.name: {
         "running": _is_running(a), "inflight": a.inflight,
-        "idle_sec": int(now - a.last_used), "gpu": a.gpu} for a in ALIASES.values()}}
+        "idle_sec": int(now - a.last_used), "gpu": a.gpu} for a in ALIASES.values()},
+        "analysis_overflow": {"inflight": overflow_inflight, "total": overflow_total, "cap": ANALYSIS_CAP,
+                              "bi_max": ANALYSIS_BI_MAX, "peer_load": _peer_load[1]}}
 
 
 @app.post("/internal/start/{alias}")

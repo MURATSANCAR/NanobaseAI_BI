@@ -1,0 +1,41 @@
+{
+	"name": "@zeki.chat/ui-avatar",
+	"version": "27.0.0",
+	"private": true,
+	"main": "./dist/index.js",
+	"typings": "./dist/index.d.ts",
+	"files": [
+		"/dist"
+	],
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+		"lint": "eslint .",
+		"lint:fix": "eslint --fix .",
+		"typecheck": "tsc -p tsconfig.json --noEmit"
+	},
+	"devDependencies": {
+		"@zeki.chat/core-typings": "workspace:~",
+		"@rocket.chat/emitter": "^0.32.0",
+		"@rocket.chat/fuselage": "^0.78.0",
+		"@rocket.chat/fuselage-hooks": "^0.41.0",
+		"@rocket.chat/fuselage-tokens": "~0.33.2",
+		"@rocket.chat/icons": "~0.47.0",
+		"@zeki.chat/ui-contexts": "workspace:^",
+		"@types/react": "~18.3.28",
+		"@types/react-dom": "~18.3.7",
+		"eslint": "~9.39.4",
+		"react": "~18.3.1",
+		"react-dom": "~18.3.1",
+		"react-virtuoso": "~4.12.8",
+		"typescript": "~5.9.3"
+	},
+	"peerDependencies": {
+		"@rocket.chat/fuselage": "*",
+		"@zeki.chat/ui-contexts": "workspace:^",
+		"react": "*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

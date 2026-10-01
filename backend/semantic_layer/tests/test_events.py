@@ -373,8 +373,8 @@ def test_award_entries_flow(engine):
 def test_fair_sales_sql_uses_invoiced_lines_channel_and_codes():
     q = S.fair_sales_sql("411", date(2026, 11, 7), date(2026, 11, 16), "FUAR", ["120.FUAR.01", "x'; DROP--", "120.02"])
     assert "LG_411_01_STLINE" in q and "LG_411_CLCARD" in q and "S.INVOICEREF <> 0" in q and "S.LINETYPE = 0" in q
-    assert "S.CANCELLED = 0" in q and "C.SPECODE2 = 'FUAR'" in q and "TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET" in q
-    assert "S.DATE_ >= '2026-11-07' AND S.DATE_ < '2026-11-16'" in q
+    assert "S.CANCELLED = 0" in q and "C.SPECODE2 = 'FUAR'" in q and "TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH" in q
+    assert "SH.DATE_ >= '2026-11-07' AND SH.DATE_ < '2026-11-16'" in q
     assert "C.CODE IN (N'120.FUAR.01', N'120.02')" in q and "DROP" not in q
     with pytest.raises(S.SourceError):
         S.fair_sales_sql("41'1", date(2026, 1, 1), date(2026, 1, 2), "FUAR")
@@ -441,6 +441,18 @@ class FakeSource:
         return [{"id": "e1", "ad": "İmza günü", "tipId": TY_FUAR, "baslangic": E.today().isoformat(), "saat": None,
                  "sorumlu": "ayse", "iptal": False, "yer": "Kadıköy", "il": "İstanbul"},
                 {"id": "e2", "ad": "Ziyaret", "tipId": TY_ZIY, "baslangic": E.today().isoformat(), "sorumlu": "mehmet", "iptal": False}]
+
+    def window_events(self, frm, to, fresh=False):
+        """Gerçek kaynaktaki gibi: takvim yılı okumaları, başlangıcı [frm, to) aralığında olanlar."""
+        from datetime import date as _d
+
+        from semantic_bridge.events_sources import year_slices
+
+        out = []
+        for y, _a, _b in year_slices(frm, to):
+            out += [r for r in self.events(_d(y, 1, 1), _d(y + 1, 1, 1), fresh)
+                    if frm.isoformat() <= r["baslangic"] < to.isoformat()]
+        return out
 
     def types(self, fresh=False):
         return [{"id": TY_FUAR, "ad": "Fuar", "adet": 1, "etkin": True, "son": None}]

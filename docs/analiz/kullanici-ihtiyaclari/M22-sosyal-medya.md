@@ -112,7 +112,7 @@ TİMAŞ'ın bugünkü sorunu: yayınevinin birden çok marka/imprint hesabı var
 - Ekranda teknoloji adı yok (platform adları kalır; model adı yok, «Zeki AI önerisi»).
 - Demo veri yok; boş hesapta «veri yok» yazar. Sayı tavanı yok.
 - KVKK: yorumcu adı ve profil kişisel veridir; yorum metni yalnız kendi hesabımıza gelen yorumlarda ve iş gereği (yanıt, şikâyet aktarımı) saklanır, saklama süresi tanımlanır; raporlarda kişi adı geçmez. Alıntı paylaşımında telif: kitap metninden alıntı kısa tutulur, sözleşmede sosyal medya kullanımına engel madde (`new_sozlesmeBase.new_haklaraciklama` dolu) varsa uyarı.
-- Yapay zekâ ile üretilmiş görselin ticari kullanımı: stüdyo görsel modelinin ticari lisansı bekleniyor (editor-book-visuals belleği); lisans gelene kadar üretilen görselin paylaşımı kullanıcı kararıdır, ekranda uyarı durur.
+- Yapay zekâ ile üretilmiş görselin ticari kullanımı: görsel modelin ticari lisansı 2026-09-29'da alındı; gönderide ve pakette lisans uyarısı yok (`SOCIAL_STUDIO_LICENSE_PENDING` ayarı kaldırıldı).
 
 ## 9. Kapsam önerisi
 

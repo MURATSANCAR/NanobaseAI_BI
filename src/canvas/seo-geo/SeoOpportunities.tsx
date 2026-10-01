@@ -2,13 +2,14 @@ import type { Kaynaklar } from '../components/sqlInfo';
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { FIELD_LABEL, dateTime, fmt, seoApi } from './api';
 import { oppsApi, type Delta, type ImpactItem, type ImpactStatus, type Metrics, type OppItem, type OppKind } from './api-opps';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 import { TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 const PAGE = 50;
 
@@ -390,6 +391,7 @@ function ImpactList() {
                       <th>Sıra <SeoInfo k={r.data?.kaynaklar} label="Sıra" /></th>
                       <th><ExplainLabel label="Site geneli">Aynı dönemlerde bütün sitenin tıklama ve gösterim değişimi. Mevsim ya da genel trafik etkisini görmek için karşılaştırma ölçüsüdür.</ExplainLabel></th>
                       <th><ExplainLabel label="Siteye göre">Kitabın tıklama değişiminden site genelindeki değişim çıkarılır. Artıysa kitap siteden daha iyi gitmiş demektir; değişikliğin gerçek etkisine en yakın ölçü budur.</ExplainLabel></th>
+                      <th><ExplainLabel label="Google’dan satış">Aynı önce/sonra pencerelerinde bu sayfaya Google aramasından gelen ziyaret, satış ve ciro (Google Analytics). Pencere dolunca ölçülür.</ExplainLabel></th>
                       <th>Durum</th>
                     </tr>
                   </thead>
@@ -444,9 +446,26 @@ function ImpactRow({ i }: { i: ImpactItem }) {
           <td className="num">
             <Tone good={sign(i.netClicksPct)}>{signed(i.netClicksPct, 'puan', 0)}</Tone>
           </td>
+          <td className="num" style={{ fontSize: 12 }}>
+            {i.ga4?.before && i.ga4.after ? (
+              <>
+                <div>
+                  {fmt(i.ga4.before.revenue)} ₺ → {fmt(i.ga4.after.revenue)} ₺
+                </div>
+                <div style={{ fontSize: 11 }}>
+                  <Tone good={sign(i.ga4.delta?.revenue)}>ciro {signed(i.ga4.delta?.revenue)}</Tone>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--sg-muted)' }}>
+                  ziyaret {fmt(i.ga4.before.sessions)} → {fmt(i.ga4.after.sessions)} · satış {fmt(i.ga4.before.purchases)} → {fmt(i.ga4.after.purchases)}
+                </div>
+              </>
+            ) : (
+              <span style={{ color: 'var(--sg-muted)' }}>{i.ga4?.error ? 'Ölçülemedi' : '—'}</span>
+            )}
+          </td>
         </>
       ) : (
-        <td colSpan={6} style={{ fontSize: 12, color: 'var(--sg-muted)' }}>
+        <td colSpan={7} style={{ fontSize: 12, color: 'var(--sg-muted)' }}>
           {note}
           {i.error && <div style={{ color: '#9b1c24' }}>Son ölçüm denemesi: {i.error}</div>}
         </td>
@@ -492,20 +511,7 @@ function Control({ d, m }: { d: Delta | null; m: Metrics | null }) {
 // ------------------------------------------------------------------ ortak
 
 function Pager({ start, total, onChange }: { start: number; total: number; onChange: (n: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => onChange(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => onChange(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+  return <SeoPager start={start} total={total} size={PAGE} onChange={onChange} />;
 }
 
 function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {

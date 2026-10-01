@@ -1,0 +1,18 @@
+{
+  "sourceMatchesTestServer": true,
+  "files": {
+    "backend/semantic_bridge/finance_query/planner.py": "c6219aab1973613aecb24470f7a43ebb7b05e3793d3f97ba36ea9f0624918be2",
+    "backend/semantic_bridge/finance_query/__init__.py": "ea6067c65b32712cd7e4d936c3391417753772fdab7c0ebcef9d14debcd9578d",
+    "backend/semantic_bridge/finance_query/language.py": "66fa2afe96a2ed8d360a90da3d4bd203438d92b79012727b284824100c60aa5e",
+    "backend/semantic_bridge/finance_query/contracts.py": "3b4f1d3ee3eb0fa4c2d70a660da27b4fa2615951b80c5881c326bdbde940bd71",
+    "backend/semantic_bridge/finance_query/model_schema.py": "752d4c2355df11c717700b1af3bd4898aacb26665db3482ed10e275650c4904f",
+    "backend/semantic_bridge/finance_query/executor.py": "e0e75e6d79c4c11d23e262dcb1c7f734282832f4aa0beb4b04a831a7fa71d2cc",
+    "backend/semantic_bridge/app.py": "2013980c1b25ffe51fe8dba5c5bf5dd5877c72979f6f88484f2b5c58752b3d54",
+    "backend/semantic_layer/runtime/llm_queue.py": "5441bdb7b1228e710807394aff97019b7813dd82ea6829bc2b98f222c1d6b9f5",
+    "src/pages/BiCanvasPage.tsx": "36b99adc16a9689f6c1e197b734a8ede6ff240f21d2587cf823e47fbcddc66be",
+    "src/canvas/components/AskResult.tsx": "efa64a7d72d85c333a728cc5128831a1969f8b3234f44838c8296d0e5a9e936c",
+    "src/canvas/engine.ts": "dfbae8fe819ff45173dd662a344660cfb3bea16c8f51850589ab215d296cf71f",
+    "src/canvas/stitch/data.ts": "b0495879e62a2c885009ee7c115175f8b41ae2900d0ce3cbe6a0d4429e77b865",
+    "src/canvas/stitch/StitchCanvas.tsx": "ec0133bd2a53549d63dd97a19a7fc1dcbd4772786dc2ffaf28273833ef19535b"
+  }
+}

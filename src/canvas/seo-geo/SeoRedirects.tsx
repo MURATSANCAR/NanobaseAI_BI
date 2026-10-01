@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, FileSpreadsheet, Loader2, Search, X } from 'lucide-react';
+import { Check, Download, ExternalLink, FileSpreadsheet, Loader2, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { fmt, seoApi, type Confidence, type Redirect } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
@@ -8,6 +8,7 @@ import { useCan } from '../useAdmin';
 import { xlsxUrl } from '../components/excel';
 import { EmptyHint, Explain } from '../components/Explain';
 import { Term } from './terms';
+import SeoPager from './SeoPager';
 
 const PAGE = 40;
 const CONF: Array<{ id: Confidence; label: string; tone: string }> = [
@@ -143,19 +144,7 @@ export default function SeoRedirects() {
           <Row key={r.id} r={r} canApprove={canApprove} onDone={refresh} />
         ))}
       </div>
-      {total > PAGE && (
-        <div className="sg-pager">
-          <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-            <ChevronLeft size={16} aria-hidden />
-          </button>
-          <span className="sg-mono">
-            {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-          </span>
-          <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-            <ChevronRight size={16} aria-hidden />
-          </button>
-        </div>
-      )}
+      <SeoPager start={start} total={total} size={PAGE} onChange={setStart} style={{ marginTop: 0 }} />
     </SeoLayout>
   );
 }

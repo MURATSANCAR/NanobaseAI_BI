@@ -175,6 +175,16 @@ class Conventions:
                 continue
             if all(self.has(side["entity"], side["column"]) for side in (left, right)):
                 self.filter_equivalences.append(rule)
+        # A column whose value is a function of another on the same row, measured on the data: Logo's
+        # document group GRPCODE follows from the transaction code TRCODE (7, 8, 9 → 2). A restriction
+        # written on the determining column proves one on the determined column whenever every value it
+        # keeps maps inside the requested set.
+        self.determinations = []
+        for rule in declarations.get("determined_columns", []):
+            if not rule.get("reason") or not rule.get("map"):
+                raise ValueError("a determined column requires a measured map and a reason")
+            if self.has(rule["entity"], rule["column"]) and self.has(rule["entity"], rule["by"]):
+                self.determinations.append(rule)
 
     def filter_bindings(self, mapping) -> list[dict]:
         out = []
@@ -190,6 +200,15 @@ class Conventions:
                                 "join": list(rule["join"]), "source": "declared_business_filter", "reason": rule["reason"]})
         return out
 
+
+    def determined_by(self, mapping) -> list[dict]:
+        """The columns that determine `mapping`'s column on its entity, each with its measured value map."""
+        def bare(name: str) -> str:
+            return re.sub(r"^LG_", "", (name or "").upper())
+        return [{"column": str(rule["by"]).upper(), "map": {str(k).upper(): str(v).upper() for k, v in rule["map"].items()},
+                 "reason": rule["reason"]}
+                for rule in getattr(self, "determinations", [])
+                if bare(rule["entity"]) == bare(mapping.entity) and str(rule["column"]).upper() == (mapping.column or "").upper()]
 
     def time_of_day(self, entity: str) -> Optional[dict]:
         """The declared time-of-day column beside this entity's business date, or None: {column, encoding, reason}."""

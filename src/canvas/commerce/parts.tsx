@@ -50,7 +50,7 @@ export function CommerceFrame({ presence, aside, badges, badgeInfo, children }: 
               </div>
               {aside && <div className="w-full shrink-0 lg:w-[420px]">{aside}</div>}
             </header>
-            <nav aria-label="Bölüm" className="-mx-1 overflow-x-auto px-1">
+            <nav aria-label="Bölüm" className="overflow-x-auto">
               <div className="flex w-max min-w-full gap-1 rounded-2xl bg-slate-100 p-1">
                 {SECTIONS.map((s) => {
                   const active = s.to === ROOT ? here === ROOT : here.startsWith(s.to);

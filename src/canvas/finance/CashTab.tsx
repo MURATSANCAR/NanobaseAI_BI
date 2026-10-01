@@ -186,7 +186,7 @@ export default function CashTab() {
           <p className="text-[12.5px] text-canvas-muted">Henüz karşılaştırılacak geçmiş tahmin yok; tablo birkaç hafta kurulduktan sonra tahmin ile gerçekleşen burada yan yana görünür.</p>
         ) : (
           <>
-            <p className="mb-2 text-[12px] text-canvas-muted">Gerçekleşen = kasa ve banka (100, 102) haftalık net hareketi. Ortalama mutlak sapma {fmtMoney(hist.data.ortalamaMutlakSapma)}.</p>
+            <p className="mb-2 text-[12px] text-canvas-muted">Gerçekleşen = kasa ve banka hesaplarının haftalık net hareketi. Ortalama mutlak sapma {fmtMoney(hist.data.ortalamaMutlakSapma)}.</p>
             <TableWrap>
               <thead><tr><th className={th}>Hafta</th><th className={`${th} text-right`}>Tahmin net</th><th className={`${th} text-right`}>Gerçekleşen net</th><th className={`${th} text-right`}>Sapma</th></tr></thead>
               <tbody>

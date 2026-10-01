@@ -1,0 +1,14 @@
+[Unit]
+Description=ZEKI AI CHAT local network host access guard
+After=network-pre.target ufw.service netfilter-persistent.service nftables.service
+Before=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/zeki-local-egress
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=docker.service

@@ -45,7 +45,9 @@ describe('belge okuyan ekranlarda yükleme ilk görünümde', () => {
     const h = await renderAt('/redaksiyon', () => import('../editorial/RedactionScreen'));
     expect(h).toContain('data-filedrop');
     expect(h).toContain('Metin dosyası yükle');
-    expect(h).toContain('Kabul edilen: DOCX, PDF, TXT, MD · en çok 120 MB');
+    // ZEKI-26: kitap PDF'i yüzlerce MB olabilir; eser metninde boyut tavanı yok (köprü diske akıtır).
+    expect(h).toContain('Kabul edilen: DOCX, PDF, TXT, MD');
+    expect(h).not.toContain('en çok 120 MB');
     expect(h).toContain('Yeni eser dosyası (adı dosya adından)');
     expect(h).toContain('Yukarıdaki yükleme alanına dosyayı bırakın');
   });

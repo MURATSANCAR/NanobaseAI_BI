@@ -1,0 +1,11 @@
+{
+  "image": "zeki-ai-chat:8.5.3-84bac94",
+  "vendorNoticesBefore": 8,
+  "vendorNoticesAfter": 0,
+  "vendorMetadataBefore": 28,
+  "vendorMetadataAfter": 0,
+  "independentNoticesBefore": 2986,
+  "independentNoticesAfter": 2986,
+  "changedIndependentNotices": [],
+  "independentReferenceSha256": "528eec83cb836a0adda9f8fc3d6a2a70a710d6cc0be9a155f92212c8df28acfa"
+}

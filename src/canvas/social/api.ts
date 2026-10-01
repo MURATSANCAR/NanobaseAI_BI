@@ -21,7 +21,6 @@ export type Meta = {
     leadDays: number;
     backlistQuietDays: number;
     backlistMinAgeDays: number;
-    licensePending: boolean;
     defaultHour: string;
     recipientsSet: boolean;
   };
@@ -46,7 +45,7 @@ export type Account = {
   aktif: boolean;
 };
 
-export type AssetRef = { tip: 'studio' | 'creative'; job?: string; sid?: string; id?: string; ad?: string | null; boyut?: string | null; onayli?: boolean; taslak?: boolean };
+export type AssetRef = { tip: 'studio' | 'creative'; job?: string; sid?: string; id?: string; ad?: string | null; boyut?: string | null; onayli?: boolean };
 export type Warning = { kod: string; metin: string };
 export type DraftOption = { metin: string; etiketler: string; dusen: Array<{ cumle: string; neden: string }>; karakter: number; uzun: boolean };
 

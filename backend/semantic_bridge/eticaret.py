@@ -83,6 +83,7 @@ DIFFS = sa.Table(
     sa.Column("crm_deger", sa.String(600)),
     sa.Column("logo_deger", sa.String(600)),
     sa.Column("tsoft_deger", sa.String(600)),
+    sa.Column("dr_deger", sa.String(600)),                          # D&R fiyat farkında D&R'nin değeri (sonradan eklendi)
     sa.Column("aciklama", sa.String(1000)),
     sa.Column("imza", sa.String(40)),                               # değerlerin özeti: bilinçli fark değişince açılır
     sa.Column("etki", sa.Float, nullable=False, default=0.0),       # sıralama: Logo son 12 ay net adet
@@ -133,8 +134,21 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) in _ready:
             return
         from semantic_layer.store import schema_stamp
-        schema_stamp.create_all(_md, engine)
+
+        def install() -> None:
+            _md.create_all(engine, checkfirst=True)
+            _add_columns(engine)
+        schema_stamp.run(engine, _md.sorted_tables, install, extra="dr_deger")
         _ready.add(id(engine))
+
+
+def _add_columns(engine: sa.engine.Engine) -> None:
+    """Sonradan eklenen kolonlar (tablo önceden kurulmuşsa): yalnız ekler, hiçbir şey silmez."""
+    have = {c["name"] for c in sa.inspect(engine).get_columns(DIFFS.name)}
+    for col in DIFFS.columns:
+        if col.name not in have:
+            with engine.begin() as c:
+                c.execute(sa.text(f"ALTER TABLE {DIFFS.name} ADD COLUMN {col.name} {col.type.compile(dialect=engine.dialect)}"))
 
 
 # ------------------------------------------------------------------ sözlük ve ayar
@@ -143,6 +157,7 @@ def ensure(engine: sa.engine.Engine) -> None:
 DIFF_KINDS: dict[str, str] = {
     "hak": "Satışta olmaması gereken",
     "fiyat": "Fiyat farkı",
+    "perakende": "D&R fiyat farkı",
     "stok": "Stok yokken satışta",
     "aktiflik": "Aktiflik farkı",
     "barkod": "Barkod ve eşleşme",
@@ -450,10 +465,10 @@ def compute_diffs(it: dict[str, Any], st: dict[str, Any], sources: dict[str, boo
     live = it["tsoft_aktif"]
     cut = it.get("logo_kesim_tarihi")
 
-    def add(tur: str, crm: Any, logo: Any, tsoft: Any, why: str, sig: Any = None) -> None:
+    def add(tur: str, crm: Any, logo: Any, tsoft: Any, why: str, sig: Any = None, dr: Any = None) -> None:
         if tur in kinds:
-            out.append({"tur": tur, "crm_deger": _s(crm), "logo_deger": _s(logo), "tsoft_deger": _s(tsoft), "aciklama": why[:1000],
-                        "imza": _sig(tur, sig if sig is not None else (crm, logo, tsoft))})
+            out.append({"tur": tur, "crm_deger": _s(crm), "logo_deger": _s(logo), "tsoft_deger": _s(tsoft), "dr_deger": _s(dr),
+                        "aciklama": why[:1000], "imza": _sig(tur, sig if sig is not None else (crm, logo, tsoft))})
 
     # Satışta olmaması gereken (hukuki risk): CRM yayın durumu ya da ayarda seçilen hak kararı.
     if sources.get("rights") and live:
@@ -516,6 +531,32 @@ def compute_diffs(it: dict[str, Any], st: dict[str, Any], sources: dict[str, boo
                 f"Sitedeki fiyat {other} fiyatından farklı ({_money(it['fiyat_tsoft'])} ↔ {_money(ref)}).{extra}",
                 sig=(it["fiyat_crm"], it["fiyat_logo"], it["fiyat_tsoft"], it["fiyat_tsoft_indirimli"]))
 
+    # D&R fiyatı: TİMAŞ grubu kitap, barkodu D&R kataloğunun son görüntüsünde. (1) Sitemizde satışta ve D&R'nin satış
+    # fiyatı sitedeki fiyatımızdan (indirimli varsa o) düşük; (2) D&R'deki liste fiyatı bizim liste fiyatımızdan farklı.
+    dr = it.get("dr")
+    if sources.get("dr") and ref_ok and dr and dr.get("katalogda") and dr.get("timas"):
+        tol = st["priceTol"]
+        drf, drl = dr.get("drFiyat"), dr.get("fiyat")
+        site = site_effective(it) if live else None
+        ref = it["fiyat_crm"] if st["priceRef"] == "crm" else it["fiyat_logo"]
+        notes = []
+        if site is not None and drf and dr.get("siteSatista") and drf < site - tol:
+            notes.append(f"D&R'de {_money(drf)}, sitemizde {_money(site)}: aynı kitap D&R'de {_money(site - drf)} ucuz.")
+        if ref is not None and ref > 0 and drl and abs(float(drl) - float(ref)) > tol:
+            notes.append(f"D&R'deki liste fiyatı {_money(drl)}, bizim liste fiyatımız ({'CRM' if st['priceRef'] == 'crm' else 'Logo liste'}) "
+                         f"{_money(ref)}; D&R eski ya da farklı liste fiyatı gösteriyor.")
+        if notes:
+            ind = dr.get("indirim")
+            dr_txt = (f"{_money(drf)}" + (f" (D&R liste {_money(drl)}, %{round(ind * 100):.0f} indirim)" if ind and ind > 0 else
+                                          f" (D&R liste {_money(drl)})")) if drf else f"D&R liste {_money(drl)}"
+            if not dr.get("siteSatista"):
+                dr_txt += " · sitede satışta değil"
+            site_txt = (_money(it["fiyat_tsoft"]) + (f" · indirimli {_money(site)}" if site is not None and site != it["fiyat_tsoft"] else "")
+                        if it.get("fiyat_tsoft") is not None else None)
+            add("perakende", _money(it["fiyat_crm"]), _money(it["fiyat_logo"]), site_txt,
+                " ".join(notes) + f" (D&R kataloğu {dr.get('son') or '—'}.)",
+                sig=(drf, drl, site, ref), dr=dr_txt)
+
     # Stok: sitede satışta, Logo bakiyesi eşik ve altında (kesim tarihiyle).
     if sources.get("logo") and live and it["stok_kodu"] and it["stok_logo"] is not None and it["stok_logo"] <= st["stockMin"]:
         no_row = it.get("logo_kayit") is False
@@ -537,6 +578,14 @@ def _s(v: Any) -> Optional[str]:
     return str(v)[:600]
 
 
+def site_effective(it: dict[str, Any]) -> Optional[float]:
+    """Okurun sitede ödediği fiyat: indirimli fiyat doluysa ve liste fiyatından düşükse o, değilse site fiyatı."""
+    p, d = it.get("fiyat_tsoft"), it.get("fiyat_tsoft_indirimli")
+    if p is None:
+        return None
+    return float(d) if d is not None and 0 < float(d) < float(p) else float(p)
+
+
 def evaluated_kinds(st: dict[str, Any], sources: dict[str, bool]) -> set[str]:
     """Bu turda hesaplanabilen türler: yalnız bunların kaydı kapanabilir (okunamayan kaynak farkı «kalktı» saydırmaz)."""
     if not sources.get("tsoft"):
@@ -548,6 +597,8 @@ def evaluated_kinds(st: dict[str, Any], sources: dict[str, bool]) -> set[str]:
         out |= {"aktiflik", "barkod", "ad", "eksik_kart"}
     if sources.get("crm" if st["priceRef"] == "crm" else "logo"):
         out.add("fiyat")
+        if sources.get("dr"):
+            out.add("perakende")
     if sources.get("logo"):
         out.add("stok")
     return out & set(st["kinds"])
@@ -581,7 +632,8 @@ def apply_run(engine: sa.engine.Engine, tenant: str, items: dict[str, dict[str, 
             c.execute(ITEMS.insert(), rows[i:i + 500])
         old = {r["id"]: dict(r) for r in c.execute(sa.select(DIFFS).where(DIFFS.c.tenant_id == tenant)).mappings()}
         for did, d in found.items():
-            vals = {k: d[k] for k in ("ad", "stok_kodu", "crm_deger", "logo_deger", "tsoft_deger", "aciklama", "imza", "etki")}
+            vals = {k: d.get(k) for k in ("ad", "stok_kodu", "crm_deger", "logo_deger", "tsoft_deger", "dr_deger", "aciklama",
+                                          "imza", "etki")}
             prev = old.get(did)
             if prev is None:
                 owner = st["owners"].get(d["tur"])
@@ -687,6 +739,7 @@ def _diff_out(r: Any) -> dict[str, Any]:
     d = dict(r)
     return {"id": d["id"], "productKey": d["product_key"], "tur": d["tur"], "turAdi": DIFF_KINDS.get(d["tur"], d["tur"]),
             "ad": d["ad"], "stokKodu": d["stok_kodu"], "crm": d["crm_deger"], "logo": d["logo_deger"], "site": d["tsoft_deger"],
+            "dr": d.get("dr_deger"),
             "aciklama": d["aciklama"], "etki": d["etki"], "ilkGoruldu": iso(d["ilk_goruldu"]), "sonGoruldu": iso(d["son_goruldu"]),
             "durum": d["durum"], "durumAdi": STATUSES.get(d["durum"], d["durum"]), "erteleBitis": iso(d["ertele_bitis"]),
             "neden": ({"oneri": d["neden_onerisi"], "olasilik": d["neden_olasilik"]} if d["neden_onerisi"] else None),
@@ -752,11 +805,11 @@ def all_diffs(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum: st
 def diffs_csv(rows: list[dict[str, Any]]) -> bytes:
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";")
-    w.writerow(["Tür", "Barkod / anahtar", "Stok kodu", "Kitap", "CRM", "Logo", "Site", "Açıklama", "Durum", "Sahip", "Not",
+    w.writerow(["Tür", "Barkod / anahtar", "Stok kodu", "Kitap", "CRM", "Logo", "Site", "D&R", "Açıklama", "Durum", "Sahip", "Not",
                 "İlk görüldü", "Son görüldü", "Zeki AI neden önerisi"])
     for d in rows:
         w.writerow([d["turAdi"], d["productKey"], d["stokKodu"] or "", d["ad"] or "", d["crm"] or "", d["logo"] or "",
-                    d["site"] or "", d["aciklama"] or "", d["durumAdi"], d["sahip"] or "", d["not"] or "",
+                    d["site"] or "", d.get("dr") or "", d["aciklama"] or "", d["durumAdi"], d["sahip"] or "", d["not"] or "",
                     (d["ilkGoruldu"] or "")[:10], (d["sonGoruldu"] or "")[:10],
                     (f"{d['neden']['oneri']} (%{round((d['neden']['olasilik'] or 0) * 100)})" if d.get("neden") else "")])
     return buf.getvalue().encode("utf-8-sig")
@@ -1242,7 +1295,7 @@ class Refresher:
         started = now()
         self.state.update(running=True, startedAt=iso(started), finishedAt=None, error=None, step="site")
         summary: dict[str, Any] = {"kaynaklar": {}}
-        sources = {"tsoft": False, "crm": False, "logo": False, "rights": False}
+        sources = {"tsoft": False, "crm": False, "logo": False, "rights": False, "dr": False}
         error = None
         try:
             site = src.read_site(engine, tenant)
@@ -1275,8 +1328,21 @@ class Refresher:
                                                 "fiyat": len(prices), "satisPenceresi": [a.isoformat(), b.isoformat()]}
             except Exception as e:  # noqa: BLE001
                 summary["kaynaklar"]["logo"] = {"hata": str(e)[:300]}
+            # D&R kataloğu (M39, köprünün kendi tablosu): TİMAŞ grubu başlıkların son görüntüdeki fiyatı.
+            self.state["step"] = "dr"
+            dr_map: dict[str, dict[str, Any]] = {}
+            try:
+                from semantic_bridge import pazar_dagitim as PD
+
+                got = PD.dr_timas(engine, tenant)
+                dr_map = got["ean"]
+                sources["dr"] = got["tarih"] is not None
+                summary["kaynaklar"]["dr"] = {"goruntu": got["tarih"], "timasBaslik": len(dr_map)}
+            except Exception as e:  # noqa: BLE001 — okunamazsa D&R fark türü bu turda hesaplanmaz (ve kapanmaz)
+                summary["kaynaklar"]["dr"] = {"hata": str(e)[:300]}
             Y.bitir(token)
-            Y.koken_yaz(engine, tenant, KOKEN_OKUMA, q, portal_tables=("semantic_seo_products", "semantic_seo_crm_books"))
+            Y.koken_yaz(engine, tenant, KOKEN_OKUMA, q, portal_tables=("semantic_seo_products", "semantic_seo_crm_books",
+                                                                        "semantic_pazar_dagitim_titles"))
             self.state["step"] = "fark"
             site_url = ""
             try:
@@ -1286,6 +1352,8 @@ class Refresher:
             except Exception:  # noqa: BLE001
                 pass
             items = build_items(site, crm_cards, stock, prices, sales, st, src.tsoft_values, lambda p: _image(p, site_url), cut)
+            for key, it in items.items():
+                it["dr"] = dr_map.get(key)
             result = apply_run(engine, tenant, items, st, sources, site["tsoftAt"])
             summary.update(result | {"events": len(result["events"])})
         except Exception as e:  # noqa: BLE001

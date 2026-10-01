@@ -8,6 +8,7 @@ import { Kpi, KpiRow, ModuleFrame, Panel, useDebounced } from '../kit';
 import { fmtDay } from '../authors/shared';
 import { applicationsApi, type AppListItem, type AppStatus, type AppView } from './api';
 import ApplicationForm from './ApplicationForm';
+import FormsPanel from './FormsPanel';
 import { StatusPill, useAppMeta } from './shared';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
@@ -43,7 +44,7 @@ function Row({ a }: { a: AppListItem }) {
           </span>
           <span className="mt-1 block break-words text-[13.5px] font-extrabold leading-snug">{a.title}</span>
           <span className="mt-0.5 block break-words text-[11.5px] leading-snug text-canvas-muted">
-            {[a.authorName, a.agencyName && `Ajans: ${a.agencyName}`, a.categoryName, `${nf.format(a.pageEstimate)} sayfa`].filter(Boolean).join(' · ')}
+            {[a.authorName, a.agencyName && `Ajans: ${a.agencyName}`, a.categoryName, a.pageEstimate != null ? `${nf.format(a.pageEstimate)} sayfa` : null].filter(Boolean).join(' · ')}
           </span>
           {closed && a.decisionNote && <span className="mt-1 block break-words text-[11.5px] leading-snug text-canvas-ink/80">«{a.decisionNote.length > 160 ? `${a.decisionNote.slice(0, 160)}…` : a.decisionNote}»</span>}
         </span>
@@ -133,6 +134,7 @@ export default function ApplicationsScreen() {
           Yeni başvuru
         </button>
       )}
+      <FormsPanel />
     </div>
   );
 

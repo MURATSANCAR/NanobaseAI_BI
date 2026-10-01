@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
+import { ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { EmptyHint, Explain } from '../components/Explain';
 import { Term, TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 const PAGE = 50;
 type View = 'pages' | 'domains' | 'new' | 'lost' | 'books';
@@ -152,19 +153,7 @@ export default function SeoBacklinks() {
               </div>
             </section>
           )}
-          {total > PAGE && (
-            <div className="sg-pager">
-              <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                <ChevronLeft size={16} aria-hidden />
-              </button>
-              <span className="sg-mono">
-                {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-              </span>
-              <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                <ChevronRight size={16} aria-hidden />
-              </button>
-            </div>
-          )}
+          <SeoPager start={start} total={total} size={PAGE} onChange={setStart} style={{ marginTop: 0 }} />
         </>
       )}
     </SeoLayout>

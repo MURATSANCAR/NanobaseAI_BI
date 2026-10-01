@@ -22,6 +22,12 @@ def _no_live_label_dictionary(monkeypatch, tmp_path):
     from semantic_layer.runtime import label_values
     monkeypatch.setattr(label_values, "PATH", str(tmp_path / "label-values.json"))
 
+@pytest.fixture(autouse=True)
+def _no_live_response_cache(monkeypatch, tmp_path):
+    """Köprüyü kuran testler canlının hazır cevap klasörüne (ve kişi kaydına) yazmasın: her test kendi klasöründe."""
+    monkeypatch.setenv("RESPONSE_CACHE_DIR", str(tmp_path / "response-cache"))
+
+
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "configs" / "semantic" / "knowledge" / "logo"
 ENUM_PROBE = ROOT / "artifacts" / "timas" / "apply-all.json"

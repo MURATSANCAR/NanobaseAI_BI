@@ -1,10 +1,11 @@
-/** Cihazdaki kalıcı depo (IndexedDB). İki depo: `sira` (gönderilmemiş plan düzenlemeleri) ve `foto`
- *  (yüklemesi bitmemiş fotoğraf dosyaları). Her çağrı hata verebilir (gizli pencere, kota, kapalı site
+/** Cihazdaki kalıcı depo (IndexedDB). Üç depo: `sira` (gönderilmemiş plan düzenlemeleri), `foto`
+ *  (yüklemesi bitmemiş fotoğraf dosyaları) ve `kitap` (okutulmak üzere yüklenmesi bitmemiş kitap PDF'leri). Her çağrı hata verebilir (gizli pencere, kota, kapalı site
  *  verisi); çağıran try/catch ile localStorage'a ya da belleğe düşer. */
 
 const DB_NAME = 'zeki-studyo-sayfa';
 export const STORE_QUEUE = 'sira';
 export const STORE_PHOTO = 'foto';
+export const STORE_BOOK = 'kitap';
 
 let dbPromise: Promise<IDBDatabase | null> | null = null;
 function db(): Promise<IDBDatabase | null> {
@@ -12,13 +13,20 @@ function db(): Promise<IDBDatabase | null> {
   dbPromise = new Promise((resolve) => {
     try {
       if (typeof indexedDB === 'undefined') return resolve(null);
-      const req = indexedDB.open(DB_NAME, 2);
+      const req = indexedDB.open(DB_NAME, 3);
       req.onupgradeneeded = () => {
-        for (const s of [STORE_QUEUE, STORE_PHOTO]) {
+        for (const s of [STORE_QUEUE, STORE_PHOTO, STORE_BOOK]) {
           if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s, { keyPath: 'key' });
         }
       };
-      req.onsuccess = () => resolve(req.result);
+      req.onsuccess = () => {
+        // Sonraki bir sürüm depo eklerken açık sekme yükseltmeyi kilitlemesin: bağlantı kapanır, sonraki çağrı yeniden açar.
+        req.result.onversionchange = () => {
+          req.result.close();
+          dbPromise = null;
+        };
+        resolve(req.result);
+      };
       req.onerror = () => resolve(null);
       req.onblocked = () => resolve(null);
     } catch {

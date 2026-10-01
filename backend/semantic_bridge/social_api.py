@@ -241,7 +241,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             "platforms": S.PLATFORMS, "statuses": S.STATUSES, "kinds": S.KINDS, "metrics": S.METRIC_LABELS,
             "settings": {"limits": s["limits"], "tagLimits": s["tagLimits"], "opportunityDays": s["opportunityDays"],
                          "leadDays": s["leadDays"], "backlistQuietDays": s["backlistQuietDays"],
-                         "backlistMinAgeDays": s["backlistMinAgeDays"], "licensePending": s["licensePending"],
+                         "backlistMinAgeDays": s["backlistMinAgeDays"],
                          "defaultHour": s["defaultHour"], "recipientsSet": bool(s["recipients"])},
             "webWatch": web_on(), "creativeLinked": src.creative_provider(app.state) is not None,
             "lastRun": S.meta_get(engine, tenant, "run-due") or None,

@@ -595,6 +595,15 @@ class QueuedLlm:
         with self._turn(messages, user_id=kwargs.pop("user_id", None), cancel=cancel, on_admitted=on_admitted):
             return self.llm.chat(messages, **kwargs)
 
+    def complete(self, messages: list[dict[str, str]], **kwargs: Any) -> dict[str, Any]:
+        """Structured transport through the same admission queue as chat."""
+        cancel = kwargs.get("cancel")
+        on_admitted = kwargs.pop("on_admitted", None)
+        if cancel is not None and not _accepts_cancel(self.llm):
+            kwargs.pop("cancel")
+        with self._turn(messages, user_id=kwargs.pop("user_id", None), cancel=cancel, on_admitted=on_admitted):
+            return self.llm.complete(messages, **kwargs)
+
     def choose(self, prompt: str, choices: list[str], *, system: Optional[str] = None,
                top_logprobs: int = C.DEFAULT_TOP_LOGPROBS, text_max_tokens: int = 16,
                user_id: Optional[str] = None, cancel: Optional[threading.Event] = None,

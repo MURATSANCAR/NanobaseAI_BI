@@ -4,8 +4,9 @@ Tanımlar mevcut ölçülerle aynıdır (doğrudan sorguyla ölçüldü, 2026-09
 
 - **Satış satırı** = `STLINE`, `CANCELLED = 0`, `LINETYPE = 0` (malzeme satırı), `INVOICEREF <> 0` (faturalı;
   faturasız irsaliye satışa girmez), `TRCODE 7/8/9` satış, `2/3` iade (eksi).
-- **Net ciro** = Σ `LINENET` (satış) − Σ `LINENET` (iade). 2026 toplamı 837.901.631,04 ₺ — kokpitteki satır seviyesi
-  net ciroyla birebir.
+- **Net ciro** = Σ `VATMATRAH` (satış) − Σ `VATMATRAH` (iade) (KDV matrahı, fatura geneli iskonto dahil; dönem fatura
+  tarihi `INVOICE.DATE_` — karar 2026-10-01).
+  TİMAŞ satış raporu görünümü (`V_SatisRaporu_*`, malzeme satırı) ve finans motoruyla birebir.
 - **Net adet** = Σ `AMOUNT` (satış) − Σ `AMOUNT` (iade).
 - **Maliyet** = Σ `AMOUNT × OUTCOST` (iade eksi), yalnız maliyeti girilmiş satırlarda (`OUTCOST <> 0`); marj bu
   satırların net cirosuna bölünür (`maliyetli_ciro`). 2026 satış satırlarının ~%20'sinde maliyet yok; marj kapsamı ayrıca
@@ -131,17 +132,19 @@ def _firm(firms: dict[int, str], year: int) -> str:
 def sales_sql(firm: str, year: int) -> str:
     """Kitap (stok kodu) × ay: net adet, net ciro, maliyet ve maliyeti olan satırların net cirosu."""
     return f"""
--- Faturalı satış satırları; iade eksi. Net ciro = LINENET (satır iskontosu düşülmüş).
-SELECT I.CODE AS stok_kodu, MONTH(S.DATE_) AS ay,
+-- Faturalı satış satırları; iade eksi. Net ciro = VATMATRAH (satır ve fatura geneli iskonto düşülmüş), dönem fatura
+-- tarihi.
+SELECT I.CODE AS stok_kodu, MONTH(SH.DATE_) AS ay,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro,
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro,
   SUM(CASE WHEN S.OUTCOST <> 0 THEN (CASE WHEN S.TRCODE IN (7,8,9) THEN 1 ELSE -1 END) * S.AMOUNT * S.OUTCOST ELSE 0 END) AS maliyet,
-  SUM(CASE WHEN S.OUTCOST <> 0 THEN (CASE WHEN S.TRCODE IN (7,8,9) THEN 1 ELSE -1 END) * S.LINENET ELSE 0 END) AS maliyetli_ciro
+  SUM(CASE WHEN S.OUTCOST <> 0 THEN (CASE WHEN S.TRCODE IN (7,8,9) THEN 1 ELSE -1 END) * S.VATMATRAH ELSE 0 END) AS maliyetli_ciro
 FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{firm}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
-  AND S.DATE_ >= '{year}-01-01' AND S.DATE_ < '{year + 1}-01-01'
-GROUP BY I.CODE, MONTH(S.DATE_)""".strip()
+  AND SH.DATE_ >= '{year}-01-01' AND SH.DATE_ < '{year + 1}-01-01'
+GROUP BY I.CODE, MONTH(SH.DATE_)""".strip()
 
 
 def data_end_sql(firm: str) -> str:

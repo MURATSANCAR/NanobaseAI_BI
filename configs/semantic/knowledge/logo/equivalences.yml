@@ -25,6 +25,22 @@ equivalent_filters:
     join: [STLINE, INVOICEREF, INVOICE, LOGICALREF]
     reason: "Satış iadesi kodları 2 ve 3, fatura başlığı ve bağlı satış satırında aynı işlemi seçer."
 
+# Logo's document group follows from the transaction code on the same row. Measured on the live
+# database 2026-09-30 (SELECT TRCODE, GRPCODE, COUNT(*) … GROUP BY on LG_411_01 and LG_211_01): every
+# TRCODE carries exactly one GRPCODE in both years. A restriction on TRCODE proves one on GRPCODE when
+# every kept code maps inside the requested group.
+determined_columns:
+  - entity: INVOICE
+    column: GRPCODE
+    by: TRCODE
+    map: {"1": "1", "2": "2", "3": "2", "4": "1", "6": "1", "7": "2", "8": "2", "9": "2"}
+    reason: "Fatura grubu işlem türünden çıkar: 1, 4, 6 alış (1); 2, 3, 7, 8, 9 satış (2) — canlı veride 2021–2026 istisnasız."
+  - entity: LG_STFICHE
+    column: GRPCODE
+    by: TRCODE
+    map: {"1": "1", "2": "2", "3": "2", "5": "1", "6": "1", "7": "2", "8": "2", "10": "1", "11": "3", "12": "3", "13": "3", "14": "3", "25": "3", "50": "3", "51": "3"}
+    reason: "İrsaliye grubu işlem türünden çıkar: alış (1), satış (2), diğer (3) — canlı veride 2021–2026 istisnasız."
+
 # A sale occurrence uses the certified invoice sales scope (7,8,9), not net
 # balance: a later return does not erase the fact that the product was sold.
 absence_queries:

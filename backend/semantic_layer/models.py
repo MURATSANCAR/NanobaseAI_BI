@@ -431,12 +431,25 @@ class SemanticQuery:
     comparison: Optional[dict[str, Any]] = None
     data_coverage: list[dict[str, Any]] = field(default_factory=list)
     temporal_binding: Optional[dict[str, Any]] = None
+    # «X bazında / X kırılımında» diye istenen ama hiçbir kırılım kolonuna yerleşmeyen kelimeler. Sessizce düşmez:
+    # çözülemeyen kelime olarak modele gider ve kapı, gruplamayan bir cevabı reddeder (2026-09-29, A044 sınıfı).
+    requested_breakdowns: list[str] = field(default_factory=list)
+    # Her istenen kırılım için ölçünün tablosundan kırılımı taşıyan tabloya katalog ilişkileriyle yol ve kelimeyi taşıyan
+    # dolu kolonlar ({word, path: [(a, a_col, b, b_col)…], columns: [(entity, column, term)…], empty: [...]}).
+    breakdown_paths: list[dict[str, Any]] = field(default_factory=list)
     absence_contract: Optional[dict[str, Any]] = None
     # Soru dönem söylemedi ama doğası gereği yıl aşıyor ("son üç baskı", "hiç sipariş vermemiş",
     # "ilk kez", "bugüne kadar"): okunacak aralık bir tarih koşulu DEĞİL, hangi yıl kopyalarının
     # okunacağıdır. `temporal` boş kalır (kapı tarih filtresi aramaz); kopya seçimi bunu okur.
     period_scope: Optional[dict[str, Any]] = None
     measure_expressions: list[dict[str, Any]] = field(default_factory=list)
+    # ZEKI-54: kolon/kırılım olarak istenen ama bu kurulumda tek sorguda okunamayan terimler (öteki
+    # sunucuda ya da hiçbir yerde tanımlı değil). Modele bırakılmaz — model onu bir süzgece çeviriyordu —
+    # cevaba alınmaz ve cevapta düz bir cümleyle söylenir: {"term", "source", "sentence"}.
+    omitted: list[dict[str, Any]] = field(default_factory=list)
+    # Kişinin kolon/kırılım olarak istediği ve modele bırakılan terimler: kapı, bu terimin yorumunun satırları
+    # daraltan bir süzgece dönüşmesini reddeder (kolon istenmiş, süzgeç uydurulmuş).
+    column_terms: list[str] = field(default_factory=list)
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -512,10 +525,14 @@ class SemanticQuery:
             "languagePoolHash": self.language_pool_hash,
             "contextScope": dict(self.context_scope),
             "measureExpressions": [dict(x) for x in self.measure_expressions],
+            "omitted": [dict(x) for x in self.omitted],
+            "columnTerms": list(self.column_terms),
             "analytics": dict(self.analytics) if self.analytics else None,
             "comparison": dict(self.comparison) if self.comparison else None,
             "dataCoverage": [dict(c) for c in self.data_coverage],
             "temporalBinding": dict(self.temporal_binding) if self.temporal_binding else None,
+            "requestedBreakdowns": list(self.requested_breakdowns),
+            "breakdownPaths": [dict(p) for p in self.breakdown_paths],
             "periodScope": dict(self.period_scope) if self.period_scope else None,
             "absenceContract": {k: v for k, v in self.absence_contract.items() if k != "sql"} if self.absence_contract else None,
             "fullyResolved": self.fully_resolved,

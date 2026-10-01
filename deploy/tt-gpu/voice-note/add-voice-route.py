@@ -16,6 +16,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from customer_sources import ALLOW  # noqa: E402 — müşteri kaynak adresleri tek yerde
+
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 s = open(P, encoding="utf-8").read()
 if "BI-SESLI-NOT" in s:
@@ -24,14 +27,14 @@ if "BI-SESLI-NOT" in s:
 gate = re.search(r'\$http_x_editor_gate != "([^"]+)"', s).group(1)
 block = f'''    # BI-SESLI-NOT  (musteri VM -> ZEKI AI sesli not; saglik GET ve yaziya dokme POST, ayni uc kat koruma)
     location = /bi-voice/health {{
-        allow 85.105.0.0/16; deny all;
+        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}
         if ($request_method != GET) {{ return 405; }}
         proxy_pass http://127.0.0.1:8797/health;
         proxy_set_header Host $host;
     }}
     location = /bi-voice/v1/transcribe {{
-        allow 85.105.0.0/16; deny all;
+        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}
         if ($request_method != POST) {{ return 405; }}
         client_max_body_size 64m;

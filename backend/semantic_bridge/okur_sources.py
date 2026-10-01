@@ -343,8 +343,8 @@ def read_book(crm: Runner, schema: str, book_id: Optional[str]) -> Optional[dict
     if not rows:
         return None
     r = rows[0]
-    spot = r.get("spot") or r.get("ozet") or ""
-    spot = _re.sub(r"<[^>]+>", " ", str(spot))
+    from semantic_bridge.crm_text import rich_line   # ZEKI-23: etiket + bütün HTML varlıkları
+    spot = rich_line(r.get("spot") or r.get("ozet")) or ""
     return {"id": str(r["id"]), "ad": O._clean(r.get("ad")), "yazar": O._clean(r.get("yazar")), "spot": O._clean(spot, 2000)}
 
 

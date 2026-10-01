@@ -4,6 +4,10 @@
 - `model`: saf hesap (birim maliyetin tek sahibi; M10/M12/M46 buradan çağırır).
 - `sources` + `data`: Logo/CRM'den salt okunur anlık görüntü ve üstündeki hesaplar.
 - `store`: analizler, onaylar, elle girilen pazar fiyatları, varsayılanlar, toplu zam teklifleri (kendi tablolarımız).
+- `dagitim`: dağıtımcı kataloğundan (M39 Başarı/D&R tabloları) kategori fiyat dağılımı; ortanca tek tıkla pazar
+  fiyatı olarak eklenir, `recommend()`'e o yoldan girer.
+- `karsilastir`: eski kitaplar — CRM'deki güncel kapak fiyatı ↔ «Kitap hesabı»nın aynı zinciriyle bizim fiyatımız,
+  bütün kitaplar için (arka planda hesaplanır, girdiler değişince yenilenir); toplu fiyat teklifi buradan çıkar.
 - `cost_provider`: öbür modüllere (M32, M33, M53) kitap birim maliyeti — onaylı analiz → Logo gerçekleşen → yok.
 
 CRM'e, Logo'ya, e-ticarete yazılmaz. Uçlar `/api/v1/pricing/*`; sayfa `sayfa:fiyatlama`, yazma `ozellik:fiyatlama.yaz`,
@@ -22,6 +26,7 @@ from semantic_bridge.pricing import data as D
 from semantic_bridge.pricing import model as M
 from semantic_bridge import provenance as P
 from semantic_bridge.pricing import kaynak as K
+from semantic_bridge.pricing import karsilastir as KS
 from semantic_bridge.pricing import sources as SRC
 from semantic_bridge.pricing import store as S
 
@@ -70,8 +75,9 @@ def cost_inputs(inp: dict) -> M.CostInputs:
         variable_rate=_num(inp, "variableRate", 0.0, 0.0, 0.9) or 0.0, sell_through=sell)
 
 
-def calculate(snap: Optional[dict], body: dict[str, Any]) -> dict[str, Any]:
-    """Senaryo tablosu + fiyat önerisi + kanal matrisi. Emsal fiyatları görüntüden (ve elle girilen pazar fiyatlarından)."""
+def calculate(snap: Optional[dict], body: dict[str, Any], pool: Optional[list[dict]] = None) -> dict[str, Any]:
+    """Senaryo tablosu + fiyat önerisi + kanal matrisi. Emsal fiyatları görüntüden (ve elle girilen pazar fiyatlarından).
+    `pool`: toplu hesapta bir kez kurulan emsal havuzu (`data.comparable_pool`)."""
     inp = body.get("inputs") or {}
     ci = cost_inputs(inp)
     qtys = S._qtys(inp.get("qtys") or body.get("qtys") or list(M.DEFAULT_QTYS))
@@ -83,7 +89,7 @@ def calculate(snap: Optional[dict], body: dict[str, Any]) -> dict[str, Any]:
     comp_prices: list[float] = []
     if snap:
         pages = _num(spec, "pages")
-        comp = D.comparables(snap, pages, spec.get("binding") or None, exclude=spec.get("code"))
+        comp = D.comparables(snap, pages, spec.get("binding") or None, exclude=spec.get("code"), pool=pool)
         comp_prices = [r["price"] for r in comp["rows"] if r.get("price")]
     market = [float(m) for m in (body.get("marketPrices") or []) if isinstance(m, (int, float)) and m > 0]
     rec = M.recommend(ci, chosen_qty, target, comp_prices + market)
@@ -144,6 +150,60 @@ def freelance_costs(engine: Any, tenant: str, book_id: Optional[str]) -> dict[st
         by[key] = round(by.get(key, 0.0) + amount, 2)
         items.append({"role": role, "status": status, "amount": round(amount, 2), "package": title, "key": key})
     return {"items": items, "byKey": by}
+
+
+def freelance_all(engine: Any, tenant: str) -> dict[str, dict[str, float]]:
+    """`freelance_costs`'un bütün kitaplar için tek sorguluk eşi: CRM kitap kimliği (küçük harf) → maliyet kalemi → tutar."""
+    import sqlalchemy as sa
+    from semantic_bridge import freelance as fl
+    stmt = (sa.select(fl.PACKAGES.c.book_id, fl.TASKS.c.role, fl.TASKS.c.units, fl.TASKS.c.unit_price)
+            .join(fl.PACKAGES, fl.PACKAGES.c.id == fl.TASKS.c.package_id)
+            .where(fl.TASKS.c.tenant_id == tenant, fl.PACKAGES.c.status != "iptal", fl.TASKS.c.status != "iptal"))
+    try:
+        with engine.connect() as c:
+            rows = c.execute(stmt).all()
+    except Exception:  # noqa: BLE001 — M8 tabloları bu kurulumda yoksa kalem boş kalır
+        log.info("pricing: serbest çalışan tabloları okunamadı", exc_info=True)
+        return {}
+    out: dict[str, dict[str, float]] = {}
+    for book_id, role, units, price in rows:
+        by = out.setdefault((book_id or "").lower(), {})
+        key = FREELANCE_ROLE.get(role, "diger")
+        by[key] = round(by.get(key, 0.0) + float(units or 0) * float(price or 0), 2)
+    return out
+
+
+def market_all(engine: Any, tenant: str) -> dict[str, list[float]]:
+    """Kitaplara elle girilmiş pazar fiyatları: CRM kitap kimliği (küçük harf) → fiyatlar (kitap ekranındaki sırayla)."""
+    out: dict[str, list[float]] = {}
+    for m in S.market_list(engine, tenant)["items"]:
+        if m.get("crmBookId") and m.get("price"):
+            out.setdefault(m["crmBookId"].lower(), []).append(m["price"])
+    return out
+
+
+def compare_csv(rows: list[dict]) -> str:
+    """Karşılaştırma listesi CSV (Excel eşi ortak katmandan, `bicim=xlsx`). Süzgece uyan bütün satırlar."""
+    import csv
+    import io
+    label = {"zam": "Zam gerekiyor", "yuksek": "Güncel fiyat hesabın üstünde", "esit": "Aynı", "hesaplanamadi": "Hesaplanamadı"}
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=";")
+    w.writerow(["Stok kodu", "Kitap", "Yazar", "Yayınevi", "İlk yayın", "Son baskı faturası", "Sayfa", "Satış (2 yıl, adet)",
+                "Hesap adedi", "Birim maliyet", "Güncel fiyat", "Bizim hesap", "Fark (TL)", "Fark (%)", "Güncel fiyatla marj",
+                "Maliyet alt sınırı", "Emsal ortancası", "Durum", "Neden"])
+
+    def n(v: Any, d: int = 2) -> str:
+        return "" if v is None else f"{v:.{d}f}".replace(".", ",")
+
+    for r in rows:
+        w.writerow([r["code"], r["name"], r.get("author") or "", r.get("publisher") or "", r.get("firstPub") or "",
+                    r.get("lastPrint") or "", r.get("pages") or "", n(r.get("sold2y"), 0), r.get("qty") or "",
+                    n(r.get("unitCost")), n(r.get("price")), n(r.get("ours")), n(r.get("diff")),
+                    "" if r.get("diffPct") is None else n(r["diffPct"] * 100, 1) + "%",
+                    "" if r.get("margin") is None else n(r["margin"] * 100, 1) + "%", n(r.get("floor")), n(r.get("median")),
+                    label.get(r["status"], r["status"]), r.get("reason") or ""])
+    return "\ufeff" + buf.getvalue()
 
 
 def production_quotes(engine: Any, tenant: str, crm_prints: list[dict]) -> list[dict]:
@@ -322,14 +382,56 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         out["rows"] = out["rows"][offset:offset + limit]
         return P.bagla(out, lambda: K.for_actuals(snap, *dbs()))
 
-    @app.get("/api/v1/pricing/backlist")
-    def pricing_backlist(request: Request, target: Optional[float] = None, minSold: float = 1.0) -> dict[str, Any]:  # noqa: N803
-        ses(request)
-        if target is not None and not 0 < target < 1:
-            raise HTTPException(400, detail={"code": "PRICING", "message": "Hedef oran 0 ile 1 arasında olmalı."})
+    compare_cache = KS.Cache()
+
+    def compare_result(engine: Any, tenant: str, snap: dict) -> dict[str, Any]:
+        """Eski kitap karşılaştırmasının güncel girdilerle sonucu (hazır değilse arka planda başlar)."""
+        defaults = S.get_defaults(engine, tenant)
+        tariff = S.get_form_tariff(engine, tenant)
+        kur = snap_kur(snap, tariff)
+        fl, mk = freelance_all(engine, tenant), market_all(engine, tenant)
+        key = KS.fingerprint(snap, defaults, tariff, kur, fl, mk)
+        got = compare_cache.get(key, lambda: KS.compare_all(snap, defaults=defaults, tariff=tariff, kur=kur, freelance=fl,
+                                                            market=mk, calculate=calculate))
+        got["kurKaynak"] = tariff.get("kurKaynak") or "logo"
+        got["kur"] = kur or tariff.get("kur")
+        return got
+
+    def compare_select(got: dict, q: str, status: str, new: bool, min_sold: float, sort: str) -> Optional[dict]:
+        if status and status not in KS.STATUS:
+            raise HTTPException(400, detail={"code": "PRICING", "message": "Durum zam, yuksek, esit ya da hesaplanamadi olmalı."})
+        res = got.get("result")
+        return KS.select(res, q=q, status=status, new=new, min_sold=max(0.0, min_sold), sort=sort) if res else None
+
+    @app.get("/api/v1/pricing/compare")
+    def pricing_compare(request: Request, q: str = "", status: str = "", new: bool = False, minSold: float = 0.0,  # noqa: N803
+                        sort: str = "diffPct", offset: int = 0, limit: int = 100) -> dict[str, Any]:
+        engine, tenant, _, _ = ses(request)
         snap = need_snap()
-        out = D.backlist(snap, target_ratio=target, min_sold=minSold)
-        return P.bagla(out, lambda: K.for_backlist(snap, *dbs()))
+        got = compare_result(engine, tenant, snap)
+        sel = compare_select(got, q, status, new, minSold, sort)
+        res = got.get("result") or {}
+        offset, limit = max(0, offset), max(1, limit)
+        out = {"ready": got["ready"], "stale": got["stale"], "error": got.get("error"), "startedAt": got.get("startedAt"),
+               "kur": got["kur"], "kurKaynak": got["kurKaynak"], "logoKur": snap.get("kur") or {},
+               "dataEnd": res.get("dataEnd"), "since": res.get("since"), "targetMargin": res.get("targetMargin"),
+               "seconds": res.get("seconds"), "offset": offset, "limit": limit}
+        if sel:
+            out.update({k: v for k, v in sel.items() if k != "rows"}, rows=sel["rows"][offset:offset + limit])
+        return P.bagla(out, lambda: K.for_compare(snap, *dbs()))
+
+    @app.get("/api/v1/pricing/compare.csv")
+    def pricing_compare_csv(request: Request, q: str = "", status: str = "", new: bool = False, minSold: float = 0.0,  # noqa: N803
+                            sort: str = "diffPct"):
+        from fastapi.responses import Response
+        engine, tenant, user, _ = ses(request)
+        got = compare_result(engine, tenant, need_snap())
+        sel = compare_select(got, q, status, new, minSold, sort)
+        if not sel:
+            raise HTTPException(409, detail={"code": "PRICING_WARMING", "message": "Karşılaştırma hesaplanıyor; biraz sonra yeniden deneyin."})
+        audit(engine, user, "export", "pricing_compare", tenant, "Eski kitap fiyat karşılaştırması", {"satir": len(sel["rows"])})
+        return Response(compare_csv(sel["rows"]).encode("utf-8"), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": 'attachment; filename="eski-kitap-fiyatlari.csv"'})
 
     # ---- analizler
     @app.get("/api/v1/pricing/analyses")
@@ -399,6 +501,29 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
               out["title"], {"rol": S.APPROVERS.get(role), "surum": out["version"], "durum": out["statusLabel"]})
         return out
 
+    # ---- dağıtımcı kataloğundan pazar fiyatı (M39 portal tabloları; Logo görüntüsü gerekmez)
+    @app.get("/api/v1/pricing/distributor")
+    def pricing_distributor(request: Request, code: str = "", kategori: str = "", pages: Optional[float] = None,
+                            kapak: str = "") -> dict[str, Any]:
+        """Kitabın kategorisinde TİMAŞ dışı başlıkların liste fiyatı dağılımı. `kategori` verilirse o Başarı kategorisi
+        (tam yol ya da üst kategori); sayfa ve kapak verilmezse kitabın künyesinden."""
+        from semantic_bridge.pricing import dagitim as DG
+        engine, tenant, _, _ = ses(request)
+        snap = snaps.get()
+        det = D.book_detail(snap, code) if (snap and code) else None
+        spec = (det or {}).get("spec") or {}
+        out = DG.suggest(engine, tenant, code=code or None, kategori=kategori.strip() or None,
+                         library=((det or {}).get("book") or {}).get("library"),
+                         pages=pages if pages and pages > 0 else spec.get("pages"), kapak=kapak or spec.get("binding"))
+        return P.bagla(out, lambda: K.for_distributor(engine, tenant, out))
+
+    @app.get("/api/v1/pricing/distributor/categories")
+    def pricing_distributor_categories(request: Request) -> dict[str, Any]:
+        from semantic_bridge.pricing import dagitim as DG
+        engine, tenant, _, _ = ses(request)
+        out = DG.categories(engine, tenant)
+        return P.bagla(out, lambda: K.for_distributor_categories(engine, tenant, out))
+
     # ---- pazar fiyatları
     @app.post("/api/v1/pricing/market", status_code=201)
     def pricing_market_add(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -432,7 +557,11 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         except F.FormError as e:
             raise HTTPException(status_code=400, detail={"code": "PRICING_FORM", "message": str(e)}) from e
 
-    def snap_kur(snap: Optional[dict]) -> Optional[dict]:
+    def snap_kur(snap: Optional[dict], tariff: dict) -> Optional[dict]:
+        """Formun kuru: fiyat listesinde «elle» seçildiyse None (hesap listedeki kuru kullanır), değilse Logo faturalarının
+        son kuru (Logo'da o dövizle fatura yoksa yine listedeki kur)."""
+        if tariff.get("kurKaynak") == "elle":
+            return None
         k = (snap or {}).get("kur") or {}
         return {c: v["rate"] for c, v in k.items() if (v or {}).get("rate")} or None
 
@@ -443,7 +572,7 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         engine, tenant, user, _ = ses(request)
         snap = snaps.get()
         tariff = S.get_form_tariff(engine, tenant)
-        kur = snap_kur(snap)
+        kur = snap_kur(snap, tariff)
         start = {"inputs": F.blank_inputs(tariff, kur=kur), "origin": {}}
         if kitap:
             det = D.book_detail(need_snap(), kitap)
@@ -487,7 +616,7 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         reset = bool(body.get("reset"))
         before = S.get_form_tariff(engine, tenant)
         out = call(S.reset_form_tariff, engine, tenant) if reset else call(S.save_form_tariff, engine, tenant, user, body)
-        keys = ("kur", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")
+        keys = ("kur", "kurKaynak", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")
         audit(engine, user, "update", "pricing_form_tariff", tenant, "Matbaa ve malzeme fiyat listesi",
               {"sifirla": reset} if reset else {k: "değişti" for k in keys if before.get(k) != out.get(k)})
         return out
@@ -504,13 +633,21 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         engine, tenant, user, _ = ses(request)
         snap = need_snap()
         codes = {str(c) for c in (body.get("codes") or [])}
-        target = body.get("target")
-        bl = D.backlist(snap, target_ratio=float(target) if target else None, min_sold=float(body.get("minSold") or 1))
-        # Teklif sunucuda yeniden hesaplanır; ekrandan yalnız seçilen kodlar gelir.
-        items = [{k: r[k] for k in ("code", "name", "price", "proposed", "increase", "ratio", "unit", "sold2y",
-                                    "lastPrintDate")} for r in bl["rows"] if not codes or r["code"] in codes]
+        if not codes:
+            raise HTTPException(400, detail={"code": "PRICING", "message": "Teklife en az bir kitap seçin."})
+        got = compare_result(engine, tenant, snap)
+        if not got["ready"]:
+            raise HTTPException(409, detail={"code": "PRICING_WARMING", "message": "Fiyatlar güncel girdilerle yeniden "
+                                             "hesaplanıyor; bir dakika sonra teklifi yeniden oluşturun."})
+        # Teklif sunucudaki son hesaptan dondurulur; ekrandan yalnız seçilen kodlar gelir.
+        res = got["result"]
+        items = [{"code": r["code"], "name": r["name"], "price": r["price"], "proposed": r["ours"], "increase": r["diffPct"],
+                  "unit": r["unitCost"], "qty": r["qty"], "margin": r["margin"], "sold2y": r["sold2y"],
+                  "lastPrintDate": r["lastPrint"]}
+                 for r in res["rows"] if r["code"] in codes and r.get("ours")]
         out = call(S.proposal_create, engine, tenant, user, str(body.get("title") or ""), items,
-                   {"target": bl["target"], "measuredTarget": bl["measuredTarget"], "dataEnd": bl["dataEnd"]})
+                   {"method": "kitap-hesabi", "targetMargin": res["targetMargin"], "kur": got["kur"],
+                    "kurKaynak": got["kurKaynak"], "dataEnd": res["dataEnd"]})
         audit(engine, user, "create", "pricing_proposal", out["id"], out["title"], {"kitap": out["count"]})
         return out
 

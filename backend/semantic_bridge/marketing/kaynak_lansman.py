@@ -28,7 +28,7 @@ ORIGINS = {
     "bekleyenUrun": ("crm", "CRM bekleyen ürün", "CRM «Bekleyen Ürün» kayıtları (durum 1)."),
     "siparisAnindakiStok": ("crm", "CRM sipariş anındaki depo stoku", "Kitabın en son siparişindeki depo stoku (yedek sinyal)."),
     "fatura": ("logo", "Logo faturalı satış (gün gün)", "Önce stok kodları kayıt numarasına çevrilir, sonra faturalı satış "
-               "satırları (TRCODE 7/8/9 satış, 2/3 iade eksi; net ciro = LINENET) gün kırılımıyla. Yıl başına ayrı firma."),
+               "satırları (TRCODE 7/8/9 satış, 2/3 iade eksi; net ciro = VATMATRAH) gün kırılımıyla. Yıl başına ayrı firma."),
     "depo": ("logo", "Logo depo stoku", "Baskı Öneri ile aynı depo görünümü; kitap eşlemesi okumadan sonra yapılır."),
     "emsal": ("logo", "Logo emsal kitapların ilk günleri", "Emsal kitabın ilk satış gününden itibaren faturalı net adet (gün gün)."),
 }

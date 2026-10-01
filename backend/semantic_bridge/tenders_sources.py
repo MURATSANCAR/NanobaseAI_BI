@@ -10,7 +10,8 @@
 - **Logo fiyat listesi** = `PRCLIST` satış (`PTYPE 2`), kullanımda (`ACTIVE 0`), TL (`CURRENCY 160`), bugün geçerli;
   cari özel kodu boş liste önce, yoksa en düşük geçerli liste (Kural 8: hangi liste alındığı yazılır).
 - **Kamu kurumlarına satış** = faturalı satış satırı (`STLINE`, `LINETYPE 0`, `CANCELLED 0`, `INVOICEREF <> 0`,
-  `TRCODE 7/8/9` satış, `2/3` iade eksi; net ciro `LINENET`) × (CRM `AccountBase.new_KurumRolu` 2 Devlet Kurumu / 3 Resmi
+  `TRCODE 7/8/9` satış, `2/3` iade eksi; net ciro `VATMATRAH` (KDV matrahı, fatura geneli iskonto dahil; dönem fatura
+  tarihi `INVOICE.DATE_` — karar 2026-10-01)) × (CRM `AccountBase.new_KurumRolu` 2 Devlet Kurumu / 3 Resmi
   → `new_logicalref` = Logo cari `LOGICALREF`) ∪ Logo satış kanalı `CLCARD.SPECODE2 = 'KURUM'`. CRM ve Logo iki ayrı
   sorgudur; birleştirme anahtar listesiyle yapılır.
 - **Birim maliyet** M9'dan gelecek (M9 henüz main'de değil): `unit_costs()` köprüde kayıtlı bir sağlayıcıya sorar
@@ -144,13 +145,14 @@ def public_sales_sql(firm: str, year: int, refs: list[int], channel: str) -> str
     return f"""
 -- Faturalı satış satırı; iade eksi. Kamu = Logo kanalı ya da CRM'de kamu kurumu işaretli cari.
 SELECT C.LOGICALREF AS ref, C.CODE AS kod, C.DEFINITION_ AS unvan, C.CITY AS il, C.SPECODE2 AS kanal,
-  SUM(CASE WHEN L.TRCODE IN (7,8,9) THEN L.LINENET ELSE -L.LINENET END) AS ciro,
+  SUM(CASE WHEN L.TRCODE IN (7,8,9) THEN L.VATMATRAH ELSE -L.VATMATRAH END) AS ciro,
   SUM(CASE WHEN L.TRCODE IN (7,8,9) THEN L.AMOUNT ELSE -L.AMOUNT END) AS adet,
   COUNT(DISTINCT L.INVOICEREF) AS fatura
 FROM dbo.LG_{firm}_01_STLINE AS L
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = L.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{firm}_CLCARD AS C ON C.LOGICALREF = L.CLIENTREF
 WHERE L.LINETYPE = 0 AND L.CANCELLED = 0 AND L.INVOICEREF <> 0 AND L.TRCODE IN (2,3,7,8,9)
-  AND L.DATE_ >= '{year}-01-01' AND L.DATE_ < '{year + 1}-01-01'
+  AND SH.DATE_ >= '{year}-01-01' AND SH.DATE_ < '{year + 1}-01-01'
   AND (C.SPECODE2 = {q(channel)}{ref_cond})
 GROUP BY C.LOGICALREF, C.CODE, C.DEFINITION_, C.CITY, C.SPECODE2""".strip()
 

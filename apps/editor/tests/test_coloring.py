@@ -299,19 +299,20 @@ def test_derived_coloring_book(tmp_path, monkeypatch, with_plan):
     assert got["Editör onayı"] == "FAIL"                                  # çizgiler editör onayı bekler
     # görünüm, kısa cümle düzeltme ve onay
     v = C.view(d)
-    assert len(v["sentences"]) == n_art and v["drafts"] == [] and v["derived_from"] == src.name
+    assert len(v["sentences"]) == n_art and "drafts" not in v and v["derived_from"] == src.name
     s0 = v["sentences"][0]
     v2 = C.set_sentences(d, [{"aid": s0["aid"], "text": "Elif koşuyor.", "approved": True}], "editor")
     assert v2["sentences"][0]["text"] == "Elif koşuyor." and v2["sentences"][0]["approved"]
     assert C.derived(src)[0]["id"] == d.name
-    # görsel modelin (renkli) sürümü kancayla baskı kuralına gelir; taslak işaretlenir
+    # görsel modelin (renkli) sürümü kancayla baskı kuralına gelir; kaynağı «model» yazılır, taslak işareti yok
     aid = cz["arts"][0]["aid"]
     colored = d / "resim" / f"cizgi-{aid}.v2.png"
     _scene_img(900, 620).save(colored)
     studio.add_version(d, aid, str(colored), mode="new", prompt="", seed=1, by="t", dpi=300)
     with Image.open(colored) as im:
         assert lineart.is_two_tone(im)
-    assert C.view(d)["arts"][0]["draft"] is True
+    a0 = C.view(d)["arts"][0]
+    assert a0["model"] is True and "draft" not in a0
     # yeniden koşmak planı bozmaz
     rev = P.load(d)["rev"]
     assert asyncio.run(C.build(d))["status"] == "done" and P.load(d)["rev"] == rev

@@ -70,7 +70,7 @@ def numbers(full: dict[str, Any], days: list[dict[str, Any]], gun: int, events: 
     add("dagilim", "Dağılım siparişi", dist.get("adet"), "adet", "CRM sipariş tipi Dağılım")
     add("dagilimBayi", "Dağılım alan bayi", dist.get("bayi"), "bayi", "CRM sipariş tipi Dağılım")
     add("fatura", f"Faturalı net satış, ilk {gun} gün (Logo verisinin kapsadığı günler)", fatura, "adet", "Logo faturalı satış")
-    add("ciro", f"Faturalı net ciro, ilk {gun} gün", _sum(cov, "fatura_net_ciro"), "TL", "Logo faturalı satış (LINENET)", para=True)
+    add("ciro", f"Faturalı net ciro, ilk {gun} gün", _sum(cov, "fatura_net_ciro"), "TL", "Logo faturalı satış (VATMATRAH)", para=True)
     add("kapsanan", "Logo verisinin kapsadığı gün", len(cov), "gün", f"Logo veri sonu {tr_day(logo_end)}")
     add("hedef", f"Hedef payı, ilk {gun} gün", hedef, "adet", "Bütçe ve hedefler (aylık hedef ÷ ayın gün sayısı)")
     add("oranFatura", "Faturalı satış / hedef payı (kapsanan günler)", _pct(fatura, hedef_cov), "%", "hesap")

@@ -10,6 +10,7 @@ const CONTENT: ScreenInfoMap = {
       "Rehber, CRM'deki etkin kullanıcılardan gelir; ad, birim ya da dahiliyle anında aranır.",
       "«Bugün» özeti uyarılarınızı, onay kuyruklarınızı ve ajandanızı yetkinize göre toplar; Zeki AI bunu üç cümleyle özetler.",
       "Ajanda kartı yalnız sorumlusu olduğunuz etkinlik ve görevleri gösterir; «Matbaadan yeni çıkanlar» yalnız son günlerde basılan kitap varsa görünür.",
+      "İK kartları herkese aynıdır: duyurular, doğum günleri ve iş yıldönümleri (yaş yok), aramıza katılanlar, bugün izinde olanlar (izin türü yok); «Bugün» özetindeki İK maddeleri ise yalnız sizin kaydınızdan, yöneticiyseniz yalnız ekibinizden gelir.",
     ],
     data: "CRM kullanıcı kayıtları ve kişi profilleri, portalın kendi modülleri (ajanda, oda, eğitim, üretim), Logo satış verisi",
     refresh: "Sayfa açıldığında okunur; toplantı odalarının durumu 30 saniyede bir tazelenir.",

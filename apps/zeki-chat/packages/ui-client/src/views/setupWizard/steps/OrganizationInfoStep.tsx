@@ -1,0 +1,73 @@
+import type { ISetting } from '@zeki.chat/core-typings';
+import OrganizationInfoPage from '../components/OrganizationInfoPage';
+import type { TranslationKey } from '@zeki.chat/ui-contexts';
+import { useRole } from '@zeki.chat/ui-contexts';
+import type { TFunction } from 'i18next';
+import type { ComponentProps, ReactElement } from 'react';
+import { I18nextProvider, useTranslation } from 'react-i18next';
+
+import { useSetupWizardContext } from '../contexts/SetupWizardContext';
+
+const getSettingOptions = (
+	settings: Array<ISetting> | undefined,
+	settingId: ISetting['_id'],
+	t: TFunction,
+): Array<[key: string, text: string]> => {
+	if (!settings) {
+		return [];
+	}
+
+	const setting = settings.find(({ _id }) => _id === settingId);
+
+	if (!setting?.values) {
+		return [];
+	}
+
+	return setting.values.map(({ i18nLabel, key }) => [String(key), t(i18nLabel as TranslationKey)]);
+};
+
+const OrganizationInfoStep = (): ReactElement => {
+	const { t, i18n } = useTranslation();
+	const hasAdminRole = useRole('admin');
+
+	const {
+		setupWizardData: { organizationData },
+		saveOrganizationData,
+		setSetupWizardData,
+		settings,
+		goToPreviousStep,
+		completeSetupWizard,
+		currentStep,
+		maxSteps,
+	} = useSetupWizardContext();
+
+	const countryOptions = getSettingOptions(settings, 'Country', t);
+	const organizationIndustryOptions = getSettingOptions(settings, 'Industry', t);
+	const organizationSizeOptions = getSettingOptions(settings, 'Size', t);
+
+	const handleSubmit: ComponentProps<typeof OrganizationInfoPage>['onSubmit'] = async (data) => {
+		// Zeki: no cloud registration step; save organization data locally and finish the wizard.
+		setSetupWizardData((prevState) => ({ ...prevState, organizationData: data }));
+
+		await saveOrganizationData(data);
+
+		return completeSetupWizard();
+	};
+
+	return (
+		<I18nextProvider i18n={i18n} defaultNS='onboarding'>
+			<OrganizationInfoPage
+				initialValues={organizationData}
+				onSubmit={handleSubmit}
+				onBackButtonClick={!hasAdminRole ? goToPreviousStep : undefined}
+				currentStep={currentStep}
+				stepCount={maxSteps}
+				organizationIndustryOptions={organizationIndustryOptions}
+				organizationSizeOptions={organizationSizeOptions}
+				countryOptions={countryOptions}
+			/>
+		</I18nextProvider>
+	);
+};
+
+export default OrganizationInfoStep;

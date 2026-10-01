@@ -303,7 +303,7 @@ def _front(d: Path, ms: dict | None = None) -> dict | None:
     """Künye paneli: satırlar (etiket, değer, eksik mi, düzenlenir mi, kaynak). «Kitap» ve «Yazar» satırları el
     yazmasını düzeltir (`field`: title | author); kaynakları okunduğu yer ya da editörün düzeltmesi (`edited`: kim,
     ne zaman, eski değer). Yazarsız kitapta «Yazar» satırı künyede basılmaz ama panelde düzenlenebilir kalır."""
-    from .front import EDITABLE, MISSING
+    from .front import EDITABLE, MISSING, usable
     from .manuscript import BOOK_FIELDS, field_source
     fr = studio.read(d, "front.json")
     if not fr:
@@ -318,7 +318,7 @@ def _front(d: Path, ms: dict | None = None) -> dict | None:
            "YAYINEVI": "Yayınevi", "ADRES": "Adres", "TELEFON": "Telefon", "EPOSTA": "E-posta",
            "SERTIFIKA": "Sertifika No", "MATBAA": "Baskı ve Cilt", "MATBAA_SERTIFIKA": "Matbaa Sertifika No",
            "MATBAA_ADRES": "Matbaa Adresi", "TELIF": "Telif"}
-    sources = {src[k]: v.get("source") for k, v in (fr.get("kunye_fields") or {}).items() if k in src}
+    sources = {src[k]: v.get("source") for k, v in usable(fr.get("kunye_fields")).items() if k in src}
     manual = fr.get("manual") or {}
     rows = []
     for lab, val in fr["kunye"]:

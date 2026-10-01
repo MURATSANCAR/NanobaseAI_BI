@@ -1,7 +1,7 @@
 """M17 Backlist: Logo ve CRM okuma sorguları (yalnız `SELECT`; CRM'e, Logo'ya yazma yok).
 
 - **Logo satışı** burada yazılmaz: `budget_sources.sales_sql` (M46; faturalı satır `INVOICEREF <> 0`, `TRCODE 7/8/9`
-  satış, `2/3` iade eksi, net ciro = `LINENET`, maliyet `AMOUNT × OUTCOST`) aynen kullanılır. M46'nın önbelleğinde
+  satış, `2/3` iade eksi, net ciro = `VATMATRAH`, maliyet `AMOUNT × OUTCOST`) aynen kullanılır. M46'nın önbelleğinde
   olmayan geçmiş yıllar da aynı sorguyla okunur; iki modül aynı rakamı gösterir.
 - **Logo depo stoku**: Baskı Öneri'nin sorgusu (`management/sql/baski_oneri/logo_depo_stok.sql`,
   `EOS_DEPO_STOK_KONTROL_211`, 157 ile başlayan ticari ürün hariç) dosyadan okunur; iki ekran aynı stoku gösterir.

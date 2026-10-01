@@ -12,7 +12,8 @@ insan açar. Her yazma `semantic_audit`'e düşer (`corp_quote`, `corp_opportuni
 
 **Kurallar (model yok):**
 - *Hacim indirimi:* `CORP_VOLUME_TIERS` ayarı (`100:10;300:15` = 100 adet ve üstü %10 …) varsa o; yoksa son 12 ayın kurum
-  faturalarında (KURUM kanalı) aynı adet aralığındaki **gerçekleşen iskontonun medyanı** (1 − Σ LINENET ÷ Σ TOTAL). Aralıkta
+  faturalarında (KURUM kanalı) aynı adet aralığındaki **gerçekleşen iskontonun medyanı** (1 − Σ VATMATRAH ÷ Σ TOTAL).
+  Aralıkta
   `CORP_VOLUME_MIN_N` faturadan az geçmiş varsa öneri yok (0) ve ekranda yazılır.
 - *Onay:* teklifte herhangi bir satırın indirimi `CORP_DISCOUNT_APPROVAL_PCT`'yi (varsayılan %30 — analizdeki iş günü örneği)
   aşarsa ya da marj biliniyor ve `CORP_MARGIN_MIN_PCT`'nin (varsayılan %0: maliyetin altında satış) altındaysa teklif

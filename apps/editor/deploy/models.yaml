@@ -179,7 +179,7 @@ aliases:
   # Kitap görselleri (kapak, iç resim, tanıtım) — kullanıcı kararı 2026-09-24. Diffusion model,
   # vLLM-Omni ile sunulur: POST /v1/images/generations (metinden görsel), referanslı düzenleme
   # JSON /v1/chat/completions ile. Diğerleri gibi ilk istekte açılır, boşta kapanır.
-  # Lisans: Qwen Research (ticari olmayan). Ticari izin gelene kadar basılacak işe çıktı verilmez.
+  # Lisans: ticari lisans alındı (kullanıcı kararı 2026-09-29); çıktı basılabilir, taslak işareti yok.
   # İmaj: 2.1 desteği vLLM-Omni sürümüne henüz girmedi (PR #7759); ekibin yayınladığı
   # `qwen-image21` imajı digest ile sabit. Sürüme girince buradan değiştirilir.
   book-image:

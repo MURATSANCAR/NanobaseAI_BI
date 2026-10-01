@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Download, Loader2, Mail, Pause, PencilLine, Play, Plus, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
@@ -40,6 +41,7 @@ const RECURRENCE: Array<{ v: ReportRecurrence; label: string }> = [
 
 const LAST: Record<Exclude<ReportLastStatus, null>, { label: string; tone: string }> = {
   sent: { label: 'Gönderildi', tone: 'bg-emerald-50 text-emerald-700' },
+  ready: { label: 'Dosya hazır · e-posta planlanan saatte gidecek', tone: 'bg-violet-50 text-canvas-violet' },
   no_smtp: { label: 'Dosya hazır · e-posta ayarı yapılmadığı için gönderilmedi', tone: 'bg-amber-50 text-amber-800' },
   no_recipient: { label: 'Dosya hazır · alıcı olmadığı için gönderilmedi', tone: 'bg-slate-100 text-canvas-ink' },
   failed: { label: 'Rapor hazırlanamadı', tone: 'bg-red-50 text-red-700' },
@@ -241,13 +243,15 @@ export default function ReportsScreen() {
   const canPlan = useCan('rapor.planla');
   const canExport = useCan('veri.disa-aktar');
   const canSql = useCan('kart.sql-goster');
+  // E-postadaki «Raporu ekranda aç» bağlantısı raporu kimliğiyle açar: /planli-raporlar?id=<rapor>.
+  const [params, setParams] = useSearchParams();
   /** '' = yeni rapor; aksi halde seçili raporun kimliği. */
-  const [sel, setSel] = useState('');
+  const [sel, setSel] = useState(() => params.get('id') ?? '');
   const [text, setText] = useState('');
   const [draft, setDraft] = useState<ReportDraft | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [layout, setLayout] = useState<ReportColumn[]>([]);
-  /** Onaylanınca ilk dosya beklemeden üretilsin; plan zamanı ayrıca işler. */
+  /** Onaylanınca ilk dosya beklemeden hazırlansın (e-posta gitmez); gönderim yalnız plan saatinde. */
   const [runNow, setRunNow] = useState(true);
   /** Her yeni cümle yeni bir taslaktır; önizlemenin değişiklik geçmişi onunla sıfırlanır. */
   const [draftId, setDraftId] = useState(0);
@@ -275,15 +279,34 @@ export default function ReportsScreen() {
   };
   const refresh = () => qc.invalidateQueries({ queryKey: ['planli-raporlar'] });
 
-  const open = (id: string) => {
-    setSel(id);
-    setEditing(false);
-    setConfirmDelete(false);
+  const showDetail = () => {
     if (window.innerWidth < 1024) {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }));
     }
   };
+  const open = (id: string) => {
+    setSel(id);
+    setEditing(false);
+    setConfirmDelete(false);
+    // Adres seçimi taşır: yenileyince ya da bağlantı paylaşılınca aynı rapor açılır.
+    setParams((p) => {
+      const next = new URLSearchParams(p);
+      if (id) next.set('id', id);
+      else next.delete('id');
+      return next;
+    }, { replace: true });
+    showDetail();
+  };
+  // Bağlantıyla gelinen rapor: liste gelince telefonda ayrıntıya kaydırılır.
+  const linked = useRef(sel);
+  useEffect(() => {
+    if (linked.current && list.isSuccess) {
+      if (reports.some((r) => r.id === linked.current)) showDetail();
+      linked.current = '';
+    }
+  }, [list.isSuccess, reports]);
+  const missing = !!sel && list.isSuccess && !cur;
   const startNew = () => {
     open('');
     setDraft(null);
@@ -328,7 +351,8 @@ export default function ReportsScreen() {
       setLayout([]);
       setText('');
       open(r.id);
-      if (runNow) run.mutate(r.id);
+      // İlk dosya yalnız hazırlanır; e-posta zamanlanan saatte gider (ZEKI-53).
+      if (runNow) run.mutate({ id: r.id, send: false });
       else flash('Onaylandı ve planlandı');
     },
   });
@@ -344,10 +368,16 @@ export default function ReportsScreen() {
   });
 
   const run = useMutation({
-    mutationFn: (id: string) => reportsApi.run(id),
-    onSuccess: async (r) => {
+    mutationFn: ({ id, send }: { id: string; send?: boolean }) => reportsApi.run(id, { send }),
+    onSuccess: async (r, v) => {
       await refresh();
-      flash(r.lastStatus === 'failed' ? 'Çalıştı ama hata verdi' : `Çalıştı · ${nf.format(r.lastRows ?? 0)} satır`);
+      flash(
+        r.lastStatus === 'failed'
+          ? 'Çalıştı ama hata verdi'
+          : v.send === false
+            ? `Onaylandı · ilk dosya hazır (${nf.format(r.lastRows ?? 0)} satır); e-posta planlanan saatte gidecek`
+            : `Çalıştı · ${nf.format(r.lastRows ?? 0)} satır`,
+      );
     },
   });
 
@@ -459,6 +489,11 @@ export default function ReportsScreen() {
                 </div>
               )}
               {errText && <div className="rounded-xl bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">{errText}</div>}
+              {missing && (
+                <div className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800">
+                  Bağlantıdaki rapor bulunamadı; silinmiş ya da başka bir kişiye ait olabilir.
+                </div>
+              )}
               {done && <div className="rounded-xl bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700">{done}</div>}
 
               {!cur && !canPlan ? (
@@ -527,7 +562,10 @@ export default function ReportsScreen() {
                             onChange={(e) => setRunNow(e.target.checked)}
                             className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
                           />
-                          Onaylayınca ilk dosyayı hemen hazırla
+                          <span>
+                            Onaylayınca ilk dosyayı hemen hazırla
+                            <span className="block text-[11.5px] font-normal text-canvas-muted">E-posta yalnız planlanan saatte gider.</span>
+                          </span>
                         </label>
                         <div className="flex flex-wrap gap-2">
                           <button
@@ -665,7 +703,7 @@ export default function ReportsScreen() {
                     <button
                       type="button"
                       disabled={run.isPending}
-                      onClick={() => run.mutate(cur.id)}
+                      onClick={() => run.mutate({ id: cur.id })}
                       className={`${btn} bg-gradient-to-r from-canvas-mint to-emerald-600 text-white shadow-md`}
                     >
                       {run.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}

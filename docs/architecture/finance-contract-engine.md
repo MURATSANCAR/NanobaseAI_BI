@@ -1,0 +1,107 @@
+# Finans soru motoru — bağımsız sözleşme mimarisi
+
+2026-09-30. Kullanıcı: mevcut yapıyı yedekle, finans soru akışını sıfırdan kur; eski sorgu/katalog kullanma.
+
+## Sınır
+
+Yeni paket `backend/semantic_bridge/finance_query/`: bağımsız tarih çözümleme, kapalı plan şeması,
+sürümlü iş tanımları, gerçek şema doğrulama, açık kaynak/dönem seçimi, deterministik SQL ve tam sonuç.
+Eski resolver, eş anlamlılar, eski soru SQL'leri, aday havuzu ve SQL model istemi kullanılmaz.
+Mevcut API'nin kimlik doğrulaması, kişi veri yetkisi, bağlantı altyapısı, model taşıyıcısı ve sonuç saklama
+entegrasyon sınırıdır; bunlar yeni iş anlamı için kaynak değildir.
+
+`FINANCE_QUERY_MODE=contract` yeni finans hattını açar. `off` yedekli geri dönüş seçeneğidir.
+Yeni hat üstlendiği soruyu eski SQL üreticiye düşürmez. Tanımsız hesap/kısıt sessizce atılmaz; netleştirme
+döner. Finans dışı portal işlevlerinin yeniden yazımı bu değişikliğin kapsamı değildir.
+
+## İş akışı
+
+1. Soru → bağımsız tarih aralıkları + kapalı sözleşmeden metric/dimension/filter planı.
+2. Açık kaynak adı, belge sayımı, tür, ölçü ailesi, süzgeç değeri ve plan bütünlüğü kontrolü.
+   Model ikinci okumada sorudan düşen koşulları da denetler; bu bir doğruluk ispatı değildir.
+3. `SEMANTIC_FIRMS` kaynak kapsamı ∩ canlı `L_CAPIPERIOD`. Aynı şirketin yıllık kaynaklarıdır.
+   Dönem boşluğu/örtüşmesi varsa durulur; en büyük kod/ilk tablo veya örnek MIN/MAX ile kaynak seçilmez.
+4. Gerçek `INFORMATION_SCHEMA.COLUMNS` ile kolon ve mali değer türleri denetlenir.
+   Adet ölçüsünde `UINFO1/UINFO2` farklı, eksik veya geçersizse işlem miktarı kitap adedi diye
+   sunulmaz; birim sözleşmesi netleştirilir. Stok kartlarının iş kapsamı ayrıca iş kabulü gerektirir.
+5. SQL yalnız sabit sözleşme ifadeleri ve kaçırılmış literal değerlerden oluşur. Model SQL gönderemez.
+6. Satışlar gereken düzeyde toplanır. CRM eşlemesi aktif stok kodunda tekil olmalıdır; çoklu anahtarda
+   sorgu durur. LEFT birleştirme öncesi/sonrası mali toplamlar korunur. Eksik künye açık veri notudur.
+7. Tam sonuç, aynı yürütmenin kimliğiyle önizleme/dışa aktarmaya verilir. Kesilen sonuç başarı değildir.
+
+`contractChecked` teknik sözleşme denetimidir; `independentlyVerified=false` canlı bağımsız kabulün yerine
+geçmez. Eski `certified=true` anlam karışıklığı yeni cevaba taşınmaz. Kod içindeki tanımların hash'i
+her cevaba ve kayıt izine yazılır; canlı eski katalog değişiklikleri bu tanımları değiştirmez.
+`engineCodeHash` çalışan süreçte yüklenmiş yeni motorun kaynak dosyalarını bağlar; disk ile süreç
+farkı kabul koşucusunda ayrıca reddedilir.
+
+## Alan anlamı ve kaynak kanıtı
+
+- Logo'nun 2016 tarihli **Aktarımlar** belgesi (Logo tarafından yazılmış, bayi sitesindeki kopya):
+  https://www.sdmyazilim.com.tr/var/uploads/1500467351-aktarimlar.pdf
+  Sayfa 178/186/217/283: `STLINE.LINENET` satır net toplamı; 173/225: `INVOICE.NETTOTAL` fatura net toplamı.
+  Eski belge güncel kurulumu tek başına doğrulamaz; canlı şema ve bağımsız hesap zorunludur.
+- Microsoft, kurum içi Dynamics metadata açıklamaları:
+  https://learn.microsoft.com/en-us/dynamics365/customerengagement/on-premises/developer/customize-entity-attribute-metadata?view=op-9-1
+  Kolon açıklaması, görünen ad ve lookup ilişkisi ayrı metadata özellikleridir. Kuruma özel `new_*`
+  alanlarının iş anlamı internetteki benzer bir alan adından aktarılmaz.
+- Canlı 2026-09-30 inceleme: aktif `new_kitapBase` 9.380 kayıt, `new_yazarid` dolu 0;
+  `new_Yazar` dolu 3.072, aktif Contact eşleşmesi 2.140. `new_yayineviid` aktif marka eşleşmesi 9.253;
+  `new_yayinciid` 2.541. Stok kodunda aktif çoğulluk bulunmadı (her yürütmede tekrar kontrol edilir).
+- Yazar kırılımı `new_yazartext` kitap künyesi metnidir, kişi/telif kimliği değildir.
+  Yazar kişi sayısı ise aktif durum nedenli `ContactBase` ve `new_yazarmi=1`; aynı kavram gibi birleştirilmez.
+- VPN geri geldikten sonra bağımsız metadata okuması: `new_yayineviid` = "Yayın Evi",
+  `new_yayinciid` = "Yayın Evi Alt Marka", ikisi de `new_marka`; `new_yazartext` = "Yazar",
+  `new_Yazar` = "Z - Yazar" (contact), `new_yazarid` = "X - Yazar" (new_yazar).
+- İlk gerçek kapı 2/10 geçti; 4 tür-denetçisi yanlış reddi, 1 JSON biçimi reddi ve 3 CRM referans
+  tanımı uyuşmazlığı çıktı. Bağımsız `StringMapBase` okuması `statecode=0` içinde 4.234 kitap ve
+  1.716 yazar kişide durum nedeninin "Pasif" olduğunu gösterdi. Kitap/kişi `statuscode=1`;
+  müşteri "Aktif Müşteri" `statuscode=100000000` (11.904). Potansiyel, arşiv ve sorunlu müşteri
+  bu ölçüye dahil değil. Referans SQL'ler bu doğrudan metadata kanıtıyla düzeltildi, API sayısına
+  uydurulmadı. Önceki yalnız-statecode tanımı geçersizdir.
+- Yeni CRM SQL'i eski bağlantı yeniden-yazıcısından geçmez; havuz/yük sınırı korunur.
+  Kendi pozitif aktif etiket sözleşmesini gerçek CRM metadata'sından okur; statecode ve statuscode
+  koşulları kaydedilen fiziksel SQL'de görünür. Model JSON çıkışı aynı kabul kuyruğundan zorlanır;
+  tür-denetçisi `sale_kind` alanının koşul karşılığını bilir.
+- İkinci 10 soruluk koşu 6 geçti / 4 başarısız: aktif kitap 9.380, aktif yazar kişi 660,
+  gerçek Aktif Müşteri 11.904 bağımsız referansla eşleşti. Kalan biçim/yanlış-ret hataları için
+  JSON Schema sunucuya gönderiliyor; denetçi teknik slot yerleşimi yerine genişletilmiş Türkçe
+  planı okuyor. Model kimliği ve plan/denetçi JSON çıktıları cevap izinde tutuluyor.
+  JSON Schema taşıma biçimi: https://docs.vllm.ai/en/stable/examples/features/structured_outputs/
+- `scripts/acceptance/finance_contracts/schema.py`, gerçek fiziksel şemayı, yayımlanmış Dynamics
+  alan etiketlerini/açıklamalarını ve lookup ilişkilerini salt okunur dışarı alır. Sözlük eski
+  semantik katalogdan üretilmez. Web belgesi ile kuruma özel metadata ayrı kanıt olarak tutulur.
+
+## Kabul ve bilinen kapsam
+
+Yeni bağımsız koşucu `scripts/acceptance/finance_contracts/live.py` yalnız Linux test sunucusunda,
+gerçek API ve doğrudan pyodbc referansı ile çalışır. Üretim derleyicisini veya eski SQL'leri içe aktarmaz.
+102 yeni soru (92 tam cevap, 10 kapsam sınırı); tam kolon kimliği, tüm anahtarlar/satırlar,
+sayı/NULL ve kesilme karşılaştırması; büyük sonuç,
+kanal/kitap kırılımı, yıllık kaynak değişimi, gün/ay, boş dönem, yanlış kaynak ve dürüst netleştirme.
+Kaynaklar salt okunur. Var olan timasai hesabının 15 dk oturumu finally'de silinir. Her 10 sonuç raporlanır.
+Sayısal tam cevap geçişleri (`fullAnswer`) ve kapsam dışı isteği doğru durdurma (`boundary`) ayrı sayılır.
+Koşu başında/sonunda canlı kaynak hash'leri alınır; kod değişirse o koşuya sürüm kabulü verilmez.
+Yeni motor etkin değilse koşucu eski motora hiçbir soru göndermez.
+
+İlk sözleşme: satış/net satış/iade tutarı, satılan/net adet, fatura sayısı/toplamı, müşteri ödeme
+hareketleri, aktif CRM kitap/yazar/cari sayıları. Kâr, kesin yaşlandırma, bütçe-hedef, döviz dönüşümü
+ve karmaşık koşullar iş tanımı genişletilene kadar netleştirmedir; destekleniyor veya üretim kabulü
+geçti diye sunulmaz. Belgeli kapsam büyümesi yeni sürüm ve bağımsız referans gerektirir.
+
+## Yedek ve geri dönüş
+
+Yerel tüm Git geçmişi: `/Users/msancar/.codex/backups/nonobase-finance-20260930/repository.bundle`
+(bundle verify başarılı). Canlı yedek: `/data/nanobaseai/bi/backups/finance-contracts-20260930/`;
+metadata PostgreSQL özel biçim dump, kaynak/arayüz/servis ayarı arşivleri ve SHA256 manifesti.
+Sırlar yalnız sunucunun root erişimli yedeğinde; Git'e veya rapora yazılmaz.
+Geri dönüş: yeni hattı `FINANCE_QUERY_MODE=off` ile kapat, köprüyü yeniden başlat. Motor kaynakları
+değiştiyse önce yedek arşivden ayrı dizine çıkarıp manifesti doğrula; canlı ağaca rastgele dosya basma.
+Metadata bu değişiklikte düzenlenmez; dump geri yüklemesi diğer modüllerin yeni verilerini sileceğinden
+yalnız ayrı kurtarma veritabanına yapılır.
+
+Durum: son arka uç be31c7817, arayüz 53e8e4e93 test sunucusunda kurulu. Aynı kodla 102/102 (92 tam cevap, 10 sınır) geçti; 92 farklı tam sonuç kimliği, UI 1.345 satır/CSV/netleştirme/dört genişlik doğrulandı. 17 geçici timasai oturumu temizlendi. Yedek tam okuma/hash doğrulaması tamamlandı. Tüm finans iş tanımları veya müşteri üretim kabulü iddia edilmez; soru bazlı sonuçlar ve açık deadlock teşhisi [raporda](../reports/finance-rebuild-20260930.md).
+
+## Geçici veritabanı hatası
+
+Gerçek 1205 deadlock hem API hem bağımsız referansta yakalandı (30 Eylül 19:03). SQL Server kurban işlemi geri alır; resmi çözüm yeniden denemeyi içerir: [Microsoft 1205](https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/mssqlserver-1205-database-engine-error). Yalnız salt okunur SELECT ve native 1205/uyumlu SQLSTATE için toplam üç deneme; kısa artan rastgele bekleme, kaydedilen hata kodu/SQL hash/deneme, tükenmede dürüst kaynak hatası. Genel hata, zaman aşımı veya yazma yeniden denenmez. Bu mekanizma DBA'nın kilit döngüsünü çözmesinin yerine geçmez. system_health kaydına mevcut hesabın yetkisi yok (297); kilitleyen diğer işlemin kök nedeni belirlenemedi.

@@ -39,6 +39,8 @@ QUESTIONS = sa.Table(
     sa.Column("not_found", sa.Boolean),
     sa.Column("card_selection", sa.JSON),
     sa.Column("graph", sa.JSON),  # karakter sorusunda ekrandaki ağ (editörün doğrulanmış olaylarından)
+    # Sayfa atıflarının kitabı ve o sayfanın o kitapta olup olmadığı (cevap bittiğinde; editorial_citations.build).
+    sa.Column("citations", sa.JSON),
     sa.Column("parent_id", sa.String(32)),
     sa.Column("error", sa.String(600)),
     sa.Column("elapsed_ms", sa.Integer),
@@ -113,7 +115,12 @@ POLISH_SYSTEM = (
     "Anlamı, kişi/kitap adlarını, sayfa numaralarını («s. 14», «[s.2]») ve «Kitapta bulunamadı.» başlangıcını aynen koru; "
     "yeni bilgi ekleme, kısaltma. Yalnız yeniden yazılmış metni döndür."
 )
-_PAGE = re.compile(r"s\.\s?\d+")
+
+
+def _cited(text: str) -> set[int]:
+    """Metindeki bütün atıf sayfaları («s. 114, 127» ikisi de); sadeleştirme hiçbirini düşürmemeli."""
+    from .editorial_citations import groups
+    return {p for _s, _e, pages in groups(text) for p in pages}
 
 
 def polish(text: str, chat: Optional[Any] = None) -> str:
@@ -127,7 +134,7 @@ def polish(text: str, chat: Optional[Any] = None) -> str:
     except Exception as e:  # noqa: BLE001 — sadeleştirme bir iyileştirmedir, cevabı düşürmez
         log.info("editorial polish failed: %s", e)
         out = ""
-    keeps = (out and set(_PAGE.findall(text.replace(" ", ""))) <= set(_PAGE.findall(out.replace(" ", "")))
+    keeps = (out and _cited(text) <= _cited(out)
              and out.startswith(NOT_FOUND) == text.lstrip().startswith(NOT_FOUND) and len(out) >= len(text) * 0.4)
     return plain(out if keeps else text) or text
 
@@ -151,12 +158,19 @@ BOOK: bir kitabın içeriği (karakter, olay, tema, sayfa, alıntı, özet), yaz
 SELF: yalnız selamlaşma, test, anlamsız karakterler ya da asistanın kimliği, modeli, nasıl çalıştığı, neler yapabildiği.
 OFF: kitapla ilgisi olmayan konular: siyaset, spor/futbol, gündem, hava durumu, genel kültür, sağlık, para, kod, yemek tarifi, kişisel sohbet vb.
 UNKNOWN: emin değilsen.
+Kitaplar kurgu ve tarih de anlatır: bir kişi, yer, kurum, olay, tarih, saat, sayı, suç, ceza, yangın, ölüm, savaş ya da maç
+hakkındaki soru, gerçek dünyadan bir haber gibi görünse de bir kitabın içinde geçebilir. Mesajda `selectedBook` varsa kişi
+seçili kitabı okuyordur: o kitabın içeriği olabilecek her soru BOOK'tur; OFF yalnız kitapla hiçbir bağ kurulamayan istekler
+(hava durumu, kod yaz, yemek tarifi, kişisel sohbet) içindir. Kitap seçili değilse ve gerçek dünya gündemi olduğu açık
+değilse UNKNOWN de.
 Yalnız {"intent":"BOOK|SELF|OFF|UNKNOWN"} JSON döndür."""
 
 
-def scope_reply(question: str, chat: Optional[Any] = None) -> Optional[str]:
+def scope_reply(question: str, chat: Optional[Any] = None, book_title: Optional[str] = None) -> Optional[str]:
     """Kimlik/selam → SELF_REPLY, kitap dışı → OFF_REPLY, aksi hâlde None (soru kitap motoruna gider).
-    Emin olunamazsa ya da sınıflandırma başarısızsa None: meşru bir kitap sorusu asla geri çevrilmez."""
+    Emin olunamazsa ya da sınıflandırma başarısızsa None: meşru bir kitap sorusu asla geri çevrilmez.
+    `book_title`: ekranda seçili kitap. Sınıflandırıcı onu görmezse kitabın içindeki olayı soran soru («X Binası'ndaki
+    yangın ihbarı saat kaçta yapıldı?») gündem sanılıp geri çevriliyordu (2026-10-01, Çiçekçi Kadın 14 sorudan 2'si)."""
     norm = " ".join(re.sub(r"[^\w\s]", "", question.casefold()).split())
     if not norm or norm in _PINGS:
         return SELF_REPLY
@@ -164,7 +178,9 @@ def scope_reply(question: str, chat: Optional[Any] = None) -> Optional[str]:
         return None
     try:
         raw = chat([{"role": "system", "content": SCOPE_SYSTEM},
-                    {"role": "user", "content": json.dumps({"message": question}, ensure_ascii=False)}])
+                    {"role": "user", "content": json.dumps({"message": question, **({"selectedBook": book_title}
+                                                                                 if book_title else {})},
+                                                           ensure_ascii=False)}])
         m = re.search(r"\{.*\}", raw or "", re.S)
         intent = (json.loads(m.group(0)).get("intent") if m else "") or ""
     except Exception as e:  # noqa: BLE001
@@ -183,8 +199,13 @@ SYSTEM = (
     "Kitap seçilmemişse ve soru okunmuş kitapları kapsıyorsa, erişilebilir okunmuş kitapları araçla listele; "
     "cevabı bu kitaplardan bul ve her kitap için kitabın adını ayrı belirt. Tek bir kitabı sessizce varsayma. "
     "Yalnız başlık veya kapak bulunması kitabın okunmuş olduğunu kanıtlamaz. İçerik kaynağı yoksa bunu söyle. "
-    "Seçili kitap varsa yalnız o kitabın kayıtlarından cevap ver. Kısmi okuma varsa kapsamın kısmi olduğunu açıkla. "
-    "Her iddiayı hangi sayfaya dayandığını yazarak ver (örnek: «s. 14»). Cevabı Türkçe, kısa ve sıcak bir "
+    "Seçili kitap varsa cevabı o kitabın kayıtlarından ver. Soru başka bir kitabı da açıkça anıyorsa (karşılaştırma, "
+    "benzerlik) o kitabı da araçla bul; onunla ilgili her bilgiyi yalnız o kitabın kendi kayıtlarından ve kendi sayfa "
+    "numarasıyla ver. O kitap okunmamışsa bunu söyle ve ona sayfa numarası yazma. "
+    "Kısmi okuma varsa kapsamın kısmi olduğunu açıkla. "
+    "Her iddiayı hangi sayfaya dayandığını yazarak ver (örnek: «s. 14»; birden çok sayfa: «s. 14, 27»). Sayfa "
+    "numarası yalnız o kitabın kaynak sayfasından gelir; bir kitabın sayfasını başka bir kitaba yazma. Cevapta birden "
+    "çok kitap geçiyorsa her atıfa kitabın adını ekle (örnek: «(«Kitap Adı», s. 14, 27)»). Cevabı Türkçe, kısa ve sıcak bir "
     "dille yaz; «defter», «kanıt defteri», «generation», «claim», «analiz hattı» gibi iç terimleri kullanma "
     "(«okunmuş kitaplar» de).\n"
     f"Sorulan şey kitapta yoksa cevabına birebir «{NOT_FOUND}» cümlesiyle başla, sonra tek cümleyle nereye "
@@ -223,7 +244,7 @@ def ensure(engine: sa.engine.Engine) -> None:
         # Sürüm damgası: tanım değişmediyse açılışta veritabanına sorulmaz. Kolon ekleme listesi tanımda
         # görünmeyebilir (tablo tanımı JSON/metin); listenin kendisi damgaya eklenir.
         from semantic_layer.store import schema_stamp
-        schema_stamp.run(engine, _md.sorted_tables, install, extra="not_found,card_selection,parent_id,graph")
+        schema_stamp.run(engine, _md.sorted_tables, install, extra="not_found,card_selection,parent_id,graph,citations")
         _ready.add(id(engine))
 
 
@@ -233,7 +254,8 @@ def _add_missing_columns(engine: sa.engine.Engine) -> None:
         have = {c["name"] for c in sa.inspect(engine).get_columns(QUESTIONS.name)}
     except Exception:  # noqa: BLE001 — tablo henüz yoksa create_all zaten kurdu
         return
-    for col, ddl in (("not_found", "BOOLEAN"), ("card_selection", "JSON"), ("parent_id", "VARCHAR(32)"), ("graph", "JSON")):
+    for col, ddl in (("not_found", "BOOLEAN"), ("card_selection", "JSON"), ("parent_id", "VARCHAR(32)"), ("graph", "JSON"),
+                     ("citations", "JSON")):
         if col not in have:
             try:
                 with engine.begin() as conn:
@@ -257,13 +279,43 @@ def _iso(v: Optional[datetime]) -> Optional[str]:
 def _row(r: Any) -> dict[str, Any]:
     from . import editorial_cards
     cards, card_error = editorial_cards.resolve(r.card_selection)
-    # bookId: sayfa rozetlerinin önizlemesi için kart kimliği (kitap adı kataloğa tam eşleşir; yoksa None).
+    # bookId: cevabın kitabı (kapak köşesi ve atıf çözümü olmayan eski ekran için; kitap adı kataloğa tam eşleşir).
+    # citations: her sayfa atıfının kitabı ekranda buradan çözülür (ZEKI-43); tek bookId bütün rozetlere bağlanmaz.
     return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "bookId": editorial_cards.book_id_for_title(r.book_title, f"{r.question}\n{r.answer or ''}"),
+            "citations": _citations(r),
             "question": r.question,
             "status": r.status, "answer": scrub(r.answer), "notFound": bool(r.not_found),
             "cards": cards, "cardError": card_error, "graph": r.graph, "cardMatch": (r.card_selection or {}).get("match"),
             "error": (r.error if r.error and not _INTERNAL.search(r.error) and not re.search(r"\b\d{3}:", r.error) else (UNAVAILABLE if r.error else None)), "elapsedMs": r.elapsed_ms,
             "username": r.username, "createdAt": _iso(r.created_at), "finishedAt": _iso(r.finished_at)}
+
+
+def _citations(r: Any) -> Optional[dict[str, Any]]:
+    """Kayıtlı atıf özeti; yoksa (eski kayıt) aday kitaplar anında çıkarılır, sayfa varlığı sorulmaz.
+    Hiçbir hata satırı bozmaz: özet yoksa ekran eski tek kitaplı davranışa döner."""
+    from . import editorial_citations
+    stored = getattr(r, "citations", None)
+    if stored:
+        return stored
+    try:
+        if not r.answer or not editorial_citations.groups(r.answer):
+            return None
+        return editorial_citations.build(r.question, r.book_title, r.answer)
+    except Exception as e:  # noqa: BLE001
+        log.info("editorial citations (read) failed: %s", e)
+        return None
+
+
+def _citations_checked(question: str, book_title: Optional[str], answer: Optional[str]) -> Optional[dict[str, Any]]:
+    """Cevap bittiğinde: her atıfın kitabı ve o sayfanın o kitapta varlığı. Hata cevabı düşürmez."""
+    from . import editorial_citations
+    if not answer or not editorial_citations.groups(answer):
+        return None
+    try:
+        return editorial_citations.build(question, book_title, answer, check=editorial_citations.page_exists)
+    except Exception as e:  # noqa: BLE001 — atıf denetimi bir iyileştirmedir
+        log.info("editorial citations failed: %s", e)
+        return None
 
 
 def reset_stale(engine: sa.engine.Engine) -> None:
@@ -403,7 +455,7 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
         # Kimlik ya da kitap dışı soru kitap motorunu (dakikalar) beklemez; anında nazik cevap alır.
         # A follow-up like "Peki ya babası?" needs its book context; the standalone
         # scope classifier must not reject it before the conversation is read.
-        reply = scope_reply(q, chat) if not history else None
+        reply = scope_reply(q, chat, book_title) if not history else None
         if reply:
             done = _now()
             with engine.begin() as conn:
@@ -412,7 +464,9 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                     elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
             return
         from . import editorial_cards
-        selection = editorial_cards.card_answer(q, book_title, chat) if not history else None
+        # Kart seçimi kütüphane düzeyinde kitap arayan soru içindir; bir kitap seçiliyken soru o kitap
+        # hakkındadır (09-28: «bu kitabı önerir misin» sorusuna «kartı aşağıda» dönüyordu).
+        selection = editorial_cards.card_answer(q, book_title, chat) if not history and not book_title else None
         if selection is not None:
             done = _now()
             with engine.begin() as conn:
@@ -420,6 +474,30 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                     status="bitti", answer=selection['answer'], card_selection=selection, not_found=False,
                     elapsed_ms=int((done-started).total_seconds()*1000), finished_at=done))
             return
+        # Hızlı yol: kitabın kayıtlarından tek model çağrısı (saniyeler). Kayıt yetmezse ya da yol kapalıysa
+        # soru sohbet ajanına (dakikalar) düşer; hızlı yolun hatası soruyu düşürmez.
+        with engine.begin() as conn:
+            conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(status="calisiyor"))
+        started = _now()
+        quick = None
+        try:
+            quick = editorial_cards.quick_answer(q, book_title, history)
+        except Exception as e:  # noqa: BLE001
+            log.info("editorial quick answer unavailable, falling back: %s", str(e)[:200])
+        if quick and quick.get("handled") and quick.get("answer"):
+            answer = plain(scrub(quick["answer"]) or quick["answer"]) or quick["answer"]
+            done = _now()
+            not_found = answer.lstrip().startswith(NOT_FOUND)
+            citations = _citations_checked(q, book_title, answer)
+            with engine.begin() as conn:
+                conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(
+                    status="bitti", answer=answer, error=None, not_found=not_found, citations=citations,
+                    graph=(editorial_cards.character_graph(q, book_title, answer, chat)
+                           if not not_found else None),
+                    elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
+            return
+        if quick is not None:
+            log.info("editorial quick answer declined (%s); asking the book agent", quick.get("reason"))
         # Motor tek modelle çalışır; sıraya girilir. Bekleyen soru «bekliyor» kalır, koşan «çalışıyor».
         with _gate:
             with engine.begin() as conn:
@@ -433,9 +511,12 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                 answer, err = None, (str(e) if isinstance(e, BookAskError) else UNAVAILABLE)[:580]
             done = _now()
             not_found = bool(answer and answer.lstrip().startswith(NOT_FOUND))
+            # Süre ölçümü motorun cevabıdır; atıf denetimi (kart servisine birkaç kısa istek) ondan sonra gelir.
+            citations = _citations_checked(q, book_title, answer)
             with engine.begin() as conn:
                 conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(
                     status="bitti" if answer else "hata", answer=answer, error=err, not_found=not_found,
+                    citations=citations,
                     graph=(editorial_cards.character_graph(q, book_title, answer, chat)
                            if answer and not not_found else None),
                     elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))

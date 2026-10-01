@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "anonymousRoomReadDenied": true,
+  "authenticatedReads": 25,
+  "concurrentMessages": 6,
+  "elapsedMs": 5696,
+  "charactersPerMessage": 44806,
+  "messagesMatchIndependentMongo": true
+}

@@ -29,7 +29,7 @@ TITLES = {
     "fiyat": ("Logo satış fiyat listesi", "Bugün geçerli TL satış fiyatları; genel liste = cari özel kodu boş."),
     "cariler": ("Logo cari kartları", "Bayinin Logo kaydı (telefon, şehir)."),
     "bayi_satisi": ("Logo bayi × kitap faturalı satış", "Faturalı net adet (7,8,9 satış − 2,3 iade), yıl kopyası başına."),
-    "bayi_aylik": ("Logo bayi × ay faturalı satış", "Ay başına faturalı net adet ve net ciro (LINENET), yıl kopyası başına."),
+    "bayi_aylik": ("Logo bayi × ay faturalı satış", "Ay başına faturalı net adet ve net ciro (VATMATRAH), yıl kopyası başına."),
 }
 
 NOT_RAKAM = ("page", "pageSize", "items[].calendar", "school.kurumTipiKod", "school.kademeKod", "school.kurumTuruKod",

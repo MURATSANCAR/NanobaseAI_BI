@@ -195,8 +195,7 @@ def test_assets_are_validated_and_warnings_follow(engine):
                                                                {"tip": "studio", "job": "j1", "sid": "s_0123abcd"}]}, _st())
     assert len(ok["assets"]) == 1
     kods = {w["kod"] for w in ok["uyarilar"]}
-    assert "gorsel-yok" not in kods and "lisans" in kods
-    assert "lisans" not in {w["kod"] for w in S.get_post(engine, T, p["id"], _st(licensePending=False))["uyarilar"]}
+    assert "gorsel-yok" not in kods and "lisans" not in kods          # görsel modelin ticari lisansı alındı (2026-09-29)
 
 
 def test_every_write_leaves_history(engine):
@@ -380,7 +379,7 @@ def test_package_has_text_info_images_and_notes(engine):
     assert {"metin.txt", "bilgi.txt", "OKUBENI.txt", "01-kare-gorsel.png"} <= names
     assert z.read("metin.txt").decode().strip().endswith("#kitap")
     readme = z.read("OKUBENI.txt").decode()
-    assert "2. görsel kaynağında bulunamadı" in readme and "lisans" in readme and "kendiliğinden" in readme
+    assert "2. görsel kaynağında bulunamadı" in readme and "lisans" not in readme and "kendiliğinden" in readme
 
 
 # ------------------------------------------------------------------ yetki

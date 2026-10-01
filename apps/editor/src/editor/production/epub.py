@@ -1450,7 +1450,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
         if gap:
             raise ValueError(gap)
     ms, spec = studio._manuscript(d), studio._spec(d)
-    front = studio.read(d, "front.json") or {}
+    front = studio.refresh_kunye(d) or {}          # künye kuralı değiştiyse eski işte de güncel künye basılır
     m = meta(d)
     eisbn, pisbn = m.get("eisbn"), print_isbn(d, ms)
     uid = uid_of(d, eisbn)

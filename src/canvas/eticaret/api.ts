@@ -7,7 +7,7 @@ export type WithK = { kaynaklar?: Kaynaklar };
 
 /** M34 E-ticaret ve platform yönetimi ekranlarının köprü uçları: /api/v1/eticaret/*. Portal hiçbir sisteme yazmaz. */
 
-export type DiffKind = 'hak' | 'fiyat' | 'stok' | 'aktiflik' | 'barkod' | 'ad' | 'eksik_kart';
+export type DiffKind = 'hak' | 'fiyat' | 'perakende' | 'stok' | 'aktiflik' | 'barkod' | 'ad' | 'eksik_kart';
 export type DiffState = 'acik' | 'sonra' | 'bilincli' | 'duzeltildi' | 'kapandi';
 export type MarkState = Exclude<DiffState, 'kapandi'>;
 
@@ -40,6 +40,8 @@ export type Diff = {
   crm: string | null;
   logo: string | null;
   site: string | null;
+  /** Yalnız «D&R fiyat farkı»nda: D&R satış fiyatı, liste fiyatı ve indirimi (D&R kataloğunun son görüntüsü). */
+  dr?: string | null;
   aciklama: string | null;
   etki: number;
   ilkGoruldu: string | null;
@@ -204,6 +206,7 @@ export const fmtWhen = (v: string | null | undefined) => (v ? dtFmt.format(new D
 export const KIND_TONE: Record<DiffKind, 'ok' | 'warn' | 'err' | 'muted' | 'violet'> = {
   hak: 'err',
   fiyat: 'warn',
+  perakende: 'warn',
   stok: 'warn',
   aktiflik: 'violet',
   barkod: 'violet',

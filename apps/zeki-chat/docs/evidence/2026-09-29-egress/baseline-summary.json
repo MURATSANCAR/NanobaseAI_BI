@@ -1,0 +1,13 @@
+{
+  "durationSeconds": 180,
+  "capture": "container network namespace, packet metadata only",
+  "outboundDestinations": {
+    "172.23.0.2.27017": 724,
+    "172.23.0.1.38040": 4
+  },
+  "captureStatus": [
+    "1387 packets captured",
+    "1387 packets received by filter",
+    "0 packets dropped by kernel"
+  ]
+}

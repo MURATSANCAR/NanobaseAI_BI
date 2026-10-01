@@ -24,11 +24,12 @@ _HEADING = re.compile(r"^[A-ZÇĞİÖŞÜ0-9 ,.'’!?-]{6,60}$")
 
 # --------------------------------------------------------------- chapters
 def chapters(generation_id: str) -> list[dict]:
-    """Chapters from upper-case headings at the top of a page that is followed by
-    body text on the same page (title pages and imprint lines are not chapters).
-    Consecutive heading paragraphs are one title ("TABLET PEŞİNDE" + "BİR GÜN")."""
+    """Chapters from the book's own typesetting (`editor.chapters`: point size, sunk chapter
+    openings, title pages). Without the PDF, upper-case headings at the top of a page that is
+    followed by body text on the same page (`chapters_from_pages`)."""
+    from . import chapters as typeset
     pages = source.read(generation_id)
-    return chapters_from_pages(pages)
+    return typeset.for_generation(generation_id, pages) or chapters_from_pages(pages)
 
 
 def chapters_from_pages(pages: list[dict]) -> list[dict]:
@@ -371,7 +372,107 @@ def save_emotion(generation_id: str, character: str, page: int, emotion: str, in
 
 
 # ------------------------------------------------------ identity merge
-async def resolve_character_identity(generation_id: str) -> dict:
+def _identity_error_is_deterministic(e: BaseException) -> bool:
+    """Would the same identity request fail the same way again? A request larger than the
+    context, an answer that runs out of room, a model answer that breaks the partition contract
+    three times, a window plan with no room: yes — retrying the activity only repeats it (the
+    2026-09-23/24 failures were four identical 400s per book). A busy card or a dropped
+    connection: no — the activity retry is the right answer to those."""
+    from .llm import ContextOverflow, ModelError
+    if isinstance(e, (ContextOverflow, ValueError)):          # BudgetError, JSONDecodeError too
+        return True
+    if isinstance(e, ModelError):
+        text = str(e)
+        return "gpu_busy" not in text and ("finish_reason=length" in text or ": 400 " in text
+                                           or text.startswith("400 ") or "context length" in text.lower())
+    return False
+
+
+# Each fallback halves the reading window: 1/2, then 1/4 of the budget and of the mentions a
+# window may carry. Measured sizes are what the budget already reads; this only answers "the
+# estimate was not enough" (a critic call, a reconciliation, an answer longer than expected).
+IDENTITY_FALLBACK_SHRINKS = (1, 2)
+
+
+async def _propose_identity(generation_id: str, ms: list[dict], corrections: str,
+                            final_attempt: bool) -> tuple[dict | None, int | None, dict]:
+    """identity.propose_book, and when it cannot finish, the same over smaller windows. Returns
+    (None, None, audit) when no reading produced a partition: the caller then leaves every mention
+    unresolved and puts the book in front of the editor, instead of ending the whole reading.
+    A transient failure is re-raised for the activity retry, except on its final attempt."""
+    from . import identity
+    tried: list[dict] = []
+    for shrink in (0, *IDENTITY_FALLBACK_SHRINKS):
+        try:
+            out, call_id, audit = await identity.propose_book(generation_id, ms, corrections, shrink=shrink)
+        except Exception as e:  # noqa: BLE001 - classified below; nothing is swallowed silently
+            if not (_identity_error_is_deterministic(e) or final_attempt):
+                raise
+            tried.append({"shrink": shrink, "error": f"{type(e).__name__}: {str(e)[:600]}"})
+            continue
+        if tried:
+            audit = {**audit, "fallback": tried}
+        return out, call_id, audit
+    return None, None, {"policy": identity.POLICY, "failed": True, "fallback": tried}
+
+
+def _identity_unresolved(generation_id: str, ms: list[dict], audit: dict) -> dict:
+    """No partition could be read: the mentions stay unresolved (as they already are), and one
+    CHARACTER_IDENTITY question goes to the editor's queue with the reason, citing the book's own
+    mention quotes. The reading goes on; the book cannot be accepted while the question is open
+    (OPEN_EDITOR_REVIEW)."""
+    reason = "; ".join(t["error"] for t in audit.get("fallback", []))[:1500] or "bilinmeyen"
+    with db.tx() as c:
+        evs, seen = [], set()
+        for m in ms:
+            if m["page_no"] in seen:
+                continue
+            e = c.execute("SELECT evidence_id FROM character_mention WHERE id=%s", (m["id"],)).fetchone()
+            if e:
+                seen.add(m["page_no"])
+                evs.append((str(e["evidence_id"]), True, m["page_no"]))
+            if len(evs) >= 8:
+                break
+        cid = ledger.save_claim(
+            c, generation_id, kind="CHARACTER_IDENTITY", subject="Karakter kimlikleri",
+            claim=f"Karakter kimlikleri otomatik birleştirilemedi; {len(ms)} karakter anması çözülmeden "
+                  "bırakıldı. Kişiler editör incelemesiyle belirlenmeli.",
+            evidence=evs, confidence=0.0, created_by="knowledge:identity",
+            payload={"identity_failed": True, "identity_audit": audit})
+        if cid:
+            ledger.queue_review(c, generation_id, claim_id=cid, priority=1,
+                                reason=f"Karakter kimliği birleştirilemedi: {len(ms)} anma çözülmedi ({reason})")
+    return {"characters": 0, "confirmed": 0, "unresolved_mentions": len(ms), "conflicts": 0,
+            "names_refused": 0, "entities_refused": [], "list": [], "identity_failed": True,
+            "review_queued": bool(cid), "identity_audit": audit}
+
+
+def identity_unresolved(generation_id: str, error: str) -> dict:
+    """The workflow's last resort when the identity activity itself could not finish (a timeout,
+    a crash after every retry): the same editor question as `_identity_unresolved`, over the
+    mentions that are still unresolved."""
+    ms = db.all_rows(
+        "SELECT cm.id, cm.page_no FROM character_mention cm WHERE cm.generation_id=%s"
+        " AND cm.character_id IS NULL AND cm.via IN ('TEXT','BOTH') ORDER BY cm.page_no, cm.id",
+        generation_id)
+    if not ms:
+        return {"characters": 0, "identity_failed": True, "unresolved_mentions": 0, "review_queued": False}
+    return _identity_unresolved(generation_id, ms, {"failed": True, "fallback": [{"error": error[:1500]}]})
+
+
+def _book_contributors(c, generation_id: str) -> list[str]:
+    """Authors and illustrators from the publisher's CRM record, when the book has one."""
+    if not c.execute("SELECT to_regclass('ed.book_crm_record') AS t").fetchone()["t"]:
+        return []
+    r = c.execute("SELECT r.authors, r.illustrators FROM book_crm_record r JOIN book_version bv"
+                  " ON bv.book_id=r.book_id JOIN generation g ON g.book_version_id=bv.id WHERE g.id=%s",
+                  (generation_id,)).fetchone()
+    if not r:
+        return []
+    return [str(x) for x in list(r["authors"] or []) + list(r["illustrators"] or []) if x]
+
+
+async def resolve_character_identity(generation_id: str, final_attempt: bool = False) -> dict:
     """Names are resolved from the TEXT only. The model groups text mentions; the
     alias list is not the model's to write: it is exactly the set of names under
     which the merged mentions occur in the book, so a figure label or a note can
@@ -385,10 +486,23 @@ async def resolve_character_identity(generation_id: str) -> dict:
         mentions stay unresolved;
       * an alias must be written the way the book writes a name (capitalised in the
         middle of a sentence), so a pronoun or a common noun cannot become a second name;
-      * an alias cannot be another character's canonical name in this generation.
+      * an alias cannot be another character's canonical name in this generation;
+      * an alias written with no other name of the character on any page of the book has
+        nothing in the book that joins the two names (naming.screen_shared_evidence).
     A refused name does not just disappear from the list: the mentions that carried it
     are exactly the ones that pointed at the wrong person, so they go back to unresolved
-    instead of staying attached to this character."""
+    instead of staying attached to this character.
+
+    A person whose every mention is on a page about the book rather than in it (an author's
+    or illustrator's note, a title page — naming.paratext_pages) is not written as a character.
+
+    `first_page` stays the page a character is first named on; the pages its DESCRIPTION rests
+    on are chosen separately (naming.description_pages) and stored as traits.description_pages,
+    first in the identity claim's evidence — a cast page that prints only names is not the
+    source of what the description says.
+
+    When no proposal can be read at all (every fallback of `_propose_identity` failed) the
+    mentions stay unresolved, the editor gets one question, and the reading goes on."""
     ms = db.all_rows(
         "SELECT cm.id, cm.page_no, cm.surface_name, cm.confidence, e.quote FROM character_mention cm"
         " JOIN evidence e ON e.id=cm.evidence_id WHERE cm.generation_id=%s AND cm.character_id IS NULL"
@@ -399,9 +513,12 @@ async def resolve_character_identity(generation_id: str) -> dict:
         return {"characters": 0}
     short = {str(m["id"]): f"m{i}" for i, m in enumerate(ms)}
     back = {v: k for k, v in short.items()}
-    from . import identity
-    # any length: one call when the book fits, else window by window (identity.propose_book)
-    out, call_id, audit = await identity.propose_book(generation_id, ms, corrections_text(generation_id))
+    # any length: one call when the book fits, else window by window (identity.propose_book);
+    # smaller windows when that cannot finish; the editor's queue when nothing can
+    out, call_id, audit = await _propose_identity(generation_id, ms, corrections_text(generation_id),
+                                                  final_attempt)
+    if out is None:
+        return _identity_unresolved(generation_id, ms, audit)
     # a windowed audit lists every window; each claim keeps a short form and its own windows
     claim_audit = audit if not audit.get("windowed") else {
         k: audit[k] for k in ("policy", "windowed", "mentions_unresolved") if k in audit} | {
@@ -450,9 +567,29 @@ async def resolve_character_identity(generation_id: str) -> dict:
         verdicts = naming.screen_group_names(
             [{k: p[k] for k in ("canonical", "aliases", "entity_scope")} for p in plans],
             written_text, min_share=st.proper_name_min_share, min_uses=st.proper_name_min_uses)
+        # two written names are one person only where the book joins them
+        verdicts = naming.screen_shared_evidence(verdicts, idx.raw)
+        # ---- pages about the book, not in it (author/illustrator notes, title pages)
+        role_pages = [r["page_no"] for r in c.execute(
+            "SELECT page_no FROM page_role WHERE generation_id=%s AND role IN ('NON_STORY','FRONT_MATTER')",
+            (generation_id,)).fetchall()]
+        last_page = max(idx.raw) if idx.raw else 0
+        paratext = naming.paratext_pages(idx.raw, role_pages, _book_contributors(c, generation_id), last_page)
+        # the characters' names say WHO; none of them says what a description says (a relation
+        # word a mention was called by — «torunu» — is left in: it is part of the description)
+        name_words = {w for v in verdicts if v["person"] for n in (v["canonical"], *v["aliases"])
+                      for w in naming.words(n)}
         # ---- second pass: write the characters that survived, with the names that survived
         for plan, verdict in zip(plans, verdicts):
             ch, mids = plan["ch"], plan["mids"]
+            named_on = {by_id[m]["page_no"] for m in mids}
+            if verdict["person"] and (named_on <= paratext or (
+                    ch.get("book_role") == "ABOUT_THE_BOOK"
+                    and all(naming.edge_page(p, last_page) for p in named_on))):
+                # named only where the book talks about itself: its maker, or the maker's dog.
+                # The reader's ABOUT_THE_BOOK alone is not enough: the person must also be named
+                # nowhere but the book's first or last pages, so a story person it misread stays.
+                verdict = {**verdict, "person": False, "reject_reason": naming.PARATEXT_ONLY}
             if not verdict["person"]:
                 # Not a person: no character row at all, so nothing — a drawing, an event
                 # actor, a graph edge — can be attached to it later. The mentions and their
@@ -462,7 +599,8 @@ async def resolve_character_identity(generation_id: str) -> dict:
                               " resolution='UNRESOLVED' WHERE id=%s", (m,))
                 loosened.update(mids)
                 refused.append({"name": plan["canonical"], "reason": verdict["reject_reason"],
-                                "entity_scope": plan["entity_scope"], "mentions": len(mids)})
+                                "entity_scope": plan["entity_scope"], "mentions": len(mids),
+                                "pages": sorted({by_id[m]["page_no"] for m in mids})[:12]})
                 continue
             aliases = verdict["aliases"]
             dropped_keys = {naming.key(d["name"]) for d in verdict["dropped"]}
@@ -483,8 +621,16 @@ async def resolve_character_identity(generation_id: str) -> dict:
             # One page can explicitly identify a person; keep the independent
             # identity audit and conflict checks, without a page-count veto.
             status = "CONFIRMED" if conf >= 0.85 and ch["entity_scope"] == "INDIVIDUAL" and not (set(mids) & conflicted) else "CANDIDATE"
+            # where the description is written, apart from where the name first appears
+            desc_pages = naming.description_pages(ch.get("description") or "", idx.raw, pages, name_words)
+            # The claim states the description, so it cites the pages the description rests on;
+            # without such pages, the first mentions as before. Every mention stays linked to the
+            # character either way (character_mention), first_page included.
+            rank = {p: i for i, p in enumerate(desc_pages)}
+            cited = sorted((m for m in mids if by_id[m]["page_no"] in rank) if rank else mids,
+                           key=lambda m: (rank.get(by_id[m]["page_no"], 0), by_id[m]["page_no"]))
             evs = []
-            for m in mids[:8]:
+            for m in cited[:8]:
                 e = c.execute("SELECT evidence_id FROM character_mention WHERE id=%s", (m,)).fetchone()
                 evs.append((str(e["evidence_id"]), True, by_id[m]["page_no"]))
             cid = ledger.save_claim(
@@ -494,6 +640,7 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 evidence=evs, confidence=conf, created_by="knowledge:identity", model_call_id=call_id,
                 payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status,
                          "identity_audit": claim_audit, "names_refused": verdict["dropped"],
+                         "first_page": pages[0], "description_pages": desc_pages,
                          **({"windows": ch["windows"]} if ch.get("windows") else {})})
             row = c.execute(
                 "INSERT INTO character(generation_id, canonical_name, aliases, description,"
@@ -503,13 +650,14 @@ async def resolve_character_identity(generation_id: str) -> dict:
                  ch.get("kind") or "UNKNOWN",
                  db.J({**{k: ch.get(k) or "UNKNOWN" for k in ("sex", "age_band", "entity_scope")},
                        "name_origin": name_origin, "descriptive_labels": labels,
-                       "names_refused": verdict["dropped"]}))).fetchone()
+                       "names_refused": verdict["dropped"], "description_pages": desc_pages}))).fetchone()
             for m in mids:
                 sure = float(by_id[m]["confidence"]) >= 0.75 and conf >= 0.75 and m not in conflicted
                 c.execute("UPDATE character_mention SET character_id=%s, resolution=%s WHERE id=%s",
                           (row["id"], "RESOLVED" if sure else "UNCERTAIN", m))
             made.append({"name": canonical, "aliases": aliases, "status": status, "confidence": conf,
-                         "pages": pages[:12], "names_refused": verdict["dropped"]})
+                         "pages": pages[:12], "description_pages": desc_pages,
+                         "names_refused": verdict["dropped"]})
             if status != "CONFIRMED" and len(pages) >= 3 and cid:
                 ledger.queue_review(c, generation_id, claim_id=cid, priority=2,
                                     reason=f"Karakter kimliği kesinleşmedi ({conf:.2f}): "

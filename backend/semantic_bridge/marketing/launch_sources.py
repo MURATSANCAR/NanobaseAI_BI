@@ -12,7 +12,8 @@ Tanımlar mevcut ekranlarla aynıdır, yeniden yazılmadı:
 - **Bekleyen ürün:** CRM «Bekleyen Ürün» (`new_bekleyenurunBase`, durum 1 = Bekleyen), ürün → stok kodu
   `ProductBase.ProductNumber`. Açık siparişten ayrı satır, ayrı etiket.
 - **Faturalı satış (Logo):** M46 `budget_sources.sales_sql` ile aynı satır tanımı (faturalı, iptalsiz malzeme satırı;
-  TRCODE 7/8/9 satış, 2/3 iade eksi; net ciro = LINENET), gün kırılımıyla. Yıl → firma `L_CAPIPERIOD`. Stok kodları önce
+  TRCODE 7/8/9 satış, 2/3 iade eksi; net ciro = VATMATRAH, dönem fatura tarihi), gün kırılımıyla. Yıl → firma
+  `L_CAPIPERIOD`. Stok kodları önce
   `ITEMS`'tan kayıt numarasına çevrilir (satış görünümlerindeki «IN listesi planı bozar» tuzağına düşmemek için STLINE
   `STOCKREF` ile süzülür). Veri sonu = `budget_sources.data_end_sql`.
 - **Depo stoku:** Baskı Öneri'nin `logo_depo_stok.sql` görünümü olduğu gibi ve süzgeçsiz; kitap Python'da boşluk/harf
@@ -145,15 +146,16 @@ def items_sql(firm: str, codes: Iterable[str]) -> str:
 def daily_sales_sql(firm: str, refs: Iterable[int], frm: date, to: date) -> str:
     """Kitap × gün faturalı net adet ve net ciro; [frm, to] kapalı aralık. Satır tanımı M46 `sales_sql` ile aynı."""
     return f"""
--- Faturalı satış satırları (M46 tanımı), gün kırılımı; iade eksi. Net ciro = LINENET.
-SELECT S.STOCKREF AS ref, CAST(S.DATE_ AS DATE) AS gun,
+-- Faturalı satış satırları (M46 tanımı), gün kırılımı; iade eksi. Net ciro = VATMATRAH.
+SELECT S.STOCKREF AS ref, CAST(SH.DATE_ AS DATE) AS gun,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro
 FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
   AND S.STOCKREF IN ({_ints(refs)})
-  AND S.DATE_ >= '{frm.isoformat()}' AND S.DATE_ < '{(to + timedelta(days=1)).isoformat()}'
-GROUP BY S.STOCKREF, CAST(S.DATE_ AS DATE)""".strip()
+  AND SH.DATE_ >= '{frm.isoformat()}' AND SH.DATE_ < '{(to + timedelta(days=1)).isoformat()}'
+GROUP BY S.STOCKREF, CAST(SH.DATE_ AS DATE)""".strip()
 
 
 def stock_key(v: Any) -> str:

@@ -72,7 +72,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def st() -> dict[str, Any]:
         return PR.settings(admin_mod.conf)
 
-    crm = S.Crm(lambda: admin_mod.conf("CRM_SCHEMA") or "Timas_MSCRM.dbo", lambda: st()["crmRoles"])
+    crm = S.Crm(lambda: admin_mod.conf("CRM_SCHEMA") or "Timas_MSCRM.dbo", lambda: st()["crmRoles"],
+                motor=lambda: (rt().store.engine, rt().settings.tenant_id))
     pool = ThreadPoolExecutor(max_workers=max(1, int(os.environ.get("PR_JOB_WORKERS", "2"))), thread_name_prefix="pr")
     started = {"stale": False}
     lock = threading.Lock()
@@ -81,6 +82,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         """Köprü açılışında medya kişileri ve haber arşivi arkada okunur: kişiler ekranını ilk açan CRM'i beklemesin."""
         if HK.sqlite_mi(rt().store.engine):
             return
+        crm.month_books_isit(*_month(""))   # ana sayfanın bu ayki kitapları (tablodaki kayıt tazeyse okunmaz)
         crm.media_contacts()
         crm.archive()
 
@@ -201,6 +203,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             books = await run_in_threadpool(crm.month_books, frm, to, yenile)
         except S.SourceError as e:
             err = f"CRM okunamadı: {e}"
+        # Portal okumaları ve sorgu bilgisi iş parçacığında: olay döngüsü eşzamanlı açılan diğer ekranları bekletmesin.
+        return await run_in_threadpool(_home, engine, tenant, frm, to, books, err)
+
+    def _home(engine, tenant: str, frm: date, to: date, books: list[dict[str, Any]], err: Optional[str]) -> dict[str, Any]:
         kits = PR.list_kits(engine, tenant, books=[b["kitapId"] for b in books]) if books else []
         by_book: dict[str, dict[str, Any]] = {}
         for k in kits:

@@ -244,6 +244,8 @@ def _fold(parts: list[dict]) -> dict:
             'kind': _majority(parts, 'kind', 'OTHER'), 'sex': _majority(parts, 'sex', 'UNKNOWN'),
             'age_band': _majority(parts, 'age_band', 'UNKNOWN'),
             'entity_scope': _majority(parts, 'entity_scope', 'UNKNOWN'),
+            # about the book only if no part saw the person in the story
+            'book_role': 'ABOUT_THE_BOOK' if all(c.get('book_role') == 'ABOUT_THE_BOOK' for c in parts) else 'STORY',
             'aliases': list(dict.fromkeys(a for c in parts for a in (c.get('aliases') or []))),
             'identity_confidence': min(float(c.get('identity_confidence') or 0) for c in parts),
             'merge_basis': basis[:600],
@@ -368,7 +370,8 @@ async def cross_window(gid: str, chars: list[dict], by_mid: dict[str, dict], boo
     return out, info
 
 
-async def propose_book(gid: str, mentions: list[dict], corrections: str = '') -> tuple[dict, int, dict]:
+async def propose_book(gid: str, mentions: list[dict], corrections: str = '',
+                       shrink: int = 0) -> tuple[dict, int, dict]:
     """`propose` for a book of any length. Fits (the proposal AND its critic, and no more mentions
     than the answer may list): exactly `propose`. Otherwise window by window over the pages that
     carry mentions, then:
@@ -378,7 +381,13 @@ async def propose_book(gid: str, mentions: list[dict], corrections: str = '') ->
       * cross-window: groups that share no mention are joined only on the model's proposal under
         code guards and a verbatim quote (cross_window).
     Ids in the answer are the caller's ids (m<i> over `mentions`), as with `propose`.
-    A window that fails leaves its mentions unresolved and is listed; it does not end the book."""
+    A window that fails leaves its mentions unresolved and is listed; it does not end the book.
+
+    `shrink` = k > 0 is the fallback when a reading could not finish (knowledge._propose_identity):
+    never the single call, and every window gets 1/2**k of the input budget and of the mentions
+    it may carry — an estimate that let a request through which then did not fit (the critic's
+    call is larger than the proposal's, an answer longer than its budget) is answered by
+    reading less at once, not by failing the book."""
     from . import budget
     pages = source.read(gid)
     by_page = {p['page_no']: p for p in pages}
@@ -391,8 +400,11 @@ async def propose_book(gid: str, mentions: list[dict], corrections: str = '') ->
     f = await budget.fit('book-director', body + '\n'.join(lines), 12000)
     cap = budget.list_cap(schemas.IDENTITY, 'unresolved_mention_ids')
     room = budget.items_room(cap)
-    if f.fits and (room is None or len(mentions) <= room):
+    if not shrink and f.fits and (room is None or len(mentions) <= room):
         return await propose(gid, mentions, corrections)
+    div = 2 ** max(0, int(shrink))
+    if div > 1:
+        room = max(1, (room if room is not None else len(mentions)) // div)
     on_page: dict[int, list[int]] = {}
     for i, m in enumerate(mentions):
         on_page.setdefault(m['page_no'], []).append(i)
@@ -405,7 +417,7 @@ async def propose_book(gid: str, mentions: list[dict], corrections: str = '') ->
     except Exception:  # noqa: BLE001 - chapter starts only steer where a window is cut
         starts = []
     breaks = [k for k in range(1, len(relevant)) if any(relevant[k - 1] < s <= relevant[k] for s in starts)]
-    wins = budget.plan(costs, int(f.budget.input * 0.95),
+    wins = budget.plan(costs, int(f.budget.input * 0.95 / div),
                        overhead=2 * budget.estimate(empty + CONTEXT_HEAD, f.ratio),
                        max_units=room, overlap=budget.overlap_pages(), breaks=breaks,
                        pages=[(p, p) for p in relevant], counts=[len(on_page[p]) for p in relevant])

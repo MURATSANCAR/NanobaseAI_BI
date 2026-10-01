@@ -1,0 +1,11 @@
+{
+  "apiCount": 1,
+  "mongoCount": 1,
+  "fieldsCompared": [
+    "_id",
+    "rid",
+    "unread"
+  ],
+  "fullResultMatches": true,
+  "resultSha256": "be7c6b9586088cd9e498ef9e26482429660ffa78375847d1392b8c95a7b0a971"
+}

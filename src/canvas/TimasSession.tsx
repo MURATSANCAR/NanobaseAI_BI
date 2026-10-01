@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import SessionGate from './stitch/SessionGate';
 import GreetingsInbox from './kampus/GreetingsInbox';
+import BookUploadDock from './editorial/BookUploadDock';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, clearAuthBlock } from './engine';
 import { canSeePage, usePageAccess } from './useAdmin';
 import { httpErrorText } from './httpError';
@@ -60,6 +61,8 @@ export default function RequireTimasSession() {
     <>
       <GreetingsInbox />
       <Outlet />
+      {/* Kitap okutma yüklemesi sayfa değişse de sürer; ilerleme her sayfada köşede. */}
+      <BookUploadDock />
     </>
   );
 }

@@ -15,8 +15,9 @@ from semantic_bridge import finance as F
 from semantic_bridge import finance_sources as src
 from semantic_bridge import provenance as P
 
-F_NET = ("Net satış = Σ LINENET (satış: TRCODE 7, 8, 9) − Σ LINENET (iade: TRCODE 2, 3); yalnız faturalı "
-         "(INVOICEREF ≠ 0) malzeme satırları (LINETYPE 0), iptaller hariç. İskonto öncesi = Σ TOTAL.")
+F_NET = ("Net satış = Σ VATMATRAH (satış: TRCODE 7, 8, 9) − Σ VATMATRAH (iade: TRCODE 2, 3); yalnız faturalı "
+         "(INVOICEREF ≠ 0) malzeme satırları (LINETYPE 0), iptaller hariç; dönem fatura tarihi. İskonto öncesi = "
+         "Σ TOTAL.")
 F_BRUT = ("Brüt kâr = maliyeti işlenmiş satırların net satışı − Σ AMOUNT × OUTCOST (OUTCOST ≠ 0); oran = brüt kâr ÷ "
           "maliyetli net satış. Maliyeti işlenmemiş satış marja katılmaz; payı kartın notunda.")
 F_DEGISIM = "Değişim = (bu yıl − geçen yılın aynı dönemi) ÷ geçen yılın aynı dönemi."
@@ -37,13 +38,13 @@ F_NAKIT_GECMIS = ("Geçmiş tahmin ↔ gerçekleşen: tahminin haftalık neti il
                   "çıkışı (açılış fişi hariç); sapma = gerçekleşen − tahmin; ortalama mutlak sapma.")
 F_MIZAN = "Mizan denkliği: seçili ayların bütün hesaplarında |Σ borç − Σ alacak| < 0,01 ₺ ise denk."
 F_MUTABAKAT = ("Mutabakat farkı = muhasebedeki net satış (600–612, eşlemeyle) − fatura satırlarından net satış "
-               "(LINENET kuralı).")
+               "(VATMATRAH kuralı).")
 F_KAPSAM = ("Maliyet kapsamı: maliyetli pay = (net − maliyeti işlenmemiş net) ÷ net; maliyetsiz satır sayısı ve tutarı "
             "ayrıca.")
 F_KURAL = "Kural dışı tutarlar: yansıtma ve kapanış kuralına düşen muhasebe satırlarının hesap sayısı, borç ve alacağı."
 F_ESLEME = ("Eşleme durumu: onaysız tutar = eşlemesi onaylanmamış hesapların kâr etkisi (mutlak); eşlenmemiş = hiçbir "
             "satıra eşlenmemiş hesap sayısı ve tutarı.")
-F_KARLILIK = ("Kârlılık: net = Σ LINENET; iskonto = iskonto öncesi (Σ TOTAL) − net; kesin katkı = maliyetli net − Logo "
+F_KARLILIK = ("Kârlılık: net = Σ VATMATRAH; iskonto = iskonto öncesi (Σ TOTAL) − net; kesin katkı = maliyetli net − Logo "
               "maliyeti (Σ AMOUNT × OUTCOST); yaklaşık katkı = (net − maliyeti bilinmeyen net) − Logo maliyeti − "
               "fiyatlamanın birim maliyetiyle doldurulan maliyet − telif (yaklaşık, yürürlükteki sözleşme oranıyla); "
               "marj = katkı ÷ ilgili net; kapsam = maliyeti bilinen net ÷ net.")

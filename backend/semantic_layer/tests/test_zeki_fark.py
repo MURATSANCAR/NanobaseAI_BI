@@ -25,95 +25,99 @@ from semantic_layer.store.catalog_store import open_store
 
 T, D = "t1", "logo"
 
-NET = "SUM(CASE WHEN STLINE.TRCODE IN (7, 8, 9) THEN STLINE.LINENET ELSE -STLINE.LINENET END)"
+def _plan(**kw):
+    """Finans motorunun sorgu kaydına yazdığı plan sözlüğü (`Plan.to_dict()` biçimi)."""
+    p = {"metrics": ["net_sales"], "dimensions": [], "periods": [["2026-01-01", "2026-10-01"]], "filters": [],
+         "sale_kind": "all", "limit": None, "order_by": None, "descending": True, "derived": [], "having": [],
+         "comparison": None, "crm": None, "logo_report": None, "crm_report": None, "relational_query": None,
+         "analytics": [], "sections": [], "section_title": None, "gaps": [], "coverage": [], "notes": []}
+    p.update(kw)
+    return p
 
 
-def _sq(**kw):
-    slots = [
-        {"term": "net ciro", "semanticType": "METRIC",
-         "mapping": {"entity": "STLINE", "formula": NET, "extra": {"conditions": ["STLINE.INVOICEREF NOT IN (0)"]}}},
-        {"term": "iptal olmayan", "semanticType": "DEFAULT_FILTER",
-         "mapping": {"entity": "STLINE", "column": "CANCELLED", "operator": "IN", "values": ["0"]}},
-    ]
-    q = {"slots": slots + kw.pop("extra_slots", []), "temporal": [{"start": "2026-01-01", "end": "2026-10-01"}]}
-    q.update(kw)
-    return q
+# ================================================================================ ölçü: cevabın planı
 
 
-# ================================================================================ ölçü katalogdan
+def test_target_comes_from_the_answer_plan_with_its_filters_and_sale_kind():
+    t, why = V.target_of(_plan(filters=[["channel", "eq", "TOPTAN"]], sale_kind="wholesale"))
+    assert why is None and t.olcu == "net_sales" and t.birim == "₺" and t.ad == "Net satış tutarı"
+    assert (t.bas, t.bit) == (date(2026, 1, 1), date(2026, 10, 1))
+    assert t.filtreler == (("channel", "eq", "TOPTAN"),) and t.satis_turu == "wholesale"
+    assert V.hint(_plan()) == {"ok": True, "olcu": "Net satış tutarı", "birim": "₺", "bas": "2026-01-01", "bit": "2026-10-01"}
+    assert V.plan_of({"engine": "finance_contract_v1", "plan": _plan()}) == _plan(), "sorgu kaydındaki plan okunur"
+    leaf = V.leaf_plan(t, "book", date(2025, 1, 1), date(2025, 9, 18))
+    assert leaf.metrics == ("net_sales",) and leaf.dimensions == ("book",)
+    assert leaf.periods == (("2025-01-01", "2025-09-18"),), "karşı dönem kendi tarihleriyle yürütücüye gider"
+    assert leaf.filters == (("channel", "eq", "TOPTAN"),) and leaf.sale_kind == "wholesale"
 
 
-def test_measure_comes_from_catalog_formula_conditions_and_default_scope():
-    m, why = V.measure_of(_sq())
-    assert why is None and m.formul == NET and m.birim == "₺"
-    assert m.kosullar == ["STLINE.INVOICEREF NOT IN (0)", "STLINE.CANCELLED IN (0)"]
-    assert V.hint(_sq()) == {"ok": True, "olcu": "net ciro", "birim": "₺", "bas": "2026-01-01", "bit": "2026-10-01"}
+def test_quantity_metric_is_additive_and_carries_its_unit():
+    t, _ = V.target_of(_plan(metrics=["sold_quantity"]))
+    assert t.birim == "adet"
 
 
-def test_value_filter_on_customer_card_is_carried_and_joins_the_card():
-    kanal = {"term": "toptan", "semanticType": "DIMENSION_VALUE",
-             "mapping": {"entity": "CLCARD", "column": "SPECODE2", "operator": "IN", "values": ["TOPTAN", "O'NEIL"]}}
-    m, _ = V.measure_of(_sq(extra_slots=[kanal]))
-    assert "CLCARD.SPECODE2 IN (N'TOPTAN', N'O''NEIL')" in m.kosullar and m.tablolar == {"CLCARD"}
-    sql = V.dim_sql(m, "kitap", date(2026, 1, 1), date(2026, 10, 1))
-    assert "LEFT JOIN CLCARD AS CLCARD" in sql and "LEFT JOIN ITEMS AS ITEMS" in sql
-    assert "STLINE.DATE_ >= '20260101'" in sql and "STLINE.DATE_ < '20261001'" in sql
-    assert "LG_" not in sql, "yıl kopyaları köprünün fiziksel yeniden yazımında çözülür"
-
-
-@pytest.mark.parametrize("formula,expect", [
-    ("SUM(STLINE.LINENET) / NULLIF(SUM(STLINE.AMOUNT), 0)", "toplanabilir"),
-    ("COUNT(DISTINCT STLINE.CLIENTREF)", "toplanabilir"),
-    ("AVG(STLINE.PRICE)", "toplanabilir"),
+@pytest.mark.parametrize("plan,expect", [
+    (_plan(metrics=["invoice_count"]), "toplanabilir satış"),
+    (_plan(metrics=["net_sales", "return_amount"]), "birden çok ölçü"),
+    (_plan(derived=[{"id": "r", "op": "ratio", "left": "a", "right": "b", "scale": 1.0}]), "oran"),
+    (_plan(crm={"entity": "account"}), "rapor ya da CRM"),
+    (_plan(logo_report={"kind": "stock"}), "rapor ya da CRM"),
+    (_plan(periods=[]), "dönem"),
+    (None, "hesap planı yok"),
 ])
-def test_non_additive_measures_are_refused_with_a_reason(formula, expect):
-    q = _sq()
-    q["slots"][0]["mapping"]["formula"] = formula
-    m, why = V.measure_of(q)
-    assert m is None and expect in why
+def test_non_additive_or_non_sales_plans_are_refused_with_a_reason(plan, expect):
+    t, why = V.target_of(plan)
+    assert t is None and expect in why
+    assert V.hint(plan) == {"ok": False, "neden": why}
 
 
-def test_other_tables_missing_period_and_two_measures_are_refused():
-    q = _sq(extra_slots=[{"term": "sipariş", "semanticType": "DIMENSION_VALUE",
-                          "mapping": {"entity": "ORFLINE", "column": "STATUS", "operator": "=", "values": ["1"]}}])
-    assert V.measure_of(q)[0] is None
-    q = _sq(temporal=[])
-    assert V.hint(q)["ok"] is False and "dönem" in V.hint(q)["neden"]
-    q = _sq(extra_slots=[dict(_sq()["slots"][0], term="iade")])
-    assert "birden çok ölçü" in V.measure_of(q)[1]
-    q = _sq()
-    q["slots"][0]["mapping"]["formula"] = "SUM(STLINE.LINENET); DROP TABLE X"
-    assert V.measure_of(q)[0] is None
+def test_comparison_plan_uses_its_metric_and_the_latest_period_as_now():
+    t, _ = V.target_of(_plan(metrics=["net_sales"], periods=[["2025-01-01", "2026-01-01"], ["2026-01-01", "2027-01-01"]],
+                             comparison={"op": "pct_change", "metric": "net_sales", "id": "d", "base_period": 0, "target_period": 1}))
+    assert (t.bas, t.bit) == (date(2026, 1, 1), date(2027, 1, 1))
 
 
 # ================================================================================ ayrıştırma
 
 
-def _runner(calls):
-    cur = {"kanal": [{"anahtar": "Toptan", "ad": "Toptan", "deger": 100, "son": "2026-09-17"},
-                     {"anahtar": "Perakende", "ad": "Perakende", "deger": 50, "son": "2026-09-10"}]}
-    prev = {"kanal": [{"anahtar": "Toptan", "ad": "Toptan", "deger": 60},
-                      {"anahtar": "Perakende", "ad": "Perakende", "deger": 70},
-                      {"anahtar": "Diğer", "ad": "Diğer", "deger": 10}]}
+def _fetch(calls):
+    """Yürütücünün yerine: gün kırılımı veri sonu için, kanal kırılımı iki dönem için."""
+    cur = [{"channel": "Toptan", "net_sales": 100.0}, {"channel": "Perakende", "net_sales": 50.0}, {"channel": None, "net_sales": 0.0}]
+    prev = [{"channel": "Toptan", "net_sales": 60.0}, {"channel": "Perakende", "net_sales": 70.0}, {"channel": "Diğer", "net_sales": 10.0}]
 
-    def run(sql, period):
-        calls.append((sql, period))
-        return cur["kanal"] if period[0].year == 2026 else prev["kanal"]
-    return run
+    def fetch(plan):
+        calls.append(plan)
+        (a, b), = plan.periods
+        if plan.dimensions == ("day",):
+            return [{"day": "2026-09-10", "net_sales": 5.0}, {"day": "2026-09-17", "net_sales": 7.0},
+                    {"day": "2026-09-30", "net_sales": 0.0}], [f"SELECT gun {a}"]
+        rows = cur if a.startswith("2026") else prev
+        return rows, [f"SELECT {plan.dimensions[0]} {a} {b}"]
+    return fetch
 
 
 def test_decomposition_clips_the_comparison_to_the_data_end_and_ranks_contributions():
     calls = []
-    res = V.for_question(_runner(calls), _sq(), boyutlar=["kanal"])
-    assert res["kirpildi"] is True and res["veriSonu"] == "2026-09-17"
+    res = V.for_plan(_fetch(calls), _plan(), boyutlar=["kanal"])
+    assert res["kirpildi"] is True and res["veriSonu"] == "2026-09-17", "sıfır satırlı gün veri sayılmaz"
     assert res["donem"]["bit"] == "2026-09-18"
     assert res["karsi"]["bas"] == "2025-01-01" and res["karsi"]["bit"] == "2025-09-18"
-    assert calls[1][1] == (date(2025, 1, 1), date(2025, 9, 18)), "karşı dönem kendi tarihleriyle sorulur"
+    assert [c.periods for c in calls] == [(("2026-01-01", "2026-10-01"),), (("2026-01-01", "2026-09-18"),),
+                                          (("2025-01-01", "2025-09-18"),)]
+    assert [c.dimensions for c in calls] == [("day",), ("channel",), ("channel",)]
     assert res["toplam"] == {"simdi": 150.0, "onceki": 140.0, "fark": 10.0, "oran": round(10 / 140, 4)}
     items = res["boyutlar"][0]["kalemler"]
     assert [(i["anahtar"], i["fark"]) for i in items] == [("Toptan", 40.0), ("Perakende", -20.0), ("Diğer", -10.0)]
     assert items[0]["pay"] == 4.0 and items[0]["yon"] == "artis" and items[2]["kayip"] is True
-    assert [s["sql"] for s in res["kaynak"]["sql"]] == [c[0] for c in calls], "çalıştırılan her SQL cevapta"
+    assert len(res["kaynak"]["sql"]) == 3, "çalıştırılan her SQL cevapta"
+    assert res["olcu"]["ad"] == "Net satış tutarı" and res["olcu"]["birim"] == "₺"
+
+
+def test_unknown_comparison_and_unsupported_plan_raise_plain_reasons():
+    with pytest.raises(V.VarianceError, match="gecen-yil"):
+        V.for_plan(_fetch([]), _plan(), karsi="yarin")
+    with pytest.raises(V.VarianceError, match="birden çok"):
+        V.for_plan(_fetch([]), _plan(metrics=["net_sales", "sales_amount"]))
 
 
 def test_previous_period_window_for_whole_months_and_days():
@@ -125,7 +129,7 @@ def test_previous_period_window_for_whole_months_and_days():
 
 
 def test_explanation_numbers_must_come_from_facts():
-    res = V.for_question(_runner([]), _sq(), boyutlar=["kanal"])
+    res = V.for_plan(_fetch([]), _plan(), boyutlar=["kanal"])
     ok = V.explain(res, llm=lambda messages: "Artışı en çok Toptan kanalı sürükledi. Perakende geriledi.")
     assert ok["kaynak"] == "zeki"
     bad = V.explain(res, llm=lambda messages: "Toptan kanalında 999 adet kampanya etkisi var. Başka bir şey yok.")
@@ -170,20 +174,20 @@ def test_threshold_suggestion_follows_the_condition():
 def test_measure_range_reads_history_once_and_clips_to_data_end():
     seen = []
 
-    def run(sql, period):
-        seen.append(period)
-        start = period[0]
-        out = []
-        d = start
+    def fetch(plan):
+        seen.append(plan)
+        (a, _), = plan.periods
+        d, out = date.fromisoformat(a), []
         while d < date(2026, 9, 18):
-            out.append({"gun": d.isoformat(), "deger": 10.0})
+            out.append({"day": d.isoformat(), "net_sales": 10.0})
             d += timedelta(days=1)
-        return out
+        return out, ["SELECT gun"]
 
-    rng = V.measure_range(run, _sq(temporal=[{"start": "2026-09-01", "end": "2026-10-01"}]))
-    assert len(seen) == 1 and seen[0][0] == date(2024, 9, 1)
+    rng = V.measure_range(fetch, _plan(periods=[["2026-09-01", "2026-10-01"]]))
+    assert len(seen) == 1 and seen[0].periods == (("2024-09-01", "2026-10-01"),) and seen[0].dimensions == ("day",)
     assert rng["ok"] is True and rng["kirpildi"] is True and rng["deger"] == 170.0
-    assert "gün gün" in rng["kaynak"]["sql"][0]["sql"]
+    assert rng["kaynak"]["sql"][0]["ad"] == "Gün gün geçmiş"
+    assert V.measure_range(fetch, _plan(metrics=["invoice_count"]))["ok"] is False
 
 
 # ================================================================================ uyarılar

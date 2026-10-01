@@ -256,6 +256,17 @@ def _txt(v: Any, n: int) -> Optional[str]:
     return t[:n] or None
 
 
+_TR_UP = {"i": "İ", "ı": "I"}
+
+
+def _words(v: Any, n: int) -> Optional[str]:
+    """Sınıf adı (kapak, kâğıt): kelime başları büyük, Türkçe i/ı doğru — «karton Kapak» ile «Karton Kapak» tek sınıf."""
+    t = _txt(v, n)
+    if not t:
+        return None
+    return " ".join((_TR_UP.get(w[0], w[0].upper()) + w[1:]) if w else w for w in t.split(" "))
+
+
 def _int(v: Any) -> Optional[int]:
     try:
         return int(float(str(v).strip().replace(",", ".")))
@@ -305,13 +316,17 @@ def basari_row(r: dict[str, Any]) -> Optional[dict[str, Any]]:
         return None
     kat = _txt(r.get("kategori"), 300)
     stok = _int(r.get("depo_stok"))
+    yil = _int(r.get("basimyili")) or None
+    bno = baski_no(r.get("baski_sayisi"))
+    if bno is not None and yil is not None and bno == yil:
+        bno = None          # baskı alanına basım yılı yazılmış («2018. Baskı»); 200+ gerçek baskılar (Nesil 1122.) kalır
     return {"barkod": b, "ad": _txt(r.get("urun_ad"), 400), "yazar": _txt(r.get("yazar"), 300),
             "cevirmen": _txt(r.get("cevirmen"), 300), "yayinevi": _txt(r.get("marka"), 200), "kategori": kat,
             "ust_kategori": ust(kat, "basari"), "sayfa": _int(r.get("sayfasayisi")) or None,
-            "kapak": _txt(r.get("kapak_turu"), 60), "kagit": _txt(r.get("kagit_cinsi"), 60),
-            "basim_yili": _int(r.get("basimyili")) or None, "stok": stok if stok is not None else 0,
+            "kapak": _words(r.get("kapak_turu"), 60), "kagit": _words(r.get("kagit_cinsi"), 60),
+            "basim_yili": yil, "stok": stok if stok is not None else 0,
             "site_stok": None, "fiyat": _num(r.get("satis_fiyat")), "iskonto": _num(r.get("iskonto")), "dr_fiyat": None,
-            "durum": _txt(r.get("stok_durum"), 60), "baski_no": baski_no(r.get("baski_sayisi"))}
+            "durum": _txt(r.get("stok_durum"), 60), "baski_no": bno}
 
 
 def dr_row(r: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -327,7 +342,7 @@ def dr_row(r: dict[str, Any]) -> Optional[dict[str, Any]]:
     ss = _int(r.get("available_stock"))
     return {"barkod": b, "ad": _txt(r.get("name"), 400), "yazar": None, "cevirmen": None,
             "yayinevi": _txt(r.get("brand_name"), 200), "kategori": kat, "ust_kategori": ust(kat, "dr"), "sayfa": None,
-            "kapak": _txt(r.get("characteristic_value"), 60), "kagit": None, "basim_yili": None,
+            "kapak": _words(r.get("characteristic_value"), 60), "kagit": None, "basim_yili": None,
             "stok": _int(r.get("b2bstock")) or 0,
             "site_stok": None if sil or ss is None or ss >= SITE_STOK_TAVAN else ss,
             "fiyat": _num(r.get("list_price")), "iskonto": None, "dr_fiyat": _num(r.get("dr_price")),
@@ -553,6 +568,20 @@ def store_pairs(engine: sa.engine.Engine, tenant: str, pairs: set[tuple[str, str
     return len(pairs)
 
 
+def normalize_classes(engine: sa.engine.Engine, tenant: str) -> int:
+    """Kayıtlı kapak/kâğıt sınıf adlarını `_words` biçimine getirir (ayrıştırma kuralı sonradan değiştiyse eski
+    görüntüdeki «karton Kapak» da «Karton Kapak» olsun). Yalnız farklı olan değerler güncellenir; sayısı döner."""
+    T = TITLES.c
+    n = 0
+    with engine.begin() as c:
+        for col in (T.kapak, T.kagit):
+            for (v,) in c.execute(sa.select(col).where(T.tenant_id == tenant, col.isnot(None)).distinct()).all():
+                w = _words(v, 60)
+                if w != v:
+                    n += c.execute(TITLES.update().where(T.tenant_id == tenant, col == v).values({col.name: w})).rowcount or 0
+    return n
+
+
 def relink(engine: sa.engine.Engine, tenant: str, logo: dict[str, str]) -> int:
     """Logo barkod eşleşmesi değişmişse (yeni kart, silinen barkod) güncel hâldeki stok kodunu yeniler."""
     T = TITLES.c
@@ -730,6 +759,7 @@ def run_all(engine: sa.engine.Engine, tenant: str, run: Runner, firms: dict[int,
             log.warning("pazar dagitim %s okunamadı: %s", k, e)
             out[k] = {"error": str(e)[:300]}
     step("Logo eşleşmesi ve TİMAŞ markaları")
+    out["sinifAdi"] = normalize_classes(engine, tenant)
     out["relink"] = relink(engine, tenant, logo)
     out["timas"] = mark_timas(engine, tenant)
     win = stretch(engine, tenant)
@@ -910,3 +940,139 @@ def summary_stmt(tenant: str, bas: date, son: date):
                       sa.func.sum(O.cikis).label("cikis")).select_from(j)
             .where(O.tenant_id == tenant, O.kaynak == "basari", O.tarih >= bas, O.tarih < son)
             .group_by(T.ust_kategori, T.yayinevi, T.timas, sa.func.substr(sa.cast(O.tarih, sa.String), 1, 7)))
+
+
+# ================================================================================ kanal karnesi, kampanya, e-ticaret
+
+F_KANAL_STOK = ("Kanalda bekleyen stok = son görüntüde TİMAŞ grubu başlıkların Başarı deposundaki stok toplamı; D&R'de "
+                "Prefix B2B stoğu (kitapçılara toptan) ve D&R + İdefix sitelerinin stoğu ayrı toplanır (sitede 999 ve üstü "
+                "yer tutucu değer sayım değildir, toplama girmez). Kanaldan çıkış = seçilen dönemdeki ardışık görüntüler "
+                "arasında Başarı deposundaki TİMAŞ stok düşüşünün toplamı; en az iki görüntü gerekir. Kitapçılara çıkıştır, "
+                "okura satış değildir.")
+F_DR_FIYAT = ("D&R satış fiyatı ve D&R liste fiyatı D&R kataloğunun son görüntüsünden, barkod eşleşmesiyle (stok kodunun "
+              "Logo barkodu ya da kitabın EAN'ı). D&R indirimi = 1 − D&R satış fiyatı ÷ D&R liste fiyatı.")
+
+
+def last_snapshots(engine: sa.engine.Engine, tenant: str) -> dict[str, Optional[date]]:
+    return {k: max(processed(engine, tenant, k), default=None) for k in KAYNAK}
+
+
+def kanal_stok(engine: sa.engine.Engine, tenant: str, *, bas: Optional[date] = None,
+               son: Optional[date] = None) -> dict[str, Any]:
+    """Kanal karnesi: TİMAŞ grubu başlıkların dağıtımcıda (Başarı deposu) ve perakendede (D&R Prefix B2B, D&R + İdefix
+    siteleri) bekleyen stoğu, son görüntü. Başarı'dan çıkış [bas, son] gün aralığına düşen görüntülerden; kesintisiz dizi
+    (en az iki görüntü) yoksa `cikis` None ve `cikisNot` nedenini söyler. Zaman serisi kaynakta yok."""
+    ensure(engine)
+    last = last_snapshots(engine, tenant)
+    T = TITLES.c
+    out: dict[str, Any] = {"sonGoruntu": {k: v.isoformat() if v else None for k, v in last.items()},
+                           "not": NOTLAR["endeks"], "timasNot": NOTLAR["timas"], "drNot": NOTLAR["dr"]}
+    with engine.connect() as c:
+        for k in KAYNAK:
+            d = last[k]
+            if d is None:
+                out[k] = None
+                continue
+            r = c.execute(sa.select(
+                sa.func.count(), sa.func.sum(T.stok), sa.func.sum(sa.case((T.stok > 0, 1), else_=0)),
+                sa.func.sum(T.site_stok), sa.func.count(T.site_stok), sa.func.sum(sa.case((T.site_stok > 0, 1), else_=0)))
+                .where(T.tenant_id == tenant, T.kaynak == k, T.timas.is_(True), T.son_gorulme == d)).one()
+            e = {"tarih": d.isoformat(), "baslik": int(r[0] or 0), "stok": int(r[1] or 0), "stokluBaslik": int(r[2] or 0)}
+            if k == "dr":
+                e.update(siteStok=int(r[3] or 0), siteStokBilinen=int(r[4] or 0), siteStokluBaslik=int(r[5] or 0))
+            out[k] = e
+    out["cikis"], out["cikisNot"] = None, None
+    if out["basari"] is None:
+        out["cikisNot"] = "Başarı kataloğu henüz okunmadı."
+        return out
+    win = stretch(engine, tenant)
+    if not win:
+        out["cikisNot"] = (f"Kanaldan çıkış en az iki günlük görüntü birikince hesaplanır; şu an yalnız "
+                           f"{last['basari'].strftime('%d.%m.%Y')} görüntüsü var. Kaynak geçmiş tutmaz.")
+        return out
+    # Görüntü t'deki gözlem (önceki görüntü, t] arasındaki hareketi taşır; ilk görüntünün gözlemi hareket değildir.
+    a, b = win[0] + timedelta(days=1), win[1] + timedelta(days=1)
+    if bas:
+        a = max(a, bas)
+    if son:
+        b = min(b, son + timedelta(days=1))
+    if a >= b:
+        out["cikisNot"] = (f"Seçilen dönemde ardışık görüntü yok (görüntüler {win[0].strftime('%d.%m.%Y')}–"
+                           f"{win[1].strftime('%d.%m.%Y')}).")
+        return out
+    aylar = outflow(engine, tenant, bas=a, son=b, by="ay", timas=True)
+    out["cikis"] = {"bas": a.isoformat(), "son": (b - timedelta(days=1)).isoformat(),
+                    "cikis": sum(x["cikis"] for x in aylar), "giris": sum(x["giris"] for x in aylar), "aylar": aylar}
+    return out
+
+
+def _dr_info(r: Any, last: Optional[date]) -> dict[str, Any]:
+    fiyat, drf = r.fiyat, r.dr_fiyat
+    ind = round(1 - float(drf) / float(fiyat), 4) if fiyat and drf and fiyat > 0 and drf > 0 else None
+    return {"barkod": r.barkod, "fiyat": fiyat, "drFiyat": drf, "indirim": ind, "durum": r.durum,
+            "siteSatista": str(r.durum or "").startswith("Site: Satışa açık"), "stok": r.stok, "siteStok": r.site_stok,
+            "timas": bool(r.timas), "katalogda": last is not None and r.son_gorulme == last,
+            "son": r.son_gorulme.isoformat() if r.son_gorulme else None}
+
+
+def _dr_rank(x: dict[str, Any]) -> tuple:
+    """Aynı anahtara birden çok D&R satırı düşerse: son görüntüde olan, sonra satış fiyatı dolu, sonra stoğu büyük."""
+    return (x["katalogda"], x["drFiyat"] is not None, x["stok"] or 0)
+
+
+def dr_fiyatlari(engine: sa.engine.Engine, tenant: str, *, codes: Iterable[str] = (),
+                 eans: Iterable[str] = ()) -> dict[str, Any]:
+    """Stok kodu (Logo barkod tablosu üzerinden) ve EAN → D&R fiyat bilgisi (son görüntü): liste, satış fiyatı, indirim,
+    site durumu, TİMAŞ grubu mu. D&R kataloğu hiç okunmadıysa sözlükler boş, `tarih` None."""
+    ensure(engine)
+    last = last_snapshots(engine, tenant)["dr"]
+    by_code: dict[str, dict[str, Any]] = {}
+    by_ean: dict[str, dict[str, Any]] = {}
+    if last is None:
+        return {"kod": by_code, "ean": by_ean, "tarih": None}
+    T, K = TITLES.c, BARKOD.c
+    cols = (T.barkod, T.fiyat, T.dr_fiyat, T.durum, T.stok, T.site_stok, T.timas, T.son_gorulme)
+    code_list = sorted({str(c) for c in codes if c})
+    ean_list = sorted({b for b in (barkod(e) for e in eans) if b})
+    j = TITLES.join(BARKOD, sa.and_(K.tenant_id == T.tenant_id, K.barkod == T.barkod))
+    with engine.connect() as c:
+        for i in range(0, len(code_list), 900):
+            for r in c.execute(sa.select(K.stok_kodu, *cols).select_from(j).where(
+                    T.tenant_id == tenant, T.kaynak == "dr", K.stok_kodu.in_(code_list[i:i + 900]))).all():
+                x = _dr_info(r, last)
+                cur = by_code.get(r.stok_kodu)
+                if cur is None or _dr_rank(x) > _dr_rank(cur):
+                    by_code[r.stok_kodu] = x
+        for i in range(0, len(ean_list), 900):
+            for r in c.execute(sa.select(*cols).where(T.tenant_id == tenant, T.kaynak == "dr",
+                                                      T.barkod.in_(ean_list[i:i + 900]))).all():
+                by_ean[r.barkod] = _dr_info(r, last)
+    return {"kod": by_code, "ean": by_ean, "tarih": last.isoformat()}
+
+
+def dr_timas(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+    """E-ticaret farkları için: TİMAŞ grubu D&R başlıkları, barkod → fiyat bilgisi (son görüntüde olanlar). D&R kataloğu
+    hiç okunmadıysa `tarih` None (fark türü o turda hesaplanmaz)."""
+    ensure(engine)
+    last = last_snapshots(engine, tenant)["dr"]
+    if last is None:
+        return {"ean": {}, "tarih": None}
+    T = TITLES.c
+    with engine.connect() as c:
+        rows = c.execute(sa.select(T.barkod, T.fiyat, T.dr_fiyat, T.durum, T.stok, T.site_stok, T.timas, T.son_gorulme)
+                         .where(T.tenant_id == tenant, T.kaynak == "dr", T.timas.is_(True), T.son_gorulme == last)).all()
+    return {"ean": {r.barkod: _dr_info(r, last) for r in rows}, "tarih": last.isoformat()}
+
+
+#: «D&R zaten indirimde» uyarısının alt sınırı (yuvarlama kuruşu indirim sayılmasın diye %1).
+DR_INDIRIM_ESIK = 0.01
+
+
+def dr_uyari(info: Optional[dict[str, Any]]) -> Optional[str]:
+    """«D&R zaten %X indirimde»: kitap son D&R görüntüsünde, sitede satışa açık ve indirim en az %1 ise."""
+    if not info or not info.get("katalogda") or not info.get("siteSatista"):
+        return None
+    ind = info.get("indirim")
+    if ind is None or ind < DR_INDIRIM_ESIK:
+        return None
+    return f"D&R zaten %{round(ind * 100):.0f} indirimde"

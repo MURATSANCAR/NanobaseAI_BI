@@ -10,6 +10,7 @@ import type { KaynakSorgu, Kaynaklar } from './components/sqlInfo';
  * CFO'nun ekranda görmek istediği rakamlar. Hepsi semantic bridge üzerinden
  * canlı Logo veritabanından okunur; formüller kataloğa doğrulatılmış olanlarla
  * aynıdır (net ciro = fatura seviyesi NETTOTAL, satış TRCODE 7/8/9, iade 2/3).
+ * Fatura sayısı iade faturası içermez (7/8/9; kullanıcı kararı 2026-10-01); iade faturası ayrı sayılır.
  *
  * Logo'da her yıl ayrı firma numarası taşır: 2026 → LG_411, 2021-2025 → LG_211.
  */
@@ -45,13 +46,13 @@ const SQL = {
     ` AND L.[DATE_]>='${year}-01-01' AND L.[DATE_]<'${year + 1}-01-01'` +
     ` GROUP BY IT.[NAME], IT.[CODE] ORDER BY iade_tutar DESC`,
   months: (year: number) =>
-    `SELECT MONTH(I.[DATE_]) AS ay, ${NET} AS net_ciro, COUNT(*) AS fatura FROM ${inv(year)} AS I WHERE ${SALES_FILTER} AND ${range(year)} GROUP BY MONTH(I.[DATE_]) ORDER BY ay`,
+    `SELECT MONTH(I.[DATE_]) AS ay, ${NET} AS net_ciro, SUM(CASE WHEN I.[TRCODE] IN (7,8,9) THEN 1 ELSE 0 END) AS fatura FROM ${inv(year)} AS I WHERE ${SALES_FILTER} AND ${range(year)} GROUP BY MONTH(I.[DATE_]) ORDER BY ay`,
   totals: (year: number) =>
-    `SELECT SUM(CASE WHEN I.[TRCODE] IN (7,8,9) THEN I.[NETTOTAL] ELSE 0 END) AS brut_satis, SUM(CASE WHEN I.[TRCODE] IN (2,3) THEN I.[NETTOTAL] ELSE 0 END) AS iade_tutari, SUM(CASE WHEN I.[TRCODE] IN (2,3) THEN 1 ELSE 0 END) AS iade_fatura, COUNT(*) AS toplam_fatura, MAX(I.[DATE_]) AS son_fatura FROM ${inv(year)} AS I WHERE ${SALES_FILTER} AND ${range(year)}`,
+    `SELECT SUM(CASE WHEN I.[TRCODE] IN (7,8,9) THEN I.[NETTOTAL] ELSE 0 END) AS brut_satis, SUM(CASE WHEN I.[TRCODE] IN (2,3) THEN I.[NETTOTAL] ELSE 0 END) AS iade_tutari, SUM(CASE WHEN I.[TRCODE] IN (2,3) THEN 1 ELSE 0 END) AS iade_fatura, SUM(CASE WHEN I.[TRCODE] IN (7,8,9) THEN 1 ELSE 0 END) AS toplam_fatura, MAX(I.[DATE_]) AS son_fatura FROM ${inv(year)} AS I WHERE ${SALES_FILTER} AND ${range(year)}`,
   units: (year: number) =>
     `SELECT SUM(CASE WHEN L.[TRCODE] IN (7,8,9) THEN L.[AMOUNT] ELSE -L.[AMOUNT] END) AS satilan_adet, COUNT(DISTINCT L.[STOCKREF]) AS baslik_sayisi, COUNT(*) AS satir FROM ${line(year)} AS L WHERE L.[CANCELLED]=0 AND L.[LINETYPE]=0 AND L.[TRCODE] IN (2,3,7,8,9) AND L.[DATE_]>='${year}-01-01' AND L.[DATE_]<'${year + 1}-01-01'`,
   channels: (year: number) =>
-    `SELECT I.[TRCODE] AS trcode, ${NET} AS net_ciro, COUNT(*) AS fatura FROM ${inv(year)} AS I WHERE ${SALES_FILTER} AND ${range(year)} GROUP BY I.[TRCODE] ORDER BY net_ciro DESC`,
+    `SELECT I.[TRCODE] AS trcode, ${NET} AS net_ciro, SUM(CASE WHEN I.[TRCODE] IN (7,8,9) THEN 1 ELSE 0 END) AS fatura FROM ${inv(year)} AS I WHERE ${SALES_FILTER} AND ${range(year)} GROUP BY I.[TRCODE] ORDER BY net_ciro DESC`,
   customers: (year: number) =>
     `SELECT TOP 5 C.[DEFINITION_] AS cari, ${NET} AS net_ciro FROM ${inv(year)} AS I INNER JOIN ${card(year)} AS C ON C.[LOGICALREF]=I.[CLIENTREF] WHERE ${SALES_FILTER} AND ${range(year)} GROUP BY C.[DEFINITION_] ORDER BY net_ciro DESC`,
   topItem: (year: number) =>

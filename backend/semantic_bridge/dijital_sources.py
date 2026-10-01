@@ -14,7 +14,8 @@
 - Kitap geçmişi `new_kitapgecmisi`: baskı sayısı ve kapak adresi; yeni baskı / kapak değişikliği tespiti.
 
 **Logo** (yıllar ayrı firma numarası; `budget_sources.firms_by_year`): faturalı satış satırı (`STLINE`, `LINETYPE 0`,
-`CANCELLED 0`, `INVOICEREF <> 0`, `TRCODE 7/8/9` satış, `2/3` iade eksi; net = `LINENET`). Satış görünümleri
+`CANCELLED 0`, `INVOICEREF <> 0`, `TRCODE 7/8/9` satış, `2/3` iade eksi; net = `VATMATRAH` (KDV matrahı, fatura geneli
+iskonto dahil; dönem fatura tarihi `INVOICE.DATE_` — karar 2026-10-01)). Satış görünümleri
 (`V_SatisRaporu_*`) okunmaz: tanım kokpit ve bütçeyle aynı olsun diye doğrudan `STLINE`. Son 12 ay veri sonundan
 geriye sayılır (pencere ekranda yazılır). E-kitap stok kodlarının
 satışı aynı sorgudan çıkar (kod listesi SQL'e girmez, plan tuzağı yok).
@@ -135,15 +136,16 @@ def history_sql(p: str, since: date) -> str:
 def sales_sql(firm: str, start: date, end: date) -> str:
     """Stok kodu × ay faturalı net adet ve net ciro, [start, end). İade eksi."""
     return f"""
--- Faturalı satış satırları; iade eksi. Net ciro = LINENET.
-SELECT I.CODE AS stok_kodu, YEAR(S.DATE_) AS yil, MONTH(S.DATE_) AS ay,
+-- Faturalı satış satırları; iade eksi. Net ciro = VATMATRAH.
+SELECT I.CODE AS stok_kodu, YEAR(SH.DATE_) AS yil, MONTH(SH.DATE_) AS ay,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro
 FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{firm}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
-  AND S.DATE_ >= '{start.isoformat()}' AND S.DATE_ < '{end.isoformat()}'
-GROUP BY I.CODE, YEAR(S.DATE_), MONTH(S.DATE_)""".strip()
+  AND SH.DATE_ >= '{start.isoformat()}' AND SH.DATE_ < '{end.isoformat()}'
+GROUP BY I.CODE, YEAR(SH.DATE_), MONTH(SH.DATE_)""".strip()
 
 
 # ------------------------------------------------------------------ çalışan sorgunun etiketi (sorgu bilgisi)

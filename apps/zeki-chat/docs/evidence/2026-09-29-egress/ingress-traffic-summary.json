@@ -1,0 +1,13 @@
+{
+  "durationSeconds": 120,
+  "outboundPeerPacketCounts": {
+    "1.1.1.1": 1,
+    "10.254.250.1": 4759,
+    "172.20.0.3": 2563
+  },
+  "captureStatus": [
+    "14085 packets captured",
+    "14097 packets received by filter",
+    "0 packets dropped by kernel"
+  ]
+}

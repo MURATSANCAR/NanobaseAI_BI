@@ -16,6 +16,9 @@ dosya ekleyerek gelir.
   haftalık), `trendyol_import.py` (panel dosyası), `trendyol_client.py` (çevrimdışı salt okunur), `trendyol_api.py`.
 - M41 Amazon ve yurtdışı: `amazon.py` (tablolar `semantic_intl_*`, konsinye, yurtdışı, haklar, parametre, taslak, pazar
   kartı), `amazon_client.py` (çevrimdışı salt okunur), `amazon_api.py`. Ortak: `platform_common.py`.
+- Satış modeli ve mutabakat (2026-09-29, iki platform): `pazaryeri_model.py` (Aşama 0: Logo/CRM'den model tespiti),
+  `pazaryeri_dosya.py` (hakediş ve Amazon sipariş/iade dosyası), `mutabakat.py` (Aşama 1: panel ↔ Logo, hakediş),
+  `kaynak_mutabakat.py` (sorgu bilgisi), `pazaryeri_api.py` (uçlar `…/{trendyol|amazon}/model|mutabakat*`).
 
 app.py'de iki satır:
     from semantic_bridge import channels
@@ -27,9 +30,10 @@ from typing import Any, Callable
 
 
 def register(app, rt: Callable[[], Any], require_caller: Callable[..., None], can: Callable[[str, str], bool]) -> dict[str, Any]:
-    from semantic_bridge.channels import amazon_api, api, trendyol_api
+    from semantic_bridge.channels import amazon_api, api, pazaryeri_api, trendyol_api
 
     out = api.register(app, rt, require_caller, can)
     out["trendyol"] = trendyol_api.register(app, rt, require_caller, can)   # M40: /api/v1/channels/trendyol/*
     out["amazon"] = amazon_api.register(app, rt, require_caller, can)       # M41: /api/v1/channels/amazon/*
+    out["pazaryeri"] = pazaryeri_api.register(app, rt, require_caller, can)  # Aşama 0–1: …/{trendyol|amazon}/model|mutabakat
     return out

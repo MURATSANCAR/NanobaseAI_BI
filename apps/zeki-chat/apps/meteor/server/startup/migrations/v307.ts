@@ -1,0 +1,38 @@
+import { Apps } from '@zeki.chat/apps';
+import type { IAppStorageItem } from '@zeki.chat/apps/dist/server/storage/IAppStorageItem';
+import { Capabilities } from '@zeki.chat/capabilities';
+
+import { addMigration } from '../../lib/migrations';
+
+addMigration({
+	version: 307,
+	name: "Mark all installed private apps as 'migrated'",
+	async up() {
+		const isEE = Capabilities.isReady();
+		if (isEE) {
+			return;
+		}
+
+		if (!Apps.self) {
+			throw new Error('Apps Orchestrator not registered.');
+		}
+
+		Apps.initialize();
+
+		const sigMan = Apps.getManager().getSignatureManager();
+		const appsStorage = Apps.getStorage();
+		const apps = await appsStorage.retrieveAllPrivate();
+
+		for (const app of apps.values()) {
+			const updatedApp = {
+				...app,
+				migrated: true,
+			} as IAppStorageItem;
+
+			await appsStorage.updatePartialAndReturnDocument({
+				...updatedApp,
+				signature: await sigMan.signApp(updatedApp),
+			});
+		}
+	},
+});

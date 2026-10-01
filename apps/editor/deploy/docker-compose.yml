@@ -113,6 +113,9 @@ services:
     command: ["uvicorn", "editor.card_api:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
     volumes:
       - ${EDITOR_ROOT:-/data/editor}/storage:/data/editor/storage:ro
+      # Portaldan kitap okutma (portal_books): yalnız gelen kutusu ve kitap klasörü yazılabilir.
+      - ${EDITOR_ROOT:-/data/editor}/storage/inbox:/data/editor/storage/inbox
+      - ${EDITOR_ROOT:-/data/editor}/storage/books:/data/editor/storage/books
     ports:
       - "127.0.0.1:19141:8000"
     depends_on:
@@ -220,6 +223,17 @@ services:
     profiles: [analysis]
     container_name: editor-worker
     command: ["python", "-m", "editor.workflow.worker"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      temporal: {condition: service_healthy}
+
+  # Portaldan kitap okutma kuyruğu (editor.portal_books): GPU'da okuma yokken sıradaki kitabı başlatır, düşen
+  # okumayı EDITOR_READ_ATTEMPTS denemeye kadar yeniden sıraya koyar. Aynı anda EDITOR_READ_PARALLEL (vars. 2) kitap okunur.
+  book-queue:
+    <<: *py
+    profiles: [analysis]
+    container_name: editor-book-queue
+    command: ["python", "-m", "editor.portal_books", "consume"]
     depends_on:
       postgres: {condition: service_healthy}
       temporal: {condition: service_healthy}

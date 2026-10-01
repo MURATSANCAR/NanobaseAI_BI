@@ -15,7 +15,8 @@
   - **Stok bakiyesi** güncel firma, tarih süzgeçsiz: `IOCODE 1,2` giriş − `3,4` çıkış, `LINETYPE 0`, `CANCELLED 0`;
     planlanan üretim girişi (`TRCODE 13`, `STFICHE.PRODSTAT = 1`) sayılmaz (M12/M33 ölçümüyle aynı).
   - **Satış** faturalı satır (`STLINE`, `LINETYPE 0`, `CANCELLED 0`, `INVOICEREF <> 0`), `TRCODE 7/8/9` satış,
-    `2/3` iade (eksi); net ciro `LINENET` (kokpit ve bütçeyle aynı satır tanımı).
+    `2/3` iade (eksi); net ciro `VATMATRAH` (KDV matrahı, fatura geneli iskonto dahil; dönem fatura tarihi
+    `INVOICE.DATE_` — karar 2026-10-01) (kokpit ve bütçeyle aynı satır tanımı).
   - **Pazar yeri carisi** `CLCARD.SPECODE2` ayardaki kanal(lar) (`ECOM_CHANNELS`, varsayılan `E-TICARET`).
   - **Logo liste fiyatı** `PRCLIST` satış listesi, bugün geçerli (seçim M53 ile aynı: cariye bağlı olmayan, küçük
     öncelik, en yeni başlangıç).
@@ -186,11 +187,12 @@ def item_sales_sql(firm: str, a: date, b: date) -> str:
     return f"""
 SELECT I.CODE AS stok,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 WHERE S.LINETYPE = 0 AND S.CANCELLED = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
-  AND S.DATE_ >= '{a.isoformat()}' AND S.DATE_ < '{b.isoformat()}'
+  AND SH.DATE_ >= '{a.isoformat()}' AND SH.DATE_ < '{b.isoformat()}'
 GROUP BY I.CODE""".strip()
 
 
@@ -198,16 +200,17 @@ def marketplace_sql(firm: str, channels: list[str], a: date, b: date) -> str:
     """Pazar yeri carisi × ay: satış ve iade ayrı (net ciro = satış − iade), net adet."""
     f = _f(firm)
     return f"""
-SELECT C.CODE AS kod, MAX(C.DEFINITION_) AS unvan, MAX(C.SPECODE2) AS kanal, YEAR(S.DATE_) AS yil, MONTH(S.DATE_) AS ay,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE 0 END) AS satis,
-  SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END) AS iade,
+SELECT C.CODE AS kod, MAX(C.DEFINITION_) AS unvan, MAX(C.SPECODE2) AS kanal, YEAR(SH.DATE_) AS yil, MONTH(SH.DATE_) AS ay,
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE 0 END) AS satis,
+  SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.VATMATRAH ELSE 0 END) AS iade,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE 0 END) AS satis_adet,
   SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.AMOUNT ELSE 0 END) AS iade_adet
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
 WHERE C.SPECODE2 IN ({_in(channels)}) AND S.LINETYPE = 0 AND S.CANCELLED = 0 AND S.INVOICEREF <> 0
-  AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_ >= '{a.isoformat()}' AND S.DATE_ < '{b.isoformat()}'
-GROUP BY C.CODE, YEAR(S.DATE_), MONTH(S.DATE_)""".strip()
+  AND S.TRCODE IN (2,3,7,8,9) AND SH.DATE_ >= '{a.isoformat()}' AND SH.DATE_ < '{b.isoformat()}'
+GROUP BY C.CODE, YEAR(SH.DATE_), MONTH(SH.DATE_)""".strip()
 
 
 def marketplace_books_sql(firm: str, code: str, a: date, b: date) -> str:
@@ -219,13 +222,14 @@ def marketplace_books_sql(firm: str, code: str, a: date, b: date) -> str:
 SELECT I.CODE AS stok, MAX(I.NAME) AS ad,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE 0 END) AS satis_adet,
   SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.AMOUNT ELSE 0 END) AS iade_adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro,
-  MAX(S.DATE_) AS son
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro,
+  MAX(SH.DATE_) AS son
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
 JOIN dbo.LG_{f}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 WHERE C.CODE = {_lit(code)} AND S.LINETYPE = 0 AND S.CANCELLED = 0 AND S.INVOICEREF <> 0
-  AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_ >= '{a.isoformat()}' AND S.DATE_ < '{b.isoformat()}'
+  AND S.TRCODE IN (2,3,7,8,9) AND SH.DATE_ >= '{a.isoformat()}' AND SH.DATE_ < '{b.isoformat()}'
 GROUP BY I.CODE""".strip()
 
 
@@ -236,13 +240,14 @@ def channel_books_sql(firm: str, channels: list[str], a: date, b: date) -> str:
 SELECT I.CODE AS stok, MAX(I.NAME) AS ad,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE 0 END) AS satis_adet,
   SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.AMOUNT ELSE 0 END) AS iade_adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro,
-  MAX(S.DATE_) AS son
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro,
+  MAX(SH.DATE_) AS son
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
 JOIN dbo.LG_{f}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 WHERE C.SPECODE2 IN ({_in(channels)}) AND S.LINETYPE = 0 AND S.CANCELLED = 0 AND S.INVOICEREF <> 0
-  AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_ >= '{a.isoformat()}' AND S.DATE_ < '{b.isoformat()}'
+  AND S.TRCODE IN (2,3,7,8,9) AND SH.DATE_ >= '{a.isoformat()}' AND SH.DATE_ < '{b.isoformat()}'
 GROUP BY I.CODE""".strip()
 
 

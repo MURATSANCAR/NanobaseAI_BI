@@ -324,7 +324,7 @@ def test_brief_facts_parse_and_number_guard():
 
 def test_sql_shapes_and_no_personal_columns():
     ms = S.monthly_sales_sql("411", date(2025, 9, 1), date(2026, 8, 17))
-    assert "LINENET" in ms and "INVOICEREF <> 0" in ms and "LINETYPE = 0" in ms and "< '2026-08-18'" in ms
+    assert "VATMATRAH" in ms and "SH.CANCELLED = 0" in ms and "INVOICEREF <> 0" in ms and "LINETYPE = 0" in ms and "< '2026-08-18'" in ms
     assert "COUNT(DISTINCT CASE WHEN S.TRCODE IN (7,8,9) THEN S.INVOICEREF END)" in ms
     mp = S.monthly_payments_sql("411", date(2025, 9, 1), date(2026, 8, 17), (1, 20))
     assert "L.SIGN = 1" in mp and "TRCODE IN (1, 20)" in mp

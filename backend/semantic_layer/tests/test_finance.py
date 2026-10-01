@@ -391,7 +391,7 @@ def test_pnl_excel_opens(engine):
 
 def test_sql_uses_catalog_definitions():
     s = S.sales_month_sql("411", 2026)
-    assert "S.INVOICEREF <> 0" in s and "S.LINETYPE = 0" in s and "S.TRCODE IN (2,3,7,8,9)" in s and "S.LINENET" in s
+    assert "S.INVOICEREF <> 0" in s and "S.LINETYPE = 0" in s and "S.TRCODE IN (2,3,7,8,9)" in s and "S.VATMATRAH" in s and "SH.DATE_" in s
     assert "LG_411_01_STLINE" in s and "'20260101'" in s and "'20270101'" in s
     a = S.account_actuals_sql("411", 2026)
     assert "'yansitma'" in a and "'kapanis'" in a and "F.CANCELLED = 0" in a and "L.CANCELLED = 0" in a

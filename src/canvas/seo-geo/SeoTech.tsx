@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Gauge, Loader2, RefreshCw } from 'lucide-react';
+import { ExternalLink, Gauge, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, type Severity } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 import { Term } from './terms';
+import SeoPager from './SeoPager';
 
 /* ------------------------------------------------------------------ uç tipleri (/api/v1/seo-geo/tech*, /speed*) */
 type RunState = { running: boolean; done?: number; failed?: number; queue?: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
@@ -1053,18 +1054,5 @@ function Cell({ text, cat }: { text: string; cat: Cat | undefined }) {
 }
 
 function Pager({ start, total, setStart }: { start: number; total: number; setStart: (n: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+  return <SeoPager start={start} total={total} size={PAGE} onChange={setStart} />;
 }

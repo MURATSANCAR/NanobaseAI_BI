@@ -46,6 +46,9 @@
   left: var(--nav-rail-left);
   width: var(--nav-rail-w);
   z-index: 40;
+  /* Menü düğmeleri: çift tıklama yazıyı boyamasın. İçerik alanı seçilebilir kalır (ZEKI-30). */
+  -webkit-user-select: none;
+  user-select: none;
 }
 .nav-tile {
   transition: transform 140ms var(--ease-out), background-color 150ms ease, color 150ms ease;
@@ -104,6 +107,8 @@
   bottom: calc(10px + env(safe-area-inset-bottom));
   height: 64px;
   z-index: 40;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .nav-bar-btn {
   transition: transform 140ms var(--ease-out), color 150ms ease;

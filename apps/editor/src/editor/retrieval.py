@@ -47,9 +47,13 @@ def _passages(generation_id: str) -> list[dict]:
              "text": r["description"]}
             for r in db.all_rows("SELECT id, page_no, description FROM visual_region WHERE "
                                  "generation_id=%s AND kind='scene'", generation_id)]
-    out += [{"kind": "character", "page_no": r["first_page"] or 1, "ref": f"character:{r['id']}",
+    # a character passage is its description: it is cited at the page the description rests
+    # on, not at the page the name first appears (a cast page that prints only names)
+    out += [{"kind": "character",
+             "page_no": ((r["traits"] or {}).get("description_pages") or [None])[0] or r["first_page"] or 1,
+             "ref": f"character:{r['id']}",
              "text": f"{r['canonical_name']} ({', '.join(r['aliases'])}): {r['description']}"}
-            for r in db.all_rows("SELECT id, first_page, canonical_name, aliases, description FROM "
+            for r in db.all_rows("SELECT id, first_page, canonical_name, aliases, description, traits FROM "
                                  "character WHERE generation_id=%s", generation_id)]
     return [p for p in out if p["text"] and p["text"].strip()]
 

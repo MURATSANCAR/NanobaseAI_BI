@@ -20,6 +20,7 @@ from semantic_layer.models import ColumnProfile, Mapping, SchemaProfile, Semanti
 from semantic_layer.conventions import Conventions
 from semantic_layer.runtime.compiler import DeterministicCompiler, Dialect
 from semantic_layer.runtime.resolver import SemanticResolver
+from semantic_layer.normalize import fold
 from semantic_layer.tests.conftest import DS, TENANT
 from semantic_layer.tests.test_runtime import _certify
 
@@ -62,8 +63,9 @@ def _world(store, profiles):
 TWO_SERVERS = "question names things on two servers"
 
 
-def test_a_reference_into_period_tables_is_not_written_as_one_statement_across_databases(store, profiles):
+def test_a_reference_into_period_tables_is_not_written_as_one_statement_across_databases(store, profiles, monkeypatch):
     """Sevkiyat öteki veritabanında, fatura türü Logo'nun dönem tablolarında: tek ifade yazılmaz."""
+    monkeypatch.setenv("SEMANTIC_FEDERATED", "1")        # iki sunuculu plan açık: öteki yarı plana kalır
     allp = _world(store, profiles)
     r = SemanticResolver(store, TENANT, DS, allp)
     c = DeterministicCompiler(allp, {}, "tsql")
@@ -73,15 +75,31 @@ def test_a_reference_into_period_tables_is_not_written_as_one_statement_across_d
     assert c.compile(sq, store) is None
 
 
-def test_a_breakdown_read_from_the_other_database_is_not_written_as_one_statement(store, profiles):
+def test_a_breakdown_read_from_the_other_database_is_not_written_as_one_statement(store, profiles, monkeypatch):
     """Kredi limiti öteki veritabanında, kanal Logo'nun cari kartında: öteki yarı düşürülüp tek
     kaynaklı (daha dar) bir cevap yazılmaz."""
+    monkeypatch.setenv("SEMANTIC_FEDERATED", "1")
     allp = _world(store, profiles)
     r = SemanticResolver(store, TENANT, DS, allp)
     c = DeterministicCompiler(allp, {}, "tsql")
     sq = r.resolve("kanal bazında kredi limiti", today=date(2026, 7, 20))
     assert c.plan(sq) == (None, TWO_SERVERS), (c.plan(sq), sq.explanation)
     assert c.compile(sq, store) is None
+
+
+def test_with_plans_off_the_other_half_is_answered_without_it_and_said(store, profiles, monkeypatch):
+    """ZEKI-54: iki sunuculu plan kapalıyken öteki veritabanındaki kırılım ("kanal bazında") modele BIRAKILMAZ —
+    model onu bir süzgece çeviriyordu. Soru ölçünün veritabanından cevaplanır, kırılım cevaba alınmaz ve bu,
+    terimin adıyla düz bir cümlede söylenir. İki sunucuyu okuyan tek ifade hiç istenmez."""
+    monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
+    allp = _world(store, profiles)
+    r = SemanticResolver(store, TENANT, DS, allp)
+    sq = r.resolve("kanal bazında kredi limiti", today=date(2026, 7, 20))
+    assert "CLCARD" not in {s.mapping.entity for s in list(sq.slots) + list(sq.group_by) if s.mapping}, sq.explanation
+    assert "kanal" not in sq.unresolved, (sq.unresolved, sq.explanation)
+    omitted = {fold(o["term"]): o["sentence"] for o in sq.omitted}
+    assert "kanal" in omitted and "iki ayrı sunucu" in omitted["kanal"] and "eklenmedi" in omitted["kanal"], sq.omitted
+    assert omitted["kanal"] in sq.explanation
 
 
 def test_a_measured_link_is_compared_with_its_cast_collation_and_period_meaning(store, profiles):

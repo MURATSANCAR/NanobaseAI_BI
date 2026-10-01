@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, Plus } from 'lucide-react';
-import { Note, TableWrap, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
+import { Note, Pill, TableWrap, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel, Pager, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct } from '../budget/api';
 import { InfoLabel } from '../components/SqlInfo';
@@ -69,6 +69,7 @@ export default function CandidatesPanel({ ov, campaignId, onAdded }: { ov: Overv
             en az %{d.esikler.dususPct} düştü · sezon: kampanya ile bitişinden {d.esikler.sezonOncesiGun} gün sonrası arasındaki özel güne bağlı
             {d.sezonlar.length ? ` (${d.sezonlar.join(', ')})` : ''}. Sinyallerden biri yeter; hak, maliyet ve marj seçildiyse şarttır
             {rules.includes('marj') ? ` (marj %${Math.round(d.esikler.indirim * 100)} indirimle hesaplanır)` : ''}. Logo verisi {fmtDay(d.dataEnd)} tarihine kadar.
+            {d.drTarih ? ` D&R satış fiyatı D&R kataloğunun ${fmtDay(d.drTarih)} görüntüsünden, barkodla eşlenir; indirim D&R'nin kendi liste fiyatına göredir.` : ' D&R kataloğu henüz okunmadığı için D&R fiyatı boş.'}
           </p>
         )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_260px_auto]">
@@ -105,6 +106,7 @@ export default function CandidatesPanel({ ov, campaignId, onAdded }: { ov: Overv
                 <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Stok kaç ay yeter</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Satış (son / önceki)</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Liste</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items[].dr">D&R satış fiyatı</InfoLabel></th>
                 {rules.includes('marj') && <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Marj</InfoLabel></th>}
                 <th className={th}><InfoLabel k={d?.kaynaklar} alan="items">Neden aday</InfoLabel></th>
               </tr>
@@ -128,11 +130,23 @@ export default function CandidatesPanel({ ov, campaignId, onAdded }: { ov: Overv
                     <td className={td}>
                       <div className="font-semibold">{c.ad ?? c.stok}</div>
                       <div className="text-[11px] text-canvas-muted">{[c.yazar, c.stok].filter(Boolean).join(' · ')}</div>
+                      {c.drUyari && <div className="mt-1"><Pill tone="warn">{c.drUyari}</Pill></div>}
                     </td>
                     <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(c.stokAdet)}</td>
                     <td className={`${td} text-right font-mono tabular-nums`}>{c.stokAy === null ? 'satış yok' : `${fmtInt(c.stokAy)} ay`}</td>
                     <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(c.adetSon)} / {fmtInt(c.adetOnceki)}</td>
                     <td className={`${td} text-right font-mono tabular-nums`}>{fmtMoney(c.liste)}</td>
+                    <td className={`${td} text-right font-mono tabular-nums`}>
+                      {c.dr?.drFiyat != null ? (
+                        <>
+                          <div>{fmtMoney(c.dr.drFiyat)}</div>
+                          <div className="text-[11px] text-canvas-muted">
+                            {c.dr.indirim != null && c.dr.indirim > 0 ? `D&R listesine göre %${Math.round(c.dr.indirim * 100)} indirim` : `D&R listesi ${fmtMoney(c.dr.fiyat)}`}
+                            {!c.dr.katalogda ? ' · son görüntüde yok' : !c.dr.siteSatista ? ' · sitede satışta değil' : ''}
+                          </div>
+                        </>
+                      ) : '—'}
+                    </td>
                     {rules.includes('marj') && <td className={`${td} text-right font-mono tabular-nums`}>{fmtPct(c.marjOrani)}</td>}
                     <td className={`${td} text-[12px] leading-snug`}>{c.gerekce}</td>
                   </tr>

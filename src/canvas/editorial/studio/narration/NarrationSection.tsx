@@ -241,7 +241,9 @@ function Listen({ jobId, d, running, onRegen, onRealign, regenBusy, onUploaded }
   onRealign?: (pid: string) => void; onUploaded: () => void;
 }) {
   const readable = useMemo(() => d.pages.filter((p) => p.status !== 'empty'), [d.pages]);
-  const [pid, setPid] = useState<string | null>(null);
+  // İlk sayfa ilk çizimde seçili (ilk hazır sayfa, yoksa ilk okunur sayfa); sonra sayfa listesi değişince aşağıdaki etki
+  // düzeltir. Etkiyi beklemek sayfa düğmelerini bir çizim boyunca seçimsiz gösteriyordu.
+  const [pid, setPid] = useState<string | null>(() => (readable.find((p) => p.status === 'done') ?? readable[0])?.id ?? null);
   const [auto, setAuto] = useState(false);            // sayfa bitince sonraki hazır sayfaya geç
   const [isPlaying, setIsPlaying] = useState(false);
   const [t, setT] = useState(0);

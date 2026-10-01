@@ -54,7 +54,7 @@ export const FORM_HELP: Record<string, FieldHelp> = {
   },
   kur: {
     ne: 'Dolar ve euro kuru. Fiyat listesinde döviz ile fiyatlanan kâğıt, mukavva, cilt bezi gibi malzemelerin ₺ karşılığı için kullanılır.',
-    nereden: 'Logo\'da dolar ya da euro ile kesilen en son günün faturalarındaki kur (o günün ortalaması). Logo\'da döviz faturası yoksa fiyat listesindeki kur. Kutuya yazarak değiştirebilirsiniz.',
+    nereden: 'Varsayılan: Logo\'da dolar ya da euro ile kesilen en son günün faturalarındaki kur (o günün ortalaması); Logo\'da döviz faturası yoksa fiyat listesindeki kur. «Veri ve varsayımlar» → fiyat listesinde kur kaynağı «Elle» seçilirse bütün hesaplar (eski kitap karşılaştırması dahil) oradaki kuru kullanır. Bu kutuya yazılan kur yalnız bu hesap içindir.',
     excel: 'J56 (1 dolar) ve J57 (1 euro).',
   },
   kagitFiyati: {

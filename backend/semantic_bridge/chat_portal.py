@@ -39,7 +39,7 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
 
@@ -154,10 +154,20 @@ def fold(text: Any) -> str:
     return " ".join(s.split())
 
 
-def mentions_portal(question: str) -> bool:
+def mentions_portal(question: str, covered: Iterable[str] = ()) -> bool:
     """Soruda bir portal alanının ayırt edici kelimesi geçiyor mu? Geçiyorsa soru, Logo/CRM kataloğunda güçlü bir kavrama
-    yerleşmiş olsa da konu sınıflandırıcısına sorulur («risk kaydı» cari riskine gitmesin)."""
+    yerleşmiş olsa da konu sınıflandırıcısına sorulur («risk kaydı» cari riskine gitmesin).
+
+    `covered`: sorunun Logo/CRM kataloğunda sertifikalı bir kavrama yerleşmiş öbekleri. Portal kelimesi böyle bir öbeğin
+    İÇİNDEyse ayırt edici değildir — kelimeyi katalog zaten kendi kavramının adı olarak okumuş. 2026-09-29 tam kapı A016:
+    «müşteri bazında ortalama sepet tutarı» sertifikalı Logo ölçüsü «ortalama sepet tutarı»na yerleşiyor, ama «sepet»
+    e-ticaret alanının anahtar kelimesi olduğu için soru sınıflandırıcıya gidiyor, üç denemenin birinde e-ticaret konusu
+    seçilip «henüz veri bağlı değil» deniyordu."""
     q = " " + fold(question) + " "
+    for phrase in covered or ():
+        f = fold(phrase)
+        if f:
+            q = q.replace(" " + f + " ", " " + " ".join("_" for _ in f.split()) + " ")
     for a in config()["areas"]:
         for k in a.get("keywords") or []:
             if " " + fold(k) in q:
@@ -254,7 +264,8 @@ def _str_len(tname: str) -> Optional[int]:
     return int(tname[3:]) if tname.startswith("str") and tname[3:].isdigit() else None
 
 
-def classify_column(name: str, tname: str, *, primary: bool = False) -> tuple[str, Optional[str]]:
+def classify_column(name: str, tname: str, *, primary: bool = False,
+                    person_ok: bool = False) -> tuple[str, Optional[str]]:
     """Veriye bakmadan kesin sınıf: (sınıf, dışarıda bırakma nedeni). Veriye bakılması gerekenler (boyut mu
     öznitelik mi, metin tarihi mi) `None` nedenle «aday» döner; `profile` karar verir."""
     n = name.lower()
@@ -265,7 +276,7 @@ def classify_column(name: str, tname: str, *, primary: bool = False) -> tuple[st
         return SOFT_DELETE, None
     if _rx("secret").search(n):
         return EXCLUDED, "gizli bilgi"
-    if _rx("person").search(n):
+    if _rx("person").search(n) and not person_ok:
         return EXCLUDED, "kişisel veri"
     if tname == "json" or _rx("structured").search(n):
         return EXCLUDED, "yapısal alan"
@@ -287,9 +298,13 @@ def classify_column(name: str, tname: str, *, primary: bool = False) -> tuple[st
     return EXCLUDED, "desteklenmeyen tür"
 
 
-def is_person_or_secret(name: str) -> bool:
+def is_person_or_secret(name: str, info: Optional[dict[str, Any]] = None) -> bool:
+    """Kişisel ya da gizli kolon mu. Alan, yayımlanmış künye gibi kişisel olmayan bir kolonu açıkça açtıysa
+    (`allow_personal`, profilde `kisiselIzin`) kişisel veri kuralı o kolonda uygulanmaz; gizli bilgi kuralı her zaman."""
     n = name.lower()
-    return bool(_rx("secret").search(n) or _rx("person").search(n))
+    if _rx("secret").search(n):
+        return True
+    return bool(_rx("person").search(n)) and not (info or {}).get("kisiselIzin")
 
 
 # ------------------------------------------------------------------ profil
@@ -330,15 +345,23 @@ def profile(engine: sa.engine.Engine, tenant: str, *, only: Optional[Iterable[st
         tenant_col = s["tenant_column"] if s["tenant_column"] in t.c else None
         where = [t.c[tenant_col] == tenant] if tenant_col else []
         fixed = {rf["column"] for rf in a.get("row_filters") or []}
+        names_of = (a.get("column_labels") or {}).get(name) or {}
+        notes_of = (a.get("column_notes") or {}).get(name) or {}
+        # Alan bazlı istisna: yayımlanmış kitap künyesindeki yazar/çevirmen gibi adlar (kullanıcı kararı 2026-09-29).
+        allow_of = set((a.get("allow_personal") or {}).get(name) or [])
         cols: dict[str, dict[str, Any]] = {}
         with engine.connect() as c:
             rows = int(c.execute(sa.select(sa.func.count()).select_from(t).where(*where)).scalar() or 0)
             for col in t.columns:
                 tname = _type_name(col.type)
-                kind, why = classify_column(col.name, tname, primary=(pk == [col.name]))
+                kind, why = classify_column(col.name, tname, primary=(pk == [col.name]), person_ok=col.name in allow_of)
                 if col.name in fixed and kind != EXCLUDED:
                     kind, why = EXCLUDED, "alanın sabit süzgeci"
-                info: dict[str, Any] = {"type": tname, "kind": kind, "label": humanize(col.name)}
+                info: dict[str, Any] = {"type": tname, "kind": kind, "label": names_of.get(col.name) or humanize(col.name)}
+                if col.name in allow_of:
+                    info["kisiselIzin"] = True
+                if notes_of.get(col.name):
+                    info["note"] = notes_of[col.name]
                 if why:
                     info["why"] = why
                 if kind == ATTRIBUTE:
@@ -354,9 +377,14 @@ def profile(engine: sa.engine.Engine, tenant: str, *, only: Optional[Iterable[st
                 info["kind"] = kind
                 cols[col.name] = info
         snap = (a.get("snapshots") or {}).get(name)
+        per = None
+        if isinstance(snap, dict):         # {"column", "per"}: en son gün her kaynak (per değeri) için ayrı
+            snap, per = snap.get("column"), snap.get("per")
+        snap_ok = snap in cols and cols[snap]["kind"] == TIME
         out.append({"table": name, "area": a["id"], "topic": a["topic"], "label": table_label(name, a),
                     "rows": rows, "tenant": tenant_col, "pk": pk if len(pk) == 1 else [], "columns": cols,
-                    "snapshot": snap if snap in cols and cols[snap]["kind"] == TIME else None,
+                    "snapshot": snap if snap_ok else None,
+                    "snapshot_per": per if snap_ok and per in cols else None,
                     "parents": [], "profiled_at": datetime.now(timezone.utc).isoformat()})
     _link_parents(engine, tenant, out)
     for p in out:
@@ -800,6 +828,7 @@ class FilterOption:
     negate: bool
     label: str
     source: str = "model"
+    op: str = "eq"                          # eq | contains (açılmış metin kolonunda ad araması)
 
 
 def reachable(base: dict[str, Any], by_table: dict[str, dict[str, Any]]) -> list[Node]:
@@ -823,7 +852,7 @@ def reachable(base: dict[str, Any], by_table: dict[str, dict[str, Any]]) -> list
 
 def _cols(profile: dict[str, Any], kinds: Iterable[str]) -> list[tuple[str, dict[str, Any]]]:
     ks = set(kinds)
-    return [(c, i) for c, i in profile["columns"].items() if i["kind"] in ks and not is_person_or_secret(c)]
+    return [(c, i) for c, i in profile["columns"].items() if i["kind"] in ks and not is_person_or_secret(c, i)]
 
 
 def measure_options(base: dict[str, Any]) -> list[tuple[str, Any]]:
@@ -840,7 +869,7 @@ def group_options(nodes: list[Node]) -> list[tuple[str, Any]]:
     opts: list[tuple[str, Any]] = [(NONE_BREAKDOWN, None)]
     for n in nodes:
         for c, i in n.profile["columns"].items():
-            if is_person_or_secret(c):
+            if is_person_or_secret(c, i):
                 continue
             if i["kind"] in GROUPABLE or i.get("groupable"):
                 opts.append((f"{n.prefix}{i['label']}", (n.path, c)))
@@ -858,13 +887,74 @@ def filter_options(nodes: list[Node], used: set[tuple[tuple[str, ...], str]]) ->
     out: list[FilterOption] = []
     for n in nodes:
         for c, i in n.profile["columns"].items():
-            if is_person_or_secret(c) or (n.path, c) in used or "values" not in i:
+            if is_person_or_secret(c, i) or (n.path, c) in used or "values" not in i:
                 continue
             for v in i["values"]:
                 shown = ("evet" if v else "hayır") if isinstance(v, bool) else str(v)
                 out.append(FilterOption(n.path, c, v, False, f"{n.prefix}{i['label']}: {shown}"))
                 if not isinstance(v, bool):
                     out.append(FilterOption(n.path, c, v, True, f"{n.prefix}{i['label']}: {shown} dışındaki"))
+    return out
+
+
+_NAME_RX = re.compile(r"[A-ZÇĞİÖŞÜÂÎÛ][\w'’.-]*")
+
+
+def name_phrases(question: str) -> list[str]:
+    """Sorudaki büyük harfle başlayan ardışık sözcük öbekleri (en az iki sözcük: «Metin Özdamarlar»). Soru başındaki
+    tek sözcük ve cümle başı büyük harfi ad sayılmaz; en uzun öbek önce denenir, alt öbekleri de aday olur."""
+    toks = question.replace("«", " ").replace("»", " ").replace('"', " ").split()
+    runs: list[list[str]] = []
+    cur: list[str] = []
+    for t in toks:
+        w = t.strip(",;:?!()")
+        base = re.sub(r"['’].*$", "", w)          # «Özdamarlar'ın» → «Özdamarlar»
+        if base and _NAME_RX.fullmatch(base):
+            cur.append(base)
+        else:
+            if len(cur) >= 2:
+                runs.append(cur)
+            cur = []
+    if len(cur) >= 2:
+        runs.append(cur)
+    out: list[str] = []
+    for r in runs:
+        for size in range(len(r), 1, -1):
+            for i in range(len(r) - size + 1):
+                ph = " ".join(r[i:i + size])
+                if ph not in out:
+                    out.append(ph)
+    return out
+
+
+class NameNotFound(Exception):
+    """Soru açılmış bir metin kolonunu (ör. yazar) anıyor ama sorudaki ad o kolonda yok: süzgeçsiz sayı verilmez."""
+
+    def __init__(self, label: str, tried: list[str]):
+        super().__init__(label)
+        self.label = label
+        self.tried = tried
+
+
+def text_filters(question: str, base: dict[str, Any], probe: Optional[Callable[[str, str, str], int]]) -> list[FilterOption]:
+    """Alanın açıkça açtığı metin kolonlarında (`kisiselIzin`: yazar, çevirmen) ad süzgeci. Soru kolonu adıyla anıyorsa
+    sorudaki ad öbekleri veritabanında o kolonda aranır (`probe` = eşleşen satır sayısı); ilk eşleşen öbek «içerir»
+    süzgeci olur. Kolon anılıp hiçbir öbek eşleşmezse `NameNotFound` — soru süzgeçsiz cevaplanmaz."""
+    if probe is None:
+        return []
+    qtoks = fold(question).split()
+    phrases = name_phrases(question)
+    out: list[FilterOption] = []
+    for c, i in base["columns"].items():
+        if not i.get("kisiselIzin"):
+            continue
+        words = {w for w in (fold(c).split() + fold(i.get("label") or "").split()) if len(w) >= 4}
+        if not any(t.startswith(w) for t in qtoks for w in words):
+            continue
+        hit = next((ph for ph in phrases if probe(base["table"], c, ph) > 0), None)
+        if hit is None:
+            raise NameNotFound(i.get("label") or humanize(c), phrases)
+        out.append(FilterOption((), c, hit, False, f"{i.get('label') or humanize(c)}: {hit} içeren", "soru", "contains"))
     return out
 
 
@@ -905,7 +995,7 @@ class Plan:
         return {"table": self.table, "area": self.area, "measure": list(self.measure), "measureLabel": self.measure_label,
                 "group": list(self.group) if self.group else None, "groupLabel": self.group_label,
                 "filters": [{"path": list(f.path), "column": f.column, "value": _jsonable(f.value), "negate": f.negate,
-                             "label": f.label, "source": f.source} for f in self.filters],
+                             "label": f.label, "source": f.source, "op": f.op} for f in self.filters],
                 "time": {"path": list(self.time[0]), "column": self.time[1], "label": self.time_label} if self.time else None,
                 "window": {"start": _jsonable(self.window.start), "end": _jsonable(self.window.end),
                            "text": self.window.text} if self.window else None,
@@ -941,7 +1031,8 @@ def _pick(llm: Any, prompt: str, labels: list[str], st: dict[str, Any], step: st
 
 
 def plan_question(question: str, tables: list[dict[str, Any]], by_table: dict[str, dict[str, Any]], llm: Any,
-                  st: dict[str, Any], today: date) -> Plan:
+                  st: dict[str, Any], today: date,
+                  name_probe: Optional[Callable[[str, str, str], int]] = None) -> Plan:
     """Soruyu plana çevirir. Model yalnız kapalı kümeden seçer; dönem, «ilk N» ve sorudaki değer eşleşmesi kuraldan."""
     q = f"Soru: {question}\n"
     labels = [f"{t['label']}" for t in tables]
@@ -977,7 +1068,10 @@ def plan_question(question: str, tables: list[dict[str, Any]], by_table: dict[st
             plan.group_label, plan.group = gopts[g]
 
     fopts = filter_options(nodes, set())
-    plan.filters = literal_filters(question, fopts)
+    named = text_filters(question, base, name_probe)
+    # Ad araması kurulan kolonda birebir değer eşleşmesi bırakılmaz: çok yazarlı künyede («A, B») «içerir» doğrudur.
+    ncols = {(f.path, f.column) for f in named}
+    plan.filters = [f for f in literal_filters(question, fopts) if (f.path, f.column) not in ncols] + named
     used = {(f.path, f.column) for f in plan.filters}
     while True:
         rest = filter_options(nodes, used)
@@ -1063,10 +1157,16 @@ def compile_plan(plan: Plan, by_table: dict[str, dict[str, Any]], tenant: str, s
     if snap and not (plan.window and plan.time == ((), snap)) and not (plan.group and plan.group[:2] == ((), snap)):
         # Günlük yeniden yazılan sayım tablosu: dönem sorulmadıysa yalnız en son günün satırları (günler toplanmaz).
         s0 = _table_expr(base).alias("s0")
-        sub = sa.select(sa.func.max(s0.c[snap]))
+        per = base.get("snapshot_per")
+        sub = sa.select(*([s0.c[per]] if per else []), sa.func.max(s0.c[snap]))
         if base.get("tenant"):
             sub = sub.where(s0.c[tenant_col] == tenant)
-        where.append(t0.c[snap] == sub.scalar_subquery())
+        if per:
+            # Birden çok kaynağın güncel hâli tek tabloda: her kaynağın kendi son günü (biri o gün okunmadıysa onun
+            # son görüntüsü sayılır, bütün tablonun en büyüğü değil). İlişkisiz alt sorgu: bir kez çalışır.
+            where.append(sa.tuple_(t0.c[per], t0.c[snap]).in_(sub.group_by(s0.c[per])))
+        else:
+            where.append(t0.c[snap] == sub.scalar_subquery())
         plan.latest = snap
     for rf in area_conf.get("row_filters") or []:
         if rf["column"] in base["columns"]:
@@ -1083,6 +1183,11 @@ def compile_plan(plan: Plan, by_table: dict[str, dict[str, Any]], tenant: str, s
         by_col.setdefault((f.path, f.column), []).append(f)
     for (path, c), fs in by_col.items():
         col = alias(path).c[c]
+        for f in fs:
+            if f.op == "contains":
+                like = "%" + str(f.value).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+                where.append(col.ilike(like, escape="\\"))
+        fs = [f for f in fs if f.op != "contains"]
         eq = [f.value for f in fs if not f.negate]
         ne = [f.value for f in fs if f.negate]
         if eq:
@@ -1105,14 +1210,14 @@ def compile_plan(plan: Plan, by_table: dict[str, dict[str, Any]], tenant: str, s
     if agg == "list":
         sel = []
         for c, i in base["columns"].items():
-            if i["kind"] in (LABEL, DIMENSION, ATTRIBUTE, TIME, MEASURE) and not is_person_or_secret(c):
+            if i["kind"] in (LABEL, DIMENSION, ATTRIBUTE, TIME, MEASURE) and not is_person_or_secret(c, i):
                 sel.append(t0.c[c].label(f"c{len(sel)}"))
                 names.append(i["label"])
         for path, n in nodes.items():
             if not path:
                 continue
             for c, i in n.profile["columns"].items():
-                if i["kind"] == LABEL and not is_person_or_secret(c):
+                if i["kind"] == LABEL and not is_person_or_secret(c, i):
                     sel.append(alias(path).c[c].label(f"c{len(sel)}"))
                     names.append(f"{n.prefix}{i['label']}")
         stmt = sa.select(*sel)
@@ -1216,18 +1321,44 @@ def fmt_num(v: Any) -> str:
     return str(v)
 
 
+def used_notes(plan: Plan, base: dict[str, Any]) -> list[str]:
+    """Cevapta kullanılan temel tablo kolonlarının anlamı (alanın `column_notes`'u): ölçü, kırılım, koşul, tarih."""
+    used: list[str] = []
+    if plan.measure[1]:
+        used.append(plan.measure[1])
+    if plan.group and not plan.group[0]:
+        used.append(plan.group[1])
+    used += [f.column for f in plan.filters if not f.path]
+    if plan.time and not plan.time[0]:
+        used.append(plan.time[1])
+    out: list[str] = []
+    for c in used:
+        info = base["columns"].get(c) or {}
+        text = f"{info.get('label') or c}: {info['note']}" if info.get("note") else None
+        if text and text not in out:
+            out.append(text)
+    return out
+
+
 def sentence(plan: Plan, base: dict[str, Any], rows: list[dict[str, Any]], names: list[str],
-             area_conf: dict[str, Any]) -> str:
-    """Kural cümlesi: her sayı sonuç satırlarından; model yazmaz."""
+             area_conf: dict[str, Any], as_of: Optional[str] = None) -> str:
+    """Kural cümlesi: her sayı sonuç satırlarından; model yazmaz. Kullanılan kolonun anlamı (`column_notes`) ve
+    alanın sabit uyarısı (`note`) cümleye eklenir."""
     cond = [f.label for f in plan.filters]
     if plan.window:
         cond.append(f"dönem {plan.window.text} ({plan.time_label}: "
                     f"{plan.window.start.isoformat() if plan.window.start else '…'} – "
                     f"{(plan.window.end - timedelta(days=1)).isoformat() if plan.window.end else '…'})")
     if plan.latest:
-        cond.append(f"yalnız en son sayım günü ({base['columns'][plan.latest]['label']})")
+        cond.append(f"yalnız en son sayım günü ({base['columns'][plan.latest]['label']}"
+                    + (f": {as_of}" if as_of else "") + ")")
     tail = (" Koşullar: " + "; ".join(cond) + ".") if cond else ""
     src = f" Kaynak: {area_conf['label']} ({', '.join(page_labels(area_conf.get('pages') or []))})."
+    notes = used_notes(plan, base)
+    if notes:
+        src += " Alanların anlamı: " + " ".join(n if n.endswith(".") else n + "." for n in notes)
+    if area_conf.get("note"):
+        src += " " + str(area_conf["note"])
     if plan.measure[0] == "list":
         head = f"{base['label'].capitalize()}: {fmt_num(len(rows))} kayıt."
     elif not plan.group:
@@ -1277,8 +1408,27 @@ def answer(engine: sa.engine.Engine, tenant: str, question: str, topic: dict[str
         return {"type": "CLARIFICATION", "plan": None,
                 "text": "Zeki AI şu an bu soruyu kayıtlarla eşleştiremiyor; biraz sonra yeniden deneyin."}
     by_table = {p["table"]: p for p in usable if p["area"] in readable}
+    def probe(table: str, column: str, text: str) -> int:
+        """Açılmış metin kolonunda adın geçtiği satır sayısı (kiracı süzgeçli, en çok 1 satır okunur)."""
+        prof = by_table.get(table) or {}
+        tc = _setting("tenant_column")
+        has_tc = bool(tc) and tc in prof.get("columns", {})
+        t = sa.table(table, sa.column(column), *([sa.column(tc)] if has_tc else []))
+        like = "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        cond = [t.c[column].ilike(like, escape="\\")]
+        if has_tc:
+            cond.append(t.c[tc] == tenant)
+        with engine.connect() as c:
+            return 1 if c.execute(sa.select(sa.literal(1)).select_from(t).where(*cond).limit(1)).first() else 0
+
     try:
-        plan = plan_question(question, mine, by_table, llm, st, today)
+        plan = plan_question(question, mine, by_table, llm, st, today, probe)
+    except NameNotFound as nf:
+        tried = ", ".join(f"«{x}»" for x in nf.tried[:3])
+        text = (f"Soruda {nf.label.lower()} geçiyor ama " + (f"sorudaki ad ({tried}) kayıtlarda bulunamadı. " if tried else
+                "sorudan bir ad çıkaramadım. ") + "Adı kayıtlardaki yazımıyla, büyük harfle yeniden sorabilir misiniz? "
+                "Süzgeci uygulayamadığım için bütün kayıtların sayısını vermiyorum.")
+        return {"type": "CLARIFICATION", "text": text, "plan": {"step": "ad", "options": nf.tried[:3]}}
     except Unsure as u:
         what = {"tablo": "hangi kayıtlar", "ölçü": "hangi sayı ya da liste", "tarih": "hangi tarihe göre",
                 "kırılım": "neye göre kırılım"}.get(u.step, u.step)
@@ -1302,8 +1452,35 @@ def answer(engine: sa.engine.Engine, tenant: str, question: str, topic: dict[str
                 "text": ("Bu soruya güvenilir bir cevap üretilemedi: kayıt tablosu okunamadı. Tablonun yapısı değişmiş "
                          "olabilir; yönetici sohbet kataloğunu yeniden profillemeli.")}
     columns = [{"name": n, "type": _col_type(rows, n)} for n in names]
-    return {"type": "TEXT_TO_SQL", "text": sentence(plan, base, rows, names, area_conf), "plan": plan.to_dict(),
+    as_of = latest_days(engine, base, tenant) if plan.latest else None
+    return {"type": "TEXT_TO_SQL", "text": sentence(plan, base, rows, names, area_conf, as_of), "plan": plan.to_dict(),
             "sql": sql, "columns": columns, "records": rows, "shown": rows[: max(1, int(sample_size or 50))]}
+
+
+def latest_days(engine: sa.engine.Engine, base: dict[str, Any], tenant: str) -> Optional[str]:
+    """Anlık görüntü tablosunda sayılan en son gün(ler): «2026-09-25» ya da kaynak başına «basari 2026-09-25, dr …»."""
+    snap, per = base.get("snapshot"), base.get("snapshot_per")
+    if not snap:
+        return None
+    t = _table_expr(base)
+    q = sa.select(*([t.c[per]] if per else []), sa.func.max(t.c[snap]))
+    if base.get("tenant"):
+        q = q.where(t.c[_setting("tenant_column")] == tenant)
+    if per:
+        q = q.group_by(t.c[per]).order_by(t.c[per])
+    try:
+        with engine.connect() as c:
+            got = c.execute(q).all()
+    except Exception as e:  # noqa: BLE001 — gün yazılamazsa cevap yine döner
+        log.debug("chat_portal: son gün okunamadı %s: %s", base["table"], e)
+        return None
+
+    def day(v: Any) -> str:
+        return v.isoformat()[:10] if isinstance(v, (date, datetime)) else str(v)[:10]
+
+    if per:
+        return ", ".join(f"{k} {day(v)}" for k, v in got if v is not None) or None
+    return day(got[0][0]) if got and got[0][0] is not None else None
 
 
 def _col_type(rows: list[dict[str, Any]], name: str) -> str:

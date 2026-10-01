@@ -1,4 +1,4 @@
-<!-- name: resolve_identity version: 5 -->
+<!-- name: resolve_identity version: 6 -->
 Bir kitabın METNİNDE geçen karakter anmalarını kimliklere birleştir. Aşağıda her anma: id, sayfa, metinde yazıldığı ad, kanıt cümlesi.
 <<<
 {{mentions}}
@@ -23,3 +23,4 @@ Kurallar:
 - Açıklama ve merge_basis kısa, en fazla iki cümle olsun. İç tartışmanı veya varsayımlarını bu alanlara yazma.
 
 - entity_scope: tek birey INDIVIDUAL, aile/sürü/topluluk COLLECTIVE, soyut unvan/oda/kavram CONCEPT, çözülemeyen UNKNOWN. Bir topluluğu onun üyelerinden biriyle birleştirme. Kolektif özne metinde geçebilir ama tek bir görsel figürün kimliği değildir.
+- book_role: kişi kitabın anlattığı dünyada (hikâye, anı, anlatılan olaylar, incelenen konu) geçiyorsa STORY. Yalnız kitap HAKKINDAKİ sayfalarda geçiyorsa (yazar, çizer ya da çevirmen tanıtımı ve biyografisi, künye, teşekkür, yayınevi tanıtımı) — yazarın kendisi, ailesi, evcil hayvanı gibi — ABOUT_THE_BOOK. Yazar kitabın içinde anlatıcı ya da kişi olarak da geçiyorsa STORY.

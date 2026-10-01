@@ -46,7 +46,10 @@ F_HAFTA = ("Son 7 gün: kapanan = son 7 günde «kapandı» durumuna geçen fark
            "görülme) gün ÷ kapanan sayısı, bir ondalık.")
 F_FARK = ("Fark satırı: CRM, Logo ve sitedeki değerler gece okumasından; etki = kitabın Logo son dönem net adedi (bütün "
           "kanallar; Logo yoksa sitedeki toplam satış adedi) — sıralama ağırlığı. Neden olasılığı Zeki AI'ın kapalı küme "
-          "seçimindeki güvenidir (rakam üretmez; eşik altı «belirsiz»).")
+          "seçimindeki güvenidir (rakam üretmez; eşik altı «belirsiz»). D&R fiyat farkı: TİMAŞ grubu kitabın barkodu D&R "
+          "kataloğunun son görüntüsünde; D&R satış fiyatı sitedeki fiyatımızdan (indirimli varsa o) ayardaki toleranstan "
+          "fazla düşükse ya da D&R'deki liste fiyatı bizim liste fiyatımızdan (ayardaki esas: CRM ya da Logo) farklıysa; "
+          "D&R indirimi = 1 − D&R satış fiyatı ÷ D&R liste fiyatı.")
 F_TOPLAM = "Toplam = süzgece uyan fark kaydı sayısı (sayfalı listede görünenden bağımsız)."
 F_OKUMA = "Son okumanın kaynak özeti: okunan ürün, CRM kartı, Logo stok kodu ve fiyat sayıları okuma kaydından."
 F_KITAP = ("Kitap: Logo stok = güncel firma, IOCODE 1,2 giriş − 3,4 çıkış (planlanan üretim girişi hariç); Logo fiyat = bugün "
@@ -58,11 +61,11 @@ F_ONERI = ("Öneri puanları (önce/sonra) ürün kartının kural denetimi puan
 F_HUNI = ("Huni: görüntülenme ve satış sitedeki ürün sayaçları (tüm zamanlar), dönüşüm = satış ÷ görüntülenme. Ortanca "
           "dönüşüm = görüntülenmesi olan aktif ürünlerin dönüşüm oranlarının ortancası; düşük dönüşüm eşiği = ortanca × ayardaki "
           "oran. Toplamlar aktif ürünlerin Σ görüntülenme, Σ satış, Σ yorum.")
-F_PAZAR = ("Pazar yeri carisi (CLCARD.SPECODE2 ayardaki kanal): satış = Σ LINENET (TRCODE 7,8,9), iade = Σ LINENET (2,3), "
+F_PAZAR = ("Pazar yeri carisi (CLCARD.SPECODE2 ayardaki kanal): satış = Σ VATMATRAH (TRCODE 7,8,9), iade = Σ VATMATRAH (2,3), "
            "net = satış − iade; faturalı malzeme satırı (INVOICEREF ≠ 0, LINETYPE 0), iptal hariç. Bu yıl 1 Ocak–kesim günü, "
            "geçen yıl aynı dönem; değişim = (net − geçen yıl net) ÷ |geçen yıl net|; iade oranı = iade ÷ satış. Aylık = o ayın "
            "neti. Yıl sınırında her yıl kendi firma kopyasından okunur.")
-F_KITAPLAR = ("Kitap kırılımı: satış/iade adedi = Σ AMOUNT (7,8,9 / 2,3), ciro = Σ LINENET (satış − iade), net adet = satış "
+F_KITAPLAR = ("Kitap kırılımı: satış/iade adedi = Σ AMOUNT (7,8,9 / 2,3), ciro = Σ VATMATRAH (satış − iade), net adet = satış "
               "− iade adedi, iade oranı = iade ÷ satış adedi. Logo stok ve kalan gün kitap satırından: kalan gün = Logo stok ÷ "
               "(son dönem net adet ÷ gün); tükenme riski = kalan gün < ayardaki eşik.")
 F_KESIM = "Kesim = güncel Logo firmasındaki son faturalı satış satırının günü; Logo rakamları bu güne kadardır."

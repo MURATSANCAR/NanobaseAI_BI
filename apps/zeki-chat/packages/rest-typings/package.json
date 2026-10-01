@@ -1,0 +1,33 @@
+{
+	"name": "@zeki.chat/rest-typings",
+	"version": "8.5.3",
+	"main": "./dist/index.js",
+	"typings": "./dist/index.d.ts",
+	"files": [
+		"/dist"
+	],
+	"scripts": {
+		"build": "rm -rf dist && tsc",
+		"dev": "tsc --watch --preserveWatchOutput",
+		"lint": "eslint .",
+		"lint:fix": "eslint --fix .",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/message-parser": "workspace:^",
+		"@zeki.chat/ui-kit": "workspace:~",
+		"ajv": "^8.17.1",
+		"ajv-formats": "^3.0.1"
+	},
+	"devDependencies": {
+		"@zeki.chat/apps-engine": "workspace:^",
+		"@types/jest": "~30.0.0",
+		"eslint": "~9.39.4",
+		"mongodb": "6.16.0",
+		"typescript": "~5.9.3"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

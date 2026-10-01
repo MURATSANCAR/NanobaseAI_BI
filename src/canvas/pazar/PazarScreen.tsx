@@ -6,7 +6,7 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, btnGhost, errText } from '../admin/ui';
 import { fmtDay, fmtInt, pazarApi } from './api';
-import { FreshnessStrip, PazarFrame, ROOT, useMeta } from './parts';
+import { FreshnessStrip, PazarFrame, ROOT, RakipKaynakBar, useMeta } from './parts';
 import MarketHome from './MarketHome';
 import CompetitorMatrix from './CompetitorMatrix';
 import ComparablesScreen from './ComparablesScreen';
@@ -80,18 +80,21 @@ export default function PazarScreen() {
     : <MarketHome overview={overview.data} loading={overview.isLoading} error={overview.error} />;
 
   const f = overview.data?.freshness;
+  // Rakip kaynağı seçilen bölümler: seçici + seçilen kaynağın tazeliği. Özet ve raporlar CRM rakip kayıtlarının şeridini gösterir.
+  const bySource = [`${ROOT}/rakipler`, `${ROOT}/emsal`, `${ROOT}/kategori-esleme`].some((p) => here.startsWith(p));
+  const pending = (m?: { counts: Partial<Record<string, number>> }) => (m ? (m.counts.oneri ?? 0) + (m.counts.belirsiz ?? 0) : 0);
   return (
     <PazarFrame
       presence={f?.records ? `${fmtInt(f.records)} rakip kaydı` : 'Pazar ve rakip'}
       aside={aside}
       badges={{
-        [`${ROOT}/kategori-esleme`]: overview.data ? (overview.data.mapping.counts.oneri ?? 0) + (overview.data.mapping.counts.belirsiz ?? 0) : null,
+        [`${ROOT}/kategori-esleme`]: overview.data ? pending(overview.data.mapping) + pending(overview.data.mappingBasari) : null,
         [`${ROOT}/raporlar`]: overview.data?.pendingFigures ?? null,
       }}
     >
       {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; sayılar açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Pazar ekranı açılamadı.')}</Note>}
-      <FreshnessStrip />
+      {bySource ? <RakipKaynakBar /> : <FreshnessStrip />}
       {section}
     </PazarFrame>
   );

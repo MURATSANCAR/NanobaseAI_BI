@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, field } from '../admin/ui';
 import { AnalogTable, Box, ChannelBars, ForecastChart, FpFrame, Legend, ScenarioCards, Segmented, TierPill } from './parts';
 import DecisionBox from './DecisionBox';
+import MarketContext from './MarketContext';
 import SqlInfo from '../components/SqlInfo';
 import { sourceLine, useSummary } from './FirstPrintScreen';
 import { NotReadyError, fmtMoney, fmtUnits, firstPrintApi, monthName, pct, stockoutText, type Forecast } from './api';
@@ -167,6 +168,13 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
       <Box title={`Emsal kitaplar (${hz.analogs.length})`} info={<SqlInfo k={fc.kaynaklar} alan={`horizons.${h}.analogs`} label="Emsal kitaplar" />} help="Bu kitaba en çok benzeyen, daha önce çıkmış kitaplar. Tahmin, bunların satışından benzerlik puanına göre ağırlıklandırılarak çıkar. Emsal adına basınca onun tahmini ve gerçekleşeni açılır.">
         <AnalogTable h={hz} />
       </Box>
+
+      <MarketContext
+        key={`${fc.book.code}|${fc.book.pages ?? ''}|${fc.book.genre ?? ''}`}
+        code={fc.mode === 'free' ? undefined : fc.book.code}
+        pages={fc.book.pages}
+        genre={fc.book.genre}
+      />
     </div>
   );
 }

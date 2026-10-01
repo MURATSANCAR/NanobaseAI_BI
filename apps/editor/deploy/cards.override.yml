@@ -12,6 +12,9 @@ services:
       EDITOR_ROOT: /data/editor
     volumes:
       - ${EDITOR_ROOT:-/data/editor}/storage:/data/editor/storage:ro
+      # Portaldan kitap okutma (portal_books): yalnız gelen kutusu ve kitap klasörü yazılabilir.
+      - ${EDITOR_ROOT:-/data/editor}/storage/inbox:/data/editor/storage/inbox
+      - ${EDITOR_ROOT:-/data/editor}/storage/books:/data/editor/storage/books
     ports:
       - "127.0.0.1:19141:8000"
     networks: [editor-net]

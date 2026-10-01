@@ -85,6 +85,40 @@ export type Scorecard = {
   };
   platformDisi: { grupSayisi: number; donem: Metrics | null };
   kanallar: Array<{ kanal: string; donem: Metrics; paySirket: number | null }>;
+  /** Dağıtımcı ve perakende: kanala satış (Logo) yanında kanalda bekleyen stok (TİMAŞ grubu, katalogların son görüntüsü). */
+  dagitimci?: Dagitimci;
+};
+
+/** Katalogdaki TİMAŞ grubu başlıkların stoğu (son görüntü). D&R'de `stok` Prefix B2B stoğu, `siteStok` D&R + İdefix. */
+export type KanalStok = {
+  tarih: string;
+  baslik: number;
+  stok: number;
+  stokluBaslik: number;
+  siteStok?: number;
+  siteStokBilinen?: number;
+  siteStokluBaslik?: number;
+};
+
+export type Dagitimci = {
+  basari: {
+    label: string;
+    cari: string | null;
+    unvan: string | null;
+    kanalaSatis: Metrics | null;
+    gecenYil: Metrics | null;
+    degisim: number | null;
+    satisOkundu: boolean;
+    stok: KanalStok | null;
+    /** Başarı deposundan çıkış (kitapçılara); en az iki görüntü birikince, yoksa null ve `cikisNot`. */
+    cikis: { bas: string; son: string; cikis: number; giris: number } | null;
+    cikisNot: string | null;
+  };
+  dr: { label: string; platform: string; kanalaSatis: Metrics | null; stok: KanalStok | null };
+  donem: { bas: string; son: string };
+  sonGoruntu: { basari: string | null; dr: string | null } | null;
+  hata: string | null;
+  notlar: { endeks: string | null; timas: string | null; dr: string | null };
 };
 
 export type ReadStatus = {
@@ -140,6 +174,8 @@ export type ChannelDetail = {
   hedef: CrmTarget | null;
   imports: ImportRow[];
   m9Bagli: boolean;
+  /** Yalnız D&R: kanalda bekleyen stok (Prefix B2B ve site stoğu, TİMAŞ grubu). */
+  dagitimStok?: { dr: KanalStok | null; sonGoruntu?: { basari: string | null; dr: string | null }; not?: string | null; timasNot?: string | null; hata: string | null };
 };
 
 export type BookRow = {

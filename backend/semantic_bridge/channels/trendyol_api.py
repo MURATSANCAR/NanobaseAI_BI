@@ -36,7 +36,7 @@ log = logging.getLogger("semantic.channels.trendyol.api")
 
 R = "/api/v1/channels/trendyol"
 PAGES = {"trendyol": "sayfa:trendyol", "urunler": "sayfa:trendyol-urunler", "siparisler": "sayfa:trendyol-siparisler",
-         "sorular": "sayfa:trendyol-sorular"}
+         "sorular": "sayfa:trendyol-sorular", "mutabakat": "sayfa:trendyol-mutabakat"}
 F_IMPORT = "ozellik:trendyol.yukle"
 F_DRAFT = "ozellik:trendyol.taslak"
 F_DECIDE = "ozellik:trendyol.oneri-karar"
@@ -165,7 +165,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as q:
             out = await run_in_threadpool(lambda: T.overview(engine, tenant, st(), wholesale(engine, tenant)))
-        return PV.bagla(out, lambda: KP.ty_overview(engine, tenant, out, q))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_overview(engine, tenant, out, q))
 
     @app.get(R + "/accounts")
     def ty_accounts(request: Request) -> dict[str, Any]:
@@ -195,14 +195,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, T.products, engine, tenant, st(), durum, q, page)
-        return PV.bagla(out, lambda: KP.ty_list("urun")(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("urun")(engine, tenant, out, yq))
 
     @app.get(R + "/stock-diff")
     async def ty_stock_diff(request: Request, fark: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, T.stock_diff, engine, tenant, st(), fark, q, page)
-        return PV.bagla(out, lambda: KP.ty_list("stok")(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("stok")(engine, tenant, out, yq))
 
     @app.get(R + "/price-diff")
     async def ty_price_diff(request: Request, isaret: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
@@ -212,7 +212,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             isaret = ""
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, T.price_diff, engine, tenant, st(), isaret, q, page, uc)
-        return PV.bagla(out, lambda: KP.ty_list("fiyat")(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("fiyat")(engine, tenant, out, yq))
 
     # ------------------------------------------------------------------ sipariş ve iade
 
@@ -221,14 +221,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, T.orders, engine, tenant, durum, bas, bit, q, page)
-        return PV.bagla(out, lambda: KP.ty_list("siparis")(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("siparis")(engine, tenant, out, yq))
 
     @app.get(R + "/claims")
     async def ty_claims(request: Request, bas: str = "", bit: str = "", sinif: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, T.claims, engine, tenant, bas, bit, sinif, q, page)
-        return PV.bagla(out, lambda: KP.ty_list("iade")(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("iade")(engine, tenant, out, yq))
 
     @app.post(R + "/claims/classify")
     async def ty_classify(request: Request, yeniden: bool = False) -> dict[str, Any]:
@@ -244,14 +244,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, T.questions, engine, tenant, st(), cevapsiz, q, page)
-        return PV.bagla(out, lambda: KP.ty_list("soru")(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("soru")(engine, tenant, out, yq))
 
     @app.get(R + "/reviews")
     async def ty_reviews(request: Request, maxPuan: Optional[float] = None, q: str = "", page: int = 0) -> dict[str, Any]:  # noqa: N803
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, T.reviews, engine, tenant, maxPuan, q, page)
-        return PV.bagla(out, lambda: KP.ty_list("yorum")(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("yorum")(engine, tenant, out, yq))
 
     async def _draft(kind: str, rid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
@@ -274,7 +274,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as yq:
             out = await run_in_threadpool(call, T.showcase, engine, tenant, st(), q, page)
-        return PV.bagla(out, lambda: KP.ty_list("vitrin")(engine, tenant, out, yq))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("vitrin")(engine, tenant, out, yq))
 
     @app.post(R + "/showcase/suggest", status_code=201)
     async def ty_showcase_suggest(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -355,7 +355,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as q:
             out = await run_in_threadpool(call, T.weekly, engine, tenant, st(), bitis, llm() if ozet else None)
-        return PV.bagla(out, lambda: KP.ty_list("hafta")(engine, tenant, out, q))
+        return await run_in_threadpool(PV.bagla, out, lambda: KP.ty_list("hafta")(engine, tenant, out, q))
 
     @app.get(R + "/export/{liste}.xlsx")
     async def ty_export(liste: str, request: Request, fark: str = "", isaret: str = "", durum: str = "", bas: str = "",

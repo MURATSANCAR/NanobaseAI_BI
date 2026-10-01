@@ -149,8 +149,8 @@ def _num(v: Any) -> Optional[float]:
 
 
 def _plain(v: Any) -> Optional[str]:
-    from semantic_bridge.editorial import _plain as plain
-    return plain(v)
+    from semantic_bridge.crm_text import rich_text
+    return rich_text(v)
 
 
 def rights(r: dict[str, Any]) -> list[dict[str, Any]]:
@@ -203,8 +203,11 @@ def attach_scope(items: list[dict[str, Any]], run: Any, p: str) -> None:
     by = {(c.get("id") or "").lower(): c for c in items if c.get("id") and c.get("license") is not None}
     if not by:
         return
-    for sql in scope_sql(p, list(by)):
-        for r in run(sql).get("records") or []:
+    from semantic_bridge.sorgu_izi import birlikte
+
+    # Ülke ve dil kapsamı birbirini beklemez (sıra ve sorgu bilgisi sabit).
+    for res in birlikte(*[(lambda s=sql: run(s)) for sql in scope_sql(p, list(by))]):
+        for r in res.get("records") or []:
             c = by.get(str(r.get("new_sozlesmeid") or "").lower())
             name = _s(r.get("ad"))
             if c is not None and name:

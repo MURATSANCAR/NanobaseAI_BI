@@ -1094,9 +1094,25 @@ Fetcher = Callable[[str], tuple]
 Explainer = Callable[[dict[str, Any], str], dict[str, Any]]
 
 
+def report_link(base: str, rid: str) -> str:
+    """E-postadaki «Raporu ekranda aç» adresi: portal kökü + /planli-raporlar?id=<rapor>.
+
+    `base` Yönetim'deki ALERT_LINK'tir; uyarılar ekranını gösterir (…/timas/uyarilar). Diğer modüller gibi
+    kökü ondan alır, raporun kendi ayrıntısına gider. Adres yoksa bağlantı da yoktur.
+    """
+    root = (base or "").split("/uyarilar")[0].rstrip("/")
+    return f"{root}/planli-raporlar?id={rid}" if root else ""
+
+
 def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetcher, *, manual: bool,
-               now: Optional[datetime] = None, link: str = "", explain: Optional[Explainer] = None) -> dict[str, Any]:
-    """Soruyu yeniden sorar, tüm satırları dosyaya yazar, gönderir; sonucu kayda işler."""
+               now: Optional[datetime] = None, link: str = "", explain: Optional[Explainer] = None,
+               send: bool = True) -> dict[str, Any]:
+    """Soruyu yeniden sorar, tüm satırları dosyaya yazar, gönderir; sonucu kayda işler.
+
+    `send=False`: dosya hazırlanır ama e-posta gitmez (plan onaylanınca «ilk dosyayı hemen hazırla»). Gönderim
+    zamanlanan saatte olur; önceki sonuç da yazılmaz ki o e-postanın «ne değişti» karşılaştırması gönderilmiş
+    son rapora göre kalsın. Durum `ready` (alıcı yoksa `no_recipient`).
+    """
     now = now or _now()
     base = _row(engine, rid)
     if not base:
@@ -1114,14 +1130,22 @@ def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetche
         upd["last_db_json"] = json.dumps(db) if db else None
         columns, rows, dropped = apply_columns(rep["columns"], columns, rows)
         path = build_file(rid, rep["title"], rep["fmt"], columns, rows, now)
-        change = change_of(rid, rep["title"], columns, rows, explain)
-        status = send_file(rep, path, columns, rows, now, link, change)
-        try:
-            save_snapshot(rid, columns, rows, now)
-        except OSError as e:  # noqa: BLE001 — önceki sonuç yazılamazsa bir sonraki e-postada «ilk koşu» denir
-            log.info("reports: %s önceki sonucu yazılamadı: %s", rid, e)
+        if send:
+            change = change_of(rid, rep["title"], columns, rows, explain)
+            status = send_file(rep, path, columns, rows, now, report_link(link, rid), change)
+            try:
+                save_snapshot(rid, columns, rows, now)
+            except OSError as e:  # noqa: BLE001 — önceki sonuç yazılamazsa bir sonraki e-postada «ilk koşu» denir
+                log.info("reports: %s önceki sonucu yazılamadı: %s", rid, e)
+        else:
+            status = "ready" if rep.get("recipients") else "no_recipient"
         # Düzendeki bir kolon artık sonuçta yoksa dosya yine üretilir ama bu kayda yazılır.
         note = f"Not: şu kolonlar bu çalışmada sonuçta yoktu: {', '.join(dropped)}" if dropped else None
+        # ZEKI-54: soruda istenen ama bu kurulumda okunamayan kolon (ör. öteki sunucudaki yazar) raporun durum metninde.
+        omitted = [str(o.get("sentence")) for o in (((answer.get("semantic") or {}).get("query") or {}).get("omitted") or [])
+                   if isinstance(o, dict) and o.get("sentence")]
+        if omitted:
+            note = " ".join(([note] if note else []) + omitted)
         upd.update(sql=sql[:50000], last_file=str(path), last_rows=len(rows), last_status=status, last_error=note)
     except Exception as e:  # noqa: BLE001
         msg = str(e) if isinstance(e, ReportError) else f"Rapor üretilemedi: {str(e)[:400]}"

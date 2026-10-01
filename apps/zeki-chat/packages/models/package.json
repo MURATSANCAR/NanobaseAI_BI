@@ -1,0 +1,43 @@
+{
+	"name": "@zeki.chat/models",
+	"version": "2.3.1",
+	"private": true,
+	"main": "./dist/index.js",
+	"typings": "./dist/index.d.ts",
+	"files": [
+		"/dist"
+	],
+	"scripts": {
+		"build": "rm -rf dist && tsc",
+		"dev": "tsc --watch --preserveWatchOutput",
+		"lint": "eslint .",
+		"lint:fix": "eslint --fix .",
+		"test": "jest",
+		"testunit": "jest",
+		"typecheck": "tsc --noEmit",
+		"unit": "jest"
+	},
+	"dependencies": {
+		"@zeki.chat/core-typings": "workspace:^",
+		"@zeki.chat/model-typings": "workspace:~",
+		"@zeki.chat/random": "workspace:^",
+		"@zeki.chat/rest-typings": "workspace:^",
+		"@zeki.chat/sha256": "workspace:^",
+		"@rocket.chat/string-helpers": "~0.32.0",
+		"@zeki.chat/tracing": "workspace:^",
+		"date-fns": "~4.1.0",
+		"node-rsa": "^1.1.1"
+	},
+	"devDependencies": {
+		"@zeki.chat/jest-presets": "workspace:~",
+		"@zeki.chat/tsconfig": "workspace:*",
+		"@types/jest": "~30.0.0",
+		"@types/node-rsa": "^1.1.4",
+		"eslint": "~9.39.4",
+		"jest": "~30.2.0",
+		"typescript": "~5.9.3"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

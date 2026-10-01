@@ -32,6 +32,7 @@ import { CALC_HELP as CH, FORM_HELP } from './help';
 import { CostGroups, Lines, MobileBar, ResultCard, setters } from './CostForm';
 import type { Kaynaklar } from '../components/sqlInfo';
 import MarketPrices from './MarketPrices';
+import DistributorPrices from './DistributorPrices';
 import { Explain } from '../components/Explain';
 
 /** Ekrandaki girdiler: baskı hizmeti ve kâğıt ayrı kutularda, hesaba toplamları gider. */
@@ -464,6 +465,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             <Results
               r={calc.data}
               chosenQty={form.chosenQty ?? null}
+              current={code ? book.data?.book.price : null}
               onPickPrice={(p) => {
                 if (readOnly) return;
                 st.set({ fiyat: p });
@@ -494,6 +496,15 @@ export default function CalcPane({ ov }: { ov: Overview }) {
           )}
           {!ov.me.canWrite && <Note tone="info">Hesap sizde görünür; analizi kaydetmek ve onaya göndermek «Fiyat analizi hazırlama» yetkisi ister.</Note>}
 
+          <DistributorPrices
+            code={code ?? analysis.data?.stockCode ?? null}
+            pages={spec.pages}
+            binding={spec.binding}
+            analysisId={aid}
+            crmBookId={book.data?.book.id ?? analysis.data?.crmBookId ?? null}
+            canWrite={ov.me.canWrite}
+            readOnly={readOnly}
+          />
           {aid && analysis.data && <MarketPrices analysis={analysis.data} canWrite={ov.me.canWrite} />}
         </>
       )}
@@ -639,7 +650,7 @@ function BookFacts({ b }: { b: BookDetail }) {
   );
 }
 
-function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: number | null; onPickPrice: (p: number) => void }) {
+function Results({ r, chosenQty, onPickPrice, current }: { r: CalcResult; chosenQty: number | null; onPickPrice: (p: number) => void; current?: number | null }) {
   const s = r.summary;
   const rec = r.recommendation;
   const comp = r.comparables;
@@ -654,9 +665,19 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
             value={tl0(rec.price)}
             note={
               rec.price ? (
-                <button type="button" className="font-bold text-canvas-violet hover:underline" onClick={() => onPickPrice(rec.price!)}>
-                  Bu fiyatı kullan
-                </button>
+                <>
+                  {current ? (
+                    <span className="block">
+                      Güncel {tl0(current)} ·{' '}
+                      <span className={rec.price > current ? 'font-bold text-amber-700' : rec.price < current ? 'font-bold text-emerald-700' : ''}>
+                        {rec.price === current ? 'aynı' : `${rec.price > current ? '+' : '−'}%${(Math.abs(rec.price / current - 1) * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}`}
+                      </span>
+                    </span>
+                  ) : null}
+                  <button type="button" className="font-bold text-canvas-violet hover:underline" onClick={() => onPickPrice(rec.price!)}>
+                    Bu fiyatı kullan
+                  </button>
+                </>
               ) : (
                 rec.floorReason
               )

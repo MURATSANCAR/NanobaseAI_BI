@@ -143,7 +143,8 @@ def test_cached_screens_equal_old_computation(pr_engine, tmp_path, sayac):
     days = svc.settings()["newPrintsDays"]
     cards = PR.build_cards(snap, entries, settings=svc.settings(), now=NOW)
     assert svc.new_prints(pr_engine, T) == {
-        "items": PR.new_prints(cards, NOW, days), "days": days, "ready": True,
+        "items": [{**{k: v for k, v in i.items() if k != "titleFromBook"}, "cover": None} for i in PR.new_prints(cards, NOW, days)],
+        "days": days, "ready": True,
         "asOf": datetime.fromtimestamp(snap["at"], PR.TZ).isoformat(timespec="seconds")}
 
     # Sorgu bilgisi: kartların dayandığı okumanın SQL'i, kaynaksız rakam yok.

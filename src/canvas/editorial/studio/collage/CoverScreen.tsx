@@ -15,10 +15,7 @@ import { Explain } from '../../../components/Explain';
 
 /** Kapak ekranı: kapak tarzı seçimi (resimli / kolaj / tipografik) ve kolaj kapağın ayarları. Kolajda fotoğraf
  *  adayları (ZEKİ AI üretir ya da editör yükler), «başka düzen», etiket şeritleri ve ön kapak önizlemesi.
- *  ZEKİ AI'ın ürettiği fotoğrafla kurulan kolaj ticari kullanım izni gelene kadar taslaktır; ekranda yazılır.
  *  Hareket yalnız basış geri bildirimi (ortak `press`); yeni animasyon yok. */
-
-const DRAFT = 'Taslak — ticari kullanım izni bekleniyor';
 
 const STYLES: { key: CoverStyle; title: string; help: string; Icon: typeof ImageIcon }[] = [
   { key: 'illustrated', title: 'Resimli', help: 'Kitabın üslubunda çizilmiş kapak resmi, üstünde başlık ve yazar.', Icon: ImageIcon },
@@ -82,7 +79,7 @@ export default function CoverScreen() {
           <Panel>
             <div className="flex items-center gap-1">
               <div className={label} id="kapak-tarzi">Kapak tarzı</div>
-              <Explain label="Kapak tarzı">Seçtiğiniz tarz hemen uygulanır ve ön kapak yeniden kurulur; birkaç saniye sürebilir. Başka bir tarza istediğiniz zaman geri geçebilirsiniz.</Explain>
+              <Explain label="Kapak tarzı">Seçtiğiniz tarz hemen uygulanır ve ön kapak yeniden kurulur; birkaç saniye sürebilir. Tarz değiştirmek hiçbir şeyi silmez: kolaj fotoğrafları ve adayları, seçtiğiniz fotoğraf, düzen ve başlık şeritleri ile resimli kapağın resmi saklanır; eski tarza döndüğünüzde kaldığınız yerden devam edersiniz.</Explain>
             </div>
             <div role="radiogroup" aria-labelledby="kapak-tarzi" className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {STYLES.map(({ key, title: t, help, Icon }) => (
@@ -109,12 +106,6 @@ export default function CoverScreen() {
               <div className={label}>Ön kapak</div>
               {pending && <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-canvas-violet"><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />Kapak yenileniyor…</span>}
             </div>
-            {current === 'collage' && v.draft && (
-              <div role="status" className="mt-2 flex items-start gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[12.5px] font-bold text-amber-800">
-                <span className="min-w-0 flex-1">{DRAFT}</span>
-                <Explain label="Taslak kapak">Zeki AI'ın ürettiği fotoğrafla kurulan kolaj, ticari kullanım izni gelene kadar taslaktır ve basılmamalıdır. Kendi yüklediğiniz fotoğraf taslak sayılmaz.</Explain>
-              </div>
-            )}
             <div className="mx-auto mt-2 w-full max-w-[520px]">
               {v.built ? (
                 <Img src={collageApi.previewUrl(jobId, 1040, rev)} alt="Ön kapak önizlemesi" fallback="Kapak henüz kurulmadı"
@@ -170,8 +161,8 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
                   aria-pressed={p.id === v.selected} aria-label={`Aday ${i + 1}${p.source === 'editor' ? ' (yüklenen)' : ''}`}
                   className={`relative block w-full overflow-hidden rounded-xl border bg-white ${press} ${p.id === v.selected ? 'border-canvas-violet ring-2 ring-canvas-violet/40' : 'border-slate-200'}`}>
                   <Img src={collageApi.photoUrl(jobId, p.id, 320)} alt="" fallback={`${i + 1}`} className="aspect-[4/5] w-full object-cover grayscale" />
-                  <span className={`absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${p.draft ? 'bg-amber-100 text-amber-800' : 'bg-white/90 text-canvas-ink'}`}>
-                    {p.draft ? 'Taslak' : p.source === 'editor' ? 'Yüklenen' : 'Zeki AI'}
+                  <span className="absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-canvas-ink">
+                    {p.source === 'editor' ? 'Yüklenen' : 'Zeki AI'}
                   </span>
                 </button>
               </li>
@@ -200,7 +191,6 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
           <FileDrop
             size="sm"
             title="Fotoğraf yükle"
-            hint="Yüklediğiniz fotoğraf taslak sayılmaz."
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
             maxBytes={uploadMb ? uploadMb * MB : undefined}
             busy={uploading}

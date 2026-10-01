@@ -174,8 +174,8 @@ def cost_last_sql(f: str) -> str:
 
 
 def costless_share_sql(f: str) -> str:
-    """M45 kabul 4 ile aynı kapsam: faturalı satış satırı TRCODE 7/8; maliyetli = OUTCOST ≠ 0."""
-    return (f"SELECT SUM(CASE WHEN OUTCOST <> 0 THEN LINENET ELSE 0 END) AS maliyetli, SUM(LINENET) AS toplam, "
+    """M45 kabul 4 ile aynı kapsam: faturalı satış satırı TRCODE 7/8, tutar KDV matrahı; maliyetli = OUTCOST ≠ 0."""
+    return (f"SELECT SUM(CASE WHEN OUTCOST <> 0 THEN VATMATRAH ELSE 0 END) AS maliyetli, SUM(VATMATRAH) AS toplam, "
             f"SUM(CASE WHEN OUTCOST <> 0 THEN 0 ELSE 1 END) AS maliyetsiz_satir, COUNT(*) AS satir "
             f"FROM dbo.LG_{f}_01_STLINE WHERE CANCELLED = 0 AND LINETYPE = 0 AND INVOICEREF <> 0 AND TRCODE IN (7,8)")
 

@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ENGINE_ENABLED } from '../engine';
-import { dateTime, fmt, seoApi, type Overview, type WithK } from './api';
+import { call, dateTime, fmt, seoApi, type Overview, type WithK } from './api';
+import type { Ga4Overview } from './SeoSearchToSales';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { EmptyHint, Explain } from '../components/Explain';
@@ -87,6 +88,8 @@ function Body({ o, onBatch, batchPending }: { o: Overview & WithK; onBatch?: () 
           note={o.search ? `${o.search.start} – ${o.search.end} · ort. sıra ${fmt(position, 1)}` : 'Search Console bağlı değil'} info={<SeoInfo k={o.kaynaklar} label="Google tıklaması" />}
           explain="Search Console’a göre bu tarih aralığında Google sonuçlarından siteye gelen toplam tıklama. «Ort. sıra», sitenin Google’da ortalama kaçıncı çıktığıdır (1 en üst); çok görünen aramalar daha çok sayılır." />
       </section>
+
+      {o.connections.ga4 && <Ga4Card />}
 
       <div className="sg-grid">
         <section className="sg-card sg-span-7">
@@ -228,6 +231,30 @@ function Kpi({ label, value, unit, note, info, explain }: { label: string; value
       </div>
       <div className="sg-kpi-note">{note}</div>
     </div>
+  );
+}
+
+/** Aramadan satışa özeti: organik ciro ve değişimi; yalnız okunmuş veri varsa görünür. */
+function Ga4Card() {
+  const q = useQuery({ queryKey: ['seo-ga4'], queryFn: () => call<Ga4Overview>('ga4'), enabled: ENGINE_ENABLED, retry: false });
+  const org = q.data?.snapshot?.organic;
+  if (!org) return null;
+  const ch = org.change.revenue;
+  const share = q.data?.snapshot?.share?.revenue;
+  return (
+    <Link to="/seo-geo/aramadan-satisa" className="sg-card" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', color: 'inherit' }}>
+      <span style={{ minWidth: 0 }}>
+        <span className="sg-kpi-label" style={{ display: 'block' }}>Google aramasından gelen ciro · son 28 gün</span>
+        <span className="sg-kpi-value sg-mono" style={{ display: 'block' }}>{fmt(org.cur.revenue)} ₺</span>
+        <span className="sg-kpi-note" style={{ display: 'block', color: ch == null ? undefined : ch >= 0 ? '#0f7a51' : '#c2361b' }}>
+          {ch == null ? 'Önceki dönem yok' : `${ch >= 0 ? '+' : ''}${fmt(ch, 1)}% önceki 28 güne göre`} · {fmt(org.cur.sessions)} ziyaret, {fmt(org.cur.purchases)} satış
+          {share != null ? ` · toplam cironun %${fmt(share * 100, 1)}’i` : ''}
+        </span>
+      </span>
+      <span className="sg-button">
+        Aramadan satışa <ArrowRight size={14} aria-hidden />
+      </span>
+    </Link>
   );
 }
 

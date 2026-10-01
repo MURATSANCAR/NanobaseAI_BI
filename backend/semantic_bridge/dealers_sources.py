@@ -10,7 +10,8 @@ testleri değişmeden geçer.
 
 - Aylık faturalı satış/iade/fatura sayısı (cari kodu × ay) — 12 aylık seri, iade oranı, sipariş düzensizliği ve
   tahsilat süresi (DSO) yaklaşımı. Satış tanımı M30/M46 ile aynı: `STLINE` faturalı satır (`LINETYPE = 0`,
-  `INVOICEREF <> 0`, `CANCELLED = 0`), TRCODE 7/8/9 satış, 2/3 iade, tutar `LINENET`. Fatura sayısı ayrı fatura başlığı
+  `INVOICEREF <> 0`, `CANCELLED = 0`), TRCODE 7/8/9 satış, 2/3 iade, tutar `VATMATRAH` (KDV matrahı, fatura geneli
+  iskonto dahil; dönem fatura tarihi `INVOICE.DATE_` — karar 2026-10-01). Fatura sayısı ayrı fatura başlığı
   (`COUNT(DISTINCT INVOICEREF)`).
 - Aylık ödeme (cari alacak satırı, ayardaki TRCODE listesi — M30 `FIELD_PAYMENT_TRCODES` ile aynı küme).
 - CRM cari bayrakları: «Sorunlu Müşteri» (`StatusCode` 100000003), `CreditOnHold`, `new_vadegun`, `new_ekacikhesaplimiti`.
@@ -45,18 +46,20 @@ def _d(d: date) -> str:
 
 
 def monthly_sales_sql(f: str, start: date, end: date, prefix_: str = "120") -> str:
-    """Cari kodu × ay: faturalı satış, iade (LINENET) ve satış faturası sayısı. [start, end] kapalı aralık."""
+    """Cari kodu × ay: faturalı satış, iade (VATMATRAH) ve satış faturası sayısı. [start, end] kapalı aralık."""
     f = firm(f)
-    return (f"SELECT C.CODE AS code, YEAR(S.DATE_) AS y, MONTH(S.DATE_) AS m,"
-            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE 0 END) AS satis,"
-            f" SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END) AS iade,"
+    return (f"SELECT C.CODE AS code, YEAR(SH.DATE_) AS y, MONTH(SH.DATE_) AS m,"
+            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE 0 END) AS satis,"
+            f" SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.VATMATRAH ELSE 0 END) AS iade,"
             f" COUNT(DISTINCT CASE WHEN S.TRCODE IN (7,8,9) THEN S.INVOICEREF END) AS fatura,"
-            f" MAX(CASE WHEN S.TRCODE IN (7,8,9) THEN S.DATE_ END) AS son_fatura"
-            f" FROM dbo.LG_{f}_01_STLINE S JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
+            f" MAX(CASE WHEN S.TRCODE IN (7,8,9) THEN SH.DATE_ END) AS son_fatura"
+            f" FROM dbo.LG_{f}_01_STLINE S"
+            f" JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0"
+            f" JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
             f" WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)"
             f" AND C.CODE LIKE '{code_prefix(prefix_)}%'"
-            f" AND S.DATE_ >= '{_d(start)}' AND S.DATE_ < '{_d(end + timedelta(days=1))}'"
-            f" GROUP BY C.CODE, YEAR(S.DATE_), MONTH(S.DATE_)")
+            f" AND SH.DATE_ >= '{_d(start)}' AND SH.DATE_ < '{_d(end + timedelta(days=1))}'"
+            f" GROUP BY C.CODE, YEAR(SH.DATE_), MONTH(SH.DATE_)")
 
 
 def monthly_payments_sql(f: str, start: date, end: date, codes: tuple[int, ...], prefix_: str = "120") -> str:

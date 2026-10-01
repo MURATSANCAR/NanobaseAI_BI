@@ -1,0 +1,11 @@
+{
+	"extends": "@zeki.chat/tsconfig/server.json",
+	"compilerOptions": {
+		"lib": ["dom", "dom.iterable"],
+		"declaration": true,
+		"rootDir": "./src",
+		"outDir": "./dist",
+		"plugins": [{ "transform": "typia/lib/transform" }]
+	},
+	"include": ["./src/**/*"]
+}

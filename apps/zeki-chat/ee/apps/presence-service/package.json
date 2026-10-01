@@ -1,0 +1,54 @@
+{
+	"name": "@zeki.chat/presence-service",
+	"version": "0.4.57",
+	"private": true,
+	"description": "ZEKI AI CHAT Presence service",
+	"keywords": [
+		"zeki-ai-chat"
+	],
+	"main": "./dist/ee/apps/presence-service/src/service.js",
+	"files": [
+		"/dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"lint": "eslint .",
+		"ms": "TRANSPORTER=${TRANSPORTER:-TCP} MONGO_URL=${MONGO_URL:-mongodb://localhost:3001/meteor} ts-node --files src/service.ts",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"typecheck": "tsc --noEmit --skipLibCheck -p tsconfig.json"
+	},
+	"dependencies": {
+		"@zeki.chat/core-services": "workspace:^",
+		"@zeki.chat/core-typings": "workspace:^",
+		"@rocket.chat/emitter": "^0.32.0",
+		"@zeki.chat/logger": "workspace:^",
+		"@zeki.chat/model-typings": "workspace:^",
+		"@zeki.chat/models": "workspace:^",
+		"@zeki.chat/network-broker": "workspace:^",
+		"@zeki.chat/presence": "workspace:^",
+		"@rocket.chat/string-helpers": "~0.32.0",
+		"@zeki.chat/tracing": "workspace:^",
+		"@types/node": "~22.19.17",
+		"ejson": "^2.2.3",
+		"eventemitter3": "^5.0.4",
+		"mem": "^8.1.1",
+		"moleculer": "^0.14.35",
+		"mongodb": "6.16.0",
+		"nats": "^2.28.2",
+		"pino": "10.3.1",
+		"polka": "^0.5.2",
+		"prom-client": "^14.2.0",
+		"prometheus-gc-stats": "^1.1.0"
+	},
+	"devDependencies": {
+		"@zeki.chat/tsconfig": "workspace:*",
+		"@types/polka": "^0.5.8",
+		"@types/prometheus-gc-stats": "^0.6.4",
+		"eslint": "~9.39.4",
+		"ts-node": "^10.9.2",
+		"typescript": "~5.9.3"
+	},
+	"volta": {
+		"extends": "../../../package.json"
+	}
+}

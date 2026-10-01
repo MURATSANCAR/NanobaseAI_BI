@@ -19,6 +19,8 @@ ACC, SUG, BARC, TARG = ("semantic_channel_accounts", "semantic_channel_suggestio
 SETT, META, IMP, IMPR = ("semantic_channel_settings", "semantic_channel_meta", "semantic_channel_imports",
                          "semantic_channel_import_rows")
 H3_ORD = "semantic_commerce_orders"
+PD_TITLES, PD_OBS, PD_SNAPS = ("semantic_pazar_dagitim_titles", "semantic_pazar_dagitim_obs",
+                               "semantic_pazar_dagitim_snapshots")
 
 TABLOLAR = {
     KANAL: ("Kanal kodu × ay (Logo)", "Logo kanal kodu (cari özel kod) × ay: satış/iade ciro ve adet, brüt satış, iskonto, "
@@ -36,6 +38,10 @@ TABLOLAR = {
     IMP: ("Panel dosyaları", "Yüklenen pazar yeri panel dosyası (Excel/CSV) başlığı."),
     IMPR: ("Panel dosyası satırları", "Yüklenen dosyanın satırları: kitap, satış adedi (kişisel kolon alınmaz)."),
     H3_ORD: ("Site siparişleri", "Sitenin sipariş servisinden gece okunan siparişler (e-ticaret müşteri modülü)."),
+    PD_TITLES: ("Dağıtımcı başlıkları (son hâl)", "Başarı ve D&R kataloğundaki başlıkların son hâli: stok, site stoğu, "
+                                                  "fiyat, TİMAŞ grubu işareti, son görüldüğü görüntü."),
+    PD_OBS: ("Dağıtımcı depo hareketleri", "Görüntüler arası değişen başlıklar: önceki ve şimdiki stok, çıkış, giriş."),
+    PD_SNAPS: ("Dağıtımcı görüntüleri", "Her gün okunan katalog görüntülerinin tarihleri ve satır sayıları."),
 }
 
 #: Rakam olmayan sayılar: yıl ve ay numarası, sayfa, ayar, eşik ve kullanıcının girdiği simülasyon değerleri.
@@ -43,7 +49,7 @@ NOT_RAKAM = ("page", "pageSize", "period.yil", "period.ay", "years", "defaultYea
              "months", "yil", "aylik[].ay", "esik", "iskontoPuan", "hacimYuzde", "aralik.ay", "crmYilKodu", "oran",
              "bolgeler[].yil", "items[].yil", "data.years", "data.startedAt", "kanalaSatisAylari")
 
-F_OLCU = ("Ölçüler (faturalı satır, Logo): net ciro = satış cirosu (TRCODE 7,8,9 LINENET) − iade cirosu (2,3); net adet = "
+F_OLCU = ("Ölçüler (faturalı satır, Logo): net ciro = satış cirosu (TRCODE 7,8,9 VATMATRAH) − iade cirosu (2,3); net adet = "
           "satış − iade adedi; iskonto oranı = iskonto ÷ brüt satış; iade oranı = iade cirosu ÷ satış cirosu; brüt kâr = "
           "maliyetli ciro − maliyet, marj = brüt kâr ÷ maliyetli ciro (yalnız maliyeti girilmiş satırlar); iade sonrası marj "
           "iadenin cirosu ve maliyeti düşülerek; katkı = iade sonrası brüt kâr − net ciro × ek kanal maliyeti oranı.")
@@ -70,6 +76,9 @@ F_BOLGE = "Bölge: CRM hedef satırı; yıllık = hedef toplamı, aylık toplam 
 F_ONERI = "Öneri: simülasyon ve D2C set önerisinin rakamları öneri kaydında saklanır (oluşturulduğu andaki hesap)."
 F_DOSYA = ("Panel dosyası: yüklenen dosyadaki satış (sell-through) adetleri ile aynı dönemde kanala satış (Logo sell-in) "
            "adetleri kitap başına yan yana; oran = panel satışı ÷ kanala satış.")
+F_DAGITIMCI = ("Başarı Dağıtım'a satış (sell-in) = ayardaki Başarı carisine (PAZAR_DAGITIM_BASARI_CARI) faturalı satış − iade, "
+               "karnedeki cari × ay sorgusunun aynısı, kapsam yalnız bu cari; e-ticaret ve platform toplamlarına girmez. "
+               + F_OLCU + " " + F_DONEM)
 F_META = "Okuma bilgisi: yıl okumalarının satır sayıları, son okuma zamanı, CRM sipariş tipleri ve uyarı sayıları okuma kaydından."
 
 
@@ -97,12 +106,38 @@ def for_meta(engine: Any, tenant: str, out: dict[str, Any], q: Y.Yakalanan) -> P
     return b.alanlar({"data": h, "alerts": h, "crmOrders": h})
 
 
+def _dagitim_sources(b: Y.Kurucu, *which: str) -> list[str]:
+    """M39 dağıtımcı katalogları: tabloyu dolduran kaynak sorguları (Logo sunucusundaki ayrı veritabanı)."""
+    from semantic_bridge import pazar_dagitim as PD
+
+    out = []
+    if "basari" in which:
+        out.append(b.k.sorgu("kanal.dagitim.basari", "Başarı Dağıtım kataloğu", "logo", PD.SQL_BASARI,
+                             description="Başarı'nın güncel kataloğu (kaynak kendi üstüne yazar); her gün okunur, yalnız "
+                                         "değişen satır saklanır."))
+    if "dr" in which:
+        out.append(b.k.sorgu("kanal.dagitim.dr", "D&R kataloğu", "logo", PD.SQL_DR,
+                             description="D&R Prefix kataloğu: Prefix B2B stoğu ve D&R/İdefix site stoğu ayrı okunur."))
+    return out
+
+
 def for_scorecard(engine: Any, tenant: str, out: dict[str, Any], q: Y.Yakalanan) -> P.Kaynaklar:
-    b = _kur(engine, tenant, q, _years(out))
+    from semantic_bridge import pazar_dagitim as PD
+
+    years = _years(out)
+    b = _kur(engine, tenant, q, years)
     k = b.hesap("karne", F_KARNE, CARI, KANAL, ACC)
-    return b.alanlar({"platforms": k, "platforms[].hedef": b.hesap("hedef", F_HEDEF, TARG, CARI), "toplam": k,
-                      "platformDisi": k, "kanallar": b.hesap("kanalKiyas", F_OLCU + " Kanal kodu başına; pay = ÷ şirket.", KANAL),
-                      "period": b.hesap("donem", F_DONEM, META)})
+    f = {"platforms": k, "platforms[].hedef": b.hesap("hedef", F_HEDEF, TARG, CARI), "toplam": k,
+         "platformDisi": k, "kanallar": b.hesap("kanalKiyas", F_OLCU + " Kanal kodu başına; pay = ÷ şirket.", KANAL),
+         "period": b.hesap("donem", F_DONEM, META)}
+    if out.get("dagitimci"):
+        stok = b.hesap("kanalStok", PD.F_KANAL_STOK, PD_TITLES, PD_SNAPS, PD_OBS, *_dagitim_sources(b, "basari", "dr"))
+        # Dağıtımcı carisinin satırları yıl okumasında (kanal okuması · yıl) okunur ve okuma kaydında saklanır.
+        okuma = [i for y in years for i in b._origin(RF.koken_yil(y), f"Kanal okuması · {y}")]
+        satis = b.hesap("dagitimciSatis", F_DAGITIMCI, META, *okuma)
+        f.update({"dagitimci": stok, "dagitimci.basari.kanalaSatis": satis, "dagitimci.basari.gecenYil": satis,
+                  "dagitimci.basari.degisim": satis, "dagitimci.dr.kanalaSatis": k})
+    return b.alanlar(f)
 
 
 def for_channel(engine: Any, tenant: str, out: dict[str, Any], q: Y.Yakalanan) -> P.Kaynaklar:
@@ -112,6 +147,10 @@ def for_channel(engine: Any, tenant: str, out: dict[str, Any], q: Y.Yakalanan) -
          "cariler": b.hesap("cariler", F_OLCU + " Cari grubu başına; CRM sipariş sayısı son N günün CRM siparişlerinden.",
                             CARI, META), "crmSiparisGun": "hesap:cariler", "hedef": b.hesap("hedef", F_HEDEF, TARG, CARI),
          "period": b.hesap("donem", F_DONEM, META), "imports": b.hesap("dosya", F_DOSYA, IMP)}
+    if out.get("dagitimStok"):
+        from semantic_bridge import pazar_dagitim as PD
+
+        f["dagitimStok"] = b.hesap("kanalStok", PD.F_KANAL_STOK, PD_TITLES, PD_SNAPS, *_dagitim_sources(b, "dr"))
     return b.alanlar(f)
 
 

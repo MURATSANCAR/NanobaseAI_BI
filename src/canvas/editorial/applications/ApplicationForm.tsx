@@ -55,7 +55,7 @@ const fromApp = (a: AppDetail): Form => ({
   authorExpertise: a.authorExpertise ?? '', authorHistory: a.authorHistory ?? '', crmContactId: a.crmContactId,
   crmName: a.crmContactId ? a.authorName : null, summary: a.summary, audience: a.audience ?? '',
   ageFrom: a.ageFrom == null ? '' : String(a.ageFrom), ageTo: a.ageTo == null ? '' : String(a.ageTo),
-  pageEstimate: String(a.pageEstimate), genre: a.genre ?? '', categoryId: a.categoryId ?? '', series: a.series ?? '',
+  pageEstimate: a.pageEstimate != null ? String(a.pageEstimate) : '', genre: a.genre ?? '', categoryId: a.categoryId ?? '', series: a.series ?? '',
   publisherNote: a.publisherNote ?? '', channel: a.channel, receivedOn: a.receivedOn,
 });
 

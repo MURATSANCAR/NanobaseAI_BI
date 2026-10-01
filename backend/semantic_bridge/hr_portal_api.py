@@ -185,6 +185,14 @@ def register(app, hr: Any) -> None:
             raise HTTPException(404, detail={"code": "HR", "message": "Fotoğraf yok."})
         return _download(got[0], "fotograf", got[1], inline=True)
 
+    @app.get(P + "/kampus")
+    def portal_kampus(request: Request) -> dict[str, Any]:
+        """Kampüs ortak insan kartları: duyurular, aramıza katılanlar, doğum günleri, iş yıldönümleri, bugün izinde."""
+        from semantic_bridge import hr_brief as HB
+
+        engine, tenant, _, _ = ready(request)
+        return HB.kampus(engine, tenant)
+
     @app.get(P + "/birthdays")
     def portal_birthdays(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ready(request)
@@ -311,9 +319,13 @@ def register(app, hr: Any) -> None:
     def admin_person_delete(pid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who, _ = admin(request, PT.F_EDIT, what="Personel kaydını silme")
         need(who, PT.F_SENS, what="Belgeleriyle birlikte personel kaydını silme")
-        out = call(PT.delete_person, engine, tenant, pid)
-        H.log_access(engine, tenant, who.user, SUBJECT, pid, "sil", f"özlük kaydı ve {out['files']} belge")
-        hr.audit(engine, who.user, "delete", "hr_person", pid, f"Personel kaydı {out['idNo']}", {"belge": out["files"]})
+        out = call(PT.delete_person, engine, tenant, pid, who.user)
+        lv = out["linked"].get("izin") or {}
+        H.log_access(engine, tenant, who.user, SUBJECT, pid, "sil",
+                     f"pasife alındı: özlük kaydı ve {out['files']} belge; {lv.get('requests', 0)} izin talebi, {lv.get('files', 0)} izin "
+                     f"belgesi, {lv.get('ledger', 0)} bakiye satırı; {lv.get('deputyCleared', 0)} talepte vekil boşaltıldı")
+        hr.audit(engine, who.user, "delete", "hr_person", pid, f"Personel kaydı {out['idNo']} pasife alındı",
+                 {"belge": out["files"], "arsiv": out["archiveId"], **out["linked"]})
         return {"ok": True, **out}
 
     @app.post(A + "/people/{pid}/files/{field_key}", status_code=201)

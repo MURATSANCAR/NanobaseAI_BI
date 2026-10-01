@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
+import { Download, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { EmptyHint, Explain } from '../components/Explain';
 import { Term } from './terms';
+import SeoPager from './SeoPager';
 
 const PAGE = 40;
 
@@ -146,19 +147,7 @@ export default function SeoSchema() {
                     </tbody>
                   </table>
                 </div>
-                {d.total > PAGE && (
-                  <div className="sg-pager" style={{ marginTop: 12 }}>
-                    <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                      <ChevronLeft size={16} aria-hidden />
-                    </button>
-                    <span className="sg-mono">
-                      {fmt(start + 1)}–{fmt(Math.min(d.total, start + PAGE))} / {fmt(d.total)}
-                    </span>
-                    <button className="sg-button" disabled={start + PAGE >= d.total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                      <ChevronRight size={16} aria-hidden />
-                    </button>
-                  </div>
-                )}
+                <SeoPager start={start} total={d.total} size={PAGE} onChange={setStart} />
               </section>
             </div>
           )}

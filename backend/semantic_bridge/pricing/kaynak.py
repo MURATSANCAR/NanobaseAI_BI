@@ -20,10 +20,10 @@ F_KAGIT = ("Kâğıt (adet başına) = iç sayfa kg × son 6 ayın ortalama ₺/
            "× gramaj; fire ve kapak alanı katsayısı varsayımdır. ₺/kg = alış tutarı ÷ kg (15001 kartları).")
 F_TELIF = ("Telif (adet başına) = oran × taban; taban «kapak» = P ÷ (1 + KDV), «net» = net birim gelir. Oran, taban, "
            "doğuş (satış/baskı) ve avans CRM'deki yürürlükteki sözleşmeden.")
-F_ISKONTO = ("Kanal iskontosu = 1 − Σ net (LINENET) ÷ Σ iskonto öncesi (TOTAL), son 12 ay kitap satış satırları, müşteri "
+F_ISKONTO = ("Kanal iskontosu = 1 − Σ net (VATMATRAH) ÷ Σ iskonto öncesi (TOTAL), son 12 ay kitap satış satırları, müşteri "
              "grubuna göre; ağırlıklı iskonto kanal payına (ya da seçilen kanal karmasına) göre.")
 F_DAGITIM = "Dağıtım gideri oranı = son 12 ayın «Satış Nakliye Giderleri» hizmet tutarı ÷ kitap net satışı."
-F_NET = ("Net satış = Σ LINENET (TRCODE 7, 8, 9) − Σ LINENET (TRCODE 2, 3), faturalı malzeme satırları; Logo birim "
+F_NET = ("Net satış = Σ VATMATRAH (TRCODE 7, 8, 9) − Σ VATMATRAH (TRCODE 2, 3), faturalı malzeme satırları; Logo birim "
          "maliyeti = Σ AMOUNT × OUTCOST ÷ maliyeti işlenmiş adet; kâr = net − maliyet; marj = kâr ÷ net.")
 F_SENARYO = ("Senaryo: birim maliyet = c(Q) + sabit giderler ÷ Q; net birim gelir N = P ÷ (1 + KDV) × (1 − iskonto); "
              "başabaş satış adedi S* = (Q·c(Q) + F) ÷ (N·(1 − t) − R); kâr = satılan × (N − R − t·N) − Q·c(Q) − F; "
@@ -34,9 +34,14 @@ F_EMSAL = ("Emsal kitaplar: son 12 ayda Logo'da baskı faturası olan, sayfa say
 F_GERCEK = ("Gerçekleşen: basılan adet ve baskı bedeli matbaa faturalarından; satılan adet, net satış ve Logo birim "
             "maliyeti satış satırlarından; kapak fiyatı CRM'den; maliyet ÷ fiyat = Logo birim maliyeti ÷ (kapak ÷ "
             "(1 + KDV)). " + F_NET)
-F_BACKLIST = ("Fiyat revizyonu adayı: oran = (son baskı birim bedeli + güncel kâğıt) ÷ kapak fiyatı (KDV hariç). Hedef "
-              "oran verilmezse son 12 ayda ilk baskısı yapılan kitapların ortanca oranı. Oranı hedefin üstünde olan ve "
-              "son iki yılda satışı olan kitaba hedefi tutturan fiyat (5 ₺'ye yukarı) önerilir.")
+F_KARSILASTIR = ("Eski kitap karşılaştırması: güncel fiyat = CRM kitap kartındaki KDV dahil kapak fiyatı. Bizim hesap = «Kitap "
+                 "hesabı»nda kitap seçildiğinde çıkan önerilen kapak fiyatı, bütün kitaplar için aynı zincirle: CRM + Logo "
+                 "öneri girdileri, basım Excel'indeki maliyet formu (baskı adedi son CRM üretim kaydından, kâğıt Logo "
+                 "alışından, kur fiyat listesindeki seçime göre Logo faturalarından ya da elle), serbest çalışan tutarları ve "
+                 "elle girilen pazar fiyatları; öneri = hedef marjı tutan maliyet alt sınırı ile emsal ortancasının büyüğü "
+                 "(KDV dahil, 5 ₺'ye yukarı). Fark = bizim hesap − güncel fiyat; % = bizim hesap ÷ güncel fiyat − 1. «Yeni» = "
+                 "ilk yayını (yoksa ilk matbaa faturası) son 12 ayda. Satış (2 yıl) = bu yıl ve geçen yılın Logo faturalı "
+                 "satış adedi.")
 F_ONAY = "Analiz ve teklifler portalda saklanır; rakamlar hesaplandığı andaki sonuçtur (sürümüyle)."
 
 
@@ -259,13 +264,17 @@ def for_actuals(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[s
     return k
 
 
-def for_backlist(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[str]) -> P.Kaynaklar:
+def for_compare(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[str]) -> P.Kaynaklar:
     k = _new(snap)
-    ref = k.hesap("backlist", F_BACKLIST + " " + F_KAGIT,
-                  snap_sources(k, snap, ["logo_baski", "logo_kagit", "crm_kitap", "crm_baski", "logo_satis"], logo_db, crm_db))
-    k.alanlar({"rows[]": ref, "count": ref, "target": ref, "measuredTarget": ref, "freshBooks": ref, "candidates": ref,
-               "secim": k.hesap("secim", "Seçilen = tabloda işaretlenen kitap sayısı; ortalama artış = seçilen kitapların "
-                                         "önerilen artış oranlarının aritmetik ortalaması (ekranda hesaplanır).", [ref])})
+    ref = k.hesap("karsilastir", F_KARSILASTIR + " " + F_FORM + " " + F_SENARYO + " " + F_EMSAL,
+                  snap_sources(k, snap, ["crm_kitap", "crm_baski", "crm_secenek", "logo_baski", "logo_kagit", "logo_kur",
+                                         "logo_satis", "logo_kanal", "logo_nakliye"], logo_db, crm_db))
+    k.alanlar({"rows[]": ref, "count": ref, "total": ref, "counts": ref, "avgDiffPct": ref, "kur": ref, "targetMargin": ref,
+               "newHidden": ref, "logoKur": ref,
+               "seconds": k.hesap("hazirlik", "Karşılaştırmanın son hesaplanma süresi (saniye) ve başladığı an; yalnız hesap "
+                                             "durumunu anlatır.", [ref]), "startedAt": "hesap:hazirlik",
+               "secim": k.hesap("secim", "Seçilen = tabloda işaretlenen kitap sayısı; ortalama değişim = seçilen kitapların "
+                                         "fark yüzdelerinin aritmetik ortalaması (ekranda hesaplanır).", [ref])})
     return k
 
 
@@ -294,8 +303,8 @@ def for_proposals(engine: Any, tenant: str, pid: Optional[str] = None) -> P.Kayn
     k = P.Kaynaklar()
     stmt = S.proposal_stmt(tenant, pid) if pid else S.proposals_stmt(tenant)
     p = k.portal("portal.fiyat.teklif", "Fiyat revizyonu teklifleri", stmt, engine,
-                 description="Teklif anında backlist listesinden seçilen kitaplar ve hedef oran (sunucuda hesaplanmış).")
-    ref = k.hesap("teklif", F_ONAY + " " + F_BACKLIST, [p])
+                 description="Teklif anında eski kitap karşılaştırmasından seçilen kitaplar ve hesabın girdileri (sunucuda hesaplanmış).")
+    ref = k.hesap("teklif", F_ONAY + " " + F_KARSILASTIR, [p])
     k.alanlar({"items[]": ref, "params": ref, "count": ref})
     return k
 
@@ -335,4 +344,71 @@ def for_form(engine: Any, tenant: str, snap: Optional[dict[str, Any]], out: dict
     fields["kur"] = k.hesap("formKur", "Kur: ekranda yazılan; boşsa Logo'da o dövizle kesilen son faturaların kuru, o da "
                                        "yoksa fiyat listesindeki kur.", [t] + kur)
     k.alanlar(fields)
+    return k
+
+
+# ------------------------------------------------------------------ dağıtımcı kataloğundan pazar fiyatı
+
+
+def _dagitim_kaynak(k: P.Kaynaklar) -> tuple[str, str]:
+    """Portal tablosunu dolduran Başarı ve D&R okumaları (M39, her gün; güncel hâl portalda tutulur)."""
+    from semantic_bridge import pazar_dagitim as PD
+
+    b = k.sorgu("pazar.dagitim.basari", "Başarı Dağıtım kataloğu", "logo", PD.SQL_BASARI,
+                description="Başarı'nın güncel kataloğu; her gün okunur, portalda güncel hâli tutulur.")
+    d = k.sorgu("pazar.dagitim.dr", "D&R kataloğu", "logo", PD.SQL_DR,
+                description="D&R'nin güncel kataloğu (liste ve satış fiyatı, site durumu); her gün okunur.")
+    return b, d
+
+
+def _kategori_listesi(k: P.Kaynaklar, engine: Any, tenant: str, tarih: str, b: str) -> str:
+    from datetime import date as _date
+
+    from semantic_bridge.pricing import dagitim as DG
+
+    return k.portal("portal.fiyat.dagitimKategori", "Başarı kategorileri (TİMAŞ dışı)",
+                    DG.categories_stmt(tenant, _date.fromisoformat(tarih)), engine,
+                    description="Son görüntüde fiyatlı, TİMAŞ grubu dışı başlık sayısı, kategori başına.", origin=[b])
+
+
+def for_distributor(engine: Any, tenant: str, out: dict[str, Any]) -> P.Kaynaklar:
+    """`/distributor`: kategori kümesi (portal), kitabın kendi Başarı kaydı ve kategori listesi; hesap `dagitim.py`."""
+    from datetime import date as _date
+
+    from semantic_bridge.pricing import dagitim as DG
+
+    src = out.get("kaynak") or {}
+    k = P.Kaynaklar(data_end=src.get("basari"))
+    b, d = _dagitim_kaynak(k)
+    kat = out.get("kategori") or {}
+    ins = [b, d]
+    fields: dict[str, str] = {}
+    if src.get("basari"):
+        kat_ins = [_kategori_listesi(k, engine, tenant, src["basari"], b)]
+        if out.get("kod"):
+            kat_ins.append(k.portal("portal.fiyat.dagitimKendi", "Kitabın kendi Başarı kaydı",
+                                    DG.own_stmt(tenant, out["kod"]), engine,
+                                    description="Logo barkodu ↔ stok kodu eşleşmesiyle kitabın Başarı başlığı.", origin=[b]))
+        fields["kategori"] = k.hesap("dagitim.kategori", DG.F_KATEGORI, kat_ins)
+        if kat.get("secili"):
+            tb = _date.fromisoformat(src["basari"])
+            td = _date.fromisoformat(src["dr"]) if src.get("dr") else None
+            ins = [k.portal("portal.fiyat.dagitim", "Dağıtımcı kataloğu: kategori kümesi",
+                            DG.rows_stmt(tenant, kat["secili"], tb, td), engine,
+                            description="Seçilen kategorideki TİMAŞ dışı, fiyatlı başlıklar ve aynı barkodun D&R satırı; "
+                                        "sayfa, kapak ve basım yılı süzgeçleri bu satırlar üstünde uygulanır.",
+                            origin=[b, d])]
+    f = k.hesap("dagitim", DG.F_DAGITIM, ins)
+    fields.update({"tum": f, "sonYillar": f, "suzgec": f, "kume": f})
+    k.alanlar(fields)
+    return k
+
+
+def for_distributor_categories(engine: Any, tenant: str, out: dict[str, Any]) -> P.Kaynaklar:
+    k = P.Kaynaklar(data_end=out.get("tarih"))
+    b, _ = _dagitim_kaynak(k)
+    ins = [b] + ([_kategori_listesi(k, engine, tenant, out["tarih"], b)] if out.get("tarih") else [])
+    k.alanlar({"items[]": k.hesap("dagitim.kategoriler", "Başlık sayısı = son Başarı görüntüsünde TİMAŞ grubu dışı, "
+                                                         "liste fiyatı sıfırdan büyük başlıklar; üst kategori satırı "
+                                                         "alt kategorilerinin toplamıdır.", ins)})
     return k

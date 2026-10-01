@@ -15,6 +15,9 @@ Kaynaklar (analiz: `docs/analiz/kullanici-ihtiyaclari/M44-lojistik-kargo.md` §6
 - **Takip bilgisi** `new_kargotakipbilgisiBase` ve **sevkiyat** `new_sevkiyatBase` siparişe kimlikle bağlıdır.
 - **Gerçekleşen sevk** Logo `STLINE` TRCODE 7,8 IOCODE 4 (Kural 10); kargo faturası Logo alınan hizmet faturası (TRCODE 4),
   kargo carileri ayardan (insan onaylı eşleme).
+- **Kargo maliyeti** (`/kargo/maliyet`) Logo alınan hizmet faturası satırları (hizmet kodları ayarda,
+  `SHIPPING_COST_SERVICE_CODES`), satış irsaliyesinin taşıyıcı kodu (`STFICHE.SHPAGNCOD`), net ciro (satış − iade
+  faturası, KDV hariç). CRM `new_kargobilgisiBase` burada kullanılmaz (2024'te donmuş aktarım).
 
 **Kimlik bilgisi yasağı:** CRM `new_kargofirmasiBase`'in kullanıcı adı, parola, token, istemci kimliği/sırrı ve UPS hesap
 kolonları hiçbir sorguda geçmez. Kolonlar tek tek adıyla seçilir (`SELECT *` yok); `guard()` yasak kolon adı ya da
@@ -476,6 +479,39 @@ def read_data_end(run: Runner, firms: dict[int, str]) -> Optional[date]:
         return bsrc.read_data_end(run, firms)
     except SourceError:
         return None
+
+
+# ------------------------------------------------------------------ Logo okumaları: kargo maliyeti (/kargo/maliyet)
+
+
+def service_codes(codes: Iterable[str]) -> str:
+    """Hizmet kartı kodları (ayar) → SQL listesi. Her kod doğrulanır; boş liste hata."""
+    cl = [c for c in codes if c and str(c).strip()]
+    if not cl:
+        raise SourceError("Kargo gideri hizmet kodu listesi boş.")
+    return ", ".join(sorted({f"'{code_text(str(c))}'" for c in cl}))
+
+
+def read_cost_lines(run: Runner, f: str, codes: Iterable[str], start: date, end: date) -> list[dict[str, Any]]:
+    """Kargo ve nakliye gideri: alınan hizmet faturası × hizmet kodu (satır tutarı, KDV hariç)."""
+    return lower_keys(run(sql("logo_kargo_gider", f=firm(f), hizmetler=service_codes(codes), bas=start.isoformat(),
+                              bit=end.isoformat())))
+
+
+def read_cost_receivers(run: Runner, f: str, codes: Iterable[str], start: date, end: date) -> list[dict[str, Any]]:
+    """Vergi kimliği bir kargo gideri tedarikçisininkiyle aynı olan alıcılara taşıyıcı kodlu irsaliye (alıcı × kod)."""
+    return lower_keys(run(sql("logo_kargo_alici", f=firm(f), hizmetler=service_codes(codes), bas=start.isoformat(),
+                              bit=end.isoformat())))
+
+
+def read_slip_counts(run: Runner, f: str, start: date, end: date) -> list[dict[str, Any]]:
+    """Satış irsaliyesi sayısı, ay × taşıyıcı kodu (SHPAGNCOD, ham)."""
+    return lower_keys(run(sql("logo_kargo_irsaliye", f=firm(f), bas=start.isoformat(), bit=end.isoformat())))
+
+
+def read_net_sales(run: Runner, f: str, start: date, end: date) -> list[dict[str, Any]]:
+    """Ay ay net ciro (satış − iade faturası, KDV hariç) ve en son fatura tarihi."""
+    return lower_keys(run(sql("logo_net_ciro", f=firm(f), bas=start.isoformat(), bit=end.isoformat())))
 
 
 # ------------------------------------------------------------------ kargo kaydı ↔ sipariş (bağlantı noktası)

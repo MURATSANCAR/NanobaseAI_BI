@@ -1,0 +1,21 @@
+{
+  "files": {
+    "worker": "97d8afe55f3b25b7e96847dbd32cd938ca7426f119161ee97831cd0c4a23b969",
+    "mongoAdapter": "2b4daa6c4c3f52219d74382935689df3f445032d1380d9a0051930e329a524d3",
+    "endpoint": "277b1ee1f34960cdc1cb2044fe74b2f351bb1e58839bd377223aef8aacc2dd18",
+    "app": "9e5a004210f1798a438158d372f29b743f745f9d9536b2d73ffb3ba93d3a2be9",
+    "service": "49a0239c5108e6eb37dc21142d7a7098a9e27a37875f1fcbc91f735b7f1c039d"
+  },
+  "enabled": "enabled",
+  "active": "active",
+  "chatImage": "zeki-ai-chat:8.5.3-c1f548205",
+  "macArtifacts": 0,
+  "remainingAcceptanceJobs": 0,
+  "cleanup": {
+    "temporaryRooms": 0,
+    "remainingBotReplies": 0,
+    "botCount": 1,
+    "accounts": 218
+  },
+  "temporarySecretsRemoved": true
+}

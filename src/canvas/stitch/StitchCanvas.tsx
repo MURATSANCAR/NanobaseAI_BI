@@ -13,6 +13,7 @@ import ReasonPanel from '../reason/ReasonPanel';
 import { reasonApi } from '../reason/api';
 import { questionParticle } from '../interpret';
 import { Explain } from '../components/Explain';
+import AskResult from '../components/AskResult';
 
 /**
  * Stitch ekranının (projects/13426839861607265553/screens/c35e1503…) birebir
@@ -674,6 +675,7 @@ function CanvasBody({
 
               {/* Action Buttons */}
               <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
+                {d.main.result && <AskResult key={d.main.result.id} {...d.main.result} />}
                 {d.main.board && canPin && <BoardButton b={d.main.board} />}
                 {/* Primary Gradient Action */}
                 <Link to={d.main.primaryTo} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-coral to-violet text-white text-xs font-extrabold tracking-tight shadow-md hover:shadow-lg hover:opacity-95 transition-all flex items-center gap-2 active:scale-95">
