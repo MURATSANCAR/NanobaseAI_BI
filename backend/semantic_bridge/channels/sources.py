@@ -256,11 +256,33 @@ def read_target_labels(run: Runner, schema: str) -> dict[str, dict[str, str]]:
     return {"years": years, "regions": regions}
 
 
+def target_key(bolge: Any, bmt: Any) -> Optional[str]:
+    """Hedef sahibinin anahtarı: bölge kodu; bölge boşsa (2025'ten beri) BMT kullanıcısı `u:<kullanıcı adı>`. İkisi de
+    boşsa None (sahipsiz satır karneye girmez)."""
+    if bolge is not None:
+        return str(bolge)
+    name = str(bmt or "").strip().split("\\")[-1].lower()
+    return ("u:" + name)[:20] if name else None
+
+
+def target_owner_name(full: Any) -> str:
+    """CRM'de kanal hesabının adı «Hepsiburada Hepsiburada» biçiminde (ad + soyad alanı aynı): tekrar atılır."""
+    words = str(full or "").split()
+    half = len(words) // 2
+    return " ".join(words[:half]) if half and words[:half] == words[half:] else " ".join(words)
+
+
 def read_targets(run: Runner, schema: str, yil_kodu: int) -> list[dict[str, Any]]:
-    out = []
+    """Hedef sahibi (bölge ya da BMT) başına aylık adet. Aynı bölge birden çok BMT'ye bölünmüşse (2023–2024) toplanır."""
+    out: dict[str, dict[str, Any]] = {}
     for r in run(crm_hedef_sql(schema, yil_kodu)):
-        if r.get("bolge") is None:
+        key = target_key(r.get("bolge"), r.get("bmt"))
+        if key is None:
             continue
-        out.append({"bolge": str(r["bolge"]), "satir": int(r.get("satir") or 0), "toplam": _f(r.get("toplam")),
-                    "aylar": [_f(r.get(f"m{i}")) for i in range(1, 13)]})
-    return out
+        d = out.setdefault(key, {"bolge": key, "ad": None if r.get("bolge") is not None else target_owner_name(r.get("bmt_ad")),
+                                 "satir": 0, "toplam": 0.0, "aylar": [0.0] * 12})
+        d["satir"] += int(r.get("satir") or 0)
+        d["toplam"] += _f(r.get("toplam"))
+        for i in range(12):
+            d["aylar"][i] += _f(r.get(f"m{i + 1}"))
+    return list(out.values())

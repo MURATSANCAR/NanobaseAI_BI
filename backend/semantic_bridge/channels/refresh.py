@@ -234,7 +234,7 @@ class Refresher:
                         Y.koken_yaz(engine, tenant, f"{KOKEN_OKUMA}.hedef.{y}", qt)
                         year_sql |= {x["sql"] for x in qt.queries}
                         S.replace_year(engine, tenant, S.TARGETS, y, [
-                            {"yil": y, "bolge": r["bolge"], "bolge_ad": labels["regions"].get(r["bolge"]), "satir": r["satir"],
+                            {"yil": y, "bolge": r["bolge"], "bolge_ad": labels["regions"].get(r["bolge"]) or r.get("ad"), "satir": r["satir"],
                              "toplam": r["toplam"], "aylar_json": _json(r["aylar"])} for r in rows])
                 except src.SourceError as e:
                     crm_meta["error"] = str(e)

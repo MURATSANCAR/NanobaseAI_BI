@@ -483,3 +483,20 @@ def test_api_redacts_margin_and_enforces_two_eyes(monkeypatch, store, settings):
     x = client.get("/api/v1/channels/export/karne.xlsx?yil=2026&ay=7", headers=a)
     assert x.status_code == 200 and x.content[:2] == b"PK"
     assert client.post("/api/v1/channels/run-due", headers=a).status_code == 403
+
+
+# 2025'ten beri CRM satış hedefinin sahibi bölge değil BMT (bölge boş): bu satırlar atlanmamalı (2026-10-01 düzeltmesi).
+def test_targets_without_region_are_keyed_by_the_bmt_user():
+    sql = src.crm_hedef_sql("Timas_MSCRM.dbo", 100000000)
+    assert "LEFT JOIN Timas_MSCRM.dbo.SystemUserBase AS u ON u.SystemUserId = t.new_BMT" in sql
+    assert "GROUP BY t.new_bolge, u.DomainName" in sql
+    months = {f"m{i}": 1 for i in range(1, 13)}
+    rows = [{"bolge": None, "bmt": "TIMAS\\hepsiburada", "bmt_ad": "Hepsiburada Hepsiburada", "satir": 10, "toplam": 12, **months},
+            {"bolge": 7, "bmt": "TIMAS\\ali", "bmt_ad": "Ali Veli", "satir": 2, "toplam": 12, **months},
+            {"bolge": 7, "bmt": "TIMAS\\ayse", "bmt_ad": "Ayşe", "satir": 3, "toplam": 12, **months},
+            {"bolge": None, "bmt": None, "bmt_ad": None, "satir": 9, "toplam": 0, **months}]
+    out = {r["bolge"]: r for r in src.read_targets(lambda sql: rows, "Timas_MSCRM.dbo", 100000000)}
+    assert set(out) == {"u:hepsiburada", "7"}, "sahipsiz satır atlanır, bölgesiz BMT satırı tutulur"
+    assert out["u:hepsiburada"]["ad"] == "Hepsiburada" and out["u:hepsiburada"]["toplam"] == 12
+    assert out["7"]["ad"] is None and out["7"]["satir"] == 5 and out["7"]["toplam"] == 24, "bölge iki BMT'ye bölünse de toplanır"
+    assert src.target_key(None, "TIMAS\\mustafacetinkara") == "u:mustafacetinkara"
