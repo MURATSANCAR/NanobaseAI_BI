@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Müşteri VM kontrolü; zamanlanmış iş takvim kolonu 40→200
+
+- VM 03:56'da çekirdek güncellemesiyle yeniden başlamış (7.0.0-34); konteynerler 30 Eylül kurulumundan, anlık görüntüye dönüş yok. Tünel kapalıydı, kullanıcı açtı; `/timas/` 200, köprü hazır (5.023 sertifikalı).
+- VM köprüsünde `POST /api/v1/it-ops/watchdog` 500: `semantic_itops_jobs.every` VARCHAR(40), M19 işinin takvimi 43 karakter. `278a3e0c4`: kolon 200, var olan Postgres tablosu `it_ops.ensure` içinde ALTER ile genişler.
+- Test sunucusu: yalnız `it_ops.py` (md5 kontrollü) + köprü yeniden başlatma, kolon 200. VM: VM'in tam kod sürümü kayıtlı değil (son kurulum kaydı 29.09 `411dd7be`, imaj 30.09) ve main 80 commit önde → yalnız bu dosya `docker cp` ile `bi-bridge-1`'e kondu + konteyner yeniden başlatıldı, kolon 200. Konteyner yeniden oluşturulursa düzeltme bir sonraki tam VM kurulumuyla (main'de) gelir.
+
 ## 2026-10-01 — Karar: aktif müşteri yalnız «Aktif Müşteri» durumu
 
 - Kullanıcı kararı: aktif müşteri = AccountBase statecode=0 ve durum nedeni «Aktif Müşteri» (Eylül 2026: 11.854). Ürün (`executor.crm_status`) zaten böyle sayıyordu; kabul referansı genel pasif-olmayan kuralı (12.388) kullandığı için TANIM_FARKI çıkıyordu.
