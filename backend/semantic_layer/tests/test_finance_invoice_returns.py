@@ -278,3 +278,29 @@ def test_sales_metric_definitions_name_the_basis():
     for m in ("net_sales", "sales_amount", "return_amount"):
         assert "VATMATRAH" in METRICS[m].expression and "LINENET" not in METRICS[m].expression
         assert "fatura tarihi" in METRICS[m].definition
+
+
+# 2026-10-01 FC23: kartı olan ama kaynakta yazarı boş ürün (kılavuz, dergi) kapsam açığı değildir;
+# kartı olmayan / aktif olmayan kart açık kalır.
+def book_sales(sql):
+    return [{"book_code": "K1", "book_name": "Roman", "sales_amount": 10},
+            {"book_code": "K2", "book_name": "Kılavuz", "sales_amount": 5},
+            {"book_code": "K3", "book_name": "Pasif kartlı", "sales_amount": 7}]
+
+
+def test_authorless_product_with_a_card_is_a_note_not_a_gap(monkeypatch):
+    monkeypatch.setattr(Executor, "crm_dimension_books", lambda self, plan: {
+        "k1": {"author": "Yazar A"}, "k2": {"author": None}, "k3": {"author": "Yazar C"}})
+    engine = Executor(Runtime(book_sales))
+    engine.execute(Plan(("sales_amount",), ("book", "author"), SEPT))
+    assert engine.coverage_complete
+    assert any("kaynakta yazar alanı boş" in n for n in engine.notes)
+
+
+def test_sale_without_an_active_card_stays_a_gap(monkeypatch):
+    monkeypatch.setattr(Executor, "crm_dimension_books", lambda self, plan: {
+        "k1": {"author": "Yazar A"}, "k2": {"author": None}})
+    engine = Executor(Runtime(book_sales))
+    engine.execute(Plan(("sales_amount",), ("book", "author"), SEPT))
+    assert not engine.coverage_complete
+    assert any("aktif CRM kitap eşleşmesi yok" in n for n in engine.notes)

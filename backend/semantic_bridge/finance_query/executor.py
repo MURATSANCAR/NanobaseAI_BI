@@ -348,6 +348,10 @@ class Executor:
             before = {m: sum((number(r[m]) for r in partials), Decimal(0)) for m in plan.metrics}
             missing = 0
             empty_fields = {field: 0 for field in ("author", "publisher", "subbrand", "author_group_ids") if field in group_fields}
+            # A matched card whose author text is empty has no author in the source (teacher guides,
+            # badges, magazines, compiled works: measured 2026-10-01). That is a fact about the product,
+            # not a coverage gap; a missing or non-active card stays a gap.
+            authorless = 0
             for row in partials:
                 if enrichment:
                     card = books.get(str(row.get("book_code") or "").strip().casefold())
@@ -356,13 +360,18 @@ class Executor:
                     for field in ("author", "publisher", "subbrand_id", "subbrand", "author_group_ids", "author_group_names"):
                         row[field] = card.get(field) if card else None
                         if field in empty_fields and not row[field]:
-                            empty_fields[field] += 1
+                            if field == "author" and card is not None:
+                                authorless += 1
+                            else:
+                                empty_fields[field] += 1
             after = {m: sum((number(r[m]) for r in partials), Decimal(0)) for m in plan.metrics}
             if before != after:
                 raise ContractError("Kaynaklar birleştirildiğinde ölçü toplamları değişti; cevap engellendi.")
             if missing:
                 self.coverage_complete = False
                 self.notes.append(f"{missing} satış kırılımında aktif CRM kitap eşleşmesi yok; künye alanları boş bırakıldı, satışlar korunuyor.")
+            if authorless:
+                self.notes.append(f"{authorless} satış kırılımında kitap kartı var ama kaynakta yazar alanı boş (kılavuz, dergi, derleme gibi yazarsız ürün); yazar boş gösterildi.")
             for field, count in empty_fields.items():
                 if count:
                     self.coverage_complete = False

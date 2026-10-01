@@ -181,7 +181,12 @@ def compare(case, answer, whole, reference):
         # numbers (UNSUPPORTED_CAPABILITY). Any answer carrying rows is a failure.
         honest=answer.get("type") in HONEST_BOUNDARY_TYPES and not answer.get("records")
         return [] if honest else ["expected honest clarification or refusal without numbers"]
-    if answer.get("type")!="TEXT_TO_SQL":return ["expected answer: "+str(answer.get("explanation") or answer.get("error"))]
+    # CRM enrichment: under the 2026-09-29 rule non-active CRM cards are never read, so sales of such
+    # books carry empty catalogue fields. An honest PARTIAL_ANSWER is right when the independent
+    # reference has the same empty fields and the answer says why; the data must still match exactly.
+    honest_partial=(answer.get("type")=="PARTIAL_ANSWER" and case.get("source")=="cross" and (answer.get("dataNotes") or answer.get("gaps"))
+                    and any(r.get(k) is None for r in reference for k in ("author","publisher")))
+    if answer.get("type")!="TEXT_TO_SQL" and not honest_partial:return ["expected answer: "+str(answer.get("explanation") or answer.get("error"))]
     problems=[]
     if whole.get("truncated"):problems.append("full result truncated")
     if set(c["name"] for c in whole.get("columns",[]))!=set(case["columns"]):problems.append("column identity mismatch")

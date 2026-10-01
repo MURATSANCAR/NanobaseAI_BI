@@ -6,6 +6,8 @@ import json
 import hashlib
 import re
 from time import perf_counter
+import os
+import threading
 from zoneinfo import ZoneInfo
 from datetime import datetime, timezone
 
@@ -136,6 +138,21 @@ class PlanGenerationExhausted(ContractError):
     """No complete JSON plan exists; semantic replanning cannot repair it."""
 
 
+_RETRY_GUIDANCE = ("Önceki deneme geçerli ve tamamlanmış JSON üretemedi. Aynı soruyu ve aynı sözleşmeyi "
+    "yeniden değerlendir. Yalnız şemaya uyan tek JSON nesnesi üret; düşünce metni veya Markdown yazma. "
+    "Sorunun koşullarını atlama; eksikleri ve belirsizlikleri yalnız verilen şemanın izin verdiği alanlarla bildir.")
+
+
+def _think_deadline():
+    """Wall-clock limit of the reasoning plan attempt (FINANCE_PLAN_THINK_DEADLINE_SEC, 0 = none).
+    Measured 2026-10-01 over 189 reasoning attempts: 92% of the successful ones finish within 90 s,
+    while on a slow GPU one ran 646 s and was cut empty; the plain retry needs ~4-18 s."""
+    try:
+        return max(0.0, float(os.environ.get("FINANCE_PLAN_THINK_DEADLINE_SEC", "90") or 0))
+    except ValueError:
+        return 90.0
+
+
 def _object(llm, messages, max_tokens, schema, name, trace=None):
     """One bounded format retry; an incomplete plan never reaches the executor."""
     request_messages = list(messages)
@@ -151,19 +168,48 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
         ordered_messages = ([{"role": "system", "content": "\n\n".join(system_parts)}] if system_parts else [])
         ordered_messages.extend(m for m in request_messages if m.get("role") != "system")
         started = perf_counter()
+        # A reasoning attempt gets a wall-clock deadline. It is streamed so that cancelling closes
+        # the connection and the model stops generating; the timer starts once the shared model
+        # queue admits the call, so waiting for a slot does not count.
+        deadline = _think_deadline() if thinking_requested else 0.0
+        expired = threading.Event() if deadline else None
+        timer = threading.Timer(deadline, expired.set) if deadline else None
+        extra = {}
+        if timer is not None:
+            timer.daemon = True
+            extra = {"stream": True, "cancel": expired}
+            if hasattr(llm, "queue"):
+                extra["on_admitted"] = lambda _ticket: timer.start()
+            else:
+                timer.start()
         try:
-            choice = llm.complete(ordered_messages, max_tokens=budget, stream=False,
+            choice = llm.complete(ordered_messages, max_tokens=budget, **({"stream": False} | extra),
                                   body={"max_tokens": budget, "temperature": 0.0,
                                         "chat_template_kwargs": {"enable_thinking": thinking_requested},
                                         "response_format": {"type": "json_schema", "json_schema": {
                                             "name": name, "strict": True, "schema": schema}}})
-        except Exception:
+        except Exception as exc:
+            if expired is not None and expired.is_set() and type(exc).__name__ == "LlmCancelled":
+                # Our own deadline, not a transport failure: retry once without reasoning.
+                if trace is not None:
+                    trace.append({"stage":"model_response", "schema":name, "attempt":attempt + 1,
+                                  "maxTokens":budget, "thinkingRequested":True, "finishReason":"think_deadline",
+                                  "deadlineSeconds":deadline, "elapsedSeconds":round(perf_counter() - started, 3),
+                                  "reasoningChars":0, "contentChars":0, "nextAttemptThinkingRequested":False})
+                thinking_requested = False
+                error = ContractError("Soru planının düşünme süresi doldu; eksik planla hesap yapılmadı.", code="PLAN_INVALID")
+                request_messages = [*messages, {"role": "system", "content": _RETRY_GUIDANCE}]
+                continue
+
             if trace is not None:
                 trace.append({"stage":"model_response", "schema":name, "attempt":attempt + 1,
                               "maxTokens":budget, "thinkingRequested":thinking_requested,
                               "elapsedSeconds":round(perf_counter() - started, 3),
                               "finishReason":"request_failed", "reasoningChars":0, "contentChars":0})
             raise
+        finally:
+            if timer is not None:
+                timer.cancel()
         elapsed = perf_counter() - started
         message = choice.get("message") or {}
         content = message.get("content") or ""
@@ -196,10 +242,7 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
         if stripped.startswith("{"):
             event["partialJsonPreview"] = stripped[:1600]
         if attempt == 0:
-            request_messages = [*messages, {"role": "system", "content":
-                "Önceki deneme geçerli ve tamamlanmış JSON üretemedi. Aynı soruyu ve aynı sözleşmeyi "
-                "yeniden değerlendir. Yalnız şemaya uyan tek JSON nesnesi üret; düşünce metni veya Markdown yazma. "
-                "Sorunun koşullarını atlama; eksikleri ve belirsizlikleri yalnız verilen şemanın izin verdiği alanlarla bildir."}]
+            request_messages = [*messages, {"role": "system", "content": _RETRY_GUIDANCE}]
     raise PlanGenerationExhausted(str(error), code="PLAN_INVALID") from error
 
 

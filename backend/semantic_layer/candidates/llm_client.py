@@ -83,6 +83,7 @@ class LlmClient:
             return _Reply(r.status_code, r.text, r.json())
         idle = self.stream_idle or self.timeout
         parts: list[str] = []
+        reasoning: list[str] = []
         finish: Optional[str] = None
         with httpx.Client(timeout=httpx.Timeout(idle, connect=min(30.0, self.timeout))) as c:
             with c.stream("POST", f"{self.base}/chat/completions", json=payload, headers=headers) as r:
@@ -100,9 +101,15 @@ class LlmClient:
                         choice = (json.loads(data).get("choices") or [{}])[0]
                     except ValueError:
                         continue
-                    parts.append(str((choice.get("delta") or {}).get("content") or ""))
+                    delta = choice.get("delta") or {}
+                    parts.append(str(delta.get("content") or ""))
+                    # Reasoning deltas are kept so a streamed answer is measured like a plain one.
+                    reasoning.append(str(delta.get("reasoning_content") or delta.get("reasoning") or ""))
                     finish = choice.get("finish_reason") or finish
-        return _Reply(200, body={"choices": [{"message": {"content": "".join(parts)}, "finish_reason": finish}]})
+        message = {"content": "".join(parts)}
+        if any(reasoning):
+            message["reasoning_content"] = "".join(reasoning)
+        return _Reply(200, body={"choices": [{"message": message, "finish_reason": finish}]})
 
     def _post(self, payload: dict[str, Any], headers: dict[str, str], cancel: Optional[threading.Event] = None) -> _Reply:
         """One request, bounded by `timeout` as a whole. httpx's timeout is per socket operation: a
