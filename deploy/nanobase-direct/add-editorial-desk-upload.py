@@ -6,14 +6,15 @@ Uçlar (hepsi ham gövde PUT; aynı yollardaki GET'ler de bu konumdan geçer, y�
   `…/editorial/works-from-file`
 - Son okuma «Belge yükle ve incelet» `…/editorial/documents`
 - Çeviri kaynak metni `…/editorial/translation/jobs-from-file`, `…/editorial/translation/jobs/<iş>/source`
+- Kitaba sor'un üstündeki kitap okutma `…/editorial/ask/read` (2026-10-01'de eklendi: yoktu, 10 MB üstü kitap 413)
 
 Bunlar genel /timas/api/ konumuna düşüyordu; oradaki 10 MB gövde sınırı kitap PDF'inde nginx'in HTML 413'ünü
 döndürüyordu (ekranda «Zeki AI 413»). Köprü artık gövdeyi diske akıtıyor ve boyut tavanı koymuyor (yalnız disk
 dolacaksa 507); bu konumda da tavan yok (`client_max_body_size 0`), gövde tamponlanmadan köprüye akar, büyük PDF'in
 işlenmesi için zaman aşımı 30 dk. Oturum denetimi, hız sınırı ve arayan başlığı genel API ile aynı.
 
-İlk sürüm (yalnız redaksiyon/son okuma uçları, PUT dışı 405) kuruluysa bu konum yenisiyle değiştirilir; ilk sürüm
-provanın GET durum okumasını 405'e düşürüyordu. `nginx -t` geçmezse dosya eski içeriğine döner.
+Önceki sürümler kuruluysa konum yenisiyle değiştirilir: ilk sürüm (yalnız redaksiyon/son okuma uçları, PUT dışı
+405) provanın GET durum okumasını 405'e düşürüyordu; ikinci sürümde kitap okutma (`ask/read`) yoktu. `nginx -t` geçmezse dosya eski içeriğine döner.
 
 VM karşılığı: infra/docker/bi/web.default.conf.template (aynı konum) ve infra/docker/bi/npm-custom-http.conf (dış kapı 0).
 
@@ -26,7 +27,7 @@ import sys
 
 P = os.path.realpath("/etc/nginx/sites-enabled/portal.nanobase.ai")
 s = open(P, encoding="utf-8").read()
-MARK = "translation/jobs-from-file|translation/jobs/"
+MARK = "translation/jobs/[0-9a-f]{32}/source|ask/read)$"
 if MARK in s:
     print("zaten var")
     sys.exit(0)
@@ -34,9 +35,9 @@ loc_anchor = "    location /timas/api/ {\n"
 if loc_anchor not in s:
     print("beklenen satır bulunamadı (genel API konumu); dokunulmadı")
     sys.exit(1)
-loc = r'''    # Editoryal kitap/belge yüklemesi (ZEKI-26): eser metni, prova, belge incelemesi, çeviri kaynağı. Boyut tavanı
+loc = r'''    # Editoryal kitap/belge yüklemesi (ZEKI-26): eser metni, prova, belge incelemesi, çeviri kaynağı, kitap okutma. Boyut tavanı
     # yok; köprü diske akıtır. Aynı yollardaki GET'ler de buradan geçer.
-    location ~ "^/timas/api/v1/editorial/(works-from-file|works/[0-9a-f]{32}/(manuscript|proof)|documents|translation/jobs-from-file|translation/jobs/[0-9a-f]{32}/source)$" {
+    location ~ "^/timas/api/v1/editorial/(works-from-file|works/[0-9a-f]{32}/(manuscript|proof)|documents|translation/jobs-from-file|translation/jobs/[0-9a-f]{32}/source|ask/read)$" {
         set $timas_original_method $request_method;
         auth_request /_timas_session_check;
         limit_req zone=timas_api burst=30 nodelay;
@@ -59,7 +60,13 @@ loc = r'''    # Editoryal kitap/belge yüklemesi (ZEKI-26): eser metni, prova, b
 old = re.compile(r"    # Redaksiyon / son okuma: eser metni ve prova yükleme \(ZEKI-26\)[^\n]*\n"
                  r"    location ~ \"\^/timas/api/v1/editorial/\(works-from-file\|works/[^\n]*\n"
                  r"(?:        [^\n]*\n)+?    \}\n\n")
+# İkinci sürüm: aynı yorum başlığı, `ask/read`'siz konum.
+old2 = re.compile(r"    # Editoryal kitap/belge yüklemesi \(ZEKI-26\)[^\n]*\n(?:    #[^\n]*\n)*"
+                  r"    location ~ \"\^/timas/api/v1/editorial/\(works-from-file\|[^\n]*\n"
+                  r"(?:        [^\n]*\n)+?    \}\n\n")
 base, replaced = old.subn("", s, count=1)
+base, replaced2 = old2.subn("", base, count=1)
+replaced += replaced2
 new = base.replace(loc_anchor, loc + loc_anchor, 1)
 open(P, "w", encoding="utf-8").write(new)
 t = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
