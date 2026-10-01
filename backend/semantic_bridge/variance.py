@@ -1,19 +1,16 @@
 """Fark ayrıştırma — «rakam neden değişti?» (öneri 4) ve beklenen aralık / eşik önerisi (öneri 6).
 
-Tek iş: bir ölçünün iki dönem arasındaki farkını kanal (`CLCARD.SPECODE2`), cari ve kitap katkısına SQL ile ayırmak;
-en çok katkı yapan kırılımları pay ve yönüyle vermek. Rakamı model üretmez: bütün sayılar buradaki SQL'den gelir, Zeki AI
+Tek iş: bir ölçünün iki dönem arasındaki farkını kanal (`CLCARD.SPECODE2`), cari ve kitap katkısına ayırmak; en çok
+katkı yapan kırılımları pay ve yönüyle vermek. Rakamı model üretmez: bütün sayılar yürütücünün SQL'inden gelir, Zeki AI
 yalnız anlatır (`zeki_text.interpret`, sayı denetimli; tutmazsa kural metni).
 
-**Ölçü katalogdan gelir, örnekten değil.** Soru çözümleyiciden geçer; sorunun sertifikalı METRIC formülü (ör.
-`SUM(CASE WHEN STLINE.TRCODE IN (7,8,9) THEN STLINE.VATMATRAH ELSE 0 END)`), formülün koşulları (`INVOICEREF NOT IN
-(0)`),
-ölçünün varsayılan satır kapsamı (DEFAULT_FILTER) ve sorudaki değer filtreleri (DIMENSION_VALUE) aynen SQL'e taşınır;
-böylece ayrıştırmanın toplamı sohbet cevabının rakamıyla aynı tanımdadır. Desteklenmeyen durum açıkça söylenir, tahmin
-edilmez: ölçü `STLINE` üzerinde toplanabilir bir SUM değilse (oran, ortalama, tekil sayım), soru başka tablo filtresi
-taşıyorsa ya da dönemi yoksa «ayrıştırılamadı» ve nedeni döner.
-
-**Yıl kopyaları** (211 = 2021–2025, 411 = 2026): SQL mantıksal varlık adlarıyla yazılır (`STLINE`, `CLCARD`, `ITEMS`);
-köprünün fiziksel yeniden yazımı dönemi taşıyan kopyaları kendi tarihleriyle birleştirir — sohbet cevabıyla aynı yol.
+**Ölçü sohbet cevabının planından gelir.** Eski semantik katalog 2026-10-01'de emekliye ayrıldı; ayrıştırma artık finans
+motorunun planını (`finance_query.Plan`) okur: sohbet cevabında sorgu kaydındaki plan (`resolved_json.plan`), pano kartı
+ve uyarıda sorunun planlayıcıdan geçmiş hâli. Aynı plan kanal/cari/kitap kırılımıyla ve iki dönem için yine motorun
+yürütücüsünde koşar; ölçü tanımı (KDV matrahı, fatura tarihi, iptal ve iade kuralı), filtreler, satış türü ve yıl
+kopyaları sohbet cevabıyla birebir aynıdır, burada SQL yazılmaz. Yalnız toplanabilir satış satırı ölçüleri (satış/net
+satış/iade tutarı, satılan/net adet) ayrıştırılır; oran, fatura sayısı, CRM ve rapor planları «ayrıştırılamadı» ve
+nedeniyle döner, tahmin edilmez.
 
 **Karşı dönem**: «geçen yılın aynı dönemi» (varsayılan) ya da «önceki dönem» (aynı uzunlukta hemen önceki pencere).
 Dönem veri son gününden ileri uzanıyorsa (ay ortası, donmuş kopya) karşı dönem aynı uzunluğa kırpılır ve bu yazılır.
@@ -27,7 +24,6 @@ from __future__ import annotations
 import calendar
 import logging
 import math
-import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Optional
@@ -36,128 +32,132 @@ from semantic_bridge import zeki_text as Z
 
 log = logging.getLogger(__name__)
 
-#: Ayrıştırma boyutları. Anahtar ifadesi SQL'de gruplamadır; ad gösterimdir.
+#: Ayrıştırma boyutları → finans motorunun kırılımı ve satırdaki anahtar/ad kolonları.
 DIMENSIONS: dict[str, dict[str, Any]] = {
-    "kanal": {"ad": "Kanal", "anahtar": "ISNULL(NULLIF(LTRIM(RTRIM(CLCARD.SPECODE2)), ''), N'Grup kodu boş')",
-              "etiket": None, "tablo": "CLCARD"},
-    "cari": {"ad": "Cari", "anahtar": "ISNULL(CLCARD.CODE, N'#YOK')", "etiket": "MAX(CLCARD.DEFINITION_)", "tablo": "CLCARD"},
-    "kitap": {"ad": "Kitap", "anahtar": "ISNULL(ITEMS.CODE, N'#YOK')", "etiket": "MAX(ITEMS.NAME)", "tablo": "ITEMS"},
+    "kanal": {"ad": "Kanal", "boyut": "channel", "anahtar": "channel", "etiket": None},
+    "cari": {"ad": "Cari", "boyut": "customer", "anahtar": "customer_code", "etiket": "customer_name"},
+    "kitap": {"ad": "Kitap", "boyut": "book", "anahtar": "book_code", "etiket": "book_name"},
 }
 DEFAULT_DIMS = ("kanal", "cari", "kitap")
-#: Ayrıştırmada kullanılabilen varlıklar ve STLINE'a bağları.
-JOINS = {
-    "CLCARD": "LEFT JOIN CLCARD AS CLCARD ON CLCARD.LOGICALREF = STLINE.CLIENTREF",
-    "ITEMS": "LEFT JOIN ITEMS AS ITEMS ON ITEMS.LOGICALREF = STLINE.STOCKREF",
-}
-ENTITIES = {"STLINE", "CLCARD", "ITEMS"}
 COMPARE = {"gecen-yil": "geçen yılın aynı dönemi", "onceki-donem": "önceki dönem"}
-_OPS = {"IN", "NOT IN", "=", "<>", "!=", ">", ">=", "<", "<="}
-_REF = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\.\[?([A-Za-z_][A-Za-z0-9_]*)\]?")
-_NOT_ADDITIVE = re.compile(r"\b(AVG|COUNT|MIN|MAX|STDEV|VAR)\s*\(|\bDISTINCT\b|/", re.I)
-#: SQL'e taşınan metinde yasak (catalog'dan gelse de): ikinci deyim, yorum, veri değiştiren komut.
-_UNSAFE = re.compile(r";|--|/\*|\b(INSERT|UPDATE|DELETE|DROP|ALTER|EXEC|EXECUTE|MERGE|TRUNCATE|CREATE|GRANT)\b", re.I)
+#: Kırılımda boş kanal kodu (ekranda okunur ad).
+EMPTY_CHANNEL = "Grup kodu boş"
+#: Ayrıştırılabilen ölçüler: faturalı satış satırı üzerinde toplanabilir SUM (kırılımların toplamı bütüne eşit).
+ADDITIVE_FAMILY = "sales"
 
-Runner = Callable[[str, Optional[tuple]], list[dict[str, Any]]]
+#: Planı yürütür: `fetch(plan)` → (satırlar, çalıştırılan SQL'ler). Köprüde `executor_fetch(rt)`.
+Fetch = Callable[[Any], tuple[list[dict[str, Any]], list[str]]]
 
 
 class VarianceError(ValueError):
     """Ekrana olduğu gibi yazılan düz Türkçe neden."""
 
 
-# ================================================================================ ölçü: sorunun katalog tanımı
+# ================================================================================ ölçü: cevabın planı
 
 
 @dataclass
-class Measure:
+class Target:
+    """Ayrıştırılacak hesap: tek ölçü, planın filtreleri ve satış türü, en yeni dönemi [bas, bit)."""
+    olcu: str
     ad: str
-    formul: str
-    kosullar: list[str] = field(default_factory=list)
-    birim: str = "₺"
-    tablolar: set[str] = field(default_factory=set)
+    birim: str
+    bas: date
+    bit: date
+    filtreler: tuple = ()
+    satis_turu: str = "all"
 
     def as_dict(self) -> dict[str, Any]:
-        return {"ad": self.ad, "birim": self.birim, "formul": self.formul, "kosullar": list(self.kosullar)}
+        return {"ad": self.ad, "birim": self.birim, "olcu": self.olcu,
+                "filtreler": [list(f) for f in self.filtreler], "satisTuru": self.satis_turu}
 
 
-def _qdict(sq: Any) -> dict[str, Any]:
-    if sq is None:
-        return {}
-    if isinstance(sq, dict):
-        return sq
-    return sq.to_dict() if hasattr(sq, "to_dict") else {}
-
-
-def _value(v: Any) -> str:
-    s = str(v)
-    if re.fullmatch(r"-?\d+(\.\d+)?", s):
-        return s
-    return "N'" + s.replace("'", "''") + "'"
-
-
-def _entities_of(text: str) -> set[str]:
-    return {m.group(1).upper() for m in _REF.finditer(text or "") if not m.group(1).upper().startswith("DBO")}
-
-
-def _condition(mp: dict[str, Any]) -> Optional[str]:
-    """Bir eşlemenin (değer filtresi / varsayılan kapsam) SQL koşulu; tanınmayan biçimde None."""
-    if mp.get("formula"):
-        return f"({mp['formula']})"
-    col, op = mp.get("column"), str(mp.get("operator") or "IN").upper().strip()
-    vals = [v for v in (mp.get("values") or []) if v is not None]
-    ent = str(mp.get("entity") or "").upper()
-    if col and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", str(col)) and op in ("IS NULL", "IS NOT NULL"):
-        return f"{ent}.{col} {op}"
-    if not col or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", str(col)) or op not in _OPS or not vals:
+def plan_of(state: Any) -> Optional[dict[str, Any]]:
+    """Sorgu kaydındaki (`resolved_json`) ya da doğrudan verilen plan sözlüğü; plan yoksa None."""
+    if not isinstance(state, dict):
         return None
-    ref = f"{ent}.{col}"
-    if op in ("IN", "NOT IN"):
-        return f"{ref} {op} ({', '.join(_value(v) for v in vals)})"
-    return f"{ref} {'<>' if op == '!=' else op} {_value(vals[0])}"
+    plan = state.get("plan") if "plan" in state else state if "metrics" in state else None
+    return plan if isinstance(plan, dict) else None
 
 
-def _unit(formula: str) -> str:
-    f = formula.upper()
-    if re.search(r"LINENET|TOTAL|PRICE|VATMATRAH|DISTCOST|OUTCOST", f):
-        return "₺"
-    return "adet" if "AMOUNT" in f else ""
+def _unit(code: str) -> str:
+    return "₺" if code == "TRY" else code
 
 
-def measure_of(sq: Any) -> tuple[Optional[Measure], Optional[str]]:
-    """Sorunun çözümünden ayrıştırılabilir ölçü; olmazsa (None, neden)."""
-    q = _qdict(sq)
-    slots = q.get("slots") or []
-    metrics = [s for s in slots if s.get("semanticType") == "METRIC" and s.get("mapping")]
+def target_of(plan: Optional[dict[str, Any]]) -> tuple[Optional[Target], Optional[str]]:
+    """Planın ayrıştırılabilir hedefi; olmazsa (None, neden). Neden ekrana olduğu gibi gider."""
+    from semantic_bridge.finance_query.contracts import METRICS
+
+    if not plan:
+        return None, "Bu cevabın hesap planı yok; ayrıştırma bir satış ölçüsünün planından yapılır."
+    if any(plan.get(k) for k in ("crm", "logo_report", "crm_report", "relational_query", "sections")):
+        return None, "Ayrıştırma yalnız satış ölçüsü cevaplarında yapılır; bu cevap bir rapor ya da CRM listesi."
+    if plan.get("derived") or plan.get("analytics"):
+        return None, "Cevap oran ya da türetilmiş hesap içeriyor; katkıya bölünemez."
+    comparison = plan.get("comparison") or {}
+    metrics = [comparison["metric"]] if comparison.get("metric") else list(plan.get("metrics") or [])
     if not metrics:
-        return None, "Soruda katalogda tanımlı bir ölçü yok."
+        return None, "Cevapta ölçü yok."
     if len(metrics) > 1:
-        return None, "Soruda birden çok ölçü var; ayrıştırma tek ölçüde yapılır."
-    m = metrics[0]["mapping"]
-    formula = str(m.get("formula") or "").strip()
-    if str(m.get("entity") or "").upper() != "STLINE" or not formula:
-        return None, "Ayrıştırma yalnız satış/fatura satırı (STLINE) ölçülerinde yapılır."
-    if _NOT_ADDITIVE.search(formula) or not re.match(r"^\s*SUM\s*\(", formula, re.I):
-        return None, "Bu ölçü toplanabilir değil (oran, ortalama ya da tekil sayım); katkıya bölünemez."
-    conds: list[str] = [str(c) for c in ((m.get("extra") or {}).get("conditions") or []) if str(c).strip()]
-    for s in slots:
-        t = s.get("semanticType")
-        if t not in ("DEFAULT_FILTER", "DIMENSION_VALUE"):
-            continue
-        mp = s.get("mapping") or {}
-        c = _condition(mp)
-        if c is None:   # taşınamayan kapsam tanımı değiştirir: yaklaşık ayrıştırma yapılmaz
-            return None, f"«{s.get('term')}» {'filtresi' if t == 'DIMENSION_VALUE' else 'kapsamı'} ayrıştırmaya taşınamadı."
-        conds.append(c)
-    for extra in ("unhandled", "qualifierColumns", "modelQualifiers"):
-        if q.get(extra):
-            return None, "Soruda katalogda tanımı olmayan bir niteleyici var; ayrıştırma aynı tanımı kuramaz."
-    tables = _entities_of(" ".join([formula, *conds]))
-    bad = tables - ENTITIES
-    if bad:
-        return None, f"Ölçü ya da filtre başka tabloya dayanıyor ({', '.join(sorted(bad))}); ayrıştırılamadı."
-    if any(_UNSAFE.search(x) for x in [formula, *conds]):
-        return None, "Ölçü tanımı ayrıştırmaya uygun değil."
-    return Measure(ad=str(metrics[0].get("term") or "ölçü"), formul=formula, kosullar=conds, birim=_unit(formula),
-                   tablolar=tables - {"STLINE"}), None
+        return None, "Cevapta birden çok ölçü var; ayrıştırma tek ölçüde yapılır."
+    metric = METRICS.get(metrics[0])
+    if metric is None or metric.family != ADDITIVE_FAMILY:
+        return None, "Ayrıştırma yalnız toplanabilir satış ölçülerinde (satış, net satış, iade tutarı ya da adedi) yapılır."
+    periods = [(_d(a), _d(b)) for a, b in (plan.get("periods") or [])]
+    periods = [(a, b) for a, b in periods if a and b and a < b]
+    if not periods:
+        return None, "Soruda dönem yok; ayrıştırma iki dönemi karşılaştırır."
+    # İki dönem anılmışsa («2025 ile 2026») en yeni dönem «şimdi»; karşı dönem ayrıştırmanın kendi seçimidir.
+    a, b = max(periods, key=lambda p: (p[1], p[0]))
+    filters = tuple(tuple(str(x) for x in f) for f in (plan.get("filters") or []))
+    return Target(olcu=metrics[0], ad=metric.label, birim=_unit(metric.unit), bas=a, bit=b, filtreler=filters,
+                  satis_turu=str(plan.get("sale_kind") or "all")), None
+
+
+def leaf_plan(t: Target, dimension: Optional[str], a: date, b: date) -> Any:
+    """Hedefin tek kırılımlı, tek dönemli planı (yürütücünün kendi doğrulamasından geçer)."""
+    from semantic_bridge.finance_query.planner import Plan
+
+    return Plan(metrics=(t.olcu,), dimensions=(dimension,) if dimension else (), periods=((a.isoformat(), b.isoformat()),),
+                filters=t.filtreler, sale_kind=t.satis_turu)
+
+
+def executor_fetch(rt: Any, seen: Optional[list[dict[str, Any]]] = None) -> Fetch:
+    """Köprüde planı finans motorunun yürütücüsüyle koşturur (yetki, yıl kopyaları, okuma kapısı sohbetle aynı).
+    `seen` verilirse her kaynak okumasının SQL'i, satırı ve süresi eklenir (uyarının sorgu bilgisi)."""
+    from semantic_bridge.finance_query.executor import Executor
+
+    def fetch(plan: Any) -> tuple[list[dict[str, Any]], list[str]]:
+        ex = Executor(rt)
+        rows = ex.execute(plan)
+        if seen is not None:
+            seen.extend({"sql": run["sql"], "rows": run.get("rows"), "ms": run.get("dbMs"), "at": run.get("startedAt")}
+                        for run in ex.runs)
+        return rows, [f"-- {run['source']}\n{run['sql']}" for run in ex.runs]
+    return fetch
+
+
+#: Soru metni → plan (pano kartı, uyarı). Planlayıcı model çağırır; aynı gün aynı soru bir kez planlanır.
+_PLANS: dict[tuple[str, str], dict[str, Any]] = {}
+
+
+def plan_for_question(rt: Any, question: str) -> Optional[dict[str, Any]]:
+    """Sorunun finans planı (bağlamsız). Planlanamayan soru None — neden `target_of` mesajıyla söylenir."""
+    from semantic_bridge.finance_query import ContractError, planner
+
+    q = " ".join(str(question or "").split())[:2000]
+    if not q:
+        return None
+    key = (date.today().isoformat(), q)
+    if key not in _PLANS:
+        if len(_PLANS) > 500:
+            _PLANS.clear()
+        try:
+            _PLANS[key] = planner.build(q, rt.llm_for("finance"), None, []).to_dict()
+        except ContractError as e:
+            log.info("fark: soru planlanamadı: %s", e)
+            return None
+    return _PLANS[key]
 
 
 # ================================================================================ dönem
@@ -174,15 +174,6 @@ def _d(v: Any) -> Optional[date]:
         return date.fromisoformat(str(v)[:10])
     except ValueError:
         return None
-
-
-def bounds_of(sq: Any) -> tuple[Optional[date], Optional[date]]:
-    """Sorunun dönemi [başlangıç, bitiş). Dönemsiz soruda (None, None). Soru iki dönem anıyorsa («2025 ile 2026») en
-    yeni dönem «şimdi» sayılır; karşı dönem ayrıştırmanın kendi seçimidir (iki dönemi birleştirip tek pencere yapmaz)."""
-    t = [(s, e) for s, e in ((_d(x.get("start")), _d(x.get("end"))) for x in (_qdict(sq).get("temporal") or [])) if s and e]
-    if not t:
-        return None, None
-    return max(t, key=lambda p: (p[1], p[0]))
 
 
 def add_months(d: date, n: int) -> date:
@@ -218,48 +209,6 @@ def compare_window(a: date, b: date, how: str) -> tuple[date, date]:
 def label(a: date, b: date) -> str:
     last = b - timedelta(days=1)
     return f"{a.strftime('%d.%m.%Y')}–{last.strftime('%d.%m.%Y')}"
-
-
-def _ymd(d: date) -> str:
-    return d.strftime("%Y%m%d")
-
-
-# ================================================================================ SQL
-
-
-def _where(m: Measure, a: date, b: date) -> str:
-    parts = [f"STLINE.DATE_ >= '{_ymd(a)}'", f"STLINE.DATE_ < '{_ymd(b)}'", *[f"({c})" for c in m.kosullar]]
-    return "\n  AND ".join(parts)
-
-
-def _joins(tables: Iterable[str]) -> str:
-    return "\n".join(JOINS[t] for t in ("CLCARD", "ITEMS") if t in set(tables))
-
-
-def dim_sql(m: Measure, dim: str, a: date, b: date) -> str:
-    """Bir boyutun [a, b) dönemindeki değerleri (mantıksal varlık adlarıyla; yıl kopyaları köprüde çözülür)."""
-    spec = DIMENSIONS[dim]
-    name = spec["etiket"] or spec["anahtar"]
-    tables = set(m.tablolar) | {spec["tablo"]}
-    return (f"-- Fark ayrıştırma: {m.ad} · {DIMENSIONS[dim]['ad'].lower()} kırılımı · {label(a, b)}\n"
-            f"SELECT {spec['anahtar']} AS anahtar, {name} AS ad, {m.formul} AS deger, MAX(STLINE.DATE_) AS son\n"
-            f"FROM STLINE AS STLINE\n{_joins(tables)}\n"
-            f"WHERE {_where(m, a, b)}\n"
-            f"GROUP BY {spec['anahtar']}").replace("\n\n", "\n")
-
-
-def daily_sql(m: Measure, a: date, b: date) -> str:
-    """Gün gün toplam (beklenen aralık için geçmiş pencereler bundan toplanır)."""
-    return (f"-- Beklenen aralık: {m.ad} · gün gün · {label(a, b)}\n"
-            f"SELECT CONVERT(date, STLINE.DATE_) AS gun, {m.formul} AS deger\n"
-            f"FROM STLINE AS STLINE\n{_joins(m.tablolar)}\n"
-            f"WHERE {_where(m, a, b)}\n"
-            f"GROUP BY CONVERT(date, STLINE.DATE_)").replace("\n\n", "\n")
-
-
-def total_sql(m: Measure, a: date, b: date) -> str:
-    return (f"SELECT {m.formul} AS deger, MAX(STLINE.DATE_) AS son\nFROM STLINE AS STLINE\n{_joins(m.tablolar)}\n"
-            f"WHERE {_where(m, a, b)}").replace("\n\n", "\n")
 
 
 # ================================================================================ ayrıştırma (saf)
@@ -305,22 +254,33 @@ def decompose(current: list[dict[str, Any]], previous: list[dict[str, Any]]) -> 
             "kalemSayisi": len(items)}
 
 
-def _last_day(rows: Iterable[dict[str, Any]]) -> Optional[date]:
-    ds = [d for d in (_d(r.get("son")) for r in rows) if d]
-    return max(ds) if ds else None
+def _rows_for(rows: list[dict[str, Any]], dim: str, metric: str) -> list[dict[str, Any]]:
+    """Yürütücü satırı → {anahtar, ad, deger}. Boş kanal kodu okunur ada çevrilir."""
+    spec = DIMENSIONS[dim]
+    out = []
+    for r in rows:
+        key = r.get(spec["anahtar"])
+        key = str(key).strip() if key not in (None, "") else (EMPTY_CHANNEL if dim == "kanal" else "#YOK")
+        out.append({"anahtar": key or (EMPTY_CHANNEL if dim == "kanal" else "#YOK"),
+                    "ad": r.get(spec["etiket"]) if spec["etiket"] else key, "deger": r.get(metric)})
+    return out
 
 
-def run(runner: Runner, m: Measure, a: date, b: date, *, karsi: str = "gecen-yil",
-        boyutlar: Iterable[str] = DEFAULT_DIMS) -> dict[str, Any]:
-    """Ayrıştırmayı çalıştırır. `runner(sql, dönem)` → satırlar (köprüde `run_complete`, dönemle)."""
+def _daily(fetch: Fetch, t: Target, a: date, b: date, sqls: list[dict[str, str]], ad: str) -> dict[date, float]:
+    rows, ran = fetch(leaf_plan(t, "day", a, b))
+    sqls.extend({"ad": ad, "sql": s} for s in ran)
+    return {d: _f(r.get(t.olcu)) for r in rows for d in [_d(r.get("day"))] if d}
+
+
+def run(fetch: Fetch, t: Target, *, karsi: str = "gecen-yil", boyutlar: Iterable[str] = DEFAULT_DIMS) -> dict[str, Any]:
+    """Ayrıştırmayı çalıştırır: önce dönemin gün gün toplamı (veri sonu ve kırpma), sonra her boyut iki dönem için."""
+    if karsi not in COMPARE:
+        raise VarianceError("Karşı dönem «gecen-yil» ya da «onceki-donem» olmalı.")
     dims = [x for x in boyutlar if x in DIMENSIONS] or list(DEFAULT_DIMS)
+    a, b = t.bas, t.bit
     sqls: list[dict[str, str]] = []
-    cur: dict[str, list[dict[str, Any]]] = {}
-    for dim in dims:
-        sql = dim_sql(m, dim, a, b)
-        sqls.append({"ad": f"{DIMENSIONS[dim]['ad']} · {label(a, b)}", "sql": sql})
-        cur[dim] = runner(sql, (a, b))
-    seen = [d for d in (_last_day(v) for v in cur.values()) if d]
+    daily = _daily(fetch, t, a, b, sqls, f"Gün gün · {label(a, b)}")
+    seen = [d for d, v in daily.items() if abs(v) > 1e-9]
     end_seen = max(seen) if seen else None
     eff_b, clipped = b, False
     if end_seen is not None and end_seen + timedelta(days=1) < b:
@@ -328,13 +288,15 @@ def run(runner: Runner, m: Measure, a: date, b: date, *, karsi: str = "gecen-yil
     ca, cb = compare_window(a, eff_b, karsi)
     out_dims = []
     for dim in dims:
-        sql = dim_sql(m, dim, ca, cb)
-        sqls.append({"ad": f"{DIMENSIONS[dim]['ad']} · {label(ca, cb)}", "sql": sql})
-        prev = runner(sql, (ca, cb))
-        dec = decompose(cur[dim], prev)
-        out_dims.append({"id": dim, "ad": DIMENSIONS[dim]["ad"], **dec})
+        spec = DIMENSIONS[dim]
+        cur, ran = fetch(leaf_plan(t, spec["boyut"], a, eff_b))
+        sqls.extend({"ad": f"{spec['ad']} · {label(a, eff_b)}", "sql": s} for s in ran)
+        prev, ran = fetch(leaf_plan(t, spec["boyut"], ca, cb))
+        sqls.extend({"ad": f"{spec['ad']} · {label(ca, cb)}", "sql": s} for s in ran)
+        dec = decompose(_rows_for(cur, dim, t.olcu), _rows_for(prev, dim, t.olcu))
+        out_dims.append({"id": dim, "ad": spec["ad"], **dec})
     head = out_dims[0] if out_dims else {"simdi": 0.0, "onceki": 0.0, "fark": 0.0, "oran": None}
-    return {"ok": True, "olcu": m.as_dict(), "donem": {"bas": a.isoformat(), "bit": eff_b.isoformat(), "etiket": label(a, eff_b)},
+    return {"ok": True, "olcu": t.as_dict(), "donem": {"bas": a.isoformat(), "bit": eff_b.isoformat(), "etiket": label(a, eff_b)},
             "karsi": {"tur": karsi, "ad": COMPARE[karsi], "bas": ca.isoformat(), "bit": cb.isoformat(), "etiket": label(ca, cb)},
             "kirpildi": clipped, "veriSonu": end_seen.isoformat() if end_seen else None,
             "toplam": {k: head[k] for k in ("simdi", "onceki", "fark", "oran")},
@@ -402,27 +364,20 @@ def explain(res: dict[str, Any], *, llm: Any = None, rt: Any = None, module: str
 # ================================================================================ soru → ayrıştırma
 
 
-def hint(sq: Any) -> dict[str, Any]:
-    """Sohbet cevabı / pano kartı / uyarı için: bu soru ayrıştırılabilir mi. Ekran «Neden?»i buna göre gösterir."""
-    m, why = measure_of(sq)
-    a, b = bounds_of(sq)
-    if m is None:
+def hint(plan: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """Sohbet cevabı / pano kartı / uyarı için: bu plan ayrıştırılabilir mi (SQL koşmaz). Ekran «Neden?»i buna göre gösterir."""
+    t, why = target_of(plan)
+    if t is None:
         return {"ok": False, "neden": why}
-    if not (a and b):
-        return {"ok": False, "neden": "Soruda dönem yok; ayrıştırma iki dönemi karşılaştırır."}
-    return {"ok": True, "olcu": m.ad, "birim": m.birim, "bas": a.isoformat(), "bit": b.isoformat()}
+    return {"ok": True, "olcu": t.ad, "birim": t.birim, "bas": t.bas.isoformat(), "bit": t.bit.isoformat()}
 
 
-def for_question(runner: Runner, sq: Any, *, karsi: str = "gecen-yil", boyutlar: Iterable[str] = DEFAULT_DIMS) -> dict[str, Any]:
-    m, why = measure_of(sq)
-    if m is None:
+def for_plan(fetch: Fetch, plan: Optional[dict[str, Any]], *, karsi: str = "gecen-yil",
+             boyutlar: Iterable[str] = DEFAULT_DIMS) -> dict[str, Any]:
+    t, why = target_of(plan)
+    if t is None:
         raise VarianceError(why or "Ayrıştırılamadı.")
-    a, b = bounds_of(sq)
-    if not (a and b):
-        raise VarianceError("Soruda dönem yok; ayrıştırma iki dönemi karşılaştırır.")
-    if karsi not in COMPARE:
-        raise VarianceError("Karşı dönem «gecen-yil» ya da «onceki-donem» olmalı.")
-    return run(runner, m, a, b, karsi=karsi, boyutlar=boyutlar)
+    return run(fetch, t, karsi=karsi, boyutlar=boyutlar)
 
 
 # ================================================================================ beklenen aralık ve eşik önerisi
@@ -488,28 +443,34 @@ def window_lags(daily: dict[date, float], a: date, b: date, lags: int = LAGS) ->
     return cur, out
 
 
-def measure_range(runner: Runner, sq: Any, *, k: float = 2.0, today: Optional[date] = None) -> dict[str, Any]:
-    """Sorunun ölçüsü için beklenen aralık (bugünkü penceresi ve geçmiş 24 ay). Hesaplanamazsa {"ok": False, "neden"}."""
-    m, why = measure_of(sq)
-    a, b = bounds_of(sq)
-    if m is None:
-        return {"ok": False, "neden": why}
-    if not (a and b):
-        return {"ok": False, "neden": "Soruda dönem yok; beklenen aralık bir pencerenin geçmişiyle hesaplanır."}
+def measure_range(fetch: Fetch, plan: Optional[dict[str, Any]], *, k: float = 2.0) -> dict[str, Any]:
+    """Planın ölçüsü için beklenen aralık (bugünkü penceresi ve geçmiş 24 ay, tek gün gün okuma). Hesaplanamazsa
+    {"ok": False, "neden"}."""
+    t, why = target_of(plan)
+    if t is None:
+        return {"ok": False, "neden": why.replace("ayrıştırma iki dönemi karşılaştırır", "beklenen aralık bir pencerenin geçmişiyle hesaplanır")
+                if why else why}
+    a, b = t.bas, t.bit
     start = add_months(a, -LAGS)
-    sql = daily_sql(m, start, b)
-    rows = runner(sql, (start, b))
-    daily = {d: _f(r.get("deger")) for r in rows for d in [_d(r.get("gun"))] if d}
-    last = max(daily) if daily else None
+    sqls: list[dict[str, str]] = []
+    try:
+        daily = _daily(fetch, t, start, b, sqls, "Gün gün geçmiş")
+    except Exception as e:  # noqa: BLE001 — geçmişin bir kısmı için kaynak yoksa aralık uydurulmaz
+        from semantic_bridge.finance_query import ContractError
+
+        if isinstance(e, ContractError):
+            return {"ok": False, "neden": f"Geçmiş 24 ay okunamadı: {e}"}
+        raise
+    seen = [d for d, v in daily.items() if abs(v) > 1e-9]
+    last = max(seen) if seen else None
     eff_b = b
     if last is not None and last + timedelta(days=1) < b:
         eff_b = last + timedelta(days=1)
-    if eff_b <= a:
-        return {"ok": False, "neden": "Bu dönemde henüz veri yok.", "kaynak": {"sql": [{"ad": "Gün gün", "sql": sql}]}}
+    if last is None or eff_b <= a:
+        return {"ok": False, "neden": "Bu dönemde henüz veri yok.", "kaynak": {"sql": sqls}}
     cur, lags = window_lags(daily, a, eff_b)
     rng = expected_range(cur, lags, k=k)
-    base = {"olcu": m.ad, "birim": m.birim, "donem": label(a, eff_b), "kirpildi": eff_b != b,
-            "kaynak": {"sql": [{"ad": "Gün gün geçmiş", "sql": sql}]}}
+    base = {"olcu": t.ad, "birim": t.birim, "donem": label(a, eff_b), "kirpildi": eff_b != b, "kaynak": {"sql": sqls}}
     if rng is None:
         return {"ok": False, "neden": f"Beklenen aralık için en az {MIN_POINTS} geçmiş pencere gerekir.", **base}
     return {"ok": True, **base, **rng}

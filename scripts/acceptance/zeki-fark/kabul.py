@@ -2,9 +2,10 @@
 önerisi, pano «ne değişti», bütçe sapmasının nedeni, olasılıklı nakit bandı, destek taslağı olguları.
 
 Referanslar köprü kodunu kullanmaz: Logo doğrudan bağlantı dosyasıyla sorgulanır (R1–R3, R9), köprü veritabanı doğrudan
-SQL ile (R6–R7). Net ciro referansı bilinen tanımdır: faturalı satır (INVOICEREF <> 0), CANCELLED = 0, LINETYPE = 0,
-satış TRCODE 7/8/9 artı, iade 2/3 eksi, Σ LINENET; yıllar kendi kopyasında kendi tarihleriyle (L_CAPIPERIOD).
-Katalog ölçüsü bu tanımdan saparsa R1 KALDI der — bu bir bulgudur, ayar değil.
+SQL ile (R6–R7). Net satış referansı kullanıcı kararıdır (2026-10-01): faturalı satır (INVOICEREF <> 0), CANCELLED = 0,
+LINETYPE = 0, satış TRCODE 7/8/9 artı, iade 2/3 eksi, Σ VATMATRAH (KDV matrahı), dönem faturanın tarihi (iptal edilmemiş
+INVOICE); yıllar kendi kopyasında kendi tarihleriyle (L_CAPIPERIOD). Ayrıştırma bu tanımdan saparsa R1 KALDI der —
+bu bir bulgudur, ayar değil.
 
 Yazma: yalnız pano kartı (R8; timasai'nin panosuna geçici kart eklenir, sonunda çıkarılır). Kimlikler `--out` dosyasına,
 `temizlik.py` artakalanı siler.
@@ -83,10 +84,12 @@ def firms(run) -> dict[int, str]:
 def net_sql(firm: str, a: date, b: date, group: str = "") -> str:
     sel = f"{group} AS k, " if group else ""
     grp = f" GROUP BY {group}" if group else ""
-    return (f"SELECT {sel}SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS v "
-            f"FROM dbo.LG_{firm}_01_STLINE S LEFT JOIN dbo.LG_{firm}_CLCARD C ON C.LOGICALREF = S.CLIENTREF "
+    return (f"SELECT {sel}SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS v "
+            f"FROM dbo.LG_{firm}_01_STLINE S WITH (NOLOCK) "
+            f"JOIN dbo.LG_{firm}_01_INVOICE H WITH (NOLOCK) ON H.LOGICALREF = S.INVOICEREF AND H.CANCELLED = 0 "
+            f"LEFT JOIN dbo.LG_{firm}_CLCARD C WITH (NOLOCK) ON C.LOGICALREF = S.CLIENTREF "
             f"WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9) "
-            f"AND S.DATE_ >= '{a:%Y%m%d}' AND S.DATE_ < '{b:%Y%m%d}'{grp}")
+            f"AND H.DATE_ >= '{a:%Y%m%d}' AND H.DATE_ < '{b:%Y%m%d}'{grp}")
 
 
 def ref_total(run, fm, a: date, b: date) -> float:

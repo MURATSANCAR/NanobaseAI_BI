@@ -1722,17 +1722,6 @@ def _trace_run(out: Any) -> None:
         log.debug("sorgu izi yazılamadı", exc_info=True)
 
 
-def _variance_hint(sq: Any) -> dict[str, Any]:
-    """Cevabın «Neden?» ipucu (SQL koşmaz). Hata cevabı düşürmez."""
-    try:
-        from semantic_bridge import variance
-
-        return variance.hint(sq)
-    except Exception as e:  # noqa: BLE001
-        log.info("variance hint failed: %s", e)
-        return {"ok": False, "neden": "Ayrıştırma ipucu hesaplanamadı."}
-
-
 def _year_slot(year: int) -> TemporalSlot:
     from datetime import date
 
@@ -3229,22 +3218,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     def _alert_expect(r: Runtime):
         """Kuralın sorusu için beklenen aralık (geçmiş 24 ayın aynı penceresi; model yok)."""
-        from semantic_bridge import variance, variance_api
+        from semantic_bridge import variance
 
         def expect(rule: dict[str, Any]) -> dict[str, Any]:
             if not (rule.get("question") or "").strip():
                 return {"ok": False, "neden": "Kural soru değil SQL; beklenen aralık sorudan hesaplanır."}
             k = float(rule["threshold"]) if rule.get("condition") == "olagandisi" else _range_k()
             seen: list[dict[str, Any]] = []
-
-            def run(sql: str, period: Optional[tuple]) -> list[dict[str, Any]]:
-                # Sorgu bilgisi: aralığın geçmişini okuyan fiziksel SQL, satırı ve süresi aralıkla birlikte saklanır.
-                out = r.run_complete(sql, period)
-                seen.append({"sql": out.get("physicalSql"), "rows": out.get("totalRows"), "ms": out.get("dbMs"),
-                             "at": out.get("computedAt")})
-                return variance_api.rows_of(r, out)
-
-            rng = variance.measure_range(run, r.resolver.resolve(rule["question"]), k=k)
+            rng = variance.measure_range(variance.executor_fetch(r, seen), variance.plan_for_question(r, rule["question"]), k=k)
             if seen and isinstance(rng, dict):
                 rng["fiziksel"] = [x for x in seen if x.get("sql")]
             return rng
@@ -3252,11 +3233,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     def _alert_reason(r: Runtime):
         """Bildirimdeki «neden»: geçen yılın aynı dönemine göre kanal/cari/kitap katkısı + 2–3 cümle (sayı denetimli)."""
-        from semantic_bridge import variance, variance_api
+        from semantic_bridge import variance
         from semantic_layer.runtime.llm_queue import NORMAL
 
         def reason(rule: dict[str, Any]) -> dict[str, Any]:
-            res = variance.for_question(variance_api.runner_for(r), r.resolver.resolve(rule["question"]))
+            res = variance.for_plan(variance.executor_fetch(r), variance.plan_for_question(r, rule["question"]))
             res["anlatim"] = variance.explain(res, rt=r, module="fark", priority=NORMAL)
             return res
         return reason
@@ -3361,7 +3342,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def alerts_suggest(request: Request, body: dict[str, Any]) -> dict[str, Any]:
         """Kural düzenlerken: sorunun geçmişinden beklenen aralık ve koşula göre eşik önerisi (kurala göre; model yok).
         Hesaplanamazsa nedeni döner, öneri uydurulmaz."""
-        from semantic_bridge import variance, variance_api
+        from semantic_bridge import variance
 
         _require_caller(request)
         _alert_owner(request)
@@ -3371,15 +3352,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         cond = str(body.get("condition") or "gt").strip().lower()
         r = rt()
         seen: list[dict[str, Any]] = []
-
-        def run(sql: str, period: Optional[tuple]) -> list[dict[str, Any]]:
-            out = r.run_complete(sql, period)
-            seen.append({"sql": out.get("physicalSql"), "rows": out.get("totalRows"), "ms": out.get("dbMs"),
-                         "at": out.get("computedAt")})
-            return variance_api.rows_of(r, out)
-
         try:
-            rng = variance.measure_range(run, r.resolver.resolve(q[:2000]), k=_range_k())
+            rng = variance.measure_range(variance.executor_fetch(r, seen), variance.plan_for_question(r, q), k=_range_k())
         except Exception as e:  # noqa: BLE001
             from semantic_bridge import access as access_mod
 

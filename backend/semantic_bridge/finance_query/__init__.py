@@ -159,7 +159,10 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         state["stage"] = "complete"
         # The record (state["plan"], effectiveQuestion) is the follow-up context of the next message.
         qid = record(kind, summary, result)
-        return public_response({**result, "type": kind, "sql": sql, "resultId": rid, "summary": summary,
+        # «Neden?» düğmesi: plan toplanabilir bir satış ölçüsüyse ayrıştırılabilir (SQL koşmaz; ayrıştırma kayıttaki planı okur).
+        from semantic_bridge import variance
+        reason = variance.hint(state["plan"])
+        return public_response({**result, "type": kind, "sql": sql, "resultId": rid, "summary": summary, "neden": reason,
                 "records": rows[:max(1,min(sample_size,500))], "shownRows": min(len(rows),max(1,min(sample_size,500))),
                 "rowCount": len(rows), "threadId": thread_id, "queryId": qid, "semantic": state,
                 "answerQuality": {"contractChecked": True, "independentlyVerified": False,
