@@ -474,18 +474,23 @@ class Executor:
         book = "book" in dims or enrichment
         client = bool(dims & {"channel", "customer"}) or family == "collection"
         needed = {table: ["CANCELLED", "DATE_", "TRCODE"]}
-        needed[table] += {"sales": ["LINETYPE", "INVOICEREF", "STOCKREF", "CLIENTREF", "LINENET", "AMOUNT"],
+        needed[table] += {"sales": ["LINETYPE", "INVOICEREF", "STOCKREF", "CLIENTREF", "VATMATRAH", "AMOUNT"],
                           "invoice": ["LOGICALREF", "NETTOTAL", "CLIENTREF"],
                           "collection": ["CLIENTREF", "AMOUNT", "SIGN"]}[family]
         quantities = set(plan.metrics) & {"sold_quantity", "net_quantity"}
         if quantities:
             needed[table] += ["UINFO1", "UINFO2"]
+        # A sales line belongs to the period of its invoice (user decision 2026-10-01).
+        header_table = f"LG_{firm}_{period}_INVOICE"
+        if family == "sales":
+            needed[header_table] = ["LOGICALREF", "DATE_", "CANCELLED"]
+        date_col = "h.DATE_" if family == "sales" else "f.DATE_"
         if book:
             needed[item_table] = ["LOGICALREF", "CODE", "NAME"]
         if client:
             needed[client_table] = ["LOGICALREF", "CODE", "DEFINITION_", "SPECODE2"]
         types = self.verify_schema(needed, "logo")
-        measures = {"sales": ["AMOUNT", "LINENET"], "invoice": ["NETTOTAL"], "collection": ["AMOUNT"]}[family]
+        measures = {"sales": ["AMOUNT", "VATMATRAH"], "invoice": ["NETTOTAL"], "collection": ["AMOUNT"]}[family]
         for col in measures:
             if types[table.lower(), col.lower()] not in {"decimal", "numeric", "float", "real", "money", "smallmoney", "int", "bigint"}:
                 raise ContractError("Finansal değer alanının veri türü sözleşmeyle uyuşmuyor.")
@@ -496,7 +501,7 @@ class Executor:
             labels["channel"] = "c.SPECODE2"
         if "customer" in dims:
             labels.update(customer_code="c.CODE", customer_name="c.DEFINITION_")
-        for d, expression in {"day": "CONVERT(varchar(10),f.DATE_,23)", "month": "CONVERT(varchar(7),f.DATE_,23)", "year": "YEAR(f.DATE_)"}.items():
+        for d, expression in {"day": f"CONVERT(varchar(10),{date_col},23)", "month": f"CONVERT(varchar(7),{date_col},23)", "year": f"YEAR({date_col})"}.items():
             if d in plan.dimensions:
                 labels[d] = expression
         select = [f"{expr} AS [{name}]" for name, expr in labels.items()]
@@ -507,11 +512,15 @@ class Executor:
                           "(f.UINFO1 IS NULL OR f.UINFO2 IS NULL OR f.UINFO1<=0 OR f.UINFO1<>f.UINFO2) "
                           "THEN 1 ELSE 0 END),0) AS [_unverified_quantity_units]")
         sql = "SELECT " + ", ".join(select) + f" FROM dbo.[{table}] f"
+        if family == "sales":
+            sql += f" JOIN dbo.[{header_table}] h ON h.LOGICALREF=f.INVOICEREF"
         if book:
             sql += f" LEFT JOIN dbo.[{item_table}] i ON i.LOGICALREF=f.STOCKREF"
         if client:
             sql += f" LEFT JOIN dbo.[{client_table}] c ON c.LOGICALREF=f.CLIENTREF"
-        conditions = ["f.CANCELLED=0", f"f.DATE_>='{start}'", f"f.DATE_<'{end}'"]
+        conditions = ["f.CANCELLED=0", f"{date_col}>='{start}'", f"{date_col}<'{end}'"]
+        if family == "sales":
+            conditions.append("h.CANCELLED=0")
         if family in ("sales", "invoice"):
             transaction_codes = codes_sql(set().union(*(TRANSACTION_CODES[m] for m in plan.metrics)))
             if family == "sales":

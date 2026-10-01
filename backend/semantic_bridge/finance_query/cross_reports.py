@@ -37,7 +37,8 @@ def execute(executor, spec):
     for a,b,firm,period in executor.partitions(date.fromisoformat(spec["start"]),date.fromisoformat(spec["end"])):
         line=f"LG_{firm}_{period}_STLINE"; card=f"LG_{firm}_ITEMS" if book else f"LG_{firm}_CLCARD"
         extra=[] if book else ["TAXNR"]
-        executor.verify_schema({line:["STOCKREF","CLIENTREF","DATE_","CANCELLED","LINETYPE","INVOICEREF","TRCODE","LINENET","AMOUNT","UINFO1","UINFO2"],card:["LOGICALREF","CODE","NAME" if book else "DEFINITION_",*extra]},"logo")
+        header=f"LG_{firm}_{period}_INVOICE"
+        executor.verify_schema({line:["STOCKREF","CLIENTREF","DATE_","CANCELLED","LINETYPE","INVOICEREF","TRCODE","VATMATRAH","AMOUNT","UINFO1","UINFO2"],header:["LOGICALREF","DATE_","CANCELLED"],card:["LOGICALREF","CODE","NAME" if book else "DEFINITION_",*extra]},"logo")
         title="NAME" if book else "DEFINITION_"
         all_cards=executor.read(f"SELECT LOGICALREF card_id,LTRIM(RTRIM(CODE)) card_code,{title} card_name"+("" if book else ",TAXNR tax_number")+f" FROM dbo.[{card}]")
         cards={int(row["card_id"]):row for row in all_cards}
@@ -49,9 +50,10 @@ def execute(executor, spec):
                 names[k].add(str(r["card_name"] or ""))
                 if not wanted or _key(r["card_code"])==_key(wanted):selected_keys.add(k)
         ref="STOCKREF" if book else "CLIENTREF"
-        conditions=f"S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_>='{a}' AND S.DATE_<'{b}'"
+        # Same sales contract as the engine: VAT base (invoice-level discounts included), invoice date.
+        conditions=f"S.CANCELLED=0 AND H.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (2,3,7,8,9) AND H.DATE_>='{a}' AND H.DATE_<'{b}'"
         if wanted:conditions+=f" AND I.CODE={literal(wanted)}"
-        rows=executor.read(f"SELECT S.{ref} card_id,SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.LINENET ELSE S.LINENET END) net_sales,SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END) return_amount,SUM(CASE WHEN S.TRCODE IN (7,8) THEN S.AMOUNT ELSE 0 END) sold_quantity,SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN 1 ELSE 0 END) sale_activity_count,SUM(CASE WHEN S.TRCODE IN (7,8) AND (S.UINFO1 IS NULL OR S.UINFO2 IS NULL OR S.UINFO1<=0 OR S.UINFO1<>S.UINFO2) THEN 1 ELSE 0 END) unverified_units FROM dbo.[{line}] S LEFT JOIN dbo.[{card}] I ON I.LOGICALREF=S.{ref} WHERE {conditions} GROUP BY S.{ref}")
+        rows=executor.read(f"SELECT S.{ref} card_id,SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.VATMATRAH ELSE S.VATMATRAH END) net_sales,SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.VATMATRAH ELSE 0 END) return_amount,SUM(CASE WHEN S.TRCODE IN (7,8) THEN S.AMOUNT ELSE 0 END) sold_quantity,SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN 1 ELSE 0 END) sale_activity_count,SUM(CASE WHEN S.TRCODE IN (7,8) AND (S.UINFO1 IS NULL OR S.UINFO2 IS NULL OR S.UINFO1<=0 OR S.UINFO1<>S.UINFO2) THEN 1 ELSE 0 END) unverified_units FROM dbo.[{line}] S JOIN dbo.[{header}] H ON H.LOGICALREF=S.INVOICEREF LEFT JOIN dbo.[{card}] I ON I.LOGICALREF=S.{ref} WHERE {conditions} GROUP BY S.{ref}")
         for r in rows:
             c=cards.get(int(r["card_id"]),{})
             k=_key(c.get("card_code") if book else c.get("tax_number")) or f"__unresolved:{firm}:{r['card_id']}"

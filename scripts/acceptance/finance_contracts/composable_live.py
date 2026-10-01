@@ -48,7 +48,7 @@ REFERENCE_CONTEXT = {}
 EXACT_COUNT_COLUMNS = frozenset({"sold_quantity", "net_quantity", "invoice_count", "record_count",
                                  "missing_isbn", "missing_book_code", "missing_author"})
 ROOT = Path("/data/nanobaseai/bi/frontend/backend")
-ST = "dbo.LG_411_01_STLINE S WITH (NOLOCK)"
+ST = ir.sales_from("411")  # K-DONEM-FATURA: dönem SH.DATE_
 SALES_METRICS = ("sales_amount", "return_amount", "net_sales", "sold_quantity", "net_quantity")
 
 
@@ -60,8 +60,8 @@ def measures(variant="decision"):
 MEASURES = measures("decision")
 DIMENSIONS = {
     "channel": ("C.SPECODE2", "LEFT JOIN dbo.LG_411_CLCARD C WITH (NOLOCK) ON C.LOGICALREF=S.CLIENTREF"),
-    "day": ("CONVERT(varchar(10),S.DATE_,23)", ""),
-    "month": ("CONVERT(varchar(7),S.DATE_,23)", ""),
+    "day": ("CONVERT(varchar(10),SH.DATE_,23)", ""),
+    "month": ("CONVERT(varchar(7),SH.DATE_,23)", ""),
 }
 
 
@@ -72,7 +72,7 @@ def sales_sql(start, end, metrics, dimension=None, having=None, limit=None, vari
     columns = ([f"{expression} [{dimension}]"] if dimension else [])
     columns += [f"COALESCE({MEASURES[m]},0) [{m}]" for m in metrics]
     sql = "SELECT " + (f"TOP ({limit}) " if limit else "") + ",".join(columns)
-    sql += f" FROM {ST} {join} WHERE {ir.population_where('S')} AND S.DATE_>='{start}' AND S.DATE_<'{end}'"
+    sql += f" FROM {ST} {join} WHERE {ir.population_where('S')} AND SH.DATE_>='{start}' AND SH.DATE_<'{end}'"
     if expression:
         sql += " GROUP BY " + expression
     if having:
@@ -149,7 +149,7 @@ def cases(reference_date=REFERENCE_DATE, variant="decision"):
          "WITH sales AS ("+sales_sql("2026-09-01","2026-10-01",["net_sales"])+"), invoices AS (SELECT COUNT_BIG(*) invoice_count FROM dbo.LG_411_01_INVOICE I WHERE "+invoice_where+"), payments AS (SELECT COALESCE(SUM(L.AMOUNT),0) collections FROM dbo.LG_411_01_CLFLINE L JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE "+collection_where+") SELECT S.net_sales,I.invoice_count,P.collections FROM sales S CROSS JOIN invoices I CROSS JOIN payments P",
          ["net_sales","invoice_count","collections"],[]),
         ("Eylül 2026'da müşteri bazında KDV hariç iadeler düşülmüş net satış tutarı ile satış faturalarının genel toplamını ayrı kolonlarda göster. Bir tarafta hareketi olmayan müşteriyi listeden düşürme.",
-         "WITH sales AS (SELECT C.CODE customer_code,C.DEFINITION_ customer_name,COALESCE("+MEASURES["net_sales"]+",0) net_sales FROM "+ST+" LEFT JOIN dbo.LG_411_CLCARD C WITH (NOLOCK) ON C.LOGICALREF=S.CLIENTREF WHERE "+ir.population_where("S")+" AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY C.CODE,C.DEFINITION_), invoices AS (SELECT C.CODE customer_code,C.DEFINITION_ customer_name,SUM(I.NETTOTAL) invoice_amount FROM dbo.LG_411_01_INVOICE I LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=I.CLIENTREF WHERE "+invoice_where+" GROUP BY C.CODE,C.DEFINITION_) SELECT COALESCE(S.customer_code,I.customer_code) customer_code,COALESCE(S.customer_name,I.customer_name) customer_name,COALESCE(S.net_sales,0) net_sales,COALESCE(I.invoice_amount,0) invoice_amount FROM sales S FULL OUTER JOIN invoices I ON (S.customer_code=I.customer_code OR S.customer_code IS NULL AND I.customer_code IS NULL) AND (S.customer_name=I.customer_name OR S.customer_name IS NULL AND I.customer_name IS NULL)",
+         "WITH sales AS (SELECT C.CODE customer_code,C.DEFINITION_ customer_name,COALESCE("+MEASURES["net_sales"]+",0) net_sales FROM "+ST+" LEFT JOIN dbo.LG_411_CLCARD C WITH (NOLOCK) ON C.LOGICALREF=S.CLIENTREF WHERE "+ir.population_where("S")+" AND SH.DATE_>='20260901' AND SH.DATE_<'20261001' GROUP BY C.CODE,C.DEFINITION_), invoices AS (SELECT C.CODE customer_code,C.DEFINITION_ customer_name,SUM(I.NETTOTAL) invoice_amount FROM dbo.LG_411_01_INVOICE I LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=I.CLIENTREF WHERE "+invoice_where+" GROUP BY C.CODE,C.DEFINITION_) SELECT COALESCE(S.customer_code,I.customer_code) customer_code,COALESCE(S.customer_name,I.customer_name) customer_name,COALESCE(S.net_sales,0) net_sales,COALESCE(I.invoice_amount,0) invoice_amount FROM sales S FULL OUTER JOIN invoices I ON (S.customer_code=I.customer_code OR S.customer_code IS NULL AND I.customer_code IS NULL) AND (S.customer_name=I.customer_name OR S.customer_name IS NULL AND I.customer_name IS NULL)",
          ["customer_code","customer_name","net_sales","invoice_amount"],["customer_code","customer_name"]),
         ("Eylül 2026'da kanal bazında satış faturası sayısını ve iadeler düşülmeden satılan kitap adedini birlikte göster. Yalnız bir ölçüde hareketi olan kanallar da kalsın.",
          "WITH sales AS ("+sales_sql("2026-09-01","2026-10-01",["sold_quantity"],"channel")+"), invoices AS (SELECT C.SPECODE2 channel,COUNT_BIG(*) invoice_count FROM dbo.LG_411_01_INVOICE I LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=I.CLIENTREF WHERE "+invoice_where+" GROUP BY C.SPECODE2) SELECT COALESCE(S.channel,I.channel) channel,COALESCE(I.invoice_count,0) invoice_count,COALESCE(S.sold_quantity,0) sold_quantity FROM sales S FULL OUTER JOIN invoices I ON S.channel=I.channel OR S.channel IS NULL AND I.channel IS NULL",
@@ -198,7 +198,7 @@ def cases(reference_date=REFERENCE_DATE, variant="decision"):
     for dim, cols, question in [
         ("subbrand", ["subbrand_id","subbrand"], "Eylül 2026 net satış tutarını CRM new_yayinciid ile bağlı güncel alt marka kimliği ve adına göre göster; eşleşmeyenleri boş grupta koru."),
         ("author_group", ["author_group_ids","author_group_names"], "Eylül 2026 net satış tutarını aktif gerçek Yazar katılımındaki kişi kimlikleri ortak grubuna göre göster. Çok yazarlı kitabı bir grupta bir kez say; kişilere dağıtma, eşleşmeyenleri boş grupta koru.")]:
-        out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="cross_dimensions",crossDimension=dim,metrics=["net_sales"],dimensions=[dim],columns=[*cols,"net_sales"],keys=cols,periods=[["2026-09-01","2026-10-01"]],allowCoverageGap=True,referenceSql="SELECT LTRIM(RTRIM(I.CODE)) book_code,COALESCE("+MEASURES["net_sales"]+",0) net_sales FROM "+ST+" LEFT JOIN dbo.LG_411_ITEMS I WITH (NOLOCK) ON I.LOGICALREF=S.STOCKREF WHERE "+ir.population_where("S")+" AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY LTRIM(RTRIM(I.CODE))"))
+        out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="cross_dimensions",crossDimension=dim,metrics=["net_sales"],dimensions=[dim],columns=[*cols,"net_sales"],keys=cols,periods=[["2026-09-01","2026-10-01"]],allowCoverageGap=True,referenceSql="SELECT LTRIM(RTRIM(I.CODE)) book_code,COALESCE("+MEASURES["net_sales"]+",0) net_sales FROM "+ST+" LEFT JOIN dbo.LG_411_ITEMS I WITH (NOLOCK) ON I.LOGICALREF=S.STOCKREF WHERE "+ir.population_where("S")+" AND SH.DATE_>='20260901' AND SH.DATE_<'20261001' GROUP BY LTRIM(RTRIM(I.CODE))"))
     # Modifier-scope regressions: opposite operand order and different fact grains.
     add("Eylül 2026'da iadeler düşülmeden satılan adedi, iadeler düşüldükten sonraki net satılan adede böl. İki adet toplamını ayrı kolonlarda ver; oran yüzde değil katsayı olsun.",
         ["sold_quantity","net_quantity"], derived=dict(op="ratio",left="sold_quantity",right="net_quantity",scale=1))

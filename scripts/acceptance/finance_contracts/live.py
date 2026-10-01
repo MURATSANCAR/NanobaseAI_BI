@@ -144,7 +144,7 @@ def cases(variant="decision"):
     # bu yüzden ürün varyantı TRCODE 7 popülasyonunda ürünün sales_amount ifadesidir.
     add("29 Eylül 2026 tarihinde perakende satışın KDV hariç satır toplamı ne kadar?", "logo",
         ("SELECT R.retail_sales_amount sales_amount FROM ("+ir.sales_select("411","2026-09-29","2026-09-30",["retail_sales_amount"])+") R") if variant=="decision" else
-        ("SELECT COALESCE("+ir.measure_sql("sales_amount","S","product")+",0) sales_amount FROM dbo.LG_411_01_STLINE S WITH (NOLOCK) WHERE "+ir.population_where("S",(7,))+" AND S.DATE_>='20260929' AND S.DATE_<'20260930'"), ["sales_amount"])
+        ("SELECT COALESCE("+ir.measure_sql("sales_amount","S","product")+",0) sales_amount FROM "+ir.sales_from("411")+" WHERE "+ir.population_where("S",(7,))+" AND SH.DATE_>='20260929' AND SH.DATE_<'20260930'"), ["sales_amount"])
     for case in out:case["variant"]=variant
     return out
 
@@ -156,7 +156,7 @@ def cross_reference(conns, variant="decision"):
         key=r["code"].strip().casefold()
         if key in index:raise RuntimeError("independent CRM reference has duplicate key")
         index[key]=r
-    raw=query(conns["logo"],"SELECT I.CODE book_code,I.NAME book_name,C.SPECODE2 channel,L.TRCODE,L.IOCODE,L.AMOUNT,L.LINENET FROM dbo.LG_411_01_STLINE L WITH (NOLOCK) LEFT JOIN dbo.LG_411_ITEMS I WITH (NOLOCK) ON I.LOGICALREF=L.STOCKREF LEFT JOIN dbo.LG_411_CLCARD C WITH (NOLOCK) ON C.LOGICALREF=L.CLIENTREF WHERE "+ir.population_where("L",(7,8,9))+" AND L.DATE_>='20260929' AND L.DATE_<'20260930'")
+    raw=query(conns["logo"],"SELECT I.CODE book_code,I.NAME book_name,C.SPECODE2 channel,L.TRCODE,L.IOCODE,L.AMOUNT,L.VATMATRAH FROM "+ir.sales_from("411","L","LH")+" LEFT JOIN dbo.LG_411_ITEMS I WITH (NOLOCK) ON I.LOGICALREF=L.STOCKREF LEFT JOIN dbo.LG_411_CLCARD C WITH (NOLOCK) ON C.LOGICALREF=L.CLIENTREF WHERE "+ir.population_where("L",(7,8,9))+" AND LH.DATE_>='20260929' AND LH.DATE_<'20260930'")
     # Karar işaret haritaları (ir.LOGO_MEASURES); ürün varyantı yalnız TANIM_FARKI sınıflaması için 7/8 adet kuralını kullanır.
     qty=ir.LOGO_MEASURES["sold_quantity"];amt=ir.LOGO_MEASURES["sales_amount"]
     groups={}
@@ -169,7 +169,7 @@ def cross_reference(conns, variant="decision"):
             if r["TRCODE"] in qty.signs and (not qty.sales_iocodes or r["IOCODE"] in qty.sales_iocodes):
                 row["sold_quantity"]+=qty.signs[r["TRCODE"]]*Decimal(str(r["AMOUNT"]))
         elif r["TRCODE"] in (7,8):row["sold_quantity"]+=Decimal(str(r["AMOUNT"]))
-        if r["TRCODE"] in amt.signs:row["sales_amount"]+=amt.signs[r["TRCODE"]]*Decimal(str(r["LINENET"]))
+        if r["TRCODE"] in amt.signs:row["sales_amount"]+=amt.signs[r["TRCODE"]]*Decimal(str(r["VATMATRAH"]))
     return list(groups.values())
 
 

@@ -17,6 +17,11 @@ class Metric:
     definition: str
 
 
+# Sales amounts: user decision 2026-10-01 — the accounting net is the line VAT base (VATMATRAH):
+# it carries invoice-level discounts that Logo keeps on separate discount lines (414 invoices in
+# 2026; LINENET misses them) and sums exactly to the invoice header. The period of a sales line is
+# its invoice date, not the line (dispatch) date: books, VAT returns and TİMAŞ's own sales report
+# use the invoice date.
 # One invoice definition for the whole engine. User decision 2026-10-01: an invoice
 # count is sales invoices only (retail 7, wholesale 8, service 9); sales return
 # invoices (retail 2, wholesale 3) are a separate measure, added only on request.
@@ -29,11 +34,11 @@ def codes_sql(codes):
 
 
 METRICS = {
-    "sales_amount": Metric("sales", "Satış tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (7,8,9) THEN f.LINENET ELSE 0 END)", "Faturalı malzeme satırı, iskonto sonrası KDV hariç; iadeler düşülmeden satış (7/8/9)."),
-    "net_sales": Metric("sales", "Net satış tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN -f.LINENET ELSE f.LINENET END)", "Faturalı malzeme satırında satış (7/8/9) eksi iade (2/3); iskonto sonrası KDV hariç."),
+    "sales_amount": Metric("sales", "Satış tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (7,8,9) THEN f.VATMATRAH ELSE 0 END)", "Faturalı malzeme satırının KDV matrahı: satır ve fatura geneli iskonto sonrası, KDV hariç; iadeler düşülmeden satış (7/8/9); dönem fatura tarihine göre."),
+    "net_sales": Metric("sales", "Net satış tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN -f.VATMATRAH ELSE f.VATMATRAH END)", "Faturalı malzeme satırının KDV matrahında satış (7/8/9) eksi iade (2/3); satır ve fatura geneli iskonto sonrası, KDV hariç; dönem fatura tarihine göre."),
     "sold_quantity": Metric("sales", "Satılan adet", "adet", "SUM(CASE WHEN f.TRCODE IN (7,8) THEN f.AMOUNT ELSE 0 END)", "Faturalı malzeme satırı; perakende/toptan 7/8, iadeler düşülmeden miktar; hizmet 9 hariç."),
     "net_quantity": Metric("sales", "Net satılan adet", "adet", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN -f.AMOUNT WHEN f.TRCODE IN (7,8) THEN f.AMOUNT ELSE 0 END)", "Faturalı malzeme; 7/8 miktarı eksi 2/3 iade miktarı."),
-    "return_amount": Metric("sales", "İade tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN f.LINENET ELSE 0 END)", "İptal edilmemiş faturalı malzeme iadesi; LINENET, KDV hariç, pozitif gösterim."),
+    "return_amount": Metric("sales", "İade tutarı", "TRY", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN f.VATMATRAH ELSE 0 END)", "İptal edilmemiş faturalı malzeme iadesi; KDV matrahı (iskonto sonrası, KDV hariç), pozitif gösterim; dönem fatura tarihine göre."),
     "invoice_count": Metric("invoice", "Fatura sayısı", "belge", "SUM(CASE WHEN f.TRCODE IN (7,8,9) THEN 1 ELSE 0 END)", "İptal edilmemiş satış faturası başlıkları (perakende, toptan, hizmet); satış iadesi faturaları dahil değildir. Satırlar değil fatura belgeleri sayılır (7/8/9)."),
     "return_invoice_count": Metric("invoice", "İade faturası sayısı", "belge", "SUM(CASE WHEN f.TRCODE IN (2,3) THEN 1 ELSE 0 END)", "İptal edilmemiş satış iadesi faturası başlıkları (perakende ve toptan iade); fatura sayısına dahil edilmez (2/3)."),
     "invoice_count_with_returns": Metric("invoice", "Fatura sayısı (iadeler dahil)", "belge", "SUM(CASE WHEN f.TRCODE IN (2,3,7,8,9) THEN 1 ELSE 0 END)", "Satış faturası sayısı ile satış iadesi faturası sayısının toplamı; yalnız iadeler açıkça istendiğinde kullanılır (2/3/7/8/9)."),
@@ -59,9 +64,9 @@ DIMENSIONS = {
     "publisher": "CRM kitap kartının new_yayineviid ilişkisindeki aktif marka/yayınevi",
     "subbrand": "CRM new_yayinciid aktif Marka kimliği ve adı; alternatif new_YayneviAltMarka değildir",
     "author_group": "Aktif Yazar katılım rolüyle bağlı gerçek kişi UUID kümesi; ortak yazarlı kitabın satışı kümede bir kez sayılır, kişilere dağıtılmaz",
-    "day": "İşlem günü", "month": "İşlem yılı ve ayı", "year": "İşlem yılı",
+    "day": "İşlem günü (satışta fatura tarihi)", "month": "İşlem yılı ve ayı (satışta fatura tarihi)", "year": "İşlem yılı (satışta fatura tarihi)",
 }
-CONTRACT = {"version": "2.0", "metrics": {k: asdict(v) for k, v in METRICS.items()},
+CONTRACT = {"version": "2.1", "metrics": {k: asdict(v) for k, v in METRICS.items()},
             "dimensions": DIMENSIONS,
             "sources": "Tek şirket. SEMANTIC_FIRMS kapsamı ile L_CAPIPERIOD dönemleri; çakışmada tahmin yok.",
             "joins": "Logo ITEMS.CODE -> CRM new_kitapBase.new_stokkodu; aktif anahtar tekilliği zorunlu; alt marka/kişi grubu kırılımında çoğul kodlar eşleştirilmeden NULL ve kapsam açıklamasıyla korunur. LEFT JOIN; ölçüler çoğalmaz. Eşleşmeyen satışlar NULL CRM alanlarıyla korunur ve toplam kontrol edilir.",

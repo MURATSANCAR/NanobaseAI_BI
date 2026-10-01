@@ -39,7 +39,13 @@ NL = "WITH (NOLOCK)"
 # ---------------------------------------------------------------------------
 SOURCES = {
     "K-SATIS-SATIR": "Kullanıcı kararı 2026-09-21 (bellek: sales-are-invoiced-lines): satış = faturalı satır; "
-                     "STLINE INVOICEREF<>0, CANCELLED=0, LINETYPE=0; tutar LINENET (iskonto sonrası, KDV hariç).",
+                     "STLINE INVOICEREF<>0, CANCELLED=0, LINETYPE=0; tutar VATMATRAH (K-NET-MATRAH), dönem fatura tarihi "
+                     "(K-DONEM-FATURA).",
+    "K-NET-MATRAH": "Kullanıcı kararı 2026-10-01: satış tutarı muhasebe neti = satırın KDV matrahı (VATMATRAH); "
+                    "fatura geneli iskonto dahil düşülür. 2026'da 414 faturada iskonto ayrı satırda, LINENET görmüyor; "
+                    "VATMATRAH toplamı fatura başlığıyla (NETTOTAL-TOTALVAT) birebir.",
+    "K-DONEM-FATURA": "Kullanıcı kararı 2026-10-01: satış satırının dönemi fatura tarihi (INVOICE.DATE_), satır/sevk "
+                      "tarihi değil; defter, KDV beyannamesi ve TİMAŞ satış raporu fatura tarihine bakar.",
     "K-IADE": "Kullanıcı kararı 2026-10-01: iade 2/3 düşülür; perakende = 7 eksi 2, toptan = 8 eksi 3.",
     "K-FATURA-SAYISI": "Kullanıcı kararı 2026-10-01: fatura sayısı = INVOICE TRCODE 7/8/9, iptal değil, iadesiz "
                        "(Eylül 2026: 13.680); iade faturası sayısı ayrı ölçüdür (TRCODE 2/3, Eylül 2026: 120).",
@@ -71,16 +77,24 @@ class Measure:
 
 
 LOGO_MEASURES = {
-    "sales_amount": Measure("LINENET", {7: 1, 8: 1, 9: 1}, "TRY", ("K-SATIS-SATIR",)),
-    "return_amount": Measure("LINENET", {2: 1, 3: 1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
-    "net_sales": Measure("LINENET", {7: 1, 8: 1, 9: 1, 2: -1, 3: -1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
-    "retail_net_sales": Measure("LINENET", {7: 1, 2: -1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
-    "wholesale_net_sales": Measure("LINENET", {8: 1, 3: -1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
-    "retail_sales_amount": Measure("LINENET", {7: 1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
-    "wholesale_sales_amount": Measure("LINENET", {8: 1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
+    "sales_amount": Measure("VATMATRAH", {7: 1, 8: 1, 9: 1}, "TRY", ("K-SATIS-SATIR",)),
+    "return_amount": Measure("VATMATRAH", {2: 1, 3: 1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
+    "net_sales": Measure("VATMATRAH", {7: 1, 8: 1, 9: 1, 2: -1, 3: -1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
+    "retail_net_sales": Measure("VATMATRAH", {7: 1, 2: -1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
+    "wholesale_net_sales": Measure("VATMATRAH", {8: 1, 3: -1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
+    "retail_sales_amount": Measure("VATMATRAH", {7: 1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
+    "wholesale_sales_amount": Measure("VATMATRAH", {8: 1}, "TRY", ("K-SATIS-SATIR", "K-IADE")),
     "sold_quantity": Measure("AMOUNT", {7: 1, 8: 1, 9: 1}, "quantity", ("G-C040",), sales_iocodes=(3, 4)),
     "net_quantity": Measure("AMOUNT", {7: 1, 8: 1, 9: 1, 2: -1, 3: -1}, "quantity", ("G-C040", "K-IADE"), sales_iocodes=(3, 4)),
 }
+
+
+def sales_from(firm, alias="S", header="SH"):
+    """Satış satırı + faturası (K-DONEM-FATURA): dönem `SH.DATE_`, iptal edilmiş fatura dışarıda."""
+    return (f"dbo.LG_{firm}_01_STLINE {alias} WITH (NOLOCK) JOIN dbo.LG_{firm}_01_INVOICE {header} WITH (NOLOCK)"
+            f" ON {header}.LOGICALREF={alias}.INVOICEREF AND {header}.CANCELLED=0")
+
+
 # Fatura başlığı ölçüleri (satır değil belge).
 HEADER_MEASURES = {
     "invoice_count": dict(trcodes=(7, 8, 9), agg="COUNT", unit="count", sources=("K-FATURA-SAYISI",)),
@@ -157,16 +171,16 @@ def product_has(name):
         return False
 
 
-# Kırılımlar: kanal K-KANAL, kitap Logo ITEMS kodu ve adı, gün/ay satır tarihi.
+# Kırılımlar: kanal K-KANAL, kitap Logo ITEMS kodu ve adı, gün/ay fatura tarihi (K-DONEM-FATURA).
 DIMENSION_SQL = {
     "channel": dict(select=["C.SPECODE2 channel"], group=["C.SPECODE2"], order=["C.SPECODE2"],
                     join="LEFT JOIN dbo.LG_{firm}_CLCARD C WITH (NOLOCK) ON C.LOGICALREF=S.CLIENTREF"),
     "book": dict(select=["LTRIM(RTRIM(I.CODE)) book_code", "I.NAME book_name"], group=["I.CODE", "I.NAME"],
                  order=["I.CODE", "I.NAME"], join="LEFT JOIN dbo.LG_{firm}_ITEMS I WITH (NOLOCK) ON I.LOGICALREF=S.STOCKREF"),
-    "day": dict(select=["CONVERT(varchar(10),S.DATE_,23) day"], group=["CONVERT(varchar(10),S.DATE_,23)"],
-                order=["CONVERT(varchar(10),S.DATE_,23)"], join=""),
-    "month": dict(select=["CONVERT(varchar(7),S.DATE_,23) month"], group=["CONVERT(varchar(7),S.DATE_,23)"],
-                  order=["CONVERT(varchar(7),S.DATE_,23)"], join=""),
+    "day": dict(select=["CONVERT(varchar(10),SH.DATE_,23) day"], group=["CONVERT(varchar(10),SH.DATE_,23)"],
+                order=["CONVERT(varchar(10),SH.DATE_,23)"], join=""),
+    "month": dict(select=["CONVERT(varchar(7),SH.DATE_,23) month"], group=["CONVERT(varchar(7),SH.DATE_,23)"],
+                  order=["CONVERT(varchar(7),SH.DATE_,23)"], join=""),
 }
 
 
@@ -191,8 +205,8 @@ def sales_select(firm, start, end, metrics, dims=(), variant="decision", top=Non
     select += list(extra_columns)
     select += [f"COALESCE({measure_sql(m, 'S', variant)},0) {m}" for m in metrics]
     sql = "SELECT " + (f"TOP ({int(top)}) " if top else "") + ",".join(select)
-    sql += f" FROM dbo.LG_{firm}_01_STLINE S WITH (NOLOCK) " + " ".join(j.format(firm=firm) for j in joins)
-    sql += f" WHERE {population_where('S')} AND S.DATE_>='{_ymd(start)}' AND S.DATE_<'{_ymd(end)}'"
+    sql += f" FROM {sales_from(firm)} " + " ".join(j.format(firm=firm) for j in joins)
+    sql += f" WHERE {population_where('S')} AND SH.DATE_>='{_ymd(start)}' AND SH.DATE_<'{_ymd(end)}'"
     if channel is not None:
         sql += " AND C.SPECODE2=N'" + str(channel).replace("'", "''") + "'"
     if group:
@@ -346,11 +360,11 @@ def _measure_value(m, by, sign_filter=None):
 def cross_check_sales(query, conn, firm, start, end, dimension=None):
     """Bir firma-dönem için satış ölçülerinin karar değeri + ikinci yol uzlaşması.
 
-    İkinci yol TİMAŞ'ın kendi satış raporu görünümüdür (V_SatisRaporu_<firma>, malzeme satırları). Görünüm dönemi
-    fatura tarihine, karar referansı satır tarihine (STLINE.DATE_) bakar; tutarı VATMATRAH'tır, karar LINENET.
+    İkinci yol TİMAŞ'ın kendi satış raporu görünümüdür (V_SatisRaporu_<firma>, malzeme satırları). Karar
+    (K-NET-MATRAH, K-DONEM-FATURA) da görünüm de fatura tarihine ve VATMATRAH'a bakar; sütun köprüsü 0 beklenir.
     Uzlaşma durumları:
       UZLASTI          |Δ| <= 0,01 ve satır kümesi birebir
-      ACIKLANDI        satır kümesi birebir; Δ yalnız LINENET−VATMATRAH sütun farkı (ayrıca raporlanır)
+      ACIKLANDI        satır kümesi birebir; Δ yalnız sütun farkı (karar ve görünüm aynı sütunda: 0 beklenir)
       ACIKLANDI_TARIH  fatura tarihine göre satır kümesi birebir; Δ = satır/fatura tarihi farkı + sütun farkı
       UZLASMADI        yukarıdakilerin hiçbiri; IKINCI_YOL_YOK görünüm okunamadı."""
     if not re.fullmatch(r"\d{3}", str(firm)):
@@ -358,8 +372,8 @@ def cross_check_sales(query, conn, firm, start, end, dimension=None):
     s, e = _ymd(start), _ymd(end)
     cols = (" COUNT_BIG(*) n, SUM(S.LINENET) linenet, SUM(S.VATMATRAH) vatmatrah, SUM(S.AMOUNT) amount,"
             " SUM(CASE WHEN S.IOCODE IN (3,4) THEN S.AMOUNT ELSE 0 END) amount_out")
-    lines = query(conn, f"SELECT S.TRCODE trcode,{cols} FROM dbo.LG_{firm}_01_STLINE S {NL} WHERE {population_where('S')}"
-                        f" AND S.DATE_>='{s}' AND S.DATE_<'{e}' GROUP BY S.TRCODE")
+    lines = query(conn, f"SELECT S.TRCODE trcode,{cols} FROM {sales_from(firm)} WHERE {population_where('S')}"
+                        f" AND SH.DATE_>='{s}' AND SH.DATE_<'{e}' GROUP BY S.TRCODE")
     by = {int(r["trcode"]): r for r in lines}
     decision = {name: _measure_value(m, by) for name, m in LOGO_MEASURES.items()}
     view = None
@@ -397,9 +411,9 @@ def cross_check_sales(query, conn, firm, start, end, dimension=None):
             population[code] = p
         nine = by.get(9) or hby.get(9)
         for name, m in LOGO_MEASURES.items():
-            if m.column == "LINENET":
+            if m.column == "VATMATRAH":
                 second = sum(sign * population[c]["viewNet"] for c, sign in m.signs.items() if c in population)
-                column_bridge = sum(sign * population[c]["linenetMinusVatmatrah"] for c, sign in m.signs.items() if c in population)
+                column_bridge = Decimal(0)
             else:
                 second = sum(sign * population[c]["viewQuantity"] for c, sign in m.signs.items() if c in population)
                 # altın C040 satışta IOCODE 3/4 ister; görünüm miktarı IOCODE süzmez
@@ -522,8 +536,8 @@ def product_vs_decision(query, conn, firm, start, end, root=PRODUCT_ROOT):
         return {"error": str(exc)[:200]}
     names = [n for n in LOGO_MEASURES if n in product]
     cols = ",".join(f"{decision_measure_sql(n)} [d_{n}],{product_measure_sql(n, root=root)} [p_{n}]" for n in names)
-    row = query(conn, f"SELECT {cols} FROM dbo.LG_{firm}_01_STLINE S {NL} WHERE {population_where('S')}"
-                      f" AND S.DATE_>='{s}' AND S.DATE_<'{e}'")[0]
+    row = query(conn, f"SELECT {cols} FROM {sales_from(firm)} WHERE {population_where('S')}"
+                      f" AND SH.DATE_>='{s}' AND SH.DATE_<'{e}'")[0]
     for n in names:
         d, p = D(row[f"d_{n}"]), D(row[f"p_{n}"])
         tol = MONEY_TOLERANCE if LOGO_MEASURES[n].unit == "TRY" else Decimal(0)

@@ -22,7 +22,7 @@ from semantic_bridge.finance_query.result_metadata import return_invoice_note
 
 SEPT = (("2026-09-01", "2026-10-01"),)
 COLUMNS = ("CANCELLED DATE_ TRCODE LOGICALREF NETTOTAL CLIENTREF CODE DEFINITION_ SPECODE2 LINETYPE INVOICEREF "
-           "STOCKREF LINENET AMOUNT UINFO1 UINFO2 NAME SIGN FICHENO TRCURR TRNET FIRMNR CURTYPE CURCODE ORDFICHEREF "
+           "STOCKREF LINENET VATMATRAH AMOUNT UINFO1 UINFO2 NAME SIGN FICHENO TRCURR TRNET FIRMNR CURTYPE CURCODE ORDFICHEREF "
            "CLOSED SHIPPEDAMOUNT UOMREF SOURCEINDEX DUEDATE").split()
 
 
@@ -256,3 +256,25 @@ def test_include_returns_is_not_a_model_field_and_only_for_invoice_counts():
     assert "include_returns" not in LOGO_REPORT_SCHEMA["properties"]
     with pytest.raises(ContractError):
         validate_logo_report({"mode": "stock", "as_of": "2026-09-30", "include_returns": True})
+
+
+# Kullanıcı kararı 2026-10-01: satış tutarı KDV matrahı (fatura geneli iskonto dahil), dönem fatura tarihi.
+def sales_answer(sql):
+    return [{"net_sales": 1, "sales_amount": 1, "return_amount": 0, "month": "2026-09"}]
+
+
+def test_sales_amounts_use_the_vat_base_and_the_invoice_date():
+    engine, rows, sql = run(Plan(("net_sales", "sales_amount", "return_amount"), ("month",), SEPT), sales_answer)
+    sales = [s for s in sql if "_STLINE" in s]
+    assert sales, sql
+    for s in sales:
+        assert "VATMATRAH" in s and "LINENET" not in s
+        assert "JOIN dbo.[LG_411_01_INVOICE] h ON h.LOGICALREF=f.INVOICEREF" in s and "h.CANCELLED=0" in s
+        assert "h.DATE_>='2026-09-01'" in s and "h.DATE_<'2026-10-01'" in s and "f.DATE_" not in s
+        assert "CONVERT(varchar(7),h.DATE_,23)" in s
+
+
+def test_sales_metric_definitions_name_the_basis():
+    for m in ("net_sales", "sales_amount", "return_amount"):
+        assert "VATMATRAH" in METRICS[m].expression and "LINENET" not in METRICS[m].expression
+        assert "fatura tarihi" in METRICS[m].definition

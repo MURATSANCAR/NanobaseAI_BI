@@ -26,7 +26,7 @@ from .contracts import METRICS
 #: Logo kolon/tablo adları ve sorgu dili sözcükleri (büyük harfle yazıldıklarında). Karşılığı olan Türkçe iş adıyla,
 #: olmayan boşla değişir; ardından kalan noktalama temizlenir.
 _LOGO = {
-    "LINENET": "satır net tutarı", "NETTOTAL": "fatura genel toplamı", "GROSSTOTAL": "brüt toplam",
+    "LINENET": "satır net tutarı", "VATMATRAH": "KDV matrahı", "NETTOTAL": "fatura genel toplamı", "GROSSTOTAL": "brüt toplam",
     "TOTALVAT": "KDV tutarı", "VAT": "KDV", "TOTALDISCOUNTS": "toplam iskonto", "DISTDISC": "dağıtılmış iskonto",
     "TRCODE": "işlem türü", "LINETYPE": "satır türü", "IOCODE": "giriş/çıkış türü", "SIGN": "borç/alacak yönü",
     "SPECODE": "özel kod", "SPECODE2": "satış kanalı kodu", "CYPHCODE": "yetki kodu", "TRADINGGRP": "ticari grup",
@@ -257,7 +257,7 @@ def leaks(text: Any) -> list[str]:
     """Metinde kalan teknik adlar (test ve kabul taraması için)."""
     s = str(text or "")
     found = [m.group(0) for m in _TECH.finditer(s)]
-    found += [w for w in ("TRCODE", "LINENET", "NETTOTAL", "LINETYPE", "statecode", "statuscode") if w in s]
+    found += [w for w in ("TRCODE", "LINENET", "VATMATRAH", "NETTOTAL", "LINETYPE", "statecode", "statuscode") if w in s]
     found += re.findall(r"\bSQL\b|\bLG_\w+|\b\w+Base\b|\bnew_\w+", s)
     found += [k for k in _PLAN_FIELDS if "_" in k or "." in k if re.search(r"(?<![\w.])" + re.escape(k) + r"(?![\w])", s)]
     found += re.findall(r"\b(?:metrics|dimensions|derived|analytics|uncovered)\b", s)

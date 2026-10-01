@@ -226,7 +226,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     source_question = _source_question or question
     source_q = fold(source_question)
     # A bare amount has two observed, different accounting answers. Never let
-    # model sampling pick between header NETTOTAL and line LINENET.
+    # model sampling pick between header NETTOTAL and the line VAT base (VATMATRAH).
     if re.search(r"\bsatis\w*\s+(?:tutar\w*|toplam\w*)", q) and not re.search(r"\b(kdv|fatura\w*|net|satir\w*)\b", q):
         raise ContractError("Satış tutarıyla fatura genel toplamını mı, iskonto sonrası KDV hariç satış satırı toplamını mı istiyorsunuz?", code="NEEDS_CLARIFICATION")
     today = datetime.now(timezone.utc if re.search(r"\butc\b", q) else ZoneInfo("Europe/Istanbul")).date()
