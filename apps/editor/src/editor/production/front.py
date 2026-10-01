@@ -29,7 +29,10 @@ PUBLISHER_FIELDS = ("YAYINEVI", "ADRES", "TELEFON", "EPOSTA", "SERTIFIKA", "MATB
                     "MATBAA_ADRES")
 # Kitaba ait alanlar: yalnız kitabın kendi künyesinden. Başka kitabın künyesinden gelmiş (eski işlerde kayıtlı)
 # değer de basılmaz (`usable`).
-PERSON_FIELDS = ("YAYIN_YONETMENI", "PROJE_EDITORU", "EDITOR", "DIZI", "TELIF")
+PERSON_FIELDS = ("YAYIN_YONETMENI", "PROJE_EDITORU", "EDITOR", "DIZI", "TELIF", "CEVIRI", "DESTEK")
+# Yalnız kitapta varsa basılan satırlar: çeviri kitapta çevirmen, destekli yayında destek cümlesi. Yoksa satır hiç
+# yoktur (telif kitabında «Çeviri: —» basılmaz, eksik sayılmaz).
+OPTIONAL = (("Çeviri", "CEVIRI"), ("Destek", "DESTEK"))
 KUNYE_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["fields"], "properties": {
     "fields": {"type": "array", "items": {"type": "object", "additionalProperties": False,
                                           "required": ["field", "value", "quote"],
@@ -122,6 +125,7 @@ def kunye(ms: Manuscript, f: dict, manual: dict | None = None) -> list[list[str]
         ["Yayın Yönetmeni", v("Yayın Yönetmeni", "YAYIN_YONETMENI")],
         ["Proje Editörü", v("Proje Editörü", "PROJE_EDITORU")],
         ["Editör", v("Editör", "EDITOR")],
+        *[[label, v(label, key)] for label, key in OPTIONAL[:1] if m.get(label) or f.get(key)],
         ["Baskı", v("Baskı")],
         ["ISBN", ms.meta.get("ISBN") or v("ISBN")],
         ["", ""],
@@ -134,14 +138,15 @@ def kunye(ms: Manuscript, f: dict, manual: dict | None = None) -> list[list[str]
         ["Matbaa Adresi", v("Matbaa Adresi", "MATBAA_ADRES")],
         ["", ""],
         ["Telif", v("Telif", "TELIF")],
+        *[[label, v(label, key)] for label, key in OPTIONAL[1:] if m.get(label) or f.get(key)],
     ]
     return rows
 
 
 # Ekranda düzenlenebilen etiketler. Kitap adı ve yazar da düzenlenir ama künye alanı olarak değil: el yazmasının
 # kendisi düzeltilir (studio.set_kunye `book`); resim/tasarım satırları sistemindir.
-EDITABLE =("Dizi", "Yayın Yönetmeni", "Proje Editörü", "Editör", "Baskı", "ISBN", "Yayınevi", "Adres", "Telefon",
-            "E-posta", "Sertifika No", "Baskı ve Cilt", "Matbaa Sertifika No", "Matbaa Adresi", "Telif")
+EDITABLE =("Dizi", "Yayın Yönetmeni", "Proje Editörü", "Editör", "Çeviri", "Baskı", "ISBN", "Yayınevi", "Adres", "Telefon",
+            "E-posta", "Sertifika No", "Baskı ve Cilt", "Matbaa Sertifika No", "Matbaa Adresi", "Telif", "Destek")
 
 
 def bios_for_author(bios: list[dict], author: str | None) -> list[dict]:
