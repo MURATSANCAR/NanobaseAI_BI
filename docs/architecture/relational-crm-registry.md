@@ -28,6 +28,16 @@ kapsamında yasaktır. Kitap–sözleşme ve kitap–proje N:N bağları fizikse
 kimlikleriyle ayrı varlıklardır. Birden fazla lookup yolunu eşdeğer sayıp OR JOIN
 üretmek yasaktır.
 
+Katılım kökünden kitap, kişi ve katılım rolüne; kitap üzerinden yayıncı, alt
+marka, alternatif alt marka ve kitap projesine ilerleyen yol mevcut kayıtta
+tanımlıdır. Yedi ileri FK bağlantısı sekiz SQL tablo takma adı oluşturur;
+marka tablosu iki farklı lookup rolüyle kullanıldığı için fiziksel tablo sayısı
+yedidir. `book.book_project_id` fiziksel `new_KitapProjesi` alanıdır ve
+`new_new_proje_new_kitap_KitapProjesi` FK'sıyla `new_projeBase.new_projeId`
+anahtarına gider. Bu yol ters JOIN gerektirmez; sonuç tanesi katılım kaydı
+olmaya devam eder. LEFT/INNER tercihi nüfusu belirler; NULL proje veya diğer
+aktif hedeflerin bulunmaması, açık seçim olmadan kök kayıtları düşürmemelidir.
+
 Hiçbir sayısal alan için toplamsallık kanıtlanmadığından `sum_allowed=False`.
 Baskı sayısı, durum kodu ve kimlikleri toplamak anlamlı iş ölçüsü sayılmaz.
 Alan türü, tek başına bir hesabın iş tanımını doğrulamaz. CreatedOn/ModifiedOn

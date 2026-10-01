@@ -53,6 +53,7 @@ def compile_relational_query(plan):
         if op=="count_records": expression="COUNT_BIG(DISTINCT "+root_pk+")"
         elif op=="count_distinct": expression="COUNT_BIG(DISTINCT "+value+")"
         elif op=="sum": expression="SUM("+value+")"
+        elif op=="normalized_text": expression="NULLIF(LTRIM(RTRIM("+value+")),N'')"
         elif op=="missing_flag":
             spec=ENTITY_REGISTRY[aliases[item["field"]["alias"]]]["fields"][item["field"]["field"]]
             condition=value+" IS NULL"
@@ -75,7 +76,11 @@ def compile_relational_query(plan):
     predicates=["("+_active(root,"root")+")"]
     for predicate in plan["filters"]:
         col=_column(predicate["field"],aliases);op=predicate["op"];values=predicate["values"]
-        if op in {"is_null","not_null"}: term=col+(" IS NULL" if op=="is_null" else " IS NOT NULL")
+        if op in {"is_missing","not_missing"}:
+            spec=ENTITY_REGISTRY[aliases[predicate["field"]["alias"]]]["fields"][predicate["field"]["field"]]
+            target="NULLIF(LTRIM(RTRIM("+col+")),N'')" if spec["type"]=="text" else col
+            term=target+(" IS NULL" if op=="is_missing" else " IS NOT NULL")
+        elif op in {"is_null","not_null"}: term=col+(" IS NULL" if op=="is_null" else " IS NOT NULL")
         elif op=="contains":
             pattern=values[0]["value"].replace("~","~~").replace("%","~%").replace("_","~_").replace("[","~[")
             term=col+" LIKE "+_text("%"+pattern+"%")+" ESCAPE N'~'"

@@ -27,10 +27,10 @@ RELATIONAL_SCHEMA = _object({
         "kind":{"type":"string","enum":["left","inner"]}})},
     "select":{"type":"array","minItems":1,"maxItems":32,"items":_object({
         "id":{"type":"string","pattern":"^[a-z][a-z0-9_]{0,63}$"},
-        "op":{"type":"string","enum":["field","missing_flag","count_records","count_distinct","sum"]},
+        "op":{"type":"string","enum":["field","normalized_text","missing_flag","count_records","count_distinct","sum"]},
         "field":{"anyOf":[{"type":"null"},FIELD_REF]}})},
     "filters":{"type":"array","maxItems":24,"items":_object({
-        "field":FIELD_REF, "op":{"type":"string","enum":["eq","ne","contains","in","range","is_null","not_null"]},
+        "field":FIELD_REF, "op":{"type":"string","enum":["eq","ne","contains","in","range","is_null","not_null","is_missing","not_missing"]},
         "values":{"type":"array","maxItems":100,"items":LITERAL}})},
     "group_by":{"type":"array","maxItems":16,"items":FIELD_REF},
     "order_by":{"type":"array","maxItems":8,"items":_object({
@@ -124,26 +124,28 @@ def validate_relational_query(data, question, reference_date):
     for selected in data["select"]:
         _keys(selected,["id","op","field"])
         if (not isinstance(selected["id"],str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}",selected["id"])
-                or selected["id"] in ids or not isinstance(selected["op"],str) or selected["op"] not in {"field","missing_flag","count_records","count_distinct","sum"}):
+                or selected["id"] in ids or not isinstance(selected["op"],str) or selected["op"] not in {"field","normalized_text","missing_flag","count_records","count_distinct","sum"}):
             _invalid("Projeksiyon kimliği veya işlemi geçersiz.")
         ids.add(selected["id"])
         if selected["op"]=="count_records":
             if selected["field"] is not None: _invalid("Kayıt sayımı kök kimliğini kullanır, başka alan alamaz.")
         else:
             field=_field(selected["field"],aliases)
+            if selected["op"]=="normalized_text" and field["type"]!="text":
+                _invalid("Metin normalleştirme yalnız metin alanında geçerli.")
             if selected["op"]=="sum" and (field["type"]!="number" or field.get("sum_allowed") is not True):
                 _invalid("Bu alanın toplamsal ölçü olduğu doğrulanmamış.")
-        if selected["op"] in {"field","missing_flag"}: plain.append((selected["field"]["alias"],selected["field"]["field"]))
+        if selected["op"] in {"field","normalized_text","missing_flag"}: plain.append((selected["field"]["alias"],selected["field"]["field"]))
         else: aggregates=True
-    if aggregates and (data["distinct"] or any(item["op"]=="missing_flag" for item in data["select"])):
-        _invalid("Toplulaştırmaya ek DISTINCT veya düz eksiklik bayrağı henüz desteklenmiyor.")
+    if aggregates and (data["distinct"] or any(item["op"] in {"missing_flag","normalized_text"} for item in data["select"])):
+        _invalid("Toplulaştırmaya ek DISTINCT, düz eksiklik bayrağı veya normalleştirilmiş metin henüz desteklenmiyor.")
     if (aggregates and set(plain)!=set(groups)) or (groups and not aggregates):
         _invalid("Grup anahtarları ile seçilen düz alanlar aynı olmalı; salt listeye gizli tekilleştirme uygulanamaz.")
     filters=[]
     for predicate in data["filters"]:
         _keys(predicate,["field","op","values"])
         field=_field(predicate["field"],aliases); op=predicate["op"]; values=predicate["values"]
-        arity={"eq":(1,1),"ne":(1,1),"contains":(1,1),"in":(1,100),"range":(2,2),"is_null":(0,0),"not_null":(0,0)}
+        arity={"eq":(1,1),"ne":(1,1),"contains":(1,1),"in":(1,100),"range":(2,2),"is_null":(0,0),"not_null":(0,0),"is_missing":(0,0),"not_missing":(0,0)}
         if not isinstance(op,str) or op not in arity or not isinstance(values,list) or not arity[op][0]<=len(values)<=arity[op][1]:
             _invalid("Süzgeç işlemi veya değer sayısı geçersiz.")
         if op=="contains" and field["type"]!="text": _invalid("İçerme işlemi yalnız metinde geçerli.")
@@ -181,10 +183,10 @@ RELATIONAL_CAPABILITIES = {
         for key,relation in RELATION_REGISTRY.items()},
     "operations":{
         "joins":"root alias is root; new aliases j1..j8. Only forward child FK -> unique parent PK. LEFT preserves missing/inactive parents with NULL; INNER excludes those roots. Reverse parent -> children is not supported.",
-        "projection":"field, missing_flag (text NULL/trimmed empty; other fields NULL), distinct true means unique whole selected row, count_records (distinct root PK), count_distinct (nonNULL field), sum only when sum_allowed. Raw numeric field is not necessarily additive.",
-        "filters":"AND of eq/ne/contains/in/range/is_null/not_null. range inclusive lower/exclusive upper. NULL tests do not test blank strings. ne does not retain NULL. Fields cannot be compared to other fields.",
+        "projection":"field (raw), normalized_text (text-only trim spaces and blank to NULL), missing_flag (text NULL/trimmed empty; other fields NULL), distinct true means unique whole selected row, count_records (distinct root PK), count_distinct (nonNULL field), sum only when sum_allowed. Raw numeric field is not necessarily additive.",
+        "filters":"AND of eq/ne/contains/in/range/is_null/not_null/is_missing/not_missing. is_missing/not_missing use NULL or trimmed blank for text, NULL for other types. range inclusive lower/exclusive upper. NULL tests do not test blank strings. ne does not retain NULL. Fields cannot be compared to other fields.",
         "literal":"type must equal field type; value string. number finite decimal, identity UUID, bool true/false; date ISO date means Istanbul midnight or timestamp must include UTC offset.",
-        "grouping":"When aggregates selected, group_by must equal all plain selected field references. DISTINCT projection requires explicit distinct=true and cannot combine with aggregates. Missing flags are detail-only; no derived arithmetic, HAVING or conditional counters.",
+        "grouping":"When aggregates selected, group_by must equal all plain selected field references. DISTINCT projection requires explicit distinct=true and cannot combine with aggregates. Missing flags and normalized_text are detail-only; no derived arithmetic, HAVING or conditional counters.",
         "ordering":"Only selected output IDs, descending boolean. Technical tie-breaker is root PK for detail or group fields for aggregate.",
         "limit":"Explicit user limit only; null means whole result up to technical 50000 cap, fail closed beyond cap.",
     },
@@ -208,8 +210,8 @@ def describe_relational_output(plan):
                 "root_entity":plan["root"],"root_key":root["primary_key"],"type":"number"}
         else:
             columns[item["id"]]={"operation":item["op"],"source":reference(item["field"]),
-                "type":"bool" if item["op"]=="missing_flag" else "number" if item["op"]!="field" else reference(item["field"])["type"],
-                "null_semantics":"True for NULL or trimmed empty text; otherwise false" if item["op"]=="missing_flag" else "NULL excluded from aggregate" if item["op"]!="field" else "NULL preserved"}
+                "type":"bool" if item["op"]=="missing_flag" else "number" if item["op"] in {"count_records","count_distinct","sum"} else reference(item["field"])["type"],
+                "null_semantics":"True for NULL or trimmed empty text; otherwise false" if item["op"]=="missing_flag" else "Leading/trailing spaces removed; blank becomes NULL" if item["op"]=="normalized_text" else "NULL excluded from aggregate" if item["op"]!="field" else "NULL preserved"}
     aggregate=any(item["op"] in {"count_records","count_distinct","sum"} for item in plan["select"])
     return {
         "columns":columns,
