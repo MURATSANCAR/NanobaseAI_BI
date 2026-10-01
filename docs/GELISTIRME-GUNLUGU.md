@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 (akşam) — Finans 90 sn sınırı test sunucusunda ve VM'de; TİMAŞ VPN push
+
+- TİMAŞ VPN kopuktu (tun0 yok, `.55:22` kapalı). `~/bin/timas-vpn-push.sh` Claude tarafından ControlMaster üzerinden koşuldu: ilk deneme 2 sn'de `AUTH_FAILED` (push gitmedi), ikinci deneme push'u gönderdi, tun0 172.16.6.4; `.25/.28:1433`, `.20:389`, `.55:22` açık.
+- `46d645424` (finans düşünmeli plan 90 sn sınırı, yazarsız ürün notu) test sunucusuna kurulmamıştı: 3 kod + 2 test dosyası gönderildi (sunucu kopyaları önceki main ile md5 aynıydı), `._*` 0. Sunucudaki `test_finance.py` eskiydi (LINENET bekliyordu), main'deki sürümle değiştirildi. Odaklı testler 504/504, köprü yeniden başladı, health 200. Canlı kabul `live.py --only FC23,FC01`: 2/2 PASS (65 / 87 sn), geçici oturum silindi.
+- Müşteri VM'i: `git archive 46d645424` → `/tmp/bi-main-46d64542` (VM'deki `84250e625` atası, fark yalnız 5 commit'in dosyaları, çakışma işareti 0), birim `vm-deploy-46d64542`. EXIT=0, `._*` 0, sürüm kaydı id 28 codeSha 46d645424, konteynerdeki planner md5 = main, köprü health 200, `http://192.168.0.55/timas/` 200. Yandex SEO ekranı ve Stüdyo künye düzeltmesi de bu sürümle VM'de.
+
 ## 2026-10-01 (akşam) — «Neden?», uyarı nedeni ve beklenen aralık finans motoruna bağlandı
 
 - Sorun: eski semantik katalog emekli olunca (`074f3ff26`, kullanıcı kararı) `variance.py` ölçüyü hâlâ eski çözücüden (`r.resolver.resolve`) arıyordu; katalog boş olduğu için «Neden?» ayrıştırması, uyarı bildirimindeki neden, beklenen aralık ve eşik önerisi «katalogda ölçü yok» dönüyordu. Yeni motorun cevabında `neden` ipucu olmadığından sohbetteki «Neden?» düğmesi de hiç görünmüyordu. Uyarının eşik değeri (`r.ask`) zaten yeni motordaydı.
