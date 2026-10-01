@@ -223,6 +223,7 @@ def describe_relational_output(plan):
         "population_contract":{
             "root_entity":plan["root"],"active_only":True,
             "active_predicates":{alias:ENTITY_REGISTRY[entity]["active_predicate"] for alias,entity in aliases.items()},
+            "passive_rule":"Additionally every table with statecode: statecode=0 and no status reason labelled Pasif/Inactive (root WHERE, joined targets in ON).",
             "joins":[{**join,"relationship":RELATIONAL_CAPABILITIES["relations"][join["relation"]]} for join in plan["joins"]],
             "filters_AND":[{**predicate,"field":reference(predicate["field"])} for predicate in plan["filters"]],
             "filter_stage":"Before projection, optional DISTINCT, aggregation and ordering; explicit limit last",

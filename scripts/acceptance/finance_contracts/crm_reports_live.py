@@ -80,6 +80,15 @@ def localday(v):
     return (d.replace(tzinfo=timezone.utc) if d.tzinfo is None else d).astimezone(ZoneInfo("Europe/Istanbul")).date()
 def in_window(v,c):return bool(v) and (not c["start"] or c["start"]<=str(localday(v))<c["end"])
 def pack(v):return json.dumps(v,ensure_ascii=False,sort_keys=True,default=str)
+def not_passive(entity,alias):
+    # User rule: statecode 0 and no status reason whose published label starts Pasif/Inactive.
+    return (f"{alias}.statecode=0 AND ({alias}.statuscode IS NULL OR {alias}.statuscode NOT IN (SELECT M.AttributeValue FROM dbo.StringMapBase M "
+            f"JOIN MetadataSchema.Entity E ON E.ObjectTypeCode=M.ObjectTypeCode AND E.ComponentState=0 WHERE E.LogicalName='{entity}' "
+            f"AND M.AttributeName='statuscode' AND (LTRIM(M.Value) LIKE N'Pasif%' OR LTRIM(M.Value) LIKE N'Inactive%')))")
+RIGHTS={"new_tamsilhakki":"Temsil Hakkı","new_islemehakki":"İşleme Hakkı","new_cogaltmahakki":"Çoğaltma Hakkı","new_yaymahakki":"Yayma Hakkı",
+        "new_iletimhakki":"İletim Hakkı","new_EKitap":"E-Kitap","new_SesliKitapHakki":"Sesli Kitap Hakkı","new_ZKitapHakki":"Z-Kitap Hakkı",
+        "new_isaretsesgoruntu":"İşaret Ses Görüntü Hakkı","new_yurtdisitelifsatis":"Y.dışı Telif Satış Hakkı","new_baskadilleretercume":"Başka Dillere Tercüme Hakkı",
+        "new_yabancidilecevirihakki":"Yabancı Dile Çeviri Hakkı","new_malihaklardevir":"Mali Haklar Devir"}
 
 
 class Oracle:
@@ -115,12 +124,36 @@ class Oracle:
         for r in rows:result[identity(r["book_id"])].add(identity(r["person_id"]))
         return result
     def customers(self):
+        if "customer_cards" in self.cache:return self.cache["customer_cards"]
         rows=self.get("customers","""SELECT C.AccountId customer_id,C.Name customer_name,C.new_VergiNo tax_number,
  C.TerritoryId territory_id,T.Name territory,C.PrimaryContactId primary_contact_id,C.CreatedOn created_at,C.ModifiedOn updated_at,
- A.City city,A.StateOrProvince region,A.Country country FROM dbo.AccountBase C
+ A.City old_city,A.StateOrProvince old_region,A.Country old_country FROM dbo.AccountBase C
  LEFT JOIN dbo.CustomerAddressBase A ON A.ParentId=C.AccountId AND A.ObjectTypeCode=1 AND A.AddressNumber=1
  LEFT JOIN dbo.TerritoryBase T ON T.TerritoryId=C.TerritoryId WHERE C.statecode=0 AND C.statuscode=100000000""")
-        return unique(rows,"customer_id")
+        addresses=self.get("adres","""SELECT D.new_Firma customer_id,I.new_name city,B.new_name region,U.new_name country,D.new_ilid city_id,D.new_birincil is_primary,D.new_adrestipi address_type
+ FROM dbo.new_adresBase D JOIN dbo.new_illerBase I ON I.new_illerId=D.new_ilid AND I.statecode=0
+ LEFT JOIN dbo.new_firmablgesiBase B ON B.new_firmablgesiId=D.new_bolgeid AND B.statecode=0
+ LEFT JOIN dbo.new_ulkeBase U ON U.new_ulkeId=D.new_ulkeid AND U.statecode=0 WHERE D.statecode=0""")
+        own=defaultdict(list)
+        for r in addresses:own[identity(r["customer_id"])].append(r)
+        cards=unique(rows,"customer_id")
+        for cid,r in cards.items():
+            old=(r.pop("old_city"),r.pop("old_region"),r.pop("old_country"))
+            r.update(city=None,region=None,country=None,city_source=None)
+            mine=own.get(cid,[])
+            # Billing address option value read by label, not a guessed constant.
+            for group in (mine,[a for a in mine if a["is_primary"]],[a for a in mine if a["address_type"]==self.billing()]):
+                if len({identity(a["city_id"]) for a in group})==1:
+                    one=lambda f:(lambda v:v.pop() if len(v)==1 else None)({a[f] for a in group if a[f] is not None})
+                    r.update(city=one("city"),region=one("region"),country=one("country"),city_source="new_adres");break
+            else:
+                if mine:r["city_source"]="new_adres_ambiguous"
+                elif text(old[0]):r.update(city=old[0],region=old[1],country=old[2],city_source="CustomerAddress")
+        self.cache["customer_cards"]=cards
+        return cards
+    def billing(self):
+        rows=self.get("billing","SELECT M.AttributeValue code FROM dbo.StringMapBase M JOIN MetadataSchema.Entity E ON E.ObjectTypeCode=M.ObjectTypeCode AND E.ComponentState=0 WHERE E.LogicalName='new_adres' AND M.AttributeName='new_adrestipi' AND M.LangId=1055 AND M.Value=N'Fatura Adresi'")
+        return int(rows[0]["code"]) if len(rows)==1 else None
     def customer_relations(self):
         return self.get("customer_relations","""SELECT C.ContactId person_id,A.AccountId customer_id,'Contact.ParentCustomerId' relationship_type
  FROM dbo.ContactBase C JOIN dbo.AccountBase A ON A.AccountId=C.ParentCustomerId AND C.ParentCustomerIdType=1
@@ -248,8 +281,9 @@ def expected_customers(o,c):
             pid,cid=identity(r["person_id"]),identity(r["customer_id"])
             if len(byp[pid])>1:rows.append(dict(record_type="relationship",person_id=pid,person_name=people[pid]["person_name"],customer_id=cid,customer_name=customers[cid]["customer_name"],relationship_type=r["relationship_type"],customer_count=len(byp[pid]),decision="Kaynakta ilişki var; hata olduğu çıkarılmadı"))
     elif c["report"]=="customer_geography":
-        groups=Counter((text(r["city"]),normalized(r["city"]),text(r["region"]),identity(r["territory_id"])) for r in customers.values());totals=Counter(normalized(r["city"]) for r in customers.values())
-        rows=[dict(record_type="city_distribution",raw_city=k[0],normalized_city=k[1],region=k[2],territory_id=k[3],record_count=n,normalized_city_total=totals[k[1]]) for k,n in groups.items()];bounds.append("unproven_city_region_reference")
+        groups=Counter((text(r["city"]),normalized(r["city"]),text(r["region"]),identity(r["territory_id"]),r["city_source"]) for r in customers.values());totals=Counter(normalized(r["city"]) for r in customers.values())
+        rows=[dict(record_type="city_distribution",raw_city=k[0],normalized_city=k[1],region=k[2],territory_id=k[3],city_source=k[4],record_count=n,normalized_city_total=totals[k[1]]) for k,n in groups.items()];bounds.append("unproven_city_region_reference")
+        if any(r["city_source"]=="new_adres_ambiguous" for r in customers.values()):bounds.append("ambiguous_customer_city")
     else:
         tax=Counter(text(r["tax_number"]) for r in customers.values() if text(r["tax_number"]))
         for cid,r in customers.items():
@@ -268,7 +302,7 @@ def expected_work(o,c,asof):
  JOIN dbo.new_projeBase P ON P.new_projeId=W.new_projeid AND P.statecode=0
  LEFT JOIN dbo.new_projeasamalariBase S ON S.new_projeasamalariId=W.new_projeasamasiid AND S.statecode=0
  WHERE W.statecode=0 AND COALESCE(W.new_isplaniiptal,0)=0 AND (W.new_isEmriDurumu IS NULL OR W.new_isEmriDurumu<>3) AND W.new_gercekbitistarihi IS NULL""")
-    br=o.get("projectbooks","""SELECT new_projeid project_id,new_kitapid book_id FROM dbo.new_new_proje_new_kitapBase
+    br=o.get("projectbooks","""SELECT new_projeId project_id,new_stakkarti book_id FROM dbo.new_projeBase WHERE statecode=0 AND new_stakkarti IS NOT NULL
  UNION SELECT new_KitapProjesi,new_kitapId FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1 AND new_KitapProjesi IS NOT NULL
  UNION SELECT new_projekarti,new_kitapId FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1 AND new_projekarti IS NOT NULL""")
     byp=defaultdict(set)
@@ -322,8 +356,9 @@ def expected_activities(o,c):
 
 
 def expected_contracts(o,c):
-    books=o.books();people=o.people();authorlinks=o.authors()
-    contracts=unique(o.get("contracts","SELECT new_sozlesmeId contract_id,new_name contract_number,new_SozlesmeBaslangicTarihi start_date,new_SozlesmeBitisTarihi end_date,new_revizebitistarihi revised_end_date,new_yenilemebaslangictarihi renewal_start_date,new_yenilemebitistarihi renewal_end_date,new_fesihtarihi termination_date,new_suresizsozlesme indefinite_flag FROM dbo.new_sozlesmeBase WHERE statecode=0"),"contract_id")
+    books=o.books();people=o.people();authorlinks=o.authors();never_recorded=[]
+    contracts=unique(o.get("contracts","SELECT S.new_sozlesmeId contract_id,S.new_name contract_number,T.Value contract_type,S.new_SozlesmeBaslangicTarihi start_date,S.new_SozlesmeBitisTarihi end_date,S.new_revizebitistarihi revised_end_date,S.new_yenilemebaslangictarihi renewal_start_date,S.new_yenilemebitistarihi renewal_end_date,S.new_fesihtarihi termination_date,S.new_suresizsozlesme indefinite_flag,"+",".join(f"S.{k} [r_{k}]" for k in RIGHTS)+" FROM dbo.new_sozlesmeBase S OUTER APPLY (SELECT TOP 1 M.Value FROM dbo.StringMapBase M JOIN MetadataSchema.Entity E ON E.ObjectTypeCode=M.ObjectTypeCode AND E.ComponentState=0 WHERE E.LogicalName='new_sozlesme' AND M.AttributeName='new_sozlesmetipi' AND M.LangId=1055 AND M.AttributeValue=S.new_SozlesmeTipi) T WHERE "+not_passive("new_sozlesme","S")),"contract_id")
+    flags={cid:{k:d.pop("r_"+k) for k in RIGHTS} for cid,d in contracts.items()}
     revisions={}
     if c["report"]=="contract_revision_evidence":
         # SQL-side identity classification is independent of the application's
@@ -336,21 +371,24 @@ def expected_contracts(o,c):
  WHEN TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid)=C.new_sozlesmeId THEN 'SELF_REFERENCE'
  WHEN P.new_sozlesmeId IS NOT NULL THEN 'OTHER_ACTIVE_RECORD' ELSE 'ACTIVE_PARENT_NOT_FOUND' END parent_reference_status,
  P.new_name parent_contract_number FROM dbo.new_sozlesmeBase C LEFT JOIN dbo.new_sozlesmeBase P
- ON P.new_sozlesmeId=TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid) AND P.statecode=0 WHERE C.statecode=0"""),"contract_id")
+ ON P.new_sozlesmeId=TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid) AND """+not_passive("new_sozlesme","P")+" WHERE "+not_passive("new_sozlesme","C")),"contract_id")
         for r in revisions.values():r["parent_match_basis"]="UUID metin eşitliği; yayımlı lookup/ebeveyn önceliği değildir"
-    links=o.get("contractbooks","SELECT DISTINCT L.new_sozlesmeid contract_id,L.new_kitapid book_id FROM dbo.new_new_sozlesme_new_kitapBase L JOIN dbo.new_sozlesmeBase C ON C.new_sozlesmeId=L.new_sozlesmeid AND C.statecode=0 JOIN dbo.new_kitapBase B ON B.new_kitapId=L.new_kitapid AND B.statecode=0 AND B.statuscode=1")
+    links=o.get("contractbooks","SELECT DISTINCT L.new_sozlesmeid contract_id,L.new_kitapid book_id FROM dbo.new_new_sozlesme_new_kitapBase L JOIN dbo.new_sozlesmeBase C ON C.new_sozlesmeId=L.new_sozlesmeid AND "+not_passive("new_sozlesme","C")+" JOIN dbo.new_kitapBase B ON B.new_kitapId=L.new_kitapid AND B.statecode=0 AND B.statuscode=1")
     bybook=defaultdict(set)
     for r in links:bybook[identity(r["book_id"])].add(identity(r["contract_id"]))
-    scopes={}
-    for name,relation,foreign,target,key in [("rights","new_new_hak_new_sozlesmeBase","new_hakid","new_hakBase","new_hakId"),("languages","new_new_sozlesme_new_dilBase","new_dilid","new_dilBase","new_dilId"),("regions","new_new_sozlesme_new_blgeBase","new_blgeid","new_blgeBase","new_blgeId"),("countries","new_new_sozlesme_new_ulkeBase","new_ulkeid","new_ulkeBase","new_ulkeId")]:
+    scopes={"rights":defaultdict(set,{cid:{(k,label) for k,label in RIGHTS.items() if f[k]} for cid,f in flags.items()})}
+    unrecorded={cid:[label for k,label in RIGHTS.items() if f[k] is None] for cid,f in flags.items()}
+    for name,relation,foreign,target,key in [("languages","new_new_sozlesme_new_dilBase","new_dilid","new_dilBase","new_dilId"),("regions","new_new_sozlesme_new_blgeBase","new_blgeid","new_blgeBase","new_blgeId"),("countries","new_new_sozlesme_new_ulkeBase","new_ulkeid","new_ulkeBase","new_ulkeId")]:
         rows=o.get("scope_"+name,f"SELECT DISTINCT L.new_sozlesmeid contract_id,V.{key} scope_id,V.new_name scope_name FROM dbo.{relation} L JOIN dbo.{target} V ON V.{key}=L.{foreign} AND V.statecode=0")
         scopes[name]=defaultdict(set)
-        for r in rows:scopes[name][identity(r["contract_id"])].add((identity(r["scope_id"]),r["scope_name"]))
+        for r in rows:
+            if identity(r["contract_id"]) in contracts:scopes[name][identity(r["contract_id"])].add((identity(r["scope_id"]),r["scope_name"]))
+        if not scopes[name]:never_recorded.append("contract_"+name+"_never_recorded")
     parties=defaultdict(list)
     for r in o.get("parties","""SELECT P.new_sozlesmetarafiId party_id,P.new_sozlesmeid contract_id,P.new_kisi person_id,P.new_Firma account_id,P.new_TarafTipi party_type_id,
  C.FullName person_name,A.Name account_name,T.new_name party_type FROM dbo.new_sozlesmetarafiBase P
  LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND C.statecode=0 AND C.statuscode=1
- LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND A.statecode=0
+ LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND """+not_passive("account","A")+"""
  LEFT JOIN dbo.new_sozlesmetaraftipiBase T ON T.new_sozlesmetaraftipiId=P.new_TarafTipi AND T.statecode=0
  WHERE P.statecode=0 AND (P.new_kisi IS NULL OR C.ContactId IS NOT NULL) AND (P.new_Firma IS NULL OR A.AccountId IS NOT NULL)"""):
         parties[identity(r["contract_id"])].append(r)
@@ -368,10 +406,10 @@ def expected_contracts(o,c):
         incomplete_parties={identity(r["contract_id"]) for r in o.get("party_identity_gaps", """SELECT DISTINCT P.new_sozlesmeid contract_id
  FROM dbo.new_sozlesmetarafiBase P
  LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND C.statecode=0 AND C.statuscode=1
- LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND A.statecode=0
+ LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND """+not_passive("account","A")+"""
  WHERE P.statecode=0 AND ((P.new_kisi IS NOT NULL AND C.ContactId IS NULL)
  OR (P.new_Firma IS NOT NULL AND A.AccountId IS NULL))""")}
-    rows=[];bounds=["scope_interpretation_unverified"] if c["report"]=="contract_overlap" else ["contract_revision_priority_unverified"] if c["report"]=="contract_revision_evidence" else []
+    rows=[];bounds=(["scope_interpretation_unverified"] if c["report"]=="contract_overlap" else ["contract_revision_priority_unverified"] if c["report"]=="contract_revision_evidence" else [])+never_recorded
     for bid,ids in bybook.items():
         if c["report"]=="contract_overlap":
             ordered=sorted(ids)
@@ -406,7 +444,7 @@ def expected_contracts(o,c):
                         mismatch=bool(authors.symmetric_difference(counterpart))
                         if c["report"]=="contract_author_differences" and not mismatch:continue
                         data.update(role_comparison="CONTACT_ID_SETS_DIFFER" if mismatch else "CONTACT_ID_SETS_EQUAL",author_only_ids=pack(sorted(authors-counterpart)),party_only_ids=pack(sorted(counterpart-authors)))
-                rows.append(dict(record_type="contract_detail",book_id=bid,book_name=books[bid]["book_name"],**data,**{n:pack(sorted(scopes[n][cid])) for n in scopes},parties=pack(parties[cid]),author_people=pack([dict(person_id=i,person_name=people[i]["person_name"]) for i in sorted(authorlinks[bid])]),end_date_status="Bitiş tarihi mevcut" if d["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"))
+                rows.append(dict(record_type="contract_detail",book_id=bid,book_name=books[bid]["book_name"],**data,**{n:pack(sorted(scopes[n][cid])) for n in scopes},rights_unrecorded=pack(unrecorded[cid]),parties=pack(parties[cid]),author_people=pack([dict(person_id=i,person_name=people[i]["person_name"]) for i in sorted(authorlinks[bid])]),end_date_status="Bitiş tarihi mevcut" if d["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"))
     relevant={identity(r.get("contract_id")) for r in rows}|{identity(r.get("other_contract_id")) for r in rows}
     if c["report"] in {"contract_author_roles", "contract_expiry", "contract_revision_evidence"} and relevant.intersection(incomplete_parties):
         bounds.append("incomplete_active_party_identity")
@@ -426,7 +464,7 @@ def reference(conn,c,asof):
     return dict(records=[{k:r.get(k) for k in columns} for r in rows],columns=columns,boundaries=bounds,queries=oracle.sql)
 
 
-JSON_COLUMNS={"author_ids","author_names","missing_fields","missing_core_fields","books","publisher_ids","shared_author_ids","contacts","rights","languages","regions","countries","parties","author_people","scope_intersections","author_only_ids","party_only_ids"}
+JSON_COLUMNS={"rights_unrecorded","author_ids","author_names","missing_fields","missing_core_fields","books","publisher_ids","shared_author_ids","contacts","rights","languages","regions","countries","parties","author_people","scope_intersections","author_only_ids","party_only_ids"}
 UUID_PATTERN=re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
@@ -452,7 +490,7 @@ def row_identity(row):
         "publisher_summary":["publisher_id"],"book_detail":["book_id"],"candidate":["book_id"],"person_detail":["person_id"],
         "arrived_missing":["book_id","date_basis"],"chronology_signal":["book_id"],
         "modified_book":["book_id"],"history_snapshot":["history_id"],"customer_detail":["customer_id"],
-        "relationship":["person_id","customer_id","relationship_type"],"city_distribution":["raw_city","normalized_city","region","territory_id"],
+        "relationship":["person_id","customer_id","relationship_type"],"city_distribution":["raw_city","normalized_city","region","territory_id","city_source"],
         "month_summary":["created_month","publisher_id"],"assignment_detail":["book_id","role"],"assignment_summary":["role","person_id"],
         "work_detail":["work_id"],"contract_detail":["book_id","contract_id"],"contract_pair":["book_id","contract_id","other_contract_id"],
         "open_action":["person_id","task_id","meeting_id"],"appointment_preparation":["appointment_id","person_id","task_id"],"summary":["report"],

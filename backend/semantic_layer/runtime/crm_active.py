@@ -92,11 +92,67 @@ def passive_codes(rows: Any) -> dict[str, tuple[int, ...]]:
     return {k: tuple(sorted(v)) for k, v in out.items()}
 
 
-def _where(table: str, passive: dict) -> str:
+def predicate(table: str, alias: Optional[str], passive: dict) -> str:
+    """Tek pasif kuralı metni: `statecode = 0` ve durum nedeni «Pasif…/Inactive…» değil. Sarmal bunu alt sorguya,
+    sorgusunu kendisi yazan motorlar (finans motoru) doğrudan kendi WHERE/ON koşuluna koyar."""
+    p = f"{alias}." if alias else ""
     codes = passive.get(table.lower()) or ()
     if not codes:
-        return "statecode = 0"
-    return f"statecode = 0 AND (statuscode IS NULL OR statuscode NOT IN ({', '.join(str(c) for c in codes)}))"
+        return f"{p}statecode = 0"
+    return f"{p}statecode = 0 AND ({p}statuscode IS NULL OR {p}statuscode NOT IN ({', '.join(str(c) for c in codes)}))"
+
+
+def _where(table: str, passive: dict) -> str:
+    return predicate(table, None, passive)
+
+
+def missing(sql: str, eligible: set[str] | frozenset, passive: Optional[dict] = None) -> list[str]:
+    """Sorguyu yeniden yazmadan denetler: süzülmesi gereken her tablo başvurusunun kendi kapsamında (FROM için
+    WHERE, JOIN için ON — LEFT hedefi dahil) `<takma ad>.statecode = 0` VE-koşulu, pasif durum nedeni olan tabloda
+    ayrıca `<takma ad>.statuscode` koşulu var mı. Eksik başvurular «tablo takma_ad» listesi olarak döner;
+    ayrıştırılamayan sorgu eksik sayılır (denetimden kaçamaz)."""
+    import sqlglot
+    from sqlglot import exp
+
+    passive = passive or {}
+    try:
+        trees = [t for t in sqlglot.parse(sql, read="tsql") if t is not None]
+    except Exception as e:  # noqa: BLE001 — denetlenemeyen sorgu geçmez
+        return [f"ayrıştırılamadı: {str(e)[:80]}"]
+
+    def parts(node: Any) -> list:
+        while isinstance(node, exp.Paren):
+            node = node.this
+        if isinstance(node, exp.And):
+            return parts(node.left) + parts(node.right)
+        return [node]
+
+    def column(node: Any, alias: str, name: str) -> bool:
+        return isinstance(node, exp.Column) and node.name.lower() == name and (node.table or "").lower() == alias
+
+    def zero(node: Any) -> bool:
+        return isinstance(node, exp.Literal) and not node.is_string and node.this.strip() == "0"
+
+    out: list[str] = []
+    for tree in trees:
+        for tb in tree.find_all(exp.Table):
+            name = tb.name.lower()
+            if name not in eligible:
+                continue
+            alias = (tb.alias or tb.name).lower()
+            parent, scope = tb.parent, None
+            if isinstance(parent, exp.Join):
+                scope = parent.args.get("on")
+            elif isinstance(parent, exp.From) and parent.parent is not None:
+                where = parent.parent.args.get("where")
+                scope = where.this if where is not None else None
+            conj = parts(scope) if scope is not None else []
+            state = any(isinstance(c, exp.EQ) and ((column(c.left, alias, "statecode") and zero(c.right))
+                                                   or (column(c.right, alias, "statecode") and zero(c.left))) for c in conj)
+            status = not passive.get(name) or any(column(x, alias, "statuscode") for c in conj for x in c.find_all(exp.Column))
+            if not (state and status):
+                out.append(f"{tb.name} {alias}")
+    return out
 
 
 def _span(tb: Any) -> Optional[tuple[int, int, int, str]]:

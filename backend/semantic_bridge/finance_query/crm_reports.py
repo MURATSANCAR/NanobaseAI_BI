@@ -68,8 +68,8 @@ _OUTPUT_FIELDSETS = {
     "book": "book_id book_code book_name isbn author_text publisher_id publisher subbrand_id subbrand alternate_subbrand_id alternate_subbrand first_print_date last_publication_date edition_count last_print_date created_at updated_at editor_id project_editor_id publishing_director_id owner_id previous_publisher_id book_project_id project_card_id author_count author_ids author_names".split(),
     "publisher": "publisher_id publisher book_count".split(),
     "person": "person_id person_name created_at updated_at book_count books publisher_ids has_email has_phone".split(),
-    "customer": "customer_id customer_name tax_number territory_id territory primary_contact_id created_at updated_at city region country active_contact_count contacts".split(),
-    "contract": "book_id book_name contract_id contract_number start_date end_date revised_end_date renewal_start_date renewal_end_date termination_date indefinite_flag rights languages regions countries parties author_people end_date_status".split(),
+    "customer": "customer_id customer_name tax_number territory_id territory primary_contact_id created_at updated_at city region country city_source active_contact_count contacts".split(),
+    "contract": "book_id book_name contract_id contract_number contract_type start_date end_date revised_end_date renewal_start_date renewal_end_date termination_date indefinite_flag rights rights_unrecorded languages regions countries parties author_people end_date_status".split(),
     "revision": "parent_contract_text protocol_date protocol_end_date is_addendum addendum_time_limited parent_contract_id parent_reference_status parent_contract_number parent_match_basis".split(),
     "work": "work_id work_name project_id owner_id stage_id due_date actual_end work_state cancelled created_at updated_at project_name stage_name books overdue missing_owner missing_stage".split(),
     "action": "person_id person_name task_id task_subject owner_id due_date".split(),
@@ -153,7 +153,7 @@ def _output_contracts():
                     "review_action": "If the user permits missing history to be disclosed, the supported cohort/snapshots plus the mandatory runtime gap may form a partial answer. An unconditional old/new timeline remains unsupported. A gap NEVER substitutes for a requested different population filter; latest ModifiedOn cohort is not a full historical event cohort."})
     add("duplicate_customer_tax customers_without_contacts", {"customer_detail": _output_record("customer_id; ordered updated_at oldest first", "customer")})
     add("contact_multiple_customers", {"relationship": _output_record("person_id + customer_id + relationship_type", fields="person_id person_name customer_id customer_name relationship_type customer_count decision")})
-    add("customer_geography", {"city_distribution": _output_record("raw_city + normalized_city + region + territory_id", fields="raw_city normalized_city region territory_id record_count normalized_city_total")}, gaps="Always UNVERIFIED_DEFINITION: text normalization is not official city/region identity or hierarchy.")
+    add("customer_geography", {"city_distribution": _output_record("raw_city + normalized_city + region + territory_id + city_source", fields="raw_city normalized_city region territory_id city_source record_count normalized_city_total")}, gaps="Always UNVERIFIED_DEFINITION: text normalization is not official city/region identity or hierarchy. INCOMPLETE_SOURCE_COVERAGE when customers have several Adres cities and no single primary/billing one.")
     add("work_due", {"work_detail": _output_record("work_id", "work")}, "Required start/end: includes overdue due_date before as_of OR due_date in [start,end); overdue is independent of requested range.")
     add("work_due_missing", {"work_detail": _output_record("work_id", "work")}, "Required start/end: overdue due_date before as_of OR due_date in [start,end) AND missing_owner/missing_stage. Overdue rows include all open work regardless of missing fields.")
     add("work_stage_history", {"work_detail": _output_record("work_id", "work")}, "Current open plans; no period filter. as_of only determines overdue.", "Always UNVERIFIED_DEFINITION: stage entry/exit dates and days in stage unknown; ModifiedOn is not stage entry.")
@@ -209,7 +209,10 @@ CRM_REPORT_OUTPUT_CONTRACTS = {
             "isbn": "Current ISBN13, not old ISBN.", "first_print_date": "First print date", "last_publication_date": "Last publication date", "created_at": "CRM creation time", "updated_at": "CRM modification time, not field-specific history",
             "author_ids/author_names": "JSON arrays of distinct active Contact IDs/names through active Yazar participation; author_text is separate book imprint text.",
             "books": "JSON array of book_id/book_name objects", "contacts": "JSON array of person_id/person_name objects",
-            "rights/languages/regions/countries": "JSON arrays of [id,name] scope pairs; absence does not mean unrestricted rights.",
+            "rights/languages/regions/countries": "JSON arrays of [id,name] scope pairs; absence does not mean unrestricted rights. rights = contract right flags marked Evet ([column,label]); Hayır omitted. regions: CRM has no contract-region records (explicit gap), never read as worldwide.",
+            "rights_unrecorded": "JSON array of right labels whose flag is empty on the contract (not entered, not 'no').",
+            "contract_type": "Sözleşme Tipi label (Telif Alış = rights acquired, Telif Satış = rights sold); right flags are read in this direction.",
+            "city_source": "new_adres (CRM Adres entity il lookup; all active addresses agree, else single primary, else single billing address) / CustomerAddress (Account Address1 fallback when no Adres il) / new_adres_ambiguous (several cities, city left empty) / null (no city entered).",
             "parties": "JSON objects: party_id,contract_id,person_id,account_id,party_type_id,person_name,account_name,party_type; legal party role is separate from authorship.",
             "author_people": "JSON array person_id/person_name; book author link, not automatic rights holder.",
             "scope_intersections": "JSON object rights/languages/regions/countries with intersecting [id,name] pairs; candidate evidence only.",
@@ -217,7 +220,7 @@ CRM_REPORT_OUTPUT_CONTRACTS = {
             "role_comparison": "CONTACT_ID_SETS_EQUAL / CONTACT_ID_SETS_DIFFER / UNVERIFIED_IDENTITY_TYPES_OR_MISSING; compares only nonempty Contact sets, not legal ownership.",
             "author_only_ids/party_only_ids": "JSON Contact ID set differences when comparable; null for Account/mixed/missing identities.",
             "arrived_missing": "Same book may appear once per first_print_date/last_publication_date; date_basis identifies which recorded date arrived. Not additional unique books.",
-            "region": "CustomerAddress StateOrProvince text; distinct from business TerritoryId/territory.",
+            "region": "Region of city_source: Adres 'Firma Bölgesi' lookup, or CustomerAddress StateOrProvince text; distinct from business TerritoryId/territory.",
             "parent_reference_status": "NOT_RECORDED / INVALID_UUID_TEXT / SELF_REFERENCE / OTHER_ACTIVE_RECORD / ACTIVE_PARENT_NOT_FOUND; no passive parent record loaded.",
             "missing_core_fields/core_missing_count": "Missing among isbn,book_code,publisher only; missing_fields/missing_count also include dates,subbrand,author_link.",
             "filled_pct_*": "Percent of publisher books with field/active author link present, not external validity verification.",
@@ -283,13 +286,47 @@ def _wire(v):
     return v
 
 
+BILLING_ADDRESS = 1  # new_adres.new_adrestipi option "Fatura Adresi" (metadata 2026-10-01)
+# new_sozlesme right flags and their CRM display names (metadata 2026-10-01). Evet = right in the contract.
+RIGHT_FLAGS = {"new_tamsilhakki": "Temsil Hakkı", "new_islemehakki": "İşleme Hakkı", "new_cogaltmahakki": "Çoğaltma Hakkı",
+               "new_yaymahakki": "Yayma Hakkı", "new_iletimhakki": "İletim Hakkı", "new_EKitap": "E-Kitap",
+               "new_SesliKitapHakki": "Sesli Kitap Hakkı", "new_ZKitapHakki": "Z-Kitap Hakkı",
+               "new_isaretsesgoruntu": "İşaret Ses Görüntü Hakkı", "new_yurtdisitelifsatis": "Y.dışı Telif Satış Hakkı",
+               "new_baskadilleretercume": "Başka Dillere Tercüme Hakkı", "new_yabancidilecevirihakki": "Yabancı Dile Çeviri Hakkı",
+               "new_malihaklardevir": "Mali Haklar Devir"}
+
+
+def _address(rows, names):
+    """One city per customer without guessing: all active addresses agree, else the primary ones, else billing ones.
+    Otherwise city stays empty and the source says why."""
+    usable = [r for r in rows if _key(r["city_id"]) in names["city_id"]]
+    for subset in (usable, [r for r in usable if r["primary"]], [r for r in usable if r["address_type"] == BILLING_ADDRESS]):
+        if len({_key(r["city_id"]) for r in subset}) != 1: continue
+        def one(field):
+            values = {names[field][_key(r[field])]["name"] for r in subset if _key(r[field]) in names[field]}
+            return values.pop() if len(values) == 1 else None
+        return {"city": one("city_id"), "region": one("region_id"), "country": one("country_id"), "city_source": "new_adres"}
+    return {"city": None, "region": None, "country": None, "city_source": "new_adres_ambiguous" if usable else None}
+
+
 class Sources:
     def __init__(self, ex): self.ex, self.cache = ex, {}
-    def rows(self, table, fields, where="r.statecode=0"):
+    def rows(self, table, fields, where=None):
+        """where=None applies the shared passive-record rule; callers pass extra conditions after it."""
         from .executor import CRM
-        self.ex.verify_schema({table: list(fields.values()) + (["statecode"] if "r.statecode" in where else [])}, "crm")
+        if where is None: where = self.ex.crm_active(table, "r")
+        used = re.findall(r"\br\.\[?([A-Za-z_][A-Za-z0-9_]*)", where)
+        self.ex.verify_schema({table: list(dict.fromkeys(list(fields.values()) + used))}, "crm")
         sql = "SELECT " + ",".join(f"r.[{col}] AS [{name}]" for name, col in fields.items()) + f" FROM {CRM}.[{table}] r WHERE {where}"
         return [{k: _wire(v) for k, v in r.items()} for r in self.ex.read(sql, source="crm")]
+    def options(self, entity, attribute):
+        """Published Turkish option labels of a picklist."""
+        from .executor import literal
+        rows = self.ex.read("SELECT DISTINCT M.AttributeValue AS code,M.Value AS label FROM [Timas_MSCRM].dbo.StringMapBase M "
+                            "JOIN [Timas_MSCRM].MetadataSchema.Entity E ON E.ObjectTypeCode=M.ObjectTypeCode AND E.ComponentState=0 "
+                            "WHERE M.LangId=1055 AND M.AttributeName=" + literal(attribute) + " AND E.LogicalName=" + literal(entity),
+                            metadata=True, source="crm")
+        return {int(r["code"]): r["label"] for r in rows}
     def keyed(self, rows, key):
         out = {}
         for row in rows:
@@ -333,14 +370,31 @@ class Sources:
     def customers(self):
         if "customers" not in self.cache:
             customers = self.keyed(self.rows("AccountBase", {"customer_id":"AccountId", "customer_name":"Name", "tax_number":"new_VergiNo", "territory_id":"TerritoryId", "primary_contact_id":"PrimaryContactId", "created_at":"CreatedOn", "updated_at":"ModifiedOn"}, self.ex.crm_status("AccountBase", "r")), "customer_id")
-            # Dynamics exposes Address1_* virtual fields on Account, but their
-            # physical storage is CustomerAddressBase (verified live inventory).
+            # City source (2026-10-01 live): the custom Adres entity (new_adres, il lookup) is the maintained
+            # one; Dynamics CustomerAddress is labelled "Kullanılmayan Adres". Active customers: new_adres il
+            # 3.591, CustomerAddress#1 City 1.164, both 3 -> new_adres first, CustomerAddress#1 only as fallback.
             from .executor import CRM
-            addresses = self.keyed(self.rows("CustomerAddressBase", {"customer_id":"ParentId", "city":"City", "region":"StateOrProvince", "country":"Country"},
-                "r.ObjectTypeCode=1 AND r.AddressNumber=1 AND EXISTS (SELECT 1 FROM " + CRM + ".AccountBase c WHERE c.AccountId=r.ParentId AND " + self.ex.crm_status("AccountBase","c") + ")"), "customer_id")
+            active = self.ex.crm_status("AccountBase","c")
+            own = defaultdict(list)
+            for r in self.rows("new_adresBase", {"customer_id":"new_Firma", "city_id":"new_ilid", "region_id":"new_bolgeid", "country_id":"new_ulkeid", "primary":"new_birincil", "address_type":"new_adrestipi"},
+                    self.ex.crm_active("new_adresBase","r") + " AND EXISTS (SELECT 1 FROM " + CRM + ".AccountBase c WHERE c.AccountId=r.new_Firma AND " + active + ")"):
+                own[_key(r["customer_id"])].append(r)
+            names = {"city_id": self.keyed(self.rows("new_illerBase", {"id":"new_illerId", "name":"new_name"}), "id"),
+                     "region_id": self.keyed(self.rows("new_firmablgesiBase", {"id":"new_firmablgesiId", "name":"new_name"}), "id"),
+                     "country_id": self.keyed(self.rows("new_ulkeBase", {"id":"new_ulkeId", "name":"new_name"}), "id")}
+            # Dynamics Address1_* of Account is physically CustomerAddressBase AddressNumber=1.
+            legacy = self.keyed(self.rows("CustomerAddressBase", {"customer_id":"ParentId", "city":"City", "region":"StateOrProvince", "country":"Country"},
+                "r.ObjectTypeCode=1 AND r.AddressNumber=1 AND EXISTS (SELECT 1 FROM " + CRM + ".AccountBase c WHERE c.AccountId=r.ParentId AND " + active + ")"), "customer_id")
             territories = self.keyed(self.rows("TerritoryBase", {"territory_id":"TerritoryId", "territory":"Name"}, "1=1"), "territory_id")
+            stats = Counter()
             for cid,c in customers.items():
-                c.update(city=addresses.get(cid,{}).get("city"), region=addresses.get(cid,{}).get("region"), country=addresses.get(cid,{}).get("country"), territory=territories.get(_key(c["territory_id"]),{}).get("territory"))
+                place = _address(own.get(cid, ()), names)
+                if place["city_source"] is None and _text(legacy.get(cid,{}).get("city")):
+                    old = legacy[cid]
+                    place = {"city": old["city"], "region": old["region"], "country": old["country"], "city_source": "CustomerAddress"}
+                stats[place["city_source"]] += 1
+                c.update(place, territory=territories.get(_key(c["territory_id"]),{}).get("territory"))
+            self.cache["address_stats"] = stats
             self.cache["customers"] = customers
         return self.cache["customers"]
     def customer_links(self):
@@ -477,13 +531,17 @@ def _customer_reports(s,p,out):
     links=s.customer_links(); bycustomer=defaultdict(set); byperson=defaultdict(set)
     for pid,cid,role in links: bycustomer[cid].add(pid); byperson[pid].add(cid)
     rows=out["records"]
+    st=s.cache["address_stats"]
+    out["notes"].append(f"Şehir kaynağı: {st['new_adres']} müşteri CRM Adres kaydından (il), {st['CustomerAddress']} müşteri yalnız eski müşteri adresi alanından; {st['new_adres_ambiguous']} müşteride il belirsiz, {st[None]} müşteride şehir girilmemiş.")
     if report=="contact_multiple_customers":
         for pid,cid,role in links:
             if len(byperson[pid])>1: rows.append({"record_type":"relationship","person_id":pid,"person_name":people[pid]["person_name"],"customer_id":cid,"customer_name":customers[cid]["customer_name"],"relationship_type":role,"customer_count":len(byperson[pid]),"decision":"Kaynakta ilişki var; hata olduğu çıkarılmadı"})
     elif report=="customer_geography":
-        counts=Counter((_text(c["city"]),_norm(c["city"]),_text(c["region"]),_key(c["territory_id"])) for c in customers.values())
+        counts=Counter((_text(c["city"]),_norm(c["city"]),_text(c["region"]),_key(c["territory_id"]),c["city_source"]) for c in customers.values())
         normcount=Counter(_norm(c["city"]) for c in customers.values())
-        rows.extend({"record_type":"city_distribution","raw_city":k[0],"normalized_city":k[1],"region":k[2],"territory_id":k[3],"record_count":n,"normalized_city_total":normcount[k[1]]} for k,n in counts.items())
+        rows.extend({"record_type":"city_distribution","raw_city":k[0],"normalized_city":k[1],"region":k[2],"territory_id":k[3],"city_source":k[4],"record_count":n,"normalized_city_total":normcount[k[1]]} for k,n in counts.items())
+        if s.cache["address_stats"]["new_adres_ambiguous"]:
+            _gap(out,f"{s.cache['address_stats']['new_adres_ambiguous']} aktif müşterinin Adres kayıtlarında birden çok il var, tek birincil veya fatura adresi yok; şehir seçilmedi, boş gösterildi.","INCOMPLETE_SOURCE_COVERAGE")
         _gap(out,"Normalizasyon yalnız boşluk/noktalama/harf farkı önerisidir. Resmî şehir-bölge eşleme kanıtı yok; bölge tutarlılığı veya farklı şehir kimliği otomatik birleştirilmedi.")
     else:
         taxcounts=Counter(_text(c["tax_number"]) for c in customers.values() if _text(c["tax_number"]))
@@ -498,7 +556,14 @@ def _contract_reports(s,p,out):
     if p["report"]=="contract_overlap":
         _gap(out,"Kapsam yorumu doğrulanamadı (scope_interpretation_unverified): sözleşmedeki ülke ve bölge listelerinin birlikte AND/OR anlamı veya ülke-bölge hiyerarşisi kanıtlanmadı. Gösterilenler ham kayıt kesişim adaylarıdır; kesin hak çakışması ya da çakışma yokluğu değildir.")
     books=s.books(); people=s.people(); links=s.author_links()
-    contracts=s.keyed(s.rows("new_sozlesmeBase",{"contract_id":"new_sozlesmeId","contract_number":"new_name","start_date":"new_SozlesmeBaslangicTarihi","end_date":"new_SozlesmeBitisTarihi","revised_end_date":"new_revizebitistarihi","renewal_start_date":"new_yenilemebaslangictarihi","renewal_end_date":"new_yenilemebitistarihi","termination_date":"new_fesihtarihi","indefinite_flag":"new_suresizsozlesme"}),"contract_id")
+    contracts=s.keyed(s.rows("new_sozlesmeBase",{"contract_id":"new_sozlesmeId","contract_number":"new_name","contract_type_code":"new_SozlesmeTipi","start_date":"new_SozlesmeBaslangicTarihi","end_date":"new_SozlesmeBitisTarihi","revised_end_date":"new_revizebitistarihi","renewal_start_date":"new_yenilemebaslangictarihi","renewal_end_date":"new_yenilemebitistarihi","termination_date":"new_fesihtarihi","indefinite_flag":"new_suresizsozlesme",**{"flag_"+col:col for col in RIGHT_FLAGS}}),"contract_id")
+    contract_types=s.options("new_sozlesme","new_sozlesmetipi")
+    rights=defaultdict(set); rights_unrecorded={}
+    for cid,c in contracts.items():
+        flags={col:c.pop("flag_"+col) for col in RIGHT_FLAGS}
+        rights[cid]={(col,label) for col,label in RIGHT_FLAGS.items() if flags[col]}
+        rights_unrecorded[cid]=[label for col,label in RIGHT_FLAGS.items() if flags[col] is None]
+        c["contract_type"]=contract_types.get(c.pop("contract_type_code"))
     revision_fields={}
     if p["report"]=="contract_revision_evidence":
         revision_fields=s.keyed(s.rows("new_sozlesmeBase",{"contract_id":"new_sozlesmeId","parent_contract_text":"new_anasozlesmeid","protocol_date":"new_ekprotokoltarihi","protocol_end_date":"new_ekprotokolbitist","is_addendum":"new_EkProtokolyeni","addendum_time_limited":"new_ekprotokolsurelimi"}),"contract_id")
@@ -516,17 +581,22 @@ def _contract_reports(s,p,out):
     bybook=defaultdict(set)
     for r in s.rows("new_new_sozlesme_new_kitapBase",{"contract_id":"new_sozlesmeid","book_id":"new_kitapid"},"1=1"):
         if _key(r["contract_id"]) in contracts and _key(r["book_id"]) in books: bybook[_key(r["book_id"])].add(_key(r["contract_id"]))
-    scopes={}
-    for name,table,col,target,targetid in [("rights","new_new_hak_new_sozlesmeBase","new_hakid","new_hakBase","new_hakId"),("languages","new_new_sozlesme_new_dilBase","new_dilid","new_dilBase","new_dilId"),("regions","new_new_sozlesme_new_blgeBase","new_blgeid","new_blgeBase","new_blgeId"),("countries","new_new_sozlesme_new_ulkeBase","new_ulkeid","new_ulkeBase","new_ulkeId")]:
+    # Rights are the contract's own Evet/Hayır flags; the N:N new_new_hak_new_sozlesme has no rows (2026-10-01).
+    scopes={"rights":rights}
+    for name,table,col,target,targetid in [("languages","new_new_sozlesme_new_dilBase","new_dilid","new_dilBase","new_dilId"),("regions","new_new_sozlesme_new_blgeBase","new_blgeid","new_blgeBase","new_blgeId"),("countries","new_new_sozlesme_new_ulkeBase","new_ulkeid","new_ulkeBase","new_ulkeId")]:
         labels=s.keyed(s.rows(target,{"id":targetid,"name":"new_name"}),"id"); values=defaultdict(set)
         for r in s.rows(table,{"contract_id":"new_sozlesmeid","scope_id":col},"1=1"):
-            if _key(r["scope_id"]) in labels: values[_key(r["contract_id"])].add((_key(r["scope_id"]),labels[_key(r["scope_id"])]["name"]))
+            if _key(r["scope_id"]) in labels and _key(r["contract_id"]) in contracts: values[_key(r["contract_id"])].add((_key(r["scope_id"]),labels[_key(r["scope_id"])]["name"]))
         scopes[name]=values
+        if not values:
+            # A column that the source never records is reported, not shown as silently empty.
+            _gap(out,{"languages":"Dil","regions":"Bölge","countries":"Ülke"}[name]+" kapsamı CRM'de hiçbir aktif sözleşme için girilmemiş ("+table+" boş); "+name+" kolonu bilinmiyor demektir, sınırsız veya yok sayılmadı.","INCOMPLETE_SOURCE_COVERAGE")
     parties=defaultdict(list)
     incomplete_parties=set()
     partyrows=s.rows("new_sozlesmetarafiBase",{"party_id":"new_sozlesmetarafiId","contract_id":"new_sozlesmeid","person_id":"new_kisi","account_id":"new_Firma","party_type_id":"new_TarafTipi"})
     types=s.keyed(s.rows("new_sozlesmetaraftipiBase",{"id":"new_sozlesmetaraftipiId","name":"new_name"}),"id")
-    accounts=s.keyed(s.rows("AccountBase",{"account_id":"AccountId","account_name":"Name"},"r.statecode=0"),"account_id")
+    # Party organizations are not necessarily customers: generic passive rule, not "Aktif Müşteri".
+    accounts=s.keyed(s.rows("AccountBase",{"account_id":"AccountId","account_name":"Name"}),"account_id")
     for r in partyrows:
         pid,aid=_key(r["person_id"]),_key(r["account_id"])
         if (pid and pid not in people) or (aid and aid not in accounts):
@@ -568,7 +638,7 @@ def _contract_reports(s,p,out):
                     if not comparable: _gap(out,"Sözleşme tarafı-yazar karşılaştırması: kurum/karışık kimlik, çözülemeyen aktif katılım rolü veya eksik/çözülemeyen aktif kişi bağı nedeniyle Contact kimlik kümelerinin tamlığı kanıtlanamadı; isimden kişi/kurum eşleşmesi yapılmadı.")
                     if p["report"]=="contract_author_differences" and status=="CONTACT_ID_SETS_EQUAL": continue
                     comparison={"role_comparison":status,"author_only_ids":_json(sorted(authors-party_people)) if comparable else None,"party_only_ids":_json(sorted(party_people-authors)) if comparable else None}
-                rows.append({"record_type":"contract_detail", **comparison, "book_id":bid,"book_name":b["book_name"], **c, **revision_fields.get(cid,{}), **{n:_json(sorted(scopes[n][cid])) for n in scopes},"parties":_json(parties[cid]),"author_people":_json([{"person_id":pid,"person_name":people[pid]["person_name"]} for pid in sorted(links.get(bid,set()))]),"end_date_status":"Bitiş tarihi mevcut" if c["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"})
+                rows.append({"record_type":"contract_detail", **comparison, "book_id":bid,"book_name":b["book_name"], **c, **revision_fields.get(cid,{}), **{n:_json(sorted(scopes[n][cid])) for n in scopes},"rights_unrecorded":_json(rights_unrecorded[cid]),"parties":_json(parties[cid]),"author_people":_json([{"person_id":pid,"person_name":people[pid]["person_name"]} for pid in sorted(links.get(bid,set()))]),"end_date_status":"Bitiş tarihi mevcut" if c["end_date"] else "Bitiş tarihi bilinmiyor; süresiz varsayılmadı"})
     out["notes"].append("Sözleşme tarafı ve kitap yazarı ayrı rollerdir. Yenileme/revize/fesih kayıtları gösterilir; hukuki geçerlilik veya satış yasağı çıkarılmaz.")
     relevant_ids={_key(r.get("contract_id")) for r in rows} | {_key(r.get("other_contract_id")) for r in rows}
     if p["report"] in {"contract_author_roles", "contract_expiry", "contract_revision_evidence"} and relevant_ids & incomplete_parties:
@@ -578,14 +648,17 @@ def _contract_reports(s,p,out):
 
 
 def _work_reports(s,p,out):
-    plans=s.rows("new_isplaniBase",{"work_id":"new_isplaniId","work_name":"new_planadi","project_id":"new_projeid","owner_id":"OwnerId","stage_id":"new_projeasamasiid","due_date":"new_tahminibitistarihi","actual_end":"new_gercekbitistarihi","work_state":"new_isEmriDurumu","cancelled":"new_isplaniiptal","created_at":"CreatedOn","updated_at":"ModifiedOn"},"r.statecode=0 AND COALESCE(r.new_isplaniiptal,0)=0 AND (r.new_isEmriDurumu IS NULL OR r.new_isEmriDurumu<>3) AND r.new_gercekbitistarihi IS NULL")
+    plans=s.rows("new_isplaniBase",{"work_id":"new_isplaniId","work_name":"new_planadi","project_id":"new_projeid","owner_id":"OwnerId","stage_id":"new_projeasamasiid","due_date":"new_tahminibitistarihi","actual_end":"new_gercekbitistarihi","work_state":"new_isEmriDurumu","cancelled":"new_isplaniiptal","created_at":"CreatedOn","updated_at":"ModifiedOn"},s.ex.crm_active("new_isplaniBase","r")+" AND COALESCE(r.new_isplaniiptal,0)=0 AND (r.new_isEmriDurumu IS NULL OR r.new_isEmriDurumu<>3) AND r.new_gercekbitistarihi IS NULL")
     books=s.books(); projectbooks=defaultdict(set)
+    # Book<->project is the card lookups: book "Bağlı Proje Kartı"/"Kitap Projesi" and project "Stok Kartı".
+    # The N:N new_new_proje_new_kitap is not the book's project (2026-10-01: 14 of 722 active pairs agree).
     for bid,b in books.items():
         for field in ("book_project_id","project_card_id"):
             if b[field]: projectbooks[_key(b[field])].add(bid)
-    for r in s.rows("new_new_proje_new_kitapBase",{"project_id":"new_projeid","book_id":"new_kitapid"},"1=1"):
-        if _key(r["book_id"]) in books: projectbooks[_key(r["project_id"])].add(_key(r["book_id"]))
-    projects=s.keyed(s.rows("new_projeBase",{"project_id":"new_projeId","project_name":"new_name"}),"project_id")
+    projectrows=s.rows("new_projeBase",{"project_id":"new_projeId","project_name":"new_name","stock_card_id":"new_stakkarti"})
+    for r in projectrows:
+        if _key(r["stock_card_id"]) in books: projectbooks[_key(r["project_id"])].add(_key(r["stock_card_id"]))
+    projects=s.keyed(projectrows,"project_id")
     stages=s.keyed(s.rows("new_projeasamalariBase",{"stage_id":"new_projeasamalariId","stage_name":"new_name"}),"stage_id")
     for r in plans:
         project=_key(r["project_id"])
