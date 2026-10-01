@@ -138,8 +138,10 @@ def fix_inline(text: str, lex) -> str:
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
-def normalize(paragraphs: list[tuple[int, str]], lex=None) -> list[tuple[str | None, list[Block]]]:
-    """(sayfa, metin) sırası → [(bölüm başlığı, bloklar)]. Başlıksız giriş bölümü None başlıklıdır."""
+def normalize(paragraphs: list[tuple[int, str]], lex=None,
+              headings: bool = True) -> list[tuple[str | None, list[Block]]]:
+    """(sayfa, metin) sırası → [(bölüm başlığı, bloklar)]. Başlıksız giriş bölümü None başlıklıdır.
+    `headings=False`: bölümler başka yerden (dizgiden) bilinir; büyük harfli satır bölüm açmaz."""
     chapters: list[tuple[str | None, list[Block]]] = [(None, [])]
     prev: Block | None = None
     prev_page = None
@@ -147,7 +149,7 @@ def normalize(paragraphs: list[tuple[int, str]], lex=None) -> list[tuple[str | N
         text = raw.strip()
         if not text:
             continue
-        head, rest = (text, "") if is_heading(text) else split_leading_heading(text)
+        head, rest = ((text, "") if is_heading(text) else split_leading_heading(text)) if headings else (None, text)
         if head and chapters[-1][0] is not None and not chapters[-1][1]:
             # Başlık birkaç satıra bölünmüş («KoRsAnLaRlA» / «BİrLİkTe BaLİnAnın» / «KaRnınDa»): tek başlık.
             chapters[-1] = (f"{chapters[-1][0]} {head}", [])
@@ -237,9 +239,89 @@ def from_generation(generation_id: str, lex=None) -> Manuscript:
                 "non_story_pages": sorted(non_story),
                 "origin": {"title": "crm" if crm.get("crm_title") else "card",
                            "author": "crm" if crm_author else "card" if author else None}})
-    paras = [(r["page_no"], r["text"]) for r in rows if r["page_no"] not in non_story]
-    ms.chapters = [Chapter(h, b) for h, b in normalize(paras, lex)]
+    layout = spaced_layout(generation_id)
+    paras = [(r["page_no"], part) for r in rows if r["page_no"] not in non_story
+             for part in resplit(r["text"], (layout or {}).get(r["page_no"], []))]
+    ms.chapters = by_typeset(generation_id, paras, lex) or [Chapter(h, b) for h, b in normalize(paras, lex)]
     return ms
+
+
+def resplit(text: str, parts: list[str]) -> list[str]:
+    """Okunmuş paragrafı dizgideki paragraf başlarından böler (`parts`: aynı sayfanın dizgiden paragrafları).
+    Metin değişmez, yalnız bölünür: her paragraf başı okunmuş metinde aynen (ilk 30 harf, kelime başında)
+    aranır; bulunamayan baş (font onarımı, tire birleşimi farkı) atlanır, paragraf orada bölünmez."""
+    if len(parts) < 2:
+        return [text]
+    out, cur = [], 0
+    for nxt in parts[1:]:
+        probe = nxt[:30].strip()
+        if len(probe) < 8:
+            continue
+        i = text.find(probe, cur + 1)
+        if i <= cur or text[i - 1] != " ":
+            continue
+        out.append(text[cur:i].strip())
+        cur = i
+    out.append(text[cur:].strip())
+    return [o for o in out if o]
+
+
+def spaced_layout(generation_id: str) -> dict[int, list[str]] | None:
+    """Sayfa no → dizgiden paragraflar (önünde boşluk bırakılan paragraflar dahil). PDF yoksa None."""
+    try:
+        from .. import db
+        from ..document import _open_version, paragraphs_from_layout
+        g = db.one("SELECT book_version_id FROM ed.generation WHERE id=%s", generation_id)
+        doc, _ = _open_version(str(g["book_version_id"]))
+    except Exception:  # noqa: BLE001 - dizgi okunamazsa okunmuş paragraflar olduğu gibi
+        return None
+    with doc:
+        return {i: paragraphs_from_layout(p, spaced=True) for i, p in enumerate(doc, 1)}
+
+
+_TITLE_END = re.compile(r"[.!?…:;,]$")
+
+
+def _key(t: str) -> str:
+    return re.sub(r"[^\w]", "", t.casefold())
+
+
+def split_typeset(chapters: list[dict], paras: list[tuple[int, str]], lex=None) -> list[Chapter] | None:
+    """Dizgiden bulunmuş bölümler (`editor.chapters`: [{title, page_from, page_to}]) üzerine okunmuş paragraflar.
+    Bölümün ilk sayfasının başındaki başlık paragrafları gövdeden çıkar ve başlık metni olur (okunmuş metin
+    font onarımından geçmiştir, PDF'in ham satırı geçmemiş olabilir). Tek «Kitap» bölümü bilgi taşımaz → None."""
+    if len(chapters) < 2:
+        return None
+    out: list[Chapter] = []
+    for ch in chapters:
+        mine = [(p, t) for p, t in paras if ch["page_from"] <= p <= ch["page_to"] and t.strip()]
+        intro = ch["title"] == "Başlıksız başlangıç"
+        title = None if intro else ch["title"]
+        if title:
+            want, got, k = _key(title), "", 0
+            # başlık birkaç paragrafa bölünmüş olabilir («Birinci Kısım» / «1.»); başlıktan uzun olmayan,
+            # cümle gibi bitmeyen kısa paragraflar başlığa aittir
+            while (k < len(mine) and k < 4 and len(mine[k][1]) <= 80 and not _TITLE_END.search(mine[k][1].strip())
+                   and len(got + _key(mine[k][1])) <= len(want) + 4):
+                got += _key(mine[k][1])
+                k += 1
+            if k and (got == want or len(got) >= 0.6 * len(want)):
+                title = " ".join(t.strip() for _, t in mine[:k])
+                mine = mine[k:]
+        blocks = [b for _, bs in normalize(mine, lex, headings=False) for b in bs]
+        if blocks:                      # metni olmayan bölüm (hikâye dışı sayfalar) boş başlık basmaz
+            out.append(Chapter(title, blocks))
+    return out if sum(1 for c in out if c.title) >= 2 else None
+
+
+def by_typeset(generation_id: str, paras: list[tuple[int, str]], lex=None) -> list[Chapter] | None:
+    """Okunmuş kitabın bölümleri kitabın kendi dizgisinden; PDF yoksa ya da bölüm bulunamazsa None."""
+    try:
+        from .. import chapters as typeset
+        found = typeset.for_generation(generation_id)
+    except Exception:  # noqa: BLE001 - dizgi okunamazsa eski büyük harf kuralı
+        return None
+    return split_typeset(found, paras, lex) if found else None
 
 
 def from_docx(path: str, lex=None) -> Manuscript:

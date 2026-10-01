@@ -30,6 +30,7 @@ def capture(c, gid: str) -> dict:
         raise KeyError(gid)
     pages = source.load(c, gid)
     from .knowledge import chapters_from_pages
+    from . import chapters as typeset
     claims = c.execute("SELECT * FROM ed.usable_claim WHERE generation_id=%s "
         "AND kind NOT IN ('SUMMARY','ANSWER','AGE_GROUP','PUBLISHER_DECISION') ORDER BY id", (gid,)).fetchall()
     ids = [r['id'] for r in claims]
@@ -89,7 +90,7 @@ def capture(c, gid: str) -> dict:
         'models':gen['model_manifest'],'prompts':gen['prompt_manifest'],'title':gen['title'],
         'configuration':{'actor_min_probability':settings().actor_min_probability,'source_policy':source.POLICY},
         'origin':gen['origin'],'producer_completed':gen['producer_completed'],
-        'chapters':chapters_from_pages(pages),'claims':claims,'evidence':evidence,
+        'chapters':typeset.for_generation(gid, pages) or chapters_from_pages(pages),'claims':claims,'evidence':evidence,
         'events':events,'emotions':emotions,'characters':characters,'reviews':reviews,
         'contradictions':contradictions,'regression':regression,
         'sources':pages,'blockers':blockers,'semantic_acceptance':False})

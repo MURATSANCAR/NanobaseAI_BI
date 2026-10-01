@@ -24,11 +24,12 @@ _HEADING = re.compile(r"^[A-ZÇĞİÖŞÜ0-9 ,.'’!?-]{6,60}$")
 
 # --------------------------------------------------------------- chapters
 def chapters(generation_id: str) -> list[dict]:
-    """Chapters from upper-case headings at the top of a page that is followed by
-    body text on the same page (title pages and imprint lines are not chapters).
-    Consecutive heading paragraphs are one title ("TABLET PEŞİNDE" + "BİR GÜN")."""
+    """Chapters from the book's own typesetting (`editor.chapters`: point size, sunk chapter
+    openings, title pages). Without the PDF, upper-case headings at the top of a page that is
+    followed by body text on the same page (`chapters_from_pages`)."""
+    from . import chapters as typeset
     pages = source.read(generation_id)
-    return chapters_from_pages(pages)
+    return typeset.for_generation(generation_id, pages) or chapters_from_pages(pages)
 
 
 def chapters_from_pages(pages: list[dict]) -> list[dict]:

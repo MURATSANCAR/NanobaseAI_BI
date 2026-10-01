@@ -305,10 +305,14 @@ def _page_lines(page: pymupdf.Page) -> list[dict]:
     return lines
 
 
-def paragraphs_from_layout(page: pymupdf.Page) -> list[str]:
+def paragraphs_from_layout(page: pymupdf.Page, spaced: bool = False) -> list[str]:
     """Rebuild paragraphs from line geometry. InDesign exports put each line in
     its own block; we re-join lines, undo end-of-line hyphenation, attach drop
-    caps, drop page numbers and keep headings (larger type) separate."""
+    caps, drop page numbers and keep headings (larger type) separate.
+
+    `spaced=True`: a paragraph also starts after a line gap clearly above the line
+    step (space-before paragraphs without indent: Çiçekçi Kadın, step 17.9 pt,
+    paragraph gap 23.6 pt). Used by book production; the reading keeps the default."""
     lines = _page_lines(page)
     if not lines:
         return []
@@ -345,7 +349,8 @@ def paragraphs_from_layout(page: pymupdf.Page) -> list[str]:
             gap = l["y0"] - prev["y0"]
             prev_heading = prev["size"] > body * 1.2
             indented = l["x0"] - left > 6 and prev["text"][-1:] in ".!?”\"…:"
-            new = (heading != prev_heading) or gap > step * 1.6 or gap < -step or indented
+            spaced_gap = spaced and gap > step + max(3.0, body * 0.25) and prev["text"][-1:] in ".!?”\"…:»"
+            new = (heading != prev_heading) or gap > step * 1.6 or gap < -step or indented or spaced_gap
         if new:
             if cur:
                 paras.append(cur)

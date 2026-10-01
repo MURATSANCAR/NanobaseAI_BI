@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 (öğle) — Bölüm bulma dizgiden, Stüdyo paragrafları; finans motoru test sunucusunda
+
+- Bölüm bulma (okuma + Kitap Tasarım Stüdyosu): yeni `apps/editor/src/editor/chapters.py` bölüm açılışını kitabın PDF dizgisinden bulur (punto, bölüm başı boşluğu, başlık altı boşluk, başlık sayfası; sayfa başlığı/künye/ithaf/içindekiler/tanıtım sayfası elenir; sahne arasından sonra büyük puntolu cümle başı başlık değildir; Türkçe İ küçültmesi düzeltildi). `knowledge.chapters`, `outputs.capture` ve Stüdyo (`manuscript.by_typeset/split_typeset`) bunu kullanır, PDF yoksa eski büyük harf kuralı. Stüdyo başlık metnini okunmuş (font onarımlı) paragraftan alır, metni olmayan bölümü basmaz. 26 kabul kitabında ölçüm: cevap anahtarındaki 335 bölümün 262'si (kalanların çoğu anahtar biçimi: sayfa no eki, «Birinci Bölüm» öneki, bozuk font metni); Çiçekçi 7/7, Rüzgâr 58/58, Dallar 11/11, Takılı 30/30. Eski kural Babam 150, Duvarları 199 bölüm buluyordu.
+- Stüdyo paragrafları: Çiçekçi'nin okuması sayfayı tek paragraf saklamış (paragraflar girintisiz, önünde boşlukla: satır 17,9 pt, paragraf arası 23,6 pt; okuma eşiği 1,6×). `paragraphs_from_layout(spaced=True)` bu boşluğu paragraf sayar; yalnız Stüdyo kullanır (`manuscript.resplit`: okunmuş metin değişmez, dizgideki paragraf başlarından bölünür). Çiçekçi 131 → 1.068 blok. Okumanın kendi paragraf eşiği değişmedi — değişirse bütün kitapların okuması etkilenir, ayrı karar.
+- Editör testleri GPU'da editör imajında: `main` 710 geçti, bu dal 720 geçti, yalnız dalda bozulan 0.
+- CRM kitap kaydı: gece 03:10 `editor-crm-connector` TİMAŞ VPN kapalı olduğu için düşmüştü; elle koşuldu, 26 kitabın 25'i bağlandı (Çiçekçi: Minyoung Kang, 978-605-08-5019-2). Stüdyo'nun ilk işi CRM'siz ve tek bölümle başlamıştı, görsel adımından önce durduruldu.
+- Finans motoru (628d32d9b) test sunucusuna kuruldu: 25 dosya md5 = main, `._*` 0, odaklı 808/808, köprü yeniden başladı; kokpit derlendi/yayınlandı; CFO özeti `/opt/timas-metrics/build.py` (zamanlayıcının çalıştırdığı kopya, depodaki değil) main'e çekildi — Eylül fatura 13.680, 2026 toplam 88.757, iade faturası 3.380 ayrı. Kabul koşusu 45. soruda model gecikmesiyle (180 sn) durdu: 34 PASS, 2 FAIL (FC40 düşünmesiz ikinci plan yanlış adet ölçüsü; FC23 karşılaştırıcı PARTIAL_ANSWER kabul etmiyor), 8 başka oturumun 09:05 köprü yeniden başlatmasına denk geldi, 1 bilinen tanım farkı (aktif müşteri).
+- TİMAŞ VPN düşmüştü (tun0 yok); push betiği `~/bin/timas-vpn-push.sh` (Claude'un sunucuda openvpn çalıştırması reddediliyor, kullanıcı çalıştırır).
+
 ## 2026-10-01 — Müşteri VM kontrolü; zamanlanmış iş takvim kolonu 40→200
 
 - VM 03:56'da çekirdek güncellemesiyle yeniden başlamış (7.0.0-34); konteynerler 30 Eylül kurulumundan, anlık görüntüye dönüş yok. Tünel kapalıydı, kullanıcı açtı; `/timas/` 200, köprü hazır (5.023 sertifikalı).
