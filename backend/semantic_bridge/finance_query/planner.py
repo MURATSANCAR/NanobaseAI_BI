@@ -50,6 +50,7 @@ class Plan:
     crm: dict | None = None
     logo_report: dict | None = None
     crm_report: dict | None = None
+    relational_query: dict | None = None
     analytics: tuple[dict, ...] = ()
     sections: tuple[Plan, ...] = ()
     section_title: str | None = None
@@ -216,9 +217,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError("Soru planlayıcısına şu anda ulaşılamıyor.", code="SOURCE_UNAVAILABLE")
     schema = {"metrics": ["contract metric ID"], "dimensions": [], "sale_kind": "all|wholesale|retail",
               "filters": [{"dimension": "book|channel|customer|author|publisher|subbrand", "op": "eq|contains", "value": "sorudaki değer"}],
-              "limit": None, "order_by": None, "descending": True, "derived": [], "having": [], "comparison": None, "crm": None, "logo_report": None, "crm_report": None, "analytics": [],
+              "limit": None, "order_by": None, "descending": True, "derived": [], "having": [], "comparison": None, "crm": None, "logo_report": None, "crm_report": None, "relational_query": None, "analytics": [],
               "sections": [], "gaps": [], "coverage": [], "uncovered": [], "clarification": ""}
     from .crm_query import CRM_CAPABILITIES
+    from .relational_plan import RELATIONAL_CAPABILITIES
     from .crm_reports import CRM_REPORT_CAPABILITIES
     from .logo_reports import LOGO_REPORT_CAPABILITIES, LOGO_REPORT_COMPACT_OUTPUT_CONTRACTS
     prompt = ("Türkçe finans sorusunu kapalı sözleşmeden bir sorgu planına çevir. YALNIZ JSON. SQL yazma. "
@@ -228,7 +230,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "clarification yalnız kullanıcının cevaplayabileceği çözümlenmemiş iş tercihi içindir; somut bir soru sor. "
               "Kullanıcı koşulları açıkken ürünün hesap/kırılım/ilişki yeteneğinin bulunmaması clarification değildir: uncovered kullan "
               "veya bağımsız desteklenen kısım varsa doğrulanmış gaps ile bölümlü cevap kur. Teknik yetenek eksikliğini kullanıcı belirsizliği gibi sunma. "
-              "Önce doğrulanmış ölçüleri, sonra logoReportCapabilities/crmReportCapabilities raporlarını değerlendir. "
+              "CRM alan seçimi, filtreleme, kanıtlı ilişkilerden JOIN ve gruplu sayımları relational_query ile sorudan oluştur. "
+              "relationalCapabilities alan ve ilişki sözlüğüdür; hazır soru veya cevap değildir. Yeni alan/ilişki uydurma. "
+              "Hazır crm_report yalnız relational_query işlemleriyle ifade edilemeyen doğrulanmış özel hesaplar içindir. "
+              "Kaynak dalları birbirini dışlar; relational_query seçiliyse diğer kaynak dalları null ve ölçü dizileri boştur. "
               "Nüfusu seçme koşuluyla çıktıdaki durum/eksiklik bayrağını ayır: bütün kayıtları gösterip eksikleri belirtme isteği "
               "yalnız eksik kayıtları seçme isteği değildir. population_contract predicate ve selection_intent seçilen raporun "
               "gerçek nüfusudur; dar altküme gerektiriyorsa kullanıcı bunu olumlu olarak istemiş olmalıdır. "
@@ -247,7 +252,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Yalnız tek raporun karşılamadığı farklı kırılımlar/bağımsız kaynak bölümleri gerekiyorsa sections kullan (en fazla 4 yaprak). "
               "Her section title, anlamı koruyan question ve tek leaf plan içerir; leaf plan iç içe sections içermez. "
               "Her bölüm sorusu ortak dönemi ve o bölüme ait özel koşulları korumalıdır; tek ortak dönem deterministik miras alınabilir, farklı dönemler bölüm sorusunda açık olmalıdır. "
-              "Root sections doluyken metrics/dimensions/filters/derived/having/analytics boş; crm/logo_report/crm_report/comparison/limit/order_by null, uncovered boş liste ve clarification boş metin olsun. Kök bölüm planlarından alan miras almaz. "
+              "Root sections doluyken metrics/dimensions/filters/derived/having/analytics boş; crm/logo_report/crm_report/relational_query/comparison/limit/order_by null, uncovered boş liste ve clarification boş metin olsun. Kök bölüm planlarından alan miras almaz. "
               "YALNIZ sections dolu olan bölümlü kökte her bağımsız isteği coverage'a özgün sorudan harfi harfine kesintisiz alınmış requirement metniyle bağla; büyük/küçük harf, noktalama ve ekleri değiştirme. Özet veya section question metni alıntı yerine geçmez. sections sıfır tabanlı bölüm indeksleri, "
               "gap_index gaps içindeki eksik kapsam indeksidir. Bir koşul ya gerçek bölüme ya açık gaps kaydına bağlanır. "
               "Bağımsız eksik işi gaps ile açık belirt; bir filtrenin yapılamamasını gaps diyerek atıp filtresiz geniş sonuç üretme. "
@@ -289,7 +294,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "yalnız bir tarafta hareketi olan anahtarları da koru isteği için sıfırdan farklı HAVING ekleme. "
               "having koşulları AND birleşir; iki ölçüyü !=0 yapmak tek taraflı satırları siler. Hareket bulunması net tutarın sıfırdan farklı olması değildir. "
               "Kullanıcı gerçekten tutar eşiği/sıfır dışlama istiyorsa ilgili koşulu koru; nüfus koruma isteğini tutar filtresine dönüştürme. "
-              "CRM basit kart listesi, gruplu sayımı ve eksik alanları crm dalıyla planla; ilişkili detay, mükerrer grupların üyeleri veya basit dalda bulunmayan alanlar için karşılayan crm_report yeteneğini seç. "
+              "CRM kart seçimi, kanıtlı ilişki ve gruplu sayımlar için relational_query genel işlemlerini değerlendir. Eksik kalite veya özel hesap işlemi varsa uygun crm/crm_report sözleşmesiyle tamamla; sorunun koşullarını azaltma. "
               "Basit crm.mode=list bütün kartlar listesidir; having_min_count yalnız gruplu count için geçerlidir, mükerrer üyelerin detayını seçmez. "
               "Basit CRM group_by ham alan değerlerini gruplar: created_at/updated_at zaman damgasına göre grup ay/gün/yıl grubu değildir. "
               "İstenen takvim dilimini üreten output_contract alanına sahip raporu seç; zaman damgası ile ay kırılımını karşılanmış sayma. "
@@ -310,7 +315,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Filtreden geçen özel isimler filters'a aynen yazılır; anlamlı sıfatlar kaybolamaz. "
               "Top N yalnız açıkça istenirse. Önceki plan yalnız açık takip sorularında bağlamdır.\n"
               + json.dumps({"contract": CONTRACT, "groupedFamilyPopulation": GROUPED_FAMILY_POPULATION, "output": schema, "parsedPeriods": periods,
-                            "parsedGrain": grain, "referenceDate": str(today), "previous": previous, "crmCapabilities": CRM_CAPABILITIES, "crmReportCapabilities": CRM_REPORT_CAPABILITIES,
+                            "parsedGrain": grain, "referenceDate": str(today), "previous": previous, "crmCapabilities": CRM_CAPABILITIES, "crmReportCapabilities": CRM_REPORT_CAPABILITIES, "relationalCapabilities": RELATIONAL_CAPABILITIES,
                             "logoReportCapabilities": LOGO_REPORT_CAPABILITIES, "logoReportOutputContracts": LOGO_REPORT_COMPACT_OUTPUT_CONTRACTS}, ensure_ascii=False))
     guided_schema, coverage_spans = _question_plan_schema(source_question)
     prompt += "\nCoverage requirement yalnız coverageSourceSpans listesindeki bir metin olabilir; farklı parçaları birleştirme. Ortak bir kaynak cümlesi gerekirse birden çok bölümle eşlenebilir, bütün iş koşulları bağımsız denetlenir.\n" + json.dumps({"coverageSourceSpans":coverage_spans}, ensure_ascii=False)
@@ -354,10 +359,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         reason = str(data.get("clarification") or "; ".join(map(str, missing)))
         raise ContractError("Bu kapsam için doğrulanmış hesap tanımı eksik: " + reason[:600],
                             code="NEEDS_CLARIFICATION" if data.get("clarification") else "UNSUPPORTED_CAPABILITY")
-    branches = [k for k in ("crm", "logo_report", "crm_report") if data.get(k) is not None]
+    branches = [k for k in ("crm", "logo_report", "crm_report", "relational_query") if data.get(k) is not None]
     if len(branches) > 1:
         raise ContractError("Bir yaprak planda birden çok kaynak raporu seçilemez.", code="PLAN_INVALID")
-    if data.get("logo_report") is not None or data.get("crm_report") is not None:
+    if any(data.get(k) is not None for k in ("logo_report", "crm_report", "relational_query")):
         return build_report(data, question, llm, periods, today, trace, source_question)
     if data.get("crm") is not None:
         from .crm_query import validate_crm_plan
@@ -792,11 +797,12 @@ def validate_analytics(raw, metrics, dims, periods, question):
 
 def build_composite(data, question, llm, previous, trace, today, depth):
     from .crm_query import CRM_CAPABILITIES
+    from .relational_plan import describe_relational_output
     from .crm_reports import CRM_REPORT_CAPABILITIES, describe_crm_report_output
     from .logo_reports import LOGO_REPORT_CAPABILITIES, describe_logo_report_output
     if depth or not isinstance(data["sections"], list) or not 1 <= len(data["sections"]) <= 4:
         raise ContractError("Bölümlü plan en fazla dört yaprak içerebilir; iç içe rapor desteklenmez.", code="PLAN_INVALID")
-    if any(data.get(k) for k in ("metrics", "dimensions", "filters", "derived", "having", "analytics", "crm", "logo_report", "crm_report", "comparison", "limit", "order_by", "uncovered", "clarification")):
+    if any(data.get(k) for k in ("metrics", "dimensions", "filters", "derived", "having", "analytics", "crm", "logo_report", "crm_report", "relational_query", "comparison", "limit", "order_by", "uncovered", "clarification")):
         raise ContractError("Bölümlü rapor kökünde ayrı yürütme veya gizli eksik kapsam bulunamaz.", code="PLAN_INVALID")
     gaps = data.get("gaps") or []
     for gap in gaps:
@@ -853,6 +859,7 @@ def build_composite(data, question, llm, previous, trace, today, depth):
         {"role": "user", "content": json.dumps({"question": question, "referenceDate": str(today),
          "sections": [{"question": raw["question"], "plan": p.to_dict()} for raw,p in zip(data["sections"],plans)],
          "selectedReportOutputs": {
+             **{"relational:"+str(i):describe_relational_output(p.relational_query) for i,p in enumerate(plans) if p.relational_query},
              **{"crm:"+p.crm_report["report"]:describe_crm_report_output(p.crm_report["report"]) for p in plans if p.crm_report},
              **{"logo:"+p.logo_report["mode"]:describe_logo_report_output(p.logo_report["mode"]) for p in plans if p.logo_report}},
          "gaps": gaps, "coverage": coverage, "contract": CONTRACT, "crmCapabilities": CRM_CAPABILITIES,
@@ -966,61 +973,69 @@ def source_answer_permissions(question, by_id, llm, trace):
 def build_report(data, question, llm, periods, today, trace, source_question=None):
     from .logo_reports import validate_logo_report, LOGO_REPORT_CAPABILITIES, describe_logo_report_output
     from .crm_reports import validate_crm_report, CRM_REPORT_CAPABILITIES, describe_crm_report_output
-    branch = "logo_report" if data.get("logo_report") is not None else "crm_report"
-    if any(data.get(k) for k in ("metrics", "dimensions", "filters", "derived", "having", "analytics", "comparison", "crm", "limit", "order_by")):
-        raise ContractError("Kaynak raporu dalı ile ölçü planı karıştırılamaz.", code="PLAN_INVALID")
-    raw = data[branch]
-    if isinstance(raw, dict):
-        raw = dict(raw)
-        mode = raw.get("mode") if branch == "logo_report" else None
-        expected_as_of = str(today)
-        if mode == "stock_history":
-            pair = (raw.get("start"), raw.get("end"))
-            if pair not in periods:
-                raise ContractError("Stok geçmişi dönemi sorudan çözümlenen dönemle uyuşmuyor.", code="PLAN_INVALID")
-            expected_as_of = str(date.fromisoformat(pair[1]) - timedelta(days=1))
-        elif mode == "stock" and periods:
-            single_days = [a for a,b in periods if (date.fromisoformat(b)-date.fromisoformat(a)).days == 1]
-            if len(single_days) == 1:
-                expected_as_of = single_days[0]
-            elif not single_days and type(raw.get("lookback_days")) is int and raw["lookback_days"] > 0 and (raw.get("start"), raw.get("end")) == (str(today+timedelta(days=1-raw["lookback_days"])), str(today+timedelta(days=1))) and (raw.get("start"), raw.get("end")) in periods:
-                expected_as_of = str(today)
-            else:
-                raise ContractError("Noktasal stok için tek bir gün açıkça belirtilmelidir; dönem içindeki stok hareketi ayrı rapordur.", code="NEEDS_CLARIFICATION")
-        elif mode in {"open_orders", "aging"} and raw.get("as_of"):
-            allowed = {str(today)} | {a for a,b in periods if (date.fromisoformat(b)-date.fromisoformat(a)).days == 1}
-            if raw["as_of"] not in allowed:
-                raise ContractError("İtibarıyla tarihi sorudaki tek gün veya bugünün referans tarihiyle uyuşmuyor.", code="PLAN_INVALID")
-            expected_as_of = raw["as_of"]
-        if raw.get("as_of") is not None and raw["as_of"] != expected_as_of:
-            raise ContractError("Raporun itibarıyla tarihi istenen iş tarihiyle uyuşmuyor.", code="PLAN_INVALID")
-        if raw.get("as_of") is None:
-            raw["as_of"] = expected_as_of
-            if trace is not None:
-                trace.append({"stage":"report_date_resolved", "mode":mode or branch, "as_of":expected_as_of,
-                              "basis":"period_end_minus_one" if mode == "stock_history" else "explicit_point_day" if mode == "stock" and periods else "reference_date"})
-    report = (validate_logo_report if branch == "logo_report" else validate_crm_report)(raw)
-    for key in ("customer_code", "book_code"):
-        if report.get(key) and fold(str(report[key])) not in fold(source_question or question):
-            raise ContractError("Kaynak raporu kod filtresi kullanıcının asıl sorusunda bulunamadı.", code="PLAN_INVALID")
-    start, end = report.get("start"), report.get("end")
-    if branch == "crm_report" and (start or end) and re.search(r"\butc\b", fold(question)):
-        raise ContractError("Bu CRM raporu İstanbul takvim dönemlerini kullanır; açık UTC aralığı bu rapor dalında henüz tanımlı değil.")
-    if bool(start) != bool(end) or (start and (str(start), str(end)) not in periods):
-        raise ContractError("Kaynak raporu tarih aralığı sorudan çözümlenen dönemle uyuşmuyor.", code="PLAN_INVALID")
-    limit = report.get("limit")
-    if limit is not None and (not re.search(r"\b" + str(limit) + r"\b", normalize_numbers(question)) or not re.search(r"\b(ilk|en cok|en buyuk|en yuksek|en dusuk|en az)\b", fold(question))):
-        raise ContractError("Kaynak raporunda soruda istenmeyen sınır kullanılamaz.", code="PLAN_INVALID")
-    if branch == "crm_report":
-        capabilities = {
-            "report": report["report"],
-            "description": CRM_REPORT_CAPABILITIES["reports"][report["report"]],
-            "rules": CRM_REPORT_CAPABILITIES["rules"],
-            "output_contract": describe_crm_report_output(report["report"]),
-        }
+    if data.get("relational_query") is not None:
+        from .relational_plan import validate_relational_query, describe_relational_output
+        if any(data.get(k) for k in ("metrics", "dimensions", "filters", "derived", "having", "analytics", "comparison", "crm", "crm_report", "logo_report", "limit", "order_by")):
+            raise ContractError("İlişkisel plan başka yürütme dallarıyla karıştırılamaz.", code="PLAN_INVALID")
+        branch = "relational_query"
+        report = validate_relational_query(data[branch], source_question or question, today)
+        capabilities = {"output_contract": describe_relational_output(report)}
     else:
-        capabilities = {"mode":report["mode"], "description":LOGO_REPORT_CAPABILITIES[report["mode"]],
-                        "output_contract":describe_logo_report_output(report["mode"])}
+        branch = "logo_report" if data.get("logo_report") is not None else "crm_report"
+        if any(data.get(k) for k in ("metrics", "dimensions", "filters", "derived", "having", "analytics", "comparison", "crm", "limit", "order_by")):
+            raise ContractError("Kaynak raporu dalı ile ölçü planı karıştırılamaz.", code="PLAN_INVALID")
+        raw = data[branch]
+        if isinstance(raw, dict):
+            raw = dict(raw)
+            mode = raw.get("mode") if branch == "logo_report" else None
+            expected_as_of = str(today)
+            if mode == "stock_history":
+                pair = (raw.get("start"), raw.get("end"))
+                if pair not in periods:
+                    raise ContractError("Stok geçmişi dönemi sorudan çözümlenen dönemle uyuşmuyor.", code="PLAN_INVALID")
+                expected_as_of = str(date.fromisoformat(pair[1]) - timedelta(days=1))
+            elif mode == "stock" and periods:
+                single_days = [a for a,b in periods if (date.fromisoformat(b)-date.fromisoformat(a)).days == 1]
+                if len(single_days) == 1:
+                    expected_as_of = single_days[0]
+                elif not single_days and type(raw.get("lookback_days")) is int and raw["lookback_days"] > 0 and (raw.get("start"), raw.get("end")) == (str(today+timedelta(days=1-raw["lookback_days"])), str(today+timedelta(days=1))) and (raw.get("start"), raw.get("end")) in periods:
+                    expected_as_of = str(today)
+                else:
+                    raise ContractError("Noktasal stok için tek bir gün açıkça belirtilmelidir; dönem içindeki stok hareketi ayrı rapordur.", code="NEEDS_CLARIFICATION")
+            elif mode in {"open_orders", "aging"} and raw.get("as_of"):
+                allowed = {str(today)} | {a for a,b in periods if (date.fromisoformat(b)-date.fromisoformat(a)).days == 1}
+                if raw["as_of"] not in allowed:
+                    raise ContractError("İtibarıyla tarihi sorudaki tek gün veya bugünün referans tarihiyle uyuşmuyor.", code="PLAN_INVALID")
+                expected_as_of = raw["as_of"]
+            if raw.get("as_of") is not None and raw["as_of"] != expected_as_of:
+                raise ContractError("Raporun itibarıyla tarihi istenen iş tarihiyle uyuşmuyor.", code="PLAN_INVALID")
+            if raw.get("as_of") is None:
+                raw["as_of"] = expected_as_of
+                if trace is not None:
+                    trace.append({"stage":"report_date_resolved", "mode":mode or branch, "as_of":expected_as_of,
+                                  "basis":"period_end_minus_one" if mode == "stock_history" else "explicit_point_day" if mode == "stock" and periods else "reference_date"})
+        report = (validate_logo_report if branch == "logo_report" else validate_crm_report)(raw)
+        for key in ("customer_code", "book_code"):
+            if report.get(key) and fold(str(report[key])) not in fold(source_question or question):
+                raise ContractError("Kaynak raporu kod filtresi kullanıcının asıl sorusunda bulunamadı.", code="PLAN_INVALID")
+        start, end = report.get("start"), report.get("end")
+        if branch == "crm_report" and (start or end) and re.search(r"\butc\b", fold(question)):
+            raise ContractError("Bu CRM raporu İstanbul takvim dönemlerini kullanır; açık UTC aralığı bu rapor dalında henüz tanımlı değil.")
+        if bool(start) != bool(end) or (start and (str(start), str(end)) not in periods):
+            raise ContractError("Kaynak raporu tarih aralığı sorudan çözümlenen dönemle uyuşmuyor.", code="PLAN_INVALID")
+        limit = report.get("limit")
+        if limit is not None and (not re.search(r"\b" + str(limit) + r"\b", normalize_numbers(question)) or not re.search(r"\b(ilk|en cok|en buyuk|en yuksek|en dusuk|en az)\b", fold(question))):
+            raise ContractError("Kaynak raporunda soruda istenmeyen sınır kullanılamaz.", code="PLAN_INVALID")
+        if branch == "crm_report":
+            capabilities = {
+                "report": report["report"],
+                "description": CRM_REPORT_CAPABILITIES["reports"][report["report"]],
+                "rules": CRM_REPORT_CAPABILITIES["rules"],
+                "output_contract": describe_crm_report_output(report["report"]),
+            }
+        else:
+            capabilities = {"mode":report["mode"], "description":LOGO_REPORT_CAPABILITIES[report["mode"]],
+                            "output_contract":describe_logo_report_output(report["mode"])}
     intents = source_report_intents(question, periods, today, llm, trace)
     permissions = source_answer_permissions(question, intents, llm, trace)
     _, source_spans = _question_plan_schema(question)

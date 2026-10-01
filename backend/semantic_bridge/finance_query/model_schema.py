@@ -49,6 +49,7 @@ PLAN_SCHEMA["required"].append("crm")
 from copy import deepcopy
 from .logo_reports import LOGO_REPORT_SCHEMA
 from .crm_reports import CRM_REPORT_SCHEMA
+from .relational_plan import RELATIONAL_SCHEMA
 
 ANALYTIC_SCHEMA = obj({
     "op": {"type": "string", "enum": ["contribution", "top_remainder"]},
@@ -59,6 +60,7 @@ ANALYTIC_SCHEMA = obj({
     "label": {"type": "string"},
 })
 for field, schema in {
+    "relational_query": {"anyOf": [{"type": "null"}, RELATIONAL_SCHEMA]},
     "logo_report": {"anyOf": [{"type": "null"}, LOGO_REPORT_SCHEMA]},
     "crm_report": {"anyOf": [{"type": "null"}, CRM_REPORT_SCHEMA]},
     "analytics": {"type": "array", "maxItems": 3, "items": ANALYTIC_SCHEMA},
@@ -93,7 +95,7 @@ for field, schema in {
 _EMPTY_ARRAY = {"type": "array", "maxItems": 0}
 _NULL = {"type": "null"}
 _EXECUTION_ARRAYS = ("metrics", "dimensions", "filters", "derived", "having", "analytics")
-_SOURCE_BRANCHES = ("crm", "logo_report", "crm_report")
+_SOURCE_BRANCHES = ("crm", "logo_report", "crm_report", "relational_query")
 
 
 def _closed_variant(base, changes):

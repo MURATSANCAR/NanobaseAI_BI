@@ -248,6 +248,9 @@ class Executor:
             self.output_fields = ["section", "status", "row_count"]
             self.numeric_fields = {"row_count"}
             return overview
+        if getattr(plan, "relational_query", None):
+            from .relational_executor import execute_relational_query
+            return self.report_result(execute_relational_query(self, plan.relational_query))
         if getattr(plan, "crm_report", None):
             from .crm_reports import execute_crm_report
             return self.report_result(execute_crm_report(self, plan.crm_report))

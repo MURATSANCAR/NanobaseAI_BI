@@ -112,4 +112,11 @@ def calculation_definitions(plan):
         from .crm_reports import CRM_REPORT_CAPABILITIES
         description = CRM_REPORT_CAPABILITIES["reports"].get(plan.crm_report["report"])
         if description: definitions.append(str(description))
+    if getattr(plan, "relational_query", None):
+        definitions.append("CRM güncel aktif kaynaklarında sorudan oluşturulan alan, ilişki, filtre ve gruplama planı; geçmiş durum veya kimlik sınıflandırması anlamına gelmez.")
+        for selected in plan.relational_query["select"]:
+            if selected["op"] == "count_records":
+                definitions.append(selected["id"] + ": filtrelerden geçen tekil kök kayıt kimliği sayısı.")
+            elif selected["op"] == "count_distinct":
+                definitions.append(selected["id"] + ": seçilen alandaki NULL dışındaki farklı değerlerin sayısı.")
     return list(dict.fromkeys(definitions))

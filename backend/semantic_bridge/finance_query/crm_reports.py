@@ -177,8 +177,8 @@ def _output_contracts():
         non_claims={"ModifiedOn_is_stage_entry": False, "stage_wait_duration_proven": False,
                     "meaning": "The instruction not to infer stage entry from last modification is respected; no entry/duration is fabricated."},
         unsupported_requested_operations={"stage_entry_exit_timeline": "not_computed",
-                    "days_in_stage": "not_computed", "over_three_months_stage_filter": "not_computed",
-                    "review_action": "Current work plus explicit mandatory history gap can satisfy an explicit request to show current work and disclose unverifiable waiting time. It cannot satisfy an unconditional demand for the three-month filtered population or numeric waiting duration."})
+                    "days_in_stage": "not_computed", "stage_duration_filter": "not_computed",
+                    "review_action": "Current work plus explicit mandatory history gap can satisfy an explicit request to show current work and disclose unverifiable waiting time. It cannot satisfy an unconditional demand for a duration-filtered population or numeric waiting duration; this limitation applies to every requested threshold."})
     contractrecord = {"contract_detail": _output_record("book_id + contract_id", "contract")}
     precedence = "Relevant revised_end_date, renewal_end_date or termination_date adds UNVERIFIED_DEFINITION: no legal precedence/effective-end calculation."
     add("contract_expiry", contractrecord, "Required start/end: any main end, revised end, renewal end or termination in interval, OR main end missing. Start_date output is contract start, not filter start.", precedence)
@@ -596,7 +596,7 @@ def _work_reports(s,p,out):
         if p["report"]=="work_due" and not (late or in_window): continue
         if p["report"]=="work_due_missing" and not (late or (in_window and missing_assignment)): continue
         out["records"].append({"record_type":"work_detail",**r,"project_name":projects[project]["project_name"],"stage_name":stages.get(_key(r["stage_id"]),{}).get("stage_name"),"books":_json([{"book_id":bid,"book_name":books[bid]["book_name"]} for bid in sorted(projectbooks[project])]),"overdue":late,"missing_owner":not bool(r["owner_id"]),"missing_stage":_key(r["stage_id"]) not in stages})
-    if p["report"]=="work_stage_history": _gap(out,"Aşamaya giriş ve çıkış tarihçesi kanıtlanmadı. ModifiedOn aşama başlangıcı sayılmadı; üç aydan uzun aynı aşamada bekleme süresi doğrulanamadı.")
+    if p["report"]=="work_stage_history": _gap(out,"Aşamaya giriş ve çıkış tarihçesi kanıtlanmadı. ModifiedOn aşama başlangıcı sayılmadı; aynı aşamada bekleme süresi ve bu süreye göre istenen filtre doğrulanamadı.")
 
 
 def _activity_reports(s,p,out):

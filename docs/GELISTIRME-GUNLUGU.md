@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Soruya özel olmayan CRM ilişkisel plan
+
+- Kullanıcının yeni vurgusu üzerine üretim yolu test kimliği/örnek müşteri/tarihe özel dal açısından incelendi; böyle bir yönlendirme bulunmadı. Ancak CRM'nin 33 hazır rapor seçimine bağımlılığı genel niyet motoru sayılmadı. Aşamada bekleme sınırı açıklamasındaki sabit üç ay ifadesi genel süre koşuluna çevrildi.
+- Yeni kaynak sözlüğü: fiziksel envanter kanıtından 15 varlık,108 alan,19 yönlü FK→PK ilişkisi. Model fiziksel SQL üretmez; kapalı ilişkisel planı sunucu doğrular ve SELECT derler. Anahtar tekilliği/aktiflik/çoğalma/tür/sonuç sınırı korunur. İş anlamı, özgün niyet ve gerçek çıktı sözleşmesi ayrıca denetlenir.
+- Yeni 12 bağımsız canlı kabul vakası paraphrase, değişen filtre/grup/dönem, NULL ve çok tabloludur. Oracle üretim SQL'ini/registry'sini kullanmaz. Yerel ürün testi yapılmadı. Yeni sürüm canlı kabul bekler; genel başarı veya müşteri kabulü yoktur.
+- Önceki sürüm 19e0d723c: CRM-R12 8 soru 2 FULL_ANSWER_PASS ve6 BOUNDARY_PASS. Ayrı CR023 izin pilotu BOUNDARY_PASS. Toplam iki geçici timasai oturumu temizlendi, kaynak yazımı0. Bulgular `docs/reports/crm-coverage-live-20261001.md`; önceki geçişler yeni kodun kabulü sayılmaz.
+
 ## 2026-10-01 — Kısmi denetim kararının şemada tutarlı olması
 
 - 9a6457d44 CRM-R10 yedi soru tamamlandı: 6 BOUNDARY_PASS, 1 FAIL (CR023); sourceWrites=0, bir geçici oturum silindi. CR030 ve CR033 boş karar onarımıyla yeniden geçtiler. Tam cevap/genel CRM kabulü değildir.
