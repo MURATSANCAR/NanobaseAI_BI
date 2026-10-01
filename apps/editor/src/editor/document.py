@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pymupdf
 
-from . import db, prompts, schemas, source
+from . import db, pdf_repair, prompts, schemas, source
 from .config import settings
 from .llm import Llm, image_part
 
@@ -64,11 +64,16 @@ def inspect_book(file_name: str, title: str | None = None, universe: str | None 
             "sha256": sha, "page_count": doc.page_count, "new_version": True}
 
 
-def _open_version(book_version_id: str) -> tuple[pymupdf.Document, dict]:
+def _open_version(book_version_id: str, repair: bool = True) -> tuple[pymupdf.Document, dict]:
+    """The version's PDF. `repair`: wrong letter mappings of its fonts are mended from the fonts' own
+    data in memory (pdf_repair; the file is never written). Rendering does not need it."""
     bv = db.one("SELECT * FROM book_version WHERE id=%s", book_version_id)
     if bv is None:
         raise KeyError(f"book_version {book_version_id} not found")
-    return pymupdf.open(bv["file_path"]), bv
+    doc = pymupdf.open(bv["file_path"])
+    if repair:
+        pdf_repair.repair_document(doc)
+    return doc, bv
 
 
 def _pages_dir(bv: dict) -> Path:
@@ -201,7 +206,7 @@ def region_ink_ratio(png_path: str, bbox: list[int]) -> float:
 
 
 def render_page(book_version_id: str, page_no: int, long_side_px: int = TARGET_LONG_SIDE_PX) -> dict:
-    doc, bv = _open_version(book_version_id)
+    doc, bv = _open_version(book_version_id, repair=False)
     page = doc[page_no - 1]
     zoom = long_side_px / max(page.rect.width, page.rect.height)
     out = _pages_dir(bv) / f"p{page_no:04d}.png"
@@ -258,16 +263,66 @@ def create_page_manifest(book_version_id: str) -> dict:
             "no_text_layer": [r[1] for r in rows if r[4] < 30]}
 
 
+#: A heading font without «ı»: the typesetter sets a shrunken «l» in its place («Bal» 28 pt + «l» 20 pt +
+#: «ğ» 28 pt = Balığ…). A lone «l» inside a word, below this share of the preceding letters' size, in a font
+#: that carries no «ı», is «ı» (same rule as the BI reading, editorial_desk_structure.pdf_lines).
+_SMALL_L = 0.85
+
+
+def _borrowed_capital_i(spans: list[dict], texts: list[str]) -> None:
+    """A small-caps heading font without a dotted small capital: the typesetter borrows «İ» from another
+    font of the family («yüreğ» + «İ» + «me», Rüzgârın Ardından). Every other letter of the line is
+    lower case (small caps are lower-case letters), the «İ» is a span of its own in another font and
+    touches a lower-case letter: it is «i»."""
+    lone = [k for k, t in enumerate(texts) if t == "İ"]
+    if not lone:
+        return
+    rest = "".join(t for k, t in enumerate(texts) if k not in lone)
+    if not re.search(r"[^\W\d_]", rest) or any(c.isupper() for c in rest):
+        return
+    for k in lone:
+        nb = [j for j in (k - 1, k + 1) if 0 <= j < len(spans) and texts[j].strip()]
+        touching = (k > 0 and texts[k - 1][-1:].islower()) or (k + 1 < len(texts) and texts[k + 1][:1].islower())
+        # another font (pymupdf shortens long names, so a size of its own also tells the borrowed glyph)
+        if nb and touching and all(spans[j]["font"] != spans[k]["font"] or abs(spans[j]["size"] - spans[k]["size"]) > 0.2
+                                   for j in nb):
+            texts[k] = "i"
+
+
+def _span_texts(page: pymupdf.Page, spans: list[dict]) -> list[str]:
+    texts = [s["text"] for s in spans]
+    _borrowed_capital_i(spans, texts)
+    repair = getattr(page.parent, "_editor_text_repair", None)
+    if not repair:
+        return texts
+    last = 0.0
+    for k, s in enumerate(spans):
+        if (s["text"].strip() == "l" and last and s["size"] <= _SMALL_L * last
+                and re.search(r"[^\W\d_]$", "".join(texts[:k])) and pdf_repair.font_lacks(repair, s["font"])):
+            texts[k] = "ı"
+        elif s["text"].strip():
+            last = s["size"]
+    return texts
+
+
 def _page_lines(page: pymupdf.Page) -> list[dict]:
     lines = []
     seen = set()
     for b in page.get_text("dict", sort=True)["blocks"]:
         for ln in b.get("lines", []):
             # alpha 0 = invisible text (overset frames behind artwork): not on the page
-            spans = [s for s in ln["spans"] if s["text"].strip() and s.get("alpha", 255) != 0]
-            if not spans:
+            visible = [s for s in ln["spans"] if s.get("alpha", 255) != 0]
+            inked = [k for k, s in enumerate(visible) if s["text"].strip()]
+            if not inked:
                 continue
-            text = re.sub(r"\s+", " ", "".join(s["text"] for s in spans)).strip()
+            # A word space set in another size than its words («aynada» 10.5 pt + « » 15 pt + «yolculuk»,
+            # a heading) comes as a span of its own and was dropped with the empty spans: between two
+            # inked spans and in a size of its own it is the word break. Other blank spans stay out
+            # (measured on 26 books: keeping all of them changed 641 pages, not all for the better).
+            spans = [s for k, s in enumerate(visible) if s["text"].strip() or (
+                inked[0] < k < inked[-1] and abs(s["size"] - visible[k - 1]["size"]) > 0.5
+                and abs(s["size"] - visible[k + 1]["size"]) > 0.5)]
+            text = re.sub(r"\s+", " ", "".join(_span_texts(page, spans))).strip()
             # Overprinted glyphs can produce two identical lines at exactly the
             # same coordinates. Preserve repeated prose elsewhere on the page.
             identity = (text, tuple(ln['bbox']))
@@ -275,7 +330,7 @@ def _page_lines(page: pymupdf.Page) -> list[dict]:
                 continue
             seen.add(identity)
             lines.append({"text": text, "x0": ln["bbox"][0], "y0": ln["bbox"][1], "x1": ln["bbox"][2],
-                          "y1": ln["bbox"][3], "size": max(s["size"] for s in spans)})
+                          "y1": ln["bbox"][3], "size": max(s["size"] for s in spans if s["text"].strip())})
     # Label/value tables (credits, contact details): slightly different font
     # baselines must not interleave the next row's name with the current role.
     # Require a recurring pair of columns, not arbitrary multi-column prose.
@@ -369,14 +424,19 @@ def paragraphs_from_layout(page: pymupdf.Page, spaced: bool = False) -> list[str
 def extract_text_layer(generation_id: str, book_version_id: str) -> dict:
     """Page text + paragraphs from the PDF text layer (rebuilt from line layout)."""
     doc, _ = _open_version(book_version_id)
+    book = {}
+    for i, page in enumerate(doc, start=1):
+        if _garbled_ratio(page.get_text("text") or "") > 0.02:
+            continue  # unreadable encoding: OCR provides this page's paragraphs
+        paras = paragraphs_from_layout(page)
+        if paras:
+            book[i] = paras
+    # a private-use character the fonts' own data could not mend: the book's own vocabulary decides
+    letters = pdf_repair.private_letter_map([p for paras in book.values() for p in paras])
     pages_with_text = 0
     with db.tx() as c:
-        for i, page in enumerate(doc, start=1):
-            if _garbled_ratio(page.get_text("text") or "") > 0.02:
-                continue  # unreadable encoding: OCR provides this page's paragraphs
-            paras = paragraphs_from_layout(page)
-            if not paras:
-                continue
+        for i, paras in book.items():
+            paras = [pdf_repair.apply_private_letters(p, letters) for p in paras]
             pages_with_text += 1
             c.execute("INSERT INTO page_text(generation_id, book_version_id, page_no, source, text)"
                       " VALUES (%s,%s,%s,'TEXT_LAYER',%s) ON CONFLICT DO NOTHING",
