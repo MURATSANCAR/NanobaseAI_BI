@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Finans kararları üç ortamda: kabul tamam, VM kuruldu
+
+- Denetçi düzeltmesinin ilk hâli (yalnız `tarih_kaynağı` ipucu) canlıda yetmedi: FC54/FC66'da denetçi doğru «Aralık 2026» aralığını yine Kasım/Ocak diye yeniden yazdı. `84250e625`: dönem sorudan kurallı çözüldüyse denetçi somut tarih görmez. Sonra FC54/FC66 2'şer tekrarla 4/4 PASS.
+- Kalan 13 vakanın yeniden koşusu (GPU yavaş olduğu için geçici kopyada istemci süresi 900 sn; depodaki betik değişmedi): 11/13 PASS — 5 sınır sorusu (dürüst ret), FC52, FC69–FC73. Yalnız FC23 açık (künye eksik, kısmi cevap; önceden de vardı).
+- Müşteri VM'i: `84250e625` kuruldu (`git archive` → `/tmp/bi-main-84250e62`, `deploy-customer-vm.sh`, birim `vm-deploy-84250e62`). VM sürümü `1f4c9a1d` atadır, çakışma işareti 0, fark yalnız planlayıcı + test. Sonuç EXIT=0, `._*` 0, sürüm kaydı id 27 codeSha 84250e625. VM'de Eylül 2026 net satış (önceki kurulumda) 245.629.727,66 ₺, TİMAŞ satış raporuyla eş.
+- VM kurulumu ve durumu Claude oturumunda izin denetimine takıldı; kullanıcı terminalden izledi.
+
 ## 2026-10-01 — Kabul açıkları: denetçi tarih yargısı ve dürüst ret
 
 - FC54/FC66: model denetçisi «Aralık 2026» aralığını (bugünden ileride) yanlış sanıp doğru planı reddetti («Aralık yerine Kasım olmalı»). Dönemi model hiç seçmiyor, kurallı ayrıştırıcı çözüyor; `planner._build` denetçiye `tarih_kaynağı=sorudaki_ifadeden_kurallı_çözüm` veriyor ve bu durumda tarih uyuşmazlığı yazmamasını söylüyor. Varsayılan dönem (yılbaşından bugüne) bu işareti taşımaz. Testler: `test_finance_dates.py` +2.
