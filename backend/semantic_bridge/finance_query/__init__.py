@@ -9,7 +9,7 @@ import time
 import uuid
 
 from .contracts import CONTRACT_HASH as BASE_CONTRACT_HASH, METRICS, ContractError
-from .planner import follows, build  # noqa: F401 — follows: geriye uyum
+from .planner import follows, build, scope_extension, apply_scope_extension  # noqa: F401 — follows: geriye uyum
 from . import conversation
 from .presentation import public_error, public_response, public_text
 from .executor import Executor
@@ -72,7 +72,15 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         state["planning"] = []
         model = runtime.llm_for("finance")
         state["model"] = getattr(getattr(model, "llm", model), "model", None)
-        plan = build(planned, model, previous, state["planning"])
+        extension = scope_extension(planned)
+        if extension:
+            # «iadeleri de ekle»: the previous answer's plan, widened; no model call.
+            base = previous or conversation.previous_turn(runtime, thread_id, username)
+            state["planning"].append({"stage": "scope_extension", "extension": extension,
+                                      "previousQueryId": (base or {}).get("queryId")})
+            plan = apply_scope_extension(base, extension)
+        else:
+            plan = build(planned, model, previous, state["planning"])
         state["plan"] = plan.to_dict()
         if not execute:
             message = "Soru planı hazır; veri okunmadı."

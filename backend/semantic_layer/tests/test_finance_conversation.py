@@ -179,3 +179,32 @@ def test_store_is_unavailable_keeps_answering(engine):
     rt = make_runtime(SimpleNamespace(log_query=lambda *a, **k: "q1"))
     got = ask(rt, "2026 net satış")
     assert got["type"] == "TEXT_TO_SQL"
+
+
+# ------------------------------------------------------------- «iadeleri de ekle» (iade kapsamı takibi)
+def test_include_returns_follow_up_widens_the_previous_invoice_count(monkeypatch):
+    """Kullanıcı kararı 2026-10-01: fatura sayısı iadesiz; «iadeleri de ekle» önceki planı modelsiz genişletir."""
+    built, executed = [], []
+
+    def fake_build(question, llm, previous=None, trace=None, **kw):
+        built.append(question)
+        return Plan(("invoice_count",), ("channel",), (("2026-09-01", "2026-10-01"),), limit=None, order_by="invoice_count")
+
+    class CountingExecutor(FakeExecutor):
+        def execute(self, plan):
+            executed.append(plan)
+            return [{"channel": "Toptan", **{m: 1 for m in plan.metrics}}]
+
+    monkeypatch.setattr(fq, "build", fake_build)
+    monkeypatch.setattr(fq, "Executor", CountingExecutor)
+    store = open_store("sqlite://")
+    ask(make_runtime(store), "Eylül 2026 kanal bazında fatura sayısı")
+    got = ask(make_runtime(store), "iadeleri de ekle")
+    assert built == ["Eylül 2026 kanal bazında fatura sayısı"]          # takipte model planı yok
+    widened = executed[-1]
+    assert widened.metrics[:3] == ("invoice_count", "return_invoice_count", "invoice_count_with_returns")
+    assert widened.dimensions == ("channel",) and widened.periods == (("2026-09-01", "2026-10-01"),)
+    assert got["type"] == "TEXT_TO_SQL"
+    # Başka thread'de önceki fatura sayısı yok: tahmin değil netleştirme.
+    other = ask(make_runtime(store), "iadeleri de ekle", thread="th9")
+    assert other["type"] == "CLARIFICATION"

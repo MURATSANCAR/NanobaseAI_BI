@@ -152,7 +152,9 @@ PUBLIC_DEFINITIONS = {
     "sold_quantity": "Faturalı toptan ve perakende satış satırlarındaki miktar; iadeler düşülmez, hizmet satırları dahil değildir.",
     "net_quantity": "Faturalı toptan ve perakende satış miktarından satış iadesi miktarının düşülmüş hâli.",
     "return_amount": "İptal edilmemiş satış iadesi faturalarının satır tutarı; iskonto sonrası, KDV hariç, pozitif gösterilir.",
-    "invoice_count": "İptal edilmemiş satış faturalarının sayısı (toptan, perakende ve hizmet); satırlar değil belgeler sayılır.",
+    "invoice_count": "İptal edilmemiş satış faturalarının sayısı (toptan, perakende ve hizmet); iade faturaları dahil değildir, satırlar değil belgeler sayılır.",
+    "return_invoice_count": "İptal edilmemiş satış iadesi faturalarının sayısı (toptan ve perakende iade); satırlar değil belgeler sayılır.",
+    "invoice_count_with_returns": "Satış faturaları ile satış iadesi faturalarının toplam sayısı; iptal edilenler dahil değildir.",
     "invoice_amount": "İptal edilmemiş satış faturalarının genel toplamı; satır bazında net ciro değildir.",
     "collections": "Müşteri carilerindeki iptal edilmemiş alacak hareketleri: nakit, havale, çek, senet ve kredi kartı. Çek/senet "
                    "teslimi dahildir; yalnız nakit tahsilat değildir.",
