@@ -1159,7 +1159,7 @@ class Runtime:
     def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None) -> dict[str, Any]:
         """The retired semantic catalog is never a conversational SQL fallback."""
         from semantic_bridge import chat_scope, chat_portal
-        from semantic_bridge.finance_query import answer as finance_answer
+        from semantic_bridge.finance_query import answer as finance_answer, conversation
 
         report = progress or (lambda stage: None)
         report("understanding")
@@ -1185,9 +1185,22 @@ class Runtime:
                 sq = SemanticQuery(question=question, tenant_id=self.settings.tenant_id,
                                    datasource_id=self.settings.datasource_id)
                 return self._answer_portal(question, scope, sq, thread_id, {}, username, sample_size, record)
+        # Conversation context comes from this user's own records of this thread (restart/multi-worker safe).
+        context = conversation.resolve(self, question, thread_id, username)
+        # A cheap scope decision before the 8k-token plan call: one closed-choice token with probabilities.
+        # Only a confident off-topic/identity verdict answers without the planner; a clarification answer or an
+        # explicit follow-up is part of a data conversation and is never screened.
+        if context.mode == conversation.NEW:
+            scope = chat_scope.screen(question, self.llm_for("chat"), has_context=context.has_history)
+            if scope.is_intro:
+                qid = record(sql=None, compiler="intro", catalog_version=None, executed=False,
+                             answer_type="MODULE_INTRO", answer_summary=scope.reply, gate={"chatScope": scope.to_dict()})
+                log.info("ask screened intent=%s q=%r", scope.intent, question[:80])
+                return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
+                        "explanation": scope.reply, "threadId": thread_id, "queryId": qid}
         # Every remaining data question reaches the new planner, including words
         # such as alışveriş, randevu and bağlı kişi that the old keyword gate missed.
-        return finance_answer(self, question, thread_id, sample_size, execute, report, username)
+        return finance_answer(self, question, thread_id, sample_size, execute, report, username, context=context)
 
     def _retry_documented_empty(self, sq, sql, result, compiled, thread, scope_args, semantic):
         """An empty answer whose cause the knowledge pack documents, on a column the statement actually uses: the

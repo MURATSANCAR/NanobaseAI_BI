@@ -736,6 +736,33 @@ class CatalogStore:
             )
         return qid
 
+    def thread_turns(self, tenant_id: str, datasource_id: str, thread_id: str, username: Optional[str], *,
+                     answered_compiler: str, answered_types: tuple[str, ...]) -> dict[str, Optional[dict[str, Any]]]:
+        """Sohbet bağlamı: aynı kişinin aynı konuşmasındaki son kayıt (`last`) ve `answered_compiler` ile verilmiş son
+        başarılı cevap (`answered`). Kişi eşleşmesi zorunlu: başkasının thread kimliğini bilen biri onun bağlamını
+        okuyamaz; adı olmayan istek yalnız adı olmayan kayıtları görür. Süreç belleği değil kayıt okunur: yeniden
+        başlatma ve çok işçili köprü aynı bağlamı görür."""
+        conds = [S.sl_query_log.c.tenant_id == tenant_id, S.sl_query_log.c.datasource_id == datasource_id,
+                 S.sl_query_log.c.thread_id == thread_id]
+        name = (username or "").strip().lower()
+        conds.append(sa.func.lower(S.sl_query_log.c.username) == name if name else S.sl_query_log.c.username.is_(None))
+        cols = [S.sl_query_log.c.id, S.sl_query_log.c.question, S.sl_query_log.c.compiler, S.sl_query_log.c.answer_type,
+                S.sl_query_log.c.answer_summary, S.sl_query_log.c.resolved_json, S.sl_query_log.c.created_at]
+        order = (S.sl_query_log.c.created_at.desc(), S.sl_query_log.c.id.desc())
+        last = self._rows(sa.select(*cols).where(*conds).order_by(*order).limit(1))
+        answered = self._rows(sa.select(*cols).where(
+            *conds, S.sl_query_log.c.compiler == answered_compiler,
+            S.sl_query_log.c.answer_type.in_(answered_types)).order_by(*order).limit(1))
+
+        def _turn(rows):
+            if not rows:
+                return None
+            r = dict(rows[0])
+            r["resolved"] = _json(r.pop("resolved_json", None)) or {}
+            r["created_at"] = _iso(r.get("created_at"))
+            return r
+        return {"last": _turn(last), "answered": _turn(answered)}
+
     def mark_validated(self, query_id: str, validated: bool) -> bool:
         with self.engine.begin() as conn:
             res = conn.execute(S.sl_query_log.update().where(S.sl_query_log.c.id == query_id).values(validated=bool(validated)))

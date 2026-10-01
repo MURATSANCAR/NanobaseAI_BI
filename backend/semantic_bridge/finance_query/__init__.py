@@ -1,6 +1,5 @@
 """Fresh financial question engine; legacy SQL generation is never a fallback."""
 from __future__ import annotations
-from collections import OrderedDict
 import hashlib
 import json
 import logging
@@ -10,7 +9,9 @@ import time
 import uuid
 
 from .contracts import CONTRACT_HASH as BASE_CONTRACT_HASH, METRICS, ContractError
-from .planner import follows, build
+from .planner import follows, build  # noqa: F401 — follows: geriye uyum
+from . import conversation
+from .presentation import public_error, public_response, public_text
 from .executor import Executor
 from .result_metadata import describe_columns, calculation_definitions
 from .crm_query import CRM_CAPABILITIES
@@ -33,12 +34,15 @@ def _tr(value):
     return str(value)
 
 
-def answer(runtime, question, thread_id, sample_size, execute, progress, username):
-    context_key = (username, thread_id)
-    previous = getattr(runtime, "_finance_plans", {}).get(context_key)
-    if not follows(question):
-        previous = None
-    # Follow-up context belongs only to the new engine, never a legacy semantic plan.
+def answer(runtime, question, thread_id, sample_size, execute, progress, username, context=None):
+    """`context`: çağıran (Runtime.ask) bağlamı zaten kurduysa aynı nesne; yoksa sorgu kaydından burada kurulur.
+
+    Ekrana giden metinler `presentation` süzgecinden geçer; teknik ayrıntı kayıtta (`error`, `semantic`) kalır."""
+    # Follow-up context belongs only to the new engine, never a legacy semantic plan, and lives in the
+    # persistent query log of the same user and thread (restart and multi-worker safe).
+    ctx = context or conversation.resolve(runtime, question, thread_id, username)
+    planned = ctx.question
+    previous = ctx.previous
     started = time.monotonic()
     engine = Executor(runtime)
     plan = None
@@ -46,7 +50,9 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
     state = {"engine": "finance_contract_v1", "contractHash": CONTRACT_HASH, "engineCodeHash": ENGINE_HASH,
              "crmContractHash": hashlib.sha256(json.dumps(CRM_CAPABILITIES, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
              "legacyCatalogUsed": False, "legacySqlFallback": False, "readRetries": engine.read_retries,
-             "stage": "planning"}
+             "stage": "planning", "conversation": ctx.to_state()}
+    if planned != question:
+        state["effectiveQuestion"] = planned
 
     def record(kind, summary, result=None, error=None):
         nonlocal sql
@@ -66,10 +72,10 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         state["planning"] = []
         model = runtime.llm_for("finance")
         state["model"] = getattr(getattr(model, "llm", model), "model", None)
-        plan = build(question, model, previous, state["planning"])
+        plan = build(planned, model, previous, state["planning"])
         state["plan"] = plan.to_dict()
         if not execute:
-            message = "Finans soru planı hazır; veri okunmadı."
+            message = "Soru planı hazır; veri okunmadı."
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": message,
                     "threadId": thread_id, "semantic": state, "queryId": record("CLARIFICATION", message)}
         state["stage"] = "source_execution"
@@ -97,13 +103,17 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
                 numeric.update(spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct"))
         if any(set(row) != set(fields) for row in rows) or any(m not in fields for m in numeric):
             raise ContractError("Cevabın kolonları ölçü sözleşmesini sağlamıyor.", code="SOURCE_CONTRACT_VIOLATION")
-        columns = describe_columns(plan, fields, numeric)
+        columns = public_response({"columns": describe_columns(plan, fields, numeric)})["columns"]
         labels = {column["name"]: column for column in columns}
-        definition_items = calculation_definitions(plan)
+        internal_definitions = calculation_definitions(plan)
+        definition_items = [public_text(d) for d in internal_definitions]
         sql = "\n\n".join("-- " + run["source"] + "\n" + run["sql"] for run in engine.runs)
         notes = list(dict.fromkeys([*getattr(plan, "notes", ()), *engine.notes]))
         if "author" in plan.dimensions:
             notes.append("Yazar kırılımı kitap künyesindeki yazar metnidir; kişi kimliği ve telif sahipliği çıkarımı yapılmaz.")
+        # Technical wording stays in the record (semantic state); the screen gets business language.
+        state["internalNotes"], state["internalDefinitions"] = list(notes), list(internal_definitions)
+        notes = [public_text(n) for n in notes]
         definitions = " ".join(definition_items)
         def label(k):
             return labels.get(k, {}).get("label", METRICS[k].label if k in METRICS else k)
@@ -120,9 +130,9 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
             summary += " Veri notu: " + " ".join(notes)
         kind = "PARTIAL_ANSWER" if engine.gaps or not engine.coverage_complete else "TEXT_TO_SQL"
         if engine.section_results:
-            summary = f"{len(engine.section_results)} rapor bölümü hazır. " + " · ".join(f"{s['title']}: {s['totalRows']} satır" if s["status"] == "COMPLETE" else f"{s['title']}: tamamlanamadı" for s in engine.section_results)
+            summary = f"{len(engine.section_results)} rapor bölümü hazır. " + " · ".join(f"{public_text(s['title'])}: {s['totalRows']} satır" if s["status"] == "COMPLETE" else f"{public_text(s['title'])}: tamamlanamadı" for s in engine.section_results)
         if engine.gaps:
-            summary += " Kesin cevaplanamayan kısımlar: " + " · ".join(g["reason"] for g in engine.gaps)
+            summary += " Kesin cevaplanamayan kısımlar: " + " · ".join(public_text(g["reason"]) for g in engine.gaps)
         state["gaps"] = engine.gaps
         rid = uuid.uuid4().hex
         result = {"id": rid, "columns": columns, "records": rows, "totalRows": len(rows), "truncated": False,
@@ -136,27 +146,30 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         result["gaps"] = engine.gaps
         progress("presenting")
         if not engine.section_results and not plan.logo_report and not plan.crm_report and not plan.relational_query:
-            runtime.attach_widget(result, question)
-        runtime.remember_result(result, question=question, sql=sql)
+            runtime.attach_widget(result, planned)
+        runtime.remember_result(result, question=planned, sql=sql)
         state["stage"] = "complete"
+        # The record (state["plan"], effectiveQuestion) is the follow-up context of the next message.
         qid = record(kind, summary, result)
-        if not hasattr(runtime, "_finance_plans"):
-            runtime._finance_plans = OrderedDict()
-        runtime._finance_plans[context_key] = {"question": question, "plan": plan.to_dict()}
-        while len(runtime._finance_plans)>200:
-            runtime._finance_plans.popitem(last=False)
-        return {**result, "type": kind, "sql": sql, "resultId": rid, "summary": summary,
+        return public_response({**result, "type": kind, "sql": sql, "resultId": rid, "summary": summary,
                 "records": rows[:max(1,min(sample_size,500))], "shownRows": min(len(rows),max(1,min(sample_size,500))),
                 "rowCount": len(rows), "threadId": thread_id, "queryId": qid, "semantic": state,
                 "answerQuality": {"contractChecked": True, "independentlyVerified": False,
-                                  "sourceComplete": engine.coverage_complete, "contractHash": CONTRACT_HASH}}
+                                  "sourceComplete": engine.coverage_complete, "contractHash": CONTRACT_HASH}})
     except ContractError as exc:
-        message = str(exc)
+        internal = str(exc)
+        message = public_error(exc)
         status = exc.code
         kind = "CLARIFICATION" if status == "NEEDS_CLARIFICATION" else status
         state["outcome"] = status
         state["failureStage"] = state["stage"]
-        qid = record(kind, message, error=message)
+        state["failureDetail"] = internal
+        if status == "NEEDS_CLARIFICATION":
+            # The next message of this user in this thread is read as the answer (conversation.resolve).
+            state["awaitingAnswer"] = True
+        if internal != message:
+            log.info("finance contract message kept internal code=%s detail=%s", status, internal[:500])
+        qid = record(kind, message, error=internal)
         return {"id": uuid.uuid4().hex, "type": kind, "needs_clarification": status == "NEEDS_CLARIFICATION",
                 "explanation": message, "threadId": thread_id, "semantic": state, "queryId": qid}
     except Exception as exc:
@@ -167,13 +180,13 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
         phase = state["stage"]
         if phase == "planning":
             kind = "PLAN_INVALID"
-            message = "Finans sorusunun planlama veya model hizmeti işlemi tamamlanamadı; veri kaynaklarına sorgu gönderilmedi."
+            message = "Soru şu anda hesap planına dönüştürülemedi; veri kaynaklarına başvurulmadı. Biraz sonra yeniden deneyebilirsiniz."
         elif phase == "source_execution":
             kind = "DATA_SOURCE_UNAVAILABLE"
-            message = "Finans cevabı doğrulanamadı; veri kaynağını okuma veya hesap yürütme işlemi tamamlanamadı."
+            message = "Cevap doğrulanamadı; veri kaynağı okunurken ya da hesap yapılırken işlem tamamlanamadı."
         else:
             kind = "PLAN_INVALID"
-            message = "Finans sonucu hazırlanırken doğrulama tamamlanamadı; sonuç sunulmadı."
+            message = "Sonuç hazırlanırken doğrulama tamamlanamadı; sonuç sunulmadı."
         state["outcome"] = kind
         state["failureStage"] = phase
         # Details remain in restricted server logs, never the user-visible query record.
