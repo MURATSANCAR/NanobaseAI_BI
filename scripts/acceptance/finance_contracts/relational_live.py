@@ -24,8 +24,17 @@ import urllib.request
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from composable_live import (ROOT, connect, environment, manifest, query, save,
+from composable_live import (ROOT, connect, environment, manifest as source_manifest, query, save,
                              require_reference_day, REFERENCE_CONTEXT, REFERENCE_RETRIES)
+
+def manifest():
+    snapshot=source_manifest()
+    # Bind the acceptance transport/reference helpers as well as product code.
+    for name in ("composable_live.py", "relational_live.py"):
+        path=Path(__file__).with_name(name)
+        snapshot["acceptance_helpers/"+name]=hashlib.sha256(path.read_bytes()).hexdigest()
+    return snapshot
+
 
 BOOK = "dbo.new_kitapBase B"
 ACTIVE = "B.statecode=0 AND B.statuscode=1"
@@ -43,7 +52,7 @@ def cases():
     def add(question,sql,columns,keys,numeric=(),pair=None,changed_from=None,join_tables=1):
         out.append(dict(id=f"RL{len(out)+1:03d}",question=question,referenceSql=sql,
                         columns=columns.split(),keys=keys.split(),numeric=list(numeric),
-                        units={k:("binary_missing_flag" if k=="missing_isbn" else "book_count") for k in numeric},paraphrase_of=pair,
+                        units={k:("gösterge" if k=="missing_isbn" else "adet") for k in numeric},paraphrase_of=pair,
                         changed_from=changed_from,source_table_count=join_tables))
     sql=f"SELECT B.new_kitapId book_id,B.new_name book_name,{ISBN} isbn FROM {BOOK} WHERE {ACTIVE}"
     tail=" Kolon adları book_id, book_name, isbn olsun. Güncel ISBN alanını kullan; metin kenar boşluklarını temizle, boş ISBN'yi NULL bırak. Bütün satırlar gelsin."
@@ -112,7 +121,12 @@ def compare(case,answer,whole,records,expected_hash):
     if semantic.get("engine")!="finance_contract_v1" or semantic.get("engineCodeHash")!=expected_hash:errors.append("STRUCTURE: engine/code hash mismatch")
     if answer.get("type")!="TEXT_TO_SQL":errors.append("STRUCTURE: complete answer not produced")
     if not answer.get("resultId") or whole.get("id")!=answer["resultId"]:errors.append("STRUCTURE: stored result identity differs")
-    if whole.get("gaps") or semantic.get("gaps") or whole.get("sourceComplete") is not True:errors.append("STRUCTURE: source coverage incomplete")
+    if (whole.get("gaps") != [] or answer.get("gaps") != [] or semantic.get("gaps") != []
+            or whole.get("sourceComplete") is not True or answer.get("sourceComplete") is not True
+            or (answer.get("answerQuality") or {}).get("sourceComplete") is not True):
+        errors.append("STRUCTURE: source coverage incomplete")
+    if answer.get("id")!=whole.get("id"):errors.append("STRUCTURE: preview execution id differs")
+    if answer.get("columns")!=whole.get("columns"):errors.append("STRUCTURE: preview column metadata differs")
     dataset=whole
     if whole.get("sections"):
         if len(whole["sections"])!=1:return errors+["STRUCTURE: unexpected multi-section output"]
@@ -121,11 +135,19 @@ def compare(case,answer,whole,records,expected_hash):
         if answer.get("sections")!=whole["sections"]:errors.append("STRUCTURE: preview sections differ")
     rows=dataset.get("records");overview=whole.get("records")
     if not isinstance(rows,list) or not isinstance(overview,list):return errors+["STRUCTURE: stored records missing"]
-    if whole.get("truncated") is not False or dataset.get("truncated") is not False:errors.append("STRUCTURE: truncated output")
-    if dataset.get("totalRows")!=len(rows) or whole.get("totalRows")!=len(overview) or answer.get("rowCount")!=len(overview):errors.append("STRUCTURE: result cardinality metadata differs")
+    if answer.get("truncated") is not False or whole.get("truncated") is not False or dataset.get("truncated") is not False:errors.append("STRUCTURE: truncated output")
+    if dataset.get("totalRows")!=len(rows) or whole.get("totalRows")!=len(overview) or answer.get("rowCount")!=len(overview) or answer.get("totalRows")!=len(overview):errors.append("STRUCTURE: result cardinality metadata differs")
     names=[c.get("name") for c in dataset.get("columns",[])]
-    if len(names)!=len(case["columns"]) or set(names)!=set(case["columns"]):errors.append("STRUCTURE: output column identities differ")
-    if answer.get("records",[])!=overview[:len(answer.get("records",[]))] or answer.get("shownRows")!=len(answer.get("records",[])):errors.append("STRUCTURE: preview not prefix of same stored result")
+    if names!=case["columns"]:errors.append("STRUCTURE: output column identities/order differ")
+    for column in dataset.get("columns",[]):
+        name=column.get("name")
+        expected_type="float" if name in case["numeric"] else "str"
+        if column.get("type")!=expected_type:errors.append("STRUCTURE: output column type differs "+str(name))
+        if name in case["units"] and column.get("unit")!=case["units"][name]:
+            errors.append("STRUCTURE: output column unit differs "+str(name))
+    expected_shown=min(7,len(overview))
+    if answer.get("records")!=overview[:expected_shown] or answer.get("shownRows")!=expected_shown:
+        errors.append("STRUCTURE: preview length/content differs from same stored result")
     if dataset is not whole and overview!=[{"section":dataset.get("title"),"status":dataset.get("status"),"row_count":len(rows)}]:errors.append("STRUCTURE: section overview differs")
     errors.extend(compare_rows(case,records,rows))
     return errors

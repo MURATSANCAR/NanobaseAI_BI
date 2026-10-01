@@ -72,6 +72,13 @@ def _metadata(plan):
         labels[spec["id"]+"_group_total"] = {"label": metric.label + " grup toplamı", "unit": metric.unit}
         labels[spec["id"]+"_share_pct"] = {"label": metric.label + " payı", "unit": "%", "formula": "satır ölçüsü / grup toplamı × 100"}
         labels[spec["id"]+"_cumulative_pct"] = {"label": metric.label + " kümülatif payı", "unit": "%", "formula": "azalan sıralı birikimli ölçü / grup toplamı × 100"}
+    if getattr(plan, "relational_query", None):
+        for selected in plan.relational_query["select"]:
+            key = selected["id"]
+            if selected["op"] in {"count_records", "count_distinct"}:
+                labels[key] = {"label": key, "unit": "adet", "definition": "Filtrelenmiş nüfusta tekil kimlik sayısı" if selected["op"] == "count_records" else "Seçilen alandaki NULL dışı farklı değerlerin sayısı"}
+            elif selected["op"] == "missing_flag":
+                labels[key] = {"label": key, "unit": "gösterge", "definition": "Eksikse 1, doluysa 0; metinde boş ve yalnız boşluk içeren değerler eksiktir"}
     return labels
 
 
