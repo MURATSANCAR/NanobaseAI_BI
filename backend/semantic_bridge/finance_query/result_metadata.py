@@ -3,6 +3,16 @@ from datetime import date, timedelta
 
 from .contracts import METRICS
 
+
+def public_definition(metric_id):
+    from .presentation import public_definition as _public
+    return _public(metric_id)
+
+
+def _readable(identifier):
+    words = str(identifier).replace("_", " ").strip()
+    return words[:1].upper() + words[1:]
+
 LABELS = {
     "book_code": "Stok kodu", "book_name": "Kitap adı", "customer_code": "Müşteri kodu",
     "customer_name": "Müşteri adı", "channel": "Satış kanalı", "author": "Yazar künyesi",
@@ -74,7 +84,7 @@ def _metadata(plan):
     labels = {name: {"label": label} for name,label in LABELS.items()}
     for key in plan.metrics:
         metric = METRICS[key]
-        labels[key] = {"label": metric.label, "unit": metric.unit, "definition": metric.definition}
+        labels[key] = {"label": metric.label, "unit": metric.unit, "definition": public_definition(key)}
     for spec in plan.derived:
         left, right = METRICS[spec.left], METRICS[spec.right]
         if spec.op == "difference":
@@ -106,7 +116,7 @@ def _metadata(plan):
         for selected in plan.relational_query["select"]:
             key = selected["id"]
             if selected["op"] in {"count_records", "count_distinct"}:
-                labels[key] = {"label": key, "unit": "adet", "definition": "Filtrelenmiş nüfusta tekil kimlik sayısı" if selected["op"] == "count_records" else "Seçilen alandaki NULL dışı farklı değerlerin sayısı"}
+                labels[key] = {"label": key, "unit": "adet", "definition": "Süzgeçlerden geçen tekil kayıt sayısı" if selected["op"] == "count_records" else "Seçilen alandaki boş olmayan farklı değerlerin sayısı"}
             elif selected["op"] == "missing_flag":
                 labels[key] = {"label": key, "unit": "gösterge", "definition": "Eksikse 1, doluysa 0; metinde boş ve yalnız boşluk içeren değerler eksiktir"}
     return labels
@@ -121,7 +131,7 @@ def describe_columns(plan, fields, numeric):
 
 def calculation_definitions(plan):
     labels = _metadata(plan)
-    definitions = [METRICS[m].definition for m in plan.metrics]
+    definitions = [public_definition(m) for m in plan.metrics]
     for spec in plan.derived:
         meta = labels[spec.id]
         definitions.append(f"{meta['label']}: {meta['formula']} ({meta['unit']}).")
@@ -138,7 +148,7 @@ def calculation_definitions(plan):
     if "author_group" in plan.dimensions:
         definitions.append("Yazar grubu aktif Yazar katılımındaki gerçek kişi kimlikleri kümesidir; satış her ortak gruba bir kez yazılır, kişi başına çoğaltılmaz. Güncel CRM ilişkisi kullanılır.")
     if "subbrand" in plan.dimensions:
-        definitions.append("Alt marka new_yayinciid ile bağlı aktif Marka kimliğidir; alternatif alt marka alanıyla veya geçmiş dönem yayıncı kimliğiyle karıştırılmaz.")
+        definitions.append("Alt marka, kitap kartındaki yayıncı bağlantısıyla bağlı aktif marka kaydıdır; alternatif alt marka alanıyla veya geçmiş dönem yayıncı kaydıyla karıştırılmaz.")
     if "author" in plan.dimensions:
         definitions.append("Yazar kırılımı kitap künyesindeki metindir; kişi kimliği veya telif sahipliği değildir.")
     if getattr(plan, "logo_report", None):
@@ -153,7 +163,7 @@ def calculation_definitions(plan):
         definitions.append("CRM güncel aktif kaynaklarında sorudan oluşturulan alan, ilişki, filtre ve gruplama planı; geçmiş durum veya kimlik sınıflandırması anlamına gelmez.")
         for selected in plan.relational_query["select"]:
             if selected["op"] == "count_records":
-                definitions.append(selected["id"] + ": filtrelerden geçen tekil kök kayıt kimliği sayısı.")
+                definitions.append(_readable(selected["id"]) + ": süzgeçlerden geçen tekil kayıt sayısı.")
             elif selected["op"] == "count_distinct":
-                definitions.append(selected["id"] + ": seçilen alandaki NULL dışındaki farklı değerlerin sayısı.")
+                definitions.append(_readable(selected["id"]) + ": seçilen alandaki boş olmayan farklı değerlerin sayısı.")
     return list(dict.fromkeys(definitions))

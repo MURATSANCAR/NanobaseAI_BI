@@ -63,10 +63,38 @@ class Plan:
 
 
 INVOICE_COUNT_METRICS = {"invoice_count", "return_invoice_count", "invoice_count_with_returns"}
+#: Dönem sözcükleri: «bu yıl», «bu ay», «önceki ay», «bir önceki çeyrek» kendi başına bir dönemdir, takip değildir.
+_PERIOD_WORD = r"(?:yil|sene|ay|hafta|gun|ceyrek|donem|yariyil|sezon|sabah|aksam|gece|mevsim)\w*"
+#: Önceki cevaba gönderme yapan nesneler («önceki sonuç», «az önceki tablo»).
+_ANSWER_OBJECT = r"(?:soru|cevap|yanit|sonuc|tablo|rapor|hesap|liste|sorgu|rakam|veri|grafik|kirilim)\w*"
+_FOLLOWS = re.compile(
+    # Konuşmayı sürdüren açılış: «Peki…», «Ya geçen yıl?», «Bir de…», «Ayrıca…»
+    r"^\s*(?:peki|ya|ayrica|bir\s+de)\b"
+    # Önceki cevabı gösteren zamirler: bunu, bunun, bunlardan, şunları, onların…
+    r"|\b(?:bun|sun|on)(?:u|un|unla|lar|lari|larin|lardan|lara|larda|larla)\b"
+    # «bu sonuç», «bu kitapların»; «bu yıl/bu ay» dönemdir
+    r"|\bbu\s+(?!" + _PERIOD_WORD + r"\b)[a-z]\w*"
+    # «aynısını», «aynı şekilde/hesabı/raporu»; «geçen yılın aynı dönemi» dönem karşılaştırmasıdır
+    r"|\bayni(?:si\w*|\s+(?:sekil|hesap|hesab|sorgu|rapor|tablo|soru|liste|kirilim)\w*)"
+    # «önceki sonuç», «az önceki»; «önceki ay» dönemdir
+    r"|\b(?:az\s+onceki|(?:bir\s+)?onceki\s+" + _ANSWER_OBJECT + r")"
+    r"|\b(?:yukaridaki|ustteki|sonuctaki|tablodaki|listedeki|raporundaki)\b"
+    # «geçen yıl için de», «iadeleri de ekle»
+    r"|\b(?:icin|ile)\s+(?:de|da)\b|\b(?:de|da|te|ta)\s+(?:ekle|dahil|katil|kat|goster|getir|hesapla|ver)\w*")
 
 
 def follows(question: str) -> bool:
-    return bool(re.search(r"\b(peki|aynisini|bunu|bunlari|bu sonucu|bu tabloyu|bir de|onceki)\b", fold(question)))
+    """Mesaj önceki cevaba dayanıyor mu? Yalnız açık gönderme sayılır; dönem ifadesi takip değildir."""
+    return bool(_FOLLOWS.search(fold(question)))
+
+
+def unmet_error(prefix, items, code="PLAN_INVALID"):
+    """Koşulu karşılanmayan plan hatası. İleti teknik ayrıntıyı korur (onarım turu ve kayıt için); `unmet`
+    model denetiminin karşılanmadı dediği koşulların listesidir — ekrana yalnız süzgeçten geçmiş hâliyle gider."""
+    items = [str(i) for i in items if str(i).strip()]
+    error = ContractError(prefix + "; ".join(items)[:600], code=code)
+    error.unmet = tuple(items)
+    return error
 
 
 def _json(text):
@@ -360,10 +388,11 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if data.get("gaps") or data.get("coverage"):
         raise ContractError("Bölümlü kapsam haritası yalnız bölümlü raporda kullanılabilir.", code="PLAN_INVALID")
     missing = data.get("uncovered") or []
-    if missing or data.get("clarification"):
-        reason = str(data.get("clarification") or "; ".join(map(str, missing)))
-        raise ContractError("Bu kapsam için doğrulanmış hesap tanımı eksik: " + reason[:600],
-                            code="NEEDS_CLARIFICATION" if data.get("clarification") else "UNSUPPORTED_CAPABILITY")
+    if data.get("clarification"):
+        # The model's question to the person; the next message in the thread is read as its answer.
+        raise ContractError(str(data["clarification"])[:600], code="NEEDS_CLARIFICATION")
+    if missing:
+        raise unmet_error("Bu kapsam için doğrulanmış hesap tanımı eksik: ", missing, code="UNSUPPORTED_CAPABILITY")
     branches = [k for k in ("crm", "logo_report", "crm_report", "relational_query") if data.get(k) is not None]
     if len(branches) > 1:
         raise ContractError("Bir yaprak planda birden çok kaynak raporu seçilemez.", code="PLAN_INVALID")
@@ -413,7 +442,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
              "previous": previous}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "crm_review", trace)
         if trace is not None: trace.append({"stage": "review", "output": review})
         if review.get("ok") is not True or review.get("missing"):
-            raise ContractError("CRM sorusunun bütün koşulları plana taşınamadı: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")
+            raise unmet_error("CRM sorusunun bütün koşulları plana taşınamadı: ", review.get("missing") or [])
         return Plan((), (), periods, crm=crm)
     metrics = tuple(data.get("metrics") or ())
     dims = tuple(data.get("dimensions") or ())
@@ -657,7 +686,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if trace is not None:
         trace.append({"stage": "review", "output": review})
     if review.get("ok") is not True or review.get("missing"):
-        raise ContractError("Sorunun bütün koşulları plana taşınamadı: " + "; ".join(map(str, review.get("missing") or ["ölçü/kırılım uyumu"])), code="PLAN_INVALID")
+        raise unmet_error("Sorunun bütün koşulları plana taşınamadı: ", review.get("missing") or ["ölçü/kırılım uyumu"])
     return Plan(metrics, dims, periods, tuple(filters), kind, limit, order, data.get("descending", True), derived, having, comparison, analytics=analytics, notes=tuple(period_notes))
 
 
@@ -880,7 +909,7 @@ def build_composite(data, question, llm, previous, trace, today, depth):
          "gaps": gaps, "coverage": coverage, "contract": CONTRACT, "crmCapabilities": CRM_CAPABILITIES,
          "crmReportCapabilities": CRM_REPORT_CAPABILITIES, "logoReportCapabilities": LOGO_REPORT_CAPABILITIES}, ensure_ascii=False)}], 2400, REVIEW_SCHEMA, "composite_review", trace)
     if review.get("ok") is not True or review.get("missing"):
-        raise ContractError("Bölümlü rapor tüm koşulları güvenle kapsamıyor: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")
+        raise unmet_error("Bölümlü rapor tüm koşulları güvenle kapsamıyor: ", review.get("missing") or [])
     return Plan((), (), (), sections=tuple(plans), gaps=tuple(gaps), coverage=tuple(coverage))
 
 
@@ -1189,7 +1218,7 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
     if missing:
         # This rejects the selected plan, not every capability in the contract.
         # The root may replan once; the same report/metric guards run again.
-        raise ContractError("Seçilen kaynak raporu sorunun tüm koşullarını karşılamıyor: " + "; ".join(review.get("missing") or []), code="PLAN_INVALID")
+        raise unmet_error("Seçilen kaynak raporu sorunun tüm koşullarını karşılamıyor: ", review.get("missing") or [])
     fallback_gaps = tuple({
         "status": "UNSUPPORTED_CAPABILITY",
         "reason": "İstenen: " + intents[check["intent_id"]]["question_quote"]
