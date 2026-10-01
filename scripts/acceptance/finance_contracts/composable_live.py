@@ -26,6 +26,9 @@ import urllib.error
 import urllib.request
 from zoneinfo import ZoneInfo
 
+# Bağımsız referans: ölçüler kullanıcı kararı/altın setten, ürünün METRICS ifadesinden değil (2026-10-01).
+import independent_reference as ir
+
 REFERENCE_DATE = "2026-09-30"
 
 
@@ -45,28 +48,31 @@ REFERENCE_CONTEXT = {}
 EXACT_COUNT_COLUMNS = frozenset({"sold_quantity", "net_quantity", "invoice_count", "record_count",
                                  "missing_isbn", "missing_book_code", "missing_author"})
 ROOT = Path("/data/nanobaseai/bi/frontend/backend")
-ST = "dbo.LG_411_01_STLINE S"
-MEASURES = {
-    "sales_amount": "SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE 0 END)",
-    "return_amount": "SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END)",
-    "net_sales": "SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.LINENET ELSE S.LINENET END)",
-    "sold_quantity": "SUM(CASE WHEN S.TRCODE IN (7,8) THEN S.AMOUNT ELSE 0 END)",
-    "net_quantity": "SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.AMOUNT WHEN S.TRCODE IN (7,8) THEN S.AMOUNT ELSE 0 END)",
-}
+ST = "dbo.LG_411_01_STLINE S WITH (NOLOCK)"
+SALES_METRICS = ("sales_amount", "return_amount", "net_sales", "sold_quantity", "net_quantity")
+
+
+def measures(variant="decision"):
+    """`decision`: ir.LOGO_MEASURES (karar/altın set). `product`: kurulu ürün ifadesi, yalnız TANIM_FARKI sınıflaması."""
+    return {m: ir.measure_sql(m, "S", variant) for m in SALES_METRICS}
+
+
+MEASURES = measures("decision")
 DIMENSIONS = {
-    "channel": ("C.SPECODE2", "LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF"),
+    "channel": ("C.SPECODE2", "LEFT JOIN dbo.LG_411_CLCARD C WITH (NOLOCK) ON C.LOGICALREF=S.CLIENTREF"),
     "day": ("CONVERT(varchar(10),S.DATE_,23)", ""),
     "month": ("CONVERT(varchar(7),S.DATE_,23)", ""),
 }
 
 
-def sales_sql(start, end, metrics, dimension=None, having=None, limit=None):
+def sales_sql(start, end, metrics, dimension=None, having=None, limit=None, variant="decision"):
     # This reference builder has its own tiny, fixed allowlist. Never accepts AI SQL.
+    MEASURES = measures(variant)
     expression, join = DIMENSIONS[dimension] if dimension else (None, "")
     columns = ([f"{expression} [{dimension}]"] if dimension else [])
     columns += [f"COALESCE({MEASURES[m]},0) [{m}]" for m in metrics]
     sql = "SELECT " + (f"TOP ({limit}) " if limit else "") + ",".join(columns)
-    sql += f" FROM {ST} {join} WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_>='{start}' AND S.DATE_<'{end}'"
+    sql += f" FROM {ST} {join} WHERE {ir.population_where('S')} AND S.DATE_>='{start}' AND S.DATE_<'{end}'"
     if expression:
         sql += " GROUP BY " + expression
     if having:
@@ -78,7 +84,13 @@ def sales_sql(start, end, metrics, dimension=None, having=None, limit=None):
     return sql
 
 
-def cases(reference_date=REFERENCE_DATE):
+def cases(reference_date=REFERENCE_DATE, variant="decision"):
+    """`variant='product'` aynı vakaları ürünün bugünkü tanımıyla kurar; yalnız TANIM_FARKI sınıflaması içindir."""
+    MEASURES = measures(variant)
+    def sales_sql(*a, **k):
+        return globals()["sales_sql"](*a, variant=variant, **k)
+    def kitap(alias="K"):
+        return ir.crm_active("new_kitapBase", alias, variant)
     anchor=date.fromisoformat(reference_date)
     month_index=anchor.year*12+anchor.month-1-3
     back_year,back_month=divmod(month_index,12);back_month+=1
@@ -122,8 +134,8 @@ def cases(reference_date=REFERENCE_DATE):
     add("Peki aynı dönemin iade tutarı toplamı ne kadar?",["return_amount"],thread="followup1",followup=True)
     add("Bir de aynı dönemde iadeler düşülmeden satılan adet toplamını ver.",["sold_quantity"],thread="followup1",followup=True)
     for question, sql, columns, keys in [
-        ("CRM'deki aktif kitaplarda güncel ISBN, stok kodu ve yazar künyesi metni boş olanların sayılarını ayrı ayrı, aktif kitap toplamıyla birlikte göster.", "SELECT COUNT_BIG(*) record_count,SUM(CASE WHEN NULLIF(LTRIM(RTRIM(new_isbn13)),'') IS NULL THEN 1 ELSE 0 END) missing_isbn,SUM(CASE WHEN NULLIF(LTRIM(RTRIM(new_stokkodu)),'') IS NULL THEN 1 ELSE 0 END) missing_book_code,SUM(CASE WHEN NULLIF(LTRIM(RTRIM(new_yazartext)),'') IS NULL THEN 1 ELSE 0 END) missing_author FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1", ["record_count","missing_isbn","missing_book_code","missing_author"], []),
-        ("CRM'de aynı stok kodunu kullanan birden fazla aktif kitap kaydı var mı? Boş stok kodlarını dahil etme, her kodu kayıt sayısıyla göster.", "SELECT LTRIM(RTRIM(new_stokkodu)) book_code,COUNT_BIG(*) record_count FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1 AND NULLIF(LTRIM(RTRIM(new_stokkodu)),'') IS NOT NULL GROUP BY LTRIM(RTRIM(new_stokkodu)) HAVING COUNT_BIG(*)>=2", ["book_code","record_count"],["book_code"]),
+        ("CRM'deki aktif kitaplarda güncel ISBN, stok kodu ve yazar künyesi metni boş olanların sayılarını ayrı ayrı, aktif kitap toplamıyla birlikte göster.", "SELECT COUNT_BIG(*) record_count,SUM(X.mi) missing_isbn,SUM(X.mb) missing_book_code,SUM(X.ma) missing_author FROM (SELECT CASE WHEN NULLIF(LTRIM(RTRIM(K.new_isbn13)),'') IS NULL THEN 1 ELSE 0 END mi,CASE WHEN NULLIF(LTRIM(RTRIM(K.new_stokkodu)),'') IS NULL THEN 1 ELSE 0 END mb,CASE WHEN NULLIF(LTRIM(RTRIM(K.new_yazartext)),'') IS NULL THEN 1 ELSE 0 END ma FROM dbo.new_kitapBase K WITH (NOLOCK) WHERE "+kitap()+") X", ["record_count","missing_isbn","missing_book_code","missing_author"], []),
+        ("CRM'de aynı stok kodunu kullanan birden fazla aktif kitap kaydı var mı? Boş stok kodlarını dahil etme, her kodu kayıt sayısıyla göster.", "SELECT LTRIM(RTRIM(K.new_stokkodu)) book_code,COUNT_BIG(*) record_count FROM dbo.new_kitapBase K WITH (NOLOCK) WHERE "+kitap()+" AND NULLIF(LTRIM(RTRIM(K.new_stokkodu)),'') IS NOT NULL GROUP BY LTRIM(RTRIM(K.new_stokkodu)) HAVING COUNT_BIG(*)>=2", ["book_code","record_count"],["book_code"]),
     ]:
         out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="crm",referenceSql=sql,columns=columns,keys=keys,periods=[]))
     add("Eylül 2026'da iadeler düşülmeden KDV hariç satış tutarı, KDV hariç net satış tutarından yüzde kaç farklı? Farkı net satış tutarına böl; her iki tutarı da göster.", ["sales_amount","net_sales"], derived=dict(op="percent_change",left="sales_amount",right="net_sales",scale=100))
@@ -137,7 +149,7 @@ def cases(reference_date=REFERENCE_DATE):
          "WITH sales AS ("+sales_sql("2026-09-01","2026-10-01",["net_sales"])+"), invoices AS (SELECT COUNT_BIG(*) invoice_count FROM dbo.LG_411_01_INVOICE I WHERE "+invoice_where+"), payments AS (SELECT COALESCE(SUM(L.AMOUNT),0) collections FROM dbo.LG_411_01_CLFLINE L JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE "+collection_where+") SELECT S.net_sales,I.invoice_count,P.collections FROM sales S CROSS JOIN invoices I CROSS JOIN payments P",
          ["net_sales","invoice_count","collections"],[]),
         ("Eylül 2026'da müşteri bazında KDV hariç iadeler düşülmüş net satış tutarı ile satış faturalarının genel toplamını ayrı kolonlarda göster. Bir tarafta hareketi olmayan müşteriyi listeden düşürme.",
-         "WITH sales AS (SELECT C.CODE customer_code,C.DEFINITION_ customer_name,COALESCE("+MEASURES["net_sales"]+",0) net_sales FROM "+ST+" LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY C.CODE,C.DEFINITION_), invoices AS (SELECT C.CODE customer_code,C.DEFINITION_ customer_name,SUM(I.NETTOTAL) invoice_amount FROM dbo.LG_411_01_INVOICE I LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=I.CLIENTREF WHERE "+invoice_where+" GROUP BY C.CODE,C.DEFINITION_) SELECT COALESCE(S.customer_code,I.customer_code) customer_code,COALESCE(S.customer_name,I.customer_name) customer_name,COALESCE(S.net_sales,0) net_sales,COALESCE(I.invoice_amount,0) invoice_amount FROM sales S FULL OUTER JOIN invoices I ON (S.customer_code=I.customer_code OR S.customer_code IS NULL AND I.customer_code IS NULL) AND (S.customer_name=I.customer_name OR S.customer_name IS NULL AND I.customer_name IS NULL)",
+         "WITH sales AS (SELECT C.CODE customer_code,C.DEFINITION_ customer_name,COALESCE("+MEASURES["net_sales"]+",0) net_sales FROM "+ST+" LEFT JOIN dbo.LG_411_CLCARD C WITH (NOLOCK) ON C.LOGICALREF=S.CLIENTREF WHERE "+ir.population_where("S")+" AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY C.CODE,C.DEFINITION_), invoices AS (SELECT C.CODE customer_code,C.DEFINITION_ customer_name,SUM(I.NETTOTAL) invoice_amount FROM dbo.LG_411_01_INVOICE I LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=I.CLIENTREF WHERE "+invoice_where+" GROUP BY C.CODE,C.DEFINITION_) SELECT COALESCE(S.customer_code,I.customer_code) customer_code,COALESCE(S.customer_name,I.customer_name) customer_name,COALESCE(S.net_sales,0) net_sales,COALESCE(I.invoice_amount,0) invoice_amount FROM sales S FULL OUTER JOIN invoices I ON (S.customer_code=I.customer_code OR S.customer_code IS NULL AND I.customer_code IS NULL) AND (S.customer_name=I.customer_name OR S.customer_name IS NULL AND I.customer_name IS NULL)",
          ["customer_code","customer_name","net_sales","invoice_amount"],["customer_code","customer_name"]),
         ("Eylül 2026'da kanal bazında satış faturası sayısını ve iadeler düşülmeden satılan kitap adedini birlikte göster. Yalnız bir ölçüde hareketi olan kanallar da kalsın.",
          "WITH sales AS ("+sales_sql("2026-09-01","2026-10-01",["sold_quantity"],"channel")+"), invoices AS (SELECT C.SPECODE2 channel,COUNT_BIG(*) invoice_count FROM dbo.LG_411_01_INVOICE I LEFT JOIN dbo.LG_411_CLCARD C ON C.LOGICALREF=I.CLIENTREF WHERE "+invoice_where+" GROUP BY C.SPECODE2) SELECT COALESCE(S.channel,I.channel) channel,COALESCE(I.invoice_count,0) invoice_count,COALESCE(S.sold_quantity,0) sold_quantity FROM sales S FULL OUTER JOIN invoices I ON S.channel=I.channel OR S.channel IS NULL AND I.channel IS NULL",
@@ -186,7 +198,7 @@ def cases(reference_date=REFERENCE_DATE):
     for dim, cols, question in [
         ("subbrand", ["subbrand_id","subbrand"], "Eylül 2026 net satış tutarını CRM new_yayinciid ile bağlı güncel alt marka kimliği ve adına göre göster; eşleşmeyenleri boş grupta koru."),
         ("author_group", ["author_group_ids","author_group_names"], "Eylül 2026 net satış tutarını aktif gerçek Yazar katılımındaki kişi kimlikleri ortak grubuna göre göster. Çok yazarlı kitabı bir grupta bir kez say; kişilere dağıtma, eşleşmeyenleri boş grupta koru.")]:
-        out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="cross_dimensions",crossDimension=dim,metrics=["net_sales"],dimensions=[dim],columns=[*cols,"net_sales"],keys=cols,periods=[["2026-09-01","2026-10-01"]],allowCoverageGap=True,referenceSql="SELECT LTRIM(RTRIM(I.CODE)) book_code,COALESCE(SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.LINENET ELSE S.LINENET END),0) net_sales FROM dbo.LG_411_01_STLINE S LEFT JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=S.STOCKREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.INVOICEREF<>0 AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY LTRIM(RTRIM(I.CODE))"))
+        out.append(dict(id=f"CP{len(out)+1:03d}",question=question,source="cross_dimensions",crossDimension=dim,metrics=["net_sales"],dimensions=[dim],columns=[*cols,"net_sales"],keys=cols,periods=[["2026-09-01","2026-10-01"]],allowCoverageGap=True,referenceSql="SELECT LTRIM(RTRIM(I.CODE)) book_code,COALESCE("+MEASURES["net_sales"]+",0) net_sales FROM "+ST+" LEFT JOIN dbo.LG_411_ITEMS I WITH (NOLOCK) ON I.LOGICALREF=S.STOCKREF WHERE "+ir.population_where("S")+" AND S.DATE_>='20260901' AND S.DATE_<'20261001' GROUP BY LTRIM(RTRIM(I.CODE))"))
     # Modifier-scope regressions: opposite operand order and different fact grains.
     add("Eylül 2026'da iadeler düşülmeden satılan adedi, iadeler düşüldükten sonraki net satılan adede böl. İki adet toplamını ayrı kolonlarda ver; oran yüzde değil katsayı olsun.",
         ["sold_quantity","net_quantity"], derived=dict(op="ratio",left="sold_quantity",right="net_quantity",scale=1))
@@ -200,6 +212,7 @@ def cases(reference_date=REFERENCE_DATE):
         if case.get("sections"):
             case["referenceQueries"] = [child["referenceSql"] for child in case["sections"]]
             continue
+        case["variant"] = variant
         case["referenceQueries"] = ([sales_sql(a,b,[case["comparison"]["metric"]],case["keys"][0] if case["keys"] else None) for a,b in case["periods"]]
                                     if case.get("comparison") else [case["referenceSql"]])
     return out
@@ -262,9 +275,10 @@ def calculate(op,left,right,scale=1):
 
 def dimension_reference(case, conns):
     sales = query(conns["logo"], case["referenceSql"])
-    # Published status labels define the existing active-card contract.
+    # Etkin kayıt: kullanıcı kararı K-CRM-PASIF (durum nedeni Pasif değil), ürünün Aktif/Etkin listesi değil.
     def active(entity, alias):
-        return f"{alias}.statecode=0 AND {alias}.statuscode IN (SELECT M.AttributeValue FROM dbo.StringMapBase M JOIN MetadataSchema.Entity E ON E.ObjectTypeCode=M.ObjectTypeCode AND E.ComponentState=0 WHERE E.LogicalName='{entity}' AND M.AttributeName='statuscode' AND M.LangId=1055 AND M.Value IN (N'Aktif',N'Etkin'))"
+        table = {"new_kitap":"new_kitapBase","new_marka":"new_markaBase","contact":"ContactBase"}[entity]
+        return ir.crm_active(table, alias, case.get("variant","decision"))
     cards = query(conns["crm"], "SELECT K.new_kitapId book_id,K.new_stokkodu book_code,M.new_markaId subbrand_id,M.new_name subbrand FROM dbo.new_kitapBase K LEFT JOIN dbo.new_markaBase M ON M.new_markaId=K.new_yayinciid AND " + active("new_marka","M") + " WHERE " + active("new_kitap","K"))
     people = query(conns["crm"], "SELECT DISTINCT L.new_Kitap book_id,C.ContactId person_id,C.FullName person_name FROM dbo.new_eserkatilimBase L JOIN dbo.ContactBase C ON C.ContactId=L.new_Katilimsaglayan AND " + active("contact","C") + " JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=L.new_katilimciTipi AND R.statecode=0 AND LTRIM(RTRIM(R.new_name))=N'Yazar' WHERE L.statecode=0") if case["crossDimension"]=="author_group" else []
     broken = query(conns["crm"], "SELECT DISTINCT L.new_Kitap book_id FROM dbo.new_eserkatilimBase L JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=L.new_katilimciTipi AND R.statecode=0 AND LTRIM(RTRIM(R.new_name))=N'Yazar' LEFT JOIN dbo.ContactBase C ON C.ContactId=L.new_Katilimsaglayan AND " + active("contact","C") + " WHERE L.statecode=0 AND C.ContactId IS NULL") if case["crossDimension"]=="author_group" else []
@@ -289,6 +303,7 @@ def dimension_reference(case, conns):
 
 
 def reference(case,conn):
+    variant=case.get("variant","decision")
     if case.get("crossDimension"):
         return dimension_reference(case,conn)
     if case.get("sections"):
@@ -302,7 +317,7 @@ def reference(case,conn):
     spec=case["comparison"]; metric=spec["metric"]; keys=case["keys"]
     pairs=[]
     for start,end in case["periods"]:
-        sql=sales_sql(start,end,[metric],keys[0] if keys else None)
+        sql=sales_sql(start,end,[metric],keys[0] if keys else None,variant=variant)
         pairs.append({tuple(r[k] for k in keys):r[metric] for r in query(conn,sql)})
     base,target=pairs; rows=[]
     for key in set(base)|set(target):
@@ -575,6 +590,12 @@ def main():
     selected=[c for c in cases(args.reference_date) if not args.only or c["id"] in args.only.split(",")]
     if not selected:raise SystemExit("No cases selected")
     session=None;digest=None;conns={};results=[];counts=Counter();threads={};before=manifest();removed=0
+    cross_counts=Counter();crosschecks=None;product_cases={}
+    def product_case(cid):
+        if "map" not in product_cases:
+            try:product_cases["map"]={c["id"]:c for c in cases(args.reference_date,variant="product")}
+            except Exception as exc:product_cases["map"]={};product_cases["error"]=type(exc).__name__+": "+str(exc)[:300]
+        return product_cases["map"].get(cid)
     def interrupt(signum,frame):raise KeyboardInterrupt(f"Signal {signum}")
     signal.signal(signal.SIGTERM,interrupt)
     try:
@@ -595,6 +616,7 @@ def main():
         if cross_dimensions:sources=(sources-{"cross_dimensions"})|{"logo","crm"}
         for source in sources:conns[source]=connect(f"/data/nanobaseai/bi/secrets/{source}-mssql-connection.json")
         if cross_dimensions:conns["cross_dimensions"]={"logo":conns["logo"],"crm":conns["crm"]}
+        crosschecks=ir.CrossChecks(query,conns["logo"]) if "logo" in conns else None
         for case in selected:
             if manifest()!=before:
                 raise RuntimeError("Deployed code changed; acceptance stopped before another question")
@@ -617,6 +639,19 @@ def main():
                 expected_hash=hashlib.sha256(json.dumps({k.rsplit('/',1)[-1]:v for k,v in before.items() if '/finance_query/' in k},sort_keys=True).encode()).hexdigest()
                 if answer.get("semantic",{}).get("engineCodeHash")!=expected_hash:errors.append("Loaded engine hash differs from deployed files")
                 item["errors"]=errors;item["status"]="FAIL" if errors else "PARTIAL_REFERENCE_MATCH" if answer.get("type")=="PARTIAL_ANSWER" else "PASS"
+                # TANIM_FARKI: karar referansı tutmuyor ama ürünün bugünkü tanımıyla kurulan referans tutuyor.
+                if errors and not [error for error in errors if not data_dependent_error(error)]:
+                    variant_case=product_case(case["id"])
+                    if variant_case is not None:
+                        REFERENCE_CONTEXT["phase"]="product_variant"
+                        product_ref=reference(variant_case,conns[case["source"]]);item["productVariantReference"]=product_ref
+                        product_errors=compare(dict(variant_case),answer,whole,product_ref);item["productVariantErrors"]=product_errors
+                        if ir.classify(errors,product_errors)=="TANIM_FARKI":item["status"]="TANIM_FARKI"
+                if crosschecks is not None and case["source"] in ("logo","cross_dimensions"):
+                    REFERENCE_CONTEXT["phase"]="second_path"
+                    item["referenceCrossCheck"]=cross_check_case(crosschecks,case)
+                    if not item["referenceCrossCheck"]["reconciled"]:cross_counts["REFERANS_UZLASMADI"]+=1
+                    else:cross_counts["REFERANS_UZLASTI"]+=1
                 # If live source changed between reference and API, do not claim a mismatch or pass.
                 REFERENCE_CONTEXT["phase"]="after_api"
                 after_ref=reference(case,conns[case["source"]]);item["referenceAfter"]=after_ref
@@ -637,6 +672,7 @@ def main():
             item["elapsedSeconds"]=round(time.time()-item["started"],2)
             save(out/(case["id"]+".json"),item);counts[item["status"]]+=1
             results.append({k:item[k] for k in ("id","status","errors","error","elapsedSeconds") if k in item})
+            if "referenceCrossCheck" in item:results[-1]["referenceReconciled"]=item["referenceCrossCheck"]["reconciled"]
             print(json.dumps(results[-1],ensure_ascii=False),flush=True)
             if len(results)%10==0:print("BATCH",len(results),dict(counts),flush=True)
             if stop:print("STOP: reference day changed or API unavailable; preserve evidence and do not duplicate workload",flush=True);break
@@ -654,10 +690,32 @@ def main():
             finally:session.close()
         after=manifest()
         if before!=after:counts["UNVERIFIED"]+=1;results.append(dict(id="CODE_CHANGED",status="UNVERIFIED"))
-        report=dict(referenceDate=args.reference_date,api=args.base,executionEnvironment="connected test server",counts=dict(counts),results=results,planned=len(selected),completed=len([r for r in results if r["id"].startswith("CP")]),sessionsDeleted=removed,sourceWrites=0,codeBefore=before,codeAfter=after,codeStable=before==after,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),referenceRetries=REFERENCE_RETRIES,referenceRetryIsProductRecoveryEvidence=False)
+        report=dict(referenceDate=args.reference_date,api=args.base,executionEnvironment="connected test server",counts=dict(counts),results=results,
+                    referenceIndependence=dict(sources=ir.SOURCES,crossCheckCounts=dict(cross_counts),
+                        crossChecks=ir.jsonable(list(crosschecks.cache.values())) if crosschecks else [],
+                        productVariantError=product_cases.get("error"),
+                        definitionDifferenceCases=[r["id"] for r in results if r.get("status")=="TANIM_FARKI"],
+                        note="TANIM_FARKI ve REFERANS_UZLASMADI PASS/FAIL'e karışmaz; ayrı sayılır."),planned=len(selected),completed=len([r for r in results if r["id"].startswith("CP")]),sessionsDeleted=removed,sourceWrites=0,codeBefore=before,codeAfter=after,codeStable=before==after,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),referenceRetries=REFERENCE_RETRIES,referenceRetryIsProductRecoveryEvidence=False)
         save(out/"report.json",report);print("FINAL",dict(counts),"sessionsDeleted",removed,flush=True)
         fcntl.flock(lock,fcntl.LOCK_UN);lock.close()
-    return 1 if counts["FAIL"] or counts["UNVERIFIED"] or report["completed"]!=len(selected) else 0
+    if counts["FAIL"] or counts["UNVERIFIED"] or report["completed"]!=len(selected):return 1
+    return 2 if counts["TANIM_FARKI"] or cross_counts["REFERANS_UZLASMADI"] else 0
+
+
+def case_metrics(case):
+    known=set(ir.LOGO_MEASURES)|set(ir.HEADER_MEASURES)
+    found=list(case.get("metrics") or [])+[c for c in case.get("columns",[]) if c in known]
+    for child in case.get("sections") or []:found+=case_metrics(child)
+    return [m for m in dict.fromkeys(found) if m in known]
+
+
+def cross_check_case(crosschecks,case):
+    """Vakanın dönemleri için ikinci yol (V_SatisRaporu_411 + fatura başlığı) uzlaşma özeti."""
+    periods=list(case.get("periods") or [])
+    for child in case.get("sections") or []:periods+=child.get("periods") or []
+    dimension="channel" if "channel" in (case.get("keys") or []) else None
+    checks=[c for a,b in dict.fromkeys(tuple(p) for p in periods) for c in crosschecks.check("411",a,b,dimension)]
+    return ir.jsonable(ir.CrossChecks.summary(checks,case_metrics(case)))
 
 
 if __name__=="__main__":raise SystemExit(main())
