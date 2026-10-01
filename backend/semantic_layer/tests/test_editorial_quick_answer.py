@@ -18,7 +18,7 @@ def engine(monkeypatch):
     B._md.create_all(e)
     monkeypatch.setenv("EDITOR_API_BASE", "http://motor")
     monkeypatch.setenv("EDITOR_API_KEY", "k")
-    monkeypatch.setattr(B, "scope_reply", lambda q, chat=None: None)
+    monkeypatch.setattr(B, "scope_reply", lambda q, chat=None, book_title=None: None)
     monkeypatch.setattr(B, "_citations_checked", lambda *a: None)
     monkeypatch.setattr(C, "character_graph", lambda *a: None)
     return e

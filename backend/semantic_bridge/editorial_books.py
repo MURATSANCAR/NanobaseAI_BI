@@ -158,12 +158,19 @@ BOOK: bir kitabın içeriği (karakter, olay, tema, sayfa, alıntı, özet), yaz
 SELF: yalnız selamlaşma, test, anlamsız karakterler ya da asistanın kimliği, modeli, nasıl çalıştığı, neler yapabildiği.
 OFF: kitapla ilgisi olmayan konular: siyaset, spor/futbol, gündem, hava durumu, genel kültür, sağlık, para, kod, yemek tarifi, kişisel sohbet vb.
 UNKNOWN: emin değilsen.
+Kitaplar kurgu ve tarih de anlatır: bir kişi, yer, kurum, olay, tarih, saat, sayı, suç, ceza, yangın, ölüm, savaş ya da maç
+hakkındaki soru, gerçek dünyadan bir haber gibi görünse de bir kitabın içinde geçebilir. Mesajda `selectedBook` varsa kişi
+seçili kitabı okuyordur: o kitabın içeriği olabilecek her soru BOOK'tur; OFF yalnız kitapla hiçbir bağ kurulamayan istekler
+(hava durumu, kod yaz, yemek tarifi, kişisel sohbet) içindir. Kitap seçili değilse ve gerçek dünya gündemi olduğu açık
+değilse UNKNOWN de.
 Yalnız {"intent":"BOOK|SELF|OFF|UNKNOWN"} JSON döndür."""
 
 
-def scope_reply(question: str, chat: Optional[Any] = None) -> Optional[str]:
+def scope_reply(question: str, chat: Optional[Any] = None, book_title: Optional[str] = None) -> Optional[str]:
     """Kimlik/selam → SELF_REPLY, kitap dışı → OFF_REPLY, aksi hâlde None (soru kitap motoruna gider).
-    Emin olunamazsa ya da sınıflandırma başarısızsa None: meşru bir kitap sorusu asla geri çevrilmez."""
+    Emin olunamazsa ya da sınıflandırma başarısızsa None: meşru bir kitap sorusu asla geri çevrilmez.
+    `book_title`: ekranda seçili kitap. Sınıflandırıcı onu görmezse kitabın içindeki olayı soran soru («X Binası'ndaki
+    yangın ihbarı saat kaçta yapıldı?») gündem sanılıp geri çevriliyordu (2026-10-01, Çiçekçi Kadın 14 sorudan 2'si)."""
     norm = " ".join(re.sub(r"[^\w\s]", "", question.casefold()).split())
     if not norm or norm in _PINGS:
         return SELF_REPLY
@@ -171,7 +178,9 @@ def scope_reply(question: str, chat: Optional[Any] = None) -> Optional[str]:
         return None
     try:
         raw = chat([{"role": "system", "content": SCOPE_SYSTEM},
-                    {"role": "user", "content": json.dumps({"message": question}, ensure_ascii=False)}])
+                    {"role": "user", "content": json.dumps({"message": question, **({"selectedBook": book_title}
+                                                                                 if book_title else {})},
+                                                           ensure_ascii=False)}])
         m = re.search(r"\{.*\}", raw or "", re.S)
         intent = (json.loads(m.group(0)).get("intent") if m else "") or ""
     except Exception as e:  # noqa: BLE001
@@ -446,7 +455,7 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
         # Kimlik ya da kitap dışı soru kitap motorunu (dakikalar) beklemez; anında nazik cevap alır.
         # A follow-up like "Peki ya babası?" needs its book context; the standalone
         # scope classifier must not reject it before the conversation is read.
-        reply = scope_reply(q, chat) if not history else None
+        reply = scope_reply(q, chat, book_title) if not history else None
         if reply:
             done = _now()
             with engine.begin() as conn:
