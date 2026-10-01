@@ -48,6 +48,8 @@ SOURCES = {
               "CANCELLED 0, INVOICEREF<>0; iade düşülmez.",
     "K-CRM-PASIF": "Kullanıcı kararı 2026-09-29: CRM'de pasif hiçbir yerde yok = statecode=0 VE durum nedeni "
                    "(statuscode) etiketi 'Pasif…'/'Inactive…' değil (StringMapBase, bütün diller).",
+    "K-CRM-MUSTERI": "Kullanıcı kararı 2026-10-01: aktif müşteri = AccountBase statecode=0 VE durum nedeni etiketi "
+                     "yalnız 'Aktif Müşteri' (Eylül 2026: 11.854; pasif-olmayan 12.388 değil).",
     "K-KANAL": "KAVRAM-SAHIPLIGI.md 'Kanal / müşteri grubu': Logo CLCARD.SPECODE2.",
     "K-BOS-TARIH": "Kullanıcı kararı 2026-10-01: 1899-12-30 / 1900-01-01 tarih girilmemiş demektir.",
     "YOK": "Bağımsız karar ya da altın referans yok; tanım ürünle aynı kaynaktan (ürün tanımı) — bağımsız değildir.",
@@ -263,11 +265,13 @@ def _entity(table):
     return t[:-4].lower() if t.lower().endswith("base") else t.lower()
 
 
-def crm_active(table, alias, variant="decision"):
+def crm_active(table, alias, variant="decision", role="customer"):
     """`decision`: K-CRM-PASIF (statecode=0 ve durum nedeni etiketi Pasif/Inactive değil).
     `product`: ürünün bugünkü davranışı (executor.crm_status / crm_reports.rows / eski kabul): kitap, kişi ve
     marka için Aktif/Etkin etiketi (=1), müşteri için yalnız 'Aktif Müşteri' (100000000), diğerleri statecode=0.
-    `product` yalnız TANIM_FARKI sınıflamasında kullanılır, beklenen değer olarak asla."""
+    `product` yalnız TANIM_FARKI sınıflamasında kullanılır, beklenen değer olarak asla.
+    Müşteri kartında karar K-CRM-MUSTERI'dir: yalnız 'Aktif Müşteri' etiketi (etiketten, kod sabiti yazılmadan).
+    `role='party'`: sözleşme tarafı gibi müşteri olmayan kurum; genel K-CRM-PASIF kuralı."""
     entity = _entity(table)
     if variant == "product":
         if entity in ("new_kitap", "contact", "new_marka"):
@@ -275,6 +279,11 @@ def crm_active(table, alias, variant="decision"):
         if entity == "account":
             return f"{alias}.statecode=0 AND {alias}.statuscode=100000000"
         return f"{alias}.statecode=0"
+    if entity == "account" and variant == "decision" and role == "customer":
+        customer = ("SELECT M.AttributeValue FROM dbo.StringMapBase M WITH (NOLOCK) JOIN dbo.EntityView E WITH (NOLOCK) "
+                    "ON E.ObjectTypeCode=M.ObjectTypeCode WHERE M.AttributeName='statuscode' "
+                    "AND LOWER(E.Name)='account' AND LTRIM(RTRIM(M.Value)) IN (N'Aktif Müşteri', N'Active Customer')")
+        return f"{alias}.statecode=0 AND {alias}.statuscode IN ({customer})"
     passive = ("SELECT M.AttributeValue FROM dbo.StringMapBase M WITH (NOLOCK) JOIN dbo.EntityView E WITH (NOLOCK) "
                "ON E.ObjectTypeCode=M.ObjectTypeCode WHERE M.AttributeName='statuscode' "
                f"AND LOWER(E.Name)='{entity}' AND (LTRIM(M.Value) LIKE N'Pasif%' OR LTRIM(M.Value) LIKE N'Inactive%')")

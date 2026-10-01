@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Karar: aktif müşteri yalnız «Aktif Müşteri» durumu
+
+- Kullanıcı kararı: aktif müşteri = AccountBase statecode=0 ve durum nedeni «Aktif Müşteri» (Eylül 2026: 11.854). Ürün (`executor.crm_status`) zaten böyle sayıyordu; kabul referansı genel pasif-olmayan kuralı (12.388) kullandığı için TANIM_FARKI çıkıyordu.
+- `independent_reference.py`: yeni karar kaynağı `K-CRM-MUSTERI`; `crm_active` müşteri kartında etiketten «Aktif Müşteri» süzer. Sözleşme tarafı gibi müşteri olmayan kurumlar `role="party"` ile genel K-CRM-PASIF kuralında kalır (`crm_reports_live.py`).
+- Ürün koduna dokunulmadı. Bekleyen iki karar (dağıtılmamış genel iskonto, dönem tarihi) için muhasebe önerisi kullanıcıya verildi.
+
 ## 2026-10-01 — Finans motoru prod eksikleri: pasif CRM, sohbet bağlamı, iade faturası, bağımsız kabul
 
 - Dört paralel dal birleştirildi (A CRM, B sohbet, C Logo/iade, D kabul) + kokpit. Test sunucusunda odaklı 642/642; tam paket birleşik 5.019 geçti / 146 başarısız, taban 4.548 / 147 — yalnız birleşikte bozulan 0 (146'sı önceden var).

@@ -94,8 +94,8 @@ class Oracle:
     `variant='decision'`: etkin kayıt = ir.crm_active (K-CRM-PASIF). `variant='product'`: önceki kabul süzgeci
     (ürünün bugünkü davranışıyla aynı); yalnız TANIM_FARKI sınıflamasında kullanılır."""
     def __init__(self,conn,variant="decision"): self.conn=conn;self.sql=[];self.cache={};self.variant=variant
-    def A(self,table,alias,legacy):
-        return legacy if self.variant=="product" else ir.crm_active(table,alias)
+    def A(self,table,alias,legacy,role="customer"):
+        return legacy if self.variant=="product" else ir.crm_active(table,alias,role=role)
     def get(self,key,sql):
         if key not in self.cache:
             self.sql.append(sql);self.cache[key]=query(self.conn,sql)
@@ -393,7 +393,7 @@ def expected_contracts(o,c):
     for r in o.get("parties",f"""SELECT P.new_sozlesmetarafiId party_id,P.new_sozlesmeid contract_id,P.new_kisi person_id,P.new_Firma account_id,P.new_TarafTipi party_type_id,
  C.FullName person_name,A.Name account_name,T.new_name party_type FROM dbo.new_sozlesmetarafiBase P
  LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND {o.A("ContactBase","C","C.statecode=0 AND C.statuscode=1")}
- LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND {o.A("AccountBase","A","A.statecode=0")}
+ LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND {o.A("AccountBase","A","A.statecode=0","party")}
  LEFT JOIN dbo.new_sozlesmetaraftipiBase T ON T.new_sozlesmetaraftipiId=P.new_TarafTipi AND {o.A("new_sozlesmetaraftipiBase","T","T.statecode=0")}
  WHERE {o.A("new_sozlesmetarafiBase","P","P.statecode=0")} AND (P.new_kisi IS NULL OR C.ContactId IS NOT NULL) AND (P.new_Firma IS NULL OR A.AccountId IS NOT NULL)"""):
         parties[identity(r["contract_id"])].append(r)
@@ -411,7 +411,7 @@ def expected_contracts(o,c):
         incomplete_parties={identity(r["contract_id"]) for r in o.get("party_identity_gaps", f"""SELECT DISTINCT P.new_sozlesmeid contract_id
  FROM dbo.new_sozlesmetarafiBase P
  LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND {o.A("ContactBase","C","C.statecode=0 AND C.statuscode=1")}
- LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND {o.A("AccountBase","A","A.statecode=0")}
+ LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND {o.A("AccountBase","A","A.statecode=0","party")}
  WHERE {o.A("new_sozlesmetarafiBase","P","P.statecode=0")} AND ((P.new_kisi IS NOT NULL AND C.ContactId IS NULL)
  OR (P.new_Firma IS NOT NULL AND A.AccountId IS NULL))""")}
     rows=[];bounds=(["scope_interpretation_unverified"] if c["report"]=="contract_overlap" else ["contract_revision_priority_unverified"] if c["report"]=="contract_revision_evidence" else [])+never_recorded
