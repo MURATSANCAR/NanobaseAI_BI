@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Finans motoru prod eksikleri: pasif CRM, sohbet bağlamı, iade faturası, bağımsız kabul
+
+- Dört paralel dal birleştirildi (A CRM, B sohbet, C Logo/iade, D kabul) + kokpit. Test sunucusunda odaklı 642/642; tam paket birleşik 5.019 geçti / 146 başarısız, taban 4.548 / 147 — yalnız birleşikte bozulan 0 (146'sı önceden var).
+- A — CRM pasif kuralı her okumada: motor sarmalı söktüğü için her CRM okuması `crm_active.predicate()` ile statecode=0 + «Pasif/Inactive» durum nedeni dışlamasını kendisi yazıyor, okuma kapısı eksik koşulu `SOURCE_CONTRACT_VIOLATION` ile durduruyor (LEFT hedefte ON içinde). Canlı: etkin görünen 44.361 firmanın 31.973'ü, 14.869 sözleşmenin 3.376'sı «Pasif» durum nedenli — önceden sızıyordu. Adres: `new_adresBase` önce, yoksa «Kullanılmayan Adres» (CustomerAddress) yedek, kaynak kolonu `city_source`; şehir 4.683 müşteride. Sözleşme hakları boş N:N yerine sözleşme kartındaki 13 evet/hayır alanından; bölge kaynağı yok → açık eksik. Proje–kitap bağı yanıltıcı N:N yerine kart alanları (722 N:N çiftinin 14'ü doğruydu; yeni 1.677).
+- B — Finans dışı soru plan çağrısından önce kapalı seçimle ayrılıyor (52 model çağrısı: 40 iş sorusunda yanlış ret 0, 15 dış soruda yanlış kabul 0). Konuşma bağlamı süreç belleği yerine sorgu kaydından (kişi+thread), netleştirme cevabı özgün soruyla birleşiyor; `follows()` düzeltildi. Ekrana giden metinler `presentation.public_*` süzgecinden geçiyor (teknik ad yok), ayrıntı `semantic`/`error` alanında.
+- C — Fatura sayısı tek tanım: iade içermez (7/8/9); yeni `return_invoice_count`, `invoice_count_with_returns`; her fatura sayısı cevabına iade notu; «iadeleri de ekle» önceki planı modelsiz genişletir (B'nin kalıcı bağlamına bağlandı). Canlı Eylül 2026: 13.680 + 120 = 13.800. Boş tarih (1899/1900) ortak yardımcıda; canlıda böyle vade yok (Logo NULL tutuyor) — 01.10 incelemesindeki "46.000 gün" bulgusu veride gerçekleşmiyor; vadesiz 5.120 açık sipariş satırı artık notta.
+- Kokpit: fatura sayısı iadesiz (kullanıcı kararı); `timas-metrics-build.py` + `cfo.ts`. 2026: 92.137 → 88.757, iade faturası 3.380 ayrı.
+- D — Kabul referansları ürün tanımını kopyalamıyor: `independent_reference.py` karar/altın tanım + TİMAŞ satış raporu görünümüyle ikinci yol; ürün≠karar ise TANIM_FARKI. `routing_eval.py` (1.100 soru), `donem_kabul.py` (37 ifade). Bulunan tanım farkları kullanıcı kararı bekliyor: aktif müşteri (11.854 «Aktif Müşteri» / 12.388 pasif-olmayan), dağıtılmamış genel iskonto (Eylül tek fatura 2.025 ₺), dönem tarihi (satır/fatura tarihi; Eylül 2025 622 ₺).
+- Kurulmadı; canlı API kabulü kurulumdan sonra.
+
 ## 2026-10-01 — Dönem kuralı: yıl yazılmamışsa güncel yıl, geçmiş yıl yalnız açıkça istenirse
 
 - Kullanıcı kararı: yılsız ay/gün her zaman güncel yıl (ay henüz gelmemiş olsa bile); geçen ay, dün/geçen gün, önceki çeyrek, geçen hafta bugüne göre. 2021–2025 kopyaları yalnız yıl yazılınca ya da göreli geçmiş/karşılaştırma istenince okunur.
