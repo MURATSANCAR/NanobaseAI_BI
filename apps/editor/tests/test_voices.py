@@ -222,3 +222,29 @@ def test_default_male_narrator_uses_pinned_reference(root, monkeypatch, tmp_path
     with pytest.raises(N.PinnedVoiceMissing, match="yok"):
         asyncio.run(N.voice_ref(vid))
     N._pinned_ok.clear()
+
+
+def test_alania_voices_use_packaged_reference(root, monkeypatch):
+    """Alania havuzundan alınan sesler (voices_alania.py) tariften üretilmez: paketteki kayıt + kaydın kendi metniyle
+    klonlanır; her kayıt sha256'sıyla doğrulanır, lisans atfı klasörde durur, varsayılan anlatıcılar değişmez."""
+    import hashlib
+    from editor.production import voices_alania as A
+    assert A.PINNED and set(A.PINNED) <= N.VOICE_IDS
+    assert N.DEFAULT_NARRATOR not in A.PINNED and N.DEFAULT_MALE_NARRATOR not in A.PINNED
+    assert "CC BY 4.0" in A.ATTRIBUTION and "PatientDesk AI" in (N.PINNED_DIR / "alania" / "KAYNAK.md").read_text()
+    calls = []
+    monkeypatch.setattr(N, "_call", _fake_service(calls))
+    for vid, meta in A.PINNED.items():
+        assert N.PINNED[vid] is meta
+        data = (N.PINNED_DIR / meta["file"]).read_bytes()
+        assert hashlib.sha256(data).hexdigest() == meta["sha256"]
+        w = wave.open(io.BytesIO(data))
+        assert w.getnchannels() == 1 and w.getframerate() == 48000 and 3.0 < w.getnframes() / w.getframerate() < 10.0
+        ref = asyncio.run(N.voice_ref(vid))
+        assert base64.b64decode(ref["ref_audio"]) == data and ref["ref_text"] == meta["text"] != N.REF_TEXT
+    assert calls == []
+    with pytest.raises(N.PinnedVoiceMissing, match="«Kadın · kadife ses» sesinin"):
+        monkeypatch.setattr(N, "PINNED_DIR", root)
+        N._pinned_ok.clear()
+        asyncio.run(N.voice_ref("anlatici-kadin-kadife"))
+    N._pinned_ok.clear()

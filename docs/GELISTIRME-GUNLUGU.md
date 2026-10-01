@@ -6,6 +6,12 @@
 - `finance_query/language.py`: gün aralığı ("1-15 Mart", "1 Ocak - 15 Mart 2026", "1 Ocak'tan 15 Mart'a kadar", "01.01.2026 - 15.03.2026"), ay aralığı ("Ocak-Mart", "Ocak ile Mart arası"; yıl değiştiren aralık netleştirme ister), yılsız gün ("5 Mart"), yıla bağlı ilk N ay ("2025'in ilk 3 ayı", "geçen yılın ilk 8 ayı"), yarıyıl, "…'den beri / bugüne" (gelecek ay netleştirme), geçen sene / bir önceki yıl / geçen hafta / bu hafta / geçen gün eklendi. "aralık" yalnız "Aralık ayı" ya da kesme işaretiyle ay sayılır; "aynı aralık" artık Aralık ayı eklemiyor. Netleştirme hataları genel "tarih geçerli değil" mesajına düşmüyor.
 - `planner.py`: dönem yazılmamış Logo ölçü sorusu "Hangi dönem?" diye sormak yerine yılbaşından bugüne hesaplanır; cevaba dönem notu, henüz gelmemiş dönem için ayrı not eklenir (`Plan.notes`). Denetçiye bunun kurum kuralı olduğu bildirilir.
 - Yeni `backend/semantic_layer/tests/test_finance_dates.py`: 47 vaka, test sunucusunda (canlı ağacın kopyası + değişen dosyalar) 47/47 geçti. Canlı API kabulü bu sürüm kurulunca koşulacak.
+## 2026-10-01 — Sesli okuma sesleri Alania referanslarıyla değişti
+
+- Kullanıcı isteği: Hugging Face'teki «Alania Turkish Synthetic Speech» seslerini alıp robotik bulunan seslerimizin yerine koymak. Veri seti bizim modelimizle (VoxCPM2, aynı adım/yönlendirme) üretilmiş 2.752 yapay ses; model değişmedi, klonlama referansı değişti. Lisans CC BY 4.0: atıf `voices_alania.ATTRIBUTION` ve `sesler/alania/KAYNAK.md`.
+- Seçim GPU'da: tarife göre ses başına 3 aday, aynı masal parçası bugünkü sesle ve adaylarla okutuldu (116 kayıt), UTMOS22 doğallık + harf hatası + perde; en iyi uygun aday ikinci metinle yeniden ölçüldü. Kural: iki metinde de üstün ve ortalama ≥ +0,15. Hugging Face toplu okumayı 429 ile kestiği için havuzun kendi kalite sütunları toplanmadı, adaylar doğrudan ölçüldü.
+- Sonuç 19 değişti / 12 aynı (varsayılan iki anlatıcı dahil; çocuk sesleri havuzda yok). En büyük kazançlar: anaokulu öğretmeni +1,41, Yaşlı kadın +1,39, Genç erkek +1,32. Tablo `docs/analiz/sesli-okuma-alania-sesleri.md`, dinleme sayfası https://claude.ai/artifact/NFxDuoqaFeHeer3NML14dB.
+- Kod: `voices_alania.py` (19 kayıt, sha256), `narration.PINNED.update`, sabit kayıt hata mesajı sesin adıyla; eski `sesler/anlatici-erkek-masalci.wav` silindi. Test `test_alania_voices_use_packaged_reference`; GPU'da stüdyo imajında ses testleri 120/120.
 
 ## 2026-10-01 — Soruya özel olmayan CRM ilişkisel plan
 
