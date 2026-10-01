@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-01 — Satış tanımı kararları test sunucusunda: kurulum ve gerçek API kabulü
+
+- Kurulum (test sunucusu, `main` f14dc357f): 5 `finance_query` dosyası + kokpit `/opt/timas-metrics/build.py`; önce sunucu kopyalarının önceki main ile aynı olduğu (yabancı yama yok) md5 ile doğrulandı. Köprü yeniden başladı, health 200, Mac artığı 0, kokpit üreticisi elle koştu (başarılı).
+- Gerçek API kabulü `live.py` (74 vaka): 59 PASS, 8 FAIL, 1 TANIM_FARKI, 6 UNVERIFIED. FAIL'lerin hiçbiri satış tanımı değil: 5'i motorun dürüst «desteklenmiyor» cevabı (test yalnız CLARIFICATION türü bekliyor — test beklentisi açık iş; sabah bu sorular zaman aşımıyla cevapsızdı), FC23 kısmi cevap (künye eksik, sabah da FAIL), FC54/FC66 model denetçisi Aralık 2026 aralığını (1–31 Aralık) yanlış sanıp cevabı engelledi. TANIM_FARKI FC52 Ekim 2026: bugün girilen faturalar koşu sırasında arttı (40.154 → 43.694 → 47.058 ₺), tanım farkı değil. Birleşik set `composable_live.py`: CP001–CP005 PASS, referansla uzlaştı; CP006'da zaman aşımı.
+- Zaman aşımlarının nedeni model sunucusu: 11:06'dan sonra model 100 token'ı 13 sn'de üretiyor (5 eşzamanlı istek; kitap okuma işi BI GPU'suna taşıyor). Finans planının düşünme açık ilk denemesi 8.192 token sınırına 645 sn'de çarpıp kesiliyor, düşünme kapalı ikinci deneme 18 sn'de doğru plan veriyor; cevaplar doğru ama 4–11 dk. Kodla ilgisi yok; GPU yükü azalınca UNVERIFIED vakalar ve birleşik set yeniden koşulmalı.
+- Müşteri VM'ine kurulmadı.
+
 ## 2026-10-01 (öğle) — Bölüm bulma dizgiden, Stüdyo paragrafları; finans motoru test sunucusunda
 
 - Bölüm bulma (okuma + Kitap Tasarım Stüdyosu): yeni `apps/editor/src/editor/chapters.py` bölüm açılışını kitabın PDF dizgisinden bulur (punto, bölüm başı boşluğu, başlık altı boşluk, başlık sayfası; sayfa başlığı/künye/ithaf/içindekiler/tanıtım sayfası elenir; sahne arasından sonra büyük puntolu cümle başı başlık değildir; Türkçe İ küçültmesi düzeltildi). `knowledge.chapters`, `outputs.capture` ve Stüdyo (`manuscript.by_typeset/split_typeset`) bunu kullanır, PDF yoksa eski büyük harf kuralı. Stüdyo başlık metnini okunmuş (font onarımlı) paragraftan alır, metni olmayan bölümü basmaz. 26 kabul kitabında ölçüm: cevap anahtarındaki 335 bölümün 262'si (kalanların çoğu anahtar biçimi: sayfa no eki, «Birinci Bölüm» öneki, bozuk font metni); Çiçekçi 7/7, Rüzgâr 58/58, Dallar 11/11, Takılı 30/30. Eski kural Babam 150, Duvarları 199 bölüm buluyordu.
