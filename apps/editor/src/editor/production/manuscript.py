@@ -186,6 +186,137 @@ def normalize(paragraphs: list[tuple[int, str]], lex=None,
     return [(h, b) for h, b in chapters if b or h]
 
 
+# ------------------------------------------------------------------ baskı dışı sayfalar
+# Okumanın NON_STORY önerisi «hikâye anlatmayan sayfa» demektir (bilgilendirme, kaynakça, önsöz da girer); kurgu
+# dışı kitapta gövdenin çoğu bu öneriyi alır. Baskı kararı değildir: Stüdyo yalnız aday sayar ve sayfayı ancak kendi
+# metni baskı dışı olduğunu gösterirse atar — künye, içindekiler, yayınevi tanıtımı/reklamı, iç kapak, yazar
+# tanıtımı (Stüdyo kendi tanıtım sayfasını basar), boş sayfa. Önsöz, giriş, sonsöz, yazarın notu, kaynakça, notlar,
+# ekler, ithaf ve bütün gövde kalır. Kurallar kitaptan bağımsızdır; 2026-10-01 GPU editöründeki 12 okunmuş kitapta
+# ölçüldü (eski hâlinde İbn Sina'nın 148, İstediğim İnsan'ın 101 sayfası basılmıyordu).
+_KUNYE = (r"\bisbn\b", r"sertifika", r"yay[ıi]n y[öo]netmeni", r"t[üu]m haklar[ıi]", r"©|\bcopyright\b",
+          r"bask[ıi] ve cilt", r"matbaa", r"yay[ıi]na haz[ıi]rlayan", r"kapak tasar[ıi]m", r"\bedit[öo]r\b")
+_PROMO = re.compile(r"kitap [öo]nerimiz|karekod|qr ?kod|yay[ıi]nlar[ıi]m[ıi]zdan|(yazar[ıi]n|dizinin) di[ğg]er kitaplar",
+                    re.I)
+_PLACE_YEAR = re.compile(r"^\s*[^\W\d_]+,? (19|20)\d\d\s*$")              # «İstanbul 2026»: künyenin yeri/yılı
+_TOC = ("icindekiler", "contents", "fihrist")
+_BIO = re.compile(r"do[ğg](du|an|umlu)|d[üu]nyaya gel|mezun|e[ğg]itimini|lisans|[çc]al[ıi][şs]maktad[ıi]r|"
+                  r"ya[şs]amaktad[ıi]r|eserleri|kitaplar[ıi]", re.I)
+_SENTENCE_END = re.compile(r"[.!?…:;][\"”’'»)]?\s*$")
+_BORN = re.compile(r"do[ğg](du|an|umlu)|d[üu]nyaya gel", re.I)
+_PAGE_REF =re.compile(r"(?:/|\.{3,}|…+)\s*\d{1,3}\b|\s\d{1,3}$")
+
+
+def _fold(t: str) -> str:
+    """Karşılaştırma anahtarı: küçük harf, düzeltme işaretsiz, i/ı ayrımsız (büyük harfli Türkçe ad ile yabancı ad
+    aynı anahtara düşer), noktalama ve rakamsız. Okunmuş metinde «İ» bazen I + birleşen nokta olarak gelir (NFC)."""
+    import unicodedata
+    t = unicodedata.normalize("NFC", t).replace("İ", "i").casefold().replace("ı", "i")
+    t = "".join(c for c in unicodedata.normalize("NFKD", t) if not unicodedata.combining(c))
+    return " ".join(re.sub(r"[^\w\s]|\d|_", " ", t).split())
+
+
+def _caps(t: str) -> bool:
+    letters = [c for c in t if c.isalpha()]
+    return len(letters) >= 3 and all(c.isupper() for c in letters)
+
+
+def print_plan(pages: dict[int, list[str]], candidates: set[int], last_page: int,
+               titles: list[str], names: list[str]) -> dict[int, tuple[str, int]]:
+    """Baskıya girmeyecek sayfalar: {sayfa: (neden, kalan ilk paragraf sayısı)}; 0 = sayfa bütünüyle çıkar.
+    `pages`: sayfa → okunmuş paragraflar; `candidates`: okumanın (ya da editörün) hikâye dışı dediği sayfalar —
+    yalnız bunlar atılabilir; `titles`/`names`: kitabın adı ve yazar/çevirmen adları (iç kapak, tanıtım)."""
+    titles = [t for t in (_fold(x) for x in titles if x) if len(t) >= 3]
+    names = [n for n in (_fold(x) for part in names if part for x in re.split(r"[,;&]| ve ", part)) if len(n) >= 5]
+    front = max(10, last_page // 10)
+    back = max(5, last_page // 20)
+    opening = {}                                   # bir kitapta ≥3 sayfayı açan satır sayfa başlığıdır (künye değil)
+    for ps in pages.values():
+        for t in ps[:2]:
+            opening[_fold(t)] = opening.get(_fold(t), 0) + 1
+    out: dict[int, tuple[str, int]] = {}
+
+    def text_of(p):
+        return " ".join(pages.get(p, []))
+
+    def words(p):
+        return len(text_of(p).split())
+
+    def is_toc(p):
+        ps = [t for t in pages.get(p, []) if t.strip()]
+        return bool(ps) and any(_fold(ps[0]).startswith(x) for x in _TOC)
+
+    def toc_like(p):
+        tokens = text_of(p).split()
+        refs = len(_PAGE_REF.findall(text_of(p))) + sum(1 for t in pages.get(p, []) if re.search(r"\d{1,3}\s*$", t))
+        nums = sum(1 for t in tokens if re.fullmatch(r"\d{1,3}", t))
+        return bool(tokens) and (refs >= 3 or nums / len(tokens) >= 0.06)
+
+    def has_name(t):
+        f = _fold(t)
+        return any(n in f for n in names)
+
+    toc_pages: set[int] = set()
+    for p in sorted(candidates):
+        ps = [t for t in pages.get(p, []) if t.strip()]
+        if not ps or p in out:
+            continue
+        low = text_of(p).casefold()
+        if sum(1 for k in _KUNYE if re.search(k, low)) >= 3 or re.search(r"\bisbn\b", low) and "sertifika" in low:
+            out[p] = ("künye", 0)
+        elif is_toc(p) or (p - 1 in toc_pages and toc_like(p)):
+            toc_pages.add(p)
+            out[p] = ("içindekiler", 0)
+        elif all(_PLACE_YEAR.match(t) or re.search(r"www\.|https?:", t) for t in ps):
+            out[p] = ("künye", 0)
+        elif p <= front and _BIO.search(text_of(p)) and (
+                (opening.get(_fold(ps[0]), 0) < 3 and (has_name(ps[0]) or (_caps(ps[0]) and 2 <= len(ps[0].split()) <= 4
+                                                                       and _BORN.search(text_of(p)))))
+                # yazar adı sayfa başlığı olarak da basılmışsa: adın altındaki paragraf doğumla başlar
+                or (opening.get(_fold(ps[0]), 0) >= 3 and len(ps) > 1 and _BORN.search(ps[1][:160]))):
+            out[p] = ("yazar tanıtımı", 0)
+            nxt = p + 1                             # tanıtım içindekilere kadar sürebilir (üyelikler, eser listesi)
+            run = []
+            while nxt in candidates and nxt <= front and not is_toc(nxt) and pages.get(nxt):
+                run.append(nxt)
+                nxt += 1
+            if run and is_toc(nxt) and len(run) <= 3:
+                for q in run:
+                    out[q] = ("yazar tanıtımı", 0)
+        elif (p <= front and words(p) <= 40 and all(len(t.split()) <= 15 and not _SENTENCE_END.search(t) for t in ps)
+              and any(any(x in _fold(t) for x in titles) or has_name(t) for t in ps)):
+            # kitap adı/yazar/yayınevi satırları tek başına; cümleyle biten satır (bölüm sonu, ithaf, epigraf) varsa değil
+            out[p] = ("iç kapak", 0)
+        else:
+            # reklam yalnız kitabın son sayfalarında aranır (gövdede «karekod» geçen kurgu dışı metin kalır)
+            cut = next((i for i, t in enumerate(ps) if _PROMO.search(t)), None) if p > last_page - back else None
+            if cut is not None:
+                out[p] = ("yayınevi tanıtımı", cut)
+            elif p <= front and _PLACE_YEAR.match(ps[-1]) and len(ps) > 1:
+                out[p] = ("künye", len(ps) - 1)
+    # Tanıtım sayfasından sonra kitabın sonuna dek süren hikâye dışı sayfalar: yayınevinin diğer kitapları.
+    promo = [p for p, (why, _) in out.items() if why == "yayınevi tanıtımı"]
+    tail = [p for p in range(min(promo) + 1, last_page + 1)] if promo else []
+    if tail and all(p in candidates or not pages.get(p) for p in tail):
+        for p in tail:
+            if pages.get(p) and p not in out:
+                out[p] = ("yayınevi tanıtımı", 0)
+    # Kitabın sonundan geriye: başka bir kitabın adı + yazarı (büyük harf, art arda satırlar) ile açılan hikâye dışı
+    # sayfalar kitap reklamıdır; ilk böyle olmayan sayfada durulur.
+    def ad_like(ps):
+        return any(_caps(a) and _caps(b) and len(a.split()) <= 10 and 2 <= len(b.split()) <= 4
+                   and not any(_fold(a).startswith(x) or x.startswith(_fold(a)) for x in titles)
+                   for a, b in zip(ps[:4], ps[1:5]))
+
+    for p in range(last_page, max(0, last_page - back), -1):
+        ps = [t for t in pages.get(p, []) if t.strip()]
+        if not ps or (p in out and out[p][1] == 0):
+            continue
+        if p not in candidates or p in out or not ad_like(ps):
+            break
+        out[p] = ("yayınevi tanıtımı", 0)
+    return out
+
+
 # ------------------------------------------------------------------ sources
 def _first(meta: dict, key: str) -> str | None:
     v = meta.get(key)
@@ -206,11 +337,15 @@ def from_generation(generation_id: str, lex=None) -> Manuscript:
                "WHERE g.id=%s", generation_id)
     if g is None:
         raise ValueError(f"okuma nesli yok: {generation_id}")
-    non_story = {r["page_no"] for r in db.all_rows(
+    # Hikâye dışı önerisi yalnız adaydır; hangisinin basılmayacağına sayfanın metni karar verir (`print_plan`).
+    candidates = {r["page_no"] for r in db.all_rows(
         "SELECT DISTINCT ON (page_no) page_no, role FROM ed.page_role WHERE generation_id=%s "
-        "ORDER BY page_no, (source='editor') DESC", generation_id) if r["role"] == "NON_STORY"}
+        "ORDER BY page_no, (source='editor') DESC", generation_id) if r["role"] in ("NON_STORY", "FRONT_MATTER")}
     rows = db.all_rows("SELECT page_no, idx, text FROM ed.paragraph WHERE generation_id=%s "
                        "ORDER BY page_no, idx", generation_id)
+    last_page = (db.one("SELECT page_count FROM ed.book_version bv JOIN ed.generation g ON g.book_version_id=bv.id "
+                        "WHERE g.id=%s", generation_id) or {}).get("page_count") or max(
+        (r["page_no"] for r in rows), default=0)
     card = db.one("SELECT title, metadata, age_min, age_max FROM ed.book_card WHERE book_id=%s "
                   "ORDER BY is_current DESC, created_at DESC LIMIT 1", g["book_id"]) or {}
     meta = dict(card.get("metadata") or {})
@@ -229,6 +364,14 @@ def from_generation(generation_id: str, lex=None) -> Manuscript:
         fields |= {"age_min": card["age_min"], "age_max": card["age_max"]}
     crm_author = ", ".join(crm.get("authors") or [])
     author = crm_author or _first(meta, "AUTHOR")
+    by_page: dict[int, list[str]] = {}
+    for r in rows:
+        by_page.setdefault(r["page_no"], []).append(r["text"])
+    plan = print_plan(by_page, candidates, last_page,
+                      [crm.get("crm_title"), _first(meta, "TITLE"), card.get("title"), g["file_title"]],
+                      [crm_author, _first(meta, "AUTHOR"), _first(meta, "TRANSLATOR"),
+                       ", ".join(crm.get("illustrators") or [])])
+    dropped = {p for p, (_, keep) in plan.items() if keep == 0}
     ms = Manuscript(
         title=crm.get("crm_title") or _first(meta, "TITLE") or card.get("title") or g["file_title"],
         author=author,
@@ -236,12 +379,14 @@ def from_generation(generation_id: str, lex=None) -> Manuscript:
         meta=fields,
         source={"kind": "generation", "generation_id": str(generation_id), "book_id": str(g["book_id"]),
                 "crm_book_id": str(crm["crm_book_id"]) if crm.get("crm_book_id") else None,
-                "non_story_pages": sorted(non_story),
+                "non_story_pages": sorted(dropped),       # basılmayan sayfalar (adı eski kayıtlarla uyumlu)
+                "not_printed": {str(p): why for p, (why, keep) in sorted(plan.items())},
                 "origin": {"title": "crm" if crm.get("crm_title") else "card",
                            "author": "crm" if crm_author else "card" if author else None}})
     layout = spaced_layout(generation_id)
-    paras = [(r["page_no"], part) for r in rows if r["page_no"] not in non_story
-             for part in resplit(r["text"], (layout or {}).get(r["page_no"], []))]
+    paras = [(p, part) for p, texts in sorted(by_page.items())
+             for i, text in enumerate(texts) if p not in plan or i < plan[p][1]
+             for part in resplit(text, (layout or {}).get(p, []))]
     ms.chapters = by_typeset(generation_id, paras, lex) or [Chapter(h, b) for h, b in normalize(paras, lex)]
     return ms
 
