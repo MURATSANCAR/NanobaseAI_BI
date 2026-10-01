@@ -94,7 +94,7 @@ def test_marketplace_endpoints_show_the_logo_text(engine, monkeypatch):
             sent.append(sql)
             if "AS stok" in sql:
                 return [{"stok": "K31", "ad": "Stoksuz", "satis_adet": 50, "iade_adet": 1, "ciro": 500.0, "son": date(2026, 8, 1)}]
-            if "YEAR(S.DATE_)" in sql:
+            if "YEAR(SH.DATE_)" in sql:
                 return [{"kod": "120.01", "unvan": "Kitapyurdu", "kanal": "E-TICARET", "yil": 2026, "ay": 3, "satis": 1000.0,
                          "iade": 100.0, "satis_adet": 10, "iade_adet": 1}]
             if "L_CAPIPERIOD" in sql:

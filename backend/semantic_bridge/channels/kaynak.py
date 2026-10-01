@@ -49,7 +49,7 @@ NOT_RAKAM = ("page", "pageSize", "period.yil", "period.ay", "years", "defaultYea
              "months", "yil", "aylik[].ay", "esik", "iskontoPuan", "hacimYuzde", "aralik.ay", "crmYilKodu", "oran",
              "bolgeler[].yil", "items[].yil", "data.years", "data.startedAt", "kanalaSatisAylari")
 
-F_OLCU = ("Ölçüler (faturalı satır, Logo): net ciro = satış cirosu (TRCODE 7,8,9 LINENET) − iade cirosu (2,3); net adet = "
+F_OLCU = ("Ölçüler (faturalı satır, Logo): net ciro = satış cirosu (TRCODE 7,8,9 VATMATRAH) − iade cirosu (2,3); net adet = "
           "satış − iade adedi; iskonto oranı = iskonto ÷ brüt satış; iade oranı = iade cirosu ÷ satış cirosu; brüt kâr = "
           "maliyetli ciro − maliyet, marj = brüt kâr ÷ maliyetli ciro (yalnız maliyeti girilmiş satırlar); iade sonrası marj "
           "iadenin cirosu ve maliyeti düşülerek; katkı = iade sonrası brüt kâr − net ciro × ek kanal maliyeti oranı.")

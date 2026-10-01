@@ -197,7 +197,7 @@ BOOKS = sa.Table(
     sa.Column("adet_12", sa.Float, nullable=False, default=0.0),
     sa.Column("tutar_12", sa.Float, nullable=False, default=0.0),
     sa.Column("gunluk_hiz", sa.Float, nullable=False, default=0.0),
-    sa.Column("ciro_yil", sa.Float),                                  # güncel yıl, satış satırları Σ LINENET
+    sa.Column("ciro_yil", sa.Float),                                  # güncel yıl, satış satırları Σ VATMATRAH
     sa.Column("maliyet_yil", sa.Float),                               # Σ AMOUNT × OUTCOST
     sa.Column("maliyetli_ciro", sa.Float),
     sa.Column("maliyetli_adet", sa.Float),

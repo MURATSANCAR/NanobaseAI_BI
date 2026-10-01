@@ -3,7 +3,8 @@
 Tanımlar mevcut ölçülerle aynıdır:
 
 - **Satış satırı** (`budget_sources.sales_sql` ile aynı): `STLINE`, `CANCELLED = 0`, `INVOICEREF <> 0` (faturalı),
-  `TRCODE 7/8/9` satış, `2/3` iade (eksi). Net ciro = Σ `LINENET`, net adet = Σ `AMOUNT`. Satır türü ayardır
+  `TRCODE 7/8/9` satış, `2/3` iade (eksi). Net ciro = Σ `VATMATRAH` (KDV matrahı, fatura geneli iskonto dahil; dönem
+  fatura tarihi `INVOICE.DATE_` — karar 2026-10-01), net adet = Σ `AMOUNT`. Satır türü ayardır
   (`SETS_SALES_LINETYPES`, varsayılan `0` = malzeme satırı — bütçe ve kokpitle aynı).
 - **Set satışı yalnız setin kendi stok koduyla okunur.** Katalog profilinde `ITEMS.CARDTYPE` değerleri 1, 4, 10, 11, 12,
   13, 20, 22'dir; Karma Koli (2) yoktur. Set ayrı bir stok kartıdır; bileşenler CRM «Set İşlemi» (set yapma) ile stoktan
@@ -152,15 +153,16 @@ def sales_sql(firm: str, a: date, b: date, linetypes: list[int]) -> str:
     f = _f(firm)
     lt = ", ".join(str(int(x)) for x in (linetypes or [0]))
     return f"""
--- Faturalı satış satırları; iade eksi. Net ciro = LINENET.
-SELECT I.CODE AS stok, YEAR(S.DATE_) AS yil, MONTH(S.DATE_) AS ay,
+-- Faturalı satış satırları; iade eksi. Net ciro = VATMATRAH.
+SELECT I.CODE AS stok, YEAR(SH.DATE_) AS yil, MONTH(SH.DATE_) AS ay,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 WHERE S.CANCELLED = 0 AND S.LINETYPE IN ({lt}) AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
-  AND S.DATE_ >= '{a.isoformat()}' AND S.DATE_ < '{b.isoformat()}'
-GROUP BY I.CODE, YEAR(S.DATE_), MONTH(S.DATE_)""".strip()
+  AND SH.DATE_ >= '{a.isoformat()}' AND SH.DATE_ < '{b.isoformat()}'
+GROUP BY I.CODE, YEAR(SH.DATE_), MONTH(SH.DATE_)""".strip()
 
 
 def stock_sql(firm: str) -> str:

@@ -39,7 +39,7 @@ class FakeLogo:
                 return [{"FIRMNR": 211}, {"FIRMNR": 411}]
             if "MAX(DATE_)" in sql:
                 return [{"son": CUT}]
-            if "YEAR(S.DATE_)" in sql:
+            if "YEAR(SH.DATE_)" in sql:
                 out = []
                 for kod, unvan, base in (("120.01", "Kitapyurdu", 1000.0), ("120.02", "Hepsiburada", 700.0), ("120.03", "Trendyol", 0.0)):
                     for ay in range(1, 9):

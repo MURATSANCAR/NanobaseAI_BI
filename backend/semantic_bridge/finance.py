@@ -726,7 +726,7 @@ def line_accounts(engine: sa.engine.Engine, tenant: str, kod: str, year: int, mo
 
 
 def reconciliation(engine: sa.engine.Engine, tenant: str, year: int, month: int, grain: str = "ay") -> dict[str, Any]:
-    """Muhasebedeki net satış (600–612, eşlemeyle) ↔ fatura satırlarından net satış (LINENET)."""
+    """Muhasebedeki net satış (600–612, eşlemeyle) ↔ fatura satırlarından net satış (VATMATRAH)."""
     months = period_months(int(year), int(month), grain)
     cur = compute_lines(engine, tenant, months)
     s = _sales_totals(engine, months)

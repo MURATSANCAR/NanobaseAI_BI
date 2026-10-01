@@ -23,7 +23,7 @@ korunur. Kaynaktan düşen elle düzeltilmiş kalem silinmez, «kaynakta yok» d
 **Bütçe** (rakamı kod üretir, Zeki AI yalnız gerekçe yazar):
 - Ay hedefi: M46 yürürlükteki planında o ayın `aylik[ay].ciro` toplamı, segment başına (yeni / backlist).
 - Önceki ay oranı: M46'nın Logo gerçekleşme önbelleğinden (`semantic_budget_sales_actuals`: faturalı satır, net ciro =
-  LINENET) önceki ayda o segmentin hedefli kitaplarının net cirosu ÷ aynı kitapların o ayki hedefi.
+  VATMATRAH) önceki ayda o segmentin hedefli kitaplarının net cirosu ÷ aynı kitapların o ayki hedefi.
 - Çerçeve: elle girilen > Yönetim ayarı «Aylık pazarlama bütçesi» > oran × ayın toplam hedef cirosu (oran M15'le aynı:
   ayar ya da son tam yılda pazarlama masraf merkezi gideri ÷ net ciro). Hiçbiri yoksa çerçeve boş, tutar sıfır.
 - Segment ağırlığı = hedef payı × (1 + hedefin altında kalınan pay); önceki ayda hedefin %70'inde kalan segmentin

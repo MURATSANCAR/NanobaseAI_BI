@@ -148,7 +148,7 @@ def test_budget_every_number_has_its_query(engine):
     assert logo["sql"].startswith("USE [TIGERDB];") and "LG_411_01_STLINE" in logo["sql"]
     assert "'2026-01-01'" in logo["sql"] and "'2027-01-01'" in logo["sql"] and logo["stats"]["rows"] == 40
     assert "logo.satis.2026" in k["sources"]["portal.satis"]["origin"]
-    assert "net" in k["formulas"]["gercek"]["text"].lower() and "LINENET" in k["formulas"]["gercek"]["text"]
+    assert "net" in k["formulas"]["gercek"]["text"].lower() and "VATMATRAH" in k["formulas"]["gercek"]["text"]
     assert k["fields"]["sirket"] == "hesap:sirket"
 
     for build in (

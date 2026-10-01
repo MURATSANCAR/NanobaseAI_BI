@@ -5,8 +5,10 @@ veritabanında (`semantic_editorial_tasks`).
 
 Tanımlar (kabul betiği `scripts/acceptance/M56/` aynı tanımı bağımsız SQL ile sınar):
 
-- **Temsilci net satışı** = faturalı satırlar (`INVOICEREF <> 0`, `LINETYPE = 0`, `CANCELLED = 0`), satış `TRCODE` 7, 8, 9 `LINENET`
-  eksi iade 2, 3 `LINENET`; fatura başlığındaki `SALESMANREF` → `LG_SLSMAN.CODE` (satış elemanı kartı firmadan bağımsız
+- **Temsilci net satışı** = faturalı satırlar (`INVOICEREF <> 0`, `LINETYPE = 0`, `CANCELLED = 0`), satış `TRCODE` 7,
+  8, 9 `VATMATRAH`
+  eksi iade 2, 3 `VATMATRAH` (KDV matrahı, fatura geneli iskonto dahil; dönem fatura tarihi `INVOICE.DATE_` — karar
+  2026-10-01); fatura başlığındaki `SALESMANREF` → `LG_SLSMAN.CODE` (satış elemanı kartı firmadan bağımsız
   tek tablodadır; `LG_<firma>_SLSMAN` yoktur). Yıl → firma `L_CAPIPERIOD`'dan
   (`budget_sources.firms_by_year`; 2021–2025 LG_211, 2026 LG_411). Dönem iki uç dahil.
 - **Temsilci alanı doluluğu** = aynı yılın satış faturalarında `SALESMANREF <> 0` oranı; düşükse sistem ölçüsü açılmaz
@@ -49,13 +51,13 @@ def _record(conn: str, title: str, text: str, desc: str) -> None:
 
 def salesman_net_sql(firm: str, code: str, start: date, end: date) -> str:
     return f"""
-SELECT SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS net, COUNT(DISTINCT S.INVOICEREF) AS fatura,
-       MAX(S.DATE_) AS son
+SELECT SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS net, COUNT(DISTINCT S.INVOICEREF) AS fatura,
+       MAX(I.DATE_) AS son
 FROM dbo.LG_{firm}_01_STLINE AS S
-JOIN dbo.LG_{firm}_01_INVOICE AS I ON I.LOGICALREF = S.INVOICEREF
+JOIN dbo.LG_{firm}_01_INVOICE AS I ON I.LOGICALREF = S.INVOICEREF AND I.CANCELLED = 0
 JOIN dbo.LG_SLSMAN AS M ON M.LOGICALREF = I.SALESMANREF
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
-  AND S.DATE_ >= '{start.isoformat()}' AND S.DATE_ < '{(end + timedelta(days=1)).isoformat()}'
+  AND I.DATE_ >= '{start.isoformat()}' AND I.DATE_ < '{(end + timedelta(days=1)).isoformat()}'
   AND M.CODE = {_lit(code)}""".strip()
 
 

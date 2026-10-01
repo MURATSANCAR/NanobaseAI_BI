@@ -122,7 +122,7 @@ def test_firm_windows_never_count_a_day_twice():
     assert w == [("211", date(2024, 8, 18), date(2025, 12, 31)), ("411", date(2026, 1, 1), KESIM)]
     sql = S.daily_sales_sql("411", date(2026, 1, 1), KESIM)
     assert "LINETYPE = 0" in sql and "INVOICEREF <> 0" in sql and "TRCODE IN (2,3,7,8,9)" in sql and "< '2026-08-18'" in sql
-    assert "GROUP BY C.CODE, S.DATE_" in sql and "SELECT *" not in sql
+    assert "GROUP BY C.CODE, SH.DATE_" in sql and "SELECT *" not in sql
 
     rows = {"411": [{"CODE": "120.01", "GUN": "2026-02-01", "SATIS": 100, "IADE": 0, "FATURA": 1}],
             "211": [{"CODE": "120.01", "GUN": "2025-02-01", "SATIS": 50, "IADE": 5, "FATURA": 1}]}

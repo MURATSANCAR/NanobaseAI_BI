@@ -12,7 +12,8 @@ Tanımlar (depodaki sertifikalı SQL'lerle aynı):
   kullanılmadığı için sonuç **yaklaşıktır**; ekranda böyle yazılır. Vade planına dağıtılamayan bakiye («plansız») ayrıca
   verilir, kovalara girmez (sertifikalı SQL'de de girmez).
 - **Satış** — faturalı satır (`STLINE`, `LINETYPE = 0`, `INVOICEREF <> 0`, `CANCELLED = 0`), TRCODE 7/8/9 satış, 2/3 iade;
-  net ciro = Σ `LINENET` satış − Σ `LINENET` iade (M46 ile aynı).
+  net ciro = Σ `VATMATRAH` satış − Σ `VATMATRAH` iade (KDV matrahı, fatura geneli iskonto dahil; dönem fatura tarihi
+  `INVOICE.DATE_` — karar 2026-10-01).
 - **Çek olayı** — Kural 12: karşılıksız çıkma `CSTRANS.STATUS = 11`, protesto `STATUS IN (5, 7)`, `DEVIR = 0`,
   `CANCELLED = 0`, dönem hareket tarihi üzerinde; tutar `CSCARD.AMOUNT`, çek başına bir kez. `CSCARD`'da cari kolonu yok:
   çekin müşterisi portföye giriş hareketinin (`STATUS = 1`) `CARDREF`'idir. **Ölçülecek:** `CARDREF`'in bu harekette
@@ -316,13 +317,15 @@ def sales_sql(f: str, start: date, end: date, prefix_: str = "120") -> str:
     """Cari başına faturalı satış ve iade (net ciro = satış − iade), son fatura tarihi. [start, end] kapalı aralık."""
     f = firm(f)
     return (f"SELECT C.CODE AS code,"
-            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE 0 END) AS satis,"
-            f" SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END) AS iade,"
-            f" MAX(CASE WHEN S.TRCODE IN (7,8,9) THEN S.DATE_ END) AS son_fatura"
-            f" FROM dbo.LG_{f}_01_STLINE S JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
+            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE 0 END) AS satis,"
+            f" SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.VATMATRAH ELSE 0 END) AS iade,"
+            f" MAX(CASE WHEN S.TRCODE IN (7,8,9) THEN SH.DATE_ END) AS son_fatura"
+            f" FROM dbo.LG_{f}_01_STLINE S"
+            f" JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0"
+            f" JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
             f" WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)"
             f" AND C.CODE LIKE '{code_prefix(prefix_)}%'"
-            f" AND S.DATE_ >= '{_d(start)}' AND S.DATE_ < '{_d(end + timedelta(days=1))}'"
+            f" AND SH.DATE_ >= '{_d(start)}' AND SH.DATE_ < '{_d(end + timedelta(days=1))}'"
             f" GROUP BY C.CODE")
 
 
@@ -340,11 +343,13 @@ def items_for_sql(f: str, code: str, start: date, end: date) -> str:
     f = firm(f)
     return (f"SELECT I.CODE AS stok, MAX(I.NAME) AS ad,"
             f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,"
-            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro"
-            f" FROM dbo.LG_{f}_01_STLINE S JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
+            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro"
+            f" FROM dbo.LG_{f}_01_STLINE S"
+            f" JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0"
+            f" JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
             f" JOIN dbo.LG_{f}_ITEMS I ON I.LOGICALREF = S.STOCKREF"
             f" WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)"
-            f" AND C.CODE = '{_code_literal(code)}' AND S.DATE_ >= '{_d(start)}' AND S.DATE_ < '{_d(end + timedelta(days=1))}'"
+            f" AND C.CODE = '{_code_literal(code)}' AND SH.DATE_ >= '{_d(start)}' AND SH.DATE_ < '{_d(end + timedelta(days=1))}'"
             f" GROUP BY I.CODE")
 
 
@@ -362,12 +367,14 @@ def similar_items_sql(f: str, code: str, city: Optional[str], channel: Optional[
         raise SourceError("Benzer cari için şehir ya da kanal gerekli.")
     return (f"SELECT I.CODE AS stok, MAX(I.NAME) AS ad, C.CODE AS cari,"
             f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,"
-            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro"
-            f" FROM dbo.LG_{f}_01_STLINE S JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
+            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro"
+            f" FROM dbo.LG_{f}_01_STLINE S"
+            f" JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0"
+            f" JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
             f" JOIN dbo.LG_{f}_ITEMS I ON I.LOGICALREF = S.STOCKREF"
             f" WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)"
             f" AND C.CODE LIKE '{code_prefix(prefix_)}%' AND C.CODE <> '{_code_literal(code)}' AND {' AND '.join(conds)}"
-            f" AND S.DATE_ >= '{_d(start)}' AND S.DATE_ < '{_d(end + timedelta(days=1))}'"
+            f" AND SH.DATE_ >= '{_d(start)}' AND SH.DATE_ < '{_d(end + timedelta(days=1))}'"
             f" GROUP BY I.CODE, C.CODE")
 
 
@@ -487,9 +494,9 @@ def query_tag(sql: str) -> str:
         return "crm.guvenlik"
     if "GROUP BY k." in s:
         return "crm.kampanya"
-    if "S.DATE_ AS gun" in s:
+    if "S.DATE_ AS gun" in s or "SH.DATE_ AS gun" in s:
         return f"logo.gunluk_satis.{f}.{d}"
-    if "YEAR(S.DATE_) AS yil" in s:
+    if "YEAR(S.DATE_) AS yil" in s or "YEAR(SH.DATE_) AS yil" in s:
         return f"logo.aylik_cari.{f}.{d}"
     if "C.CODE AS code FROM" in s and "_CLCARD" in s:
         return f"logo.cari_kodlari.{f}"
@@ -498,7 +505,7 @@ def query_tag(sql: str) -> str:
         return "crm.cari_bayrak"
     if "new_anliklimit" in s:
         return "crm.risk_gecmisi"
-    if "YEAR(S.DATE_) AS y" in s:
+    if "YEAR(S.DATE_) AS y" in s or "YEAR(SH.DATE_) AS y" in s:
         return f"logo.aylik_satis.{f}.{d}"
     if "YEAR(L.DATE_) AS y" in s:
         return f"logo.aylik_odeme.{f}.{d}"
@@ -528,7 +535,7 @@ def query_tag(sql: str) -> str:
         return f"logo.son_odeme.{f}"
     if "_CLFLINE" in s:
         return f"logo.odeme.{f}"
-    if "_01_INVOICE" in s:
+    if "_01_INVOICE I " in s:  # satış satırının fatura bağı (SH) değil, fatura listesi
         return f"logo.faturalar.{f}"
     if "AS son_fatura" in s:
         return f"logo.satis.{f}.{d}"

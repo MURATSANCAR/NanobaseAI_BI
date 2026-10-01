@@ -39,7 +39,7 @@ F_HAK = ("Hak kararı (kitap × biçim): kitaba bağlı yürürlükteki bütün 
          "Satış sözleşmeleri hak kontrolüne girmez. Telif hak haritası bağlıysa karar oradan gelir.")
 F_12AY = ("Basılı son 12 ay: Logo faturalı satış satırı (iptal değil, stok satırı, faturaya bağlı; TRCODE 7/8/9 satış, 2/3 "
           "iade eksi), veri sonunun ayı dahil son 12 takvim ayı, her yıl kendi firma kopyasından; adet = Σ AMOUNT, ciro = "
-          "Σ LINENET, kitabın stok koduyla. Logo e-kitap = aynı sorgudan CRM'deki e-kitap stok koduyla kesilen faturalar.")
+          "Σ VATMATRAH, kitabın stok koduyla. Logo e-kitap = aynı sorgudan CRM'deki e-kitap stok koduyla kesilen faturalar.")
 F_DIJITALDE = ("Dijitalde (e-kitap) = CRM'de e-kitap stok kodu dolu ya da bir e-kitap platformunda «yüklendi/yayında» "
                "işaretli (platform durumu elle ya da onaylı rapordan girilir). Sesli = aynı adlı sesli kitap kartı ya da sesli "
                "platformda «yüklendi/yayında».")
@@ -57,7 +57,7 @@ F_SATIS = ("Dijital satış: onaylı platform satış raporlarının veri satır
            "(TRY için 1; modül kur varsaymaz). Aylık = dönem × platform Σ adet, Σ net TL, satır sayısı; kitap kırılımı yalnız "
            "kitaba eşlenmiş satırlar; eşleşmeyen satır atılmaz, açık iş olarak listelenir.")
 F_LOGO_EKITAP = ("Logo'daki e-kitap faturaları: gece okumasındaki Logo satış sorgusunun, CRM'de e-kitap stok kodu olan "
-                 "kartlara düşen satırları ay ay (adet = Σ AMOUNT, ciro = Σ LINENET); sonuç semantic_dijital_meta «logo» "
+                 "kartlara düşen satırları ay ay (adet = Σ AMOUNT, ciro = Σ VATMATRAH); sonuç semantic_dijital_meta «logo» "
                  "kaydında. Platform raporlarıyla toplanmaz: aynı satış iki kaynakta da olabilir.")
 F_ESLEME = ("Kurallı eşleme: e-ISBN, e-kitap barkodu, ISBN, barkod, e-kitap stok kodu, stok kodu (anahtar tek kitaba gidiyorsa). "
             "Kalan satırlarda adaylar ad ve yazar sözcük örtüşmesiyle (benzerlik 0–1); olasılık Zeki AI kapalı küme seçiminin "

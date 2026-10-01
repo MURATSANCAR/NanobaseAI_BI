@@ -192,7 +192,7 @@ LEVELS = {"sirket": "Şirket", "birim": "Birim", "kisi": "Kişi"}
 GOAL_STATES = {"taslak": "Taslak", "onayda": "Onayda", "yururlukte": "Yürürlükte", "kapandi": "Kapandı"}
 MEASURE_KINDS = {"beyan": "Beyan (check-in ile)", "sistem": "Sistem ölçüsü"}
 SYSTEM_MEASURES = {"logo_net_satis": {"label": "Logo faturalı net satış (₺)", "unit": "₺",
-                                      "hint": "Satış temsilcisi kodunun faturalı net satışı: satış − iade, LINENET"}}
+                                      "hint": "Satış temsilcisi kodunun faturalı net satışı: satış − iade, VATMATRAH"}}
 FORM_STATES = {"taslak": "Taslak", "yururlukte": "Yürürlükte", "arsiv": "Arşiv"}
 SECTION_KINDS = {"yetkinlik": "Yetkinlik (1–5 puan)", "hedef": "Hedefler (dönemin hedefleri üzerinden)", "acik": "Açık uçlu"}
 CYCLE_STATES = {"hazirlik": "Hazırlık", "acik": "Açık", "kalibrasyon": "Kalibrasyon", "kapandi": "Kapandı"}

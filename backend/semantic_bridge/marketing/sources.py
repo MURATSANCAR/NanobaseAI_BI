@@ -6,7 +6,7 @@
   baskı tekrarı olmayan ilk kart; dağılım planı ve depo girişi), rakip kitaplar, özel gün bağı, pazarlama bütçe modülü
   kayıtları (`new_pazarlamamoduluBase` + kitap bağı). CRM tarihleri UTC saklanır; gün İstanbul saatine (+3) çevrilir.
 - **Logo** buradan okunmaz: satış rakamları M46'nın Logo gerçekleşme önbelleğinden (`semantic_budget_sales_actuals`,
-  faturalı satır, net ciro = LINENET) ve M10'un veri kümesinden (emsallerin ilk 3/6/12 ayı) gelir. Böylece karne,
+  faturalı satır, net ciro = VATMATRAH) ve M10'un veri kümesinden (emsallerin ilk 3/6/12 ayı) gelir. Böylece karne,
   bütçe ve ilk baskı ekranıyla aynı rakamı gösterir ve Logo'ya ikinci kez yük bindirmez.
 
 Yazma yok: bu modülde CRM'e/Logo'ya giden tek komut `SELECT`tir.

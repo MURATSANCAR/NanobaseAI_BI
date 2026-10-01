@@ -11,7 +11,7 @@ kaynağıyla görünür; plan sahibi elle değiştirebilir (kaynak «elle»).
 - Emsaller: M10 İlk baskı tahmininin veri kümesi (CRM emsal bağı + M10'un benzerlik puanıyla seçtiği emsaller; ilk
   3/6/12 ay net adet, iade düşülmüş, Baskı Öneri ile aynı satış satırları). Bu modül emsal hesabını yeniden yazmaz.
 - Yazar geçmişi ve yıllık satış: M46'nın Logo gerçekleşme önbelleği (`semantic_budget_sales_actuals`: faturalı satır,
-  net adet, net ciro = LINENET).
+  net adet, net ciro = VATMATRAH).
 - Hedef: M46 yürürlükteki planı (`budget.approved_targets`).
 
 **Bütçe çerçevesi** (kitap bazlı pazarlama bütçesi M46'da yok): (1) plan sahibinin elle girdiği tutar; yoksa (2) CRM

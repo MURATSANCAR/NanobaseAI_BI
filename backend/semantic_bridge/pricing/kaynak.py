@@ -20,10 +20,10 @@ F_KAGIT = ("Kâğıt (adet başına) = iç sayfa kg × son 6 ayın ortalama ₺/
            "× gramaj; fire ve kapak alanı katsayısı varsayımdır. ₺/kg = alış tutarı ÷ kg (15001 kartları).")
 F_TELIF = ("Telif (adet başına) = oran × taban; taban «kapak» = P ÷ (1 + KDV), «net» = net birim gelir. Oran, taban, "
            "doğuş (satış/baskı) ve avans CRM'deki yürürlükteki sözleşmeden.")
-F_ISKONTO = ("Kanal iskontosu = 1 − Σ net (LINENET) ÷ Σ iskonto öncesi (TOTAL), son 12 ay kitap satış satırları, müşteri "
+F_ISKONTO = ("Kanal iskontosu = 1 − Σ net (VATMATRAH) ÷ Σ iskonto öncesi (TOTAL), son 12 ay kitap satış satırları, müşteri "
              "grubuna göre; ağırlıklı iskonto kanal payına (ya da seçilen kanal karmasına) göre.")
 F_DAGITIM = "Dağıtım gideri oranı = son 12 ayın «Satış Nakliye Giderleri» hizmet tutarı ÷ kitap net satışı."
-F_NET = ("Net satış = Σ LINENET (TRCODE 7, 8, 9) − Σ LINENET (TRCODE 2, 3), faturalı malzeme satırları; Logo birim "
+F_NET = ("Net satış = Σ VATMATRAH (TRCODE 7, 8, 9) − Σ VATMATRAH (TRCODE 2, 3), faturalı malzeme satırları; Logo birim "
          "maliyeti = Σ AMOUNT × OUTCOST ÷ maliyeti işlenmiş adet; kâr = net − maliyet; marj = kâr ÷ net.")
 F_SENARYO = ("Senaryo: birim maliyet = c(Q) + sabit giderler ÷ Q; net birim gelir N = P ÷ (1 + KDV) × (1 − iskonto); "
              "başabaş satış adedi S* = (Q·c(Q) + F) ÷ (N·(1 − t) − R); kâr = satılan × (N − R − t·N) − Q·c(Q) − F; "

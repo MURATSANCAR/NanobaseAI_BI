@@ -3,8 +3,9 @@
 Hesaplar önbellekten (Logo okuması, `refresh.py`) ve onaylı eşlemeden yapılır; model rakam üretmez.
 
 **Tanımlar** (ekranda da yazılır)
-- Net ciro = satış LINENET − iade LINENET (faturalı satır). Kanala satış (sell-in); kanalın son tüketiciye sattığı değil.
-- İade oranı = iade LINENET ÷ satış LINENET. İskonto oranı = satır iskontosu ÷ brüt satış (iskonto öncesi TOTAL).
+- Net ciro = satış VATMATRAH − iade VATMATRAH (faturalı satır; KDV matrahı, dönem fatura tarihi). Kanala satış
+  (sell-in); kanalın son tüketiciye sattığı değil.
+- İade oranı = iade VATMATRAH ÷ satış VATMATRAH. İskonto oranı = satır iskontosu ÷ brüt satış (iskonto öncesi TOTAL).
 - Brüt marj = 1 − maliyet ÷ maliyetli ciro; yalnız maliyeti girilmiş satış satırları (OUTCOST > 0). Maliyetsiz satır
   sayısı ve cirosu her zaman yanında yazılır (gizlenmez, marja sessizce katılmaz).
 - İade sonrası marj (M46 tanımı): iade satırları eksi işaretle (maliyetli iade satırlarının cirosu ve maliyeti düşülür).

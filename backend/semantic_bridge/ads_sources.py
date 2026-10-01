@@ -426,16 +426,17 @@ def ecom_daily_sql(firm: str, frm: date, to: date, channels: list[str]) -> str:
     """E-ticaret kanalı günlük net ciro ve adet (faturalı satır, iade eksi; M46 satış satırı tanımı)."""
     f = _firm(firm)
     return f"""
--- E-ticaret kanalı (cari özel kod 2) günlük net ciro: faturalı satış satırı, iade eksi, net ciro = LINENET.
-SELECT CAST(S.DATE_ AS date) AS gun,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro,
+-- E-ticaret kanalı (cari özel kod 2) günlük net ciro: faturalı satış satırı, iade eksi, net ciro = VATMATRAH.
+SELECT CAST(SH.DATE_ AS date) AS gun,
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
   AND C.SPECODE2 IN ({_in(channels, _CHANNEL, 'kanal kodu')})
-  AND S.DATE_ >= '{frm.isoformat()}' AND S.DATE_ < '{(to + timedelta(days=1)).isoformat()}'
-GROUP BY CAST(S.DATE_ AS date)""".strip()
+  AND SH.DATE_ >= '{frm.isoformat()}' AND SH.DATE_ < '{(to + timedelta(days=1)).isoformat()}'
+GROUP BY CAST(SH.DATE_ AS date)""".strip()
 
 
 def book_daily_sql(firm: str, frm: date, to: date, codes: list[str], channels: list[str]) -> str:
@@ -445,18 +446,19 @@ def book_daily_sql(firm: str, frm: date, to: date, codes: list[str], channels: l
     sign = "(CASE WHEN S.TRCODE IN (7,8,9) THEN 1 ELSE -1 END)"
     return f"""
 -- Kitap × gün: e-ticaret kanalı ve toplam net ciro/adet (faturalı satır, iade eksi).
-SELECT I.CODE AS stok_kodu, CAST(S.DATE_ AS date) AS gun,
-  SUM(CASE WHEN C.SPECODE2 IN ({ch}) THEN {sign} * S.LINENET ELSE 0 END) AS eticaret_ciro,
+SELECT I.CODE AS stok_kodu, CAST(SH.DATE_ AS date) AS gun,
+  SUM(CASE WHEN C.SPECODE2 IN ({ch}) THEN {sign} * S.VATMATRAH ELSE 0 END) AS eticaret_ciro,
   SUM(CASE WHEN C.SPECODE2 IN ({ch}) THEN {sign} * S.AMOUNT ELSE 0 END) AS eticaret_adet,
-  SUM({sign} * S.LINENET) AS toplam_ciro,
+  SUM({sign} * S.VATMATRAH) AS toplam_ciro,
   SUM({sign} * S.AMOUNT) AS toplam_adet
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 LEFT JOIN dbo.LG_{f}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
   AND I.CODE IN ({_in(codes, _CODE, 'stok kodu')})
-  AND S.DATE_ >= '{frm.isoformat()}' AND S.DATE_ < '{(to + timedelta(days=1)).isoformat()}'
-GROUP BY I.CODE, CAST(S.DATE_ AS date)""".strip()
+  AND SH.DATE_ >= '{frm.isoformat()}' AND SH.DATE_ < '{(to + timedelta(days=1)).isoformat()}'
+GROUP BY I.CODE, CAST(SH.DATE_ AS date)""".strip()
 
 
 def stock_sql(firm: str, codes: list[str]) -> str:

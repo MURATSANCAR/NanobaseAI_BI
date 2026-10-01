@@ -452,7 +452,7 @@ def _net(r: Any) -> tuple[float, float]:
 
 
 def international(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, ulke: str = "") -> dict[str, Any]:
-    """Yurtdışı karne: cari × ülke × döviz (seçilen yıl, geçen yıl kıyaslı), ülke özeti, aylık seyir. TL tutar LINENET;
+    """Yurtdışı karne: cari × ülke × döviz (seçilen yıl, geçen yıl kıyaslı), ülke özeti, aylık seyir. TL tutar VATMATRAH;
     döviz tutarı fatura kuruyla. Geçen yıl tam yıl; yıl kısmi ise geçen yılın aynı ayına kadar olan toplam da verilir
     (toplamda, ülkede ve cari satırında `gecenYilAyniDonem`; bu yılla kıyas bununla yapılır)."""
     m = _need_read(engine, tenant)

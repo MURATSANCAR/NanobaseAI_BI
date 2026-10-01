@@ -5,7 +5,8 @@ kırılımı, kredi riski göstergesi M30'un fonksiyonlarıdır (`field_sales_so
 yazılmaz. Bu dosya yalnız M38'e özgü okumaları taşır:
 
 - **Günlük alım** — Logo faturalı satır (`STLINE`, `LINETYPE = 0`, `INVOICEREF <> 0`, `CANCELLED = 0`; TRCODE 7/8/9 satış,
-  2/3 iade; tutar `LINENET`, M30/M46 ile aynı tanım), cari kodu × gün. Carinin 12 ay değeri, önceki 12 ay, iade oranı,
+  2/3 iade; tutar `VATMATRAH` (KDV matrahı, fatura geneli iskonto dahil; dönem fatura tarihi `INVOICE.DATE_` — karar
+  2026-10-01), M30/M46 ile aynı tanım), cari kodu × gün. Carinin 12 ay değeri, önceki 12 ay, iade oranı,
   alım günleri (medyan aralık), aylık grafik ve aksiyonun 30/90 gün sonucu bu tek okumadan hesaplanır.
   Yıllar Logo'da ayrı firmadır (411 = 2026, 211 = 2021–2025): her firma yalnız **kendi yıllarının tarih aralığında**
   okunur (aynı gün iki kopyadan iki kez sayılmaz) ve cari **kodla** (`CLCARD.CODE`) birleşir; LOGICALREF firmalar arasında
@@ -72,30 +73,34 @@ def firm_windows(firms: dict[int, str], start: date, end: date) -> list[tuple[st
 
 
 def daily_sales_sql(f: str, start: date, end: date, prefix_: str = "120") -> str:
-    """Cari kodu × gün: faturalı satış ve iade (`LINENET`), satış faturası sayısı. [start, end] kapalı aralık."""
+    """Cari kodu × gün: faturalı satış ve iade (`VATMATRAH`), satış faturası sayısı. [start, end] kapalı aralık."""
     f = firm(f)
-    return (f"SELECT C.CODE AS code, S.DATE_ AS gun,"
-            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE 0 END) AS satis,"
-            f" SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END) AS iade,"
+    return (f"SELECT C.CODE AS code, SH.DATE_ AS gun,"
+            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE 0 END) AS satis,"
+            f" SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.VATMATRAH ELSE 0 END) AS iade,"
             f" COUNT(DISTINCT CASE WHEN S.TRCODE IN (7,8,9) THEN S.INVOICEREF END) AS fatura"
-            f" FROM dbo.LG_{f}_01_STLINE S JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
+            f" FROM dbo.LG_{f}_01_STLINE S"
+            f" JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0"
+            f" JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
             f" WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)"
             f" AND C.CODE LIKE '{code_prefix(prefix_)}%'"
-            f" AND S.DATE_ >= '{_d(start)}' AND S.DATE_ < '{_d(end + timedelta(days=1))}'"
-            f" GROUP BY C.CODE, S.DATE_")
+            f" AND SH.DATE_ >= '{_d(start)}' AND SH.DATE_ < '{_d(end + timedelta(days=1))}'"
+            f" GROUP BY C.CODE, SH.DATE_")
 
 
 def monthly_sql(f: str, code: str, start: date, end: date) -> str:
     """Tek carinin aylık faturalı satış ve iadesi (cari ayrıntısı grafiği; canlı okuma)."""
     f = firm(f)
-    return (f"SELECT YEAR(S.DATE_) AS yil, MONTH(S.DATE_) AS ay,"
-            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE 0 END) AS satis,"
-            f" SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END) AS iade"
-            f" FROM dbo.LG_{f}_01_STLINE S JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
+    return (f"SELECT YEAR(SH.DATE_) AS yil, MONTH(SH.DATE_) AS ay,"
+            f" SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE 0 END) AS satis,"
+            f" SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.VATMATRAH ELSE 0 END) AS iade"
+            f" FROM dbo.LG_{f}_01_STLINE S"
+            f" JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0"
+            f" JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
             f" WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)"
             f" AND C.CODE = '{code_literal(code)}'"
-            f" AND S.DATE_ >= '{_d(start)}' AND S.DATE_ < '{_d(end + timedelta(days=1))}'"
-            f" GROUP BY YEAR(S.DATE_), MONTH(S.DATE_)")
+            f" AND SH.DATE_ >= '{_d(start)}' AND SH.DATE_ < '{_d(end + timedelta(days=1))}'"
+            f" GROUP BY YEAR(SH.DATE_), MONTH(SH.DATE_)")
 
 
 def all_client_codes_sql(f: str) -> str:

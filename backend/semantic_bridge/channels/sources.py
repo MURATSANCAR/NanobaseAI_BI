@@ -5,7 +5,8 @@ SQL metinleri `channels/sql/*.sql` dosyalarındadır; M34 (pazar yeri sell-in) v
 (`L_CAPIPERIOD`, kopya yıllar atlanır). Yıllık firma tablosu yıl süzgeciyle okunur (211 kopyası 2021–2025'i tutar).
 
 Tanım (katalog ve M46 ile aynı): satış = faturalı (`INVOICEREF <> 0`) malzeme satırı (`LINETYPE 0`), TRCODE 7/8/9;
-iade = 2/3; net ciro = Σ LINENET (satış) − Σ LINENET (iade); iskonto = satır iskontosu (`LINETYPE 2`) TOTAL'i;
+iade = 2/3; net ciro = Σ VATMATRAH (satış) − Σ VATMATRAH (iade) (KDV matrahı, fatura geneli iskonto dahil; dönem
+fatura tarihi `INVOICE.DATE_` — karar 2026-10-01); iskonto = satır iskontosu (`LINETYPE 2`) TOTAL'i;
 maliyet yalnız `OUTCOST > 0` satırlarında `AMOUNT × OUTCOST`.
 """
 from __future__ import annotations

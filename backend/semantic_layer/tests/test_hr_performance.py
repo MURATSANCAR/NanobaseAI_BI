@@ -143,8 +143,8 @@ def test_system_measure_is_closed_until_setting_opens_it(engine, org):
 def test_logo_salesman_sql_is_invoiced_lines_net_of_returns():
     sql = S.salesman_net_sql("411", "S01", date(2026, 1, 1), date(2026, 8, 17))
     assert "S.INVOICEREF <> 0" in sql and "S.LINETYPE = 0" in sql and "S.CANCELLED = 0" in sql
-    assert "TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET" in sql and "TRCODE IN (2,3,7,8,9)" in sql
-    assert "S.DATE_ < '2026-08-18'" in sql and "M.CODE = N'S01'" in sql and "dbo.LG_SLSMAN AS M" in sql and "LG_411_SLSMAN" not in sql
+    assert "TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH" in sql and "TRCODE IN (2,3,7,8,9)" in sql
+    assert "I.DATE_ < '2026-08-18'" in sql and "I.CANCELLED = 0" in sql and "M.CODE = N'S01'" in sql and "dbo.LG_SLSMAN AS M" in sql and "LG_411_SLSMAN" not in sql
     with pytest.raises(S.SourceError):
         S.salesman_net_sql("411", "x'; DROP TABLE y--", date(2026, 1, 1), date(2026, 1, 2))
     calls = []

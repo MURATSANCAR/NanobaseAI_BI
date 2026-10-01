@@ -14,7 +14,7 @@ from semantic_bridge import dealers as D
 from semantic_bridge import field_sales_kaynak as FK
 from semantic_bridge import provenance as P
 
-F_SERI = ("12 ay serisi (Logo aylık, iki yıl kopyası cari koduyla toplanır): satış = Σ LINENET (7, 8, 9), iade = Σ LINENET "
+F_SERI = ("12 ay serisi (Logo aylık, iki yıl kopyası cari koduyla toplanır): satış = Σ VATMATRAH (7, 8, 9), iade = Σ VATMATRAH "
           "(2, 3), net = satış − iade, iade oranı = iade ÷ satış, düzensizlik = aylık satışın değişim katsayısı (std ÷ ortalama), "
           "aktif ay = satışı olan ay sayısı, büyüme = son 6 ay net ÷ önceki 6 ay net − 1, tahsilat süresi (yaklaşık) = bakiye ÷ "
           "(12 ay net ÷ 365).")

@@ -11,7 +11,8 @@ Kaynaklar (analiz `docs/analiz/kullanici-ihtiyaclari/M27-fuar-etkinlik-odul.md` 
 - **Fuar / etkinlik / imza siparişi** — CRM `new_siparisBase.new_siparistipi` (4 Fuar, 5 Etkinlik, 16 İmza siparişi);
   sayılan tipler ve dışlanan durumlar ayardır (`EVENTS_ORDER_TYPES`, `EVENTS_ORDER_EXCLUDED_STATUS`).
 - **Fuar satışı** — Logo faturalı satış satırı (`STLINE`, `CANCELLED = 0`, `LINETYPE = 0`, `INVOICEREF <> 0`,
-  TRCODE 7/8/9 − 2/3, net ciro = `LINENET`) ⨝ `CLCARD`, cari kanalı `SPECODE2 = <EVENTS_FAIR_CHANNEL>` (varsayılan
+  TRCODE 7/8/9 − 2/3, net ciro = `VATMATRAH` (KDV matrahı, fatura geneli iskonto dahil; dönem fatura tarihi
+  `INVOICE.DATE_` — karar 2026-10-01)) ⨝ `CLCARD`, cari kanalı `SPECODE2 = <EVENTS_FAIR_CHANNEL>` (varsayılan
   «FUAR»); fuara cari kodu eşlendiyse ayrıca `CLCARD.CODE IN (…)`. Yıllar ayrı firma numarasıdır (`L_CAPIPERIOD`,
   211 = 2021–2025, 411 = 2026); kopya firmalar (`SEMANTIC_EXCLUDE_CONTEXT`) atlanır.
 - **Stok** — güncel kopyada malzeme bakiyesi (IOCODE 1/2 giriş, 3/4 çıkış; tarih süzgeçsiz).
@@ -256,13 +257,14 @@ def fair_sales_sql(firm: str, frm: date, to: date, channel: str, client_codes: O
     return (
         "SELECT C.CODE AS cari_kodu, MAX(C.DEFINITION_) AS cari_adi, I.CODE AS stok_kodu, MAX(I.NAME) AS ad,"
         " SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,"
-        " SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS ciro"
+        " SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS ciro"
         f" FROM dbo.LG_{f}_01_STLINE S"
+        f" JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0"
         f" JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF"
         f" JOIN dbo.LG_{f}_ITEMS I ON I.LOGICALREF = S.STOCKREF"
         " WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)"
         f" AND C.SPECODE2 = '{_channel(channel)}'"
-        f" AND S.DATE_ >= '{frm.isoformat()}' AND S.DATE_ < '{to.isoformat()}'"
+        f" AND SH.DATE_ >= '{frm.isoformat()}' AND SH.DATE_ < '{to.isoformat()}'"
         + (f" AND C.CODE IN ({_code_in(cc)})" if cc else "")
         + " GROUP BY C.CODE, I.CODE"
     )

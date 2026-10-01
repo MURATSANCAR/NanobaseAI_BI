@@ -14,7 +14,8 @@
 - Kitaplık listesi = `new_kitaplikBase` (kategori kaynağı «kitaplık» iken).
 
 **Logo:** TİMAŞ'ın kendi satışı — satır tanımı M46 ile aynı (`budget_sources`): `STLINE`, `CANCELLED = 0`,
-`LINETYPE = 0`, `INVOICEREF <> 0` (faturalı), `TRCODE 7/8/9` satış, `2/3` iade (eksi); ciro = `LINENET`. Yayınevi =
+`LINETYPE = 0`, `INVOICEREF <> 0` (faturalı), `TRCODE 7/8/9` satış, `2/3` iade (eksi); ciro = `VATMATRAH` (KDV
+matrahı, fatura geneli iskonto dahil; dönem fatura tarihi `INVOICE.DATE_` — karar 2026-10-01). Yayınevi =
 `ITEMS.SPECODE` (kayıtlı SQL «yayınevi bazında net ciro»), kanal = `CLCARD.SPECODE2`. Yıl → firma eşlemesi
 `L_CAPIPERIOD`'dan. Bu satış **sell-in**'dir (kitapçıya ve dağıtıcıya satış), okura satış ya da pazar payı değildir;
 ekran bunu her yerde yazar.
@@ -231,12 +232,13 @@ def item_sales_sql(firm: str, year: int, cut: date) -> str:
     return f"""
 -- Faturalı satış satırları; iade eksi. ytd_* = 1 Ocak – veri sonu (aynı dönem karşılaştırması için).
 SELECT I.CODE AS stok, MAX(I.SPECODE) AS yayinevi,
-  SUM(CASE WHEN S.DATE_ < '{cut.isoformat()}' THEN {_SIGN} * S.AMOUNT ELSE 0 END) AS ytd_adet,
-  SUM(CASE WHEN S.DATE_ < '{cut.isoformat()}' THEN {_SIGN} * S.LINENET ELSE 0 END) AS ytd_ciro,
-  SUM({_SIGN} * S.AMOUNT) AS adet, SUM({_SIGN} * S.LINENET) AS ciro
+  SUM(CASE WHEN SH.DATE_ < '{cut.isoformat()}' THEN {_SIGN} * S.AMOUNT ELSE 0 END) AS ytd_adet,
+  SUM(CASE WHEN SH.DATE_ < '{cut.isoformat()}' THEN {_SIGN} * S.VATMATRAH ELSE 0 END) AS ytd_ciro,
+  SUM({_SIGN} * S.AMOUNT) AS adet, SUM({_SIGN} * S.VATMATRAH) AS ciro
 FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{firm}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
-WHERE {_SALE} AND S.DATE_ >= '{year}-01-01' AND S.DATE_ < '{year + 1}-01-01'
+WHERE {_SALE} AND SH.DATE_ >= '{year}-01-01' AND SH.DATE_ < '{year + 1}-01-01'
 GROUP BY I.CODE""".strip()
 
 
@@ -244,12 +246,13 @@ def channel_sales_sql(firm: str, year: int, cut: date) -> str:
     return f"""
 -- Kanal = cari kartın özel kodu 2 (CLCARD.SPECODE2); boş kod «(boş)».
 SELECT COALESCE(NULLIF(C.SPECODE2, ''), '(boş)') AS kanal,
-  SUM(CASE WHEN S.DATE_ < '{cut.isoformat()}' THEN {_SIGN} * S.AMOUNT ELSE 0 END) AS ytd_adet,
-  SUM(CASE WHEN S.DATE_ < '{cut.isoformat()}' THEN {_SIGN} * S.LINENET ELSE 0 END) AS ytd_ciro,
-  SUM({_SIGN} * S.AMOUNT) AS adet, SUM({_SIGN} * S.LINENET) AS ciro
+  SUM(CASE WHEN SH.DATE_ < '{cut.isoformat()}' THEN {_SIGN} * S.AMOUNT ELSE 0 END) AS ytd_adet,
+  SUM(CASE WHEN SH.DATE_ < '{cut.isoformat()}' THEN {_SIGN} * S.VATMATRAH ELSE 0 END) AS ytd_ciro,
+  SUM({_SIGN} * S.AMOUNT) AS adet, SUM({_SIGN} * S.VATMATRAH) AS ciro
 FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 LEFT JOIN dbo.LG_{firm}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
-WHERE {_SALE} AND S.DATE_ >= '{year}-01-01' AND S.DATE_ < '{year + 1}-01-01'
+WHERE {_SALE} AND SH.DATE_ >= '{year}-01-01' AND SH.DATE_ < '{year + 1}-01-01'
 GROUP BY COALESCE(NULLIF(C.SPECODE2, ''), '(boş)')""".strip()
 
 

@@ -54,7 +54,7 @@ TITLES = {
     "bayiAyrinti": "Logo bayinin kitap karması (anlık okuma)",
 }
 
-F_NET = ("Net ciro = Σ LINENET (TRCODE 7/8/9 satış) − Σ LINENET (TRCODE 2/3 iade); faturalı satış satırı (LINETYPE 0, "
+F_NET = ("Net ciro = Σ VATMATRAH (TRCODE 7/8/9 satış) − Σ VATMATRAH (TRCODE 2/3 iade); faturalı satış satırı (LINETYPE 0, "
          "iptal değil, INVOICEREF ≠ 0); kanal = cari özel kodu 2 (CLCARD.SPECODE2). Her yıl kendi Logo firma kopyasından "
          "okunur ve cari koduyla birleştirilir; satış faturası sayısı fatura başlığından (TRCODE 7/8/9, iptal değil).")
 F_DONEM = ("Dönem: Logo verisinin bittiği aydan önceki tam aylar (veri Ocak'ta bitiyorsa Ocak); bu yıl = Ocak–o ay, geçen "
@@ -84,7 +84,7 @@ F_TASLAK = ("Kaydedilmemiş değişiklikte ekranda: tutar = liste fiyatı × (1 
             "adet; teklif tutarı = Σ tutar; indirim = 1 − teklif tutarı ÷ liste fiyatıyla. Kaydedince fiyat listesi ve "
             "kurallarla yeniden hesaplanır.")
 F_HACIM = ("Önerilen indirim: ayarda hacim kademesi varsa toplam adedin geçtiği en yüksek kademenin oranı; yoksa son 12 ayın "
-           "KURUM kanalı faturalarında aynı adet aralığındaki gerçekleşen iskontonun ortancası (fatura başına 1 − Σ LINENET ÷ "
+           "KURUM kanalı faturalarında aynı adet aralığındaki gerçekleşen iskontonun ortancası (fatura başına 1 − Σ VATMATRAH ÷ "
            "Σ TOTAL); aralıkta en az N fatura (ayar) yoksa öneri 0. Elle girilen indirim kuralın önüne geçer.")
 F_PAKET = ("Aday = seçilen temalardan birinde onaylı etiketi olan (CRM bağı ya da onaylanmış öneri/elle), stoğu paket sayısına "
            "yeten, bugün geçerli Logo satış fiyatı olan kitap (yaş verilmişse yaş aralığı örtüşen); elenen sayıları bu üç "

@@ -3,8 +3,10 @@
 Tanımlar mevcut ölçülerle aynıdır (`budget_sources` başındaki ölçüm, 2026-09-28):
 
 - **Satış satırı** = `STLINE`, `CANCELLED = 0`, `LINETYPE = 0` (malzeme satırı), `INVOICEREF <> 0` (faturalı), `TRCODE 7/8/9`
-  satış, `2/3` iade. Net tutar = Σ `LINENET` (iade eksi), net adet = Σ `AMOUNT` (iade eksi).
-- **Logo brüt farkı (mevcut marj)** güncel yıl kopyasında kitap başına: Σ `LINENET` − Σ `AMOUNT × OUTCOST`, yalnız satış
+  satış, `2/3` iade. Net tutar = Σ `VATMATRAH` (KDV matrahı, fatura geneli iskonto dahil; dönem fatura tarihi
+  `INVOICE.DATE_` — karar 2026-10-01) (iade eksi), net adet = Σ `AMOUNT` (iade eksi).
+- **Logo brüt farkı (mevcut marj)** güncel yıl kopyasında kitap başına: Σ `VATMATRAH` − Σ `AMOUNT × OUTCOST`, yalnız
+  satış
   satırları (kabul testi 1 ile birebir). Maliyeti girilmemiş satır (`OUTCOST = 0`) sayısı ayrıca tutulur (kabul testi 2);
   marj oranı yalnız maliyetli satırlardan hesaplanır, maliyetsiz satır varsa ekranda yazılır.
 - **Satış hızı** son `KAMPANYA_ADAY_HIZ_AY` tam ay (veri sonu ayı hariç değil: veri sonunun bulunduğu ay dahil, `Yıl*12+Ay`
@@ -233,15 +235,16 @@ def monthly_sql(firm: str, a: date, b: date) -> str:
     """Stok kodu × ay: satış adedi, iade adedi, net tutar (iade eksi), [a, b)."""
     f = _f(firm)
     return f"""
-SELECT I.CODE AS stok, YEAR(S.DATE_) AS yil, MONTH(S.DATE_) AS ay,
+SELECT I.CODE AS stok, YEAR(SH.DATE_) AS yil, MONTH(SH.DATE_) AS ay,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE 0 END) AS satis_adet,
   SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.AMOUNT ELSE 0 END) AS iade_adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS net_tutar
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS net_tutar
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
-  AND S.DATE_ >= '{a.isoformat()}' AND S.DATE_ < '{b.isoformat()}'
-GROUP BY I.CODE, YEAR(S.DATE_), MONTH(S.DATE_)""".strip()
+  AND SH.DATE_ >= '{a.isoformat()}' AND SH.DATE_ < '{b.isoformat()}'
+GROUP BY I.CODE, YEAR(SH.DATE_), MONTH(SH.DATE_)""".strip()
 
 
 def margin_sql(firm: str, a: date, b: date) -> str:
@@ -249,17 +252,18 @@ def margin_sql(firm: str, a: date, b: date) -> str:
     f = _f(firm)
     return f"""
 SELECT I.CODE AS stok,
-  SUM(S.LINENET) AS ciro,
+  SUM(S.VATMATRAH) AS ciro,
   SUM(S.AMOUNT * S.OUTCOST) AS maliyet,
-  SUM(CASE WHEN S.OUTCOST <> 0 THEN S.LINENET ELSE 0 END) AS maliyetli_ciro,
+  SUM(CASE WHEN S.OUTCOST <> 0 THEN S.VATMATRAH ELSE 0 END) AS maliyetli_ciro,
   SUM(CASE WHEN S.OUTCOST <> 0 THEN S.AMOUNT ELSE 0 END) AS maliyetli_adet,
   SUM(S.AMOUNT) AS adet,
   SUM(CASE WHEN S.OUTCOST = 0 THEN 1 ELSE 0 END) AS maliyetsiz_satir,
   COUNT(*) AS satir
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (7,8,9)
-  AND S.DATE_ >= '{a.isoformat()}' AND S.DATE_ < '{b.isoformat()}'
+  AND SH.DATE_ >= '{a.isoformat()}' AND SH.DATE_ < '{b.isoformat()}'
 GROUP BY I.CODE""".strip()
 
 
@@ -272,18 +276,19 @@ def daily_sql(firm: str, codes: list[str], a: date, b: date, cari: Optional[list
         cari_join = (f"\nJOIN dbo.LG_{f}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF"
                      f"\nJOIN (VALUES {values(cari)}) AS CK(kod) ON CK.kod = C.CODE")
     return f"""
-SELECT K.kod AS stok, CAST(S.DATE_ AS date) AS gun,
+SELECT K.kod AS stok, CAST(SH.DATE_ AS date) AS gun,
   SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE 0 END) AS adet,
   SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.AMOUNT ELSE 0 END) AS iade_adet,
-  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS net_tutar,
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS net_tutar,
   SUM(CASE WHEN S.OUTCOST <> 0 THEN (CASE WHEN S.TRCODE IN (7,8,9) THEN 1 ELSE -1 END) * S.AMOUNT * S.OUTCOST ELSE 0 END) AS maliyet,
-  SUM(CASE WHEN S.OUTCOST <> 0 THEN (CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) ELSE 0 END) AS maliyetli_tutar
+  SUM(CASE WHEN S.OUTCOST <> 0 THEN (CASE WHEN S.TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) ELSE 0 END) AS maliyetli_tutar
 FROM dbo.LG_{f}_01_STLINE AS S
+JOIN dbo.LG_{f}_01_INVOICE AS SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0
 JOIN dbo.LG_{f}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
 JOIN (VALUES {values(codes)}) AS K(kod) ON K.kod = I.CODE{cari_join}
 WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (2,3,7,8,9)
-  AND S.DATE_ >= '{a.isoformat()}' AND S.DATE_ < '{b.isoformat()}'
-GROUP BY K.kod, CAST(S.DATE_ AS date)""".strip()
+  AND SH.DATE_ >= '{a.isoformat()}' AND SH.DATE_ < '{b.isoformat()}'
+GROUP BY K.kod, CAST(SH.DATE_ AS date)""".strip()
 
 
 # ------------------------------------------------------------------------------------------ CRM SQL

@@ -5,7 +5,8 @@ en çok katkı yapan kırılımları pay ve yönüyle vermek. Rakamı model üre
 yalnız anlatır (`zeki_text.interpret`, sayı denetimli; tutmazsa kural metni).
 
 **Ölçü katalogdan gelir, örnekten değil.** Soru çözümleyiciden geçer; sorunun sertifikalı METRIC formülü (ör.
-`SUM(CASE WHEN STLINE.TRCODE IN (7,8,9) THEN STLINE.LINENET ELSE 0 END)`), formülün koşulları (`INVOICEREF NOT IN (0)`),
+`SUM(CASE WHEN STLINE.TRCODE IN (7,8,9) THEN STLINE.VATMATRAH ELSE 0 END)`), formülün koşulları (`INVOICEREF NOT IN
+(0)`),
 ölçünün varsayılan satır kapsamı (DEFAULT_FILTER) ve sorudaki değer filtreleri (DIMENSION_VALUE) aynen SQL'e taşınır;
 böylece ayrıştırmanın toplamı sohbet cevabının rakamıyla aynı tanımdadır. Desteklenmeyen durum açıkça söylenir, tahmin
 edilmez: ölçü `STLINE` üzerinde toplanabilir bir SUM değilse (oran, ortalama, tekil sayım), soru başka tablo filtresi

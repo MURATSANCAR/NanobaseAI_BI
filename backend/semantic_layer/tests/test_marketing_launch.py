@@ -381,7 +381,7 @@ def test_sql_is_read_only_and_uses_the_same_definitions():
     o = S.orders_sql("Timas_MSCRM.dbo", ["15201.0001"], date(2026, 10, 1), date(2026, 10, 31), [1, 100000001])
     assert "statuscode NOT IN (1, 100000001)" in o and "DATEADD(HOUR, 3" in o and "N'15201.0001'" in o
     s = S.daily_sales_sql("411", [7, 3], date(2026, 10, 1), date(2026, 10, 31))
-    assert "INVOICEREF <> 0" in s and "TRCODE IN (2,3,7,8,9)" in s and "LINENET" in s and "STOCKREF IN (3, 7)" in s
+    assert "INVOICEREF <> 0" in s and "TRCODE IN (2,3,7,8,9)" in s and "VATMATRAH" in s and "SH.CANCELLED = 0" in s and "STOCKREF IN (3, 7)" in s
     for sql in (o, s, S.pending_items_sql("Timas_MSCRM.dbo", ["X"]), S.events_sql("Timas_MSCRM.dbo", "0f8fad5b-d9cb-469f-a165-70867728950e")):
         up = sql.upper()
         assert not any(w in up for w in ("INSERT ", "UPDATE ", "DELETE ", "MERGE ", "EXEC "))

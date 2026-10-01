@@ -373,8 +373,8 @@ def test_award_entries_flow(engine):
 def test_fair_sales_sql_uses_invoiced_lines_channel_and_codes():
     q = S.fair_sales_sql("411", date(2026, 11, 7), date(2026, 11, 16), "FUAR", ["120.FUAR.01", "x'; DROP--", "120.02"])
     assert "LG_411_01_STLINE" in q and "LG_411_CLCARD" in q and "S.INVOICEREF <> 0" in q and "S.LINETYPE = 0" in q
-    assert "S.CANCELLED = 0" in q and "C.SPECODE2 = 'FUAR'" in q and "TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET" in q
-    assert "S.DATE_ >= '2026-11-07' AND S.DATE_ < '2026-11-16'" in q
+    assert "S.CANCELLED = 0" in q and "C.SPECODE2 = 'FUAR'" in q and "TRCODE IN (7,8,9) THEN S.VATMATRAH ELSE -S.VATMATRAH" in q
+    assert "SH.DATE_ >= '2026-11-07' AND SH.DATE_ < '2026-11-16'" in q
     assert "C.CODE IN (N'120.FUAR.01', N'120.02')" in q and "DROP" not in q
     with pytest.raises(S.SourceError):
         S.fair_sales_sql("41'1", date(2026, 1, 1), date(2026, 1, 2), "FUAR")

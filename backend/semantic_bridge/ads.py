@@ -8,7 +8,7 @@ olur (satır `import_id`'si yeni yüklemeye geçer); bir dosyada aynı kampanya-
 toplanır.
 
 **Rakamlar.** Harcama, tıklama, dönüşüm dosyadan; e-ticaret cirosu Logo'dan (kanal `CLCARD.SPECODE2`, varsayılan
-`E-TICARET`; faturalı satır, iade eksi, net ciro = LINENET — M46 ile aynı tanım); stok Logo'nun güncel kopyasından
+`E-TICARET`; faturalı satır, iade eksi, net ciro = VATMATRAH — M46 ile aynı tanım); stok Logo'nun güncel kopyasından
 («stok bakiyesi» ölçüsü). **Pazarlama verimi** = e-ticaret net cirosu ÷ reklam harcaması, yalnız Logo verisinin bulunduğu
 günlerde (iki taraf aynı günlerle sınırlanır; satış verisi bittikten sonraki harcama verime girmez, ekranda yazılır).
 Platformun kendi dönüşüm değeri «platform ROAS» diye ayrıca gösterilir; gerçek getiri diye sunulmaz.

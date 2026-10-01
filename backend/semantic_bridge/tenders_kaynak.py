@@ -33,7 +33,7 @@ F_ORAN = ("Fiyat oranı önerisi = geçmiş sonuçlarda kazanan fiyat ÷ aynı k
           "türünde yeterli sonuç varsa o, yoksa bütün sonuçlar; yetersizse 1).")
 F_SONUC = ("Sonuç ekranı: sonuç kayıtları elle girilir (kazanan, kazanan fiyat, bizim teklif, liste toplamı); kazanan ÷ "
            "liste oranı satırda hesaplanır; kurum türü özeti = sonuç ve kazanılan sayısı, oranların ortancası.")
-F_KAMU = ("Kamu satışı: faturalı satış satırı (iade eksi), net ciro = Σ LINENET, adet = Σ AMOUNT, fatura = farklı fatura "
+F_KAMU = ("Kamu satışı: faturalı satış satırı (iade eksi), net ciro = Σ VATMATRAH, adet = Σ AMOUNT, fatura = farklı fatura "
           "sayısı; kamu = Logo satış kanalı (CLCARD.SPECODE2) ya da CRM'de kamu kurumu rolü işaretli cari. İl, kaynak ve "
           "toplam satırları bu cari satırlarından toplanır.")
 F_KARAR = ("Karar özeti rakamları kayıttan ve teklif tablosundan (model yok); geçmiş = aynı kurumun ve kurum türünün sonuç "

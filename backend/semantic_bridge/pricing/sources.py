@@ -7,7 +7,7 @@
 - **Kâğıdı Timaş alır:** `15001…` kâğıt kartları (3. hamur 60/65 gr, bristol kapak…) satın alma faturasıyla (TRCODE 1)
   gelir, ₺/kg ölçülür; matbaanın baskı faturası kâğıtsızdır. Bandrol de `15001.000.000001.BD` kartıyla alınır.
 - **Gerçekleşen birim maliyet:** satış satırındaki `OUTCOST` (Logo'nun maliyetlendirdiği birim maliyet; kâğıt + baskı
-  + üretim fişine yüklenen her şey). Kâr = LINENET − AMOUNT × OUTCOST (katalog kuralı); OUTCOST = 0 satır sayılır.
+  + üretim fişine yüklenen her şey). Kâr = VATMATRAH − AMOUNT × OUTCOST (katalog kuralı); OUTCOST = 0 satır sayılır.
 - **Satış:** yalnız faturalı satır (`INVOICEREF <> 0`), satış 7/8/9 eksi iade 2/3, `LINETYPE = 0`, kitap kodları `152…`.
 - Her yıl ayrı Logo kopyasıdır (211 = 2021–2025, 411 = 2026). Kopyalar ölçülerek bulunur, birbirine eklenmez;
   her kopyadan yalnız kendi yıllarının satırı okunur.
@@ -54,32 +54,34 @@ SOURCES: list[Source] = [
     ),
     Source(
         "logo_satis", "logo", "Kitap satışları ve satılan malın maliyeti",
-        "Faturalı satış satırları (7, 8, 9) eksi iadeler (2, 3); kitap ve yıl başına adet, net tutar (LINENET), "
+        "Faturalı satış satırları (7, 8, 9) eksi iadeler (2, 3); kitap ve yıl başına adet, net tutar (KDV matrahı, VATMATRAH), "
         "iskonto öncesi tutar (TOTAL) ve Logo'nun birim maliyetiyle (OUTCOST) satılan malın maliyeti.",
-        "SELECT IT.CODE AS kod, YEAR(S.DATE_) AS yil,\n"
+        "SELECT IT.CODE AS kod, YEAR(SH.DATE_) AS yil,\n"
         "       SUM(CASE WHEN S.TRCODE IN (7, 8, 9) THEN S.AMOUNT ELSE -S.AMOUNT END) AS adet,\n"
-        "       SUM(CASE WHEN S.TRCODE IN (7, 8, 9) THEN S.LINENET ELSE -S.LINENET END) AS net,\n"
+        "       SUM(CASE WHEN S.TRCODE IN (7, 8, 9) THEN S.VATMATRAH ELSE -S.VATMATRAH END) AS net,\n"
         "       SUM(CASE WHEN S.TRCODE IN (7, 8, 9) THEN S.TOTAL ELSE -S.TOTAL END) AS brut,\n"
         "       SUM(CASE WHEN S.TRCODE IN (7, 8, 9) THEN S.AMOUNT * S.OUTCOST ELSE 0 END) AS maliyet,\n"
         "       SUM(CASE WHEN S.TRCODE IN (7, 8, 9) AND S.OUTCOST > 0 THEN S.AMOUNT ELSE 0 END) AS maliyetli_adet,\n"
         "       SUM(CASE WHEN S.TRCODE IN (7, 8, 9) THEN S.AMOUNT ELSE 0 END) AS satis_adet\n"
         "FROM dbo.LG_{f}_01_STLINE S\n"
+        "JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0\n"
         "JOIN dbo.LG_{f}_ITEMS IT ON IT.LOGICALREF = S.STOCKREF\n"
         "WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.TRCODE IN (2, 3, 7, 8, 9) AND S.INVOICEREF <> 0\n"
-        "  AND IT.CODE LIKE '152%' AND S.DATE_ >= '{start}' AND S.DATE_ < '{end}'\n"
-        "GROUP BY IT.CODE, YEAR(S.DATE_)",
+        "  AND IT.CODE LIKE '152%' AND SH.DATE_ >= '{start}' AND SH.DATE_ < '{end}'\n"
+        "GROUP BY IT.CODE, YEAR(SH.DATE_)",
     ),
     Source(
         "logo_kanal", "logo", "Kanal iskontoları (son 12 ay)",
         "Kitap satış satırlarında müşteri grubuna (CLCARD.SPECODE2) göre iskonto öncesi tutar (TOTAL = adet × liste "
-        "fiyatı, KDV hariç) ve net tutar (LINENET). İskonto = 1 − net ÷ iskonto öncesi.",
+        "fiyatı, KDV hariç) ve net tutar (KDV matrahı, VATMATRAH). İskonto = 1 − net ÷ iskonto öncesi.",
         "SELECT ISNULL(NULLIF(LTRIM(RTRIM(C.SPECODE2)), ''), N'Grup kodu boş') AS kanal,\n"
-        "       SUM(S.TOTAL) AS brut, SUM(S.LINENET) AS net, SUM(S.AMOUNT) AS adet, COUNT(*) AS satir\n"
+        "       SUM(S.TOTAL) AS brut, SUM(S.VATMATRAH) AS net, SUM(S.AMOUNT) AS adet, COUNT(*) AS satir\n"
         "FROM dbo.LG_{f}_01_STLINE S\n"
+        "JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0\n"
         "JOIN dbo.LG_{f}_ITEMS IT ON IT.LOGICALREF = S.STOCKREF\n"
         "LEFT JOIN dbo.LG_{f}_CLCARD C ON C.LOGICALREF = S.CLIENTREF\n"
         "WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.TRCODE IN (7, 8) AND S.INVOICEREF <> 0\n"
-        "  AND IT.CODE LIKE '152%' AND S.DATE_ >= '{start}' AND S.DATE_ < '{end}'\n"
+        "  AND IT.CODE LIKE '152%' AND SH.DATE_ >= '{start}' AND SH.DATE_ < '{end}'\n"
         "GROUP BY ISNULL(NULLIF(LTRIM(RTRIM(C.SPECODE2)), ''), N'Grup kodu boş')",
     ),
     Source(
