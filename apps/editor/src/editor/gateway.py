@@ -47,6 +47,21 @@ NETWORK = os.environ.get("EDITOR_NETWORK", "editor-net")
 GIB = 1024**3
 MEM_MARGIN = int(float(os.environ.get("EDITOR_GPU_MARGIN_GIB", "1.5")) * GIB)
 FIT_TOGETHER = 0.92          # models.yaml: aynı karttaki modellerin payları toplamı bunu aşmıyorsa birlikte sığar
+# Kart sırası (2026-10-01): okuma sürerken resim modeli 40 dk yer bulamadı (ana model hiç boşalmadı), iki model aynı
+# anda açılıp bellek aşımıyla düştü, resim ile ana model her resimde yer değiştirdi. Kurallar:
+#  - aynı kartta modeller sırayla açılır (kart kilidi; bir model sağlıklı olana kadar ikincisi başlamaz);
+#  - kartta yer bekleyen model varsa kartı tutan modele yeni iş beslenmez: istek eşe taşar ya da bekler;
+#  - son EVICT_GRACE saniyede iş görmüş (ya da açılmakta olan) model kartından atılmaz; resim üretiminin adımları
+#    arasında yer değiştirme olmaz. Ana model o sırada isteklerini eşe taşır ya da bekler. Sürekli açık ana model
+#    bu korumadan yararlanmaz (kart gerekince yer açar, sonra bekçi geri kaldırır).
+EVICT_GRACE = int(os.environ.get("EDITOR_EVICT_GRACE_SEC", "120"))
+YIELD_MAX = int(os.environ.get("EDITOR_YIELD_MAX_SEC", "1500"))     # bekleme bundan uzarsa eski davranış;
+#   istemci zaman aşımlarının altında (stüdyo 1800 sn, okuma 3600 sn)
+GPU_LOCKS: dict[int, asyncio.Lock] = {}
+
+
+def _gpu_lock(gpu: int) -> asyncio.Lock:
+    return GPU_LOCKS.setdefault(gpu, asyncio.Lock())
 PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score",
                "pooling", "classify", "tokenize", "detokenize",
                "images/generations",      # book-image (vLLM-Omni); edits go as JSON chat/completions
@@ -273,11 +288,7 @@ async def _make_room(a: Alias) -> None:
     """Free enough memory on a's card by stopping idle editor models there."""
     need = int(a.mem_fraction * gpu_mem(a.gpu)[1]) + MEM_MARGIN
     deadline = time.time() + a.start_timeout_sec
-    WAITING.add(a.name)
-    try:
-        await _make_room_inner(a, need, deadline)
-    finally:
-        WAITING.discard(a.name)
+    await _make_room_inner(a, need, deadline)      # WAITING'i ensure_running tutar (kart kilidi boyunca)
 
 
 async def _make_room_inner(a: Alias, need: int, deadline: float) -> None:
@@ -298,7 +309,8 @@ async def _make_room_inner(a: Alias, need: int, deadline: float) -> None:
             key=lambda o: o.last_used)
         # An always-on model gives way only when nothing else can: it is stopped last and the
         # keeper brings it back as soon as the card has room again.
-        idle = sorted((o for o in others if o.inflight == 0), key=lambda o: o.always_on)
+        now = time.time()
+        idle = sorted((o for o in others if o.inflight == 0 and not _held(o, a, now)), key=lambda o: o.always_on)
         if idle:
             await _stop(idle[0], f"make room for {a.name}")
             await asyncio.sleep(3)
@@ -312,6 +324,57 @@ async def _make_room_inner(a: Alias, need: int, deadline: float) -> None:
                 "total_gib": round(total / GIB, 1), "holders": gpu_holders(a.gpu),
             })
         await asyncio.sleep(5)  # busy editor models on this card: wait
+
+
+def _held(o: Alias, a: Alias, now: float) -> bool:
+    """`o` kartını `a`ya bırakmamalı mı? İş başındaki model (son EVICT_GRACE saniyede kullanılmış ya da açılıyor)
+    tutulur. Sürekli açık ana model tutulmaz: kart gerekince yer verir, bekçi sonra geri kaldırır."""
+    return not o.always_on and (o.lock.locked() or now - o.last_used < EVICT_GRACE)
+
+
+def _must_yield(a: Alias) -> bool:
+    """`a`ya gelen yeni istek kartı beslememeli mi? (1) Aynı kartta yer bekleyen başka model var: kartı boşaltmak
+    için `a`ya iş verilmez. (2) `a` sürekli açık model ve kapalı; kartını iş başındaki başka model tutuyor: onu
+    atmak yerine beklenir. İkisinde de istek eşe taşar ya da sırasını bekler (`_route`)."""
+    now = time.time()
+    for o in ALIASES.values():
+        if o is a or o.gpu != a.gpu:
+            continue
+        if o.name in WAITING:
+            return True
+        if (not _is_running(a) and _held(o, a, now) and (o.lock.locked() or _is_running(o))
+                and o.mem_fraction + a.mem_fraction > FIT_TOGETHER):
+            return True
+    return False
+
+
+async def _drain_overflow(a: Alias) -> bool:
+    """Kart boşaltılırken ana modelin isteği eşe gidebilir mi? Yalnız eş ayaktaysa, taşma sınırı doluysa değil ve
+    eşte BI'ın kendi yükü sınırı aşmıyorsa (BI hiç yavaşlatılmaz)."""
+    if not (OVERFLOW_URL and OVERFLOW_MODEL and a.name == OVERFLOW_ALIAS):
+        return False
+    if ANALYSIS_CAP <= 0 or overflow_inflight >= ANALYSIS_CAP:
+        return False
+    load = await peer_load()
+    return load is not None and load - overflow_inflight <= ANALYSIS_BI_MAX
+
+
+async def _route(a: Alias, req: Request) -> bool:
+    """True: istek eşe gider. Kart boşaltılıyor ya da başka modelde iken istek kartı beslemez; eşe taşar ya da
+    sırasını bekler (YIELD_MAX'tan sonra eski davranış: kendi modelini açar)."""
+    deadline = time.time() + YIELD_MAX
+    logged = False
+    while True:
+        if await _should_overflow(a, req):
+            return True
+        if not _must_yield(a) or time.time() > deadline:
+            return False
+        if await _drain_overflow(a):
+            return True
+        if not logged:
+            log.info("yield %s: card %s busy with another model, request waits", a.name, a.gpu)
+            logged = True
+        await asyncio.sleep(2)
 
 
 def _would_wait(a: Alias) -> bool:
@@ -406,24 +469,38 @@ async def ensure_running(a: Alias) -> None:
     async with a.lock:
         if _is_running(a) and await _healthy(a):
             return
-        c = await asyncio.to_thread(_ensure_created, a)
+        # Kart kilidi: yer açma, başlatma ve sağlıklı olana kadar bekleme tek parça. Yeni açılan model belleğini
+        # yüklenirken ayırır; o arada kart boş görünür ve ikinci model de açılırsa ikisi birden düşer (ölçüldü
+        # 2026-10-01: %90 + %62 aynı anda başladı, resim modeli bellek aşımıyla düştü).
+        WAITING.add(a.name)            # sırada beklerken de kartı besleyen istekler durur
+        try:
+            async with _gpu_lock(a.gpu):
+                await _start_locked(a)
+        finally:
+            WAITING.discard(a.name)
+
+
+async def _start_locked(a: Alias) -> None:
+    if _is_running(a) and await _healthy(a):
+        return
+    c = await asyncio.to_thread(_ensure_created, a)
+    if c.status != "running":
+        await _make_room(a)
+        log.info("start %s on gpu %s", a.name, a.gpu)
+        await asyncio.to_thread(c.start)
+    t0 = time.time()
+    while time.time() - t0 < a.start_timeout_sec:
+        if await _healthy(a):
+            log.info("ready %s in %.0fs", a.name, time.time() - t0)
+            a.last_used = time.time()
+            return
+        c.reload()
         if c.status != "running":
-            await _make_room(a)
-            log.info("start %s on gpu %s", a.name, a.gpu)
-            await asyncio.to_thread(c.start)
-        t0 = time.time()
-        while time.time() - t0 < a.start_timeout_sec:
-            if await _healthy(a):
-                log.info("ready %s in %.0fs", a.name, time.time() - t0)
-                a.last_used = time.time()
-                return
-            c.reload()
-            if c.status != "running":
-                tail = c.logs(tail=40).decode(errors="replace")
-                raise HTTPException(503, {"error": "model_failed_to_start",
-                                          "alias": a.name, "log_tail": tail[-4000:]})
-            await asyncio.sleep(3)
-        raise HTTPException(504, {"error": "model_start_timeout", "alias": a.name})
+            tail = c.logs(tail=40).decode(errors="replace")
+            raise HTTPException(503, {"error": "model_failed_to_start",
+                                      "alias": a.name, "log_tail": tail[-4000:]})
+        await asyncio.sleep(3)
+    raise HTTPException(504, {"error": "model_start_timeout", "alias": a.name})
 
 
 async def reaper() -> None:
@@ -531,7 +608,7 @@ async def proxy(path: str, req: Request):
         if (path == "chat/completions" and not CHAT_THINKING and _client_name(req)
                 and without_thinking(payload)):
             body = json.dumps(payload).encode()
-        if await _should_overflow(a, req):
+        if await _route(a, req):
             # Aynı modelin GPU 0'daki eşi; yalnız sunulan ad farklı, gövdedeki model adı ona çevrilir.
             client = _client_name(req)
             if not client:
