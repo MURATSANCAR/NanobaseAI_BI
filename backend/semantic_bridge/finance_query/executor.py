@@ -17,9 +17,9 @@ import time
 
 import sqlglot
 from sqlglot import exp
-from .contracts import METRICS, ContractError
+from .contracts import METRICS, TRANSACTION_CODES, ContractError, codes_sql
 from . import operations
-from .result_metadata import describe_columns, calculation_definitions
+from .result_metadata import describe_columns, calculation_definitions, return_invoice_note
 
 MAX_ROWS = 250_000
 CRM = "[Timas_MSCRM].[dbo]"
@@ -31,6 +31,32 @@ def literal(value):
 
 def number(value):
     return Decimal(str(value or 0))
+
+
+# Logo stores an unentered date as NULL, 1899-12-30 (Delphi zero) or 1900-01-01
+# (SQL Server zero). None of them is a business date: a due date of 1900-01-01
+# would otherwise be ~46.000 days overdue. Every Logo vade/gecikme/as-of use goes
+# through these two helpers; the boundary matches the golden references.
+LOGO_FIRST_REAL_DATE = date(1901, 1, 1)
+
+
+def logo_date_entered(column):
+    """SQL predicate: the Logo date column holds a real, user-entered date."""
+    return f"{column}>='{LOGO_FIRST_REAL_DATE:%Y%m%d}'"
+
+
+def logo_date_text(column):
+    """ISO day text of a Logo date column, NULL when the date was not entered."""
+    return f"CASE WHEN {logo_date_entered(column)} THEN CONVERT(varchar(10),{column},23) END"
+
+
+def logo_entered_date(value):
+    """Python twin for values read back from Logo: a date, or None when not entered."""
+    if value is None or value == "":
+        return None
+    day = value.date() if hasattr(value, "date") and callable(value.date) else value
+    day = day if isinstance(day, date) else date.fromisoformat(str(day)[:10])
+    return day if day >= LOGO_FIRST_REAL_DATE else None
 
 
 class Executor:
@@ -45,6 +71,8 @@ class Executor:
         self.coverage_complete = True
         self.section_results = []
         self.gaps = []
+        # Return invoices measured beside an invoice count: [{start, end, returnInvoiceCount}].
+        self.return_invoice_counts = []
 
     def read(self, sql, *, metadata=False, source="logo"):
         statements = sqlglot.parse(sql, read="tsql")
@@ -234,6 +262,7 @@ class Executor:
                     self.runs.extend(child.runs)
                     self.read_retries.extend(child.read_retries)
                     self.source_periods.extend(child.source_periods)
+                    self.return_invoice_counts.extend(child.return_invoice_counts)
                     self.notes.extend(title + ": " + n for n in child.notes)
                     self.coverage_complete &= child.coverage_complete
                 section["sourceExecutions"] = child.runs
@@ -274,10 +303,17 @@ class Executor:
         group_fields = []
         for d in plan.dimensions:
             group_fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else ["subbrand_id", "subbrand"] if d == "subbrand" else ["author_group_ids", "author_group_names"] if d == "author_group" else [d])
+        returns_probe = self.returns_probe(plan)
+        return_counts = []
         for start, end in plan.periods:
             partials = []
+            returns = Decimal(0)
             for a, b, firm, period in self.partitions(date.fromisoformat(start), date.fromisoformat(end)):
                 partials.extend(self.aggregate_families(plan, a, b, firm, period, enrichment))
+                if returns_probe:
+                    returns += sum((number(r["return_invoice_count"]) for r in self.aggregate(returns_probe, "invoice", a, b, firm, period, False)), Decimal(0))
+            if returns_probe:
+                return_counts.append((start, end, int(returns)))
             before = {m: sum((number(r[m]) for r in partials), Decimal(0)) for m in plan.metrics}
             missing = 0
             empty_fields = {field: 0 for field in ("author", "publisher", "subbrand", "author_group_ids") if field in group_fields}
@@ -330,6 +366,9 @@ class Executor:
                 self.output_fields += [spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct")] if spec["op"] == "contribution" else ["row_kind"]
         if plan.derived or plan.comparison:
             self.notes.append("Oran veya yüzde değişim hesabında sıfır/eksik payda boş gösterilir; dönemde bulunmayan kırılım sıfır varsayılmaz.")
+        if returns_probe:
+            self.return_invoice_counts = [{"start": a, "end": b, "returnInvoiceCount": n} for a, b, n in return_counts]
+            self.notes.append(return_invoice_note(return_counts, bool(plan.filters) or plan.sale_kind != "all"))
         self.numeric_fields = {k for k in self.output_fields if k in plan.metrics or k in {d.id for d in plan.derived}}
         if plan.comparison:
             self.numeric_fields.update(("base_value", "target_value", plan.comparison.id))
@@ -345,9 +384,21 @@ class Executor:
         self.numeric_fields = set(result.get("numeric_fields", []))
         self.notes.extend(result.get("notes", []))
         self.gaps.extend(result.get("gaps", []))
+        self.return_invoice_counts.extend(result.get("return_invoice_counts", []))
         if self.gaps:
             self.coverage_complete = False
         return result["records"]
+
+    @staticmethod
+    def returns_probe(plan):
+        """Invoice counts exclude returns (user decision 2026-10-01). The same run also
+        counts return invoices for the identical period, filters and sale kind, so the
+        answer can say how many were left out. One total, not per breakdown row."""
+        counted = set(plan.metrics) | ({plan.comparison.metric} if plan.comparison else set())
+        if "invoice_count" not in counted or counted & {"return_invoice_count", "invoice_count_with_returns"}:
+            return None
+        return replace(plan, metrics=("return_invoice_count",), dimensions=(), derived=(), having=(),
+                       comparison=None, analytics=(), limit=None, order_by=None)
 
     @staticmethod
     def matches(value, op, wanted):
@@ -430,19 +481,17 @@ class Executor:
         if client:
             sql += f" LEFT JOIN dbo.[{client_table}] c ON c.LOGICALREF=f.CLIENTREF"
         conditions = ["f.CANCELLED=0", f"f.DATE_>='{start}'", f"f.DATE_<'{end}'"]
-        if family == "sales":
-            codes_by_metric = {"sold_quantity": {7,8}, "net_quantity": {2,3,7,8},
-                               "sales_amount": {7,8,9}, "net_sales": {2,3,7,8,9}, "return_amount": {2,3}}
-            transaction_codes = sorted(set().union(*(codes_by_metric[m] for m in plan.metrics)))
-            conditions += ["f.LINETYPE=0", "f.INVOICEREF<>0", "f.TRCODE IN (" + ",".join(map(str,transaction_codes)) + ")"]
-        elif family == "invoice":
-            conditions += ["f.TRCODE IN (7,8,9)"]
+        if family in ("sales", "invoice"):
+            transaction_codes = codes_sql(set().union(*(TRANSACTION_CODES[m] for m in plan.metrics)))
+            if family == "sales":
+                conditions += ["f.LINETYPE=0", "f.INVOICEREF<>0"]
+            conditions.append("f.TRCODE IN " + transaction_codes)
         else:
             conditions += ["f.SIGN=1", "f.TRCODE IN (1,20,61,62,70)", "c.CODE LIKE '120%'"]
         if plan.sale_kind != "all":
-            # Retail returns are 2, wholesale returns 3; do not silently discard returns from net metrics.
-            codes = "(8,3)" if plan.sale_kind == "wholesale" and family == "sales" else "(7,2)" if family == "sales" else "(8)" if plan.sale_kind == "wholesale" else "(7)"
-            conditions.append("f.TRCODE IN " + codes)
+            # Retail returns are 2, wholesale returns 3; do not silently discard returns from
+            # net metrics or return counts. Service sales 9 are neither retail nor wholesale.
+            conditions.append("f.TRCODE IN " + ("(8,3)" if plan.sale_kind == "wholesale" else "(7,2)"))
         for dim, op, value in plan.filters:
             if dim in ("author", "publisher", "subbrand"):
                 continue
