@@ -27,6 +27,8 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from composable_live import ROOT, connect, environment, manifest, query, save, REFERENCE_CONTEXT, REFERENCE_RETRIES
+# Etkin kayıt kullanıcı kararı K-CRM-PASIF'ten (durum nedeni 'Pasif…' değil); eski/ürün süzgeci yalnız TANIM_FARKI için.
+import independent_reference as ir
 
 
 def cases():
@@ -83,53 +85,59 @@ def pack(v):return json.dumps(v,ensure_ascii=False,sort_keys=True,default=str)
 
 
 class Oracle:
-    """Fixed independently authored SQL against source DB, not application output."""
-    def __init__(self,conn): self.conn=conn;self.sql=[];self.cache={}
+    """Fixed independently authored SQL against source DB, not application output.
+
+    `variant='decision'`: etkin kayıt = ir.crm_active (K-CRM-PASIF). `variant='product'`: önceki kabul süzgeci
+    (ürünün bugünkü davranışıyla aynı); yalnız TANIM_FARKI sınıflamasında kullanılır."""
+    def __init__(self,conn,variant="decision"): self.conn=conn;self.sql=[];self.cache={};self.variant=variant
+    def A(self,table,alias,legacy):
+        return legacy if self.variant=="product" else ir.crm_active(table,alias)
     def get(self,key,sql):
         if key not in self.cache:
             self.sql.append(sql);self.cache[key]=query(self.conn,sql)
         return self.cache[key]
     def books(self):
-        sql="""SELECT K.new_kitapId book_id,K.new_stokkodu book_code,K.new_name book_name,K.new_isbn13 isbn,
+        sql=f"""SELECT K.new_kitapId book_id,K.new_stokkodu book_code,K.new_name book_name,K.new_isbn13 isbn,
  K.new_yazartext author_text,K.new_yayineviid publisher_id,P.new_name publisher,
  K.new_yayinciid subbrand_id,S.new_name subbrand,K.new_YayneviAltMarka alternate_subbrand_id,A.new_name alternate_subbrand,
  K.new_ilkyayintarihi first_print_date,K.new_sonyayintarihi last_publication_date,K.new_baskisayisi edition_count,K.new_baskitarihi last_print_date,
  K.CreatedOn created_at,K.ModifiedOn updated_at,K.new_Editor editor_id,K.new_projeeditoru project_editor_id,
  K.new_yayinyonetmeni publishing_director_id,K.OwnerId owner_id,K.new_oncekiyayineviid previous_publisher_id,
  K.new_KitapProjesi book_project_id,K.new_projekarti project_card_id
- FROM dbo.new_kitapBase K LEFT JOIN dbo.new_markaBase P ON P.new_markaId=K.new_yayineviid AND P.statecode=0 AND P.statuscode=1
- LEFT JOIN dbo.new_markaBase S ON S.new_markaId=K.new_yayinciid AND S.statecode=0 AND S.statuscode=1
- LEFT JOIN dbo.new_yaynevialtmarkaBase A ON A.new_yaynevialtmarkaId=K.new_YayneviAltMarka AND A.statecode=0
- WHERE K.statecode=0 AND K.statuscode=1"""
+ FROM dbo.new_kitapBase K LEFT JOIN dbo.new_markaBase P ON P.new_markaId=K.new_yayineviid AND {self.A("new_markaBase","P","P.statecode=0 AND P.statuscode=1")}
+ LEFT JOIN dbo.new_markaBase S ON S.new_markaId=K.new_yayinciid AND {self.A("new_markaBase","S","S.statecode=0 AND S.statuscode=1")}
+ LEFT JOIN dbo.new_yaynevialtmarkaBase A ON A.new_yaynevialtmarkaId=K.new_YayneviAltMarka AND {self.A("new_yaynevialtmarkaBase","A","A.statecode=0")}
+ WHERE {self.A("new_kitapBase","K","K.statecode=0 AND K.statuscode=1")}"""
         return unique(self.get("books",sql),"book_id")
     def people(self):
-        return unique(self.get("people","SELECT ContactId person_id,FullName person_name,new_yazarmi is_author,EMailAddress1 email,Telephone1 phone,MobilePhone mobile,CreatedOn created_at,ModifiedOn updated_at,ParentCustomerId parent_id,ParentCustomerIdType parent_type FROM dbo.ContactBase WHERE statecode=0 AND statuscode=1"),"person_id")
+        return unique(self.get("people","SELECT P.ContactId person_id,P.FullName person_name,P.new_yazarmi is_author,P.EMailAddress1 email,P.Telephone1 phone,P.MobilePhone mobile,P.CreatedOn created_at,P.ModifiedOn updated_at,P.ParentCustomerId parent_id,P.ParentCustomerIdType parent_type FROM dbo.ContactBase P WHERE "+self.A("ContactBase","P","P.statecode=0 AND P.statuscode=1")),"person_id")
     def authors(self):
         # The source's Yazar role is resolved by label, never by a guessed GUID.
-        rows=self.get("authors","""SELECT DISTINCT E.new_Kitap book_id,E.new_Katilimsaglayan person_id
- FROM dbo.new_eserkatilimBase E JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=E.new_katilimciTipi AND R.statecode=0
- JOIN dbo.ContactBase C ON C.ContactId=E.new_Katilimsaglayan AND C.statecode=0 AND C.statuscode=1
- JOIN dbo.new_kitapBase B ON B.new_kitapId=E.new_Kitap AND B.statecode=0 AND B.statuscode=1
- WHERE E.statecode=0 AND R.new_name=N'Yazar'""")
+        rows=self.get("authors",f"""SELECT DISTINCT E.new_Kitap book_id,E.new_Katilimsaglayan person_id
+ FROM dbo.new_eserkatilimBase E JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=E.new_katilimciTipi AND {self.A("new_katilimcitipiBase","R","R.statecode=0")}
+ JOIN dbo.ContactBase C ON C.ContactId=E.new_Katilimsaglayan AND {self.A("ContactBase","C","C.statecode=0 AND C.statuscode=1")}
+ JOIN dbo.new_kitapBase B ON B.new_kitapId=E.new_Kitap AND {self.A("new_kitapBase","B","B.statecode=0 AND B.statuscode=1")}
+ WHERE {self.A("new_eserkatilimBase","E","E.statecode=0")} AND R.new_name=N'Yazar'""")
         result=defaultdict(set)
         for r in rows:result[identity(r["book_id"])].add(identity(r["person_id"]))
         return result
     def customers(self):
-        rows=self.get("customers","""SELECT C.AccountId customer_id,C.Name customer_name,C.new_VergiNo tax_number,
+        rows=self.get("customers",f"""SELECT C.AccountId customer_id,C.Name customer_name,C.new_VergiNo tax_number,
  C.TerritoryId territory_id,T.Name territory,C.PrimaryContactId primary_contact_id,C.CreatedOn created_at,C.ModifiedOn updated_at,
  A.City city,A.StateOrProvince region,A.Country country FROM dbo.AccountBase C
  LEFT JOIN dbo.CustomerAddressBase A ON A.ParentId=C.AccountId AND A.ObjectTypeCode=1 AND A.AddressNumber=1
- LEFT JOIN dbo.TerritoryBase T ON T.TerritoryId=C.TerritoryId WHERE C.statecode=0 AND C.statuscode=100000000""")
+ LEFT JOIN dbo.TerritoryBase T ON T.TerritoryId=C.TerritoryId WHERE {self.A("AccountBase","C","C.statecode=0 AND C.statuscode=100000000")}""")
         return unique(rows,"customer_id")
     def customer_relations(self):
-        return self.get("customer_relations","""SELECT C.ContactId person_id,A.AccountId customer_id,'Contact.ParentCustomerId' relationship_type
+        both=self.A("ContactBase","C","C.statecode=0 AND C.statuscode=1")+" AND "+self.A("AccountBase","A","A.statecode=0 AND A.statuscode=100000000")
+        return self.get("customer_relations",f"""SELECT C.ContactId person_id,A.AccountId customer_id,'Contact.ParentCustomerId' relationship_type
  FROM dbo.ContactBase C JOIN dbo.AccountBase A ON A.AccountId=C.ParentCustomerId AND C.ParentCustomerIdType=1
- WHERE C.statecode=0 AND C.statuscode=1 AND A.statecode=0 AND A.statuscode=100000000
+ WHERE {both}
  UNION SELECT C.ContactId,A.AccountId,'Account.PrimaryContactId' FROM dbo.ContactBase C JOIN dbo.AccountBase A ON A.PrimaryContactId=C.ContactId
- WHERE C.statecode=0 AND C.statuscode=1 AND A.statecode=0 AND A.statuscode=100000000
+ WHERE {both}
  UNION SELECT C.ContactId,A.AccountId,'new_contact_account' FROM dbo.new_contact_accountBase N
  JOIN dbo.ContactBase C ON C.ContactId=N.contactid JOIN dbo.AccountBase A ON A.AccountId=N.accountid
- WHERE C.statecode=0 AND C.statuscode=1 AND A.statecode=0 AND A.statuscode=100000000""")
+ WHERE {both}""")
 
 
 def unique(rows,column):
@@ -232,7 +240,7 @@ def expected_books(o,c,asof):
     elif report=="book_change_history":
         changed={bid:b for bid,b in books.items() if in_window(b["updated_at"],c)}
         rows=[dict(record_type="modified_book",**detail(b)) for b in changed.values()]
-        history=o.get("history","SELECT new_kitapgecmisiId history_id,new_kitapid book_id,CreatedOn recorded_at,new_baskisayisi edition_count,new_kdvdahilfiyat vat_inclusive_price FROM dbo.new_kitapgecmisiBase WHERE statecode=0")
+        history=o.get("history","SELECT H.new_kitapgecmisiId history_id,H.new_kitapid book_id,H.CreatedOn recorded_at,H.new_baskisayisi edition_count,H.new_kdvdahilfiyat vat_inclusive_price FROM dbo.new_kitapgecmisiBase H WHERE "+o.A("new_kitapgecmisiBase","H","H.statecode=0"))
         rows.extend(dict(record_type="history_snapshot",**r) for r in history if identity(r["book_id"]) in changed and in_window(r["recorded_at"],c))
         boundaries.append("general_old_new_history_not_verified")
     else:raise ValueError("No independent book oracle for "+report)
@@ -261,21 +269,22 @@ def expected_customers(o,c):
 
 def expected_work(o,c,asof):
     books=o.books()
-    works=o.get("works","""SELECT W.new_isplaniId work_id,W.new_planadi work_name,W.new_projeid project_id,W.OwnerId owner_id,
+    works=o.get("works",f"""SELECT W.new_isplaniId work_id,W.new_planadi work_name,W.new_projeid project_id,W.OwnerId owner_id,
  W.new_projeasamasiid stage_id,W.new_tahminibitistarihi due_date,W.new_gercekbitistarihi actual_end,
  W.new_isEmriDurumu work_state,W.new_isplaniiptal cancelled,W.CreatedOn created_at,W.ModifiedOn updated_at,
  P.new_name project_name,S.new_name stage_name FROM dbo.new_isplaniBase W
- JOIN dbo.new_projeBase P ON P.new_projeId=W.new_projeid AND P.statecode=0
- LEFT JOIN dbo.new_projeasamalariBase S ON S.new_projeasamalariId=W.new_projeasamasiid AND S.statecode=0
- WHERE W.statecode=0 AND COALESCE(W.new_isplaniiptal,0)=0 AND (W.new_isEmriDurumu IS NULL OR W.new_isEmriDurumu<>3) AND W.new_gercekbitistarihi IS NULL""")
-    br=o.get("projectbooks","""SELECT new_projeid project_id,new_kitapid book_id FROM dbo.new_new_proje_new_kitapBase
- UNION SELECT new_KitapProjesi,new_kitapId FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1 AND new_KitapProjesi IS NOT NULL
- UNION SELECT new_projekarti,new_kitapId FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1 AND new_projekarti IS NOT NULL""")
+ JOIN dbo.new_projeBase P ON P.new_projeId=W.new_projeid AND {o.A("new_projeBase","P","P.statecode=0")}
+ LEFT JOIN dbo.new_projeasamalariBase S ON S.new_projeasamalariId=W.new_projeasamasiid AND {o.A("new_projeasamalariBase","S","S.statecode=0")}
+ WHERE {o.A("new_isplaniBase","W","W.statecode=0")} AND COALESCE(W.new_isplaniiptal,0)=0 AND (W.new_isEmriDurumu IS NULL OR W.new_isEmriDurumu<>3) AND W.new_gercekbitistarihi IS NULL""")
+    kb=o.A("new_kitapBase","K","K.statecode=0 AND K.statuscode=1")
+    br=o.get("projectbooks",f"""SELECT new_projeid project_id,new_kitapid book_id FROM dbo.new_new_proje_new_kitapBase
+ UNION SELECT K.new_KitapProjesi,K.new_kitapId FROM dbo.new_kitapBase K WHERE {kb} AND K.new_KitapProjesi IS NOT NULL
+ UNION SELECT K.new_projekarti,K.new_kitapId FROM dbo.new_kitapBase K WHERE {kb} AND K.new_projekarti IS NOT NULL""")
     byp=defaultdict(set)
     for r in br:
         if identity(r["book_id"]) in books:byp[identity(r["project_id"])].add(identity(r["book_id"]))
     # ID presence, not the human-readable label, defines whether an active stage exists.
-    stages={identity(r["id"]) for r in o.get("stages","SELECT new_projeasamalariId id FROM dbo.new_projeasamalariBase WHERE statecode=0")}
+    stages={identity(r["id"]) for r in o.get("stages","SELECT S.new_projeasamalariId id FROM dbo.new_projeasamalariBase S WHERE "+o.A("new_projeasamalariBase","S","S.statecode=0"))}
     rows=[]
     for w in works:
         bids=byp[identity(w["project_id"])]
@@ -323,12 +332,13 @@ def expected_activities(o,c):
 
 def expected_contracts(o,c):
     books=o.books();people=o.people();authorlinks=o.authors()
-    contracts=unique(o.get("contracts","SELECT new_sozlesmeId contract_id,new_name contract_number,new_SozlesmeBaslangicTarihi start_date,new_SozlesmeBitisTarihi end_date,new_revizebitistarihi revised_end_date,new_yenilemebaslangictarihi renewal_start_date,new_yenilemebitistarihi renewal_end_date,new_fesihtarihi termination_date,new_suresizsozlesme indefinite_flag FROM dbo.new_sozlesmeBase WHERE statecode=0"),"contract_id")
+    # K-CRM-PASIF: 'Pasif' durum nedenli sözleşme (statecode=0, statuscode 100000004) karar referansında yoktur.
+    contracts=unique(o.get("contracts","SELECT Z.new_sozlesmeId contract_id,Z.new_name contract_number,Z.new_SozlesmeBaslangicTarihi start_date,Z.new_SozlesmeBitisTarihi end_date,Z.new_revizebitistarihi revised_end_date,Z.new_yenilemebaslangictarihi renewal_start_date,Z.new_yenilemebitistarihi renewal_end_date,Z.new_fesihtarihi termination_date,Z.new_suresizsozlesme indefinite_flag FROM dbo.new_sozlesmeBase Z WHERE "+o.A("new_sozlesmeBase","Z","Z.statecode=0")),"contract_id")
     revisions={}
     if c["report"]=="contract_revision_evidence":
         # SQL-side identity classification is independent of the application's
         # UUID parser/dictionary lookup. Never infer precedence from this link.
-        revisions=unique(o.get("revisions","""SELECT C.new_sozlesmeId contract_id,C.new_anasozlesmeid parent_contract_text,
+        revisions=unique(o.get("revisions",f"""SELECT C.new_sozlesmeId contract_id,C.new_anasozlesmeid parent_contract_text,
  C.new_ekprotokoltarihi protocol_date,C.new_ekprotokolbitist protocol_end_date,C.new_EkProtokolyeni is_addendum,C.new_ekprotokolsurelimi addendum_time_limited,
  CONVERT(varchar(36),TRY_CONVERT(uniqueidentifier,NULLIF(LTRIM(RTRIM(C.new_anasozlesmeid)),''))) parent_contract_id,
  CASE WHEN NULLIF(LTRIM(RTRIM(C.new_anasozlesmeid)),'') IS NULL THEN 'NOT_RECORDED'
@@ -336,40 +346,40 @@ def expected_contracts(o,c):
  WHEN TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid)=C.new_sozlesmeId THEN 'SELF_REFERENCE'
  WHEN P.new_sozlesmeId IS NOT NULL THEN 'OTHER_ACTIVE_RECORD' ELSE 'ACTIVE_PARENT_NOT_FOUND' END parent_reference_status,
  P.new_name parent_contract_number FROM dbo.new_sozlesmeBase C LEFT JOIN dbo.new_sozlesmeBase P
- ON P.new_sozlesmeId=TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid) AND P.statecode=0 WHERE C.statecode=0"""),"contract_id")
+ ON P.new_sozlesmeId=TRY_CONVERT(uniqueidentifier,C.new_anasozlesmeid) AND {o.A("new_sozlesmeBase","P","P.statecode=0")} WHERE {o.A("new_sozlesmeBase","C","C.statecode=0")}"""),"contract_id")
         for r in revisions.values():r["parent_match_basis"]="UUID metin eşitliği; yayımlı lookup/ebeveyn önceliği değildir"
-    links=o.get("contractbooks","SELECT DISTINCT L.new_sozlesmeid contract_id,L.new_kitapid book_id FROM dbo.new_new_sozlesme_new_kitapBase L JOIN dbo.new_sozlesmeBase C ON C.new_sozlesmeId=L.new_sozlesmeid AND C.statecode=0 JOIN dbo.new_kitapBase B ON B.new_kitapId=L.new_kitapid AND B.statecode=0 AND B.statuscode=1")
+    links=o.get("contractbooks","SELECT DISTINCT L.new_sozlesmeid contract_id,L.new_kitapid book_id FROM dbo.new_new_sozlesme_new_kitapBase L JOIN dbo.new_sozlesmeBase C ON C.new_sozlesmeId=L.new_sozlesmeid AND "+o.A("new_sozlesmeBase","C","C.statecode=0")+" JOIN dbo.new_kitapBase B ON B.new_kitapId=L.new_kitapid AND "+o.A("new_kitapBase","B","B.statecode=0 AND B.statuscode=1"))
     bybook=defaultdict(set)
     for r in links:bybook[identity(r["book_id"])].add(identity(r["contract_id"]))
     scopes={}
     for name,relation,foreign,target,key in [("rights","new_new_hak_new_sozlesmeBase","new_hakid","new_hakBase","new_hakId"),("languages","new_new_sozlesme_new_dilBase","new_dilid","new_dilBase","new_dilId"),("regions","new_new_sozlesme_new_blgeBase","new_blgeid","new_blgeBase","new_blgeId"),("countries","new_new_sozlesme_new_ulkeBase","new_ulkeid","new_ulkeBase","new_ulkeId")]:
-        rows=o.get("scope_"+name,f"SELECT DISTINCT L.new_sozlesmeid contract_id,V.{key} scope_id,V.new_name scope_name FROM dbo.{relation} L JOIN dbo.{target} V ON V.{key}=L.{foreign} AND V.statecode=0")
+        rows=o.get("scope_"+name,f"SELECT DISTINCT L.new_sozlesmeid contract_id,V.{key} scope_id,V.new_name scope_name FROM dbo.{relation} L JOIN dbo.{target} V ON V.{key}=L.{foreign} AND "+o.A(target,"V","V.statecode=0"))
         scopes[name]=defaultdict(set)
         for r in rows:scopes[name][identity(r["contract_id"])].add((identity(r["scope_id"]),r["scope_name"]))
     parties=defaultdict(list)
-    for r in o.get("parties","""SELECT P.new_sozlesmetarafiId party_id,P.new_sozlesmeid contract_id,P.new_kisi person_id,P.new_Firma account_id,P.new_TarafTipi party_type_id,
+    for r in o.get("parties",f"""SELECT P.new_sozlesmetarafiId party_id,P.new_sozlesmeid contract_id,P.new_kisi person_id,P.new_Firma account_id,P.new_TarafTipi party_type_id,
  C.FullName person_name,A.Name account_name,T.new_name party_type FROM dbo.new_sozlesmetarafiBase P
- LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND C.statecode=0 AND C.statuscode=1
- LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND A.statecode=0
- LEFT JOIN dbo.new_sozlesmetaraftipiBase T ON T.new_sozlesmetaraftipiId=P.new_TarafTipi AND T.statecode=0
- WHERE P.statecode=0 AND (P.new_kisi IS NULL OR C.ContactId IS NOT NULL) AND (P.new_Firma IS NULL OR A.AccountId IS NOT NULL)"""):
+ LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND {o.A("ContactBase","C","C.statecode=0 AND C.statuscode=1")}
+ LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND {o.A("AccountBase","A","A.statecode=0")}
+ LEFT JOIN dbo.new_sozlesmetaraftipiBase T ON T.new_sozlesmetaraftipiId=P.new_TarafTipi AND {o.A("new_sozlesmetaraftipiBase","T","T.statecode=0")}
+ WHERE {o.A("new_sozlesmetarafiBase","P","P.statecode=0")} AND (P.new_kisi IS NULL OR C.ContactId IS NOT NULL) AND (P.new_Firma IS NULL OR A.AccountId IS NOT NULL)"""):
         parties[identity(r["contract_id"])].append(r)
     incomplete_authors=set();incomplete_parties=set()
     if c["report"]=="contract_author_differences":
         # Independent anti-join coverage probes: the already filtered visible
         # sets cannot prove that all active relationships resolved.
-        incomplete_authors={identity(r["book_id"]) for r in o.get("author_identity_gaps", """SELECT DISTINCT E.new_Kitap book_id
+        incomplete_authors={identity(r["book_id"]) for r in o.get("author_identity_gaps", f"""SELECT DISTINCT E.new_Kitap book_id
  FROM dbo.new_eserkatilimBase E
- LEFT JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=E.new_katilimciTipi AND R.statecode=0
- LEFT JOIN dbo.ContactBase C ON C.ContactId=E.new_Katilimsaglayan AND C.statecode=0 AND C.statuscode=1
- WHERE E.statecode=0 AND (R.new_katilimcitipiId IS NULL OR NULLIF(LTRIM(RTRIM(R.new_name)),'') IS NULL OR
+ LEFT JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=E.new_katilimciTipi AND {o.A("new_katilimcitipiBase","R","R.statecode=0")}
+ LEFT JOIN dbo.ContactBase C ON C.ContactId=E.new_Katilimsaglayan AND {o.A("ContactBase","C","C.statecode=0 AND C.statuscode=1")}
+ WHERE {o.A("new_eserkatilimBase","E","E.statecode=0")} AND (R.new_katilimcitipiId IS NULL OR NULLIF(LTRIM(RTRIM(R.new_name)),'') IS NULL OR
  (LOWER(LTRIM(RTRIM(R.new_name)))='yazar' AND C.ContactId IS NULL))""")}
     if c["report"] in {"contract_author_differences", "contract_author_roles", "contract_expiry", "contract_revision_evidence"}:
-        incomplete_parties={identity(r["contract_id"]) for r in o.get("party_identity_gaps", """SELECT DISTINCT P.new_sozlesmeid contract_id
+        incomplete_parties={identity(r["contract_id"]) for r in o.get("party_identity_gaps", f"""SELECT DISTINCT P.new_sozlesmeid contract_id
  FROM dbo.new_sozlesmetarafiBase P
- LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND C.statecode=0 AND C.statuscode=1
- LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND A.statecode=0
- WHERE P.statecode=0 AND ((P.new_kisi IS NOT NULL AND C.ContactId IS NULL)
+ LEFT JOIN dbo.ContactBase C ON C.ContactId=P.new_kisi AND {o.A("ContactBase","C","C.statecode=0 AND C.statuscode=1")}
+ LEFT JOIN dbo.AccountBase A ON A.AccountId=P.new_Firma AND {o.A("AccountBase","A","A.statecode=0")}
+ WHERE {o.A("new_sozlesmetarafiBase","P","P.statecode=0")} AND ((P.new_kisi IS NOT NULL AND C.ContactId IS NULL)
  OR (P.new_Firma IS NOT NULL AND A.AccountId IS NULL))""")}
     rows=[];bounds=["scope_interpretation_unverified"] if c["report"]=="contract_overlap" else ["contract_revision_priority_unverified"] if c["report"]=="contract_revision_evidence" else []
     for bid,ids in bybook.items():
@@ -414,8 +424,8 @@ def expected_contracts(o,c):
     return rows,sorted(set(bounds))
 
 
-def reference(conn,c,asof):
-    oracle=Oracle(conn)
+def reference(conn,c,asof,variant="decision"):
+    oracle=Oracle(conn,variant)
     if c["report"] in {"duplicate_customer_tax","customers_without_contacts","contact_multiple_customers","customer_geography"}:rows,bounds=expected_customers(oracle,c)
     elif c["report"].startswith("contract_"):rows,bounds=expected_contracts(oracle,c)
     elif c["report"] in {"work_due","work_due_missing","work_stage_history"}:rows,bounds=expected_work(oracle,c,asof)
@@ -571,6 +581,12 @@ def main():
                 whole=call("/api/v1/result/"+answer["resultId"]) if answer.get("resultId") else answer;item["fullResult"]=whole
                 errors=compare(c,answer,whole,ref,expected_hash);item["errors"]=errors
                 item["status"]="FAIL" if errors else "BOUNDARY_PASS" if ref["boundaries"] else "FULL_ANSWER_PASS"
+                # TANIM_FARKI: karar (K-CRM-PASIF) referansı tutmuyor, eski/ürün etkin kayıt süzgeciyle kurulan tutuyor.
+                if errors and not [x for x in errors if not x.startswith(("Row count ","Row identity set differs","Numeric mismatch:","Value mismatch:","Expected PARTIAL_ANSWER","Expected TEXT_TO_SQL","Required explicit gap","Section completeness"))]:
+                    REFERENCE_CONTEXT["phase"]="product_variant"
+                    pref=reference(conn,c,asof,"product");item["productVariantReference"]=pref
+                    perr=compare(c,answer,whole,pref,expected_hash);item["productVariantErrors"]=perr
+                    if ir.classify(errors,perr)=="TANIM_FARKI":item["status"]="TANIM_FARKI"
                 REFERENCE_CONTEXT["phase"]="after_api";after_ref=reference(conn,c,asof);item["referenceAfter"]=after_ref
                 changed=ref["boundaries"]!=after_ref["boundaries"] or ref["columns"]!=after_ref["columns"] or bool(compare_rows(ref["records"],after_ref["records"],ref["columns"]))
                 if changed:
@@ -597,10 +613,12 @@ def main():
             finally:session.close()
         after=manifest()
         if before!=after:counts["UNVERIFIED"]+=1;results.append(dict(id="CODE_CHANGED",status="UNVERIFIED"))
-        report=dict(asOf=args.as_of,api=args.base,source="connected real Timas_MSCRM",executionEnvironment="test server",planned=len(selected),completed=sum(r["id"].startswith("CR") for r in results),counts=dict(counts),results=results,sessionsDeleted=deleted,sourceWrites=0,codeBefore=before,codeAfter=after,codeStable=before==after,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),referenceRetries=REFERENCE_RETRIES,referenceRetryIsProductRecoveryEvidence=False,boundaryPassIsNumericAcceptance=False)
+        report=dict(asOf=args.as_of,api=args.base,source="connected real Timas_MSCRM",executionEnvironment="test server",planned=len(selected),completed=sum(r["id"].startswith("CR") for r in results),counts=dict(counts),results=results,
+                    referenceIndependence=dict(activeRecordRule=ir.SOURCES["K-CRM-PASIF"],definitionDifferenceCases=[r["id"] for r in results if r.get("status")=="TANIM_FARKI"],note="TANIM_FARKI PASS/FAIL'e karışmaz; ayrı sayılır."),sessionsDeleted=deleted,sourceWrites=0,codeBefore=before,codeAfter=after,codeStable=before==after,runnerSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),referenceRetries=REFERENCE_RETRIES,referenceRetryIsProductRecoveryEvidence=False,boundaryPassIsNumericAcceptance=False)
         save(out/"report.json",report);print("FINAL",dict(counts),"sessionsDeleted",deleted,flush=True)
         fcntl.flock(lock,fcntl.LOCK_UN);lock.close()
-    return 1 if counts["FAIL"] or counts["UNVERIFIED"] or report["completed"]!=len(selected) else 0
+    if counts["FAIL"] or counts["UNVERIFIED"] or report["completed"]!=len(selected):return 1
+    return 2 if counts["TANIM_FARKI"] else 0
 
 
 if __name__=="__main__":raise SystemExit(main())

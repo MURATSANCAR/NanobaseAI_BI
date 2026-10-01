@@ -9,6 +9,7 @@ import json
 from statistics import median
 
 import composable_live as gate
+import independent_reference as ir
 
 
 def cases():
@@ -36,9 +37,12 @@ def reference(case, conn):
         return rows+movements
     crm=gate.connect("/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
     try:
-        codes={str(row["code"]).strip().casefold() for row in gate.query(crm,"SELECT new_stokkodu code FROM dbo.new_kitapBase WHERE statecode=0 AND statuscode=1 AND NULLIF(LTRIM(RTRIM(new_stokkodu)),'') IS NOT NULL")}
+        # Etkin kitap: kullanıcı kararı K-CRM-PASIF (ir.crm_active), ürünün Aktif/Etkin listesi değil.
+        codes={str(row["code"]).strip().casefold() for row in gate.query(crm,"SELECT K.new_stokkodu code FROM dbo.new_kitapBase K WITH (NOLOCK) WHERE "+ir.crm_active("new_kitapBase","K")+" AND NULLIF(LTRIM(RTRIM(K.new_stokkodu)),'') IS NOT NULL")}
     finally:crm.close()
-    rows=gate.query(conn,"SELECT L.STOCKREF stock_id,I.CODE code,I.NAME name,L.TRCODE type,L.LINENET amount,L.AMOUNT quantity,L.UINFO1 unit1,L.UINFO2 unit2 FROM dbo.LG_411_01_STLINE L LEFT JOIN dbo.LG_411_ITEMS I ON I.LOGICALREF=L.STOCKREF WHERE L.DATE_>='20260901' AND L.DATE_<'20261001' AND L.CANCELLED=0 AND L.LINETYPE=0 AND L.INVOICEREF<>0 AND L.TRCODE IN (2,3,7,8,9)")
+    rows=gate.query(conn,"SELECT L.STOCKREF stock_id,I.CODE code,I.NAME name,L.TRCODE type,L.IOCODE iocode,L.LINENET amount,L.AMOUNT quantity,L.UINFO1 unit1,L.UINFO2 unit2 FROM dbo.LG_411_01_STLINE L WITH (NOLOCK) LEFT JOIN dbo.LG_411_ITEMS I WITH (NOLOCK) ON I.LOGICALREF=L.STOCKREF WHERE L.DATE_>='20260901' AND L.DATE_<'20261001' AND "+ir.population_where("L"))
+    # Karar işaret haritaları: net_sales/return_amount K-SATIS-SATIR+K-IADE, satılan adet altın C040 (7/8/9, IOCODE 3/4).
+    net=ir.LOGO_MEASURES["net_sales"].signs;ret=ir.LOGO_MEASURES["return_amount"].signs;sold=ir.LOGO_MEASURES["sold_quantity"]
     all_cards=gate.query(conn,"SELECT CODE code,NAME name FROM dbo.LG_411_ITEMS")
     names=defaultdict(set); identities=defaultdict(set)
     for row in all_cards:
@@ -49,10 +53,10 @@ def reference(case, conn):
         key=str(row["code"]).strip().casefold() if row["code"] and str(row["code"]).strip() else "__unresolved:411:"+str(row["stock_id"])
         if key in codes:continue
         g=groups.setdefault(key,[Decimal(0),Decimal(0),Decimal(0),False])
-        amount=Decimal(str(row["amount"] or 0)); returned=row["type"] in (2,3)
-        g[0]+= -amount if returned else amount
-        if returned:g[1]+=amount
-        if row["type"] in (7,8):
+        amount=Decimal(str(row["amount"] or 0))
+        g[0]+=net.get(row["type"],0)*amount
+        g[1]+=ret.get(row["type"],0)*amount
+        if row["type"] in sold.signs and row["iocode"] in sold.sales_iocodes:
             g[2]+=Decimal(str(row["quantity"] or 0))
             g[3]|= row["unit1"] is None or row["unit2"] is None or row["unit1"]<=0 or row["unit1"]!=row["unit2"]
         names[key].add(str(row["name"] or ""));identities[key].add(str(row["code"] or "411:"+str(row["stock_id"])).strip())

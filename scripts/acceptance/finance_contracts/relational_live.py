@@ -30,24 +30,39 @@ from composable_live import (ROOT, connect, environment, manifest as source_mani
 def manifest():
     snapshot=source_manifest()
     # Bind the acceptance transport/reference helpers as well as product code.
-    for name in ("composable_live.py", "relational_live.py"):
+    for name in ("composable_live.py", "relational_live.py", "independent_reference.py"):
         path=Path(__file__).with_name(name)
         snapshot["acceptance_helpers/"+name]=hashlib.sha256(path.read_bytes()).hexdigest()
     return snapshot
 
 
+# Etkin kayıt: kullanıcı kararı K-CRM-PASIF (ir.crm_active). `product` varyantı önceki süzgeçtir (ürünün bugünkü
+# davranışı); yalnız TANIM_FARKI sınıflaması için kullanılır, beklenen değer olarak asla.
+import independent_reference as ir
+
 BOOK = "dbo.new_kitapBase B"
-ACTIVE = "B.statecode=0 AND B.statuscode=1"
 ISBN = "NULLIF(LTRIM(RTRIM(B.new_isbn13)),N'')"
-PUB = "LEFT JOIN dbo.new_markaBase P ON P.new_markaId=B.new_yayineviid AND P.statecode=0 AND P.statuscode=1"
-BRAND = "LEFT JOIN dbo.new_markaBase S ON S.new_markaId=B.new_yayinciid AND S.statecode=0 AND S.statuscode=1"
-ALT = "LEFT JOIN dbo.new_yaynevialtmarkaBase A ON A.new_yaynevialtmarkaId=B.new_YayneviAltMarka AND A.statecode=0"
-AUTHOR = """JOIN dbo.new_eserkatilimBase E ON E.new_Kitap=B.new_kitapId AND E.statecode=0
- JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=E.new_katilimciTipi AND R.statecode=0 AND R.new_name=N'Yazar'
- JOIN dbo.ContactBase C ON C.ContactId=E.new_Katilimsaglayan AND C.statecode=0 AND C.statuscode=1"""
 
 
-def cases():
+def predicates(variant="decision"):
+    def a(table, alias, legacy):
+        return legacy if variant == "product" else ir.crm_active(table, alias)
+    return dict(
+        ACTIVE=a("new_kitapBase", "B", "B.statecode=0 AND B.statuscode=1"),
+        PUB="LEFT JOIN dbo.new_markaBase P ON P.new_markaId=B.new_yayineviid AND " + a("new_markaBase", "P", "P.statecode=0 AND P.statuscode=1"),
+        BRAND="LEFT JOIN dbo.new_markaBase S ON S.new_markaId=B.new_yayinciid AND " + a("new_markaBase", "S", "S.statecode=0 AND S.statuscode=1"),
+        ALT="LEFT JOIN dbo.new_yaynevialtmarkaBase A ON A.new_yaynevialtmarkaId=B.new_YayneviAltMarka AND " + a("new_yaynevialtmarkaBase", "A", "A.statecode=0"),
+        AUTHOR="JOIN dbo.new_eserkatilimBase E ON E.new_Kitap=B.new_kitapId AND " + a("new_eserkatilimBase", "E", "E.statecode=0")
+               + "\n JOIN dbo.new_katilimcitipiBase R ON R.new_katilimcitipiId=E.new_katilimciTipi AND " + a("new_katilimcitipiBase", "R", "R.statecode=0") + " AND R.new_name=N'Yazar'"
+               + "\n JOIN dbo.ContactBase C ON C.ContactId=E.new_Katilimsaglayan AND " + a("ContactBase", "C", "C.statecode=0 AND C.statuscode=1"),
+        PROJECT=a("new_projeBase", "J", "J.statecode=0"),
+        CONTRACT=a("new_sozlesmeBase", "C", "C.statecode=0"),
+    )
+
+
+def cases(variant="decision"):
+    P_ = predicates(variant)
+    ACTIVE, PUB, BRAND, ALT, AUTHOR = P_["ACTIVE"], P_["PUB"], P_["BRAND"], P_["ALT"], P_["AUTHOR"]
     out=[]
     def add(question,sql,columns,keys,numeric=(),pair=None,changed_from=None,join_tables=1):
         out.append(dict(id=f"RL{len(out)+1:03d}",question=question,referenceSql=sql,
@@ -72,11 +87,11 @@ def cases():
         b=(date.fromisoformat(end)-timedelta(days=1)).isoformat()+"T21:00:00"
         add(f"{month} 2026 İstanbul takvim ayında CRM'de kaydı açılmış ve şu an etkin olan kitap kartlarının toplam sayısını söyle. Yayın tarihi değil kayıt açılışını kullan. Tek kolon book_count olsun.",f"SELECT COUNT_BIG(*) book_count FROM {BOOK} WHERE {ACTIVE} AND B.CreatedOn>='{a}' AND B.CreatedOn<'{b}'","book_count","",numeric=["book_count"],changed_from="RL008" if month=="Ağustos" else None)
     add("CRM'de etkin kitaplarla etkin Yazar rolü katılımından bağlı etkin kişileri listele. Aynı kitap ve kişi birden fazla katılımda varsa bir kez göster. İsme göre eşleştirme yapma. Kolonlar book_id, book_name, person_id, person_name olsun; adlar ham kaynak değerleri olsun.",f"SELECT DISTINCT B.new_kitapId book_id,B.new_name book_name,C.ContactId person_id,C.FullName person_name FROM {BOOK} {AUTHOR} WHERE {ACTIVE}","book_id book_name person_id person_name","book_id person_id",join_tables=4)
-    add("CRM'deki etkin kitapların etkin Yazar rolüyle bağlı etkin kişi yazarlarını, bugünkü yayın evi, alt marka, alternatif alt marka ve Kitap Projesi bilgileriyle yan yana göster. Her kitap-kişi çifti tek satır olsun; eksik sınıflandırmada kitabı düşürme. Kolonlar book_id, person_id, publisher_id, subbrand_id, alternate_subbrand_id, book_project_id, project_name olsun; yalnız etkin bağlı sınıflandırmaların kimliklerini göster. Alt marka new_yayinciid, alternatif alt marka new_YayneviAltMarka alanıdır. Kitap Projesi için new_KitapProjesi bağını kullan; proje adı ham değer olsun. Projesi boş veya pasifse NULL bırak.",f"SELECT DISTINCT B.new_kitapId book_id,C.ContactId person_id,P.new_markaId publisher_id,S.new_markaId subbrand_id,A.new_yaynevialtmarkaId alternate_subbrand_id,J.new_projeId book_project_id,J.new_name project_name FROM {BOOK} {AUTHOR} {PUB} {BRAND} {ALT} LEFT JOIN dbo.new_projeBase J ON J.new_projeId=B.new_KitapProjesi AND J.statecode=0 WHERE {ACTIVE}","book_id person_id publisher_id subbrand_id alternate_subbrand_id book_project_id project_name","book_id person_id",join_tables=8)
-    add("CRM'de etkin kitaplara doğrudan kitap-sözleşme bağlantısıyla bağlı etkin sözleşmeleri çıkar. Her kitap-sözleşme çifti bir satır olsun. Kitap kimliği, ham adı, sözleşme kimliği ve ham numarasını book_id, book_name, contract_id, contract_number kolonlarında göster. Tarih önceliği, yürürlük veya hak sahipliği çıkarması yapma.","""SELECT DISTINCT B.new_kitapId book_id,B.new_name book_name,C.new_sozlesmeId contract_id,C.new_name contract_number
+    add("CRM'deki etkin kitapların etkin Yazar rolüyle bağlı etkin kişi yazarlarını, bugünkü yayın evi, alt marka, alternatif alt marka ve Kitap Projesi bilgileriyle yan yana göster. Her kitap-kişi çifti tek satır olsun; eksik sınıflandırmada kitabı düşürme. Kolonlar book_id, person_id, publisher_id, subbrand_id, alternate_subbrand_id, book_project_id, project_name olsun; yalnız etkin bağlı sınıflandırmaların kimliklerini göster. Alt marka new_yayinciid, alternatif alt marka new_YayneviAltMarka alanıdır. Kitap Projesi için new_KitapProjesi bağını kullan; proje adı ham değer olsun. Projesi boş veya pasifse NULL bırak.",f"SELECT DISTINCT B.new_kitapId book_id,C.ContactId person_id,P.new_markaId publisher_id,S.new_markaId subbrand_id,A.new_yaynevialtmarkaId alternate_subbrand_id,J.new_projeId book_project_id,J.new_name project_name FROM {BOOK} {AUTHOR} {PUB} {BRAND} {ALT} LEFT JOIN dbo.new_projeBase J ON J.new_projeId=B.new_KitapProjesi AND {P_['PROJECT']} WHERE {ACTIVE}","book_id person_id publisher_id subbrand_id alternate_subbrand_id book_project_id project_name","book_id person_id",join_tables=8)
+    add("CRM'de etkin kitaplara doğrudan kitap-sözleşme bağlantısıyla bağlı etkin sözleşmeleri çıkar. Her kitap-sözleşme çifti bir satır olsun. Kitap kimliği, ham adı, sözleşme kimliği ve ham numarasını book_id, book_name, contract_id, contract_number kolonlarında göster. Tarih önceliği, yürürlük veya hak sahipliği çıkarması yapma.",f"""SELECT DISTINCT B.new_kitapId book_id,B.new_name book_name,C.new_sozlesmeId contract_id,C.new_name contract_number
  FROM dbo.new_kitapBase B JOIN dbo.new_new_sozlesme_new_kitapBase L ON L.new_kitapid=B.new_kitapId
- JOIN dbo.new_sozlesmeBase C ON C.new_sozlesmeId=L.new_sozlesmeid AND C.statecode=0
- WHERE B.statecode=0 AND B.statuscode=1""","book_id book_name contract_id contract_number","book_id contract_id",join_tables=3)
+ JOIN dbo.new_sozlesmeBase C ON C.new_sozlesmeId=L.new_sozlesmeid AND {P_['CONTRACT']}
+ WHERE {ACTIVE}""","book_id book_name contract_id contract_number","book_id contract_id",join_tables=3)
     return out
 
 
@@ -202,6 +217,14 @@ def main():
                 item["fullResult"]=whole
                 errors=compare(case,answer,whole,expected,expected_hash);item["errors"]=errors
                 item["status"]="FAIL" if errors else "FULL_ANSWER_PASS"
+                # TANIM_FARKI: karar (K-CRM-PASIF) referansı tutmuyor, önceki/ürün süzgeciyle kurulan referans tutuyor.
+                if errors and all(e.startswith("DATA:") for e in errors):
+                    variant=next((c for c in cases("product") if c["id"]==case["id"]),None)
+                    if variant is not None and variant["referenceSql"]!=case["referenceSql"]:
+                        REFERENCE_CONTEXT["phase"]="product_variant"
+                        pref=reference(conn,variant);item["productVariantReference"]=pref
+                        perr=compare(variant,answer,whole,pref,expected_hash);item["productVariantErrors"]=perr
+                        if ir.classify(errors,perr)=="TANIM_FARKI":item["status"]="TANIM_FARKI"
                 require_reference_day(args.as_of)
                 REFERENCE_CONTEXT["phase"]="after_api";after_ref=reference(conn,case);item["referenceAfter"]=after_ref
                 changed=bool(compare_rows(case,expected,after_ref));item["referenceChanged"]=changed
