@@ -1,5 +1,7 @@
 # NanobaseAI BI — Proje Belleği
 
+**2026-10-02 — Okunamayan kitabı yeniden okut:** kart servisi `POST /v1/books/read/{iş}/retry` (`portal_books.reread`: son iş FAILED, süren iş varsa 409, attempt 1, isteyen `portal:<kişi>`); köprü `POST /api/v1/editorial/ask/read/{iş}/retry` ve `…/pharmacy/books/{kitap}/reread`, yetki `ozellik:kitap.okut`; ön yüz `editorial/RereadButton.tsx`. VM: GPU nginx beyaz listesine retry yolu gerekir.
+
 **2026-10-02 — Kitap Eczanesi «Zeki'ye sor»:** ekranın en üstünde (`pharmacy/PharmacyAsk.tsx`) kütüphane geneli soru; Kitaba sor ucu `POST /api/v1/editorial/ask` kitap adı boş + `GET …/ask/{id}`; kaynak kitaplar `askSources.ts` (kart kimliği = eczane kitap kimliği), basınca `?kitap=` ayrıntısı.
 
 **2026-10-02 — Kitap eczanesi arşiv okuması:** 4.018 kitap `profile='archive'` kuyrukta (`editor/archive.py enqueue --root /data/kitaplar --prescan ...`, ön tarama `tt-gpu:/tmp/claude-ontarama/ontarama.jsonl`); arşiv kipi «Zeki'ye sor» içindir, son okuma yok, redaksiyon isteğe bağlı. GPU editör `0.15.9-b73cbd50` (`/data/editor/releases/b73cbd50`), `EDITOR_READ_PARALLEL=4`, director 0.70, BI dağıtıcısında GPU 1 yedek. GPU 0 BI önceliği hazır, uygulanmadı.

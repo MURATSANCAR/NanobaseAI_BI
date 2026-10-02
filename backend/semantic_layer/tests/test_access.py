@@ -289,6 +289,10 @@ def test_feature_rules_match_the_actions_not_the_reads():
     assert f("GET", "/api/v1/seo-geo/worklist") == [] and f("GET", "/api/v1/seo-geo/faq/p1") == []
     assert f("POST", "/api/v1/seo-geo/bios/drafts/d1/decide") == []        # onay ucun içinde
     assert f("POST", "/api/v1/seo-geo/indexnow/submit") == []              # onay ucun içinde
+    # Okunamayan kitabı yeniden okutmak GPU'da okuma başlatır: yüklemeyle aynı yetki; liste okumak yetki istemez.
+    assert f("POST", "/api/v1/editorial/ask/read/j1/retry") == ["ozellik:kitap.okut"]
+    assert f("POST", "/api/v1/editorial/pharmacy/books/b1/reread") == ["ozellik:kitap.okut"]
+    assert f("GET", "/api/v1/editorial/ask/read") == [] and f("GET", "/api/v1/editorial/pharmacy/books/b1") == []
     keys = {k for _, _, k in A.FEATURE_RULES}
     assert keys <= A.all_keys() - A.explicit_keys()
 

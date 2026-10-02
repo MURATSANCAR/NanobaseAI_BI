@@ -18,6 +18,7 @@ import { EmptyHint } from '../../components/Explain';
 import { Panel } from '../kit';
 import { UploadBar } from '../BookUploadDock';
 import { ProofFindings } from '../ProofFindings';
+import RereadButton from '../RereadButton';
 import { WordMapPanel } from '../WordMapPanel';
 import ReviewPanel from '../ReviewPanel';
 import { EpubSection } from '../studio/epub';
@@ -375,6 +376,7 @@ export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string;
     refetchInterval: (s) => (moving(s.state.data?.read) || moving(s.state.data?.redaction) ? 20_000 : false),
   });
   const b = q.data;
+  const qc = useQueryClient();
   const back = (
     <button type="button" onClick={onBack} className={`${ghostBtn} !min-h-10 self-start lg:hidden`}>
       <ArrowLeft className="h-4 w-4" aria-hidden /> Kitap listesi
@@ -417,6 +419,9 @@ export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string;
               </div>
             )}
             {note && <p className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">{note}</p>}
+            {b.read?.state === 'okunamadi' && (
+              <RereadButton title={b.title} run={() => pharmacyApi.reread(b.id)} onDone={() => void qc.invalidateQueries({ queryKey: ['pharmacy'] })} />
+            )}
             {b.read?.state === 'hazir' && b.read.finished_at && (
               <p className="mt-1.5 text-[11.5px] text-canvas-muted">Okuma bitti: {dateTime(b.read.finished_at)} · «Zeki'ye sor»da sorulabilir.</p>
             )}

@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-10-02 (akşam) — Okunamayan kitabı «Yeniden okut»
+
+- Sorun: kendini onarma (`portal_books.retry_failed`, `EDITOR_READ_ATTEMPTS`=3) bitince iş FAILED kalıyordu; kişinin yapabileceği bir şey yoktu (bugün «Babam Sultan Abdülhamid», «Beni de Kalbinde Götür», «Levent Dünya Harikalarının Peşinde»).
+- Kart servisi: `POST /v1/books/read/{iş}/retry` → `portal_books.reread`: sürümün o kipteki son işi FAILED olmalı, sürümde QUEUED/RUNNING iş varsa 409 (koşullu tek INSERT, çift tık ikinci iş açmaz); aynı kip (tam/arşiv), `CARRIED` alanları aynen, `attempt` 1, `retry_of`, `manual_retry`, isteyen `portal:<kişi>` (toplu arşiv kuyruğunun önüne geçer). `listing(kişi)` artık kişinin okuttuğu sürümlerin son portal işini verir (başkası yeniden okuttuysa da kişi güncel durumu görür).
+- Köprü: `POST /api/v1/editorial/ask/read/{iş}/retry` (app.py) ve `POST /api/v1/editorial/pharmacy/books/{kitap}/reread` (kitabın arşiv okuma işi bulunur) → `editorial_book_reads.retry` → `editorial_cards.book_read_retry`. Yetki `ozellik:kitap.okut` (yüklemeyle aynı; sayfa: `_EDITORIAL` / `sayfa:kitap-eczanesi`). Denetim kaydı oturumdaki kişiyle.
+- Ön yüz: `RereadButton` (kısa onay «Kitap yeniden sıraya alınacak», 44 px) Kitaba sor okutma listesinde «Okunamadı» motor satırında ve Kitap Eczanesi ayrıntısında; neden gösterilmez, yalnız «Okuma tamamlanamadı».
+- Kurulum: GPU kart servisi + köprü + ön yüz birlikte; VM için GPU nginx beyaz listesine `POST /editor/cards/v1/books/read/*/retry` eklenmeli. Kurulmadı.
+
 ## 2026-10-02 (akşam) — Kitap Eczanesi: en üstte «Zeki'ye sor»
 
 - Kitap Eczanesi ekranının başlığının hemen altına soru alanı (`src/canvas/editorial/pharmacy/PharmacyAsk.tsx`): okunmuş bütün kitaplara doğal dilde soru; Enter gönderir, örnek sorular, yükleniyor/hata/«okunan kitaplarda cevap bulunamadı» durumları, cevabın altında kaynak kitaplar (atıf sayfalarıyla); kitaba basınca ekrandaki kitap ayrıntısı açılır ve ekrana getirilir.

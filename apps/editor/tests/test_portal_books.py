@@ -78,3 +78,71 @@ def test_item_counts_books_ahead_including_the_running_one():
     assert PB.item(_row("QUEUED"), waiting, busy=1)["ahead"] == 2
     assert PB.item(_row("QUEUED"), waiting, busy=0)["ahead"] == 1
     assert PB.item(_row("RUNNING", workflow_id="w"), waiting, busy=1)["ahead"] is None
+
+
+class _FakeDb:
+    """`editor.db.one` yerine: SQL'in ilk sözcüklerine göre sabit cevaplar; eklenen işi kaydeder."""
+
+    def __init__(self, job=None, busy=False, last=None, insert_ok=True):
+        self.job, self.busy, self.last, self.insert_ok, self.inserted = job, busy, last, insert_ok, None
+
+    def one(self, sql, *args):
+        if sql.startswith("SELECT book_version_id, profile FROM analysis_job WHERE id="):
+            return self.job
+        if "status IN ('QUEUED','RUNNING') LIMIT 1" in sql:
+            return {"x": 1} if self.busy else None
+        if sql.startswith("SELECT id, status, progress"):
+            return self.last
+        if sql.startswith("INSERT INTO analysis_job"):
+            self.inserted = args
+            return {"id": "new-job"} if self.insert_ok else None
+        raise AssertionError(sql)
+
+
+def _use(monkeypatch, fake):
+    # Veritabanı sürücüsü kurulu olmasa da (geliştirici makinesi) koşsun: `editor.db` yerine sahte modül.
+    import sys
+    import types
+    import editor
+    mod = types.ModuleType("editor.db")
+    mod.one, mod.J = fake.one, (lambda v: v)
+    monkeypatch.setitem(sys.modules, "editor.db", mod)
+    monkeypatch.setattr(editor, "db", mod, raising=False)
+
+
+def test_reread_opens_a_fresh_job_with_the_kept_fields(monkeypatch):
+    fake = _FakeDb(job={"book_version_id": "bv1", "profile": "archive"},
+                   last={"id": "old", "status": "FAILED",
+                         "progress": {"attempt": 3, "archive": {"category": "Kurgu"}, "retry_of": "older", "error": "x"}})
+    _use(monkeypatch, fake)
+    out = PB.reread("old", "ayse")
+    assert out == {"job_id": "new-job", "retry_of": "old"}
+    bv, profile, who, progress, bv2 = fake.inserted
+    assert (bv, profile, who, bv2) == ("bv1", "archive", "portal:ayse", "bv1")
+    assert progress == {"archive": {"category": "Kurgu"}, "attempt": 1, "retry_of": "old", "manual_retry": True}
+
+
+def test_reread_refuses_running_or_not_failed_and_unknown_job(monkeypatch):
+    _use(monkeypatch, _FakeDb(job={"book_version_id": "bv1", "profile": "full"}, busy=True))
+    with pytest.raises(PB.RereadRefused, match="sırada"):
+        PB.reread("j", "ayse")
+    _use(monkeypatch, _FakeDb(job={"book_version_id": "bv1", "profile": "full"},
+                              last={"id": "j", "status": "SUCCEEDED", "progress": {}}))
+    with pytest.raises(PB.RereadRefused, match="düşmüş değil"):
+        PB.reread("j", "ayse")
+    _use(monkeypatch, _FakeDb(job={"book_version_id": "bv1", "profile": "redaction"}))
+    with pytest.raises(PB.RereadRefused):
+        PB.reread("j", "ayse")
+    _use(monkeypatch, _FakeDb(job=None))
+    with pytest.raises(LookupError):
+        PB.reread("j", "ayse")
+    with pytest.raises(ValueError):
+        PB.reread("j", " ")
+
+
+def test_reread_second_click_does_not_add_a_second_job(monkeypatch):
+    # Aynı anda gelen ikinci istek: koşullu ekleme satır döndürmez, kişiye «zaten sırada» gider.
+    _use(monkeypatch, _FakeDb(job={"book_version_id": "bv1", "profile": "full"},
+                              last={"id": "j", "status": "FAILED", "progress": {}}, insert_ok=False))
+    with pytest.raises(PB.RereadRefused, match="sırada"):
+        PB.reread("j", "ayse")

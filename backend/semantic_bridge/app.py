@@ -6387,6 +6387,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                              name="editorial-readable-books", daemon=True).start()
         return out
 
+    @app.post("/api/v1/editorial/ask/read/{item_id}/retry")
+    def editorial_book_read_retry(item_id: str, request: Request) -> dict[str, Any]:
+        """Okunamayan kitabı elle yeniden okut: motor aynı kipte yeni iş açar (kitap «Sırada» olur). Yeniden okutan
+        = oturum; yetki `ozellik:kitap.okut` (yükleme ile aynı, access.FEATURE_RULES)."""
+        engine, _tenant, user, _admin = _books(request)
+        from semantic_bridge import editorial_book_reads as reads_mod
+        try:
+            out = reads_mod.retry(item_id, user)
+        except reads_mod.RetryRefused as e:
+            raise HTTPException(status_code=e.status, detail={"code": "BOOK_READ", "message": str(e)}) from e
+        admin_mod.audit(engine, user, "run", "editorial_book_read", out.get("job_id"), "kitap yeniden okumaya alındı",
+                        {"retryOf": out.get("retry_of")})
+        return out
+
     @app.delete("/api/v1/editorial/ask/read/{item_id}")
     def editorial_book_read_dismiss(item_id: str, request: Request) -> dict[str, Any]:
         """Okunamayan (motorun reddettiği) satırı listeden kaldırır; gönderimi süren satır kaldırılmaz."""

@@ -105,3 +105,42 @@ def test_archive_mode_rejects_unknown_values(box, profile, category):
         R.accept(FakeIncoming(box / "up-a.pdf", b"%PDF-1.7 x"), "a.pdf", "", "ayse", profile, category)
     assert list(R.folder().glob("*.json")) == []
     assert R.read_mode("", "") == {} and R.read_mode("archive", "") == {"profile": "archive", "category": ""}
+
+
+JOB = "00000000-0000-0000-0000-0000000000aa"
+
+
+def _engine_status(code, detail=None):
+    req = httpx.Request("POST", "http://x")
+    return httpx.HTTPStatusError(str(code), request=req, response=httpx.Response(code, json={"detail": detail}, request=req))
+
+
+def test_retry_passes_the_session_user_and_maps_engine_answers(monkeypatch):
+    from semantic_bridge import editorial_cards
+    seen = []
+    monkeypatch.setattr(editorial_cards, "book_read_retry",
+                        lambda job, user: seen.append((job, user)) or {"job_id": "new", "retry_of": job})
+    assert R.retry(JOB, "ayse") == {"job_id": "new", "retry_of": JOB} and seen == [(JOB, "ayse")]
+
+    def busy(job, user):
+        raise _engine_status(409, "Kitap zaten sırada ya da okunuyor.")
+    monkeypatch.setattr(editorial_cards, "book_read_retry", busy)
+    with pytest.raises(R.RetryRefused) as e:
+        R.retry(JOB, "ayse")
+    assert e.value.status == 409 and "sırada" in str(e.value)
+
+    def down(job, user):
+        raise httpx.ConnectError("tünel yok")
+    monkeypatch.setattr(editorial_cards, "book_read_retry", down)
+    with pytest.raises(R.RetryRefused) as e:
+        R.retry(JOB, "ayse")
+    assert e.value.status == 502 and "tünel" not in str(e.value)
+
+
+def test_retry_refuses_outbox_rows_and_bad_ids():
+    with pytest.raises(R.RetryRefused) as e:
+        R.retry("gonder-abc", "ayse")
+    assert e.value.status == 409
+    with pytest.raises(R.RetryRefused) as e:
+        R.retry("../x", "ayse")
+    assert e.value.status == 404

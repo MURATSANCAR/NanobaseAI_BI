@@ -784,6 +784,13 @@ def book_read_upload(data, filename: str, title: str, user: str, profile: str = 
         return r.json()
 
 
+def book_read_retry(job_id: str, user: str) -> dict:
+    """Okuması düşmüş kitabı elle yeniden sıraya koyar (kart servisi `POST /v1/books/read/{iş}/retry`). Yeniden
+    okutan = oturum (X-Editor). 409: kitap zaten sırada/okunuyor ya da okuma düşmüş değil; 404: iş yok. Yazma
+    isteğidir, yeniden denenmez."""
+    return request_json('POST','/v1/books/read/'+str(uuid.UUID(job_id))+'/retry',{},editor=user)
+
+
 def book_read_jobs(user: str, see_all: bool) -> dict:
     """Portaldan okutulan kitaplar: kişi kendi okuttuklarını, yönetici hepsini görür."""
     return request('/v1/books/read'+('' if see_all else '?requested_by='+urllib.parse.quote(user))).json()

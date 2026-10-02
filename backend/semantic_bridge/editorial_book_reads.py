@@ -8,6 +8,9 @@ kalıcıdır: satır «okunamadı» olur, yeniden gönderilmez.
 
 Motorun listesi okunamazsa son başarılı liste (bellekte, kişi başına) gösterilir; ekran boş ya da hatalı kalmaz.
 Aynı dosya iki kez gönderilse de motor içerik özetinden aynı kitabı bulur, ikinci okuma açılmaz.
+
+Elle yeniden okuma (`retry`): kendini onarma denemeleri biten («okunamadı») kitabı kişi yeniden sıraya koyar; motor
+aynı kipte yeni iş açar (çift iş açılmaz). Hata nedeni ekrana gitmez; kişi yalnız «okuma tamamlanamadı» görür.
 """
 from __future__ import annotations
 
@@ -220,3 +223,44 @@ def listing(user: str, see_all: bool, engine_list: Callable[[], dict[str, Any]])
         stale = True
     mine = [public(it) for it in reversed(pending(None if see_all else user))]
     return {"items": mine + engine, "stale": stale}
+
+
+class RetryRefused(ValueError):
+    """Yeniden okuma açılamadı; `status` köprünün döneceği kod, mesaj kişiye olduğu gibi gösterilir."""
+
+    def __init__(self, message: str, status: int):
+        super().__init__(message)
+        self.status = status
+
+
+def retry(job_id: str, user: str) -> dict[str, Any]:
+    """Motorun okuma işini (`job_id`, ekrandaki satırın kimliği) elle yeniden sıraya koyar. Giden kutusu satırı
+    («gonder-…») motora hiç geçmemiştir, yeniden okunacak işi yoktur. Motorun 409'u (zaten sırada / düşmüş değil)
+    ve 404'ü kişiye sade cümleyle; ulaşılamazsa 502."""
+    import httpx
+
+    from semantic_bridge import editorial_cards
+
+    if job_id.startswith("gonder-"):
+        raise RetryRefused("Bu kitap henüz okumaya gönderilmedi.", 409)
+    try:
+        uuid.UUID(job_id)
+    except ValueError:
+        raise RetryRefused("Okuma bulunamadı.", 404) from None
+    try:
+        return editorial_cards.book_read_retry(job_id, user)
+    except httpx.HTTPStatusError as e:
+        code = e.response.status_code
+        if code == 409:
+            try:
+                detail = e.response.json().get("detail")
+            except ValueError:
+                detail = None
+            raise RetryRefused(detail if isinstance(detail, str) else "Kitap şu an yeniden okutulamaz.", 409) from e
+        if code == 404:
+            raise RetryRefused("Okuma bulunamadı.", 404) from e
+        log.warning("yeniden okuma motor hatası %s", code)
+        raise RetryRefused("Kitap şu an yeniden sıraya alınamadı; birazdan tekrar deneyin.", 502) from e
+    except Exception as e:  # noqa: BLE001 — tünel/GPU/ağ
+        log.warning("yeniden okuma motora ulaşamadı: %s", str(e)[:200])
+        raise RetryRefused("Kitap şu an yeniden sıraya alınamadı; birazdan tekrar deneyin.", 502) from e

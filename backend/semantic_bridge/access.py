@@ -1106,6 +1106,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
     # Kitap okutma (Kitaba sor): PDF gelen kutusuna yazılır, GPU'da uzun okuma işi başlar.
     (frozenset({"PUT", "DELETE"}), r"^/api/v1/editorial/ask/read(/[^/]+)?$", "ozellik:kitap.okut"),
+    # Okunamayan kitabı elle yeniden okutmak da GPU'da okuma başlatır: yüklemeyle aynı yetki (Kitaba sor ve Eczane).
+    (frozenset({"POST"}), r"^/api/v1/editorial/(ask/read/[^/]+/retry|pharmacy/books/[^/]+/reread)$", "ozellik:kitap.okut"),
     # Kitap Eczanesi: arşivde okunmuş kitabı redaksiyona açmak GPU'da son okuma denetimlerini başlatır.
     (frozenset({"POST"}), r"^/api/v1/editorial/pharmacy/books/[^/]+/redaction$", "ozellik:kitap-eczanesi.redaksiyon"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi

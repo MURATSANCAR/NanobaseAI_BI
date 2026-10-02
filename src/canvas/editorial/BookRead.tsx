@@ -9,6 +9,7 @@ import { fmtSize } from '../components/fileDropRules';
 import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 import { UploadBar as Bar } from './BookUploadDock';
 import { useBookUploads, type BookUpload } from './bookReadUploads';
+import RereadButton from './RereadButton';
 import { Panel } from './kit';
 
 /** Kitap okut (Kitaba sor'un üstü): editör bir ya da birçok PDF bırakır ve istediği sayfaya geçebilir. Yükleme
@@ -37,7 +38,11 @@ function serverState(b: BookRead): { tone: Tone; text: string; note?: string } {
     case 'yeniden':
       return { tone: 'warn', text: 'Yeniden deneniyor', note: `Okuma yarıda kaldı; ZEKİ AI kitabı yeniden sıraya aldı (${b.attempt + 1}. deneme / ${b.attempts}).` };
     case 'okunamadi':
-      return { tone: 'err', text: 'Okunamadı', note: b.message || (b.attempts > 1 ? `${b.attempts} denemede okunamadı; dosyayı kontrol edip yeniden yükleyin.` : 'Dosya okunamadı; dosyayı kontrol edip yeniden yükleyin.') };
+      // Giden kutusu satırı: dosyanın kendisi okunamaz (PDF değil, bozuk), köprünün sade cümlesi. Motor satırı: neden
+      // gösterilmez; kişi «Yeniden okut» ile kitabı yeniden sıraya alabilir.
+      return b.id.startsWith('gonder-')
+        ? { tone: 'err', text: 'Okunamadı', note: b.message || 'Dosya okunamadı; dosyayı kontrol edip yeniden yükleyin.' }
+        : { tone: 'err', text: 'Okunamadı', note: 'Okuma tamamlanamadı. Kitabı yeniden sıraya alabilirsiniz.' };
     default:
       return b.listed ? { tone: 'ok', text: "Kitaba sor'da" } : { tone: 'ok', text: 'Listeye ekleniyor' };
   }
@@ -86,7 +91,7 @@ export function LocalRow({ l, onClose }: { l: BookUpload; onClose: () => void })
   );
 }
 
-export function ServerRow({ b, onClose }: { b: BookRead; onClose?: () => void }) {
+export function ServerRow({ b, onClose, onReread }: { b: BookRead; onClose?: () => void; onReread?: () => void }) {
   const st = serverState(b);
   return (
     <Shell title={b.title} pill={st} onClose={onClose}>
@@ -105,6 +110,9 @@ export function ServerRow({ b, onClose }: { b: BookRead; onClose?: () => void })
         {b.finished_at ? `bitti ${dateTime(b.finished_at)}` : `gönderildi ${dateTime(b.created_at)}`}
         {b.requested_by ? ` · ${b.requested_by}` : ''}
       </span>
+      {onReread && b.state === 'okunamadi' && !b.id.startsWith('gonder-') && (
+        <RereadButton title={b.title} run={() => bookReadApi.retry(b.id)} onDone={onReread} />
+      )}
     </Shell>
   );
 }
@@ -201,7 +209,12 @@ export default function BookReadPanel() {
                 <LocalRow key={l.key} l={l} onClose={() => uploads.remove(l.key)} />
               ))}
               {more.shown.map((b) => (
-                <ServerRow key={b.id} b={b} onClose={b.state === 'okunamadi' && b.id.startsWith('gonder-') ? () => void dismiss(b.id) : undefined} />
+                <ServerRow
+                  key={b.id}
+                  b={b}
+                  onClose={b.state === 'okunamadi' && b.id.startsWith('gonder-') ? () => void dismiss(b.id) : undefined}
+                  onReread={() => void qc.invalidateQueries({ queryKey: ['editorial', 'bookReads'] })}
+                />
               ))}
             </ul>
             <ShowMoreButton more={more} noun="kitap" />

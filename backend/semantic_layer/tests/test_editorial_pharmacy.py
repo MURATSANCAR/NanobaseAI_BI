@@ -96,3 +96,28 @@ def test_word_alternatives_body(client, monkeypatch):
     assert client.post("/api/v1/editorial/proofing/word-alternatives", json={"bookId": BID, "findingIds": "x"}).status_code == 422
     assert client.post("/api/v1/editorial/proofing/word-alternatives", json={"bookId": "x"}).status_code == 404
     assert client.post("/api/v1/editorial/proofing/word-alternatives", json=[1]).status_code == 400
+
+
+def test_reread_uses_the_books_read_job_and_is_audited(client, monkeypatch):
+    from semantic_bridge import editorial_book_reads
+    monkeypatch.setattr(editorial_cards, "archive_book", lambda bid: {"id": bid, "read": {"id": "job-1", "state": "okunamadi"}})
+    calls = []
+    monkeypatch.setattr(editorial_book_reads, "retry", lambda job, user: calls.append((job, user)) or {"job_id": "job-2", "retry_of": job})
+    r = client.post(f"/api/v1/editorial/pharmacy/books/{BID}/reread")
+    assert r.status_code == 200 and r.json()["job_id"] == "job-2"
+    assert calls == [("job-1", "ayse")]
+    assert client.audits and client.audits[-1][1] == "ayse" and client.audits[-1][3] == "editorial_book_read"
+
+
+def test_reread_without_a_read_or_refused_is_409(client, monkeypatch):
+    from semantic_bridge import editorial_book_reads
+    monkeypatch.setattr(editorial_cards, "archive_book", lambda bid: {"id": bid, "read": None})
+    assert client.post(f"/api/v1/editorial/pharmacy/books/{BID}/reread").status_code == 409
+    monkeypatch.setattr(editorial_cards, "archive_book", lambda bid: {"id": bid, "read": {"id": "job-1"}})
+
+    def busy(job, user):
+        raise editorial_book_reads.RetryRefused("Kitap zaten sırada ya da okunuyor.", 409)
+    monkeypatch.setattr(editorial_book_reads, "retry", busy)
+    r = client.post(f"/api/v1/editorial/pharmacy/books/{BID}/reread")
+    assert r.status_code == 409 and "sırada" in r.text
+    assert client.post("/api/v1/editorial/pharmacy/books/yok/reread").status_code == 404

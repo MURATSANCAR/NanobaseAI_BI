@@ -10,7 +10,8 @@ alanında `portal:<AD kullanıcısı>` olarak durur; liste bu önekle süzülür
 
 Kendini onarma: okuması düşen kitap `EDITOR_READ_ATTEMPTS` (varsayılan 3) denemeye kadar kendiliğinden yeniden
 kuyruğa girer (yeni iş satırı, `progress.attempt`); iş akışı kapanmış ama iş RUNNING kalmışsa (işçi öldü) iş
-düşmüş sayılır ve aynı yoldan yeniden denenir. Kuyruk takılmaz.
+düşmüş sayılır ve aynı yoldan yeniden denenir. Kuyruk takılmaz. Denemeler bitince kitap «okunamadı» kalır; kişi
+portaldan «Yeniden okut» ile (`reread`) aynı sürüm için yeni iş açar: deneme sayacı baştan, isteyen o kişi.
 
 Ekrana adım adı değil aşama gider: iş akışının adım etiketleri teknik ad taşır (OCR, manifest), aşama adı taşımaz.
 Hata metni de ekrana gitmez.
@@ -181,6 +182,48 @@ def retry_failed() -> int:
     return len(rows)
 
 
+class RereadRefused(ValueError):
+    """Elle yeniden okuma açılamaz (iş sürüyor ya da okuma düşmüş değil); köprü 409 olarak kişiye gösterir."""
+
+
+#: Elle yeniden okumada iş hiç açılmamışsa (aynı sürümde süren iş yoksa) eklenir; tek SQL cümlesi: iki tık aynı
+#: anda gelse de ikinci cümle birincinin işini görür ve satır eklemez (aynı işlemde değil, ama aralık milisaniye).
+_REREAD_SQL = ("INSERT INTO analysis_job(book_version_id, profile, requested_by, progress)"
+               " SELECT %s, %s, %s, %s WHERE NOT EXISTS (SELECT 1 FROM analysis_job"
+               " WHERE book_version_id=%s AND status IN ('QUEUED','RUNNING')) RETURNING id")
+
+
+def reread(job_id: str, who: str) -> dict:
+    """Okuması düşmüş kitabı elle yeniden sıraya koyar. `job_id`: ekrandaki satırın işi (kitap sürümünün herhangi
+    bir işi olabilir; kararı o sürümün o kipteki SON işi verir). Son iş FAILED olmalı; sürümde QUEUED/RUNNING iş varsa
+    çift iş açılmaz (`RereadRefused`). Yeni iş aynı kipte (tam okuma ya da arşiv), korunan alanlar (`CARRIED`)
+    `retry_failed`'deki gibi aynen geçer; deneme sayacı 1'den başlar (kendini onarma yeniden çalışır), isteyen
+    `portal:<kişi>` (portal kitabı olarak toplu arşiv kuyruğunun önüne geçer). İş yoksa `LookupError`.
+    Döner: {'job_id', 'retry_of'}."""
+    from . import db
+    who = (who or "").strip()
+    if not who:
+        raise ValueError("Yeniden okutan kişi eksik.")
+    r = db.one("SELECT book_version_id, profile FROM analysis_job WHERE id=%s", job_id)
+    if not r:
+        raise LookupError("job not found")
+    bv, profile = r["book_version_id"], r.get("profile") or "full"
+    if profile not in PROFILES:
+        raise RereadRefused("Bu iş yeniden okutulamaz.")
+    if db.one("SELECT 1 AS x FROM analysis_job WHERE book_version_id=%s AND status IN ('QUEUED','RUNNING') LIMIT 1", bv):
+        raise RereadRefused("Kitap zaten sırada ya da okunuyor.")
+    last = db.one("SELECT id, status, progress FROM analysis_job WHERE book_version_id=%s AND profile=%s"
+                  " ORDER BY created_at DESC, id DESC LIMIT 1", bv, profile)
+    if not last or last["status"] != "FAILED":
+        raise RereadRefused("Kitabın okuması düşmüş değil; yeniden okutulacak bir şey yok.")
+    kept = {k: v for k, v in (last.get("progress") or {}).items() if k in CARRIED}
+    progress = {**kept, "attempt": 1, "retry_of": str(last["id"]), "manual_retry": True}
+    job = db.one(_REREAD_SQL, bv, profile, PREFIX + who[:200], db.J(progress), bv)
+    if not job:
+        raise RereadRefused("Kitap zaten sırada ya da okunuyor.")
+    return {"job_id": str(job["id"]), "retry_of": str(last["id"])}
+
+
 async def reap() -> int:
     """İş akışı kapanmış (ya da hiç yok) ama işi QUEUED/RUNNING kalan satırları düşmüş sayar; kuyruk takılmaz."""
     from temporalio.client import WorkflowExecutionStatus
@@ -250,7 +293,8 @@ async def consume(poll_sec: float = POLL_SEC) -> None:
 
 def listing(requested_by: str = "") -> list[dict]:
     """Portaldan okutulan kitaplar: kitap sürümü başına son iş (yeniden denemeler tek satır), ilk gönderim sırasıyla
-    yeniden eskiye. Sırada bekleyenin önünde kaç kitap olduğu bütün kuyruğa göre (başka kaynaktan gelen işler dahil)."""
+    yeniden eskiye. `requested_by` verilirse o kişinin okuttuğu sürümler; satır sürümün son portal işidir (kitabı
+    başkası elle yeniden okuttuysa kişi yine kendi kitabının güncel durumunu görür). Sırada bekleyenin önünde kaç kitap olduğu bütün kuyruğa göre (başka kaynaktan gelen işler dahil)."""
     from . import db
     who = requested_by.strip()
     rows = db.all_rows(
@@ -258,8 +302,9 @@ def listing(requested_by: str = "") -> list[dict]:
         " j.finished_at, coalesce((j.progress->>'attempt')::int, 1) AS attempt, b.title, bv.page_count,"
         " min(j.created_at) OVER (PARTITION BY j.book_version_id) AS submitted_at"
         " FROM analysis_job j JOIN book_version bv ON bv.id=j.book_version_id JOIN book b ON b.id=bv.book_id"
-        " WHERE j.requested_by " + ("= %s" if who else "LIKE %s") +
-        " ORDER BY j.book_version_id, j.created_at DESC", PREFIX + who if who else PREFIX + "%")
+        " WHERE j.requested_by LIKE %s" +
+        (" AND j.book_version_id IN (SELECT book_version_id FROM analysis_job WHERE requested_by = %s)" if who else "") +
+        " ORDER BY j.book_version_id, j.created_at DESC", PREFIX + "%", *((PREFIX + who,) if who else ()))
     waiting = [str(r["id"]) for r in db.all_rows(
         "SELECT id FROM analysis_job WHERE status='QUEUED' AND workflow_id IS NULL ORDER BY " + QUEUE_ORDER)]
     busy = busy_count()

@@ -8,7 +8,8 @@ kitabı redaksiyona açma. Editör veritabanına doğrudan erişim yok; hepsi ka
 Son okuma kararı, Word çıktısı, kelime haritası ve karşılık önerileri Son okuma ekranıyla ortak uçlardır.
 
 Sayfa yetkisi `sayfa:kitap-eczanesi` (access.py); redaksiyona açma ayrıca `ozellik:kitap-eczanesi.redaksiyon`
-ister (GPU'da son okuma denetimlerini başlatır). Açan kişi oturumdan gelir (`X-Editor`), istemci adını yazamaz.
+ister (GPU'da son okuma denetimlerini başlatır); okunamayan kitabı yeniden okutma (`…/reread`) kitap yüklemeyle
+aynı `ozellik:kitap.okut` yetkisini. Açan kişi oturumdan gelir (`X-Editor`), istemci adını yazamaz.
 
 app.py'de `_books` tanımından sonra bağlanır:
     from semantic_bridge import editorial_pharmacy
@@ -120,6 +121,31 @@ def register(app, deps: dict[str, Any] | Any) -> None:
             try:
                 audit(engine, user, "create", "editorial_redaction", bid, "kitap redaksiyona açıldı",
                       {"jobId": out.get("job_id"), "already": out.get("already")})
+            except Exception:  # noqa: BLE001 — denetim kaydı düşerse işlem geri alınmaz
+                log.exception("kitap eczanesi denetim kaydı")
+        return out
+
+    @app.post(P + "/books/{book_id}/reread")
+    def pharmacy_reread(book_id: str, request: Request) -> dict[str, Any]:
+        """Okuması düşmüş (okunamadı) kitabı yeniden sıraya koyar: kitabın arşiv okuma işi motordan okunur, aynı kipte
+        yeni iş açılır (editorial_book_reads.retry). Yetki `ozellik:kitap.okut` (kitap yükleme ile aynı)."""
+        from semantic_bridge import editorial_book_reads as reads_mod
+        engine, _tenant, user, _ = auth(request)
+        bid = _uuid(book_id)
+        try:
+            read = (editorial_cards.archive_book(bid) or {}).get("read") or {}
+        except Exception as e:  # noqa: BLE001
+            _engine_error(e, "Kitap şu an okunamadı.")
+        if not read.get("id"):
+            raise HTTPException(409, "Kitabın yeniden okutulacak bir okuması yok.")
+        try:
+            out = reads_mod.retry(str(read["id"]), user)
+        except reads_mod.RetryRefused as e:
+            raise HTTPException(e.status, str(e)) from e
+        if audit is not None:
+            try:
+                audit(engine, user, "run", "editorial_book_read", bid, "kitap yeniden okumaya alındı",
+                      {"jobId": out.get("job_id"), "retryOf": out.get("retry_of")})
             except Exception:  # noqa: BLE001 — denetim kaydı düşerse işlem geri alınmaz
                 log.exception("kitap eczanesi denetim kaydı")
         return out

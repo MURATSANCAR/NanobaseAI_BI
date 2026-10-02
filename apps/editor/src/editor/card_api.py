@@ -328,6 +328,22 @@ async def book_read_upload(file: UploadFile = File(...), title: str = Form(defau
     rows=[r for r in PB.listing(who) if r['id']==q['job_id']] or [{'id':q['job_id'],'title':name}]
     return {**rows[0],'already':q['already'],'bytes':size}
 
+@app.post('/v1/books/read/{job_id}/retry')
+def book_read_retry(job_id: UUID, x_editor: str = Header(default='')):
+    """Elle yeniden okuma (editor.portal_books.reread): okuması düşmüş (son işi FAILED) kitap sürümü için aynı kipte
+    yeni iş sıraya girer; deneme sayacı baştan, isteyen X-Editor (köprü oturumdan verir). Sürümde süren iş varsa ya da
+    okuma düşmüş değilse 409; iş yoksa 404. Kitap Eczanesi'nin arşiv kipi de aynı uçtan."""
+    from . import portal_books as PB
+    who=(x_editor or '').strip()
+    if not who:
+        raise HTTPException(400,'Yeniden okutan (X-Editor) eksik.')
+    try:
+        return PB.reread(str(job_id),who)
+    except LookupError:
+        raise HTTPException(404,'job not found') from None
+    except PB.RereadRefused as e:
+        raise HTTPException(409,str(e)) from None
+
 @app.get('/v1/books/read')
 def book_read_jobs(requested_by: str = Query(default='')):
     """Portaldan okutulan kitaplar ve kuyruktaki yeri (yeniden eskiye, hepsi); `requested_by` verilirse yalnız

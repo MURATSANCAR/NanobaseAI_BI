@@ -2950,6 +2950,8 @@ export const pharmacyApi = {
   /** Son okuma raporu kitap kimliğiyle (Son okuma ekranındaki biçim). */
   proofing: (id: string, title?: string) => send<ProofingReport>('GET', `${PH}/${encodeURIComponent(id)}/proofing${qs({ title })}`, undefined, 30_000),
   openRedaction: (id: string) => send<{ book_id: string; job_id: string; already: string | null }>('POST', `${PH}/${encodeURIComponent(id)}/redaction`, {}, 60_000),
+  /** Okuması düşmüş (okunamadı) kitabı yeniden sıraya koyar; kitap «Sırada» olur. */
+  reread: (id: string) => send<{ job_id: string; retry_of: string }>('POST', `${PH}/${encodeURIComponent(id)}/reread`, {}, 30_000),
 };
 
 /** Belge incelemesi: Son Okuma ekranından yüklenen belge (doc, docx, pdf, odt, rtf, txt, md) üstünde metin denetimleri. */
@@ -3054,6 +3056,8 @@ export type BookReadMode = { profile: 'archive'; category: PharmacyCategory | ''
 export const bookReadApi = {
   list: () => send<{ items: BookRead[]; stale?: boolean }>('GET', '/api/v1/editorial/ask/read', undefined, 30_000),
   dismiss: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/editorial/ask/read/${encodeURIComponent(id)}`, undefined, 30_000),
+  /** Okunamayan kitabı elle yeniden okut: aynı kipte yeni okuma işi açılır, kitap «Sırada» olur (409: zaten sırada). */
+  retry: (id: string) => send<{ job_id: string; retry_of: string }>('POST', `/api/v1/editorial/ask/read/${encodeURIComponent(id)}/retry`, {}, 30_000),
   /** Ham PDF gövdesi; köprü diske akıtır ve giden kutusuna alır (motora gönderim arkada). İlerleme için XHR.
    *  Hata: `status` 0 = bağlantı koptu (yeniden denenebilir), 4xx = dosya/izin (kalıcı), 5xx = sunucu (denenebilir). */
   upload: (file: File, title: string, onProgress: (share: number) => void, mode?: BookReadMode) =>
