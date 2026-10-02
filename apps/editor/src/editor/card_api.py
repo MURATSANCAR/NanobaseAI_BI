@@ -472,6 +472,43 @@ def book_word_map(book_id: UUID):
             'finished_at':run['finished_at'].isoformat() if run and run['finished_at'] else None,
             'stats':run['stats'] if run else None}
 
+@app.post('/v1/books/{book_id}/proofing/word-variety/alternatives')
+async def book_word_alternatives(book_id: UUID, body: dict = Body(default={})):
+    """Editör yakın tekrar bulgularını açınca karşılık önerileri üretilir (kullanıcı kararı 2026-10-02: okumada
+    değil). `finding_ids` verilirse yalnız onlar (ekranda açılanlar), verilmezse son koşunun ertelenmiş bütün
+    bulguları. Önerisi üretilmiş bulgu yeniden sorulmaz. Sonra GET .../proofing öneriyle döner."""
+    from .proofing import word_variety
+    ids=body.get('finding_ids')
+    if ids is not None and (not isinstance(ids,list) or not all(isinstance(i,str) for i in ids)):
+        raise HTTPException(400,'finding_ids bir kimlik listesi olmalı')
+    with foundation.read_snapshot() as c:
+        gen=_proofed_generation(c,str(book_id))
+    if gen is None:
+        raise HTTPException(404,'book not found')
+    try:
+        ids=[str(UUID(i)) for i in ids] if ids is not None else None
+    except ValueError:
+        raise HTTPException(400,'finding_ids geçersiz') from None
+    return {'book_id':str(book_id),'generation_id':str(gen['id']),
+            **await word_variety.fill_alternatives(str(gen['id']),ids)}
+
+@app.post('/v1/books/{book_id}/redaction')
+def book_open_redaction(book_id: UUID, x_editor: str = Header(default='')):
+    """Arşiv kipinde okunmuş kitabı redaksiyona açar (editor.archive.open_for_redaction): son okuma denetimleri,
+    metin–görsel teyidi, süreklilik ve çelişki tespiti aynı nesil üstünde okuma kuyruğuna girer."""
+    from . import archive
+    who=(x_editor or '').strip()
+    if not who:
+        raise HTTPException(400,'Açan (X-Editor) eksik.')
+    with foundation.read_snapshot() as c:
+        gen=read_model.latest(c,str(book_id))
+    if gen is None:
+        raise HTTPException(404,'book not found')
+    try:
+        return {'book_id':str(book_id),**archive.open_for_redaction(str(gen['id']),who)}
+    except ValueError as e:
+        raise HTTPException(409,str(e)) from None
+
 @app.post('/v1/books/{book_id}/proofing/findings/{finding_id}/decision')
 def book_proofing_decision(book_id: UUID, finding_id: UUID, body: dict = Body(...)):
     """Editörün bulguya kararı: «Doğru» (ACCEPT), «Yanlış alarm» (REJECT + gerekçe [+ not]) ya da «Geri al»

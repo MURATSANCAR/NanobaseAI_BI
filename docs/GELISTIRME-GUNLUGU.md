@@ -11,6 +11,16 @@
 - `gateway.py`: denetim + yer ayırma tek adım (`_reserve_overflow`, arada await yok); BI payı ölçüm anındaki taşan sayımızla hesaplanır (`_peer_ours`; yeri ayrılıp eşe henüz varmamış istek BI yükünü eksi göstermesin); `/metrics` okuması kilitle tekilleşti; istemci adı istek başına bir kez çözülür (ayrılan yer aynı kararla geri verilsin). `EDITOR_OVERFLOW_PRIORITY` (vars. 0 = gönderilmez) taşan okumaya vLLM `priority` alanı ekler. Test: `tests/test_gateway_overflow_race.py` (120 eşzamanlı istekte taşan hiçbir an 8'i aşmıyor, yer geri veriliyor, öncelik alanı).
 - `compose.qwen27b.yaml` `--scheduling-policy priority`; `llm-dispatch` GPU 1 `backup`; `models.yaml` ana model 0.70 (KV ≈ 452k token, 32 koltuk geri çekilmeden dolar), OCR 0.22, reranker 0.22 (ana modelle 0.92), derin görsel koltuk 12. `editorctl` editor.env'e yorum satırı olarak öneri değerleri ekler. Hiçbiri sunucuya uygulanmadı; sıra ve kesinti PROJECT-MEMORY «İki karta tek kapı»da.
 - Testler GPU'da: 752/752 (ilk koşuda `test_portal_read::test_read_ocr_only_needed_and_requested_pages` eşzamanlı sıra yüzünden bir kez düştü, tek başına 5/5 ve ikinci tam koşuda geçti; geçitle ilgisiz).
+## 2026-10-02 — Editör: arşiv kipi (Zeki'ye sor için okuma) ve /data/kitaplar toplu kuyruğu
+
+Kullanıcı kararı: GPU `/data/kitaplar` (4.034 PDF) «Kitaba sor» arşivi olarak okunacak, son okuma (redaksiyon) değil.
+
+- **Kip iş başına:** `analysis_job.profile` = `full` (bugünkü gibi) | `archive` | `redaction`. `prepare_generation` profili döndürür; `_run_verified` arşivde `workflow.patched("archive-profile-v1")`, redaksiyonda `"redaction-profile-v1"` alır (normal işte işaret alınmaz: eski geçmişler aynı komut dizisini oynatır).
+- **Arşivde koşmayan:** son okuma denetimleri, metin–görsel teyidi, karakter sürekliliği, çelişki tespiti + editör kuyruğu. Çıktılar `archive_outputs` ile (rebuild.run'ın eşi; doğrulama = critic + kim ne yaptı + regresyon; özet/dizin/rapor/katalog aynı). Görsel tarama yalnız kapak + resimli/çizimli sayfa (alanın ≥%5'i resim ya da ≥40 çizim yolu; `editor/archive.py`).
+- **Redaksiyona açma:** `python -m editor.archive redaction --generation <id>` ya da kart servisi `POST /v1/books/{id}/redaction` → aynı nesilde atlanan adımlar + normal yeniden kurulum.
+- **Kelime çeşitliliği önerileri** (her iki kipte) okumada değil editör açınca: `POST /v1/books/{id}/proofing/word-variety/alternatives` (`EDITOR_WORD_ALTERNATIVES_AT_READ=1` eski davranış).
+- **Toplu kuyruk:** `python -m editor.archive enqueue --root /data/kitaplar --prescan … [--dry-run]`; klasör → okur kitlesi/tür ipucu (CRM yoksa `book_profile.audience_source='ARCHIVE'`), sha kopyası ve kesik parça atlanır, PDF kitap klasörüne sert bağla konur. Portal kitabı arşivin önüne geçer (`QUEUE_ORDER`); yeniden deneme kipi taşır.
+- Kuru koşu (gerçek DB okuması): 4.018 kitap, 658.919 sayfa, görsel taramaya 179.288 (%27); kesik parça 7, zaten okunmuş/okunuyor 9, kopya 0. Kuyruğa alma koşturulmadı.
 
 ## 2026-10-01 (gece) — Kararlar: muhasebe net satışı, fiyat farkı notu, pasif kayıtta sayı, BMT hedefleri karnede
 

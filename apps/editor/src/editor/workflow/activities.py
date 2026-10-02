@@ -38,11 +38,21 @@ async def set_step(job_id: str, n: int, label: str, extra: dict) -> None:
 async def prepare_generation(job_id: str) -> dict:
     """Step 1: new generation (never overwrites an old one) with the model and
     prompt manifests and the editor corrections that apply to this book."""
-    job = await _t(db.one, "SELECT j.book_version_id, bv.book_id FROM analysis_job j JOIN book_version"
-                   " bv ON bv.id=j.book_version_id WHERE j.id=%s", job_id)
+    job = await _t(db.one, "SELECT j.book_version_id, bv.book_id, j.profile, j.progress FROM analysis_job j"
+                   " JOIN book_version bv ON bv.id=j.book_version_id WHERE j.id=%s", job_id)
+    # The job's profile (editor.archive): 'full' as before, 'archive' reads for questions only, 'redaction'
+    # runs what an archive reading left out — on the archive generation itself, not on a new one.
+    profile = job["profile"] or "full"
+    if profile == "redaction":
+        target = (job["progress"] or {}).get("generation_id")
+        g = await _t(db.one, "SELECT id, book_version_id FROM generation WHERE id=%s", target) if target else None
+        if g is None or str(g["book_version_id"]) != str(job["book_version_id"]):
+            raise ValueError(f"redaction job {job_id}: generation {target!r} is not this book version's")
+        return {"generation_id": str(g["id"]), "book_version_id": str(g["book_version_id"]), "profile": profile}
     existing = await _t(db.one, "SELECT id,book_version_id FROM generation WHERE job_id=%s", job_id)
     if existing:
-        return {"generation_id": str(existing["id"]), "book_version_id": str(existing["book_version_id"])}
+        return {"generation_id": str(existing["id"]), "book_version_id": str(existing["book_version_id"]),
+                "profile": profile}
     manifest = await aliases()
     pm = await _t(prompts.register_all)
 
@@ -61,7 +71,7 @@ async def prepare_generation(job_id: str) -> dict:
         return str(row["id"])
 
     gid = await _t(mk)
-    return {"generation_id": gid, "book_version_id": str(job["book_version_id"])}
+    return {"generation_id": gid, "book_version_id": str(job["book_version_id"]), "profile": profile}
 
 
 @activity.defn
@@ -77,6 +87,22 @@ async def text_layer(generation_id: str, book_version_id: str) -> dict:
 @activity.defn
 async def ocr_page(generation_id: str, book_version_id: str, page_no: int) -> dict:
     return await document.run_ocr(generation_id, book_version_id, page_no)
+
+
+@activity.defn
+async def archive_visual_pages(book_version_id: str) -> dict:
+    """Archive profile: the pages that carry a picture (and the cover); a text-only page never goes
+    to the vision model (editor.archive.visual_pages)."""
+    from .. import archive
+    return await _t(archive.visual_pages, book_version_id)
+
+
+@activity.defn
+async def archive_outputs(generation_id: str) -> dict:
+    """Archive profile's rebuild_outputs: the same outputs, validated without contradiction detection
+    and the editor's queue (editor.archive.run_outputs)."""
+    from .. import archive
+    return await archive.run_outputs(generation_id)
 
 
 @activity.defn
@@ -304,7 +330,7 @@ async def rebuild_outputs(generation_id: str) -> dict:
     return await rebuild.run(generation_id)
 
 
-ALL = [proofreading, rebuild_outputs, event_actors, detect_contradictions, queue_contradictions, book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
+ALL = [archive_visual_pages, archive_outputs, proofreading, rebuild_outputs, event_actors, detect_contradictions, queue_contradictions, book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
        persist_visual, text_chunks, extract_chunk, resolve_identity, identity_unresolved, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

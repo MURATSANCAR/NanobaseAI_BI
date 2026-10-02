@@ -177,18 +177,24 @@ def _refresh_from_crm(row: dict) -> dict | None:
     if not rec:
         return None
     upd: dict = {}
-    if row["audience_source"] == "NONE" and rec.get("audience"):
+    # arşiv klasöründen gelen okur kitlesi/tür (ARCHIVE) CRM'den zayıftır: CRM kaydı gelince CRM geçer
+    if row["audience_source"] in ("NONE", "ARCHIVE") and rec.get("audience"):
         upd.update(audience=rec["audience"], audience_source="CRM", age_from=rec.get("age_from"),
                    age_to=rec.get("age_to"))
     crm = crm_forms(list(rec.get("genres") or []), rec.get("web_categories"))
     # editörün kararı (EDITOR) CRM'le ezilmez; yalnız metinden seçilen ya da hiç seçilemeyen tür
-    if row["form_source"] in ("MODEL", "NONE") and len(crm["forms"]) == 1:
+    if row["form_source"] in ("MODEL", "NONE", "ARCHIVE") and len(crm["forms"]) == 1:
         upd.update(form=crm["forms"][0], form_source="CRM")
     if not upd:
         return None
     sets = ", ".join(f"{k}=%s" for k in upd)
     return db.one(f"UPDATE book_profile SET {sets} WHERE generation_id=%s RETURNING *", *upd.values(),
                   row["generation_id"])
+
+
+def _archive_hint(generation_id: str) -> dict | None:
+    from . import archive
+    return archive.hint_of_generation(generation_id)
 
 
 def _stored(generation_id: str) -> dict | None:
@@ -199,7 +205,7 @@ async def profile(generation_id: str) -> dict:
     """The generation's profile; decided and stored on first use (idempotent)."""
     row = await asyncio.to_thread(_stored, generation_id)
     if row:
-        if row["audience_source"] == "NONE" or row["form_source"] in ("MODEL", "NONE"):
+        if row["audience_source"] in ("NONE", "ARCHIVE") or row["form_source"] in ("MODEL", "NONE", "ARCHIVE"):
             row = await asyncio.to_thread(_refresh_from_crm, row) or row
         return row
     info = await asyncio.to_thread(
@@ -217,25 +223,38 @@ async def profile(generation_id: str) -> dict:
     genres = list(rec.get("genres") or [])
     crm = crm_forms(genres, rec.get("web_categories"))
     detail: dict = {"crm": crm}
+    # A book of the archive (editor.archive) carries its shelf: Cocuk/6-9_yas, Kurgu, Kurgu_Disi. It
+    # stands in for the CRM record where that is missing, never over it.
+    arc = None if rec.get("audience") and len(crm["forms"]) == 1 else await asyncio.to_thread(_archive_hint, generation_id)
+    if arc:
+        detail["archive"] = arc
+    arc_forms = [f for f in (arc or {}).get("forms") or [] if f in FORMS]
     call_id = None
     if len(crm["forms"]) == 1:
         form, source_ = crm["forms"][0], "CRM"
+    elif not crm["forms"] and len(arc_forms) == 1:
+        form, source_ = arc_forms[0], "ARCHIVE"
     else:
         # none named (the genre field is empty on about half of the catalogue) or several
         # («Bilim Tarihi, İnceleme-Araştırma»): the book's own text decides among them
-        candidates = crm["forms"] or list(FORMS)
+        candidates = crm["forms"] or arc_forms or list(FORMS)
         got = await _model_form(generation_id, rec.get("crm_title") or info["title"], genres, candidates)
         detail["model"] = got
         call_id = got.get("model_call_id")
         form, source_ = got["form"], ("MODEL" if got["form"] != "UNKNOWN" else "NONE")
-    audience = rec.get("audience") or "UNKNOWN"
+    if rec.get("audience"):
+        audience, a_source, age_from, age_to = rec["audience"], "CRM", rec.get("age_from"), rec.get("age_to")
+    elif (arc or {}).get("audience"):
+        audience, a_source, age_from, age_to = arc["audience"], "ARCHIVE", arc.get("age_from"), arc.get("age_to")
+    else:
+        audience, a_source, age_from, age_to = "UNKNOWN", "NONE", rec.get("age_from"), rec.get("age_to")
     await asyncio.to_thread(
         db.one, "INSERT INTO book_profile(generation_id, form, form_source, form_detail, audience,"
         " audience_source, age_from, age_to, illustrated_pages, pages, model_call_id)"
         " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (generation_id) DO NOTHING"
         " RETURNING generation_id",
-        generation_id, form, source_, db.J(detail), audience, "CRM" if rec.get("audience") else "NONE",
-        rec.get("age_from"), rec.get("age_to"), int(pages["drawn"]), int(pages["n"]), call_id)
+        generation_id, form, source_, db.J(detail), audience, a_source,
+        age_from, age_to, int(pages["drawn"]), int(pages["n"]), call_id)
     return await asyncio.to_thread(_stored, generation_id)
 
 

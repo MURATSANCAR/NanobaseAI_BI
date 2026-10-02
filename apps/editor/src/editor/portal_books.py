@@ -134,18 +134,27 @@ def enqueue(file_name: str, title: str, who: str) -> dict:
     return {"job_id": str(job["id"]), "already": None}
 
 
+#: Kuyruk sırası: arşiv kipindeki toplu okuma (editor.archive, binlerce kitap) portaldan gelen kitabı bekletmez.
+QUEUE_ORDER = "(profile = 'archive'), created_at, id"
+#: İşin profil dışında taşıdığı, yeniden denemede aynen geçen alanlar (arşiv ipucu, redaksiyonun nesli).
+CARRIED = ("archive", "generation_id", "from_profile")
+
+
 def retry_failed() -> int:
-    """Portaldan gelen ve düşen kitabın son işi deneme hakkı kaldıysa aynı sürüm için yeni iş sıraya girer."""
-    from . import db
+    """Portaldan (ya da arşiv toplu kuyruğundan) gelen ve düşen kitabın son işi deneme hakkı kaldıysa aynı sürüm
+    için yeni iş sıraya girer; işin kipi (profile) ve kipin bilgisi aynen geçer."""
+    from . import archive, db
     rows = db.all_rows(
-        "SELECT j.id, j.book_version_id, j.requested_by, coalesce((j.progress->>'attempt')::int, 1) AS attempt"
-        " FROM analysis_job j WHERE j.status='FAILED' AND j.requested_by LIKE %s"
+        "SELECT j.id, j.book_version_id, j.requested_by, j.profile, j.progress,"
+        " coalesce((j.progress->>'attempt')::int, 1) AS attempt"
+        " FROM analysis_job j WHERE j.status='FAILED' AND (j.requested_by LIKE %s OR j.requested_by LIKE %s)"
         " AND NOT EXISTS (SELECT 1 FROM analysis_job k WHERE k.book_version_id=j.book_version_id AND k.created_at>j.created_at)"
-        " AND coalesce((j.progress->>'attempt')::int, 1) < %s", PREFIX + "%", ATTEMPTS)
+        " AND coalesce((j.progress->>'attempt')::int, 1) < %s", PREFIX + "%", archive.PREFIX + "%", ATTEMPTS)
     for r in rows:
-        db.one("INSERT INTO analysis_job(book_version_id, profile, requested_by, progress) VALUES (%s,'full',%s,%s)"
-               " RETURNING id", r["book_version_id"], r["requested_by"],
-               db.J({"attempt": r["attempt"] + 1, "retry_of": str(r["id"])}))
+        kept = {k: v for k, v in (r.get("progress") or {}).items() if k in CARRIED}
+        db.one("INSERT INTO analysis_job(book_version_id, profile, requested_by, progress) VALUES (%s,%s,%s,%s)"
+               " RETURNING id", r["book_version_id"], r.get("profile") or "full", r["requested_by"],
+               db.J({**kept, "attempt": r["attempt"] + 1, "retry_of": str(r["id"])}))
     return len(rows)
 
 
@@ -184,7 +193,8 @@ async def dispatch_once() -> str | None:
         foundation.assert_enabled()
     except RuntimeError:
         return None  # bakım: kuyruk bekler
-    nxt = db.one("SELECT id FROM analysis_job WHERE status='QUEUED' AND workflow_id IS NULL ORDER BY created_at, id LIMIT 1")
+    nxt = db.one("SELECT id FROM analysis_job WHERE status='QUEUED' AND workflow_id IS NULL ORDER BY "
+                 + QUEUE_ORDER + " LIMIT 1")
     if not nxt:
         return None
     job_id = str(nxt["id"])
@@ -228,7 +238,7 @@ def listing(requested_by: str = "") -> list[dict]:
         " WHERE j.requested_by " + ("= %s" if who else "LIKE %s") +
         " ORDER BY j.book_version_id, j.created_at DESC", PREFIX + who if who else PREFIX + "%")
     waiting = [str(r["id"]) for r in db.all_rows(
-        "SELECT id FROM analysis_job WHERE status='QUEUED' AND workflow_id IS NULL ORDER BY created_at, id")]
+        "SELECT id FROM analysis_job WHERE status='QUEUED' AND workflow_id IS NULL ORDER BY " + QUEUE_ORDER)]
     busy = busy_count()
     rows.sort(key=lambda r: r["submitted_at"], reverse=True)
     return [item(r, waiting, busy) for r in rows]

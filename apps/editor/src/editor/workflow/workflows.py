@@ -73,12 +73,21 @@ class BookFullAnalysis:
 
         Old histories retain their original patched branch. New jobs use only
         revision-bound producers and keep analytical acceptance separate.
+
+        Profile 'archive' (editor.archive): read for questions only — the vision model sees only
+        the cover and the pages with a picture; final-read checks, text-visual confirmation,
+        continuity and contradiction detection are left to a later 'redaction' job.
         """
         failures: dict[str, list] = {}
         try:
             await self.step(1, "Kitap ve içerik sürümü")
             ctx = await self.act("prepare_generation", job_id, timeout=SHORT)
             gid, bv = ctx["generation_id"], ctx["book_version_id"]
+            # The job's profile is in prepare_generation's recorded result: histories from before it
+            # carry none and replay the full reading; only the new kinds of job take a marker.
+            if ctx.get("profile") == "redaction" and workflow.patched("redaction-profile-v1"):
+                return await self._run_redaction(job_id, gid)
+            archive = ctx.get("profile") == "archive" and workflow.patched("archive-profile-v1")
             await self.step(2, "Sayfa manifesti", {"generation_id": gid})
             man = await self.act("page_manifest", bv)
             pages = list(range(1, man["page_count"] + 1))
@@ -86,16 +95,23 @@ class BookFullAnalysis:
             await self.act("text_layer", gid, bv)
             await self.step(4, "OCR", {"pages": man["needs_ocr"]})
             _, failures["ocr"] = await self.fan_out("ocr_page", man["needs_ocr"], gid, bv)
-            await self.step(5, "Hızlı görsel tarama", {"pages": len(pages)})
-            fast, failures["fast_scan"] = await self.fan_out("scan_page_fast", pages, gid)
+            scan = pages
+            if archive:
+                # only the cover and the pages that carry a picture go to the vision model
+                scan = (await self.act("archive_visual_pages", bv, timeout=SHORT))["pages"]
+            await self.step(5, "Hızlı görsel tarama", {"pages": len(scan), "of": len(pages)} if archive
+                            else {"pages": len(pages)})
+            fast, failures["fast_scan"] = await self.fan_out("scan_page_fast", scan, gid)
             uncertain = [r["page_no"] for r in fast if r.get("uncertain")]
             # ---- deep vision, first visit: everything that needs only the pages themselves
             await self.step(6, "Derin görsel inceleme", {"uncertain_pages": uncertain})
             await self.act("release_models", ["book-vision-fast"], timeout=SHORT)
             _, failures["deep_scan"] = await self.fan_out("scan_page_deep", uncertain, gid)
             await self.act("persist_visual", gid, "deep")
-            await self.step(6, "Metin–görsel bulguların teyidi")
-            tv = await self.act("confirm_text_visual", gid)     # reads scans and page text only
+            tv: dict = {}
+            if not archive:
+                await self.step(6, "Metin–görsel bulguların teyidi")
+                tv = await self.act("confirm_text_visual", gid)     # reads scans and page text only
             await self.act("release_models", ["book-vision-deep"], timeout=SHORT)
             # ---- director phase
             await self.step(7, "Karakter ve olay adayları")
@@ -108,15 +124,20 @@ class BookFullAnalysis:
             mrg = await self.act("merge_events", gid)
             await self.step(9, "Önemli olay sayfaları")
             roles = await self.act("narrative_roles", gid)
+            key_pages = roles["pages"]
+            if archive:
+                # a text-only page has nothing for the deep model to see
+                shown = set(scan)
+                key_pages = [p for p in key_pages if p in shown]
             vis = cont = None
-            if roles["pages"]:
+            if key_pages:
                 # more deep scans are needed and the Critic must see their scene claims:
                 # the visual work goes here and the director loads a second time
-                vis, cont, tv = await self._visual_phase(gid, ident, tv, roles["pages"], failures)
+                vis, cont, tv = await self._visual_phase(gid, ident, tv, key_pages, failures, archive=archive)
             await self.act("persist_visual", gid, "all")
             await self.step(10, "Duygu ve tema")
             emo = await self.act("emotions_themes", gid)
-            if workflow.patched("proofreading-v1"):
+            if not archive and workflow.patched("proofreading-v1"):
                 await self.step(10, "Son okuma denetimleri")
                 try:
                     failures["proofreading"] = []
@@ -130,10 +151,12 @@ class BookFullAnalysis:
                 failures["book_metadata"] = [str(e.cause or e)[:500]]
             # ---- deep vision, second visit (unless it already happened above)
             if vis is None:
-                vis, cont, tv = await self._visual_phase(gid, ident, tv, [], failures)
+                vis, cont, tv = await self._visual_phase(gid, ident, tv, [], failures, archive=archive)
             # All visual identity/continuity writes have completed here. The
             # rebuild activity verifies facts and actors before freezing inputs.
             await self.step(13, "Doğrulama → sürümlü özet, rapor ve indeks")
+            # archive: same outputs, validated without contradiction detection and the editor's queue
+            outputs_activity = "archive_outputs" if archive else "rebuild_outputs"
             produced = None
             # When several books are read at once they take turns on the card, and a book
             # that reaches this step while another holds it cannot start its models. That
@@ -142,7 +165,7 @@ class BookFullAnalysis:
             if workflow.patched("rebuild-capacity-wait-v1"):
                 waited = 0
                 for attempt in range(40):
-                    produced = await self.act("rebuild_outputs", gid, timeout=timedelta(hours=6))
+                    produced = await self.act(outputs_activity, gid, timeout=timedelta(hours=6))
                     status = produced["technical_status"]
                     if status in ("SUCCEEDED", "ALREADY_CURRENT"):
                         break
@@ -156,7 +179,7 @@ class BookFullAnalysis:
                     break
             else:
                 for attempt in range(3):
-                    produced = await self.act("rebuild_outputs", gid, timeout=timedelta(hours=6))
+                    produced = await self.act(outputs_activity, gid, timeout=timedelta(hours=6))
                     if produced["technical_status"] in ("SUCCEEDED", "ALREADY_CURRENT"):
                         break
                     if produced["technical_status"] == "BUSY":
@@ -169,6 +192,10 @@ class BookFullAnalysis:
                 "step_order":"verified-revision-outputs-v1","accepted":False,
                 "analytical_status":"NEEDS_REVIEW",
                 "failures":{k:v for k,v in failures.items() if v}}
+            if archive:
+                summary.update(profile="archive", visual_pages=len(scan),
+                               deferred=["proofreading", "confirm_text_visual", "continuity_checks",
+                                         "detect_contradictions", "queue_contradictions"])
             await self.act("finish_job", job_id, "SUCCEEDED", summary, timeout=SHORT)
             return summary
         except BaseException as e:
@@ -179,6 +206,56 @@ class BookFullAnalysis:
         finally:
             await workflow.execute_activity("release_models", args=[[]], start_to_close_timeout=SHORT,
                                             retry_policy=RETRY)
+
+    async def _run_redaction(self, job_id: str, gid: str) -> dict:
+        """A book read in the archive profile, opened for redaction: the steps the archive reading
+        left out, on that same generation. Text-visual confirmation and continuity read the deep
+        scans already there (the archive scanned every page with a picture); contradictions are
+        detected over the full knowledge and queued with everything else; the outputs then rebuild
+        through the normal path. Word alternatives are produced when the editor opens the findings."""
+        failures: dict[str, list] = {}
+
+        async def soft(key: str, name: str, timeout: timedelta = LONG):
+            try:
+                return await self.act(name, gid, timeout=timeout)
+            except ActivityError as e:
+                failures[key] = [str(e.cause or e)[:500]]
+                return None
+
+        await self.step(10, "Son okuma denetimleri", {"generation_id": gid})
+        await soft("proofreading", "proofreading")
+        await self.step(6, "Metin–görsel bulguların teyidi")
+        tv = await soft("text_visual", "confirm_text_visual")
+        await self.step(8, "Karakter sürekliliği")
+        cont = await soft("continuity", "continuity_checks")
+        await self.act("release_models", ["book-vision-deep"], timeout=SHORT)
+        await self.step(14, "Çelişkiler")
+        found = await self.act("detect_contradictions", gid)
+        await self.step(14, "Editör kuyruğu")
+        con = {**found, **await self.act("queue_contradictions", gid, timeout=SHORT)}
+        await self.step(13, "Doğrulama → sürümlü özet, rapor ve indeks")
+        produced, waited = None, 0
+        for attempt in range(40):
+            produced = await self.act("rebuild_outputs", gid, timeout=timedelta(hours=6))
+            status = produced["technical_status"]
+            if status in ("SUCCEEDED", "ALREADY_CURRENT"):
+                break
+            if status == "BUSY":
+                await workflow.sleep(timedelta(seconds=30))
+                continue
+            if status == "CAPACITY_WAIT" and waited < 12:
+                waited += 1
+                await workflow.sleep(timedelta(minutes=5))
+                continue
+            break
+        if produced["technical_status"] not in ("SUCCEEDED", "ALREADY_CURRENT"):
+            raise ApplicationError(f"Output revision did not stabilize ({produced['technical_status']})",
+                                   non_retryable=True)
+        summary = {"generation_id": gid, "profile": "redaction", "outputs": produced, "text_visual": tv,
+                   "continuity": cont, "contradictions": con, "step_order": "redaction-profile-v1",
+                   "accepted": False, "failures": {k: v for k, v in failures.items() if v}}
+        await self.act("finish_job", job_id, "SUCCEEDED", summary, timeout=SHORT)
+        return summary
 
     async def _run_single_phase(self, job_id: str) -> dict:
         """Same activities, same inputs per model call, other order. The director (0.48 of
@@ -300,19 +377,24 @@ class BookFullAnalysis:
             return await self.act("identity_unresolved", gid, failures["identity"][0], timeout=SHORT)
 
     async def _visual_phase(self, gid: str, ident: dict, tv: dict, key_pages: list,
-                            failures: dict) -> tuple[dict, dict, dict]:
-        """Everything the deep vision model does once the characters are known."""
+                            failures: dict, archive: bool = False) -> tuple[dict, dict | None, dict]:
+        """Everything the deep vision model does once the characters are known. Archive profile:
+        who each drawn figure is, and the key pages' scans; continuity and text-visual
+        confirmation wait for redaction."""
         await self.step(8, "Görsel kimlik (kümeleme ve hakem)", {"characters": ident.get("characters")})
         vis = await self.act("visual_identity", gid)
-        await self.step(8, "Karakter sürekliliği", vis)
-        cont = await self.act("continuity_checks", gid)
+        cont = None
+        if not archive:
+            await self.step(8, "Karakter sürekliliği", vis)
+            cont = await self.act("continuity_checks", gid)
         if key_pages:
             await self.step(9, "Önemli olay sayfalarının derin taraması", {"pages": key_pages})
             _, failures["key_event_scan"] = await self.fan_out("scan_page_deep_key", key_pages, gid)
             await self.act("persist_visual", gid, "all")
-            more = await self.act("confirm_text_visual", gid)   # only the pages scanned just now
-            tv = {**tv, **{k: tv[k] + more[k] for k in ("pages", "proposed", "confirmed",
-                                                        "confirmed_pages", "pages_failed")}}
+            if not archive:
+                more = await self.act("confirm_text_visual", gid)   # only the pages scanned just now
+                tv = {**tv, **{k: tv[k] + more[k] for k in ("pages", "proposed", "confirmed",
+                                                            "confirmed_pages", "pages_failed")}}
         await self.act("release_models", ["book-vision-deep"], timeout=SHORT)
         return vis, cont, tv
 

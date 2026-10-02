@@ -17,7 +17,8 @@ Hat:
    («yavaş yavaş», «göz göze») tekrar değildir.
 4. Yargı (model, kapalı soru, iki sırada sorulup ortalanır, `_spelling_judge._ab`): bu tekrar
    redaksiyonda düzeltilmeli mi, yoksa bilinçli mi (vurgu, tekrar sanatı, diyalog, terim)?
-   `p ≥ KEEP` → WARN bulgu; öneri alanına modelin aynı anlamı veren karşılıkları.
+   `p ≥ KEEP` → WARN bulgu. Öneri alanı (aynı anlamı veren karşılıklar) kitap okunurken değil editör
+   bulguları açınca dolar (`fill_alternatives`, kullanıcı kararı 2026-10-02).
 
 Çıktı: bulgular (yakın tekrar) + `stats.map` (kelime haritası: her kök, biçimleri, sayfaları,
 anlamları) + çeşitlilik ölçüleri (MTLD, tekil kök sayısı, bir kez geçenler). Harita kart
@@ -60,6 +61,11 @@ PARALLEL = C.setting("word_variety_parallel", 4)           # EDITOR_WORD_VARIETY
 # Yakınlık, sözcüğün kitaptaki sıklığıyla tesadüfen beklenenden fazla olmalı: rastgele serpilmiş olsa bu
 # kadar yakın düşme olasılığı bu değerin altında. 0,05 alışılmış anlamlılık düzeyi; kitapta ayarlanmadı.
 ECHO_ALPHA = C.setting("word_echo_alpha", 0.05)            # EDITOR_WORD_ECHO_ALPHA
+# Kullanıcı kararı 2026-10-02: karşılık önerileri ve «anlam korunuyor mu» yargısı kitap OKUNURKEN değil, editör
+# bulguları açınca üretilir (`fill_alternatives`; kart servisi POST .../proofing/word-variety/alternatives).
+# Okumada bulgu öneri alanı boş, `details.alternatives='deferred'` ile kaydolur. 1 = eski davranış (okurken).
+# Yüklenen belgenin incelemesi (document_review) editörün kendi isteğidir: orada öneriler hemen üretilir.
+ALTERNATIVES_AT_READ = C.setting("word_alternatives_at_read", False)   # EDITOR_WORD_ALTERNATIVES_AT_READ
 
 
 def _alt_schema() -> dict:
@@ -312,7 +318,12 @@ async def run(generation_id: str):
         async with sem:
             return await _alternatives(llm, lex, lem, sense, marked, cl[1].page, [o.word for o in cl])
 
-    alts_of = await asyncio.gather(*(alternatives(lem, sense, cl, marked) for lem, sense, cl, _, marked, _, _ in kept))
+    now = ALTERNATIVES_AT_READ or D.is_document(generation_id)
+    if now:
+        alts_of = await asyncio.gather(*(alternatives(lem, sense, cl, marked) for lem, sense, cl, _, marked, _, _ in kept))
+    else:
+        alts_of = [[] for _ in kept]            # editör açınca (fill_alternatives)
+        stats["alternatives_deferred"] = len(kept)
     bv = await asyncio.to_thread(D.book_version, generation_id)
     boxes = await asyncio.to_thread(_boxes, bv, [o for j in kept for o in j[2]]) if bv else {}
     for (lem, sense, cl, plain, marked, pages, p), alts in zip(kept, alts_of):
@@ -330,7 +341,8 @@ async def run(generation_id: str):
                         "chance": round(min(W.chance_near(b.idx - a.idx, rate_of[(lem, cl[0].sense)])
                                             for a, b in zip(cl, cl[1:])), 4),
                         # ekran için genel alanlar: grup (topluca karar), güven (sıralama), sayfadaki bütün geçişler
-                        "group": f"{lem} · {sense['label']}", "confidence": round(p, 3), "marks": marks}}))
+                        "group": f"{lem} · {sense['label']}", "confidence": round(p, 3), "marks": marks,
+                        "alternatives": "done" if now else "deferred"}}))
         stats["kept"] += 1
     # sıra metne değil kayıtlı alanlara bağlı (metin değişince bulguların sırası oynamasın)
     findings.sort(key=lambda f: (f["page"], f["details"]["lemma"], f["details"]["sense"], f["details"]["forms"]))
@@ -353,3 +365,48 @@ async def run(generation_id: str):
                                    for f, ps in sorted(rd["unknown"].items(), key=lambda kv: -len(kv[1]))],
                  "map": W.build_map(occs, senses, contexts)}
     return findings, out_stats
+
+
+def _deferred(generation_id: str, finding_ids: list[str] | None) -> list[dict]:
+    """Kitabın en yeni yakın tekrar koşusunda önerisi henüz üretilmemiş bulgular (istenenler ya da hepsi)."""
+    sql = ("SELECT f.id, f.page_no, f.details FROM proof_finding f WHERE f.generation_id=%s AND f.check_name=%s"
+           " AND f.details->>'alternatives'='deferred' AND f.run_id=(SELECT r.id FROM proof_run r WHERE"
+           " r.generation_id=%s AND r.check_name=%s ORDER BY r.started_at DESC LIMIT 1)")
+    args: list = [generation_id, NAME, generation_id, NAME]
+    if finding_ids is not None:
+        sql += " AND f.id = ANY(%s::uuid[])"
+        args.append([str(i) for i in finding_ids])
+    return db.all_rows(sql + " ORDER BY f.page_no, f.id", *args)
+
+
+def _store(finding_id, alts: list[str]) -> None:
+    db.one("UPDATE proof_finding SET suggestion=%s, details=details || %s WHERE id=%s RETURNING id",
+           ", ".join(alts) or None, db.J({"alternatives": "done"}), str(finding_id))
+
+
+async def fill_alternatives(generation_id: str, finding_ids: list[str] | None = None) -> dict:
+    """Editör bulguları açınca: ertelenmiş yakın tekrar bulgularına karşılık önerisi (öneri + «anlam korunuyor mu»
+    yargısı, okurken yapılanın aynısı). Bir bulgunun çağrısı düşerse o bulgu ertelenmiş kalır, öbürleri yazılır."""
+    rows = await asyncio.to_thread(_deferred, generation_id, finding_ids)
+    if not rows:
+        return {"filled": 0, "failed": 0, "pending": 0}
+    lex = T.lexicon()
+    llm = Llm(D.llm_gid(generation_id))
+    sem = asyncio.Semaphore(PARALLEL)
+    out = collections.Counter()
+
+    async def one(r):
+        d = r["details"] or {}
+        sense = {"label": d["sense"]} if d.get("sense") else None
+        try:
+            async with sem:
+                alts = await _alternatives(llm, lex, d["lemma"], sense, d.get("passage_marked") or "",
+                                           r["page_no"], list(d.get("forms") or [d["lemma"]]))
+        except (ModelError, KeyError):    # bulgu ertelenmiş kalır, yeniden istenebilir
+            out["failed"] += 1
+            return
+        await asyncio.to_thread(_store, r["id"], alts)
+        out["filled"] += 1
+
+    await asyncio.gather(*(one(r) for r in rows))
+    return {"filled": out["filled"], "failed": out["failed"], "pending": len(rows) - out["filled"]}
