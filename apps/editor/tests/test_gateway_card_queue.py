@@ -119,9 +119,10 @@ def test_same_card_starts_one_at_a_time(G, monkeypatch):
         return False
 
     monkeypatch.setattr(G, "_healthy", unhealthy)
-    fm = types.ModuleType("editor.foundation")
-    fm.assert_enabled = lambda: None
-    monkeypatch.setitem(sys.modules, "editor.foundation", fm)
+    # Gerçek modülün tek fonksiyonu: sahte modül sys.modules'tan geri alınsa da `editor.foundation` paket
+    # özniteliği sahte kalır ve sonraki testleri bozar (test_portal_read bununla düşüyordu).
+    from editor import foundation
+    monkeypatch.setattr(foundation, "assert_enabled", lambda: None)
 
     async def both():
         await asyncio.gather(G.ensure_running(G.ALIASES["book-image"]),
