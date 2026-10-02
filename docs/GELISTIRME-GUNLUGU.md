@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-02 (sabah) — Test sunucusuna kurulum, karmaşık 100 soru (yarıda durduruldu), VPN kopma nedenleri
+
+- Test sunucusu 05:25: muhasebe net satışı, pasif sayımı, fiyat farkı notu ve kanal BMT hedef düzeltmesi (main `6a8b0521f`, 9 dosya md5 tabanla eşken `sudo cp`, köprü yeniden başladı, sağlık 200). VM'e kurulmadı.
+- Karmaşık 100 soru son kodla canlı köprüde koşturuldu: soru dosyası 01.10 tarihliydi, gece yarısı geçtiği için aynı 100 soru `complex100-prompts-20261002.json`'a 02.10 tarihiyle kopyalandı (30 göreli tarihli soru Ekim'e göre). Kullanıcı «durdur, sadece kitap okuma yapılacak» deyince 60. soruda durduruldu. Sonuç (yalnız yürütme, doğruluk değil): tam cevap 0; desteklenmeyen 27, plan hatası 8, netleştirme 2, kaynak hatası 23 (06:23 sonrası VPN kapalı; bu 23 geçersiz). Baskın sınıflar: «doğrulanmış hesap tanımı eksik» (yaşlandırma, tahsilat süresi, kâr/maliyet, stok/depo, açık sipariş, tedarikçi, ilk kez alan müşteri, iade-satış bağı), karşılaştırma planında `metrics` ≠ `comparison.metric` (3 soru), pay/ilk N yalnız tek dönem, en çok üç dönem, «satış tutarı» sabit netleştirmesi. Kanıt `/data/nanobaseai/bi/acceptance/claude-c100-20261002/report.json`; 60 timasai sorgu kaydı silindi, koşucu oturumu kendisi sildi.
+- VPN iki ayrı nedenle düşüyor: (1) TİMAŞ sunucusu 8 saatte bir yeniden kimlik istiyor; `vpn-open.sh` tek kullanımlık CRV1 dosyasını açılıştan sonra sildiği için openvpn «auth file» hatasıyla kapanıyor (01.10 16:52, 02.10 04:34) — kalıcı çözüm TİMAŞ BT'den MFA muafiyetli servis hesabı; (2) 02.10 06:23 `unattended-upgrade` openvpn paketini (2.6.19-0ubuntu0.24.04.3→.4) yükseltip servisi yeniden başlattı, MFA tüneli yeniden başlatmada açılamadı. (2) için openvpn'i otomatik güncelleme/yeniden başlatma dışına almak önerildi, kullanıcı onayı bekliyor; yapılmadı.
+
 ## 2026-10-01 (gece) — Kararlar: muhasebe net satışı, fiyat farkı notu, pasif kayıtta sayı, BMT hedefleri karnede
 
 Kullanıcı üç açık kararı «doğrusu neyse yap» diyerek bıraktı; veriye bakılarak verildi.
