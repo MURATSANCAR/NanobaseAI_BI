@@ -58,7 +58,9 @@ def test_book_and_proofing_need_a_book_id(client, monkeypatch):
     monkeypatch.setattr(editorial_cards, "proofing_report_by_id", lambda bid, title: {"bookId": bid, "bookTitle": title})
     assert client.get("/api/v1/editorial/pharmacy/books/yok").status_code == 404
     assert client.get(f"/api/v1/editorial/pharmacy/books/{BID}").json() == {"id": BID}
-    assert client.get(f"/api/v1/editorial/pharmacy/books/{BID}/proofing?title=A").json() == {"bookId": BID, "bookTitle": "A"}
+    rep = client.get(f"/api/v1/editorial/pharmacy/books/{BID}/proofing?title=A").json()
+    assert (rep["bookId"], rep["bookTitle"]) == (BID, "A")
+    assert "kaynaklar" in rep            # sorgu bilgisi (ekrandaki «?» düğmesi) uçla birlikte gelir
 
     def gone(*a):
         raise _status(404, "book not found")

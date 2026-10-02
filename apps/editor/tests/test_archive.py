@@ -395,7 +395,8 @@ def test_shape_one_row_per_book_with_read_and_redaction():
     assert b1["read"]["state"] == "hazir" and b1["redaction"]["state"] == "okunuyor" and b1["proofed"]
     assert b1["bulk"] and b1["read"]["requested_by"] is None and b1["redaction"]["requested_by"] == "ayse"
     assert b1["category"] == "Kurgu"
-    assert by[B2]["read"]["state"] == "sirada" and by[B2]["read"]["ahead"] == 2 and by[B2]["redaction"] is None
+    # sıradaki ilk iş + süren bir okuma = önünde 1 iş
+    assert by[B2]["read"]["state"] == "sirada" and by[B2]["read"]["ahead"] == 1 and by[B2]["redaction"] is None
     assert by[B3]["read"]["state"] == "okunamadi" and not by[B3]["bulk"] and by[B3]["read"]["requested_by"] == "mehmet"
 
 

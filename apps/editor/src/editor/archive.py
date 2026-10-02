@@ -371,11 +371,30 @@ def listing_data(c, book_id: str | None = None) -> tuple[list[dict], set[str], l
     return rows, proofed, waiting
 
 
+class _Positions(list):
+    """Kuyruk sırası listesi, sabit sürede `index`/`in` ile (portal_books.item satır başına sorar; arşivde binlerce
+    iş sıradayken liste taraması kitap sayısının karesi kadar sürerdi)."""
+
+    def __init__(self, items):
+        super().__init__(items)
+        self._at = {v: i for i, v in enumerate(self)}
+
+    def index(self, v, *a):  # noqa: D401 — list.index ile aynı sözleşme (yoksa ValueError)
+        try:
+            return self._at[v]
+        except KeyError:
+            raise ValueError(v) from None
+
+    def __contains__(self, v):
+        return v in self._at
+
+
 def shape(rows: list[dict], proofed: set[str], waiting: list[str], busy: int) -> list[dict]:
     """Kitap başına tek satır: okuma (arşiv kipi) ve redaksiyonun durumu portal satırının diliyle (sirada,
     okunuyor, hazir, yeniden, okunamadi; aşama adı teknik ad taşımaz). Redaksiyon işi yoksa `redaction` None;
     son okuması koşmuşsa `proofed`."""
     from . import portal_books as PB
+    waiting = _Positions(waiting)
     by: dict[str, dict] = {}
     for r in rows:
         bid = str(r["book_id"])
