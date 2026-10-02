@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-02 — SEO & GEO: 40 ekran menüde 8 gruba toplandı
+
+- Analiz: SEO menüsünde 40 öğe vardı (iki bölüm, «izleme» ve «işler»); aynı konunun ekranları (ör. Search Console'dan beslenen kelimeler/fırsatlar/sorgu–sayfa/yarışan; Bing/Yandex/YouTube/video) ayrı ayrı menüde duruyordu. Ekranların içeriği birleştirilmedi: her ekranın kendi ucu, hazır hesabı, yetki anahtarı ve bilgi kutusu var; birleştirmek bunları kırar.
+- Çözüm: menüde 8 giriş, her grubun ekranları başlığın altında sekme şeridinde (`SeoTabs`). `NavItem.tabOf`/`tabLabel` + `panelItems`/`panelActiveId`/`tabsFor` (navModel). Adresler aynı kaldığından eski bağlantılar, yer imleri, «Önemli günler» ve iş listesi bağlantıları çalışır; palette eski adlarla arama sürer. Grup girişinin eski adı aramada anahtar sözcük.
+- Test: `navModel.test.ts` +3 (8 giriş, şerit sırası, kapalı grup girişinde sekmenin menüde kalması); nav testleri 45/45.
+
 ## 2026-10-02 (sabah) — Test sunucusuna kurulum, karmaşık 100 soru (yarıda durduruldu), VPN kopma nedenleri
 
 - Test sunucusu 05:25: muhasebe net satışı, pasif sayımı, fiyat farkı notu ve kanal BMT hedef düzeltmesi (main `6a8b0521f`, 9 dosya md5 tabanla eşken `sudo cp`, köprü yeniden başladı, sağlık 200). VM'e kurulmadı.

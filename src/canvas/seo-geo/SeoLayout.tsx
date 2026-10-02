@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useNavData } from '../nav/useNav';
+import { tabsFor } from '../nav/navModel';
 import Shell from '../stitch/Shell';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
@@ -36,10 +39,38 @@ export default function SeoLayout({ crumb, eyebrow, title, lead, actions, childr
             </div>
             {actions && <div className="sg-actions">{actions}</div>}
           </header>
+          <SeoTabs />
           {children}
         </div>
       </main>
     </Shell>
+  );
+}
+
+/** Grubun sekmeleri (menüde tek giriş, ekranlar burada): kişinin görebildiği kardeş ekranlar, etkin olan işaretli.
+ *  Her sekme kendi adresidir; geri tuşu, yer imi ve yetki ekran başına aynen çalışır. */
+function SeoTabs() {
+  const nav = useNavData();
+  const group = nav.active?.group;
+  const activeId = nav.active?.item.id;
+  const visible = group ? nav.groups.find((g) => g.id === group.id)?.items ?? [] : [];
+  const tabs = tabsFor(visible, activeId);
+  const ref = useRef<HTMLElement>(null);
+  // Telefonda şerit yatay kayar; etkin sekme görünür alana alınır (anında, sayfa kaymadan).
+  useLayoutEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    const bar = ref.current;
+    if (el && bar) bar.scrollLeft = el.offsetLeft - (bar.clientWidth - el.offsetWidth) / 2;
+  }, [activeId]);
+  if (tabs.length === 0) return null;
+  return (
+    <nav ref={ref} className="sg-tabs" aria-label="Bu bölümün ekranları">
+      {tabs.map((t) => (
+        <Link key={t.id} to={t.to} className="sg-tab" aria-current={t.id === activeId ? 'page' : undefined} title={t.hint}>
+          {t.tabLabel ?? t.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 

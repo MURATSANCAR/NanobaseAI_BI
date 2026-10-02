@@ -183,6 +183,11 @@ export type NavItem = {
   also?: string[];
   /** Başka bir öğenin altında (girintili) görünür; yalnız görünüm. */
   parent?: string;
+  /** Bu öğe, kimliği verilen öğenin (grup girişi) sekmesidir: o öğe kişiye görünürken menüde ayrıca yazmaz,
+   *  grubun ekranlarının üstündeki sekme şeridinde çıkar. Adres, yetki anahtarı ve bilgi kutusu değişmez. */
+  tabOf?: string;
+  /** Sekme şeridindeki kısa ad; yoksa `label`. Grup girişi kendi sekmesinde de bu adı taşır. */
+  tabLabel?: string;
   adminOnly?: boolean;
   /** Ortamda kapalıysa öğe hiç görünmez (ör. müşteri ortamında basın ve web). */
   feature?: NavFeature;
@@ -326,45 +331,47 @@ export const NAV: NavGroup[] = [
       { id: 'etkinlikler', label: 'Fuar ve etkinlik', to: '/etkinlikler', icon: CalendarRange, section: 'Etkinlik', hint: 'Fuar, imza günü, söyleşi ve ödüller', keywords: ['fuar', 'tüyap', 'imza günü', 'söyleşi', 'etkinlik', 'ödül', 'stant', 'fuar sonucu', 'ajanda'] },
       // M28: kişi kartı, kurumlar, hediye programı, projeler ve rapor alt adresleri (/kurumsal-iliskiler/…) bu öğenin altında.
       { id: 'kurumsal-iliskiler', label: 'Kurumsal ilişkiler', to: '/kurumsal-iliskiler', icon: Landmark, section: 'Kurumsal ilişkiler', hint: 'Kanaat önderleri, kurumlar ve kamu projeleri', keywords: ['kanaat önderi', 'hediye kitap', 'kamu projesi', 'belediye', 'milli eğitim', 'kütüphane bağışı', 'okuma kampanyası', 'akademisyen', 'teklif dosyası'] },
-      { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'SEO ve GEO izleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
-      { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'SEO ve GEO izleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
-      { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'SEO ve GEO izleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },
-      { id: 'seo-aramadan-satisa', label: 'Aramadan satışa', to: '/seo-geo/aramadan-satisa', icon: ShoppingCart, section: 'SEO ve GEO izleme', hint: 'Google’dan gelen ziyaretin sepete, satışa ve ciroya dönüşü; satmayan ve düşen sayfalar', keywords: ['analytics', 'organik', 'ciro', 'dönüşüm', 'sepet', 'huni'] },
-      { id: 'seo-bing', label: 'Bing ve IndexNow', to: '/seo-geo/bing', icon: Radar, section: 'SEO ve GEO izleme', hint: 'Bing arama verisi ve değişen sayfaların bildirimi', keywords: ['bing', 'indexnow', 'chatgpt'] },
-      { id: 'seo-yandex', label: 'Yandex', to: '/seo-geo/yandex', icon: Globe, section: 'SEO ve GEO izleme', hint: 'Yandex arama verisi, dizin, site teşhisi ve dış bağlantılar', keywords: ['yandex', 'webmaster', 'alice', 'rusça'] },
-      { id: 'seo-rakip', label: 'Rakipler', to: '/seo-geo/rakipler', icon: Swords, section: 'SEO ve GEO izleme', hint: 'Aynı kitap aramasında rakip sitelerin Google sırası', keywords: ['rakip', 'd&r', 'kitapyurdu'] },
-      { id: 'seo-izleme', label: 'İzleme ve rapor', to: '/seo-geo/izleme', icon: BellRing, section: 'SEO ve GEO izleme', hint: 'Tıklama düşüşü, 404, robots ve yapay zekâ uyarıları; haftalık rapor', keywords: ['uyarı', 'rapor', 'izleme'] },
-      { id: 'seo-kaynak', label: 'Yapay zekânın kaynakları', to: '/seo-geo/kaynaklar', icon: Quote, section: 'SEO ve GEO izleme', hint: 'Yapay zekâ cevaplarında kaynak gösterilen siteler ve hedef listesi', keywords: ['kaynak', 'pr', 'atıf'] },
-      { id: 'seo-yarisan', label: 'Yarışan sayfalar', to: '/seo-geo/yarisan', icon: Split, section: 'SEO ve GEO izleme', hint: 'Aynı aramada birbirinin sırasını düşüren sayfalar', keywords: ['yarışan', 'kannibalizasyon'] },
-      { id: 'seo-tarama', label: 'Google taraması', to: '/seo-geo/google-taramasi', icon: ScanSearch, section: 'SEO ve GEO izleme', hint: 'Googlebot’un son taraması, dizin durumu ve bot istekleri', keywords: ['googlebot', 'dizin', 'tarama', 'bot'] },
-      { id: 'seo-geri-baglanti', label: 'Gelen bağlantılar', to: '/seo-geo/geri-baglantilar', icon: Link2, section: 'SEO ve GEO izleme', hint: 'Timaş’a bağlantı veren siteler', keywords: ['backlink', 'bağlantı'] },
-      { id: 'seo-eslesme', label: 'Sorgu–sayfa eşlemesi', to: '/seo-geo/sorgu-sayfa', icon: Target, section: 'SEO ve GEO izleme', hint: 'Her önemli arama için hedef sayfa ve boşluklar', keywords: ['eşleme', 'hedef sayfa', 'boşluk'] },
-      { id: 'seo-soru', label: 'Soru önerileri', to: '/seo-geo/soru-onerileri', icon: Lightbulb, section: 'SEO ve GEO izleme', hint: 'Yapay zekâ ölçümü için okur sorusu adayları', keywords: ['soru', 'geo', 'öneri'] },
-      { id: 'seo-youtube', label: 'YouTube', to: '/seo-geo/youtube', icon: Youtube, section: 'SEO ve GEO izleme', hint: 'Tanıtım videolarının izlenmesi ve açıklamadaki site bağlantısı', keywords: ['youtube', 'video'] },
-      { id: 'seo-aylik', label: 'Aylık rapor', to: '/seo-geo/aylik-rapor', icon: FileBarChart, section: 'SEO ve GEO izleme', hint: 'Yönetim için aylık SEO/GEO raporu (PDF)', keywords: ['aylık', 'rapor', 'pdf'] },
-      { id: 'seo-ai', label: 'Yapay zekâ görünürlüğü', to: '/seo-geo/ai-gorunurluk', icon: Sparkles, section: 'SEO ve GEO izleme', hint: 'Yapay zekâ cevaplarında Timaş', keywords: ['ai görünürlük', 'geo'] },
-      { id: 'seo-sayfalar', label: 'Yazar ve kategori', to: '/seo-geo/sayfalar', icon: BookUser, section: 'SEO ve GEO işleri', hint: 'Yazar ve kategori sayfaları', keywords: ['sayfa'] },
-      { id: 'seo-yonlendirme', label: 'Yönlendirmeler', to: '/seo-geo/yonlendirmeler', icon: CornerDownRight, section: 'SEO ve GEO işleri', hint: 'Kırık adres yönlendirmeleri', keywords: ['301', 'yönlendirme'] },
-      { id: 'seo-teknik', label: 'Teknik sağlık', to: '/seo-geo/teknik', icon: Stethoscope, section: 'SEO ve GEO işleri', hint: 'Canonical, yönlendirme, sitemap, yapay zekâ botları, görsel ve hız', keywords: ['teknik', 'hız', 'sitemap', 'robots', 'core web vitals'] },
-      { id: 'seo-kimlik', label: 'Kimlik ve bilgi paneli', to: '/seo-geo/kimlik', icon: BadgeCheck, section: 'SEO ve GEO işleri', hint: 'Wikidata, kurum şeması, Google Kitaplar hazırlığı', keywords: ['wikidata', 'bilgi paneli', 'google kitaplar'] },
-      { id: 'seo-rehber', label: 'Rehber içerikler', to: '/seo-geo/rehberler', icon: Library, section: 'SEO ve GEO işleri', hint: 'Okur sorularına cevap veren liste ve rehber taslakları', keywords: ['rehber', 'liste', 'içerik'] },
-      { id: 'seo-takvim', label: 'Sezon takvimi', to: '/seo-geo/takvim', icon: CalendarDays, section: 'SEO ve GEO işleri', hint: 'Özel günler, geçen yılın arama artışı ve kitap hazırlığı', keywords: ['özel gün', 'sezon', 'takvim'] },
-      { id: 'seo-ic-baglanti', label: 'Site içi bağlantılar', to: '/seo-geo/ic-baglantilar', icon: Network, section: 'SEO ve GEO işleri', hint: 'Bağlantı almayan kitaplar, derinlik ve yazar–kitap bağları', keywords: ['iç bağlantı', 'yetim sayfa'] },
-      { id: 'seo-yorum', label: 'Okur yorumları', to: '/seo-geo/yorumlar', icon: MessageSquareText, section: 'SEO ve GEO işleri', hint: 'Yorumsuz çok satanlar ve puan şeması', keywords: ['yorum', 'puan'] },
-      { id: 'seo-video', label: 'Video', to: '/seo-geo/video', icon: Video, section: 'SEO ve GEO işleri', hint: 'Tanıtım videoları, video şeması ve video sitemap', keywords: ['video', 'youtube'] },
-      { id: 'seo-kalkan', label: 'Satıştan kalkan kitaplar', to: '/seo-geo/satistan-kalkan', icon: Archive, section: 'SEO ve GEO işleri', hint: 'Baskısı biten ya da hakkı bizde olmayan kitap sayfaları ne olmalı', keywords: ['baskısı bitti', '410', '301'] },
-      { id: 'seo-yazar-sayfa', label: 'Yazar sayfaları', to: '/seo-geo/yazar-sayfalari', icon: UserRoundCheck, section: 'SEO ve GEO işleri', hint: 'Yazar sayfalarında biyografi, kimlik ve güven sinyalleri', keywords: ['yazar', 'biyografi', 'eeat'] },
-      { id: 'seo-isler', label: 'İş listesi', to: '/seo-geo/is-listesi', icon: ListChecks, section: 'SEO ve GEO işleri', hint: 'Bütün SEO ekranlarının yapılacakları tek sırada; kim yapacak, etkisi ne', keywords: ['iş listesi', 'yapılacaklar', 'görev'] },
-      { id: 'seo-karne', label: 'Kitap karnesi', to: '/seo-geo/kitap', icon: NotebookTabs, section: 'SEO ve GEO işleri', hint: 'Bir kitabın bütün SEO durumu tek sayfada', keywords: ['kitap', 'karne', 'durum'] },
-      { id: 'seo-biyografi', label: 'Yazar biyografileri', to: '/seo-geo/yazar-biyografi', icon: UserPen, section: 'SEO ve GEO işleri', hint: 'CRM özgeçmişinden yazar sayfası biyografisi taslakları', keywords: ['biyografi', 'özgeçmiş', 'yazar'] },
-      { id: 'seo-sss', label: 'Kitap soru–cevapları', to: '/seo-geo/sss', icon: MessageCircleQuestion, section: 'SEO ve GEO işleri', hint: 'Kitap sayfası için soru–cevap taslakları', keywords: ['sss', 'soru cevap', 'faq'] },
-      { id: 'seo-benzer', label: 'Benzer kitaplar', to: '/seo-geo/benzer-kitaplar', icon: BookCopy, section: 'SEO ve GEO işleri', hint: 'CRM emsal kitaplarından site içi bağlantı önerileri', keywords: ['benzer', 'emsal', 'ilgili ürün'] },
-      { id: 'seo-alisveris', label: 'Google Alışveriş hazırlığı', to: '/seo-geo/alisveris', icon: ShoppingBag, section: 'SEO ve GEO işleri', hint: 'Ürün akışı denetimi: ISBN, fiyat, stok, görsel', keywords: ['alışveriş', 'merchant', 'gtin'] },
-      { id: 'seo-sema', label: 'Şema denetimi', to: '/seo-geo/sema', icon: Braces, section: 'SEO ve GEO işleri', hint: 'Ürün sayfalarının yapısal verisi', keywords: ['şema'] },
-      { id: 'seo-llms', label: 'Yapay zekâ tarama dosyası', to: '/seo-geo/llms', icon: FileText, section: 'SEO ve GEO işleri', hint: 'Yapay zekâ motorlarına siteyi anlatan dosya', keywords: ['llms.txt', 'llms'] },
-      { id: 'seo-crm', label: 'Haklar ve CRM', to: '/seo-geo/crm-haklar', icon: ShieldCheck, section: 'SEO ve GEO işleri', hint: 'Kitabın CRM kartı, internette gösterim hakkı ve yayın durumu', keywords: ['telif', 'hak', 'crm', 'sözleşme', 'google kitaplar'] },
-      { id: 'seo-urun', label: 'Ürün denetimi', to: '/seo-geo/urun-denetimi', icon: ClipboardCheck, section: 'SEO ve GEO işleri', hint: 'Ürün açıklaması ve başlık önerileri', keywords: ['ürün'] },
-      { id: 'seo-gecmis', label: 'Karar geçmişi', to: '/seo-geo/gecmis', icon: History, section: 'SEO ve GEO işleri', hint: 'Onaylanan ve reddedilen öneriler', keywords: ['geçmiş'] },
+      // SEO ve GEO (10-02): 40 ekran 7 sekmeli gruba ve Bağlantılar'a toplandı. `tabOf` öğesi menüde görünmez, grubun
+      // ekranlarında sekme olur; adresi, yetki anahtarı (sayfa:<id>) ve bilgi kutusu aynen kalır.
+      { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'SEO ve GEO', tabLabel: 'Özet', hint: 'Görünürlük özeti, iş listesi, uyarılar, aylık rapor ve karar geçmişi', keywords: ['seo özeti', 'seo', 'geo', 'genel bakış'] },
+      { id: 'seo-isler', label: 'İş listesi', to: '/seo-geo/is-listesi', icon: ListChecks, section: 'SEO ve GEO', tabOf: 'seo-geo', tabLabel: 'İş listesi', hint: 'Bütün SEO ekranlarının yapılacakları tek sırada; kim yapacak, etkisi ne', keywords: ['iş listesi', 'yapılacaklar', 'görev'] },
+      { id: 'seo-izleme', label: 'İzleme ve rapor', to: '/seo-geo/izleme', icon: BellRing, section: 'SEO ve GEO', tabOf: 'seo-geo', tabLabel: 'Uyarılar', hint: 'Tıklama düşüşü, 404, robots ve yapay zekâ uyarıları; haftalık rapor', keywords: ['uyarı', 'rapor', 'izleme'] },
+      { id: 'seo-aylik', label: 'Aylık rapor', to: '/seo-geo/aylik-rapor', icon: FileBarChart, section: 'SEO ve GEO', tabOf: 'seo-geo', tabLabel: 'Aylık rapor', hint: 'Yönetim için aylık SEO/GEO raporu (PDF)', keywords: ['aylık', 'rapor', 'pdf'] },
+      { id: 'seo-gecmis', label: 'Karar geçmişi', to: '/seo-geo/gecmis', icon: History, section: 'SEO ve GEO', tabOf: 'seo-geo', tabLabel: 'Karar geçmişi', hint: 'Onaylanan ve reddedilen öneriler', keywords: ['geçmiş'] },
+      { id: 'seo-arama', label: 'Google araması', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'SEO ve GEO', tabLabel: 'Kelimeler ve sayfalar', hint: 'Kelimeler, fırsatlar, sorgu–sayfa eşlemesi, yarışan sayfalar, rakipler, sezon ve satışa dönüşüm', keywords: ['arama ve kelimeler', 'anahtar kelime', 'google'] },
+      { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'SEO ve GEO', tabOf: 'seo-arama', tabLabel: 'Fırsatlar ve etki', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },
+      { id: 'seo-eslesme', label: 'Sorgu–sayfa eşlemesi', to: '/seo-geo/sorgu-sayfa', icon: Target, section: 'SEO ve GEO', tabOf: 'seo-arama', tabLabel: 'Sorgu–sayfa', hint: 'Her önemli arama için hedef sayfa ve boşluklar', keywords: ['eşleme', 'hedef sayfa', 'boşluk'] },
+      { id: 'seo-yarisan', label: 'Yarışan sayfalar', to: '/seo-geo/yarisan', icon: Split, section: 'SEO ve GEO', tabOf: 'seo-arama', tabLabel: 'Yarışan sayfalar', hint: 'Aynı aramada birbirinin sırasını düşüren sayfalar', keywords: ['yarışan', 'kannibalizasyon'] },
+      { id: 'seo-rakip', label: 'Rakipler', to: '/seo-geo/rakipler', icon: Swords, section: 'SEO ve GEO', tabOf: 'seo-arama', tabLabel: 'Rakipler', hint: 'Aynı kitap aramasında rakip sitelerin Google sırası', keywords: ['rakip', 'd&r', 'kitapyurdu'] },
+      { id: 'seo-takvim', label: 'Sezon takvimi', to: '/seo-geo/takvim', icon: CalendarDays, section: 'SEO ve GEO', tabOf: 'seo-arama', tabLabel: 'Sezon takvimi', hint: 'Özel günler, geçen yılın arama artışı ve kitap hazırlığı', keywords: ['özel gün', 'sezon', 'takvim'] },
+      { id: 'seo-aramadan-satisa', label: 'Aramadan satışa', to: '/seo-geo/aramadan-satisa', icon: ShoppingCart, section: 'SEO ve GEO', tabOf: 'seo-arama', tabLabel: 'Aramadan satışa', hint: 'Google’dan gelen ziyaretin sepete, satışa ve ciroya dönüşü; satmayan ve düşen sayfalar', keywords: ['analytics', 'organik', 'ciro', 'dönüşüm', 'sepet', 'huni'] },
+      { id: 'seo-ai', label: 'Yapay zekâ (GEO)', to: '/seo-geo/ai-gorunurluk', icon: Sparkles, section: 'SEO ve GEO', tabLabel: 'Görünürlük', hint: 'Yapay zekâ cevaplarında Timaş, kaynak gösterilen siteler, soru önerileri ve tarama dosyası', keywords: ['yapay zekâ görünürlüğü', 'ai görünürlük', 'geo'] },
+      { id: 'seo-kaynak', label: 'Yapay zekânın kaynakları', to: '/seo-geo/kaynaklar', icon: Quote, section: 'SEO ve GEO', tabOf: 'seo-ai', tabLabel: 'Kaynaklar', hint: 'Yapay zekâ cevaplarında kaynak gösterilen siteler ve hedef listesi', keywords: ['kaynak', 'pr', 'atıf'] },
+      { id: 'seo-soru', label: 'Soru önerileri', to: '/seo-geo/soru-onerileri', icon: Lightbulb, section: 'SEO ve GEO', tabOf: 'seo-ai', tabLabel: 'Soru önerileri', hint: 'Yapay zekâ ölçümü için okur sorusu adayları', keywords: ['soru', 'geo', 'öneri'] },
+      { id: 'seo-llms', label: 'Yapay zekâ tarama dosyası', to: '/seo-geo/llms', icon: FileText, section: 'SEO ve GEO', tabOf: 'seo-ai', tabLabel: 'Tarama dosyası', hint: 'Yapay zekâ motorlarına siteyi anlatan dosya', keywords: ['llms.txt', 'llms'] },
+      { id: 'seo-karne', label: 'Kitap sayfaları', to: '/seo-geo/kitap', icon: NotebookTabs, section: 'SEO ve GEO', tabLabel: 'Kitap karnesi', hint: 'Kitap karnesi, ürün denetimi, soru–cevap, benzer kitaplar, yorumlar, rehberler, haklar', keywords: ['kitap karnesi', 'kitap', 'karne', 'durum'] },
+      { id: 'seo-urun', label: 'Ürün denetimi', to: '/seo-geo/urun-denetimi', icon: ClipboardCheck, section: 'SEO ve GEO', tabOf: 'seo-karne', tabLabel: 'Ürün denetimi', hint: 'Ürün açıklaması ve başlık önerileri', keywords: ['ürün'] },
+      { id: 'seo-sss', label: 'Kitap soru–cevapları', to: '/seo-geo/sss', icon: MessageCircleQuestion, section: 'SEO ve GEO', tabOf: 'seo-karne', tabLabel: 'Soru–cevaplar', hint: 'Kitap sayfası için soru–cevap taslakları', keywords: ['sss', 'soru cevap', 'faq'] },
+      { id: 'seo-benzer', label: 'Benzer kitaplar', to: '/seo-geo/benzer-kitaplar', icon: BookCopy, section: 'SEO ve GEO', tabOf: 'seo-karne', tabLabel: 'Benzer kitaplar', hint: 'CRM emsal kitaplarından site içi bağlantı önerileri', keywords: ['benzer', 'emsal', 'ilgili ürün'] },
+      { id: 'seo-yorum', label: 'Okur yorumları', to: '/seo-geo/yorumlar', icon: MessageSquareText, section: 'SEO ve GEO', tabOf: 'seo-karne', tabLabel: 'Okur yorumları', hint: 'Yorumsuz çok satanlar ve puan şeması', keywords: ['yorum', 'puan'] },
+      { id: 'seo-rehber', label: 'Rehber içerikler', to: '/seo-geo/rehberler', icon: Library, section: 'SEO ve GEO', tabOf: 'seo-karne', tabLabel: 'Rehber içerikler', hint: 'Okur sorularına cevap veren liste ve rehber taslakları', keywords: ['rehber', 'liste', 'içerik'] },
+      { id: 'seo-crm', label: 'Haklar ve CRM', to: '/seo-geo/crm-haklar', icon: ShieldCheck, section: 'SEO ve GEO', tabOf: 'seo-karne', tabLabel: 'Haklar ve CRM', hint: 'Kitabın CRM kartı, internette gösterim hakkı ve yayın durumu', keywords: ['telif', 'hak', 'crm', 'sözleşme', 'google kitaplar'] },
+      { id: 'seo-yazar-sayfa', label: 'Yazar ve kimlik', to: '/seo-geo/yazar-sayfalari', icon: UserRoundCheck, section: 'SEO ve GEO', tabLabel: 'Yazar sayfaları', hint: 'Yazar sayfaları, biyografiler, yazar/kategori sayfaları ve bilgi paneli', keywords: ['yazar sayfaları', 'yazar', 'biyografi', 'eeat'] },
+      { id: 'seo-biyografi', label: 'Yazar biyografileri', to: '/seo-geo/yazar-biyografi', icon: UserPen, section: 'SEO ve GEO', tabOf: 'seo-yazar-sayfa', tabLabel: 'Biyografiler', hint: 'CRM özgeçmişinden yazar sayfası biyografisi taslakları', keywords: ['biyografi', 'özgeçmiş', 'yazar'] },
+      { id: 'seo-sayfalar', label: 'Yazar ve kategori', to: '/seo-geo/sayfalar', icon: BookUser, section: 'SEO ve GEO', tabOf: 'seo-yazar-sayfa', tabLabel: 'Yazar ve kategori', hint: 'Yazar ve kategori sayfaları', keywords: ['sayfa'] },
+      { id: 'seo-kimlik', label: 'Kimlik ve bilgi paneli', to: '/seo-geo/kimlik', icon: BadgeCheck, section: 'SEO ve GEO', tabOf: 'seo-yazar-sayfa', tabLabel: 'Kimlik ve bilgi paneli', hint: 'Wikidata, kurum şeması, Google Kitaplar hazırlığı', keywords: ['wikidata', 'bilgi paneli', 'google kitaplar'] },
+      { id: 'seo-teknik', label: 'Teknik sağlık', to: '/seo-geo/teknik', icon: Stethoscope, section: 'SEO ve GEO', tabLabel: 'Teknik denetim', hint: 'Teknik denetim, Google taraması, yönlendirmeler, iç ve gelen bağlantılar, şema, satıştan kalkanlar', keywords: ['teknik sağlık', 'teknik', 'hız', 'sitemap', 'robots', 'core web vitals'] },
+      { id: 'seo-tarama', label: 'Google taraması', to: '/seo-geo/google-taramasi', icon: ScanSearch, section: 'SEO ve GEO', tabOf: 'seo-teknik', tabLabel: 'Google taraması', hint: 'Googlebot’un son taraması, dizin durumu ve bot istekleri', keywords: ['googlebot', 'dizin', 'tarama', 'bot'] },
+      { id: 'seo-yonlendirme', label: 'Yönlendirmeler', to: '/seo-geo/yonlendirmeler', icon: CornerDownRight, section: 'SEO ve GEO', tabOf: 'seo-teknik', tabLabel: 'Yönlendirmeler', hint: 'Kırık adres yönlendirmeleri', keywords: ['301', 'yönlendirme'] },
+      { id: 'seo-ic-baglanti', label: 'Site içi bağlantılar', to: '/seo-geo/ic-baglantilar', icon: Network, section: 'SEO ve GEO', tabOf: 'seo-teknik', tabLabel: 'Site içi bağlantılar', hint: 'Bağlantı almayan kitaplar, derinlik ve yazar–kitap bağları', keywords: ['iç bağlantı', 'yetim sayfa'] },
+      { id: 'seo-geri-baglanti', label: 'Gelen bağlantılar', to: '/seo-geo/geri-baglantilar', icon: Link2, section: 'SEO ve GEO', tabOf: 'seo-teknik', tabLabel: 'Gelen bağlantılar', hint: 'Timaş’a bağlantı veren siteler', keywords: ['backlink', 'bağlantı'] },
+      { id: 'seo-sema', label: 'Şema denetimi', to: '/seo-geo/sema', icon: Braces, section: 'SEO ve GEO', tabOf: 'seo-teknik', tabLabel: 'Şema', hint: 'Ürün sayfalarının yapısal verisi', keywords: ['şema'] },
+      { id: 'seo-kalkan', label: 'Satıştan kalkan kitaplar', to: '/seo-geo/satistan-kalkan', icon: Archive, section: 'SEO ve GEO', tabOf: 'seo-teknik', tabLabel: 'Satıştan kalkanlar', hint: 'Baskısı biten ya da hakkı bizde olmayan kitap sayfaları ne olmalı', keywords: ['baskısı bitti', '410', '301'] },
+      { id: 'seo-bing', label: 'Diğer kanallar', to: '/seo-geo/bing', icon: Radar, section: 'SEO ve GEO', tabLabel: 'Bing ve IndexNow', hint: 'Bing, Yandex, YouTube, video şeması ve Google Alışveriş', keywords: ['bing ve indexnow', 'bing', 'indexnow', 'chatgpt'] },
+      { id: 'seo-yandex', label: 'Yandex', to: '/seo-geo/yandex', icon: Globe, section: 'SEO ve GEO', tabOf: 'seo-bing', tabLabel: 'Yandex', hint: 'Yandex arama verisi, dizin, site teşhisi ve dış bağlantılar', keywords: ['yandex', 'webmaster', 'alice', 'rusça'] },
+      { id: 'seo-youtube', label: 'YouTube', to: '/seo-geo/youtube', icon: Youtube, section: 'SEO ve GEO', tabOf: 'seo-bing', tabLabel: 'YouTube', hint: 'Tanıtım videolarının izlenmesi ve açıklamadaki site bağlantısı', keywords: ['youtube', 'video'] },
+      { id: 'seo-video', label: 'Video', to: '/seo-geo/video', icon: Video, section: 'SEO ve GEO', tabOf: 'seo-bing', tabLabel: 'Video şeması', hint: 'Tanıtım videoları, video şeması ve video sitemap', keywords: ['video', 'youtube'] },
+      { id: 'seo-alisveris', label: 'Google Alışveriş hazırlığı', to: '/seo-geo/alisveris', icon: ShoppingBag, section: 'SEO ve GEO', tabOf: 'seo-bing', tabLabel: 'Google Alışveriş', hint: 'Ürün akışı denetimi: ISBN, fiyat, stok, görsel', keywords: ['alışveriş', 'merchant', 'gtin'] },
       { id: 'seo-baglanti', label: 'Bağlantılar', to: '/seo-geo/baglantilar', icon: Plug, section: 'SEO ve GEO ayarı', hint: 'Site ve arama hesabı bağlantıları', keywords: ['bağlantı'] },
     ],
   },
@@ -761,6 +768,30 @@ export function visibleNav(
     .map((g, i) => ({ g, i }))
     .sort((a, b) => rank(a.g.id) - rank(b.g.id) || a.i - b.i)
     .map(({ g }) => ({ ...g, defaultOpen: g.id === 'kampus' || g.id === 'editoryal', tag: g.id === 'editoryal' ? 'Çalışma alanım' : undefined }));
+}
+
+/* ------------------------------------------------------------------ sekmeli gruplar */
+
+/** Menüde yazan öğeler: grup girişi görünürken onun sekmeleri (`tabOf`) gizlenir. Giriş kişiye kapalıysa sekme
+ *  kendi adıyla menüde kalır (ekran erişilemez olmasın). */
+export function panelItems(items: NavItem[]): NavItem[] {
+  const ids = new Set(items.map((i) => i.id));
+  return items.filter((i) => !i.tabOf || !ids.has(i.tabOf));
+}
+
+/** Menüde etkin görünecek öğe: sekmedeyken grup girişi. */
+export function panelActiveId(items: NavItem[], activeId?: string): string | undefined {
+  const hit = items.find((i) => i.id === activeId);
+  return hit?.tabOf && items.some((i) => i.id === hit.tabOf) ? hit.tabOf : activeId;
+}
+
+/** Etkin öğenin sekme şeridi: grup girişi + kişinin görebildiği sekmeleri (menü sırasıyla). Tek sekme kalırsa boş. */
+export function tabsFor(items: NavItem[], activeId?: string): NavItem[] {
+  const hit = items.find((i) => i.id === activeId);
+  if (!hit) return [];
+  const hub = hit.tabOf ?? hit.id;
+  const tabs = items.filter((i) => i.id === hub || i.tabOf === hub);
+  return tabs.length > 1 && tabs[0].id === hub ? tabs : [];
 }
 
 /* ------------------------------------------------------------------ sol menü görünümü */

@@ -1,7 +1,7 @@
 import { Fragment, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, Grid2x2, Search } from 'lucide-react';
-import { badgeLabel, railView, type NavCounts, type NavItem, type VisibleGroup } from './navModel';
+import { badgeLabel, panelActiveId, panelItems, railView, type NavCounts, type NavItem, type VisibleGroup } from './navModel';
 import { initials, paletteKey, roleLabel, useNavUi, type NavData } from './useNav';
 
 /**
@@ -166,7 +166,7 @@ function ModuleItems({
   group,
   isActiveGroup,
   onBack,
-  activeId,
+  activeId: current,
   alertCount,
   counts,
   mailOverdue = 0,
@@ -181,7 +181,8 @@ function ModuleItems({
 }) {
   const Icon = group.icon;
   const headId = `nav-head-${group.id}`;
-  const items: NavItem[] = group.items;
+  const items: NavItem[] = panelItems(group.items);
+  const activeId = panelActiveId(group.items, current);
   return (
     <>
       <button

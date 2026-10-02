@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Drawer } from '@base-ui/react/drawer';
 import { Bell, ChevronLeft, ChevronRight, Grid2x2, House, LayoutDashboard, LayoutGrid, Menu, Search, SendHorizontal, Sparkles, X } from 'lucide-react';
-import { railView } from './navModel';
+import { panelActiveId, panelItems, railView } from './navModel';
 import { NavList } from './NavList';
 import { initials, roleLabel, useNavUi, type NavData } from './useNav';
 
@@ -147,7 +147,7 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
                           {view.group.tag && <p className="text-[12px] font-bold text-emerald-700">{view.group.tag}</p>}
                         </div>
                       </div>
-                      <NavList items={view.group.items} activeId={nav.active?.item.id} alertCount={nav.alertCount} counts={nav.counts} mailOverdue={nav.mailOverdue} onPick={() => setMenuOpen(false)} variant="sheet" />
+                      <NavList items={panelItems(view.group.items)} activeId={panelActiveId(view.group.items, nav.active?.item.id)} alertCount={nav.alertCount} counts={nav.counts} mailOverdue={nav.mailOverdue} onPick={() => setMenuOpen(false)} variant="sheet" />
                     </>
                   ) : (
                     <>

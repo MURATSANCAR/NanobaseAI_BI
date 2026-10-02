@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { NAV, flatItems, groupEntry, matchActive, needsPagePermission, railView, recentGroupLabel, scoreText, visibleNav } from './navModel';
+import { NAV, flatItems, groupEntry, matchActive, needsPagePermission, panelActiveId, panelItems, railView, tabsFor, recentGroupLabel, scoreText, visibleNav } from './navModel';
 import { RECENT_KEEP, cleanNavState, pushRecent } from './navState';
 
 const user = { isAdmin: false, isEditor: false };
@@ -445,5 +445,29 @@ describe('ana modül giriş ekranı (Kampüs kutuları)', () => {
     const finans = NAV.find((x) => x.id === 'finans')!;
     const stolen = { ...finans, items: [{ ...finans.items[0], id: 'x', to: '/stok/fark' }, ...finans.items] };
     expect(groupEntry([...NAV.filter((x) => x.id !== 'finans'), stolen], stolen)).toBe(finans.items[0].to);
+  });
+});
+
+describe('sekmeli gruplar (SEO ve GEO)', () => {
+  const seo = NAV.flatMap((g) => g.items).filter((i) => i.to.startsWith('/seo-geo'));
+
+  it('menüde 40 ekran yerine 8 giriş; her ekran yine adresiyle etkin olur', () => {
+    expect(seo).toHaveLength(40);
+    expect(panelItems(seo).map((i) => i.id)).toEqual(['seo-geo', 'seo-arama', 'seo-ai', 'seo-karne', 'seo-yazar-sayfa', 'seo-teknik', 'seo-bing', 'seo-baglanti']);
+    expect(panelActiveId(seo, 'seo-llms')).toBe('seo-ai');
+    expect(panelActiveId(seo, 'seo-ai')).toBe('seo-ai');
+  });
+
+  it('her sekmenin grubu var, grup girişi kendi şeridinin ilki', () => {
+    const ids = new Set(seo.map((i) => i.id));
+    for (const i of seo) if (i.tabOf) expect(ids.has(i.tabOf)).toBe(true);
+    expect(tabsFor(seo, 'seo-llms').map((i) => i.id)).toEqual(['seo-ai', 'seo-kaynak', 'seo-soru', 'seo-llms']);
+    expect(tabsFor(seo, 'seo-baglanti')).toEqual([]);
+  });
+
+  it('grup girişi kişiye kapalıysa sekme menüde kendi adıyla kalır', () => {
+    const limited = seo.filter((i) => i.id !== 'seo-ai');
+    expect(panelItems(limited).map((i) => i.id)).toContain('seo-llms');
+    expect(tabsFor(limited, 'seo-llms')).toEqual([]);
   });
 });

@@ -201,3 +201,11 @@
   .sg-button, .sg-filter, .sg-item { transition: background-color 150ms ease }
   .sg-button:active:not(:disabled), .sg-filter:active, .sg-item:active { transform: none }
 }
+
+/* Grup sekmeleri: menüde tek giriş, ekranlar burada. Günde onlarca kez basılır → hareket yok, yalnız renk. */
+.sg-tabs { display: flex; gap: 4px; padding: 4px; margin-top: -4px; border-radius: 16px; background: rgba(255, 255, 255, .7); border: 1px solid var(--sg-line); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch }
+.sg-tabs::-webkit-scrollbar { display: none }
+.sg-tab { flex: none; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; font-size: 12.5px; font-weight: 750; color: var(--sg-muted); text-decoration: none; white-space: nowrap; transition: background-color 150ms ease, color 150ms ease }
+.sg-tab[aria-current="page"] { background: var(--sg-grad); color: #fff; box-shadow: 0 8px 20px -10px rgba(124, 92, 255, .6) }
+@media (hover: hover) and (pointer: fine) { .sg-tab:not([aria-current="page"]):hover { background: #f4effc; color: var(--sg-ink) } }
+@media (max-width: 640px) { .sg-tab { min-height: 44px } }
