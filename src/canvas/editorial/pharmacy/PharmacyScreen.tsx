@@ -2,18 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Search, X } from 'lucide-react';
-import { ENGINE_ENABLED, PHARMACY_CATEGORIES, pharmacyApi, type PharmacyBook, type PharmacyState } from '../../engine';
+import { ENGINE_ENABLED, pharmacyApi, type PharmacyBook, type PharmacyState } from '../../engine';
 import { Note, Pill, errText, nf } from '../../admin/ui';
 import { EmptyHint } from '../../components/Explain';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from '../kit';
 import { UploadBar } from '../BookUploadDock';
 import PharmacyUpload from './PharmacyUpload';
 import PharmacyDetail, { isTab, type Tab } from './PharmacyDetail';
-import { STATE_FILTERS, categoryLabel, moving, readPill, redactionPill } from './labels';
+import { STATE_FILTERS, moving, readPill, redactionPill } from './labels';
 
 /** Kitap Eczanesi: arşiv kipinde okunan kitaplar (Zeki'ye sor için ~4.000 kitap) ve kitap başına işler.
  *
- *  Sol sütun: yükleme alanı ve sayfalı kitap listesi (arama, kategori, okuma durumu; sunucu süzer ve sayfalar,
+ *  Sol sütun: yükleme alanı ve sayfalı kitap listesi (arama, okuma durumu, «gözden geçir»; sunucu süzer ve sayfalar,
  *  liste bir seferde 50 kitap çizer, toplam her zaman yazar). Sağ sütun: seçili kitabın ayrıntısı ve işleri (son
  *  okuma, e-kitap, sesli kitap, tasarım). Telefonda (lg altı) liste ile ayrıntı aynı yerde sırayla görünür: kitap
  *  seçilince ayrıntı açılır, «Kitap listesi» düğmesi geri döndürür. Bütün seçimler adreste (?q, kat, durum, sira,
@@ -55,12 +55,14 @@ function Row({ b, selected, onPick }: { b: PharmacyBook; selected: boolean; onPi
         <span className="min-w-0 flex-1">
           <span className="line-clamp-2 break-words text-[13px] font-bold leading-snug">{b.title}</span>
           <span className="mt-0.5 block truncate text-[11.5px] text-canvas-muted">
-            {categoryLabel(b.category)}
-            {b.pages ? ` · ${nf.format(b.pages)} sayfa` : ''}
+            {[b.pages ? `${nf.format(b.pages)} sayfa` : null, b.site?.found ? b.site.categories[0] : b.site ? 'sitede bulunamadı' : null]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
           <span className="mt-1 flex flex-wrap gap-1">
             <Pill tone={pill.tone}>{pill.text}</Pill>
             {red && <Pill tone={red.tone}>{red.text}</Pill>}
+            {b.review?.review && <Pill tone="warn">Gözden geçir</Pill>}
           </span>
           {b.read?.state === 'okunuyor' && (
             <span className="mt-1.5 block">
@@ -83,6 +85,7 @@ export default function PharmacyScreen() {
   const state = (STATE_KEYS.has(durum) ? durum : '') as PharmacyState | '';
   const sort = params.get('sira') === 'yeni' ? 'recent' : 'title';
   const page = Math.max(0, Number(params.get('sayfa') ?? 0) || 0);
+  const review = params.get('gg') === '1';
   const picked = params.get('kitap');
   const sekme = params.get('sekme');
   const tab: Tab = isTab(sekme) ? sekme : 'son-okuma';
@@ -111,8 +114,8 @@ export default function PharmacyScreen() {
   }, [debounced, q, set]);
 
   const list = useQuery({
-    queryKey: ['pharmacy', 'books', { q, cat, state, sort, page }],
-    queryFn: () => pharmacyApi.books({ q, category: cat, state, sort, offset: page * PAGE, limit: PAGE }),
+    queryKey: ['pharmacy', 'books', { q, cat, state, sort, page, review }],
+    queryFn: () => pharmacyApi.books({ q, category: cat, state, sort, offset: page * PAGE, limit: PAGE, review }),
     enabled: ENGINE_ENABLED,
     placeholderData: keepPreviousData,
     // Sayfada okunan/sırada kitap varsa durum kendiliğinden ilerler; dakikada bir tazelenir.
@@ -130,7 +133,6 @@ export default function PharmacyScreen() {
 
   const data = list.data;
   const items = data?.items ?? [];
-  const cats = data?.facets.categories ?? {};
   const states = data?.facets.states ?? {};
   const t = totals.data;
   const tf = t?.facets.states ?? {};
@@ -187,18 +189,14 @@ export default function PharmacyScreen() {
               )}
             </label>
 
-            <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Kategori">
-              <Chip on={!cat} label="Hepsi" onClick={() => set({ kat: null, sayfa: null })} />
-              {PHARMACY_CATEGORIES.map((c) => (
-                <Chip key={c.key} on={cat === c.key} label={c.label} count={cats[c.key] ?? 0} onClick={() => set({ kat: cat === c.key ? null : c.key, sayfa: null })} />
-              ))}
-              {(cats[''] ?? 0) > 0 && <Chip on={cat === '-'} label="Kategorisiz" count={cats['']} onClick={() => set({ kat: cat === '-' ? null : '-', sayfa: null })} />}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Durum">
+            <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Durum">
               <Chip on={!state} label="Her durum" onClick={() => filterState('')} />
               {STATE_FILTERS.map((s) => (
                 <Chip key={s.key} on={state === s.key} label={s.label} count={states[s.key] ?? 0} onClick={() => filterState(s.key)} />
               ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Kategori önerisi">
+              <Chip on={review} label="Gözden geçir" count={data?.facets.review ?? 0} onClick={() => set({ gg: review ? null : '1', sayfa: null })} />
             </div>
             <div className="mt-2 flex items-center justify-end gap-1 text-[11.5px]">
               <span className="font-bold text-canvas-muted">Sırala:</span>
@@ -224,8 +222,8 @@ export default function PharmacyScreen() {
             {!list.isLoading && !items.length && !list.error ? (
               <div className="mt-2">
                 <EmptyHint
-                  title={q || cat || state ? 'Süzgece uyan kitap yok' : 'Kitap Eczanesi boş'}
-                  why={q || cat || state ? 'Aramayı ya da süzgeçleri değiştirin.' : 'Yukarıdan kitap yükleyin; okunmaya başlayan kitap burada görünür.'}
+                  title={q || cat || state || review ? 'Süzgece uyan kitap yok' : 'Kitap Eczanesi boş'}
+                  why={q || cat || state || review ? 'Aramayı ya da süzgeçleri değiştirin.' : 'Yukarıdan kitap yükleyin; okunmaya başlayan kitap burada görünür.'}
                 />
               </div>
             ) : (

@@ -2910,9 +2910,29 @@ export type PharmacyBook = {
   proofed: boolean;
   /** Toplu arşiv kuyruğundan (portaldan yüklenmedi). */
   bulk: boolean;
+  /** Kitabın timas.com.tr'deki kategorileri, olduğu gibi (ISBN ya da adla eşlenir; belirsizse bulunamadı). */
+  site?: PharmacySite;
+  /** Zeki AI önerisi: okunan içerikten kategori (sitenin ağacından), okur kitlesi, yaş, gerekçe; yoksa null. */
+  suggestion?: PharmacySuggestion | null;
+  /** Site ile öneri ayrışıyor mu; ayrışıyorsa nedeni. */
+  review?: { review: boolean; reasons: Array<'CATEGORY' | 'AUDIENCE' | 'AGE'> };
+};
+export type PharmacyAudience = 'CHILD' | 'YOUNG' | 'ADULT';
+export type PharmacySite =
+  | { found: false }
+  | { found: true; by: 'ISBN' | 'TITLE' | 'TITLE_AUTHOR'; title: string; url: string | null; categories: string[]; age_from: number | null; age_to: number | null };
+export type PharmacySuggestion = {
+  category: string;
+  audience: PharmacyAudience;
+  age_from: number;
+  /** null: üst sınır yok. */
+  age_to: number | null;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  reason: string;
+  evidence_pages: number[];
 };
 export type PharmacyState = 'sirada' | 'okunuyor' | 'hazir' | 'yeniden' | 'okunamadi' | 'redaksiyon';
-export type PharmacyQuery = { q?: string; category?: string; state?: PharmacyState | ''; sort?: 'title' | 'recent'; offset?: number; limit?: number };
+export type PharmacyQuery = { q?: string; category?: string; state?: PharmacyState | ''; sort?: 'title' | 'recent'; offset?: number; limit?: number; review?: boolean };
 export type PharmacyPage = {
   items: PharmacyBook[];
   total: number;
@@ -2920,12 +2940,12 @@ export type PharmacyPage = {
   limit: number;
   /** Eczanedeki bütün kitaplar (süzgeçsiz). */
   all: number;
-  facets: { categories: Record<string, number>; states: Partial<Record<PharmacyState, number>> };
+  facets: { categories: Record<string, number>; states: Partial<Record<PharmacyState, number>>; review?: number };
 };
 const PH = '/api/v1/editorial/pharmacy/books';
 export const pharmacyApi = {
   books: (o: PharmacyQuery) =>
-    send<PharmacyPage>('GET', `${PH}${qs({ q: o.q, category: o.category, state: o.state, sort: o.sort, offset: o.offset, limit: o.limit })}`, undefined, 30_000),
+    send<PharmacyPage>('GET', `${PH}${qs({ q: o.q, category: o.category, state: o.state, sort: o.sort, offset: o.offset, limit: o.limit, review: o.review ? 'true' : undefined })}`, undefined, 30_000),
   book: (id: string) => send<PharmacyBook>('GET', `${PH}/${encodeURIComponent(id)}`, undefined, 30_000),
   /** Son okuma raporu kitap kimliğiyle (Son okuma ekranındaki biçim). */
   proofing: (id: string, title?: string) => send<ProofingReport>('GET', `${PH}/${encodeURIComponent(id)}/proofing${qs({ title })}`, undefined, 30_000),

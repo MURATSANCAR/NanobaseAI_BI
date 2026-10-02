@@ -188,11 +188,22 @@ class BookFullAnalysis:
                 raise ApplicationError(
                     f"Output revision did not stabilize ({produced['technical_status']})",
                     non_retryable=True)
+            recommendation = None
+            if archive and workflow.patched("archive-recommend-v1"):
+                # category and age suggestion from the summaries just built; a failure leaves the book
+                # without a suggestion, it never fails the reading
+                await self.step(14, "Kategori ve yaş önerisi")
+                try:
+                    recommendation = await self.act("archive_recommend", gid, timeout=SHORT)
+                except ActivityError as e:
+                    failures["recommend"] = [str(e.cause or e)[:500]]
             summary = {"generation_id":gid,"pages":len(pages),"outputs":produced,
                 "step_order":"verified-revision-outputs-v1","accepted":False,
                 "analytical_status":"NEEDS_REVIEW",
                 "failures":{k:v for k,v in failures.items() if v}}
             if archive:
+                if recommendation is not None:
+                    summary["recommendation"] = recommendation
                 summary.update(profile="archive", visual_pages=len(scan),
                                deferred=["proofreading", "confirm_text_visual", "continuity_checks",
                                          "detect_contradictions", "queue_contradictions"])

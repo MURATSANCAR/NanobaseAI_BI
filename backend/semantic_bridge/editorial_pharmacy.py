@@ -70,11 +70,12 @@ def register(app, deps: dict[str, Any] | Any) -> None:
                  'kaydından (kitap başına son iş); sayılar kayıtların sayımıdır.', engine=None, dbs=_sk_dbs,
                  dis_adi='Editör kart servisi (okuma kuyruğu)')
     def pharmacy_books(request: Request, q: str = "", category: str = "", state: str = "", sort: str = "title",
-                       offset: int = 0, limit: int = 50) -> dict[str, Any]:
-        """Sayfa sayfa liste; arama, kategori («-» = kategorisiz) ve durum süzgeci. `total` süzülmüş sayı."""
+                       offset: int = 0, limit: int = 50, review: bool = False) -> dict[str, Any]:
+        """Sayfa sayfa liste; arama, kategori («-» = kategorisiz), durum ve «gözden geçir» süzgeci (sitedeki kategori
+        ile Zeki AI önerisi ayrışanlar). `total` süzülmüş sayı."""
         auth(request)
         try:
-            return editorial_cards.archive_books(q, category, state, sort, offset, limit)
+            return editorial_cards.archive_books(q, category, state, sort, offset, limit, review)
         except Exception as e:  # noqa: BLE001
             _engine_error(e, "Kitap listesi şu an alınamadı.")
 

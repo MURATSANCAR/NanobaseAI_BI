@@ -24,7 +24,7 @@ import { EpubSection } from '../studio/epub';
 import { NarrationSection } from '../studio/narration';
 import { ART_MODES, ArtModePicker, artModeDuration } from '../studio/ArtMode';
 import { StepIcon, ago, ghostBtn, gradientBtn } from '../studio/shared';
-import { categoryLabel, jobNote, moving, readPill, redactionPill } from './labels';
+import { AUDIENCE_LABEL, CONFIDENCE_LABEL, ageText, jobNote, moving, readPill, redactionPill, reviewText } from './labels';
 
 /** Kitap Eczanesi'nde seçili kitap: okuma durumu ve dört iş — son okuma (redaksiyon), e-kitap, sesli kitap,
  *  Kitap Tasarım Stüdyosu. Her biri var olan ekranların bileşenleriyle: son okuma bulguları, kararlar, Word çıktısı,
@@ -294,6 +294,80 @@ function StudioTab({ b, tab }: { b: PharmacyBook; tab: Exclude<Tab, 'son-okuma'>
   );
 }
 
+/* ------------------------------------------------------------------ önerilen kategori / yaş */
+
+function ColHead({ children }: { children: ReactNode }) {
+  return <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{children}</div>;
+}
+
+/** «Önerilen kategori / yaş»: yan yana iki sütun (telefonda alt alta) — kitabın timas.com.tr'deki kategorileri olduğu
+ *  gibi ve Zeki AI'ın okunan içerikten önerisi. Ayrışırlarsa üstte «gözden geçirin» notu; karar editörde, hiçbir şey
+ *  kendiliğinden değişmez. */
+function CategoryCompare({ b }: { b: PharmacyBook }) {
+  const site = b.site;
+  const s = b.suggestion;
+  const why = reviewText(b);
+  const siteAge = site?.found ? ageText(site.age_from, site.age_to) : null;
+  return (
+    <Panel>
+      <SectionHead title="Önerilen kategori / yaş">Kitabın sitedeki yeri ile Zeki AI'ın kitabın içeriğinden önerdiği yer yan yana. Karar sizde; hiçbir şey kendiliğinden değişmez.</SectionHead>
+      {why && (
+        <div className="mt-2.5">
+          <Note tone="warn">Gözden geçirin: {why}.</Note>
+        </div>
+      )}
+      <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+        <section aria-label="timas.com.tr" className="min-w-0 rounded-2xl border border-slate-100 bg-white/85 p-3">
+          <ColHead>timas.com.tr</ColHead>
+          {site?.found ? (
+            <>
+              <ul className="mt-1.5 space-y-1">
+                {site.categories.map((c) => (
+                  <li key={c} className="break-words text-[13px] font-bold leading-snug">{c}</li>
+                ))}
+              </ul>
+              {siteAge && <p className="mt-1.5 text-[12px] text-canvas-muted">Sitede yaş: {siteAge}</p>}
+              {site.url && (
+                <a href={site.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-8 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline">
+                  Sitede aç <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                </a>
+              )}
+            </>
+          ) : site ? (
+            <p className="mt-1.5 text-[13px] text-canvas-muted">Sitede bulunamadı.</p>
+          ) : (
+            <p className="mt-1.5 text-[13px] text-canvas-muted">Henüz bakılmadı.</p>
+          )}
+        </section>
+        <section aria-label="Zeki AI önerisi" className={`min-w-0 rounded-2xl border p-3 ${why ? 'border-amber-200 bg-amber-50/60' : 'border-slate-100 bg-white/85'}`}>
+          <ColHead>Zeki AI önerisi</ColHead>
+          {s ? (
+            <>
+              <p className="mt-1.5 break-words text-[13px] font-bold leading-snug">{s.category}</p>
+              <p className="mt-1 text-[12px] text-canvas-muted">
+                {AUDIENCE_LABEL[s.audience]} · {ageText(s.age_from, s.age_to)}
+              </p>
+              <div className="mt-1.5">
+                <Pill tone={CONFIDENCE_LABEL[s.confidence].tone}>{CONFIDENCE_LABEL[s.confidence].text}</Pill>
+              </div>
+              {s.reason && <p className="mt-2 text-[12.5px] leading-snug">{s.reason}</p>}
+              {s.evidence_pages.length > 0 && (
+                <p className="mt-1 text-[11.5px] text-canvas-muted">
+                  Dayanak: sayfa {s.evidence_pages.join(', ')}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="mt-1.5 text-[13px] text-canvas-muted">
+              {b.read?.state === 'hazir' ? 'Bu kitap için öneri yok.' : 'Öneri, okuma bitince hazırlanır.'}
+            </p>
+          )}
+        </section>
+      </div>
+    </Panel>
+  );
+}
+
 /* ------------------------------------------------------------------ ayrıntı */
 
 export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string; tab: Tab; onTab: (t: Tab) => void; onBack: () => void }) {
@@ -332,9 +406,9 @@ export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string;
           <div className="min-w-0 flex-1">
             <h2 className="break-words text-[18px] font-extrabold leading-tight sm:text-[20px]">{b.title}</h2>
             <p className="mt-1 text-[12px] text-canvas-muted">
-              {categoryLabel(b.category)}
-              {b.pages ? ` · ${nf.format(b.pages)} sayfa` : ''}
-              {b.read?.requested_by ? ` · yükleyen ${b.read.requested_by}` : b.bulk ? ' · arşivden' : ''}
+              {[b.pages ? `${nf.format(b.pages)} sayfa` : null, b.read?.requested_by ? `yükleyen ${b.read.requested_by}` : b.bulk ? 'arşivden' : null]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Pill tone={pill.tone}>Okuma: {pill.text}</Pill>
@@ -352,6 +426,8 @@ export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string;
           </div>
         </div>
       </Panel>
+
+      <CategoryCompare b={b} />
 
       <div role="tablist" aria-label="Kitap için işler" className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 sm:grid-cols-4">
         {TABS.map(({ key, label, Icon }) => (

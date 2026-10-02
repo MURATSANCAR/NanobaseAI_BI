@@ -825,13 +825,14 @@ def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by,
 ARCHIVE_STATES=('sirada','okunuyor','hazir','yeniden','okunamadi','redaksiyon')
 
 
-def archive_books(q='', category='', state='', sort='title', offset=0, limit=50) -> dict:
+def archive_books(q='', category='', state='', sort='title', offset=0, limit=50, review=False) -> dict:
     """Arşiv kipinde okunan kitaplar (sayfa sayfa). Süzgeç değerleri burada da biçimle sınırlanır; servise serbest
     metin yalnız arama kutusundan gider (URL kodlu)."""
     if state and state not in ARCHIVE_STATES: raise ValueError('Durum geçersiz.')
     if sort not in ('title','recent'): raise ValueError('Sıralama geçersiz.')
     params={'q':(q or '')[:200],'category':(category or '')[:64],'state':state or '','sort':sort,
             'offset':max(0,int(offset)),'limit':min(200,max(1,int(limit)))}
+    if review: params['review']='true'
     return request('/v1/archive/books?'+urllib.parse.urlencode(params)).json()
 
 

@@ -424,11 +424,17 @@ def _state_of(b: dict) -> str | None:
     return (b.get("read") or {}).get("state")
 
 
+def _review(b: dict) -> bool:
+    return bool((b.get("review") or {}).get("review"))
+
+
 def select(books: list[dict], q: str = "", category: str = "", state: str = "", sort: str = "title",
-           offset: int = 0, limit: int = 50) -> dict:
+           offset: int = 0, limit: int = 50, review: bool = False) -> dict:
     """Arama (Türkçe harf ve büyük/küçük harf farkı gözetmez) → kategori → durum süzgeci, sıralama ve sayfa.
     `facets`: aramaya uyan kitapların kategori sayıları ve (kategori süzgeciyle) durum sayıları; ekran süzgeç
-    düğmelerinde gösterir. `total` süzülmüş kitap sayısı; hiçbir kitap kesilmez, sayfalar `offset` ile gezilir."""
+    düğmelerinde gösterir. `total` süzülmüş kitap sayısı; hiçbir kitap kesilmez, sayfalar `offset` ile gezilir.
+    `review`: yalnız sitedeki kategori ile Zeki AI önerisi ayrışan kitaplar («gözden geçir»; editor.recommend);
+    `facets.review` süzgeçlerden sonra kaç kitabın gözden geçirileceğini söyler."""
     key = fold(q).strip()
     hit = [b for b in books if not key or key in fold(b["title"] or "")]
     cats: dict[str, int] = collections.Counter((b["category"] or "") for b in hit)
@@ -441,13 +447,17 @@ def select(books: list[dict], q: str = "", category: str = "", state: str = "", 
         out = [b for b in in_cat if _state_of(b) == state]
     else:
         out = in_cat
+    to_review = sum(1 for b in out if _review(b))
+    if review:
+        out = [b for b in out if _review(b)]
     if sort == "recent":
         out = sorted(out, key=lambda b: (_stamp(b), b["id"]), reverse=True)
     else:
         out = sorted(out, key=lambda b: (fold(b["title"] or ""), b["id"]))
     page = out[offset:offset + limit]
     return {"items": page, "total": len(out), "offset": offset, "limit": limit, "all": len(books),
-            "facets": {"categories": dict(cats), "states": {k: v for k, v in states.items() if k}}}
+            "facets": {"categories": dict(cats), "states": {k: v for k, v in states.items() if k},
+                       "review": to_review}}
 
 
 # ------------------------------------------------------------------ arşiv çıktıları (rebuild.run'ın arşiv eşi)

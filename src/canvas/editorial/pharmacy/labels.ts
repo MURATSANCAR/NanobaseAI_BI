@@ -1,4 +1,4 @@
-import { PHARMACY_CATEGORIES, type PharmacyBook, type PharmacyJob, type PharmacyState } from '../../engine';
+import { PHARMACY_CATEGORIES, type PharmacyAudience, type PharmacyBook, type PharmacyJob, type PharmacyState, type PharmacySuggestion } from '../../engine';
 
 /** Kitap Eczanesi'nin ekran dili: kategori ve durum adları, durumun rengi ve kısa açıklaması. Teknik ad yok. */
 
@@ -53,4 +53,28 @@ export function redactionPill(b: PharmacyBook): { tone: Tone; text: string } | n
   if (b.proofed) return { tone: 'ok', text: 'Son okuma hazır' };
   if (b.redaction?.state === 'okunamadi') return { tone: 'err', text: 'Son okuma tamamlanamadı' };
   return null;
+}
+
+/* ------------------------------------------------------------------ timas.com.tr ↔ Zeki AI önerisi */
+
+export const AUDIENCE_LABEL: Record<PharmacyAudience, string> = { CHILD: 'Çocuk', YOUNG: 'Genç', ADULT: 'Yetişkin' };
+export const CONFIDENCE_LABEL: Record<PharmacySuggestion['confidence'], { tone: Tone; text: string }> = {
+  HIGH: { tone: 'ok', text: 'Güven yüksek' },
+  MEDIUM: { tone: 'muted', text: 'Güven orta' },
+  LOW: { tone: 'warn', text: 'Güven düşük' },
+};
+const REASON_LABEL = { CATEGORY: 'kategori farklı', AUDIENCE: 'okur kitlesi farklı', AGE: 'yaş aralığı örtüşmüyor' } as const;
+
+/** «6-9 yaş», «13+ yaş»; yaş yoksa null. */
+export function ageText(from: number | null | undefined, to: number | null | undefined): string | null {
+  if (from === null || from === undefined) return null;
+  return to === null || to === undefined ? `${from}+ yaş` : `${from}-${to} yaş`;
+}
+
+/** Gözden geçirme nedeni, cümle olarak («Kategori farklı, yaş aralığı örtüşmüyor»); ayrışma yoksa null. */
+export function reviewText(b: PharmacyBook): string | null {
+  const rs = b.review?.review ? b.review.reasons : [];
+  if (!rs.length) return null;
+  const t = rs.map((r) => REASON_LABEL[r]).join(', ');
+  return t[0].toUpperCase() + t.slice(1);
 }
