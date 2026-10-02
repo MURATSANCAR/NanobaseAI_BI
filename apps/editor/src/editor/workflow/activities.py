@@ -295,7 +295,14 @@ async def report(generation_id: str) -> dict:
 
 @activity.defn
 async def book_metadata(generation_id: str) -> dict:
-    """Bibliographic claims (ISBN, author, age range...) while the generation is still open."""
+    """Bibliographic claims (ISBN, author, age range...) while the generation is still open.
+
+    The whole-book page rule (editor.page_scope.ensure) is applied first: during the reading it
+    only saw each chunk, and an imprint page it had not marked yet left METADATA empty. The
+    validation runs it again (idempotent) and reads the imprint once more only if new imprint
+    pages appear there."""
+    from .. import page_scope
+    await _t(page_scope.ensure, generation_id)
     meta = await catalog.extract_metadata(generation_id)
     return {"fields": sorted(meta)}
 

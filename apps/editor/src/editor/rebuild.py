@@ -77,6 +77,9 @@ async def validate(gid: str) -> dict:
         # and can turn a page back). Written under this validation's token.
         from . import page_scope
         scope=await asyncio.to_thread(page_scope.ensure,gid)
+        # Newly marked imprint pages and no METADATA yet: read the imprint now (the reading's
+        # imprint step ran before the whole-book rule existed). Same token: it is this validation's write.
+        scope['metadata']=await page_scope.metadata_after_scope(gid,scope)
         # Identity and visual work is performed before activate in the full workflow.
         # Repairs invalidate actor readings in the same transaction.
         critic=await quality.critic_pass(gid, recheck=True)
@@ -198,20 +201,23 @@ async def build(kind,snap,built,key):
         from .knowledge import director_slots
         slots=director_slots()
 
-        async def chapter(ch):
-            claims=[c for c in snap['claims'] if any(ch['page_from']<=p<=ch['page_to'] for p in c['source_pages'])]
+        # A chapter reads only the claims whose pages all lie in it (a theme spread over the
+        # whole book is the book's, not every chapter's), each claim in one chapter only.
+        inputs=outputs.chapter_claims(snap['chapters'],snap['claims'])
+
+        async def chapter(ch,claims):
             async with slots:
                 value=await outputs.summarize(snap,claims,ch['title'])
             return {**ch,**value}
 
-        tasks=[asyncio.ensure_future(chapter(ch)) for ch in snap['chapters']]
+        tasks=[asyncio.ensure_future(chapter(ch,cl)) for ch,cl in zip(snap['chapters'],inputs)]
         try:
             chapters=await asyncio.gather(*tasks)
         except BaseException:
             for t in tasks: t.cancel()
             await asyncio.gather(*tasks,return_exceptions=True)
             raise
-        return {'chapters':list(chapters),'semantic_acceptance':False}
+        return {'chapters':outputs.dedupe_chapter_sentences(list(chapters)),'semantic_acceptance':False}
     if kind=='book_summary':
         # Chapter selection may omit late events. The book plot consumes the
         # complete verified event set of the same immutable revision.

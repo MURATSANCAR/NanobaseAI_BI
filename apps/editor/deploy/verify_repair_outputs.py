@@ -14,7 +14,7 @@ expected={p for c in claims.values() for p in c['source_pages']}
 actual={p for s in book['sentences'] for p in s['pages']}
 checks=[{'name':'plot uses only verified events','passed':bool(book['sentences']) and all(set(s['claim_ids'])<=claims.keys() for s in book['sentences'])},
  {'name':'first and last supported event retained','passed':bool(expected) and bool(actual) and min(expected)==min(actual) and max(expected)==max(actual)},
- {'name':'new summary policy','passed':snap['policy']=='validated-outputs-v9'},
+ {'name':'new summary policy','passed':snap['policy']=='validated-outputs-v10'},
  {'name':'page review targets are unique','passed':len({r['page_role_page_no'] for r in reviews})==len(reviews)}]
 # Fetch actual served artifact, not a re-execution of its production query.
 s=settings()

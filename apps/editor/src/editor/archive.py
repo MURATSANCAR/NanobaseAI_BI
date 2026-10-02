@@ -474,6 +474,7 @@ async def validate(gid: str) -> dict:
         # sırasında parçalar yan yana koştuğu için eksik kalanı burada tamamlanır.
         from . import page_scope
         scope = await asyncio.to_thread(page_scope.ensure, gid)
+        scope["metadata"] = await page_scope.metadata_after_scope(gid, scope)
         critic = await quality.critic_pass(gid, recheck=True)
         actors = await knowledge.attribute_event_actors(gid)
         regression = await asyncio.to_thread(quality.run_regression_suite, gid)

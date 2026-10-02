@@ -15,7 +15,7 @@ from .book_type import STORY_FORMS
 from .config import settings
 
 ORDER = ('chapter_summaries', 'book_summary', 'search_index', 'report', 'catalog')
-POLICY = 'validated-outputs-v9'
+POLICY = 'validated-outputs-v10'
 
 
 def plain(value):
@@ -87,6 +87,15 @@ def capture(c, gid: str, roles_override: dict | None = None) -> dict:
         events = [e for e in events if e['claim_id'] not in drop]
         emotions = [e for e in emotions if e['claim_id'] not in drop]
         evidence = [e for e in evidence if e['claim_id'] not in drop]
+    # Bütün anmaları kapsam dışı sayfalarda olan karakter (yayınevinin başka kitaplarının tanıtımındaki adlar,
+    # künyedeki editör) kitabın karakteri değildir: çıktıda (kart, okuma modeli) görünmez, kaydı silinmez.
+    unused_chars: set[str] = set()
+    if outside:
+        mention_pages = {str(r['character_id']): set(r['pages']) for r in c.execute(
+            "SELECT character_id,array_agg(DISTINCT page_no) AS pages FROM ed.character_mention "
+            "WHERE generation_id=%s AND character_id IS NOT NULL GROUP BY character_id", (gid,))}
+        unused_chars = page_scope.characters_outside(characters, mention_pages, outside)
+        characters = [ch for ch in characters if str(ch['id']) not in unused_chars]
     if gen['origin'] != 'TRACKED': blockers.append('LEGACY_UNASSESSED')
     if any(p['issues'] for p in pages): blockers.append('SOURCE_ISSUES')
     if not pages or any(p['page_role']=='UNKNOWN' for p in pages): blockers.append('PAGE_ROLES_UNASSESSED')
@@ -110,7 +119,8 @@ def capture(c, gid: str, roles_override: dict | None = None) -> dict:
         'events':events,'emotions':emotions,'characters':characters,'reviews':reviews,
         'contradictions':contradictions,'regression':regression,
         'sources':pages,'blockers':blockers,'semantic_acceptance':False,
-        'scope':{'policy':page_scope.SOURCE,'out_of_scope_pages':sorted(outside),'claims_unused':len(dropped)}})
+        'scope':{'policy':page_scope.SOURCE,'out_of_scope_pages':sorted(outside),'claims_unused':len(dropped),
+                 'characters_unused':len(unused_chars)}})
 
 
 def preview(gid: str) -> dict:
@@ -278,6 +288,53 @@ def spread(snap: dict, claims: list[dict], slots: int, chosen: set | None = None
     return sorted(add, key=lambda c: (_first_page(c), c['id']))
 
 
+#: Bölüm özetinin girdisi: kaynak sayfalarının HEPSİ bölüm aralığında (iki uçta bu kadar sayfa payıyla) olan
+#: iddialar. 2026-10-02 denetimi: «sayfalarından biri bölümde» kuralıyla kitabın bütününe yayılan tema iddiaları her
+#: bölüm özetine aynen giriyordu.
+CHAPTER_PAGE_TOLERANCE = 1
+
+
+def chapter_claims(chapters: list[dict], claims: list[dict], tolerance: int = CHAPTER_PAGE_TOLERANCE) -> list[list[dict]]:
+    """Her bölüm için girdisi: kaynak sayfaları bölüm aralığında (± tolerance) kalan iddialar; her iddia yalnız
+    bir bölüme gider (sayfalarının çoğunun düştüğü, eşitlikte ilk bölüm). Sayfasız iddia hiçbir bölüme girmez."""
+    out: list[list[dict]] = [[] for _ in chapters]
+    for c in claims:
+        pages = c.get('source_pages') or []
+        if not pages:
+            continue
+        best, share = None, 0
+        for i, ch in enumerate(chapters):
+            lo, hi = ch['page_from'] - tolerance, ch['page_to'] + tolerance
+            if not all(lo <= p <= hi for p in pages):
+                continue
+            n = sum(1 for p in pages if ch['page_from'] <= p <= ch['page_to'])
+            if best is None or n > share:
+                best, share = i, n
+        if best is not None:
+            out[best].append(c)
+    return out
+
+
+def dedupe_chapter_sentences(chapters: list[dict]) -> list[dict]:
+    """Aynı cümle birden çok bölüm özetinde tekrarlanmaz: kitap sırasında ilk geçtiği bölümde kalır."""
+    seen: set[str] = set()
+    out = []
+    for ch in chapters:
+        keep = []
+        for s in ch.get('sentences') or []:
+            text = s.get('text') if isinstance(s, dict) else None
+            if not text:
+                keep.append(s)
+                continue
+            k = ' '.join(text.split()).casefold()
+            if k in seen:
+                continue
+            seen.add(k)
+            keep.append(s)
+        out.append({**ch, 'sentences': keep})
+    return out
+
+
 async def _condense(snap: dict, claims: list[dict], label: str, *, plot_only: bool) -> dict:
     """A long book's verified claims do not fit one call. Nothing is cut silently: the claims
     are split in page order into parts that fit, each part is summarised on its own (the model
@@ -315,9 +372,72 @@ async def _condense(snap: dict, claims: list[dict], label: str, *, plot_only: bo
     kept = [c for c in claims if c['id'] in chosen]
     if len(kept) >= len(claims):
         raise ValueError('Summary input could not be condensed below the bounded context')
+    selected = len(kept)
+    kept = cap_final(snap, kept, FINAL_INPUT_MAX)
     out = await summarize(snap, kept, label, plot_only=plot_only, pool=claims)
     out['model_calls'] = calls + out.get('model_calls', [])
-    out['condensed'] = {'claims': len(claims), 'parts': stages, 'final_input': len(kept)}
+    out['condensed'] = {'claims': len(claims), 'parts': stages, 'selected': selected, 'final_input': len(kept)}
+    return out
+
+
+#: Uzun kitabın son özetine giren iddia sayısı = özetin cümle tavanı. 2026-10-02 denetimi: parça seçimleri + yayma
+#: son özete ~71 iddia sokuyordu; model şemanın 24 cümlesini hep baştan dolduruyor, «son sayfalardan olay» kuralı
+#: üç denemede de düşüyor ve özet yedeğe kalıyordu. Kitabın bütününe eşit dilimlerle indirilir: model ne seçerse
+#: seçsin kitabın başından sonuna yayılır.
+FINAL_INPUT_MAX = 24
+
+
+def cap_final(snap: dict, claims: list[dict], limit: int) -> list[dict]:
+    """claims > limit ise sayfa aralığının `limit` eşit diliminin her birinden en önemli iddia; ilk ve son hikâye
+    iddiası her zaman içinde (sayfa sırasıyla). Model çağırmaz."""
+    if len(claims) <= limit:
+        return list(claims)
+    ordered = sorted(claims, key=lambda c: (_first_page(c), c['id']))
+    story = _story(snap, ordered) or ordered
+    keep = {story[0]['id']: story[0], story[-1]['id']: story[-1]}
+    for c in spread(snap, story, max(1, limit - 2)):
+        if len(keep) >= limit:
+            break
+        keep.setdefault(c['id'], c)
+    return sorted(keep.values(), key=lambda c: (_first_page(c), c['id']))
+
+
+def edge_fill(snap: dict, claims: list[dict], rows: list[dict], ends, limit: int) -> list[dict]:
+    """Olay özeti kitabın baş ya da son sayfalarından hiç olay taşımıyorsa, o aralığın en önemli doğrulanmış
+    iddiası uygulama tarafından kelimesi kelimesine eklenir (model çağrısı yok; `EXACT_VERIFIED_CLAIM`). Cümle
+    tavanı aşılırsa, eklenenin dışında sayfaca en sık yerdeki iç cümle düşer. Ekleyecek iddia yoksa rows aynen."""
+    if not ends or not rows:
+        return rows
+    proven = {e['claim_id'] for e in snap['evidence'] if e['quote_verified']}
+    used = {cid for r in rows for cid in r['claim_ids']}
+    texts = {r['text'].strip() for r in rows}
+    key = _rank(snap)
+    added = []
+    for lo, hi in ends:
+        if any(lo <= p <= hi for r in rows for p in r['pages']):
+            continue
+        cands = [c for c in _story(snap, claims) if c['id'] in proven and c['id'] not in used
+                 and c['claim'].strip() not in texts and c['source_pages'] and lo <= _first_page(c) <= hi]
+        if not cands:
+            continue
+        best = max(cands, key=key)
+        row = bind_sentences({'sentences': [{'text': best['claim'].strip(), 'claim_ids': [best['id']]}]},
+                             claims, snap['evidence'])[0]
+        row['support_check'] = 'EXACT_VERIFIED_CLAIM'
+        row['added_by'] = 'edge_fill'
+        added.append(row)
+        used.add(best['id'])
+    if not added:
+        return rows
+    out = sorted(rows + added, key=lambda r: (min(r['pages']) if r['pages'] else 0))
+    while len(out) > limit:
+        inner = [i for i in range(1, len(out) - 1) if out[i].get('added_by') != 'edge_fill']
+        if not inner:
+            break
+        def crowd(i):
+            a, b, m = (min(out[j]['pages'] or [0]) for j in (i - 1, i + 1, i))
+            return (min(m - a, b - m), i)
+        out.pop(min(inner, key=crowd))
     return out
 
 
@@ -389,11 +509,10 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
             bound = {'sentences':[{'text':row['text'],
                 'claim_ids':[reference_ids[r] for r in row['claim_ids']]} for row in out['sentences']]}
             rows = bind_sentences(bound,claims,snap['evidence'])
-            if plot_only and ends:
-                selected_pages = [p for row in rows for p in row['pages']]
-                if not selected_pages or min(selected_pages) > ends[0][1] or max(selected_pages) < ends[1][0]:
-                    raise ValueError('Plot summary must include an event from the first and the last story pages: '
-                                     + str(ends))
+            # The story's first and last pages: when the model left an end out, the application adds
+            # that end's most important verified claim word for word after the critic (edge_fill) —
+            # no extra model call and no rejected attempt (2026-10-02: the end rule refused all three
+            # attempts and every long book fell back to the extractive summary).
             if attempt == 2 and any(len(s['claim_ids']) != 1 or s['text'].strip() !=
                     allowed[s['claim_ids'][0]]['claim'].strip() for s in rows):
                 raise ValueError('Final repair must preserve selected verified claim text exactly')
@@ -436,6 +555,8 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
                             feedback.append({'error':'Unsupported subject, meaning, or modality',
                                              'reason':verdict['reason'],**checks[i]})
         if not feedback:
+            if plot_only and ends:
+                rows = edge_fill(snap, claims, rows, ends, SUMMARY_SCHEMA['properties']['sentences']['maxItems'])
             return {'sentences':rows,'status':'SOURCE_SUPPORTED_DRAFT','model_calls':calls,
                     'attempts':attempt+1,'rejected_attempts':rejected,'critic_disagreements':disagreements}
         rejected.append({'attempt':attempt+1,'feedback':feedback})

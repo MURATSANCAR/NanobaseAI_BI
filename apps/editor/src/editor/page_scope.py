@@ -30,18 +30,37 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import re
 import sys
 import time
 
 #: print_plan nedeni → yazılacak sayfa rolü
 ROLE_OF = {"künye": "FRONT_MATTER", "iç kapak": "FRONT_MATTER", "yazar tanıtımı": "FRONT_MATTER",
-           "içindekiler": "NON_STORY", "yayınevi tanıtımı": "NON_STORY", "ithaf": "NON_STORY"}
-#: İthaf: baskıda kalır (print_plan onu basar), okumada kitabın olayı değildir. Yalnız okumanın da hikâye dışı
-#: dediği ön sayfada ve metni ithafsa: kısa (≤ 40 sözcük) ve ithaf sözcüğü ya da «Ad'a/'e/'ya/'ye/'na/'ne,» ile
-#: açılıyor (Benim Adım Ekin s.1: «Ekin'e, ... sarıp sarmalayanlara...»). Yer/yıl satırı («İstanbul 2025») sayılmaz.
+           "içindekiler": "NON_STORY", "yayınevi tanıtımı": "NON_STORY", "ithaf": "NON_STORY",
+           "epigraf": "NON_STORY"}
+#: İthaf: baskıda kalır (print_plan onu basar), okumada kitabın olayı değildir. Metni ithafsa: kısa (≤ 40 sözcük) ve
+#: ithaf sözcüğü, «Ad'a/'e/'ya/'ye/'na/'ne,» ile açılıyor (Benim Adım Ekin s.1: «Ekin'e, ... sarıp
+#: sarmalayanlara...») ya da satırın HERHANGİ bir yerinde özel ad + yönelme eki bir öbeği bitiriyor («Bana masal
+#: anlatan büyükannem Ad'a.» — 2026-10-02 denetimi: bu biçim kaçtı, ithaf kitabın ilk olayı ve özetin ilk cümlesi
+#: oldu). Yer/yıl satırı («İstanbul 2025») sayılmaz.
 _ITHAF = re.compile(r"\bithaf|hat[ıi]ras[ıi]na|an[ıi]s[ıi]na", re.I)
 _DATIVE = re.compile(r"^\W*[^\W\d_]+['’](y?[ae]|n[ae])\b")
+#: özel ad (büyük harfle başlar) + kesme + yönelme eki, ardından satır sonu ya da öbek sonu (virgül, nokta, «ve»):
+#: «… büyükannem Ad'a.», «Ad'a ve Ad'e,». Gövde cümlesinde yönelme eki çoğunlukla fiilden önce gelir («topu Ad'a
+#: verdi») ve eşleşmez.
+_DATIVE_ANY = re.compile(r"(?<![^\W\d_])[A-ZÇĞİÖŞÜÂÎÛ][^\W\d_]*['’](?:y?[ae]|n[ae])"
+                         r"(?=\s*(?:[,.;:!…]|$)|\s+(?:ve|ile)\b)", re.M)
+#: Epigraf: bir alıntı ve son satırında yalnız kaynağı («— Yazar», «– Ad Soyad, Eser»). Diyalog çizgisiyle
+#: karışmasın diye sayfada çizgiyle açılan tek satır o kaynak satırıdır, kaynak cümle değildir (nokta/soru ile
+#: bitmez, ≤ 8 sözcük, büyük harfle başlar); alıntı tırnakla açılmıyorsa okumanın da hikâye dışı demesi gerekir.
+_DASH_LINE = re.compile(r"^\s*[—–-]{1,2}\s*(?P<src>\S.*)$")
+_QUOTE_OPEN = re.compile(r"^\s*[«“\"'‘„]")
+#: Okumanın önerisi olmayan sayfada ithaf/epigraf yalnız kitabın ilk %5'inde (en az 2 sayfa) ve gövdenin ilk uzun
+#: sayfasından (> 40 sözcük) önce aranır: resimli kitabın kısa gövde sayfası ithaf sayılmasın.
+FRONT_SHARE = 0.05
+SHORT_WORDS = 40
+EPIGRAPH_WORDS = 60
 SOURCE = "auto"
 #: kapsam dışı sayfayı çıktıdan düşüren rol kaynakları (editörün kararı + otomatik kural; okumanın
 #: `extract` önerisi değil)
@@ -72,13 +91,49 @@ def classify(pages: dict[int, list[str]], suggested: set[int], last_page: int,
     out = {p: (ROLE_OF[why], why) for p, (why, keep) in sorted(plan_.items()) if keep == 0 and why in ROLE_OF}
     from .production.manuscript import _PLACE_YEAR
     front = max(10, last_page // 10)
-    for p in sorted(suggested):
+    words = {p: len(" ".join(t).split()) for p, t in pages.items()}
+    body = min((p for p, n in words.items() if n > SHORT_WORDS and p not in out), default=last_page + 1)
+    early = {p for p in pages if p <= max(2, math.ceil(last_page * FRONT_SHARE)) and p < body}
+    for p in sorted(set(suggested) | early):
         ps = [t for t in pages.get(p, []) if t.strip() and not _PLACE_YEAR.match(t)]
-        if p in out or p > front or not ps or len(" ".join(ps).split()) > 40:
+        if p in out or p > front or not ps:
             continue
-        if _ITHAF.search(" ".join(ps)) or _DATIVE.match(ps[0]):
-            out[p] = (ROLE_OF["ithaf"], "ithaf")
+        why = front_page_kind(ps, suggested=p in suggested)
+        if why:
+            out[p] = (ROLE_OF[why], why)
     return dict(sorted(out.items()))
+
+
+def is_dedication(lines: list[str]) -> bool:
+    """Kısa ön sayfanın metni ithaf mı (yer/yıl satırı çıkarılmış satırlar)."""
+    text = "\n".join(lines)
+    if not lines or len(text.split()) > SHORT_WORDS:
+        return False
+    return bool(_ITHAF.search(text) or _DATIVE.match(lines[0]) or _DATIVE_ANY.search(text))
+
+
+def is_epigraph(lines: list[str], *, suggested: bool = False) -> bool:
+    """Alıntı + «— Kaynak» sayfası mı. Diyalog sayfası değil: çizgiyle açılan yalnız son satır (kaynak), ondan
+    önce en az bir alıntı satırı; alıntı tırnakla açılmıyorsa okumanın önerisi şart."""
+    if len(lines) < 2 or len(" ".join(lines).split()) > EPIGRAPH_WORDS:
+        return False
+    m = _DASH_LINE.match(lines[-1])
+    if not m or any(_DASH_LINE.match(t) for t in lines[:-1]):
+        return False
+    src = m.group("src").strip()
+    words = [w for w in re.split(r"[\s,]+", src) if w]
+    if not words or len(words) > 8 or re.search(r"[.!?…:]$", src) or not words[0][:1].isupper():
+        return False
+    return bool(_QUOTE_OPEN.match(lines[0])) or suggested
+
+
+def front_page_kind(lines: list[str], *, suggested: bool = False) -> str | None:
+    """Kısa ön sayfa ithaf mı, epigraf mı (`classify`'ın ön sayfa kuralı; salt hesap)."""
+    if is_dedication(lines):
+        return "ithaf"
+    if is_epigraph(lines, suggested=suggested):
+        return "epigraf"
+    return None
 
 
 def inputs(c, gid: str) -> dict:
@@ -148,6 +203,17 @@ def scoped(claim: dict, pages: set[int]) -> bool:
     return claim["kind"] in SCOPED_KINDS and bool(set(claim.get("source_pages") or []) & pages)
 
 
+def characters_outside(characters: list[dict], mention_pages: dict[str, set[int]], pages: set[int]) -> set[str]:
+    """Bütün anmaları kapsam dışı sayfalarda olan karakterlerin kimlikleri (salt hesap). Anması hiç olmayan
+    karakter hakkında hüküm yok: kalır."""
+    out = set()
+    for ch in characters:
+        seen = mention_pages.get(str(ch["id"])) or set()
+        if seen and seen <= pages:
+            out.add(str(ch["id"]))
+    return out
+
+
 def ensure(gid: str) -> dict:
     """Bütün kitap için kuralı uygular (okuma sonu doğrulamasında; doğrulama jetonu çağıranın bağlamında)."""
     from . import db
@@ -155,7 +221,25 @@ def ensure(gid: str) -> dict:
         p = plan(c, gid)
         n = apply(c, gid, p["writes"])
     return {"auto_pages": {k: v[1] for k, v in p["found"].items()}, "written": n,
+            "front_matter_written": sorted(k for k, (role, _) in p["writes"].items() if role == "FRONT_MATTER"),
             "editor_kept": sorted(p["editor_kept"])}
+
+
+async def metadata_after_scope(gid: str, scope: dict) -> dict | None:
+    """Künye okuması, `ensure` yeni künye sayfası işaretlediyse ve kitapta künye iddiası yoksa.
+
+    Sıra sorunu (2026-10-02 denetimi): künye adımı (`catalog.extract_metadata`) okumanın sonunda, bütün kitabın
+    sayfa kuralı (`ensure`, doğrulamada) yazılmadan koşar; o an künye sayfası bulamazsa METADATA boş kalır ve
+    sonradan yazılan FRONT_MATTER rolü künyeyi yeniden okutmazdı (yalnız `regenerate` okuyordu). Künye iddiası
+    zaten varsa `extract_metadata` model çağırmaz. Hata çıktıyı durdurmaz: kart künyesiz kalır, sebep döner."""
+    if not scope.get("front_matter_written"):
+        return None
+    from . import catalog
+    try:
+        meta = await catalog.extract_metadata(gid)
+    except Exception as exc:  # noqa: BLE001 — künye eksikliği kitabın çıktısını düşürmez
+        return {"error": f"{type(exc).__name__}: {exc}"[:300]}
+    return {"fields": sorted(meta), "pages": scope["front_matter_written"]}
 
 
 def for_chunk(c, gid: str, page_from: int, page_to: int, suggested: set[int]) -> set[int]:
