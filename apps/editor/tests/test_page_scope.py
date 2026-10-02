@@ -121,7 +121,7 @@ def test_plot_summary_ends_are_story_pages(monkeypatch):
     monkeypatch.setattr(llm, "Llm", FakeLlm)
     out = asyncio.run(outputs.summarize(snap, snap["claims"], "Kitabın olay örgüsü özeti", plot_only=True))
     assert out["status"] == "SOURCE_SUPPORTED_DRAFT"
-    assert "Kitabın başı s.3–3, sonu s.29–29" in asked[0]
+    assert "Kitabın başı s.3–4, sonu s.28–29" in asked[0]
 
 
 def test_edges_tolerate_one_paratext_event_at_the_very_end():
