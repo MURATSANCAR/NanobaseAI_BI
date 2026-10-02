@@ -319,6 +319,17 @@ def screen_shared_evidence(verdicts: list[dict], pages: dict[int, str]) -> list[
 PARATEXT_ONLY = "PARATEXT_ONLY"
 
 
+def about_the_book_pages(roles) -> list[int]:
+    """Pages the page roles put outside the text: FRONT_MATTER always; NON_STORY only in a book that
+    has STORY pages. A non-fiction book (an essay, a biography, a study) is NON_STORY on every page —
+    İbn Sina 148/148, Takılı Kalan Zihin 110/110 (2026-10-02) — and there NON_STORY says nothing about
+    which page talks about the book: read as paratext it refused every person the book discusses
+    («İbn Sînâ'nın babası Abdullah, annesi Sitâre», Aristoteles, Platon) as PARATEXT_ONLY."""
+    rows = [(int(r["page_no"]), r["role"]) for r in roles]
+    story = any(role == "STORY" for _, role in rows)
+    return [p for p, role in rows if role == "FRONT_MATTER" or (role == "NON_STORY" and story)]
+
+
 def paratext_pages(pages: dict[int, str], role_pages, contributors, last_page: int) -> set[int]:
     """Pages about the book rather than in it (see above). A contributor's name counts only in
     full and only with two or more words, so a one-word name the story also uses cannot turn a

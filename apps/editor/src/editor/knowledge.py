@@ -616,9 +616,8 @@ async def resolve_character_identity(generation_id: str, final_attempt: bool = F
         # two written names are one person only where the book joins them
         verdicts = naming.screen_shared_evidence(verdicts, idx.raw)
         # ---- pages about the book, not in it (author/illustrator notes, title pages)
-        role_pages = [r["page_no"] for r in c.execute(
-            "SELECT page_no FROM page_role WHERE generation_id=%s AND role IN ('NON_STORY','FRONT_MATTER')",
-            (generation_id,)).fetchall()]
+        role_pages = naming.about_the_book_pages(c.execute(
+            "SELECT page_no, role FROM page_role WHERE generation_id=%s", (generation_id,)).fetchall())
         last_page = max(idx.raw) if idx.raw else 0
         paratext = naming.paratext_pages(idx.raw, role_pages, _book_contributors(c, generation_id), last_page)
         # the characters' names say WHO; none of them says what a description says (a relation

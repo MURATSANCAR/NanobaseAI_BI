@@ -6,6 +6,10 @@ yeni sayfada, metinden aşağıda başlar; başlık gövdeden büyük ya da alt�
 kitaplarda başlık kendi sayfasındadır, metin sonraki sayfada başlar. Kural kitaptan bağımsızdır; sayfa
 başlığı/altlığı (≥3 sayfada aynı kısa küçük satır), künye, ithaf, içindekiler ve tanıtım sayfası bölüm
 sayılmaz. 2026-10-01: 26 kabul kitabında ölçüldü (eski kural Babam 150, Duvarları 199 bölüm buluyordu).
+2026-10-02: büyük puntolu başlığın kendi satır aralığı gövdeninkinden büyüktür: aynı puntolu başlık satırları
+arasındaki boşluk başlığı bölmez («DUT AĞACININ / ALTINDA»); gövdeden az büyük, birden çok satırlı başlık («YER
+ALTI / OYUNLARI», 24/21 pt) altındaki boşlukla tanınır; yanda duran etiket («BÖLÜM 1») başlık satırlarının arasına
+karışmaz; iri puntolu konuşma («Tabii ki FİLİN!», «… beliriyordu.») cümledir, başlık değildir.
 """
 
 from __future__ import annotations
@@ -18,7 +22,7 @@ HEAD_BIG = 1.15      # bu oranı aşan satır boşluk aranmadan başlık adayıd
 HEAD_MIN = 1.02      # gövdeden biraz büyük satır, altında boşluk varsa başlık
 HEAD_LOW = 0.85      # bölüm başı sayfasında altında boşluk olan küçük puntolu satır da başlıktır («1.», «arayış»)
 GAP = 1.8            # başlık ile metin arası: satır aralığının en az bu katı
-_NOT_TITLE = ("içindekiler", "contents", "kaynakça", "kaynaklar", "dizin", "notlar", "bibliyografya",
+_NOT_TITLE = ("içindekiler", "contents", "kaynakça", "kaynaklar", "dizin", "indeks", "index", "notlar", "bibliyografya",
               "yeni kitap önerimiz")
 _SENT_BREAK = re.compile(r"[^\W\d_][.!?…]+[\"”’']?\s+\S")      # başlıkta cümle sonu + devam: konuşma/metin
 _NUMBER = re.compile(r"^\d{1,3}\.?$")
@@ -35,6 +39,21 @@ def _norm(t: str) -> str:
 def _median(xs: list[float]) -> float:
     xs = sorted(xs)
     return xs[len(xs) // 2] if xs else 0.0
+
+
+def _sentence(t: str) -> bool:
+    """Başlık değil, iri puntolu cümle: noktayla ya da ünlemle biter (üç nokta değil) ve ilk kelimeden sonra
+    küçük harfle başlayan bir kelime taşır («Tabii ki FİLİN!», «O sırada sanki … beliriyordu.»). Başlıklar
+    büyük harfli ya da her kelimesi büyük harfle başlar; tek kelimelik ünlem («GECELER!», «sensİz!») ve büyük
+    harfsiz dizgi («razıyım yâ rab!») başlıktır. Birden çok satır cümle olarak sürüyorsa («… sanırsın? Küllerin
+    …», şiir) ya da son kelime bölünmüşse («izledi-») metindir."""
+    t = t.strip()
+    if len(t.split()) > 1 and (_SENT_BREAK.search(t) or re.search(r"(?:^|\s)[^\W\d_]+[-­]$", t)):
+        return True                     # satırlar cümle olarak sürüyor ya da kelime bölünmüş: metin
+    if not re.search(r"[^.!…][.!]$", t) or _NUMBER.match(t) or not any(c.isupper() for c in t):
+        return False                    # küçük harfli dizgi («razıyım yâ rab!») başlık olabilir
+    words = re.findall(r"[^\W\d_][\w’'-]*", t)
+    return len(words) >= 2 and any(w[0].islower() for w in words[1:])
 
 
 def _title_like(t: str) -> bool:
@@ -77,35 +96,94 @@ def _opening(v: dict, L: dict) -> dict | None:
     def is_body(ln):
         return abs(ln["size"] - body) < 0.6 and len(ln["text"]) > 25
 
-    if sum(map(is_body, ls)) < 3:
-        # başlık sayfası: yalnız kısa satırlar (bölüm adı, kısım adı); metin sonraki sayfada
+    if sum(map(is_body, ls)) < 3 and (len(ls) <= 6 or sum(
+            len(ln["text"]) > 25 and ln["size"] > body + 0.6 for ln in ls) < 3):
+        # başlık sayfası: yalnız kısa satırlar (bölüm adı, kısım adı); metin sonraki sayfada. Metni gövdeden
+        # İRİ puntolu sayfa («Evet Selin, …» 20/14 pt) başlık sayfası değildir: açılışı aşağıda aranır.
+        # Gövdeden küçük puntolu metin (arka kapak tanıtımı, yazar özgeçmişi) bölüm açmaz.
         lines = [ln for ln in ls if _title_like(ln["text"])]
         words = sum(len(ln["text"].split()) for ln in lines)
-        text = " ".join(ln["text"].strip() for ln in lines)
-        if lines and len(lines) == len(ls) and len(ls) <= 6 and words <= 12 and not _DEDICATION.search(text):
+        text = " ".join(ln["text"].strip() for ln in _reading_order(lines))
+        if (lines and len(lines) == len(ls) and len(ls) <= 6 and words <= 12 and not _DEDICATION.search(text)
+                and not _sentence(text)):
             return {"title": text, "size": max(ln["size"] for ln in lines), "kind": "page"}
         return None
     head, i = [], 0
-    while i < len(ls) and len(head) < 4:
+    while i < len(ls) and len(head) < 5:
         ln = ls[i]
         nxt = ls[i + 1] if i + 1 < len(ls) else None
         gap = (nxt["y0"] - ln["y0"]) if nxt else 1e9
         big = ln["size"] >= body * HEAD_BIG
+        sized = ln["size"] >= body * HEAD_MIN or (sunk and ln["size"] >= body * HEAD_LOW)
         ok = _title_like(ln["text"]) and (
-            big or (gap >= step * GAP and (ln["size"] >= body * HEAD_MIN or (sunk and ln["size"] >= body * HEAD_LOW)))
-            or (head and abs(ln["size"] - head[-1]["size"]) < 0.3))
+            big or (gap >= step * GAP and sized)
+            or (head and abs(ln["size"] - head[-1]["size"]) < 0.3)
+            or (not head and sized and _run_then_gap(ls, i, step)))
         if not ok:
             break
         head.append(ln)
         i += 1
-        if gap >= step * GAP:
+        if gap >= step * GAP and not _title_continues(ln, nxt, gap):
             break
     if not head:
         return {"title": "", "size": 0, "kind": "sunk"} if sunk else None
-    title = " ".join(ln["text"].strip() for ln in head)
+    title = " ".join(ln["text"].strip() for ln in _reading_order(head))
     if title[:1].islower() and not sunk:
         return None
+    if _sentence(title):
+        return {"title": "", "size": 0, "kind": "sunk"} if sunk else None
     return {"title": title, "size": max(ln["size"] for ln in head), "kind": "sunk" if sunk else "head"}
+
+
+def _title_continues(ln: dict, nxt: dict | None, gap: float) -> bool:
+    """Büyük puntolu başlığın kendi satır aralığı: aynı puntodaki sonraki başlık satırı, puntonun 1,6 katı
+    içinde («BEYNİMDEN» 34 pt, 40 pt aşağıda «CIZIRTILAR GELİYOR»). Gövde satır aralığıyla ölçülen boşluk
+    başlığı ortasından bölerdi."""
+    return (nxt is not None and abs(nxt["size"] - ln["size"]) < 0.3 and gap <= ln["size"] * 1.6
+            and _title_like(nxt["text"]))
+
+
+def _run_then_gap(ls: list[dict], i: int, step: float) -> bool:
+    """Gövdeden az büyük (HEAD_MIN), birden çok satırlı başlık: aynı puntoda, başlık satırı gibi 2–4 satır, ardından
+    gövde satır aralığının GAP katı boşluk («YER ALTI / OYUNLARI» 24 pt, gövde 21 pt). Tek satırlıyı eski kural tanır."""
+    j = i
+    while (j + 1 < len(ls) and j - i < 3 and abs(ls[j + 1]["size"] - ls[i]["size"]) < 0.3
+           and _title_like(ls[j + 1]["text"])
+           and ls[j + 1]["y0"] - ls[j]["y0"] <= max(step * GAP, ls[i]["size"] * 1.6)):
+        j += 1
+    after = (ls[j + 1]["y0"] - ls[j]["y0"]) if j + 1 < len(ls) else 1e9
+    return j > i and after >= step * GAP
+
+
+def _reading_order(lines: list[dict]) -> list[dict]:
+    """Başlık satırları okuma sırasıyla. Yatayda öbürleriyle hiç örtüşmeyen satır ayrı bir sütundur (sağda duran
+    «BÖLÜM 1» etiketi, başlığın iki satırının arasına düşen yüksekliktedir): sütunlar ayrı okunur, tek satırlık kısa
+    etiket sütunu önce. Konumu bilinmeyen satırlar geldikleri sırada kalır."""
+    if len(lines) < 2 or any(ln.get("x0") is None or ln.get("x1") is None for ln in lines):
+        return lines
+    cols: list[list[dict]] = []
+    for ln in sorted(lines, key=lambda l: l["y0"]):
+        for col in cols:
+            if any(min(ln["x1"], c["x1"]) > max(ln["x0"], c["x0"]) for c in col):
+                col.append(ln)
+                break
+        else:
+            cols.append([ln])
+    if len(cols) == 1:
+        return lines
+    # harf harf dizilmiş tek satır («R», «TA», «İ»…) ayrı sütunlar gibi görünür: satır satır, soldan sağa
+    if len(cols) > 3:
+        return sorted(lines, key=lambda l: (round(l["y0"] / max(l["size"], 1.0)), l["x0"]))
+    label = [c for c in cols if len(c) == 1 and len(c[0]["text"].split()) <= 2]
+    rest = [c for c in cols if c not in label]
+    if not rest:
+        return lines
+    # etiket öbür satırların yüksekliği içinde durur; sayfanın dibindeki tablo başlığı («MİLADİ MALI») etiket değil
+    top, bottom = min(ln["y0"] for c in rest for ln in c), max(ln["y0"] for c in rest for ln in c)
+    keep = [c for c in label if not top <= c[0]["y0"] <= bottom]
+    label = [c for c in label if c not in keep]
+    rest += keep
+    return [ln for c in label + sorted(rest, key=lambda c: c[0]["y0"]) for ln in c]
 
 
 def page_headings(doc, page_lines) -> dict[int, dict]:

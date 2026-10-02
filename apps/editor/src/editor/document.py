@@ -305,9 +305,25 @@ def _span_texts(page: pymupdf.Page, spans: list[dict]) -> list[str]:
     return texts
 
 
+def book_letters(doc: pymupdf.Document) -> dict[str, str]:
+    """Fontun verisinden onarılamayan karakter → kitabın sözlüğünden harf (pdf_repair.private_letter_map), belge
+    başına bir kez, onarılmış (`_open_version`) belgede. Böylece okuma, bölüm başlıkları, Stüdyo ve son okuma aynı
+    harfi görür (Aşk Terapi: U+F002 → ş, «¤» → ğ). Onarılmamış belgede (çizim, arşiv) hiçbir şey değişmez."""
+    repair = getattr(doc, "_editor_text_repair", None)
+    if repair is None:
+        return {}
+    if "private_letters" not in repair:
+        texts = [re.sub(r"[-\xad]\n", "", p.get_text("text") or "") for p in doc]
+        repair["private_letters"] = (pdf_repair.private_letter_map(texts)
+                                     if any(pdf_repair.unreadable(t) or re.search(f"[{pdf_repair._SUBST}]", t)
+                                            for t in texts) else {})
+    return repair["private_letters"]
+
+
 def _page_lines(page: pymupdf.Page) -> list[dict]:
     lines = []
     seen = set()
+    letters = book_letters(page.parent) if getattr(page, "parent", None) is not None else {}
     for b in page.get_text("dict", sort=True)["blocks"]:
         for ln in b.get("lines", []):
             # alpha 0 = invisible text (overset frames behind artwork): not on the page
@@ -323,6 +339,8 @@ def _page_lines(page: pymupdf.Page) -> list[dict]:
                 inked[0] < k < inked[-1] and abs(s["size"] - visible[k - 1]["size"]) > 0.5
                 and abs(s["size"] - visible[k + 1]["size"]) > 0.5)]
             text = re.sub(r"\s+", " ", "".join(_span_texts(page, spans))).strip()
+            if letters:
+                text = pdf_repair.apply_private_letters(text, letters)
             # Overprinted glyphs can produce two identical lines at exactly the
             # same coordinates. Preserve repeated prose elsewhere on the page.
             identity = (text, tuple(ln['bbox']))

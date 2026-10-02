@@ -144,3 +144,38 @@ def test_spaced_paragraphs_from_layout():
     assert len(paragraphs_from_layout(page)) == 1
     spaced = paragraphs_from_layout(page, spaced=True)
     assert len(spaced) == 3 and "Ah, yapraklara" in spaced[1]   # sahte PDF fontunda Türkçe harf yok
+
+
+def _ln(text, y0, size, x0=60.0, x1=None):
+    return {"text": text, "y0": y0, "size": size, "x0": x0, "x1": x1 if x1 is not None else x0 + 7 * len(text)}
+
+
+def test_multi_line_heading_in_large_type_is_not_cut_by_its_own_leading():
+    """34 pt başlığın iki satırı arası 40 pt (gövde satır aralığının iki katı): başlık bölünmez."""
+    pages = [_page([_ln("BEYNİMDEN", 140, 34.0), _ln("CIZIRTILAR GELİYOR", 180, 34.0)] + _body(260, 18))
+             for _ in range(1)] + [_page(_body(60)) for _ in range(3)]
+    found = typeset.chapters_from_pages(_pages(pages), typeset.page_headings(pages, _lines))
+    assert found[0]["title"] == "BEYNİMDEN CIZIRTILAR GELİYOR"
+
+
+def test_two_line_heading_slightly_above_body_size():
+    """Gövde 10 pt, başlık 11 pt iki satır, altında boşluk («YER ALTI / OYUNLARI»)."""
+    doc = [_page([_ln("YER ALTI", 60, 11.0), _ln("OYUNLARI", 74, 11.0)] + _body(110, 18)),
+           _page(_body(60)), _page([_ln("İLK", 60, 11.0), _ln("DENEY", 74, 11.0)] + _body(110, 18)), _page(_body(60))]
+    found = typeset.chapters_from_pages(_pages(doc), typeset.page_headings(doc, _lines))
+    assert [c["title"] for c in found] == ["YER ALTI OYUNLARI", "İLK DENEY"]
+
+
+def test_side_label_does_not_split_the_heading():
+    """Sağda «BÖLÜM 1» etiketi başlığın iki satırının arasındaki yükseklikte: başlık karışmaz."""
+    doc = [_page([_ln("OSMANLI MERKEZ VE TAŞRA", 110, 16.6, 97, 300), _ln("BÖLÜM 1", 120, 25.8, 333, 400),
+                  _ln("MÜLKÎ-MALÎ İDARESİ", 135, 16.6, 97, 280)] + _body(200, 18)), _page(_body(60))]
+    found = typeset.chapters_from_pages(_pages(doc), typeset.page_headings(doc, _lines))
+    assert found[0]["title"] == "BÖLÜM 1 OSMANLI MERKEZ VE TAŞRA MÜLKÎ-MALÎ İDARESİ"
+
+
+def test_large_type_sentence_is_not_a_heading():
+    """Resimli kitapta iri puntolu konuşma («Tabii ki FİLİN!») bölüm başlığı değildir."""
+    assert typeset._sentence("Tabii ki FİLİN!") and typeset._sentence("O sırada sanki başında minik dikenler beliriyordu.")
+    assert not any(typeset._sentence(t) for t in ("BİTTİK BİZ!", "GECELER!", "sensİz!", "1.", "Hazan Ağlar Baharında...",
+                                                   "MaCeRa DeDİğİn BuDuR DoStUm!"))

@@ -122,6 +122,33 @@ def test_paratext_pages_role_and_contributor_on_an_edge_page():
     assert got == {3, 4, 99}                          # tek kelimelik ad (Kaya) sayfa belirlemez
 
 
+def test_non_story_is_paratext_only_in_a_book_with_story_pages():
+    """Deneme/inceleme kitabında her sayfa NON_STORY: rol kitabın hakkındaki sayfayı ayırmaz (İbn Sina)."""
+    roles = [{"page_no": p, "role": "NON_STORY"} for p in range(1, 41)] + [{"page_no": 2, "role": "FRONT_MATTER"}]
+    assert naming.about_the_book_pages(roles) == [2]
+    roles = [{"page_no": 3, "role": "NON_STORY"}, {"page_no": 4, "role": "STORY"}, {"page_no": 1, "role": "FRONT_MATTER"}]
+    assert sorted(naming.about_the_book_pages(roles)) == [1, 3]
+
+
+def test_same_name_groups_join_unless_the_reading_kept_them_apart():
+    from editor import identity
+    u = lambda name, pages, windows=(), kind="HUMAN_ADULT", sex="MALE", n=3: {
+        "name": name, "kind": kind, "sex": sex, "entity_scope": "INDIVIDUAL", "pages": set(pages),
+        "windows": set(windows), "n": n}
+    units = [u("Asım", [10, 11], [0], n=9), u("ASIM", [80], [3]), u("Asım", [150], [5]),
+             u("Asım", [11], [1]),                                   # aynı sayfa: iki ayrı Asım
+             u("Asım", [200], [7], sex="FEMALE"),                    # cinsiyet çelişkisi
+             u("babam", [20], [1]), u("Babam", [90], [4])]          # konuşana göreli etiket
+    proper = lambda n: identity.name_key(n) != "babam"
+    clusters, refused = identity.same_name_plan(units, proper)
+    assert clusters == [[0, 1, 2]]
+    reasons = {r["reason"] for r in refused}
+    assert {"SAME_PAGE", "SEX_CONFLICT", "NOT_A_PROPER_NAME"} <= reasons
+    # aynı pencerede ayrı tutulmuş iki grup birleşmez
+    clusters, refused = identity.same_name_plan([u("Ekin", [1], [2]), u("Ekin", [5], [2])])
+    assert clusters == [] and refused[0]["reason"] == "SAME_WINDOW"
+
+
 def test_edge_page_is_the_credit_bound():
     assert naming.edge_page(6, 40) and naming.edge_page(40, 40) and not naming.edge_page(20, 40)
     assert naming.edge_page(40, 500) and not naming.edge_page(41, 500)
@@ -255,7 +282,9 @@ class FakeLedgerDB:
                 outer.executed.append((sql, params))
                 outer.n += 1
                 if "FROM page_role" in sql:
-                    return _Cur([{"page_no": p} for p in outer.role_pages])
+                    # sayfa rolü verilen sayfalar NON_STORY, kitabın öbür sayfaları STORY
+                    return _Cur([{"page_no": p, "role": "NON_STORY"} for p in outer.role_pages]
+                                + [{"page_no": p, "role": "STORY"} for p in range(1, 10) if p not in outer.role_pages])
                 if "to_regclass" in sql:
                     return _Cur([{"t": "ed.book_crm_record"}])
                 if "r.authors, r.illustrators" in sql:

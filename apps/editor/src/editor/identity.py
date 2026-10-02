@@ -370,6 +370,108 @@ async def cross_window(gid: str, chars: list[dict], by_mid: dict[str, dict], boo
     return out, info
 
 
+# ------------------------------------------------------------------ same name, one person
+# Cross-window joins above happen only where the model proposes them; a person met in many windows
+# («Asım» in seven windows of a 380-page novel) stayed seven characters whenever the model did not
+# propose each join. Code closes that gap without the model: groups carrying the same (folded) name
+# whose kind, sex and individual/collective scope agree are one person, unless the reading itself
+# kept them apart — they share a page (two people of one name on a page) or one window saw both and
+# made them two groups. Only a name the book writes as a name joins (naming.is_proper_name: capital
+# mid-sentence): «babam», «annem», «kadın», «bakan» are relative to who speaks, and a book with
+# several narrators has several of each. Nothing here is specific to a book.
+
+def name_key(name: str) -> str:
+    """A written name folded for comparison: Turkish case («İ»/«I»), punctuation and spacing."""
+    from . import ledger
+    n = (name or '').replace('İ', 'i').replace('I', 'ı')
+    return ledger.norm(n)
+
+
+def same_name_refusal(a: dict, b: dict) -> str | None:
+    """Why two same-named units are not joined (None = they are one person). A unit: name, kind, sex,
+    entity_scope, pages (set), windows (set)."""
+    bad = incompatible([a], [b])
+    if bad:
+        return bad
+    if a['pages'] & b['pages']:
+        return 'SAME_PAGE'
+    if a.get('windows') and b.get('windows') and a['windows'] & b['windows']:
+        return 'SAME_WINDOW'
+    return None
+
+
+def proper_name_test(text: str):
+    """name -> is it written as a name in this book (settings: proper_name_min_share / _min_uses)."""
+    from . import naming
+    from .config import settings
+    st = settings()
+    memo: dict[str, bool] = {}
+
+    def test(name: str) -> bool:
+        k = name_key(name)
+        if k not in memo:
+            memo[k] = naming.is_proper_name(name, text, min_share=st.proper_name_min_share,
+                                            min_uses=st.proper_name_min_uses)
+        return memo[k]
+    return test
+
+
+def same_name_plan(units: list[dict], proper=None) -> tuple[list[list[int]], list[dict]]:
+    """Clusters (index lists, 2+ members, largest unit first) of units that are one person by name, and
+    the refused pairs. A unit joins a cluster only if it is compatible with EVERY member (no chaining
+    across a conflict). Units are taken largest first, so the main record keeps its place. `proper`
+    (name -> bool): only names it accepts are joined."""
+    buckets: dict[str, list[int]] = {}
+    for i, u in enumerate(units):
+        k = name_key(u['name'])
+        if k:
+            buckets.setdefault(k, []).append(i)
+    clusters, refused = [], []
+    for k, idx in buckets.items():
+        if len(idx) < 2:
+            continue
+        if proper is not None and not proper(units[idx[0]]['name']):
+            refused.append({'name': units[idx[0]]['name'], 'with': units[idx[0]]['name'], 'records': len(idx),
+                            'reason': 'NOT_A_PROPER_NAME'})
+            continue
+        groups: list[list[int]] = []
+        for i in sorted(idx, key=lambda i: (-units[i].get('n', 0), i)):
+            for g in groups:
+                why = next((r for r in (same_name_refusal(units[i], units[j]) for j in g) if r), None)
+                if why is None:
+                    g.append(i)
+                    break
+                refused.append({'name': units[i]['name'], 'with': units[g[0]]['name'], 'reason': why})
+            else:
+                groups.append([i])
+        clusters += [g for g in groups if len(g) > 1]
+    return clusters, refused
+
+
+def same_name_join(chars: list[dict], by_mid: dict[str, dict], text: str = '') -> tuple[list[dict], dict]:
+    """`same_name_plan` over the joined groups of a windowed reading; `text` is the book as written."""
+    units = [{'name': ch['canonical_name'], 'kind': ch.get('kind'), 'sex': ch.get('sex'),
+              'entity_scope': ch.get('entity_scope'), 'n': len(ch['mention_ids']),
+              'pages': {by_mid[m]['page_no'] for m in ch['mention_ids'] if m in by_mid},
+              'windows': set(ch.get('window_ids') or [])} for ch in chars]
+    clusters, refused = same_name_plan(units, proper_name_test(text))
+    if not clusters:
+        return chars, {'joins': [], 'refused': refused}
+    taken = {i for g in clusters for i in g}
+    out = [ch for i, ch in enumerate(chars) if i not in taken]
+    joins = []
+    for g in clusters:
+        folded = _fold([chars[i] for i in g])
+        # the name is certain, the groups were each read: the main record's confidence stands (a stray
+        # three-mention group does not demote a confirmed main character)
+        folded['identity_confidence'] = float(chars[g[0]].get('identity_confidence') or 0)
+        folded['merge_basis'] = (folded.get('merge_basis', '') + ' | aynı ad: ' + chars[g[0]]['canonical_name']
+                                 + f' ({len(g)} grup)').strip(' |')[:600]
+        out.append(folded)
+        joins.append({'name': chars[g[0]]['canonical_name'], 'groups': len(g)})
+    return out, {'joins': joins, 'refused': refused}
+
+
 async def propose_book(gid: str, mentions: list[dict], corrections: str = '',
                        shrink: int = 0) -> tuple[dict, int, dict]:
     """`propose` for a book of any length. Fits (the proposal AND its critic, and no more mentions
@@ -487,6 +589,7 @@ async def _windowed(gid: str, mentions: list[dict], corrections: str, wins: list
             joined.append(parts[0] if len(parts) == 1 else _fold(parts))
     by_mid = {f'm{i}': m for i, m in enumerate(mentions)}
     final, cross = await cross_window(gid, joined, by_mid, book_norm_text(pages))
+    final, same_name = same_name_join(final, by_mid, '\n'.join(s['text'] for p in pages for s in p['spans']))
     # every mention exactly once: in one character, else unresolved
     seen: set[str] = set()
     characters = []
@@ -499,7 +602,7 @@ async def _windowed(gid: str, mentions: list[dict], corrections: str, wins: list
     audit = {'policy': POLICY, 'windowed': True, 'fit': f.as_dict(),
              'windows': [w.as_dict() for w in wins], 'window_runs': window_runs, 'failed': run.errors,
              'overlap_joins': sum(len(s) - 1 for s in sets), 'overlap_refused': refused,
-             'cross_window': cross, 'mentions_unresolved': len(unresolved)}
+             'cross_window': cross, 'same_name': same_name, 'mentions_unresolved': len(unresolved)}
     return ({'characters': characters, 'unresolved_mention_ids': unresolved,
              'conflicts': [c for m, c in conflicts.items() if m in by_mid]}, first_call, audit)
 
