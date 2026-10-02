@@ -80,6 +80,14 @@ NO_WAIT_HEADER = "x-editor-no-wait"
 CPU_TWIN_MAX_INPUTS = int(os.environ.get("EDITOR_CPU_TWIN_MAX_INPUTS", "4"))
 
 
+def _serving(o: "Alias") -> int:
+    """Modelin şu an gerçekten sunduğu istek sayısı. `inflight` _route'ta sırasını bekleyen istekleri de sayar; onlar
+    kartı kullanmıyor. Ölçüldü 2026-10-02: derin görsel model işi bitmiş, kartı tutarken yeni istekleri bekleyen modele
+    yol vermek için bekliyordu (yield); bekleyen istekler `inflight`'ı sıfırın üstünde tuttuğundan bekleyen model onu
+    «iş başında» sayıp hiç atamadı — iki taraf 30 dk birbirini bekledi (gpu_busy), okumalar zaman aşımına düştü."""
+    return max(0, o.inflight - YIELDING.get(o.name, 0))
+
+
 def _gpu_lock(gpu: int) -> asyncio.Lock:
     return GPU_LOCKS.setdefault(gpu, asyncio.Lock())
 PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score",
@@ -350,7 +358,7 @@ async def _make_room_inner(a: Alias, need: int, deadline: float) -> None:
         # An always-on model gives way only when nothing else can: it is stopped last and the
         # keeper brings it back as soon as the card has room again.
         now = time.time()
-        idle = sorted((o for o in others if o.inflight == 0 and not _held(o, a, now)), key=lambda o: o.always_on)
+        idle = sorted((o for o in others if _serving(o) == 0 and not _held(o, a, now)), key=lambda o: o.always_on)
         if idle:
             await _stop(idle[0], f"make room for {a.name}")
             await asyncio.sleep(3)
@@ -479,7 +487,7 @@ def _would_wait(a: Alias) -> bool:
     if free >= need:
         return False
     others = [o for o in ALIASES.values() if o.name != a.name and o.gpu == a.gpu and _is_running(o)]
-    reclaimable = sum(int(o.mem_fraction * total) for o in others if o.inflight == 0)
+    reclaimable = sum(int(o.mem_fraction * total) for o in others if _serving(o) == 0)
     return free + reclaimable < need
 
 

@@ -271,3 +271,16 @@ def test_no_wait_request_is_refused_when_model_is_not_up(G, monkeypatch):
     monkeypatch.setattr(G, "_background_start", lambda a: started.append(a.name) or asyncio.sleep(0))
     req = types.SimpleNamespace(headers={}, client=None)
     assert asyncio.run(G._ready_now(rer, req)) is False and started == []   # kart dolu: kimse atılmaz
+
+
+def test_requests_waiting_their_turn_do_not_keep_the_holder_busy(G, monkeypatch):
+    """Ölçüldü 2026-10-02: derin görsel modelin işi bitti, ona gelen yeni istekler sırasını bekliyor (yield), embedding
+    kartta yer bekliyor. Bekleyen istekler kartı kullanmaz: görsel model boşta sayılır ve yer açılır."""
+    vision, emb = G.ALIASES["book-vision-deep"], G.ALIASES["book-embedding"]
+    _running(G, monkeypatch, {"book-vision-deep"})
+    vision.last_used = time.time() - G.EVICT_GRACE - 1
+    vision.inflight = 3                              # _route'ta bekleyen üç istek
+    G.YIELDING[vision.name] = 3
+    assert G._serving(vision) == 0 and not G._held(vision, emb, time.time())
+    vision.inflight = 4                              # biri gerçekten sunuluyor
+    assert G._serving(vision) == 1
