@@ -11,6 +11,13 @@
 - Kategori/yaş önerisi tam okumada da (`patched("full-recommend-v1")`); tek seferlik doldurma `python -m editor.recommend fill --all-read [--apply]`.
 - Postgres 100 bağlantının 98'i doluydu (editor_app 67 boşta). Havuz süreç başına 8 (gateway 2), `max_idle` 60 sn (psycopg_pool fazlayı 10 dk'da bir kapatıyordu); gateway her vekil istekte bakım anahtarını DB'ye soruyordu → cevap 5 sn paylaşılır, eşzamanlı istekler tek sorgu.
 - `POLICY` validated-outputs-v10. Testler `tests/test_read_audit_classes.py` (+ kimlik/arşiv testleri güncel). Kurulmadı; okunmuş kitaplara uygulama: `page_scope rebuild --all-read`, `identity_fold --apply`, `recommend fill --all-read --apply`.
+## 2026-10-03 — Logo ve CRM'de öğrenilmemiş tablo/kolon envanteri
+
+- Excel: `docs/kaynak-sozlugu/OGRENILMEMIS-TABLO-KOLON-2026-10-02.xlsx` (Özet, Logo tablolar/kolonlar, CRM varlıklar/alanlar). Ölçüm betiği `scripts/kaynak-sozlugu-ogrenilmemis.py` (canlı Logo .25 firma 411 + CRM .28; yalnız SELECT, NOLOCK, tablo başına tek toplulaştırılmış sorgu).
+- Öğrenilmiş = kaynak sözlüğünde (34 Logo ailesi) anlamı yazılı ya da ürün kodunda o tabloyu anan dosyada geçiyor; ad/çeviri/açıklama dökümleri sayılmadı.
+- Sonuç: Logo 778 dolu tablo, 13.222 dolu kolon, 10.528 öğrenilmemiş; 661 tablo hiç öğrenilmemiş (390 genel L_, 221 özel, 29 dönem, 21 firma). CRM 591 dolu varlık (198'i sistem/günlük, ölçülmedi), 6.316 dolu alan, 4.769 öğrenilmemiş; 242 varlık hiç öğrenilmemiş (103 künye, 63 ilişki, 34 süreç).
+- Eski katalog (bi_meta `sl_schema_profile`, 4.259 profil, 2026-09-07/09) yapı/doluluk tutar, hiçbir cevap motoru kullanmıyor; güncel `LG_411_*` adları büyük ölçüde profilsiz. Sohbet yalnız öğretilmiş tanımlarla cevap verir (14 ölçü, 10 kırılım, 14 Logo + 33 CRM + 4 fatura raporu, 13 CRM varlığı/106 alan).
+- Sunucuda LibreOffice tek hücrelik dosyayı da hesaplamadı; Excel açılışta yeniden hesaplar (fullCalcOnLoad), formül mantığı bağımsız Python sayımıyla doğrulandı.
 
 ## 2026-10-02 (akşam) — Okunamayan kitabı «Yeniden okut»
 
