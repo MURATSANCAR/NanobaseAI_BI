@@ -95,9 +95,17 @@ OVERFLOW_CLIENTS = {c.strip() for c in os.environ.get("EDITOR_OVERFLOW_CLIENTS",
 # BI modeli hiç kapatılmaz; BI isteği gelince yeni taşma durur, taşmış olanlar biter. CAP=0 kapalı.
 ANALYSIS_CAP = int(os.environ.get("EDITOR_OVERFLOW_ANALYSIS_CAP", "8") or 0)
 ANALYSIS_BI_MAX = int(os.environ.get("EDITOR_OVERFLOW_ANALYSIS_BI_MAX", "2") or 0)
+# BI önceliği (2026-10-02): GPU 0'daki vLLM `--scheduling-policy priority` ile açıldığında taşan analiz isteği bu
+# değeri `priority` alanında taşır (vLLM: küçük sayı önce; BI isteği alan göndermez = 0). Bekleme sırasında BI önce
+# alınır, bellek darlığında önce taşan analiz geri çekilir. 0 = alan gönderilmez: politika açık değilken vLLM sıfırdan
+# farklı önceliği reddeder; önce BI kabı priority ile açılır, sonra bu değer verilir (deploy/tt-gpu/compose.qwen27b.yaml).
+OVERFLOW_PRIORITY = int(os.environ.get("EDITOR_OVERFLOW_PRIORITY", "0") or 0)
+PRIORITY_PATHS = {"chat/completions", "completions"}
 PEER_LOAD_TTL = 1.0
 _peer_load: tuple[float, int | None] = (0.0, None)
-overflow_inflight = 0          # GPU 0'a taşmış, henüz bitmemiş analiz istekleri
+_peer_ours: int | None = None  # eşin yükü okunduğu an bizim taşan isteklerimiz (BI payı = yük - bu)
+_peer_lock = asyncio.Lock()    # önbellek süresi dolunca /metrics'i tek istek okur, ötekiler onu bekler
+overflow_inflight = 0          # GPU 0'a taşmış (ya da yeri ayrılmış), henüz bitmemiş analiz istekleri
 overflow_total = 0
 
 # Etkileşimli sohbet (EDITOR_OVERFLOW_CLIENTS) düşünme kapalı çalışır (editor.chat_params). Analiz işçisinin
@@ -348,15 +356,18 @@ def _must_yield(a: Alias) -> bool:
     return False
 
 
-async def _drain_overflow(a: Alias) -> bool:
+async def _drain_overflow(a: Alias, client: str = "") -> bool:
     """Kart boşaltılırken ana modelin isteği eşe gidebilir mi? Yalnız eş ayaktaysa, taşma sınırı doluysa değil ve
-    eşte BI'ın kendi yükü sınırı aşmıyorsa (BI hiç yavaşlatılmaz)."""
+    eşte BI'ın kendi yükü sınırı aşmıyorsa (BI hiç yavaşlatılmaz). Analiz isteğinin yeri burada ayrılır
+    (`_reserve_overflow`); etkileşimli istek eskisi gibi sayılmaz, yalnız denetlenir."""
     if not (OVERFLOW_URL and OVERFLOW_MODEL and a.name == OVERFLOW_ALIAS):
         return False
     if ANALYSIS_CAP <= 0 or overflow_inflight >= ANALYSIS_CAP:
         return False
     load = await peer_load()
-    return load is not None and load - overflow_inflight <= ANALYSIS_BI_MAX
+    if client:
+        return _overflow_room(load)
+    return _reserve_overflow(load)
 
 
 async def _route(a: Alias, req: Request) -> bool:
@@ -364,12 +375,13 @@ async def _route(a: Alias, req: Request) -> bool:
     sırasını bekler (YIELD_MAX'tan sonra eski davranış: kendi modelini açar)."""
     deadline = time.time() + YIELD_MAX
     logged = False
+    client = _client_name(req)
     while True:
         if await _should_overflow(a, req):
             return True
         if not _must_yield(a) or time.time() > deadline:
             return False
-        if await _drain_overflow(a):
+        if await _drain_overflow(a, client):
             return True
         if not logged:
             log.info("yield %s: card %s busy with another model, request waits", a.name, a.gpu)
@@ -390,17 +402,27 @@ def _would_wait(a: Alias) -> bool:
 
 
 def _client_name(req: Request) -> str:
-    """İsteği atan konteynerin adı (editor-net üzerinde ters DNS); çözülemezse boş."""
-    host = req.client.host if req.client else ""
-    if not host:
-        return ""
-    for name in OVERFLOW_CLIENTS:
+    """İsteği atan konteynerin adı (editor-net üzerinde ters DNS); çözülemezse boş. İstek başına bir kez çözülür:
+    taşma yeri «analiz isteği» kararıyla ayrılıp (`_route`) aynı kararla geri verildiği (`proxy.release`) için iki
+    çağrı aynı cevabı vermeli, yoksa ayrılan yer hiç geri verilmez."""
+    cached = getattr(req, "_editor_client", None)
+    if cached is not None:
+        return cached
+    c = getattr(req, "client", None)
+    host = c.host if c else ""
+    name = ""
+    for n in OVERFLOW_CLIENTS if host else ():
         try:
-            if host in {ai[4][0] for ai in socket.getaddrinfo(name, None)}:
-                return name
+            if host in {ai[4][0] for ai in socket.getaddrinfo(n, None)}:
+                name = n
+                break
         except OSError:
             continue
-    return ""
+    try:
+        req._editor_client = name            # type: ignore[attr-defined]
+    except AttributeError:
+        pass
+    return name
 
 
 async def _overflow_ok() -> bool:
@@ -412,37 +434,66 @@ async def _overflow_ok() -> bool:
 
 
 async def peer_load() -> int | None:
-    """Eşin (GPU 0) çalışan + bekleyen istek sayısı, vLLM /metrics'ten; okunamazsa None. 1 sn önbellek."""
-    global _peer_load
-    now = time.time()
-    if now - _peer_load[0] < PEER_LOAD_TTL:
+    """Eşin (GPU 0) çalışan + bekleyen istek sayısı, vLLM /metrics'ten; okunamazsa None. 1 sn önbellek.
+    Okunduğu an bizim taşan isteklerimizin sayısı da saklanır (`_peer_ours`); BI'ın kendi yükü ondan hesaplanır."""
+    global _peer_load, _peer_ours
+    if time.time() - _peer_load[0] < PEER_LOAD_TTL:
         return _peer_load[1]
-    n: int | None = None
-    try:
-        r = await http.get(f"{OVERFLOW_URL}/metrics", timeout=3.0)
-        if r.status_code == 200:
-            n = 0
-            for line in r.text.splitlines():
-                if line.startswith(("vllm:num_requests_running{", "vllm:num_requests_waiting{")):
-                    n += int(float(line.rsplit(" ", 1)[1]))
-    except (httpx.HTTPError, ValueError):
-        n = None
-    _peer_load = (now, n)
-    return n
+    async with _peer_lock:
+        if time.time() - _peer_load[0] < PEER_LOAD_TTL:     # beklerken başkası okudu
+            return _peer_load[1]
+        n: int | None = None
+        try:
+            r = await http.get(f"{OVERFLOW_URL}/metrics", timeout=3.0)
+            if r.status_code == 200:
+                n = 0
+                for line in r.text.splitlines():
+                    if line.startswith(("vllm:num_requests_running{", "vllm:num_requests_waiting{")):
+                        n += int(float(line.rsplit(" ", 1)[1]))
+        except (httpx.HTTPError, ValueError):
+            n = None
+        _peer_load, _peer_ours = (time.time(), n), overflow_inflight
+        return n
+
+
+def _bi_load(load: int) -> int:
+    """Eşteki yükün BI'a ait kısmı: ölçüm anındaki taşan sayımız çıkarılır. Ölçümden sonra yeri ayrılan (eşin
+    sayacına henüz girmemiş) istekler çıkarılırsa BI yükü eksi görünür ve sınır yine aşılır."""
+    ours = overflow_inflight if _peer_ours is None else _peer_ours
+    return max(0, load - ours)
+
+
+def _overflow_room(load: int | None) -> bool:
+    """Taşma için yer var mı (yalnız denetim)? Sınır dolmamış ve eşte BI'ın kendi yükü sınırı aşmıyor."""
+    if ANALYSIS_CAP <= 0 or overflow_inflight >= ANALYSIS_CAP or load is None:
+        return False
+    return _bi_load(load) <= ANALYSIS_BI_MAX
+
+
+def _reserve_overflow(load: int | None) -> bool:
+    """Denetim + yer ayırma tek adımda; arada `await` yok, olay döngüsünde başka istek araya giremez.
+    Ölçüldü 2026-10-02: denetim (`peer_load` beklenirken) ile `overflow_inflight += 1` (proxy'de) ayrıyken aynı anda
+    gelen okumaların hepsi «yer var» gördü; sınır 8 iken 121 istek taştı, BI GPU 0 kuyruğunda bekledi.
+    True: yer ayrıldı; istek bitince `proxy.release` geri verir."""
+    global overflow_inflight
+    if not _overflow_room(load):
+        return False
+    overflow_inflight += 1
+    return True
 
 
 async def _analysis_overflow(a: Alias) -> bool:
-    """Analiz isteği GPU 0'daki eşe gitsin mi? Yerelde yer varsa hayır; eşte BI meşgulse ya da sınır doluysa hayır."""
+    """Analiz isteği GPU 0'daki eşe gitsin mi? Yerelde yer varsa hayır; eşte BI meşgulse ya da sınır doluysa hayır.
+    True dönerse taşma yeri ayrılmıştır."""
     if ANALYSIS_CAP <= 0 or overflow_inflight >= ANALYSIS_CAP:
-        return False
+        return False                                 # hızlı ret; asıl denetim beklemelerden sonra
     local_up = _is_running(a) and await _healthy(a)
+    load = await peer_load()
+    # Buradan sonra await yok: denetim ve yer ayırma aynı anda gelen isteklerle yarışmaz.
     # Yerel kopya ayaktaysa yük dengelenir: yereldeki iş (bu istek hariç) eşe taşanlardan fazla değilse yerelde kalır.
     if local_up and a.inflight - 1 <= overflow_inflight:
         return False
-    load = await peer_load()
-    if load is None:
-        return False
-    return load - overflow_inflight <= ANALYSIS_BI_MAX
+    return _reserve_overflow(load)
 
 
 async def _should_overflow(a: Alias, req: Request) -> bool:
@@ -572,7 +623,7 @@ async def models(req: Request) -> dict:
 
 @app.api_route("/v1/{path:path}", methods=["POST"])
 async def proxy(path: str, req: Request):
-    global overflow_inflight, overflow_total
+    global overflow_total
     _auth(req)
     from .foundation import assert_enabled
     try:
@@ -612,10 +663,11 @@ async def proxy(path: str, req: Request):
             # Aynı modelin GPU 0'daki eşi; yalnız sunulan ad farklı, gövdedeki model adı ona çevrilir.
             client = _client_name(req)
             if not client:
-                spilled = True
+                spilled = True                   # yeri _route içinde ayrıldı (_reserve_overflow), burada sayılmaz
                 a.inflight -= 1
-                overflow_inflight += 1
                 overflow_total += 1
+                if OVERFLOW_PRIORITY and path in PRIORITY_PATHS:
+                    payload.setdefault("priority", OVERFLOW_PRIORITY)   # BI (0) önce sıraya girer
             if client or overflow_total % 100 == 1:
                 log.info("overflow %s → %s (gpu %s busy, client %s, analiz taşan %d/%d, toplam %d)", a.name,
                          OVERFLOW_URL, a.gpu, client or "analiz", overflow_inflight, ANALYSIS_CAP, overflow_total)
@@ -678,7 +730,8 @@ async def internal_status(req: Request) -> dict:
         "running": _is_running(a), "inflight": a.inflight,
         "idle_sec": int(now - a.last_used), "gpu": a.gpu} for a in ALIASES.values()},
         "analysis_overflow": {"inflight": overflow_inflight, "total": overflow_total, "cap": ANALYSIS_CAP,
-                              "bi_max": ANALYSIS_BI_MAX, "peer_load": _peer_load[1]}}
+                              "bi_max": ANALYSIS_BI_MAX, "priority": OVERFLOW_PRIORITY,
+                              "peer_load": _peer_load[1], "peer_ours": _peer_ours}}
 
 
 @app.post("/internal/start/{alias}")

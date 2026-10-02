@@ -40,7 +40,13 @@ aliases:
     role: Planlama, sentez, özet, karar
     kind: chat
     gpu: 1
-    mem_fraction: 0.48
+    # 0.48 → 0.70 (2026-10-02, arşiv okuması). Ölçüldü: 0.48'de ağırlık 29,07 GiB + ek 4,35 GiB, KV 11,5 GiB =
+    # 161.826 token; okuma isteği ~11,5k token tutuyor, KV 13-15 eşzamanlı istekte doluyor (koltuk 32). 0.70'te
+    # KV ≈ 65,5 - 29,07 - 4,35 = 32,1 GiB ≈ 452k token (14.072 token/GiB, GPU 0'daki aynı modelle tutarlı):
+    # 32 koltuğun hepsi geri çekilmeden dolar. Birlikte sığanlar (FIT_TOGETHER 0.92): OCR 0.22, embedding 0.21,
+    # reranker 0.22, ses 0.12 (+büyütücü 0.06). Sığmayanlar zaten tek başına kartı alanlar (derin görsel 0.90,
+    # resim 0.62) ve son 24 saatte hiç açılmamış hızlı görsel (0.40): açılırsa ana model yer verir, bekçi geri kaldırır.
+    mem_fraction: 0.70
     args:
       - '--structured-outputs-config={"backend":"xgrammar","disable_any_whitespace":true}'
       - --max-model-len=131072
@@ -73,7 +79,9 @@ aliases:
     role: Kanıt ve sayfa sıralaması
     kind: rerank
     gpu: 1
-    mem_fraction: 0.23
+    # 0.23 → 0.22 (2026-10-02): ana model 0.70 ile toplam 0.92. Ölçüldü: ağırlık 14,11 GiB, KV 0.23'te 5,92 GiB;
+    # 0.22'de ~4,98 GiB (embedding 0.21'de 4,06 GiB ile çalışıyor; 8192 bağlam).
+    mem_fraction: 0.22
     args:
       - --runner=pooling
       - --convert=classify
@@ -109,7 +117,10 @@ aliases:
     role: Sayfa OCR okuyucusu (resimli ve dijital metni bozuk sayfalar)
     kind: chat
     gpu: 1
-    mem_fraction: 0.30
+    # 0.30 → 0.22 (2026-10-02): okuma sırasında ana modelle (0.70) birlikte sığsın (0.92). Ölçüldü: ağırlık 5,87 GiB,
+    # KV 0.30'da 18,07 GiB = 676.800 token (37,4k token/GiB); 0.22'de ~10,6 GiB ≈ 396k token = 32k bağlamın 12 katı,
+    # 16 koltuk × sayfa başı birkaç bin token için bol.
+    mem_fraction: 0.22
     args:
       - --max-model-len=32768
       - --max-num-seqs=16
@@ -150,7 +161,10 @@ aliases:
     args:
       - '--structured-outputs-config={"backend":"xgrammar","disable_any_whitespace":true}'
       - --max-model-len=40960
-      - --max-num-seqs=8
+      # 8 → 12 (2026-10-02). Ölçüldü (44 istek): istem ≤5k token (çoğu 1-2k), üretim ort. 2,6k, %11'i 5-10k; istek
+      # sonunda ort. ~4,2k token. KV 77.392 token: 8 koltuk dolu iken KV %29. 12 koltukta ortalama ~50k (%65); iki
+      # uzun (15k) istekle ~72k (%93) — taşarsa vLLM geri çekip yeniden hesaplar (şimdiye dek geri çekme 0).
+      - --max-num-seqs=12
       - --enable-prefix-caching
       - --reasoning-parser=qwen3
       - '--limit-mm-per-prompt={"image":6,"video":0}'
@@ -233,7 +247,7 @@ aliases:
   # önbelleği doluyken 41 sn), hazırken 7,6 GiB, üretimde tepe 9,8 GiB (nvidia-smi; PyTorch 9,1 GiB). Pay servis
   # içinde PyTorch tavanıdır (server.py): 0.10 (9,4 GiB) tepeye çok yakındı, 0.12 (11,2 GiB) pay bırakır.
   # RTF 0,34–0,46 (sayfa sesinin süresine göre üretim süresi; derlemesiz 0,59–0,74). Kartta birlikte sığar:
-  # ana model 0.48 + 0.12 = 0.60; görsel model 0.62 + büyütücü 0.06 + 0.12 = 0.80 (FIT_TOGETHER 0.92).
+  # ana model 0.70 + 0.12 = 0.82 (2026-10-02'ye dek 0.48); görsel model 0.62 + büyütücü 0.06 + 0.12 = 0.80 (FIT_TOGETHER 0.92).
   book-voice:
     container: editor-model-voice
     model_dir: book-voice
