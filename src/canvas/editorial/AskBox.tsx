@@ -20,12 +20,12 @@ const UNAVAILABLE = `${PRODUCT} şu an bu soruyu cevaplayamadı. Birazdan tekrar
 const INTERNAL = /\b(?:hermes(?:\s+agent)?|book[-_ ]?director|qwen[\w.-]*|vllm|llama[\w.-]*|gpt[\w.-]*|claude|openai|ocr|editör motoru|editor motoru|dil modeli|llm)\b/gi;
 
 /** Eski kayıtlar ve beklenmedik metinler için ikinci kat: iç adlar ZEKİ AI olur. */
-function scrub(s: string): string {
+export function scrub(s: string): string {
   return s.replace(INTERNAL, PRODUCT).replace(new RegExp(`(?:${PRODUCT}(?:[\\s,/]+|\\s+ve\\s+))+${PRODUCT}`, 'g'), PRODUCT);
 }
 
 /** Hata metni teknik ayrıntı taşıyorsa (durum kodu, iç ad) yerine sade cümle gösterilir. */
-function friendlyError(e: string): string {
+export function friendlyError(e: string): string {
   INTERNAL.lastIndex = 0;
   return INTERNAL.test(e) || /\b\d{3}:|motor/i.test(e) ? UNAVAILABLE : e;
 }
@@ -80,7 +80,7 @@ const NUMBERED = /^\s*\d+[.)]\s+/;
 
 /** Cevabı bloklara ayırır: madde listesi, numaralı liste ve paragraf. Modelin sözü ve sayfa
  *  atıfları korunur; yalnız görünüm yapılandırılır (düz metin duvarı yerine okunur ritim). */
-function AnswerText({ text, book = {} }: { text: string; book?: Book }) {
+export function AnswerText({ text, book = {} }: { text: string; book?: Book }) {
   // Metin baştan sona tek imleçle okunur: bir atıfın kitabı, kendinden önce en son anılan kitaptır.
   const cursor = new CiteCursor(citationsOf(book));
   const blocks = text.split(/\r?\n[\t ]*\r?\n/).map((b) => b.trim()).filter(Boolean);
@@ -121,7 +121,7 @@ function AnswerText({ text, book = {} }: { text: string; book?: Book }) {
   );
 }
 
-function Orb({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
+export function Orb({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
   const box = size === 'lg' ? 'h-16 w-16' : 'h-8 w-8';
   const inner = size === 'lg' ? 'inset-[3px] text-[15px]' : 'inset-[2px] text-[9px]';
   return (
@@ -147,7 +147,7 @@ function Rotating({ lines }: { lines: string[] }) {
   );
 }
 
-function Thinking({ queued }: { queued: boolean }) {
+export function Thinking({ queued }: { queued: boolean }) {
   return (
     <div className="flex items-center gap-2.5 text-[13px] font-semibold text-canvas-ink">
       <span className="flex items-center gap-1" aria-hidden>

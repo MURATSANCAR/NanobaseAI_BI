@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-02 (akşam) — Kitap Eczanesi: en üstte «Zeki'ye sor»
+
+- Kitap Eczanesi ekranının başlığının hemen altına soru alanı (`src/canvas/editorial/pharmacy/PharmacyAsk.tsx`): okunmuş bütün kitaplara doğal dilde soru; Enter gönderir, örnek sorular, yükleniyor/hata/«okunan kitaplarda cevap bulunamadı» durumları, cevabın altında kaynak kitaplar (atıf sayfalarıyla); kitaba basınca ekrandaki kitap ayrıntısı açılır ve ekrana getirilir.
+- Yeni soru motoru ya da köprü ucu yok: Kitaba sor'un kitap seçilmemiş (kütüphane geneli) sorusu — `POST /api/v1/editorial/ask` (kitap adı boş) + `GET /api/v1/editorial/ask/{id}` yoklaması; köprü kart seçimi → hızlı yol (`quick_answer`, kütüphane kartları) → derin okuma sırasını zaten yürütüyor. Uç `_EDITORIAL` kuralında, `sayfa:kitap-eczanesi` o kümede. Cevap metni ve sayfa rozetleri `AskBox`'tan dışa açılan `AnswerText` ile aynı. Kaynak çıkarımı saf işlev (`askSources.ts`, testli): kart cevabında seçilen kartlar, metin cevabında atıf özetindeki adı geçen kitaplar + atıfın kitabı (Kitaba sor'daki kural). Kart kimliği = `ed.book.id` = eczane kitap kimliği.
+- Yalnız ön yüz değişti; köprü/GPU kurulumu gerekmez. Kurulmadı.
+
 ## 2026-10-02 (öğle) — Okunmuş 22 kitabın denetimi ve düzeltmeler
 
 - Bağımsız denetim (22 okunmuş kitap): metin tam, kanıt alıntıları %94–97 birebir, arama dizini tam; ama Kitaba sor hızlı yolu ölü (boş `ed.book_card`), kitap özeti 22/22 yedek özet (uç sayfa kuralı künye/biyografide takılıyor), künye/biyografi olay sayılıyor ve kart METADATA boş, bölümler eski kuralla, aynı kişinin çok kaydı, Aşk Terapi bozuk karakter (eski okuma).

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Search, X } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Note, Pill, errText, nf } from '../../admin/ui';
 import { EmptyHint } from '../../components/Explain';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from '../kit';
 import { UploadBar } from '../BookUploadDock';
+import PharmacyAsk from './PharmacyAsk';
 import PharmacyUpload from './PharmacyUpload';
 import PharmacyDetail, { isTab, type Tab } from './PharmacyDetail';
 import { STATE_FILTERS, moving, readPill, redactionPill } from './labels';
@@ -17,7 +18,10 @@ import { STATE_FILTERS, moving, readPill, redactionPill } from './labels';
  *  liste bir seferde 50 kitap çizer, toplam her zaman yazar). Sağ sütun: seçili kitabın ayrıntısı ve işleri (son
  *  okuma, e-kitap, sesli kitap, tasarım). Telefonda (lg altı) liste ile ayrıntı aynı yerde sırayla görünür: kitap
  *  seçilince ayrıntı açılır, «Kitap listesi» düğmesi geri döndürür. Bütün seçimler adreste (?q, kat, durum, sira,
- *  sayfa, kitap, sekme): sayfa yenilenince ya da bağlantı paylaşılınca aynı görünüm açılır. */
+ *  sayfa, kitap, sekme): sayfa yenilenince ya da bağlantı paylaşılınca aynı görünüm açılır.
+ *
+ *  En üstte «Zeki'ye sor» (PharmacyAsk): okunmuş bütün kitaplara soru; cevaptaki kaynak kitaba basınca o kitabın
+ *  ayrıntısı açılır ve ekrana getirilir. */
 
 const PAGE = 50;
 const STATE_KEYS = new Set<string>(STATE_FILTERS.map((s) => s.key));
@@ -138,6 +142,18 @@ export default function PharmacyScreen() {
   const tf = t?.facets.states ?? {};
 
   const pick = (id: string | null) => set({ kitap: id, sekme: null }, true);
+  // Kaynak kitaba basılınca ayrıntı açılır; soru alanı üstte kaldığı için ayrıntının başı ekrana getirilir.
+  const detail = useRef<HTMLDivElement>(null);
+  const [reveal, setReveal] = useState(0);
+  const pickSource = (id: string) => {
+    pick(id);
+    setReveal((n) => n + 1);
+  };
+  useEffect(() => {
+    if (!reveal) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    detail.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }, [reveal]);
   const filterState = (k: PharmacyState | '') => set({ durum: k === state ? null : k || null, sayfa: null });
 
   return (
@@ -152,6 +168,8 @@ export default function PharmacyScreen() {
       presence="Kaynak: Zeki AI okuma kaydı"
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; Kitap Eczanesi açılamaz. Sistem yöneticinize haber verin.</Note>}
+
+      <PharmacyAsk onPickBook={pickSource} />
 
       <KpiRow>
         <Kpi label="Kitap" value={t ? nf.format(t.all) : '—'} help="Eczanedeki bütün kitaplar" active={!state} onClick={() => filterState('')} />
@@ -237,7 +255,7 @@ export default function PharmacyScreen() {
           </Panel>
         </div>
 
-        <div className={`min-w-0 ${picked ? '' : 'hidden lg:block'}`}>
+        <div ref={detail} className={`min-w-0 scroll-mt-4 ${picked ? '' : 'hidden lg:block'}`}>
           {picked ? (
             <PharmacyDetail key={picked} id={picked} tab={tab} onTab={(k) => set({ sekme: k === 'son-okuma' ? null : k })} onBack={() => pick(null)} />
           ) : (

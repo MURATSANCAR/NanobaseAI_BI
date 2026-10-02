@@ -1,5 +1,7 @@
 # NanobaseAI BI — Proje Belleği
 
+**2026-10-02 — Kitap Eczanesi «Zeki'ye sor»:** ekranın en üstünde (`pharmacy/PharmacyAsk.tsx`) kütüphane geneli soru; Kitaba sor ucu `POST /api/v1/editorial/ask` kitap adı boş + `GET …/ask/{id}`; kaynak kitaplar `askSources.ts` (kart kimliği = eczane kitap kimliği), basınca `?kitap=` ayrıntısı.
+
 **2026-10-02 — Kitap eczanesi arşiv okuması:** 4.018 kitap `profile='archive'` kuyrukta (`editor/archive.py enqueue --root /data/kitaplar --prescan ...`, ön tarama `tt-gpu:/tmp/claude-ontarama/ontarama.jsonl`); arşiv kipi «Zeki'ye sor» içindir, son okuma yok, redaksiyon isteğe bağlı. GPU editör `0.15.9-b73cbd50` (`/data/editor/releases/b73cbd50`), `EDITOR_READ_PARALLEL=4`, director 0.70, BI dağıtıcısında GPU 1 yedek. GPU 0 BI önceliği hazır, uygulanmadı.
 
 **2026-10-01 — Bölüm bulma dizgiden:** `apps/editor/src/editor/chapters.py` (punto/bölüm başı boşluğu/başlık sayfası) okuma (`knowledge.chapters`, `outputs.capture`) ve Stüdyo (`production/manuscript.by_typeset`) için tek kural; PDF yoksa eski büyük harf kuralı. Stüdyo paragrafları `paragraphs_from_layout(spaced=True)` + `manuscript.resplit` ile dizgiden bölünür (okumanın paragraf eşiği değişmedi). CFO özeti zamanlayıcısı `/opt/timas-metrics/build.py` çalıştırır, depodaki betik oraya ayrıca kurulur.
