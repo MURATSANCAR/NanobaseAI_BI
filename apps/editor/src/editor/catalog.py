@@ -47,11 +47,45 @@ async def extract_metadata(generation_id: str) -> dict:
         # an already sealed generation. A sealed generation is read-only; its card simply
         # has no bibliographic block until the book is analysed again.
         return {}
-    pages = [r["page_no"] for r in db.all_rows(
-        "SELECT page_no FROM page_role WHERE generation_id=%s AND role='FRONT_MATTER' ORDER BY 1",
-        generation_id)]
+    pages = metadata_pages(generation_id)
     if not pages:
         return {}
+    fields, call_id = await _ask(generation_id, pages)
+    with db.tx() as c:
+        idx = ledger.PageIndex.load(c, generation_id)
+        valid = _valid_pages(c, generation_id)
+        for f in fields:
+            evs = [e for e in ledger.evidence_from_model(
+                c, generation_id, idx, [{"page": f["page"], "paragraph": f["paragraph"], "quote": f["quote"]}],
+                valid_pages=valid) if e[1]]
+            if evs:     # verbatim on the page, or it does not exist
+                ledger.save_claim(c, generation_id, kind="METADATA", subject=f["field"],
+                                  claim=f["value"], evidence=evs, confidence=0.95,
+                                  created_by="catalog:metadata", model_call_id=call_id,
+                                  status="VERIFIED")
+    return _metadata_dict(db.all_rows(
+        "SELECT subject, claim, source_pages, id FROM claim WHERE generation_id=%s AND kind='METADATA'"
+        " AND status = ANY(%s)", generation_id, list(OK)))
+
+
+def metadata_pages(generation_id: str) -> list[int]:
+    """Künye okumasının sayfaları: FRONT_MATTER rolü (editörün ya da otomatik kuralın, editor.page_scope).
+    Rol henüz yazılmamışsa (eski okuma) aynı kural salt okunarak uygulanır; editörün STORY dediği sayfa
+    okunmaz."""
+    from . import foundation, page_scope
+    with foundation.read_snapshot() as c:
+        roles = {r["page_no"]: dict(r) for r in c.execute(
+            "SELECT page_no, role, source FROM ed.page_role WHERE generation_id=%s", (generation_id,))}
+        pages = sorted(p for p, r in roles.items() if r["role"] == "FRONT_MATTER")
+        if pages:
+            return pages
+        found = page_scope.plan(c, generation_id)["found"]
+    return sorted(p for p, (role, _) in found.items() if role == "FRONT_MATTER"
+                  and (roles.get(p) or {}).get("source") != "editor")
+
+
+async def _ask(generation_id: str, pages: list[int]) -> tuple[list[dict], int]:
+    """Model künye sayfalarından alanları okur; yalnız alıntısı sayfada birebir bulunan alan kalır (yazmaz)."""
     ref, body = prompts.render("book_metadata", pages_text="\n".join(
         page_text_numbered(generation_id, p) for p in pages))
     out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
@@ -59,24 +93,27 @@ async def extract_metadata(generation_id: str) -> dict:
                                                  max_tokens=3000, temperature=0.0, thinking=False)
     with db.tx() as c:
         idx = ledger.PageIndex.load(c, generation_id)
-        valid = _valid_pages(c, generation_id)
-        for f in out["fields"]:
-            if not f["value"].strip():
-                continue
-            matches = idx.matching_spans(f["page"], f["quote"])
-            if not matches:
-                continue
-            evs = [e for e in ledger.evidence_from_model(
-                c, generation_id, idx, [{"page": f["page"], "paragraph": matches[0]["idx"], "quote": f["quote"]}],
-                valid_pages=valid) if e[1]]
-            if evs:     # verbatim on the page, or it does not exist
-                ledger.save_claim(c, generation_id, kind="METADATA", subject=f["field"],
-                                  claim=f["value"].strip(), evidence=evs, confidence=0.95,
-                                  created_by="catalog:metadata", model_call_id=call_id,
-                                  status="VERIFIED")
-    return _metadata_dict(db.all_rows(
-        "SELECT subject, claim, source_pages, id FROM claim WHERE generation_id=%s AND kind='METADATA'"
-        " AND status = ANY(%s)", generation_id, list(OK)))
+    kept = []
+    for f in out["fields"]:
+        if not f["value"].strip():
+            continue
+        matches = idx.matching_spans(f["page"], f["quote"])
+        if matches:
+            kept.append({"field": f["field"], "value": f["value"].strip(), "page": f["page"],
+                         "paragraph": matches[0]["idx"], "quote": f["quote"]})
+    return kept, call_id
+
+
+async def ask_metadata(generation_id: str, pages: list[int] | None = None) -> dict:
+    """Kuru koşu (editor.page_scope): künye okumasının ne bulacağı, hiçbir şey yazmadan."""
+    pages = pages if pages is not None else metadata_pages(generation_id)
+    if not pages:
+        return {}
+    fields, _ = await _ask(generation_id, pages)
+    out: dict[str, list] = {}
+    for f in fields:
+        out.setdefault(f["field"], []).append(f["value"])
+    return out
 
 
 def _metadata_dict(rows: list[dict]) -> dict:

@@ -72,6 +72,11 @@ async def validate(gid: str) -> dict:
     try:
         # Off the loop: the token context var travels with asyncio.to_thread (copied context).
         start=(await asyncio.to_thread(db.one,"SELECT knowledge_revision FROM ed.generation_state WHERE generation_id=%s",gid))['knowledge_revision']
+        # Pages whose text is the imprint, title page, author bio, contents or the publisher's
+        # adverts leave the outputs' scope (editor.page_scope; the editor's own decision is kept
+        # and can turn a page back). Written under this validation's token.
+        from . import page_scope
+        scope=await asyncio.to_thread(page_scope.ensure,gid)
         # Identity and visual work is performed before activate in the full workflow.
         # Repairs invalidate actor readings in the same transaction.
         critic=await quality.critic_pass(gid, recheck=True)
@@ -80,7 +85,8 @@ async def validate(gid: str) -> dict:
         queued=await asyncio.to_thread(quality.contradictions_to_queue,gid)
         regression=await asyncio.to_thread(quality.run_regression_suite,gid)
         return {'critic':critic,'actors':actors,'contradictions':contradictions,'queued':queued,
-                'regression_passed':regression['passed'],'writer_token':token,'start_revision':start}
+                'regression_passed':regression['passed'],'writer_token':token,'start_revision':start,
+                'page_scope':scope}
     finally:
         db.validation_token.reset(context)
 

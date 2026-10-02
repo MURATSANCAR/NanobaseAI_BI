@@ -469,12 +469,18 @@ async def validate(gid: str) -> dict:
     ctx = db.validation_token.set(token)
     try:
         start = db.one("SELECT knowledge_revision FROM ed.generation_state WHERE generation_id=%s", gid)["knowledge_revision"]
+        # Künye, iç kapak, yazar tanıtımı, içindekiler, yayınevi tanıtımı: metni öyle olan sayfa editör onayı
+        # beklemeden kapsam dışı (editor.page_scope; editör sonradan geri alabilir). Bütün kitap üstünden: okuma
+        # sırasında parçalar yan yana koştuğu için eksik kalanı burada tamamlanır.
+        from . import page_scope
+        scope = await asyncio.to_thread(page_scope.ensure, gid)
         critic = await quality.critic_pass(gid, recheck=True)
         actors = await knowledge.attribute_event_actors(gid)
         regression = await asyncio.to_thread(quality.run_regression_suite, gid)
         return {"critic": critic, "actors": actors, "contradictions": None, "queued": None,
                 "regression_passed": regression["passed"], "writer_token": token, "start_revision": start,
-                "profile": PROFILE, "deferred": ["detect_contradictions", "contradictions_to_queue"]}
+                "profile": PROFILE, "deferred": ["detect_contradictions", "contradictions_to_queue"],
+                "page_scope": scope}
     finally:
         db.validation_token.reset(ctx)
 

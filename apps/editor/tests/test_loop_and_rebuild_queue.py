@@ -230,6 +230,8 @@ def test_rebuild_validate_never_blocks_the_loop(monkeypatch):
     monkeypatch.setattr(knowledge, "detect_contradictions", fake_async)
     monkeypatch.setattr(quality, "contradictions_to_queue", slow)
     monkeypatch.setattr(quality, "run_regression_suite", slow)
+    from editor import page_scope
+    monkeypatch.setattr(page_scope, "ensure", slow)
 
     async def main():
         with Ticker() as t:

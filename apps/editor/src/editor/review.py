@@ -293,9 +293,14 @@ def choose(item_id: str, choice: str, editor: str, note: str | None = None) -> d
         key = it["subject"] or (it["claim"] or "")[:200]
         if typ == "page":
             p = it["page_role_page_no"]
-            role = "NON_STORY" if choice == "yes" else "STORY"
             if choice == "fix":
                 raise ValueError("Sayfa için Evet ya da Hayır seçilir.")
+            # «Evet» kapsam dışını onaylar: otomatik kuralın künye/iç kapak dediği sayfa FRONT_MATTER kalır (künye
+            # okuması onu okur). «Hayır» sayfayı kapsama döndürür (editor.page_scope; çıktılar iddiasını yine kullanır).
+            cur = c.execute("SELECT role FROM page_role WHERE generation_id=%s AND page_no=%s",
+                            (it["generation_id"], p)).fetchone()
+            role = ("FRONT_MATTER" if cur and cur["role"] == "FRONT_MATTER" else "NON_STORY") if choice == "yes" \
+                else "STORY"
             c.execute("INSERT INTO page_role(generation_id, page_no, role, source) VALUES (%s,%s,%s,'editor')"
                       " ON CONFLICT (generation_id, page_no) DO UPDATE SET role=EXCLUDED.role, source='editor'",
                       (it["generation_id"], p, role))

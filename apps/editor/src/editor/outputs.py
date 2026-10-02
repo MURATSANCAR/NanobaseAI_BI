@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 
 from . import db, foundation, source
@@ -21,7 +22,8 @@ def plain(value):
     return json.loads(json.dumps(value, default=str, ensure_ascii=False))
 
 
-def capture(c, gid: str) -> dict:
+def capture(c, gid: str, roles_override: dict | None = None) -> dict:
+    """`roles_override` (kuru koşu, page_scope.dry_run): sayfa rolleri DB'deki yerine bunlar sayılır."""
     gen = c.execute("SELECT g.*,s.knowledge_revision,s.origin,s.producer_completed,b.title "
         "FROM ed.generation g JOIN ed.generation_state s ON s.generation_id=g.id "
         "JOIN ed.book_version bv ON bv.id=g.book_version_id JOIN ed.book b ON b.id=bv.book_id "
@@ -71,6 +73,20 @@ def capture(c, gid: str) -> dict:
         events=[e for e in events if e['claim_id'] in eligible]
         emotions=[e for e in emotions if e['claim_id'] in eligible]
         evidence=[e for e in evidence if e['claim_id'] in eligible]
+    # Kapsam dışı sayfa (künye, yazar tanıtımı, yayınevi tanıtımı; editörün ya da otomatik kuralın kararı —
+    # editor.page_scope): o sayfadaki olay/duygu/tema iddiası çıktıda kullanılmaz, silinmez; rol geri alınınca
+    # geri gelir. Okumanın NON_STORY önerisi tek başına kapsamı değiştirmez.
+    from . import page_scope
+    roles = roles_override if roles_override is not None else {r['page_no']: dict(r) for r in c.execute(
+        "SELECT page_no,role,source FROM ed.page_role WHERE generation_id=%s", (gid,))}
+    outside = page_scope.out_of_scope(roles)
+    dropped = [cl['id'] for cl in claims if page_scope.scoped(cl, outside)]
+    if dropped:
+        drop = set(dropped)
+        claims = [cl for cl in claims if cl['id'] not in drop]
+        events = [e for e in events if e['claim_id'] not in drop]
+        emotions = [e for e in emotions if e['claim_id'] not in drop]
+        evidence = [e for e in evidence if e['claim_id'] not in drop]
     if gen['origin'] != 'TRACKED': blockers.append('LEGACY_UNASSESSED')
     if any(p['issues'] for p in pages): blockers.append('SOURCE_ISSUES')
     if not pages or any(p['page_role']=='UNKNOWN' for p in pages): blockers.append('PAGE_ROLES_UNASSESSED')
@@ -93,7 +109,8 @@ def capture(c, gid: str) -> dict:
         'chapters':typeset.for_generation(gid, pages) or chapters_from_pages(pages),'claims':claims,'evidence':evidence,
         'events':events,'emotions':emotions,'characters':characters,'reviews':reviews,
         'contradictions':contradictions,'regression':regression,
-        'sources':pages,'blockers':blockers,'semantic_acceptance':False})
+        'sources':pages,'blockers':blockers,'semantic_acceptance':False,
+        'scope':{'policy':page_scope.SOURCE,'out_of_scope_pages':sorted(outside),'claims_unused':len(dropped)}})
 
 
 def preview(gid: str) -> dict:
@@ -199,13 +216,76 @@ def _claim_size(c: dict) -> int:
                            'payload': c.get('payload', {})}, ensure_ascii=False)) + 16
 
 
+#: Uzun kitapta her parçanın özeti parçanın bütününe yayılır: parça bu kadar eşit sayfa dilimine bölünür ve
+#: seçimi olmayan her dilimden o dilimin en önemli iddiası son özetin girdisine eklenir (kitap başına toplam,
+#: parça sayısına bölünür; parça başına en az 2). Çiçekçi Kadın 2026-10-02: 1. parça s.7–176, 24 seçimin hepsi
+#: s.7–19 → özet kitabın %76'sını görmedi.
+SPREAD_SLOTS = 24
+
+
+def _outside(snap: dict) -> set[int]:
+    return set((snap.get('scope') or {}).get('out_of_scope_pages') or [])
+
+
+def _story(snap: dict, claims: list[dict]) -> list[dict]:
+    """Kapsam içi (hikâye/gövde) sayfalara dayanan iddialar; capture zaten süzer, eski anlık görüntü için."""
+    out = _outside(snap)
+    return [c for c in claims if not set(c['source_pages']) & out] if out else list(claims)
+
+
+def _rank(snap: dict):
+    """Model çağırmadan «en önemli» iddia: olay önce, sonra olayın önemi, sonra güven."""
+    importance = {e['claim_id']: float(e.get('importance') or 0) for e in snap.get('events', [])}
+    return lambda c: (c['kind'] == 'EVENT', importance.get(c['id'], 0.0), float(c.get('confidence') or 0))
+
+
+#: Olay özetinin «baş» ve «son»u: kitabın olay sayfalarının ilk ve son %5'i (en az birer sayfa). Tek bir uç
+#: sayfayı şart koşmak, uçtaki ithaf/teşekkür/telif notu gibi tek olaylık sayfayı modelin atlamasıyla özeti üç
+#: denemede de düşürüyordu (2026-10-02: 22 kitabın 22'si yedek özet).
+EDGE_SHARE = 0.05
+
+
+def edge_pages(claims: list[dict]) -> tuple[tuple[int, int], tuple[int, int]] | None:
+    pages = sorted({p for c in claims for p in c['source_pages']})
+    if not pages:
+        return None
+    k = max(1, math.ceil(len(pages) * EDGE_SHARE)) - 1
+    return (pages[0], pages[k]), (pages[-1 - k], pages[-1])
+
+
+def _first_page(c: dict) -> int:
+    return min(c['source_pages']) if c['source_pages'] else 0
+
+
+def spread(snap: dict, claims: list[dict], slots: int, chosen: set | None = None) -> list[dict]:
+    """claims'in sayfa aralığını `slots` eşit dilime böler; içinde `chosen`dan iddia olmayan her dilimden en
+    önemli iddiayı verir (sayfa sırasıyla). Dilim sayfa üzerindendir, iddia sayısı üzerinden değil: olayı yoğun
+    bir bölüm seçimi yutmaz."""
+    chosen = chosen or set()
+    if not claims or slots < 1:
+        return []
+    lo = min(_first_page(c) for c in claims)
+    hi = max(_first_page(c) for c in claims)
+    width = max(1.0, (hi - lo + 1) / slots)
+    bins: dict[int, list[dict]] = {}
+    for c in claims:
+        bins.setdefault(min(slots - 1, int((_first_page(c) - lo) / width)), []).append(c)
+    key = _rank(snap)
+    add = []
+    for k in sorted(bins):
+        if not any(c['id'] in chosen for c in bins[k]):
+            add.append(max(bins[k], key=key))
+    return sorted(add, key=lambda c: (_first_page(c), c['id']))
+
+
 async def _condense(snap: dict, claims: list[dict], label: str, *, plot_only: bool) -> dict:
     """A long book's verified claims do not fit one call. Nothing is cut silently: the claims
     are split in page order into parts that fit, each part is summarised on its own (the model
     chooses that part's most important verified claims, under the same critic), and the final
-    summary is written from the claims those part summaries chose. The first and last claims
-    of the book always stay in, so the story keeps its beginning and end. Every sentence of the
-    result still cites original ledger claims."""
+    summary is written from the claims those part summaries chose. Every part is covered over its
+    whole page range (`spread`), and the first and last claims of the story — not of the
+    imprint or the publisher's adverts (editor.page_scope) — always stay in. Every sentence of
+    the result still cites original ledger claims."""
     parts, cur, size = [], [], 0
     limit = summary_input_max()
     for c in claims:                      # already in page order
@@ -217,27 +297,62 @@ async def _condense(snap: dict, claims: list[dict], label: str, *, plot_only: bo
         cur.append(c); size += n
     if cur:
         parts.append(cur)
-    calls, chosen, stages = [], {claims[0]['id'], claims[-1]['id']}, []
+    story = _story(snap, claims) or claims
+    calls, chosen, stages = [], {story[0]['id'], story[-1]['id']}, []
+    per_part = max(2, SPREAD_SLOTS // len(parts))
     for k, part in enumerate(parts, 1):
         pages = [p for c in part for p in c['source_pages']] or [0]
-        r = await summarize(snap, part, f"{label} — bölüm {k}/{len(parts)}, sayfa {min(pages)}–{max(pages)}")
+        r = await summarize(snap, part, f"{label} — bölüm {k}/{len(parts)}, sayfa {min(pages)}–{max(pages)}. "
+                            f"Seçimini bu sayfa aralığının başından sonuna yay; yalnız ilk sayfalarda kalma.")
         calls += r.get('model_calls', [])
         ids = {cid for row in r['sentences'] for cid in row['claim_ids']}
-        chosen |= ids
-        stages.append({'part': k, 'claims': len(part), 'chosen': len(ids), 'status': r['status'],
-                       'pages': [min(pages), max(pages)]})
+        filled = [c['id'] for c in spread(snap, _story(snap, part) or part, per_part, ids)]
+        chosen |= ids | set(filled)
+        picked_pages = sorted(_first_page(c) for c in part if c['id'] in ids | set(filled))
+        stages.append({'part': k, 'claims': len(part), 'chosen': len(ids), 'spread_added': len(filled),
+                       'status': r['status'], 'pages': [min(pages), max(pages)],
+                       'chosen_pages': [picked_pages[0], picked_pages[-1]] if picked_pages else None})
     kept = [c for c in claims if c['id'] in chosen]
     if len(kept) >= len(claims):
         raise ValueError('Summary input could not be condensed below the bounded context')
-    out = await summarize(snap, kept, label, plot_only=plot_only)
+    out = await summarize(snap, kept, label, plot_only=plot_only, pool=claims)
     out['model_calls'] = calls + out.get('model_calls', [])
     out['condensed'] = {'claims': len(claims), 'parts': stages, 'final_input': len(kept)}
     return out
 
 
-async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bool = False) -> dict:
+def extractive(snap: dict, claims: list[dict], limit: int | None = None) -> list[dict]:
+    """Yedek özet (model üç kez kabul edilmeyince): doğrulanmış iddiaların kendisi, kelimesi kelimesine, sayfa
+    sırasıyla. Kitabın bütün kullanılabilir iddiaları üstünde, sayfa aralığının `limit` eşit diliminin her
+    birinden en önemli iddia; ilk ve son hikâye iddiası her zaman içinde. Söylediği her şey defterde doğrulanmış."""
+    limit = limit or SUMMARY_SCHEMA['properties']['sentences'].get('maxItems', 24)
+    proven = {e['claim_id'] for e in snap['evidence'] if e['quote_verified']}
+    usable = sorted((c for c in _story(snap, claims) if c['id'] in proven), key=lambda c: (_first_page(c), c['id']))
+    if not usable:
+        return []
+    # dilimler sayfa sırasında: ilk seçim ilk dilimden (kitabın ilk iddiası da orada), son seçim son dilimden;
+    # o dilimlerde uç iddia seçilir ki özet kitabın başını ve sonunu tutsun
+    picked = spread(snap, usable, limit)
+    picked = [usable[0], *picked[1:-1], usable[-1]] if len(picked) > 1 or len(usable) > 1 else picked
+    seen, unique = set(), []
+    for c in picked:
+        if c['claim'].strip() not in seen:
+            seen.add(c['claim'].strip())
+            unique.append(c)
+    rows = bind_sentences({'sentences': [{'text': c['claim'].strip(), 'claim_ids': [c['id']]} for c in unique]},
+                          usable, snap['evidence'])
+    for row in rows:
+        row['support_check'] = 'EXACT_VERIFIED_CLAIM'
+    return rows
+
+
+async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bool = False,
+                    pool: list[dict] | None = None) -> dict:
+    """`pool`: yedek özetin seçtiği iddialar (uzun kitapta son özetin girdisi seçilmiş iddialardır; yedek özet
+    yine kitabın bütün iddiaları üstüne yayılır)."""
     if plot_only:
         claims = [c for c in claims if c['kind'] == 'EVENT']
+        pool = [c for c in pool if c['kind'] == 'EVENT'] if pool is not None else None
     if not claims: return {'sentences':[],'status':'NO_VERIFIED_FACTS','model_calls':[]}
     from .llm import Llm, PromptRef
     llm = Llm(snap['generation_id'])
@@ -247,6 +362,12 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
     raw = json.dumps(payload,ensure_ascii=False)
     if len(raw) > summary_input_max():
         return await _condense(snap, claims, label, plot_only=plot_only)
+    # Olay özetinin uçları kitabın hikâye/gövde sayfalarıdır: künye, yazar tanıtımı, yayınevinin başka
+    # kitaplarının tanıtımı uç sayılmaz (editor.page_scope; capture bu sayfaların iddiasını zaten süzer).
+    ends = edge_pages(_story(snap, claims))
+    if plot_only and ends:
+        label = (f"{label}. Kitabın başı s.{ends[0][0]}–{ends[0][1]}, sonu s.{ends[1][0]}–{ends[1][1]}: her iki "
+                 f"uçtan da en az bir olay seç; seçimini kitabın başından sonuna yay.")
     messages=[{'role':'user','content':SUMMARY_PROMPT+label+'\n'+raw}]
     calls, rejected, disagreements = [], [], []
     allowed={c['id']:c for c in claims}
@@ -268,13 +389,11 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
             bound = {'sentences':[{'text':row['text'],
                 'claim_ids':[reference_ids[r] for r in row['claim_ids']]} for row in out['sentences']]}
             rows = bind_sentences(bound,claims,snap['evidence'])
-            if plot_only:
-                eligible_pages = [p for c in claims for p in c['source_pages']]
+            if plot_only and ends:
                 selected_pages = [p for row in rows for p in row['pages']]
-                if eligible_pages and (not selected_pages or min(selected_pages) != min(eligible_pages)
-                        or max(selected_pages) != max(eligible_pages)):
-                    raise ValueError('Plot summary must include the first and last supported event pages: '
-                                     + str([min(eligible_pages), max(eligible_pages)]))
+                if not selected_pages or min(selected_pages) > ends[0][1] or max(selected_pages) < ends[1][0]:
+                    raise ValueError('Plot summary must include an event from the first and the last story pages: '
+                                     + str(ends))
             if attempt == 2 and any(len(s['claim_ids']) != 1 or s['text'].strip() !=
                     allowed[s['claim_ids'][0]]['claim'].strip() for s in rows):
                 raise ValueError('Final repair must preserve selected verified claim text exactly')
@@ -330,27 +449,15 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
              +feedback_text}]
     # The third attempt asks the model to do something the application can do itself:
     # copy verified claims word for word. When the model will not, the application does —
-    # an extractive summary of verified claims in page order, first and last included, evenly
-    # spread over the book. It reads less well than a written one and says so (`status`), but
+    # an extractive summary of verified claims in page order (`extractive`): first and last story
+    # claims included, one claim from each equal page slice of the WHOLE book (`pool`, not only
+    # the condensed input). It reads less well than a written one and says so (`status`), but
     # it cannot say anything the ledger has not verified, and a book whose summary the critic
     # refused three times still has its analysis instead of "FAILED".
-    limit = SUMMARY_SCHEMA['properties']['sentences'].get('maxItems', 24)
-    proven = {e['claim_id'] for e in snap['evidence'] if e['quote_verified']}
-    usable = [c for c in claims if c['id'] in proven]
-    if not usable:
+    rows = extractive(snap, pool if pool else claims)
+    if not rows:
         return {'sentences': [], 'status': 'NO_VERIFIED_FACTS', 'model_calls': calls, 'attempts': 3,
                 'rejected_attempts': rejected, 'critic_disagreements': disagreements}
-    picked = usable if len(usable) <= limit else \
-        [usable[round(i * (len(usable) - 1) / (limit - 1))] for i in range(limit)]
-    seen, unique = set(), []
-    for c in picked:
-        if c['claim'].strip() not in seen:
-            seen.add(c['claim'].strip())
-            unique.append(c)
-    rows = bind_sentences({'sentences': [{'text': c['claim'].strip(), 'claim_ids': [c['id']]} for c in unique]},
-                          claims, snap['evidence'])
-    for row in rows:
-        row['support_check'] = 'EXACT_VERIFIED_CLAIM'
     return {'sentences': rows, 'status': 'EXTRACTIVE_FALLBACK', 'model_calls': calls, 'attempts': 3,
             'rejected_attempts': rejected, 'critic_disagreements': disagreements}
 

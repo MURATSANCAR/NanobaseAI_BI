@@ -194,8 +194,14 @@ def _persist(st: ChunkState) -> ChunkState:
             c.execute("INSERT INTO page_role(generation_id, page_no, role, source, model_call_id)"
                       " VALUES (%s,%s,'NON_STORY','extract',%s) ON CONFLICT DO NOTHING", (gid, p, call_id))
             ledger.queue_review(c,gid,reason=f"Sayfa türü incelemesi: s{p}; çıkarıcının NON_STORY önerisi, kapsamdan çıkarılmadı",priority=2,page_role_page_no=p)
+        # The suggestion alone never removes a page (non-fiction bodies get it wholesale). A page whose
+        # TEXT is the imprint, title page, author bio, contents or the publisher's adverts is out of the
+        # book at once, in both profiles, without waiting for an editor (editor.page_scope; the
+        # editor can turn it back): nothing is extracted from it.
+        from . import page_scope
+        page_scope.for_chunk(c, gid, st["page_from"], st["page_to"], suggested_non_story)
         non_story = {r["page_no"] for r in c.execute("SELECT page_no FROM page_role WHERE generation_id=%s "
-            "AND source='editor' AND role IN ('FRONT_MATTER','NON_STORY')",(gid,))}
+            "AND source = ANY(%s) AND role IN ('FRONT_MATTER','NON_STORY')",(gid, list(page_scope.SCOPE_SOURCES)))}
 
         def story(item: dict, *keys: str) -> bool:
             """Keep an item only if none of its pages is a non-story page."""

@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-10-02 — Editör: kitap özeti ve künye — kapsam dışı sayfalar (künye, iç kapak, yazar tanıtımı, içindekiler, tanıtım)
+
+- Sorun (22 okunmuş kitap): kitap özeti 22/22 `EXTRACTIVE_FALLBACK` — olay özeti kuralı uç olay sayfası olarak künyeyi (Dallar s.2) ya da yayınevinin başka kitaplarının tanıtımını istiyordu; uzun kitapta parça özeti parçanın ilk sayfalarında kalıyordu (Çiçekçi Kadın 1. parça s.7–176, seçimlerin hepsi s.7–19), yedek özet yalnız bu seçimden. `page_role`'de yalnız okumanın NON_STORY önerisi vardı (editör onayı bekliyor; arşivde onaylayan yok), FRONT_MATTER hiç yoktu → künye okunmadı (METADATA 0), künye/yazar tanıtımı/tanıtım sayfalarından olay çıktı.
+- Karar: öneriyi olduğu gibi uygulamak kurgu dışı kitabın gövdesini silerdi (Osmanlı Taşra Maliyesi 544 sayfanın 440'ı önerili, üstünde 312 olay; İbn Sina 160'ın 148'i). Sayfa ancak METNİ kitabın dışı olduğunu gösterirse çıkar: Stüdyo'nun baskı dışı kuralı (`production.manuscript.print_plan`) + ön sayfada kısa ithaf. Yeni `editor/page_scope.py`: künye/iç kapak/yazar tanıtımı → FRONT_MATTER, içindekiler/yayınevi tanıtımı/ithaf → NON_STORY, kaynak `source='auto'`; editörün kararı ezilmez, sayfa sorusunda «Hayır» kapsama döndürür (`review.choose`). Tam ve arşiv kipinde aynı (yalnız metinle doğrulanan paratext; öneri yine öneri).
+- Kapsam dışı sayfanın olay/duygu/tema iddiası silinmez, çıktı kullanmaz (`outputs.capture` → `snap.scope`); yeni okumada o sayfadan olay çıkarılmaz (`knowledge._persist` → `page_scope.for_chunk`); okuma sonu doğrulaması (`rebuild.validate`, `archive.validate`) bütün kitapla tamamlar (`page_scope.ensure`).
+- Özet: uçlar hikâye sayfalarının ilk/son %5'i (`outputs.edge_pages`; tek uç sayfa şartı ithaf/telif notu gibi tek olayla düşürüyordu), parça özeti parçanın bütününe yayılır (`spread`, kitap başına 24 dilim), yedek özet bütün kullanılabilir olaylar üstünde sayfa dilimleriyle (`extractive`, ilk ve son hikâye olayı dahil). Künye okuması rol yoksa aynı kuralı salt okuyarak uygular (`catalog.metadata_pages`).
+- Yeniden üretim (yeniden okumadan): `python -m editor.page_scope rebuild --all-read [--dry-run [--model N]]` — kural → künye (1 model çağrısı) → doğrulama (Critic yeniden koşmaz: iddialar önceki revizyonda doğrulandı; regresyon koşar) → özet/dizin/rapor/kart. ÇALIŞTIRILMADI; yalnız kuru koşu (salt okuma oturumu).
+- Test: `tests/test_page_scope.py` (8).
+
 ## 2026-10-02 — SEO & GEO: 40 ekran menüde 8 gruba toplandı
 
 - Analiz: SEO menüsünde 40 öğe vardı (iki bölüm, «izleme» ve «işler»); aynı konunun ekranları (ör. Search Console'dan beslenen kelimeler/fırsatlar/sorgu–sayfa/yarışan; Bing/Yandex/YouTube/video) ayrı ayrı menüde duruyordu. Ekranların içeriği birleştirilmedi: her ekranın kendi ucu, hazır hesabı, yetki anahtarı ve bilgi kutusu var; birleştirmek bunları kırar.
