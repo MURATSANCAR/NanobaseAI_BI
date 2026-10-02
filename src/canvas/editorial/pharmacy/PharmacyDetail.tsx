@@ -24,7 +24,7 @@ import { EpubSection } from '../studio/epub';
 import { NarrationSection } from '../studio/narration';
 import { ART_MODES, ArtModePicker, artModeDuration } from '../studio/ArtMode';
 import { StepIcon, ago, ghostBtn, gradientBtn } from '../studio/shared';
-import { AUDIENCE_LABEL, CONFIDENCE_LABEL, ageText, jobNote, moving, readPill, redactionPill, reviewText } from './labels';
+import { AUDIENCE_LABEL, ageText, jobNote, moving, readPill, redactionPill, reviewText } from './labels';
 
 /** Kitap Eczanesi'nde seçili kitap: okuma durumu ve dört iş — son okuma (redaksiyon), e-kitap, sesli kitap,
  *  Kitap Tasarım Stüdyosu. Her biri var olan ekranların bileşenleriyle: son okuma bulguları, kararlar, Word çıktısı,
@@ -347,9 +347,6 @@ function CategoryCompare({ b }: { b: PharmacyBook }) {
               <p className="mt-1 text-[12px] text-canvas-muted">
                 {AUDIENCE_LABEL[s.audience]} · {ageText(s.age_from, s.age_to)}
               </p>
-              <div className="mt-1.5">
-                <Pill tone={CONFIDENCE_LABEL[s.confidence].tone}>{CONFIDENCE_LABEL[s.confidence].text}</Pill>
-              </div>
               {s.reason && <p className="mt-2 text-[12.5px] leading-snug">{s.reason}</p>}
               {s.evidence_pages.length > 0 && (
                 <p className="mt-1 text-[11.5px] text-canvas-muted">

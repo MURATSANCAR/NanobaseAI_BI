@@ -1,4 +1,4 @@
-import { PHARMACY_CATEGORIES, type PharmacyAudience, type PharmacyBook, type PharmacyJob, type PharmacyState, type PharmacySuggestion } from '../../engine';
+import { PHARMACY_CATEGORIES, type PharmacyAudience, type PharmacyBook, type PharmacyJob, type PharmacyState } from '../../engine';
 
 /** Kitap Eczanesi'nin ekran dili: kategori ve durum adları, durumun rengi ve kısa açıklaması. Teknik ad yok. */
 
@@ -58,11 +58,6 @@ export function redactionPill(b: PharmacyBook): { tone: Tone; text: string } | n
 /* ------------------------------------------------------------------ timas.com.tr ↔ Zeki AI önerisi */
 
 export const AUDIENCE_LABEL: Record<PharmacyAudience, string> = { CHILD: 'Çocuk', YOUNG: 'Genç', ADULT: 'Yetişkin' };
-export const CONFIDENCE_LABEL: Record<PharmacySuggestion['confidence'], { tone: Tone; text: string }> = {
-  HIGH: { tone: 'ok', text: 'Güven yüksek' },
-  MEDIUM: { tone: 'muted', text: 'Güven orta' },
-  LOW: { tone: 'warn', text: 'Güven düşük' },
-};
 const REASON_LABEL = { CATEGORY: 'kategori farklı', AUDIENCE: 'okur kitlesi farklı', AGE: 'yaş aralığı örtüşmüyor' } as const;
 
 /** «6-9 yaş», «13+ yaş»; yaş yoksa null. */

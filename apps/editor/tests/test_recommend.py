@@ -100,6 +100,43 @@ def test_sample_takes_short_picture_book_pages():
     assert got and all(len(t) >= R.MIN_PAGE_CHARS for _, t in got)
 
 
+def test_readability_is_deterministic():
+    pages = [{"page_no": n, "spans": [{"text": "Ali topu attı. Top uçtu."}, {"text": "- Bak, top!"}]}
+             for n in range(1, 21)]
+    r = R.readability(pages)
+    assert r == R.readability(pages)
+    assert r["words_per_text_page"] == 7                      # 5 + 2 kelime
+    assert r["words_per_sentence"] == round(7 / 3, 1)         # iki cümle + bir konuşma
+    assert r["dialogue_share"] == 0.5
+    assert r["syllables_per_word"] == round(sum([2, 2, 2, 1, 2, 1, 1]) / 7, 2)
+    assert R.readability([])["words_per_text_page"] == 0
+
+
+def test_prompt_carries_measures_and_age_scale():
+    inp = {"title": "X", "pages": 24, "illustrated_pages": 20, "words_per_text_page": 9, "metadata": [],
+           "readability": {"words_per_sentence": 5.2, "letters_per_word": 4.8, "syllables_per_word": 2.1,
+                           "dialogue_share": 0.25},
+           "book_summary": [], "chapters": [], "sample": []}
+    p = R.prompt_text(inp, ["Çocuk > Hikaye"])
+    assert "ortalama cümle uzunluğu: 5.2 kelime" in p and "%83" in p and "diyalog payı" in p and "%25" in p
+    for step in ("0-3", "3-6", "6-9", "9-12", "12-17", "18+"):
+        assert f"- {step}" in p
+    assert "ölçülerin uyduğu basamak: 0-3" in p
+
+
+def test_scale_band_from_measures_only():
+    def inp(ill, pages, wpp, wps):
+        return {"illustrated_pages": ill, "pages": pages, "words_per_text_page": wpp,
+                "readability": {"words_per_sentence": wps}}
+    assert R.scale_band(inp(29, 32, 32, 4.8)) == "3-6"        # resimli, kısa metin
+    assert R.scale_band(inp(44, 128, 85, 4.9)) == "6-9"       # ilk okuma
+    assert R.scale_band(inp(3, 208, 210, 9.5)) is None        # dolu sayfa: tavan yok
+    assert R.scale_band(inp(0, 0, 0, 0)) is None
+    p = R.prompt_text({**inp(3, 208, 210, 9.5), "title": "Y", "metadata": [], "book_summary": [], "chapters": [],
+                       "sample": []}, ["Yetişkin > Roman"])
+    assert "ölçülerin uyduğu basamak" not in p
+
+
 def test_prompt_has_no_book_specific_rule_and_lists_tree():
     inp = {"title": "X", "pages": 24, "illustrated_pages": 20, "words_per_text_page": 9, "metadata": [],
            "book_summary": [{"text": "Bir çocuk.", "pages": [3]}], "chapters": [], "sample": [{"page": 5, "text": "a"}]}
