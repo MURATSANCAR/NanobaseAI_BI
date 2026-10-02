@@ -6,6 +6,11 @@ arasında geldi. Burada soru, kitabın güncel kartından (özet, temalar, karak
 listesinden ve soruya en yakın metin parçalarından kurulan tek bir bağlamla, düşünme kapalı tek çağrıda
 cevaplanır.
 
+Kitap listesi ve kart, portaldaki kitap kartıyla aynı kaynaktan okunur: kitabın son okumasının güncel, doğrulanmış
+`catalog` çıktısı ve onun bilgi anlık görüntüsü (`read_model.card`). Eski `ed.book_card` tablosu kullanılmaz:
+onu yalnız mühürlü nesilden kart kuran eski üretici yazıyordu; 2026-10-02 denetiminde 0 satırdı ve 22 okunmuş
+kitabın hepsinde hızlı yol `NO_BOOKS` dönüp soruyu yavaş yola düşürüyordu.
+
 Kayıtlar soruya yetmiyorsa model yalnız `DEEPER` işaretini döner; çağıran (köprü) o zaman soruyu sohbet
 ajanına verir. Sorunun hangi kitap(lar)la ilgili olduğu kitap adlarının soruda geçmesinden bulunur; ad yoksa
 kütüphanedeki bütün kitapların kartı verilir.
@@ -15,7 +20,9 @@ Bağlamın boyu modelin sunulan bağlamından (budget) hesaplanır; sığmayan k
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 import re
 import unicodedata
 from typing import Any
@@ -30,6 +37,9 @@ DEEPER = "[[DERIN_OKUMA]]"
 NOT_FOUND = "Kitapta bulunamadı."
 #: Soruya özel metin parçası sayısı (arama + yeniden sıralama). Aramanın kendisi 40 aday tarar.
 EVIDENCE_K = 8
+#: Metin araması en çok bu kadar sürer; aşarsa soru kart ve olaylarla cevaplanır (okuma kartı tutarken soru
+#: bekletilmez). Arama hiçbir modeli beklemez (retrieval interactive); bu süre son güvenlik sınırıdır.
+EVIDENCE_TIMEOUT = float(os.environ.get("EDITOR_QUICK_EVIDENCE_TIMEOUT_SEC", "20"))
 
 SYSTEM = f"""Sen ZEKİ AI'sın; Timaş'ın kitap asistanısın. Türkçe, sade ve doğrudan cevap ver.
 
@@ -64,15 +74,44 @@ def mentioned(question: str, books: list[dict]) -> list[dict]:
     return out
 
 
+#: (kitap, kart çıktısının build_key'i) -> kart. Bir build_key'in içeriği değişmez; yeni okuma yeni anahtar getirir.
+_CARDS: dict[tuple[str, str], dict] = {}
+
+
 def library(c) -> list[dict]:
-    """Soru sorulabilen kitaplar: güncel kartı olanlar."""
+    """Soru sorulabilen kitaplar: son okumasının güncel `catalog` çıktısı olanlar (portal kartıyla aynı kural:
+    `read_model.card`; okuması süren ya da çıktısı bayat kitap listede yoktur)."""
     rows = c.execute(
-        "SELECT bc.book_id, bc.generation_id, bc.title, bc.metadata, bc.summary, bc.themes, bc.key_events,"
-        " b.title AS record_title, bv.page_count, cr.crm_title, cr.authors AS crm_authors"
-        " FROM ed.book_card bc JOIN ed.book b ON b.id=bc.book_id JOIN ed.book_version bv ON bv.id=bc.book_version_id"
-        " LEFT JOIN ed.book_crm_record cr ON cr.book_id=bc.book_id WHERE bc.is_current ORDER BY bc.title").fetchall()
-    return [{**r, "book_id": str(r["book_id"]), "generation_id": str(r["generation_id"]),
-             "names": [r["title"], r["record_title"], r["crm_title"]]} for r in rows]
+        "SELECT * FROM (SELECT DISTINCT ON (v.book_id) v.book_id, g.id AS generation_id, v.page_count,"
+        " a.build_key FROM ed.generation g JOIN ed.book_version v ON v.id=g.book_version_id"
+        " LEFT JOIN ed.current_artifact a ON a.generation_id=g.id AND a.kind='catalog'"
+        " ORDER BY v.book_id, g.created_at DESC, g.id DESC) x WHERE build_key IS NOT NULL").fetchall()
+    if not rows:
+        return []
+    crm = {str(r["book_id"]): r for r in c.execute(
+        "SELECT book_id, crm_title, authors FROM ed.book_crm_record WHERE book_id=ANY(%s::uuid[])",
+        ([str(r["book_id"]) for r in rows],)).fetchall()}
+    books = []
+    for r in rows:
+        bid = str(r["book_id"])
+        key = (bid, r["build_key"])
+        card = _CARDS.get(key)
+        if card is None:
+            card = read_model.card(c, bid)
+            if not card or not card["available"]:
+                continue
+            if card["card_id"] == r["build_key"]:
+                _CARDS[key] = card
+        cr = crm.get(bid) or {}
+        meta = card["metadata"] or []
+        books.append({
+            "book_id": bid, "generation_id": card["generation_id"], "title": card["title"],
+            "crm_title": cr.get("crm_title"), "crm_authors": cr.get("authors") or [],
+            "page_count": r["page_count"], "metadata": meta, "summary": card["summary"] or [],
+            "themes": card["themes"] or [], "events": card["key_events"] or [],
+            "characters": card["characters"] or [],
+            "names": [card["title"], cr.get("crm_title"), *_meta_values(meta, "TITLE")]})
+    return sorted(books, key=lambda b: norm(b["crm_title"] or b["title"]))
 
 
 def _pages(p: Any) -> str:
@@ -80,21 +119,35 @@ def _pages(p: Any) -> str:
     return ("s." + ",".join(str(x) for x in sorted(set(pages)))) if pages else "sayfa yok"
 
 
-def _meta(meta: dict, key: str) -> str:
-    return ", ".join(str(x.get("value")) for x in (meta or {}).get(key, []) if x.get("value"))
+def _meta_values(meta: list[dict], subject: str) -> list[str]:
+    """Kitabın künye sayfasında birebir bulunmuş METADATA iddiaları (subject = AUTHOR, TITLE, GENRE, ...)."""
+    return [str(m["claim"]) for m in meta or [] if m.get("subject") == subject and m.get("claim")]
+
+
+def _themes(themes: list[dict]) -> list[tuple[str, list[int]]]:
+    """Kitap düzeyindeki temalar; yoksa bölüm temaları, aynı ad tek satırda (sayfaları birleşik)."""
+    book = [t for t in themes if (t.get("payload") or {}).get("level") == "book"]
+    merged: dict[str, tuple[str, set]] = {}
+    for t in book or themes:
+        text = str(t.get("claim") or "").strip()
+        if not text:
+            continue
+        name, pages = merged.setdefault(norm(text), (text, set()))
+        pages.update(int(p) for p in (t.get("source_pages") or []) if str(p).lstrip("-").isdigit())
+    return [(name, sorted(pages)) for name, pages in merged.values()]
 
 
 def card_block(b: dict, c, *, full: bool) -> tuple[str, list[str]]:
     """Kitabın sabit kısmı (başlık, özet, temalar, karakterler) ve ayrı satırlar hâlinde olay listesi.
-    `full=False`: kütüphane sorusunda yalnız kart (olay listesi yok)."""
+    `full=False`: kütüphane sorusunda yalnız kart (olay listesi yerine kilit olaylar)."""
     gid = b["generation_id"]
     title = b["crm_title"] or b["title"]
-    authors = _meta(b["metadata"], "AUTHOR") or ", ".join(b["crm_authors"] or [])
+    authors = ", ".join(_meta_values(b["metadata"], "AUTHOR")) or ", ".join(b["crm_authors"] or [])
     head = [f"### KİTAP: {title}"]
     if authors:
         head.append(f"Yazar: {authors}")
     for label, key in (("Yaş", "AGE_RANGE"), ("Tür", "GENRE")):
-        if v := _meta(b["metadata"], key):
+        if v := ", ".join(_meta_values(b["metadata"], key)):
             head.append(f"{label}: {v}")
     if b["page_count"]:
         head.append(f"Sayfa sayısı: {b['page_count']}")
@@ -104,36 +157,37 @@ def card_block(b: dict, c, *, full: bool) -> tuple[str, list[str]]:
         head.append("Okuma durumu: kaynaklı taslak, editör incelemesi tamamlanmadı.")
     if b["summary"]:
         head.append("Özet: " + " ".join(f"{s['text']} [{_pages(s.get('pages'))}]" for s in b["summary"]))
-    if b["themes"]:
-        head.append("Temalar: " + "; ".join(f"{t['theme']}: {t['text']} [{_pages(t.get('pages'))}]"
-                                           for t in b["themes"]))
-    chars = c.execute(
-        "SELECT canonical_name, aliases, description, first_page, identity_status, kind, traits FROM ed.character"
-        " WHERE generation_id=%s AND identity_status<>'UNCERTAIN' ORDER BY first_page NULLS LAST, canonical_name",
-        (gid,)).fetchall()
-    if chars:
+    if themes := _themes(b["themes"]):
+        head.append("Temalar: " + "; ".join(f"{name} [{_pages(pages)}]" for name, pages in themes))
+    chars = sorted((ch for ch in b["characters"] if ch.get("identity_status") != "UNCERTAIN"),
+                   key=lambda ch: (ch.get("first_page") is None, ch.get("first_page") or 0, ch["canonical_name"]))
+    if chars and not full:
+        # Kütüphane sorusu: 22 kitabın tam kartı modelin bağlamını aştı (ölçüldü 2026-10-02: 133 bin token, yer
+        # 127 bin); kitap seçmek için karakter adları yeter, tanımlar kitap sorulunca gelir.
+        head.append("Karakterler: " + ", ".join(ch["canonical_name"] for ch in chars))
+    elif chars:
         head.append("Karakterler (adın ilk geçtiği sayfa; tanımın kaynağı ayrı yazılı):")
         for ch in chars:
-            alias = f" (diğer adları: {', '.join(ch['aliases'])})" if ch["aliases"] else ""
-            unsure = " — kimliği kesinleşmedi" if ch["identity_status"] != "CONFIRMED" else ""
-            src = read_model.description_pages(ch)
+            alias = f" (diğer adları: {', '.join(ch['aliases'])})" if ch.get("aliases") else ""
+            unsure = " — kimliği kesinleşmedi" if ch.get("identity_status") != "CONFIRMED" else ""
+            src = ch.get("description_pages") or []
             desc = (f": {ch['description']} [{_pages(src)}]" if src else f": {ch['description']} [tanım sayfası yok]") \
-                if ch["description"] else ""
-            first = f" [adı ilk s.{ch['first_page']}]" if ch["first_page"] else ""
+                if ch.get("description") else ""
+            first = f" [adı ilk s.{ch['first_page']}]" if ch.get("first_page") else ""
             head.append(f"- {ch['canonical_name']}{alias}{first}{unsure}{desc}")
+    events = sorted((e for e in b["events"] if e.get("merged_into") is None),
+                    key=lambda e: (e["page_from"], e.get("story_order") is None, e.get("story_order") or 0,
+                                   str(e.get("id"))))
     if not full:
-        if b["key_events"]:
-            head.append("Kilit olaylar: " + "; ".join(f"{e['text']} [{_pages(e.get('pages'))}]"
-                                                    for e in b["key_events"]))
+        key = [e for e in events if e.get("narrative_role") not in (None, "ORDINARY")]
+        if key:
+            head.append("Kilit olaylar: " + "; ".join(f"{e['summary']} [{_pages([e['page_from']])}]" for e in key))
         return "\n".join(head), []
-    events = c.execute(
-        "SELECT page_from, page_to, summary, modality, narrative_role FROM ed.usable_event WHERE generation_id=%s"
-        " ORDER BY page_from, story_order NULLS LAST, id", (gid,)).fetchall()
     lines = []
     for e in events:
-        span = f"s.{e['page_from']}" + (f"-{e['page_to']}" if e["page_to"] != e["page_from"] else "")
-        kind = "" if e["modality"] == "REALIZED" else f" ({e['modality'].lower()})"
-        role = f" [{e['narrative_role'].lower()}]" if e["narrative_role"] and e["narrative_role"] != "ORDINARY" else ""
+        span = f"s.{e['page_from']}" + (f"-{e['page_to']}" if e.get("page_to") not in (None, e["page_from"]) else "")
+        kind = "" if e.get("modality") in (None, "REALIZED") else f" ({e['modality'].lower()})"
+        role = f" [{e['narrative_role'].lower()}]" if e.get("narrative_role") not in (None, "ORDINARY") else ""
         lines.append(f"- {span}{role}{kind}: {e['summary']}")
     return "\n".join(head), lines
 
@@ -141,16 +195,33 @@ def card_block(b: dict, c, *, full: bool) -> tuple[str, list[str]]:
 async def _evidence(gid: str, question: str) -> list[str]:
     from . import retrieval
     try:
-        rows = await retrieval.search_book_evidence(gid, question, EVIDENCE_K)
-    except Exception as e:  # noqa: BLE001 — arama dizini yoksa kart ve olaylar yine kullanılır
+        rows = await asyncio.wait_for(
+            retrieval.search_book_evidence(gid, question, EVIDENCE_K, interactive=True), EVIDENCE_TIMEOUT)
+    except Exception as e:  # noqa: BLE001 — dizin yok ya da süre doldu: kart ve olaylar yine kullanılır
         log.info("quick answer evidence search skipped (%s): %s", gid, str(e)[:200])
         return []
     return [f"- s.{r['page']}: {r['text']}" for r in rows]
 
 
+def _shrink(block: str, share: int) -> str:
+    """Bloğu satır satır `share` token'a sığdırır; alınmayan satır sayısı blokta yazılı kalır."""
+    lines, kept, cost = block.split("\n"), [], 0
+    for line in lines:
+        n = budget.estimate(line) + 1
+        if cost + n > share:
+            break
+        kept.append(line)
+        cost += n
+    if len(kept) < len(lines):
+        kept.append(f"(Yer yetmediği için bu kitabın kaydından {len(lines) - len(kept)} satır daha alınmadı.)")
+    return "\n".join(kept)
+
+
 def fit(fixed: list[str], tails: list[list[str]], room: int) -> str:
-    """Sabit blokları tam koyar; kalan yeri kitapların olay listelerine eşit böler. Sığmayan satır sayısı
-    bağlamda yazılı kalır (sessizce düşmez)."""
+    """Sabit blokları tam koyar; kalan yeri kitapların olay listelerine eşit böler. Sabit bloklar yere sığmıyorsa
+    her kitaba eşit pay verilir. Sığmayan satır sayısı bağlamda yazılı kalır (sessizce düşmez)."""
+    if sum(budget.estimate(x) for x in fixed) > room:
+        fixed = [_shrink(x, room // max(1, len(fixed))) for x in fixed]
     used = sum(budget.estimate(x) for x in fixed)
     left = max(0, room - used)
     share = left // max(1, len([t for t in tails if t]))

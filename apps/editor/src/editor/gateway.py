@@ -58,6 +58,26 @@ EVICT_GRACE = int(os.environ.get("EDITOR_EVICT_GRACE_SEC", "120"))
 YIELD_MAX = int(os.environ.get("EDITOR_YIELD_MAX_SEC", "1500"))     # bekleme bundan uzarsa eski davranış;
 #   istemci zaman aşımlarının altında (stüdyo 1800 sn, okuma 3600 sn)
 GPU_LOCKS: dict[int, asyncio.Lock] = {}
+# Adil sıra (2026-10-02): dört kitap paralel okunurken derin görsel model sürekli yeni iş aldığı için hiç «boş» olmadı;
+# _held kartı ona bıraktı, OCR ve embedding istekleri 25+ dk (YIELD_MAX'a kadar) aç kaldı — ölçüldü: 90 dk'da 5 OCR
+# çağrısı, iki kitap 1,5 saat OCR adımında. Kural: kartı bekleyen model, beklemeye başladığı andan HOLD_MAX saniye
+# sonra (etkileşimli istekte INTERACTIVE_HOLD_MAX) sırasını alır: kartı tutan model yeni iş almaz (drain), elindeki
+# işler biter, bekleyen açılır. Kartı tutan model sırasını en az HOLD_MAX saniye kullanmış olmalı (yer değiştirme
+# döngüsü olmasın); yeni açılan model de aynı korumayla en az bir HOLD süresi kartta kalır. İş kesilmez.
+HOLD_MAX = int(os.environ.get("EDITOR_HOLD_MAX_SEC", "600"))
+INTERACTIVE_HOLD_MAX = int(os.environ.get("EDITOR_INTERACTIVE_HOLD_MAX_SEC", "120"))
+WAITING_SINCE: dict[str, float] = {}        # alias -> kartı beklemeye başladığı an (ilk bekleyen istek)
+WAITING_INTERACTIVE: dict[str, float] = {}  # alias -> etkileşimli bir isteğin beklemeye başladığı an
+YIELDING: dict[str, int] = {}               # alias -> şu an _route'ta sıra bekleyen istek sayısı
+TURN_START: dict[str, float] = {}           # alias -> kartta sırasının başladığı an (sağlıklı açıldığı an)
+# Etkileşimli istek (Kitaba sor, kart ekranı) bu başlıkla gelir: kartı daha kısa süre bekler.
+INTERACTIVE_HEADER = "x-editor-interactive"
+# Bu başlıkla gelen istek hiç beklemez: model şimdi ayakta değilse (ve CPU eşi yoksa) hemen 503 model_not_ready
+# döner; çağıran o adımı atlar (Kitaba sor: yeniden sıralama yoksa metin parçaları benzerlik sırasıyla verilir).
+NO_WAIT_HEADER = "x-editor-no-wait"
+# CPU eşi (models.yaml `cpu_twin`): GPU kopyası kapalıyken küçük istekler (en çok bu kadar girdi; sorgu embedding'i
+# 1 girdi) CPU'daki aynı ağırlıklara gider. Toplu dizinleme (64'lük paketler) GPU'yu bekler/açar.
+CPU_TWIN_MAX_INPUTS = int(os.environ.get("EDITOR_CPU_TWIN_MAX_INPUTS", "4"))
 
 
 def _gpu_lock(gpu: int) -> asyncio.Lock:
@@ -137,6 +157,10 @@ class Alias:
     entrypoint: list[str] = field(default_factory=list)
     # Extra container environment for this alias only (e.g. PyTorch allocator settings).
     env: dict[str, str] = field(default_factory=dict)
+    # gpu < 0: CPU'da çalışan model (kart, bellek payı ve kart kilidi yok). `cpus`: kaba ayrılan çekirdek sayısı.
+    cpus: int = 0
+    # Aynı ağırlıkları CPU'da sunan alias; GPU kopyası kapalıyken küçük istekler ona gider (CPU_TWIN_MAX_INPUTS).
+    cpu_twin: str = ""
     inflight: int = 0
     last_used: float = field(default_factory=time.time)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -153,6 +177,8 @@ class Alias:
             spec.append(self.entrypoint)
         if self.env:
             spec.append(sorted(self.env.items()))
+        if self.cpus:
+            spec.append(self.cpus)
         blob = json.dumps(spec)
         return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
@@ -174,6 +200,8 @@ def load_aliases() -> dict[str, Alias]:
             also_serves=[str(x) for x in a.get("also_serves", [])],
             entrypoint=[str(x) for x in a.get("entrypoint", [])],
             env={str(k): str(v) for k, v in (a.get("env") or {}).items()},
+            cpus=int(a.get("cpus", 0)),
+            cpu_twin=str(a.get("cpu_twin", "")),
         )
     return out
 
@@ -233,11 +261,15 @@ def _create(a: Alias):
     cmd = ["/model", "--served-model-name", a.name, *a.also_serves,
            "--gpu-memory-utilization", f"{a.mem_fraction:.2f}", *a.args]
     log.info("create %s (%s) gpu=%s frac=%.2f", a.container, a.real_model, a.gpu, a.mem_fraction)
+    extra: dict[str, Any] = {}
+    if a.gpu >= 0:
+        extra["device_requests"] = [DeviceRequest(device_ids=[str(a.gpu)], capabilities=[["gpu"]])]
+    if a.cpus:
+        extra["nano_cpus"] = a.cpus * 10**9
     return dk.containers.create(
         a.image, cmd, entrypoint=a.entrypoint or None, name=a.container, labels=labels, detach=True,
         network=NETWORK, ipc_mode="host", shm_size="16g",
-        ulimits=[Ulimit(name="memlock", soft=-1, hard=-1)],
-        device_requests=[DeviceRequest(device_ids=[str(a.gpu)], capabilities=[["gpu"]])],
+        ulimits=[Ulimit(name="memlock", soft=-1, hard=-1)], **extra,
         volumes={f"{HOST_ROOT}/models/{a.model_dir}": {"bind": "/model", "mode": "ro"},
                  cache: {"bind": "/root/.cache/vllm", "mode": "rw"}},
         environment={**a.env, "HF_HUB_OFFLINE": "1", "VLLM_NO_USAGE_STATS": "1",
@@ -336,8 +368,46 @@ async def _make_room_inner(a: Alias, need: int, deadline: float) -> None:
 
 def _held(o: Alias, a: Alias, now: float) -> bool:
     """`o` kartını `a`ya bırakmamalı mı? İş başındaki model (son EVICT_GRACE saniyede kullanılmış ya da açılıyor)
-    tutulur. Sürekli açık ana model tutulmaz: kart gerekince yer verir, bekçi sonra geri kaldırır."""
-    return not o.always_on and (o.lock.locked() or now - o.last_used < EVICT_GRACE)
+    tutulur. Sürekli açık ana model tutulmaz: kart gerekince yer verir, bekçi sonra geri kaldırır. `a`nın sırası
+    geldiyse (`_turn_over`) `o` artık tutulmaz: yeni iş almaz, elindeki işler bitince kartı bırakır."""
+    if o.always_on:
+        return False
+    if o.lock.locked():
+        return True
+    return now - o.last_used < EVICT_GRACE and not _turn_over(o, a, now)
+
+
+def _turn_over(o: Alias, a: Alias, now: float) -> bool:
+    """`a` kartı yeterince bekledi ve `o` sırasını en az bir HOLD süresi kullandı mı? Etkileşimli bekleyişte iki süre
+    de INTERACTIVE_HOLD_MAX'tır."""
+    since, inter = WAITING_SINCE.get(a.name), WAITING_INTERACTIVE.get(a.name)
+    if inter is not None and now - inter >= INTERACTIVE_HOLD_MAX \
+            and now - TURN_START.get(o.name, 0.0) >= INTERACTIVE_HOLD_MAX:
+        return True
+    return since is not None and now - since >= HOLD_MAX and now - TURN_START.get(o.name, 0.0) >= HOLD_MAX
+
+
+def _wait_begin(a: Alias, interactive: bool) -> None:
+    now = time.time()
+    YIELDING[a.name] = YIELDING.get(a.name, 0) + 1
+    WAITING_SINCE.setdefault(a.name, now)
+    if interactive:
+        WAITING_INTERACTIVE.setdefault(a.name, now)
+
+
+def _wait_end(a: Alias, proceeding: bool) -> None:
+    """`proceeding`: istek modeli açmaya gidiyor (ensure_running); bekleyiş kaydı orada, model açılınca silinir —
+    burada silinirse yer açma sırasında kartı tutan modelin sırası yeniden «bitmemiş» görünür."""
+    YIELDING[a.name] = max(0, YIELDING.get(a.name, 0) - 1)
+    if not proceeding:
+        _wait_forget(a)
+
+
+def _wait_forget(a: Alias, served: bool = False) -> None:
+    """Bekleyiş kaydı, model açıldığında ya da artık bekleyen isteği kalmadığında silinir."""
+    if served or (not YIELDING.get(a.name) and a.name not in WAITING):
+        WAITING_SINCE.pop(a.name, None)
+        WAITING_INTERACTIVE.pop(a.name, None)
 
 
 def _must_yield(a: Alias) -> bool:
@@ -370,23 +440,35 @@ async def _drain_overflow(a: Alias, client: str = "") -> bool:
     return _reserve_overflow(load)
 
 
+def _interactive(req: Request) -> bool:
+    headers = getattr(req, "headers", None) or {}
+    return bool(_client_name(req)) or headers.get(INTERACTIVE_HEADER, "") == "1"
+
+
 async def _route(a: Alias, req: Request) -> bool:
     """True: istek eşe gider. Kart boşaltılıyor ya da başka modelde iken istek kartı beslemez; eşe taşar ya da
-    sırasını bekler (YIELD_MAX'tan sonra eski davranış: kendi modelini açar)."""
+    sırasını bekler (YIELD_MAX'tan sonra eski davranış: kendi modelini açar). Beklemeye başladığı an kaydedilir:
+    HOLD_MAX (etkileşimlide INTERACTIVE_HOLD_MAX) dolunca kartı tutan modelin sırası biter (`_turn_over`)."""
     deadline = time.time() + YIELD_MAX
-    logged = False
+    waiting = proceeding = False
     client = _client_name(req)
-    while True:
-        if await _should_overflow(a, req):
-            return True
-        if not _must_yield(a) or time.time() > deadline:
-            return False
-        if await _drain_overflow(a, client):
-            return True
-        if not logged:
-            log.info("yield %s: card %s busy with another model, request waits", a.name, a.gpu)
-            logged = True
-        await asyncio.sleep(2)
+    try:
+        while True:
+            if await _should_overflow(a, req):
+                return True
+            if not _must_yield(a) or time.time() > deadline:
+                proceeding = True
+                return False
+            if await _drain_overflow(a, client):
+                return True
+            if not waiting:
+                log.info("yield %s: card %s busy with another model, request waits", a.name, a.gpu)
+                _wait_begin(a, _interactive(req))
+                waiting = True
+            await asyncio.sleep(2)
+    finally:
+        if waiting:
+            _wait_end(a, proceeding)
 
 
 def _would_wait(a: Alias) -> bool:
@@ -516,6 +598,11 @@ async def ensure_running(a: Alias) -> None:
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from None
     if _is_running(a) and await _healthy(a):
+        _wait_forget(a, served=True)
+        return
+    if a.gpu < 0:                       # CPU modeli: kart, kart kilidi ve yer açma yok
+        async with a.lock:
+            await _start_locked(a)
         return
     async with a.lock:
         if _is_running(a) and await _healthy(a):
@@ -529,6 +616,7 @@ async def ensure_running(a: Alias) -> None:
                 await _start_locked(a)
         finally:
             WAITING.discard(a.name)
+            _wait_forget(a)
 
 
 async def _start_locked(a: Alias) -> None:
@@ -536,14 +624,16 @@ async def _start_locked(a: Alias) -> None:
         return
     c = await asyncio.to_thread(_ensure_created, a)
     if c.status != "running":
-        await _make_room(a)
+        if a.gpu >= 0:
+            await _make_room(a)
         log.info("start %s on gpu %s", a.name, a.gpu)
         await asyncio.to_thread(c.start)
     t0 = time.time()
     while time.time() - t0 < a.start_timeout_sec:
         if await _healthy(a):
             log.info("ready %s in %.0fs", a.name, time.time() - t0)
-            a.last_used = time.time()
+            a.last_used = TURN_START[a.name] = time.time()
+            _wait_forget(a, served=True)
             return
         c.reload()
         if c.status != "running":
@@ -575,6 +665,10 @@ async def _keep(a: Alias) -> None:
     back as soon as there is room — never by pushing a working model out in turn — and while
     it is away interactive questions are answered by its copy on GPU 0 (overflow)."""
     if _is_running(a) or a.lock.locked():
+        return
+    if a.gpu < 0:                             # CPU modeli: kart hesabı yok, hemen geri kalkar
+        log.info("keep %s up (always on, cpu)", a.name)
+        await ensure_running(a)
         return
     # Another model is waiting for room on this card: coming back now would only be pushed
     # out again (measured: a start/stop loop every 50 s that stalled an analysis for an hour).
@@ -640,6 +734,9 @@ async def proxy(path: str, req: Request):
     a = ALIASES.get(payload.get("model", ""))
     if a is None:
         raise HTTPException(404, {"error": "unknown model", "models": sorted(ALIASES)})
+    a = await _cpu_twin(a, payload)
+    if req.headers.get(NO_WAIT_HEADER, "") == "1" and not await _ready_now(a, req):
+        raise HTTPException(503, {"error": "model_not_ready", "alias": a.name})
     a.inflight += 1
     released = False
     spilled = False
@@ -699,6 +796,53 @@ async def proxy(path: str, req: Request):
     except BaseException:
         release()
         raise
+
+
+async def _up_now(a: Alias) -> bool:
+    """Model şu an, kart sırası beklemeden cevap verebilir mi (ayakta, sağlıklı ve kartı boşaltılmıyor)?
+    Ölçüldü 2026-10-02: embedding kabı ayaktayken bile kartta başka model yer beklediği için (`_must_yield`)
+    soru embedding'i dakikalarca «card 1 busy» diye bekledi."""
+    return _is_running(a) and not _must_yield(a) and await _healthy(a)
+
+
+async def _cpu_twin(a: Alias, payload: dict) -> Alias:
+    """GPU kopyası şu an cevap veremiyorsa (`_up_now`) küçük isteği CPU eşine verir. Ölçüldü 2026-10-02: derin görsel model kartın
+    %90'ını tutarken Kitaba sor'un sorgu embedding'i kartta yer bulamadı (YIELD_MAX'a kadar bekledi); aynı
+    Qwen3-Embedding-8B CPU'da (32 çekirdek, AMX bf16) bir soruyu 0,15 sn'de gömüyor, dizindeki GPU vektörleriyle
+    kosinüs 0,9999."""
+    twin = ALIASES.get(a.cpu_twin) if a.cpu_twin else None
+    if twin is None:
+        return a
+    inputs = payload.get("input")
+    n = len(inputs) if isinstance(inputs, list) else 1
+    if n > CPU_TWIN_MAX_INPUTS or await _up_now(a):
+        return a
+    payload["model"] = twin.name
+    return twin
+
+
+async def _ready_now(a: Alias, req: Request) -> bool:
+    """NO_WAIT isteği şimdi cevaplanabilir mi: model ayakta ya da eşe taşacak. Değilse ve kartta kimseyi atmadan
+    yer varsa model arka planda açılır (bir sonraki soru kullanır); kimse durdurulmaz, kimse beklemez."""
+    if await _up_now(a):
+        return True
+    if a.gpu < 0:
+        return False
+    if OVERFLOW_URL and OVERFLOW_MODEL and a.name == OVERFLOW_ALIAS and _client_name(req):
+        return await _overflow_ok()
+    free, total = gpu_mem(a.gpu)
+    if not a.lock.locked() and not _must_yield(a) and free >= int(a.mem_fraction * total) + MEM_MARGIN:
+        log.info("no-wait %s: card %s has room, starting in background", a.name, a.gpu)
+        asyncio.create_task(_background_start(a))
+    return False
+
+
+async def _background_start(a: Alias) -> None:
+    try:
+        await ensure_running(a)
+        a.last_used = time.time()
+    except Exception as e:  # noqa: BLE001 — arka plan açılışı; istek zaten cevaplandı
+        log.info("background start %s failed: %s", a.name, str(e)[:200])
 
 
 # ------------------------------------------------------ internal endpoints

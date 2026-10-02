@@ -86,13 +86,19 @@ def _looping(text: str) -> bool:
     return False
 
 
-async def _post(path: str, req: dict) -> httpx.Response:
+#: Etkileşimli istek (Kitaba sor): gateway kart sırasında kısa bekler (EDITOR_INTERACTIVE_HOLD_MAX_SEC).
+INTERACTIVE = {"x-editor-interactive": "1"}
+#: Hiç beklemeyen istek: model ayakta değilse gateway hemen 503 model_not_ready döner, çağıran adımı atlar.
+NO_WAIT = {**INTERACTIVE, "x-editor-no-wait": "1"}
+
+
+async def _post(path: str, req: dict, headers: dict | None = None) -> httpx.Response:
     """POST to the gateway; while it answers gpu_busy, wait for room instead of failing.
     Holders of the GPU that are not the editor's are never stopped, so waiting is the only
     honest move; the window is a setting and ends in the same error it would have raised."""
     deadline = time.time() + settings().gpu_wait_seconds
     while True:
-        r = await client().post(path, json=req)
+        r = await client().post(path, json=req, headers=headers)
         if r.status_code == 503 and "gpu_busy" in r.text and time.time() < deadline:
             await asyncio.sleep(30)
             continue
@@ -268,12 +274,13 @@ class Llm:
                 await asyncio.sleep(2 * (attempt + 1))
         raise ModelError(f"{alias} choose failed after {retries + 1} attempts: {last_err}")
 
-    async def embed(self, texts: list[str], *, instruction: str | None = None) -> list[list[float]]:
-        """Qwen3-Embedding: queries carry an instruction, documents do not."""
+    async def embed(self, texts: list[str], *, instruction: str | None = None,
+                    headers: dict | None = None) -> list[list[float]]:
+        """Qwen3-Embedding: queries carry an instruction, documents do not. `headers`: INTERACTIVE / NO_WAIT."""
         inputs = [f"Instruct: {instruction}\nQuery:{t}" if instruction else t for t in texts]
         t0 = time.time()
         req = {"model": "book-embedding", "input": inputs}
-        r = await _post("/v1/embeddings", req)
+        r = await _post("/v1/embeddings", req, headers)
         if r.status_code >= 400:
             await self._record("book-embedding", None, [], {"n": len(texts)}, None, None, t0,
                                False, r.text[:2000])
@@ -289,7 +296,8 @@ class Llm:
                      "only be \"yes\" or \"no\".<|im_end|>\n<|im_start|>user\n")
     RERANK_SUFFIX = "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
 
-    async def rerank(self, query: str, docs: list[str], *, instruction: str) -> list[float]:
+    async def rerank(self, query: str, docs: list[str], *, instruction: str,
+                     headers: dict | None = None) -> list[float]:
         """Qwen3-Reranker yes/no probability per document (vLLM score API)."""
         if not docs:
             return []
@@ -297,7 +305,7 @@ class Llm:
         d = [f"<Document>: {x}{self.RERANK_SUFFIX}" for x in docs]
         t0 = time.time()
         r = await client().post("/v1/score", json={"model": "book-reranker",
-                                                   "text_1": q, "text_2": d})
+                                                   "text_1": q, "text_2": d}, headers=headers)
         if r.status_code >= 400:
             await self._record("book-reranker", None, [], {"n": len(docs)}, None, None, t0,
                                False, r.text[:2000])

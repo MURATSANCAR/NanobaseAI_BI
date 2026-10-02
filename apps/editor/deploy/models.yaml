@@ -67,9 +67,33 @@ aliases:
     kind: embedding
     gpu: 1
     mem_fraction: 0.21
+    # GPU kopyası kapalıyken küçük istekler (en çok EDITOR_CPU_TWIN_MAX_INPUTS girdi; sorgu = 1) CPU eşine gider.
+    cpu_twin: book-embedding-cpu
     args:
       - --runner=pooling
       - --convert=embed
+      - --max-model-len=8192
+
+  # Aynı ağırlıklar CPU'da (2026-10-02): derin görsel model kartın %90'ını tutarken Kitaba sor'un sorgu embedding'i
+  # kartta yer bulamadı (gateway «card 1 busy with another model, request waits»). GPU 0'da yer yok: ölçüldü,
+  # 95,8 GB'ın 82,4'ü dolu (BI 78,9 + tahmin servisi 3,6), boş 13,4 GB < ağırlık 15 GB. CPU'da (Xeon 6740P, AMX bf16,
+  # 32 çekirdek) tek soru 0,15 sn, dizindeki GPU vektörleriyle kosinüs 0,9999; RAM 16 GB (sunucuda 2 TB).
+  # Yeniden sıralayıcı CPU'ya taşınmadı: 40 aday 39 sn sürdü; Kitaba sor onu beklemez (x-editor-no-wait).
+  # Toplu dizinleme GPU kopyasında kalır. Sürekli açık: ilk soru açılış beklemez. İmaj: editorctl install.
+  book-embedding-cpu:
+    always_on: true
+    container: editor-model-embedding-cpu
+    model_dir: Qwen3-Embedding-8B
+    real_model: Qwen/Qwen3-Embedding-8B
+    role: Soru embedding'i (CPU; GPU kopyası kapalıyken)
+    kind: embedding
+    gpu: -1
+    cpus: 32
+    mem_fraction: 0.0
+    image: editor-embed-cpu:1
+    env:
+      EMBED_CPU_THREADS: "32"
+    args:
       - --max-model-len=8192
 
   book-reranker:

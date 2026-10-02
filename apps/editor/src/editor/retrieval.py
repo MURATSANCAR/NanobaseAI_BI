@@ -74,34 +74,49 @@ async def embed_passages(generation_id: str, batch: int = 64) -> dict:
     return {"indexed": len(ps), "collection": PASSAGES}
 
 
-async def rerank_evidence(query: str, candidates: list[str], generation_id: str | None = None) -> list[dict]:
-    scores = await Llm(generation_id).rerank(query, candidates, instruction=RERANK_INSTRUCTION)
+async def rerank_evidence(query: str, candidates: list[str], generation_id: str | None = None,
+                          headers: dict | None = None) -> list[dict]:
+    scores = await Llm(generation_id).rerank(query, candidates, instruction=RERANK_INSTRUCTION, headers=headers)
     return sorted(({"index": i, "score": s, "text": t} for i, (t, s) in
                    enumerate(zip(candidates, scores))), key=lambda x: -x["score"])
 
 
 async def search_book_evidence(generation_id: str, query: str, k: int = 8,
-                               kinds: list[str] | None = None) -> list[dict]:
-    """Embedding recall (top 40) -> reranker -> top k, each with page reference."""
+                               kinds: list[str] | None = None, interactive: bool = False) -> list[dict]:
+    """Embedding recall (top 40) -> reranker -> top k, each with page reference.
+
+    `interactive` (Kitaba sor): hiçbir model beklenmez. Sorgu embedding'i GPU kopyası kapalıysa CPU eşinden gelir
+    (gateway `cpu_twin`); yeniden sıralayıcı şu an ayakta değilse adım atlanır ve adaylar embedding benzerliği
+    sırasıyla verilir (`rerank_score` None). Okuma kartı tutarken soru bekletilmez."""
     from .outputs import current
     selected = current(generation_id, "search_index")
     if not selected["available"]:
         raise ValueError("Current revision search index is unavailable; rebuild required")
     build_key = selected["artifact"]["build_key"]
     await _ensure(PASSAGES)
-    vec = (await Llm(generation_id).embed([query], instruction=QUERY_INSTRUCTION))[0]
+    from .llm import INTERACTIVE, NO_WAIT, ModelError
+    vec = (await Llm(generation_id).embed([query], instruction=QUERY_INSTRUCTION,
+                                          headers=INTERACTIVE if interactive else None))[0]
     must = [models.FieldCondition(key="generation_id", match=models.MatchValue(value=generation_id))]
     must.append(models.FieldCondition(key="build_key", match=models.MatchValue(value=build_key)))
     if kinds:
         must.append(models.FieldCondition(key="kind", match=models.MatchAny(any=kinds)))
     hits = (await qdrant().query_points(PASSAGES, query=vec, limit=40, with_payload=True,
                                         query_filter=models.Filter(must=must))).points
-    ranked = await rerank_evidence(query, [h.payload["text"] for h in hits], generation_id) if hits else []
+    texts = [h.payload["text"] for h in hits]
+    try:
+        ranked = await rerank_evidence(query, texts, generation_id,
+                                       headers=NO_WAIT if interactive else None) if hits else []
+    except ModelError as e:
+        if not (interactive and "model_not_ready" in str(e)):
+            raise
+        ranked = [{"index": i, "score": None, "text": t} for i, t in enumerate(texts)]   # benzerlik sırası
     out = []
     for r in ranked[:k]:
         p = hits[r["index"]].payload
         out.append({"page": p["page_no"], "paragraph": p.get("paragraph_idx"), "kind": p["kind"],
-                    "ref": p["ref"], "text": p["text"], "rerank_score": round(r["score"], 4),
+                    "ref": p["ref"], "text": p["text"],
+                    "rerank_score": round(r["score"], 4) if r["score"] is not None else None,
                     "embedding_score": round(hits[r["index"]].score, 4)})
     latest = current(generation_id, "search_index")
     if not latest["available"] or latest["artifact"]["build_key"] != build_key:
