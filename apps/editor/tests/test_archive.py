@@ -268,7 +268,7 @@ def test_archive_workflow_leaves_redaction_out_and_scans_only_pictures():
     assert sorted(v[1] for n, v in calls if n == "scan_page_deep") == [3, 5]
     assert [v[1] for n, v in calls if n == "scan_page_deep_key"] == [3]          # 2 düz metin sayfası
     assert out["profile"] == "archive" and out["visual_pages"] == 3 and set(out["deferred"]) == REDACTION_ONLY
-    assert "archive-profile-v1" in hist
+    assert "archive-profile-v1" in hist and "full-recommend-v1" not in hist
     assert [v for n, v in calls if n == "finish_job"][-1][1] == "SUCCEEDED"
 
 
@@ -282,6 +282,10 @@ def test_full_workflow_is_unchanged():
     assert "profile" not in out
     # normal kipte yeni işaret alınmaz: eski geçmişlerle aynı komut dizisi
     assert "archive-profile-v1" not in hist and "redaction-profile-v1" not in hist
+    # kategori/yaş önerisi tam okumada da, kendi işaretiyle (2026-10-03)
+    assert "full-recommend-v1" in hist and "archive-recommend-v1" not in hist
+    assert names & {"archive_recommend"} and _names(calls).index("rebuild_outputs") < _names(calls).index(
+        "archive_recommend")
 
 
 def test_redaction_workflow_runs_what_the_archive_left_out():

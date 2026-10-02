@@ -189,7 +189,10 @@ class BookFullAnalysis:
                     f"Output revision did not stabilize ({produced['technical_status']})",
                     non_retryable=True)
             recommendation = None
-            if archive and workflow.patched("archive-recommend-v1"):
+            # The full reading suggests too (2026-10-03); its marker is separate so histories recorded
+            # before it replay without the step. `patched` is only evaluated on its own profile's path.
+            if (archive and workflow.patched("archive-recommend-v1")) or \
+                    (not archive and workflow.patched("full-recommend-v1")):
                 # category and age suggestion from the summaries just built; a failure leaves the book
                 # without a suggestion, it never fails the reading
                 await self.step(14, "Kategori ve yaş önerisi")
@@ -201,9 +204,9 @@ class BookFullAnalysis:
                 "step_order":"verified-revision-outputs-v1","accepted":False,
                 "analytical_status":"NEEDS_REVIEW",
                 "failures":{k:v for k,v in failures.items() if v}}
+            if recommendation is not None:
+                summary["recommendation"] = recommendation
             if archive:
-                if recommendation is not None:
-                    summary["recommendation"] = recommendation
                 summary.update(profile="archive", visual_pages=len(scan),
                                deferred=["proofreading", "confirm_text_visual", "continuity_checks",
                                          "detect_contradictions", "queue_contradictions"])

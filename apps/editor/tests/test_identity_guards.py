@@ -138,8 +138,8 @@ def test_same_name_groups_join_unless_the_reading_kept_them_apart():
     units = [u("Asım", [10, 11], [0], n=9), u("ASIM", [80], [3]), u("Asım", [150], [5]),
              u("Asım", [11], [1]),                                   # aynı sayfa: iki ayrı Asım
              u("Asım", [200], [7], sex="FEMALE"),                    # cinsiyet çelişkisi
-             u("babam", [20], [1]), u("Babam", [90], [4])]          # konuşana göreli etiket
-    proper = lambda n: identity.name_key(n) != "babam"
+             u("kadın", [20], [1]), u("Kadın", [90], [4])]          # konuşana göreli, akrabalık değil
+    proper = lambda n: identity.name_key(n) != "kadın"
     clusters, refused = identity.same_name_plan(units, proper)
     assert clusters == [[0, 1, 2]]
     reasons = {r["reason"] for r in refused}

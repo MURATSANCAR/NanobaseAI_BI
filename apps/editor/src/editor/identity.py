@@ -416,11 +416,59 @@ def proper_name_test(text: str):
     return test
 
 
-def same_name_plan(units: list[dict], proper=None) -> tuple[list[list[int]], list[dict]]:
+#: First-person possessive kinship labels («annem», «kız kardeşim», «büyükannem»): relative to the narrator.
+#: A book told by one «I» has one «annem»; a windowed reading split her into one record per window
+#: (2026-10-02 audit: «Annem», «Kız kardeşim» three records each). They are joined like a name, with one more
+#: guard for books with several narrators (alternating chapters): the records' page spans must not
+#: interleave — two «annem» read side by side across the same stretch of the book are two mothers.
+#: Third-person labels («annesi», «kadın», «bakan») are never joined: who they point at changes with the subject.
+_KIN = ('anne', 'baba', 'abla', 'ağabey', 'abi', 'kardeş', 'kız kardeş', 'erkek kardeş', 'dede', 'nine',
+        'büyükanne', 'büyükbaba', 'anneanne', 'babaanne', 'teyze', 'hala', 'amca', 'dayı', 'eş', 'koca', 'karı',
+        'oğul', 'kız', 'torun', 'yenge', 'enişte', 'kuzen', 'üvey anne', 'üvey baba')
+_POSSESSIVE_1SG = {'oğul': 'oğlum'}
+
+
+def _kin_forms() -> set[str]:
+    out = set()
+    for k in _KIN:
+        if k in _POSSESSIVE_1SG:
+            out.add(_POSSESSIVE_1SG[k])
+            continue
+        last = [ch for ch in k if ch in 'aeıioöuü'][-1]
+        vowel = {'a': 'ı', 'ı': 'ı', 'e': 'i', 'i': 'i', 'o': 'u', 'u': 'u', 'ö': 'ü', 'ü': 'ü'}[last]
+        out.add(k + 'm' if k[-1] in 'aeıioöuü' else k + vowel + 'm')
+    return out
+
+
+KIN_1SG = frozenset(_kin_forms())
+
+
+def is_relative_label(name: str) -> bool:
+    """«Annem», «Kız kardeşim», «sevgili büyükannem»: the narrator's own relative, as a label (not a name)."""
+    words = name_key(name).split()
+    while len(words) > 1 and words[0] in ('benim', 'sevgili', 'canım', 'küçük', 'büyük', 'öz', 'üvey'):
+        if ' '.join(words) in KIN_1SG:
+            break
+        words = words[1:]
+    return ' '.join(words) in KIN_1SG
+
+
+def _span(u: dict) -> tuple[int, int] | None:
+    return (min(u['pages']), max(u['pages'])) if u.get('pages') else None
+
+
+def interleaved(a: dict, b: dict) -> bool:
+    """Do two units' page spans overlap (both present over the same stretch of the book)?"""
+    x, y = _span(a), _span(b)
+    return bool(x and y and x[0] <= y[1] and y[0] <= x[1])
+
+
+def same_name_plan(units: list[dict], proper=None, relative=is_relative_label) -> tuple[list[list[int]], list[dict]]:
     """Clusters (index lists, 2+ members, largest unit first) of units that are one person by name, and
     the refused pairs. A unit joins a cluster only if it is compatible with EVERY member (no chaining
     across a conflict). Units are taken largest first, so the main record keeps its place. `proper`
-    (name -> bool): only names it accepts are joined."""
+    (name -> bool): only names it accepts are joined — or, under `relative` (a first-person kinship label,
+    `is_relative_label`), labels whose records do not interleave over the book's pages."""
     buckets: dict[str, list[int]] = {}
     for i, u in enumerate(units):
         k = name_key(u['name'])
@@ -430,14 +478,23 @@ def same_name_plan(units: list[dict], proper=None) -> tuple[list[list[int]], lis
     for k, idx in buckets.items():
         if len(idx) < 2:
             continue
+        label = False
         if proper is not None and not proper(units[idx[0]]['name']):
-            refused.append({'name': units[idx[0]]['name'], 'with': units[idx[0]]['name'], 'records': len(idx),
-                            'reason': 'NOT_A_PROPER_NAME'})
-            continue
+            if relative is None or not relative(units[idx[0]]['name']):
+                refused.append({'name': units[idx[0]]['name'], 'with': units[idx[0]]['name'], 'records': len(idx),
+                                'reason': 'NOT_A_PROPER_NAME'})
+                continue
+            label = True
+
+        def refusal(a: dict, b: dict) -> str | None:
+            why = same_name_refusal(a, b)
+            if why is None and label and interleaved(a, b):
+                return 'RELATIVE_LABEL_INTERLEAVED'
+            return why
         groups: list[list[int]] = []
         for i in sorted(idx, key=lambda i: (-units[i].get('n', 0), i)):
             for g in groups:
-                why = next((r for r in (same_name_refusal(units[i], units[j]) for j in g) if r), None)
+                why = next((r for r in (refusal(units[i], units[j]) for j in g) if r), None)
                 if why is None:
                     g.append(i)
                     break

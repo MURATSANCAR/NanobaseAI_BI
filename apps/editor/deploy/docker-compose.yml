@@ -171,6 +171,9 @@ services:
       EDITOR_ROOT: /data/editor
       EDITOR_MODELS_YAML: /app/deploy/models.yaml
       EDITOR_HOST_ROOT: ${EDITOR_ROOT:-/data/editor}
+      # DB'ye yalnız bakım anahtarı için gider (5 sn paylaşılır, gateway.check_enabled): 2 bağlantı yeter.
+      # Öteki servisler db.POOL_MAX (8) ile; hepsi EDITOR_DB_POOL_MAX / _MIN / _MAX_IDLE ile değişir.
+      EDITOR_DB_POOL_MAX: "2"
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: utility
     runtime: nvidia

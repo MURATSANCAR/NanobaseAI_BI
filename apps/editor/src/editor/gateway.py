@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import socket
+import threading
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -58,6 +59,37 @@ EVICT_GRACE = int(os.environ.get("EDITOR_EVICT_GRACE_SEC", "120"))
 YIELD_MAX = int(os.environ.get("EDITOR_YIELD_MAX_SEC", "1500"))     # bekleme bundan uzarsa eski davranış;
 #   istemci zaman aşımlarının altında (stüdyo 1800 sn, okuma 3600 sn)
 GPU_LOCKS: dict[int, asyncio.Lock] = {}
+# Bakım anahtarı sorgusu (2026-10-03): her vekil istek kendi iş parçacığından `assert_enabled` ile veritabanına
+# gidiyordu; aynı anda gelen onlarca istek (okumanın paralel parçaları, gömme, eleştirmen) havuzu açabildiği kadar
+# açtı ve psycopg_pool fazlasını 10 dakikada bir kapattığı için gateway Postgres'te ~21 bağlantıyı boşta tuttu.
+# Cevap MAINTENANCE_CHECK_SEC saniye paylaşılır; aynı anda soran iş parçacıkları tek sorguyu bekler.
+MAINTENANCE_CHECK_SEC = float(os.environ.get("EDITOR_MAINTENANCE_CHECK_SEC", "5") or 5)
+_ENABLED_GUARD = threading.Lock()
+_ENABLED: dict[str, Any] = {"at": None, "fn": None, "error": None}
+
+
+def _enabled_cached() -> None:
+    """foundation.assert_enabled, cevabı MAINTENANCE_CHECK_SEC saniye paylaşılarak (iş parçacığında çağrılır).
+    Bakım hatası (RuntimeError) da paylaşılır; bağlantı hatası paylaşılmaz, yükselir."""
+    from . import foundation
+    fn = foundation.assert_enabled
+    with _ENABLED_GUARD:
+        now = time.monotonic()
+        if MAINTENANCE_CHECK_SEC <= 0 or _ENABLED["fn"] is not fn or _ENABLED["at"] is None \
+                or now - _ENABLED["at"] >= MAINTENANCE_CHECK_SEC:
+            try:
+                fn()
+                _ENABLED["error"] = None
+            except RuntimeError as exc:
+                _ENABLED["error"] = str(exc)
+            _ENABLED.update(at=time.monotonic(), fn=fn)
+        err = _ENABLED["error"]
+    if err:
+        raise RuntimeError(err)
+
+
+async def check_enabled() -> None:
+    await asyncio.to_thread(_enabled_cached)
 # Adil sıra (2026-10-02): dört kitap paralel okunurken derin görsel model sürekli yeni iş aldığı için hiç «boş» olmadı;
 # _held kartı ona bıraktı, OCR ve embedding istekleri 25+ dk (YIELD_MAX'a kadar) aç kaldı — ölçüldü: 90 dk'da 5 OCR
 # çağrısı, iki kitap 1,5 saat OCR adımında. Kural: kartı bekleyen model, beklemeye başladığı andan HOLD_MAX saniye
@@ -600,9 +632,8 @@ async def _should_overflow(a: Alias, req: Request) -> bool:
 
 
 async def ensure_running(a: Alias) -> None:
-    from .foundation import assert_enabled
     try:
-        await asyncio.to_thread(assert_enabled)
+        await check_enabled()
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from None
     if _is_running(a) and await _healthy(a):
@@ -682,9 +713,8 @@ async def _keep(a: Alias) -> None:
     # out again (measured: a start/stop loop every 50 s that stalled an analysis for an hour).
     if any(ALIASES[w].gpu == a.gpu for w in WAITING if w in ALIASES):
         return
-    from .foundation import assert_enabled
     try:
-        await asyncio.to_thread(assert_enabled)
+        await check_enabled()
     except RuntimeError:
         return                                # maintenance: nothing is started
     # Boş bellek tek başına ölçü değil: yeni açılan model (ör. book-image) belleğini ancak yüklenirken
@@ -727,9 +757,8 @@ async def models(req: Request) -> dict:
 async def proxy(path: str, req: Request):
     global overflow_total
     _auth(req)
-    from .foundation import assert_enabled
     try:
-        await asyncio.to_thread(assert_enabled)
+        await check_enabled()
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from None
     if path not in PASSTHROUGH:

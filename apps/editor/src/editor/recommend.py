@@ -559,15 +559,62 @@ async def _dry(gids: list[str]) -> list[dict]:
     return out
 
 
+#: Okuması bitmiş her kitabın son nesli (tam ya da arşiv) ve öneri durumu — tek seferlik doldurma için.
+_READ_WITHOUT_OK = (
+    "SELECT DISTINCT ON (bv.book_id) g.id, b.title, j.profile, r.status AS rec_status"
+    " FROM generation g JOIN analysis_job j ON j.id=g.job_id JOIN book_version bv ON bv.id=g.book_version_id"
+    " JOIN book b ON b.id=bv.book_id LEFT JOIN book_recommendation r ON r.generation_id=g.id"
+    " WHERE j.status='SUCCEEDED' AND j.profile IN ('full','archive')"
+    " ORDER BY bv.book_id, g.created_at DESC")
+
+
+def fill_targets(rows: list[dict], profile: str | None = None) -> list[dict]:
+    """Önerisi OK olmayan son nesiller (salt hesap)."""
+    return sorted(({"id": str(r["id"]), "title": r["title"], "profile": r["profile"], "status": r["rec_status"]}
+                   for r in rows if r["rec_status"] != "OK" and (profile is None or r["profile"] == profile)),
+                  key=lambda r: (r["title"] or "", r["id"]))
+
+
+async def fill(targets: list[dict]) -> dict:
+    """Her kitap için `run` (OK öneri varsa model çağırmaz); bir kitabın hatası ötekileri durdurmaz."""
+    done = {"OK": 0, "FAILED": 0}
+    for t in targets:
+        try:
+            res = await run(t["id"])
+            done["OK" if res.get("status") == "OK" else "FAILED"] += 1
+        except Exception as e:  # noqa: BLE001
+            res = {"status": "FAILED", "error": f"{type(e).__name__}: {e}"[:300]}
+            done["FAILED"] += 1
+        print(json.dumps({**t, "result": res}, ensure_ascii=False, default=str), flush=True)
+    return done
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m editor.recommend")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    f = sub.add_parser("fill", help="okunmuş kitaplarda eksik öneriyi doldur (varsayılan kuru: yalnız listeler)")
+    f.add_argument("--all-read", action="store_true", required=True,
+                   help="okuması bitmiş her kitabın son nesli (tam + arşiv)")
+    f.add_argument("--profile", choices=["full", "archive"])
+    f.add_argument("--apply", action="store_true", help="öneriyi gerçekten üret ve yaz (model çağrısı)")
     d = sub.add_parser("dry", help="öneriyi kuru koştur (veritabanına yazmaz, model çağrısını kaydetmez)")
     d.add_argument("generation", nargs="+")
     m = sub.add_parser("match", help="kitapların sitedeki ürünle eşleşmesi (model çağırmaz)")
     m.add_argument("book", nargs="*", help="book id")
     m.add_argument("--archive", action="store_true", help="arşiv kipinde okunan/sıradaki bütün kitaplar")
     a = ap.parse_args(argv)
+    if a.cmd == "fill":
+        with db.tx() as c:
+            c.execute("SET TRANSACTION READ ONLY")
+            targets = fill_targets(c.execute(_READ_WITHOUT_OK).fetchall(), a.profile)
+        print(f"{len(targets)} kitapta öneri yok ya da başarısız; "
+              f"{'GERÇEK KOŞU' if a.apply else 'kuru koşu (yazılmaz, model çağrılmaz)'}", file=sys.stderr)
+        if not a.apply:
+            for t in targets:
+                print(json.dumps(t, ensure_ascii=False), flush=True)
+            return 0
+        print(json.dumps(asyncio.run(fill(targets)), ensure_ascii=False))
+        return 0
     if a.cmd == "dry":
         asyncio.run(_dry(a.generation))
         return 0

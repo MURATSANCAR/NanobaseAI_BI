@@ -21,28 +21,42 @@ _pool: ConnectionPool | None = None
 MIGRATIONS = Path(__file__).resolve().parent.parent.parent / "db" / "migrations"
 
 
-def pool_limits() -> tuple[int, float]:
-    """(max connections, seconds to wait for one). The size is shared with Temporal and the
-    other editor services on one Postgres (max_connections 100), so it stays 24 unless set.
-    The wait is long on purpose: every query of a running activity is made from a worker
-    thread, where waiting for a free connection costs nothing, whereas psycopg's 30 s default
-    turned a few busy seconds into a failed activity."""
+#: Süreç başına üst sınır. Postgres max_connections 100'ü Temporal ve on kadar editör süreci paylaşır;
+#: 2026-10-02'de 100'ün 98'i doluydu (editor_app 67 boşta: rebuild ~24, gateway ~21, worker ~18) ve yeni süreç
+#: bağlanamadı. Eski varsayılan 24 × süreç sayısı sınırı tek başına aşıyordu; psycopg_pool fazla bağlantıyı
+#: `max_idle` sürede bir tane kapatır (varsayılan 10 dk), bu yüzden bir patlamadan sonra saatlerce boşta kalıyordu.
+POOL_MAX = 8
+POOL_MIN = 1
+POOL_MAX_IDLE = 60.0
+
+
+def pool_limits() -> dict:
+    """Havuz ayarları, env ile: EDITOR_DB_POOL_MAX (vars. 8), EDITOR_DB_POOL_MIN (1), EDITOR_DB_POOL_MAX_IDLE
+    (sn, 60: fazla bağlantı bu sürede bir kapanır), EDITOR_DB_POOL_TIMEOUT (sn, 600). Bekleme uzun: her sorgu
+    bir iş parçacığından yapılır, boş bağlantıyı beklemek bir şeye mal olmaz; psycopg'nin 30 sn'si birkaç yoğun
+    saniyeyi düşen etkinliğe çeviriyordu."""
     import os
-    size = int(os.environ.get("EDITOR_DB_POOL_MAX", "") or 24)
-    wait = float(os.environ.get("EDITOR_DB_POOL_TIMEOUT", "") or 600)
-    return max(2, size), max(1.0, wait)
+
+    def num(key: str, default: float) -> float:
+        raw = os.environ.get(key, "")
+        return float(raw) if raw.strip() else default
+    size = max(2, int(num("EDITOR_DB_POOL_MAX", POOL_MAX)))
+    low = min(size, max(0, int(num("EDITOR_DB_POOL_MIN", POOL_MIN))))
+    return {"min_size": low, "max_size": size, "max_idle": max(5.0, num("EDITOR_DB_POOL_MAX_IDLE", POOL_MAX_IDLE)),
+            "timeout": max(1.0, num("EDITOR_DB_POOL_TIMEOUT", 600))}
 
 
 def pool() -> ConnectionPool:
     global _pool
     if _pool is None:
         import atexit
-        size, wait = pool_limits()
+        lim = pool_limits()
         _pool = ConnectionPool(
             settings().db_dsn,
-            min_size=1,
-            max_size=size,
-            timeout=wait,
+            min_size=lim["min_size"],
+            max_size=lim["max_size"],
+            max_idle=lim["max_idle"],
+            timeout=lim["timeout"],
             kwargs={"row_factory": dict_row, "options": "-c search_path=ed,public"},
             open=True,
         )

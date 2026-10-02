@@ -2,9 +2,12 @@
 
 Kural, okumanın kimlik adımındakiyle aynıdır (`identity.same_name_plan`): aynı (katlanmış) adı taşıyan kayıtlar,
 türleri / cinsiyetleri / birey-topluluk kapsamları uyuşuyorsa tek kişidir; okuma onları ayrı tuttuysa (aynı sayfada
-ikisi de anılıyor ya da aynı okuma penceresi ikisini ayrı grup yaptı) birleştirilmez; yalnız kitabın ad gibi
-yazdığı ad (cümle ortasında büyük harfle) birleşir, «babam», «annem», «kadın» gibi konuşana göreli etiketler
-birleşmez. Model çağrısı yoktur.
+ikisi de anılıyor ya da aynı okuma penceresi ikisini ayrı grup yaptı) birleştirilmez; kitabın ad gibi yazdığı ad
+(cümle ortasında büyük harfle) birleşir. Anlatıcıya göreli birinci tekil akrabalık etiketi («annem», «kız
+kardeşim», 2026-10-03) da birleşir, ama kayıtların sayfa aralıkları iç içe geçmiyorsa (çok anlatıcılı kitapta
+aynı kesimde iki «annem» iki kişidir: RELATIVE_LABEL_INTERLEAVED). «Kadın», «annesi», «bakan» gibi etiketler
+birleşmez. Kısaltma = tam ad («Bee»/«Beatrice») birleştirilmez: kitapta açık eşleme olmadan ön ek benzerliği
+güvenli değil. Model çağrısı yoktur.
 
     python -m editor.identity_fold [--generation GID ...]            # kuru koşu (varsayılan): yalnız okur
     python -m editor.identity_fold --generation GID --apply           # yazar
