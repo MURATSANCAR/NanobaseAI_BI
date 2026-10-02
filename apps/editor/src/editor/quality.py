@@ -4,6 +4,7 @@ editor queue, regression suite, analysis report (NIHAI-KARAR.md §5 13-15, §7).
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,7 @@ import yaml
 
 from . import db, ledger, naming, prompts, schemas
 from .config import settings
-from .knowledge import DIRECTOR, _valid_pages, build_timeline, chapters
+from .knowledge import DIRECTOR, _valid_pages, build_timeline, chapters, director_slots
 from .llm import Llm
 
 REGRESSION_DIR = Path(__file__).resolve().parent.parent.parent / "tests" / "regression"
@@ -123,10 +124,47 @@ def send_to_editor_queue(generation_id: str, reason: str, claim_id: str | None =
 
 
 # -------------------------------------------------------------- critic
-_CLAIM_SQL = ("SELECT c.id, c.kind, c.subject, c.claim, c.confidence, c.payload, c.source_pages,"
+_CLAIM_SQL = ("SELECT c.id, c.kind, c.subject, c.claim, c.confidence, c.payload, c.source_pages, c.created_by,"
               " (SELECT json_agg(json_build_object('id', e.id, 'page', e.page_no, 'kind', e.kind,"
               " 'quote', e.quote, 'verified', e.quote_verified)) FROM claim_evidence ce JOIN evidence e"
               " ON e.id=ce.evidence_id WHERE ce.claim_id=c.id) AS ev FROM claim c WHERE ")
+VERDICT_STAGE = "critic_verdict"
+REPAIRED_BY = "critic:repair"
+
+
+@functools.lru_cache(maxsize=1)
+def _critic_prompt_ids() -> dict:
+    """Version and text digest of the prompts a verdict depends on (a deploy is a new process)."""
+    from .foundation import digest_inputs
+    ids = {}
+    for name in ("critic", "claim_repair"):
+        ref, body = prompts.load(name)
+        ids[name] = [ref.version, digest_inputs({"body": body})]
+    return ids
+
+
+def _verdict_key(x: dict) -> str:
+    """Everything a critic verdict on this claim depends on: the claim (immutable), its
+    evidence as it stands now, and the critic and repair prompts. Same key = same question;
+    a changed piece of evidence or a new prompt version is a new question and is judged."""
+    from .foundation import digest_inputs
+    prompt_ids = _critic_prompt_ids()
+    ev = sorted(([str(e.get("id")), e.get("page"), e.get("kind"), e.get("quote"), bool(e.get("verified"))]
+                 for e in (x.get("ev") or [])), key=lambda r: r[0])
+    return digest_inputs({"stage": VERDICT_STAGE, "alias": DIRECTOR, "prompts": prompt_ids,
+                          "claim_id": str(x["id"]), "kind": x["kind"], "subject": x.get("subject"),
+                          "claim": x["claim"], "payload": x.get("payload") or {}, "evidence": ev})
+
+
+def _judged_before(generation_id: str, claims: list[dict]) -> set[str]:
+    """Claims whose verdict for exactly these inputs is already applied (receipt written in
+    the same transaction as the verdict). A retried validation does not ask them again."""
+    if not claims:
+        return set()
+    keys = {_verdict_key(x): str(x["id"]) for x in claims}
+    rows = db.all_rows("SELECT input_digest FROM operation_receipt WHERE generation_id=%s AND stage=%s"
+                       " AND input_digest = ANY(%s)", generation_id, VERDICT_STAGE, list(keys))
+    return {keys[r["input_digest"]] for r in rows}
 
 
 async def _judge(generation_id: str, claims: list[dict], batch: int = 30,
@@ -139,9 +177,10 @@ async def _judge(generation_id: str, claims: list[dict], batch: int = 30,
                      f"s{e['page']} ({e['kind']}{'' if e['verified'] else ', alıntı metinde yok'}): “{e['quote']}”"
                      for e in (x["ev"] or [])) for k, x in short.items()]
         ref, body = prompts.render("critic", claims="\n".join(lines))
-        out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
-                                               prompt=ref, schema=schemas.CRITIC, max_tokens=8000,
-                                               temperature=0.0, thinking=False)
+        async with director_slots():
+            out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
+                                                   prompt=ref, schema=schemas.CRITIC, max_tokens=8000,
+                                                   temperature=0.0, thinking=False)
         # One verdict per supplied claim is the contract. An answer that breaks it for some
         # claims is still a valid answer for the others: a claim ID answered exactly once is
         # kept, an ID answered twice (which one is meant?) or never is asked again below.
@@ -150,6 +189,8 @@ async def _judge(generation_id: str, claims: list[dict], batch: int = 30,
         return [(short[v["claim_id"]], v) for v in out["verdicts"]
                 if v["claim_id"] in short and ids.count(v["claim_id"]) == 1]
 
+    if not claims:
+        return []
     parts = await asyncio.gather(*(run(claims[i:i + batch]) for i in range(0, len(claims), batch)),
                                  return_exceptions=True)
     got = [x for p in parts if not isinstance(p, BaseException) for x in p]
@@ -193,27 +234,15 @@ def _apply_verdict(c, generation_id: str, x: dict, v: dict, stats: dict) -> None
                             priority=1 if not (v["modality_ok"] and v["identity_ok"]) else 3,
                             reason="Critic: " + "; ".join(why) + f" — {v['note']}")
         stats["to_review"] += 1
+    # Same transaction as the verdict: a receipt exists exactly when the verdict was applied.
+    c.execute("INSERT INTO operation_receipt(generation_id, stage, input_digest, result) VALUES"
+              " (%s,%s,%s,%s) ON CONFLICT DO NOTHING",
+              (generation_id, VERDICT_STAGE, _verdict_key(x),
+               db.J({"claim_id": str(x["id"]), "status": status, "supported": v["supported"],
+                     "modality_ok": v["modality_ok"], "identity_ok": v["identity_ok"]})))
 
 
-async def _repair(generation_id: str, x: dict, v: dict) -> str | None:
-    """The application's own fix for a PARTIAL claim: find the missing evidence on the
-    claim's pages, or narrow the claim to what its evidence says. Claims are immutable,
-    so the repair is a new claim that supersedes the old one. Returns the new claim id."""
-    from .document import page_text_numbered
-    pages = sorted({p + d for p in x["source_pages"] for d in (-1, 0, 1) if p + d > 0})
-    ref, body = prompts.render(
-        "claim_repair", kind=x["kind"], claim=x["claim"], note=v["note"],
-        evidence=" | ".join(f"s{e['page']}: “{e['quote']}”" for e in (x["ev"] or [])),
-        pages_text="\n".join(page_text_numbered(generation_id, p) for p in pages))
-    try:
-        out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
-                                                     prompt=ref, schema=schemas.CLAIM_REPAIR,
-                                                     pages=pages, max_tokens=3000, temperature=0.0,
-                                                     thinking=False)
-    except Exception:  # noqa: BLE001 - an unrepaired claim simply keeps its first verdict
-        return None
-    if out["action"] == "NONE":
-        return None
+def _save_repair(generation_id: str, x: dict, v: dict, out: dict, call_id) -> str | None:
     with db.tx() as c:
         idx = ledger.PageIndex.load(c, generation_id)
         added = [e for e in ledger.evidence_from_model(c, generation_id, idx, out["evidence"],
@@ -225,7 +254,7 @@ async def _repair(generation_id: str, x: dict, v: dict) -> str | None:
         old = [(str(e["id"]), e["verified"], e["page"]) for e in (x["ev"] or [])]
         new_id = ledger.save_claim(
             c, generation_id, kind=x["kind"], subject=x["subject"], claim=text, evidence=old + added,
-            confidence=float(x["confidence"]), created_by="critic:repair", model_call_id=call_id,
+            confidence=float(x["confidence"]), created_by=REPAIRED_BY, model_call_id=call_id,
             payload={**(x["payload"] or {}), "supersedes": str(x["id"]), "repair": out["action"],
                      "participants_invalidated": bool((x["payload"] or {}).get("participants_invalidated"))
                          or (x['kind']=='EVENT' and text!=x['claim'])})
@@ -242,49 +271,50 @@ async def _repair(generation_id: str, x: dict, v: dict) -> str | None:
     return new_id
 
 
-async def critic_pass(generation_id: str, recheck: bool = False) -> dict:
-    """Step 13. The Critic Agent re-reads every claim against its evidence only. What it
-    finds PARTIAL the application first tries to repair itself (missing evidence added
-    from the page, or the claim narrowed) and judges again; only what is still weak
-    after that goes to the editor."""
-    # Text-visual and continuity findings are candidates by definition and reach the editor
-    # once, through the contradiction queue; judging them here queued the same finding twice.
-    statuses = ("CANDIDATE", "VERIFIED") if recheck else ("CANDIDATE",)
-    excluded = ["TEXT_VISUAL_MISMATCH", "VISUAL_CONTINUITY"]
-    if recheck:
-        excluded += ["SUMMARY", "ANSWER", "AGE_GROUP", "PUBLISHER_DECISION"]
-    claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status=ANY(%s) AND NOT(c.kind=ANY(%s))",
-                         generation_id, list(statuses), excluded)
-    for claim in claims:
-        original_model_confidence(claim)
-    stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0,
-             "repair_tried": 0, "repaired": 0, "no_verdict": 0}
-    first = await _judge(generation_id, claims)
-    # A claim the critic would not judge after every bounded retry is not verified and not
-    # rejected: it goes to the editor as exactly that. Failing the whole book over it turned
-    # a question about one sentence into "no analysis at all".
-    judged = {str(x["id"]) for x, _ in first}
-    unjudged = [x for x in claims if str(x["id"]) not in judged]
-    stats["no_verdict"] = len(unjudged)
-    if unjudged:
-        with db.tx() as c:
-            for x in unjudged:
-                ledger.queue_review(c, generation_id, claim_id=str(x["id"]), priority=3,
-                                    reason="Critic: sınırlı yeniden denemelerden sonra karar dönmedi")
-    repairable = [(x, v) for x, v in first
-                  if v["supported"] == "PARTIAL" and v["modality_ok"] and v["identity_ok"]]
-    rep_ids = {str(x["id"]) for x, _ in repairable}
+async def _repair(generation_id: str, x: dict, v: dict) -> str | None:
+    """The application's own fix for a PARTIAL claim: find the missing evidence on the
+    claim's pages, or narrow the claim to what its evidence says. Claims are immutable,
+    so the repair is a new claim that supersedes the old one. Returns the new claim id."""
+    from .document import page_text_numbered
+    pages = sorted({p + d for p in x["source_pages"] for d in (-1, 0, 1) if p + d > 0})
+    # The page reads happen inside the model slot: a thousand repairs of one book then read
+    # their pages as the model frees up, instead of all at once ahead of it.
+    async with director_slots():
+        pages_text = await asyncio.to_thread(
+            lambda: "\n".join(page_text_numbered(generation_id, p) for p in pages))
+        ref, body = prompts.render(
+            "claim_repair", kind=x["kind"], claim=x["claim"], note=v["note"],
+            evidence=" | ".join(f"s{e['page']}: “{e['quote']}”" for e in (x["ev"] or [])),
+            pages_text=pages_text)
+        try:
+            out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
+                                                         prompt=ref, schema=schemas.CLAIM_REPAIR,
+                                                         pages=pages, max_tokens=3000, temperature=0.0,
+                                                         thinking=False)
+        except Exception:  # noqa: BLE001 - an unrepaired claim simply keeps its first verdict
+            return None
+    if out["action"] == "NONE":
+        return None
+    return await asyncio.to_thread(_save_repair, generation_id, x, v, out, call_id)
+
+
+def _queue_unjudged(generation_id: str, unjudged: list[dict]) -> None:
+    with db.tx() as c:
+        for x in unjudged:
+            ledger.queue_review(c, generation_id, claim_id=str(x["id"]), priority=3,
+                                reason="Critic: sınırlı yeniden denemelerden sonra karar dönmedi")
+
+
+def _apply_first(generation_id: str, first: list, rep_ids: set[str], stats: dict) -> None:
     with db.tx() as c:
         for x, v in first:
             stats["checked"] += 1
             if str(x["id"]) not in rep_ids:
                 _apply_verdict(c, generation_id, x, v, stats)
-    stats["repair_tried"] = len(repairable)
-    new_ids = await asyncio.gather(*(_repair(generation_id, x, v) for x, v in repairable))
-    fresh = [i for i in new_ids if i]
-    stats["repaired"] = len(fresh)
-    second = await _judge(generation_id, db.all_rows(_CLAIM_SQL + "c.id = ANY(%s::uuid[])", fresh)) \
-        if fresh else []
+
+
+def _apply_second(generation_id: str, second: list, repairable: list, new_ids: list,
+                  fresh: list[str], stats: dict) -> None:
     judged = {str(x["id"]) for x, _ in second}
     with db.tx() as c:
         for x, v in second:
@@ -296,6 +326,57 @@ async def critic_pass(generation_id: str, recheck: bool = False) -> dict:
             if nid not in judged:
                 ledger.queue_review(c, generation_id, claim_id=nid, priority=3,
                                     reason="Critic: onarılan iddia yeniden denetlenemedi")
+
+
+async def critic_pass(generation_id: str, recheck: bool = False) -> dict:
+    """Step 13. The Critic Agent re-reads every claim against its evidence only. What it
+    finds PARTIAL the application first tries to repair itself (missing evidence added
+    from the page, or the claim narrowed) and judges again; only what is still weak
+    after that goes to the editor.
+
+    A claim whose verdict for the very same inputs (claim, evidence, critic and repair
+    prompt versions) is already applied is not asked again: a retried activity or the
+    rebuild's recheck re-judged every VERIFIED claim on each attempt. A claim that is itself
+    a repair is judged but never repaired again — the same as within one pass.
+
+    All database work runs off the event loop (see attribute_event_actors)."""
+    # Text-visual and continuity findings are candidates by definition and reach the editor
+    # once, through the contradiction queue; judging them here queued the same finding twice.
+    statuses = ("CANDIDATE", "VERIFIED") if recheck else ("CANDIDATE",)
+    excluded = ["TEXT_VISUAL_MISMATCH", "VISUAL_CONTINUITY"]
+    if recheck:
+        excluded += ["SUMMARY", "ANSWER", "AGE_GROUP", "PUBLISHER_DECISION"]
+    claims = await asyncio.to_thread(
+        db.all_rows, _CLAIM_SQL + "c.generation_id=%s AND c.status=ANY(%s) AND NOT(c.kind=ANY(%s))",
+        generation_id, list(statuses), excluded)
+    for claim in claims:
+        original_model_confidence(claim)
+    stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0,
+             "repair_tried": 0, "repaired": 0, "no_verdict": 0, "already_judged": 0}
+    known = await asyncio.to_thread(_judged_before, generation_id, claims)
+    stats["already_judged"] = len(known)
+    claims = [x for x in claims if str(x["id"]) not in known]
+    first = await _judge(generation_id, claims)
+    # A claim the critic would not judge after every bounded retry is not verified and not
+    # rejected: it goes to the editor as exactly that. Failing the whole book over it turned
+    # a question about one sentence into "no analysis at all".
+    judged = {str(x["id"]) for x, _ in first}
+    unjudged = [x for x in claims if str(x["id"]) not in judged]
+    stats["no_verdict"] = len(unjudged)
+    if unjudged:
+        await asyncio.to_thread(_queue_unjudged, generation_id, unjudged)
+    repairable = [(x, v) for x, v in first
+                  if v["supported"] == "PARTIAL" and v["modality_ok"] and v["identity_ok"]
+                  and x.get("created_by") != REPAIRED_BY]
+    rep_ids = {str(x["id"]) for x, _ in repairable}
+    await asyncio.to_thread(_apply_first, generation_id, first, rep_ids, stats)
+    stats["repair_tried"] = len(repairable)
+    new_ids = await asyncio.gather(*(_repair(generation_id, x, v) for x, v in repairable))
+    fresh = [i for i in new_ids if i]
+    stats["repaired"] = len(fresh)
+    second = await _judge(generation_id, await asyncio.to_thread(
+        db.all_rows, _CLAIM_SQL + "c.id = ANY(%s::uuid[])", fresh)) if fresh else []
+    await asyncio.to_thread(_apply_second, generation_id, second, repairable, new_ids, fresh, stats)
     return stats
 
 

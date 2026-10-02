@@ -70,7 +70,8 @@ async def validate(gid: str) -> dict:
     token=str(uuid.uuid4())
     context=db.validation_token.set(token)
     try:
-        start=db.one("SELECT knowledge_revision FROM ed.generation_state WHERE generation_id=%s",gid)['knowledge_revision']
+        # Off the loop: the token context var travels with asyncio.to_thread (copied context).
+        start=(await asyncio.to_thread(db.one,"SELECT knowledge_revision FROM ed.generation_state WHERE generation_id=%s",gid))['knowledge_revision']
         # Identity and visual work is performed before activate in the full workflow.
         # Repairs invalidate actor readings in the same transaction.
         critic=await quality.critic_pass(gid, recheck=True)
@@ -185,12 +186,26 @@ def failed(gid,error):
 
 async def build(kind,snap,built,key):
     if kind=='chapter_summaries':
-        chapters=[]
-        for ch in snap['chapters']:
+        # Chapters are independent questions over one frozen snapshot: they run side by side,
+        # each holding one of the director's shared slots (its capacity, not a chapter cap),
+        # and come back in the book's order. The first failure stops the rest, as before.
+        from .knowledge import director_slots
+        slots=director_slots()
+
+        async def chapter(ch):
             claims=[c for c in snap['claims'] if any(ch['page_from']<=p<=ch['page_to'] for p in c['source_pages'])]
-            value=await outputs.summarize(snap,claims,ch['title'])
-            chapters.append({**ch,**value})
-        return {'chapters':chapters,'semantic_acceptance':False}
+            async with slots:
+                value=await outputs.summarize(snap,claims,ch['title'])
+            return {**ch,**value}
+
+        tasks=[asyncio.ensure_future(chapter(ch)) for ch in snap['chapters']]
+        try:
+            chapters=await asyncio.gather(*tasks)
+        except BaseException:
+            for t in tasks: t.cancel()
+            await asyncio.gather(*tasks,return_exceptions=True)
+            raise
+        return {'chapters':list(chapters),'semantic_acceptance':False}
     if kind=='book_summary':
         # Chapter selection may omit late events. The book plot consumes the
         # complete verified event set of the same immutable revision.
@@ -210,88 +225,129 @@ async def build(kind,snap,built,key):
     raise KeyError(kind)
 
 
-async def run(gid: str) -> dict:
-    # Kept on a dedicated connection for the whole async build; a process crash
-    # releases it. Duplicate Temporal/daemon deliveries therefore cannot overlap.
-    with db.pool().connection() as lock:
+def _lock(gid: str):
+    """A dedicated connection holding the build's advisory lock (runs in a worker thread:
+    waiting for a pooled connection must not stop the event loop)."""
+    lock=db.pool().getconn()
+    try:
         acquired=lock.execute("SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS ok",('outputs:'+gid,)).fetchone()['ok']
         owner=lock.execute("SELECT pid,backend_start FROM pg_stat_activity WHERE pid=pg_backend_pid()").fetchone()
         lock.commit()
-        if not acquired: return {'generation_id':gid,'technical_status':'BUSY'}
+    except BaseException:
+        db.pool().putconn(lock)
+        raise
+    if not acquired:
+        db.pool().putconn(lock)
+        return None,None
+    return lock,owner
+
+
+def _unlock(gid: str, lock, owner) -> None:
+    # Operational lease only; never touches book facts or model results.
+    try:
+        db.one("UPDATE ed.rebuild_request SET consumer_backend_pid=NULL,consumer_backend_start=NULL "
+            "WHERE generation_id=%s AND consumer_backend_pid=%s RETURNING generation_id",gid,owner['pid'])
+    finally:
         try:
-            with db.tx() as c:
-                state=ensure_open(c,gid)
-                if not state['producer_completed']: raise ValueError('Producers still running')
-                request=c.execute("SELECT * FROM ed.rebuild_request WHERE generation_id=%s FOR UPDATE",(gid,)).fetchone()
-                if request is None: raise ValueError('Missing rebuild request')
-                if request['completed_revision']==state['knowledge_revision'] and state['validated_revision']==state['knowledge_revision'] and c.execute("SELECT count(*) AS n FROM ed.current_artifact a JOIN ed.knowledge_snapshot s ON s.generation_id=a.generation_id AND s.input_digest=a.input_digest WHERE a.generation_id=%s AND s.content->>'code_version'=%s AND s.content->>'policy'=%s",(gid,code_version(),outputs.POLICY)).fetchone()['n']==len(outputs.ORDER):
-                    return {'generation_id':gid,'technical_status':'ALREADY_CURRENT','accepted':False}
-                if request['attempted_revision']==state['knowledge_revision'] and request['attempted_code_version']==code_version() and request['attempts']>=MAX_ATTEMPTS:
-                    raise ValueError('Rebuild retry budget exhausted')
-                c.execute("UPDATE ed.rebuild_request SET consumer_backend_pid=%s,consumer_backend_start=%s WHERE generation_id=%s",
-                    (owner['pid'],owner['backend_start'],gid))
-                c.execute("UPDATE ed.rebuild_request SET attempts=CASE WHEN attempted_revision=%s AND attempted_code_version=%s "
-                    "THEN attempts+1 ELSE 1 END,attempted_revision=%s,attempted_code_version=%s WHERE generation_id=%s",
-                    (state['knowledge_revision'],code_version(),state['knowledge_revision'],code_version(),gid))
-            # Model upgrades require an explicit new analysis generation. Never
-            # silently rebuild a recorded profile using a different model revision.
-            from .llm import aliases
-            actual=await aliases()
-            declared=db.one("SELECT model_manifest FROM ed.generation WHERE id=%s",gid)['model_manifest']
-            for alias in ('book-director','book-embedding'):
-                if any(actual.get(alias,{}).get(k)!=declared.get(alias,{}).get(k) for k in ('real_model','revision')):
-                    raise ValueError('Model profile changed; create a new generation: '+alias)
-            # On an artifact-only retry the verified immutable input remains usable.
-            existing=db.one("SELECT s.content,s.input_digest FROM ed.knowledge_snapshot s JOIN ed.generation_state g "
-                "ON g.generation_id=s.generation_id AND g.validated_revision=s.revision "
-                "WHERE s.generation_id=%s AND g.knowledge_revision=s.revision ORDER BY s.created_at DESC LIMIT 1",gid)
-            if existing and existing['content']['code_version']==os.environ.get('EDITOR_CODE_VERSION','unknown'):
-                snap,digest=existing['content'],existing['input_digest']
-            else:
-                validation=await validate(gid)
-                snap,digest=await asyncio.to_thread(freeze,gid,validation)
-                # Validator writes may advance the revision. Charge retries to its
-                # final revision too, so repeated model failures have a finite budget.
-                db.one("UPDATE ed.rebuild_request SET attempted_revision=%s WHERE generation_id=%s RETURNING generation_id",snap['revision'],gid)
-            built={}
-            for kind in outputs.ORDER:
-                key=key_for(snap,digest,kind)
-                cached=await asyncio.to_thread(begin,snap,digest,kind,key)
-                if cached is None:
-                    cached=await build(kind,snap,built,key)
-                await asyncio.to_thread(publish,snap,digest,kind,key,cached)
-                built[kind]=cached
-            return await asyncio.to_thread(finish,snap,digest)
-        except Superseded as exc:
-            # Queue already contains the newer revision; never mark it completed.
-            return {'generation_id':gid,'technical_status':'SUPERSEDED','reason':str(exc),'accepted':False}
-        except Exception as exc:
-            await asyncio.to_thread(failed,gid,exc)
-            # The card being full is a wait, not a verdict on the book: the caller is told
-            # to come back rather than the whole analysis being failed.
-            if is_capacity_error(exc):
-                return {'generation_id':gid,'technical_status':'CAPACITY_WAIT','reason':str(exc)[:500],
-                        'accepted':False}
-            raise
+            lock.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))",('outputs:'+gid,))
+            lock.commit()
         finally:
-            # Operational lease only; never touches book facts or model results.
-            try:
-                db.one("UPDATE ed.rebuild_request SET consumer_backend_pid=NULL,consumer_backend_start=NULL "
-                    "WHERE generation_id=%s AND consumer_backend_pid=%s RETURNING generation_id",gid,owner['pid'])
-            finally:
-                lock.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))",('outputs:'+gid,))
-                lock.commit()
+            db.pool().putconn(lock)
+
+
+def _start(gid: str, owner) -> dict | None:
+    """Claims the queued request for this attempt; returns a result when nothing is to do."""
+    with db.tx() as c:
+        state=ensure_open(c,gid)
+        if not state['producer_completed']: raise ValueError('Producers still running')
+        request=c.execute("SELECT * FROM ed.rebuild_request WHERE generation_id=%s FOR UPDATE",(gid,)).fetchone()
+        if request is None: raise ValueError('Missing rebuild request')
+        if request['completed_revision']==state['knowledge_revision'] and state['validated_revision']==state['knowledge_revision'] and c.execute("SELECT count(*) AS n FROM ed.current_artifact a JOIN ed.knowledge_snapshot s ON s.generation_id=a.generation_id AND s.input_digest=a.input_digest WHERE a.generation_id=%s AND s.content->>'code_version'=%s AND s.content->>'policy'=%s",(gid,code_version(),outputs.POLICY)).fetchone()['n']==len(outputs.ORDER):
+            return {'generation_id':gid,'technical_status':'ALREADY_CURRENT','accepted':False}
+        if request['attempted_revision']==state['knowledge_revision'] and request['attempted_code_version']==code_version() and request['attempts']>=MAX_ATTEMPTS:
+            raise ValueError('Rebuild retry budget exhausted')
+        c.execute("UPDATE ed.rebuild_request SET consumer_backend_pid=%s,consumer_backend_start=%s WHERE generation_id=%s",
+            (owner['pid'],owner['backend_start'],gid))
+        c.execute("UPDATE ed.rebuild_request SET attempts=CASE WHEN attempted_revision=%s AND attempted_code_version=%s "
+            "THEN attempts+1 ELSE 1 END,attempted_revision=%s,attempted_code_version=%s WHERE generation_id=%s",
+            (state['knowledge_revision'],code_version(),state['knowledge_revision'],code_version(),gid))
+    return None
+
+
+async def run(gid: str) -> dict:
+    # Kept on a dedicated connection for the whole async build; a process crash
+    # releases it. Duplicate Temporal/daemon deliveries therefore cannot overlap.
+    # Every database step runs in a worker thread: this coroutine shares the worker's event
+    # loop with dozens of other activities and their liveness heartbeats.
+    lock,owner=await asyncio.to_thread(_lock,gid)
+    if lock is None: return {'generation_id':gid,'technical_status':'BUSY'}
+    try:
+        done=await asyncio.to_thread(_start,gid,owner)
+        if done is not None:
+            return done
+        # Model upgrades require an explicit new analysis generation. Never
+        # silently rebuild a recorded profile using a different model revision.
+        from .llm import aliases
+        actual=await aliases()
+        declared=(await asyncio.to_thread(db.one,"SELECT model_manifest FROM ed.generation WHERE id=%s",gid))['model_manifest']
+        for alias in ('book-director','book-embedding'):
+            if any(actual.get(alias,{}).get(k)!=declared.get(alias,{}).get(k) for k in ('real_model','revision')):
+                raise ValueError('Model profile changed; create a new generation: '+alias)
+        # On an artifact-only retry the verified immutable input remains usable.
+        existing=await asyncio.to_thread(db.one,"SELECT s.content,s.input_digest FROM ed.knowledge_snapshot s JOIN ed.generation_state g "
+            "ON g.generation_id=s.generation_id AND g.validated_revision=s.revision "
+            "WHERE s.generation_id=%s AND g.knowledge_revision=s.revision ORDER BY s.created_at DESC LIMIT 1",gid)
+        if existing and existing['content']['code_version']==os.environ.get('EDITOR_CODE_VERSION','unknown'):
+            snap,digest=existing['content'],existing['input_digest']
+        else:
+            validation=await validate(gid)
+            snap,digest=await asyncio.to_thread(freeze,gid,validation)
+            # Validator writes may advance the revision. Charge retries to its
+            # final revision too, so repeated model failures have a finite budget.
+            await asyncio.to_thread(db.one,"UPDATE ed.rebuild_request SET attempted_revision=%s WHERE generation_id=%s RETURNING generation_id",snap['revision'],gid)
+        built={}
+        for kind in outputs.ORDER:
+            key=key_for(snap,digest,kind)
+            cached=await asyncio.to_thread(begin,snap,digest,kind,key)
+            if cached is None:
+                cached=await build(kind,snap,built,key)
+            await asyncio.to_thread(publish,snap,digest,kind,key,cached)
+            built[kind]=cached
+        return await asyncio.to_thread(finish,snap,digest)
+    except Superseded as exc:
+        # Queue already contains the newer revision; never mark it completed.
+        return {'generation_id':gid,'technical_status':'SUPERSEDED','reason':str(exc),'accepted':False}
+    except Exception as exc:
+        await asyncio.to_thread(failed,gid,exc)
+        # The card being full is a wait, not a verdict on the book: the caller is told
+        # to come back rather than the whole analysis being failed.
+        if is_capacity_error(exc):
+            return {'generation_id':gid,'technical_status':'CAPACITY_WAIT','reason':str(exc)[:500],
+                    'accepted':False}
+        raise
+    finally:
+        # Shielded: a cancelled activity must still give the lock and connection back.
+        await asyncio.shield(asyncio.to_thread(_unlock,gid,lock,owner))
 
 
 def pending():
+    """The next generation whose outputs need building. Not taken: a generation whose
+    analysis job FAILED (its outputs are not wanted; building them ran for hours beside the
+    readings, 2026-10-02), or one whose book has a newer job queued or running (that job
+    makes a new generation; this one is already superseded)."""
     with foundation.read_snapshot() as c:
         if c.execute("SELECT maintenance FROM ed.runtime_control WHERE singleton").fetchone()['maintenance']:
             return []
         return [str(r['generation_id']) for r in c.execute("SELECT r.generation_id FROM ed.rebuild_request r "
             "JOIN ed.generation_state s USING(generation_id) JOIN ed.generation g ON g.id=r.generation_id "
-            "JOIN ed.analysis_job j ON j.id=g.job_id WHERE r.completed_revision<r.requested_revision "
+            "JOIN ed.analysis_job j ON j.id=g.job_id JOIN ed.book_version bv ON bv.id=j.book_version_id "
+            "WHERE r.completed_revision<r.requested_revision "
             "AND s.origin='TRACKED' AND s.producer_completed AND g.sealed_at IS NULL "
-            "AND j.status NOT IN ('QUEUED','RUNNING') AND (r.attempted_code_version IS DISTINCT FROM %s "
+            "AND j.status NOT IN ('QUEUED','RUNNING','FAILED') "
+            "AND NOT EXISTS (SELECT 1 FROM ed.analysis_job n JOIN ed.book_version nv ON nv.id=n.book_version_id "
+            "WHERE nv.book_id=bv.book_id AND n.id<>j.id AND n.status IN ('QUEUED','RUNNING') "
+            "AND n.created_at>j.created_at) "
+            "AND (r.attempted_code_version IS DISTINCT FROM %s "
             "OR r.attempted_revision IS DISTINCT FROM r.requested_revision "
             "OR (r.attempts<%s AND (r.retry_after IS NULL OR r.retry_after<=now()))) ORDER BY r.updated_at LIMIT 1",(code_version(),MAX_ATTEMPTS))]
 

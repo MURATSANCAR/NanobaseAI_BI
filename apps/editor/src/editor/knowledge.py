@@ -22,6 +22,43 @@ DIRECTOR = "book-director"
 _HEADING = re.compile(r"^[A-ZÇĞİÖŞÜ0-9 ,.'’!?-]{6,60}$")
 
 
+# ------------------------------------------------- shared model capacity
+def director_capacity() -> int:
+    """How many director requests the model serves at once: EDITOR_DIRECTOR_CONCURRENCY if set,
+    else the director's own `--max-num-seqs` in models.yaml, else EDITOR_PAGE_CONCURRENCY. This
+    is the model's capacity, not a cap on books or work: everything still runs, only in turn."""
+    import os
+    raw = os.environ.get("EDITOR_DIRECTOR_CONCURRENCY", "").strip()
+    if raw:
+        return max(1, int(raw))
+    try:
+        import yaml
+        spec = yaml.safe_load(settings().models_yaml.read_text())
+        for arg in ((spec.get("aliases") or {}).get(DIRECTOR) or {}).get("args") or []:
+            m = re.fullmatch(r"--max-num-seqs[= ](\d+)", str(arg).strip())
+            if m:
+                return max(1, int(m.group(1)))
+    except Exception:  # noqa: BLE001 - no readable manifest: fall back to the page setting
+        pass
+    return max(1, settings().page_concurrency)
+
+
+_director_slots: dict[int, tuple[Any, asyncio.Semaphore]] = {}
+
+
+def director_slots() -> asyncio.Semaphore:
+    """One semaphore per event loop, shared by every book this worker process reads at the same
+    time. Measured 2026-10-02: one book's critic sent 1.115 repair calls at once; 48 activities
+    doing that together queued thousands of requests behind a model that serves 32. Waiting here
+    costs nothing; waiting inside the model's queue holds the worker's sockets and memory."""
+    loop = asyncio.get_running_loop()
+    held = _director_slots.get(id(loop))
+    if held is None or held[0] is not loop:
+        held = (loop, asyncio.Semaphore(director_capacity()))
+        _director_slots[id(loop)] = held
+    return held[1]
+
+
 # --------------------------------------------------------------- chapters
 def chapters(generation_id: str) -> list[dict]:
     """Chapters from the book's own typesetting (`editor.chapters`: point size, sunk chapter
@@ -108,10 +145,13 @@ def _visual_summary(generation_id: str, a: int, b: int) -> str:
 async def _extract(st: ChunkState) -> ChunkState:
     gid, a, b = st["generation_id"], st["page_from"], st["page_to"]
     if "body" not in st:
-        text = "\n".join(page_text_numbered(gid, p) for p in range(a, b + 1))
-        ref, body = prompts.render("extract_knowledge", page_from=str(a), page_to=str(b),
-                                   pages_text=text, visual_summary=_visual_summary(gid, a, b),
-                                   corrections=corrections_text(gid))
+        # Page text, visual summary and corrections are database reads: off the event loop.
+        def render() -> tuple:
+            text = "\n".join(page_text_numbered(gid, p) for p in range(a, b + 1))
+            return prompts.render("extract_knowledge", page_from=str(a), page_to=str(b),
+                                  pages_text=text, visual_summary=_visual_summary(gid, a, b),
+                                  corrections=corrections_text(gid))
+        ref, body = await asyncio.to_thread(render)
         st = {**st, "body": body, "ref": ref}
     messages = [{"role": "user", "content": st["body"]}]
     if st.get("unverified"):
@@ -686,9 +726,10 @@ async def verify_event_modality(generation_id: str, batch: int = 25) -> dict:
 
     async def run(chunk: list[dict]) -> dict:
         short = {f"e{i}": e for i, e in enumerate(chunk)}
+        ctxs = await asyncio.to_thread(
+            lambda: [page_text_numbered(generation_id, e["page_from"])[:1500] for e in chunk])
         lines = []
-        for k, e in short.items():
-            ctx = page_text_numbered(generation_id, e["page_from"])[:1500]
+        for (k, e), ctx in zip(short.items(), ctxs):
             lines.append(f"{k} | s{e['page_from']}-{e['page_to']} | {e['summary']} | kanıt: "
                          f"{e['quotes']} | sayfa: {ctx}")
         ref, body = prompts.render("modality_check", events="\n".join(lines))
@@ -703,10 +744,11 @@ async def verify_event_modality(generation_id: str, batch: int = 25) -> dict:
 
     async def referee(e: dict, v: dict) -> tuple[dict, dict, dict | None, int | None]:
         pages = [p for p in range(e["page_from"] - 1, e["page_to"] + 2) if p > 0]
+        pages_text = await asyncio.to_thread(
+            lambda: "\n".join(page_text_numbered(generation_id, p) for p in pages))
         ref, body = prompts.render(
             "modality_referee", summary=e["summary"], quotes=e["quotes"] or "-", first=e["modality"],
-            second=v["modality"], second_reason=v["reason"],
-            pages_text="\n".join(page_text_numbered(generation_id, p) for p in pages))
+            second=v["modality"], second_reason=v["reason"], pages_text=pages_text)
         try:
             out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
                                                          prompt=ref, schema=schemas.MODALITY_REFEREE,
@@ -1006,30 +1048,40 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
     written to it (the calls are logged without a generation) and every pair's reading
     comes back under `detail`."""
     s = settings()
-    chars = db.all_rows("SELECT id, canonical_name, aliases, kind, description FROM character"
-                        " WHERE generation_id=%s ORDER BY first_page NULLS LAST, canonical_name",
-                        generation_id)
-    evs = db.all_rows(
-        "SELECT e.id, e.summary, e.page_from, e.page_to, e.participants, e.claim_id,"
-        " coalesce(c.payload->>'participants_invalidated'='true',false) AS participants_invalidated,"
-        " (SELECT string_agg(ev.quote, ' | ') FROM claim_evidence ce JOIN evidence ev"
-        "  ON ev.id=ce.evidence_id WHERE ce.claim_id=e.claim_id) AS quotes"
-        " FROM event e LEFT JOIN claim c ON c.id=e.claim_id WHERE e.generation_id=%s AND"
-        " e.merged_into IS NULL AND coalesce(c.status,'CANDIDATE') NOT IN ('REJECTED','SUPERSEDED')"
-        " ORDER BY e.page_from, e.page_to", generation_id)
+
+    # Every database read and write below runs off the event loop: this coroutine shares its
+    # loop with up to 48 other activities and with their liveness heartbeats. Run inline, one
+    # book's queries and page reads froze the loop for 56-145 s (measured 2026-10-02) and the
+    # whole worker's activities were cancelled as "timed out" although none of them had failed.
+    def load() -> tuple[list[dict], list[dict], set]:
+        chars = db.all_rows("SELECT id, canonical_name, aliases, kind, description FROM character"
+                            " WHERE generation_id=%s ORDER BY first_page NULLS LAST, canonical_name",
+                            generation_id)
+        evs = db.all_rows(
+            "SELECT e.id, e.summary, e.page_from, e.page_to, e.participants, e.claim_id,"
+            " coalesce(c.payload->>'participants_invalidated'='true',false) AS participants_invalidated,"
+            " (SELECT string_agg(ev.quote, ' | ') FROM claim_evidence ce JOIN evidence ev"
+            "  ON ev.id=ce.evidence_id WHERE ce.claim_id=e.claim_id) AS quotes"
+            " FROM event e LEFT JOIN claim c ON c.id=e.claim_id WHERE e.generation_id=%s AND"
+            " e.merged_into IS NULL AND coalesce(c.status,'CANDIDATE') NOT IN ('REJECTED','SUPERSEDED')"
+            " ORDER BY e.page_from, e.page_to", generation_id)
+        done = {(str(r["event_id"]), str(r["character_id"])) for r in db.all_rows(
+            "SELECT event_id, character_id FROM event_actor WHERE generation_id=%s", generation_id)} \
+            if write and evs and chars else set()
+        return chars, evs, done
+
+    chars, evs, done = await asyncio.to_thread(load)
     stats = {"events": len(evs), "characters": len(chars), "pairs": 0, "pairs_failed": 0,
              "actor": 0, "involved": 0, "absent": 0, "uncertain": 0,
              "extractor_disagreements": 0, "sent_to_review": 0, "invalidated_participant_lists": 0,
              "pairs_skipped": 0, "second_reading": 0, "second_reading_disagreed": 0, "no_doer": 0}
     if not evs or not chars:
         return stats
-    done = {(str(r["event_id"]), str(r["character_id"])) for r in db.all_rows(
-        "SELECT event_id, character_id FROM event_actor WHERE generation_id=%s", generation_id)} \
-        if write else set()
     detail: list[dict] = []
     names = {str(ch["id"]): {ledger.norm(n) for n in [ch["canonical_name"], *ch["aliases"]]}
              for ch in chars}
     sem = asyncio.Semaphore(s.page_concurrency)
+    shared = director_slots()
 
     def card(ch: dict) -> str:
         also = f" (diğer adları: {', '.join(ch['aliases'])})" if ch["aliases"] else ""
@@ -1039,7 +1091,7 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
     async def pair(e: dict, ch: dict, pages: list[int], text: str, seed: int = 17):
         ref, body = prompts.render("event_actor", pages_text=text, summary=e["summary"],
                                    quotes=e["quotes"] or "-", character=card(ch))
-        async with sem:
+        async with sem, shared:
             try:
                 probs, call_id = await Llm(generation_id if write else None).choose(
                     DIRECTOR, [{"role": "user", "content": body}], list(ACTOR_ROLES),
@@ -1048,7 +1100,7 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
                 return ch, None, None
         return ch, probs, call_id
 
-    async def one(e: dict) -> None:
+    def prepare(e: dict) -> tuple[list[int], str, set, list[dict]]:
         pages = [p for p in range(e["page_from"] - 1, e["page_to"] + 1) if p > 0]
         text = "\n".join(page_text_numbered(generation_id, p) for p in pages)
         listed = {ledger.norm(p) for p in e["participants"]}
@@ -1060,6 +1112,55 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
         todo = [ch for ch in chars if (str(e["id"]), str(ch["id"])) not in done
                 and (names[str(ch["id"])] & listed
                      or any(ledger.has_name(here, n) for n in [ch["canonical_name"], *ch["aliases"]]))]
+        return pages, text, listed, todo
+
+    def record(e: dict, res: list, listed: set) -> tuple[dict, list[dict], list[dict]]:
+        """Writes one event's readings. Returns its own counts (merged on the loop, so worker
+        threads never update the shared counters) and the pairs that disagree with the extractor."""
+        got = {"pairs": 0, "pairs_failed": 0, "actor": 0, "involved": 0, "absent": 0,
+               "uncertain": 0, "invalidated_participant_lists": 0, "extractor_disagreements": 0,
+               "no_doer": 0}
+        with db.tx() as c:
+            for ch, probs, call_id in res:
+                got["pairs"] += 1
+                if probs is None:
+                    got["pairs_failed"] += 1
+                    continue
+                c.execute(
+                    "INSERT INTO event_actor(event_id, character_id, generation_id, p_actor,"
+                    " p_involved, p_absent, role, listed_by_extractor, model_call_id) VALUES"
+                    " (%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING",
+                    (e["id"], ch["id"], generation_id, probs["A"], probs["B"], probs["C"],
+                     _actor_role(probs, s.actor_min_probability),
+                     bool(names[str(ch["id"])] & listed), call_id))
+            # judged on every pair of the event, also those a previous attempt wrote
+            rows = c.execute(
+                "SELECT ea.*, ch.canonical_name FROM event_actor ea JOIN character ch ON"
+                " ch.id=ea.character_id WHERE ea.event_id=%s", (e["id"],)).fetchall()
+        for r in rows:
+            got[r["role"].lower()] += 1
+        unsure = [r for r in rows if r["role"] == "UNCERTAIN"]
+        # A correction invalidates the previous extractor list. An unknown
+        # list is not a negative assertion that nobody participated. The
+        # fresh actor probabilities and genuine uncertainty still apply.
+        comparable = not e['participants_invalidated']
+        if not comparable:
+            got['invalidated_participant_lists'] += 1
+        dropped = [r for r in rows if comparable and r["listed_by_extractor"] and r["role"] == "ABSENT"]
+        added = [r for r in rows if comparable and not r["listed_by_extractor"] and r["role"] == "ACTOR"]
+        no_doer = comparable and any(r["listed_by_extractor"] for r in rows) and \
+            not any(r["role"] == "ACTOR" for r in rows)
+        got["extractor_disagreements"] += len(dropped) + len(added)
+        got["no_doer"] += bool(no_doer and not unsure)
+        return got, dropped, added
+
+    def queue(e: dict, why: list[str]) -> None:
+        with db.tx() as c:
+            ledger.queue_review(c, generation_id, claim_id=str(e["claim_id"]), priority=2,
+                                reason="Kim yaptı: " + "; ".join(why))
+
+    async def one(e: dict) -> None:
+        pages, text, listed, todo = await asyncio.to_thread(prepare, e)
         stats["pairs_skipped"] += len(chars) - len(todo)
         if not todo:
             return
@@ -1079,38 +1180,9 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
                                "p_actor": round(probs["A"], 4), "p_involved": round(probs["B"], 4),
                                "p_absent": round(probs["C"], 4)})
             return
-        with db.tx() as c:
-            for ch, probs, call_id in res:
-                stats["pairs"] += 1
-                if probs is None:
-                    stats["pairs_failed"] += 1
-                    continue
-                c.execute(
-                    "INSERT INTO event_actor(event_id, character_id, generation_id, p_actor,"
-                    " p_involved, p_absent, role, listed_by_extractor, model_call_id) VALUES"
-                    " (%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING",
-                    (e["id"], ch["id"], generation_id, probs["A"], probs["B"], probs["C"],
-                     _actor_role(probs, s.actor_min_probability),
-                     bool(names[str(ch["id"])] & listed), call_id))
-            # judged on every pair of the event, also those a previous attempt wrote
-            rows = c.execute(
-                "SELECT ea.*, ch.canonical_name FROM event_actor ea JOIN character ch ON"
-                " ch.id=ea.character_id WHERE ea.event_id=%s", (e["id"],)).fetchall()
-            for r in rows:
-                stats[r["role"].lower()] += 1
-            unsure = [r for r in rows if r["role"] == "UNCERTAIN"]
-            # A correction invalidates the previous extractor list. An unknown
-            # list is not a negative assertion that nobody participated. The
-            # fresh actor probabilities and genuine uncertainty still apply.
-            comparable = not e['participants_invalidated']
-            if not comparable:
-                stats['invalidated_participant_lists'] += 1
-            dropped = [r for r in rows if comparable and r["listed_by_extractor"] and r["role"] == "ABSENT"]
-            added = [r for r in rows if comparable and not r["listed_by_extractor"] and r["role"] == "ACTOR"]
-            no_doer = comparable and any(r["listed_by_extractor"] for r in rows) and \
-                not any(r["role"] == "ACTOR" for r in rows)
-            stats["extractor_disagreements"] += len(dropped) + len(added)
-            stats["no_doer"] += bool(no_doer and not unsure)
+        got, dropped, added = await asyncio.to_thread(record, e, res, listed)
+        for k, v in got.items():
+            stats[k] += v
         # The editor is asked only when the reading CHANGES what a claim says — a listed
         # participant read as absent, an unlisted character read as the doer — and only when
         # a second, independent reading (another seed) agrees. A pair that stays uncertain
@@ -1138,9 +1210,7 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
             if add:
                 why.append("çıkarımın listesinde yok, iki okuma da eylemi yapan diyor: " + ", ".join(
                     f"{r['canonical_name']} ({r['p_actor']:.2f})" for r in add))
-            with db.tx() as c:
-                ledger.queue_review(c, generation_id, claim_id=str(e["claim_id"]), priority=2,
-                                    reason="Kim yaptı: " + "; ".join(why))
+            await asyncio.to_thread(queue, e, why)
             stats["sent_to_review"] += 1
 
     await asyncio.gather(*(one(e) for e in evs))

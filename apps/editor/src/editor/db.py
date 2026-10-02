@@ -21,14 +21,28 @@ _pool: ConnectionPool | None = None
 MIGRATIONS = Path(__file__).resolve().parent.parent.parent / "db" / "migrations"
 
 
+def pool_limits() -> tuple[int, float]:
+    """(max connections, seconds to wait for one). The size is shared with Temporal and the
+    other editor services on one Postgres (max_connections 100), so it stays 24 unless set.
+    The wait is long on purpose: every query of a running activity is made from a worker
+    thread, where waiting for a free connection costs nothing, whereas psycopg's 30 s default
+    turned a few busy seconds into a failed activity."""
+    import os
+    size = int(os.environ.get("EDITOR_DB_POOL_MAX", "") or 24)
+    wait = float(os.environ.get("EDITOR_DB_POOL_TIMEOUT", "") or 600)
+    return max(2, size), max(1.0, wait)
+
+
 def pool() -> ConnectionPool:
     global _pool
     if _pool is None:
         import atexit
+        size, wait = pool_limits()
         _pool = ConnectionPool(
             settings().db_dsn,
             min_size=1,
-            max_size=24,
+            max_size=size,
+            timeout=wait,
             kwargs={"row_factory": dict_row, "options": "-c search_path=ed,public"},
             open=True,
         )

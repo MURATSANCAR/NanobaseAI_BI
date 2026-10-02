@@ -53,6 +53,69 @@ class HeartbeatActivityInterceptor(ActivityInboundInterceptor):
                 await task
 
 
+class LoopWatchdog:
+    """Notices, from its own thread, when the worker's event loop stops turning.
+
+    Every activity of this worker and every liveness heartbeat share one asyncio loop. The
+    Temporal SDK sends heartbeats through that loop (payload conversion is async), so no
+    thread can heartbeat on behalf of a blocked loop: the cure is keeping blocking work off
+    it (asyncio.to_thread). This guard makes a regression visible instead of silent — when
+    the loop has not turned for `threshold` seconds it logs the loop thread's current stack
+    (the code that blocks), and when the loop resumes it logs how long the stall lasted.
+    Measured 2026-10-02: stalls of 56-145 s made Temporal cancel healthy activities as
+    "activity task timed out" (heartbeat timeout 60 s)."""
+
+    def __init__(self, threshold: float | None = None, tick: float = 1.0) -> None:
+        import os
+        self.threshold = threshold if threshold is not None else \
+            float(os.environ.get("EDITOR_LOOP_STALL_SECONDS", "") or 10)
+        self.tick = tick
+        self.last = 0.0
+        self.stalls: list[float] = []
+        self._loop_thread: int | None = None
+        self._stop = None
+        self._task: asyncio.Task | None = None
+
+    async def _pulse(self) -> None:
+        import time
+        while True:
+            self.last = time.monotonic()
+            await asyncio.sleep(self.tick)
+
+    def _watch(self) -> None:
+        import sys
+        import time
+        import traceback
+        reported = None
+        while not self._stop.wait(self.tick / 2):
+            gap = time.monotonic() - self.last
+            if gap >= self.threshold and reported != self.last:
+                reported = self.last
+                frame = sys._current_frames().get(self._loop_thread)
+                stack = "".join(traceback.format_stack(frame)) if frame else "(stack unavailable)"
+                log.warning("event loop blocked for %.1f s; heartbeats are not being sent. "
+                            "Blocking code:\n%s", gap, stack)
+            elif reported is not None and reported != self.last:
+                self.stalls.append(self.last - reported)
+                log.warning("event loop resumed after a %.1f s stall", self.last - reported)
+                reported = None
+
+    def start(self) -> None:
+        import threading
+        import time
+        self._loop_thread = threading.get_ident()
+        self.last = time.monotonic()
+        self._stop = threading.Event()
+        self._task = asyncio.get_running_loop().create_task(self._pulse())
+        threading.Thread(target=self._watch, name="loop-watchdog", daemon=True).start()
+
+    def stop(self) -> None:
+        if self._stop is not None:
+            self._stop.set()
+        if self._task is not None:
+            self._task.cancel()
+
+
 class DeterministicFailureInterceptor(ActivityInboundInterceptor):
     """A request that cannot fit the model's context fails identically on every attempt:
     it ends the activity at once instead of spending the retry policy (4 attempts x 3 calls,
@@ -104,7 +167,12 @@ async def main() -> None:
                     max_heartbeat_throttle_interval=timedelta(seconds=20),
                     default_heartbeat_throttle_interval=timedelta(seconds=20))
     log.info("worker polling %s/%s", s.temporal_namespace, s.task_queue)
-    await worker.run()
+    watchdog = LoopWatchdog()
+    watchdog.start()
+    try:
+        await worker.run()
+    finally:
+        watchdog.stop()
 
 
 if __name__ == "__main__":
