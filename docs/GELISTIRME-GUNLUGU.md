@@ -1,5 +1,17 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — Editör: bir kitap denetiminden çıkan genel hata sınıfları
+
+- Künye boş kalıyordu: künye adımı bütün kitabın sayfa kuralından (`page_scope.ensure`, doğrulamada) önce koşuyordu. Künye adımı artık önce kuralı uygular; doğrulama (tam + arşiv) yeni künye sayfası yazar ve METADATA yoksa künyeyi okur (`page_scope.metadata_after_scope`; hata çıktıyı düşürmez).
+- Kitap özeti yedeğe düşüyordu: uzun kitapta son özete ~71 iddia giriyor, model 24 cümleyi baştan dolduruyor, uç kuralı üç denemede de reddediyordu. Son girdi ≤ 24 iddiaya kitap boyunca dilimlerle iner (`cap_final`); model bir ucu atlarsa uygulama o ucun en önemli doğrulanmış iddiasını kelimesi kelimesine ekler (`edge_fill`, model çağrısı yok). Yedek özet yalnız eleştirmen reddinde.
+- İthaf: kısa ön sayfada satırın herhangi bir yerinde «Ad'a/'e/'ya/'ye» öbek sonu; epigraf (alıntı + «— Kaynak») yeni NON_STORY nedeni. Öneri olmayan sayfada yalnız ilk %5 ve gövdenin ilk uzun sayfasından önce (resimli kitabın gövdesi korunur; diyalog çizgisi epigraf sayılmaz).
+- Bütün anmaları kapsam dışı sayfalarda olan karakter (tanıtım sayfalarındaki adlar) çıktıda yok (`outputs.capture`, kayıt silinmez).
+- Kimlik: anlatıcıya göreli birinci tekil akrabalık etiketleri («Annem» ×3) sayfa aralıkları iç içe geçmiyorsa katlanır (çok anlatıcılı kitapta iç içe → `RELATIVE_LABEL_INTERLEAVED`). Kısaltma = tam ad («Bee»/«Beatrice») yapılmadı: metinde açık eşleme olmadan ön ek benzerliği güvenli değil; başkasının lakabının eklenmesi ayrı iş.
+- Bölüm özeti: yalnız bütün kaynak sayfaları bölümde (±1) olan iddialar, her iddia tek bölüm; aynı cümle tek bölümde. Bütün kitaba yayılan tema bölüm özetine girmez.
+- Kategori/yaş önerisi tam okumada da (`patched("full-recommend-v1")`); tek seferlik doldurma `python -m editor.recommend fill --all-read [--apply]`.
+- Postgres 100 bağlantının 98'i doluydu (editor_app 67 boşta). Havuz süreç başına 8 (gateway 2), `max_idle` 60 sn (psycopg_pool fazlayı 10 dk'da bir kapatıyordu); gateway her vekil istekte bakım anahtarını DB'ye soruyordu → cevap 5 sn paylaşılır, eşzamanlı istekler tek sorgu.
+- `POLICY` validated-outputs-v10. Testler `tests/test_read_audit_classes.py` (+ kimlik/arşiv testleri güncel). Kurulmadı; okunmuş kitaplara uygulama: `page_scope rebuild --all-read`, `identity_fold --apply`, `recommend fill --all-read --apply`.
+
 ## 2026-10-02 (akşam) — Okunamayan kitabı «Yeniden okut»
 
 - Sorun: kendini onarma (`portal_books.retry_failed`, `EDITOR_READ_ATTEMPTS`=3) bitince iş FAILED kalıyordu; kişinin yapabileceği bir şey yoktu (bugün «Babam Sultan Abdülhamid», «Beni de Kalbinde Götür», «Levent Dünya Harikalarının Peşinde»).
