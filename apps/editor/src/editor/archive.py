@@ -341,6 +341,96 @@ def open_for_redaction(generation_id: str, who: str) -> dict:
     return {"job_id": str(job["id"]), "already": None}
 
 
+# ------------------------------------------------------------------ Kitap Eczanesi listesi (kart servisi /v1/archive/books)
+#: Okuma durumu (portal_books.item ile aynı sözlük) + «redaksiyon»: son okuması açılmış ya da koşmuş kitaplar.
+LIST_STATES = ("sirada", "okunuyor", "hazir", "yeniden", "okunamadi", "redaksiyon")
+SORTS = ("title", "recent")
+
+
+def listing_data(c, book_id: str | None = None) -> tuple[list[dict], set[str], list[str]]:
+    """Salt okuma (kart servisinin anlık görüntüsünde): arşiv kipinde okunan kitapların kitap × kip (archive |
+    redaction) başına SON işi, son okuması koşmuş kitaplar ve kuyrukta bekleyen işlerin sırası.
+    `book_id` verilirse yalnız o kitap."""
+    from . import portal_books as PB
+    one = " AND bv.book_id=%s" if book_id else ""
+    rows = c.execute(
+        "SELECT DISTINCT ON (bv.book_id, j.profile) bv.book_id, b.title, j.id, j.profile, j.status, j.step,"
+        " j.workflow_id, j.requested_by, j.created_at, j.finished_at, coalesce((j.progress->>'attempt')::int, 1)"
+        " AS attempt, j.progress->'archive'->>'category' AS category, bv.page_count,"
+        " min(j.created_at) OVER (PARTITION BY bv.book_id, j.profile) AS submitted_at"
+        " FROM ed.analysis_job j JOIN ed.book_version bv ON bv.id=j.book_version_id JOIN ed.book b ON b.id=bv.book_id"
+        " WHERE j.profile IN ('archive','redaction')" + one +
+        " ORDER BY bv.book_id, j.profile, j.created_at DESC, j.id DESC", (book_id,) if book_id else ()).fetchall()
+    ids = list({str(r["book_id"]) for r in rows})
+    proofed = {str(r["book_id"]) for r in c.execute(
+        "SELECT DISTINCT v.book_id FROM ed.proof_run r JOIN ed.generation g ON g.id=r.generation_id"
+        " JOIN ed.book_version v ON v.id=g.book_version_id WHERE v.book_id::text = ANY(%s)", (ids,)).fetchall()} if ids else set()
+    waiting = [str(r["id"]) for r in c.execute(
+        "SELECT id FROM ed.analysis_job WHERE status='QUEUED' AND workflow_id IS NULL ORDER BY " + PB.QUEUE_ORDER,
+        ()).fetchall()]
+    return rows, proofed, waiting
+
+
+def shape(rows: list[dict], proofed: set[str], waiting: list[str], busy: int) -> list[dict]:
+    """Kitap başına tek satır: okuma (arşiv kipi) ve redaksiyonun durumu portal satırının diliyle (sirada,
+    okunuyor, hazir, yeniden, okunamadi; aşama adı teknik ad taşımaz). Redaksiyon işi yoksa `redaction` None;
+    son okuması koşmuşsa `proofed`."""
+    from . import portal_books as PB
+    by: dict[str, dict] = {}
+    for r in rows:
+        bid = str(r["book_id"])
+        b = by.setdefault(bid, {"id": bid, "title": r["title"], "category": None, "pages": r["page_count"],
+                                "read": None, "redaction": None, "proofed": bid in proofed, "bulk": False})
+        it = PB.item(r, waiting, busy)
+        who = r.get("requested_by") or ""
+        it["requested_by"] = None if who.startswith(PREFIX) else it["requested_by"]
+        if r["profile"] == PROFILE:
+            b["read"] = it
+            b["category"] = r.get("category")
+            b["bulk"] = who.startswith(PREFIX)
+            b["pages"] = r["page_count"] or b["pages"]
+        else:
+            b["redaction"] = it
+    # Redaksiyon işi olan ama arşiv okuması bu listede görünmeyen kitap olmaz (redaksiyon arşiv neslinden açılır);
+    # yine de okuma satırı yoksa kitap gösterilir, okuma durumu bilinmez (None).
+    return list(by.values())
+
+
+def _stamp(b: dict) -> str:
+    xs = [x.get("finished_at") or x.get("created_at") or "" for x in (b.get("read"), b.get("redaction")) if x]
+    return max(xs) if xs else ""
+
+
+def _state_of(b: dict) -> str | None:
+    return (b.get("read") or {}).get("state")
+
+
+def select(books: list[dict], q: str = "", category: str = "", state: str = "", sort: str = "title",
+           offset: int = 0, limit: int = 50) -> dict:
+    """Arama (Türkçe harf ve büyük/küçük harf farkı gözetmez) → kategori → durum süzgeci, sıralama ve sayfa.
+    `facets`: aramaya uyan kitapların kategori sayıları ve (kategori süzgeciyle) durum sayıları; ekran süzgeç
+    düğmelerinde gösterir. `total` süzülmüş kitap sayısı; hiçbir kitap kesilmez, sayfalar `offset` ile gezilir."""
+    key = fold(q).strip()
+    hit = [b for b in books if not key or key in fold(b["title"] or "")]
+    cats: dict[str, int] = collections.Counter((b["category"] or "") for b in hit)
+    in_cat = [b for b in hit if not category or (b["category"] or "") == ("" if category == "-" else category)]
+    states: dict[str, int] = collections.Counter(_state_of(b) or "" for b in in_cat)
+    states["redaksiyon"] = sum(1 for b in in_cat if b["redaction"] or b["proofed"])
+    if state == "redaksiyon":
+        out = [b for b in in_cat if b["redaction"] or b["proofed"]]
+    elif state:
+        out = [b for b in in_cat if _state_of(b) == state]
+    else:
+        out = in_cat
+    if sort == "recent":
+        out = sorted(out, key=lambda b: (_stamp(b), b["id"]), reverse=True)
+    else:
+        out = sorted(out, key=lambda b: (fold(b["title"] or ""), b["id"]))
+    page = out[offset:offset + limit]
+    return {"items": page, "total": len(out), "offset": offset, "limit": limit, "all": len(books),
+            "facets": {"categories": dict(cats), "states": {k: v for k, v in states.items() if k}}}
+
+
 # ------------------------------------------------------------------ arşiv çıktıları (rebuild.run'ın arşiv eşi)
 async def validate(gid: str) -> dict:
     """rebuild.validate'in arşiv eşi: doğruluk denetimi (critic) + kim ne yaptı + regresyon. Çelişki tespiti ve

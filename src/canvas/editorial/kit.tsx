@@ -27,8 +27,14 @@ export function ModuleFrame({
   source,
   presence = 'Kaynak: CRM',
   aside,
+  section = 'Editoryal',
+  home = true,
   children,
 }: {
+  /** Üst şeritteki ana modül adı (ayrı ana modüldeki ekran, ör. Kitap Eczanesi, kendi adını verir). */
+  section?: string;
+  /** Başlığın üstündeki «Masam» dönüş bağlantısı; Editoryal dışındaki ana modülde false (yerine `section` yazar). */
+  home?: boolean;
   route: string;
   crumb: string;
   title: string;
@@ -46,14 +52,16 @@ export function ModuleFrame({
   const detail = onDetail ? [title, crumb].filter((x, i, a) => x && a.indexOf(x) === i).join(' · ') || undefined : undefined;
   return (
     <Shell
-      head={{ tenant: 'Timaş Yayınları', section: 'Editoryal', crumb, source, presence, detail }}
+      head={{ tenant: 'Timaş Yayınları', section, crumb, source, presence, detail }}
     >
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
             <header className="relative z-20 flex flex-col gap-3 px-1 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
               <div className="min-w-0">
-              {route !== '/editoryal' ? (
+              {!home ? (
+                section !== title && <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">{section}</div>
+              ) : route !== '/editoryal' ? (
                 <Link to="/editoryal" className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-violet hover:underline">
                   <ChevronLeft aria-hidden className="h-3.5 w-3.5" />
                   Masam

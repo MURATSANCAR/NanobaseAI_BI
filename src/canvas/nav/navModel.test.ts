@@ -9,7 +9,7 @@ const editor = { isAdmin: false, isEditor: true };
 const ids = (gs: { id: string }[]) => gs.map((g) => g.id);
 const itemIds = (gs: ReturnType<typeof visibleNav>) => flatItems(gs).map((x) => x.item.id);
 /** Onaylı ana menü sırası (firmanın modül sunumu A–L; 2026-09-28). */
-const ALL_GROUPS = ['kampus', 'analiz', 'editoryal', 'uretim-fiyat', 'pazarlama', 'satis', 'dijital', 'musteri', 'platform', 'lojistik', 'finans', 'altyapi', 'ik', 'yonetim'];
+const ALL_GROUPS = ['kampus', 'analiz', 'editoryal', 'kitap-eczanesi', 'uretim-fiyat', 'pazarlama', 'satis', 'dijital', 'musteri', 'platform', 'lojistik', 'finans', 'altyapi', 'ik', 'yonetim'];
 
 describe('sayfa yetkisi', () => {
   it('yalnız izin verilen sayfalar görünür; boş kalan alan raydan kalkar; Kampüs hep açık', () => {
@@ -269,7 +269,7 @@ describe('ana menü yerleşimi (2026-09-28, modül sunumu A–L)', () => {
   it('ana modüller onaylı sırada; «Kayıtlar» yok', () => {
     expect(NAV.map((g) => g.id)).toEqual(ALL_GROUPS);
     expect(NAV.map((g) => g.label)).toEqual([
-      'Kampüs', 'Analiz', 'Editoryal', 'Fiyatlama ve üretim', 'Pazarlama', 'Saha satış ve okul', 'Dijital ve topluluk',
+      'Kampüs', 'Analiz', 'Editoryal', 'Kitap Eczanesi', 'Fiyatlama ve üretim', 'Pazarlama', 'Saha satış ve okul', 'Dijital ve topluluk',
       'Müşteri ve pazar', 'Platform yönetimi', 'Lojistik', 'Finans ve risk', 'Altyapı ve destek', 'İnsan Kaynakları', 'Yönetim',
     ]);
     expect(NAV.some((g) => (g.id as string) === 'kayitlar' || g.label === 'Kayıtlar')).toBe(false);
@@ -433,7 +433,8 @@ describe('ana modül giriş ekranı (Kampüs kutuları)', () => {
       expect(to, g.id).not.toBeNull();
       const [path, q = ''] = to!.split('?');
       expect(matchActive(NAV, path, q)?.group.id, g.id).toBe(g.id);
-      if (g.id !== 'kampus') expect(railView(visibleNav(admin, { webWatch: true }), g.id).kind).toBe('module');
+      // Tek ekranlı ana modül (Kampüs, Kitap Eczanesi) rayda doğrudan bağlantıdır; paneli yoktur.
+      expect(railView(visibleNav(admin, { webWatch: true }), g.id).kind).toBe(g.to ? 'modules' : 'module');
     }
   });
   it('rolde görünmeyen ekrana gitmez: modülde kişinin açabildiği ilk ekran', () => {

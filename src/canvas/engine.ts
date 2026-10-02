@@ -2877,6 +2877,59 @@ export const proofingApi = {
   },
   /** Kelime haritası (kök, biçim, sayfa, anlam, deyim); motordaki kitap kimliğiyle. */
   wordMap: (bookId: string) => send<WordMap>('GET', `/api/v1/editorial/proofing/word-map${qs({ bookId })}`, undefined, 30_000),
+  /** Yakın tekrar bulgularının karşılık önerileri: editör grubu açınca üretilir (model çağrısı, dakikaya varabilir).
+   *  Önerisi hazır bulgu yeniden sorulmaz; sonra rapor yeniden okunur. */
+  wordAlternatives: (bookId: string, findingIds: string[]) =>
+    send<{ filled: number; failed: number; pending: number }>('POST', '/api/v1/editorial/proofing/word-alternatives', { bookId, findingIds }, 600_000),
+};
+
+// ---------------------------------------------------------------- Kitap Eczanesi
+/** Arşiv kategorisi: editörün arşiv klasör adı (editor.archive.CATEGORIES). Ekrandaki ad `PHARMACY_CATEGORIES`. */
+export type PharmacyCategory = 'Cocuk/0-5_yas' | 'Cocuk/6-9_yas' | 'Cocuk/10-12_yas' | 'Cocuk/13+_yas' | 'Kurgu' | 'Kurgu_Disi';
+export const PHARMACY_CATEGORIES: Array<{ key: PharmacyCategory; label: string }> = [
+  { key: 'Cocuk/0-5_yas', label: 'Çocuk 0-5' },
+  { key: 'Cocuk/6-9_yas', label: 'Çocuk 6-9' },
+  { key: 'Cocuk/10-12_yas', label: 'Çocuk 10-12' },
+  { key: 'Cocuk/13+_yas', label: 'Çocuk 13+' },
+  { key: 'Kurgu', label: 'Kurgu' },
+  { key: 'Kurgu_Disi', label: 'Kurgu dışı' },
+];
+/** Okuma (ve redaksiyon) satırı: portalın okutma satırıyla aynı sözlük; `requested_by` toplu arşivde null. */
+export type PharmacyJob = Pick<BookRead, 'id' | 'state' | 'phase' | 'ahead' | 'attempt' | 'attempts' | 'failed' | 'created_at' | 'finished_at'> & {
+  requested_by: string | null;
+};
+export type PharmacyBook = {
+  id: string;
+  title: string;
+  category: PharmacyCategory | null;
+  pages: number | null;
+  read: PharmacyJob | null;
+  /** Redaksiyon (son okuma) işi; açılmadıysa null. */
+  redaction: PharmacyJob | null;
+  /** Son okuma denetimleri bu kitapta koştu (bulgular hazır). */
+  proofed: boolean;
+  /** Toplu arşiv kuyruğundan (portaldan yüklenmedi). */
+  bulk: boolean;
+};
+export type PharmacyState = 'sirada' | 'okunuyor' | 'hazir' | 'yeniden' | 'okunamadi' | 'redaksiyon';
+export type PharmacyQuery = { q?: string; category?: string; state?: PharmacyState | ''; sort?: 'title' | 'recent'; offset?: number; limit?: number };
+export type PharmacyPage = {
+  items: PharmacyBook[];
+  total: number;
+  offset: number;
+  limit: number;
+  /** Eczanedeki bütün kitaplar (süzgeçsiz). */
+  all: number;
+  facets: { categories: Record<string, number>; states: Partial<Record<PharmacyState, number>> };
+};
+const PH = '/api/v1/editorial/pharmacy/books';
+export const pharmacyApi = {
+  books: (o: PharmacyQuery) =>
+    send<PharmacyPage>('GET', `${PH}${qs({ q: o.q, category: o.category, state: o.state, sort: o.sort, offset: o.offset, limit: o.limit })}`, undefined, 30_000),
+  book: (id: string) => send<PharmacyBook>('GET', `${PH}/${encodeURIComponent(id)}`, undefined, 30_000),
+  /** Son okuma raporu kitap kimliğiyle (Son okuma ekranındaki biçim). */
+  proofing: (id: string, title?: string) => send<ProofingReport>('GET', `${PH}/${encodeURIComponent(id)}/proofing${qs({ title })}`, undefined, 30_000),
+  openRedaction: (id: string) => send<{ book_id: string; job_id: string; already: string | null }>('POST', `${PH}/${encodeURIComponent(id)}/redaction`, {}, 60_000),
 };
 
 /** Belge incelemesi: Son Okuma ekranından yüklenen belge (doc, docx, pdf, odt, rtf, txt, md) üstünde metin denetimleri. */
@@ -2969,17 +3022,24 @@ export type BookRead = {
   created_at: string;
   finished_at: string | null;
   listed?: boolean;
+  /** Giden kutusundaki satır: okuma kipi (Kitap Eczanesi'nden yüklenen `archive`). */
+  profile?: 'full' | 'archive';
+  category?: string | null;
 };
+
+/** Kitap Eczanesi'nden okutma: arşiv kipi («Zeki'ye sor» için okunur; son okuma redaksiyona açılınca) ve isteğe
+ *  bağlı arşiv kategorisi (okur kitlesi ipucu). Verilmezse tam okuma. */
+export type BookReadMode = { profile: 'archive'; category: PharmacyCategory | '' };
 
 export const bookReadApi = {
   list: () => send<{ items: BookRead[]; stale?: boolean }>('GET', '/api/v1/editorial/ask/read', undefined, 30_000),
   dismiss: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/editorial/ask/read/${encodeURIComponent(id)}`, undefined, 30_000),
   /** Ham PDF gövdesi; köprü diske akıtır ve giden kutusuna alır (motora gönderim arkada). İlerleme için XHR.
    *  Hata: `status` 0 = bağlantı koptu (yeniden denenebilir), 4xx = dosya/izin (kalıcı), 5xx = sunucu (denenebilir). */
-  upload: (file: File, title: string, onProgress: (share: number) => void) =>
+  upload: (file: File, title: string, onProgress: (share: number) => void, mode?: BookReadMode) =>
     new Promise<BookRead>((resolve, reject) => {
       const x = new XMLHttpRequest();
-      x.open('PUT', `${ENGINE_BASE}/api/v1/editorial/ask/read${qs({ filename: file.name, title: title.trim() || undefined })}`);
+      x.open('PUT', `${ENGINE_BASE}/api/v1/editorial/ask/read${qs({ filename: file.name, title: title.trim() || undefined, profile: mode?.profile, category: mode?.category || undefined })}`);
       x.withCredentials = true;
       x.timeout = 1_800_000;
       x.setRequestHeader('Content-Type', 'application/octet-stream');

@@ -96,7 +96,8 @@ export default function Shell({
   const active = nav.active;
   const onDetail = !!active && loc.pathname.replace(/\/+$/, '') !== pathOf(active.item.to);
   const detail = head.detail ?? (active && onDetail && head.crumb && head.crumb !== active.item.label ? head.crumb : undefined);
-  const crumbGroup = active ? (active.group.id === 'kampus' ? null : active.group.label) : head.section;
+  // Tek ekranlı ana modülde (Kampüs, Kitap Eczanesi) modül adı ekran adıyla aynı: iki kez yazılmaz.
+  const crumbGroup = active ? (active.group.id === 'kampus' || active.group.label === active.item.label ? null : active.group.label) : head.section;
   const crumbItem = active ? active.item.label : head.crumb;
 
   // Ekran bilgi kutusu: ilk girişte «Bu ekran» düğmesinin altında kısa özet açılır, 8 sn sonra kapanır; düğme tam metni açar.

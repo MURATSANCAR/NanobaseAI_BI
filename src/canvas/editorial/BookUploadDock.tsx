@@ -20,7 +20,10 @@ export function UploadBar({ share, label }: { share: number; label: string }) {
 export default function BookUploadDock() {
   const { items } = useBookUploads();
   const { pathname } = useLocation();
-  if (!items.length || /\/editoryal\/?$/.test(pathname)) return null;
+  // Yükleme alanının kendisinin olduğu ekranlarda (Masam, Kitap Eczanesi) gösterge çizilmez.
+  if (!items.length || /\/(editoryal|kitap-eczanesi)\/?$/.test(pathname)) return null;
+  // «Gör» yüklemenin başladığı ekrana gider: Kitap Eczanesi'nden yüklenen kitap oraya.
+  const home = items.some((i) => i.mode?.profile === 'archive') && !items.some((i) => !i.mode) ? '/kitap-eczanesi' : '/editoryal';
   const live = items.filter((i) => i.status !== 'failed');
   const failed = items.length - live.length;
   const now = live.find((i) => i.status === 'uploading');
@@ -47,7 +50,7 @@ export default function BookUploadDock() {
           <p className="truncate text-[12px] font-extrabold">{head}</p>
           <p className={`truncate text-[11px] ${failed && !live.length ? 'text-red-700' : 'text-canvas-muted'}`}>{sub}</p>
         </div>
-        <Link to="/editoryal" className="zk-press shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11.5px] font-bold hover:bg-slate-200">
+        <Link to={home} className="zk-press shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11.5px] font-bold hover:bg-slate-200">
           Gör
         </Link>
       </div>

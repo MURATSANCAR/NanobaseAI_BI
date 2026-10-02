@@ -22,6 +22,7 @@ const IntakeProjectScreen = lazy(() => import('@/canvas/editorial/intake/IntakeP
 const BookScreen = lazy(() => import('@/canvas/editorial/BookScreen'));
 const EditorialHome = lazy(() => import('@/canvas/editorial/EditorialHome'));
 const RedactionScreen = lazy(() => import('@/canvas/editorial/RedactionScreen'));
+const PharmacyScreen = lazy(() => import('@/canvas/editorial/pharmacy/PharmacyScreen'));
 const ProofScreen = lazy(() => import('@/canvas/editorial/ProofScreen'));
 const TranslationScreen = lazy(() => import('@/canvas/editorial/translation/TranslationScreen'));
 const TranslationWorkbench = lazy(() => import('@/canvas/editorial/translation/Workbench'));
@@ -636,6 +637,8 @@ export default function App() {
             <Route path="editoryal" element={<EditorialHome />} />
             <Route path="redaksiyon" element={<RedactionScreen />} />
             <Route path="son-okuma" element={<ProofScreen />} />
+            {/* Kitap Eczanesi: arşiv kipinde okunan kitaplar; son okuma, e-kitap, sesli kitap, stüdyoya gönderme (/api/v1/editorial/pharmacy). */}
+            <Route path="kitap-eczanesi" element={<PharmacyScreen />} />
             <Route path="ceviri" element={<TranslationScreen />} />
             <Route path="ceviri/masam" element={<TranslationWorkbench />} />
             <Route path="ceviri/masam/:jobId" element={<TranslationWorkbench />} />

@@ -485,7 +485,7 @@ _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bi
                                    "seo-aramadan-satisa"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kapak-arsivi", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
-                                         "editor-atama", "serbest-calisanlar", "uretim"))
+                                         "editor-atama", "serbest-calisanlar", "uretim", "kitap-eczanesi"))
 
 _OKUR = frozenset(page(x) for x in ("okur-toplulugu", "okur-segmentler", "okur-programlar", "okur-yorumlar"))
 _CHANNELS = frozenset(page(x) for x in ("kanallar", "kanal-matris", "kanal-d2c", "kanal-eslesme"))
@@ -777,7 +777,10 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/board", frozenset({page("panolar"), page("genel-bakis")})),
     # Kapak arşivi kendi sayfasıdır; stüdyoda kapak tarzı seçen de örneklere bakabilsin diye ikisi.
     ("/api/v1/editorial/studio/library", frozenset({page("kapak-arsivi"), page("kitap-tasarim")})),
-    ("/api/v1/editorial/studio", frozenset({page("kitap-tasarim")})),
+    # Kitap Eczanesi kitabın EPUB'ını, sesli kitabını ve tasarım işini kendi ekranından açar (stüdyo uçları); üretim
+    # yine `tasarim.uret` ister (aşağıdaki özellik kuralı).
+    ("/api/v1/editorial/studio", frozenset({page("kitap-tasarim"), page("kitap-eczanesi")})),
+    ("/api/v1/editorial/pharmacy/", frozenset({page("kitap-eczanesi")})),
     ("/api/v1/editorial/translation", frozenset({page("ceviri"), page("ceviri-masam")})),
     # Kişiler ekranı CRM kişisinin serbest çalışan kaydını sorar; geri kalan her şey Serbest çalışanlar sayfasının.
     ("/api/v1/editorial/freelance/lookup", frozenset({page("kisiler"), page("serbest-calisanlar")})),
@@ -1103,6 +1106,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
     # Kitap okutma (Kitaba sor): PDF gelen kutusuna yazılır, GPU'da uzun okuma işi başlar.
     (frozenset({"PUT", "DELETE"}), r"^/api/v1/editorial/ask/read(/[^/]+)?$", "ozellik:kitap.okut"),
+    # Kitap Eczanesi: arşivde okunmuş kitabı redaksiyona açmak GPU'da son okuma denetimlerini başlatır.
+    (frozenset({"POST"}), r"^/api/v1/editorial/pharmacy/books/[^/]+/redaction$", "ozellik:kitap-eczanesi.redaksiyon"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
     # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur. ZEKİ kalite tahmini
     # (POST …/jobs/{iş}/qe) da model harcar ama işin inceleyenine de açıktır: «ceviri.yonet YA DA inceleyen» burada

@@ -19,6 +19,10 @@
       "label": "Editoryal"
     },
     {
+      "id": "kitap-eczanesi",
+      "label": "Kitap Eczanesi"
+    },
+    {
       "id": "uretim-fiyat",
       "label": "Fiyatlama ve üretim"
     },
@@ -202,6 +206,11 @@
       "key": "sayfa:serbest-calisanlar",
       "area": "editoryal",
       "label": "Serbest çalışanlar"
+    },
+    {
+      "key": "sayfa:kitap-eczanesi",
+      "area": "kitap-eczanesi",
+      "label": "Kitap Eczanesi"
     },
     {
       "key": "sayfa:uretim",
@@ -1449,6 +1458,13 @@
       "page": "sayfa:son-okuma",
       "label": "Belge yükleyip inceletme",
       "hint": "doc, docx, pdf, odt, rtf, txt, md — metin denetimleri"
+    },
+    {
+      "key": "ozellik:kitap-eczanesi.redaksiyon",
+      "area": "kitap-eczanesi",
+      "page": "sayfa:kitap-eczanesi",
+      "label": "Kitap Eczanesi: kitabı redaksiyona açma",
+      "hint": "Arşivde okunmuş kitabın son okuma denetimlerini başlatma (GPU harcar). Kitap yükleme «Kitap okutma», stüdyoya gönderme, e-kitap ve sesli kitap «Kitap tasarımında üretim» yetkisiyle"
     },
     {
       "key": "ozellik:yazar-iliski.yaz",

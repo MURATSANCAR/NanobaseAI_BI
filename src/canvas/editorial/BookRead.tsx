@@ -61,7 +61,7 @@ function Shell({ title, pill, children, onClose }: { title: string; pill: { tone
   );
 }
 
-function LocalRow({ l, onClose }: { l: BookUpload; onClose: () => void }) {
+export function LocalRow({ l, onClose }: { l: BookUpload; onClose: () => void }) {
   const pill: { tone: Tone; text: string } =
     l.status === 'uploading'
       ? { tone: 'violet', text: `Yükleniyor %${Math.round(l.share * 100)}` }
@@ -86,7 +86,7 @@ function LocalRow({ l, onClose }: { l: BookUpload; onClose: () => void }) {
   );
 }
 
-function ServerRow({ b, onClose }: { b: BookRead; onClose?: () => void }) {
+export function ServerRow({ b, onClose }: { b: BookRead; onClose?: () => void }) {
   const st = serverState(b);
   return (
     <Shell title={b.title} pill={st} onClose={onClose}>

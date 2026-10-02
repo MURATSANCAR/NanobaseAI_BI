@@ -344,5 +344,87 @@ def test_retry_keeps_the_profile_and_its_data(monkeypatch):
 
 
 def test_queue_order_puts_portal_books_before_the_archive():
+    """Toplu arşiv (`arsiv:` önekli) sona; portaldan gelen kitap — Kitap Eczanesi'nden arşiv kipinde yüklenen de —
+    önde. Sorgu parametreli koştuğu için LIKE'taki yüzde işareti kaçışlı."""
     from editor import portal_books as PB
-    assert PB.QUEUE_ORDER.startswith("(profile = 'archive')")
+    assert PB.QUEUE_ORDER.startswith("(requested_by LIKE 'arsiv:%%')")
+
+
+def test_portal_upload_profile_settings():
+    from editor import portal_books as PB
+    assert PB.job_settings("", "") == ("full", {"attempt": 1})
+    prof, prog = PB.job_settings("archive", "Cocuk/6-9_yas")
+    assert prof == "archive"
+    assert prog["archive"]["category"] == "Cocuk/6-9_yas" and prog["archive"]["audience"] == "CHILD"
+    assert prog["archive"]["age_from"] == 6 and prog["archive"]["source"] == "portal"
+    # kategorisiz arşiv kitabı: ipucu boş, okur kitlesini metin belirler
+    prof, prog = PB.job_settings("ARCHIVE", "../etc")
+    assert prof == "archive" and prog["archive"]["category"] is None and prog["archive"]["audience"] is None
+    with pytest.raises(PB.UploadError):
+        PB.job_settings("redaction", "")
+
+
+# ------------------------------------------------------------------ Kitap Eczanesi listesi (saf parçalar)
+def _job(book, title, profile, status, *, jid=None, cat=None, who="arsiv:Kurgu", wf=None, at="2026-10-01T10:00:00+00:00",
+         attempt=1, done=None):
+    import datetime as dt
+    t = dt.datetime.fromisoformat(at)
+    return {"book_id": uuid.UUID(book), "title": title, "id": jid or uuid.uuid4(), "profile": profile, "status": status,
+            "step": None, "workflow_id": wf, "requested_by": who, "created_at": t, "submitted_at": t,
+            "finished_at": dt.datetime.fromisoformat(done) if done else None, "attempt": attempt, "category": cat,
+            "page_count": 120}
+
+
+B1, B2, B3 = (str(uuid.UUID(int=i)) for i in (1, 2, 3))
+
+
+def _books():
+    q = uuid.UUID(int=99)
+    rows = [
+        _job(B1, "Çalıkuşu", "archive", "SUCCEEDED", cat="Kurgu", done="2026-10-01T12:00:00+00:00"),
+        _job(B1, "Çalıkuşu", "redaction", "RUNNING", who="portal:ayse", wf="w1", at="2026-10-02T09:00:00+00:00"),
+        _job(B2, "İnce Memed", "archive", "QUEUED", jid=q, cat="Kurgu"),
+        _job(B3, "Uyku Masalı", "archive", "FAILED", cat="Cocuk/0-5_yas", who="portal:mehmet", attempt=99),
+    ]
+    return A.shape(rows, {B1}, [str(q)], busy=1)
+
+
+def test_shape_one_row_per_book_with_read_and_redaction():
+    by = {b["id"]: b for b in _books()}
+    b1 = by[B1]
+    assert b1["read"]["state"] == "hazir" and b1["redaction"]["state"] == "okunuyor" and b1["proofed"]
+    assert b1["bulk"] and b1["read"]["requested_by"] is None and b1["redaction"]["requested_by"] == "ayse"
+    assert b1["category"] == "Kurgu"
+    assert by[B2]["read"]["state"] == "sirada" and by[B2]["read"]["ahead"] == 2 and by[B2]["redaction"] is None
+    assert by[B3]["read"]["state"] == "okunamadi" and not by[B3]["bulk"] and by[B3]["read"]["requested_by"] == "mehmet"
+
+
+def test_select_search_is_turkish_and_case_insensitive():
+    books = _books()
+    assert [b["id"] for b in A.select(books, q="CALIKUSU")["items"]] == [B1]
+    assert [b["id"] for b in A.select(books, q="ince")["items"]] == [B2]
+    assert A.select(books, q="yok")["total"] == 0
+
+
+def test_select_filters_facets_and_pages():
+    books = _books()
+    out = A.select(books)
+    assert out["total"] == 3 and out["all"] == 3
+    assert out["facets"]["categories"] == {"Kurgu": 2, "Cocuk/0-5_yas": 1}
+    assert out["facets"]["states"] == {"hazir": 1, "sirada": 1, "okunamadi": 1, "redaksiyon": 1}
+    assert [b["id"] for b in out["items"]] == [B1, B2, B3]     # ada göre (Türkçe harf katlanır)
+    assert [b["id"] for b in A.select(books, category="Kurgu", state="sirada")["items"]] == [B2]
+    assert [b["id"] for b in A.select(books, state="redaksiyon")["items"]] == [B1]
+    assert A.select(books, category="Kurgu")["facets"]["states"] == {"hazir": 1, "sirada": 1, "redaksiyon": 1}
+    page = A.select(books, offset=1, limit=1)
+    assert [b["id"] for b in page["items"]] == [B2] and page["total"] == 3
+    assert [b["id"] for b in A.select(books, sort="recent")["items"]][0] == B1
+
+
+def test_select_uncategorised_filter():
+    import copy
+    books = copy.deepcopy(_books())
+    books[0]["category"] = None
+    out = A.select(books, category="-")
+    assert [b["id"] for b in out["items"]] == [books[0]["id"]]
+    assert out["facets"]["categories"][""] == 1

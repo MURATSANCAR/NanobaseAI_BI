@@ -6341,22 +6341,29 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     # ---------------------------------------------------------- kitap okutma (Kitaba sor'un üstündeki yükleme alanı)
     @app.put("/api/v1/editorial/ask/read")
-    async def editorial_book_read(request: Request, filename: str = "", title: str = "") -> dict[str, Any]:
+    async def editorial_book_read(request: Request, filename: str = "", title: str = "", profile: str = "",
+                                  category: str = "") -> dict[str, Any]:
         """Kitap PDF'i yükle ve okut: dosya köprünün giden kutusuna alınır, hemen «Gönderiliyor» döner; editör
         motoruna gönderim ve okuma kuyruğu arkada (editorial_book_reads). Toplu yüklemede her dosya ayrı istektir.
-        Gövde ham dosya (belge yüklemesiyle aynı yol, diske akar). Yükleyen = oturum."""
+        Gövde ham dosya (belge yüklemesiyle aynı yol, diske akar). Yükleyen = oturum. `profile=archive`: Kitap
+        Eczanesi'nden, arşiv kipinde okunur (`category` arşiv klasör adı, isteğe bağlı)."""
         engine, _tenant, user, _admin = await run_in_threadpool(_books, request)
         from semantic_bridge import editorial_book_reads as reads_mod
+        try:
+            reads_mod.read_mode(profile, category)    # dosya alınmadan önce: geçersiz kip gövdeyi diske yazdırmaz
+        except reads_mod.Rejected as e:
+            raise HTTPException(status_code=422, detail={"code": "BOOK_READ", "message": str(e)}) from e
         incoming = await _desk_receive(request)
         try:
             if not incoming.size:
                 raise HTTPException(status_code=400, detail={"code": "EDITORIAL_DESK", "message": "Dosya boş."})
-            out = await run_in_threadpool(reads_mod.accept, incoming, filename, title, user)
+            out = await run_in_threadpool(reads_mod.accept, incoming, filename, title, user, profile, category)
         except reads_mod.Rejected as e:
             raise HTTPException(status_code=422, detail={"code": "BOOK_READ", "message": str(e)}) from e
         finally:
             incoming.discard()                      # giden kutusuna taşındıysa silinmez (stored)
-        admin_mod.audit(engine, user, "upload", "editorial_book_read", out["id"], out["title"], {"bytes": incoming.size})
+        admin_mod.audit(engine, user, "upload", "editorial_book_read", out["id"], out["title"],
+                        {"bytes": incoming.size, "profile": out.get("profile"), "category": out.get("category")})
         return out
 
     @app.get("/api/v1/editorial/ask/read")
@@ -7034,6 +7041,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     editorial_studio_characters.register(app, {"auth": _books})
     from semantic_bridge import editorial_studio_epub  # e-kitap (EPUB): üret, denetim, önizleme, alt metin, e-ISBN
     editorial_studio_epub.register(app, {"auth": _books, "audit": admin_mod.audit})
+    from semantic_bridge import editorial_pharmacy  # Kitap Eczanesi: arşiv kitapları, redaksiyona açma, karşılık önerisi
+    editorial_pharmacy.register(app, {"auth": _books, "audit": admin_mod.audit})
     from semantic_bridge import editorial_studio_narration  # sesli okuma (docs/analiz/sesli-okuma-model-secimi.md)
     editorial_studio_narration.register(app, {"auth": _books, "audit": admin_mod.audit})
     from semantic_bridge import editorial_studio_sfx  # sesli okumaya efekt sesleri (docs/analiz/efekt-sesleri-kaynaklar.md)

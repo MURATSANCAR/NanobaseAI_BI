@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { EngineAuthError, bookReadApi } from '../engine';
+import { EngineAuthError, bookReadApi, type BookReadMode } from '../engine';
 import { STORE_BOOK, heldTabLocks, holdTabLock, idbAll, idbDelete, idbPut } from './studio/deviceStore';
 
 /** Kitap okutma yükleme sırası — sayfadan bağımsız, portal boyunca yaşar (tek örnek).
@@ -25,8 +25,10 @@ export type BookUpload = {
   error: string | null;
   /** Cihaz deposuna yazılamadıysa dosya yalnız bellekte durur (sekme kapanırsa kaybolur; ekran uyarır). */
   stored: boolean;
+  /** Kitap Eczanesi'nden: arşiv kipi ve kategori (yoksa tam okuma). */
+  mode?: BookReadMode;
 };
-type Rec = Pick<BookUpload, 'key' | 'tab' | 'name' | 'title' | 'size' | 'at'> & { blob: Blob };
+type Rec = Pick<BookUpload, 'key' | 'tab' | 'name' | 'title' | 'size' | 'at' | 'mode'> & { blob: Blob };
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 /** Yeniden denenebilir: bağlantı yok (0), zaman aşımı, çok istek, sunucu/kapı hatası. 4xx'in geri kalanı kalıcıdır. */
@@ -83,7 +85,7 @@ class BookUploads {
       for (const r of recs) {
         if (this.items.some((i) => i.key === r.key)) continue;
         this.blobs.set(r.key, r.blob);
-        this.items.push({ key: r.key, tab: this.tab, name: r.name, title: r.title, size: r.size, at: r.at, status: 'waiting', share: 0, error: null, stored: true });
+        this.items.push({ key: r.key, tab: this.tab, name: r.name, title: r.title, size: r.size, at: r.at, status: 'waiting', share: 0, error: null, stored: true, mode: r.mode });
         await idbPut(STORE_BOOK, { ...r, tab: this.tab } satisfies Rec);
       }
       if (recs.length) {
@@ -95,16 +97,17 @@ class BookUploads {
     }
   }
 
-  /** Dosyalar sıraya girer. `title` yalnız tek dosyada kullanılır (toplu yüklemede ad dosyadan). */
-  async add(files: File[], title: string) {
+  /** Dosyalar sıraya girer. `title` yalnız tek dosyada kullanılır (toplu yüklemede ad dosyadan). `mode`: Kitap
+   *  Eczanesi'nin arşiv kipi (cihaz deposunda da durur; sekme kapanıp açılınca aynı kiple gider). */
+  async add(files: File[], title: string, mode?: BookReadMode) {
     const one = files.length === 1 ? title.trim() : '';
     for (const f of files) {
-      const item: BookUpload = { key: uid(), tab: this.tab, name: f.name || 'kitap.pdf', title: one, size: f.size, at: Date.now(), status: 'waiting', share: 0, error: null, stored: false };
+      const item: BookUpload = { key: uid(), tab: this.tab, name: f.name || 'kitap.pdf', title: one, size: f.size, at: Date.now(), status: 'waiting', share: 0, error: null, stored: false, mode };
       this.blobs.set(item.key, f);
       this.items.push(item);
       this.emit();
       try {
-        await idbPut(STORE_BOOK, { key: item.key, tab: this.tab, name: item.name, title: item.title, size: item.size, at: item.at, blob: f } satisfies Rec);
+        await idbPut(STORE_BOOK, { key: item.key, tab: this.tab, name: item.name, title: item.title, size: item.size, at: item.at, mode, blob: f } satisfies Rec);
         item.stored = true;
       } catch {
         /* bellekte kalır; ekran «sekmeyi kapatmayın» der */
@@ -151,7 +154,7 @@ class BookUploads {
           await bookReadApi.upload(new File([blob], it.name, { type: 'application/pdf' }), it.title, (share) => {
             it.share = share;
             this.emit();
-          });
+          }, it.mode);
           this.backoff = 0;
           this.items = this.items.filter((x) => x.key !== it.key);
           this.blobs.delete(it.key);

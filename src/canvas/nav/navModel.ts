@@ -33,6 +33,7 @@ import {
   ShoppingBag,
   Youtube,
   Archive,
+  Pill,
   BellRing,
   CalendarDays,
   Link2,
@@ -144,6 +145,7 @@ export type NavGroupId =
   | 'kampus'
   | 'analiz'
   | 'editoryal'
+  | 'kitap-eczanesi'
   | 'uretim-fiyat'
   | 'pazarlama'
   | 'satis'
@@ -257,6 +259,18 @@ export const NAV: NavGroup[] = [
       { id: 'kisiler', label: 'Kişiler', to: '/kisiler', icon: Contact, section: 'Yazarlar ve kişiler', hint: 'Yazar, çevirmen, çizer ve serbest çalışanlar', keywords: ['yazar', 'çizer', 'rehber'] },
       { id: 'basin-web', label: 'Basın ve web', to: '/basin-web', icon: Newspaper, section: 'Yazarlar ve kişiler', hint: 'Açık kaynaklarda yazar ve kitap haberleri', feature: 'webWatch', keywords: ['haber', 'basın'] },
       { id: 'serbest-calisanlar', label: 'Serbest çalışanlar', to: '/serbest-calisanlar', icon: BriefcaseBusiness, section: 'Yazarlar ve kişiler', hint: 'Çizer ve serbest çalışan havuzu, iş paketleri, kapasite, hakediş', keywords: ['çizer', 'freelancer', 'illüstratör', 'hakediş', 'iş paketi', 'kapasite'] },
+    ],
+  },
+  {
+    // Kitap Eczanesi (2026-10-02): Zeki AI'ın «Zeki'ye sor» için arşiv kipinde okuduğu kitaplar; kitap başına son okuma,
+    // e-kitap, sesli kitap ve stüdyoya gönderme. Tek ekranlı ana modül: rayda doğrudan bağlantı, paneli yok.
+    id: 'kitap-eczanesi',
+    label: 'Kitap Eczanesi',
+    hint: 'Kitap arşivi: yükleme, okuma durumu, son okuma, e-kitap, sesli kitap, tasarım',
+    icon: Pill,
+    to: '/kitap-eczanesi',
+    items: [
+      { id: 'kitap-eczanesi', label: 'Kitap Eczanesi', to: '/kitap-eczanesi', icon: Pill, hint: 'Kitap arşivi: yükleme, okuma durumu, son okuma, e-kitap, sesli kitap, tasarım', keywords: ['arşiv', 'kitap arşivi', 'zeki\'ye sor', 'redaksiyon', 'son okuma', 'epub', 'e-kitap', 'sesli kitap', 'seslendirme', 'eczane'] },
     ],
   },
   {

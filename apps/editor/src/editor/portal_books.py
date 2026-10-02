@@ -119,23 +119,46 @@ def _sha(path: Path) -> str:
 
 
 # ------------------------------------------------------------------ kuyruk (veritabanı + iş akışı)
-def enqueue(file_name: str, title: str, who: str) -> dict:
+#: Portaldan seçilebilen okuma kipleri: tam okuma (son okuma dahil) ya da Kitap Eczanesi'nin arşiv kipi.
+PROFILES = ("full", "archive")
+
+
+def job_settings(profile: str, category: str) -> tuple[str, dict]:
+    """(kip, işin `progress` başlangıcı). Arşiv kipinde kategori klasörünün okur kitlesi ipucu işe yazılır (toplu
+    kuyrukla aynı biçim: `progress.archive`); tanınmayan ya da boş kategoride ipucu boş kalır, okur kitlesini kitabın
+    metni belirler. Geçersiz kip `UploadError` (köprü 422 olarak kişiye gösterir)."""
+    profile = (profile or "full").strip().lower()
+    if profile not in PROFILES:
+        raise UploadError("Okuma kipi geçersiz.")
+    progress: dict = {"attempt": 1}
+    if profile == "archive":
+        from . import archive
+        cat = (category or "").strip().strip("/")
+        hint = archive.hint_for(cat) if cat in archive.CATEGORIES else {**archive.hint_for(""), "category": None}
+        progress["archive"] = {**hint, "source": "portal"}
+    return profile, progress
+
+
+def enqueue(file_name: str, title: str, who: str, profile: str = "full", category: str = "") -> dict:
     """Kitabı kaydeder (içerik sürümü) ve sıraya koyar. Aynı sürüm okunmuş, sırada ya da okunuyorsa yeni iş
-    açılmaz: {'job_id', 'already': 'SUCCEEDED'|'QUEUED'|'RUNNING'|None}."""
+    açılmaz: {'job_id', 'already': 'SUCCEEDED'|'QUEUED'|'RUNNING'|None}. `profile='archive'` (Kitap Eczanesi):
+    kitap «Zeki'ye sor» için okunur; son okuma adımları kitap redaksiyona açılınca koşar (editor.archive)."""
     from . import db, document
+    profile, progress = job_settings(profile, category)
     info = document.inspect_book(file_name, title=title)
     bv = info["book_version_id"]
     row = db.one("SELECT id, status FROM analysis_job WHERE book_version_id=%s AND status IN"
                  " ('QUEUED','RUNNING','SUCCEEDED') ORDER BY created_at DESC LIMIT 1", bv)
     if row:
         return {"job_id": str(row["id"]), "already": row["status"]}
-    job = db.one("INSERT INTO analysis_job(book_version_id, profile, requested_by, progress) VALUES (%s,'full',%s,%s)"
-                 " RETURNING id", bv, PREFIX + who[:200], db.J({"attempt": 1}))
+    job = db.one("INSERT INTO analysis_job(book_version_id, profile, requested_by, progress) VALUES (%s,%s,%s,%s)"
+                 " RETURNING id", bv, profile, PREFIX + who[:200], db.J(progress))
     return {"job_id": str(job["id"]), "already": None}
 
 
-#: Kuyruk sırası: arşiv kipindeki toplu okuma (editor.archive, binlerce kitap) portaldan gelen kitabı bekletmez.
-QUEUE_ORDER = "(profile = 'archive'), created_at, id"
+#: Kuyruk sırası: arşivin toplu okuması (editor.archive, `arsiv:` önekli binlerce kitap) portaldan gelen kitabı
+#: bekletmez. Kitap Eczanesi'nden arşiv kipinde yüklenen kitap da portal kitabıdır, toplu kuyruğun önüne geçer.
+QUEUE_ORDER = "(requested_by LIKE 'arsiv:%%'), created_at, id"
 #: İşin profil dışında taşıdığı, yeniden denemede aynen geçen alanlar (arşiv ipucu, redaksiyonun nesli).
 CARRIED = ("archive", "generation_id", "from_profile")
 

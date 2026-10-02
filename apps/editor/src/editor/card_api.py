@@ -291,17 +291,23 @@ async def document_upload(file: UploadFile = File(...), title: str = Form(defaul
 # ------------------------------------------------------------------ portaldan kitap okutma (editor.portal_books)
 @app.post('/v1/books/read')
 async def book_read_upload(file: UploadFile = File(...), title: str = Form(default=''),
+                           profile: str = Form(default='full'), category: str = Form(default=''),
                            x_editor: str = Header(default='')):
     """Editörün yüklediği kitap PDF'i gelen kutusuna yazılır ve okuma kuyruğuna girer; okumayı kuyruk servisi
     (editor-book-queue) GPU boşalınca başlatır. Aynı içerik okunmuş/sırada/okunuyorsa yeni iş açılmaz.
     İsteyen = X-Editor (köprü oturumdan verir). Depo bu serviste salt okunur; yalnız gelen kutusu ve kitap
-    klasörü yazılabilir bağlıdır (docker-compose). 422 = dosyanın kendisi okunamaz (köprü yeniden göndermez)."""
+    klasörü yazılabilir bağlıdır (docker-compose). 422 = dosyanın kendisi okunamaz (köprü yeniden göndermez).
+    `profile=archive` (Kitap Eczanesi): arşiv kipinde okunur; `category` arşiv klasörü adı (okur kitlesi ipucu)."""
     from starlette.concurrency import run_in_threadpool
     from . import portal_books as PB
     from .config import settings
     who=(x_editor or '').strip()
     if not who:
         raise HTTPException(400,'Yükleyen (X-Editor) eksik.')
+    try:
+        PB.job_settings(profile,category)
+    except PB.UploadError as e:
+        raise HTTPException(422,str(e)) from None
     name=PB.title_of(title,file.filename or '')
     try:
         file_name,size=await run_in_threadpool(PB.save,file.file,settings().inbox,file.filename or 'kitap.pdf',title)
@@ -318,7 +324,7 @@ async def book_read_upload(file: UploadFile = File(...), title: str = Form(defau
         # Okunamayan dosya gelen kutusunda kalmaz: kuyruk komutu (editorctl queue) onu yeniden denemesin.
         (settings().inbox/file_name).unlink(missing_ok=True)
         raise HTTPException(422,'PDF açılamadı; dosya bozuk ya da parolalı olabilir.') from None
-    q=await run_in_threadpool(PB.enqueue,file_name,name,who)
+    q=await run_in_threadpool(PB.enqueue,file_name,name,who,profile,category)
     rows=[r for r in PB.listing(who) if r['id']==q['job_id']] or [{'id':q['job_id'],'title':name}]
     return {**rows[0],'already':q['already'],'bytes':size}
 
@@ -328,6 +334,36 @@ def book_read_jobs(requested_by: str = Query(default='')):
     onunkiler. Hata metni dönmez: iş akışının hatası teknik ad taşır, ekran yalnız durumu söyler."""
     from . import portal_books as PB
     return {'items':PB.listing(requested_by),'attempts':PB.ATTEMPTS}
+
+@app.get('/v1/archive/books')
+def archive_books(q: str = Query(default='', max_length=200), category: str = Query(default='', max_length=64),
+                  state: str = Query(default='', max_length=20), sort: str = Query(default='title', max_length=10),
+                  offset: int = Query(default=0, ge=0), limit: int = Query(default=50, ge=1, le=200)):
+    """Kitap Eczanesi: arşiv kipinde okunan kitaplar (toplu arşiv + portaldan arşiv kipinde yüklenen), okuma ve
+    redaksiyon durumuyla; arama, kategori ve durum süzgeci, sayfa. Salt okuma. Sayfa boyu bir istekte en çok 200;
+    bütün kitaplar `offset` ile gezilir, `total` süzülmüş sayıdır (kesilmez)."""
+    from . import archive
+    from . import portal_books as PB
+    if state and state not in archive.LIST_STATES:
+        raise HTTPException(422,'state geçersiz')
+    if sort not in archive.SORTS:
+        raise HTTPException(422,'sort geçersiz')
+    with foundation.read_snapshot() as c:
+        rows,proofed,waiting=archive.listing_data(c)
+    books=archive.shape(rows,proofed,waiting,PB.busy_count())
+    return archive.select(books,q=q,category=category,state=state,sort=sort,offset=offset,limit=limit)
+
+@app.get('/v1/archive/books/{book_id}')
+def archive_book(book_id: UUID):
+    """Kitap Eczanesi'nde tek kitabın satırı (ayrıntı ekranının yoklaması; bütün listeyi okumaz)."""
+    from . import archive
+    from . import portal_books as PB
+    with foundation.read_snapshot() as c:
+        rows,proofed,waiting=archive.listing_data(c,str(book_id))
+    books=archive.shape(rows,proofed,waiting,PB.busy_count())
+    if not books:
+        raise HTTPException(404,'book not found')
+    return books[0]
 
 @app.get('/v1/documents')
 def document_list(uploaded_by: str = Query(default='')):

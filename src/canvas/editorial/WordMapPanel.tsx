@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState, type ReactNode } from 'react';
+import { useDeferredValue, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronRight, Loader2, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED, documentApi, proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingFinding, type WordMap, type WordMapEntry } from '../engine';
@@ -155,6 +155,30 @@ function Repeats({ bookId, findings, document = false }: { bookId: string; findi
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [busy, setBusy] = useState<{ key: string; done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Karşılık önerileri okumada değil, editör grubu açınca üretilir (kullanıcı kararı 2026-10-02). Bir grup bu
+  // ekranda bir kez istenir; önerisi hazır bulgu servis tarafında yeniden sorulmaz.
+  const asked = useRef(new Set<string>());
+  const [alts, setAlts] = useState<Record<string, 'loading' | 'error'>>({});
+  const askAlternatives = (g: RepeatGroup) => {
+    const ids = g.rows.filter((r) => r.id && !r.suggestion).map((r) => r.id as string);
+    if (document || !ENGINE_ENABLED || !ids.length || asked.current.has(g.key)) return;
+    asked.current.add(g.key);
+    setAlts((s) => ({ ...s, [g.key]: 'loading' }));
+    proofingApi
+      .wordAlternatives(bookId, ids)
+      .then(() => {
+        setAlts((s) => {
+          const next = { ...s };
+          delete next[g.key];
+          return next;
+        });
+        void qc.invalidateQueries({ queryKey: ['editorial', 'proofing'] });
+      })
+      .catch(() => {
+        asked.current.delete(g.key);
+        setAlts((s) => ({ ...s, [g.key]: 'error' }));
+      });
+  };
 
   const groups = useMemo<RepeatGroup[]>(() => {
     const by = new Map<string, ProofingFinding[]>();
@@ -210,7 +234,15 @@ function Repeats({ bookId, findings, document = false }: { bookId: string; findi
           return (
             <li key={g.key} className={`rounded-xl border border-slate-100 bg-white/85 ${g.open === 0 ? 'opacity-75' : ''}`}>
               <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-                <button type="button" aria-expanded={open} onClick={() => setOpenKey(open ? null : g.key)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() => {
+                    setOpenKey(open ? null : g.key);
+                    if (!open) askAlternatives(g);
+                  }}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                >
                   <ChevronRight aria-hidden className={`h-3.5 w-3.5 shrink-0 text-canvas-muted transition-transform duration-150 ease-out ${open ? 'rotate-90' : ''}`} />
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-extrabold">
@@ -254,6 +286,22 @@ function Repeats({ bookId, findings, document = false }: { bookId: string; findi
                 <div className="px-3 pb-2">
                   <RejectForm busy={running} onCancel={() => setRejecting(null)} onSave={(r, note) => void decideAll(g, 'REJECT', r, note)} />
                 </div>
+              )}
+              {open && alts[g.key] && (
+                <p role="status" className="flex items-center gap-1.5 border-t border-slate-100 px-3 py-1.5 text-[11.5px] text-canvas-muted">
+                  {alts[g.key] === 'loading' ? (
+                    <>
+                      <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> Zeki AI karşılık önerilerini hazırlıyor…
+                    </>
+                  ) : (
+                    <>
+                      Karşılık önerileri şu an hazırlanamadı.
+                      <button type="button" onClick={() => askAlternatives(g)} className="font-bold text-canvas-violet underline">
+                        Yeniden dene
+                      </button>
+                    </>
+                  )}
+                </p>
               )}
               {open && (
                 <ul className="space-y-1.5 border-t border-slate-100 px-3 py-2 text-[12px]">

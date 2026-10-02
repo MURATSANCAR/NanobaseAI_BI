@@ -86,3 +86,22 @@ def test_listing_falls_back_to_last_engine_list(box):
 
     second = R.listing("ayse", False, down)
     assert second["stale"] and [i["title"] for i in second["items"]] == ["a", "Eski"]
+
+
+def test_archive_mode_travels_to_the_engine(box):
+    """Kitap Eczanesi: kip ve kategori giden kutusu kaydında durur, motora form alanı olarak gider; tam okumada
+    alan hiç gönderilmez (eski kart servisi de kabul eder)."""
+    out = R.accept(FakeIncoming(box / "up-a.pdf", b"%PDF-1.7 x"), "a.pdf", "", "ayse", "archive", "Cocuk/6-9_yas")
+    assert out["profile"] == "archive" and out["category"] == "Cocuk/6-9_yas"
+    _take(box, "b.pdf")
+    sent = []
+    assert R.send_once(lambda f, name, title, user, **kw: sent.append((name, kw))) == 2
+    assert sent == [("a.pdf", {"profile": "archive", "category": "Cocuk/6-9_yas"}), ("b.pdf", {})]
+
+
+@pytest.mark.parametrize("profile,category", [("redaction", ""), ("archive", "../etc"), ("archive", "Roman")])
+def test_archive_mode_rejects_unknown_values(box, profile, category):
+    with pytest.raises(R.Rejected):
+        R.accept(FakeIncoming(box / "up-a.pdf", b"%PDF-1.7 x"), "a.pdf", "", "ayse", profile, category)
+    assert list(R.folder().glob("*.json")) == []
+    assert R.read_mode("", "") == {} and R.read_mode("archive", "") == {"profile": "archive", "category": ""}

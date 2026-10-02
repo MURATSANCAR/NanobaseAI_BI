@@ -55,8 +55,28 @@ def _load(path: Path) -> Optional[dict[str, Any]]:
         return None
 
 
-def accept(incoming: Any, filename: str, title: str, user: str) -> dict[str, Any]:
-    """Yüklemeyi giden kutusuna alır (taşıma, kopya yok) ve gönderimi tetikler. PDF değilse hemen reddeder."""
+#: Kitap Eczanesi'nin arşiv kategorileri (editör `editor.archive.CATEGORIES` ile aynı klasör adları). Boş = yok.
+ARCHIVE_CATEGORIES = ("Cocuk/0-5_yas", "Cocuk/6-9_yas", "Cocuk/10-12_yas", "Cocuk/13+_yas", "Kurgu", "Kurgu_Disi")
+
+
+def read_mode(profile: str, category: str) -> dict[str, str]:
+    """Okuma kipi: boş/`full` = tam okuma (Kitaba sor yükleme alanı), `archive` = Kitap Eczanesi (arşiv kipi,
+    son okuma redaksiyona açılınca). Kategori yalnız arşivde ve yalnız tanınan klasör adıyla geçer."""
+    p = (profile or "").strip().lower()
+    if p in ("", "full"):
+        return {}
+    if p != "archive":
+        raise Rejected("Okuma kipi geçersiz.")
+    c = (category or "").strip()
+    if c and c not in ARCHIVE_CATEGORIES:
+        raise Rejected("Kategori geçersiz.")
+    return {"profile": "archive", "category": c}
+
+
+def accept(incoming: Any, filename: str, title: str, user: str, profile: str = "", category: str = "") -> dict[str, Any]:
+    """Yüklemeyi giden kutusuna alır (taşıma, kopya yok) ve gönderimi tetikler. PDF değilse hemen reddeder.
+    `profile='archive'`: Kitap Eczanesi'nden; kip ve kategori giden kutusu kaydında taşınır, motora iletilir."""
+    mode = read_mode(profile, category)
     with open(incoming.path, "rb") as f:
         head = f.read(len(PDF_MAGIC))
     if not (filename or "").lower().endswith(".pdf"):
@@ -69,7 +89,7 @@ def accept(incoming: Any, filename: str, title: str, user: str) -> dict[str, Any
     incoming.stored = True
     item = {"id": item_id, "filename": filename or "kitap.pdf", "title": (title or "").strip(), "user": user,
             "bytes": incoming.size, "sha256": incoming.sha256, "created_at": time.time(), "attempts": 0,
-            "state": "gonderiliyor", "waiting": False}
+            "state": "gonderiliyor", "waiting": False, **mode}
     _save(root / f"{item_id}.json", item)
     kick()
     return public(item)
@@ -81,7 +101,8 @@ def public(item: dict[str, Any]) -> dict[str, Any]:
             "pages": None, "status": "SENDING", "state": item["state"], "waiting": bool(item.get("waiting")),
             "message": item.get("message"), "phase": {"n": 0, "of": 15, "label": "Gönderiliyor"}, "ahead": None,
             "attempt": 1, "attempts": 1, "failed": item["state"] == "okunamadi", "requested_by": item["user"],
-            "created_at": _iso(item["created_at"]), "finished_at": None, "bytes": item.get("bytes")}
+            "created_at": _iso(item["created_at"]), "finished_at": None, "bytes": item.get("bytes"),
+            "profile": item.get("profile") or "full", "category": item.get("category") or None}
 
 
 def _iso(ts: float) -> str:
@@ -124,7 +145,8 @@ def send_once(upload: Callable[..., dict[str, Any]]) -> int:
             return sent  # sırayı koru: en eski beklerken yenisi öne geçmez
         try:
             with pdf.open("rb") as f:
-                upload(f, it["filename"], it["title"], it["user"])
+                extra = {"profile": it["profile"], "category": it.get("category") or ""} if it.get("profile") else {}
+                upload(f, it["filename"], it["title"], it["user"], **extra)
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 422:  # dosya okunamaz: kalıcı
                 try:

@@ -681,8 +681,19 @@ def proofing_report(book_title):
     exact=[c for c in cards if c['title'].casefold()==book_title.strip().casefold()]
     if len(exact)!=1: return out
     card=exact[0]
-    r=request('/v1/books/'+str(uuid.UUID(card['id']))+'/proofing').json()
-    out.update({'bookId':card['id'],'bookTitle':card['title'],'generationId':r.get('generation_id'),
+    return _proofing_shape(out,card['id'],card['title'])
+
+
+def proofing_report_by_id(book_id, title=None):
+    """Son okuma raporu doğrudan motordaki kitap kimliğiyle (Kitap Eczanesi: arşiv kitabının adı katalogda tek
+    olmayabilir, ad eşleşmesine gerek yok). Biçim `proofing_report` ile aynı."""
+    out={'configured':True,'bookId':None,'bookTitle':None,'generationId':None,'checks':[],'findings':[]}
+    return _proofing_shape(out,str(uuid.UUID(book_id)),title)
+
+
+def _proofing_shape(out,book_id,title):
+    r=request('/v1/books/'+str(uuid.UUID(book_id))+'/proofing').json()
+    out.update({'bookId':book_id,'bookTitle':title,'generationId':r.get('generation_id'),
         'checks':[{'name':c['name'],'label':c['label'],'version':c['version'],'status':c['status'],
                    'startedAt':c.get('started_at'),'finishedAt':c.get('finished_at'),
                    'findings':c['findings'],'serious':c['serious'],'error':c.get('error'),
@@ -756,14 +767,18 @@ def document_upload(data, filename: str, title: str, audience: str, age_from, ag
 
 
 # ------------------------------------------------------------------ kitap okutma (kart servisi /v1/books/read)
-def book_read_upload(data, filename: str, title: str, user: str) -> dict:
+def book_read_upload(data, filename: str, title: str, user: str, profile: str = '', category: str = '') -> dict:
     """Kitap PDF'i kart servisine gider; orada gelen kutusuna yazılır ve okuma kuyruğuna girer. Yükleyen = oturum.
     `data`: açık dosya (giden kutusundaki kopya; kitap yüzlerce MB olabilir, belleğe alınmaz). Çağıran:
-    editorial_book_reads gönderici (422 kalıcı ret, başka her hata yeniden denenir)."""
+    editorial_book_reads gönderici (422 kalıcı ret, başka her hata yeniden denenir). `profile='archive'`: Kitap
+    Eczanesi'nden (arşiv kipi; `category` arşiv klasör adı). Boşsa alan gönderilmez (eski kart servisi de kabul eder)."""
     base,headers,ca=_headers()
     headers['X-Editor']=user[:200]
+    form={'title':title or ''}
+    if profile:
+        form.update(profile=profile,category=category or '')
     with httpx.Client(timeout=httpx.Timeout(1800, connect=30),verify=ca or True,follow_redirects=False) as client:
-        r=client.post(base+'/v1/books/read',headers=headers,data={'title':title or ''},
+        r=client.post(base+'/v1/books/read',headers=headers,data=form,
                       files={'file':(filename or 'kitap.pdf',data,'application/pdf')})
         r.raise_for_status()
         return r.json()
@@ -804,3 +819,38 @@ def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by,
     if note: body['note']=note
     if carried_from: body['carriedFrom']=carried_from
     return request_json('POST','/v1/books/'+str(uuid.UUID(book_id))+'/proofing/findings/'+str(uuid.UUID(finding_id))+'/decision',json=body)
+
+
+# ------------------------------------------------------------------ Kitap Eczanesi (kart servisi /v1/archive/books)
+ARCHIVE_STATES=('sirada','okunuyor','hazir','yeniden','okunamadi','redaksiyon')
+
+
+def archive_books(q='', category='', state='', sort='title', offset=0, limit=50) -> dict:
+    """Arşiv kipinde okunan kitaplar (sayfa sayfa). Süzgeç değerleri burada da biçimle sınırlanır; servise serbest
+    metin yalnız arama kutusundan gider (URL kodlu)."""
+    if state and state not in ARCHIVE_STATES: raise ValueError('Durum geçersiz.')
+    if sort not in ('title','recent'): raise ValueError('Sıralama geçersiz.')
+    params={'q':(q or '')[:200],'category':(category or '')[:64],'state':state or '','sort':sort,
+            'offset':max(0,int(offset)),'limit':min(200,max(1,int(limit)))}
+    return request('/v1/archive/books?'+urllib.parse.urlencode(params)).json()
+
+
+def archive_book(book_id) -> dict:
+    return request('/v1/archive/books/'+str(uuid.UUID(book_id))).json()
+
+
+def open_redaction(book_id, user: str) -> dict:
+    """Arşivde okunmuş kitabı redaksiyona açar (son okuma denetimleri okuma kuyruğuna girer). Açan = oturum."""
+    return request_json('POST','/v1/books/'+str(uuid.UUID(book_id))+'/redaction',editor=user)
+
+
+def word_alternatives(book_id, finding_ids=None) -> dict:
+    """Yakın tekrar bulgularının karşılık önerileri: editör bulguları açınca üretilir (model çağrısı; açılan
+    bulgu sayısına göre dakikaya varabilir). `finding_ids` None ise son koşunun ertelenmiş bütün bulguları."""
+    base,headers,ca=_headers()
+    body={} if finding_ids is None else {'finding_ids':[str(uuid.UUID(i)) for i in finding_ids]}
+    with httpx.Client(timeout=httpx.Timeout(600,connect=30),verify=ca or True,follow_redirects=False) as client:
+        r=client.post(base+'/v1/books/'+str(uuid.UUID(book_id))+'/proofing/word-variety/alternatives',
+                      headers=headers,json=body)
+        r.raise_for_status()
+        return r.json()

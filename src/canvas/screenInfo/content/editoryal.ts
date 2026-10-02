@@ -212,6 +212,25 @@ const CONTENT: ScreenInfoMap = {
 
   'kapak-arsivi': KAPAK_ARSIVI,
 
+  'kitap-eczanesi': {
+    summary:
+      "Kitap Eczanesi: Zeki AI'ın «Zeki'ye sor» için okuduğu kitap arşivi. Kitap yüklenir, okuma izlenir; kitap başına son okuma, e-kitap, sesli kitap ve tasarım buradan açılır.",
+    how: [
+      "Arşivdeki kitaplar «Zeki'ye sor» için okunur: sayfalar, resimler, karakterler, olaylar ve özet. Son okuma denetimleri bu okumada yapılmaz.",
+      'Kitabı redaksiyona açınca son okuma denetimleri sıraya girer; bulgular, kararlar, kelime haritası ve karşılık önerileri Son okuma ekranındakiyle aynıdır.',
+      "E-kitap ve sesli kitap kitabın tasarım işi üstünden hazırlanır; iş yoksa kitap önce Kitap Tasarım Stüdyosu'na gönderilir.",
+      'Yüklenen kitap sıraya girer; portaldan gelen kitap arşivin toplu okumasından önce okunur. Okuması düşen kitap kendiliğinden yeniden denenir.',
+    ],
+    data: "Zeki AI'ın okuma kaydı (kitap, kategori, okuma ve son okuma durumu), son okuma raporu ve tasarım işleri.",
+    refresh: 'Okunan ya da sırada kitap varken liste dakikada bir, seçili kitap yirmi saniyede bir kendiliğinden yenilenir.',
+    actions: [
+      'Kitap adıyla arayın; kategori ve durumla süzün.',
+      'PDF bırakıp kitap yükleyin; kategori seçerseniz okur kitlesi ipucu olur.',
+      "Kitabı seçip «Redaksiyona aç»a basın, bitince bulgulara karar verin.",
+      "E-kitap ya da sesli kitap için kitabı Kitap Tasarım Stüdyosu'na gönderin.",
+    ],
+  },
+
   // Kitap tasarım alt sayfaları (menüde yok). Arşiv kalıbı iş kalıbından ÖNCE gelmeli: `/kitap-tasarim/:jobId`
   // kalıbı `/kitap-tasarim/kapak-arsivi` adresine de uyar, kalıplar sırayla denenir.
   'path:/kitap-tasarim/kapak-arsivi': KAPAK_ARSIVI,
