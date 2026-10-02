@@ -5,6 +5,14 @@
 - Analiz: SEO menüsünde 40 öğe vardı (iki bölüm, «izleme» ve «işler»); aynı konunun ekranları (ör. Search Console'dan beslenen kelimeler/fırsatlar/sorgu–sayfa/yarışan; Bing/Yandex/YouTube/video) ayrı ayrı menüde duruyordu. Ekranların içeriği birleştirilmedi: her ekranın kendi ucu, hazır hesabı, yetki anahtarı ve bilgi kutusu var; birleştirmek bunları kırar.
 - Çözüm: menüde 8 giriş, her grubun ekranları başlığın altında sekme şeridinde (`SeoTabs`). `NavItem.tabOf`/`tabLabel` + `panelItems`/`panelActiveId`/`tabsFor` (navModel). Adresler aynı kaldığından eski bağlantılar, yer imleri, «Önemli günler» ve iş listesi bağlantıları çalışır; palette eski adlarla arama sürer. Grup girişinin eski adı aramada anahtar sözcük.
 - Test: `navModel.test.ts` +3 (8 giriş, şerit sırası, kapalı grup girişinde sekmenin menüde kalması); nav testleri 45/45.
+## 2026-10-02 — Kitap eczanesi arşiv okuması: 4.018 kitap kuyrukta, GPU kurulumu b73cbd50
+
+- Amaç (kullanıcı): `tt-gpu:/data/kitaplar` 4.034 PDF son okuma değil, «Zeki'ye sor» arşivi. Arşiv kipi (`analysis_job.profile='archive'`, `editor/archive.py`): son okuma, çelişki/editör kuyruğu, metin–görsel teyidi yok; görsel tarama yalnız görselli sayfada (≥%5 resim ya da ≥40 çizim, kapak her zaman); doğrulama (critic) + kim ne yaptı + özet + dizin + kart kalır. Redaksiyon gerekirse `POST /v1/books/{id}/redaction`. Kelime önerileri artık okumada değil editör açınca (`fill_alternatives`).
+- Ön tarama (modelsiz, 4.034 PDF, hata 0): 660.418 sayfa, görselli 177 bin (%27); düz metin kitap 1.408, karma 680, resimli 1.946; sha kopyası 0; 7 kesik parça atlandı; 43 kitap OCR yolu.
+- Hata sıfır: worker olay döngüsünü bloklayan senkron DB/CPU işleri thread'e (kalp atışı zaman aşımı = dünkü 2 düşüşün nedeni), döngü bekçisi (`EDITOR_LOOP_STALL_SECONDS`), rebuild FAILED/yeni işi olan nesli almaz, aynı girdiyle yargılanmış iddia yeniden yargılanmaz (`operation_receipt critic_verdict`), kitaplar arası ortak director semaforu, bölüm özetleri paralel.
+- GPU: gateway kart sırası (modeller sırayla açılır, bekleyen modele yol açılır, iş başındaki atılmaz), taşma yarışı atomik (8'lik sınır 121'e çıkıyordu), BI dağıtıcısı GPU 1'i yedek yaptı, director payı 0.48→0.70, vision-deep koltuk 12, `EDITOR_READ_PARALLEL=4`. GPU 0 BI önceliği (`--scheduling-policy priority`, CAP 16) hazır, UYGULANMADI (BI modeli 2-4 dk yeniden başlar; kullanıcı onayı bekliyor).
+- Ayrıca: PDF font onarımı (`pdf_repair.py`), kurgu dışı metin düşmesi (`manuscript.print_plan`), CRM boşluk/tire eşleşmesi (COMPACT), künye çevirmen/destek, arka kapak sığdırma, dizgiden bölüm.
+- Testler: birleşik 790/790; GPU kurulumu `0.15.9-b73cbd50` 8 servis, `._*` 0. 4.018 kitap QUEUED (sert bağ, kopya yok). Kitap Eczanesi ekranı ajanı sürüyor; sosyal video altyapısı kullanıcı isteğiyle bekletildi.
 
 ## 2026-10-02 (sabah) — Test sunucusuna kurulum, karmaşık 100 soru (yarıda durduruldu), VPN kopma nedenleri
 
