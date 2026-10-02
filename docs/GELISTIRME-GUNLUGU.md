@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-02 (öğle) — Okunmuş 22 kitabın denetimi ve düzeltmeler
+
+- Bağımsız denetim (22 okunmuş kitap): metin tam, kanıt alıntıları %94–97 birebir, arama dizini tam; ama Kitaba sor hızlı yolu ölü (boş `ed.book_card`), kitap özeti 22/22 yedek özet (uç sayfa kuralı künye/biyografide takılıyor), künye/biyografi olay sayılıyor ve kart METADATA boş, bölümler eski kuralla, aynı kişinin çok kaydı, Aşk Terapi bozuk karakter (eski okuma).
+- Düzeltmeler: hızlı yol `read_model.card`/catalog çıktısından; etkileşimli arama CPU embedding eşiyle (`book-embedding-cpu`, 0,15 sn) ve gateway adil kart sırası (`EDITOR_HOLD_MAX_SEC` 600, etkileşimli 120) — okuma sürerken OCR 1,5 saat aç kalıyordu; `page_scope.py` künye/iç kapak/yazar tanıtımı/içindekiler/tanıtım/ithafı metinden doğrulayıp kapsam dışı tutar (okumanın NON_STORY önerisi kurgu dışında gövdeyi sildiği için toptan uygulanmaz), özet uçları hikâye sayfalarının ilk/son %5'i, parça özetleri bütüne yayılır; bölüm başlığı çok satırlı/etiketli/cümle ayrımı (anahtar bölüm 293→300/335, gerileme 0); kitap sözlüğüyle harf çözümü her yolda; kimlikte aynı ad birleştirme (25 okumada 448 kayıt, `editor.identity_fold`); kurgu dışında kişi düşmesi (`naming.about_the_book_pages`). Kategori/yaş önerisi okunabilirlik ölçüleriyle (Anne Terliği 8-12→6-9).
+- Yeniden üretim yeniden okumasız: `python -m editor.page_scope rebuild --all-read`, `python -m editor.identity_fold --apply`. Yeniden okunacak: Aşk Terapi, İbn Sina, Takılı Kalan Zihin.
+- Birleşik editör testleri 837/837. Kurulmadı.
+
 ## 2026-10-02 — Editör: kitap özeti ve künye — kapsam dışı sayfalar (künye, iç kapak, yazar tanıtımı, içindekiler, tanıtım)
 
 - Sorun (22 okunmuş kitap): kitap özeti 22/22 `EXTRACTIVE_FALLBACK` — olay özeti kuralı uç olay sayfası olarak künyeyi (Dallar s.2) ya da yayınevinin başka kitaplarının tanıtımını istiyordu; uzun kitapta parça özeti parçanın ilk sayfalarında kalıyordu (Çiçekçi Kadın 1. parça s.7–176, seçimlerin hepsi s.7–19), yedek özet yalnız bu seçimden. `page_role`'de yalnız okumanın NON_STORY önerisi vardı (editör onayı bekliyor; arşivde onaylayan yok), FRONT_MATTER hiç yoktu → künye okunmadı (METADATA 0), künye/yazar tanıtımı/tanıtım sayfalarından olay çıktı.
