@@ -33,6 +33,7 @@ belgesini yazar (EPUB 3 Media Overlays). Biçim `media_overlay`'in belgesinde.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import json
@@ -1185,6 +1186,44 @@ async def sample(text: str, vid: str, lex: Lexicon) -> bytes:
     tmp.write_bytes(data)
     tmp.replace(cache)
     return data
+
+
+# Ekrandaki «dinle» cümlesi (NarrationSection.tsx `SAMPLE` ile aynı olmalı): anlatıcı ve karakter satırları bunu okur.
+SAMPLE_TEXT = "Merhaba, bu kitabı sizin için ben okuyacağım."
+_warm: asyncio.Task | None = None
+
+
+async def warm_samples() -> dict:
+    """Bütün seçilebilir seslerin «dinle» örneğini sırayla önceden üretir (2026-10-03, kullanıcı: «sese tıklayınca
+    bekliyoruz»). Ses modeli kartı kitap okuyan modellerle paylaşır; ilk tıklama kart boşalana dek bekliyordu. Örnek
+    önbellekteyse `sample` diske bakıp döner, GPU'ya gitmez. Yayınevi sözlüğüyle okunur (iş sözlüğü bu cümleye girmez)."""
+    lex = Lexicon(lexicon_entries(None, "publisher"))
+    done, failed = 0, []
+    for v in all_voices():
+        try:
+            await sample(SAMPLE_TEXT, v["id"], lex)
+            done += 1
+        except Exception as e:  # noqa: BLE001 — bir ses düşerse diğerleri ısınır
+            failed.append({"voice": v["id"], "error": f"{type(e).__name__}: {e}"[:200]})
+    return {"done": done, "failed": failed}
+
+
+def warm_samples_soon() -> None:
+    """Isıtmayı arka planda başlatır; zaten sürüyorsa yenisini açmaz."""
+    global _warm
+    if _warm is not None and not _warm.done():
+        return
+    _warm = asyncio.get_running_loop().create_task(warm_samples())
+
+    def _done(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        import logging
+        if t.exception() is not None:
+            logging.getLogger(__name__).error("örnek ısıtma düştü: %r", t.exception())
+        elif t.result()["failed"]:
+            logging.getLogger(__name__).warning("örnek ısıtma: %s", t.result()["failed"])
+    _warm.add_done_callback(_done)
 
 
 # ------------------------------------------------------------------ EPUB medya kaplaması

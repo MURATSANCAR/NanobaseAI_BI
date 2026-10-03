@@ -353,3 +353,20 @@ def test_short_exclamation_gets_min_duration():
     ps = N.pieces([u])
     got = {p.text: N.excl_min_sec(p, [u]) for p in ps}
     assert got == {"Tüh!": 0.28, "O da ne!": 0.84, "Bu çok güzel bir gün oldu!": None, "Nerede?": None}
+
+
+def test_warm_samples_caches_every_voice_once(job, monkeypatch):
+    """«Dinle» örnekleri önceden üretilir; ikinci ısıtma ve ekrandan gelen aynı cümle GPU'ya gitmez."""
+    calls = []
+    monkeypatch.setattr(N, "_call", _fake_service(calls))
+    first = asyncio.run(N.warm_samples())
+    assert first["failed"] == [] and first["done"] == len(N.all_voices())
+    n = len(calls)
+    assert asyncio.run(N.warm_samples())["done"] == first["done"] and len(calls) == n
+    asyncio.run(N.sample(N.SAMPLE_TEXT, "anlatici-kadin", N.lexicon(job)))
+    assert len(calls) == n
+
+
+def test_sample_text_matches_screen():
+    tsx = Path(__file__).resolve().parents[3] / "src/canvas/editorial/studio/narration/NarrationSection.tsx"
+    assert f"const SAMPLE = '{N.SAMPLE_TEXT}';" in tsx.read_text()
