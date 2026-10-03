@@ -1653,7 +1653,10 @@ def ensure(engine: sa.engine.Engine) -> None:
             from semantic_layer.store import schema_stamp
             schema_stamp.create_all(_md, engine)
             from semantic_bridge import audit_trail
-            audit_trail.ensure(engine)
+            try:
+                audit_trail.ensure(engine)
+            except Exception as e:  # noqa: BLE001 — denetim kurulumu yönetim/ayar okumasını durdurmaz; sonra yeniden denenir
+                log.warning("admin: denetim kaydı kurulumu bu sefer olmadı: %s", e)
             _ready.add(id(engine))
         _engine = engine
 

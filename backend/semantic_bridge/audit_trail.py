@@ -320,7 +320,8 @@ class Middleware:
 
 
 def session_key(cookie: str) -> Optional[str]:
-    m = re.search(r"(?:^|;\s*)timas_session=([^;]+)", cookie or "")
+    # Giriş servisi HTTPS'te `__Secure-timas_session`, düz HTTP'de `timas_session` yazar.
+    m = re.search(r"(?:^|;\s*)(?:__Secure-)?timas_session=([^;]+)", cookie or "")
     return hashlib.sha256(m.group(1).encode()).hexdigest()[:16] if m else None
 
 
@@ -434,8 +435,17 @@ END $f$;
 """.replace("__SECRET_RX__", SECRET_RX.pattern.replace("(?i)", ""))
 
 
+_ensure_lock = threading.Lock()
+
+
 def ensure(engine: sa.engine.Engine) -> None:
-    """Tablolar, işlem kaydının yeni kolonları, tetikleyici işlevleri ve koruma tetikleyicileri (bir kez, damgalı)."""
+    """Tablolar, işlem kaydının yeni kolonları, tetikleyici işlevleri ve koruma tetikleyicileri (bir kez, damgalı).
+    Kilitli: açılışta yazıcı ve ilk istekler aynı anda kurmaya kalkınca CREATE TABLE yarışı olmasın."""
+    with _ensure_lock:
+        _ensure(engine)
+
+
+def _ensure(engine: sa.engine.Engine) -> None:
     from semantic_layer.store import schema_stamp
 
     def install() -> None:
@@ -524,6 +534,7 @@ def _lit(s: str) -> str:
 _q: "queue.Queue[tuple[str, dict]]" = queue.Queue()
 _engine_fn: Optional[Callable[[], Optional[sa.engine.Engine]]] = None
 _thread: Optional[threading.Thread] = None
+_maint: Optional[threading.Thread] = None
 _stop = threading.Event()
 _TABLES = {"request": REQUESTS, "ui": UI}
 
@@ -589,19 +600,23 @@ def _replay_spool(engine: sa.engine.Engine) -> None:
 
 def start(engine_fn: Callable[[], Optional[sa.engine.Engine]]) -> None:
     """Yazıcı + mühürleyici + tetikleyici kurucu tek iş parçacığında. Çalışma ortamı hazır değilken kuyruk bekler."""
-    global _engine_fn, _thread
+    global _engine_fn, _thread, _maint
     _engine_fn = engine_fn
     if _thread and _thread.is_alive():
         return
     _stop.clear()
+    # Yazıcı ayrı, bakım (tetikleyici kurulumu, mühür, doğrulama) ayrı: uzun bakım turu kaydı bekletmesin.
     _thread = threading.Thread(target=_loop, name="audit-trail", daemon=True)
     _thread.start()
+    _maint = threading.Thread(target=_maintenance, name="audit-trail-maint", daemon=True)
+    _maint.start()
 
 
 def stop() -> None:
     _stop.set()
-    if _thread:
-        _thread.join(timeout=5)
+    for t in (_thread, _maint):
+        if t:
+            t.join(timeout=5)
     _drain(final=True)
 
 
@@ -640,36 +655,49 @@ def _drain(final: bool = False) -> None:
 
 
 def _loop() -> None:
-    last_seal = last_trig = last_verify = 0.0
     ready = False
     while not _stop.is_set():
         _stop.wait(1.0)
         try:
+            eng = _engine()
+            if eng is not None and not ready:
+                ensure(eng)
+                bind_engine(eng)
+                _replay_spool(eng)
+                ready = True
             _drain()
         except Exception as e:  # noqa: BLE001
             log.warning("denetim: yazıcı turu hata verdi: %s", e)
+
+
+def _maintenance() -> None:
+    last_seal = last_trig = last_replay = 0.0
+    last_verify: Optional[float] = None
+    while not _stop.is_set():
+        _stop.wait(5.0)
         eng = _engine()
         if eng is None:
             continue
         now = time.monotonic()
         try:
-            if not ready:
-                ensure(eng)
-                bind_engine(eng)
-                _replay_spool(eng)
-                ready = True
+            ensure(eng)
             if now - last_trig > 300:
                 last_trig = now
                 with _advisory(eng, 72110) as got:
                     if got:
                         install_row_triggers(eng)
+            if now - last_replay > 300:
+                last_replay = now
                 _replay_spool(eng)
             if now - last_seal > 60:
                 last_seal = now
                 with _advisory(eng, 72111) as got:
                     if got:
                         seal_all(eng)
-            if now - last_verify > 86400 or (last_verify == 0 and now > 600):
+            # İlk doğrulama açılıştan 10 dk sonra, sonra günde bir.
+            if last_verify is None:
+                last_verify = now - 86400 + 600
+            if now - last_verify > 86400:
                 last_verify = now
                 with _advisory(eng, 72112) as got:
                     if got:
