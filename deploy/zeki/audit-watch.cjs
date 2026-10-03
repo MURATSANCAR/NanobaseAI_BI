@@ -4,8 +4,10 @@
 const { MongoClient } = require('/app/bundle/programs/server/npm/node_modules/meteor/npm-mongo/node_modules/mongodb');
 const readline = require('node:readline');
 
-// Kişinin işi olmayan, sürekli dönen kayıtlar: çevrimiçi durumu, okundu bilgisi, oturum nabzı, dosya parçaları.
-const SKIP = /^(usersSessions|zeki_message_reads|zeki_instances|zeki_cron_history|zeki_statistics|zeki_apps_logs|zeki_sessions|zeki_nps_vote|zeki_server_events_cache|system\..*)$|\.chunks$/;
+// Kişinin işi olmayan, sürekli dönen kayıtlar: sunucu nabzı, zamanlayıcı kilitleri ve kuyrukları, çevrimiçi durumu,
+// okundu bilgisi, oturum nabzı, önizleme önbelleği, dosya parçaları (2026-10-03 ölçümü: `instances` 10 sn'de bir,
+// `zeki_cron` kilidi dakikada bir yazıyordu).
+const SKIP = /^(instances|_queue|usersSessions|zeki_message_reads|zeki_read_receipts(_archive)?|zeki_instances|zeki_cron|zeki_cron_history|zeki_statistics|zeki_analytics|zeki_apps_logs|zeki_apps_scheduler|zeki_sessions|zeki_nps_vote|zeki_notification_queue|zeki_oembed_cache|zeki_federation_locks|zeki_federation_events_staging|zeki_livechat_agent_activity|omnichannel_.*|system\..*)$|\.chunks$/;
 
 (async () => {
   const first = await new Promise((resolve) => {
