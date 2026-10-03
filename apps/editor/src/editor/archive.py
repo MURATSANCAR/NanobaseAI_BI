@@ -48,12 +48,16 @@ IMAGE_SHARE = float(os.environ.get("EDITOR_ARCHIVE_IMAGE_SHARE", "0.05"))
 MIN_DRAWINGS = int(os.environ.get("EDITOR_ARCHIVE_MIN_DRAWINGS", "40"))
 
 
-def page_is_visual(image_share: float, drawings: int) -> bool:
-    return image_share >= IMAGE_SHARE or drawings >= MIN_DRAWINGS
+def page_is_visual(image_share: float, drawings: int, layerless_ink: bool = False) -> bool:
+    """`layerless_ink`: metin katmanı yok, resim yok ama sayfada mürekkep var (yazısı çizime çevrilmiş sayfa;
+    `document.layerless_with_ink`, OCR'ın NO_LAYER_WITH_INK gerekçesiyle aynı kural)."""
+    return image_share >= IMAGE_SHARE or drawings >= MIN_DRAWINGS or layerless_ink
 
 
-def measure_page(page) -> tuple[float, int]:
-    """(resim alanı payı, çizim yolu sayısı). Çizimler yalnız resim payı eşiğin altındaysa sayılır (pahalı)."""
+def measure_page(page) -> tuple[float, int, bool]:
+    """(resim alanı payı, çizim yolu sayısı, katmansız mürekkep). Çizimler yalnız resim payı eşiğin altındaysa
+    sayılır (pahalı); mürekkep yalnız sayfa bunlarla görsel sayılmadıysa ve metin katmanı kısaysa ölçülür."""
+    from . import document
     area = (page.rect.width * page.rect.height) or 1.0
     img = 0.0
     for info in page.get_image_info():
@@ -61,12 +65,14 @@ def measure_page(page) -> tuple[float, int]:
         img += max(0.0, x1 - x0) * max(0.0, y1 - y0)
     share = min(1.0, img / area)
     drawings = len(page.get_drawings()) if share < IMAGE_SHARE else 0
-    return share, drawings
+    inked = (not page_is_visual(share, drawings)) and document.page_is_layerless_with_ink(page)
+    return share, drawings, inked
 
 
-def select_visual(measures: list[tuple[float, int]]) -> list[int]:
-    """Görsel taramaya girecek sayfalar (1'den): kapak (ilk sayfa) her zaman + resimli/çizimli sayfalar."""
-    out = [n for n, (share, dr) in enumerate(measures, start=1) if n == 1 or page_is_visual(share, dr)]
+def select_visual(measures: list[tuple]) -> list[int]:
+    """Görsel taramaya girecek sayfalar (1'den): kapak (ilk sayfa) her zaman + resimli/çizimli sayfalar + metni
+    çizime çevrilmiş sayfalar."""
+    out = [n for n, m in enumerate(measures, start=1) if n == 1 or page_is_visual(*m)]
     return out
 
 
@@ -77,7 +83,8 @@ def visual_pages(book_version_id: str) -> dict:
     measures = [measure_page(p) for p in doc]
     pages = select_visual(measures)
     return {"pages": pages, "page_count": len(measures), "visual": len(pages),
-            "rule": {"image_share": IMAGE_SHARE, "min_drawings": MIN_DRAWINGS, "cover": 1}}
+            "rule": {"image_share": IMAGE_SHARE, "min_drawings": MIN_DRAWINGS, "cover": 1,
+                     "layerless_ink": document.LAYERLESS_INK_MIN}}
 
 
 # ------------------------------------------------------------------ klasör → okur kitlesi / tür
@@ -182,7 +189,7 @@ def _measure_file(path: Path) -> dict:
     rec = {"bytes": path.stat().st_size, "sha256": _sha(path)}
     with pymupdf.open(path) as doc:
         ms = [measure_page(p) for p in doc]
-        rec.update(pages=len(ms), visual_pages=sum(1 for s, d in ms if page_is_visual(s, d)),
+        rec.update(pages=len(ms), visual_pages=sum(1 for m in ms if page_is_visual(*m)),
                    cover_visual=int(bool(ms) and page_is_visual(*ms[0])),
                    text_chars=sum(len(p.get_text("text").strip()) for p in doc))
     return rec
@@ -542,10 +549,7 @@ async def run_outputs(gid: str) -> dict:
             built = {}
             for kind in outputs.ORDER:
                 key = rebuild.key_for(snap, digest, kind)
-                cached = await asyncio.to_thread(rebuild.begin, snap, digest, kind, key)
-                if cached is None:
-                    cached = await rebuild.build(kind, snap, built, key)
-                await asyncio.to_thread(rebuild.publish, snap, digest, kind, key, cached)
+                cached = await rebuild.produce(kind, snap, digest, built, key)
                 built[kind] = cached
             return {**await asyncio.to_thread(rebuild.finish, snap, digest), "profile": PROFILE}
         except rebuild.Superseded as exc:

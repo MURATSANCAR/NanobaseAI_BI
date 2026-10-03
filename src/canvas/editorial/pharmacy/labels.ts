@@ -1,4 +1,4 @@
-import { PHARMACY_CATEGORIES, type PharmacyAudience, type PharmacyBook, type PharmacyJob, type PharmacyState } from '../../engine';
+import { PHARMACY_CATEGORIES, type NotABookReason, type PharmacyAudience, type PharmacyBook, type PharmacyJob, type PharmacyState } from '../../engine';
 
 /** Kitap Eczanesi'nin ekran dili: kategori ve durum adları, durumun rengi ve kısa açıklaması. Teknik ad yok. */
 
@@ -54,6 +54,20 @@ export function redactionPill(b: PharmacyBook): { tone: Tone; text: string } | n
   if (b.proofed) return { tone: 'ok', text: 'Son okuma hazır' };
   if (b.redaction?.state === 'okunamadi') return { tone: 'err', text: 'Son okuma tamamlanamadı' };
   return null;
+}
+
+/* ------------------------------------------------------------------ kitap değil */
+
+const NOT_A_BOOK_WHY: Record<NotABookReason, string> = {
+  FEW_PAGES: 'Dosyada yalnız kapak ya da birkaç sayfa var',
+  CATALOGUE: 'Sayfalar art arda kitap tanıtımı, fiyat ve kod taşıyor (katalog ya da fiyat listesi)',
+  MODEL: 'Zeki AI dosyayı katalog, bülten ya da broşür olarak okudu',
+};
+
+/** «Kitap değil» açıklaması (ayrıntı alanının notu); kitapsa null. */
+export function notABookText(b: PharmacyBook): string | null {
+  if (!b.not_a_book) return null;
+  return `${NOT_A_BOOK_WHY[b.not_a_book.reason] ?? NOT_A_BOOK_WHY.MODEL}. Bu dosyadan karakter, olay ve kategori/yaş önerisi çıkarılmadı.`;
 }
 
 /* ------------------------------------------------------------------ timas.com.tr ↔ Zeki AI önerisi */

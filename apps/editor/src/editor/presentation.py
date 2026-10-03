@@ -50,9 +50,14 @@ def profile_view(p: dict | None) -> dict | None:
     detail = p['form_detail'] or {}
     model = detail.get('model') or {}
     probs = model.get('probabilities') or {}
+    # «kitap değil» (book_type.NOT_A_BOOK): katalog/bülten/broşür ya da yalnız kapak — nedeni kuraldan
+    # (FEW_PAGES | CATALOGUE) ya da modelin seçiminden (MODEL)
+    not_a_book = ({'reason': (detail.get('not_a_book') or {}).get('reason') or 'MODEL'}
+                  if p['form'] == 'NOT_A_BOOK' else None)
     return {'form': p['form'], 'source': p['form_source'], 'audience': p['audience'],
             'crmGenres': list((detail.get('crm') or {}).get('genres') or {}),
-            'probability': probs.get(p['form']) if p['form_source'] == 'MODEL' else None}
+            'probability': probs.get(p['form']) if p['form_source'] == 'MODEL' else None,
+            'notABook': not_a_book}
 
 
 def cover_path(book_id: str) -> tuple[Path,str]:

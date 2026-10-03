@@ -51,9 +51,13 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
                               reasons: list[str] | None = None) -> dict:
     """One vision pass over a page; stored in page_scan (FAST or DEEP)."""
     gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
-    pg = db.one("SELECT nontext_ink FROM page WHERE book_version_id=%s AND page_no=%s",
+    pg = db.one("SELECT nontext_ink, layer_health FROM page WHERE book_version_id=%s AND page_no=%s",
                 gen["book_version_id"], page_no)
-    if pg and pg["nontext_ink"] is not None and pg["nontext_ink"] < settings().min_illustration_ink:
+    # A page without a text layer whose words are drawn (NO_LAYER_WITH_INK) is looked at even when its ink
+    # is light: there is no text reading of it to invent figures from.
+    drawn_text = "NO_LAYER_WITH_INK" in ((pg or {}).get("layer_health") or {}).get("ocr_reasons", [])
+    if pg and pg["nontext_ink"] is not None and pg["nontext_ink"] < settings().min_illustration_ink \
+            and not drawn_text:
         # Nothing but text on the page: asking a vision model what it "sees" only
         # invites figures invented from the text. Record an empty scan instead.
         out = dict(EMPTY_SCAN)

@@ -25,7 +25,7 @@ import { EpubSection } from '../studio/epub';
 import { NarrationSection } from '../studio/narration';
 import { ART_MODES, ArtModePicker, artModeDuration } from '../studio/ArtMode';
 import { StepIcon, ago, ghostBtn, gradientBtn } from '../studio/shared';
-import { AUDIENCE_LABEL, ageText, jobNote, moving, readPill, redactionPill, reviewText } from './labels';
+import { AUDIENCE_LABEL, ageText, jobNote, moving, notABookText, readPill, redactionPill, reviewText } from './labels';
 
 /** Kitap Eczanesi'nde seçili kitap: okuma durumu ve dört iş — son okuma (redaksiyon), e-kitap, sesli kitap,
  *  Kitap Tasarım Stüdyosu. Her biri var olan ekranların bileşenleriyle: son okuma bulguları, kararlar, Word çıktısı,
@@ -412,13 +412,19 @@ export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string;
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Pill tone={pill.tone}>Okuma: {pill.text}</Pill>
               {red && <Pill tone={red.tone}>{red.text}</Pill>}
-              {!!b.title_review?.length && <Pill tone="muted">Adı gözden geçir</Pill>}
+              {!!b.title_review?.length && !b.not_a_book && <Pill tone="muted">Adı gözden geçir</Pill>}
+              {b.not_a_book && <Pill tone="muted">Kitap değil</Pill>}
             </div>
-            {!!b.title_review?.length && (
+            {!!b.title_review?.length && !b.not_a_book && (
               <p className="mt-1.5 break-words text-[11.5px] leading-snug text-canvas-muted">
                 Ad dosya adından geldi; yayınevi sitesinde ve künyede doğrulanamadı.
                 {b.title_review.some((r) => r !== 'dosya adından') && ` ${b.title_review.filter((r) => r !== 'dosya adından').join(' · ')}`}
               </p>
+            )}
+            {notABookText(b) && (
+              <div className="mt-2">
+                <Note tone="warn">{notABookText(b)}</Note>
+              </div>
             )}
             {b.read?.state === 'okunuyor' && (
               <div className="mt-2 max-w-sm">

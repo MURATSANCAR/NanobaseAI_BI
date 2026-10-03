@@ -66,6 +66,7 @@ function Row({ b, selected, onPick }: { b: PharmacyBook; selected: boolean; onPi
           <span className="mt-1 flex flex-wrap gap-1">
             <Pill tone={pill.tone}>{pill.text}</Pill>
             {red && <Pill tone={red.tone}>{red.text}</Pill>}
+            {b.not_a_book && <Pill tone="muted">Kitap değil</Pill>}
             {b.review?.review && <Pill tone="warn">Gözden geçir</Pill>}
             {!!b.title_review?.length && <Pill tone="muted">Adı gözden geçir</Pill>}
           </span>

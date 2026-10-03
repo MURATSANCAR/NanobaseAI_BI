@@ -2650,10 +2650,15 @@ export type BookCard = {
     audience: 'CHILD' | 'YOUNG' | 'ADULT' | 'UNKNOWN';
     crmGenres: string[];
     probability: number | null;
+    /** Dosya kitap değil (katalog, bülten, broşür ya da yalnız kapak); kitapsa null. */
+    notABook?: { reason: NotABookReason } | null;
   } | null;
 };
 
-export type BookForm = 'FICTION' | 'NARRATIVE_NONFICTION' | 'EXPOSITORY' | 'ACTIVITY' | 'POETRY' | 'UNKNOWN';
+/** «Kitap değil» nedeni: çok az sayfa (kapak/broşür), katalog sayfaları (ISBN/fiyat dizisi) ya da Zeki AI'ın okuması. */
+export type NotABookReason = 'FEW_PAGES' | 'CATALOGUE' | 'MODEL';
+
+export type BookForm = 'FICTION' | 'NARRATIVE_NONFICTION' | 'EXPOSITORY' | 'ACTIVITY' | 'POETRY' | 'UNKNOWN' | 'NOT_A_BOOK';
 export const BOOK_FORM_TR: Record<BookForm, string> = {
   FICTION: 'Kurgu',
   NARRATIVE_NONFICTION: 'Gerçek kişi ve olay anlatısı',
@@ -2661,6 +2666,7 @@ export const BOOK_FORM_TR: Record<BookForm, string> = {
   ACTIVITY: 'Etkinlik ya da ders kitabı',
   POETRY: 'Şiir',
   UNKNOWN: 'Belirlenemedi',
+  NOT_A_BOOK: 'Kitap değil (katalog, bülten, broşür)',
 };
 
 export type BookQuestion = {
@@ -2924,6 +2930,8 @@ export type PharmacyBook = {
   suggestion?: PharmacySuggestion | null;
   /** Site ile öneri ayrışıyor mu; ayrışıyorsa nedeni. */
   review?: { review: boolean; reasons: Array<'CATEGORY' | 'AUDIENCE' | 'AGE'> };
+  /** Dosya kitap değil: karakter, olay ve kategori/yaş önerisi çıkarılmadı. Kitapsa null. */
+  not_a_book?: { reason: NotABookReason } | null;
 };
 export type PharmacyAudience = 'CHILD' | 'YOUNG' | 'ADULT';
 export type PharmacySite =

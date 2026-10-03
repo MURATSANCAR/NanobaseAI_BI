@@ -10,6 +10,8 @@ Three axes, each from data, none from a title:
   form      FICTION | NARRATIVE_NONFICTION (history, biography, memoir: real people, real
             events) | EXPOSITORY (psychology, self-help, parenting, essay, research,
             religion) | ACTIVITY (activity, colouring, maths, exercises) | POETRY | UNKNOWN
+            | NOT_A_BOOK (catalogue, bulletin, brochure, price list, cover only; a rule over the
+            pages first, then one more choice of the model: `not_a_book`)
   audience  CHILD | YOUNG | ADULT | UNKNOWN, with the target age range
   drawn     how many pages carry a picture (page.nontext_ink, measured at the manifest)
 
@@ -33,6 +35,12 @@ from . import db
 from .config import settings
 
 FORMS = ("FICTION", "NARRATIVE_NONFICTION", "EXPOSITORY", "ACTIVITY", "POETRY")
+#: Not a book at all (2026-10-03 archive audit: a publisher's catalogue read as 72 % fiction, its authors and
+#: titles became 79 «characters», its blurbs 42 «events», and it got a HIGH-confidence age suggestion): a
+#: catalogue, bulletin, brochure, price list, or a file that holds only a cover / a few pages. Such a file is not
+#: read for characters, events, emotions or themes, and gets no category/age suggestion. An activity or
+#: colouring book IS a book (ACTIVITY).
+NOT_A_BOOK = "NOT_A_BOOK"
 # Forms read for characters, events, modality, narrative roles and story continuity.
 # UNKNOWN stays here: a book nobody could classify is read as every book was before.
 STORY_FORMS = frozenset({"FICTION", "NARRATIVE_NONFICTION", "UNKNOWN"})
@@ -80,13 +88,16 @@ def _word_form(w: str) -> str | None:
     return _WORD_FORM[stem] if stem else None
 
 
-LETTERS = {"FICTION": "K", "NARRATIVE_NONFICTION": "A", "EXPOSITORY": "F", "ACTIVITY": "E", "POETRY": "S"}
+LETTERS = {"FICTION": "K", "NARRATIVE_NONFICTION": "A", "EXPOSITORY": "F", "ACTIVITY": "E", "POETRY": "S",
+           NOT_A_BOOK: "N"}
 LETTER_TR = {"K": "K = kurgu: roman, öykü, masal (uydurulmuş kişiler ve olaylar)",
              "A": "A = gerçek kişi ve olay anlatısı: tarih, biyografi, anı, gezi",
              "F": "F = fikir, bilgi ya da rehber: psikoloji, kişisel gelişim, pedagoji, deneme, "
                   "inceleme-araştırma, din",
              "E": "E = etkinlik ya da ders kitabı: alıştırma, boyama, matematik, soru",
-             "S": "S = şiir"}
+             "S": "S = şiir",
+             "N": "N = kitap değil: yayınevi kataloğu, bülten, broşür, fiyat listesi, tanıtım dosyası (birçok "
+                  "kitabın adı, yazarı, fiyatı ya da tanıtımı art arda; etkinlik ve boyama kitabı kitaptır, E)"}
 FORM_MIN = 0.6          # below this the model's choice is not taken (not measured on a corpus yet)
 SAMPLE_PAGES = 3
 SAMPLE_CHARS = 1500
@@ -126,6 +137,44 @@ def crm_forms(genres: list[str], web_categories: str | None) -> dict:
     return {"forms": sorted(forms), "genres": by_genre, "web_categories": by_web}
 
 
+# ------------------------------------------------------------------ kitap değil (rule, before any model)
+#: A file of at most this many pages is a cover or a leaflet, not a book (the shortest picture books of the
+#: archive have 16 pages).
+FEW_PAGES = 4
+#: A catalogue page lists several books: their ISBNs, prices, page counts and sizes one after another.
+_ISBN = re.compile(r"\bISBN\b|\b97[89][-\s]?\d{1,5}[-\s]?\d", re.I)
+_PRICE = re.compile(r"\d+[.,]\d{2}\s*(?:TL|₺)|₺\s*\d|\b\d+\s*TL\b|\bfiyat[ıi]?\b", re.I)
+_SPEC = re.compile(r"\b\d{2,4}\s*(?:sayfa|sf\.)|sayfa say[ıi]s[ıi]|\b\d{1,2}(?:[.,]\d)?\s*[x×]\s*\d{1,2}(?:[.,]\d)?"
+                   r"\s*cm\b|\bebat\b|karton kapak|\bciltli\b|ya[şs] grubu|\bbarkod\b", re.I)
+#: share of the text pages (and at least this many pages) that must be listing pages
+LISTING_SHARE = 0.3
+LISTING_MIN_PAGES = 3
+
+
+def listing_page(text: str) -> bool:
+    """A page of a catalogue / price list: two or more ISBNs or prices, or four and more specification
+    marks (page count, size, binding, age group). A book's imprint page carries one ISBN and one size."""
+    isbn, price, spec = (len(rx.findall(text or "")) for rx in (_ISBN, _PRICE, _SPEC))
+    return isbn >= 2 or price >= 2 or spec >= 4 or (isbn + price + spec) >= 4
+
+
+def not_a_book(texts: list[str], page_count: int) -> dict | None:
+    """{'reason': 'FEW_PAGES' | 'CATALOGUE', …} when the file is not a book, else None. Salt hesap.
+    `texts`: one text per page (empty for a page without text)."""
+    if page_count and page_count <= FEW_PAGES:
+        return {"reason": "FEW_PAGES", "pages": page_count}
+    with_text = [t for t in texts if len((t or "").strip()) >= 40]
+    listing = sum(1 for t in with_text if listing_page(t))
+    if with_text and listing >= LISTING_MIN_PAGES and listing >= LISTING_SHARE * len(with_text):
+        return {"reason": "CATALOGUE", "listing_pages": listing, "text_pages": len(with_text)}
+    return None
+
+
+def is_book(p: dict | None) -> bool:
+    """False only for a profile that says «not a book»; a missing profile is read as a book (as before)."""
+    return not p or p.get("form") != NOT_A_BOOK
+
+
 def _sample(pages: list[dict]) -> list[tuple[int, str]]:
     """Text of a few pages from the body of the book: front and back matter left out."""
     texts = [(p["page_no"], " ".join(s["text"] for s in p["spans"]).strip()) for p in pages]
@@ -157,6 +206,8 @@ async def _model_form(generation_id: str, title: str, genres: list[str], candida
     sample = _sample(pages)
     if not sample:
         return {"form": "UNKNOWN", "reason": "NO_TEXT", "model_call_id": None}
+    # «not a book» is always among the choices: a catalogue has no CRM genre and lies on any shelf
+    candidates = [*candidates, *([NOT_A_BOOK] if NOT_A_BOOK not in candidates else [])]
     letters = [LETTERS[f] for f in candidates]
     probs, call_id = await Llm(generation_id).choose(
         DIRECTOR, [{"role": "user", "content": classify_prompt(title, genres, candidates, sample)}],
@@ -230,7 +281,15 @@ async def profile(generation_id: str) -> dict:
         detail["archive"] = arc
     arc_forms = [f for f in (arc or {}).get("forms") or [] if f in FORMS]
     call_id = None
-    if len(crm["forms"]) == 1:
+    # Not a book (catalogue, leaflet, cover only): the file's own pages decide, before the shelf of the archive
+    # and the model. A CRM stock card naming one form says it is a book: then the rule is not asked.
+    nab = None
+    if len(crm["forms"]) != 1:
+        nab = await asyncio.to_thread(_not_a_book_of, generation_id, int(pages["n"]))
+    if nab:
+        detail["not_a_book"] = nab
+        form, source_ = NOT_A_BOOK, "RULE"
+    elif len(crm["forms"]) == 1:
         form, source_ = crm["forms"][0], "CRM"
     elif not crm["forms"] and len(arc_forms) == 1:
         form, source_ = arc_forms[0], "ARCHIVE"
@@ -258,6 +317,15 @@ async def profile(generation_id: str) -> dict:
     return await asyncio.to_thread(_stored, generation_id)
 
 
+def _not_a_book_of(generation_id: str, page_count: int) -> dict | None:
+    """`not_a_book` over the generation's read pages (text layer + OCR, as the reading saw them)."""
+    from . import source
+    if page_count and page_count <= FEW_PAGES:
+        return not_a_book([], page_count)
+    pages = source.read(generation_id)
+    return not_a_book([" ".join(s["text"] for s in p["spans"]) for p in pages], page_count or len(pages))
+
+
 def is_story(p: dict) -> bool:
     return p["form"] in STORY_FORMS
 
@@ -266,6 +334,8 @@ def describe(p: dict) -> str:
     """Turkish phrase for prompts: what the model is reading («… bir kitabın METNİ»)."""
     reader = {"CHILD": "çocuklar için ", "YOUNG": "gençler için ", "ADULT": "yetişkinler için "}.get(
         p.get("audience") or "UNKNOWN", "")
+    if p["form"] == NOT_A_BOOK:
+        return "kitap olmayan bir dosya (katalog, bülten ya da broşür)"
     kind = {"FICTION": "kurgu", "NARRATIVE_NONFICTION": "gerçek kişi ve olayları anlatan",
             "EXPOSITORY": "fikir ya da bilgi", "ACTIVITY": "etkinlik", "POETRY": "şiir"}.get(p["form"], "")
     drawn = "resimli " if p.get("pages") and p.get("illustrated_pages", 0) >= 0.3 * p["pages"] else ""

@@ -193,6 +193,27 @@ def failed(gid,error):
             "WHERE generation_id=%s",(str(error)[:2000],gid))
 
 
+async def produce(kind: str, snap: dict, digest: str, built: dict, key: str) -> dict:
+    """begin → (önbellek yoksa) build → publish, tek yer (rebuild.run, arşiv ve sayfa kapsamı yeniden üretimi).
+    Arama dizini: önbellekteki kaydın noktaları dizinde yoksa (eski anahtar temizlenmiş) yeniden yazılır; yayından
+    sonra aynı neslin eski anahtarlı noktaları silinir (retrieval.prune_stale). Temizlik hatası çıktıyı düşürmez."""
+    cached=await asyncio.to_thread(begin,snap,digest,kind,key)
+    if cached is not None and kind=='search_index':
+        from . import retrieval
+        if not await retrieval.index_present(snap['generation_id'],key,cached.get('indexed')):
+            cached=None
+    if cached is None:
+        cached=await build(kind,snap,built,key)
+    await asyncio.to_thread(publish,snap,digest,kind,key,cached)
+    if kind=='search_index':
+        from . import retrieval
+        try:
+            await retrieval.prune_stale(snap['generation_id'],key)
+        except Exception as exc:  # noqa: BLE001 — eski nokta kalır, sonraki üretimde ya da komutla silinir
+            log.warning('arama dizini temizliği: %s',str(exc)[:200])
+    return cached
+
+
 async def build(kind,snap,built,key):
     if kind=='chapter_summaries':
         # Chapters are independent questions over one frozen snapshot: they run side by side,
@@ -320,11 +341,7 @@ async def run(gid: str) -> dict:
         built={}
         for kind in outputs.ORDER:
             key=key_for(snap,digest,kind)
-            cached=await asyncio.to_thread(begin,snap,digest,kind,key)
-            if cached is None:
-                cached=await build(kind,snap,built,key)
-            await asyncio.to_thread(publish,snap,digest,kind,key,cached)
-            built[kind]=cached
+            built[kind]=await produce(kind,snap,digest,built,key)
         return await asyncio.to_thread(finish,snap,digest)
     except Superseded as exc:
         # Queue already contains the newer revision; never mark it completed.
