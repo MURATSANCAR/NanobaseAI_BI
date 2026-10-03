@@ -932,6 +932,13 @@ async def internal_start(alias: str, req: Request) -> dict:
 async def internal_stop(alias: str, req: Request) -> dict:
     _auth(req, internal=True)
     a = ALIASES.get(alias) or _404(alias)
+    # Bir kitabın işi bitti diye model, başka kitapların istekleri sürerken durdurulmaz. Ölçüldü 2026-10-03:
+    # release_models derin görsel modeli öbür kitapların sayfaları işlenirken durduruyordu; derin çağrıların %29'u
+    # 500 ile öldü (her biri ~7 dk iş). Model iş başındaysa yalnız «boşta durdurulabilir» işaretlenir: reaper
+    # idle_stop_sec sonra kapatır, kartı bekleyen model zaten kart sırasıyla yer alır.
+    if _serving(a) > 0 or YIELDING.get(a.name, 0) > 0 or a.lock.locked():
+        log.info("stop %s deferred (requested; %d serving, %d waiting)", a.name, _serving(a), YIELDING.get(a.name, 0))
+        return {"alias": alias, "running": _is_running(a), "deferred": True}
     await _stop(a, "requested")
     return {"alias": alias, "running": False}
 

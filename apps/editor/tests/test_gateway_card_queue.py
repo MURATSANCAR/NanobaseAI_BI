@@ -284,3 +284,22 @@ def test_requests_waiting_their_turn_do_not_keep_the_holder_busy(G, monkeypatch)
     assert G._serving(vision) == 0 and not G._held(vision, emb, time.time())
     vision.inflight = 4                              # biri gerçekten sunuluyor
     assert G._serving(vision) == 1
+
+
+def test_requested_stop_waits_while_other_books_use_the_model(G, monkeypatch):
+    """Ölçüldü 2026-10-03: bir kitabın release_models'i derin görsel modeli öbür kitapların istekleri sürerken
+    durduruyordu (%29 «500»). İş başındaki model durdurulmaz; boşta ise durur."""
+    vision = G.ALIASES["book-vision-deep"]
+    _running(G, monkeypatch, {"book-vision-deep"})
+    stopped = []
+
+    async def fake_stop(a, why):
+        stopped.append((a.name, why))
+    monkeypatch.setattr(G, "_stop", fake_stop)
+    monkeypatch.setattr(G, "_auth", lambda req, internal=False: None)
+    vision.inflight = 2
+    out = asyncio.run(G.internal_stop("book-vision-deep", object()))
+    assert out["deferred"] and stopped == []
+    vision.inflight = 0
+    out = asyncio.run(G.internal_stop("book-vision-deep", object()))
+    assert stopped == [("book-vision-deep", "requested")] and out["running"] is False
