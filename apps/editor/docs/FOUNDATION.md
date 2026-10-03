@@ -7,7 +7,7 @@ eski mühürlü nesiller değiştirilmez. Kaynak kapsamı ve model kalitesi kabu
 
 - `editor-control`, localhost `19140`: mevcut iç gateway anahtarıyla kimlik doğrulayan,
   yalnız okuyan FastAPI. Sağlık, bakım durumu, nesil kabul engelleri ve sayfalı ortak okuma.
-- PostgreSQL, Qdrant ve Temporal korunur. Gateway, worker, MCP ve Hermes Compose
+- PostgreSQL, Qdrant ve Temporal korunur. Gateway, worker, MCP ve sohbet ajanı Compose
   `analysis` profiline alınır; normal `up` bunları açmaz. Deneysel editor-embed durdurulmuş kalır.
 - `runtime_control.maintenance=true`: yeni iş/nesil ve bilgi yazımı DB seviyesinde engellenir.
   Yeni worker başlangıcı ve gateway model çalıştırma yolu da bu kilidi okur.

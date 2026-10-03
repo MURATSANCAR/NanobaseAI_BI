@@ -4,7 +4,7 @@
 
 ## Tarihsel 0.12 gerçek yaşam döngüsü kabulü
 
-> Sonraki okuma entegrasyonu: `0.13.0-reads-7eda4ec1` ile rapor, kart, timeline, aktör, karakter geçmişi ve Hermes MCP okumaları ortak güncel sürüme geçirildi. Bu belgedeki 0.12 kabul kapsamı tarihsel olarak korunur; yeni kanıt ve kalan sınırlar [CURRENT-READS.md](CURRENT-READS.md).
+> Sonraki okuma entegrasyonu: `0.13.0-reads-7eda4ec1` ile rapor, kart, timeline, aktör, karakter geçmişi ve sohbet ajanı MCP okumaları ortak güncel sürüme geçirildi. Bu belgedeki 0.12 kabul kapsamı tarihsel olarak korunur; yeni kanıt ve kalan sınırlar [CURRENT-READS.md](CURRENT-READS.md).
 
 21 Eylül 2026. **Tek gerçek kitapta teknik yaşam döngüsü kabulü geçti.**
 Düzeltme → eski çıktıları kapatma → otomatik yeniden üretim → süreç kesintisinden
@@ -20,7 +20,7 @@ Tam kayıtlar `/data/editor/backups/20260921-live-outputs/` altında; özette ha
 - Kitap: **Dünyanın En Korkak Hayvanı**, 32 fiziksel sayfa.
 - Nesil: `3a987c80-95ba-48ce-a08e-820425cf438d`.
 - PDF SHA-256: `12cc83a4ccffe9394fa2695c76e460cf87e2ffe32e6ae69d6699fcaee43ceea2`.
-- Ayrı kuyruk: `editor-output-acceptance-20260921`; genel worker/MCP/Hermes kapalı.
+- Ayrı kuyruk: `editor-output-acceptance-20260921`; genel worker/MCP/sohbet ajanı kapalı.
 - Kaynak üreticileri: `0.12.0-outputs-b5bfc0d7`. Son doğrulama/çıktı kodu:
   **`0.12.1-outputs-226d05ac`**, release `/data/editor/releases/226d05ac`.
 - Image: `sha256:f8f702adbed39ec29f571fb4a63548334bc7507db146d696551765e18d40d5e3`.
@@ -80,14 +80,14 @@ crash replay kabulü olarak sunulmuyor. Model çağrısında exactly-once garant
 - Eski analizlerin 13 tablosunun içerik hashleri değişmedi. Son sunucu kodunda
   altı mühürlü kitap için eski çıktı okuma regresyonu **54/54**; 17 tablo sabit.
 - Bakım true; aktif Temporal iş ve bekleyen rebuild yok. Gateway/worker/rebuild/
-  MCP/Hermes ve Editor modelleri kapalı; GPU 1 **0 MiB**. BI modeli çalışıyor.
+  MCP/sohbet ajanı ve Editor modelleri kapalı; GPU 1 **0 MiB**. BI modeli çalışıyor.
 
 ## Kabul sınırı
 
 Teknik çıktı döngüsü geçti; analitik durum **NEEDS_REVIEW**, yayın **BLOCKED**.
 Kaynak uyarıları, doğrulanmamış sayfa türleri ve açık incelemeler var. Görsel kimlikte
 60 anılışın 7'si, metinde 33 anılışın 22'si karaktere bağlandı. Bağımsız tam kitap
-semantik kabul kapısı henüz yok. Yeni artifact API'nin eski UI/Hermes okuma yollarına
+semantik kabul kapısı henüz yok. Yeni artifact API'nin eski UI/sohbet ajanı okuma yollarına
 ürün entegrasyonu ve eski Qdrant noktalarının temizliği bu kabulün dışında.
 
 `deploy/verify_live_outputs.py` ve iki kaynaklı kabul yazım scripti yalnız sunucuda
@@ -158,7 +158,7 @@ engellidir. Mühürlü eski nesil değiştirilemez; yeni nesil gerekir.
 - `GET /v1/generations/{id}/artifacts/{kind}`: yalnız READY + güncel revizyon +
   aynı doğrulanmış revizyon eşleşirse çıktı döner. Aksi durumda `available=false`.
 - Yeni özet/rapor/katalog formatı immutable artifact API'sindedir. Eski claim,
-  report ve catalog_card tablolarına bağımsız kopya yazılmaz. Eski ön yüz/Hermes
+  report ve catalog_card tablolarına bağımsız kopya yazılmaz. Eski ön yüz/sohbet ajanı
   araçlarının yeni artifact API'sine ürün entegrasyonu bu yayında yapılmadı.
 - Teknik SUCCEEDED ile `analytical_status=NEEDS_REVIEW` ayrıdır. Rapor adımı artık
   yeni nesli mühürlemez. Başarısız regresyon, eksik kaynak ve kimlik kontrolü olan

@@ -36,7 +36,7 @@ Kaynak: `ai-analiz-okuma` ağacı (main kopyası, HEAD `f26e11d6`), salt okuma. 
 Kapsam dışı notu: **M10 İlk baskı** (`/ilk-baski`) menüde «Finans» alanındadır (`navModel.ts:265`), bu grubun
 menüsünde değil — Finans grubunun raporuna bırakıldı. Editör motoru `apps/editor` ayrı bölümde (sonda).
 
-**Bugünkü AI envanteri (özet, dosya:satır):** kitaba soru (`app.py:5811` → `editorial_books.py`, Hermes), redaksiyon
+**Bugünkü AI envanteri (özet, dosya:satır):** kitaba soru (`app.py:5811` → `editorial_books.py`, sohbet ajanı), redaksiyon
 önerisi (`editorial_desk.py:502`), çeviri ham taslağı (`editorial_translation.py:1259`), çeviri kalite tahmini
 (`editorial_translation_qe.py`), 19 son okuma denetimi (`apps/editor/src/editor/proofing/*`), stüdyo üretimi (resim,
 profil, künye, pazarlama kiti, sesli okuma, efekt, çocuk gözüyle okuma, alt metin — `apps/editor/src/editor/production/*`),
@@ -57,7 +57,7 @@ süreci, M2 atama, M6 sözleşme, M8 serbest çalışan, M12 üretim, Kişiler, 
   (`src/canvas/editorial/EditorialHome.tsx:22-451`). Açılış verisi köprüde önceden ısıtılır (`editorial_home.py`).
 - **Kim:** Editör, yayın yönetmeni; günlük işi dosyaları ilerletmek, bekleyen kararı vermek, terminleri tutmak.
 - **Bugün AI:** Var — `AskBox` (`EditorialHome.tsx:433`) kitap içeriğine kanıtlı soru; `POST /api/v1/editorial/ask`
-  (`app.py:5807-5818`) → `editorial_books.ask` Hermes ajanına sorar, cevap sayfa numaralı, iç adlar ekranda silinir
+  (`app.py:5807-5818`) → `editorial_books.ask` sohbet ajanına sorar, cevap sayfa numaralı, iç adlar ekranda silinir
   (`AskBox.tsx:7-12`). Sohbet PDF'i `editorial_export.py`. Masadaki iş listeleri modelsiz.
 - **Beklenti:** (1) «Bugün neye bakmalıyım?» sorusuna süreç verisinden cevap (kurulda kaç dosya, hangi çeviri
   gecikiyor); (2) sabah tek paragraf durum özeti; (3) gecikme riski olan dosyanın önceden işaretlenmesi;
@@ -797,10 +797,10 @@ Ortak: köprü yalnız vekildir (`backend/semantic_bridge/editorial_studio*.py`)
 
 ---
 
-## Editör motoru (`apps/editor`, Hermes Book Director)
+## Editör motoru (`apps/editor`, sohbet ajanı (Book Director))
 
-- **Ne yapıyor:** Kanıta bağlı kitap analizi; ayrı yığın (TT GPU `/data/editor`): Hermes ajanı + 17 kitap skill'i
-  (`hermes/skills/book/*`), MCP araçları (belge, görüntü, bilgi, arama, kalite, iş), model geçidi (ihtiyaçta aç/kapat),
+- **Ne yapıyor:** Kanıta bağlı kitap analizi; ayrı yığın (TT GPU `/data/editor`): sohbet ajanı + 17 kitap skill'i
+  (`ajan becerileri/*`), MCP araçları (belge, görüntü, bilgi, arama, kalite, iş), model geçidi (ihtiyaçta aç/kapat),
   Temporal 15 adımlı iş akışı, Postgres kanıt defteri, Qdrant (`apps/editor/README.md:6-18`). Köprüye kart servisi ve
   OpenAI uyumlu API ile bağlanır (`editorial_cards.py`, `editorial_books.py:1-10`).
 - **Bugün AI (portalda görünen):** kitaba soru, tür belirleme (`book_type.py`), editöre soru kuyruğu (`review.py` →

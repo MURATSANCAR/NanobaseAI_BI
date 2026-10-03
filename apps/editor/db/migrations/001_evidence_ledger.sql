@@ -1,5 +1,5 @@
 -- Editor Evidence Ledger (NIHAI-KARAR.md §1, §5, §7).
--- Book facts live here, never in Hermes' memory. Quality rules that can be
+-- Book facts live here, never in a model's memory. Quality rules that can be
 -- enforced by the database are enforced here, not left to prompts.
 
 CREATE SCHEMA IF NOT EXISTS ed;

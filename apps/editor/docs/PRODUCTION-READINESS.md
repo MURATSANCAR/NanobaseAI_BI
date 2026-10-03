@@ -15,7 +15,7 @@ Salt okunur ön denetimde altı kitabın dördünde kaynakta bulunmayan ad/etike
 - **Son tam analiz FAILED:** `0439924a`, nesil `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`, iş `2cc4bd08-67cf-424a-af67-4f686ea6b8a3`, adım 13/15. Hızlı tarama 32/32, derin tarama 29/29 tamamlandı. 37 görsel figür belirsiz. Tarama tamamlanması kimlik/kitap kabulü değildir.
 - **Önceki GPU sürümü `f935b9d9` / v9:** rev3477, beş READY çıktı, teknik SUCCEEDED; analitik NEEDS_REVIEW, `accepted=false`. Gerçek API/PG/Qdrant 313/313 ve hedefli 5/5 kontrol geçti. Aynı sürümde yeniden çağrı `ALREADY_CURRENT`, ek model üretimi yok. Önceki `f1cc4614` sayfa rolü yazım/okuma düzeltmesi 2/2 geçti. [Kurtarma kaydı](RECOVERY-2026-09-21.md).
 - Genel analiz ve yeniden üretim işçileri kapalı. Kontrollü kabul için servislerin açılması genel taramaların açılması anlamına gelmez. Bakım anahtarının önceki ölçümleri güncel durum yerine kullanılamaz.
-- CPU portalın konuşma bağlamı `474cb2d9`; bakım hatasını cevap saymayı engelleyen düzeltme `40b19439`. `finish_reason=stop` dışındaki Hermes sonuçları kitap cevabı olarak yayımlanmaz.
+- CPU portalın konuşma bağlamı `474cb2d9`; bakım hatasını cevap saymayı engelleyen düzeltme `40b19439`. `finish_reason=stop` dışındaki sohbet ajanı sonuçları kitap cevabı olarak yayımlanmaz.
 - GPU yönetim tüneli **kurulu ve doğrulandı**: CPU loopback `18891` → GPU SSH. Normal VPN yolu kopuk olsa da bu yönetim yolu çalışıyor; mevcut anahtar ve host doğrulaması korunur.
 
 ## Gerçek kanıtlar ve sınırları
@@ -24,7 +24,7 @@ Salt okunur ön denetimde altı kitabın dördünde kaynakta bulunmayan ad/etike
 |---|---|---|
 | Orijinal PDF geometri/künye kontrolü | [45/45 geçti](evidence/2026-09-21-pdf-layout.json) | Bütün kaynak/rol/kimlik doğruluğu değildir |
 | Yedi sohbet aracı, gerçek MCP/API–DB karşılaştırması | [329/329 geçti](evidence/2026-09-21-resumed-chat-tools.json) | Araç/veri sözleşmesi; bütün kitap semantiği değildir |
-| Gerçek Hermes sohbeti | [10 cevap tamamlandı](evidence/2026-09-21-resumed-chat-ten.jsonl) | Hepsi içerik açısından kabul edilmiş değil; özet kapsamı eksik |
+| Gerçek sohbet ajanıyla sohbet | [10 cevap tamamlandı](evidence/2026-09-21-resumed-chat-ten.jsonl) | Hepsi içerik açısından kabul edilmiş değil; özet kapsamı eksik |
 | Portal bakım hatası | [Hata durumu, cevap null](evidence/2026-09-21-portal-maintenance-rejection.json) | Hata ayırımı; kitap doğruluğu değildir |
 | V9 güncel çıktı tutarlılığı | [313/313 API/PG/Qdrant](evidence/2026-09-21-repair-v9-live-outputs.json), [5/5 hedefli kontrol](evidence/2026-09-21-repair-v9-api.json) | Rev3477, beş READY; tam kitap semantik kabulü değil |
 | Worker SIGKILL → kendiliğinden devam | [9 OCR activity attempt 2](evidence/2026-09-21-new-generation-crash.json), yaklaşık 59 sn | Aynı iş/nesilde otomatik devam geçti; tam koşu sonradan FAILED |

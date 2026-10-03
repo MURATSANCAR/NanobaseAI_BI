@@ -2,7 +2,7 @@
 
 **Üretime hazır değil.** Bu belgedeki 37/37, 36/59 kimlik ve rev3009 sonuçları önceki `1600e738-621b-434f-8d9c-0c0645b42fb2` nesline aittir. Yeni `0439924a` nesli `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`, 32/32 hızlı ve 29/29 derin taramayı tamamladı; 37 görsel figür belirsiz kaldı ve iş 13/15'te FAILED oldu. `f1cc4614` sayfa rolü yazım/okuma onarımı 2/2 geçti; V8 teknik READY özetlerinin olay örgüsü kapsamı FAIL. Son kurulu v9 `f935b9d9`, rev3477 için 5 READY ve 313/313 + 5/5 teknik kabul aldı. Kimliklerin tam kabulü açık; alias regresyonu 18/19, ilk 5–7/son 28–32 anlatı eksikleri ve 37 görsel belirsizlik sürüyor. Analitik NEEDS_REVIEW, accepted=false. [Güncel kurtarma kaydı](RECOVERY-2026-09-21.md).
 
-Önceki kabulün kapanışında bakım açık, genel worker/rebuild, Hermes/MCP/gateway ve Editor modelleri kapalıydı; GPU 1 0 MiB ölçüldü. Bu tarihsel ölçüm güncel çalışma durumu değildir. Genel taramalar kapalı kalır; BI GPU 0'a dokunulmadı.
+Önceki kabulün kapanışında bakım açık, genel worker/rebuild, sohbet ajanı/MCP/gateway ve Editor modelleri kapalıydı; GPU 1 0 MiB ölçüldü. Bu tarihsel ölçüm güncel çalışma durumu değildir. Genel taramalar kapalı kalır; BI GPU 0'a dokunulmadı.
 
 ## Düzeltilenler
 
@@ -23,19 +23,19 @@ Ortam: tt-gpu, gerçek Editor PostgreSQL + kontrol API'si + Qdrant ve orijinal P
 - Görsel anmalar **36/59 RESOLVED**, **23/59 UNCERTAIN**. Bu iki hedef figürün başarısı kitabın tüm kimliklerinin kabulü değildir.
 - İlk tam job özet referans hatasında **FAILED** kaldı. Tarama tekrarlanmadan yeni çıktı koduyla gerçek yeniden üretim **SUCCEEDED**, bilgi revizyonu **3009**, beş çıktı READY. Başarısız job geçmişi değiştirilmedi.
 - Son yayında gerçek API/DB/Qdrant çıktı tutarlılığı **371/371** geçti. Bu sayılar kaynak/kimlik semantiğinin tam kabulü değildir. Analitik durum **NEEDS_REVIEW**, `accepted=false`.
-- İlk üretim 13:45 UTC'de başladı; bakım 14:55 UTC'de geri açıldı. Bu yaklaşık 70 dakika; model geçişi, denetim, Hermes çakışması ve kod düzeltmesi/yeniden üretimi içerir, temiz performans benchmarkı değildir. İlk aktör geçişi 62 olay × 16 karakter için 992 kısa çağrı yaptı; maliyet ayrıca ele alınmalı.
+- İlk üretim 13:45 UTC'de başladı; bakım 14:55 UTC'de geri açıldı. Bu yaklaşık 70 dakika; model geçişi, denetim, sohbet ajanı çakışması ve kod düzeltmesi/yeniden üretimi içerir, temiz performans benchmarkı değildir. İlk aktör geçişi 62 olay × 16 karakter için 992 kısa çağrı yaptı; maliyet ayrıca ele alınmalı.
 
 ## Önceki nesil kabulünde kalanlar
 
 1. Kaynak: 32 sayfa kapsamda, 30'u metin okunabilir. 2/3/18/24/26. sayfalarda metin/OCR uyuşmazlığı; 4/10 görsel-only değerlendirmesi ve 32 sayfanın rol onayı açık. Ham kaynaklar korunuyor, editör onayı uydurulmadı.
 2. Kimlik: 23 görsel anma belirsiz; tüm karakterlerin bağımsız doğruluğu kabul edilmedi. İki TEXT anmasında doğrulanmış metin kanıtı yok; bunlar metinsel kimlik çözümüne alınmadı.
-3. Hermes: gerçek pending sohbet son neslin hazır olmadığını, çalışan işi doğru bildirdi; eski özet sunmadı/yeni iş önermedi. Ancak servis günlüklerinde spillover dosyasına erişemeyen tekrarlı araç çağrıları ve başka bekleyen oturumlar var. Döngünün tek pending isteğe aidiyeti kanıtlanmadı. Servis durduruldu. Hazır çıktı üzerinden tam sohbet ve oturum yaşam döngüsü **DOĞRULANAMADI**; önce araç erişimi/oturum izolasyonu çözülmeli.
+3. sohbet ajanı: gerçek pending sohbet son neslin hazır olmadığını, çalışan işi doğru bildirdi; eski özet sunmadı/yeni iş önermedi. Ancak servis günlüklerinde spillover dosyasına erişemeyen tekrarlı araç çağrıları ve başka bekleyen oturumlar var. Döngünün tek pending isteğe aidiyeti kanıtlanmadı. Servis durduruldu. Hazır çıktı üzerinden tam sohbet ve oturum yaşam döngüsü **DOĞRULANAMADI**; önce araç erişimi/oturum izolasyonu çözülmeli.
 4. Tam yeni analiz neslinin baştan sona tek sürümle SUCCEEDED olması henüz yok: bu kabul, başarısız üretim sonrasında gerçek çıktının kurtarılmasını kanıtlar.
 
-Hermes için yukarıdaki durdurulmuş oturum gözlemi tarihseldir. Sonraki yedi araçlı MCP kontrolleri, portal yaşam döngüsü ve sohbet yeniden koşuları [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) içinde kayıtlıdır; bunlar tam kitap kabulü değildir.
+sohbet ajanı için yukarıdaki durdurulmuş oturum gözlemi tarihseldir. Sonraki yedi araçlı MCP kontrolleri, portal yaşam döngüsü ve sohbet yeniden koşuları [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) içinde kayıtlıdır; bunlar tam kitap kabulü değildir.
 
 ## Kanıt
 
-[Depodaki kabul kaydı](evidence/2026-09-21-identity-coverage.json). Sunucu kanıtları `/data/editor/backups/20260921-identity/`: `before-new-generation.dump`, `identity-final.json`, `visual-reference.json`, `visual-page23-final.json`, `outputs-final.json`, `source-final.json`, `runtime-final.json`, `hermes-pending-final.json`, `hermes-background-loop.log`. Yeniden çalıştırılabilir sunucu kontrol scriptleri `deploy/verify_identity_coverage.py`, `deploy/verify_live_outputs.py`, `deploy/verify_hermes_pending.py`.
+[Depodaki kabul kaydı](evidence/2026-09-21-identity-coverage.json). Sunucu kanıtları `/data/editor/backups/20260921-identity/`: `before-new-generation.dump`, `identity-final.json`, `visual-reference.json`, `visual-page23-final.json`, `outputs-final.json`, `source-final.json`, `runtime-final.json`, `ajan-pending-final.json`, `ajan-background-loop.log`. Yeniden çalıştırılabilir sunucu kontrol scriptleri `deploy/verify_identity_coverage.py`, `deploy/verify_live_outputs.py`, `deploy/verify_ajan_pending.py (silindi)`.
 
 Kod yerel main'de. GitHub push bu oturumda HTTPS kimliği olmadığı için başarısız; origin yayını tamamlanmış sayılmıyor.

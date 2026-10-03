@@ -10,7 +10,7 @@ En yeni nesil seçilir; eski mühürlü nesil yeni neslin önüne geçmez. Karak
 
 Kitap araması güncel kartları reranker ile sıralar; tarihsel katalog Qdrant metinlerini kullanmaz. Modelden sonra nesil/build anahtarı tekrar kontrol edilir. Yaş filtresinde bilinmeyen yaş uygun kabul edilmez. Kitap içi aramada boş sonuç yolu da sorgu sonrasında güncellik kontrolünden geçer.
 
-Bu değişiklik model doğruluğu, tam kitap analitik kabulü, Hermes sohbeti veya mobil ekran kabulü iddiası değildir. Kapsam ve kanıtlar aşağıdadır.
+Bu değişiklik model doğruluğu, tam kitap analitik kabulü, sohbet ajanıyla sohbet veya mobil ekran kabulü iddiası değildir. Kapsam ve kanıtlar aşağıdadır.
 
 ## Son yayın ve gerçek kabul
 
@@ -29,7 +29,7 @@ Kanıt: [özet JSON](evidence/2026-09-21-current-reads.json); tam özel cevaplar
 ## Açık kalan sınırlar
 
 - Bu koşuda yeni bir düzeltme yazılmadı veya eşzamanlı düzeltme yarışı üretilmedi. Önceki döngü kabulü korunuyor; bu koşu gerçek mevcut reddedilmiş/tarihsel kayıtların kullanıcı okumalarından dışlandığını doğrular.
-- Hermes'in MCP araçları sınandı; doğal dil sohbet zinciri ve mobil tarayıcı akışı bu kabulün dışında. Kart API biçimi korundu.
+- sohbet ajanının MCP araçları sınandı; doğal dil sohbet zinciri ve mobil tarayıcı akışı bu kabulün dışında. Kart API biçimi korundu.
 - Analitik kabul hâlâ BLOCKED: kaynak/sayfa türü, karakter kimliği kapsamı ve açık incelemeler ayrı iş. Son kodla sıfırdan tam kitap ve çeşitli gerçek kitaplarda analitik regresyon yapılmadı.
 - Güncel katalog bütün hazır kartları reranker ile sıralar; bu altı kitaplı kurulumda gerçek sorgu geçti. Büyük katalog yükü/ölçek kabulü yok; eski Qdrant katalog noktaları silinmedi ve okunmaz.
 - GitHub HTTPS kimliği yok; `git push origin main` başarısız. Kod yerel main ve sunucuda; kimlik sağlanınca kalan komut `git push origin main`.

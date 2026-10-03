@@ -2336,19 +2336,19 @@
     "complete_book": false,
     "semantic_acceptance": false
   },
-  "hermes": {
+  "ajan": {
     "pending_response": "Hazır değil, net olarak bildiriyorum.\n\n\"Dünyanın En Korkak Hayvanı\" için en son analiz nesli mevcut ama güncel rapor taslağı henüz oluşmamış durumda (mevcut neslin raporu doğrulanmamış). Yani defterde bu kitap için kaynaklı bir özet gösteremiyorum; eski nesilden veya genel bilgiden tamamlamıyorum.\n\nMevcut işin durumu:\n- İş hâlâ çalışıyor (RUNNING), 15 adımlık sürecin 7. adımında: \"Karakter ve olay adayları\".\n- Analiz bugün 13:45 UTC'de başlatılmış.\n- Şu an için açık editör kalemi yok, hata raporlanmamış.\n\nİş kendi kendine ilerliyor; çalışan bir işi yeniden başlatmayı önermem. Özet ve rapor, iş tamamlandıktan sonra otomatik olarak kullanılabilir hale gelecek. Dilerseniz daha sonra tekrar kontrol edebilirim.",
     "elapsed_seconds": 94.70589447021484,
     "full_chat_acceptance": "NOT_ACCEPTED",
     "blocker": "Service logs show inaccessible spillover file retries and other waiting sessions; attribution to the pending request not established. Service stopped.",
-    "log": "/data/editor/backups/20260921-identity/hermes-background-loop.log"
+    "log": "/data/editor/backups/20260921-identity/ajan-background-loop.log"
   },
   "runtime": {
     "runtime": {
       "control": {
         "singleton": true,
         "maintenance": true,
-        "reason": "Controlled identity acceptance complete; source/identity gaps and Hermes tool loop remain",
+        "reason": "Controlled identity acceptance complete; source/identity gaps and chat agent tool loop remain",
         "updated_at": "2026-09-21 14:55:28.140545+00:00"
       },
       "jobs": [

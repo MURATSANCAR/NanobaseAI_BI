@@ -1,5 +1,5 @@
 {
-  "environment": "nanobase-cm real portal + Hermes GPU relay + PostgreSQL",
+  "environment": "nanobase-cm real portal + chat agent GPU relay + PostgreSQL",
   "revision": "474cb2d9",
   "api": "https://portal.nanobase.ai/timas/api/v1/editorial/ask",
   "checks": [

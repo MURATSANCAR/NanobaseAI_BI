@@ -7,7 +7,7 @@
 > **2026-10-03 (kullanıcı kararı):** aşağıda anlatılan sohbet ajanı, becerileri ve MCP araç katmanı kaldırıldı;
 > bu bölümler artık geçerli değildir. Ayrıntı: `docs/UYGULAMA-NOTLARI.md` → «Sohbet ajanı ve MCP kaldırıldı».
 
-Hermes, kitabı analiz eden model olmayacak. Hermes:
+sohbet ajanı, kitabı analiz eden model olmayacak. sohbet ajanı:
 
 - Kullanıcıyla konuşacak
 - Analiz planını oluşturacak
@@ -18,15 +18,15 @@ Hermes, kitabı analiz eden model olmayacak. Hermes:
 - Kanıt ve güven kontrolü yaptıracak
 - Editör kuyruğuna gönderecek
 
-Kitap gerçekleri Hermes'in hafızasında değil, PostgreSQL ve Evidence Ledger'da tutulacak.
+Kitap gerçekleri sohbet ajanının hafızasında değil, PostgreSQL ve Evidence Ledger'da tutulacak.
 
-Hermes'in özel model endpoint'i, MCP, skill, alt ajan, kalıcı hafıza ve zamanlanmış görev desteği bu role uygun. Hermes Agent · Hermes araçları
+sohbet ajanının özel model endpoint'i, MCP, skill, alt ajan, kalıcı hafıza ve zamanlanmış görev desteği bu role uygun. sohbet ajanı Agent · sohbet ajanı araçları
 
-## 1. Hermes tarafında kullanılacak ana yapı
+## 1. sohbet ajanı tarafında kullanılacak ana yapı
 
-Hermes Agent
+sohbet ajanı Agent
 
-Hermes üzerinde şu ana persona bulunur:
+sohbet ajanı üzerinde şu ana persona bulunur:
 
 **Book Director**
 
@@ -36,7 +36,7 @@ Hermes üzerinde şu ana persona bulunur:
 > Belirsiz sonuçları kesin gerçek olarak yazma.
 > Çelişkileri editör incelemesine gönder.
 
-Hermes'in kendi hafızası yalnızca şunları tutar:
+sohbet ajanının kendi hafızası yalnızca şunları tutar:
 
 - Kullanıcı tercihleri
 - Yayıncı değerlendirme kuralları
@@ -45,14 +45,14 @@ Hermes'in kendi hafızası yalnızca şunları tutar:
 - Proje ayarları
 - Editörün onayladığı çalışma biçimi
 
-Karakter, olay veya duygu bilgileri Hermes hafızasına yazılmaz. Bunlar PostgreSQL'de tutulur.
+Karakter, olay veya duygu bilgileri sohbet ajanı hafızasına yazılmaz. Bunlar PostgreSQL'de tutulur.
 
 ## 2. Model gateway
 
-Hermes doğrudan model isimlerini görmemeli. Arada yerel bir Model Gateway olmalı:
+sohbet ajanı doğrudan model isimlerini görmemeli. Arada yerel bir Model Gateway olmalı:
 
 ```
-Hermes
+sohbet ajanı
    ↓
 Local Model Gateway
    ↓
@@ -85,9 +85,9 @@ Qwen3-VL-32B-Thinking, 256K bağlam, uzun belge, görsel akış ve genişletilmi
 
 Qwen3-Embedding-8B, 100'den fazla dil, 32K bağlam ve 4096 boyuta kadar embedding destekliyor. Qwen3-Reranker-8B de 100'den fazla dil ve 32K bağlamla kanıt seçimi için kullanılabilir. Embedding · Reranker
 
-## 3. Hermes Skills
+## 3. sohbet ajanı Skills
 
-Hermes'e serbest biçimde "kitabı analiz et" dedirtmek yerine kontrollü skill'ler tanımlanmalı.
+sohbet ajanına serbest biçimde "kitabı analiz et" dedirtmek yerine kontrollü skill'ler tanımlanmalı.
 
 ### Temel skill'ler
 
@@ -118,9 +118,9 @@ Her skill şu bilgileri içermeli:
 - Editöre gönderme koşulları
 - Kanıt zorunluluğu
 
-## 4. Hermes MCP sunucuları
+## 4. sohbet ajanı MCP sunucuları
 
-Hermes'e yalnızca kontrollü ve yüksek seviyeli araçlar açılmalı.
+sohbet ajanına yalnızca kontrollü ve yüksek seviyeli araçlar açılmalı.
 
 **book_document_mcp**
 - inspect_book()
@@ -161,7 +161,7 @@ Hermes'e yalnızca kontrollü ve yüksek seviyeli araçlar açılmalı.
 - run_regression_suite()
 - create_analysis_report()
 
-Hermes'e doğrudan şu yetkiler verilmemeli:
+sohbet ajanına doğrudan şu yetkiler verilmemeli:
 
 - Serbest SQL
 - Sınırsız dosya sistemi
@@ -176,7 +176,7 @@ Kullanıcı:
 
 > "Bu kitabı tam analiz et."
 
-Hermes şu sırayla çalışır:
+sohbet ajanı şu sırayla çalışır:
 
 1. Kitap ve içerik sürümünü oluşturur.
 2. Sayfa manifestini çıkarır.
@@ -194,12 +194,12 @@ Hermes şu sırayla çalışır:
 14. Çelişkileri NEEDS_REVIEW olarak editör kuyruğuna gönderir.
 15. Rapor ve atıflı soru-cevap ekranını hazırlar.
 
-Uzun süren bu işlem Hermes'in tek sohbet turunda tutulmamalı. Hermes job_id oluşturmalı; kalıcı iş akışı ve retry sistemi ayrı workflow servisinde çalışmalıdır.
+Uzun süren bu işlem sohbet ajanının tek sohbet turunda tutulmamalı. sohbet ajanı job_id oluşturmalı; kalıcı iş akışı ve retry sistemi ayrı workflow servisinde çalışmalıdır.
 
 En kaliteli yapı:
 
 ```
-Hermes → MCP → Temporal Workflow
+sohbet ajanı → MCP → Temporal Workflow
                  ↓
        Python analiz işçileri
                  ↓
@@ -261,10 +261,10 @@ Zorunlu kurallar:
 - Model, prompt, sürüm ve kullanılan kaynaklar kaydedilir.
 - Her analiz sonunda regression test çalışır.
 
-## Nihai Hermes mimarisi
+## Nihai sohbet ajanı mimarisi
 
 ```
-Hermes Book Director
+sohbet ajanı (Book Director)
  ├── Book Skills
  ├── Critic Agent
  ├── Editor Review Agent
@@ -276,7 +276,7 @@ Hermes Book Director
  └── Local PDF/Image Storage
 ```
 
-Bu tasarımda Hermes yalnızca sohbet eden bir agent olmaz. Kitap alma, görsel analiz, karakter sürekliliği, evren takibi, yaş grubu değerlendirmesi ve yayıncı karar desteğini yöneten kanıta bağlı bir kitap istihbarat yöneticisi olur.
+Bu tasarımda sohbet ajanı yalnızca sohbet eden bir agent olmaz. Kitap alma, görsel analiz, karakter sürekliliği, evren takibi, yaş grubu değerlendirmesi ve yayıncı karar desteğini yöneten kanıta bağlı bir kitap istihbarat yöneticisi olur.
 
 ## Çalışma kuralı (aynı mesajdan)
 

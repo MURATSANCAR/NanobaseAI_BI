@@ -2865,7 +2865,7 @@
   "limits": [
     "No full-book semantic acceptance",
     "No new full analysis generation",
-    "No Hermes natural-language chat or mobile browser acceptance",
+    "No chat agent natural-language chat or mobile browser acceptance",
     "No concurrent correction injected in this read-only run; legacy and rejected real records checked",
     "Historical output producer remains 226d05ac; current read runtime 7eda4ec1"
   ],
