@@ -794,6 +794,45 @@ Dal `zeki-q49-kapsam` (main'e koordinatör taşır). Soruya özel kural/eşleme/
 - **Neden:** kullanıcı «çok yer kaplıyor, kapatması zor» dedi. Kutu ilk girişte 600 px genişlik, ~560 px yükseklikte bütün metni (maddeler, veri, güncelleme, arka plan işleri, yapılabilecekler) açıp ekranın üstünü 15 sn örtüyordu; Esc yalnız odak kutudayken çalışıyor, dışarı tıklamak kapatmıyordu.
 - **Şimdi:** kutu «Bu ekran» düğmesinin altında sağa yaslı 380 px açılır (köken sağ üst). Kendiliğinden açılışta yalnız başlık + özet + «Nasıl çalışır →» (8 sn). Elle açılışta özet + maddeler; veri/güncelleme/işler/yapılabilecekler «Ayrıntılar» altında katlı. Büyük başlık etiketi ve alt not kalktı; kapat düğmesi 36 px. Dışarı tıklama ve Esc her yerden kapatır.
 - Dosyalar: `src/canvas/screenInfo/ScreenInfo.tsx`, `screenInfo.css`, `src/canvas/stitch/Shell.tsx` (yorum). İçerik ve test değişmedi (5/5).
+## 2026-09-30 — K13 ay kolonu açılımı derleyicide (dal `zeki-ay-acilimi`, main'e taşınmadı, katalog yazılmadı)
+
+- **Sorun (tam kapı 09-29, B072/Q65):** 12 ay kolonunun satıra açılması modele kalıyordu; aynı kod ve istemle 68 / 24.888 / 30.334 /
+  189.649 satır. Soruya özel hiçbir şey yazılmadı: genel «ay kolonu grubu» beyanı + derleyici açılımı + kapı denetimi.
+- **Veri (CRM .28, doğrudan, salt okuma):** `new_satishedefleriBase` statecode 0 = 334.982 kayıt; 9.428'i hiç doldurulmamış (12 ay
+  ve toplam NULL), kalanında hiçbir ay NULL değil; en az bir ayı > 0 olan 181.464 kayıt (= `new_ToplamHedef > 0`, toplam = Σ ay her
+  kayıtta); bunların boş ayı 189.649 hücre, **hepsi 0**. Karar: girilmemiş ay = `ISNULL(ay_degeri, 0) = 0` (`null_or_zero`) —
+  yalnız NULL okunursa cevap 0 satır olur. Aynı ölçümle açılım + bu koşul = 189.649, referansla birebir.
+- **Mekanizma:** `runtime/month_groups.py` — tanıma (ay adı ya da dönem sözlü 1–12 soneki, 12 sayısal kolon; DOCTYPE1…25,
+  GROUPS1…99 gibi sıra listeleri elenir), beyan `extra.month_columns` + `month_missing` → profil (`apply`, açılışta), istemde tablo
+  altına «AY AÇILIMI» notu, model sanal `ay / ay_adi / ay_degeri` yazar → derleyici tablonun hemen ardına `CROSS APPLY (VALUES
+  (1, N'Ocak', h.[new_ocak]) … ) AS nb_ay_h(ay, ay_adi, ay_degeri)` ekler (model SQL'i, onarım, plan parçaları; onarımda
+  geri katlanır). `ay`/`ay_adi` biri GROUP BY'daysa öbürü eklenir (ilk tam kapıda `GROUP BY ay_adi ORDER BY ay` 8127 ile düştü).
+  Eleştirmen `MONTH_UNPIVOT` (block): beyanlı grubu VALUES / UNION / CASE ile elle açıp 12'den az ay açan ya da yanlış eşleyen
+  okuma onarıma gider. Yan köprü denemesi için `SEMANTIC_MONTH_GROUPS_FILE` (katalog yazmadan bellekte).
+- **Katalog betiği** `scripts/catalog-authoring/2026-09-29-ay-kolonu-gruplari.py` kuru koşu (test sunucusu, canlı katalog, yazmadı):
+  7 aday; yazılacak 2 — CRM satış hedefi (`satış hedefi` ENTITY, `null_or_zero`) ve CRM AccountBase ay kolonları (`potansiyel
+  müşteri` ENTITY; dolu 649 kayıtta 7 NULL + 43 sıfır ay → `null_only`); yeri olmayan 5 (sertifikalı kavram yok): Logo
+  `AYLARA_GORE_CARI_SATIS`, `PLASIYER_AYLARA_GORE_TAHSILAT` («1»…«12»), `KARLILIK_ANALIZI` (A_Ocak…), `EOS_VADELI_TAHSILAT_018`
+  («OCAK 2018»…), CRM `new_satishedefleri` görünümü; 324 grup elendi (hepsi sıra listesi, çoğu yıl kopyası tekrarı). `--apply` koordinatörde.
+- **Doğrulama (test sunucusu, yan köprü 8830, beyan bellekte):** hedefli `--only Q65,Q69 --repeat 3`: Q65 **3/3 SAĞLAM** (12 satır
+  ay başına sayım, iki SQL biçimi aynı sonuç); Q69 0/3 — 10.036 satır, üç denemede aynı, ama cevapta barkod anahtarı yok (altın
+  lookup barkod ister; ay açılımıyla ilgisiz, iki kaynaklı plan). İkinci hedefli koşuda Q65 3/3 ret: model metin yerine görsel
+  döndü (aşağıdaki ortam bulgusu); aynı anda beyansız köprüde 1/1 cevap, doğrudan istem denemesinde notlu 8/9 · notsuz 3/3 SQL —
+  görsel yanıt nottan bağımsız, başka oturumun köprüsünde de var.
+- **Tam kapı A/B (aynı anda, aynı kod; 8830 beyanlı, 8831 beyansız = main davranışı), `--repeat 3`:** 8830 43 SAĞLAM · 10 BOZUK · 8
+  KARARSIZ · 8 VERİ; 8831 36 · 9 · 13 · 11. **01:53'ten sonra Logo .25 ve CRM .28 ikisi de erişilemez** («Adaptive Server is
+  unavailable», VPN) — Q63–Q71 iki tarafta da «veri kaynağına ulaşılamıyor», Q65/Q69 bu koşuda DOĞRULANAMADI. Q2–Q62 arasında dalın
+  beyansızdan kötü olduğu dört soru (Q3, Q6, Q17, Q54) model redleri/SQL hatası: Q6/Q17/Q54 redleri görsel yanıt, Q3 Logo yaşlandırma
+  SQL'i (`kalan`, 8127) — hiçbirinin SQL'inde ay grubu yok, `MONTH_UNPIVOT` bulgusu tüm koşuda 0. Dalın SAĞLAM→BOZUK geçişi yok;
+  temel çizgiye (53–54) göre düşüş iki taraf için ortak (görsel yanıt + kopan veri kaynağı).
+- **Ortam bulgusu:** 09-29 22:59'dan beri model uç noktası (18885) bazı çağrılara metin yerine `[{'type': 'image_url', … base64
+  PNG}]` dönüyor — bu dalın köprüsünde (8830) ve başka bir oturumun köprüsünde (8823) aynı anda, tablo seçicide de. İlk tam kapı
+  (43 SAĞLAM / 7 BOZUK / 17 KARARSIZ) bu yüzden kirli: kararsızların çoğu «model SQL üretmedi» redleri. Kıyas için aynı kodun
+  beyansız kopyası (8831) aynı anda koşuldu.
+- **Testler (test sunucusu):** `semantic_layer/tests` 4.716 geçti · 9 atlandı · 0 hata (yeni `test_month_groups.py` 17 test).
+  Kalite kapısı: dal 19 kayıp, **origin/main aynı koşulda 20** (dalın kayıpları main'in alt kümesi; fark «Ağustos 2026 net satış»
+  main'de). Main'in bilinen 6 kaybı bugün 20'ye çıkmış — ortam/katalog kayması, ayrı iş.
+
 ## 2026-09-29 (22:15) — Müşteri VM'ine `411dd7be9`: hız 4, hazır cevap diski, Zeki kapı; katalog VM'de de yazıldı
 
 - **Ön denetim:** VM'deki son kurulum `1c615b80` ⊂ `411dd7be9` (geriye sarma yok); çakışma işareti 0; arşiv test sunucusunda açılıp `semantic_bridge.app` yüklendi.
