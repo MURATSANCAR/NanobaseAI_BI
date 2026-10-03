@@ -450,7 +450,14 @@ def store(gid: str, rec: dict) -> None:
 
 async def run(gid: str) -> dict:
     """İş akışının adımı: öneri bir kez (OK satırı varsa yeniden çağrılmaz); hata FAILED satırı olarak kalır ve
-    yükselir — iş akışı onu failures'a yazar, okumayı düşürmez."""
+    yükselir — iş akışı onu failures'a yazar, okumayı düşürmez.
+
+    Kitap olmayan dosyaya (katalog, bülten, broşür, yalnız kapak: book_type.NOT_A_BOOK) öneri yapılmaz, model
+    çağrılmaz, satır yazılmaz."""
+    from .book_type import NOT_A_BOOK
+    prof = await asyncio.to_thread(db.one, "SELECT form FROM book_profile WHERE generation_id=%s", gid)
+    if prof and prof["form"] == NOT_A_BOOK:
+        return {"status": NOT_A_BOOK, "skipped": True}
     have = await asyncio.to_thread(db.one, "SELECT status FROM book_recommendation WHERE generation_id=%s", gid)
     if have and have["status"] == "OK":
         return {"status": "OK", "already": True}
@@ -476,6 +483,8 @@ def listing_extra(c, book_ids: list[str]) -> dict[str, dict]:
                 " evidence_pages")
     rows = c.execute(
         "SELECT DISTINCT ON (bv.book_id) bv.book_id, b.title, g.id AS generation_id, " + rec_cols + ","
+        " (SELECT jsonb_build_object('form', p.form, 'detail', p.form_detail->'not_a_book') FROM ed.book_profile p"
+        "   WHERE p.generation_id=g.id) AS profile,"
         " cr.isbn AS crm_isbn, cr.crm_title,"
         " cr.authors AS crm_authors,"
         " (SELECT coalesce(jsonb_agg(jsonb_build_object('s', m.subject, 'v', m.claim)), '[]') FROM ed.claim m"
@@ -498,8 +507,17 @@ def listing_extra(c, book_ids: list[str]) -> dict[str, dict]:
                 "reason": r["reason"], "evidence_pages": r["evidence_pages"] or []},
             "isbns": [x for x in [r["crm_isbn"], *[m["v"] for m in meta if m["s"] == "ISBN"]] if x],
             "titles": [x for x in [r["title"], r["crm_title"], *[m["v"] for m in meta if m["s"] == "TITLE"]] if x],
-            "authors": [*(r["crm_authors"] or []), *[m["v"] for m in meta if m["s"] == "AUTHOR"]]}
+            "authors": [*(r["crm_authors"] or []), *[m["v"] for m in meta if m["s"] == "AUTHOR"]],
+            "not_a_book": not_a_book_view(r.get("profile"))}
     return out
+
+
+def not_a_book_view(profile: dict | None) -> dict | None:
+    """Kitap Eczanesi satırının «kitap değil» alanı: {reason: FEW_PAGES | CATALOGUE | MODEL}; kitapsa None."""
+    from .book_type import NOT_A_BOOK
+    if not profile or profile.get("form") != NOT_A_BOOK:
+        return None
+    return {"reason": ((profile.get("detail") or {}).get("reason")) or "MODEL"}
 
 
 def suggestion_view(rec: dict | None) -> dict | None:
@@ -517,8 +535,11 @@ def attach(books: list[dict], extra: dict[str, dict], site: SiteIndex) -> list[d
         x = extra.get(b["id"]) or {"rec": None, "isbns": [], "titles": [b.get("title")], "authors": []}
         found = site_view(match(site, x["isbns"], [t for t in x["titles"] if t], x["authors"]))
         b["site"] = found
-        b["suggestion"] = suggestion_view(x["rec"])
-        b["review"] = compare(found, x["rec"])
+        nab = x.get("not_a_book")
+        b["not_a_book"] = nab
+        # kitap olmayan dosyaya öneri yok (eski bir okumadan kalan öneri de gösterilmez, gözden geçirilmez)
+        b["suggestion"] = None if nab else suggestion_view(x["rec"])
+        b["review"] = compare(found, None if nab else x["rec"])
     return books
 
 

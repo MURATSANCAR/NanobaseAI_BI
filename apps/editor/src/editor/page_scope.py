@@ -46,7 +46,8 @@ import time
 ROLE_OF = {"künye": "FRONT_MATTER", "iç kapak": "FRONT_MATTER", "yazar tanıtımı": "FRONT_MATTER",
            "içindekiler": "NON_STORY", "yayınevi tanıtımı": "NON_STORY", "ithaf": "NON_STORY",
            "epigraf": "NON_STORY", "teşekkür": "NON_STORY", "yayınevi notu": "NON_STORY",
-           "yazar notu": "NON_STORY", "etkinlik": "NON_STORY", "sözlük": "NON_STORY", "ek": "NON_STORY"}
+           "yazar notu": "NON_STORY", "etkinlik": "NON_STORY", "sözlük": "NON_STORY", "ek": "NON_STORY",
+           "arka kapak": "NON_STORY"}
 #: İthaf: baskıda kalır (print_plan onu basar), okumada kitabın olayı değildir. Metni ithafsa: kısa (≤ 40 sözcük) ve
 #: ithaf sözcüğü, «Ad'a/'e/'ya/'ye/'na/'ne,» ile açılıyor (Benim Adım Ekin s.1: «Ekin'e, ... sarıp
 #: sarmalayanlara...») ya da satırın HERHANGİ bir yerinde özel ad + yönelme eki bir öbeği bitiriyor («Bana masal
@@ -100,9 +101,42 @@ _QUOTE_OPEN = re.compile(r"^\s*[«“\"'‘„]")
 #: Okumanın önerisi olmayan sayfada ithaf/epigraf yalnız kitabın ilk %5'inde (en az 2 sayfa) ve gövdenin ilk uzun
 #: sayfasından (> 40 sözcük) önce aranır: resimli kitabın kısa gövde sayfası ithaf sayılmasın.
 FRONT_SHARE = 0.05
+#: Uç pencereler kitabın uzunluğuna göre (2026-10-03 arşiv pilotu: resimli kitapta ithaf s.3'te, yazar özgeçmişi s.4'te
+#: kaçtı): ön pencere en az 4 sayfa (ya da kitabın %5'i), arka pencere kısa kitapta (< 48 sayfa) son 2, uzunda son 3
+#: sayfa. Eski 2 sayfalık ön pencerenin dışında (3. sayfadan sonra) ithaf daha güçlü kanıt ister (`is_dedication`,
+#: `strict`): resimli kitabın kısa gövde sayfası («Mert'e annesi bir hediye aldı.») ithaf sayılmasın.
+FRONT_MIN_PAGES = 4
+OLD_FRONT_PAGES = 2
+BACK_PAGES_SHORT, BACK_PAGES_LONG, SHORT_BOOK = 2, 3, 48
 SHORT_WORDS = 40
 EPIGRAPH_WORDS = 60
 SOURCE = "auto"
+#: Yazar özgeçmişi (üçüncü şahıs biyografi): doğum/mezuniyet fiili + (kitabın yazarının adı ya da yazarlık sözü).
+#: Okumanın önerisi olmasa da ön/arka pencerede uygulanır. Biyografi türü kitapta (NARRATIVE_NONFICTION) gövde de bu
+#: kalıptadır: orada yazarın ADI şarttır (konusu olan kişinin doğumu yazarın özgeçmişi değildir); ad bilinmiyorsa
+#: kural uygulanmaz. Birinci şahıs («doğdum», «mezun oldum») anı gövdesidir, sayılmaz.
+_BIO_CORE = re.compile(r"\b(do[ğg]du|d[üu]nyaya geldi|mezun oldu|e[ğg]itimini\b.{0,80}\btamamlad[ıi]|"
+                       r"lisans (e[ğg]itimini|derecesini)|do[ğg]umlu|do[ğg]um (tarihi|y[ıi]l[ıi]|yeri))", re.I)
+_BIO_CAREER = re.compile(r"\byazar(d[ıi]r|[ıi]|l[ıi][ğg]a|l[ıi]k|l[ıi][ğg][ıi])\b|yazmaya ba[şs]la|yay[ıi]mlan(d[ıi]|an|m[ıi][şs])|"
+                         r"bas[ıi]ld[ıi]\b|eserler(i|inden)\b|[öo]d[üu]l(ü|[üu]n[üu]|ler|leri)\b|"
+                         r"yazar[ıi]n\b.{0,60}\bkitab|kitaplar[ıi] (var|bulunmaktad|yay[ıi]mlan)|"
+                         r"[çc]ocuklar i[çc]in yaz", re.I)
+_FIRST_PERSON_BIO = re.compile(r"\b(do[ğg]dum|mezun oldum|d[üu]nyaya geldim)\b", re.I)
+BIO_WORDS = 300
+#: Arka kapak tanıtım yazısı: pazarlama sözü şart, ve bir tanıtım sözü daha (ya da okumanın önerisi). Kurgu dışı
+#: kitabın «Sonuç» sayfası «bu kitapta…» diyebilir ama pazarlama dili taşımaz.
+_BLURB_MARKET = re.compile(r"s[üu]r[üu]kleyici|soluksuz|merakla okunacak|keyifle okunacak|unutulmaz bir|[öo]d[üu]ll[üu] "
+                           r"yazar|(yeni|son) (kitab[ıi]|roman[ıi]|hikâyesi|hikayesi)|\b\d{1,2}\s*\+\s*ya[şs]|"
+                           r"okurlar[ıi]n[ıi]?\b|okuyucular[ıi]n[ıi]?\b|t[üu]m (aile|ya[şs]lar)|ka[çc][ıi]r[ıi]lmayacak|"
+                           r"(?<![\w+])\d{1,2}\s?\+(?=\s|$|[\"“«])|\b[İIiı]lk gen[çc]\b",
+                           re.I)
+_BLURB_BOOK = re.compile(r"\bbu (kitap|roman|hikâye|hikaye|[öo]yk[üu]|eser)\w*|elinizdeki|\bisbn\b|barkod|"
+                         r"www\.|\.com\b|\bfiyat|\b([çc]izer|resimleyen|yazan|[çc]eviren)\s*:", re.I)
+BLURB_WORDS = 150
+#: Başlıksız yazar notu (uç sayfada okura seslenme ya da kitabın yazılışı)
+_AUTHOR_NOTE = re.compile(r"(sevgili|de[ğg]erli) (okur|okuyucu)\w*|bu (kitab|hikâye|hikaye|[öo]yk[üu]|roman)\w* "
+                          r"yaz(arken|d[ıi]m|d[ıi][ğg][ıi]m|maya)", re.I)
+NOTE_WORDS = 400
 #: kapsam dışı sayfayı çıktıdan düşüren rol kaynakları (editörün kararı + otomatik kural; okumanın
 #: `extract` önerisi değil)
 SCOPE_SOURCES = ("editor", SOURCE)
@@ -172,10 +206,19 @@ def apparatus_pages(pages: dict[int, list[str]], sections: list[dict] | None, la
     return out
 
 
+def edge_windows(last_page: int) -> tuple[int, int]:
+    """(ön pencerenin son sayfası, arka pencerenin ilk sayfası) — kitap uzunluğuna göre."""
+    front = max(FRONT_MIN_PAGES, math.ceil(last_page * FRONT_SHARE))
+    back = BACK_PAGES_SHORT if last_page < SHORT_BOOK else BACK_PAGES_LONG
+    return front, last_page - back + 1
+
+
 def classify(pages: dict[int, list[str]], suggested: set[int], last_page: int,
-             titles: list[str], names: list[str], sections: list[dict] | None = None) -> dict[int, tuple[str, str]]:
+             titles: list[str], names: list[str], sections: list[dict] | None = None,
+             form: str | None = None) -> dict[int, tuple[str, str]]:
     """{sayfa: (rol, neden)} — yalnız bütünüyle kitabın dışında kalan sayfalar (salt hesap, yazmaz).
-    `sections`: kitabın bölümleri (`chapters.for_generation`; yoksa yalnız sayfa başlığına bakılır)."""
+    `sections`: kitabın bölümleri (`chapters.for_generation`; yoksa yalnız sayfa başlığına bakılır).
+    `form`: kitabın türü (book_type; biyografi türünde yazar özgeçmişi kuralı yazarın adını şart koşar)."""
     from . import running_head
     from .production.manuscript import print_plan
     back = max(5, last_page // 20)
@@ -187,12 +230,15 @@ def classify(pages: dict[int, list[str]], suggested: set[int], last_page: int,
     front = max(10, last_page // 10)
     words = {p: len(" ".join(t).split()) for p, t in pages.items()}
     body = min((p for p, n in words.items() if n > SHORT_WORDS and p not in out), default=last_page + 1)
-    early = {p for p in pages if p <= max(2, math.ceil(last_page * FRONT_SHARE)) and p < body}
+    front_end, back_start = edge_windows(last_page)
+    old_front = max(OLD_FRONT_PAGES, math.ceil(last_page * FRONT_SHARE))
+    early = {p for p in pages if p <= front_end and p < body}
     for p in sorted(set(suggested) | early):
         ps = [t for t in pages.get(p, []) if t.strip() and not _PLACE_YEAR.match(t)]
         if p in out or p > front or not ps:
             continue
-        why = front_page_kind(ps, suggested=p in suggested, before_body=p < body)
+        why = front_page_kind(ps, suggested=p in suggested, before_body=p < body,
+                              strict=p > old_front and p not in suggested)
         if why:
             out[p] = (ROLE_OF[why], why)
     # Sayfa başlığı/altlığı ayıklanmış metin üstünde (yazar adı her sayfanın başında: «başlık» o değil)
@@ -212,7 +258,74 @@ def classify(pages: dict[int, list[str]], suggested: set[int], last_page: int,
     for p, why in apparatus_pages(clean, sections, last_page).items():
         if p not in out:
             out[p] = (ROLE_OF[why], why)
+    # Ön/arka pencerede okumanın önerisi olmasa da: yazar özgeçmişi, arka kapak tanıtımı, başlıksız yazar notu
+    biography = form == "NARRATIVE_NONFICTION"
+    for p in sorted(clean):
+        ps = [t for t in clean[p] if t.strip()]
+        if p in out or not ps or not (p <= front_end or p >= back_start):
+            continue
+        if is_author_bio(ps, names, need_name=biography):
+            out[p] = (ROLE_OF["yazar tanıtımı"], "yazar tanıtımı")
+        elif p >= back_start and is_back_cover(ps, suggested=p in suggested):
+            out[p] = (ROLE_OF["arka kapak"], "arka kapak")
+        elif is_author_note(ps):
+            out[p] = (ROLE_OF["yazar notu"], "yazar notu")
+    # Kitabın sonundan geriye: okumanın hikâye dışı dediği ve tanıtım gibi okunan art arda sayfalar (başka
+    # kitapların tanıtımı, karekod sayfasından önce de gelebilir); ilk böyle olmayan sayfada durulur.
+    for p in range(last_page, max(0, last_page - max(5, last_page // 20)), -1):
+        ps = [t for t in clean.get(p, []) if t.strip()]
+        if not ps or p in out:
+            continue
+        if p not in suggested or not (is_back_cover(ps, suggested=True) or foreign_title(ps, titles)):
+            break
+        out[p] = (ROLE_OF["arka kapak"], "arka kapak")
     return dict(sorted(out.items()))
+
+
+def _name_keys(names: list[str]) -> list[str]:
+    from .production.manuscript import _fold
+    return [n for n in (_fold(x) for part in names if part for x in re.split(r"[,;&]| ve ", part)) if len(n) >= 5]
+
+
+def is_author_bio(lines: list[str], names: list[str], *, need_name: bool = False) -> bool:
+    """Üçüncü şahıs yazar özgeçmişi mi: ≤ `BIO_WORDS` sözcük, doğum/mezuniyet fiili, birinci şahıs yok, ve kitabın
+    yazarının adı ya da (`need_name` değilse) yazarlık sözü («yazarın … kitabı», «eserleri», «ödülü», «yayımlandı»)."""
+    from .production.manuscript import _fold
+    text = " ".join(lines)
+    if len(text.split()) > BIO_WORDS or not _BIO_CORE.search(text) or _FIRST_PERSON_BIO.search(text):
+        return False
+    keys = _name_keys(names)
+    named = bool(keys) and any(k in _fold(text) for k in keys)
+    return named or (not need_name and bool(_BIO_CAREER.search(text)))
+
+
+def is_back_cover(lines: list[str], *, suggested: bool = False) -> bool:
+    """Arka kapak tanıtım yazısı mı: ≤ `BLURB_WORDS` sözcük, pazarlama sözü ve bir tanıtım sözü daha (ya da okumanın
+    önerisi). Yalnız arka pencerede sorulur."""
+    text = " ".join(lines)
+    if len(text.split()) > BLURB_WORDS:
+        return False
+    market = {m.group(0).casefold() for m in _BLURB_MARKET.finditer(text)}
+    book = {m.group(0).casefold() for m in _BLURB_BOOK.finditer(text)}
+    # okumanın önerisi varsa tanıtım sözü («Bu kitapta…», «Çizer:») de yeter
+    return (bool(market) and (len(market) + len(book) >= 2 or suggested)) or (suggested and bool(book))
+
+
+def foreign_title(lines: list[str], titles: list[str]) -> bool:
+    """Sayfa başka bir kitabın büyük harfli adıyla açılan kısa tanıtım mı (kitabın kendi adı değil; ≤ `BLURB_WORDS`
+    sözcük). Yalnız kitabın sonundaki, okumanın hikâye dışı dediği art arda sayfalarda sorulur."""
+    from .production.manuscript import _caps, _fold
+    head = lines[0].strip(" #*")
+    own = [f for f in (_fold(t) for t in titles if t) if len(f) >= 3]
+    return (_caps(head) and 2 <= len(head.split()) <= 10 and len(" ".join(lines).split()) <= BLURB_WORDS
+            and not any(t in _fold(head) or _fold(head) in t for t in own))
+
+
+def is_author_note(lines: list[str]) -> bool:
+    """Başlıksız yazar notu mu: uç sayfada ≤ `NOTE_WORDS` sözcük, okura seslenme («Sevgili okur») ya da kitabın
+    yazılışı («bu kitabı yazarken»). Başlıklı yazar notu `apparatus_pages`'te."""
+    text = " ".join(lines)
+    return len(text.split()) <= NOTE_WORDS and bool(_AUTHOR_NOTE.search(text))
 
 
 def is_acknowledgement(lines: list[str]) -> bool:
@@ -236,11 +349,26 @@ def is_publisher_note(lines: list[str]) -> bool:
     return prose and len(text.split()) <= 400 and bool(_PUBLISHER.search(text)) and bool(_EDITION.search(text))
 
 
-def is_dedication(lines: list[str]) -> bool:
-    """Kısa ön sayfanın metni ithaf mı (yer/yıl satırı çıkarılmış satırlar)."""
+_URL = re.compile(r"\S*(www\.|https?:|\.com|\.net|\.org)\S*", re.I)
+_URL_LINE = re.compile(r"^\s*\S*(www\.|https?:|\.com|\.net|\.org)\S*\s*$", re.I)
+#: bir-dört sözcüklü özel adla («Ad Soyad’a,») açılan satır
+_DATIVE_NAME_START = re.compile(r"^\W*(?:[A-ZÇĞİÖŞÜÂÎÛ][^\W\d_]*\s+){0,3}[A-ZÇĞİÖŞÜÂÎÛ][^\W\d_]*['’](?:y?[ae]|n[ae])\b")
+#: güçlü ithaf kanıtı: özel ad + yönelme eki satırı/paragrafı bitiriyor («… büyükannem Ad'a.»)
+_DATIVE_END = re.compile(r"(?<![^\W\d_])[A-ZÇĞİÖŞÜÂÎÛ][^\W\d_]*['’](?:y?[ae]|n[ae])\s*[,.;:!…]?\s*$", re.M)
+
+
+def is_dedication(lines: list[str], *, strict: bool = False) -> bool:
+    """Kısa ön sayfanın metni ithaf mı (yer/yıl satırı çıkarılmış satırlar). `strict` (eski 2 sayfalık ön pencerenin
+    dışı): ithaf sözü, teşekkür sözü ya da satırı bitiren «Ad'a» şart — satır başındaki «Ad'e,» yetmez."""
+    lines = [t for t in lines if not _URL_LINE.match(t)]
     text = "\n".join(lines)
     if not lines or len(text.split()) > SHORT_WORDS:
         return False
+    if strict:
+        # «Ad'a, … sevenlere ve … öğretmenlerine»: yönelme ekli adla açılan, cümle bitirmeyen öbek de ithaftır
+        bare = _URL.sub(" ", text)
+        return bool(_ITHAF.search(text) or _THANKS.search(text) or _DATIVE_END.search(bare)
+                    or (_DATIVE_NAME_START.match(lines[0]) and not re.search(r"[.!?…]", bare)))
     return bool(_ITHAF.search(text) or _DATIVE.match(lines[0]) or _DATIVE_ANY.search(text))
 
 
@@ -276,11 +404,14 @@ def is_epigraph(lines: list[str], *, suggested: bool = False, before_body: bool 
     return bool(_QUOTE_OPEN.match(lines[0])) or suggested
 
 
-def front_page_kind(lines: list[str], *, suggested: bool = False, before_body: bool = True) -> str | None:
-    """Kısa ön sayfa ithaf mı, epigraf mı (`classify`'ın ön sayfa kuralı; salt hesap)."""
-    if is_dedication(lines):
+def front_page_kind(lines: list[str], *, suggested: bool = False, before_body: bool = True,
+                    strict: bool = False) -> str | None:
+    """Kısa ön sayfa ithaf mı, epigraf mı (`classify`'ın ön sayfa kuralı; salt hesap). `strict`: eski ön pencerenin
+    dışında, okumanın önerisi yok — ithaf güçlü kanıt ister, epigraf hiç sayılmaz (resimli kitabın tırnaklı tek
+    konuşma sayfası epigraf değil)."""
+    if is_dedication(lines, strict=strict):
         return "ithaf"
-    if is_epigraph(lines, suggested=suggested, before_body=before_body):
+    if not strict and is_epigraph(lines, suggested=suggested, before_body=before_body):
         return "epigraf"
     return None
 
@@ -298,9 +429,15 @@ def inputs(c, gid: str) -> dict:
         "SELECT page_no, role, source FROM ed.page_role WHERE generation_id=%s", (gid,))}
     crm = c.execute("SELECT crm_title, authors, illustrators FROM ed.book_crm_record WHERE book_id=%s",
                     (g["book_id"],)).fetchone() or {}
+    prof = c.execute("SELECT form FROM ed.book_profile WHERE generation_id=%s", (gid,)).fetchone() or {}
+    # künyeden okunmuş yazar adı (CRM kaydı olmayan arşiv kitabında yazar özgeçmişini tanımak için)
+    authors = [r["claim"] for r in c.execute(
+        "SELECT claim FROM ed.claim WHERE generation_id=%s AND kind='METADATA' AND subject='AUTHOR'"
+        " AND status IN ('VERIFIED','EDITOR_APPROVED','EDITOR_CORRECTED')", (gid,)).fetchall() if r.get("claim")]
     return {"pages": pages, "roles": roles, "last_page": g["page_count"] or max(pages, default=0),
             "titles": [crm.get("crm_title"), g["title"]],
-            "names": [", ".join(crm.get("authors") or []), ", ".join(crm.get("illustrators") or [])]}
+            "names": [", ".join(crm.get("authors") or []), ", ".join(crm.get("illustrators") or [])],
+            "authors": authors, "form": prof.get("form")}
 
 
 def sections_of(gid: str) -> list[dict]:
@@ -319,8 +456,8 @@ def plan(c, gid: str, sections: list[dict] | None = None) -> dict:
     zaten otomatik yazılmışsa yazılmaz. `sections` verilmezse kitabın bölümleri bulunur (`sections_of`)."""
     x = inputs(c, gid)
     suggested = {p for p, r in x["roles"].items() if r["role"] in SCOPE_ROLES}
-    found = classify(x["pages"], suggested, x["last_page"], x["titles"], x["names"],
-                     sections_of(gid) if sections is None else sections)
+    found = classify(x["pages"], suggested, x["last_page"], x["titles"], x["names"] + x["authors"],
+                     sections_of(gid) if sections is None else sections, form=x["form"])
     writes, kept = {}, {}
     for p, (role, why) in found.items():
         cur = x["roles"].get(p)
@@ -412,7 +549,7 @@ def for_chunk(c, gid: str, page_from: int, page_to: int, suggested: set[int]) ->
     okuma sonu doğrulaması (`ensure`) bütün kitapla tamamlar (çıktılar orada süzülür)."""
     x = inputs(c, gid)
     sug = {p for p, r in x["roles"].items() if r["role"] in SCOPE_ROLES} | set(suggested)
-    found = classify(x["pages"], sug, x["last_page"], x["titles"], x["names"])
+    found = classify(x["pages"], sug, x["last_page"], x["titles"], x["names"] + x["authors"], form=x["form"])
     mine = {p: v for p, v in found.items() if page_from <= p <= page_to
             and (x["roles"].get(p) or {}).get("source") != "editor"}
     apply(c, gid, mine)
@@ -511,10 +648,7 @@ async def _build_outputs(gid: str) -> dict:
         built = {}
         for kind in outputs.ORDER:
             key = rebuild.key_for(snap, digest, kind)
-            cached = await asyncio.to_thread(rebuild.begin, snap, digest, kind, key)
-            if cached is None:
-                cached = await rebuild.build(kind, snap, built, key)
-            await asyncio.to_thread(rebuild.publish, snap, digest, kind, key, cached)
+            cached = await rebuild.produce(kind, snap, digest, built, key)
             built[kind] = cached
         return await asyncio.to_thread(rebuild.finish, snap, digest)
     except rebuild.Superseded as exc:

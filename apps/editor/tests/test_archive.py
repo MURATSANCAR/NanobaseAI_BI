@@ -58,7 +58,8 @@ def test_visual_pages_skips_text_and_logo_pages(tmp_path, monkeypatch):
     monkeypatch.setattr(document, "_open_version", lambda bv, repair=True: (pymupdf.open(pdf), {}))
     out = A.visual_pages("bv")
     assert out["pages"] == [1, 3, 5]
-    assert out["page_count"] == 6 and out["rule"] == {"image_share": 0.05, "min_drawings": 40, "cover": 1}
+    assert out["page_count"] == 6 and out["rule"] == {"image_share": 0.05, "min_drawings": 40, "cover": 1,
+                                                      "layerless_ink": document.LAYERLESS_INK_MIN}
 
 
 # ------------------------------------------------------------------ ad anahtarı, kesik parça, başlık
@@ -183,6 +184,7 @@ def test_profile_uses_the_archive_shelf_when_crm_is_missing(monkeypatch):
     monkeypatch.setattr(bt, "settings", lambda: type("S", (), {"min_illustration_ink": 0.02})())
     monkeypatch.setattr(bt, "_archive_hint", lambda gid: A.hint_for("Kurgu"))
     monkeypatch.setattr(bt, "_refresh_from_crm", lambda row: None)
+    monkeypatch.setattr(bt, "_not_a_book_of", lambda gid, n: None)    # kitap (katalog kuralı sayfa okur)
     row = asyncio.run(bt.profile("g1"))
     assert (row["audience"], row["audience_source"], row["form"], row["form_source"]) == \
         ("ADULT", "ARCHIVE", "FICTION", "ARCHIVE")

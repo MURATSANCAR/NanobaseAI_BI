@@ -73,7 +73,9 @@ def register(app, deps: dict[str, Any] | Any) -> None:
     def pharmacy_books(request: Request, q: str = "", category: str = "", state: str = "", sort: str = "title",
                        offset: int = 0, limit: int = 50, review: bool = False) -> dict[str, Any]:
         """Sayfa sayfa liste; arama, kategori («-» = kategorisiz), durum ve «gözden geçir» süzgeci (sitedeki kategori
-        ile Zeki AI önerisi ayrışanlar). `total` süzülmüş sayı."""
+        ile Zeki AI önerisi ayrışanlar). `total` süzülmüş sayı. Satırda `not_a_book` ({reason: FEW_PAGES |
+        CATALOGUE | MODEL} ya da null): dosya kitap değil (katalog, bülten, broşür, yalnız kapak) — karakter, olay ve
+        kategori/yaş önerisi çıkarılmadı; ekran «Kitap değil» rozeti gösterir. Kart servisinin alanı olduğu gibi gelir."""
         auth(request)
         try:
             return editorial_cards.archive_books(q, category, state, sort, offset, limit, review)

@@ -31,6 +31,8 @@ function genreFact(b: BookDetail, card: BookCard | null): { value: string | null
   const crm = b.genres || b.shelf;
   const p = card?.profile;
   const pct = p?.probability != null ? ` (%${Math.round(p.probability * 100)} güven)` : '';
+  // Kitap değil (katalog, bülten, broşür, yalnız kapak): karakter, olay ve yaş önerisi çıkarılmadı
+  if (p?.form === 'NOT_A_BOOK') return { value: 'Kitap değil', note: 'Zeki AI: katalog, bülten, broşür ya da yalnız kapak; karakter, olay ve yaş önerisi çıkarılmadı' };
   if (crm) {
     // CRM'deki tür iki ayrı türe işaret ediyordu («Bilim Tarihi, İnceleme-Araştırma»): hangisi olarak okunduğu
     return p?.source === 'MODEL' ? { value: crm, note: `Zeki AI: ${BOOK_FORM_TR[p.form].toLocaleLowerCase('tr')} olarak okudu${pct}` } : { value: crm };

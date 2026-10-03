@@ -140,6 +140,82 @@ async def search_universe_canon(universe: str, query: str, k: int = 8) -> list[d
     return [{**rows[r["index"]], "rerank_score": round(r["score"], 4)} for r in ranked[:k]]
 
 
+# ------------------------------------------------------------------ eski yapı anahtarının noktaları
+# Her yeniden üretim (yeni bilgi revizyonu) dizini yeni bir `build_key` altında yazar; okuyucu yalnız DB'deki güncel
+# anahtarı sorar. Eski anahtarın noktaları silinmiyordu: yeniden üretilen kitapta koleksiyon iki katına çıkıyordu
+# (2026-10-03 arşiv pilotu). Temizlik yalnız AYNI NESLİN, anahtarı OLAN ve güncelden FARKLI noktalarını siler;
+# anahtarsız eski (embed_passages) noktalara ve başka nesle dokunmaz.
+def _stale_filter(generation_id: str, keep_build_key: str) -> models.Filter:
+    return models.Filter(
+        must=[models.FieldCondition(key="generation_id", match=models.MatchValue(value=generation_id))],
+        must_not=[models.FieldCondition(key="build_key", match=models.MatchValue(value=keep_build_key)),
+                  models.IsEmptyCondition(is_empty=models.PayloadField(key="build_key"))])
+
+
+async def stale_points(generation_id: str, keep_build_key: str) -> int:
+    """Neslin güncel anahtar dışındaki (anahtarlı) nokta sayısı (salt okuma)."""
+    if not keep_build_key:
+        return 0
+    return (await qdrant().count(PASSAGES, exact=True,
+                                 count_filter=_stale_filter(generation_id, keep_build_key))).count
+
+
+async def prune_stale(generation_id: str, keep_build_key: str) -> int:
+    """Neslin eski anahtarlı noktalarını siler; silinen sayıyı döner. Güncel anahtar boşsa hiçbir şey silinmez."""
+    n = await stale_points(generation_id, keep_build_key)
+    if n:
+        await qdrant().delete(PASSAGES, wait=True, points_selector=models.FilterSelector(
+            filter=_stale_filter(generation_id, keep_build_key)))
+    return n
+
+
+async def index_present(generation_id: str, build_key: str, expected: int | None) -> bool:
+    """Bu anahtarın noktaları dizinde tam mı (önbellekteki eski dizin kaydı yeniden kullanılmadan önce: o anahtar
+    temizlikte silinmiş olabilir)."""
+    count = (await qdrant().count(PASSAGES, exact=True, count_filter=models.Filter(must=[
+        models.FieldCondition(key="generation_id", match=models.MatchValue(value=generation_id)),
+        models.FieldCondition(key="build_key", match=models.MatchValue(value=build_key))]))).count
+    return expected is not None and count == expected
+
+
+async def prune_all(apply: bool = False, generation: str | None = None) -> list[dict]:
+    """Tek seferlik temizlik: her neslin güncel dizin anahtarı (ed.current_artifact) dışındaki noktaları. Varsayılan
+    kuru koşu (yalnız sayar); `apply` ile siler. Güncel dizini olmayan nesle dokunulmaz."""
+    from . import foundation
+    with foundation.read_snapshot() as c:
+        rows = c.execute("SELECT a.generation_id, v.build_key FROM ed.current_artifact a JOIN ed.artifact_version v"
+                         " ON v.generation_id=a.generation_id AND v.kind=a.kind AND v.input_digest=a.input_digest"
+                         " WHERE a.kind='search_index'" + (" AND a.generation_id=%s" if generation else "")
+                         + " ORDER BY a.generation_id, v.created_at DESC", (generation,) if generation else ()).fetchall()
+    keep: dict[str, str] = {}
+    for r in rows:
+        keep.setdefault(str(r["generation_id"]), r["build_key"])
+    out = []
+    for gid, key in keep.items():
+        n = await (prune_stale(gid, key) if apply else stale_points(gid, key))
+        if n:
+            out.append({"generation_id": gid, "keep_build_key": key, "stale_points": n, "deleted": apply})
+    return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    import asyncio
+    import json
+    ap = argparse.ArgumentParser(prog="python -m editor.retrieval")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    pr = sub.add_parser("prune", help="eski yapı anahtarlı dizin noktaları (varsayılan kuru koşu: yalnız sayar)")
+    pr.add_argument("--apply", action="store_true", help="gerçekten sil")
+    pr.add_argument("--generation")
+    a = ap.parse_args(argv)
+    res = asyncio.run(prune_all(apply=a.apply, generation=a.generation))
+    for r in res:
+        print(json.dumps(r, ensure_ascii=False))
+    print(f"{len(res)} nesil, {sum(r['stale_points'] for r in res)} eski nokta; "
+          f"{'SİLİNDİ' if a.apply else 'kuru koşu (silinmedi)'}")
+    return 0
+
+
 async def embed_snapshot(snapshot: dict, build_key: str) -> dict:
     """Write an immutable index namespace; readers use the DB's current pointer."""
     from .outputs import snapshot_passages
@@ -160,3 +236,7 @@ async def embed_snapshot(snapshot: dict, build_key: str) -> dict:
         models.FieldCondition(key='build_key',match=models.MatchValue(value=build_key))]))).count
     if count!=len(passages): raise ValueError('Index staging count mismatch')
     return {'collection':PASSAGES,'build_key':build_key,'revision':snapshot['revision'],'indexed':count}
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

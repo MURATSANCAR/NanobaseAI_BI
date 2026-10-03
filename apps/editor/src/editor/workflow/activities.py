@@ -153,8 +153,14 @@ async def confirm_text_visual(generation_id: str) -> dict:
 async def text_chunks(generation_id: str) -> list[list[int]]:
     """Every book is read for people, events, emotions and themes, whatever its kind (user
     decision 2026-09-24). The profile (editor.book_type) is decided here, the first step
-    that needs it, while the director model is up; later steps read it."""
-    await book_type.profile(generation_id)
+    that needs it, while the director model is up; later steps read it.
+
+    A file that is not a book (catalogue, bulletin, brochure, cover only: book_type.NOT_A_BOOK) yields no
+    chunks: no characters or events are read from it. The workflow is unchanged (the fan-out over no chunk
+    is empty), so recorded histories replay as they were."""
+    prof = await book_type.profile(generation_id)
+    if not book_type.is_book(prof):
+        return []
     return [list(c) for c in await _t(knowledge.text_chunks, generation_id)]
 
 
@@ -227,6 +233,9 @@ async def merge_events(generation_id: str) -> dict:
 
 @activity.defn
 async def emotions_themes(generation_id: str) -> dict:
+    # not a book (book_type.NOT_A_BOOK): no emotions or themes are read from a catalogue's blurbs
+    if not book_type.is_book(await book_type.profile(generation_id)):
+        return {"skipped": book_type.NOT_A_BOOK}
     return await knowledge.link_emotions_and_themes(generation_id)
 
 

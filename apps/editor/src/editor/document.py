@@ -205,6 +205,28 @@ def region_ink_ratio(png_path: str, bbox: list[int]) -> float:
     return ink / max(1, (min(w, x1) - x0) * (min(h, y1) - y0))
 
 
+#: A page whose text layer is (nearly) empty but whose body carries ink: its words were turned into drawing
+#: (outlined text, vector art) or it is a drawn page without a raster picture. Measured 2026-10-03 on 38 read
+#: books: such pages (layer < 30 characters, no raster image) measure 0.000–0.005 when blank or carrying only a
+#: mark, and 0.006–0.4 when their text is outlined (one information book: 118 of 184 pages, 0.03–0.13 typical).
+NO_LAYER_CHARS = 30
+LAYERLESS_INK_MIN = 0.01
+
+
+def layerless_with_ink(n_chars: int, n_images: int, ink: float | None) -> bool:
+    """OCR reason NO_LAYER_WITH_INK: no usable text layer, no raster picture, but ink on the page (vector
+    drawing, text set as outlines). A blank or white page never qualifies. The archive's visual-page choice
+    (editor.archive.visual_pages) uses the same rule."""
+    return n_chars < NO_LAYER_CHARS and n_images == 0 and ink is not None and ink >= LAYERLESS_INK_MIN
+
+
+def page_is_layerless_with_ink(page: pymupdf.Page) -> bool:
+    """`layerless_with_ink` measured on a PDF page (the ink is rendered only when the layer is short)."""
+    if len((page.get_text("text") or "").strip()) >= NO_LAYER_CHARS or page.get_images(full=True):
+        return False
+    return layerless_with_ink(0, 0, nontext_ink_ratio(page))
+
+
 def render_page(book_version_id: str, page_no: int, long_side_px: int = TARGET_LONG_SIDE_PX) -> dict:
     doc, bv = _open_version(book_version_id, repair=False)
     page = doc[page_no - 1]
@@ -231,10 +253,12 @@ def create_page_manifest(book_version_id: str) -> dict:
             x0, y0, x1, y1 = info["bbox"]
             img_area += max(0.0, x1 - x0) * max(0.0, y1 - y0)
         coverage = min(1.0, img_area / (page.rect.width * page.rect.height))
-        # OCR when there is no usable text layer on a page that has pictures, or
-        # the layer is letter-spaced / broken, or a picture covers most of the page
-        # (text drawn inside illustrations is not in the text layer).
-        why = [n for n, hit in (("NO_LAYER_WITH_IMAGES", n_chars < 30 and n_img > 0),
+        ink = nontext_ink_ratio(page)
+        # OCR when there is no usable text layer on a page that has pictures or other ink
+        # (outlined text, vector drawing), or the layer is letter-spaced / broken, or a picture
+        # covers most of the page (text drawn inside illustrations is not in the text layer).
+        why = [n for n, hit in (("NO_LAYER_WITH_IMAGES", n_chars < NO_LAYER_CHARS and n_img > 0),
+                                ("NO_LAYER_WITH_INK", layerless_with_ink(n_chars, n_img, ink)),
                                 ("LETTER_SPACED", _spaced_ratio(text) > SPACED_MAX),
                                 ("PICTURE_COVERS_PAGE", coverage > 0.6),
                                 ("GARBLED_CHARACTERS", _garbled_ratio(text) > GARBLED_MAX),
@@ -246,7 +270,7 @@ def create_page_manifest(book_version_id: str) -> dict:
         health["ocr_reasons"] = why
         r = render_page(book_version_id, i)
         rows.append((bv["id"], i, page.rect.width, page.rect.height, n_chars, n_img, needs_ocr,
-                     r["path"], r["dpi"], nontext_ink_ratio(page), db.J(health)))
+                     r["path"], r["dpi"], ink, db.J(health)))
     with db.tx() as c:
         for row in rows:
             c.execute(
