@@ -493,16 +493,31 @@ def front_block(b: dict, c) -> str:
     return ("KÜNYE SAYFALARI:\n" + "\n".join(out)) if out else ""
 
 
+#: Bölüm bulucunun yer tutucuları (`chapters.chapters_from_pages`): bölüm adı değildir. 2026-10-03: «ilk bölümün adı
+#: ne» sorusuna model başlıksız ön sayfaları ilk bölüm saydı.
+NO_HEADINGS, FRONT_PAGES = "Kitap", "Başlıksız başlangıç"
+
+
 def chapter_block(b: dict, c) -> str:
-    """Bölüm listesi: kitabın güncel okuma raporundaki bölümler (ad + sayfa aralığı)."""
+    """Bölüm listesi: kitabın güncel okuma raporundaki bölümler (ad + sayfa aralığı). Yer tutucular adıyla değil,
+    ne oldukları yazılarak verilir: ilk bölümden önceki başlıksız sayfalar, ya da başlık bulunamaması."""
     from .chapters import display_title
     row = read_model.artifact(c, b["generation_id"], "report")["artifact"]
     chs = [ch for ch in ((row or {}).get("content") or {}).get("chapters") or []
            if isinstance(ch, dict) and isinstance(ch.get("title"), str)]
     if not chs:
         return ""
-    return "BÖLÜMLER (sırasıyla):\n" + "\n".join(
-        f"- {display_title(ch['title'])} [s.{ch.get('page_from')}-{ch.get('page_to')}]" for ch in chs)
+    if len(chs) == 1 and chs[0]["title"] == NO_HEADINGS:
+        return "BÖLÜMLER: kitapta bölüm başlığı bulunamadı (metin tek parça okundu)."
+    lines, n = [], 0
+    for ch in chs:
+        span = f"[s.{ch.get('page_from')}-{ch.get('page_to')}]"
+        if ch["title"] == FRONT_PAGES:
+            lines.append(f"- (bölüm değil: ilk bölümden önceki başlıksız sayfalar) {span}")
+            continue
+        n += 1
+        lines.append(f"- {n}. bölüm: {display_title(ch['title'])} {span}")
+    return "BÖLÜMLER (sırasıyla; ilk bölüm 1. bölüm diye yazılı olandır):\n" + "\n".join(lines)
 
 
 async def context(question: str, book_title: str | None, deep: bool = False) -> tuple[str, list[dict], bool]:

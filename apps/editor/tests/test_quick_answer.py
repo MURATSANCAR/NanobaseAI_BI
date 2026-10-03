@@ -240,6 +240,18 @@ def test_deep_read_blocks_carry_imprint_pages_and_chapters(monkeypatch):
     b = {"generation_id": "g"}
     assert QA.front_block(b, None) == "KÜNYE SAYFALARI:\n- s.2: ÇEVİRİ Selen Demirtaş"
     ch = QA.chapter_block(b, None).split("\n")
-    assert ch[0] == "BÖLÜMLER (sırasıyla):" and ch[1].startswith("- Börekler") and ch[2] == "- Son [s.31-40]"
+    assert ch[0].startswith("BÖLÜMLER (sırasıyla") and ch[1].startswith("- 1. bölüm: Börekler")
+    assert ch[2] == "- 2. bölüm: Son [s.31-40]"
     monkeypatch.setattr(QA.read_model, "artifact", lambda c, gid, kind: {"artifact": None})
     assert QA.chapter_block(b, None) == ""
+
+
+def test_placeholder_chapters_are_not_named_as_chapters(monkeypatch):
+    chs = [{"title": QA.FRONT_PAGES, "page_from": 1, "page_to": 6}, {"title": "Avokado", "page_from": 7, "page_to": 30}]
+    monkeypatch.setattr(QA.read_model, "artifact", lambda c, gid, kind: {"artifact": {"content": {"chapters": chs}}})
+    lines = QA.chapter_block({"generation_id": "g"}, None).split("\n")
+    assert lines[1] == "- (bölüm değil: ilk bölümden önceki başlıksız sayfalar) [s.1-6]"
+    assert lines[2] == "- 1. bölüm: Avokado [s.7-30]"
+    monkeypatch.setattr(QA.read_model, "artifact", lambda c, gid, kind: {"artifact": {"content": {"chapters": [
+        {"title": QA.NO_HEADINGS, "page_from": 1, "page_to": 90}]}}})
+    assert "bölüm başlığı bulunamadı" in QA.chapter_block({"generation_id": "g"}, None)

@@ -7,15 +7,16 @@ import time
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.pool import StaticPool
 
 from semantic_bridge import editorial_books as B
 from semantic_bridge import editorial_cards as C
 
 
 @pytest.fixture()
-def engine(monkeypatch):
-    e = sa.create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+def engine(monkeypatch, tmp_path):
+    # Dosya veritabanı, iş parçacığı başına bağlantı: soru iş parçacığı ile bekleyen test tek SQLite bağlantısını
+    # (StaticPool) aynı anda kullanınca iş parçacığı ara sıra düşüyor, soru «bitmedi» kalıyordu.
+    e = sa.create_engine(f"sqlite:///{tmp_path / 'sorular.db'}", connect_args={"timeout": 30})
     B._md.create_all(e)
     monkeypatch.setenv("EDITOR_CATALOG_BASE", "http://kartlar")
     monkeypatch.setenv("EDITOR_CATALOG_KEY", "k")
@@ -70,3 +71,41 @@ def test_selected_book_skips_card_selection(engine, monkeypatch):
     out = B.ask(engine, "t", "u", "Bu kitabı önerir misin?", book_key="k1", book_title="bocekleri-seven-kadin",
                 chat=lambda *a, **k: '{"intent":"CARD"}')
     assert _wait(engine, out["id"]).answer == "Öneririm [s.5]."
+
+
+def _open_row(engine, qid, minutes_ago, status="calisiyor"):
+    from datetime import datetime, timedelta, timezone
+    with engine.begin() as c:
+        c.execute(sa.insert(B.QUESTIONS).values(
+            id=qid, tenant_id="t", username="u", book_key="k1", book_title="anne-terligi", question="Kim?",
+            status=status, created_at=datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)))
+
+
+def test_restart_asks_the_interrupted_question_again_once(engine, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    calls = []
+    monkeypatch.setattr(C, "quick_answer", lambda q, t, h=None: calls.append(q) or
+                        {"handled": True, "answer": "Hürdeniz [s.47]."})
+    _open_row(engine, "yarim", 3)
+    _open_row(engine, "eski", 90, status="bekliyor")
+    monkeypatch.setattr(B, "_BOOT", datetime.now(timezone.utc) - timedelta(minutes=1))
+    _open_row(engine, "yeni", 0)          # bu süreç başladıktan sonra açılmış: başka işçinin, dokunulmaz
+    out = B.resume_stale(engine)
+    assert out == {"resumed": 1, "expired": 1}
+    assert _wait(engine, "yarim").answer == "Hürdeniz [s.47]."
+    with engine.connect() as c:
+        rows = {r.id: r for r in c.execute(sa.select(B.QUESTIONS))}
+    assert rows["eski"].status == "hata" and rows["eski"].error == B.STALE_ERROR
+    assert rows["yeni"].status == "calisiyor"
+    assert B.resume_stale(engine) == {"resumed": 0, "expired": 0} and calls == ["Kim?"]   # ikinci işçi almaz
+
+
+def test_restart_does_not_take_a_question_another_worker_just_claimed(engine, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    monkeypatch.setattr(C, "quick_answer", lambda *a, **k: pytest.fail("üstlenilmiş soru yeniden sorulmaz"))
+    _open_row(engine, "alindi", 2)
+    with engine.begin() as c:
+        c.execute(sa.update(B.QUESTIONS).where(B.QUESTIONS.c.id == "alindi").values(
+            resumed_at=datetime.now(timezone.utc) - timedelta(seconds=30)))
+    monkeypatch.setattr(B, "_BOOT", datetime.now(timezone.utc))
+    assert B.resume_stale(engine) == {"resumed": 0, "expired": 0}

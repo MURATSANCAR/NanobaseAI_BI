@@ -6325,13 +6325,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # Köprü editörün veritabanına dokunmaz; yalnız editör motorunun OpenAI uyumlu API'sinden sorar (ters tünel).
     from semantic_bridge import editorial_books as books_mod
 
+    def _books_chat():
+        # Hızlı model: kapsam (kimlik / kitap dışı) ayrımı ve kitap kartı seçimi.
+        llm = rt().llm_for("editorial", priority=1)
+        return (lambda messages, max_tokens=40: llm.chat(messages, max_tokens=max_tokens, temperature=0.0)) if llm is not None else None
+
     def _books(request: Request) -> tuple[Any, str, str, bool]:
         engine, tenant, user, _ = _greetings(request)
         first = id(engine) not in books_mod._ready
         books_mod.ensure(engine)
         admin_mod.ensure(engine)
         if first:
-            books_mod.reset_stale(engine)
+            # Yeniden başlamadan önce yarıda kalan sorular yeniden sorulur (eskisi «tekrar sorun» der).
+            books_mod.resume_stale(engine, _books_chat())
         return engine, tenant, user, admin_mod.is_admin(user)
 
     def _books_call(fn, *a, **kw):
@@ -6348,9 +6354,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/editorial/ask")
     def editorial_ask(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = _books(request)
-        # Hızlı model: kapsam (kimlik / kitap dışı) ayrımı ve cevaptaki iç terimlerin sadeleştirilmesi.
-        llm = rt().llm_for("editorial", priority=1)
-        chat = (lambda messages, max_tokens=40: llm.chat(messages, max_tokens=max_tokens, temperature=0.0)) if llm is not None else None
+        chat = _books_chat()
         out = _books_call(books_mod.ask, engine, tenant, user, str(body.get("question") or ""),
                           book_key=str(body.get("bookKey") or ""), book_title=(str(body.get("bookTitle") or "") or None),
                           chat=chat, parent_id=(str(body.get("parentId") or "") or None))
