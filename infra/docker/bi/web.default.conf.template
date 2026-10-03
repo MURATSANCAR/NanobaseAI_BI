@@ -7,10 +7,19 @@ limit_req_zone $binary_remote_addr zone=timas_api:10m rate=120r/m;
 limit_req_zone $binary_remote_addr zone=timas_studio_img:10m rate=600r/m;
 # ZEKİ AI Destek (8446): şifre alan giriş uçları, IP başına dakikada 10 (test sunucusundaki vhost'la aynı).
 limit_req_zone $binary_remote_addr zone=destek_login:10m rate=10r/m;
+# Merkezi denetim kaydı — kenar katmanı (test sunucusunda deploy/nanobase-direct/add-audit-edge-log.py ile aynı biçim).
+# Kişi giriş servisinin /check cevabındaki X-Timas-User başlığından; satırı köprü bi_audit diskinden okur (ship_edge).
+log_format nb_audit escape=json '{"t":"$time_iso8601","ip":"$remote_addr","u":"$timas_user","m":"$request_method",'
+    '"p":"$request_uri","s":$status,"b":$body_bytes_sent,"rt":"$request_time","ref":"$http_referer",'
+    '"ua":"$http_user_agent","h":"$server_name:$server_port","rid":"$request_id"}';
 
 server {
     listen 80;
     server_name _;
+    # Denetim kaydı (kenar): kişi giriş servisinden, satır merkeze akar; ana log yerinde.
+    auth_request_set $timas_user $upstream_http_x_timas_user;
+    access_log /var/log/nanobase-audit/edge.log nb_audit;
+    access_log /var/log/nginx/access.log;
     client_max_body_size 8m;
     # Docker DNS: login/bridge yeniden kurulunca iç adresleri değişir.
     resolver 127.0.0.11 valid=30s ipv6=off;
@@ -333,6 +342,10 @@ server {
 server {
     listen 8446;
     server_name _;
+    # Denetim kaydı (kenar): kişi giriş servisinden, satır merkeze akar; ana log yerinde.
+    auth_request_set $timas_user $upstream_http_x_timas_user;
+    access_log /var/log/nanobase-audit/edge.log nb_audit;
+    access_log /var/log/nginx/access.log;
     client_max_body_size 50m;
     resolver 127.0.0.11 valid=30s ipv6=off;
     set $destek http://destek-frontend:8080;

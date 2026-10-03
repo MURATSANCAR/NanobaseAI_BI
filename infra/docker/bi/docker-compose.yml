@@ -47,6 +47,8 @@ services:
       - bi_reports:/data/reports
       # Uygulamanın yazdığı durum (rapor önbelleği, Finansal Denetim arşivi, editör verisi): kurulumda silinmez.
       - bi_var:/data/nanobaseai/bi/var
+      # Merkezi denetim kaydı: web'in kenar logu (köprü yalnız okur, audit_trail.ship_edge).
+      - bi_audit:/var/log/nanobase-audit:ro
     depends_on:
       db:
         condition: service_healthy
@@ -100,6 +102,8 @@ services:
       DESTEK_PUBLIC_ORIGIN: ${DESTEK_PUBLIC_ORIGIN:-}
     volumes:
       - bi_metrics:/usr/share/nginx/metrics:ro
+      # Merkezi denetim kaydı: kişili istek logu (nb_audit), köprü okur.
+      - bi_audit:/var/log/nanobase-audit
     ports:
       - "8088:80"          # geçici doğrudan erişim + doğrulama; NPM devreye girince kaldırılabilir
       - "8446:8446"        # ZEKİ AI Destek (iç ağ, HTTP)
@@ -139,3 +143,5 @@ volumes:
     name: bi_reports
   bi_var:
     name: bi_var
+  bi_audit:
+    name: bi_audit
