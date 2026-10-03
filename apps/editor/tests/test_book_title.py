@@ -235,6 +235,10 @@ def test_crm_partial_match_is_flagged():
     ("Arsen Lüpen - Kibar Hırsız", "Arsen Lupen Kibar Hirsiz", "Arsen Lüpen - Kibar Hırsız"),
     ("Arsen Lüpen - Herlock Sholmes'e Karşı", "Arsen Lupen Herlock", "Arsen Lüpen - Herlock Sholmes'e Karşı"),
     ("Levent - Doğu Ekspresi'nde Soygun", "Levent Dogu Ekspresi", "Levent - Doğu Ekspresi'nde Soygun"),
+    # cilt numarası ilk parçada değil: kaydın tamamı
+    ("Danger Dan - Milli Marşı Kurtarıyor 2", "Dangerdan2", "Danger Dan - Milli Marşı Kurtarıyor 2"),
+    ("Zulu - Bir Madagaskar Macerası - Ormanda Cümbüş Var 1", "Zulu 1", "Zulu - Bir Madagaskar Macerası - Ormanda Cümbüş Var 1"),
+    ("Kayı 2: Cihan Devleti", "kayi2", "Kayı 2: Cihan Devleti"),
 ])
 def test_record_name(record, file_title, want):
     assert BT.record_name(record, file_title) == want

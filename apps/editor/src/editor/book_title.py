@@ -306,6 +306,11 @@ def record_name(title: str, file_title: str = "") -> str:
     pick = next((p for p in parts if want and key(p) == want), None) \
         or next((p for p in parts if want and key(p).startswith(want)), None) \
         or (whole if want and key(whole).startswith(want) else None) or parts[0]
+    # dosya adındaki cilt numarası seçilen parçada yoksa ama kayıt adında varsa kitabın adı kaydın tamamıdır
+    # («dangerdan2» → «Danger Dan - Milli Marşı Kurtarıyor 2», «Danger Dan» değil)
+    nums = set(re.findall(r"\d+", file_title or ""))
+    if nums - set(re.findall(r"\d+", pick)) and nums <= set(re.findall(r"\d+", whole)):
+        pick = whole
     pick = pick.strip(" .,;-–—")
     return _small_words(title_case(pick, typed=False))[:300]
 
