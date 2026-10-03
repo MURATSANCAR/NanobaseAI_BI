@@ -23,8 +23,9 @@ arasından harf sayısıyla orantılı tahmin edilir (`estimated`).
                         narration_human.py) yalnız metnin özeti (`text_hash`) bakılır; üzerine yapay ses yazılmaz
     insan/<yükleme>/    yüklenen insan kaydı: özgün dosya, hak beyanı, izin belgesi (narration_human.py)
 Yayınevi düzeyinde (`<storage>/production/_ses/`): sozluk.json (yayınevi sözlüğü), sesler/<ses>.wav|json (her ses bir
-kez tarifle üretilen referans; sonra hep o referansla okunur, kitap boyunca aynı ses kalır). Önerilen erkek anlatıcının
-referansı pakette sabittir (`production/sesler/`, PINNED; sha256 kodda), yayınevi klasörüne yazılmaz.
+kez tarifle üretilen referans; sonra hep o referansla okunur, kitap boyunca aynı ses kalır). Sabit referanslı seslerin
+(önerilen erkek anlatıcı ve Alania havuzundan alınanlar, voices_alania.py) kaydı pakettedir (`production/sesler/`,
+PINNED; sha256 kodda), yayınevi klasörüne yazılmaz.
 
 EPUB bağlantısı: `media_overlay(job)` bütün kitabın kelime zamanlarını verir, `smil(...)` bir sayfanın SMIL 3.0
 belgesini yazar (EPUB 3 Media Overlays). Biçim `media_overlay`'in belgesinde.
@@ -64,7 +65,7 @@ def _v(vid: str, label: str, note: str, group: str, design: str) -> dict:
 VOICES: list[dict] = [
     _v("anlatici-kadin", "Kadın anlatıcı", "sıcak, sakin", "anlatici",
        "A warm, calm middle-aged woman storyteller, clear gentle diction, unhurried pace"),
-    # 2026-09-27–28 arası önerilen erkek anlatıcıydı; referansı sabit kayıttır (PINNED), tariften yeniden üretilmez.
+    # 2026-09-27–28 arası önerilen erkek anlatıcıydı; 2026-10-01'den beri referansı Alania kaydıdır (voices_alania.py).
     _v("anlatici-erkek-masalci", "Erkek anlatıcı · sıcak masalcı", "olgun, kadifemsi, yavaş", "anlatici",
        "A warm, mature man in his late forties telling a bedtime story to small children: deep, velvety, gentle voice "
        "with a soft smile in it, slow calm pace, very clear Turkish diction, natural pauses at commas and full stops, "
@@ -151,13 +152,15 @@ REF_SEED = 20260925
 # üretilmez). Seçim ve ölçüm: docs/analiz/sesli-okuma-model-secimi.md «Ses kütüphanesi».
 PINNED_DIR = Path(__file__).with_name("sesler")
 PINNED = {
-    "anlatici-erkek-masalci": {"file": "anlatici-erkek-masalci.wav", "text": REF_TEXT,
-                               "sha256": "41c9a3b283e3ceaed33a5e93ce8ef7b21ef3ae12210ff007399ceeecdcffc785"},
     # radyo oyuncusu: 2026-09-27'de dinlenip sabitlenen referans (tohum 20260926, 48 kHz tek kanal, 8,0 sn), yayınevi
     # klasöründeki `_ses/sesler/canli-erkek-radyo.wav` ile birebir aynı
     "canli-erkek-radyo": {"file": "canli-erkek-radyo.wav", "text": REF_TEXT,
                           "sha256": "afe289c508e43fb19becc8e80249d3f4018a103047909bf7e882f546fae02b3c"},
 }
+# Alania havuzundan alınan referanslar (2026-10-01, kullanıcı isteği: «mevcut sesler çok robotik»): aynı sabit kayıt
+# düzeni, dosyalar `production/sesler/alania/`; seçim, ölçüm ve lisans atfı voices_alania.py'de.
+from .voices_alania import PINNED as _ALANIA  # noqa: E402
+PINNED.update(_ALANIA)
 _pinned_ok: dict[str, tuple[float, int]] = {}
 
 
@@ -170,6 +173,10 @@ def canonical(vid: str | None) -> str | None:
     return ALIASES.get(vid, vid) if vid else vid
 
 
+def _label(vid: str) -> str:
+    return next((v["label"] for v in VOICES if v["id"] == vid), vid)
+
+
 def pinned_ref(vid: str) -> bytes:
     """Sabit referans kaydının baytları; sha256 tutmazsa PinnedVoiceMissing. Özet dosya değişmedikçe bir kez hesaplanır."""
     meta = PINNED[vid]
@@ -178,11 +185,11 @@ def pinned_ref(vid: str) -> bytes:
         st = p.stat()
         data = p.read_bytes()
     except OSError:
-        raise PinnedVoiceMissing("Önerilen erkek anlatıcının ses kaydı bu kurulumda yok; kurulum denetlenmeli.") from None
+        raise PinnedVoiceMissing(f"«{_label(vid)}» sesinin kaydı bu kurulumda yok; kurulum denetlenmeli.") from None
     key = (st.st_mtime, st.st_size)
     if _pinned_ok.get(vid) != key:
         if hashlib.sha256(data).hexdigest() != meta["sha256"]:
-            raise PinnedVoiceMissing("Önerilen erkek anlatıcının ses kaydı beklenen kayıt değil; kurulum denetlenmeli.")
+            raise PinnedVoiceMissing(f"«{_label(vid)}» sesinin kaydı beklenen kayıt değil; kurulum denetlenmeli.")
         _pinned_ok[vid] = key
     return data
 
