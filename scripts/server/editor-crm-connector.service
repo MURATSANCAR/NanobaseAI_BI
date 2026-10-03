@@ -10,4 +10,6 @@ Environment=CRM_CONNECTION_JSON=/data/nanobaseai/bi/secrets/crm-mssql-connection
 Environment=PYTHONDONTWRITEBYTECODE=1
 # CRM'e salt okuma; editöre kitap başına bir eşleşme yazar. Kaynak: apps/editor/connectors/crm_covers.py (main).
 ExecStart=/data/nanobaseai/bi/semantic-venv/bin/python /data/nanobaseai/bi/connectors/crm_covers.py
-TimeoutStartSec=30min
+# 4.044 kitapta bir koşu ~50 dk (kitap başına CRM kaydı + kapak + editöre yazım); 30 dk sınırı her gece
+# kitapların ~%40'ını aranmadan bırakıyordu (2026-10-03 ölçüm: 2.417/4.044'te kesildi).
+TimeoutStartSec=3h
