@@ -16,6 +16,7 @@
 - **Ne:** `epub.House`/`HOUSES`, `house_faces`, `house_fronts`, `NoteBook`, `flow_html(notebook=…)`, `templates/epub/timas.css`; Dockerfile'a 5 açık lisanslı aile; `font_faces` lisans yan dosyası okur. Girdi özeti ev stili ve şablon dosyasını içerir (akışkan e-kitapta şablon değişince «eski»).
 - **Yazı tipi seçimi:** referans fontlarla (Palatino/Cochin/Corbel Mac'ten, Chaparral/Trajan basılı PDF'ten) x-yüksekliği eşitlenmiş harf örtüşmesi; Chaparral için basılı satır görüntüsüyle karşılaştırma.
 - **Doğrulama:** GPU'da stüdyo imajında yeni kod + fontlarla `test_epub.py`, `test_audio_epub.py`, `test_plan.py` 64/64; gerçek iş kopyası (Çiçekçi Kadın) ev stiliyle üretildi, EPUBCheck 0 hata 0 uyarı, 2,2 MB.
+- **Kurulum (GPU, 10:55):** sürüm `/data/editor/releases/b60c6fac` (main'le dosya dosya aynı, Mac artığı 0), imajlar `editor-py:0.15.9-b60c6fac` + stüdyo; yeni imajda 925 test geçti; 10 servis yeni sürümde. Logo `/data/editor/storage/epub-sablon/timas/logo.svg` (basılı Devlerin Savaşı iç kapağından vektör). Canlı işçide iş kopyası: ev stili, logo ve stil dosyası içeride, tam denetim 0/0, 3,8 MB (bölüm başı resimleriyle). Test sunucusu ve VM'de değişen kod yok (stüdyo GPU'da), kurulum gerekmedi.
 
 ## 2026-10-03 — Dal temizliği: main'e taşınanlar, K0776 geri alındı
 
