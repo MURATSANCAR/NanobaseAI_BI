@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from .language import fold, dates, normalize_numbers
 from .plan_types import DerivedMetric, MetricPredicate, PeriodComparison
 from decimal import Decimal, InvalidOperation
-from .contracts import CONTRACT, METRICS, DIMENSIONS, ContractError
+from .contracts import CONTRACT, METRICS, DIMENSIONS, CODED_DIMENSIONS, ContractError
 from .model_schema import PLAN_SCHEMA, REVIEW_SCHEMA
 
 
@@ -297,7 +297,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if llm is None:
         raise ContractError("Soru planlayıcısına şu anda ulaşılamıyor.", code="SOURCE_UNAVAILABLE")
     schema = {"metrics": ["contract metric ID"], "dimensions": [], "sale_kind": "all|wholesale|retail",
-              "filters": [{"dimension": "book|channel|customer|author|publisher|subbrand", "op": "eq|contains", "value": "sorudaki değer"}],
+              "filters": [{"dimension": "book|channel|customer|author|publisher|subbrand|" + "|".join(CODED_DIMENSIONS), "op": "eq|contains", "value": "sorudaki değer"}],
               "limit": None, "order_by": None, "descending": True, "derived": [], "having": [], "comparison": None, "crm": None, "logo_report": None, "crm_report": None, "relational_query": None, "analytics": [],
               "sections": [], "gaps": [], "coverage": [], "uncovered": [], "clarification": ""}
     from .crm_query import CRM_CAPABILITIES
@@ -538,6 +538,12 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError("CRM kayıt sayımı güncel aktif kayıtları kapsar; tarihli veya kırılımlı sayım ayrıca tanımlanmalıdır.")
     if families & {"invoice", "collection"} and set(dims) & {"book", "author", "publisher", "subbrand", "author_group"}:
         raise ContractError("Belge/ödeme toplamı kitaplara dağıtılamaz; kitap için satış satırı ölçüsü seçin.")
+    from .logo_codes import CODED
+    coded = {d for d in dims if d in CODED} | {f.get("dimension") for f in data.get("filters") or [] if isinstance(f, dict) and f.get("dimension") in CODED}
+    if coded and (not families <= {"sales", "invoice", "collection"} or len(families) != 1):
+        raise ContractError("Fatura ve cari kartı kodları yalnız tek bir Logo satış, fatura ya da tahsilat ölçüsünde kırılım olur.")
+    if coded and families == {"collection"} and any(CODED[d].level != "client" for d in coded):
+        raise ContractError("Ödeme hareketlerinde fatura belge türü, e-belge durumu ya da KDV istisnası yoktur.")
     kind = data.get("sale_kind", "all")
     if kind not in ("all", "wholesale", "retail"):
         raise ContractError("Satış türü doğrulanamadı.")
@@ -552,7 +558,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         if not isinstance(f, dict) or set(f) != {"dimension", "op", "value"}:
             raise ContractError("Süzgeç biçimi doğrulanamadı.", code="PLAN_INVALID")
         dim, op, val = f["dimension"], f["op"], f["value"]
-        if dim not in ("book", "channel", "customer", "author", "publisher", "subbrand") or op not in ("eq", "contains") or not isinstance(val, str) or not 1 <= len(val) <= 200:
+        if dim not in ("book", "channel", "customer", "author", "publisher", "subbrand", *CODED_DIMENSIONS) or op not in ("eq", "contains") or not isinstance(val, str) or not 1 <= len(val) <= 200:
             raise ContractError("Süzgeç sözleşme dışında.")
         inherited = previous and follows(question) and [dim, op, val] in [list(f) for f in previous.get("plan", {}).get("filters", [])]
         if fold(val) not in source_q and not inherited:

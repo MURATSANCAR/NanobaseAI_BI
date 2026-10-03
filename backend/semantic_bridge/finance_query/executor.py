@@ -437,7 +437,8 @@ class Executor:
             self.output_fields = (["period_start", "period_end_exclusive"] if len(plan.periods)>1 else []) + group_fields + list(plan.metrics) + [d.id for d in plan.derived]
             for spec in getattr(plan, "analytics", ()):
                 self.output_fields += [spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct")] if spec["op"] == "contribution" else ["row_kind"]
-        if family == "sales" and set(plan.metrics) & {"net_sales", "sales_amount"}:
+        from .logo_codes import CODED
+        if family == "sales" and set(plan.metrics) & {"net_sales", "sales_amount"} and not any(d in CODED for d, _, _ in plan.filters):
             self.price_difference_note(plan)
         if plan.derived or plan.comparison:
             self.notes.append("Oran veya yüzde değişim hesabında sıfır/eksik payda boş gösterilir; dönemde bulunmayan kırılım sıfır varsayılmaz.")
@@ -582,7 +583,9 @@ class Executor:
         item_table, client_table = f"LG_{firm}_ITEMS", f"LG_{firm}_CLCARD"
         dims = set(plan.dimensions) | {d for d, _, _ in plan.filters}
         book = "book" in dims or enrichment
-        client = bool(dims & {"channel", "customer"}) or family == "collection"
+        from .logo_codes import CODED, columns as coded_columns, sql_alias as coded_alias
+        coded = [d for d in CODED if d in dims]
+        client = bool(dims & {"channel", "customer"}) or family == "collection" or any(CODED[d].level == "client" for d in coded)
         needed = {table: ["CANCELLED", "DATE_", "TRCODE"]}
         needed[table] += {"sales": ["LINETYPE", "INVOICEREF", "STOCKREF", "CLIENTREF", "VATMATRAH", "AMOUNT"],
                           "invoice": ["LOGICALREF", "NETTOTAL", "CLIENTREF"],
@@ -599,6 +602,10 @@ class Executor:
             needed[item_table] = ["LOGICALREF", "CODE", "NAME"]
         if client:
             needed[client_table] = ["LOGICALREF", "CODE", "DEFINITION_", "SPECODE2"]
+        for d in coded:
+            coded_alias(d, family)                        # okunamayan düzeyde açık hata
+            t, col = coded_columns(d, family, firm, period)
+            needed.setdefault(t, []).append(col)
         types = self.verify_schema(needed, "logo")
         measures = {"sales": ["AMOUNT", "VATMATRAH"], "invoice": ["NETTOTAL"], "collection": ["AMOUNT"]}[family]
         for col in measures:
@@ -611,6 +618,9 @@ class Executor:
             labels["channel"] = "c.SPECODE2"
         if "customer" in dims:
             labels.update(customer_code="c.CODE", customer_name="c.DEFINITION_")
+        for d in coded:
+            if d in plan.dimensions:
+                labels[d] = CODED[d].expression(coded_alias(d, family))
         for d, expression in {"day": f"CONVERT(varchar(10),{date_col},23)", "month": f"CONVERT(varchar(7),{date_col},23)", "year": f"YEAR({date_col})"}.items():
             if d in plan.dimensions:
                 labels[d] = expression
@@ -644,6 +654,9 @@ class Executor:
             conditions.append("f.TRCODE IN " + ("(8,3)" if plan.sale_kind == "wholesale" else "(7,2)"))
         for dim, op, value in plan.filters:
             if dim in ("author", "publisher", "subbrand"):
+                continue
+            if dim in CODED:
+                conditions.append(CODED[dim].predicate(coded_alias(dim, family), op, value))
                 continue
             exprs = {"book": ["i.CODE", "i.NAME"], "customer": ["c.CODE", "c.DEFINITION_"], "channel": ["c.SPECODE2"]}[dim]
             if op == "contains":

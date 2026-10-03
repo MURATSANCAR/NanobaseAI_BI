@@ -20,6 +20,8 @@ LABELS = {
     "subbrand_id": "Alt marka kimliği", "subbrand": "Alt marka",
     "author_group_ids": "Ortak yazar kişi kimlikleri", "author_group_names": "Ortak yazar adları",
     "publisher": "Yayınevi", "day": "Gün", "month": "Ay", "year": "Yıl",
+    "e_document": "Belge türü", "einvoice_scenario": "e-Fatura senaryosu", "einvoice_status": "e-Belge durumu",
+    "vat_exemption": "KDV istisnası", "customer_einvoice_user": "e-Fatura mükellefi", "customer_legal_form": "Şahıs / şirket",
     "period_start": "Dönem başlangıcı", "period_end_exclusive": "Dönem sonu (hariç)",
     "base_period_start": "Baz dönem başlangıcı", "base_period_end_exclusive": "Baz dönem sonu (hariç)",
     "target_period_start": "Karşılaştırılan dönem başlangıcı", "target_period_end_exclusive": "Karşılaştırılan dönem sonu (hariç)",
