@@ -113,19 +113,28 @@ async def archive_recommend(generation_id: str) -> dict:
     return await recommend.run(generation_id)
 
 
+# Page scans, visual identity, metadata, identity and final-read checks run on their own event loop
+# (editor.offloop): their page renders, page-text reads and DB transactions are synchronous, and on
+# the worker's shared loop they stopped the heartbeats of every activity of every book being read
+# (worker log 2026-10-03: source.read 33 s, embed_figures 22 s, catalog source.load 28 s).
+def _own_loop(fn, *a, **k):
+    from .. import offloop
+    return offloop.run(fn, *a, **k)
+
+
 @activity.defn
 async def scan_page_fast(generation_id: str, page_no: int) -> dict:
-    return await vision.analyze_page_visual(generation_id, page_no, "fast")
+    return await _own_loop(vision.analyze_page_visual, generation_id, page_no, "fast")
 
 
 @activity.defn
 async def scan_page_deep(generation_id: str, page_no: int) -> dict:
-    return await vision.analyze_page_visual(generation_id, page_no, "deep")
+    return await _own_loop(vision.analyze_page_visual, generation_id, page_no, "deep")
 
 
 @activity.defn
 async def scan_page_deep_key(generation_id: str, page_no: int) -> dict:
-    return await vision.analyze_page_visual(generation_id, page_no, "deep", ["IMPORTANT_EVENT"])
+    return await _own_loop(vision.analyze_page_visual, generation_id, page_no, "deep", ["IMPORTANT_EVENT"])
 
 
 @activity.defn
@@ -170,12 +179,19 @@ async def extract_chunk(generation_id: str, chunk: list[int]) -> dict:
 
 
 @activity.defn
-async def resolve_identity(generation_id: str) -> dict:
-    # On the last attempt the policy allows, a failure that would otherwise be retried leaves
-    # the mentions unresolved and asks the editor instead of ending the reading.
+async def resolve_identity(generation_id: str, strict: bool = False) -> dict:
+    """Runs on its own event loop (editor.offloop): the write phase reads the whole book's text and
+    screens every name synchronously, and on the shared loop it cost heartbeats (2026-10-03).
+
+    Old workflows (no `strict`): on the last attempt the policy allows, a failure that would otherwise be
+    retried leaves the mentions unresolved and asks the editor instead of ending the reading.
+    `strict` (workflow «infra-step-retry-v1»): an infrastructure failure is never turned into an editor
+    question — it is raised on every attempt and the workflow retries the step, then fails the job;
+    a deterministic failure still falls back to smaller windows and then to the editor."""
+    from .. import offloop
     from .workflows import RETRY
-    final = activity.info().attempt >= (RETRY.maximum_attempts or 1)
-    return await knowledge.resolve_character_identity(generation_id, final_attempt=final)
+    final = not strict and activity.info().attempt >= (RETRY.maximum_attempts or 1)
+    return await offloop.run(knowledge.resolve_character_identity, generation_id, final_attempt=final)
 
 
 @activity.defn
@@ -185,10 +201,27 @@ async def identity_unresolved(generation_id: str, error: str) -> dict:
 
 
 @activity.defn
-async def proofreading(generation_id: str) -> dict:
-    """Final-read checks; each isolated, none can fail the book (editor.proofing)."""
-    from .. import proofing
-    return await proofing.run_all(generation_id)
+async def proofreading(generation_id: str, resume: bool = False) -> dict:
+    """Final-read checks; each isolated, none can fail the book for a problem of its own (editor.proofing).
+
+    A retry (attempt > 1, or `resume` from the workflow's own retry round) continues where the lost
+    attempt stopped: checks already recorded at their version are not run again. Each check's name goes
+    into the heartbeat details. A check that failed for an infrastructure reason (model, connection,
+    database) makes the activity fail with a retryable `TransientStepFailure` after every other check
+    has been recorded: the retry runs only what is missing, and a step that never passes is not
+    reported as done."""
+    from temporalio.exceptions import ApplicationError
+
+    from .. import proofing, transient
+    from .liveness import report
+    resume = resume or activity.info().attempt > 1
+    out = await proofing.run_all(generation_id, resume=resume, progress=report)
+    lost = sorted(k for k, v in out.items() if isinstance(v, dict) and v.get("transient"))
+    if lost:
+        raise ApplicationError(f"son okuma denetimleri altyapı hatasıyla tamamlanamadı: {', '.join(lost)}: "
+                               + "; ".join(f"{k}: {out[k]['failed'][:160]}" for k in lost)[:1500],
+                               {"checks": lost}, type=transient.TYPE)
+    return out
 
 
 @activity.defn
@@ -196,7 +229,7 @@ async def visual_identity(generation_id: str) -> dict:
     """Who each drawn figure is: embeddings, constrained clustering, one adjudication per
     cluster (figure_identity). The per-figure reference matching it replaces named 31% of a
     six-book corpus at one 32B call per crop; this names more for a call per cluster."""
-    out = await figure_identity.resolve(generation_id)
+    out = await _own_loop(figure_identity.resolve, generation_id)
     return {k: v for k, v in out.items() if k not in ("assignments", "by_figure")}
 
 
@@ -312,7 +345,7 @@ async def book_metadata(generation_id: str) -> dict:
     pages appear there."""
     from .. import page_scope
     await _t(page_scope.ensure, generation_id)
-    meta = await catalog.extract_metadata(generation_id)
+    meta = await _own_loop(catalog.extract_metadata, generation_id)
     return {"fields": sorted(meta)}
 
 

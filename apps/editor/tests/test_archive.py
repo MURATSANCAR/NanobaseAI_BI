@@ -219,7 +219,7 @@ def _run_workflow(profile: str):
         "confirm_text_visual": lambda gid: {"pages": 0, "proposed": 0, "confirmed": 0, "confirmed_pages": [],
                                             "pages_failed": []},
         "text_chunks": lambda gid: [[1, 6]],
-        "resolve_identity": lambda gid: {"characters": 1},
+        "resolve_identity": lambda gid, *strict: {"characters": 1},
         "narrative_roles": lambda gid: {"pages": [2, 3]},
         "rebuild_outputs": lambda gid: {"technical_status": "SUCCEEDED"},
         "archive_outputs": lambda gid: {"technical_status": "SUCCEEDED"},

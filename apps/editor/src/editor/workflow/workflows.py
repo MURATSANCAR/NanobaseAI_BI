@@ -10,12 +10,35 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 from temporalio.exceptions import ActivityError, ApplicationError
+from temporalio.exceptions import TimeoutError as ActivityTimeout
+
+with workflow.unsafe.imports_passed_through():
+    from .. import transient
 
 RETRY = RetryPolicy(initial_interval=timedelta(seconds=10), backoff_coefficient=2.0,
                     maximum_interval=timedelta(minutes=5), maximum_attempts=4,
                     non_retryable_error_types=["ValueError", "KeyError"])
 SHORT = timedelta(minutes=20)
 LONG = timedelta(hours=2)
+
+#: «Sessiz başarı yok» (2026-10-03): a required step (identity, final-read checks) that failed for an
+#: infrastructure reason is run again by the workflow after these pauses (each run is a full activity
+#: with its own retry policy); when the last one fails too, the job fails instead of ending SUCCEEDED
+#: with the step missing. Histories recorded before this marker replay their old handling.
+INFRA_STEP_RETRY = "infra-step-retry-v1"
+INFRA_STEP_DELAYS = (timedelta(minutes=10), timedelta(minutes=30))
+
+
+def infrastructure_failure(e: ActivityError) -> bool:
+    """The activity lost its worker (heartbeat / start-to-close timeout) or ended in a connection,
+    database or model-availability error (editor.transient): the step may pass later. Anything else
+    — the book's data, a rule, a request that cannot fit — fails the same way again."""
+    cause = e.cause
+    if isinstance(cause, ActivityTimeout):
+        return True
+    if isinstance(cause, ApplicationError):
+        return transient.failure_type_transient(cause.type, cause.message or "")
+    return False
 
 
 @workflow.defn(name="BookFullAnalysis")
@@ -29,6 +52,30 @@ class BookFullAnalysis:
         options = {"heartbeat_timeout": timedelta(seconds=60)} if self.activity_heartbeats else {}
         return await workflow.execute_activity(name, args=list(args), start_to_close_timeout=timeout,
                                                retry_policy=RETRY, **options)
+
+    async def required(self, key: str, name: str, *args, failures: dict, retry_args: tuple = (),
+                       timeout: timedelta = LONG):
+        """A step the book must not silently lose (INFRA_STEP_RETRY). An infrastructure failure is run
+        again after INFRA_STEP_DELAYS (`retry_args` appended on those runs), and when it still fails the
+        job fails (ApplicationError, non-retryable: the job's FAILED status brings the self-repair /
+        «Yeniden okut»). Any other failure is recorded in `failures[key]` and returned as None — the
+        old handling. Only called where INFRA_STEP_RETRY is patched."""
+        for round_ in range(len(INFRA_STEP_DELAYS) + 1):
+            try:
+                return await self.act(name, *args, *(retry_args if round_ else ()), timeout=timeout)
+            except ActivityError as e:
+                error = str(e.cause or e)[:500]
+                if not infrastructure_failure(e):
+                    failures[key] = [error]
+                    return None
+                if round_ == len(INFRA_STEP_DELAYS):
+                    raise ApplicationError(
+                        f"{key}: altyapı hatası {round_ + 1} turda da geçmedi, adım atlanmadı: {error}",
+                        non_retryable=True) from e
+                workflow.logger.warning("%s failed for an infrastructure reason (round %d): %s; retrying in %s",
+                                        key, round_ + 1, error, INFRA_STEP_DELAYS[round_])
+                await workflow.sleep(INFRA_STEP_DELAYS[round_])
+        return None
 
     async def step(self, n: int, label: str, extra: dict | None = None) -> None:
         await self.act("set_step", self.job_id, n, label, extra or {}, timeout=SHORT)
@@ -139,11 +186,14 @@ class BookFullAnalysis:
             emo = await self.act("emotions_themes", gid)
             if not archive and workflow.patched("proofreading-v1"):
                 await self.step(10, "Son okuma denetimleri")
-                try:
-                    failures["proofreading"] = []
-                    await self.act("proofreading", gid, timeout=LONG)
-                except ActivityError as e:
-                    failures["proofreading"] = [str(e.cause or e)[:500]]
+                if workflow.patched(INFRA_STEP_RETRY):
+                    await self._proofreading(gid, failures)
+                else:
+                    try:
+                        failures["proofreading"] = []
+                        await self.act("proofreading", gid, timeout=LONG)
+                    except ActivityError as e:
+                        failures["proofreading"] = [str(e.cause or e)[:500]]
             await self.step(15, "Künye")
             try:
                 await self.act("book_metadata", gid)
@@ -237,7 +287,10 @@ class BookFullAnalysis:
                 return None
 
         await self.step(10, "Son okuma denetimleri", {"generation_id": gid})
-        await soft("proofreading", "proofreading")
+        if workflow.patched(INFRA_STEP_RETRY):
+            await self._proofreading(gid, failures)
+        else:
+            await soft("proofreading", "proofreading")
         await self.step(6, "Metin–görsel bulguların teyidi")
         tv = await soft("text_visual", "confirm_text_visual")
         await self.step(8, "Karakter sürekliliği")
@@ -382,6 +435,14 @@ class BookFullAnalysis:
         retry: the mentions stay unresolved, the editor gets the question, the book goes on.
         On success nothing here adds a command; a replayed history that ended here before this
         branch existed has no marker and fails exactly as it did."""
+        if workflow.patched(INFRA_STEP_RETRY):
+            # strict: the activity raises infrastructure failures instead of asking the editor on its
+            # last attempt; the workflow runs it again, and fails the job if it never passes (a book
+            # with 0 characters because of a heartbeat timeout ended SUCCEEDED, 2026-10-03)
+            ident = await self.required("identity", "resolve_identity", gid, True, failures=failures)
+            if ident is None:
+                return await self.act("identity_unresolved", gid, failures["identity"][0], timeout=SHORT)
+            return ident
         try:
             return await self.act("resolve_identity", gid)
         except ActivityError as e:
@@ -389,6 +450,16 @@ class BookFullAnalysis:
                 raise
             failures["identity"] = [str(e.cause or e)[:500]]
             return await self.act("identity_unresolved", gid, failures["identity"][0], timeout=SHORT)
+
+    async def _proofreading(self, gid: str, failures: dict) -> None:
+        """Final-read checks under INFRA_STEP_RETRY: an infrastructure failure is retried and then fails
+        the job; a workflow retry round resumes (checks already recorded are not run again). A check
+        that failed for a problem of its own does not fail the book (as before) but is named in
+        `failures.proofreading_checks` instead of disappearing."""
+        res = await self.required("proofreading", "proofreading", gid, failures=failures, retry_args=(True,))
+        lost = sorted(k for k, v in (res or {}).items() if isinstance(v, dict) and "failed" in v)
+        if lost:
+            failures["proofreading_checks"] = lost
 
     async def _visual_phase(self, gid: str, ident: dict, tv: dict, key_pages: list,
                             failures: dict, archive: bool = False) -> tuple[dict, dict | None, dict]:

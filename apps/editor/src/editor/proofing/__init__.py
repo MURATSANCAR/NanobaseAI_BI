@@ -23,6 +23,7 @@ Rules that apply to every check (project rules):
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import pkgutil
 import time
@@ -31,6 +32,8 @@ import traceback
 from .. import book_type, db
 
 SEVERITIES = ("INFO", "WARN", "ERROR")
+#: Who closes a superseded queue item (the change log shows the application as «ZEKİ AI»).
+ACTOR = "ZEKİ AI"
 
 # Every check runs on every book (user decision 2026-09-24: what a children's book gets, every
 # book gets). Where a check's premise does not hold for this kind of book (editor.book_type) —
@@ -96,6 +99,14 @@ def record(generation_id: str, mod, findings: list[dict], stats: dict, started: 
                 (run, generation_id, mod.NAME, f["page"], f["severity"], f["quote"],
                  db.J(f["bbox"]) if f["bbox"] is not None else None, f["message"], f["suggestion"],
                  db.J(f["details"])))
+        # an older run of the same check on this generation is superseded: its still-open queue item
+        # would be a duplicate of this one (an activity retry used to run every check again, up to
+        # four open items per check, 2026-10-01..03); an item the editor already decided stays
+        c.execute("UPDATE review_item SET status='REJECTED', decided_by=%s, decided_at=now(),"
+                  " decision=%s WHERE generation_id=%s AND status='OPEN' AND proof_run_id IN"
+                  " (SELECT id FROM proof_run WHERE generation_id=%s AND check_name=%s AND id<>%s)",
+                  (ACTOR, db.J({"superseded_by_run": str(run), "reason": "aynı denetimin yeni koşusu"}),
+                   generation_id, generation_id, mod.NAME, run))
         serious = [f for f in rows if f["severity"] != "INFO"]
         if serious:
             pages = sorted({f["page"] for f in serious if f["page"] is not None})
@@ -109,29 +120,75 @@ def record(generation_id: str, mod, findings: list[dict], stats: dict, started: 
     return {"run_id": str(run), "findings": len(rows), "serious": len(serious)}
 
 
-async def run_all(generation_id: str, only: list[str] | None = None) -> dict:
+def recorded(generation_id: str) -> dict[str, str]:
+    """{check name: run id} of the checks that already have a SUCCEEDED run at their current version on
+    this generation (what a resumed run skips)."""
+    have = {(r["check_name"], r["check_version"]): str(r["id"]) for r in db.all_rows(
+        "SELECT DISTINCT ON (check_name, check_version) id, check_name, check_version FROM proof_run"
+        " WHERE generation_id=%s AND status='SUCCEEDED' ORDER BY check_name, check_version, started_at DESC",
+        generation_id)}
+    return {name: have[(name, str(mod.VERSION))] for name, mod in checks().items()
+            if (name, str(mod.VERSION)) in have}
+
+
+def _failed(generation_id: str, name: str, mod, e: BaseException, t0: float) -> None:
+    with db.tx() as c:
+        c.execute("INSERT INTO proof_run(generation_id, check_name, check_version, status, error,"
+                  " started_at, finished_at) VALUES (%s,%s,%s,'FAILED',%s,to_timestamp(%s),now())",
+                  (generation_id, name, str(getattr(mod, "VERSION", "?")),
+                   (str(e) + "\n" + "".join(traceback.format_exception(e)))[-4000:], t0))
+
+
+async def _one(generation_id: str, name: str, mod, reason: str | None) -> dict:
+    """One check, start to record. Runs on its own event loop (editor.offloop): a check reads the whole
+    book, renders pages and measures them, and much of that is synchronous; on the worker's shared loop
+    it stopped every activity's heartbeat (layout 151 s, series_canon, setting — 2026-10-01..03)."""
+    from .. import transient
+    t0 = time.time()
+    try:
+        result = await mod.run(generation_id)
+        findings, stats = (result if isinstance(result, tuple) else (result, {}))
+        if reason:
+            findings, stats = as_advice(findings, reason), {**stats, "advisory": reason}
+        return record(generation_id, mod, findings, stats, t0)
+    except Exception as e:  # noqa: BLE001 - recorded, the other checks go on
+        _failed(generation_id, name, mod, e, t0)
+        out = {"failed": str(e)[:300]}
+        if transient.is_transient(e):
+            out["transient"] = True
+        return out
+
+
+async def run_all(generation_id: str, only: list[str] | None = None, *, resume: bool = False,
+                  progress=None) -> dict:
     """Run every check, each isolated: one failing check never costs the book the others.
-    A check whose premise does not hold for this kind of book reports advice (as_advice)."""
-    out = {}
-    profile = await book_type.profile(generation_id)
-    for name, mod in checks().items():
-        if only and name not in only:
+    A check whose premise does not hold for this kind of book reports advice (as_advice).
+
+    Each check runs on its own event loop and thread (editor.offloop), so nothing a check does can
+    stop the worker's heartbeats. `resume`: a check that already has a SUCCEEDED run at its current
+    version on this generation is not run again (an activity retry continues where the lost attempt
+    stopped instead of starting over and queueing every finding a second time). `progress(**kw)` is
+    told which check runs (the activity's heartbeat details).
+
+    A check that failed for an infrastructure reason (editor.transient: connection, database, model
+    down) is marked `transient`; the caller decides whether that may pass silently (the workflow's
+    activity does not let it)."""
+    from .. import offloop
+    out: dict = {}
+    profile = await offloop.run(book_type.profile, generation_id)
+    done = await asyncio.to_thread(recorded, generation_id) if resume else {}
+    todo = [(n, m) for n, m in checks().items() if not only or n in only]
+    for i, (name, mod) in enumerate(todo):
+        if name in done:
+            out[name] = {"resumed": done[name]}
             continue
-        t0 = time.time()
-        reason = advisory_reason(name, profile)
-        try:
-            result = await mod.run(generation_id)
-            findings, stats = (result if isinstance(result, tuple) else (result, {}))
-            if reason:
-                findings, stats = as_advice(findings, reason), {**stats, "advisory": reason}
-            out[name] = record(generation_id, mod, findings, stats, t0)
-        except Exception as e:  # noqa: BLE001 - recorded, the other checks go on
-            with db.tx() as c:
-                c.execute("INSERT INTO proof_run(generation_id, check_name, check_version, status, error,"
-                          " started_at, finished_at) VALUES (%s,%s,%s,'FAILED',%s,to_timestamp(%s),now())",
-                          (generation_id, name, str(getattr(mod, "VERSION", "?")),
-                           (str(e) + "\n" + traceback.format_exc())[-4000:], t0))
-            out[name] = {"failed": str(e)[:300]}
+        if progress is not None:
+            progress(check=name, index=i + 1, of=len(todo),
+                     done=sorted(k for k, v in out.items() if "failed" not in v))
+        out[name] = await offloop.run(_one, generation_id, name, mod, advisory_reason(name, profile))
+    if progress is not None:
+        progress(check=None, index=len(todo), of=len(todo),
+                 done=sorted(k for k, v in out.items() if "failed" not in v))
     return out
 
 

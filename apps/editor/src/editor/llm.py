@@ -22,21 +22,37 @@ from . import db
 from .config import settings
 
 MAX_RETRY_TOKENS = 32768     # upper bound; retry_budget also keeps it inside the context
-_client: httpx.AsyncClient | None = None
+_clients: dict[int, tuple[Any, httpx.AsyncClient]] = {}
 _aliases: dict[str, dict] | None = None
 
 
 def client() -> httpx.AsyncClient:
-    global _client
-    if _client is None:
+    """One client per event loop: an httpx connection pool belongs to the loop that opened it, and a
+    step may run on its own loop (editor.offloop) beside the worker's."""
+    try:
+        loop: Any = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    held = _clients.get(id(loop))
+    if held is None or held[0] is not loop:
         s = settings()
-        _client = httpx.AsyncClient(
+        held = (loop, httpx.AsyncClient(
             base_url=s.gateway_url,
             headers={"authorization": f"Bearer {s.gateway_key}"},
             timeout=httpx.Timeout(3600.0, connect=15.0),
             limits=httpx.Limits(max_connections=128, max_keepalive_connections=64),
-        )
-    return _client
+        ))
+        _clients[id(loop)] = held
+    return held[1]
+
+
+async def close_client() -> None:
+    """Close the current loop's client (editor.offloop calls this when its loop ends)."""
+    loop = asyncio.get_running_loop()
+    held = _clients.get(id(loop))
+    if held is not None and held[0] is loop:
+        _clients.pop(id(loop), None)
+        await held[1].aclose()
 
 
 async def aliases() -> dict[str, dict]:
