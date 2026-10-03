@@ -152,13 +152,13 @@ PAGE = {
     "texts": [{"id": "t1", "box": {"x": 20, "y": 200, "w": 60, "h": 18}, "runs": [{"text": "SON"}], "z": 4}],
     "shapes": [{"id": "s1", "kind": "sign", "runs": [{"text": "Sihirli Orman"}]}],
 }
-CFG = {"narrator": "anlatici-kadin", "characters": {"Elif": "cocuk-kiz"}}
+CFG = {"narrator": "roman-kadin", "characters": {"Elif": "genc-kadin"}}
 
 
 def test_page_units_reading_order_and_voices():
     us = N.page_units(PAGE, CFG, N.Lexicon())
     assert [u.id for u in us] == ["b1", "b2", "c1", "c2", "t1"]     # üstteki balonlar önce, şekil yazısı yok
-    assert [u.voice for u in us] == ["cocuk-kiz", "anlatici-kadin", "anlatici-kadin", "anlatici-kadin", "anlatici-kadin"]
+    assert [u.voice for u in us] == ["genc-kadin", "roman-kadin", "roman-kadin", "roman-kadin", "roman-kadin"]
     assert us[2].text == "Elif pencereden baktı. Ayşe çok heyecanlıydı."   # run'lar birleşir
     assert us[0].speaker == "Elif" and us[0].kind == "bubble"
 
@@ -253,14 +253,13 @@ def test_narrate_page_status_overlay_and_smil(job, monkeypatch):
 
     res = asyncio.run(N.narrate_page(job, "p_1", "editör"))
     assert res["status"] == "done"
-    # iki ses referansı bir kez tarifle üretildi (yayınevi düzeyinde), sayfa referansla klonlandı
-    designs = [c for c in calls if c["segments"][0]["voice"].get("design")]
-    assert {c["segments"][0]["voice"]["design"] for c in designs} == {N.voice("anlatici-kadin")["design"],
-                                                                        N.voice("cocuk-kiz")["design"]}
+    # katalog sesleri pakettaki sabit kayıtla klonlanır (tariften üretim çağrısı yok); eski kimlikler yeni seslere
+    assert len(calls) == 1 and not any(s["voice"].get("design") for s in calls[0]["segments"])
+    refs = {s["voice"]["ref_audio"] for s in calls[0]["segments"]}
+    assert refs <= {base64.b64encode(N.pinned_ref(v)).decode() for v in ("roman-kadin", "genc-kadin")}
     page_call = calls[-1]
     assert all(s["voice"].get("ref_audio") and s["voice"].get("ref_text") for s in page_call["segments"])
     assert page_call["format"] == "mp3" and page_call["align"] is True
-    assert (N._root() / "sesler" / "cocuk-kiz.wav").exists()
 
     assert {r["id"]: r["status"] for r in N.status(job)}["p_1"] == "done"
     mo = N.media_overlay(job)
@@ -320,7 +319,7 @@ def test_default_voices_from_character_descriptions(job):
         {"name": "Dede", "species": "human", "base_look": "an old man with a white beard"},
         {"name": "Tilki", "species": "a small fox", "base_look": ""}]})
     cfg = N.settings_of(job)
-    assert cfg["source"] == "auto" and cfg["characters"] == {"Elif": "cocuk-kiz", "Dede": "yasli-erkek"}
+    assert cfg["source"] == "auto" and cfg["characters"] == {"Elif": "genc-kadin", "Dede": "bilge-dede"}
 
 
 def test_clock():
@@ -343,7 +342,7 @@ def test_guess_voice_ignores_comparisons_and_follows_stated_sex():
     assert N.guess_voice("wombat", "female wombat, a bit larger than the father") == "genc-kadin"
     assert N.guess_voice("mother wombat", "larger than the father") == "genc-kadin"
     assert N.guess_voice("lion", "a big man with a mane") == "genc-erkek"
-    assert N.guess_voice("son of the king", "") == "cocuk-erkek"
+    assert N.guess_voice("son of the king", "") == "genc-erkek"           # küçük çocuk sesi yok: genç ses
     assert N.guess_voice("tree", "old and tall") is None
 
 
@@ -353,3 +352,20 @@ def test_short_exclamation_gets_min_duration():
     ps = N.pieces([u])
     got = {p.text: N.excl_min_sec(p, [u]) for p in ps}
     assert got == {"Tüh!": 0.28, "O da ne!": 0.84, "Bu çok güzel bir gün oldu!": None, "Nerede?": None}
+
+
+def test_warm_samples_caches_every_voice_once(job, monkeypatch):
+    """«Dinle» örnekleri önceden üretilir; ikinci ısıtma ve ekrandan gelen aynı cümle GPU'ya gitmez."""
+    calls = []
+    monkeypatch.setattr(N, "_call", _fake_service(calls))
+    first = asyncio.run(N.warm_samples())
+    assert first["failed"] == [] and first["done"] == len(N.all_voices())
+    n = len(calls)
+    assert asyncio.run(N.warm_samples())["done"] == first["done"] and len(calls) == n
+    asyncio.run(N.sample(N.SAMPLE_TEXT, "anlatici-kadin", N.lexicon(job)))
+    assert len(calls) == n
+
+
+def test_sample_text_matches_screen():
+    tsx = Path(__file__).resolve().parents[3] / "src/canvas/editorial/studio/narration/NarrationSection.tsx"
+    assert f"const SAMPLE = '{N.SAMPLE_TEXT}';" in tsx.read_text()

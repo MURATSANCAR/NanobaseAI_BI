@@ -55,6 +55,7 @@ class Page:
     table_y: list[float] = field(default_factory=list)       # tabloların üst kenarı (sayfadaki yeri)
     table_key: str = ""
     perde: bool = False
+    breaks: list[float] = field(default_factory=list)       # ara işaretinin (süs) sayfadaki yeri
 
 
 def fold(t: str) -> str:
@@ -116,6 +117,11 @@ def page_parts(page, body: float, left: float, right: float) -> Page:
                                                    b[1] - 1 <= (ln.y0 + ln.y1) / 2 <= b[3] + 1 for b in boxes)]
     is_body = [abs(ln.size - body) <= max(0.8, body * 0.08) for ln in lines]
     body_idx = [i for i, b in enumerate(is_body) if b]
+    big = [ln for ln in lines if ln.size >= body * 1.3]
+    if big and len(lines) <= 6 and sum(len(lines[i].text) for i in body_idx) <= 120 and not pg.tables:
+        pg.perde = True                       # bölüm perdesi: büyük başlık + en çok kısa bir alt satır
+        pg.heads = {fold(ln.text) for ln in lines if DIGITS.match(ln.text)}
+        return pg
     if not body_idx:
         big = [ln for ln in lines if ln.size >= body * 1.3]
         pg.perde = bool(big) and len(lines) <= 6 and not pg.tables and all(ln.size >= body * 0.95 or DIGITS.match(ln.text) for ln in lines)
@@ -141,16 +147,47 @@ def page_parts(page, body: float, left: float, right: float) -> Page:
         last = next((int(n) for n, _ in reversed(pg.notes) if n is not None), None)
         # not numarası sırayla artar; sayfanın ilk notu sayfadaki bir gönderme numarasıdır (devam satırındaki
         # «12 Ocak 1999» yeni not sayılmaz)
-        if m and (int(m.group(1)) == last + 1 if last is not None else (not pg.refs or m.group(1) in pg.refs)):
+        n = int(m.group(1)) if m else 0
+        if m and ((n == last + 1 or (last < n <= last + 3 and m.group(1) in pg.refs)) if last is not None
+                  else (not pg.refs or m.group(1) in pg.refs)):           # basılıda atlanmış numara (71 yok, 72 var)
             pg.notes.append([m.group(1), m.group(2)])
         elif pg.notes:
             pg.notes[-1][1] = _join(pg.notes[-1][1], ln.text)
         else:
             pg.notes.append([None, ln.text])
     pg.note_key = "".join(fold(t) for _, t in pg.notes)
+    # Ara işareti: gövdede iki satır arasında olağandan büyük boşluk ve boşlukta süs (çizim ya da resim). Okunmuş
+    # metinde izi yoktur; sahne geçişi kaybolmasın.
+    try:
+        marks = [fitz_rect for fitz_rect in _ornaments(page)]
+        for a, b in zip(pg.body, pg.body[1:]):
+            gap = b.y0 - a.y1
+            if gap > 1.5 * (a.y1 - a.y0) and any(a.y1 - 1 <= (r[1] + r[3]) / 2 <= b.y0 + 1 for r in marks):
+                pg.breaks.append((a.y1 + b.y0) / 2)
+        if pg.body:                                   # sayfanın başında ya da sonunda (son satırın altında) duran süs
+            first, last = pg.body[0], pg.body[-1]
+            for r in marks:
+                cy = (r[1] + r[3]) / 2
+                if (top - 3 * (first.y1 - first.y0) <= cy < first.y0 - 1) or (last.y1 + 1 < cy <= last.y1 + 3 * (last.y1 - last.y0)):
+                    pg.breaks.append(cy)
+    except Exception:  # noqa: BLE001
+        pass
     pg.body_folds = [fold(ln.text) for ln in pg.body]
     pg.body_key = "".join(pg.body_folds)
     return pg
+
+
+def _ornaments(page) -> list[tuple]:
+    """Sayfadaki küçük süsler: çizim kümeleri ve resimler (en çok sütunun yarısı genişliğinde, 60 pt yüksekliğinde)."""
+    out = []
+    for r in page.cluster_drawings() if hasattr(page, "cluster_drawings") else []:
+        if r.width <= page.rect.width / 2 and r.height <= 60:
+            out.append((r.x0, r.y0, r.x1, r.y1))
+    for info in page.get_image_info():
+        x0, y0, x1, y1 = info["bbox"]
+        if (x1 - x0) <= page.rect.width / 2 and (y1 - y0) <= 60:
+            out.append((x0, y0, x1, y1))
+    return out
 
 
 def _same_baseline(lines: list[Line]) -> list[Line]:
@@ -183,7 +220,9 @@ def para_lines(pg: Page, text: str) -> list[Line]:
     """Okunmuş paragrafın dizgideki satırları: anahtarı paragrafın anahtarıyla başlayan ilk satırdan, paragraf bitene
     dek ardışık satırlar."""
     key = fold(text)
-    if len(key) < 4 or key[:12] not in pg.body_key:
+    if len(key) < 4:                                  # kısa paragraf («II»): yalnız aynı satırla eşleşir
+        return [ln for k, ln in zip(pg.body_folds, pg.body) if k == key][:1] if key else []
+    if key[:12] not in pg.body_key:
         return []
     body, folds = pg.body, pg.body_folds
     for i, ln in enumerate(body):
@@ -205,7 +244,8 @@ def para_lines(pg: Page, text: str) -> list[Line]:
 
 
 def kind_of(lines: list[Line], left: float, right: float, body: float = 0.0) -> tuple[str, str | None]:
-    """(tür, şiirde satır sonlu metin). tür: para | poem | italic | right. Şiir: en az 2 satır, satırların dörtte üçü
+    """(tür, şiirde satır sonlu metin). tür: para | subhead | poem | italic | right. Alt başlık: tek, ortalı, gövdeden
+    belirgin büyük puntolu kısa satır («II»). Şiir: en az 2 satır, satırların dörtte üçü
     sütunun %80'inden kısa, hepsi aynı soldan başlar (iki sütunlu kısaltma listesi, ortalı grafik başlığı değil),
     gövde puntosunda (bölüm başlığı değil), tireyle bölünmemiş; sağa yaslı satırlar şiir sayılmaz (imza, kaynak)."""
     if len(lines) < 1:
@@ -217,6 +257,10 @@ def kind_of(lines: list[Line], left: float, right: float, body: float = 0.0) -> 
     hyph = any(re.search(r"\w[-\xad]$", ln.text) for ln in lines[:-1])
     same_left = max(ln.x0 for ln in lines) - min(ln.x0 for ln in lines) <= 4
     body_size = not body or all(ln.size <= body * 1.08 for ln in lines)
+    mid = (left + right) / 2
+    if (len(lines) == 1 and body and lines[0].size >= body * 1.12 and len(lines[0].text) <= 80
+            and abs((lines[0].x0 + lines[0].x1) / 2 - mid) <= 12):
+        return "subhead", None
     if right_al >= 0.6:
         return "right", None
     caption = bool(CAPTION.match(lines[0].text))
@@ -230,6 +274,15 @@ def kind_of(lines: list[Line], left: float, right: float, body: float = 0.0) -> 
 def analyze(doc) -> dict[int, Page]:
     body, left, right = measure(doc)
     pages = {i: page_parts(p, body, left, right) for i, p in enumerate(doc, 1)}
+    # Sayfa altı künyesi («nurullah genç · her şey yanıp gül oldu 11»): kitabın birçok sayfasında aynen tekrarlanan
+    # küçük puntolu alt satır dipnot değildir (rakamsız anahtarı en az 5 sayfada ve sayfaların %10'unda geçer).
+    seen = collections.Counter(fold(t) for pg in pages.values() for t in {t for _, t in pg.notes})
+    footer = {k for k, n in seen.items() if k and n >= max(5, len(pages) // 10)}
+    for pg in pages.values():
+        if any(fold(t) in footer for _, t in pg.notes):
+            pg.heads |= {fold(t) for _, t in pg.notes if fold(t) in footer}
+            pg.notes = [[n, t] for n, t in pg.notes if fold(t) not in footer]
+            pg.note_key = "".join(fold(t) for _, t in pg.notes)
     for pg in pages.values():
         pg.left, pg.right, pg.size = left, right, body     # type: ignore[attr-defined]
     return pages

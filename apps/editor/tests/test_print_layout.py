@@ -85,5 +85,15 @@ def test_finish_layout_epigraph_and_perde():
         Block("italic", "Ortadaki alıntı epigraf değildir.", [8])])
     ms = Manuscript("K", chapters=[ch])
     _finish_layout(ms, {5: perde, 7: page([]), 8: page([])}, {})
-    assert ch.kind == "perde"
-    assert [b.kind for b in ch.blocks] == ["perde_alti", "epigraph", "epigraph", "para", "italic"]
+    # Bölüm perde sayfasından yeniden kesilir: perde sayfasındaki ilk satır bölüm adı, alt satır perde altı.
+    assert [(c.title, c.kind) for c in ms.chapters] == [("I. BÖLÜM DEHŞETİN SINIRLARI", "perde")]
+    assert [b.kind for b in ms.chapters[0].blocks] == ["perde_alti", "epigraph", "epigraph", "para", "italic"]
+
+
+def test_section_heading_and_ornament_break():
+    sub = [ln("II", 223, 235, size=14)]
+    assert L.kind_of(sub, 89, 372, 12)[0] == "subhead"
+    pg = page([ln("Sonu.", y=100), ln("Yeni sahne başlıyor.", y=145)])
+    assert L.para_lines(pg, "II") == []
+    pg2 = page([ln("II", 223, 235, y=80, size=14)])
+    assert L.para_lines(pg2, "II")[0].text == "II"                               # kısa paragraf satırla eşleşir

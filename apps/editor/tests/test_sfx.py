@@ -366,17 +366,17 @@ def test_voice_person_from_voice_identity():
     got = {v: sfx.voice_person(v) for v in ("anlatici-kadin", "canli-erkek-radyo", "anlatici-erkek", "cocuk-kiz",
                                              "cocuk-erkek", "yasli-kadin", "masal-erkek-dede", "masal-kadin-anne")}
     assert got == {"anlatici-kadin": "kadın", "canli-erkek-radyo": "erkek", "anlatici-erkek": "erkek",
-                   "cocuk-kiz": "kız çocuğu", "cocuk-erkek": "erkek çocuğu", "yasli-kadin": "yaşlı kadın",
+                   "cocuk-kiz": "kadın", "cocuk-erkek": "erkek", "yasli-kadin": "yaşlı kadın",   # çocuk → genç ses
                    "masal-erkek-dede": "yaşlı erkek", "masal-kadin-anne": "kadın"}
     assert sfx.voice_person("yok-boyle-ses") is None and sfx.voice_person(None) is None
 
 
 def test_pick_prompt_carries_who_makes_the_human_sound(pool):
-    """Kadın anlatıcının okuduğu yerde iç çekiş, kız karakterin balonundaki «Tüh!»: seçim istemi sesi çıkaranın
+    """Kadın anlatıcının okuduğu yerde iç çekiş, nine karakterin balonundaki «Tüh!»: seçim istemi sesi çıkaranın
     cinsiyetini/yaşını taşır, insan sesinde tutması gerektiğini söyler; istem sürümü artar."""
     t, b = "Kız derin bir iç çekti.", "Tüh!"
     units = [N.Unit("b1", "para", None, "anlatici-kadin", t, N.read(t)),
-             N.Unit("k1", "bubble", "Elif", "cocuk-kiz", b, N.read(b)),
+             N.Unit("k1", "bubble", "Nine", "masal-nine", b, N.read(b)),
              N.Unit("k2", "bubble", "Can", "canli-erkek-radyo", b, N.read(b))]
     cands = [{"id": "x1", "title": "male sigh", "source": "kenney", "dur": 1.0},
              {"id": "x2", "title": "female sigh", "source": "kenney", "dur": 1.0}]
@@ -386,13 +386,13 @@ def test_pick_prompt_carries_who_makes_the_human_sound(pool):
     assert "Sesi çıkaran" not in nar
     assert "adayın cinsiyeti ve yaşı sesi çıkaranla tutmalı" in nar and "A) male sigh" in nar
     bub = sfx.pick_prompt({"quote": "Tüh", "query": "hayal kırıklığı iç çekişi"}, cands, sfx.block_speaker(units, "k1"))
-    assert "Sesi çıkaran: kız çocuğu («Elif» konuşuyor)." in bub
+    assert "Sesi çıkaran: yaşlı kadın («Nine» konuşuyor)." in bub
     assert "Sesi çıkaran: erkek («Can» konuşuyor)." in sfx.pick_prompt({"quote": "Tüh"}, cands,
                                                                         sfx.block_speaker(units, "k2"))
     assert "Sesi çıkaran" not in sfx.pick_prompt({"quote": "Tüh"}, cands, None)   # bilinmiyorsa satır yok
     # ipucu okumasında da her bloğun okuyan sesi görünür (tarif cinsiyet/yaşla yazılsın)
     prompt, _ = sfx._page_prompt(units)
-    assert "[b1] Kız derin" in prompt and "[k1] (Elif · konuşan ses: kız çocuğu) Tüh!" in prompt
+    assert "[b1] Kız derin" in prompt and "[k1] (Nine · konuşan ses: yaşlı kadın) Tüh!" in prompt
 
     class Llm:
         def __init__(self):
@@ -406,7 +406,7 @@ def test_pick_prompt_carries_who_makes_the_human_sound(pool):
     llm = Llm()
     ranked, fit = asyncio.run(sfx.rerank(llm, {"quote": "Tüh"}, cands, sfx.block_speaker(units, "k1")))
     assert [r["id"] for r in ranked] == ["x2", "x1"] and fit == 0.95
-    assert "Sesi çıkaran: kız çocuğu" in llm.msgs[0] and llm.refs[0] == ("sfx.pick", "5")
+    assert "Sesi çıkaran: yaşlı kadın" in llm.msgs[0] and llm.refs[0] == ("sfx.pick", "5")
 
 
 def test_suggest_page_gives_no_person_for_narration_text(job, pool, monkeypatch):

@@ -24,8 +24,8 @@ arasından harf sayısıyla orantılı tahmin edilir (`estimated`).
     insan/<yükleme>/    yüklenen insan kaydı: özgün dosya, hak beyanı, izin belgesi (narration_human.py)
 Yayınevi düzeyinde (`<storage>/production/_ses/`): sozluk.json (yayınevi sözlüğü), sesler/<ses>.wav|json (her ses bir
 kez tarifle üretilen referans; sonra hep o referansla okunur, kitap boyunca aynı ses kalır). Sabit referanslı seslerin
-(önerilen erkek anlatıcı ve Alania havuzundan alınanlar, voices_alania.py) kaydı pakettedir (`production/sesler/`,
-PINNED; sha256 kodda), yayınevi klasörüne yazılmaz.
+(katalogdaki seçilmiş kayıtlar, voices_zeki.py) kaydı pakettedir (`production/sesler/`, PINNED; sha256 kodda),
+yayınevi klasörüne yazılmaz.
 
 EPUB bağlantısı: `media_overlay(job)` bütün kitabın kelime zamanlarını verir, `smil(...)` bir sayfanın SMIL 3.0
 belgesini yazar (EPUB 3 Media Overlays). Biçim `media_overlay`'in belgesinde.
@@ -33,6 +33,7 @@ belgesini yazar (EPUB 3 Media Overlays). Biçim `media_overlay`'in belgesinde.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import json
@@ -48,119 +49,22 @@ DIR = "ses"
 VERSION = 1
 
 # ------------------------------------------------------------------ sesler
-# Ses tarifle tasarlanır (gerçek kişi kaydı gerekmez); tarif modelin en iyi anladığı dilde (İngilizce), ad Türkçe.
-# Gruplar ekranda başlık olur. Kütüphane (2026-09-27): her grupta kadın ve erkek adaylar; tarifler referans cümlesiyle
-# üretilip temel frekansla (kadın > 165 Hz, erkek < 150 Hz ortanca) denetlendi — «lively/bright/energetic» gibi
-# sözcükler erkek tarifini tiz sese kaydırıyordu, erkek tarifleri «calm … low/deep male voice» kalıbındadır. Ölçüm ve
-# seçim: docs/analiz/sesli-okuma-model-secimi.md «Ses kütüphanesi». Varsayılanlar (DEFAULT_NARRATOR) kullanıcı seçene
-# kadar değişmez.
-GROUPS = {"anlatici": "Anlatıcı", "cocuk": "Çocuk kitabı anlatıcısı", "yetiskin": "Yetişkin kitap okuyucusu",
-          "karakter": "Karakter sesleri"}
+# Ses kataloğu voices_zeki.py'de (2026-10-03): Timaş kitap türlerine göre okuyucular + film karakteri sesleri, hepsi
+# modelimizin tariften ürettiği ve kullanıcının dinleyip seçtiği sabit kayıtlar. Gruplar ekranda başlık olur. Eski
+# kimlikler ALIASES ile yeni seslere gider. Varsayılanlar (DEFAULT_NARRATOR) kullanıcı seçene kadar değişmez.
+from .voices_zeki import ALIASES, DEFAULT_MALE_NARRATOR, DEFAULT_NARRATOR, GROUPS, RECOMMENDED, VOICES  # noqa: E402
+from .voices_zeki import PINNED as _ZEKI  # noqa: E402
 
-
-def _v(vid: str, label: str, note: str, group: str, design: str) -> dict:
-    return {"id": vid, "label": label, "note": note, "group": group, "design": design}
-
-
-VOICES: list[dict] = [
-    _v("anlatici-kadin", "Kadın anlatıcı", "sıcak, sakin", "anlatici",
-       "A warm, calm middle-aged woman storyteller, clear gentle diction, unhurried pace"),
-    # 2026-09-27–28 arası önerilen erkek anlatıcıydı; 2026-10-01'den beri referansı Alania kaydıdır (voices_alania.py).
-    _v("anlatici-erkek-masalci", "Erkek anlatıcı · sıcak masalcı", "olgun, kadifemsi, yavaş", "anlatici",
-       "A warm, mature man in his late forties telling a bedtime story to small children: deep, velvety, gentle voice "
-       "with a soft smile in it, slow calm pace, very clear Turkish diction, natural pauses at commas and full stops, "
-       "tender emphasis on key words"),
-    _v("anlatici-kadin-berrak", "Kadın · berrak anlatıcı", "net, dengeli, her kitaba", "anlatici",
-       "A clear, confident female narrator in her early forties with a warm mid-range voice, even steady pace, "
-       "precise Turkish diction, friendly neutral tone that suits any book"),
-    _v("anlatici-kadin-kadife", "Kadın · kadife ses", "alçak, yatıştırıcı, yavaş", "anlatici",
-       "A soft-spoken woman in her fifties with a low, velvety, soothing female voice, slow relaxed pace, gentle "
-       "warmth, clear careful Turkish pronunciation"),
-    _v("anlatici-kadin-canli", "Kadın · canlı anlatıcı", "ifadeli, ölçülü", "anlatici",
-       "An expressive woman in her thirties with a bright, engaging female voice, lively yet controlled pace, clear "
-       "Turkish diction, natural storytelling intonation with light emphasis"),
-    _v("anlatici-erkek-abi", "Erkek · anlatıcı ağabey", "genç, içten, sakin", "anlatici",
-       "A young man in his early thirties with a soft low male voice reading a bedtime story, warm big-brother tone, "
-       "calm measured pace, clear Turkish diction"),
-    _v("anlatici-erkek-radyo", "Erkek · radyo tiyatrosu", "tok, sahne diksiyonu", "anlatici",
-       "A deep-voiced man in his forties, a radio theatre narrator with a rich resonant low male voice, theatrical but "
-       "warm, deliberate rhythm, dramatic pauses, polished Turkish stage diction, vivid voices in dialogue"),
-    _v("masal-kadin-anne", "Kadın · masal okuyan anne", "yumuşak, ninni gibi", "cocuk",
-       "A warm young mother in her thirties reading a fairy tale to a small child at bedtime: gentle smiling female "
-       "voice, slow to medium pace, soft sing-song storytelling melody, very clear Turkish words"),
-    _v("masal-kadin-ogretmen", "Kadın · anaokulu öğretmeni", "neşeli, merak dolu", "cocuk",
-       "A cheerful kindergarten teacher, a woman in her late twenties, bright lively female voice full of wonder, "
-       "medium pace, playful expressive intonation, clear simple Turkish diction"),
-    _v("masal-kadin-nine", "Kadın · masalcı nine", "şefkatli, ağır", "cocuk",
-       "A tender grandmother-like woman in her sixties telling a fairy tale: warm cozy female voice, slow unhurried "
-       "pace, affectionate tone, clear Turkish pronunciation"),
-    _v("masal-erkek-baba", "Erkek · masal okuyan baba", "yumuşak, güven veren", "cocuk",
-       "A warm, gentle father in his late thirties reading a bedtime fairy tale: soft low male voice, slow to medium "
-       "pace, calm smiling tone, clear Turkish diction, cozy and reassuring"),
-    _v("masal-erkek-ogretmen", "Erkek · sınıf öğretmeni", "açık, sevecen", "cocuk",
-       "A calm male primary school teacher in his forties with a warm low male voice, reading a storybook to his class, "
-       "clear and kind, medium pace, clear Turkish diction"),
-    _v("masal-erkek-dede", "Erkek · masalcı dede", "derin, ağır", "cocuk",
-       "A kind grandfather in his sixties telling a fairy tale by the fire: warm deep elderly male voice, slow gentle "
-       "pace, affectionate tone, clear Turkish words"),
-    _v("yetiskin-kadin-roman", "Kadın · roman okuyucusu", "olgun, sakin", "yetiskin",
-       "A calm, mature woman in her forties reading a literary novel aloud: warm low female voice, measured even pace, "
-       "subtle emotional nuance, precise Turkish diction, audiobook narration style"),
-    _v("yetiskin-kadin-deneme", "Kadın · deneme okuyucusu", "düşünceli, ölçülü", "yetiskin",
-       "A thoughtful woman in her fifties reading an essay aloud: composed, articulate, clear mid-low female voice, "
-       "steady reflective pace, restrained intonation, careful Turkish pronunciation"),
-    _v("yetiskin-kadin-cagdas", "Kadın · çağdaş anlatı", "doğal, samimi", "yetiskin",
-       "A young adult woman in her early thirties narrating contemporary fiction: natural intimate female voice, "
-       "relaxed conversational pace, clear Turkish diction, understated expressiveness"),
-    _v("yetiskin-erkek-roman", "Erkek · roman okuyucusu", "derin, ağır", "yetiskin",
-       "A calm, mature man in his fifties reading a literary novel aloud: deep low male voice, measured unhurried pace, "
-       "subtle nuance, precise Turkish diction, audiobook narration style"),
-    _v("yetiskin-erkek-deneme", "Erkek · deneme okuyucusu", "düşünceli, ölçülü", "yetiskin",
-       "A thoughtful man in his forties reading an essay aloud: composed, articulate baritone male voice, steady "
-       "reflective pace, restrained intonation, careful Turkish pronunciation"),
-    _v("yetiskin-erkek-cagdas", "Erkek · çağdaş anlatı", "genç, samimi", "yetiskin",
-       "A calm young man in his thirties with a low baritone voice reading a modern novel aloud, intimate "
-       "conversational pace, clear Turkish diction"),
-    _v("genc-kadin", "Genç kadın", "canlı, içten", "karakter",
-       "A young woman in her twenties, lively and sincere, bright voice"),
-    _v("genc-erkek", "Genç erkek", "enerjik", "karakter", "A young man in his twenties, energetic and friendly voice"),
-    _v("cocuk-kiz", "Küçük kız", "neşeli", "karakter", "A cheerful little girl about eight years old, high playful voice"),
-    _v("cocuk-erkek", "Küçük oğlan", "meraklı", "karakter",
-       "A curious little boy about eight years old, lively childlike voice"),
-    _v("yasli-kadin", "Yaşlı kadın", "şefkatli", "karakter",
-       "A kind elderly grandmother in her seventies, soft affectionate slightly shaky voice"),
-    _v("yasli-erkek", "Yaşlı adam", "bilge", "karakter", "A wise elderly grandfather in his seventies, low warm slow voice"),
-]
-from .voices_lively import extend as _lively; GROUPS, VOICES = _lively(GROUPS, VOICES)  # noqa: E402,E702 — CANLI MASAL ANLATICISI kancası (voices_lively.py)
 VOICE_IDS = {v["id"] for v in VOICES}
-DEFAULT_NARRATOR = "anlatici-kadin"
-# Erkek anlatıcı istendiğinde kullanılan ses. Kullanıcı kararı 2026-09-28: «radyo oyuncusu» (12 erkek ses dinlenip
-# ölçüldü: ünlemli cümlede perde aralığı 8,4 yarım ton, önceki varsayılan «sıcak masalcı» 4,8; harf hatası %2,6 —
-# docs/analiz/sesli-okuma-erkek-anlatici-ve-kisa-fisilti.md). 2026-09-27'deki «sıcak masalcı» kararının yerine; o ses
-# listede kalır, seçmiş kitaplar değişmez. Eski «Erkek anlatıcı» (`anlatici-erkek`) bu sese yönlenir: kayıtlı ayar ve API
-# isteği çalışır, ekranda ayrı satır olarak görünmez.
-DEFAULT_MALE_NARRATOR = "canli-erkek-radyo"
-ALIASES = {"anlatici-erkek": DEFAULT_MALE_NARRATOR}
-RECOMMENDED = {DEFAULT_MALE_NARRATOR}
-# Referans cümle: Türkçe seslerin hepsini (ı, ğ, ş, ç, ö, ü) taşır; ses bir kez bununla üretilir, sonra klonlanır.
+# Referans cümle (sabit kaydı olmayan tarifli ses için): Türkçe seslerin hepsini (ı, ğ, ş, ç, ö, ü) taşır; ses bir kez
+# bununla üretilir, sonra klonlanır.
 REF_TEXT = "Bir varmış bir yokmuş; dağların eteğinde, şirin bir köyde, meraklı ve güler yüzlü bir çocuk yaşarmış."
 REF_SEED = 20260925
 # Sabit referanslar: aynı tarif ve tohum çalıştırmadan çalıştırmaya biraz farklı ses verebildiği için, kullanıcının
-# dinleyip seçtiği referans kaydın kendisi pakette durur (`production/sesler/<ses>.wav`, imajla gelir) ve sha256'sı
-# burada sabittir. Kayıt modelin tariften ürettiği sestir (REF_TEXT, REF_SEED; 48 kHz tek kanal, 8,5 sn, temel frekans
-# 87 Hz), gerçek kişi kaydı değildir. Dosya yoksa ya da özeti tutmazsa ses üretilmez (tariften sessizce başka bir ses
-# üretilmez). Seçim ve ölçüm: docs/analiz/sesli-okuma-model-secimi.md «Ses kütüphanesi».
+# dinleyip seçtiği referans kaydın kendisi pakette durur (`production/sesler/`, imajla gelir) ve sha256'sı kodda
+# sabittir. Dosya yoksa ya da özeti tutmazsa ses üretilmez (tariften sessizce başka bir ses üretilmez).
 PINNED_DIR = Path(__file__).with_name("sesler")
-PINNED = {
-    # radyo oyuncusu: 2026-09-27'de dinlenip sabitlenen referans (tohum 20260926, 48 kHz tek kanal, 8,0 sn), yayınevi
-    # klasöründeki `_ses/sesler/canli-erkek-radyo.wav` ile birebir aynı
-    "canli-erkek-radyo": {"file": "canli-erkek-radyo.wav", "text": REF_TEXT,
-                          "sha256": "afe289c508e43fb19becc8e80249d3f4018a103047909bf7e882f546fae02b3c"},
-}
-# Alania havuzundan alınan referanslar (2026-10-01, kullanıcı isteği: «mevcut sesler çok robotik»): aynı sabit kayıt
-# düzeni, dosyalar `production/sesler/alania/`; seçim, ölçüm ve lisans atfı voices_alania.py'de.
-from .voices_alania import PINNED as _ALANIA  # noqa: E402
-PINNED.update(_ALANIA)
+PINNED: dict[str, dict] = dict(_ZEKI)
 _pinned_ok: dict[str, tuple[float, int]] = {}
 
 
@@ -228,7 +132,8 @@ def all_voices() -> list[dict]:
     return sorted(out, key=lambda v: order.index(v["group"]) if v["group"] in order else len(order))
 
 
-# Karakter tarifinden (artplan: species/look, İngilizce) sese öneri: genel kelimeler, kitaba özel değil.
+# Karakter tarifinden (artplan: species/look, İngilizce) sese öneri: genel kelimeler, kitaba özel değil. Sağdaki
+# kimlikler kişi sınıfıdır; katalogdaki sese canonical() çevirir (çocuk → genç ses, yaşlı → masalcı nine / bilge dede).
 _GUESS = [
     (r"\b(grand(ma|mother)|old (woman|lady)|granny|elderly woman|nine)\b", "yasli-kadin"),
     (r"\b(grand(pa|father)|old man|elderly man|dede)\b", "yasli-erkek"),
@@ -261,10 +166,10 @@ def guess_voice(species: str, look: str = "") -> str | None:
         return "genc-kadin" if re.search(r"\bfemale\b", main) else "genc-erkek" if re.search(r"\bmale\b", main) else None
     fem, mal = bool(_FEMALE.search(main)), bool(_MALE.search(main))
     if vid in ("genc-erkek", "yasli-erkek", "cocuk-erkek") and fem and not mal:
-        return _SWAP[vid]
-    if vid in ("genc-kadin", "yasli-kadin", "cocuk-kiz") and mal and not fem:
-        return _SWAP[vid]
-    return vid
+        vid = _SWAP[vid]
+    elif vid in ("genc-kadin", "yasli-kadin", "cocuk-kiz") and mal and not fem:
+        vid = _SWAP[vid]
+    return canonical(vid)          # kişi sınıfı (yaşlı/çocuk/genç) katalogdaki sese: ALIASES (voices_zeki.py)
 
 
 # ------------------------------------------------------------------ Türkçe yardımcıları
@@ -1185,6 +1090,44 @@ async def sample(text: str, vid: str, lex: Lexicon) -> bytes:
     tmp.write_bytes(data)
     tmp.replace(cache)
     return data
+
+
+# Ekrandaki «dinle» cümlesi (NarrationSection.tsx `SAMPLE` ile aynı olmalı): anlatıcı ve karakter satırları bunu okur.
+SAMPLE_TEXT = "Merhaba, bu kitabı sizin için ben okuyacağım."
+_warm: asyncio.Task | None = None
+
+
+async def warm_samples() -> dict:
+    """Bütün seçilebilir seslerin «dinle» örneğini sırayla önceden üretir (2026-10-03, kullanıcı: «sese tıklayınca
+    bekliyoruz»). Ses modeli kartı kitap okuyan modellerle paylaşır; ilk tıklama kart boşalana dek bekliyordu. Örnek
+    önbellekteyse `sample` diske bakıp döner, GPU'ya gitmez. Yayınevi sözlüğüyle okunur (iş sözlüğü bu cümleye girmez)."""
+    lex = Lexicon(lexicon_entries(None, "publisher"))
+    done, failed = 0, []
+    for v in all_voices():
+        try:
+            await sample(SAMPLE_TEXT, v["id"], lex)
+            done += 1
+        except Exception as e:  # noqa: BLE001 — bir ses düşerse diğerleri ısınır
+            failed.append({"voice": v["id"], "error": f"{type(e).__name__}: {e}"[:200]})
+    return {"done": done, "failed": failed}
+
+
+def warm_samples_soon() -> None:
+    """Isıtmayı arka planda başlatır; zaten sürüyorsa yenisini açmaz."""
+    global _warm
+    if _warm is not None and not _warm.done():
+        return
+    _warm = asyncio.get_running_loop().create_task(warm_samples())
+
+    def _done(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        import logging
+        if t.exception() is not None:
+            logging.getLogger(__name__).error("örnek ısıtma düştü: %r", t.exception())
+        elif t.result()["failed"]:
+            logging.getLogger(__name__).warning("örnek ısıtma: %s", t.result()["failed"])
+    _warm.add_done_callback(_done)
 
 
 # ------------------------------------------------------------------ EPUB medya kaplaması

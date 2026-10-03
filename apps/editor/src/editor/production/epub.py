@@ -1132,7 +1132,7 @@ SUP = str.maketrans("¹²³⁴⁵⁶⁷⁸⁹⁰", "1234567890")
 
 #: Basılı kitabın dizgisinden gelen blok türleri → ev stili sınıfı (`manuscript.from_generation(layout=True)`).
 KIND_CLASS = {"poem": "e-siir", "epigraph": "e-epi", "italic": "e-paragraf e-italik-p", "right": "e-paragraf-sagdan",
-              "perde_alti": "e-perde-alti"}
+              "perde_alti": "e-perde-alti", "subhead": "e-1-baslik", "break": "e-yildiz"}
 SECTION_BREAK = re.compile(r"^\s*(?:[*✱✳⁂•·]\s*){1,5}$")    # «* * *», «***», «⁂»: bölüm içi ara
 
 
@@ -1893,13 +1893,14 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
         if bios:
             fronts.append(("yazar.xhtml", "Yazar hakkında", "contributors", bios))
         if house:
-            kun = None
+            kun, bios_basili = None, []
             if mode == "basili":
                 from . import epub_source
                 items = epub_source.print_kunye(d)
                 kun = house_kunye_print(house, items, eisbn, warn) if items else None
+                bios_basili = epub_source.print_bios(d)        # basılı kitabın kendi tanıtım sayfaları
             fronts = [(fn, t, et.removeprefix("frontmatter").strip(), b) for fn, t, et, b in
-                      house_fronts(house, ms, rows, front.get("bios") or [],
+                      house_fronts(house, ms, rows, bios_basili or front.get("bios") or [],
                                    f"../images/logo{logo.suffix}" if logo else None,
                                    inner=f"../images/kapak{cov[1]}" if cov else None, inner_alt=alts["kapak"],
                                    extras=[x for x in edits.get("extras") or [] if x.get("place") == "front"],

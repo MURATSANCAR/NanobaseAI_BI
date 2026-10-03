@@ -110,7 +110,7 @@ def print_kunye(d: Path) -> list[tuple[str | None, str]]:
 
 # ------------------------------------------------------------------ basılı kitabın metni (dizgiyle)
 #: Dizgi okumasının sürümü: kural değişince önbellek yeniden kurulur.
-LAYOUT_VERSION = 3
+LAYOUT_VERSION = 9
 CACHE = "basili.json"
 _busy: set[str] = set()
 _busy_lock = threading.Lock()
@@ -122,7 +122,57 @@ def _gid(d: Path) -> str | None:
     return src.get("generation_id") if src.get("kind") == "generation" else None
 
 
-def print_manuscript(d: Path, wait: bool = True):
+def _drop_back_ads(ms, signature: str | None, source: list[tuple[int, str]] | None = None) -> None:
+    """Kitabın sonundaki yayınevi tanıtım sayfaları (yayınevi imzasıyla açılır: «iyi ki kitaplar var...») e-kitaba
+    girmez; imza okunmuş kitabın son %15'indeki sayfalarda aranır (başındaki imza sayfası baskı kuralıyla zaten çıkar;
+    imza küçük puntoyla dizildiyse dizgi katmanı onu sayfa başlığı sayıp gövdeden atmış olabilir, o yüzden okunmuş
+    metne bakılır). İlk böyle sayfadan sonuna dek e-kitaba girmez."""
+    if not signature:
+        return
+    from .manuscript import _fold
+    key = _fold(signature)
+    pages = sorted({p for p, _ in source or []} or {p for c in ms.chapters for b in c.blocks for p in b.pages})
+    if not pages or not key:
+        return
+    back = pages[-1] - max(5, (pages[-1] - pages[0]) * 15 // 100)
+    hits = [p for p, t in source or [] if p >= back and any(_fold(x).startswith(key) for x in t.split("\n"))]
+    cut = min(hits) if hits else None
+    if cut is None:
+        return
+    for ch in ms.chapters:
+        ch.blocks = [b for b in ch.blocks if not b.pages or b.pages[0] < cut]
+    ms.chapters = [c for c in ms.chapters if c.blocks]
+
+
+def print_bios(d: Path) -> list[dict]:
+    """Basılı kitabın tanıtım sayfaları (baskı kuralının «yazar tanıtımı» dediği sayfalar) okunmuş metinden: her sayfa
+    grubunda ilk kısa satır ad, gerisi metin. Model çıkarımı yok; e-kitap basılı kitabın tanıtımını aynen taşır."""
+    from . import studio
+    from .epub_compare import _reasons_now, source_pages
+    m = studio.read(d, "manuscript.json") or {}
+    src = m.get("source") or {}
+    if src.get("kind") != "generation" or not src.get("generation_id"):
+        return []
+    pages = source_pages(src["generation_id"], heads=False)
+    reasons = src.get("not_printed")
+    if reasons is None:
+        reasons = _reasons_now(pages, src.get("non_story_pages") or [], m)
+    bio = {int(p) for p, why in reasons.items() if why == "yazar tanıtımı"}
+    out: list[dict] = []
+    for p, text in pages:
+        if p not in bio:
+            continue
+        for t in (x.strip() for x in text.split("\n") if x.strip()):
+            if len(t.split()) <= 8 and not t.endswith((".", ",", ";", ":")):
+                out.append({"name": t, "text": ""})
+            elif out:
+                out[-1]["text"] = (out[-1]["text"] + "\n\n" + t).strip()
+            else:
+                out.append({"name": m.get("author") or "", "text": t})
+    return [b for b in out if b["text"]]
+
+
+def print_manuscript(d: Path, wait: bool = True, signature: str | None = None):
     """Basılı kitabın e-kitabının metni: okunmuş kitap dizgiyle (`manuscript.from_generation(layout=True)`: sayfa
     üst başlığı/numarası yok, dipnotlar bölüm sonunda, tablolar, şiir/epigraf/perde). Kitap adı, yazar ve kitap
     bilgisi stüdyonun el yazmasından (editörün düzeltmesi korunur). Sonuç `epub/basili.json`'da saklanır; büyük
@@ -142,6 +192,8 @@ def print_manuscript(d: Path, wait: bool = True):
     def run():
         try:
             ms = from_generation(gid, layout=True)
+            from .epub_compare import source_pages
+            _drop_back_ads(ms, signature, source_pages(gid))
             (d / "epub").mkdir(exist_ok=True)
             studio.write(d / "epub", CACHE, {"generation_id": gid, "v": LAYOUT_VERSION,
                                              "chapters": [{"title": c.title, "kind": c.kind,
@@ -161,7 +213,7 @@ def print_manuscript(d: Path, wait: bool = True):
                 time.sleep(1)
         else:
             run()
-        return print_manuscript(d, wait=False)
+        return print_manuscript(d, wait=False, signature=signature)
     if not running:
         threading.Thread(target=run, daemon=True).start()
     return None

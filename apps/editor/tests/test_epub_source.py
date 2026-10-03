@@ -107,13 +107,15 @@ def test_print_book_ebook_uses_publisher_cover_and_kunye(tmp_path, monkeypatch):
     monkeypatch.setattr(S, "original_cover", lambda ms_: (buf.getvalue(), ".jpg", {"source": "yayınevi sitesi"}))
     monkeypatch.setattr(S, "print_kunye", lambda d_: S.parse_kunye(KUNYE, "Çiçekçi Kadın", "Minyoung Kang"))
     from editor.production import studio
-    monkeypatch.setattr(S, "print_manuscript", lambda d_, wait=True: studio._manuscript(d_))   # dizgiyle okunmuş metin
+    monkeypatch.setattr(S, "print_manuscript", lambda d_, wait=True, signature=None: studio._manuscript(d_))
+    monkeypatch.setattr(S, "print_bios", lambda d_: [{"name": "Minyoung Kang", "text": "Seulde yaşar."}])
     assert X.source_mode(d, X.load(d)) == "basili"
     out = E.build(d, "reflow", "e")
     assert out["source"] == "basili"
     z = zipfile.ZipFile(d / "epub" / "kitap.epub")
     kun = z.read("OEBPS/text/kunye.xhtml").decode()
     assert "Rabia Erdohan" in kun and "ZEKİ AI" not in kun and "Matbaa" not in kun
+    assert "Seulde yaşar." in z.read("OEBPS/text/yazar.xhtml").decode()               # basılı kitabın tanıtımı
     assert z.read("OEBPS/images/kapak.jpg") == buf.getvalue()
     names = z.namelist()
     assert not [n for n in names if n.startswith("OEBPS/images/a_") or n.startswith("OEBPS/images/g_")]
