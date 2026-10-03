@@ -2905,6 +2905,10 @@ export type PharmacyJob = Pick<BookRead, 'id' | 'state' | 'phase' | 'ahead' | 'a
 export type PharmacyBook = {
   id: string;
   title: string;
+  /** Adın kaynağı: kişinin verdiği, yayınevi sitesi, künye ya da temizlenmiş dosya adı (eski kayıtta null). */
+  title_source?: 'user' | 'site' | 'metadata' | 'file' | null;
+  /** Ad gözden geçirilmeli mi, neden (boş = gerek yok); ad dosya adından geldiyse dolu. */
+  title_review?: string[];
   category: PharmacyCategory | null;
   pages: number | null;
   read: PharmacyJob | null;

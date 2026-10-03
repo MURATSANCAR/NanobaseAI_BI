@@ -31,8 +31,9 @@ def list_inbox() -> list[dict]:
 
 
 def inspect_book(file_name: str, title: str | None = None, universe: str | None = None,
-                 age_group: str | None = None) -> dict:
-    """Creates (or finds) the book and its content version (sha256 of the file)."""
+                 age_group: str | None = None, merge_by_title: bool = True) -> dict:
+    """Creates (or finds) the book and its content version (sha256 of the file). `merge_by_title`: a new
+    content joins an existing book of the same title (a title derived from a file name does not)."""
     path = _safe_inbox_path(file_name)
     data = path.read_bytes()
     sha = hashlib.sha256(data).hexdigest()
@@ -48,7 +49,7 @@ def inspect_book(file_name: str, title: str | None = None, universe: str | None 
             return {**{k: str(v) for k, v in existing.items()}, "sha256": sha,
                     "page_count": doc.page_count, "new_version": False}
         book = c.execute("SELECT id FROM book WHERE title=%s ORDER BY created_at LIMIT 1",
-                         (title,)).fetchone()
+                         (title,)).fetchone() if merge_by_title else None
         if book is None:
             book = c.execute("INSERT INTO book(title, universe, age_group) VALUES (%s,%s,%s) "
                              "RETURNING id", (title, universe, age_group)).fetchone()
