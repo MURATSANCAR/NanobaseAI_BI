@@ -1101,8 +1101,10 @@ def _edge_event(line: bytes) -> Optional[dict]:
 # ------------------------------------------------------------------ editör (GPU): giden kutusunu çek
 
 def pull_editor(engine: sa.engine.Engine) -> int:
-    """Editörün `ed.audit_outbox`'ını kart servisi üzerinden çeker (`GET /v1/audit/outbox?after=`), merkeze yazar,
-    sonra onaylar (`POST /v1/audit/outbox/ack`). Bağlantı tanımlı değilse sessiz geçer; hata imleç satırına yazılır."""
+    """Editörün `ed.audit_outbox`'ını kart servisi üzerinden kendi imlecinden sonra okur (`GET /v1/audit/outbox?after=`)
+    ve merkeze yazar. Okuma silmez: GPU editörünü test sunucusu ve müşteri VM'i ortak kullanır, iki köprü de her olayı
+    alır. `ack` çağrılmaz (eski editör sürümü onu silme sayar); saklama süresini editör kendisi uygular. Bağlantı tanımlı değilse
+    sessiz geçer; hata imleç satırına yazılır."""
     if not os.environ.get("EDITOR_CATALOG_BASE"):
         return 0
     from semantic_bridge import editorial_cards as EC
@@ -1111,18 +1113,18 @@ def pull_editor(engine: sa.engine.Engine) -> int:
     try:
         base, headers, ca = EC._headers()
         cl = EC._client(ca)
+        after = int(_cursor_get(engine, "editor") or 0)
         while True:
-            r = cl.get(base + "/v1/audit/outbox", params={"limit": 1000}, headers=headers)
+            r = cl.get(base + "/v1/audit/outbox", params={"limit": 1000, "after": after}, headers=headers)
             if r.status_code == 404:
                 return total                       # editör bu sürümde giden kutusu taşımıyor
             r.raise_for_status()
-            items = r.json().get("items") or []
+            items = [i for i in (r.json().get("items") or []) if int(i.get("seq") or 0) > after]
             if not items:
                 break
             total += ingest(engine, "editor", items)["written"]
-            upto = max(int(i["seq"]) for i in items)
-            cl.post(base + "/v1/audit/outbox/ack", json={"upto": upto}, headers=headers).raise_for_status()
-            _cursor_set(engine, "editor", str(upto))
+            after = max(int(i["seq"]) for i in items)
+            _cursor_set(engine, "editor", str(after))
             if len(items) < 1000:
                 break
     except Exception as e:  # noqa: BLE001

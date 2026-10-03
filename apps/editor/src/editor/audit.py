@@ -4,8 +4,9 @@
   istek kimliği portal köprüsünün `X-Audit-Rid`'i (yoksa yeni). Bağlam `db.audit_context`'e konur; o istekte açılan
   her işlemde `ed.nb_audit_row` değişen satırı önceki/sonraki hâliyle `ed.audit_outbox`'a yazar. İsteğin kendisi de
   (yol, yöntem, kod, süre, maskeli JSON gövde) kutuya bir satır olur. Okuma istekleri portal köprüsünde zaten kayıtlı.
-- **Uçlar** (yalnız kart servisinde, aynı Bearer anahtarı): `GET /v1/audit/outbox?limit=` sıradaki olaylar,
-  `POST /v1/audit/outbox/ack {"upto": seq}` köprü merkeze yazdıktan sonra o sıraya kadar siler.
+- **Uçlar** (yalnız kart servisinde, aynı Bearer anahtarı): `GET /v1/audit/outbox?after=&limit=` verilen sıradan
+  sonraki olaylar (her köprü kendi imlecini tutar: test sunucusu ve müşteri VM'i aynı editörü okur);
+  `POST /v1/audit/outbox/ack` silmez, yalnız 90 günden eski satırları temizler.
 """
 
 from __future__ import annotations
@@ -104,12 +105,24 @@ class Middleware:
             await run_in_threadpool(_put, event)
 
 
-def outbox(limit: int = 1000) -> dict:
-    rows = db.all_rows("SELECT seq, body FROM ed.audit_outbox ORDER BY seq LIMIT %s", max(1, int(limit)))
+#: Kutu bir taşıma tamponudur; asıl kayıt merkezdedir. GPU editörü test sunucusu ve müşteri VM'i tarafından ortak
+#: kullanılır: iki köprü de kendi kaldığı sıradan (`after`) okur, okuma hiçbir şeyi silmez (2026-10-03: onayla silmek
+#: her olayı yalnız önce çeken tarafa veriyordu). Bu süreden eski satırlar temizlenir.
+KEEP_DAYS = 90
+
+
+def outbox(limit: int = 1000, after: int = 0) -> dict:
+    import random
+
+    if random.random() < 0.01:
+        ack(0)                       # saklama süresi (okuma silmez; yalnız 90 günden eski)
+    rows = db.all_rows("SELECT seq, body FROM ed.audit_outbox WHERE seq > %s ORDER BY seq LIMIT %s",
+                       max(0, int(after)), max(1, int(limit)))
     return {"items": [{**r["body"], "seq": r["seq"]} for r in rows]}
 
 
 def ack(upto: int) -> dict:
+    """Geriye uyum: eski köprü sürümleri çağırır. Silmez; yalnız saklama süresini aşanları temizler."""
     with db.tx() as c:
-        n = c.execute("DELETE FROM ed.audit_outbox WHERE seq <= %s", (int(upto),)).rowcount
+        n = c.execute("DELETE FROM ed.audit_outbox WHERE at < now() - make_interval(days => %s)", (KEEP_DAYS,)).rowcount
     return {"deleted": n}

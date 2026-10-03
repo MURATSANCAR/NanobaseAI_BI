@@ -36,8 +36,8 @@ app.add_middleware(audit_mod.Middleware, service='kartlar')
 
 
 @app.get('/v1/audit/outbox')
-def audit_outbox(limit: int = 1000):
-    return audit_mod.outbox(limit)
+def audit_outbox(limit: int = 1000, after: int = 0):
+    return audit_mod.outbox(limit, after)
 
 
 @app.post('/v1/audit/outbox/ack')
