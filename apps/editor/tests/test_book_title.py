@@ -56,11 +56,46 @@ def test_hand_written_mixed_case_is_kept():
     ("11 Levent - Düşen Diş IC.pdf", "Levent - Düşen Diş"),
     ("Merakli Kutu 3. Baskı İç.pdf", "Merakli Kutu"),
     ("yazdiklariylayasayanlar-135x210-18f.pdf", "Yazdiklariylayasayanlar"),
-    ("2.kitap (2).pdf", "2. Kitap"),                         # numara adın kendisi
-    ("7.Kitap (2).pdf", "7. Kitap"),
+    ("0-6yasdonemicocukegitimi (2).pdf", "Donemicocukegitimi"),   # baştaki yaş aralığı + «yas» atılır
+    ("6-9 yaş Masallar.pdf", "Masallar"),
+    ("3+ yas_boyama kitabim.pdf", "Boyama Kitabim"),
 ])
 def test_from_file(name, want):
     assert BT.from_file(name)["title"] == want
+
+
+@pytest.mark.parametrize("name,stem", [
+    ("Cocuk/10-12_yas/10.kitap  (2).pdf", "10.kitap"),       # yalnız seri numarası
+    ("2.kitap (2).pdf", "2.kitap"),
+    ("Cocuk/6-9_yas/1-kitap (2).pdf", "1-kitap"),
+    ("7.Kitap (2).pdf", "7.Kitap"),
+    ("Kurgu_Disi/16sayfakuse (2).pdf", "16sayfakuse"),      # yalnız sayfa sayısı + kâğıt
+    ("Kurgu_Disi/16sayfason.pdf", "16sayfason"),
+    ("16 sayfa ic.pdf", "16 sayfa ic"),
+])
+def test_meaningless_file_name_is_untitled_and_flagged(name, stem):
+    f = BT.from_file(name)
+    assert f["title"] == f"Adsız kitap (dosya: {stem})" and f["meaningless"]
+    assert "dosya adı kitabın adını taşımıyor" in f["review"]
+
+
+def test_names_with_a_number_and_a_word_are_not_meaningless():
+    for t in ("100 Soruda Osmanlı", "1453 Geldim Kuşattım", "2. Dünya Savaşı", "100 Sayfada Osmanlı", "Kitap"):
+        assert not BT.meaningless(t), t
+
+
+def test_age_prefix_is_named_in_review():
+    f = BT.from_file("0-6yasdonemicocukegitimi (2).pdf")
+    assert "baştaki yaş aralığı atıldı" in f["review"] and "baştaki numara atıldı" not in f["review"]
+
+
+def test_meaningless_file_takes_the_metadata_title_for_review():
+    r = BT.resolve("Cocuk/10-12_yas/10.kitap (2).pdf", metadata=["KAYIP HAZİNE"])
+    assert r["source"] == BT.METADATA and r["title"] == "Kayıp Hazine"
+    assert r["review"] == ["dosya adı kitabın adını taşımıyor; ad künyeden"]
+    # künye yoksa adsız kalır, dosya adından
+    r = BT.resolve("Cocuk/10-12_yas/10.kitap (2).pdf")
+    assert r["source"] == BT.FILE and r["title"].startswith("Adsız kitap")
 
 
 def test_numbers_inside_the_name_are_kept_and_flagged():

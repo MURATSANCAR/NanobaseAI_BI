@@ -32,6 +32,23 @@ def test_multi_page_forms():
     assert _pages("s. 3, s. 5") == [3, 5]
 
 
+def test_long_closed_lists_are_one_group_and_numbers_are_not_split():
+    """Canlıda bozuk görünen cevaplar: sayı geri adımla bölünüyordu («44,59» → 4 + «4,59»), kapanış ayracı dışarıda kalıyordu."""
+    t = "Gölge'dir (s.81, 101,130]."
+    (s, e, ps), = C.groups(t)
+    assert ps == [81, 101, 130] and t[s:e] == "(s.81, 101,130]"
+    t = "anlatılır s.17, 44,59,68,88,93,95,119,120,124,128,135,149,160,171,174,191,192]"
+    (s, e, ps), = C.groups(t)
+    assert ps[:4] == [17, 44, 59, 68] and len(ps) == 18 and t[e - 1] == "]" and e == len(t)
+    assert _pages("[s. 4, 59, 68, 88]") == [4, 59, 68, 88]
+    # açılışsız grup cümlenin parantezini yutmaz; ayraçsız grupta ondalık atıf değildir, sayı bölünmez
+    t = "(bkz. s. 12) sonra"
+    (s, e, ps), = C.groups(t)
+    assert ps == [12] and t[s:e] == "s. 12"
+    assert _pages("s. 14, 3,5 milyon") == [14]
+    assert _pages("s. 101,130 arası") == [101]
+
+
 def test_not_citations():
     assert _pages("s. 14, 3 kişi gelir") == [14]
     assert _pages("s. 3, 5 ve 9 arasında") == [3, 5]

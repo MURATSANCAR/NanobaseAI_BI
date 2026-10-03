@@ -37,6 +37,8 @@ function serverState(b: BookRead): { tone: Tone; text: string; note?: string } {
       return { tone: 'violet', text: 'Okunuyor' };
     case 'yeniden':
       return { tone: 'warn', text: 'Yeniden deneniyor', note: `Okuma yarıda kaldı; ZEKİ AI kitabı yeniden sıraya aldı (${b.attempt + 1}. deneme / ${b.attempts}).` };
+    case 'beklemede':
+      return { tone: 'muted', text: 'Beklemede', note: 'Okuması bilerek bekletiliyor; sırası açılınca okunur.' };
     case 'okunamadi':
       // Giden kutusu satırı: dosyanın kendisi okunamaz (PDF değil, bozuk), köprünün sade cümlesi. Motor satırı: neden
       // gösterilmez; kişi «Yeniden okut» ile kitabı yeniden sıraya alabilir.

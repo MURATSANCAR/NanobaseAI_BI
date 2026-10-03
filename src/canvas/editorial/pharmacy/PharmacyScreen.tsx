@@ -43,6 +43,23 @@ function Chip({ on, label, count, onClick }: { on: boolean; label: string; count
   );
 }
 
+/** Kuyruk göstergesi: değer sırada + okunuyor + beklemede toplamı (üç sayı yan yana telefonda kutuya sığmıyordu);
+ *  alt satır üçünü ayrı yazar, düşen ve okunamayan ayrıca söylenir. Bekletilen kitap hata sayılmaz. */
+function queueValue(tf: Partial<Record<PharmacyState, number>>): string {
+  return nf.format((tf.sirada ?? 0) + (tf.okunuyor ?? 0) + (tf.beklemede ?? 0));
+}
+
+function queueHelp(tf: Partial<Record<PharmacyState, number>>): string {
+  const parts = [
+    `${nf.format(tf.sirada ?? 0)} sırada`,
+    `${nf.format(tf.okunuyor ?? 0)} okunuyor`,
+    `${nf.format(tf.beklemede ?? 0)} beklemede`,
+    tf.yeniden ? `${nf.format(tf.yeniden)} düştü, yeniden denenecek` : null,
+    tf.okunamadi ? `${nf.format(tf.okunamadi)} okunamadı` : null,
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
+
 function Row({ b, selected, onPick }: { b: PharmacyBook; selected: boolean; onPick: () => void }) {
   const pill = readPill(b.read);
   const red = redactionPill(b);
@@ -67,7 +84,7 @@ function Row({ b, selected, onPick }: { b: PharmacyBook; selected: boolean; onPi
             <Pill tone={pill.tone}>{pill.text}</Pill>
             {red && <Pill tone={red.tone}>{red.text}</Pill>}
             {b.not_a_book && <Pill tone="muted">Kitap değil</Pill>}
-            {b.review?.review && <Pill tone="warn">Gözden geçir</Pill>}
+            {b.review?.review && <Pill tone="warn">Kategoriyi gözden geçir</Pill>}
             {!!b.title_review?.length && <Pill tone="muted">Adı gözden geçir</Pill>}
           </span>
           {b.read?.state === 'okunuyor' && (
@@ -92,6 +109,7 @@ export default function PharmacyScreen() {
   const sort = params.get('sira') === 'yeni' ? 'recent' : 'title';
   const page = Math.max(0, Number(params.get('sayfa') ?? 0) || 0);
   const review = params.get('gg') === '1';
+  const titleReview = params.get('ad') === '1';
   const picked = params.get('kitap');
   const sekme = params.get('sekme');
   const tab: Tab = isTab(sekme) ? sekme : 'son-okuma';
@@ -120,8 +138,8 @@ export default function PharmacyScreen() {
   }, [debounced, q, set]);
 
   const list = useQuery({
-    queryKey: ['pharmacy', 'books', { q, cat, state, sort, page, review }],
-    queryFn: () => pharmacyApi.books({ q, category: cat, state, sort, offset: page * PAGE, limit: PAGE, review }),
+    queryKey: ['pharmacy', 'books', { q, cat, state, sort, page, review, titleReview }],
+    queryFn: () => pharmacyApi.books({ q, category: cat, state, sort, offset: page * PAGE, limit: PAGE, review, titleReview }),
     enabled: ENGINE_ENABLED,
     placeholderData: keepPreviousData,
     // Sayfada okunan/sırada kitap varsa durum kendiliğinden ilerler; dakikada bir tazelenir.
@@ -177,9 +195,9 @@ export default function PharmacyScreen() {
         <Kpi label="Kitap" value={t ? nf.format(t.all) : '—'} help="Eczanedeki bütün kitaplar" active={!state} onClick={() => filterState('')} />
         <Kpi label="Okuması bitti" value={t ? nf.format(tf.hazir ?? 0) : '—'} help="«Zeki'ye sor»da sorulabilir" active={state === 'hazir'} onClick={() => filterState('hazir')} />
         <Kpi
-          label="Sırada · okunuyor"
-          value={t ? `${nf.format(tf.sirada ?? 0)} · ${nf.format(tf.okunuyor ?? 0)}` : '—'}
-          help={t && (tf.yeniden ?? 0) + (tf.okunamadi ?? 0) > 0 ? `${nf.format((tf.yeniden ?? 0) + (tf.okunamadi ?? 0))} kitap düştü ya da okunamadı` : 'Okuma kuyruğu'}
+          label="Sırada · okunuyor · beklemede"
+          value={t ? queueValue(tf) : '—'}
+          help={t ? queueHelp(tf) : 'Okuma kuyruğu'}
           active={state === 'okunuyor'}
           onClick={() => filterState('okunuyor')}
         />
@@ -215,8 +233,11 @@ export default function PharmacyScreen() {
                 <Chip key={s.key} on={state === s.key} label={s.label} count={states[s.key] ?? 0} onClick={() => filterState(s.key)} />
               ))}
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Kategori önerisi">
-              <Chip on={review} label="Gözden geçir" count={data?.facets.review ?? 0} onClick={() => set({ gg: review ? null : '1', sayfa: null })} />
+            {/* İki ayrı gözden geçirme: sitedeki kategori ile Zeki AI önerisi ayrışan kitaplar ve adı dosya adından
+                tahmin edilen (doğrulanmamış) kitaplar. Sayılar diğer süzgeçlerden sonradır. */}
+            <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Gözden geçirilecekler">
+              <Chip on={review} label="Kategoriyi gözden geçir" count={data?.facets.review ?? 0} onClick={() => set({ gg: review ? null : '1', sayfa: null })} />
+              <Chip on={titleReview} label="Adı gözden geçir" count={data?.facets.title_review ?? 0} onClick={() => set({ ad: titleReview ? null : '1', sayfa: null })} />
             </div>
             <div className="mt-2 flex items-center justify-end gap-1 text-[11.5px]">
               <span className="font-bold text-canvas-muted">Sırala:</span>
@@ -242,8 +263,8 @@ export default function PharmacyScreen() {
             {!list.isLoading && !items.length && !list.error ? (
               <div className="mt-2">
                 <EmptyHint
-                  title={q || cat || state || review ? 'Süzgece uyan kitap yok' : 'Kitap Eczanesi boş'}
-                  why={q || cat || state || review ? 'Aramayı ya da süzgeçleri değiştirin.' : 'Yukarıdan kitap yükleyin; okunmaya başlayan kitap burada görünür.'}
+                  title={q || cat || state || review || titleReview ? 'Süzgece uyan kitap yok' : 'Kitap Eczanesi boş'}
+                  why={q || cat || state || review || titleReview ? 'Aramayı ya da süzgeçleri değiştirin.' : 'Yukarıdan kitap yükleyin; okunmaya başlayan kitap burada görünür.'}
                 />
               </div>
             ) : (

@@ -1,7 +1,8 @@
 /** Kitaba sor cevabındaki sayfa atıfları (ZEKI-43). Köprüdeki `editorial_citations.py` ile aynı kural:
  *
- *  - Atıf grubu: «s. 14», «[s.2]», «s. 12-14», «(s. 114, 127)», «ss. 3, 5 ve 9», «sayfa 7», «[s.3 p2]».
- *    Gruptaki HER sayı ayrı rozettir (önceden yalnız ilki rozet oluyordu); aralığın iki ucu ayrı rozettir.
+ *  - Atıf grubu: «s. 14», «[s.2]», «s. 12-14», «(s. 114, 127)», «ss. 3, 5 ve 9», «sayfa 7», «[s.3 p2]»,
+ *    «[s. 4, 59,68,88,…]». Ayraçla kapanan grupta ayraçlar ve ayırıcılar grubun parçasıdır (ekranda kalmaz).
+ *    Gruptaki HER sayı ayrı sayfadır; ekran bir grubu tek rozet kümesi olarak çizer (`citePages`).
  *  - Grubun kitabı: metinde gruptan önce en son anılan aday kitap (adı, kısa adı ya da yayınevi adı; Türkçe harf ve
  *    büyük/küçük farkı yok sayılır). Hiç anılmadıysa cevabın varsayılan kitabı (seçili kitap).
  *  - Sayfa durumu köprüden: o kitapta var (önizleme), yok (kaynaksız), bilinmiyor (önizleme dener).
@@ -16,11 +17,19 @@ export type Citations = {
 };
 
 const PREFIX = String.raw`(?:ss\.|sf\.|syf\.|s\.|sayfa(?:lar)?)`;
-const ITEM = String.raw`\d+(?:[ \t]?[-–—][ \t]?\d+)?(?:[ \t]?p[ \t]?\d+)?`;
-// Ek sayı yalnız ardından ondalık ya da kelime gelmiyorsa atıftır: «s. 14, 3 kişi» → yalnız 14.
-const MORE = String.raw`(?:(?:[ \t]*[,;/&][ \t]*|[ \t]+(?:ve|ile)[ \t]+)(?:(?:ss|sf|syf|s)\.[ \t]?)?` + ITEM
-  + String.raw`(?![ \t]*[.,]\d)(?![ \t]+(?!(?:ve|ile)[ \t]+\d)\p{L}))`;
-const GROUP_SRC = String.raw`\[?` + PREFIX + String.raw`[ \t]?` + ITEM + MORE + String.raw`*\]?`;
+// Sayı bütün alınır (`(?!\d)`): yoksa «44,59» gibi bir sayı geri adımla «4» + «4,59» diye bölünüyordu.
+const NUM = String.raw`\d+(?!\d)`;
+const ITEM = NUM + String.raw`(?:[ \t]?[-–—][ \t]?` + NUM + String.raw`)?(?:[ \t]?p[ \t]?` + NUM + String.raw`)?`;
+const SEP = String.raw`(?:[ \t]*[,;/&][ \t]*|[ \t]+(?:ve|ile)[ \t]+)(?:(?:ss|sf|syf|s)\.[ \t]?)?`;
+// Ayraçla kapanan grup («[s. 4, 59,68,88]», «(s.81, 101,130]», «(s. 114, 127)», «s.17, 44,59]»): kapanışa kadar her
+// sayı sayfadır (ondalık sayılmaz; ayraç atıfın sınırını zaten söylüyor). Açılış ve kapanış ayracı grubun parçasıdır.
+// Açılışsız grupta yalnız «]» kapanıştır: «(bkz. s. 12)» parantezi cümlenindir, grup onu yutmaz.
+const LIST = PREFIX + String.raw`[ \t]?` + ITEM + String.raw`(?:` + SEP + ITEM + String.raw`)*[ \t]*`;
+const CLOSED = String.raw`[\[(][ \t]*` + LIST + String.raw`[\])]|` + LIST + String.raw`\]`;
+// Ayraçsız grupta ek sayı yalnız ardından ondalık ya da kelime gelmiyorsa atıftır: «s. 14, 3 kişi» → yalnız 14.
+const MORE = String.raw`(?:` + SEP + ITEM + String.raw`(?![ \t]*[.,]\d)(?![ \t]+(?!(?:ve|ile)[ \t]+\d)\p{L}))`;
+const OPEN = String.raw`\[?` + PREFIX + String.raw`[ \t]?` + ITEM + MORE + String.raw`*\]?`;
+const GROUP_SRC = String.raw`(?:` + CLOSED + String.raw`|` + OPEN + String.raw`)`;
 const ITEM_RE = /\d+(?:[ \t]?p[ \t]?\d+)?/giu;
 const REPREFIX = /(?:ss|sf|syf|s)\.[ \t]?$/iu;
 const WORDISH = /[\p{L}\p{N}]/u;
@@ -30,7 +39,7 @@ export type Segment = { kind: 'text'; text: string } | { kind: 'cite'; pieces: C
 
 /** Bir grubun parçaları: ilk rozet önekiyle («s. 114»), sonrakiler yalnız sayı («127»); ayraçlar düz metin. */
 function pieces(group: string): CitePiece[] {
-  const body = group.replace(/^\[/, '').replace(/\]$/, '');
+  const body = group.replace(/^[[(][ \t]*/, '').replace(/[ \t]*[\])]$/, '');
   const out: CitePiece[] = [];
   let last = 0;
   ITEM_RE.lastIndex = 0;
@@ -57,6 +66,32 @@ function pieces(group: string): CitePiece[] {
   return out;
 }
 
+/** Grubun sayfa rozetleri (ayırıcı metin olmadan), metindeki sırayla; aynı sayfa bir kez. Aralık («s. 12-14») tek
+ *  rozettir: etiketi aralığın kendisi, açtığı sayfa ilk uç. */
+export function citePages(pieces: CitePiece[]): Array<{ label: string; page: number }> {
+  const out: Array<{ label: string; page: number }> = [];
+  const seen = new Set<string>();
+  let dash = false;
+  for (const p of pieces) {
+    if (!('page' in p)) {
+      dash = /^[ \t]*[-–—][ \t]*$/.test(p.text);
+      continue;
+    }
+    const prev = out[out.length - 1];
+    if (dash && prev) {
+      prev.label = `${prev.label}–${p.label}`;
+      dash = false;
+      continue;
+    }
+    dash = false;
+    const key = p.label.replace(/^\D+/, '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ label: p.label, page: p.page });
+  }
+  return out;
+}
+
 /** Metni düz parçalara ve atıf gruplarına böler (sırayla). */
 export function splitCitations(text: string): Segment[] {
   const re = new RegExp(GROUP_SRC, 'giu');
@@ -65,7 +100,7 @@ export function splitCitations(text: string): Segment[] {
   for (let m = re.exec(text); m; m = re.exec(text)) {
     // Önek bir kelimenin parçası olmamalı («vs. 14» atıf değildir); köşeli ayraçla başlayan grup zaten ayrıktır.
     const prev = text[m.index - 1];
-    if (!m[0].startsWith('[') && prev && WORDISH.test(prev)) {
+    if (!/^[[(]/.test(m[0]) && prev && WORDISH.test(prev)) {
       re.lastIndex = m.index + 1;
       continue;
     }

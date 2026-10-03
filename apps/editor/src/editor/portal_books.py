@@ -310,7 +310,7 @@ def listing(requested_by: str = "") -> list[dict]:
     who = requested_by.strip()
     rows = db.all_rows(
         "SELECT DISTINCT ON (j.book_version_id) j.id, j.status, j.step, j.workflow_id, j.requested_by, j.created_at,"
-        " j.finished_at, coalesce((j.progress->>'attempt')::int, 1) AS attempt, b.title, bv.page_count,"
+        " j.finished_at, coalesce((j.progress->>'attempt')::int, 1) AS attempt, j.progress->>'hold' AS hold, b.title, bv.page_count,"
         " min(j.created_at) OVER (PARTITION BY j.book_version_id) AS submitted_at"
         " FROM analysis_job j JOIN book_version bv ON bv.id=j.book_version_id JOIN book b ON b.id=bv.book_id"
         " WHERE j.requested_by LIKE %s" +
@@ -324,7 +324,10 @@ def listing(requested_by: str = "") -> list[dict]:
 
 
 def item(r: dict, waiting: list[str], busy: int) -> dict:
-    """Ekrana giden satır. Durum: sirada | okunuyor | hazir | yeniden (düştü, deneme hakkı var) | okunamadi."""
+    """Ekrana giden satır. Durum: sirada | okunuyor | hazir | yeniden (düştü, deneme hakkı var) | beklemede (iş bilerek
+    durduruldu: CANCELLED, çoğu `progress.hold` etiketiyle — ör. arşiv pilotu dışında bekletilen kitaplar; okuma
+    hatası değil) | okunamadi (yalnız FAILED ve deneme hakkı bitmiş: dosya açılamadı ya da her deneme düştü).
+    `hold`: bekletme etiketi (satırda varsa)."""
     iso = lambda t: t.isoformat() if t else None
     jid = str(r["id"])
     st = r["status"]
@@ -336,6 +339,8 @@ def item(r: dict, waiting: list[str], busy: int) -> dict:
         state = "sirada"
     elif st == "FAILED" and r["attempt"] < ATTEMPTS:
         state = "yeniden"
+    elif st == "CANCELLED":
+        state = "beklemede"
     else:
         state = "okunamadi"
     # Önünde kaç kitap var: sırada ondan önce bekleyenler + şu an okunanlar.
@@ -343,6 +348,7 @@ def item(r: dict, waiting: list[str], busy: int) -> dict:
     return {"id": jid, "title": r["title"], "pages": r["page_count"], "status": st, "state": state,
             "phase": phase(r["step"], "QUEUED" if state == "sirada" else st), "ahead": ahead,
             "attempt": r["attempt"], "attempts": ATTEMPTS, "failed": state == "okunamadi",
+            "hold": (r.get("hold") or None) if state == "beklemede" else None,
             "requested_by": (r["requested_by"] or "").removeprefix(PREFIX),
             "created_at": iso(r.get("submitted_at") or r["created_at"]), "finished_at": iso(r["finished_at"])}
 

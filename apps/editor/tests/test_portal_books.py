@@ -54,10 +54,10 @@ def test_save_rejects_and_leaves_no_partial(tmp_path, data, filename, msg):
     assert list(tmp_path.iterdir()) == []
 
 
-def _row(status, attempt=1, workflow_id=None, jid="j1"):
+def _row(status, attempt=1, workflow_id=None, jid="j1", hold=None):
     return {"id": jid, "status": status, "step": None, "workflow_id": workflow_id, "requested_by": "portal:ayse",
             "created_at": None, "finished_at": None, "attempt": attempt, "title": "Kitap", "page_count": 32,
-            "submitted_at": None}
+            "submitted_at": None, "hold": hold}
 
 
 @pytest.mark.parametrize("status,attempt,wf,state", [
@@ -67,13 +67,24 @@ def _row(status, attempt=1, workflow_id=None, jid="j1"):
     ("SUCCEEDED", 2, "book-analysis-j1", "hazir"),
     ("FAILED", 1, "book-analysis-j1", "yeniden"),
     ("FAILED", PB.ATTEMPTS, "book-analysis-j1", "okunamadi"),
-    ("CANCELLED", 1, "book-analysis-j1", "okunamadi"),
+    ("CANCELLED", 1, "book-analysis-j1", "beklemede"),
+    ("CANCELLED", 1, None, "beklemede"),
 ])
 def test_item_state(status, attempt, wf, state):
     it = PB.item(_row(status, attempt, wf), [], 0)
     assert it["state"] == state
     assert it["failed"] == (state == "okunamadi")
     assert it["requested_by"] == "ayse"
+
+
+def test_held_job_is_on_hold_not_unreadable():
+    """Bilerek bekletilen iş (CANCELLED + progress.hold, ör. arşiv pilotu dışı) «beklemede»: hata değil, etiket satırda."""
+    it = PB.item(_row("CANCELLED", hold="pilot-2026-10-02"), [], 0)
+    assert it["state"] == "beklemede" and not it["failed"] and it["hold"] == "pilot-2026-10-02"
+    assert PB.item(_row("FAILED", PB.ATTEMPTS), [], 0)["hold"] is None
+    # satırda `hold` alanı hiç yoksa (eski sorgu) da düşmez
+    r = _row("CANCELLED"); r.pop("hold")
+    assert PB.item(r, [], 0)["state"] == "beklemede"
 
 
 def test_item_counts_books_ahead_including_the_running_one():

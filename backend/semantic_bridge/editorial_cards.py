@@ -834,10 +834,10 @@ def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by,
 
 
 # ------------------------------------------------------------------ Kitap Eczanesi (kart servisi /v1/archive/books)
-ARCHIVE_STATES=('sirada','okunuyor','hazir','yeniden','okunamadi','redaksiyon')
+ARCHIVE_STATES=('sirada','okunuyor','hazir','yeniden','beklemede','okunamadi','redaksiyon')
 
 
-def archive_books(q='', category='', state='', sort='title', offset=0, limit=50, review=False) -> dict:
+def archive_books(q='', category='', state='', sort='title', offset=0, limit=50, review=False, title_review=False) -> dict:
     """Arşiv kipinde okunan kitaplar (sayfa sayfa). Süzgeç değerleri burada da biçimle sınırlanır; servise serbest
     metin yalnız arama kutusundan gider (URL kodlu)."""
     if state and state not in ARCHIVE_STATES: raise ValueError('Durum geçersiz.')
@@ -845,6 +845,7 @@ def archive_books(q='', category='', state='', sort='title', offset=0, limit=50,
     params={'q':(q or '')[:200],'category':(category or '')[:64],'state':state or '','sort':sort,
             'offset':max(0,int(offset)),'limit':min(200,max(1,int(limit)))}
     if review: params['review']='true'
+    if title_review: params['title_review']='true'
     return request('/v1/archive/books?'+urllib.parse.urlencode(params)).json()
 
 

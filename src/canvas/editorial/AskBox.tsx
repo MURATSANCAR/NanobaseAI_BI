@@ -9,7 +9,7 @@ import CharacterGraph from './CharacterGraph';
 import Cover from './Cover';
 import ChatExport from './ChatExport';
 import PageRef from './PagePeek';
-import { CiteCursor, citationsOf, pageStatus, splitCitations } from './citations';
+import { CiteCursor, citePages, citationsOf, pageStatus, splitCitations, type CitePiece } from './citations';
 
 /** ZEKİ AI'ya kitap sorusu: sohbet görünümü. Cevap kitabın kendi metninden gelir, sayfa numarasıyla;
  *  Soru sunucuda kayıtlı kalır; ekranda yalnız bu açılışta gönderilen sorular gösterilir.
@@ -38,29 +38,47 @@ const SUGGEST = ['hangi karakterler var?', 'hikâye nasıl başlıyor?', 'ana te
 /** Cevabın kitap bilgisi: `citations` her atıfın kitabını çözer; yoksa tek `bookId` (önceki davranış). */
 type Book = Parameters<typeof citationsOf>[0];
 
-/** Sayfa atıflarını küçük rozetlere çevirir. Gruptaki her sayfa ayrı rozettir («(s. 114, 127)» → iki rozet) ve
- *  metinde kendinden önce anılan kitabın sayfasını açar (ZEKI-43). `cursor` metin sırasıyla okunur: bu işlev
- *  cevabın parçaları için sırayla çağrılır (AnswerText her çizimde yeni bir imleç kurar). */
+/** Bir grupta ilk kaç sayfa rozet olarak görünür; kalanı «+N» düğmesinin arkasında. */
+const GROUP_SHOWN = 3;
+
+/** Tek atıf grubu tek rozet kümesi: «[s. 4, 59, 68, …]» → «s. 4» «59» «68» «+14». Ayraç ve virgül çizilmez (rozetler
+ *  zaten ayrık); «+N» basınca gruptaki bütün sayfalar açılır. Sık görülen, okunan metin: hareket yok. */
+function CiteGroup({ pieces, cursor }: { pieces: CitePiece[]; cursor: CiteCursor }) {
+  const [all, setAll] = useState(false);
+  const bookId = cursor.current;
+  const bookTitle = cursor.title(bookId);
+  const pages = citePages(pieces);
+  const shown = all || pages.length <= GROUP_SHOWN + 1 ? pages : pages.slice(0, GROUP_SHOWN);
+  const rest = pages.length - shown.length;
+  return (
+    <span>
+      {shown.map((p, j) => (
+        <PageRef key={j} label={p.label} page={p.page} bookId={bookId} bookTitle={bookTitle}
+          missing={pageStatus(cursor.c, bookId, p.page) === 'missing'} />
+      ))}
+      {rest > 0 && (
+        <button type="button" className="zk-page-ref zk-page-ref--more" onClick={() => setAll(true)}
+          aria-label={`${rest} sayfa daha göster: ${pages.slice(shown.length).map((p) => p.page).join(', ')}`}>
+          +{rest}
+        </button>
+      )}
+    </span>
+  );
+}
+
+/** Sayfa atıflarını küçük rozetlere çevirir. Bir atıf grubu tek rozet kümesidir (`CiteGroup`) ve metinde kendinden
+ *  önce anılan kitabın sayfasını açar (ZEKI-43). `cursor` metin sırasıyla okunur: bu işlev cevabın parçaları için
+ *  sırayla çağrılır (AnswerText her çizimde yeni bir imleç kurar); grubun kitabı çizim sırasında sabitlenir. */
 function withPages(text: string, cursor: CiteCursor): ReactNode[] {
   return splitCitations(text).map((seg, i) => {
     if (seg.kind === 'text') {
       cursor.read(seg.text);
       return <Fragment key={i}>{seg.text}</Fragment>;
     }
-    const bookId = cursor.current;
-    const bookTitle = cursor.title(bookId);
-    return (
-      <Fragment key={i}>
-        {seg.pieces.map((p, j) =>
-          'page' in p ? (
-            <PageRef key={j} label={p.label} page={p.page} bookId={bookId} bookTitle={bookTitle}
-              missing={pageStatus(cursor.c, bookId, p.page) === 'missing'} />
-          ) : (
-            <Fragment key={j}>{p.text}</Fragment>
-          ),
-        )}
-      </Fragment>
-    );
+    // Grup bileşeni imleci çizimde okur; o ana kadar metin ilerlemiş olur. Kitabı burada sabitlemek için kopya.
+    const at = new CiteCursor(cursor.c);
+    at.current = cursor.current;
+    return <CiteGroup key={i} pieces={seg.pieces} cursor={at} />;
   });
 }
 

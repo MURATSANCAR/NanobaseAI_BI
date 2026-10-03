@@ -172,7 +172,8 @@ export default function PharmacyAsk({ onPickBook }: { onPickBook: (id: string) =
           maxLength={2000}
           rows={1}
           disabled={off}
-          placeholder={`Örn. ${EXAMPLES[0]}`}
+          // Kısa yer tutucu: telefonda (320-390 px) tek satıra sığar; örnek sorular kutunun altında düğme olarak durur.
+          placeholder="Kitaplara sorun…"
           aria-label="Zeki'ye soru"
           className="max-h-[120px] min-h-[44px] min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base font-medium leading-snug text-canvas-ink outline-none placeholder:text-canvas-muted/70 disabled:opacity-60 sm:text-[14px]"
         />

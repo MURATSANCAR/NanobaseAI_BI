@@ -355,7 +355,7 @@ def open_for_redaction(generation_id: str, who: str) -> dict:
 
 # ------------------------------------------------------------------ Kitap Eczanesi listesi (kart servisi /v1/archive/books)
 #: Okuma durumu (portal_books.item ile aynı sözlük) + «redaksiyon»: son okuması açılmış ya da koşmuş kitaplar.
-LIST_STATES = ("sirada", "okunuyor", "hazir", "yeniden", "okunamadi", "redaksiyon")
+LIST_STATES = ("sirada", "okunuyor", "hazir", "yeniden", "beklemede", "okunamadi", "redaksiyon")
 SORTS = ("title", "recent")
 
 
@@ -371,7 +371,7 @@ def listing_data(c, book_id: str | None = None) -> tuple[list[dict], set[str], l
     rows = c.execute(
         "SELECT DISTINCT ON (bv.book_id, j.profile) bv.book_id, b.title, " + tcols + ", j.id, j.profile, j.status, j.step,"
         " j.workflow_id, j.requested_by, j.created_at, j.finished_at, coalesce((j.progress->>'attempt')::int, 1)"
-        " AS attempt, j.progress->'archive'->>'category' AS category, bv.page_count,"
+        " AS attempt, j.progress->>'hold' AS hold, j.progress->'archive'->>'category' AS category, bv.page_count,"
         " min(j.created_at) OVER (PARTITION BY bv.book_id, j.profile) AS submitted_at"
         " FROM ed.analysis_job j JOIN ed.book_version bv ON bv.id=j.book_version_id JOIN ed.book b ON b.id=bv.book_id"
         " WHERE j.profile IN ('archive','redaction')" + one +
@@ -406,7 +406,7 @@ class _Positions(list):
 
 def shape(rows: list[dict], proofed: set[str], waiting: list[str], busy: int) -> list[dict]:
     """Kitap başına tek satır: okuma (arşiv kipi) ve redaksiyonun durumu portal satırının diliyle (sirada,
-    okunuyor, hazir, yeniden, okunamadi; aşama adı teknik ad taşımaz). Redaksiyon işi yoksa `redaction` None;
+    okunuyor, hazir, yeniden, beklemede, okunamadi; aşama adı teknik ad taşımaz). Redaksiyon işi yoksa `redaction` None;
     son okuması koşmuşsa `proofed`."""
     from . import portal_books as PB
     waiting = _Positions(waiting)
@@ -445,13 +445,19 @@ def _review(b: dict) -> bool:
     return bool((b.get("review") or {}).get("review"))
 
 
+def _title_review(b: dict) -> bool:
+    return bool(b.get("title_review"))
+
+
 def select(books: list[dict], q: str = "", category: str = "", state: str = "", sort: str = "title",
-           offset: int = 0, limit: int = 50, review: bool = False) -> dict:
+           offset: int = 0, limit: int = 50, review: bool = False, title_review: bool = False) -> dict:
     """Arama (Türkçe harf ve büyük/küçük harf farkı gözetmez) → kategori → durum süzgeci, sıralama ve sayfa.
     `facets`: aramaya uyan kitapların kategori sayıları ve (kategori süzgeciyle) durum sayıları; ekran süzgeç
     düğmelerinde gösterir. `total` süzülmüş kitap sayısı; hiçbir kitap kesilmez, sayfalar `offset` ile gezilir.
     `review`: yalnız sitedeki kategori ile Zeki AI önerisi ayrışan kitaplar («gözden geçir»; editor.recommend);
-    `facets.review` süzgeçlerden sonra kaç kitabın gözden geçirileceğini söyler."""
+    `facets.review` süzgeçlerden sonra kaç kitabın gözden geçirileceğini söyler. `title_review`: yalnız adı
+    doğrulanmamış kitaplar (`book.title_review` dolu, «Adı gözden geçir»); `facets.title_review` sayısı. İki
+    gözden geçirme ayrı şeyler sayar, birbirinin sayısını süzmez."""
     key = fold(q).strip()
     hit = [b for b in books if not key or key in fold(b["title"] or "")]
     cats: dict[str, int] = collections.Counter((b["category"] or "") for b in hit)
@@ -465,8 +471,11 @@ def select(books: list[dict], q: str = "", category: str = "", state: str = "", 
     else:
         out = in_cat
     to_review = sum(1 for b in out if _review(b))
+    to_title = sum(1 for b in out if _title_review(b))
     if review:
         out = [b for b in out if _review(b)]
+    if title_review:
+        out = [b for b in out if _title_review(b)]
     if sort == "recent":
         out = sorted(out, key=lambda b: (_stamp(b), b["id"]), reverse=True)
     else:
@@ -474,7 +483,7 @@ def select(books: list[dict], q: str = "", category: str = "", state: str = "", 
     page = out[offset:offset + limit]
     return {"items": page, "total": len(out), "offset": offset, "limit": limit, "all": len(books),
             "facets": {"categories": dict(cats), "states": {k: v for k, v in states.items() if k},
-                       "review": to_review}}
+                       "review": to_review, "title_review": to_title}}
 
 
 # ------------------------------------------------------------------ arşiv çıktıları (rebuild.run'ın arşiv eşi)

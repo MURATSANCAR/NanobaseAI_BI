@@ -375,12 +375,13 @@ def book_read_jobs(requested_by: str = Query(default='')):
 def archive_books(q: str = Query(default='', max_length=200), category: str = Query(default='', max_length=64),
                   state: str = Query(default='', max_length=20), sort: str = Query(default='title', max_length=10),
                   offset: int = Query(default=0, ge=0), limit: int = Query(default=50, ge=1, le=200),
-                  review: bool = Query(default=False)):
+                  review: bool = Query(default=False), title_review: bool = Query(default=False)):
     """Kitap Eczanesi: arşiv kipinde okunan kitaplar (toplu arşiv + portaldan arşiv kipinde yüklenen), okuma ve
     redaksiyon durumuyla; arama, kategori ve durum süzgeci, sayfa. Salt okuma. Sayfa boyu bir istekte en çok 200;
     bütün kitaplar `offset` ile gezilir, `total` süzülmüş sayıdır (kesilmez). Her satırda `site` (kitabın
     timas.com.tr'deki kategori yolları, olduğu gibi; bulunamadıysa found=false), `suggestion` (Zeki AI önerisi)
-    ve `review` (ikisi ayrışıyor mu, neden); `review=true` yalnız gözden geçirilecekleri verir."""
+    ve `review` (ikisi ayrışıyor mu, neden); `review=true` yalnız gözden geçirilecekleri verir; `title_review=true`
+    yalnız adı doğrulanmamış kitapları («Adı gözden geçir»). Durum `beklemede`: okuma bilerek durdurulmuş (hata değil)."""
     from . import archive, recommend
     from . import portal_books as PB
     if state and state not in archive.LIST_STATES:
@@ -392,7 +393,8 @@ def archive_books(q: str = Query(default='', max_length=200), category: str = Qu
         books=archive.shape(rows,proofed,waiting,PB.busy_count())
         extra=recommend.listing_extra(c,[b['id'] for b in books])
     recommend.attach(books,extra,recommend.site_index())
-    return archive.select(books,q=q,category=category,state=state,sort=sort,offset=offset,limit=limit,review=review)
+    return archive.select(books,q=q,category=category,state=state,sort=sort,offset=offset,limit=limit,review=review,
+                         title_review=title_review)
 
 @app.get('/v1/archive/books/{book_id}')
 def archive_book(book_id: UUID):

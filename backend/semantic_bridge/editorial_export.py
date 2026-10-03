@@ -98,7 +98,7 @@ def _runs(text: str) -> list[tuple[str, str]]:
             if not piece:
                 continue
             if _PAGE_REF.fullmatch(piece):
-                out.append(("page", piece.replace("[", "").replace("]", "")))
+                out.append(("page", re.sub(r"^[\[(][ \t]*|[ \t]*[\])]$", "", piece)))  # ayraç grubun parçası
             else:
                 out.append(("bold" if bold else "text", piece))
     return out

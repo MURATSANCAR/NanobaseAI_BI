@@ -771,6 +771,32 @@ button.zk-page-ref--missing {
     background: #f1f0f5;
   }
 }
+/* Atıf grubu: bir atıftaki bütün sayfalar tek küme (ayraç/virgül çizilmez); «+N» kalan sayfaları açar. Kesik çizgi
+   kaynaksız rozetin dili olduğu için «+N» düz çizgili, beyaz zeminli. Satır içi düğmenin dokunma alanı görünmez bir
+   uzantıyla büyür (satır aralığı değişmez). */
+button.zk-page-ref--more {
+  position: relative;
+  appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+button.zk-page-ref--more::after {
+  content: '';
+  position: absolute;
+  inset: -12px -6px;
+}
+button.zk-page-ref--more:focus-visible {
+  outline: 2px solid #7c5cff;
+  outline-offset: 1px;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.zk-page-ref--more:hover {
+    border-color: rgb(124 92 255 / 0.55);
+    background: #f3efff;
+  }
+}
 
 /* Sayfa önizlemesi: rozetin üstünde (yer yoksa altında) küçük bir kart. Tooltip ölçüsü: 150 ms giriş,
    100 ms çıkış, ölçek 0.97→1 + opaklık; transform-origin rozetin bulunduğu noktadır (--zk-origin, JS'ten). */

@@ -1,17 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { CiteCursor, citationsOf, lastMention, norm, pageStatus, splitCitations, type CitePiece } from './citations';
+import { CiteCursor, citePages, citationsOf, lastMention, norm, pageStatus, splitCitations, type CitePiece } from './citations';
 
 const pages = (text: string) =>
   splitCitations(text).flatMap((s) => (s.kind === 'cite' ? s.pieces.filter((p): p is Extract<CitePiece, { page: number }> => 'page' in p).map((p) => p.page) : []));
 const labels = (text: string) =>
   splitCitations(text).flatMap((s) => (s.kind === 'cite' ? s.pieces.flatMap((p) => ('page' in p ? [p.label] : [])) : []));
 
+/** Metnin atıf dışı kısmı; her grup «#». */
+const rest = (text: string) => splitCitations(text).map((s) => (s.kind === 'text' ? s.text : '#')).join('');
+/** Her grubun rozet etiketleri (`citePages`). */
+const groups = (text: string) => splitCitations(text).flatMap((s) => (s.kind === 'cite' ? [citePages(s.pieces).map((p) => p.label)] : []));
+
+describe('uzun sayfa listesi tek grup (canlıda bozuk görünen cevaplar)', () => {
+  it('«(s.81, 101,130]»: bütün sayfalar tek grup, ayraç/virgül kalmaz', () => {
+    const t = "Kötü karakter Gölge'dir (s.81, 101,130].";
+    expect(rest(t)).toBe("Kötü karakter Gölge'dir #.");
+    expect(groups(t)).toEqual([['s.81', '101', '130']]);
+  });
+  it('«s.17, 44,59,…,192]»: sayılar bölünmez, kapanış ayracı metinde kalmaz', () => {
+    const t = 'Bu konu anlatılır s.17, 44,59,68,88,93,95,119,120,124,128,135,149,160,171,174,191,192]';
+    expect(rest(t)).toBe('Bu konu anlatılır #');
+    expect(pages(t)).toEqual([17, 44, 59, 68, 88, 93, 95, 119, 120, 124, 128, 135, 149, 160, 171, 174, 191, 192]);
+  });
+  it('«[s. 4, 59, 68, …]»: köşeli ayraçlı liste tek grup', () => {
+    const t = 'anlatılır [s. 4, 59, 68, 88, 93].';
+    expect(rest(t)).toBe('anlatılır #.');
+    expect(groups(t)).toEqual([['s. 4', '59', '68', '88', '93']]);
+  });
+  it('aralık tek rozet; tekrar eden sayfa bir kez', () => {
+    expect(groups('[s. 12-14, 20, 20]')).toEqual([['s. 12–14', '20']]);
+  });
+  it('ayraçsız grupta ondalık ve sayı+kelime yine atıf değildir; sayı bölünmez', () => {
+    expect(pages('s. 14, 3,5 milyon')).toEqual([14]);
+    expect(pages('s. 101,130 arası')).toEqual([101]);
+  });
+});
+
 describe('splitCitations — çoklu sayfa biçimleri (ZEKI-43)', () => {
-  it('«(s. 114, 127)» iki rozet; ayraç ve parantez düz metin', () => {
+  it('«(s. 114, 127)» iki sayfa; parantez grubun parçası, metinde kalmaz', () => {
     const segs = splitCitations('asıl konu ( s. 114, 127) dır');
     expect(pages('asıl konu ( s. 114, 127) dır')).toEqual([114, 127]);
     expect(labels('asıl konu ( s. 114, 127) dır')).toEqual(['s. 114', '127']);
-    expect(segs.map((s) => (s.kind === 'text' ? s.text : '#')).join('')).toBe('asıl konu ( #) dır');
+    expect(segs.map((s) => (s.kind === 'text' ? s.text : '#')).join('')).toBe('asıl konu # dır');
+  });
+  it('«(bkz. s. 12)»: açılışsız grup cümlenin parantezini yutmaz', () => {
+    expect(rest('Bkz. (bkz. s. 12) sonra')).toBe('Bkz. (bkz. #) sonra');
   });
   it('aralık, «ss.», «ve», «sayfa», köşeli ayraç, paragraf', () => {
     expect(pages('s. 12-14')).toEqual([12, 14]);

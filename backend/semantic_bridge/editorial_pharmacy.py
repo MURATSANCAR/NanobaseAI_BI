@@ -71,14 +71,17 @@ def register(app, deps: dict[str, Any] | Any) -> None:
                  'kaydından (kitap başına son iş); sayılar kayıtların sayımıdır.', engine=None, dbs=_sk_dbs,
                  dis_adi='Editör kart servisi (okuma kuyruğu)')
     def pharmacy_books(request: Request, q: str = "", category: str = "", state: str = "", sort: str = "title",
-                       offset: int = 0, limit: int = 50, review: bool = False) -> dict[str, Any]:
+                       offset: int = 0, limit: int = 50, review: bool = False,
+                       title_review: bool = False) -> dict[str, Any]:
         """Sayfa sayfa liste; arama, kategori («-» = kategorisiz), durum ve «gözden geçir» süzgeci (sitedeki kategori
-        ile Zeki AI önerisi ayrışanlar). `total` süzülmüş sayı. Satırda `not_a_book` ({reason: FEW_PAGES |
+        ile Zeki AI önerisi ayrışanlar) ve «adı gözden geçir» süzgeci (`title_review`: adı dosya adından tahmin edilen
+        kitaplar; `facets.title_review` sayısı). Durum `beklemede`: okuma bilerek bekletiliyor (hata değil).
+        `total` süzülmüş sayı. Satırda `not_a_book` ({reason: FEW_PAGES |
         CATALOGUE | MODEL} ya da null): dosya kitap değil (katalog, bülten, broşür, yalnız kapak) — karakter, olay ve
         kategori/yaş önerisi çıkarılmadı; ekran «Kitap değil» rozeti gösterir. Kart servisinin alanı olduğu gibi gelir."""
         auth(request)
         try:
-            return editorial_cards.archive_books(q, category, state, sort, offset, limit, review)
+            return editorial_cards.archive_books(q, category, state, sort, offset, limit, review, title_review)
         except Exception as e:  # noqa: BLE001
             _engine_error(e, "Kitap listesi şu an alınamadı.")
 

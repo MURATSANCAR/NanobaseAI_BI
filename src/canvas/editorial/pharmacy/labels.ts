@@ -7,12 +7,14 @@ export type Tone = 'ok' | 'warn' | 'err' | 'muted' | 'violet';
 export const categoryLabel = (key: string | null | undefined): string =>
   PHARMACY_CATEGORIES.find((c) => c.key === key)?.label ?? 'Kategorisiz';
 
-/** Süzgeç düğmeleri: okuma durumu (kullanıcının dili: sırada, okunuyor, bitti, düştü) ve redaksiyon. */
+/** Süzgeç düğmeleri: okuma durumu (kullanıcının dili: sırada, okunuyor, bitti, düştü, beklemede) ve redaksiyon.
+ *  «Beklemede»: okuması bilerek bekletilen kitap (hata değil); «Okunamadı» yalnız deneme hakkı bitmiş okuma. */
 export const STATE_FILTERS: Array<{ key: PharmacyState; label: string }> = [
   { key: 'hazir', label: 'Bitti' },
   { key: 'okunuyor', label: 'Okunuyor' },
   { key: 'sirada', label: 'Sırada' },
   { key: 'yeniden', label: 'Düştü' },
+  { key: 'beklemede', label: 'Beklemede' },
   { key: 'okunamadi', label: 'Okunamadı' },
   { key: 'redaksiyon', label: 'Redaksiyonda' },
 ];
@@ -30,6 +32,8 @@ export function readPill(j: PharmacyJob | null): { tone: Tone; text: string } {
       return { tone: 'muted', text: 'Sırada' };
     case 'yeniden':
       return { tone: 'warn', text: 'Düştü · yeniden denenecek' };
+    case 'beklemede':
+      return { tone: 'muted', text: 'Beklemede' };
     case 'okunamadi':
       return { tone: 'err', text: 'Okunamadı' };
     default:
@@ -43,6 +47,7 @@ export function jobNote(j: PharmacyJob | null, what: 'okuma' | 'son okuma'): str
   if (j.state === 'sirada') return j.ahead ? `Önünde ${j.ahead.toLocaleString('tr-TR')} iş var; sırası gelince ${what} kendiliğinden başlar.` : `Sıradaki iş bu; ${what} birazdan başlar.`;
   if (j.state === 'okunuyor') return `${j.phase.label} · adım ${j.phase.n}/${j.phase.of}${j.attempt > 1 ? ` · ${j.attempt}. deneme` : ''}`;
   if (j.state === 'yeniden') return `${what[0].toUpperCase()}${what.slice(1)} yarıda kaldı; Zeki AI kendiliğinden yeniden deneyecek (${j.attempt + 1}. deneme / ${j.attempts}).`;
+  if (j.state === 'beklemede') return `${what[0].toUpperCase()}${what.slice(1)} bilerek bekletiliyor; sırası açılınca kendiliğinden okunur.`;
   // Neden gösterilmez (teknik ad taşır); okuma için «Yeniden okut» düğmesi ayrıntıda.
   if (j.state === 'okunamadi') return `${what[0].toUpperCase()}${what.slice(1)} tamamlanamadı.`;
   return null;

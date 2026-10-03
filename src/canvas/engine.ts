@@ -3073,8 +3073,19 @@ export type PharmacySuggestion = {
   reason: string;
   evidence_pages: number[];
 };
-export type PharmacyState = 'sirada' | 'okunuyor' | 'hazir' | 'yeniden' | 'okunamadi' | 'redaksiyon';
-export type PharmacyQuery = { q?: string; category?: string; state?: PharmacyState | ''; sort?: 'title' | 'recent'; offset?: number; limit?: number; review?: boolean };
+export type PharmacyState = 'sirada' | 'okunuyor' | 'hazir' | 'yeniden' | 'beklemede' | 'okunamadi' | 'redaksiyon';
+export type PharmacyQuery = {
+  q?: string;
+  category?: string;
+  state?: PharmacyState | '';
+  sort?: 'title' | 'recent';
+  offset?: number;
+  limit?: number;
+  /** Sitedeki kategori ile Zeki AI önerisi ayrışan kitaplar. */
+  review?: boolean;
+  /** Adı doğrulanmamış (dosya adından tahmin edilen) kitaplar. */
+  titleReview?: boolean;
+};
 export type PharmacyPage = {
   items: PharmacyBook[];
   total: number;
@@ -3082,12 +3093,13 @@ export type PharmacyPage = {
   limit: number;
   /** Eczanedeki bütün kitaplar (süzgeçsiz). */
   all: number;
-  facets: { categories: Record<string, number>; states: Partial<Record<PharmacyState, number>>; review?: number };
+  /** review: kategoriyi gözden geçir; title_review: adı gözden geçir (ikisi de diğer süzgeçlerden sonra). */
+  facets: { categories: Record<string, number>; states: Partial<Record<PharmacyState, number>>; review?: number; title_review?: number };
 };
 const PH = '/api/v1/editorial/pharmacy/books';
 export const pharmacyApi = {
   books: (o: PharmacyQuery) =>
-    send<PharmacyPage>('GET', `${PH}${qs({ q: o.q, category: o.category, state: o.state, sort: o.sort, offset: o.offset, limit: o.limit, review: o.review ? 'true' : undefined })}`, undefined, 30_000),
+    send<PharmacyPage>('GET', `${PH}${qs({ q: o.q, category: o.category, state: o.state, sort: o.sort, offset: o.offset, limit: o.limit, review: o.review ? 'true' : undefined, title_review: o.titleReview ? 'true' : undefined })}`, undefined, 30_000),
   book: (id: string) => send<PharmacyBook>('GET', `${PH}/${encodeURIComponent(id)}`, undefined, 30_000),
   /** Son okuma raporu kitap kimliğiyle (Son okuma ekranındaki biçim). */
   proofing: (id: string, title?: string) => send<ProofingReport>('GET', `${PH}/${encodeURIComponent(id)}/proofing${qs({ title })}`, undefined, 30_000),
@@ -3165,8 +3177,9 @@ export const documentApi = {
 };
 
 /** Okutulan kitabın durumu: gonderiliyor (köprünün giden kutusunda) → sirada → okunuyor → hazir; yeniden = düştü,
- *  kendiliğinden yeniden deneniyor; okunamadi = dosya okunamaz ya da deneme hakkı bitti. Aşama teknik ad taşımaz. */
-export type BookReadState = 'gonderiliyor' | 'sirada' | 'okunuyor' | 'hazir' | 'yeniden' | 'okunamadi';
+ *  kendiliğinden yeniden deneniyor; beklemede = okuma bilerek durduruldu (hata değil); okunamadi = dosya okunamaz ya da
+ *  deneme hakkı bitti. Aşama teknik ad taşımaz. */
+export type BookReadState = 'gonderiliyor' | 'sirada' | 'okunuyor' | 'hazir' | 'yeniden' | 'beklemede' | 'okunamadi';
 export type BookRead = {
   id: string;
   title: string;

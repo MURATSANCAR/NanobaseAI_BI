@@ -25,6 +25,18 @@ describe('answerSources', () => {
     expect(out).toEqual([{ id: 'a', title: 'Gölge Tilki', pages: [5] }]);
   });
 
+  it('uzun sayfa listesinin bütün sayfaları kaynağa girer (sayı bölünmez)', () => {
+    const out = answerSources({
+      answer: "Gölge Tilki'de kötü karakter Gölge'dir (s.81, 101,130]. Taşra İdaresi'nde anlatılır s.17, 44,59,68]",
+      notFound: false,
+      citations: { books, defaultId: null },
+    });
+    expect(out).toEqual([
+      { id: 'a', title: 'Gölge Tilki', pages: [81, 101, 130] },
+      { id: 'b', title: 'Taşra İdaresi', pages: [17, 44, 59, 68] },
+    ]);
+  });
+
   it('kart cevabında seçilen kitaplar, yayınevi adıyla', () => {
     const out = answerSources({
       answer: 'İstediğiniz kitapların kartı aşağıda.',

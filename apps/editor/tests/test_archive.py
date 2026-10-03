@@ -372,13 +372,13 @@ def test_portal_upload_profile_settings():
 
 # ------------------------------------------------------------------ Kitap Eczanesi listesi (saf parçalar)
 def _job(book, title, profile, status, *, jid=None, cat=None, who="arsiv:Kurgu", wf=None, at="2026-10-01T10:00:00+00:00",
-         attempt=1, done=None):
+         attempt=1, done=None, hold=None):
     import datetime as dt
     t = dt.datetime.fromisoformat(at)
     return {"book_id": uuid.UUID(book), "title": title, "id": jid or uuid.uuid4(), "profile": profile, "status": status,
             "step": None, "workflow_id": wf, "requested_by": who, "created_at": t, "submitted_at": t,
             "finished_at": dt.datetime.fromisoformat(done) if done else None, "attempt": attempt, "category": cat,
-            "page_count": 120}
+            "page_count": 120, "hold": hold}
 
 
 B1, B2, B3 = (str(uuid.UUID(int=i)) for i in (1, 2, 3))
@@ -423,6 +423,7 @@ def test_select_filters_facets_and_pages():
     assert [b["id"] for b in A.select(books, category="Kurgu", state="sirada")["items"]] == [B2]
     assert [b["id"] for b in A.select(books, state="redaksiyon")["items"]] == [B1]
     assert A.select(books, category="Kurgu")["facets"]["states"] == {"hazir": 1, "sirada": 1, "redaksiyon": 1}
+    assert out["facets"]["title_review"] == 0
     page = A.select(books, offset=1, limit=1)
     assert [b["id"] for b in page["items"]] == [B2] and page["total"] == 3
     assert [b["id"] for b in A.select(books, sort="recent")["items"]][0] == B1
@@ -435,3 +436,23 @@ def test_select_uncategorised_filter():
     out = A.select(books, category="-")
     assert [b["id"] for b in out["items"]] == [books[0]["id"]]
     assert out["facets"]["categories"][""] == 1
+
+
+def test_held_books_are_on_hold_and_title_review_is_its_own_filter():
+    """Bekletilen arşiv işi «beklemede» sayılır (okunamadı değil); «Adı gözden geçir» süzgeci kategori önerisinin
+    «gözden geçir»inden ayrı sayar ve süzer."""
+    B4, B5 = (str(uuid.UUID(int=i)) for i in (4, 5))
+    rows = [
+        _job(B4, "Bekleyen", "archive", "CANCELLED", hold="pilot-2026-10-02"),
+        _job(B5, "Düşen", "archive", "FAILED", attempt=99),
+    ]
+    books = A.shape(rows, set(), [], busy=0)
+    books[0]["title_review"] = ["FILE_NAME"]
+    books[1]["review"] = {"review": True, "reasons": ["CATEGORY"]}
+    out = A.select(books)
+    assert out["facets"]["states"] == {"beklemede": 1, "okunamadi": 1, "redaksiyon": 0}
+    assert out["facets"]["review"] == 1 and out["facets"]["title_review"] == 1
+    assert [b["id"] for b in A.select(books, state="beklemede")["items"]] == [B4]
+    assert [b["id"] for b in A.select(books, title_review=True)["items"]] == [B4]
+    assert [b["id"] for b in A.select(books, review=True)["items"]] == [B5]
+    assert "beklemede" in A.LIST_STATES

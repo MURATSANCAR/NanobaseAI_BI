@@ -5,7 +5,8 @@ rozetlerini o kitaba bağlıyordu. Seçili kitapla başka bir kitap karşılaşt
 kitabın sayfası olarak açılıyordu. Ayrıca «(s. 114, 127)» gibi çoklu atıfta yalnız ilk sayı rozet oluyordu.
 
 Kural (ekrandaki `src/canvas/editorial/citations.ts` ile aynı, genel; kitap adı/sayfa bilgisi kodda yoktur):
-- Atıf grubu: «s. 14», «[s.2]», «s. 12-14», «(s. 114, 127)», «ss. 3, 5 ve 9», «sayfa 7», «[s.3 p2]».
+- Atıf grubu: «s. 14», «[s.2]», «s. 12-14», «(s. 114, 127)», «ss. 3, 5 ve 9», «sayfa 7», «[s.3 p2]»,
+  «[s. 4, 59,68,88]» (ayraçla kapanan grupta kapanışa kadar her sayı sayfadır).
 - Grubun kitabı: metinde gruptan ÖNCE en son anılan aday kitap (kitabın adı, katalogdaki kısa adı ya da yayınevi adı;
   Türkçe harf ve büyük/küçük farkı yok sayılır). Hiç anılmadıysa seçili kitap; seçili yoksa tek aday varsa o.
 - Doğrulama: cevap bittiğinde her (kitap, sayfa) çifti için o kitabın son okumasında sayfa var mı bakılır. Yoksa ekran
@@ -29,12 +30,18 @@ log = logging.getLogger("semantic.editorial_citations")
 
 # ------------------------------------------------------------------ atıf grubu (ekrandaki citations.ts ile aynı desen)
 _PREFIX = r"(?:ss\.|sf\.|syf\.|s\.|sayfa(?:lar)?)"
-_ITEM = r"\d+(?:[ \t]?[-–—][ \t]?\d+)?(?:[ \t]?p[ \t]?\d+)?"
-# Ek sayı yalnız ardından ondalık ya da kelime gelmiyorsa atıftır: «s. 14, 3 kişi» → yalnız 14.
-_MORE = (r"(?:(?:[ \t]*[,;/&][ \t]*|[ \t]+(?:ve|ile)[ \t]+)(?:(?:ss|sf|syf|s)\.[ \t]?)?"
-         r"\d+(?:[ \t]?[-–—][ \t]?\d+)?(?:[ \t]?p[ \t]?\d+)?"
+# Sayı bütün alınır (`(?!\d)`): yoksa «44,59» geri adımla «4» + «4,59» diye bölünüyordu.
+_NUM = r"\d+(?!\d)"
+_ITEM = rf"{_NUM}(?:[ \t]?[-–—][ \t]?{_NUM})?(?:[ \t]?p[ \t]?{_NUM})?"
+_SEP = r"(?:[ \t]*[,;/&][ \t]*|[ \t]+(?:ve|ile)[ \t]+)(?:(?:ss|sf|syf|s)\.[ \t]?)?"
+# Ayraçla kapanan grup («[s. 4, 59,68]», «(s.81, 101,130]», «s.17, 44,59]»): kapanışa kadar her sayı sayfadır.
+# Açılışsız grupta yalnız «]» kapanıştır («(bkz. s. 12)» parantezi cümlenindir).
+_LIST = rf"(?<![^\W_]){_PREFIX}[ \t]?{_ITEM}(?:{_SEP}{_ITEM})*[ \t]*"
+_CLOSED = rf"[\[(][ \t]*{_LIST}[\])]|{_LIST}\]"
+# Ayraçsız grupta ek sayı yalnız ardından ondalık ya da kelime gelmiyorsa atıftır: «s. 14, 3 kişi» → yalnız 14.
+_MORE = (rf"(?:{_SEP}{_ITEM}"
          r"(?![ \t]*[.,]\d)(?![ \t]+(?!(?:ve|ile)[ \t]+\d)[^\W\d_]))")
-GROUP = re.compile(rf"\[?(?<![^\W_]){_PREFIX}[ \t]?{_ITEM}{_MORE}*\]?", re.I)
+GROUP = re.compile(rf"(?:{_CLOSED}|\[?(?<![^\W_]){_PREFIX}[ \t]?{_ITEM}{_MORE}*\]?)", re.I)
 _PAGE_ITEM = re.compile(r"(\d+)(?:[ \t]?p[ \t]?\d+)?", re.I)
 
 

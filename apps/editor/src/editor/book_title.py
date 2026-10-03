@@ -17,8 +17,10 @@ kelimeler bitişik («meleklerbeniseviyor»). Kural, bütün kitaplar için tek 
                     uyan parça alınır. Künye dosya adından bambaşka bir şey diyorsa (yanlış sayfa okunmuş olabilir)
                     kullanılmaz; dosya adı kalır, «gözden geçir» işaretinde künye adayı yazılır.
   5. ``file``     — temizlenmiş dosya adı: kopya eki «(2)», ölçü «135x210», forma «19f», baskı numarası, dergi
-                    künye kodu «_K43_6», sondaki dosya hâli sözcükleri (baskı, özalit, iç, son…) ve BAŞTAKİ sıra
-                    numarası / sayfa aralığı / yıl («1-», «01_», «04-13 », «2020. ») atılır; alt çizgi ve tire boşluk
+                    künye kodu «_K43_6», sondaki dosya hâli sözcükleri (baskı, özalit, iç, son…) ve BAŞTAKİ yaş
+                    aralığı / sıra numarası / sayfa aralığı / yıl («0-6yas», «1-», «01_», «04-13 », «2020. ») atılır;
+                    geriye ad kalmıyorsa («10.kitap», «16sayfakuse») «Adsız kitap (dosya: …)» yazılır ve künyedeki
+                    ilk TITLE iddiası (varsa) dosya adıyla örtüşmesi aranmadan alınır, ikisi de «gözden geçir»; alt çizgi ve tire boşluk
                     olur; harf büyüklüğü tek biçimse (hepsi küçük, hepsi büyük ya da yalnız ilk harf büyük) Türkçe
                     başlık yazımına çevrilir. Bitişik kelime ve eksik Türkçe harf TAHMİN EDİLMEZ (yanlış düzeltme
                     riski); bu yüzden dosya adından gelen her ad «gözden geçirilmeli» işaretlenir.
@@ -154,9 +156,13 @@ def key(s: str | None) -> str:
     return "".join(words)
 
 
-# Baştaki kalıplar (sırayla, en çok üç kez): sayfa aralığı «04-13 », «104-111 »; yıl + ayraç «2020. », «2020-»;
-# sıra numarası + ayraç «1-», «01_», «10.», «3)»; sıfırla başlayan ya da iki haneli sayı + boşluk «020 », «10 ».
+# Baştaki kalıplar (sırayla, en çok üç kez): yaş aralığı + «yaş» «0-6yas», «6-9 yaş », «3+ yaş_»; sayfa aralığı
+# «04-13 », «104-111 »; yıl + ayraç «2020. », «2020-»; sıra numarası + ayraç «1-», «01_», «10.», «3)»; sıfırla başlayan
+# ya da iki haneli sayı + boşluk «020 », «10 ».
 _PREFIXES = (
+    # «yaş» ek almışsa («6-9 yaşındakiler», «yaşam», «yaşlar»: adın parçası olabilir) atılmaz
+    ("age", re.compile(r"^\d{1,2}\s*(?:[-_ ]\s*\d{1,2}|\+)\s*[-_ ]?\s*ya[sş](?!(?:[ıi]|la|am|ar))[\s_-]*"
+                       r"(?=[^\W\d_])", re.I)),
     ("page_range", re.compile(r"^\d{1,3}\s*-\s*\d{1,3}\s+(?=\S)")),
     ("year", re.compile(r"^(?:19|20)\d{2}\s*[-_.)]\s*(?=[^\W\d_])")),
     ("number", re.compile(r"^\d{1,3}\s*[-_.)]+\s*(?=[^\W\d_]|\d{1,3}\.?\s)")),          # «4-1. Yok Artık»
@@ -182,6 +188,24 @@ def strip_prefix(s: str) -> tuple[str, list[str]]:
         else:
             break
     return s, removed
+
+
+#: Baştaki numara/yaş atılınca ya da hiç atılmadan dosya adı kitabın adını taşımıyorsa (yalnız seri numarası «10.
+#: Kitap», «3. Cilt»; yalnız sayfa sayısı ve kâğıt «16sayfakuse», «16 sayfa son»; boş) ad anlamsızdır. Yalnız sayı
+#: anlamlı olabilir («1984», «1868»).
+_MEANINGLESS = (
+    re.compile(r"\d+\s*(?:" + "|".join(sorted(VOLUME_WORDS)) + r")"),
+    re.compile(r"\d*\s*sayfa\w*(?:\s+(?:" + "|".join(sorted(TAIL_NOISE | {"kuse", "ic", "son"})) + r"))*"),
+    re.compile(r""),
+)
+#: Anlamsız adın yerine gösterilen ad; dosya adı parantezde (arama dosya adıyla da bulur).
+UNTITLED = "Adsız kitap"
+
+
+def meaningless(title: str) -> bool:
+    """Ad kitabın adını taşımıyor mu: yalnız seri numarası, yalnız sayfa sayısı/kâğıt ya da boş."""
+    f = fold(title)
+    return any(rx.fullmatch(f) for rx in _MEANINGLESS)
 
 
 def clean_stem(name: str) -> str:
@@ -211,8 +235,17 @@ def from_file(name: str) -> dict:
     s = " ".join(words).strip(" .-")
     reasons = ["dosya adından"]
     if not s:
-        s = re.sub(r"\s+", " ", Path(raw).stem).strip() or "Adsız kitap"
-    if removed:
+        s = re.sub(r"\s+", " ", Path(raw).stem).strip() or UNTITLED
+    if meaningless(s):
+        # «10.kitap (2).pdf», «16sayfakuse.pdf»: dosya adı kitabın adı değil. Ad uydurulmaz (klasör adı arşivde
+        # kategori/yaş klasörüdür, ad ipucu değil); «Adsız kitap (dosya: …)» yazılır, künye/CRM/site adı gelince o geçer.
+        stem = re.sub(r"\s*\(\d+\)\s*$", "", Path(raw).stem if raw.lower().endswith(".pdf") else Path(raw).name)
+        stem = re.sub(r"\s+", " ", stem).strip() or raw
+        return {"title": f"{UNTITLED} (dosya: {stem})"[:300], "review": reasons + ["dosya adı kitabın adını taşımıyor"],
+                "raw": raw[:300], "meaningless": True}
+    if "age" in removed:
+        reasons.append("baştaki yaş aralığı atıldı")
+    if set(removed) - {"age"}:
         reasons.append("baştaki numara atıldı")
     if re.search(r"\d", s):
         reasons.append("adda sayı ya da yıl var")
@@ -226,7 +259,7 @@ def from_file(name: str) -> dict:
         reasons.append("kelimeler bitişik olabilir")
     if shape == "none":
         reasons.append("ad okunamadı")
-    return {"title": titled[:300], "review": reasons, "raw": raw[:300]}
+    return {"title": titled[:300], "review": reasons, "raw": raw[:300], "meaningless": False}
 
 
 # ------------------------------------------------------------------ künye adı
@@ -345,6 +378,12 @@ def resolve(file_name: str = "", user: str | None = None, site: dict | None = No
         if fit:
             return {"title": fit[:300], "source": METADATA, "review": [], "raw": f["raw"]}
         others.append(claim)
+    if f.get("meaningless") and others:
+        # dosya adı ad taşımıyorsa karşılaştırılacak bir şey yok: künyedeki ad en iyi kanıt, ama gözden geçirilir
+        claim = re.sub(r"\s+", " ", others[0]).strip().strip(" .,;:-–—…")
+        if claim and not meaningless(claim):
+            return {"title": title_case(claim, typed=False)[:300], "source": METADATA,
+                    "review": ["dosya adı kitabın adını taşımıyor; ad künyeden"], "raw": f["raw"]}
     review = list(f["review"])
     if others:
         review.append("künyede farklı ad: " + re.sub(r"\s+", " ", others[0]).strip()[:120])
