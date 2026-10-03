@@ -4,12 +4,19 @@ Büyük harf kuralı («AVOKADO») yalnız bir dizgi alışkanlığıdır; çoğ
 («Avokado», «Böcek Kapan Menekşe») ya da küçük puntolu bir numaradır («1.»). Ortak olan dizgidir: bölüm
 yeni sayfada, metinden aşağıda başlar; başlık gövdeden büyük ya da altında boşluk bırakılmıştır; bazı
 kitaplarda başlık kendi sayfasındadır, metin sonraki sayfada başlar. Kural kitaptan bağımsızdır; sayfa
-başlığı/altlığı (≥3 sayfada aynı kısa küçük satır), künye, ithaf, içindekiler ve tanıtım sayfası bölüm
-sayılmaz. 2026-10-01: 26 kabul kitabında ölçüldü (eski kural Babam 150, Duvarları 199 bölüm buluyordu).
+başlığı/altlığı (≥3 sayfada aynı kısa küçük satır ve tekrarlı sayfa kenarı satırı), künye, ithaf, içindekiler ve
+tanıtım sayfası bölüm sayılmaz. 2026-10-01: 26 kabul kitabında ölçüldü (eski kural Babam 150, Duvarları 199 bölüm
+buluyordu).
 2026-10-02: büyük puntolu başlığın kendi satır aralığı gövdeninkinden büyüktür: aynı puntolu başlık satırları
 arasındaki boşluk başlığı bölmez («DUT AĞACININ / ALTINDA»); gövdeden az büyük, birden çok satırlı başlık («YER
 ALTI / OYUNLARI», 24/21 pt) altındaki boşlukla tanınır; yanda duran etiket («BÖLÜM 1») başlık satırlarının arasına
 karışmaz; iri puntolu konuşma («Tabii ki FİLİN!», «… beliriyordu.») cümledir, başlık değildir.
+2026-10-03 (25 kitap denetimi): sayfa başlığı/altlığı okunan metinle aynı kuralla (`editor.running_head`: kenarda
+tekrar, tek/çift sayfa, puntodan bağımsız; aynı yükseklikte) ayıklanır; başlık sayfasından sonraki sayfanın başlığı
+bölüm adına eklenmez (ara başlıktır) — başlık sayfası yalnız etiketse («Birinci Bölüm») eklenir; bağlaçla başlayan
+kısa başlık («VE TEŞEKKÜR») ≤ 4 sayfa önceki başlığın devamıdır; iç kapak kitap adıyla aksansız/i-ayrımsız
+karşılaştırılır («DARWIN» = «Darwin», «SÎNÂ» = «Sina»); başlık sonundaki dipnot imi atılır; gövdeden küçük puntolu
+başlık sayfası (fotoğraf altı) ve «;»/«,» ile biten satır («Bu kitabın oluşmasında;») bölüm açmaz.
 """
 
 from __future__ import annotations
@@ -255,7 +262,8 @@ _LABEL_WORDS = {"birinci", "ikinci", "üçüncü", "dördüncü", "beşinci", "a
 _ROMAN = re.compile(r"^[ıivxlc]+$")
 #: Bağlaçla başlayan başlık («VE TEŞEKKÜR») önceki başlığın devamıdır («ÖNSÖZ» iki sayfa önce).
 _CONJ = re.compile(r"^(ve|ile|veya|ya da|yahut)\b")
-_NOTE_MARK = re.compile(r"(?<=[^\W\d_])\d{1,2}$")     # başlık sonundaki dipnot imi: «DERSAADET’TE1»
+#: başlık sonundaki dipnot imi: «DERSAADET’TE1», «… DARWIN Mİ YIKTI?1» (boşluksuz, harf ya da soru/ünlem/tırnaktan sonra)
+_NOTE_MARK = re.compile(r"(?:(?<=[^\W\d_])|(?<=[?!’”\"')]))\d{1,2}$")
 
 
 def _label_only(title: str) -> bool:

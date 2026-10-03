@@ -51,7 +51,9 @@ def key(text: str) -> str:
 def candidate(text: str) -> bool:
     """Sayfa başlığı olabilecek kısa satır mı."""
     t = " ".join((text or "").split())
-    if not t or len(t) > MAX_CHARS or len(t.split()) > MAX_WORDS or len(key(t)) < 2:
+    # sözcük sayısı harf aralıklı dizgide («D İ J İ T A L») harf sayısıdır: aralıklı harfler tek sözcük sayılır
+    words = len(re.sub(r"(?<=\b[^\W\d_]) (?=[^\W\d_]\b)", "", t).split())
+    if not t or len(t) > MAX_CHARS or words > MAX_WORDS or len(key(t)) < 2:
         return False
     if t[0] in "—–-«“\"'‘„" or re.search(r"[^.][.!?]$", t):
         return False                       # konuşma ya da cümle: «— Gel.», «Kapıyı açtı.»

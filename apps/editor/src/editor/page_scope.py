@@ -20,6 +20,13 @@ yayınevi tanıtımı → NON_STORY (başka kitapların yazarı künyeye karış
 («otomatik»): editörün kararı (`source='editor'`) hiçbir zaman ezilmez; editör sayfa sorusunda «Hayır» derse
 sayfa STORY olur ve kapsama döner (review.choose). Her otomatik sayfa için editöre açık bir sayfa sorusu kalır.
 
+2026-10-03 (25 kitap denetimi) eklenen NON_STORY nedenleri: teşekkür sayfası («Teşekkür» başlığı ya da adlara
+yönelme ekli teşekkür satırları; «…'e Teşekkürlerimle.» ithaf), kaynak satırı olmayan tek başına alıntı (epigraf),
+yayınevi notu («Yeni baskıya önsöz»; gövdeden önce yayınevi + baskı sözü), başlığından tanınan yazar notu, etkinlik,
+sözlük ve ek bölümleri (`apparatus_pages`; bölüm listesi varsa bölümün bütün sayfaları, ek/sözlük yalnız arka yarıda,
+teşekkür/yayınevi/yazar notu yalnız ön ve arka onda birde; başlık tam eşleşir, gövde bölümü «Etkinlik Bağımlılığı»
+eşleşmez). Bu kurallar sayfa başlığı/altlığı ayıklanmış paragraflara bakar (`running_head.strip_paragraphs`).
+
 Kapsam dışı sayfanın olay/duygu/tema iddiası SİLİNMEZ: çıktılar (`outputs.capture`) onu kullanmaz; rol geri
 alınınca geri gelir. Yeni okumada bu sayfalardan olay hiç çıkarılmaz (`knowledge._persist`).
 
@@ -75,7 +82,7 @@ _APPARATUS = (
     ("etkinlik", re.compile(r"^(bolum sonu )?etkinli(k|kler|gi|kleri)\b( (sorulari|sayfasi|zamani))?\s*(:|$)|"
                             r"^bolum sonu etkinligi|^(okuma|etkinlik|degerlendirme|anlama|tartisma) sorulari\s*(:|$)|"
                             r"^sorular$")),
-    ("sözlük", re.compile(r"^((kucuk|kelime|terimler|kavramlar) )?(sozlugu?|sozcukler)$")),
+    ("sözlük", re.compile(r"^((kucuk|kelime|terimler|kavramlar) )?(sozluk|sozlugu|sozcukler)$")),
     ("ek", re.compile(r"^ek(ler)?( [a-z0-9]{1,3})?\s*(:|$)")),
 )
 #: kitabın arka yarısında aranan (önde gövde bölümüyle karışır): ek, sözlük
@@ -185,7 +192,7 @@ def classify(pages: dict[int, list[str]], suggested: set[int], last_page: int,
         ps = [t for t in pages.get(p, []) if t.strip() and not _PLACE_YEAR.match(t)]
         if p in out or p > front or not ps:
             continue
-        why = front_page_kind(ps, suggested=p in suggested)
+        why = front_page_kind(ps, suggested=p in suggested, before_body=p < body)
         if why:
             out[p] = (ROLE_OF[why], why)
     # Sayfa başlığı/altlığı ayıklanmış metin üstünde (yazar adı her sayfanın başında: «başlık» o değil)
@@ -237,12 +244,13 @@ def is_dedication(lines: list[str]) -> bool:
     return bool(_ITHAF.search(text) or _DATIVE.match(lines[0]) or _DATIVE_ANY.search(text))
 
 
-def is_epigraph(lines: list[str], *, suggested: bool = False) -> bool:
+def is_epigraph(lines: list[str], *, suggested: bool = False, before_body: bool = True) -> bool:
     """Alıntı + «— Kaynak» sayfası mı. Diyalog sayfası değil: çizgiyle açılan yalnız son satır (kaynak), ondan
     önce en az bir alıntı satırı; alıntı tırnakla açılmıyorsa okumanın önerisi şart.
 
     Kaynak satırı olmayan alıntı (2026-10-03 denetimi): 1–3 satır, ≤ `EPIGRAPH_ALONE_WORDS` sözcük, baştan sona
-    tırnak içinde; tırnaksızsa okumanın önerisi ve ≤ 2 satır, ≤ 25 sözcük. Konuşma çizgisiyle açılan satır yok."""
+    tırnak içinde; tırnaksızsa okumanın önerisi, gövdenin ilk uzun sayfasından önce (`before_body`; kurgu dışı
+    gövdenin kısa son paragrafı epigraf değil) ve ≤ 2 satır, ≤ 25 sözcük. Konuşma çizgisiyle açılan satır yok."""
     words = len(" ".join(lines).split())
     if lines and len(lines) <= 3 and words <= EPIGRAPH_ALONE_WORDS and not any(_DASH_LINE.match(t) for t in lines):
         if _QUOTED.match("\n".join(lines)) and words >= 4:
@@ -254,7 +262,7 @@ def is_epigraph(lines: list[str], *, suggested: bool = False) -> bool:
                     and any(ch.islower() for ch in lines[0]))
         attributed = (len(lines) == 2 and len(lines[1].split()) <= 3 and lines[1][:1].isupper()
                       and not re.search(r"[.!?…:]$", lines[1].strip()))
-        if suggested and sentence and words <= 25 and (len(lines) == 1 or attributed):
+        if suggested and before_body and sentence and words <= 25 and (len(lines) == 1 or attributed):
             return True
     if len(lines) < 2 or words > EPIGRAPH_WORDS:
         return False
@@ -268,11 +276,11 @@ def is_epigraph(lines: list[str], *, suggested: bool = False) -> bool:
     return bool(_QUOTE_OPEN.match(lines[0])) or suggested
 
 
-def front_page_kind(lines: list[str], *, suggested: bool = False) -> str | None:
+def front_page_kind(lines: list[str], *, suggested: bool = False, before_body: bool = True) -> str | None:
     """Kısa ön sayfa ithaf mı, epigraf mı (`classify`'ın ön sayfa kuralı; salt hesap)."""
     if is_dedication(lines):
         return "ithaf"
-    if is_epigraph(lines, suggested=suggested):
+    if is_epigraph(lines, suggested=suggested, before_body=before_body):
         return "epigraf"
     return None
 
