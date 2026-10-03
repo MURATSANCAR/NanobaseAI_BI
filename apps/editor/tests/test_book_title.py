@@ -253,3 +253,14 @@ def test_capital_forma_and_glued_print_suffix_are_dropped():
     assert BT.from_file("cagribey 10F.pdf")["title"] == "Cagribey"
     assert BT.from_file("onun gibi yasamaya var misinBASKI.pdf")["title"] == "Onun Gibi Yasamaya Var Misin"
     assert "BASKI" not in BT.from_file("yorganımınaltindansesleniyorumBASKI.pdf")["title"]
+
+
+def test_every_source_is_allowed_by_the_database():
+    # 2026-10-03: «crm» kaynağı eklenince göç 032'nin CHECK'i canlıda her ad yazımını düşürdü; birim testleri DB'siz
+    # olduğu için görmedi. Son göçteki izin listesi koddaki kaynaklarla aynı olmalı.
+    import re
+    from pathlib import Path
+    migs = sorted((Path(__file__).resolve().parents[1] / "db" / "migrations").glob("*.sql"))
+    last = [m for m in migs if "book_title_source_check" in m.read_text()][-1].read_text()
+    allowed = set(re.findall(r"'(\w+)'", last.split("book_title_source_check")[-1]))
+    assert allowed == set(BT.SOURCES), (allowed, BT.SOURCES)
