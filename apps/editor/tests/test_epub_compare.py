@@ -51,3 +51,7 @@ def test_publisher_promo_inside_page_is_expected():
     promo = "Yeni kitap önerimiz için karekodu telefon kameranıza okutunuz. Aynı karekod ile her hafta başka bir kitap"
     r = C.compare([(208, NOTE + " " + promo)], NOTE)
     assert len(r["missing"]) == 1 and r["missing"][0]["expected"] and r["missing"][0]["reason"] == "yayınevi tanıtımı"
+    r = C.compare([(206, BODY), (208, NOTE + " " + promo)], BODY)          # not e-kitapta yok: reklamla birlikte gizlenmez
+    gaps = [m for m in r["missing"] if not m["expected"]]
+    assert len(gaps) == 1 and "yazarın notu" in gaps[0]["text"] and "karekod" not in gaps[0]["text"]
+    assert any(m["reason"] == "yayınevi tanıtımı" for m in r["missing"])

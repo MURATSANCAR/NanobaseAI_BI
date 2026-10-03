@@ -87,12 +87,17 @@ def compare(pages: list[tuple[int, str]], epub_txt: str, reasons: dict | None = 
     ew = words(epub_txt)
     miss, cov = _runs(sw, _grams(ew))
     extra, _ = _runs(ew, _grams(sw))
+    parts = []
+    for a, b in miss:                     # sayfanın içindeki yayınevi reklamı (karekod…) kendi parçası olur:
+        m = _PROMO.search(" ".join(sw[a:b]))                     # önündeki metin eksik, reklam beklenen
+        cut = a + len(" ".join(sw[a:b])[:m.start()].split()) if m else a
+        parts += ([(a, cut, None)] if cut - a >= MIN_RUN else []) + [(cut if cut - a >= MIN_RUN else a, b, bool(m))]
     missing = []
-    for a, b in miss:
+    for a, b, promo in parts:
         first, last = sp[a], sp[b - 1]
         why = [reasons.get(sp[k]) for k in range(a, b)]          # kelimelerin çoğunun sayfasındaki neden
         reason = max(set(why), key=why.count)
-        if reason is None and _PROMO.search(" ".join(sw[a:b])):   # sayfanın içindeki yayınevi reklamı (karekod…)
+        if reason is None and promo:
             reason = "yayınevi tanıtımı"
         missing.append({"pages": [first, last], "words": b - a, "reason": reason,
                         "expected": reason in EXPECTED, "text": " ".join(sw[a:b])[:PREVIEW]})
