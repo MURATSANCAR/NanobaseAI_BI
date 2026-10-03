@@ -19,11 +19,12 @@ RUN mkdir -p /app/data/fonts && cd /app/data/fonts && python -c "import sys,urll
     && ls -la /app/data/fonts
 # E-kitap ev stili (editor.production.epub HOUSES): yayınevi e-kitaplarındaki yazı tiplerinin açık lisanslı
 # karşılıkları — Palatino → Domitian (CTAN 1.0.1, OFL 1.1 seçeneğiyle; ad tablosunda lisans yok, LICENSES.json),
-# Corbel → Lato, Trajan → Cinzel, Chaparral italik → Crimson Pro italik, Cochin italik → EB Garamond italik.
+# Corbel → Lato, Trajan → Cinzel, Chaparral italik → Crimson Pro italik, Cochin italik → EB Garamond italik,
+# Adobe Arabic → Amiri (Arapça ibareler; yalnız kitapta Arapça varsa gömülür).
 ARG DOMITIAN_SHA256=5cd534127eb16a97ac34442b0791cfc68bd764f7f7e87a541aba7dd47aa2866e
 RUN cd /app/data/fonts && python -c "import sys,urllib.request,urllib.parse; \
 [urllib.request.urlretrieve('https://raw.githubusercontent.com/google/fonts/'+sys.argv[1]+'/ofl/'+urllib.parse.quote(p), p.split('/')[1]) for p in \
- ['lato/Lato-Regular.ttf','lato/Lato-Bold.ttf','cinzel/Cinzel[wght].ttf', \
+ ['lato/Lato-Regular.ttf','lato/Lato-Bold.ttf','cinzel/Cinzel[wght].ttf','amiri/Amiri-Regular.ttf', \
   'crimsonpro/CrimsonPro-Italic[wght].ttf','ebgaramond/EBGaramond-Italic[wght].ttf']]" $GFONTS \
     && python -c "import urllib.request; urllib.request.urlretrieve('https://mirrors.ctan.org/fonts/domitian.zip', '/tmp/domitian.zip')" \
     && echo "$DOMITIAN_SHA256  /tmp/domitian.zip" | sha256sum -c - \

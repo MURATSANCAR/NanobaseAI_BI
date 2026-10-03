@@ -22,6 +22,7 @@ export type EpubResult = {
   pages: EpubPage[]; viewport: [number, number] | null; fonts: EpubFont[]; images: number; alt_missing: number;
   warnings: string[]; seconds: number; a11y: { accessibilitySummary: string }; audio?: EpubAudio | null;
   house?: string | null;
+  source?: 'basili' | 'studyo' | null;
 };
 /** Basılı kitapla karşılaştırma: basılıda olup e-kitapta olmayan parçalar (sayfasıyla); `expected` = künye, içindekiler
  *  gibi bilerek çıkan sayfa. Word'den gelen işte basılı kaynak yok (null). */
@@ -89,6 +90,8 @@ export type DuzenBlock = { id: string; kind: string; text: string; long: boolean
 export type DuzenChapter = { key: string; title: string; merged: boolean; split: boolean; renamed: boolean; blocks: DuzenBlock[] };
 export type DuzenView = {
   rev: number; chapters: DuzenChapter[]; styles: Record<string, string>;
+  /** Basılı kitabın e-kitabı (yayınevinin kapağı ve künyesi) ya da stüdyo tasarımı; `source_set` false → kendiliğinden. */
+  source: 'basili' | 'studyo'; source_set: boolean; sources: { key: 'basili' | 'studyo'; label: string }[];
   fronts: { key: string; label: string; on: boolean }[];
   extras: { id: string; title: string; pages: [number, number]; words: number; place: 'front' | 'end' }[];
   missing: (EpubMissing & { added: boolean })[]; warnings: string[]; house: boolean; by: string | null; at: number | null;
@@ -101,6 +104,7 @@ export type DuzenOp =
   | { op: 'front'; key: string; on: boolean }
   | { op: 'add_missing'; pages: [number, number]; title: string; place: 'front' | 'end' }
   | { op: 'remove_extra'; id: string }
+  | { op: 'source'; source: 'basili' | 'studyo' | null }
   | { op: 'reset' };
 
 export const epubApi = {
