@@ -95,6 +95,10 @@ Portal Yönetim → Kişiler'de `claude` adlı bir hesap kalmıştı. Kişi list
   doğurur) silinir. Gerçek hesabın (`timasai`) test izleri **silinmez**: kayıt doğru geçmişi (açıldı → silindi)
   anlatır ve denetim kaydından satır silmek kaydın güvenilirliğini bozar. Bu satırların kimlik aralığı günlüğe yazılır
   (kullanıcı kararı 2026-09-28).
+- **Denetim tabloları kilitli (2026-10-03):** `semantic_audit`, `semantic_audit_requests`, `semantic_audit_rows`,
+  `semantic_audit_ui` satırları `nb_audit_guard` tetikleyicisiyle silinemez/değiştirilemez. Yukarıdaki «uydurma hesap
+  satırı silinir» durumunda aynı işlemde önce `SELECT set_config('nanobase.audit_purge', '1', true)`; silinen satır
+  mühür zincirinde boşluk olarak görünür, nedeni günlüğe yazılır.
 - **Yan port / geçici köprü kopyası** canlı katalog veritabanına yazıyorsa aynı kural geçerlidir.
 - **Kabul sonunda kontrol:** Yönetim → Kişiler listesinde gerçek olmayan hesap yok; varsa silinip günlüğe yazılır.
 
