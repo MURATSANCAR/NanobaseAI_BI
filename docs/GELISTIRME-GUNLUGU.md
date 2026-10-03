@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — Geniş menü: büyük «Aç» düğmesi, fare çıkınca kendiliğinden kapanır
+
+- **Neden:** kullanıcı ekran görüntüsüyle «metinler sığmıyor (SÖZLEŞMELER taşıyor), menüyü biraz genişlet, fare üzerinden gidince otomatik kapansın, açma kısmı belirgin/büyük ve dönen hareketli olsun» dedi.
+- **Ne:** dar ray 84 → 92 px (sahne solu 96 → 104 px, `nav.css`); dar raydaki bölüm başlıkları büyük harf yerine olağan yazım (kelimeler sığar). Rayın üstünde mercan→mor, 76×44 px «Menüyü genişlet» düğmesi (çift ok). Tıklanınca 272 px'lik geniş panel rayın üstüne biner (sahne kaymaz): adlar tek satır, bölüm başlıkları tam metin, ara / tüm modüller / profil satırları. Açılış raydan sağa `clip-path` ile 240 ms, kapanış 180 ms (güçlü ease-out, CSS geçişi — yarıda tersine dönebilir), ok 180° döner; azaltılmış harekette yalnız solma. Fare panelden çıkınca 300 ms sonra kapanır (yalnız fare; dokunmada değil), Esc / dışarı tıklama / ekran değişimi de kapatır. Kod `src/canvas/nav/DesktopNav.tsx` (`WideModuleList`, `WideModuleItems`), `nav.css` (`.nav-wide`, `.nav-toggle`).
+
 ## 2026-10-03 — Menü okunurluğu: modül, ekran ve bölüm başlıkları belirgin
 
 - **Neden:** kullanıcı «menüde modül / alt modül ayrıntıları çok soluk» dedi. Rayda modül adları ve ekranlar 10–10,5 px gri (`muted` #6B7280), bölüm başlıkları bunun %80 saydamı, ekran kutusu %55 beyazdı; cam zeminde seçilmiyordu.
