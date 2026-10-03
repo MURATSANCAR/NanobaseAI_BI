@@ -303,6 +303,16 @@ def _inflects(token: str, root: str) -> bool:
 
 
 
+def _term_head(key: str) -> str:
+    """Last word of a normalized catalog term that is not a generic measure, modifier or stop word."""
+    words = key.split()
+    for w in reversed(words):
+        if w not in STOPWORDS_S and w not in MODIFIERS_S and w not in METRIC_VOCAB_S:
+            return w
+    return words[-1] if words else ""
+
+
+_PLANNED_FIGURE = re.compile(r"potansiyel|ongorulen|hedef|tahmin|planlanan|onerilen|beklenen")
 _QUESTION_PARTICLE = re.compile(r"^m[iu](s[iu]n|y[iu]z|d[iu]r|s[iu]n[iu]z)?$")
 
 
@@ -1956,7 +1966,12 @@ class SemanticResolver:
             # "en çok satan", "bir yazarı": ordinary words that happen to be some field's value. A name starts
             # with a word of its own ("Mavi Kirpi", "Timaş Okul").
             head = toks[0]
-            return (name_word(head) or self._source_named(head) is not None) and head not in acronyms
+            # …and it is written as a name, or at least is not built of words the catalog already defines: "yeni
+            # yazarlar", all lower case and ending in the catalog's own word for authors, is a question about new
+            # authors, not the one B2B banner that happens to carry that title (K0483, 2026-09-29). "mavi kirpi"
+            # in lower case is still a name — none of its words is a catalog term.
+            ordinary = not any(w in named for w in toks) and any(w in vocabulary or stem(w) in vocabulary for w in toks[1:])
+            return (name_word(head) or self._source_named(head) is not None) and head not in acronyms and not ordinary
 
         # A certified name read on the other database than every measure ("antik kitap" is also a CRM contact
         # flag, while the sales are in Logo): the same words are looked for as a label beside the measure.
@@ -2586,9 +2601,13 @@ class SemanticResolver:
             forms = {f for m in metrics for w in fold(m.term).split() for f in (stem(w), short_root(w)) if f and len(f) >= 4}
 
             def says_measure(voices: dict[str, set[str]]) -> bool:
+                # A planned or forecast figure is not the measure itself: the CRM project card's
+                # "potansiyel net satış" cannot answer "öngörülen satışa ulaştı mı" — that needs the
+                # sales that happened, on the ERP (K0776, 2026-09-29).
                 for ent in {e for ents in voices.values() for e in ents}:
                     prof = self.by_entity.get(ent)
-                    if prof is not None and any(f in fold(c.name) for c in prof.columns for f in forms):
+                    if prof is not None and any(f in fold(c.name) and not _PLANNED_FIGURE.search(fold(c.name))
+                                                for c in prof.columns for f in forms):
                         return True
                 return False
 
@@ -3339,7 +3358,11 @@ class SemanticResolver:
                 slot.explain["why"] = f"'{tok}' türetilmiş biçim; kökü '{key}' katalogda sertifikalı"
                 return slot
         bases = {st} | set(derived_forms(tok))
-        matches = [(key, senses) for key, senses in index.items() if bases & set(key.split())]
+        # The word must be the term's head — its last word once generic measure words are set aside —
+        # not a modifier inside it: "sipariş" stands for "sipariş sayısı", but "kez" does not stand for
+        # "kaç kez okundu" (a book's read count), and "kaç kez zam yapılmış" was read as that column
+        # (K0305/K0575, 2026-09-29).
+        matches = [(key, senses) for key, senses in index.items() if _term_head(key) in bases]
         if not matches:
             return None
         concepts = {c.id for _, senses in matches for c, _ in senses}
