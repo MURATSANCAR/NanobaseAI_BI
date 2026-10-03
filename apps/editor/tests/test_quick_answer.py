@@ -62,7 +62,7 @@ def fake(monkeypatch):
     def reply(*answers, **kw):
         queue = list(answers)
 
-        async def post(path, req):
+        async def post(path, req, headers=None):
             sent.append(req)
             a = queue.pop(0) if len(queue) > 1 else queue[0]
             return _Resp(*a) if isinstance(a, tuple) else _Resp(a, **kw)
@@ -115,7 +115,7 @@ def test_library_question_does_not_deep_read(fake):
 
 
 def test_model_error_is_reported_not_answered(fake, monkeypatch):
-    async def post(path, req):
+    async def post(path, req, headers=None):
         return _Resp("bad gateway", status=502)
     monkeypatch.setattr(QA.llm, "_post", post)
     out = asyncio.run(QA.answer("Karakterler kim?", "anne-terligi"))

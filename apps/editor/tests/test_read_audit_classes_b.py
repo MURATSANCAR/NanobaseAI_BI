@@ -346,7 +346,7 @@ def _answer(monkeypatch, asked, *replies):
         return ("DERIN" if deep else "KAYIT"), [{"crm_title": "Kitap", "title": "kitap", "asked_pages": asked}], True
     monkeypatch.setattr(QA, "context", ctx)
 
-    async def post(path, req):
+    async def post(path, req, headers=None):
         sent.append(req)
         return _Resp(replies[min(len(sent), len(replies)) - 1])
     monkeypatch.setattr(QA.llm, "_post", post)
