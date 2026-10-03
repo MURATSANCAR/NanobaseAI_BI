@@ -202,6 +202,7 @@ Son denetimden iki genel hata sınıfı (kitaba özel kural yok; K1–K13'ün ü
 - **Kod:** `finance_query/logo_codes.py` (CODED): `e_document` (EINVOICE), `einvoice_scenario` (PROFILEID), `einvoice_status` (ESTATUS), `vat_exemption` (VATEXCEPTCODE, satışta satır, faturada başlık), `customer_einvoice_user` (ACCEPTEINV), `customer_legal_form` (ISPERSCOMP). Sözleşme 2.3. Model yalnız kırılım kimliği ve değer verir; değer bilinen koda çevrilir, kodu anan kelime soruda geçmeli, olumsuz ifadede en uzun kelime kazanır. Kodlu süzgeçte aynı koşulla iptal edilmiş satış faturası sayısı nota yazılır (2026'da reddedilen 2 e-faturanın ikisi iptal). Kodlu süzgeçte iskonto fiyat farkı notu atlanır (o süzgeç ayrı iskonto faturasına uygulanamaz).
 - **Sınama:** 21 yeni birim testi; tam test seti dal 19 hata / main 20 hata, yeni kırık yok. Yan köprüde 13 soru, cevap verenlerin hepsi doğrudan sorguyla birebir; A/B 23 soruda gerileme yok.
 - **Yazılmadı:** PAYTRANS.DEVIR (2021–25'te bayrak değil), ORFLINE.ORGPRICE/RESERVE*, ISFOREIGN (YURTDIŞI kanalıyla örtüşmüyor; «yurtdışı satış» kanalla kalır).
+- **Kurulum (bdcb7cd75):** test sunucusu — yalnız 6 `finance_query` dosyası, canlı md5 eski main ile eşti; köprü yeniden başladı, 3 soru doğrudan sorguyla birebir (gün içinde gelen faturayla 79.378.401,43). Müşteri VM'i — aynı 6 dosya VM ağacına (md5 eski main), yalnız `bridge` imajı derlendi; konteynerde md5 yeni, `._*` 0; e-Fatura sayısı 5.420 ve e-Arşiv satışı 11.251.116,12 birebir.
 
 ## 2026-10-03 — E-kitap ↔ basılı otomatik karşılaştırma
 
