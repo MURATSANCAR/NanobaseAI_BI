@@ -251,7 +251,7 @@ def cover_requests() -> list[dict]:
     `last_lookup`: the book's latest CRM lookup (time, outcome, CRM record, name). The connector
     re-reads a book only when it is new, its match changed, or its CRM record / cover alternatives
     changed since then (kullanıcı kararı 2026-10-03: «sadece değişen ve yeni oluşturulanları alalım»)."""
-    from . import book_title, foundation, read_model
+    from . import archive, book_title, foundation, read_model
     legacy = {str(r["book_id"]): r["metadata"] or {} for r in db.all_rows(
         "SELECT book_id, metadata FROM book_card WHERE is_current")}
     out = []
@@ -268,12 +268,15 @@ def cover_requests() -> list[dict]:
                            " ed.book_cover cv ON cv.book_id=b.id AND cv.is_current ORDER BY b.id").fetchall():
             book_id = str(b["id"])
             raw = b["title_file"] or (Path(b["archive_path"]).name if b["archive_path"] else None)
-            titles = [book_title.from_file(raw)["title"], book_title.clean_stem(raw)] if raw else \
-                [book_title.from_file(b["title"])["title"]]
-            # otomatik ad (CRM/site/künye/dosya) eşleştirmeye girmez — CRM'den gelen «Arsen Lüpen» kendini yeniden eşleyip
-            # başka kayda düşmesin; kişinin verdiği ad (ya da kuraldan önceki elle ad) önce gelir
-            auto = b.get("title_source") in book_title.SOURCES[1:] and bool(raw)
-            titles = titles if auto else [b["title"], *titles]
+            # dosya adının yazımları: temizlenmiş ad, eski arşiv adı (baştaki sayı adın parçası olabilir: «50 Garip
+            # Gerçek»), ham gövde
+            titles = [book_title.from_file(raw)["title"], archive.clean_title(raw), book_title.clean_stem(raw)] if raw \
+                else [book_title.from_file(b["title"])["title"]]
+            # CRM'den gelen ad eşleştirmeye girmez (kendini yeniden eşleyip başka kayda düşmesin: «Arsen Lüpen»); site /
+            # künye adı bağımsız kanıttır, en sonda denenir; kişinin verdiği ad (ya da kuraldan önceki elle ad) önce gelir
+            src = b.get("title_source")
+            auto = src == book_title.CRM and bool(raw)
+            titles = titles if auto else [*titles, b["title"]] if src in book_title.SOURCES[1:] else [b["title"], *titles]
             meta = (read_model.card(c, book_id) or {}).get("metadata", [])
             facts = lambda k: list(dict.fromkeys(  # noqa: E731
                 [x["claim"] for x in meta if x.get("subject") == k] +
