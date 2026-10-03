@@ -466,7 +466,9 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
     starts = [{**s, "title": display_title(s["title"])}
               for s in _join_continuations([{**s, "title": _clean_title(s["title"])} for s in starts])]
     # Kitabın tek açılışı ilk sayfalardaki başlık sayfasıysa o iç kapaktır (adı kitap adına uymasa da): bölüm yok.
-    if len(starts) == 1 and starts[0]["kind"] == "page" and _front(starts[0]["page"], last_page):
+    if (len(starts) == 1 and starts[0]["kind"] == "page" and _front(starts[0]["page"], last_page)
+            and not _label_only(" ".join(starts[0]["title"].split()[:2]))):
+        # «Birinci Bölüm …» başlık sayfası iç kapak değil, bölümdür
         starts = []
     if not starts:
         return [{"title": "Kitap", "page_from": 1, "page_to": last_page}]
