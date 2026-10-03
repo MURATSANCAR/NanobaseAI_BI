@@ -18,10 +18,14 @@ from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput, 
 from .. import db, foundation
 from ..config import settings
 from ..llm import ContextOverflow
+from . import liveness
 from .activities import ALL
 from .workflows import BookFullAnalysis
 
 log = logging.getLogger("editor.worker")
+
+#: Liveness heartbeat period and the worker's heartbeat throttle (seconds).
+PULSE_SECONDS = 5.0
 
 
 class HeartbeatActivityInterceptor(ActivityInboundInterceptor):
@@ -35,14 +39,18 @@ class HeartbeatActivityInterceptor(ActivityInboundInterceptor):
         info = activity.info()
         if not info.heartbeat_timeout:
             return await self.next.execute_activity(input)
-        interval = min(20.0, info.heartbeat_timeout.total_seconds() / 3)
+        # Short pulse (with the worker's 5 s throttle below): a stall of the shared loop costs the
+        # heartbeat only the stall itself plus ~5 s, not stall + 20 s pulse + 20 s throttle
+        # (2026-10-03: stalls of ~30 s were enough to pass the 60 s timeout).
+        interval = min(PULSE_SECONDS, info.heartbeat_timeout.total_seconds() / 6)
         details = {"kind": "worker_liveness", "activity": info.activity_type, "attempt": info.attempt}
-        activity.heartbeat(details)
+        token = liveness.DETAILS.set(details)       # the activity may add its progress (liveness.report)
+        activity.heartbeat(dict(details))
 
         async def pulse() -> None:
             while True:
                 await asyncio.sleep(interval)
-                activity.heartbeat(details)
+                activity.heartbeat(dict(details))
 
         task = asyncio.create_task(pulse())
         try:
@@ -51,6 +59,7 @@ class HeartbeatActivityInterceptor(ActivityInboundInterceptor):
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+            liveness.DETAILS.reset(token)
 
 
 class LoopWatchdog:
@@ -164,8 +173,8 @@ async def main() -> None:
     client = await Client.connect(s.temporal_address, namespace=s.temporal_namespace)
     worker = Worker(client, task_queue=s.task_queue, workflows=[BookFullAnalysis], activities=ALL,
                     max_concurrent_activities=48, interceptors=[HeartbeatInterceptor()],
-                    max_heartbeat_throttle_interval=timedelta(seconds=20),
-                    default_heartbeat_throttle_interval=timedelta(seconds=20))
+                    max_heartbeat_throttle_interval=timedelta(seconds=PULSE_SECONDS),
+                    default_heartbeat_throttle_interval=timedelta(seconds=PULSE_SECONDS))
     log.info("worker polling %s/%s", s.temporal_namespace, s.task_queue)
     watchdog = LoopWatchdog()
     watchdog.start()
