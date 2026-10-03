@@ -181,3 +181,75 @@ def test_large_type_sentence_is_not_a_heading():
     assert typeset._sentence("Tabii ki FİLİN!") and typeset._sentence("O sırada sanki başında minik dikenler beliriyordu.")
     assert not any(typeset._sentence(t) for t in ("BİTTİK BİZ!", "GECELER!", "sensİz!", "1.", "Hazan Ağlar Baharında...",
                                                    "MaCeRa DeDİğİn BuDuR DoStUm!"))
+
+
+# ---------------------------------------------------------------- K16: iç kapakta künye/imza satırları
+def _cover_book(cover: list[dict], n: int = 12) -> list:
+    """1 iç kapak (verilen satırlar) · 2..n metin. Başka açılış yok: tek bölümlü resimli kitap."""
+    return [_page(cover)] + [_page(_body(60)) for _ in range(n - 1)]
+
+
+def _found(doc, titles, names=()):
+    return typeset.chapters_from_pages(_pages(doc), typeset.page_headings(doc, _lines), titles, names)
+
+
+def test_inner_cover_with_author_and_illustrator_is_not_a_chapter():
+    """K16 «Levent Adana'da»: «ADANA’DA Mustafa Orakçı Çizer: Derya Işık Özbay» bölüm adı oluyordu. Kıvrık kesme
+    (U+2019) ve seri adıyla başlayan kitap adı: «ADANA’DA» ↔ «Levent Adana'da»."""
+    doc = _cover_book([{"text": "ADANA’DA", "y0": 190, "size": 29.0},
+                       {"text": "Mustafa Orakçı", "y0": 255, "size": 16.0},
+                       {"text": "Çizer: Derya Işık Özbay", "y0": 280, "size": 13.0}])
+    assert [c["title"] for c in _found(doc, ["Levent Adana'da"], ["Mustafa Orakçı"])] == ["Kitap"]
+    # künye TITLE iddiası da kitabın adıdır
+    assert [c["title"] for c in _found(doc, ["kitap 5", "ADANA’DA"], ["Mustafa Orakçı"])] == ["Kitap"]
+    # adı tutmasa da tek açılış ilk sayfalardaki başlık sayfasıysa iç kapaktır
+    assert [c["title"] for c in _found(doc, "Başka Ad")] == ["Kitap"]
+
+
+def test_byline_is_cut_from_the_title():
+    s = typeset._strip_byline
+    assert s("ADANA’DA Mustafa Orakçı Çizer: Derya Işık Özbay", ["Mustafa Orakçı"]) == "ADANA’DA"
+    assert s("Kayıp Şehir Resimleyen: Ayşe Kaya") == "Kayıp Şehir"
+    assert s("Kayıp Şehir ÇEVİREN: Ali Can") == "Kayıp Şehir"
+    assert s("Kayıp Şehir Yayına Hazırlayan: Ali Can") == "Kayıp Şehir"
+    assert s("Yazan: Ali Can") == ""
+    assert s("Mustafa Orakçı Kayıp Şehir", ["Mustafa Orakçı"]) == "Kayıp Şehir"
+    # yanlış pozitif sınırları: «Yazar» kelimesi geçen gerçek ad, ekli ad, yazarı olmayan ad, tek kelimelik ad
+    assert s("Yazarın Dönüşü", ["Mustafa Orakçı"]) == "Yazarın Dönüşü"
+    assert s("Mustafa Kemal'in Çocukluğu", ["Ali Can"]) == "Mustafa Kemal'in Çocukluğu"
+    assert s("Mustafa Kemal'in Çocukluğu", ["Mustafa Kemal"]) == "Mustafa Kemal'in Çocukluğu"
+    assert s("Derya Kıyısında", ["Derya"]) == "Derya Kıyısında"
+    # imza yoksa başlık olduğu gibi kalır (sondaki çizgi dahil)
+    assert s("EK 2: Selanik Vilayeti –Kuruş-", ["Ali Can"]) == "EK 2: Selanik Vilayeti –Kuruş-"
+
+
+def test_real_chapters_survive_the_byline_rule():
+    doc = [
+        _page([{"text": "Çiçekçi Kadın", "y0": 200, "size": 24.0},
+               {"text": "Yazar: Ali Can", "y0": 260, "size": 13.0}]),
+        _page(_body(60)),
+        _page([{"text": "Yazarın Dönüşü", "y0": 250, "size": 16.0}]),
+        _page(_body(60)), _page(_body(60)),
+        _page([{"text": "Mustafa Kemal'in Çocukluğu", "y0": 250, "size": 16.0}]),
+        _page(_body(60)), _page(_body(60)),
+    ]
+    found = [(c["title"], c["page_from"]) for c in _found(doc, "Çiçekçi Kadın", ["Ali Can"])]
+    assert ("Yazarın Dönüşü", 3) in found and ("Mustafa Kemal'in Çocukluğu", 6) in found
+    assert not any("Çiçekçi" in t or "Ali Can" in t for t, _ in found)
+
+
+def test_scattered_letter_heading_is_not_a_chapter_name():
+    """Dalgalı dizilmiş resimli kitap başlığı harf harf okunur («G İ D İ E»): zayıf adayken bölüm açmaz."""
+    assert typeset._scattered("G İ D İ E") and typeset._scattered("U Ğ")
+    assert not any(typeset._scattered(t) for t in ("1.", "A", "Ali ve Veli", "II. Kısım", "C Vitamini"))
+    heads = {3: {"title": "G İ D İ E", "size": 25.0, "kind": "head"},
+             8: {"title": "Yağ Camii", "size": 25.0, "kind": "head"}}
+    pages = [{"page_no": i, "spans": [{"text": LONG}]} for i in range(1, 13)]
+    assert [c["title"] for c in typeset.chapters_from_pages(pages, heads)] == ["Başlıksız başlangıç", "Yağ Camii"]
+
+
+def test_part_of_the_book_title_needs_half_of_its_letters():
+    assert typeset._is_book_title("ADANA’DA", "Levent Adana'da")
+    assert typeset._is_book_title("Adana'da", "Levent Adana’da") and typeset._is_book_title("LEVENT ADANA'DA", "Levent Adana'da")
+    assert not typeset._is_book_title("Giriş", "Giriş Sanatı Üzerine")
+    assert not typeset._is_book_title("Adana", "Levent Adana'da")

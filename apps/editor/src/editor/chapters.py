@@ -252,16 +252,81 @@ def page_headings(doc, page_lines) -> dict[int, dict]:
     return out
 
 
-def _skip(title: str, book_title: str, page: int, last_page: int) -> bool:
+def _front(page: int, last_page: int) -> bool:
+    """İç kapak/künye bölgesi: ilk 6 sayfa ya da kitabın ilk onda biri."""
+    return page <= max(6, last_page // 10)
+
+
+def _titles(book_title) -> list[str]:
+    return [t for t in ([book_title] if isinstance(book_title, str) else list(book_title or ())) if t and t.strip()]
+
+
+def _is_book_title(title: str, book_title) -> bool:
+    """Başlık kitabın kendi adı mı. Harf karşılaştırması aksansız, boşluksuz, noktalama/kesme işaretsiz ve noktalı/
+    noktasız i ayrımsız: «DARWIN VE OSMANLILAR» (Türkçe küçültmede «darwın») = «Darwin ve Osmanlılar», «İBN SÎNÂ» =
+    «İbn Sina», «Dİjİtal Dünyada e-beveyn» = «Dijital Dünyada Ebeveyn» (2026-10-03: üçü bölüm oldu). Kitabın adı
+    seri adıyla başlıyorsa iç kapakta yalnız adın kendisi durur («ADANA’DA» ↔ «Levent Adana'da», K16): adın baş ya
+    da son kelimeleri, harflerinin en az yarısını taşıyorsa, kitabın adı sayılır («Giriş» ↔ «Giriş Sanatı» değil)."""
+    from .running_head import key
+    kt = key(title)
+    if not kt:
+        return False
+    for bt in _titles(book_title):
+        kb = key(bt)
+        if not kb:
+            continue
+        if kt.startswith(kb):
+            return True
+        words = [key(w) for w in bt.split() if key(w)]
+        for n in range(1, len(words)):
+            for part in ("".join(words[:n]), "".join(words[n:])):
+                if part == kt and 2 * len(kt) >= len(kb):
+                    return True
+    return False
+
+
+def _skip(title: str, book_title, page: int, last_page: int) -> bool:
     n = _norm(title)
     if any(n.startswith(x) for x in _NOT_TITLE):
         return True
-    # kitabın kendi adı ilk sayfalarda: iç kapak, bölüm değil. Harf karşılaştırması aksansız, boşluksuz ve noktalı/
-    # noktasız i ayrımsız: «DARWIN VE OSMANLILAR» (Türkçe küçültmede «darwın») = «Darwin ve Osmanlılar»,
-    # «İBN SÎNÂ» = «İbn Sina», «Dİjİtal Dünyada e-beveyn» = «Dijital Dünyada Ebeveyn» (2026-10-03: üçü bölüm oldu).
+    # kitabın kendi adı ilk sayfalarda: iç kapak, bölüm değil
+    return _front(page, last_page) and _is_book_title(title, book_title)
+
+
+#: Künye/imza satırının etiketi («Çizer: Derya …», «Yazar: …», «Çeviren: …»): iki noktayla. «Yazarın Dönüşü» değil.
+_CREDIT = re.compile(
+    r"(?:^|(?<=\s))(?:yazar|yazan|yazanlar|çizer|çizen|çizim|çizimler|resim|resimler|resimleyen|resimlendiren|"
+    r"illüstrasyon|illüstrasyonlar|illüstratör|illüstre eden|görseller|çeviren|çeviri|çevirmen|türkçesi|"
+    r"türkçeleştiren|editör|editörler|yayına hazırlayan|hazırlayan|hazırlayanlar|derleyen|derleyenler|"
+    r"yayın yönetmeni|genel yayın yönetmeni|kapak tasarımı|kapak tasarım|kapak|mizanpaj|mizanpaj tasarım|"
+    r"sayfa tasarımı|redaksiyon|düzelti|son okuma|anlatan|uyarlayan|seslendiren|sunan)\s*[:：]",
+    re.I)
+
+
+def _strip_byline(title: str, names: list[str] = ()) -> str:
+    """Bölüm adından künye/imza kısmı (K16, «ADANA’DA Mustafa Orakçı Çizer: Derya Işık Özbay»): etiketli künye satırı
+    («Çizer:», «Resimleyen:», «Çeviren:», «Yazan:», «Editör:» …) ve sonrası; başta ya da sonda bütün kelimeleriyle
+    duran, en az iki kelimelik yazar/çizer adı (künyeden ya da CRM'den). Ekli ad («Mustafa Kemal'in Çocukluğu») ad
+    değildir: anahtarı farklıdır («kemalin»)."""
     from .running_head import key
-    return bool(book_title) and bool(key(book_title)) and key(title).startswith(key(book_title)) \
-        and page <= max(6, last_page // 10)
+    t = " ".join((title or "").split())
+    m = _CREDIT.search(t.replace("İ", "i").replace("I", "ı"))
+    cut = m is not None
+    if m:
+        t = t[:m.start()].rstrip(" ,;:-–—/|·•")
+    words = t.split()
+    keys = [key(w) for w in words]
+    for name in names or ():
+        nk = [key(w) for w in (name or "").split() if key(w)]
+        if len(nk) < 2 or len(nk) > len(words):
+            continue                    # tek kelimelik ad («Derya») sıradan kelimeyle karışır
+        if keys[-len(nk):] == nk:
+            words, keys, cut = words[:-len(nk)], keys[:-len(nk)], True
+        elif keys[:len(nk)] == nk:
+            words, keys, cut = words[len(nk):], keys[len(nk):], True
+    if not cut:
+        return title                    # imza yok: başlık olduğu gibi («–Kuruş-» sonundaki çizgi dahil)
+    return " ".join(words).strip(" ,;:-–—/|·•")
 
 
 #: Yalnız bölüm etiketi olan başlık («Birinci Bölüm», «BÖLÜM 3», «II. Kısım», «1.»): adı sonraki sayfadadır.
@@ -307,6 +372,12 @@ def display_title(title: str) -> str:
     return title_case(tr_lower(title), typed=False)
 
 
+def _scattered(title: str) -> bool:
+    """Yalnız tek harflerden oluşan, en az iki parçalı başlık («G İ D İ E», «U Ğ»)."""
+    words = title.split()
+    return len(words) >= 2 and all(len(w) == 1 and w.isalpha() for w in words)
+
+
 def _label_only(title: str) -> bool:
     return all(w in _LABEL_WORDS or _ROMAN.match(w) for w in _norm(title).split())
 
@@ -334,9 +405,11 @@ def _join_continuations(starts: list[dict]) -> list[dict]:
     return out
 
 
-def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title: str = "") -> list[dict]:
+def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title: str | list[str] = "",
+                        names: list[str] = ()) -> list[dict]:
     """Sayfalar (page_no + spans) ve dizgi açılışlarından bölümler: [{title, page_from, page_to}]. Sayfa
-    başlığı/altlığı spanları (`source.RUNNING_HEAD`) sayfanın metni sayılmaz."""
+    başlığı/altlığı spanları (`source.RUNNING_HEAD`) sayfanın metni sayılmaz. `book_title`: kitabın adı ya da
+    adları (kayıt, künye TITLE, CRM); `names`: yazar/çizer/çevirmen adları (künye, CRM) — başlıktaki imza atılır."""
     by_page = {p["page_no"]: [s["text"].strip() for s in p["spans"]
                               if s["text"].strip() and s.get("role") != "running_head"] for p in pages}
     last_page = max(by_page, default=0)
@@ -345,6 +418,15 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
         h = headings.get(p)
         if h and h["kind"] == "empty":
             continue
+        if h and h["title"]:
+            # künye/imza satırı bölüm adına girmez (K16); başlıkta yalnız imza kaldıysa (iç kapakta yazar adı,
+            # «Çizer: …») sayfa başlıksızdır
+            title = _strip_byline(h["title"], names)
+            if title != h["title"]:
+                h = {**h, "title": title}
+                if not title and h["kind"] == "page":
+                    pending = None
+                    continue
         near = pending is not None and p - pending["last"] <= 2
         if h and h["kind"] == "page":
             if _skip(h["title"], book_title, p, last_page):
@@ -373,12 +455,19 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
         pending = None
     # Bölüm başlıkları bir kitapta aynı dizgide: güçlü açılışların (başlık sayfası / bölüm başı boşluğu) puntosundan
     # sapan zayıf aday (yalnız büyük punto) konuşma balonu ya da ara başlıktır.
+    # Harf harf dağılmış zayıf aday («G İ D İ E»: dalgalı dizilmiş resimli kitap başlığı, okuma sırası bozuk)
+    # okunabilir bir ad değildir. K16'da iç kapak artık bölüm sayılmayınca güçlü açılışı kalmayan kitapta bunlar
+    # bölüm oluyordu (önce iç kapağın puntosu onları ayıklıyordu).
+    starts = [s for s in starts if not (s["kind"] == "head" and _scattered(s["title"]))]
     strong = [s["size"] for s in starts if s["kind"] in ("page", "sunk")]
     if strong:
         keep = {k for k, _ in Counter(round(x) for x in strong).most_common(2)}
         starts = [s for s in starts if s["kind"] != "head" or round(s["size"]) in keep or s["size"] > max(keep)]
     starts = [{**s, "title": display_title(s["title"])}
               for s in _join_continuations([{**s, "title": _clean_title(s["title"])} for s in starts])]
+    # Kitabın tek açılışı ilk sayfalardaki başlık sayfasıysa o iç kapaktır (adı kitap adına uymasa da): bölüm yok.
+    if len(starts) == 1 and starts[0]["kind"] == "page" and _front(starts[0]["page"], last_page):
+        starts = []
     if not starts:
         return [{"title": "Kitap", "page_from": 1, "page_to": last_page}]
     out = []
@@ -394,14 +483,37 @@ def for_generation(generation_id: str, pages: list[dict] | None = None) -> list[
     """Okunmuş kitabın bölümleri, kitabın kendi PDF dizgisinden. PDF açılamazsa None (çağıran eski kurala döner)."""
     from . import db, source
     from .document import _open_version, _page_lines
-    g = db.one("SELECT g.book_version_id, b.title FROM generation g JOIN book_version bv ON bv.id=g.book_version_id "
-               "JOIN book b ON b.id=bv.book_id WHERE g.id=%s", generation_id)
+    g = db.one("SELECT g.book_version_id, b.id AS book_id, b.title FROM generation g "
+               "JOIN book_version bv ON bv.id=g.book_version_id JOIN book b ON b.id=bv.book_id WHERE g.id=%s",
+               generation_id)
     if g is None:
         return None
+    titles, names = book_names(generation_id, str(g["book_id"]), g["title"] or "")
     try:
         doc, _ = _open_version(str(g["book_version_id"]))
     except Exception:  # noqa: BLE001 - dosya taşınmış/silinmiş: dizgi yok, eski kural
         return None
     with doc:
         headings = page_headings(doc, _page_lines)
-    return chapters_from_pages(pages if pages is not None else source.read(generation_id), headings, g["title"] or "")
+    return chapters_from_pages(pages if pages is not None else source.read(generation_id), headings, titles, names)
+
+
+def book_names(generation_id: str, book_id: str, title: str) -> tuple[list[str], list[str]]:
+    """Kitabın adları (kayıt adı, künyenin TITLE iddiaları, CRM kayıt adının parçaları) ve imza adları (künyenin
+    AUTHOR/ILLUSTRATOR iddiaları, CRM yazarları/çizerleri). Salt okuma; okunamazsa yalnız kayıt adı."""
+    from . import db
+    from .book_title import segments
+    titles, names = [title], []
+    try:
+        for r in db.all_rows("SELECT subject, claim FROM claim WHERE generation_id=%s AND kind='METADATA'"
+                             " AND subject IN ('TITLE','AUTHOR','ILLUSTRATOR')"
+                             " AND status IN ('VERIFIED','EDITOR_APPROVED','EDITOR_CORRECTED')", generation_id):
+            (titles if r["subject"] == "TITLE" else names).append(r["claim"] or "")
+        crm = db.one("SELECT crm_title, authors, illustrators FROM book_crm_record WHERE book_id=%s", book_id) or {}
+        titles += segments(crm.get("crm_title") or "")
+        names += [*(crm.get("authors") or []), *(crm.get("illustrators") or [])]
+    except Exception:  # noqa: BLE001 - künye/CRM okunamazsa kural kayıt adıyla sürer
+        pass
+    # «Ad Soyad, Ad Soyad» tek iddiada birden çok kişi
+    names = [n.strip() for x in names for n in re.split(r"[,;/&]| ve ", x or "") if n.strip()]
+    return [t for t in dict.fromkeys(titles) if t], list(dict.fromkeys(names))
