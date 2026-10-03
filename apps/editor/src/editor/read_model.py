@@ -179,8 +179,24 @@ def latest(c, book_id):
         'WHERE v.book_id=%s ORDER BY g.created_at DESC,g.id DESC LIMIT 1', (book_id,)).fetchone()
 
 
+#: Kitabın kartı/kataloğu okunacak nesil: güncel (READY, doğrulanmış revizyon) `catalog` çıktısı olan EN YENİ nesil.
+#: En yeni nesli körü körüne almak, kitap yeniden okunurken ya da yeni okuması düşmüşken (FAILED/RUNNING nesil)
+#: eski başarılı okumayı da kaybettiriyordu: Zeki'ye sor «bulunamadı», kart boş. Kitaba sor listesi
+#: (quick_answer.library) aynı kuralı tek sorguda uygular.
+CARDED_SQL = ('SELECT g.id FROM ed.generation g JOIN ed.book_version v ON v.id=g.book_version_id '
+              'WHERE v.book_id=%s AND EXISTS (SELECT 1 FROM ed.current_artifact a '
+              "WHERE a.generation_id=g.id AND a.kind='catalog') ORDER BY g.created_at DESC,g.id DESC LIMIT 1")
+
+
+def carded(c, book_id):
+    """Güncel katalog çıktısı olan en yeni nesil; yoksa None."""
+    return c.execute(CARDED_SQL, (book_id,)).fetchone()
+
+
 def card(c, book_id: str) -> dict | None:
-    gen = latest(c, book_id)
+    """Kitabın kartı: güncel kataloğu olan en yeni nesilden (`carded`); hiçbiri yoksa en yeni nesil (kart
+    «yok» olarak döner, `available=False`)."""
+    gen = carded(c, book_id) or latest(c, book_id)
     if gen is None:
         return None
     selected = artifact(c, str(gen['id']), 'catalog')

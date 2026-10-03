@@ -248,6 +248,62 @@ def test_scattered_letter_heading_is_not_a_chapter_name():
     assert [c["title"] for c in typeset.chapters_from_pages(pages, heads)] == ["Başlıksız başlangıç", "Yağ Camii"]
 
 
+# ------------------------------------------------------------------ 56 kitap denetimi (2026-10-03)
+def _starts(heads: dict, n: int = 40, texts: dict | None = None):
+    pages = [{"page_no": i, "spans": [{"text": (texts or {}).get(i, LONG)}]} for i in range(1, n + 1)]
+    return [(c["title"], c["page_from"]) for c in typeset.chapters_from_pages(pages, heads)]
+
+
+def test_repeated_single_letter_or_roman_chapter_names_are_numbered():
+    heads = {p: {"title": "I", "size": 20.0, "kind": "page"} for p in (13, 19, 25, 31)}
+    assert [t for t, _ in _starts(heads)][1:] == ["I", "II", "III", "IV"]
+    heads = {p: {"title": "x", "size": 20.0, "kind": "page"} for p in (13, 19, 25)}
+    assert [t for t, _ in _starts(heads)][1:] == ["1. Bölüm", "2. Bölüm", "3. Bölüm"]
+    # iki kez tekrar ya da anlamlı ad: dokunulmaz
+    heads = {13: {"title": "I", "size": 20.0, "kind": "page"}, 19: {"title": "I", "size": 20.0, "kind": "page"}}
+    assert [t for t, _ in _starts(heads)][1:] == ["I", "I"]
+    heads = {p: {"title": "NE YAPMALI?", "size": 20.0, "kind": "sunk"} for p in (13, 19, 25)}
+    assert [t for t, _ in _starts(heads)][1:] == ["NE YAPMALI?"] * 3
+
+
+def test_lower_case_mid_sentence_line_is_not_a_chapter_name():
+    heads = {13: {"title": "KEŞİF GÖREVİ", "size": 14.0, "kind": "sunk"},
+             19: {"title": "nasıl kaçabileceğini düşünürken uzun süre uyuyama- dı ancak", "size": 10.0,
+                  "kind": "sunk"},
+             25: {"title": "YENİ GÜN", "size": 14.0, "kind": "sunk"}}
+    assert [t for t, _ in _starts(heads)] == ["Başlıksız başlangıç", "KEŞİF GÖREVİ", "YENİ GÜN"]
+    # başlıkları bilerek küçük harfle dizilmiş kitap: uzun küçük harfli başlık da başlıktır
+    heads = {13: {"title": "arayış", "size": 14.0, "kind": "sunk"},
+             19: {"title": "yol içre yol, sır içre sır", "size": 14.0, "kind": "sunk"},
+             25: {"title": "kalkmak için düşmek gerek", "size": 14.0, "kind": "sunk"}}
+    assert [t for t, _ in _starts(heads)][1:] == ["arayış", "yol içre yol, sır içre sır", "kalkmak için düşmek gerek"]
+    # satır sonu bölünmesi her kitapta gövdedir
+    assert typeset._mid_sentence("ne yapacağını bilemeden bekle- di", True)
+    assert not typeset._mid_sentence("Anne-Baba", False)
+
+
+def test_dedication_page_does_not_open_a_chapter():
+    heads = {2: {"title": "Siyah Lale’ye ithaf olunur…", "size": 12.0, "kind": "page"},
+             12: {"title": "BİR DELİLİK YAPMALIYIM", "size": 16.0, "kind": "page"}}
+    texts = {2: "Siyah Lale’ye ithaf olunur…"}
+    assert [t for t, _ in _starts(heads, texts=texts)] == ["Başlıksız başlangıç", "BİR DELİLİK YAPMALIYIM"]
+    # ithaf sözü olmadan, ilk sayfalarda «Ad'a» satırı
+    heads = {1: {"title": "Annem Ayşe’ye", "size": 12.0, "kind": "page"},
+             12: {"title": "Birinci Gün", "size": 16.0, "kind": "page"}}
+    assert [t for t, _ in _starts(heads, texts={1: "Annem Ayşe’ye"})] == ["Başlıksız başlangıç", "Birinci Gün"]
+
+
+def test_weakly_scattered_heading_is_not_a_chapter_name():
+    for t in ("KS DE T O", "İ L Gİ R E", "LARI UN K A MU", "e v miş git", "M Zİ Bİ ÜKOSMAN Y"):
+        assert typeset._scattered_weak(t), t
+    for t in ("1. BÖLÜM", "BÖLÜM 12", "5. Paylaşma", "Ali ve Su", "NE YAPMALI?", "A'dan Z'ye", "Ve Kazanan...",
+              "II. Kısım", "C Vitamini", "O da Ben", "1. FASL"):
+        assert not typeset._scattered_weak(t), t
+    heads = {13: {"title": "KS DE T O", "size": 20.0, "kind": "page"},
+             19: {"title": "Yağ Camii", "size": 20.0, "kind": "page"}}
+    assert [t for t, _ in _starts(heads)] == ["Başlıksız başlangıç", "Yağ Camii"]
+
+
 def test_part_of_the_book_title_needs_half_of_its_letters():
     assert typeset._is_book_title("ADANA’DA", "Levent Adana'da")
     assert typeset._is_book_title("Adana'da", "Levent Adana’da") and typeset._is_book_title("LEVENT ADANA'DA", "Levent Adana'da")

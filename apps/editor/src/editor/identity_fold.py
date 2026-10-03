@@ -45,7 +45,7 @@ from .identity import family_address, name_key
 from . import identity_links
 
 _CHARS = ("SELECT ch.id, ch.canonical_name, ch.aliases, ch.kind, ch.traits, ch.identity_status,"
-          " ch.identity_confidence, ch.first_page, cl.payload -> 'windows' AS windows,"
+          " ch.identity_confidence, ch.first_page, ch.description, cl.payload -> 'windows' AS windows,"
           " (SELECT count(*) FROM character_attribute a WHERE a.character_id = ch.id) AS attributes"
           " FROM character ch LEFT JOIN claim cl ON cl.id = ch.claim_id WHERE ch.generation_id = %s")
 _PAGES = ("SELECT character_id, array_agg(DISTINCT page_no) AS pages, count(*) AS n FROM character_mention"
@@ -85,6 +85,7 @@ def plan(generation_id: str, title: str | None = None) -> dict:
                       "windows": {w.get("window") for w in (r["windows"] or []) if isinstance(w, dict)} - {None},
                       "status": r["identity_status"], "confidence": float(r["identity_confidence"]),
                       "aliases": list(r["aliases"] or []), "first_page": r["first_page"],
+                      "description": r["description"] or "",
                       "attributes": int(r["attributes"]), "traits": tr,
                       "age_evidence": identity_links.text_stage(quotes.get(str(r["id"]), []))})
     read = source.read(generation_id)

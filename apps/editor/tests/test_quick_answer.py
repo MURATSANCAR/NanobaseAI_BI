@@ -182,6 +182,42 @@ def test_library_skips_books_whose_latest_reading_has_no_current_card(monkeypatc
     assert QA.library(_Cur([])) == []
 
 
+def test_library_picks_newest_generation_with_current_catalog_not_newest_generation():
+    """Kitap yeniden okunurken/yeni okuması düşmüşken eski başarılı okuması kaybolmamalı («Bulunamadı»):
+    nesil seçimi güncel catalog çıktısı olanlar arasında yapılır (iç birleşim, sonradan süzme değil)."""
+    cur = _Cur([])
+    QA.library(cur)
+    sql = cur.sql[0]
+    assert "LEFT JOIN ed.current_artifact" not in sql and "JOIN ed.current_artifact" in sql
+    assert "WHERE build_key IS NOT NULL" not in sql
+
+
+def test_read_model_card_uses_newest_carded_generation(monkeypatch):
+    from editor import read_model as RM
+
+    class Cur:
+        def __init__(self):
+            self.sql = []
+
+        def execute(self, sql, params=None):
+            self.sql.append(sql)
+            if "current_artifact a" in sql and "LIMIT 1" in sql:       # carded: eski başarılı nesil
+                rows = [{"id": "g-old"}]
+            elif "ORDER BY g.created_at DESC,g.id DESC LIMIT 1" in sql:  # latest: düşmüş yeni nesil
+                rows = [{"id": "g-new"}]
+            elif "FROM ed.book WHERE" in sql:
+                rows = [{"title": "kitap"}]
+            else:
+                rows = []
+            return type("R", (), {"fetchall": lambda _s: rows, "fetchone": lambda _s: rows[0] if rows else None})()
+
+    seen = []
+    monkeypatch.setattr(RM, "artifact", lambda c, gid, kind: seen.append(gid) or {
+        "generation_id": gid, "available": False, "artifact": None})
+    out = RM.card(Cur(), "b1")
+    assert seen == ["g-old"] and out["generation_id"] == "g-old"
+
+
 def test_card_block_uses_snapshot_characters_events_and_merges_chunk_themes():
     b = {"generation_id": "g", "title": "anne-terligi", "crm_title": "Anne Terliği", "crm_authors": ["Y"],
          "page_count": 24, "metadata": [{"subject": "AUTHOR", "claim": "Kitaptaki Yazar"}],

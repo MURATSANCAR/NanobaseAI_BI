@@ -192,6 +192,68 @@ def test_namesakes_are_not_folded():
     assert clusters == [] and refused[0]["reason"] == "KIND_CONFLICT"
 
 
+def _d(u, description):
+    return {**u, "description": description}
+
+
+def test_closing_memory_child_joins_with_full_name_or_same_family_place():
+    """56 kitap denetimi: çocuk kaydı yetişkinden SONRA (sondaki anı / fotoğraf altyazısı). Tam ad ya da aynı
+    akrabalık tanımı varsa sıra koşulu aranmaz; iç içe anılan adaşlar (dede/torun) yine ayrı."""
+    def plan(units):
+        return identity.same_name_plan(units, lambda n: True)
+    # tam ad (ad + ad + unvan): sondaki fotoğraf altyazısındaki çocuk aynı kişi
+    clusters, refused = plan([_p("Mehmed Selim Efendi", "HUMAN_ADULT", [50, 93, 203, 273]),
+                              _p("Mehmed Selim Efendi", "HUMAN_CHILD", [298])])
+    assert clusters == [[0, 1]] and refused == []
+    # ad + unvan da tam ad
+    assert plan([_p("Abid Efendi", "HUMAN_ADULT", [10, 40]), _p("Abid Efendi", "HUMAN_CHILD", [90])])[0] == [[0, 1]]
+    # tek ad, aynı akrabalık tanımı (sondaki geri dönüş)
+    units = [_d(_p("Helva", "HUMAN_ADULT", [5, 30, 71], sex="FEMALE"), "Üç kardeşin ortancası. 55 yaşında."),
+             _d(_p("Helva", "HUMAN_CHILD", [84, 126], sex="FEMALE"), "Şaşkın Kardeşler'den ortanca kardeş.")]
+    assert plan(units)[0] == [[0, 1]]
+    # tek ad, tanım yok ya da farklı yer: eski kural (oğul babanın adını almış)
+    clusters, refused = plan([_p("Ahmed", "HUMAN_ADULT", [5, 40, 100]), _p("Ahmed", "HUMAN_CHILD", [120, 130])])
+    assert clusters == [] and refused[0]["reason"] == "LIFE_STAGE_ORDER"
+    units = [_d(_p("Ahmed", "HUMAN_ADULT", [5, 40]), "Ali'nin büyük oğlu."),
+             _d(_p("Ahmed", "HUMAN_CHILD", [120]), "Hasan'ın büyük oğlu.")]
+    assert plan(units)[0] == []
+    # yalnız bir taraf sahip adı veriyor: aynı yer sayılmaz
+    units = [_d(_p("Ahmed", "HUMAN_ADULT", [5, 40]), "Ali'nin büyük oğlu."),
+             _d(_p("Ahmed", "HUMAN_CHILD", [120]), "Babasının büyük oğlu.")]
+    assert plan(units)[0] == []
+    # tam ad ama tanımlar farklı aileye koyuyor (tarihte ad kuşaklar boyu tekrar eder): ayrı
+    units = [_d(_p("Hatice Sultan", "HUMAN_ADULT", [41, 156], sex="FEMALE"), "Sultan Murad'ın kızı."),
+             _d(_p("Hatice Sultan", "HUMAN_CHILD", [263], sex="FEMALE"), "Sultan Abdülhamid'in kızı. Bebekken ölür.")]
+    assert plan(units)[0] == []
+    units = [_d(_p("Naime Sultan", "HUMAN_ADULT", [53], sex="FEMALE"), "Babamın Bîdar Kadınefendi'den olan kızı."),
+             _d(_p("Naime Sultan", "HUMAN_CHILD", [257], sex="FEMALE"), "Abdülmecid Han'ın kızı. Küçükken ölmüştür.")]
+    assert plan(units)[0] == []
+    # tek tarafta sahip adı var ama sıra ortak («babanın büyük oğlu» / «X'in büyük oğlu»): aynı kişi
+    units = [_d(_p("Mehmed Selim Efendi", "HUMAN_ADULT", [50, 273]), "Anlatıcının büyük erkek kardeşi, babanın büyük oğlu."),
+             _d(_p("Mehmed Selim Efendi", "HUMAN_CHILD", [298]), "Sultan Abdülhamid'in büyük oğlu.")]
+    assert plan(units)[0] == [[0, 1]]
+    # dede/torun iç içe: tam adla da ayrı
+    clusters, refused = plan([_p("Ahmed Rıza", "HUMAN_ADULT", [5, 40, 100]),
+                              _p("Ahmed Rıza", "HUMAN_CHILD", [10, 70, 160])])
+    assert clusters == [] and refused[0]["reason"] == "LIFE_STAGE_ORDER"
+    # aynı sayfa yine iki kişi
+    clusters, refused = plan([_p("Ahmed Rıza", "HUMAN_ADULT", [5, 40]), _p("Ahmed Rıza", "HUMAN_CHILD", [40, 90])])
+    assert clusters == [] and refused[0]["reason"] == "SAME_PAGE"
+
+
+def test_full_name_and_relation_marks_boundaries():
+    assert identity.full_name("Mehmed Selim Efendi") and identity.full_name("Abid Efendi")
+    assert not identity.full_name("Helva") and not identity.full_name("Yasemin abla")
+    assert not identity.full_name("Küçük kardeşim") and not identity.full_name("Ali'nin babası")
+    m = identity.relation_marks("Sultan Abdülhamid'in büyük oğlu. Fotoğrafta çocuk olarak anılır.")
+    assert m["kin"] == {"oğul"} and m["rank"] == {"büyük"} and m["owner"] == {"abdülhamid"}
+    # «hala» (hâlâ) ve «kızıl» akrabalık değil
+    assert identity.relation_marks("Hala kızıl saçlı bir kadın.")["kin"] == set()
+    assert not identity.same_relation("Anlatıcının annesi.", "Ali'nin annesi.")
+    assert not identity.same_relation("Kardeşi.", "Kardeşi.")          # sıra/sahip yok: yetmez
+    assert identity.same_relation("Ali'nin kızı.", "Ali'nin kızı, okula gider.")
+
+
 def test_cross_window_join_of_child_and_adult_needs_life_order():
     by_mid = {"m1": {"page_no": 5, "surface_name": "Ali"}, "m2": {"page_no": 120, "surface_name": "Ali"},
               "m3": {"page_no": 130, "surface_name": "Ali"}}

@@ -107,13 +107,14 @@ _CARDS: dict[tuple[str, str], dict] = {}
 
 
 def library(c) -> list[dict]:
-    """Soru sorulabilen kitaplar: son okumasının güncel `catalog` çıktısı olanlar (portal kartıyla aynı kural:
-    `read_model.card`; okuması süren ya da çıktısı bayat kitap listede yoktur)."""
+    """Soru sorulabilen kitaplar: güncel `catalog` çıktısı olan EN YENİ nesilleriyle (portal kartıyla aynı kural:
+    `read_model.carded`/`read_model.card`). Kitap yeniden okunurken ya da yeni okuması düşmüşken eski başarılı
+    okuması kullanılır; hiç güncel çıktısı olmayan kitap listede yoktur."""
     rows = c.execute(
-        "SELECT * FROM (SELECT DISTINCT ON (v.book_id) v.book_id, g.id AS generation_id, v.page_count,"
+        "SELECT DISTINCT ON (v.book_id) v.book_id, g.id AS generation_id, v.page_count,"
         " a.build_key FROM ed.generation g JOIN ed.book_version v ON v.id=g.book_version_id"
-        " LEFT JOIN ed.current_artifact a ON a.generation_id=g.id AND a.kind='catalog'"
-        " ORDER BY v.book_id, g.created_at DESC, g.id DESC) x WHERE build_key IS NOT NULL").fetchall()
+        " JOIN ed.current_artifact a ON a.generation_id=g.id AND a.kind='catalog'"
+        " ORDER BY v.book_id, g.created_at DESC, g.id DESC").fetchall()
     if not rows:
         return []
     crm = {str(r["book_id"]): r for r in c.execute(

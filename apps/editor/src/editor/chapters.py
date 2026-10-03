@@ -378,6 +378,89 @@ def _scattered(title: str) -> bool:
     return len(words) >= 2 and all(len(w) == 1 and w.isalpha() for w in words)
 
 
+#: Türkçede tek başına yazılan 1–2 harfli sözcükler (bağlaç, soru eki, zamir, ünlem, sık ad): bunlar dağılmış harf
+#: sayılmaz («Ali ve Su», «O da Ben»).
+_SHORT_WORDS = frozenset({
+    "o", "a", "ı", "ve", "de", "da", "ki", "mi", "mı", "mu", "mü", "ne", "ya", "bu", "şu", "en", "ey", "ah", "of",
+    "oh", "eh", "ha", "he", "hu", "iç", "ön", "üç", "su", "ay", "an", "el", "ev", "iş", "ok", "ip", "at", "ad", "ak",
+    "al", "ar", "aş", "az", "iz", "öz", "uç", "ün", "us", "ot", "it", "il", "is", "on", "un", "ağ"})
+
+
+def _scattered_weak(title: str) -> bool:
+    """Harfleri dağılmış başlık, parçaları 1–2 harfli («KS DE T O», «LARI UN K A MU», «e v miş git», «M Zİ Bİ
+    ÜKOSMAN Y»): en az üç harfli parça, yarısı ya da fazlası 1–2 harfli ve en az biri sözcük olmayan tek harf.
+    Rakamlı etiket («1. BÖLÜM», «BÖLÜM 12»), kısa gerçek ad («Ali ve Su», «NE YAPMALI?»), kesmeyle ekli tek harf
+    («A'dan Z'ye») yakalanmaz."""
+    low = title.replace("İ", "i").replace("I", "ı").casefold()
+    parts = [w for w in (re.sub(r"[^\w'’]|\d|_", "", t) for t in low.split()) if re.search(r"[^\W\d_]", w)]
+    if len(parts) < 3:
+        return False
+    short = [p for p in parts if len(p) <= 2]
+    return 2 * len(short) >= len(parts) and any(len(p) == 1 and p not in _SHORT_WORDS for p in short)
+
+
+#: Satır sonunda bölünmüş kelime («uyuyama- dı»): gövde metni, başlık değil.
+_BROKEN_WORD = re.compile(r"[^\W\d_][-­]\s+[^\W\d_]")
+
+
+def _mid_sentence(title: str, book_lower: bool) -> bool:
+    """Küçük harfle başlayan, cümle ortası görünümlü satır (sayfa başı satırından sonraki gövde satırı: «nasıl
+    kaçabileceğini düşünürken … uyuyama- dı ancak»): içinde satır sonu bölünmesi var, ya da kitabın başlıkları küçük
+    harfle dizilmiyorken (`book_lower` değil) dört ve daha çok kelime. Başlıkları bilerek küçük harfle dizilmiş
+    kitapta («yol içre yol, sır içre sır», «birinci bölüm BABAM VE …») küçük harf başlık olağandır."""
+    t = title.strip()
+    if not t[:1].islower():
+        return False
+    return bool(_BROKEN_WORD.search(t)) or (not book_lower and len(t.split()) >= 4)
+
+
+#: Tek başına bölüm adı olamayan, tekrarlanan etiket: tek karakter ya da yalnız roma rakamı («I» ×7).
+_REPEAT_MIN = 3
+
+
+def _number_repeats(starts: list[dict]) -> list[dict]:
+    """Aynı ad ≥ 3 bölümde ve ad tek karakter ya da yalnız roma rakamıysa (dizgide her bölümün numarası «I»
+    okunmuş): o bölümler sırayla numaralanır — roma rakamıysa «I», «II», «III» …, değilse «1. Bölüm», «2. Bölüm» …
+    Anlamlı tekrar eden ad («NE YAPMALI?») değişmez."""
+    count = Counter(_norm(s["title"]) or s["title"].strip() for s in starts)
+    out, seen = [], Counter()
+    for s in starts:
+        t = s["title"].strip()
+        k = _norm(t) or t
+        bare = t.rstrip(".")
+        if count[k] >= _REPEAT_MIN and (len(bare) == 1 or _ROMAN.match(_norm(bare) or "-")):
+            seen[k] += 1
+            n = seen[k]
+            roman = _ROMAN.match(_norm(bare) or "-") and bare.isupper()
+            s = {**s, "title": _to_roman(n) if roman else f"{n}. Bölüm"}
+        out.append(s)
+    return out
+
+
+def _to_roman(n: int) -> str:
+    out = ""
+    for v, r in ((1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
+                 (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")):
+        while n >= v:
+            out, n = out + r, n - v
+    return out
+
+
+#: «ithaf» sözü başlıkta («Siyah Lale’ye ithaf olunur…»)
+_ITHAF_WORD = re.compile(r"\bithaf", re.I)
+
+
+def _dedication(title: str, lines: list[str], page: int, last_page: int) -> bool:
+    """İthaf sayfası (56 kitap denetimi: «… ithaf olunur…» ilk bölümün adı oldu): başlıkta «ithaf» sözü, ya da ön
+    bölgedeki kısa sayfanın metni `page_scope.is_dedication` ile ithaf (ilk iki sayfadan sonra güçlü kanıtla)."""
+    if _ITHAF_WORD.search(title.replace("İ", "i")):
+        return True
+    if not _front(page, last_page):
+        return False
+    from .page_scope import is_dedication
+    return is_dedication([t for t in lines if t], strict=page > 2)
+
+
 def _label_only(title: str) -> bool:
     return all(w in _LABEL_WORDS or _ROMAN.match(w) for w in _norm(title).split())
 
@@ -427,6 +510,9 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
                 if not title and h["kind"] == "page":
                     pending = None
                     continue
+        if h and h["title"] and _dedication(h["title"], by_page[p], p, last_page):
+            pending = None              # ithaf sayfası bölüm açmaz (page_scope'un ithaf kuralı)
+            continue
         near = pending is not None and p - pending["last"] <= 2
         if h and h["kind"] == "page":
             if _skip(h["title"], book_title, p, last_page):
@@ -458,13 +544,18 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
     # Harf harf dağılmış zayıf aday («G İ D İ E»: dalgalı dizilmiş resimli kitap başlığı, okuma sırası bozuk)
     # okunabilir bir ad değildir. K16'da iç kapak artık bölüm sayılmayınca güçlü açılışı kalmayan kitapta bunlar
     # bölüm oluyordu (önce iç kapağın puntosu onları ayıklıyordu).
-    starts = [s for s in starts if not (s["kind"] == "head" and _scattered(s["title"]))]
+    # 2026-10-03 (56 kitap): çoğu parçası 1–2 harfli dağılmış başlık («KS DE T O», «e v miş git») her açılış
+    # türünde zayıftır; küçük harfle başlayan cümle ortası satır («… uyuyama- dı ancak») başlık değildir.
+    lettered = [s for s in starts if re.search(r"[^\W\d_]", s["title"])]
+    book_lower = bool(lettered) and 2 * sum(s["title"].strip()[:1].islower() for s in lettered) >= len(lettered)
+    starts = [s for s in starts if not ((s["kind"] == "head" and _scattered(s["title"])) or _scattered_weak(s["title"])
+                                        or _mid_sentence(s["title"], book_lower))]
     strong = [s["size"] for s in starts if s["kind"] in ("page", "sunk")]
     if strong:
         keep = {k for k, _ in Counter(round(x) for x in strong).most_common(2)}
         starts = [s for s in starts if s["kind"] != "head" or round(s["size"]) in keep or s["size"] > max(keep)]
-    starts = [{**s, "title": display_title(s["title"])}
-              for s in _join_continuations([{**s, "title": _clean_title(s["title"])} for s in starts])]
+    starts = _number_repeats([{**s, "title": display_title(s["title"])}
+                              for s in _join_continuations([{**s, "title": _clean_title(s["title"])} for s in starts])])
     # Kitabın tek açılışı ilk sayfalardaki başlık sayfasıysa o iç kapaktır (adı kitap adına uymasa da): bölüm yok.
     if (len(starts) == 1 and starts[0]["kind"] == "page" and _front(starts[0]["page"], last_page)
             and not _label_only(" ".join(starts[0]["title"].split()[:2]))):

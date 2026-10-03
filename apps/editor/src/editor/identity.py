@@ -246,17 +246,22 @@ def stage_of(chs: list[dict]) -> str | None:
     return next(iter(kinds)) if len(kinds) == 1 and kinds <= LIFE_STAGES else None
 
 
-def life_stage_refusal(child_pages: set, adult_pages: set) -> str | None:
+def life_stage_refusal(child_pages: set, adult_pages: set, *, ordered: bool = True) -> str | None:
     """A child record and an adult record of one name are one person growing up when the book tells the childhood
     as one stretch: no page of the adult falls inside the child's page span (childhood first, then the grown-up;
     or a frame story / flashback with the childhood between the adult's pages), and the child does not appear only
     after the adult (a child met after the adult's last page is someone named after them). Two people of one name
     told side by side (a grandfather and the grandson named after him) interleave — refused. Shared pages are
-    refused before this (SAME_PAGE)."""
+    refused before this (SAME_PAGE).
+
+    `ordered=False` (2026-10-03, 56 kitap denetimi): the two records carry the same full name or the same kinship
+    description (`same_person_hint`) — the «child only after the adult» condition is not asked: a closing memory /
+    flashback or a photo caption tells the childhood after the grown-up («Mehmed Selim Efendi» as a child in a
+    photo caption at the end of a memoir). Interleaving still refuses (grandfather and grandson told side by side)."""
     if not child_pages or not adult_pages:
         return None
     lo, hi = min(child_pages), max(child_pages)
-    if any(lo <= p <= hi for p in adult_pages) or lo > max(adult_pages):
+    if any(lo <= p <= hi for p in adult_pages) or (ordered and lo > max(adult_pages)):
         return 'LIFE_STAGE_ORDER'
     return None
 
@@ -355,7 +360,10 @@ def cross_guard(side_i: list[dict], side_j: list[dict], wins_i: set, wins_j: set
         child, adult = (pages[0], pages[1]) if si == 'HUMAN_CHILD' else (pages[1], pages[0])
         if child & adult:
             return 'SAME_PAGE'
-        bad = life_stage_refusal(child, adult)
+        hint = any(same_person_hint({'name': x['canonical_name'], 'description': x.get('description')},
+                                    {'name': y['canonical_name'], 'description': y.get('description')})
+                   for x in side_i for y in side_j)
+        bad = life_stage_refusal(child, adult, ordered=not hint)
         if bad:
             return bad
     qn = ledger.norm(quote or '')
@@ -486,7 +494,7 @@ def same_name_refusal(a: dict, b: dict) -> str | None:
     sa, sb = unit_stage(a), unit_stage(b)
     if sa and sb and sa != sb:
         child, adult = (a, b) if sa == 'HUMAN_CHILD' else (b, a)
-        return life_stage_refusal(child['pages'], adult['pages'])
+        return life_stage_refusal(child['pages'], adult['pages'], ordered=not same_person_hint(a, b))
     return None
 
 
@@ -501,6 +509,91 @@ def unit_stage(u: dict) -> str | None:
         ev = u.get('age_evidence')
         return ev if ev in LIFE_STAGES else None
     return stage_of([u])
+
+
+#: Kinship words of a description («Sultan Abdülhamid'in büyük oğlu», «üç kardeşin ortancası», «anlatıcının küçük
+#: kardeşi»), matched as whole words with the inflections a description uses («kızıl», «eşya» do not count).
+_REL_ROOTS = {'anne': 'anne', 'baba': 'baba', 'kardeş': 'kardeş', 'birader': 'kardeş', 'abla': 'abla',
+              'ağabey': 'ağabey', 'oğl': 'oğul', 'oğul': 'oğul', 'kız': 'kız', 'eş': 'eş', 'zevce': 'eş',
+              'koca': 'koca', 'dede': 'dede', 'nine': 'nine', 'torun': 'torun', 'hala': 'hala', 'teyze': 'teyze',
+              'amca': 'amca', 'dayı': 'dayı', 'kuzen': 'kuzen', 'yeğen': 'yeğen', 'büyükanne': 'büyükanne',
+              'büyükbaba': 'büyükbaba', 'anneanne': 'anneanne', 'babaanne': 'babaanne'}
+#: written like a kinship word but usually another word: «hala» (still), «koca» (huge); inflected forms stay kin
+_REL_NOT_KIN = frozenset({'hala', 'koca'})
+_REL_SUFFIX = (r'(?:u|ı|i|ü|si|sı|su|sü|m|ım|im|um|üm|mın|min|mun|mün|n|ın|in|un|ün|nın|nin|nun|nün|ları|leri|lar|ler|ların|lerin'
+               r'|lardan|lerden|larından|lerinden|ndan|nden|dan|den)?')
+_REL_WORD = re.compile('(' + '|'.join(sorted(_REL_ROOTS, key=len, reverse=True)) + ')' + _REL_SUFFIX)
+#: which one of the family: birth order / position words within two words of the kinship word
+_REL_RANK = {'büyük': 'büyük', 'büyüğü': 'büyük', 'küçük': 'küçük', 'küçüğü': 'küçük', 'ortanca': 'ortanca',
+             'ortancası': 'ortanca', 'ilk': 'ilk', 'tek': 'tek', 'ikinci': 'ikinci', 'üçüncü': 'üçüncü',
+             'dördüncü': 'dördüncü'}
+#: a named owner: capitalised word with a genitive after an apostrophe («Abdülhamid'in», «Ali'nin»)
+_REL_OWNER = re.compile(r"([A-ZÇĞİÖŞÜÂÎÛ][^\W\d_]+)['’]n?[ıiuü]n\b")
+
+
+def relation_marks(description: str) -> dict[str, set]:
+    """The family place a record's description gives: kinship roots, the rank next to them (büyük / küçük /
+    ortanca …) and named owners («Abdülhamid'in» → abdülhamid)."""
+    low = (description or '').replace('İ', 'i').replace('I', 'ı').lower()
+    words = [w.replace("'", '').replace('’', '') for w in re.findall(r"[^\W\d_]+(?:['’][^\W\d_]+)?", low)]
+    kins, ranks = set(), set()
+    for i, w in enumerate(words):
+        m = _REL_WORD.fullmatch(w)
+        if not m or w in _REL_NOT_KIN:
+            continue
+        kins.add(_REL_ROOTS[m.group(1)])
+        ranks |= {_REL_RANK[x] for x in words[max(0, i - 2):i + 3] if x in _REL_RANK}
+    owners = {name_key(m.group(1)) for m in _REL_OWNER.finditer(description or '')}
+    return {'kin': kins, 'rank': ranks, 'owner': owners}
+
+
+def same_relation(a: str | None, b: str | None) -> bool:
+    """Two descriptions give the same family place: a shared kinship word AND (a shared rank or a shared named
+    owner). Named owners must agree when either side names one («Ali'nin büyük oğlu» / «Hasan'ın büyük oğlu»
+    / «babasının büyük oğlu»: not the same place)."""
+    x, y = relation_marks(a or ''), relation_marks(b or '')
+    if not x['kin'] & y['kin']:
+        return False
+    if (x['owner'] or y['owner']) and not x['owner'] & y['owner']:
+        return False
+    return bool(x['rank'] & y['rank'] or x['owner'] & y['owner'])
+
+
+def full_name(name: str) -> bool:
+    """A written name of at least two words that is a person's name (first + family name, or name + title:
+    «Mehmed Selim Efendi», «Abid Efendi»), not a family-address form («Yasemin abla»), a first-person kinship label
+    («küçük kardeşim») or a possessive phrase («Ali'nin babası»)."""
+    words = name_key(name).split()
+    if len(words) < 2 or family_address(name) or is_relative_label(name):
+        return False
+    return not any(w in _GENITIVE or w in KIN_1SG or _REL_WORD.fullmatch(w) for w in words)
+
+
+def relation_conflict(a: str | None, b: str | None) -> bool:
+    """Do two descriptions place the record in different families? Both give kinship and: two different named owners
+    («Sultan Abdülhamid'in kızı» / «Sultan Murad'ın kızı»), or only one names the owner and no rank is shared
+    («Babamın kızı» / «Abdülmecid Han'ın kızı»: in history and memoir a full name repeats across generations).
+    «babanın büyük oğlu» / «Abdülhamid'in büyük oğlu» share the rank: no conflict."""
+    x, y = relation_marks(a or ''), relation_marks(b or '')
+    if not (x['kin'] and y['kin']):
+        return False
+    if x['owner'] and y['owner']:
+        return not x['owner'] & y['owner']
+    if bool(x['owner']) != bool(y['owner']):
+        return not x['rank'] & y['rank']
+    return False
+
+
+def same_person_hint(a: dict, b: dict) -> bool:
+    """Child / adult records of one name that need no page order (life_stage_refusal ordered=False): the same full
+    name on both and descriptions that do not place them in different families (relation_conflict), or both
+    descriptions give the same family place (same_relation). Measured 2026-10-03 on 58 read books: without the
+    conflict check two «X Sultan» namesakes of different fathers joined."""
+    da, db_ = a.get('description'), b.get('description')
+    if full_name(a.get('name') or '') and name_key(a.get('name')) == name_key(b.get('name')) \
+            and not relation_conflict(da, db_):
+        return True
+    return same_relation(da, db_)
 
 
 def proper_name_test(text: str):
@@ -725,6 +818,7 @@ def same_name_join(chars: list[dict], by_mid: dict[str, dict], text: str = '',
               'entity_scope': ch.get('entity_scope'), 'n': len(ch['mention_ids']),
               'aliases': _names(ch, by_mid)[1:] + list(ch.get('aliases') or []),
               'pages': {by_mid[m]['page_no'] for m in ch['mention_ids'] if m in by_mid},
+              'description': ch.get('description') or '',
               'windows': set(ch.get('window_ids') or []),
               # K19: an address-named record's age comes only from its own text
               'age_evidence': identity_links.text_stage([by_mid[m].get('quote') or '' for m in ch['mention_ids']
