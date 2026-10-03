@@ -113,6 +113,8 @@ function ChapterRow({ ch, index, open, toggle, styles, busy, run, query }: {
 
 function MissingRow({ m, busy, run }: { m: DuzenView['missing'][number]; busy: boolean; run: (ops: DuzenOp[]) => void }) {
   const [title, setTitle] = useState('');
+  // Tanıtım sayfası (yazar/çevirmen) yayınevinin e-kitaplarındaki gibi ön sayfalara; öteki metin kitabın sonuna.
+  const [place, setPlace] = useState<'front' | 'end'>(m.reason === 'yazar tanıtımı' ? 'front' : 'end');
   return (
     <li className="flex flex-col gap-1.5 rounded-xl bg-white/70 px-2.5 py-2 text-[12px]">
       <div>
@@ -120,13 +122,18 @@ function MissingRow({ m, busy, run }: { m: DuzenView['missing'][number]; busy: b
         <span className="text-canvas-muted"> · {m.words.toLocaleString('tr-TR')} kelime{m.reason ? ` · ${m.reason}` : ''}</span>
         <span className="mt-0.5 block text-[11.5px] leading-snug text-canvas-muted">«{m.text}…»</span>
       </div>
-      {m.added ? <span className="text-[11.5px] font-bold text-emerald-700">E-kitaba eklendi (kitabın sonunda)</span> : (
+      {m.added ? <span className="text-[11.5px] font-bold text-emerald-700">E-kitaba eklendi</span> : (
         <form className="flex flex-wrap items-center gap-1.5" onSubmit={(e) => {
           e.preventDefault();
-          if (title.trim()) run([{ op: 'add_missing', pages: m.pages, title: title.trim() }]);
+          if (title.trim()) run([{ op: 'add_missing', pages: m.pages, title: title.trim(), place }]);
         }}>
-          <input aria-label="Eklenecek bölümün adı" placeholder="Bölüm adı (ör. Yazarın Notu)" value={title} maxLength={160}
+          <input aria-label="Eklenecek bölümün adı" placeholder={place === 'front' ? 'Başlık (ör. Çeviren: …)' : 'Bölüm adı (ör. Yazarın Notu)'} value={title} maxLength={160}
             onChange={(e) => setTitle(e.target.value)} className={`${field} min-h-9 min-w-0 flex-1`} />
+          <select value={place} onChange={(e) => setPlace(e.target.value as 'front' | 'end')} aria-label="Eklenecek yer"
+            className={`${field} min-h-9`}>
+            <option value="end">Kitabın sonuna</option>
+            <option value="front">Ön sayfalara (tanıtım)</option>
+          </select>
           <button type="submit" className={ghostBtn} disabled={busy || !title.trim()}><Plus className="h-4 w-4" aria-hidden />E-kitaba ekle</button>
         </form>
       )}
@@ -206,7 +213,7 @@ export default function EpubEditor({ jobId }: { jobId: string }) {
             <ul className="flex flex-col gap-1">
               {v.extras.map((x) => (
                 <li key={x.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50/70 px-2.5 py-1.5 text-[12px]">
-                  <span className="min-w-0 flex-1"><b>{x.title}</b> <span className="text-canvas-muted">· basılı {pagesText(x.pages)} · {x.words.toLocaleString('tr-TR')} kelime · kitabın sonunda</span></span>
+                  <span className="min-w-0 flex-1"><b>{x.title}</b> <span className="text-canvas-muted">· basılı {pagesText(x.pages)} · {x.words.toLocaleString('tr-TR')} kelime · {x.place === 'front' ? 'ön sayfalarda' : 'kitabın sonunda'}</span></span>
                   <button type="button" className={ghostBtn} disabled={busy} onClick={() => run([{ op: 'remove_extra', id: x.id }])}>
                     <Trash2 className="h-4 w-4" aria-hidden />Çıkar
                   </button>

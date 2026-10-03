@@ -161,22 +161,38 @@ def test_house_flow_html_classes_and_book_end_notes():
     assert 'href="bolum-002.xhtml#dr-3"' in notes and "Üçüncü not." in notes and 'class="e-dipnotmetni"' in notes
 
 
-def test_house_fronts_kunye_upper_labels_and_no_title_repeat():
+def test_house_fronts_follow_publisher_order():
+    """Yayınevinin e-künyesi gibi tek künye dosyası: iç kapak görseli → imza → kitap adı → logo → «YAYINEVİ | yayın no»
+    ve dizi satırı → görevliler → E-ISBN → yayınevi adresi → sertifika → yayın hakları; basılı ISBN yok. Tanıtım
+    dosyasında yazar ve ön sayfalara eklenen metin (çevirmen tanıtımı)."""
     import types
-    ms = types.SimpleNamespace(title="Şer'î Siyaset", author="İbn Teymiyye")
-    rows = [("Kitap", "Şer'î Siyaset"), ("Yazar", "İbn Teymiyye"), ("Editör", "Ali Veli"), ("Yayınevi", "TİMAŞ"),
-            ("Telif", "©"), ("e-ISBN", "978-605-08-4323-1")]
-    fronts = E.house_fronts(E.HOUSES["timas"], ms, rows, [{"name": "İbn Teymiyye", "text": "661'de doğdu.\n\nÖldü."}],
-                            "../images/logo.svg")
-    files = [f[0] for f in fronts]
-    assert files == ["imza.xhtml", "kunye.xhtml", "yazar.xhtml"]
-    kun = fronts[1][3]
-    assert '<span class="e-bold">EDİTÖR</span><br/>Ali Veli' in kun and "E-ISBN" in kun
-    assert kun.count("İbn Teymiyye") == 1 and ">KİTAP<" not in kun and ">YAZAR<" not in kun   # başlıkta bir kez
-    assert kun.index("E-ISBN") < kun.index("YAYINEVİ") < kun.index("TELİF")                  # ISBN yayınevinden önce
-    assert 'src="../images/logo.svg"' in kun and 'epub:type="copyright-page"' in kun
-    assert fronts[2][3].count('class="e-jenerik"') == 2 and "İbn Teymiyye" in fronts[2][3]
-    assert "iyi ki kitaplar var" in fronts[0][3]
+    ms = types.SimpleNamespace(title="Çiçekçi Kadın", author="Minyoung Kang")
+    rows = [("Kitap", "Çiçekçi Kadın"), ("Yazar", "Minyoung Kang"), ("Resimler", "ZEKİ AI"),
+            ("Dizi", "6543 Edebiyat Kitaplığı | 132"),
+            ("Editör", "Ali Veli"), ("Çeviri", "Selen Demirtaş"), ("ISBN (basılı)", "978-6050850192"),
+            ("e-ISBN", "978-605-08-4323-1"), ("Yayınevi", "TİMAŞ YAYINLARI"), ("Adres", "Üsküdar / İstanbul"),
+            ("Telefon", "(0212) 511 24 24"), ("E-posta", "timas@timas.com.tr"), ("Sertifika No", "45587"),
+            ("Telif", "© Minyoung Kang, 2026 ... kapsamında Ti"), ("Destek", "LTI Korea desteğiyle.")]
+    warn: list[str] = []
+    fronts = E.house_fronts(E.HOUSES["timas"], ms, rows, [{"name": "Minyoung Kang", "text": "1990'da doğdu."}],
+                            "../images/logo.svg", inner="../images/kapak.jpg", inner_alt="Kapak",
+                            extras=[{"title": "Çeviren: Selen Demirtaş", "paras": ["2000 yılında doğdu."]}], warn=warn)
+    assert [f[0] for f in fronts] == ["kunye.xhtml", "yazar.xhtml"]
+    kun = fronts[0][3]
+    order = ["e-ic-kapak", "e-iyikikitaplarvar", "e-jenerikbaslik", "logo.svg", "TİMAŞ YAYINLARI | 6543",
+             "Edebiyat Kitaplığı | 132", ">EDİTÖR<", ">ÇEVİREN<", ">RESİMLER<", ">E-ISBN<", "Telefon: (0212)", "Sertifika No: 45587",
+             ">YAYIN HAKLARI<", "LTI Korea"]
+    pos = [kun.index(x) for x in order]
+    assert pos == sorted(pos), [x for x in order]
+    assert "6050850192" not in kun and ">KİTAP<" not in kun and ">YAZAR<" not in kun        # basılı ISBN, ad tekrarı yok
+    assert any("telif cümlesi yarım" in w for w in warn)
+    bio = fronts[1][3]
+    assert bio.index("Minyoung Kang") < bio.index("Çeviren: Selen Demirtaş") and "2000 yılında doğdu." in bio
+    off = E.house_fronts(E.HOUSES["timas"], ms, rows, [], None, inner="../images/kapak.jpg",
+                         on=lambda k: k not in ("ic_kapak", "imza"))
+    assert "e-ic-kapak" not in off[0][3] and "e-iyikikitaplarvar" not in off[0][3]
+    norights = E.house_kunye(E.HOUSES["timas"], [("Yayınevi", "TİMAŞ YAYINLARI")], [])
+    assert any("Eserin her hakkı" in x for x in norights)
 
 
 def test_house_fonts_are_open_and_cover_every_style():
@@ -314,9 +330,11 @@ def test_reflowable_house_style_matches_publisher_structure(tmp_path, monkeypatc
     z = zipfile.ZipFile(path)
     names = z.namelist()
     assert "OEBPS/css/timas.css" in names and "OEBPS/images/logo.svg" in names and "OEBPS/css/akis.css" not in names
-    assert "e-iyikikitaplarvar" in z.read("OEBPS/text/imza.xhtml").decode()
     kun = z.read("OEBPS/text/kunye.xhtml").decode()
+    assert "e-iyikikitaplarvar" in kun and 'class="e-ic-kapak"' in kun and "kapak" in kun
     assert 'class="e-jenerikbaslik"' in kun and 'class="e-jenerik"' in kun and "logo.svg" in kun
+    cover = next(i for i in _opf(z).findall(".//o:spine/o:itemref", NS) if "kapak" in i.get("idref") and "xhtml" in i.get("idref"))
+    assert cover.get("linear") == "no"                                              # yayınevi gibi: kapak okuma sırası dışında
     ch = next(p for p in out["pages"] if p["href"].startswith("text/bolum-"))
     raw = z.read("OEBPS/" + ch["href"]).decode()
     assert 'class="e-1-baslik"' in raw and 'class="e-paragraf"' in raw
@@ -326,7 +344,7 @@ def test_reflowable_house_style_matches_publisher_structure(tmp_path, monkeypatc
     monkeypatch.setenv("EPUB_HOUSE", "")
     out = E.build(d, "reflow", "e")
     z = zipfile.ZipFile(path)
-    assert out["house"] is None and "OEBPS/css/akis.css" in z.namelist() and "OEBPS/text/imza.xhtml" not in z.namelist()
+    assert out["house"] is None and "OEBPS/css/akis.css" in z.namelist() and "e-iyikikitaplarvar" not in z.read("OEBPS/text/kunye.xhtml").decode()
 
 
 @typeset_only

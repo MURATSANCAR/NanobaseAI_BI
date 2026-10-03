@@ -29,7 +29,9 @@ body { -epub-hyphens: auto; -webkit-hyphens: auto; hyphens: auto; }
   -webkit-hyphens: none; hyphens: none; }
 .e-siir { font-size: 0.792em; line-height: 1.474; margin: 11px 0 9px 14px; text-align: left; }
 
-/* İç kapak, künye, yazar tanıtımı */
+/* İç kapak, künye, yazar tanıtımı (tek künye dosyası: iç kapak görseli → imza → kitap adı → logo → künye) */
+.e-ic-kapak { text-align: center; margin: 0; break-after: page; page-break-after: always; }
+.e-ic-kapak img { max-width: 100%; max-height: 95vh; }
 .e-jenerikbaslik { font-family: 'Cinzel', 'Trajan Pro', serif; font-size: 1.083em; font-weight: 600; line-height: 1.692;
   margin: 40px 0 28px 0; text-align: center; color: #000000; }
 .e-jenerik { font-family: 'Lato', 'Corbel', sans-serif; font-size: 0.667em; line-height: 1.375; margin-top: 9px;

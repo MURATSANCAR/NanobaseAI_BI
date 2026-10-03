@@ -84,7 +84,7 @@ def set_duzen(job_id: str, rev: int, ops: list, editor: str) -> dict:
     değiştiyse servis 409 STALE döner."""
     if not isinstance(ops, list) or not 0 < len(ops) <= 200:
         raise editorial_studio.StudioError(400, "İşlem listesi geçersiz.")
-    keep = ("op", "block", "style", "chapter", "title", "on", "key", "pages", "id")
+    keep = ("op", "block", "style", "chapter", "title", "on", "key", "pages", "id", "place")
     clean = []
     for o in ops:
         if not isinstance(o, dict) or o.get("op") not in DUZEN_OPS:

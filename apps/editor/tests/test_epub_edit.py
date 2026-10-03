@@ -59,6 +59,21 @@ def test_added_text_drops_repeated_title_and_publisher_promo():
     assert X._clean(paras, "Yazarın Notu") == ["Bu hikâye bir öyküydü.", "Teşekkürler."]
 
 
+def test_added_text_skips_paragraphs_already_in_epub(tmp_path, monkeypatch):
+    """Aynı basılı sayfada e-kitaba girmiş metin (yazar tanıtımı) ve onun ad satırı yeniden eklenmez; çevirmenin adı
+    başlığın içinde geçtiği için düşer."""
+    from editor.production import epub_compare
+    d = tmp_path / "j"
+    (d / "epub").mkdir(parents=True)
+    (d / "epub" / "kitap.epub").write_bytes(b"x")
+    author = "Minyoung Kang sinema dergisi CAST'ın genel yayın yönetmeni ve yazardır, Güney Kore'de yaşamaktadır."
+    monkeypatch.setattr(epub_compare, "epub_text", lambda p: "Yazar hakkında " + author)
+    page = ["MİNYOUNG KANG", author, "SELEN DEMİRTAŞ",
+            "2000 yılında İstanbul'da doğdu ve Ankara Üniversitesi Kore Dili ve Edebiyatı Bölümü'nden mezun oldu."]
+    got = X._clean(X._not_in_epub(d, page), "Çeviren: Selen Demirtaş")
+    assert got == [page[3]]
+
+
 def test_split_on_changed_text_is_not_applied():
     e = X.empty()
     e["splits"] = {"c": {"title": "Ara", "h": "0000000000"}}
@@ -78,7 +93,8 @@ def test_change_then_build_applies_edits(tmp_path):
     st = X.change(d, 0, [{"op": "style", "block": blk["id"], "style": "e-epi"},
                          {"op": "title", "chapter": ch["key"], "title": "Yeni Ad"},
                          {"op": "front", "key": "imza", "on": False},
-                         {"op": "add_missing", "pages": [9, 9], "title": "Yazarın Notu"}],
+                         {"op": "add_missing", "pages": [9, 9], "title": "Yazarın Notu"},
+                         {"op": "add_missing", "pages": [3, 3], "title": "Çeviren", "place": "front"}],
                   "editör", source=lambda d_, a, b: ["Basılı kitaptan gelen not."])
     assert st["rev"] == 1 and st["chapters"][0]["title"] == "Yeni Ad" and st["extras"][0]["title"] == "Yazarın Notu"
     assert next(f for f in st["fronts"] if f["key"] == "imza")["on"] is False
@@ -87,7 +103,8 @@ def test_change_then_build_applies_edits(tmp_path):
     out = E.build(d, "reflow", "e")
     z = zipfile.ZipFile(d / "epub" / "kitap.epub")
     names = z.namelist()
-    assert "OEBPS/text/imza.xhtml" not in names
+    assert "e-iyikikitaplarvar" not in z.read("OEBPS/text/kunye.xhtml").decode()
+    assert "Çeviren" in z.read("OEBPS/text/yazar.xhtml").decode()                       # ön sayfaya eklenen tanıtım
     body = "".join(z.read("OEBPS/" + p["href"]).decode() for p in out["pages"] if p["href"].startswith("text/bolum-"))
     assert 'class="e-epi"' in body and "Yeni Ad" in body and "Basılı kitaptan gelen not." in body
     assert [p["title"] for p in out["pages"]][-1] == "Yazarın Notu"

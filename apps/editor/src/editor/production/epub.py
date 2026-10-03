@@ -1369,7 +1369,8 @@ class House:
     body: str                                    # metin ailesi (yazı parçalarının yazı tipi eşlemesi)
     heading: str
     signature: str | None                        # ilk ön sayfadaki yayınevi imzası
-    publisher: str                               # logonun alt metni
+    publisher: str                               # logonun alt metni; künyede yayınevi adı yoksa
+    rights: str = ""                             # künyede telif cümlesi yoksa yayın hakları
 
 
 HOUSES = {
@@ -1378,7 +1379,9 @@ HOUSES = {
         faces=(("Domitian", 400, "normal"), ("Domitian", 700, "normal"), ("Domitian", 400, "italic"),
                ("Lato", 400, "normal"), ("Lato", 700, "normal"), ("Cinzel", 600, "normal"),
                ("Crimson Pro", 400, "italic"), ("EB Garamond", 400, "italic")),
-        body="Domitian", heading="Lato", signature="iyi ki kitaplar var...", publisher="Timaş Yayınları"),
+        body="Domitian", heading="Lato", signature="iyi ki kitaplar var...", publisher="Timaş Yayınları",
+        rights="© Eserin her hakkı anlaşmalı olarak Timaş Basım Ticaret ve Sanayi Anonim Şirketi’ne aittir. İzinsiz "
+               "yayınlanamaz. Kaynak gösterilerek alıntı yapılabilir."),
 }
 
 
@@ -1422,30 +1425,82 @@ def tr_upper(s: str) -> str:
     return (s or "").replace("i", "İ").replace("ı", "I").upper()
 
 
-def house_fronts(h: House, ms, rows: list[tuple[str, str]], bios: list[dict], logo: str | None
-                 ) -> list[tuple[str, str, str, str]]:
-    """Ev stilinde ön sayfalar [(dosya, başlık, epub:type, gövde)]: yayınevi imzası, iç kapak ile künye (aynı sayfa,
-    etiket kalın büyük harf, değer alt satırda; ISBN satırları kişilerden sonra, yayınevinden önce), yazar tanıtımı.
-    Kitap adı ve yazar künyede tekrar edilmez; kişi adları yazıldığı gibi kalır (Türkçe büyük harf yabancı adı bozar)."""
+PUBLISHER_ROWS = ("Yayınevi", "Adres", "Telefon", "E-posta", "Sertifika No")
+RIGHTS_ROWS = ("Telif", "Destek")
+ROLE_LABEL = {"Çeviri": "Çeviren"}                      # yayınevinin e-künyesindeki adı
+DESIGN_ROWS = ("Resimler", "Kapak ve İç Tasarım", "Kapak Tasarımı", "İç Tasarım")
+SERIES_NO = re.compile(r"^\s*(\d{1,6})\s+(\S.*)$")      # «6543 Edebiyat Kitaplığı | 132»: yayın no + dizi
+
+
+def _jen(html_: str) -> str:
+    return f'<p class="e-jenerik">{html_}</p>'
+
+
+def _jen_row(label: str, value: str) -> str:
+    return _jen(f'<span class="e-bold">{esc(tr_upper(label))}</span><br/>{esc(value)}')
+
+
+def house_kunye(h: House, rows: list[tuple[str, str]], warn: list[str]) -> list[str]:
+    """Künye, yayınevinin e-künyesinin sırasıyla: «YAYINEVİ | yayın no» ve «dizi | no» satırı, görevliler (etiket kalın
+    büyük harf, değer alt satırda), E-ISBN, yayınevinin adı-adresi-telefonu-e-postası, bakanlık sertifikası, yayın
+    hakları. Basılı ISBN ve basıma ait satırlar e-künyede yok (basılı ISBN paket bilgisinde kaynak olarak durur)."""
+    d = dict(rows)
+    pub = tr_upper(d.get("Yayınevi") or h.publisher)
     out = []
-    if h.signature:
-        out.append(("imza.xhtml", h.title, "frontmatter", f'<p class="e-iyikikitaplarvar">{esc(h.signature)}</p>'))
-    head = f'<span class="e-bold">{esc(ms.title)}</span>' + (f"<br/><br/>{esc(ms.author)}" if ms.author else "")
-    body = [f'<section epub:type="titlepage"><p class="e-jenerikbaslik">{head}</p>']
-    if logo:
-        body.append(f'<p class="e-jenerik-logo"><img src="{logo}" alt="{esc(h.publisher)}"/></p>')
-    body.append('</section><section epub:type="copyright-page">')
-    rows = [(k, v) for k, v in rows if k not in ("Kitap", "Yazar")]
-    isbn = [r for r in rows if "ISBN" in r[0]]                # yayınevinin e-künyesi gibi: kişilerden sonra,
-    rest = [r for r in rows if "ISBN" not in r[0]]            # yayınevi bilgilerinden önce
-    at = next((i for i, (k, _) in enumerate(rest) if k == "Yayınevi"), len(rest))
-    body += [f'<p class="e-jenerik"><span class="e-bold">{esc(tr_upper(k))}</span><br/>{esc(v)}</p>'
-             for k, v in rest[:at] + isbn + rest[at:]]
-    body.append("</section>")
-    out.append(("kunye.xhtml", "Künye", "frontmatter", "".join(body)))
+    dz = d.get("Dizi")
+    m = SERIES_NO.match(dz) if dz else None
+    head = [f"{pub} | {m.group(1)}", m.group(2)] if m else ([dz] if dz else [pub])
+    out.append(_jen("<br/>".join(esc(x) for x in head)))
+    skip = {"Kitap", "Yazar", "Dizi", "ISBN (basılı)", "e-ISBN", *PUBLISHER_ROWS, *RIGHTS_ROWS}
+    roles = [(k, v) for k, v in rows if k not in skip]
+    roles.sort(key=lambda r: r[0] in DESIGN_ROWS)          # yayınevi gibi: önce editörler, sonra tasarım satırları
+    out += [_jen_row(ROLE_LABEL.get(k, k), v) for k, v in roles]
+    if d.get("e-ISBN"):
+        out.append(_jen_row("E-ISBN", d["e-ISBN"]))
+    block = [f'<span class="e-bold">{esc(pub)}</span>'] + [esc(x) for x in (
+        d.get("Adres"), f"Telefon: {d['Telefon']}" if d.get("Telefon") else None, d.get("E-posta")) if x]
+    out.append(_jen("<br/>".join(block)))
+    if d.get("Sertifika No"):
+        out.append(_jen(f"Kültür Bakanlığı Yayıncılık<br/>Sertifika No: {esc(d['Sertifika No'])}"))
+    rights = d.get("Telif") or h.rights
+    if d.get("Telif") and not re.search(r"[.!?…)»”\"]\s*$", d["Telif"]):
+        warn.append("Künyedeki telif cümlesi yarım görünüyor; stüdyonun künye bölümünde tamamlayın.")
+    out.append(_jen_row("Yayın Hakları", rights))
+    if d.get("Destek"):
+        out.append(_jen(esc(d["Destek"])))
+    return out
+
+
+def house_fronts(h: House, ms, rows: list[tuple[str, str]], bios: list[dict], logo: str | None,
+                 inner: str | None = None, inner_alt: str = "", extras: list[dict] | None = None, on=None,
+                 warn: list[str] | None = None) -> list[tuple[str, str, str, str]]:
+    """Ev stilinde ön sayfalar [(dosya, başlık, epub:type, gövde)], yayınevinin e-kitaplarındaki gibi tek künye dosyası:
+    iç kapak görseli → yayınevi imzası → kitap adı ve yazar → logo → künye (`house_kunye`); ardından tanıtım dosyası:
+    yazar tanıtımı ve editörün basılıdan ön sayfalara eklediği metin (çevirmen tanıtımı gibi). `on(anahtar)`: editörün
+    e-kitap düzenindeki ön sayfa anahtarı (ic_kapak, imza, kunye, yazar). Kişi adları yazıldığı gibi kalır (Türkçe
+    büyük harf yabancı adı bozar)."""
+    on = on or (lambda k: True)
+    warn = warn if warn is not None else []
+    out = []
+    parts = []
+    if inner and on("ic_kapak"):
+        parts.append(f'<section epub:type="titlepage"><div class="e-ic-kapak"><img src="{inner}" alt="{esc(inner_alt)}"/>'
+                     "</div></section>")
+    if h.signature and on("imza"):
+        parts.append(f'<p class="e-iyikikitaplarvar">{esc(h.signature)}</p>')
+    if on("kunye"):
+        head = f'<span class="e-bold">{esc(ms.title)}</span>' + (f"<br/><br/>{esc(ms.author)}" if ms.author else "")
+        parts.append(f'<p class="e-jenerikbaslik">{head}</p>')
+        if logo:
+            parts.append(f'<p class="e-jenerik-logo"><img src="{logo}" alt="{esc(h.publisher)}"/></p>')
+        parts.append('<section epub:type="copyright-page">' + "".join(house_kunye(h, rows, warn)) + "</section>")
+    if parts:
+        out.append(("kunye.xhtml", "Künye", "frontmatter", "".join(parts)))
     bio = "".join(f'<p class="e-jenerikbaslik">{esc(b.get("name"))}</p>' + "".join(
         f'<p class="e-jenerik">{esc(p)}</p>' for p in str(b.get("text") or "").split("\n\n") if p.strip() and p != "—")
-        for b in bios if b.get("name") and b.get("name") != "—" and b.get("text") not in (None, "—"))
+        for b in bios if b.get("name") and b.get("name") != "—" and b.get("text") not in (None, "—")) if on("yazar") else ""
+    bio += "".join(f'<p class="e-jenerikbaslik">{esc(x["title"])}</p>' + "".join(f'<p class="e-jenerik">{esc(t)}</p>'
+                   for t in x.get("paras") or []) for x in extras or [])
     if bio:
         out.append(("yazar.xhtml", "Yazar hakkında", "frontmatter contributors", bio))
     return out
@@ -1734,7 +1789,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             cid = pack.add("text/kapak.xhtml", xhtml(ms.title, f'<div class="kapak"><img src="../images/kapak{cov[1]}" '
                                                      f'alt="{esc(alts["kapak"])}"/></div>', css=css,
                                                      body_attr=' epub:type="cover"'))
-            pack.spine.append({"id": cid})
+            pack.spine.append({"id": cid, "linear": not house})     # yayınevinin e-kitaplarında kapak okuma sırası dışında
             toc.append(("Kapak", "text/kapak.xhtml"))
             landmarks.append(("cover", "text/kapak.xhtml", "Kapak"))
             pages_meta.append({"href": "text/kapak.xhtml", "title": "Kapak", "side": None, "no": None})
@@ -1758,17 +1813,17 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
         if house:
             from . import epub_edit
             edits = epub_edit.load(d)
-            keep = {"imza.xhtml": "imza", "kunye.xhtml": "kunye", "yazar.xhtml": "yazar"}
             fronts = [(fn, t, et.removeprefix("frontmatter").strip(), b) for fn, t, et, b in
                       house_fronts(house, ms, rows, front.get("bios") or [],
-                                   f"../images/logo{logo.suffix}" if logo else None)
-                      if epub_edit.front_on(edits, keep[fn])]
+                                   f"../images/logo{logo.suffix}" if logo else None,
+                                   inner=f"../images/kapak{cov[1]}" if cov else None, inner_alt=alts["kapak"],
+                                   extras=[x for x in edits.get("extras") or [] if x.get("place") == "front"],
+                                   on=lambda k: epub_edit.front_on(edits, k), warn=warn)]
         for fn, title, etype, body in fronts:
             attr = f' epub:type="frontmatter {etype}"' if etype else ' epub:type="frontmatter"'
             iid = pack.add(f"text/{fn}", xhtml(title, body, css=css, body_attr=attr))
             pack.spine.append({"id": iid})
-            if fn != "imza.xhtml":                  # yayınevi imzası içindekilere girmez
-                toc.append((title, f"text/{fn}"))
+            toc.append((title, f"text/{fn}"))
             pages_meta.append({"href": f"text/{fn}", "title": title, "side": None, "no": None})
         docs = flow_docs(plan, ms) if plan else _docs_from_manuscript(ms)
         styles: dict[str, str] = {}

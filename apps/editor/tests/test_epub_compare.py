@@ -45,3 +45,9 @@ def test_epub_text_reads_spine_without_nav_and_separates_paragraphs(tmp_path):
         z.writestr("OEBPS/text/b.xhtml", "<html><body><p>bir</p><p>iki<br/>üç</p></body></html>")
     t = C.epub_text(p)
     assert C.words(t) == ["bir", "iki", "üç"]
+
+
+def test_publisher_promo_inside_page_is_expected():
+    promo = "Yeni kitap önerimiz için karekodu telefon kameranıza okutunuz. Aynı karekod ile her hafta başka bir kitap"
+    r = C.compare([(208, NOTE + " " + promo)], NOTE)
+    assert len(r["missing"]) == 1 and r["missing"][0]["expected"] and r["missing"][0]["reason"] == "yayınevi tanıtımı"

@@ -9,9 +9,10 @@ Yalnız ev stiliyle (akışkan) üretilen e-kitapta geçerlidir: stil adları ev
 - **Bölüm** (`titles`, `splits`, `merges`): bölüm adını değiştirme; bir paragraftan yeni bölüm başlatma; bölümü
   öncekine katma (başlığı metin içi ara başlık olur, yeni sayfa açmaz). Bölüm anahtarı başlık bloğunun kimliği,
   bölünmüş bölümde bölündüğü paragrafın kimliği, başlıksız bölümde sırası (`d<n>`).
-- **Ön sayfalar** (`fronts`): yayınevi imzası, iç kapak ve künye, yazar tanıtımı açık/kapalı.
+- **Ön sayfalar** (`fronts`): iç kapak görseli, yayınevi imzası, kitap adı-logo-künye, yazar tanıtımı açık/kapalı.
 - **Eklenen metin** (`extras`): basılı kitapta olup e-kitapta olmayan parça (karşılaştırmanın bulduğu sayfalar)
-  okunmuş kitabın kendi paragraflarından kitabın sonuna bölüm olarak eklenir; metin uydurulmaz, kaynak sayfası saklanır.
+  okunmuş kitabın kendi paragraflarından eklenir — kitabın sonuna bölüm olarak ya da ön sayfalara tanıtım olarak
+  (çevirmen tanıtımı gibi); metin uydurulmaz, kaynak sayfası saklanır.
 
 Değişiklikler sıra numarasıyla (`rev`) yazılır; ekranın gördüğü sıra eskiyse yazım reddedilir (iki editör çakışmaz).
 """
@@ -37,7 +38,9 @@ STYLES = {
     "e-resimalti": "Görsel altı yazısı",
     "gizle": "E-kitapta gösterme",
 }
-FRONTS = {"imza": "«iyi ki kitaplar var» sayfası", "kunye": "İç kapak ve künye", "yazar": "Yazar tanıtımı"}
+FRONTS = {"ic_kapak": "İç kapak görseli", "imza": "«iyi ki kitaplar var»", "kunye": "Kitap adı, logo ve künye",
+          "yazar": "Yazar tanıtımı"}
+PLACES = ("front", "end")                     # eklenen metin: ön sayfalarda (tanıtım) ya da kitabın sonunda
 PREVIEW = 220
 TITLE_MAX = 160
 
@@ -151,6 +154,8 @@ def apply(docs: list[dict], e: dict, warn: list[str]) -> tuple[list[dict], dict[
         else:
             out.append({"title": ch["title"], "nodes": list(ch["nodes"])})
     for x in e.get("extras") or []:
+        if x.get("place") == "front":              # ön sayfalara eklenen (tanıtım) epub.house_fronts'ta
+            continue
         nodes = [("h", x["title"], x["id"], [{"text": x["title"]}])]
         nodes += [("p", "para", [("runs", [{"text": t}], f"{x['id']}-{k}")]) for k, t in enumerate(x.get("paras") or [])]
         out.append({"title": x["title"], "nodes": nodes})
@@ -200,8 +205,8 @@ def structure(d: Path) -> dict:
     missing = [{**m, "added": tuple(m["pages"]) in added} for m in cmp.get("missing") or [] if not m.get("expected")]
     return {"rev": e["rev"], "chapters": out, "styles": STYLES,
             "fronts": [{"key": k, "label": v, "on": front_on(e, k)} for k, v in FRONTS.items()],
-            "extras": [{"id": x["id"], "title": x["title"], "pages": x["pages"], "words": sum(len(t.split()) for t in x["paras"])}
-                       for x in e.get("extras") or []],
+            "extras": [{"id": x["id"], "title": x["title"], "pages": x["pages"], "place": x.get("place") or "end",
+                        "words": sum(len(t.split()) for t in x["paras"])} for x in e.get("extras") or []],
             "missing": missing, "warnings": list(dict.fromkeys(warn)),
             "house": bool(E.house_key(d)), "by": e.get("by"), "at": e.get("at")}
 
@@ -273,11 +278,15 @@ def change(d: Path, rev: int, ops: list[dict], by: str, source=None) -> dict:
             if len(pages) != 2 or pages[0] > pages[1] or pages[1] - pages[0] > 40:
                 raise ValueError("Sayfa aralığı geçersiz.")
             title = _title(op.get("title"))
-            paras = _clean((source or _source_paras)(d, pages[0], pages[1]), title)
+            paras = _clean(_not_in_epub(d, (source or _source_paras)(d, pages[0], pages[1])), title)
             if not paras:
                 raise ValueError("Bu sayfalarda basılı metin bulunamadı.")
+            place = op.get("place") or "end"
+            if place not in PLACES:
+                raise ValueError("Yer geçersiz.")
             e["extras"] = [x for x in e["extras"] if x["pages"] != pages]
-            e["extras"].append({"id": f"ek-{pages[0]}-{pages[1]}", "title": title, "pages": pages, "paras": paras})
+            e["extras"].append({"id": f"ek-{pages[0]}-{pages[1]}", "title": title, "pages": pages, "paras": paras,
+                                "place": place})
         elif kind == "remove_extra":
             e["extras"] = [x for x in e["extras"] if x["id"] != op.get("id")]
         elif kind == "reset":
@@ -288,12 +297,32 @@ def change(d: Path, rev: int, ops: list[dict], by: str, source=None) -> dict:
     return structure(d)
 
 
+def _not_in_epub(d: Path, paras: list[str]) -> list[str]:
+    """Yalnız e-kitapta olmayan paragraflar: aynı basılı sayfada e-kitaba zaten girmiş metin (ör. çevirmen tanıtımıyla
+    aynı sayfadaki yazar tanıtımı) yeniden eklenmez. Ölçü karşılaştırmanınki: 6 kelimelik dizilerin yarısı e-kitapta."""
+    from . import epub as E
+    from .epub_compare import _grams, epub_text, words
+    path = d / E.DIR / E.FILE
+    if not path.exists():
+        return paras
+    have = _grams(words(epub_text(path)))
+    new: list[bool | None] = []
+    for t in paras:
+        g = _grams(words(t))
+        new.append(None if not g else sum(1 for x in g if x in have) / len(g) < 0.5)
+    for i in range(len(new) - 1, -1, -1):          # N kelimeden kısa satır (ad, başlık) ardındaki paragrafla gider
+        if new[i] is None:
+            new[i] = new[i + 1] if i + 1 < len(new) else True
+    return [t for t, keep in zip(paras, new) if keep]
+
+
 def _clean(paras: list[str], title: str) -> list[str]:
-    """Eklenen metin: bölüm adını tekrar eden ilk satır düşer (başlık zaten bölüm adı); yayınevi tanıtımı/reklam
-    satırından (basılı kitabın baskı kuralındaki tanım) sonrası alınmaz."""
+    """Eklenen metin: bölüm adını tekrar eden ilk satır düşer (başlık zaten bölüm adı; «SELEN DEMİRTAŞ» satırı
+    «Çeviren: Selen Demirtaş» başlığının içinde geçer); yayınevi tanıtımı/reklam satırından (basılı kitabın baskı
+    kuralındaki tanım) sonrası alınmaz."""
     from .manuscript import _PROMO, _fold
     out = list(paras)
-    if out and _fold(out[0]) == _fold(title):
+    if out and _fold(out[0]) and _fold(out[0]) in _fold(title):
         out = out[1:]
     cut = next((i for i, t in enumerate(out) if _PROMO.search(t)), None)
     return out[:cut] if cut is not None else out

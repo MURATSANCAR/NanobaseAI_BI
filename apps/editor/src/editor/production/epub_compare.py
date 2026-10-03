@@ -20,6 +20,8 @@ N = 6
 MIN_RUN = 8
 PREVIEW = 240
 EXPECTED = ("künye", "içindekiler", "iç kapak", "yayınevi tanıtımı", "hikâye dışı sayfa")
+from .manuscript import _PROMO  # noqa: E402 - basılı kitabın baskı kuralındaki reklam tanımı
+
 HYPHEN = re.compile(r"([a-zçğıöşüâîû])[-\u00ad]\s+([a-zçğıöşüâîû])")
 
 
@@ -90,6 +92,8 @@ def compare(pages: list[tuple[int, str]], epub_txt: str, reasons: dict | None = 
         first, last = sp[a], sp[b - 1]
         why = [reasons.get(sp[k]) for k in range(a, b)]          # kelimelerin çoğunun sayfasındaki neden
         reason = max(set(why), key=why.count)
+        if reason is None and _PROMO.search(" ".join(sw[a:b])):   # sayfanın içindeki yayınevi reklamı (karekod…)
+            reason = "yayınevi tanıtımı"
         missing.append({"pages": [first, last], "words": b - a, "reason": reason,
                         "expected": reason in EXPECTED, "text": " ".join(sw[a:b])[:PREVIEW]})
     unexpected = [m for m in missing if not m["expected"]]

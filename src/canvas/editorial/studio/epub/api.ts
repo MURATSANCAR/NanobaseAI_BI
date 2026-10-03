@@ -90,7 +90,7 @@ export type DuzenChapter = { key: string; title: string; merged: boolean; split:
 export type DuzenView = {
   rev: number; chapters: DuzenChapter[]; styles: Record<string, string>;
   fronts: { key: string; label: string; on: boolean }[];
-  extras: { id: string; title: string; pages: [number, number]; words: number }[];
+  extras: { id: string; title: string; pages: [number, number]; words: number; place: 'front' | 'end' }[];
   missing: (EpubMissing & { added: boolean })[]; warnings: string[]; house: boolean; by: string | null; at: number | null;
 };
 export type DuzenOp =
@@ -99,7 +99,7 @@ export type DuzenOp =
   | { op: 'split'; block: string; title?: string; on: boolean }
   | { op: 'merge'; chapter: string; on: boolean }
   | { op: 'front'; key: string; on: boolean }
-  | { op: 'add_missing'; pages: [number, number]; title: string }
+  | { op: 'add_missing'; pages: [number, number]; title: string; place: 'front' | 'end' }
   | { op: 'remove_extra'; id: string }
   | { op: 'reset' };
 
