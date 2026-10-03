@@ -17,7 +17,7 @@ import { CiteCursor, citationsOf, pageStatus, splitCitations } from './citations
 
 const PRODUCT = 'ZEKİ AI';
 const UNAVAILABLE = `${PRODUCT} şu an bu soruyu cevaplayamadı. Birazdan tekrar sorun.`;
-const INTERNAL = /\b(?:hermes(?:\s+agent)?|book[-_ ]?director|qwen[\w.-]*|vllm|llama[\w.-]*|gpt[\w.-]*|claude|openai|ocr|editör motoru|editor motoru|dil modeli|llm)\b/gi;
+const INTERNAL = /\b(?:book[-_ ]?director|qwen[\w.-]*|vllm|llama[\w.-]*|gpt[\w.-]*|claude|openai|ocr|editör motoru|editor motoru|dil modeli|llm)\b/gi;
 
 /** Eski kayıtlar ve beklenmedik metinler için ikinci kat: iç adlar ZEKİ AI olur. */
 export function scrub(s: string): string {

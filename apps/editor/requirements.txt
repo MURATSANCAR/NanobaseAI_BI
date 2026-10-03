@@ -1,7 +1,6 @@
 # Editor Python image (python:3.14-slim). Versions current on 2026-09-19.
 temporalio==1.33.0
 langgraph==1.2.11
-mcp==2.2.0
 qdrant-client==1.19.1
 psycopg[binary]==3.3.6
 psycopg-pool

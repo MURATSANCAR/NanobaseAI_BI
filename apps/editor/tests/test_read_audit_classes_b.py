@@ -320,12 +320,13 @@ def test_context_places_the_page_text_right_after_the_title(monkeypatch):
     monkeypatch.setattr(QA, "card_block", lambda b, c, full: ("### KİTAP: Kitap\nÖzet: uzun özet", []))
     monkeypatch.setattr(QA.source, "load", lambda c, gid, p: [{"page_no": p, "spans": [{"text": "Metin."}]}])
 
-    async def ev(gid, q):
+    async def ev(gid, q, k=QA.EVIDENCE_K):
         return []
     monkeypatch.setattr(QA, "_evidence", ev)
     monkeypatch.setattr(QA.budget, "estimate", lambda t, ratio=None: len(t))
     monkeypatch.setattr(QA.budget, "for_call", lambda alias, n: types.SimpleNamespace(input=100000))
-    ctx, books = asyncio.run(QA.context("12. sayfada ne anlatılıyor?", "Kitap"))
+    ctx, books, full = asyncio.run(QA.context("12. sayfada ne anlatılıyor?", "Kitap"))
+    assert full
     assert ctx.index("### KİTAP") < ctx.index("- s.12: Metin.") < ctx.index("Özet: uzun özet")
     assert books[0]["asked_pages"]["present"] == [12]
 
@@ -338,16 +339,16 @@ class _Resp:
         return {"choices": [{"message": {"content": self._c}, "finish_reason": "stop"}], "usage": {}}
 
 
-def _answer(monkeypatch, asked, reply):
+def _answer(monkeypatch, asked, *replies):
     sent = []
 
-    async def ctx(q, t):
-        return "KAYIT", [{"crm_title": "Kitap", "title": "kitap", "asked_pages": asked}]
+    async def ctx(q, t, deep=False):
+        return ("DERIN" if deep else "KAYIT"), [{"crm_title": "Kitap", "title": "kitap", "asked_pages": asked}], True
     monkeypatch.setattr(QA, "context", ctx)
 
     async def post(path, req):
         sent.append(req)
-        return _Resp(reply)
+        return _Resp(replies[min(len(sent), len(replies)) - 1])
     monkeypatch.setattr(QA.llm, "_post", post)
     return asyncio.run(QA.answer("45. sayfada ne anlatılıyor?", "Kitap")), sent
 
@@ -359,8 +360,9 @@ def test_missing_page_is_answered_with_the_page_count_without_a_model_call(monke
 
 def test_present_page_not_found_goes_to_the_deeper_read(monkeypatch):
     out, sent = _answer(monkeypatch, {"present": [45], "missing": [], "page_count": 120},
-                        QA.NOT_FOUND + " Kayıtlarda yok.")
-    assert len(sent) == 1 and out["handled"] is False and out["reason"] == "NEEDS_DEEPER_READ"
+                        QA.NOT_FOUND + " Kayıtlarda yok.", "Ali kapıyı açar [s.45].")
+    assert len(sent) == 2 and out["handled"] and out["deep"] and out["answer"].startswith("Ali kapıyı")
+    assert "DERIN" in sent[1]["messages"][1]["content"]
     out, _ = _answer(monkeypatch, {"present": [45], "missing": [], "page_count": 120}, "Ali eve döner [s.45].")
     assert out["handled"] and out["answer"].startswith("Ali")
 

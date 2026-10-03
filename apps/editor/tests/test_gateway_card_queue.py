@@ -26,7 +26,7 @@ def G(monkeypatch):
     monkeypatch.setenv("EDITOR_MODELS_YAML", str(Path(__file__).resolve().parents[1] / "deploy" / "models.yaml"))
     monkeypatch.setenv("EDITOR_OVERFLOW_URL", "http://peer:8001")
     monkeypatch.setenv("EDITOR_OVERFLOW_MODEL", "nanobaseAI")
-    monkeypatch.setenv("EDITOR_OVERFLOW_CLIENTS", "editor-hermes")
+    monkeypatch.setenv("EDITOR_OVERFLOW_CLIENTS", "editor-cards")
     monkeypatch.setenv("EDITOR_YIELD_MAX_SEC", "1")
     sys.modules.pop("editor.gateway", None)
     g = importlib.import_module("editor.gateway")

@@ -2,10 +2,10 @@
 # editorctl — editor stack on the TT GPU host. Everything lives under
 # EDITOR_ROOT (/data/editor); nothing here touches BI containers or files.
 #
-#   editorctl install        dirs, secrets (once), rendered configs, Hermes home, image build
+#   editorctl install        dirs, secrets (once), rendered configs, image build
 #   editorctl studio-image [editor-py:<etiket>]   stüdyo imajını (editor-py-studio:<etiket>) editor-py'nin üstüne kurar
-#   editorctl up             core services (Postgres, Qdrant, Temporal, gateway, MCP, worker, Hermes)
-#   editorctl pause | resume "<neden>"   bakım kilidi + analiz servisleri (worker, mcp, gateway, embed, hermes)
+#   editorctl up             core services (Postgres, Qdrant, Temporal, gateway, cards, worker)
+#   editorctl pause | resume "<neden>"   bakım kilidi + analiz servisleri (worker, gateway, embed)
 #   editorctl down           stop every editor model container, then the core services
 #   editorctl status         containers + gateway GPU/model status
 #   editorctl models         model containers only
@@ -15,7 +15,6 @@
 #   editorctl queue          analyse every book in the inbox, one after another (detached)
 #   editorctl cover <book_id> <image> <who>   set a book's cover (replaces the PDF stand-in)
 #   editorctl cli ...        python -m editor.cli ... (review, report, canon)
-#   editorctl hermes ...     hermes CLI inside the Hermes container
 set -euo pipefail
 
 ROOT=${EDITOR_ROOT:-/data/editor}
@@ -46,26 +45,25 @@ render() {  # render <template> <out>: ${VAR} from the secrets env files
   python3 - "$1" "$2" <<'PY'
 import os, re, sys
 env = {}
-for f in ("editor.env", "postgres.env", "hermes.env"):
+for f in ("editor.env", "postgres.env"):
     p = os.path.join(os.environ["EDITOR_ROOT"], "secrets", f)
     for line in open(p):
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, v = line.split("=", 1); env[k] = v
 src = open(sys.argv[1]).read()
-keep = {"EDITOR_MCP_KEY"}          # resolved by Hermes at runtime from its env
-out = re.sub(r"\$\{(\w+)\}", lambda m: m.group(0) if m.group(1) in keep else env[m.group(1)], src)
+out = re.sub(r"\$\{(\w+)\}", lambda m: env[m.group(1)], src)
 open(sys.argv[2], "w").write(out)
 PY
 }
 
 cmd_install() {
-  sudo mkdir -p "$ROOT"/{secrets,storage/inbox,pg,qdrant,temporal,hermes,vllm-cache,logs}
+  sudo mkdir -p "$ROOT"/{secrets,storage/inbox,pg,qdrant,temporal,vllm-cache,logs}
   sudo chown "$(id -u):$(id -g)" "$ROOT" "$ROOT"/{secrets,storage,storage/inbox,temporal,vllm-cache,logs}
   chmod 700 "$ROOT/secrets"
   if [ ! -f "$ROOT/secrets/editor.env" ]; then
-    local pg_pw ed_pw tp_pw gw gwi mcp qd api
-    pg_pw=$(rand); ed_pw=$(rand); tp_pw=$(rand); gw=$(rand); gwi=$(rand); mcp=$(rand); qd=$(rand); api=$(rand)
+    local pg_pw ed_pw tp_pw gw gwi qd
+    pg_pw=$(rand); ed_pw=$(rand); tp_pw=$(rand); gw=$(rand); gwi=$(rand); qd=$(rand)
     umask 077
     cat > "$ROOT/secrets/postgres.env" <<EOF
 POSTGRES_PASSWORD=$pg_pw
@@ -81,17 +79,11 @@ EDITOR_DB_DSN=postgresql://editor_app:$ed_pw@editor-postgres:5432/editor
 EDITOR_GATEWAY_URL=http://editor-gateway:8000
 EDITOR_GATEWAY_KEY=$gw
 EDITOR_GATEWAY_INTERNAL_KEY=$gwi
-EDITOR_MCP_KEY=$mcp
 EDITOR_QDRANT_URL=http://editor-qdrant:6333
 QDRANT__SERVICE__API_KEY=$qd
 EDITOR_TEMPORAL_ADDRESS=editor-temporal:7233
 EDITOR_TEMPORAL_NAMESPACE=editor
 EDITOR_NETWORK=editor-net
-EOF
-    cat > "$ROOT/secrets/hermes.env" <<EOF
-API_SERVER_KEY=$api
-EDITOR_MCP_KEY=$mcp
-EDITOR_GATEWAY_KEY=$gw
 EOF
     umask 022
     echo "secrets created in $ROOT/secrets"
@@ -99,13 +91,13 @@ EOF
   # deployment settings that may be added after the first install (values are set on the host)
   #   EDITOR_COVER_WEB_SEARCH: publisher web site search URL with {isbn}, for cover lookup
   grep -q '^EDITOR_COVER_WEB_SEARCH=' "$ROOT/secrets/editor.env" || echo 'EDITOR_COVER_WEB_SEARCH=' >> "$ROOT/secrets/editor.env"
-  # Interactive questions (Hermes) are answered by the same model on GPU 0 (BI's copy) while
-  # the editor's own copy on GPU 1 is cold or the card is busy (user decision 2026-09-21).
-  # Only Hermes overflows; analysis workers never do. Values can be changed on the host.
+  # Kitaba sor (editor-cards) is answered by the same model on GPU 0 (BI's copy) while the editor's
+  # own copy on GPU 1 is cold or the card is busy (user decision 2026-09-21). Analysis workers use the
+  # separate analysis-overflow rule. Values can be changed on the host.
   grep -q '^EDITOR_OVERFLOW_URL=' "$ROOT/secrets/editor.env" || cat >> "$ROOT/secrets/editor.env" <<'EOV'
 EDITOR_OVERFLOW_URL=http://172.17.0.1:8001
 EDITOR_OVERFLOW_MODEL=nanobaseAI
-EDITOR_OVERFLOW_CLIENTS=editor-hermes,editor-cards
+EDITOR_OVERFLOW_CLIENTS=editor-cards
 EOV
   # Analiz taşması ve okuma kapasitesi (2026-10-02): yorum olarak eklenir, değer elle açılır. SIRA ŞART: önce GPU 0'daki BI
   # kabı `--scheduling-policy priority` ile yeniden açılır (deploy/tt-gpu/compose.qwen27b.yaml); politika kapalıyken
@@ -119,14 +111,6 @@ EOV
 EOV
   render "$APP/deploy/temporal/server.yaml.tpl" "$ROOT/temporal/server.yaml"
   chmod 644 "$ROOT/temporal/server.yaml"
-  # Hermes home (uid 10000 in the image): config, persona, skills.
-  sudo mkdir -p "$ROOT/hermes/skills"
-  render "$APP/hermes/config.yaml.tpl" /tmp/editor-hermes-config.yaml
-  sudo install -m 600 /tmp/editor-hermes-config.yaml "$ROOT/hermes/config.yaml"; rm -f /tmp/editor-hermes-config.yaml
-  sudo install -m 644 "$APP/hermes/SOUL.md" "$ROOT/hermes/SOUL.md"
-  sudo rm -rf "$ROOT/hermes/skills/book"
-  sudo cp -r "$APP/hermes/skills/book" "$ROOT/hermes/skills/book"
-  sudo chown -R 10000:10000 "$ROOT/hermes"
   local ver; ver=$(cat "$APP/VERSION" 2>/dev/null || echo dev)
   docker build -q -t "editor-py:$ver" -t editor-py:latest --build-arg CODE_VERSION="$ver" \
     -f "$APP/images/py/Dockerfile" "$APP"
@@ -184,7 +168,7 @@ case "${1:-}" in
   foundation-status) docker exec editor-control python -m editor.foundation status ;;
   pause)
     docker exec editor-control python -m editor.foundation pause
-    docker stop -t 30 editor-hermes editor-mcp editor-worker editor-gateway
+    docker stop -t 30 editor-worker editor-gateway
     cmd_stop_models ;;
   resume)  # editorctl resume "<neden>": bakım kilidini kaldırır ve analiz servislerini açar
     docker exec editor-control python -m editor.foundation resume --reason "${2:-Analysis resumed}"
@@ -193,20 +177,19 @@ case "${1:-}" in
   analyze)
     shift; f=$1; shift
     install -m 644 "$f" "$ROOT/storage/inbox/$(basename "$f")"
-    docker exec editor-mcp python -m editor.cli analyze "$(basename "$f")" "$@" ;;
-  wait) docker exec editor-mcp python -m editor.cli wait "$2" ;;
+    docker exec editor-worker python -m editor.cli analyze "$(basename "$f")" "$@" ;;
+  wait) docker exec editor-worker python -m editor.cli wait "$2" ;;
   queue)  # editorctl queue [--force|--code-version]: gelen kutusundaki her kitabı sırayla analiz eder
     shift
     # detached from this shell on purpose: the queue outlives the ssh session that starts it
     sudo systemd-run --unit=editor-queue --collect --description="editör kitap kuyruğu" \
-      docker exec editor-mcp python -m editor.cli queue "$@"
+      docker exec editor-worker python -m editor.cli queue "$@"
     echo "kuyruk başladı: journalctl -u editor-queue -f" ;;
   cover)  # editorctl cover <book_id> <image file> <who>
     mkdir -p "$ROOT/storage/covers-inbox"
     install -m 644 "$3" "$ROOT/storage/covers-inbox/$(basename "$3")"
-    docker exec editor-mcp python -m editor.cli cover "$2" "$(basename "$3")" --by "${4:?kim ekliyor}" ;;
-  cli) shift; docker exec -i editor-mcp python -m editor.cli "$@" ;;
-  hermes) shift; docker exec -it editor-hermes hermes "$@" ;;
+    docker exec editor-worker python -m editor.cli cover "$2" "$(basename "$3")" --by "${4:?kim ekliyor}" ;;
+  cli) shift; docker exec -i editor-worker python -m editor.cli "$@" ;;
   gw) shift; gw "$@" ;;
-  *) sed -n '2,17p' "$0"; exit 2 ;;
+  *) sed -n '2,16p' "$0"; exit 2 ;;
 esac

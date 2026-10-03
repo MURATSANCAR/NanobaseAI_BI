@@ -1,4 +1,4 @@
-"""Operator/editor CLI (runs inside editor-mcp via `editorctl`).
+"""Operator/editor CLI (runs inside editor-worker via `editorctl`).
 
   python -m editor.cli analyze <file.pdf> [--title T] [--universe U] [--age A]
   python -m editor.cli queue [--force] [--code-version]
@@ -12,7 +12,7 @@
   python -m editor.cli canon add <universe> <kind> <key> '<json>' --editor NAME [--claim ID]
   python -m editor.cli gallery prune [--apply]
 
-Editor decisions are never Hermes tools: a model does not close its own questions. They
+Editor decisions are never made by a model: a model does not close its own questions. They
 are made by a person — here, or through the portal's review screen, which reaches the same
 `review.decide` over the card service and signs the decision with the caller's AD user.
 Canon writes exist only here.

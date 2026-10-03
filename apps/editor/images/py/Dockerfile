@@ -1,4 +1,4 @@
-# editor-py: gateway, MCP servers, Temporal worker (one image, three commands).
+# editor-py: gateway, card service, Temporal worker (one image, several commands).
 FROM python:3.14-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app/src
 WORKDIR /app

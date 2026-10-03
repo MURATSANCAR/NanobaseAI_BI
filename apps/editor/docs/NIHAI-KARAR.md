@@ -3,6 +3,9 @@
 > Bu dosya kullanıcının 2026-09-19'da verdiği analizin kelimesi kelimesine kopyasıdır.
 > Modülün bütün kararları buna bağlıdır. Buradan sapan bir uygulama kararı
 > `docs/UYGULAMA-NOTLARI.md` içinde gerekçesiyle ayrıca yazılır; bu dosya değiştirilmez.
+>
+> **2026-10-03 (kullanıcı kararı):** aşağıda anlatılan sohbet ajanı, becerileri ve MCP araç katmanı kaldırıldı;
+> bu bölümler artık geçerli değildir. Ayrıntı: `docs/UYGULAMA-NOTLARI.md` → «Sohbet ajanı ve MCP kaldırıldı».
 
 Hermes, kitabı analiz eden model olmayacak. Hermes:
 

@@ -7,8 +7,6 @@ Kurulu parçalar (adlar sunucudaki gerçek adlardır, tarihsel nedenle `editor-g
 - GPU (`gpuubuntu`): systemd servisi `editor-gpu-tunnel.service` (bu dizindeki dosya), ortam dosyası `/etc/editor-gpu-tunnel.env` (`TUNNEL_DESTINATION`, `TUNNEL_KEY_FILE`, `TUNNEL_KNOWN_HOSTS`). Yalnız bu iş için üretilmiş Ed25519 anahtarı GPU'dan çıkmaz; CPU host key'i ayrı known_hosts dosyasına sabitlenir.
 - CPU (`nanobase-direct`): komut/TTY açamayan `editor-gpu-tunnel` hesabı (`/usr/sbin/nologin`) ve `/etc/ssh/sshd_config.d/60-editor-gpu-tunnel.conf` (bu dizindeki dosya). Ana `sshd_config` drop-in dizinini içermediği için yalnız bu dosya açık `Include` ile eklendi. Değişiklikten önce `sshd -t`; etkin kısıtlar `sshd -T -C user=editor-gpu-tunnel,...` ile görülür.
 
-Servis ikinci bir yönlendirme daha açar: **`127.0.0.1:18887` → GPU `19110`, editör motorunun (Hermes) OpenAI uyumlu API'si** (2026-09-21). Portalın "kitaba sor" özelliği bu adresten sorar; köprü editörün veritabanına dokunmaz. Anahtar ve model adı CPU'da `/etc/nanobase/semantic-bridge.env` içinde (`EDITOR_API_BASE`, `EDITOR_API_KEY`, `EDITOR_MODEL`), repoda tutulmaz. `PermitListen` zaten 18887'yi içerdiği için sshd'ye dokunulmadı; port tarihsel olarak boştaydı (eski hedefi GPU `8010` kaldırılmıştı) ve yeniden kullanıldı.
-
-**Yan etki:** soru sorulunca gateway yönetici modelini açar; GPU 1'de yer yoksa koşan analiz modelini kapatır. Yani kitap analizi sürerken soru sormak analizi aksatabilir.
+Portalın "kitaba sor" özelliği kart servisinin tünelinden (`editor-cards-tunnel.service`, `EDITOR_CATALOG_BASE`) `POST /v1/books/ask` ile sorar. 2026-10-03'e kadar bu servis `127.0.0.1:18887` → GPU `19110` (sohbet ajanının API'si) yönlendirmesini de açıyordu; ajan kaldırıldı, yönlendirme de kaldırıldı. `PermitListen`'deki 18887 boş kalır.
 
 Kurulum ve model ayrıntıları: [GPU sunucusu belgesi](../../../docs/TT-GPU-SUNUCUSU.md).

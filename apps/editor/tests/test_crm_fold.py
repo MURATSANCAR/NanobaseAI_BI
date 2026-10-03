@@ -20,7 +20,7 @@ def test_file_name_titles_fold_like_crm_titles():
     assert C.fold("Kitap.Adı Devam") == "kitap adi devam"          # başlık içindeki nokta uzantı değil
 
 
-def test_api_goes_to_card_service_when_configured_so():
+def test_api_goes_to_card_service():
     import io, json, os
     seen = []
 
@@ -35,18 +35,13 @@ def test_api_goes_to_card_service_when_configured_so():
     real, env = C.urllib.request.urlopen, dict(os.environ)
     C.urllib.request.urlopen = fake
     try:
-        for k in ("EDITOR_API", "EDITOR_MCP_KEY"):
-            os.environ.pop(k, None)
         os.environ.update(EDITOR_CATALOG_BASE="http://127.0.0.1:18889/", EDITOR_CATALOG_KEY="k1")
         C.api("requests"); C.api("store", {"book_id": "x"})
-        os.environ.update(EDITOR_API="http://editor-mcp:8000", EDITOR_MCP_KEY="k2")
-        C.api("requests")
     finally:
         C.urllib.request.urlopen = real
         os.environ.clear(); os.environ.update(env)
     assert seen == [("http://127.0.0.1:18889/v1/catalog/cover-requests", "Bearer k1"),
-                    ("http://127.0.0.1:18889/v1/catalog/crm-lookups", "Bearer k1"),
-                    ("http://editor-mcp:8000/catalog/cover-requests", "Bearer k2")]
+                    ("http://127.0.0.1:18889/v1/catalog/crm-lookups", "Bearer k1")]
 
 
 def _book(i, name, author, urun=None, project=None):

@@ -317,46 +317,7 @@ def text_chunks(generation_id: str, size: int = 4) -> list[tuple[int, int]]:
     return [(pages[i], pages[min(i + size, len(pages)) - 1]) for i in range(0, len(pages), size)]
 
 
-# ------------------------------------------------- agent-facing writes
-def _agent_evidence(c, generation_id: str, evidence: list[dict]) -> list[tuple[str, bool, int]]:
-    """Evidence supplied by Hermes must be verbatim page text; otherwise refused."""
-    idx = ledger.PageIndex.load(c, generation_id)
-    pages = _valid_pages(c, generation_id)
-    for e in evidence or []:
-        kind = "VISUAL" if int(e.get("paragraph") or 0) == 0 else "TEXT"
-        if int(e.get("page") or 0) not in pages or not idx.verify(int(e["page"]), e.get("quote", ""), kind, int(e.get("paragraph") or 0) or None):
-            raise ValueError(f"kanıt doğrulanamadı: sayfa {e.get('page')}: “{e.get('quote')}”")
-    evs = ledger.evidence_from_model(c, generation_id, idx, evidence, valid_pages=pages)
-    if not evs:
-        raise ValueError("kanıt zorunlu (Kaynaksız iddia üretilemez)")
-    return evs
 
-
-def save_character_candidate(generation_id: str, name: str, page: int, description: str,
-                             evidence: list[dict], confidence: float, via: str = "TEXT") -> dict:
-    with db.tx() as c:
-        evs = _agent_evidence(c, generation_id, evidence)
-        c.execute("INSERT INTO character_mention(generation_id, page_no, surface_name, via, appearance,"
-                  " resolution, confidence, evidence_id) VALUES (%s,%s,%s,%s,%s,'UNRESOLVED',%s,%s)",
-                  (generation_id, page, name, via, db.J({"description": description}),
-                   confidence, evs[0][0]))
-    return {"saved": True, "status": "UNRESOLVED", "evidence": len(evs)}
-
-
-def save_event(generation_id: str, summary: str, modality: str, page_from: int, page_to: int,
-               participants: list[str], evidence: list[dict], confidence: float,
-               importance: float = 0.5) -> dict:
-    with db.tx() as c:
-        evs = _agent_evidence(c, generation_id, evidence)
-        cid = ledger.save_claim(c, generation_id, kind="EVENT", subject=", ".join(participants),
-                                claim=summary, evidence=evs, confidence=confidence,
-                                created_by="hermes", payload={"modality": modality})
-        row = c.execute("INSERT INTO event(generation_id, page_from, page_to, summary, modality,"
-                        " participants, importance, confidence, claim_id) VALUES"
-                        " (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
-                        (generation_id, min(page_from, page_to), max(page_from, page_to), summary,
-                         modality, participants, importance, confidence, cid)).fetchone()
-    return {"event_id": str(row["id"]), "claim_id": cid, "modality": modality}
 
 
 def _emotion_character(c, generation_id: str, name: str, page: int, claim_id: str):
@@ -399,22 +360,6 @@ def _emotion_character(c, generation_id: str, name: str, page: int, claim_id: st
         {ledger.norm(n) for n in [m['canonical_name'], *(m['aliases'] or []), m['surface_name']] if n}
         and supporting & spans(m['source_refs'])}
     return next(iter(candidates)) if len(candidates) == 1 else None
-
-
-def save_emotion(generation_id: str, character: str, page: int, emotion: str, intensity: float,
-                 trigger: str, evidence: list[dict], confidence: float) -> dict:
-    with db.tx() as c:
-        evs = _agent_evidence(c, generation_id, evidence)
-        cid = ledger.save_claim(c, generation_id, kind="EMOTION", subject=character,
-                                claim=f"{character} {emotion} hissediyor ({trigger})", evidence=evs,
-                                confidence=confidence, created_by="hermes",
-                                payload={"emotion": emotion, "intensity": intensity, "trigger": trigger})
-        character_id = _emotion_character(c, generation_id, character, page, cid)
-        c.execute("INSERT INTO emotion(generation_id, character_id, character_name, page_no, emotion,"
-                  " intensity, trigger, confidence, claim_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                  (generation_id, character_id, character, page, emotion, intensity,
-                   trigger, confidence, cid))
-    return {"claim_id": cid}
 
 
 # ------------------------------------------------------ identity merge

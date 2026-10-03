@@ -330,7 +330,7 @@ async def regression(generation_id: str) -> dict:
 
 @activity.defn
 async def report(generation_id: str) -> dict:
-    r = await _t(quality.create_analysis_report, generation_id, "ANALYSIS", None)
+    r = await _t(quality.create_analysis_report, generation_id, "ANALYSIS")
     await _t(db.one, "UPDATE generation SET sealed_at=now() WHERE id=%s RETURNING id", generation_id)
     return {"report_id": r["report_id"]}
 

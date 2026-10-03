@@ -1,7 +1,7 @@
 # editor-py-studio: Kitap Tasarım Stüdyosu'nun imajı (editor-studio API'si + editor-studio-worker).
 # editor-py'nin üstüne yalnız stüdyonun gerektirdiği katman: tam e-kitap denetimi (EPUBCheck 5.4.0, W3C) ve onu
 # çalıştıran başsız Java; sesli okumadaki efekt karışımı için ffmpeg ve efekt aramasının metin kolu (onnxruntime).
-# Öteki editör servisleri (gateway, kartlar, MCP, işçi…) editor-py'de kalır, etkilenmez.
+# Öteki editör servisleri (gateway, kartlar, işçi…) editor-py'de kalır, etkilenmez.
 #
 #   docker build -t editor-py-studio:<etiket> --build-arg BASE=editor-py:<etiket> -f images/studio/Dockerfile .
 #

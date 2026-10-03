@@ -1,5 +1,4 @@
-"""Job control: Hermes creates a job_id; the Temporal workflow does the work
-("Uzun süren bu işlem Hermes'in tek sohbet turunda tutulmamalı")."""
+"""Job control: a caller (portal, editorctl) creates a job_id; the Temporal workflow does the work."""
 
 from __future__ import annotations
 
@@ -22,7 +21,7 @@ async def temporal() -> Client:
 
 async def start_analysis_job(file_name: str, title: str | None = None, universe: str | None = None,
                              age_group: str | None = None, profile: str = "full",
-                             requested_by: str = "hermes") -> dict:
+                             requested_by: str = "editor") -> dict:
     foundation.assert_enabled()
     info = document.inspect_book(file_name, title=title, universe=universe, age_group=age_group)
     running = db.one("SELECT id FROM analysis_job WHERE book_version_id=%s AND status IN "
@@ -59,28 +58,6 @@ def get_job_status(job_id: str) -> dict:
         out['knowledge_revision'] = rep['knowledge_revision']
         out['semantic_acceptance'] = False
     return out
-
-
-async def cancel_job(job_id: str) -> dict:
-    j = db.one("SELECT workflow_id, status FROM analysis_job WHERE id=%s", job_id)
-    if j is None or not j["workflow_id"]:
-        raise KeyError(f"job {job_id} not found")
-    await (await temporal()).get_workflow_handle(j["workflow_id"]).cancel()
-    return {"job_id": job_id, "cancel_requested": True}
-
-
-def list_books() -> list[dict]:
-    return db.all_rows(
-        "SELECT b.id AS book_id, b.title, b.universe, b.age_group, bv.id AS book_version_id,"
-        " bv.page_count, bv.sha256, (SELECT g.id FROM generation g WHERE g.book_version_id=bv.id"
-        " ORDER BY g.created_at DESC,g.id DESC LIMIT 1) AS latest_generation_id"
-        " FROM book b JOIN book_version bv ON bv.book_id=b.id ORDER BY bv.created_at DESC")
-
-
-def latest_generation(book_version_id: str) -> dict | None:
-    return db.one("SELECT id AS generation_id, job_id, created_at, sealed_at FROM generation WHERE"
-                  " book_version_id=%s ORDER BY created_at DESC, id DESC LIMIT 1",
-                  book_version_id)
 
 
 def list_review_queue(generation_id: str, status: str = "OPEN", limit: int = 50) -> list[dict]:

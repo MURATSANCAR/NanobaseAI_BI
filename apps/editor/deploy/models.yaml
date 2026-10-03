@@ -3,7 +3,7 @@
 # GPU placement (2026-09-19, user decision): BI's qwen38-27b runs alone on
 # GPU 0; the whole editor (every alias below) lives on GPU 1. Models that do
 # not fit together are swapped by the gateway (idle editor models stop first).
-# Hermes and the analysis workers only ever see the alias. The real model,
+# Callers (card service, analysis workers) only ever see the alias. The real model,
 # revision and GPU live here and in the ledger's model_call provenance rows.
 #
 # Every model runs in its own vLLM container that is CREATED but not started

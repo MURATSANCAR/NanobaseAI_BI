@@ -15,7 +15,7 @@ Two further invariants need no text at all, only the shape of one generation's p
 
 * a character's alias cannot be another character's canonical name in the same
   generation — one written name cannot be the main name of one person and a second name
-  of another, and if it were, every name-based lookup (graph._resolve, vision, event
+  of another, and if it were, every name-based lookup (graph, vision, event
   actors) would answer with whichever row it reached first;
 * an entity the reader declared a collective or a concept is not a person, so it must
   not become a `character` row that people, drawings and events are then attached to.

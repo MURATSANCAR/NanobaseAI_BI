@@ -55,72 +55,7 @@ def original_model_confidence(claim: dict) -> float:
     return float(value)
 
 
-def calculate_confidence(claim_id: str) -> dict:
-    with db.tx() as c:
-        f = _claim_facts(c, claim_id)
-    critic = (f["claim"]["payload"] or {}).get("critic")
-    return {"claim_id": claim_id, **confidence_from(original_model_confidence(f["claim"]), f["evidence"], critic)}
-
-
 # ---------------------------------------------------------- validation
-def validate_claim(generation_id: str, claim: dict | None = None, claim_id: str | None = None) -> dict:
-    """Checks a claim in the §7 shape ({claim, source_pages, evidence, confidence,
-    status, needs_editor_review}) or a stored claim, against the quality rules."""
-    problems: list[str] = []
-    with db.tx() as c:
-        pages = _valid_pages(c, generation_id)
-        idx = ledger.PageIndex.load(c, generation_id)
-        if claim_id:
-            f = _claim_facts(c, claim_id)
-            cl = f["claim"]
-            claim = {"claim": cl["claim"], "source_pages": cl["source_pages"], "confidence": cl["confidence"],
-                     "status": cl["status"], "needs_editor_review": cl["needs_editor_review"],
-                     "evidence": [{"page": e["page_no"], "quote": e["quote"], "verified": e["quote_verified"],
-                                   "kind": e["kind"]} for e in f["evidence"]],
-                     "kind": cl["kind"], "payload": cl["payload"]}
-        assert claim is not None
-        for k in ("claim", "source_pages", "evidence", "confidence", "status", "needs_editor_review"):
-            if k not in claim:
-                problems.append(f"alan eksik: {k}")
-        ev = claim.get("evidence") or []
-        if isinstance(ev, str):
-            ev = [{"page": p, "quote": ev} for p in claim.get("source_pages") or []]
-        if not ev:
-            problems.append("Kaynaksız iddia üretilemez: kanıt yok")
-        for p in claim.get("source_pages") or []:
-            if p not in pages:
-                problems.append(f"sayfa {p} kitapta yok")
-        verified = 0
-        for e in ev:
-            ok = e.get("verified")
-            if ok is None:
-                ok = idx.verify(int(e.get("page") or 0), e.get("quote", ""), e.get("kind", "TEXT"))
-            verified += bool(ok)
-            if not ok and e.get("kind", "TEXT") == "TEXT":
-                problems.append(f"alıntı sayfa {e.get('page')} metninde bulunamadı: “{e.get('quote', '')[:80]}”")
-        conf = float(claim.get("confidence") or 0)
-        if not 0 <= conf <= 1:
-            problems.append("güven 0-1 arasında olmalı")
-        payload = claim.get("payload") or {}
-        if claim.get("kind") == "EVENT" and payload.get("modality") not in (None, "REALIZED", "MEMORY") \
-                and "gerçekleşti" in claim["claim"].lower():
-            problems.append("Plan/hayal/şaka gerçekleşmiş olay gibi yazılmış")
-        if claim.get("kind") == "CHARACTER_IDENTITY" and payload.get("identity_status") == "CONFIRMED" \
-                and conf < 0.85:
-            problems.append("Belirsiz karakter kesin kimlik olarak kaydedilemez (güven < 0.85)")
-    needs_review = bool(problems) or conf < REVIEW_CONFIDENCE
-    return {"valid": not problems, "problems": problems, "evidence_verified": f"{verified}/{len(ev)}",
-            "needs_editor_review": needs_review}
-
-
-def send_to_editor_queue(generation_id: str, reason: str, claim_id: str | None = None,
-                         contradiction_id: str | None = None, priority: int = 2) -> dict:
-    if not claim_id and not contradiction_id:
-        raise ValueError("claim_id ya da contradiction_id gerekli")
-    with db.tx() as c:
-        rid = ledger.queue_review(c, generation_id, reason=reason, claim_id=claim_id,
-                                  contradiction_id=contradiction_id, priority=priority)
-    return {"review_item_id": rid, "status": "OPEN"}
 
 
 # -------------------------------------------------------------- critic
@@ -591,35 +526,10 @@ def _cite(pages: list[int]) -> str:
     return "[" + ", ".join(f"s.{p}" for p in pages) + "]"
 
 
-def create_analysis_report(generation_id: str, kind: str = "ANALYSIS",
-                           sections: list[dict] | None = None) -> dict:
-    """Builds the cited report from the ledger. `sections` (from a Hermes skill
-    such as age_group_assessment) are validated claim by claim and saved as
-    claims first; a section claim without verified evidence is refused."""
+def create_analysis_report(generation_id: str, kind: str = "ANALYSIS") -> dict:
+    """Builds the cited report from the ledger."""
     from .outputs import guard_legacy_producer
     guard_legacy_producer(generation_id)
-    saved = []
-    if sections:
-        with db.tx() as c:
-            idx = ledger.PageIndex.load(c, generation_id)
-            pages = _valid_pages(c, generation_id)
-            claim_kind = {"AGE_GROUP": "AGE_GROUP", "PUBLISHER": "PUBLISHER_DECISION"}.get(kind, "ANSWER")
-            for s in sections:
-                for cl in s.get("claims", []):
-                    for e in cl.get("evidence", []):
-                        k = "VISUAL" if int(e.get("paragraph") or 0) == 0 else "TEXT"
-                        if not idx.verify(int(e.get("page") or 0), e.get("quote", ""), k):
-                            raise ValueError(f"kanıt doğrulanamadı: s{e.get('page')} “{e.get('quote')}”")
-                    evs = ledger.evidence_from_model(c, generation_id, idx, cl.get("evidence", []),
-                                                     valid_pages=pages)
-                    cid = ledger.save_claim(c, generation_id, kind=claim_kind, subject=s.get("title"),
-                                            claim=cl["claim"], evidence=evs,
-                                            confidence=float(cl.get("confidence", 0.5)),
-                                            created_by="hermes", payload={"section": s.get("title")},
-                                            needs_review=bool(cl.get("needs_editor_review")))
-                    if cid is None:
-                        raise ValueError(f"kanıtsız iddia reddedildi: {cl['claim'][:80]}")
-                    saved.append(cid)
     gen = db.one("SELECT g.*, b.title, bv.sha256, bv.page_count FROM generation g JOIN book_version bv"
                  " ON bv.id=g.book_version_id JOIN book b ON b.id=bv.book_id WHERE g.id=%s", generation_id)
     q = lambda sql, *a: db.all_rows(sql, generation_id, *a)  # noqa: E731
@@ -679,12 +589,6 @@ def create_analysis_report(generation_id: str, kind: str = "ANALYSIS",
            *[f"- {x['kind']} {_cite(x['pages'])} ({x['confidence']:.2f}, {x['status']}): {x['description']}"
              for x in cons], ""]
     content["contradictions"] = cons
-    if kind != "ANALYSIS":
-        sec = q("SELECT subject, claim, source_pages, confidence FROM claim WHERE generation_id=%s AND"
-                " id = ANY(%s::uuid[])", saved)
-        md += [f"## {kind}", *[f"- ({s['subject']}) {s['claim']} {_cite(s['source_pages'])} "
-                               f"— güven {s['confidence']:.2f}" for s in sec], ""]
-        content["sections"] = sec
     rq = q("SELECT r.priority, r.reason FROM review_item r WHERE r.generation_id=%s AND r.status='OPEN'"
            " ORDER BY r.priority, r.created_at")
     md += [f"## Editör kuyruğu ({len(rq)} açık)", *[f"- P{r['priority']}: {r['reason']}" for r in rq[:60]], ""]
@@ -703,4 +607,4 @@ def create_analysis_report(generation_id: str, kind: str = "ANALYSIS",
     content["review_open"] = len(rq)
     row = db.one("INSERT INTO report(generation_id, kind, content, markdown) VALUES (%s,%s,%s,%s) RETURNING id",
                  generation_id, kind, db.J(json.loads(json.dumps(content, default=str))), text)
-    return {"report_id": str(row["id"]), "kind": kind, "saved_claims": saved, "markdown": text}
+    return {"report_id": str(row["id"]), "kind": kind, "markdown": text}

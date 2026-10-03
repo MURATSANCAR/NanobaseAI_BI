@@ -149,28 +149,6 @@ def known_characters_text(generation_id: str) -> str:
     return "\n".join(f"- {n}: " + " | ".join(v[:4]) for n, v in looks.items()) or "-"
 
 
-async def _ensure_scan(generation_id: str, page_no: int) -> dict:
-    s = best_scan(generation_id, page_no)
-    if s is None:
-        await analyze_page_visual(generation_id, page_no, "fast")
-        s = best_scan(generation_id, page_no)
-    return s
-
-
-async def detect_characters(generation_id: str, page_no: int) -> list[dict]:
-    return (await _ensure_scan(generation_id, page_no))["result"]["characters"]
-
-
-async def detect_objects(generation_id: str, page_no: int) -> list[dict]:
-    return (await _ensure_scan(generation_id, page_no))["result"]["objects"]
-
-
-async def detect_scene(generation_id: str, page_no: int) -> dict:
-    s = (await _ensure_scan(generation_id, page_no))["result"]
-    return {"scene": s["scene"], "important_event": s["important_event"],
-            "text_in_image": s["text_in_image"]}
-
-
 def persist_page_visual(generation_id: str, page_no: int) -> dict:
     """Best scan -> visual regions, visual character mentions, scene claim. Idempotent
     per page. Text-visual findings are written by `confirm_text_visual`."""
@@ -336,20 +314,6 @@ async def confirm_text_visual(generation_id: str) -> dict:
     return {"pages": len(ok), "proposed": sum(r["proposed"] for r in ok),
             "confirmed": sum(r["confirmed"] for r in ok),
             "confirmed_pages": [r["page_no"] for r in ok if r["confirmed"]], "pages_failed": failed}
-
-
-async def check_text_visual_consistency(generation_id: str, page_no: int) -> dict:
-    """Findings are the voted ones; a scan's own unvoted candidates are reported as such."""
-    s = await _ensure_scan(generation_id, page_no)
-    persist_page_visual(generation_id, page_no)
-    voted = db.one("SELECT proposed, confirmed, detail FROM text_visual_check WHERE generation_id=%s AND"
-                   " page_no=%s", generation_id, page_no)
-    checks = s["result"]["text_visual_checks"]
-    return {"page_no": page_no, "pass": s["pass"], "voted": voted is not None,
-            "findings": [p for p in (voted or {}).get("detail", []) if p.get("confirmed")],
-            "not_confirmed": [p for p in (voted or {}).get("detail", []) if not p.get("confirmed")],
-            "unvoted_candidates": [] if voted else [c for c in checks if contradicts(c)],
-            "consistent": sum(1 for c in checks if not contradicts(c))}
 
 
 async def compare_character_appearances(generation_id: str, character: str,

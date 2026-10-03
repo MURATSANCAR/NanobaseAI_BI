@@ -1,4 +1,4 @@
-"""Run only on tt-gpu: actual HTTP/MCP reads vs independent real ledger references."""
+"""Run only on tt-gpu: actual HTTP reads vs independent real ledger references."""
 import asyncio
 import hashlib
 import json

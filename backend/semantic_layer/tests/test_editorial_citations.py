@@ -72,11 +72,6 @@ def test_build_unknown_is_not_written():
     assert out["pages"] == {}
 
 
-def test_polish_keeps_every_cited_page():
-    from semantic_bridge import editorial_books
-    assert editorial_books._cited("( s. 114, 127)") == {114, 127}
-
-
 def test_export_pill_covers_whole_group():
     from semantic_bridge import editorial_export
     runs = editorial_export._runs("konu ( s. 114, 127)")

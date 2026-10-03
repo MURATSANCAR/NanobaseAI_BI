@@ -26,7 +26,7 @@ def G(monkeypatch):
     monkeypatch.setenv("EDITOR_MODELS_YAML", str(Path(__file__).resolve().parents[1] / "deploy" / "models.yaml"))
     monkeypatch.setenv("EDITOR_OVERFLOW_URL", "http://peer:8001")
     monkeypatch.setenv("EDITOR_OVERFLOW_MODEL", "nanobaseAI")
-    monkeypatch.setenv("EDITOR_OVERFLOW_CLIENTS", "editor-hermes")
+    monkeypatch.setenv("EDITOR_OVERFLOW_CLIENTS", "editor-cards")
     monkeypatch.setenv("EDITOR_GATEWAY_KEY", "k")
     monkeypatch.setenv("EDITOR_OVERFLOW_PRIORITY", "10")
     monkeypatch.delenv("EDITOR_OVERFLOW_ANALYSIS_CAP", raising=False)

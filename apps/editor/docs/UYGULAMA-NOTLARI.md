@@ -3,6 +3,14 @@
 Kaynak karar metni: [NIHAI-KARAR.md](NIHAI-KARAR.md). Bu dosya, o metnin açık bıraktığı ya da sunucunun
 fiziksel sınırları yüzünden yorumlanması gereken noktaları ve gerekçelerini yazar. Kararın kendisi değişmedi.
 
+## Sohbet ajanı ve MCP kaldırıldı (kullanıcı kararı, 2026-10-03)
+
+Karar metnindeki ajan (yönetici, beceriler, araç katmanı `editor-mcp`) kaldırıldı. Ölçüm: aynı sorularda ajan soru
+başına 4-16 model çağrısı ve 44-692 bin token harcadı, 6 sn-5,5 dk sürdü; 4.044 kitaplık listede kitabı bulamayıp
+yanlış «bulunamadı» dedi. Yerine: Kitaba sor kart servisinde (`quick_answer`) en çok iki çağrı (kayıtlar; yetmezse
+künye sayfaları + bölüm listesi + geniş metin). Okuma zaten Temporal iş akışıyla yürüyordu; ajan okumayı
+yönetmiyordu. Aşağıdaki notlarda ajana ve MCP'ye yapılan atıflar tarihseldir.
+
 ## Ana kurallar (kullanıcı, 2026-09-19)
 
 1. **Kitaba özel geliştirme yok.** Bir kusur tek bir kitapta görülmüş olabilir; çözümü her kitapta aynı çalışan genel bir mekanizmadır. Kitap adı, sayfa numarası, karakter adı, kelime listesi ya da tek kitabın verisine oturtulmuş eşik koda ve prompt'lara girmez. Eşik gerekiyorsa fiziksel anlamı olur, ayardan okunur ve ikinci bir kitapta doğrulanana kadar "tek kitapta ölçüldü" diye not edilir.

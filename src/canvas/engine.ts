@@ -2743,7 +2743,7 @@ export const editorialSearchApi = {
     send<{ items: SearchHit[]; total: number; page: number; pageSize: number; db?: DbTiming | null }>('GET', `/api/v1/editorial/people/${encodeURIComponent(id)}/books${qs({ page })}`, undefined, 60_000),
 };
 
-// ------------------------------------------------ kitabın içeriğine soru (editör motoru, Hermes)
+// ------------------------------------------------ kitabın içeriğine soru (editörün kart servisi)
 
 export type BookCard = {
   id: string;

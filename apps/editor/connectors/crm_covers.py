@@ -3,7 +3,7 @@
 (the editor's GPU host is not on that network), for every book the editor knows.
 
   1. asks the editor for its books (title, other spellings `titles` — the cleaned file name
-     first —, verified ISBNs, verified authors)                GET  /catalog/cover-requests
+     first —, verified ISBNs, verified authors)                GET  /v1/catalog/cover-requests
   2. reads the CRM book list ONCE (new_kitapBase, ~14k rows) and matches each book; every step
      tries all of the book's names before the next, weaker step:
        ISBN      the ISBN in the card was verified verbatim on the book's imprint page
@@ -42,7 +42,7 @@
      (new_kitap.new_resimurl, dated by the record) and the cover alternatives of the book's
      project (new_kapakalternatifi.new_Link, dated by CreatedOn); the NEWEST readable one wins
      (rule given by the user, 2026-09-20). The CRM stores paths, not bytes → CRM_IMAGE_ROOTS.
-  5. posts the result, with or without an image                POST /catalog/covers
+  5. posts the result, with or without an image                POST /v1/catalog/crm-lookups
 
 Only what is new or changed (kullanıcı kararı 2026-10-03): matching runs in memory for every book
 (one CRM read), but a book is read in full and posted only when it was never looked up, its match
@@ -51,7 +51,6 @@ records was modified / its project got a cover alternative after the last lookup
 posts every book (first fill, or after a rule change).
 
 Read-only on the CRM. Configuration comes from the environment:
-  EDITOR_API, EDITOR_MCP_KEY      editor MCP endpoint + key, or
   EDITOR_CATALOG_BASE, EDITOR_CATALOG_KEY   the card service (test host timer: scripts/server/editor-crm-connector.*)
   CRM_CONNECTION_JSON             path of {host, port, user, password, database}
   CRM_IMAGE_ROOTS                 JSON: how a stored path becomes a readable location,
@@ -108,18 +107,15 @@ def names(s: str | None) -> list[str]:
     return [x.strip() for x in re.split(r"\s*[,;/&]\s*|\s+ve\s+", s or "") if x.strip()]
 
 
-# İki yoldan biri: editörün MCP'si (EDITOR_API + EDITOR_MCP_KEY; /catalog/...) ya da kart servisi
-# (EDITOR_CATALOG_BASE + EDITOR_CATALOG_KEY; /v1/catalog/...) — test sunucusundaki zamanlayıcı kart servisi
+# Kart servisi (EDITOR_CATALOG_BASE + EDITOR_CATALOG_KEY; /v1/catalog/...) — test sunucusundaki zamanlayıcı kart servisi
 # tünelini ve köprünün zaten tuttuğu anahtarı kullanır, yeni anahtar taşınmaz.
-PATHS = {"requests": ("/catalog/cover-requests", "/v1/catalog/cover-requests"),
-         "store": ("/catalog/covers", "/v1/catalog/crm-lookups")}
+PATHS = {"requests": "/v1/catalog/cover-requests", "store": "/v1/catalog/crm-lookups"}
 
 
 def api(path: str, payload: dict | None = None) -> dict:
-    via_cards = not os.environ.get("EDITOR_API") and bool(os.environ.get("EDITOR_CATALOG_BASE"))
-    base = (os.environ["EDITOR_CATALOG_BASE"] if via_cards else os.environ["EDITOR_API"]).rstrip("/")
-    key = os.environ["EDITOR_CATALOG_KEY"] if via_cards else os.environ["EDITOR_MCP_KEY"]
-    path = PATHS[path][1 if via_cards else 0] if path in PATHS else path
+    base = os.environ["EDITOR_CATALOG_BASE"].rstrip("/")
+    key = os.environ["EDITOR_CATALOG_KEY"]
+    path = PATHS.get(path, path)
     req = urllib.request.Request(base + path,
                                  data=json.dumps(payload).encode() if payload is not None else None,
                                  headers={"authorization": "Bearer " + key, "content-type": "application/json"})

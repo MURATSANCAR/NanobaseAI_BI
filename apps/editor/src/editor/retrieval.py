@@ -124,22 +124,6 @@ async def search_book_evidence(generation_id: str, query: str, k: int = 8,
     return out
 
 
-def search_character_history(generation_id: str, name: str) -> dict:
-    from . import read_model
-    return read_model.character_history(generation_id, name)
-
-
-async def search_universe_canon(universe: str, query: str, k: int = 8) -> list[dict]:
-    """Only editor-approved, non-superseded canon entries are searchable."""
-    rows = db.all_rows("SELECT id, kind, key, value, approved_by, approved_at FROM canon_entry "
-                       "WHERE universe=%s AND superseded_by IS NULL", universe)
-    if not rows or not query.strip():
-        return rows[:k]
-    texts = [f"{r['kind']} {r['key']}: {r['value']}" for r in rows]
-    ranked = await rerank_evidence(query, texts)
-    return [{**rows[r["index"]], "rerank_score": round(r["score"], 4)} for r in ranked[:k]]
-
-
 # ------------------------------------------------------------------ eski yapı anahtarının noktaları
 # Her yeniden üretim (yeni bilgi revizyonu) dizini yeni bir `build_key` altında yazar; okuyucu yalnız DB'deki güncel
 # anahtarı sorar. Eski anahtarın noktaları silinmiyordu: yeniden üretilen kitapta koleksiyon iki katına çıkıyordu

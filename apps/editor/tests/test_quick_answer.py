@@ -1,4 +1,4 @@
-"""Kitaba sor hızlı yolu: kitap adı eşleşmesi, bağlam bütçesi ve ajana devretme işareti."""
+"""Kitaba sor: kitap adı eşleşmesi, bağlam bütçesi, derin okuma (ikinci ve son çağrı)."""
 import asyncio
 
 import pytest
@@ -43,19 +43,31 @@ class _Resp:
         return {"choices": [{"message": {"content": self._c}, "finish_reason": self._f}], "usage": {}}
 
 
+class _Sent(list):
+    pass
+
+
 @pytest.fixture()
 def fake(monkeypatch):
-    sent = []
+    sent = _Sent()
 
-    async def ctx(q, t):
-        return "KAYIT", [{"crm_title": None, "title": "anne-terligi"}]
+    full = {"v": True}
+    deep_calls = []
+
+    async def ctx(q, t, deep=False):
+        deep_calls.append(deep)
+        return ("DERIN" if deep else "KAYIT"), [{"crm_title": None, "title": "anne-terligi"}], full["v"]
     monkeypatch.setattr(QA, "context", ctx)
 
-    def reply(content, **kw):
+    def reply(*answers, **kw):
+        queue = list(answers)
+
         async def post(path, req):
             sent.append(req)
-            return _Resp(content, **kw)
+            a = queue.pop(0) if len(queue) > 1 else queue[0]
+            return _Resp(*a) if isinstance(a, tuple) else _Resp(a, **kw)
         monkeypatch.setattr(QA.llm, "_post", post)
+    sent.full, sent.deep = full, deep_calls
     return sent, reply
 
 
@@ -67,11 +79,47 @@ def test_answer_is_one_call_without_thinking(fake):
     assert sent[0]["chat_template_kwargs"] == {"enable_thinking": False}
 
 
-@pytest.mark.parametrize("content,finish", [(QA.DEEPER, "stop"), ("yarım", "length"), ("", "stop")])
-def test_deeper_or_broken_answer_is_handed_to_agent(fake, content, finish):
-    _, reply = fake
-    reply(content, finish=finish)
-    assert asyncio.run(QA.answer("s.12'de ne oluyor?"))["handled"] is False
+@pytest.mark.parametrize("content,finish", [(QA.DEEPER, "stop"), ("yarım", "length"), ("", "stop"),
+                                            (QA.NOT_FOUND + " Kayıtta yok.", "stop")])
+def test_selected_book_gets_one_deep_read_call(fake, content, finish):
+    sent, reply = fake
+    reply((content, finish), ("Selen Demirtaş [s.2].", "stop"))
+    out = asyncio.run(QA.answer("Kitabı kim çevirdi?", "anne-terligi"))
+    assert out["handled"] and out["deep"] and out["answer"] == "Selen Demirtaş [s.2]."
+    assert len(sent) == 2 and sent.deep == [False, True]
+    assert sent[1]["max_tokens"] == QA.DEEP_ANSWER_TOKENS and sent[1]["messages"][0]["content"] == QA.DEEP_SYSTEM
+    assert "DERIN" in sent[1]["messages"][1]["content"]
+
+
+def test_deep_read_never_asks_for_a_third_call(fake):
+    sent, reply = fake
+    reply((QA.DEEPER, "stop"), (QA.DEEPER, "stop"))
+    out = asyncio.run(QA.answer("Neden?", "anne-terligi"))
+    assert out["handled"] and out["not_found"] and len(sent) == 2 and QA.DEEPER not in out["answer"]
+    assert QA.DEEPER not in QA.DEEP_SYSTEM
+
+
+def test_cut_deep_answer_is_kept_with_a_note(fake):
+    sent, reply = fake
+    reply(("", "length"), ("Uzun liste", "length"))
+    out = asyncio.run(QA.answer("Karakterler kim?", "anne-terligi"))
+    assert out["handled"] and out["answer"].startswith("Uzun liste") and QA.CUT_NOTE in out["answer"]
+
+
+def test_library_question_does_not_deep_read(fake):
+    sent, reply = fake
+    sent.full["v"] = False
+    reply((QA.DEEPER, "stop"))
+    out = asyncio.run(QA.answer("Hangi kitapta deniz var?"))
+    assert out["handled"] and out["answer"] == QA.LIBRARY_DEEPER and len(sent) == 1
+
+
+def test_model_error_is_reported_not_answered(fake, monkeypatch):
+    async def post(path, req):
+        return _Resp("bad gateway", status=502)
+    monkeypatch.setattr(QA.llm, "_post", post)
+    out = asyncio.run(QA.answer("Karakterler kim?", "anne-terligi"))
+    assert out["handled"] is False and out["reason"] == "MODEL_UNAVAILABLE"
 
 
 def test_not_found_is_flagged(fake):
@@ -179,3 +227,19 @@ def test_fit_shares_room_when_cards_alone_do_not_fit(monkeypatch):
     text = QA.fit(cards, [[], []], room=400)
     assert "KİTAP A satır 0" in text and "KİTAP B satır 0" in text
     assert text.count("satır daha alınmadı") == 2 and len(text) < 600
+
+
+def test_deep_read_blocks_carry_imprint_pages_and_chapters(monkeypatch):
+    from editor import catalog
+    monkeypatch.setattr(catalog, "metadata_pages", lambda gid: [1, 2])
+    monkeypatch.setattr(QA.source, "load", lambda c, gid, p: [{"spans": [{"text": "ÇEVİRİ Selen Demirtaş"}]}]
+                        if p == 2 else [{"spans": []}])
+    monkeypatch.setattr(QA.read_model, "artifact", lambda c, gid, kind: {"artifact": {"content": {"chapters": [
+        {"title": "BÖReKlEr, KrEdİ KaRtI", "page_from": 7, "page_to": 30}, {"title": "Son", "page_from": 31,
+                                                                          "page_to": 40}, "bozuk"]}}})
+    b = {"generation_id": "g"}
+    assert QA.front_block(b, None) == "KÜNYE SAYFALARI:\n- s.2: ÇEVİRİ Selen Demirtaş"
+    ch = QA.chapter_block(b, None).split("\n")
+    assert ch[0] == "BÖLÜMLER (sırasıyla):" and ch[1].startswith("- Börekler") and ch[2] == "- Son [s.31-40]"
+    monkeypatch.setattr(QA.read_model, "artifact", lambda c, gid, kind: {"artifact": None})
+    assert QA.chapter_block(b, None) == ""

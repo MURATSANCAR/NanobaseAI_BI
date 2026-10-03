@@ -7,7 +7,7 @@ from typing import Any
 def without_thinking(payload: dict[str, Any]) -> bool:
     """Sohbet isteğinde modelin düşünme kipini kapatır (istemci açıkça belirtmediyse). Gövde değiştiyse True.
 
-    Kitap sorusu kayıttan ve araç çağrılarıyla cevaplanır; her turdaki uzun akıl yürütme cevabı dakikalarca
+    Kitap sorusu kayıttan cevaplanır; uzun akıl yürütme cevabı dakikalarca
     geciktiriyordu (2026-09-30 ölçümü: tek soruda 18 bin düşünme token'ı)."""
     kwargs = payload.get("chat_template_kwargs")
     if kwargs is None:

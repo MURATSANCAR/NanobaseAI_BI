@@ -193,7 +193,7 @@ async def run_all(generation_id: str, only: list[str] | None = None, *, resume: 
 
 
 def latest(generation_id: str) -> dict:
-    """The newest run of every check and its findings (what a screen or Hermes reads)."""
+    """The newest run of every check and its findings (what a screen reads)."""
     runs = db.all_rows("SELECT DISTINCT ON (check_name) * FROM proof_run WHERE generation_id=%s"
                        " ORDER BY check_name, started_at DESC", generation_id)
     return {r["check_name"]: {"run": r, "findings": db.all_rows(

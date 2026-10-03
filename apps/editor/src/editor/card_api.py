@@ -48,10 +48,16 @@ def audit_outbox_ack(body: dict = Body(...)):
 def book_cards():
     return {'items':cards(),'read_only':True}
 
+@app.get('/v1/books/ask/books')
+def book_ask_books():
+    """Kitaba sor ekranındaki okunmuş kitap listesi (editor.quick_answer.library; model çağrısı yok)."""
+    from . import quick_answer
+    return {'items': quick_answer.titles()}
+
 @app.post('/v1/books/ask')
 async def book_ask(body: dict = Body(...)):
-    """Kitaba sor hızlı yolu (editor.quick_answer): kayıttan tek model çağrısı. handled=false ise köprü soruyu
-    sohbet ajanına verir. Salt okunur; defterde yazma yok."""
+    """Kitaba sor (editor.quick_answer): kayıttan tek model çağrısı, yetmezse künye/bölüm/metinle bir derin okuma
+    çağrısı. handled=false yalnız kitap yokken ya da model cevap vermediğinde. Salt okunur; defterde yazma yok."""
     from . import quick_answer
     history = body.get('history') if isinstance(body.get('history'), list) else None
     try:
@@ -469,7 +475,7 @@ def catalog_cover_requests():
 def catalog_crm_lookup(body: dict = Body(...)):
     """Bağlayıcının bir kitap için CRM eşleşmesi: yayınevi kaydı (yazar, özet, okur kitlesi, yaş, tür) ve kapak
     sonucu. Kart servisinin ikinci yazma ucudur; yazdığı kitabın metni değil, yayınevinin kendi kaydıdır
-    (editor.catalog.store_crm_lookup — MCP'deki /catalog/covers ile aynı işlev)."""
+    (editor.catalog.store_crm_lookup)."""
     from . import catalog
     if not isinstance(body,dict) or not body.get('book_id') or not body.get('outcome'):
         raise HTTPException(422,'book_id ve outcome gerekli')

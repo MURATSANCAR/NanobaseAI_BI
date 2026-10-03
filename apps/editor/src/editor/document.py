@@ -543,26 +543,3 @@ def page_text_numbered(generation_id: str, page_no: int) -> str:
         return "(sayfa yok)"
 
 
-def get_page_bundle(generation_id: str, page_no: int) -> dict:
-    """Everything the ledger knows about one page (no image bytes)."""
-    gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
-    if gen is None:
-        raise KeyError(f"generation {generation_id} not found")
-    page = db.one("SELECT page_no, width_pt, height_pt, text_layer_chars, image_count, needs_ocr,"
-                  " render_path FROM page WHERE book_version_id=%s AND page_no=%s",
-                  gen["book_version_id"], page_no)
-    reading = source.read(generation_id,page_no)[0]
-    return {
-        "page": page,
-        "source_reading": reading,
-        "paragraphs": reading["spans"],
-        "legacy_paragraphs": db.all_rows("SELECT idx, text, source FROM paragraph WHERE generation_id=%s"
-                                  " AND page_no=%s ORDER BY idx", generation_id, page_no),
-        "ocr": db.one("SELECT text FROM page_text WHERE generation_id=%s AND page_no=%s AND "
-                      "source='OCR'", generation_id, page_no),
-        "scans": db.all_rows("SELECT pass, alias, uncertain, uncertainty_reasons, result FROM "
-                             "page_scan WHERE generation_id=%s AND page_no=%s ORDER BY pass",
-                             generation_id, page_no),
-        "regions": db.all_rows("SELECT id, label, kind, bbox, description FROM visual_region "
-                               "WHERE generation_id=%s AND page_no=%s", generation_id, page_no),
-    }

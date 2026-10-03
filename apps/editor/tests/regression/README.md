@@ -1,6 +1,6 @@
 # Regression
 
-`run_regression_suite` (book_quality_mcp) runs after every analysis
+`run_regression_suite` (editor.quality) runs after every analysis
 (NIHAI-KARAR.md §7). It always checks the quality-rule invariants; per-book
 golden expectations live in `books/<sha256[:16]>.yaml`:
 

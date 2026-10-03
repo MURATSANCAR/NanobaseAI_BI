@@ -24,7 +24,7 @@ def G(monkeypatch):
     monkeypatch.setenv("EDITOR_MODELS_YAML", str(Path(__file__).resolve().parents[1] / "deploy" / "models.yaml"))
     monkeypatch.setenv("EDITOR_OVERFLOW_URL", "http://peer:8001")
     monkeypatch.setenv("EDITOR_OVERFLOW_MODEL", "nanobaseAI")
-    monkeypatch.setenv("EDITOR_OVERFLOW_CLIENTS", "editor-hermes")
+    monkeypatch.setenv("EDITOR_OVERFLOW_CLIENTS", "editor-cards")
     monkeypatch.delenv("EDITOR_OVERFLOW_ANALYSIS_CAP", raising=False)
     monkeypatch.delenv("EDITOR_OVERFLOW_ANALYSIS_BI_MAX", raising=False)
     sys.modules.pop("editor.gateway", None)
@@ -93,7 +93,7 @@ def test_other_alias_never_spills(G, monkeypatch):
 
 def test_interactive_rule_unchanged(G, monkeypatch):
     a = _setup(G, monkeypatch, up=True, local=5, peer=0)
-    monkeypatch.setattr(G, "_client_name", lambda _r: "editor-hermes")
+    monkeypatch.setattr(G, "_client_name", lambda _r: "editor-cards")
     assert not _ask(G, a)                       # yönetici ayaktayken etkileşimli soru yerelde kalır
 
 
