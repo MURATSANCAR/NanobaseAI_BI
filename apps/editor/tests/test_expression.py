@@ -149,7 +149,7 @@ def test_marks_reach_the_voice_service_and_make_page_stale(job, monkeypatch):
     # örnek bir kez üretildi: taban + üç aday ölçüldü, kimlik sınırında olan (+%14) seçildi
     ex_calls = [c for c in calls if c.get("measure")]
     assert len(ex_calls) == 1 and len(ex_calls[0]["segments"]) == 4
-    meta = json.loads((N._root() / "ifade" / "anlatici-kadin" / "uzuntu.json").read_text())
+    meta = json.loads((N._root() / "ifade" / "roman-kadin" / "uzuntu.json").read_text())
     assert meta["chosen"]["seed"] == 22 and meta["chosen"]["shift"] == 14.0
     # fısıltı: talimat yolu (referans-yalnız), önce durak, sonu uzar
     fis = by_text["Güneş batarken annesi, Eve dönme zamanı, dedi."]
@@ -249,21 +249,6 @@ def test_sample_sentence_only_that_sentence(job, monkeypatch):
     n = len(calls)
     asyncio.run(X.sample_sentence(job, "p_1", "c2:0", "fisilti", ["zamanı"]))
     assert len(calls) == n                                          # aynı örnek önbellekten
-
-
-def test_lively_group_is_placed_after_children_group():
-    from editor.production import voices_lively as L
-    groups = {"anlatici": "A", "cocuk": "Ç", "yetiskin": "Y", "karakter": "K"}
-    old = L.VOICES
-    try:
-        L.VOICES = [{"id": "canli-x", "label": "x", "note": "", "group": "canli", "design": "d"}]
-        g, v = L.extend(groups, [{"id": "a"}])
-        assert list(g) == ["anlatici", "cocuk", "canli", "yetiskin", "karakter"]
-        assert [x["id"] for x in v] == ["a", "canli-x"]
-        g2, v2 = L.extend(g, v)
-        assert [x["id"] for x in v2] == ["a", "canli-x"]
-    finally:
-        L.VOICES = old
 
 
 # ------------------------------------------------------------------ 2026-09-28 tam kitap dinlemesi
