@@ -50,7 +50,14 @@ _md = sa.MetaData()
 
 
 def _seal_cols() -> list[sa.Column]:
-    return [sa.Column("seal_seq", sa.BigInteger), sa.Column("seal", sa.String(64))]
+    # source: kaydı üreten sistem (boş = portal köprüsü; edge, sohbet, destek, editor). ext_id: o sistemin kendi
+    # olay kimliği — aynı olay ikinci kez gönderilirse (ağ kopması, yeniden deneme) çift yazılmaz.
+    return [sa.Column("source", sa.String(24), index=True), sa.Column("ext_id", sa.String(120)),
+            sa.Column("seal_seq", sa.BigInteger), sa.Column("seal", sa.String(64))]
+
+
+def _ext_index(name: str) -> sa.Index:
+    return sa.Index(f"ux_{name}_ext", "source", "ext_id", unique=True, postgresql_where=sa.text("ext_id IS NOT NULL"))
 
 
 REQUESTS = sa.Table(
@@ -77,6 +84,7 @@ REQUESTS = sa.Table(
     sa.Column("files", sa.Text),                    # çok parçalı yüklemede alan + dosya adları (JSON)
     *_seal_cols(),
     sa.Index("ix_semantic_audit_requests_unsealed", "id", postgresql_where=sa.text("seal IS NULL")),
+    _ext_index("semantic_audit_requests"),
 )
 
 ROWS = sa.Table(
@@ -95,6 +103,7 @@ ROWS = sa.Table(
     *_seal_cols(),
     sa.Index("ix_semantic_audit_rows_record", "tbl", "pk"),
     sa.Index("ix_semantic_audit_rows_unsealed", "id", postgresql_where=sa.text("seal IS NULL")),
+    _ext_index("semantic_audit_rows"),
 )
 
 UI = sa.Table(
@@ -112,6 +121,16 @@ UI = sa.Table(
     sa.Column("detail", sa.Text),
     *_seal_cols(),
     sa.Index("ix_semantic_audit_ui_unsealed", "id", postgresql_where=sa.text("seal IS NULL")),
+    _ext_index("semantic_audit_ui"),
+)
+
+#: Dış kaynaktan okumanın kaldığı yer (kenar logu: dosya kimliği + bayt; editör: giden kutusu sırası).
+CURSORS = sa.Table(
+    "semantic_audit_cursor", _md,
+    sa.Column("source", sa.String(40), primary_key=True),
+    sa.Column("pos", sa.Text, nullable=False),
+    sa.Column("at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("error", sa.Text),
 )
 
 SEALS = sa.Table(
@@ -131,7 +150,7 @@ SEALED = ("semantic_audit", "semantic_audit_requests", "semantic_audit_rows", "s
 #: Satır tetikleyicisi kurulmayan tablolar: denetim/güvenlik kayıtlarının kendisi ve kendisi zaten kayıt olan
 #: sıra/iz tabloları (soru kaydı promt izleyicide, model sırası kendi ekranında).
 _NO_ROW_TRIGGER = frozenset({
-    *SEALED, "semantic_audit_seal",
+    *SEALED, "semantic_audit_seal", "semantic_audit_cursor",
     "sl_query_log", "sl_llm_queue", "sl_llm_job", "sl_llm_gate", "sl_schema_stamp",
     "alembic_version", "nanobase_alembic_version",
     "semantic_security_logins", "semantic_security_access", "semantic_security_state", "semantic_security_retention_runs",
@@ -454,8 +473,15 @@ def _ensure(engine: sa.engine.Engine) -> None:
             return
         with engine.begin() as c:
             for col, typ in (("rid", "varchar(32)"), ("ip", "varchar(64)"), ("ua", "text"), ("page", "text"),
-                             ("seal_seq", "bigint"), ("seal", "varchar(64)")):
+                             ("seal_seq", "bigint"), ("seal", "varchar(64)"), ("source", "varchar(24)"),
+                             ("ext_id", "varchar(120)")):
                 c.exec_driver_sql(f"ALTER TABLE semantic_audit ADD COLUMN IF NOT EXISTS {col} {typ}")
+            for t in ("semantic_audit_requests", "semantic_audit_rows", "semantic_audit_ui"):
+                for col, typ in (("source", "varchar(24)"), ("ext_id", "varchar(120)")):
+                    c.exec_driver_sql(f"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS {col} {typ}")
+            for t in SEALED:
+                c.exec_driver_sql(f"CREATE INDEX IF NOT EXISTS ix_{t}_source ON {t} (source)")
+                c.exec_driver_sql(f"CREATE UNIQUE INDEX IF NOT EXISTS ux_{t}_ext ON {t} (source, ext_id) WHERE ext_id IS NOT NULL")
             c.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_semantic_audit_rid ON semantic_audit (rid)")
             c.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_semantic_audit_unsealed ON semantic_audit (id) WHERE seal IS NULL")
             c.exec_driver_sql(_ROW_FN.replace("%", "%%"))  # psycopg2 parametresiz de % biçimler
@@ -474,7 +500,7 @@ def _ensure(engine: sa.engine.Engine) -> None:
         admin_mod.AUDIT.create(engine, checkfirst=True)
         install()
 
-    schema_stamp.run(engine, list(_md.sorted_tables), install_all, name="audit_trail", extra="v1:" + _ROW_FN)
+    schema_stamp.run(engine, list(_md.sorted_tables), install_all, name="audit_trail", extra="v2:" + _ROW_FN)
 
 
 _TRIGGER_SQL = """
@@ -671,7 +697,7 @@ def _loop() -> None:
 
 
 def _maintenance() -> None:
-    last_seal = last_trig = last_replay = 0.0
+    last_seal = last_trig = last_replay = last_pull = 0.0
     last_verify: Optional[float] = None
     while not _stop.is_set():
         _stop.wait(5.0)
@@ -689,6 +715,15 @@ def _maintenance() -> None:
             if now - last_replay > 300:
                 last_replay = now
                 _replay_spool(eng)
+            if now - last_pull > 30:
+                last_pull = now
+                with _advisory(eng, 72113) as got:
+                    if got:
+                        try:
+                            ship_edge(eng)
+                        except Exception as e:  # noqa: BLE001
+                            log.warning("denetim: kenar logu okunamadı: %s", e)
+                        pull_editor(eng)
             if now - last_seal > 60:
                 last_seal = now
                 with _advisory(eng, 72111) as got:
@@ -876,6 +911,233 @@ def note_purge(conn: sa.engine.Connection, name: str, ids: list[int]) -> None:
                      .values(anchor_seq=top[0], anchor_hash=top[1]))
 
 
+# ------------------------------------------------------------------ merkez: öteki sistemlerden gelen kayıt
+
+#: Merkeze kayıt gönderen sistemler. Ekranda kaynak adıyla görünür.
+SOURCES = {"portal": "Portal", "edge": "Portal kapısı", "sohbet": "Zeki AI sohbet", "destek": "ZEKİ AI Destek",
+           "editor": "Editör", "giris": "Portal girişi"}
+_INGEST_TYPES = ("request", "row", "action", "ui")
+
+
+def _dt(v: Any) -> datetime:
+    if isinstance(v, (int, float)):
+        return datetime.fromtimestamp(float(v) / (1000 if v > 1e11 else 1), tz=timezone.utc)
+    d = _parse_dt(str(v)) if v else None
+    return d or _now()
+
+
+def _txt(v: Any) -> Optional[str]:
+    if v is None or v == "":
+        return None
+    return v if isinstance(v, str) else json.dumps(mask(v), ensure_ascii=False, default=str)
+
+
+def _ingest_row(source: str, e: dict) -> tuple[sa.Table, dict]:
+    """Dış olayı merkez tablosunun satırına çevirir. Gövde/satır içeriği burada da maskelenir (kaynak unutsa bile)."""
+    from semantic_bridge import admin as admin_mod
+
+    t = e.get("type")
+    base = {"source": source, "ext_id": (str(e["id"])[:120] if e.get("id") not in (None, "") else None), "at": _dt(e.get("at"))}
+    actor = (str(e.get("actor") or "").strip() or None)
+    if t == "request":
+        body = e.get("body")
+        return REQUESTS, {**base, "rid": str(e.get("rid") or new_rid())[:32], "actor": actor and actor[:120],
+                          "session": (str(e.get("session"))[:16] if e.get("session") else None),
+                          "ip": e.get("ip"), "ua": e.get("ua"), "method": str(e.get("method") or "GET")[:8].upper(),
+                          "path": str(e.get("path") or ""), "query": e.get("query") or None, "page": e.get("page") or None,
+                          "module": e.get("module") or None, "kind": str(e.get("kind") or ("read" if str(e.get("method") or "GET").upper() in ("GET", "HEAD") else "write"))[:12],
+                          "status": e.get("status"), "ms": e.get("ms"), "req_bytes": e.get("reqBytes"),
+                          "resp_bytes": e.get("respBytes"), "content_type": (str(e.get("contentType"))[:200] if e.get("contentType") else None),
+                          "body": None if body in (None, "") else json.dumps(mask(body), ensure_ascii=False, default=str) if not isinstance(body, str) else body,
+                          "files": _txt(e.get("files"))}
+    if t == "row":
+        return ROWS, {**base, "rid": (str(e.get("rid"))[:32] if e.get("rid") else None), "actor": actor and actor[:120],
+                      "tbl": str(e.get("table") or "?")[:120], "op": str(e.get("op") or "?")[:8].upper(),
+                      "pk": _txt(e.get("pk")), "changed": _txt(e.get("changed")),
+                      "old_row": _txt(e.get("old")), "new_row": _txt(e.get("new")), "txid": None}
+    if t == "ui":
+        return UI, {**base, "client_at": None, "actor": actor or "?", "session": None, "ip": e.get("ip"), "ua": e.get("ua"),
+                    "page": e.get("page"), "event": str(e.get("event") or "click")[:16], "label": e.get("label"),
+                    "detail": _txt(e.get("detail"))}
+    return admin_mod.AUDIT, {**base, "actor": admin_mod.system_actor(actor)[:120], "action": str(e.get("action") or "run")[:16],
+                             "kind": str(e.get("kind") or source)[:24], "object_id": (str(e["objectId"])[:120] if e.get("objectId") else None),
+                             "title": (str(e["title"])[:300] if e.get("title") else None), "detail": _txt(e.get("detail")),
+                             "rid": (str(e.get("rid"))[:32] if e.get("rid") else None), "ip": e.get("ip"), "ua": e.get("ua"),
+                             "page": e.get("page")}
+
+
+def ingest(engine: sa.engine.Engine, source: str, events: Any) -> dict[str, int]:
+    """Öteki sistemin olaylarını merkeze yazar; dönen sayı yazılan (yeni) olaydır. Aynı `id` ikinci kez gelirse
+    sessizce atlanır — gönderen taraf ancak bu cevabı aldıktan sonra kendi giden kutusundan siler."""
+    source = re.sub(r"[^a-z0-9_-]", "", str(source or "").lower())[:24]
+    if not source or source == "portal":
+        raise ValueError("Kaynak adı geçersiz.")
+    if not isinstance(events, list):
+        raise ValueError("Olay listesi bekleniyordu.")
+    ensure(engine)
+    groups: dict[str, tuple[sa.Table, list[dict]]] = {}
+    for e in events:
+        if not isinstance(e, dict) or e.get("type") not in _INGEST_TYPES:
+            continue
+        T, row = _ingest_row(source, e)
+        groups.setdefault(T.name, (T, []))[1].append(row)
+    written = 0
+    with engine.begin() as c:
+        for T, rows in groups.values():
+            if engine.dialect.name == "postgresql":
+                from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+                stmt = pg_insert(T).on_conflict_do_nothing(index_elements=["source", "ext_id"],
+                                                            index_where=sa.text("ext_id IS NOT NULL"))
+                written += sum(c.execute(stmt, [r]).rowcount or 0 for r in rows)
+            else:
+                c.execute(T.insert(), rows)
+                written += len(rows)
+    return {"received": len(events), "written": written}
+
+
+def _cursor_get(engine: sa.engine.Engine, source: str) -> Optional[str]:
+    with engine.connect() as c:
+        return c.execute(sa.select(CURSORS.c.pos).where(CURSORS.c.source == source)).scalar()
+
+
+def _cursor_set(engine: sa.engine.Engine, source: str, pos: str, error: Optional[str] = None) -> None:
+    with engine.begin() as c:
+        if c.execute(CURSORS.update().where(CURSORS.c.source == source).values(pos=pos, at=_now(), error=error)).rowcount == 0:
+            c.execute(CURSORS.insert().values(source=source, pos=pos, at=_now(), error=error))
+
+
+# ------------------------------------------------------------------ kenar: nginx'in kişili istek logu
+
+#: nginx `log_format nb_audit` satırları (deploy/nanobase-direct/nginx-audit-log.conf). Köprüye giden istekleri köprü
+#: kendisi daha ayrıntılı yazar; kenar logundan yalnız köprü dışındaki yollar (sayfa açılışı, sohbet, giriş, Destek
+#: kapısı, analiz) alınır. Derleme dosyaları (js/css/görsel) kişinin işi değildir, alınmaz.
+_EDGE_SKIP = re.compile(r"^/timas/api/|^/_timas_|\.(?:js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf)(?:\?|$)|^/timas/sohbet/(?:sockjs|websocket)/")
+
+
+def edge_log_path() -> str:
+    return os.environ.get("AUDIT_EDGE_LOG", "/var/log/nanobase-audit/edge.log")
+
+
+def ship_edge(engine: sa.engine.Engine) -> int:
+    """Kenar logunu kaldığı yerden okur. Dosya döndürülürse (logrotate) yeni dosyanın başından başlar; önceki
+    dosyanın okunmamış sonu `.1`'den tamamlanır."""
+    path = edge_log_path()
+    if not os.path.exists(path):
+        return 0
+    st = os.stat(path)
+    pos = _cursor_get(engine, "edge") or ""
+    ino, off = (pos.split(":", 1) + ["0"])[:2] if pos else ("", "0")
+    total = 0
+    if ino and ino != str(st.st_ino) and os.path.exists(path + ".1") and str(os.stat(path + ".1").st_ino) == ino:
+        total += _ship_edge_file(engine, path + ".1", int(off), lambda n: None)
+        off = "0"
+    elif ino != str(st.st_ino):
+        off = "0"
+    start = int(off) if int(off) <= st.st_size else 0
+    total += _ship_edge_file(engine, path, start, lambda n: _cursor_set(engine, "edge", f"{st.st_ino}:{n}"))
+    return total
+
+
+def _ship_edge_file(engine: sa.engine.Engine, path: str, start: int, save: Callable[[int], None]) -> int:
+    n = 0
+    with open(path, "rb") as f:
+        f.seek(start)
+        while True:
+            batch, events = f.tell(), []
+            for _ in range(2000):              # parti boyu tavan değildir: dosya sonuna kadar döner
+                line = f.readline()
+                if not line or not line.endswith(b"\n"):
+                    if line:
+                        f.seek(-len(line), os.SEEK_CUR)   # yarım satır: nginx henüz bitirmedi
+                    break
+                ev = _edge_event(line)
+                if ev:
+                    events.append(ev)
+            if f.tell() == batch:
+                return n
+            if events:
+                n += ingest(engine, "edge", events)["written"]
+            save(f.tell())
+
+
+def _edge_event(line: bytes) -> Optional[dict]:
+    try:
+        d = json.loads(line.decode("utf-8", "replace"))
+    except ValueError:
+        return None
+    uri = str(d.get("p") or "")
+    if _EDGE_SKIP.search(uri):
+        return None
+    path, _, query = uri.partition("?")
+    status = int(d.get("s") or 0)
+    return {"type": "request", "id": d.get("rid"), "at": d.get("t"), "actor": d.get("u") or None, "ip": d.get("ip"),
+            "ua": d.get("ua") or None, "method": d.get("m"), "path": path, "query": query or None,
+            "page": _page_of(d.get("ref") or "") , "module": d.get("h"), "status": status,
+            "ms": int(float(d.get("rt") or 0) * 1000), "respBytes": d.get("b"),
+            "kind": "denied" if status in (401, 403) else "error" if status >= 500 else
+                    ("read" if str(d.get("m")).upper() in ("GET", "HEAD") else "write") if d.get("u") else "public"}
+
+
+# ------------------------------------------------------------------ editör (GPU): giden kutusunu çek
+
+def pull_editor(engine: sa.engine.Engine) -> int:
+    """Editörün `ed.audit_outbox`'ını kart servisi üzerinden çeker (`GET /v1/audit/outbox?after=`), merkeze yazar,
+    sonra onaylar (`POST /v1/audit/outbox/ack`). Bağlantı tanımlı değilse sessiz geçer; hata imleç satırına yazılır."""
+    if not os.environ.get("EDITOR_CATALOG_BASE"):
+        return 0
+    from semantic_bridge import editorial_cards as EC
+
+    total = 0
+    try:
+        base, headers, ca = EC._headers()
+        cl = EC._client(ca)
+        while True:
+            r = cl.get(base + "/v1/audit/outbox", params={"limit": 1000}, headers=headers)
+            if r.status_code == 404:
+                return total                       # editör bu sürümde giden kutusu taşımıyor
+            r.raise_for_status()
+            items = r.json().get("items") or []
+            if not items:
+                break
+            total += ingest(engine, "editor", items)["written"]
+            upto = max(int(i["seq"]) for i in items)
+            cl.post(base + "/v1/audit/outbox/ack", json={"upto": upto}, headers=headers).raise_for_status()
+            _cursor_set(engine, "editor", str(upto))
+            if len(items) < 1000:
+                break
+    except Exception as e:  # noqa: BLE001
+        log.warning("denetim: editör kayıtları çekilemedi: %s", e)
+        try:
+            _cursor_set(engine, "editor", _cursor_get(engine, "editor") or "0", error=str(e)[:500])
+        except Exception:  # noqa: BLE001
+            pass
+    return total
+
+
+def sources_state(engine: sa.engine.Engine) -> list[dict[str, Any]]:
+    """Her kaynağın son kaydı ve okuma durumu (Yönetim ekranındaki «kaynaklar» şeridi)."""
+    from semantic_bridge import admin as admin_mod
+
+    out = []
+    with engine.connect() as c:
+        cur = {r["source"]: r for r in c.execute(sa.select(CURSORS)).mappings()}
+        for key, label in SOURCES.items():
+            if key == "giris":
+                continue
+            last, n = None, 0
+            for T in (REQUESTS, ROWS, UI, admin_mod.AUDIT):
+                cond = T.c.source.is_(None) if key == "portal" else T.c.source == key
+                lo, cnt = c.execute(sa.select(sa.func.max(T.c.at), sa.func.count()).where(cond)).one()
+                n += int(cnt or 0)
+                if lo and (last is None or lo > last):
+                    last = lo
+            cr = cur.get(key)
+            out.append({"source": key, "label": label, "count": n, "last": _iso(last),
+                        "error": cr["error"] if cr else None, "readAt": _iso(cr["at"]) if cr else None})
+    return out
+
+
 # ------------------------------------------------------------------ ekran olayları
 
 
@@ -908,7 +1170,7 @@ def ui_events(user: str, cookie: str, ip: Optional[str], ua: Optional[str], body
 
 # ------------------------------------------------------------------ okuma (Yönetim → Denetim kaydı)
 
-TYPES = ("ui", "request", "row", "action")
+TYPES = ("ui", "request", "row", "action", "login")
 
 
 def _parse_dt(v: Optional[str]) -> Optional[datetime]:
@@ -937,35 +1199,45 @@ def _jl(v: Optional[str]) -> Any:
 
 
 def _selects(types: list[str], actor: Optional[str], since: Optional[datetime], until: Optional[datetime],
-             q: Optional[str], reads: Any, tbl: Optional[str], module: Optional[str]) -> list[Any]:
-    """`reads`: False = okuma istekleri yok, True = hepsi, "only" = yalnız okuma."""
+             q: Optional[str], reads: Any, tbl: Optional[str], module: Optional[str],
+             sources: Optional[list[str]] = None) -> list[Any]:
+    """`reads`: False = okuma istekleri yok, True = hepsi, "only" = yalnız okuma. `sources`: yalnız bu sistemler
+    (`portal` = köprünün kendi kaydı, kaynak kolonu boş)."""
     from semantic_bridge import admin as admin_mod
+    from semantic_bridge import data_security as ds_mod
 
     A = admin_mod.AUDIT
     like = f"%{q.strip()}%" if q and q.strip() else None
     parts = []
 
-    def common(T: sa.Table, stmt: Any, text_cols: list[Any]) -> Any:
+    def common(T: sa.Table, stmt: Any, text_cols: list[Any], actor_col: Any = None, has_source: bool = True) -> Any:
+        ac = actor_col if actor_col is not None else T.c.actor
         if actor:
-            stmt = stmt.where(T.c.actor == actor)
+            stmt = stmt.where(ac == actor)
         if since:
             stmt = stmt.where(T.c.at >= since)
         if until:
             stmt = stmt.where(T.c.at < until)
         if like:
             stmt = stmt.where(sa.or_(*[col.ilike(like) for col in text_cols]))
+        if sources and has_source:
+            conds = [T.c.source.in_([x for x in sources if x != "portal"])]
+            if "portal" in sources:
+                conds.append(T.c.source.is_(None))
+            stmt = stmt.where(sa.or_(*conds))
         return stmt
 
     null = sa.null()
+    src = lambda T: sa.func.coalesce(T.c.source, "portal").label("src")  # noqa: E731
     if "ui" in types and not tbl and not module:
         s = sa.select(sa.literal("ui").label("type"), UI.c.id, UI.c.at, UI.c.actor, sa.cast(null, sa.String).label("rid"),
                       UI.c.event.label("a"), UI.c.label.label("b"), UI.c.page.label("c"),
-                      sa.cast(null, sa.Integer).label("n"), UI.c.ip)
+                      sa.cast(null, sa.Integer).label("n"), UI.c.ip, src(UI))
         parts.append(common(UI, s, [UI.c.label, UI.c.page]))
     if "request" in types and not tbl:
         s = sa.select(sa.literal("request").label("type"), REQUESTS.c.id, REQUESTS.c.at, REQUESTS.c.actor, REQUESTS.c.rid,
                       REQUESTS.c.method.label("a"), REQUESTS.c.path.label("b"), REQUESTS.c.page.label("c"),
-                      REQUESTS.c.status.label("n"), REQUESTS.c.ip)
+                      REQUESTS.c.status.label("n"), REQUESTS.c.ip, src(REQUESTS))
         if reads == "only":
             s = s.where(REQUESTS.c.kind == "read")
         elif not reads:
@@ -976,15 +1248,23 @@ def _selects(types: list[str], actor: Optional[str], since: Optional[datetime], 
     if "row" in types and not module:
         s = sa.select(sa.literal("row").label("type"), ROWS.c.id, ROWS.c.at, ROWS.c.actor, ROWS.c.rid,
                       ROWS.c.op.label("a"), ROWS.c.tbl.label("b"), ROWS.c.pk.label("c"),
-                      sa.cast(null, sa.Integer).label("n"), sa.cast(null, sa.String).label("ip"))
+                      sa.cast(null, sa.Integer).label("n"), sa.cast(null, sa.String).label("ip"), src(ROWS))
         if tbl:
             s = s.where(ROWS.c.tbl == tbl)
         parts.append(common(ROWS, s, [ROWS.c.tbl, ROWS.c.pk, ROWS.c.old_row, ROWS.c.new_row]))
     if "action" in types and not tbl and not module:
         s = sa.select(sa.literal("action").label("type"), sa.cast(A.c.id, sa.BigInteger).label("id"), A.c.at, A.c.actor,
                       A.c.rid, A.c.action.label("a"), A.c.title.label("b"), A.c.kind.label("c"),
-                      sa.cast(null, sa.Integer).label("n"), A.c.ip)
+                      sa.cast(null, sa.Integer).label("n"), A.c.ip, src(A))
         parts.append(common(A, s, [A.c.title, A.c.object_id, A.c.detail]))
+    # Portal girişleri (giriş servisinin olayları, güvenlik modülü eşler): başarılı/başarısız giriş, çıkış.
+    if "login" in types and not tbl and not module and (not sources or "giris" in sources):
+        L = ds_mod.LOGINS
+        s = sa.select(sa.literal("login").label("type"), sa.cast(L.c.id, sa.BigInteger).label("id"), L.c.at,
+                      L.c.username.label("actor"), sa.cast(null, sa.String).label("rid"), L.c.reason.label("a"),
+                      sa.cast(L.c.ok, sa.String).label("b"), sa.cast(null, sa.String).label("c"),
+                      sa.cast(null, sa.Integer).label("n"), L.c.addr.label("ip"), sa.literal("giris").label("src"))
+        parts.append(common(L, s, [L.c.username, L.c.reason], actor_col=L.c.username, has_source=False))
     return parts
 
 
@@ -1003,7 +1283,7 @@ def _cursor(v: Optional[str]) -> Optional[tuple[datetime, str, int]]:
 def timeline(engine: sa.engine.Engine, *, types: Optional[list[str]] = None, actor: Optional[str] = None,
              since: Optional[str] = None, until: Optional[str] = None, q: Optional[str] = None, reads: Any = False,
              tbl: Optional[str] = None, module: Optional[str] = None, before: Optional[str] = None,
-             limit: int = 100) -> dict[str, Any]:
+             limit: int = 100, sources: Optional[list[str]] = None) -> dict[str, Any]:
     """Dört katman tek akışta, yeniden eskiye. `before` = önceki sayfanın `next` imleci. `limit` sayfa boyudur."""
     from semantic_bridge import admin as admin_mod
 
@@ -1012,7 +1292,10 @@ def timeline(engine: sa.engine.Engine, *, types: Optional[list[str]] = None, act
     limit = max(1, int(limit or 100))
     cur = _cursor(before)
     top = _parse_dt(until)
-    parts = _selects(types, actor, _parse_dt(since), top, q, reads, tbl, module)
+    from semantic_bridge import data_security as ds_mod
+
+    ds_mod.ensure(engine)
+    parts = _selects(types, actor, _parse_dt(since), top, q, reads, tbl, module, sources)
     if not parts:
         return {"items": [], "next": None}
     u = sa.union_all(*parts).subquery()
@@ -1026,8 +1309,10 @@ def timeline(engine: sa.engine.Engine, *, types: Optional[list[str]] = None, act
     items = []
     for r in rows[:limit]:
         item = {"type": r["type"], "id": r["id"], "at": _iso(r["at"]), "actor": admin_mod.system_actor(r["actor"]) if r["actor"] else None,
-                "rid": r["rid"], "ip": r["ip"]}
-        if r["type"] == "ui":
+                "rid": r["rid"], "ip": r["ip"], "source": r["src"], "sourceLabel": SOURCES.get(r["src"], r["src"])}
+        if r["type"] == "login":
+            item.update(event=r["a"], ok=r["b"] in ("true", "1", "t"))
+        elif r["type"] == "ui":
             item.update(event=r["a"], label=r["b"], page=r["c"])
         elif r["type"] == "request":
             item.update(method=r["a"], path=r["b"], page=r["c"], status=r["n"])
@@ -1075,7 +1360,7 @@ def request_dict(r: Any) -> dict[str, Any]:
     from semantic_bridge import admin as admin_mod
 
     return {"id": r["id"], "at": _iso(r["at"]), "rid": r["rid"], "actor": admin_mod.system_actor(r["actor"]) if r["actor"] else None,
-            "ip": r["ip"], "ua": r["ua"], "method": r["method"], "path": r["path"], "query": r["query"], "page": r["page"],
+            "source": r["source"] or "portal", "ip": r["ip"], "ua": r["ua"], "method": r["method"], "path": r["path"], "query": r["query"], "page": r["page"],
             "module": r["module"], "kind": r["kind"], "status": r["status"], "ms": r["ms"], "reqBytes": r["req_bytes"],
             "respBytes": r["resp_bytes"], "contentType": r["content_type"], "body": _jl(r["body"]), "files": _jl(r["files"]),
             "sealed": bool(r["seal"])}
@@ -1098,7 +1383,8 @@ def _mask_nested(row: Any) -> Any:
 
 
 def row_dict(r: Any) -> dict[str, Any]:
-    return {"id": r["id"], "at": _iso(r["at"]), "rid": r["rid"], "actor": r["actor"], "table": r["tbl"], "op": r["op"],
+    return {"id": r["id"], "at": _iso(r["at"]), "rid": r["rid"], "actor": r["actor"], "source": r["source"] or "portal",
+            "table": r["tbl"], "op": r["op"],
             "pk": _jl(r["pk"]), "changed": _jl(r["changed"]), "old": _mask_nested(_jl(r["old_row"])),
             "new": _mask_nested(_jl(r["new_row"])), "sealed": bool(r["seal"])}
 
@@ -1113,6 +1399,14 @@ def item_detail(engine: sa.engine.Engine, typ: str, item_id: int) -> Optional[di
     from semantic_bridge import admin as admin_mod
 
     ensure(engine)
+    if typ == "login":
+        from semantic_bridge import data_security as ds_mod
+
+        L = ds_mod.LOGINS
+        with engine.connect() as c:
+            r = c.execute(sa.select(L).where(L.c.id == item_id)).mappings().first()
+        return None if r is None else {"login": {"id": r["id"], "at": _iso(r["at"]), "actor": r["username"], "ok": bool(r["ok"]),
+                                                 "reason": r["reason"], "ip": r["addr"]}}
     T = {"ui": UI, "request": REQUESTS, "row": ROWS, "action": admin_mod.AUDIT}.get(typ)
     if T is None:
         return None
@@ -1180,6 +1474,7 @@ def stats(engine: sa.engine.Engine) -> dict[str, Any]:
     d = spool_dir()
     out["spooled"] = sum(1 for f in d.glob("*.jsonl") for _ in open(f, encoding="utf-8")) if d.is_dir() else 0
     out["queued"] = _q.qsize()
+    out["sources"] = sources_state(engine)
     return out
 
 

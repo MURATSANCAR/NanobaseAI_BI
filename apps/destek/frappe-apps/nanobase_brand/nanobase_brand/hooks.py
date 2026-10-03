@@ -38,8 +38,19 @@ before_migrate = ["nanobase_brand.install.eski_adlar"]
 after_install = "nanobase_brand.install.apply"
 after_migrate = ["nanobase_brand.install.apply"]
 
+# Merkezi denetim kaydı (portalın Yönetim → Denetim kaydı): nanobase_brand/denetim.py
+before_request = ["nanobase_brand.denetim.istek_basi"]
+after_request = ["nanobase_brand.denetim.istek"]
+
 # Yapay zekâ özellikleri: nanobase_brand/yz/
 doc_events = {
+	"*": {
+		"after_insert": "nanobase_brand.denetim.after_insert",
+		"on_update": "nanobase_brand.denetim.on_update",
+		"on_trash": "nanobase_brand.denetim.on_trash",
+		"on_submit": "nanobase_brand.denetim.on_submit",
+		"on_cancel": "nanobase_brand.denetim.on_cancel",
+	},
 	"HD Ticket": {
 		"after_insert": "nanobase_brand.yz.kanca.on_ticket_insert",
 		"on_update": "nanobase_brand.yz.kanca.on_ticket_update",
@@ -58,5 +69,7 @@ scheduler_events = {
 		# Öneriye süresinde yanıt gelmeyen kayıt BT'ye (saat başı); BT temsilcileri AD'den (her sabah).
 		"5 * * * *": ["nanobase_brand.yz.cozum.zaman_asimi"],
 		"15 6 * * *": ["nanobase_brand.yz.temsilci.esitle"],
+		# Denetim olaylarının giden kutusu merkeze (dakikada bir).
+		"* * * * *": ["nanobase_brand.denetim.gonder"],
 	},
 }

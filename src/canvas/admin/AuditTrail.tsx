@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Database, Download, FileText, MousePointerClick, Search, Send, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { ChevronDown, Database, Download, FileText, KeyRound, MousePointerClick, Search, Send, ShieldCheck, ShieldAlert } from 'lucide-react';
 import {
   adminApi,
   type TrailDetail,
@@ -28,7 +28,48 @@ const LAYERS: Array<{ id: string; label: string; types: TrailType[] }> = [
   { id: 'read', label: 'Görüntülenen', types: ['request'] },
   { id: 'row', label: 'Veri değişikliği', types: ['row'] },
   { id: 'action', label: 'İşlem', types: ['action'] },
+  { id: 'login', label: 'Giriş', types: ['login'] },
 ];
+
+/** Merkezi kayıt: hangi sistemden. Boş seçim = hepsi. */
+const SOURCES: Array<{ id: string; label: string }> = [
+  { id: 'portal', label: 'Portal' },
+  { id: 'edge', label: 'Portal kapısı' },
+  { id: 'giris', label: 'Portal girişi' },
+  { id: 'sohbet', label: 'Zeki AI sohbet' },
+  { id: 'destek', label: 'ZEKİ AI Destek' },
+  { id: 'editor', label: 'Editör' },
+];
+
+/** Öteki sistemlerin kayıt türleri (sohbet koleksiyonları, Destek belge türleri) okunur adla. */
+const TABLE_NAME: Record<string, string> = {
+  zeki_message: 'Sohbet mesajı',
+  zeki_room: 'Sohbet odası',
+  zeki_subscription: 'Oda üyeliği',
+  zeki_uploads: 'Sohbete yüklenen dosya',
+  zeki__trash: 'Sohbette silinen',
+  zeki_settings: 'Sohbet ayarı',
+  zeki_server_events: 'Sohbet olayı',
+  users: 'Sohbet kullanıcısı',
+  'HD Ticket': 'Destek talebi',
+  'HD Agent': 'Destek temsilcisi',
+  'HD Article': 'Bilgi bankası makalesi',
+  Communication: 'Destek e-postası / yanıtı',
+  Comment: 'Yorum',
+  User: 'Kullanıcı',
+};
+const tableName = (t: string) => TABLE_NAME[t] ?? readableName(t);
+
+const LOGIN_LABEL: Record<string, string> = {
+  ok: 'Giriş yaptı',
+  logout: 'Çıkış yaptı',
+  bad_password: 'Hatalı parola',
+  unknown_account: 'Bilinmeyen hesap',
+  unknown_domain: 'Bilinmeyen alan',
+  bad_format: 'Geçersiz giriş',
+  directory_down: 'Dizin yanıt vermedi',
+  revoked: 'Oturumu kapatıldı',
+};
 
 const OP_LABEL: Record<string, { label: string; tone: 'ok' | 'violet' | 'err' }> = {
   INSERT: { label: 'Ekledi', tone: 'ok' },
@@ -60,8 +101,17 @@ const dayEnd = (d: string) => (d ? new Date(new Date(`${d}T00:00:00+03:00`).getT
 
 function TypeIcon({ t }: { t: TrailType }) {
   const cls = 'h-3.5 w-3.5';
-  const Icon = t === 'ui' ? MousePointerClick : t === 'request' ? Send : t === 'row' ? Database : FileText;
-  const tone = t === 'ui' ? 'bg-sky-50 text-sky-700' : t === 'request' ? 'bg-slate-100 text-canvas-ink' : t === 'row' ? 'bg-amber-50 text-amber-800' : 'bg-canvas-violet/10 text-canvas-violet';
+  const Icon = t === 'ui' ? MousePointerClick : t === 'request' ? Send : t === 'row' ? Database : t === 'login' ? KeyRound : FileText;
+  const tone =
+    t === 'ui'
+      ? 'bg-sky-50 text-sky-700'
+      : t === 'request'
+        ? 'bg-slate-100 text-canvas-ink'
+        : t === 'row'
+          ? 'bg-amber-50 text-amber-800'
+          : t === 'login'
+            ? 'bg-emerald-50 text-emerald-700'
+            : 'bg-canvas-violet/10 text-canvas-violet';
   return (
     <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${tone}`} aria-hidden>
       <Icon className={cls} />
@@ -71,6 +121,14 @@ function TypeIcon({ t }: { t: TrailType }) {
 
 /** Satırın tek cümlelik özeti. */
 function Summary({ it }: { it: TrailItem }) {
+  if (it.type === 'login') {
+    return (
+      <>
+        <Pill tone={it.event === 'ok' ? 'ok' : it.event === 'logout' ? 'muted' : 'err'}>{LOGIN_LABEL[it.event ?? ''] ?? it.event}</Pill>
+        {it.ip && <span className="text-canvas-muted">{it.ip}</span>}
+      </>
+    );
+  }
   if (it.type === 'ui') {
     const what =
       it.event === 'view' ? 'Sayfa açtı' : it.event === 'click' ? 'Bastı' : it.event === 'change' ? 'Seçti' : it.event === 'leave' ? 'Sayfadan çıktı' : it.event;
@@ -97,7 +155,7 @@ function Summary({ it }: { it: TrailItem }) {
     return (
       <>
         <Pill tone={o.tone}>{o.label}</Pill>
-        <span className="font-semibold">{readableName(it.table)}</span>
+        <span className="font-semibold">{tableName(it.table ?? '')}</span>
         <span className="truncate text-canvas-muted">{pkText(it.pk)}</span>
       </>
     );
@@ -181,7 +239,7 @@ function RowBlock({ r, onHistory }: { r: TrailRow; onHistory?: (r: TrailRow) => 
     <div className="rounded-xl border border-slate-100 bg-white p-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
         <Pill tone={o.tone}>{o.label}</Pill>
-        <span className="font-semibold">{readableName(r.table)}</span>
+        <span className="font-semibold">{tableName(r.table)}</span>
         <span className="text-canvas-muted">{pkText(r.pk)}</span>
         <span className="ml-auto text-[11px] tabular-nums text-canvas-muted">{timeFmt.format(new Date(r.at))}</span>
       </div>
@@ -252,7 +310,7 @@ function History({ table, pk, onClose }: { table: string; pk: Record<string, unk
     <div className="space-y-2 rounded-xl border border-canvas-violet/20 bg-canvas-violet/5 p-2.5">
       <div className="flex items-center gap-2">
         <span className="font-bold">
-          {readableName(table)} · {pkText(pk)} — bütün geçmişi
+          {tableName(table)} · {pkText(pk)} — bütün geçmişi
         </span>
         <button type="button" onClick={onClose} className="ml-auto text-[11.5px] font-bold text-canvas-muted hover:text-canvas-ink">
           Kapat
@@ -285,6 +343,15 @@ function Detail({ it }: { it: TrailItem }) {
   if (q.error) return <Note tone="err">{errText(q.error, 'Ayrıntı okunamadı.')}</Note>;
   const d: TrailDetail = q.data ?? {};
   const rows = d.row ? [d.row] : (d.rows ?? []);
+  if (d.login) {
+    return (
+      <dl className="mt-2 space-y-1 rounded-xl bg-slate-50 p-2.5 text-[11.5px]">
+        <KV k="Sonuç">{LOGIN_LABEL[d.login.reason] ?? d.login.reason}</KV>
+        <KV k="Zaman">{fmtDate(d.login.at)} · {timeFmt.format(new Date(d.login.at))}</KV>
+        <KV k="IP">{d.login.ip ?? '—'}</KV>
+      </dl>
+    );
+  }
   return (
     <div className="mt-2 space-y-3 rounded-xl bg-slate-50 p-2.5 text-[11.5px]">
       {d.ui && d.ui.length > 0 && it.type !== 'ui' && (
@@ -355,6 +422,7 @@ function Line({ it }: { it: TrailItem }) {
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-[12.5px]">
             <span className="font-bold">{it.actor ?? 'Oturumsuz'}</span>
+            {it.source !== 'portal' && it.source !== 'giris' && <Pill tone="violet">{it.sourceLabel}</Pill>}
             <Summary it={it} />
           </span>
           {it.type === 'request' && it.page && <span className="block truncate text-[11px] text-canvas-muted">Ekran: {screenOf(it.page)}</span>}
@@ -416,6 +484,19 @@ function SealPanel() {
           Doğrula
         </button>
       </div>
+      {s.sources && s.sources.length > 0 && (
+        <ul className="grid grid-cols-2 gap-2 sm:col-span-2 sm:grid-cols-5" aria-label="Kayıt kaynakları">
+          {s.sources.map((x) => (
+            <li key={x.source} className={`rounded-xl border px-3 py-2 ${x.error ? 'border-red-100 bg-red-50' : 'border-slate-100 bg-white/80'}`}>
+              <div className="truncate text-[11px] font-bold text-canvas-muted">{x.label}</div>
+              <div className="text-[13px] font-extrabold tabular-nums">{nf.format(x.count)}</div>
+              <div className="truncate text-[10.5px] text-canvas-muted" title={x.error ?? undefined}>
+                {x.error ? 'Okunamıyor' : x.last ? `Son ${fmtDate(x.last)}` : 'Henüz kayıt yok'}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
       {(s.spooled > 0 || s.queued > 50) && (
         <Note tone="warn">
           {s.spooled > 0 ? `${nf.format(s.spooled)} kayıt veritabanına yazılamadı, diskte bekliyor; bağlantı dönünce aktarılır.` : `${nf.format(s.queued)} kayıt yazılmayı bekliyor.`}
@@ -431,7 +512,8 @@ export default function AuditTrail() {
   const [until, setUntil] = useState('');
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
-  const [layers, setLayers] = useState<string[]>(['ui', 'write', 'row', 'action']);
+  const [layers, setLayers] = useState<string[]>(['ui', 'write', 'row', 'action', 'login']);
+  const [sources, setSources] = useState<string[]>([]);
 
   const actors = useQuery({ queryKey: ['admin', 'trail', 'actors'], queryFn: adminApi.trailActors, retry: false, staleTime: 60_000 });
   const filter: TrailQuery = useMemo(() => {
@@ -444,8 +526,9 @@ export default function AuditTrail() {
       since: dayStart(since),
       until: dayEnd(until),
       q: search || undefined,
+      sources: sources.length ? sources.join(',') : undefined,
     };
-  }, [layers, actor, since, until, search]);
+  }, [layers, actor, since, until, search, sources]);
 
   const q = useInfiniteQuery({
     queryKey: ['admin', 'trail', filter],
@@ -467,12 +550,13 @@ export default function AuditTrail() {
 
   const toggle = (id: string) => setLayers((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   const actorOptions = (actors.data?.items ?? []).map((a) => ({ value: a.actor, label: a.actor }));
-  const filtered = !!(actor || since || until || search);
+  const filtered = !!(actor || since || until || search || sources.length);
+  const toggleSource = (id: string) => setSources((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
 
   return (
     <Section
       title="Denetim kaydı"
-      help="Kim, ne zaman, hangi ekranda ne yaptı: açtığı sayfa, bastığı düğme, yazıp gönderdiği her şey, veride neyi ekleyip değiştirdiği ya da sildiği (eski ve yeni değeriyle). Satıra dokununca o işin bütün izi açılır."
+      help="Bütün sistemler tek kayıtta — portal, Zeki AI sohbet, ZEKİ AI Destek, Editör ve portal girişi: kim, ne zaman, nereden, hangi ekranda ne yaptı; açtığı sayfa, bastığı düğme, yazıp gönderdiği her şey, neyi ekleyip değiştirdiği ya da sildiği (eski ve yeni değeriyle). Satıra dokununca o işin bütün izi açılır."
       action={
         <a href={adminApi.trailExportUrl(filter)} className={btnGhost} download>
           <Download className="h-4 w-4" />
@@ -523,6 +607,35 @@ export default function AuditTrail() {
               }`}
             >
               {l.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Kaynak sistemler">
+        <span className="pr-1 text-[11.5px] font-bold text-canvas-muted">Sistem</span>
+        <button
+          type="button"
+          aria-pressed={!sources.length}
+          onClick={() => setSources([])}
+          className={`min-h-9 rounded-full px-3 text-[12px] font-bold transition-[transform,background-color,color] duration-150 ease-out active:scale-[0.97] ${
+            !sources.length ? 'bg-canvas-violet text-white' : 'bg-slate-100 text-canvas-muted hover:bg-slate-200'
+          }`}
+        >
+          Hepsi
+        </button>
+        {SOURCES.map((x) => {
+          const on = sources.includes(x.id);
+          return (
+            <button
+              key={x.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggleSource(x.id)}
+              className={`min-h-9 rounded-full px-3 text-[12px] font-bold transition-[transform,background-color,color] duration-150 ease-out active:scale-[0.97] ${
+                on ? 'bg-canvas-violet text-white' : 'bg-slate-100 text-canvas-muted hover:bg-slate-200'
+              }`}
+            >
+              {x.label}
             </button>
           );
         })}

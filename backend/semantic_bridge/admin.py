@@ -55,6 +55,8 @@ AUDIT = sa.Table(
     sa.Column("page", sa.Text),
     sa.Column("seal_seq", sa.BigInteger),
     sa.Column("seal", sa.String(64)),
+    sa.Column("source", sa.String(24)),             # boş = portal; sohbet, destek, editor (merkezi denetim kaydı)
+    sa.Column("ext_id", sa.String(120)),
 )
 
 #: Yönetici AD grubunun üyelerinin kalıcı anlık görüntüsü. Yetki kontrolü (is_admin) bunu okur;

@@ -89,6 +89,10 @@ def editor(x_editor: str = Header("")) -> str:
 
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, dependencies=[Depends(authorize)])
+# Merkezi denetim kaydı: stüdyodaki yazma isteklerinin değiştirdiği satırlar (editor/audit.py).
+from .. import audit as _audit  # noqa: E402
+
+app.add_middleware(_audit.Middleware, service="studyo")
 
 
 class Coded(Exception):

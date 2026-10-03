@@ -113,8 +113,14 @@ if readable "$LLM_KEY_FILE"; then
   # Anahtar dosyadan okunur, standart girişten gider: komut satırında görünmez.
   rd "$LLM_KEY_FILE" | python3 -c 'import json,sys; print(json.dumps({"base_url": sys.argv[1], "api_key": sys.stdin.read().strip()}))' "$LLM_BASE" \
     | dc exec -T backend bench --site "$SITE" execute nanobase_brand.ai.ensure_model >/dev/null
+  say "Denetim kaydı gönderimi"
+  # Merkezi denetim kaydı (portal Yönetim → Denetim kaydı): giden kutusu dakikada bir köprünün masa yoluna gider,
+  # aynı masa anahtarıyla. Adres model adresinden türetilir (…/destek-llm/v1 → …/destek-baglam/v1).
+  AUDIT_URL=${AUDIT_URL:-${LLM_BASE/\/destek-llm\//\/destek-baglam\/}}
+  rd "$LLM_KEY_FILE" | python3 -c 'import json,sys; print(json.dumps({"url": sys.argv[1], "key": sys.stdin.read().strip()}))' "$AUDIT_URL" \
+    | dc exec -T backend bench --site "$SITE" execute nanobase_brand.denetim.ayarla >/dev/null
 else
-  echo "UYARI: $LLM_KEY_FILE yok; yapay zekâ paneli model olmadan açılır"
+  echo "UYARI: $LLM_KEY_FILE yok; yapay zekâ paneli model olmadan açılır, denetim kaydı merkeze gitmez"
 fi
 if readable "$AD_FILE"; then
   say "AD girişi (NTLM)"

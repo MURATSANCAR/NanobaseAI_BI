@@ -863,7 +863,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/editorial/documents", frozenset(page(x) for x in ("son-okuma", "redaksiyon"))),
     ("/api/v1/people", OPEN),                      # Kampüs rehberi
     ("/api/v1/me/", OPEN),
-    ("/api/v1/audit/ui", OPEN),                    # ekran olayları (denetim izi): kişi yalnız kendi olayını yazar
+    ("/api/v1/audit/ui", OPEN),
+    ("/api/v1/audit/ingest", SYSTEM),               # merkezi denetim kaydı: aynı sunucudaki sistemler (çağıran jetonu)                    # ekran olayları (denetim izi): kişi yalnız kendi olayını yazar
     ("/api/v1/greetings", OPEN),
     ("/api/v1/bulletins", OPEN),                   # Kampüs sesli bülteni (yazma /api/v1/admin/bulletins)
     ("/api/v1/rooms", OPEN),

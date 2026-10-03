@@ -89,6 +89,10 @@ TRANSLATED_DOCTYPES = ("HD Ticket Status", "HD Ticket Type", "HD Ticket Priority
 
 
 def apply():
+	# Merkezi denetim kaydının giden kutusu (nanobase_brand/denetim.py).
+	from nanobase_brand import denetim
+
+	denetim.ensure_table()
 	_ileri_tarihli_isler()
 	_custom_fields()
 	_bt_duzeni()

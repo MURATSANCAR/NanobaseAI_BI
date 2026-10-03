@@ -32,6 +32,11 @@ def _headers():
     if ':' in extra:
         name,_,value=extra.partition(':')
         headers[name.strip()]=value.strip()
+    # Merkezi denetim kaydı: editörde değişen satırlar portal isteğinin kimliğiyle bağlansın (editor/audit.py).
+    from semantic_bridge import audit_trail
+    ctx=audit_trail.current()
+    if ctx and ctx.get('rid'):
+        headers['X-Audit-Rid']=ctx['rid']
     return base,headers,os.environ.get('EDITOR_CATALOG_CA_FILE','')
 
 

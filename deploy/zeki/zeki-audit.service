@@ -1,0 +1,22 @@
+[Unit]
+Description=Zeki AI sohbet — merkezi denetim kaydı (değişiklik akışı → portal köprüsü)
+After=network-online.target docker.service nanobase-semantic-bridge.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /opt/timas-login/audit-watch.py
+Restart=always
+RestartSec=15
+StateDirectory=zeki-audit
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/zeki-audit
+
+[Install]
+WantedBy=multi-user.target

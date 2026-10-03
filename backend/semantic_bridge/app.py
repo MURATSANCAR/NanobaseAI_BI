@@ -7680,9 +7680,38 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         ip = request.headers.get("x-real-ip") or (request.client.host if request.client else None)
         return {"ok": True, "count": audit_trail.ui_events(user, cookie, ip, request.headers.get("user-agent"), body)}
 
+    def _audit_ingest_body(request: Request, body: bytes) -> dict[str, Any]:
+        from semantic_bridge import audit_trail
+
+        try:
+            data = json.loads(body or b"{}")
+            return audit_trail.ingest(rt().store.engine, str(data.get("source") or ""), data.get("events"))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": str(e)}) from None
+
+    @app.post("/api/v1/audit/ingest")
+    async def audit_ingest(request: Request) -> dict[str, Any]:
+        """Merkezi denetim kaydı: aynı sunucudaki sistemlerin (sohbet izleyicisi) olayları. Çağıran jetonu ister."""
+        _require_caller(request)
+        return await run_in_threadpool(_audit_ingest_body, request, await request.body())
+
+    @app.post("/api/v1/support/panel/audit-ingest")
+    async def audit_ingest_destek(request: Request) -> dict[str, Any]:
+        """Destek masasının giden kutusu: nginx `/destek-baglam/v1/` anahtarı + köprü çağıran jetonu. Kaynak hep `destek`."""
+        _require_caller(request)
+        from semantic_bridge import audit_trail
+
+        try:
+            data = json.loads((await request.body()) or b"{}")
+            return await run_in_threadpool(audit_trail.ingest, rt().store.engine, "destek", data.get("events"))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": str(e)}) from None
+
     def _trail_filters(types: Optional[str], actor: Optional[str], since: Optional[str], until: Optional[str],
-                       q: Optional[str], reads: Optional[str], table: Optional[str], module: Optional[str]) -> dict[str, Any]:
+                       q: Optional[str], reads: Optional[str], table: Optional[str], module: Optional[str],
+                       sources: Optional[str] = None) -> dict[str, Any]:
         return {"types": [t for t in (types or "").split(",") if t] or None, "actor": actor or None,
+                "sources": [x for x in (sources or "").split(",") if x] or None,
                 "since": since or None, "until": until or None, "q": q or None,
                 "reads": "only" if (reads or "").lower() == "only" else (reads or "").lower() in ("1", "true", "evet"), "tbl": table or None, "module": module or None}
 
@@ -7690,12 +7719,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def admin_trail(request: Request, types: Optional[str] = None, actor: Optional[str] = None,
                     since: Optional[str] = None, until: Optional[str] = None, q: Optional[str] = None,
                     reads: Optional[str] = None, table: Optional[str] = None, module: Optional[str] = None,
-                    before: Optional[str] = None, limit: int = 100) -> dict[str, Any]:
+                    before: Optional[str] = None, limit: int = 100, sources: Optional[str] = None) -> dict[str, Any]:
         from semantic_bridge import audit_trail
 
         _, engine, _, _, _ = _admin(request)
         return audit_trail.timeline(engine, before=before, limit=limit,
-                                    **_trail_filters(types, actor, since, until, q, reads, table, module))
+                                    **_trail_filters(types, actor, since, until, q, reads, table, module, sources))
 
     @app.get("/api/v1/admin/trail/item/{typ}/{item_id}")
     def admin_trail_item(typ: str, item_id: int, request: Request) -> dict[str, Any]:
@@ -7755,12 +7784,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def admin_trail_export(request: Request, types: Optional[str] = None, actor: Optional[str] = None,
                            since: Optional[str] = None, until: Optional[str] = None, q: Optional[str] = None,
                            reads: Optional[str] = None, table: Optional[str] = None,
-                           module: Optional[str] = None) -> Response:
+                           module: Optional[str] = None, sources: Optional[str] = None) -> Response:
         from semantic_bridge import audit_trail
 
         _, engine, _, _, user = _admin(request)
-        filters = _trail_filters(types, actor, since, until, q, reads, table, module)
-        cols = ["at", "type", "actor", "ip", "rid", "event", "label", "method", "path", "status", "page",
+        filters = _trail_filters(types, actor, since, until, q, reads, table, module, sources)
+        cols = ["at", "sourceLabel", "type", "actor", "ip", "rid", "event", "label", "method", "path", "status", "page",
                 "op", "table", "pk", "action", "kindLabel", "title", "id"]
         buf = io.StringIO()
         w = csv.writer(buf)

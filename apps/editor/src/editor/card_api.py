@@ -30,6 +30,20 @@ def authorize(authorization: str = Header(default='')):
 
 app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None,dependencies=[Depends(authorize)])
 
+# Merkezi denetim kaydı (audit.py): yazma isteğinde değişen satırlar + istek, portal köprüsü kutuyu buradan çeker.
+from . import audit as audit_mod
+app.add_middleware(audit_mod.Middleware, service='kartlar')
+
+
+@app.get('/v1/audit/outbox')
+def audit_outbox(limit: int = 1000):
+    return audit_mod.outbox(limit)
+
+
+@app.post('/v1/audit/outbox/ack')
+def audit_outbox_ack(body: dict = Body(...)):
+    return audit_mod.ack(int(body.get('upto') or 0))
+
 @app.get('/v1/books/cards')
 def book_cards():
     return {'items':cards(),'read_only':True}

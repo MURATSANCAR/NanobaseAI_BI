@@ -505,7 +505,7 @@ class Handler(BaseHTTPRequestHandler):
                 record(db, (user or '?').lower(), True, 'revoked', 'yonetici:' + str(data.get('actor') or '')[:40])
         return self.reply(200, {'revoked': len(rows)})
 
-    def reply(self, status, data=None, cookie=None):
+    def reply(self, status, data=None, cookie=None, headers=None):
         raw = json.dumps(data or {}, ensure_ascii=False).encode()
         self.send_response(status)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -513,6 +513,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(raw)))
         if cookie:
             self.send_header('Set-Cookie', cookie)
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(raw)
 
@@ -548,7 +550,9 @@ class Handler(BaseHTTPRequestHandler):
             # Browser sessions require the same origin on mutations, including nginx subrequests.
             if self.headers.get('X-Original-Method', 'GET') not in ('GET', 'HEAD', 'OPTIONS') and self.headers.get('Origin') != ORIGIN:
                 return self.reply(403)
-            return self.reply(200 if session(self.headers.get('Cookie', '')) else 401)
+            # Denetim kaydı: nginx `auth_request_set $timas_user $upstream_http_x_timas_user` ile her isteği kişisiyle loglar.
+            row = session(self.headers.get('Cookie', ''))
+            return self.reply(200, headers={'X-Timas-User': row[0]}) if row else self.reply(401)
         if self.path == '/session':
             row = session(self.headers.get('Cookie', ''))
             if not row:

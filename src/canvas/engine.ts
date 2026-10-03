@@ -893,7 +893,7 @@ export type PromptQuery = { limit?: number; offset?: number; only?: string; q?: 
 
 /* ------------------------------------------------------------------ denetim izi (Yönetim → Denetim kaydı) */
 
-export type TrailType = 'ui' | 'request' | 'row' | 'action';
+export type TrailType = 'ui' | 'request' | 'row' | 'action' | 'login';
 export type TrailItem = {
   type: TrailType;
   id: number;
@@ -901,6 +901,11 @@ export type TrailItem = {
   actor: string | null;
   rid: string | null;
   ip: string | null;
+  /** Kaydı üreten sistem: portal, edge (portal kapısı), sohbet, destek, editor, giris. */
+  source: string;
+  sourceLabel: string;
+  // giriş
+  ok?: boolean;
   // ekran olayı
   event?: string;
   label?: string | null;
@@ -930,6 +935,7 @@ export type TrailQuery = {
   module?: string;
   before?: string;
   limit?: number;
+  sources?: string;
 };
 export type TrailRequest = {
   id: number;
@@ -958,6 +964,7 @@ export type TrailRow = {
   at: string;
   rid: string | null;
   actor: string | null;
+  source?: string;
   table: string;
   op: 'INSERT' | 'UPDATE' | 'DELETE';
   pk: Record<string, unknown> | null;
@@ -985,6 +992,7 @@ export type TrailDetail = {
   actions?: Array<AuditItem>;
   ui?: TrailUi[];
   row?: TrailRow;
+  login?: { id: number; at: string; actor: string; ok: boolean; reason: string; ip: string | null };
 };
 export type TrailVerify = {
   at: string;
@@ -993,7 +1001,12 @@ export type TrailVerify = {
   tables: Array<{ table: string; checked: number; broken: number; missing: number; unsealed: number; total: number; ok: boolean; firstProblem: { seq: number; id?: number; why: string } | null }>;
 };
 export type TrailStatus = {
-  stats: Record<TrailType, { count: number; since: string | null }> & { tablesWatched?: number; spooled: number; queued: number };
+  stats: Record<Exclude<TrailType, 'login'>, { count: number; since: string | null }> & {
+    tablesWatched?: number;
+    spooled: number;
+    queued: number;
+    sources?: Array<{ source: string; label: string; count: number; last: string | null; error: string | null; readAt: string | null }>;
+  };
   seal: { tables: Array<{ table: string; lastSeq: number; anchorSeq: number; verifiedAt: string | null }>; lastVerify: TrailVerify | null };
 };
 

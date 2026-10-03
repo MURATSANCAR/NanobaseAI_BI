@@ -16,6 +16,9 @@ from psycopg_pool import ConnectionPool
 from .config import settings
 
 validation_token: ContextVar[str | None] = ContextVar("editor_validation_token", default=None)
+#: Merkezi denetim kaydı: kişinin yazma isteğinde {"rid", "actor"} (audit.py ara katmanı koyar). İşlemin başında
+#: `nanobase.audit` olarak verilir; `ed.nb_audit_row` tetikleyicisi oradan okur. Bağlam yoksa tetikleyici çalışmaz.
+audit_context: ContextVar[str | None] = ContextVar("editor_audit_context", default=None)
 
 _pool: ConnectionPool | None = None
 MIGRATIONS = Path(__file__).resolve().parent.parent.parent / "db" / "migrations"
@@ -72,6 +75,9 @@ def tx() -> Iterator[psycopg.Connection]:
             token = validation_token.get()
             if token:
                 conn.execute(sql.SQL("SET LOCAL editor.validation_token = {}").format(sql.Literal(token)))
+            audit = audit_context.get()
+            if audit:
+                conn.execute("SELECT set_config('nanobase.audit', %s, true)", (audit,))
             yield conn
 
 
@@ -105,6 +111,9 @@ def migrate() -> list[str]:
                 conn.execute("INSERT INTO ed.schema_migration(name) VALUES (%s) "
                              "ON CONFLICT DO NOTHING", (f.name,))
             applied.append(f.name)
+        # Denetim tetikleyicisi sonradan açılan tablolara da (035_audit_outbox.sql).
+        if conn.execute("SELECT to_regprocedure('ed.nb_audit_install()')").fetchone()[0]:
+            conn.execute("SELECT ed.nb_audit_install()")
     return applied
 
 
