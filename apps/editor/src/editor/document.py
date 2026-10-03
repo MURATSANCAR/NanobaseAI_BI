@@ -345,6 +345,27 @@ def book_letters(doc: pymupdf.Document) -> dict[str, str]:
     return repair["private_letters"]
 
 
+#: Aynı satırda iki parça arasındaki boşluk: kelime arası karakter olarak yok, yalnız konumla verilmiş
+#: («dergisinin» | «okurlarına», «devlet» | «dönem»; 2026-10-03, okunmuş kitaplarda yapışık kelime). Puntonun bu
+#: katından geniş açıklık kelime arasıdır; harf aralığı, italik/üst simge geçişi ve kerning bunun çok altında kalır.
+_SPAN_GAP = 0.15
+
+
+def _join_spans(spans: list[dict], texts: list[str], horizontal: bool = True) -> str:
+    if not horizontal:                    # yan çevrilmiş satırda yatay açıklık ölçü değildir
+        return "".join(texts)
+    out = ""
+    prev = None
+    for s, t in zip(spans, texts):
+        if (prev is not None and t and out and not out[-1].isspace() and not t[0].isspace()
+                and s["bbox"][0] - prev["bbox"][2] > _SPAN_GAP * min(s["size"], prev["size"])):
+            out += " "
+        out += t
+        if t.strip():
+            prev = s
+    return out
+
+
 def _page_lines(page: pymupdf.Page) -> list[dict]:
     lines = []
     seen = set()
@@ -363,7 +384,7 @@ def _page_lines(page: pymupdf.Page) -> list[dict]:
             spans = [s for k, s in enumerate(visible) if s["text"].strip() or (
                 inked[0] < k < inked[-1] and abs(s["size"] - visible[k - 1]["size"]) > 0.5
                 and abs(s["size"] - visible[k + 1]["size"]) > 0.5)]
-            text = re.sub(r"\s+", " ", "".join(_span_texts(page, spans))).strip()
+            text = re.sub(r"\s+", " ", _join_spans(spans, _span_texts(page, spans), abs(ln.get("dir", (1, 0))[0] - 1) < 0.01)).strip()
             if letters:
                 text = pdf_repair.apply_private_letters(text, letters)
             # Overprinted glyphs can produce two identical lines at exactly the

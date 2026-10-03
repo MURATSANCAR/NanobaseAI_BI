@@ -74,6 +74,24 @@ def _latest_publisher_text(publisher: str | None) -> tuple[str, str | None]:
     return "", None
 
 
+#: Yayınevi künyesinde «BÜYÜK HARFLİ ETİKET değer» satırları (kuralla, tam metin): model uzun değeri (telif cümlesi)
+#: yarıda kesebiliyordu («…anlaşma kapsamında Ti»).
+RULE_LABELS = {"YAYIN YÖNETMENİ": "YAYIN_YONETMENI", "PROJE EDİTÖRÜ": "PROJE_EDITORU", "EDİTÖR": "EDITOR",
+               "EDİTÖRLER": "EDITOR", "ÇEVİRİ": "CEVIRI", "ÇEVİREN": "CEVIRI", "YAYIN HAKLARI": "TELIF"}
+
+
+def rule_fields(text: str) -> dict:
+    """Künye metninden etiketli satırlar {alan: {value, quote}}; değer satırın kendisinden, kısaltılmadan."""
+    from .epub_source import split_label
+    out: dict = {}
+    for t in (" ".join(x.split()) for x in re.split(r"\n+", text or "") if x.strip()):
+        label, value = split_label(t)
+        field = RULE_LABELS.get((label or "").upper())
+        if field and value and field not in out:
+            out[field] = {"value": value, "quote": t}
+    return out
+
+
 async def kunye_fields(ms: Manuscript, llm) -> dict:
     """{alan: {value, quote, source}}; kaynağı kitabın kendi künyesi ya da (yalnız yayınevi alanları)
     yayınevinin en son künyesi."""
@@ -96,7 +114,31 @@ async def kunye_fields(ms: Manuscript, llm) -> dict:
             if _norm(f["quote"]) in _norm(text) and _norm(f["value"]) in _norm(f["quote"]):
                 found[f["field"]] = {"value": f["value"].strip(), "quote": f["quote"],
                                      "source": OWN_SOURCE if is_own else f"yayınevinin son künyesi ({gid})"}
-    return found
+    return merge_rule_fields(found, own_kunye_text(ms) or own)
+
+
+def own_kunye_text(ms: Manuscript) -> str:
+    """Okunmuş kitabın künye sayfalarının metni, satır satır (baskı kuralının «künye» dediği sayfalar; e-kitabın
+    basılı künyesiyle aynı kaynak). Sayfa rolü (`_front_text`) künye sayfasını kaçırabiliyor."""
+    from .epub_compare import source_pages
+    from .epub_source import kunye_pages
+    src = ms.source or {}
+    if not src.get("generation_id"):
+        return ""
+    pages = source_pages(src["generation_id"])
+    keep = set(kunye_pages({**src, "title": ms.title}, pages))
+    return "\n".join(t for p, text in pages if p in keep for t in text.split("\n") if t.strip())
+
+
+def merge_rule_fields(fields: dict, own_text: str) -> dict:
+    """Kitabın kendi künyesinde etiketli satır varsa onun tam metni kazanır: model alanı bulamadıysa ya da modelin
+    değeri onun kısaltılmışıysa. Başka kitabın künyesine bakılmaz."""
+    out = dict(fields)
+    for field, r in rule_fields(own_text).items():
+        cur = (out.get(field) or {}).get("value") or ""
+        if not cur or (len(r["value"]) > len(cur) and _norm(cur)[:40] in _norm(r["value"])):
+            out[field] = {**r, "source": OWN_SOURCE}
+    return out
 
 
 def usable(f: dict) -> dict:

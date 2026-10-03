@@ -55,9 +55,12 @@ def candidate(text: str) -> bool:
     words = len(re.sub(r"(?<=\b[^\W\d_]) (?=[^\W\d_]\b)", "", t).split())
     if not t or len(t) > MAX_CHARS or words > MAX_WORDS or len(key(t)) < 2:
         return False
-    if t[0] in "—–-«“\"'‘„" or re.search(r"[^.][.!?]$", t):
-        return False                       # konuşma ya da cümle: «— Gel.», «Kapıyı açtı.»
-    return True
+    if t[0] in "—–-«“\"'‘„":
+        return False                       # konuşma: «— Gel.»
+    letters = [c for c in t if c.isalpha()]
+    if re.search(r"[^.][.!?]$", t) and not (letters and all(c.isupper() for c in letters) and t[-1] == "?"):
+        return False                       # cümle: «Kapıyı açtı.»; büyük harfli soru başlığı aday kalır
+    return True                            # («GALİLEO’YU KİM ÖLDÜRDÜ?», bölüm adı sağ sayfa başlığında)
 
 
 def _blocks(text: str) -> list[tuple[int, int]]:

@@ -64,13 +64,15 @@ def fold(t: str) -> str:
 
 
 def lines_of(page) -> list[Line]:
+    from ..document import _join_spans
     out = []
     for b in page.get_text("dict")["blocks"]:
         for ln in b.get("lines", []):
             sp = [s for s in ln["spans"] if s["text"].strip()]
             if not sp:
                 continue
-            text = "".join(s["text"] for s in ln["spans"]).replace("\t", " ").strip()
+            text = _join_spans(ln["spans"], [s["text"] for s in ln["spans"]],
+                               abs(ln.get("dir", (1, 0))[0] - 1) < 0.01).replace("\t", " ").strip()
             n = sum(len(s["text"]) for s in sp) or 1
             size = max(sp, key=lambda s: len(s["text"]))["size"]
             out.append(Line(text, ln["bbox"][0], ln["bbox"][2], ln["bbox"][1], ln["bbox"][3], size,

@@ -34,7 +34,15 @@ HEAD_LOW = 0.85      # bölüm başı sayfasında altında boşluk olan küçük
 GAP = 1.8            # başlık ile metin arası: satır aralığının en az bu katı
 _NOT_TITLE = ("içindekiler", "contents", "kaynakça", "kaynaklar", "dizin", "indeks", "index", "notlar", "bibliyografya",
               "yeni kitap önerimiz")
-_SENT_BREAK = re.compile(r"[^\W\d_][.!?…]+[\"”’']?\s+\S")      # başlıkta cümle sonu + devam: konuşma/metin
+_SENT_BREAK = re.compile(r"([^\W\d_]+)[.!?…]+[\"”’']?\s+\S")   # başlıkta cümle sonu + devam: konuşma/metin
+_ORDINAL = re.compile(r"^(?:[IVXLC]+|[A-ZÇĞİÖŞÜ])$")   # «II. BÖLÜM», «G. Marquez»: sıra/baş harf noktası cümle sonu değil
+_CONTINUED = re.compile(r"\(\s*devam[ıi]?\s*\)\s*$", re.I)   # «EK 2: … (Devam)»: önceki başlığın sürmesi
+_PAREN = re.compile(r"^\(.*\)$")          # başlık sayfasında ayraç içi alt satır («(Yıldırım Bayezid Han)»)
+
+
+def _sent_break(t: str) -> bool:
+    return any(not (m.group(0)[len(m.group(1))] == "." and _ORDINAL.match(m.group(1)))
+               for m in _SENT_BREAK.finditer(t))
 _NUMBER = re.compile(r"^\d{1,3}\.?$")
 _IMPRINT = re.compile(r"www\.|\.com|\.tr\b|https?:|^[^\W\d_]+ (19|20)\d\d$", re.I)   # künye/adres: «İstanbul 2026»
 _UNFINISHED = re.compile(r"[;,]\s*$")     # «Bu kitabın oluşmasında;» — cümle sürüyor (teşekkür), başlık değil
@@ -59,7 +67,7 @@ def _sentence(t: str) -> bool:
     harfsiz dizgi («razıyım yâ rab!») başlıktır. Birden çok satır cümle olarak sürüyorsa («… sanırsın? Küllerin
     …», şiir) ya da son kelime bölünmüşse («izledi-») metindir."""
     t = t.strip()
-    if len(t.split()) > 1 and (_SENT_BREAK.search(t) or re.search(r"(?:^|\s)[^\W\d_]+[-­]$", t)):
+    if len(t.split()) > 1 and (_sent_break(t) or re.search(r"(?:^|\s)[^\W\d_]+[-­]$", t)):
         return True                     # satırlar cümle olarak sürüyor ya da kelime bölünmüş: metin
     if not re.search(r"[^.!…][.!]$", t) or _NUMBER.match(t) or not any(c.isupper() for c in t):
         return False                    # küçük harfli dizgi («razıyım yâ rab!») başlık olabilir
@@ -73,7 +81,7 @@ def _title_like(t: str) -> bool:
         return False
     if _NUMBER.match(t):
         return True
-    return bool(re.search(r"[^\W\d_]", t)) and not _SENT_BREAK.search(t)
+    return bool(re.search(r"[^\W\d_]", t)) and not _sent_break(t)
 
 
 def _strip_running_heads(raw: dict[int, list[dict]]) -> dict[int, list[dict]]:
@@ -147,13 +155,21 @@ def _opening(v: dict, L: dict) -> dict | None:
         # İRİ puntolu sayfa («Evet Selin, …» 20/14 pt) başlık sayfası değildir: açılışı aşağıda aranır.
         # Gövdeden küçük puntolu metin (arka kapak tanıtımı, yazar özgeçmişi) bölüm açmaz.
         lines = [ln for ln in ls if _title_like(ln["text"])]
-        words = sum(len(ln["text"].split()) for ln in lines)
+        # ayraç içi alt satır (perde altı «(Yıldırım Bayezid Han)»): en çok 3 satırlık başlığın altındaki son satır;
+        # sayfayı bozmaz, ada girmez
+        last = max(ls, key=lambda l: l["y0"])
+        paren = [last] if (last not in lines and _PAREN.match(last["text"].strip()) and len(lines) <= 3) else []
+        words = sum(len(ln["text"].split()) for ln in lines + paren)
         text = " ".join(ln["text"].strip() for ln in _reading_order(lines))
+        # gövdeden belirgin küçük satır (yan çevrilmiş tablonun başlık hücresi «MİLADİ MALI») sayfayı bozmaz ama ada
+        # girmez; denetimler (cümle, kelime sayısı) bütün satırlara bakar
+        named = [ln for ln in lines if ln["size"] >= body * HEAD_LOW] or lines
         # gövdeden küçük puntolu kısa satırlar fotoğraf altı ya da künye notudur («Hatıratın yazarı … resmi»)
-        if (lines and len(lines) == len(ls) and len(ls) <= 6 and words <= 12 and not _DEDICATION.search(text)
-                and not _sentence(text) and max(ln["size"] for ln in lines) >= body - 0.6
-                and not _UNFINISHED.search(text)):
-            return {"title": text, "size": max(ln["size"] for ln in lines), "kind": "page"}
+        if (lines and len(lines) + len(paren) == len(ls) and len(ls) <= 6 and words <= 12
+                and not _DEDICATION.search(text) and not _sentence(text)
+                and max(ln["size"] for ln in lines) >= body - 0.6 and not _UNFINISHED.search(text)):
+            return {"title": " ".join(ln["text"].strip() for ln in _reading_order(named)),
+                    "size": max(ln["size"] for ln in named), "kind": "page"}
         return None
     head, i = [], 0
     while i < len(ls) and len(head) < 5:
@@ -514,6 +530,12 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
             pending = None              # ithaf sayfası bölüm açmaz (page_scope'un ithaf kuralı)
             continue
         near = pending is not None and p - pending["last"] <= 2
+        if h and h["title"] and _CONTINUED.search(h["title"]):
+            # «(Devam)» sayfası önceki başlığın sürmesidir (yan çevrilmiş ek tablonun ikinci sayfası): bölüm açmaz,
+            # ada eklenmez
+            if pending is not None:
+                pending["last"] = p
+            continue
         if h and h["kind"] == "page":
             if _skip(h["title"], book_title, p, last_page):
                 pending = None

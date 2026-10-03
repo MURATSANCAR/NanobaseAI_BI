@@ -97,3 +97,17 @@ def test_section_heading_and_ornament_break():
     assert L.para_lines(pg, "II") == []
     pg2 = page([ln("II", 223, 235, y=80, size=14)])
     assert L.para_lines(pg2, "II")[0].text == "II"                               # kısa paragraf satırla eşleşir
+
+
+def test_print_style_notes_are_superscript_at_chapter_end():
+    """Stüdyonun basılı tasarımı: üst başlık ve dipnot gövdeden çıkar, gönderme üst simge rakam, notlar bölüm sonunda
+    «¹ metin»; tür yeni dizgi türü değil (para)."""
+    p20 = page([ln("uyumludur.18 Benzer bir şekilde", sup=["18"])],
+               notes=[["18", "Gregory, Scientific Materialism, s. 184."]], heads=[L.fold("DARWIN VE OSMANLILAR")])
+    paras = [(20, "DARWIN VE OSMANLILAR"), (20, "uyumludur.18 Benzer bir şekilde"),
+             (20, "18 Gregory, Scientific Materialism, s. 184.")]
+    out, notes = _apply_layout(paras, {20: p20}, tables=False)
+    ms = Manuscript("K", chapters=[Chapter(h, b) for h, b in normalize([(p, t) for p, t, _ in out], None)])
+    _finish_layout(ms, {20: p20}, notes, print_style=True)
+    body = [b.text for c in ms.chapters for b in c.blocks]
+    assert body == ["uyumludur.¹ Benzer bir şekilde", "¹ Gregory, Scientific Materialism, s. 184."]

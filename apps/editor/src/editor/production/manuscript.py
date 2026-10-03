@@ -337,12 +337,15 @@ def _first(meta: dict, key: str) -> str | None:
     return str(v).strip() if v else None
 
 
-def from_generation(generation_id: str, lex=None, layout: bool = False) -> Manuscript:
+def from_generation(generation_id: str, lex=None, layout: bool | str = False) -> Manuscript:
     """Editörün okuduğu kitaptan. Hikâye dışı sayfalar (künye, tanıtım) sayfa rolünden çıkar;
     kitap bilgisi kitabın güncel kartından (künyeden çıkarılmış, kanıtlı).
     `layout=True` (basılı kitabın e-kitabı): basılı PDF'in dizgisiyle sayfa üst başlıkları ve numaraları gövdeden
     çıkar, dipnotlar bölüm sonuna «[n] …» notu olur ve metindeki gönderme «[n]» olur, tablolar tablo olur, paragrafın
-    biçimi (şiir, italik, sağa yaslı, epigraf, perde) bloğun türüne yazılır (`print_layout`, `_apply_layout`)."""
+    biçimi (şiir, italik, sağa yaslı, epigraf, perde) bloğun türüne yazılır (`print_layout`, `_apply_layout`).
+    `layout="print"` (stüdyonun basılı tasarımı): yalnız temizlik — üst başlık, sayfa numarası ve dipnot gövdeden
+    çıkar, bölünen cümle birleşir, dipnotlar bölüm sonunda «¹ metin» paragrafı, göndermeler üst simge rakam; bloklar
+    para/diyalog kalır (dizgi yeni türleri tanımaz), tablo okunmuş metniyle kalır."""
     from .. import db
     lex = lex if lex is not None else _lexicon()
     g = db.one("SELECT g.id, bv.book_id, b.title AS file_title FROM ed.generation g "
@@ -403,10 +406,12 @@ def from_generation(generation_id: str, lex=None, layout: bool = False) -> Manus
     pages = _print_pages(generation_id) if layout else None
     notes: dict = {}
     if pages:
-        paras, notes = _apply_layout(paras, pages)
+        paras, notes = _apply_layout(paras, pages, tables=layout != "print")
+        if layout == "print":
+            paras = [(p, t) for p, t, _ in paras]       # tür yok: basılı dizgi para/diyalog bilir
     ms.chapters = by_typeset(generation_id, paras, lex) or [Chapter(h, b) for h, b in normalize(paras, lex)]
     if pages:
-        _finish_layout(ms, pages, notes)
+        _finish_layout(ms, pages, notes, print_style=layout == "print")
     return ms
 
 
@@ -448,7 +453,7 @@ def index_pages(by_page: dict[int, str]) -> set[int]:
 _MARK = re.compile(r"\[\[(\d+):(\d+)\]\]")
 
 
-def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple], dict]:
+def _apply_layout(paras: list[tuple[int, str]], pages: dict, tables: bool = True) -> tuple[list[tuple], dict]:
     """Okunmuş paragraflar dizgiyle: üst başlık/sayfa no ve dipnot/tablo bölgesindeki paragraf düşer, gönderme
     numarası «[[sayfa:no]]» işareti olur, paragrafa dizgiden tür yazılır, tablo ilk tablo paragrafının yerine girer.
     Döner: ([(sayfa, metin, tür)], {(sayfa, no): not metni})."""
@@ -489,7 +494,7 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple
         if len(k) >= 6 and (probe in pg.note_key or (prev is not None and probe in prev.note_key)) \
                 and probe not in pg.body_key:
             continue
-        if pg.tables and len(k) >= 6 and probe in pg.table_key:
+        if tables and pg.tables and len(k) >= 6 and probe in pg.table_key:
             if p not in placed:
                 placed.add(p)
                 for rows, y in zip(pg.tables, pg.table_y):
@@ -517,7 +522,7 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple
             q, t, k = out[at]
             out[at] = (q, t + "".join(f"[[{p}:{n}]]" for n in lost), k)
     for p, pg in pages.items():                       # tablo okumada hiç paragraf vermediyse sayfadaki yerine
-        if pg.tables and p not in placed:
+        if tables and pg.tables and p not in placed:
             at = max((i for i, x in enumerate(out) if x[0] <= p), default=-1) + 1
             for rows, y in zip(pg.tables, pg.table_y):
                 out.insert(at, (p, table_html(rows), "table"))
@@ -539,7 +544,7 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple
         j = i
         while j < len(out) and out[j][0] == out[i][0]:
             j += 1
-        if any(x[2] == "table" for x in out[i:j]):
+        if tables and any(x[2] == "table" for x in out[i:j]):
             known, last = {}, -1.0                    # yeri bulunamayan paragraf öncekinin hemen ardında kalır
             for k in range(i, j):
                 last = ys[k] if ys[k] is not None else last + 0.01
@@ -592,11 +597,15 @@ def _recut_perde(ms: Manuscript, pages: dict) -> None:
     ms.chapters = [c for c in out if c.blocks or c.title]
 
 
-def _finish_layout(ms: Manuscript, pages: dict, notes: dict) -> None:
+_SUP = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def _finish_layout(ms: Manuscript, pages: dict, notes: dict, print_style: bool = False) -> None:
     """Bölümler kurulduktan sonra: gönderme işaretleri bölüm içinde 1'den numaralanır («[k]»), notlar bölüm sonuna
     «[k] metin» paragrafı olur (e-kitap bunları kitabın sonundaki notlara bağlar); bölüm başındaki italik / sağa
     yaslı paragraflar epigraf; perde sayfasıyla açılan bölüm perde, o sayfadaki kısa paragraf perde altı."""
-    _recut_perde(ms, pages)
+    if not print_style:
+        _recut_perde(ms, pages)
     for ch in ms.chapters:                            # ardışık şiir blokları (dörtlükler) tek şiir
         merged: list[Block] = []
         for b in ch.blocks:
@@ -618,7 +627,7 @@ def _finish_layout(ms: Manuscript, pages: dict, notes: dict) -> None:
                 return ""
             k += 1
             found.append((k, text))
-            return f"[{k}]"
+            return str(k).translate(_SUP) if print_style else f"[{k}]"
         if ch.title:
             ch.title = _MARK.sub(renum, _clean_title(ch.title))
         for b in ch.blocks:
@@ -639,7 +648,10 @@ def _finish_layout(ms: Manuscript, pages: dict, notes: dict) -> None:
                 b.kind = "epigraph"
                 continue
             start = False
-        ch.blocks += [Block("para", f"[{n}] {t}", []) for n, t in found]
+        if print_style:                               # basılı dizgi: bölüm sonunda «Notlar», üst simge numaralı
+            ch.blocks += [Block("para", f"{str(n).translate(_SUP)} {t}", []) for n, t in found]
+        else:
+            ch.blocks += [Block("para", f"[{n}] {t}", []) for n, t in found]
 
 
 def resplit(text: str, parts: list[str]) -> list[str]:

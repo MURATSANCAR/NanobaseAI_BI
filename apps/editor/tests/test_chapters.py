@@ -309,3 +309,46 @@ def test_part_of_the_book_title_needs_half_of_its_letters():
     assert typeset._is_book_title("Adana'da", "Levent Adana’da") and typeset._is_book_title("LEVENT ADANA'DA", "Levent Adana'da")
     assert not typeset._is_book_title("Giriş", "Giriş Sanatı Üzerine")
     assert not typeset._is_book_title("Adana", "Levent Adana'da")
+
+
+def test_perde_page_with_roman_part_number_and_parenthesized_line():
+    """Perde sayfası «II. BÖLÜM / BEN YÜRÜRKEN / (Yıldırım Bayezid Han)»: «I.» sıra noktası cümle sonu değil, ayraç
+    içi alt satır başlık sayfasını bozmaz ama ada girmez; sonraki sayfanın «I» alt başlığı bölüm adı olmaz (Devlerin
+    Savaşı'nda bütün bölümler «I» adını alıyordu)."""
+    assert typeset._title_like("II. BÖLÜM") and not typeset._sentence("II. BÖLÜM BEN YÜRÜRKEN")
+    assert typeset._title_like("Gabriel G. Marquez") and not typeset._title_like("Kapıyı açtı. Sonra")
+    doc = [
+        _page(_body(60)), _page(_body(60)),
+        _page([_ln("II. BÖLÜM", 193, 16.0, 185, 273), _ln("BEN YÜRÜRKEN", 222, 16.0, 159, 299),
+               _ln("(Yıldırım Bayezid Han)", 303, 11.5, 176, 282)]),
+        _page([]),
+        _page([_ln("I", 191, 14.0, 226, 232)] + _body(240, 14)),
+        _page(_body(60)),
+    ]
+    found = typeset.chapters_from_pages(_pages(doc), typeset.page_headings(doc, _lines), "Devlerin Savaşı")
+    assert ("II. BÖLÜM BEN YÜRÜRKEN", 3) in [(c["title"], c["page_from"]) for c in found]
+    assert not any(c["title"] == "I" for c in found)
+
+
+def test_continued_title_page_does_not_repeat_the_title():
+    """Yan çevrilmiş ek tablosunun ikinci sayfası «EK 2: … (Devam)»: önceki başlığın sürmesi, ada eklenmez."""
+    title = "EK 2: Selanik Vilayeti Toplam Gelir-Gider"
+    doc = [
+        *[_page(_body(60)) for _ in range(8)],
+        _page([_ln(title, 219, BODY, 76, 90)]),
+        _page([_ln(title + " (Devam)", 197, BODY, 50, 63)]),
+        _page(_body(60)),
+    ]
+    found = typeset.chapters_from_pages(_pages(doc), typeset.page_headings(doc, _lines), "Taşra Maliyesi")
+    assert [(c["title"], c["page_from"], c["page_to"]) for c in found if c["page_from"] == 9] == [(title, 9, 11)]
+
+
+def test_word_space_given_only_by_position_between_spans():
+    """Aynı satırda iki parça arasındaki kelime arası karakter değil, konumla verilmişse boşluk konur
+    («dergisinin» + «okurlarına» yapışıyordu); bitişik parçalar (üst simge, italik geçişi) bitişik kalır."""
+    from editor.document import _join_spans
+    a = {"bbox": (75, 0, 107, 11), "size": 11.0}
+    b = {"bbox": (110, 0, 160, 11), "size": 11.0}
+    c = {"bbox": (160.2, 0, 166, 8), "size": 7.0}
+    assert _join_spans([a, b, c], ["dergisinin", "okurlarına", "18"]) == "dergisinin okurlarına18"
+    assert _join_spans([a, b], ["dergisinin", "okurlarına"], horizontal=False) == "dergisininokurlarına"

@@ -110,7 +110,7 @@ def print_kunye(d: Path) -> list[tuple[str | None, str]]:
 
 # ------------------------------------------------------------------ basılı kitabın metni (dizgiyle)
 #: Dizgi okumasının sürümü: kural değişince önbellek yeniden kurulur.
-LAYOUT_VERSION = 9
+LAYOUT_VERSION = 10
 CACHE = "basili.json"
 _busy: set[str] = set()
 _busy_lock = threading.Lock()

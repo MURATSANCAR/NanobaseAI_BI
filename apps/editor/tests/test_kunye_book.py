@@ -396,3 +396,15 @@ def test_collage_cover_labels_follow_new_title(tmp_path, monkeypatch):
     assert all(ln in text for ln in K.view(d)["label_lines"]) and "Etimesgutlu" not in text
     assert " ".join(K.view(d)["label_lines"]).split() == NEW_TITLE.split()
     assert json.loads((d / "cover.json").read_text())["style"] == "collage"
+
+
+def test_rule_fields_keep_the_full_rights_sentence():
+    """Model telif cümlesini yarıda kesebiliyordu («…anlaşma kapsamında Ti»): künyenin etiketli satırı tam kazanır;
+    modelin bulmadığı alan (çeviri) eklenir; başka bir değer (kısaltması değil) ezilmez."""
+    text = ("ÇEVİRİ Selen Demirtaş\nYAYIN HAKLARI © Minyoung Kang, 2026 ... anlaşma kapsamında Timaş Basım "
+            "Ticaret ve Sanayi A.Ş.'ye aittir.\nEDİTÖR Dilruba Aydın")
+    fields = {"TELIF": {"value": "© Minyoung Kang, 2026 ... anlaşma kapsamında Ti", "quote": "x"},
+              "EDITOR": {"value": "Elle Düzeltilmiş Ad", "quote": "x"}}
+    out = front.merge_rule_fields(fields, text)
+    assert out["TELIF"]["value"].endswith("aittir.") and out["CEVIRI"]["value"] == "Selen Demirtaş"
+    assert out["EDITOR"]["value"] == "Elle Düzeltilmiş Ad"

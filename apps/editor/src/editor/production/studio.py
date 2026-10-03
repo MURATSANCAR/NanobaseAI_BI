@@ -361,8 +361,18 @@ def refresh_kunye(d: Path) -> dict | None:
     fr = read(d, "front.json")
     if not fr or not (d / "manuscript.json").exists():
         return fr
-    rows = front_mod.kunye(_manuscript(d), fr.get("kunye_fields") or {}, fr.get("manual") or {})
-    if rows != fr.get("kunye"):
+    ms = _manuscript(d)
+    gid = (ms.source or {}).get("generation_id")
+    dirty = False
+    if gid and not fr.get("rule_fields_v"):     # eski işte modelin yarım bıraktığı alanı (telif) kuralla tamamla
+        try:
+            fr["kunye_fields"] = front_mod.merge_rule_fields(fr.get("kunye_fields") or {},
+                                                             front_mod.own_kunye_text(ms) or front_mod._front_text(gid))
+            fr["rule_fields_v"] = dirty = 1
+        except Exception:  # noqa: BLE001 - okuma kaydına ulaşılamazsa kayıtlı alanlarla devam
+            pass
+    rows = front_mod.kunye(ms, fr.get("kunye_fields") or {}, fr.get("manual") or {})
+    if rows != fr.get("kunye") or dirty:
         fr["kunye"] = rows
         write(d, "front.json", fr)
     return fr

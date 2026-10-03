@@ -291,3 +291,9 @@ def test_summary_edges_skip_suggested_preface():
     assert a == 8
     assert outputs.edge_pages(claims, set(range(1, 300))) == outputs.edge_pages(claims)  # hepsi öneriyse yok sayılır
     assert outputs.edge_skip({"scope": {"edge_excluded_pages": [5, 6]}}) == {5, 6}
+
+
+def test_upper_case_question_is_a_running_head_candidate():
+    """Bölüm adı soruysa («GALİLEO’YU KİM ÖLDÜRDÜ?») sağ sayfa başlığıdır; küçük harfli soru cümledir."""
+    assert running_head.candidate("GALİLEO’YU KİM ÖLDÜRDÜ?")
+    assert not running_head.candidate("Kim öldürdü?") and not running_head.candidate("KAPIYI AÇTI.")

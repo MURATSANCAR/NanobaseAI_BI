@@ -216,7 +216,7 @@ async def _plan(d: Path, job: dict, st: State):
     src = job["source"]
 
     st.start("icerik")
-    ms = await asyncio.to_thread(from_generation, src["generation_id"]) if src.get("generation_id") \
+    ms = await asyncio.to_thread(from_generation, src["generation_id"], None, "print") if src.get("generation_id") \
         else await asyncio.to_thread(from_docx, src["docx"])
     # Aynı işte metin yeniden okunuyorsa (yarıda kalan planın yeniden denemesi) editörün kitap adı/yazar düzeltmesi kalır.
     reapply_edits(ms, (studio.read(d, "manuscript.json") or {}).get("source"))
