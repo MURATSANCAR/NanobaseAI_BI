@@ -24,7 +24,7 @@ from typing import Any, Callable, Optional, Protocol
 
 from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
 from semantic_layer.naming import is_shadow_copy, logical_table, physical_name, source_rank
-from semantic_layer.runtime import federated, periods
+from semantic_layer.runtime import federated, month_groups, periods
 from semantic_layer.normalize import fold
 from semantic_layer.store.catalog_store import CatalogStore
 
@@ -2068,6 +2068,10 @@ class ExistingCompiler:
                 prefix + ", ".join(cols) +
                 (f" … (+{left_out} kolon listelenmedi; burada olmayan bir kolonu varsayma)" if left_out else "")
             ]
+            # Ay kolonu grubu beyanlı tablo (K13): açılımı derleyici yazar, model sanal ay kolonlarını kullanır.
+            month_note = month_groups.prompt_note(p, self.table_label(p)) if self._months_on() else ""
+            if month_note:
+                block.append(month_note)
             lines.extend(block)
             spent += sum(len(x) + 1 for x in block)
         if skipped:
@@ -2436,7 +2440,7 @@ class ExistingCompiler:
         text = self.llm.chat(messages)
         ms = int((time.perf_counter() - t0) * 1000)
         if self._plans_enabled(q):
-            plan = federated.parse_plan(text)
+            plan = self._months_plan(federated.parse_plan(text))
             if plan is not None:
                 return CompiledQuery(sql=plan.text(), compiler=self.name, catalog_version=q.catalog_version,
                                      explain=["LLM iki sunuculu plan yazdı; parçalar ayrı çalışır, bellekte birleşir"],
@@ -2453,15 +2457,15 @@ class ExistingCompiler:
                                      "kendi parçasında, birleştirme final'de. Yalnız ```json bloğu döndür."}]
                 text2 = self.llm.chat(retry)
                 ms = int((time.perf_counter() - t0) * 1000)
-                plan = federated.parse_plan(text2)
+                plan = self._months_plan(federated.parse_plan(text2))
                 if plan is not None:
                     return CompiledQuery(sql=plan.text(), compiler=self.name, catalog_version=q.catalog_version,
                                          explain=["LLM iki sunuculu plan yazdı (tek SQL denemesinden sonra); parçalar ayrı çalışır, bellekte birleşir"],
                                          llm_ms=ms, certified=False, plan=plan)
-        sql = self._requested_row_limit(extract_sql(text), q)
+        sql = self._months(self._requested_row_limit(extract_sql(text), q))
         if not sql and (again := self._reconsider_owed(q, messages, text)):
             # Asked a second time with the prompt's own contradiction removed, and it wrote the reading.
-            sql = self._requested_row_limit(extract_sql(again), q)
+            sql = self._months(self._requested_row_limit(extract_sql(again), q))
             ms = int((time.perf_counter() - t0) * 1000)
             if sql:
                 return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version,
@@ -2529,11 +2533,38 @@ class ExistingCompiler:
         return self.llm.chat(list(messages) + [{"role": "assistant", "content": text},
                                                {"role": "user", "content": self._OWED_NUDGE}])
 
+    def _months_on(self) -> bool:
+        """Ay açılımı SQL Server biçimidir (CROSS APPLY … VALUES); başka motorda beyan istemde de gösterilmez."""
+        return Dialect(self.dialect).family == "tsql"
+
+    def _months(self, sql: Optional[str]) -> Optional[str]:
+        """Modelin yazdığı sanal ay kolonlarını (`t.ay`, `t.ay_adi`, `t.ay_degeri`) derleyicinin açılımına çevirir (K13)."""
+        if not sql or not self._months_on():
+            return sql
+        try:
+            out, notes = month_groups.expand(sql, self.profiles, "tsql")
+        except Exception as e:  # noqa: BLE001 — açılamayan sorgu olduğu gibi kapıya gider; kapı eksik açılımı yakalar
+            log.warning("ay açılımı yazılamadı: %s", e)
+            return sql
+        for n in notes:
+            log.info("%s", n)
+        return out
+
+    def _months_plan(self, plan: Optional["federated.Plan"]) -> Optional["federated.Plan"]:
+        if plan is not None:
+            for part in plan.parts:
+                part.sql = self._months(part.sql) or part.sql
+        return plan
+
     def repair_plan(self, q: SemanticQuery, plan: "federated.Plan", error: str, thread: Optional[list[dict[str, str]]] = None) -> Optional["federated.Plan"]:
         messages = self.build_messages(q, thread or [])
-        messages.append({"role": "assistant", "content": "```json\n" + json.dumps(plan.to_dict(), ensure_ascii=False) + "\n```"})
+        # The model sees its plan as it wrote it: the compiler's month expansion folded back (K13).
+        shown = plan.to_dict()
+        for part in shown.get("parts") or []:
+            part["sql"] = month_groups.collapse(part.get("sql") or "")
+        messages.append({"role": "assistant", "content": "```json\n" + json.dumps(shown, ensure_ascii=False) + "\n```"})
         messages.append({"role": "user", "content": f"Bu plan doğrulamadan geçmedi: {error}\nPlanı düzelt, yalnız ```json``` bloğu döndür."})
-        return federated.parse_plan(self.llm.chat(messages))
+        return self._months_plan(federated.parse_plan(self.llm.chat(messages)))
 
     def column_hint(self, sql: str, error: str) -> str:
         """What the server said is missing, and what the tables in the statement actually have.
@@ -2594,9 +2625,11 @@ class ExistingCompiler:
     def repair(self, q: SemanticQuery, sql: str, error: str, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> Optional[str]:
         error = (error or "") + self.column_hint(sql, error)
         messages = self.build_messages(q, thread or [], recall=recall)
-        messages.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
+        # The model sees its statement the way it wrote it: the compiler's month expansion folded back into the
+        # virtual month columns, so a repair neither re-expands it by hand nor loses a month (K13).
+        messages.append({"role": "assistant", "content": f"```sql\n{month_groups.collapse(sql)}\n```"})
         messages.append({"role": "user", "content": f"Bu sorgu veritabanı doğrulamasından geçmedi. Hata: {error}\nSorguyu düzelt, yalnız ```sql``` bloğu döndür."})
-        fixed = self._requested_row_limit(extract_sql(self.llm.chat(messages)), q)
+        fixed = self._months(self._requested_row_limit(extract_sql(self.llm.chat(messages)), q))
         # A repair is asked for SQL only and often drops the reading lines; they belong to the answer.
         missing = [r for r in interpretations(sql) if fixed and r not in interpretations(fixed)]
         if missing:
