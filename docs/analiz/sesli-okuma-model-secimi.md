@@ -202,6 +202,8 @@ güncelken üretilir (`epub.audio_gap`; değilse ekranda neden + «Eksik sesleri
 
 ## Ses kütüphanesi (2026-09-27)
 
+> 2026-10-01: 19 sesin referansı Alania havuzundaki kayıtlarla değişti; ölçüm ve tablo `sesli-okuma-alania-sesleri.md`.
+
 Gruplar ekranda başlık: **Anlatıcı**, **Çocuk kitabı anlatıcısı**, **Yetişkin kitap okuyucusu**, **Karakter sesleri**;
 her grupta kadın ve erkek 3'er aday (`narration.VOICES`), hepsi yalnız yazılı tariften (hiçbir gerçek kişinin kaydı
 yok). Varsayılanlar (`anlatici-kadin`) kullanıcı seçene kadar değişmez. Her sesin yanında «dinle»: kısa örnek, ses ve
