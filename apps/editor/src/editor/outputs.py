@@ -15,7 +15,7 @@ from .book_type import STORY_FORMS
 from .config import settings
 
 ORDER = ('chapter_summaries', 'book_summary', 'search_index', 'report', 'catalog')
-POLICY = 'validated-outputs-v10'
+POLICY = 'validated-outputs-v11'
 
 
 def plain(value):
@@ -76,7 +76,7 @@ def capture(c, gid: str, roles_override: dict | None = None) -> dict:
     # Kapsam dışı sayfa (künye, yazar tanıtımı, yayınevi tanıtımı; editörün ya da otomatik kuralın kararı —
     # editor.page_scope): o sayfadaki olay/duygu/tema iddiası çıktıda kullanılmaz, silinmez; rol geri alınınca
     # geri gelir. Okumanın NON_STORY önerisi tek başına kapsamı değiştirmez.
-    from . import page_scope
+    from . import naming, page_scope
     roles = roles_override if roles_override is not None else {r['page_no']: dict(r) for r in c.execute(
         "SELECT page_no,role,source FROM ed.page_role WHERE generation_id=%s", (gid,))}
     outside = page_scope.out_of_scope(roles)
@@ -95,6 +95,15 @@ def capture(c, gid: str, roles_override: dict | None = None) -> dict:
             "SELECT character_id,array_agg(DISTINCT page_no) AS pages FROM ed.character_mention "
             "WHERE generation_id=%s AND character_id IS NOT NULL GROUP BY character_id", (gid,))}
         unused_chars = page_scope.characters_outside(characters, mention_pages, outside)
+    # Adı yalnız sayfa başlığında/altlığında yazılan karakter (yazar adı her sayfanın başında okunmuş; sayfa başlığı
+    # kuralından önce okunan kitaplar): çıktıda yok, kaydı silinmez (editor.running_head).
+    from . import running_head
+    if running_head.has_heads(pages):
+        mentions = c.execute("SELECT cm.character_id,cm.page_no,e.quote,e.kind,e.source_refs FROM ed.character_mention cm "
+                             "JOIN ed.evidence e ON e.id=cm.evidence_id AND e.generation_id=cm.generation_id "
+                             "WHERE cm.generation_id=%s AND cm.character_id IS NOT NULL", (gid,)).fetchall()
+        unused_chars |= running_head.characters_only_in_heads(characters, mentions, pages)
+    if unused_chars:
         characters = [ch for ch in characters if str(ch['id']) not in unused_chars]
     if gen['origin'] != 'TRACKED': blockers.append('LEGACY_UNASSESSED')
     if any(p['issues'] for p in pages): blockers.append('SOURCE_ISSUES')
@@ -120,6 +129,8 @@ def capture(c, gid: str, roles_override: dict | None = None) -> dict:
         'contradictions':contradictions,'regression':regression,
         'sources':pages,'blockers':blockers,'semantic_acceptance':False,
         'scope':{'policy':page_scope.SOURCE,'out_of_scope_pages':sorted(outside),'claims_unused':len(dropped),
+                 'edge_excluded_pages':sorted(set(naming.about_the_book_pages(
+                     {'page_no':p,'role':r['role']} for p,r in roles.items())) - outside),
                  'characters_unused':len(unused_chars)}})
 
 
@@ -145,7 +156,7 @@ def current(gid: str, kind: str) -> dict:
 def snapshot_passages(snap: dict) -> list[dict]:
     out = []
     for page in snap['sources']:
-        for span in page['spans']:
+        for span in source.body_spans(page):     # sayfa başlığı/altlığı aranmaz
             out.append({'kind':'paragraph','page_no':page['page_no'],'paragraph_idx':span['idx'],
                 'ref':span['span_id'],'text':span['text'],'source_issues':page['issues']})
     for event in snap['events']:
@@ -209,6 +220,41 @@ def bind_sentences(out: dict, claims: list[dict], evidence: list[dict]) -> list[
     return sentences
 
 
+def exact_copy(text: str, claims: list[dict]) -> bool:
+    """The sentence is word for word the claim (with or without a final full stop) of every claim it cites."""
+    t = text.strip()
+    return bool(claims) and all(t in (c['claim'].strip(), c['claim'].strip() + '.') for c in claims)
+
+
+def merge_repeats(rows: list[dict], allowed: dict[str, dict], evidence: list[dict]) -> list[dict]:
+    """Summary rows with one identical sentence become one row at the first place: claim, page and evidence
+    references are joined. A sentence that is a word-for-word copy of claims keeps only the claims it copies (a
+    copied claim is its own proof; another claim's pages would cite what the sentence does not say)."""
+    first: dict[str, dict] = {}
+    out = []
+    for row in rows:
+        key = row['text'].strip()
+        if key not in first:
+            first[key] = {**row, 'claim_ids': list(row['claim_ids']), 'pages': list(row['pages']),
+                          'evidence_ids': list(row['evidence_ids'])}
+            out.append(first[key])
+            continue
+        keep = first[key]
+        keep['claim_ids'] = list(dict.fromkeys(keep['claim_ids'] + row['claim_ids']))
+        keep['pages'] = sorted(set(keep['pages']) | set(row['pages']))
+        keep['evidence_ids'] = sorted(set(keep['evidence_ids']) | set(row['evidence_ids']))
+        keep['merged_repeats'] = keep.get('merged_repeats', 0) + 1
+    for row in out:
+        if not row.get('merged_repeats'):
+            continue
+        copied = [cid for cid in row['claim_ids'] if exact_copy(row['text'], [allowed[cid]])]
+        if copied and len(copied) < len(row['claim_ids']):
+            row['claim_ids'] = copied
+            row['pages'] = sorted({p for cid in copied for p in allowed[cid]['source_pages']})
+            row['evidence_ids'] = sorted({e['id'] for e in evidence if e['claim_id'] in copied and e['quote_verified']})
+    return out
+
+
 # One summary call sees at most this much claim JSON (the director's context, with room for
 # the prompt, the answer and two repair rounds: the messages grow with every repair). A setting
 # (EDITOR_SUMMARY_INPUT_MAX_CHARS, editor.budget); the value is the one in use since the
@@ -255,8 +301,18 @@ def _rank(snap: dict):
 EDGE_SHARE = 0.05
 
 
-def edge_pages(claims: list[dict]) -> tuple[tuple[int, int], tuple[int, int]] | None:
+def edge_skip(snap: dict) -> set[int]:
+    """Uç sayılmayan kapsam içi sayfalar: hikâye kitabında okumanın NON_STORY önerisi olan (önsöz, takdim, yazar
+    notu) sayfalar. Kapsamdan çıkmazlar (kurgu dışı gövde öneriyle silinmesin), yalnız özetin «baş»ı ve «son»u
+    olmazlar: 2026-10-03 denetimi, roman özeti önsözle başladı."""
+    return set((snap.get('scope') or {}).get('edge_excluded_pages') or [])
+
+
+def edge_pages(claims: list[dict], skip=frozenset()) -> tuple[tuple[int, int], tuple[int, int]] | None:
+    """`skip`: uç sayılmayan sayfalar (`edge_skip`); bütün sayfalar oradaysa yok sayılır."""
     pages = sorted({p for c in claims for p in c['source_pages']})
+    if skip:
+        pages = [p for p in pages if p not in skip] or pages
     if not pages:
         return None
     k = max(1, math.ceil(len(pages) * EDGE_SHARE)) - 1
@@ -484,7 +540,7 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
         return await _condense(snap, claims, label, plot_only=plot_only)
     # Olay özetinin uçları kitabın hikâye/gövde sayfalarıdır: künye, yazar tanıtımı, yayınevinin başka
     # kitaplarının tanıtımı uç sayılmaz (editor.page_scope; capture bu sayfaların iddiasını zaten süzer).
-    ends = edge_pages(_story(snap, claims))
+    ends = edge_pages(_story(snap, claims), edge_skip(snap))
     if plot_only and ends:
         label = (f"{label}. Kitabın başı s.{ends[0][0]}–{ends[0][1]}, sonu s.{ends[1][0]}–{ends[1][1]}: her iki "
                  f"uçtan da en az bir olay seç; seçimini kitabın başından sonuna yay.")
@@ -516,8 +572,9 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
             if attempt == 2 and any(len(s['claim_ids']) != 1 or s['text'].strip() !=
                     allowed[s['claim_ids'][0]]['claim'].strip() for s in rows):
                 raise ValueError('Final repair must preserve selected verified claim text exactly')
-            if len({s['text'].strip() for s in rows}) != len(rows):
-                raise ValueError('Summary repeats an identical sentence')
+            # A repeated sentence is dropped, its references join the first one (2026-10-03: one repeat
+            # refused all three attempts and the summary fell back to the extractive one).
+            rows = merge_repeats(rows, allowed, snap['evidence'])
         except (ValueError, KeyError, TypeError) as exc:
             feedback.append({'error':str(exc)})
         else:
@@ -542,8 +599,7 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
                         # Identity is a proof of preservation, not a semantic
                         # model vote. No fuzzy matching, name substitution,
                         # lowercasing, or removal of qualifiers/punctuation.
-                        exact=len(refs)==1 and sentence['text'].strip() in (
-                            allowed[refs[0]]['claim'].strip(), allowed[refs[0]]['claim'].strip()+'.')
+                        exact=exact_copy(sentence['text'], [allowed[r] for r in refs])
                         if exact:
                             sentence['support_check']='EXACT_VERIFIED_CLAIM'
                             if verdict['supported'] is not True:

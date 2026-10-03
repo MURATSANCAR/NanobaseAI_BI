@@ -74,6 +74,7 @@ def test_imprint_read_again_only_when_new_imprint_pages(monkeypatch):
         return {"ISBN": [{"value": "978"}], "AUTHOR": [{"value": "A"}]}
     fake = types.ModuleType("editor.catalog")
     fake.extract_metadata = extract_metadata
+    fake.needs_metadata = lambda gid: False
     monkeypatch.setitem(sys.modules, "editor.catalog", fake)
     import editor
     monkeypatch.setattr(editor, "catalog", fake, raising=False)

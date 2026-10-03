@@ -6,7 +6,10 @@ ikisi de anılıyor ya da aynı okuma penceresi ikisini ayrı grup yaptı) birle
 (cümle ortasında büyük harfle) birleşir. Anlatıcıya göreli birinci tekil akrabalık etiketi («annem», «kız
 kardeşim», 2026-10-03) da birleşir, ama kayıtların sayfa aralıkları iç içe geçmiyorsa (çok anlatıcılı kitapta
 aynı kesimde iki «annem» iki kişidir: RELATIVE_LABEL_INTERLEAVED). «Kadın», «annesi», «bakan» gibi etiketler
-birleşmez. Kısaltma = tam ad («Bee»/«Beatrice») birleştirilmez: kitapta açık eşleme olmadan ön ek benzerliği
+birleşmez. Aynı adın çocuk ve yetişkin kaydı (anlatıda büyüyen kişi, 2026-10-03) tür çatışması sayılmaz: aynı sayfada
+birlikte geçmiyor ve sayfa sırası yaşla tutarlıysa birleşir (`identity.life_stage_refusal`); insan↔hayvan gibi öbür tür
+çatışmaları reddedilir. Yazılı adlarda farklı sıra sayısı («II. Abdülhamid» / «I. Abdülhamid») ya da farklı baba adı
+(«Ahmed oğlu», «bin Ahmed») varsa adaşlar birleşmez. Kısaltma = tam ad («Bee»/«Beatrice») birleştirilmez: kitapta açık eşleme olmadan ön ek benzerliği
 güvenli değil. Model çağrısı yoktur.
 
     python -m editor.identity_fold [--generation GID ...]            # kuru koşu (varsayılan): yalnız okur
@@ -60,7 +63,7 @@ def plan(generation_id: str) -> dict:
                       "status": r["identity_status"], "confidence": float(r["identity_confidence"]),
                       "aliases": list(r["aliases"] or []), "first_page": r["first_page"],
                       "attributes": int(r["attributes"])})
-    text = "\n".join(sp["text"] for pg in source.read(generation_id) for sp in pg["spans"])
+    text = source.body_text(source.read(generation_id))   # sayfa başlığı/altlığı ad sayımına girmez
     clusters, refused = same_name_plan(units, proper_name_test(text))
     joins = []
     for g in clusters:

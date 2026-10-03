@@ -43,7 +43,37 @@ def _span(gid: str, page: int, source: dict, start: int, end: int, role="body") 
         "model_call_id": source.get("model_call_id"), "role": role}
 
 
-def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | None = None) -> dict:
+#: Sayfa başlığı/altlığı (yazar adı, kitap adı, bölüm adı sayfa kenarında): metin olarak korunur (ofsetler, kanıt
+#: doğrulaması aynı), ama okumaya (numbered), aramaya (passages), ad sayımına ve bölüm bulmaya girmez
+#: (`editor.running_head`). Rol span kimliğine girmez: eski kanıtların span bağı geçerli kalır.
+RUNNING_HEAD = "running_head"
+
+
+def body_spans(page: dict) -> list[dict]:
+    """Sayfanın gövde spanları (sayfa başlığı/altlığı hariç)."""
+    return [s for s in page["spans"] if s.get("role") != RUNNING_HEAD]
+
+
+def body_text(pages: list[dict], sep: str = "\n") -> str:
+    """Kitabın yazılı metni, sayfa başlığı/altlığı olmadan (özel ad sayımı: `naming.is_proper_name`)."""
+    return sep.join(s["text"] for p in pages for s in body_spans(p))
+
+
+def _unreliable(page: dict) -> bool:
+    return bool((page.get("layer_health") or {}).get("layer_unreliable"))
+
+
+def base_source(page: dict, by_source: dict) -> str | None:
+    """Sayfanın taban okuması (`project_page` ile aynı): metin katmanı; katman güvenilmez ölçülmüş ve OCR okuması
+    varsa OCR."""
+    if "TEXT_LAYER" in by_source and not ("OCR" in by_source and _unreliable(page)):
+        return "TEXT_LAYER"
+    return "OCR" if "OCR" in by_source else None
+
+
+def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | None = None,
+                 running=frozenset()) -> dict:
+    """`running`: bu sayfanın sayfa başlığı/altlığı olan kenar blokları ({"top", "bottom"}; `running_heads`)."""
     ocr_attempted = any(s["source"] == "OCR" for s in sources)
     by_source = {s["source"]: s for s in sources if s["text"].strip()}
     layer, ocr = by_source.get("TEXT_LAYER"), by_source.get("OCR")
@@ -53,7 +83,7 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
     # and the page was read from its pixels, that reading is the base instead and the layer
     # is kept only as an alternative. Without an OCR reading the unreliable layer stays —
     # it is all there is — and the page says so.
-    unreliable = bool((page.get("layer_health") or {}).get("layer_unreliable"))
+    unreliable = _unreliable(page)
     if layer and ocr and unreliable:
         alternatives.append({**_span(gid, page["page_no"], layer, 0, len(layer["text"])),
                              "disposition": "TEXT_LAYER_UNRELIABLE",
@@ -112,6 +142,17 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
                 candidate["reading_order"] = "UNRESOLVED_SUPPLEMENT"
                 spans.append(candidate)
                 issues.append("OCR_SUPPLEMENT_ORDER_UNRESOLVED")
+    if running and base:
+        from . import running_head
+        raw = base["text"]
+        edges = running_head.edge_blocks(raw[:running_head.WINDOW], raw[-running_head.WINDOW:], len(raw))
+        for pos in running:
+            if pos not in edges:
+                continue
+            lo, hi = edges[pos]
+            for span in spans:
+                if span["source"] == base["source"] and lo <= span["start"] and span["end"] <= hi:
+                    span["role"] = RUNNING_HEAD
     for idx,span in enumerate(spans,1):
         span["idx"] = idx
     if not spans:
@@ -134,6 +175,28 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
         "spans":spans,"alternatives":alternatives}
 
 
+def running_heads(conn, generation_id: str, book_version_id) -> dict[int, set[str]]:
+    """{sayfa: {"top"/"bottom"}} — kitabın sayfa başlığı/altlığı olan kenar blokları (`editor.running_head`).
+    Bütün kitaba bakar ama sayfa metinlerinin yalnız kenarlarını okur (tek sayfalık sorguda da ucuz)."""
+    from . import running_head
+    w = running_head.WINDOW
+    health = {r["page_no"]: r for r in conn.execute(
+        "SELECT page_no,layer_health FROM ed.page WHERE book_version_id=%s", (book_version_id,))}
+    rows = conn.execute("SELECT page_no,source,left(text,%s) AS head,right(text,%s) AS tail,length(text) AS n "
+                        "FROM ed.page_text WHERE generation_id=%s AND btrim(text)<>''",
+                        (w, w, generation_id)).fetchall()
+    by_page: dict[int, dict] = {}
+    for r in rows:
+        by_page.setdefault(r["page_no"], {})[r["source"]] = r
+    edges = {}
+    for p, srcs in by_page.items():
+        base = base_source(health.get(p) or {}, srcs)
+        if base is None:
+            continue
+        edges[p] = running_head.edge_texts(srcs[base]["head"], srcs[base]["tail"], srcs[base]["n"])
+    return running_head.detect(edges, len(edges))
+
+
 def load(conn, generation_id: str, page_no: int | None = None) -> list[dict]:
     gen = conn.execute("SELECT book_version_id FROM ed.generation WHERE id=%s",(generation_id,)).fetchone()
     if not gen:
@@ -151,7 +214,9 @@ def load(conn, generation_id: str, page_no: int | None = None) -> list[dict]:
     by_page = {}
     for row in data:
         by_page.setdefault(row["page_no"],[]).append(row)
-    return [project_page(str(generation_id),p,by_page.get(p["page_no"],[]),roles.get(p["page_no"])) for p in pages]
+    heads = running_heads(conn, generation_id, gen["book_version_id"])
+    return [project_page(str(generation_id),p,by_page.get(p["page_no"],[]),roles.get(p["page_no"]),
+                         heads.get(p["page_no"], frozenset())) for p in pages]
 
 
 def read(generation_id: str, page_no: int | None = None) -> list[dict]:
@@ -162,8 +227,9 @@ def read(generation_id: str, page_no: int | None = None) -> list[dict]:
 
 
 def numbered(page: dict) -> str:
+    """Okumaya giden sayfa metni; sayfa başlığı/altlığı yazılmaz (paragraf numaraları değişmez)."""
     lines=[]
-    for span in page["spans"]:
+    for span in body_spans(page):
         tag = " [OCR eki; okuma sırası belirsiz]" if span.get("reading_order") else ""
         lines.append(f"[s{page['page_no']} p{span['idx']}]{tag} {span['text']}")
     if page["issues"]:
@@ -188,4 +254,4 @@ def passages(generation_id: str) -> list[dict]:
              "text":s["text"], "source_policy":POLICY, "reading_sha256":p["reading_sha256"],
              "source_span":{k:s[k] for k in ("span_id","source","source_sha256","start","end")},
              "source_issues":p["issues"]}
-            for p in read(generation_id) for s in p["spans"]]
+            for p in read(generation_id) for s in body_spans(p)]

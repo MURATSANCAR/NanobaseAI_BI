@@ -89,6 +89,38 @@ def usage(name: str, text: str) -> tuple[int, int]:
     return mid, cap
 
 
+def _fold_word(s: str) -> str:
+    return ledger.norm(s.replace("I", "ı").replace("İ", "i"))
+
+
+def forced_usage(name: str, text: str) -> tuple[int, int]:
+    """(sentence-start occurrences of a MULTI-word name, of which every word after the first is
+    written with a capital). At a sentence start the first capital is the sentence's, but the
+    later words' capitals are still the writer's: «Ayşe Osmanoğlu kapıyı açtı.» is evidence,
+    «Kitabın yazarı geldi.» is not. A name followed by a colon is a label («Yayın Yönetmeni:
+    …»), not a use. Single-word names give no evidence here: (0, 0)."""
+    want = [w for w in (_fold_word(w) for w in _WORD.findall(name or "")) if w]
+    if len(want) < 2:
+        return 0, 0
+    tokens = [(m.start(), m.end(), m.group(0)) for m in _WORD.finditer(text or "")]
+    folded = [_fold_word(t) for _, _, t in tokens]
+    n = cap = 0
+    for i in range(len(tokens) - len(want) + 1):
+        if folded[i:i + len(want)] != want:
+            continue
+        j = tokens[i][0] - 1
+        while j >= 0 and text[j] in " \t":
+            j -= 1
+        if not (j < 0 or text[j] in _FORCED_AFTER):
+            continue                      # mid-sentence: `usage` counts it
+        end = tokens[i + len(want) - 1][1]
+        if text[end:end + 2].lstrip(" \t")[:1] == ":":
+            continue
+        n += 1
+        cap += all(tokens[k][2][:1].isupper() for k in range(i + 1, i + len(want)))
+    return n, cap
+
+
 def proper_share(name: str, text: str) -> float | None:
     """Share of mid-sentence uses written with a capital; None when the book never uses
     the name mid-sentence and the question therefore cannot be answered."""
@@ -97,9 +129,20 @@ def proper_share(name: str, text: str) -> float | None:
 
 
 def is_proper_name(name: str, text: str, *, min_share: float, min_uses: int) -> bool:
-    """Does the book write this name the way it writes a name?"""
+    """Does the book write this name the way it writes a name?
+
+    The evidence is the capital the sentence does not force: the first word's capital in the
+    middle of a sentence (`usage`) and, for a name of two or more words, the later words'
+    capitals at a sentence start too (`forced_usage`). A two-word author/narrator name that the
+    book writes only at sentence starts (2026-10-03 audit: mid = 0, refused) is written as a name
+    when its later words are capitalised there. `text` should be the book's body text without
+    running heads (`source.body_text`): a page head is no sentence of the book."""
     mid, cap = usage(name, text)
-    return mid >= max(1, min_uses) and cap / mid >= min_share
+    if mid >= max(1, min_uses) and cap / mid >= min_share:
+        return True
+    n, rest = forced_usage(name, text)
+    total = mid + n
+    return n > 0 and total >= max(1, min_uses) and (cap + rest) / total >= min_share
 
 
 def screen_group_names(groups: list[dict], text: str, *, min_share: float,
@@ -145,7 +188,7 @@ def screen_group_names(groups: list[dict], text: str, *, min_share: float,
             share = cap / mid if mid else None
             if canonical_keys.get(k, set()) - {seen_people}:
                 reason = OTHER_CHARACTERS_NAME
-            elif not (mid >= max(1, min_uses) and share is not None and share >= min_share):
+            elif not is_proper_name(a, text, min_share=min_share, min_uses=min_uses):
                 reason = NOT_A_PROPER_NAME
             else:
                 kept.append(a)
