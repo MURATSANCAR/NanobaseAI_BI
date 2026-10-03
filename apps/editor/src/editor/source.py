@@ -220,9 +220,8 @@ def load(conn, generation_id: str, page_no: int | None = None) -> list[dict]:
 
 
 def read(generation_id: str, page_no: int | None = None) -> list[dict]:
-    with db.tx() as c:
-        c.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
-        c.execute("SET LOCAL statement_timeout='15s'")
+    from .foundation import read_snapshot  # denetim bağlamını işlemin dışında tutar (foundation.read_snapshot)
+    with read_snapshot() as c:
         return load(c,generation_id,page_no)
 
 

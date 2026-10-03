@@ -17,10 +17,17 @@ from . import db
 
 @contextmanager
 def read_snapshot():
-    with db.tx() as c:
-        c.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
-        c.execute("SET LOCAL statement_timeout='15s'")
-        yield c
+    """Salt okunur işlem. Denetim bağlamı (`db.audit_context`) bu işlemde verilmez: `db.tx()` onu işlemin ilk komutu
+    olarak yazar, `SET TRANSACTION` ise ilk komut olmak zorunda (2026-10-03: kart servisinde POST ile gelen her
+    okuma — Kitaba sor, inceleme kararı — `ActiveSqlTransaction` ile düştü). Salt okunur işlemde yazılacak satır yok."""
+    token = db.audit_context.set(None)
+    try:
+        with db.tx() as c:
+            c.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            c.execute("SET LOCAL statement_timeout='15s'")
+            yield c
+    finally:
+        db.audit_context.reset(token)
 
 
 def assert_enabled(c=None) -> None:
