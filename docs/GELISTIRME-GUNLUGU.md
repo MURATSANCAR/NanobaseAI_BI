@@ -4,6 +4,7 @@
 
 - **Neden:** kullanıcı ekran görüntüsüyle «metinler sığmıyor (SÖZLEŞMELER taşıyor), menüyü biraz genişlet, fare üzerinden gidince otomatik kapansın, açma kısmı belirgin/büyük ve dönen hareketli olsun» dedi.
 - **Ne:** dar ray 84 → 92 px (sahne solu 96 → 104 px, `nav.css`); dar raydaki bölüm başlıkları büyük harf yerine olağan yazım (kelimeler sığar). Rayın üstünde mercan→mor, 76×44 px «Menüyü genişlet» düğmesi (çift ok). Tıklanınca 272 px'lik geniş panel rayın üstüne biner (sahne kaymaz): adlar tek satır, bölüm başlıkları tam metin, ara / tüm modüller / profil satırları. Açılış raydan sağa `clip-path` ile 240 ms, kapanış 180 ms (güçlü ease-out, CSS geçişi — yarıda tersine dönebilir), ok 180° döner; azaltılmış harekette yalnız solma. Fare panelden çıkınca 300 ms sonra kapanır (yalnız fare; dokunmada değil), Esc / dışarı tıklama / ekran değişimi de kapatır. Kod `src/canvas/nav/DesktopNav.tsx` (`WideModuleList`, `WideModuleItems`), `nav.css` (`.nav-wide`, `.nav-toggle`).
+- **Kurulum:** test sunucusu (arayüz `index-D5qnqa5z.js`, kullanıcı onayladı) → müşteri VM'i tam main `343d188b` (`/tmp/bi-main-343d188b`, `vm-deploy-343d188b`; VM'deki 49f74d85'in torunu, 56 commit; çakışma işareti 0, köprü test sunucusunda yüklendi). VM: 5 konteyner ayakta, köprü yeniden başlama 0, `/timas/` 200 ve aynı `index-D5qnqa5z.js`, `._*` 0, bi_var korundu (7 → 7). Test sunucusu köprüsüne sürüm kaydı 401 ile yazılamadı (VM köprüsüne yazıldı, id 31).
 
 ## 2026-10-03 — Menü okunurluğu: modül, ekran ve bölüm başlıkları belirgin
 
