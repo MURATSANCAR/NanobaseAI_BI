@@ -153,3 +153,10 @@ def test_a_coded_filter_reports_the_cancelled_invoices_it_left_out():
     probe = next(s for s in rt.connector.sql if "f.CANCELLED=1" in s)
     assert "f.ESTATUS IN (13)" in probe and "f.TRCODE IN (7,8,9)" in probe
     assert any("2 satış faturası iptal edilmiş" in n for n in engine.notes)
+
+
+@pytest.mark.parametrize("op", ["eq", "contains"])
+@pytest.mark.parametrize("value,codes", [("e-fatura mükellefi olmayan", {0}), ("e-Fatura mükellefi", {1}),
+                                         ("mükellefi olmayan müşteriler", {0}), ("e-fatura mükellefi müşteriler", {1})])
+def test_a_negated_phrase_is_not_read_as_its_positive_part(op, value, codes):
+    assert CODED["customer_einvoice_user"].codes_for(op, value) == codes

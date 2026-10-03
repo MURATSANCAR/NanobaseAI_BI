@@ -45,10 +45,13 @@ class Coded:
         """Sorudaki değeri bilinen kodlara çevirir; eşleşmeyen değerle hesap yapılmaz."""
         wanted, words = fold(value), self.words()
         codes = set(words.get(wanted, ()))          # tam eşleşme önce: «mükellefi değil» «mükellefi»ni de içerir
-        if not codes and op == "contains":
-            for word, matched in words.items():
-                if word and (word in wanted or wanted in word):
-                    codes |= matched
+        if not codes:
+            # Değerin içinde geçen kelimelerden yalnız en uzunları: «e-fatura mükellefi olmayan» içindeki
+            # «e-fatura mükellefi» olumlu koda gitmesin. İçerme (contains) ayrıca değeri içeren kelimeyi de alır.
+            hits = [w for w in words if w and (w in wanted or (op == "contains" and wanted in w))]
+            for word in hits:
+                if not any(word != other and word in other for other in hits):
+                    codes |= words[word]
         if not codes:
             raise ContractError(f"«{value}» değeri {self.label} kırılımının doğrulanmış kodlarından biri değil.")
         return codes
@@ -104,6 +107,7 @@ CODED = {
         "müşteri e-Fatura mükellefi mi",
         "client", "ACCEPTEINV", {1: "e-Fatura mükellefi", 0: "e-Fatura mükellefi değil"},
         {"e-fatura mükellefi": (1,), "mükellef": (1,), "evet": (1,), "e-fatura mükellefi değil": (0,),
+         "e-fatura mükellefi olmayan": (0,), "mükellefi olmayan": (0,), "mükellefi değil": (0,),
          "mükellef olmayan": (0,), "mükellef değil": (0,), "hayır": (0,)}),
     "customer_legal_form": Coded(
         "müşteri şahıs mı şirket mi",
