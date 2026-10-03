@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, BookOpen, CheckCircle2, Download, Eye, EyeOff, Headphones, Loader2, Volume2, VolumeX, XCircle } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle2, Download, Eye, EyeOff, Headphones, Loader2, PenLine, Volume2, VolumeX, XCircle } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
 import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
 import { narrationApi } from '../narration/api';
 import AltTextList from './AltTextList';
+import EpubEditor from './EpubEditor';
 import EpubPreview from './EpubPreview';
 import { epubApi, isbnOk, useEpub, type EpubAudioInfo, type EpubCheck, type EpubCompare, type EpubMissing, type EpubView, type EpubWant } from './api';
 import { StudioInfo } from '../shared';
@@ -205,6 +206,7 @@ export default function EpubSection({ jobId }: { jobId: string }) {
   const [audioChoice, setAudioChoice] = useState<boolean | null>(null);
   const [preview, setPreview] = useState(false);
   const [alts, setAlts] = useState(false);
+  const [editing, setEditing] = useState(false);
   const withAudio = !!v?.audio?.ready && (audioChoice ?? true);
   // Sesli e-kitap seçilip sesler sonradan eksik düşerse (metin değişti) sessize döner; ekran seçimi gösterir.
   const build = useMutation({
@@ -316,6 +318,11 @@ export default function EpubSection({ jobId }: { jobId: string }) {
               {preview ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}{preview ? 'Önizlemeyi kapat' : r.audio?.on ? 'Önizle ve dinle' : 'Önizle'}
             </button>
           )}
+          {canEdit && r?.house && (
+            <button type="button" className={ghostBtn} aria-expanded={editing} onClick={() => setEditing((x) => !x)}>
+              <PenLine className="h-4 w-4" aria-hidden />{editing ? 'Düzeni kapat' : 'E-kitabı düzenle'}
+            </button>
+          )}
           {v.has_plan && (
             <button type="button" className={ghostBtn} aria-expanded={alts} onClick={() => setAlts((a) => !a)}>
               Alt metinleri gözden geçir
@@ -324,6 +331,7 @@ export default function EpubSection({ jobId }: { jobId: string }) {
           )}
         </div>
 
+        {editing && <EpubEditor jobId={jobId} />}
         {preview && r && <EpubPreview jobId={jobId} result={r} />}
         {alts && <AltTextList jobId={jobId} />}
       </div>

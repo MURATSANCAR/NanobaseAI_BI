@@ -72,6 +72,27 @@ def set_eisbn(job_id: str, eisbn: str, editor: str) -> dict:
     return _put(f"{_base(job_id)}/meta", {"eisbn": str(eisbn or "")[:40]}, editor)
 
 
+DUZEN_OPS = {"style", "title", "split", "merge", "front", "add_missing", "remove_extra", "reset"}
+
+
+def duzen(job_id: str) -> dict:
+    return editorial_studio.get_json(f"{_base(job_id)}/duzen")
+
+
+def set_duzen(job_id: str, rev: int, ops: list, editor: str) -> dict:
+    """E-kitap düzeni işlemleri; işlem türü ve alanlar sınırlı, serbest alan servise gitmez. Düzen başka yerde
+    değiştiyse servis 409 STALE döner."""
+    if not isinstance(ops, list) or not 0 < len(ops) <= 200:
+        raise editorial_studio.StudioError(400, "İşlem listesi geçersiz.")
+    keep = ("op", "block", "style", "chapter", "title", "on", "key", "pages", "id")
+    clean = []
+    for o in ops:
+        if not isinstance(o, dict) or o.get("op") not in DUZEN_OPS:
+            raise editorial_studio.StudioError(400, "İşlem geçersiz.")
+        clean.append({k: (str(v)[:200] if isinstance(v, str) else v) for k, v in o.items() if k in keep})
+    return _put(f"{_base(job_id)}/duzen", {"rev": int(rev), "ops": clean}, editor)
+
+
 def alts(job_id: str) -> dict:
     return editorial_studio.get_json(f"{_base(job_id)}/alt")
 
@@ -173,6 +194,22 @@ def register(app, deps: dict[str, Any] | Any) -> None:
         b = await body(request)
         return write(request, set_eisbn, job, str(b.get("eisbn") or ""), action="update", obj=job, what="e-ISBN",
                      detail={"eisbn": b.get("eisbn")})
+
+    @app.get(P + "/duzen")
+    def editorial_studio_epub_duzen(job: str, request: Request):
+        auth(request)
+        return call(duzen, job)
+
+    @app.put(P + "/duzen")
+    async def editorial_studio_epub_duzen_set(job: str, request: Request):
+        b = await body(request)
+        ops = b.get("ops") if isinstance(b.get("ops"), list) else []
+        try:
+            rev = int(b.get("rev"))
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Düzen sırası geçersiz.") from None
+        return write(request, set_duzen, job, rev, ops, action="update", obj=job, what="e-kitap düzeni",
+                     detail={"ops": [o.get("op") for o in ops if isinstance(o, dict)][:50]})
 
     @app.get(P + "/alt")
     def editorial_studio_epub_alts(job: str, request: Request):

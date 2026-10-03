@@ -1239,12 +1239,13 @@ def _strip_note_head(parts: list) -> list:
 
 
 def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=None, notebook: "NoteBook | None" = None,
-              href: str = "") -> tuple[str, list[int]]:
+              href: str = "", styles: dict | None = None) -> tuple[str, list[int]]:
     """Bölüm gövdesi ve içindeki basılı sayfa numaraları. Dipnot: aynı bölümde «[n] …» ya da «¹ …» ile başlayan paragraf
     not olur (bölüm sonunda), metindeki aynı işaret ona bağlanır; işareti metinde olmayan paragraf not sayılmaz.
     `wrap(runs, blok_kimliği) -> html | None`: sesli e-kitapta kelimeleri kimlikli yazar (Narr.runs).
     `notebook` (ev stili): stil adları ev stilinin (e-1-baslik, e-paragraf, e-yildiz…), dipnotlar bölüm sonunda değil
-    kitabın sonundaki not dosyasında, kitap boyu tek sıra numarayla; `href` bu bölümün dosyası (geri bağlantı için)."""
+    kitabın sonundaki not dosyasında, kitap boyu tek sıra numarayla; `href` bu bölümün dosyası (geri bağlantı için).
+    `styles` (ev stili, editörün e-kitap düzeni): blok kimliği → sınıf; «gizle» paragrafı e-kitaba koymaz."""
     def flat(n) -> str:
         return "".join(runs_text(p[1]) for p in n[2] if p[0] == "runs")
 
@@ -1304,7 +1305,12 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=
             if k is not None:
                 bodies[k] = inline(_strip_note_head(n[2]), False)
                 continue
-            if house:
+            own = (styles or {}).get(next((p[2] for p in n[2] if p[0] == "runs" and len(p) > 2), None))
+            if own == "gizle":
+                continue
+            if house and own:
+                cls = f' class="{own}"'
+            elif house:
                 cls = ' class="e-yildiz"' if SECTION_BREAK.match(flat(n)) else \
                     {"sound": ' class="e-paragraf ses"', "free": ' class="e-paragraf serbest"'}.get(n[1], ' class="e-paragraf"')
             else:
@@ -1557,12 +1563,12 @@ def uid_of(d: Path, eisbn: str | None) -> str:
 
 
 def inputs_hash(d: Path, audio: bool = False) -> str:
-    """E-kitabın girdileri (plan sürümü, alt metinler, e-ISBN, künye, seçili resimler, kapak; sesli e-kitapta sayfa
+    """E-kitabın girdileri (plan sürümü, alt metinler, e-ISBN, e-kitap düzeni, künye, seçili resimler, kapak; sesli e-kitapta sayfa
     sesleri ve ses ayarı): değişince «eski» olur."""
     h = hashlib.sha1()
     pl = plan_mod.load(d) or {}
     h.update(str(pl.get("rev")).encode())
-    for name in (DIR + "/" + ALT, DIR + "/" + META, "front.json", "cover.json"):
+    for name in (DIR + "/" + ALT, DIR + "/" + META, DIR + "/duzen.json", "front.json", "cover.json"):
         p = d / name
         h.update(p.read_bytes() if p.exists() else b"-")
     h.update(json.dumps(studio.selected_art(d), sort_keys=True).encode())
@@ -1750,9 +1756,13 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
         if bios:
             fronts.append(("yazar.xhtml", "Yazar hakkında", "contributors", bios))
         if house:
+            from . import epub_edit
+            edits = epub_edit.load(d)
+            keep = {"imza.xhtml": "imza", "kunye.xhtml": "kunye", "yazar.xhtml": "yazar"}
             fronts = [(fn, t, et.removeprefix("frontmatter").strip(), b) for fn, t, et, b in
                       house_fronts(house, ms, rows, front.get("bios") or [],
-                                   f"../images/logo{logo.suffix}" if logo else None)]
+                                   f"../images/logo{logo.suffix}" if logo else None)
+                      if epub_edit.front_on(edits, keep[fn])]
         for fn, title, etype, body in fronts:
             attr = f' epub:type="frontmatter {etype}"' if etype else ' epub:type="frontmatter"'
             iid = pack.add(f"text/{fn}", xhtml(title, body, css=css, body_attr=attr))
@@ -1761,6 +1771,10 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
                 toc.append((title, f"text/{fn}"))
             pages_meta.append({"href": f"text/{fn}", "title": title, "side": None, "no": None})
         docs = flow_docs(plan, ms) if plan else _docs_from_manuscript(ms)
+        styles: dict[str, str] = {}
+        if house:                                  # editörün e-kitap düzeni (stil, bölüm, eklenen metin)
+            from . import epub_edit
+            docs, styles = epub_edit.apply(docs, edits, warn)
         href: dict[str, str] = {}
         sel = studio.selected_art(d)
         for n_ in docs:
@@ -1784,7 +1798,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
                 narr.doc = f"text/{fn}"
             body, nos = flow_html(doc, di, href, alts, fonts,
                                   wrap=(lambda runs, bid: narr.runs(runs, bid, fonts)) if narr else None,
-                                  notebook=notebook, href=fn)
+                                  notebook=notebook, href=fn, styles=styles)
             mo = narr.attach(pack, f"text/{fn}") if narr else None
             iid = pack.add(f"text/{fn}", xhtml(doc["title"], body, css=css,
                                                body_attr=' epub:type="bodymatter"' if di == 1 else ""), overlay=mo)
@@ -1857,7 +1871,7 @@ def _docs_from_manuscript(ms) -> list[dict]:
     """Sayfa planı yoksa el yazmasının bölümlerinden (sayfa numarasız)."""
     docs = []
     for ci, ch in enumerate(ms.chapters):
-        nodes = [("p", b.kind, [("runs", [{"text": b.text}])]) for b in ch.blocks]
+        nodes = [("p", b.kind, [("runs", [{"text": b.text}], f"m{ci}-{bi}")]) for bi, b in enumerate(ch.blocks)]
         docs.append({"title": ch.title or (ms.title if len(ms.chapters) == 1 else f"Bölüm {ci + 1}"), "nodes": nodes})
     return docs
 

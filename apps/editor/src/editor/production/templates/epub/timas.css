@@ -18,6 +18,10 @@ body { -epub-hyphens: auto; -webkit-hyphens: auto; hyphens: auto; }
   text-align: center; color: #000000; -epub-hyphens: none; -webkit-hyphens: none; hyphens: none;
   break-before: page; page-break-before: always; break-after: avoid; page-break-after: avoid; }
 .e-1-baslik { margin: 23px 0 14px 0; }
+/* Ara başlık: öncekine katılan bölümün başlığı ya da editörün seçtiği metin içi başlık; yeni sayfa açmaz. */
+.e-2-baslik { font-family: 'Lato', 'Corbel', sans-serif; font-size: 0.875em; font-weight: bold; line-height: 1.25;
+  margin: 23px 0 9px 0; text-align: center; color: #000000; -epub-hyphens: none; -webkit-hyphens: none; hyphens: none;
+  break-after: avoid; page-break-after: avoid; }
 .e-perde { margin: 14px 0 28px 0; }
 .e-perde-alti, .e-epi, .e-siir { font-family: 'Crimson Pro', 'Chaparral Pro', serif; font-style: italic; color: #000000; }
 .e-perde-alti { font-size: 0.75em; line-height: 1.333; margin-top: 14px; text-align: center; }

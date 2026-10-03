@@ -4,6 +4,11 @@
 
 - **Neden:** VM kurulumunda (343d188b) test sunucusu köprüsüne sürüm kaydı 401 aldı: `deploy-customer-vm.sh` administrator ile koşuyor, `SEMANTIC_CALLER_TOKEN` ise root:600 `/etc/nanobase/semantic-bridge.env`'de; boş jetonla gidildi. Kayıt kullanıcı tarafından root ile elle yazıldı (test köprüsü id 3).
 - **Ne:** `scripts/server/itops-report-release.sh` jeton verilmemişse env dosyasından yalnız `SEMANTIC_CALLER_TOKEN` satırını okur (önce doğrudan, olmazsa `sudo -n`); okuyamazsa eski davranış (uyarı, kurulum durmaz). Bir sonraki kurulumda doğrulanacak.
+## 2026-10-03 — E-kitap düzenleme ekranı (planın 3. adımı)
+
+- **Neden:** kullanıcı «şablon ve yapı aynı olsun, editördeki gibi kullanıcıya değişiklik yaptırabilelim» dedi; metin yalnız paragraf/diyalog tanıdığı için epigraf, şiir, alıntı, ara işareti editörün seçimiyle atanmalı.
+- **Ne:** `epub_edit.py` (düzen kaydı, `apply`, `structure`, `change`), `epub.build` ev stilinde düzeni uygular (`flow_html(styles=…)`, ön sayfa anahtarları, eklenen bölümler), el yazmasından gelen bölümlere blok kimliği (`m<bölüm>-<blok>`), `timas.css`'e `e-2-baslik`. Servis/köprü uçları, giriş kapısı yolu, ekran `EpubEditor.tsx`. Testler `test_epub_edit.py` (4).
+- **Gerçek kitapta (Çiçekçi Kadın kopyası, canlı işçi + veritabanı):** 6 bölüm 1.068 paragraf, düzen verisi 278 kB; «Yazarın notu» (s.206–208) basılı kayıttan eklendi — ilk denemede başlık tekrarı ve sayfa sonundaki karekod reklamı da giriyordu, kuralla temizlendi; yeniden üretimde karşılaştırma yalnız çevirmen tanıtımını eksik buldu.
 
 ## 2026-10-03 — E-kitap ↔ basılı otomatik karşılaştırma
 

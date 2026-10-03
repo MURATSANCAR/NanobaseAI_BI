@@ -6,6 +6,10 @@ anahtar (uygulama düzeyinde), yazanlarda X-Editor. Üretim stüdyo işçisinde 
                                                             dinle; yalnız bütün sayfaların sesi hazır ve güncelken)
     GET  /v1/studio/jobs/{job}/epub/file                    indir (application/epub+zip)
     PUT  /v1/studio/jobs/{job}/epub/meta     {eisbn}        e-ISBN (basılı ISBN'den ayrı)
+    GET  /v1/studio/jobs/{job}/epub/duzen                   e-kitap düzeni: bölümler, paragraf stilleri, ön sayfalar,
+                                                            eklenen metin, basılıda olup e-kitapta olmayan parçalar
+    PUT  /v1/studio/jobs/{job}/epub/duzen    {rev, ops}     düzen işlemleri (style, title, split, merge, front,
+                                                            add_missing, remove_extra, reset); rev eskiyse 409 STALE
     GET  /v1/studio/jobs/{job}/epub/alt                     alt metin listesi
     PUT  /v1/studio/jobs/{job}/epub/alt/{key}  {text}       editörün alt metni (boş → otomatiğe döner)
     POST /v1/studio/jobs/{job}/epub/alt/{key}/suggest       model önerisi (yazar; editörün metni varsa üzerine yazar)
@@ -119,6 +123,29 @@ def epub_meta(job: str, body: Meta, by: str = Depends(editor)) -> dict:
     except ValueError as e:
         raise HTTPException(400, str(e)) from None
     return {"eisbn": m.get("eisbn"), "print_isbn": epub.print_isbn(d)}
+
+
+@router.get("/duzen")
+async def epub_duzen(job: str) -> dict:
+    from . import epub_edit
+    return await asyncio.to_thread(epub_edit.structure, _dir(job))
+
+
+class Duzen(BaseModel):
+    rev: int
+    ops: list[dict] = Field(min_length=1, max_length=200)
+
+
+@router.put("/duzen")
+async def epub_duzen_set(job: str, body: Duzen, by: str = Depends(editor)):
+    from . import epub_edit
+    d = _dir(job)
+    try:
+        return await asyncio.to_thread(epub_edit.change, d, body.rev, body.ops, by)
+    except epub_edit.Conflict as e:
+        return _coded(409, "STALE", str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from None
 
 
 @router.get("/alt")

@@ -83,7 +83,29 @@ async function send<T>(method: string, path: string, body?: unknown, timeoutMs =
   return (await res.json()) as T;
 }
 
+/** E-kitap düzeni (yalnız ev stiliyle üretilen akışkan e-kitapta): bölümler, paragraf stilleri, ön sayfalar, basılıdan
+ *  eklenen metin; düzen basılı plana dokunmaz, bir sonraki e-kitap üretiminde uygulanır. */
+export type DuzenBlock = { id: string; kind: string; text: string; long: boolean; style: string | null; auto: string; split: boolean };
+export type DuzenChapter = { key: string; title: string; merged: boolean; split: boolean; renamed: boolean; blocks: DuzenBlock[] };
+export type DuzenView = {
+  rev: number; chapters: DuzenChapter[]; styles: Record<string, string>;
+  fronts: { key: string; label: string; on: boolean }[];
+  extras: { id: string; title: string; pages: [number, number]; words: number }[];
+  missing: (EpubMissing & { added: boolean })[]; warnings: string[]; house: boolean; by: string | null; at: number | null;
+};
+export type DuzenOp =
+  | { op: 'style'; block: string; style: string }
+  | { op: 'title'; chapter: string; title: string }
+  | { op: 'split'; block: string; title?: string; on: boolean }
+  | { op: 'merge'; chapter: string; on: boolean }
+  | { op: 'front'; key: string; on: boolean }
+  | { op: 'add_missing'; pages: [number, number]; title: string }
+  | { op: 'remove_extra'; id: string }
+  | { op: 'reset' };
+
 export const epubApi = {
+  duzen: (job: string) => send<DuzenView>('GET', `${base(job)}/duzen`, undefined, 60_000),
+  setDuzen: (job: string, rev: number, ops: DuzenOp[]) => send<DuzenView>('PUT', `${base(job)}/duzen`, { rev, ops }, 120_000),
   view: (job: string) => send<EpubView>('GET', base(job), undefined, 30_000),
   /** `audio`: sesli e-kitap (okurken dinle; bütün sayfaların sesi hazırken). */
   build: (job: string, layout: EpubWant, audio = false) => send<EpubView>('POST', base(job), { layout, audio }),
