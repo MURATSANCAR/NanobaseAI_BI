@@ -136,6 +136,17 @@ def test_ambiguous_records_sharing_the_books_name_still_name_the_book():
     assert rep["outcome"] == "AMBIGUOUS" and "crm_title" not in rep
 
 
+def test_a_name_taken_from_the_crm_does_not_re_match_by_itself():
+    crm = [_book("k1", "Arsen Lüpen - Kibar Hırsız", "M. Leblanc"), _book("k2", "Arsen Lüpen - Kristal Tıpa", "M. Leblanc"),
+           _book("k3", "Arsen Lüpen", "M. Leblanc", urun="Arsen Lüpen Seti")]
+    # editör: önce dosya adı, en son bugünkü (CRM'den gelmiş) ad
+    how, rows, _ = C.match(crm, [], "Arsen Lüpen - Kibar Hırsız", titles=["Arsen Lupen Kibar Hirsiz",
+                                                                          "Arsen Lüpen - Kibar Hırsız"])
+    assert [r["new_kitapId"] for r in rows] == ["k1"], how
+    how, rows, _ = C.match(crm, [], "Arsen Lüpen", titles=["Arsen Lupen Kibar Hirsiz", "Arsen Lüpen"])
+    assert [r["new_kitapId"] for r in rows] == ["k1"] and how == "TITLE"
+
+
 def test_only_new_or_changed_books_are_read_again():
     from datetime import datetime
     crm = [_book("g1", "Hafıza Bakımı", "Bora Jin", project="p1")]          # ModifiedOn 2026-01-02

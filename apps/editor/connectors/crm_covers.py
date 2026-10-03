@@ -188,27 +188,39 @@ def _author_hit(authors: list[str], book: dict) -> bool:
     return any(fold(a) and fold(a) in have for a in authors)
 
 
+def steps_for(books: list[dict]):
+    exact = (("TITLE", lambda n: (lambda t: [b for b in books if t in b["_titles"]])(fold(n))),
+             ("COMPACT", lambda n: (lambda c: [b for b in books if c in b["_compact"]])(compact(n))),
+             ("SEGMENT", lambda n: (lambda c: [b for b in books if c in b["_first"]])(compact(n))))
+    partial = (("PARTIAL", lambda n: (lambda w: [b for b in books if len(w) >= 2 and any(_opens(w, x) for x in b["_titles"])
+                                                 and partial_candidate(b)])(fold(n).split())),)
+    return exact, partial
+
+
 def match(books: list[dict], isbns: list[str], title: str, authors: list[str] = (),
           titles: list[str] = ()) -> tuple[str, list[dict], str]:
     """-> (matched_by, records, detail). One record, or several editions of one book. `titles`: the
-    book's other spellings (cleaned file name first); each step tries every name before the next step."""
+    book's spellings in the editor's order (an automatic name: cleaned file name first, the current
+    title last — a name taken from the CRM, «Arsen Lüpen», must not re-match by itself and land on
+    another record). Each name goes through all steps before the next name; a name of the editor's
+    list is never matched partially before an earlier name had its exact steps."""
     wanted = {i for i in map(norm_isbn, isbns) if i}
     names = list(dict.fromkeys(n for n in [*titles, title] if fold(n)))
+    exact, partial = steps_for(books)
     how, rows = "NONE", []
     if wanted:
         how, rows = "ISBN", [b for b in books if b["_isbns"] & wanted]
-    steps = (("TITLE", lambda n: (lambda t: [b for b in books if t in b["_titles"]])(fold(n))),
-             ("COMPACT", lambda n: (lambda c: [b for b in books if c in b["_compact"]])(compact(n))),
-             ("SEGMENT", lambda n: (lambda c: [b for b in books if c in b["_first"]])(compact(n))),
-             ("PARTIAL", lambda n: (lambda w: [b for b in books if len(w) >= 2 and any(_opens(w, x) for x in b["_titles"])
-                                                and partial_candidate(b)])(fold(n).split())))
-    for step, find in steps:
-        if rows:
-            break
+    # tam adımlar (TITLE/COMPACT/SEGMENT) ad ad sırayla; kısmi eşleme ancak hiçbir ad tam eşleşmezse
+    for group in (exact, partial):
         for n in names:
-            how, rows = step, find(n)
             if rows:
                 break
+            for step, find in group:
+                how, rows = step, find(n)
+                if rows:
+                    break
+        if rows:
+            break
     if not rows:
         return "NONE", [], ""
     if len(rows) > 1 and authors:

@@ -231,6 +231,10 @@ def test_crm_partial_match_is_flagged():
      "Mülk ve Hukuk: Osmanlı Vergi Düzeninde Meşruiyet Sorunu"),
     ("GALATASARAY", "galatasaray", "Galatasaray"),
     ("Hamam mı? Tamam mı? - Uçuk Ailemle Kaçık Maceralar", "Hamammi Tamammi", "Hamam mı? Tamam mı?"),
+    # seri adı önde, dosya adı iki parçayı da taşıyor: kaydın tamamı
+    ("Arsen Lüpen - Kibar Hırsız", "Arsen Lupen Kibar Hirsiz", "Arsen Lüpen - Kibar Hırsız"),
+    ("Arsen Lüpen - Herlock Sholmes'e Karşı", "Arsen Lupen Herlock", "Arsen Lüpen - Herlock Sholmes'e Karşı"),
+    ("Levent - Doğu Ekspresi'nde Soygun", "Levent Dogu Ekspresi", "Levent - Doğu Ekspresi'nde Soygun"),
 ])
 def test_record_name(record, file_title, want):
     assert BT.record_name(record, file_title) == want

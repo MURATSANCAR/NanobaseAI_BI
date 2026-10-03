@@ -297,12 +297,15 @@ def _small_words(t: str) -> str:
 def record_name(title: str, file_title: str = "") -> str:
     """Yayınevi kaydının (CRM ya da site) adından kitabın kendi adı. «Kitap Adı - Seri Adı 3 (Ciltli)» biçiminde
     kitabın adı dosya adına uyan parçadır; uyan yoksa dosya adıyla başlayan parça (dosya adı kısaltılmış: «Rüzgârın
-    Ardından» → «Rüzgarın Ardından: Ayine-i Zülcenaheyn»); o da yoksa ilk parça (seri adı « - »'den sonra gelir).
+    Ardından» → «Rüzgarın Ardından: Ayine-i Zülcenaheyn»); dosya adı parçaları aşıyorsa kaydın tamamı (seri adı önde:
+    «arsen lupen kibar hirsiz» → «Arsen Lüpen - Kibar Hırsız»); hiçbiri değilse ilk parça (seri adı « - »'den sonra).
     Harf büyüklüğü tek biçimse Türkçe başlık yazımı; bağlaçlar küçük."""
     parts = segments(title) or [re.sub(r"\s+", " ", title or "").strip()]
     want = key(file_title)
+    whole = " - ".join(parts)
     pick = next((p for p in parts if want and key(p) == want), None) \
-        or next((p for p in parts if want and key(p).startswith(want)), None) or parts[0]
+        or next((p for p in parts if want and key(p).startswith(want)), None) \
+        or (whole if want and key(whole).startswith(want) else None) or parts[0]
     pick = pick.strip(" .,;-–—")
     return _small_words(title_case(pick, typed=False))[:300]
 
