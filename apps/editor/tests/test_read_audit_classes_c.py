@@ -178,7 +178,7 @@ def test_not_a_book_form_and_prompt():
     assert "kitap olmayan" in bt.describe(p)
     prompt = bt.classify_prompt("Deneme", [], ["FICTION", bt.NOT_A_BOOK], [(5, "metin")])
     assert "N = kitap değil" in prompt and "etkinlik ve boyama kitabı kitaptır" in prompt
-    assert "NOT_A_BOOK" in (DB / "032_not_a_book.sql").read_text()
+    assert "NOT_A_BOOK" in (DB / "033_not_a_book.sql").read_text()
 
 
 def test_model_choice_always_offers_not_a_book(monkeypatch):
