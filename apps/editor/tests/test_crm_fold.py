@@ -174,3 +174,27 @@ def test_only_new_or_changed_books_are_read_again():
     ma = C.match(amb, [], "penguenkarcan")
     assert C.unchanged({"last_lookup": {**last, "outcome": "AMBIGUOUS", "crm_title": "Penguen Karcan"}}, ma, {})
     assert not C.unchanged({"last_lookup": {**last, "outcome": "AMBIGUOUS", "crm_title": None}}, ma, {})
+
+
+def test_glued_file_names_number_prefixes_and_series_numbers():
+    crm = [_book("p1", "Arkadaşım Güneş", "A"), _book("p2", "Müpteladır Gemiler Benim Denizlerime", "B"),
+           _book("p3", "Danger Dan - Milli Marşı Kurtarıyor 2", "C"), _book("p4", "Danger Dan - Kurnaz Casusla İş Birliği Yapıyor 5", "C"),
+           _book("p5", "Ulak - Akıncı Fırtınası", "D"), _book("p6", "Beşiktaşlı Çocuklar Kitabı", "E"),
+           _book("p7", "Şirin Topkapı Sarayı'nda - İstanbul'u Geziyorum 1", "F"), _book("p8", "Armağan", "G")]
+    ids = lambda m: (m[0], [r["new_kitapId"] for r in m[1]])  # noqa: E731
+    assert ids(C.match(crm, [], "arkadasımgunesic")) == ("COMPACT", ["p1"])         # sona bitişik «ic»
+    assert ids(C.match(crm, [], "7armagan"))[1] == ["p8"]                            # başa bitişik numara
+    assert ids(C.match(crm, [], "mupteladirgemiler")) == ("PREFIX", ["p2"])         # kısaltılmış bitişik ad
+    assert ids(C.match(crm, [], "sirintopkapisarayi")) == ("PREFIX", ["p7"])        # kesmeden sonraki ek ayrı kelime
+    assert ids(C.match(crm, [], "dangerdan2")) == ("SERIES_NO", ["p3"])             # cilt numarası kayıtta
+    assert C.match(crm, [], "ulak4")[0] == "NONE"                                   # numara kayıtta yok
+    assert C.match(crm, [], "besiktas")[0] == "NONE"                                # 10 harften kısa önek
+    crm += [_book("q1", "Canavar Otu - Öykü Çemberi 2", "H"), _book("q2", "Gizli Görevler Okulu", "I"),
+            _book("q3", "Sevgili Peygamberim Günlüğümde", "J"), _book("q4", "Kayı 1: Ertuğrul'un Ocağı", "K"),
+            _book("q5", "Meraklı Kutu - Peygamberimi Tanıyorum Seti (4 Kitap)", "L")]
+    assert C.match(crm, [], "Can Avar 2")[0] == "NONE"                              # numara kaydın ilk parçasından sonra değil
+    assert C.match(crm, [], "gizligorev")[0] == "NONE"                              # kelimenin içinde bitiyor
+    assert C.match(crm, [], "365 Sevgili Peygamberim")[0] == "NONE"                 # numarasız ad kısmi eşlemede yok
+    assert ids(C.match(crm, [], "kayi1")) == ("SERIES_NO", ["q4"])
+    assert C.match(crm, [], "Merakli Kutu 4")[0] == "NONE"                          # set ürünü
+    assert C.match(crm, [], "besiktaslicocuklarki")[0] == "NONE"                    # başka kelimenin içinde bitiyor

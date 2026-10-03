@@ -159,7 +159,7 @@ def key(s: str | None) -> str:
 _PREFIXES = (
     ("page_range", re.compile(r"^\d{1,3}\s*-\s*\d{1,3}\s+(?=\S)")),
     ("year", re.compile(r"^(?:19|20)\d{2}\s*[-_.)]\s*(?=[^\W\d_])")),
-    ("number", re.compile(r"^\d{1,3}\s*[-_.)]+\s*(?=[^\W\d_]|\d{1,3}\s)")),
+    ("number", re.compile(r"^\d{1,3}\s*[-_.)]+\s*(?=[^\W\d_]|\d{1,3}\.?\s)")),          # «4-1. Yok Artık»
     ("number_space", re.compile(r"^(?:0\d{1,2}|\d{1,2})\s+(?=[^\W\d_])")),
 )
 
@@ -319,10 +319,16 @@ def resolve(file_name: str = "", user: str | None = None, site: dict | None = No
     if user and user.strip():
         return {"title": re.sub(r"\s+", " ", user).strip()[:300], "source": USER, "review": [], "raw": file_name}
     f = from_file(file_name)
+    if crm and crm.get("by") == "SAME_NAME" and \
+            set(re.findall(r"\d+", f["title"])) - set(re.findall(r"\d+", crm.get("title") or "")):
+        # birden çok kaydın ortak adı dosya adındaki cilt numarasını taşımıyorsa kitabın adı değildir («Bilimbaz 2»
+        # dosyası «Bilimbaz - …» kayıtlarının ortak adı «Bilimbaz» olmaz)
+        crm = None
     if crm and (crm.get("title") or "").strip():
         # kayıt adının içinden kelime seçilmez, bütün parça alınır: «El Cezeri ve Bakır Taç» «cezeri»ye kısalmaz
         by = crm.get("by") or ""
-        review = ["CRM'de kısmi ad eşleşmesi: " + crm["title"].strip()[:120]] if by.startswith("PARTIAL") else []
+        review = ["CRM'de kısmi ad eşleşmesi: " + crm["title"].strip()[:120]] \
+            if by.startswith(("PARTIAL", "PREFIX", "SERIES_NO")) else []
         return {"title": record_name(crm["title"], f["title"]), "source": CRM, "review": review, "raw": f["raw"],
                 "by": by or None}
     if site and (site.get("row") or {}).get("title"):

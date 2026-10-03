@@ -171,15 +171,20 @@ def _opens(words: list[str], title: str) -> bool:
 
 #: Kitap olmayan CRM ürünü (kayıt adının kendi parçasında): kısmi eşlemede «Entel Dantel İşler» dosyası «Entel Dantel
 #: İşler Ayraç» ürününe, «Dedektif Aynes» «Dedektif Aynes Seti (4 Kitap)»a gitmesin.
-NOT_A_BOOK = frozenset({"ayrac", "kartpostal", "set", "seti", "bulten", "insert", "testi", "poster", "takvim",
-                        "ajanda", "afis"})
+NOT_A_BOOK = frozenset({"ayrac", "kartpostal", "set", "seti", "bulten", "bulteni", "insert", "testi", "poster", "takvim",
+                        "ajanda", "afis", "koli", "barkod"})
+#: Kayıt adının herhangi bir yerinde kitap dışı ürün işareti: «… Seti (4 Kitap)», «Boş Kutu», «Market Grup».
+NOT_A_BOOK_ANYWHERE = re.compile(r"\bbos (?:koli|kutu)\b|\btek barkod\b|\bmarket grup\b")
+#: Ham adda set: «(4 Kitap)» (setin kendisi); «(10. Kitap)» setin onuncu kitabıdır, kitaptır.
+SET_OF_BOOKS = re.compile(r"\(\s*\d+\s+kitap\s*\)", re.I)
 
 
 def partial_candidate(book: dict) -> bool:
     """Kısmi eşlemeye girebilir mi (kayıt başına bir kez hesaplanır, `_partial`)."""
     if "_partial" not in book:
         name = book.get("new_name") or ""
-        book["_partial"] = not (set(fold(first_part(name)).split()) & NOT_A_BOOK) and "iptal edildi" not in fold(name)
+        book["_partial"] = not (set(fold(first_part(name)).split()) & NOT_A_BOOK) and "iptal edildi" not in fold(name) \
+            and not NOT_A_BOOK_ANYWHERE.search(fold(name)) and not SET_OF_BOOKS.search(name)
     return book["_partial"]
 
 
@@ -188,13 +193,86 @@ def _author_hit(authors: list[str], book: dict) -> bool:
     return any(fold(a) and fold(a) in have for a in authors)
 
 
+#: Dosya adının SONUNA bitişik yazılmış dosya hâli sözcükleri («arkadasımgunesic», «hareminpadisahibaski»,
+#: «canımarkadasımyeni»): boşluksuz anahtardan atılmış biçim ayrıca denenir (yalnız özgün ad eşleşmezse).
+GLUED_TAIL = re.compile(r"(?:baski+|ic|son|ozalit|yeni|small)+$")
+
+
+def name_variants(names: list[str], lead: bool = True) -> list[str]:
+    """Editörün adlarına ek yazımlar (her biri kendi adından SONRA denenir): sona bitişik dosya hâli sözcüğü atılmış,
+    `lead` ise başa bitişik sıra numarası da atılmış («7armagan» → «armagan»; «80gundedevrialem» özgün hâliyle önce
+    denenir). Numarası atılmış ad yalnız tam eşlemede kullanılır: kısmi eşlemede «365 Sevgili Peygamberim» «Sevgili
+    Peygamberim Günlüğümde»ye gider."""
+    out: list[str] = []
+    for n in names:
+        out.append(n)
+        c = compact(n)
+        stripped = re.sub(r"^\d{1,3}(?=[a-z])", "", c) if lead else c
+        for v in (GLUED_TAIL.sub("", c), stripped, GLUED_TAIL.sub("", stripped)):
+            if v != c and len(v) >= 6:
+                out.append(v)
+    return list(dict.fromkeys(out))
+
+
+def _word_ends(title: str) -> list[int]:
+    """Katlanmış adın kelime sonlarının boşluksuz anahtardaki konumları."""
+    ends, n = [], 0
+    for w in fold(title).split():
+        n += len(w)
+        ends.append(n)
+    return ends
+
+
+def _keys(b: dict) -> list[tuple[str, list[int]]]:
+    """Kaydın adlarının (boşluksuz anahtar, kelime sonları) çiftleri; kayıt başına bir kez hesaplanır."""
+    if "_keys" not in b:
+        b["_keys"] = [(compact(t), _word_ends(t)) for t in dict.fromkeys(
+            b.get(k) or "" for k in ("new_name", "new_KitabnAd", "new_urunadi")) if compact(t)]
+        b["_nums"] = set(re.findall(r"\d+", fold(b.get("new_name"))))
+    return b["_keys"]
+
+
+def opens_compact(want: str, title: str, keys: tuple[str, list[int]] | None = None) -> bool:
+    """Boşluksuz dosya adı kayıt adının başı mı (dosya adı kısaltılmış: «mupteladirgemiler» → «Müpteladır Gemiler
+    Benim Denizlerime»)? Dosya adı bir kelime sınırında bitmeli: kesmeden sonraki ek ayrı kelime sayılır («sirintopkapi
+    sarayi» → «Şirin Topkapı Sarayı'nda»), ama kelimenin içinde bitemez («gizligorev» «Gizli Görevler Okulu» değil)."""
+    c, ends = keys or (compact(title), _word_ends(title))
+    if len(want) < 10 or not c.startswith(want) or c == want:
+        return False
+    nxt = next((e for e in ends if e >= len(want)), None)
+    return nxt == len(want)
+
+
 def steps_for(books: list[dict]):
     exact = (("TITLE", lambda n: (lambda t: [b for b in books if t in b["_titles"]])(fold(n))),
              ("COMPACT", lambda n: (lambda c: [b for b in books if c in b["_compact"]])(compact(n))),
              ("SEGMENT", lambda n: (lambda c: [b for b in books if c in b["_first"]])(compact(n))))
     partial = (("PARTIAL", lambda n: (lambda w: [b for b in books if len(w) >= 2 and any(_opens(w, x) for x in b["_titles"])
-                                                 and partial_candidate(b)])(fold(n).split())),)
+                                                 and partial_candidate(b)])(fold(n).split())),
+               # dosya adı kayıt adının başı (bitişik yazılmış, kısaltılmış ad)
+               ("PREFIX", lambda n: (lambda c: [] if len(c) < 10 else [
+                   b for b in books if any(k[0].startswith(c) for k in _keys(b))
+                   and any(opens_compact(c, "", k) for k in _keys(b)) and partial_candidate(b)])(compact(n))),
+               # sondaki cilt numarası: numarasız ad kaydın ilk parçası ve numara kayıt adında; ya da kayıt adı ad + numara
+               # ile başlıyor («dangerdan2» → «Danger Dan - Milli Marşı Kurtarıyor 2», «kayi1» → «Kayı 1: Ertuğrul'un
+               # Ocağı»; «ulak4» numarasız «Ulak - …»ya, «Can Avar 2» «Canavar Otu - … 2»ye gitmez)
+               ("SERIES_NO", lambda n: series_no(books, compact(n))))
     return exact, partial
+
+
+def series_no(books: list[dict], c: str) -> list[dict]:
+    m = re.fullmatch(r"(.{4,}?)(\d{1,2})", c)
+    if not m:
+        return []
+    base, no = m.groups()
+    out = []
+    for b in books:
+        if not ((base in b["_first"] and no in b["_nums"]) or any(k[0].startswith(c) and any(
+                e == len(c) for e in k[1]) for k in _keys(b))):
+            continue
+        if partial_candidate(b):
+            out.append(b)
+    return out
 
 
 def match(books: list[dict], isbns: list[str], title: str, authors: list[str] = (),
@@ -205,14 +283,15 @@ def match(books: list[dict], isbns: list[str], title: str, authors: list[str] = 
     another record). Each name goes through all steps before the next name; a name of the editor's
     list is never matched partially before an earlier name had its exact steps."""
     wanted = {i for i in map(norm_isbn, isbns) if i}
-    names = list(dict.fromkeys(n for n in [*titles, title] if fold(n)))
+    given = list(dict.fromkeys(n for n in [*titles, title] if fold(n)))
+    names, loose = name_variants(given), name_variants(given, lead=False)
     exact, partial = steps_for(books)
     how, rows = "NONE", []
     if wanted:
         how, rows = "ISBN", [b for b in books if b["_isbns"] & wanted]
     # tam adımlar (TITLE/COMPACT/SEGMENT) ad ad sırayla; kısmi eşleme ancak hiçbir ad tam eşleşmezse
-    for group in (exact, partial):
-        for n in names:
+    for group, group_names in ((exact, names), (partial, loose)):
+        for n in group_names:
             if rows:
                 break
             for step, find in group:

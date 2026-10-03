@@ -268,3 +268,15 @@ def test_every_source_is_allowed_by_the_database():
     last = [m for m in migs if "book_title_source_check" in m.read_text()][-1].read_text()
     allowed = set(re.findall(r"'(\w+)'", last.split("book_title_source_check")[-1]))
     assert allowed == set(BT.SOURCES), (allowed, BT.SOURCES)
+
+
+def test_double_order_number_is_dropped():
+    assert BT.from_file("4-1. Yok Artik.pdf")["title"] == "Yok Artik"
+    assert BT.from_file("4-10. Gerçek Kahramanlar.pdf")["title"] == "Gerçek Kahramanlar"
+
+
+def test_shared_name_without_the_volume_number_is_not_taken():
+    r = BT.resolve("bilimbaz-2 - baskı ozalit.pdf", crm={"title": "Bilimbaz", "by": "SAME_NAME"})
+    assert r["source"] == "file"
+    r = BT.resolve("kayi2.pdf", crm={"title": "Kayı 2: Cihan Devleti", "by": "SAME_NAME"})
+    assert (r["title"], r["source"]) == ("Kayı 2: Cihan Devleti", "crm")
