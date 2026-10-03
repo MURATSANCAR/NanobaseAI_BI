@@ -40,6 +40,8 @@ services:
       REPORT_DIR: /data/reports
       # Kapak arşivi: VM beslemez, GPU'daki ortak arşivi GPU nginx'inin salt okunur yollarından okur (09-29 kararı).
       STUDIO_LIBRARY_FEED: "0"
+      # Kenar logu günlük dosyalarda (web nginx'i, logrotate yok): audit_trail._ship_edge_daily.
+      AUDIT_EDGE_DIR: /var/log/nanobase-audit
     volumes:
       - ./secrets/logo-mssql-connection.json:/app/secrets/logo-mssql-connection.json:ro
       - ./secrets/crm-mssql-connection.json:/app/secrets/crm-mssql-connection.json:ro
@@ -47,8 +49,8 @@ services:
       - bi_reports:/data/reports
       # Uygulamanın yazdığı durum (rapor önbelleği, Finansal Denetim arşivi, editör verisi): kurulumda silinmez.
       - bi_var:/data/nanobaseai/bi/var
-      # Merkezi denetim kaydı: web'in kenar logu (köprü yalnız okur, audit_trail.ship_edge).
-      - bi_audit:/var/log/nanobase-audit:ro
+      # Merkezi denetim kaydı: web'in günlük kenar logu (köprü okur, okunmuş ve 30 günden eski dosyayı siler).
+      - bi_audit:/var/log/nanobase-audit
     depends_on:
       db:
         condition: service_healthy

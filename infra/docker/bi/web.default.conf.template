@@ -12,13 +12,18 @@ limit_req_zone $binary_remote_addr zone=destek_login:10m rate=10r/m;
 log_format nb_audit escape=json '{"t":"$time_iso8601","ip":"$remote_addr","u":"$timas_user","m":"$request_method",'
     '"p":"$request_uri","s":$status,"b":$body_bytes_sent,"rt":"$request_time","ref":"$http_referer",'
     '"ua":"$http_user_agent","h":"$server_name:$server_port","rid":"$request_id"}';
+# Günlük dosya: konteynerde logrotate yok; köprü okur, okunmuş ve 30 günden eski dosyayı siler (audit_trail).
+map $time_iso8601 $nb_audit_day {
+    "~^(?<y>\d{4})-(?<mo>\d{2})-(?<d>\d{2})" "$y$mo$d";
+    default "gun";
+}
 
 server {
     listen 80;
     server_name _;
     # Denetim kaydı (kenar): kişi giriş servisinden, satır merkeze akar; ana log yerinde.
     auth_request_set $timas_user $upstream_http_x_timas_user;
-    access_log /var/log/nanobase-audit/edge.log nb_audit;
+    access_log /var/log/nanobase-audit/edge-$nb_audit_day.log nb_audit;
     access_log /var/log/nginx/access.log;
     client_max_body_size 8m;
     # Docker DNS: login/bridge yeniden kurulunca iç adresleri değişir.
@@ -344,7 +349,7 @@ server {
     server_name _;
     # Denetim kaydı (kenar): kişi giriş servisinden, satır merkeze akar; ana log yerinde.
     auth_request_set $timas_user $upstream_http_x_timas_user;
-    access_log /var/log/nanobase-audit/edge.log nb_audit;
+    access_log /var/log/nanobase-audit/edge-$nb_audit_day.log nb_audit;
     access_log /var/log/nginx/access.log;
     client_max_body_size 50m;
     resolver 127.0.0.11 valid=30s ipv6=off;

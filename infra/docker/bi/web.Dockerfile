@@ -15,5 +15,7 @@ FROM nginx:alpine
 # default.conf.template: nginx:alpine açılışta envsubst ile ${CALLER_TOKEN}'ı yazar.
 # Ortam değişkeni olmayan $host/$uri gibi nginx değişkenlerine dokunmaz (sadece env'de tanımlı olanları değiştirir).
 COPY infra/docker/bi/web.default.conf.template /etc/nginx/templates/default.conf.template
+# Denetim kaydının kenar logu: nginx işçisi günlük dosyayı kendisi açar, dizin ona yazılabilir olmalı (bi_audit diski).
+COPY infra/docker/bi/web-audit-dir.sh /docker-entrypoint.d/15-audit-dir.sh
 COPY --from=build /src/dist /usr/share/nginx/html
 EXPOSE 80

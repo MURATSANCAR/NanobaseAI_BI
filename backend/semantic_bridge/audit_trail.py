@@ -1040,7 +1040,10 @@ def edge_log_path() -> str:
 
 def ship_edge(engine: sa.engine.Engine) -> int:
     """Kenar logunu kaldığı yerden okur. Dosya döndürülürse (logrotate) yeni dosyanın başından başlar; önceki
-    dosyanın okunmamış sonu `.1`'den tamamlanır."""
+    dosyanın okunmamış sonu `.1`'den tamamlanır. `AUDIT_EDGE_DIR` verilmişse (müşteri VM'i: nginx konteynerde,
+    logrotate yok) nginx günlük dosyalara yazar, okuma `_ship_edge_daily` ile."""
+    if os.environ.get("AUDIT_EDGE_DIR"):
+        return _ship_edge_daily(engine, os.environ["AUDIT_EDGE_DIR"])
     path = edge_log_path()
     if not os.path.exists(path):
         return 0
@@ -1055,6 +1058,49 @@ def ship_edge(engine: sa.engine.Engine) -> int:
         off = "0"
     start = int(off) if int(off) <= st.st_size else 0
     total += _ship_edge_file(engine, path, start, lambda n: _cursor_set(engine, "edge", f"{st.st_ino}:{n}"))
+    return total
+
+
+#: Günlük kenar dosyalarının saklama süresi: okunmuş ve bu süreden eski dosya silinir. Kayıt merkezde süresiz durur;
+#: dosya yalnız taşıma tamponudur (müşteri VM'inde nginx konteynerinde logrotate yok, 2026-10-03).
+EDGE_KEEP_DAYS = 30
+
+
+def _ship_edge_daily(engine: sa.engine.Engine, directory: str) -> int:
+    """nginx `edge-YYYYAAGG.log` dosyaları: imleç «dosya adı:bayt». Ad sırası gün sırasıdır; imleçteki dosyadan önceki
+    günler okunmuştur. Eski tek dosya (`edge.log`, gün dosyalarından önceki kurulum) baştan bir kez okunur ve silinir —
+    olay kimliği (nginx `$request_id`) aynı satırın ikinci kez yazılmasını önler."""
+    import glob
+
+    total = 0
+    legacy = os.path.join(directory, "edge.log")
+    if os.path.exists(legacy):
+        total += _ship_edge_file(engine, legacy, 0, lambda n: None)
+        try:
+            os.remove(legacy)
+        except OSError as e:
+            log.warning("denetim: eski kenar logu silinemedi: %s", e)
+    files = sorted(glob.glob(os.path.join(directory, "edge-*.log")))
+    pos = _cursor_get(engine, "edge") or ""
+    name, off = pos.rsplit(":", 1) if ":" in pos and pos.startswith("edge-") else ("", "0")
+    for f in files:
+        base = os.path.basename(f)
+        if name and base < name:
+            continue
+        start = int(off) if base == name else 0
+        if start > os.path.getsize(f):
+            start = 0
+        total += _ship_edge_file(engine, f, start, lambda n, b=base: _cursor_set(engine, "edge", f"{b}:{n}"))
+    pos = _cursor_get(engine, "edge") or ""
+    current = pos.rsplit(":", 1)[0] if pos.startswith("edge-") else ""
+    cutoff = time.time() - EDGE_KEEP_DAYS * 86400
+    for f in files:
+        base = os.path.basename(f)
+        if current and base < current and os.path.getmtime(f) < cutoff:
+            try:
+                os.remove(f)
+            except OSError as e:
+                log.warning("denetim: eski kenar logu silinemedi (%s): %s", base, e)
     return total
 
 
