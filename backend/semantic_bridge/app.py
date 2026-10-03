@@ -2135,6 +2135,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     def _boot_services(r: Runtime) -> None:
         """Ekranların arka plan işleri: yalnız çalışma ortamını (depo, bağlantılar) ister, kataloğu beklemez."""
+        # Denetim izi: yazma isteğindeki her işlem kişinin bağlamını taşısın (satır tetikleyicisi oradan okur).
+        from semantic_bridge import audit_trail
+        audit_trail.bind_engine(r.store.engine)
         r.start_refresher()
         app.state.financial_audit.start()
         app.state.editorial_home.start()
@@ -2173,6 +2176,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             anyio.to_thread.current_default_thread_limiter().total_tokens = int(os.environ.get("SEMANTIC_THREADPOOL", "200"))
         except Exception as e:  # noqa: BLE001
             log.warning("thread pool size left at its default: %s", e)
+        from semantic_bridge import audit_trail
+        audit_trail.start(lambda: state["rt"].store.engine if state["rt"] is not None else None)
         if runtime is not None and getattr(runtime, "catalog_is_ready", lambda: True)():
             boot.run_inline()            # hazır verilen çalışma ortamı (testler): servisler eskisi gibi hemen başlar
         else:
@@ -2181,6 +2186,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             yield
         finally:
             label_stop.set()
+            audit_trail.stop()
             if boot.stop():
                 app.state.editorial_home.stop()
                 app.state.editorial_intake.stop()
@@ -7655,6 +7661,120 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _, engine, _, _, _ = _admin(request)
         return admin_mod.audit_list(engine, kind=kind, actor=actor, action=action, q=q, before=before, limit=limit)
 
+    # ------------------------------------------------------------------ denetim izi (audit_trail.py)
+
+    @app.post("/api/v1/audit/ui")
+    async def audit_ui(request: Request) -> dict[str, Any]:
+        """Tarayıcının ekran olayları (sayfa, düğme, seçim). Kişi oturumdan; gövdedeki ad dikkate alınmaz."""
+        from semantic_bridge import audit_trail
+
+        cookie = request.headers.get("cookie", "")
+        try:
+            user = await run_in_threadpool(board_mod.user_of, cookie)
+        except board_mod.NoUser:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
+        try:
+            body = json.loads((await request.body()) or b"{}")
+        except ValueError:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Olaylar okunamadı."}) from None
+        ip = request.headers.get("x-real-ip") or (request.client.host if request.client else None)
+        return {"ok": True, "count": audit_trail.ui_events(user, cookie, ip, request.headers.get("user-agent"), body)}
+
+    def _trail_filters(types: Optional[str], actor: Optional[str], since: Optional[str], until: Optional[str],
+                       q: Optional[str], reads: Optional[str], table: Optional[str], module: Optional[str]) -> dict[str, Any]:
+        return {"types": [t for t in (types or "").split(",") if t] or None, "actor": actor or None,
+                "since": since or None, "until": until or None, "q": q or None,
+                "reads": "only" if (reads or "").lower() == "only" else (reads or "").lower() in ("1", "true", "evet"), "tbl": table or None, "module": module or None}
+
+    @app.get("/api/v1/admin/trail")
+    def admin_trail(request: Request, types: Optional[str] = None, actor: Optional[str] = None,
+                    since: Optional[str] = None, until: Optional[str] = None, q: Optional[str] = None,
+                    reads: Optional[str] = None, table: Optional[str] = None, module: Optional[str] = None,
+                    before: Optional[str] = None, limit: int = 100) -> dict[str, Any]:
+        from semantic_bridge import audit_trail
+
+        _, engine, _, _, _ = _admin(request)
+        return audit_trail.timeline(engine, before=before, limit=limit,
+                                    **_trail_filters(types, actor, since, until, q, reads, table, module))
+
+    @app.get("/api/v1/admin/trail/item/{typ}/{item_id}")
+    def admin_trail_item(typ: str, item_id: int, request: Request) -> dict[str, Any]:
+        from semantic_bridge import audit_trail
+
+        _, engine, _, _, _ = _admin(request)
+        out = audit_trail.item_detail(engine, typ, item_id)
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kayıt bulunamadı."})
+        return out
+
+    @app.get("/api/v1/admin/trail/request/{rid}")
+    def admin_trail_request(rid: str, request: Request) -> dict[str, Any]:
+        from semantic_bridge import audit_trail
+
+        _, engine, _, _, _ = _admin(request)
+        out = audit_trail.request_detail(engine, rid)
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "İstek bulunamadı."})
+        return out
+
+    @app.get("/api/v1/admin/trail/record")
+    def admin_trail_record(request: Request, table: str, pk: str) -> dict[str, Any]:
+        from semantic_bridge import audit_trail
+
+        _, engine, _, _, _ = _admin(request)
+        return {"items": audit_trail.record_history(engine, table, pk)}
+
+    @app.get("/api/v1/admin/trail/actors")
+    def admin_trail_actors(request: Request) -> dict[str, Any]:
+        from semantic_bridge import audit_trail
+
+        _, engine, _, _, _ = _admin(request)
+        return {"items": audit_trail.actors(engine)}
+
+    @app.get("/api/v1/admin/trail/status")
+    def admin_trail_status(request: Request) -> dict[str, Any]:
+        from semantic_bridge import audit_trail
+
+        _, engine, _, _, _ = _admin(request)
+        return {"stats": audit_trail.stats(engine), "seal": audit_trail.seal_state(engine)}
+
+    @app.post("/api/v1/admin/trail/verify")
+    def admin_trail_verify(request: Request) -> dict[str, Any]:
+        """Mühür zincirini baştan doğrular (önce bekleyen satırlar mühürlenir)."""
+        from semantic_bridge import audit_trail
+
+        _, engine, _, _, user = _admin(request)
+        audit_trail.seal_all(engine)
+        out = audit_trail.verify_all(engine)
+        admin_mod.audit(engine, user, "run", "audit_verify", None, "Denetim kaydı mühür doğrulaması",
+                        {"ok": out["ok"], "tables": {t["table"]: {"checked": t["checked"], "broken": t["broken"],
+                                                                   "missing": t["missing"]} for t in out["tables"]}})
+        return out
+
+    @app.get("/api/v1/admin/trail/export.csv")
+    def admin_trail_export(request: Request, types: Optional[str] = None, actor: Optional[str] = None,
+                           since: Optional[str] = None, until: Optional[str] = None, q: Optional[str] = None,
+                           reads: Optional[str] = None, table: Optional[str] = None,
+                           module: Optional[str] = None) -> Response:
+        from semantic_bridge import audit_trail
+
+        _, engine, _, _, user = _admin(request)
+        filters = _trail_filters(types, actor, since, until, q, reads, table, module)
+        cols = ["at", "type", "actor", "ip", "rid", "event", "label", "method", "path", "status", "page",
+                "op", "table", "pk", "action", "kindLabel", "title", "id"]
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(cols)
+        n = 0
+        for it in audit_trail.export_rows(engine, **filters):
+            w.writerow(["" if it.get(c) is None else (json.dumps(it[c], ensure_ascii=False) if isinstance(it[c], (dict, list)) else it[c])
+                        for c in cols])
+            n += 1
+        admin_mod.audit(engine, user, "run", "audit_export", None, f"Denetim kaydı dışa aktarıldı ({n} satır)",
+                        {k: v for k, v in filters.items() if v})
+        return Response(content="\ufeff" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": 'attachment; filename="denetim-kaydi.csv"'})
+
     # ------------------------------------------------------------------ promt izleyici
     # Her promt (soru + üretilen SQL + sonuç + kapı kararları) sl_query_log'a yazılır (bkz.
     # Runtime.ask._log). Bu uçlar yalnız yöneticiye, incelemek ve nereyi düzelteceğimizi görmek için.
@@ -8209,6 +8329,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # Açılış kapısından sonra eklenir ki en dışta kalsın: kapının «hazırlanıyor» cevabı JSON olduğu için çevrilmez.
     from semantic_bridge import csv_excel
     csv_excel.register(app)
+
+    # Denetim izi — en dış katman: her isteği (kişi, IP, ekran, gövde, sonuç, süre) kapıdan ve hazır cevaptan önce görür,
+    # 401/403 ile dönen istek de kayda girer. Bağlam (istek kimliği, kişi) içerideki her katmana ve iş parçacığına geçer.
+    from semantic_bridge import audit_trail as _audit_trail
+
+    def _audit_user(cookie: str) -> Optional[str]:
+        try:
+            return board_mod.user_of(cookie)
+        except board_mod.NoUser:
+            return None
+
+    def _audit_module(path: str) -> Optional[str]:
+        rule = access_mod.rule_for(path)
+        if rule is None:
+            return None
+        return ",".join(sorted(rule)) if isinstance(rule, (set, frozenset)) else str(rule)
+
+    app.add_middleware(_audit_trail.Middleware, resolve=_audit_user, module_of=_audit_module,
+                       system_name=admin_mod.LLM_DISPLAY)
 
     app.state.boot = boot
     return app

@@ -47,6 +47,14 @@ AUDIT = sa.Table(
     sa.Column("object_id", sa.String(120)),
     sa.Column("title", sa.String(300)),
     sa.Column("detail", sa.Text),
+    # Denetim izi (audit_trail.py): aynı isteğin kimliği, IP'si, tarayıcısı ve ekranı; mühür. Kolonlar sonradan
+    # eklendi (ALTER … IF NOT EXISTS, audit_trail.ensure).
+    sa.Column("rid", sa.String(32), index=True),
+    sa.Column("ip", sa.String(64)),
+    sa.Column("ua", sa.Text),
+    sa.Column("page", sa.Text),
+    sa.Column("seal_seq", sa.BigInteger),
+    sa.Column("seal", sa.String(64)),
 )
 
 #: Yönetici AD grubunun üyelerinin kalıcı anlık görüntüsü. Yetki kontrolü (is_admin) bunu okur;
@@ -1596,7 +1604,7 @@ LLM_KEYS = ("OPENAI_API_BASE", "LLM_MODEL_NAME", "OPENAI_API_KEY", "LLM_TIMEOUT_
 #: kural). Teknik ad, düzeltilecek yerde — «Model» ayarının kendisinde — duruyor.
 LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "ZEKİ AI")
 
-KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
+KIND_LABEL = {"audit_verify": "Denetim kaydı doğrulaması", "audit_export": "Denetim kaydı aktarımı", "report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
               "room": "Toplantı odası", "booking": "Oda rezervasyonu", "access": "Yetki",
               "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali",
@@ -1644,6 +1652,8 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) not in _ready:
             from semantic_layer.store import schema_stamp
             schema_stamp.create_all(_md, engine)
+            from semantic_bridge import audit_trail
+            audit_trail.ensure(engine)
             _ready.add(id(engine))
         _engine = engine
 
@@ -2448,18 +2458,26 @@ def system_actor(actor: Optional[str]) -> str:
 
 def audit(engine: Optional[sa.engine.Engine], actor: Optional[str], action: str, kind: str,
           object_id: Optional[str], title: Optional[str], detail: Any = None) -> None:
+    """İşlem kaydı. İstek içinden çağrıldıysa isteğin kimliği, IP'si, tarayıcısı ve ekranı da yazılır (denetim izi
+    aynı isteğin değiştirdiği satırları buradan bağlar). Veritabanına yazılamazsa diske düşer, sonra aktarılır."""
+    from semantic_bridge import audit_trail
+
+    ctx = audit_trail.current() or {}
+    row = dict(at=_now(), actor=system_actor(actor)[:120], action=action[:16], kind=kind[:24],
+               object_id=(str(object_id)[:120] if object_id else None), title=(str(title)[:300] if title else None),
+               detail=json.dumps(detail, ensure_ascii=False, default=str) if detail is not None else None,
+               rid=ctx.get("rid"), ip=ctx.get("ip"), ua=ctx.get("ua"), page=ctx.get("page"))
     eng = engine or _engine
     if eng is None:
+        audit_trail.spool("action", row)
         return
     try:
         ensure(eng)
         with eng.begin() as c:
-            c.execute(AUDIT.insert().values(
-                at=_now(), actor=system_actor(actor)[:120], action=action[:16], kind=kind[:24],
-                object_id=(str(object_id)[:120] if object_id else None), title=(str(title)[:300] if title else None),
-                detail=json.dumps(detail, ensure_ascii=False, default=str)[:20000] if detail is not None else None))
+            c.execute(AUDIT.insert().values(**row))
     except Exception as e:  # noqa: BLE001
-        log.warning("admin: değişiklik kaydı yazılamadı (%s %s): %s", action, kind, e)
+        log.warning("admin: değişiklik kaydı yazılamadı, diske alındı (%s %s): %s", action, kind, e)
+        audit_trail.spool("action", row)
 
 
 def audit_list(engine: sa.engine.Engine, *, kind: Optional[str] = None, actor: Optional[str] = None,

@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { LocaleProvider } from '@/context/LocaleContext';
-import { EngineAuthError, isAuthBlocked } from '@/canvas/engine';
+import { ENGINE_ENABLED, EngineAuthError, isAuthBlocked } from '@/canvas/engine';
+import { startAuditTrail } from '@/canvas/auditTrail';
 import { DATA_STALE_MS } from '@/canvas/DataRefresh';
 import { msUntilNextRefresh } from '@/canvas/refreshSchedule';
 import App from './App';
@@ -64,6 +65,9 @@ window.addEventListener('vite:preloadError', (e) => {
   e.preventDefault();
   window.location.reload();
 });
+
+// Denetim izi: açılan sayfa, basılan düğme, seçilen seçenek (Yönetim → Denetim kaydı).
+if (ENGINE_ENABLED) startAuditTrail();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -891,6 +891,112 @@ export type PromptOverview = {
 
 export type PromptQuery = { limit?: number; offset?: number; only?: string; q?: string; user?: string; days?: number };
 
+/* ------------------------------------------------------------------ denetim izi (Yönetim → Denetim kaydı) */
+
+export type TrailType = 'ui' | 'request' | 'row' | 'action';
+export type TrailItem = {
+  type: TrailType;
+  id: number;
+  at: string;
+  actor: string | null;
+  rid: string | null;
+  ip: string | null;
+  // ekran olayı
+  event?: string;
+  label?: string | null;
+  page?: string | null;
+  // istek
+  method?: string;
+  path?: string;
+  status?: number | null;
+  // satır
+  op?: 'INSERT' | 'UPDATE' | 'DELETE';
+  table?: string;
+  pk?: Record<string, unknown> | null;
+  // işlem kaydı
+  action?: string;
+  title?: string | null;
+  kind?: string;
+  kindLabel?: string;
+};
+export type TrailQuery = {
+  types?: string;
+  actor?: string;
+  since?: string;
+  until?: string;
+  q?: string;
+  reads?: string;
+  table?: string;
+  module?: string;
+  before?: string;
+  limit?: number;
+};
+export type TrailRequest = {
+  id: number;
+  at: string;
+  rid: string;
+  actor: string | null;
+  ip: string | null;
+  ua: string | null;
+  method: string;
+  path: string;
+  query: string | null;
+  page: string | null;
+  module: string | null;
+  kind: string;
+  status: number | null;
+  ms: number | null;
+  reqBytes: number | null;
+  respBytes: number | null;
+  contentType: string | null;
+  body: unknown;
+  files: Array<{ name: string; filename?: string }> | null;
+  sealed: boolean;
+};
+export type TrailRow = {
+  id: number;
+  at: string;
+  rid: string | null;
+  actor: string | null;
+  table: string;
+  op: 'INSERT' | 'UPDATE' | 'DELETE';
+  pk: Record<string, unknown> | null;
+  changed: string[] | null;
+  old: Record<string, unknown> | null;
+  new: Record<string, unknown> | null;
+  sealed: boolean;
+};
+export type TrailUi = {
+  id: number;
+  at: string;
+  clientAt: string | null;
+  actor: string;
+  ip: string | null;
+  ua: string | null;
+  page: string | null;
+  event: string;
+  label: string | null;
+  detail: Record<string, unknown> | null;
+  sealed: boolean;
+};
+export type TrailDetail = {
+  request?: TrailRequest | null;
+  rows?: TrailRow[];
+  actions?: Array<AuditItem>;
+  ui?: TrailUi[];
+  row?: TrailRow;
+};
+export type TrailVerify = {
+  at: string;
+  ok: boolean;
+  seconds: number;
+  tables: Array<{ table: string; checked: number; broken: number; missing: number; unsealed: number; total: number; ok: boolean; firstProblem: { seq: number; id?: number; why: string } | null }>;
+};
+export type TrailStatus = {
+  stats: Record<TrailType, { count: number; since: string | null }> & { tablesWatched?: number; spooled: number; queued: number };
+  seal: { tables: Array<{ table: string; lastSeq: number; anchorSeq: number; verifiedAt: string | null }>; lastVerify: TrailVerify | null };
+};
+
 const qs = (o: Record<string, string | number | undefined>) => {
   const p = new URLSearchParams();
   Object.entries(o).forEach(([k, v]) => {
@@ -933,6 +1039,13 @@ export const adminApi = {
   deleteCard: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/cards/${encodeURIComponent(id)}`, undefined, 30_000),
   users: () => send<WithK<{ items: AdminUser[] }>>('GET', '/api/v1/admin/users', undefined, 30_000),
   audit: (q: AuditQuery) => send<{ items: AuditItem[]; next: number | null }>('GET', `/api/v1/admin/audit${qs(q)}`, undefined, 30_000),
+  trail: (q: TrailQuery) => send<{ items: TrailItem[]; next: string | null }>('GET', `/api/v1/admin/trail${qs(q)}`, undefined, 60_000),
+  trailItem: (type: TrailType, id: number) => send<TrailDetail>('GET', `/api/v1/admin/trail/item/${type}/${id}`, undefined, 30_000),
+  trailRecord: (table: string, pk: string) => send<{ items: TrailRow[] }>('GET', `/api/v1/admin/trail/record${qs({ table, pk })}`, undefined, 30_000),
+  trailActors: () => send<{ items: Array<{ actor: string; last: string | null; count: number }> }>('GET', '/api/v1/admin/trail/actors', undefined, 30_000),
+  trailStatus: () => send<TrailStatus>('GET', '/api/v1/admin/trail/status', undefined, 30_000),
+  trailVerify: () => send<TrailVerify>('POST', '/api/v1/admin/trail/verify', undefined, 600_000),
+  trailExportUrl: (q: TrailQuery) => `${ENGINE_BASE}/api/v1/admin/trail/export.csv${qs(q)}`,
   prompts: (q: PromptQuery) =>
     send<WithK<{ items: PromptRow[]; hasMore: boolean; nextOffset: number | null }>>('GET', `/api/v1/admin/prompts${qs(q)}`, undefined, 30_000),
   promptsOverview: (days = 30) => send<WithK<PromptOverview>>('GET', `/api/v1/admin/prompts/overview${qs({ days })}`, undefined, 30_000),

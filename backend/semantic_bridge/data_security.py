@@ -784,7 +784,7 @@ RETENTION: list[dict[str, Any]] = [
     {"id": "alert", "key": "SECURITY_RETENTION_ALERT_DAYS", "default": 730, "label": "Kapanmış güvenlik uyarıları",
      "what": "Kapatılmış ve süresi dolmuş uyarılar silinir; açık uyarıya dokunulmaz."},
     {"id": "audit", "key": "SECURITY_RETENTION_AUDIT_DAYS", "default": 0, "label": "Değişiklik kaydı",
-     "what": "Süresi dolan değişiklik kaydı satırları silinir. 0 = süresiz (yetki değişikliklerinin kanıtı)."},
+     "what": "Süresi dolan denetim kaydı (işlem, istek, satır değişikliği, ekran olayı) silinir. 0 = süresiz (yetki ve veri değişikliklerinin kanıtı)."},
 ]
 _BY_OBJ = {o["id"]: o for o in RETENTION}
 _BATCH = 2000
@@ -818,8 +818,10 @@ def _targets(obj: str, tenant: str, ds: str, cutoff: datetime) -> list[dict[str,
         return [{"table": ALERTS, "id": ALERTS.c.id, "date": ALERTS.c.at,
                  "where": [ALERTS.c.at < cutoff, ALERTS.c.state == "closed"], "action": "delete"}]
     if obj == "audit":
-        A = admin_mod.AUDIT
-        return [{"table": A, "id": A.c.id, "date": A.c.at, "where": [A.c.at < cutoff], "action": "delete"}]
+        from semantic_bridge import audit_trail as AT
+
+        return [{"table": T, "id": T.c.id, "date": T.c.at, "where": [T.c.at < cutoff], "action": "delete"}
+                for T in (admin_mod.AUDIT, AT.REQUESTS, AT.ROWS, AT.UI)]
     raise SecurityError(f"Bilinmeyen saklama nesnesi: {obj}")
 
 
@@ -867,6 +869,9 @@ def _apply_one(eng: sa.engine.Engine, t: dict[str, Any]) -> int:
             if not ids:
                 return done
             if t["action"] == "delete":
+                from semantic_bridge import audit_trail
+                # Denetim tabloları yalnız saklama işiyle silinir (koruma tetikleyicisi); silinen sıra mühür çapası olur.
+                audit_trail.note_purge(c, t["table"].name, ids)
                 c.execute(t["table"].delete().where(t["id"].in_(ids)))
             else:
                 c.execute(t["table"].update().where(t["id"].in_(ids)).values(**t["action"]))

@@ -9,7 +9,7 @@ import SettingsPanel, { SettingsCategoryNav, settingsQuery } from './SettingsPan
 import { AlertsAdmin, CardsAdmin, ReportsAdmin } from './Definitions';
 import People from './People';
 import AccessAdmin from './AccessAdmin';
-import AuditLog from './AuditLog';
+import AuditTrail from './AuditTrail';
 import PromptTracker from './PromptTracker';
 import BulletinsAdmin from './BulletinsAdmin';
 import { Loading, Note } from './ui';
@@ -26,7 +26,7 @@ const TABS: Array<{ id: AdminTab; label: string; icon: typeof Activity }> = [
   { id: 'people', label: 'Kişiler', icon: Users },
   { id: 'prompts', label: 'Soru izleme', icon: MessageSquareText },
   { id: 'bulletins', label: 'Sesli bülten', icon: Radio },
-  { id: 'audit', label: 'Değişiklik kaydı', icon: History },
+  { id: 'audit', label: 'Denetim kaydı', icon: History },
 ];
 
 export default function AdminScreen() {
@@ -73,7 +73,7 @@ export default function AdminScreen() {
   ) : tab === 'bulletins' ? (
     <BulletinsAdmin />
   ) : tab === 'audit' ? (
-    <AuditLog />
+    <AuditTrail />
   ) : (
     <Overview go={go} />
   );
