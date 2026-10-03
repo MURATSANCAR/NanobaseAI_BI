@@ -242,20 +242,32 @@ def cover_requests() -> list[dict]:
     """Every book the editor knows, for the CRM connector: it looks up the publisher record
     and the cover (again on every run, so a newer CRM image replaces an older one; an editor
     upload is kept by store_lookup). Books without a current card are asked too: a book must
-    not stay unfound because its analysis has not finished."""
-    from . import foundation, read_model
+    not stay unfound because its analysis has not finished.
+
+    `titles`: the book's other spellings for name matching, cleaned file name first (a title still
+    taken from the file name, «1 todişin bir günü», matches the CRM only without its order number).
+    An older connector reads `title` alone."""
+    from . import book_title, foundation, read_model
     legacy = {str(r["book_id"]): r["metadata"] or {} for r in db.all_rows(
         "SELECT book_id, metadata FROM book_card WHERE is_current")}
     out = []
     with foundation.read_snapshot() as c:
-        for b in c.execute("SELECT b.id, b.title, cv.source, cv.source_date FROM ed.book b LEFT JOIN"
+        tf = "b.title_file" if book_title.has_columns(c) else "NULL::text AS title_file"
+        for b in c.execute(f"SELECT b.id, b.title, {tf}, cv.source, cv.source_date,"
+                           " (SELECT bv.pdf_meta->>'archive_path' FROM ed.book_version bv WHERE bv.book_id=b.id"
+                           "  ORDER BY bv.created_at LIMIT 1) AS archive_path FROM ed.book b LEFT JOIN"
                            " ed.book_cover cv ON cv.book_id=b.id AND cv.is_current ORDER BY b.id").fetchall():
             book_id = str(b["id"])
+            raw = b["title_file"] or (Path(b["archive_path"]).name if b["archive_path"] else None)
+            titles = [book_title.from_file(raw)["title"], book_title.clean_stem(raw)] if raw else \
+                [book_title.from_file(b["title"])["title"]]
             meta = (read_model.card(c, book_id) or {}).get("metadata", [])
             facts = lambda k: list(dict.fromkeys(  # noqa: E731
                 [x["claim"] for x in meta if x.get("subject") == k] +
                 [x["value"] for x in legacy.get(book_id, {}).get(k, [])]))
-            out.append({"book_id": book_id, "title": b["title"], "isbns": facts("ISBN"),
+            out.append({"book_id": book_id, "title": b["title"],
+                        "titles": [t for t in dict.fromkeys(titles) if t and t != b["title"]],
+                        "isbns": facts("ISBN"),
                         "authors": facts("AUTHOR"), "current_source": b["source"],
                         "current_date": str(b["source_date"]) if b["source_date"] else None})
     return out
@@ -329,8 +341,18 @@ def store_lookup(rep: dict, source: str, data: bytes | None = None) -> dict:
 
 
 def store_crm_lookup(rep: dict) -> dict:
+    """CRM kaydı ve kapak; ardından kitabın adı CRM adıyla yeniden çözülür (book_title: CRM > site > künye >
+    dosya adı; kişinin verdiği ada dokunmaz). Ad çözümü düşerse kayıt yine yazılmış olur."""
     store_crm_record(rep["book_id"], rep)
-    return store_lookup(rep, "CRM")
+    out = store_lookup(rep, "CRM")
+    from . import book_title
+    try:
+        renamed = book_title.refresh(rep["book_id"])
+    except Exception as e:  # noqa: BLE001 — ad çözümü kapak/kayıt yazımını geri almaz
+        renamed = {"error": f"{type(e).__name__}: {e}"[:200]}
+    if renamed:
+        out["title"] = renamed
+    return out
 
 
 def ensure_cover(book_id: str, generation_id: str) -> dict | None:

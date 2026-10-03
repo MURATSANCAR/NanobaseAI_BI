@@ -56,6 +56,7 @@ def _book(i, name, author, urun=None, project=None):
          "ModifiedOn": datetime(2026, 1, int(i[-1]) + 1)}
     b["_titles"] = {t for t in (C.fold(b[k]) for k in ("new_name", "new_KitabnAd", "new_urunadi")) if t}
     b["_compact"] = {t.replace(" ", "") for t in b["_titles"]}
+    b["_first"] = {C.compact(C.first_part(b[k])) for k in ("new_name", "new_KitabnAd", "new_urunadi")}
     b["_isbns"] = set()
     return b
 
@@ -91,3 +92,45 @@ if __name__ == "__main__":
         if name.startswith("test_") and callable(fn):
             fn()
             print("ok", name)
+
+
+def test_file_name_without_its_order_number_and_the_books_own_name_inside_a_series_name():
+    crm = [_book("c1", "Todiş'in Bir Günü - Todiş'le Boyama Zamanı", "Yazar Bir"),
+           _book("c2", "Todiş Ne Yiyor? - Todiş'le Boyama Zamanı", "Yazar Bir")]
+    # editörün adı hâlâ dosya adı; temizlenmiş ad `titles` ile gelir, bitişik/kesmeli yazım ilk parçaya eşit
+    how, rows, _ = C.match(crm, [], "1 todişin bir günü", titles=["Todişin Bir Günü"])
+    assert (how, [r["new_kitapId"] for r in rows]) == ("SEGMENT", ["c1"])
+    how, rows, _ = C.match(crm, [], "emircantasarrufuogreniyor")
+    assert how == "NONE"
+    assert C.first_part("Gözlerini Kocaman Aç - Duyularla Rabbimi Tanıyorum 3 (Pencereli Kitap)") == \
+        "Gözlerini Kocaman Aç"
+    assert C.first_part("Dikkat Zeka (4 Yaş)") == "Dikkat Zeka (4 Yaş)"
+
+
+def test_a_number_in_a_partial_name_must_be_equal():
+    crm = [_book("d1", "3N Kitap Kırtasiye İnsert 2020", "")]
+    assert C.match(crm, [], "3 KITAP")[0] == "NONE"
+    crm = [_book("d2", "Kaybolan Balinaların Şarkısı", "Yazar")]
+    assert C.match(crm, [], "kaybolan balinalar")[0] == "PARTIAL"
+    assert C.match([_book("d3", "Kayıp İslam Tarihi", "")], [], "kayi I")[0] == "NONE"
+    assert C.match([_book("d4", "Kitapkıran 1", "")], [], "KITAP 1")[0] == "NONE"
+    assert C.match([_book("d5", "Levent Van'da - Türkiye'yi Geziyorum 5", "")], [], "levent Van")[0] == "PARTIAL"
+
+
+def test_a_record_that_is_not_a_book_is_never_a_partial_match():
+    for name in ("Entel Dantel İşler Ayraç", "Dedektif Aynes Seti (4 Kitap)", "Bilim Dedektifleri 3 (İptal Edildi)",
+                 "Öteki Beriki Diğeri 15x21 Kartpostal"):
+        assert C.match([_book("n1", name, "")], [], " ".join(name.split()[:2]))[0] == "NONE", name
+    # hikâye setindeki bir kitap kitaptır (set adı « - »'den sonra)
+    crm = [_book("n2", "Kampta Oyun Var - Selim'in Renkli Dünyası - 3. Sınıf Hikaye Seti", "")]
+    assert C.match(crm, [], "kampta oyun")[0] == "PARTIAL"
+
+
+def test_ambiguous_records_sharing_the_books_name_still_name_the_book():
+    crm = [_book("e1", "Penguen Karcan - Mini Masallar 3 (30)", "Yazar Bir", project="p"),
+           _book("e2", "Penguen Karcan - Penton The Penguin (İngilizce)", "Yazar İki")]
+    rep = C.report(None, crm, {"book_id": "x", "title": "penguenkarcan"}, with_image=False)
+    assert rep["outcome"] == "AMBIGUOUS" and rep["crm_title"] == "Penguen Karcan" and "crm" not in rep
+    crm = [_book("f1", "Mavi Kuş - Orman Masalları", "A", urun="Mavi"), _book("f2", "Mavi Deniz", "B", urun="Mavi")]
+    rep = C.report(None, crm, {"book_id": "y", "title": "mavi"}, with_image=False)
+    assert rep["outcome"] == "AMBIGUOUS" and "crm_title" not in rep

@@ -6,25 +6,32 @@ kelimeler bitişik («meleklerbeniseviyor»). Kural, bütün kitaplar için tek 
 
 Öncelik (üstteki her zaman kazanır, otomatik çözüm üsttekini ezmez):
   1. ``user``     — kişinin elle verdiği ad (yüklemede yazdığı). Hiçbir otomatik adım dokunmaz.
-  2. ``site``     — yayınevi sitesindeki ürün adı (``ed.cover_library``; eşleme ``recommend.match``: ISBN, yoksa
-                    katlanmış ad birebir ve tek ürün). Dış istek yok, köprünün beslediği tablo okunur.
-  3. ``metadata`` — okumanın künyesindeki TITLE iddiası; YALNIZ dosya adıyla aynı kelimeleri taşıyorsa (harf
+  2. ``crm``      — yayınevinin CRM kitap kaydı (kullanıcı kararı 2026-10-03: «CRM baz al, yoksa timas.com.tr»).
+                    Eşlemeyi CRM bağlayıcısı yapar (``connectors/crm_covers.py``: ISBN, ad, bitişik ad, kayıt adının
+                    ilk parçası, kısmi); sonuç ``ed.book_crm_record`` ya da — kayıt birden çok baskıya düşüp hepsinin
+                    adı aynıysa — son CRM aramasının ``crm_title``'ı. Kısmi eşleşme «gözden geçir» işaretlenir.
+  3. ``site``     — yayınevi sitesindeki ürün adı (``ed.cover_library``; eşleme ``recommend.match``: ISBN, yoksa
+                    katlanmış ad birebir ve tek ürün; o da yoksa ürün adının ilk parçası). Dış istek yok.
+  4. ``metadata`` — okumanın künyesindeki TITLE iddiası; YALNIZ dosya adıyla aynı kelimeleri taşıyorsa (harf
                     büyüklüğü, Türkçe harf ve boşluk farkı dışında). Künyede alt başlık/seri adı varsa dosya adına
                     uyan parça alınır. Künye dosya adından bambaşka bir şey diyorsa (yanlış sayfa okunmuş olabilir)
                     kullanılmaz; dosya adı kalır, «gözden geçir» işaretinde künye adayı yazılır.
-  4. ``file``     — temizlenmiş dosya adı: kopya eki «(2)», ölçü «135x210», forma «19f», baskı numarası, dergi
+  5. ``file``     — temizlenmiş dosya adı: kopya eki «(2)», ölçü «135x210», forma «19f», baskı numarası, dergi
                     künye kodu «_K43_6», sondaki dosya hâli sözcükleri (baskı, özalit, iç, son…) ve BAŞTAKİ sıra
                     numarası / sayfa aralığı / yıl («1-», «01_», «04-13 », «2020. ») atılır; alt çizgi ve tire boşluk
                     olur; harf büyüklüğü tek biçimse (hepsi küçük, hepsi büyük ya da yalnız ilk harf büyük) Türkçe
                     başlık yazımına çevrilir. Bitişik kelime ve eksik Türkçe harf TAHMİN EDİLMEZ (yanlış düzeltme
                     riski); bu yüzden dosya adından gelen her ad «gözden geçirilmeli» işaretlenir.
 
-Kayıt: ``ed.book.title_source`` (yukarıdaki dört değer; NULL = bu kuraldan önceki kayıt), ``title_review`` (gözden
+CRM ve site adı «Kitap Adı - Seri Adı 3 (Ciltli)» biçimindedir: kitabın adı ``record_name`` ile çıkarılır.
+
+Kayıt: ``ed.book.title_source`` (yukarıdaki beş değer; NULL = bu kuraldan önceki kayıt), ``title_review`` (gözden
 geçirme nedenleri; boş = gerek yok), ``title_file`` (adın türediği özgün dosya adı). Göç 032.
 
 Ne zaman: yüklemede (portal tekli/toplu, arşiv içe aktarma) ad hemen belirlenir — o anda yalnız dosya adı ya da
 kişinin yazdığı ad vardır. Okuma bitince (``finish_job`` SUCCEEDED → ``after_reading``) site ve künye ile yeniden
-çözülür; bu aktivitenin içinde olduğu için Temporal geçmişi değişmez, ``patched`` bayrağı gerekmez.
+çözülür; bu aktivitenin içinde olduğu için Temporal geçmişi değişmez, ``patched`` bayrağı gerekmez. CRM bağlayıcısı
+her gece bir kitabın kaydını yazınca da (``catalog.store_crm_lookup`` → ``refresh``) ad yeniden çözülür.
 
 Tek seferlik düzeltme: ``python -m editor.book_title fix --all [--apply]`` (varsayılan kuru koşu; yalnız dosya
 adından gelmiş adlara dokunur).
@@ -38,10 +45,10 @@ import sys
 import unicodedata
 from pathlib import Path
 
-USER, SITE, METADATA, FILE = "user", "site", "metadata", "file"
-SOURCES = (USER, SITE, METADATA, FILE)
+USER, CRM, SITE, METADATA, FILE = "user", "crm", "site", "metadata", "file"
+SOURCES = (USER, CRM, SITE, METADATA, FILE)
 #: Daha yüksek sıra daha güvenilir: otomatik çözüm yalnız aynı ya da daha yüksek sıraya geçer.
-RANK = {FILE: 1, METADATA: 2, SITE: 3, USER: 4}
+RANK = {FILE: 1, METADATA: 2, SITE: 3, CRM: 4, USER: 5}
 
 # ------------------------------------------------------------------ Türkçe harf büyüklüğü
 _TR_CHARS = set("çğıöşüÇĞİÖŞÜâîûÂÎÛ")
@@ -182,7 +189,8 @@ def clean_stem(name: str) -> str:
     s = unicodedata.normalize("NFC", Path(name or "").stem if (name or "").lower().endswith(".pdf") else (name or ""))
     s = re.sub(r"\(\d+\)", " ", s)                                                # kopya eki
     s = re.sub(r"\d+([.,]\d+)?\s*[xX]\s*\d+([.,]\d+)?(\s*cm\b)?", " ", s)         # ölçü
-    s = re.sub(r"\b\d+([.,]\d+)?f\b", " ", s)                                     # forma
+    s = re.sub(r"\b\d+([.,]\d+)?f+\b", " ", s, flags=re.I)                         # forma «19f», «13,5F»
+    s = re.sub(r"(?<=[a-zçğıöşü])BASK[IİI]+\b", " ", s)                          # bitişik «…misinBASKI»
     s = re.sub(r"(?<!\d)\d{1,2}\s*\.?\s*bask\S*", " ", s, flags=re.I)           # baskı numarası («3. Baskı»)
     s = re.sub(r"(?:^|[\s_-])K\d{2,3}(?:[\s_-]+\d{1,3}\s*\+?\s*R?)?[\s._]*$", " ", s)  # dergi künye kodu «_K43_6»
     s = re.sub(r"\s+", " ", s).strip(" ._-")
@@ -255,22 +263,68 @@ def site_name(title: str) -> str:
     return _BINDING.sub("", t).strip() or t
 
 
+#: Kayıt adının sonundaki not: «(Ciltli)», «(Önceki Ebat)», «(İngilizce)», «(Pencereli Kitap)», «(10. Kitap)»,
+#: «(Ön Sipariş)». Yaş/sınıf bilgisi («(4 Yaş)») adın parçası sayılır, kalır.
+_NOTE = re.compile(r"\s*\((?![^()]*\b(?:ya[sş]|s[ıi]n[ıi]f)\b)[^()]*\)\s*$", re.I)
+_SEGMENT = re.compile(r"\s+[-–—]\s+")
+
+
+def segments(title: str) -> list[str]:
+    """Kayıt adının « - » parçaları, sondaki notlar atılmış: «Gözlerini Kocaman Aç - Duyularla Rabbimi Tanıyorum 3
+    (Pencereli Kitap)» → ['Gözlerini Kocaman Aç', 'Duyularla Rabbimi Tanıyorum 3']. İki noktalı alt başlık
+    («Mülk ve Hukuk: Osmanlı…») parçalanmaz, adın kendisidir."""
+    t = re.sub(r"\s+", " ", title or "").strip()
+    while True:
+        u = _NOTE.sub("", t).strip()
+        if u == t or not u:
+            break
+        t = u
+    return [p.strip() for p in _SEGMENT.split(t) if p.strip()]
+
+
+def _small_words(t: str) -> str:
+    """Elle yazılmış kayıt adında ortadaki bağlaç küçük harf olur («Piri Reis Ve Acayip Haritası» → «… ve …»); ilk
+    kelime ve iki nokta sonrası olduğu gibi kalır."""
+    words = t.split(" ")
+    for i in range(1, len(words)):
+        w = words[i]
+        if w and tr_lower(w) in SMALL and w[:1].isupper() and not words[i - 1].endswith(":") \
+                and not (len(w) > 1 and w.isupper() and casing(t) == "upper"):
+            words[i] = tr_lower(w)
+    return " ".join(words)
+
+
+def record_name(title: str, file_title: str = "") -> str:
+    """Yayınevi kaydının (CRM ya da site) adından kitabın kendi adı. «Kitap Adı - Seri Adı 3 (Ciltli)» biçiminde
+    kitabın adı dosya adına uyan parçadır; uyan yoksa dosya adıyla başlayan parça (dosya adı kısaltılmış: «Rüzgârın
+    Ardından» → «Rüzgarın Ardından: Ayine-i Zülcenaheyn»); o da yoksa ilk parça (seri adı « - »'den sonra gelir).
+    Harf büyüklüğü tek biçimse Türkçe başlık yazımı; bağlaçlar küçük."""
+    parts = segments(title) or [re.sub(r"\s+", " ", title or "").strip()]
+    want = key(file_title)
+    pick = next((p for p in parts if want and key(p) == want), None) \
+        or next((p for p in parts if want and key(p).startswith(want)), None) or parts[0]
+    pick = pick.strip(" .,;-–—")
+    return _small_words(title_case(pick, typed=False))[:300]
+
+
 # ------------------------------------------------------------------ karar
 def resolve(file_name: str = "", user: str | None = None, site: dict | None = None,
-            metadata: list[str] | None = None) -> dict:
-    """Kitabın adı. `site`: recommend.match sonucu ({'row': {'title'…}, 'by': 'ISBN'|'TITLE'|'TITLE_AUTHOR'}),
-    `metadata`: künyedeki TITLE iddiaları (doğrulanmış). Döner {'title', 'source', 'review': [...], 'raw'}."""
+            metadata: list[str] | None = None, crm: dict | None = None) -> dict:
+    """Kitabın adı. `crm`: CRM kaydı ({'title': kayıt adı, 'by': bağlayıcının eşleme yolu}), `site`:
+    recommend.match sonucu ({'row': {'title'…}, 'by': 'ISBN'|'TITLE'|'TITLE_AUTHOR'|'SEGMENT'}), `metadata`:
+    künyedeki TITLE iddiaları (doğrulanmış). Döner {'title', 'source', 'review': [...], 'raw'}."""
     if user and user.strip():
         return {"title": re.sub(r"\s+", " ", user).strip()[:300], "source": USER, "review": [], "raw": file_name}
     f = from_file(file_name)
+    if crm and (crm.get("title") or "").strip():
+        # kayıt adının içinden kelime seçilmez, bütün parça alınır: «El Cezeri ve Bakır Taç» «cezeri»ye kısalmaz
+        by = crm.get("by") or ""
+        review = ["CRM'de kısmi ad eşleşmesi: " + crm["title"].strip()[:120]] if by.startswith("PARTIAL") else []
+        return {"title": record_name(crm["title"], f["title"]), "source": CRM, "review": review, "raw": f["raw"],
+                "by": by or None}
     if site and (site.get("row") or {}).get("title"):
-        t = site_name(site["row"]["title"])
-        # ürün adı «Kitap Adı - Seri Adı 1 - Set» ise dosya adına uyan BÜTÜN parça kitabın adıdır (parçanın içinden
-        # kelime seçilmez: «El Cezeri ve Bakır Taç» dosya adı «cezeri» diye kısalmaz)
-        want = key(f["title"])
-        part = next((p for p in re.split(r"\s+[-–—]\s+", t) if want and key(p) == want), None)
-        t = title_case(part or t, typed=False)
-        return {"title": t[:300], "source": SITE, "review": [], "raw": f["raw"], "by": site.get("by")}
+        return {"title": record_name(site["row"]["title"], f["title"]), "source": SITE, "review": [],
+                "raw": f["raw"], "by": site.get("by")}
     others = []
     for claim in metadata or []:
         fit = metadata_fit(claim, f["title"])
@@ -321,8 +375,9 @@ def legacy_file_derived(title: str, archive_path: str | None, requested_by: str 
 
 
 def evidence(c, book_id: str) -> dict:
-    """Kitabın ad kanıtları (salt okuma): son okunmuş neslin doğrulanmış künye TITLE / ISBN / AUTHOR iddiaları ve
-    CRM kaydının ISBN'i / yazarları."""
+    """Kitabın ad kanıtları (salt okuma): son okunmuş neslin doğrulanmış künye TITLE / ISBN / AUTHOR iddiaları,
+    CRM kaydının adı / ISBN'i / yazarları. CRM kaydı yoksa ama son CRM araması birden çok baskıya düşüp hepsinin adı
+    aynı çıktıysa (bağlayıcı o adı ``crm_title``'a yazar) ad oradan gelir."""
     rows = c.execute(
         "SELECT m.subject, m.claim FROM ed.claim m WHERE m.generation_id = ("
         "  SELECT g.id FROM ed.generation g JOIN ed.book_version bv ON bv.id=g.book_version_id"
@@ -331,8 +386,15 @@ def evidence(c, book_id: str) -> dict:
         " AND m.kind='METADATA' AND m.subject IN ('TITLE','ISBN','AUTHOR')"
         " AND m.status IN ('VERIFIED','EDITOR_APPROVED','EDITOR_CORRECTED') ORDER BY m.subject, m.claim",
         (book_id,)).fetchall()
-    crm = c.execute("SELECT isbn, authors FROM ed.book_crm_record WHERE book_id=%s", (book_id,)).fetchone() or {}
-    return {"titles": [r["claim"] for r in rows if r["subject"] == "TITLE"],
+    crm = c.execute("SELECT isbn, authors, crm_title, matched_by FROM ed.book_crm_record WHERE book_id=%s",
+                    (book_id,)).fetchone() or {}
+    crm_name = {"title": crm["crm_title"], "by": crm["matched_by"]} if crm.get("crm_title") else None
+    if crm_name is None:
+        last = c.execute("SELECT outcome, crm_title FROM ed.cover_lookup WHERE book_id=%s AND source='CRM'"
+                         " ORDER BY created_at DESC LIMIT 1", (book_id,)).fetchone()
+        if last and last["outcome"] == "AMBIGUOUS" and last["crm_title"]:
+            crm_name = {"title": last["crm_title"], "by": "SAME_NAME"}
+    return {"crm": crm_name, "titles": [r["claim"] for r in rows if r["subject"] == "TITLE"],
             "isbns": [x for x in [crm.get("isbn"), *[r["claim"] for r in rows if r["subject"] == "ISBN"]] if x],
             "authors": [*(crm.get("authors") or []), *[r["claim"] for r in rows if r["subject"] == "AUTHOR"]]}
 
@@ -356,10 +418,35 @@ def decide(row: dict, ev: dict, site_ix) -> dict | None:
     # adla eşleşme ancak ürün adı dosya adının kendisiyse kabul (künyedeki başka adla eşleşen ürün başka kitaptır)
     if m and m["by"] != "ISBN" and key(m["row"]["title"]) not in {key(f["title"]), key(clean_stem(raw))}:
         m = None
-    res = resolve(raw, site=m, metadata=ev.get("titles"))
+    if m is None:
+        m = site_by_segment(site_ix, [f["title"], clean_stem(raw)])
+    res = resolve(raw, site=m, metadata=ev.get("titles"), crm=ev.get("crm"))
     if not may_replace(src, res["source"]):
         return None
     return res
+
+
+def site_by_segment(site_ix, names: list[str]) -> dict | None:
+    """Sitede adla eşleşme yoksa: ürün adının İLK parçası dosya adına eşit («Emircan Tasarrufu Öğreniyor - Yaşasın
+    Okuyorum» = «emircantasarrufuogreniyor»). Birden çok ürün düşerse (Ciltli, İngilizce baskı) adları aynı olduğu
+    için ad yine bellidir; yalnız ad kullanılır, ürünün kategorisi değil."""
+    ix = getattr(site_ix, "_first_segment", None)
+    if ix is None:
+        ix = {}
+        for r in getattr(site_ix, "rows", []) or []:
+            parts = segments(site_name(r.get("title") or ""))
+            if parts and key(parts[0]):
+                ix.setdefault(key(parts[0]), []).append(r)
+        try:
+            site_ix._first_segment = ix
+        except AttributeError:
+            pass
+    for n in names:
+        rows = ix.get(key(n)) if key(n) else None
+        if rows:
+            best = max(rows, key=lambda r: (r.get("sales") or 0, str(r.get("id"))))
+            return {"row": {"title": segments(site_name(best["title"]))[0]}, "by": "SEGMENT"}
+    return None
 
 
 def apply(c, book_id: str, res: dict) -> bool:
@@ -400,17 +487,23 @@ def set_on_intake(c, book_id: str, given: str | None, file_name: str) -> None:
 
 
 def after_reading(generation_id: str) -> dict | None:
-    """Okuma bitince (finish_job SUCCEEDED): site ve künye ile ad yeniden çözülür. Kişinin adına dokunmaz; hata
-    okumayı düşürmez (çağıran yakalar)."""
+    """Okuma bitince (finish_job SUCCEEDED): CRM, site ve künye ile ad yeniden çözülür. Kişinin adına dokunmaz;
+    hata okumayı düşürmez (çağıran yakalar)."""
+    from . import db
+    with db.tx() as c:
+        bid = c.execute("SELECT bv.book_id FROM ed.generation g JOIN ed.book_version bv ON bv.id=g.book_version_id"
+                        " WHERE g.id=%s", (generation_id,)).fetchone()
+    return refresh(str(bid["book_id"])) if bid else None
+
+
+def refresh(book_id: str) -> dict | None:
+    """Bir kitabın adını eldeki kanıtla yeniden çözer (okuma sonu, CRM bağlayıcısının kaydı). Değişiklik yoksa
+    None."""
     from . import db, recommend
     with db.tx() as c:
         if not has_columns(c):
             return None
-        bid = c.execute("SELECT bv.book_id FROM ed.generation g JOIN ed.book_version bv ON bv.id=g.book_version_id"
-                        " WHERE g.id=%s", (generation_id,)).fetchone()
-        if bid is None:
-            return None
-        rows = books(c, str(bid["book_id"]))
+        rows = books(c, book_id)
         if not rows:
             return None
         row = rows[0]

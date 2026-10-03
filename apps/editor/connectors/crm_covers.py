@@ -2,9 +2,10 @@
 """CRM connector (cover + publisher record). Runs where the publisher's CRM is reachable
 (the editor's GPU host is not on that network), for every book the editor knows.
 
-  1. asks the editor for its books (title, verified ISBNs, verified authors)
-                                                               GET  /catalog/cover-requests
-  2. reads the CRM book list ONCE (new_kitapBase, ~14k rows) and matches each book:
+  1. asks the editor for its books (title, other spellings `titles` — the cleaned file name
+     first —, verified ISBNs, verified authors)                GET  /catalog/cover-requests
+  2. reads the CRM book list ONCE (new_kitapBase, ~14k rows) and matches each book; every step
+     tries all of the book's names before the next, weaker step:
        ISBN      the ISBN in the card was verified verbatim on the book's imprint page
        TITLE     folded title equal to the CRM name / book name / product name
                  (folding: Turkish letters to ASCII, punctuation and dashes to spaces, so a
@@ -12,15 +13,25 @@
        COMPACT   only when no title is equal: the same folded title with its spaces removed
                  («Dijital Dünyada Ebeveyn Olmak» = «Dijital Dünyada E-beveyn Olmak»: a dash or
                  space inside a word is spelling, not a different book)
+       SEGMENT   only when no title is equal: the first « - » part of the CRM name (a trailing
+                 «(Ciltli)»-like note removed) equals the title, spaces aside: the CRM name
+                 carries the series after the book's own name («Emircan Tasarrufu Öğreniyor -
+                 Yaşasın Okuyorum» = «emircantasarrufuogreniyor»)
        PARTIAL   only when nothing is equal: the editor title's words (at least two) open
                  the CRM title word by word, each word a prefix («kaybolan balinalar» →
-                 «Kaybolan Balinaların Şarkısı»)
+                 «Kaybolan Balinaların Şarkısı»); a number or a word of one or two letters must
+                 be equal, not a prefix («3 kitap» is not «3N Kitap Kırtasiye», «kayi I» is not
+                 «Kayıp İslam Tarihi»), a prefix covers at least 60% of its word (a Turkish suffix,
+                 «dinozor» → «Dinozorla»; not another word, «kitap» → «Kitapkıran»); a record that is not a book (bookmark, postcard, box set,
+                 bulletin, test booklet) or was cancelled («(İptal Edildi)») is never a partial match
      several records left → the editor's verified author narrows them; records that still
      share one folded title (a trailing «(Önceki Ebat)»-like note aside) and one author (an
      empty author field aside) are editions of one book (matched_by gets
      «+EDITIONS»): the record carrying a project card, else the newest, gives the text, and
      cover images are collected from all of them. Different titles left = AMBIGUOUS,
-     nothing is guessed.
+     nothing is guessed; if they still share the book's own name (first part: «Penguen Karcan
+     - Mini Masallar 3» and «Penguen Karcan - Penton The Penguin (İngilizce)») that name is sent
+     as `crm_title` without a record, so the editor can name the book (editor.book_title).
   3. publisher record for the card: authors (new_yazartext, else the «Yazar - …» participation
      rows, else the project's probable author), illustrators (new_cizerlertext), summary
      (web text > new_ozet > old summary > the project's one-sentence idea), ISBN, stock code,
@@ -118,6 +129,17 @@ def crm():
                            database=c.get("database", "Timas_MSCRM"), login_timeout=20, timeout=300)
 
 
+NOTE = re.compile(r"\s*\((?![^()]*\b(?:ya[sş]|s[ıi]n[ıi]f)\b)[^()]*\)\s*$", re.I)
+
+
+def first_part(s: str | None) -> str:
+    """The book's own name inside a CRM name: the first « - » part, trailing notes removed."""
+    t = re.sub(r"\s+", " ", s or "").strip()
+    while NOTE.search(t) and NOTE.sub("", t).strip():
+        t = NOTE.sub("", t).strip()
+    return re.split(r"\s+[-–—]\s+", t)[0].strip()
+
+
 def load_books(cur) -> list[dict]:
     cur.execute("SELECT new_kitapId, new_name, new_KitabnAd, new_urunadi, new_isbn, new_isbn13, new_resimurl,"
                 " new_projekarti, new_yazartext, new_cizerlertext, new_StokKodu, new_ilkyayintarihi,"
@@ -128,13 +150,31 @@ def load_books(cur) -> list[dict]:
     for b in books:
         b["_titles"] = {t for t in (fold(b.get(k)) for k in ("new_name", "new_KitabnAd", "new_urunadi")) if t}
         b["_compact"] = {t.replace(" ", "") for t in b["_titles"]}
+        b["_first"] = {c for c in (compact(first_part(b.get(k))) for k in ("new_name", "new_KitabnAd", "new_urunadi"))
+                       if c}
         b["_isbns"] = {i for i in (norm_isbn(b.get("new_isbn13")), norm_isbn(b.get("new_isbn"))) if i}
     return books
 
 
 def _opens(words: list[str], title: str) -> bool:
     other = title.split()
-    return len(words) >= 2 and len(other) >= len(words) and all(o.startswith(w) for w, o in zip(words, other))
+    return len(words) >= 2 and len(other) >= len(words) and \
+        all(o == w if w.isdigit() or o.isdigit() or len(w) <= 2 else o.startswith(w) and len(w) >= 0.6 * len(o)
+            for w, o in zip(words, other))
+
+
+#: Kitap olmayan CRM ürünü (kayıt adının kendi parçasında): kısmi eşlemede «Entel Dantel İşler» dosyası «Entel Dantel
+#: İşler Ayraç» ürününe, «Dedektif Aynes» «Dedektif Aynes Seti (4 Kitap)»a gitmesin.
+NOT_A_BOOK = frozenset({"ayrac", "kartpostal", "set", "seti", "bulten", "insert", "testi", "poster", "takvim",
+                        "ajanda", "afis"})
+
+
+def partial_candidate(book: dict) -> bool:
+    """Kısmi eşlemeye girebilir mi (kayıt başına bir kez hesaplanır, `_partial`)."""
+    if "_partial" not in book:
+        name = book.get("new_name") or ""
+        book["_partial"] = not (set(fold(first_part(name)).split()) & NOT_A_BOOK) and "iptal edildi" not in fold(name)
+    return book["_partial"]
 
 
 def _author_hit(authors: list[str], book: dict) -> bool:
@@ -142,21 +182,27 @@ def _author_hit(authors: list[str], book: dict) -> bool:
     return any(fold(a) and fold(a) in have for a in authors)
 
 
-def match(books: list[dict], isbns: list[str], title: str, authors: list[str] = ()) -> tuple[str, list[dict], str]:
-    """-> (matched_by, records, detail). One record, or several editions of one book."""
+def match(books: list[dict], isbns: list[str], title: str, authors: list[str] = (),
+          titles: list[str] = ()) -> tuple[str, list[dict], str]:
+    """-> (matched_by, records, detail). One record, or several editions of one book. `titles`: the
+    book's other spellings (cleaned file name first); each step tries every name before the next step."""
     wanted = {i for i in map(norm_isbn, isbns) if i}
+    names = list(dict.fromkeys(n for n in [*titles, title] if fold(n)))
     how, rows = "NONE", []
     if wanted:
         how, rows = "ISBN", [b for b in books if b["_isbns"] & wanted]
-    if not rows:
-        t = fold(title)
-        how, rows = "TITLE", [b for b in books if t and t in b["_titles"]]
-    if not rows:
-        c = compact(title)
-        how, rows = "COMPACT", [b for b in books if c and c in b["_compact"]]
-    if not rows:
-        words = fold(title).split()
-        how, rows = "PARTIAL", [b for b in books if any(_opens(words, x) for x in b["_titles"])]
+    steps = (("TITLE", lambda n: (lambda t: [b for b in books if t in b["_titles"]])(fold(n))),
+             ("COMPACT", lambda n: (lambda c: [b for b in books if c in b["_compact"]])(compact(n))),
+             ("SEGMENT", lambda n: (lambda c: [b for b in books if c in b["_first"]])(compact(n))),
+             ("PARTIAL", lambda n: (lambda w: [b for b in books if len(w) >= 2 and any(_opens(w, x) for x in b["_titles"])
+                                                and partial_candidate(b)])(fold(n).split())))
+    for step, find in steps:
+        if rows:
+            break
+        for n in names:
+            how, rows = step, find(n)
+            if rows:
+                break
     if not rows:
         return "NONE", [], ""
     if len(rows) > 1 and authors:
@@ -248,11 +294,16 @@ def fetch(cand: dict) -> bytes | None:
 
 def report(cur, books: list[dict], b: dict, with_image: bool = True) -> dict:
     import base64
-    how, rows, detail = match(books, b.get("isbns") or [], b["title"], b.get("authors") or [])
+    how, rows, detail = match(books, b.get("isbns") or [], b["title"], b.get("authors") or [], b.get("titles") or [])
     rep = {"book_id": b.get("book_id"), "matched_by": how, "candidates": [], "outcome": "NO_MATCH",
            "detail": detail or None}
     if how == "AMBIGUOUS":
         rep["outcome"] = "AMBIGUOUS"
+        # kayıt seçilemedi ama kitabın adı bütün kayıtlarda aynıysa ad bellidir (kayıt bilgisi gönderilmez)
+        own = {compact(first_part(r["new_name"])) for r in rows}
+        if len(own) == 1:
+            best = max(rows, key=lambda r: (r["new_projekarti"] is not None, r["ModifiedOn"]))
+            rep["crm_title"] = first_part(best["new_name"])
     elif rows:
         main_row = rows[0]
         cands = sorted((c for r in rows for c in candidates(cur, r)), key=lambda x: x["date"], reverse=True)
@@ -267,13 +318,18 @@ def report(cur, books: list[dict], b: dict, with_image: bool = True) -> dict:
     return rep
 
 
+def _clean(t: str) -> str:
+    """--dry-run: the order number in front of a file name («1- todişin bir günü») is not part of the name."""
+    return re.sub(r"^\s*\d{1,3}\s*[-_.)]*\s+", "", re.sub(r"^\s*\d{1,3}\s*[-_.)]+\s*", "", t or "")).strip()
+
+
 def main(argv: list[str]) -> int:
     conn = crm()
     cur = conn.cursor(as_dict=True)
     books = load_books(cur)
     if argv[:1] == ["--dry-run"]:
         for t in argv[1:]:
-            rep = report(cur, books, {"title": t}, with_image=False)
+            rep = report(cur, books, {"title": t, "titles": [_clean(t)]}, with_image=False)
             crm_rec = rep.get("crm") or {}
             print(json.dumps({"title": t, "matched_by": rep["matched_by"], "outcome": rep["outcome"],
                               "crm_title": rep.get("crm_title"), "detail": rep["detail"],

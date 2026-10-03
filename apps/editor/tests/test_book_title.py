@@ -129,7 +129,8 @@ def test_site_before_metadata_before_file():
 def test_site_name_is_not_cut_to_the_file_nickname():
     r = BT.resolve("2-cezeri-baski.pdf", site={"row": {"title": "El Cezeri ve Bakır Taç - Dedemin Masal Krallığı 1"},
                                                "by": "ISBN"})
-    assert r["title"] == "El Cezeri ve Bakır Taç - Dedemin Masal Krallığı 1"
+    # dosya adına uyan parça yoksa kitabın adı ilk parçadır (seri adı « - »'den sonra); parçanın içinden kelime seçilmez
+    assert r["title"] == "El Cezeri ve Bakır Taç"
     assert BT.site_name("365 Günde Peygamberler Tarihi (Fleksi Cilt)") == "365 Günde Peygamberler Tarihi"
     assert BT.site_name("Sahaflar ve Kitapçılar (Ciltli)") == "Sahaflar ve Kitapçılar"
     assert BT.site_name("Dikkat Zeka (4 Yaş)") == "Dikkat Zeka (4 Yaş)"
@@ -144,6 +145,7 @@ def test_unrelated_metadata_keeps_the_file_name_and_says_why():
 def test_automatic_never_overwrites_the_user_or_a_stronger_source():
     assert not BT.may_replace("user", "site")
     assert not BT.may_replace("site", "metadata") and not BT.may_replace("site", "file")
+    assert not BT.may_replace("crm", "site") and BT.may_replace("site", "crm") and not BT.may_replace("user", "crm")
     assert BT.may_replace("file", "metadata") and BT.may_replace("metadata", "site") and BT.may_replace(None, "file")
 
 
@@ -198,3 +200,56 @@ def test_name_match_with_another_title_is_not_taken():
     rows = [{**ROWS[0], "isbn": None, "title": "Boyama Zamanı"}]
     r = BT.decide(_row(), {"isbns": [], "titles": ["Boyama Zamanı"], "authors": []}, _Ix(rows))
     assert r["source"] == "file"
+
+
+# ------------------------------------------------------------------ CRM (kullanıcı kararı 2026-10-03: CRM > site)
+def test_crm_name_comes_before_the_site():
+    crm = {"title": "Todiş'in Bir Günü - Todiş'le Boyama Zamanı", "by": "SEGMENT"}
+    r = BT.resolve("1- todişin bir günü (2).pdf", crm=crm, site={"row": {"title": "Başka Ad"}, "by": "ISBN"})
+    assert (r["title"], r["source"], r["review"], r["by"]) == ("Todiş'in Bir Günü", "crm", [], "SEGMENT")
+    assert BT.resolve("x.pdf", user="Benim Adım", crm=crm)["source"] == "user"
+
+
+def test_crm_partial_match_is_flagged():
+    r = BT.resolve("istediğim insan.pdf", crm={"title": "İstediğim İnsan Olma Yolunda", "by": "PARTIAL"})
+    assert r["title"] == "İstediğim İnsan Olma Yolunda" and r["source"] == "crm"
+    assert r["review"] and r["review"][0].startswith("CRM'de kısmi ad eşleşmesi")
+
+
+@pytest.mark.parametrize("record, file_title, want", [
+    ("Gözlerini Kocaman Aç - Duyularla Rabbimi Tanıyorum 3 (Pencereli Kitap)", "Gozlerini Kocaman Ac",
+     "Gözlerini Kocaman Aç"),
+    ("Kamptan Yükselen Sesler - Mucit Mete Ve Tayfası - 3. Sınıf Hikaye Seti (10. Kitap)", "Kamptan Yukselen Sesler",
+     "Kamptan Yükselen Sesler"),
+    ("Sherlock Holmes - Trendeki Ceset", "Trendeki Ceset", "Trendeki Ceset"),
+    ("Rüzgarın Ardından: Ayine-i Zülcenaheyn", "Rüzgârın Ardından", "Rüzgarın Ardından: Ayine-i Zülcenaheyn"),
+    ("Piri Reis Ve Acayip Haritası", "Piri Reis ve Acayip Haritasi", "Piri Reis ve Acayip Haritası"),
+    ("Dinozor Ferro İle Tanışalım - Güçlü Dinozorlar", "Dinozor Ferro", "Dinozor Ferro ile Tanışalım"),
+    ("Kayıp Kılıç (Önceki Ebat)", "Kayipkilic", "Kayıp Kılıç"),
+    ("Dikkat Zeka (4 Yaş)", "", "Dikkat Zeka (4 Yaş)"),
+    ("Mülk ve Hukuk: Osmanlı Vergi Düzeninde Meşruiyet Sorunu", "Mulkvehukuk",
+     "Mülk ve Hukuk: Osmanlı Vergi Düzeninde Meşruiyet Sorunu"),
+    ("GALATASARAY", "galatasaray", "Galatasaray"),
+    ("Hamam mı? Tamam mı? - Uçuk Ailemle Kaçık Maceralar", "Hamammi Tamammi", "Hamam mı? Tamam mı?"),
+])
+def test_record_name(record, file_title, want):
+    assert BT.record_name(record, file_title) == want
+
+
+def test_decide_takes_the_crm_name_and_the_site_by_first_segment():
+    ev = {"isbns": [], "titles": [], "authors": [], "crm": {"title": "Todiş'in Bir Günü - Boyama", "by": "SEGMENT"}}
+    r = BT.decide(_row(), ev, _Ix([]))
+    assert (r["title"], r["source"]) == ("Todiş'in Bir Günü", "crm")
+    rows = [{**ROWS[0], "isbn": None, "title": "Todiş'in Bir Günü - Todiş'le Boyama Zamanı (Ciltli)"}]
+    r = BT.decide(_row(), {"isbns": [], "titles": [], "authors": []}, _Ix(rows))
+    assert (r["title"], r["source"], r["by"]) == ("Todiş'in Bir Günü", "site", "SEGMENT")
+    # CRM'den gelen ad siteyle ezilmez
+    assert BT.decide(_row(title="Todiş'in Bir Günü", title_source="crm", title_file="1- todişin bir günü.pdf"),
+                     {"isbns": ["9786050000001"], "titles": [], "authors": []}, _Ix(ROWS)) is None
+
+
+def test_capital_forma_and_glued_print_suffix_are_dropped():
+    assert BT.from_file("turkiyeninzihintarihi 13,5F.pdf")["title"] == "Turkiyeninzihintarihi"
+    assert BT.from_file("cagribey 10F.pdf")["title"] == "Cagribey"
+    assert BT.from_file("onun gibi yasamaya var misinBASKI.pdf")["title"] == "Onun Gibi Yasamaya Var Misin"
+    assert "BASKI" not in BT.from_file("yorganımınaltindansesleniyorumBASKI.pdf")["title"]
