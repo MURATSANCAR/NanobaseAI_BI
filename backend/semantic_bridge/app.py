@@ -8341,10 +8341,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return None
 
     def _audit_module(path: str) -> Optional[str]:
+        # Yalnız sayfa yetkisine bağlı uçlar bir bölüme aittir; ortak/kendi denetleyen uçta bölüm boş kalır.
         rule = access_mod.rule_for(path)
-        if rule is None:
-            return None
-        return ",".join(sorted(rule)) if isinstance(rule, (set, frozenset)) else str(rule)
+        return ",".join(sorted(rule)) if isinstance(rule, (set, frozenset)) else None
 
     app.add_middleware(_audit_trail.Middleware, resolve=_audit_user, module_of=_audit_module,
                        system_name=admin_mod.LLM_DISPLAY)

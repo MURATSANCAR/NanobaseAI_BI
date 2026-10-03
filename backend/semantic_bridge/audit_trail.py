@@ -1081,10 +1081,26 @@ def request_dict(r: Any) -> dict[str, Any]:
             "sealed": bool(r["seal"])}
 
 
+def _mask_nested(row: Any) -> Any:
+    """Kolonda JSON metni olarak duran değerin içindeki gizli anahtarlar (ör. tercih değerindeki `api_token`) ekranda
+    maskeli gösterilir. Tetikleyici kolon adına bakar; metnin içini ancak burada açabiliriz."""
+    if not isinstance(row, dict):
+        return row
+    out = {}
+    for k, v in row.items():
+        if isinstance(v, str) and v[:1] in "{[" and SECRET_RX.search(v):
+            try:
+                v = json.dumps(mask(json.loads(v)), ensure_ascii=False)
+            except ValueError:
+                pass
+        out[k] = v
+    return out
+
+
 def row_dict(r: Any) -> dict[str, Any]:
     return {"id": r["id"], "at": _iso(r["at"]), "rid": r["rid"], "actor": r["actor"], "table": r["tbl"], "op": r["op"],
-            "pk": _jl(r["pk"]), "changed": _jl(r["changed"]), "old": _jl(r["old_row"]), "new": _jl(r["new_row"]),
-            "sealed": bool(r["seal"])}
+            "pk": _jl(r["pk"]), "changed": _jl(r["changed"]), "old": _mask_nested(_jl(r["old_row"])),
+            "new": _mask_nested(_jl(r["new_row"])), "sealed": bool(r["seal"])}
 
 
 def ui_dict(u: Any) -> dict[str, Any]:
