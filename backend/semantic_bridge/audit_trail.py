@@ -771,10 +771,25 @@ _SEAL_BATCH = 2000          # parti boyu tavan değildir: mühürlenmemiş satı
 _SEAL_DELAY = timedelta(seconds=30)
 
 
-def _canon(row: dict) -> str:
+#: Mühür hesabına boş değeriyle de giren kolonlar: her tablonun ilk (v1) kolonları. Sonradan eklenen bir kolon yalnız
+#: doluysa girer — kolon eklemek eski satırların mührünü bozmasın (2026-10-03: `source`/`ext_id` eklenince bütün eski
+#: satırlar «değişmiş» göründü; satır değil hesap değişmişti).
+_SEAL_BASE = {
+    "semantic_audit": {"id", "at", "actor", "action", "kind", "object_id", "title", "detail", "rid", "ip", "ua", "page"},
+    "semantic_audit_requests": {"id", "at", "rid", "actor", "session", "ip", "ua", "method", "path", "query", "page",
+                                "module", "kind", "status", "ms", "req_bytes", "resp_bytes", "content_type", "body", "files"},
+    "semantic_audit_rows": {"id", "at", "rid", "actor", "tbl", "op", "pk", "changed", "old_row", "new_row", "txid"},
+    "semantic_audit_ui": {"id", "at", "client_at", "actor", "session", "ip", "ua", "page", "event", "label", "detail"},
+}
+
+
+def _canon(row: dict, table: str = "") -> str:
+    base = _SEAL_BASE.get(table)
     out = {}
     for k, v in row.items():
         if k in ("seal", "seal_seq"):
+            continue
+        if v is None and base is not None and k not in base:
             continue
         if isinstance(v, datetime):
             v = (v if v.tzinfo else v.replace(tzinfo=timezone.utc)).astimezone(timezone.utc).isoformat()
@@ -782,8 +797,8 @@ def _canon(row: dict) -> str:
     return json.dumps(out, ensure_ascii=False, sort_keys=True, default=str)
 
 
-def _digest(prev: str, row: dict) -> str:
-    return hashlib.sha256((prev + "\n" + _canon(row)).encode("utf-8")).hexdigest()
+def _digest(prev: str, row: dict, table: str = "") -> str:
+    return hashlib.sha256((prev + "\n" + _canon(row, table)).encode("utf-8")).hexdigest()
 
 
 def _table(engine: sa.engine.Engine, name: str) -> sa.Table:
@@ -824,7 +839,7 @@ def seal_table(engine: sa.engine.Engine, name: str) -> int:
                 return done
             for r in rows:
                 seq += 1
-                prev = _digest(prev, dict(r))
+                prev = _digest(prev, dict(r), name)
                 c.execute(T.update().where(T.c.id == r["id"]).values(seal_seq=seq, seal=prev))
             c.execute(SEALS.update().where(SEALS.c.tbl == name).values(last_seq=seq, last_hash=prev))
             done += len(rows)
@@ -852,7 +867,11 @@ def verify_table(engine: sa.engine.Engine, name: str) -> dict[str, Any]:
                 gaps += s - expect
                 first_bad = first_bad or {"seq": expect, "why": f"{s - expect} kayıt eksik (sıra {expect}–{s - 1})"}
                 prev = None                      # boşluktan sonra zincir bu satırın kendi mührüyle sürer
-            h = _digest(prev, dict(r)) if prev is not None else r["seal"]
+            h = _digest(prev, dict(r), name) if prev is not None else r["seal"]
+            if h != r["seal"] and prev is not None:
+                # 2026-10-03 17:00–17:30 arasında mühürlenen satırlar sonradan eklenen boş kolonlarla hesaplandı
+                # (kural değişmeden önce). Aynı satırın içeriğinden türeyen bu ikinci biçim de kabul edilir.
+                h = hashlib.sha256((prev + "\n" + _canon(dict(r))).encode("utf-8")).hexdigest()
             if h != r["seal"]:
                 broken += 1
                 first_bad = first_bad or {"seq": s, "id": r["id"], "why": "satır mühürlendikten sonra değişmiş"}
