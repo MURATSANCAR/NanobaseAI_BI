@@ -44,6 +44,12 @@
      (rule given by the user, 2026-09-20). The CRM stores paths, not bytes → CRM_IMAGE_ROOTS.
   5. posts the result, with or without an image                POST /catalog/covers
 
+Only what is new or changed (kullanıcı kararı 2026-10-03): matching runs in memory for every book
+(one CRM read), but a book is read in full and posted only when it was never looked up, its match
+differs from its last lookup (another record, another outcome, another name), or one of its CRM
+records was modified / its project got a cover alternative after the last lookup. `--full`
+posts every book (first fill, or after a rule change).
+
 Read-only on the CRM. Configuration comes from the environment:
   EDITOR_API, EDITOR_MCP_KEY      editor MCP endpoint + key, or
   EDITOR_CATALOG_BASE, EDITOR_CATALOG_KEY   the card service (test host timer: scripts/server/editor-crm-connector.*)
@@ -292,18 +298,64 @@ def fetch(cand: dict) -> bytes | None:
     return None
 
 
-def report(cur, books: list[dict], b: dict, with_image: bool = True) -> dict:
+def _utc(s: str | None):
+    """Editörün ISO zamanı → CRM'in saklama biçimi (saat dilimsiz UTC)."""
+    from datetime import datetime, timezone
+    if not s:
+        return None
+    t = datetime.fromisoformat(s)
+    return t.astimezone(timezone.utc).replace(tzinfo=None) if t.tzinfo else t
+
+
+def latest_alternatives(cur) -> dict[str, object]:
+    """Proje → en yeni kapak alternatifinin CreatedOn'u (yeni eklenen kapak kitabı değişmiş sayar)."""
+    cur.execute("SELECT new_Proje, max(CreatedOn) AS t FROM new_kapakalternatifiBase WHERE statecode=0"
+                " AND new_Link IS NOT NULL GROUP BY new_Proje")
+    return {str(r["new_Proje"]): r["t"] for r in cur.fetchall() if r["new_Proje"]}
+
+
+def own_name(rows: list[dict]) -> str | None:
+    """Belirsiz eşleşmede kayıtların ortak kitap adı (hepsinde aynıysa), yoksa None."""
+    if len({compact(first_part(r["new_name"])) for r in rows}) != 1:
+        return None
+    best = max(rows, key=lambda r: (r["new_projekarti"] is not None, r["ModifiedOn"]))
+    return first_part(best["new_name"])
+
+
+def unchanged(b: dict, m: tuple[str, list[dict], str], alternatives: dict) -> bool:
+    """Kitabın son aramasından beri hiçbir şey değişmedi mi (yeniden okumaya ve göndermeye gerek yok)."""
+    last = b.get("last_lookup")
+    at = _utc((last or {}).get("at"))
+    if not last or at is None:
+        return False                                      # hiç aranmamış: yeni
+    how, rows, _ = m
+    if how == "NONE":
+        return last["outcome"] == "NO_MATCH"
+    if how == "AMBIGUOUS":
+        return last["outcome"] == "AMBIGUOUS" and (last.get("crm_title") or None) == own_name(rows)
+    if last["outcome"] in ("NO_MATCH", "AMBIGUOUS") or last.get("crm_book_id") != str(rows[0]["new_kitapId"]):
+        return False                                      # eşleşme değişti
+    for r in rows:
+        if r["ModifiedOn"] and r["ModifiedOn"] > at:
+            return False                                  # CRM kaydı değişti
+        alt = alternatives.get(str(r["new_projekarti"] or ""))
+        if alt and alt > at:
+            return False                                  # projeye yeni kapak eklendi
+    return True
+
+
+def report(cur, books: list[dict], b: dict, with_image: bool = True, m: tuple | None = None) -> dict:
     import base64
-    how, rows, detail = match(books, b.get("isbns") or [], b["title"], b.get("authors") or [], b.get("titles") or [])
+    how, rows, detail = m or match(books, b.get("isbns") or [], b["title"], b.get("authors") or [],
+                                   b.get("titles") or [])
     rep = {"book_id": b.get("book_id"), "matched_by": how, "candidates": [], "outcome": "NO_MATCH",
            "detail": detail or None}
     if how == "AMBIGUOUS":
         rep["outcome"] = "AMBIGUOUS"
         # kayıt seçilemedi ama kitabın adı bütün kayıtlarda aynıysa ad bellidir (kayıt bilgisi gönderilmez)
-        own = {compact(first_part(r["new_name"])) for r in rows}
-        if len(own) == 1:
-            best = max(rows, key=lambda r: (r["new_projekarti"] is not None, r["ModifiedOn"]))
-            rep["crm_title"] = first_part(best["new_name"])
+        name = own_name(rows)
+        if name:
+            rep["crm_title"] = name
     elif rows:
         main_row = rows[0]
         cands = sorted((c for r in rows for c in candidates(cur, r)), key=lambda x: x["date"], reverse=True)
@@ -337,12 +389,29 @@ def main(argv: list[str]) -> int:
                               "summary": (crm_rec.get("summary") or "")[:80], "images": len(rep["candidates"])},
                              ensure_ascii=False), flush=True)
         return 0
+    full = "--full" in argv
+    alternatives = latest_alternatives(cur)
+    seen = skipped = failed = 0
     for b in api("requests")["books"]:
-        rep = report(cur, books, b)
+        seen += 1
+        m = match(books, b.get("isbns") or [], b["title"], b.get("authors") or [], b.get("titles") or [])
+        if not full and unchanged(b, m, alternatives):
+            skipped += 1
+            continue
+        rep = report(cur, books, b, m=m)
         print(b["title"], "→", rep["matched_by"], rep["outcome"], (rep.get("crm") or {}).get("audience") or "",
               (rep.get("chosen") or {}).get("name", ""), flush=True)
-        api("store", rep)
-    return 0
+        for attempt in (1, 2):       # kart servisi yeniden başlarken bağlantı kopabilir: bir kez daha, sonra sıradaki
+            try:
+                api("store", rep)
+                break
+            except OSError as e:
+                if attempt == 2:
+                    failed += 1
+                    print("  yazılamadı:", type(e).__name__, e, flush=True)
+    print(f"{seen} kitap; {seen - skipped - failed} yazıldı, {skipped} değişmemiş (atlandı), {failed} yazılamadı"
+          + (" [--full]" if full else ""), flush=True)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

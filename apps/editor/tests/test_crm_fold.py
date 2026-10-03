@@ -134,3 +134,23 @@ def test_ambiguous_records_sharing_the_books_name_still_name_the_book():
     crm = [_book("f1", "Mavi Kuş - Orman Masalları", "A", urun="Mavi"), _book("f2", "Mavi Deniz", "B", urun="Mavi")]
     rep = C.report(None, crm, {"book_id": "y", "title": "mavi"}, with_image=False)
     assert rep["outcome"] == "AMBIGUOUS" and "crm_title" not in rep
+
+
+def test_only_new_or_changed_books_are_read_again():
+    from datetime import datetime
+    crm = [_book("g1", "Hafıza Bakımı", "Bora Jin", project="p1")]          # ModifiedOn 2026-01-02
+    m = C.match(crm, [], "hafizabakimi")
+    last = {"at": "2026-02-01T10:00:00+00:00", "outcome": "NO_IMAGE", "crm_book_id": "g1", "crm_title": "Hafıza Bakımı"}
+    assert not C.unchanged({"title": "x"}, m, {})                               # hiç aranmamış
+    assert C.unchanged({"last_lookup": last}, m, {})                            # değişmedi
+    assert not C.unchanged({"last_lookup": {**last, "at": "2026-01-01T00:00:00+03:00"}}, m, {})   # kayıt sonra değişti
+    assert not C.unchanged({"last_lookup": last}, m, {"p1": datetime(2026, 3, 1)})                # yeni kapak
+    assert not C.unchanged({"last_lookup": {**last, "crm_book_id": "eski"}}, m, {})               # başka kayıt
+    assert not C.unchanged({"last_lookup": {**last, "outcome": "NO_MATCH"}}, m, {})               # artık bulunuyor
+    none = C.match(crm, [], "bambaşka kitap")
+    assert C.unchanged({"last_lookup": {**last, "outcome": "NO_MATCH"}}, none, {})
+    assert not C.unchanged({"last_lookup": last}, none, {})                     # eşleşme kayboldu: kayıt silinmeli
+    amb = [_book("h1", "Penguen Karcan - Mini Masallar 3", "A"), _book("h2", "Penguen Karcan - Penton (İngilizce)", "B")]
+    ma = C.match(amb, [], "penguenkarcan")
+    assert C.unchanged({"last_lookup": {**last, "outcome": "AMBIGUOUS", "crm_title": "Penguen Karcan"}}, ma, {})
+    assert not C.unchanged({"last_lookup": {**last, "outcome": "AMBIGUOUS", "crm_title": None}}, ma, {})

@@ -246,13 +246,21 @@ def cover_requests() -> list[dict]:
 
     `titles`: the book's other spellings for name matching, cleaned file name first (a title still
     taken from the file name, «1 todişin bir günü», matches the CRM only without its order number).
-    An older connector reads `title` alone."""
+    An older connector reads `title` alone.
+
+    `last_lookup`: the book's latest CRM lookup (time, outcome, CRM record, name). The connector
+    re-reads a book only when it is new, its match changed, or its CRM record / cover alternatives
+    changed since then (kullanıcı kararı 2026-10-03: «sadece değişen ve yeni oluşturulanları alalım»)."""
     from . import book_title, foundation, read_model
     legacy = {str(r["book_id"]): r["metadata"] or {} for r in db.all_rows(
         "SELECT book_id, metadata FROM book_card WHERE is_current")}
     out = []
     with foundation.read_snapshot() as c:
         tf = "b.title_file" if book_title.has_columns(c) else "NULL::text AS title_file"
+        last = {str(r["book_id"]): {"at": r["created_at"].isoformat(), "outcome": r["outcome"],
+                                    "crm_book_id": r["crm_book_id"], "crm_title": r["crm_title"]}
+                for r in c.execute("SELECT DISTINCT ON (book_id) book_id, created_at, outcome, crm_book_id, crm_title"
+                                   " FROM ed.cover_lookup WHERE source='CRM' ORDER BY book_id, created_at DESC")}
         for b in c.execute(f"SELECT b.id, b.title, {tf}, cv.source, cv.source_date,"
                            " (SELECT bv.pdf_meta->>'archive_path' FROM ed.book_version bv WHERE bv.book_id=b.id"
                            "  ORDER BY bv.created_at LIMIT 1) AS archive_path FROM ed.book b LEFT JOIN"
@@ -269,7 +277,8 @@ def cover_requests() -> list[dict]:
                         "titles": [t for t in dict.fromkeys(titles) if t and t != b["title"]],
                         "isbns": facts("ISBN"),
                         "authors": facts("AUTHOR"), "current_source": b["source"],
-                        "current_date": str(b["source_date"]) if b["source_date"] else None})
+                        "current_date": str(b["source_date"]) if b["source_date"] else None,
+                        "last_lookup": last.get(book_id)})
     return out
 
 
