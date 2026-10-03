@@ -6,6 +6,7 @@
 - **Ne:** `production/epub_compare.py` (`compare`, `epub_text`, `for_job`), `epub.build_job` denetimden sonra çalıştırır (hata e-kitabı durdurmaz), `view`'da `compare`, ön kontrol satırı; ekran `EpubSection.tsx` `CompareResult` + biçim satırında şablon adı. Test `tests/test_epub_compare.py` (3).
 - **Bulunan kusurlar (kendi kodumda, testle):** kodlama bildirimsiz XHTML Latin-1 okunuyordu; tire birleştirme küçük harften önceydi; Türkçe «İ» casefold'da iki harfe bölünüyordu; paragraflar boşluksuz birleşiyordu.
 - **Gerçek kitapta (Çiçekçi Kadın, canlı işçide kopya):** %98,6 eşleşti; beklenmeyen 3 parça 487 kelime — «Yazarın notu» (s.206–208, 411 kelime, eski iş hikâye dışı saydığı için basılmamış) ve çevirmen tanıtımı.
+- **Kurulum:** GPU `releases/a85cac79` (main'le dosya dosya aynı), 928 test geçti, 10 servis `0.15.9-a85cac79`; canlı işçide iş kopyasıyla `build_job` → durum `compare`, ön kontrol satırı doğru. Test sunucusu ön yüzü: `EpubSection.tsx` + `api.ts` (sunucudaki eski md5 = main'in önceki hâli), sunucuda derleme, `cockpit/dist` → portal `index-DATob_-J.js`, Mac artığı 0. Müşteri VM'i: kullanıcı onayı bekliyor.
 
 ## 2026-10-03 — Geniş menü: büyük «Aç» düğmesi, fare çıkınca kendiliğinden kapanır
 
