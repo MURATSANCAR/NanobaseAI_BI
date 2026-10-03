@@ -59,15 +59,15 @@ def empty() -> dict:
 
 
 def source_auto(d: Path) -> str:
-    """Kaynak seçilmemişse: okunmuş yayınevi kitabından açılan işte basılı kitabın e-kitabı (yayınevinin kapağı
-    kapak kütüphanesinde ve künyesi okunmuş kayıtta bulunuyorsa); Word'den gelen işte stüdyo tasarımı."""
+    """Kaynak seçilmemişse: okunmuş yayınevi kitabından açılan işte basılı kitabın e-kitabı (künyesi okunmuş kayıtta
+    bulunuyorsa; kapak kütüphanesinde yoksa stüdyonun kapağı); Word'den gelen işte stüdyo tasarımı."""
     from . import studio
     from .epub_source import original_cover, print_kunye
     m = studio.read(d, "manuscript.json") or {}
     if (m.get("source") or {}).get("kind") != "generation":
         return "studyo"
-    try:
-        ok = bool(print_kunye(d)) and original_cover(studio._manuscript(d)) is not None
+    try:                                         # yayınevinin kapağı bulunamazsa stüdyonun kapağı kullanılır (uyarıyla)
+        ok = bool(print_kunye(d))
     except Exception:  # noqa: BLE001 - veritabanına ulaşılamazsa stüdyo tasarımı (e-kitap yine üretilir)
         ok = False
     return "basili" if ok else "studyo"
@@ -84,7 +84,8 @@ def book_docs(d: Path, plan: dict | None, ms, mode: str, wait: bool = True) -> l
     from . import epub as E
     if mode == "basili":
         from .epub_source import print_manuscript
-        pm = print_manuscript(d, wait=wait)
+        h = E.HOUSES.get(E.house_key(d))
+        pm = print_manuscript(d, wait=wait, signature=h.signature if h else None)
         if pm is None:
             return None if not wait else E._docs_from_manuscript(ms, pages=True)
         return E._docs_from_manuscript(pm, pages=True)

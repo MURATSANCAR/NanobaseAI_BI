@@ -23,7 +23,7 @@ DIALOGUE = re.compile(r"^\s*[-–—]\s*")
 @dataclass
 class Block:
     kind: str                    # para | dialogue; dizgiyle (`layout=True`): poem | italic | right | epigraph |
-    #                              perde_alti | table (metin tablonun HTML'i)
+    #                              perde_alti | subhead | break | table (metin tablonun HTML'i)
     text: str
     pages: list[int] = field(default_factory=list)   # kaynak sayfalar (okunmuş kitapta)
 
@@ -523,6 +523,16 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple
                 out.insert(at, (p, table_html(rows), "table"))
                 ys.insert(at, y)
                 at += 1
+    # Ara işareti (süs): sayfada, ardından gelen ilk paragrafın önüne.
+    for p, pg in pages.items():
+        for y in pg.breaks:
+            at = next((i for i, (q, _, _) in enumerate(out) if q == p and ys[i] is not None and ys[i] > y), None)
+            if at is None:                            # sayfanın son satırının altındaki süs: sayfanın ardına
+                at = max((i for i, x in enumerate(out) if x[0] == p), default=None)
+                at = at + 1 if at is not None else None
+            if at is not None and not (at > 0 and out[at - 1][2] == "break"):
+                out.insert(at, (p, "* * *", "break"))
+                ys.insert(at, y)
     # Tablolu sayfada öğeler basılı sayfadaki yerine göre sıralanır (tablo başlığının ikinci satırı tablodan önce).
     i = 0
     while i < len(out):
@@ -552,10 +562,50 @@ def _clean_title(t: str) -> str:
     return t
 
 
+def _recut_perde(ms: Manuscript, pages: dict) -> None:
+    """Perde sayfası olan kitapta bölümler perdeden başlar: perde sayfasındaki ilk paragraf bölüm adı, kısa alt satırı
+    perde altı; dizgiden bulunmuş bölüm adları («I», «II»: perdeden sonraki alt başlık) bölüm içi başlık olur."""
+    perde = {p for p, pg in pages.items() if pg.perde}
+    if not perde:
+        return
+    flat: list[Block] = []
+    for ch in ms.chapters:
+        if ch.title:
+            first = ch.blocks[0].pages[:1] if ch.blocks else []
+            flat.append(Block("subhead", ch.title, list(first)))
+        flat += ch.blocks
+    out: list[Chapter] = [Chapter(None, [])]
+    i = 0
+    while i < len(flat):
+        b = flat[i]
+        p = b.pages[0] if b.pages else None
+        if p in perde:
+            ch = Chapter(b.text, [], "perde")
+            out.append(ch)
+            i += 1
+            while i < len(flat) and flat[i].pages and flat[i].pages[0] == p:
+                ch.blocks.append(Block("perde_alti", flat[i].text, flat[i].pages))
+                i += 1
+            continue
+        out[-1].blocks.append(b)
+        i += 1
+    ms.chapters = [c for c in out if c.blocks or c.title]
+
+
 def _finish_layout(ms: Manuscript, pages: dict, notes: dict) -> None:
     """Bölümler kurulduktan sonra: gönderme işaretleri bölüm içinde 1'den numaralanır («[k]»), notlar bölüm sonuna
     «[k] metin» paragrafı olur (e-kitap bunları kitabın sonundaki notlara bağlar); bölüm başındaki italik / sağa
     yaslı paragraflar epigraf; perde sayfasıyla açılan bölüm perde, o sayfadaki kısa paragraf perde altı."""
+    _recut_perde(ms, pages)
+    for ch in ms.chapters:                            # ardışık şiir blokları (dörtlükler) tek şiir
+        merged: list[Block] = []
+        for b in ch.blocks:
+            if b.kind == "poem" and merged and merged[-1].kind == "poem":
+                merged[-1].text += "\n\n" + b.text
+                merged[-1].pages += [p for p in b.pages if p not in merged[-1].pages]
+            else:
+                merged.append(b)
+        ch.blocks = merged
     for ch in ms.chapters:
         k = 0
         found: list[tuple[int, str]] = []
@@ -575,18 +625,20 @@ def _finish_layout(ms: Manuscript, pages: dict, notes: dict) -> None:
             if b.kind != "table":
                 b.text = _MARK.sub(renum, b.text)
         first = ch.blocks[0].pages[0] if ch.blocks and ch.blocks[0].pages else None
-        if first is not None and pages.get(first) is not None and pages[first].perde:
+        if ch.kind != "perde" and first is not None and pages.get(first) is not None and pages[first].perde:
             ch.kind = "perde"
             for b in ch.blocks:
                 if b.pages and b.pages[0] == first and len(b.text) <= 120:
                     b.kind = "perde_alti"
-        for b in ch.blocks:                           # bölüm başındaki italik / sağa yaslı paragraflar: epigraf
-            if b.kind == "perde_alti":
+        start = True                                  # bölüm ve alt bölüm başındaki italik / sağa yaslı: epigraf
+        for b in ch.blocks:
+            if b.kind in ("perde_alti", "subhead"):
+                start = True
                 continue
-            if b.kind in ("italic", "right") and len(b.text) <= 600:
+            if start and b.kind in ("italic", "right") and len(b.text) <= 600:
                 b.kind = "epigraph"
                 continue
-            break
+            start = False
         ch.blocks += [Block("para", f"[{n}] {t}", []) for n, t in found]
 
 
