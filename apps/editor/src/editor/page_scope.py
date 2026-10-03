@@ -231,15 +231,18 @@ async def metadata_after_scope(gid: str, scope: dict) -> dict | None:
     Sıra sorunu (2026-10-02 denetimi): künye adımı (`catalog.extract_metadata`) okumanın sonunda, bütün kitabın
     sayfa kuralı (`ensure`, doğrulamada) yazılmadan koşar; o an künye sayfası bulamazsa METADATA boş kalır ve
     sonradan yazılan FRONT_MATTER rolü künyeyi yeniden okutmazdı (yalnız `regenerate` okuyordu). Künye iddiası
-    zaten varsa `extract_metadata` model çağırmaz. Hata çıktıyı durdurmaz: kart künyesiz kalır, sebep döner."""
-    if not scope.get("front_matter_written"):
-        return None
+    zaten varsa `extract_metadata` model çağırmaz. Hata çıktıyı durdurmaz: kart künyesiz kalır, sebep döner.
+
+    Yeni künye sayfası yoksa da künye kimlik alanı (ad/yazar/yayınevi) eksikse eksik alan okuması bir kez koşar
+    (`catalog.needs_metadata`, 2026-10-03: yazar adı kapakta kalıyordu)."""
     from . import catalog
     try:
+        if not scope.get("front_matter_written") and not await asyncio.to_thread(catalog.needs_metadata, gid):
+            return None
         meta = await catalog.extract_metadata(gid)
     except Exception as exc:  # noqa: BLE001 — künye eksikliği kitabın çıktısını düşürmez
         return {"error": f"{type(exc).__name__}: {exc}"[:300]}
-    return {"fields": sorted(meta), "pages": scope["front_matter_written"]}
+    return {"fields": sorted(meta), "pages": scope.get("front_matter_written") or []}
 
 
 def for_chunk(c, gid: str, page_from: int, page_to: int, suggested: set[int]) -> set[int]:
@@ -256,15 +259,31 @@ def for_chunk(c, gid: str, page_from: int, page_to: int, suggested: set[int]) ->
 
 
 # ------------------------------------------------------------------ yeniden üretim (yeniden okumadan)
-def read_generations(c, profile: str | None = None) -> list[dict]:
-    """Okuması bitmiş, çıktısı kurulabilir nesiller: iş SUCCEEDED, nesil izlenen ve mühürsüz."""
-    q = ("SELECT g.id, b.title, j.profile FROM ed.generation g JOIN ed.analysis_job j ON j.id=g.job_id"
+def read_generations(c, profile: str | None = None, *, all_generations: bool = False) -> list[dict]:
+    """Okuması bitmiş, çıktısı kurulabilir nesiller: iş SUCCEEDED, nesil izlenen ve mühürsüz. Varsayılan: kitap
+    sürümü başına yalnız EN SON okunmuş nesil (eski nesli yeniden üretmek boşa model çağrısıdır; 2026-10-03).
+    `all_generations`: hepsi. `profile` en son nesil seçildikten sonra süzer (son okuması tam olan kitabın eski
+    arşiv nesli seçilmez)."""
+    q = ("SELECT g.id, b.title, j.profile, g.book_version_id, g.created_at FROM ed.generation g"
+         " JOIN ed.analysis_job j ON j.id=g.job_id"
          " JOIN ed.generation_state s ON s.generation_id=g.id JOIN ed.book_version bv ON bv.id=g.book_version_id"
          " JOIN ed.book b ON b.id=bv.book_id WHERE j.status='SUCCEEDED' AND s.origin='TRACKED'"
          " AND g.sealed_at IS NULL AND j.profile IN ('full','archive')")
-    rows = c.execute(q + (" AND j.profile=%s" if profile else "") + " ORDER BY b.title",
-                     (profile,) if profile else ()).fetchall()
-    return [{"id": str(r["id"]), "title": r["title"], "profile": r["profile"]} for r in rows]
+    rows = [dict(r) for r in c.execute(q + " ORDER BY b.title, g.created_at, g.id").fetchall()]
+    rows = rows if all_generations else latest_per_version(rows)
+    return [{"id": str(r["id"]), "title": r["title"], "profile": r["profile"]} for r in rows
+            if not profile or r["profile"] == profile]
+
+
+def latest_per_version(rows: list[dict]) -> list[dict]:
+    """Kitap sürümü başına en son oluşturulan nesil (salt hesap; girdi sırası korunur)."""
+    last: dict = {}
+    for r in rows:
+        k = str(r["book_version_id"])
+        if k not in last or (r["created_at"], str(r["id"])) > (last[k]["created_at"], str(last[k]["id"])):
+            last[k] = r
+    keep = {id(r) for r in last.values()}
+    return [r for r in rows if id(r) in keep]
 
 
 def _artifact(c, gid: str, kind: str) -> dict | None:
@@ -440,6 +459,8 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--generation", action="append")
     g.add_argument("--all-read", action="store_true", help="okuması bitmiş bütün nesiller (tam + arşiv)")
     r.add_argument("--profile", choices=["full", "archive"])
+    r.add_argument("--all-generations", action="store_true",
+                   help="kitap sürümünün eski okunmuş nesilleri de (varsayılan: yalnız en son nesil)")
     r.add_argument("--dry-run", action="store_true", help="hiçbir şey yazma; ne değişeceğini raporla")
     r.add_argument("--model", type=int, default=0,
                    help="kuru koşuda ilk N kitapta özet+künye model çağrısıyla gerçekten denenir (yazılmaz)")
@@ -447,7 +468,7 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     from . import foundation
     with foundation.read_snapshot() as c:
-        gens = read_generations(c, a.profile)
+        gens = read_generations(c, a.profile, all_generations=a.all_generations or bool(a.generation))
     if a.generation:
         gens = [x for x in gens if x["id"] in set(a.generation)]
     out = open(a.json, "w", encoding="utf-8") if a.json else None

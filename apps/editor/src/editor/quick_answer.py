@@ -17,6 +17,16 @@ kütüphanedeki bütün kitapların kartı verilir.
 
 Bağlamın boyu modelin sunulan bağlamından (budget) hesaplanır; sığmayan kayıt sessizce düşmez, bağlamda
 «şu kadar kayıt daha var» diye yazar ve model gerekirse DEEPER der.
+
+Sayfa sorusu (2026-10-03 denetimi: «45. sayfada ne anlatılıyor» → «Kitapta bulunamadı»): sorudaki sayfa numarası /
+aralığı (`page_refs`) ayıklanır; o sayfaların metni, olayları ve özet cümleleri bağlama konur. Sayfa kitapta varsa
+ve model yine «bulunamadı» derse soru derin okumaya gider; sayfa kitapta yoksa model çağrılmadan «Kitap N sayfa»
+denir.
+
+Yaş ve tür (aynı denetim: kütüphane geneli «okul öncesi korku kitabı» sorusunda künyesi boş 3-6 yaş kitapları
+bulunamıyordu): künyede yazmıyorsa kitabın içerikten önerilen kategori/yaşı (`ed.book_recommendation`, durum OK)
+kartta kaynağıyla yazılır; kütüphane geneli soruda sorudaki yaş ve kategori sözcükleri kitapların yaş/türüyle
+eşleştirilir, eşleşen kitaplar önce gelir ve bağlamda adlarıyla yazılır (hiçbir kitap düşmez).
 """
 from __future__ import annotations
 
@@ -27,7 +37,7 @@ import re
 import unicodedata
 from typing import Any
 
-from . import budget, foundation, llm, read_model
+from . import budget, foundation, llm, read_model, source
 
 log = logging.getLogger("editor.quick_answer")
 
@@ -91,6 +101,7 @@ def library(c) -> list[dict]:
     crm = {str(r["book_id"]): r for r in c.execute(
         "SELECT book_id, crm_title, authors FROM ed.book_crm_record WHERE book_id=ANY(%s::uuid[])",
         ([str(r["book_id"]) for r in rows],)).fetchall()}
+    recs = recommendations(c, [str(r["book_id"]) for r in rows])
     books = []
     for r in rows:
         bid = str(r["book_id"])
@@ -109,9 +120,196 @@ def library(c) -> list[dict]:
             "crm_title": cr.get("crm_title"), "crm_authors": cr.get("authors") or [],
             "page_count": r["page_count"], "metadata": meta, "summary": card["summary"] or [],
             "themes": card["themes"] or [], "events": card["key_events"] or [],
-            "characters": card["characters"] or [],
+            "characters": card["characters"] or [], "recommendation": recs.get(bid),
             "names": [card["title"], cr.get("crm_title"), *_meta_values(meta, "TITLE")]})
     return sorted(books, key=lambda b: norm(b["crm_title"] or b["title"]))
+
+
+def recommendations(c, book_ids: list[str]) -> dict[str, dict]:
+    """Kitap başına içerikten önerilen kategori ve yaş (editor.recommend; kitabın en son OK önerisi). Tablo yoksa
+    (göç henüz koşmadıysa) boş."""
+    if not book_ids:
+        return {}
+    have = c.execute("SELECT to_regclass('ed.book_recommendation') IS NOT NULL AS ok").fetchone()
+    if not have or not have["ok"]:
+        return {}
+    rows = c.execute(
+        "SELECT DISTINCT ON (bv.book_id) bv.book_id, r.category, r.audience, r.age_from, r.age_to"
+        " FROM ed.book_recommendation r JOIN ed.generation g ON g.id=r.generation_id"
+        " JOIN ed.book_version bv ON bv.id=g.book_version_id WHERE r.status='OK' AND bv.book_id=ANY(%s::uuid[])"
+        " ORDER BY bv.book_id, r.created_at DESC", (book_ids,)).fetchall()
+    return {str(r["book_id"]): {"category": list(r["category"] or []), "audience": r["audience"],
+                                "age_from": r["age_from"], "age_to": r["age_to"]} for r in rows}
+
+
+#: Sorudaki yaş sözcükleri (genel okul/yaş evreleri; kitaptan bağımsız). Üst sınır None = açık.
+AGE_WORDS = (("okul oncesi", (3, 6)), ("anaokul", (3, 6)), ("kres", (3, 6)), ("bebek", (0, 3)),
+             ("ilkokul", (7, 10)), ("ortaokul", (11, 14)), ("lise", (14, 18)), ("ergen", (12, 18)),
+             ("yetiskin", (18, None)))
+_AGE_RANGE = re.compile(r"(\d{1,2})\s*(?:-|–|ile|ila)\s*(\d{1,2})\s*yas")
+_AGE_PLUS = re.compile(r"(\d{1,2})\s*\+\s*yas|(\d{1,2})\s*yas\s*(?:ve\s*)?(?:ustu|uzeri)")
+_AGE_ONE = re.compile(r"(\d{1,2})\s*yas")
+
+
+def _plain(text: str) -> str:
+    """Küçük harf, Türkçe harfler sadeleşmiş; noktalama korunur (yaş biçimleri için)."""
+    return unicodedata.normalize("NFKC", text or "").translate(_TR).lower()
+
+
+def question_age(question: str) -> tuple[int, int | None] | None:
+    """Sorunun istediği yaş aralığı: «3-6 yaş», «8+ yaş», «5 yaşındaki», «okul öncesi», «ilkokul»..."""
+    t = _plain(question)
+    if m := _AGE_RANGE.search(t):
+        a, b = int(m.group(1)), int(m.group(2))
+        return (min(a, b), max(a, b))
+    if m := _AGE_PLUS.search(t):
+        return (int(m.group(1) or m.group(2)), None)
+    if m := _AGE_ONE.search(t):
+        return (int(m.group(1)), int(m.group(1)))
+    w = f" {norm(question)} "
+    for word, rng in AGE_WORDS:
+        if f" {word}" in w:
+            return rng
+    return None
+
+
+def book_age(b: dict) -> tuple[tuple[int, int | None], str] | None:
+    """(yaş aralığı, kaynak): künyedeki AGE_RANGE, yoksa içerikten önerilen yaş."""
+    for v in _meta_values(b.get("metadata") or [], "AGE_RANGE"):
+        t = _plain(v)
+        nums = [int(n) for n in re.findall(r"\d{1,2}", t)]
+        if nums:
+            open_ = "+" in t or "ustu" in t or "uzeri" in t
+            return ((min(nums), None if open_ else max(nums)), "künye")
+    rec = b.get("recommendation") or {}
+    if rec.get("age_from") is not None:
+        return ((rec["age_from"], rec.get("age_to")), "öneri")
+    return None
+
+
+def ages_overlap(a: tuple[int, int | None], b: tuple[int, int | None]) -> bool:
+    return a[0] <= (b[1] if b[1] is not None else 99) and b[0] <= (a[1] if a[1] is not None else 99)
+
+
+#: Kategori eşleşmesinde sayılmayan genel sözcükler (okur kökü ve yaş: yaş ayrı eşleşir).
+_GENERIC = frozenset({"cocuk", "genc", "yetiskin", "kitap", "kitabi", "kitaplar", "kitaplari", "yas", "yasi",
+                      "yaslar", "dizi", "seri", "kitaplik"})
+
+
+def book_categories(b: dict) -> list[str]:
+    """Kitabın tür/kategori adları: künyedeki GENRE, yoksa içerikten önerilen kategori yolu (kökü hariç)."""
+    genre = _meta_values(b.get("metadata") or [], "GENRE")
+    rec = (b.get("recommendation") or {}).get("category") or []
+    return genre or list(rec[1:] if len(rec) > 1 else rec)
+
+
+def category_match(question: str, cats: list[str]) -> bool:
+    """Sorudaki bir sözcük kitabın tür/kategori adlarındaki bir sözcükle (Türkçe ek payıyla) eşleşiyor mu."""
+    words = {w for c in cats for w in norm(c).split() if len(w) >= 4 and w not in _GENERIC and not w.isdigit()}
+    asked = {w for w in norm(question).split() if len(w) >= 4 and w not in _GENERIC}
+    return any(q.startswith(w) or w.startswith(q) for q in asked for w in words)
+
+
+def library_match(question: str, books: list[dict]) -> tuple[list[dict], list[str]]:
+    """Kütüphane geneli soru: yaş ve kategorisi soruyla eşleşen kitaplar önce (sıra içinde korunur); bağlama yazılan
+    eşleşme satırları. Hiçbir kitap düşmez."""
+    want = question_age(question)
+    score, lines = {}, []
+    by_age = [b for b in books if want and (a := book_age(b)) and ages_overlap(want, a[0])]
+    by_cat = [b for b in books if (cats := book_categories(b)) and category_match(question, cats)]
+    for b in by_age:
+        score[b["book_id"]] = score.get(b["book_id"], 0) + 1
+    for b in by_cat:
+        score[b["book_id"]] = score.get(b["book_id"], 0) + 1
+    title = lambda b: b.get("crm_title") or b["title"]  # noqa: E731
+    if want:
+        rng = f"{want[0]}-{want[1]}" if want[1] is not None else f"{want[0]}+"
+        lines.append(f"Sorudaki yaş: {rng}. Yaşı örtüşen kitaplar: "
+                     + (", ".join(title(b) for b in by_age) or "yok") + ".")
+    if by_cat:
+        lines.append("Türü/kategorisi sorudaki sözcüklerle eşleşen kitaplar: "
+                     + ", ".join(title(b) for b in by_cat) + ".")
+    both = [b for b in books if score.get(b["book_id"]) == 2]
+    if want and by_cat:
+        lines.append("İkisi birden eşleşen kitaplar: " + (", ".join(title(b) for b in both) or "yok") + ".")
+    order = sorted(range(len(books)), key=lambda i: (-score.get(books[i]["book_id"], 0), i))
+    return [books[i] for i in order], lines
+
+
+# ------------------------------------------------------------------ sayfa sorusu
+_NUM_ORD = r"(\d{1,4})(?:\s*\.|['’]?n?c[ıiuü]\b|['’]?[ıiuü]nc[ıiuü]\b)"
+_SEP = r"\s*(?:[-–—]|\bile\b|\bila\b)\s*"
+_PAGE_RANGE = re.compile(r"(?<![\d.,])(\d{1,4})\s*\.?" + _SEP + _NUM_ORD + r"\s*sayfa", re.I)
+_PAGE_ONE = re.compile(r"(?<![\d.,])" + _NUM_ORD + r"\s*sayfa", re.I)
+_PAGE_BEFORE = re.compile(r"(?:\bsayfa(?:lar)?(?:[ıi]n[ıi]?|da|de|ya|ye)?|\bsf\.?|(?<![^\W\d_])s\.)\s*"
+                          r"(\d{1,4})(?:" + _SEP + r"(\d{1,4}))?", re.I)
+
+
+def page_refs(question: str) -> list[int]:
+    """Soruda sorulan sayfalar (sıralı, tekrarsız): «45. sayfa», «45'inci sayfada», «45-47. sayfalar», «45 ile 47.
+    sayfalar», «sayfa 45», «sayfa 45-47», «s. 45», «s.45»."""
+    out: set[int] = set()
+    t = question or ""
+    for m in _PAGE_RANGE.finditer(t):
+        a, b = int(m.group(1)), int(m.group(2))
+        out.update(range(min(a, b), max(a, b) + 1))
+    t = _PAGE_RANGE.sub(" ", t)
+    for m in _PAGE_ONE.finditer(t):
+        out.add(int(m.group(1)))
+    t = _PAGE_ONE.sub(" ", t)
+    for m in _PAGE_BEFORE.finditer(t):
+        a = int(m.group(1))
+        b = int(m.group(2)) if m.group(2) else a
+        out.update(range(min(a, b), max(a, b) + 1))
+    return sorted(p for p in out if p > 0)
+
+
+def _span_text(pages: list[int]) -> str:
+    """[45, 46, 47, 50] → «45-47, 50»."""
+    parts, start = [], None
+    for i, p in enumerate(pages):
+        if start is None:
+            start = p
+        if i + 1 == len(pages) or pages[i + 1] != p + 1:
+            parts.append(str(start) if start == p else f"{start}-{p}")
+            start = None
+    return ", ".join(parts)
+
+
+def page_block(b: dict, c, asked: list[int]) -> tuple[str, dict]:
+    """Sorulan sayfaların metni, o sayfalardaki olaylar ve özet cümleleri; kitapta olmayan sayfalar ayrıca yazılır.
+    Dönüş: (bağlam bloğu, {'present', 'missing', 'page_count'})."""
+    count = b.get("page_count")
+    present, missing, lines = [], [], []
+    for p in asked:
+        if count and p > count:
+            missing.append(p)
+            continue
+        try:
+            page = source.load(c, b["generation_id"], p)
+        except KeyError:
+            missing.append(p)
+            continue
+        present.append(p)
+        text = " ".join(sp["text"] for pg in page for sp in pg["spans"]).strip()
+        lines.append(f"- s.{p}: {text}" if text else f"- s.{p}: (bu sayfada okunabilir metin yok; görsel sayfa olabilir)")
+    out = []
+    if present:
+        out.append(f"SORULAN SAYFALARIN METNİ (s.{_span_text(present)}):")
+        out += lines
+        want = set(present)
+        events = [e for e in b.get("events") or [] if e.get("merged_into") is None and want & set(range(
+            e["page_from"], (e.get("page_to") or e["page_from"]) + 1))]
+        if events:
+            out.append("Bu sayfalardaki olaylar: " + "; ".join(
+                f"{e['summary']} [s.{e['page_from']}]" for e in sorted(events, key=lambda e: e["page_from"])))
+        sums = [s for s in b.get("summary") or [] if want & set(s.get("pages") or [])]
+        if sums:
+            out.append("Bu sayfaları anan özet cümleleri: " + " ".join(
+                f"{s['text']} [{_pages(s.get('pages'))}]" for s in sums))
+    if missing:
+        out.append((f"Kitap {count} sayfa; " if count else "") + f"sorulan s.{_span_text(missing)} kitapta yok.")
+    return "\n".join(out), {"present": present, "missing": missing, "page_count": count}
 
 
 def _pages(p: Any) -> str:
@@ -146,9 +344,16 @@ def card_block(b: dict, c, *, full: bool) -> tuple[str, list[str]]:
     head = [f"### KİTAP: {title}"]
     if authors:
         head.append(f"Yazar: {authors}")
+    rec = b.get("recommendation") or {}
     for label, key in (("Yaş", "AGE_RANGE"), ("Tür", "GENRE")):
         if v := ", ".join(_meta_values(b["metadata"], key)):
             head.append(f"{label}: {v}")
+        elif key == "AGE_RANGE" and rec.get("age_from") is not None:
+            to = rec.get("age_to")
+            head.append(f"{label} (künyede yazmıyor; içerikten önerilen): "
+                        + (f"{rec['age_from']}-{to}" if to is not None else f"{rec['age_from']}+"))
+        elif key == "GENRE" and rec.get("category"):
+            head.append(f"{label} (künyede yazmıyor; içerikten önerilen): " + " > ".join(rec["category"]))
     if b["page_count"]:
         head.append(f"Sayfa sayısı: {b['page_count']}")
     state = c.execute("SELECT coverage_status, semantic_status FROM ed.generation_state WHERE generation_id=%s",
@@ -244,19 +449,32 @@ def fit(fixed: list[str], tails: list[list[str]], room: int) -> str:
 
 
 async def context(question: str, book_title: str | None) -> tuple[str, list[dict]]:
+    """Bağlam ve kitaplar. Seçili kitapta sayfa soruluysa kitabın sözlüğüne `asked_pages` yazılır (answer)."""
+    asked = page_refs(question)
+    matched: list[str] = []
     with foundation.read_snapshot() as c:
         books = library(c)
         chosen = [b for b in books if book_title and norm(book_title) in {norm(n) for n in b["names"] if n}]
         chosen += [b for b in mentioned(question, books) if b not in chosen]
         full = bool(chosen)
+        if not full:
+            books, matched = library_match(question, books)
         blocks = [card_block(b, c, full=full) for b in (chosen or books)]
+        pages = {}
+        if full and asked:
+            for i, b in enumerate(chosen):
+                pages[i], b["asked_pages"] = page_block(b, c, asked)
     fixed = [h for h, _ in blocks]
+    for i, block in pages.items():
+        title, _, rest = fixed[i].partition("\n")
+        fixed[i] = title + "\n" + block + ("\n" + rest if rest else "")
     if full:
         for i, b in enumerate(chosen):
             if ev := await _evidence(b["generation_id"], question):
                 fixed[i] += "\nSoruya en yakın metin parçaları:\n" + "\n".join(ev)
     else:
-        fixed.insert(0, f"Kütüphanede okunmuş {len(books)} kitap var; soruda belirli bir kitap adı geçmiyor.")
+        fixed.insert(0, "\n".join([f"Kütüphanede okunmuş {len(books)} kitap var; soruda belirli bir kitap adı geçmiyor.",
+                                    *matched]))
     b = budget.for_call(ALIAS, ANSWER_TOKENS)
     room = b.input - budget.estimate(SYSTEM) - budget.estimate(question) - 200
     tails = [t for _, t in blocks] if full else [[] for _ in fixed]
@@ -272,6 +490,13 @@ async def answer(question: str, book_title: str | None = None, history: list[dic
     names = [b["crm_title"] or b["title"] for b in books]
     if not books:
         return {"handled": False, "reason": "NO_BOOKS", "books": []}
+    asked = [b for b in books if b.get("asked_pages")]
+    if asked and len(asked) == len(books) and not any(b["asked_pages"]["present"] for b in asked):
+        # Sorulan sayfa kitapta yok: model çağrılmaz, kitabın sayfa sayısı söylenir.
+        return {"handled": True, "not_found": False, "books": names, "answer": " ".join(
+            (f"«{b['crm_title'] or b['title']}» {b['asked_pages']['page_count']} sayfa; " if b["asked_pages"]["page_count"]
+             else f"«{b['crm_title'] or b['title']}»: ") + f"{_span_text(b['asked_pages']['missing'])}. sayfa kitapta yok."
+            for b in asked)}
     user = (f"Seçili kitap: «{book_title}». " if book_title else "") + f"Soru: {q}"
     messages = [{"role": "system", "content": SYSTEM},
                 {"role": "user", "content": "KAYITLAR:\n\n" + ctx},
@@ -288,5 +513,8 @@ async def answer(question: str, book_title: str | None = None, history: list[dic
     text = (choice.get("message", {}).get("content") or "").strip()
     if choice.get("finish_reason") != "stop" or not text or DEEPER in text:
         return {"handled": False, "reason": "NEEDS_DEEPER_READ" if DEEPER in text else "NO_ANSWER", "books": names}
+    if text.startswith(NOT_FOUND) and any(b["asked_pages"]["present"] for b in asked):
+        # Sayfa kitapta var ama kayıtlar cevaba yetmedi: «bulunamadı» değil, sayfanın derin okuması.
+        return {"handled": False, "reason": "NEEDS_DEEPER_READ", "books": names}
     return {"handled": True, "answer": text, "not_found": text.startswith(NOT_FOUND), "books": names,
             "usage": r.json().get("usage")}

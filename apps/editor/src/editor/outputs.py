@@ -15,7 +15,7 @@ from .book_type import STORY_FORMS
 from .config import settings
 
 ORDER = ('chapter_summaries', 'book_summary', 'search_index', 'report', 'catalog')
-POLICY = 'validated-outputs-v10'
+POLICY = 'validated-outputs-v11'
 
 
 def plain(value):
@@ -207,6 +207,41 @@ def bind_sentences(out: dict, claims: list[dict], evidence: list[dict]) -> list[
         sentences.append({'text':row['text'],'claim_ids':refs,'pages':pages,'evidence_ids':evs})
     if claims and not sentences: raise ValueError('Empty summary for nonempty verified inputs')
     return sentences
+
+
+def exact_copy(text: str, claims: list[dict]) -> bool:
+    """The sentence is word for word the claim (with or without a final full stop) of every claim it cites."""
+    t = text.strip()
+    return bool(claims) and all(t in (c['claim'].strip(), c['claim'].strip() + '.') for c in claims)
+
+
+def merge_repeats(rows: list[dict], allowed: dict[str, dict], evidence: list[dict]) -> list[dict]:
+    """Summary rows with one identical sentence become one row at the first place: claim, page and evidence
+    references are joined. A sentence that is a word-for-word copy of claims keeps only the claims it copies (a
+    copied claim is its own proof; another claim's pages would cite what the sentence does not say)."""
+    first: dict[str, dict] = {}
+    out = []
+    for row in rows:
+        key = row['text'].strip()
+        if key not in first:
+            first[key] = {**row, 'claim_ids': list(row['claim_ids']), 'pages': list(row['pages']),
+                          'evidence_ids': list(row['evidence_ids'])}
+            out.append(first[key])
+            continue
+        keep = first[key]
+        keep['claim_ids'] = list(dict.fromkeys(keep['claim_ids'] + row['claim_ids']))
+        keep['pages'] = sorted(set(keep['pages']) | set(row['pages']))
+        keep['evidence_ids'] = sorted(set(keep['evidence_ids']) | set(row['evidence_ids']))
+        keep['merged_repeats'] = keep.get('merged_repeats', 0) + 1
+    for row in out:
+        if not row.get('merged_repeats'):
+            continue
+        copied = [cid for cid in row['claim_ids'] if exact_copy(row['text'], [allowed[cid]])]
+        if copied and len(copied) < len(row['claim_ids']):
+            row['claim_ids'] = copied
+            row['pages'] = sorted({p for cid in copied for p in allowed[cid]['source_pages']})
+            row['evidence_ids'] = sorted({e['id'] for e in evidence if e['claim_id'] in copied and e['quote_verified']})
+    return out
 
 
 # One summary call sees at most this much claim JSON (the director's context, with room for
@@ -516,8 +551,9 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
             if attempt == 2 and any(len(s['claim_ids']) != 1 or s['text'].strip() !=
                     allowed[s['claim_ids'][0]]['claim'].strip() for s in rows):
                 raise ValueError('Final repair must preserve selected verified claim text exactly')
-            if len({s['text'].strip() for s in rows}) != len(rows):
-                raise ValueError('Summary repeats an identical sentence')
+            # A repeated sentence is dropped, its references join the first one (2026-10-03: one repeat
+            # refused all three attempts and the summary fell back to the extractive one).
+            rows = merge_repeats(rows, allowed, snap['evidence'])
         except (ValueError, KeyError, TypeError) as exc:
             feedback.append({'error':str(exc)})
         else:
@@ -542,8 +578,7 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
                         # Identity is a proof of preservation, not a semantic
                         # model vote. No fuzzy matching, name substitution,
                         # lowercasing, or removal of qualifiers/punctuation.
-                        exact=len(refs)==1 and sentence['text'].strip() in (
-                            allowed[refs[0]]['claim'].strip(), allowed[refs[0]]['claim'].strip()+'.')
+                        exact=exact_copy(sentence['text'], [allowed[r] for r in refs])
                         if exact:
                             sentence['support_check']='EXACT_VERIFIED_CLAIM'
                             if verdict['supported'] is not True:

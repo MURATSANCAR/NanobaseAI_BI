@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import Counter
 import json
+import re
 from . import db, prompts, schemas, source
 from .llm import Llm
 
@@ -218,14 +219,79 @@ def _attrs(chs: list[dict]) -> dict[str, set]:
                       for c in chs if c.get('entity_scope') in ('INDIVIDUAL', 'COLLECTIVE', 'CONCEPT')}}
 
 
-def incompatible(a: list[dict], b: list[dict]) -> str | None:
+#: One human's life stages. A character who grows up in the story is read as HUMAN_CHILD in early windows and
+#: HUMAN_ADULT later (2026-10-03 audit: one person split in two, the join refused as KIND_CONFLICT). These two kinds
+#: do not refuse a join by themselves; the caller then checks the page order (life_stage_refusal). Every other
+#: kind conflict (human <-> animal, robot, ...) still refuses.
+LIFE_STAGES = frozenset({'HUMAN_CHILD', 'HUMAN_ADULT'})
+
+
+def incompatible(a: list[dict], b: list[dict], *, life_stages: bool = False) -> str | None:
     """Code guard for every join across windows (analysis §6.3): a kind, sex or
     individual<->collective conflict between the two sides refuses the join, whatever the model or
-    a shared mention says."""
+    a shared mention says. `life_stages`: HUMAN_CHILD vs HUMAN_ADULT is not a conflict here (the caller
+    applies life_stage_refusal where the two sides are apart)."""
     x, y = _attrs(a), _attrs(b)
     for k, why in (('kind', 'KIND_CONFLICT'), ('sex', 'SEX_CONFLICT'), ('scope', 'INDIVIDUAL_COLLECTIVE')):
         if x[k] and y[k] and len(x[k] | y[k]) > 1:
+            if k == 'kind' and life_stages and (x[k] | y[k]) <= LIFE_STAGES:
+                continue
             return why
+    return None
+
+
+def stage_of(chs: list[dict]) -> str | None:
+    """The side's life stage when all its known kinds are one stage (None: mixed, unknown or not human)."""
+    kinds = _attrs(chs)['kind']
+    return next(iter(kinds)) if len(kinds) == 1 and kinds <= LIFE_STAGES else None
+
+
+def life_stage_refusal(child_pages: set, adult_pages: set) -> str | None:
+    """A child record and an adult record of one name are one person growing up when the book tells the childhood
+    as one stretch: no page of the adult falls inside the child's page span (childhood first, then the grown-up;
+    or a frame story / flashback with the childhood between the adult's pages), and the child does not appear only
+    after the adult (a child met after the adult's last page is someone named after them). Two people of one name
+    told side by side (a grandfather and the grandson named after him) interleave — refused. Shared pages are
+    refused before this (SAME_PAGE)."""
+    if not child_pages or not adult_pages:
+        return None
+    lo, hi = min(child_pages), max(child_pages)
+    if any(lo <= p <= hi for p in adult_pages) or lo > max(adult_pages):
+        return 'LIFE_STAGE_ORDER'
+    return None
+
+
+#: Qualifiers that tell namesakes apart in history and biography: a regnal / ordinal number («II. Abdülhamid»,
+#: «Abdülhamid II», «1. Ahmed») and a father's name («Ahmed oğlu Mehmed», «Mehmed bin Ahmed»). Two records whose
+#: written names carry different ones are two people, whatever else agrees.
+_ORDINAL = re.compile(r'(?<![\w.])([IVXLC]+|\d{1,2})\.(?=\s*[^\W\d_])|(?<=[^\W\d_])\s+([IVXLC]+)\b(?!\.)')
+_FATHER = re.compile(r'([^\W\d_]+)\s+(?:oğlu|oglu|kızı|kizi)\b|\b(?:bin|ibn|binti|bint)\s+([^\W\d_]+)', re.I)
+
+
+def _ordinal_value(tok: str) -> int:
+    """«II» and «2» are one ordinal."""
+    if tok.isdigit():
+        return int(tok)
+    vals = [{'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}[ch] for ch in tok.upper()]
+    return sum(-v if i + 1 < len(vals) and v < vals[i + 1] else v for i, v in enumerate(vals))
+
+
+def qualifiers(names: list[str]) -> dict[str, set]:
+    out: dict[str, set] = {'ordinal': set(), 'father': set()}
+    for n in names:
+        for m in _ORDINAL.finditer(n or ''):
+            out['ordinal'].add(_ordinal_value(m.group(1) or m.group(2)))
+        for m in _FATHER.finditer(n or ''):
+            out['father'].add(name_key(m.group(1) or m.group(2)))
+    return out
+
+
+def qualifier_refusal(a_names: list[str], b_names: list[str]) -> str | None:
+    x, y = qualifiers(a_names), qualifiers(b_names)
+    if x['ordinal'] and y['ordinal'] and not x['ordinal'] & y['ordinal']:
+        return 'DIFFERENT_ORDINAL'
+    if x['father'] and y['father'] and not x['father'] & y['father']:
+        return 'DIFFERENT_FATHER'
     return None
 
 
@@ -274,14 +340,27 @@ def cross_guard(side_i: list[dict], side_j: list[dict], wins_i: set, wins_j: set
     from . import ledger
     if wins_i & wins_j:
         return 'SAME_WINDOW'                  # a window that saw both kept them apart
-    bad = incompatible(side_i, side_j)
+    bad = incompatible(side_i, side_j, life_stages=True)
     if bad:
         return bad
+    names_i = [n for c in side_i for n in _names(c, by_mid)]
+    names_j = [n for c in side_j for n in _names(c, by_mid)]
+    bad = qualifier_refusal(names_i, names_j)
+    if bad:
+        return bad
+    si, sj = stage_of(side_i), stage_of(side_j)
+    if si and sj and si != sj:
+        pages = [{by_mid[m]['page_no'] for c in side for m in c['mention_ids'] if m in by_mid}
+                 for side in (side_i, side_j)]
+        child, adult = (pages[0], pages[1]) if si == 'HUMAN_CHILD' else (pages[1], pages[0])
+        if child & adult:
+            return 'SAME_PAGE'
+        bad = life_stage_refusal(child, adult)
+        if bad:
+            return bad
     qn = ledger.norm(quote or '')
     if not qn or qn not in book_norm:
         return 'QUOTE_NOT_IN_BOOK'            # no invented evidence: the quote is searched verbatim
-    names_i = [n for c in side_i for n in _names(c, by_mid)]
-    names_j = [n for c in side_j for n in _names(c, by_mid)]
     if not (any(ledger.has_name(qn, n, allow_suffix=True) for n in names_i)
             and any(ledger.has_name(qn, n, allow_suffix=True) for n in names_j)):
         return 'QUOTE_DOES_NOT_NAME_BOTH'
@@ -389,14 +468,25 @@ def name_key(name: str) -> str:
 
 def same_name_refusal(a: dict, b: dict) -> str | None:
     """Why two same-named units are not joined (None = they are one person). A unit: name, kind, sex,
-    entity_scope, pages (set), windows (set)."""
-    bad = incompatible([a], [b])
+    entity_scope, pages (set), windows (set), optionally aliases (other written names).
+
+    A child record and an adult record (one person growing up) join like any other pair — never on a shared
+    page or window — and only when their pages are in life order (life_stage_refusal). A different ordinal or
+    father's name among the written names (namesakes in history and biography) refuses every pair."""
+    bad = incompatible([a], [b], life_stages=True)
     if bad:
         return bad
     if a['pages'] & b['pages']:
         return 'SAME_PAGE'
     if a.get('windows') and b.get('windows') and a['windows'] & b['windows']:
         return 'SAME_WINDOW'
+    bad = qualifier_refusal([a['name'], *(a.get('aliases') or [])], [b['name'], *(b.get('aliases') or [])])
+    if bad:
+        return bad
+    sa, sb = stage_of([a]), stage_of([b])
+    if sa and sb and sa != sb:
+        child, adult = (a, b) if sa == 'HUMAN_CHILD' else (b, a)
+        return life_stage_refusal(child['pages'], adult['pages'])
     return None
 
 
@@ -509,6 +599,7 @@ def same_name_join(chars: list[dict], by_mid: dict[str, dict], text: str = '') -
     """`same_name_plan` over the joined groups of a windowed reading; `text` is the book as written."""
     units = [{'name': ch['canonical_name'], 'kind': ch.get('kind'), 'sex': ch.get('sex'),
               'entity_scope': ch.get('entity_scope'), 'n': len(ch['mention_ids']),
+              'aliases': _names(ch, by_mid)[1:] + list(ch.get('aliases') or []),
               'pages': {by_mid[m]['page_no'] for m in ch['mention_ids'] if m in by_mid},
               'windows': set(ch.get('window_ids') or [])} for ch in chars]
     clusters, refused = same_name_plan(units, proper_name_test(text))
@@ -623,7 +714,8 @@ async def _windowed(gid: str, mentions: list[dict], corrections: str, wins: list
             conflicts.setdefault(c['mention_id'], c)
 
     def refuse(a: set[int], b: set[int]) -> str | None:
-        return incompatible([chs[i] for i in a], [chs[i] for i in b])
+        # one mention placed in both groups: a child and an adult reading of the same person join
+        return incompatible([chs[i] for i in a], [chs[i] for i in b], life_stages=True)
 
     sets, refused = budget.union_groups(groups, refuse=refuse)
     # a mention whose two windows' groups could not be joined stays with the window it sits
