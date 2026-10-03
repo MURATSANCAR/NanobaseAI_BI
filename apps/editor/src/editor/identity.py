@@ -543,6 +543,87 @@ def is_relative_label(name: str) -> bool:
     return ' '.join(words) in KIN_1SG
 
 
+#: Family address words written after a name («Safiş yengem», «Yasemin abla», «Suna teyze»; 2026-10-03 audit K15):
+#: the reading kept «Ad + hitap» and the bare «Ad» as two records of one person. Only the words a family (or a child
+#: speaking of elders as family) puts after a first name, with the sex they imply. Titles of rank and office («Paşa»,
+#: «Sultan», «Han», «Bey», «Efendi», «Ağa», «Şeyh», «Hz.», «Hanım», «Hoca», «Usta») are NOT here: in history and
+#: biography «Nuri Paşa», «Nuri Efendi», «Nuri Ağa» and «Nuri» are often different men (live data: one memoir has all
+#: four), so a title never joins a bare name. «X'in babası» (a possessive phrase) is another person and never joins X.
+FAMILY_ADDRESS = {'abla': 'FEMALE', 'ağabey': 'MALE', 'abi': 'MALE', 'teyze': 'FEMALE', 'hala': 'FEMALE',
+                  'amca': 'MALE', 'dayı': 'MALE', 'yenge': 'FEMALE', 'enişte': 'MALE', 'dede': 'MALE',
+                  'nine': 'FEMALE', 'babaanne': 'FEMALE', 'anneanne': 'FEMALE'}
+_TITLE_WORDS = frozenset({'paşa', 'sultan', 'han', 'hanım', 'bey', 'efendi', 'ağa', 'şeyh', 'hz', 'hazreti',
+                          'hoca', 'usta', 'molla', 'hacı', 'hafız', 'bin', 'ibn', 'oğlu', 'kızı'})
+#: genitive suffix split off by `name_key` («Lidya'nın babası» → «lidya nın babası»)
+_GENITIVE = frozenset({'in', 'ın', 'un', 'ün', 'nin', 'nın', 'nun', 'nün'})
+
+
+def _address_forms() -> dict[str, str]:
+    """Written form → root: bare, 1sg («yengem», «ağabeyim»), 3sg («teyzesi», «dayısı») and 1pl («teyzemiz»)."""
+    out = {}
+    for w in FAMILY_ADDRESS:
+        last = [ch for ch in w if ch in 'aeıioöuü'][-1]
+        v = {'a': 'ı', 'ı': 'ı', 'e': 'i', 'i': 'i', 'o': 'u', 'u': 'u', 'ö': 'ü', 'ü': 'ü'}[last]
+        if w[-1] in 'aeıioöuü':
+            forms = (w, w + 'm', w + 's' + v, w + 'm' + v + 'z')
+        else:
+            forms = (w, w + v + 'm', w + v, w + v + 'm' + v + 'z')
+        out.update({f: w for f in forms})
+    return out
+
+
+_ADDRESS_FORMS = _address_forms()
+
+
+def family_address(name: str) -> dict | None:
+    """«Safiş yengem» → {base: 'safiş', root: 'yenge', sex: 'FEMALE', base_text: 'Safiş'}; None when the name is not
+    «first name + family address word». A title of rank anywhere in the name, a possessive phrase («Lidya'nın
+    teyzesi»: someone's aunt, not Lidya), a lone address word or a base longer than three words gives None."""
+    key = name_key(name)
+    words = key.split()
+    if len(words) < 2 or words[-1] not in _ADDRESS_FORMS:
+        return None
+    base = words[:-1]
+    if len(base) > 3 or any(w in _TITLE_WORDS or w in _GENITIVE or w in _ADDRESS_FORMS for w in base) \
+            or any(w in KIN_1SG for w in base):
+        return None
+    root = _ADDRESS_FORMS[words[-1]]
+    raw = (name or '').split()
+    return {'base': ' '.join(base), 'root': root, 'sex': FAMILY_ADDRESS[root],
+            'base_text': ' '.join(raw[:-1]) if len(raw) == len(words) else ' '.join(base)}
+
+
+def address_buckets(units: list[dict], buckets: dict[str, list[int]]) -> tuple[dict[str, dict], list[dict]]:
+    """K15: which «Ad + family address» records join the bare «Ad» bucket. Joined only when the name is unambiguous in
+    the book: one address root for that name («Suna teyze» and «Suna abla» both present: two readings of who Suna is —
+    not joined), at most one bare record, and no other record carrying the name as its first words («Suna Yılmaz»,
+    «Suna Hanım»). Returns base → {members: [index …], name: written base} and the refused names."""
+    by_base: dict[str, list[tuple[int, dict]]] = {}
+    for i, u in enumerate(units):
+        a = family_address(u['name'])
+        if a:
+            by_base.setdefault(a['base'], []).append((i, a))
+    out, refused = {}, []
+    for base, members in by_base.items():
+        idx = {i for i, _ in members}
+        plain = buckets.get(base, [])
+        roots = {a['root'] for _, a in members}
+        others = [j for j, u in enumerate(units) if j not in idx and j not in plain
+                  and name_key(u['name']).startswith(base + ' ')]
+        why = ('ADDRESS_TWO_ROOTS' if len(roots) > 1 else 'ADDRESS_NAME_SHARED' if others or len(plain) > 1
+               else 'ADDRESS_SEX' if any(units[i].get('sex') in ('MALE', 'FEMALE') and units[i]['sex'] != a['sex']
+                                         for i, a in members) else None)
+        if why:
+            refused.append({'name': units[members[0][0]]['name'], 'with': base, 'reason': why})
+            continue
+        if not plain and len(members) < 2:
+            continue                                   # nothing to join
+        text = units[plain[0]]['name'] if plain else members[0][1]['base_text']
+        out[base] = {'members': list(plain) + sorted(idx), 'name': text,
+                     'sex': {i: a['sex'] for i, a in members}}
+    return out, refused
+
+
 def _span(u: dict) -> tuple[int, int] | None:
     return (min(u['pages']), max(u['pages'])) if u.get('pages') else None
 
@@ -564,14 +645,27 @@ def same_name_plan(units: list[dict], proper=None, relative=is_relative_label) -
         k = name_key(u['name'])
         if k:
             buckets.setdefault(k, []).append(i)
-    clusters, refused = [], []
+    # K15: «Safiş yengem» joins the bucket of «Safiş» (address_buckets: unambiguous name, family words only)
+    addressed, refused = address_buckets(units, buckets)
+    address_sex: dict[int, str] = {}
+    for base, a in addressed.items():
+        moved = set(a['members'])
+        for k in list(buckets):
+            buckets[k] = [i for i in buckets[k] if i not in moved]
+            if not buckets[k]:
+                del buckets[k]
+        buckets[base] = a['members']
+        address_sex.update(a['sex'])
+    proper_text = {base: a['name'] for base, a in addressed.items()}
+    clusters = []
     for k, idx in buckets.items():
         if len(idx) < 2:
             continue
         label = False
-        if proper is not None and not proper(units[idx[0]]['name']):
-            if relative is None or not relative(units[idx[0]]['name']):
-                refused.append({'name': units[idx[0]]['name'], 'with': units[idx[0]]['name'], 'records': len(idx),
+        shown = proper_text.get(k, units[idx[0]]['name'])
+        if proper is not None and not proper(shown):
+            if k in proper_text or relative is None or not relative(shown):
+                refused.append({'name': shown, 'with': shown, 'records': len(idx),
                                 'reason': 'NOT_A_PROPER_NAME'})
                 continue
             label = True
@@ -581,10 +675,15 @@ def same_name_plan(units: list[dict], proper=None, relative=is_relative_label) -
             if why is None and label and interleaved(a, b):
                 return 'RELATIVE_LABEL_INTERLEAVED'
             return why
+        def unit(i: int) -> dict:
+            # the family word tells the sex the reading left unknown («Yasemin abla» is a woman)
+            if i in address_sex and units[i].get('sex') not in ('MALE', 'FEMALE'):
+                return {**units[i], 'sex': address_sex[i]}
+            return units[i]
         groups: list[list[int]] = []
         for i in sorted(idx, key=lambda i: (-units[i].get('n', 0), i)):
             for g in groups:
-                why = next((r for r in (refusal(units[i], units[j]) for j in g) if r), None)
+                why = next((r for r in (refusal(unit(i), unit(j)) for j in g) if r), None)
                 if why is None:
                     g.append(i)
                     break

@@ -17,6 +17,9 @@ bölüm adına eklenmez (ara başlıktır) — başlık sayfası yalnız etikets
 kısa başlık («VE TEŞEKKÜR») ≤ 4 sayfa önceki başlığın devamıdır; iç kapak kitap adıyla aksansız/i-ayrımsız
 karşılaştırılır («DARWIN» = «Darwin», «SÎNÂ» = «Sina»); başlık sonundaki dipnot imi atılır; gövdeden küçük puntolu
 başlık sayfası (fotoğraf altı) ve «;»/«,» ile biten satır («Bu kitabın oluşmasında;») bölüm açmaz.
+2026-10-03 (K14): tasarım fontuyla süslü yazılmış başlık («BÖReKlEr, KrEdİ KaRtI DÖKÜMlErİ Ve»; bir kelimede ≥ 2
+büyük↔küçük geçişi) Türkçe başlık yazımıyla gösterilir (`display_title`); bağlaçla («ve, ile, ya da, veya, ama,
+de/da») BİTEN başlık sonraki kısa satırla (aynı sayfada) ya da ≤ 4 sayfa sonraki kısa başlıkla birleşir.
 """
 
 from __future__ import annotations
@@ -169,6 +172,12 @@ def _opening(v: dict, L: dict) -> dict | None:
         i += 1
         if gap >= step * GAP and not _title_continues(ln, nxt, gap):
             break
+    # Bağlaçla biten başlık («… DÖKÜMlErİ Ve») yarımdır: hemen altındaki kısa satır (puntosu ya da aradaki boşluk
+    # farklı olsa da) başlığın devamıdır («BeN»).
+    while (head and i < len(ls) and len(head) < 6 and ends_with_conjunction(" ".join(ln["text"] for ln in head))
+           and _title_like(ls[i]["text"]) and len(ls[i]["text"].split()) <= 4 and not is_body(ls[i])):
+        head.append(ls[i])
+        i += 1
     if not head:
         return {"title": "", "size": 0, "kind": "sunk"} if sunk else None
     title = " ".join(ln["text"].strip() for ln in _reading_order(head))
@@ -266,6 +275,38 @@ _CONJ = re.compile(r"^(ve|ile|veya|ya da|yahut)\b")
 _NOTE_MARK = re.compile(r"(?:(?<=[^\W\d_])|(?<=[?!’”\"')]))\d{1,2}$")
 
 
+#: Başlığı bitiren bağlaç («BÖReKlEr, KrEdİ KaRtI DÖKÜMlErİ Ve»): başlık bir sonraki kısa satırda/başlıkta sürer.
+_CONJ_END = frozenset({"ve", "ile", "veya", "yahut", "ama", "de", "da"})
+
+
+def ends_with_conjunction(title: str) -> bool:
+    """Son kelime ayrı yazılmış bağlaç («… Ve», «… ya da»). Kesmeyle bitişik ek («Ankara'da») bağlaç değildir."""
+    words = title.replace("İ", "i").replace("I", "ı").casefold().split()
+    last = words[-1].strip(".,;:!?…\"”“«»()") if words else ""
+    return len(words) >= 2 and last in _CONJ_END          # «ya da» de «da» ile biter
+
+
+def _irregular_word(word: str) -> bool:
+    """Aynı kelimede (harf öbeğinde) en az iki büyük↔küçük geçişi: tasarım fontunun süslü yazımı («BÖReKlEr»,
+    «KaRtI»). «Kulağım» (bir geçiş), «GİRİŞ» (hiç) ve kesmeyle ayrılmış ek («ALİ'nin») olağandır."""
+    for part in re.findall(r"[^\W\d_]+", word):
+        flips = sum(1 for a, b in zip(part, part[1:]) if a.isupper() != b.isupper())
+        if flips >= 2:
+            return True
+    return False
+
+
+def display_title(title: str) -> str:
+    """Bölüm adının gösterilen yazımı. Harf büyüklüğü düzensiz başlık (bir kelimede ≥ 2 büyük↔küçük geçişi) Türkçe
+    başlık yazımına çevrilir (`book_title.title_case`, dizilmiş metin: «I» → «ı»); tümü büyük («GİRİŞ») ve olağan
+    karışık («Kulağım Kapıda») başlık olduğu gibi kalır."""
+    title = " ".join((title or "").split())
+    if not any(_irregular_word(w) for w in title.split()):
+        return title
+    from .book_title import title_case, tr_lower
+    return title_case(tr_lower(title), typed=False)
+
+
 def _label_only(title: str) -> bool:
     return all(w in _LABEL_WORDS or _ROMAN.match(w) for w in _norm(title).split())
 
@@ -275,12 +316,18 @@ def _clean_title(title: str) -> str:
 
 
 def _join_continuations(starts: list[dict]) -> list[dict]:
-    """Bağlaçla başlayan kısa başlık, en çok 4 sayfa önceki aynı puntolu kısa başlığın devamıdır: tek bölüm."""
+    """Bağlaçla başlayan kısa başlık, en çok 4 sayfa önceki aynı puntolu kısa başlığın devamıdır: tek bölüm.
+    Bağlaçla BİTEN başlık («… DÖKÜMlErİ Ve») yarımdır: en çok 4 sayfa sonraki kısa (≤ 6 kelime) başlık devamıdır
+    (punto aynı olmayabilir: süslü dizgide satırlar farklı büyüklükte)."""
     out: list[dict] = []
     for s in starts:
         prev = out[-1] if out else None
-        if (prev and _CONJ.match(_norm(s["title"])) and s["page"] - prev["page"] <= 4
-                and abs(s["size"] - prev["size"]) < 0.6 and len((prev["title"] + " " + s["title"]).split()) <= 6):
+        near = prev is not None and s["page"] - prev["page"] <= 4
+        if (near and _CONJ.match(_norm(s["title"])) and abs(s["size"] - prev["size"]) < 0.6
+                and len((prev["title"] + " " + s["title"]).split()) <= 6):
+            prev["title"] = prev["title"] + " " + s["title"]
+            continue
+        if near and ends_with_conjunction(prev["title"]) and 0 < len(s["title"].split()) <= 6:
             prev["title"] = prev["title"] + " " + s["title"]
             continue
         out.append(dict(s))
@@ -330,7 +377,8 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
     if strong:
         keep = {k for k, _ in Counter(round(x) for x in strong).most_common(2)}
         starts = [s for s in starts if s["kind"] != "head" or round(s["size"]) in keep or s["size"] > max(keep)]
-    starts = _join_continuations([{**s, "title": _clean_title(s["title"])} for s in starts])
+    starts = [{**s, "title": display_title(s["title"])}
+              for s in _join_continuations([{**s, "title": _clean_title(s["title"])} for s in starts])]
     if not starts:
         return [{"title": "Kitap", "page_from": 1, "page_to": last_page}]
     out = []

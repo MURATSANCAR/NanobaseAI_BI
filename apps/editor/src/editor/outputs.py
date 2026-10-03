@@ -165,6 +165,15 @@ def snapshot_passages(snap: dict) -> list[dict]:
     return out
 
 
+def _shown_chapter(ch):
+    """Bölüm adının gösterilen yazımı (K14, `chapters.display_title`): eski kurala göre kurulmuş bölüm özetindeki
+    süslü yazımlı ad («BÖReKlEr …») raporda da Türkçe başlık yazımıyla görünür."""
+    if not isinstance(ch, dict) or not isinstance(ch.get('title'), str):
+        return ch
+    from .chapters import display_title
+    return {**ch, 'title': display_title(ch['title'])}
+
+
 def render_report(snap: dict, chapters: dict, book: dict) -> dict:
     """No independent SQL or copied stale event/emotion fields in the renderer."""
     sentences = book['sentences']
@@ -173,7 +182,7 @@ def render_report(snap: dict, chapters: dict, book: dict) -> dict:
     md += [f"- {s['text']} (s. {', '.join(map(str,s['pages']))})" for s in sentences]
     md += ['', '## Açık kontroller']+[f'- {b}' for b in snap['blockers']]
     return {'generation_id':snap['generation_id'],'revision':snap['revision'],
-        'book_summary':sentences,'chapters':chapters['chapters'],'events':snap['events'],
+        'book_summary':sentences,'chapters':[_shown_chapter(ch) for ch in chapters['chapters']],'events':snap['events'],
         'emotions':snap['emotions'],'reviews':snap['reviews'],'contradictions':snap['contradictions'],
         'blockers':snap['blockers'],'markdown':'\n'.join(md),'semantic_acceptance':False}
 
