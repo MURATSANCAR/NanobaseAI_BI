@@ -1,9 +1,10 @@
 {
-  "_note": "Zeki AI sohbet konuları (kullanıcı kararı 2026-09-28: sohbet yalnız finans değil, şirketin bütün modüllerinin sorularını cevaplar). Niyet sınıflandırıcı soruyu bu kapalı listeden bir konuya koyar; konu, cevabın dayandığı kayıttır, soranın birimi değil. `data`: konunun kayıtlarının bulunduğu katalog veri alanları (data_domains.json kimlikleri). Boş `data` = bu konunun verisi sohbete henüz bağlanmadı; o konudaki soruya tahmin yerine «henüz veri bağlı değil» denir. Yönetim ekranındaki CHAT_CONNECTED_TOPICS doluysa bağlı konuların tam listesi odur (bu dosyadaki varsayılanın yerine geçer). `label` ekranda görünür: teknoloji adı yazılmaz. `modules`: analiz belgelerindeki modül kodları, yalnız belge amaçlı. `portal`: konunun kayıtları portalın kendi modül tablolarındaysa oradaki veri alanları (chat_portal_areas.json kimlikleri); o konudaki soruyu Logo/CRM hattı değil chat_portal cevaplar, yalnız onaylı tablolarla ve kişinin sayfa yetkisiyle. `closed`: konunun verisi bilerek sohbete bağlanmaz (ör. İK kişisel verisi); cevap bu metindir.",
-  "version": 1,
+  "_note": "Zeki AI sohbet konuları (kullanıcı kararı 2026-09-28: sohbet yalnız finans değil, şirketin bütün modüllerinin sorularını cevaplar). Niyet sınıflandırıcı soruyu bu kapalı listeden bir konuya koyar; konu, cevabın dayandığı kayıttır, soranın birimi değil. `data`: konunun kayıtlarının bulunduğu katalog veri alanları (data_domains.json kimlikleri). Boş `data` = bu konunun verisi sohbete henüz bağlanmadı; o konudaki soruya tahmin yerine «henüz veri bağlı değil» denir. Yönetim ekranındaki CHAT_CONNECTED_TOPICS doluysa bağlı konuların tam listesi odur (bu dosyadaki varsayılanın yerine geçer). `label` ekranda görünür: teknoloji adı yazılmaz. `modules`: analiz belgelerindeki modül kodları, yalnız belge amaçlı. `portal`: konunun kayıtları portalın kendi modül tablolarındaysa oradaki veri alanları (chat_portal_areas.json kimlikleri); o konudaki soruyu Logo/CRM hattı değil chat_portal cevaplar, yalnız onaylı tablolarla ve kişinin sayfa yetkisiyle. `closed`: konunun verisi bilerek sohbete bağlanmaz (ör. İK kişisel verisi); cevap bu metindir. `module`: konunun ekrandaki evi (menü ana modülü, src/canvas/nav/navModel.ts grup kimliği); cevabın altındaki «hangi modülden» bilgisi ve «modüle git» bağlantısı buradan kurulur. `scopes` (2026-09-30 kullanıcı kararı): bir modül ekranından sorulan soru yalnız o modülün konularıyla cevaplanır; kimlik = menü ana modülü, `topics` = o modülde cevaplanan konular. Konu listede yoksa ZEKİ cevap vermez, sorunun ana sayfadaki ZEKİ'ye sorulmasını önerir. Ana sayfa (kapsamsız soru) her konuyu cevaplar ve soruyu konunun verisine yönlendirir.",
+  "version": 2,
   "topics": [
     {
       "id": "finans",
+      "module": "finans",
       "label": "finans ve bütçe",
       "hint": "gelir tablosu, net ciro, brüt kâr, kârlılık, nakit akışı, gider, bütçe, beyanname, çek ve senet, banka, döviz",
       "modules": ["M45", "M46", "DYK"],
@@ -11,6 +12,7 @@
     },
     {
       "id": "satis",
+      "module": "satis",
       "label": "satış, bayi ve tahsilat",
       "hint": "fatura, satış adedi, iade, kanal, cari, bayi ve kitapçı, vade, alacak, tahsilat, sipariş, ilk dağılım ve sevk, kurumsal satış, set satışı",
       "modules": ["M29", "M30", "M32", "M38", "M53", "M59"],
@@ -18,6 +20,7 @@
     },
     {
       "id": "stok",
+      "module": "lojistik",
       "label": "depo ve stok",
       "hint": "stok miktarı, stok devir hızı, depo, depolar arası sevk, sayım, bekleyen sipariş karşısında stok",
       "modules": ["M43"],
@@ -25,6 +28,7 @@
     },
     {
       "id": "yayin",
+      "module": "editoryal",
       "label": "kitap kataloğu ve yayın programı",
       "hint": "kitap kartı, kategori ve kitaplık, hedef kitle, yeni kitap programı, e-kitap ve sesli kitap hakları, yazar ve proje kayıtları",
       "modules": ["H1", "M10", "M11", "M36"],
@@ -32,6 +36,7 @@
     },
     {
       "id": "telif",
+      "module": "editoryal",
       "label": "yazar telif ve sözleşmeler",
       "hint": "telif, avans, hakediş, sözleşme süresi, çeviri ve yabancı hak satışı, yazar ödemeleri",
       "modules": ["M54"],
@@ -39,6 +44,7 @@
     },
     {
       "id": "editoryal",
+      "module": "editoryal",
       "label": "editoryal süreç ve üretim",
       "hint": "yazar başvurusu ve değerlendirme, yayın kurulu kararı, editör görevi ve ataması, redaksiyon, baskı öncesi denetim, çeviri işi ve çeviri hatası, üretim takvimi ve baskı teklifi, serbest çalışan işleri",
       "modules": ["M1", "M2", "M3", "M4", "M8", "M12"],
@@ -47,6 +53,7 @@
     },
     {
       "id": "tedarik",
+      "module": "lojistik",
       "label": "tedarik ve baskı",
       "hint": "matbaa, baskı adedi, baskı maliyeti, kâğıt ihtiyacı, matbaa borcu, depo girişi bekleyen baskılar",
       "modules": ["M52"],
@@ -54,6 +61,7 @@
     },
     {
       "id": "lojistik",
+      "module": "lojistik",
       "label": "lojistik ve kargo",
       "hint": "kargo firması, desi maliyeti, teslim süresi, koli, sevk edilmemiş sipariş, tahsilatlı kargo",
       "modules": ["M44"],
@@ -61,6 +69,7 @@
     },
     {
       "id": "basin",
+      "module": "editoryal",
       "label": "basın ve halkla ilişkiler",
       "hint": "basında çıkan haberler, basın bülteni, gazeteci ve medya ilişkisi, röportaj",
       "modules": ["M20"],
@@ -68,6 +77,7 @@
     },
     {
       "id": "kurumsal",
+      "module": "pazarlama",
       "label": "fuar, etkinlik ve kurumsal ilişkiler",
       "hint": "fuar, imza günü, etkinlik, ödül başvurusu, okul ziyareti, kanaat önderi, kamu projesi, ihale ilanı ve teklif",
       "modules": ["M27", "M28", "M31", "M33"],
@@ -75,6 +85,7 @@
     },
     {
       "id": "pazarlama",
+      "module": "pazarlama",
       "label": "pazarlama planları ve içerik",
       "hint": "yeni kitap ve backlist pazarlama planı, lansman, aylık plan ve föy, pazarlama bütçesi, görsel ve metin içerik, katalog, bülten açılma ve tıklama",
       "modules": ["M15", "M16", "M17", "M18", "M19", "M24"],
@@ -83,6 +94,7 @@
     },
     {
       "id": "dijital",
+      "module": "pazarlama",
       "label": "sosyal medya ve dijital reklam",
       "hint": "sosyal medya paylaşımı, etkileşim, yorum, reklam harcaması, tıklama başı maliyet, kampanya getirisi, influencer işbirliği",
       "modules": ["M21", "M22", "M23"],
@@ -91,6 +103,7 @@
     },
     {
       "id": "eticaret",
+      "module": "dijital",
       "label": "e-ticaret sitesi ve pazar yerleri",
       "hint": "site siparişi, görüntülenme, sepet, site müşterisi ve segmenti, site kampanyası, pazar yeri mağaza paneli, pazar yeri iadesi ve yorumu",
       "modules": ["H3", "M34", "M35", "M40", "M41", "M42"],
@@ -99,6 +112,7 @@
     },
     {
       "id": "okur",
+      "module": "dijital",
       "label": "okur topluluğu ve iletişim izinleri",
       "hint": "okur kaydı, e-posta ve ileti izni, izin reddi, ilgi alanı, okur segmenti, okur yorumu",
       "modules": ["H2", "M37"],
@@ -107,6 +121,7 @@
     },
     {
       "id": "destek",
+      "module": "musteri",
       "label": "müşteri hizmetleri ve kurumsal e-posta",
       "hint": "destek talebi, şikâyet, çözüm süresi, ilk yanıt süresi, cevapsız ileti, kurumsal gelen kutusu",
       "modules": ["H4", "M51"],
@@ -115,6 +130,7 @@
     },
     {
       "id": "ik",
+      "module": "ik",
       "label": "insan kaynakları",
       "hint": "işe alım, açık pozisyon, aday, mülakat, performans hedefi ve değerlendirme, eğitim, gelişim planı, çalışan anketi ve bağlılık",
       "modules": ["M55", "M56", "M57", "M58"],
@@ -123,6 +139,7 @@
     },
     {
       "id": "risk",
+      "module": "finans",
       "label": "risk ve uyum",
       "hint": "risk kaydı, risk göstergesi, sigorta poliçesi, kişisel veri ihlali, uyum takvimi",
       "modules": ["M47", "M49"],
@@ -131,6 +148,7 @@
     },
     {
       "id": "yonetim",
+      "module": "finans",
       "label": "yönetim kurulu kararları",
       "hint": "kurul toplantısı, kurul kararı ve aksiyonu, kurul gündemi",
       "modules": ["DYK"],
@@ -139,6 +157,7 @@
     },
     {
       "id": "pazar",
+      "module": "musteri",
       "label": "pazar araştırması ve rakipler",
       "hint": "rakip yayınevi, rakip kitap ve fiyatı, sektör raporu, pazar büyüklüğü",
       "modules": ["M39"],
@@ -146,6 +165,7 @@
     },
     {
       "id": "dagitimci",
+      "module": "musteri",
       "label": "dağıtımcı ve perakende katalogları",
       "hint": "Başarı Dağıtım ve D&R kataloğundaki kitaplar: yayınevi ve kategoriye göre başlık sayısı, satışta / baskısı yok / temin edilemiyor durumu, dağıtımcı deposu ve D&R stoğu, liste fiyatı ve D&R satış fiyatı, dağıtımcı iskontosu, baskı sayısı, TİMAŞ grubu kitapları",
       "modules": ["M39"],
@@ -154,11 +174,27 @@
     },
     {
       "id": "isletim",
+      "module": "altyapi",
       "label": "Zeki AI ve sistem işletimi",
       "hint": "planlı raporların gönderimi, bağlantı kesintisi, sohbet cevap süresi, soru kuyruğu, sürüm, hatalı cevaplar, eş anlamlı onayı, sunucu diski",
       "modules": ["M48", "M50"],
       "data": [],
       "portal": ["sistem-isletimi", "zeki-kalite", "planli-raporlar"]
     }
+  ],
+  "scopes": [
+    {"id": "editoryal", "label": "Editoryal", "topics": ["editoryal", "yayin", "telif", "basin"]},
+    {"id": "kitap-eczanesi", "label": "Kitap Eczanesi", "topics": ["yayin", "editoryal", "telif"]},
+    {"id": "uretim-fiyat", "label": "Fiyatlama ve üretim", "topics": ["tedarik", "stok", "yayin", "editoryal", "satis"]},
+    {"id": "pazarlama", "label": "Pazarlama", "topics": ["pazarlama", "dijital", "basin", "kurumsal", "yayin"]},
+    {"id": "satis", "label": "Saha satış ve okul", "topics": ["satis", "kurumsal", "stok", "yayin"]},
+    {"id": "dijital", "label": "Dijital ve topluluk", "topics": ["eticaret", "okur", "dijital", "yayin"]},
+    {"id": "musteri", "label": "Müşteri ve pazar", "topics": ["satis", "destek", "pazar", "dagitimci", "okur"]},
+    {"id": "platform", "label": "Platform yönetimi", "topics": ["eticaret", "satis"]},
+    {"id": "lojistik", "label": "Lojistik", "topics": ["lojistik", "stok", "tedarik", "dagitimci"]},
+    {"id": "finans", "label": "Finans ve risk", "topics": ["finans", "satis", "telif", "risk", "yonetim", "isletim"]},
+    {"id": "altyapi", "label": "Altyapı ve destek", "topics": ["isletim", "destek"]},
+    {"id": "ik", "label": "İnsan Kaynakları", "topics": ["ik"]},
+    {"id": "yonetim", "label": "Yönetim", "topics": ["isletim", "yonetim"]}
   ]
 }

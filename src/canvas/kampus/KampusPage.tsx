@@ -69,11 +69,14 @@ const floorKey = (f: string) => f.trim();
 
 /** Zeki AI şirketin bütün modüllerinin sorularını kapsar (chat_scope, 2026-09-28); verisi bağlı olmayan konuda
  * «henüz veri bağlı değil» der. Hızlı örnekler bugün sohbete verisi bağlı konulardan (satış ve finans) seçildi. */
+// Ana sayfadaki ZEKİ bütün modüllere sorar (2026-09-30): örnekler de farklı modüllerden; soru konusuna göre ilgili
+// modülün verisine (Logo, CRM ya da modülün kendi kayıtları) gider.
 const PROMPTS = [
   { label: '💰 Bu yıl net ciro', q: 'Bu yıl net ciro ne kadar?' },
   { label: '🏬 En çok satan 5 kanal', q: 'Bu yıl en çok satış yapılan 5 kanalı göster' },
-  { label: '📈 Aylara göre ciro', q: 'Bu yıl aylara göre net ciro' },
-  { label: '🧾 İade oranı', q: 'Bu yıl iade oranı yüzde kaç?' },
+  { label: '📣 Lansmanlar', q: 'Bu ay kaç lansman kapandı?' },
+  { label: '🛒 Dünkü site siparişi', q: 'Dün sitede kaç sipariş geldi?' },
+  { label: '📚 Bekleyen başvurular', q: 'Hangi başvurular 30 günden fazladır değerlendirmede?' },
 ];
 
 /** Ana modül kutuları sol menüdeki ana modüllerin kendisidir (aynı ad, simge, sıra); kutu modülün giriş ekranını
@@ -480,7 +483,7 @@ export default function KampusPage() {
                     <input
                       value={zekiQ}
                       onChange={(e) => setZekiQ(e.target.value)}
-                      placeholder="ZEKİ'ye sor: 'Bu ay net ciro ne?', 'En çok satan 5 kanal'..."
+                      placeholder="ZEKİ'ye sor: ciro, stok, lansman, site siparişi, başvurular…"
                       className="w-full min-w-0 border-0 bg-transparent px-2.5 py-1.5 text-xs text-ink placeholder:text-muted/70 focus:outline-none focus:ring-0 sm:text-sm"
                     />
                     <button

@@ -295,3 +295,65 @@ def test_weak_placements_are_not_business_evidence():
     for strong in (satan, iade, [slot("x", "COLUMN", "explicit")]):
         assert chat_scope.has_business_evidence(strong)
     assert not chat_scope.has_business_evidence([ResolvedSlot(term="y", semantic_type="METRIC", status="CERTIFIED")])  # yerleşmemiş
+
+
+# ------------------------------------------------------------------ modül kapsamı (2026-09-30)
+def test_scopes_are_menu_modules_and_every_topic_lives_in_its_home_module():
+    raw = json.loads(chat_scope.TOPICS_FILE.read_text(encoding="utf-8"))
+    access = json.loads(Path(chat_scope.__file__).with_name("access_catalog.json").read_text(encoding="utf-8"))
+    menu = {a["id"] for a in access["areas"]} - {"ortak", "kampus"}
+    ids = {t["id"] for t in raw["topics"]}
+    by = {s["id"]: set(s["topics"]) for s in raw["scopes"]}
+    assert set(by) == menu, "her menü ana modülünün bir kapsamı var, fazlası yok"
+    for s in raw["scopes"]:
+        assert s["label"] and set(s["topics"]) <= ids and s["topics"], s["id"]
+    for t in raw["topics"]:
+        assert t["module"] in by and t["id"] in by[t["module"]], t["id"]
+
+
+@pytest.mark.parametrize("module_id", [None, "", "kampus", "bilinmeyen"])
+def test_home_and_unknown_screens_are_unscoped(module_id):
+    assert chat_scope.module_scope(module_id) is None
+
+
+def test_classifier_knows_the_screen_module_but_never_refuses():
+    """Ret yalnız olasılıklı kapının (`screen`) işidir; olasılıksız sınıflandırıcı modül dışı konuyu yalnız bildirir."""
+    pazarlama = chat_scope.module_scope("pazarlama")
+    model = Scripted({"intent": "DATA", "topic": "finans"})
+    scope = classify("Bu yıl net ciro ne kadar?", model, module=pazarlama)
+    assert not scope.outside_module and scope.reply is None
+    said = json.loads(model.messages[-1]["content"])
+    assert said["screenModule"] == "Pazarlama" and "pazarlama" in said["screenTopics"]
+    assert scope.to_dict()["screenModule"] == "pazarlama" and scope.to_dict()["module"] == "finans"
+
+
+def test_question_inside_the_screen_module_goes_to_data():
+    scope = classify("Bu ay kaç lansman kapandı?", Scripted({"intent": "DATA", "topic": "pazarlama"}),
+                     module=chat_scope.module_scope("pazarlama"))
+    assert not scope.outside_module and scope.reply is None and scope.answer_type is None
+
+
+@pytest.mark.parametrize("reply", [{"intent": "UNKNOWN", "topic": "finans"}, {"intent": "DATA", "topic": "none"}, "{{bozuk"])
+def test_undecided_question_is_never_rejected_by_the_screen_module(reply):
+    scope = classify("kampanya sonucu", Scripted(reply), module=chat_scope.module_scope("pazarlama"))
+    assert not scope.outside_module
+
+
+def test_identity_question_on_a_module_screen_keeps_the_fixed_intro():
+    scope = classify("Sen kimsin?", Never(), module=chat_scope.module_scope("finans"))
+    assert scope.reply == BI_INTRO and not scope.outside_module
+
+
+def test_home_question_carries_the_module_it_is_answered_from():
+    model = Scripted({"intent": "DATA", "topic": "eticaret"})
+    scope = classify("Dün sitede kaç sipariş geldi?", model)
+    assert scope.module is None and not scope.outside_module
+    assert scope.to_dict()["module"] == "dijital" and scope.to_dict()["screenModule"] is None
+    assert "screenTopics" not in json.loads(model.messages[-1]["content"])
+
+
+def test_out_of_module_reply_carries_no_technology_names():
+    for m in chat_scope.scopes():
+        for t in chat_scope.topics():
+            text = chat_scope.out_of_module_reply(m, t)
+            assert not _TECH.search(text), text

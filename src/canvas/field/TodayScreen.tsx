@@ -11,6 +11,7 @@ import VisitNoteSheet from './VisitNoteSheet';
 import MorningBrief from './MorningBrief';
 import SqlInfo from '../components/SqlInfo';
 import { Explain } from '../components/Explain';
+import { useZekiAskHref } from '@/canvas/zekiAsk';
 
 /** «Bugün» (telefonun ilk ekranı): üstte 3 sayı, bugün planlanan ziyaretler, sonra kural puanıyla sıralı müşteri listesi
  *  (gerekçe çipleriyle). Sıralamayı temsilci ziyaret planlayarak değiştirir; müdür önceliği gerekçesiyle üste çıkarır. */
@@ -18,6 +19,8 @@ import { Explain } from '../components/Explain';
 const STEP = 40;
 
 export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci: string }) {
+  // ZEKİ öneri soruları bu modülün kapsamıyla sorulur (yalnız modülün konuları cevaplanır).
+  const askHref = useZekiAskHref();
   const qc = useQueryClient();
   const [q, setQ] = useState('');
   const [shown, setShown] = useState(STEP);
@@ -231,7 +234,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
           {meta.zekiQuestions.map((s) => (
             <Link
               key={s}
-              to={`/genel-bakis?soru=${encodeURIComponent(s)}`}
+              to={askHref(s)}
               className="inline-flex min-h-9 items-center rounded-xl bg-canvas-violet/10 px-2.5 text-[12px] font-bold text-canvas-violet transition-transform duration-150 ease-out active:scale-[0.97]"
             >
               {s}

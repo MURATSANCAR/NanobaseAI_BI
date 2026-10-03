@@ -17,6 +17,7 @@ import CalendarGrid from './CalendarGrid';
 import FoyTable from './FoyTable';
 import MonthNav from './MonthNav';
 import TargetGapsPanel from './TargetGapsPanel';
+import { useZekiAskHref } from '@/canvas/zekiAsk';
 
 /** M18 Aylık pazarlama planı: önceki ay şeridi, takvim (hafta × kanal, çakışmalar), bütçe ve öncelik, föyler.
  *  Adres /pazarlama/aylik-plan/:ay?sekme=takvim|butce|foy|ozet. */
@@ -31,6 +32,8 @@ type Tab = (typeof TABS)[number]['key'];
 type Ask = null | 'submit' | 'withdraw' | 'approve' | 'upper-approve' | 'reject' | 'revise';
 
 export default function MonthScreen() {
+  // ZEKİ öneri soruları bu modülün kapsamıyla sorulur (yalnız modülün konuları cevaplanır).
+  const askHref = useZekiAskHref();
   const { ay: routeAy } = useParams();
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -210,7 +213,7 @@ export default function MonthScreen() {
                     'Geçen ay planlanan sosyal medya işlerinin kaçı yapıldı?',
                   ].map((q) => (
                     <li key={q}>
-                      <Link className="block min-h-11 rounded-xl bg-white/70 px-3 py-2 text-[12px] font-semibold leading-snug text-canvas-ink transition-colors duration-150 hover:bg-white" to={`/genel-bakis?soru=${encodeURIComponent(q)}`}>{q}</Link>
+                      <Link className="block min-h-11 rounded-xl bg-white/70 px-3 py-2 text-[12px] font-semibold leading-snug text-canvas-ink transition-colors duration-150 hover:bg-white" to={askHref(q)}>{q}</Link>
                     </li>
                   ))}
                 </ul>

@@ -18,6 +18,7 @@ import MaterialsTab from './MaterialsTab';
 import HistoryTab from './HistoryTab';
 import PlanBooks from './backlist/PlanBooks';
 import { xlsxUrl } from '../components/excel';
+import { useZekiAskHref } from '@/canvas/zekiAsk';
 
 /** Plan ekranı: Karne · Kanal ve bütçe · Takvim · Materyaller · Onay ve geçmiş; sağda Zeki AI önerisi. */
 
@@ -34,6 +35,8 @@ type Ask = null | 'submit' | 'withdraw' | 'approve' | 'upper' | 'reject' | 'revi
 const daysLeft = (iso: string | null) => (iso ? Math.round((Date.parse(iso) - Date.parse(new Date().toISOString().slice(0, 10))) / 86_400_000) : null);
 
 export default function PlanScreen() {
+  // ZEKİ öneri soruları bu modülün kapsamıyla sorulur (yalnız modülün konuları cevaplanır).
+  const askHref = useZekiAskHref();
   const { id = '' } = useParams();
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -266,7 +269,7 @@ export default function PlanScreen() {
                       'Önümüzdeki ay yayımlanacak yeni kitapların toplam pazarlama bütçesi ve hedef cirosu ne?',
                     ].map((q) => (
                       <li key={q}>
-                        <Link className="block min-h-11 rounded-xl bg-white/70 px-3 py-2 text-[12px] font-semibold leading-snug text-canvas-ink transition-colors duration-150 hover:bg-white" to={`/genel-bakis?soru=${encodeURIComponent(q)}`}>
+                        <Link className="block min-h-11 rounded-xl bg-white/70 px-3 py-2 text-[12px] font-semibold leading-snug text-canvas-ink transition-colors duration-150 hover:bg-white" to={askHref(q)}>
                           {q}
                         </Link>
                       </li>

@@ -145,6 +145,60 @@ function RetryButton({ r }: { r: NonNullable<StitchCanvasData['main']['retry']> 
   );
 }
 
+/** Soru bir modül ekranından geldi: ZEKİ yalnız o modülün konularını cevaplar. Kapsam tek tıkla kalkar (ana ZEKİ). */
+function ScopeChip({ s }: { s: NonNullable<StitchCanvasData['main']['scope']> }) {
+  return (
+    <div className="mb-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-snug text-muted">
+      <span className="inline-flex items-center rounded-full bg-violet/10 px-2 py-0.5 font-bold text-violet ring-1 ring-violet/20">
+        {s.label}
+      </span>
+      <span>modülünün sorularını cevaplıyorum</span>
+      <button
+        type="button"
+        onClick={s.onClear}
+        disabled={s.busy}
+        className="min-h-11 rounded-md px-1 font-bold text-ink underline decoration-slate-300 decoration-dotted underline-offset-2 transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 motion-reduce:transition-none sm:min-h-0"
+      >
+        Tüm modüllere sor
+      </button>
+    </div>
+  );
+}
+
+/** Modül dışı sorunun altında: aynı soru, kapsam kaldırılarak ana ZEKİ'ye; konu hangi modüldeyse oradan cevaplanır. */
+function WidenButton({ w }: { w: NonNullable<StitchCanvasData['main']['widen']> }) {
+  return (
+    <button
+      type="button"
+      onClick={() => w.onAsk(w.question)}
+      disabled={w.busy}
+      className="mt-3 flex min-h-11 max-w-full items-center gap-2 rounded-xl bg-violet/10 px-4 py-2.5 text-left text-xs font-extrabold tracking-tight text-violet ring-1 ring-violet/25 transition-[background-color,transform] duration-150 ease-out hover:bg-violet/15 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 sm:min-h-0"
+    >
+      <span className="shrink-0">Tüm modüllere sor:</span>
+      <span className="min-w-0 font-bold [overflow-wrap:anywhere]">“{w.question}”</span>
+    </button>
+  );
+}
+
+/** Cevabın geldiği modül; kişi o modülü açabiliyorsa giriş ekranına bağlantı. */
+function OriginLine({ o }: { o: NonNullable<StitchCanvasData['main']['origin']> }) {
+  return (
+    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs leading-snug text-muted">
+      <span>
+        <strong className="font-bold text-ink">{o.label}</strong> modülünden{o.topic ? ` (${o.topic})` : ''}
+      </span>
+      {o.to && (
+        <Link
+          to={o.to}
+          className="inline-flex min-h-11 items-center rounded-md px-1 font-bold text-violet underline decoration-violet/30 underline-offset-2 transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none sm:min-h-0"
+        >
+          Modüle git →
+        </Link>
+      )}
+    </div>
+  );
+}
+
 /**
  * Belirsiz kelime çipi, cevap metninin hemen üstünde: "Cari bakiyesi olarak yorumladım · Banka bakiyesi mi?".
  * Cevabın kendisinden küçük ve sakin; okunan şey cevap kalsın, düzeltme de gözden kaçmasın.
@@ -644,11 +698,14 @@ function CanvasBody({
             {/* Decision Content & Recommended Actions */}
             <div className="w-full min-w-0 flex-1 flex flex-col justify-between sm:min-h-[140px]">
               <div>
+                {d.main.scope && canAsk && <ScopeChip s={d.main.scope} />}
                 {d.main.interpret && d.main.interpret.items.length > 0 && <InterpretChips it={d.main.interpret} />}
                 <p className="text-base font-bold text-ink leading-snug">
                   {d.main.text}
                 </p>
+                {d.main.origin && <OriginLine o={d.main.origin} />}
                 {d.main.retry && canAsk && <RetryButton r={d.main.retry} />}
+                {d.main.widen && canAsk && <WidenButton w={d.main.widen} />}
               
                 {/* Verbatim insight mention & sub-metrics */}
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">

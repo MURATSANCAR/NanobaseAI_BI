@@ -1167,15 +1167,32 @@ class Runtime:
         log.info("ask portal type=%s topic=%s ms=%s q=%r", out["type"], scope.topic["id"], timings["portal_ms"], question[:80])
         return resp
 
-    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None) -> dict[str, Any]:
-        """The retired semantic catalog is never a conversational SQL fallback."""
+    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None, module: Optional[str] = None) -> dict[str, Any]:
+        """The retired semantic catalog is never a conversational SQL fallback.
+
+        `module`: the menu module whose screen the question was asked on (chat_topics.json `scopes`); empty = home,
+        every topic. 2026-09-30 user decision: a module screen answers only its own topics. The answer carries its
+        topic and that topic's module in `chatScope` (the "from which module" line on screen)."""
+        from semantic_bridge import chat_scope
+
+        seen: dict[str, Any] = {}
+        resp = self._ask(question, thread_id=thread_id, sample_size=sample_size, execute=execute, progress=progress,
+                         username=username, screen_module=chat_scope.module_scope(module), seen=seen)
+        scope = seen.get("scope")
+        if isinstance(resp, dict) and scope is not None and (scope.topic is not None or scope.module is not None):
+            resp.setdefault("chatScope", scope.to_dict())
+        return resp
+
+    def _ask(self, question: str, *, thread_id: Optional[str], sample_size: int, execute: bool, progress,
+             username: Optional[str], screen_module: Optional[dict[str, Any]], seen: dict[str, Any]) -> dict[str, Any]:
         from semantic_bridge import chat_scope, chat_portal
         from semantic_bridge.finance_query import answer as finance_answer, conversation
 
         report = progress or (lambda stage: None)
         report("understanding")
         thread_id = thread_id or uuid.uuid4().hex
-        scope = chat_scope.classify(question)
+        scope = chat_scope.classify(question, module=screen_module)
+        seen["scope"] = scope
 
         def record(**values):
             gate = values.pop("gate", None)
@@ -1189,26 +1206,51 @@ class Runtime:
             return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
                     "explanation": scope.reply, "threadId": thread_id, "queryId": qid}
         # Portal modules have their own closed plans and authorization. They do not
-        # use the retired Logo/CRM term-to-column catalog either.
-        if execute and chat_portal.mentions_portal(question):
-            scope = chat_scope.classify(question, self.llm_for("chat"), has_context=False)
-            if not scope.is_intro and scope.connected and chat_portal.serves(scope.topic):
-                sq = SemanticQuery(question=question, tenant_id=self.settings.tenant_id,
-                                   datasource_id=self.settings.datasource_id)
-                return self._answer_portal(question, scope, sq, thread_id, {}, username, sample_size, record)
+        # use the retired Logo/CRM term-to-column catalog either. On a module screen the portal is tried only
+        # after the module gate below, and only for a topic of that module.
+        def portal_answer():
+            if not (execute and chat_portal.mentions_portal(question)):
+                return None
+            found = chat_scope.classify(question, self.llm_for("chat"), has_context=False, module=screen_module)
+            if found.is_intro or not found.connected or not chat_portal.serves(found.topic):
+                return None
+            if screen_module is not None and found.topic["id"] not in set(screen_module.get("topics") or ()):
+                return None
+            seen["scope"] = found
+            sq = SemanticQuery(question=question, tenant_id=self.settings.tenant_id,
+                               datasource_id=self.settings.datasource_id)
+            return self._answer_portal(question, found, sq, thread_id, {}, username, sample_size, record)
+
+        if screen_module is None:
+            portal = portal_answer()
+            if portal is not None:
+                return portal
         # Conversation context comes from this user's own records of this thread (restart/multi-worker safe).
         context = conversation.resolve(self, question, thread_id, username)
         # A cheap scope decision before the 8k-token plan call: one closed-choice token with probabilities.
         # Only a confident off-topic/identity verdict answers without the planner; a clarification answer or an
-        # explicit follow-up is part of a data conversation and is never screened.
+        # explicit follow-up is part of a data conversation and is never screened. On a module screen the same
+        # single call also picks the topic: a confident topic outside the module is not answered (OUT_OF_MODULE).
         if context.mode == conversation.NEW:
-            scope = chat_scope.screen(question, self.llm_for("chat"), has_context=context.has_history)
+            scope = chat_scope.screen(question, self.llm_for("chat"), has_context=context.has_history, module=screen_module)
+            seen["scope"] = scope
             if scope.is_intro:
                 qid = record(sql=None, compiler="intro", catalog_version=None, executed=False,
                              answer_type="MODULE_INTRO", answer_summary=scope.reply, gate={"chatScope": scope.to_dict()})
                 log.info("ask screened intent=%s q=%r", scope.intent, question[:80])
                 return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
                         "explanation": scope.reply, "threadId": thread_id, "queryId": qid}
+            if scope.outside_module:
+                qid = record(sql=None, compiler="module", catalog_version=None, executed=False,
+                             answer_type=chat_scope.OUT_OF_MODULE, answer_summary=scope.reply,
+                             gate={"chatScope": scope.to_dict()})
+                log.info("ask outside module=%s topic=%s q=%r", screen_module["id"], scope.topic["id"], question[:80])
+                return {"id": uuid.uuid4().hex, "type": chat_scope.OUT_OF_MODULE, "explanation": scope.reply,
+                        "chatScope": scope.to_dict(), "threadId": thread_id, "queryId": qid}
+        if screen_module is not None:
+            portal = portal_answer()
+            if portal is not None:
+                return portal
         # Every remaining data question reaches the new planner, including words
         # such as alışveriş, randevu and bağlı kişi that the old keyword gate missed.
         return finance_answer(self, question, thread_id, sample_size, execute, report, username, context=context)
@@ -1788,6 +1830,8 @@ class AskIn(BaseModel):
     sampleSize: int | None = 50
     excludeNl: str | None = None
     execute: bool | None = True
+    #: Sorunun sorulduğu modül ekranı (menü ana modülü, chat_topics.json `scopes`); boş = ana sayfa, her konu.
+    module: str | None = None
 
 
 class FeedbackIn(BaseModel):
@@ -2414,7 +2458,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if not q:
             raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
         try:
-            answer = rt().ask(q, thread_id=body.threadId, sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl, execute=bool(body.execute if body.execute is not None else True), username=_ask_user(request))
+            answer = rt().ask(q, thread_id=body.threadId, sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl, execute=bool(body.execute if body.execute is not None else True), username=_ask_user(request), module=body.module)
             return _answer_kaynak(answer)
         except HTTPException:
             raise
@@ -2440,7 +2484,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                     answer = await run_in_threadpool(rt().ask, q, thread_id=body.threadId,
                         sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl,
                         execute=bool(body.execute if body.execute is not None else True), progress=progress,
-                        username=asker)
+                        username=asker, module=body.module)
                     await queue.put({"event": "result", "result": _answer_kaynak(answer)})
                 except boot_mod.Warming:
                     # Açılış sürüyor: hata değil, kısa bekleme (ekran aynı soruyu biraz sonra yeniden sorar).

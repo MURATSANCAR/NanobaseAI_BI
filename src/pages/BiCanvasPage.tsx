@@ -14,6 +14,19 @@ import { useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, useCanvasQueries } from '@/canvas/data';
 import AlertsPanel from '@/canvas/alerts/AlertsPanel';
 import { readableText } from '@/canvas/components/readableName';
+import { moduleLabel } from '@/canvas/zekiAsk';
+import { NAV, groupEntry } from '@/canvas/nav/navModel';
+import { canOpenRoute, usePageAccess } from '@/canvas/useAdmin';
+
+/** Cevabın geldiği modül: yalnız veriyle cevaplanmış soruda. Bağlantı kişinin açabildiği modül ekranına gider. */
+function originOf(answer: AskAnswer | null, pages: ReturnType<typeof usePageAccess>): { label: string; topic: string; to?: string } | undefined {
+  const cs = answer?.chatScope;
+  const label = moduleLabel(cs?.module);
+  if (!answer || (answer.type !== 'TEXT_TO_SQL' && answer.type !== 'PARTIAL_ANSWER') || !cs?.module || !label) return undefined;
+  const group = NAV.find((g) => g.id === cs.module);
+  const entry = group ? groupEntry(NAV, group) : null;
+  return { label, topic: cs.topicLabel ?? '', to: entry && canOpenRoute(pages, entry) ? entry : undefined };
+}
 
 /** Bu sayfa iki yolu çizer: /genel-bakis (CFO kanvası) ve /uyarilar (kural listesi). Planlı raporlar ayrı ekrandır. */
 
@@ -59,22 +72,27 @@ export default function BiCanvasPage() {
   /** Cevabı doğuran soru; panoya eklenen kartın başlığı ve yeniden sorulacak sorusu olur. */
   const [answeredQ, setAnsweredQ] = useState('');
   const [board, setBoard] = useState<{ state: BoardAction['state']; message?: string }>({ state: 'idle' });
-  // Ardışık sorular kuyruğa girer ve tek tek işlenir; yeni soru önceki cevabı ezmez.
-  const queueRef = useRef<string[]>([]);
+  // Soru bir modül ekranından geldiyse (?modul=…) o modülün kapsamı: ZEKİ yalnız o modülün konularını cevaplar.
+  // Kapsam kaldırılınca (ya da Kampüs'ten gelince) soru konusuna göre ilgili modülün verisine gider.
+  const [askModule, setAskModule] = useState<string | null>(null);
+  const pages = usePageAccess();
+  // Ardışık sorular kuyruğa girer ve tek tek işlenir; yeni soru önceki cevabı ezmez. Her soru sorulduğu kapsamla gider.
+  const queueRef = useRef<Array<{ q: string; module: string | null }>>([]);
   const runningRef = useRef(false);
   const [queued, setQueued] = useState(0);
   const [current, setCurrent] = useState<string | null>(null);
   /** Ekranda soru balonunda duran son soru; hata olsa da kalır ki kullanıcı neyin sorulduğunu görsün. */
   const [shownQ, setShownQ] = useState('');
   const runNext = () => {
-    const q = queueRef.current.shift();
+    const next = queueRef.current.shift();
     setQueued(queueRef.current.length);
-    if (q === undefined) {
+    if (next === undefined) {
       runningRef.current = false;
       setAsking(false);
       setCurrent(null);
       return;
     }
+    const { q, module } = next;
     runningRef.current = true;
     setAsking(true);
     setCurrent(q);
@@ -82,7 +100,7 @@ export default function BiCanvasPage() {
     setAskErr(null);
     setAnswer(null);
     setBoard({ state: 'idle' });
-    askEngine(q)
+    askEngine(q, module)
       .then((a) => {
         setAnsweredQ(q);
         setAnswer({ ...a, summary: a.summary ?? a.explanation });
@@ -90,9 +108,9 @@ export default function BiCanvasPage() {
       .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Zeki AI yanıt vermedi; biraz sonra yeniden sorun'))
       .finally(() => runNext());
   };
-  const ask = (q: string) => {
+  const ask = (q: string, module: string | null = askModule) => {
     if (!ENGINE_ENABLED) return;
-    queueRef.current.push(q);
+    queueRef.current.push({ q, module });
     setQueued(queueRef.current.length);
     if (!runningRef.current) runNext();
   };
@@ -114,16 +132,24 @@ export default function BiCanvasPage() {
   // Kampüs sayfasındaki ZEKİ kutusu soruyu adresle getirir (?soru=…). Bir kez sorulur, sonra adresten silinir;
   // yenileme aynı soruyu motora ikinci kez göndermesin.
   const incoming = params.get('soru');
+  const incomingModule = moduleLabel(params.get('modul')) ? params.get('modul') : null;
   useEffect(() => {
     if (!incoming) return;
     markSplashSeen();
     setSplash(false);
     setParams({}, { replace: true });
-    ask(incoming);
+    setAskModule(incomingModule);
+    ask(incoming, incomingModule);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incoming]);
 
   const onAsk = (q: string) => ask(q);
+  // Modül dışı soruyu tek tıkla ana ZEKİ'ye sormak: kapsam kalkar, soru ilgili modülün verisine gider.
+  const askEverywhere = (q: string) => {
+    if (runningRef.current || !q.trim()) return;
+    setAskModule(null);
+    ask(q, null);
+  };
 
   // Yorum çipi: alternatife tıklamak soruyu, belirsiz kelimenin yerine alternatifin ifadesi konmuş hâliyle
   // yeniden sormaktır; yeni uç yok. Bir soru çalışırken gelen ikinci tık (çift tık dahil) yok sayılır:
@@ -205,6 +231,12 @@ export default function BiCanvasPage() {
           !asking && !askErr && answer?.dataEnd?.suggestion?.question
             ? { question: answer.dataEnd.suggestion.question, busy: asking, onAsk: rephrase }
             : undefined,
+        // Modül ekranından gelen soru: hangi modülde sorulduğu ve kapsamı kaldırma (tüm modüllere sor).
+        scope: askModule ? { label: moduleLabel(askModule) ?? askModule, busy: asking, onClear: () => setAskModule(null) } : undefined,
+        // Konusu dışarıda kalan soru cevaplanmadı: aynı soruyu tek tıkla bütün modüllere sor.
+        widen: !asking && !askErr && answer?.type === 'OUT_OF_MODULE' && answeredQ ? { question: answeredQ, busy: asking, onAsk: askEverywhere } : undefined,
+        // Cevabın geldiği modül ve (kişi açabiliyorsa) o modülün giriş ekranı.
+        origin: !asking && !askErr ? originOf(answer, pages) : undefined,
         // M50: cevabın altında «Doğru / Kısmen / Yanlış»; yalnız soru kaydı olan (motorun cevapladığı) cevapta.
         feedback: !asking && !askErr && answer?.queryId ? { queryId: answer.queryId } : undefined,
         // «Neden?»: ayrıştırılabilir cevapta (katalog ölçüsü + dönem); farkın kanal/cari/kitap katkısı.
@@ -222,7 +254,7 @@ export default function BiCanvasPage() {
       },
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d, answer, asking, askErr, phase, queued, board, answeredQ, shownQ, interpretChips]);
+  }, [d, answer, asking, askErr, phase, queued, board, answeredQ, shownQ, interpretChips, askModule, pages]);
 
   if (splash) return <Splash onDone={closeSplash} />;
 

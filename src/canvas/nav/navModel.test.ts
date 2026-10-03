@@ -9,7 +9,7 @@ const editor = { isAdmin: false, isEditor: true };
 const ids = (gs: { id: string }[]) => gs.map((g) => g.id);
 const itemIds = (gs: ReturnType<typeof visibleNav>) => flatItems(gs).map((x) => x.item.id);
 /** Onaylı ana menü sırası (firmanın modül sunumu A–L; 2026-09-28). */
-const ALL_GROUPS = ['kampus', 'analiz', 'editoryal', 'kitap-eczanesi', 'uretim-fiyat', 'pazarlama', 'satis', 'dijital', 'musteri', 'platform', 'lojistik', 'finans', 'altyapi', 'ik', 'yonetim'];
+const ALL_GROUPS = ['kampus', 'editoryal', 'kitap-eczanesi', 'uretim-fiyat', 'pazarlama', 'satis', 'dijital', 'musteri', 'platform', 'lojistik', 'finans', 'altyapi', 'ik', 'yonetim'];
 
 describe('sayfa yetkisi', () => {
   it('yalnız izin verilen sayfalar görünür; boş kalan alan raydan kalkar; Kampüs hep açık', () => {
@@ -83,16 +83,15 @@ describe('rol görünürlüğü', () => {
     const by = Object.fromEntries(g.map((x) => [x.id, x]));
     expect(by.editoryal.tag).toBe('Çalışma alanım');
     expect(by.editoryal.defaultOpen).toBe(true);
-    expect(by.analiz.defaultOpen).toBe(false);
     expect(by.finans.defaultOpen).toBe(false);
-    expect(by.analiz.items.length).toBeGreaterThan(0);
+    expect(by.finans.items.length).toBeGreaterThan(0);
     // Yönetim'in yönetici ekranları editörde yok; sayfa yetkisiyle açılan Kategori ağacı kalır.
     expect(by.yonetim.items.map((i) => i.id)).toEqual(['kategori-agaci']);
   });
 
   it('hem yönetici hem editör olan kişi yönetici menüsünü görür', () => {
     const g = visibleNav({ isAdmin: true, isEditor: true }, { webWatch: true });
-    expect(ids(g)[1]).toBe('analiz');
+    expect(ids(g)[1]).toBe('editoryal');
     expect(ids(g)).toContain('yonetim');
   });
 });
@@ -266,18 +265,20 @@ describe('menü tanımı', () => {
 describe('ana menü yerleşimi (2026-09-28, modül sunumu A–L)', () => {
   const groupOf = (id: string) => NAV.find((g) => g.items.some((i) => i.id === id))?.id;
 
-  it('ana modüller onaylı sırada; «Kayıtlar» yok', () => {
+  it('ana modüller onaylı sırada; «Kayıtlar» ve «Analiz» yok', () => {
     expect(NAV.map((g) => g.id)).toEqual(ALL_GROUPS);
     expect(NAV.map((g) => g.label)).toEqual([
-      'Kampüs', 'Analiz', 'Editoryal', 'Kitap Eczanesi', 'Fiyatlama ve üretim', 'Pazarlama', 'Saha satış ve okul', 'Dijital ve topluluk',
+      'Kampüs', 'Editoryal', 'Kitap Eczanesi', 'Fiyatlama ve üretim', 'Pazarlama', 'Saha satış ve okul', 'Dijital ve topluluk',
       'Müşteri ve pazar', 'Platform yönetimi', 'Lojistik', 'Finans ve risk', 'Altyapı ve destek', 'İnsan Kaynakları', 'Yönetim',
     ]);
     expect(NAV.some((g) => (g.id as string) === 'kayitlar' || g.label === 'Kayıtlar')).toBe(false);
+    expect(NAV.some((g) => (g.id as string) === 'analiz' || g.label === 'Analiz')).toBe(false);
   });
 
-  it('Analiz yalnız Panolar, Planlı raporlar, Uyarılar; Finans ve risk Genel bakış ile başlar', () => {
-    expect(NAV.find((g) => g.id === 'analiz')!.items.map((i) => i.id)).toEqual(['panolar', 'planli-raporlar', 'uyarilar']);
-    expect(NAV.find((g) => g.id === 'finans')!.items[0].id).toBe('genel-bakis');
+  it('Finans ve risk Genel bakış ile başlar; Panolar, Planlı raporlar, Uyarılar onun «Analiz» bölümünde (2026-09-30)', () => {
+    const fin = NAV.find((g) => g.id === 'finans')!;
+    expect(fin.items[0].id).toBe('genel-bakis');
+    expect(fin.items.filter((i) => i.section === 'Analiz').map((i) => i.id)).toEqual(['panolar', 'planli-raporlar', 'uyarilar']);
   });
 
   it('taşınan ekranlar yeni yerinde (rota değişmedi)', () => {
@@ -291,12 +292,14 @@ describe('ana menü yerleşimi (2026-09-28, modül sunumu A–L)', () => {
       'okur-segmentler': 'dijital', 'okur-programlar': 'dijital', 'okur-yorumlar': 'dijital', 'eticaret-musteri': 'dijital',
       eticaret: 'dijital', 'eticaret-farklar': 'dijital', 'eticaret-huni': 'dijital', kampanya: 'dijital',
       'eticaret-pazar-yerleri': 'platform', 'kitap-tasarim': 'editoryal', 'kapak-arsivi': 'editoryal',
-      'serbest-calisanlar': 'editoryal',
+      'serbest-calisanlar': 'editoryal', panolar: 'finans', 'planli-raporlar': 'finans', uyarilar: 'finans',
     };
     for (const [id, g] of Object.entries(moved)) expect([id, groupOf(id)]).toEqual([id, g]);
     const to = (id: string) => NAV.flatMap((g) => g.items).find((i) => i.id === id)!.to;
     expect(to('baski-oneri')).toBe('/yonetim-raporlari/baski-oneri');
     expect(to('genel-bakis')).toBe('/genel-bakis');
+    expect(to('panolar')).toBe('/panolar');
+    expect(to('uyarilar')).toBe('/uyarilar');
     expect(to('eticaret-pazar-yerleri')).toBe('/e-ticaret/pazar-yerleri');
     expect(to('kampanya')).toBe('/kampanyalar');
   });
@@ -394,6 +397,7 @@ describe('eski kayıtlı menü durumu kırılmaz', () => {
     expect(recentGroupLabel({ to: '/kurumsal-eposta', group: 'Kayıtlar' })).toBe('Müşteri ve pazar');
     expect(recentGroupLabel({ to: '/kategori-agaci', group: 'Kayıtlar' })).toBe('Yönetim');
     expect(recentGroupLabel({ to: '/genel-bakis', group: 'Analiz' })).toBe('Finans ve risk');
+    expect(recentGroupLabel({ to: '/panolar', group: 'Analiz' })).toBe('Finans ve risk');
     expect(recentGroupLabel({ to: '/telif-sozlesme/TS-2026-1', group: 'Kayıtlar · Sözleşmeler' })).toBe('Editoryal · Sözleşmeler');
     expect(recentGroupLabel({ to: '/bilinmeyen', group: 'Eski' })).toBe('Eski');
   });

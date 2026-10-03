@@ -11,10 +11,13 @@ import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { Explain } from '../components/Explain';
 import { ShowMoreButton, useShowMore } from '../components/ShowMore';
+import { useZekiAskHref } from '@/canvas/zekiAsk';
 
 /** Pano: ilk açılış. Kötüleşen bayilere bakmak tek dokunuş (kart listesi burada), bayi kartı iki. */
 
 export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (p: Record<string, string | null>) => void }) {
+  // ZEKİ öneri soruları bu modülün kapsamıyla sorulur (yalnız modülün konuları cevaplanır).
+  const askHref = useZekiAskHref();
   const q = useQuery({ queryKey: ['dealers', 'summary'], queryFn: dealersApi.summary, enabled: ENGINE_ENABLED && !!meta.run.gun });
   const s = q.data;
   const limits = useShowMore(s?.limitBekleyen, 5);
@@ -143,7 +146,7 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
           {meta.zekiQuestions.map((z) => (
             <Link
               key={z}
-              to={`/genel-bakis?soru=${encodeURIComponent(z)}`}
+              to={askHref(z)}
               className="inline-flex min-h-9 items-center rounded-xl bg-canvas-violet/10 px-2.5 text-[12px] font-bold text-canvas-violet transition-transform duration-150 ease-out active:scale-[0.97]"
             >
               {z}

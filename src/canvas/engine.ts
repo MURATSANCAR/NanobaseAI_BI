@@ -134,6 +134,9 @@ export type AskAnswer = DbTiming & {
   dataEnd?: { lastDay: string | null; note: string; suggestion: { question: string; start: string; end: string } | null } | null;
   /** «Neden?»: ölçü katalogda toplanabilir bir satış satırı ölçüsü ve soruda dönem varsa `ok`; değilse nedeni. */
   neden?: { ok: boolean; neden?: string; olcu?: string; birim?: string; bas?: string; bit?: string } | null;
+  /** Sorunun konusu ve cevabın geldiği modül. `module`: konunun menüdeki ana modülü; sorunun sorulduğu
+   *  modül (`screenModule`, ana sayfada null). Tip `OUT_OF_MODULE`: konu, sorulduğu modülün dışında; cevap verilmedi. */
+  chatScope?: { intent: string; topic: string | null; topicLabel: string | null; connected: boolean; module?: string | null; screenModule?: string | null };
 };
 
 /** Belirsiz bir kelimenin seçilen anlamı. */
@@ -149,9 +152,10 @@ export type AnswerInterpretation = {
   basis: 'context' | 'default';
 };
 
-/** Doğal dil sorusu. Motor SQL üretir, çalıştırır ve özetler. */
-export function ask(question: string): Promise<AskAnswer> {
-  return post<AskAnswer>('/api/v1/ask', { question, language: 'TR', execute: true, sampleSize: 50 }, 180_000);
+/** Doğal dil sorusu. Motor SQL üretir, çalıştırır ve özetler. `module`: sorunun sorulduğu modül ekranı (menü ana
+ *  modülü); verilirse yalnız o modülün konuları cevaplanır, boşsa soru konusuna göre ilgili modülün verisine gider. */
+export function ask(question: string, module?: string | null): Promise<AskAnswer> {
+  return post<AskAnswer>('/api/v1/ask', { question, language: 'TR', execute: true, sampleSize: 50, ...(module ? { module } : {}) }, 180_000);
 }
 
 export type StoredAskResult = {

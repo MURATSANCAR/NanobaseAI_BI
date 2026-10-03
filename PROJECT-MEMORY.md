@@ -1,5 +1,7 @@
 # NanobaseAI BI — Proje Belleği
 
+**2026-10-03 — ZEKİ modül kapsamı:** sohbet sorusu `module` (menü ana modülü) taşır; modül ekranında `chat_scope.screen(module=…)` tek kapalı seçimle konu + şirket dışı + kimlik kararı verir, modül dışı konuların olasılığı ≥ 0,9 ise `OUT_OF_MODULE` (plan çağrısı yok). Ana sayfa kapsamsız. Kapsamlar `backend/semantic_bridge/chat_topics.json` `scopes` (menü grubu kimlikleri; Kampüs yok), konu evi `topics[].module`; cevapta `chatScope.module` / `screenModule`. Ön yüz: `src/canvas/zekiAsk.ts` (`?modul=`), Genel bakış çip/«Tüm modüllere sor»/«Modüle git». Menüde «Analiz» grubu yok: Panolar, Planlı raporlar, Uyarılar Finans ve risk → «Analiz» bölümü (yetki alanı `finans`).
+
 **2026-10-02 — Okunamayan kitabı yeniden okut:** kart servisi `POST /v1/books/read/{iş}/retry` (`portal_books.reread`: son iş FAILED, süren iş varsa 409, attempt 1, isteyen `portal:<kişi>`); köprü `POST /api/v1/editorial/ask/read/{iş}/retry` ve `…/pharmacy/books/{kitap}/reread`, yetki `ozellik:kitap.okut`; ön yüz `editorial/RereadButton.tsx`. VM: GPU nginx beyaz listesine retry yolu gerekir.
 
 **2026-10-02 — Kitap Eczanesi «Zeki'ye sor»:** ekranın en üstünde (`pharmacy/PharmacyAsk.tsx`) kütüphane geneli soru; Kitaba sor ucu `POST /api/v1/editorial/ask` kitap adı boş + `GET …/ask/{id}`; kaynak kitaplar `askSources.ts` (kart kimliği = eczane kitap kimliği), basınca `?kitap=` ayrıntısı.

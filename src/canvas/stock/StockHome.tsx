@@ -15,6 +15,7 @@ import { gunText, n0, stockApi, tl, type DagitimIsaret, type StockState } from '
 import ItemList from './ItemList';
 import { BookCell, Chips, DagitimTazelikLine, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
 import { RULES } from './rules';
+import { useZekiAskHref } from '@/canvas/zekiAsk';
 
 /** M43 açılış (/stok): dört gösterge, kitap sor, bugün ilgilenilecekler, stok listesi (süzgeçler adreste). */
 
@@ -37,6 +38,8 @@ const ASK = [
 
 
 export default function StockHome() {
+  // ZEKİ öneri soruları bu modülün kapsamıyla sorulur (yalnız modülün konuları cevaplanır).
+  const askHref = useZekiAskHref();
   const nav = useNavigate();
   const pages = usePageAccess();
   const [params, setParams] = useSearchParams();
@@ -269,7 +272,7 @@ export default function StockHome() {
           </div>
           <div className="flex flex-wrap gap-2">
             {ASK.map((s) => (
-              <Link key={s} to={`/genel-bakis?soru=${encodeURIComponent(s)}`} className="min-h-11 rounded-xl bg-slate-100 px-3 py-2 text-[12px] font-semibold text-canvas-ink transition-colors duration-150 hover:bg-slate-200 sm:min-h-0">
+              <Link key={s} to={askHref(s)} className="min-h-11 rounded-xl bg-slate-100 px-3 py-2 text-[12px] font-semibold text-canvas-ink transition-colors duration-150 hover:bg-slate-200 sm:min-h-0">
                 {s}
               </Link>
             ))}

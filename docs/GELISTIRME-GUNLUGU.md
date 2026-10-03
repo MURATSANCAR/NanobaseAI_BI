@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — ZEKİ modül kapsamı bugünkü sohbet akışında; Analiz, Finans ve risk altında
+
+- **Neden:** 2026-09-30 kullanıcı kararı («her modülde Zeki yalnız o modülün sorusunu cevaplasın», «ana sayfada ne sorulursa ilgili modülden gitsin bulsun») `e6b41ab05` ile eski sohbet akışına (`Runtime.ask` → eski katalog/çözücü) yazılmıştı; main'de `ask()` finans motoruna ve plan öncesi kapıya (`chat_scope.screen`) geçince cherry-pick mekanik çözülemedi. Özellik bugünkü akışa yeniden yazıldı.
+- **Köprü:** `POST /api/v1/ask` ve `/ask/stream` gövdesinde `module` (menü ana modülü). Modül ekranında plan öncesi kapı aynı tek kapalı seçimde (olasılıklı) konuyu da seçer: seçenekler 21 konu + şirket dışı + asistanın kendisi. Modül dışındaki konuların toplam olasılığı `SCREEN_MIN_PROB` (0,9) üstündeyse plan çağrısı yapılmaz, veri okunmaz, cevap `OUT_OF_MODULE` («Bu ekranda ZEKİ yalnız X modülünün sorularını cevaplıyor…»). Kararsız soru modülün içinde sayılır; olasılık okunamazsa ret yok. Ana sayfa (modülsüz) değişmedi. Modül ekranında portal (modül tabloları) yalnız o modülün konusu için denenir. Cevap `chatScope` taşır: `module` = konunun menüdeki evi, `screenModule` = sorulduğu modül. Kapsamlar `chat_topics.json` `scopes` (yeni: `kitap-eczanesi`); her konuya `module` alanı.
+- **Ön yüz (`e6b41ab05`'ten):** ekranların ZEKİ önerileri `?modul=` ile gider (`zekiAsk.ts`), Genel bakış'ta «X modülünün sorularını cevaplıyorum · Tüm modüllere sor» çipi, modül dışı cevapta tek tıkla tüm modüllere sorma, cevabın altında «X modülünden · Modüle git» (yeni: kısmi cevapta da).
+- **Menü (kullanıcı onayı, 10-03):** «Analiz» grubu kalktı; Panolar, Planlı raporlar, Uyarılar Finans ve risk'in «Analiz» bölümünde. Yetki kataloğunda üç sayfanın alanı `finans` (sayfa anahtarları aynı, verilmiş yetkiler korunur).
+- **Gerçek modelle kapı sondası (test sunucusu, veri okumadan):** 27 soru × 7 modül, 26 doğru, **yanlış ret 0**; kaçan tek soru («Dün sitede kaç sipariş geldi?» Finans ekranında) 0,897 ile eşiğin altında kaldı ve cevaplanmaya bırakıldı. Soru başı ~1 sn; mevcut kapı çağrısının yerine geçer, ek çağrı yok.
+- **Test (test sunucusu, `/tmp/claude-modscope`, önce=main `9f5c5bbf0` / sonra=aday):** pytest önce 5.332 geçti · 23 kırık, sonra 5.353 geçti · aynı 23 kırık (+21 yeni test; fazladan görünen 2 kırık tek başına iki ağaçta da geçiyor — paralel koşu). `tsc -b` 0, vitest iki ağaçta geçti, `._*` 0.
+- Eski dal `claude/module-specific-responses-cfb542` ve worktree'si (`screens-csv-excel-download-test-a20850`, içindeki commit'lenmemiş değişiklikler eski akışa aitti) silindi.
+
 ## 2026-10-03 — Editör: bir kitap denetiminden çıkan genel hata sınıfları
 
 - Künye boş kalıyordu: künye adımı bütün kitabın sayfa kuralından (`page_scope.ensure`, doğrulamada) önce koşuyordu. Künye adımı artık önce kuralı uygular; doğrulama (tam + arşiv) yeni künye sayfası yazar ve METADATA yoksa künyeyi okur (`page_scope.metadata_after_scope`; hata çıktıyı düşürmez).

@@ -74,7 +74,6 @@ import {
   Braces,
   CalendarClock,
   CalendarRange,
-  ChartColumn,
   ClipboardCheck,
   ClipboardList,
   Rocket,
@@ -140,10 +139,10 @@ import {
 
 /** Ana modüller (firmanın modül sunumundaki A–L gruplaması). Kimlikler kalıcıdır: yetki kataloğunun `areas`
  *  listesi ve kişi tercihleri bunlarla eşleşir. «kayitlar» 2026-09-28'de kalktı (içeriği Editoryal, Müşteri ve
- *  pazar ile Yönetim'e dağıldı); eski kayıtlarda geçerse yok sayılır. */
+ *  pazar ile Yönetim'e dağıldı), «analiz» 2026-09-30'da Finans ve risk'e katıldı (Panolar, Planlı raporlar, Uyarılar);
+ *  eski kayıtlarda geçerse yok sayılır. */
 export type NavGroupId =
   | 'kampus'
-  | 'analiz'
   | 'editoryal'
   | 'kitap-eczanesi'
   | 'uretim-fiyat'
@@ -219,17 +218,6 @@ export const NAV: NavGroup[] = [
     to: '/',
     items: [
       { id: 'kampus', label: 'Kampüs', to: '/', icon: House, hint: 'Ana sayfa, rehber ve duyurular', keywords: ['ana sayfa', 'rehber', 'dahili'] },
-    ],
-  },
-  {
-    id: 'analiz',
-    label: 'Analiz',
-    hint: 'Panolar, planlı raporlar ve uyarılar',
-    icon: ChartColumn,
-    items: [
-      { id: 'panolar', label: 'Panolar', to: '/panolar', icon: LayoutGrid, hint: 'Kişisel pano kartları', keywords: ['pano', 'panom', 'kart'] },
-      { id: 'planli-raporlar', label: 'Planlı raporlar', to: '/planli-raporlar', icon: CalendarClock, hint: 'E-postayla giden zamanlı raporlar', keywords: ['rapor', 'excel'] },
-      { id: 'uyarilar', label: 'Uyarılar', to: '/uyarilar', icon: Bell, hint: 'Eşik kuralları ve bildirimler', badge: 'alerts', keywords: ['uyarı', 'kural', 'eşik'] },
     ],
   },
   {
@@ -600,7 +588,7 @@ export const NAV: NavGroup[] = [
     // J (M45–M47, M54, M59, DYK): ilk öğe Genel bakış (rota değişmedi).
     id: 'finans',
     label: 'Finans ve risk',
-    hint: 'Genel bakış, finansal raporlar, bütçe, risk, bayi riski, telif dönemi ve kurul',
+    hint: 'Genel bakış, finansal raporlar, panolar, planlı raporlar, uyarılar, bütçe, risk, bayi riski, telif dönemi ve kurul',
     icon: Landmark,
     items: [
       { id: 'genel-bakis', label: 'Genel bakış', to: '/genel-bakis', icon: LayoutDashboard, section: 'Raporlar', hint: 'Finansal göstergeler ve ZEKİ AI\'a soru', keywords: ['ciro', 'soru', 'sor'] },
@@ -614,6 +602,9 @@ export const NAV: NavGroup[] = [
         keywords: ['gelir tablosu', 'kâr zarar', 'kârlılık', 'nakit', 'nakit akışı', 'vergi takvimi', 'beyanname', 'katkı payı', 'mutabakat'],
       },
       { id: 'yonetim-raporlari', label: 'Yönetim raporları', to: '/yonetim-raporlari', icon: FileChartColumn, section: 'Raporlar', hint: 'Karar raporları', keywords: ['rapor'] },
+      { id: 'panolar', label: 'Panolar', to: '/panolar', icon: LayoutGrid, section: 'Analiz', hint: 'Kişisel pano kartları', keywords: ['pano', 'panom', 'kart'] },
+      { id: 'planli-raporlar', label: 'Planlı raporlar', to: '/planli-raporlar', icon: CalendarClock, section: 'Analiz', hint: 'E-postayla giden zamanlı raporlar', keywords: ['rapor', 'excel'] },
+      { id: 'uyarilar', label: 'Uyarılar', to: '/uyarilar', icon: Bell, section: 'Analiz', hint: 'Eşik kuralları ve bildirimler', badge: 'alerts', keywords: ['uyarı', 'kural', 'eşik'] },
       { id: 'finansal-denetim', label: 'Finansal denetim', to: '/finansal-denetim', icon: ShieldCheck, section: 'Denetim ve bütçe', hint: 'Logo kayıtlarının denetimi', keywords: ['denetim', 'muhasebe', 'risk'] },
       {
         id: 'butce',

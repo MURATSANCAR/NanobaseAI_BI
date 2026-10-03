@@ -77,3 +77,61 @@ def test_screen_prompt_lists_company_areas_and_no_technology_names():
     assert "finans ve bütçe" in prompt and "kitap" in prompt
     for name in ("Qwen", "vLLM", "SQL", "LINENET"):
         assert name not in prompt
+
+
+# ------------------------------------------------------------------ modül ekranı (2026-09-30 kararı, 10-03 bugünkü akış)
+class TopicChooser:
+    """Modül kapısının seçenekleri konulardır (+ şirket dışı, asistan); olasılık konu kimliğiyle verilir."""
+
+    def __init__(self, probs, method=LOGPROBS):
+        self.probs, self.method, self.calls = probs, method, []
+
+    def choose(self, prompt, choices, *, system=None, **kw):
+        self.calls.append({"prompt": prompt, "choices": choices, "system": system})
+        key = {chat_scope._topic_choice(t): t["id"] for t in chat_scope.topics()}
+        key.update({v: k for k, v in LABELS.items()})
+        by_choice = {c: self.probs.get(key[c], 0.0) for c in choices}
+        picked = max(by_choice, key=by_choice.get)
+        return Choice(picked, choices.index(picked), by_choice if self.method == LOGPROBS else None, self.method)
+
+
+PAZARLAMA = chat_scope.module_scope("pazarlama")
+
+
+def test_confident_topic_outside_the_module_is_not_answered():
+    llm = TopicChooser({"finans": 0.95, "pazarlama": 0.05})
+    got = screen("Bu yıl net ciro ne kadar?", llm, module=PAZARLAMA)
+    assert got.outside_module and got.answer_type == chat_scope.OUT_OF_MODULE
+    assert "Pazarlama" in got.reply and "ana sayfa" in got.reply
+    assert got.to_dict()["module"] == "finans" and got.to_dict()["screenModule"] == "pazarlama"
+    assert len(llm.calls) == 1, "konu ve şirket dışı kararı tek çağrıda"
+    assert "Pazarlama" in llm.calls[0]["system"] and len(llm.calls[0]["choices"]) == len(chat_scope.topics()) + 2
+
+
+@pytest.mark.parametrize("probs", [
+    {"finans": 0.6, "pazarlama": 0.4},                    # dışarısı eşik altı
+    {"finans": 0.45, "satis": 0.44, "pazarlama": 0.11},   # dışarı toplam 0,89 < 0,9
+])
+def test_uncertain_topic_stays_in_the_module(probs):
+    got = screen("kampanya cirosu", TopicChooser(probs), module=PAZARLAMA)
+    assert got.intent == DATA and not got.outside_module and got.reply is None
+
+
+def test_module_topic_goes_to_data_and_carries_its_module():
+    got = screen("Bu ay kaç lansman kapandı?", TopicChooser({"pazarlama": 0.9, "finans": 0.1}), module=PAZARLAMA)
+    assert not got.outside_module and got.topic["id"] == "pazarlama" and got.to_dict()["module"] == "pazarlama"
+
+
+def test_module_screen_still_redirects_offtopic_and_never_refuses_without_probability():
+    got = screen("Mercimek çorbası tarifi", TopicChooser({OFFTOPIC: 0.97, "finans": 0.03}), module=PAZARLAMA)
+    assert got.intent == OFFTOPIC and got.reply == BI_REDIRECT
+    got = screen("Bu yıl net ciro ne kadar?", TopicChooser({"finans": 1.0}, method=TEXT), module=PAZARLAMA)
+    assert got.intent == DATA and not got.outside_module
+    assert not screen("net ciro", FakeChooser(error=TimeoutError("x")), module=PAZARLAMA).outside_module
+
+
+def test_module_screen_prompt_carries_no_technology_names():
+    prompt = chat_scope.screen_system_prompt(PAZARLAMA)
+    assert "Pazarlama" in prompt and "pazarlama planları" in prompt
+    for name in ("Qwen", "vLLM", "SQL", "LINENET"):
+        assert name not in prompt

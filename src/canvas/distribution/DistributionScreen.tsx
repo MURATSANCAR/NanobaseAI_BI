@@ -17,6 +17,7 @@ import AlertsTab from './AlertsTab';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import { useZekiAskHref } from '@/canvas/zekiAsk';
 
 /** M29 İlk dağılım: dağılım bekleyen kitaplar, izlenenler, BMT görünümü (Bölgem), uyarılar. Sekme adreste (?sekme=). */
 
@@ -46,6 +47,8 @@ const ASK = [
 ];
 
 export default function DistributionScreen() {
+  // ZEKİ öneri soruları bu modülün kapsamıyla sorulur (yalnız modülün konuları cevaplanır).
+  const askHref = useZekiAskHref();
   const qc = useQueryClient();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -191,7 +194,7 @@ export default function DistributionScreen() {
           </div>
           <div className="flex flex-wrap gap-2">
             {ASK.map((s) => (
-              <Link key={s} to={`/genel-bakis?soru=${encodeURIComponent(s)}`} className="min-h-11 rounded-xl bg-slate-100 px-3 py-2 text-[12px] font-semibold text-canvas-ink transition-colors duration-150 hover:bg-slate-200 sm:min-h-0">
+              <Link key={s} to={askHref(s)} className="min-h-11 rounded-xl bg-slate-100 px-3 py-2 text-[12px] font-semibold text-canvas-ink transition-colors duration-150 hover:bg-slate-200 sm:min-h-0">
                 {s}
               </Link>
             ))}

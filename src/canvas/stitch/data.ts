@@ -146,6 +146,12 @@ export type StitchCanvasData = {
     timing?: DbTiming | null;
     /** Boş cevapta verinin bittiği döneme kurulmuş aynı soru; tıklayınca o soru sorulur. */
     retry?: { question: string; busy: boolean; onAsk: (question: string) => void };
+    /** Soru bir modül ekranından geldi: ZEKİ yalnız bu modülün konularını cevaplar; `onClear` kapsamı kaldırır. */
+    scope?: { label: string; busy: boolean; onClear: () => void };
+    /** Soru, sorulduğu modülün dışında kaldı: aynı soru tek tıkla bütün modüllere sorulur. */
+    widen?: { question: string; busy: boolean; onAsk: (question: string) => void };
+    /** Cevabın geldiği modül (ve konu); `to` kişinin açabildiği modül ekranı. */
+    origin?: { label: string; topic: string; to?: string };
     /** Cevabın soru kaydı: altında «Doğru / Kısmen / Yanlış» gösterilir (M50). */
     feedback?: { queryId: string };
     /** «Neden?»: farkın kanal/cari/kitap katkısı; yalnız ayrıştırılabilir cevapta. */

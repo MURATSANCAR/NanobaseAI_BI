@@ -11,10 +11,6 @@
       "label": "Kampüs"
     },
     {
-      "id": "analiz",
-      "label": "Analiz"
-    },
-    {
       "id": "editoryal",
       "label": "Editoryal"
     },
@@ -75,17 +71,17 @@
     },
     {
       "key": "sayfa:panolar",
-      "area": "analiz",
+      "area": "finans",
       "label": "Panolar"
     },
     {
       "key": "sayfa:planli-raporlar",
-      "area": "analiz",
+      "area": "finans",
       "label": "Planlı raporlar"
     },
     {
       "key": "sayfa:uyarilar",
-      "area": "analiz",
+      "area": "finans",
       "label": "Uyarılar"
     },
     {
@@ -1021,21 +1017,21 @@
     },
     {
       "key": "ozellik:pano.duzenle",
-      "area": "analiz",
+      "area": "finans",
       "page": "sayfa:panolar",
       "label": "Panoya kart ekleme ve düzenleme",
       "hint": "Kart ekle, çıkar, boyut, grafik, tazeleme saati"
     },
     {
       "key": "ozellik:rapor.planla",
-      "area": "analiz",
+      "area": "finans",
       "page": "sayfa:planli-raporlar",
       "label": "Planlı rapor oluşturma ve yönetme",
       "hint": "Oluştur, düzenle, şimdi çalıştır (e-posta gider), duraklat, sil"
     },
     {
       "key": "ozellik:uyari.kural",
-      "area": "analiz",
+      "area": "finans",
       "page": "sayfa:uyarilar",
       "label": "Uyarı kuralı yazma",
       "hint": "Kural kaydet, duraklat, sil, şimdi kontrol et"

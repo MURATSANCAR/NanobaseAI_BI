@@ -16,6 +16,11 @@ kendi metnini alır.
 2026-10-01: eski katalog emekliye ayrıldığından beri veri sorusu finans planlayıcısına gider; plan çağrısından önce
 `screen` tek token'lık kapalı seçimle (olasılıklı) yalnız şirket dışı sohbeti ve kimlik sorusunu ayırır. Ret ancak
 olasılık `SCREEN_MIN_PROB` üstündeyse verilir; konu sorulmaz, «bağlı olmayan konu» kararı bu kapıda verilmez.
+
+2026-09-30 kullanıcı kararı (modül kapsamı), 2026-10-03'te bugünkü akışa taşındı: bir modül ekranından sorulan soru yalnız
+o modülün konularıyla cevaplanır (`chat_topics.json` `scopes`). Modül ekranında `screen` aynı tek çağrıda konuyu da seçer;
+konu modülün dışındaysa ve dışarıdaki konuların toplam olasılığı `SCREEN_MIN_PROB` üstündeyse cevap verilmez, ana sayfadaki
+ZEKİ önerilir (`OUT_OF_MODULE`). Ana sayfa kapsamsızdır. Cevap konusunun modülünü taşır (`to_dict` → `module`).
 """
 from __future__ import annotations
 
@@ -34,6 +39,7 @@ BI_REDIRECT = (BI_INTRO + " Bu soru şirketinizin işleriyle ilgili görünmüyo
 TOPICS_FILE = Path(__file__).with_name("chat_topics.json")
 
 IDENTITY, OFFTOPIC, DATA, UNKNOWN = "IDENTITY", "OFFTOPIC", "DATA", "UNKNOWN"
+OUT_OF_MODULE = "OUT_OF_MODULE"
 INTRO_INTENTS = frozenset({IDENTITY, OFFTOPIC})
 _INTENTS = frozenset({IDENTITY, OFFTOPIC, DATA, UNKNOWN})
 
@@ -111,6 +117,23 @@ def topic(topic_id: Optional[str]) -> Optional[dict[str, Any]]:
     return next((t for t in topics() if t["id"] == key), None)
 
 
+@lru_cache(maxsize=1)
+def scopes() -> tuple[dict[str, Any], ...]:
+    with TOPICS_FILE.open(encoding="utf-8") as f:
+        return tuple(json.load(f).get("scopes") or ())
+
+
+def module_scope(module_id: Optional[str]) -> Optional[dict[str, Any]]:
+    """Sorunun sorulduğu modül ekranının kapsamı; ana sayfa, bilinmeyen ya da boş kimlik için None (kapsamsız)."""
+    key = str(module_id or "").strip().lower()
+    return next((m for m in scopes() if m["id"] == key), None) if key else None
+
+
+def out_of_module_reply(module: dict[str, Any], t: dict[str, Any]) -> str:
+    return (f"Bu ekranda ZEKİ yalnız {module['label']} modülünün sorularını cevaplıyor. Sorunuz {t['label']} konusunda; "
+            "ana sayfadaki ZEKİ'ye sorarsanız ilgili modülün verisinden cevaplanır.")
+
+
 def _conf(key: str) -> str:
     """Ekran > ortam > varsayılan (yönetim ayarı). Yönetim modülü yüklenemezse yalnız ortam."""
     try:
@@ -149,6 +172,7 @@ IDENTITY: yalnız selam, test, anlamsız karakterler ya da asistanın kimliği, 
 OFFTOPIC: şirketin işleriyle ilgisiz genel sohbet ya da istek (hava durumu, spor, yemek tarifi, fıkra, genel kültür, kişisel sohbet).
 UNKNOWN: belirsiz. Bilmediğin iş terimi, kısa filtre/değer/dönem, belirsiz rapor isteği DATA ya da UNKNOWN olmalı. Şirket işi içeren karma mesaj DATA olmalı. hasDataContext true ise kısa devam mesajı DATA olmalı.
 topic: DATA ve UNKNOWN için cevabın dayandığı kaydın konusu (soranın birimi değil): fatura, ciro, çek, cari, stok gibi muhasebe kaydı isteyen soru finans, satis ya da stok konusudur. Uyan konu yoksa ya da niyet IDENTITY/OFFTOPIC ise "none".
+screenTopics verilmişse soru bir modül ekranından soruldu: soru o konulardan birine de uyabiliyorsa o konuyu seç; soru açıkça başka bir konunun kaydını istiyorsa o konuyu seç.
 Konular:
 """
 _SYSTEM_TAIL = """
@@ -181,6 +205,10 @@ class Scope:
     connected: bool = True
     #: Plan öncesi kapı (`screen`) kararının ayrıntısı: seçim, olasılıklar, yöntem. Yalnız kayda gider.
     screen: Optional[dict[str, Any]] = None
+    #: Sorunun sorulduğu modül ekranının kapsamı (`module_scope`); ana sayfada None.
+    module: Optional[dict[str, Any]] = None
+    #: Konu modülün dışında ve bu karar cevabı durdurur. `screen` olasılık eşiğiyle verir; `classify` hiç vermez.
+    outside: bool = False
 
     @property
     def is_intro(self) -> bool:
@@ -192,9 +220,16 @@ class Scope:
         return self.intent in (DATA, UNKNOWN) and self.topic is not None and not self.connected
 
     @property
+    def outside_module(self) -> bool:
+        """Modül ekranından sorulan şirket sorusu, o modülün konularından birine ait değil; cevap verilmez."""
+        return self.outside and self.module is not None and self.topic is not None
+
+    @property
     def answer_type(self) -> Optional[str]:
         if self.is_intro:
             return "MODULE_INTRO"
+        if self.outside_module:
+            return OUT_OF_MODULE
         if self.not_connected:
             return "DATA_UNAVAILABLE"
         return None
@@ -206,13 +241,18 @@ class Scope:
             return BI_INTRO
         if self.intent == OFFTOPIC:
             return BI_REDIRECT
+        if self.outside_module:
+            return out_of_module_reply(self.module, self.topic)
         if self.not_connected:
             return not_connected_reply(self.topic)
         return None
 
     def to_dict(self) -> dict[str, Any]:
+        """`module`: konunun ekrandaki evi (menü ana modülü); `screenModule`: sorunun sorulduğu modül (ana sayfada None)."""
         out = {"intent": self.intent, "topic": self.topic["id"] if self.topic else None,
-               "topicLabel": self.topic["label"] if self.topic else None, "connected": self.connected}
+               "topicLabel": self.topic["label"] if self.topic else None, "connected": self.connected,
+               "module": self.topic.get("module") if self.topic else None,
+               "screenModule": self.module["id"] if self.module else None}
         if self.screen is not None:
             out["screen"] = self.screen
         return out
@@ -252,37 +292,43 @@ def strong_phrases(slots: Iterable[Any]) -> list[str]:
 
 
 def classify(question: str, llm=None, *, has_context: bool = False,
-             connected: Optional[Iterable[str]] = None) -> Scope:
+             connected: Optional[Iterable[str]] = None, module: Optional[dict[str, Any]] = None) -> Scope:
     """Mesajın niyeti ve konusu.
 
     Kimlik/selam modelsiz, kalıpla ayrılır (model adı sızmasın, gereksiz model çağrısı olmasın). Geri kalanı
     `llm` verilmişse kapalı küme sınıflandırıcıya sorulur; model yoksa, düşerse ya da tanımsız cevap verirse
     soru DATA sayılır — meşru bir iş sorusu hiçbir hata yüzünden reddedilmez.
+
+    `module` (`module_scope`): soru bir modül ekranından soruldu; sınıflandırıcı modülün konularını bilir ve iki konuya
+    uyan soruda modülünkini seçer. Olasılıksız bu karar cevabı durdurmaz (`outside` hep False): ret `screen`'in işidir.
     """
     if is_identity(question):
-        return Scope(IDENTITY)
+        return Scope(IDENTITY, module=module)
     if llm is None:
-        return Scope(DATA)
+        return Scope(DATA, module=module)
+    said: dict[str, Any] = {"message": question, "hasDataContext": has_context}
+    if module is not None:
+        said.update(screenModule=module["label"], screenTopics=list(module.get("topics") or ()))
     try:
         raw = llm.chat([
             {"role": "system", "content": system_prompt()},
-            {"role": "user", "content": json.dumps({"message": question, "hasDataContext": has_context}, ensure_ascii=False)},
+            {"role": "user", "content": json.dumps(said, ensure_ascii=False)},
         ], max_tokens=60)
     except Exception:  # noqa: BLE001
-        return Scope(DATA)
+        return Scope(DATA, module=module)
     got = _parse(raw)
     intent = str(got.get("intent") or "").strip().upper()
     if intent == "INTRO":            # eski sözleşme: selam/kimlik
         intent = IDENTITY
     if intent not in _INTENTS:
-        return Scope(DATA)
+        return Scope(DATA, module=module)
     if intent in INTRO_INTENTS:
-        return Scope(intent)
+        return Scope(intent, module=module)
     t = topic(got.get("topic"))
     if t is None:
-        return Scope(intent)
+        return Scope(intent, module=module)
     ids = connected_topic_ids() if connected is None else frozenset(connected)
-    return Scope(intent, t, t["id"] in ids)
+    return Scope(intent, t, t["id"] in ids, module=module)
 
 
 # ------------------------------------------------------------------ plan öncesi kapsam kapısı
@@ -304,11 +350,24 @@ _SCREEN_CHOICES = {
 }
 
 
-def screen_system_prompt() -> str:
-    return _SCREEN_SYSTEM.format(areas=", ".join(t["label"] for t in topics()))
+def screen_system_prompt(module: Optional[dict[str, Any]] = None) -> str:
+    head = _SCREEN_SYSTEM.format(areas=", ".join(t["label"] for t in topics()))
+    if module is None:
+        return head
+    inside = ", ".join(t["label"] for t in topics() if t["id"] in set(module.get("topics") or ()))
+    return head + _SCREEN_MODULE.format(module=module["label"], inside=inside)
 
 
-def screen(question: str, llm=None, *, has_context: bool = False) -> Scope:
+#: Modül ekranında aynı kapı konuyu da seçer: seçenekler konular + şirket dışı + asistanın kendisi (tek çağrı).
+_SCREEN_MODULE = """
+Mesaj «{module}» modül ekranından soruldu. Şirket işiyse, cevabın dayandığı kaydın konusunu seç (soranın birimi değil): fatura, ciro, çek, cari, stok gibi muhasebe kaydı isteyen soru finans, satış ya da stok konusudur. Soru bu modülün konularından birine de uyabiliyorsa onu seç; bu modülün konuları: {inside}. Emin değilsen bu modülün konularından birini seç."""
+
+
+def _topic_choice(t: dict[str, Any]) -> str:
+    return f"{t['label']} ({t['hint']})"
+
+
+def screen(question: str, llm=None, *, has_context: bool = False, module: Optional[dict[str, Any]] = None) -> Scope:
     """Plan çağrısından önce ucuz kapsam kararı: tek token kapalı seçim (`QueuedLlm.choose`, olasılıklı).
 
     2026-10-01: eski katalog emekliye ayrılınca (074f3ff26) «güçlü kavram kanıtı» da gitti; kanıtsız her soruyu
@@ -316,12 +375,17 @@ def screen(question: str, llm=None, *, has_context: bool = False) -> Scope:
     model sınıflandırması kaldırılmış, bu yüzden «mercimek çorbası tarifi» 8.192 token'lık finans plan çağrısına gidip
     «hesap tanımı eksik» dönüyordu. Bu kapı o riski tekrar etmez: konu sorulmaz (konu yüzünden ret yok), yalnız
     şirket dışı/kimlik ayrılır ve ret yalnız modelin olasılığı `SCREEN_MIN_PROB` üstündeyse verilir. Olasılık
-    okunamazsa, model düşerse, istemci seçim bilmiyorsa ya da karar düşük olasılıklıysa soru DATA sayılır."""
+    okunamazsa, model düşerse, istemci seçim bilmiyorsa ya da karar düşük olasılıklıysa soru DATA sayılır.
+
+    `module` verilirse (modül ekranı) aynı tek çağrının seçenekleri konulardır (+ şirket dışı, asistanın kendisi): modül
+    dışındaki konuların toplam olasılığı `SCREEN_MIN_PROB` üstündeyse soru cevaplanmaz (`outside_module`)."""
     if is_identity(question):
-        return Scope(IDENTITY)
+        return Scope(IDENTITY, module=module)
     choose = getattr(llm, "choose", None)
     if not callable(choose):
-        return Scope(DATA)
+        return Scope(DATA, module=module)
+    if module is not None:
+        return _screen_module(question, choose, has_context, module)
     options = list(_SCREEN_CHOICES.values())
     prompt = json.dumps({"message": question, "hasDataContext": bool(has_context)}, ensure_ascii=False)
     try:
@@ -336,6 +400,41 @@ def screen(question: str, llm=None, *, has_context: bool = False) -> Scope:
     if got.probs is None or intent == DATA or outside < SCREEN_MIN_PROB:
         return Scope(DATA, screen={**detail, "decision": DATA})
     return Scope(intent, screen={**detail, "decision": intent})
+
+
+def _screen_module(question: str, choose: Any, has_context: bool, module: dict[str, Any]) -> Scope:
+    """Modül ekranının kapısı: tek kapalı seçimde konu, şirket dışı ya da asistanın kendisi.
+
+    Ret iki yerde ve yalnız olasılık okunmuşsa: şirket dışı + kimlik toplamı eşik üstündeyse tanıtım; modül dışındaki
+    konuların toplamı eşik üstündeyse `OUT_OF_MODULE` (konu = dışarıdaki en olası konu). Kararsız kalan, modülün içinde
+    sayılır — meşru bir modül sorusu sınıflandırıcı emin olamadı diye reddedilmez."""
+    inside_ids = set(module.get("topics") or ())
+    by_option = {_topic_choice(t): t for t in topics()}
+    options = [*by_option, _SCREEN_CHOICES[OFFTOPIC], _SCREEN_CHOICES[IDENTITY]]
+    prompt = json.dumps({"message": question, "hasDataContext": bool(has_context)}, ensure_ascii=False)
+    try:
+        got = choose(prompt, options, system=screen_system_prompt(module))
+    except Exception:  # noqa: BLE001
+        return Scope(DATA, screen={"decision": DATA, "reason": "model_unavailable"}, module=module)
+    probs = got.probs or {}
+    picked = by_option.get(got.choice)
+    intro = probs.get(_SCREEN_CHOICES[OFFTOPIC], 0.0) + probs.get(_SCREEN_CHOICES[IDENTITY], 0.0)
+    outside = sum(p for o, p in probs.items() if o in by_option and by_option[o]["id"] not in inside_ids)
+    detail = {"choice": picked["id"] if picked else next((k for k, v in _SCREEN_CHOICES.items() if v == got.choice), None),
+              "outsideModule": round(outside, 4), "outsideCompany": round(intro, 4) if got.probs else None,
+              "method": got.method, "module": module["id"]}
+    if got.probs is None:
+        return Scope(DATA, screen={**detail, "decision": DATA}, module=module)
+    if picked is None and got.choice in (_SCREEN_CHOICES[OFFTOPIC], _SCREEN_CHOICES[IDENTITY]) and intro >= SCREEN_MIN_PROB:
+        intent = OFFTOPIC if got.choice == _SCREEN_CHOICES[OFFTOPIC] else IDENTITY
+        return Scope(intent, screen={**detail, "decision": intent}, module=module)
+    ids = connected_topic_ids()
+    if picked is not None and picked["id"] not in inside_ids and outside >= SCREEN_MIN_PROB:
+        return Scope(DATA, picked, picked["id"] in ids, screen={**detail, "decision": OUT_OF_MODULE}, module=module,
+                     outside=True)
+    if picked is not None and picked["id"] in inside_ids:
+        return Scope(DATA, picked, picked["id"] in ids, screen={**detail, "decision": DATA}, module=module)
+    return Scope(DATA, screen={**detail, "decision": DATA}, module=module)
 
 
 def is_intro(question, llm=None, *, has_context=False) -> bool:
