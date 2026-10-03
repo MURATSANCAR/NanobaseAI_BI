@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — Sürüm kaydı jetonu: kurulum administrator ile koşunca da yazılır
+
+- **Neden:** VM kurulumunda (343d188b) test sunucusu köprüsüne sürüm kaydı 401 aldı: `deploy-customer-vm.sh` administrator ile koşuyor, `SEMANTIC_CALLER_TOKEN` ise root:600 `/etc/nanobase/semantic-bridge.env`'de; boş jetonla gidildi. Kayıt kullanıcı tarafından root ile elle yazıldı (test köprüsü id 3).
+- **Ne:** `scripts/server/itops-report-release.sh` jeton verilmemişse env dosyasından yalnız `SEMANTIC_CALLER_TOKEN` satırını okur (önce doğrudan, olmazsa `sudo -n`); okuyamazsa eski davranış (uyarı, kurulum durmaz). Bir sonraki kurulumda doğrulanacak.
+
 ## 2026-10-03 — E-kitap ↔ basılı otomatik karşılaştırma
 
 - **Neden:** 4 Timaş örneğinde e-kitapta dizin, yazar tanıtımı, reklam sayfaları atılmış, bir kitap eski baskıdan üretilmişti; kullanıcıyla kararlaştırılan planın 2. adımı: her e-kitapta basılıda olup e-kitapta olmayanı editöre göstermek.

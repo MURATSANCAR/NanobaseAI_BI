@@ -17,6 +17,14 @@ BRIDGE="${BRIDGE:-http://127.0.0.1:${SEMANTIC_BRIDGE_PORT:-8795}}"
 IMAGE="${IMAGE:-}"
 NOTE="${NOTE:-}"
 
+# Jeton köprünün env dosyasında (root:600). Kurulum administrator ile koşunca dosya okunamaz, istek boş jetonla 401
+# alır (2026-10-03 VM kurulumu). Jeton verilmemişse yalnız bu satır parolasız sudo ile okunur; sudo yoksa eski davranış.
+BRIDGE_ENV="${BRIDGE_ENV:-/etc/nanobase/semantic-bridge.env}"
+if [[ -z "${SEMANTIC_CALLER_TOKEN:-}" && -f "$BRIDGE_ENV" ]]; then
+  SEMANTIC_CALLER_TOKEN="$( { cat "$BRIDGE_ENV" 2>/dev/null || sudo -n cat "$BRIDGE_ENV" 2>/dev/null; } \
+    | sed -n 's/^SEMANTIC_CALLER_TOKEN=//p' | tail -1 | tr -d "\"'\r")"
+fi
+
 if [[ -z "${APPLEDOUBLE:-}" ]]; then
   APPLEDOUBLE="$(find "$ROOT" -name '._*' -type f -not -path '*/node_modules/*' 2>/dev/null | wc -l | tr -d ' ')"
 fi
