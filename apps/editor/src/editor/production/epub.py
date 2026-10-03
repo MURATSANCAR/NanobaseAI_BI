@@ -1879,8 +1879,14 @@ async def build_job(d: Path, want: str, by: str, llm=None, audio: bool = False) 
                                       audio)
         set_state(d, step="denetim", progress=[0, 0])
         rep = await asyncio.to_thread(check, _dir(d) / FILE)
+        set_state(d, step="karsilastirma", progress=[0, 0])
+        try:
+            from . import epub_compare
+            cmp = await asyncio.to_thread(epub_compare.for_job, d, _dir(d) / FILE)
+        except Exception as e:  # noqa: BLE001 - karşılaştırma e-kitabı durdurmaz
+            cmp = {"error": f"Basılı kitapla karşılaştırılamadı: {type(e).__name__}"}
         st = set_state(d, status="done", step=None, progress=None, finished=time.time(), result=res, check=rep,
-                       inputs=inputs_hash(d, audio), error=None)
+                       compare=cmp, inputs=inputs_hash(d, audio), error=None)
         from . import studio as st_mod
         try:
             st_mod.refresh_preflight(d)
@@ -2197,7 +2203,8 @@ def view(d: Path) -> dict:
                  "stale": 0, "duration": 0}
     return {"status": st.get("status", "none"), "step": st.get("step"), "progress": st.get("progress"),
             "error": st.get("error"), "started": st.get("started"), "finished": st.get("finished"), "by": st.get("by"),
-            "result": st.get("result"), "check": st.get("check"), "stale": st.get("status") == "done" and not fresh,
+            "result": st.get("result"), "check": st.get("check"), "compare": st.get("compare"),
+            "stale": st.get("status") == "done" and not fresh,
             "auto": {"layout": auto[0], "reason": auto[1]}, "has_plan": plan is not None,
             "meta": {"eisbn": m.get("eisbn"), "print_isbn": print_isbn(d) if (d / "manuscript.json").exists() else None},
             "alt": {"total": len(alts), "missing": sum(1 for a in alts if not a["text"]),
@@ -2220,9 +2227,11 @@ def preflight_checks(d: Path) -> list[dict]:
         return [{"name": "E-kitap", "status": "WARN", "detail": f"e-kitap ({kind}) denetiminde {ne} hata"
                  + (f", {nw} uyarı" if nw else "") + " (stüdyoda E-kitap bölümü)"}]
     miss = res.get("alt_missing") or 0
-    return [{"name": "E-kitap", "status": "WARN" if (nw or miss or not res.get("eisbn")) else "OK",
+    gap = (st.get("compare") or {}).get("missing_parts") or 0
+    return [{"name": "E-kitap", "status": "WARN" if (nw or miss or gap or not res.get("eisbn")) else "OK",
              "detail": f"e-kitap ({kind}) denetimden geçti" + (f"; {nw} uyarı" if nw else "")
-             + (f"; {miss} görselin alt metni yok" if miss else "") + ("; e-ISBN yok" if not res.get("eisbn") else "")}]
+             + (f"; {miss} görselin alt metni yok" if miss else "") + ("; e-ISBN yok" if not res.get("eisbn") else "")
+             + (f"; basılıda olup e-kitapta olmayan {gap} parça" if gap else "")}]
 
 
 def content(d: Path, build: str, path: str) -> tuple[bytes, str]:

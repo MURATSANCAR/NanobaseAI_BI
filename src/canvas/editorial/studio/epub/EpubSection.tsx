@@ -7,7 +7,7 @@ import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
 import { narrationApi } from '../narration/api';
 import AltTextList from './AltTextList';
 import EpubPreview from './EpubPreview';
-import { epubApi, isbnOk, useEpub, type EpubAudioInfo, type EpubCheck, type EpubView, type EpubWant } from './api';
+import { epubApi, isbnOk, useEpub, type EpubAudioInfo, type EpubCheck, type EpubCompare, type EpubMissing, type EpubView, type EpubWant } from './api';
 import { StudioInfo } from '../shared';
 import { useCan } from '../../../useAdmin';
 import { Explain } from '../../../components/Explain';
@@ -17,7 +17,10 @@ import { Explain } from '../../../components/Explain';
  *  üret düğmesi ve ilerleme, e-kitap denetiminin sonucu (Türkçe), indir, sayfa sayfa önizleme (sesliyse önizlemede
  *  dinle) ve alt metinleri gözden geçirme. Ekranda teknoloji adı yok. */
 
-const STEP: Record<string, string> = { alt: 'Alt metinler hazırlanıyor', dizgi: 'Sayfalar diziliyor', denetim: 'E-kitap denetleniyor' };
+const STEP: Record<string, string> = {
+  alt: 'Alt metinler hazırlanıyor', dizgi: 'Sayfalar diziliyor', denetim: 'E-kitap denetleniyor',
+  karsilastirma: 'Basılı kitapla karşılaştırılıyor',
+};
 const LAYOUT_TEXT = { fixed: 'Sabit sayfa', reflow: 'Akışkan metin' } as const;
 
 function mb(n: number) {
@@ -59,6 +62,52 @@ function CheckResult({ check }: { check: EpubCheck }) {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function pagesText(p: [number, number]) {
+  return p[0] === p[1] ? `s. ${p[0]}` : `s. ${p[0]}–${p[1]}`;
+}
+
+function MissingItem({ m }: { m: EpubMissing }) {
+  return (
+    <li className="rounded-lg bg-white/70 px-2.5 py-1.5 text-[12px]">
+      <span className="font-bold">{pagesText(m.pages)}</span>
+      <span className="text-canvas-muted"> · {m.words.toLocaleString('tr-TR')} kelime{m.reason ? ` · ${m.reason}` : ''}</span>
+      <span className="mt-0.5 block text-[11.5px] leading-snug text-canvas-muted">«{m.text}…»</span>
+    </li>
+  );
+}
+
+/** Basılı kitapla karşılaştırma: metnin ne kadarı e-kitapta; basılıda olup e-kitapta olmayan parçalar sayfasıyla.
+ *  Bilerek çıkanlar (künye, içindekiler, iç kapak, reklam) ayrı ve kapalı listede. */
+function CompareResult({ cmp }: { cmp: EpubCompare }) {
+  if (cmp.error !== undefined) return <Note tone="warn">{cmp.error}</Note>;
+  const gaps = cmp.missing.filter((m) => !m.expected);
+  const known = cmp.missing.filter((m) => m.expected);
+  const pct = cmp.covered == null ? null : (cmp.covered * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 });
+  const tone = gaps.length ? 'text-amber-800 bg-amber-50' : 'text-emerald-700 bg-emerald-50';
+  const Icon = gaps.length ? AlertTriangle : CheckCircle2;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-bold ${tone}`}>
+        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1">
+          {gaps.length
+            ? `Basılıda olup e-kitapta olmayan ${gaps.length} parça (${cmp.missing_words.toLocaleString('tr-TR')} kelime)`
+            : 'Basılı kitabın bütün metni e-kitapta'}
+        </span>
+        {pct && <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10.5px] font-bold">%{pct} eşleşti</span>}
+        <Explain label="Basılı kitapla karşılaştırma">E-kitabın metni, kitabın okunmuş basılı sayfalarıyla kelime kelime karşılaştırılır. Satır sonu tireleri ve büyük/küçük harf farkı sayılmaz. Künye, içindekiler, iç kapak ve reklam sayfaları e-kitapta bilerek yer almaz; bunlar ayrı listededir.</Explain>
+      </div>
+      {gaps.length > 0 && <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">{gaps.map((m) => <MissingItem key={`${m.pages[0]}-${m.text}`} m={m} />)}</ul>}
+      {known.length > 0 && (
+        <details className="text-[12px]">
+          <summary className="cursor-pointer select-none font-semibold text-canvas-muted">Bilerek çıkarılan {known.length} parça (künye, içindekiler…)</summary>
+          <ul className="mt-1 flex max-h-48 flex-col gap-1 overflow-y-auto">{known.map((m) => <MissingItem key={`${m.pages[0]}-${m.text}`} m={m} />)}</ul>
+        </details>
       )}
     </div>
   );
@@ -239,7 +288,7 @@ export default function EpubSection({ jobId }: { jobId: string }) {
           <div className="grid gap-3 lg:grid-cols-2">
             <div className="flex flex-col gap-2">
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-2xl bg-white/70 p-3 text-[12px]">
-                <dt className="text-canvas-muted">Biçim</dt><dd className="font-bold">{LAYOUT_TEXT[r.layout]}</dd>
+                <dt className="text-canvas-muted">Biçim</dt><dd className="font-bold">{LAYOUT_TEXT[r.layout]}{r.house ? ` · ${r.house} şablonu` : ''}</dd>
                 <dt className="text-canvas-muted">Sayfa / bölüm</dt><dd className="font-bold">{r.pages.length}</dd>
                 <dt className="text-canvas-muted">Görsel</dt><dd className="font-bold">{r.images}{r.alt_missing ? ` · ${r.alt_missing} alt metinsiz` : ' · hepsinin alt metni var'}</dd>
                 <dt className="text-canvas-muted">Ses</dt>
@@ -254,7 +303,10 @@ export default function EpubSection({ jobId }: { jobId: string }) {
                 </ul>
               )}
             </div>
-            {v.check && <CheckResult check={v.check} />}
+            <div className="flex flex-col gap-3">
+              {v.check && <CheckResult check={v.check} />}
+              {v.compare && <CompareResult cmp={v.compare} />}
+            </div>
           </div>
         )}
 

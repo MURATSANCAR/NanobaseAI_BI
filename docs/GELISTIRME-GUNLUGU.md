@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — E-kitap ↔ basılı otomatik karşılaştırma
+
+- **Neden:** 4 Timaş örneğinde e-kitapta dizin, yazar tanıtımı, reklam sayfaları atılmış, bir kitap eski baskıdan üretilmişti; kullanıcıyla kararlaştırılan planın 2. adımı: her e-kitapta basılıda olup e-kitapta olmayanı editöre göstermek.
+- **Ne:** `production/epub_compare.py` (`compare`, `epub_text`, `for_job`), `epub.build_job` denetimden sonra çalıştırır (hata e-kitabı durdurmaz), `view`'da `compare`, ön kontrol satırı; ekran `EpubSection.tsx` `CompareResult` + biçim satırında şablon adı. Test `tests/test_epub_compare.py` (3).
+- **Bulunan kusurlar (kendi kodumda, testle):** kodlama bildirimsiz XHTML Latin-1 okunuyordu; tire birleştirme küçük harften önceydi; Türkçe «İ» casefold'da iki harfe bölünüyordu; paragraflar boşluksuz birleşiyordu.
+- **Gerçek kitapta (Çiçekçi Kadın, canlı işçide kopya):** %98,6 eşleşti; beklenmeyen 3 parça 487 kelime — «Yazarın notu» (s.206–208, 411 kelime, eski iş hikâye dışı saydığı için basılmamış) ve çevirmen tanıtımı.
+
 ## 2026-10-03 — Geniş menü: büyük «Aç» düğmesi, fare çıkınca kendiliğinden kapanır
 
 - **Neden:** kullanıcı ekran görüntüsüyle «metinler sığmıyor (SÖZLEŞMELER taşıyor), menüyü biraz genişlet, fare üzerinden gidince otomatik kapansın, açma kısmı belirgin/büyük ve dönen hareketli olsun» dedi.

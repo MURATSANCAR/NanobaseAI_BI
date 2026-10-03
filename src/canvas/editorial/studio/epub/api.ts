@@ -21,16 +21,25 @@ export type EpubResult = {
   layout: EpubLayout; reason: string; eisbn: string | null; print_isbn: string | null; build: string; size: number;
   pages: EpubPage[]; viewport: [number, number] | null; fonts: EpubFont[]; images: number; alt_missing: number;
   warnings: string[]; seconds: number; a11y: { accessibilitySummary: string }; audio?: EpubAudio | null;
+  house?: string | null;
 };
+/** Basılı kitapla karşılaştırma: basılıda olup e-kitapta olmayan parçalar (sayfasıyla); `expected` = künye, içindekiler
+ *  gibi bilerek çıkan sayfa. Word'den gelen işte basılı kaynak yok (null). */
+export type EpubMissing = { pages: [number, number]; words: number; reason: string | null; expected: boolean; text: string };
+export type EpubCompare = {
+  source_words: number; epub_words: number; covered: number | null; missing: EpubMissing[]; missing_words: number;
+  missing_parts: number; extra: { words: number; text: string }[]; error?: undefined;
+} | { error: string };
 export type EpubView = {
   status: 'none' | 'queued' | 'running' | 'done' | 'fail';
-  step: 'alt' | 'dizgi' | 'denetim' | null;
+  step: 'alt' | 'dizgi' | 'denetim' | 'karsilastirma' | null;
   progress: [number, number] | null;
   error: string | null;
   finished: number | null;
   by: string | null;
   result: EpubResult | null;
   check: EpubCheck | null;
+  compare?: EpubCompare | null;
   stale: boolean;
   auto: { layout: EpubLayout; reason: string };
   has_plan: boolean;
