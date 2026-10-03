@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 (akşam) — Kitaba sor kart servisinde kuruldu, sohbet ajanı her yerde kapatıldı
+
+- **GPU kart servisi:** `55e19446` (yalnız `cards` + `studio`; okumaları kesmemek için worker'a dokunulmadı). Paket önceki sürümün üstüne yalnız değişen 16 dosya, 466 dosyanın md5'i main ile karşılaştırıldı (`VERSION` hariç), Mac artığı 0. Önce `bfa87e96` kuruldu, POST okumaları 500 verdi (denetim bağlamı hatası, bkz. aşağıdaki giriş) → `2989f50d`'ye geri alındı → düzeltme `8511a6e58` → `55e19446`. Arada başka oturum bütün servisleri `078ac055` ile kurdu (göç 035 uygulandı, 54 tetikleyici); `cards`/`studio` düzeltmesiz kaldığı için yeniden `55e19446`'ya alındı.
+- **Ölçüm (test sunucusu köprüsü → kart servisi, aynı 24 soru):** Çiçekçi Kadın 14 soruda 1,4–7,5 sn; çevirmen (Selen Demirtaş) ve orijinal ad (Plant Lady) derin okumayla ~2 sn'de bulundu (hızlı yol bunlara «bulunamadı» diyordu, ajan dakikalarca okuyordu); 13/14 doğru + bölüm sorusu yarım (başlıksız girişi ilk bölüm saydı). «Benim Adım Ekin karakterleri» derin okumayla cevaplandı (90 sn, GPU okumayla meşgul); bir karşılaştırma 168 sn (sıra bekleme, ölçülmedi).
+- **Müşteri VM:** GPU nginx `add-ask-routes.py` (`/editor/cards/v1/books/ask` + `/ask/books` eklendi, `/editor/v1/*` ajan yolları silindi). VM köprüsü: yalnız `editorial_books.py` VM kaynak ağacına (eski md5 = main öncesi doğrulandı), `docker compose build bridge` + `up -d --no-deps bridge`, konteynerde md5 main ile aynı. `.env`'den `EDITOR_API_BASE/KEY`, `EDITOR_MODEL`, `EDITOR_CA_FILE`, `EDITOR_EXTRA_HEADER` silindi. VM köprüsünden gerçek istek: «kim çevirdi» → Selen Demirtaş [s.2] (derin, 35 sn), «Çiçekçi Kadın ana karakteri» → Choi Yuhui (2,5–6 sn; ajan aynı soruya VM'de «bulunamadı» demişti).
+- **Kapatılan:** GPU `editor-hermes` + `editor-mcp` konteynerleri silindi, ajan imajı, `/data/editor/hermes` ve `secrets/ajan.env` silindi; tünel birimi `editor-gpu-tunnel.service`'ten `-R 18887:19110` çıktı (BI model yolu 18885 yeniden 200); test sunucusu `/etc/nanobase/semantic-bridge.env`'den 3 eski satır silindi. Eski 88 sürüm klasörü ve 154 eski editör imajı silindi (çalışan ve başka oturumların kullandığı `ddb3c8b5`, `2989f50d`, `f777934d` imajları tutuldu). GPU kök disk %72 → %38.
+- **Açık:** test sunucusu sshd `PermitListen`'de 18887 boş kalıyor (zararsız); test sunucusu ön yüzünde iç ad süzgecindeki tek kelimelik değişiklik derlenmedi (işlevsel etkisi yok); köprü yeniden başlarken koşan soru «Servis yeniden başladı» ile kayboluyor (ayrı iş).
+
 ## 2026-10-03 — GPU disk temizliği (kullanıcı kararıyla)
 
 - **Tarama (salt okuma):** kök disk %72, `/data` %45. Çalışan konteyner ve ayarla karşılaştırılıp kullanılmayanlar listelendi.
