@@ -41,6 +41,13 @@ Arşiv pilotu denetiminden çıkan üç genel hata sınıfı (kitaba özel kural
 - **Yazı tipi seçimi:** referans fontlarla (Palatino/Cochin/Corbel Mac'ten, Chaparral/Trajan basılı PDF'ten) x-yüksekliği eşitlenmiş harf örtüşmesi; Chaparral için basılı satır görüntüsüyle karşılaştırma.
 - **Doğrulama:** GPU'da stüdyo imajında yeni kod + fontlarla `test_epub.py`, `test_audio_epub.py`, `test_plan.py` 64/64; gerçek iş kopyası (Çiçekçi Kadın) ev stiliyle üretildi, EPUBCheck 0 hata 0 uyarı, 2,2 MB.
 - **Kurulum (GPU, 10:55):** sürüm `/data/editor/releases/b60c6fac` (main'le dosya dosya aynı, Mac artığı 0), imajlar `editor-py:0.15.9-b60c6fac` + stüdyo; yeni imajda 925 test geçti; 10 servis yeni sürümde. Logo `/data/editor/storage/epub-sablon/timas/logo.svg` (basılı Devlerin Savaşı iç kapağından vektör). Canlı işçide iş kopyası: ev stili, logo ve stil dosyası içeride, tam denetim 0/0, 3,8 MB (bölüm başı resimleriyle). Test sunucusu ve VM'de değişen kod yok (stüdyo GPU'da), kurulum gerekmedi.
+## 2026-10-03 — Logo ve CRM tablo/kolon eşleştirmesi (canlı şema × web × veri)
+
+- **Neden:** kullanıcı «Logo'daki tablo ve kolonları bul, tara, internetten neler bulabiliyorsun eşleştir; aynısını CRM için paralel yap, tablo ve kolondaki verilerden de bir şey çıkar» dedi.
+- **Logo (.25):** TİMAŞ firmalarında 3.610 tablo şekli; sözlükte 316. Sözlükte olmayan 2.449 şekil (584'ü boş) ve bilinen tablolarda 3.000 yeni kolon bulundu. Dolu tablolardaki 1.974 yeni kolonun 1.415'i veride hep boş/0/sabit (kullanılmıyor), 200'ü web kaynaklı. 294 standart tablo web kaynaklı açıklandı, 31 kopya asıl tabloya bağlandı. `FICHEOBJECT.LDATA` (zip'li UBL XML) ile `PROFILEID`, `EINVOICETYP`, `SENDMOD`, `DOCUMENTTYPE` kodları veriden çözüldü. `T_USATIS_2006…2014` özel tablolarında yazar/kitaplık/tür/yayın yönetmeni kolonları var (o yıllarda yazar Logo'da da tutulmuş).
+- **CRM (.28):** 2.076 Türkçe etiketsiz kolonun 1.980'i Microsoft kaynağıyla açıklandı (hepsi sistem kolonu). 179 metadata dışı tablo (97 CRM iç, 82 müşteri) ve 171 adsız entity açıklandı. `tblPaymentLog` bilerek okunmadı.
+- **Sınır:** `zekiai` hesabında `VIEW DEFINITION` yok, Logo'daki 10.168 modül tanımı okunamıyor. 1.202 özel view yalnız adı ve kolonlarıyla açıklandı.
+- Müşteri verisi örnekleri taşıyan birleşik sonuç sunucuda kaldı (`/tmp/ltc/out_*.json`). Depoya yalnız web bulguları, betikler ve rapor girdi: `docs/analiz/kolon-eslestirme/`. Sözlüğe (`logo-ldds.json`) aktarım yapılmadı, açık iş.
 
 ## 2026-10-03 — Dal temizliği: main'e taşınanlar, K0776 geri alındı
 
