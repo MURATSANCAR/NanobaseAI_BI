@@ -270,15 +270,16 @@ def cover_requests() -> list[dict]:
             raw = b["title_file"] or (Path(b["archive_path"]).name if b["archive_path"] else None)
             titles = [book_title.from_file(raw)["title"], book_title.clean_stem(raw)] if raw else \
                 [book_title.from_file(b["title"])["title"]]
-            # otomatik ad (CRM/site/künye/dosya) eşleşmeyi yönetmez: önce dosya adı, en son bugünkü ad; kişinin verdiği
-            # ad (ya da kuraldan önceki elle ad) önce gelir
-            titles = titles + [b["title"]] if b.get("title_source") in book_title.SOURCES[1:] else [b["title"], *titles]
+            # otomatik ad (CRM/site/künye/dosya) eşleştirmeye girmez — CRM'den gelen «Arsen Lüpen» kendini yeniden eşleyip
+            # başka kayda düşmesin; kişinin verdiği ad (ya da kuraldan önceki elle ad) önce gelir
+            auto = b.get("title_source") in book_title.SOURCES[1:] and bool(raw)
+            titles = titles if auto else [b["title"], *titles]
             meta = (read_model.card(c, book_id) or {}).get("metadata", [])
             facts = lambda k: list(dict.fromkeys(  # noqa: E731
                 [x["claim"] for x in meta if x.get("subject") == k] +
                 [x["value"] for x in legacy.get(book_id, {}).get(k, [])]))
             out.append({"book_id": book_id, "title": b["title"],
-                        "titles": [t for t in dict.fromkeys(titles) if t],
+                        "titles": [t for t in dict.fromkeys(titles) if t], "title_auto": auto,
                         "isbns": facts("ISBN"),
                         "authors": facts("AUTHOR"), "current_source": b["source"],
                         "current_date": str(b["source_date"]) if b["source_date"] else None,

@@ -147,6 +147,15 @@ def test_a_name_taken_from_the_crm_does_not_re_match_by_itself():
     assert [r["new_kitapId"] for r in rows] == ["k1"] and how == "TITLE"
 
 
+def test_an_automatic_title_is_left_out_of_matching():
+    crm = [_book("k1", "Arsen Lüpen - Herlock Sholmes'e Karşı", "M"), _book("k2", "Arsen Lüpen - Kristal Tıpa", "M"),
+           _book("k3", "Arsen Lüpen - Kontes Cagliostro", "M")]
+    b = {"title": "Arsen Lüpen", "titles": ["Arsen Lupen Herlock", "arsen lupen herlock baski"], "title_auto": True}
+    how, rows, _ = C.match_book(crm, b)
+    assert (how, [r["new_kitapId"] for r in rows]) == ("PARTIAL", ["k1"])
+    assert C.match_book(crm, {**b, "title_auto": False})[0] == "AMBIGUOUS"     # kişinin adı önce gelir
+
+
 def test_only_new_or_changed_books_are_read_again():
     from datetime import datetime
     crm = [_book("g1", "Hafıza Bakımı", "Bora Jin", project="p1")]          # ModifiedOn 2026-01-02

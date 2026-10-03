@@ -334,6 +334,14 @@ def own_name(rows: list[dict]) -> str | None:
     return first_part(best["new_name"])
 
 
+def match_book(books: list[dict], b: dict) -> tuple[str, list[dict], str]:
+    """Editörün bir kitabı için eşleme. `title_auto`: bugünkü ad editörün kendi çıkardığı ad (CRM/site/künye/dosya);
+    eşleştirmeye girmez, yalnız `titles` (dosya adı) aranır."""
+    titles = b.get("titles") or []
+    title = titles[0] if b.get("title_auto") and titles else b["title"]
+    return match(books, b.get("isbns") or [], title, b.get("authors") or [], titles)
+
+
 def unchanged(b: dict, m: tuple[str, list[dict], str], alternatives: dict) -> bool:
     """Kitabın son aramasından beri hiçbir şey değişmedi mi (yeniden okumaya ve göndermeye gerek yok)."""
     last = b.get("last_lookup")
@@ -358,8 +366,7 @@ def unchanged(b: dict, m: tuple[str, list[dict], str], alternatives: dict) -> bo
 
 def report(cur, books: list[dict], b: dict, with_image: bool = True, m: tuple | None = None) -> dict:
     import base64
-    how, rows, detail = m or match(books, b.get("isbns") or [], b["title"], b.get("authors") or [],
-                                   b.get("titles") or [])
+    how, rows, detail = m or match_book(books, b)
     rep = {"book_id": b.get("book_id"), "matched_by": how, "candidates": [], "outcome": "NO_MATCH",
            "detail": detail or None}
     if how == "AMBIGUOUS":
@@ -406,7 +413,7 @@ def main(argv: list[str]) -> int:
     seen = skipped = failed = 0
     for b in api("requests")["books"]:
         seen += 1
-        m = match(books, b.get("isbns") or [], b["title"], b.get("authors") or [], b.get("titles") or [])
+        m = match_book(books, b)
         if not full and unchanged(b, m, alternatives):
             skipped += 1
             continue
