@@ -163,13 +163,35 @@ def note_checks(job_id: str, lost: list[str]) -> None:
                " WHERE id=%s RETURNING id", db.J(lost), job_id)
 
 
-async def outputs(gid: str, profile: str) -> dict:
-    from . import archive, rebuild
-    try:
-        res = await (archive.run_outputs(gid) if profile == "archive" else rebuild.run(gid))
-    except Exception as e:  # noqa: BLE001 - the step itself is done; the outputs stay queued / reported
-        return {"technical_status": "FAILED", "error": f"{type(e).__name__}: {e}"[:300]}
-    return {"technical_status": res.get("technical_status")}
+#: Altyapı hatasında (bağlantı koptu, model meşgul/açılmıyor: `transient.is_transient`) yeniden denemeden önce
+#: beklenen saniyeler. 2026-10-03 onarımında çıktıların yeniden üretimi «bağlantı hatası» ile düşüp öyle kalmıştı.
+OUTPUT_RETRY_WAITS = (30.0, 90.0, 180.0)
+
+
+async def outputs(gid: str, profile: str, waits: tuple[float, ...] | None = None, sleep=asyncio.sleep) -> dict:
+    """Çıktıları yeniden kurar. Altyapı hatasında bekleyip yeniden dener; denemeler biter ya da üretici meşgulse
+    (BUSY: kilit başka süreçte; CAPACITY_WAIT: kart dolu) iş `editor-rebuild` kuyruğuna bırakılır (`rebuild.requeue`)
+    ve QUEUED döner — düşmez. Kitabın içeriğinden gelen hata FAILED olarak raporlanır (yeniden denenmez)."""
+    from . import archive, rebuild, transient
+    waits = OUTPUT_RETRY_WAITS if waits is None else waits
+    for attempt in range(len(waits) + 1):
+        try:
+            res = await (archive.run_outputs(gid) if profile == "archive" else rebuild.run(gid))
+        except Exception as e:  # noqa: BLE001 - the step itself is done; the outputs stay queued / reported
+            err = f"{type(e).__name__}: {e}"[:300]
+            if not transient.is_transient(e):
+                return {"technical_status": "FAILED", "error": err}
+            if attempt < len(waits):
+                await sleep(waits[attempt])
+                continue
+            queued = await asyncio.to_thread(rebuild.requeue, gid, "backfill:transient")
+            return {"technical_status": "QUEUED" if queued else "FAILED", "error": err, "attempts": attempt + 1}
+        status = res.get("technical_status")
+        if status in ("BUSY", "CAPACITY_WAIT"):
+            queued = await asyncio.to_thread(rebuild.requeue, gid, "backfill:" + status.lower())
+            return {"technical_status": "QUEUED" if queued else status, "reason": status}
+        return {"technical_status": status}
+    raise AssertionError("unreachable")
 
 
 async def proofread(gid: str, resume: bool) -> tuple[dict, list[str], list[str]]:

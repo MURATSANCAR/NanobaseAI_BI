@@ -212,12 +212,31 @@ def card(c, book_id: str) -> dict | None:
         identity = characters(snap, mentions=counts)
     # K18: unnamed figures mentioned at most twice are «diğer kişiler», not the cast
     main, others = split_minor(identity)
+    title = c.execute('SELECT title FROM ed.book WHERE id=%s', (book_id,)).fetchone()['title']
     return {**selected, 'book_id': book_id, 'card_id': row['build_key'] if row else None,
-            'title': c.execute('SELECT title FROM ed.book WHERE id=%s', (book_id,)).fetchone()['title'],
+            'title': title,
             'created_at': row['created_at'] if row else None,
-            'summary': content.get('summary', []), 'metadata': content.get('metadata', []),
+            'summary': content.get('summary', []),
+            'metadata': reviewed_metadata(c, book_id, title, content.get('metadata', [])),
             'themes': content.get('themes', []), 'key_events': content.get('events', []),
             'characters': main, 'other_characters': others, 'blockers': content.get('blockers', [])}
+
+
+def reviewed_metadata(c, book_id: str, title: str, meta: list[dict]) -> list[dict]:
+    """Kartın künye satırları `metadata_review` ile (dizi sloganı TITLE → SERIES, dizi kitabı TITLE işaretli,
+    kişi adı yayınevi düşer, yazar adına karışmış kitap adı kırpılır). Kayıt değişmez; okurken uygulanır."""
+    if not meta:
+        return meta or []
+    from . import metadata_review as MR
+    from .book_title import segments
+    crm = c.execute('SELECT crm_title, authors, illustrators FROM ed.book_crm_record WHERE book_id=%s',
+                    (book_id,)).fetchone() or {}
+    names = [title, crm.get('crm_title'), *segments(crm.get('crm_title') or '')]
+    people = [*(crm.get('authors') or []), *(crm.get('illustrators') or []),
+              *[m.get('claim') for m in meta if m.get('subject') in ('ILLUSTRATOR', 'TRANSLATOR')]]
+    ctx = MR.context(c)
+    return MR.review(meta, names=[n for n in names if n], people=[p for p in people if p],
+                     shared=ctx['shared'], publishers=ctx['publishers'])
 
 
 def cards() -> list[dict]:

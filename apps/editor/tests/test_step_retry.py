@@ -420,3 +420,45 @@ def test_backfill_apply_marks_only_finished_steps(monkeypatch):
     res = asyncio.run(B.apply_one({"generation_id": "g", "job_id": "j", "profile": "full",
                                    "steps": ["identity", "proofreading"]}))
     assert done == ["identity"] and res["identity"]["characters"] == 3 and res["proofreading"]["transient"]
+
+
+def _outputs_with(monkeypatch, results):
+    """backfill.outputs, rebuild.run sırayla `results`ı verir (istisna ise yükseltir); bekleme ve kuyruk sayılır."""
+    from editor import backfill as B, rebuild
+    calls, slept, queued = [], [], []
+
+    async def run(gid):
+        r = results[len(calls)]
+        calls.append(gid)
+        if isinstance(r, BaseException):
+            raise r
+        return r
+
+    async def sleep(s):
+        slept.append(s)
+    monkeypatch.setattr(rebuild, "run", run)
+    monkeypatch.setattr(rebuild, "requeue", lambda gid, reason="": queued.append(reason) or True)
+    return B, calls, slept, queued, sleep
+
+
+def test_backfill_outputs_retries_infrastructure_errors_then_succeeds(monkeypatch):
+    B, calls, slept, queued, sleep = _outputs_with(
+        monkeypatch, [ConnectionError("bağlantı koptu"), {"technical_status": "SUCCEEDED"}])
+    res = asyncio.run(B.outputs("g", "full", waits=(1.0, 2.0), sleep=sleep))
+    assert res == {"technical_status": "SUCCEEDED"} and len(calls) == 2 and slept == [1.0] and queued == []
+
+
+def test_backfill_outputs_queues_when_busy_or_still_failing(monkeypatch):
+    B, calls, slept, queued, sleep = _outputs_with(monkeypatch, [{"technical_status": "BUSY"}])
+    res = asyncio.run(B.outputs("g", "full", waits=(1.0,), sleep=sleep))
+    assert res["technical_status"] == "QUEUED" and queued == ["backfill:busy"] and slept == []
+    B, calls, slept, queued, sleep = _outputs_with(
+        monkeypatch, [ConnectionError("x"), ConnectionError("y")])
+    res = asyncio.run(B.outputs("g", "full", waits=(1.0,), sleep=sleep))
+    assert res["technical_status"] == "QUEUED" and len(calls) == 2 and queued == ["backfill:transient"]
+
+
+def test_backfill_outputs_does_not_retry_book_errors(monkeypatch):
+    B, calls, slept, queued, sleep = _outputs_with(monkeypatch, [ValueError("Rebuild retry budget exhausted")])
+    res = asyncio.run(B.outputs("g", "full", waits=(1.0, 2.0), sleep=sleep))
+    assert res["technical_status"] == "FAILED" and len(calls) == 1 and slept == [] and queued == []

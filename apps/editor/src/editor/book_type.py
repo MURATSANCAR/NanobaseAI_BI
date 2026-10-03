@@ -273,7 +273,7 @@ async def profile(generation_id: str) -> dict:
         " WHERE book_version_id=%s", settings().min_illustration_ink, info["book_version_id"])
     genres = list(rec.get("genres") or [])
     crm = crm_forms(genres, rec.get("web_categories"))
-    detail: dict = {"crm": crm}
+    detail: dict = {"crm": crm, "rule_version": RULE_VERSION}
     # A book of the archive (editor.archive) carries its shelf: Cocuk/6-9_yas, Kurgu, Kurgu_Disi. It
     # stands in for the CRM record where that is missing, never over it.
     arc = None if rec.get("audience") and len(crm["forms"]) == 1 else await asyncio.to_thread(_archive_hint, generation_id)
@@ -317,6 +317,103 @@ async def profile(generation_id: str) -> dict:
     return await asyncio.to_thread(_stored, generation_id)
 
 
+# ------------------------------------------------------------------ kural sürümü, yeniden hesap
+#: Kural tabanlı tür kararının sürümü (form_detail.rule_version). 1: CRM / arşiv rafı; 2 (2026-10-03): «kitap
+#: değil» sayfa kuralı (NOT_A_BOOK). Profil bir kez yazılır; kural sonradan eklenince eski okumanın profili eski
+#: kuralla kalıyordu (bir yayınevi kataloğu modelce FICTION yazılmıştı). Sürümü düşük profil yeniden üretimde
+#: (rebuild.run → refresh_if_stale) ve tek seferlik komutla (`python -m editor.book_type recheck`) kurala göre
+#: yeniden hesaplanır. Editörün kararı (form_source='EDITOR') hiç değişmez.
+RULE_VERSION = 2
+
+
+def rule_form(generation_id: str) -> dict | None:
+    """Kural tabanlı tür kararı, model çağrısı olmadan (profile() ile aynı sıra): CRM tek tür söylemiyorsa kitabın
+    sayfaları «kitap değil» mi; CRM tek tür; CRM tür söylemiyorsa arşiv rafının tek türü. Kural bir şey
+    söylemiyorsa (tür modelin seçimine kalır) None. Döner {form, form_source, detail}. Salt okuma."""
+    info = db.one("SELECT b.id AS book_id, g.book_version_id FROM generation g JOIN book_version bv"
+                  " ON bv.id=g.book_version_id JOIN book b ON b.id=bv.book_id WHERE g.id=%s", generation_id)
+    if info is None:
+        return None
+    rec = db.one("SELECT genres, web_categories FROM book_crm_record WHERE book_id=%s", info["book_id"]) or {}
+    crm = crm_forms(list(rec.get("genres") or []), rec.get("web_categories"))
+    if len(crm["forms"]) != 1:
+        n = db.one("SELECT count(*) AS n FROM page WHERE book_version_id=%s", info["book_version_id"])["n"]
+        nab = _not_a_book_of(generation_id, int(n))
+        if nab:
+            return {"form": NOT_A_BOOK, "form_source": "RULE", "detail": {"not_a_book": nab}}
+    if len(crm["forms"]) == 1:
+        return {"form": crm["forms"][0], "form_source": "CRM", "detail": {"crm": crm}}
+    arc_forms = [f for f in (_archive_hint(generation_id) or {}).get("forms") or [] if f in FORMS]
+    if not crm["forms"] and len(arc_forms) == 1:
+        return {"form": arc_forms[0], "form_source": "ARCHIVE", "detail": {}}
+    return None
+
+
+def stale(row: dict | None) -> bool:
+    """Profil kuralın eski sürümüyle mi yazılmış (editörün kararı hiç eski sayılmaz)."""
+    if not row or row.get("form_source") == "EDITOR":
+        return False
+    return int((row.get("form_detail") or {}).get("rule_version") or 1) < RULE_VERSION
+
+
+def recheck(generation_id: str, apply: bool = False) -> dict | None:
+    """Kayıtlı profili kuralın bugünkü sürümüyle karşılaştırır. Döner {generation_id, before, after, changed} ya da
+    None (profil yok / editör kararı). `apply`: kural sonucu farklıysa form/form_source yazılır (eski karar
+    form_detail.recheck'te kalır); her durumda rule_version damgalanır (bir daha sorulmaz)."""
+    row = _stored(generation_id)
+    if not row or row.get("form_source") == "EDITOR":
+        return None
+    got = rule_form(generation_id)
+    changed = bool(got) and got["form"] != row["form"]
+    out = {"generation_id": generation_id, "before": {"form": row["form"], "form_source": row["form_source"]},
+           "after": {"form": got["form"], "form_source": got["form_source"]} if got else None,
+           "changed": changed}
+    if apply:
+        detail = dict(row.get("form_detail") or {}) | {"rule_version": RULE_VERSION}
+        if changed:
+            detail |= got["detail"] | {"recheck": out["before"]}
+            db.one("UPDATE book_profile SET form=%s, form_source=%s, form_detail=%s WHERE generation_id=%s"
+                   " AND form_source<>'EDITOR' RETURNING generation_id", got["form"], got["form_source"],
+                   db.J(detail), generation_id)
+        else:
+            db.one("UPDATE book_profile SET form_detail=%s WHERE generation_id=%s AND form_source<>'EDITOR'"
+                   " RETURNING generation_id", db.J(detail), generation_id)
+    return out
+
+
+def refresh_if_stale(generation_id: str) -> dict | None:
+    """Yeniden üretim yolu: profil kuralın eski sürümüyle yazıldıysa kurala göre yeniden hesaplanır."""
+    row = _stored(generation_id)
+    return recheck(generation_id, apply=True) if stale(row) else None
+
+
+def _read_generations() -> list[dict]:
+    """Okunmuş kitaplar: kitap başına profili olan en yeni nesil."""
+    return db.all_rows("SELECT DISTINCT ON (bv.book_id) g.id, b.title FROM generation g JOIN book_version bv"
+                       " ON bv.id=g.book_version_id JOIN book b ON b.id=bv.book_id JOIN book_profile p"
+                       " ON p.generation_id=g.id ORDER BY bv.book_id, g.created_at DESC, g.id DESC")
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    import json
+    ap = argparse.ArgumentParser(prog="python -m editor.book_type")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    rc = sub.add_parser("recheck", help="okunmuş kitapların türünü bugünkü kurala göre yeniden hesapla")
+    rc.add_argument("--generation", action="append", default=[])
+    rc.add_argument("--apply", action="store_true", help="yaz (varsayılan: kuru, yalnız listeler)")
+    a = ap.parse_args(argv)
+    gens = [{"id": g, "title": ""} for g in a.generation] or _read_generations()
+    changed = 0
+    for g in gens:
+        r = recheck(str(g["id"]), apply=a.apply)
+        if r and r["changed"]:
+            changed += 1
+            print(json.dumps({"title": g.get("title"), **r}, ensure_ascii=False, default=str))
+    print(json.dumps({"generations": len(gens), "changed": changed, "applied": a.apply}, ensure_ascii=False))
+    return 0
+
+
 def _not_a_book_of(generation_id: str, page_count: int) -> dict | None:
     """`not_a_book` over the generation's read pages (text layer + OCR, as the reading saw them)."""
     from . import source
@@ -340,3 +437,7 @@ def describe(p: dict) -> str:
             "EXPOSITORY": "fikir ya da bilgi", "ACTIVITY": "etkinlik", "POETRY": "şiir"}.get(p["form"], "")
     drawn = "resimli " if p.get("pages") and p.get("illustrated_pages", 0) >= 0.3 * p["pages"] else ""
     return f"{reader}{drawn}{kind + ' ' if kind else ''}bir kitap".replace("  ", " ")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -42,7 +42,7 @@ import re
 import unicodedata
 from typing import Any
 
-from . import budget, foundation, llm, read_model, source
+from . import budget, foundation, llm, metadata_review, read_model, source
 
 log = logging.getLogger("editor.quick_answer")
 
@@ -141,7 +141,8 @@ def library(c) -> list[dict]:
             "themes": card["themes"] or [], "events": card["key_events"] or [],
             "characters": card["characters"] or [], "other_characters": card.get("other_characters") or [],
             "recommendation": recs.get(bid),
-            "names": [card["title"], cr.get("crm_title"), *_meta_values(meta, "TITLE")]})
+            # dizi sloganı / dizinin başka kitabı kitabın adı değildir (metadata_review)
+            "names": [card["title"], cr.get("crm_title"), *metadata_review.title_values(meta)]})
     return sorted(books, key=lambda b: norm(b["crm_title"] or b["title"]))
 
 

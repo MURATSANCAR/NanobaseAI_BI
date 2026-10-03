@@ -188,3 +188,37 @@ def test_credit_names_are_not_characters(name, quote, page, role):
 def test_people_of_the_text_stay_characters(name, quote, page):
     from editor.naming import credit_role
     assert credit_role(name, quote, page, 208) is None
+
+
+# --- 2026-10-03: profil kuraldan eskiyse yeniden hesaplanır (kural sürümü) -----------------------------------
+def test_stale_profile_is_recomputed_by_rule_editor_decision_kept(monkeypatch):
+    rows = {"g1": {"generation_id": "g1", "form": "FICTION", "form_source": "MODEL", "form_detail": {}},
+            "g2": {"generation_id": "g2", "form": "FICTION", "form_source": "EDITOR", "form_detail": {}},
+            "g3": {"generation_id": "g3", "form": "FICTION", "form_source": "MODEL",
+                   "form_detail": {"rule_version": bt.RULE_VERSION}}}
+    writes = []
+    monkeypatch.setattr(bt, "_stored", lambda gid: rows.get(gid))
+    monkeypatch.setattr(bt, "rule_form", lambda gid: {"form": bt.NOT_A_BOOK, "form_source": "RULE",
+                                                      "detail": {"not_a_book": {"reason": "CATALOGUE"}}})
+    monkeypatch.setattr(bt.db, "one", lambda sql, *a: writes.append((sql.split()[0], a)) or {"generation_id": a[-1]})
+    monkeypatch.setattr(bt.db, "J", lambda x: x)
+    assert bt.stale(rows["g1"]) and not bt.stale(rows["g2"]) and not bt.stale(rows["g3"])
+    # kuru: yazmaz, değişeni söyler
+    r = bt.recheck("g1")
+    assert r["changed"] and r["after"]["form"] == bt.NOT_A_BOOK and writes == []
+    assert bt.recheck("g2") is None                                 # editörün kararı
+    assert bt.refresh_if_stale("g3") is None                        # güncel kuralla yazılmış
+    r = bt.refresh_if_stale("g1")
+    assert r["changed"] and writes and writes[0][1][0] == bt.NOT_A_BOOK
+    assert writes[0][1][2]["rule_version"] == bt.RULE_VERSION and writes[0][1][2]["recheck"]["form"] == "FICTION"
+
+
+def test_recheck_without_rule_answer_keeps_model_form_and_stamps(monkeypatch):
+    row = {"generation_id": "g", "form": "FICTION", "form_source": "MODEL", "form_detail": {"model": {}}}
+    writes = []
+    monkeypatch.setattr(bt, "_stored", lambda gid: row)
+    monkeypatch.setattr(bt, "rule_form", lambda gid: None)
+    monkeypatch.setattr(bt.db, "one", lambda sql, *a: writes.append(a) or {"generation_id": "g"})
+    monkeypatch.setattr(bt.db, "J", lambda x: x)
+    r = bt.refresh_if_stale("g")
+    assert not r["changed"] and len(writes) == 1 and writes[0][0] == {"model": {}, "rule_version": bt.RULE_VERSION}

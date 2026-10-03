@@ -65,6 +65,25 @@ def activate(gid: str):
             "updated_at=now()",(gid,state['knowledge_revision']))
 
 
+def requeue(gid: str, reason: str = 'requeued') -> bool:
+    """Çıktı yeniden üretimini `editor-rebuild` kuyruğuna (ed.rebuild_request) bırakır: istek yoksa açılır, varsa
+    neslin güncel bilgi sürümüne kadar bekleyen sayılır ve bekleme süresi kalkar. Üretici o an meşgulse (kilit
+    başka süreçte) ya da altyapı hatası sürüyorsa iş düşmez, kuyruktan sırası gelince kurulur. Mühürlü/izlenmeyen
+    nesilde hiçbir şey yazılmaz (False). Deneme hakkı sıfırlanır: yalnız altyapı hatası / meşguliyet sonrası
+    çağrılır, kitabın içeriğinden gelen hata hakkı yememeli."""
+    with db.tx() as c:
+        state=c.execute("SELECT s.knowledge_revision,s.producer_completed,s.origin,g.sealed_at FROM ed.generation_state s"
+            " JOIN ed.generation g ON g.id=s.generation_id WHERE s.generation_id=%s",(gid,)).fetchone()
+        if not state or state['sealed_at'] is not None or state['origin']!='TRACKED' or not state['producer_completed']:
+            return False
+        c.execute("INSERT INTO ed.rebuild_request(generation_id,requested_revision,reason) VALUES(%s,%s,%s) "
+            "ON CONFLICT(generation_id) DO UPDATE SET requested_revision=GREATEST(ed.rebuild_request.requested_revision,"
+            "EXCLUDED.requested_revision),completed_revision=LEAST(ed.rebuild_request.completed_revision,"
+            "EXCLUDED.requested_revision-1),retry_after=NULL,attempts=0,updated_at=now()",
+            (gid,state['knowledge_revision'],reason[:60]))
+    return True
+
+
 async def validate(gid: str) -> dict:
     from . import knowledge, quality
     token=str(uuid.uuid4())
@@ -182,7 +201,11 @@ def failed(gid,error):
     # A capacity failure gives the attempt back (run() charged it up front) and waits
     # longer before the next one; only failures the input itself causes spend the budget.
     capacity=is_capacity_error(error)
-    keep="GREATEST(r.attempts-1,0)" if capacity else "r.attempts"
+    # Altyapı hatası (bağlantı koptu, model meşgul: editor.transient) da kitabın hakkını yemez (2026-10-03 onarımı:
+    # bağlantı hatasıyla yeniden denenen çıktı üretimi hakkı bitirip «retry budget exhausted» ile düşüyordu).
+    from .transient import is_transient
+    infra=isinstance(error,BaseException) and is_transient(error)
+    keep="GREATEST(r.attempts-1,0)" if capacity or infra else "r.attempts"
     wait=CAPACITY_BACKOFF if capacity else "interval '5 minutes'"
     with db.tx() as c:
         c.execute("UPDATE ed.derived_artifact SET state='FAILED',updated_at=now() WHERE generation_id=%s AND state='BUILDING'",(gid,))
@@ -318,6 +341,15 @@ async def run(gid: str) -> dict:
         done=await asyncio.to_thread(_start,gid,owner)
         if done is not None:
             return done
+        # Profil kuralın eski sürümüyle yazıldıysa (book_type.RULE_VERSION) kurala göre yeniden hesaplanır: çıktılar
+        # (katalog engelleri, öneri) güncel türle kurulur. Hata yeniden üretimi durdurmaz.
+        try:
+            from . import book_type
+            changed=await asyncio.to_thread(book_type.refresh_if_stale,gid)
+            if changed and changed.get('changed'):
+                log.info('profile recomputed by rule: %s', json.dumps(changed,ensure_ascii=False,default=str))
+        except Exception as exc:  # noqa: BLE001
+            log.warning('profile rule recheck failed for %s: %s', gid, exc)
         # Model upgrades require an explicit new analysis generation. Never
         # silently rebuild a recorded profile using a different model revision.
         from .llm import aliases

@@ -447,7 +447,12 @@ def evidence(c, book_id: str) -> dict:
                          " ORDER BY created_at DESC LIMIT 1", (book_id,)).fetchone()
         if last and last["outcome"] == "AMBIGUOUS" and last["crm_title"]:
             crm_name = {"title": last["crm_title"], "by": "SAME_NAME"}
-    return {"crm": crm_name, "titles": [r["claim"] for r in rows if r["subject"] == "TITLE"],
+    # birçok kitabın künyesinde aynı TITLE (dizi sloganı/dizi adı, metadata_review) kitabın adı adayı değildir;
+    # dizinin başka kitabının adı aday kalır: dosya adına uymadığı için «künyede farklı ad» diye gözden geçire düşer
+    from . import metadata_review
+    shared = metadata_review.context(c)["shared"] if rows else {}
+    return {"crm": crm_name, "titles": [r["claim"] for r in rows if r["subject"] == "TITLE"
+                                        and metadata_review.fold(r["claim"]) not in shared],
             "isbns": [x for x in [crm.get("isbn"), *[r["claim"] for r in rows if r["subject"] == "ISBN"]] if x],
             "authors": [*(crm.get("authors") or []), *[r["claim"] for r in rows if r["subject"] == "AUTHOR"]]}
 
