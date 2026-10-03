@@ -640,6 +640,11 @@ async def resolve_character_identity(generation_id: str, final_attempt: bool = F
                  ch.get("kind") or "UNKNOWN",
                  db.J({**{k: ch.get(k) or "UNKNOWN" for k in ("sex", "age_band", "entity_scope")},
                        "name_origin": name_origin, "descriptive_labels": labels,
+                       # K18: the book never writes it as a name («Kadın», «Annesi»): a figure, listed apart
+                       # when rarely mentioned (identity_links.is_minor)
+                       "unnamed": not naming.is_proper_name(canonical, written_text,
+                                                            min_share=st.proper_name_min_share,
+                                                            min_uses=st.proper_name_min_uses),
                        "names_refused": verdict["dropped"], "description_pages": desc_pages}))).fetchone()
             for m in mids:
                 sure = float(by_id[m]["confidence"]) >= 0.75 and conf >= 0.75 and m not in conflicted

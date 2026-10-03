@@ -411,8 +411,14 @@ async def build_card(generation_id: str) -> dict:
                                key=lambda r: int(r["payload"].get("order", 0)))]
     themes = [{"theme": r["subject"], "text": r["claim"], "pages": r["source_pages"], "claim_id": str(r["id"])}
               for r in _claims(generation_id, "kind='THEME' AND payload->>'level'='book'")]
-    chars = db.all_rows("SELECT canonical_name AS name, aliases, description FROM character WHERE"
-                        " generation_id=%s AND identity_status='CONFIRMED' ORDER BY first_page", generation_id)
+    chars = db.all_rows("SELECT canonical_name AS name, aliases, description, traits,"
+                        " (SELECT count(*) FROM character_mention m WHERE m.character_id = character.id) AS mentions"
+                        " FROM character WHERE generation_id=%s AND identity_status='CONFIRMED' ORDER BY first_page",
+                        generation_id)
+    # K18: an unnamed figure mentioned at most twice is not the book's cast (the record stays)
+    from .identity_links import is_minor
+    chars = [{k: c[k] for k in ("name", "aliases", "description")} for c in chars
+             if not is_minor(c["name"], c.get("traits"), int(c.get("mentions") or 0))]
     events = [{"role": r["narrative_role"], "text": r["summary"], "pages": [r["page_from"]],
                "claim_id": str(r["claim_id"])}
               for r in db.all_rows(

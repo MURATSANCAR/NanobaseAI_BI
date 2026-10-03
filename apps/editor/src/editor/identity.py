@@ -483,11 +483,24 @@ def same_name_refusal(a: dict, b: dict) -> str | None:
     bad = qualifier_refusal([a['name'], *(a.get('aliases') or [])], [b['name'], *(b.get('aliases') or [])])
     if bad:
         return bad
-    sa, sb = stage_of([a]), stage_of([b])
+    sa, sb = unit_stage(a), unit_stage(b)
     if sa and sb and sa != sb:
         child, adult = (a, b) if sa == 'HUMAN_CHILD' else (b, a)
         return life_stage_refusal(child['pages'], adult['pages'])
     return None
+
+
+def unit_stage(u: dict) -> str | None:
+    """The unit's life stage for a join decision. K19 (2026-10-03): a record named «Ad + abla/abi/teyze…» was read
+    as an adult BECAUSE of the address word, and «Yasemin abla» / «Yasemin» were refused as LIFE_STAGE_ORDER — but an
+    «abla» is as often a child. For such a record (`stage_from_address`) only the text's own age evidence counts
+    (`age_evidence`: «on iki yaşında», «bebek»; identity_links.text_stage); without it the stage is unknown.
+    Grandparent words (dede, nine, babaanne, anneanne) are a generation, not a guess: their stage stands (a
+    grandfather and the grandson named after him stay two people)."""
+    if u.get('stage_from_address'):
+        ev = u.get('age_evidence')
+        return ev if ev in LIFE_STAGES else None
+    return stage_of([u])
 
 
 def proper_name_test(text: str):
@@ -552,6 +565,8 @@ def is_relative_label(name: str) -> bool:
 FAMILY_ADDRESS = {'abla': 'FEMALE', 'ağabey': 'MALE', 'abi': 'MALE', 'teyze': 'FEMALE', 'hala': 'FEMALE',
                   'amca': 'MALE', 'dayı': 'MALE', 'yenge': 'FEMALE', 'enişte': 'MALE', 'dede': 'MALE',
                   'nine': 'FEMALE', 'babaanne': 'FEMALE', 'anneanne': 'FEMALE'}
+#: address words that name a generation (a grandparent), not a guess at an age: their life stage stands
+ELDER_ADDRESS = frozenset({'dede', 'nine', 'babaanne', 'anneanne'})
 _TITLE_WORDS = frozenset({'paşa', 'sultan', 'han', 'hanım', 'bey', 'efendi', 'ağa', 'şeyh', 'hz', 'hazreti',
                           'hoca', 'usta', 'molla', 'hacı', 'hafız', 'bin', 'ibn', 'oğlu', 'kızı'})
 #: genitive suffix split off by `name_key` («Lidya'nın babası» → «lidya nın babası»)
@@ -676,10 +691,16 @@ def same_name_plan(units: list[dict], proper=None, relative=is_relative_label) -
                 return 'RELATIVE_LABEL_INTERLEAVED'
             return why
         def unit(i: int) -> dict:
+            if i not in address_sex:
+                return units[i]
+            u = units[i]
             # the family word tells the sex the reading left unknown («Yasemin abla» is a woman)
-            if i in address_sex and units[i].get('sex') not in ('MALE', 'FEMALE'):
-                return {**units[i], 'sex': address_sex[i]}
-            return units[i]
+            if u.get('sex') not in ('MALE', 'FEMALE'):
+                u = {**u, 'sex': address_sex[i]}
+            # ... but not the age: «abla» is a child as often as an adult (unit_stage)
+            if family_address(u['name'])['root'] not in ELDER_ADDRESS:
+                u = {**u, 'stage_from_address': True}
+            return u
         groups: list[list[int]] = []
         for i in sorted(idx, key=lambda i: (-units[i].get('n', 0), i)):
             for g in groups:
@@ -694,16 +715,33 @@ def same_name_plan(units: list[dict], proper=None, relative=is_relative_label) -
     return clusters, refused
 
 
-def same_name_join(chars: list[dict], by_mid: dict[str, dict], text: str = '') -> tuple[list[dict], dict]:
-    """`same_name_plan` over the joined groups of a windowed reading; `text` is the book as written."""
+def same_name_join(chars: list[dict], by_mid: dict[str, dict], text: str = '',
+                   pages: dict[int, str] | None = None) -> tuple[list[dict], dict]:
+    """`same_name_plan` over the joined groups of a windowed reading; `text` is the book as written. With `pages`
+    (page number -> text) the whole `identity_links.link_plan`: also unnamed labels (K18), explicit alias
+    statements (K16) and the narrator's relatives (K17), each join with its rule and evidence in merge_basis."""
+    from . import identity_links
     units = [{'name': ch['canonical_name'], 'kind': ch.get('kind'), 'sex': ch.get('sex'),
               'entity_scope': ch.get('entity_scope'), 'n': len(ch['mention_ids']),
               'aliases': _names(ch, by_mid)[1:] + list(ch.get('aliases') or []),
               'pages': {by_mid[m]['page_no'] for m in ch['mention_ids'] if m in by_mid},
-              'windows': set(ch.get('window_ids') or [])} for ch in chars]
-    clusters, refused = same_name_plan(units, proper_name_test(text))
+              'windows': set(ch.get('window_ids') or []),
+              # K19: an address-named record's age comes only from its own text
+              'age_evidence': identity_links.text_stage([by_mid[m].get('quote') or '' for m in ch['mention_ids']
+                                                         if m in by_mid])
+              if family_address(ch['canonical_name']) else None} for ch in chars]
+    proper = proper_name_test(text)
+    extra: dict = {}
+    if pages:
+        plan = identity_links.link_plan(units, pages, proper)
+        clusters, refused = plan['clusters'], plan['refused']
+        extra = {'links': [x for x in plan['links'] if x['rule'] != 'SAME_NAME'], 'narrator': plan['narrator'],
+                 'alias_conflicts': [{k: v for k, v in c.items() if k in ('alias', 'action', 'records')}
+                                     for c in plan['alias_conflicts']]}
+    else:
+        clusters, refused = same_name_plan(units, proper)
     if not clusters:
-        return chars, {'joins': [], 'refused': refused}
+        return chars, {'joins': [], 'refused': refused, **extra}
     taken = {i for g in clusters for i in g}
     out = [ch for i, ch in enumerate(chars) if i not in taken]
     joins = []
@@ -712,11 +750,15 @@ def same_name_join(chars: list[dict], by_mid: dict[str, dict], text: str = '') -
         # the name is certain, the groups were each read: the main record's confidence stands (a stray
         # three-mention group does not demote a confirmed main character)
         folded['identity_confidence'] = float(chars[g[0]].get('identity_confidence') or 0)
+        keys = {name_key(chars[i]['canonical_name']) for i in g}
+        why = '; '.join(dict.fromkeys(
+            x['rule'] + (f" s.{x['page']} «{x['quote']}»" if x.get('quote') else '')
+            for x in extra.get('links', []) if {name_key(n) for n in x.get('names') or []} & keys))
         folded['merge_basis'] = (folded.get('merge_basis', '') + ' | aynı ad: ' + chars[g[0]]['canonical_name']
-                                 + f' ({len(g)} grup)').strip(' |')[:600]
+                                 + f' ({len(g)} grup' + (f'; {why}' if why else '') + ')').strip(' |')[:600]
         out.append(folded)
         joins.append({'name': chars[g[0]]['canonical_name'], 'groups': len(g)})
-    return out, {'joins': joins, 'refused': refused}
+    return out, {'joins': joins, 'refused': refused, **extra}
 
 
 async def propose_book(gid: str, mentions: list[dict], corrections: str = '',
@@ -837,7 +879,8 @@ async def _windowed(gid: str, mentions: list[dict], corrections: str, wins: list
             joined.append(parts[0] if len(parts) == 1 else _fold(parts))
     by_mid = {f'm{i}': m for i, m in enumerate(mentions)}
     final, cross = await cross_window(gid, joined, by_mid, book_norm_text(pages))
-    final, same_name = same_name_join(final, by_mid, '\n'.join(s['text'] for p in pages for s in p['spans']))
+    final, same_name = same_name_join(final, by_mid, '\n'.join(s['text'] for p in pages for s in p['spans']),
+                                      {p['page_no']: '\n'.join(s['text'] for s in p['spans']) for p in pages})
     # every mention exactly once: in one character, else unresolved
     seen: set[str] = set()
     characters = []

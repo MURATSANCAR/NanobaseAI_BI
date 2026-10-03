@@ -138,7 +138,8 @@ def library(c) -> list[dict]:
             "crm_title": cr.get("crm_title"), "crm_authors": cr.get("authors") or [],
             "page_count": r["page_count"], "metadata": meta, "summary": card["summary"] or [],
             "themes": card["themes"] or [], "events": card["key_events"] or [],
-            "characters": card["characters"] or [], "recommendation": recs.get(bid),
+            "characters": card["characters"] or [], "other_characters": card.get("other_characters") or [],
+            "recommendation": recs.get(bid),
             "names": [card["title"], cr.get("crm_title"), *_meta_values(meta, "TITLE")]})
     return sorted(books, key=lambda b: norm(b["crm_title"] or b["title"]))
 
@@ -404,6 +405,10 @@ def card_block(b: dict, c, *, full: bool) -> tuple[str, list[str]]:
                 if ch.get("description") else ""
             first = f" [adı ilk s.{ch['first_page']}]" if ch.get("first_page") else ""
             head.append(f"- {ch['canonical_name']}{alias}{first}{unsure}{desc}")
+    if full and (others := [ch for ch in b.get("other_characters") or [] if ch.get("identity_status") != "UNCERTAIN"]):
+        # K18: adsız ve en çok iki kez anılan figüranlar ayrı satırda (karakter listesini kalabalıklaştırmaz)
+        head.append("Diğer kişiler (adsız, az anılan): " + ", ".join(
+            ch["canonical_name"] + (f" [s.{ch['first_page']}]" if ch.get("first_page") else "") for ch in others))
     events = sorted((e for e in b["events"] if e.get("merged_into") is None),
                     key=lambda e: (e["page_from"], e.get("story_order") is None, e.get("story_order") or 0,
                                    str(e.get("id"))))

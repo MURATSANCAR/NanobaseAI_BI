@@ -105,20 +105,31 @@ def description_pages(ch: dict) -> list[int]:
     return [int(p) for p in ((ch.get('traits') or {}).get('description_pages') or [])]
 
 
-def characters(snap: dict, ids=None) -> list[dict]:
+def characters(snap: dict, ids=None, mentions=None) -> list[dict]:
+    """`mentions` (character id -> mention count) marks the minor figures: unnamed and mentioned at most twice
+    (identity_links.is_minor, K18) — listed apart as «diğer kişiler», never dropped."""
+    from .identity_links import is_minor
     claims = {r['id']: r for r in snap['claims']}
     out = []
     for ch in snap['characters']:
         if ids is not None and ch['id'] not in ids:
             continue
         pages = description_pages(ch)
+        n = (mentions or {}).get(str(ch['id'])) if mentions is not None else None
         out.append({k: ch[k] for k in ('id', 'canonical_name', 'aliases', 'identity_status', 'identity_confidence', 'first_page')} | {
             'description': claims[ch['claim_id']]['claim'] if ch.get('claim_id') in claims else None,
             'description_available': ch.get('claim_id') in claims,
             # cite THIS for the description; first_page = where the name first appears
             'description_page': pages[0] if pages else None,
-            'description_pages': pages})
+            'description_pages': pages,
+            'mentions': n,
+            'minor': is_minor(ch['canonical_name'], ch.get('traits'), n if mentions is not None else None)})
     return out
+
+
+def split_minor(chars: list[dict]) -> tuple[list[dict], list[dict]]:
+    """(main list, «diğer kişiler»)."""
+    return [c for c in chars if not c.get('minor')], [c for c in chars if c.get('minor')]
 
 
 def character_history(gid: str, name: str) -> dict:
@@ -179,13 +190,18 @@ def card(c, book_id: str) -> dict | None:
     if row:
         snap = c.execute('SELECT content FROM ed.knowledge_snapshot WHERE generation_id=%s AND revision=%s '
             'AND input_digest=%s', (gen['id'], row['input_revision'], row['input_digest'])).fetchone()['content']
-        identity = characters(snap)
+        counts = {str(r['character_id']): int(r['n']) for r in c.execute(
+            'SELECT character_id, count(*) AS n FROM ed.character_mention WHERE generation_id=%s'
+            ' AND character_id IS NOT NULL GROUP BY 1', (gen['id'],)).fetchall()}
+        identity = characters(snap, mentions=counts)
+    # K18: unnamed figures mentioned at most twice are «diğer kişiler», not the cast
+    main, others = split_minor(identity)
     return {**selected, 'book_id': book_id, 'card_id': row['build_key'] if row else None,
             'title': c.execute('SELECT title FROM ed.book WHERE id=%s', (book_id,)).fetchone()['title'],
             'created_at': row['created_at'] if row else None,
             'summary': content.get('summary', []), 'metadata': content.get('metadata', []),
             'themes': content.get('themes', []), 'key_events': content.get('events', []),
-            'characters': identity, 'blockers': content.get('blockers', [])}
+            'characters': main, 'other_characters': others, 'blockers': content.get('blockers', [])}
 
 
 def cards() -> list[dict]:

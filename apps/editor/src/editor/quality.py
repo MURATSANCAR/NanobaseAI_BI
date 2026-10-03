@@ -555,14 +555,23 @@ def create_analysis_report(generation_id: str, kind: str = "ANALYSIS") -> dict:
                    *[f"- {r['claim']} {_cite(r['source_pages'])}" for r in rows], ""]
             content["chapters"].append({**ch, "sentences": rows})
     chars = q("SELECT canonical_name, aliases, description, identity_status, identity_confidence, first_page,"
-              " coalesce(traits->'description_pages', '[]'::jsonb) AS description_pages"
+              " coalesce(traits->'description_pages', '[]'::jsonb) AS description_pages, traits,"
+              " (SELECT count(*) FROM character_mention m WHERE m.character_id = character.id) AS mentions"
               " FROM character WHERE generation_id=%s ORDER BY first_page")
+    # K18: unnamed figures mentioned at most twice are listed apart («diğer kişiler»), not dropped
+    from .identity_links import is_minor
+    minor = [c for c in chars if is_minor(c["canonical_name"], c.get("traits"), int(c.get("mentions") or 0))]
+    main = [c for c in chars if c not in minor]
     md += ["## Karakterler", "| Karakter | Diğer adlar | Kimlik | Güven | İlk sayfa | Tanım sayfası |",
            "|---|---|---|---|---|---|",
            *[f"| {c['canonical_name']} | {', '.join(c['aliases'])} | {c['identity_status']} | "
              f"{c['identity_confidence']:.2f} | {c['first_page']} | "
-             f"{', '.join(map(str, c['description_pages'] or [])) or '-'} |" for c in chars], ""]
-    content["characters"] = chars
+             f"{', '.join(map(str, c['description_pages'] or [])) or '-'} |" for c in main], ""]
+    if minor:
+        md += ["### Diğer kişiler (adsız, en çok iki kez anılan)",
+               ", ".join(f"{c['canonical_name']} (s.{c['first_page']})" for c in minor), ""]
+    content["characters"] = [{k: v for k, v in c.items() if k != "traits"} for c in main]
+    content["other_characters"] = [{k: v for k, v in c.items() if k != "traits"} for c in minor]
     tl = build_timeline(generation_id)
     md += ["## Zaman çizelgesi (yalnız gerçekleşmiş olaylar)",
            *[f"{e['story_order'] or '-'}. {e['summary']} [s.{e['page_from']}]"

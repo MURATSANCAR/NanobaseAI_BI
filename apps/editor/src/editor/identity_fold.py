@@ -1,16 +1,24 @@
 """Okunmuş kitapta aynı kişinin birden çok karakter kaydını, kitabı yeniden okumadan birleştirir.
 
-Kural, okumanın kimlik adımındakiyle aynıdır (`identity.same_name_plan`): aynı (katlanmış) adı taşıyan kayıtlar,
-türleri / cinsiyetleri / birey-topluluk kapsamları uyuşuyorsa tek kişidir; okuma onları ayrı tuttuysa (aynı sayfada
-ikisi de anılıyor ya da aynı okuma penceresi ikisini ayrı grup yaptı) birleştirilmez; kitabın ad gibi yazdığı ad
-(cümle ortasında büyük harfle) birleşir. Anlatıcıya göreli birinci tekil akrabalık etiketi («annem», «kız
-kardeşim», 2026-10-03) da birleşir, ama kayıtların sayfa aralıkları iç içe geçmiyorsa (çok anlatıcılı kitapta
-aynı kesimde iki «annem» iki kişidir: RELATIVE_LABEL_INTERLEAVED). «Kadın», «annesi», «bakan» gibi etiketler
-birleşmez. Aynı adın çocuk ve yetişkin kaydı (anlatıda büyüyen kişi, 2026-10-03) tür çatışması sayılmaz: aynı sayfada
-birlikte geçmiyor ve sayfa sırası yaşla tutarlıysa birleşir (`identity.life_stage_refusal`); insan↔hayvan gibi öbür tür
-çatışmaları reddedilir. Yazılı adlarda farklı sıra sayısı («II. Abdülhamid» / «I. Abdülhamid») ya da farklı baba adı
-(«Ahmed oğlu», «bin Ahmed») varsa adaşlar birleşmez. Kısaltma = tam ad («Bee»/«Beatrice») birleştirilmez: kitapta açık eşleme olmadan ön ek benzerliği
-güvenli değil. Model çağrısı yoktur.
+Kural, okumanın kimlik adımındakiyle aynıdır (`identity_links.link_plan`, içinde `identity.same_name_plan`): aynı
+(katlanmış) adı taşıyan kayıtlar, türleri / cinsiyetleri / birey-topluluk kapsamları uyuşuyorsa tek kişidir; okuma
+onları ayrı tuttuysa (aynı sayfada ikisi de anılıyor ya da aynı okuma penceresi ikisini ayrı grup yaptı)
+birleştirilmez; kitabın ad gibi yazdığı ad (cümle ortasında büyük harfle) birleşir. Anlatıcıya göreli birinci tekil
+akrabalık etiketi («annem», «kız kardeşim», 2026-10-03) da birleşir, ama kayıtların sayfa aralıkları iç içe
+geçmiyorsa (çok anlatıcılı kitapta aynı kesimde iki «annem» iki kişidir: RELATIVE_LABEL_INTERLEAVED). Aynı adın
+çocuk ve yetişkin kaydı (anlatıda büyüyen kişi) tür çatışması sayılmaz: aynı sayfada birlikte geçmiyor ve sayfa sırası
+yaşla tutarlıysa birleşir (`identity.life_stage_refusal`); «Ad + abla/abi/teyze…» kaydının hitaptan çıkan yaşı bu
+kararda sayılmaz, yalnız metindeki yaş sayılır (K19); insan↔hayvan gibi öbür tür çatışmaları reddedilir. Yazılı
+adlarda farklı sıra sayısı («II. Abdülhamid» / «I. Abdülhamid») ya da farklı baba adı («Ahmed oğlu», «bin Ahmed»)
+varsa adaşlar birleşmez.
+
+2026-10-03 (K16–K18, `identity_links`): kısaltma / takma ad = tam ad («Bee» / «Beatrice») YALNIZ kitapta açık eşleme
+cümlesi varsa birleşir (kanıt cümlesi ve sayfası kayda yazılır: traits.identity_links); ön ek benzerliği tek başına
+asla. Birinci şahıs anlatıda anlatıcı tek ve kanıtlıysa «Babam» ile «<anlatıcı>'nın babası» bir kişidir. Aynı adsız
+etiket («anne» / «Annesi»; «Kadın» ×4) aynı sahiplikle ve iç içe geçmeyen sayfalarda tek kayda katlanır. Bir diğer
+ad iki kişinin kaydındaysa: sahibi belliyse yanlış kayıttan çıkarılır (o adla yapılan anmalar sahibine taşınır),
+değilse iki kayıt işaretlenir (traits.alias_conflicts). Her kayda `traits.unnamed` (kitap adı ad gibi yazmıyor)
+yazılır: ekranda adsız ve az anılan figüran «diğer kişiler» altında gösterilir. Model çağrısı yoktur.
 
     python -m editor.identity_fold [--generation GID ...]            # kuru koşu (varsayılan): yalnız okur
     python -m editor.identity_fold --generation GID --apply           # yazar
@@ -32,7 +40,9 @@ import json
 from collections import Counter
 
 from . import db, source
-from .identity import proper_name_test, same_name_plan
+from .identity import proper_name_test, same_name_plan  # noqa: F401 - same rule as the reading
+from .identity import family_address, name_key
+from . import identity_links
 
 _CHARS = ("SELECT ch.id, ch.canonical_name, ch.aliases, ch.kind, ch.traits, ch.identity_status,"
           " ch.identity_confidence, ch.first_page, cl.payload -> 'windows' AS windows,"
@@ -40,6 +50,8 @@ _CHARS = ("SELECT ch.id, ch.canonical_name, ch.aliases, ch.kind, ch.traits, ch.i
           " FROM character ch LEFT JOIN claim cl ON cl.id = ch.claim_id WHERE ch.generation_id = %s")
 _PAGES = ("SELECT character_id, array_agg(DISTINCT page_no) AS pages, count(*) AS n FROM character_mention"
           " WHERE generation_id = %s AND character_id IS NOT NULL AND via IN ('TEXT','BOTH') GROUP BY 1")
+_QUOTES = ("SELECT cm.character_id, e.quote FROM character_mention cm JOIN evidence e ON e.id = cm.evidence_id"
+           " WHERE cm.generation_id = %s AND cm.character_id = ANY(%s::uuid[])")
 
 
 def _latest_generations() -> list[dict]:
@@ -49,9 +61,20 @@ def _latest_generations() -> list[dict]:
         " ORDER BY b.id, g.created_at DESC")
 
 
-def plan(generation_id: str) -> dict:
+def _title(generation_id: str) -> str:
+    r = db.one("SELECT b.title FROM generation g JOIN book_version bv ON bv.id = g.book_version_id"
+               " JOIN book b ON b.id = bv.book_id WHERE g.id = %s", generation_id)
+    return (r or {}).get("title") or ""
+
+
+def plan(generation_id: str, title: str | None = None) -> dict:
     rows = db.all_rows(_CHARS, generation_id)
     pages = {str(r["character_id"]): r for r in db.all_rows(_PAGES, generation_id)}
+    addressed = [str(r["id"]) for r in rows if family_address(r["canonical_name"])]
+    quotes: dict[str, list[str]] = {}
+    if addressed:
+        for q in db.all_rows(_QUOTES, generation_id, addressed):
+            quotes.setdefault(str(q["character_id"]), []).append(q["quote"] or "")
     units = []
     for r in rows:
         tr = r["traits"] or {}
@@ -62,25 +85,43 @@ def plan(generation_id: str) -> dict:
                       "windows": {w.get("window") for w in (r["windows"] or []) if isinstance(w, dict)} - {None},
                       "status": r["identity_status"], "confidence": float(r["identity_confidence"]),
                       "aliases": list(r["aliases"] or []), "first_page": r["first_page"],
-                      "attributes": int(r["attributes"])})
-    text = source.body_text(source.read(generation_id))   # sayfa başlığı/altlığı ad sayımına girmez
-    clusters, refused = same_name_plan(units, proper_name_test(text))
+                      "attributes": int(r["attributes"]), "traits": tr,
+                      "age_evidence": identity_links.text_stage(quotes.get(str(r["id"]), []))})
+    read = source.read(generation_id)
+    text = source.body_text(read)   # sayfa başlığı/altlığı ad sayımına girmez
+    by_page = {p["page_no"]: source.body_text([p]) for p in read}
+    proper = proper_name_test(text)
+    lp = identity_links.link_plan(units, by_page, proper, title if title is not None else _title(generation_id))
     joins = []
-    for g in clusters:
+    for g in lp["clusters"]:
         keep, folds = units[g[0]], [units[i] for i in g[1:]]
+        keys = {name_key(units[i]["name"]) for i in g}
+        rules = [x for x in lp["links"] if {name_key(nm) for nm in x.get("names") or []} & keys]
         joins.append({"name": keep["name"], "keep": keep["id"], "keep_status": keep["status"],
                       "fold": [f["id"] for f in folds], "fold_status": [f["status"] for f in folds],
+                      "fold_names": [f["name"] for f in folds],
+                      "rules": sorted({x["rule"] for x in rules}),
+                      "evidence": [{k: x[k] for k in ("rule", "pattern", "names", "page", "quote", "narrator", "owner")
+                                    if x.get(k) is not None} for x in rules if x["rule"] != "SAME_NAME"],
                       "blocked_by_attributes": [f["id"] for f in folds if f["attributes"]],
                       "mentions_moved": sum(f["n"] for f in folds)})
+    unnamed = {u["id"]: not proper(u["name"]) for u in units}
+    conflicts = [{"alias": c["alias"], "action": c["action"], "records": c["records"],
+                  "owner": units[c["owner"]]["id"] if c.get("owner") is not None else None,
+                  "holders": [units[i]["id"] for i in c["holders"]]} for c in lp["alias_conflicts"]]
     return {"generation_id": generation_id, "characters": len(units),
             "records_folded": sum(len(j["fold"]) for j in joins),
             "records_blocked": sum(len(j["blocked_by_attributes"]) for j in joins),
             "characters_after": len(units) - sum(len(j["fold"]) - len(j["blocked_by_attributes"]) for j in joins),
-            "joins": joins, "refused": refused, "_units": {u["id"]: u for u in units}}
+            "joins": joins, "refused": lp["refused"], "narrator": lp["narrator"], "alias_conflicts": conflicts,
+            "unnamed": sum(unnamed.values()),
+            "minor": sum(1 for u in units if unnamed[u["id"]] and u["n"] <= 2),
+            "_unnamed": unnamed, "_units": {u["id"]: u for u in units}}
 
 
 def apply(p: dict) -> dict:
     gid, units, done = p["generation_id"], p["_units"], []
+    alias_now: dict[str, list] = {}
     with db.tx() as c:
         for j in p["joins"]:
             keep = units[j["keep"]]
@@ -101,16 +142,49 @@ def apply(p: dict) -> dict:
                 c.execute("UPDATE event_actor SET character_id=%s WHERE generation_id=%s AND character_id=%s",
                           (keep["id"], gid, f["id"]))
                 c.execute("DELETE FROM character WHERE id=%s AND generation_id=%s", (f["id"], gid))
-            aliases = list(dict.fromkeys(keep["aliases"] + [a for f in folds for a in f["aliases"]
-                                                            if a != keep["name"]]))
+            # a folded record's own name becomes another name of the person — unless it is no name («anne»)
+            aliases = list(dict.fromkeys(keep["aliases"] + [
+                a for f in folds for a in ([] if p["_unnamed"].get(f["id"]) else [f["name"]]) + f["aliases"]
+                if a != keep["name"]]))
+            alias_now[keep["id"]] = aliases
             confirmed = keep["status"] == "CONFIRMED" or (
                 keep["confidence"] >= 0.85 and any(f["status"] == "CONFIRMED" for f in folds))
             first = min([x for x in [keep["first_page"], *(f["first_page"] for f in folds)] if x is not None],
                         default=None)
             c.execute("UPDATE character SET aliases=%s, first_page=%s, identity_status=%s WHERE id=%s",
                       (aliases, first, "CONFIRMED" if confirmed else keep["status"], keep["id"]))
+            if j["evidence"]:
+                # the sentence of the book that joined them stays with the record (K16/K17/K18)
+                c.execute("UPDATE character SET traits = traits || jsonb_build_object('identity_links',"
+                          " coalesce(traits->'identity_links', '[]'::jsonb) || %s::jsonb) WHERE id=%s",
+                          (json.dumps(j["evidence"], ensure_ascii=False), keep["id"]))
             done.append({"name": j["name"], "folded": len(folds)})
-    return {"generation_id": gid, "applied": done}
+        gone = {f for j in p["joins"] for f in j["fold"] if f not in j["blocked_by_attributes"]}
+        fixed = []
+        for cf in p["alias_conflicts"]:
+            holders = [h for h in cf["holders"] if h not in gone]
+            if cf["action"] == "fix" and cf["owner"] not in gone:
+                # the book says whose name it is: off the wrong record, the mentions made with it to the owner
+                for h in holders:
+                    moved = [r["id"] for r in c.execute(
+                        "SELECT id, surface_name FROM character_mention WHERE generation_id=%s AND character_id=%s",
+                        (gid, h)).fetchall() if name_key(r["surface_name"] or "") == cf["alias"]]
+                    if moved:
+                        c.execute("UPDATE character_mention SET character_id=%s WHERE id = ANY(%s)",
+                                  (cf["owner"], moved))
+                    c.execute("UPDATE character SET aliases=%s WHERE id=%s",
+                              ([a for a in alias_now.get(h, units[h]["aliases"]) if name_key(a) != cf["alias"]], h))
+                fixed.append(cf["alias"])
+                continue
+            for h in holders:
+                c.execute("UPDATE character SET traits = traits || jsonb_build_object('alias_conflicts',"
+                          " coalesce(traits->'alias_conflicts', '[]'::jsonb) || %s::jsonb) WHERE id=%s",
+                          (json.dumps([{"alias": cf["alias"], "records": cf["records"]}], ensure_ascii=False), h))
+        for cid, flag in p["_unnamed"].items():
+            if cid not in gone and units[cid]["traits"].get("unnamed") != flag:
+                c.execute("UPDATE character SET traits = traits || jsonb_build_object('unnamed', %s::boolean)"
+                          " WHERE id=%s", (flag, cid))
+    return {"generation_id": gid, "applied": done, "alias_fixed": fixed}
 
 
 def main() -> None:
@@ -119,22 +193,26 @@ def main() -> None:
     ap.add_argument("--apply", action="store_true", help="yaz (yoksa kuru koşu)")
     ap.add_argument("--details", action="store_true", help="birleşen ve reddedilen her çift")
     args = ap.parse_args()
-    gens = [{"id": g, "title": ""} for g in args.generation] or _latest_generations()
+    gens = [{"id": g, "title": None} for g in args.generation] or _latest_generations()
     total = {"generations": 0, "records_folded": 0, "records_blocked": 0}
+    rules: Counter = Counter()
     for g in gens:
-        p = plan(str(g["id"]))
+        p = plan(str(g["id"]), g.get("title"))
         total["generations"] += 1
         total["records_folded"] += p["records_folded"]
         total["records_blocked"] += p["records_blocked"]
-        line = {"title": g.get("title"), **{k: v for k, v in p.items() if k != "_units"}}
+        for j in p["joins"]:
+            rules.update(j["rules"])
+        line = {"title": g.get("title"), **{k: v for k, v in p.items() if not k.startswith("_")}}
         if not args.details:
-            line["joins"] = [{"name": j["name"], "records": 1 + len(j["fold"]),
+            line["joins"] = [{"name": j["name"], "records": 1 + len(j["fold"]), "rules": j["rules"],
                               "blocked": len(j["blocked_by_attributes"])} for j in p["joins"]]
             line["refused"] = dict(Counter(r["reason"] for r in p["refused"]))
-        if args.apply and p["joins"]:
+        if args.apply and (p["joins"] or p["alias_conflicts"] or p["_unnamed"]):
             line["result"] = apply(p)
         print(json.dumps(line, ensure_ascii=False, default=str), flush=True)
-    print(json.dumps({"total": total, "dry_run": not args.apply}, ensure_ascii=False))
+    print(json.dumps({"total": {**total, "joins_by_rule": dict(rules)}, "dry_run": not args.apply},
+                     ensure_ascii=False))
 
 
 if __name__ == "__main__":
