@@ -251,21 +251,6 @@ def test_sample_sentence_only_that_sentence(job, monkeypatch):
     assert len(calls) == n                                          # aynı örnek önbellekten
 
 
-def test_lively_group_is_placed_after_children_group():
-    from editor.production import voices_lively as L
-    groups = {"anlatici": "A", "cocuk": "Ç", "yetiskin": "Y", "karakter": "K"}
-    old = L.VOICES
-    try:
-        L.VOICES = [{"id": "canli-x", "label": "x", "note": "", "group": "canli", "design": "d"}]
-        g, v = L.extend(groups, [{"id": "a"}])
-        assert list(g) == ["anlatici", "cocuk", "canli", "yetiskin", "karakter"]
-        assert [x["id"] for x in v] == ["a", "canli-x"]
-        g2, v2 = L.extend(g, v)
-        assert [x["id"] for x in v2] == ["a", "canli-x"]
-    finally:
-        L.VOICES = old
-
-
 # ------------------------------------------------------------------ 2026-09-28 tam kitap dinlemesi
 def test_emphasis_is_short_and_skips_aux_verbs_and_caps():
     assert X._emphasize("Kimse yardım etmedi ona", ["etmedi"]) == "Kimse yardım etmedi ona"

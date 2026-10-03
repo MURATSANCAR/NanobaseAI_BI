@@ -78,30 +78,23 @@ def test_smil_doc_is_continuous_and_sums_duration():
     assert [p.find(f"{SMIL}audio").get("clipEnd") for p in root.findall(f".//{SMIL}par")] == [N.clock(0.5), N.clock(2.0)]
 
 
-def test_male_narrator_candidates_are_selectable_not_default():
+def test_catalog_voices_are_designs_not_people():
     ids = [v["id"] for v in N.VOICES]
-    assert len(ids) == len(set(ids))
-    cand = [v for v in N.VOICES if v["id"].startswith("anlatici-erkek-")]
-    assert len(cand) == 3 and all(v["group"] == "anlatici" and v["design"] for v in cand)
-    assert len({v["design"] for v in cand}) == 3
-    assert N.DEFAULT_NARRATOR == "anlatici-kadin"                    # genel varsayılan değişmedi
-    for v in cand:
+    assert len(ids) == len(set(ids)) and len({v["design"] for v in N.VOICES}) == len(N.VOICES)
+    for v in N.VOICES:
         assert not re.search(r"\b(clone|voice of|sounds like|imitat)", v["design"], re.I)   # tarif, kişi değil
 
 
-def test_default_male_narrator_is_the_radio_actor(tmp_path, monkeypatch):
-    """Kullanıcı kararı 2026-09-28: erkek anlatıcı = «radyo oyuncusu» (önceki «sıcak masalcı» listede kalır). Eski
-    «Erkek anlatıcı» kimliği ona yönlenir, listede ayrı satır yoktur; ekranda kendi grubunda «önerilen»."""
-    assert N.DEFAULT_MALE_NARRATOR == "canli-erkek-radyo"
-    assert N.canonical("anlatici-erkek") == N.DEFAULT_MALE_NARRATOR and N.canonical("anlatici-kadin") == "anlatici-kadin"
+def test_old_voice_ids_follow_the_new_catalog(tmp_path, monkeypatch):
+    """Kullanıcı kararı 2026-10-03: eski sesler kaldırıldı, yerine voices_zeki.py. Eski kimlik en yakın yeni sese
+    yönlenir, listede ayrı satır yoktur; anlatıcı varsayılanları roman okuyucuları, ikisi «önerilen»."""
+    assert (N.DEFAULT_NARRATOR, N.DEFAULT_MALE_NARRATOR) == ("roman-kadin", "roman-erkek")
+    assert N.canonical("anlatici-erkek") == N.DEFAULT_MALE_NARRATOR and N.canonical("anlatici-kadin") == "roman-kadin"
     assert N.is_voice("anlatici-erkek") and N.voice("anlatici-erkek")["id"] == N.DEFAULT_MALE_NARRATOR
+    assert all(N.is_voice(old) and new in N.VOICE_IDS for old, new in N.ALIASES.items())
     listed = N.all_voices()
-    assert "anlatici-erkek" not in {v["id"] for v in listed}
-    rec = [v for v in listed if v.get("recommended")]
-    assert [v["id"] for v in rec] == [N.DEFAULT_MALE_NARRATOR] and rec[0]["group"] == "canli"
-    grp = [v for v in listed if v["group"] == "anlatici"]
-    assert grp[0]["id"] == N.DEFAULT_NARRATOR and "anlatici-erkek-masalci" in {v["id"] for v in grp}
-    assert sum(bool(v.get("recommended")) for v in listed) == 1
+    assert not set(N.ALIASES) & {v["id"] for v in listed}
+    assert {v["id"] for v in listed if v.get("recommended")} == {N.DEFAULT_NARRATOR, N.DEFAULT_MALE_NARRATOR}
     # kayıtlı ayar ve API isteği: eski kimlik güncel sese çevrilir
     monkeypatch.setattr(studio, "root", lambda: tmp_path)
     d = tmp_path / "20260927000000abcdef"

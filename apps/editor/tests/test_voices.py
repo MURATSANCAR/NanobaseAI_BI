@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
+import re
 import wave
 
 import numpy as np
@@ -141,22 +142,23 @@ def test_sample_is_cached_per_voice_and_text(root, monkeypatch):
     calls = []
     monkeypatch.setattr(N, "_call", _fake_service(calls))
     lex = N.Lexicon()
-    a = asyncio.run(N.sample("Merhaba, bu kitabı ben okuyacağım.", "anlatici-erkek-masalci", lex))
+    a = asyncio.run(N.sample("Merhaba, bu kitabı ben okuyacağım.", "masal-baba", lex))
     n = len(calls)
-    b = asyncio.run(N.sample("Merhaba, bu kitabı ben okuyacağım.", "anlatici-erkek-masalci", lex))
+    b = asyncio.run(N.sample("Merhaba, bu kitabı ben okuyacağım.", "masal-baba", lex))
     assert a == b and len(calls) == n                                  # ikinci dinleme modele gitmez
-    asyncio.run(N.sample("Başka bir cümle.", "anlatici-erkek-masalci", lex))
+    asyncio.run(N.sample("Başka bir cümle.", "masal-baba", lex))
     assert len(calls) == n + 1
 
 
 def test_voice_library_groups_and_designs():
     groups = {v["group"] for v in N.VOICES}
     assert groups == set(N.GROUPS)
-    for g in ("anlatici", "cocuk", "yetiskin"):
+    for g in ("yetiskin", "genc", "cocuk"):                         # her okuyucu grubunda kadın ve erkek
         ws = [v for v in N.VOICES if v["group"] == g]
-        assert sum("Kadın" in v["label"] for v in ws) >= 3 and sum("Erkek" in v["label"] for v in ws) >= 3, g
-    assert len({v["design"] for v in N.VOICES}) == len(N.VOICES)
-    assert N.DEFAULT_NARRATOR == "anlatici-kadin"
+        assert any("Kadın" in v["label"] or "kadın" in v["label"] for v in ws), g
+        assert any("Erkek" in v["label"] or "erkek" in v["label"] or "adam" in v["label"] for v in ws), g
+    assert not any(re.search(r"\b(child|girl|boy)\b", v["design"]) for v in N.VOICES)   # küçük çocuk sesi yok
+    assert N.DEFAULT_NARRATOR == "roman-kadin"
 
 
 def test_voice_endpoints(root, monkeypatch):
@@ -188,23 +190,27 @@ def test_voice_endpoints(root, monkeypatch):
     assert vid not in {v["id"] for v in lib["voices"]} and vid in {v["id"] for v in lib["removed"]}
 
 
-def test_default_male_narrator_uses_pinned_reference(root, monkeypatch, tmp_path_factory):
-    """Önerilen erkek anlatıcı tariften yeniden üretilmez: kullanıcının dinlediği referans kayıt pakette sabit (sha256
-    kodda). Eski kimlik aynı kayda gider; kayıt yoksa ya da değişmişse ses üretilmez (başka ses sessizce gelmez)."""
+def test_catalog_voices_use_packaged_reference(root, monkeypatch, tmp_path_factory):
+    """Katalogdaki her ses (voices_zeki.py) tariften yeniden üretilmez: kullanıcının dinleyip seçtiği kayıt pakette
+    sabit (sha256 kodda), kaydın kendi metniyle klonlanır. Eski kimlik aynı kayda gider; kayıt yoksa ya da değişmişse
+    ses üretilmez (başka ses sessizce gelmez)."""
     import hashlib
-    vid = N.DEFAULT_MALE_NARRATOR
-    meta = N.PINNED[vid]
-    data = (N.PINNED_DIR / meta["file"]).read_bytes()
-    assert hashlib.sha256(data).hexdigest() == meta["sha256"]
-    w = wave.open(io.BytesIO(data))
-    assert w.getnchannels() == 1 and 7.0 < w.getnframes() / w.getframerate() < 10.0
-    assert meta["text"] == N.REF_TEXT
+    from editor.production import voices_zeki as Z
+    assert set(Z.PINNED) == N.VOICE_IDS                               # bütün katalog sabit kayıtlı
     calls = []
     monkeypatch.setattr(N, "_call", _fake_service(calls))
-    for v in (vid, "anlatici-erkek"):
-        ref = asyncio.run(N.voice_ref(v))
-        assert base64.b64decode(ref["ref_audio"]) == data and ref["ref_text"] == N.REF_TEXT
-    assert calls == [] and not (N._root() / "sesler" / f"{vid}.wav").exists()   # model çağrılmadı, klasöre yazılmadı
+    for vid, meta in Z.PINNED.items():
+        data = (N.PINNED_DIR / meta["file"]).read_bytes()
+        assert hashlib.sha256(data).hexdigest() == meta["sha256"]
+        w = wave.open(io.BytesIO(data))
+        assert w.getnchannels() == 1 and 5.0 < w.getnframes() / w.getframerate() < 16.0
+        ref = asyncio.run(N.voice_ref(vid))
+        assert base64.b64decode(ref["ref_audio"]) == data and ref["ref_text"] == meta["text"]
+        assert meta["text"] in (Z.READER_TEXT, Z.FILM_TEXT)
+    vid = N.DEFAULT_MALE_NARRATOR
+    data = (N.PINNED_DIR / N.PINNED[vid]["file"]).read_bytes()
+    assert base64.b64decode(asyncio.run(N.voice_ref("anlatici-erkek"))["ref_audio"]) == data
+    assert calls == [] and not (N._root() / "sesler").exists()        # model çağrılmadı, klasöre yazılmadı
     # sayfa bu referansla okunur
     job = root / "20260927000000abcdef"
     N.set_settings(job, "anlatici-erkek", {}, "editör")
@@ -213,38 +219,14 @@ def test_default_male_narrator_uses_pinned_reference(root, monkeypatch, tmp_path
                          for s in calls[-1]["segments"])
     # kayıt bozuk / eksik: üretim durur
     bad = tmp_path_factory.mktemp("sesler")
-    (bad / meta["file"]).write_bytes(data[:-10] + b"0123456789")
+    (bad / "zeki").mkdir()
+    (bad / N.PINNED[vid]["file"]).write_bytes(data[:-10] + b"0123456789")
     monkeypatch.setattr(N, "PINNED_DIR", bad)
     N._pinned_ok.clear()
-    with pytest.raises(N.PinnedVoiceMissing, match="beklenen kayıt değil"):
+    with pytest.raises(N.PinnedVoiceMissing, match="«Erkek · roman» sesinin kaydı beklenen kayıt değil"):
         asyncio.run(N.voice_ref(vid))
-    (bad / meta["file"]).unlink()
+    (bad / N.PINNED[vid]["file"]).unlink()
     with pytest.raises(N.PinnedVoiceMissing, match="yok"):
         asyncio.run(N.voice_ref(vid))
     N._pinned_ok.clear()
 
-
-def test_alania_voices_use_packaged_reference(root, monkeypatch):
-    """Alania havuzundan alınan sesler (voices_alania.py) tariften üretilmez: paketteki kayıt + kaydın kendi metniyle
-    klonlanır; her kayıt sha256'sıyla doğrulanır, lisans atfı klasörde durur, varsayılan anlatıcılar değişmez."""
-    import hashlib
-    from editor.production import voices_alania as A
-    assert A.PINNED and set(A.PINNED) <= N.VOICE_IDS
-    assert N.DEFAULT_NARRATOR not in A.PINNED and N.DEFAULT_MALE_NARRATOR not in A.PINNED
-    assert "CC BY 4.0" in A.ATTRIBUTION and "PatientDesk AI" in (N.PINNED_DIR / "alania" / "KAYNAK.md").read_text()
-    calls = []
-    monkeypatch.setattr(N, "_call", _fake_service(calls))
-    for vid, meta in A.PINNED.items():
-        assert N.PINNED[vid] is meta
-        data = (N.PINNED_DIR / meta["file"]).read_bytes()
-        assert hashlib.sha256(data).hexdigest() == meta["sha256"]
-        w = wave.open(io.BytesIO(data))
-        assert w.getnchannels() == 1 and w.getframerate() == 48000 and 3.0 < w.getnframes() / w.getframerate() < 10.0
-        ref = asyncio.run(N.voice_ref(vid))
-        assert base64.b64decode(ref["ref_audio"]) == data and ref["ref_text"] == meta["text"] != N.REF_TEXT
-    assert calls == []
-    with pytest.raises(N.PinnedVoiceMissing, match="«Kadın · kadife ses» sesinin"):
-        monkeypatch.setattr(N, "PINNED_DIR", root)
-        N._pinned_ok.clear()
-        asyncio.run(N.voice_ref("anlatici-kadin-kadife"))
-    N._pinned_ok.clear()
