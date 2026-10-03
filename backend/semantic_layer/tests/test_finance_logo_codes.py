@@ -31,7 +31,7 @@ class Connector:
             rows = [{"TABLE_NAME": t, "COLUMN_NAME": c, "DATA_TYPE": "float"} for t in tables for c in COLUMNS]
         else:
             self.sql.append(sql)
-            rows = [{"sales_amount": 10, "invoice_count": 3, "collections": 5}]
+            rows = [{"sales_amount": 10, "invoice_count": 3, "return_invoice_count": 1, "collections": 5}]
         return list(rows[0]) if rows else [], rows, False
 
 
