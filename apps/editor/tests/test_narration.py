@@ -367,5 +367,8 @@ def test_warm_samples_caches_every_voice_once(job, monkeypatch):
 
 
 def test_sample_text_matches_screen():
-    tsx = Path(__file__).resolve().parents[3] / "src/canvas/editorial/studio/narration/NarrationSection.tsx"
+    here = Path(__file__).resolve()
+    tsx = here.parents[3] / "src/canvas/editorial/studio/narration/NarrationSection.tsx" if len(here.parents) > 3 else None
+    if tsx is None or not tsx.exists():
+        pytest.skip("ön yüz kaynağı yok (imaj içinde koşuyor)")
     assert f"const SAMPLE = '{N.SAMPLE_TEXT}';" in tsx.read_text()
