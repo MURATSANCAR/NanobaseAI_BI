@@ -9,7 +9,7 @@ Portalın denetim kaydı (BI köprüsü, Yönetim → Denetim kaydı) her sistem
 - **İstek** (`after_request`): kişi, IP, tarayıcı, yöntem, yol, gönderilen form/gövde (maskeli), sonuç kodu, süre.
 
 Olay önce bu sitenin kendi veritabanındaki `nb_audit_outbox` tablosuna yazılır — belge değişikliğiyle **aynı işlemde**:
-değişiklik geri alınırsa olay da gider, kalıcı olursa olay da kalır. Dakikada bir `gonder()` kutuyu merkeze yollar
+değişiklik geri alınırsa olay da gider, kalıcı olursa olay da kalır. Zamanlayıcının her turunda (Frappe varsayılanı 4 dk) `gonder()` kutuyu merkeze yollar
 (`<destek-baglam>/audit-ingest`, model anahtarıyla aynı masa anahtarı) ve yalnız merkez yazdığını söyledikten sonra siler.
 Merkez kapalıysa olaylar kutuda bekler; sayı tavanı yoktur.
 """
@@ -33,7 +33,7 @@ SKIP = frozenset({
 #: İstek kaydına girmeyen yollar: derleme dosyaları, canlı bağlantı, durum yoklaması.
 SKIP_PATH = re.compile(r"^/(?:assets|files|socket\.io|private/files)/|\.(?:js|css|map|png|jpe?g|gif|svg|webp|ico|woff2?)$"
                        r"|^/api/method/(?:frappe\.realtime\.|frappe\.client\.get_count|ping)")
-SECRET = re.compile(r"(pass(word|wd)?|parola|sifre|şifre|secret|token|api_?key|apikey|credential|private_?key|cookie|"
+SECRET = re.compile(r"(pass(word|wd)?|pwd|parola|sifre|şifre|secret|token|api_?key|apikey|credential|private_?key|cookie|"
                     r"authorization|client_secret|smtp_pass)", re.I)
 _SYSTEM_FIELDS = {"modified", "modified_by", "idx", "_liked_by", "_comments", "_seen", "_assign", "_user_tags"}
 
@@ -226,7 +226,7 @@ def istek_basi():
 	frappe.local.nb_audit_rid = uuid.uuid4().hex
 
 
-# ------------------------------------------------------------------ merkeze gönderim (zamanlayıcı, dakikada bir)
+# ------------------------------------------------------------------ merkeze gönderim (zamanlayıcı turu, 4 dk)
 
 _BATCH_BYTES = 700_000       # nginx konumu 1 MB gövde kabul eder; parti boyudur, tavan değil (kutu boşalana kadar döner)
 

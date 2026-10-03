@@ -158,7 +158,7 @@ _NO_ROW_TRIGGER = frozenset({
 })
 
 #: Değeri hiçbir kayda açık yazılmayan alan adları (gövde, satır). Değişip değişmediği özetle görünür.
-SECRET_RX = re.compile(r"(pass(word|wd)?|parola|sifre|şifre|secret|token|api_?key|apikey|credential|private_?key|"
+SECRET_RX = re.compile(r"(pass(word|wd)?|pwd|parola|sifre|şifre|secret|token|api_?key|apikey|credential|private_?key|"
                        r"cookie|authorization|client_secret|smtp_pass)", re.I)
 #: Değeri bir satırın başka alanına bağlı gizli olan tablolar: (anahtar kolonu, değer kolonu).
 _KEYED_SECRETS = {"semantic_settings": ("key", "value")}

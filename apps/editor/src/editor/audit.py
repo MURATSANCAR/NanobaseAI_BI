@@ -19,7 +19,7 @@ from typing import Any
 from . import db
 
 _WRITE = {"POST", "PUT", "PATCH", "DELETE"}
-SECRET = re.compile(r"(pass(word|wd)?|parola|sifre|şifre|secret|token|api_?key|apikey|credential|private_?key|cookie|"
+SECRET = re.compile(r"(pass(word|wd)?|pwd|parola|sifre|şifre|secret|token|api_?key|apikey|credential|private_?key|cookie|"
                     r"authorization)", re.I)
 
 

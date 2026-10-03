@@ -68,7 +68,7 @@ BEGIN
            coalesce((SELECT string_agg(a.attname || ':' || CASE WHEN t.typname = 'bytea' THEN 'b' ELSE 's' END, ',' ORDER BY a.attnum)
                      FROM pg_attribute a JOIN pg_type t ON t.oid = a.atttypid
                      WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
-                       AND (t.typname = 'bytea' OR a.attname ~* '(pass(word|wd)?|parola|sifre|secret|token|api_?key|credential|private_?key|cookie)')), '') AS masks,
+                       AND (t.typname = 'bytea' OR a.attname ~* '(pass(word|wd)?|pwd|parola|sifre|secret|token|api_?key|credential|private_?key|cookie)')), '') AS masks,
            (SELECT encode(tg.tgargs, 'escape') FROM pg_trigger tg WHERE tg.tgrelid = c.oid AND tg.tgname = 'nb_audit_row') AS have
     FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
     WHERE ns.nspname = 'ed' AND c.relkind IN ('r', 'p') AND NOT c.relispartition
