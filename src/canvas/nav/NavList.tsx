@@ -33,7 +33,7 @@ export function NavList({
         return (
           <Fragment key={item.id}>
             {heading && (
-              <li aria-hidden className={`px-3 pb-1 ${i === 0 ? 'pt-1' : 'pt-3'} text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-muted/80`}>
+              <li aria-hidden className={`px-3 pb-1 ${i === 0 ? 'pt-1' : 'pt-3'} text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-violet-700`}>
                 {heading}
               </li>
             )}
@@ -49,10 +49,10 @@ export function NavList({
                   (item.parent ? 'pl-8 ' : 'pl-3 ') +
                   (active
                     ? 'bg-gradient-to-r from-coral to-violet font-bold text-white shadow-[0_8px_20px_-8px_rgba(124,92,255,0.6)]'
-                    : 'font-semibold text-ink/80')
+                    : 'font-semibold text-ink')
                 }
               >
-                <Icon aria-hidden className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-muted'}`} strokeWidth={2} />
+                <Icon aria-hidden className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-slate-600'}`} strokeWidth={2} />
                 <span className="min-w-0 flex-1 truncate">{item.label}</span>
                 {count > 0 && (
                   <span

@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — Menü okunurluğu: modül, ekran ve bölüm başlıkları belirgin
+
+- **Neden:** kullanıcı «menüde modül / alt modül ayrıntıları çok soluk» dedi. Rayda modül adları ve ekranlar 10–10,5 px gri (`muted` #6B7280), bölüm başlıkları bunun %80 saydamı, ekran kutusu %55 beyazdı; cam zeminde seçilmiyordu.
+- **Ne:** `src/canvas/nav/DesktopNav.tsx` — boştaki modül kutusu beyaz zemin + ince çerçeve + koyu ikon (slate-700), modül adı 11 px kalın slate-700 (seçili: violet-700), modül başlığı 12 px, ekran kabı %90 beyaz + gölge, bölüm başlıkları («Günlük» vb.) büyük harf violet-700 + ayırıcı çizgi, ekran adları ink ve 10,5 px, ikonlar slate-600, «Ana menü» / arama / «Tüm modüller» koyu. `nav.css` boştaki modül hover'ı açık mor. Telefon (`NavList.tsx`, `PhoneNav.tsx`) aynı hiyerarşi: bölüm başlığı violet-700, satır ink, ikon slate-600. Yerleşim ve ölçüler değişmedi (ray 84 px).
+
 ## 2026-10-03 — Dal temizliği: main'e taşınanlar, K0776 geri alındı
 
 - Taşındı (merge, tam test seti test sunucusunda — yeni kırık 0, geçen 5.299 → 5.330): `zeki-q49-kapsam` (ölçünün satır kapsamı), `zeki-ay-acilimi` (K13 ay kolonu açılımı), `claude/synthetic-speech-integration-544c08` (sesli okumada 19 ses). Modül kapsamlı cevaplar ayrı oturumda bugünkü akışa yeniden yazılıp taşındı (4fe3809e0).

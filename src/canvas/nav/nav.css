@@ -58,8 +58,8 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .nav-tile[data-state='idle']:hover .nav-tile-box {
-    background: rgba(255, 255, 255, 0.9);
-    color: #1b1f2a;
+    background: #f5f3ff;
+    color: #6d28d9;
   }
   .nav-row[data-active='0']:hover {
     background: rgba(255, 255, 255, 0.85);

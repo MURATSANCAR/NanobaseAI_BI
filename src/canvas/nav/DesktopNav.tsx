@@ -63,7 +63,7 @@ export default function DesktopNav({ nav, whoName, modulesOpen }: { nav: NavData
         onClick={ui.openPalette}
         aria-label={`Ara veya git (${paletteKey()})`}
         title={`Ara veya git · ${paletteKey()}`}
-        className="nav-tile nav-ghost flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl text-muted"
+        className="nav-tile nav-ghost flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl text-slate-700"
       >
         <Search aria-hidden className="h-[18px] w-[18px]" />
         <span className="mt-0.5 text-[9.5px] font-bold leading-none">{paletteKey()}</span>
@@ -94,10 +94,10 @@ export default function DesktopNav({ nav, whoName, modulesOpen }: { nav: NavData
         className="nav-tile mt-2 flex w-[76px] shrink-0 flex-col items-center py-1"
         aria-label="Tüm modüller"
       >
-        <span className={`nav-tile-box flex h-10 w-11 items-center justify-center rounded-2xl ${modulesOpen ? 'bg-gradient-to-tr from-coral to-violet text-white' : 'text-muted'}`}>
+        <span className={`nav-tile-box flex h-10 w-11 items-center justify-center rounded-2xl ${modulesOpen ? 'bg-gradient-to-tr from-coral to-violet text-white' : 'text-slate-700'}`}>
           <Grid2x2 aria-hidden className="h-5 w-5" strokeWidth={2} />
         </span>
-        <span className="mt-1 text-center text-[10px] font-semibold leading-[1.1] text-muted">Tüm modüller</span>
+        <span className="mt-1 text-center text-[10.5px] font-bold leading-[1.1] text-slate-700">Tüm modüller</span>
       </button>
       <button
         type="button"
@@ -114,7 +114,7 @@ export default function DesktopNav({ nav, whoName, modulesOpen }: { nav: NavData
 
 const tileBox = (on: boolean) =>
   'nav-tile-box flex h-10 w-11 items-center justify-center rounded-2xl transition-colors duration-150 ' +
-  (on ? 'bg-gradient-to-tr from-coral to-violet text-white shadow-[0_10px_22px_-10px_rgba(124,92,255,0.8)]' : 'text-muted');
+  (on ? 'bg-gradient-to-tr from-coral to-violet text-white shadow-[0_10px_22px_-10px_rgba(124,92,255,0.8)]' : 'bg-white text-slate-700 ring-1 ring-slate-200/90 shadow-[0_1px_2px_rgba(27,31,42,0.06)]');
 
 /** Ana modül listesi: Kampüs bağlantıdır; öbür modüller rayda kendi ekranlarını açar. */
 function ModuleList({ groups, activeGroup, onOpen }: { groups: VisibleGroup[]; activeGroup: string | null; onOpen: (g: VisibleGroup) => void }) {
@@ -128,7 +128,7 @@ function ModuleList({ groups, activeGroup, onOpen }: { groups: VisibleGroup[]; a
             <span className={tileBox(isActive)}>
               <Icon aria-hidden className="h-5 w-5" strokeWidth={2} />
             </span>
-            <span className={`mt-1 line-clamp-2 max-w-full break-words px-0.5 text-center text-[10.5px] leading-[1.1] ${isActive ? 'font-extrabold text-ink' : 'font-semibold text-muted'}`}>
+            <span className={`mt-1 line-clamp-2 max-w-full break-words px-0.5 text-center text-[11px] leading-[1.15] ${isActive ? 'font-extrabold text-violet-700' : 'font-bold text-slate-700'}`}>
               {g.label}
             </span>
           </>
@@ -190,7 +190,7 @@ function ModuleItems({
         onClick={onBack}
         aria-label="Ana menü: bütün ana modüller"
         title="Ana menü · bütün ana modüller"
-        className="nav-tile nav-ghost flex min-h-9 w-[76px] shrink-0 items-center justify-center gap-0.5 rounded-xl px-1 text-[10.5px] font-bold text-muted"
+        className="nav-tile nav-ghost flex min-h-9 w-[76px] shrink-0 items-center justify-center gap-0.5 rounded-xl bg-white/80 px-1 text-[10.5px] font-bold text-slate-700 ring-1 ring-slate-200/80"
       >
         <ChevronLeft aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
         Ana menü
@@ -199,12 +199,12 @@ function ModuleItems({
         <span className={tileBox(isActiveGroup)}>
           <Icon aria-hidden className="h-5 w-5" strokeWidth={2} />
         </span>
-        <h2 id={headId} tabIndex={-1} className="mt-1 break-words text-center text-[11px] font-extrabold leading-[1.15] text-ink outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-violet/40">
+        <h2 id={headId} tabIndex={-1} className="mt-1 break-words text-center text-[12px] font-black leading-[1.15] text-ink outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-violet/40">
           {group.label}
         </h2>
         {group.tag && <span className="mt-0.5 text-center text-[9.5px] font-bold leading-tight text-emerald-700">{group.tag}</span>}
       </div>
-      <ul aria-labelledby={headId} className="mx-1.5 flex w-[calc(100%-12px)] flex-col gap-0.5 rounded-2xl bg-white/55 p-1 ring-1 ring-slate-200/60">
+      <ul aria-labelledby={headId} className="mx-1.5 flex w-[calc(100%-12px)] flex-col gap-0.5 rounded-2xl bg-white/90 p-1 shadow-[0_1px_3px_rgba(27,31,42,0.06)] ring-1 ring-slate-200">
         {items.map((item, i) => {
           const ItemIcon = item.icon;
           const active = item.id === activeId;
@@ -213,7 +213,7 @@ function ModuleItems({
           return (
             <Fragment key={item.id}>
               {heading && (
-                <li className={`px-0.5 pb-0.5 text-center text-[9.5px] font-extrabold leading-[1.1] text-muted/80 ${i === 0 ? 'pt-0.5' : 'mt-1 border-t border-slate-200/80 pt-1.5'}`}>
+                <li className={`px-0.5 pb-0.5 text-center text-[9.5px] font-black uppercase leading-[1.15] tracking-[0.04em] text-violet-700 ${i === 0 ? 'pt-1' : 'mt-1.5 border-t border-slate-200 pt-2'}`}>
                   {heading}
                 </li>
               )}
@@ -225,11 +225,11 @@ function ModuleItems({
                   aria-current={active ? 'page' : undefined}
                   className={
                     'nav-row flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-center ' +
-                    (active ? 'bg-gradient-to-tr from-coral to-violet text-white shadow-[0_8px_20px_-8px_rgba(124,92,255,0.6)]' : 'text-ink/75')
+                    (active ? 'bg-gradient-to-tr from-coral to-violet text-white shadow-[0_8px_20px_-8px_rgba(124,92,255,0.6)]' : 'text-ink')
                   }
                 >
                   <span className="relative">
-                    <ItemIcon aria-hidden className={`h-4 w-4 ${active ? 'text-white' : 'text-muted'}`} strokeWidth={2} />
+                    <ItemIcon aria-hidden className={`h-4 w-4 ${active ? 'text-white' : 'text-slate-600'}`} strokeWidth={2} />
                     {count > 0 && (
                       <span
                         className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full bg-amberWarn px-1 text-[9px] font-extrabold tabular-nums leading-4 text-white ring-2 ring-white"
@@ -239,7 +239,7 @@ function ModuleItems({
                       </span>
                     )}
                   </span>
-                  <span className={`line-clamp-2 break-words text-[10px] leading-[1.15] ${active ? 'font-bold' : 'font-semibold'}`}>{item.label}</span>
+                  <span className={`line-clamp-2 break-words text-[10.5px] leading-[1.15] ${active ? 'font-extrabold' : 'font-semibold'}`}>{item.label}</span>
                 </Link>
               </li>
             </Fragment>

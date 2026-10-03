@@ -151,16 +151,16 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
                     </>
                   ) : (
                     <>
-                      <h3 className="px-3 pb-1 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-muted/80">Ana modüller</h3>
+                      <h3 className="px-3 pb-1 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-violet-700">Ana modüller</h3>
                       <ul className="flex flex-col gap-0.5">
                         {nav.groups.map((g) => {
                           const on = g.id === activeGroup;
                           const rowCls =
                             'nav-row flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] ' +
-                            (on ? 'bg-violet/10 font-extrabold text-ink' : 'font-semibold text-ink/80');
+                            (on ? 'bg-violet/10 font-extrabold text-ink' : 'font-semibold text-ink');
                           const body = (
                             <>
-                              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-gradient-to-tr from-coral to-violet text-white' : 'bg-slate-100 text-muted'}`}>
+                              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-gradient-to-tr from-coral to-violet text-white' : 'bg-slate-100 text-slate-700'}`}>
                                 <g.icon aria-hidden className="h-4 w-4" />
                               </span>
                               <span className="min-w-0 flex-1">
