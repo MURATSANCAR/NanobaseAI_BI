@@ -49,8 +49,41 @@ class Conflict(Exception):
     """Ekranın gördüğü düzen sırası eski."""
 
 
+SOURCES = {"basili": "Basılı kitabın e-kitabı (yayınevinin kapağı ve künyesi)",
+           "studyo": "Stüdyo tasarımı (stüdyonun kapağı, resimleri ve künyesi)"}
+
+
 def empty() -> dict:
-    return {"rev": 0, "styles": {}, "titles": {}, "splits": {}, "merges": [], "fronts": {}, "extras": []}
+    return {"rev": 0, "styles": {}, "titles": {}, "splits": {}, "merges": [], "fronts": {}, "extras": [],
+            "source": None}
+
+
+def source_auto(d: Path) -> str:
+    """Kaynak seçilmemişse: okunmuş yayınevi kitabından açılan işte basılı kitabın e-kitabı (yayınevinin kapağı
+    kapak kütüphanesinde ve künyesi okunmuş kayıtta bulunuyorsa); Word'den gelen işte stüdyo tasarımı."""
+    from . import studio
+    from .epub_source import original_cover, print_kunye
+    m = studio.read(d, "manuscript.json") or {}
+    if (m.get("source") or {}).get("kind") != "generation":
+        return "studyo"
+    try:
+        ok = bool(print_kunye(d)) and original_cover(studio._manuscript(d)) is not None
+    except Exception:  # noqa: BLE001 - veritabanına ulaşılamazsa stüdyo tasarımı (e-kitap yine üretilir)
+        ok = False
+    return "basili" if ok else "studyo"
+
+
+def source_mode(d: Path, e: dict) -> str:
+    return e.get("source") if e.get("source") in SOURCES else source_auto(d)
+
+
+def book_docs(plan: dict | None, ms, mode: str) -> list[dict]:
+    """E-kitabın bölümleri: basılı kitabın e-kitabında okunmuş kitabın metni (basılı sayfa numaralarıyla, stüdyonun
+    resimleri olmadan); stüdyo tasarımında sayfa planı (yoksa el yazması)."""
+    from . import epub as E
+    if mode == "basili" or not plan:
+        return E._docs_from_manuscript(ms, pages=mode == "basili")
+    return E.flow_docs(plan, ms)
 
 
 def load(d: Path) -> dict:
@@ -177,7 +210,8 @@ def structure(d: Path) -> dict:
     e = load(d)
     plan = plan_mod.load(d)
     ms = studio._manuscript(d)
-    docs = E.flow_docs(plan, ms) if plan else E._docs_from_manuscript(ms)
+    mode = source_mode(d, e)
+    docs = book_docs(plan, ms, mode)
     warn: list[str] = []
     chs = chapters(docs, e, warn)
     styles = e.get("styles") or {}
@@ -203,7 +237,8 @@ def structure(d: Path) -> dict:
     cmp = st.get("compare") or {}
     added = {tuple(x["pages"]) for x in e.get("extras") or []}
     missing = [{**m, "added": tuple(m["pages"]) in added} for m in cmp.get("missing") or [] if not m.get("expected")]
-    return {"rev": e["rev"], "chapters": out, "styles": STYLES,
+    return {"rev": e["rev"], "chapters": out, "styles": STYLES, "source": mode, "source_set": e.get("source") in SOURCES,
+            "sources": [{"key": k, "label": v} for k, v in SOURCES.items()],
             "fronts": [{"key": k, "label": v, "on": front_on(e, k)} for k, v in FRONTS.items()],
             "extras": [{"id": x["id"], "title": x["title"], "pages": x["pages"], "place": x.get("place") or "end",
                         "words": sum(len(t.split()) for t in x["paras"])} for x in e.get("extras") or []],
@@ -217,7 +252,7 @@ def _text_of(d: Path, bid: str) -> str | None:
     from . import studio
     plan = plan_mod.load(d)
     ms = studio._manuscript(d)
-    docs = E.flow_docs(plan, ms) if plan else E._docs_from_manuscript(ms)
+    docs = book_docs(plan, ms, source_mode(d, load(d)))
     for doc in docs:
         for n in doc["nodes"]:
             if n[0] == "p" and node_id(n) == bid:
@@ -289,6 +324,11 @@ def change(d: Path, rev: int, ops: list[dict], by: str, source=None) -> dict:
                                 "place": place})
         elif kind == "remove_extra":
             e["extras"] = [x for x in e["extras"] if x["id"] != op.get("id")]
+        elif kind == "source":
+            v = op.get("source")
+            if v not in SOURCES and v is not None:
+                raise ValueError("Kaynak geçersiz.")
+            e["source"] = v
         elif kind == "reset":
             e = {**empty(), "rev": e["rev"]}
         else:

@@ -48,6 +48,8 @@ a.e-dipnot-no { font-size: 0.625em; vertical-align: super; line-height: 0; text-
 .e-dipnotmetni a { color: inherit; text-decoration: none; }
 
 .e-bold { font-weight: bold; }
+.arapca { font-family: 'Amiri', 'Adobe Arabic', serif; font-size: 1.083em; }
+hr.e-dipnot-cizgi { border: 0; border-top: 1px solid #000000; margin: 23px 0 9px 0; }
 .e-italik { font-style: italic; }
 
 /* Görsel ve görsel altı açıklaması birlikte kalır */

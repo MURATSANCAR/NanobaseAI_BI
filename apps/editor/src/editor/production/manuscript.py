@@ -22,7 +22,8 @@ DIALOGUE = re.compile(r"^\s*[-–—]\s*")
 
 @dataclass
 class Block:
-    kind: str                    # para | dialogue
+    kind: str                    # para | dialogue; dizgiyle (`layout=True`): poem | italic | right | epigraph |
+    #                              perde_alti | table (metin tablonun HTML'i)
     text: str
     pages: list[int] = field(default_factory=list)   # kaynak sayfalar (okunmuş kitapta)
 
@@ -31,6 +32,7 @@ class Block:
 class Chapter:
     title: str | None
     blocks: list[Block] = field(default_factory=list)
+    kind: str = "chapter"        # chapter | perde (bölüm perdesi: başlığı kendi sayfasında, dizgiyle bulunur)
 
 
 @dataclass
@@ -145,9 +147,16 @@ def normalize(paragraphs: list[tuple[int, str]], lex=None,
     chapters: list[tuple[str | None, list[Block]]] = [(None, [])]
     prev: Block | None = None
     prev_page = None
-    for page, raw in paragraphs:
+    for item in paragraphs:
+        page, raw = item[0], item[1]
+        forced = item[2] if len(item) > 2 else None        # dizgiden bilinen tür (şiir, tablo…): birleşmez
         text = raw.strip()
         if not text:
+            continue
+        if forced and forced != "para":
+            chapters[-1][1].append(Block(forced, text, [page]))
+            prev = None
+            prev_page = page
             continue
         head, rest = ((text, "") if is_heading(text) else split_leading_heading(text)) if headings else (None, text)
         if head and chapters[-1][0] is not None and not chapters[-1][1]:
@@ -182,7 +191,8 @@ def normalize(paragraphs: list[tuple[int, str]], lex=None,
         prev_page = page
     for _, blocks in chapters:
         for b in blocks:
-            b.text = fix_inline(b.text, lex)
+            if b.kind not in ("poem", "table"):              # satır sonu ve tablo HTML'i olduğu gibi kalır
+                b.text = fix_inline(b.text, lex)
     return [(h, b) for h, b in chapters if b or h]
 
 
@@ -327,9 +337,12 @@ def _first(meta: dict, key: str) -> str | None:
     return str(v).strip() if v else None
 
 
-def from_generation(generation_id: str, lex=None) -> Manuscript:
+def from_generation(generation_id: str, lex=None, layout: bool = False) -> Manuscript:
     """Editörün okuduğu kitaptan. Hikâye dışı sayfalar (künye, tanıtım) sayfa rolünden çıkar;
-    kitap bilgisi kitabın güncel kartından (künyeden çıkarılmış, kanıtlı)."""
+    kitap bilgisi kitabın güncel kartından (künyeden çıkarılmış, kanıtlı).
+    `layout=True` (basılı kitabın e-kitabı): basılı PDF'in dizgisiyle sayfa üst başlıkları ve numaraları gövdeden
+    çıkar, dipnotlar bölüm sonuna «[n] …» notu olur ve metindeki gönderme «[n]» olur, tablolar tablo olur, paragrafın
+    biçimi (şiir, italik, sağa yaslı, epigraf, perde) bloğun türüne yazılır (`print_layout`, `_apply_layout`)."""
     from .. import db
     lex = lex if lex is not None else _lexicon()
     g = db.one("SELECT g.id, bv.book_id, b.title AS file_title FROM ed.generation g "
@@ -383,12 +396,134 @@ def from_generation(generation_id: str, lex=None) -> Manuscript:
                 "not_printed": {str(p): why for p, (why, keep) in sorted(plan.items())},
                 "origin": {"title": "crm" if crm.get("crm_title") else "card",
                            "author": "crm" if crm_author else "card" if author else None}})
-    layout = spaced_layout(generation_id)
+    spaced = spaced_layout(generation_id)
     paras = [(p, part) for p, texts in sorted(by_page.items())
              for i, text in enumerate(texts) if p not in plan or i < plan[p][1]
-             for part in resplit(text, (layout or {}).get(p, []))]
+             for part in resplit(text, (spaced or {}).get(p, []))]
+    pages = _print_pages(generation_id) if layout else None
+    notes: dict = {}
+    if pages:
+        paras, notes = _apply_layout(paras, pages)
     ms.chapters = by_typeset(generation_id, paras, lex) or [Chapter(h, b) for h, b in normalize(paras, lex)]
+    if pages:
+        _finish_layout(ms, pages, notes)
     return ms
+
+
+def _print_pages(generation_id: str):
+    try:
+        from .. import db
+        from ..document import _open_version
+        from . import print_layout
+        g = db.one("SELECT book_version_id FROM ed.generation WHERE id=%s", generation_id)
+        doc, _ = _open_version(str(g["book_version_id"]))
+    except Exception:  # noqa: BLE001 - PDF yoksa (taranmış kitap vb.) okunmuş paragraflar olduğu gibi
+        return None
+    with doc:
+        return print_layout.analyze(doc)
+
+
+_MARK = re.compile(r"\[\[(\d+):(\d+)\]\]")
+
+
+def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple], dict]:
+    """Okunmuş paragraflar dizgiyle: üst başlık/sayfa no ve dipnot/tablo bölgesindeki paragraf düşer, gönderme
+    numarası «[[sayfa:no]]» işareti olur, paragrafa dizgiden tür yazılır, tablo ilk tablo paragrafının yerine girer.
+    Döner: ([(sayfa, metin, tür)], {(sayfa, no): not metni})."""
+    import html as _html
+    from .print_layout import fold, kind_of, para_lines
+    out: list[tuple] = []
+    placed: set[int] = set()
+    notes: dict[tuple[int, str], str] = {}
+    last_note = None
+    for p in sorted(pages):
+        for num, text in pages[p].notes:
+            if num is None and last_note is not None:
+                notes[last_note] = f"{notes[last_note]} {text}"
+            elif num is not None:
+                last_note = (p, num)
+                notes[last_note] = text
+    used: dict[int, int] = {}
+    for p, text in paras:
+        pg = pages.get(p)
+        if pg is None:
+            out.append((p, text, None))
+            continue
+        k = fold(text)
+        prev = pages.get(p - 1)
+        if k in pg.heads or not k:
+            continue
+        probe = k[: min(40, len(k))]
+        if len(k) >= 6 and (probe in pg.note_key or (prev is not None and probe in prev.note_key)) \
+                and probe not in "".join(fold(ln.text) for ln in pg.body):
+            continue
+        if pg.tables and len(k) >= 6 and probe in pg.table_key:
+            if p not in placed:
+                placed.add(p)
+                for rows in pg.tables:
+                    head = "".join(f"<th>{_html.escape(c)}</th>" for c in rows[0])
+                    body = "".join("<tr>" + "".join(f"<td>{_html.escape(c)}</td>" for c in r) + "</tr>" for r in rows[1:])
+                    out.append((p, f'<table class="e-tablo"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>',
+                                "table"))
+            continue
+        refs = pg.refs[used.get(p, 0):]
+        for n in refs:
+            new, cnt = re.subn(rf"(?<=[^\s\d\[]){n}(?=[\s.,;:!?”\"’')»]|$)", f"[[{p}:{n}]]", text, count=1)
+            if cnt:
+                text = new
+                used[p] = used.get(p, 0) + 1
+            else:
+                break
+        kind, poem = kind_of(para_lines(pg.body, text), pg.left, pg.right)
+        out.append((p, poem if poem and "[[" not in text else text, kind if kind != "para" else None))
+    for p, pg in pages.items():                       # tablo okumada hiç paragraf vermediyse sayfanın sonuna
+        if pg.tables and p not in placed:
+            at = max((i for i, x in enumerate(out) if x[0] <= p), default=-1) + 1
+            for rows in pg.tables:
+                head = "".join(f"<th>{_html.escape(c)}</th>" for c in rows[0])
+                body = "".join("<tr>" + "".join(f"<td>{_html.escape(c)}</td>" for c in r) + "</tr>" for r in rows[1:])
+                out.insert(at, (p, f'<table class="e-tablo"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>',
+                                "table"))
+                at += 1
+    return out, notes
+
+
+def _finish_layout(ms: Manuscript, pages: dict, notes: dict) -> None:
+    """Bölümler kurulduktan sonra: gönderme işaretleri bölüm içinde 1'den numaralanır («[k]»), notlar bölüm sonuna
+    «[k] metin» paragrafı olur (e-kitap bunları kitabın sonundaki notlara bağlar); bölüm başındaki italik / sağa
+    yaslı paragraflar epigraf; perde sayfasıyla açılan bölüm perde, o sayfadaki kısa paragraf perde altı."""
+    for ch in ms.chapters:
+        k = 0
+        found: list[tuple[int, str]] = []
+
+        def renum(m):
+            nonlocal k
+            key = (int(m.group(1)), m.group(2))
+            text = notes.get(key) or notes.get((key[0] + 1, key[1]))
+            if not text:
+                return ""
+            k += 1
+            found.append((k, text))
+            return f"[{k}]"
+        if ch.title:
+            ch.title = _MARK.sub(renum, ch.title)
+        for b in ch.blocks:
+            if b.kind != "table":
+                b.text = _MARK.sub(renum, b.text)
+        first = ch.blocks[0].pages[0] if ch.blocks and ch.blocks[0].pages else None
+        if first is not None and pages.get(first) is not None and pages[first].perde:
+            ch.kind = "perde"
+            for b in ch.blocks:
+                if b.pages and b.pages[0] == first and len(b.text) <= 120:
+                    b.kind = "perde_alti"
+        for b in ch.blocks:                           # bölüm başındaki italik / sağa yaslı paragraflar: epigraf
+            if b.kind == "perde_alti":
+                continue
+            if b.kind in ("italic", "right") and len(b.text) <= 600:
+                b.kind = "epigraph"
+                continue
+            break
+        ch.blocks += [Block("para", f"[{n}] {t}", []) for n, t in found]
 
 
 def resplit(text: str, parts: list[str]) -> list[str]:
@@ -439,7 +574,7 @@ def split_typeset(chapters: list[dict], paras: list[tuple[int, str]], lex=None) 
         return None
     out: list[Chapter] = []
     for ch in chapters:
-        mine = [(p, t) for p, t in paras if ch["page_from"] <= p <= ch["page_to"] and t.strip()]
+        mine = [x for x in paras if ch["page_from"] <= x[0] <= ch["page_to"] and x[1].strip()]
         intro = ch["title"] == "Başlıksız başlangıç"
         title = None if intro else ch["title"]
         if title:
@@ -451,7 +586,7 @@ def split_typeset(chapters: list[dict], paras: list[tuple[int, str]], lex=None) 
                 got += _key(mine[k][1])
                 k += 1
             if k and (got == want or len(got) >= 0.6 * len(want)):
-                title = " ".join(t.strip() for _, t in mine[:k])
+                title = " ".join(x[1].strip() for x in mine[:k])
                 mine = mine[k:]
         blocks = [b for _, bs in normalize(mine, lex, headings=False) for b in bs]
         if blocks:                      # metni olmayan bölüm (hikâye dışı sayfalar) boş başlık basmaz

@@ -194,6 +194,22 @@ export default function EpubEditor({ jobId }: { jobId: string }) {
       {save.error && !stale && <Note tone="err">{errText(save.error, 'Kaydedilemedi.')}</Note>}
       {v.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
 
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1 flex items-center gap-1 text-[12px] font-extrabold">
+          Kaynak
+          <Explain label="E-kitabın kaynağı">«Basılı kitabın e-kitabı» yayınevinin kendi kapağını ve basılı künyesini (kapak ve iç tasarımcı adları, yayın hakları) kullanır, stüdyonun ürettiği resimler girmez; okunmuş bir yayınevi kitabında kendiliğinden budur. «Stüdyo tasarımı» stüdyonun kapağını, resimlerini ve künyesini kullanır.</Explain>
+        </legend>
+        <div role="radiogroup" aria-label="E-kitabın kaynağı" className="grid gap-1.5 sm:grid-cols-2">
+          {v.sources.map((o) => (
+            <button key={o.key} type="button" role="radio" aria-checked={v.source === o.key} disabled={busy}
+              onClick={() => run([{ op: 'source', source: o.key }])}
+              className={`rounded-xl border px-2.5 py-2 text-left text-[12px] font-bold ${press} ${v.source === o.key ? 'border-canvas-violet bg-violet-50/60 ring-2 ring-canvas-violet/25' : 'border-slate-200 bg-white/80'}`}>
+              {o.label}{v.source === o.key && !v.source_set ? <span className="ml-1 font-semibold text-canvas-muted">· kendiliğinden</span> : null}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
       <fieldset className="flex flex-wrap gap-2">
         <legend className="mb-1 text-[12px] font-extrabold">Ön sayfalar</legend>
         {v.fronts.map((f) => (

@@ -640,6 +640,16 @@ def cover_image(d: Path, spec, ms) -> tuple[bytes, str] | None:
 
 
 # ------------------------------------------------------------------ ortak yazı biçimi
+ARABIC = re.compile("[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+"
+                    "(?:[\\s\u060C\u061B\u061F.,:;!()«»\"'-]+[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+)*")
+
+
+def rtl(text_html: str) -> str:
+    """Arapça harf dizisi sağdan sola yazılan, dili işaretli alana alınır (okuyucu doğru yönde dizer, ekran okuyucu
+    Arapça okur; ev stilinde gömülü Arapça yazı tipiyle)."""
+    return ARABIC.sub(lambda m: f'<span class="arapca" lang="ar" dir="rtl">{m.group(0)}</span>', text_html)
+
+
 def run_html(r: dict, fonts: dict, scale_pt=None) -> str:
     st = []
     if r.get("color"):
@@ -651,7 +661,7 @@ def run_html(r: dict, fonts: dict, scale_pt=None) -> str:
         st.append(f"font-size:{scale_pt(r['size']) if scale_pt else _f(r['size']) + 'pt'}")
     if r.get("font") in fonts:
         st.append(f"font-family:{fonts[r['font']]}")
-    t = esc(r.get("text", ""))
+    t = rtl(esc(r.get("text", "")))
     return f'<span style="{";".join(st)}">{t}</span>' if st else t
 
 
@@ -1139,7 +1149,7 @@ class NoteBook:
         self.items.append((n, body, back))
 
     def html(self) -> str:
-        out = []
+        out = ['<hr class="e-dipnot-cizgi"/>']            # yayınevinin e-kitabı gibi: notlardan önce çizgi
         for n, body, back in sorted(self.items):
             mark = f'<a href="{back}" role="doc-backlink">{n}</a>' if back else str(n)
             out.append(f'<aside epub:type="footnote" role="doc-footnote" id="dn-{n}"><p class="e-dipnotmetni">'
@@ -1378,7 +1388,7 @@ HOUSES = {
         key="timas", title="Timaş e-kitap", css="timas.css",
         faces=(("Domitian", 400, "normal"), ("Domitian", 700, "normal"), ("Domitian", 400, "italic"),
                ("Lato", 400, "normal"), ("Lato", 700, "normal"), ("Cinzel", 600, "normal"),
-               ("Crimson Pro", 400, "italic"), ("EB Garamond", 400, "italic")),
+               ("Crimson Pro", 400, "italic"), ("EB Garamond", 400, "italic"), ("Amiri", 400, "normal")),
         body="Domitian", heading="Lato", signature="iyi ki kitaplar var...", publisher="Timaş Yayınları",
         rights="© Eserin her hakkı anlaşmalı olarak Timaş Basım Ticaret ve Sanayi Anonim Şirketi’ne aittir. İzinsiz "
                "yayınlanamaz. Kaynak gösterilerek alıntı yapılabilir."),
@@ -1398,8 +1408,20 @@ def house_dir(key: str) -> Path:
     return Path(os.environ.get("EPUB_HOUSE_DIR") or Path(settings().storage) / "epub-sablon") / key
 
 
-def house_logo(key: str) -> Path | None:
+def house_logo(key: str, hint: str = "") -> Path | None:
+    """Ev stilinin logosu. Şablon klasöründe `logolar.json` ([{"ad": "Timaş Akademi", "dosya": "logo-akademi.png"}])
+    varsa adı künyede (dizi/yayınevi satırı, `hint`) geçen alt markanın logosu; yoksa ana logo."""
+    import json as _json
     base = house_dir(key)
+    try:
+        marks = _json.loads((base / "logolar.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        marks = []
+    fold = (hint or "").casefold()
+    for m in marks if isinstance(marks, list) else []:
+        f = base / str(m.get("dosya") or "")
+        if m.get("ad") and str(m["ad"]).casefold() in fold and f.is_file() and f.parent == base:
+            return f
     return next((base / f"logo{x}" for x in (".svg", ".png", ".jpg") if (base / f"logo{x}").exists()), None)
 
 
@@ -1471,14 +1493,42 @@ def house_kunye(h: House, rows: list[tuple[str, str]], warn: list[str]) -> list[
     return out
 
 
+def house_kunye_print(h: House, items: list[tuple[str | None, str]], eisbn: str | None, warn: list[str]) -> list[str]:
+    """Basılı kitabın kendi künyesinden e-künye (`epub_source.print_kunye`): satırlar basılı sırasıyla (yayınevi | yayın
+    no ve dizi, görevliler, yayınevinin adresi, web ve sosyal medya, sertifika, destek, yayın hakları); E-ISBN
+    yayınevinin adres satırının önüne girer (yayınevinin e-künyesi gibi)."""
+    from .epub_source import SERIES, SERIES_KEY
+    out: list[str] = []
+    pub = None
+    for label, value in items:
+        if label == SERIES_KEY:
+            m = SERIES.match(value)
+            pub = m.group("pub").strip()
+            out.append(_jen(f"{esc(pub)} | {esc(m.group('no'))}<br/>{esc(m.group('rest'))}"))
+    at = None
+    for label, value in items:
+        if label == SERIES_KEY:
+            continue
+        if at is None and pub and label and label.casefold() == pub.casefold():
+            at = len(out)                                   # yayınevinin adres satırı
+        out.append(_jen_row(label, value) if label else _jen(esc(value)))
+    if eisbn:
+        row = _jen_row("E-ISBN", _isbn_fmt(eisbn))
+        out.insert(at if at is not None else len(out), row)
+    if not any(label and "HAKLAR" in label for label, _ in items):
+        out.append(_jen_row("Yayın Hakları", h.rights))
+    return out
+
+
 def house_fronts(h: House, ms, rows: list[tuple[str, str]], bios: list[dict], logo: str | None,
                  inner: str | None = None, inner_alt: str = "", extras: list[dict] | None = None, on=None,
-                 warn: list[str] | None = None) -> list[tuple[str, str, str, str]]:
+                 warn: list[str] | None = None, kunye: list[str] | None = None) -> list[tuple[str, str, str, str]]:
     """Ev stilinde ön sayfalar [(dosya, başlık, epub:type, gövde)], yayınevinin e-kitaplarındaki gibi tek künye dosyası:
     iç kapak görseli → yayınevi imzası → kitap adı ve yazar → logo → künye (`house_kunye`); ardından tanıtım dosyası:
     yazar tanıtımı ve editörün basılıdan ön sayfalara eklediği metin (çevirmen tanıtımı gibi). `on(anahtar)`: editörün
-    e-kitap düzenindeki ön sayfa anahtarı (ic_kapak, imza, kunye, yazar). Kişi adları yazıldığı gibi kalır (Türkçe
-    büyük harf yabancı adı bozar)."""
+    e-kitap düzenindeki ön sayfa anahtarı (ic_kapak, imza, kunye, yazar). `kunye`: hazır künye satırları (basılı
+    kitabın e-kitabında `house_kunye_print`); verilmezse stüdyonun künyesinden. Kişi adları yazıldığı gibi kalır
+    (Türkçe büyük harf yabancı adı bozar)."""
     on = on or (lambda k: True)
     warn = warn if warn is not None else []
     out = []
@@ -1493,7 +1543,8 @@ def house_fronts(h: House, ms, rows: list[tuple[str, str]], bios: list[dict], lo
         parts.append(f'<p class="e-jenerikbaslik">{head}</p>')
         if logo:
             parts.append(f'<p class="e-jenerik-logo"><img src="{logo}" alt="{esc(h.publisher)}"/></p>')
-        parts.append('<section epub:type="copyright-page">' + "".join(house_kunye(h, rows, warn)) + "</section>")
+        parts.append('<section epub:type="copyright-page">' + "".join(kunye if kunye is not None
+                                                                   else house_kunye(h, rows, warn)) + "</section>")
     if parts:
         out.append(("kunye.xhtml", "Künye", "frontmatter", "".join(parts)))
     bio = "".join(f'<p class="e-jenerikbaslik">{esc(b.get("name"))}</p>' + "".join(
@@ -1682,8 +1733,14 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
         from . import sfx
         rows += sfx.kunye_rows(d)                 # sesli e-kitapta efekt kaynakçası (atıf gerekenler dahil)
     house = HOUSES.get(house_key(d)) if layout == "reflow" else None
+    from . import epub_edit
+    edits = epub_edit.load(d) if house else epub_edit.empty()
+    mode = epub_edit.source_mode(d, edits) if house else "studyo"
     if house:
         faces, missing_fam = house_faces(house)
+        if not ARABIC.search(ms.text()):           # Arapça yazı tipi yalnız kitapta Arapça varsa gömülür
+            faces = [f for f in faces if f.family != "Amiri"]
+            missing_fam = [x for x in missing_fam if not x.startswith("Amiri")]
     else:
         faces = font_faces([spec.body_font, spec.heading_font])
         faces = [f for f in faces if f.style == "normal"] or faces        # dizgide eğik yazı yok
@@ -1706,7 +1763,14 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             pack.encrypted.append(f"OEBPS/fonts/{f.name}")
         pack.add(f"fonts/{f.name}", data)
         fonts_used.append(f)
-    cov = cover_image(d, spec, ms)
+    cov = None
+    if mode == "basili":                       # basılı kitabın e-kitabı: yayınevinin kapağı
+        from . import epub_source
+        oc = epub_source.original_cover(ms)
+        cov = (oc[0], oc[1]) if oc else None
+        if oc is None:
+            warn.append("Yayınevinin kapağı kapak kütüphanesinde bulunamadı (basılı ISBN'le); stüdyonun kapağı kullanıldı.")
+    cov = cov or cover_image(d, spec, ms)
     cover_id = None
     if cov:
         cover_id = pack.add(f"images/kapak{cov[1]}", cov[0], id="kapak-gorsel", props="cover-image")
@@ -1795,7 +1859,11 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             pages_meta.append({"href": "text/kapak.xhtml", "title": "Kapak", "side": None, "no": None})
             img_keys.add("kapak")
         pub = ms.meta.get("PUBLISHER") or dict(rows).get("Yayınevi") or ""
-        logo = house_logo(house.key) if house else None
+        hint = " ".join(v for k, v in rows if k in ("Dizi", "Yayınevi"))
+        if house and mode == "basili":
+            from . import epub_source
+            hint += " " + " ".join(v for k, v in epub_source.print_kunye(d) if k == epub_source.SERIES_KEY)
+        logo = house_logo(house.key, hint) if house else None
         if house and logo:
             pack.add(f"images/logo{logo.suffix}", logo.read_bytes())
         elif house:
@@ -1811,24 +1879,26 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
         if bios:
             fronts.append(("yazar.xhtml", "Yazar hakkında", "contributors", bios))
         if house:
-            from . import epub_edit
-            edits = epub_edit.load(d)
+            kun = None
+            if mode == "basili":
+                from . import epub_source
+                items = epub_source.print_kunye(d)
+                kun = house_kunye_print(house, items, eisbn, warn) if items else None
             fronts = [(fn, t, et.removeprefix("frontmatter").strip(), b) for fn, t, et, b in
                       house_fronts(house, ms, rows, front.get("bios") or [],
                                    f"../images/logo{logo.suffix}" if logo else None,
                                    inner=f"../images/kapak{cov[1]}" if cov else None, inner_alt=alts["kapak"],
                                    extras=[x for x in edits.get("extras") or [] if x.get("place") == "front"],
-                                   on=lambda k: epub_edit.front_on(edits, k), warn=warn)]
+                                   on=lambda k: epub_edit.front_on(edits, k), warn=warn, kunye=kun)]
         for fn, title, etype, body in fronts:
             attr = f' epub:type="frontmatter {etype}"' if etype else ' epub:type="frontmatter"'
             iid = pack.add(f"text/{fn}", xhtml(title, body, css=css, body_attr=attr))
             pack.spine.append({"id": iid})
             toc.append((title, f"text/{fn}"))
             pages_meta.append({"href": f"text/{fn}", "title": title, "side": None, "no": None})
-        docs = flow_docs(plan, ms) if plan else _docs_from_manuscript(ms)
+        docs = epub_edit.book_docs(plan, ms, mode)
         styles: dict[str, str] = {}
         if house:                                  # editörün e-kitap düzeni (stil, bölüm, eklenen metin)
-            from . import epub_edit
             docs, styles = epub_edit.apply(docs, edits, warn)
         href: dict[str, str] = {}
         sel = studio.selected_art(d)
@@ -1911,7 +1981,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             "viewport": [int(round(spec.trim_w * K)), int(round(spec.trim_h * K))] if fixed else None,
             "fonts": [f.report() for f in faces], "images": len(shown), "alt_missing": len(lacking),
             "a11y": access, "warnings": warn, "seconds": round(time.time() - t0, 2), "by": by, "audio": audio_res,
-            "house": house.title if house else None}
+            "house": house.title if house else None, "source": mode if house else None}
 
 
 def _image_path(d: Path, plan: dict | None, sel: dict, key: str) -> Path | None:
@@ -1922,11 +1992,20 @@ def _image_path(d: Path, plan: dict | None, sel: dict, key: str) -> Path | None:
     return p if p is not None and p.exists() else None
 
 
-def _docs_from_manuscript(ms) -> list[dict]:
-    """Sayfa planı yoksa el yazmasının bölümlerinden (sayfa numarasız)."""
+def _docs_from_manuscript(ms, pages: bool = False) -> list[dict]:
+    """El yazmasının bölümlerinden (sayfa planı yoksa ya da basılı kitabın e-kitabında): bölüm başlığı (varsa) ve
+    paragraflar. `pages`: okunmuş kitabın basılı sayfa numaraları (bloğun kaynak sayfası; e-kitabın sayfa listesi
+    basılı kitabınkiyle aynı olur)."""
     docs = []
     for ci, ch in enumerate(ms.chapters):
-        nodes = [("p", b.kind, [("runs", [{"text": b.text}], f"m{ci}-{bi}")]) for bi, b in enumerate(ch.blocks)]
+        nodes: list = [("h", ch.title, f"m{ci}-h", [{"text": ch.title}])] if ch.title else []
+        last = 0
+        for bi, b in enumerate(ch.blocks):
+            for no in (b.pages or []) if pages else []:
+                if no > last:
+                    nodes.append(("pb", no))
+                    last = no
+            nodes.append(("p", b.kind, [("runs", [{"text": b.text}], f"m{ci}-{bi}")]))
         docs.append({"title": ch.title or (ms.title if len(ms.chapters) == 1 else f"Bölüm {ci + 1}"), "nodes": nodes})
     return docs
 
