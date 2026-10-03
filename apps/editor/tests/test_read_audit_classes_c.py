@@ -291,7 +291,10 @@ def test_card_profile_says_not_a_book():
 
 
 def test_screens_show_not_a_book_badge():
-    root = pathlib.Path(__file__).resolve().parents[3]
+    here = pathlib.Path(__file__).resolve()
+    root = here.parents[3] if len(here.parents) > 3 else here.parent
+    if not (root / "src/canvas/editorial/pharmacy").is_dir():
+        pytest.skip("ön yüz ağacı yok (GPU imajında yalnız apps/editor kurulur)")
     labels = (root / "src/canvas/editorial/pharmacy/labels.ts").read_text()
     row = (root / "src/canvas/editorial/pharmacy/PharmacyScreen.tsx").read_text()
     detail = (root / "src/canvas/editorial/pharmacy/PharmacyDetail.tsx").read_text()
