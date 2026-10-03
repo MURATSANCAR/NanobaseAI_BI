@@ -60,7 +60,7 @@ def plan(generation_id: str) -> dict:
                       "status": r["identity_status"], "confidence": float(r["identity_confidence"]),
                       "aliases": list(r["aliases"] or []), "first_page": r["first_page"],
                       "attributes": int(r["attributes"])})
-    text = "\n".join(sp["text"] for pg in source.read(generation_id) for sp in pg["spans"])
+    text = source.body_text(source.read(generation_id))   # sayfa başlığı/altlığı ad sayımına girmez
     clusters, refused = same_name_plan(units, proper_name_test(text))
     joins = []
     for g in clusters:

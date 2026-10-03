@@ -51,8 +51,10 @@ def test_mixed_case_headings_from_typesetting():
     found = typeset.chapters_from_pages(_pages(doc), typeset.page_headings(doc, _lines), "Çiçekçi Kadın")
     titles = [(c["title"], c["page_from"]) for c in found]
     assert ("Avokado", 2) in titles
-    # başlık sayfası ile sonraki sayfanın açılışı tek bölüm
-    assert ("Böcek Kapan Menekşe Kepenk", 5) in titles
+    # başlık sayfası ile sonraki sayfanın açılışı tek bölüm; sonraki sayfanın başlığı («Kepenk») bölümün ilk ara
+    # başlığıdır, bölüm adına eklenmez (2026-10-03: «AŞKIN MAHİYETİ AŞK, İNSANIN YAŞADIĞI…» birleşiyordu)
+    assert ("Böcek Kapan Menekşe", 5) in titles
+    assert next(c for c in found if c["page_from"] == 5)["page_to"] == 7
     # iç kapaktaki kitap adı ve sayfa başlığı tekrarı bölüm değil
     assert not any("Çiçekçi" in t for t, _ in titles)
     assert len([t for t, _ in titles if t != "Başlıksız başlangıç"]) == 2

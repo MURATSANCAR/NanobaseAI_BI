@@ -38,7 +38,8 @@ import time
 #: print_plan nedeni → yazılacak sayfa rolü
 ROLE_OF = {"künye": "FRONT_MATTER", "iç kapak": "FRONT_MATTER", "yazar tanıtımı": "FRONT_MATTER",
            "içindekiler": "NON_STORY", "yayınevi tanıtımı": "NON_STORY", "ithaf": "NON_STORY",
-           "epigraf": "NON_STORY"}
+           "epigraf": "NON_STORY", "teşekkür": "NON_STORY", "yayınevi notu": "NON_STORY",
+           "yazar notu": "NON_STORY", "etkinlik": "NON_STORY", "sözlük": "NON_STORY", "ek": "NON_STORY"}
 #: İthaf: baskıda kalır (print_plan onu basar), okumada kitabın olayı değildir. Metni ithafsa: kısa (≤ 40 sözcük) ve
 #: ithaf sözcüğü, «Ad'a/'e/'ya/'ye/'na/'ne,» ile açılıyor (Benim Adım Ekin s.1: «Ekin'e, ... sarıp
 #: sarmalayanlara...») ya da satırın HERHANGİ bir yerinde özel ad + yönelme eki bir öbeği bitiriyor («Bana masal
@@ -50,7 +51,40 @@ _DATIVE = re.compile(r"^\W*[^\W\d_]+['’](y?[ae]|n[ae])\b")
 #: «… büyükannem Ad'a.», «Ad'a ve Ad'e,». Gövde cümlesinde yönelme eki çoğunlukla fiilden önce gelir («topu Ad'a
 #: verdi») ve eşleşmez.
 _DATIVE_ANY = re.compile(r"(?<![^\W\d_])[A-ZÇĞİÖŞÜÂÎÛ][^\W\d_]*['’](?:y?[ae]|n[ae])"
-                         r"(?=\s*(?:[,.;:!…]|$)|\s+(?:ve|ile)\b)", re.M)
+                         r"(?=\s*(?:[,.;:!…]|$)|\s+(?:ve|ile)\b|\s+(?:[Tt]eşekkür|[Mm]innet|[Şş]ükran|[Ss]evgi|[Ss]aygı)\w*)",
+                         re.M)
+#: «…'e Teşekkürlerimle.», «…'a teşekkür ederim»: kısa ön sayfada ithaf/teşekkür sözü (2026-10-03 denetimi)
+_THANKS = re.compile(r"te[şs]ekk[üu]r(ler|lerimle|[üu]m[üu]z?|ederim|ediyorum|ederiz|ü borç)|minnettar|[şs][üu]kran",
+                     re.I)
+#: Teşekkür sayfası: uzun da olabilir («Bu kitabın oluşmasında; … Ad’na… Ad’na…»), en çok bu kadar sözcük
+THANKS_WORDS = 250
+#: Kısa, tırnak içinde tek başına alıntı (kaynak satırı yok): «“Kalp kırmak Kâbe yıkmaktan beterdir.”»
+_QUOTED = re.compile(r"^\s*[«“\"'‘„].+[»”\"'’]\W*$", re.S)
+EPIGRAPH_ALONE_WORDS = 30
+#: Yayınevinin baskı notu («Yeni baskıya önsöz», yayınevi adı + baskı): okurdan önce yayıncının sözü
+_PUBLISHER = re.compile(r"yay[ıi]nevi|yay[ıi]nlar[ıi]\b|yay[ıi]nc[ıi]l[ıi]k|yay[ıi]nevimiz", re.I)
+_EDITION = re.compile(r"\bbask[ıi](s[ıi]|y[ae]|lar[ıi]?|m[ıi]z)?\b", re.I)
+#: Bölüm/sayfa başlığından tanınan kitap dışı bölümler (katlanmış başlık: küçük harf, aksansız). Kitap türünden
+#: bağımsız ama dar: tam başlık eşleşir, «Etkinlik Bağımlılığı», «Ekonomik Yapı», «Teşekkür Etmenin Gücü» gibi
+#: gövde bölümleri eşleşmez.
+_APPARATUS = (
+    ("teşekkür", re.compile(r"^(ve )?tesekkur(ler|name)?$")),
+    ("yayınevi notu", re.compile(r"^(\w+ )?baskiya (onsoz|not|sunus)|^yayin(evi(nin)?|cinin) (notu|onsozu)$|"
+                                  r"^yayinevinden$")),
+    ("yazar notu", re.compile(r"^(yazarin (notu|notlari|sozu)|yazardan|yazar notu)$")),
+    ("etkinlik", re.compile(r"^(bolum sonu )?etkinli(k|kler|gi|kleri)\b( (sorulari|sayfasi|zamani))?\s*(:|$)|"
+                            r"^bolum sonu etkinligi|^(okuma|etkinlik|degerlendirme|anlama|tartisma) sorulari\s*(:|$)|"
+                            r"^sorular$")),
+    ("sözlük", re.compile(r"^((kucuk|kelime|terimler|kavramlar) )?(sozlugu?|sozcukler)$")),
+    ("ek", re.compile(r"^ek(ler)?( [a-z0-9]{1,3})?\s*(:|$)")),
+)
+#: kitabın arka yarısında aranan (önde gövde bölümüyle karışır): ek, sözlük
+_BACK_ONLY = ("ek", "sözlük")
+#: ön/arka bölgede aranan (ortada bölüm adı olabilir): teşekkür, yayınevi notu, yazar notu
+_EDGE_ONLY = ("teşekkür", "yayınevi notu", "yazar notu")
+#: bölüm başlığından tanınan kitap dışı bölüm en çok bu kadar sayfa sürer (yanlış bölüm sınırı gövdeyi götürmesin)
+APPARATUS_MAX_SHARE = 0.15
+APPARATUS_MAX_PAGES = 10
 #: Epigraf: bir alıntı ve son satırında yalnız kaynağı («— Yazar», «– Ad Soyad, Eser»). Diyalog çizgisiyle
 #: karışmasın diye sayfada çizgiyle açılan tek satır o kaynak satırıdır, kaynak cümle değildir (nokta/soru ile
 #: bitmez, ≤ 8 sözcük, büyük harfle başlar); alıntı tırnakla açılmıyorsa okumanın da hikâye dışı demesi gerekir.
@@ -80,9 +114,62 @@ def _strong_kunye(texts: list[str]) -> bool:
     return sum(1 for k in _KUNYE if re.search(k, low)) >= 3 or bool(re.search(r"\bisbn\b", low) and "sertifika" in low)
 
 
+def heading_fold(t: str) -> str:
+    """Başlık karşılaştırması: Türkçe küçük harf, aksansız, noktasız/noktalı i ayrımsız; iki nokta korunur."""
+    import unicodedata
+    t = (t or "").replace("İ", "i").replace("I", "ı").casefold().replace("ı", "i")
+    t = "".join(ch for ch in unicodedata.normalize("NFKD", t) if not unicodedata.combining(ch))
+    return " ".join(re.sub(r"[^\w\s:]|_", " ", t).split())
+
+
+def apparatus_kind(title: str) -> str | None:
+    """Başlık kitap dışı bir bölümün mü (teşekkür, yayınevi notu, yazar notu, etkinlik, sözlük, ek)."""
+    f = heading_fold(title)
+    return next((kind for kind, rx in _APPARATUS if rx.search(f)), None)
+
+
+def _page_heading(paras: list[str]) -> str | None:
+    """Sayfanın başlığı: sayfa başlığı/altlığı ayıklanmış ilk harfli paragraf, kısa ve cümle gibi bitmiyorsa."""
+    t = next((x.strip() for x in paras if x and re.search(r"[^\W\d_]", x)), "")
+    return t if t and len(t.split()) <= 8 and not re.search(r"[^.][.!?]$", t) else None
+
+
+def apparatus_pages(pages: dict[int, list[str]], sections: list[dict] | None, last_page: int) -> dict[int, str]:
+    """{sayfa: neden} — başlığından tanınan kitap dışı bölümler. Bölüm listesi (`chapters`) varsa bölümün bütün
+    sayfaları (en çok `APPARATUS_MAX_PAGES` ya da kitabın `APPARATUS_MAX_SHARE` kadarı; daha uzunsa yalnız açılış
+    sayfası: yanlış bölüm sınırı gövdeyi götürmesin), yoksa yalnız başlığı taşıyan sayfa. Ek/sözlük yalnız kitabın
+    arka yarısında; teşekkür/yayınevi notu/yazar notu yalnız ön ve arka onda birde; etkinlik her yerde (resimli
+    kitapta her bölümün sonunda)."""
+    front = max(10, last_page // 10)
+
+    def allowed(kind: str, p: int) -> bool:
+        if kind in _BACK_ONLY:
+            return p > last_page / 2
+        if kind in _EDGE_ONLY:
+            return p <= front or p > last_page - front
+        return True
+
+    limit = max(APPARATUS_MAX_PAGES, math.ceil(last_page * APPARATUS_MAX_SHARE))
+    out: dict[int, str] = {}
+    for s in sections or []:
+        kind = apparatus_kind(s.get("title") or "")
+        if kind and allowed(kind, s["page_from"]):
+            rng = range(s["page_from"], s["page_to"] + 1)
+            for p in (rng if len(rng) <= limit else [s["page_from"]]):
+                out[p] = kind
+    for p, paras in pages.items():
+        h = _page_heading(paras) if p not in out else None
+        kind = apparatus_kind(h) if h else None
+        if kind and allowed(kind, p):
+            out[p] = kind
+    return out
+
+
 def classify(pages: dict[int, list[str]], suggested: set[int], last_page: int,
-             titles: list[str], names: list[str]) -> dict[int, tuple[str, str]]:
-    """{sayfa: (rol, neden)} — yalnız bütünüyle kitabın dışında kalan sayfalar (salt hesap, yazmaz)."""
+             titles: list[str], names: list[str], sections: list[dict] | None = None) -> dict[int, tuple[str, str]]:
+    """{sayfa: (rol, neden)} — yalnız bütünüyle kitabın dışında kalan sayfalar (salt hesap, yazmaz).
+    `sections`: kitabın bölümleri (`chapters.for_generation`; yoksa yalnız sayfa başlığına bakılır)."""
+    from . import running_head
     from .production.manuscript import print_plan
     back = max(5, last_page // 20)
     candidates = set(suggested) | {p for p, t in pages.items() if t and _strong_kunye(t)} \
@@ -101,7 +188,45 @@ def classify(pages: dict[int, list[str]], suggested: set[int], last_page: int,
         why = front_page_kind(ps, suggested=p in suggested)
         if why:
             out[p] = (ROLE_OF[why], why)
+    # Sayfa başlığı/altlığı ayıklanmış metin üstünde (yazar adı her sayfanın başında: «başlık» o değil)
+    clean = running_head.strip_paragraphs(pages)
+    back = last_page - front
+    for p in sorted(clean):
+        ps = [t for t in clean[p] if t.strip()]
+        if p in out or not ps:
+            continue
+        edge = p <= front or p > back
+        # teşekkür sayfası: ön bölgede gövdeden önce (ya da okumanın önerisi), arka bölgede okumanın önerisiyle
+        if edge and (p in suggested or (p <= front and p < body)) and is_acknowledgement(ps):
+            out[p] = (ROLE_OF["teşekkür"], "teşekkür")
+        # yayınevinin notu gövdeden önce: kurgu dışı gövdede kaynakça anması («… Yayınları, 2. baskı») sayılmaz
+        elif p < body and p in suggested and is_publisher_note(ps):
+            out[p] = (ROLE_OF["yayınevi notu"], "yayınevi notu")
+    for p, why in apparatus_pages(clean, sections, last_page).items():
+        if p not in out:
+            out[p] = (ROLE_OF[why], why)
     return dict(sorted(out.items()))
+
+
+def is_acknowledgement(lines: list[str]) -> bool:
+    """Teşekkür sayfası mı: başlığı «Teşekkür», ya da en çok `THANKS_WORDS` sözcükte özel ad + yönelme eki öbeği
+    bitiren en az iki satır ve teşekkür sözü (ya da üç ve daha çok böyle satır: «Bu kitabın oluşmasında; …
+    Ad’na… Ad’na… Ad’a…»). Romanda diyalogdaki tek «teşekkür ederim» yetmez."""
+    text = "\n".join(lines)
+    if not lines or len(text.split()) > THANKS_WORDS:
+        return False
+    if apparatus_kind(lines[0]) == "teşekkür" and len(lines[0].split()) <= 3:
+        return True
+    datives = len(_DATIVE_ANY.findall(text))
+    return (datives >= 2 and bool(_THANKS.search(text))) or datives >= 3
+
+
+def is_publisher_note(lines: list[str]) -> bool:
+    """Yayınevinin baskı notu mu: yayınevi sözü ve baskı sözü birlikte, ≤ 400 sözcük (okumanın önerisiyle)."""
+    text = "\n".join(lines)
+    # düzyazı paragrafı şart: künye satırları («X Yayınları», «Baskı ve Cilt: …») künye okumasına kalır
+    prose = any(len(t) > 120 and re.search(r"[.!?…]\W*$", t) for t in lines)
+    return prose and len(text.split()) <= 400 and bool(_PUBLISHER.search(text)) and bool(_EDITION.search(text))
 
 
 def is_dedication(lines: list[str]) -> bool:
@@ -114,8 +239,24 @@ def is_dedication(lines: list[str]) -> bool:
 
 def is_epigraph(lines: list[str], *, suggested: bool = False) -> bool:
     """Alıntı + «— Kaynak» sayfası mı. Diyalog sayfası değil: çizgiyle açılan yalnız son satır (kaynak), ondan
-    önce en az bir alıntı satırı; alıntı tırnakla açılmıyorsa okumanın önerisi şart."""
-    if len(lines) < 2 or len(" ".join(lines).split()) > EPIGRAPH_WORDS:
+    önce en az bir alıntı satırı; alıntı tırnakla açılmıyorsa okumanın önerisi şart.
+
+    Kaynak satırı olmayan alıntı (2026-10-03 denetimi): 1–3 satır, ≤ `EPIGRAPH_ALONE_WORDS` sözcük, baştan sona
+    tırnak içinde; tırnaksızsa okumanın önerisi ve ≤ 2 satır, ≤ 25 sözcük. Konuşma çizgisiyle açılan satır yok."""
+    words = len(" ".join(lines).split())
+    if lines and len(lines) <= 3 and words <= EPIGRAPH_ALONE_WORDS and not any(_DASH_LINE.match(t) for t in lines):
+        if _QUOTED.match("\n".join(lines)) and words >= 4:
+            return True
+        # tırnaksız: tek cümle tek başına, ya da cümle + çizgisiz kısa kaynak adı («… bilmediğimdir.» / «Sokrates»)
+        # Cümle olmalı (noktalama ile biter, küçük harf taşır, ≥ 4 sözcük): bölüm başlığı sayfası («BİRİNCİ BÖLÜM
+        # İNSAN OLMAYA DAİR»), yayınevi/yer satırı («TİMAŞ YAYINLARI İSTANBUL 2026»), adres epigraf değildir.
+        sentence = (re.search(r"[.!?…][\"”’'»)]?\s*$", lines[0]) and len(lines[0].split()) >= 4
+                    and any(ch.islower() for ch in lines[0]))
+        attributed = (len(lines) == 2 and len(lines[1].split()) <= 3 and lines[1][:1].isupper()
+                      and not re.search(r"[.!?…:]$", lines[1].strip()))
+        if suggested and sentence and words <= 25 and (len(lines) == 1 or attributed):
+            return True
+    if len(lines) < 2 or words > EPIGRAPH_WORDS:
         return False
     m = _DASH_LINE.match(lines[-1])
     if not m or any(_DASH_LINE.match(t) for t in lines[:-1]):
@@ -154,12 +295,24 @@ def inputs(c, gid: str) -> dict:
             "names": [", ".join(crm.get("authors") or []), ", ".join(crm.get("illustrators") or [])]}
 
 
-def plan(c, gid: str) -> dict:
+def sections_of(gid: str) -> list[dict]:
+    """Kitabın bölümleri (dizgiden; PDF yoksa eski kural) — kitap dışı bölümü bütün sayfalarıyla tanımak için.
+    Hata kuralı durdurmaz: bölümsüz kalan yalnız başlık sayfasına bakar."""
+    try:
+        from . import chapters, knowledge, source
+        pages = source.read(gid)
+        return chapters.for_generation(gid, pages) or knowledge.chapters_from_pages(pages)
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def plan(c, gid: str, sections: list[dict] | None = None) -> dict:
     """Bu nesilde yazılacak otomatik roller (salt okuma). Editörün karar verdiği sayfaya dokunulmaz; aynı rol
-    zaten otomatik yazılmışsa yazılmaz."""
+    zaten otomatik yazılmışsa yazılmaz. `sections` verilmezse kitabın bölümleri bulunur (`sections_of`)."""
     x = inputs(c, gid)
     suggested = {p for p, r in x["roles"].items() if r["role"] in SCOPE_ROLES}
-    found = classify(x["pages"], suggested, x["last_page"], x["titles"], x["names"])
+    found = classify(x["pages"], suggested, x["last_page"], x["titles"], x["names"],
+                     sections_of(gid) if sections is None else sections)
     writes, kept = {}, {}
     for p, (role, why) in found.items():
         cur = x["roles"].get(p)

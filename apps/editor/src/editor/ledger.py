@@ -103,7 +103,9 @@ class PageIndex:
         for r in conn.execute("SELECT page_no, result::text AS t FROM page_scan "
                               "WHERE generation_id=%s", (generation_id,)):
             visual.setdefault(r["page_no"], []).append(r["t"])
-        raw = {p: "\n".join(s["text"] for s in ss) for p, ss in spans.items()}
+        # kanıt doğrulaması bütün spanlara bakar (eski kanıt sayfa başlığını alıntılamış olabilir); yazılı metin
+        # (özel ad sayımı, görsel kanıt) sayfa başlığı/altlığı olmadan
+        raw = {p["page_no"]: "\n".join(s["text"] for s in source.body_spans(p)) for p in pages}
         return cls({p: norm(t) for p, t in raw.items()},
                    {p: norm(" ".join(v)) for p, v in visual.items()}, raw, spans, str(generation_id))
 

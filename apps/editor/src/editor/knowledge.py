@@ -71,7 +71,7 @@ def chapters(generation_id: str) -> list[dict]:
 
 def chapters_from_pages(pages: list[dict]) -> list[dict]:
     """Pure chapter proposal over an already captured source snapshot."""
-    rows = [{"page_no":p["page_no"],**span} for p in pages for span in p["spans"]]
+    rows = [{"page_no":p["page_no"],**span} for p in pages for span in source.body_spans(p)]
     last_page = max((p["page_no"] for p in pages), default=0)
     by_page: dict[int, list[str]] = {}
     for r in rows:

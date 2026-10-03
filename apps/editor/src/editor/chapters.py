@@ -27,6 +27,7 @@ _NOT_TITLE = ("içindekiler", "contents", "kaynakça", "kaynaklar", "dizin", "in
 _SENT_BREAK = re.compile(r"[^\W\d_][.!?…]+[\"”’']?\s+\S")      # başlıkta cümle sonu + devam: konuşma/metin
 _NUMBER = re.compile(r"^\d{1,3}\.?$")
 _IMPRINT = re.compile(r"www\.|\.com|\.tr\b|https?:|^[^\W\d_]+ (19|20)\d\d$", re.I)   # künye/adres: «İstanbul 2026»
+_UNFINISHED = re.compile(r"[;,]\s*$")     # «Bu kitabın oluşmasında;» — cümle sürüyor (teşekkür), başlık değil
 _DEDICATION = re.compile(r"[’'](y?[ae]|n[ae])\W*$|\b\w+(ına|ine|una|üne)\W*$")       # ithaf: «… X'e…», «… hatırasına…»
 
 
@@ -65,10 +66,44 @@ def _title_like(t: str) -> bool:
     return bool(re.search(r"[^\W\d_]", t)) and not _SENT_BREAK.search(t)
 
 
+def _strip_running_heads(raw: dict[int, list[dict]]) -> dict[int, list[dict]]:
+    """Sayfa başlığı/altlığı (`editor.running_head`, okunan metinle aynı kural): sayfanın en üst ve en alt harfli
+    satırı, kitap boyunca aynı konumda tekrar ediyorsa. Puntodan bağımsız: gövde puntosunda dizilmiş sayfa başlığı
+    («AYŞE OSMANOĞLU» 11,5 pt) da ayıklanır."""
+    from . import running_head
+
+    def lettered(ls):
+        return sorted((ln for ln in ls if re.search(r"[^\W\d_]", ln["text"])), key=lambda l: l["y0"])
+
+    edges, at = {}, {}
+    for i, ls in raw.items():
+        lt = lettered(ls)
+        if len(lt) >= 2:                  # yalnız tek satırı olan sayfa (başlık sayfası) sayfa başlığı taşımaz
+            edges[i] = {"top": lt[0]["text"], "bottom": lt[-1]["text"]}
+            at[i] = {"top": lt[0], "bottom": lt[-1]}
+    marks = running_head.detect(edges, len(edges))
+    # Sayfa başlığı hep aynı yükseklikte durur: bölüm adı sağ sayfanın başlığıysa, bölümün açılış sayfasındaki aynı
+    # ad (aşağıda, başlık olarak) ayıklanmaz.
+    ys: dict[tuple, list[float]] = {}
+    for i, m in marks.items():
+        for pos in m:
+            ys.setdefault((pos, running_head.key(at[i][pos]["text"])), []).append(at[i][pos]["y0"])
+    out = {}
+    for i, ls in raw.items():
+        drop = set()
+        for pos in marks.get(i, ()):
+            ln = at[i][pos]
+            y = _median(ys[(pos, running_head.key(ln["text"]))])
+            if abs(ln["y0"] - y) <= max(ln["size"], 1.0) * 1.5:
+                drop.add(id(ln))
+        out[i] = [ln for ln in ls if id(ln) not in drop] if drop else ls
+    return out
+
+
 def page_layout(doc, page_lines) -> dict:
     """Kitabın gövde puntosu, satır aralığı ve normal metnin üst kenarı; sayfa başlığı/altlığı ayıklanmış satırlar."""
-    raw = {i: [ln for ln in page_lines(p) if ln["text"].strip() and not ln["text"].strip().isdigit()]
-           for i, p in enumerate(doc, 1)}
+    raw = _strip_running_heads({i: [ln for ln in page_lines(p) if ln["text"].strip() and not ln["text"].strip().isdigit()]
+                                for i, p in enumerate(doc, 1)})
     sizes: Counter = Counter()
     for ls in raw.values():
         for ln in ls:
@@ -104,8 +139,10 @@ def _opening(v: dict, L: dict) -> dict | None:
         lines = [ln for ln in ls if _title_like(ln["text"])]
         words = sum(len(ln["text"].split()) for ln in lines)
         text = " ".join(ln["text"].strip() for ln in _reading_order(lines))
+        # gövdeden küçük puntolu kısa satırlar fotoğraf altı ya da künye notudur («Hatıratın yazarı … resmi»)
         if (lines and len(lines) == len(ls) and len(ls) <= 6 and words <= 12 and not _DEDICATION.search(text)
-                and not _sentence(text)):
+                and not _sentence(text) and max(ln["size"] for ln in lines) >= body - 0.6
+                and not _UNFINISHED.search(text)):
             return {"title": text, "size": max(ln["size"] for ln in lines), "kind": "page"}
         return None
     head, i = [], 0
@@ -130,7 +167,7 @@ def _opening(v: dict, L: dict) -> dict | None:
     title = " ".join(ln["text"].strip() for ln in _reading_order(head))
     if title[:1].islower() and not sunk:
         return None
-    if _sentence(title):
+    if _sentence(title) or _UNFINISHED.search(title):
         return {"title": "", "size": 0, "kind": "sunk"} if sunk else None
     return {"title": title, "size": max(ln["size"] for ln in head), "kind": "sunk" if sunk else "head"}
 
@@ -203,13 +240,50 @@ def _skip(title: str, book_title: str, page: int, last_page: int) -> bool:
     n = _norm(title)
     if any(n.startswith(x) for x in _NOT_TITLE):
         return True
-    # kitabın kendi adı ilk sayfalarda: iç kapak, bölüm değil
-    return bool(book_title) and n.startswith(_norm(book_title)) and page <= max(6, last_page // 10)
+    # kitabın kendi adı ilk sayfalarda: iç kapak, bölüm değil. Harf karşılaştırması aksansız, boşluksuz ve noktalı/
+    # noktasız i ayrımsız: «DARWIN VE OSMANLILAR» (Türkçe küçültmede «darwın») = «Darwin ve Osmanlılar»,
+    # «İBN SÎNÂ» = «İbn Sina», «Dİjİtal Dünyada e-beveyn» = «Dijital Dünyada Ebeveyn» (2026-10-03: üçü bölüm oldu).
+    from .running_head import key
+    return bool(book_title) and bool(key(book_title)) and key(title).startswith(key(book_title)) \
+        and page <= max(6, last_page // 10)
+
+
+#: Yalnız bölüm etiketi olan başlık («Birinci Bölüm», «BÖLÜM 3», «II. Kısım», «1.»): adı sonraki sayfadadır.
+_LABEL_WORDS = {"birinci", "ikinci", "üçüncü", "dördüncü", "beşinci", "altıncı", "yedinci", "sekizinci", "dokuzuncu",
+                "onuncu", "yirminci", "otuzuncu", "on", "yirmi", "otuz", "ilk", "son", "sonuncu", "bölüm", "kısım",
+                "kitap", "cilt", "fasıl", "perde", "ünite", "part", "chapter", "book"}
+_ROMAN = re.compile(r"^[ıivxlc]+$")
+#: Bağlaçla başlayan başlık («VE TEŞEKKÜR») önceki başlığın devamıdır («ÖNSÖZ» iki sayfa önce).
+_CONJ = re.compile(r"^(ve|ile|veya|ya da|yahut)\b")
+_NOTE_MARK = re.compile(r"(?<=[^\W\d_])\d{1,2}$")     # başlık sonundaki dipnot imi: «DERSAADET’TE1»
+
+
+def _label_only(title: str) -> bool:
+    return all(w in _LABEL_WORDS or _ROMAN.match(w) for w in _norm(title).split())
+
+
+def _clean_title(title: str) -> str:
+    return _NOTE_MARK.sub("", " ".join(title.split())).strip()
+
+
+def _join_continuations(starts: list[dict]) -> list[dict]:
+    """Bağlaçla başlayan kısa başlık, en çok 4 sayfa önceki aynı puntolu kısa başlığın devamıdır: tek bölüm."""
+    out: list[dict] = []
+    for s in starts:
+        prev = out[-1] if out else None
+        if (prev and _CONJ.match(_norm(s["title"])) and s["page"] - prev["page"] <= 4
+                and abs(s["size"] - prev["size"]) < 0.6 and len((prev["title"] + " " + s["title"]).split()) <= 6):
+            prev["title"] = prev["title"] + " " + s["title"]
+            continue
+        out.append(dict(s))
+    return out
 
 
 def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title: str = "") -> list[dict]:
-    """Sayfalar (page_no + spans) ve dizgi açılışlarından bölümler: [{title, page_from, page_to}]."""
-    by_page = {p["page_no"]: [s["text"].strip() for s in p["spans"] if s["text"].strip()] for p in pages}
+    """Sayfalar (page_no + spans) ve dizgi açılışlarından bölümler: [{title, page_from, page_to}]. Sayfa
+    başlığı/altlığı spanları (`source.RUNNING_HEAD`) sayfanın metni sayılmaz."""
+    by_page = {p["page_no"]: [s["text"].strip() for s in p["spans"]
+                              if s["text"].strip() and s.get("role") != "running_head"] for p in pages}
     last_page = max(by_page, default=0)
     starts, pending = [], None
     for p in sorted(by_page):
@@ -226,7 +300,11 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
                 pending = {"page": p, "title": h["title"], "size": h["size"], "last": p, "kind": "page"}
             continue
         if near and by_page[p]:
-            starts.append({**pending, "title": (pending["title"] + " " + (h["title"] if h else "")).strip()})
+            # Başlık sayfasından sonraki sayfanın açılışı bölümün ilk ara başlığıdır («AŞKIN MAHİYETİ» sayfasından
+            # sonra «AŞK, İNSANIN YAŞADIĞI…»): başlığa eklenmez. Başlık sayfası yalnız etiketse («Birinci Bölüm»)
+            # bölümün adı odur.
+            sub = h["title"] if h and _label_only(pending["title"]) else ""
+            starts.append({**pending, "title": (pending["title"] + " " + sub).strip()})
         elif h and h["title"]:
             n = _norm(h["title"])
             paras = by_page[p]
@@ -244,6 +322,7 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
     if strong:
         keep = {k for k, _ in Counter(round(x) for x in strong).most_common(2)}
         starts = [s for s in starts if s["kind"] != "head" or round(s["size"]) in keep or s["size"] > max(keep)]
+    starts = _join_continuations([{**s, "title": _clean_title(s["title"])} for s in starts])
     if not starts:
         return [{"title": "Kitap", "page_from": 1, "page_to": last_page}]
     out = []
