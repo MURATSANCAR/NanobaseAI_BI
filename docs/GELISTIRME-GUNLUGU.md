@@ -10,6 +10,12 @@
 
 - **Neden:** kullanıcı «menüde modül / alt modül ayrıntıları çok soluk» dedi. Rayda modül adları ve ekranlar 10–10,5 px gri (`muted` #6B7280), bölüm başlıkları bunun %80 saydamı, ekran kutusu %55 beyazdı; cam zeminde seçilmiyordu.
 - **Ne:** `src/canvas/nav/DesktopNav.tsx` — boştaki modül kutusu beyaz zemin + ince çerçeve + koyu ikon (slate-700), modül adı 11 px kalın slate-700 (seçili: violet-700), modül başlığı 12 px, ekran kabı %90 beyaz + gölge, bölüm başlıkları («Günlük» vb.) büyük harf violet-700 + ayırıcı çizgi, ekran adları ink ve 10,5 px, ikonlar slate-600, «Ana menü» / arama / «Tüm modüller» koyu. `nav.css` boştaki modül hover'ı açık mor. Telefon (`NavList.tsx`, `PhoneNav.tsx`) aynı hiyerarşi: bölüm başlığı violet-700, satır ink, ikon slate-600. Yerleşim ve ölçüler değişmedi (ray 84 px).
+## 2026-10-03 — E-kitap Timaş ev stili
+
+- **Neden:** müşteri e-kitaplarını InDesign'dan üretiyor; kullanıcı «şablon ve yapı olarak aynı olsun» dedi. 4 örnek (Şer'î Siyaset, Devlerin Savaşı, Karpat, Çanakkale) GPU arşivindeki basılı PDF'leriyle karşılaştırıldı: kırpma yok; tablolar ~300 px resim, logo harf harf parçalanmış, kapaklar 380–480 px, Devlerin Savaşı e-kitabı 1. baskıdan, dizin/yazar tanıtımı atılmış, dipnotlar kitap sonunda tek sırayla. Şablon bu yapıyı alır, kusurları almaz.
+- **Ne:** `epub.House`/`HOUSES`, `house_faces`, `house_fronts`, `NoteBook`, `flow_html(notebook=…)`, `templates/epub/timas.css`; Dockerfile'a 5 açık lisanslı aile; `font_faces` lisans yan dosyası okur. Girdi özeti ev stili ve şablon dosyasını içerir (akışkan e-kitapta şablon değişince «eski»).
+- **Yazı tipi seçimi:** referans fontlarla (Palatino/Cochin/Corbel Mac'ten, Chaparral/Trajan basılı PDF'ten) x-yüksekliği eşitlenmiş harf örtüşmesi; Chaparral için basılı satır görüntüsüyle karşılaştırma.
+- **Doğrulama:** GPU'da stüdyo imajında yeni kod + fontlarla `test_epub.py`, `test_audio_epub.py`, `test_plan.py` 64/64; gerçek iş kopyası (Çiçekçi Kadın) ev stiliyle üretildi, EPUBCheck 0 hata 0 uyarı, 2,2 MB.
 
 ## 2026-10-03 — Dal temizliği: main'e taşınanlar, K0776 geri alındı
 

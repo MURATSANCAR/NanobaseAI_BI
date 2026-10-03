@@ -409,6 +409,10 @@ def font_faces(families: list[str], font_dir: Path | None = None) -> list[Face]:
     font_dir = font_dir or studio.fonts()
     want = {f.casefold() for f in families if f}
     out = []
+    try:                                       # ad tablosunda lisans yazmayan fontun lisansı (kurulumda yazılır)
+        side = json.loads((font_dir / "LICENSES.json").read_text())
+    except (OSError, ValueError):
+        side = {}
     for p in sorted(font_dir.glob("*")) if font_dir.exists() else []:
         if p.suffix.lower() not in (".ttf", ".otf") or p.name.startswith("._"):
             continue
@@ -428,7 +432,7 @@ def font_faces(families: list[str], font_dir: Path | None = None) -> list[Face]:
         else:
             weight = str(os2.usWeightClass)
         text = " ".join(n.getDebugName(i) or "" for i in (0, 13, 14)).lower()
-        lic = next((name for key, name in OPEN_LICENSES if key in text), "")
+        lic = next((name for key, name in OPEN_LICENSES if key in text), "") or side.get(p.name, "")
         fs = int(os2.fsType)
         embed = (fs & 0x000F) != 0x0002              # yalnız «kısıtlı lisans gömme» (2) gömülmez
         rfn = "reserved font name" in text
@@ -1116,6 +1120,33 @@ NOTE_HEAD = re.compile(r"^\s*(?:\[(\d{1,3})\]|([¹²³⁴⁵⁶⁷⁸⁹⁰]+))\
 SUP = str.maketrans("¹²³⁴⁵⁶⁷⁸⁹⁰", "1234567890")
 
 
+SECTION_BREAK = re.compile(r"^\s*(?:[*✱✳⁂•·]\s*){1,5}$")    # «* * *», «***», «⁂»: bölüm içi ara
+
+
+class NoteBook:
+    """Ev stilinde dipnotlar: kitap boyu tek sıra numara, hepsi kitabın sonundaki not dosyasında."""
+
+    def __init__(self, href: str):
+        self.href = href                      # not dosyası, bölüm dosyasına göre (aynı klasör)
+        self.n = 0
+        self.items: list[tuple[int, str, str | None]] = []
+
+    def take(self) -> int:
+        self.n += 1
+        return self.n
+
+    def add(self, n: int, body: str, back: str | None) -> None:
+        self.items.append((n, body, back))
+
+    def html(self) -> str:
+        out = []
+        for n, body, back in sorted(self.items):
+            mark = f'<a href="{back}" role="doc-backlink">{n}</a>' if back else str(n)
+            out.append(f'<aside epub:type="footnote" role="doc-footnote" id="dn-{n}"><p class="e-dipnotmetni">'
+                       f'{mark} {body}</p></aside>')
+        return "\n".join(out)
+
+
 def _note_no(m) -> str:
     return m.group(1) or m.group(2).translate(SUP)
 
@@ -1207,10 +1238,13 @@ def _strip_note_head(parts: list) -> list:
     return out
 
 
-def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=None) -> tuple[str, list[int]]:
+def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=None, notebook: "NoteBook | None" = None,
+              href: str = "") -> tuple[str, list[int]]:
     """Bölüm gövdesi ve içindeki basılı sayfa numaraları. Dipnot: aynı bölümde «[n] …» ya da «¹ …» ile başlayan paragraf
     not olur (bölüm sonunda), metindeki aynı işaret ona bağlanır; işareti metinde olmayan paragraf not sayılmaz.
-    `wrap(runs, blok_kimliği) -> html | None`: sesli e-kitapta kelimeleri kimlikli yazar (Narr.runs)."""
+    `wrap(runs, blok_kimliği) -> html | None`: sesli e-kitapta kelimeleri kimlikli yazar (Narr.runs).
+    `notebook` (ev stili): stil adları ev stilinin (e-1-baslik, e-paragraf, e-yildiz…), dipnotlar bölüm sonunda değil
+    kitabın sonundaki not dosyasında, kitap boyu tek sıra numarayla; `href` bu bölümün dosyası (geri bağlantı için)."""
     def flat(n) -> str:
         return "".join(runs_text(p[1]) for p in n[2] if p[0] == "runs")
 
@@ -1221,6 +1255,7 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=
     body_text = " ".join(flat(n) for i, n in enumerate(doc["nodes"]) if n[0] == "p" and i not in heads.values())
     marks = {_note_no(m) for m in NOTE_MARK.finditer(body_text)}
     notes = {k: i for k, i in heads.items() if k in marks}
+    num = {k: notebook.take() for k in sorted(notes, key=notes.get)} if notebook is not None else {}
     pages: list[int] = []
     refs: set[str] = set()
 
@@ -1232,6 +1267,12 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=
         k = _note_no(m)
         if k not in notes:
             return m.group(0)
+        if notebook is not None:
+            n = num[k]
+            rid = "" if k in refs else f' id="dr-{n}"'
+            refs.add(k)
+            return (f'<a class="e-dipnot-no" epub:type="noteref" role="doc-noteref" href="{notebook.href}#dn-{n}"{rid}>'
+                    f'{n}</a>')
         rid = "" if k in refs else f' id="dr-{di}-{k}"'
         refs.add(k)
         return f'<a class="dn" epub:type="noteref" role="doc-noteref" href="#dn-{di}-{k}"{rid}>{esc(k)}</a>'
@@ -1246,24 +1287,34 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=
                 buf.append(NOTE_MARK.sub(ref, h) if link and notes else h)
         return "".join(buf)
 
+    house = notebook is not None
     out, bodies = [], {}
     for idx, n in enumerate(doc["nodes"]):
         if n[0] == "pb":
             out.append(pb(n[1]))
         elif n[0] == "h":
             inner = (wrap(n[3], n[2]) if wrap is not None and len(n) > 3 else None) or esc(n[1])
-            out.append(f"<h1>{inner}</h1>")
+            out.append(f'<h1 class="e-1-baslik">{inner}</h1>' if house else f"<h1>{inner}</h1>")
         elif n[0] == "img":
             if n[1] in img_href:
-                out.append(f'<figure class="resim"><img src="{img_href[n[1]]}" alt="{esc(alts.get(n[1], ""))}"/></figure>')
+                out.append(f'<figure class="{"e-resim" if house else "resim"}"><img src="{img_href[n[1]]}" '
+                           f'alt="{esc(alts.get(n[1], ""))}"/></figure>')
         elif n[0] == "p":
             k = next((k for k, i in notes.items() if i == idx), None)
             if k is not None:
                 bodies[k] = inline(_strip_note_head(n[2]), False)
                 continue
-            cls = {"dialogue": ' class="diyalog"', "sound": ' class="ses"', "free": ' class="serbest"'}.get(n[1], "")
+            if house:
+                cls = ' class="e-yildiz"' if SECTION_BREAK.match(flat(n)) else \
+                    {"sound": ' class="e-paragraf ses"', "free": ' class="e-paragraf serbest"'}.get(n[1], ' class="e-paragraf"')
+            else:
+                cls = {"dialogue": ' class="diyalog"', "sound": ' class="ses"', "free": ' class="serbest"'}.get(n[1], "")
             out.append(f"<p{cls}>{'– ' if n[1] == 'dialogue' else ''}{inline(n[2], True)}</p>")
-    if bodies:
+    if bodies and notebook is not None:
+        for k, body in bodies.items():
+            n = num[k]
+            notebook.add(n, body, f"{href}#dr-{n}" if k in refs else None)
+    elif bodies:
         out.append('<section class="notlar" aria-label="Dipnotlar">')
         for k, body in bodies.items():
             back = f'<a href="#dr-{di}-{k}" role="doc-backlink">{esc(k)}</a> ' if k in refs else f"{esc(k)} "
@@ -1299,6 +1350,104 @@ a.dn {{ vertical-align: super; font-size: 0.7em; line-height: 0; text-decoration
 .kapak {{ text-align: center; margin: 0; padding: 0; }}
 .kapak img {{ max-width: 100%; max-height: 100vh; }}
 """
+
+
+# ------------------------------------------------------------------ ev stili (yayınevinin e-kitap şablonu)
+@dataclass(frozen=True)
+class House:
+    """Yayınevinin akışkan e-kitap şablonu: stil dosyası, yazı tipleri (aile, kalınlık, duruş), ön sayfalar."""
+    key: str
+    title: str
+    css: str                                     # templates/epub altında
+    faces: tuple[tuple[str, int, str], ...]      # gömülecek yüzler: (aile, kalınlık, normal|italic)
+    body: str                                    # metin ailesi (yazı parçalarının yazı tipi eşlemesi)
+    heading: str
+    signature: str | None                        # ilk ön sayfadaki yayınevi imzası
+    publisher: str                               # logonun alt metni
+
+
+HOUSES = {
+    "timas": House(
+        key="timas", title="Timaş e-kitap", css="timas.css",
+        faces=(("Domitian", 400, "normal"), ("Domitian", 700, "normal"), ("Domitian", 400, "italic"),
+               ("Lato", 400, "normal"), ("Lato", 700, "normal"), ("Cinzel", 600, "normal"),
+               ("Crimson Pro", 400, "italic"), ("EB Garamond", 400, "italic")),
+        body="Domitian", heading="Lato", signature="iyi ki kitaplar var...", publisher="Timaş Yayınları"),
+}
+
+
+def house_key(d: Path) -> str:
+    """İşin e-kitap ev stili: e-kitap kaydında seçilmişse o, yoksa ayar (EPUB_HOUSE, varsayılan «timas»); boş = sade."""
+    m = meta(d)
+    k = m["house"] if "house" in m else os.environ.get("EPUB_HOUSE", "timas")
+    return k if k in HOUSES else ""
+
+
+def house_dir(key: str) -> Path:
+    """Ev stilinin sunucudaki dosyaları (logo): depoya girmez, yayınevinin kendi varlığıdır."""
+    from ..config import settings
+    return Path(os.environ.get("EPUB_HOUSE_DIR") or Path(settings().storage) / "epub-sablon") / key
+
+
+def house_logo(key: str) -> Path | None:
+    base = house_dir(key)
+    return next((base / f"logo{x}" for x in (".svg", ".png", ".jpg") if (base / f"logo{x}").exists()), None)
+
+
+def _covers(f: Face, weight: int) -> bool:
+    lo, _, hi = f.weight.partition(" ")
+    return int(lo) <= weight <= int(hi or lo)
+
+
+def house_faces(h: House, font_dir: Path | None = None) -> tuple[list[Face], list[str]]:
+    """Ev stilinin istediği yüzler (aynı dosya bir kez) ve sunucuda bulunamayanlar."""
+    found = font_faces(sorted({f for f, _, _ in h.faces}), font_dir)
+    out, missing = [], []
+    for fam, w, style in h.faces:
+        c = [f for f in found if f.family.casefold() == fam.casefold() and f.style == style and _covers(f, w)]
+        if not c:
+            missing.append(f"{fam} {w}{' italik' if style == 'italic' else ''}")
+        elif c[0] not in out:
+            out.append(c[0])
+    return out, missing
+
+
+def tr_upper(s: str) -> str:
+    return (s or "").replace("i", "İ").replace("ı", "I").upper()
+
+
+def house_fronts(h: House, ms, rows: list[tuple[str, str]], bios: list[dict], logo: str | None
+                 ) -> list[tuple[str, str, str, str]]:
+    """Ev stilinde ön sayfalar [(dosya, başlık, epub:type, gövde)]: yayınevi imzası, iç kapak ile künye (aynı sayfa,
+    etiket kalın büyük harf, değer alt satırda; ISBN satırları kişilerden sonra, yayınevinden önce), yazar tanıtımı.
+    Kitap adı ve yazar künyede tekrar edilmez; kişi adları yazıldığı gibi kalır (Türkçe büyük harf yabancı adı bozar)."""
+    out = []
+    if h.signature:
+        out.append(("imza.xhtml", h.title, "frontmatter", f'<p class="e-iyikikitaplarvar">{esc(h.signature)}</p>'))
+    head = f'<span class="e-bold">{esc(ms.title)}</span>' + (f"<br/><br/>{esc(ms.author)}" if ms.author else "")
+    body = [f'<section epub:type="titlepage"><p class="e-jenerikbaslik">{head}</p>']
+    if logo:
+        body.append(f'<p class="e-jenerik-logo"><img src="{logo}" alt="{esc(h.publisher)}"/></p>')
+    body.append('</section><section epub:type="copyright-page">')
+    rows = [(k, v) for k, v in rows if k not in ("Kitap", "Yazar")]
+    isbn = [r for r in rows if "ISBN" in r[0]]                # yayınevinin e-künyesi gibi: kişilerden sonra,
+    rest = [r for r in rows if "ISBN" not in r[0]]            # yayınevi bilgilerinden önce
+    at = next((i for i, (k, _) in enumerate(rest) if k == "Yayınevi"), len(rest))
+    body += [f'<p class="e-jenerik"><span class="e-bold">{esc(tr_upper(k))}</span><br/>{esc(v)}</p>'
+             for k, v in rest[:at] + isbn + rest[at:]]
+    body.append("</section>")
+    out.append(("kunye.xhtml", "Künye", "frontmatter", "".join(body)))
+    bio = "".join(f'<p class="e-jenerikbaslik">{esc(b.get("name"))}</p>' + "".join(
+        f'<p class="e-jenerik">{esc(p)}</p>' for p in str(b.get("text") or "").split("\n\n") if p.strip() and p != "—")
+        for b in bios if b.get("name") and b.get("name") != "—" and b.get("text") not in (None, "—"))
+    if bio:
+        out.append(("yazar.xhtml", "Yazar hakkında", "frontmatter contributors", bio))
+    return out
+
+
+def house_css(h: House, faces: list[Face], audio: bool = False) -> str:
+    return (_font_css(faces, "../fonts/") + "\n" + (Path(__file__).resolve().parent / "templates" / "epub" / h.css)
+            .read_text(encoding="utf-8") + (ACTIVE_CSS if audio else ""))
 
 
 # ------------------------------------------------------------------ içindekiler, OPF
@@ -1417,6 +1566,11 @@ def inputs_hash(d: Path, audio: bool = False) -> str:
         p = d / name
         h.update(p.read_bytes() if p.exists() else b"-")
     h.update(json.dumps(studio.selected_art(d), sort_keys=True).encode())
+    hk = house_key(d) if ((read_state(d).get("result") or {}).get("layout")) == "reflow" else ""
+    if hk:                                     # akışkanda ev stili ya da şablonu değişince e-kitap «eski»
+        h.update(hk.encode() + (Path(__file__).resolve().parent / "templates" / "epub" / HOUSES[hk].css).read_bytes())
+        logo = house_logo(hk)
+        h.update(logo.read_bytes() if logo else b"-")
     if audio:
         h.update(b"ses")
         sd = d / "ses"
@@ -1466,12 +1620,17 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
     if audio:
         from . import sfx
         rows += sfx.kunye_rows(d)                 # sesli e-kitapta efekt kaynakçası (atıf gerekenler dahil)
-    faces = font_faces([spec.body_font, spec.heading_font])
-    faces = [f for f in faces if f.style == "normal"] or faces        # dizgide eğik yazı yok
+    house = HOUSES.get(house_key(d)) if layout == "reflow" else None
+    if house:
+        faces, missing_fam = house_faces(house)
+    else:
+        faces = font_faces([spec.body_font, spec.heading_font])
+        faces = [f for f in faces if f.style == "normal"] or faces        # dizgide eğik yazı yok
+        missing_fam = [x for x in (spec.body_font, spec.heading_font)
+                       if x and not any(f.family.casefold() == x.casefold() for f in faces)]
     for f in faces:
         if not f.embed:
             warn.append(f"{f.family} yazı tipinin lisansı gömmeye izin vermiyor; okuyucunun yazı tipi kullanılır.")
-    missing_fam = [x for x in (spec.body_font, spec.heading_font) if x and not any(f.family.casefold() == x.casefold() for f in faces)]
     for x in dict.fromkeys(missing_fam):
         warn.append(f"{x} yazı tipi sunucuda bulunamadı; okuyucunun yazı tipi kullanılır.")
     pack = Pack()
@@ -1556,9 +1715,15 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
     else:
         acc = ((studio.read(d, "pagemap.json") or {}).get("layout") or {}).get("accent") or \
             ((studio.read(d, "artplan.json") or {}).get("style") or {}).get("accent") or "#264653"
-        pack.add("css/akis.css", flow_css(spec, fonts_used, acc, audio=narr is not None))
-        fonts = {"body": _stack(spec.body_font), "heading": _stack(spec.heading_font, False)}
-        css = ["../css/akis.css"]
+        if house:
+            css_path = f"css/{house.key}.css"
+            pack.add(css_path, house_css(house, fonts_used, audio=narr is not None))
+            fonts = {"body": _stack(house.body), "heading": _stack(house.heading, False)}
+        else:
+            css_path = "css/akis.css"
+            pack.add(css_path, flow_css(spec, fonts_used, acc, audio=narr is not None))
+            fonts = {"body": _stack(spec.body_font), "heading": _stack(spec.heading_font, False)}
+        css = ["../" + css_path]
         if cov:
             cid = pack.add("text/kapak.xhtml", xhtml(ms.title, f'<div class="kapak"><img src="../images/kapak{cov[1]}" '
                                                      f'alt="{esc(alts["kapak"])}"/></div>', css=css,
@@ -1569,6 +1734,11 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             pages_meta.append({"href": "text/kapak.xhtml", "title": "Kapak", "side": None, "no": None})
             img_keys.add("kapak")
         pub = ms.meta.get("PUBLISHER") or dict(rows).get("Yayınevi") or ""
+        logo = house_logo(house.key) if house else None
+        if house and logo:
+            pack.add(f"images/logo{logo.suffix}", logo.read_bytes())
+        elif house:
+            warn.append(f"{house.title} logosu sunucuda yok ({house_dir(house.key)}); künyede logo basılmadı.")
         fronts = [("ic-kapak.xhtml", "İç kapak", "titlepage",
                    f'<div class="baslik"><h1>{esc(ms.title)}</h1><p class="yazar">{esc(ms.author or "")}</p>'
                    f'<p class="yayinevi">{esc(pub.upper())}</p></div>'),
@@ -1579,10 +1749,16 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             for b in front.get("bios") or [] if b.get("name") and b.get("name") != "—" and b.get("text") not in (None, "—"))
         if bios:
             fronts.append(("yazar.xhtml", "Yazar hakkında", "contributors", bios))
+        if house:
+            fronts = [(fn, t, et.removeprefix("frontmatter").strip(), b) for fn, t, et, b in
+                      house_fronts(house, ms, rows, front.get("bios") or [],
+                                   f"../images/logo{logo.suffix}" if logo else None)]
         for fn, title, etype, body in fronts:
-            iid = pack.add(f"text/{fn}", xhtml(title, body, css=css, body_attr=f' epub:type="frontmatter {etype}"'))
+            attr = f' epub:type="frontmatter {etype}"' if etype else ' epub:type="frontmatter"'
+            iid = pack.add(f"text/{fn}", xhtml(title, body, css=css, body_attr=attr))
             pack.spine.append({"id": iid})
-            toc.append((title, f"text/{fn}"))
+            if fn != "imza.xhtml":                  # yayınevi imzası içindekilere girmez
+                toc.append((title, f"text/{fn}"))
             pages_meta.append({"href": f"text/{fn}", "title": title, "side": None, "no": None})
         docs = flow_docs(plan, ms) if plan else _docs_from_manuscript(ms)
         href: dict[str, str] = {}
@@ -1599,6 +1775,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
                 pack.add(p, data)
                 href[node[1]] = "../" + p
                 img_keys.add(node[1])
+        notebook = NoteBook("notlar.xhtml") if house else None
         for di, doc in enumerate(docs, 1):
             if progress:
                 progress(di - 1, len(docs))
@@ -1606,7 +1783,8 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             if narr:
                 narr.doc = f"text/{fn}"
             body, nos = flow_html(doc, di, href, alts, fonts,
-                                  wrap=(lambda runs, bid: narr.runs(runs, bid, fonts)) if narr else None)
+                                  wrap=(lambda runs, bid: narr.runs(runs, bid, fonts)) if narr else None,
+                                  notebook=notebook, href=fn)
             mo = narr.attach(pack, f"text/{fn}") if narr else None
             iid = pack.add(f"text/{fn}", xhtml(doc["title"], body, css=css,
                                                body_attr=' epub:type="bodymatter"' if di == 1 else ""), overlay=mo)
@@ -1617,12 +1795,19 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
                                "smil": narr.smil_of.get(f"text/{fn}") if narr else None})
             if di == 1:
                 landmarks.append(("bodymatter", f"text/{fn}", "Metin"))
-        nav_css, nav_head = "css/akis.css", ""
+        if notebook is not None and notebook.items:
+            iid = pack.add("text/notlar.xhtml", xhtml("Notlar", notebook.html(), css=css,
+                                                      body_attr=' epub:type="backmatter endnotes"'))
+            pack.spine.append({"id": iid})
+            toc.append(("Notlar", "text/notlar.xhtml"))
+            pages_meta.append({"href": "text/notlar.xhtml", "title": "Notlar", "side": None, "no": None})
+        nav_css, nav_head = css_path, ""
     pagelist.sort(key=lambda x: x[0])
-    if not fixed:                              # içindekiler yalnız akışkanda okuma sırasında (bağlantı spine'a gitmeli)
+    in_spine = not fixed and not house         # ev stilinde (yayınevinin e-kitapları gibi) içindekiler okuyucunun menüsünde
+    if in_spine:                               # içindekiler yalnız akışkanda okuma sırasında (bağlantı spine'a gitmeli)
         landmarks.append(("toc", "nav.xhtml", "İçindekiler"))
     pack.add("nav.xhtml", nav_xhtml(toc, pagelist, landmarks, nav_css, nav_head), id="nav", props="nav")
-    if not fixed:                              # sabit sayfada içindekiler okuma sırasına girmez (okuyucunun menüsünde)
+    if in_spine:                               # sabit sayfada içindekiler okuma sırasına girmez (okuyucunun menüsünde)
         pack.spine.insert(1 if cov else 0, {"id": "nav"})
         pages_meta.insert(1 if cov else 0, {"href": "nav.xhtml", "title": "İçindekiler", "side": None, "no": None})
     pack.add("toc.ncx", ncx(uid, ms.title, toc), id="ncx")
@@ -1656,7 +1841,8 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             "build": hashlib.sha1(data).hexdigest()[:12], "size": len(data), "pages": pages_meta,
             "viewport": [int(round(spec.trim_w * K)), int(round(spec.trim_h * K))] if fixed else None,
             "fonts": [f.report() for f in faces], "images": len(shown), "alt_missing": len(lacking),
-            "a11y": access, "warnings": warn, "seconds": round(time.time() - t0, 2), "by": by, "audio": audio_res}
+            "a11y": access, "warnings": warn, "seconds": round(time.time() - t0, 2), "by": by, "audio": audio_res,
+            "house": house.title if house else None}
 
 
 def _image_path(d: Path, plan: dict | None, sel: dict, key: str) -> Path | None:

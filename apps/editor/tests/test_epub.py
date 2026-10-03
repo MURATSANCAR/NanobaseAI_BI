@@ -135,6 +135,61 @@ def test_flow_docs_merges_split_block_and_notes():
     assert "[1] Dipnot" not in html
 
 
+def test_house_flow_html_classes_and_book_end_notes():
+    """Ev stili: yayınevinin stil adları; dipnotlar kitabın sonunda, kitap boyu tek sıra numarayla (bölümde 1'den
+    başlayan basılı numara değil); «* * *» ara satırı e-yildiz."""
+    import types
+    ms = types.SimpleNamespace(title="K", chapters=[types.SimpleNamespace(title="BİR"), types.SimpleNamespace(title="İKİ")])
+
+    def pg(blocks):
+        return {"id": P.new_id("p"), "chapter": 0, "layout": "text-only", "art": None,
+                "text": {"blocks": [{"id": i, "kind": k, "runs": [{"text": t}]} for i, k, t in blocks]},
+                "bubbles": [], "figures": [], "texts": [], "shapes": []}
+    plan = {"pages": [pg([("h0", "heading", "BİR"), ("a", "para", "İlk[1] ve ikinci[2] not."), ("b", "para", "* * *"),
+                          ("c", "para", "[1] Birinci not."), ("d", "para", "[2] İkinci not.")]),
+                      pg([("h1", "heading", "İKİ"), ("e", "dialogue", "Yine[1] bir not."), ("f", "para", "[1] Üçüncü not.")])]}
+    docs = E.flow_docs(plan, ms)
+    nb = E.NoteBook("notlar.xhtml")
+    fonts = {"body": "serif", "heading": "sans-serif"}
+    h1, _ = E.flow_html(docs[0], 1, {}, {}, fonts, notebook=nb, href="bolum-001.xhtml")
+    h2, _ = E.flow_html(docs[1], 2, {}, {}, fonts, notebook=nb, href="bolum-002.xhtml")
+    assert '<h1 class="e-1-baslik">BİR</h1>' in h1 and '<p class="e-yildiz">' in h1 and 'class="e-paragraf"' in h2
+    assert 'href="notlar.xhtml#dn-1"' in h1 and 'href="notlar.xhtml#dn-2"' in h1 and 'href="notlar.xhtml#dn-3"' in h2
+    assert "footnote" not in h1 + h2 and "Birinci not" not in h1                 # not gövdesi bölümde değil
+    notes = nb.html()
+    assert [int(n) for n in re.findall(r'id="dn-(\d+)"', notes)] == [1, 2, 3]
+    assert 'href="bolum-002.xhtml#dr-3"' in notes and "Üçüncü not." in notes and 'class="e-dipnotmetni"' in notes
+
+
+def test_house_fronts_kunye_upper_labels_and_no_title_repeat():
+    import types
+    ms = types.SimpleNamespace(title="Şer'î Siyaset", author="İbn Teymiyye")
+    rows = [("Kitap", "Şer'î Siyaset"), ("Yazar", "İbn Teymiyye"), ("Editör", "Ali Veli"), ("Yayınevi", "TİMAŞ"),
+            ("Telif", "©"), ("e-ISBN", "978-605-08-4323-1")]
+    fronts = E.house_fronts(E.HOUSES["timas"], ms, rows, [{"name": "İbn Teymiyye", "text": "661'de doğdu.\n\nÖldü."}],
+                            "../images/logo.svg")
+    files = [f[0] for f in fronts]
+    assert files == ["imza.xhtml", "kunye.xhtml", "yazar.xhtml"]
+    kun = fronts[1][3]
+    assert '<span class="e-bold">EDİTÖR</span><br/>Ali Veli' in kun and "E-ISBN" in kun
+    assert kun.count("İbn Teymiyye") == 1 and ">KİTAP<" not in kun and ">YAZAR<" not in kun   # başlıkta bir kez
+    assert kun.index("E-ISBN") < kun.index("YAYINEVİ") < kun.index("TELİF")                  # ISBN yayınevinden önce
+    assert 'src="../images/logo.svg"' in kun and 'epub:type="copyright-page"' in kun
+    assert fronts[2][3].count('class="e-jenerik"') == 2 and "İbn Teymiyye" in fronts[2][3]
+    assert "iyi ki kitaplar var" in fronts[0][3]
+
+
+def test_house_fonts_are_open_and_cover_every_style():
+    faces, missing = E.house_faces(E.HOUSES["timas"], FONTS)
+    if missing:
+        pytest.skip(f"ev stili fontları yok (editor-py imajında koşar): {missing}")
+    assert all(f.embed for f in faces) and all(f.license == "SIL OFL 1.1" for f in faces), \
+        [(f.path.name, f.license) for f in faces]
+    css = E.house_css(E.HOUSES["timas"], faces)
+    for fam in ("Domitian", "Lato", "Cinzel", "Crimson Pro", "EB Garamond"):
+        assert f"font-family: '{fam}'" in css
+
+
 # ------------------------------------------------------------------ dizgiyle
 @typeset_only
 def test_fixed_layout_epub_from_child_plan(tmp_path):
@@ -239,6 +294,39 @@ def test_reflowable_epub_from_novel_plan(tmp_path):
     assert printed <= {int(n) for n in re.findall(r'id="s(\d+)"', body)}
     rep = E.check(path)
     _no_errors(rep)
+
+
+@typeset_only
+def test_reflowable_house_style_matches_publisher_structure(tmp_path, monkeypatch):
+    """Ev stili (varsayılan «timas»): yayınevi imzası, iç kapakla künye, bölümler e-1-baslik/e-paragraf, stil dosyası,
+    içindekiler okuma sırasında değil; logo sunucudaki şablon klasöründen. EPUB_HOUSE boş → sade akışkan."""
+    logo_dir = tmp_path / "sablon" / "timas"
+    logo_dir.mkdir(parents=True)
+    (logo_dir / "logo.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>')
+    monkeypatch.setenv("EPUB_HOUSE_DIR", str(tmp_path / "sablon"))
+    monkeypatch.delenv("EPUB_HOUSE", raising=False)
+    d, ms = _job(tmp_path, child=False)
+    P.freeze(d, "sınama")
+    out = E.build(d, "reflow", "e")
+    assert out["house"] == "Timaş e-kitap"
+    path = d / "epub" / "kitap.epub"
+    _keep(path, "ev-stili.epub")
+    z = zipfile.ZipFile(path)
+    names = z.namelist()
+    assert "OEBPS/css/timas.css" in names and "OEBPS/images/logo.svg" in names and "OEBPS/css/akis.css" not in names
+    assert "e-iyikikitaplarvar" in z.read("OEBPS/text/imza.xhtml").decode()
+    kun = z.read("OEBPS/text/kunye.xhtml").decode()
+    assert 'class="e-jenerikbaslik"' in kun and 'class="e-jenerik"' in kun and "logo.svg" in kun
+    ch = next(p for p in out["pages"] if p["href"].startswith("text/bolum-"))
+    raw = z.read("OEBPS/" + ch["href"]).decode()
+    assert 'class="e-1-baslik"' in raw and 'class="e-paragraf"' in raw
+    spine = [i.get("idref") for i in _opf(z).findall(".//o:spine/o:itemref", NS)]
+    assert "nav" not in spine
+    _no_errors(E.check(path))
+    monkeypatch.setenv("EPUB_HOUSE", "")
+    out = E.build(d, "reflow", "e")
+    z = zipfile.ZipFile(path)
+    assert out["house"] is None and "OEBPS/css/akis.css" in z.namelist() and "OEBPS/text/imza.xhtml" not in z.namelist()
 
 
 @typeset_only

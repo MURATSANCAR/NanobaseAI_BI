@@ -1,0 +1,60 @@
+/* Timaş e-kitap ev stili (akışkan e-kitap). Stil adları, puntolar, satır aralıkları, boşluklar ve sayfa başlangıçları
+   yayınevinin kendi e-kitaplarındakiyle aynı (e-paragraf, e-1-baslik, e-perde, e-epi, e-siir, e-jenerik…).
+   Yazı tipleri açık lisanslı karşılıklarıdır: Palatino → Domitian, Corbel → Lato, Trajan → Cinzel,
+   Chaparral italik → Crimson Pro italik, Cochin italik → EB Garamond italik. */
+
+body, div, p, h1, h2, figure, aside, section, nav, ol, li { margin: 0; padding: 0; border-width: 0; }
+body { -epub-hyphens: auto; -webkit-hyphens: auto; hyphens: auto; }
+
+.e-paragraf, .e-paragraf-sagdan, .e-yildiz, .e-daryazi, .e-dipnotmetni, nav li {
+  font-family: 'Domitian', 'Palatino', 'Palatino Linotype', serif; color: #000000; orphans: 1; widows: 1; }
+.e-paragraf { font-size: 0.792em; line-height: 1.474; margin-top: 9px; text-align: justify; -epub-text-align-last: left; }
+.e-paragraf-sagdan { font-size: 0.792em; line-height: 1.474; margin-top: 9px; text-align: right; }
+.e-yildiz { font-size: 0.792em; line-height: 1.474; margin: 11px 14px 9px 0; text-align: center; }
+.e-daryazi { font-size: 0.75em; line-height: 1.556; margin: 11px 14px 3px 14px; text-align: justify; }
+
+/* Ana başlık ve bölüm perdesi yeni sayfadan başlar (yayınevinin e-kitap şablonu). */
+.e-1-baslik, .e-perde { font-family: 'Lato', 'Corbel', sans-serif; font-size: 1em; font-weight: bold; line-height: 1.25;
+  text-align: center; color: #000000; -epub-hyphens: none; -webkit-hyphens: none; hyphens: none;
+  break-before: page; page-break-before: always; break-after: avoid; page-break-after: avoid; }
+.e-1-baslik { margin: 23px 0 14px 0; }
+.e-perde { margin: 14px 0 28px 0; }
+.e-perde-alti, .e-epi, .e-siir { font-family: 'Crimson Pro', 'Chaparral Pro', serif; font-style: italic; color: #000000; }
+.e-perde-alti { font-size: 0.75em; line-height: 1.333; margin-top: 14px; text-align: center; }
+.e-epi { font-size: 0.75em; line-height: 1.444; margin-left: 57px; text-align: right; -epub-hyphens: none;
+  -webkit-hyphens: none; hyphens: none; }
+.e-siir { font-size: 0.792em; line-height: 1.474; margin: 11px 0 9px 14px; text-align: left; }
+
+/* İç kapak, künye, yazar tanıtımı */
+.e-jenerikbaslik { font-family: 'Cinzel', 'Trajan Pro', serif; font-size: 1.083em; font-weight: 600; line-height: 1.692;
+  margin: 40px 0 28px 0; text-align: center; color: #000000; }
+.e-jenerik { font-family: 'Lato', 'Corbel', sans-serif; font-size: 0.667em; line-height: 1.375; margin-top: 9px;
+  text-align: left; color: #000000; }
+.e-jenerik-logo { text-align: center; margin: 28px 0 14px 0; }
+.e-jenerik-logo img { width: 17%; }
+.e-iyikikitaplarvar { font-family: 'EB Garamond', 'Cochin', serif; font-style: italic; font-size: 1.333em;
+  line-height: 1.375; margin: 40px 0 28px 0; text-align: center; color: #000000; }
+
+/* Dipnotlar: kitabın sonunda, tek sıra numarayla */
+.e-dipnotmetni { font-size: 0.667em; line-height: 1.625; margin-left: 20px; margin-top: 9px; text-indent: -20px;
+  text-align: justify; -epub-text-align-last: left; }
+a.e-dipnot-no { font-size: 0.625em; vertical-align: super; line-height: 0; text-decoration: none; color: inherit; }
+.e-dipnotmetni a { color: inherit; text-decoration: none; }
+
+.e-bold { font-weight: bold; }
+.e-italik { font-style: italic; }
+
+/* Görsel ve görsel altı açıklaması birlikte kalır */
+figure.e-resim { margin: 1em 0; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+figure.e-resim img { max-width: 100%; max-height: 95vh; }
+.e-resimalti { font-family: 'Lato', 'Corbel', sans-serif; font-size: 0.667em; line-height: 1.375; margin-top: 6px;
+  text-align: center; break-before: avoid; page-break-before: avoid; }
+
+.kapak { text-align: center; margin: 0; padding: 0; }
+.kapak img { max-width: 100%; max-height: 100vh; }
+
+nav h1 { font-family: 'Lato', 'Corbel', sans-serif; font-size: 1em; font-weight: bold; text-align: center;
+  margin: 23px 0 14px 0; }
+nav ol { list-style: none; }
+nav li { font-size: 0.792em; line-height: 1.474; margin-top: 6px; }
+nav a { color: inherit; text-decoration: none; }

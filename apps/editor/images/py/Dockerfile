@@ -17,6 +17,21 @@ RUN mkdir -p /app/data/fonts && cd /app/data/fonts && python -c "import sys,urll
   'cormorantgaramond/CormorantGaramond[wght].ttf','notoserif/NotoSerif[wdth,wght].ttf', \
   'andika/Andika-Regular.ttf','andika/Andika-Bold.ttf','andika/Andika-Italic.ttf']]" $GFONTS \
     && ls -la /app/data/fonts
+# E-kitap ev stili (editor.production.epub HOUSES): yayınevi e-kitaplarındaki yazı tiplerinin açık lisanslı
+# karşılıkları — Palatino → Domitian (CTAN 1.0.1, OFL 1.1 seçeneğiyle; ad tablosunda lisans yok, LICENSES.json),
+# Corbel → Lato, Trajan → Cinzel, Chaparral italik → Crimson Pro italik, Cochin italik → EB Garamond italik.
+ARG DOMITIAN_SHA256=5cd534127eb16a97ac34442b0791cfc68bd764f7f7e87a541aba7dd47aa2866e
+RUN cd /app/data/fonts && python -c "import sys,urllib.request,urllib.parse; \
+[urllib.request.urlretrieve('https://raw.githubusercontent.com/google/fonts/'+sys.argv[1]+'/ofl/'+urllib.parse.quote(p), p.split('/')[1]) for p in \
+ ['lato/Lato-Regular.ttf','lato/Lato-Bold.ttf','cinzel/Cinzel[wght].ttf', \
+  'crimsonpro/CrimsonPro-Italic[wght].ttf','ebgaramond/EBGaramond-Italic[wght].ttf']]" $GFONTS \
+    && python -c "import urllib.request; urllib.request.urlretrieve('https://mirrors.ctan.org/fonts/domitian.zip', '/tmp/domitian.zip')" \
+    && echo "$DOMITIAN_SHA256  /tmp/domitian.zip" | sha256sum -c - \
+    && python -c "import zipfile; z=zipfile.ZipFile('/tmp/domitian.zip'); \
+[open(n.split('/')[-1],'wb').write(z.read(n)) for n in z.namelist() if n.endswith(('Roman.otf','Bold.otf','-Italic.otf'))]" \
+    && rm /tmp/domitian.zip \
+    && echo '{"Domitian-Roman.otf": "SIL OFL 1.1", "Domitian-Bold.otf": "SIL OFL 1.1", "Domitian-Italic.otf": "SIL OFL 1.1"}' > LICENSES.json \
+    && ls -la /app/data/fonts
 COPY requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
 COPY src /app/src
