@@ -3822,8 +3822,14 @@ class SemanticResolver:
                 f"'{(metric.explain or {}).get('canonical') or metric.term}' ({metric.mapping.entity}) "
                 f"{', '.join(sq.requested_breakdowns)} kırılımına ulaşamıyor. Kapsam: yalnız '{c.term}' kaydının dolu "
                 f"olduğu satırlar; toplam, asıl ölçüden farklı olabilir.")
-        slot.explain = {**(slot.explain or {}), "source": "breakdown_family", "why": note,
-                        "replaced": (metric.explain or {}).get("canonical") or metric.term}
+        # What the person reads under the number (dataNotes, `column_facts.scope_notes`): which figure this is and
+        # that it is not the measure named. The log line above keeps the tables; the answer says it in words.
+        asked = (metric.explain or {}).get("canonical") or metric.term
+        scope_note = (f"'{metric.term}' {', '.join(sq.requested_breakdowns)} kırılımında '{c.term}' ölçüsünden verildi: "
+                      f"'{asked}' {', '.join(sq.requested_breakdowns)} bazında bölünemiyor. Tutarlar yalnız '{c.term}' "
+                      f"alanı dolu kayıtları kapsar; '{asked}' toplamından farklıdır.")
+        slot.explain = {**(slot.explain or {}), "source": "breakdown_family", "why": note, "scope_note": scope_note,
+                        "replaced": asked}
         hits[hits.index(metric)] = slot
         sq.slots = hits
         sq.explanation.append(note)
