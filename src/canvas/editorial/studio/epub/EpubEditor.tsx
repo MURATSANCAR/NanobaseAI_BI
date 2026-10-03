@@ -144,7 +144,10 @@ function MissingRow({ m, busy, run }: { m: DuzenView['missing'][number]; busy: b
 export default function EpubEditor({ jobId }: { jobId: string }) {
   const qc = useQueryClient();
   const key = ['studio', 'epub', jobId, 'duzen'];
-  const q = useQuery({ queryKey: key, queryFn: () => epubApi.duzen(jobId), enabled: !!jobId });
+  const q = useQuery({
+    queryKey: key, queryFn: () => epubApi.duzen(jobId), enabled: !!jobId,
+    refetchInterval: (x) => (x.state.data?.preparing ? 4000 : false),
+  });
   const [open, setOpen] = useState<Set<string>>(() => new Set());
   const [search, setSearch] = useState('');
   const query = search.trim().toLocaleLowerCase('tr');
@@ -172,6 +175,14 @@ export default function EpubEditor({ jobId }: { jobId: string }) {
   if (q.isLoading) return <p className="flex items-center gap-2 text-[12px] text-canvas-muted"><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />E-kitap düzeni okunuyor…</p>;
   if (q.error || !v) return <Note tone="err">{errText(q.error, 'E-kitap düzeni okunamadı.')}</Note>;
   if (!v.house) return <Note tone="warn">Düzenleme yayınevinin e-kitap şablonuyla üretilen akışkan e-kitapta yapılır.</Note>;
+  if (v.preparing) {
+    return (
+      <p className="flex items-center gap-2 rounded-2xl bg-white/50 p-3 text-[12px] text-canvas-muted" aria-live="polite">
+        <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />
+        Basılı kitabın dizgisi okunuyor: dipnotlar, tablolar, şiir ve epigraflar ayrılıyor. Büyük kitapta birkaç dakika sürer; sayfadan ayrılabilirsiniz.
+      </p>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl bg-white/50 p-3">

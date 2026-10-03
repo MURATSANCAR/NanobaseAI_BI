@@ -106,6 +106,8 @@ def test_print_book_ebook_uses_publisher_cover_and_kunye(tmp_path, monkeypatch):
     Image.new("RGB", (600, 900), (200, 30, 30)).save(buf, "JPEG")
     monkeypatch.setattr(S, "original_cover", lambda ms_: (buf.getvalue(), ".jpg", {"source": "yayınevi sitesi"}))
     monkeypatch.setattr(S, "print_kunye", lambda d_: S.parse_kunye(KUNYE, "Çiçekçi Kadın", "Minyoung Kang"))
+    from editor.production import studio
+    monkeypatch.setattr(S, "print_manuscript", lambda d_, wait=True: studio._manuscript(d_))   # dizgiyle okunmuş metin
     assert X.source_mode(d, X.load(d)) == "basili"
     out = E.build(d, "reflow", "e")
     assert out["source"] == "basili"

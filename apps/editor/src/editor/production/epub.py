@@ -1130,6 +1130,9 @@ NOTE_HEAD = re.compile(r"^\s*(?:\[(\d{1,3})\]|([¹²³⁴⁵⁶⁷⁸⁹⁰]+))\
 SUP = str.maketrans("¹²³⁴⁵⁶⁷⁸⁹⁰", "1234567890")
 
 
+#: Basılı kitabın dizgisinden gelen blok türleri → ev stili sınıfı (`manuscript.from_generation(layout=True)`).
+KIND_CLASS = {"poem": "e-siir", "epigraph": "e-epi", "italic": "e-paragraf e-italik-p", "right": "e-paragraf-sagdan",
+              "perde_alti": "e-perde-alti"}
 SECTION_BREAK = re.compile(r"^\s*(?:[*✱✳⁂•·]\s*){1,5}$")    # «* * *», «***», «⁂»: bölüm içi ara
 
 
@@ -1305,7 +1308,10 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=
             out.append(pb(n[1]))
         elif n[0] == "h":
             inner = (wrap(n[3], n[2]) if wrap is not None and len(n) > 3 else None) or esc(n[1])
-            out.append(f'<h1 class="e-1-baslik">{inner}</h1>' if house else f"<h1>{inner}</h1>")
+            if notes:
+                inner = NOTE_MARK.sub(ref, inner)
+            hcls = (styles or {}).get(n[2]) or ("e-perde" if doc.get("perde") else "e-1-baslik")
+            out.append(f'<h1 class="{hcls}">{inner}</h1>' if house else f"<h1>{inner}</h1>")
         elif n[0] == "img":
             if n[1] in img_href:
                 out.append(f'<figure class="{"e-resim" if house else "resim"}"><img src="{img_href[n[1]]}" '
@@ -1318,14 +1324,22 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=
             own = (styles or {}).get(next((p[2] for p in n[2] if p[0] == "runs" and len(p) > 2), None))
             if own == "gizle":
                 continue
+            if n[1] == "table":                        # basılı kitabın tablosu (hücreler kaçışlı HTML)
+                out.append(next(p[1][0]["text"] for p in n[2] if p[0] == "runs"))
+                continue
             if house and own:
                 cls = f' class="{own}"'
+            elif house and n[1] in KIND_CLASS:
+                cls = f' class="{KIND_CLASS[n[1]]}"'
             elif house:
                 cls = ' class="e-yildiz"' if SECTION_BREAK.match(flat(n)) else \
                     {"sound": ' class="e-paragraf ses"', "free": ' class="e-paragraf serbest"'}.get(n[1], ' class="e-paragraf"')
             else:
                 cls = {"dialogue": ' class="diyalog"', "sound": ' class="ses"', "free": ' class="serbest"'}.get(n[1], "")
-            out.append(f"<p{cls}>{'– ' if n[1] == 'dialogue' else ''}{inline(n[2], True)}</p>")
+            body = inline(n[2], True)
+            if n[1] == "poem":                         # şiir: satır sonları korunur
+                body = body.replace("\n", "<br/>")
+            out.append(f"<p{cls}>{'– ' if n[1] == 'dialogue' else ''}{body}</p>")
     if bodies and notebook is not None:
         for k, body in bodies.items():
             n = num[k]
@@ -1896,7 +1910,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
             pack.spine.append({"id": iid})
             toc.append((title, f"text/{fn}"))
             pages_meta.append({"href": f"text/{fn}", "title": title, "side": None, "no": None})
-        docs = epub_edit.book_docs(plan, ms, mode)
+        docs = epub_edit.book_docs(d, plan, ms, mode)
         styles: dict[str, str] = {}
         if house:                                  # editörün e-kitap düzeni (stil, bölüm, eklenen metin)
             docs, styles = epub_edit.apply(docs, edits, warn)
@@ -1998,7 +2012,8 @@ def _docs_from_manuscript(ms, pages: bool = False) -> list[dict]:
     basılı kitabınkiyle aynı olur)."""
     docs = []
     for ci, ch in enumerate(ms.chapters):
-        nodes: list = [("h", ch.title, f"m{ci}-h", [{"text": ch.title}])] if ch.title else []
+        nodes: list = [("h", ch.title.replace("\n", " "), f"m{ci}-h", [{"text": ch.title.replace("\n", " ")}])] \
+            if ch.title else []
         last = 0
         for bi, b in enumerate(ch.blocks):
             for no in (b.pages or []) if pages else []:
@@ -2006,7 +2021,9 @@ def _docs_from_manuscript(ms, pages: bool = False) -> list[dict]:
                     nodes.append(("pb", no))
                     last = no
             nodes.append(("p", b.kind, [("runs", [{"text": b.text}], f"m{ci}-{bi}")]))
-        docs.append({"title": ch.title or (ms.title if len(ms.chapters) == 1 else f"Bölüm {ci + 1}"), "nodes": nodes})
+        title = " ".join(NOTE_MARK.sub("", ch.title or "").split())        # içindekilerde dipnot işareti yok
+        docs.append({"title": title or (ms.title if len(ms.chapters) == 1 else f"Bölüm {ci + 1}"), "nodes": nodes,
+                     "perde": getattr(ch, "kind", "chapter") == "perde"})
     return docs
 
 

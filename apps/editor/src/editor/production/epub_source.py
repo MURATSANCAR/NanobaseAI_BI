@@ -15,6 +15,7 @@ gerçek adlarıyla geçer. Okunmuş bir yayınevi kitabından açılan stüdyo i
 from __future__ import annotations
 
 import re
+import threading
 from pathlib import Path
 
 #: Basıma ait etiketler (e-künyeye girmez). «1. BASKI», «2. BASKI»… da baskıdır.
@@ -105,3 +106,62 @@ def print_kunye(d: Path) -> list[tuple[str | None, str]]:
     keep = set(kunye_pages({**src, "title": m.get("title")}, pages))
     paras = [t for p, text in pages if p in keep for t in text.split("\n") if t.strip()]
     return parse_kunye(paras, m.get("title") or "", m.get("author") or "")
+
+
+# ------------------------------------------------------------------ basılı kitabın metni (dizgiyle)
+#: Dizgi okumasının sürümü: kural değişince önbellek yeniden kurulur.
+LAYOUT_VERSION = 3
+CACHE = "basili.json"
+_busy: set[str] = set()
+_busy_lock = threading.Lock()
+
+
+def _gid(d: Path) -> str | None:
+    from . import studio
+    src = (studio.read(d, "manuscript.json") or {}).get("source") or {}
+    return src.get("generation_id") if src.get("kind") == "generation" else None
+
+
+def print_manuscript(d: Path, wait: bool = True):
+    """Basılı kitabın e-kitabının metni: okunmuş kitap dizgiyle (`manuscript.from_generation(layout=True)`: sayfa
+    üst başlığı/numarası yok, dipnotlar bölüm sonunda, tablolar, şiir/epigraf/perde). Kitap adı, yazar ve kitap
+    bilgisi stüdyonun el yazmasından (editörün düzeltmesi korunur). Sonuç `epub/basili.json`'da saklanır; büyük
+    kitapta dakikalar sürebilir. `wait=False`: önbellek yoksa okumayı arka planda başlatır, None döner."""
+    from . import studio
+    from .manuscript import Block, Chapter, Manuscript, from_generation
+    gid = _gid(d)
+    if not gid:
+        return None
+    cache = studio.read(d / "epub", CACHE)
+    base = studio._manuscript(d)
+    if cache and cache.get("generation_id") == gid and cache.get("v") == LAYOUT_VERSION:
+        chapters = [Chapter(c["title"], [Block(**b) for b in c["blocks"]], c.get("kind", "chapter"))
+                    for c in cache["chapters"]]
+        return Manuscript(base.title, base.author, base.illustrator, base.meta, chapters, base.source)
+
+    def run():
+        try:
+            ms = from_generation(gid, layout=True)
+            (d / "epub").mkdir(exist_ok=True)
+            studio.write(d / "epub", CACHE, {"generation_id": gid, "v": LAYOUT_VERSION,
+                                             "chapters": [{"title": c.title, "kind": c.kind,
+                                                           "blocks": [b.__dict__ for b in c.blocks]}
+                                                          for c in ms.chapters]})
+        finally:
+            with _busy_lock:
+                _busy.discard(str(d))
+    with _busy_lock:
+        running = str(d) in _busy
+        if not running:
+            _busy.add(str(d))
+    if wait:
+        if running:                                   # başka bir çağrı kuruyorsa bitmesini bekle
+            import time
+            while str(d) in _busy:
+                time.sleep(1)
+        else:
+            run()
+        return print_manuscript(d, wait=False)
+    if not running:
+        threading.Thread(target=run, daemon=True).start()
+    return None

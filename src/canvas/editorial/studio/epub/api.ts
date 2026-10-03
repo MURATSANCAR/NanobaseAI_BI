@@ -90,6 +90,8 @@ export type DuzenBlock = { id: string; kind: string; text: string; long: boolean
 export type DuzenChapter = { key: string; title: string; merged: boolean; split: boolean; renamed: boolean; blocks: DuzenBlock[] };
 export type DuzenView = {
   rev: number; chapters: DuzenChapter[]; styles: Record<string, string>;
+  /** Basılı kitabın dizgisi ilk kez okunuyor (büyük kitapta birkaç dakika); ekran bekler. */
+  preparing?: boolean;
   /** Basılı kitabın e-kitabı (yayınevinin kapağı ve künyesi) ya da stüdyo tasarımı; `source_set` false → kendiliğinden. */
   source: 'basili' | 'studyo'; source_set: boolean; sources: { key: 'basili' | 'studyo'; label: string }[];
   fronts: { key: string; label: string; on: boolean }[];

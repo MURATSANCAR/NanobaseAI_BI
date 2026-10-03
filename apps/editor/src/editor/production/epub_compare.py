@@ -19,7 +19,9 @@ from pathlib import Path
 N = 6
 MIN_RUN = 8
 PREVIEW = 240
-EXPECTED = ("künye", "içindekiler", "iç kapak", "yayınevi tanıtımı", "hikâye dışı sayfa")
+TABLE_SHARE = 0.85                # kelimelerinin bu payı e-kitabın tablolarında geçen parça: tablo hücrelerinin sırası
+CIRCUMFLEX = str.maketrans("âîû", "aiu")
+EXPECTED = ("künye", "içindekiler", "iç kapak", "yayınevi tanıtımı", "hikâye dışı sayfa", "tablo düzeni", "dizin")
 from .manuscript import _PROMO  # noqa: E402 - basılı kitabın baskı kuralındaki reklam tanımı
 
 HYPHEN = re.compile(r"([a-zçğıöşüâîû])[-\u00ad]\s+([a-zçğıöşüâîû])")
@@ -27,7 +29,20 @@ HYPHEN = re.compile(r"([a-zçğıöşüâîû])[-\u00ad]\s+([a-zçğıöşüâî
 
 def words(text: str) -> list[str]:
     text = (text or "").replace("\u00ad", "").replace("İ", "i").replace("I", "ı").lower()   # Türkçe küçük harf
-    return re.findall(r"\w+", HYPHEN.sub(r"\1\2", text))     # (casefold «İ»yi iki harfe böler); tire sonra
+    text = re.sub(r"(?<=[^\W\d_])\d{1,3}\b", "", text)          # kelimeye yapışık dipnot numarası («tarihinde138»)
+    text = text.translate(CIRCUMFLEX)                            # «nâibi» = «naibi» (dizgi/okuma farkı)
+    # Yalnız rakamdan oluşan kelime karşılaştırmaya girmez: dipnotlar e-kitapta kitap boyu yeniden numaralanır,
+    # sayfa numarası e-kitapta yoktur; aranan eksik metindir.
+    return [w for w in re.findall(r"\w+", HYPHEN.sub(r"\1\2", text)) if not w.isdigit()]   # «İ» casefold'da bölünür
+
+
+def epub_table_words(path: Path) -> set[str]:
+    z = zipfile.ZipFile(path)
+    cells = []
+    for n in z.namelist():
+        if n.endswith(".xhtml"):
+            cells += re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", z.read(n).decode("utf-8", "ignore"), re.S)
+    return set(words(" ".join(re.sub(r"<[^>]+>", " ", c) for c in cells)))
 
 
 def epub_text(path: Path) -> str:
@@ -76,8 +91,11 @@ def _grams(w: list[str]) -> set[tuple[str, ...]]:
     return {tuple(w[i:i + N]) for i in range(len(w) - N + 1)}
 
 
-def compare(pages: list[tuple[int, str]], epub_txt: str, reasons: dict | None = None) -> dict:
-    """`pages`: [(sayfa, metin)] okuma sırasıyla; `reasons`: {sayfa: baskıya girmeme nedeni}."""
+def compare(pages: list[tuple[int, str]], epub_txt: str, reasons: dict | None = None,
+            table_words: set[str] | None = None) -> dict:
+    """`pages`: [(sayfa, metin)] okuma sırasıyla; `reasons`: {sayfa: baskıya girmeme nedeni}; `table_words`: e-kitabın
+    tablolarındaki kelimeler (okunmuş metin tablo hücrelerini başka sırayla verir; kısa parçanın kelimeleri tabloda
+    geçiyorsa eksik değil, tablo düzeni farkıdır)."""
     reasons = {int(k): v for k, v in (reasons or {}).items()}
     sw, sp = [], []
     for no, text in pages:
@@ -99,6 +117,8 @@ def compare(pages: list[tuple[int, str]], epub_txt: str, reasons: dict | None = 
         reason = max(set(why), key=why.count)
         if reason is None and promo:
             reason = "yayınevi tanıtımı"
+        if reason is None and table_words and sum(1 for w in sw[a:b] if w in table_words) >= TABLE_SHARE * (b - a):
+            reason = "tablo düzeni"
         missing.append({"pages": [first, last], "words": b - a, "reason": reason,
                         "expected": reason in EXPECTED, "text": " ".join(sw[a:b])[:PREVIEW]})
     unexpected = [m for m in missing if not m["expected"]]
@@ -109,13 +129,20 @@ def compare(pages: list[tuple[int, str]], epub_txt: str, reasons: dict | None = 
             "extra": [{"words": b - a, "text": " ".join(ew[a:b])[:PREVIEW]} for a, b in extra]}
 
 
-def source_pages(generation_id: str) -> list[tuple[int, str]]:
+def source_pages(generation_id: str, heads: bool = True) -> list[tuple[int, str]]:
+    """Okunmuş kitabın sayfaları. `heads=False`: sayfa üst başlıkları çıkar (en az 3 sayfada aynen tekrarlanan, en çok
+    8 kelimelik paragraf: kitap ya da bölüm adı; e-kitapta yoktur, karşılaştırmada eksik sayılmaz)."""
     from .. import db
     rows = db.all_rows("SELECT page_no, text FROM ed.paragraph WHERE generation_id=%s ORDER BY page_no, idx",
                        generation_id)
     pages: dict[int, list[str]] = {}
     for r in rows:
         pages.setdefault(int(r["page_no"]), []).append(r["text"] or "")
+    if not heads:
+        import collections
+        seen = collections.Counter(" ".join(words(t)) for ts in pages.values() for t in set(ts) if len(t.split()) <= 8)
+        rep = {k for k, n in seen.items() if n >= 3 and k}
+        pages = {p: [t for t in ts if " ".join(words(t)) not in rep] for p, ts in pages.items()}
     return [(p, "\n".join(t)) for p, t in sorted(pages.items())]
 
 
@@ -127,11 +154,13 @@ def for_job(d: Path, epub_path: Path) -> dict | None:
     gid = src.get("generation_id") if src.get("kind") == "generation" else None
     if not gid:
         return None
-    pages = source_pages(gid)
+    pages = source_pages(gid, heads=False)
     reasons = src.get("not_printed")
     if reasons is None:
         reasons = _reasons_now(pages, src.get("non_story_pages") or [], ms)
-    return compare(pages, epub_text(epub_path), reasons)
+    from .manuscript import index_pages
+    reasons = {**reasons, **{str(p): "dizin" for p in index_pages(dict(pages))}}   # e-kitapta dizin yok
+    return compare(pages, epub_text(epub_path), reasons, epub_table_words(epub_path))
 
 
 def _reasons_now(pages: list[tuple[int, str]], non_story: list[int], ms: dict) -> dict:

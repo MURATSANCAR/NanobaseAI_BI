@@ -423,6 +423,28 @@ def _print_pages(generation_id: str):
         return print_layout.analyze(doc)
 
 
+_INDEX_TITLE = re.compile(r"^((genel|kişi|kisi|yer|kavram|isim|özel ad|ozel ad)(ler)?\s+)?(dizin[i]?|indeks|index)$")
+
+
+def index_pages(by_page: dict[int, str]) -> set[int]:
+    """Kitabın sonundaki dizin sayfaları (e-kitapta sayfa numaraları anlamsızdır; yayınevinin e-kitaplarında dizin
+    yoktur): «Dizin / İndeks / Index» başlıklı paragrafla açılan sayfa ve ardından kelimelerinin en az %30'u sayfa
+    numarası olan sayfalar."""
+    out: set[int] = set()
+    start = next((p for p in sorted(by_page) if any(_INDEX_TITLE.match(" ".join(_fold(t).split()))
+                                                    for t in by_page[p].split("\n")[:3] if len(t) <= 40)), None)
+    if start is None:
+        return out
+    for p in sorted(x for x in by_page if x >= start):
+        toks = by_page[p].split()
+        nums = sum(1 for t in toks if re.fullmatch(r"\d{1,4}([-–]\d{1,4})?[,;.]?", t))
+        if p == start or (toks and nums / len(toks) >= 0.3):
+            out.add(p)
+        else:
+            break
+    return out
+
+
 _MARK = re.compile(r"\[\[(\d+):(\d+)\]\]")
 
 
@@ -432,7 +454,13 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple
     Döner: ([(sayfa, metin, tür)], {(sayfa, no): not metni})."""
     import html as _html
     from .print_layout import fold, kind_of, para_lines
+
+    def table_html(rows):
+        head = "".join(f"<th>{_html.escape(c)}</th>" for c in rows[0])
+        body = "".join("<tr>" + "".join(f"<td>{_html.escape(c)}</td>" for c in r) + "</tr>" for r in rows[1:])
+        return f'<table class="e-tablo"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>'
     out: list[tuple] = []
+    ys: list[float | None] = []                        # öğenin basılı sayfadaki yeri (tablolu sayfada sıra için)
     placed: set[int] = set()
     notes: dict[tuple[int, str], str] = {}
     last_note = None
@@ -443,11 +471,15 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple
             elif num is not None:
                 last_note = (p, num)
                 notes[last_note] = text
-    used: dict[int, int] = {}
+    used: dict[int, set[str]] = {}
+    index = index_pages({p: "\n".join(t for q, t in paras if q == p) for p in {q for q, _ in paras}})
     for p, text in paras:
+        if p in index:                                # dizin e-kitaba girmez
+            continue
         pg = pages.get(p)
         if pg is None:
             out.append((p, text, None))
+            ys.append(None)
             continue
         k = fold(text)
         prev = pages.get(p - 1)
@@ -455,37 +487,69 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict) -> tuple[list[tuple
             continue
         probe = k[: min(40, len(k))]
         if len(k) >= 6 and (probe in pg.note_key or (prev is not None and probe in prev.note_key)) \
-                and probe not in "".join(fold(ln.text) for ln in pg.body):
+                and probe not in pg.body_key:
             continue
         if pg.tables and len(k) >= 6 and probe in pg.table_key:
             if p not in placed:
                 placed.add(p)
-                for rows in pg.tables:
-                    head = "".join(f"<th>{_html.escape(c)}</th>" for c in rows[0])
-                    body = "".join("<tr>" + "".join(f"<td>{_html.escape(c)}</td>" for c in r) + "</tr>" for r in rows[1:])
-                    out.append((p, f'<table class="e-tablo"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>',
-                                "table"))
+                for rows, y in zip(pg.tables, pg.table_y):
+                    out.append((p, table_html(rows), "table"))
+                    ys.append(y)
             continue
-        refs = pg.refs[used.get(p, 0):]
-        for n in refs:
+        # Gönderme numarası üst simge işaretli değilse de (PDF'e göre değişir) sayfanın not numarası metinde aranır;
+        # biri bulunamazsa ötekiler yine aranır.
+        for n in sorted(set(pg.refs) | {x for x, _ in pg.notes if x}, key=int):
+            if n in used.setdefault(p, set()):
+                continue
             new, cnt = re.subn(rf"(?<=[^\s\d\[]){n}(?=[\s.,;:!?”\"’')»]|$)", f"[[{p}:{n}]]", text, count=1)
             if cnt:
                 text = new
-                used[p] = used.get(p, 0) + 1
-            else:
-                break
-        kind, poem = kind_of(para_lines(pg.body, text), pg.left, pg.right)
+                used[p].add(n)
+        lines = para_lines(pg, text)
+        kind, poem = kind_of(lines, pg.left, pg.right, pg.size)
         out.append((p, poem if poem and "[[" not in text else text, kind if kind != "para" else None))
-    for p, pg in pages.items():                       # tablo okumada hiç paragraf vermediyse sayfanın sonuna
+        ys.append(lines[0].y0 if lines else None)
+    # Gönderme numarası metinde bulunamayan not kaybolmaz: sayfanın son paragrafının sonuna bağlanır.
+    for p, pg in pages.items():
+        lost = [n for n, _ in pg.notes if n and n not in used.get(p, set())]
+        at = max((i for i, x in enumerate(out) if x[0] == p and x[2] in (None, "italic", "right")), default=None)
+        if lost and at is not None:
+            q, t, k = out[at]
+            out[at] = (q, t + "".join(f"[[{p}:{n}]]" for n in lost), k)
+    for p, pg in pages.items():                       # tablo okumada hiç paragraf vermediyse sayfadaki yerine
         if pg.tables and p not in placed:
             at = max((i for i, x in enumerate(out) if x[0] <= p), default=-1) + 1
-            for rows in pg.tables:
-                head = "".join(f"<th>{_html.escape(c)}</th>" for c in rows[0])
-                body = "".join("<tr>" + "".join(f"<td>{_html.escape(c)}</td>" for c in r) + "</tr>" for r in rows[1:])
-                out.insert(at, (p, f'<table class="e-tablo"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>',
-                                "table"))
+            for rows, y in zip(pg.tables, pg.table_y):
+                out.insert(at, (p, table_html(rows), "table"))
+                ys.insert(at, y)
                 at += 1
+    # Tablolu sayfada öğeler basılı sayfadaki yerine göre sıralanır (tablo başlığının ikinci satırı tablodan önce).
+    i = 0
+    while i < len(out):
+        j = i
+        while j < len(out) and out[j][0] == out[i][0]:
+            j += 1
+        if any(x[2] == "table" for x in out[i:j]):
+            known, last = {}, -1.0                    # yeri bulunamayan paragraf öncekinin hemen ardında kalır
+            for k in range(i, j):
+                last = ys[k] if ys[k] is not None else last + 0.01
+                known[k] = last
+            order = sorted(range(i, j), key=lambda k: known[k])
+            out[i:j] = [out[k] for k in order]
+            ys[i:j] = [ys[k] for k in order]
+        i = j
     return out, notes
+
+
+def _clean_title(t: str) -> str:
+    """Devam sayfasının başlığı bölüm adına eklenmiş olabilir («EK 2: X EK 2: X (Devam)»): tek ad."""
+    t = re.sub(r"\s*\(devam(ı)?\)\s*$", "", " ".join(t.split()), flags=re.I)
+    half = len(t) // 2
+    for cut in range(half - 2, half + 3):
+        a, b = t[:cut].strip(), t[cut:].strip()
+        if a and a == b:
+            return a
+    return t
 
 
 def _finish_layout(ms: Manuscript, pages: dict, notes: dict) -> None:
@@ -506,7 +570,7 @@ def _finish_layout(ms: Manuscript, pages: dict, notes: dict) -> None:
             found.append((k, text))
             return f"[{k}]"
         if ch.title:
-            ch.title = _MARK.sub(renum, ch.title)
+            ch.title = _MARK.sub(renum, _clean_title(ch.title))
         for b in ch.blocks:
             if b.kind != "table":
                 b.text = _MARK.sub(renum, b.text)

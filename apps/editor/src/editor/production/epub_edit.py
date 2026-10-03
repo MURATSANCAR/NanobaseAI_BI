@@ -77,12 +77,19 @@ def source_mode(d: Path, e: dict) -> str:
     return e.get("source") if e.get("source") in SOURCES else source_auto(d)
 
 
-def book_docs(plan: dict | None, ms, mode: str) -> list[dict]:
-    """E-kitabın bölümleri: basılı kitabın e-kitabında okunmuş kitabın metni (basılı sayfa numaralarıyla, stüdyonun
-    resimleri olmadan); stüdyo tasarımında sayfa planı (yoksa el yazması)."""
+def book_docs(d: Path, plan: dict | None, ms, mode: str, wait: bool = True) -> list[dict] | None:
+    """E-kitabın bölümleri: basılı kitabın e-kitabında okunmuş kitabın metni dizgiyle (`epub_source.print_manuscript`:
+    basılı sayfa numaraları, dipnot, tablo, şiir/epigraf/perde; stüdyonun resimleri yok); stüdyo tasarımında sayfa
+    planı (yoksa el yazması). `wait=False`: basılı metin henüz hazırlanıyorsa None (ekran «hazırlanıyor» gösterir)."""
     from . import epub as E
-    if mode == "basili" or not plan:
-        return E._docs_from_manuscript(ms, pages=mode == "basili")
+    if mode == "basili":
+        from .epub_source import print_manuscript
+        pm = print_manuscript(d, wait=wait)
+        if pm is None:
+            return None if not wait else E._docs_from_manuscript(ms, pages=True)
+        return E._docs_from_manuscript(pm, pages=True)
+    if not plan:
+        return E._docs_from_manuscript(ms)
     return E.flow_docs(plan, ms)
 
 
@@ -132,7 +139,7 @@ def chapters(docs: list[dict], e: dict, warn: list[str] | None = None) -> list[d
     splits = e.get("splits") or {}
     out: list[dict] = []
     for i, doc in enumerate(docs):
-        cur = {"title": doc["title"], "key": _key(doc, i), "nodes": [], "split": False}
+        cur = {"title": doc["title"], "key": _key(doc, i), "nodes": [], "split": False, "perde": doc.get("perde")}
         out.append(cur)
         for n in doc["nodes"]:
             bid = node_id(n) if n[0] == "p" else None
@@ -185,7 +192,7 @@ def apply(docs: list[dict], e: dict, warn: list[str]) -> tuple[list[dict], dict[
                 else:
                     out[-1]["nodes"].append(n)
         else:
-            out.append({"title": ch["title"], "nodes": list(ch["nodes"])})
+            out.append({"title": ch["title"], "nodes": list(ch["nodes"]), "perde": ch.get("perde")})
     for x in e.get("extras") or []:
         if x.get("place") == "front":              # ön sayfalara eklenen (tanıtım) epub.house_fronts'ta
             continue
@@ -211,7 +218,11 @@ def structure(d: Path) -> dict:
     plan = plan_mod.load(d)
     ms = studio._manuscript(d)
     mode = source_mode(d, e)
-    docs = book_docs(plan, ms, mode)
+    docs = book_docs(d, plan, ms, mode, wait=False)
+    if docs is None:
+        return {"rev": e["rev"], "preparing": True, "source": mode, "source_set": e.get("source") in SOURCES,
+                "sources": [{"key": k, "label": v} for k, v in SOURCES.items()], "chapters": [], "styles": STYLES,
+                "fronts": [], "extras": [], "missing": [], "warnings": [], "house": bool(E.house_key(d))}
     warn: list[str] = []
     chs = chapters(docs, e, warn)
     styles = e.get("styles") or {}
@@ -226,6 +237,8 @@ def structure(d: Path) -> dict:
             if not bid:
                 continue
             text = node_text(n)
+            if n[1] == "table":                          # ekranda tablonun yazısı (HTML değil)
+                text = "Tablo: " + " ".join(re.sub(r"<[^>]+>", " ", text).split())
             s = styles.get(bid) or {}
             blocks.append({"id": bid, "kind": n[1], "text": text[:PREVIEW], "long": len(text) > PREVIEW,
                            "style": s.get("style") if s.get("h") == digest(text) else None,
@@ -237,7 +250,7 @@ def structure(d: Path) -> dict:
     cmp = st.get("compare") or {}
     added = {tuple(x["pages"]) for x in e.get("extras") or []}
     missing = [{**m, "added": tuple(m["pages"]) in added} for m in cmp.get("missing") or [] if not m.get("expected")]
-    return {"rev": e["rev"], "chapters": out, "styles": STYLES, "source": mode, "source_set": e.get("source") in SOURCES,
+    return {"rev": e["rev"], "preparing": False, "chapters": out, "styles": STYLES, "source": mode, "source_set": e.get("source") in SOURCES,
             "sources": [{"key": k, "label": v} for k, v in SOURCES.items()],
             "fronts": [{"key": k, "label": v, "on": front_on(e, k)} for k, v in FRONTS.items()],
             "extras": [{"id": x["id"], "title": x["title"], "pages": x["pages"], "place": x.get("place") or "end",
@@ -252,7 +265,7 @@ def _text_of(d: Path, bid: str) -> str | None:
     from . import studio
     plan = plan_mod.load(d)
     ms = studio._manuscript(d)
-    docs = book_docs(plan, ms, source_mode(d, load(d)))
+    docs = book_docs(d, plan, ms, source_mode(d, load(d)))
     for doc in docs:
         for n in doc["nodes"]:
             if n[0] == "p" and node_id(n) == bid:
