@@ -31,22 +31,35 @@ class Coded:
     def _sql(self, code):
         return "N'" + code + "'" if self.text else str(code)
 
-    def predicate(self, alias, op, value):
-        """Sorudaki değeri bilinen kodlara çevirir; eşleşmeyen değerle hesap yapılmaz."""
-        wanted = fold(value)
-        aliases = {}
+    def words(self):
+        """Kod kümesini anan kelimeler: etiketler (süzgeç dışı olanlar hariç) ve eş anlamlılar."""
+        out = {}
         for c, t in self.codes.items():                   # etiketin kendisi de bir kelimedir (2 ve 3 ikisi de e-Arşiv)
             if c not in self.label_only:
-                aliases.setdefault(fold(t), set()).add(c)
+                out.setdefault(fold(t), set()).add(c)
         for w, m in self.aliases.items():
-            aliases.setdefault(fold(w), set()).update(m)
-        codes = aliases.get(wanted, set())          # tam eşleşme önce: «mükellefi değil» «mükellefi»ni de içerir
+            out.setdefault(fold(w), set()).update(m)
+        return out
+
+    def codes_for(self, op, value):
+        """Sorudaki değeri bilinen kodlara çevirir; eşleşmeyen değerle hesap yapılmaz."""
+        wanted, words = fold(value), self.words()
+        codes = set(words.get(wanted, ()))          # tam eşleşme önce: «mükellefi değil» «mükellefi»ni de içerir
         if not codes and op == "contains":
-            for word, matched in aliases.items():
+            for word, matched in words.items():
                 if word and (word in wanted or wanted in word):
                     codes |= matched
         if not codes:
             raise ContractError(f"«{value}» değeri {self.label} kırılımının doğrulanmış kodlarından biri değil.")
+        return codes
+
+    def asked(self, codes, question):
+        """Seçilen kodlardan birini anan bir kelime soruda geçiyor mu (modelin uydurduğu değere karşı)."""
+        q = fold(question)
+        return any(word and word in q and matched & codes for word, matched in self.words().items())
+
+    def predicate(self, alias, op, value):
+        codes = self.codes_for(op, value)
         col = f"{alias}.{self.column}"
         if self.text:
             col = f"LTRIM(RTRIM(ISNULL({col},'')))"
@@ -90,7 +103,8 @@ CODED = {
     "customer_einvoice_user": Coded(
         "müşteri e-Fatura mükellefi mi",
         "client", "ACCEPTEINV", {1: "e-Fatura mükellefi", 0: "e-Fatura mükellefi değil"},
-        {"e-fatura mükellefi": (1,), "mükellef": (1,), "e-fatura mükellefi değil": (0,), "mükellef olmayan": (0,)}),
+        {"e-fatura mükellefi": (1,), "mükellef": (1,), "evet": (1,), "e-fatura mükellefi değil": (0,),
+         "mükellef olmayan": (0,), "mükellef değil": (0,), "hayır": (0,)}),
     "customer_legal_form": Coded(
         "müşteri şahıs mı şirket mi",
         "client", "ISPERSCOMP", {1: "Şahıs", 0: "Şirket"},

@@ -105,3 +105,51 @@ def test_labels_with_apostrophes_are_valid_sql_and_unknown_codes_show_as_other()
 def test_price_difference_note_does_not_claim_a_coded_filter_it_cannot_apply():
     engine, sql = run(Plan(("sales_amount",), (), SEPT, filters=(("e_document", "eq", "e-Fatura"),)))
     assert not any("611%" in s for s in sql)
+
+
+class Review:
+    """Plan denetimini onaylar; başka model çağrısı olmaz."""
+
+    def complete(self, messages, **kw):
+        assert kw["body"]["response_format"]["json_schema"]["name"] == "finance_review"
+        return {"message": {"content": '{"ok": true, "missing": []}'}, "finish_reason": "stop"}
+
+
+def plan_data(metric, filters):
+    return {"metrics": [metric], "dimensions": [], "sale_kind": "all", "filters": filters, "limit": None,
+            "order_by": None, "descending": True, "derived": [], "having": [], "comparison": None, "crm": None,
+            "logo_report": None, "crm_report": None, "relational_query": None, "analytics": [], "sections": [],
+            "gaps": [], "coverage": [], "uncovered": [], "clarification": ""}
+
+
+def test_model_may_word_a_coded_value_its_own_way_when_the_question_names_the_code():
+    from semantic_bridge.finance_query.planner import build
+    f = [{"dimension": "customer_einvoice_user", "op": "eq", "value": "Evet"}]
+    plan = build("Bu yıl e-fatura mükellefi müşterilere satışımız ne kadar?", Review(), _data=plan_data("net_sales", f))
+    assert plan.filters == (("customer_einvoice_user", "eq", "Evet"),)
+    with pytest.raises(ContractError, match="soruda bulunamadı"):
+        build("Bu yıl müşterilere satışımız ne kadar?", Review(), _data=plan_data("net_sales", f))
+
+
+def test_document_codes_do_not_reach_payments_from_the_planner():
+    from semantic_bridge.finance_query.planner import build
+    f = [{"dimension": "e_document", "op": "eq", "value": "e-Arşiv"}]
+    with pytest.raises(ContractError, match="Ödeme hareketlerinde"):
+        build("2026 e-arşiv tahsilatları", Review(), _data=plan_data("collections", f))
+
+
+def test_a_coded_filter_reports_the_cancelled_invoices_it_left_out():
+    class Cancelled(Connector):
+        def execute(self, sql, max_rows):
+            if "f.CANCELLED=1" in sql and "COUNT_BIG" in sql:
+                self.sql.append(sql)
+                return ["n"], [{"n": 2}], False
+            return super().execute(sql, max_rows)
+
+    rt = Runtime()
+    rt.connector = Cancelled()
+    engine = Executor(rt)
+    engine.execute(Plan(("invoice_count",), ("einvoice_status",), SEPT, filters=(("einvoice_status", "eq", "Reddedildi"),)))
+    probe = next(s for s in rt.connector.sql if "f.CANCELLED=1" in s)
+    assert "f.ESTATUS IN (13)" in probe and "f.TRCODE IN (7,8,9)" in probe
+    assert any("2 satış faturası iptal edilmiş" in n for n in engine.notes)

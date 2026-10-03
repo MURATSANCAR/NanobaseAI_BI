@@ -18,7 +18,7 @@ import time
 import sqlglot
 from sqlglot import exp
 from semantic_layer.runtime import crm_active as active_rule
-from .contracts import METRICS, TRANSACTION_CODES, ContractError, codes_sql
+from .contracts import METRICS, SALES_INVOICE_CODES, TRANSACTION_CODES, ContractError, codes_sql
 from . import operations
 from .result_metadata import describe_columns, calculation_definitions, return_invoice_note
 
@@ -440,6 +440,8 @@ class Executor:
         from .logo_codes import CODED
         if family == "sales" and set(plan.metrics) & {"net_sales", "sales_amount"} and not any(d in CODED for d, _, _ in plan.filters):
             self.price_difference_note(plan)
+        if family in ("sales", "invoice"):
+            self.cancelled_coded_note(plan)
         if plan.derived or plan.comparison:
             self.notes.append("Oran veya yüzde değişim hesabında sıfır/eksik payda boş gösterilir; dönemde bulunmayan kırılım sıfır varsayılmaz.")
         if returns_probe:
@@ -510,6 +512,33 @@ class Executor:
                     target[metric] += number(row[metric])
         self.notes.append("Satış satırı, fatura başlığı ve ödeme hareketleri ayrı hesaplandı; ortak kırılımda birleştirildi. Dönemde hareketi olmayan ölçü 0 gösterilir.")
         return list(joined.values())
+
+    def cancelled_coded_note(self, plan):
+        """Kodlu fatura süzgeci (e-belge durumu, belge türü, senaryo, cari işareti) iptal edilmemiş faturaları sayar.
+        Reddedilen e-fatura çoğu zaman iptal edilir (2026: 2 ret, ikisi iptal); aynı dönem ve süzgeçle iptal edilmiş
+        satış faturası sayısı not olarak söylenir ki «0» sessiz bir kapsam kararı olmasın."""
+        from .logo_codes import CODED
+        coded = [(d, op, v) for d, op, v in plan.filters if d in CODED and CODED[d].level in ("invoice", "client")]
+        if not coded:
+            return
+        total = 0
+        coverage = list(self.source_periods)    # aynı dönemler cevabın kapsamında zaten yazılı
+        for start, end in plan.periods:
+            for a, b, firm, period in self.partitions(date.fromisoformat(start), date.fromisoformat(end)):
+                header, client = f"LG_{firm}_{period}_INVOICE", f"LG_{firm}_CLCARD"
+                needed = {header: ["LOGICALREF", "DATE_", "CANCELLED", "TRCODE", "CLIENTREF"]}
+                for d, _, _ in coded:
+                    t = client if CODED[d].level == "client" else header
+                    needed.setdefault(t, ["LOGICALREF"]).append(CODED[d].column)
+                self.verify_schema(needed, "logo")
+                where = ["f.CANCELLED=1", f"f.DATE_>='{a}'", f"f.DATE_<'{b}'", "f.TRCODE IN " + codes_sql(SALES_INVOICE_CODES)]
+                where += [CODED[d].predicate("c" if CODED[d].level == "client" else "f", op, v) for d, op, v in coded]
+                rows = self.read(f"SELECT COUNT_BIG(*) AS [n] FROM dbo.[{header}] f LEFT JOIN dbo.[{client}] c ON c.LOGICALREF=f.CLIENTREF"
+                                 " WHERE " + " AND ".join(where))
+                total += sum(int(number(r.get("n"))) for r in rows)
+        self.source_periods = coverage
+        if total:
+            self.notes.append(f"Aynı dönem ve koşullarda {total:,} satış faturası iptal edilmiş; iptal edilen faturalar hesaba girmez.".replace(",", "."))
 
     def price_difference_note(self, plan):
         """Müşteriye ayrı faturayla verilen iskonto fiyat farkı (hizmet kartı 611…): muhasebede satış indirimi, kitap

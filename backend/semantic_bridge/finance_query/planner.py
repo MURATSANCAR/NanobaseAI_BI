@@ -561,7 +561,11 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         if dim not in ("book", "channel", "customer", "author", "publisher", "subbrand", *CODED_DIMENSIONS) or op not in ("eq", "contains") or not isinstance(val, str) or not 1 <= len(val) <= 200:
             raise ContractError("Süzgeç sözleşme dışında.")
         inherited = previous and follows(question) and [dim, op, val] in [list(f) for f in previous.get("plan", {}).get("filters", [])]
-        if fold(val) not in source_q and not inherited:
+        if dim in CODED:
+            # Kodlu alanda model değeri kendi kelimesiyle yazabilir («Evet»); şart, seçilen kodu anan bir kelimenin soruda geçmesi.
+            if not inherited and not CODED[dim].asked(CODED[dim].codes_for(op, val), source_q):
+                raise ContractError("Süzgeç değeri soruda bulunamadı; modelin eklediği değerle hesap yapılmaz.")
+        elif fold(val) not in source_q and not inherited:
             raise ContractError("Süzgeç değeri soruda bulunamadı; modelin eklediği değerle hesap yapılmaz.")
         if family.startswith("crm_") or (families != {"sales"} and dim in ("book", "author", "publisher", "subbrand", "author_group")):
             raise ContractError("Bu süzgeç ölçünün kayıt düzeyine uygulanamaz.")
