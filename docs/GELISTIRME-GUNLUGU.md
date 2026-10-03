@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — Editör: denetim bağlamı salt okunur işlemi bozuyordu (kart servisi POST'ları 500)
+
+- **Bulgu (kurulumda):** main'le kurulan kart servisi (`bfa87e96`) Kitaba sor'un her sorusuna 500 verdi: `psycopg.errors.ActiveSqlTransaction: SET TRANSACTION ISOLATION LEVEL must be called before any query`. Merkezi denetim işi (`3f788d27b`) `db.tx()`'in ilk komutu olarak `set_config('nanobase.audit', …)` yazıyor; bağlam yalnız yazma isteğinde (POST/PUT/PATCH/DELETE, `audit.Middleware`) konur. `foundation.read_snapshot()` ve `source.read()` ardından `SET TRANSACTION` çalıştırıyor → POST ile gelen ve okuyan her istek (Kitaba sor, inceleme kararı, Son Okuma kararı…) düşer. Denetim işi GPU'ya henüz kurulmadığı için görülmemişti. Kart servisi hemen `2989f50d`'ye geri alındı (Kitaba sor yeniden cevap verdi).
+- **Düzeltme:** `read_snapshot` işlem süresince `db.audit_context`'i boşaltır, sonra geri koyar (salt okunur işlemde yazılacak satır yok); `source.read` aynı işlevi kullanır. `book_title`/`recommend` komut satırı yolları bağlamsız, değişmedi. Test `tests/test_read_snapshot_audit.py`.
+- **Doğrulama:** GPU'da tam editör seti 1.077 geçti / 11 atlandı; gerçek veritabanında denetim bağlamı açıkken `quick_answer.context(deep=True)` («Kitabı kim çevirdi?», Çiçekçi Kadın): künye + bölüm blokları geldi, çevirmen adı bağlamda.
+- **Not:** denetimin GPU kurulumu (göç 035, `ed.audit_outbox`) hâlâ yok; o yokken ara katmanın istek olayı yazılamaz (uyarı günlüğe düşer, istek düşmez).
+
 ## 2026-10-03 — Merkezi denetim kaydı: sohbet, Destek, editör, portal kapısı ve girişler tek kayıtta
 
 - **İstek (kullanıcı):** «merkezi log sistemi olacak, her şeyi eksiksiz izlesin» — portalın denetim kaydı (aynı gün, aşağıda) yalnız köprüyü kapsıyordu.

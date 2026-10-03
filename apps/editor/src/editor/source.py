@@ -12,7 +12,6 @@ import re
 import unicodedata
 from difflib import SequenceMatcher
 
-from . import db
 
 POLICY = "source-reading-v1"
 
