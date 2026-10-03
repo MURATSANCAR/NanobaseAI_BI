@@ -418,7 +418,8 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
   // Ses seçimi ve örnek dinleme (GPU) «Kitap tasarımında üretim ve düzenleme» ister; yoksa seçimler yalnız görünür.
   const canEdit = useCan('tasarim.uret');
 
-  // Kütüphanedeki «dinle»: her ses aynı kısa cümleyi okur (sunucu ses başına bir kez üretir).
+  // «Dinle»: anlatıcı ve karakter satırlarında her ses aynı cümleyi okur; sunucu bütün seslerin örneğini önceden
+  // üretir (narration.warm_samples), tıklama GPU'yu beklemez. Cümle narration.SAMPLE_TEXT ile aynı olmalı.
   const listen = (voice: string, key: string) => onPlay(SAMPLE, voice, key);
 
   return (
@@ -441,7 +442,7 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
               <label htmlFor={`narration-char-${i}`} className="flex min-h-10 items-center truncate text-[12.5px] font-bold" title={name}>{name}</label>
               <VoicePicker id={`narration-char-${i}`} label={`${name} sesi`} value={chars[name] ?? ''} voices={d.voices} groups={d.groups}
                 allowNarrator onChange={(v) => setChars((c) => ({ ...c, [name]: v }))}
-                onPlay={(voice, key) => onPlay(`Merhaba, ben ${name}.`, voice, key)} playing={playing} canPlay={d.available && canEdit} />
+                onPlay={listen} playing={playing} canPlay={d.available && canEdit} />
             </div>
           ))}
           {d.settings.source === 'auto' && Object.keys(d.settings.characters ?? {}).length > 0 && (

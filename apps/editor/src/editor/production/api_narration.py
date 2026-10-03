@@ -159,6 +159,8 @@ def _overview(d: Path) -> dict:
 async def narration_view(job: str, retry: bool = Query(False), x_editor: str = Header("")) -> dict:
     d = await _ready(job, x_editor, retry)
     view, ok = await asyncio.gather(asyncio.to_thread(_overview, d), N.available())
+    if ok:
+        N.warm_samples_soon()          # «dinle» örnekleri önceden üretilir; tıklama diskten çalar
     return {**view, "available": ok}
 
 
@@ -378,6 +380,7 @@ async def voices_add(body: VoiceIn, by: str = Depends(_editor)) -> dict:
                                       reference=body.reference, original=orig)
     except voices.VoiceError as e:
         raise _Err(400, "VOICE_REJECTED", str(e)) from None
+    N.warm_samples_soon()
     return {"voice": voices.as_voice(rec), "stats": rec["stats"], "rights": rec["rights"]}
 
 
