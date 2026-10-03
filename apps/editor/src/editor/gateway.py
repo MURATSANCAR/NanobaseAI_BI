@@ -161,6 +161,19 @@ ANALYSIS_BI_MAX = int(os.environ.get("EDITOR_OVERFLOW_ANALYSIS_BI_MAX", "2") or 
 # farklı önceliği reddeder; önce BI kabı priority ile açılır, sonra bu değer verilir (deploy/tt-gpu/compose.qwen27b.yaml).
 OVERFLOW_PRIORITY = int(os.environ.get("EDITOR_OVERFLOW_PRIORITY", "0") or 0)
 PRIORITY_PATHS = {"chat/completions", "completions"}
+# Etkileşimli öncelik (2026-10-03): «Gölge Tilki'de ana karakter kim?» kitap okumaları yoğunken 8+ dk bekledi, yük
+# yokken 7 sn. GPU 1'deki yönetici model 32 koltuğu analizle doluyken (ölçüldü: bekleyen 82'ye kadar, bir saatte
+# 10.461 event_actor + 3.949 adsız çağrı) vLLM FCFS sırasında soru analiz isteklerinin arkasına giriyordu.
+# Yönetici `--scheduling-policy priority` ile açıldığında (models.yaml) gateway her sohbet isteğine `priority` koyar:
+# etkileşimli (Kitaba sor, kart ekranı) INTERACTIVE_PRIORITY, analiz ANALYSIS_PRIORITY. vLLM: küçük sayı önce; KV
+# darlığında önce büyük sayılı istek geri çekilir. BI'ın dağıtıcıdan (llm-dispatch backup) gelen isteği alan
+# göndermez = 0, yani etkileşimliyle aynı, analizden önce. Politika kapalı kapta sıfırdan farklı öncelik reddedilir;
+# bu yüzden karar models.yaml'a değil çalışan kabın kendi argümanlarına bakar (`_priority_on`): yeni argüman, kap
+# bir sonraki soğuk açılışında yeniden yaratılana kadar geçerli değildir.
+INTERACTIVE_PRIORITY = int(os.environ.get("EDITOR_INTERACTIVE_PRIORITY", "0") or 0)
+ANALYSIS_PRIORITY = int(os.environ.get("EDITOR_ANALYSIS_PRIORITY", "10") or 0)
+PRIORITY_TTL = 10.0
+_priority_seen: dict[str, tuple[float, bool]] = {}   # alias -> (okunduğu an, çalışan kapta politika açık mı)
 PEER_LOAD_TTL = 1.0
 _peer_load: tuple[float, int | None] = (0.0, None)
 _peer_ours: int | None = None  # eşin yükü okunduğu an bizim taşan isteklerimiz (BI payı = yük - bu)
@@ -618,13 +631,69 @@ async def _analysis_overflow(a: Alias) -> bool:
     return _reserve_overflow(load)
 
 
+def _seats(a: Alias) -> int:
+    """Modelin aynı anda sunduğu istek sayısı (`--max-num-seqs`); bilinmiyorsa 0."""
+    args = [str(x).strip() for x in a.args]
+    for i, arg in enumerate(args):
+        if arg.startswith("--max-num-seqs="):
+            return int(arg.split("=", 1)[1])
+        if arg == "--max-num-seqs" and i + 1 < len(args):
+            return int(args[i + 1])
+    return 0
+
+
+def _policy_priority(args: list) -> bool:
+    args = [str(x).strip() for x in args or []]
+    return "--scheduling-policy=priority" in args or any(
+        x == "--scheduling-policy" and i + 1 < len(args) and args[i + 1] == "priority" for i, x in enumerate(args))
+
+
+def _priority_on(a: Alias) -> bool:
+    """Çalışan kap `--scheduling-policy priority` ile mi açıldı? models.yaml'a bakılmaz: argüman değişince kap bir
+    sonraki soğuk açılışa kadar eski argümanla çalışır (`_ensure_created`) ve politika kapalıyken vLLM sıfırdan farklı
+    önceliği 400 ile reddeder. 10 sn önbellek (istek başına docker sorgusu olmasın)."""
+    now = time.time()
+    seen = _priority_seen.get(a.name)
+    if seen and now - seen[0] < PRIORITY_TTL:
+        return seen[1]
+    on = False
+    try:
+        c = _container(a)
+        if c is not None and c.status == "running":
+            on = _policy_priority((getattr(c, "attrs", None) or {}).get("Args") or [])
+    except Exception:  # noqa: BLE001 — okunamazsa alan gönderilmez (eski davranış)
+        on = False
+    _priority_seen[a.name] = (now, on)
+    return on
+
+
+def _with_priority(a: Alias, path: str, payload: dict, interactive: bool) -> bool:
+    """Yerel kaba gidecek sohbet isteğine öncelik koyar (politika açıksa). True: gövde değişti."""
+    if path not in PRIORITY_PATHS or "priority" in payload or not _priority_on(a):
+        return False
+    payload["priority"] = INTERACTIVE_PRIORITY if interactive else ANALYSIS_PRIORITY
+    return True
+
+
+async def _interactive_spill(a: Alias) -> bool:
+    """Yönetici ayaktayken etkileşimli soru eşe gitsin mi? Yalnız yerelde koltuklar doluysa (bu istek hariç sunulan
+    istek ≥ `--max-num-seqs`: soru vLLM sırasına girecek) ve eşte BI'ın kendi yükü EDITOR_OVERFLOW_ANALYSIS_BI_MAX'ı
+    aşmıyorsa (BI hiç yavaşlatılmaz). Analiz taşma sınırı (ANALYSIS_CAP) burada sayılmaz: o sınır okumanın eşe
+    taşıdığı yük içindir; soru tek istektir ve analiz 8/8 doluyken (ölçüldü 2026-10-03) hiç geçemezdi."""
+    seats = _seats(a)
+    if seats <= 0 or _serving(a) - 1 < seats:
+        return False
+    load = await peer_load()
+    return load is not None and _bi_load(load) <= ANALYSIS_BI_MAX
+
+
 async def _should_overflow(a: Alias, req: Request) -> bool:
     if not (OVERFLOW_URL and OVERFLOW_MODEL and a.name == OVERFLOW_ALIAS):
         return False
     if not _client_name(req):
         return await _analysis_overflow(a)  # analiz işçisi: yalnız GPU 0'da BI boşken
     if _is_running(a) and await _healthy(a):
-        return False                      # yönetici model GPU 1'de açık: orada cevaplanır
+        return await _interactive_spill(a)  # yönetici GPU 1'de açık: koltuklar dolu değilse orada cevaplanır
     # Kapalı model de "meşgul"dür: soğuk açılış ~100 sn sürüyor (ölçüldü: "ana karakter kim"
     # 111 sn'de cevaplandı, kullanıcı ekranda boş bekledi). Aynı model GPU 0'da zaten ayakta;
     # etkileşimli soru oradan anında cevaplanır. GPU 1 bir sonraki analiz ihtiyacında açılır.
@@ -810,6 +879,8 @@ async def proxy(path: str, req: Request):
             url = f"{OVERFLOW_URL}{_upstream_path(path)}"
         else:
             await ensure_running(a)
+            if _with_priority(a, path, payload, _interactive(req)):
+                body = json.dumps(payload).encode()
             url = f"{a.upstream}{_upstream_path(path)}"
         headers = {"content-type": "application/json"}
         if payload.get("stream"):
@@ -912,6 +983,7 @@ async def internal_status(req: Request) -> dict:
         "idle_sec": int(now - a.last_used), "gpu": a.gpu} for a in ALIASES.values()},
         "analysis_overflow": {"inflight": overflow_inflight, "total": overflow_total, "cap": ANALYSIS_CAP,
                               "bi_max": ANALYSIS_BI_MAX, "priority": OVERFLOW_PRIORITY,
+                              "local_priority": {n: v[1] for n, v in _priority_seen.items()},
                               "peer_load": _peer_load[1], "peer_ours": _peer_ours}}
 
 

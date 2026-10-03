@@ -554,7 +554,9 @@ async def _ask(system: str, ctx: str, user: str, history: list[dict] | None, max
                 {"role": "user", "content": user}]
     req = {"model": ALIAS, "messages": messages, "temperature": 0.2, "max_tokens": max_tokens,
            "chat_template_kwargs": {"enable_thinking": False}}
-    r = await llm._post("/v1/chat/completions", req)
+    # Etkileşimli başlık: gateway soruyu yönetici modelin sırasında okumaların önüne koyar (vLLM priority) ve
+    # koltuklar doluyken GPU 0 eşine taşıyabilir. Kart servisi istemci adıyla da tanınır; başlık adı çözülemese de geçer.
+    r = await llm._post("/v1/chat/completions", req, llm.INTERACTIVE)
     if r.status_code >= 400:
         log.warning("quick answer model %s: %s", r.status_code, r.text[:300])
         return None
