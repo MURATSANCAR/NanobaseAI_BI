@@ -12,12 +12,13 @@
 - Postgres 100 bağlantının 98'i doluydu (editor_app 67 boşta). Havuz süreç başına 8 (gateway 2), `max_idle` 60 sn (psycopg_pool fazlayı 10 dk'da bir kapatıyordu); gateway her vekil istekte bakım anahtarını DB'ye soruyordu → cevap 5 sn paylaşılır, eşzamanlı istekler tek sorgu.
 - `POLICY` validated-outputs-v10. Testler `tests/test_read_audit_classes.py` (+ kimlik/arşiv testleri güncel). Kurulmadı; okunmuş kitaplara uygulama: `page_scope rebuild --all-read`, `identity_fold --apply`, `recommend fill --all-read --apply`.
 ## 2026-10-03 — Logo ve CRM'de öğrenilmemiş tablo/kolon envanteri
+## 2026-10-03 — Logo ve CRM veri sözlüğü (Excel)
 
-- Excel: `docs/kaynak-sozlugu/OGRENILMEMIS-TABLO-KOLON-2026-10-02.xlsx` (Özet, Logo tablolar/kolonlar, CRM varlıklar/alanlar). Ölçüm betiği `scripts/kaynak-sozlugu-ogrenilmemis.py` (canlı Logo .25 firma 411 + CRM .28; yalnız SELECT, NOLOCK, tablo başına tek toplulaştırılmış sorgu).
-- Öğrenilmiş = kaynak sözlüğünde (34 Logo ailesi) anlamı yazılı ya da ürün kodunda o tabloyu anan dosyada geçiyor; ad/çeviri/açıklama dökümleri sayılmadı.
-- Sonuç: Logo 778 dolu tablo, 13.222 dolu kolon, 10.528 öğrenilmemiş; 661 tablo hiç öğrenilmemiş (390 genel L_, 221 özel, 29 dönem, 21 firma). CRM 591 dolu varlık (198'i sistem/günlük, ölçülmedi), 6.316 dolu alan, 4.769 öğrenilmemiş; 242 varlık hiç öğrenilmemiş (103 künye, 63 ilişki, 34 süreç).
-- Eski katalog (bi_meta `sl_schema_profile`, 4.259 profil, 2026-09-07/09) yapı/doluluk tutar, hiçbir cevap motoru kullanmıyor; güncel `LG_411_*` adları büyük ölçüde profilsiz. Sohbet yalnız öğretilmiş tanımlarla cevap verir (14 ölçü, 10 kırılım, 14 Logo + 33 CRM + 4 fatura raporu, 13 CRM varlığı/106 alan).
-- Sunucuda LibreOffice tek hücrelik dosyayı da hesaplamadı; Excel açılışta yeniden hesaplar (fullCalcOnLoad), formül mantığı bağımsız Python sayımıyla doğrulandı.
+- Kullanıcı isteği: Logo ve CRM'de her tablo ve kolon için bildiğimiz açıklama, yoksa sistemde yazan. İlk «öğrenilmemiş» sayım Excel'i istenmediği için kaldırıldı.
+- `docs/kaynak-sozlugu/VERI-SOZLUGU-LOGO-CRM-2026-10-03.xlsx`: Logo 778 dolu tablo / 23.897 kolon, CRM 586 varlık / 14.742 alan. Açıklama önceliği — Logo: bizim sözlük (34 aile, ölçülmüş anlam + veri notları) → Logo resmî belgesi (LDDS TR / çeviri) → eski katalog (otomatik) → LDDS İngilizce → aile iş adı → ad kalıbı; CRM: motor alan tanımı → CRM açıklaması → CRM etiketi. Kaynak her satırda yazılı; kod değerleri / CRM seçenekleri, bağlantı hedefi, doluluk (2026-10-02 canlı ölçüm), koddaki kullanım ayrı sütunlarda.
+- Yedek ve kopya tablolar (`LG_411_01_STLINE_yedek1`, `MS_211_01_STLINE` …) ad parçalarından belgelenmiş ana tabloya bağlanır («aynı yapı: STLINE»). Açıklamasız kalan yalnız 163 TİMAŞ özel tablosu (hiçbir belgede yok).
+- Bulgu: CRM kitap kartında `statuscode` (durum nedeni: Aktif/Pasif) alanının ekran etiketi «Yayıncılık Statüsü»; gerçek yayıncılık statüsü ayrı alan `new_kitap_yayincilikstatusu`. Pasif kart karışıklığının bir nedeni olabilir.
+- Ölçüm: `scripts/kaynak-sozlugu-ogrenilmemis.py` (canlı Logo .25 + CRM .28, yalnız SELECT, NOLOCK). Excel: `scripts/kaynak-sozlugu-veri-sozlugu-excel.py`. TİMAŞ VPN'i (tun0) 10-03 sabahı kapalıydı; Logo kolon listesi Logo belgesi + eski katalog + 10-02 ölçümünden birleştirildi (doluluk olmayan kolonlar belgede yoksa listede olmayabilir).
 
 ## 2026-10-02 (akşam) — Okunamayan kitabı «Yeniden okut»
 
