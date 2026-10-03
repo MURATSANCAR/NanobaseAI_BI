@@ -31,7 +31,7 @@ _INFLATABLE = (exp.Sum, exp.Avg)   # COUNT(*) over a fan-out is also inflated; C
 
 @dataclass(frozen=True)
 class Finding:
-    kind: str          # FANOUT | NON_NUMERIC | UNKNOWN_COLUMN | UNKNOWN_JOIN | RATIO_BASE
+    kind: str          # FANOUT | NON_NUMERIC | UNKNOWN_COLUMN | UNKNOWN_JOIN | RATIO_BASE | COUNT_SCOPE | …
     severity: str      # block | warn
     message: str       # in the language the person asked in, usable as a repair instruction
 
@@ -63,6 +63,15 @@ def _profiles_by_name(profiles: list[SchemaProfile]) -> tuple[dict[str, SchemaPr
             by_table.setdefault(_pattern_key(p.table_pattern), p)
         by_entity.setdefault(p.entity, p)
     return by_table, by_entity
+
+
+def _second_source_names(profiles: list[SchemaProfile]) -> dict[str, SchemaProfile]:
+    """İkinci kaynağın tablosu sorguda mantıksal adıyla yazılır: `Timas_MSCRM_dbo_NEW_ETKINLIKBASE` (şema
+    `Timas_MSCRM.dbo`, noktalar alt çizgi). `_profiles_by_name` bu adı tanımıyor: CRM sorgularının tabloları profile
+    bağlanmıyor, eleştirmenin kuralları CRM cevaplarında hiçbir şey okumuyor (2026-09-30 ölçümü, A044). Bu ad şimdilik
+    yalnız `_count_scope` için çözülür; öbür kurallar CRM'de açılınca (şişirme, değer) tam kapıda ayrıca ölçülmeli —
+    Q49'un doğru cevabı N:N bağ tablosu yüzünden FANOUT'a takılıyor."""
+    return {f"{p.schema_name.replace('.', '_')}_{p.table_name}".upper(): p for p in profiles if "." in (p.schema_name or "")}
 
 
 def prefer_base_tables(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> str:
@@ -498,6 +507,74 @@ def _mismatched_keys(tree: exp.Expression, by_table: dict, by_entity: dict, dial
     return out
 
 
+#: Ölçü kolonu profil örneğinde en az bu oranda boşsa, ölçünün dışında kalan satırlar satırların çoğudur: ölçünün
+#: yanındaki sayım o satırları da sayarsa başka bir kümenin sayısı olur. Yoğun kolonda (LINENET) fark ihmal edilir.
+_SPARSE_MEASURE = 0.5
+
+
+def _count_scope(select: exp.Select, tables: dict[str, SchemaProfile], dialect: str) -> list[Finding]:
+    """A count given beside a measure, over rows the measure does not cover.
+
+    2026-09-30 (A044 sınıfı): «etkinlik giderleri yazar bazında» — SUM(e.new_ToplamEtkinlikGideri) adds the few
+    events whose expense is filled (28 of 57.000), COUNT(DISTINCT e.new_etkinlikId) beside it counted every event
+    of the author (56, 287 …). Both are right about something; side by side they read as «1.330 ₺ over 56 events».
+    The rule is the ratio rule's twin (`_ratio_base`: numerator and denominator from the same rows): a figure
+    shown next to a measure is read as the measure's own rows.
+
+    Only where it matters and can be seen: the summed column is sparse in the catalog profile (≥ `_SPARSE_MEASURE`
+    of sampled rows empty), the statement restricts that column nowhere (WHERE / JOIN ON / HAVING), and the count
+    does not read it itself (COUNT(x.col), COUNT(CASE WHEN x.col … )). Refused with the rewrite; nothing is
+    known about which count was meant beyond «the same rows», so nothing else is said."""
+    if not tables:
+        return []
+    single = next(iter(tables)) if len(tables) == 1 else None
+
+    def alias_of(col: exp.Column) -> str:
+        return (col.table or "").upper() if col.table else (single or "")
+
+    guarded: set[tuple[str, str]] = set()
+    parts = [select.args.get("where"), select.args.get("having")] + [j.args.get("on") for j in select.args.get("joins") or []]
+    for part in parts:
+        if part is None:
+            continue
+        for c in part.find_all(exp.Column):
+            if _in_scope(c, select):
+                guarded.add((alias_of(c), c.name.upper()))
+    sparse: list[tuple[exp.AggFunc, exp.Column, SchemaProfile, float]] = []
+    for agg in select.find_all(exp.Sum, exp.Avg):
+        if not _in_scope(agg, select) or not isinstance(agg.this, exp.Expression):
+            continue
+        inner = agg.this
+        tested = {id(c) for pred in inner.find_all(exp.Predicate) for c in pred.find_all(exp.Column)}
+        for c in inner.find_all(exp.Column):
+            if id(c) in tested or (alias_of(c), c.name.upper()) in guarded:
+                continue
+            prof = tables.get(alias_of(c))
+            cp = prof.column(c.name) if prof is not None else None
+            if cp is None or cp.null_ratio is None or float(cp.null_ratio) < _SPARSE_MEASURE:
+                continue
+            sparse.append((agg, c, prof, float(cp.null_ratio)))
+    if not sparse:
+        return []
+    out: list[Finding] = []
+    for cnt in select.find_all(exp.Count):
+        if not _in_scope(cnt, select):
+            continue
+        read = {(alias_of(c), c.name.upper()) for c in cnt.find_all(exp.Column)}
+        for agg, c, prof, ratio in sparse:
+            if (alias_of(c), c.name.upper()) in read:
+                continue
+            a = c.table or alias_of(c) or prof.entity
+            out.append(Finding("COUNT_SCOPE", "block",
+                f"{cnt.sql(dialect=dialect)} ölçüyle aynı satır kapsamında değil: {agg.sql(dialect=dialect)} yalnız "
+                f"{prof.entity}.{c.name} dolu satırları toplar (katalog profili: bu kolon satırların %{ratio * 100:.0f}'inde "
+                f"boş), sayım ise kolonu boş satırları da sayıyor. Ölçünün yanındaki sayımı aynı satırlarla sınırla: "
+                f"WHERE'e {a}.{c.name} IS NOT NULL ekle (sıfır tutar da ölçü dışıysa {a}.{c.name} <> 0) ya da sayımı "
+                f"COUNT(DISTINCT CASE WHEN {a}.{c.name} IS NOT NULL THEN <anahtar> END) olarak yaz."))
+            break
+    return out
+
+
 #: Köprü tablosu (barkod, birim) anahtar tablosunun satırı başına en çok bu kadar satır taşır. Ölçülen satır
 #: sayılarından okunur; fazlası bir hareket tablosudur ve kırılım anahtarı olsa bile grubu çoğaltır.
 _BRIDGE_ROWS_PER_KEY = 2.0
@@ -555,6 +632,7 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
         except Exception:  # noqa: BLE001
             return []
     by_table, by_entity = _profiles_by_name(profiles)
+    second = _second_source_names(profiles)
     same_entity: dict[str, list[SchemaProfile]] = {}          # LG_ önekiyle ve öneksiz aynı ad
     for p in profiles:
         same_entity.setdefault(_bare_of(p.entity), []).append(p)
@@ -578,6 +656,14 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
             if rel is not None:
                 rels[str(alias).upper()] = rel
         tables: dict[str, SchemaProfile] = {a: r.profile for a, r in rels.items() if r.profile is not None}
+        # The count beside a measure is read over every table the statement names, a second source's too.
+        counted = dict(tables)
+        for alias, src in scope.sources.items():
+            if isinstance(src, exp.Table) and str(alias).upper() not in counted:
+                prof = second.get((((src.db + "_") if src.db else "") + src.name).upper()) or second.get(src.name.upper())
+                if prof is not None:
+                    counted[str(alias).upper()] = prof
+        findings += _count_scope(select, counted, dialect)
         if not rels:
             continue
 
