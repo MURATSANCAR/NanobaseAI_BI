@@ -1,7 +1,7 @@
 """Read the same pages with two vision aliases and report where they differ.
 
   python -m editor.compare_models <generation_id> [--ref book-vision-deep]
-                                 [--alias book-vision-deep-fp8] [--out FILE]
+                                 --alias <aday takma ad> [--out FILE]
 
 Both aliases get exactly the same prompt and image for every page the generation
 scanned deeply, one alias after the other (they need not fit on the GPU together). Nothing is written to the
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("generation_id")
     ap.add_argument("--ref", default="book-vision-deep")
-    ap.add_argument("--alias", default="book-vision-deep-fp8")
+    ap.add_argument("--alias", required=True)  # aday FP8 modeli 2026-10-03 GPU'dan silindi
     ap.add_argument("--out", default="/data/editor/storage/compare-models.json")
     a = ap.parse_args()
     asyncio.run(main(a.generation_id, a.ref, a.alias, Path(a.out)))

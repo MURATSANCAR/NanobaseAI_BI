@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — GPU disk temizliği (kullanıcı kararıyla)
+
+- **Tarama (salt okuma):** kök disk %72, `/data` %45. Çalışan konteyner ve ayarla karşılaştırılıp kullanılmayanlar listelendi.
+- **Silinen (kullanıcı çalıştırdı):** 5 OCR deneme modeli (chandra, Qianfan, Unlimited, Hunyuan, Paddle; 31 GB) + vLLM önbellekleri, eski ses deneyi `/data/tts`, pip/uv önbellekleri, `/data/tmp/http-v2`; kullanıcı kararıyla Logo yedeği `/data/Timas_LOGODB_Yedek_200820261257` (227 GB), `/data/mssql_restore` (301 GB), hukuk projesi `/data/nanobase-legal` + `~/kev-turkish-20260921` + 4 durmuş `kev-*` konteyneri + `llama.cpp`/`legal-qualpipe-olc` imajları, aday görsel model `Qwen3-VL-32B-Thinking-FP8` (34 GB). Sonuç: `/data` 2,5 → 1,9 TB dolu, kök 140 GB boş.
+- **Depoda:** `models.yaml`'dan `book-vision-deep-fp8` takma adı çıktı; `compare_models --alias` artık zorunlu.
+- **Bekleyen (kullanıcı):** Gemma-4-31B önbelleği root sahipli (`sudo rm`), eski imajlar + derleme önbelleği (~90 GB).
+
 ## 2026-10-03 — Editör: denetim bağlamı salt okunur işlemi bozuyordu (kart servisi POST'ları 500)
 
 - **Bulgu (kurulumda):** main'le kurulan kart servisi (`bfa87e96`) Kitaba sor'un her sorusuna 500 verdi: `psycopg.errors.ActiveSqlTransaction: SET TRANSACTION ISOLATION LEVEL must be called before any query`. Merkezi denetim işi (`3f788d27b`) `db.tx()`'in ilk komutu olarak `set_config('nanobase.audit', …)` yazıyor; bağlam yalnız yazma isteğinde (POST/PUT/PATCH/DELETE, `audit.Middleware`) konur. `foundation.read_snapshot()` ve `source.read()` ardından `SET TRANSACTION` çalıştırıyor → POST ile gelen ve okuyan her istek (Kitaba sor, inceleme kararı, Son Okuma kararı…) düşer. Denetim işi GPU'ya henüz kurulmadığı için görülmemişti. Kart servisi hemen `2989f50d`'ye geri alındı (Kitaba sor yeniden cevap verdi).
