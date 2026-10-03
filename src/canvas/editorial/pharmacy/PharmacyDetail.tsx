@@ -412,7 +412,14 @@ export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string;
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Pill tone={pill.tone}>Okuma: {pill.text}</Pill>
               {red && <Pill tone={red.tone}>{red.text}</Pill>}
+              {!!b.title_review?.length && <Pill tone="muted">Adı gözden geçir</Pill>}
             </div>
+            {!!b.title_review?.length && (
+              <p className="mt-1.5 break-words text-[11.5px] leading-snug text-canvas-muted">
+                Ad dosya adından geldi; yayınevi sitesinde ve künyede doğrulanamadı.
+                {b.title_review.some((r) => r !== 'dosya adından') && ` ${b.title_review.filter((r) => r !== 'dosya adından').join(' · ')}`}
+              </p>
+            )}
             {b.read?.state === 'okunuyor' && (
               <div className="mt-2 max-w-sm">
                 <UploadBar share={b.read.phase.n / (b.read.phase.of || 1)} label={`${b.title} okuma ilerlemesi`} />

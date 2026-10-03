@@ -155,8 +155,8 @@ def fragments(rows: list[dict]) -> dict[str, dict]:
 
 
 def clean_title(path: str) -> str:
-    """Kitap adı dosya adından: kopya eki, ölçü, forma, baskı numarası ve dosya hâli sözcükleri atılır;
-    Türkçe harfler korunur. Asıl künye adı okumada (book_metadata) ayrıca çıkarılır."""
+    """ESKİ temizlik (2026-10-03'e kadar arşiv kitaplarının adı buydu): yalnız eski kayıtların adının dosya adından
+    geldiğini tanımak için (book_title.legacy_file_derived). Yeni kitabın adı `book_title.from_file`'dan."""
     s = Path(path).stem
     s = re.sub(r"\(\d+\)", " ", s)
     s = re.sub(r"\d+([.,]\d+)?\s*[xX]\s*\d+([.,]\d+)?", " ", s)
@@ -290,12 +290,17 @@ def intake(root: Path, r: dict) -> dict:
         pages = doc.page_count
     dest = settings().storage / "books" / sha[:16] / "source.pdf"
     how = _place(src, dest)
+    from . import book_title
     with db.tx() as c:
         bv = c.execute("SELECT id FROM book_version WHERE sha256=%s ORDER BY created_at LIMIT 1", (sha,)).fetchone()
         if bv is None:
             # Arşivde ad tekrarı kitap birleştirmez: farklı içerik = ayrı kitap (aynı adlı «1.kitap» iki klasörde).
+            # Ad temizlenmiş dosya adı (kaynak «file», gözden geçir işaretli); okuma bitince site ve künyeyle
+            # yeniden çözülür (book_title.after_reading).
+            name = Path(r["path"]).name
             book = c.execute("INSERT INTO book(title, age_group) VALUES (%s,%s) RETURNING id",
-                             (clean_title(r["path"]), age_group(hint))).fetchone()
+                             (book_title.from_file(name)["title"], age_group(hint))).fetchone()
+            book_title.set_on_intake(c, str(book["id"]), None, name)
             bv = c.execute("INSERT INTO book_version(book_id, sha256, file_path, file_bytes, page_count, pdf_meta)"
                            " VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
                            (book["id"], sha, str(dest), src.stat().st_size, pages,
@@ -351,10 +356,13 @@ def listing_data(c, book_id: str | None = None) -> tuple[list[dict], set[str], l
     """Salt okuma (kart servisinin anlık görüntüsünde): arşiv kipinde okunan kitapların kitap × kip (archive |
     redaction) başına SON işi, son okuması koşmuş kitaplar ve kuyrukta bekleyen işlerin sırası.
     `book_id` verilirse yalnız o kitap."""
+    from . import book_title
     from . import portal_books as PB
     one = " AND bv.book_id=%s" if book_id else ""
+    tcols = ("b.title_source, b.title_review" if book_title.has_columns(c)
+             else "NULL::text AS title_source, '{}'::text[] AS title_review")
     rows = c.execute(
-        "SELECT DISTINCT ON (bv.book_id, j.profile) bv.book_id, b.title, j.id, j.profile, j.status, j.step,"
+        "SELECT DISTINCT ON (bv.book_id, j.profile) bv.book_id, b.title, " + tcols + ", j.id, j.profile, j.status, j.step,"
         " j.workflow_id, j.requested_by, j.created_at, j.finished_at, coalesce((j.progress->>'attempt')::int, 1)"
         " AS attempt, j.progress->'archive'->>'category' AS category, bv.page_count,"
         " min(j.created_at) OVER (PARTITION BY bv.book_id, j.profile) AS submitted_at"
@@ -398,8 +406,10 @@ def shape(rows: list[dict], proofed: set[str], waiting: list[str], busy: int) ->
     by: dict[str, dict] = {}
     for r in rows:
         bid = str(r["book_id"])
-        b = by.setdefault(bid, {"id": bid, "title": r["title"], "category": None, "pages": r["page_count"],
-                                "read": None, "redaction": None, "proofed": bid in proofed, "bulk": False})
+        b = by.setdefault(bid, {"id": bid, "title": r["title"], "title_source": r.get("title_source"),
+                                "title_review": list(r.get("title_review") or []), "category": None,
+                                "pages": r["page_count"], "read": None, "redaction": None, "proofed": bid in proofed,
+                                "bulk": False})
         it = PB.item(r, waiting, busy)
         who = r.get("requested_by") or ""
         it["requested_by"] = None if who.startswith(PREFIX) else it["requested_by"]

@@ -324,7 +324,7 @@ async def book_read_upload(file: UploadFile = File(...), title: str = Form(defau
         # Okunamayan dosya gelen kutusunda kalmaz: kuyruk komutu (editorctl queue) onu yeniden denemesin.
         (settings().inbox/file_name).unlink(missing_ok=True)
         raise HTTPException(422,'PDF açılamadı; dosya bozuk ya da parolalı olabilir.') from None
-    q=await run_in_threadpool(PB.enqueue,file_name,name,who,profile,category)
+    q=await run_in_threadpool(PB.enqueue,file_name,name,who,profile,category,title,file.filename or file_name)
     rows=[r for r in PB.listing(who) if r['id']==q['job_id']] or [{'id':q['job_id'],'title':name}]
     return {**rows[0],'already':q['already'],'bytes':size}
 

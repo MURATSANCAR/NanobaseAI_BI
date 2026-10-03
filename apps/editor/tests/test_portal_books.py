@@ -12,8 +12,12 @@ def test_slug_turkish_and_empty():
 
 
 def test_title_from_filename_when_not_given():
-    assert PB.title_of("", "anne_terligi-son.pdf") == "anne terligi son"
-    assert PB.title_of("  Anne Terliği ", "x.pdf") == "Anne Terliği"
+    # dosya adından: sondaki dosya hâli sözcüğü («son») atılır, Türkçe başlık yazımı (editor.book_title)
+    assert PB.title_of("", "anne_terligi-son.pdf") == "Anne Terligi"
+    assert PB.title_of("", "1- todişin bir günü (2).pdf") == "Todişin Bir Günü"
+    # kişinin yazdığı ad olduğu gibi (yalnız boşluk sadeleşir)
+    assert PB.title_of("  Anne  Terliği ", "x.pdf") == "Anne Terliği"
+    assert PB.title_of("küçük harfle yazdım", "x.pdf") == "küçük harfle yazdım"
 
 
 @pytest.mark.parametrize("step,status,n,label", [

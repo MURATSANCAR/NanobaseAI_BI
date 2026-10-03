@@ -55,12 +55,13 @@ def slug(name: str) -> str:
 
 
 def title_of(given: str, filename: str) -> str:
-    """Kitabın adı: editör yazdıysa o; yoksa dosya adından (uzantısız, tire/alt çizgi boşluk)."""
-    t = (given or "").strip()
+    """Kitabın adı: editör yazdıysa o (olduğu gibi); yoksa temizlenmiş dosya adı (editor.book_title: baştaki sıra
+    numarası, ölçü, baskı eki atılır, Türkçe başlık yazımı). Okuma bitince site ve künyeyle yeniden çözülür."""
+    t = re.sub(r"\s+", " ", given or "").strip()
     if t:
         return t[:300]
-    stem = Path(filename or "").stem
-    return re.sub(r"\s+", " ", re.sub(r"[_-]+", " ", stem)).strip()[:300] or "Adsız kitap"
+    from . import book_title
+    return book_title.from_file(Path(filename or "").name or "kitap.pdf")["title"]
 
 
 def phase(step: str | None, status: str) -> dict:
@@ -140,13 +141,23 @@ def job_settings(profile: str, category: str) -> tuple[str, dict]:
     return profile, progress
 
 
-def enqueue(file_name: str, title: str, who: str, profile: str = "full", category: str = "") -> dict:
+def enqueue(file_name: str, title: str, who: str, profile: str = "full", category: str = "",
+            given: str | None = None, original_name: str | None = None) -> dict:
     """Kitabı kaydeder (içerik sürümü) ve sıraya koyar. Aynı sürüm okunmuş, sırada ya da okunuyorsa yeni iş
     açılmaz: {'job_id', 'already': 'SUCCEEDED'|'QUEUED'|'RUNNING'|None}. `profile='archive'` (Kitap Eczanesi):
-    kitap «Zeki'ye sor» için okunur; son okuma adımları kitap redaksiyona açılınca koşar (editor.archive)."""
-    from . import db, document
+    kitap «Zeki'ye sor» için okunur; son okuma adımları kitap redaksiyona açılınca koşar (editor.archive).
+    `given`: kişinin yazdığı ad (varsa kaynak «user», hiçbir otomatik çözüm ezmez); `original_name`: yüklenen
+    dosyanın özgün adı (adın kaynağı «file» olarak kaydedilir). İkisi de verilmezse (eski çağıran) ad kaynağı
+    yazılmaz ve aynı adlı kitap varsa sürüm ona eklenir (önceki davranış)."""
+    from . import book_title, db, document
     profile, progress = job_settings(profile, category)
-    info = document.inspect_book(file_name, title=title)
+    provenance = given is not None or original_name is not None
+    # Dosya adından gelen ad başka bir kitabın adıyla çakışabilir («Cezeri»): o zaman kitaplar birleşmez.
+    info = document.inspect_book(file_name, title=title,
+                                 merge_by_title=not provenance or bool((given or "").strip()))
+    if provenance:
+        with db.tx() as c:
+            book_title.set_on_intake(c, info["book_id"], given, original_name or file_name)
     bv = info["book_version_id"]
     row = db.one("SELECT id, status FROM analysis_job WHERE book_version_id=%s AND status IN"
                  " ('QUEUED','RUNNING','SUCCEEDED') ORDER BY created_at DESC LIMIT 1", bv)

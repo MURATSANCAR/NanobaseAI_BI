@@ -67,6 +67,7 @@ function Row({ b, selected, onPick }: { b: PharmacyBook; selected: boolean; onPi
             <Pill tone={pill.tone}>{pill.text}</Pill>
             {red && <Pill tone={red.tone}>{red.text}</Pill>}
             {b.review?.review && <Pill tone="warn">Gözden geçir</Pill>}
+            {!!b.title_review?.length && <Pill tone="muted">Adı gözden geçir</Pill>}
           </span>
           {b.read?.state === 'okunuyor' && (
             <span className="mt-1.5 block">

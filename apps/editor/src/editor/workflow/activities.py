@@ -317,6 +317,15 @@ async def finish_job(job_id: str, status: str, result: dict) -> None:
     await _t(db.one, "UPDATE analysis_job SET status=%s, finished_at=now(), progress=progress || %s,"
              " error=%s WHERE id=%s RETURNING id", status, db.J({"result": result}),
              result.get("error"), job_id)
+    if status == "SUCCEEDED" and result.get("generation_id"):
+        # The book's title from the publisher site / the colophon now that the reading is done
+        # (editor.book_title; never over a name a person gave). Inside this activity so no workflow
+        # history changes; a failure leaves the title as it was and never fails the job.
+        from .. import book_title
+        try:
+            await _t(book_title.after_reading, result["generation_id"])
+        except Exception as e:  # noqa: BLE001
+            activity.logger.warning("book title not resolved for %s: %s", result["generation_id"], e)
 
 
 @activity.defn
