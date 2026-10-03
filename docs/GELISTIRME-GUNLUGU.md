@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-03 — Dal temizliği: main'e taşınanlar, K0776 geri alındı
+
+- Taşındı (merge, tam test seti test sunucusunda — yeni kırık 0, geçen 5.299 → 5.330): `zeki-q49-kapsam` (ölçünün satır kapsamı), `zeki-ay-acilimi` (K13 ay kolonu açılımı), `claude/synthetic-speech-integration-544c08` (sesli okumada 19 ses). Modül kapsamlı cevaplar ayrı oturumda bugünkü akışa yeniden yazılıp taşındı (4fe3809e0).
+- Taşınmadı: `claude/k0776-sozluk` — `resolver._term_head` terimi yalnız son anlamlı kelimesinden eşliyor, `test_state_participles::test_a_negated_verb_over_a_certified_status_label_is_the_labels_complement` («İptal edilmemiş faturalar») bozuluyor. «bj» (cb8bc7af8) bunu eski bir dal üzerinden main'e geri getirmiş ve PROJECT-MEMORY.md'ye çakışma işareti bırakmıştı; bu commit K0776 dosyalarını geri alır, işaretleri siler. Dal düzeltilmek üzere duruyor.
+- Silindi: içeriği main'de olan 57 yerel dal ve 43 worktree; eski sohbet kopyası `apps/sohbet` dalları (main'de `apps/zeki-chat`). Silinmeden önce her dalın içeriği `git merge-tree` ile ya da commit başlığı + dosya eşliğiyle main'de doğrulandı; commit'lenmemiş dosyalar arşivlendi (`~/Documents/NonobaseAI-arsiv/2026-10-03-worktree-artiklari/`).
+- Kalan: çalışan oturumların dalları ve worktree'leri (okuma denetimi ajanı, Markdown oturumu, modül oturumu), «Biizm yapı» ve «GPU sunucusu güvenlik» oturum dalları (eski 9f5c5bbf0'dan çıktılar — K0776'yı taşır, main'e merge edilmemeli).
+
 ## 2026-10-03 — ZEKİ modül kapsamı bugünkü sohbet akışında; Analiz, Finans ve risk altında
 
 - **Neden:** 2026-09-30 kullanıcı kararı («her modülde Zeki yalnız o modülün sorusunu cevaplasın», «ana sayfada ne sorulursa ilgili modülden gitsin bulsun») `e6b41ab05` ile eski sohbet akışına (`Runtime.ask` → eski katalog/çözücü) yazılmıştı; main'de `ask()` finans motoruna ve plan öncesi kapıya (`chat_scope.screen`) geçince cherry-pick mekanik çözülemedi. Özellik bugünkü akışa yeniden yazıldı.
