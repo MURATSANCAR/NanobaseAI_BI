@@ -865,6 +865,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/me/", OPEN),
     ("/api/v1/audit/ui", OPEN),
     ("/api/v1/audit/ingest", SYSTEM),               # merkezi denetim kaydı: aynı sunucudaki sistemler (çağıran jetonu)                    # ekran olayları (denetim izi): kişi yalnız kendi olayını yazar
+    # Sohbette @Zeki: aynı sunucudaki çerezsiz işçi (deploy/zeki/mention-worker.py, yerel anahtar). Kişinin
+    # /api/v1/ask kapısı (zeki.soru + veri alanları) ucun içinde o kişi adına yeniden uygulanır.
+    ("/api/v1/chat/mention-answer", SYSTEM),
     ("/api/v1/greetings", OPEN),
     ("/api/v1/bulletins", OPEN),                   # Kampüs sesli bülteni (yazma /api/v1/admin/bulletins)
     ("/api/v1/rooms", OPEN),
