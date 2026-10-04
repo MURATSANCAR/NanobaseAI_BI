@@ -4,7 +4,9 @@
 
 - **Neden:** main'de `test_access.py::test_every_bridge_route_has_a_rule` kalıyordu: sohbetteki @Zeki ucu (`semantic_bridge/chat_mention.py`) `access.RULES`'ta yoktu (`rule_for` → None; oturumlu istekte kapı 403, yönetici hariç).
 - **Ne:** `("/api/v1/chat/mention-answer", SYSTEM)`. Çağıran aynı sunucudaki çerezsiz işçi (`deploy/zeki/mention-worker.py`, yerel anahtar) — `/api/v1/audit/ingest` ile aynı desen; kişinin `/api/v1/ask` kapısı (zeki.soru + veri alanları) ucun içinde o kişi adına uygulanmaya devam eder. Tarayıcı oturumuyla gelen istek yönetici değilse 403.
-- **Doğrulama:** test sunucusunda köprü venv'iyle (git archive, `._*` 0) `test_access.py` 19/19. Kurulum yok (yalnız kural tablosu; mevcut çerezsiz işçi akışı değişmedi).
+- **Doğrulama:** test sunucusunda köprü venv'iyle (git archive, `._*` 0) `test_access.py` 19/19.
+- **Test sunucusu kurulumu (2026-10-04):** yalnız `access.py` (sunucu md5 = eski main doğrulandı, sonra main'in kopyası; md5 `baedcff3…`), köprü yeniden başlatıldı, `ready:true`. Çerezsiz yerel istek uca ulaşıyor (anahtarsız → uçtan 401 «Worker authentication required»), `zeki-mention` active, günlükte «kuralı olmayan uç» 0, `._*` 0.
+- **Müşteri VM'i: kurulmadı.** VM `f24762abb`'de; arada main'de test sunucusuna kurulmamış film ekranı + köprü vekili (`93c693c77`) var — tam main VM'e gidemez. Değişiklik VM'de davranışı değiştirmiyor (çağıran çerezsiz işçi); film işi test sunucusunda doğrulanınca bir sonraki tam main kurulumuyla gider.
 
 ## 2026-10-04 — Film ve video: köprü vekili ve stüdyo ekranı
 
