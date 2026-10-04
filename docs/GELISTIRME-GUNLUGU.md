@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-10-04 — CRM bağlayıcısı başarısız gece koşusunu saatte bir yeniden dener
+
+- **Neden:** 03:10 koşusu 3 saniyede düştü: TİMAŞ VPN'i 02:26'da kopmuş (MFA'lı, kendiliğinden geri gelmiyor), CRM .28'e «No route to host». VPN 10:05'te açıldı; koşu elle telafi edildi (4 yazıldı, 4.040 atlandı, 0 hata). Kullanıcı «başarısız olursa yeniden dene» önerisini onayladı.
+- **Ne:** `scripts/server/editor-crm-connector.service` → `Restart=on-failure`, `RestartSec=1h`, `StartLimitBurst=7` / `StartLimitIntervalSec=8h` (ilk koşu + 6 deneme, 09:10'a kadar). Yazılamayan kitap kalan koşu da (çıkış 1) bir saat sonra yeniden dener; artımlı olduğu için yalnız eksikler yazılır.
+
 ## 2026-10-04 — SEO: onaylanan önerinin görünmez alanları CRM kitap kartına; gece denetimi
 
 - Kullanıcı kararı: sistem her gece bütün ürünleri kontrol eder, eksik/hatalı olan Ürün denetiminde görünür; kullanıcı onaylayınca ürünün sitedeki metnine dokunmayan yalnız SEO/GEO alanları CRM'e yazılır; yazılanlar her gece denetlenir.
