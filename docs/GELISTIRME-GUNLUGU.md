@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-04 — Film ve video: köprü vekili ve stüdyo ekranı
+
+- **Neden:** kullanıcı film hattının ekranına geçilmesini istedi (önceki giriş: arka uç). Modeller hâlâ kapalı, kurulum yok.
+- **Köprü** `backend/semantic_bridge/editorial_studio_film.py`: stüdyo `films…` uçlarının vekili; yazanlarda X-Editor = oturum, `admin.audit` kaydı; film/çekim kimliği ve medya yolu köprüde süzülür; medya (kare, çekim, ses, kurgu) belleğe alınmadan akış olarak geçer, tarayıcının ileri sarma (Range) isteği servise iletilir; paylaşım dosyası indirme `veri.disa-aktar` ister, servis ayrıca onaysız paketi vermez. Yetki kapısı mevcut `/api/v1/editorial/studio` öneki (kitap-tasarim).
+- **Ekran** `src/canvas/editorial/studio/film/` (StudioEditor, Pazarlama'nın altı): film listesi + yeni film (biçim kartları, üslup), 7 adım sekmesi (durum rozeti: bekliyor/sırada/çalışıyor/onay bekliyor/onaylı/güncel değil/hata), adım çubuğu (başlat, ilerleme, onay, «önce şu adım» uyarısı), senaryo (çekim kartları, alıntı, replik/süre düzeltme, sorunlar), oyuncular (ses seçimi, kart durumu), ses (replik dinleme), kareler (denetim rozeti, sürüm seçimi, yönlendirmeyle yeniden çiz), çekim ve kurgu (video), paylaşım (platform seçimi, kesitler, kapak, açıklama/etiket). Yeni hareket yok (sık kullanılan sekmeler anlık; basışta `press`); ekranda teknoloji adı yok.
+- **Doğrulama (test sunucusunda, kurulum değil):** `tsc -b` 0, `vite build` 0 (geçici çıktı klasörü), köprü testleri 4/4 + `test_access` 22/23 — kalan `test_every_bridge_route_has_a_rule` main'deki `/api/v1/chat/mention-answer` kuralsızlığı (bu değişiklikle ilgisiz; ayrı iş açıldı). Ekran gerçek oturumla görülmedi (kurulum yok, AD girişi gerekir).
+
 ## 2026-10-04 — CRM bağlayıcısı başarısız gece koşusunu saatte bir yeniden dener
 
 - **Neden:** 03:10 koşusu 3 saniyede düştü: TİMAŞ VPN'i 02:26'da kopmuş (MFA'lı, kendiliğinden geri gelmiyor), CRM .28'e «No route to host». VPN 10:05'te açıldı; koşu elle telafi edildi (4 yazıldı, 4.040 atlandı, 0 hata). Kullanıcı «başarısız olursa yeniden dene» önerisini onayladı.
