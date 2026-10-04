@@ -67,9 +67,9 @@ DIMENSIONS = {
     "author_group": "Aktif Yazar katılım rolüyle bağlı gerçek kişi UUID kümesi; ortak yazarlı kitabın satışı kümede bir kez sayılır, kişilere dağıtılmaz",
     "day": "İşlem günü (satışta fatura tarihi)", "month": "İşlem yılı ve ayı (satışta fatura tarihi)", "year": "İşlem yılı (satışta fatura tarihi)",
     # Logo kodlu alanlar (logo_codes.CODED): kodların anlamı canlı veriyle doğrulandı 2026-10-03.
-    "e_document": "Faturanın kesiliş biçimi: Kağıt fatura, e-Fatura ya da e-Arşiv fatura (Logo fatura başlığı EINVOICE)",
+    "e_document": "Belge türü / kesiliş biçimi (fatura tipi DEĞİL): Kağıt fatura, e-Fatura ya da e-Arşiv fatura (Logo fatura başlığı EINVOICE)",
     "einvoice_scenario": "e-Faturanın GİB senaryosu: Temel fatura ya da Ticari fatura (fatura başlığı PROFILEID)",
-    "einvoice_type": "e-Fatura/e-Arşiv fatura tipi: Satış, İstisna ya da Tevkifat (fatura başlığı EINVOICETYP; KDV istisna kodundan ayrı, fatura düzeyinde)",
+    "einvoice_type": "Fatura tipi (GİB fatura tipi; «fatura tipine göre» bu kırılımdır): Satış, İstisna ya da Tevkifat (fatura başlığı EINVOICETYP; KDV istisna kodundan ayrı, fatura düzeyinde)",
     "einvoice_status": "Faturanın e-Fatura/e-Arşiv gönderim durumu: Onaylandı, Alıcıda işlendi, Kabul edildi, Reddedildi, GİB'e gönderilemedi… (fatura başlığı ESTATUS)",
     "vat_exemption": "GİB KDV istisna kodu: 335 basılı kitap ve süreli yayın teslimi, 301 mal ihracatı, 302 hizmet ihracatı, 351 istisna olmayan diğer (satışta satır, fatura sayısında fatura başlığı VATEXCEPTCODE)",
     "customer_einvoice_user": "Müşterinin e-Fatura mükellefi olup olmadığı (Logo cari kartı ACCEPTEINV)",
@@ -78,7 +78,7 @@ DIMENSIONS = {
 # Logo kodlu kırılım ve süzgeçler; hangi kayıt düzeyinde okundukları logo_codes.CODED'da.
 CODED_DIMENSIONS = ("e_document", "einvoice_scenario", "einvoice_type", "einvoice_status", "vat_exemption",
                     "customer_einvoice_user", "customer_legal_form")
-CONTRACT = {"version": "2.4", "metrics": {k: asdict(v) for k, v in METRICS.items()},
+CONTRACT = {"version": "2.5", "metrics": {k: asdict(v) for k, v in METRICS.items()},
             "dimensions": DIMENSIONS,
             "sources": "Tek şirket. SEMANTIC_FIRMS kapsamı ile L_CAPIPERIOD dönemleri; çakışmada tahmin yok.",
             "joins": "Logo ITEMS.CODE -> CRM new_kitapBase.new_stokkodu; aktif anahtar tekilliği zorunlu; alt marka/kişi grubu kırılımında çoğul kodlar eşleştirilmeden NULL ve kapsam açıklamasıyla korunur. LEFT JOIN; ölçüler çoğalmaz. Eşleşmeyen satışlar NULL CRM alanlarıyla korunur ve toplam kontrol edilir.",
