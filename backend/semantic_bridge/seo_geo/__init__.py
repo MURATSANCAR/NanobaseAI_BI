@@ -1527,6 +1527,22 @@ def register(app, runtime, authorize, session_user):
                                                          "previewPdf", "video", "originalTitle", "inForce")} if b else None)})
         return {"total": total, "start": start, "items": items, "summary": _crm_summary()}
 
+    @app.get("/api/v1/seo-geo/crm-writes")
+    def seo_crm_writes(request: Request, limit: int = 200) -> dict[str, Any]:
+        """CRM kitap kartına yazılan (ya da deneme kipinde yazılacak) SEO alanları; eski değerle birlikte."""
+        gate(request)
+        from semantic_bridge.seo_geo import crm_write
+        return crm_write.listing(seo, limit=min(max(limit, 1), 2000))
+
+    @app.post("/api/v1/seo-geo/crm-writes/{write_id}/undo")
+    def seo_crm_write_undo(write_id: str, request: Request) -> dict[str, Any]:
+        user = approver(request)
+        from semantic_bridge.seo_geo import crm_write
+        try:
+            return crm_write.undo(seo, write_id, user)
+        except RuntimeError as e:
+            raise _err(409, str(e))
+
     @app.post("/api/v1/seo-geo/crm/sync")
     def seo_crm_sync(request: Request) -> dict[str, Any]:
         user = gate(request)

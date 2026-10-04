@@ -262,6 +262,10 @@ SPEC: list[dict[str, Any]] = [
      "help": "Ürün sayfası bağlantıları ve arama önizlemesi bu adresle kurulur"},
     {"key": "SEO_APPROVERS", "group": "seo", "label": "Onay verebilenler", "type": "text", "default": "",
      "help": "AD hesap adları, virgülle. SEO önerilerini bunlar onaylar (onay kayıt altına alınır; T-soft'a gönderim yok). Boşsa yöneticiler onaylar"},
+    {"key": "SEO_CRM_WRITE", "group": "seo", "label": "CRM'e yazma kipi", "type": "text", "default": "kapali",
+     "help": "kapali | deneme | acik. Onaylı öneriden yalnız sitede görünmeyen alanlar (SEO başlığı, meta açıklama, kapak alt "
+             "metni, SEO durumu/tarihi) CRM kitap kartına yazılır. deneme: yazılacak değeri gösterir, yazmaz. Test sunucusunda "
+             "deneme, müşteri ortamında acik"},
     {"key": "SEO_TITLE_MIN", "group": "seo", "label": "SEO başlığı en kısa (karakter)", "type": "int", "default": "30", "help": ""},
     {"key": "SEO_TITLE_MAX", "group": "seo", "label": "SEO başlığı en uzun (karakter)", "type": "int", "default": "65",
      "help": "Google başlığı yaklaşık 60–65 karakterden sonra keser"},
