@@ -111,3 +111,12 @@ def test_counting_by_the_root_key_written_out_is_the_same_record_count():
 def test_state_is_not_offered_as_a_field_because_the_active_rule_is_automatic():
     assert not any("statecode" in e["fields"] for e in PROCESS_ENTITIES.values())
     assert PROCESS_ENTITIES["crm_order"]["active_predicate"] == "{alias}.[statecode]=0"
+
+
+def test_filter_values_are_plain_strings_typed_by_the_registry_field():
+    from semantic_bridge.finance_query.relational_plan import RELATIONAL_SCHEMA
+    items = RELATIONAL_SCHEMA["properties"]["filters"]["items"]["properties"]["values"]["items"]
+    assert items == {"type": "string"}
+    p = plan("crm_order", [{"id": "n", "op": "count_records", "field": None}],
+             filters=[{"field": ref("root", "statuscode"), "op": "eq", "values": ["100000001"]}])
+    assert validate_relational_query(p, "", None)["filters"][0]["values"] == [{"type": "number", "value": "100000001"}]

@@ -31,7 +31,9 @@ RELATIONAL_SCHEMA = _object({
         "field":{"anyOf":[{"type":"null"},FIELD_REF]}})},
     "filters":{"type":"array","maxItems":24,"items":_object({
         "field":FIELD_REF, "op":{"type":"string","enum":["eq","ne","contains","in","range","is_null","not_null","is_missing","not_missing"]},
-        "values":{"type":"array","maxItems":100,"items":LITERAL}})},
+        # Plain strings: a value object ({type,value}) made the model loop on blank lines under constrained decoding
+        # (2026-10-04, vLLM 0.27.1, reproduced 3/3); the field type is known from the registry anyway.
+        "values":{"type":"array","maxItems":100,"items":{"type":"string"}}})},
     "group_by":{"type":"array","maxItems":16,"items":FIELD_REF},
     "order_by":{"type":"array","maxItems":8,"items":_object({
         "column":{"type":"string","pattern":"^[a-z][a-z0-9_]{0,63}$"}, "descending":{"type":"boolean"}})},
@@ -61,6 +63,8 @@ def _field(ref, aliases):
     return entity["fields"][ref["field"]]
 
 def _value(value, field_type):
+    if isinstance(value,str):
+        value={"type":field_type,"value":value}
     _keys(value,["type","value"])
     if value["type"]!=field_type or not isinstance(value["value"],str) or len(value["value"])>2000:
         _invalid("Süzgeç değeri kaynak alan türüyle uyuşmuyor.")
@@ -199,7 +203,7 @@ RELATIONAL_CAPABILITIES = {
         "joins":"root alias is root; new aliases j1..j8. Only forward child FK -> unique parent PK. LEFT preserves missing/inactive parents with NULL; INNER excludes those roots. Reverse parent -> children is not supported.",
         "projection":"field (raw), label (code-list field shown as its CRM label; filter such fields by the numeric code from codes), normalized_text (text-only trim spaces and blank to NULL), missing_flag (text NULL/trimmed empty; other fields NULL), distinct true means unique whole selected row, count_records (distinct root PK), count_distinct (nonNULL field), sum only when sum_allowed and only on a root field (a joined parent's amount repeats per child row). Raw numeric field is not necessarily additive.",
         "filters":"AND of eq/ne/contains/in/range/is_null/not_null/is_missing/not_missing. eq/ne/contains need exactly one value, in at least one, range two; a filter without its value is invalid — omit the filter instead. A code-list field (codes) is filtered with the numeric code whose label matches the question. Active/passive record rules are applied automatically; never add a state filter for them. is_missing/not_missing use NULL or trimmed blank for text, NULL for other types. range inclusive lower/exclusive upper. NULL tests do not test blank strings. ne does not retain NULL. Fields cannot be compared to other fields.",
-        "literal":"type must equal field type; value string. number finite decimal, identity UUID, bool true/false; date ISO date means Istanbul midnight or timestamp must include UTC offset.",
+        "literal":"filter values are plain strings in the field's type; number finite decimal, identity UUID, bool true/false; date ISO date means Istanbul midnight or timestamp must include UTC offset.",
         "grouping":"When aggregates selected, group_by must equal all plain selected field references. DISTINCT projection requires explicit distinct=true and cannot combine with aggregates. Missing flags and normalized_text are detail-only; no derived arithmetic, HAVING or conditional counters.",
         "ordering":"Only selected output IDs, descending boolean. Technical tie-breaker is root PK for detail or group fields for aggregate.",
         "limit":"Explicit user limit only; null means whole result up to technical 50000 cap, fail closed beyond cap.",
