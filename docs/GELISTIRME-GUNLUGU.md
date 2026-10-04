@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-04 — Film ve video: test sunucusu + müşteri VM kurulumu (a8a1a31d), GPU editörü bekliyor
+
+- **Neden:** kullanıcı «merge et, müşteriye de kur ama nasıl olsa çalışmayacak dursun şimdilik» dedi. Modeller ve GPU'daki editör (film uçları `api_film.py`) kurulmadı; köprü stüdyonun film yolunu tanımamasını «henüz açık değil» olarak okur (`available: false`, a8a1a31d), ekran hata göstermez.
+- **Test sunucusu:** yalnız değişen dosyalar. `editorial_studio_film.py` yeni; `app.py` sunucu kopyası main'den farklıydı → `git merge-file` ile yalnız iki kayıt satırı eklendi (başka değişiklik yok, md5 kopyalamadan hemen önce yeniden denetlendi); `StudioEditor.tsx` + `film/*` (sunucu = önceki main). Köprü yeniden başladı (`/health` 200), `vite build` geçici klasöre → `cockpit/dist` (yayında `index-dGy80TCe.js`). Doğrulama: kısa ömürlü `timasai` oturumuyla iş listesi 200 (5 iş), film listesi 200 `available:false`; oturum silindi (kalan 0). Tarayıcı panesinde oturum yoktu, ekran görüntüsü alınmadı.
+- **Müşteri VM'i:** `git archive origin/main` → `/tmp/bi-main-a8a1a31d` (önceki VM kurulumu `f24762ab`, ata denetimi geçti; çakışma işareti 0; arşivden köprü yüklendi), `systemd-run --unit=vm-deploy-a8a1a31d`, günlük `/tmp/vm-deploy-a8a1a31d.log`. Giden 10 commit: film (4), `mention-answer` erişim kuralı (cb1cd485, test sunucusunda kurulu, VM'i bekliyordu), belgeler. Sonrası: konteynerler ayakta, `/timas/` 200, `._*` 0; `bi-bridge-1` içinde `editorial_studio_film.py` ve `app.py` md5 = main, `bi-web-1` paketinde «Film ve video». Sürüm kaydı `codeSha` «bilinmiyor» yazdı (arşivde .git yok) — md5 ile doğrulandı.
+
 ## 2026-10-04 — PDF yapı çıkarıcı denemesi: Docling, MinerU, pymupdf-layout ↔ bizim hat (4 Timaş örneği)
 
 - **Neden:** kullanıcı sordu: e-kitapta yaşanan sorunlar PDF'ten yapı tahmininden geliyor; hazır açık kaynak araçlar daha iyi mi.
