@@ -162,7 +162,6 @@ def test_only_new_or_changed_books_are_read_again():
     assert not C.unchanged({"last_lookup": last}, m, {"p1": datetime(2026, 3, 1)})                # yeni kapak
     assert not C.unchanged({"last_lookup": {**last, "crm_book_id": "eski"}}, m, {})               # başka kayıt
     assert not C.unchanged({"last_lookup": {**last, "outcome": "NO_MATCH"}}, m, {})               # artık bulunuyor
-    assert not C.unchanged({"last_lookup": {**last, "outcome": "FETCH_FAILED"}}, m, {})           # kapak okunamamıştı
     none = C.match(crm, [], "bambaşka kitap")
     assert C.unchanged({"last_lookup": {**last, "outcome": "NO_MATCH"}}, none, {})
     assert not C.unchanged({"last_lookup": last}, none, {})                     # eşleşme kayboldu: kayıt silinmeli
@@ -194,3 +193,19 @@ def test_glued_file_names_number_prefixes_and_series_numbers():
     assert ids(C.match(crm, [], "kayi1")) == ("SERIES_NO", ["q4"])
     assert C.match(crm, [], "Merakli Kutu 4")[0] == "NONE"                          # set ürünü
     assert C.match(crm, [], "besiktaslicocuklarki")[0] == "NONE"                    # başka kelimenin içinde bitiyor
+
+
+def test_unreadable_cover_is_retried_only_when_image_roots_are_set():
+    import os
+    crm = [_book("r1", "Hafıza Bakımı", "Bora Jin", project="p1")]
+    m = C.match(crm, [], "hafizabakimi")
+    last = {"at": "2026-02-01T10:00:00+00:00", "outcome": "FETCH_FAILED", "crm_book_id": "r1", "crm_title": "Hafıza Bakımı"}
+    old = os.environ.pop("CRM_IMAGE_ROOTS", None)
+    try:
+        assert C.unchanged({"last_lookup": last}, m, {})                 # klasör ayarsız: boşuna yeniden okuma yok
+        os.environ["CRM_IMAGE_ROOTS"] = '{"resimurl": "/mnt/crm-web"}'
+        assert not C.unchanged({"last_lookup": last}, m, {})             # klasör ayarlı: yeniden dene
+    finally:
+        os.environ.pop("CRM_IMAGE_ROOTS", None)
+        if old is not None:
+            os.environ["CRM_IMAGE_ROOTS"] = old

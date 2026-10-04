@@ -430,8 +430,10 @@ def unchanged(b: dict, m: tuple[str, list[dict], str], alternatives: dict) -> bo
         return last["outcome"] == "AMBIGUOUS" and (last.get("crm_title") or None) == own_name(rows)
     if last["outcome"] in ("NO_MATCH", "AMBIGUOUS") or last.get("crm_book_id") != str(rows[0]["new_kitapId"]):
         return False                                      # eşleşme değişti
-    if last["outcome"] == "FETCH_FAILED":
-        return False                                      # kapak dosyası okunamamıştı (paylaşım/ağ): yeniden dene
+    if last["outcome"] == "FETCH_FAILED" and json.loads(os.environ.get("CRM_IMAGE_ROOTS") or "{}"):
+        # kapak dosyası okunamamıştı (paylaşım/ağ): yeniden dene — yalnız kapak klasörü ayarlıyken; ayar yokken okuma
+        # hiç başarılı olamaz ve 2.539 kitap her gece boşuna yeniden okunur (kullanıcı kararı: yalnız yeni/değişen)
+        return False
     for r in rows:
         if r["ModifiedOn"] and r["ModifiedOn"] > at:
             return False                                  # CRM kaydı değişti
