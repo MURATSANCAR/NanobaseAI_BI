@@ -299,6 +299,10 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `CLCARD.BLOCKED` — Engellenmiş: 0=Evet, 1=Hayır
 - `CLCARD.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
 - `CLCARD.PAYMENTPROC` — Borç izleme (0: döviz: 1=Mixed
+- `CLCARD.ACCEPTEDESP` — Cari hesap e-İrsaliye kullanıcısı mı (e-Devlet sekmesi 'e-İrsaliye Kullanıcısı'). İşaretliyse VKN/TCKN, ülke, adres, e-İrsaliye posta kutusu/gönderici birim etiketi zorunlu olur.: 0=Hayır, 1=Evet (e-İrsaliye kullanıcısı)
+- `CLCARD.ACCEPTEINV` — Cari e-Fatura mükellefi mi: 0=Mükellef değil, 1=e-Fatura mükellefi
+- `CLCARD.ACCEPTEINVPUBLIC` — 'e-Fatura Kamu' işareti: cari e-Fatura kullanıcısı olan kamu idaresi; faturada senaryo otomatik Kamu olur ve değiştirilemez.: 0=Hayır, 1=Evet (kamu e-fatura alıcısı)
+- `CLCARD.ISPERSCOMP` — Şahıs mı şirket mi (kimlik no TCKNO, vergi no TAXNR): 0=Şirket, 1=Şahıs
 - `CLFICHE.TRCODE` — Hareket türü: 1=Nakit tahsilat, 2=Borç ödeme, 3=Borç dekontu, 4=Alacak dekontu, 5=Virman fişi, 6=Kur farkı fişi, 12=Özel fiş, 14=Açılış fişi, 41=Verilen vade farkı faturası, 42=Alınan vade farkı faturası
 - `CLFICHE.CANCELLED` — İptal Edilmiş: 0=Hayır, 1=Evet
 - `CLFICHE.CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş: 0=Hayır, 1=Evet
@@ -338,6 +342,8 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `DECARDS.ACTIVE` — İndirim / Masraf Kart Durumu: 0=Kullanımda, 1=Kullanım dışı
 - `DEFNFLDSCARDV.MODULENR` — Modül Numarası: 4=Fatura, 5=Cari Hesap, 6=Malzeme
 - `DEFNFLDSCARDV.LEVEL_` — Seviye: 0=Ana Kayıt, 1=Satır
+- `DEFNFLDSD.LEVEL_` — Ek alan düzeyi: 0=başlık, 1=satır
+- `DEFNFLDSD.TYP` — Alan veri türü: 1=metin, 2=sayısal, 3=liste, 4=tarih
 - `DEFNFLDSTRANV.MODULENR` — Modül Numarası: 4=Fatura, 5=Cari Hesap, 6=Malzeme
 - `DEMANDLINE.MEETTYPE` — Teslimat Şekli: 0==Alış Siparişi, 1==Üretim Emri, 2==Ambar Fişi
 - `DEMANDLINE.MRPHEADTYPE` — Talep/Teklif Planlama Türü: 1==MPS 2=MRP
@@ -355,6 +361,16 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `DISTORDLINE.LINETYPE` — Satır Tipi: 1=İndirim, 2=Promosyon, 7=Karma Koli
 - `DISTORDLINE.RISKSTATUS` — Risk durumu: 0=Riskli Değil, 1=Riskli, 2=Stok Yetersiz
 - `DISTORDLINE.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect8
+- `EARCHIVEDET.EARCHIVESTATUS` — e-Arşiv fatura durumu: 0=E-Arşiv Faturası Oluşturulacak, 1=E-Arşiv Faturası Oluşturuldu, 2=Rapor Dosyasına Yazıldı, 3=Sunucuya İletildi, İşlenmeyi Bekliyor, 4=GİB'e İletildi, 5=Sunucuda Hata Alındı, 6=Sunucuda İmzalandı
+- `EARCHIVEDET.INSTEADOFDESP` — İrsaliye Yerine Geçer işareti: fatura aynı zamanda irsaliye olarak kullanılır.: 0=hayır, 1=irsaliye yerine geçer
+- `EARCHIVEDET.ISCOMP` — Ticari Şirket işareti (perakende cari üzerinden kesilen belgede alıcı tüzel kişi mi): işaretliyse VKN+Unvan, değilse TCKN+Ad+Soyad zorunlu.: 0=şahıs (TCKN/ad/soyad), 1=ticari şirket (VKN/unvan)
+- `EARCHIVEDET.SENDMOD` — e-Arşiv gönderim şekli: 0=Belirtilmemiş, 1=Kağıt, 2=Elektronik
+- `EBOOKDETAILDOC.DOCUMENTTYPE` — e-Defter belge türü: 0=Seçilmemiş (cari/banka/kasa kaynaklı mahsup), 2=Fatura, 6=Diğer (açıklama dolu), 99=Belgesiz
+- `EBOOKDETAILDOC.NOPAYMENT` — 'Ödeme kaydı değildir' işareti (ödeme kaydı olup olmadığı): 0=Ödeme kaydı (PAYTYPE dolu olmalı), 1=Ödeme kaydı değildir
+- `EBOOKDETAILDOC.UNDOCUMENTED` — 'Bu fişe ait belge yoktur' işareti (Belge var/yok): 0=Belge var, 1=Belge yok
+- `EBOOKINFO.TYP` — Defter türü: 0=Yevmiye Defteri, 1=Defter-i Kebir (Büyük Defter)
+- `EINVOICEDET.EINVOICETYP` — e-Fatura/e-Arşiv fatura tipi: 0=Satış (iade faturasında İade), 2=İstisna, 4=Tevkifat
+- `EINVOICEDET.PROFILEID` — e-Fatura senaryosu: 0=Senaryo seçilmemiş, 1=Temel fatura, 2=Ticari fatura
 - `EMCENTER.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
 - `EMDEMFICHE.TEXTINC` — Detay açıklama içerir: 0=No, 1=Yes
 - `EMDEMFICHE.CROSSFLAG` — Ters işaretleme: 0=Original, 1=Inverse
@@ -381,6 +397,10 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `EMUHACC.NOTINFLATED` — Enflasyon Hesaplama İşareti: 0==Birleştir, 1==Birleştirme
 - `EMUHTOT.TOTTYPE` — Hesap Özeti Toplam Türü: 1=muhasebe tl toplam, 2=muh. dövizli toplam, 3=muh. Birimli toplam, 4=mas.mer. tl toplam, 5=mas.mer. dövizli toplam
 - `ENGCLINE.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `EPRODUCERRECDET.EPRODRSTATUS` — e-Müstahsil makbuzu durumu: 0=e-Makbuz oluşturulacak, 1=e-Makbuz oluşturuldu, 2=e-Makbuz paketlendi, 3=Sunucuya iletildi-Henüz sonuçlanmadı, 4=Başarılı, 5=Hatalı, 6=İptal edildi
+- `EPRODUCERRECDET.ISCOMP` — Ticari Şirket işareti (perakende cari üzerinden kesilen belgede alıcı tüzel kişi mi): işaretliyse VKN+Unvan, değilse TCKN+Ad+Soyad zorunlu.: 0=şahıs (TCKN/ad/soyad), 1=ticari şirket (VKN/unvan)
+- `ETRADESMANINVDET.ETRADSTATUS` — e-SMM durumu: 0=e-Makbuz Oluşturulacak, 1=e-Makbuz Oluşturuldu, 2=e-Makbuz Paketlendi, 3=Sunucuya İletildi – Henüz sonuçlanmadı, 4=Başarılı, 5=Hatalı, 6=İptal Edildi
+- `ETRADESMANINVDET.ISCOMP` — Ticari Şirket işareti (perakende cari üzerinden kesilen belgede alıcı tüzel kişi mi): işaretliyse VKN+Unvan, değilse TCKN+Ad+Soyad zorunlu.: 0=şahıs (TCKN/ad/soyad), 1=ticari şirket (VKN/unvan)
 - `EXCEPT.SOURCETYPE` — Kaynak Tipi: 0=Çalışan, 1=Çalışan Grubu, 2=İş İstasyonu, 3=İş İstasyonu Grubu
 - `EXIMDISTLN.SRVDISTTYPE` — Distribution Type: 1=Material Value, 2=Material Quantity, 3=Weight, 4=Volume, 5=Rate, 6=Amount01
 - `EXIMDISTLN.FICHETYPE` — Satır fiş türü: 0=Service Purchased Invoice, 1=Debit Note
@@ -408,6 +428,11 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `INVOICE.CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş: 0=Hayır, 1=Evet
 - `INVOICE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
 - `INVOICE.AFFECTCOLLATRL` — Teminatı etkileme: 0=Don't Affect, 1=Affect0
+- `INVOICE.EINVOICE` — Faturanın kesiliş biçimi: 0=Kağıt fatura, 1=e-Fatura, 2=e-Arşiv fatura, 3=e-Arşiv fatura
+- `INVOICE.EINVOICETYP` — e-Fatura/e-Arşiv fatura tipi: 0=Satış (iade faturasında İade), 2=İstisna, 4=Tevkifat
+- `INVOICE.ESTATUS` — e-Fatura durumu: 0=GİB'e Gönderilecek, 1=Onay Gönderildi, 2=Onaylandı, 3=Paketlendi, 4=GİB'e Gönderildi, 5=GİB'e Gönderilemedi, 6=GİB'de İşlendi – Alıcıya İletilecek, 7=GİB'de işlenemedi, 8=Alıcıya Gönderildi, 9=Alıcıya Gönderilemedi, 10=Alıcıda İşlendi – Başarıyla Tamamlandı, 11=Alıcıda İşlenemedi, 12=Kabul Edildi, 13=Reddedildi, 14=İade Edildi, 15=Sunucuya İletildi – İşlenmeyi Bekliyor, 16=Sunucuda Mühürlendi, 17=Sunucuda Zarflandı, 18=Sunucuda Hata Alındı, 19=Alındı, 20=Kabul Edildi – Yanıt Oluşturulmadı, 21=Reddedildi – Yanıt Oluşturulamadı, 22=Sunucuya Gönderildi, 23=Harici Yollardan İptal Edildi
+- `INVOICE.PROFILEID` — e-Fatura senaryosu: 0=Senaryo seçilmemiş, 1=Temel fatura, 2=Ticari fatura
+- `INVOICE.VATEXCEPTCODE` — GİB KDV istisna kodu: 301=Mal ihracatı, 302=Hizmet ihracatı, 335=Basılı kitap ve süreli yayın teslimi, 350=Diğer istisnalar, 351=İstisna olmayan diğer
 - `ITEMS.ACTIVE` — Malzeme Kartı Durumu: 0=Aktif, 1=Pasif
 - `ITEMS.CARDTYPE` — Malzeme Kartı Türü: 1=(TM) Ticari Mal, 2=(KK) Karma Koli, 3=(DM) Depozitolu Mal, 4=(SK) Sabit Kıymet, 10=(HM) Hammadde, 11=(YM) Yarı Mamul, 12=(MM) Mamul, 13=(TK) Tüketim Malı, 20=(MS) Malzeme Sınıfı (Genel), 21=(MT) Malzeme Sınıfı (Tablolu)
 - `ITEMS.CLASSTYPE` — Sınıf Türü: 0=Malzeme, 20=Malzeme sınıfı
@@ -437,6 +462,7 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `LNGEXCSETS.DOCID` — Kayıt Tipi: 1=Malzeme, 2=Cari Hesap, 3=Banka, 4=Muhasebe
 - `LNGEXCSETS.FIELDID` — Alan tipi: 1=Malzeme Açıklaması, 2=Cari hesap ünvanı, 3=Banka adı, 4=Muhasebe hesabı açıklaması
 - `LOGREP.LINETYPE` — Log satır türü: 0=Açıklama, 1=Geçerli hareket, 2=Hatalı hareket
+- `MANDFLDS.MANDATORY` — 1 ise zorunlu alan: 1=zorunlu
 - `MRPHEAD.RUNTYPE` — Planlama türü: 1=MPS, 2=MRP
 - `MRPHEAD.DEPMPS` — Bağımlı/Bağımsız MRP: 0=Bağımsız, 1=Bağımlı
 - `MRPHEAD.CHKRESOCC` — Kaynak kullanımı: 0=Bakılmasın, 1=Bakılsın
@@ -541,6 +567,7 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `STFICHE.PRODSTAT` — Fiş Durumu: 0=Güncel, 1=Planlanan
 - `STFICHE.CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş: 0=Hayır, 1=Evet
 - `STFICHE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `STFICHE.EDESPSTATUS` — e-İrsaliye durumu: 0=GİB'e Gönderilecek, 1=Mühürde/Onayda, 2=Mühürlendi/Onaylandı, 3=Zarflandı/Paketlendi, 4=GİB'e gönderildi, 5=GİB'e gönderilemedi, 6=GİB'de işlendi – Alıcıya iletilecek, 7=GİB'de işlenemedi, 8=Alıcıya gönderildi, 9=Alıcıya gönderilemedi, 10=Alıcıda işlendi – Başarıyla Tamamlandı, 11=Alıcıda işlenemedi, 12=Kabul edildi, 14=İade edildi, 15=Sunucuya iletildi – İşlenmeyi bekliyor, 16=Sunucuda mühürlendi, 17=Sunucuda zarflandı, 18=Sunucuda hata alındı, 19=Alındı, 22=Sunucuya gönderildi, 24=İrsaliye Yanıtı Alındı, 25=Alındı – İrsaliye Yanıtı Oluşturuldu
 - `STINVTOT.INVENNO` — Ambar Numarası ( -1 tüm ambarlar): -1=tüm ambarlar
 - `STLINE.LINETYPE` — Satır türü: 0=Malzeme, 1=Promosyon, 2=İndirim, 3=Masraf, 4=Hizmet, 5=Depozit, 6=Karma koli, 7=Karma koli satırı, 8=Sabit kıymet, 9=Ek Malzeme, 10=Malzeme sınıfı, 11=Fason1
 - `STLINE.DETLINE` — Malzeme Sınıfı Satır Ayrıntısı: 0=Hayır, 1=Evet
@@ -558,6 +585,7 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `STLINE.TRANSQCOK` — Kalite Kontrol Uygunluğu: 0=uygun değil, 1=uygun
 - `STLINE.EISRVDSTTYP` — Hizmet dağıtım türü: 0=Ambarlara göre, 1=Genel
 - `STLINE.MADEOFSHRED` — Parçalama Yoluyla Oluşmuş: 0=Hayır, 1=Evet
+- `STLINE.VATEXCEPTCODE` — GİB KDV istisna kodu: 301=Mal ihracatı, 302=Hizmet ihracatı, 335=Basılı kitap ve süreli yayın teslimi, 350=Diğer istisnalar, 351=İstisna olmayan diğer
 - `SUPPASGN.SPECIALIZED` — Kullanımda Değil: 0=No, 1=Yes
 - `TAXDECLLINE.LISTTYP` — Liste türü: -1=Social Security Organisations -2: Related Professional Association 0: Static Fields 1...n: Other Lists
 - `UNITSETF.CARDTYPE` — Kayıt türü: 1=Uzunluk ölçüleri, 2=Alan ölçüleri, 3=Hacim ölçüleri, 4=Ağırlık ölçüleri, 5=Kullanıcı tanımlı ölçüler
@@ -623,6 +651,9 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `PROJECTREF` — Proje Referansı
 - `BRANCHNR` — İşyeri
 - `EFFECTIVECOST` — Malzeme maliyeti etkilenecek: 0: Evet; 1: Hayır
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### ACCDISTDETLN — ACCDISTDETLN
 
@@ -1096,6 +1127,10 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `BDGTTREEVIEW` — Bütçe ağacının son görüntüleme durumu (kullanıcı)
 - `PAYDATETYPE` — 3: Bugün; 1: Bu hafta; 2: Bu ay; 0: Tümü
 
+### APPROVE — Onay tarihi (dönem/fiş kilitleme): işyeri (BRANCHNR) ve modül (MODNR) bazında onay tarihi; bu tarih ve öncesine işlem yapılamaz.
+
+- `APPROVEDATE` — Onay (kilit) tarihi
+
 ### ASCOND — Alış/Satış koşulları
 
 - `LOGICALREF` — Satınalma / Satış koşulları log. Ref.
@@ -1181,6 +1216,18 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CURRATETYPE` — Döviz kuru türü
 - `WTHCLTRLINTEREST` — Teminatsız kredi faiz oranı
 - `WTHCLTRLLIMIT` — Teminatsız kredi limiti
+
+### BANKCODE — Banka bilgileri / banka kodları listesi
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
+### BNBRANCH — Banka şube bilgileri
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### BNCARD — Bankalar
 
@@ -1668,6 +1715,58 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ID` — İç kullanım
 - `LDATA` — İç kullanım
 
+### CAPIDEPT — Bölüm tanımları
+
+- `FIRMNR` — Firma numarası (L_CAPIFIRM.NR)
+- `NAME` — Bölüm adı
+- `NR` — Bölüm no
+
+### CAPIDIV — İşyeri (şube) tanımları; LG_ tablolardaki BRANCH/SOURCEINDEX alanları NR ile eşleşir
+
+- `FIRMNR` — Firma no
+- `NAME` — İşyeri adı
+- `NR` — İşyeri numarası (ör. STFICHE.BRANCH = NR)
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
+### CAPIFACTORY — Fabrika tanımları
+
+- `FIRMNR` — Firma numarası (L_CAPIFIRM.NR)
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
+### CAPIFIRM — Firma tanımları (kuruluş bilgileri: firma no, ad, unvan, adres, vergi bilgileri)
+
+- `LOCALCTYP` — Yerel para birimi türü (L_CURRENCYLIST.CURTYPE)
+- `NAME` — Firma adı
+- `NR` — Firma numarası
+- `PROFILEID` — Belgenin e-Fatura senaryosu (Temel, Ticari, Yolcu Beraber, Hal, Kamu, İhracat...). Cari kart varsayılanından gelir.
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+- `TITLE` — Firma unvanı
+
+### CAPIGROUP — Kullanıcı grupları (yetkiler grup veya kullanıcı düzeyinde verilir)
+
+
+### CAPIPERIOD — Firmaların çalışma dönemleri
+
+- `ACTIVE` — Dönem aktif mi
+- `BEGDATE` — Dönem başlangıç tarihi
+- `ENDDATE` — Dönem bitiş tarihi
+- `FIRMNR` — Firma numarası
+- `NR` — Dönem numarası
+
+### CAPIUSER — Program kullanıcıları (Sistem İşletmeni kullanıcı tanımları); NR = belgelerdeki CAPIBLOCK_CREATEDBY/MODIFIEDBY
+
+- `FIRMNR` — Firma numarası (L_CAPIFIRM.NR)
+- `KEY_` — Şifrelenmiş parola
+- `NAME` — Kullanıcı adı
+- `NR` — Kullanıcı numarası; LG_ tablolarda CAPIBLOCK_CREATEDBY ile eşleşir
+
+### CAPIWHOUSE — Ambar tanımları; STLINE.SOURCEINDEX = NR
+
+- `FIRMNR` — Firma numarası (L_CAPIFIRM.NR)
+- `NAME` — Ambar adı
+- `NR` — Ambar numarası (STLINE.SOURCEINDEX ile eşleşir)
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
 ### CDBTMP — Form boyutları
 
 - `LREF` — Fiziksel adres
@@ -1757,6 +1856,9 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `LOGICALREF` — Fiziksel adres
 - `COUNTRY` — Ülke
 - `NAME` — Şehir adı
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### CLCARD — Cari hesap kartları
 
@@ -1923,6 +2025,64 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `BANKNAMES6` — Banka adı 6
 - `BANKNAMES7` — Banka adı 7
 - `LDXFIRMNR` — Veri aktarımının şirketi
+- `ACCEPTEDESP` — Cari hesap e-İrsaliye kullanıcısı mı (e-Devlet sekmesi 'e-İrsaliye Kullanıcısı'). İşaretliyse VKN/TCKN, ülke, adres, e-İrsaliye posta kutusu/gönderici birim etiketi zorunlu olur.
+- `ACCEPTEINV` — Cari e-Fatura mükellefi mi
+- `ACCEPTEINVPUBLIC` — 'e-Fatura Kamu' işareti: cari e-Fatura kullanıcısı olan kamu idaresi; faturada senaryo otomatik Kamu olur ve değiştirilemez.
+- `BANKBCURRENCY1` — Cari banka hesabı 1: hesabın döviz türü.
+- `BANKBCURRENCY2` — Cari banka hesabı 2: hesabın döviz türü.
+- `BANKBCURRENCY3` — Cari banka hesabı 3: hesabın döviz türü.
+- `BANKBCURRENCY4` — Cari banka hesabı 4: hesabın döviz türü.
+- `BANKBCURRENCY5` — Cari banka hesabı 5: hesabın döviz türü.
+- `BANKBCURRENCY6` — Cari banka hesabı 6: hesabın döviz türü.
+- `BANKBCURRENCY7` — Cari banka hesabı 7: hesabın döviz türü.
+- `BANKBICS1` — Cari banka hesabı 1: BIC (SWIFT) kodu.
+- `BANKBICS2` — Cari banka hesabı 2: BIC (SWIFT) kodu.
+- `BANKBICS3` — Cari banka hesabı 3: BIC (SWIFT) kodu.
+- `BANKBICS4` — Cari banka hesabı 4: BIC (SWIFT) kodu.
+- `BANKBICS5` — Cari banka hesabı 5: BIC (SWIFT) kodu.
+- `BANKBICS6` — Cari banka hesabı 6: BIC (SWIFT) kodu.
+- `BANKBICS7` — Cari banka hesabı 7: BIC (SWIFT) kodu.
+- `BANKCORRPACC1` — Cari banka hesabı 1: muhabir hesap (Azerbaycan mevzuatı, Detaylar sekmesi).
+- `BANKCORRPACC2` — Cari banka hesabı 2: muhabir hesap (Azerbaycan mevzuatı, Detaylar sekmesi).
+- `BANKCORRPACC3` — Cari banka hesabı 3: muhabir hesap (Azerbaycan mevzuatı, Detaylar sekmesi).
+- `BANKCORRPACC4` — Cari banka hesabı 4: muhabir hesap (Azerbaycan mevzuatı, Detaylar sekmesi).
+- `BANKCORRPACC5` — Cari banka hesabı 5: muhabir hesap (Azerbaycan mevzuatı, Detaylar sekmesi).
+- `BANKCORRPACC6` — Cari banka hesabı 6: muhabir hesap (Azerbaycan mevzuatı, Detaylar sekmesi).
+- `BANKCORRPACC7` — Cari banka hesabı 7: muhabir hesap (Azerbaycan mevzuatı, Detaylar sekmesi).
+- `BANKIBANS1` — Cari banka hesabı 1: IBAN.
+- `BANKIBANS2` — Cari banka hesabı 2: IBAN.
+- `BANKIBANS3` — Cari banka hesabı 3: IBAN.
+- `BANKIBANS4` — Cari banka hesabı 4: IBAN.
+- `BANKIBANS5` — Cari banka hesabı 5: IBAN.
+- `BANKIBANS6` — Cari banka hesabı 6: IBAN.
+- `BANKIBANS7` — Cari banka hesabı 7: IBAN.
+- `BANKVOEN1` — Cari banka hesabı 1: VÖEN (Azerbaycan vergi kimlik no; Banka Kodlarından gelir).
+- `BANKVOEN2` — Cari banka hesabı 2: VÖEN (Azerbaycan vergi kimlik no; Banka Kodlarından gelir).
+- `BANKVOEN3` — Cari banka hesabı 3: VÖEN (Azerbaycan vergi kimlik no; Banka Kodlarından gelir).
+- `BANKVOEN4` — Cari banka hesabı 4: VÖEN (Azerbaycan vergi kimlik no; Banka Kodlarından gelir).
+- `BANKVOEN5` — Cari banka hesabı 5: VÖEN (Azerbaycan vergi kimlik no; Banka Kodlarından gelir).
+- `BANKVOEN6` — Cari banka hesabı 6: VÖEN (Azerbaycan vergi kimlik no; Banka Kodlarından gelir).
+- `BANKVOEN7` — Cari banka hesabı 7: VÖEN (Azerbaycan vergi kimlik no; Banka Kodlarından gelir).
+- `CLOSEDATECOUNT` — Kapanmamış hareket gün sayısı: kapanmamış hareketin vade tarihi ile sistem tarihi farkı bu değerle karşılaştırılır.
+- `DUEDATECOUNT` — Vade takibi yapılacak gün sayısı: kapanmamış hareketin vadesi ile sistem tarihi farkı bu değere eşit/büyükse seçili fiş türlerinde kontrol yapılır; boşsa kontrol yok.
+- `DUEDATELIMIT` — Vade takibi yapılacak tutar: vadesi geçmiş kapanmamış hareketler toplamı bu tutara eşit/büyükse kontrol yapılır.
+- `EARCEMAILADDR1` — e-Arşiv faturanın elektronik gönderildiği e-posta adresi (1-3).
+- `EARCEMAILADDR2` — e-Arşiv faturanın elektronik gönderildiği e-posta adresi (1-3).
+- `EARCEMAILADDR3` — e-Arşiv faturanın elektronik gönderildiği e-posta adresi (1-3).
+- `EINVOICETYP` — Belgenin e-Fatura/e-Arşiv tipi: Satış, İade, Tevkifat, İstisna, Özel Matrah, İhraç Kayıtlı, SGK, Komisyoncu, Araç Tescil vb.
+- `EINVOICETYPE` — Cari için varsayılan e-Fatura/e-Arşiv fatura tipi; seçenekler: Özel Matrah, İstisna, Araç Tescil, Tevkifat, SGK, Komisyoncu, Satış. Faturaya varsayılan taşınır.
+- `GLOBALID` — Global ID
+- `ISPERSCOMP` — Şahıs mı şirket mi (kimlik no TCKNO, vergi no TAXNR)
+- `KVKKANONYDATE` — Anonimleştirme tarihi (otomatik)
+- `KVKKANONYSTATUS` — Anonimleştirildi işareti (izin verilmezse; işaretlenince cari kullanım dışı olur)
+- `KVKKBEGDATE` — KVKK izni başlangıç tarihi
+- `KVKKENDDATE` — KVKK izni bitiş tarihi
+- `KVKKPERMSTATUS` — KVKK kişisel veri izni (Veriyorum/Vermiyorum)
+- `PROFILEID` — Cari için varsayılan e-Fatura senaryosu (Temel Fatura, Ticari Fatura, Yolcu Beraber, Hal vb.; varsayılan Ticari). Faturaya varsayılan olarak taşınır.
+- `PROFILEIDDESP` — Cari için varsayılan e-İrsaliye senaryosu (ör. 'Temel İrsaliye').
+- `SECTORMAINREF` — Ana sektör kartı referansı (Cari Hesap Listesi'nde Ana Sektör Kodu/Açıklaması filtresi).
+- `SECTORSUBREF` — Alt sektör kartı referansı (Alt Sektör Kodu/Açıklaması).
+- `SENDMOD` — e-Arşiv gönderim şekli varsayılanı (Kağıt / Elektronik); faturadaki e-Arşiv Bilgileri > Gönderim Şekli alanına taşınır. Elektronik seçilirse e-posta zorunlu.
 
 ### CLCOLLATERALRI — CLCOLLATERALRI
 
@@ -1947,6 +2107,9 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `REPORDRISKTOTAL` — Sipariş Risk Limiti (Raporlama Dövizi)
 - `ORDRISKTOTALSUGG` — Sipariş risk limiti (öneri)
 - `REPORDRISKTOTALSUGG` — Sipariş Risk Limiti (Öneri, Raporlama Dövizi)
+
+### CLCOLLATRLRISK — Cari hesap teminat/risk toplamları: her cari ve risk türü için alınan/verilen teminat toplamları, risk toplamları (fatura, irsaliye, sipariş riski) ve risk aşımı bilgileri; Cari Hesap Teminat Risk Durumu raporunun veri kaynağı.
+
 
 ### CLFICHE — Cari hesap fişeri
 
@@ -2021,6 +2184,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
 - `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
 - `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+- `DEDUCTCODE` — KDV tevkifat (GİB) kodu, ör. 609 satış / 209 alış
 
 ### CLFLINE — Cari hesap hareketleri
 
@@ -2118,6 +2282,9 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
 - `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
 - `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+- `CANDEDUCT` — Tevkifat uygulanır mı (Apply Deduction)
+- `DEDUCTIONPART1` — Tevkifat oranı payı (DEDUCTIONPART2 paydası; ör. 5/10)
+- `DEDUCTIONPART2` — Tevkifat oranı payda kısmı (ör. 7/10'daki 10).
 
 ### CLINTEL — Cari hesap istihbarat bilgileri
 
@@ -2577,6 +2744,12 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `NAME` — Ülke adı
 - `COUNTRYNR` — Ülke numarası
 - `STATESTR` — Eyalet için ayrılan alan
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
+### CPA_CODE — CPA (ürün sınıflaması) kodları; Sistem İşletmeni/Kuruluş Bilgileri altında tanımlanır
+
 
 ### CRDACREF — Kart-Muhasbe kodları
 
@@ -2852,6 +3025,20 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `TELCODES2` — Alan kodu 2 (telefon)
 - `FAXCODE` — Alan kodu (faks)
 
+### CURRENCYLIST — Firma bazında döviz türleri listesi
+
+- `CURCODE` — Döviz kodu (USD, EUR...)
+- `CURNAME` — Döviz adı
+- `CURTYPE` — Döviz türü numarası (LG_ tablolardaki TRCURR/CURRTYPE vb. ile eşleşir; örn 1=USD, 20=EUR)
+- `FIRMNR` — Firma no
+- `GLOBALID` — Global ID
+
+### CUSTOM — Gümrük tanımları (dış ticaret)
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
 ### CVARPASG — Müşteri / tedarikçi ile cari hesap eşleştirmeleri
 
 - `LOGICALREF` — Müşteri / Tedarikçi - Cari Hesap Ataması
@@ -2886,6 +3073,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `RATES2` — Oran2
 - `RATES3` — Oran3
 - `RATES4` — Oran4
+- `GLOBALID` — Global ID
 
 ### DATAEXCHHISTOR — DATAEXCHHISTOR
 
@@ -2905,6 +3093,9 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `DOCMODMIN` — Belge değiştirilme dakikası
 - `DOCMODSEC` — Belge değiştirilme saniyesi
 - `RECVPACKID` — LDX paket numarası
+
+### DATAEXCHHISTORY — LogoConnect / veri alışverişi (firmalar arası XML aktarım, e-belge) tarihçesi: hangi belge (DOCTYPE+DOCREF) hangi LOGOID ile hangi aktarım işleminde (TRANSID) gönderildi/alındı, ilk kayıt mı güncelleme mi.
+
 
 ### DECARDS — İndirim/Masraf kartları
 
@@ -2936,6 +3127,15 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
 - `WFSTATUS` — Kullanımda Değil
 - `EXTACCESSFLAGS` — Satış noktalarında erişilebilir
+
+### DEDUCTLIMITS — Edinim şekli / gider kısıtlama limit tanımları (binek araç: sıfır/ikinci el KDV+ÖTV üst sınır, aylık kira limiti; 7194 sayılı kanun). Tarih aralığına göre limit; aşan kısım KKEG'e.
+
+- `BEGDATE` — Limit geçerlilik başlangıcı
+- `DEDUCTLIMIT` — Gider yazılabilecek üst sınır tutarı
+- `ENDDATE` — Limit geçerlilik bitişi
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### DEFNFLDSCARDV — DEFNFLDSCARDV
 
@@ -3047,6 +3247,13 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `RECSTATUS` — Kayıt Durumu
 - `SITEID` — Veri Merkezi
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### DEFNFLDSD — Tanımlı (kullanıcı tanımlı ek) alanların tanımları (SYS)
+
+- `LEVEL_` — Ek alan düzeyi
+- `MODULENR` — Tanımlı alanın ait olduğu modül (ör. 4=Fatura, 5=Cari kart, 6=Malzeme kartı)
+- `NR` — Tanımlı alan numarası
+- `TYP` — Alan veri türü
 
 ### DEFNFLDSTRANV — DEFNFLDSTRANV
 
@@ -3577,6 +3784,12 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `VARIANTREF` — Varyant (Port) mantıksal referansı
 - `AFFECTRISK` — Riski etkiler
 
+### DISTRICT — Semt (mahalle) bilgileri
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
 ### DISTROUTING — Dağıtım rotaları
 
 - `LOGICALREF` — Dağıtım Rotası Log. Ref.
@@ -3682,6 +3895,11 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `TEXTINC` — Ayrıntılı Açıklama İçerir
 - `WFSTATUS` — Kullanımda Değil
 
+### DOCPRINT — DOCPRINT
+
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `PRINTCNT` — Basım sayısı (diğer tablolardaki PRINTCNT: 'Basılmış toplam').
+
 ### DSPLNOPCMPPG — DSPLNOPCMPPG
 
 - `LOGICALREF` — DSPLNOPCMPPG mantıksal referansı
@@ -3693,6 +3911,171 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `LINENO_` — Sıra numarası
 - `CONSUMPAMNT` — Kullanım miktarı
 - `VARIANTREF` — Varyant (Port) referansı
+
+### EARCHIVEDET — e-Arşiv fatura detayı: faturanın (INVOICEREF→INVOICE.LOGICALREF) e-Arşiv durumu, gönderim şekli, internet satışı ve alıcı bilgileri
+
+- `ADDR1` — Alıcı adres satırı 1 (perakende cari / belge adres bilgileri).
+- `ADDR2` — Alıcı adres satırı 2.
+- `CHAINDELIVERY` — Zincir Teslim işareti: mal fiilen alıcı/satıcı dışındaki taraf adına doğrudan son müşteriye sevk edilir.
+- `CHRGBEGDATE` — Şarj başlangıç tarihi.
+- `CHRGBEGTIME` — Şarj başlangıç saati.
+- `CHRGENDDATE` — Şarj bitiş tarihi.
+- `CHRGENDTIME` — Şarj bitiş saati.
+- `CITY` — Alıcı il adı.
+- `CITYCODE` — Alıcı il kodu.
+- `COUNTRY` — Alıcı ülke adı.
+- `COUNTRYCODE` — Alıcı ülke kodu.
+- `DEFINITION_` — Perakende cari bilgileri: ticari şirket unvanı.
+- `DISTRICT` — Alıcı semt adı.
+- `DISTRICTCODE` — Alıcı semt kodu.
+- `DRIVERNAME1` — 1. şoför adı (e-İrsaliye/taşıma bilgileri).
+- `DRIVERNAME2` — 2. şoför adı (e-İrsaliye/taşıma bilgileri).
+- `DRIVERNAME3` — 3. şoför adı (e-İrsaliye/taşıma bilgileri).
+- `DRIVERSURNAME1` — 1. şoför soyadı.
+- `DRIVERSURNAME2` — 2. şoför soyadı.
+- `DRIVERSURNAME3` — 3. şoför soyadı.
+- `DRIVERTCKNO1` — 1. şoför TC kimlik no.
+- `DRIVERTCKNO2` — 2. şoför TC kimlik no.
+- `DRIVERTCKNO3` — 3. şoför TC kimlik no.
+- `EARCHIVESTATUS` — e-Arşiv fatura durumu
+- `EMAILADDR` — Alıcı e-posta adresi; gönderim şekli Elektronik ise zorunlu (belge e-posta ile iletilir).
+- `ENRGCARID` — Şarj edilen aracın kimlik numarası (okunabiliyorsa).
+- `ENRGPLATENUM` — Şarj edilen aracın plakası.
+- `ESURAPORID` — Elektrikli şarj hizmeti: ESU (şarj ünitesi) rapor ID'si (GİB şarj hizmetleri bildirimi).
+- `ESURAPORIDDATE` — ESU rapor tarihi.
+- `INSTEADOFDESP` — İrsaliye Yerine Geçer işareti: fatura aynı zamanda irsaliye olarak kullanılır.
+- `INTPAYMENTAGENT` — Ödeme Aracısı adı (ödeme şekli 'Ödeme Aracısı' seçildiğinde).
+- `INTPAYMENTDATE` — Ödeme Tarihi (kart/EFT/ödeme aracısı ile internet satışında zorunlu; öndeğer günün tarihi). Diğer tarih alanlarından farklı olarak INT tipinde saklanır.
+- `INTPAYMENTTYPE` — İnternet satışı Ödeme Şekli: Kredi Kartı/Banka Kartı, EFT/Havale, Kapıda Ödeme, Ödeme Aracısı, Diğer. e-Arşiv İnternet faturasında zorunlu; internet satışı değilse 0. Sayısal sıra kaynakta yok.
+- `INTSALESADDR` — İnternet satış (web) adresi; e-Arşiv İnternet faturasında zorunlu, öndeğer firma tanımı e-Devlet sekmesindeki Web Satış Adresi.
+- `INVOICEREF` — Bağlı fatura referansı (INVOICE.LOGICALREF)
+- `ISCOMP` — Ticari Şirket işareti (perakende cari üzerinden kesilen belgede alıcı tüzel kişi mi): işaretliyse VKN+Unvan, değilse TCKN+Ad+Soyad zorunlu.
+- `LOGICALREF` — Kayıt referansı.
+- `NAME` — Perakende cari bilgileri: alıcı şahsın adı.
+- `OCKFICHEDATE` — ÖKC bilgi fişi tarihi.
+- `OCKFICHENUMBER` — ÖKC bilgi fişi numarası.
+- `OCKSERIALNUMBER` — ÖKC (ödeme kaydedici cihaz) seri numarası.
+- `OCKZNUMBER` — ÖKC Z raporu numarası.
+- `PLATENUM1` — 1. araç/dorse plaka no.
+- `PLATENUM2` — 2. araç/dorse plaka no.
+- `PLATENUM3` — 3. araç/dorse plaka no.
+- `SELLERCLIENTREF` — Zincir teslimde Asıl Satıcı cari hesabının referansı (CLCARD).
+- `SENDMOD` — e-Arşiv gönderim şekli
+- `STFREF` — Bağlı irsaliye LOGICALREF'i (STFICHE); irsaliyelerde de e-Arşiv bilgileri girilebilir ve faturaya aktarılır.
+- `SURNAME` — Perakende cari bilgileri: alıcı şahsın soyadı.
+- `TAXNR` — Perakende cari bilgileri: alıcının Vergi Kimlik No'su (Ticari Şirket işaretliyse).
+- `TCKNO` — Perakende cari bilgileri: alıcı şahsın TC Kimlik No'su.
+- `TOWN` — Alıcı ilçe adı.
+- `TOWNCODE` — Alıcı ilçe kodu.
+
+### EBOOKDETAILDOC — e-Defter kaynak belge detayı: muhasebe fişine (EMFICHE) ya da satırına (EMFLINE) ait belge türü, no, tarih ve ödeme şekli. XBRL'de gl-cor:documentType/documentNumber/documentDate/gl-bus:paymentMethod alanlarına gider. 2.29 sürümünden beri muhasebeleştirmede otomatik yazılır.
+
+- `DOCUMENTDATE` — Belge tarihi
+- `DOCUMENTNR` — Belge numarası (fatura/fiş no; Varchar 16)
+- `DOCUMENTTYPE` — e-Defter belge türü
+- `EMFICHEREF` — Muhasebe fişi referansı (EMFICHE.LOGICALREF)
+- `EMFLINEREF` — Satır bazlı belge detayında muhasebe fiş satırı referansı (EMFLINE.LOGICALREF); fiş bazlıysa 0
+- `EXPLAIN` — Belge açıklaması (documentTypeDescription; tür Diğer ise zorunlu, örn. 'Nakit Tahsilat', 'Borç Dekontu', 'Masraf Formu')
+- `MODULENR` — Kaynak fişin modül numarası (fatura, cari, banka, çek/senet vb. ön muhasebe modülü); elle girilen fişte 0
+- `NOPAYMENT` — 'Ödeme kaydı değildir' işareti (ödeme kaydı olup olmadığı)
+- `PAYTYPE` — Ödeme şekli (serbest metin, gl-bus:paymentMethod; örn. 'Nakit'). Belge ödeme kaydıysa zorunlu.
+- `SOURCEFREF` — Kaynak (ön muhasebe) fiş referansı; MODULENR'ye göre ilgili fiş tablosunun LOGICALREF'i
+- `UNDOCUMENTED` — 'Bu fişe ait belge yoktur' işareti (Belge var/yok)
+
+### EBOOKINFO — Oluşturulan e-Defter (Yevmiye / Defter-i Kebir) dosyalarının kaydı: dönem, kontrol no, firma ve SM/SMMM/YMM telefon bilgileri, durum.
+
+- `BOOKSTATUS` — Defter durumu (kod listesi kaynakta yok)
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `CONTROLNO` — Kontrol numarası
+- `DATEOFCREATE` — Oluşturma tarihi
+- `FTELCODE` — Firma telefon alan kodu
+- `FTELNR` — Firma telefonu
+- `FTELNRTYPE` — Firma telefon türü (Muhasebeci, Denetim Birimi, Direkt Numara, Fax ...; XBRL phoneNumberDescription)
+- `GENEXP1` — Açıklama satır 1 (GENEXP2..4 aynı)
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `PERMONTH` — Defter ayı
+- `PERYEAR` — Defter yılı
+- `RECSTATUS` — Kayıt durumu
+- `REPORTENDDATE` — Rapor bitiş tarihi
+- `REPORTSTARTDATE` — Rapor (defter) başlangıç tarihi
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+- `SMMTELCODE` — SM/SMMM/YMM telefon alan kodu
+- `SMMTELNR` — SM/SMMM/YMM telefonu
+- `SMMTELNRTYPE` — SM/SMMM/YMM telefon türü
+- `TYP` — Defter türü
+
+### EINVOICEDET — e-Fatura belge detayı: faturanın F9 'e-Fatura Bilgileri' penceresi — senaryo (profil), e-fatura tipi, fatura dönemi, Yolcu Beraber (Tax Free) turist ve çıkış bilgileri, SGK bilgileri, taşıma/şoför, zincir teslim, şarj bilgileri. Fatura başına bir satır.
+
+- `ADDR1` — Turist/alıcı adres satırı 1 (Yolcu Beraber adres bilgileri).
+- `ADDR2` — Adres satırı 2.
+- `AGENCY` — Acente/rehber adı.
+- `AGENCYCODE` — Acente/rehber kodu.
+- `CHAINDELIVERY` — Zincir Teslim işareti: mal fiilen alıcı/satıcı dışındaki taraf adına doğrudan son müşteriye sevk edilir.
+- `CHRGBEGDATE` — Şarj başlangıç tarihi.
+- `CHRGBEGTIME` — Şarj başlangıç saati.
+- `CHRGENDDATE` — Şarj bitiş tarihi.
+- `CHRGENDTIME` — Şarj bitiş saati.
+- `CITY` — Alıcı il adı.
+- `CITYCODE` — Alıcı il kodu.
+- `COUNTRY` — Turist ülke adı.
+- `COUNTRYCODE` — Turist ülke kodu (zorunlu).
+- `DISTRICT` — Alıcı semt adı.
+- `DISTRICTCODE` — Alıcı semt kodu.
+- `DOCUMENTNOSGK` — SGK dosya numarası.
+- `DRIVERNAME1` — 1. şoför adı (e-İrsaliye/taşıma bilgileri).
+- `DRIVERNAME2` — 2. şoför adı (e-İrsaliye/taşıma bilgileri).
+- `DRIVERNAME3` — 3. şoför adı (e-İrsaliye/taşıma bilgileri).
+- `DRIVERSURNAME1` — 1. şoför soyadı.
+- `DRIVERSURNAME2` — 2. şoför soyadı.
+- `DRIVERSURNAME3` — 3. şoför soyadı.
+- `DRIVERTCKNO1` — 1. şoför TC kimlik no.
+- `DRIVERTCKNO2` — 2. şoför TC kimlik no.
+- `DRIVERTCKNO3` — 3. şoför TC kimlik no.
+- `EDURATION` — Fatura dönemi süre olarak verildiyse süre miktarı.
+- `EDURATIONTYPE` — Süre birimi (gün / hafta / ay / yıl).
+- `EENDDATE` — Fatura Dönemi Bitiş Tarihi.
+- `EINVOICETYP` — e-Fatura/e-Arşiv fatura tipi
+- `EINVOICETYPSGK` — SGK İlave Fatura Tipi: Eczane, Hastane, Optik, Medikal, Abonelik, Mal/Hizmet, Diğer.
+- `ENRGCARID` — Şarj edilen aracın kimlik numarası (okunabiliyorsa).
+- `ENRGPLATENUM` — Şarj edilen aracın plakası.
+- `ESTARTDATE` — Fatura Dönemi Başlangıç Tarihi (dönemsel faturalar; SGK abonelik vb. için zorunlu).
+- `ESURAPORID` — Elektrikli şarj hizmeti: ESU (şarj ünitesi) rapor ID'si (GİB şarj hizmetleri bildirimi).
+- `ESURAPORIDDATE` — ESU rapor tarihi.
+- `EXITCOUNTRY` — Gidilecek ülke adı.
+- `EXITCOUNTRYCODE` — Gidilecek ülke kodu.
+- `EXITDATE` — Çıkış tarihi.
+- `EXITGATE` — Çıkış kapısı adı.
+- `EXITGATECODE` — Çıkış (gümrük) kapısı kodu.
+- `EXITTIME` — Çıkış saati.
+- `FLIGHTNUMBER` — Firma/uçuş numarası.
+- `GUIDE` — Rehber.
+- `INVOICEREF` — Bağlı fatura LOGICALREF'i (INVOICE).
+- `LOGICALREF` — Kayıt referansı.
+- `PLATENUM1` — 1. araç/dorse plaka no.
+- `PLATENUM2` — 2. araç/dorse plaka no.
+- `PLATENUM3` — 3. araç/dorse plaka no.
+- `PROFILEID` — e-Fatura senaryosu
+- `SELLERCLIENTREF` — Zincir teslimde Asıl Satıcı cari hesabının referansı (CLCARD).
+- `STFREF` — Bağlı irsaliye LOGICALREF'i (STFICHE).
+- `TAXPAYERCODE` — SGK Mükellef Kodu (SGK'da tanımlı sağlık hizmet sunucusu kodu).
+- `TAXPAYERNAME` — SGK Mükellef Adı/Açıklaması.
+- `TOWN` — Alıcı ilçe adı.
+- `TOWNCODE` — Alıcı ilçe kodu.
+- `TRANSPORTTYP` — Taşıma şekli.
+- `TRANSPORTTYPCODE` — Taşıma şekli kodu.
+- `TRANSPORTTYPNAME` — Taşıma şekli adı.
+- `TUBANKNAME` — Turist banka adı (KDV iadesi için, isteğe bağlı).
+- `TUBNACCOUNTNO` — Turist banka hesap numarası.
+- `TUBNBRANCH` — Turist banka şubesi.
+- `TUBNCURR` — Turist banka hesabı döviz türü.
+- `TUNAME` — Yolcu Beraber (Tax Free): turist adı (zorunlu).
+- `TUNATIONALITY` — Turist uyruğu (ülke kodu, zorunlu).
+- `TUNATIONALITYNAME` — Turist uyruğu adı.
+- `TUPASSPORTDATE` — Turist pasaport tarihi.
+- `TUPASSPORTNO` — Turist pasaport numarası (zorunlu).
+- `TUPAYMENTNOTE` — Turist ödeme notu.
+- `TURETPRICE` — Turiste iade edilecek KDV tutarı (Tax Free iade tutarı).
+- `TUSURNAME` — Turist soyadı (zorunlu).
 
 ### EMCENTER — Masraf malzemeleri
 
@@ -4223,6 +4606,54 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
 - `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
 - `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
+### EPRODUCERRECDET — e-Müstahsil makbuzu detayı
+
+- `ADDR1` — Alıcı adres satırı 1 (perakende cari / belge adres bilgileri).
+- `ADDR2` — Alıcı adres satırı 2.
+- `CITY` — Alıcı il adı.
+- `CITYCODE` — Alıcı il kodu.
+- `COUNTRY` — Alıcı ülke adı.
+- `COUNTRYCODE` — Alıcı ülke kodu.
+- `DEFINITION_` — Perakende cari bilgileri: ticari şirket unvanı.
+- `DISTRICT` — Alıcı semt adı.
+- `DISTRICTCODE` — Alıcı semt kodu.
+- `EMAILADDR` — Alıcı e-posta adresi; gönderim şekli Elektronik ise zorunlu (belge e-posta ile iletilir).
+- `EPRODRSTATUS` — e-Müstahsil makbuzu durumu
+- `ISCOMP` — Ticari Şirket işareti (perakende cari üzerinden kesilen belgede alıcı tüzel kişi mi): işaretliyse VKN+Unvan, değilse TCKN+Ad+Soyad zorunlu.
+- `NAME` — Perakende cari bilgileri: alıcı şahsın adı.
+- `SENDMOD` — Gönderim Şekli: belgenin alıcıya nasıl teslim edileceği. Seçenekler Belirtilmemiş / Kağıt / Elektronik; öndeğer cari kartın LogoConnect (e-Devlet) sekmesinden gelir. Vergi mükellefine e-Arşiv kağıt verilir; mükellef olmayana elektronik isteğe bağlı. Sayısal karşılık kaynakta yok (muhtemelen 0=belirtilmemiş,1=kağıt,2=elektronik).
+- `SURNAME` — Perakende cari bilgileri: alıcı şahsın soyadı.
+- `TAXNR` — Perakende cari bilgileri: alıcının Vergi Kimlik No'su (Ticari Şirket işaretliyse).
+- `TCKNO` — Perakende cari bilgileri: alıcı şahsın TC Kimlik No'su.
+- `TOWN` — Alıcı ilçe adı.
+- `TOWNCODE` — Alıcı ilçe kodu.
+
+### ETRADESMANINVDET — e-Serbest Meslek Makbuzu (e-SMM) detayı
+
+- `ADDR1` — Alıcı adres satırı 1 (perakende cari / belge adres bilgileri).
+- `ADDR2` — Alıcı adres satırı 2.
+- `CITY` — Alıcı il adı.
+- `CITYCODE` — Alıcı il kodu.
+- `COUNTRY` — Alıcı ülke adı.
+- `COUNTRYCODE` — Alıcı ülke kodu.
+- `DEFINITION_` — Perakende cari bilgileri: ticari şirket unvanı.
+- `DISTRICT` — Alıcı semt adı.
+- `DISTRICTCODE` — Alıcı semt kodu.
+- `EMAILADDR` — Alıcı e-posta adresi; gönderim şekli Elektronik ise zorunlu (belge e-posta ile iletilir).
+- `ETRADSTATUS` — e-SMM durumu
+- `FICHEREF` — Bağlı cari hesap fişi (CLFICHE) referansı — e-SMM cari hesap fişlerinden girilir.
+- `ISCOMP` — Ticari Şirket işareti (perakende cari üzerinden kesilen belgede alıcı tüzel kişi mi): işaretliyse VKN+Unvan, değilse TCKN+Ad+Soyad zorunlu.
+- `NAME` — Perakende cari bilgileri: alıcı şahsın adı.
+- `SENDMOD` — Gönderim Şekli: Kağıt / Elektronik; Elektronik ise alıcı e-posta zorunlu.
+- `SURNAME` — Perakende cari bilgileri: alıcı şahsın soyadı.
+- `TAXNR` — Perakende cari bilgileri: alıcının Vergi Kimlik No'su (Ticari Şirket işaretliyse).
+- `TCKNO` — Perakende cari bilgileri: alıcı şahsın TC Kimlik No'su.
+- `TOWN` — Alıcı ilçe adı.
+- `TOWNCODE` — Alıcı ilçe kodu.
 
 ### EXCEPT — İstisnalar
 
@@ -4643,6 +5074,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `PRODCAPACITY` — Üretim kapasitesi
 - `CAPACITYUNIT` — Üretim birimi
 - `TAXEXPTYP2` — Vergi oranı türü: 0: Oran; 1: Tutar
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
 
 ### FAYEAR — Sabit kıymet yıllık kaydı
 
@@ -4712,6 +5144,10 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `STREF` — Malzeme Ref.
 - `OVHDTRANTYP` — Genel gider hareket türü
 
+### FICHEOBJECT — Fişlere bağlı ikili (binary) nesneler; e-Fatura/e-Arşiv belgelerinin UBL/XSLT dönüşümüyle oluşan içerikleri LDATA'da saklanır.
+
+- `LDATA` — İkili veri: e-belge UBL XML'i / görsel; metin olmayabilir
+
 ### FINTABLEITEM — Mali tablo tanımları
 
 - `LOGICALREF` — Logical Reference
@@ -4775,11 +5211,28 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `DOCNR` — İç kullanım
 - `LDATA` — İç kullanım
 
+### FIRMPARAMS — Firma parametreleri: firma (FIRMNR) ve modül bazında parametre kodu=değer kayıtları
+
+- `CODE` — Parametre kodu, metin (ör. FIN_CLIENTUSAGE_FINANCE / _EXPORT / _IMPORT / _SALEDIST / _PURCHASE = cari hesabın finans/ihracat/ithalat/satış-dağıtım/satınalma işlemlerinde kullanılması)
+- `FIRMNR` — Firma numarası
+- `GROUPNR` — Parametre grubu (ör. 97)
+- `MODULENR` — Parametrenin ait olduğu modül numarası (ör. 11 = finans/cari kullanım parametreleri)
+- `VALUE` — Parametre değeri (metin; ör. '1' = açık)
+
 ### FOLDER — Döküman katalog  bilgileri (watermark varsa)
 
 - `LOGICALREF` — Belge Katalog Bilgisi Log. Ref.
 - `LINETYPE` — Satır Tipi
 - `FPATH` — Dosya yolu
+
+### FREEZONE — Serbest bölge tanımları (dış ticaret)
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
+### FRGTYPES — Taşıma tipleri
+
 
 ### FRMPRDPARAM — Firma üretim parametreleri
 
@@ -4878,6 +5331,26 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `SITEID` — Veri Merkezi
 - `RECSTATUS` — Kayıt Durumu
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### GIBACCFICHE — GİB Defter-Beyan Sistemi'ne gönderilen gelir/gider fişi başlığı (belge türü, seri/sıra, karşı taraf, GİB ID ve statü).
+
+
+### GIBACCFICHELN — DBS gelir/gider fişi satırları: hesap, KDV, satır/kayıt/alt kayıt türü, stopaj, kısmi/tam istisna, ödeme türü, gümrük, sabit kıymet amortisman bilgileri.
+
+
+### GIBDOCTYPE — DBS Belge Türü listesi (fatura, e-arşiv, SMM, diğer, tevsiki zaruri olmayan gider vb.). GİB Defter-Beyan Sistemi (DBS) entegrasyonu kod tablosu (işletme/serbest meslek/basit usul defter gelir-gider kayıtları). SIMPLEMETHOD/SELFEMP/IDACCOUNT: belge türünün basit usul / serbest meslek / işletme defterinde geçerli olup olmadığı; FCTYPE gelir/gider; SERIALREQUIRED seri no zorunlu.
+
+- `GIBCODE` — GİB kodu.
+- `GIBDEF` — GİB tanımı.
+
+### GIBMMPARAM — GİB Defter-Beyan Sistemi bağlantısı için API Key ve API Secret.
+
+
+### GIBRECTYPE — DBS Kayıt Türü (gelir/gider kayıt türü: ticari mal alışı, indirilecek giderler, sabit kıymet alışı, gider kabul edilmeyen ödemeler...). GİB Defter-Beyan Sistemi (DBS) entegrasyonu kod tablosu (işletme/serbest meslek/basit usul defter gelir-gider kayıtları).
+
+
+### GIBSUBRECTYPE — DBS Kayıt Alt Türü (telefon, kira, ücret, sigorta...); GIBRECTYPREF ile kayıt türüne bağlı, kullanıcı/mükellef bazında GİB'den güncellenebilir (GIBID, GIBCLIENTID, GIBUPDATE). GİB Defter-Beyan Sistemi (DBS) entegrasyonu kod tablosu (işletme/serbest meslek/basit usul defter gelir-gider kayıtları).
+
 
 ### GLASSGN — GLASSGN
 
@@ -5008,6 +5481,13 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `LLOGOUTTIME` — Programdan çıkış saati
 - `ABNTERMS` — İç kullanım
 - `TDEFERRORS` — İç kullanım
+- `FIRMNR` — Firma numarası (L_CAPIFIRM.NR)
+
+### GTIP_CODE — GTİP (gümrük tarife istatistik pozisyonu) kodları
+
+
+### GTIP_DEF — GTİP kodu tanımları/açıklamaları
+
 
 ### GUARANTOR — Kefiller
 
@@ -5035,6 +5515,10 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `TAXOFFCODE` — Vergi dairesi kodu
 - `BANKBRANCHS` — Banka Şubesi Numarası
 - `BANKACCOUNTS` — Banka Hesabı Numarası
+
+### HISTORY — Kayıt revizyon takibi / silinen kayıt tarihçesi. Bir kayıt değiştirildiğinde ya da silindiğinde hangi tablonun (TABLEID) hangi kaydının (DATAREF) kim tarafından ne zaman değiştiği tutulur; silinen kayıtlarda MODIFTXT='DELETED' yazılır. Firma (LG_FFF_HISTORY) ve dönem (LG_FFF_PP_HISTORY) düzeyinde ayrı tablolar vardır.
+
+- `MODIFTXT` — Değişiklik açıklaması; silinen kayıtlarda 'DELETED'
 
 ### IMPSRVREL — IMPSRVREL
 
@@ -5291,6 +5775,26 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
 - `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
 - `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+- `ATAXEXCEPTCODE` — Ek vergi (ÖTV vb.) muafiyet kodu: ek vergisi 0 olan İstisna tipli e-Fatura/e-Arşiv için zorunlu.
+- `ATAXEXCEPTREASON` — Ek vergi muafiyet sebebi (açıklama).
+- `CANCELDATE` — Faturanın iptal tarihi (CANCELLED=1 olan faturada dolu; iptal çoğu kez sonraki ay yapılır)
+- `CANCELEXP` — İptal açıklaması
+- `CREDITCARDNUM` — Kredi kartı numarası (Fatura Detayları 2).
+- `DOCDATE` — Belge tarihi: satış faturasında DATE_ ile aynı; alış ve alınan hizmet faturasında tedarikçi belgesinin tarihi
+- `EDURATION` — e-Fatura fatura dönemi: süre değeri (dönem süre ile belirtildiyse).
+- `EDURATIONTYPE` — e-Fatura fatura dönemi: süre birimi.
+- `EENDDATE` — e-Fatura fatura dönemi bitiş tarihi.
+- `EINVOICE` — Faturanın kesiliş biçimi
+- `EINVOICETYP` — e-Fatura/e-Arşiv fatura tipi
+- `ENTRUST` — Emanet işareti (Fatura Detayları 2 'Emanet').
+- `ESTARTDATE` — e-Fatura fatura dönemi başlangıç tarihi.
+- `ESTATUS` — e-Fatura durumu
+- `FUTMNTHYREXPINC` — 'Gelecek aylar ve yıllar gelir/gider tahakkuku' işareti (Fatura Detayları 2).
+- `GLOBALID` — Global ID
+- `PROFILEID` — e-Fatura senaryosu
+- `TOTALSERVICES` — Faturadaki hizmet satırlarının (STLINE LINETYPE=4) toplamı
+- `VATEXCEPTCODE` — GİB KDV istisna kodu
+- `VATEXCEPTREASON` — KDV muafiyet sebebi (açıklama metni).
 
 ### INVOICEEXCH — Fatura döviz tutarları
 
@@ -5512,6 +6016,10 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `SPECODE5` — Özel kod 5
 - `EXPENSE` — 0: Sabit kıymet; 1: Sabit kıymet gideri
 - `ORIGIN` — Ürünün menşei
+- `CPACODE` — CPA (ürünlerin faaliyete göre sınıflaması) kodu; kamu senaryolu e-faturalarda malzeme/hizmet için zorunlu.
+- `DEDUCTCODE` — KDV tevkifat (GİB) kodu, ör. 609 satış / 209 alış
+- `UETDSLOADTYPE` — U-ETDS (Ulaştırma Elektronik Takip Denetim Sistemi) yük cinsi; malzeme kartı U-ETDS Bilgileri sekmesinden yük bildirimine taşınır.
+- `UETDSTRANSPORTTYPE` — U-ETDS taşıma türü: normal yük / tehlikeli madde (malzeme kartı U-ETDS sekmesi).
 
 ### ITEMSUBS — Malzeme alternatifleri
 
@@ -5642,6 +6150,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `WBARCODE` — Birimli barkod
 - `WBARCODESHIFT` — Ondalık basamak (birimli barkod)
 - `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `GLOBALID` — Global ID
 
 ### ITMWSDEF — Malzeme-İş ist. bilgileri
 
@@ -5831,6 +6340,10 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
 - `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
 - `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+- `CANDEDUCT` — Tevkifat uygulanır mı (Apply Deduction)
+- `DEDUCTCODE` — KDV tevkifat (GİB) kodu, ör. 609 satış / 209 alış
+- `DEDUCTIONPART1` — Tevkifat oranı payı (DEDUCTIONPART2 paydası; ör. 5/10)
+- `DEDUCTIONPART2` — Tevkifat oranı payda kısmı (ör. 7/10'daki 10).
 
 ### LABORREQ — Çalışan ihtiyaçları
 
@@ -6024,6 +6537,46 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ARPLID` — Cari hesap Logo kimliği
 - `ORGLOGOID` — Veri Merkezi
 
+### LEASINGPAYMENTS — Leasing ödeme planı başlığı: faiz oranı, taksit sayısı, periyot, KDV oranı, peşinat, faiz türü, ödeme başlangıç tarihi.
+
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `CASHAMOUNT` — Peşinat tutarı
+- `INTERESTTYPE` — Faiz türü (Basit/Bileşik)
+- `INTRATE` — Yıllık faiz %
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `PAYMENTCOUNT` — Taksit sayısı
+- `PAYMENTPERIOD` — Ödeme periyodu (Günlük/Aylık/Yıllık)
+- `PAYMENTSTARTDATE` — Ödeme başlangıç tarihi (taksitler bu tarih + periyoda göre oluşur)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+- `VATRATE` — KDV oranı
+- `WFSTATUS` — Kullanımda değil (iş akışı durumu için ayrılmış)
+
+### LEASINGPAYMENTSLNS — Leasing ödeme planı satırları (taksitler): vade, taksit tutarı, faiz, anapara, kalan anapara, KDV.
+
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `INTTOTAL` — Faiz tutarı
+- `MAINREMAINED` — Kalan anapara
+- `MAINTOTAL` — Anapara
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `PAYMENTDATE` — Taksit vadesi
+- `PAYMENTTOTAL` — Taksit tutarı
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+- `WFSTATUS` — Kullanımda değil (iş akışı durumu için ayrılmış)
+
+### LEASINGREG — Leasing (finansal kiralama) kayıtları başlığı: sözleşme no, açıklama, başlangıç/bitiş, muhasebe hesapları (kullanım hakkı, kısa/uzun vadeli borç maliyetleri vb.).
+
+- `BEGDATE` — Sözleşme başlangıç tarihi
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `ENDDATE` — Sözleşme bitiş tarihi
+- `REGNR` — Leasing kayıt/sözleşme numarası
+
+### LEASINGREGLN — Leasing kaydı satırları: kiralanan sabit kıymetler ve tutarları.
+
+- `FIXASSETREF` — Sabit kıymet kaydı (FAREGIST)
+- `LEASINGREGREF` — LEASINGREG başlığı
+
 ### LNGEXCSETS — Bazı kayıtların diğer dillerdeki açıklamaları
 
 - `LOGICALREF` — Fiziksel adres
@@ -6031,6 +6584,9 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `DOCREF` — Kayıt referansı
 - `FIELDID` — Alan tipi
 - `LANGID` — Seçilen dil
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### LNOPASGN — Operasyon-Malzeme ilişkisi
 
@@ -6082,6 +6638,12 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `MSGNUM1` — Mesaj Numarası 1
 - `MSGNUM2` — Mesaj Numarası 2
 
+### MANDFLDS — Zorunlu alan tanımları (kart/fiş girişlerinde doldurulması zorunlu alanlar)
+
+- `FIRMNR` — Firma numarası (L_CAPIFIRM.NR)
+- `MANDATORY` — 1 ise zorunlu alan
+- `MODULENR` — Modül
+
 ### MARK — Markalar
 
 - `LOGICALREF` — İşaretle
@@ -6113,6 +6675,12 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `SITEID` — Veri Merkezi
 - `ORGLOGICALREF` — Orijinal Kayıt Log. Ref.
 - `RECSTATUS` — Kayıt Durumu
+
+### MBLINFOGROUP — Mobil bilgilendirme abone grupları.
+
+
+### MBLINFOUSER — Mobil bilgilendirme aboneleri (SMS alacak kişiler).
+
 
 ### MBSCRMRELF — MBSCRMRELF
 
@@ -6159,6 +6727,27 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CRMMODIFIEDHOUR` — Değiştirilme Saati (CRM)
 - `CRMMODIFIEDMIN` — Değiştirilme Dakikası (CRM)
 - `CRMMODIFIEDSEC` — Değiştirilme Saniyesi (CRM)
+
+### MNTDEMANDFICHE — Bakım talep fişi başlığı (önleyici/acil/periyodik bakım talebi).
+
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+- `WFSTATUS` — Kullanımda değil (iş akışı durumu için ayrılmış)
+
+### MNTTEMPLATE — Bakım şablonu tanımı.
+
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
+### MNTTEMPLATELINE — Bakım şablonu iş adımları (kod, süre) ve malzemeleri.
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### MRPHEAD — MRP ve MPS başlıkları
 
@@ -6651,6 +7240,9 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `EUVATSTATUS` — KDV hesaplama durumu
 - `ADDTAXVATMATRAH` — Ek vergi matrahı
 
+### OKCINFO — Faturaya bağlı ÖKC (ödeme kaydedici cihaz) bilgi fişi kayıtları: fiş tipi/no, tarih-saat, cihaz seri no, Z no.
+
+
 ### OPATTASG — Operasyon-Özellik ataması
 
 - `LOGICALREF` — İşlem - Özellik ataması log. Ref.
@@ -6908,6 +7500,15 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
 - `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
 - `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+- `ATAXEXCEPTCODE` — Ek vergi (ÖTV vb.) muafiyet kodu: ek vergisi 0 olan İstisna tipli e-Fatura/e-Arşiv için zorunlu.
+- `ATAXEXCEPTREASON` — Ek vergi muafiyet sebebi (açıklama).
+- `DEDUCTIONPART1` — Tevkifat oranı payı (DEDUCTIONPART2 paydası; ör. 5/10)
+- `DEDUCTIONPART2` — Tevkifat oranı payda kısmı (ör. 7/10'daki 10).
+- `EINVOICETYP` — Belgenin e-Fatura/e-Arşiv tipi: Satış, İade, Tevkifat, İstisna, Özel Matrah, İhraç Kayıtlı, SGK, Komisyoncu, Araç Tescil vb.
+- `GLOBALID` — Global ID
+- `TAXFREECHX` — Tax Free işareti (Fatura Detayları 2 / Yolcu Beraber).
+- `VATEXCEPTCODE` — KDV muafiyet (istisna) kodu: KDV'si 0 olan Özel Matrah/İstisna tipli e-Fatura/e-Arşiv için zorunlu GİB kodu (ör. 301, 351). Kodlar program dizinindeki Defaults/Gen/VatExcepts.xml'den gelir.
+- `VATEXCEPTREASON` — KDV muafiyet sebebi (açıklama metni).
 
 ### ORFLINE — Sipariş hareketleri
 
@@ -7058,6 +7659,23 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `EXADDTAXAMNT` — İstisna ek vergi tutarı
 - `EUVATSTATUS` — KDV hesaplama durumu
 - `ADDTAXVATMATRAH` — Ek vergi matrahı
+- `ATAXEXCEPTCODE` — Ek vergi (ÖTV vb.) muafiyet kodu: ek vergisi 0 olan İstisna tipli e-Fatura/e-Arşiv için zorunlu.
+- `ATAXEXCEPTREASON` — Ek vergi muafiyet sebebi (açıklama).
+- `CANDEDUCT` — Tevkifat uygulanır mı (Apply Deduction)
+- `CPACODE` — CPA (ürünlerin faaliyete göre sınıflaması) kodu; kamu senaryolu e-faturalarda malzeme/hizmet için zorunlu.
+- `DEDUCTCODE` — KDV tevkifat (GİB) kodu, ör. 609 satış / 209 alış
+- `DEDUCTIONPART1` — Tevkifat oranı payı (DEDUCTIONPART2 paydası; ör. 5/10)
+- `DEDUCTIONPART2` — Tevkifat oranı payda kısmı (ör. 7/10'daki 10).
+- `GLOBALID` — Global ID
+- `VATEXCEPTCODE` — KDV muafiyet (istisna) kodu: KDV'si 0 olan Özel Matrah/İstisna tipli e-Fatura/e-Arşiv için zorunlu GİB kodu (ör. 301, 351). Kodlar program dizinindeki Defaults/Gen/VatExcepts.xml'den gelir.
+- `VATEXCEPTREASON` — KDV muafiyet sebebi (açıklama metni).
+
+### ORGDEFS — Organizasyon şeması tanımları
+
+
+### ORGDOC — Organizasyon şeması pozisyon açıklamaları (doküman/BLOB)
+
+- `LDATA` — İkili (binary) veri alanı: UBL XML, görsel, tasarım, sıkıştırılmış içerik olabilir
 
 ### OVERHEADS — Genel gider kartları
 
@@ -7363,6 +7981,11 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `MAININSTALREF` — Taksit Ref.
 - `ORGLOGOID` — Veri Merkezi
 - `SPECODE` — Özel Kod
+- `CREDITCARDNUM` — Kredi kartı numarası (Fatura Detayları 2).
+- `MATCHDATE` — Kapanma (eşleşme) tarihi: ödenen = toplam olduğunda dolar; boşsa kalem açık ya da kapama koşulmamış
+
+### PAYTYPES — Dış ticaret ödeme şekilleri (Sistem İşletmeni'nde tanımlanır)
+
 
 ### PEGGING — İşlem bağlantıları (üretim emri, sipariş)
 
@@ -7491,12 +8114,18 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `INVUSEPARAM` — Toplu malzeme temini - ambar kullanım türü
 - `FACTORYNR` — Toplu malzeme temini - teslimat fabrikası
 
+### POSDEFS — Organizasyon şeması pozisyonları
+
+
 ### POSTCODE — Posta kodları
 
 - `LOGICALREF` — Fiziksel adres
 - `COUNTRY` — Ülke
 - `CITY` — Şehir
 - `POSTCODE` — Posta Kodu
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### PRCARDS — Promosyon kartları
 
@@ -7682,6 +8311,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
 - `WFSTATUS` — Kullanımda Değil
 - `ORDFCMODUL` — Siparişte kullanım yeri
+- `VARIANTREF` — Varyant referansı (2.53'te eklendi)
 
 ### PRCLIST — Alış/Satış fiyatları
 
@@ -7740,6 +8370,10 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `PURCHCONTREF` — Teklif fişi referansı
 - `BRANCH` — Şube
 - `COSTVAL` — Net satın alma/maliyet
+- `GLOBALID` — Global ID
+
+### PRCLSTDIV — Fiyat kartlarının (PRCLIST) işyeri/bölüm kısıtları: bir fiyat kartının hangi işyerlerinde geçerli olduğunu tutar. 2.79 sürüm notu: işyeri filtresiyle toplu fiyat girişinde bu tabloya eski kayıtların da yazılması sorunu giderildi.
+
 
 ### PRDCOST — Maliyet dönem kapama kayıtları
 
@@ -7765,6 +8399,17 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `TOTDIFFINF` — Toplam fiyat farkı endeks değeri
 - `VARIANTREF` — Varyant (Port) referansı
 
+### PREACCDISTDETLINE — Ön muhasebe (fatura, fiş vb.) satırlarının masraf merkezi / proje dağıtım detayları. Hesap dağıtım şablonu uygulanınca ya da elle girilince, muhasebeleştirilmeden önceki kaynak satırın tutarının hangi masraf merkezine/projeye hangi oranla dağıtılacağını tutar (muhasebe fişindeki 'Dağıtım Detayları'nın ön muhasebe karşılığı).
+
+- `CENTERREF` — Masraf merkezi (EMCENTER.LOGICALREF)
+- `DISTRATE` — Dağıtım oranı %; bir satırın oranları toplamı 100'ü aşamaz
+- `DISTTEMPREF` — Uygulanan hesap dağıtım şablonu (DISTTEMP.LOGICALREF)
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `PROJECTREF` — Proje (PROJECT.LOGICALREF)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+- `WFSTATUS` — Kullanımda değil (iş akışı durumu için ayrılmış)
+
 ### PREVDISPLINE — İş emri ilişkileri
 
 - `LOGICALREF` — İş emirleri ilişkisi log. Ref.
@@ -7773,6 +8418,17 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `PREVLINEREF` — Önceki iş emri ref.
 - `OVERLAPPER` — Örtüşme oranı (%)
 - `LINENR` — Satır Numarası
+
+### PRICEINDEX — Fiyat endeksleri: endeks türüne göre ay/tarih bazında endeks değeri. Enflasyon muhasebesinde düzeltme katsayısı = düzeltme ayı endeksi / esas tarihin ayı endeksi.
+
+- `IDXDATE` — Endeks tarihi (ay)
+- `IDXTYPREF` — Endeks türü (L_PRICEINDEXTYP.LOGICALREF)
+- `PRICEIDX` — Endeks değeri
+
+### PRICEINDEXTYP — Endeks türleri (enflasyon düzeltmesi için fiyat endeksi tipi, örn. Yİ-ÜFE/TEFE).
+
+- `TYPID` — Endeks türü kodu
+- `TYPNAME` — Endeks türü adı
 
 ### PROCUREMENT — Üretim için malzeme tedariki
 
@@ -8139,6 +8795,15 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `AFFECTRISK` — Riski etkiler
 - `TOTALADDTAX` — Ek Vergi Toplamı
 - `TOTALEXADDTAX` — Toplam istisna ek vergi tutarı
+- `ATAXEXCEPTCODE` — Ek vergi (ÖTV vb.) muafiyet kodu: ek vergisi 0 olan İstisna tipli e-Fatura/e-Arşiv için zorunlu.
+- `ATAXEXCEPTREASON` — Ek vergi muafiyet sebebi (açıklama).
+- `DEDUCTIONPART1` — Tevkifat oranı payı (DEDUCTIONPART2 paydası; ör. 5/10)
+- `DEDUCTIONPART2` — Tevkifat oranı payda kısmı (ör. 7/10'daki 10).
+- `EINVOICETYP` — Belgenin e-Fatura/e-Arşiv tipi: Satış, İade, Tevkifat, İstisna, Özel Matrah, İhraç Kayıtlı, SGK, Komisyoncu, Araç Tescil vb.
+- `GLOBALID` — Global ID
+- `TAXFREECHX` — Tax Free işareti (Fatura Detayları 2 / Yolcu Beraber).
+- `VATEXCEPTCODE` — KDV muafiyet (istisna) kodu: KDV'si 0 olan Özel Matrah/İstisna tipli e-Fatura/e-Arşiv için zorunlu GİB kodu (ör. 301, 351). Kodlar program dizinindeki Defaults/Gen/VatExcepts.xml'den gelir.
+- `VATEXCEPTREASON` — KDV muafiyet sebebi (açıklama metni).
 
 ### PURCHOFFERLN — PURCHOFFERLN
 
@@ -8286,6 +8951,16 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `EXADDTAXAMNT` — İstisna ek vergi tutarı
 - `EUVATSTATUS` — KDV hesaplama durumu
 - `ADDTAXVATMATRAH` — Ek vergi matrahı
+- `ATAXEXCEPTCODE` — Ek vergi (ÖTV vb.) muafiyet kodu: ek vergisi 0 olan İstisna tipli e-Fatura/e-Arşiv için zorunlu.
+- `ATAXEXCEPTREASON` — Ek vergi muafiyet sebebi (açıklama).
+- `CANDEDUCT` — Tevkifat uygulanır mı (Apply Deduction)
+- `CPACODE` — CPA (ürünlerin faaliyete göre sınıflaması) kodu; kamu senaryolu e-faturalarda malzeme/hizmet için zorunlu.
+- `DEDUCTCODE` — KDV tevkifat (GİB) kodu, ör. 609 satış / 209 alış
+- `DEDUCTIONPART1` — Tevkifat oranı payı (DEDUCTIONPART2 paydası; ör. 5/10)
+- `DEDUCTIONPART2` — Tevkifat oranı payda kısmı (ör. 7/10'daki 10).
+- `GLOBALID` — Global ID
+- `VATEXCEPTCODE` — KDV muafiyet (istisna) kodu: KDV'si 0 olan Özel Matrah/İstisna tipli e-Fatura/e-Arşiv için zorunlu GİB kodu (ör. 301, 351). Kodlar program dizinindeki Defaults/Gen/VatExcepts.xml'den gelir.
+- `VATEXCEPTREASON` — KDV muafiyet sebebi (açıklama metni).
 
 ### QASGN — Kalite kontrol hareketi- Kalite kontrol ataması
 
@@ -8436,6 +9111,12 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `PROJECTREF` — Proje Referansı
 - `DEPARTMENT` — Bölüm
 
+### REDISCINTRATES — Reeskont faiz oranları: döviz türü bazında, geçerlilik tarihli yıllık reeskont faiz oranı (Sistem İşletmeni → Kuruluş → Reeskont Faiz Oranları). Çek/senet reeskont hesabında kullanılır.
+
+- `CRTYPE` — Döviz türü
+- `RATE` — Yıllık reeskont faiz oranı %
+- `RATEDATE` — Oranın geçerli olduğu tarih
+
 ### REFLECT — Yansıtmalar
 
 - `LOGICALREF` — Yansıtma log. Ref.
@@ -8503,6 +9184,12 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
 - `SITEID` — Veri Merkezi
 - `RECSTATUS` — Kayıt Durumu
+
+### REGIMETYP — Rejim şekilleri (ithalat/ihracat rejim tipleri)
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### REMINDHIST — REMINDHIST
 
@@ -8586,6 +9273,10 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `FORMULA1` — Formül (faiz oranı)
 - `FORMULA2` — Formül (banka ve sigorta muameleleri vergisi)
 - `FORMULA3` — Formül (KKDF)
+
+### RETTAXPEGG — RETTAXPEGG
+
+- `RETTRANSCODE` — İade hakkı doğuran işlem türü kodu (e-beyanname kodu, ör. 301)
 
 ### ROUTE — Satış yönetim raporları
 
@@ -8743,6 +9434,13 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `UPDATEINFO_MODIFIEDSEC` — (Bayi Kullanımı İçin)
 - `USERDEFAULT` — (Bayi Kullanımı İçin)
 - `USERNR` — (Bayi Kullanımı İçin)
+
+### SECTORMAIN — Ana sektör tanımları (cari hesaplarda Ana Sektör Kodu).
+
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+
+### SECTORSUB — Alt sektör tanımları (ana sektöre bağlı).
+
 
 ### SELCHVAL — Malzeme-Özellik değerleri
 
@@ -9144,6 +9842,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `SITEID` — Veri Merkezi
 - `RECSTATUS` — Kayıt Durumu
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `GLOBALID` — Global ID
 
 ### SRVCARD — Hizmet kartları
 
@@ -9178,6 +9877,11 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ADDTAXREF` — Ek vergiler referansı
 - `DISTTYPE` — Dağıtım Türü
 - `EXTACCESSFLAGS` — Satış noktalarında erişilebilir
+- `CANDEDUCT` — Tevkifat uygulanır mı (Apply Deduction)
+- `CPACODE` — CPA (ürünlerin faaliyete göre sınıflaması) kodu; kamu senaryolu e-faturalarda malzeme/hizmet için zorunlu.
+- `DEDUCTCODE` — KDV tevkifat (GİB) kodu, ör. 609 satış / 209 alış
+- `DEDUCTIONPART1` — Tevkifat oranı payı (DEDUCTIONPART2 paydası; ör. 5/10)
+- `DEDUCTIONPART2` — Tevkifat oranı payda kısmı (ör. 7/10'daki 10).
 
 ### SRVNUMS — Aylık hizmet toplamları
 
@@ -9506,6 +10210,18 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
 - `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
 - `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+- `ATAXEXCEPTCODE` — Ek vergi (ÖTV vb.) muafiyet kodu: ek vergisi 0 olan İstisna tipli e-Fatura/e-Arşiv için zorunlu.
+- `ATAXEXCEPTREASON` — Ek vergi muafiyet sebebi (açıklama).
+- `CANCELLEDINVREF1` — İrsaliyenin bağlı olduğu iptal edilmiş faturanın referansı
+- `EDESPSTATUS` — e-İrsaliye durumu
+- `EINVOICETYP` — Belgenin e-Fatura/e-Arşiv tipi: Satış, İade, Tevkifat, İstisna, Özel Matrah, İhraç Kayıtlı, SGK, Komisyoncu, Araç Tescil vb.
+- `GLOBALID` — Global ID
+- `PROFILEID` — Belgenin e-Fatura senaryosu (Temel, Ticari, Yolcu Beraber, Hal, Kamu, İhracat...). Cari kart varsayılanından gelir.
+- `SHIPDATE` — e-İrsaliye sevk (fiili sevk) tarihi; Detaylar sekmesinden e-İrsaliye bilgilerine gelir, 'GİB'e gönderilecek' statüsünde güncellenebilir.
+- `SHIPTIME` — e-İrsaliye sevk saati.
+- `TAXFREECHX` — Tax Free işareti (Fatura Detayları 2 / Yolcu Beraber).
+- `VATEXCEPTCODE` — KDV muafiyet (istisna) kodu: KDV'si 0 olan Özel Matrah/İstisna tipli e-Fatura/e-Arşiv için zorunlu GİB kodu (ör. 301, 351). Kodlar program dizinindeki Defaults/Gen/VatExcepts.xml'den gelir.
+- `VATEXCEPTREASON` — KDV muafiyet sebebi (açıklama metni).
 
 ### STINVENS — Malzeme alış/satış aylık toplamları
 
@@ -9790,6 +10506,19 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `AFFECTRISK` — Riski etkiler
 - `INEFFECTIVECOST` — Malzeme maliyeti etkilenecek: 0: Evet; 1: Hayır
 - `ADDTAXVATMATRAH` — Ek vergi matrahı
+- `ATAXEXCEPTCODE` — Ek vergi (ÖTV vb.) muafiyet kodu: ek vergisi 0 olan İstisna tipli e-Fatura/e-Arşiv için zorunlu.
+- `ATAXEXCEPTREASON` — Ek vergi muafiyet sebebi (açıklama).
+- `CPACODE` — CPA (ürünlerin faaliyete göre sınıflaması) kodu; kamu senaryolu e-faturalarda malzeme/hizmet için zorunlu.
+- `DEDUCTCODE` — KDV tevkifat (GİB) kodu, ör. 609 satış / 209 alış
+- `DEDUCTIONPART1` — Tevkifat oranının payı (DEDUCTIONPART2 paydası; ör. 2/3, 9/10)
+- `DEDUCTIONPART2` — Tevkifat oranının paydası
+- `FAKKEGAMOUNT` — Sabit kıymet (binek araç) için KKEG'e ayrılan tutar (edinim yöntemi limitlerine göre).
+- `FUTMONTHBEGDATE` — Gelecek aylara ait gelir/gider dağıtım başlangıç tarihi.
+- `FUTMONTHCNT` — Gelecek aylara ait gelir/gider dağıtım süresi (ay).
+- `FUTMONTHENDDATE` — Gelecek aylara ait gelir/gider dağıtım bitiş tarihi (süre yerine tarih aralığı).
+- `KKEGACCREF` — Kanunen kabul edilmeyen gider (KKEG) muhasebe hesabı referansı (ör. binek araç giderinin %30'u).
+- `VATEXCEPTCODE` — GİB KDV istisna kodu
+- `VATEXCEPTREASON` — KDV muafiyet sebebi (açıklama metni).
 
 ### STLINEEXCH — Malzeme satırı döviz tutarları
 
@@ -9915,6 +10644,11 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `WSPARTREF` — İş İstasyonu Parçalı Ref.
 - `ACTIVEPARTNUM` — Aktif Parça Sayısı
 
+### STSHIPPEDAMOUNT — Sipariş satırı ile o siparişten yapılan sevk (irsaliye) satırı arasındaki sevk miktarı bağı. Kalan sipariş = ORFLINE.AMOUNT − sevkedilen; topluluk SQL'lerinde ORDTRANSREF ile ORFLINE'a bağlanıp SHIPPEDAMOUNT toplanır.
+
+- `ORDTRANSREF` — Sevk edilen sipariş satırı (ORFLINE.LOGICALREF)
+- `SHIPPEDAMOUNT` — Bu sevk satırıyla sipariş satırından karşılanan (sevk edilen) miktar
+
 ### SUPPASGN — Malzeme-Tedarikçi ataması
 
 - `LOGICALREF` — Malzeme - Tedarikçi Ataması Log. Ref.
@@ -9940,6 +10674,21 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `PACKETUSETYPE` — Paket kullanım türü
 - `ORDPERC` — Cari Hesap Sipariş Oranı (%)
 - `ORDFREQ` — Cari Hesap Sipariş Periyodu (Gün)
+
+### SUPPEVALFICHE — Tedarikçi değerlendirme fişi (dönem aralığı, malzeme bağımlı mı). Kalite/Teslimat/Fiyat gibi kriterler ağırlıklarla puanlanır; malzeme bağımlı seçilirse malzeme bazında kayıt oluşur.
+
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+- `WFSTATUS` — Kullanımda değil (iş akışı durumu için ayrılmış)
+
+### SUPPEVALTRANS — Tedarikçi değerlendirme hareketleri: cari/malzeme bazında set puanı. Kalite/Teslimat/Fiyat gibi kriterler ağırlıklarla puanlanır; malzeme bağımlı seçilirse malzeme bazında kayıt oluşur.
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+- `WFSTATUS` — Kullanımda değil (iş akışı durumu için ayrılmış)
 
 ### SYSLOG — Sistem günlükleri
 
@@ -10169,6 +10918,12 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
 - `ORGLOGOID` — Veri Merkezi
 
+### TAXOFFICE — Vergi daireleri listesi
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
+
 ### TMPACASGN — Geçici kabul bağlantısı
 
 - `LOGICALREF` — Geçici kabul bağlantıları referansı
@@ -10190,6 +10945,12 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `TOOLREF` — Araç ref.
 - `AMOUNT` — Miktar
 - `UOMREF` — Birim referansı
+
+### TOWN — İlçe bilgileri (şehre bağlı ilçeler)
+
+- `ORGLOGICREF` — Orijinal kaydın LOGICALREF'i (veri aktarımında kaynak kayıt)
+- `RECSTATUS` — Kayıt durumu
+- `SITEID` — Veri merkezi (Data Processing Site) — dağıtık/şube veri aktarımı için
 
 ### TRADGRP — Ticari işlem grupları
 
@@ -10278,6 +11039,44 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `OLDTASK` — Önceki zamanlanmış görev bilgisi
 - `APPROXTIME` — İstatistiksel bilgi
 
+### UETDSCARGOINFO — U-ETDS yük bildirimi satırları: sefere (VOYAGEREF) bağlı her yükün yükleme/boşaltma yeri-zamanı, yük cinsi/miktarı, taşıma türü (normal/tehlikeli; tehlikelide UN kodu), gönderici/alıcı unvan-VKN.
+
+- `BUYERTAXNO` — Alıcı VKN.
+- `BUYERTITLE` — Alıcı unvanı.
+- `CARGOID` — U-ETDS'den dönen yük ID'si.
+- `FIRMCARGONO` — Firmanın yük numarası.
+- `LOADAMOUNT` — Yük miktarı.
+- `LOADCITYCODE` — Yükleme il kodu.
+- `LOADCNTRYCODE` — Yükleme ülke kodu.
+- `LOADDATE` — Yükleme tarihi.
+- `LOADDSTRCTCODE` — Yükleme ilçe kodu.
+- `LOADTYPE` — Yük cinsi kodu.
+- `LOADUNIT` — Yük birimi.
+- `RECSTATUS` — Kayıt durumu
+- `SENDERTAXNO` — Gönderici VKN.
+- `SENDERTITLE` — Gönderici unvanı.
+- `TRANSPORTTYPE` — Taşıma türü: normal yük / tehlikeli madde.
+- `UNCODE` — Tehlikeli madde UN numarası.
+- `UNDEF` — UN madde tanımı.
+- `UNLOADCITYCODE` — Boşaltma il kodu.
+- `UNLOADCNTRYCODE` — Boşaltma ülke kodu.
+- `UNLOADDATE` — Boşaltma tarihi.
+- `UNLOADDSTRCTCODE` — Boşaltma ilçe kodu.
+- `VOYAGEREF` — Bağlı sefer (UETDSVOYAGE).
+
+### UETDSVOYAGE — U-ETDS sefer bildirimi başlığı (Ulaştırma Bakanlığı U-ETDS: eşya/tehlikeli madde taşımacılığı sefer kaydı) — araç plakaları, şoför TCKN, sefer başlangıç/bitiş, bakanlıktan dönen sefer ID.
+
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `DRIVERTCNO1` — 1. şoför TCKN.
+- `FIRMVOYAGENO` — Firmanın kendi sefer numarası.
+- `PLATENR1` — Çekici/araç plakası.
+- `RECSTATUS` — Kayıt durumu
+- `VOYAGEBEGDATE` — Sefer başlangıç tarihi.
+- `VOYAGEBEGTIME` — Sefer başlangıç saati.
+- `VOYAGEENDDATE` — Sefer bitiş tarihi.
+- `VOYAGEENDTIME` — Sefer bitiş saati.
+- `VOYAGEID` — U-ETDS'den dönen sefer ID'si.
+
 ### UNITBARCODE — Birim-barkod eşleştirmesi (Port)
 
 - `LOGICALREF` — Birim-barkod atama (Port) mantıksal referansı
@@ -10292,6 +11091,8 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
 - `TYP` — Barkod türü; 0: Normal, 1: Birimli
 - `WBARCODESHIFT` — Ondalık basamak (birimli barkod)
+- `CAPIBLOCK_CREATEDBY` — Kaydı oluşturan kullanıcı no; CAPIBLOCK_* grubu oluşturma/değiştirme kullanıcı-tarih-saat-dakika-saniye
+- `GLOBALID` — Global ID
 
 ### UNITSETC — Birim setleri arası çevrim katsayıları
 
@@ -10349,6 +11150,14 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `WEIGHTREF` — Ağırlık birim ref.
 - `DIVUNIT` — Bölünebilir
 
+### USERSDEF — Kullanıcı firma öndeğerleri: kullanıcının firma bazında öndeğer işyeri, bölüm, fabrika, ambarı
+
+- `DEPTNR` — Öndeğer bölüm
+- `DIVNR` — Öndeğer işyeri
+- `FACTNR` — Öndeğer fabrika
+- `FIRMNR` — Firma numarası (L_CAPIFIRM.NR)
+- `WHNR` — Öndeğer ambar
+
 ### VARIANT — Varyant (Port)
 
 - `LOGICALREF` — Varyant (Port) mantıksal referansı
@@ -10397,6 +11206,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `SITEID` — Veri Merkezi
 - `RECSTATUS` — Kayıt Durumu
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `LDATA` — İkili (binary) veri alanı: UBL XML, görsel, tasarım, sıkıştırılmış içerik olabilir
 
 ### VRNTINVENS — Varyant toplamları
 
@@ -10836,6 +11646,3 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `SITEID` — Veri Merkezi
 - `RECSTATUS` — Kayıt Durumu
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
-
-
-Türkçe açıklama tamamlamalarının tam kaynak metni ve çeviri/türetme yöntemi JSON sözlüğündeki `description_tr_provenance` alanındadır. Kaynaktaki belirsiz açıklamalar tahminle tamamlanmaz.

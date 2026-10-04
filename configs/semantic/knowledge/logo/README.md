@@ -50,3 +50,15 @@ dosyalarındadır. Yeniden çalıştırıldığında JSON raporu o çalıştırm
 Canlı kataloglar bu dosya değişince kendiliğinden yeniden profillenmez; müşteri şeması bir sonraki
 profil/indeksleme çalışmasında yeni açıklamaları alır. Web sözlüğünde bulunması, kolonun müşterinin
 Logo sürümünde de bulunduğunu kanıtlamaz; canlı şema esas alınır.
+
+### Doğrulanmış ek (2026-10-03)
+
+`configs/schemas/logo-column-additions.json` canlı Logo taramasının (`docs/analiz/kolon-eslestirme/`) bulduğu,
+sözlükte olmayan tablo/kolon açıklamalarını ve canlı veriyle doğrulanmış kod etiketlerini taşır. LDDS ve web
+içe aktarımından sonra çalıştırın:
+
+```bash
+python backend/scripts/import_logo_additions.py          # --check: yazmadan rapor
+```
+
+Boşu doldurur, var olan metni ezmez; `confidence: verified` kod kümesi eski etiketin yerine geçer.
