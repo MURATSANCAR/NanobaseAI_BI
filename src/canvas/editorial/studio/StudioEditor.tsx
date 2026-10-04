@@ -8,6 +8,7 @@ import { ModuleFrame, Panel } from '../kit';
 import { Img, ghostBtn, gradientBtn, press } from './shared';
 import { revision, useStudioJob } from './StudioFlow';
 import { MarketingKit } from './marketing';
+import { FilmStudio } from './film';
 import { CharactersEntry } from './characters';
 import { EpubSection } from './epub';
 import { ColoringPanel } from './coloring';
@@ -326,6 +327,7 @@ export default function StudioEditor() {
         </Panel>
       </div>
       <MarketingKit jobId={jobId} />
+      <FilmStudio jobId={jobId} />
       <EpubSection jobId={jobId} />
       <div className="mt-3 lg:mt-4"><ColoringPanel jobId={jobId} job={d} /></div>
       <NarrationSection jobId={jobId} />
