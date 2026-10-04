@@ -182,3 +182,10 @@ def test_off_mode_does_nothing(env):
     seo, db, mp = env
     mp.setattr(w, "mode", lambda: "kapali")
     assert w.on_approve(seo, "pr1", "kisi") is None and not db.sql
+
+
+def test_title_must_carry_author():
+    assert w.title_has_author({"Model": "Nurşen Şirin"}, {"SeoTitle": "Kitap - Nurşen Şirin | Gülce"})
+    assert not w.title_has_author({"Model": "Nurşen Şirin"}, {"SeoTitle": "Kitap | Gülce Çocuk"})
+    assert w.title_has_author({"Model": "A Yazar, B Yazar"}, {"SeoTitle": "Kitap - A Yazar | Timaş"})
+    assert w.title_has_author({}, {"SeoTitle": "Kitap | Timaş"}) and w.title_has_author({"Model": "X"}, {})

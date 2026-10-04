@@ -111,6 +111,17 @@ def build(product: dict[str, Any], proposal_fields: dict[str, Any], stamp: datet
     return out
 
 
+def title_has_author(product: dict[str, Any], proposal_fields: dict[str, Any]) -> bool:
+    """Öneri kuralı «Kitap adı - Yazar | Yayınevi»: yazar kayıtta varsa başlıkta geçmeli (çok yazarlıda ilk yazar).
+    Başlık önerilmemişse kural aranmaz."""
+    title = _clean(proposal_fields.get("SeoTitle")).lower()
+    author = _clean(product.get("Model"))
+    if not title or not author:
+        return True
+    first = re.split(r"\s*[,;&]\s*|\s+ve\s+", author)[0].strip().lower()
+    return bool(first) and first in title
+
+
 def check(fields: dict[str, Any]) -> None:
     """Liste dışı alan ya da uzun değer: yazma başlamadan durur."""
     for k, v in fields.items():
@@ -191,12 +202,20 @@ def run(seo, *, approve_ready: bool, write: bool, limit: Optional[int] = None, u
                               .order_by(PROPOSALS.c.created_at)).mappings().all()
         for prop in ready:
             try:
+                data = json.loads(seo.product_row(prop["product_id"])["data_json"] or "{}")
+            except Exception:  # noqa: BLE001
+                data = {}
+            if not title_has_author(data, json.loads(prop["fields_json"] or "{}")):
+                stats["yazar_eksik"] = stats.get("yazar_eksik", 0) + 1
+                continue
+            try:
                 seo.approve(dict(prop), json.loads(prop["fields_json"] or "{}"), user, "Toplu onay (ZEKİ AI)", crm_write=False)
                 stats["onaylanan"] += 1
             except Exception as e:  # noqa: BLE001 — değişikliksiz öneri (409) ya da eksik ürün atlanır
                 stats["onay_atlanan"] += 1
                 log.info("onay atlandı %s: %s", prop["id"], e)
-        log_line(f"onay: {stats['onaylanan']} onaylandı, {stats['onay_atlanan']} atlandı")
+        log_line(f"onay: {stats['onaylanan']} onaylandı, {stats['onay_atlanan']} atlandı, "
+                 f"{stats.get('yazar_eksik', 0)} başlıkta yazar yok (onay bekliyor)")
 
     with eng.connect() as c:
         props = c.execute(sa.select(PROPOSALS).where(PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == "onaylandi")
@@ -214,8 +233,15 @@ def run(seo, *, approve_ready: bool, write: bool, limit: Optional[int] = None, u
     stamp = now()
     conn = _write_conn()
     try:
+        seen: set[str] = set()
         for pid, prop in todo:
             prod = prods.get(pid)
+            book = books.get(crm.ean_key((json.loads(prod["data_json"]) if prod else {}).get("Barcode")))
+            if book and book in seen:  # iki ürün aynı CRM kartı: en son onaylanan yazılır
+                stats["ayni_kart"] = stats.get("ayni_kart", 0) + 1
+                continue
+            if book:
+                seen.add(book)
             status = _process(seo, conn, p, prod, prop, books, write=write, user=user, stamp=stamp)
             stats[status] = stats.get(status, 0) + 1
             if status not in ("eslesmeyen", "bos"):
