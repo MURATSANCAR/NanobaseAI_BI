@@ -74,9 +74,9 @@ def test_shot_ids_are_stable_and_scene_aware():
 
 def test_check_flags_duration_cast_and_quote():
     sc = _script([_shot(1), _shot(12, chars=["Ali"])])
-    probs = spec.check(sc, "reels", {"Elif"}, in_book=lambda q: False)
+    probs = spec.check(sc, "fragman", {"Elif"}, in_book=lambda q: False)
     text = " ".join(p.text for p in probs)
-    assert "Toplam süre" in text                      # 13 sn < 15*0.8
+    assert "Toplam süre" in text                      # 13 sn < 45*0.8
     assert "1.0 sn" in text and "12.0 sn" in text       # çekim sınırları
     assert "«Ali» oyuncu listesinde yok" in text
     assert any(not p.fatal and "kanıtsız" in p.text for p in probs)
