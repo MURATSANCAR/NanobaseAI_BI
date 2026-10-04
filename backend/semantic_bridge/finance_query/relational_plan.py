@@ -88,6 +88,9 @@ def _value(value, field_type):
         _invalid("Süzgeç değeri geçerli sonlu sayı/kimlik/tarih değil.")
     return {"type":field_type,"value":text}
 
+def ROOT_PK(data, aliases):
+    return {"alias":"root","field":ENTITY_REGISTRY[aliases["root"]]["primary_key"]}
+
 def validate_relational_query(data, question, reference_date):
     """Structure/type/grain checks only; caller must review original intent separately."""
     _keys(data,RELATIONAL_SCHEMA["properties"])
@@ -120,7 +123,7 @@ def validate_relational_query(data, question, reference_date):
         key=(ref["alias"],ref["field"])
         if key in groups: _invalid("Tekrarlanan grup alanı.")
         groups.append(key)
-    ids=set(); plain=[]; aggregates=False
+    ids=set(); plain=[]; aggregates=False; selects=[]
     for selected in data["select"]:
         _keys(selected,["id","op","field"])
         if (not isinstance(selected["id"],str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}",selected["id"])
@@ -128,6 +131,8 @@ def validate_relational_query(data, question, reference_date):
             _invalid("Projeksiyon kimliği veya işlemi geçersiz.")
         ids.add(selected["id"])
         if selected["op"]=="count_records":
+            if selected["field"]==ROOT_PK(data, aliases):
+                selected={**selected,"field":None}           # kök kimliğini açıkça yazmak aynı sayımdır
             if selected["field"] is not None: _invalid("Kayıt sayımı kök kimliğini kullanır, başka alan alamaz.")
         else:
             field=_field(selected["field"],aliases)
@@ -140,6 +145,7 @@ def validate_relational_query(data, question, reference_date):
                 _invalid("Toplam yalnız kök kaydın kendi alanında alınır; bağlanan üst kaydın tutarı her alt satırda tekrarlanır.")
             if selected["op"]=="label" and not field.get("values"):
                 _invalid("Etiket yalnız kod listesi olan alanda gösterilir.")
+        selects.append(selected)
         if selected["op"] in {"field","label","normalized_text","missing_flag"}: plain.append((selected["field"]["alias"],selected["field"]["field"]))
         else: aggregates=True
     if aggregates and (data["distinct"] or any(item["op"] in {"missing_flag","normalized_text"} for item in data["select"])):
@@ -174,7 +180,7 @@ def validate_relational_query(data, question, reference_date):
         _invalid("İlişkisel sonuç sınırı geçersiz.")
     if question and data["limit"] is not None and not re.search(r"\b"+str(data["limit"])+r"\b",normalize_numbers(question)):
         _invalid("Sonuç sınırı özgün kullanıcı sorusunda bulunamadı.")
-    return {**data,"filters":filters}
+    return {**data,"select":selects,"filters":filters}
 
 
 RELATIONAL_CAPABILITIES = {
@@ -192,7 +198,7 @@ RELATIONAL_CAPABILITIES = {
     "operations":{
         "joins":"root alias is root; new aliases j1..j8. Only forward child FK -> unique parent PK. LEFT preserves missing/inactive parents with NULL; INNER excludes those roots. Reverse parent -> children is not supported.",
         "projection":"field (raw), label (code-list field shown as its CRM label; filter such fields by the numeric code from codes), normalized_text (text-only trim spaces and blank to NULL), missing_flag (text NULL/trimmed empty; other fields NULL), distinct true means unique whole selected row, count_records (distinct root PK), count_distinct (nonNULL field), sum only when sum_allowed and only on a root field (a joined parent's amount repeats per child row). Raw numeric field is not necessarily additive.",
-        "filters":"AND of eq/ne/contains/in/range/is_null/not_null/is_missing/not_missing. is_missing/not_missing use NULL or trimmed blank for text, NULL for other types. range inclusive lower/exclusive upper. NULL tests do not test blank strings. ne does not retain NULL. Fields cannot be compared to other fields.",
+        "filters":"AND of eq/ne/contains/in/range/is_null/not_null/is_missing/not_missing. eq/ne/contains need exactly one value, in at least one, range two; a filter without its value is invalid — omit the filter instead. A code-list field (codes) is filtered with the numeric code whose label matches the question. Active/passive record rules are applied automatically; never add a state filter for them. is_missing/not_missing use NULL or trimmed blank for text, NULL for other types. range inclusive lower/exclusive upper. NULL tests do not test blank strings. ne does not retain NULL. Fields cannot be compared to other fields.",
         "literal":"type must equal field type; value string. number finite decimal, identity UUID, bool true/false; date ISO date means Istanbul midnight or timestamp must include UTC offset.",
         "grouping":"When aggregates selected, group_by must equal all plain selected field references. DISTINCT projection requires explicit distinct=true and cannot combine with aggregates. Missing flags and normalized_text are detail-only; no derived arithmetic, HAVING or conditional counters.",
         "ordering":"Only selected output IDs, descending boolean. Technical tie-breaker is root PK for detail or group fields for aggregate.",

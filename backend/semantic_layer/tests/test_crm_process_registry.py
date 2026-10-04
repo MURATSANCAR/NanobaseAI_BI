@@ -101,3 +101,13 @@ def test_the_planner_is_told_which_source_owns_process_and_which_owns_money():
     from semantic_bridge.finance_query import planner
     text = inspect.getsource(planner)
     assert "CRM süreçtir" in text and "CRM sipariş tutarı sipariş anındaki tutardır, ciro veya satış değildir" in text
+
+
+def test_counting_by_the_root_key_written_out_is_the_same_record_count():
+    p = plan("crm_activity", [{"id": "n", "op": "count_records", "field": ref("root", "crm_activity_id")}])
+    assert validate_relational_query(p, "", None)["select"][0]["field"] is None
+
+
+def test_state_is_not_offered_as_a_field_because_the_active_rule_is_automatic():
+    assert not any("statecode" in e["fields"] for e in PROCESS_ENTITIES.values())
+    assert PROCESS_ENTITIES["crm_order"]["active_predicate"] == "{alias}.[statecode]=0"

@@ -100,7 +100,7 @@ for lg, key in KEYS.items():
         for c in [NAME_COL.get(lg, 'new_name')] + EXTRA.get(lg, []):
             real = next((x for x in cols if x.lower() == c.lower() and x.lower() in phys), None)
             if real: add(fold(cols[real]['label'] or c), real, cols[real])
-        if state: add('statecode', state, cols[state])
+        # statecode alan olarak verilmez: aktif kayıt koşulu (active_predicate) her okumaya kendiliğinden eklenir.
     else:
         fks = {f['fk'].lower(): f for f in d['fks']}
         for c, m in sorted(cols.items(), key=lambda kv: (kv[0] != 'statecode', kv[0])):
@@ -110,7 +110,9 @@ for lg, key in KEYS.items():
             if name_is_sensitive(c) or name_is_sensitive(fold(m['label'] or '')):
                 continue
             fill = prof['fill'].get(c, 0)
-            if lc in ('statecode', 'statuscode', 'createdon'):
+            if lc == 'statecode':
+                continue                                     # aktif kayıt koşulu otomatik; modele süzgeç olarak verilmez
+            if lc in ('statuscode', 'createdon'):
                 add(lc if lc != 'createdon' else 'created_on', c, m); continue
             if fill < 0.05: continue
             if m['type'] in ('lookup', 'customer') or lc in fks:     # N:N ara tablonun uçları uniqueidentifier tipinde
