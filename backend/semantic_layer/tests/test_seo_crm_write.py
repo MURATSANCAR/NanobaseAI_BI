@@ -189,3 +189,148 @@ def test_title_must_carry_author():
     assert not w.title_has_author({"Model": "Nurşen Şirin"}, {"SeoTitle": "Kitap | Gülce Çocuk"})
     assert w.title_has_author({"Model": "A Yazar, B Yazar"}, {"SeoTitle": "Kitap - A Yazar | Timaş"})
     assert w.title_has_author({}, {"SeoTitle": "Kitap | Timaş"}) and w.title_has_author({"Model": "X"}, {})
+
+
+# ------------------------------------------------------------------ yazım sırası, geri al korumaları, onay kuralları
+def _writes(seo):
+    with seo.engine().connect() as c:
+        return [dict(r) for r in c.execute(_sa.select(w.WRITES)).mappings()]
+
+
+def test_old_value_is_recorded_before_crm_changes(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    seen = []
+    real = _Cur.execute
+
+    def spy(self, sql, *args):
+        if sql.startswith("UPDATE"):
+            seen.extend((r["status"], _json.loads(r["before_json"]).get("new_seobaslik")) for r in _writes(seo))
+        return real(self, sql, *args)
+
+    mp.setattr(_Cur, "execute", spy)
+    assert w.on_approve(seo, "pr1", "kisi") == "yazildi"
+    assert seen == [("yaziliyor", "Eski başlık")]
+    assert [r["status"] for r in _writes(seo)] == ["yazildi"]
+
+
+def test_failed_update_keeps_single_error_record(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    real = _Cur.execute
+
+    def boom(self, sql, *args):
+        if sql.startswith("UPDATE"):
+            raise RuntimeError("izin yok")
+        return real(self, sql, *args)
+
+    mp.setattr(_Cur, "execute", boom)
+    assert w.on_approve(seo, "pr1", "kisi") == "hata"
+    rows = _writes(seo)
+    assert len(rows) == 1 and rows[0]["status"] == "hata" and "izin yok" in rows[0]["error"]
+    assert db.card["new_seobaslik"] == "Eski başlık"
+
+
+def test_undo_refuses_when_crm_was_edited_later(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    w.on_approve(seo, "pr1", "kisi")
+    db.card["new_seobaslik"] = "Editörün elle düzelttiği başlık"
+    wid = _writes(seo)[0]["id"]
+    with pytest.raises(RuntimeError, match="sonra değişmiş"):
+        w.undo(seo, wid, "kisi")
+    assert db.card["new_seobaslik"] == "Editörün elle düzelttiği başlık"
+    assert _writes(seo)[0]["status"] == "yazildi"
+
+
+def test_undo_only_latest_write_of_card(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    w.on_approve(seo, "pr1", "kisi")
+    first = _writes(seo)[0]["id"]
+    with seo.engine().begin() as c:
+        c.execute(PROPOSALS.update().where(PROPOSALS.c.id == "pr1").values(
+            fields_json=_json.dumps({"SeoTitle": "Yeni başlık - Yazar | Timaş"})))
+    assert w.on_approve(seo, "pr1", "kisi") == "yazildi"
+    with pytest.raises(RuntimeError, match="en son yazım"):
+        w.undo(seo, first, "kisi")
+    assert db.card["new_seobaslik"] == "Yeni başlık - Yazar | Timaş"
+
+
+def test_undo_fails_when_card_not_updated(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    w.on_approve(seo, "pr1", "kisi")
+    wid = _writes(seo)[0]["id"]
+    real = _Cur.execute
+
+    def passive(self, sql, *args):
+        real(self, sql, *args) if sql.startswith("SELECT") else None
+        if sql.startswith("UPDATE"):
+            self.rowcount = 0
+
+    mp.setattr(_Cur, "execute", passive)
+    with pytest.raises(RuntimeError, match="güncellenemedi"):
+        w.undo(seo, wid, "kisi")
+    assert _writes(seo)[0]["status"] == "yazildi"
+
+
+def test_odbc_password_is_braced_when_needed():
+    assert w._odbc_value("timas_1") == "timas_1"
+    assert w._odbc_value("a;b}c") == "{a;b}}c}"
+
+
+class _Approver:
+    """SeoGeo.approve'un ihtiyaç duyduğu kadarı: bellek içi SQLite, tek ürün, tek öneri."""
+
+    def __init__(self, eng):
+        self.eng, self.audits = eng, []
+
+    def engine(self):
+        return self.eng
+
+    def product_row(self, pid):
+        return {"data_json": _json.dumps({"SeoTitle": "Eski"}), "name": "Kitap"}
+
+    def rescore(self, p, fields):
+        return 80
+
+    def audit(self, *a):
+        self.audits.append(a)
+
+    def proposal(self, pid):
+        with self.eng.connect() as c:
+            return dict(c.execute(_sa.select(PROPOSALS).where(PROPOSALS.c.id == pid)).mappings().first())
+
+
+def _approver_env(status="hazir"):
+    eng = _sa.create_engine("sqlite://")
+    ensure(eng)
+    with eng.begin() as c:
+        c.execute(PROPOSALS.insert().values(id="pr9", tenant_id="t", product_id="p1", status=status, created_by="Ayşe",
+                                            fields_json=_json.dumps({"SeoTitle": "Yeni"}), before_json="{}",
+                                            created_at=w.now()))
+    return _Approver(eng)
+
+
+def test_requester_cannot_approve_own_proposal():
+    from fastapi import HTTPException
+    from semantic_bridge.seo_geo import SeoGeo
+
+    a = _approver_env()
+    with pytest.raises(HTTPException) as e:
+        SeoGeo.approve(a, a.proposal("pr9"), {"SeoTitle": "Yeni"}, "ayşe", "", crm_write=False)
+    assert e.value.status_code == 403 and a.proposal("pr9")["status"] == "hazir"
+    assert SeoGeo.approve(a, a.proposal("pr9"), {"SeoTitle": "Yeni"}, "Mehmet", "", crm_write=False)["status"] == "onaylandi"
+
+
+def test_second_concurrent_approval_is_rejected():
+    from fastapi import HTTPException
+    from semantic_bridge.seo_geo import SeoGeo
+
+    a = _approver_env()
+    stale = a.proposal("pr9")  # iki istek de «hazir» okudu
+    SeoGeo.approve(a, stale, {"SeoTitle": "Yeni"}, "Mehmet", "", crm_write=False)
+    with pytest.raises(HTTPException) as e:
+        SeoGeo.approve(a, stale, {"SeoTitle": "Yeni"}, "Zeynep", "", crm_write=False)
+    assert e.value.status_code == 409 and a.proposal("pr9")["decided_by"] == "Mehmet"

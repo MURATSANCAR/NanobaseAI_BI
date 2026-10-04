@@ -380,3 +380,25 @@ def test_crm_data_end_text_is_utc():
     assert _S.crm_utc("2026-09-28T09:09:15") == _D(2026, 9, 28, 9, 9, 15, tzinfo=_Z.utc)
     assert _S.crm_utc(_D(2026, 9, 28, 9, 9, 15)) == _D(2026, 9, 28, 9, 9, 15, tzinfo=_Z.utc)
     assert _S.crm_utc(None) is None and _S.crm_utc("x") is None
+
+
+def test_timer_service_is_read_from_systemd_not_guessed(monkeypatch):
+    """`timas-field-gece.timer` `timas-field@gece.service`'i tetikler; addan türetilen servis yoktur ve «başarılı» görünür."""
+    import subprocess as sp
+
+    class Out:
+        def __init__(self, stdout):
+            self.stdout = stdout
+
+    units = {"timas-field-gece.timer": "timas-field@gece.service\n", "timas-x.timer": ""}
+    monkeypatch.setattr(S.subprocess, "run", lambda args, **kw: Out(units[args[2]]))
+    assert S._service_of("timas-field-gece.timer") == "timas-field@gece.service"
+    assert S._service_of("timas-x.timer") == "timas-x.service"
+
+    def boom(*a, **kw):
+        raise sp.TimeoutExpired("systemctl", 5)
+
+    monkeypatch.setattr(S.subprocess, "run", boom)
+    assert S._service_of("timas-y.timer") == "timas-y.service"
+    assert {t["unit"] for t in S.EXTRA_TIMERS} >= {"timas-field-gece.timer", "timas-musteri.timer", "timas-book-similar.timer",
+                                                    "timas-readers.timer", "timas-channels.timer", "zeki-directory-sync.timer"}

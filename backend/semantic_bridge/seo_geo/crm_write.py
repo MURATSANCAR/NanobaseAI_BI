@@ -157,7 +157,7 @@ def _write_conn():
         c = json.load(f)
     c = c.get("connection", c)
     cs = "DRIVER=%s;SERVER=%s,%s;DATABASE=%s;UID=%s;PWD=%s;TDS_Version=%s" % (
-        c.get("driver", "FreeTDS"), c["host"], c.get("port", 1433), c["database"], c["user"], c["password"],
+        c.get("driver", "FreeTDS"), c["host"], c.get("port", 1433), c["database"], c["user"], _odbc_value(c["password"]),
         c.get("tds_version", "7.4"))
     conn = pyodbc.connect(cs, timeout=int(c.get("login_timeout", 30)), autocommit=False)
     conn.timeout = 60
@@ -167,6 +167,11 @@ def _write_conn():
     except Exception:  # noqa: BLE001
         pass
     return conn
+
+
+def _odbc_value(v: str) -> str:
+    """Bağlantı dizesinde `;` ya da `}` taşıyan değer süslü paranteze alınır (`}` ikilenir)."""
+    return "{" + v.replace("}", "}}") + "}" if any(ch in v for ch in ";{}") else v
 
 
 def _row(cur) -> Optional[dict[str, Any]]:
@@ -266,7 +271,15 @@ def _process(seo, conn, p: str, prod: Optional[dict[str, Any]], prop: dict[str, 
     if not fields:
         return "bos"
     cur = conn.cursor()
-    wid, err, before = uuid.uuid4().hex, None, {}
+    wid, err, before, recorded = uuid.uuid4().hex, None, {}, False
+
+    def record(status: str) -> None:
+        with seo.engine().begin() as c:
+            c.execute(WRITES.insert().values(
+                id=wid, tenant_id=seo.tenant(), product_id=prop["product_id"], book_id=book, proposal_id=prop["id"],
+                mode="acik" if write else "deneme", status=status, fields_json=_jsonable(fields),
+                before_json=_jsonable(before), error=err, by=user, at=now()))
+
     try:
         check(fields)
         cur.execute(select_sql(p), book)
@@ -277,6 +290,9 @@ def _process(seo, conn, p: str, prod: Optional[dict[str, Any]], prop: dict[str, 
         if same(fields, before):
             status = "degisiklik_yok"
         elif write:
+            # Eski değer CRM'e dokunmadan önce kayda girer: commit'ten sonra kayıt düşse de geri alınabilir.
+            record("yaziliyor")
+            recorded = True
             keys = list(fields)
             cur.execute(update_sql(p, keys), *[fields[k] for k in keys], book)
             if cur.rowcount != 1:
@@ -291,11 +307,11 @@ def _process(seo, conn, p: str, prod: Optional[dict[str, Any]], prop: dict[str, 
         except Exception:  # noqa: BLE001
             pass
         status, err = "hata", str(e)[:1000]
-    with seo.engine().begin() as c:
-        c.execute(WRITES.insert().values(
-            id=wid, tenant_id=seo.tenant(), product_id=prop["product_id"], book_id=book, proposal_id=prop["id"],
-            mode="acik" if write else "deneme", status=status, fields_json=_jsonable(fields),
-            before_json=_jsonable(before), error=err, by=user, at=now()))
+    if recorded:
+        with seo.engine().begin() as c:
+            c.execute(WRITES.update().where(WRITES.c.id == wid).values(status=status, error=err))
+    else:
+        record(status)
     if status == "yazildi":
         seo.audit(user, "crm_write", prop["product_id"], prod["name"] if prod else prop["product_id"],
                   {"crm": book, "alanlar": list(fields), "kayit": wid})
@@ -376,12 +392,16 @@ def verify(seo, log_line: Callable[[str], None] = lambda s: log.info(s)) -> dict
     with eng.begin() as c:
         for pid, r in last.items():
             wrote = json.loads(r["fields_json"])
-            cur = current.get(str(r["book_id"]).lower(), {})
-            crm_ok = all(_clean(cur.get(k)) == _clean(wrote.get(k)) for k in FIELDS if k in wrote)
+            cur = current.get(str(r["book_id"]).lower())
+            # Kart okunamadı (pasife alınmış ya da silinmiş): «değişti» değil, bilinmiyor.
+            crm_ok = None if cur is None else all(_clean(cur.get(k)) == _clean(wrote.get(k)) for k in FIELDS if k in wrote)
             d = prods.get(pid, {})
             on_site = bool(wrote.get("new_seobaslik")) and _clean(d.get("SeoTitle")) == _clean(wrote.get("new_seobaslik")) \
                 and (not wrote.get("new_seoaciklama") or _clean(d.get("SeoDescription")) == _clean(wrote.get("new_seoaciklama")))
-            stats["crm_ayni" if crm_ok else "crm_degisti"] += 1
+            if crm_ok is None:
+                stats["crm_okunamadi"] = stats.get("crm_okunamadi", 0) + 1
+            else:
+                stats["crm_ayni" if crm_ok else "crm_degisti"] += 1
             stats["sitede"] += int(on_site)
             c.execute(WRITES.update().where(WRITES.c.id == r["id"]).values(checked_at=stamp, crm_ok=crm_ok, on_site=on_site))
     log_line(json.dumps(stats, ensure_ascii=False))
@@ -389,7 +409,8 @@ def verify(seo, log_line: Callable[[str], None] = lambda s: log.info(s)) -> dict
 
 
 def undo(seo, write_id: str, user: str) -> dict[str, Any]:
-    """Yazılan kaydı CRM'deki eski değerine döndürür (yalnız «yazildi» kayıtlar; kip «acik» olmalı)."""
+    """Yazılan kaydı CRM'deki eski değerine döndürür. Yalnız kartın en son yazımı geri alınır ve yalnız CRM'deki değer
+    hâlâ bizim yazdığımızsa: biri sonradan elle düzelttiyse onun değeri ezilmez. Kip «acik» olmalı."""
     from semantic_bridge import admin as admin_mod
 
     if mode() != "acik":
@@ -397,16 +418,38 @@ def undo(seo, write_id: str, user: str) -> dict[str, Any]:
     eng = seo.engine()
     with eng.connect() as c:
         w = c.execute(sa.select(WRITES).where(WRITES.c.id == write_id, WRITES.c.tenant_id == seo.tenant())).mappings().first()
-    if not w or w["status"] != "yazildi":
-        raise RuntimeError("Geri alınacak yazılmış kayıt yok.")
+        # «yaziliyor»: CRM'e yazılmış ama sonucu kayda geçememiş olabilir; aşağıdaki karşılaştırma ayırır.
+        if not w or w["status"] not in ("yazildi", "yaziliyor"):
+            raise RuntimeError("Geri alınacak yazılmış kayıt yok.")
+        newer = c.execute(sa.select(sa.func.count()).select_from(WRITES).where(
+            WRITES.c.tenant_id == w["tenant_id"], WRITES.c.book_id == w["book_id"], WRITES.c.id != w["id"],
+            WRITES.c.status.in_(("yazildi", "yaziliyor")), WRITES.c.at > w["at"])).scalar() or 0
+    if newer:
+        raise RuntimeError("Bu kitap kartına daha sonra yeniden yazılmış; önce en son yazım geri alınmalı.")
     before = json.loads(w["before_json"] or "{}")
-    keys = [k for k in json.loads(w["fields_json"]) if k in FIELDS or k in TRACK]
+    wrote = json.loads(w["fields_json"])
+    keys = [k for k in wrote if k in FIELDS or k in TRACK]
     p = crm._prefix(admin_mod.conf("CRM_SCHEMA"))
     conn = _write_conn()
     try:
         cur = conn.cursor()
-        cur.execute(update_sql(p, keys), *[before.get(k) for k in keys], w["book_id"])
-        conn.commit()
+        cur.execute(select_sql(p), w["book_id"])
+        now_crm = _row(cur)
+        if now_crm is None:
+            raise RuntimeError("CRM'de kart bulunamadı; geri alınmadı.")
+        moved = [k for k in FIELDS if k in wrote and _clean(now_crm.get(k)) != _clean(wrote.get(k))]
+        if moved:
+            if w["status"] == "yaziliyor" and all(_clean(now_crm.get(k)) == _clean(before.get(k)) for k in moved):
+                keys = []  # yazım hiç gerçekleşmemiş: CRM zaten eski değerde, yalnız kayıt kapanır
+            else:
+                raise RuntimeError("CRM'deki değer yazımdan sonra değişmiş (" + ", ".join(moved) + "); elle yapılan "
+                                   "düzeltme ezilmesin diye geri alınmadı.")
+        if keys:
+            cur.execute(update_sql(p, keys), *[before.get(k) for k in keys], w["book_id"])
+            if cur.rowcount != 1:
+                conn.rollback()
+                raise RuntimeError("CRM kartı güncellenemedi (kart pasife alınmış olabilir); geri alınmadı.")
+            conn.commit()
     finally:
         conn.close()
     with eng.begin() as c:

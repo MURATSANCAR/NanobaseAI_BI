@@ -162,6 +162,7 @@ def test_only_new_or_changed_books_are_read_again():
     assert not C.unchanged({"last_lookup": last}, m, {"p1": datetime(2026, 3, 1)})                # yeni kapak
     assert not C.unchanged({"last_lookup": {**last, "crm_book_id": "eski"}}, m, {})               # başka kayıt
     assert not C.unchanged({"last_lookup": {**last, "outcome": "NO_MATCH"}}, m, {})               # artık bulunuyor
+    assert not C.unchanged({"last_lookup": {**last, "outcome": "FETCH_FAILED"}}, m, {})           # kapak okunamamıştı
     none = C.match(crm, [], "bambaşka kitap")
     assert C.unchanged({"last_lookup": {**last, "outcome": "NO_MATCH"}}, none, {})
     assert not C.unchanged({"last_lookup": last}, none, {})                     # eşleşme kayboldu: kayıt silinmeli

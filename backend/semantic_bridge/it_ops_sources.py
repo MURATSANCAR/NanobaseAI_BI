@@ -392,6 +392,14 @@ EXTRA_TIMERS = [
     {"unit": "timas-admin-group.timer", "label": "Yetki grupları tazeleme", "every": "07:00 ve 12:00"},
     {"unit": "timas-crm-unassigned.timer", "label": "Departmansız CRM kullanıcıları e-postası", "every": "07:00 ve 12:00"},
     {"unit": "editor-crm-connector.timer", "label": "Editör CRM bağlayıcısı", "every": "gece 03:10"},
+    {"unit": "timas-musteri.timer", "label": "Müşteri ilişkileri gece turu", "every": "gece"},
+    {"unit": "timas-book-similar.timer", "label": "Kitap benzerliği dizini", "every": "gece 03:40"},
+    {"unit": "timas-readers.timer", "label": "Okur veri tabanı", "every": "gece"},
+    {"unit": "timas-channels.timer", "label": "Kanal satışları ve CRM hedefleri", "every": "gece"},
+    {"unit": "timas-dijital.timer", "label": "Dijital yayın ve e-kitap", "every": "gece"},
+    {"unit": "timas-stock.timer", "label": "Depo ve stok", "every": "sabah"},
+    {"unit": "timas-catalog.timer", "label": "Katalog ve bülten", "every": "07:15"},
+    {"unit": "zeki-directory-sync.timer", "label": "Sohbet rehberi ve CRM ekipleri eşitlemesi", "every": "15 dk"},
     {"unit": "timas-itops.timer", "label": "Sistem durumu denetimi", "every": "5 dk"},
 ]
 
@@ -412,6 +420,17 @@ def _stamp(v: Optional[str]) -> Optional[datetime]:
     off = re.search(r"([+-]\d{2})(\d{2})?\s*$", v.strip())
     tz = timezone(timedelta(hours=int(off.group(1)), minutes=int(off.group(2) or 0))) if off else timezone(timedelta(hours=3))
     return d.replace(tzinfo=tz).astimezone(timezone.utc)
+
+
+def _service_of(timer: str) -> str:
+    """Zamanlayıcının tetiklediği servis. Adından türetilemez: `timas-field-gece.timer` → `timas-field@gece.service`;
+    türetilen ad yoksa systemd onu «başarılı» gösterir ve düşen iş hiç görünmez."""
+    try:
+        out = subprocess.run(["systemctl", "show", timer, "-p", "Unit", "--value"], capture_output=True, text=True,
+                             timeout=5).stdout.strip()
+    except Exception:  # noqa: BLE001
+        out = ""
+    return out or timer.replace(".timer", ".service")
 
 
 def _loaded(unit: str) -> bool:
@@ -437,7 +456,7 @@ def collect_timers(ctx: Ctx) -> int:
         if t.get("state") == "unknown" or not _loaded(t["unit"]):
             continue
         nxt, last = times.get(t["unit"], (t.get("next"), t.get("last")))
-        svc = admin_mod._unit(t["unit"].replace(".timer", ".service"))
+        svc = admin_mod._unit(_service_of(t["unit"]))
         failed = svc.get("state") == "failed" or (svc.get("result") not in (None, "", "success"))
         I.upsert_job(ctx.engine, ctx.tenant, t["unit"], label=t["label"], source="systemd", every=t.get("every"),
                      last_at=_stamp(last), next_at=_stamp(nxt), last_ok=None if not last else not failed,

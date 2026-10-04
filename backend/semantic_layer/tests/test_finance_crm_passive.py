@@ -34,7 +34,7 @@ class FakeCrm:
 
     def execute(self, sql, limit):
         self.sql.append(sql)
-        if "sys.tables" in sql:
+        if "sys.objects" in sql:
             return ["name"], [{"name": t} for t in ELIGIBLE], False
         if "EntityView" in sql:
             return ["ent", "code"], [{"ent": e, "code": c} for e, c in PASSIVE], False
@@ -56,7 +56,7 @@ def executor():
 
 
 def business_sql(crm):
-    return [s for s in crm.sql if "sys.tables" not in s and "StringMapBase" not in s]
+    return [s for s in crm.sql if "sys.objects" not in s and "StringMapBase" not in s]
 
 
 def assert_guarded(sqls):

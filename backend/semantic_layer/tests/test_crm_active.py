@@ -56,7 +56,7 @@ def test_wrap_only_crm_databases():
 
         def execute(self, sql, limit):
             self.seen.append(sql)
-            if "sys.tables" in sql:
+            if "sys.objects" in sql:
                 return [], [{"name": "new_kitapBase"}], False
             return [], [], False
 
@@ -74,7 +74,7 @@ def test_active_record_with_passive_status_reason_is_filtered():
     """Etkin kayıt (statecode 0) durum nedeni «Pasif» taşıyorsa da gelmez (kullanıcı kuralı 2026-09-29)."""
     passive = ca.passive_codes([{"ent": "new_kitap", "code": 2}, {"ent": "new_kitap", "code": 100000003},
                                 {"ent": "contact", "code": "2"}, {"ent": "", "code": 5}, {"ent": "x", "code": None}])
-    assert passive == {"new_kitapbase": (2, 100000003), "contactbase": (2,)}
+    assert passive == {"new_kitapbase": (2, 100000003), "new_kitap": (2, 100000003), "contactbase": (2,), "contact": (2,)}
     sql = f"SELECT b.new_name FROM {P}new_kitapBase b LEFT JOIN {P}new_projeBase j ON j.x = b.y"
     out = ca.rewrite(sql, E, passive)
     assert (f"(SELECT * FROM {P}new_kitapBase WHERE statecode = 0 AND (statuscode IS NULL OR statuscode NOT IN"
@@ -90,7 +90,7 @@ def test_wrapper_reads_passive_reasons_once_and_survives_failure():
 
         def execute(self, sql, limit):
             self.seen.append(sql)
-            if "sys.tables" in sql:
+            if "sys.objects" in sql:
                 return [], [{"name": "new_kitapBase"}], False
             if "StringMapBase" in sql:
                 if self.fail:
@@ -108,3 +108,44 @@ def test_wrapper_reads_passive_reasons_once_and_survives_failure():
     crm2 = ca.wrap(bad, "Timas_MSCRM")
     crm2.execute(f"SELECT * FROM {P}new_kitapBase k", 10)
     assert bad.seen[-1] == f"SELECT * FROM (SELECT * FROM {P}new_kitapBase WHERE statecode = 0) k"
+
+
+def test_settings_reach_the_inner_connector():
+    """`conn.query_timeout = 1800` sarmalda kalırsa asıl bağlantı varsayılan 120 sn ile koşar."""
+    class Inner:
+        query_timeout = 120
+
+    inner = Inner()
+    crm = ca.ActiveOnly(inner, "Timas_MSCRM")
+    crm.query_timeout = 1800
+    assert inner.query_timeout == 1800 and crm.query_timeout == 1800
+    assert "query_timeout" not in vars(crm) and crm.inner is inner
+
+
+def test_views_of_entities_are_filtered_too():
+    """`new_kitap` görünümünden okuyan modül süzgeçten kaçmaz; durum nedeni kodu görünüm adına da bağlanır."""
+    class Fake:
+        def __init__(self):
+            self.seen = []
+
+        def execute(self, sql, limit):
+            self.seen.append(sql)
+            if "sys.objects" in sql:
+                return [], [{"name": "new_kitapBase"}, {"name": "new_kitap"}, {"name": "Account"}], False
+            if "StringMapBase" in sql:
+                return [], [{"ent": "new_kitap", "code": 2}], False
+            return [], [], False
+
+    inner = Fake()
+    crm = ca.wrap(inner, "Timas_MSCRM")
+    crm.execute(f"SELECT k.new_name FROM {P}new_kitap k JOIN {P}Account a ON a.AccountId = k.x", 10)
+    assert inner.seen[-1] == (f"SELECT k.new_name FROM (SELECT * FROM {P}new_kitap WHERE statecode = 0 AND (statuscode IS NULL"
+                              f" OR statuscode NOT IN (2))) k JOIN (SELECT * FROM {P}Account WHERE statecode = 0) a ON a.AccountId = k.x")
+    assert ca.passive_codes([{"ent": "new_kitap", "code": 2}]) == {"new_kitapbase": (2,), "new_kitap": (2,)}
+
+    # Power BI'dan birebir rapor SQL'i: görünüm aynen, temel tablo süzülür.
+    pbi = ca.base_tables_only(ca.wrap(Fake(), "Timas_MSCRM"))
+    pbi.execute(f"SELECT * FROM {P}new_kitap k", 10)
+    assert pbi.inner.seen[-1] == f"SELECT * FROM {P}new_kitap k"
+    pbi.execute(f"SELECT * FROM {P}new_kitapBase k", 10)
+    assert "statecode = 0" in pbi.inner.seen[-1]

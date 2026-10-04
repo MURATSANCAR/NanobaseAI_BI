@@ -236,7 +236,7 @@ export type Question = { id: string; text: string; category: string | null; crea
 export type WithK = { kaynaklar?: Kaynaklar };
 
 /** CRM kitap kartına yazılan (ya da deneme kipinde yazılacak) görünmez SEO alanları. */
-export type CrmWriteStatus = 'yazildi' | 'deneme' | 'hata' | 'geri_alindi' | 'degisiklik_yok';
+export type CrmWriteStatus = 'yazildi' | 'yaziliyor' | 'deneme' | 'hata' | 'geri_alindi' | 'degisiklik_yok';
 export type CrmWrite = {
   id: string;
   productId: string;

@@ -177,7 +177,9 @@ class Reports:
             path = self._connection_files().get(name)
             if not path or not Path(path).exists():
                 raise RuntimeError(f"{CONNECTION_LABELS.get(name, name)} bağlantısı bu kurulumda tanımlı değil.")
-            conn = connector_from_file(path)
+            from semantic_layer.runtime.crm_active import base_tables_only
+            # Rapor SQL'leri Power BI'dan birebir: CRM görünümleri Power BI'daki gibi süzgeçsiz okunur.
+            conn = base_tables_only(connector_from_file(path))
             conn.query_timeout = QUERY_TIMEOUT  # rapor sorguları sohbet sorgularından uzun sürebilir
             self._connectors[key] = conn
         return self._connectors[key]

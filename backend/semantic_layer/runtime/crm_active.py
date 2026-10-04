@@ -7,7 +7,8 @@ bağlantının kendisindedir: CRM bağlantısından geçen her SELECT'te etkin/p
 `(SELECT * FROM <tablo> WHERE statecode = 0) <takma ad>` olarak okunur.
 
 Hangi tablo: CRM veritabanında `statecode` kolonu olan `new_*` tabloları ile `ContactBase` ve
-`AccountBase`. 2026-09-29 canlı ölçümü (.28 Timas_MSCRM): `new_*` tablolarının hepsinde durum yalnız
+`AccountBase`; ayrıca aynı varlıkların Dynamics görünümleri (`new_kitap`, `new_etkinlik`, `Contact`, `Account`;
+2026-10-04 canlıda 288 `new_*` görünümü `statecode` taşıyor). Görünümden okuyan modül süzgeçten kaçmasın diye. 2026-09-29 canlı ölçümü (.28 Timas_MSCRM): `new_*` tablolarının hepsinde durum yalnız
 0 (etkin) / 1 (pasif), özel etkinlik (açık/tamamlandı durumlu) tablo yok. Standart varlıkların
 çoğunda (fırsat, sipariş, fatura, vaka, etkinlik) durum etkin/pasif değil süreç aşamasıdır
 (kazanıldı, tamamlandı, çözüldü); onlar süzülmez. Kullanıcı hesabı (`SystemUserBase`) de süzülmez:
@@ -35,8 +36,8 @@ from typing import Any, Optional
 
 log = logging.getLogger(__name__)
 
-#: `new_*` dışında süzülen standart varlıklar (durumları yalnız etkin/pasif).
-STANDARD = ("ContactBase", "AccountBase")
+#: `new_*` dışında süzülen standart varlıklar (durumları yalnız etkin/pasif): temel tablo ve görünüm adı.
+STANDARD = ("ContactBase", "AccountBase", "Contact", "Account")
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _RETRY_SEC = 300
 
@@ -52,16 +53,18 @@ def is_crm_database(database: Any) -> bool:
 
 def candidate(name: str) -> bool:
     n = (name or "").strip("[]")
-    return n.lower().startswith("new_") and n.lower().endswith("base") or n in STANDARD
+    return n.lower().startswith("new_") or n.lower() in {s.lower() for s in STANDARD}
 
 
 def tables_sql(database: str) -> str:
     if not _NAME.match(database or ""):
         raise ValueError(f"veritabanı adı geçerli değil: {database!r}")
     names = ", ".join(f"'{n}'" for n in STANDARD)
+    # Tek SELECT: finans motorunun salt okuma denetimi UNION kabul etmez. Tablo (U) yalnız «…Base», görünüm (V) her ad.
     return (
-        f"SELECT t.name FROM [{database}].sys.tables t"
-        f" WHERE (t.name LIKE 'new[_]%Base' OR t.name IN ({names}))"
+        f"SELECT t.name FROM [{database}].sys.objects t"
+        f" WHERE ((t.type = 'U' AND t.name LIKE 'new[_]%Base') OR (t.type = 'V' AND t.name LIKE 'new[_]%')"
+        f" OR (t.type IN ('U', 'V') AND t.name IN ({names})))"
         f" AND EXISTS (SELECT 1 FROM [{database}].sys.columns c WHERE c.object_id = t.object_id AND c.name = 'statecode')"
     )
 
@@ -79,7 +82,7 @@ def passive_sql(database: str) -> str:
 
 
 def passive_codes(rows: Any) -> dict[str, tuple[int, ...]]:
-    """`passive_sql` satırları → {«new_kitapbase»: (2, …)}."""
+    """`passive_sql` satırları → {«new_kitapbase»: (2, …), «new_kitap»: (2, …)} (temel tablo ve görünüm)."""
     out: dict[str, set[int]] = {}
     for r in rows or []:
         ent, code = str(r.get("ent") or "").strip().lower(), r.get("code")
@@ -87,6 +90,7 @@ def passive_codes(rows: Any) -> dict[str, tuple[int, ...]]:
             continue
         try:
             out.setdefault(f"{ent}base", set()).add(int(code))
+            out.setdefault(ent, set()).add(int(code))
         except (TypeError, ValueError):
             continue
     return {k: tuple(sorted(v)) for k, v in out.items()}
@@ -232,9 +236,18 @@ class ActiveOnly:
         self._passive: dict[str, tuple[int, ...]] = {}
         self._failed_at = 0.0
         self._lock = threading.Lock()
+        self._views = True
 
     def __getattr__(self, item: str) -> Any:
         return getattr(self._inner, item)
+
+    def __setattr__(self, item: str, value: Any) -> None:
+        # Sarmalın kendi alanları `_` ile başlar; geri kalan ayar (`query_timeout` gibi) asıl bağlantınındır.
+        # İletilmezse ayar sarmalda kalır, bağlantı varsayılan süreyle (120 sn) koşar.
+        if item.startswith("_"):
+            object.__setattr__(self, item, value)
+        else:
+            setattr(self._inner, item, value)
 
     @property
     def inner(self) -> Any:
@@ -265,7 +278,12 @@ class ActiveOnly:
         return self._eligible
 
     def _sql(self, sql: str) -> str:
-        return rewrite(sql, self.eligible(), self._passive) if enabled() else sql
+        if not enabled():
+            return sql
+        eligible = self.eligible()
+        if not self._views:
+            eligible = frozenset(t for t in eligible if t.endswith("base"))
+        return rewrite(sql, eligible, self._passive)
 
     def execute(self, sql: str, limit: int):
         return self._inner.execute(self._sql(sql), limit)
@@ -275,6 +293,14 @@ class ActiveOnly:
 
     def dry_run(self, sql: str) -> None:
         return self._inner.dry_run(self._sql(sql))
+
+
+def base_tables_only(connector: Any) -> Any:
+    """Görünümler süzülmez, yalnız temel tablolar. Power BI'dan birebir alınmış rapor SQL'leri (Baskı Öneri, İlk Baskı)
+    Power BI ile aynı sonucu vermek zorunda; Power BI görünümleri süzgeçsiz okur (bkz. `management`)."""
+    if isinstance(connector, ActiveOnly):
+        connector._views = False
+    return connector
 
 
 def wrap(connector: Any, database: Any) -> Any:

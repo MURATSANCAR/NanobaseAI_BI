@@ -81,12 +81,13 @@ export default function SeoHistory() {
 
 const WRITE_LABEL: Record<CrmWriteStatus, string> = {
   yazildi: 'CRM’e yazıldı',
+  yaziliyor: 'Sonucu kayda geçmedi',
   deneme: 'Deneme (yazılmadı)',
   hata: 'Yazılamadı',
   geri_alindi: 'Geri alındı',
   degisiklik_yok: 'Zaten aynı',
 };
-const WRITE_TONE: Record<CrmWriteStatus, string> = { yazildi: 'good', deneme: 'violet', hata: 'bad', geri_alindi: '', degisiklik_yok: '' };
+const WRITE_TONE: Record<CrmWriteStatus, string> = { yazildi: 'good', yaziliyor: 'bad', deneme: 'violet', hata: 'bad', geri_alindi: '', degisiklik_yok: '' };
 const CRM_FIELD: Record<string, string> = { new_seobaslik: 'SEO başlığı', new_seoaciklama: 'Meta açıklama', new_kapakalt: 'Kapak alt metni' };
 const MODE_TEXT = {
   kapali: 'CRM’e yazma kapalı (Yönetim → SEO & GEO → CRM’e yazma kipi). Onaylar yalnız kayıt altına alınır.',
@@ -156,7 +157,9 @@ function CrmWrites() {
                   <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
                     {w.status !== 'yazildi' ? '—' : w.checkedAt == null ? 'Bu gece denetlenecek' : (
                       <>
-                        <span className={`sg-chip ${w.crmOk ? 'good' : 'bad'}`}>{w.crmOk ? 'CRM’de yerinde' : 'CRM’de değişmiş'}</span>
+                        <span className={`sg-chip ${w.crmOk ? 'good' : w.crmOk === false ? 'bad' : 'mid'}`}>
+                          {w.crmOk ? 'CRM’de yerinde' : w.crmOk === false ? 'CRM’de değişmiş' : 'Kart okunamadı'}
+                        </span>
                         <br />
                         <span className={`sg-chip ${w.onSite ? 'good' : 'mid'}`} style={{ marginTop: 4 }}>{w.onSite ? 'Sitede' : 'Sitede henüz yok'}</span>
                       </>
@@ -164,7 +167,7 @@ function CrmWrites() {
                   </td>
                   <td className="sg-mono" style={{ fontSize: 11.5, whiteSpace: 'nowrap' }}>{w.by ?? '—'}<br />{dateTime(w.at)}</td>
                   <td>
-                    {w.status === 'yazildi' && mode === 'acik' && (
+                    {(w.status === 'yazildi' || w.status === 'yaziliyor') && mode === 'acik' && (
                       <button type="button" className="sg-button" onClick={() => setAsk(w)}>Geri al</button>
                     )}
                   </td>

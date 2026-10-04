@@ -655,17 +655,22 @@ class SeoGeo:
                 crm_write: bool = True) -> dict[str, Any]:
         """Onay: onaylanan alanlar ve karar kaydedilir. T-soft'a gönderilmez (yazma yasak). `SEO_CRM_WRITE` açıksa
         sitede görünmeyen SEO alanları (başlık, meta açıklama, kapak alt metni) CRM kitap kartına yazılır."""
+        if prop.get("created_by") and prop["created_by"].lower() == (user or "").lower():
+            raise _err(403, "Öneriyi isteyen kişi onaylayamaz; onayı başka bir yetkili vermeli.")
         row = self.product_row(prop["product_id"])
         p = loads(row["data_json"], {})
         change = propose.changed(p, fields)
         if not change:
             raise _err(409, "Önerilen alanların hepsi mevcut değerle aynı; onaylanacak değişiklik yok.")
         with self.engine().begin() as c:
-            c.execute(PROPOSALS.update().where(PROPOSALS.c.id == prop["id"]).values(
+            # Yalnız hâlâ bekleyen öneri onaylanır: aynı anda gelen ikinci onay CRM'e ikinci kez yazmaz.
+            done = c.execute(PROPOSALS.update().where(PROPOSALS.c.id == prop["id"], PROPOSALS.c.status == "hazir").values(
                 status="onaylandi", fields_json=dumps({**loads(prop["fields_json"], {}), **fields}), decided_by=user,
                 decided_at=now(), note=note or None,
                 result="Onaylandı: " + ", ".join(change) + ". Gönderim yok; CRM bağlantısı bekleniyor.",
                 score_after=self.rescore(p, change)))
+            if done.rowcount != 1:
+                raise _err(409, "Bu öneri için karar zaten verilmiş.")
         # M50 karnesi «değiştirmeden onay» oranını buradan okur: onaylayanın öneride değiştirdiği alanlar.
         proposed = loads(prop["fields_json"], {})
         edited = sorted(k for k, v in fields.items() if str(proposed.get(k) or "") != str(v or ""))
