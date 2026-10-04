@@ -43,6 +43,7 @@
 - **Soru motoru:** `einvoice_type` (INVOICE.EINVOICETYP: 0 Satış, 2 İstisna, 4 Tevkifat; UBL InvoiceTypeCode ile doğrulandı), sözleşme 2.4.
 - **Gizli alanlar:** IBAN, kart numarası, e-posta kolonları sözlüğe açıklamayla girdi; profil `sensitivity` ad kalıbı bunları zaten maskeliyor.
 - **Kurulum ve deneme:** test sunucusuna kuruldu, canlı katalogda 166 tablo + 3.249 kolon açıklaması dolduruldu (`enrich_catalog_from_dictionary.py --apply`, 330 profil). «Bu yıl kaç tevkifatlı fatura» = 1 (referans 1). «Fatura tipine göre» model belge türünü seçti → tanımlar netleştirildi (sözleşme 2.5: belge türü «fatura tipi DEĞİL», fatura tipi «fatura tipine göre» bu kırılım). Logo/CRM ayrımı 8 soruda doğru kaynağa gitti. Eksik tablo/kolon listesi: `docs/analiz/kolon-eslestirme/logo-eksik-tablo-kolon.xlsx`.
+- **Kurulum (f24762abb):** test sunucusu — `contracts.py` (md5 eski main), «fatura tipine göre» İstisna 88.476 · Satış 2.125 · Tevkifat 1, referansla birebir. Müşteri VM'i — 7 dosya (md5 bdcb7cd75 ile eş), yalnız `bridge` imajı; konteynerde md5 yeni, `._*` 0; VM kataloğunda da 166 tablo + 3.249 kolon açıklaması dolduruldu (330 profil); aynı iki soru referansla birebir.
 - **Sözlüğe girmeyen (veride hep boş):** sektör, KVKK, vade takibi, KKEG, UFRS alanlarının çoğu — açıklamaları eklendi ama TİMAŞ kullanmıyor.
 ## 2026-10-03 (gece) — Editör: 56 kitap denetiminin genel kod hataları (kitaba özel kural yok)
 
