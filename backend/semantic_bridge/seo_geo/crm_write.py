@@ -205,8 +205,8 @@ def run(seo, *, approve_ready: bool, write: bool, limit: Optional[int] = None, u
         for pr in props:
             latest.setdefault(pr["product_id"], pr)
         prods = {r["id"]: r for r in c.execute(
-            sa.select(PRODUCTS.c.id, PRODUCTS.c.name, PRODUCTS.c.data_json)
-            .where(PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.id.in_(list(latest)) if latest else sa.false())).mappings()}
+            sa.select(PRODUCTS.c.product_id.label("id"), PRODUCTS.c.name, PRODUCTS.c.data_json)
+            .where(PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.product_id.in_(list(latest)) if latest else sa.false())).mappings()}
         books = {r["ean"]: r["book_id"] for r in c.execute(
             sa.select(CRM_BOOKS.c.ean, CRM_BOOKS.c.book_id).where(CRM_BOOKS.c.tenant_id == tenant)).mappings()}
     todo = list(latest.items())[: limit or None]
@@ -290,8 +290,8 @@ def on_approve(seo, proposal_id: str, user: str) -> Optional[str]:
         prop = c.execute(sa.select(PROPOSALS).where(PROPOSALS.c.id == proposal_id)).mappings().first()
         if not prop:
             return None
-        prod = c.execute(sa.select(PRODUCTS.c.id, PRODUCTS.c.name, PRODUCTS.c.data_json).where(
-            PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.id == prop["product_id"])).mappings().first()
+        prod = c.execute(sa.select(PRODUCTS.c.product_id.label("id"), PRODUCTS.c.name, PRODUCTS.c.data_json).where(
+            PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.product_id == prop["product_id"])).mappings().first()
         data = json.loads(prod["data_json"]) if prod else {}
         ean = crm.ean_key(data.get("Barcode"))
         books = {r["ean"]: r["book_id"] for r in c.execute(sa.select(CRM_BOOKS.c.ean, CRM_BOOKS.c.book_id).where(
@@ -325,8 +325,8 @@ def verify(seo, log_line: Callable[[str], None] = lambda s: log.info(s)) -> dict
         for r in rows:
             last.setdefault(r["product_id"], r)
         prods = {r["id"]: json.loads(r["data_json"] or "{}") for r in c.execute(
-            sa.select(PRODUCTS.c.id, PRODUCTS.c.data_json).where(
-                PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.id.in_(list(last)) if last else sa.false())).mappings()}
+            sa.select(PRODUCTS.c.product_id.label("id"), PRODUCTS.c.data_json).where(
+                PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.product_id.in_(list(last)) if last else sa.false())).mappings()}
     if not last:
         return {"kayit": 0}
     p = crm._prefix(admin_mod.conf("CRM_SCHEMA"))
@@ -394,7 +394,7 @@ def listing(seo, limit: int = 200) -> dict[str, Any]:
     WRITES.create(eng, checkfirst=True)
     with eng.connect() as c:
         rows = c.execute(sa.select(WRITES, PRODUCTS.c.name).select_from(WRITES.outerjoin(
-            PRODUCTS, sa.and_(PRODUCTS.c.tenant_id == WRITES.c.tenant_id, PRODUCTS.c.id == WRITES.c.product_id)))
+            PRODUCTS, sa.and_(PRODUCTS.c.tenant_id == WRITES.c.tenant_id, PRODUCTS.c.product_id == WRITES.c.product_id)))
             .where(WRITES.c.tenant_id == seo.tenant()).order_by(WRITES.c.at.desc()).limit(limit)).mappings().all()
         counts = {k: v for k, v in c.execute(sa.select(WRITES.c.status, sa.func.count())
                                              .where(WRITES.c.tenant_id == seo.tenant()).group_by(WRITES.c.status)).all()}

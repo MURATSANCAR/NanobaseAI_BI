@@ -54,3 +54,131 @@ def test_same_compares_text_fields_only():
     f = {"new_seobaslik": "A", "new_seodurum": 2}
     assert w.same(f, {"new_seobaslik": " A ", "new_seodurum": None})
     assert not w.same(f, {"new_seobaslik": None})
+
+
+# ------------------------------------------------------------------ veritabanı akışı (SQLite + sahte CRM bağlantısı)
+import json as _json
+
+import sqlalchemy as _sa
+
+from semantic_bridge.seo_geo import crm as _crm
+from semantic_bridge.seo_geo.store import CRM_BOOKS, PRODUCTS, PROPOSALS, ensure
+
+BOOK = "11111111-2222-3333-4444-555555555555"
+
+
+class _Cur:
+    def __init__(self, db):
+        self.db, self.rowcount, self.description, self._row = db, 0, None, None
+
+    def execute(self, sql, *args):
+        self.db.sql.append((sql, args))
+        if sql.startswith("SELECT"):
+            cols = [*w.FIELDS, *w.TRACK]
+            self.description = [(c,) for c in cols]
+            self._row = tuple(self.db.card.get(c) for c in cols) if args[0] == BOOK else None
+        else:
+            keys = [k.split(" = ")[0].strip() for k in sql.split(" SET ")[1].split(", ModifiedOn")[0].split(", ")]
+            if args[-1] == BOOK:
+                self.db.card.update(dict(zip(keys, args[:-1])))
+                self.rowcount = 1
+
+    def fetchone(self):
+        return self._row
+
+
+class _Conn:
+    def __init__(self, db):
+        self.db = db
+
+    def cursor(self):
+        return _Cur(self.db)
+
+    def commit(self):
+        self.db.commits += 1
+
+    def rollback(self):
+        pass
+
+    def close(self):
+        pass
+
+
+class _Seo:
+    def __init__(self, eng):
+        self.eng, self.audits = eng, []
+
+    def engine(self):
+        return self.eng
+
+    def tenant(self):
+        return "t"
+
+    def audit(self, *a):
+        self.audits.append(a)
+
+
+@pytest.fixture()
+def env(monkeypatch):
+    eng = _sa.create_engine("sqlite://")
+    ensure(eng)
+    db = type("DB", (), {})()
+    db.card, db.sql, db.commits = {"new_seobaslik": "Eski başlık"}, [], 0
+    monkeypatch.setattr(w, "_write_conn", lambda: _Conn(db))
+    from semantic_bridge import admin as admin_mod
+    monkeypatch.setattr(admin_mod, "conf", lambda k: {"CRM_SCHEMA": "Timas_MSCRM.dbo"}.get(k, ""))
+    now = w.now()
+    with eng.begin() as c:
+        c.execute(PRODUCTS.insert().values(tenant_id="t", product_id="p1", name="Kitap", active=True, score=50,
+                                           issues_json="[]", data_json=_json.dumps({"Barcode": "978-1", "ProductName": "Kitap", "Model": "Yazar",
+                                                                                    "SeoTitle": "Kitap - Yazar | Timaş"}), synced_at=now))
+        c.execute(CRM_BOOKS.insert().values(tenant_id="t", ean="9781", book_id=BOOK, rights="var", data_json="{}", synced_at=now))
+        c.execute(PROPOSALS.insert().values(id="pr1", tenant_id="t", product_id="p1", status="onaylandi",
+                                            fields_json=_json.dumps({"SeoTitle": "Kitap - Yazar | Timaş", "SeoDescription": "Açıklama"}),
+                                            before_json="{}", created_at=now, decided_at=now))
+    return _Seo(eng), db, monkeypatch
+
+
+def test_deneme_records_without_writing(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "deneme")
+    stats = w.run(seo, approve_ready=False, write=False, log_line=lambda s: None)
+    assert stats["deneme"] == 1 and db.commits == 0 and db.card["new_seobaslik"] == "Eski başlık"
+    item = w.listing(seo)["items"][0]
+    assert item["status"] == "deneme" and item["name"] == "Kitap" and item["before"]["new_seobaslik"] == "Eski başlık"
+    assert item["fields"]["new_kapakalt"] == "Kitap – Yazar kitap kapağı"
+    with pytest.raises(RuntimeError):
+        w.run(seo, approve_ready=False, write=True, log_line=lambda s: None)
+
+
+def test_write_on_approve_then_verify_and_undo(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    assert w.on_approve(seo, "pr1", "kisi") == "yazildi"
+    assert db.card["new_seobaslik"] == "Kitap - Yazar | Timaş" and db.card["new_seodurum"] == 2 and db.commits == 1
+    upd = [s for s, _ in db.sql if s.startswith("UPDATE")][0]
+    assert "Timas_MSCRM.dbo.new_kitapBase" in upd and "new_ozet" not in upd and "ModifiedOn" in upd
+    assert seo.audits and seo.audits[0][1] == "crm_write"
+    # aynı değer ikinci kez yazılmaz
+    assert w.on_approve(seo, "pr1", "kisi") == "degisiklik_yok"
+
+    class _Ro:
+        def execute(self, sql, limit):
+            assert BOOK in sql
+            return [], [{"id": BOOK, **{k: db.card.get(k) for k in w.FIELDS}}], False
+
+        def close(self):
+            pass
+
+    mp.setattr(_crm, "connector", lambda: _Ro())
+    v = w.verify(seo, log_line=lambda s: None)
+    assert v == {"kayit": 1, "crm_ayni": 1, "crm_degisti": 0, "sitede": 0}  # T-soft meta açıklaması henüz farklı
+    wid = [i for i in w.listing(seo)["items"] if i["status"] == "yazildi"][0]["id"]
+    w.undo(seo, wid, "kisi")
+    assert db.card["new_seobaslik"] == "Eski başlık"
+
+
+def test_off_mode_does_nothing(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "kapali")
+    assert w.on_approve(seo, "pr1", "kisi") is None and not db.sql
