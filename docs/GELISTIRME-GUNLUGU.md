@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-04 — `/api/v1/chat/mention-answer` köprü erişim kuralı
+
+- **Neden:** main'de `test_access.py::test_every_bridge_route_has_a_rule` kalıyordu: sohbetteki @Zeki ucu (`semantic_bridge/chat_mention.py`) `access.RULES`'ta yoktu (`rule_for` → None; oturumlu istekte kapı 403, yönetici hariç).
+- **Ne:** `("/api/v1/chat/mention-answer", SYSTEM)`. Çağıran aynı sunucudaki çerezsiz işçi (`deploy/zeki/mention-worker.py`, yerel anahtar) — `/api/v1/audit/ingest` ile aynı desen; kişinin `/api/v1/ask` kapısı (zeki.soru + veri alanları) ucun içinde o kişi adına uygulanmaya devam eder. Tarayıcı oturumuyla gelen istek yönetici değilse 403.
+- **Doğrulama:** test sunucusunda köprü venv'iyle (git archive, `._*` 0) `test_access.py` 19/19. Kurulum yok (yalnız kural tablosu; mevcut çerezsiz işçi akışı değişmedi).
+
 ## 2026-10-04 — Film ve video: köprü vekili ve stüdyo ekranı
 
 - **Neden:** kullanıcı film hattının ekranına geçilmesini istedi (önceki giriş: arka uç). Modeller hâlâ kapalı, kurulum yok.
