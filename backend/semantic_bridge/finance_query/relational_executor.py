@@ -133,11 +133,12 @@ def execute_relational_query(executor, plan):
                 raise ContractError("CRM alan türü kayıtlı sözleşmeyle uyuşmuyor.",code="SOURCE_CONTRACT_VIOLATION")
         pk=_identifier(entity["fields"][entity["primary_key"]]["column"])
         # A declared single-column PRIMARY KEY already guarantees uniqueness; scanning 9,8 Mn order lines per question does not.
-        declared=executor.read("SELECT COUNT_BIG(*) AS n FROM [Timas_MSCRM].sys.indexes i JOIN [Timas_MSCRM].sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id"
-                               " JOIN [Timas_MSCRM].sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id"
-                               " WHERE i.is_primary_key=1 AND i.object_id=OBJECT_ID(N'Timas_MSCRM.dbo."+entity["table"]+"')"
-                               " AND c.name="+_text(entity["fields"][entity["primary_key"]]["column"])
-                               " AND (SELECT COUNT(*) FROM [Timas_MSCRM].sys.index_columns k WHERE k.object_id=i.object_id AND k.index_id=i.index_id)=1",source="crm")
+        pk_column=entity["fields"][entity["primary_key"]]["column"]
+        declared=executor.read(
+            "SELECT COUNT_BIG(*) AS n FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id"
+            " JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id"
+            " WHERE i.is_primary_key=1 AND i.object_id=OBJECT_ID(N'dbo."+entity["table"]+"') AND c.name="+_text(pk_column)+
+            " AND (SELECT COUNT(*) FROM sys.index_columns k WHERE k.object_id=i.object_id AND k.index_id=i.index_id)=1",source="crm")
         if declared and int(declared[0].get("n") or 0)==1:
             continue
         check="SELECT TOP (1) r."+pk+" AS invalid_key FROM "+_table(entity)+" AS r WHERE ("+active(entity,"r")+")"
