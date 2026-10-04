@@ -51,3 +51,25 @@ aktiflik kolonları yeni sözlükte açık alan olarak yer alır. Yeni sözlüğ
 çalışma anında şema kontrolü ve bağlı gerçek DB/API üzerinden bağımsız kabulü
 henüz yapılmadı: **DOĞRULANAMADI**. Metadata varlığı, bütün CRM sorularının
 yanıtlandığını veya yeni AST'nin üretime hazır olduğunu göstermez.
+
+## CRM süreç kayıtları (2026-10-04)
+
+`relational_process.py` (üretici `scripts/crm-process/build_process_registry.py`, sunucuda CRM .28 okunarak) kayıt
+defterine 24 varlık, 211 alan ve 31 ilişki ekler: sipariş (`crm_order`), sipariş satırı (`crm_order_line`), bekleyen ürün
+(`pending_item`), satış hedefi (`sales_target`), etkinlik (`crm_activity`), ziyaret yeri (`visit_place`), kitap yaş/sınıf/
+kategori/anahtar kelime bağları ve bunların hedef tabloları (il, ilçe, etkinlik tipi, CRM kullanıcısı, ürün…). Alan adları ve
+kod etiketleri CRM metadata'sından (Türkçe), ilişkiler fiziksel FK → tekil PK; aktif satırda doluluk ≥ %5 olan alan alınır,
+kişisel veri adı taşıyan alan (telefon, adres, e-posta, kimlik) alınmaz. Her PK tekil, her FK hedefte %100 bulundu
+(`MEASUREMENTS`). Durum alanı (statecode) modele verilmez: aktif kayıt koşulu otomatik.
+
+Kurallar:
+- **Kaynak ayrımı:** CRM süreçtir (sipariş girişi ve durumu, bekleyen ürün, hedef, etkinlik/ziyaret, okul/kurum); tamamlanmış
+  finansal olay (fatura, satış tutarı/ciro, iade, tahsilat, muhasebe) Logo'dur. CRM sipariş tutarı ciro değildir. Planlayıcı
+  istemindeki «Kaynak ayrımı» cümlesi bunu söyler.
+- **Kod listesi:** `values` taşıyan alan `label` işlemiyle CRM etiketiyle gösterilir, süzgeçte sayısal kodla süzülür.
+- **Toplam yalnız kökte:** bağlantılar yalnız çocuk → üst olduğu için üst kaydın tutarı her alt satırda tekrarlanır; `sum`
+  yalnız kök alanında. `sum_allowed`: tutar ve adet alanları; oran, birim fiyat, stok, limit, risk, kod listesi toplanmaz.
+- **Süzgeç değerleri düz metin:** `{type,value}` nesnesi modeli kısıtlı çözümlemede boş satır döngüsüne sokuyordu (vLLM
+  0.27.1, 3/3 yeniden üretildi); tür alanın kayıttaki türünden gelir.
+- **Bildirilmiş PK:** tek kolonlu PRIMARY KEY varsa tekillik taraması (9,8 Mn sipariş satırı) atlanır.
+- **Satış hedefi taneciği:** kitap × yıl × bölge × satış temsilcisi (BMT); 12 ay kolonu her satırda toplam hedefe eşit.
