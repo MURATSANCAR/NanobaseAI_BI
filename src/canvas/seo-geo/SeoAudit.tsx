@@ -410,7 +410,7 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
               {canApprove
                 ? changed.length === 0
                   ? 'Önerilen metin sayfadakiyle aynı; onaylanacak değişiklik yok. Gerekirse kutularda düzenleyin ya da reddedin.'
-                  : 'Onay yalnız kayda geçer (kim, ne zaman, hangi metin); T-soft’a ve CRM’e hiçbir şey gönderilmez. Reddederseniz öneri kapanır.'
+                  : 'Onay kayda geçer (kim, ne zaman, hangi metin). T-soft’a gönderilmez; sitede görünmeyen SEO başlığı, meta açıklama ve kapak alt metni CRM kitap kartına yazılır (Yönetim’deki kipe göre). Ürün açıklaması ve anahtar kelimeler CRM’e yazılmaz. Reddederseniz öneri kapanır.'
                 : 'Onay yetkiniz yok; öneriyi görebilir ve yeniden ürettirebilirsiniz. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'}
             </small>
           </div>

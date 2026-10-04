@@ -55,6 +55,9 @@ WRITES = sa.Table(
     sa.Column("at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("undone_by", sa.String(120)),
     sa.Column("undone_at", sa.DateTime(timezone=True)),
+    sa.Column("checked_at", sa.DateTime(timezone=True)),      # gece denetimi
+    sa.Column("crm_ok", sa.Boolean),                           # CRM'deki değer hâlâ yazdığımız mı
+    sa.Column("on_site", sa.Boolean),                          # T-soft (site) başlık/meta yazdığımıza eşit mi
 )
 
 
@@ -188,7 +191,7 @@ def run(seo, *, approve_ready: bool, write: bool, limit: Optional[int] = None, u
                               .order_by(PROPOSALS.c.created_at)).mappings().all()
         for prop in ready:
             try:
-                seo.approve(dict(prop), json.loads(prop["fields_json"] or "{}"), user, "Toplu onay (ZEKİ AI)")
+                seo.approve(dict(prop), json.loads(prop["fields_json"] or "{}"), user, "Toplu onay (ZEKİ AI)", crm_write=False)
                 stats["onaylanan"] += 1
             except Exception as e:  # noqa: BLE001 — değişikliksiz öneri (409) ya da eksik ürün atlanır
                 stats["onay_atlanan"] += 1
@@ -211,57 +214,150 @@ def run(seo, *, approve_ready: bool, write: bool, limit: Optional[int] = None, u
     stamp = now()
     conn = _write_conn()
     try:
-        cur = conn.cursor()
         for pid, prop in todo:
             prod = prods.get(pid)
-            data = json.loads(prod["data_json"]) if prod else {}
-            book = books.get(crm.ean_key(data.get("Barcode")))
-            if not book:
-                stats["eslesmeyen"] += 1
-                continue
-            fields = build(data, json.loads(prop["fields_json"] or "{}"), stamp)
-            if not fields:
-                continue
-            stats["kitap"] += 1
-            wid, err, before = uuid.uuid4().hex, None, {}
-            try:
-                check(fields)
-                cur.execute(select_sql(p), book)
-                got = _row(cur)
-                if got is None:
-                    raise RuntimeError("CRM'de kart bulunamadı")
-                before = got
-                if same(fields, before):
-                    status = "degisiklik_yok"
-                elif write:
-                    keys = list(fields)
-                    cur.execute(update_sql(p, keys), *[fields[k] for k in keys], book)
-                    if cur.rowcount != 1:
-                        raise RuntimeError(f"güncellenen satır {cur.rowcount}")
-                    conn.commit()
-                    status = "yazildi"
-                else:
-                    status = "deneme"
-            except Exception as e:  # noqa: BLE001
-                try:
-                    conn.rollback()
-                except Exception:  # noqa: BLE001
-                    pass
-                status, err = "hata", str(e)[:1000]
+            status = _process(seo, conn, p, prod, prop, books, write=write, user=user, stamp=stamp)
             stats[status] = stats.get(status, 0) + 1
-            with eng.begin() as c:
-                c.execute(WRITES.insert().values(
-                    id=wid, tenant_id=tenant, product_id=pid, book_id=book, proposal_id=prop["id"],
-                    mode="acik" if write else "deneme", status=status, fields_json=_jsonable(fields),
-                    before_json=_jsonable(before), error=err, by=user, at=now()))
-            if status == "yazildi":
-                seo.audit(user, "crm_write", pid, prod["name"] if prod else pid,
-                          {"crm": book, "alanlar": list(fields), "kayit": wid})
+            if status not in ("eslesmeyen", "bos"):
+                stats["kitap"] += 1
             if status == "hata" and stats["hata"] >= 5 and stats["yazildi"] == 0 and stats["deneme"] == 0:
                 log_line("ilk 5 kayıt hata verdi; koşu durdu (izin ya da bağlantı sorunu)")
                 break
     finally:
         conn.close()
+    log_line(json.dumps(stats, ensure_ascii=False))
+    return stats
+
+
+def _process(seo, conn, p: str, prod: Optional[dict[str, Any]], prop: dict[str, Any], books: dict[str, str], *,
+             write: bool, user: str, stamp: datetime) -> str:
+    """Tek ürün: alanları kur, CRM'deki eski değeri oku, yaz ya da dene, kaydet. Dönen: durum."""
+    data = json.loads(prod["data_json"]) if prod else {}
+    book = books.get(crm.ean_key(data.get("Barcode")))
+    if not book:
+        return "eslesmeyen"
+    fields = build(data, json.loads(prop["fields_json"] or "{}"), stamp)
+    if not fields:
+        return "bos"
+    cur = conn.cursor()
+    wid, err, before = uuid.uuid4().hex, None, {}
+    try:
+        check(fields)
+        cur.execute(select_sql(p), book)
+        got = _row(cur)
+        if got is None:
+            raise RuntimeError("CRM'de kart bulunamadı")
+        before = got
+        if same(fields, before):
+            status = "degisiklik_yok"
+        elif write:
+            keys = list(fields)
+            cur.execute(update_sql(p, keys), *[fields[k] for k in keys], book)
+            if cur.rowcount != 1:
+                raise RuntimeError(f"güncellenen satır {cur.rowcount}")
+            conn.commit()
+            status = "yazildi"
+        else:
+            status = "deneme"
+    except Exception as e:  # noqa: BLE001
+        try:
+            conn.rollback()
+        except Exception:  # noqa: BLE001
+            pass
+        status, err = "hata", str(e)[:1000]
+    with seo.engine().begin() as c:
+        c.execute(WRITES.insert().values(
+            id=wid, tenant_id=seo.tenant(), product_id=prop["product_id"], book_id=book, proposal_id=prop["id"],
+            mode="acik" if write else "deneme", status=status, fields_json=_jsonable(fields),
+            before_json=_jsonable(before), error=err, by=user, at=now()))
+    if status == "yazildi":
+        seo.audit(user, "crm_write", prop["product_id"], prod["name"] if prod else prop["product_id"],
+                  {"crm": book, "alanlar": list(fields), "kayit": wid})
+    return status
+
+
+def on_approve(seo, proposal_id: str, user: str) -> Optional[str]:
+    """Öneri onaylanınca çağrılır: kip «acik» ise o kitabın görünmez SEO alanlarını CRM'e yazar, «deneme» ise yalnız
+    kaydeder. Kip kapalıysa None. Hata onayı geri almaz; durum kayda ve dönüşe yazılır."""
+    from semantic_bridge import admin as admin_mod
+
+    m = mode()
+    if m == "kapali":
+        return None
+    eng, tenant = seo.engine(), seo.tenant()
+    WRITES.create(eng, checkfirst=True)
+    with eng.connect() as c:
+        prop = c.execute(sa.select(PROPOSALS).where(PROPOSALS.c.id == proposal_id)).mappings().first()
+        if not prop:
+            return None
+        prod = c.execute(sa.select(PRODUCTS.c.id, PRODUCTS.c.name, PRODUCTS.c.data_json).where(
+            PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.id == prop["product_id"])).mappings().first()
+        data = json.loads(prod["data_json"]) if prod else {}
+        ean = crm.ean_key(data.get("Barcode"))
+        books = {r["ean"]: r["book_id"] for r in c.execute(sa.select(CRM_BOOKS.c.ean, CRM_BOOKS.c.book_id).where(
+            CRM_BOOKS.c.tenant_id == tenant, CRM_BOOKS.c.ean == ean)).mappings()}
+    try:
+        conn = _write_conn()
+    except Exception as e:  # noqa: BLE001
+        log.warning("CRM yazma bağlantısı açılamadı: %s", e)
+        return "hata"
+    try:
+        return _process(seo, conn, crm._prefix(admin_mod.conf("CRM_SCHEMA")), prod, dict(prop), books,
+                        write=(m == "acik"), user=user, stamp=now())
+    finally:
+        conn.close()
+
+
+_GUID = re.compile(r"^[0-9a-fA-F-]{36}$")
+
+
+def verify(seo, log_line: Callable[[str], None] = lambda s: log.info(s)) -> dict[str, int]:
+    """Gece denetimi: ürün başına son «yazildi» kaydı için (1) CRM'deki değer hâlâ yazdığımız mı, (2) T-soft'taki
+    (sitedeki) başlık ve meta açıklama yazdığımıza eşit mi — eşlemesi eklenince «sitede» olur. Yalnız okur."""
+    from semantic_bridge import admin as admin_mod
+
+    eng, tenant = seo.engine(), seo.tenant()
+    WRITES.create(eng, checkfirst=True)
+    with eng.connect() as c:
+        rows = c.execute(sa.select(WRITES).where(WRITES.c.tenant_id == tenant, WRITES.c.status == "yazildi")
+                         .order_by(WRITES.c.at.desc())).mappings().all()
+        last: dict[str, Any] = {}
+        for r in rows:
+            last.setdefault(r["product_id"], r)
+        prods = {r["id"]: json.loads(r["data_json"] or "{}") for r in c.execute(
+            sa.select(PRODUCTS.c.id, PRODUCTS.c.data_json).where(
+                PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.id.in_(list(last)) if last else sa.false())).mappings()}
+    if not last:
+        return {"kayit": 0}
+    p = crm._prefix(admin_mod.conf("CRM_SCHEMA"))
+    ids = [r["book_id"] for r in last.values() if _GUID.match(r["book_id"] or "")]
+    current: dict[str, dict[str, Any]] = {}
+    con = crm.connector()
+    try:
+        for i in range(0, len(ids), 500):
+            chunk = ", ".join(f"'{x}'" for x in ids[i:i + 500])
+            _, out, _ = con.execute(f"SELECT new_kitapId AS id, {', '.join(FIELDS)} FROM {p}new_kitapBase "
+                                    f"WHERE new_kitapId IN ({chunk})", 100000)
+            for r in out:
+                current[str(r["id"]).lower()] = r
+    finally:
+        try:
+            con.close()
+        except Exception:  # noqa: BLE001
+            pass
+    stats = {"kayit": len(last), "crm_ayni": 0, "crm_degisti": 0, "sitede": 0}
+    stamp = now()
+    with eng.begin() as c:
+        for pid, r in last.items():
+            wrote = json.loads(r["fields_json"])
+            cur = current.get(str(r["book_id"]).lower(), {})
+            crm_ok = all(_clean(cur.get(k)) == _clean(wrote.get(k)) for k in FIELDS if k in wrote)
+            d = prods.get(pid, {})
+            on_site = bool(wrote.get("new_seobaslik")) and _clean(d.get("SeoTitle")) == _clean(wrote.get("new_seobaslik")) \
+                and (not wrote.get("new_seoaciklama") or _clean(d.get("SeoDescription")) == _clean(wrote.get("new_seoaciklama")))
+            stats["crm_ayni" if crm_ok else "crm_degisti"] += 1
+            stats["sitede"] += int(on_site)
+            c.execute(WRITES.update().where(WRITES.c.id == r["id"]).values(checked_at=stamp, crm_ok=crm_ok, on_site=on_site))
     log_line(json.dumps(stats, ensure_ascii=False))
     return stats
 
@@ -306,6 +402,8 @@ def listing(seo, limit: int = 200) -> dict[str, Any]:
             "items": [{"id": r["id"], "productId": r["product_id"], "name": r["name"], "bookId": r["book_id"],
                        "status": r["status"], "mode": r["mode"], "error": r["error"], "by": r["by"],
                        "at": r["at"].isoformat() if r["at"] else None,
+                       "checkedAt": r["checked_at"].isoformat() if r["checked_at"] else None,
+                       "crmOk": r["crm_ok"], "onSite": r["on_site"],
                        "fields": json.loads(r["fields_json"]), "before": json.loads(r["before_json"])} for r in rows]}
 
 

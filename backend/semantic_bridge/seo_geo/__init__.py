@@ -651,8 +651,10 @@ class SeoGeo:
             if not n:
                 c.execute(SCHEMA.insert().values(tenant_id=tenant, product_id=pid, **vals))
 
-    def approve(self, prop: dict[str, Any], fields: dict[str, str], user: str, note: str) -> dict[str, Any]:
-        """Onay: onaylanan alanlar ve karar kaydedilir, hiçbir yere gönderilmez (T-soft'a yazma yasak)."""
+    def approve(self, prop: dict[str, Any], fields: dict[str, str], user: str, note: str,
+                crm_write: bool = True) -> dict[str, Any]:
+        """Onay: onaylanan alanlar ve karar kaydedilir. T-soft'a gönderilmez (yazma yasak). `SEO_CRM_WRITE` açıksa
+        sitede görünmeyen SEO alanları (başlık, meta açıklama, kapak alt metni) CRM kitap kartına yazılır."""
         row = self.product_row(prop["product_id"])
         p = loads(row["data_json"], {})
         change = propose.changed(p, fields)
@@ -669,6 +671,19 @@ class SeoGeo:
         edited = sorted(k for k, v in fields.items() if str(proposed.get(k) or "") != str(v or ""))
         self.audit(user, "approve", prop["product_id"], row["name"],
                    {"proposal": prop["id"], "fields": list(change), "duzenlenen": edited})
+        if crm_write:
+            from semantic_bridge.seo_geo import crm_write as crm_write_mod
+
+            status = crm_write_mod.on_approve(self, prop["id"], user)
+            if status:
+                text = {"yazildi": "CRM kitap kartına yazıldı (SEO başlığı, meta açıklama, kapak alt metni).",
+                        "deneme": "Deneme kipi: CRM'e yazılacak değer kaydedildi, yazılmadı.",
+                        "degisiklik_yok": "CRM'deki değer zaten aynı.",
+                        "eslesmeyen": "CRM'de barkodla eşleşen kitap kartı yok; yazılmadı.",
+                        "hata": "CRM'e yazılamadı; ayrıntı CRM yazım kaydında."}.get(status, status)
+                with self.engine().begin() as c:
+                    c.execute(PROPOSALS.update().where(PROPOSALS.c.id == prop["id"]).values(
+                        result=f"Onaylandı: {', '.join(change)}. {text}"))
         return self.proposal(prop["id"])
 
     # ---------------------------------------------------------------- CRM kitap kartı ve haklar (yalnız okuma)
@@ -1593,6 +1608,14 @@ def register(app, runtime, authorize, session_user):
     hazir.mesgul(seo, lambda: bool(seo.state.get("running")))
     hazir.mesgul(seo, lambda: bool(seo.crm_state.get("running")))
     seo.nightly.append(("hazir", lambda: hazir.isit_arkada(seo)))
+
+    def _crm_write_check() -> None:
+        # Gece: CRM'e yazılan SEO alanları hâlâ yerinde mi, sitede (T-soft) görünüyor mu. Kip kapalıysa atlanır.
+        from semantic_bridge.seo_geo import crm_write as crm_write_mod
+        if crm_write_mod.mode() != "kapali":
+            crm_write_mod.verify(seo)
+
+    seo.nightly.append(("crm_write", _crm_write_check))
     # Köprü açılışında da: kaydı olmayan ya da girdisi değişmiş hesap arkada hesaplanır, güncel kayıt belleğe alınır.
     # Çağrı köprünün arka plan açılışında (app.py `_boot_services`), çalışma ortamı kurulduktan sonra: kayıt sırasında
     # çalışma ortamı istenirse köprünün açılışı onu bekler.

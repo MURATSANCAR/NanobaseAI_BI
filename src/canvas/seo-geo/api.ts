@@ -235,6 +235,26 @@ export type Question = { id: string; text: string; category: string | null; crea
 /** Okuma cevaplarında sorgu bilgisi (köprünün SEO ara katmanı ekler): `<SqlInfo k={d.kaynaklar} …/>`. */
 export type WithK = { kaynaklar?: Kaynaklar };
 
+/** CRM kitap kartına yazılan (ya da deneme kipinde yazılacak) görünmez SEO alanları. */
+export type CrmWriteStatus = 'yazildi' | 'deneme' | 'hata' | 'geri_alindi' | 'degisiklik_yok';
+export type CrmWrite = {
+  id: string;
+  productId: string;
+  name: string | null;
+  bookId: string;
+  status: CrmWriteStatus;
+  mode: 'deneme' | 'acik';
+  error: string | null;
+  by: string | null;
+  at: string | null;
+  checkedAt: string | null;
+  crmOk: boolean | null;
+  onSite: boolean | null;
+  fields: Record<string, string | number>;
+  before: Record<string, string | number | null>;
+};
+export type CrmWrites = { mode: 'kapali' | 'deneme' | 'acik'; counts: Partial<Record<CrmWriteStatus, number>>; items: CrmWrite[] };
+
 export async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown; timeout?: number } = {}): Promise<T & WithK> {
   if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');
   const method = init.method ?? 'GET';
@@ -278,6 +298,8 @@ export const seoApi = {
     call<{ items: Array<{ id: string; status: string; result?: string; skipped?: boolean }> }>('proposals/bulk-approve', { method: 'POST', body: { ids, note }, timeout: 600_000 }),
   batch: (budget = 3600) => call<{ started: boolean }>(`proposals/batch?budget=${budget}`, { method: 'POST' }),
   history: (start = 0) => call<{ total: number; items: Proposal[] }>(`history?${qs({ start, limit: 50 })}`),
+  crmWrites: () => call<CrmWrites>('crm-writes?limit=500'),
+  crmUndo: (id: string) => call<{ id: string; status: string }>(`crm-writes/${id}/undo`, { method: 'POST' }),
   search: (kind: 'daily' | 'queries' | 'pages', range: SearchRange = {}) => {
     const q = qs({ start: range.start, end: range.end, compare: range.compare || undefined });
     // Kayıtlı aralığın dışı Search Console'dan okunur; uzun aralıkta sorgu listesi birkaç sayfa sürebilir.

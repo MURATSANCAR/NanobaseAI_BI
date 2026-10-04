@@ -184,7 +184,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview & WithK; onBatch?: () 
           <div className="sg-bars">
             <Todo to="/seo-geo/urun-denetimi?durum=hazir" label="Onay bekleyen Zeki AI önerisi" n={waiting} />
             <Todo to="/seo-geo/urun-denetimi" label={`Puanı ${o.failingThreshold}’in altındaki ürün`} n={o.failing} />
-            <Todo to="/seo-geo/gecmis" label="Onaylanan öneri (kayıtta; hiçbir yere gönderilmez)" n={o.proposals.onaylandi ?? 0} />
+            <Todo to="/seo-geo/gecmis" label="Onaylanan öneri (T-soft’a gönderilmez; görünmez SEO alanları CRM’e)" n={o.proposals.onaylandi ?? 0} />
             {o.crm.books > 0 && (
               <>
                 <Todo to="/seo-geo/crm-haklar?suzgec=durum" label="CRM’de artık bizim değil / çekildi, sitede satışta" n={Object.values(o.crm.flags ?? {}).reduce((a, n) => a + (n ?? 0), 0)} />

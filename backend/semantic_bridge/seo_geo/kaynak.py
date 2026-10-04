@@ -51,6 +51,7 @@ TABLOLAR: dict[str, tuple[str, str]] = {
     "semantic_seo_redirects": ("Yönlendirme önerileri", "Anasayfaya giden eski adres ve önerilen hedef, güven düzeyi."),
     "semantic_seo_schema": ("Şema taraması", "Sayfa başına yapılandırılmış veri ve eksikler."),
     "semantic_seo_geo_results": ("Yapay zekâ ölçümleri", "Soru × motor cevabı: Timaş anıldı mı, kaynak gösterildi mi."),
+    "semantic_seo_crm_writes": ("CRM'e yazılan SEO alanları", "Onaylı öneriden CRM kitap kartına yazılan (ya da deneme kipinde yazılacak) başlık, meta açıklama, kapak alt metni; eski değerle."),
     "semantic_seo_crm_books": ("CRM kitap kartları", "CRM kitap kartı, hak kararı ve yayın durumu (gece okuması)."),
     "semantic_seo_author_crm": ("CRM yazar kaydı", "Yazarın CRM kaydı ve ödülleri."),
     "semantic_seo_backlink_counts": ("Gelen bağlantı sayıları", "Bing'den okunan sayfa başına dış bağlantı sayısı."),
@@ -124,6 +125,8 @@ SPECS: list[tuple[str, str, str]] = [
     (r"schema", "sema", "Şema taraması: sayfa başına eksik alanlar; sorun başına sayfa sayısı; taranan sayfa sayısı."),
     (r"questions", "gorunurluk", "Yapay zekâ görünürlüğü: soru × motor ölçümünde Timaş'ın anılma ve sitenin kaynak "
                                 "gösterilme sayısı ve oranı (ölçüm kaydı); tur ilerlemesi."),
+    (r"crm-writes", "crm_yazim", "CRM'e yazım kaydı: onaylı öneriden kitap kartına yazılan SEO başlığı, meta açıklama ve "
+                                 "kapak alt metni; CRM'deki eski değer yazmadan önce okunur. Sayılar = kayıt durumuna göre."),
     (r"crm", "crm", "CRM kitap kartları (gece okuması): hak kararı (var / incele / eksik / yok…) ve yayın durumu sayıları; "
                     "yürürlükteki sözleşme sayısı."),
     (r"opportunities", "firsat", GSC + " Yakın sıra: ortalama sırası 4–15 olan sorgu+sayfa; tahmini ek tıklama = sitenin "

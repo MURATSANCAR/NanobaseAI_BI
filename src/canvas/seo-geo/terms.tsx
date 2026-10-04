@@ -136,7 +136,7 @@ const TERMS: Record<TermKey, { title: string; text: string }> = {
   },
   approval: {
     title: 'Onay ne yapar?',
-    text: 'Onay yalnız kayıt altına alınır: kim, ne zaman, hangi metni onayladı. T-soft’a ya da CRM’e hiçbir şey gönderilmez.',
+    text: 'Onay kayıt altına alınır: kim, ne zaman, hangi metni onayladı. T-soft’a hiçbir şey gönderilmez. Ürün önerisinde sitede görünmeyen SEO başlığı, meta açıklama ve kapak alt metni CRM kitap kartına yazılır; geri alınabilir.',
   },
 };
 
