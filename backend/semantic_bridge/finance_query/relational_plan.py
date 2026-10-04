@@ -17,7 +17,6 @@ def _object(fields):
     return {"type":"object", "properties":fields, "required":list(fields), "additionalProperties":False}
 
 FIELD_REF = _object({"alias":{"type":"string","enum":ALIASES}, "field":{"type":"string","enum":FIELD_IDS}})
-LITERAL = _object({"type":{"type":"string","enum":["text","number","date","identity","bool"]}, "value":{"type":"string"}})
 RELATIONAL_SCHEMA = _object({
     "root":{"type":"string","enum":list(ENTITY_REGISTRY)},
     "distinct":{"type":"boolean"},
