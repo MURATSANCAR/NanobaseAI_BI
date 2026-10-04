@@ -319,3 +319,17 @@ def test_shared_name_without_the_volume_number_is_not_taken():
     assert r["source"] == "file"
     r = BT.resolve("kayi2.pdf", crm={"title": "Kayı 2: Cihan Devleti", "by": "SAME_NAME"})
     assert (r["title"], r["source"]) == ("Kayı 2: Cihan Devleti", "crm")
+
+
+def test_library_cover_by_first_segment_only_for_a_single_book():
+    from editor import recommend, web_cover
+    rows = [{"id": "a", "title": "Acı Biber Çatçat - Mini Masallar 2 (18)", "authors": [], "isbn": None, "sales": 1},
+            {"id": "b", "title": "Şirin - Bu Nasıl Göbeklitepe", "authors": [], "isbn": None, "sales": 1},
+            {"id": "c", "title": "Şirin - Topkapı Sarayı'nda", "authors": [], "isbn": None, "sales": 1},
+            {"id": "d", "title": "Balonla Beş Hafta (Gençlik Klasikleri)", "authors": [], "isbn": None, "sales": 1},
+            {"id": "e", "title": "Balonla Beş Hafta (Ciltli)", "authors": [], "isbn": None, "sales": 1}]
+    ix = recommend.SiteIndex(rows)
+    assert web_cover._by_first_segment(ix, "Acı Biber Çatçat", None)["row"]["id"] == "a"
+    assert web_cover._by_first_segment(ix, "Balonla Beş Hafta", None)["row"]["id"] in ("d", "e")   # aynı kitap
+    assert web_cover._by_first_segment(ix, "Şirin", None) is None                                 # seri adı, iki kitap
+    assert web_cover._by_first_segment(ix, "Acı Biber Çatçat", "Acı Biber Çatçat - Başka Kitap") is None

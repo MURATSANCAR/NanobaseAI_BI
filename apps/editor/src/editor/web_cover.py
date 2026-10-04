@@ -141,3 +141,110 @@ async def sync_book(book_id: str) -> dict:
                     return catalog.store_lookup(rep, "WEB", best["_data"])
                 rep.update(matched_by="ISBN", crm_title=url, outcome="NO_IMAGE")   # keep looking
     return catalog.store_lookup(rep, "WEB")
+
+
+# ------------------------------------------------------------------ yayınevi sitesinin kapak arşivinden
+# Kullanıcı 2026-10-04: «bir şekilde bul getir». CRM kapakların yalnız dosya yolunu tutuyor ve o klasörlere erişim
+# yok; sitedeki (timas.com.tr) yayımlanmış kapaklar ise kapak arşivinde (ed.cover_library, stüdyo her gece indirir)
+# hazır duruyor. Kitap arşivdeki ürüne önce ISBN ile (CRM kaydının ve künyenin ISBN'i = ürün barkodu), yoksa adla
+# (ürün adının tamamı ya da ilk parçası kitabın adına birebir eşit) bağlanır; görsel kitabın klasörüne kopyalanır,
+# kaynak WEB. CRM kapağı (CRM_IMAGE_ROOTS açılınca) ve elle yüklenen kapak bunun önüne geçer (catalog.PRIORITY).
+LIBRARY_ADDED_BY = "site-library"
+
+
+def library_index():
+    """Kapak arşivinde görseli hazır ürünler (gizlenmemiş, `ok`)."""
+    from . import recommend
+    rows = db.all_rows("SELECT id, title, authors, isbn, category, categories, page_url, sales, image_file,"
+                       " fetched_at FROM cover_library WHERE status='ok' AND image_file IS NOT NULL")
+    return recommend.SiteIndex(rows)
+
+
+def library_match(c, book_id: str, ix) -> dict | None:
+    """Kitabın kapak arşivindeki ürünü ({'row', 'by'}) ya da None. ISBN önce; ad eşleşmesi yalnız ürün adı (ya da
+    ilk parçası) kitabın bugünkü adına ya da CRM kaydının adına birebir eşitse — tahmin yok."""
+    from . import book_title, recommend
+    rows = book_title.books(c, book_id)
+    if not rows:
+        return None
+    row, ev = rows[0], book_title.evidence(c, book_id)
+    names = [n for n in [row["title"], (ev.get("crm") or {}).get("title")] if n]
+    m = recommend.match(ix, ev.get("isbns", []), names, ev.get("authors", []))
+    if m and m["by"] != "ISBN" and book_title.key(m["row"]["title"]) not in {book_title.key(n) for n in names}:
+        m = None
+    if m is None and (ev.get("crm") or {}).get("by") != "SAME_NAME":
+        # adı CRM'de birden çok farklı kaydın ortak adından gelen kitap («Genç Houdini») ilk parçayla eşlenmez
+        m = _by_first_segment(ix, row["title"], (ev.get("crm") or {}).get("title"))
+    return m
+
+
+def _by_first_segment(ix, title: str, crm_title: str | None) -> dict | None:
+    """Ürün adının ilk parçası kitabın adına eşit («Acı Biber Çatçat» = «Acı Biber Çatçat - Mini Masallar 2»). Kapakta
+    yanlış kitap ağır bir hata olduğu için iki koşul: o ilk parça sitede TEK bir kitaba karşılık gelir (notlar —
+    «(Ciltli)», «(Gençlik Klasikleri)» — atılınca tek ad), ve kitabın CRM adı seri adından fazlasını söylemez («Şirin»,
+    «Kağan», «Kutü'l Amare» gibi seri adı taşıyan kitap serinin rastgele bir kitabının kapağını almaz)."""
+    from . import book_title
+    if crm_title and len(book_title.segments(crm_title)) > 1:
+        return None
+    want = book_title.key(title)
+    if not want:
+        return None
+    hit = [r for r in ix.rows if book_title.key((book_title.segments(book_title.site_name(r["title"])) or [""])[0]) == want]
+    books = {book_title.key(" ".join(book_title.segments(r["title"]))) for r in hit}
+    if not hit or len(books) != 1:
+        return None
+    return {"row": max(hit, key=lambda r: (r.get("sales") or 0, str(r["id"]))), "by": "SEGMENT"}
+
+
+def from_library(book_id: str, ix=None, apply: bool = True) -> dict:
+    """Kitaba kapak arşivinden kapak. Kitabın kapağı varsa ve kaynağı WEB'den güçlüyse (CRM, elle yükleme) dokunulmaz;
+    aynı görsel zaten kapaksa yeniden yazılmaz. Döner {'book_id', 'outcome', ...}."""
+    from .production import library
+    ix = ix or library_index()
+    cur = catalog.current_cover(book_id)
+    if cur and catalog.PRIORITY.get(cur["source"], 0) > catalog.PRIORITY["WEB"]:
+        return {"book_id": book_id, "outcome": "KEPT_" + cur["source"]}
+    with db.tx() as c:
+        m = library_match(c, book_id, ix)
+    if not m:
+        return {"book_id": book_id, "outcome": "NO_MATCH"}
+    r = m["row"]
+    path = library.image_path(r["id"])
+    if path is None or not path.is_file():
+        return {"book_id": book_id, "outcome": "NO_IMAGE", "library_id": r["id"]}
+    out = {"book_id": book_id, "outcome": "WOULD_STORE", "by": m["by"], "library_id": r["id"], "title": r["title"]}
+    if not apply:
+        return out
+    when = r.get("fetched_at") or datetime.now(timezone.utc)
+    rep = {"book_id": book_id, "matched_by": m["by"], "crm_title": r["title"], "outcome": "STORED",
+           "file_name": path.name, "candidates": [],
+           "chosen": {"kind": "site_library", "path": r.get("page_url") or r["id"], "name": r["title"],
+                      "date": when.isoformat(), "library_id": r["id"]},
+           "detail": "kapak arşivi (yayınevi sitesi)"}
+    res = catalog.store_lookup(rep, "WEB", path.read_bytes())
+    return {**out, "outcome": res["outcome"]}
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    import collections
+    ap = argparse.ArgumentParser(prog="python -m editor.web_cover")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    lib = sub.add_parser("library", help="kapağı olmayan kitaplara kapak arşivinden kapak (varsayılan kuru koşu)")
+    lib.add_argument("--apply", action="store_true", help="gerçekten yaz")
+    lib.add_argument("--json", action="store_true", help="kitap başına JSON satırı")
+    a = ap.parse_args(argv)
+    ix = library_index()
+    seen = collections.Counter()
+    for b in db.all_rows("SELECT id FROM book ORDER BY id"):
+        res = from_library(str(b["id"]), ix, apply=a.apply)
+        seen[(res["outcome"], res.get("by"))] += 1
+        if a.json:
+            print(json.dumps(res, ensure_ascii=False, default=str), flush=True)
+    print(("Yazıldı: " if a.apply else "Kuru koşu: ") + ", ".join(f"{o}{'/' + b if b else ''} {n}"
+          for (o, b), n in seen.most_common()), file=__import__("sys").stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -16,6 +16,12 @@
 - **Editör CRM bağlayıcısı (`crm_covers.unchanged`):** son araması `FETCH_FAILED` (kapak dosyası okunamadı) olan kitap bir daha denenmiyordu; artık her gece yeniden denenir.
 - **Açık kalan (raporda):** gövdesinde hata olup HTTP 200 dönen işler (A3), `book-similar`'ın DB kopukken 500 dönmesi (A4), uyarı alıcısı tanımsız işler (A6), VPN kopmaları (TİMAŞ BT).
 - **Doğrulama:** test sunucusunda köprü venv'iyle 751 test geçti (değişikliksiz main 740; 11 yeni test), editör `test_crm_fold.py` 12/12. Canlı CRM'de salt okuma: süzgeç sayıları ve süre iletimi yukarıda.
+## 2026-10-04 — Editör kitaplarına yayınevi sitesinin kapakları
+
+- **Neden:** kullanıcı «bir şekilde bul getir» dedi. Ölçüm: editördeki 4.044 kitabın hiçbirinin kapağı yoktu (ekranda kitap simgesi). CRM kapakların yalnız dosya yolunu tutuyor (`new_resimurl` göreli, kapak alternatifleri `C:\cube\…`); dosya sunucusu .17 ve CRM .28'de 445/139/80/443 VPN'den kapalı; CRM'de resim tablosu yok (proje notlarında 387 ek). Sitedeki kapaklar ise kapak arşivinde hazır (`ed.cover_library`, 6.313 `ok`, 578×900).
+- **Ne:** `web_cover.from_library` / `library_match` / `python -m editor.web_cover library [--apply]`: kitap arşivdeki ürüne önce ISBN ile (CRM kaydının + künyenin ISBN'i = ürün barkodu), sonra ürün adının tamamı kitabın adına ya da CRM adına birebir eşitse, son olarak ürün adının ilk parçası kitabın adına eşitse — yalnız o ilk parça sitede tek kitaba karşılık geliyorsa ve kitabın CRM adı seri adından fazlasını söylemiyorsa (CRM'de ortak addan gelen adla değil). Görsel kitabın klasörüne kopyalanır, kaynak WEB (`catalog.store_lookup`): CRM kapağı ve elle yükleme önüne geçer. `catalog.store_crm_lookup` CRM görseli okunamayınca arşivden dener (yeni kitaplar gece kendiliğinden kapak alır).
+- **Kuru koşu (canlı DB):** 4.044 kitabın 2.539'u kapak alır — ISBN 2.390, ad 124, ilk parça 25; 1.505 eşleşmez. İlk sürümün ilk-parça eşleşmelerinde seri adlı kitaplar («Şirin», «Kağan», «Kutü'l Amare», «Genç Houdini») serinin rastgele kapağını alıyordu → kural sıkılaştı (187 → 25).
+- **Test:** tam set 1.169 geçti; tek kırık `test_narration::test_sample_text_matches_screen` çalışan sürümde (8d5ca5b4) de kırık, bu işle ilgisiz.
 
 ## 2026-10-04 — `/api/v1/chat/mention-answer` köprü erişim kuralı
 

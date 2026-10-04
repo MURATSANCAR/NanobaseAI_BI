@@ -369,6 +369,13 @@ def store_crm_lookup(rep: dict) -> dict:
         renamed = {"error": f"{type(e).__name__}: {e}"[:200]}
     if renamed:
         out["title"] = renamed
+    if out.get("outcome") != "STORED":
+        # CRM görseli okunamadıysa (dosya klasörü erişilemez) yayınevi sitesinin kapak arşivinden
+        from . import web_cover
+        try:
+            out["library_cover"] = web_cover.from_library(rep["book_id"])["outcome"]
+        except Exception as e:  # noqa: BLE001 — kapak denemesi CRM kaydını geri almaz
+            out["library_cover"] = f"{type(e).__name__}: {e}"[:200]
     return out
 
 
