@@ -113,6 +113,10 @@ async def start(job: str, fid: str, stage: Stage, body: StageOpts, by: str = Dep
             return cast_mod.build(d, f, script_mod.load(f), by)
         if stage == "paylasim" and not body.platforms:
             raise store.FilmError("En az bir platform seçin.")
+        if stage == "cekim":
+            from .film import shoot as shoot_mod
+            if not await shoot_mod.available():
+                raise store.FilmError("Video üretimi bu kurulumda henüz açık değil.")
     except store.FilmError as e:
         raise _err(e) from None
     from temporalio.exceptions import WorkflowAlreadyStartedError

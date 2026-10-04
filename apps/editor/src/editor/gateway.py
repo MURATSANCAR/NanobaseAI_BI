@@ -126,7 +126,8 @@ PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score
                "pooling", "classify", "tokenize", "detokenize",
                "images/generations",      # book-image (vLLM-Omni); edits go as JSON chat/completions
                "images/upscale",          # book-upscale (Real-ESRGAN, images/upscale/server.py)
-               "audio/narrate"}           # book-voice (seslendirme + kelime zamanı, images/voice/server.py)
+               "audio/narrate",           # book-voice (seslendirme + kelime zamanı, images/voice/server.py)
+               "video/generations"}       # book-video (kareden video / konuşan çekim, images/video/server.py)
 HOP = {"content-length", "transfer-encoding", "connection", "keep-alive", "content-encoding"}
 # vLLM serves these at its root, not under /v1 (/tokenize, /detokenize). The editor counts a long
 # request with the model's own tokenizer before sending it (editor.budget).

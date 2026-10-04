@@ -257,6 +257,31 @@ aliases:
   # içinde PyTorch tavanıdır (server.py): 0.10 (9,4 GiB) tepeye çok yakındı, 0.12 (11,2 GiB) pay bırakır.
   # RTF 0,34–0,46 (sayfa sesinin süresine göre üretim süresi; derlemesiz 0,59–0,74). Kartta birlikte sığar:
   # ana model 0.70 + 0.12 = 0.82 (2026-10-02'ye dek 0.48); görsel model 0.62 + büyütücü 0.06 + 0.12 = 0.80 (FIT_TOGETHER 0.92).
+  # Kitaptan film ve reels (production/film/, kullanıcı kararı 2026-10-04): kareden video (i2v) ve sesten konuşan
+  # çekim (s2v). Motor Wan 2.2 (Apache-2.0); MiniMax-H3 / HunyuanVideo 1.5 karşılaştırması bitince kazanan aynı uç
+  # sözleşmesinin arkasına girer (images/video/server.py). Klasör iki alt klasör taşır: i2v/ (Wan2.2-I2V-A14B) ve
+  # s2v/ (Wan2.2-S2V-14B); ağırlıklar 2026-10-03/04'te indirildi (/data/editor/models/_indirme/durum.json), kurulumda
+  # buraya taşınır ve MANIFEST'e sha256 ile yazılır. Kartın tamamını ister (0.95): açılıştan önce ana model durur;
+  # boşta 5 dk sonra kapanır, ana model geri kalkar. ÖLÇÜLMEDİ: açılış süresi, bellek tepesi, çekim başı süre
+  # (ilk kurulumda ölçülüp buraya yazılacak). Kullanıcı kararı 2026-10-04: modeller şimdilik ayağa kaldırılmaz.
+  # KAPALI (2026-10-04): kurulum günü açılır — açmadan önce ağırlık MANIFEST'e yazılmalı (verify_models.py
+  # kayıtsız takma adı BAD sayar) ve editor-video:1 imajı derlenmeli (editorctl install satırı).
+  # book-video:
+  #   container: editor-model-video
+  #   model_dir: book-video
+  #   real_model: Wan-AI/Wan2.2-I2V-A14B+Wan2.2-S2V-14B
+  #   role: Kitaptan film — kareden video ve konuşan çekim
+  #   kind: video
+  #   gpu: 1
+  #   mem_fraction: 0.95
+  #   idle_stop_sec: 300
+  #   start_timeout_sec: 1800
+  #   env:
+  #     PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+  #   image: editor-video:1
+  #   entrypoint: [python, /srv/server.py]
+  #   args: []
+
   book-voice:
     container: editor-model-voice
     model_dir: book-voice

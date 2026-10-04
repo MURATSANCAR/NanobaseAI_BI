@@ -43,6 +43,20 @@ def _endpoint() -> tuple[str, dict]:
     return F._gateway()
 
 
+async def available() -> bool:
+    """Gateway `book-video` takma adını tanıyor mu (ya da doğrudan uç verilmiş mi)? Kapalı kurulumda çekim adımı
+    başlamadan editöre söylenir; model yine de ayağa kaldırılmaz (yalnız takma ad listesine bakılır)."""
+    if os.environ.get("EDITOR_VIDEO_URL"):
+        return True
+    url, hd = _endpoint()
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.get(f"{url}/v1/models", headers=hd)
+        return r.status_code == 200 and any(m.get("id") == ALIAS for m in r.json().get("data", []))
+    except (httpx.HTTPError, ValueError):
+        return False
+
+
 def mode_of(shot: dict, lines: list[dict]) -> str:
     speakers = {x["speaker"] for x in lines if x["speaker"].casefold() != spec.NARRATOR}
     if len(speakers) == 1 and shot["framing"] in TALK_FRAMINGS and len(shot.get("characters", [])) == 1:
