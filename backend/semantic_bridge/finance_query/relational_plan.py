@@ -27,7 +27,7 @@ RELATIONAL_SCHEMA = _object({
         "kind":{"type":"string","enum":["left","inner"]}})},
     "select":{"type":"array","minItems":1,"maxItems":32,"items":_object({
         "id":{"type":"string","pattern":"^[a-z][a-z0-9_]{0,63}$"},
-        "op":{"type":"string","enum":["field","normalized_text","missing_flag","count_records","count_distinct","sum"]},
+        "op":{"type":"string","enum":["field","label","normalized_text","missing_flag","count_records","count_distinct","sum"]},
         "field":{"anyOf":[{"type":"null"},FIELD_REF]}})},
     "filters":{"type":"array","maxItems":24,"items":_object({
         "field":FIELD_REF, "op":{"type":"string","enum":["eq","ne","contains","in","range","is_null","not_null","is_missing","not_missing"]},
@@ -124,7 +124,7 @@ def validate_relational_query(data, question, reference_date):
     for selected in data["select"]:
         _keys(selected,["id","op","field"])
         if (not isinstance(selected["id"],str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}",selected["id"])
-                or selected["id"] in ids or not isinstance(selected["op"],str) or selected["op"] not in {"field","normalized_text","missing_flag","count_records","count_distinct","sum"}):
+                or selected["id"] in ids or not isinstance(selected["op"],str) or selected["op"] not in {"field","label","normalized_text","missing_flag","count_records","count_distinct","sum"}):
             _invalid("Projeksiyon kimliği veya işlemi geçersiz.")
         ids.add(selected["id"])
         if selected["op"]=="count_records":
@@ -135,7 +135,12 @@ def validate_relational_query(data, question, reference_date):
                 _invalid("Metin normalleştirme yalnız metin alanında geçerli.")
             if selected["op"]=="sum" and (field["type"]!="number" or field.get("sum_allowed") is not True):
                 _invalid("Bu alanın toplamsal ölçü olduğu doğrulanmamış.")
-        if selected["op"] in {"field","normalized_text","missing_flag"}: plain.append((selected["field"]["alias"],selected["field"]["field"]))
+            if selected["op"]=="sum" and selected["field"]["alias"]!="root":
+                # Joins go child → parent only: a parent's amount repeats on every child row of the root.
+                _invalid("Toplam yalnız kök kaydın kendi alanında alınır; bağlanan üst kaydın tutarı her alt satırda tekrarlanır.")
+            if selected["op"]=="label" and not field.get("values"):
+                _invalid("Etiket yalnız kod listesi olan alanda gösterilir.")
+        if selected["op"] in {"field","label","normalized_text","missing_flag"}: plain.append((selected["field"]["alias"],selected["field"]["field"]))
         else: aggregates=True
     if aggregates and (data["distinct"] or any(item["op"] in {"missing_flag","normalized_text"} for item in data["select"])):
         _invalid("Toplulaştırmaya ek DISTINCT, düz eksiklik bayrağı veya normalleştirilmiş metin henüz desteklenmiyor.")
@@ -175,7 +180,10 @@ def validate_relational_query(data, question, reference_date):
 RELATIONAL_CAPABILITIES = {
     "source":"CRM current active records; relations and fields must be in this registry",
     "entities":{key:{"primary_key":entity["primary_key"],"grain":entity.get("grain","physical record"), "semantic_notes":entity.get("semantic_notes",[]),
-        "fields":{field:{"type":spec["type"],"semantics":spec.get("semantics",""),"sum_allowed":spec.get("sum_allowed",False)}
+        **({"label_tr":entity["label_tr"]} if entity.get("label_tr") else {}),
+        "fields":{field:{"type":spec["type"],"semantics":spec.get("semantics",""),"sum_allowed":spec.get("sum_allowed",False),
+                         **({"label_tr":spec["label_tr"]} if spec.get("label_tr") else {}),
+                         **({"codes":spec["values"]} if spec.get("values") else {})}
                   for field,spec in entity["fields"].items()}}
         for key,entity in ENTITY_REGISTRY.items()},
     "relations":{key:{field:relation[field] for field in
@@ -183,7 +191,7 @@ RELATIONAL_CAPABILITIES = {
         for key,relation in RELATION_REGISTRY.items()},
     "operations":{
         "joins":"root alias is root; new aliases j1..j8. Only forward child FK -> unique parent PK. LEFT preserves missing/inactive parents with NULL; INNER excludes those roots. Reverse parent -> children is not supported.",
-        "projection":"field (raw), normalized_text (text-only trim spaces and blank to NULL), missing_flag (text NULL/trimmed empty; other fields NULL), distinct true means unique whole selected row, count_records (distinct root PK), count_distinct (nonNULL field), sum only when sum_allowed. Raw numeric field is not necessarily additive.",
+        "projection":"field (raw), label (code-list field shown as its CRM label; filter such fields by the numeric code from codes), normalized_text (text-only trim spaces and blank to NULL), missing_flag (text NULL/trimmed empty; other fields NULL), distinct true means unique whole selected row, count_records (distinct root PK), count_distinct (nonNULL field), sum only when sum_allowed and only on a root field (a joined parent's amount repeats per child row). Raw numeric field is not necessarily additive.",
         "filters":"AND of eq/ne/contains/in/range/is_null/not_null/is_missing/not_missing. is_missing/not_missing use NULL or trimmed blank for text, NULL for other types. range inclusive lower/exclusive upper. NULL tests do not test blank strings. ne does not retain NULL. Fields cannot be compared to other fields.",
         "literal":"type must equal field type; value string. number finite decimal, identity UUID, bool true/false; date ISO date means Istanbul midnight or timestamp must include UTC offset.",
         "grouping":"When aggregates selected, group_by must equal all plain selected field references. DISTINCT projection requires explicit distinct=true and cannot combine with aggregates. Missing flags and normalized_text are detail-only; no derived arithmetic, HAVING or conditional counters.",

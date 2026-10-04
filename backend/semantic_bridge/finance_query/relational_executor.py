@@ -56,6 +56,10 @@ def compile_relational_query(plan, active=None):
         elif op=="count_distinct": expression="COUNT_BIG(DISTINCT "+value+")"
         elif op=="sum": expression="SUM("+value+")"
         elif op=="normalized_text": expression="NULLIF(LTRIM(RTRIM("+value+")),N'')"
+        elif op=="label":
+            spec=ENTITY_REGISTRY[aliases[item["field"]["alias"]]]["fields"][item["field"]["field"]]
+            whens=" ".join("WHEN "+str(int(code))+" THEN "+_text(text) for code,text in spec["values"].items())
+            expression="CASE "+value+" "+whens+" ELSE CAST("+value+" AS nvarchar(20)) END"
         elif op=="missing_flag":
             spec=ENTITY_REGISTRY[aliases[item["field"]["alias"]]]["fields"][item["field"]["field"]]
             condition=value+" IS NULL"
@@ -64,7 +68,7 @@ def compile_relational_query(plan, active=None):
         else: expression=value
         select.append(expression+" AS "+_identifier(item["id"]))
         fieldtype=ENTITY_REGISTRY[aliases[item["field"]["alias"]]]["fields"][item["field"]["field"]]["type"] if item["field"] else "number"
-        types[item["id"]]="bool" if op=="missing_flag" else "number" if op in {"count_records","count_distinct","sum"} else fieldtype
+        types[item["id"]]="text" if op=="label" else "bool" if op=="missing_flag" else "number" if op in {"count_records","count_distinct","sum"} else fieldtype
         if types[item["id"]]=="number": numeric.append(item["id"])
     explicit=plan["limit"]
     top=explicit if explicit is not None else MAX_RESULT_ROWS+1
@@ -128,6 +132,14 @@ def execute_relational_query(executor, plan):
             if physical not in allowed[field["type"]]:
                 raise ContractError("CRM alan türü kayıtlı sözleşmeyle uyuşmuyor.",code="SOURCE_CONTRACT_VIOLATION")
         pk=_identifier(entity["fields"][entity["primary_key"]]["column"])
+        # A declared single-column PRIMARY KEY already guarantees uniqueness; scanning 9,8 Mn order lines per question does not.
+        declared=executor.read("SELECT COUNT_BIG(*) AS n FROM [Timas_MSCRM].sys.indexes i JOIN [Timas_MSCRM].sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id"
+                               " JOIN [Timas_MSCRM].sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id"
+                               " WHERE i.is_primary_key=1 AND i.object_id=OBJECT_ID(N'Timas_MSCRM.dbo."+entity["table"]+"')"
+                               " AND c.name="+_text(entity["fields"][entity["primary_key"]]["column"])
+                               " AND (SELECT COUNT(*) FROM [Timas_MSCRM].sys.index_columns k WHERE k.object_id=i.object_id AND k.index_id=i.index_id)=1",source="crm")
+        if declared and int(declared[0].get("n") or 0)==1:
+            continue
         check="SELECT TOP (1) r."+pk+" AS invalid_key FROM "+_table(entity)+" AS r WHERE ("+active(entity,"r")+")"
         check+=" GROUP BY r."+pk+" HAVING COUNT_BIG(*)>1 OR r."+pk+" IS NULL"
         if executor.read(check,source="crm"):

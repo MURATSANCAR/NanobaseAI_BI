@@ -909,3 +909,9 @@ EXCLUDED_RELATIONSHIPS = {'contract_parent_text': 'Text UUID does not prove look
  'project_book_nn': 'new_new_proje_new_kitap N:N is not the book project (2026-10-01: 14 of 722 active pairs '
                     'match the card lookups); use book.project_card_id/book_project_id or project.stock_card_id.'}
 
+# CRM süreç kayıtları (sipariş, bekleyen ürün, satış hedefi, etkinlik, ziyaret yeri, kitap sınıflaması): üretilmiş,
+# metadata + veriyle ölçülmüş sözlük. Mevcut varlık anahtarlarını ezmez.
+from .relational_process import PROCESS_ENTITIES, PROCESS_RELATIONS  # noqa: E402
+assert not set(PROCESS_ENTITIES) & set(ENTITY_REGISTRY) and not set(PROCESS_RELATIONS) & set(RELATION_REGISTRY)
+ENTITY_REGISTRY.update(PROCESS_ENTITIES)
+RELATION_REGISTRY.update(PROCESS_RELATIONS)
