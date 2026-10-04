@@ -92,7 +92,20 @@ def register(app, deps: dict[str, Any]) -> None:
     @app.get(P)
     def film_list(job: str, request: Request):
         auth(request)
-        return JSONResponse(call(request_fn, "GET", job), headers={"Cache-Control": "no-store"})
+        try:
+            out = request_fn("GET", job)
+        except es.StudioError as e:
+            # Stüdyo servisi film uçlarını hiç tanımıyorsa (eski sürüm; yol yok → FastAPI'nin «Not Found»'u) ekran
+            # «henüz açık değil» der. İş yok gibi servisin kendi Türkçe hataları olduğu gibi editöre gider.
+            if not (e.status == 404 and str(e) == "Not Found"):
+                raise HTTPException(e.status if e.status in (400, 404, 409) else 400, str(e)) from None
+            out = {"films": [], "formats": {}, "styles": {}, "platforms": {}, "available": False}
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+        except Exception:  # noqa: BLE001
+            log.exception("studio film call failed")
+            raise HTTPException(502, "Stüdyo şu an yanıt vermiyor.") from None
+        return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
     @app.post(P)
     def film_new(job: str, request: Request, body: dict[str, Any] | None = None):

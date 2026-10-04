@@ -40,7 +40,7 @@ export type FilmView = { film: FilmMeta; script: ScriptRec | null; cast: CastRec
   events: { at: number; by: string; what: string; stage?: string }[] };
 export type FormatInfo = { label: string; aspect: string; min_sec: number; max_sec: number; burn_subtitles: boolean };
 export type FilmList = { films: FilmMeta[]; formats: Record<FilmFormat, FormatInfo>; styles: Record<FilmStyle, string>;
-  platforms: Record<string, string> };
+  platforms: Record<string, string>; available?: boolean };
 
 const base = (job: string) => `/api/v1/editorial/studio/jobs/${encodeURIComponent(job)}/films`;
 

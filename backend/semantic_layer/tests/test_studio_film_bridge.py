@@ -12,6 +12,8 @@ from semantic_bridge import editorial_studio_film as F
 
 FID = "f_0123abcd"
 JOB = "20261004101010abcdef"
+OLD = "20261004101010aaaaaa"
+GONE = "20261004101010bbbbbb"
 
 
 @pytest.fixture
@@ -32,6 +34,10 @@ def env(monkeypatch):
             return httpx.Response(200, content=video, headers={"content-type": "video/mp4"})
         if path.endswith("/media/cikti/paylasim/tiktok.mp4"):
             return httpx.Response(409, json={"detail": "Paylaşım paketi onaylanmadan indirilemez."})
+        if path == f"/v1/studio/jobs/{OLD}/films":
+            return httpx.Response(404, json={"detail": "Not Found"})
+        if path == f"/v1/studio/jobs/{GONE}/films":
+            return httpx.Response(404, json={"detail": "iş yok"})
         if path.endswith("/media/kare/x.exe"):
             return httpx.Response(200, content=b"MZ", headers={"content-type": "application/octet-stream"})
         return httpx.Response(200, json={"ok": True, "path": path, "body": req.content.decode() or None})
@@ -88,3 +94,11 @@ def test_download_needs_export_permission_and_service_approval(env):
     perms["veri.disa-aktar"] = True
     r = c.get(url)
     assert r.status_code == 409 and "onaylanmadan" in r.text
+
+
+def test_old_studio_without_film_routes_reads_as_not_available(env):
+    c, _, _, _, _ = env
+    r = c.get(f"/api/v1/editorial/studio/jobs/{OLD}/films")
+    assert r.status_code == 200 and r.json()["available"] is False and r.json()["films"] == []
+    gone = c.get(f"/api/v1/editorial/studio/jobs/{GONE}/films")
+    assert gone.status_code == 404 and "iş yok" in gone.text

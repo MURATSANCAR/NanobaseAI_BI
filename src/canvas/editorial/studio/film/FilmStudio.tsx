@@ -222,7 +222,8 @@ export default function FilmStudio({ jobId }: { jobId: string }) {
           </h2>
           <p className="text-[12px] text-canvas-muted">Senaryodan paylaşıma yedi adım. Zeki AI üretir, siz düzeltip onaylarsınız.</p>
         </div>
-        {!list ? (q.error ? <Note tone="info">{errText(q.error, 'Filmler okunamadı.')}</Note> : <Loading />) : (
+        {!list ? (q.error ? <Note tone="info">{errText(q.error, 'Filmler okunamadı.')}</Note> : <Loading />)
+          : list.available === false ? <Note tone="info">Film ve video üretimi bu kurulumda henüz açık değil.</Note> : (
           <>
             <div className="-mx-1 flex flex-wrap gap-1.5 px-1">
               {films.map((f) => (
