@@ -76,7 +76,7 @@ class Crm:
 
     def execute(self, sql, limit):
         self.sql.append(sql)
-        if "sys.tables" in sql:
+        if "sys.objects" in sql or "sys.tables" in sql:      # pasif kuralı tablo listesi (2026-10-05'ten beri sys.objects)
             return ["name"], [{"name": "new_siparissatiriBase"}], False
         if "EntityView" in sql or "StringMapBase" in sql:
             return ["x"], [], False
