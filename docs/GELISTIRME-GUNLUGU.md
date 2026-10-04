@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-04 — PDF yapı çıkarıcı denemesi: Docling, MinerU, pymupdf-layout ↔ bizim hat (4 Timaş örneği)
+
+- **Neden:** kullanıcı sordu: e-kitapta yaşanan sorunlar PDF'ten yapı tahmininden geliyor; hazır açık kaynak araçlar daha iyi mi.
+- **Düzenek (GPU, üretim imajlarına dokunmadan):** `/data/claude-pdfdeneme` — ayrı deneme imajları `claude-pdf-docling` (Docling, vLLM imajı üstüne), `claude-pdf-mineru` (MinerU 2.7.6, `-b pipeline -l latin -m txt`; 4.x uzak servis/telemetri seçenekli belge kütüphanesine dönüştüğü için yerel 2.x'e sabitlendi), `claude-pdf-pml` (pymupdf-layout + pymupdf4llm). Bizim hat: `from_generation(layout=True)`. Ölçü `karsilastir.py`: Timaş e-kitabının metniyle 6'lı kelime dizisi kapsaması, fazla metin, yapışık/bölünmüş kelime, başlık bulma ve isabet, dipnot sayısı, metne karışan dipnot, tekrarlanan kısa satır (sayfa başlığı artığı).
+- **Sonuç:** metin kapsaması bizde ve Docling'de eşit (%96–99,8); MinerU en düşük (%93–95, çok bölünmüş kelime, dipnot bulmuyor); pymupdf-layout başlıkta zayıf. Docling dipnotta açık ara iyi (Şer'î 303/303 — biz 296; Karpat'ta metne karışan dipnot 0 — biz 5) ve Karpat ara başlıklarını buluyor (28/28 — biz 5/28), ama sahte başlık çok (isabet %49–82; biz %56–100) ve sayfa başlığı artığı bırakıyor (Şer'î 31 satır). Bizim hat bölüm başlığı, sayfa başlığı ayıklama ve hızda (10–32 sn; Docling 23–177 sn) önde. Karpat'taki yapışık kelimelerin çoğu bizim eski okuma kaydından.
+- **Öneri:** hattı değiştirmek değil, kurgu dışı kitapta dipnot ve ara başlık için Docling'i ikinci görüş olarak eklemek (bizim kuralla uyuştuğu yerde kabul). Karar kullanıcıda; kod değişmedi.
+
 ## 2026-10-04 — `/api/v1/chat/mention-answer` köprü erişim kuralı
 
 - **Neden:** main'de `test_access.py::test_every_bridge_route_has_a_rule` kalıyordu: sohbetteki @Zeki ucu (`semantic_bridge/chat_mention.py`) `access.RULES`'ta yoktu (`rule_for` → None; oturumlu istekte kapı 403, yönetici hariç).
