@@ -78,7 +78,7 @@ def main() -> None:
     if not args.check:
         data["table_count"] = len(data["tables"])
         data["column_count"] = sum(len(t.get("columns") or {}) for t in data["tables"].values())
-        OUT_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+        OUT_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         OUT_GLOSSARY.write_text(glossary_markdown(data), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False))
 
