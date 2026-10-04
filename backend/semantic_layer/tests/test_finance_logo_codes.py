@@ -160,3 +160,10 @@ def test_a_coded_filter_reports_the_cancelled_invoices_it_left_out():
                                          ("mükellefi olmayan müşteriler", {0}), ("e-fatura mükellefi müşteriler", {1})])
 def test_a_negated_phrase_is_not_read_as_its_positive_part(op, value, codes):
     assert CODED["customer_einvoice_user"].codes_for(op, value) == codes
+
+
+def test_withholding_invoices_are_a_header_code_not_the_line_vat_exemption():
+    _, sql = run(Plan(("invoice_count",), (), SEPT, filters=(("einvoice_type", "contains", "tevkifatlı faturalar"),)))
+    assert "f.EINVOICETYP IN (4)" in main_sql(sql, "LG_411_01_INVOICE")
+    _, sql = run(Plan(("sales_amount",), ("einvoice_type",), SEPT))
+    assert "WHEN h.EINVOICETYP=2 THEN N'İstisna'" in main_sql(sql, "LG_411_01_STLINE")

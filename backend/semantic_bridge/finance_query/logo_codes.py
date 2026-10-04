@@ -71,6 +71,7 @@ class Coded:
 
 _EDOC = {0: "Kağıt fatura", 1: "e-Fatura", 2: "e-Arşiv fatura", 3: "e-Arşiv fatura"}
 _SCENARIO = {1: "Temel fatura", 2: "Ticari fatura", 0: "Senaryo seçilmemiş"}
+# EINVOICETYP fatura başlığında EINVOICEDET ile birebir aynı; anlam UBL InvoiceTypeCode'dan (iade faturasında 0 → IADE).
 # logoyazilimdestek.com «e-belgelerin veritabanı statü karşılıkları»; e-Arşiv faturada ESTATUS 2 yazılır.
 _STATUS = {0: "GİB'e gönderilecek", 1: "Onay gönderildi", 2: "Onaylandı", 3: "Paketlendi", 4: "GİB'e gönderildi",
            5: "GİB'e gönderilemedi", 6: "GİB'de işlendi", 7: "GİB'de işlenemedi", 8: "Alıcıya gönderildi",
@@ -91,6 +92,11 @@ CODED = {
         "e-Fatura senaryosu",
         "invoice", "PROFILEID", _SCENARIO,
         {"temel": (1,), "temel fatura": (1,), "ticari": (2,), "ticari fatura": (2,)}),
+    "einvoice_type": Coded(
+        "fatura tipi",
+        "invoice", "EINVOICETYP", {0: "Satış", 2: "İstisna", 4: "Tevkifat"},
+        {"satış faturası": (0,), "istisna": (2,), "istisnalı": (2,), "istisna faturası": (2,),
+         "tevkifat": (4,), "tevkifatlı": (4,), "tevkifatlı fatura": (4,)}, other="Diğer tip"),
     "einvoice_status": Coded(
         "e-belge durumu",
         "invoice", "ESTATUS", _STATUS,
