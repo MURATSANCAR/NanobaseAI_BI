@@ -333,3 +333,16 @@ def test_library_cover_by_first_segment_only_for_a_single_book():
     assert web_cover._by_first_segment(ix, "Balonla Beş Hafta", None)["row"]["id"] in ("d", "e")   # aynı kitap
     assert web_cover._by_first_segment(ix, "Şirin", None) is None                                 # seri adı, iki kitap
     assert web_cover._by_first_segment(ix, "Acı Biber Çatçat", "Acı Biber Çatçat - Başka Kitap") is None
+
+
+def test_unreadable_library_image_is_converted(tmp_path):
+    from PIL import Image
+    from editor import web_cover
+    import pymupdf
+    w = tmp_path / "k.webp"
+    Image.new("RGB", (40, 60), (200, 10, 10)).save(w, "WEBP")
+    c = tmp_path / "c.jpg"
+    Image.new("CMYK", (40, 60), (0, 200, 200, 0)).save(c, "JPEG")
+    for f in (w, c):
+        data, name = web_cover.readable_image(f)
+        assert data is not None and pymupdf.Pixmap(data).width == 40

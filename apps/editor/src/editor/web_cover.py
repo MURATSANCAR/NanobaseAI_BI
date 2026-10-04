@@ -216,13 +216,36 @@ def from_library(book_id: str, ix=None, apply: bool = True) -> dict:
     if not apply:
         return out
     when = r.get("fetched_at") or datetime.now(timezone.utc)
+    data, name = readable_image(path)
+    if data is None:
+        return {**out, "outcome": "BAD_IMAGE"}
     rep = {"book_id": book_id, "matched_by": m["by"], "crm_title": r["title"], "outcome": "STORED",
-           "file_name": path.name, "candidates": [],
+           "file_name": name, "candidates": [],
            "chosen": {"kind": "site_library", "path": r.get("page_url") or r["id"], "name": r["title"],
                       "date": when.isoformat(), "library_id": r["id"]},
            "detail": "kapak arşivi (yayınevi sitesi)"}
-    res = catalog.store_lookup(rep, "WEB", path.read_bytes())
+    res = catalog.store_lookup(rep, "WEB", data)
     return {**out, "outcome": res["outcome"]}
+
+
+def readable_image(path) -> tuple[bytes | None, str]:
+    """Kapak kaydedicinin (pymupdf) okuyabileceği görsel: okuyabiliyorsa olduğu gibi; okuyamıyorsa (WebP, CMYK renk
+    profilli JPEG) RGB JPEG'e çevrilir. Çevrilemezse (None, ad)."""
+    import io
+    data = path.read_bytes()
+    try:
+        pymupdf.Pixmap(data)
+        return data, path.name
+    except Exception:  # noqa: BLE001 — biçim okunamadı, çevrilir
+        pass
+    try:
+        from PIL import Image
+        buf = io.BytesIO()
+        Image.open(io.BytesIO(data)).convert("RGB").save(buf, "JPEG", quality=92)
+        pymupdf.Pixmap(buf.getvalue())
+        return buf.getvalue(), path.stem + ".jpg"
+    except Exception:  # noqa: BLE001
+        return None, path.name
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -237,7 +260,10 @@ def main(argv: list[str] | None = None) -> int:
     ix = library_index()
     seen = collections.Counter()
     for b in db.all_rows("SELECT id FROM book ORDER BY id"):
-        res = from_library(str(b["id"]), ix, apply=a.apply)
+        try:
+            res = from_library(str(b["id"]), ix, apply=a.apply)
+        except Exception as e:  # noqa: BLE001 — bir kitabın hatası ötekileri durdurmaz
+            res = {"book_id": str(b["id"]), "outcome": "ERROR", "error": f"{type(e).__name__}: {e}"[:200]}
         seen[(res["outcome"], res.get("by"))] += 1
         if a.json:
             print(json.dumps(res, ensure_ascii=False, default=str), flush=True)
