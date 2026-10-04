@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-10-04 — SEO: onaylanan önerinin görünmez alanları CRM kitap kartına; gece denetimi
+
+- Kullanıcı kararı: sistem her gece bütün ürünleri kontrol eder, eksik/hatalı olan Ürün denetiminde görünür; kullanıcı onaylayınca ürünün sitedeki metnine dokunmayan yalnız SEO/GEO alanları CRM'e yazılır; yazılanlar her gece denetlenir.
+- `seo_geo/crm_write.py`: yazılabilir alanlar `new_seobaslik`, `new_seoaciklama`, `new_kapakalt` + `new_seodurum`=2, `new_seoguncelleme`; ürün açıklaması (`new_ozet`) ve anahtar kelime yazılmaz. Önce CRM'deki eski değer okunur ve `semantic_seo_crm_writes`'a yazılır, sonra `UPDATE … ModifiedOn = GETUTCDATE() WHERE new_kitapId = ? AND statecode = 0`; tek tek geri alınır. Kip `SEO_CRM_WRITE` kapali/deneme/acik (Yönetim → SEO & GEO). Gece işi: CRM'deki değer hâlâ yazdığımız mı, T-soft'taki SeoTitle/SeoDescription eşit mi («sitede»).
+- Ekran: Karar geçmişinde «CRM'e yazılanlar» (durum, yazılan + önceki değer, gece denetimi, geri al onay penceresiyle); Ürün denetimi ve «Onay ne yapar?» metinleri güncellendi.
+- Test: `test_seo_crm_write.py` (6); sunucuda seo+admin testleri 585/585.
+- Paralel inceleme (timas.com.tr makine dosyaları, yalnız okuma): AI arama botları açık, eğitim botları Cloudflare'de 403; llms.txt 10 bayt boş, llms-full.txt yok; Organization `sameAs` yok; 1.381 yazar sayfasında Person şeması yok; ürün meta açıklaması başlığın tekrarı; ürün site haritası lastmod'ları her gece yenileniyor.
+
 ## 2026-10-04 — Okunmuş kitaplardaki dört kusur: üst başlık/dipnot, bölüm adı, yarım künye, yapışık kelime
 
 - **Neden:** kullanıcı okumaları durdurup önce okunmuş kitaplardaki sorunların çözülmesini istedi («hadi hepsini düzelt»). Okumalar duruyor (bakım kilidi açık, `editor-worker` ve `editor-book-queue` kapalı; kuyruk silinmedi).
