@@ -440,3 +440,8 @@ WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUp
 from .characters import ACTIVITIES as _CARD_ACTIVITIES, WORKFLOWS as _CARD_WORKFLOWS  # noqa: E402
 ACTIVITIES += _CARD_ACTIVITIES
 WORKFLOWS += _CARD_WORKFLOWS
+
+# Kitaptan film ve reels (film/flow.py): adımlar (FilmStage) aynı kuyrukta, aynı tek işçide.
+from .film.flow import ACTIVITIES as _FILM_ACTIVITIES, WORKFLOWS as _FILM_WORKFLOWS  # noqa: E402
+ACTIVITIES += _FILM_ACTIVITIES
+WORKFLOWS += _FILM_WORKFLOWS

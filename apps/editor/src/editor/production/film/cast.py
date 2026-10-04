@@ -1,0 +1,113 @@
+"""Oyuncular: senaryonun karakterleri → görünüş (dizinin onaylı karakter kartı varsa o) ve ses (ses kataloğu).
+
+Görünüş: kart varsa kartın İngilizce tarifi ve birincil referans görseli (characters.CardSet) — kart her çekimde
+aynıdır; kart yoksa senaryonun `look_en`'i kullanılır ve ilk karede karakterin referansı üretilir (frames.py).
+Ses: yaş + cinsiyet + rol kelimesinden katalogdaki sese (voices_zeki); aynı sesi iki ana karaktere vermemek için her
+grupta sıradaki aday seçilir. Editör sesi değiştirir, dinler, onaylar.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+from .. import narration
+from ..characters import CardSet
+from . import spec, store
+
+# (yaş, cinsiyet) → aday sesler (sırayla dağıtılır). Katalogda çocuk sesi yok: çocuk karakter genç sesle okunur.
+CANDIDATES = {
+    ("cocuk", "kadin"): ["genc-kadin", "masal-anne"], ("cocuk", "erkek"): ["genc-erkek", "masal-baba"],
+    ("genc", "kadin"): ["genc-kadin", "roman-kadin"], ("genc", "erkek"): ["genc-erkek", "roman-erkek"],
+    ("yetiskin", "kadin"): ["roman-kadin", "masal-anne", "tarih-kadin", "gelisim-kadin"],
+    ("yetiskin", "erkek"): ["roman-erkek", "masal-baba", "tarih-erkek", "gelisim-erkek"],
+    ("yasli", "kadin"): ["masal-nine", "tasavvuf-kadin"],
+    ("yasli", "erkek"): ["masal-dede", "bilge-dede", "yasli-kaptan", "tasavvuf-erkek"],
+}
+ROLE_VOICES = [(re.compile(r"kötü|zalim|karanlık|düşman|cadı", re.I), "karanlik-lord"),
+               (re.compile(r"kral|padişah|sultan|hükümdar", re.I), "yasli-kral"),
+               (re.compile(r"kaptan|denizci|korsan", re.I), "yasli-kaptan"),
+               (re.compile(r"bilge|derviş|hoca|öğretmen", re.I), "bilge-dede")]
+NARRATOR = {"cizgi-film": "masal-anne", "fragman": "fragman-anlatici", "reels": "roman-kadin"}
+
+
+def _ok(vid: str) -> bool:
+    return narration.is_voice(vid)
+
+
+def pick_voice(member: dict, used: set[str]) -> str:
+    role = member.get("role", "")
+    for rx, vid in ROLE_VOICES:
+        if rx.search(role) and _ok(vid) and member.get("gender") != "kadin":
+            return vid
+    key = (member.get("age", "yetiskin"), member.get("gender", "belirsiz"))
+    if key[1] == "belirsiz":
+        key = (key[0], "kadin")
+    cands = [v for v in CANDIDATES.get(key, CANDIDATES[("yetiskin", "kadin")]) if _ok(v)]
+    for v in cands:
+        if v not in used:
+            return v
+    return cands[0] if cands else narration.canonical("roman-kadin")
+
+
+def build(d: Path, f: Path, script: dict, by: str) -> dict:
+    cards = CardSet.for_job(d)
+    used: set[str] = set()
+    members = []
+    for c in script.get("cast", []):
+        card = cards.card(c["name"]) if cards else None
+        refs = cards.ref_paths([c["name"]]) if cards else {}
+        voice = pick_voice(c, used)
+        used.add(voice)
+        members.append({"name": c["name"], "role": c.get("role", ""), "age": c.get("age"), "gender": c.get("gender"),
+                        "look_en": (card or {}).get("look_en") or c.get("look_en", ""),
+                        "card": card["id"] if card else None, "ref": refs.get(c["name"]), "voice": voice})
+    m = store.meta(f)
+    old = store.read(f, "oyuncular.json") or {"rev": 0}
+    rec = {"rev": old["rev"] + 1, "narrator": NARRATOR[m["format"]], "members": members, "by": by, "at": store.now()}
+    store.write(f, "oyuncular.json", rec)
+    store.set_stage(f, "oyuncular", status="hazir", count=len(members))
+    store.log(f, by, "oyuncular hazırlandı", count=len(members))
+    return rec
+
+
+def load(f: Path) -> dict:
+    rec = store.read(f, "oyuncular.json")
+    if not rec:
+        raise store.FilmError("Oyuncu listesi yok.")
+    return rec
+
+
+def set_voice(f: Path, name: str, voice: str, rev: int, by: str) -> dict:
+    rec = load(f)
+    if rec["rev"] != rev:
+        raise store.FilmError("Oyuncu listesi bu arada değişti; sayfayı yenileyin.")
+    vid = narration.canonical(voice)
+    if not _ok(vid):
+        raise store.FilmError("Bu ses katalogda yok.")
+    if name == spec.NARRATOR:
+        rec["narrator"] = vid
+    else:
+        mem = next((x for x in rec["members"] if x["name"] == name), None)
+        if mem is None:
+            raise store.FilmError("Böyle bir oyuncu yok.")
+        mem["voice"] = vid
+    rec.update(rev=rec["rev"] + 1, by=by, at=store.now())
+    store.write(f, "oyuncular.json", rec)
+    store.set_stage(f, "oyuncular", status="hazir", count=len(rec["members"]))
+    store.log(f, by, "ses değişti", name=name, voice=vid)
+    return rec
+
+
+def voice_of(rec: dict, speaker: str) -> str:
+    if speaker.casefold() == spec.NARRATOR:
+        return rec["narrator"]
+    for m in rec["members"]:
+        if m["name"].casefold() == speaker.casefold():
+            return m["voice"]
+    return rec["narrator"]
+
+
+def card_lines(rec: dict) -> dict[str, str]:
+    """Oyuncu → istem satırı (İngilizce görünüş)."""
+    return {m["name"]: f"{m['name']}: {m['look_en'].rstrip('.')}." for m in rec["members"] if m.get("look_en")}
