@@ -76,6 +76,10 @@ class Crm:
 
     def execute(self, sql, limit):
         self.sql.append(sql)
+        if "sys.tables" in sql:
+            return ["name"], [], False                    # pasif kuralı uygulanacak tablo yok
+        if "EntityView" in sql or "StringMapBase" in sql:
+            return ["x"], [], False
         if "is_primary_key" in sql:
             return ["n"], [{"n": 1 if self.declared else 0}], False
         return [], [], False
@@ -87,7 +91,6 @@ def test_a_declared_primary_key_skips_the_full_uniqueness_scan(declared, monkeyp
     ex = Executor(SimpleNamespace(crm_connector=crm, connector=None, _check_data_scope=lambda sql: None))
     ex.verify_schema = lambda tables, source: {(t.lower(), c.lower()): TYPES.get((t.lower(), c.lower()), "nvarchar")
                                                for t, cols in tables.items() for c in cols}
-    monkeypatch.setattr(ex, "crm_active", lambda table, alias: "1=1")
     execute_relational_query(ex, plan("crm_order_line", [{"id": "n", "op": "count_records", "field": None}]))
     scans = [s for s in crm.sql if "HAVING COUNT_BIG(*)>1" in s]
     assert (not scans) if declared else scans
