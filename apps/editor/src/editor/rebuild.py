@@ -99,6 +99,9 @@ async def validate(gid: str) -> dict:
         # Newly marked imprint pages and no METADATA yet: read the imprint now (the reading's
         # imprint step ran before the whole-book rule existed). Same token: it is this validation's write.
         scope['metadata']=await page_scope.metadata_after_scope(gid,scope)
+        # One person, one record over the whole book (editor.identity_fold): a reading from before the workflow
+        # step «identity-fold-v1» is folded here; after it the run writes nothing. Under this validation's token.
+        fold=await asyncio.to_thread(fold_identities,gid)
         # Identity and visual work is performed before activate in the full workflow.
         # Repairs invalidate actor readings in the same transaction.
         critic=await quality.critic_pass(gid, recheck=True)
@@ -108,9 +111,21 @@ async def validate(gid: str) -> dict:
         regression=await asyncio.to_thread(quality.run_regression_suite,gid)
         return {'critic':critic,'actors':actors,'contradictions':contradictions,'queued':queued,
                 'regression_passed':regression['passed'],'writer_token':token,'start_revision':start,
-                'page_scope':scope}
+                'page_scope':scope,'identity_fold':fold}
     finally:
         db.validation_token.reset(context)
+
+
+def fold_identities(gid: str) -> dict:
+    """identity_fold.run for an output validation. A failure is reported in the validation, never fails the
+    build: the records stay as the reading wrote them."""
+    from . import identity_fold
+    try:
+        out=identity_fold.run(gid)
+    except Exception as exc:  # noqa: BLE001
+        log.warning('identity fold failed for %s: %s', gid, exc)
+        return {'error':str(exc)[:500]}
+    return {k:out.get(k) for k in ('characters','records_folded','records_blocked','characters_after')}
 
 
 def freeze(gid: str, validation: dict) -> tuple[dict,str]:

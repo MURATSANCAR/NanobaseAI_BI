@@ -215,6 +215,19 @@ async def resolve_identity(generation_id: str, strict: bool = False) -> dict:
     return await _own_loop(knowledge.resolve_character_identity, generation_id, final_attempt=final)
 
 
+def _fold_identities(generation_id: str) -> dict:
+    from .. import identity_fold
+    return identity_fold.run(generation_id)
+
+
+@activity.defn
+async def fold_identities(generation_id: str) -> dict:
+    """The whole-book person fold after the identity step (workflow «identity-fold-v1», editor.identity_fold.run):
+    records of one person left apart by the windowed reading become one. Plan and write in a thread; no
+    batch_guard — this is the reading's own generation."""
+    return await _t(_fold_identities, generation_id)
+
+
 @activity.defn
 async def identity_unresolved(generation_id: str, error: str) -> dict:
     """The workflow's last resort when resolve_identity itself could not finish."""
@@ -457,6 +470,6 @@ async def rebuild_outputs(generation_id: str) -> dict:
 
 
 ALL = [archive_visual_pages, archive_outputs, archive_recommend, proofreading, rebuild_outputs, event_actors, detect_contradictions, queue_contradictions, book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
-       persist_visual, text_chunks, extract_chunk, resolve_identity, identity_unresolved, continuity_checks, verify_modality,
+       persist_visual, text_chunks, extract_chunk, resolve_identity, identity_unresolved, fold_identities, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

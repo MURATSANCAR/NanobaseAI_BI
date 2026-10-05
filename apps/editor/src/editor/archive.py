@@ -520,13 +520,16 @@ async def validate(gid: str) -> dict:
         from . import page_scope
         scope = await asyncio.to_thread(page_scope.ensure, gid)
         scope["metadata"] = await page_scope.metadata_after_scope(gid, scope)
+        # bütün kitapta aynı kişinin kayıtları tek kayıt (editor.identity_fold; yeniden koşması bir şey yazmaz)
+        from . import rebuild
+        fold = await asyncio.to_thread(rebuild.fold_identities, gid)
         critic = await quality.critic_pass(gid, recheck=True)
         actors = await knowledge.attribute_event_actors(gid)
         regression = await asyncio.to_thread(quality.run_regression_suite, gid)
         return {"critic": critic, "actors": actors, "contradictions": None, "queued": None,
                 "regression_passed": regression["passed"], "writer_token": token, "start_revision": start,
                 "profile": PROFILE, "deferred": ["detect_contradictions", "contradictions_to_queue"],
-                "page_scope": scope}
+                "page_scope": scope, "identity_fold": fold}
     finally:
         db.validation_token.reset(ctx)
 

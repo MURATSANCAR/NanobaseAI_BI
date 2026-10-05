@@ -467,11 +467,17 @@ async def cross_window(gid: str, chars: list[dict], by_mid: dict[str, dict], boo
 # mid-sentence): «babam», «annem», «kadın», «bakan» are relative to who speaks, and a book with
 # several narrators has several of each. Nothing here is specific to a book.
 
+#: The circumflex is optional in Turkish spelling: «Alâeddin» and «Alaeddin» are one written name (2026-10-05,
+#: «Devlerin Savaşı»: «Alâeddin Keykubat» and «Alaeddin Keykubat» stayed two records).
+_CIRCUMFLEX = str.maketrans('âîû', 'aiu')
+
+
 def name_key(name: str) -> str:
-    """A written name folded for comparison: Turkish case («İ»/«I»), punctuation and spacing."""
+    """A written name folded for comparison: Turkish case («İ»/«I»), circumflex («â»/«a»), punctuation and
+    spacing."""
     from . import ledger
     n = (name or '').replace('İ', 'i').replace('I', 'ı')
-    return ledger.norm(n)
+    return ledger.norm(n).translate(_CIRCUMFLEX)
 
 
 def same_name_refusal(a: dict, b: dict) -> str | None:
@@ -596,20 +602,43 @@ def same_person_hint(a: dict, b: dict) -> bool:
     return same_relation(da, db_)
 
 
-def proper_name_test(text: str):
-    """name -> is it written as a name in this book (settings: proper_name_min_share / _min_uses)."""
-    from . import naming
-    from .config import settings
-    st = settings()
-    memo: dict[str, bool] = {}
+class ProperNameTest:
+    """name -> is it written as a name in this book (settings: proper_name_min_share / _min_uses).
 
-    def test(name: str) -> bool:
+    `in_quotes(name, quotes)`: the same measurement over one record's own mention quotes. A name that is also a
+    common word of the language («Almaz»: a man's name and the verb form «almaz») fails the book-wide share
+    because the book uses the word lowercase elsewhere (2026-10-05: 15 of 20 mid-sentence uses capitalised,
+    0.75 < 0.8, two records of one man stayed apart). Where a record's own quotes write the name with a capital in
+    the middle of a sentence, the reading met it as a name there; `same_name_plan` accepts a bucket whose every
+    record shows that."""
+
+    def __init__(self, text: str, min_share: float | None = None, min_uses: int | None = None) -> None:
+        if min_share is None or min_uses is None:
+            from .config import settings
+            st = settings()
+            min_share = st.proper_name_min_share if min_share is None else min_share
+            min_uses = st.proper_name_min_uses if min_uses is None else min_uses
+        self.text, self.min_share, self.min_uses = text, float(min_share), int(min_uses)
+        self._memo: dict[str, bool] = {}
+
+    def __call__(self, name: str) -> bool:
+        from . import naming
         k = name_key(name)
-        if k not in memo:
-            memo[k] = naming.is_proper_name(name, text, min_share=st.proper_name_min_share,
-                                            min_uses=st.proper_name_min_uses)
-        return memo[k]
-    return test
+        if k not in self._memo:
+            self._memo[k] = naming.is_proper_name(name, self.text, min_share=self.min_share,
+                                                  min_uses=self.min_uses)
+        return self._memo[k]
+
+    def in_quotes(self, name: str, quotes: list[str]) -> bool:
+        """Do this record's own quotes write the name as a name (capital in mid-sentence, same share)? A quote's
+        first word counts as a sentence start (a quote is a fragment: its first capital proves nothing)."""
+        from . import naming
+        mid, cap = naming.usage(name, '\n'.join(q for q in quotes if q))
+        return mid >= 1 and cap / mid >= self.min_share
+
+
+def proper_name_test(text: str) -> ProperNameTest:
+    return ProperNameTest(text)
 
 
 #: First-person possessive kinship labels («annem», «kız kardeşim», «büyükannem»): relative to the narrator.
@@ -742,12 +771,22 @@ def interleaved(a: dict, b: dict) -> bool:
     return bool(x and y and x[0] <= y[1] and y[0] <= x[1])
 
 
+def _quotes_name_it(proper, units: list[dict], idx: list[int], addressed: bool) -> bool:
+    """Every record of a same-name bucket writes the name as a name in its own quotes (ProperNameTest.in_quotes;
+    units carry `quotes`). Not for an address bucket («Safiş yengem»: its own rule) or a test without quotes."""
+    check = getattr(proper, 'in_quotes', None)
+    if addressed or check is None:
+        return False
+    return all(units[i].get('quotes') and check(units[i]['name'], units[i]['quotes']) for i in idx)
+
+
 def same_name_plan(units: list[dict], proper=None, relative=is_relative_label) -> tuple[list[list[int]], list[dict]]:
     """Clusters (index lists, 2+ members, largest unit first) of units that are one person by name, and
     the refused pairs. A unit joins a cluster only if it is compatible with EVERY member (no chaining
     across a conflict). Units are taken largest first, so the main record keeps its place. `proper`
     (name -> bool): only names it accepts are joined — or, under `relative` (a first-person kinship label,
-    `is_relative_label`), labels whose records do not interleave over the book's pages."""
+    `is_relative_label`), labels whose records do not interleave over the book's pages — or a name the book also
+    uses as a common word when every record's own quotes (`quotes`) write it as a name (ProperNameTest.in_quotes)."""
     buckets: dict[str, list[int]] = {}
     for i, u in enumerate(units):
         k = name_key(u['name'])
@@ -771,7 +810,7 @@ def same_name_plan(units: list[dict], proper=None, relative=is_relative_label) -
             continue
         label = False
         shown = proper_text.get(k, units[idx[0]]['name'])
-        if proper is not None and not proper(shown):
+        if proper is not None and not proper(shown) and not _quotes_name_it(proper, units, idx, k in proper_text):
             if k in proper_text or relative is None or not relative(shown):
                 refused.append({'name': shown, 'with': shown, 'records': len(idx),
                                 'reason': 'NOT_A_PROPER_NAME'})
@@ -820,6 +859,7 @@ def same_name_join(chars: list[dict], by_mid: dict[str, dict], text: str = '',
               'pages': {by_mid[m]['page_no'] for m in ch['mention_ids'] if m in by_mid},
               'description': ch.get('description') or '',
               'windows': set(ch.get('window_ids') or []),
+              'quotes': [by_mid[m].get('quote') or '' for m in ch['mention_ids'] if m in by_mid],
               # K19: an address-named record's age comes only from its own text
               'age_evidence': identity_links.text_stage([by_mid[m].get('quote') or '' for m in ch['mention_ids']
                                                          if m in by_mid])

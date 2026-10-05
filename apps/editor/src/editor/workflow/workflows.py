@@ -40,6 +40,16 @@ OUTPUTS_SUPERSEDED_RETRY = "outputs-superseded-retry-v1"
 SUPERSEDED_RETRIES = 3
 SUPERSEDED_PAUSE = timedelta(minutes=2)
 
+#: The whole-book person fold (editor.identity_fold) right after the identity step (2026-10-05). The reading's own
+#: same-name join sees the model's names inside its windows; the names the book gives the records are settled only
+#: when they are written (a model «Kanji» became «Kanju» after the join), and two records of one name stayed
+#: («Devlerin Savaşı»: «Kanju» ×2). Until then the fold ran only by hand. It runs before visual identity and the
+#: final-read checks: the appearance ledger those checks write (character_attribute) is append-only and keeps a
+#: record from being folded, and visual identity then assigns figures to one record per person. Histories recorded
+#: before the marker replay without the step; a failure never fails the reading (failures.identity_fold) and the
+#: output validation folds again (rebuild.validate / archive.validate).
+IDENTITY_FOLD = "identity-fold-v1"
+
 
 def infrastructure_failure(e: ActivityError) -> bool:
     """The activity lost its worker (heartbeat / start-to-close timeout) or ended in a connection,
@@ -192,6 +202,7 @@ class BookFullAnalysis:
             ext, failures["extract"] = await self.fan_out("extract_chunk", chunks, gid)
             await self.step(8, "Karakter kimlikleri")
             ident = await self._identity(gid, failures)
+            fold = await self._identity_fold(gid, failures)
             await self.step(9, "Olay kipleri")
             mod = await self.act("verify_modality", gid)
             mrg = await self.act("merge_events", gid)
@@ -285,6 +296,8 @@ class BookFullAnalysis:
                 "failures":{k:v for k,v in failures.items() if v}}
             if recommendation is not None:
                 summary["recommendation"] = recommendation
+            if fold is not None:
+                summary["identity_fold"] = fold
             if archive:
                 summary.update(profile="archive", visual_pages=len(scan),
                                deferred=["proofreading", "confirm_text_visual", "continuity_checks",
@@ -315,6 +328,9 @@ class BookFullAnalysis:
                 failures[key] = [str(e.cause or e)[:500]]
                 return None
 
+        # an archive generation read before identity-fold-v1: its records are folded before the checks write the
+        # appearance ledger (which would keep them apart)
+        fold = await self._identity_fold(gid, failures)
         await self.step(10, "Son okuma denetimleri", {"generation_id": gid})
         if workflow.patched(INFRA_STEP_RETRY):
             await self._proofreading(gid, failures)
@@ -353,6 +369,8 @@ class BookFullAnalysis:
         summary = {"generation_id": gid, "profile": "redaction", "outputs": produced, "text_visual": tv,
                    "continuity": cont, "contradictions": con, "step_order": "redaction-profile-v1",
                    "accepted": False, "failures": {k: v for k, v in failures.items() if v}}
+        if fold is not None:
+            summary["identity_fold"] = fold
         await self.act("finish_job", job_id, "SUCCEEDED", summary, timeout=SHORT)
         return summary
 
@@ -482,6 +500,20 @@ class BookFullAnalysis:
                 raise
             failures["identity"] = [str(e.cause or e)[:500]]
             return await self.act("identity_unresolved", gid, failures["identity"][0], timeout=SHORT)
+
+    async def _identity_fold(self, gid: str, failures: dict) -> dict | None:
+        """IDENTITY_FOLD: one person, one record over the whole book (editor.identity_fold, same guards as the
+        reading). Its own activity, its own thread; batch_guard is not asked (this job's generation). None when
+        the history predates the marker or the step failed (recorded in `failures`, the reading goes on)."""
+        if not workflow.patched(IDENTITY_FOLD):
+            return None
+        await self.step(8, "Kişi kayıtları: bütün kitapta birleştirme")
+        try:
+            out = await self.act("fold_identities", gid, timeout=LONG)
+        except ActivityError as e:
+            failures["identity_fold"] = [str(e.cause or e)[:500]]
+            return None
+        return {k: out.get(k) for k in ("characters", "records_folded", "records_blocked", "characters_after")}
 
     async def _proofreading(self, gid: str, failures: dict) -> None:
         """Final-read checks under INFRA_STEP_RETRY: an infrastructure failure is retried and then fails

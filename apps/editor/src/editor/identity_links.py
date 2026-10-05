@@ -443,8 +443,9 @@ def link_plan(units: list[dict], pages: dict[int, str] | None = None, proper=Non
 
     # ---- K18: one unnamed label, one owner
     by_label: dict[tuple, list[int]] = {}
+    named = {i for g in clusters for i in g}      # already one person by name: not a label
     for i, u in enumerate(units):
-        if proper is not None and proper(u['name']):
+        if i in named or (proper is not None and proper(u['name'])):
             continue
         if (u.get('entity_scope') or 'UNKNOWN') in ('COLLECTIVE', 'CONCEPT'):
             continue

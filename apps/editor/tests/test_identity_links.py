@@ -54,7 +54,7 @@ LABELS = {"kadın", "adam", "anne", "annesi", "babam", "annem", "kedi", "sultan"
 
 
 def proper(n):
-    return identity.name_key(n) not in LABELS
+    return identity.name_key(n) not in {identity.name_key(x) for x in LABELS}
 
 
 def _plan(units, pages=None, title=""):

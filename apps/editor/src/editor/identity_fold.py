@@ -50,8 +50,8 @@ _CHARS = ("SELECT ch.id, ch.canonical_name, ch.aliases, ch.kind, ch.traits, ch.i
           " FROM character ch LEFT JOIN claim cl ON cl.id = ch.claim_id WHERE ch.generation_id = %s")
 _PAGES = ("SELECT character_id, array_agg(DISTINCT page_no) AS pages, count(*) AS n FROM character_mention"
           " WHERE generation_id = %s AND character_id IS NOT NULL AND via IN ('TEXT','BOTH') GROUP BY 1")
-_QUOTES = ("SELECT cm.character_id, e.quote FROM character_mention cm JOIN evidence e ON e.id = cm.evidence_id"
-           " WHERE cm.generation_id = %s AND cm.character_id = ANY(%s::uuid[])")
+_QUOTES = ("SELECT cm.character_id, cm.via, e.quote FROM character_mention cm JOIN evidence e ON e.id = cm.evidence_id"
+           " WHERE cm.generation_id = %s AND cm.character_id IS NOT NULL")
 
 
 def _latest_generations() -> list[dict]:
@@ -69,12 +69,19 @@ def _title(generation_id: str) -> str:
 
 def plan(generation_id: str, title: str | None = None) -> dict:
     rows = db.all_rows(_CHARS, generation_id)
+    if not rows:                # nothing read (not a book, identity unresolved): the book's text is not loaded
+        return {"generation_id": generation_id, "characters": 0, "records_folded": 0, "records_blocked": 0,
+                "characters_after": 0, "joins": [], "refused": [], "narrator": None, "alias_conflicts": [],
+                "unnamed": 0, "minor": 0, "_unnamed": {}, "_units": {}}
     pages = {str(r["character_id"]): r for r in db.all_rows(_PAGES, generation_id)}
-    addressed = [str(r["id"]) for r in rows if family_address(r["canonical_name"])]
-    quotes: dict[str, list[str]] = {}
-    if addressed:
-        for q in db.all_rows(_QUOTES, generation_id, addressed):
-            quotes.setdefault(str(q["character_id"]), []).append(q["quote"] or "")
+    addressed = {str(r["id"]) for r in rows if family_address(r["canonical_name"])}
+    quotes: dict[str, list[str]] = {}        # every mention's quote: the K19 age evidence of an address record
+    text_quotes: dict[str, list[str]] = {}   # text mentions' quotes: is the name written as a name there
+    for q in (db.all_rows(_QUOTES, generation_id) if rows else []):
+        cid = str(q["character_id"])
+        quotes.setdefault(cid, []).append(q["quote"] or "")
+        if q["via"] in ("TEXT", "BOTH"):
+            text_quotes.setdefault(cid, []).append(q["quote"] or "")
     units = []
     for r in rows:
         tr = r["traits"] or {}
@@ -87,7 +94,9 @@ def plan(generation_id: str, title: str | None = None) -> dict:
                       "aliases": list(r["aliases"] or []), "first_page": r["first_page"],
                       "description": r["description"] or "",
                       "attributes": int(r["attributes"]), "traits": tr,
-                      "age_evidence": identity_links.text_stage(quotes.get(str(r["id"]), []))})
+                      "quotes": text_quotes.get(str(r["id"]), []),
+                      "age_evidence": identity_links.text_stage(quotes.get(str(r["id"]), []))
+                      if str(r["id"]) in addressed else None})
     read = source.read(generation_id)
     text = source.body_text(read)   # sayfa başlığı/altlığı ad sayımına girmez
     by_page = {p["page_no"]: source.body_text([p]) for p in read}
@@ -177,7 +186,11 @@ def apply(p: dict) -> dict:
                               ([a for a in alias_now.get(h, units[h]["aliases"]) if name_key(a) != cf["alias"]], h))
                 fixed.append(cf["alias"])
                 continue
+            mark = {"alias": cf["alias"], "records": cf["records"]}
             for h in holders:
+                # once per conflict: the fold runs again on every output rebuild (rebuild.validate)
+                if mark in (units[h]["traits"].get("alias_conflicts") or []):
+                    continue
                 c.execute("UPDATE character SET traits = traits || jsonb_build_object('alias_conflicts',"
                           " coalesce(traits->'alias_conflicts', '[]'::jsonb) || %s::jsonb) WHERE id=%s",
                           (json.dumps([{"alias": cf["alias"], "records": cf["records"]}], ensure_ascii=False), h))
@@ -186,6 +199,27 @@ def apply(p: dict) -> dict:
                 c.execute("UPDATE character SET traits = traits || jsonb_build_object('unnamed', %s::boolean)"
                           " WHERE id=%s", (flag, cid))
     return {"generation_id": gid, "applied": done, "alias_fixed": fixed}
+
+
+def brief(p: dict) -> dict:
+    """A plan's report without the private fields: joined names and refusals by reason."""
+    return {**{k: v for k, v in p.items() if not k.startswith("_") and k not in ("joins", "refused")},
+            "joins": [{"name": j["name"], "records": 1 + len(j["fold"]), "rules": j["rules"],
+                       "blocked": len(j["blocked_by_attributes"])} for j in p["joins"]],
+            "refused": dict(Counter(r["reason"] for r in p["refused"]))}
+
+
+def run(generation_id: str, title: str | None = None) -> dict:
+    """Plan and apply for one generation, for the process that owns it: the reading's own step after identity
+    (workflow «identity-fold-v1») and every output validation (rebuild.validate, archive.validate). No
+    batch_guard here: the caller's own job is the QUEUED/RUNNING one it would refuse. Running it again is
+    harmless: a folded record is gone, a flagged conflict is not flagged twice, `unnamed` is written only when it
+    changes — a second run writes nothing."""
+    p = plan(generation_id, title)
+    out = brief(p)
+    if p["joins"] or p["alias_conflicts"] or p["_unnamed"]:
+        out["result"] = apply(p)
+    return out
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -209,11 +243,8 @@ def main(argv: list[str] | None = None) -> None:
         total["records_blocked"] += p["records_blocked"]
         for j in p["joins"]:
             rules.update(j["rules"])
-        line = {"title": g.get("title"), **{k: v for k, v in p.items() if not k.startswith("_")}}
-        if not args.details:
-            line["joins"] = [{"name": j["name"], "records": 1 + len(j["fold"]), "rules": j["rules"],
-                              "blocked": len(j["blocked_by_attributes"])} for j in p["joins"]]
-            line["refused"] = dict(Counter(r["reason"] for r in p["refused"]))
+        line = {"title": g.get("title"), **({k: v for k, v in p.items() if not k.startswith("_")}
+                                             if args.details else brief(p))}
         if args.apply and (p["joins"] or p["alias_conflicts"] or p["_unnamed"]):
             # checked again right before writing: a reading may have started while the plan was made
             if skipped.check(str(g["id"]), g.get("title")):
