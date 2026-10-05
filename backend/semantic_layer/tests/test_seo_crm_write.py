@@ -344,3 +344,16 @@ def test_bulk_run_updates_result_text(env):
     with seo.engine().connect() as c:
         r = c.execute(_sa.select(PROPOSALS.c.result).where(PROPOSALS.c.id == "pr1")).scalar()
     assert r == "Onaylandı. " + w.RESULT_TEXT["yazildi"]
+
+
+def test_refresh_results_prefers_written(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    w.run(seo, approve_ready=False, write=True, log_line=lambda s: None)
+    w.run(seo, approve_ready=False, write=True, log_line=lambda s: None)  # ikinci koşu: degisiklik_yok
+    with seo.engine().begin() as c:
+        c.execute(PROPOSALS.update().where(PROPOSALS.c.id == "pr1").values(result="eski metin"))
+    assert w.refresh_results(seo, log_line=lambda s: None) == 1
+    with seo.engine().connect() as c:
+        r = c.execute(_sa.select(PROPOSALS.c.result).where(PROPOSALS.c.id == "pr1")).scalar()
+    assert r.endswith(w.RESULT_TEXT["yazildi"])

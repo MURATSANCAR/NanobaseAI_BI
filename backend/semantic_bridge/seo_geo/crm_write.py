@@ -425,6 +425,26 @@ def verify(seo, log_line: Callable[[str], None] = lambda s: log.info(s)) -> dict
     return stats
 
 
+def refresh_results(seo, log_line: Callable[[str], None] = print) -> int:
+    """Öneri «Sonuç» metnini yazım kaydından tazeler (eski toplu onaylarda metin «gönderim yok» kalmıştı). Öneri başına
+    en anlamlı durum: yazildi > degisiklik_yok > hata > eslesmeyen/deneme; geri alınan kayıt sayılmaz."""
+    rank = {"yazildi": 4, "degisiklik_yok": 3, "hata": 2, "deneme": 1}
+    eng = seo.engine()
+    WRITES.create(eng, checkfirst=True)
+    with eng.connect() as c:
+        rows = c.execute(sa.select(WRITES.c.proposal_id, WRITES.c.status).where(
+            WRITES.c.tenant_id == seo.tenant(), WRITES.c.proposal_id.is_not(None))).all()
+    best: dict[str, str] = {}
+    for pid, st in rows:
+        if st in rank and rank[st] > rank.get(best.get(pid, ""), 0):
+            best[pid] = st
+    for pid, st in best.items():
+        set_result(seo, pid, "yazildi" if st == "degisiklik_yok" and any(
+            r[0] == pid and r[1] == "yazildi" for r in rows) else st)
+    log_line(f"sonuç metni tazelendi: {len(best)} öneri")
+    return len(best)
+
+
 def undo(seo, write_id: str, user: str) -> dict[str, Any]:
     """Yazılan kaydı CRM'deki eski değerine döndürür. Yalnız kartın en son yazımı geri alınır ve yalnız CRM'deki değer
     hâlâ bizim yazdığımızsa: biri sonradan elle düzelttiyse onun değeri ezilmez. Kip «acik» olmalı."""
@@ -500,9 +520,13 @@ if __name__ == "__main__":
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--deneme", action="store_true", help="CRM'e yazma; yazılacak ve eski değeri kaydet")
     g.add_argument("--yaz", action="store_true", help="CRM'e yaz (SEO_CRM_WRITE=acik şart)")
+    g.add_argument("--sonuc-tazele", action="store_true", help="öneri «Sonuç» metnini yazım kaydından tazele")
     ap.add_argument("--onayla", action="store_true", help="bekleyen önerileri önce ZEKİ AI adına onayla")
     ap.add_argument("--sinir", type=int, help="bu koşuda en çok kaç kitap")
     a = ap.parse_args()
     from semantic_bridge.app import app as _app  # köprünün kurulu uygulaması: veritabanı, ayarlar, SEO durumu
 
-    run(_app.state.seo_geo, approve_ready=a.onayla, write=a.yaz, limit=a.sinir)
+    if a.sonuc_tazele:
+        refresh_results(_app.state.seo_geo)
+    else:
+        run(_app.state.seo_geo, approve_ready=a.onayla, write=a.yaz, limit=a.sinir)
