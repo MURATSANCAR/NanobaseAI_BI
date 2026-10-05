@@ -297,3 +297,14 @@ def test_upper_case_question_is_a_running_head_candidate():
     """Bölüm adı soruysa («GALİLEO’YU KİM ÖLDÜRDÜ?») sağ sayfa başlığıdır; küçük harfli soru cümledir."""
     assert running_head.candidate("GALİLEO’YU KİM ÖLDÜRDÜ?")
     assert not running_head.candidate("Kim öldürdü?") and not running_head.candidate("KAPIYI AÇTI.")
+
+
+def test_book_name_on_few_pages_is_a_running_head():
+    """Resimli kitapta yazar adı sayfaların ancak birkaçında kenarda («Birsen Ekim Ozen» 12 sayfa / 120): oran eşiğinin
+    altında kalır ama kitabın kendi adı/yazarıysa sayfa başlığıdır; adı olmayan tekrar eden satır değildir."""
+    words = ["elma", "armut", "kiraz", "ayva", "erik", "incir", "dut", "nar", "üzüm", "kayısı", "vişne", "şeftali"]
+    edges = {p: {"top": "Birsen Ekim Ozen" if p % 10 == 0 else f"{words[p % 12]} {words[(p // 12) % 12]} bahçesi"}
+             for p in range(1, 121)}
+    assert not running_head.detect(edges, 120)
+    marks = running_head.detect(edges, 120, ["Birsen Ekim Özen"])
+    assert sorted(marks) == list(range(10, 121, 10))

@@ -117,10 +117,18 @@ def _parity_share(pages: list[int]) -> tuple[int, float]:
     return side, (odd if side else len(pages) - odd) / max(1, len(pages))
 
 
-def detect(edges: dict[int, dict[str, str]], text_pages: int | None = None) -> dict[int, set[str]]:
+#: kitabın kendi adı/yazarı olan kenar satırı bu kadar sayfada tekrar ederse sayfa başlığıdır (oran aranmaz)
+NAME_MIN = 3
+
+
+def detect(edges: dict[int, dict[str, str]], text_pages: int | None = None,
+           names: list[str] | tuple = ()) -> dict[int, set[str]]:
     """{sayfa: {konum}} — sayfa başlığı/altlığı olan kenar blokları. `edges`: {sayfa: {"top": metin,
     "bottom": metin}} (yalnız aday olabilecek kenarlar; olmayan konum yazılmaz). `text_pages`: metinli sayfa
-    sayısı (varsayılan: edges'teki sayfa sayısı)."""
+    sayısı (varsayılan: edges'teki sayfa sayısı). `names`: kitabın adı ve yazar/çizer adları — kenarda en az
+    `NAME_MIN` sayfada tekrar eden bu satır, sayfaların ancak bir kısmında görünse de (resimli sayfalarda başlık
+    basılmaz: «Birsen Ekim Ozen» 12 sayfa) sayfa başlığıdır."""
+    name_keys = {key(n) for n in names if len(key(n)) >= 6}
     n = text_pages if text_pages is not None else len(edges)
     if n <= 0:
         return {}
@@ -135,6 +143,11 @@ def detect(edges: dict[int, dict[str, str]], text_pages: int | None = None) -> d
         confirmed: dict[str, list[int]] = {}
         sides = Counter()
         for k, ps in where.items():
+            if k in name_keys and len(ps) >= NAME_MIN:
+                confirmed[k] = ps
+                side, share = _parity_share(ps)
+                sides[side] += len(ps)
+                continue
             if len(ps) < need:
                 continue
             side, share = _parity_share(ps)

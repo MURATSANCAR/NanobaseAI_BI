@@ -84,7 +84,7 @@ def _title_like(t: str) -> bool:
     return bool(re.search(r"[^\W\d_]", t)) and not _sent_break(t)
 
 
-def _strip_running_heads(raw: dict[int, list[dict]]) -> dict[int, list[dict]]:
+def _strip_running_heads(raw: dict[int, list[dict]], names=()) -> dict[int, list[dict]]:
     """Sayfa başlığı/altlığı (`editor.running_head`, okunan metinle aynı kural): sayfanın en üst ve en alt harfli
     satırı, kitap boyunca aynı konumda tekrar ediyorsa. Puntodan bağımsız: gövde puntosunda dizilmiş sayfa başlığı
     («AYŞE OSMANOĞLU» 11,5 pt) da ayıklanır."""
@@ -99,7 +99,7 @@ def _strip_running_heads(raw: dict[int, list[dict]]) -> dict[int, list[dict]]:
         if len(lt) >= 2:                  # yalnız tek satırı olan sayfa (başlık sayfası) sayfa başlığı taşımaz
             edges[i] = {"top": lt[0]["text"], "bottom": lt[-1]["text"]}
             at[i] = {"top": lt[0], "bottom": lt[-1]}
-    marks = running_head.detect(edges, len(edges))
+    marks = running_head.detect(edges, len(edges), names)
     # Sayfa başlığı hep aynı yükseklikte durur: bölüm adı sağ sayfanın başlığıysa, bölümün açılış sayfasındaki aynı
     # ad (aşağıda, başlık olarak) ayıklanmaz.
     ys: dict[tuple, list[float]] = {}
@@ -118,10 +118,11 @@ def _strip_running_heads(raw: dict[int, list[dict]]) -> dict[int, list[dict]]:
     return out
 
 
-def page_layout(doc, page_lines) -> dict:
-    """Kitabın gövde puntosu, satır aralığı ve normal metnin üst kenarı; sayfa başlığı/altlığı ayıklanmış satırlar."""
+def page_layout(doc, page_lines, names=()) -> dict:
+    """Kitabın gövde puntosu, satır aralığı ve normal metnin üst kenarı; sayfa başlığı/altlığı ayıklanmış satırlar.
+    `names`: kitabın adı/yazarı — kenarda tekrar eden bu satır az sayfada olsa da sayfa başlığıdır."""
     raw = _strip_running_heads({i: [ln for ln in page_lines(p) if ln["text"].strip() and not ln["text"].strip().isdigit()]
-                                for i, p in enumerate(doc, 1)})
+                                for i, p in enumerate(doc, 1)}, names)
     sizes: Counter = Counter()
     for ls in raw.values():
         for ln in ls:
@@ -255,9 +256,9 @@ def _reading_order(lines: list[dict]) -> list[dict]:
     return [ln for c in label + sorted(rest, key=lambda c: c[0]["y0"]) for ln in c]
 
 
-def page_headings(doc, page_lines) -> dict[int, dict]:
+def page_headings(doc, page_lines, names=()) -> dict[int, dict]:
     """Sayfa no → açılış ({title, size, kind: page|sunk|head|empty}). Açılış olmayan sayfa yoktur."""
-    L = page_layout(doc, page_lines)
+    L = page_layout(doc, page_lines, names)
     out = {}
     for i, v in L["pages"].items():
         o = _opening(v, L)
@@ -302,8 +303,9 @@ def _is_book_title(title: str, book_title) -> bool:
 
 
 def _skip(title: str, book_title, page: int, last_page: int) -> bool:
-    n = _norm(title)
-    if any(n.startswith(x) for x in _NOT_TITLE):
+    from .running_head import key
+    # aksansız ve i/ı ayrımsız: «İÇINDEKILER» (karışık yazım) da içindekilerdir
+    if any(key(title).startswith(key(x)) for x in _NOT_TITLE):
         return True
     # kitabın kendi adı ilk sayfalarda: iç kapak, bölüm değil
     return _front(page, last_page) and _is_book_title(title, book_title)
@@ -400,6 +402,26 @@ _SHORT_WORDS = frozenset({
     "o", "a", "ı", "ve", "de", "da", "ki", "mi", "mı", "mu", "mü", "ne", "ya", "bu", "şu", "en", "ey", "ah", "of",
     "oh", "eh", "ha", "he", "hu", "iç", "ön", "üç", "su", "ay", "an", "el", "ev", "iş", "ok", "ip", "at", "ad", "ak",
     "al", "ar", "aş", "az", "iz", "öz", "uç", "ün", "us", "ot", "it", "il", "is", "on", "un", "ağ"})
+
+
+_GARBLED = re.compile(r"[\x00-\x08\x0b-\x1f$%+{}<>#@~^|\\=±²³§]")
+
+
+def _garbled(title: str) -> bool:
+    """Yazı tipi kodlaması bozuk PDF'in okunamaz başlığı («ýaý.$%+ý,%2», «L{9KJ\x03F7Hw7B7H?»): denetim karakteri ya da
+    başlıkta bulunmayan simge taşır."""
+    return bool(_GARBLED.search(title))
+
+
+def _sentence_like(title: str) -> bool:
+    """Başlık değil, iri puntolu cümle (resimli kitabın ilk satırı «Çengel zıplaya zıplaya zıpladı», «Atlar alçalıp
+    yükseldikçe çocuklar…»): ≥ 4 kelime, ilk kelime büyük harfle başlar, sonrakilerin dörtte üçü küçük harfle.
+    Küçük harfle başlayan satırı `_mid_sentence` yakalar; Başlık Yazımı ve büyük harfli başlık bu değildir."""
+    words = re.findall(r"[^\W\d_][\w’'‛-]*", title)
+    if len(words) < 4 or not words[0][0].isupper():
+        return False
+    rest = words[1:]
+    return sum(w[0].islower() for w in rest) >= 0.75 * len(rest)
 
 
 def _scattered_weak(title: str) -> bool:
@@ -576,6 +598,24 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
     if strong:
         keep = {k for k, _ in Counter(round(x) for x in strong).most_common(2)}
         starts = [s for s in starts if s["kind"] != "head" or round(s["size"]) in keep or s["size"] > max(keep)]
+    # Okunamaz (bozuk kodlamalı) başlık bölüm açmaz. İri puntolu cümle («Çengel zıplaya zıplaya zıpladı») kitabın
+    # başlık yazımı değilse bölüm açmaz: kitapta en çok iki açılış varsa (resimli tek öykü) ya da cümle biçimli
+    # açılışlar azınlıksa (< %25) ve konuşma işareti taşıyorsa. Şiir kitabının dize başlıkları, cümle biçimli
+    # başlıklı kitap (çoğunluk) ve isim öbeği başlık («Yeniden imparator olma girişimi») kalır.
+    starts = [s for s in starts if not _garbled(s["title"])]
+    sentences = [s for s in starts if s["kind"] != "page" and _sentence_like(s["title"])]
+    if sentences and len(starts) <= 2:
+        drop = {id(s) for s in sentences}
+    else:                                      # azınlıkta, konuşma işaretli («Genç adam dedi ki, ‘Sen…»)
+        talk = [s for s in sentences if re.search(r"[,‘“”\"]", s["title"])]   # kesme (’ ') iyeliktir, konuşma değil
+        drop = {id(s) for s in talk} if len(sentences) < 0.25 * len(starts) else set()
+    if sentences:
+        starts = [s for s in starts if id(s) not in drop]
+    # Kitabın son %15'inde ≥ 3 kez geçen aynı ad (rakamıyla birlikte) bölüm değil, yayınevi tanıtım sayfasının
+    # öğesidir («Eğitimi» ×10); «BÖLÜM 22», «BÖLÜM 23» ayrı adlardır.
+    back = last_page - max(5, last_page * 15 // 100)
+    tail = Counter(" ".join(s["title"].casefold().split()) for s in starts if s["page"] > back)
+    starts = [s for s in starts if not (s["page"] > back and tail[" ".join(s["title"].casefold().split())] >= 3)]
     starts = _number_repeats([{**s, "title": display_title(s["title"])}
                               for s in _join_continuations([{**s, "title": _clean_title(s["title"])} for s in starts])])
     # Kitabın tek açılışı ilk sayfalardaki başlık sayfasıysa o iç kapaktır (adı kitap adına uymasa da): bölüm yok.
@@ -609,7 +649,7 @@ def for_generation(generation_id: str, pages: list[dict] | None = None) -> list[
     except Exception:  # noqa: BLE001 - dosya taşınmış/silinmiş: dizgi yok, eski kural
         return None
     with doc:
-        headings = page_headings(doc, _page_lines)
+        headings = page_headings(doc, _page_lines, [*titles, *names])
     return chapters_from_pages(pages if pages is not None else source.read(generation_id), headings, titles, names)
 
 

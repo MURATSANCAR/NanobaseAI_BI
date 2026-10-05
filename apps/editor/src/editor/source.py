@@ -193,7 +193,19 @@ def running_heads(conn, generation_id: str, book_version_id) -> dict[int, set[st
         if base is None:
             continue
         edges[p] = running_head.edge_texts(srcs[base]["head"], srcs[base]["tail"], srcs[base]["n"])
-    return running_head.detect(edges, len(edges))
+    return running_head.detect(edges, len(edges), book_names(conn, generation_id))
+
+
+def book_names(conn, generation_id: str) -> list[str]:
+    """Kitabın kayıt adı ve künyenin doğrulanmış ad/yazar/çizer iddiaları (sayfa başlığı bulmak için)."""
+    names = [r["title"] for r in conn.execute(
+        "SELECT b.title FROM ed.generation g JOIN ed.book_version bv ON bv.id=g.book_version_id"
+        " JOIN ed.book b ON b.id=bv.book_id WHERE g.id=%s", (generation_id,)) if r["title"]]
+    names += [r["claim"] for r in conn.execute(
+        "SELECT claim FROM ed.claim WHERE generation_id=%s AND kind='METADATA' AND subject IN"
+        " ('TITLE','AUTHOR','ILLUSTRATOR') AND status IN ('VERIFIED','EDITOR_APPROVED','EDITOR_CORRECTED')",
+        (generation_id,)) if r["claim"]]
+    return [n.strip() for x in names for n in re.split(r"[,;/&]| ve ", x) if n.strip()]
 
 
 def load(conn, generation_id: str, page_no: int | None = None) -> list[dict]:

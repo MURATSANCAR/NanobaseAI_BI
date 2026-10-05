@@ -352,3 +352,26 @@ def test_word_space_given_only_by_position_between_spans():
     c = {"bbox": (160.2, 0, 166, 8), "size": 7.0}
     assert _join_spans([a, b, c], ["dergisinin", "okurlarına", "18"]) == "dergisinin okurlarına18"
     assert _join_spans([a, b], ["dergisinin", "okurlarına"], horizontal=False) == "dergisininokurlarına"
+
+
+def test_unreadable_and_sentence_openings_and_contents_are_not_chapters():
+    """Bozuk kodlamalı başlık («ýaý.$%+ý,%2»), resimli kitabın iri puntolu ilk cümlesi, «İÇINDEKILER» (karışık İ/I)
+    bölüm açmaz; cümle biçimli başlık yazımı çoğunluktaysa (şiir dizeleri) başlıklar kalır."""
+    assert typeset._garbled("ýaý.$%+ý,%2") and typeset._garbled("L{9KJ\x03F7Hw7B7H?")
+    assert not typeset._garbled("Kitaplardan Nefret Ediyorum") and not typeset._garbled("NE YAPMALI?")
+    assert typeset._sentence_like("Çengel zıplaya zıplaya zıpladı")
+    assert not typeset._sentence_like("Balığı Olmayan Kız") and not typeset._sentence_like("üçüncü baskıya önsöz")
+    assert typeset._skip("İÇINDEKILER", "x", 50, 200)
+
+    def book(first_lines):
+        doc = [_page(_body(60)) for _ in range(8)]
+        for t in first_lines:
+            doc += [_page([_ln(t, 180, 14.0)] + _body(240, 14)), _page(_body(60))]
+        return doc
+    pic = book(["Çengel zıplaya zıplaya zıpladı"])
+    found = typeset.chapters_from_pages(_pages(pic), typeset.page_headings(pic, _lines), "Çengel")
+    assert [c["title"] for c in found] == ["Kitap"]
+    poems = book(["Kalbimizden âleme bakan göz kör olur", "Kalmadı bizden başka düşman dünyada",
+                  "Yedi başlı ejderha yürüdü bahçemize"])
+    found = typeset.chapters_from_pages(_pages(poems), typeset.page_headings(poems, _lines), "Çanakkale")
+    assert "Kalmadı bizden başka düşman dünyada" in [c["title"] for c in found]
