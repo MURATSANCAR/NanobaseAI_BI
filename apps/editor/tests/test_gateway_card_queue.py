@@ -296,6 +296,45 @@ def test_small_embedding_goes_to_cpu_twin_while_gpu_copy_is_down(G, monkeypatch)
     assert asyncio.run(G._cpu_twin(emb, {"model": emb.name, "input": "soru"})) is cpu
 
 
+def test_cpu_twin_request_carries_the_twins_model_name_upstream(G, monkeypatch):
+    """2026-10-05: gövde eski baytlarla gidiyordu; CPU eşi «unknown model book-embedding» (404) dedi."""
+    import json
+    emb, cpu = G.ALIASES["book-embedding"], G.ALIASES["book-embedding-cpu"]
+    _running(G, monkeypatch, {cpu.name})
+
+    async def ok(*_a, **_k):
+        return True
+
+    async def none(*_a, **_k):
+        return None
+
+    async def no(*_a, **_k):
+        return False
+
+    sent = {}
+
+    class Http:
+        async def post(self, url, content=None, headers=None):
+            sent["url"], sent["body"] = url, json.loads(content)
+            return types.SimpleNamespace(content=b"{}", status_code=200, headers={})
+
+    monkeypatch.setattr(G, "_healthy", ok)
+    monkeypatch.setattr(G, "check_enabled", none)
+    monkeypatch.setattr(G, "ensure_running", none)
+    monkeypatch.setattr(G, "_route", no)
+    monkeypatch.setattr(G, "_auth", lambda req, internal=False: None)
+    monkeypatch.setattr(G, "http", Http())
+
+    class Req:
+        headers = {}
+
+        async def body(self):
+            return json.dumps({"model": emb.name, "input": ["soru"]}).encode()
+
+    asyncio.run(G.proxy("embeddings", Req()))
+    assert sent["body"]["model"] == cpu.name and sent["url"].startswith(cpu.upstream)
+
+
 def test_cpu_model_is_created_without_a_gpu(G, monkeypatch):
     seen = {}
 

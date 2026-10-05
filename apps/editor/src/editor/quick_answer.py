@@ -17,8 +17,15 @@ onu yalnız mühürlü nesilden kart kuran eski üretici yazıyordu; 2026-10-02 
 kitabın hepsinde hızlı yol `NO_BOOKS` dönüp soruyu yavaş yola düşürüyordu.
 
 Kayıtlar soruya yetmiyorsa model yalnız `DEEPER` işaretini döner ve derin okuma çağrısı yapılır. Sorunun hangi
-kitap(lar)la ilgili olduğu kitap adlarının soruda geçmesinden bulunur; ad yoksa kütüphanedeki bütün kitapların kartı
-verilir.
+kitap(lar)la ilgili olduğu kitap adlarının soruda geçmesinden bulunur («Kitap» gibi ad taşımayan ad sayılmaz).
+
+Kitap adı geçmeyen (kütüphane geneli) soru (2026-10-05): bütün kitapların kartı bağlama sığmıyordu (75 kitap ~192 bin
+token, yer ~127 bin; kitap başına pay tek satırlık özeti bile almıyordu) ve olay/özet/karakter içeriğiyle arama yoktu.
+Aday kitaplar `library_search` ile seçilir (tek sorgu embedding'iyle dizinde kitaba göre gruplu anlamsal arama +
+özet/bölüm özeti/olay/karakter kayıtlarında sözcük araması + soruda geçen karakter adı) ve yaş/tür eşleşmesiyle
+birleşir; adayların kartı ve eşleşen kayıtları sayfasıyla bağlama girer, diğer kitaplar yalnız adıyla. Model «hangi
+kitap» sorusunda uyan her kitabı kanıt sayfasıyla listeler; adaylar kayıtlarla yetmezse ilk üç adayın daha çok
+metin parçasıyla bir derin okuma yapılır. Aday yoksa eski davranış: «bulunamadı».
 
 Bağlamın boyu modelin sunulan bağlamından (budget) hesaplanır; sığmayan kayıt sessizce düşmez, bağlamda
 «şu kadar kayıt daha var» diye yazar ve model gerekirse DEEPER der.
@@ -31,7 +38,7 @@ denir.
 Yaş ve tür (aynı denetim: kütüphane geneli «okul öncesi korku kitabı» sorusunda künyesi boş 3-6 yaş kitapları
 bulunamıyordu): künyede yazmıyorsa kitabın içerikten önerilen kategori/yaşı (`ed.book_recommendation`, durum OK)
 kartta kaynağıyla yazılır; kütüphane geneli soruda sorudaki yaş ve kategori sözcükleri kitapların yaş/türüyle
-eşleştirilir, eşleşen kitaplar önce gelir ve bağlamda adlarıyla yazılır (hiçbir kitap düşmez).
+eşleştirilir, eşleşen kitaplar aday olur ve bağlamda adlarıyla yazılır (hiçbir kitap düşmez).
 """
 from __future__ import annotations
 
@@ -91,15 +98,49 @@ def norm(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", text))
 
 
+#: Ad taşımayan kitap adları («Kitap», «2. Kitap», «Cilt 3»): yalnız bu sözcük ve sayılardan oluşan ad anılış sayılmaz
+#: (köprüdeki `editorial_citations._GENERIC` ile aynı küme). 2026-10-05 ölçümü: arşivde adı «Kitap» olan iki 16 sayfalık
+#: kitap vardı; «... kitap hangisi?» diye biten her kütüphane sorusu bu iki kitaba seçili kitap gibi gidiyor, doğru
+#: kitap hiç bağlama girmiyordu («Kitapta bulunamadı»).
+GENERIC_TITLE_WORDS = frozenset({"kitap", "kitabi", "kitaplar", "cilt", "adsiz", "roman", "oyku", "hikaye", "siir",
+                                 "masal", "dergi", "sayi", "bolum", "dosya"})
+
+
+def meaningful_name(name: str) -> bool:
+    """Normalleşmiş ad kitabı ayırt eder mi (yalnız genel sözcük ve sayıdan oluşmuyor)."""
+    return any(not w.isdigit() and w not in GENERIC_TITLE_WORDS for w in name.split())
+
+
 def mentioned(question: str, books: list[dict]) -> list[dict]:
-    """Soruda adı geçen kitaplar (kayıt adı ya da yayınevi kaydındaki ad, kelime sınırıyla)."""
+    """Soruda adı geçen kitaplar (kayıt adı ya da yayınevi kaydındaki ad, kelime sınırıyla). Ad taşımayan ad
+    («Kitap») anılış sayılmaz."""
     q = f" {norm(question)} "
     out = []
     for b in books:
-        names = {norm(n) for n in b["names"] if n}
-        if any(n and f" {n} " in q for n in names):
+        names = {n for n in (norm(x) for x in b["names"] if x) if n and meaningful_name(n)}
+        if any(f" {n} " in q for n in names):
             out.append(b)
     return out
+
+
+_LIBRARY_ASK = re.compile(r"\b(hangi\w*|neler\w*|var mi\w*)\b")
+
+
+def library_intent(question: str) -> bool:
+    """Soru kütüphanede kitap arıyor mu («... kitap(lar)ımız hangileri», «... kitap var mı»)."""
+    q = f" {norm(question)} "
+    return bool(re.search(r"\bkitap\w*|\bkitab\w*", q) and _LIBRARY_ASK.search(q))
+
+
+def weak_mention(question: str, b: dict) -> bool:
+    """Kitap soruda yalnız tek sözcüklük, kitabın tam adı olmayan bir adıyla mı anılıyor (künyedeki dizi/kısa ad:
+    «Alparslan» → «Alparslan - Çift Başlı Kartallar»). 2026-10-05: «Sultan Alparslan dönemini anlatan kitaplarımız
+    hangileri?» bu yüzden tek kitaba seçili kitap gibi gidiyor, aynı dönemin öbür kitapları hiç aranmıyordu."""
+    q = f" {norm(question)} "
+    names = [n for n in (norm(x) for x in b["names"] if x) if n and meaningful_name(n)]
+    hits = [n for n in names if f" {n} " in q]
+    longer = [n for n in names if len(n.split()) > 1]
+    return bool(hits) and all(len(n.split()) == 1 and any(f" {n} " in f" {m} " for m in longer) for n in hits)
 
 
 #: (kitap, kart çıktısının build_key'i) -> kart. Bir build_key'in içeriği değişmez; yeni okuma yeni anahtar getirir.
@@ -135,7 +176,7 @@ def library(c) -> list[dict]:
         cr = crm.get(bid) or {}
         meta = card["metadata"] or []
         books.append({
-            "book_id": bid, "generation_id": card["generation_id"], "title": card["title"],
+            "book_id": bid, "generation_id": card["generation_id"], "card_key": r["build_key"], "title": card["title"],
             "crm_title": cr.get("crm_title"), "crm_authors": cr.get("authors") or [],
             "page_count": r["page_count"], "metadata": meta, "summary": card["summary"] or [],
             "themes": card["themes"] or [], "events": card["key_events"] or [],
@@ -237,17 +278,25 @@ def category_match(question: str, cats: list[str]) -> bool:
     return any(q.startswith(w) or w.startswith(q) for q in asked for w in words)
 
 
-def library_match(question: str, books: list[dict]) -> tuple[list[dict], list[str]]:
-    """Kütüphane geneli soru: yaş ve kategorisi soruyla eşleşen kitaplar önce (sıra içinde korunur); bağlama yazılan
-    eşleşme satırları. Hiçbir kitap düşmez."""
+def library_scores(question: str, books: list[dict]) -> tuple[dict[str, int], list[dict], list[dict]]:
+    """({kitap: yaş + tür eşleşme sayısı}, yaşı örtüşenler, türü eşleşenler)."""
     want = question_age(question)
-    score, lines = {}, []
+    score: dict[str, int] = {}
     by_age = [b for b in books if want and (a := book_age(b)) and ages_overlap(want, a[0])]
     by_cat = [b for b in books if (cats := book_categories(b)) and category_match(question, cats)]
     for b in by_age:
         score[b["book_id"]] = score.get(b["book_id"], 0) + 1
     for b in by_cat:
         score[b["book_id"]] = score.get(b["book_id"], 0) + 1
+    return score, by_age, by_cat
+
+
+def library_match(question: str, books: list[dict]) -> tuple[list[dict], list[str]]:
+    """Kütüphane geneli soru: yaş ve kategorisi soruyla eşleşen kitaplar önce (sıra içinde korunur); bağlama yazılan
+    eşleşme satırları. Hiçbir kitap düşmez."""
+    want = question_age(question)
+    lines: list[str] = []
+    score, by_age, by_cat = library_scores(question, books)
     title = lambda b: b.get("crm_title") or b["title"]  # noqa: E731
     if want:
         rng = f"{want[0]}-{want[1]}" if want[1] is not None else f"{want[0]}+"
@@ -522,24 +571,109 @@ def chapter_block(b: dict, c) -> str:
     return "BÖLÜMLER (sırasıyla; ilk bölüm 1. bölüm diye yazılı olandır):\n" + "\n".join(lines)
 
 
+#: Kütüphane sorusunda modele kitap seçme kuralı (bağlamın başında).
+LIBRARY_NOTE = (
+    "Aşağıda soruya en yakın aday kitapların kartı ve her birinde soruyla eşleşen kayıtlar (sayfasıyla) var. Adaylar "
+    "aramanın önerisidir: kitabın soruya uyup uymadığına kayıtlara bakarak sen karar ver. «Hangi kitap» sorusunda "
+    "soruya uyan her kitabın adını «» içinde yaz ve kanıtını [s.N] ile göster; birden çok kitap uyuyorsa hepsini "
+    f"listele. Hiçbir aday uymuyorsa cevaba birebir «{NOT_FOUND}» ile başla.")
+#: Kütüphane sorusunun derin okumasında metin parçası aranan aday sayısı.
+LIBRARY_DEEP_BOOKS = 3
+#: Aday kartlarına ayrılan pay (bağlam yerinin); kalanı diğer kitapların ad listesine.
+LIBRARY_RICH_SHARE = 0.85
+
+
+def _library_parts(question: str, books: list[dict], found: list[dict], c, room: int, deep: bool,
+                   deep_hits: dict[str, list[dict]]) -> list[str]:
+    """Kütüphane sorusunun sabit blokları: aday kitapların kartı + eşleşen kayıtları (içerik adayları önce, sonra
+    yaş/tür eşleşenler), yere sığmayan ve aday olmayan kitaplar yalnız adıyla."""
+    from . import library_search
+    agecat, _, _ = library_scores(question, books)
+    content = [x["book"] for x in found]
+    if deep:
+        rich = content[:LIBRARY_DEEP_BOOKS]
+    else:
+        rich = content + [b for b in books if agecat.get(b["book_id"]) and b not in content]
+    hits = {x["book"]["book_id"]: x for x in found}
+    parts, used, shown = [], 0, []
+    for b in rich:
+        head, _ = card_block(b, c, full=False)
+        x = hits.get(b["book_id"])
+        lines = deep_hits.get(b["book_id"]) or []
+        if x:
+            reason = "; ".join(x["reasons"]) or "arama"
+            lines = library_search.hit_lines(x["hits"] + [h for h in lines if h["text"] not in
+                                                           {y["text"] for y in x["hits"]}])
+            head += f"\nSoruyla eşleşen kayıtlar (aday nedeni: {reason}):\n" + "\n".join(lines)
+        cost = budget.estimate(head)
+        if shown and used + cost > room * LIBRARY_RICH_SHARE:
+            break
+        parts.append(head)
+        used += cost
+        shown.append(b)
+    rest = [b for b in books if b not in shown]
+    if rest:
+        names = "; ".join(b.get("crm_title") or b["title"] for b in rest)
+        line = f"Aday olmayan diğer okunmuş kitaplar (yalnız adları; kayıtları bu bağlamda yok): {names}."
+        if used + budget.estimate(line) > room:
+            line = f"Aday olmayan {len(rest)} okunmuş kitap daha var; adları yer yetmediği için yazılmadı."
+        parts.append(line)
+    return parts
+
+
 async def context(question: str, book_title: str | None, deep: bool = False) -> tuple[str, list[dict], bool]:
     """(bağlam, kitaplar, kitap seçili mi). Seçili kitapta sayfa soruluysa kitabın sözlüğüne `asked_pages` yazılır
-    (answer). `deep`: künye sayfaları, bölüm listesi ve daha çok metin parçası eklenir (yalnız seçili kitapta)."""
+    (answer). `deep`: künye sayfaları, bölüm listesi ve daha çok metin parçası eklenir (seçili kitapta); kütüphane
+    sorusunda ilk adayların daha çok metin parçası.
+
+    Kütüphane sorusu (kitap adı yok): aday kitaplar `library_search.candidates` (anlamsal + sözcük + karakter adı) ve
+    yaş/tür eşleşmesinden gelir; kitaplara `candidate` yazılır (answer derin okumayı yalnız aday varken yapar)."""
+    from . import library_search
     asked = page_refs(question)
     matched: list[str] = []
+    found: list[dict] = []
+    stats: dict = {}
+    call = budget.for_call(ALIAS, DEEP_ANSWER_TOKENS if deep else ANSWER_TOKENS)
+    room = call.input - budget.estimate(DEEP_SYSTEM if deep else SYSTEM) - budget.estimate(question) - 200
     with foundation.read_snapshot() as c:
         books = library(c)
         chosen = [b for b in books if book_title and norm(book_title) in {norm(n) for n in b["names"] if n}]
-        chosen += [b for b in mentioned(question, books) if b not in chosen]
+        named = [b for b in mentioned(question, books) if b not in chosen]
+        weak: list[dict] = []
+        if not chosen and named and library_intent(question) and all(weak_mention(question, b) for b in named):
+            weak, named = named, []         # kütüphane sorusu; kısa adı geçen kitap aday olarak kalır
+        chosen += named
         full = bool(chosen)
         if not full:
             books, matched = library_match(question, books)
-        blocks = [card_block(b, c, full=full) for b in (chosen or books)]
+            found, stats = await library_search.candidates(question, books, library_search.prepare(books, c),
+                                                           named=weak)
+            for x in found:
+                x["book"]["candidate"] = True
+            deep_hits: dict[str, list[dict]] = {}
+            if deep and found:
+                keys = library_search.index_keys(c, [x["book"]["generation_id"] for x in found[:LIBRARY_DEEP_BOOKS]])
+                try:
+                    more = await asyncio.wait_for(library_search.semantic(
+                        question, keys, groups=LIBRARY_DEEP_BOOKS, per_book=DEEP_EVIDENCE_K // LIBRARY_DEEP_BOOKS,
+                        kinds=["paragraph"]), EVIDENCE_TIMEOUT)
+                except Exception as e:  # noqa: BLE001 — dizin yok/süre doldu: ilk aramanın kayıtları kalır
+                    log.info("library deep evidence skipped: %s", str(e)[:200])
+                    more = {}
+                deep_hits = {x["book"]["book_id"]: more[x["book"]["generation_id"]]["hits"]
+                             for x in found if x["book"]["generation_id"] in more}
+            head = "\n".join([f"Kütüphanede okunmuş {len(books)} kitap var; soruda belirli bir kitap adı geçmiyor.",
+                              LIBRARY_NOTE, *matched])
+            parts = _library_parts(question, books, found, c, room - budget.estimate(head), deep, deep_hits)
+            log.info("library question: %d candidates %s", len(found), stats)
+            ordered = [x["book"] for x in found] + [b for b in books if not b.get("candidate")]
+            return fit([head, *parts], [[] for _ in range(len(parts) + 1)], room), ordered, False
+        blocks = [card_block(b, c, full=full) for b in chosen]
         pages, extra = {}, {}
-        if full and asked:
+        if asked:
             for i, b in enumerate(chosen):
                 pages[i], b["asked_pages"] = page_block(b, c, asked)
-        if full and deep:
+        if deep:
             for i, b in enumerate(chosen):
                 extra[i] = "\n".join(x for x in (front_block(b, c), chapter_block(b, c)) if x)
     fixed = [h for h, _ in blocks]
@@ -549,17 +683,10 @@ async def context(question: str, book_title: str | None, deep: bool = False) -> 
     for i, block in extra.items():
         if block:
             fixed[i] += "\n" + block
-    if full:
-        for i, b in enumerate(chosen):
-            if ev := await _evidence(b["generation_id"], question, DEEP_EVIDENCE_K if deep else EVIDENCE_K):
-                fixed[i] += "\nSoruya en yakın metin parçaları:\n" + "\n".join(ev)
-    else:
-        fixed.insert(0, "\n".join([f"Kütüphanede okunmuş {len(books)} kitap var; soruda belirli bir kitap adı geçmiyor.",
-                                    *matched]))
-    b = budget.for_call(ALIAS, DEEP_ANSWER_TOKENS if deep else ANSWER_TOKENS)
-    room = b.input - budget.estimate(DEEP_SYSTEM if deep else SYSTEM) - budget.estimate(question) - 200
-    tails = [t for _, t in blocks] if full else [[] for _ in fixed]
-    return fit(fixed, tails, room), (chosen or books), full
+    for i, b in enumerate(chosen):
+        if ev := await _evidence(b["generation_id"], question, DEEP_EVIDENCE_K if deep else EVIDENCE_K):
+            fixed[i] += "\nSoruya en yakın metin parçaları:\n" + "\n".join(ev)
+    return fit(fixed, [t for _, t in blocks], room), chosen, True
 
 
 async def _ask(system: str, ctx: str, user: str, history: list[dict] | None, max_tokens: int):
@@ -612,15 +739,18 @@ async def answer(question: str, book_title: str | None = None, history: list[dic
         return {"handled": False, "reason": "MODEL_UNAVAILABLE", "books": names}
     text, finish, usage = first
     deeper = DEEPER in text or finish != "stop" or not text
-    if not deeper and not (full and text.startswith(NOT_FOUND)):
+    candidates = [b["crm_title"] or b["title"] for b in books if b.get("candidate")]
+    extra = {"candidates": candidates} if not full else {}
+    if not deeper and not ((full or candidates) and text.startswith(NOT_FOUND)):
         return {"handled": True, "answer": text, "not_found": text.startswith(NOT_FOUND), "books": names,
-                "usage": usage}
-    if not full:
-        # Kitap adı geçmeyen soru: kütüphanenin bütün sayfaları bağlama sığmaz; «bulunamadı» cevabı olduğu gibi,
-        # derin okuma isteği sabit cümleyle döner.
+                "usage": usage, **extra}
+    if not full and not candidates:
+        # Kitap adı geçmeyen ve aramanın aday bulamadığı soru: kütüphanenin bütün sayfaları bağlama sığmaz;
+        # «bulunamadı» cevabı olduğu gibi, derin okuma isteği sabit cümleyle döner.
         if not deeper:
             return {"handled": True, "answer": text, "not_found": True, "books": names, "usage": usage}
         return {"handled": True, "answer": LIBRARY_DEEPER, "not_found": True, "books": names, "usage": usage}
+    # Seçili/adı geçen kitap ya da kütüphane sorusunun ilk adayları: daha çok metin parçasıyla ikinci ve son çağrı.
     ctx, books, _ = await context(q, book_title, deep=True)
     second = await _ask(DEEP_SYSTEM, ctx, user, history, DEEP_ANSWER_TOKENS)
     if second is None:
@@ -632,4 +762,4 @@ async def answer(question: str, book_title: str | None = None, history: list[dic
     elif finish != "stop":
         text = f"{text}\n\n{CUT_NOTE}"
     return {"handled": True, "answer": text, "not_found": text.startswith(NOT_FOUND), "deep": True, "books": names,
-            "usage": usage2}
+            "usage": usage2, **extra}

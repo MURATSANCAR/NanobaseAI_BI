@@ -845,7 +845,12 @@ async def proxy(path: str, req: Request):
     a = ALIASES.get(payload.get("model", ""))
     if a is None:
         raise HTTPException(404, {"error": "unknown model", "models": sorted(ALIASES)})
-    a = await _cpu_twin(a, payload)
+    twin = await _cpu_twin(a, payload)
+    if twin is not a:
+        # Eşin sunduğu ad gövdeye yazılır. 2026-10-05 ölçümü: gövde eski baytlarla gidiyordu, CPU eşi «unknown model
+        # book-embedding» (404) diyordu; GPU kopyası kapalıyken Kitaba sor'un bütün metin aramaları sessizce boştu.
+        body = json.dumps(payload).encode()
+        a = twin
     if req.headers.get(NO_WAIT_HEADER, "") == "1" and not await _ready_now(a, req):
         raise HTTPException(503, {"error": "model_not_ready", "alias": a.name})
     a.inflight += 1
