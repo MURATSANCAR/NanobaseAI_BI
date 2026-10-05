@@ -62,6 +62,21 @@ WRITES = sa.Table(
 )
 
 
+#: Öneri kaydının «Sonuç» metni (Karar geçmişi): CRM yazımının durumu.
+RESULT_TEXT = {"yazildi": "CRM kitap kartına yazıldı (SEO başlığı, meta açıklama, kapak alt metni).",
+               "deneme": "Deneme kipi: CRM'e yazılacak değer kaydedildi, yazılmadı.",
+               "degisiklik_yok": "CRM kitap kartında bu değerler zaten var.",
+               "eslesmeyen": "CRM'de barkodla eşleşen kitap kartı yok; yazılmadı.",
+               "hata": "CRM'e yazılamadı; ayrıntı CRM yazım kaydında."}
+
+
+def set_result(seo, proposal_id: str, status: str, prefix: str = "Onaylandı.") -> None:
+    text = RESULT_TEXT.get(status)
+    if text:
+        with seo.engine().begin() as c:
+            c.execute(PROPOSALS.update().where(PROPOSALS.c.id == proposal_id).values(result=f"{prefix} {text}"[:1000]))
+
+
 def now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -249,6 +264,7 @@ def run(seo, *, approve_ready: bool, write: bool, limit: Optional[int] = None, u
             if book:
                 seen.add(book)
             status = _process(seo, conn, p, prod, prop, books, write=write, user=user, stamp=stamp)
+            set_result(seo, prop["id"], status)
             stats[status] = stats.get(status, 0) + 1
             if status not in ("eslesmeyen", "bos"):
                 stats["kitap"] += 1

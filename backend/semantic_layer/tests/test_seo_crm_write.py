@@ -335,3 +335,12 @@ def test_second_concurrent_approval_is_rejected():
     with pytest.raises(HTTPException) as e:
         SeoGeo.approve(a, stale, {"SeoTitle": "Yeni"}, "Zeynep", "", crm_write=False)
     assert e.value.status_code == 409 and a.proposal("pr9")["decided_by"] == "Mehmet"
+
+
+def test_bulk_run_updates_result_text(env):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    w.run(seo, approve_ready=False, write=True, log_line=lambda s: None)
+    with seo.engine().connect() as c:
+        r = c.execute(_sa.select(PROPOSALS.c.result).where(PROPOSALS.c.id == "pr1")).scalar()
+    assert r == "Onaylandı. " + w.RESULT_TEXT["yazildi"]

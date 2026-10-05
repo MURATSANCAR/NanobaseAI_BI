@@ -681,14 +681,7 @@ class SeoGeo:
 
             status = crm_write_mod.on_approve(self, prop["id"], user)
             if status:
-                text = {"yazildi": "CRM kitap kartına yazıldı (SEO başlığı, meta açıklama, kapak alt metni).",
-                        "deneme": "Deneme kipi: CRM'e yazılacak değer kaydedildi, yazılmadı.",
-                        "degisiklik_yok": "CRM'deki değer zaten aynı.",
-                        "eslesmeyen": "CRM'de barkodla eşleşen kitap kartı yok; yazılmadı.",
-                        "hata": "CRM'e yazılamadı; ayrıntı CRM yazım kaydında."}.get(status, status)
-                with self.engine().begin() as c:
-                    c.execute(PROPOSALS.update().where(PROPOSALS.c.id == prop["id"]).values(
-                        result=f"Onaylandı: {', '.join(change)}. {text}"))
+                crm_write_mod.set_result(self, prop["id"], status, f"Onaylandı: {', '.join(change)}.")
         return self.proposal(prop["id"])
 
     # ---------------------------------------------------------------- CRM kitap kartı ve haklar (yalnız okuma)
