@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-05 — E-kitap: katalog kapağı yedeği, etiket bölüm + ara başlık = perde
+
+- **Neden:** kullanıcı e-kitap kalite değerlendirmesindeki düzeltilebilir eksiklerin hemen kapatılmasını ve kurulumun gece beklenmeden yapılmasını istedi (önceki sürüm `8733cd4e` 21:00 yerine hemen kuruldu).
+- **Kapak:** basılı kaynaklı e-kitap kapağı yalnız kapak kütüphanesinde ISBN'le aranıyordu; bulunamazsa (sitede satılmayan baskı) stüdyonun kapağı kullanılıyordu. Artık yedek olarak okunmuş kitabın katalog kapağı (`book_cover`, elle yüklenen / CRM / site; PDF sayfasından kesilen değil) alınır (`epub_source._catalog_cover`).
+- **Perde:** Timaş Şer'î Siyaset'te «1. Fasl» etiketi ile altındaki «[Emanetlerin Eda Edilmesi]» tek `e-perde` başlığı; bizde etiket bölüm adı, alt başlık ayrı ara başlık oluyordu. Kural (kitaptan bağımsız): bölüm adı yalnız etiketse (`chapters._label_only`; etiket kelimelerine «fasl», «bab» eklendi) ve bölüm bir ara başlıkla açılıyorsa ikisi tek perde başlığı olur (iki satırlı ara başlık birleştirildikten sonra). Şer'î Siyaset 31 perde (Timaş 31); Devlerin Savaşı 8 perde değişmedi. `LAYOUT_VERSION` 12.
+- **Testler:** `test_print_layout` (+1).
+
 ## 2026-10-05 (öğleden sonra) — SEO → CRM toplu yazım tamamlandı (müşteri)
 
 - VM'de `--yaz --onayla`: 2.958 öneri onaylı (ZEKİ AI), **2.057 kitap CRM'e yazıldı**, 901 barkod eşleşmedi, 200 başlıkta yazar yok (onay bekliyor), 1.052 onaylanmadı (ürün T-soft'ta yok ya da metin aynı), hata 0. Koşu 13:14'te başka bir kurulumun konteyner yeniden başlatmasıyla kesildi, yeniden koşturuldu (yazılmış olan ikinci kez yazılmadı).

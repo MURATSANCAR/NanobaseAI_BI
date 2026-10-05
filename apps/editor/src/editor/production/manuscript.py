@@ -670,6 +670,14 @@ def _finish_layout(ms: Manuscript, pages: dict, notes: dict, print_style: bool =
             else:
                 merged.append(b)
         ch.blocks = merged
+    if not print_style:
+        # Bölüm adı yalnız etiketse («1. FASL», «BİRİNCİ BÖLÜM») ve bölüm bir ara başlıkla açılıyorsa ikisi tek perde
+        # başlığıdır (Timaş Şer'î Siyaset: «1. Fasl [Emanetlerin Eda Edilmesi]» e-perde).
+        from ..chapters import _label_only
+        for ch in ms.chapters:
+            if ch.title and _label_only(ch.title) and ch.blocks and ch.blocks[0].kind == "subhead":
+                ch.title = f"{ch.title} {ch.blocks.pop(0).text}"
+                ch.kind = "perde"
     for ch in ms.chapters:
         k = 0
         found: list[tuple[int, str]] = []

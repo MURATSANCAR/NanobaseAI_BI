@@ -33,11 +33,13 @@ def digits(s: str | None) -> str:
 
 
 def original_cover(ms) -> tuple[bytes, str, dict] | None:
-    """Yayınevinin kapağı (kapak kütüphanesi, basılı ISBN eşleşmesiyle): (veri, uzantı, bilgi) ya da None."""
+    """Yayınevinin kapağı: (veri, uzantı, bilgi) ya da None. Önce kapak kütüphanesi (basılı ISBN eşleşmesiyle);
+    yoksa okunmuş kitabın katalogdaki kapağı (`book_cover`: elle yüklenen, CRM ya da site; PDF sayfasından kesilen
+    değil) — baskısı sitede artık satılmayan kitapta (Devlerin Savaşı) kütüphanede yoktur, katalogda vardır."""
+    from .. import db
     isbn = digits((ms.meta or {}).get("ISBN"))
     if len(isbn) not in (10, 13):
-        return None
-    from .. import db
+        return _catalog_cover(ms)
     from . import library
     rows = db.all_rows("SELECT id, isbn, title, image_w, image_h FROM ed.cover_library WHERE image_file IS NOT NULL "
                        "AND status <> 'hidden' AND regexp_replace(coalesce(isbn, ''), '[^0-9]', '', 'g') = %s", isbn)
@@ -46,7 +48,27 @@ def original_cover(ms) -> tuple[bytes, str, dict] | None:
         if p is not None and p.exists():
             return p.read_bytes(), p.suffix.lower(), {"source": "yayınevi sitesi", "title": r["title"],
                                                       "width": r["image_w"], "height": r["image_h"]}
-    return None
+    return _catalog_cover(ms)
+
+
+CATALOG_COVER = {"UPLOADED": "elle yüklenen kapak", "CRM": "CRM kapağı", "WEB": "yayınevi sitesi"}
+
+
+def _catalog_cover(ms) -> tuple[bytes, str, dict] | None:
+    gid = ((ms.source or {}) if isinstance(ms.source, dict) else {}).get("generation_id")
+    if not gid:
+        return None
+    from .. import db
+    row = db.one("SELECT c.source, c.file_path, c.width_px, c.height_px FROM ed.book_cover c JOIN ed.book_version bv"
+                 " ON bv.book_id=c.book_id JOIN ed.generation g ON g.book_version_id=bv.id"
+                 " WHERE g.id=%s AND c.is_current", gid)
+    if not row or row["source"] not in CATALOG_COVER:
+        return None
+    p = Path(row["file_path"])
+    if not p.is_file():
+        return None
+    return p.read_bytes(), p.suffix.lower(), {"source": CATALOG_COVER[row["source"]], "width": row["width_px"],
+                                              "height": row["height_px"]}
 
 
 def split_label(text: str) -> tuple[str | None, str]:
@@ -110,7 +132,7 @@ def print_kunye(d: Path) -> list[tuple[str | None, str]]:
 
 # ------------------------------------------------------------------ basılı kitabın metni (dizgiyle)
 #: Dizgi okumasının sürümü: kural değişince önbellek yeniden kurulur.
-LAYOUT_VERSION = 11
+LAYOUT_VERSION = 12
 CACHE = "basili.json"
 _busy: set[str] = set()
 _busy_lock = threading.Lock()

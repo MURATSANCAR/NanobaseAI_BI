@@ -156,3 +156,15 @@ def test_merged_reading_paragraphs_are_split_by_layout():
     out, _ = _apply_layout([(179, "Türkler ve Evrim Teorisinin Geçerliliği Mendelci genetik bilimsel statüsünü "
                                    "yitirmemiştir.")], single)
     assert out[0][1].startswith("Türkler ve Evrim")                             # tek sayfadaki satır silinmez
+
+
+def test_label_only_chapter_takes_its_opening_subhead_as_perde():
+    """«1. FASL» etiketli bölüm «[EMANETLERİN EDA EDİLMESİ]» ara başlığıyla açılıyorsa tek perde başlığı olur (Timaş
+    Şer'î Siyaset e-perde); adı etiket olmayan bölüm («GİRİŞ») ara başlığını bölüm adına katmaz."""
+    ms = Manuscript("K", chapters=[
+        Chapter("1. FASL", [Block("subhead", "[EMANETLERİN EDA EDİLMESİ]", [17]), Block("para", "Metin.", [17])]),
+        Chapter("GİRİŞ", [Block("subhead", "Ara başlık", [20]), Block("para", "Metin.", [20])])])
+    _finish_layout(ms, {17: page([]), 20: page([])}, {})
+    assert [(c.title, c.kind) for c in ms.chapters] == [("1. FASL [EMANETLERİN EDA EDİLMESİ]", "perde"),
+                                                       ("GİRİŞ", "chapter")]
+    assert [b.kind for b in ms.chapters[1].blocks] == ["subhead", "para"]
