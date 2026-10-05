@@ -132,7 +132,7 @@ def env(monkeypatch):
     with eng.begin() as c:
         c.execute(PRODUCTS.insert().values(tenant_id="t", product_id="p1", name="Kitap", active=True, score=50,
                                            issues_json="[]", data_json=_json.dumps({"Barcode": "978-1", "ProductName": "Kitap", "Model": "Yazar",
-                                                                                    "SeoTitle": "Kitap - Yazar | Timaş"}), synced_at=now))
+                                                                                    "SeoTitle": "Kitap - Yazar | Timaş", "Brand": "Timaş"}), synced_at=now))
         c.execute(CRM_BOOKS.insert().values(tenant_id="t", ean="9781", book_id=BOOK, rights="var", data_json="{}", synced_at=now))
         c.execute(PROPOSALS.insert().values(id="pr1", tenant_id="t", product_id="p1", status="onaylandi",
                                             fields_json=_json.dumps({"SeoTitle": "Kitap - Yazar | Timaş", "SeoDescription": "Açıklama"}),
