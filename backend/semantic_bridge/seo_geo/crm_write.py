@@ -7,7 +7,8 @@ yazılan değer sitede görünmez.
 
 Kip (`SEO_CRM_WRITE`, Yönetim/ortam): `kapali` (varsayılan) hiçbir şey yapmaz; `deneme` yazılacak değeri ve CRM'deki
 eski değeri kaydeder, CRM'e yazmaz (test sunucusu aynı canlı CRM'e bağlı); `acik` yazar. Her yazmada eski değer
-saklanır ve kayıt geri alınabilir; `ModifiedOn` güncellenir ki aktarım uygulaması değişikliği görsün.
+saklanır ve kayıt geri alınabilir. CRM'in mevcut kolonlarına (ModifiedOn dahil) dokunulmaz (kullanıcı kuralı 2026-10-05):
+yalnız Timaş'ın SEO/GEO için açtığı yeni alanlar güncellenir.
 
 Bağlantı: `SEO_CRM_WRITE_CONNECTION_FILE` (yoksa CRM okuma bağlantısı). Okuma bağlayıcısı salt okunur açılır; yazma
 için kendi bağlantısı açılır ve iş bitince kapanır.
@@ -145,7 +146,7 @@ def update_sql(p: str, keys: list[str]) -> str:
     if bad or not keys:
         raise ValueError(f"liste dışı alan: {bad}" if bad else "yazılacak alan yok")
     sets = ", ".join(f"{k} = ?" for k in keys)
-    return f"UPDATE {p}new_kitapBase SET {sets}, ModifiedOn = GETUTCDATE() WHERE new_kitapId = ? AND statecode = 0"
+    return f"UPDATE {p}new_kitapBase SET {sets} WHERE new_kitapId = ? AND statecode = 0"
 
 
 # ------------------------------------------------------------------ CRM bağlantısı (yazma)

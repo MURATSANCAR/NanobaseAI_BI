@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-05 — SEO → CRM: mevcut kolonlara dokunulmaz; müşteride yazma izni yok
+
+- Kullanıcı kuralı: Timaş SEO/GEO için yeni alanlar açtı; CRM'in mevcut kolonlarında güncelleme olmayacak. `crm_write.update_sql` artık `ModifiedOn`'u da güncellemiyor; yalnız `new_seobaslik`, `new_seoaciklama`, `new_kapakalt`, `new_seodurum`, `new_seoguncelleme`. Not: aktarım uygulaması değişikliği `ModifiedOn` ile izliyorsa yeni alan değişikliğini görmeyebilir; eşlemeyi kuran taraf `new_seoguncelleme`'ye bakmalı.
+- Müşteri VM'inde (10-04) ilk 5 yazma «UPDATE permission was denied (229)»: `zekiai` hesabının `new_kitapBase`'de UPDATE izni yok, 5 yeni alanın kolon izinleri de 0. Kip «deneme»ye döndü; CRM'de değişiklik yok. BT'den: `GRANT UPDATE (new_seobaslik, new_seoaciklama, new_kapakalt, new_seodurum, new_seoguncelleme) ON dbo.new_kitapBase TO zekiai`.
+- VM toplu onay/deneme koşusu (4.210 öneri) sürerken TİMAŞ VPN düştü; sonuç VPN açılınca okunacak.
+
 ## 2026-10-04 — Film ve video: test sunucusu + müşteri VM kurulumu (a8a1a31d), GPU editörü bekliyor
 
 - **Neden:** kullanıcı «merge et, müşteriye de kur ama nasıl olsa çalışmayacak dursun şimdilik» dedi. Modeller ve GPU'daki editör (film uçları `api_film.py`) kurulmadı; köprü stüdyonun film yolunu tanımamasını «henüz açık değil» olarak okur (`available: false`, a8a1a31d), ekran hata göstermez.
@@ -61,7 +67,7 @@
 ## 2026-10-04 — SEO: onaylanan önerinin görünmez alanları CRM kitap kartına; gece denetimi
 
 - Kullanıcı kararı: sistem her gece bütün ürünleri kontrol eder, eksik/hatalı olan Ürün denetiminde görünür; kullanıcı onaylayınca ürünün sitedeki metnine dokunmayan yalnız SEO/GEO alanları CRM'e yazılır; yazılanlar her gece denetlenir.
-- `seo_geo/crm_write.py`: yazılabilir alanlar `new_seobaslik`, `new_seoaciklama`, `new_kapakalt` + `new_seodurum`=2, `new_seoguncelleme`; ürün açıklaması (`new_ozet`) ve anahtar kelime yazılmaz. Önce CRM'deki eski değer okunur ve `semantic_seo_crm_writes`'a yazılır, sonra `UPDATE … ModifiedOn = GETUTCDATE() WHERE new_kitapId = ? AND statecode = 0`; tek tek geri alınır. Kip `SEO_CRM_WRITE` kapali/deneme/acik (Yönetim → SEO & GEO). Gece işi: CRM'deki değer hâlâ yazdığımız mı, T-soft'taki SeoTitle/SeoDescription eşit mi («sitede»).
+- `seo_geo/crm_write.py`: yazılabilir alanlar `new_seobaslik`, `new_seoaciklama`, `new_kapakalt` + `new_seodurum`=2, `new_seoguncelleme`; ürün açıklaması (`new_ozet`) ve anahtar kelime yazılmaz. Önce CRM'deki eski değer okunur ve `semantic_seo_crm_writes`'a yazılır, sonra `UPDATE … WHERE new_kitapId = ? AND statecode = 0` (yalnız yeni alanlar); tek tek geri alınır. Kip `SEO_CRM_WRITE` kapali/deneme/acik (Yönetim → SEO & GEO). Gece işi: CRM'deki değer hâlâ yazdığımız mı, T-soft'taki SeoTitle/SeoDescription eşit mi («sitede»).
 - Ekran: Karar geçmişinde «CRM'e yazılanlar» (durum, yazılan + önceki değer, gece denetimi, geri al onay penceresiyle); Ürün denetimi ve «Onay ne yapar?» metinleri güncellendi.
 - Test: `test_seo_crm_write.py` (6); sunucuda seo+admin testleri 585/585.
 - Paralel inceleme (timas.com.tr makine dosyaları, yalnız okuma): AI arama botları açık, eğitim botları Cloudflare'de 403; llms.txt 10 bayt boş, llms-full.txt yok; Organization `sameAs` yok; 1.381 yazar sayfasında Person şeması yok; ürün meta açıklaması başlığın tekrarı; ürün site haritası lastmod'ları her gece yenileniyor.

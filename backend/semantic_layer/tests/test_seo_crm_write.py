@@ -41,7 +41,8 @@ def test_check_rejects_unlisted_and_too_long():
 
 def test_sql_only_listed_columns_and_modifiedon():
     sql = w.update_sql("Timas_MSCRM.dbo.", ["new_seobaslik", "new_seodurum"])
-    assert sql.startswith("UPDATE Timas_MSCRM.dbo.new_kitapBase SET new_seobaslik = ?, new_seodurum = ?, ModifiedOn = GETUTCDATE()")
+    assert sql.startswith("UPDATE Timas_MSCRM.dbo.new_kitapBase SET new_seobaslik = ?, new_seodurum = ? WHERE")
+    assert "ModifiedOn" not in sql  # mevcut kolonlara dokunulmaz
     assert sql.endswith("WHERE new_kitapId = ? AND statecode = 0")
     with pytest.raises(ValueError):
         w.update_sql("dbo.", ["new_seobaslik", "new_ozet"])
@@ -78,7 +79,7 @@ class _Cur:
             self.description = [(c,) for c in cols]
             self._row = tuple(self.db.card.get(c) for c in cols) if args[0] == BOOK else None
         else:
-            keys = [k.split(" = ")[0].strip() for k in sql.split(" SET ")[1].split(", ModifiedOn")[0].split(", ")]
+            keys = [k.split(" = ")[0].strip() for k in sql.split(" SET ")[1].split(" WHERE")[0].split(", ")]
             if args[-1] == BOOK:
                 self.db.card.update(dict(zip(keys, args[:-1])))
                 self.rowcount = 1
@@ -157,7 +158,7 @@ def test_write_on_approve_then_verify_and_undo(env):
     assert w.on_approve(seo, "pr1", "kisi") == "yazildi"
     assert db.card["new_seobaslik"] == "Kitap - Yazar | Timaş" and db.card["new_seodurum"] == 2 and db.commits == 1
     upd = [s for s, _ in db.sql if s.startswith("UPDATE")][0]
-    assert "Timas_MSCRM.dbo.new_kitapBase" in upd and "new_ozet" not in upd and "ModifiedOn" in upd
+    assert "Timas_MSCRM.dbo.new_kitapBase" in upd and "new_ozet" not in upd and "ModifiedOn" not in upd
     assert seo.audits and seo.audits[0][1] == "crm_write"
     # aynı değer ikinci kez yazılmaz
     assert w.on_approve(seo, "pr1", "kisi") == "degisiklik_yok"
