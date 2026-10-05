@@ -392,6 +392,8 @@ class Executor:
             return rows
         enrichment = bool((set(plan.dimensions) | {d for d, _, _ in plan.filters}) & {"author", "publisher", "subbrand", "author_group"})
         books = self.crm_dimension_books(plan) if enrichment else {}
+        if enrichment and any(d in ("author", "publisher", "subbrand") for d, _, _ in plan.filters):
+            plan = replace(plan, filters=tuple(self.resolve_card_filter(books, f) for f in plan.filters))
         from . import crm_book_scope
         crm_scope = getattr(plan, "crm_books", None)
         scope_books = crm_book_scope.run(self, crm_scope) if crm_scope else None
@@ -516,6 +518,25 @@ class Executor:
             if spec["op"] == "contribution":
                 self.numeric_fields.update(spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct"))
         return [{k: float(v) if isinstance(v, Decimal) else v for k, v in r.items()} for r in answer]
+
+    def resolve_card_filter(self, books, item):
+        """Yazar/yayınevi süzgeci CRM kartındaki adla birebir tutmazsa («Metin Özdamar» ↔ «Metin Özdamarlar») içerme, sonra
+        eki atılmış kök denenir; hiçbir kart yoksa «0» değil «bulunamadı» (Logo ad süzgeciyle aynı kural)."""
+        dim, op, value = item
+        if dim not in ("author", "publisher", "subbrand"):
+            return item
+        names = {str(card.get(dim) or "") for card in books.values() if card.get(dim)}
+        for o, v in [(op, value)] + ([("contains", value)] if op == "eq" else []) + [("contains", stem) for stem in name_stems(value)]:
+            found = sorted(n for n in names if self.matches(n, o, v))
+            if found:
+                if (o, v) != (op, value):
+                    label = {"author": "yazar", "publisher": "yayınevi", "subbrand": "alt marka"}[dim]
+                    self.notes.append(f"«{value}» {label} adı CRM'de " + ", ".join(f"«{n}»" for n in found[:5])
+                                      + (" …" if len(found) > 5 else "") + " olarak bulundu.")
+                return (dim, o, v)
+        label = {"author": "yazar", "publisher": "yayınevi", "subbrand": "alt marka"}[dim]
+        raise ContractError(f"«{value}» adını taşıyan {label} CRM'deki aktif kitap kartlarında bulunamadı; adı kontrol edip yeniden sorun.",
+                            code="NEEDS_CLARIFICATION")
 
     def apply_crm_book_scope(self, rows, scope_books, scope, plan, sold):
         """Satış satırlarını CRM kümesine indirger; kırılım değerlerine açar; CRM sayısı varken satışsız kitabı 0 ile korur."""
@@ -688,6 +709,17 @@ class Executor:
                     self.notes.append(f"«{value}» {label} kayıtlarında «{v}» içeren ad olarak arandı ({n} kayıt).")
                 cache[key] = pred(alias, o, v)
                 return cache[key]
+        if dim == "channel":
+            # Kanal ve müşteri aynı cari kartta: «kitapyurduna» bir müşteridir, kanal değil. Kanal adında yoksa müşteri
+            # adında aranır; bulunursa müşteri süzgeci olarak uygulanır ve söylenir.
+            try:
+                found = self.name_predicate("customer", op, value, firm, alias)
+            except ContractError:
+                pass
+            else:
+                self.notes.append(f"«{value}» bir satış kanalı adı değil; müşteri kartı adı olarak bulundu ve müşteri süzgeci uygulandı.")
+                cache[key] = found
+                return found
         raise ContractError(f"«{value}» adını taşıyan {label} kaydı bulunamadı; adı kontrol edip yeniden sorun.", code="NEEDS_CLARIFICATION")
 
     def aggregate_ledger(self, plan, start, end, firm, period):

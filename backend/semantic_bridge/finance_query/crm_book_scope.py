@@ -86,9 +86,6 @@ def validate(spec, question, today):
 def check_plan(scope, metrics, dims, families, comparison):
     if families != {"sales"}:
         raise ContractError("CRM kitap kümesi yalnız satış satırı ölçüleriyle birleşir; fatura/tahsilat kitaba dağıtılamaz.")
-    extra = set(dims) - {"book", "crm_attribute", "day", "month", "year", "channel", "customer"}
-    if extra & {"author", "publisher", "subbrand", "author_group"}:
-        raise ContractError("CRM kitap kümesi ile künye kırılımı aynı hesapta henüz birleştirilmiyor.")
     if "crm_attribute" in dims and not scope["attributes"]:
         raise ContractError("crm_attribute kırılımı için CRM kümesinde stok kodu dışında bir kolon seçilmeli.", code="PLAN_INVALID")
     if scope["attributes"] and "crm_attribute" not in dims:
@@ -98,6 +95,15 @@ def check_plan(scope, metrics, dims, families, comparison):
             raise ContractError("Kitap başına CRM sayısı yalnız kitap kırılımıyla ya da toplam olarak verilir.")
         if comparison is not None:
             raise ContractError("CRM sayısı ile dönem karşılaştırması aynı hesapta yapılmaz.")
+
+
+def redundant(spec, dims):
+    """Hiçbir kitabı elemeyen, sayı taşımayan ve kırılımı istenmeyen küme cevaba bir şey katmaz: yok sayılır
+    (2026-10-06: «yayınevine göre ciro» künye kırılımının yanına süzgeçsiz bir CRM kümesi de yazılmıştı)."""
+    select = spec.get("select") if isinstance(spec, dict) else None
+    return (isinstance(select, list) and not spec.get("filters")
+            and not any(isinstance(s, dict) and s.get("op") in AGGREGATE for s in select)
+            and "crm_attribute" not in dims and not any(j.get("kind") == "inner" for j in spec.get("joins") or [] if isinstance(j, dict)))
 
 
 def describe(scope):

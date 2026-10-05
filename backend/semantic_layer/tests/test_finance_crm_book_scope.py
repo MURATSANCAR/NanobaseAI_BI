@@ -241,3 +241,36 @@ def test_a_crm_number_is_always_grouped_by_the_selected_stock_code():
     q["group_by"] = []
     scope = crm_book_scope.validate(q, "", None)
     assert scope["plan"]["group_by"] == [ref("root", "stok_kodu")]
+
+
+def test_an_author_name_missing_a_suffix_is_found_and_an_unknown_one_is_not_zero():
+    engine = Executor(Runtime(SALES))
+    books = {"a1": {"author": "Metin Özdamarlar"}, "b2": {"author": "Mert Arık"}}
+    assert engine.resolve_card_filter(books, ("author", "eq", "Metin Özdamar")) == ("author", "contains", "Metin Özdamar")
+    assert any("Metin Özdamarlar" in n for n in engine.notes)
+    with pytest.raises(ContractError, match="bulunamadı"):
+        engine.resolve_card_filter(books, ("author", "eq", "Orhan Pamuk"))
+
+
+def test_an_unfiltered_set_that_adds_nothing_is_ignored():
+    q = {"root": "book", "distinct": False, "joins": [{"relation": "book_publisher_id_to_publisher", "left_alias": "root", "alias": "j1", "kind": "left"}],
+         "select": [{"id": "book_code", "op": "field", "field": ref("root", "book_code")}, {"id": "publisher", "op": "field", "field": ref("j1", "name")}],
+         "filters": [], "group_by": [], "order_by": [], "limit": None}
+    assert crm_book_scope.redundant(q, ("publisher",))
+    assert not crm_book_scope.redundant(age_query() | {"filters": [{"field": ref("j2", "yas"), "op": "eq", "values": ["9 Yaş"]}]}, ())
+    plan = build("Yayınevine göre bu yılın cirosu", Review(), _data=data(["net_sales"], ["publisher"], q))
+    assert plan.crm_books is None and plan.dimensions == ("publisher",)
+
+
+def test_a_name_that_is_not_a_channel_is_tried_as_a_customer():
+    class Names(Connector):
+        def execute(self, sql, max_rows):
+            if "COUNT_BIG(*) AS n" in sql:
+                rows = [{"n": 0 if "SPECODE2" in sql else 1}]
+                return ["n"], rows, False
+            return super().execute(sql, max_rows)
+    engine = Executor(Runtime(SALES))
+    engine.rt.connector = Names(SALES)
+    predicate = engine.name_predicate("channel", "eq", "KİTAPYURDU", 411, "c")
+    assert "DEFINITION_" in predicate and "SPECODE2" not in predicate
+    assert any("müşteri kartı adı" in n for n in engine.notes)

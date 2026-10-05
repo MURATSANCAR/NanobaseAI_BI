@@ -647,6 +647,11 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
             raise ContractError("Bu süzgeç ölçünün kayıt düzeyine uygulanamaz.")
         filters.append((dim, op, val))
     crm_books = None
+    from .crm_book_scope import redundant as redundant_crm_books
+    if data.get("crm_books") is not None and redundant_crm_books(data["crm_books"], dims):
+        if trace is not None:
+            trace.append({"stage": "crm_books_dropped", "reason": "süzgeçsiz, sayısız, kırılımı istenmeyen küme"})
+        data = {**data, "crm_books": None}
     if data.get("crm_books") is not None:
         from . import crm_book_scope
         crm_books = crm_book_scope.validate(data["crm_books"], source_question, today)
