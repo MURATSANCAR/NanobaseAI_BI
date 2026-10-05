@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-05 — ZEKI-63: çıplak «satış tutarı» geri sorulmaz (kullanıcı kararı)
+
+- **Neden:** «2017 yılı toplam kitap satış tutarı nedir?» eski motorda kitap kitap 3 satır veriyordu; yeni motor bu hatayı yapmıyor ama tanımsız «satış tutarı / satışların toplamı» geçen her soruda «fatura genel toplamı mı, KDV hariç satır toplamı mı?» diye geri soruyordu (`planner.py` NEEDS_CLARIFICATION). Kullanıcı önerimi onayladı: 2026-10-01 tanımıyla doğrudan cevap, tanım notta.
+- **Değişiklik:** `planner.build` tanımsız satış tutarında soruya «(iskonto sonrası KDV hariç satış satırı toplamı)» ekleyip planlar (kullanıcının netleştirme cevabıyla aynı yol; tanımı model seçmez) ve plana `SALES_AMOUNT_NOTE` notunu ekler. «KDV», «fatura», «net», «satır» geçen sorular değişmez. Test: `test_bare_sales_amount_uses_the_decided_definition`; finans testleri 533 geçti (test sunucusu).
+- **Gerçek veri (yan köprü :8811, canlı köprüye dokunulmadı):** 2017 → 44.195.665,76 ₺ tek satır (bağımsız doğrudan Logo sorgusu `LG_171` VATMATRAH, TRCODE 7/8/9, fatura tarihi: 44.195.665,76); Eylül 2025 → 167.489.734,39 ₺ (bağımsız: 167.489.734,39). Soru setlerinde bu kalıba uyan 33 sorudan 9 temsilci soru koşuldu: canlıda dokuzu da geri soruyordu; şimdi 2'si cevaplandı (iade/satış ilk 10 müşteri, kamu kurumlarına satış), 7'si bu değişiklikten bağımsız eksikte kaldı (ödeme planı/vade/temsilci/teslimat şehri kırılımı yok, «pazaryeri» kanalı ve «son günler» belirsiz). Eklenen tanım metni ret açıklamasına sızıyordu; ayıklandı (`test_added_sales_definition_does_not_leak_into_the_refusal`, finans testleri 534 geçti).
+- **Not:** «kitap» kelimesi süzgeç değil; tutar bütün satış satırlarıdır (ZEKI-62 «tipi kitap» süzgeci ayrı iş).
+
 ## 2026-10-05 — Jira ZEKI panosu: 7 kayıt kodda düzeltildi (kurulum yok)
 
 - **Neden:** kullanıcı ZEKI panosundaki açık kayıtları «tek tek düzelt, kurma, sistemlerde kesinti olmasın» dedi. Kod `main`e girdi; test sunucusuna ve VM'e kurulmadı. Derleme ve birim testleri test sunucusunda geçici klasörde (`/tmp/claude-jira5`), canlı servis yeniden başlatılmadan.

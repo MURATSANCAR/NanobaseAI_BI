@@ -196,3 +196,36 @@ def test_a_source_value_matches_the_question_across_spaces_and_suffixes():
 def test_a_superlative_asks_for_one_result_without_writing_the_number(q, limit, ok):
     from semantic_bridge.finance_query.language import asked_limit
     assert asked_limit(limit, q) is ok
+
+
+# ZEKI-63, kullanıcı kararı 2026-10-05: çıplak «satış tutarı» geri sorulmaz; 2026-10-01 tanımıyla planlanır,
+# tanım cevabın notunda yazılır. Tanımı model seçmez: soruya eklenir.
+def test_bare_sales_amount_uses_the_decided_definition(monkeypatch):
+    from dataclasses import dataclass
+    from semantic_bridge.finance_query import planner
+
+    @dataclass(frozen=True)
+    class _Plan:
+        notes: tuple = ()
+
+    seen = []
+    monkeypatch.setattr(planner, "_build", lambda question, *a, **k: seen.append(question) or _Plan(("x",)))
+    plan = planner.build("2017 yılı toplam kitap satış tutarı nedir?", object())
+    assert seen == [f"2017 yılı toplam kitap satış tutarı nedir? ({planner.SALES_AMOUNT_DEFAULT})"]
+    assert plan.notes == ("x", planner.SALES_AMOUNT_NOTE)
+    seen.clear()
+    planner.build("2017 net satış tutarı", object())
+    planner.build("2017 fatura toplamı satış tutarı", object())
+    assert seen == ["2017 net satış tutarı", "2017 fatura toplamı satış tutarı"]
+
+
+def test_added_sales_definition_does_not_leak_into_the_refusal(monkeypatch):
+    from semantic_bridge.finance_query import planner
+    from semantic_bridge.finance_query.contracts import ContractError
+
+    def refuse(question, *a, **k):
+        raise ContractError(f"Cevaplanamayan kısım: {question}.")
+    monkeypatch.setattr(planner, "_build", refuse)
+    with pytest.raises(ContractError) as exc:
+        planner.build("Peşin satışların toplamı ne?", object())
+    assert str(exc.value) == "Cevaplanamayan kısım: Peşin satışların toplamı ne?."

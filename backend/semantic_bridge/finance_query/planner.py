@@ -265,11 +265,36 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
     raise PlanGenerationExhausted(str(error), code="PLAN_INVALID") from error
 
 
+SALES_AMOUNT_DEFAULT = "iskonto sonrası KDV hariç satış satırı toplamı"
+SALES_AMOUNT_NOTE = ("Satış tutarı: iskonto sonrası, KDV hariç satış satırı toplamı (fatura tarihine göre). "
+                     "Fatura genel toplamı (KDV dahil) isterseniz soruda «fatura toplamı» yazın.")
+
+
+def bare_sales_amount(question) -> bool:
+    """«Satış tutarı/toplamı» tanım belirtmeden soruldu mu (KDV, fatura, net, satır geçmiyor)."""
+    q = fold(question)
+    return bool(re.search(r"\bsatis\w*\s+(?:tutar\w*|toplam\w*)", q)) and not re.search(r"\b(kdv|fatura\w*|net|satir\w*)\b", q)
+
+
 def build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _source_question=None):
     # At most one semantic/structural replan for the complete user request.
     # Leaves propagate their rejection to the root rather than multiplying retries.
     if trace is None:
         trace = []
+    if not _depth and _data is None and bare_sales_amount(question):
+        # Kullanıcı kararı 2026-10-05 (ZEKI-63): çıplak «satış tutarı» geri sorulmaz; 2026-10-01 tanımıyla (KDV matrahı,
+        # fatura tarihi) cevaplanır ve tanım cevabın notunda yazılır. Model hangi tutarı seçeceğini tahmin etmez:
+        # tanım soruya, kullanıcının netleştirme cevabıyla aynı biçimde eklenir.
+        trace.append({"stage": "sales_amount_default", "definition": SALES_AMOUNT_DEFAULT})
+        added = f" ({SALES_AMOUNT_DEFAULT})"
+        try:
+            plan = build(question + added, llm, previous, trace, _source_question=_source_question)
+        except ContractError as exc:
+            # Eklenen tanım kullanıcının sorusu değildir; «cevaplanamayan kısım» metnine geçmesin.
+            exc.args = tuple(a.replace(added, "") if isinstance(a, str) else a for a in exc.args)
+            raise
+        notes = getattr(plan, "notes", None)
+        return replace(plan, notes=tuple(dict.fromkeys((*notes, SALES_AMOUNT_NOTE)))) if notes is not None else plan
     try:
         return _build(question, llm, previous, trace, _data=_data, _depth=_depth, _source_question=_source_question)
     except ContractError as exc:
@@ -291,10 +316,8 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         return passive_count_plan(question)
     source_question = _source_question or question
     source_q = fold(source_question)
-    # A bare amount has two observed, different accounting answers. Never let
-    # model sampling pick between header NETTOTAL and the line VAT base (VATMATRAH).
-    if re.search(r"\bsatis\w*\s+(?:tutar\w*|toplam\w*)", q) and not re.search(r"\b(kdv|fatura\w*|net|satir\w*)\b", q):
-        raise ContractError("Satış tutarıyla fatura genel toplamını mı, iskonto sonrası KDV hariç satış satırı toplamını mı istiyorsunuz?", code="NEEDS_CLARIFICATION")
+    # A bare amount has two observed, different accounting answers; `build` adds the decided definition before
+    # planning, so model sampling never picks between header NETTOTAL and the line VAT base (VATMATRAH).
     today = datetime.now(timezone.utc if re.search(r"\butc\b", q) else ZoneInfo("Europe/Istanbul")).date()
     periods, grain = dates(question, today)
     inherited_period = False
