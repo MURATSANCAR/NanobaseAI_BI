@@ -120,3 +120,12 @@ def test_filter_values_are_plain_strings_typed_by_the_registry_field():
     p = plan("crm_order", [{"id": "n", "op": "count_records", "field": None}],
              filters=[{"field": ref("root", "statuscode"), "op": "eq", "values": ["100000001"]}])
     assert validate_relational_query(p, "", None)["filters"][0]["values"] == [{"type": "number", "value": "100000001"}]
+
+
+def test_the_reviewer_sees_the_label_of_a_coded_filter_value():
+    from semantic_bridge.finance_query.relational_plan import describe_relational_output
+    p = plan("sales_target", [{"id": "t", "op": "sum", "field": ref("root", "toplam_hedef")}],
+             filters=[{"field": ref("root", "yil"), "op": "eq", "values": ["100000000"]}])
+    out = describe_relational_output(p)
+    flt = next(v for k, v in out.items() if isinstance(v, dict) and "filters_AND" in v)["filters_AND"][0] if not isinstance(out.get("filters_AND"), list) else out["filters_AND"][0]
+    assert flt["values_meaning"] == ["2026"]

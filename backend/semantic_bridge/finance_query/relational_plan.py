@@ -223,7 +223,14 @@ def describe_relational_output(plan):
     root=ENTITY_REGISTRY[plan["root"]]
     def reference(ref):
         entity=aliases[ref["alias"]];spec=ENTITY_REGISTRY[entity]["fields"][ref["field"]]
-        return {"alias":ref["alias"],"entity":entity,"field":ref["field"],"type":spec["type"],"semantics":spec.get("semantics","")}
+        out={"alias":ref["alias"],"entity":entity,"field":ref["field"],"type":spec["type"],"semantics":spec.get("semantics","")}
+        if spec.get("label_tr"): out["label_tr"]=spec["label_tr"]
+        return out
+    def meaning(predicate):
+        # Denetçi kodu değil anlamını görür: yil=100000000 → «2026»; kod listesi olmayan değer olduğu gibi kalır.
+        spec=ENTITY_REGISTRY[aliases[predicate["field"]["alias"]]]["fields"][predicate["field"]["field"]]
+        codes=spec.get("values") or {}
+        return [codes.get(str(v["value"]).split(".")[0], v["value"]) if codes else v["value"] for v in predicate["values"]]
     columns={}
     for item in plan["select"]:
         if item["op"]=="count_records":
@@ -246,7 +253,7 @@ def describe_relational_output(plan):
             "active_predicates":{alias:ENTITY_REGISTRY[entity]["active_predicate"] for alias,entity in aliases.items()},
             "passive_rule":"Additionally every table with statecode: statecode=0 and no status reason labelled Pasif/Inactive (root WHERE, joined targets in ON).",
             "joins":[{**join,"relationship":RELATIONAL_CAPABILITIES["relations"][join["relation"]]} for join in plan["joins"]],
-            "filters_AND":[{**predicate,"field":reference(predicate["field"])} for predicate in plan["filters"]],
+            "filters_AND":[{**predicate,"field":reference(predicate["field"]),"values_meaning":meaning(predicate)} for predicate in plan["filters"]],
             "filter_stage":"Before projection, optional DISTINCT, aggregation and ordering; explicit limit last",
             "missing_flags_filter_population":False, "projection_distinct":plan["distinct"],
             "left_join_missing_parent":"Root remains with NULL joined fields unless explicit WHERE filters reject NULL",
