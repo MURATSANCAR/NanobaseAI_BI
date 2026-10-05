@@ -348,7 +348,7 @@ def _strip_byline(title: str, names: list[str] = ()) -> str:
 #: Yalnız bölüm etiketi olan başlık («Birinci Bölüm», «BÖLÜM 3», «II. Kısım», «1.»): adı sonraki sayfadadır.
 _LABEL_WORDS = {"birinci", "ikinci", "üçüncü", "dördüncü", "beşinci", "altıncı", "yedinci", "sekizinci", "dokuzuncu",
                 "onuncu", "yirminci", "otuzuncu", "on", "yirmi", "otuz", "ilk", "son", "sonuncu", "bölüm", "kısım",
-                "kitap", "cilt", "fasıl", "perde", "ünite", "part", "chapter", "book"}
+                "kitap", "cilt", "fasıl", "fasl", "bab", "perde", "ünite", "part", "chapter", "book"}
 _ROMAN = re.compile(r"^[ıivxlc]+$")
 #: Bağlaçla başlayan başlık («VE TEŞEKKÜR») önceki başlığın devamıdır («ÖNSÖZ» iki sayfa önce).
 _CONJ = re.compile(r"^(ve|ile|veya|ya da|yahut)\b")

@@ -111,10 +111,12 @@ def validate_crm_plan(raw):
         elif not value.strip():
             raise ContractError("CRM süzgeci için boş olmayan değer gerekli.")
         elif kind == "datetime":
-            if op not in ("eq", "gte", "lt") or not re.fullmatch(r"\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2})?", value):
+            # A UTC suffix (Z / +00:00) is ISO too; planner.validate_crm_dates binds the instant to the parsed
+            # period and stores it without suffix, so the executor's revalidation sees the plain form.
+            if op not in ("eq", "gte", "lt") or not re.fullmatch(r"\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})?)?", value):
                 raise ContractError("CRM kayıt zamanı süzgeci ISO UTC tarih gerektirir.")
             try:
-                datetime.fromisoformat(value)
+                datetime.fromisoformat(value.replace("Z", "+00:00"))
             except ValueError as exc:
                 raise ContractError("CRM kayıt zamanı geçersiz.") from exc
         elif kind == "id":

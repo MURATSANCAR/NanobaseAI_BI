@@ -144,3 +144,55 @@ def test_default_period_is_not_marked_as_parsed_from_the_question():
     build("Net satış tutarı nedir?", spy, _data=_plan_data())
     assert spy.review["plan"]["tarih_kaynağı"] is None
     assert isinstance(spy.review["plan"]["uygulanan_tarih_aralıkları"], list)
+
+
+def test_an_ongoing_period_says_how_far_its_data_reaches():
+    from datetime import date
+    from semantic_bridge.finance_query.planner import build
+    plan = build("Ekim 2026 net satış tutarı nedir?", _ReviewSpy(), _data=_plan_data())
+    today = date.today()
+    if date(2026, 10, 1) <= today < date(2026, 10, 31):
+        assert any(n.startswith("Dönem sürüyor: 01.10.2026") for n in plan.notes)
+    else:
+        assert not any(n.startswith("Dönem sürüyor") for n in plan.notes)
+
+
+def test_comparing_a_finished_month_with_the_running_one_uses_the_same_days():
+    from datetime import date
+    from semantic_bridge.finance_query.plan_types import PeriodComparison
+    from semantic_bridge.finance_query.planner import align_ongoing_comparison
+    cmp = PeriodComparison("percent_change", "net_sales", "x", 0, 1)
+    periods, note = align_ongoing_comparison((("2026-09-01", "2026-10-01"), ("2026-10-01", "2026-11-01")), cmp, date(2026, 10, 5))
+    assert periods == (("2026-09-01", "2026-09-06"), ("2026-10-01", "2026-10-06"))
+    assert "01.09.2026–05.09.2026 ile 01.10.2026–05.10.2026 (5 gün)" in note
+    # Two finished periods, or a period that has not started, are left as asked.
+    assert align_ongoing_comparison((("2025-09-01", "2025-10-01"), ("2026-09-01", "2026-10-01")), cmp, date(2026, 10, 5)) == (
+        (("2025-09-01", "2025-10-01"), ("2026-09-01", "2026-10-01")), None)
+    # A year against the running year: same number of days into each.
+    periods, _ = align_ongoing_comparison((("2025-01-01", "2026-01-01"), ("2026-01-01", "2027-01-01")), cmp, date(2026, 10, 5))
+    assert periods == (("2025-01-01", "2025-10-06"), ("2026-01-01", "2026-10-06"))
+
+
+
+@pytest.mark.parametrize("q", ["geçen yıl eylülle bu yıl eylülü karşılaştır satış olarak",
+                               "bu yıl eylülü geçen yıl eylülüyle kıyasla", "geçen sene eylülde ve bu sene eylülde satış"])
+def test_a_relative_year_with_any_suffix_on_the_month_is_that_month(q):
+    from datetime import date
+    from semantic_bridge.finance_query.language import dates
+    periods, _ = dates(q, date(2026, 10, 5))
+    assert sorted(periods) == [("2025-09-01", "2025-10-01"), ("2026-09-01", "2026-10-01")]
+
+
+def test_a_source_value_matches_the_question_across_spaces_and_suffixes():
+    from semantic_bridge.finance_query.language import fold
+    from semantic_bridge.finance_query.planner import _in_question
+    q = fold("yurt dışına ne kadar sattık bu sene")
+    assert _in_question("YURTDIŞI", q) and _in_question("yurt dışı", q) and not _in_question("KITAPCI", q)
+
+
+@pytest.mark.parametrize("q,limit,ok", [("en çok kitabı olan yazar kim", 1, True), ("en fazla iade gelen müşteri hangisi", 1, True),
+                                        ("en çok satan 10 kitap", 10, True), ("en çok satan kitaplar", 5, False),
+                                        ("müşteri listesi", 1, False)])
+def test_a_superlative_asks_for_one_result_without_writing_the_number(q, limit, ok):
+    from semantic_bridge.finance_query.language import asked_limit
+    assert asked_limit(limit, q) is ok

@@ -6,7 +6,7 @@ import re
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from .language import fold, normalize_numbers
+from .language import fold, normalize_numbers, asked_limit
 from .contracts import ContractError
 from .relational_contracts import ENTITY_REGISTRY, RELATION_REGISTRY
 
@@ -24,10 +24,12 @@ RELATIONAL_SCHEMA = _object({
         "relation":{"type":"string","enum":list(RELATION_REGISTRY)},
         "left_alias":{"type":"string","enum":ALIASES}, "alias":{"type":"string","enum":ALIASES[1:]},
         "kind":{"type":"string","enum":["left","inner"]}})},
-    "select":{"type":"array","minItems":1,"maxItems":32,"items":_object({
+    # "field" is optional: after "op":"count_records" the model closes the object; a required field there made it
+    # loop on blank lines until max_tokens (2026-10-05, vLLM 0.27.1, «Bu yıl kaç sipariş iptal edildi?» 6/6).
+    "select":{"type":"array","minItems":1,"maxItems":32,"items":{**_object({
         "id":{"type":"string","pattern":"^[a-z][a-z0-9_]{0,63}$"},
         "op":{"type":"string","enum":["field","label","normalized_text","missing_flag","count_records","count_distinct","sum"]},
-        "field":{"anyOf":[{"type":"null"},FIELD_REF]}})},
+        "field":{"anyOf":[{"type":"null"},FIELD_REF]}}), "required":["id","op"]}},
     "filters":{"type":"array","maxItems":24,"items":_object({
         "field":FIELD_REF, "op":{"type":"string","enum":["eq","ne","contains","in","range","is_null","not_null","is_missing","not_missing"]},
         # Plain strings: a value object ({type,value}) made the model loop on blank lines under constrained decoding
@@ -127,7 +129,14 @@ def validate_relational_query(data, question, reference_date):
         if key in groups: _invalid("Tekrarlanan grup alanı.")
         groups.append(key)
     ids=set(); plain=[]; aggregates=False; selects=[]
+    if (not data["group_by"] and any(x.get("op")=="count_records" for x in data["select"] if isinstance(x,dict))
+            and any(x.get("op") in {"field","label","normalized_text"} for x in data["select"] if isinstance(x,dict))
+            and all(x.get("op") in {"field","label","normalized_text","missing_flag","count_records"} for x in data["select"] if isinstance(x,dict))):
+        # «… var mı, hangileri»: liste ve sayı birlikte; liste döner, sayısı satır sayısıdır.
+        data={**data,"select":[x for x in data["select"] if x.get("op")!="count_records"]}
     for selected in data["select"]:
+        if isinstance(selected,dict) and "field" not in selected:
+            selected={**selected,"field":None}
         _keys(selected,["id","op","field"])
         if (not isinstance(selected["id"],str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}",selected["id"])
                 or selected["id"] in ids or not isinstance(selected["op"],str) or selected["op"] not in {"field","label","normalized_text","missing_flag","count_records","count_distinct","sum"}):
@@ -151,7 +160,7 @@ def validate_relational_query(data, question, reference_date):
         selects.append(selected)
         if selected["op"] in {"field","label","normalized_text","missing_flag"}: plain.append((selected["field"]["alias"],selected["field"]["field"]))
         else: aggregates=True
-    if aggregates and (data["distinct"] or any(item["op"] in {"missing_flag","normalized_text"} for item in data["select"])):
+    if aggregates and (data["distinct"] or any(item["op"] in {"missing_flag","normalized_text"} for item in selects)):
         _invalid("Toplulaştırmaya ek DISTINCT, düz eksiklik bayrağı veya normalleştirilmiş metin henüz desteklenmiyor.")
     if (aggregates and set(plain)!=set(groups)) or (groups and not aggregates):
         _invalid("Grup anahtarları ile seçilen düz alanlar aynı olmalı; salt listeye gizli tekilleştirme uygulanamaz.")
@@ -181,7 +190,7 @@ def validate_relational_query(data, question, reference_date):
         ordered.add(order["column"])
     if data["limit"] is not None and (type(data["limit"]) is not int or not 1<=data["limit"]<=50000):
         _invalid("İlişkisel sonuç sınırı geçersiz.")
-    if question and data["limit"] is not None and not re.search(r"\b"+str(data["limit"])+r"\b",normalize_numbers(question)):
+    if question and data["limit"] is not None and not asked_limit(data["limit"],question):
         _invalid("Sonuç sınırı özgün kullanıcı sorusunda bulunamadı.")
     return {**data,"select":selects,"filters":filters}
 
@@ -219,7 +228,14 @@ def describe_relational_output(plan):
     root=ENTITY_REGISTRY[plan["root"]]
     def reference(ref):
         entity=aliases[ref["alias"]];spec=ENTITY_REGISTRY[entity]["fields"][ref["field"]]
-        return {"alias":ref["alias"],"entity":entity,"field":ref["field"],"type":spec["type"],"semantics":spec.get("semantics","")}
+        out={"alias":ref["alias"],"entity":entity,"field":ref["field"],"type":spec["type"],"semantics":spec.get("semantics","")}
+        if spec.get("label_tr"): out["label_tr"]=spec["label_tr"]
+        return out
+    def meaning(predicate):
+        # Denetçi kodu değil anlamını görür: yil=100000000 → «2026»; kod listesi olmayan değer olduğu gibi kalır.
+        spec=ENTITY_REGISTRY[aliases[predicate["field"]["alias"]]]["fields"][predicate["field"]["field"]]
+        codes=spec.get("values") or {}
+        return [codes.get(str(v["value"]).split(".")[0], v["value"]) if codes else v["value"] for v in predicate["values"]]
     columns={}
     for item in plan["select"]:
         if item["op"]=="count_records":
@@ -242,7 +258,7 @@ def describe_relational_output(plan):
             "active_predicates":{alias:ENTITY_REGISTRY[entity]["active_predicate"] for alias,entity in aliases.items()},
             "passive_rule":"Additionally every table with statecode: statecode=0 and no status reason labelled Pasif/Inactive (root WHERE, joined targets in ON).",
             "joins":[{**join,"relationship":RELATIONAL_CAPABILITIES["relations"][join["relation"]]} for join in plan["joins"]],
-            "filters_AND":[{**predicate,"field":reference(predicate["field"])} for predicate in plan["filters"]],
+            "filters_AND":[{**predicate,"field":reference(predicate["field"]),"values_meaning":meaning(predicate)} for predicate in plan["filters"]],
             "filter_stage":"Before projection, optional DISTINCT, aggregation and ordering; explicit limit last",
             "missing_flags_filter_population":False, "projection_distinct":plan["distinct"],
             "left_join_missing_parent":"Root remains with NULL joined fields unless explicit WHERE filters reject NULL",

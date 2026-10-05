@@ -40,6 +40,7 @@ class Line:
     size: float
     italic: float                   # italik harflerin payı
     sup: list[str]                  # üst simge rakamları (gönderme numaraları)
+    font: str = ""                  # baskın yazı tipinin ailesi («MinionPro», «TrajanPro»)
 
 
 @dataclass
@@ -74,11 +75,28 @@ def lines_of(page) -> list[Line]:
             text = _join_spans(ln["spans"], [s["text"] for s in ln["spans"]],
                                abs(ln.get("dir", (1, 0))[0] - 1) < 0.01).replace("\t", " ").strip()
             n = sum(len(s["text"]) for s in sp) or 1
-            size = max(sp, key=lambda s: len(s["text"]))["size"]
+            main = max(sp, key=lambda s: len(s["text"]))
+            size = main["size"]
             out.append(Line(text, ln["bbox"][0], ln["bbox"][2], ln["bbox"][1], ln["bbox"][3], size,
                             sum(len(s["text"]) for s in sp if s["flags"] & 2) / n,
-                            [s["text"].strip() for s in sp if s["flags"] & 1 and s["text"].strip().isdigit()]))
+                            [s["text"].strip() for s in sp if s["flags"] & 1 and s["text"].strip().isdigit()],
+                            family(main.get("font", ""))))
     return sorted(out, key=lambda x: (round(x.y0), x.x0))
+
+
+def family(font: str) -> str:
+    """Yazı tipi ailesi: alt küme öneki ve biçem eki atılır («ABCDEF+MinionPro-Bold» → «MinionPro»)."""
+    return re.sub(r"^[A-Z]{6}\+", "", font or "").split("-")[0].split(",")[0]
+
+
+def body_family(doc, body: float) -> str:
+    """Gövde metninin yazı tipi ailesi (gövde puntosundaki satırlarda en çok harf)."""
+    fams: collections.Counter = collections.Counter()
+    for pg in doc:
+        for ln in lines_of(pg):
+            if abs(ln.size - body) <= 0.6:
+                fams[ln.font] += len(ln.text)
+    return fams.most_common(1)[0][0] if fams else ""
 
 
 def measure(doc) -> tuple[float, float, float]:
@@ -130,13 +148,23 @@ def page_parts(page, body: float, left: float, right: float) -> Page:
         pg.heads = {fold(ln.text) for ln in lines if DIGITS.match(ln.text)}
         return pg
     top, bottom = lines[body_idx[0]].y0, lines[body_idx[-1]].y1
+    # Gövdenin üstündeki küçük satırlardan yalnız en üstteki sayfa başlığıdır; altındaki ortalı satır sayfa başında
+    # açılan ara başlıktır (Karpat s.179: üst başlık 7,5 pt y60, «DERS KİTAPLARI VE VATAN KAVRAMI» 9,5 pt y84).
+    above = [ln for ln in lines if ln.size < body * 0.92 and ln.y1 <= top + 1 and not DIGITS.match(ln.text)]
+    first = min((ln.y0 for ln in above), default=None)
     for i, ln in enumerate(lines):
         small = ln.size < body * 0.92
         if small and ln.y0 >= bottom - 1:
             continue
+        if (small and ln.y1 <= top + 1 and ln.y0 > first + 1 and ln.size >= body * 0.75
+                and abs((ln.x0 + ln.x1) / 2 - (left + right) / 2) <= 12):
+            pg.body.append(ln)
+            continue
         if DIGITS.match(ln.text) or (small and ln.y1 <= top + 1):
             pg.heads.add(fold(ln.text))
-        elif is_body[i] or ln.size >= body * 0.92:
+        elif is_body[i] or ln.size >= body * 0.92 or (ln.size >= body * 0.75 and top <= ln.y0 <= bottom):
+            # gövde alanının içindeki küçük puntolu satır da gövdedir: ayrı yazı tipindeki ara başlık (Karpat:
+            # 9,5 pt Trajan), küçük puntolu alıntı — önce ne gövde ne dipnot sayılıp atılıyordu
             pg.body.append(ln)
             pg.refs += ln.sup
     below = _same_baseline([ln for ln in lines if ln.size < body * 0.92 and ln.y0 >= bottom - 1])
@@ -245,9 +273,17 @@ def para_lines(pg: Page, text: str) -> list[Line]:
     return []
 
 
-def kind_of(lines: list[Line], left: float, right: float, body: float = 0.0) -> tuple[str, str | None]:
+def display_line(ln: Line, left: float, right: float, body: float, body_font: str) -> bool:
+    """Gövdeden başka yazı tipi ailesinde, ortalı, kısa satır (ara başlık satırı; resim/grafik başlığı değil)."""
+    return bool(body_font and ln.font and ln.font != body_font and ln.size >= body * 0.8 and len(ln.text) <= 80
+                and not CAPTION.match(ln.text) and abs((ln.x0 + ln.x1) / 2 - (left + right) / 2) <= 12)
+
+
+def kind_of(lines: list[Line], left: float, right: float, body: float = 0.0,
+            body_font: str = "") -> tuple[str, str | None]:
     """(tür, şiirde satır sonlu metin). tür: para | subhead | poem | italic | right. Alt başlık: tek, ortalı, gövdeden
-    belirgin büyük puntolu kısa satır («II»). Şiir: en az 2 satır, satırların dörtte üçü
+    belirgin büyük puntolu kısa satır («II»); ya da tek, ortalı, gövdeden başka yazı tipi ailesinde dizilmiş, cümle
+    gibi bitmeyen kısa satır (Karpat: ara başlıklar 9,5 pt Trajan, gövde 11 pt Minion — punto küçük, aile farklı). Şiir: en az 2 satır, satırların dörtte üçü
     sütunun %80'inden kısa, hepsi aynı soldan başlar (iki sütunlu kısaltma listesi, ortalı grafik başlığı değil),
     gövde puntosunda (bölüm başlığı değil), tireyle bölünmemiş; sağa yaslı satırlar şiir sayılmaz (imza, kaynak)."""
     if len(lines) < 1:
@@ -258,14 +294,17 @@ def kind_of(lines: list[Line], left: float, right: float, body: float = 0.0) -> 
     short = sum(1 for ln in lines if (ln.x1 - ln.x0) < width * 0.8) / len(lines)
     hyph = any(re.search(r"\w[-\xad]$", ln.text) for ln in lines[:-1])
     same_left = max(ln.x0 for ln in lines) - min(ln.x0 for ln in lines) <= 4
-    body_size = not body or all(ln.size <= body * 1.08 for ln in lines)
+    body_size = not body or all(body * 0.92 <= ln.size <= body * 1.08 for ln in lines)
     mid = (left + right) / 2
     if (len(lines) == 1 and body and lines[0].size >= body * 1.12 and len(lines[0].text) <= 80
             and abs((lines[0].x0 + lines[0].x1) / 2 - mid) <= 12):
         return "subhead", None
-    if right_al >= 0.6:
-        return "right", None
+    if 1 <= len(lines) <= 3 and all(display_line(ln, left, right, body, body_font) for ln in lines) \
+            and not re.search(r"[.,;]$", lines[-1].text.strip()):
+        return "subhead", None
     caption = bool(CAPTION.match(lines[0].text))
+    if right_al >= 0.6 and body_size and not caption:   # küçük puntolu resim/karekod yazısı sağa yaslı imza değil
+        return "right", None
     if len(lines) >= 2 and short >= 0.75 and not hyph and same_left and body_size and not caption:
         return "poem", "\n".join(ln.text for ln in lines)
     if italic >= 0.6:
@@ -285,6 +324,8 @@ def analyze(doc) -> dict[int, Page]:
             pg.heads |= {fold(t) for _, t in pg.notes if fold(t) in footer}
             pg.notes = [[n, t] for n, t in pg.notes if fold(t) not in footer]
             pg.note_key = "".join(fold(t) for _, t in pg.notes)
+    fam = body_family(doc, body)
     for pg in pages.values():
         pg.left, pg.right, pg.size = left, right, body     # type: ignore[attr-defined]
+        pg.font = fam                                      # type: ignore[attr-defined]
     return pages

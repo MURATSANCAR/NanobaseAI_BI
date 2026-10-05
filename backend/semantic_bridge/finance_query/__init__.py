@@ -13,6 +13,33 @@ from .planner import follows, build, scope_extension, apply_scope_extension  # n
 from . import conversation
 from .presentation import public_error, public_response, public_text
 from .executor import Executor
+from . import planner as _planner
+
+_DIMENSION_VALUES_AT = [0.0]
+
+
+def refresh_dimension_values(runtime, ttl=3600):
+    """Satış kanalı gibi kırılımların kaynaktaki değerleri: modele günlük ifadeyi gerçek değere bağlaması için verilir.
+    Saatte bir tazelenir; okunamazsa eski değerler kalır, soru durmaz."""
+    if time.monotonic() - _DIMENSION_VALUES_AT[0] < ttl and _planner.DIMENSION_VALUES:
+        return
+    _DIMENSION_VALUES_AT[0] = time.monotonic()
+    try:
+        from datetime import date, timedelta
+        engine = Executor(runtime)
+        firm = engine.partitions(date.today(), date.today() + timedelta(days=1))[-1][2]
+        rows = engine.read(f"SELECT LTRIM(RTRIM(c.SPECODE2)) AS v, COUNT_BIG(*) AS n FROM dbo.[LG_{firm}_CLCARD] c"
+                           " WHERE LTRIM(RTRIM(ISNULL(c.SPECODE2,'')))<>'' GROUP BY LTRIM(RTRIM(c.SPECODE2))"
+                           " HAVING COUNT_BIG(*)>=3 ORDER BY COUNT_BIG(*) DESC")
+        values = {"channel": [r["v"] for r in rows if r.get("v")]}
+        # Yayınevi/marka adları CRM'den: «timaş çocuk» kitap adında değil yayınevi kırılımında aranır.
+        rule = engine.crm_active("new_markaBase", "m")
+        brands = engine.read("SELECT DISTINCT LTRIM(RTRIM(m.new_name)) AS v FROM [Timas_MSCRM].[dbo].[new_markaBase] m"
+                             " WHERE m.new_name IS NOT NULL" + ("" if rule == "1=1" else " AND " + rule), source="crm")
+        values["publisher"] = sorted({r["v"] for r in brands if r.get("v")})
+        _planner.DIMENSION_VALUES = values
+    except Exception:  # noqa: BLE001 — bilgi amaçlı; soru bunsuz da planlanır
+        logging.getLogger(__name__).warning("kırılım değerleri okunamadı", exc_info=True)
 from .result_metadata import describe_columns, calculation_definitions
 from .crm_query import CRM_CAPABILITIES
 from .crm_reports import CRM_REPORT_CAPABILITIES
@@ -80,6 +107,7 @@ def answer(runtime, question, thread_id, sample_size, execute, progress, usernam
                                       "previousQueryId": (base or {}).get("queryId")})
             plan = apply_scope_extension(base, extension)
         else:
+            refresh_dimension_values(runtime)
             plan = build(planned, model, previous, state["planning"])
         state["plan"] = plan.to_dict()
         if not execute:

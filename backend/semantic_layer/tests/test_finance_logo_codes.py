@@ -167,3 +167,10 @@ def test_withholding_invoices_are_a_header_code_not_the_line_vat_exemption():
     assert "f.EINVOICETYP IN (4)" in main_sql(sql, "LG_411_01_INVOICE")
     _, sql = run(Plan(("sales_amount",), ("einvoice_type",), SEPT))
     assert "WHEN h.EINVOICETYP=2 THEN N'İstisna'" in main_sql(sql, "LG_411_01_STLINE")
+
+
+def test_retail_against_wholesale_is_a_breakdown_that_nets_each_kind_with_its_own_returns():
+    _, sql = run(Plan(("sales_amount",), ("sale_type",), SEPT))
+    s = main_sql(sql, "LG_411_01_STLINE")
+    assert "WHEN f.TRCODE=7 THEN N'Perakende' WHEN f.TRCODE=2 THEN N'Perakende'" in s
+    assert "GROUP BY CASE WHEN f.TRCODE=7" in s

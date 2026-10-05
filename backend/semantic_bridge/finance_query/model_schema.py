@@ -98,7 +98,7 @@ _EXECUTION_ARRAYS = ("metrics", "dimensions", "filters", "derived", "having", "a
 _SOURCE_BRANCHES = ("crm", "logo_report", "crm_report", "relational_query")
 
 
-def _closed_variant(base, changes):
+def _closed_variant(base, changes, late=()):
     properties = deepcopy(base["properties"])
     for key, change in changes.items():
         existing = properties[key]
@@ -109,7 +109,22 @@ def _closed_variant(base, changes):
             properties[key] = {"type":"null"}
         else:
             properties[key] = {**deepcopy(existing), **deepcopy(change)}
+    if late:
+        # `late` keys move to just after the last source branch; every other key keeps its place.
+        order = [key for key in properties if key not in late]
+        at = order.index("crm_report") + 1
+        properties = {key: properties[key] for key in [*order[:at], *late, *order[at:]]}
     return obj(properties)
+
+
+# Constrained decoding writes properties in schema order. In a non-metric alternative "filters" must
+# stay empty, but it came before the source branches: the model wanted to write the question's
+# condition there, the grammar allowed only whitespace, and it emitted blank lines until max_tokens
+# (2026-10-05, vLLM 0.27.1: «Bu yıl kaç sipariş iptal edildi?» 6/6 PLAN_INVALID, up to 261k chars).
+# In those alternatives "filters" now follows the branches; nothing else moves. Measured on 15 CRM
+# questions (no-thinking attempt): 0 loops, same branch choice as the original order on every question.
+# Moving the other empty arrays back or the branches forward changed the choice (3-8 of 15 went to crm).
+_LATE = ("filters",)
 
 
 def _leaf_variants(base):
@@ -122,11 +137,11 @@ def _leaf_variants(base):
             **{key:_EMPTY_ARRAY for key in _EXECUTION_ARRAYS},
             **{key:{"type":"object"} if key == selected else _NULL for key in _SOURCE_BRANCHES},
             **{key:_NULL for key in ("comparison","limit","order_by")},
-        }))
+        }, late=_LATE))
     alternatives.append(_closed_variant(base, {
         **{key:_EMPTY_ARRAY for key in _EXECUTION_ARRAYS},
         **{key:_NULL for key in (*_SOURCE_BRANCHES,"comparison","limit","order_by")},
-    }))
+    }, late=_LATE))
     return alternatives
 
 
@@ -150,5 +165,5 @@ _root_alternatives.append(_closed_variant(PLAN_SCHEMA,{
     "clarification":{"type":"string","maxLength":0},
     "sections":{"type":"array","minItems":1,"maxItems":4},
     "coverage":{"type":"array","minItems":1,"maxItems":30},
-}))
+}, late=_LATE))
 PLAN_SCHEMA = {"type":"object", "anyOf":_root_alternatives, "$defs":{"leaf_plan":_leaf_definition}}

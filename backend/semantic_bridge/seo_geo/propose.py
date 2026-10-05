@@ -21,7 +21,8 @@ Aşağıdaki kitap ürününün kaydını iyileştir. Kurallar:
 - YALNIZ aşağıdaki kayıtta yazan bilgiyi kullan. Kayıtta olmayan sayfa sayısı, yaş grubu, ödül, baskı sayısı,
   yazar biyografisi, tarih UYDURMA. Emin olmadığın bilgiyi yazma.
 - SeoTitle: {title_min}–{title_max} karakter. Biçim: "Kitap adı - Yazar | Yayınevi". Yazar kayıtta varsa MUTLAKA başlıkta
-  olsun (çok yazarlıysa ilk yazar); sığmıyorsa önce yayınevini kısalt. Kategori adı başlığa girmez.
+  olsun (çok yazarlıysa ilk yazar). Yayınevi kayıttaki Brand ile birebir aynı yazılır, kısaltılmaz ("Timaş Çocuk"
+  "Timaş" olmaz); sığmıyorsa "| Yayınevi" kısmı tamamen çıkarılır. Kategori adı başlığa girmez.
 - SeoDescription: {meta_min}–{meta_max} karakter (sınırı aşma, say), kitabı anlatan tek paragraf; başlığı tekrar etme,
   tırnak ve emoji yok. Yazar adını geçir.
 - SearchKeywords: virgülle ayrılmış 5–10 arama kelimesi (kitap adı, yazar, konu, tür; yazım varyantları).
@@ -138,11 +139,25 @@ def _cut(text: str, limit: int) -> str:
     return head[:head.rfind(" ")].rstrip(" ,;:-–") if " " in head else head
 
 
-def enforce(fields: dict[str, str], lim: dict[str, int]) -> dict[str, str]:
-    """Model sayamasa da sınır aşılmaz: başlıkta önce yayınevi ("| …") düşer, sonra kelime sınırından kesilir;
-    meta açıklama cümle sonundan kısaltılır."""
+def publisher_title(title: str, brand: Optional[str], max_len: int) -> str:
+    """Başlığın «| Yayınevi» kısmı ürünün yayınevi (T-soft Brand) ile birebir aynı olur; kısaltma yok (müşteri
+    bildirimi 2026-10-05: «Timaş Çocuk» kitabında «Timaş» yazıyordu). Sığmazsa yayınevi kısmı çıkar. Yayınevi kayıtta
+    yoksa başlığa dokunulmaz."""
+    t, b = (title or "").strip(), re.sub(r"\s+", " ", str(brand or "")).strip()
+    if not t or not b:
+        return t
+    base = t.rsplit(" | ", 1)[0].strip() if " | " in t else t
+    full = f"{base} | {b}"
+    return full if len(full) <= max_len else base
+
+
+def enforce(fields: dict[str, str], lim: dict[str, int], brand: Optional[str] = None) -> dict[str, str]:
+    """Model sayamasa da sınır aşılmaz: başlığın yayınevi kısmı ürünün yayınevine eşitlenir (verildiyse), sığmazsa
+    yayınevi ("| …") düşer, sonra kelime sınırından kesilir; meta açıklama cümle sonundan kısaltılır."""
     out = dict(fields)
     t = out.get("SeoTitle", "")
+    if brand:
+        t = publisher_title(t, brand, lim["title_max"])
     if len(t) > lim["title_max"] and " | " in t:
         t = t.rsplit(" | ", 1)[0].strip()
     out["SeoTitle"] = _cut(t, lim["title_max"]) if t else t
@@ -235,7 +250,7 @@ def suggest(llm: Any, p: dict[str, Any], lim: dict[str, int], target: Optional[s
                 break
             messages += [{"role": "assistant", "content": reply},
                          {"role": "user", "content": "Hâlâ yanlış: " + "; ".join(now) + ". Karakterleri say, yalnız JSON döndür."}]
-    return enforce(fields, lim)
+    return enforce(fields, lim, p.get("Brand"))
 
 
 def changed(p: dict[str, Any], fields: dict[str, str]) -> dict[str, str]:

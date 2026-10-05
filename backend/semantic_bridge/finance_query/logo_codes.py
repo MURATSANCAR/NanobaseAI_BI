@@ -92,6 +92,10 @@ CODED = {
         "e-Fatura senaryosu",
         "invoice", "PROFILEID", _SCENARIO,
         {"temel": (1,), "temel fatura": (1,), "ticari": (2,), "ticari fatura": (2,)}),
+    "sale_type": Coded(
+        "satış türü",
+        "line", "TRCODE", {7: "Perakende", 2: "Perakende", 8: "Toptan", 3: "Toptan", 9: "Hizmet"},
+        {"perakende": (7, 2), "toptan": (8, 3), "hizmet": (9,), "hizmet satışı": (9,)}, other="Diğer işlem"),
     "einvoice_type": Coded(
         "fatura tipi",
         "invoice", "EINVOICETYP", {0: "Satış", 2: "İstisna", 4: "Tevkifat"},

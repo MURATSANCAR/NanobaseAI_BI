@@ -65,10 +65,62 @@ def test_main_model_does_not_evict_a_working_image_model(G, monkeypatch):
     assert not G._must_yield(director)              # resim işi bitti: ana model kartı geri alır
 
 
-def test_main_model_is_never_held(G):
+def test_main_model_just_ready_is_held_for_its_turn(G, monkeypatch):
+    """2026-10-04 23:32: ana model 120 sn'lik soğuk açılışı bitirdi (23:32:14), 5 sn sonra bekleyen derin görsel
+    model için yine durduruldu. Sürekli açık model de iş başındayken sırasını kullanır."""
+    director, deep = G.ALIASES["book-director"], G.ALIASES["book-vision-deep"]
+    _running(G, monkeypatch, {"book-director"})
+    now = time.time()
+    director.last_used = G.TURN_START[director.name] = now - 5           # 5 sn önce hazır oldu
+    G.WAITING_SINCE[deep.name] = now - 160                                # derin model 23:29:40'tan beri bekliyor
+    assert G._held(director, deep, now)
+    assert G._must_yield(deep)               # derin model kartı istemez, sırasını bekler; ana model beslenir
+    assert not G._must_yield(director)
+
+
+def test_main_model_gives_way_when_the_turn_is_over(G, monkeypatch):
+    director, deep = G.ALIASES["book-director"], G.ALIASES["book-vision-deep"]
+    _running(G, monkeypatch, {"book-director"})
+    now = time.time()
+    director.last_used = now                                              # sürekli iş alıyor
+    G.TURN_START[director.name] = now - G.HOLD_MAX - 1                    # sırasını kullandı
+    G.WAITING_SINCE[deep.name] = now - G.HOLD_MAX + 30                    # bekleyen henüz HOLD_MAX beklemedi
+    assert G._held(director, deep, now)
+    G.WAITING_SINCE[deep.name] = now - G.HOLD_MAX - 1                     # bekleyiş sınırı doldu
+    assert not G._held(director, deep, now)
+    assert not G._must_yield(deep)
+
+
+def test_idle_main_model_gives_way_at_once(G, monkeypatch):
     director, image = G.ALIASES["book-director"], G.ALIASES["book-image"]
-    director.last_used = time.time()
-    assert not G._held(director, image, time.time())  # sürekli açık model yer verir, bekçi geri kaldırır
+    now = time.time()
+    director.last_used = now - G.EVICT_GRACE - 1                          # iş yok: kartı hemen bırakır
+    G.TURN_START[director.name] = now - 10
+    assert not G._held(director, image, now)
+
+
+def test_make_room_does_not_evict_main_model_whose_requests_wait(G, monkeypatch):
+    """Ana modelin istekleri kartta yer bekleyen model yüzünden `_route`'ta beklerken `_serving` 0 görünür; yer
+    açma onu yine de atmaz, sırası bitmeden kart ona aittir."""
+    director, deep = G.ALIASES["book-director"], G.ALIASES["book-vision-deep"]
+    _running(G, monkeypatch, {"book-director"})
+    now = time.time()
+    director.last_used = G.TURN_START[director.name] = now - 5
+    director.inflight = G.YIELDING[director.name] = 12                    # hepsi sırada bekliyor
+    assert G._serving(director) == 0
+    G.WAITING_SINCE[deep.name] = now - 160
+    stopped = []
+
+    async def stop(o, why):
+        stopped.append(o.name)
+
+    monkeypatch.setattr(G, "_stop", stop)
+    monkeypatch.setattr(G, "_orphans", lambda: [])
+    monkeypatch.setattr(G, "gpu_mem", lambda i: (10 * G.GIB, 94 * G.GIB))
+    monkeypatch.setattr(G, "gpu_holders", lambda i: [])
+    with pytest.raises(G.HTTPException) as e:
+        asyncio.run(G._make_room_inner(deep, 80 * G.GIB, time.time() - 1))
+    assert e.value.status_code == 503 and stopped == []
 
 
 def test_yielding_request_spills_to_peer_when_bi_idle(G, monkeypatch):

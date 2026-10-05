@@ -120,3 +120,47 @@ def test_filter_values_are_plain_strings_typed_by_the_registry_field():
     p = plan("crm_order", [{"id": "n", "op": "count_records", "field": None}],
              filters=[{"field": ref("root", "statuscode"), "op": "eq", "values": ["100000001"]}])
     assert validate_relational_query(p, "", None)["filters"][0]["values"] == [{"type": "number", "value": "100000001"}]
+
+
+def test_the_reviewer_sees_the_label_of_a_coded_filter_value():
+    from semantic_bridge.finance_query.relational_plan import describe_relational_output
+    p = plan("sales_target", [{"id": "t", "op": "sum", "field": ref("root", "toplam_hedef")}],
+             filters=[{"field": ref("root", "yil"), "op": "eq", "values": ["100000000"]}])
+    out = describe_relational_output(p)
+    flt = next(v for k, v in out.items() if isinstance(v, dict) and "filters_AND" in v)["filters_AND"][0] if not isinstance(out.get("filters_AND"), list) else out["filters_AND"][0]
+    assert flt["values_meaning"] == ["2026"]
+
+
+class Names(Crm):
+    """Kayıt adları: «9 Yaş», «10 Yaş»; tam eşitlik «9» bulamaz, kelime araması bulur."""
+    def execute(self, sql, limit):
+        if "SELECT DISTINCT TOP (20)" in sql:
+            self.sql.append(sql)
+            if "=N'9'" in sql: return ["v"], [], False
+            if "LIKE N'9 %'" in sql: return ["v"], [{"v": "9 Yaş"}], False
+            return ["v"], [], False
+        return super().execute(sql, limit)
+
+
+def test_a_text_filter_finds_the_record_name_that_holds_the_word():
+    crm = Names(True)
+    ex = Executor(SimpleNamespace(crm_connector=crm, connector=None, _check_data_scope=lambda sql: None))
+    ex.verify_schema = lambda tables, source: {(t.lower(), c.lower()): TYPES.get((t.lower(), c.lower()), "nvarchar")
+                                               for t, cols in tables.items() for c in cols}
+    joins = [{"relation": "book_age_link_age_group_id_to_age_group", "left_alias": "root", "alias": "j1", "kind": "inner"}]
+    p = plan("book_age_link", [{"id": "n", "op": "count_distinct", "field": ref("root", "book_id")}], joins,
+             filters=[{"field": ref("j1", "yas"), "op": "eq", "values": ["9"]}])
+    out = execute_relational_query(ex, p)
+    main = crm.sql[-1]
+    assert "IN (N'9 Yaş')" in main and any("«9» CRM'de «9 Yaş» olarak bulundu" in n for n in out["notes"])
+    p["filters"][0]["values"] = ["99"]
+    with pytest.raises(ContractError, match="bulunamadı"):
+        execute_relational_query(ex, p)
+
+
+def test_a_list_and_a_count_together_become_the_list():
+    p = plan("crm_order", [{"id": "n", "op": "count_records", "field": None},
+                           {"id": "no", "op": "field", "field": ref("root", "siparis_numarasi")}],
+             filters=[{"field": ref("root", "statuscode"), "op": "eq", "values": ["100000011"]}])
+    out = validate_relational_query(p, "", None)
+    assert [x["op"] for x in out["select"]] == ["field"]

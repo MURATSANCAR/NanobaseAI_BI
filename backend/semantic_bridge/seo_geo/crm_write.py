@@ -62,6 +62,21 @@ WRITES = sa.Table(
 )
 
 
+#: Öneri kaydının «Sonuç» metni (Karar geçmişi): CRM yazımının durumu.
+RESULT_TEXT = {"yazildi": "CRM kitap kartına yazıldı (SEO başlığı, meta açıklama, kapak alt metni).",
+               "deneme": "Deneme kipi: CRM'e yazılacak değer kaydedildi, yazılmadı.",
+               "degisiklik_yok": "CRM kitap kartında bu değerler zaten var.",
+               "eslesmeyen": "CRM'de barkodla eşleşen kitap kartı yok; yazılmadı.",
+               "hata": "CRM'e yazılamadı; ayrıntı CRM yazım kaydında."}
+
+
+def set_result(seo, proposal_id: str, status: str, prefix: str = "Onaylandı.") -> None:
+    text = RESULT_TEXT.get(status)
+    if text:
+        with seo.engine().begin() as c:
+            c.execute(PROPOSALS.update().where(PROPOSALS.c.id == proposal_id).values(result=f"{prefix} {text}"[:1000]))
+
+
 def now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -98,9 +113,14 @@ def alt_text(name: Any, author: Any) -> str:
 
 def build(product: dict[str, Any], proposal_fields: dict[str, Any], stamp: datetime) -> dict[str, Any]:
     """Bir kitap için yazılacak alanlar. Boş öneri alanı yazılmaz (CRM'deki değer silinmez)."""
+    from semantic_bridge.seo_geo import propose
+
     out: dict[str, Any] = {}
+    fixed = dict(proposal_fields)
+    if fixed.get("SeoTitle"):  # yayınevi birebir (kısaltma yok); CRM sınırı içinde kalır
+        fixed["SeoTitle"] = propose.publisher_title(_clean(fixed["SeoTitle"]), product.get("Brand"), title_max())
     for src, dst in FROM_PROPOSAL.items():
-        v = _clean(proposal_fields.get(src))
+        v = _clean(fixed.get(src))
         if v:
             out[dst] = _cut(v, FIELDS[dst])
     alt = alt_text(product.get("ProductName") or product.get("name"), product.get("Model"))
@@ -121,6 +141,40 @@ def title_has_author(product: dict[str, Any], proposal_fields: dict[str, Any]) -
         return True
     first = re.split(r"\s*[,;&]\s*|\s+ve\s+", author)[0].strip().lower()
     return bool(first) and first in title
+
+
+def title_max() -> int:
+    """SEO başlığı üst sınırı: Yönetim'deki SEO_TITLE_MAX (CRM alanı 100'ü aşmaz)."""
+    try:
+        from semantic_bridge import admin as admin_mod
+        return min(int(admin_mod.conf("SEO_TITLE_MAX") or 65), FIELDS["new_seobaslik"])
+    except Exception:  # noqa: BLE001
+        return 65
+
+
+def fix_publisher_titles(seo, log_line: Callable[[str], None] = print) -> dict[str, int]:
+    """Bekleyen ve onaylı önerilerin kayıtlı SEO başlığında yayınevini ürünün yayınevine eşitler (ekranda ve sonraki
+    CRM yazımında doğru görünsün). Ürün açıklaması ve diğer alanlara dokunmaz."""
+    from semantic_bridge.seo_geo import propose
+
+    eng, tenant, mx = seo.engine(), seo.tenant(), title_max()
+    with eng.connect() as c:
+        rows = c.execute(sa.select(PROPOSALS.c.id, PROPOSALS.c.fields_json, PRODUCTS.c.brand)
+                         .join(PRODUCTS, sa.and_(PRODUCTS.c.tenant_id == PROPOSALS.c.tenant_id,
+                                                 PRODUCTS.c.product_id == PROPOSALS.c.product_id))
+                         .where(PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status.in_(["hazir", "onaylandi"]))).all()
+    n = 0
+    with eng.begin() as c:
+        for pid, fj, brand in rows:
+            f = json.loads(fj or "{}")
+            t = f.get("SeoTitle") or ""
+            new = propose.publisher_title(_clean(t), brand, mx)
+            if t and new != _clean(t):
+                f["SeoTitle"] = new
+                c.execute(PROPOSALS.update().where(PROPOSALS.c.id == pid).values(fields_json=json.dumps(f, ensure_ascii=False)))
+                n += 1
+    log_line(f"başlıkta yayınevi düzeltildi: {n} öneri (toplam {len(rows)})")
+    return {"duzeltilen": n, "toplam": len(rows)}
 
 
 def check(fields: dict[str, Any]) -> None:
@@ -249,6 +303,7 @@ def run(seo, *, approve_ready: bool, write: bool, limit: Optional[int] = None, u
             if book:
                 seen.add(book)
             status = _process(seo, conn, p, prod, prop, books, write=write, user=user, stamp=stamp)
+            set_result(seo, prop["id"], status)
             stats[status] = stats.get(status, 0) + 1
             if status not in ("eslesmeyen", "bos"):
                 stats["kitap"] += 1
@@ -409,6 +464,26 @@ def verify(seo, log_line: Callable[[str], None] = lambda s: log.info(s)) -> dict
     return stats
 
 
+def refresh_results(seo, log_line: Callable[[str], None] = print) -> int:
+    """Öneri «Sonuç» metnini yazım kaydından tazeler (eski toplu onaylarda metin «gönderim yok» kalmıştı). Öneri başına
+    en anlamlı durum: yazildi > degisiklik_yok > hata > eslesmeyen/deneme; geri alınan kayıt sayılmaz."""
+    rank = {"yazildi": 4, "degisiklik_yok": 3, "hata": 2, "deneme": 1}
+    eng = seo.engine()
+    WRITES.create(eng, checkfirst=True)
+    with eng.connect() as c:
+        rows = c.execute(sa.select(WRITES.c.proposal_id, WRITES.c.status).where(
+            WRITES.c.tenant_id == seo.tenant(), WRITES.c.proposal_id.is_not(None))).all()
+    best: dict[str, str] = {}
+    for pid, st in rows:
+        if st in rank and rank[st] > rank.get(best.get(pid, ""), 0):
+            best[pid] = st
+    for pid, st in best.items():
+        set_result(seo, pid, "yazildi" if st == "degisiklik_yok" and any(
+            r[0] == pid and r[1] == "yazildi" for r in rows) else st)
+    log_line(f"sonuç metni tazelendi: {len(best)} öneri")
+    return len(best)
+
+
 def undo(seo, write_id: str, user: str) -> dict[str, Any]:
     """Yazılan kaydı CRM'deki eski değerine döndürür. Yalnız kartın en son yazımı geri alınır ve yalnız CRM'deki değer
     hâlâ bizim yazdığımızsa: biri sonradan elle düzelttiyse onun değeri ezilmez. Kip «acik» olmalı."""
@@ -484,9 +559,16 @@ if __name__ == "__main__":
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--deneme", action="store_true", help="CRM'e yazma; yazılacak ve eski değeri kaydet")
     g.add_argument("--yaz", action="store_true", help="CRM'e yaz (SEO_CRM_WRITE=acik şart)")
+    g.add_argument("--sonuc-tazele", action="store_true", help="öneri «Sonuç» metnini yazım kaydından tazele")
+    g.add_argument("--yayinevi-duzelt", action="store_true", help="önerilerin başlığındaki yayınevini ürünün yayınevine eşitle")
     ap.add_argument("--onayla", action="store_true", help="bekleyen önerileri önce ZEKİ AI adına onayla")
     ap.add_argument("--sinir", type=int, help="bu koşuda en çok kaç kitap")
     a = ap.parse_args()
     from semantic_bridge.app import app as _app  # köprünün kurulu uygulaması: veritabanı, ayarlar, SEO durumu
 
-    run(_app.state.seo_geo, approve_ready=a.onayla, write=a.yaz, limit=a.sinir)
+    if a.sonuc_tazele:
+        refresh_results(_app.state.seo_geo)
+    elif a.yayinevi_duzelt:
+        fix_publisher_titles(_app.state.seo_geo)
+    else:
+        run(_app.state.seo_geo, approve_ready=a.onayla, write=a.yaz, limit=a.sinir)

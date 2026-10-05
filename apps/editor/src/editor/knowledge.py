@@ -684,7 +684,7 @@ async def verify_event_modality(generation_id: str, batch: int = 25) -> dict:
     with the full page text decides; its verdict stands only if it sides with one of the
     two readings with confidence >= 0.8. A changed modality supersedes the claim (claims
     are immutable). Only what the referee cannot settle goes to the editor."""
-    evs = db.all_rows("SELECT e.id, e.summary, e.modality, e.page_from, e.page_to, e.claim_id,"
+    evs = await asyncio.to_thread(db.all_rows, "SELECT e.id, e.summary, e.modality, e.page_from, e.page_to, e.claim_id,"
                       " (SELECT string_agg(ev.quote, ' | ') FROM claim_evidence ce JOIN evidence ev"
                       "  ON ev.id=ce.evidence_id WHERE ce.claim_id=e.claim_id) AS quotes"
                       " FROM event e WHERE e.generation_id=%s AND e.merged_into IS NULL", generation_id)
@@ -726,28 +726,30 @@ async def verify_event_modality(generation_id: str, batch: int = 25) -> dict:
     verdicts = await asyncio.gather(*(referee(e, v) for e, v in disputed))
     stats = {"events": len(evs), "modality_disagreements": len(disputed), "settled_first": 0,
              "settled_second": 0, "sent_to_review": 0}
-    with db.tx() as c:
-        for e, v, out, call_id in verdicts:
-            final = out["modality"] if out and out["confidence"] >= 0.8 and \
-                out["modality"] in (e["modality"], v["modality"]) else None
-            if final == e["modality"]:
-                stats["settled_first"] += 1                 # first reading stands, nothing changes
-            elif final is not None:
-                stats["settled_second"] += 1
-                new_claim = ledger.supersede_claim(
-                    c, generation_id, str(e["claim_id"]), payload_update={"modality": final},
-                    created_by="knowledge:modality-referee", model_call_id=call_id,
-                    note=f"kip {e['modality']} → {final}: {out['reason'][:300]}") if e["claim_id"] else None
-                c.execute("UPDATE event SET modality=%s, story_order=NULL, claim_id=coalesce(%s, claim_id)"
-                          " WHERE id=%s", (final, new_claim, e["id"]))
-            else:
-                stats["sent_to_review"] += 1
-                c.execute("UPDATE event SET modality='UNCERTAIN', story_order=NULL WHERE id=%s", (e["id"],))
-                if e["claim_id"]:
-                    third = f"; hakem {out['modality']} ({out['confidence']:.2f}): {out['reason'][:200]}" if out else ""
-                    ledger.queue_review(c, generation_id, claim_id=str(e["claim_id"]), priority=1,
-                                        reason=f"Olay kipi çözülemedi: çıkarım {e['modality']}, kontrol "
-                                               f"{v['modality']} ({v['reason'][:200]}){third}")
+    def write():
+        with db.tx() as c:
+            for e, v, out, call_id in verdicts:
+                final = out["modality"] if out and out["confidence"] >= 0.8 and \
+                    out["modality"] in (e["modality"], v["modality"]) else None
+                if final == e["modality"]:
+                    stats["settled_first"] += 1                 # first reading stands, nothing changes
+                elif final is not None:
+                    stats["settled_second"] += 1
+                    new_claim = ledger.supersede_claim(
+                        c, generation_id, str(e["claim_id"]), payload_update={"modality": final},
+                        created_by="knowledge:modality-referee", model_call_id=call_id,
+                        note=f"kip {e['modality']} → {final}: {out['reason'][:300]}") if e["claim_id"] else None
+                    c.execute("UPDATE event SET modality=%s, story_order=NULL, claim_id=coalesce(%s, claim_id)"
+                              " WHERE id=%s", (final, new_claim, e["id"]))
+                else:
+                    stats["sent_to_review"] += 1
+                    c.execute("UPDATE event SET modality='UNCERTAIN', story_order=NULL WHERE id=%s", (e["id"],))
+                    if e["claim_id"]:
+                        third = f"; hakem {out['modality']} ({out['confidence']:.2f}): {out['reason'][:200]}" if out else ""
+                        ledger.queue_review(c, generation_id, claim_id=str(e["claim_id"]), priority=1,
+                                            reason=f"Olay kipi çözülemedi: çıkarım {e['modality']}, kontrol "
+                                                   f"{v['modality']} ({v['reason'][:200]}){third}")
+    await asyncio.to_thread(write)
     return stats
 
 
@@ -803,7 +805,7 @@ def _unit(key: str, prefix: str) -> int | None:
 
 # ------------------------------------------------------ events / timeline
 async def merge_events(generation_id: str) -> dict:
-    evs = db.all_rows("SELECT e.id, e.page_from, e.page_to, e.modality, e.summary, c.model_call_id"
+    evs = await asyncio.to_thread(db.all_rows, "SELECT e.id, e.page_from, e.page_to, e.modality, e.summary, c.model_call_id"
                       " FROM event e LEFT JOIN claim c ON c.id=e.claim_id WHERE e.generation_id=%s AND"
                       " e.merged_into IS NULL ORDER BY e.page_from, e.page_to", generation_id)
     if not evs:
@@ -854,35 +856,39 @@ async def merge_events(generation_id: str) -> dict:
         story = [f"e{u}" for u in budget.merge_order(wins, [
             [u for u in (_unit(x, "e") for x in (r or {}).get("story_order", [])) if u is not None]
             for r in run.results])]
-    merged = 0
-    with db.tx() as c:
-        for ids in groups:
-            members = [short[x] for x in ids if x in short]
-            if len({m["modality"] for m in members}) > 1 or len(members) < 2:
-                continue  # never merge a plan with its realisation
-            # The extractor listed events of one call separately on purpose: two events
-            # from the same call are never one event. Duplicates exist only across calls.
-            calls = [m["model_call_id"] for m in members if m["model_call_id"] is not None]
-            if len(calls) != len(set(calls)):
-                continue
-            # Duplicates come from chunk boundaries, so they sit on the same or the next
-            # page. Events further apart are consecutive actions, not one event.
-            lo = max(m["page_from"] for m in members)
-            hi = min(m["page_to"] for m in members)
-            if lo - hi > 1:
-                continue
-            keep = members[0]
-            for m in members[1:]:
-                c.execute("UPDATE event SET merged_into=%s WHERE id=%s AND merged_into IS NULL",
-                          (keep["id"], m["id"]))
-                merged += 1
-        order = 0
-        for x in story:
-            e = short.get(x)
-            if e and e["modality"] in ("REALIZED", "MEMORY"):
-                order += 1
-                c.execute("UPDATE event SET story_order=%s WHERE id=%s AND merged_into IS NULL "
-                          "AND modality IN ('REALIZED','MEMORY')", (order, e["id"]))
+
+    def write():
+        merged = 0
+        with db.tx() as c:
+            for ids in groups:
+                members = [short[x] for x in ids if x in short]
+                if len({m["modality"] for m in members}) > 1 or len(members) < 2:
+                    continue  # never merge a plan with its realisation
+                # The extractor listed events of one call separately on purpose: two events
+                # from the same call are never one event. Duplicates exist only across calls.
+                calls = [m["model_call_id"] for m in members if m["model_call_id"] is not None]
+                if len(calls) != len(set(calls)):
+                    continue
+                # Duplicates come from chunk boundaries, so they sit on the same or the next
+                # page. Events further apart are consecutive actions, not one event.
+                lo = max(m["page_from"] for m in members)
+                hi = min(m["page_to"] for m in members)
+                if lo - hi > 1:
+                    continue
+                keep = members[0]
+                for m in members[1:]:
+                    c.execute("UPDATE event SET merged_into=%s WHERE id=%s AND merged_into IS NULL",
+                              (keep["id"], m["id"]))
+                    merged += 1
+            order = 0
+            for x in story:
+                e = short.get(x)
+                if e and e["modality"] in ("REALIZED", "MEMORY"):
+                    order += 1
+                    c.execute("UPDATE event SET story_order=%s WHERE id=%s AND merged_into IS NULL "
+                              "AND modality IN ('REALIZED','MEMORY')", (order, e["id"]))
+        return merged, order
+    merged, order = await asyncio.to_thread(write)
     res = {"events": len(evs), "merged": merged, "ordered": order, "cap_hits": hits}
     if len(wins) > 1:
         # how the list was read: every window's pages, the windows that failed (their events
@@ -904,7 +910,7 @@ async def assign_narrative_roles(generation_id: str) -> dict:
     """Importance is relative to the whole book: the director labels each realized
     event's role in the narrative. Returns illustrated pages of key events that have
     no deep scan yet ("Önemli olaylarda" -> book-vision-deep)."""
-    tl = candidate_timeline(generation_id)
+    tl = await asyncio.to_thread(candidate_timeline, generation_id)
     if not tl:
         return {"key_events": 0, "pages": []}
     short = {f"e{i}": e for i, e in enumerate(tl)}
@@ -955,19 +961,22 @@ async def assign_narrative_roles(generation_id: str) -> dict:
         extra["reading"] = budget.report(wins, fit=fit.as_dict(), failed=run.errors,
                                          role_conflicts=conflicts)
     key = []
-    with db.tx() as c:
-        for v in verdicts:
-            e = short.get(v["event_id"])
-            if e:
-                c.execute("UPDATE event SET narrative_role=%s WHERE id=%s", (v["role"], e["id"]))
-                if v["role"] != "ORDINARY":
-                    key.append(e)
-        pages = sorted({p for e in key for p in range(e["page_from"], e["page_to"] + 1)})
-        rows = c.execute(
-            "SELECT p.page_no FROM page p JOIN generation g ON g.book_version_id=p.book_version_id"
-            " WHERE g.id=%s AND p.page_no = ANY(%s) AND coalesce(p.nontext_ink, 1) >= %s AND NOT EXISTS"
-            " (SELECT 1 FROM page_scan d WHERE d.generation_id=g.id AND d.page_no=p.page_no AND"
-            " d.pass='DEEP')", (generation_id, pages, settings().min_illustration_ink)).fetchall()
+    def write():
+        with db.tx() as c:
+            for v in verdicts:
+                e = short.get(v["event_id"])
+                if e:
+                    c.execute("UPDATE event SET narrative_role=%s WHERE id=%s", (v["role"], e["id"]))
+                    if v["role"] != "ORDINARY":
+                        key.append(e)
+            pages = sorted({p for e in key for p in range(e["page_from"], e["page_to"] + 1)})
+            rows = c.execute(
+                "SELECT p.page_no FROM page p JOIN generation g ON g.book_version_id=p.book_version_id"
+                " WHERE g.id=%s AND p.page_no = ANY(%s) AND coalesce(p.nontext_ink, 1) >= %s AND NOT EXISTS"
+                " (SELECT 1 FROM page_scan d WHERE d.generation_id=g.id AND d.page_no=p.page_no AND"
+                " d.pass='DEEP')", (generation_id, pages, settings().min_illustration_ink)).fetchall()
+        return key, rows
+    key, rows = await asyncio.to_thread(write)
     return {"key_events": len(key), "pages": [r["page_no"] for r in rows], **extra}
 
 
@@ -1194,19 +1203,26 @@ def event_actors(generation_id: str) -> list[dict]:
 
 # ----------------------------------------------------- emotions/themes
 async def link_emotions_and_themes(generation_id: str) -> dict:
-    """Step 10: attach emotions to resolved characters, consolidate themes."""
-    with db.tx() as c:
-        emotions = c.execute("SELECT id,character_name,page_no,claim_id FROM emotion "
-                             "WHERE generation_id=%s", (generation_id,)).fetchall()
-        n = 0
-        for em in emotions:
-            character_id = _emotion_character(c, generation_id, em['character_name'],
-                                              em['page_no'], em['claim_id'])
-            # Re-evaluate old links too: identity corrections can remove support.
-            c.execute("UPDATE emotion SET character_id=%s WHERE id=%s "
-                      "AND character_id IS DISTINCT FROM %s", (character_id, em['id'], character_id))
-            n += character_id is not None
-    th = db.all_rows("SELECT c.id, c.claim, c.source_pages, (SELECT string_agg(e.quote, ' | ') FROM"
+    """Step 10: attach emotions to resolved characters, consolidate themes.
+
+    The database passes run in a thread (`asyncio.to_thread`): on the worker's shared loop the
+    per-emotion lookups and theme writes held it 80-90 s (worker log 2026-10-04 23:29-23:31) and
+    every activity of every book being read lost its heartbeat (60 s) at once."""
+    def link() -> int:
+        with db.tx() as c:
+            emotions = c.execute("SELECT id,character_name,page_no,claim_id FROM emotion "
+                                 "WHERE generation_id=%s", (generation_id,)).fetchall()
+            n = 0
+            for em in emotions:
+                character_id = _emotion_character(c, generation_id, em['character_name'],
+                                                  em['page_no'], em['claim_id'])
+                # Re-evaluate old links too: identity corrections can remove support.
+                c.execute("UPDATE emotion SET character_id=%s WHERE id=%s "
+                          "AND character_id IS DISTINCT FROM %s", (character_id, em['id'], character_id))
+                n += character_id is not None
+            return n
+    n = await asyncio.to_thread(link)
+    th = await asyncio.to_thread(db.all_rows, "SELECT c.id, c.claim, c.source_pages, (SELECT string_agg(e.quote, ' | ') FROM"
                      " claim_evidence ce JOIN evidence e ON e.id=ce.evidence_id WHERE ce.claim_id=c.id)"
                      " AS quotes FROM claim c WHERE c.generation_id=%s AND c.kind='THEME' AND"
                      " c.payload->>'level'='chunk' AND c.status NOT IN "
@@ -1224,28 +1240,32 @@ async def link_emotions_and_themes(generation_id: str) -> dict:
     dropped_groups = info["dropped_groups"]
     unconsolidated = sorted(set(short) - covered)
     out = {"themes": groups}
-    made = 0
-    with db.tx() as c:
-        for t in out["themes"]:
-            srcs = [short[s] for s in t["source_ids"]]
-            evs = []
-            for s in srcs:
-                source_evidence = c.execute(
-                    "SELECT ce.evidence_id,e.page_no,e.quote_verified FROM claim_evidence ce "
-                    "JOIN evidence e ON e.id=ce.evidence_id WHERE ce.claim_id=%s AND e.generation_id=%s",
-                    (s["id"], generation_id)).fetchall()
-                if not source_evidence:
-                    raise ValueError("Theme source has no evidence in this generation: " + str(s['id']))
-                for r in source_evidence:
-                    evs.append((str(r["evidence_id"]), r["quote_verified"], r["page_no"]))
-            payload = {"level": "book", "theme": t["theme"]}
-            if t.get("windows"):
-                payload["windows"] = t["windows"]      # which windows (pages) the theme came from
-            if ledger.save_claim(c, generation_id, kind="THEME", subject=t["theme"], claim=t["text"],
-                                 evidence=list(dict.fromkeys(evs)), confidence=t["confidence"],
-                                 created_by="knowledge:themes", model_call_id=t.get("call_id") or call_id,
-                                 payload=payload):
-                made += 1
+
+    def save() -> int:
+        made = 0
+        with db.tx() as c:
+            for t in out["themes"]:
+                srcs = [short[s] for s in t["source_ids"]]
+                evs = []
+                for s in srcs:
+                    source_evidence = c.execute(
+                        "SELECT ce.evidence_id,e.page_no,e.quote_verified FROM claim_evidence ce "
+                        "JOIN evidence e ON e.id=ce.evidence_id WHERE ce.claim_id=%s AND e.generation_id=%s",
+                        (s["id"], generation_id)).fetchall()
+                    if not source_evidence:
+                        raise ValueError("Theme source has no evidence in this generation: " + str(s['id']))
+                    for r in source_evidence:
+                        evs.append((str(r["evidence_id"]), r["quote_verified"], r["page_no"]))
+                payload = {"level": "book", "theme": t["theme"]}
+                if t.get("windows"):
+                    payload["windows"] = t["windows"]      # which windows (pages) the theme came from
+                if ledger.save_claim(c, generation_id, kind="THEME", subject=t["theme"], claim=t["text"],
+                                     evidence=list(dict.fromkeys(evs)), confidence=t["confidence"],
+                                     created_by="knowledge:themes", model_call_id=t.get("call_id") or call_id,
+                                     payload=payload):
+                    made += 1
+        return made
+    made = await asyncio.to_thread(save)
     res = {"emotions_linked": n, "themes": made, "theme_groups_dropped": dropped_groups,
            "themes_left_unconsolidated": len(unconsolidated), "cap_hits": info["cap_hits"]}
     if info.get("reading"):

@@ -111,3 +111,60 @@ def test_print_style_notes_are_superscript_at_chapter_end():
     _finish_layout(ms, {20: p20}, notes, print_style=True)
     body = [b.text for c in ms.chapters for b in c.blocks]
     assert body == ["uyumludur.¹ Benzer bir şekilde", "¹ Gregory, Scientific Materialism, s. 184."]
+
+
+def test_subhead_in_display_font_smaller_than_body():
+    """Karpat: ara başlık gövdeden küçük (9,5 pt) ama başka yazı tipinde (Trajan) ve ortalı; iki satıra bölünebilir.
+    Gövdenin yazı tipindeki ortalı kısa satır ya da noktayla biten satır ara başlık değildir."""
+    head = L.Line("YUNAN AYAKLANMASI", 158, 283, 100, 109.5, 9.5, 0.0, [], "TrajanPro")
+    assert L.kind_of([head], 75, 369, 11, "MinionPro")[0] == "subhead"
+    two = [L.Line("OSMANLI ORTAÇAĞ SOSYAL ÖRGÜTLENMESİ:", 120, 324, 100, 109.5, 9.5, 0.0, [], "TrajanPro"),
+           L.Line("SOSYAL TABAKALAR", 160, 284, 112, 121.5, 9.5, 0.0, [], "TrajanPro")]
+    assert L.kind_of(two, 75, 369, 11, "MinionPro")[0] == "subhead"
+    same = L.Line("Yunan Ayaklanması", 158, 283, 100, 111, 11, 0.0, [], "MinionPro")
+    assert L.kind_of([same], 75, 369, 11, "MinionPro")[0] == "para"
+    caption = L.Line("Grafik 3: Gelirler", 158, 283, 100, 109.5, 9.5, 0.0, [], "Helvetica")
+    assert L.kind_of([caption], 75, 369, 11, "MinionPro")[0] == "para"
+    qr = [L.Line("QR kodu", 300, 369, 100, 108, 8.5, 0.0, [], "MinionPro"),
+          L.Line("okutunuz", 300, 369, 110, 118, 8.5, 0.0, [], "MinionPro")]
+    assert L.kind_of(qr, 75, 369, 11, "MinionPro")[0] == "para"               # küçük yazı şiir/sağdan değil
+
+
+def test_merged_reading_paragraphs_are_split_by_layout():
+    """Okuma kaydında birleşmiş üç durum: tekrar eden üst başlık + ara başlık + paragraf; paragraf + sayfanın
+    dipnotları. Üst başlık ve dipnot gövdeden çıkar, ara başlık ayrı olur; tek sayfadaki «baş» satırı silinmez."""
+    def pg_with(body, heads, notes=None):
+        pg = page(body, notes=notes, heads=heads)
+        pg.font = "MinionPro"
+        return pg
+    body = [L.Line("DERS KİTAPLARI VE VATAN KAVRAMI", 117, 324, 84, 93.5, 9.5, 0.0, [], "TrajanPro"),
+            ln("Hükümet tarafından yeni ders kitapları belirlendi ve", y=110),
+            ln("okullara gönderildi; kitaplarda vatan anlatıldı.14", y=125, sup=["14"])]
+    run = L.fold("OSMANLI’DA MİLLİYETÇİLİĞİN TOPLUMSAL TEMELLERİ")
+    pages = {p: pg_with(body if p == 179 else [ln("Başka bir sayfanın metni burada sürüp gidiyor.")], {run},
+                        [["14", "İlk modern kurumlardan biri olan Encümen-i Daniş kuruldu."]] if p == 179 else None)
+             for p in (177, 178, 179)}
+    paras = [(179, "OSMANLI’DA MİLLİYETÇİLİĞİN TOPLUMSAL TEMELLERİ DERS KİTAPLARI VE VATAN KAVRAMI Hükümet tarafından "
+                   "yeni ders kitapları belirlendi ve okullara gönderildi; kitaplarda vatan anlatıldı.14 14 İlk modern "
+                   "kurumlardan biri olan Encümen-i Daniş kuruldu.")]
+    out, notes = _apply_layout(paras, pages)
+    assert out[0][1:] == ("DERS KİTAPLARI VE VATAN KAVRAMI", "subhead")
+    assert out[1][1].startswith("Hükümet") and out[1][1].endswith("anlatıldı.[[179:14]]")
+    assert notes[(179, "14")].startswith("İlk modern")
+    single = {179: pg_with([ln("Mendelci genetik bilimsel statüsünü yitirmemiştir.")],
+                           {L.fold("Türkler ve Evrim Teorisinin Geçerliliği")})}
+    out, _ = _apply_layout([(179, "Türkler ve Evrim Teorisinin Geçerliliği Mendelci genetik bilimsel statüsünü "
+                                   "yitirmemiştir.")], single)
+    assert out[0][1].startswith("Türkler ve Evrim")                             # tek sayfadaki satır silinmez
+
+
+def test_label_only_chapter_takes_its_opening_subhead_as_perde():
+    """«1. FASL» etiketli bölüm «[EMANETLERİN EDA EDİLMESİ]» ara başlığıyla açılıyorsa tek perde başlığı olur (Timaş
+    Şer'î Siyaset e-perde); adı etiket olmayan bölüm («GİRİŞ») ara başlığını bölüm adına katmaz."""
+    ms = Manuscript("K", chapters=[
+        Chapter("1. FASL", [Block("subhead", "[EMANETLERİN EDA EDİLMESİ]", [17]), Block("para", "Metin.", [17])]),
+        Chapter("GİRİŞ", [Block("subhead", "Ara başlık", [20]), Block("para", "Metin.", [20])])])
+    _finish_layout(ms, {17: page([]), 20: page([])}, {})
+    assert [(c.title, c.kind) for c in ms.chapters] == [("1. FASL [EMANETLERİN EDA EDİLMESİ]", "perde"),
+                                                       ("GİRİŞ", "chapter")]
+    assert [b.kind for b in ms.chapters[1].blocks] == ["subhead", "para"]
