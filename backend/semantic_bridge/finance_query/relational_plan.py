@@ -24,10 +24,12 @@ RELATIONAL_SCHEMA = _object({
         "relation":{"type":"string","enum":list(RELATION_REGISTRY)},
         "left_alias":{"type":"string","enum":ALIASES}, "alias":{"type":"string","enum":ALIASES[1:]},
         "kind":{"type":"string","enum":["left","inner"]}})},
-    "select":{"type":"array","minItems":1,"maxItems":32,"items":_object({
+    # "field" is optional: after "op":"count_records" the model closes the object; a required field there made it
+    # loop on blank lines until max_tokens (2026-10-05, vLLM 0.27.1, «Bu yıl kaç sipariş iptal edildi?» 6/6).
+    "select":{"type":"array","minItems":1,"maxItems":32,"items":{**_object({
         "id":{"type":"string","pattern":"^[a-z][a-z0-9_]{0,63}$"},
         "op":{"type":"string","enum":["field","label","normalized_text","missing_flag","count_records","count_distinct","sum"]},
-        "field":{"anyOf":[{"type":"null"},FIELD_REF]}})},
+        "field":{"anyOf":[{"type":"null"},FIELD_REF]}}), "required":["id","op"]}},
     "filters":{"type":"array","maxItems":24,"items":_object({
         "field":FIELD_REF, "op":{"type":"string","enum":["eq","ne","contains","in","range","is_null","not_null","is_missing","not_missing"]},
         # Plain strings: a value object ({type,value}) made the model loop on blank lines under constrained decoding
@@ -128,6 +130,8 @@ def validate_relational_query(data, question, reference_date):
         groups.append(key)
     ids=set(); plain=[]; aggregates=False; selects=[]
     for selected in data["select"]:
+        if isinstance(selected,dict) and "field" not in selected:
+            selected={**selected,"field":None}
         _keys(selected,["id","op","field"])
         if (not isinstance(selected["id"],str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}",selected["id"])
                 or selected["id"] in ids or not isinstance(selected["op"],str) or selected["op"] not in {"field","label","normalized_text","missing_flag","count_records","count_distinct","sum"}):
@@ -151,7 +155,7 @@ def validate_relational_query(data, question, reference_date):
         selects.append(selected)
         if selected["op"] in {"field","label","normalized_text","missing_flag"}: plain.append((selected["field"]["alias"],selected["field"]["field"]))
         else: aggregates=True
-    if aggregates and (data["distinct"] or any(item["op"] in {"missing_flag","normalized_text"} for item in data["select"])):
+    if aggregates and (data["distinct"] or any(item["op"] in {"missing_flag","normalized_text"} for item in selects)):
         _invalid("Toplulaştırmaya ek DISTINCT, düz eksiklik bayrağı veya normalleştirilmiş metin henüz desteklenmiyor.")
     if (aggregates and set(plain)!=set(groups)) or (groups and not aggregates):
         _invalid("Grup anahtarları ile seçilen düz alanlar aynı olmalı; salt listeye gizli tekilleştirme uygulanamaz.")
