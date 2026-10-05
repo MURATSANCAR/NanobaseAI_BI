@@ -614,6 +614,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError("İlk N ve kalan hesabından sonra kalan satırı düşürecek ek limit uygulanamaz.", code="PLAN_INVALID")
     analytic_ids = {a["id"] + suffix for a in analytics if a["op"] == "contribution" for suffix in ("_share_pct", "_cumulative_pct", "_group_total")}
     derived, having, comparison = validate_operations(data, metrics, dims, periods, analytic_ids)
+    if comparison is not None:
+        periods, aligned = align_ongoing_comparison(periods, comparison, today)
+        if aligned:
+            period_notes = [n for n in period_notes if not n.startswith("Dönem sürüyor")] + [aligned]
     if derived and any(a["op"] == "top_remainder" for a in analytics):
         raise ContractError("İlk N ve kalan satırında oran/farkların yeniden hesaplanması henüz tanımlı değil; türetilmiş değerler toplanamaz.")
     output_ids = {comparison.id, "base_value", "target_value"} if comparison else set(metrics) | {d.id for d in derived} | analytic_ids
@@ -797,6 +801,33 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if review.get("ok") is not True or review.get("missing"):
         raise unmet_error("Sorunun bütün koşulları plana taşınamadı: ", review.get("missing") or ["ölçü/kırılım uyumu"])
     return Plan(metrics, dims, periods, tuple(filters), kind, limit, order, data.get("descending", True), derived, having, comparison, analytics=analytics, notes=tuple(period_notes))
+
+
+def align_ongoing_comparison(periods, comparison, today):
+    """«Geçen ayla bu ayı kıyasla» bu ay bitmeden sorulur: tamamlanmış dönemin tamamı ile sürenin birkaç günü
+    kıyaslanırsa düşüş uydurulur. Süren dönemin geçen gün sayısı kadar, öteki dönemin aynı günleri alınır."""
+    if len(periods) != 2:
+        return periods, None
+    spans = [(date.fromisoformat(a), date.fromisoformat(b)) for a, b in periods]
+    tomorrow = today + timedelta(days=1)
+    ongoing = [i for i, (a, b) in enumerate(spans) if a <= today and b > tomorrow]
+    if len(ongoing) != 1:
+        return periods, None
+    i = ongoing[0]; j = 1 - i
+    (a, _), (c, d) = spans[i], spans[j]
+    if d > tomorrow:                                      # öteki de sürüyor ya da gelecekte: hizalanacak geçmiş yok
+        return periods, None
+    elapsed = (tomorrow - a).days
+    cut = min(d, c + timedelta(days=elapsed))
+    if cut == d:
+        return periods, None
+    out = list(periods)
+    out[i] = (str(a), str(tomorrow))
+    out[j] = (str(c), str(cut))
+    last = cut - timedelta(days=1)
+    return tuple(tuple(p) for p in out), (f"Dönem sürüyor; adil kıyas için iki dönemin aynı gün sayısı karşılaştırıldı: "
+        f"{c:%d.%m.%Y}–{last:%d.%m.%Y} ile {a:%d.%m.%Y}–{today:%d.%m.%Y} ({elapsed} gün). "
+        f"Tamamlanmış dönemin tamamı için dönemi tek başına sorun.")
 
 
 def validate_operations(data, metrics, dims, periods, analytic_ids=()):

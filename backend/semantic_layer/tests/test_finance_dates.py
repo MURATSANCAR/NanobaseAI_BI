@@ -155,3 +155,19 @@ def test_an_ongoing_period_says_how_far_its_data_reaches():
         assert any(n.startswith("Dönem sürüyor: 01.10.2026") for n in plan.notes)
     else:
         assert not any(n.startswith("Dönem sürüyor") for n in plan.notes)
+
+
+def test_comparing_a_finished_month_with_the_running_one_uses_the_same_days():
+    from datetime import date
+    from semantic_bridge.finance_query.plan_types import PeriodComparison
+    from semantic_bridge.finance_query.planner import align_ongoing_comparison
+    cmp = PeriodComparison("percent_change", "net_sales", "x", 0, 1)
+    periods, note = align_ongoing_comparison((("2026-09-01", "2026-10-01"), ("2026-10-01", "2026-11-01")), cmp, date(2026, 10, 5))
+    assert periods == (("2026-09-01", "2026-09-06"), ("2026-10-01", "2026-10-06"))
+    assert "01.09.2026–05.09.2026 ile 01.10.2026–05.10.2026 (5 gün)" in note
+    # Two finished periods, or a period that has not started, are left as asked.
+    assert align_ongoing_comparison((("2025-09-01", "2025-10-01"), ("2026-09-01", "2026-10-01")), cmp, date(2026, 10, 5)) == (
+        (("2025-09-01", "2025-10-01"), ("2026-09-01", "2026-10-01")), None)
+    # A year against the running year: same number of days into each.
+    periods, _ = align_ongoing_comparison((("2025-01-01", "2026-01-01"), ("2026-01-01", "2027-01-01")), cmp, date(2026, 10, 5))
+    assert periods == (("2025-01-01", "2025-10-06"), ("2026-01-01", "2026-10-06"))
