@@ -178,19 +178,25 @@ def _spaced_ratio(text: str) -> float:
 def nontext_ink_ratio(page: pymupdf.Page) -> float:
     """Share of the page body (inside an 8% margin, so printer marks do not count)
     that has ink outside the visible text lines. Text-only pages measure ~0."""
+    import numpy as np
     z = 100 / 72
     pm = page.get_pixmap(matrix=pymupdf.Matrix(z, z), colorspace=pymupdf.csGRAY, alpha=False)
-    w, h, buf = pm.width, pm.height, bytearray(pm.samples)
+    w, h = pm.width, pm.height
+    # one grey byte per pixel, rows of `stride` bytes (== w for a grey pixmap without alpha)
+    img = np.frombuffer(pm.samples, dtype=np.uint8).reshape(h, pm.stride)[:, :w].copy()
     for b in page.get_text("dict")["blocks"]:
         for ln in b.get("lines", []):
             if not any(sp["text"].strip() and sp.get("alpha", 255) != 0 for sp in ln["spans"]):
                 continue
             x0, y0, x1, y1 = (int(v * z) for v in ln["bbox"])
             xa, xb = max(0, x0 - 2), min(w, x1 + 2)
-            for y in range(max(0, y0 - 2), min(h, y1 + 2)):
-                buf[y * w + xa: y * w + xb] = b"\xff" * (xb - xa)
+            ya, yb = max(0, y0 - 2), min(h, y1 + 2)
+            if xb > xa and yb > ya:          # a line off the page masks nothing
+                img[ya:yb, xa:xb] = 255
+    # Vectorised 2026-10-05 (the per-pixel Python loop held the worker's GIL for seconds a page); the count is
+    # the old loop's exactly (tests/test_pdf_process.py).
     mx, my = int(w * .08), int(h * .08)
-    ink = sum(1 for y in range(my, h - my) for v in buf[y * w + mx: y * w + w - mx] if v < 235)
+    ink = int(np.count_nonzero(img[my:max(my, h - my), mx:max(mx, w - mx)] < 235))
     return ink / max(1, (w - 2 * mx) * (h - 2 * my))
 
 
@@ -198,11 +204,13 @@ def region_ink_ratio(png_path: str, bbox: list[int]) -> float:
     """Ink share inside a model-given bbox (0..1000 normalised) of a rendered page."""
     if not bbox or len(bbox) != 4 or bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
         return 0.0
+    import numpy as np
     pm = pymupdf.Pixmap(pymupdf.csGRAY, pymupdf.Pixmap(png_path))
-    w, h, buf = pm.width, pm.height, pm.samples
+    w, h, buf = pm.width, pm.height, np.frombuffer(pm.samples, dtype=np.uint8)
     x0, x1 = int(bbox[0] / 1000 * w), max(int(bbox[2] / 1000 * w), int(bbox[0] / 1000 * w) + 1)
     y0, y1 = int(bbox[1] / 1000 * h), max(int(bbox[3] / 1000 * h), int(bbox[1] / 1000 * h) + 1)
-    ink = sum(1 for y in range(y0, min(h, y1)) for v in buf[y * w + x0: y * w + min(w, x1)] if v < 235)
+    # one numpy count per row, over exactly the slices the per-pixel loop read (same result)
+    ink = sum(int(np.count_nonzero(buf[y * w + x0: y * w + min(w, x1)] < 235)) for y in range(y0, min(h, y1)))
     return ink / max(1, (min(w, x1) - x0) * (min(h, y1) - y0))
 
 
@@ -228,40 +236,84 @@ def page_is_layerless_with_ink(page: pymupdf.Page) -> bool:
     return layerless_with_ink(0, 0, nontext_ink_ratio(page))
 
 
-def render_page(book_version_id: str, page_no: int, long_side_px: int = TARGET_LONG_SIDE_PX) -> dict:
-    doc, bv = _open_version(book_version_id, repair=False)
-    page = doc[page_no - 1]
+def _version_row(book_version_id: str) -> dict:
+    bv = db.one("SELECT id, file_path, page_count FROM book_version WHERE id=%s", book_version_id)
+    if bv is None:
+        raise KeyError(f"book_version {book_version_id} not found")
+    return bv
+
+
+def _render_to(page: pymupdf.Page, out: Path, long_side_px: int) -> dict:
     zoom = long_side_px / max(page.rect.width, page.rect.height)
-    out = _pages_dir(bv) / f"p{page_no:04d}.png"
     if not out.exists():
         page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False).save(out)
-    return {"page_no": page_no, "path": str(out), "dpi": round(72 * zoom)}
+    return {"page_no": page.number + 1, "path": str(out), "dpi": round(72 * zoom)}
 
 
-def create_page_manifest(book_version_id: str) -> dict:
-    """One row per page: size, text-layer size, images, OCR need, rendered PNG."""
-    doc, bv = _open_version(book_version_id)
+def render_file(path: str, page_no: int, long_side_px: int = TARGET_LONG_SIDE_PX) -> dict:
+    """Render one page of the PDF at `path` next to it (pages/pNNNN.png, kept). Plain data in and out: runs in
+    the worker's PDF processes (editor.pdfproc)."""
+    from . import pdfproc
+    doc = pdfproc.open_doc(path, repair=False)
+    return _render_to(doc[page_no - 1], _pages_dir({"file_path": path}) / f"p{page_no:04d}.png", long_side_px)
+
+
+def render_page(book_version_id: str, page_no: int, long_side_px: int = TARGET_LONG_SIDE_PX) -> dict:
+    """The page's PNG (rendered once). The render runs in the worker's PDF processes when they are on
+    (editor.pdfproc): PyMuPDF holds the GIL for the whole render."""
+    from . import pdfproc
+    return pdfproc.run_sync(render_file, _version_row(book_version_id)["file_path"], page_no, long_side_px)
+
+
+async def render_page_async(book_version_id: str, page_no: int, long_side_px: int = TARGET_LONG_SIDE_PX) -> dict:
+    import asyncio
+    from . import pdfproc
+    bv = await asyncio.to_thread(_version_row, book_version_id)
+    return await pdfproc.run(render_file, bv["file_path"], page_no, long_side_px)
+
+
+def _page_facts(page: pymupdf.Page, text: str) -> dict:
+    """What the manifest measures on one page (no database, no other page)."""
+    n_img = len(page.get_images(full=True))
+    img_area = 0.0
+    for info in page.get_image_info():
+        x0, y0, x1, y1 = info["bbox"]
+        img_area += max(0.0, x1 - x0) * max(0.0, y1 - y0)
+    return {"page_no": page.number + 1, "text": text, "width": page.rect.width, "height": page.rect.height,
+            "n_img": n_img, "coverage": min(1.0, img_area / (page.rect.width * page.rect.height)),
+            "ink": nontext_ink_ratio(page)}
+
+
+def manifest_chunk(path: str, page_nos: list[int], long_side_px: int = TARGET_LONG_SIDE_PX) -> list[dict]:
+    """Manifest facts + rendered PNG of some pages of the PDF at `path` (a pool task, editor.pdfproc)."""
+    from . import pdfproc
+    doc = pdfproc.open_doc(path, repair=True)
+    plain = pdfproc.open_doc(path, repair=False)
+    pages_dir = _pages_dir({"file_path": path})
+    out = []
+    for i in page_nos:
+        page = doc[i - 1]
+        f = _page_facts(page, page.get_text("text") or "")
+        r = _render_to(plain[i - 1], pages_dir / f"p{i:04d}.png", long_side_px)
+        out.append({**f, "path": r["path"], "dpi": r["dpi"]})
+    return out
+
+
+def manifest_rows(bv_id, facts: list[dict]) -> list[tuple]:
+    """Page rows from the measured facts: layer health against the whole book, OCR reasons."""
+    stem_pages, book_mean = book_stems([f["text"] for f in facts])
     rows = []
-    texts = [page.get_text("text") or "" for page in doc]
-    stem_pages, book_mean = book_stems(texts)
-    for i, page in enumerate(doc, start=1):
-        text = texts[i - 1]
+    for f in facts:
+        text, n_img, ink = f["text"], f["n_img"], f["ink"]
         health = layer_health(text, stem_pages, book_mean)
         n_chars = len(text.strip())
-        n_img = len(page.get_images(full=True))
-        img_area = 0.0
-        for info in page.get_image_info():
-            x0, y0, x1, y1 = info["bbox"]
-            img_area += max(0.0, x1 - x0) * max(0.0, y1 - y0)
-        coverage = min(1.0, img_area / (page.rect.width * page.rect.height))
-        ink = nontext_ink_ratio(page)
         # OCR when there is no usable text layer on a page that has pictures or other ink
         # (outlined text, vector drawing), or the layer is letter-spaced / broken, or a picture
         # covers most of the page (text drawn inside illustrations is not in the text layer).
         why = [n for n, hit in (("NO_LAYER_WITH_IMAGES", n_chars < NO_LAYER_CHARS and n_img > 0),
                                 ("NO_LAYER_WITH_INK", layerless_with_ink(n_chars, n_img, ink)),
                                 ("LETTER_SPACED", _spaced_ratio(text) > SPACED_MAX),
-                                ("PICTURE_COVERS_PAGE", coverage > 0.6),
+                                ("PICTURE_COVERS_PAGE", f["coverage"] > 0.6),
                                 ("GARBLED_CHARACTERS", _garbled_ratio(text) > GARBLED_MAX),
                                 ("SCRAMBLED_WORDS", health["suspect"]),
                                 ("UNUSUAL_VOCABULARY", health.get("unusual_vocabulary", False))) if hit]
@@ -269,9 +321,13 @@ def create_page_manifest(book_version_id: str) -> dict:
         # the layer itself cannot be trusted (as opposed to: a picture may hold more text)
         health["layer_unreliable"] = bool(set(why) & {"LETTER_SPACED", "GARBLED_CHARACTERS", "SCRAMBLED_WORDS"})
         health["ocr_reasons"] = why
-        r = render_page(book_version_id, i)
-        rows.append((bv["id"], i, page.rect.width, page.rect.height, n_chars, n_img, needs_ocr,
-                     r["path"], r["dpi"], ink, db.J(health)))
+        rows.append((bv_id, f["page_no"], f["width"], f["height"], n_chars, n_img, needs_ocr,
+                     f["path"], f["dpi"], ink, health))
+    return rows
+
+
+def _store_manifest(book_version_id: str, rows: list[tuple]) -> dict:
+    rows = [(*r[:10], db.J(r[10])) for r in rows]
     with db.tx() as c:
         for row in rows:
             c.execute(
@@ -286,6 +342,30 @@ def create_page_manifest(book_version_id: str) -> dict:
             "needs_ocr": [r[1] for r in rows if r[6]],
             "layer_unreliable": [r[1] for r in rows if r[10].obj.get("layer_unreliable")],
             "no_text_layer": [r[1] for r in rows if r[4] < 30]}
+
+
+def create_page_manifest(book_version_id: str) -> dict:
+    """One row per page: size, text-layer size, images, OCR need, rendered PNG (in-process; the reading worker
+    uses `create_page_manifest_async`, same rows)."""
+    doc, bv = _open_version(book_version_id)
+    texts = [page.get_text("text") or "" for page in doc]
+    facts = []
+    for i, page in enumerate(doc, start=1):
+        r = render_page(book_version_id, i)
+        facts.append({**_page_facts(page, texts[i - 1]), "path": r["path"], "dpi": r["dpi"]})
+    return _store_manifest(book_version_id, manifest_rows(bv["id"], facts))
+
+
+async def create_page_manifest_async(book_version_id: str) -> dict:
+    """`create_page_manifest` with the per-page work in the worker's PDF processes (editor.pdfproc): page text,
+    images, ink and the render run there a few pages per task; the database reads and writes in a thread."""
+    import asyncio
+    from . import pdfproc
+    bv = await asyncio.to_thread(_version_row, book_version_id)
+    n = await pdfproc.run(pdfproc.page_count, bv["file_path"])
+    facts = await pdfproc.map_pages(manifest_chunk, bv["file_path"], range(1, n + 1))
+    rows = await pdfproc.run(manifest_rows, bv["id"], facts)
+    return await asyncio.to_thread(_store_manifest, book_version_id, rows)
 
 
 #: A heading font without «ı»: the typesetter sets a shrunken «l» in its place («Bal» 28 pt + «l» 20 pt +
@@ -485,22 +565,34 @@ def paragraphs_from_layout(page: pymupdf.Page, spaced: bool = False) -> list[str
             for p in paras if p.strip()]
 
 
-def extract_text_layer(generation_id: str, book_version_id: str) -> dict:
-    """Page text + paragraphs from the PDF text layer (rebuilt from line layout)."""
-    doc, _ = _open_version(book_version_id)
+def _layer_paragraphs(doc: pymupdf.Document, page_nos) -> dict[int, list[str]]:
     book = {}
-    for i, page in enumerate(doc, start=1):
+    for i in page_nos:
+        page = doc[i - 1]
         if _garbled_ratio(page.get_text("text") or "") > 0.02:
             continue  # unreadable encoding: OCR provides this page's paragraphs
         paras = paragraphs_from_layout(page)
         if paras:
             book[i] = paras
-    # a private-use character the fonts' own data could not mend: the book's own vocabulary decides
+    return book
+
+
+def text_layer_chunk(path: str, page_nos: list[int]) -> list[tuple[int, list[str]]]:
+    """Paragraphs of some pages of the PDF at `path` (a pool task, editor.pdfproc)."""
+    from . import pdfproc
+    return list(_layer_paragraphs(pdfproc.open_doc(path, repair=True), page_nos).items())
+
+
+def mend_private_letters(book: dict[int, list[str]]) -> dict[int, list[str]]:
+    """A private-use character the fonts' own data could not mend: the book's own vocabulary decides."""
     letters = pdf_repair.private_letter_map([p for paras in book.values() for p in paras])
+    return {i: [pdf_repair.apply_private_letters(p, letters) for p in paras] for i, paras in book.items()}
+
+
+def _store_text_layer(generation_id: str, book_version_id: str, book: dict[int, list[str]]) -> int:
     pages_with_text = 0
     with db.tx() as c:
         for i, paras in book.items():
-            paras = [pdf_repair.apply_private_letters(p, letters) for p in paras]
             pages_with_text += 1
             c.execute("INSERT INTO page_text(generation_id, book_version_id, page_no, source, text)"
                       " VALUES (%s,%s,%s,'TEXT_LAYER',%s) ON CONFLICT DO NOTHING",
@@ -509,18 +601,43 @@ def extract_text_layer(generation_id: str, book_version_id: str) -> dict:
                 c.execute("INSERT INTO paragraph(generation_id, page_no, idx, text, source)"
                           " VALUES (%s,%s,%s,%s,'TEXT_LAYER') ON CONFLICT DO NOTHING",
                           (generation_id, i, k, t))
-    return {"pages_with_text": pages_with_text, "page_count": doc.page_count}
+    return pages_with_text
+
+
+def extract_text_layer(generation_id: str, book_version_id: str) -> dict:
+    """Page text + paragraphs from the PDF text layer (rebuilt from line layout). In-process; the reading
+    worker uses `extract_text_layer_async` (same rows)."""
+    doc, _ = _open_version(book_version_id)
+    book = mend_private_letters(_layer_paragraphs(doc, range(1, doc.page_count + 1)))
+    return {"pages_with_text": _store_text_layer(generation_id, book_version_id, book), "page_count": doc.page_count}
+
+
+async def extract_text_layer_async(generation_id: str, book_version_id: str) -> dict:
+    """`extract_text_layer` with the page work in the worker's PDF processes (editor.pdfproc) and the database
+    writes in a thread."""
+    import asyncio
+    from . import pdfproc
+    bv = await asyncio.to_thread(_version_row, book_version_id)
+    n = await pdfproc.run(pdfproc.page_count, bv["file_path"])
+    book = dict(await pdfproc.map_pages(text_layer_chunk, bv["file_path"], range(1, n + 1)))
+    book = await pdfproc.run(mend_private_letters, book)
+    return {"pages_with_text": await asyncio.to_thread(_store_text_layer, generation_id, book_version_id, book),
+            "page_count": n}
 
 
 async def run_ocr(generation_id: str, book_version_id: str, page_no: int) -> dict:
     """OCR one page with book-vision-fast (Qwen3-VL OCR). Stored as source OCR;
-    legacy paragraph cache is retained; source.py reads both original sources."""
-    r = render_page(book_version_id, page_no)
-    png = Path(r["path"]).read_bytes()
+    legacy paragraph cache is retained; source.py reads both original sources.
+
+    Nothing here blocks the caller's loop: the render runs in the PDF processes (editor.pdfproc), file and
+    database work in threads, only the model call is awaited here."""
+    import asyncio
+    r = await render_page_async(book_version_id, page_no)
+    png = await asyncio.to_thread(Path(r["path"]).read_bytes)
     s = settings()
     if s.ocr_alias == "book-vision-fast":
         # the general VLM: our prompt and block schema
-        ref, body = prompts.render("ocr_page", page_no=str(page_no))
+        ref, body = await asyncio.to_thread(prompts.render, "ocr_page", page_no=str(page_no))
         out, call_id = await Llm(generation_id).chat(
             s.ocr_alias,
             [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
@@ -535,6 +652,10 @@ async def run_ocr(generation_id: str, book_version_id: str, page_no: int) -> dic
             pages=[page_no], max_tokens=4096, temperature=0.0)
         text = re.sub(r"<[^>]+>", " ", text)
         blocks = [{"text": b.strip(), "kind": "body"} for b in re.split(r"\n\s*\n", text) if b.strip()]
+    return await asyncio.to_thread(_store_ocr, generation_id, book_version_id, page_no, blocks, call_id)
+
+
+def _store_ocr(generation_id: str, book_version_id: str, page_no: int, blocks: list[dict], call_id) -> dict:
     cut = 0
     for b in blocks:
         b["text"], n = _collapse_repeats(b["text"].strip())

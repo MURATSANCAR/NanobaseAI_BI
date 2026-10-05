@@ -598,8 +598,14 @@ def fill_targets(rows: list[dict], profile: str | None = None) -> list[dict]:
 
 async def fill(targets: list[dict]) -> dict:
     """Her kitap için `run` (OK öneri varsa model çağırmaz); bir kitabın hatası ötekileri durdurmaz."""
-    done = {"OK": 0, "FAILED": 0}
+    from . import batch_guard
+    done = {"OK": 0, "FAILED": 0, "SKIPPED_RUNNING": 0}
+    skipped = batch_guard.Skipped("recommend fill")
     for t in targets:
+        # okuması süren nesle yazılmaz (2026-10-05); sonda listelenir
+        if not await asyncio.to_thread(skipped.check, t["id"], t.get("title")):
+            done["SKIPPED_RUNNING"] += 1
+            continue
         try:
             res = await run(t["id"])
             done["OK" if res.get("status") == "OK" else "FAILED"] += 1
@@ -607,6 +613,7 @@ async def fill(targets: list[dict]) -> dict:
             res = {"status": "FAILED", "error": f"{type(e).__name__}: {e}"[:300]}
             done["FAILED"] += 1
         print(json.dumps({**t, "result": res}, ensure_ascii=False, default=str), flush=True)
+    skipped.report()
     return done
 
 

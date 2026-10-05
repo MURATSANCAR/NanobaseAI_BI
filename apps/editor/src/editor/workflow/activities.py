@@ -1,4 +1,16 @@
-"""Temporal activities: thin wrappers over the editor modules."""
+"""Temporal activities: thin wrappers over the editor modules.
+
+Rule (2026-10-05): no activity does synchronous database, file or CPU work on the worker's event loop. The loop
+carries every activity's liveness heartbeat; when it stood still for 81–93 s (02:23–02:33) five readings lost all
+four attempts at once. Each activity body therefore only awaits one of:
+
+- `_t(fn, …)`: a synchronous function in a thread;
+- `_own_loop(fn, …)`: a coroutine on its own event loop in its own thread (editor.offloop) — whatever it blocks,
+  it blocks only itself; model calls, database work and its own threads run there;
+- PDF rendering and measuring run in separate processes (editor.pdfproc) from inside those.
+
+tests/test_activity_loop.py checks this statically (every await is `_t` / `_own_loop`, no module function is
+called on the loop) and at run time (a blocking fake database does not stop a ticker on the loop)."""
 
 from __future__ import annotations
 
@@ -15,6 +27,11 @@ from ..llm import aliases, client
 
 def _t(fn, *a):
     return asyncio.to_thread(fn, *a)
+
+
+def _own_loop(fn, *a, **k):
+    from .. import offloop
+    return offloop.run(fn, *a, **k)
 
 
 def _code_version() -> str:
@@ -34,59 +51,60 @@ async def set_step(job_id: str, n: int, label: str, extra: dict) -> None:
              db.J({f"step_{n:02d}": {"label": label, **extra}}), job_id)
 
 
-@activity.defn
-async def prepare_generation(job_id: str) -> dict:
-    """Step 1: new generation (never overwrites an old one) with the model and
-    prompt manifests and the editor corrections that apply to this book."""
-    job = await _t(db.one, "SELECT j.book_version_id, bv.book_id, j.profile, j.progress FROM analysis_job j"
-                   " JOIN book_version bv ON bv.id=j.book_version_id WHERE j.id=%s", job_id)
+async def _prepare_generation(job_id: str) -> dict:
+    job = db.one("SELECT j.book_version_id, bv.book_id, j.profile, j.progress FROM analysis_job j"
+                 " JOIN book_version bv ON bv.id=j.book_version_id WHERE j.id=%s", job_id)
     # The job's profile (editor.archive): 'full' as before, 'archive' reads for questions only, 'redaction'
     # runs what an archive reading left out — on the archive generation itself, not on a new one.
     profile = job["profile"] or "full"
     if profile == "redaction":
         target = (job["progress"] or {}).get("generation_id")
-        g = await _t(db.one, "SELECT id, book_version_id FROM generation WHERE id=%s", target) if target else None
+        g = db.one("SELECT id, book_version_id FROM generation WHERE id=%s", target) if target else None
         if g is None or str(g["book_version_id"]) != str(job["book_version_id"]):
             raise ValueError(f"redaction job {job_id}: generation {target!r} is not this book version's")
         return {"generation_id": str(g["id"]), "book_version_id": str(g["book_version_id"]), "profile": profile}
-    existing = await _t(db.one, "SELECT id,book_version_id FROM generation WHERE job_id=%s", job_id)
+    existing = db.one("SELECT id,book_version_id FROM generation WHERE job_id=%s", job_id)
     if existing:
         return {"generation_id": str(existing["id"]), "book_version_id": str(existing["book_version_id"]),
                 "profile": profile}
     manifest = await aliases()
-    pm = await _t(prompts.register_all)
-
-    def mk():
-        with db.tx() as c:
-            corr = ledger.corrections_for_book(c, job["book_id"])
-            row = c.execute(
-                "INSERT INTO generation(job_id, book_version_id, code_version, model_manifest,"
-                " prompt_manifest, corrections_applied) VALUES (%s,%s,%s,%s,%s,%s) "
-                "ON CONFLICT (job_id) DO NOTHING RETURNING id",
-                (job_id, job["book_version_id"], _code_version(),
-                 db.J({a: {"real_model": m["real_model"], "revision": m["revision"]} for a, m in manifest.items()}),
-                 db.J(pm), db.J([{**x, "created_at": str(x["created_at"])} for x in corr]))).fetchone()
-            if row is None:
-                row = c.execute("SELECT id FROM generation WHERE job_id=%s", (job_id,)).fetchone()
-        return str(row["id"])
-
-    gid = await _t(mk)
-    return {"generation_id": gid, "book_version_id": str(job["book_version_id"]), "profile": profile}
+    pm = prompts.register_all()
+    with db.tx() as c:
+        corr = ledger.corrections_for_book(c, job["book_id"])
+        row = c.execute(
+            "INSERT INTO generation(job_id, book_version_id, code_version, model_manifest,"
+            " prompt_manifest, corrections_applied) VALUES (%s,%s,%s,%s,%s,%s) "
+            "ON CONFLICT (job_id) DO NOTHING RETURNING id",
+            (job_id, job["book_version_id"], _code_version(),
+             db.J({a: {"real_model": m["real_model"], "revision": m["revision"]} for a, m in manifest.items()}),
+             db.J(pm), db.J([{**x, "created_at": str(x["created_at"])} for x in corr]))).fetchone()
+        if row is None:
+            row = c.execute("SELECT id FROM generation WHERE job_id=%s", (job_id,)).fetchone()
+    return {"generation_id": str(row["id"]), "book_version_id": str(job["book_version_id"]), "profile": profile}
 
 
 @activity.defn
+async def prepare_generation(job_id: str) -> dict:
+    """Step 1: new generation (never overwrites an old one) with the model and
+    prompt manifests and the editor corrections that apply to this book."""
+    return await _own_loop(_prepare_generation, job_id)
+
+
+# PDF work (page text, images, ink, renders) runs in the worker's PDF processes (editor.pdfproc): PyMuPDF holds
+# the GIL for a whole page render, and in a thread of this process it stopped the worker's loop (2026-10-05).
+@activity.defn
 async def page_manifest(book_version_id: str) -> dict:
-    return await _t(document.create_page_manifest, book_version_id)
+    return await _own_loop(document.create_page_manifest_async, book_version_id)
 
 
 @activity.defn
 async def text_layer(generation_id: str, book_version_id: str) -> dict:
-    return await _t(document.extract_text_layer, generation_id, book_version_id)
+    return await _own_loop(document.extract_text_layer_async, generation_id, book_version_id)
 
 
 @activity.defn
 async def ocr_page(generation_id: str, book_version_id: str, page_no: int) -> dict:
-    return await document.run_ocr(generation_id, book_version_id, page_no)
+    return await _own_loop(document.run_ocr, generation_id, book_version_id, page_no)
 
 
 @activity.defn
@@ -94,7 +112,7 @@ async def archive_visual_pages(book_version_id: str) -> dict:
     """Archive profile: the pages that carry a picture (and the cover); a text-only page never goes
     to the vision model (editor.archive.visual_pages)."""
     from .. import archive
-    return await _t(archive.visual_pages, book_version_id)
+    return await _own_loop(archive.visual_pages_async, book_version_id)
 
 
 @activity.defn
@@ -102,7 +120,7 @@ async def archive_outputs(generation_id: str) -> dict:
     """Archive profile's rebuild_outputs: the same outputs, validated without contradiction detection
     and the editor's queue (editor.archive.run_outputs)."""
     from .. import archive
-    return await archive.run_outputs(generation_id)
+    return await _own_loop(archive.run_outputs, generation_id)
 
 
 @activity.defn
@@ -110,18 +128,14 @@ async def archive_recommend(generation_id: str) -> dict:
     """Archive profile: Zeki AI's category and age suggestion from the read content, in the publisher site's
     own category tree (editor.recommend). A suggestion only: the book's profile is not changed."""
     from .. import recommend
-    return await recommend.run(generation_id)
+    return await _own_loop(recommend.run, generation_id)
 
 
 # Page scans, visual identity, metadata, identity and final-read checks run on their own event loop
 # (editor.offloop): their page renders, page-text reads and DB transactions are synchronous, and on
 # the worker's shared loop they stopped the heartbeats of every activity of every book being read
-# (worker log 2026-10-03: source.read 33 s, embed_figures 22 s, catalog source.load 28 s).
-def _own_loop(fn, *a, **k):
-    from .. import offloop
-    return offloop.run(fn, *a, **k)
-
-
+# (worker log 2026-10-03: source.read 33 s, embed_figures 22 s, catalog source.load 28 s). Since 2026-10-05
+# every other activity does too.
 @activity.defn
 async def scan_page_fast(generation_id: str, page_no: int) -> dict:
     return await _own_loop(vision.analyze_page_visual, generation_id, page_no, "fast")
@@ -139,23 +153,34 @@ async def scan_page_deep_key(generation_id: str, page_no: int) -> dict:
 
 @activity.defn
 async def narrative_roles(generation_id: str) -> dict:
-    return await knowledge.assign_narrative_roles(generation_id)
+    return await _own_loop(knowledge.assign_narrative_roles, generation_id)
+
+
+def _persist_visual(generation_id: str, phase: str) -> dict:
+    # Chapter discovery does not assign page roles or remove source pages.
+    pages = db.all_rows("SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s"
+                        " AND (%s <> 'deep' OR pass='DEEP')", generation_id, phase)
+    out = [vision.persist_page_visual(generation_id, r["page_no"]) for r in pages]
+    return {"pages": len(out), "visual_mentions": sum(o.get("visual_mentions", 0) for o in out)}
 
 
 @activity.defn
 async def persist_visual(generation_id: str, phase: str = "all") -> dict:
     """A page's visual records are written once, when its best scan is final:
     phase "deep" = pages that already have their deep scan; "all" = the rest."""
-    # Chapter discovery does not assign page roles or remove source pages.
-    pages = await _t(db.all_rows, "SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s"
-                     " AND (%s <> 'deep' OR pass='DEEP')", generation_id, phase)
-    out = [await _t(vision.persist_page_visual, generation_id, r["page_no"]) for r in pages]
-    return {"pages": len(out), "visual_mentions": sum(o.get("visual_mentions", 0) for o in out)}
+    return await _t(_persist_visual, generation_id, phase)
 
 
 @activity.defn
 async def confirm_text_visual(generation_id: str) -> dict:
-    return await vision.confirm_text_visual(generation_id)
+    return await _own_loop(vision.confirm_text_visual, generation_id)
+
+
+async def _text_chunks(generation_id: str) -> list[list[int]]:
+    prof = await book_type.profile(generation_id)
+    if not book_type.is_book(prof):
+        return []
+    return [list(c) for c in knowledge.text_chunks(generation_id)]
 
 
 @activity.defn
@@ -167,15 +192,12 @@ async def text_chunks(generation_id: str) -> list[list[int]]:
     A file that is not a book (catalogue, bulletin, brochure, cover only: book_type.NOT_A_BOOK) yields no
     chunks: no characters or events are read from it. The workflow is unchanged (the fan-out over no chunk
     is empty), so recorded histories replay as they were."""
-    prof = await book_type.profile(generation_id)
-    if not book_type.is_book(prof):
-        return []
-    return [list(c) for c in await _t(knowledge.text_chunks, generation_id)]
+    return await _own_loop(_text_chunks, generation_id)
 
 
 @activity.defn
 async def extract_chunk(generation_id: str, chunk: list[int]) -> dict:
-    return await knowledge.extract_chunk(generation_id, chunk[0], chunk[1])
+    return await _own_loop(knowledge.extract_chunk, generation_id, chunk[0], chunk[1])
 
 
 @activity.defn
@@ -188,10 +210,9 @@ async def resolve_identity(generation_id: str, strict: bool = False) -> dict:
     `strict` (workflow «infra-step-retry-v1»): an infrastructure failure is never turned into an editor
     question — it is raised on every attempt and the workflow retries the step, then fails the job;
     a deterministic failure still falls back to smaller windows and then to the editor."""
-    from .. import offloop
     from .workflows import RETRY
     final = not strict and activity.info().attempt >= (RETRY.maximum_attempts or 1)
-    return await offloop.run(knowledge.resolve_character_identity, generation_id, final_attempt=final)
+    return await _own_loop(knowledge.resolve_character_identity, generation_id, final_attempt=final)
 
 
 @activity.defn
@@ -209,7 +230,7 @@ async def proofreading(generation_id: str, resume: bool = False) -> dict:
     into the heartbeat details. A check that failed for an infrastructure reason (model, connection,
     database) makes the activity fail with a retryable `TransientStepFailure` after every other check
     has been recorded: the retry runs only what is missing, and a step that never passes is not
-    reported as done."""
+    reported as done. Every check already runs on its own loop (proofing.run_all → editor.offloop)."""
     from temporalio.exceptions import ApplicationError
 
     from .. import proofing, transient
@@ -224,19 +245,21 @@ async def proofreading(generation_id: str, resume: bool = False) -> dict:
     return out
 
 
+async def _visual_identity(generation_id: str) -> dict:
+    out = await figure_identity.resolve(generation_id)
+    return {k: v for k, v in out.items() if k not in ("assignments", "by_figure")}
+
+
 @activity.defn
 async def visual_identity(generation_id: str) -> dict:
     """Who each drawn figure is: embeddings, constrained clustering, one adjudication per
     cluster (figure_identity). The per-figure reference matching it replaces named 31% of a
     six-book corpus at one 32B call per crop; this names more for a call per cluster."""
-    out = await _own_loop(figure_identity.resolve, generation_id)
-    return {k: v for k, v in out.items() if k not in ("assignments", "by_figure")}
+    return await _own_loop(_visual_identity, generation_id)
 
 
-@activity.defn
-async def continuity_checks(generation_id: str) -> dict:
-    """Compare every resolved figure, grouped by identity rather than name/page."""
-    rows = await _t(db.all_rows,
+async def _continuity_checks(generation_id: str) -> dict:
+    rows = db.all_rows(
         "SELECT ch.id, ch.canonical_name, array_agg(DISTINCT cm.page_no ORDER BY cm.page_no) AS pages"
         " FROM character ch JOIN character_mention cm ON cm.character_id=ch.id AND cm.via='VISUAL'"
         " AND cm.resolution='RESOLVED' WHERE ch.generation_id=%s AND cm.generation_id=ch.generation_id"
@@ -255,17 +278,22 @@ async def continuity_checks(generation_id: str) -> dict:
 
 
 @activity.defn
+async def continuity_checks(generation_id: str) -> dict:
+    """Compare every resolved figure, grouped by identity rather than name/page."""
+    return await _own_loop(_continuity_checks, generation_id)
+
+
+@activity.defn
 async def verify_modality(generation_id: str) -> dict:
-    return await knowledge.verify_event_modality(generation_id)
+    return await _own_loop(knowledge.verify_event_modality, generation_id)
 
 
 @activity.defn
 async def merge_events(generation_id: str) -> dict:
-    return await knowledge.merge_events(generation_id)
+    return await _own_loop(knowledge.merge_events, generation_id)
 
 
-@activity.defn
-async def emotions_themes(generation_id: str) -> dict:
+async def _emotions_themes(generation_id: str) -> dict:
     # not a book (book_type.NOT_A_BOOK): no emotions or themes are read from a catalogue's blurbs
     if not book_type.is_book(await book_type.profile(generation_id)):
         return {"skipped": book_type.NOT_A_BOOK}
@@ -273,8 +301,13 @@ async def emotions_themes(generation_id: str) -> dict:
 
 
 @activity.defn
+async def emotions_themes(generation_id: str) -> dict:
+    return await _own_loop(_emotions_themes, generation_id)
+
+
+@activity.defn
 async def embed_index(generation_id: str) -> dict:
-    return await retrieval.embed_passages(generation_id)
+    return await _own_loop(retrieval.embed_passages, generation_id)
 
 
 @activity.defn
@@ -284,35 +317,39 @@ async def list_chapters(generation_id: str) -> list[dict]:
 
 @activity.defn
 async def chapter_summary(generation_id: str, chapter: dict) -> dict:
-    return await summary.chapter_summary(generation_id, chapter)
+    return await _own_loop(summary.chapter_summary, generation_id, chapter)
 
 
 @activity.defn
 async def book_summary(generation_id: str) -> dict:
-    return await summary.book_summary(generation_id)
+    return await _own_loop(summary.book_summary, generation_id)
 
 
 @activity.defn
 async def critic(generation_id: str) -> dict:
-    return await quality.critic_pass(generation_id)
+    return await _own_loop(quality.critic_pass, generation_id)
 
 
 @activity.defn
 async def event_actors(generation_id: str) -> dict:
-    return await knowledge.attribute_event_actors(generation_id)
+    return await _own_loop(knowledge.attribute_event_actors, generation_id)
+
+
+async def _contradictions(generation_id: str) -> dict:
+    found = await knowledge.detect_contradictions(generation_id)
+    queued = quality.contradictions_to_queue(generation_id)
+    return {**found, **queued}
 
 
 @activity.defn
 async def contradictions(generation_id: str) -> dict:
-    found = await knowledge.detect_contradictions(generation_id)
-    queued = await _t(quality.contradictions_to_queue, generation_id)
-    return {**found, **queued}
+    return await _own_loop(_contradictions, generation_id)
 
 
 @activity.defn
 async def detect_contradictions(generation_id: str) -> dict:
     """The director's half of `contradictions`, so it can run while the director is loaded."""
-    return await knowledge.detect_contradictions(generation_id)
+    return await _own_loop(knowledge.detect_contradictions, generation_id)
 
 
 @activity.defn
@@ -321,18 +358,26 @@ async def queue_contradictions(generation_id: str) -> dict:
     return await _t(quality.contradictions_to_queue, generation_id)
 
 
-@activity.defn
-async def regression(generation_id: str) -> dict:
-    r = await _t(quality.run_regression_suite, generation_id)
+def _regression(generation_id: str) -> dict:
+    r = quality.run_regression_suite(generation_id)
     return {"passed": r["passed"], "failed": [c["check"] for c in r["checks"] if not c["passed"]],
             "counts": r["counts"]}
 
 
 @activity.defn
-async def report(generation_id: str) -> dict:
-    r = await _t(quality.create_analysis_report, generation_id, "ANALYSIS")
-    await _t(db.one, "UPDATE generation SET sealed_at=now() WHERE id=%s RETURNING id", generation_id)
+async def regression(generation_id: str) -> dict:
+    return await _t(_regression, generation_id)
+
+
+def _report(generation_id: str) -> dict:
+    r = quality.create_analysis_report(generation_id, "ANALYSIS")
+    db.one("UPDATE generation SET sealed_at=now() WHERE id=%s RETURNING id", generation_id)
     return {"report_id": r["report_id"]}
+
+
+@activity.defn
+async def report(generation_id: str) -> dict:
+    return await _t(_report, generation_id)
 
 
 @activity.defn
@@ -343,46 +388,50 @@ async def book_metadata(generation_id: str) -> dict:
     only saw each chunk, and an imprint page it had not marked yet left METADATA empty. The
     validation runs it again (idempotent) and reads the imprint once more only if new imprint
     pages appear there."""
+    return await _own_loop(_book_metadata, generation_id)
+
+
+async def _book_metadata(generation_id: str) -> dict:
     from .. import page_scope
-    await _t(page_scope.ensure, generation_id)
-    meta = await _own_loop(catalog.extract_metadata, generation_id)
+    page_scope.ensure(generation_id)
+    meta = await catalog.extract_metadata(generation_id)
     return {"fields": sorted(meta)}
 
 
 @activity.defn
 async def build_card(generation_id: str) -> dict:
-    return await catalog.build_card(generation_id)
+    return await _own_loop(catalog.build_card, generation_id)
 
 
-@activity.defn
-async def finish_job(job_id: str, status: str, result: dict) -> None:
-    await _t(db.one, "UPDATE analysis_job SET status=%s, finished_at=now(), progress=progress || %s,"
-             " error=%s WHERE id=%s RETURNING id", status, db.J({"result": result}),
-             result.get("error"), job_id)
+def _finish_job(job_id: str, status: str, result: dict) -> None:
+    db.one("UPDATE analysis_job SET status=%s, finished_at=now(), progress=progress || %s,"
+           " error=%s WHERE id=%s RETURNING id", status, db.J({"result": result}), result.get("error"), job_id)
     if status == "SUCCEEDED" and result.get("generation_id"):
         # The book's title from the publisher site / the colophon now that the reading is done
         # (editor.book_title; never over a name a person gave). Inside this activity so no workflow
         # history changes; a failure leaves the title as it was and never fails the job.
         from .. import book_title
         try:
-            await _t(book_title.after_reading, result["generation_id"])
+            book_title.after_reading(result["generation_id"])
         except Exception as e:  # noqa: BLE001
             activity.logger.warning("book title not resolved for %s: %s", result["generation_id"], e)
 
 
 @activity.defn
-async def release_models(aliases_: list[str]) -> dict:
-    """Stop the named models (or all, when no other job is running) so the
-    editor does not hold GPU memory after its work is done."""
+async def finish_job(job_id: str, status: str, result: dict) -> None:
+    await _t(_finish_job, job_id, status, result)
+
+
+async def _release_models(aliases_: list[str]) -> dict:
     s = settings()
     h = {"authorization": f"Bearer {s.gateway_internal_key}"}
     if aliases_:
         for a in aliases_:
             await client().post(f"/internal/stop/{a}", headers=h)
         return {"stopped": aliases_}
-    busy = await _t(db.one, "SELECT (SELECT count(*) FROM analysis_job WHERE status='RUNNING') + "
-        "(SELECT count(*) FROM rebuild_request r JOIN pg_stat_activity a ON a.pid=r.consumer_backend_pid "
-        "AND a.backend_start=r.consumer_backend_start) AS n")
+    busy = db.one("SELECT (SELECT count(*) FROM analysis_job WHERE status='RUNNING') + "
+                  "(SELECT count(*) FROM rebuild_request r JOIN pg_stat_activity a ON a.pid=r.consumer_backend_pid "
+                  "AND a.backend_start=r.consumer_backend_start) AS n")
     if (busy or {}).get("n", 0) > 0:
         return {"stopped": [], "reason": "another job is running"}
     r = await client().post("/internal/stop-all", headers=h)
@@ -390,10 +439,21 @@ async def release_models(aliases_: list[str]) -> dict:
 
 
 @activity.defn
-async def rebuild_outputs(generation_id: str) -> dict:
+async def release_models(aliases_: list[str]) -> dict:
+    """Stop the named models (or all, when no other job is running) so the
+    editor does not hold GPU memory after its work is done."""
+    return await _own_loop(_release_models, aliases_)
+
+
+async def _rebuild_outputs(generation_id: str) -> dict:
     from .. import rebuild
-    await _t(rebuild.activate, generation_id)
+    rebuild.activate(generation_id)
     return await rebuild.run(generation_id)
+
+
+@activity.defn
+async def rebuild_outputs(generation_id: str) -> dict:
+    return await _own_loop(_rebuild_outputs, generation_id)
 
 
 ALL = [archive_visual_pages, archive_outputs, archive_recommend, proofreading, rebuild_outputs, event_actors, detect_contradictions, queue_contradictions, book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,

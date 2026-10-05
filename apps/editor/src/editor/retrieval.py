@@ -17,15 +17,33 @@ NS = uuid.UUID("6f1c7a52-1b7e-4a55-9b1f-7e1d2c3b4a50")
 QUERY_INSTRUCTION = "Given a question about a book, retrieve the passages from the book that answer it"
 RERANK_INSTRUCTION = "Does this passage from the book contain evidence that answers the question?"
 
-_q: AsyncQdrantClient | None = None
+_q: dict[int, tuple] = {}
 
 
 def qdrant() -> AsyncQdrantClient:
-    global _q
-    if _q is None:
+    """One client per event loop (its connection pool belongs to the loop that opened it): the worker's
+    activities run on their own loops (editor.offloop), which close their client when they end."""
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    held = _q.get(id(loop))
+    if held is None or held[0] is not loop:
         s = settings()
-        _q = AsyncQdrantClient(url=s.qdrant_url, api_key=s.qdrant_key or None, timeout=120)
-    return _q
+        held = (loop, AsyncQdrantClient(url=s.qdrant_url, api_key=s.qdrant_key or None, timeout=120))
+        _q[id(loop)] = held
+    return held[1]
+
+
+async def close_qdrant() -> None:
+    """Close the current loop's client (editor.offloop calls this when its loop ends)."""
+    import asyncio
+    loop = asyncio.get_running_loop()
+    held = _q.get(id(loop))
+    if held is not None and held[0] is loop:
+        _q.pop(id(loop), None)
+        await held[1].close()
 
 
 async def _ensure(name: str) -> None:

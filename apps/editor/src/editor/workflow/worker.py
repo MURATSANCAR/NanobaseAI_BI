@@ -15,7 +15,7 @@ from temporalio.client import Client
 from temporalio.exceptions import ApplicationError
 from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput, Interceptor, Worker
 
-from .. import db, foundation
+from .. import db, foundation, pdfproc
 from ..config import settings
 from ..llm import ContextOverflow
 from . import liveness
@@ -171,8 +171,11 @@ async def main() -> None:
     await asyncio.to_thread(foundation.assert_enabled)
     await ensure_namespace(s.temporal_address, s.temporal_namespace)
     client = await Client.connect(s.temporal_address, namespace=s.temporal_namespace)
+    # PDF renders and measurements in their own processes (editor.pdfproc): in this process they held the GIL
+    # and stopped the loop that carries every heartbeat (2026-10-05, 81–93 s).
+    log.info("PDF processes: %d", pdfproc.configure())
     worker = Worker(client, task_queue=s.task_queue, workflows=[BookFullAnalysis], activities=ALL,
-                    max_concurrent_activities=48, interceptors=[HeartbeatInterceptor()],
+                    max_concurrent_activities=max_activities(), interceptors=[HeartbeatInterceptor()],
                     max_heartbeat_throttle_interval=timedelta(seconds=PULSE_SECONDS),
                     default_heartbeat_throttle_interval=timedelta(seconds=PULSE_SECONDS))
     log.info("worker polling %s/%s", s.temporal_namespace, s.task_queue)
@@ -182,6 +185,19 @@ async def main() -> None:
         await worker.run()
     finally:
         watchdog.stop()
+        pdfproc.shutdown()
+
+
+def max_activities() -> int:
+    """EDITOR_MAX_ACTIVITIES (default 48). Measured 2026-10-04 20:00 – 10-05 06:00 over 24 workflows: the worker
+    sat at 44–48 activities for ~18.000 of ~35.000 s, nearly all of them page scans waiting for the vision
+    model (47 of 48 at the peak). That is waiting, not CPU: with every activity off the loop and PDF work in
+    processes the number itself no longer stops the loop, so the default stays; lower it here if needed."""
+    import os
+    try:
+        return max(1, int(os.environ.get("EDITOR_MAX_ACTIVITIES", "").strip() or 48))
+    except ValueError:
+        return 48
 
 
 if __name__ == "__main__":
