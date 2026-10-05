@@ -629,6 +629,8 @@ def _contract_reports(s,p,out):
             for cid in sorted(cids):
                 c=contracts[cid]
                 if p["report"]=="contract_expiry" and c["end_date"] and not any(_within(c[f],p) for f in ("end_date","revised_end_date","renewal_end_date","termination_date")): continue
+                if p["report"]=="contract_expiry" and not c["end_date"] and c.get("indefinite_flag") and not any(_within(c[f],p) for f in ("revised_end_date","renewal_end_date","termination_date")):
+                    continue                               # süresiz sözleşme bitmez; bitişi girilmemiş süreli sözleşme ayrı bayrakla kalır
                 comparison={}
                 if p["report"]=="contract_author_differences":
                     authors=set(links.get(bid,set())); party_people={_key(r["person_id"]) for r in parties[cid] if r["person_id"]}

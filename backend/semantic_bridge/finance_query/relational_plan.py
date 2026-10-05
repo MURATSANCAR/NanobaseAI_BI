@@ -129,6 +129,11 @@ def validate_relational_query(data, question, reference_date):
         if key in groups: _invalid("Tekrarlanan grup alanı.")
         groups.append(key)
     ids=set(); plain=[]; aggregates=False; selects=[]
+    if (not data["group_by"] and any(x.get("op")=="count_records" for x in data["select"] if isinstance(x,dict))
+            and any(x.get("op") in {"field","label","normalized_text"} for x in data["select"] if isinstance(x,dict))
+            and all(x.get("op") in {"field","label","normalized_text","missing_flag","count_records"} for x in data["select"] if isinstance(x,dict))):
+        # «… var mı, hangileri»: liste ve sayı birlikte; liste döner, sayısı satır sayısıdır.
+        data={**data,"select":[x for x in data["select"] if x.get("op")!="count_records"]}
     for selected in data["select"]:
         if isinstance(selected,dict) and "field" not in selected:
             selected={**selected,"field":None}

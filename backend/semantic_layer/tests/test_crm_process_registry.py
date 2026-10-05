@@ -156,3 +156,11 @@ def test_a_text_filter_finds_the_record_name_that_holds_the_word():
     p["filters"][0]["values"] = ["99"]
     with pytest.raises(ContractError, match="bulunamadı"):
         execute_relational_query(ex, p)
+
+
+def test_a_list_and_a_count_together_become_the_list():
+    p = plan("crm_order", [{"id": "n", "op": "count_records", "field": None},
+                           {"id": "no", "op": "field", "field": ref("root", "siparis_numarasi")}],
+             filters=[{"field": ref("root", "statuscode"), "op": "eq", "values": ["100000011"]}])
+    out = validate_relational_query(p, "", None)
+    assert [x["op"] for x in out["select"]] == ["field"]
