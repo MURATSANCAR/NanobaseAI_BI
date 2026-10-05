@@ -415,11 +415,14 @@ class Executor:
             # badges, magazines, compiled works: measured 2026-10-01). That is a fact about the product,
             # not a coverage gap; a missing or non-active card stays a gap.
             authorless = 0
+            missing_codes, missing_amount = set(), Decimal(0)
             for row in partials:
                 if enrichment:
                     card = books.get(str(row.get("book_code") or "").strip().casefold())
                     if card is None:
                         missing += 1
+                        missing_codes.add(str(row.get("book_code") or "").strip())
+                        missing_amount += number(row.get(plan.metrics[0]))
                     for field in ("author", "publisher", "subbrand_id", "subbrand", "author_group_ids", "author_group_names"):
                         row[field] = card.get(field) if card else None
                         if field in empty_fields and not row[field]:
@@ -432,7 +435,12 @@ class Executor:
                 raise ContractError("Kaynaklar birleştirildiğinde ölçü toplamları değişti; cevap engellendi.")
             if missing:
                 self.coverage_complete = False
-                self.notes.append(f"{missing} satış kırılımında aktif CRM kitap eşleşmesi yok; künye alanları boş bırakıldı, satışlar korunuyor.")
+                total = before[plan.metrics[0]]
+                share = f" (%{missing_amount / total * 100:.1f})".replace(".", ",") if total else ""
+                amount = f"{missing_amount:,.2f}".replace(",", "~").replace(".", ",").replace("~", ".")
+                self.notes.append(f"{len(missing_codes)} kitabın CRM'de aktif kartı yok (kart pasif ya da hiç açılmamış); bu kitapların "
+                                  f"{METRICS[plan.metrics[0]].label.lower()} {amount}{share} yazar/yayınevine bağlanamadı ve «bilinmiyor» "
+                                  "satırında gösterildi. Toplam etkilenmez.")
             if authorless:
                 self.notes.append(f"{authorless} satış kırılımında kitap kartı var ama kaynakta yazar alanı boş (kılavuz, dergi, derleme gibi yazarsız ürün); yazar boş gösterildi.")
             for field, count in empty_fields.items():

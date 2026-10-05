@@ -306,7 +306,7 @@ def test_sale_without_an_active_card_stays_a_gap(monkeypatch):
     engine = Executor(Runtime(book_sales))
     engine.execute(Plan(("sales_amount",), ("book", "author"), SEPT))
     assert not engine.coverage_complete
-    assert any("aktif CRM kitap eşleşmesi yok" in n for n in engine.notes)
+    assert any("CRM'de aktif kartı yok" in n for n in engine.notes)
 
 
 # Karar 2026-10-01: muhasebe net satışı defterden (600–602 − 610–612), yalnız dönem kırılımı; satış tutarı cevabında
