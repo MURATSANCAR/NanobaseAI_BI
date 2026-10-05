@@ -367,8 +367,15 @@ def test_publisher_is_written_exactly_never_shortened():
     # sığmıyorsa yayınevi kısaltılmaz, çıkarılır
     long = "Bir Dehanın İzleri - II. Abdülhamid Han - Talha Uğurluel | Timaş"
     assert propose.publisher_title(long, "Timaş Tarih", 65) == "Bir Dehanın İzleri - II. Abdülhamid Han - Talha Uğurluel"
-    assert propose.publisher_title(t, "", 65) == t  # yayınevi kayıtta yoksa dokunulmaz
+    assert propose.publisher_title(t, "", 65) == "Levent Kayseri'de - Mustafa Orakçı"  # sitede yayınevi boşsa gösterilmez
     f = w.build({"ProductName": "Levent", "Model": "Mustafa Orakçı", "Brand": "Timaş Çocuk"}, {"SeoTitle": t}, STAMP)
     assert f["new_seobaslik"].endswith("| Timaş Çocuk")
     lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
     assert propose.enforce({"SeoTitle": t, "SeoDescription": ""}, lim, "Timaş Çocuk")["SeoTitle"].endswith("| Timaş Çocuk")
+
+
+def test_enforce_drops_publisher_when_site_has_none_but_not_for_guides():
+    from semantic_bridge.seo_geo import propose
+    lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
+    assert propose.enforce({"SeoTitle": "Kelebeği Yakala - Betül Özlü | Timaş", "SeoDescription": ""}, lim, "")["SeoTitle"] == "Kelebeği Yakala - Betül Özlü"
+    assert propose.enforce({"SeoTitle": "Rehber | Timaş", "SeoDescription": ""}, lim)["SeoTitle"] == "Rehber | Timaş"

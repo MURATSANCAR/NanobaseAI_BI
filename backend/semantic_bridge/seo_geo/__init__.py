@@ -426,7 +426,7 @@ class SeoGeo:
         row = self.product_row(pid)
         p = loads(row["data_json"], {})
         fields = propose.enforce({k: str(v or "") for k, v in fields.items() if k in propose.FIELDS},
-                                 rules.thresholds(self.conf), p.get("Brand"))
+                                 rules.thresholds(self.conf), p.get("Brand") or "")
         new_id = uuid.uuid4().hex
         with self.engine().begin() as c:
             c.execute(PROPOSALS.delete().where(PROPOSALS.c.tenant_id == self.tenant(),

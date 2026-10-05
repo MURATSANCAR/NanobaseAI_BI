@@ -141,12 +141,14 @@ def _cut(text: str, limit: int) -> str:
 
 def publisher_title(title: str, brand: Optional[str], max_len: int) -> str:
     """Başlığın «| Yayınevi» kısmı ürünün yayınevi (T-soft Brand) ile birebir aynı olur; kısaltma yok (müşteri
-    bildirimi 2026-10-05: «Timaş Çocuk» kitabında «Timaş» yazıyordu). Sığmazsa yayınevi kısmı çıkar. Yayınevi kayıtta
-    yoksa başlığa dokunulmaz."""
+    bildirimi 2026-10-05: «Timaş Çocuk» kitabında «Timaş» yazıyordu). Sığmazsa yayınevi kısmı çıkar. Sitede yayınevi
+    boşsa başlıkta yayınevi gösterilmez (tahmin edilen yayınevi çoğu kez yanlıştı; kullanıcı kararı 10-05)."""
     t, b = (title or "").strip(), re.sub(r"\s+", " ", str(brand or "")).strip()
-    if not t or not b:
+    if not t:
         return t
     base = t.rsplit(" | ", 1)[0].strip() if " | " in t else t
+    if not b:
+        return base
     full = f"{base} | {b}"
     return full if len(full) <= max_len else base
 
@@ -156,7 +158,7 @@ def enforce(fields: dict[str, str], lim: dict[str, int], brand: Optional[str] = 
     yayınevi ("| …") düşer, sonra kelime sınırından kesilir; meta açıklama cümle sonundan kısaltılır."""
     out = dict(fields)
     t = out.get("SeoTitle", "")
-    if brand:
+    if brand is not None:  # ürün önerisi: yayınevi birebir ya da yok; rehber/sayfa önerileri brand vermez
         t = publisher_title(t, brand, lim["title_max"])
     if len(t) > lim["title_max"] and " | " in t:
         t = t.rsplit(" | ", 1)[0].strip()
@@ -250,7 +252,7 @@ def suggest(llm: Any, p: dict[str, Any], lim: dict[str, int], target: Optional[s
                 break
             messages += [{"role": "assistant", "content": reply},
                          {"role": "user", "content": "Hâlâ yanlış: " + "; ".join(now) + ". Karakterleri say, yalnız JSON döndür."}]
-    return enforce(fields, lim, p.get("Brand"))
+    return enforce(fields, lim, p.get("Brand") or "")
 
 
 def changed(p: dict[str, Any], fields: dict[str, str]) -> dict[str, str]:
