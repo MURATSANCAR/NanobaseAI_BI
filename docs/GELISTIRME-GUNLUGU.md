@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-05 (öğleden sonra) — SEO → CRM toplu yazım tamamlandı (müşteri)
+
+- VM'de `--yaz --onayla`: 2.958 öneri onaylı (ZEKİ AI), **2.057 kitap CRM'e yazıldı**, 901 barkod eşleşmedi, 200 başlıkta yazar yok (onay bekliyor), 1.052 onaylanmadı (ürün T-soft'ta yok ya da metin aynı), hata 0. Koşu 13:14'te başka bir kurulumun konteyner yeniden başlatmasıyla kesildi, yeniden koşturuldu (yazılmış olan ikinci kez yazılmadı).
+- Karar geçmişi «Sonuç» metni toplu onayda «Gönderim yok; CRM bağlantısı bekleniyor» kalıyordu: `crm_write.set_result` (toplu koşu da yazar) + `--sonuc-tazele` (yazım kaydından); VM'e `988e03ed` kuruldu, 2.057 + 901 kayıt düzeltildi, eski metin 0.
+- VM RAM 7,7 → 23 GB (Timaş, yeniden başlatmasız).
+
 ## 2026-10-05 (öğlen) — SEO → CRM: müşteride ilk gerçek yazım
 
 - BT `zekiai`'ye 5 yeni kolonda UPDATE izni verdi (HAS_PERMS 5/5 = 1). VM'e `e5e15f82` kuruldu (`ModifiedOn`'a dokunmayan sürüm; ._* 0, 5 konteyner ayakta). Kurulum ekran derlemesinde 25 dk takıldı: VM belleği dolu (köprü 3,9 GB + vite 1,4 GB + ChatGPT tarayıcı konteyneri 1 GB); tarayıcı durduruldu, köprü yeniden başlatıldı → 3,5 GB boş, kurulum bitti. VM'e bellek artırımı (12–16 GB) önerilecek.
