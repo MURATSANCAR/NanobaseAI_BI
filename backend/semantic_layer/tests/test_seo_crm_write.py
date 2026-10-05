@@ -357,3 +357,18 @@ def test_refresh_results_prefers_written(env):
     with seo.engine().connect() as c:
         r = c.execute(_sa.select(PROPOSALS.c.result).where(PROPOSALS.c.id == "pr1")).scalar()
     assert r.endswith(w.RESULT_TEXT["yazildi"])
+
+
+def test_publisher_is_written_exactly_never_shortened():
+    from semantic_bridge.seo_geo import propose
+    t = "Levent Kayseri'de - Mustafa Orakçı | Timaş"
+    assert propose.publisher_title(t, "Timaş Çocuk", 65) == "Levent Kayseri'de - Mustafa Orakçı | Timaş Çocuk"
+    assert propose.publisher_title("Kitap - Yazar", "Timaş Tarih", 65) == "Kitap - Yazar | Timaş Tarih"
+    # sığmıyorsa yayınevi kısaltılmaz, çıkarılır
+    long = "Bir Dehanın İzleri - II. Abdülhamid Han - Talha Uğurluel | Timaş"
+    assert propose.publisher_title(long, "Timaş Tarih", 65) == "Bir Dehanın İzleri - II. Abdülhamid Han - Talha Uğurluel"
+    assert propose.publisher_title(t, "", 65) == t  # yayınevi kayıtta yoksa dokunulmaz
+    f = w.build({"ProductName": "Levent", "Model": "Mustafa Orakçı", "Brand": "Timaş Çocuk"}, {"SeoTitle": t}, STAMP)
+    assert f["new_seobaslik"].endswith("| Timaş Çocuk")
+    lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
+    assert propose.enforce({"SeoTitle": t, "SeoDescription": ""}, lim, "Timaş Çocuk")["SeoTitle"].endswith("| Timaş Çocuk")
