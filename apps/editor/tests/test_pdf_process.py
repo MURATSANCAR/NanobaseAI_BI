@@ -161,7 +161,7 @@ def test_async_manifest_text_layer_and_visual_pages_match_the_in_process_ones(tm
     monkeypatch.setattr(D.db, "tx", lambda: contextlib.nullcontext(Conn()), raising=False)
     monkeypatch.setattr(D.db, "one", lambda sql, *a: {"id": "bv", "file_path": str(pdf), "page_count": 7},
                         raising=False)
-    monkeypatch.setattr(D, "_open_version", lambda bv, repair=True: (D.pdfproc.open_doc(str(pdf), repair),
+    monkeypatch.setattr(D, "_open_version", lambda bv, repair=True: (pdfproc.open_doc(str(pdf), repair),
                                                                      {"id": "bv", "file_path": str(pdf)}))
     sync_man = D.create_page_manifest("bv")
     sync_text = D.extract_text_layer("g", "bv")
