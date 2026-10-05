@@ -82,6 +82,8 @@ def _labels() -> dict[str, str]:
     from .result_metadata import LABELS
     out = {k: v for k, v in LABELS.items()}
     out.update({k: m.label for k, m in METRICS.items()})
+    from .logo_fields import FIELDS
+    out.update({k: f.label for k, f in FIELDS.items()})
     out.update({"author_group": "yazar grubu", "subbrand": "alt marka", "base_value": "baz dönem değeri",
                 "target_value": "karşılaştırılan dönem değeri"})
     return out

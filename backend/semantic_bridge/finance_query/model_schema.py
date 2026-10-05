@@ -1,5 +1,5 @@
 """Closed output shapes supplied to the model server, not just described in a prompt."""
-from .contracts import METRICS, DIMENSIONS, CODED_DIMENSIONS
+from .contracts import METRICS, DIMENSIONS, CODED_DIMENSIONS, FIELD_DIMENSIONS
 from .crm_book_scope import VALUE_IDS as CRM_VALUE_IDS
 
 
@@ -12,7 +12,7 @@ PLAN_SCHEMA = obj({
     "dimensions": {"type": "array", "items": {"type": "string", "enum": list(DIMENSIONS)}},
     "sale_kind": {"type": "string", "enum": ["all", "wholesale", "retail"]},
     "filters": {"type": "array", "items": obj({
-        "dimension": {"type": "string", "enum": ["book", "channel", "customer", "author", "publisher", "subbrand", *CODED_DIMENSIONS]},
+        "dimension": {"type": "string", "enum": ["book", "channel", "customer", "author", "publisher", "subbrand", *CODED_DIMENSIONS, *FIELD_DIMENSIONS]},
         "op": {"type": "string", "enum": ["eq", "contains"]},
         "value": {"type": "string"},
     })},

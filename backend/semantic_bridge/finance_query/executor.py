@@ -500,7 +500,9 @@ class Executor:
             for spec in getattr(plan, "analytics", ()):
                 self.output_fields += [spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct")] if spec["op"] == "contribution" else ["row_kind"]
         from .logo_codes import CODED
-        if family == "sales" and set(plan.metrics) & {"net_sales", "sales_amount"} and not any(d in CODED for d, _, _ in plan.filters):
+        from .logo_fields import FIELDS
+        # Fiyat farkı notu yalnız müşteri/kanal süzgecini taşır; kart kolonu süzgecinde (il, temsilci…) not yanlış tutar verirdi.
+        if family == "sales" and set(plan.metrics) & {"net_sales", "sales_amount"} and not any(d in CODED or d in FIELDS for d, _, _ in plan.filters):
             self.price_difference_note(plan)
         if family in ("sales", "invoice"):
             self.cancelled_coded_note(plan)
@@ -722,6 +724,28 @@ class Executor:
                 return found
         raise ContractError(f"«{value}» adını taşıyan {label} kaydı bulunamadı; adı kontrol edip yeniden sorun.", code="NEEDS_CLARIFICATION")
 
+    def field_predicate(self, field, op, value, family, firm, period):
+        """Kart kolonu süzgeci (il, temsilci, ödeme planı…): değer kartta bulunmazsa «0» değil «bulunamadı». Türkçe ek
+        kökleri de denenir («Ankara'daki» → «Ankara»). Kodlu alanda değer koda çevrilir."""
+        alias = field.alias(family)
+        if field.kind == "coded":
+            return field.predicate(alias, op, value)
+        key = ("field", field.id, op, value, firm, period)
+        cache = self.__dict__.setdefault("_name_cache", {})
+        if key in cache:
+            return cache[key]
+        table = field.physical(firm, period)
+        tries = [(op, value)] + ([("contains", value)] if op == "eq" else []) + [("contains", stem) for stem in name_stems(value)]
+        for o, v in tries:
+            rows = self.read(f"SELECT COUNT_BIG(*) AS n FROM dbo.[{table}] m WHERE " + field.predicate("m", o, v))
+            n = int(number(rows[0].get("n"))) if rows else 0
+            if n:
+                if (o, v) != (op, value):
+                    self.notes.append(f"«{value}» {field.label} alanında «{v}» içeren değer olarak arandı.")
+                cache[key] = field.predicate(alias, o, v)
+                return cache[key]
+        raise ContractError(f"«{value}» değeri {field.label} alanında bulunamadı; yazımı kontrol edip yeniden sorun.", code="NEEDS_CLARIFICATION")
+
     def aggregate_ledger(self, plan, start, end, firm, period):
         """Muhasebe net satışı: fiş satırında 600–602 ve 610–612 alacak − borç. Kapanış ve yansıtma hesabı içeren fişler
         M45 gelir tablosuyla aynı kuralla dışarıda (finance_sources); dönem fiş satırı tarihi."""
@@ -757,7 +781,13 @@ class Executor:
         book = "book" in dims or enrichment
         from .logo_codes import CODED, columns as coded_columns, sql_alias as coded_alias
         coded = [d for d in CODED if d in dims]
-        client = bool(dims & {"channel", "customer"}) or family == "collection" or any(CODED[d].level == "client" for d in coded)
+        from . import logo_fields
+        fields = [logo_fields.FIELDS[d] for d in sorted(dims) if d in logo_fields.FIELDS]
+        for f in fields:
+            f.alias(family)                               # okunamayan düzeyde açık hata
+        client = (bool(dims & {"channel", "customer"}) or family == "collection" or any(CODED[d].level == "client" for d in coded)
+                  or any(f.level == "client" for f in fields))
+        items = book or any(f.level == "item" for f in fields)
         needed = {table: ["CANCELLED", "DATE_", "TRCODE"]}
         needed[table] += {"sales": ["LINETYPE", "INVOICEREF", "STOCKREF", "CLIENTREF", "VATMATRAH", "AMOUNT"],
                           "invoice": ["LOGICALREF", "NETTOTAL", "CLIENTREF"],
@@ -770,7 +800,7 @@ class Executor:
         if family == "sales":
             needed[header_table] = ["LOGICALREF", "DATE_", "CANCELLED"]
         date_col = "h.DATE_" if family == "sales" else "f.DATE_"
-        if book:
+        if items:
             needed[item_table] = ["LOGICALREF", "CODE", "NAME"]
         if client:
             needed[client_table] = ["LOGICALREF", "CODE", "DEFINITION_", "SPECODE2"]
@@ -778,6 +808,8 @@ class Executor:
             coded_alias(d, family)                        # okunamayan düzeyde açık hata
             t, col = coded_columns(d, family, firm, period)
             needed.setdefault(t, []).append(col)
+        for t, cols in logo_fields.schema_needs(fields, family, firm, period).items():
+            needed.setdefault(t, []).extend(cols)
         types = self.verify_schema(needed, "logo")
         measures = {"sales": ["AMOUNT", "VATMATRAH"], "invoice": ["NETTOTAL"], "collection": ["AMOUNT"]}[family]
         for col in measures:
@@ -793,6 +825,9 @@ class Executor:
         for d in coded:
             if d in plan.dimensions:
                 labels[d] = CODED[d].expression(coded_alias(d, family))
+        for f in fields:
+            if f.id in plan.dimensions:
+                labels[f.id] = f.expression(f.alias(family))
         for d, expression in {"day": f"CONVERT(varchar(10),{date_col},23)", "month": f"CONVERT(varchar(7),{date_col},23)", "year": f"YEAR({date_col})"}.items():
             if d in plan.dimensions:
                 labels[d] = expression
@@ -806,10 +841,11 @@ class Executor:
         sql = "SELECT " + ", ".join(select) + f" FROM dbo.[{table}] f"
         if family == "sales":
             sql += f" JOIN dbo.[{header_table}] h ON h.LOGICALREF=f.INVOICEREF"
-        if book:
+        if items:
             sql += f" LEFT JOIN dbo.[{item_table}] i ON i.LOGICALREF=f.STOCKREF"
         if client:
             sql += f" LEFT JOIN dbo.[{client_table}] c ON c.LOGICALREF=f.CLIENTREF"
+        sql += "".join(logo_fields.joins(fields, family, firm, period))
         conditions = ["f.CANCELLED=0", f"{date_col}>='{start}'", f"{date_col}<'{end}'"]
         if family == "sales":
             conditions.append("h.CANCELLED=0")
@@ -829,6 +865,9 @@ class Executor:
                 continue
             if dim in CODED:
                 conditions.append(CODED[dim].predicate(coded_alias(dim, family), op, value))
+                continue
+            if dim in logo_fields.FIELDS:
+                conditions.append(self.field_predicate(logo_fields.FIELDS[dim], op, value, family, firm, period))
                 continue
             conditions.append(self.name_predicate(dim, op, value, firm, "i" if dim == "book" else "c"))
         sql += " WHERE " + " AND ".join(conditions)

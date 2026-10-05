@@ -77,6 +77,11 @@ DIMENSIONS = {
     "customer_einvoice_user": "Müşterinin e-Fatura mükellefi olup olmadığı (Logo cari kartı ACCEPTEINV)",
     "customer_legal_form": "Müşterinin şahıs (TC kimlik no) ya da şirket (vergi no) olduğu (Logo cari kartı ISPERSCOMP)",
 }
+# Gerçek veriden seçilmiş Logo kart kolonları (logo_fields.py, configs/finance/logo-fields.json): müşteri ili/ilçesi,
+# bölge ve kategori özel kodları, taşıyıcı, ödeme planı, satış temsilcisi, teslimat ili…
+from .logo_fields import FIELDS as _FIELDS
+DIMENSIONS.update({k: f.describe() for k, f in _FIELDS.items() if k not in DIMENSIONS})
+FIELD_DIMENSIONS = tuple(k for k in _FIELDS if k in DIMENSIONS and DIMENSIONS[k] == _FIELDS[k].describe())
 # Logo kodlu kırılım ve süzgeçler; hangi kayıt düzeyinde okundukları logo_codes.CODED'da.
 CODED_DIMENSIONS = ("sale_type", "e_document", "einvoice_scenario", "einvoice_type", "einvoice_status", "vat_exemption",
                     "customer_einvoice_user", "customer_legal_form")

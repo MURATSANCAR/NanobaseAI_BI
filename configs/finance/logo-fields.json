@@ -1,0 +1,754 @@
+{
+ "generated_at": "2026-10-05",
+ "generator": "scripts/logo-fields/build_logo_fields.py",
+ "profiled": "LG_411_01 satış faturaları (TRCODE 7/8/9)",
+ "rule": {
+  "min_fill": 0.05,
+  "max_distinct": 1000,
+  "lookup_min_fill": 0.01
+ },
+ "fields": [
+  {
+   "id": "client_specode",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "SPECODE",
+   "label": "Müşteri kartı — Özel Kod",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "ALICILAR",
+    "YAZARLAR",
+    "DİĞER SATI",
+    "MÜTERCİM",
+    "YURTDIŞI",
+    "DANIŞMAN",
+    "Yayına Haz",
+    "YAZAR VARİ"
+   ],
+   "fill": 0.621,
+   "distinct": 14
+  },
+  {
+   "id": "client_addr2",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "ADDR2",
+   "label": "Müşteri kartı — Adres İkinci Satır",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    ".",
+    "YENİSEHİR",
+    "SOSYAL BİLİMLER VE TÜRKÇE EĞİTİMİ BÖLÜMÜ MELİKGAZİ",
+    "ATATÜRK CD.NO:39/A",
+    "DEVELİ / KAYSERİ",
+    "EMEK MAH. WILHELM THOMSEN CAD. NO: 4 B BLOK",
+    "A BLOK NO: 19/A İÇ KAPI NO: 9",
+    "ÇENGELKÖY ÜSKÜDAR-İSTANBUL"
+   ],
+   "fill": 0.59,
+   "distinct": 59
+  },
+  {
+   "id": "client_city",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "CITY",
+   "label": "Müşteri kartı — Şehir Açıklaması",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "İstanbul",
+    "Ankara",
+    "İzmir",
+    "ANTALYA",
+    "BURSA",
+    "Kocaeli",
+    "KONYA",
+    "GAZİANTEP"
+   ],
+   "fill": 1.0,
+   "distinct": 154
+  },
+  {
+   "id": "client_country",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "COUNTRY",
+   "label": "Müşteri kartı — Ülke Açıklaması",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "TÜRKİYE",
+    "TURKİYE",
+    "Kıbrıs Cumhuriyeti",
+    "TURKIYE",
+    "ABD",
+    "United Kingdom",
+    "SİNGAPUR",
+    "BELÇİKA"
+   ],
+   "fill": 1.0,
+   "distinct": 10
+  },
+  {
+   "id": "client_postcode",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "POSTCODE",
+   "label": "Müşteri kartı — Posta kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "99999",
+    "34000",
+    "06000",
+    "34480",
+    "34010",
+    "34110",
+    "21070",
+    "46050"
+   ],
+   "fill": 0.981,
+   "distinct": 838
+  },
+  {
+   "id": "client_taxoffice",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "TAXOFFICE",
+   "label": "Müşteri kartı — Vergi dairesi",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "OSTİM",
+    "T.C.",
+    "ÜMRANİYE",
+    "İKİTELLİ",
+    "SARIGAZİ",
+    "Güneşli",
+    "ŞAHİNBEY",
+    "MEVLANA"
+   ],
+   "fill": 0.875,
+   "distinct": 635
+  },
+  {
+   "id": "client_tradinggrp",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "TRADINGGRP",
+   "label": "Müşteri kartı — Ticari İşlem Grubu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "TIMASCOMTR",
+    "HEPSİBURADA",
+    "TRENDYOL",
+    "AMAZON",
+    "N11",
+    "TORBA",
+    "KITAPSIPARIS",
+    "EKSTRE"
+   ],
+   "fill": 0.378,
+   "distinct": 8
+  },
+  {
+   "id": "client_towncode",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "TOWNCODE",
+   "label": "Müşteri kartı — İlçe kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "07",
+    "13",
+    "05",
+    "25",
+    "12",
+    "08",
+    "02",
+    "465"
+   ],
+   "fill": 0.847,
+   "distinct": 403
+  },
+  {
+   "id": "client_town",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "TOWN",
+   "label": "Müşteri kartı — İlçe açıklaması",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "MERKEZ",
+    "ÜSKÜDAR",
+    "ÜMRANİYE",
+    "Çankaya",
+    "Başakşehir",
+    "Fatih",
+    "Yenimahalle",
+    "BAĞCILAR"
+   ],
+   "fill": 0.997,
+   "distinct": 403
+  },
+  {
+   "id": "client_district",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "DISTRICT",
+   "label": "Müşteri kartı — Semt Açıklaması",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "Merkez",
+    ".",
+    "ÜSKÜDAR",
+    "---",
+    "ŞİŞLİ",
+    "SARIYER",
+    "ALTUNİZADE MAH.",
+    "CAĞALOĞLU"
+   ],
+   "fill": 0.588,
+   "distinct": 54
+  },
+  {
+   "id": "client_citycode",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "CITYCODE",
+   "label": "Müşteri kartı — Şehir Kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "34",
+    "06",
+    "35",
+    "6",
+    "16",
+    "41",
+    "42",
+    "27"
+   ],
+   "fill": 0.865,
+   "distinct": 111
+  },
+  {
+   "id": "client_countrycode",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "COUNTRYCODE",
+   "label": "Müşteri kartı — Ülke Kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "TR",
+    "CY",
+    "US",
+    "SG",
+    "GB",
+    "BE",
+    "SE"
+   ],
+   "fill": 1.0,
+   "distinct": 7
+  },
+  {
+   "id": "client_telcodes1",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "TELCODES1",
+   "label": "Müşteri kartı — Alan kodu 1 (telefon)",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "5XX",
+    "532",
+    "533",
+    "543",
+    "505",
+    "542",
+    "553",
+    "507"
+   ],
+   "fill": 0.2,
+   "distinct": 29
+  },
+  {
+   "id": "client_specode3",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "SPECODE3",
+   "label": "Müşteri kartı — Özel kod 3",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "Raporla",
+    "TIMASCOMTR",
+    "HPSIBURADA",
+    "TRENDYOL",
+    "AMAZON",
+    "N11"
+   ],
+   "fill": 0.733,
+   "distinct": 6
+  },
+  {
+   "id": "client_specode4",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "SPECODE4",
+   "label": "Müşteri kartı — Özel kod 4",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "İÇ ANADOLU",
+    "DKARADENİZ",
+    "GÜNEY DOĞU",
+    "EGE",
+    "İST-ANAD",
+    "İST-AVR",
+    "MERKEZ",
+    "AKDENİZ"
+   ],
+   "fill": 0.129,
+   "distinct": 24
+  },
+  {
+   "id": "client_specode5",
+   "level": "client",
+   "table": "CLCARD",
+   "column": "SPECODE5",
+   "label": "Müşteri kartı — Özel kod 5",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "ORHANE",
+    "OSMANK",
+    "MERKEZ",
+    "CUMAY",
+    "BILALA",
+    "MEHMETR",
+    "BILALK",
+    "ALIA"
+   ],
+   "fill": 0.444,
+   "distinct": 18
+  },
+  {
+   "id": "item_cardtype",
+   "level": "item",
+   "table": "ITEMS",
+   "column": "CARDTYPE",
+   "label": "Ürün kartı — Malzeme Kartı Türü",
+   "kind": "coded",
+   "values": {
+    "1": "(TM) Ticari Mal",
+    "2": "(KK) Karma Koli",
+    "3": "(DM) Depozitolu Mal",
+    "4": "(SK) Sabit Kıymet",
+    "10": "(HM) Hammadde",
+    "11": "(YM) Yarı Mamul",
+    "12": "(MM) Mamul",
+    "13": "(TK) Tüketim Malı",
+    "20": "(MS) Malzeme Sınıfı (Genel)",
+    "21": "(MT) Malzeme Sınıfı (Tablolu)"
+   },
+   "samples": [
+    "(MM) Mamul",
+    "(TM) Ticari Mal",
+    "(HM) Hammadde"
+   ],
+   "fill": 1.0,
+   "distinct": 3
+  },
+  {
+   "id": "item_stgrpcode",
+   "level": "item",
+   "table": "ITEMS",
+   "column": "STGRPCODE",
+   "label": "Ürün kartı — Malzeme Grup Kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "AKTİF",
+    "YS04",
+    "YS10P",
+    "YSTY",
+    "YS10A",
+    "YS07",
+    "YS08",
+    "YS05"
+   ],
+   "fill": 0.562,
+   "distinct": 10
+  },
+  {
+   "id": "item_specode",
+   "level": "item",
+   "table": "ITEMS",
+   "column": "SPECODE",
+   "label": "Ürün kartı — Özel Kod",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "TARCIN",
+    "Timaş Çocu",
+    "Ç",
+    "Timaş Yayı",
+    "T",
+    "Mavi Kirpi",
+    "Genç Timaş",
+    "Timaş Tari"
+   ],
+   "fill": 0.979,
+   "distinct": 48
+  },
+  {
+   "id": "item_gtipcode",
+   "level": "item",
+   "table": "ITEMS",
+   "column": "GTIPCODE",
+   "label": "Ürün kartı — GTIP Kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "49.01.99.00.00.19",
+    "4911.10.90.00.00",
+    "4823.90.85.99.00",
+    "3923.29.90.00.19",
+    "4821.90.10.00.00",
+    "4910.00.00.00.00"
+   ],
+   "fill": 0.569,
+   "distinct": 6
+  },
+  {
+   "id": "item_expctgno",
+   "level": "item",
+   "table": "ITEMS",
+   "column": "EXPCTGNO",
+   "label": "Ürün kartı — İhracat Kategori Numarası",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "YAYIN YÖNETM",
+    "SAVAŞÖZDEMİR",
+    "İHSANSÖNMEZ",
+    "CÜNEYTDAL",
+    "ADEMKOÇAL",
+    "EMİNEEROĞLU",
+    "SİBELTALAY",
+    "SEVENGÜLSÖN"
+   ],
+   "fill": 0.549,
+   "distinct": 20
+  },
+  {
+   "id": "item_specode2",
+   "level": "item",
+   "table": "ITEMS",
+   "column": "SPECODE2",
+   "label": "Ürün kartı — Özel kod 2",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "Ç-Ç01",
+    "Çocuk Kita",
+    "Okul Önces",
+    "K-E01",
+    "EDEBİYAT K",
+    "Çocuk",
+    "Tarih Kita",
+    "Gençlik Ki"
+   ],
+   "fill": 0.482,
+   "distinct": 87
+  },
+  {
+   "id": "item_specode3",
+   "level": "item",
+   "table": "ITEMS",
+   "column": "SPECODE3",
+   "label": "Ürün kartı — Özel kod 3",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "Eğlenceli",
+    "K-E01-E001",
+    "Umutlu Kit",
+    "Roman",
+    "Özgür Roma",
+    "Gümüş Roma",
+    "Dünya Edeb",
+    "Psikoloji"
+   ],
+   "fill": 0.445,
+   "distinct": 482
+  },
+  {
+   "id": "item_specode5",
+   "level": "item",
+   "table": "ITEMS",
+   "column": "SPECODE5",
+   "label": "Ürün kartı — Özel kod 5",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "01.01.2014",
+    "01.04.2021",
+    "01.02.2020",
+    "01.08.2019",
+    "01.03.2021",
+    "01.02.2023",
+    "01.12.2023",
+    "01.12.2020"
+   ],
+   "fill": 0.548,
+   "distinct": 353
+  },
+  {
+   "id": "invoice_specode",
+   "level": "invoice",
+   "table": "INVOICE",
+   "column": "SPECODE",
+   "label": "Fatura — Özel Kod",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "B2C",
+    "-120",
+    "PERAKENDE",
+    "RobotPos",
+    "HS",
+    "SİL",
+    "E-FATURA",
+    "-100"
+   ],
+   "fill": 0.678,
+   "distinct": 8
+  },
+  {
+   "id": "invoice_shpagncod",
+   "level": "invoice",
+   "table": "INVOICE",
+   "column": "SHPAGNCOD",
+   "label": "Fatura — Taşıyıcı Kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "UPS",
+    "HEPSİJET",
+    "aras",
+    "mngkargo",
+    "depo",
+    "ICSEVK",
+    "surat",
+    "BARISAMBARI"
+   ],
+   "fill": 0.98,
+   "distinct": 11
+  },
+  {
+   "id": "invoice_tradinggrp",
+   "level": "invoice",
+   "table": "INVOICE",
+   "column": "TRADINGGRP",
+   "label": "Fatura — Ticari İşlem Grubu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "TRENDYOL",
+    "TIMASCOMTR",
+    "HEPSİBURADA",
+    "AMAZON",
+    "N11",
+    "TORBA",
+    "EKSTRE"
+   ],
+   "fill": 0.669,
+   "distinct": 7
+  },
+  {
+   "id": "ship_city",
+   "level": "ship",
+   "table": "SHIPINFO",
+   "column": "CITY",
+   "label": "Teslimat adresi — Şehir Açıklaması",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "İstanbul",
+    "Ankara",
+    "İzmir",
+    "Kocaeli",
+    "BURSA",
+    "ANTALYA",
+    "Konya",
+    "ADANA"
+   ],
+   "fill": 1.0,
+   "distinct": 128
+  },
+  {
+   "id": "ship_country",
+   "level": "ship",
+   "table": "SHIPINFO",
+   "column": "COUNTRY",
+   "label": "Teslimat adresi — Ülke Açıklaması",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "Türkiye",
+    "AZERBAYCAN"
+   ],
+   "fill": 1.0,
+   "distinct": 2
+  },
+  {
+   "id": "ship_taxoffice",
+   "level": "ship",
+   "table": "SHIPINFO",
+   "column": "TAXOFFICE",
+   "label": "Teslimat adresi — Vergi dairesi",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    ".",
+    "Ümraniye",
+    "Tuzla",
+    "SARIGAZİ",
+    "İkitelli",
+    "Kozyatağı",
+    "Bakırköy",
+    "PENDİK"
+   ],
+   "fill": 0.962,
+   "distinct": 486
+  },
+  {
+   "id": "ship_towncode",
+   "level": "ship",
+   "table": "SHIPINFO",
+   "column": "TOWNCODE",
+   "label": "Teslimat adresi — İlçe kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "07",
+    "05",
+    "08",
+    "12",
+    "10",
+    "03",
+    "04",
+    "02"
+   ],
+   "fill": 0.924,
+   "distinct": 59
+  },
+  {
+   "id": "ship_town",
+   "level": "ship",
+   "table": "SHIPINFO",
+   "column": "TOWN",
+   "label": "Teslimat adresi — İlçe açıklaması",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "Merkez",
+    "ÇANKAYA",
+    "Yenimahalle",
+    "Ümraniye",
+    "Pendik",
+    "Etimesgut",
+    "Başakşehir",
+    "Üsküdar"
+   ],
+   "fill": 1.0,
+   "distinct": 891
+  },
+  {
+   "id": "ship_citycode",
+   "level": "ship",
+   "table": "SHIPINFO",
+   "column": "CITYCODE",
+   "label": "Teslimat adresi — Şehir Kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "34",
+    "06",
+    "35",
+    "41",
+    "16",
+    "07",
+    "42",
+    "01"
+   ],
+   "fill": 0.924,
+   "distinct": 109
+  },
+  {
+   "id": "ship_countrycode",
+   "level": "ship",
+   "table": "SHIPINFO",
+   "column": "COUNTRYCODE",
+   "label": "Teslimat adresi — Ülke Kodu",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "TR",
+    "AZ"
+   ],
+   "fill": 1.0,
+   "distinct": 2
+  },
+  {
+   "id": "payplan_name",
+   "level": "payplan",
+   "table": "PAYPLANS",
+   "column": "DEFINITION_",
+   "label": "Ödeme planı",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "T1V KAPALI DEVRE",
+    "CAFE_NAKİT",
+    "CAFE_KK",
+    "40 GÜN VADELİ",
+    "VADELİ 2021",
+    "NAKİT"
+   ],
+   "fill": 0.362,
+   "distinct": null
+  },
+  {
+   "id": "salesman_name",
+   "level": "salesman",
+   "table": "SLSMAN",
+   "column": "DEFINITION_",
+   "label": "Satış temsilcisi",
+   "kind": "text",
+   "values": null,
+   "samples": [
+    "TRENDYOL",
+    "TIMASCOMTR",
+    "HEPSİBURADA",
+    "amazon",
+    "N11",
+    "ORHAN EKER",
+    "kitapyurdu",
+    "DR"
+   ],
+   "fill": 0.818,
+   "distinct": null
+  }
+ ]
+}

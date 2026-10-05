@@ -85,6 +85,9 @@ def return_invoice_note(counts, filtered=False):
 
 def _metadata(plan):
     labels = {name: {"label": label} for name,label in LABELS.items()}
+    from .logo_fields import FIELDS
+    labels.update({k: {"label": f.label, "definition": "Logo kartındaki değer; yazım farkları (büyük/küçük harf, Türkçe harf) birleştirildi, boş değer «(girilmemiş)»."}
+                   for k, f in FIELDS.items() if k in plan.dimensions})
     for key in plan.metrics:
         metric = METRICS[key]
         labels[key] = {"label": metric.label, "unit": metric.unit, "definition": public_definition(key)}

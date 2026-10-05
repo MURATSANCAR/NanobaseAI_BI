@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from .language import fold, dates, normalize_numbers, asked_limit
 from .plan_types import DerivedMetric, MetricPredicate, PeriodComparison
 from decimal import Decimal, InvalidOperation
-from .contracts import CONTRACT, METRICS, DIMENSIONS, CODED_DIMENSIONS, ContractError
+from .contracts import CONTRACT, METRICS, DIMENSIONS, CODED_DIMENSIONS, FIELD_DIMENSIONS, ContractError
 from .model_schema import PLAN_SCHEMA, REVIEW_SCHEMA
 
 
@@ -339,7 +339,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if llm is None:
         raise ContractError("Soru planlayıcısına şu anda ulaşılamıyor.", code="SOURCE_UNAVAILABLE")
     schema = {"metrics": ["contract metric ID"], "dimensions": [], "sale_kind": "all|wholesale|retail",
-              "filters": [{"dimension": "book|channel|customer|author|publisher|subbrand|" + "|".join(CODED_DIMENSIONS), "op": "eq|contains", "value": "sorudaki değer"}],
+              "filters": [{"dimension": "book|channel|customer|author|publisher|subbrand|" + "|".join((*CODED_DIMENSIONS, *FIELD_DIMENSIONS)), "op": "eq|contains", "value": "sorudaki değer"}],
               "limit": None, "order_by": None, "descending": True, "derived": [], "having": [], "comparison": None, "crm": None, "logo_report": None, "crm_report": None, "relational_query": None, "crm_books": None, "analytics": [],
               "sections": [], "gaps": [], "coverage": [], "uncovered": [], "clarification": ""}
     from .crm_query import CRM_CAPABILITIES
@@ -357,6 +357,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "'kaç fatura' fatura sayısıdır. Netleştirme yalnız iki okuma belirgin biçimde farklı sonuç verir ve soruda hiçbir ipucu yoksa sorulur. "
               "Kullanıcı koşulları açıkken ürünün hesap/kırılım/ilişki yeteneğinin bulunmaması clarification değildir: uncovered kullan "
               "veya bağımsız desteklenen kısım varsa doğrulanmış gaps ile bölümlü cevap kur. Teknik yetenek eksikliğini kullanıcı belirsizliği gibi sunma. "
+              "Logo kart alanı kırılımları (client_*, item_*, invoice_*, ship_*, payplan_name, salesman_name) gerçek veriden seçilmiş "
+              "kolonlardır; açıklamadaki sık değerler kolonun ne tuttuğunu gösterir. Günlük dildeki karşılığı (vilayet/şehir/il, ilçe, bölge, "
+              "kategori/tür, temsilci, ödeme planı/vade planı, kargo/taşıyıcı) bu açıklamalardan eşleştir; adres soruda 'teslimat/sevk' geçmiyorsa "
+              "müşteri kartındandır. Bu alanlarla cevaplanabilen kırılımı uncovered'a yazma. "
               "CRM alan seçimi, filtreleme, kanıtlı ilişkilerden JOIN ve gruplu sayımları relational_query ile sorudan oluştur. "
               "relationalCapabilities alan ve ilişki sözlüğüdür; hazır soru veya cevap değildir. Yeni alan/ilişki uydurma. "
               "Hazır crm_report yalnız relational_query işlemleriyle ifade edilemeyen doğrulanmış özel hesaplar içindir. "
@@ -620,6 +624,15 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         raise ContractError("Fatura ve cari kartı kodları yalnız tek bir Logo satış, fatura ya da tahsilat ölçüsünde kırılım olur.")
     if coded and families == {"collection"} and any(CODED[d].level != "client" for d in coded):
         raise ContractError("Ödeme hareketlerinde fatura belge türü, e-belge durumu ya da KDV istisnası yoktur.")
+    from .logo_fields import FIELDS
+    fielded = {d for d in dims if d in FIELDS} | {f.get("dimension") for f in data.get("filters") or [] if isinstance(f, dict) and f.get("dimension") in FIELDS}
+    if fielded:
+        # Kart kolonu kırılımı (il, temsilci, ödeme planı…) tek bir Logo satış, fatura ya da tahsilat ölçüsünde okunur;
+        # seviyesi ölçünün kayıt düzeyinde yoksa (tahsilatta fatura alanı, belge toplamında ürün kartı) açık hata.
+        if len(families) != 1 or not families <= {"sales", "invoice", "collection"}:
+            raise ContractError("Müşteri, ürün ve fatura kartı alanları yalnız tek bir Logo satış, fatura ya da tahsilat ölçüsünde kırılım olur.")
+        for d in fielded:
+            FIELDS[d].alias(family)
     kind = data.get("sale_kind", "all")
     if kind not in ("all", "wholesale", "retail"):
         raise ContractError("Satış türü doğrulanamadı.")
@@ -634,7 +647,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         if not isinstance(f, dict) or set(f) != {"dimension", "op", "value"}:
             raise ContractError("Süzgeç biçimi doğrulanamadı.", code="PLAN_INVALID")
         dim, op, val = f["dimension"], f["op"], f["value"]
-        if dim not in ("book", "channel", "customer", "author", "publisher", "subbrand", *CODED_DIMENSIONS) or op not in ("eq", "contains") or not isinstance(val, str) or not 1 <= len(val) <= 200:
+        if dim not in ("book", "channel", "customer", "author", "publisher", "subbrand", *CODED_DIMENSIONS, *FIELD_DIMENSIONS) or op not in ("eq", "contains") or not isinstance(val, str) or not 1 <= len(val) <= 200:
             raise ContractError("Süzgeç sözleşme dışında.")
         inherited = previous and follows(question) and [dim, op, val] in [list(f) for f in previous.get("plan", {}).get("filters", [])]
         if dim in CODED:
