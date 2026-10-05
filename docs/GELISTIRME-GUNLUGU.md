@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-05 — GPU kurulumu: kart sırası + işçi döngüsü düzeltmesi (61bad26a), canlı doğrulama
+
+- **Kurulum:** kullanıcı onayıyla gündüz (okumalar sürerken) `61bad26a` kuruldu: `releases/61bad26a`, imajlar `editor-py(-studio):0.15.9-61bad26a`, yeni imajda tam set 1202 geçti / 0 kırmızı, 9 servis yeni sürümde, `._*` 0. Arkasından iki oturum `e384da86` (11:29 UTC) ve `8733cd4e` (11:54 UTC) kurdu; ikisi de bu düzeltmeyi içeriyor (ata denetimi + dosya denetimi).
+- **Canlı gözlem (11:21–12:03 UTC):** ana model 11:25:10'da açıldı ve sonraki geçişlerde (OCR → ses, OCR → gömme) kartta kaldı, yalnız küçük modeller yer verdi. Derin görsel model sırasını bekledi (o sırada ana modelin istekleri GPU 0'a taştı) ve 12:02'de geçti: ana model kartı 39 dk kullanmıştı. Eski davranıştaki 5 sn'de geri atılma yok. 11:55 sonrasında işçide döngü duruşu / TMPRL1101 / «timed out» satırı 0, kurulumdan beri FAILED iş 0.
+- **Not:** gateway yeniden başlayınca kart sırası sayaçları (`WAITING_SINCE`, `TURN_START`) bellekte olduğu için sıfırlanır; her kurulum bekleyen modelin sırasını bir HOLD süresi erteler.
+
 ## 2026-10-05 — E-kitap: katalog kapağı yedeği, etiket bölüm + ara başlık = perde
 
 - **Neden:** kullanıcı e-kitap kalite değerlendirmesindeki düzeltilebilir eksiklerin hemen kapatılmasını ve kurulumun gece beklenmeden yapılmasını istedi (önceki sürüm `8733cd4e` 21:00 yerine hemen kuruldu).
