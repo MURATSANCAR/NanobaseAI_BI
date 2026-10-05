@@ -422,9 +422,11 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Genel tahsilat collections; nakit/banka/çek türü ayrıca seçildiyse desteklenmeyen daraltma say. "
               "Birden çok Logo family ölçüsü yalnız customer/channel/day/month/year ortak kırılımlarında birleştirilebilir; her aile önce ayrı toplanır. CRM count aileleri karıştırılmaz. Kayıt sayısına ürün kırılımı uydurma. "
               "Filtreden geçen özel isimler filters'a aynen yazılır; anlamlı sıfatlar kaybolamaz. "
+              "dimensionValues kırılımların kaynaktaki gerçek değerleridir (ör. satış kanalları): kullanıcının günlük ifadesi "
+              "('yurt dışına', 'kitapçılara', 'e-ticaretten') bunlardan birine karşılık geliyorsa o kırılımın süzgecine kaynaktaki değeri yaz. "
               "Top N yalnız açıkça istenirse. Önceki plan yalnız açık takip sorularında bağlamdır.\n"
               + json.dumps({"contract": CONTRACT, "groupedFamilyPopulation": GROUPED_FAMILY_POPULATION, "output": schema, "parsedPeriods": periods,
-                            "parsedGrain": grain, "referenceDate": str(today), "previous": previous, "crmCapabilities": CRM_CAPABILITIES, "crmReportCapabilities": CRM_REPORT_CAPABILITIES, "relationalCapabilities": RELATIONAL_CAPABILITIES,
+                            "parsedGrain": grain, "referenceDate": str(today), "previous": previous, "dimensionValues": DIMENSION_VALUES, "crmCapabilities": CRM_CAPABILITIES, "crmReportCapabilities": CRM_REPORT_CAPABILITIES, "relationalCapabilities": RELATIONAL_CAPABILITIES,
                             "logoReportCapabilities": LOGO_REPORT_CAPABILITIES, "logoReportOutputContracts": LOGO_REPORT_COMPACT_OUTPUT_CONTRACTS}, ensure_ascii=False))
     guided_schema, coverage_spans = _question_plan_schema(source_question)
     prompt += "\nCoverage requirement yalnız coverageSourceSpans listesindeki bir metin olabilir; farklı parçaları birleştirme. Ortak bir kaynak cümlesi gerekirse birden çok bölümle eşlenebilir, bütün iş koşulları bağımsız denetlenir.\n" + json.dumps({"coverageSourceSpans":coverage_spans}, ensure_ascii=False)
@@ -602,7 +604,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
             # Kodlu alanda model değeri kendi kelimesiyle yazabilir («Evet»); şart, seçilen kodu anan bir kelimenin soruda geçmesi.
             if not inherited and not CODED[dim].asked(CODED[dim].codes_for(op, val), source_q):
                 raise ContractError("Süzgeç değeri soruda bulunamadı; modelin eklediği değerle hesap yapılmaz.")
-        elif fold(val) not in source_q and not inherited:
+        elif not _in_question(val, source_q) and not inherited:
             raise ContractError("Süzgeç değeri soruda bulunamadı; modelin eklediği değerle hesap yapılmaz.")
         if family.startswith("crm_") or (families != {"sales"} and dim in ("book", "author", "publisher", "subbrand", "author_group")):
             raise ContractError("Bu süzgeç ölçünün kayıt düzeyine uygulanamaz.")
@@ -1189,6 +1191,16 @@ def source_answer_permissions(question, by_id, llm, trace):
             raise ContractError("Kısmi cevap izni özgün hesap ve alternatife bağlanamadı.", code="PLAN_INVALID")
         permission_map[permission["id"]] = permission
     return permission_map
+
+
+#: Kırılımların kaynaktaki güncel değerleri (satış kanalı…); finance_answer saatte bir Logo'dan tazeler.
+DIMENSION_VALUES: dict = {}
+
+
+def _in_question(value, folded_question):
+    """Süzgeç değeri soruda geçiyor mu: boşluk ve ek farkı gözetilmeden («YURTDIŞI» ↔ «yurt dışına»)."""
+    v = fold(value).replace(" ", "")
+    return bool(v) and v in folded_question.replace(" ", "")
 
 
 #: Raporun işlem dönemi şart olan türleri (logo_reports.validate_logo_report ile aynı küme).

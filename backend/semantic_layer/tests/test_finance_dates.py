@@ -181,3 +181,10 @@ def test_a_relative_year_with_any_suffix_on_the_month_is_that_month(q):
     from semantic_bridge.finance_query.language import dates
     periods, _ = dates(q, date(2026, 10, 5))
     assert sorted(periods) == [("2025-09-01", "2025-10-01"), ("2026-09-01", "2026-10-01")]
+
+
+def test_a_source_value_matches_the_question_across_spaces_and_suffixes():
+    from semantic_bridge.finance_query.language import fold
+    from semantic_bridge.finance_query.planner import _in_question
+    q = fold("yurt dışına ne kadar sattık bu sene")
+    assert _in_question("YURTDIŞI", q) and _in_question("yurt dışı", q) and not _in_question("KITAPCI", q)
