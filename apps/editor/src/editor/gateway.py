@@ -53,8 +53,14 @@ FIT_TOGETHER = 0.92          # models.yaml: aynı karttaki modellerin payları t
 #  - aynı kartta modeller sırayla açılır (kart kilidi; bir model sağlıklı olana kadar ikincisi başlamaz);
 #  - kartta yer bekleyen model varsa kartı tutan modele yeni iş beslenmez: istek eşe taşar ya da bekler;
 #  - son EVICT_GRACE saniyede iş görmüş (ya da açılmakta olan) model kartından atılmaz; resim üretiminin adımları
-#    arasında yer değiştirme olmaz. Ana model o sırada isteklerini eşe taşır ya da bekler. Sürekli açık ana model
-#    bu korumadan yararlanmaz (kart gerekince yer açar, sonra bekçi geri kaldırır).
+#    arasında yer değiştirme olmaz. Ana model o sırada isteklerini eşe taşır ya da bekler.
+#  - sürekli açık ana model de bu korumadan yararlanır (2026-10-05). Eskiden muaftı: 2026-10-04 23:24–23:32 kart
+#    1'de derin görsel → gömme → ana model → derin görsel takası oldu; ana model 23:32:14'te 120 sn'lik soğuk açılışı
+#    bitirdi, 5 sn sonra (23:32:19) bekleyen derin görsel model için yine durduruldu. O 5 sn'de ana modelin
+#    istekleri kartta yer bekleyen model yüzünden `_route`'ta bekliyordu (`_must_yield`), `_serving` 0 göründü ve
+#    muafiyet onu «boşta» saydı. Artık ana model de iş başındayken (son EVICT_GRACE sn) sırası bitene kadar
+#    (`_turn_over`: bekleyen HOLD_MAX bekledi, ana model sırasını HOLD_MAX kullandı) kartta kalır; boştaysa hemen
+#    yer verir. Yeni açılan model en az bir sıra süresi kartta kalır, bekleyen modelin bekleyişi HOLD_MAX'la sınırlı.
 EVICT_GRACE = int(os.environ.get("EDITOR_EVICT_GRACE_SEC", "120"))
 YIELD_MAX = int(os.environ.get("EDITOR_YIELD_MAX_SEC", "1500"))     # bekleme bundan uzarsa eski davranış;
 #   istemci zaman aşımlarının altında (stüdyo 1800 sn, okuma 3600 sn)
@@ -422,10 +428,8 @@ async def _make_room_inner(a: Alias, need: int, deadline: float) -> None:
 
 def _held(o: Alias, a: Alias, now: float) -> bool:
     """`o` kartını `a`ya bırakmamalı mı? İş başındaki model (son EVICT_GRACE saniyede kullanılmış ya da açılıyor)
-    tutulur. Sürekli açık ana model tutulmaz: kart gerekince yer verir, bekçi sonra geri kaldırır. `a`nın sırası
-    geldiyse (`_turn_over`) `o` artık tutulmaz: yeni iş almaz, elindeki işler bitince kartı bırakır."""
-    if o.always_on:
-        return False
+    tutulur; sürekli açık ana model de (bkz. EVICT_GRACE notu, 2026-10-04 takası). `a`nın sırası geldiyse
+    (`_turn_over`) `o` artık tutulmaz: yeni iş almaz, elindeki işler bitince kartı bırakır."""
     if o.lock.locked():
         return True
     return now - o.last_used < EVICT_GRACE and not _turn_over(o, a, now)

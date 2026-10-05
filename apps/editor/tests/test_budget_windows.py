@@ -434,6 +434,50 @@ def test_narrative_roles_windowed_conflicts_decided_by_the_central_window(monkey
         assert c["chosen"] == "ORDINARY"          # kenardan uzak okuyan pencere kazanır
 
 
+class OffLoopDB(FakeDB):
+    """Veritabanı işi olay döngüsünün iş parçacığında yapılırsa düşer. 2026-10-04 23:29–23:31: emotions_themes
+    duygu bağlarını ve tema yazımını işçinin ortak döngüsünde yapıyordu, döngü 80–90 sn durdu ve aynı anda okunan
+    bütün kitapların aktiviteleri heartbeat'siz kalıp «Activity task timed out» ile düştü."""
+    def __init__(self, rows):
+        super().__init__(rows)
+        self.calls = 0
+
+    def _off_loop(self):
+        self.calls += 1
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        raise AssertionError("veritabanı işi işçinin olay döngüsünde yapıldı")
+
+    def all_rows(self, sql, *args):
+        self._off_loop()
+        return super().all_rows(sql, *args)
+
+    @contextlib.contextmanager
+    def tx(self):
+        self._off_loop()
+        with super().tx() as c:
+            yield c
+
+
+def test_director_steps_keep_database_work_off_the_worker_loop(monkeypatch):
+    from editor import knowledge as k
+    evs = _events(10, dup_every=100)
+    tl = [{"id": f"t{i}", "story_order": i + 1, "page_from": 1 + i, "page_to": 1 + i, "modality": "REALIZED",
+           "summary": f"olay {i}", "participants": [], "confidence": 0.9, "narrative_role": None} for i in range(5)]
+    db = OffLoopDB({"FROM event e LEFT JOIN claim": evs, "FROM timeline": tl})
+    _wire(monkeypatch, k, db, MergeLlm)
+    asyncio.run(k.merge_events("g"))
+    monkeypatch.setattr(k, "Llm", RolesLlm)
+    asyncio.run(k.assign_narrative_roles("g"))
+    asyncio.run(k.verify_event_modality("g"))
+    asyncio.run(k.link_emotions_and_themes("g"))
+    assert db.calls >= 7
+    assert any(sql.startswith("UPDATE event SET story_order") for sql, _ in db.executed)
+    assert any(sql.startswith("UPDATE event SET narrative_role") for sql, _ in db.executed)
+
+
 # ------------------------------------------------------------------ kimlik
 def _identity_book(n_pages: int = 300):
     pages, mentions = [], []
