@@ -6,7 +6,7 @@ import re
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from .language import fold, normalize_numbers
+from .language import fold, normalize_numbers, asked_limit
 from .contracts import ContractError
 from .relational_contracts import ENTITY_REGISTRY, RELATION_REGISTRY
 
@@ -185,7 +185,7 @@ def validate_relational_query(data, question, reference_date):
         ordered.add(order["column"])
     if data["limit"] is not None and (type(data["limit"]) is not int or not 1<=data["limit"]<=50000):
         _invalid("İlişkisel sonuç sınırı geçersiz.")
-    if question and data["limit"] is not None and not re.search(r"\b"+str(data["limit"])+r"\b",normalize_numbers(question)):
+    if question and data["limit"] is not None and not asked_limit(data["limit"],question):
         _invalid("Sonuç sınırı özgün kullanıcı sorusunda bulunamadı.")
     return {**data,"select":selects,"filters":filters}
 

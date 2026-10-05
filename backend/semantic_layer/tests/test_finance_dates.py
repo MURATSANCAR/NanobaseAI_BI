@@ -188,3 +188,11 @@ def test_a_source_value_matches_the_question_across_spaces_and_suffixes():
     from semantic_bridge.finance_query.planner import _in_question
     q = fold("yurt dışına ne kadar sattık bu sene")
     assert _in_question("YURTDIŞI", q) and _in_question("yurt dışı", q) and not _in_question("KITAPCI", q)
+
+
+@pytest.mark.parametrize("q,limit,ok", [("en çok kitabı olan yazar kim", 1, True), ("en fazla iade gelen müşteri hangisi", 1, True),
+                                        ("en çok satan 10 kitap", 10, True), ("en çok satan kitaplar", 5, False),
+                                        ("müşteri listesi", 1, False)])
+def test_a_superlative_asks_for_one_result_without_writing_the_number(q, limit, ok):
+    from semantic_bridge.finance_query.language import asked_limit
+    assert asked_limit(limit, q) is ok

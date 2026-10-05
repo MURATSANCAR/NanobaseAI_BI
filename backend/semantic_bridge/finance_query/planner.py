@@ -11,7 +11,7 @@ import threading
 from zoneinfo import ZoneInfo
 from datetime import datetime, timezone
 
-from .language import fold, dates, normalize_numbers
+from .language import fold, dates, normalize_numbers, asked_limit
 from .plan_types import DerivedMetric, MetricPredicate, PeriodComparison
 from decimal import Decimal, InvalidOperation
 from .contracts import CONTRACT, METRICS, DIMENSIONS, CODED_DIMENSIONS, ContractError
@@ -612,7 +612,7 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     limit = data.get("limit")
     if limit is not None and (type(limit) is not int or not 1 <= limit <= 1000 or not dims):
         raise ContractError("İstenen sıralama sınırı doğrulanamadı.")
-    if limit is not None and (not re.search(r"\b" + str(limit) + r"\b", normalize_numbers(question)) or not re.search(r"\b(ilk|en cok|en az|en yuksek|en dusuk)\b", q)):
+    if limit is not None and (not asked_limit(limit, question) or not re.search(r"\b(ilk|en cok|en fazla|en az|en yuksek|en dusuk)\b", q)):
         raise ContractError("Soruda açıkça istenmeyen bir sonuç sınırı uygulanamaz.")
     analytics = validate_analytics(data.get("analytics") or [], metrics, dims, periods, question)
     if data.get("limit") is not None and any(a["op"] == "top_remainder" for a in analytics):
