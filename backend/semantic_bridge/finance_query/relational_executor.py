@@ -112,13 +112,20 @@ def _resolve_text_filter(executor, aliases, predicate, active, notes):
     """Metin eşitliği kayıttaki adla birebir tutmuyorsa («9» ↔ «9 Yaş», «istanbul'daki» ↔ «İSTANBUL») tam kelime olarak
     aranır, sonra Türkçe eki atılmış kökle; hiçbir kayıt yoksa «0» yerine «bulunamadı». Bulunan adlar IN süzgecine yazılır."""
     from .executor import name_stems
-    if predicate["op"]!="eq": return predicate
+    if predicate["op"] not in {"eq","contains"}: return predicate
     entity=ENTITY_REGISTRY[aliases[predicate["field"]["alias"]]];spec=entity["fields"][predicate["field"]["field"]]
     if spec["type"]!="text": return predicate
     value=predicate["values"][0]["value"];col="r."+_identifier(spec["column"])
     def names(where):
         rows=executor.read("SELECT DISTINCT TOP (20) "+col+" AS v FROM "+_table(entity)+" AS r WHERE ("+active(entity,"r")+") AND "+where,source="crm")
         return [r["v"] for r in rows if r.get("v") is not None]
+    if predicate["op"]=="contains":
+        # İçerme geniş bir küme seçer («okul» → okul ziyareti, Okul Programı, Etkinlik (Okul)…): hangi adların sayıldığı söylenir.
+        esc=value.replace("~","~~").replace("%","~%").replace("_","~_").replace("[","~[")
+        found=names(col+" LIKE "+_text("%"+esc+"%")+" ESCAPE N'~'")
+        if found:
+            notes.append("«"+value+"» içeren "+(spec.get("label_tr") or "kayıt")+" adları sayıldı: "+", ".join("«"+str(n).strip()+"»" for n in found[:8])+(" …" if len(found)>8 else "")+".")
+        return predicate
     if names(col+"="+_text(value)): return predicate
     for cand in [value,*name_stems(value)]:
         esc=cand.replace("~","~~").replace("%","~%").replace("_","~_").replace("[","~[")
