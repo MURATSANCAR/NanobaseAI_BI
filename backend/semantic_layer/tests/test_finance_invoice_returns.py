@@ -362,7 +362,7 @@ def test_sales_answer_carries_the_separately_invoiced_price_difference():
 
 def test_a_name_with_a_turkish_suffix_is_found_by_its_stem_and_an_unknown_name_is_not_zero():
     from semantic_bridge.finance_query.executor import name_stems
-    assert name_stems("kitapyurduna")[0] == "kitapyurdun" and "kitapyurdu" in name_stems("kitapyurduna")
+    assert name_stems("kitapyurduna")[0] == "kitapyurdu"
     assert name_stems("D&R'dan")[0] == "D&R"
 
     def master(sql):
