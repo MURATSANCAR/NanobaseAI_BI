@@ -31,6 +31,36 @@ def literal(value):
     return "N'" + str(value).replace("'", "''") + "'"
 
 
+#: Türkçe çekim ekleri (uzundan kısaya): «kitapyurduna», «D&R'dan», «Timaş Çocuk'un» gibi adlar ana kayıtta eksiz geçer.
+_SUFFIXES = sorted({"nın", "nin", "nun", "nün", "ın", "in", "un", "ün", "ndan", "nden", "dan", "den", "tan", "ten",
+                    "nda", "nde", "da", "de", "ta", "te", "na", "ne", "ya", "ye", "yla", "yle", "la", "le", "a", "e",
+                    "ı", "i", "u", "ü", "lar", "ler", "ları", "leri", "larına", "lerine", "lara", "lere"}, key=len, reverse=True)
+
+
+def name_stems(value):
+    """Adın ek atılmış kökleri, uzundan kısaya; kesme işaretinden önceki kısım ilk aday (en az 3 harf)."""
+    text = str(value or "").strip()
+    out = []
+    for sep in ("'", "’", "`"):
+        if sep in text:
+            out.append(text.split(sep)[0].strip())
+    frontier = [text]
+    for _ in range(2):
+        nxt = []
+        for word in frontier:
+            low = word.lower()
+            for suf in _SUFFIXES:
+                if low.endswith(suf) and len(word) - len(suf) >= 3:
+                    nxt.append(word[:-len(suf)])
+        out.extend(nxt)
+        frontier = nxt
+    seen, stems = set(), []
+    for stem in out:
+        if stem and stem.lower() != text.lower() and stem.lower() not in seen:
+            seen.add(stem.lower()); stems.append(stem)
+    return stems
+
+
 def number(value):
     return Decimal(str(value or 0))
 
@@ -560,13 +590,7 @@ class Executor:
                 for dim, op, value in plan.filters:
                     if dim not in ("customer", "channel"):
                         continue
-                    exprs = {"customer": ["c.CODE", "c.DEFINITION_"], "channel": ["c.SPECODE2"]}[dim]
-                    if op == "contains":
-                        escaped = value.replace("~", "~~").replace("%", "~%").replace("_", "~_").replace("[", "~[")
-                        pred = [f"{e} LIKE {literal('%' + escaped + '%')} ESCAPE '~'" for e in exprs]
-                    else:
-                        pred = [f"{e}={literal(value)}" for e in exprs]
-                    conditions.append("(" + " OR ".join(pred) + ")")
+                    conditions.append(self.name_predicate(dim, op, value, firm, "c"))
                 rows = self.read("SELECT ISNULL(SUM(CASE WHEN f.TRCODE IN (2,3) THEN f.VATMATRAH ELSE -f.VATMATRAH END),0) AS [discount]"
                                  f" FROM dbo.[{line}] f JOIN dbo.[{header}] h ON h.LOGICALREF=f.INVOICEREF"
                                  f" JOIN dbo.[{srv}] s ON s.LOGICALREF=f.STOCKREF LEFT JOIN dbo.[{client}] c ON c.LOGICALREF=f.CLIENTREF"
@@ -578,6 +602,36 @@ class Executor:
             where = "kitap satırına bağlı olmadığı için kitap kırılımına dağıtılamaz" if ("book" in plan.dimensions or any(d == "book" for d, _, _ in plan.filters)) else "müşteri bazında ayrı faturayla kesilir"
             self.notes.append(f"Bu dönemde ayrı faturayla verilen iskonto fiyat farkı {amount} TL (muhasebede satış indirimi) bu satış "
                               f"tutarına dahil değildir; {where}. Muhasebe net satışı bu farkları içerir.")
+
+    #: Ad süzgecinin ana kaydı: kırılım → (tablo soneki, kolonlar, ekranda ad).
+    NAME_MASTERS = {"book": ("ITEMS", ("CODE", "NAME"), "kitap"), "customer": ("CLCARD", ("CODE", "DEFINITION_"), "müşteri"),
+                    "channel": ("CLCARD", ("SPECODE2",), "satış kanalı")}
+
+    def name_predicate(self, dim, op, value, firm, alias):
+        """Ad süzgecini ana kayıtta çözer: soruda geçtiği gibi bulunmazsa eki atılmış kökü dener; hiçbiri yoksa «0» değil
+        «bulunamadı» der. Türkçe büyük/küçük harf ve aksan duyarsız (Turkish_CI_AI)."""
+        key = (dim, op, value, firm, alias)
+        cache = self.__dict__.setdefault("_name_cache", {})
+        if key in cache:
+            return cache[key]
+        table, cols, label = self.NAME_MASTERS[dim]
+
+        def pred(a, o, v):
+            if o == "contains":
+                esc = v.replace("~", "~~").replace("%", "~%").replace("_", "~_").replace("[", "~[")
+                return "(" + " OR ".join(f"{a}.{c} COLLATE Turkish_CI_AI LIKE {literal('%' + esc + '%')} ESCAPE '~'" for c in cols) + ")"
+            return "(" + " OR ".join(f"{a}.{c} COLLATE Turkish_CI_AI={literal(v)}" for c in cols) + ")"
+
+        tries = [(op, value)] + ([("contains", value)] if op == "eq" else []) + [("contains", stem) for stem in name_stems(value)]
+        for o, v in tries:
+            rows = self.read(f"SELECT COUNT_BIG(*) AS n FROM dbo.[LG_{firm}_{table}] m WHERE " + pred("m", o, v))
+            n = int(number(rows[0].get("n"))) if rows else 0
+            if n:
+                if (o, v) != (op, value):
+                    self.notes.append(f"«{value}» {label} kayıtlarında «{v}» içeren ad olarak arandı ({n} kayıt).")
+                cache[key] = pred(alias, o, v)
+                return cache[key]
+        raise ContractError(f"«{value}» adını taşıyan {label} kaydı bulunamadı; adı kontrol edip yeniden sorun.", code="NEEDS_CLARIFICATION")
 
     def aggregate_ledger(self, plan, start, end, firm, period):
         """Muhasebe net satışı: fiş satırında 600–602 ve 610–612 alacak − borç. Kapanış ve yansıtma hesabı içeren fişler
@@ -687,13 +741,7 @@ class Executor:
             if dim in CODED:
                 conditions.append(CODED[dim].predicate(coded_alias(dim, family), op, value))
                 continue
-            exprs = {"book": ["i.CODE", "i.NAME"], "customer": ["c.CODE", "c.DEFINITION_"], "channel": ["c.SPECODE2"]}[dim]
-            if op == "contains":
-                escaped = value.replace("~", "~~").replace("%", "~%").replace("_", "~_").replace("[", "~[")
-                pred = [f"{expr} LIKE {literal('%' + escaped + '%')} ESCAPE '~'" for expr in exprs]
-            else:
-                pred = [f"{expr}={literal(value)}" for expr in exprs]
-            conditions.append("(" + " OR ".join(pred) + ")")
+            conditions.append(self.name_predicate(dim, op, value, firm, "i" if dim == "book" else "c"))
         sql += " WHERE " + " AND ".join(conditions)
         if labels:
             sql += " GROUP BY " + ", ".join(labels.values())
