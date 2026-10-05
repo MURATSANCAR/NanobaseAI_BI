@@ -93,7 +93,7 @@ export default function StudioFlow() {
 
   return (
     <ModuleFrame
-      route="/kitap-tasarim"
+      route="/kitap-tasarim" parent="Kitap Tasarım Stüdyosu"
       crumb="Yeni tasarım"
       title={d?.state.title || 'Yeni tasarım'}
       lead="Tasarımın durumu: ZEKİ AI kitabı okur, CRM'den kitap bilgisini alır, yaşa ve türe göre kararları verir, sayfaları yerleştirip resimler. İş arka planda sürer; sayfadan ayrılabilirsiniz."

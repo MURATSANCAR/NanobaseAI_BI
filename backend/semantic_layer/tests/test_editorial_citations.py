@@ -76,6 +76,15 @@ def test_resolve_by_last_mention():
     assert C.resolve(answer, books, default) == [(A, [5]), (B, [114, 127])]
 
 
+def test_generic_card_name_is_not_a_mention():
+    """ZEKI-70: adı yalnız «Kitap» olan kart; cevabın sonraki paragrafında «kitap» kelimesi atıfı ona kaydırıyordu."""
+    cards = CARDS + [{"id": "dddddddd-0000-0000-0000-000000000004", "title": "Kitap", "publisher": {"title": "2. Kitap"}}]
+    answer = "Ana konu evrim [s. 22]. Kitap, dönemin aydınlarını da ele alır [s. 22, 25]."
+    books, default = C.candidates(cards, "birinci-kitap", "kitabın konusu ne?", answer)
+    assert [b["id"] for b in books] == [A]
+    assert C.resolve(answer, books, default) == [(A, [22]), (A, [22, 25])]
+
+
 def test_build_verifies_each_book_page():
     answer = "Burada dede [s. 5]. İkinci Kitap'ta asıl konu (s. 114, 127)."
     have = {(A, 5), (B, 114)}

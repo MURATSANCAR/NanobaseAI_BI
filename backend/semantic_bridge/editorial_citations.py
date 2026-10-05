@@ -69,9 +69,19 @@ def norm(s: Optional[str]) -> str:
     return " ".join(re.sub(r"[^0-9a-z]+", " ", s).split())
 
 
+# Ad taşımayan kart adları («Kitap», «2. Kitap», «Adsız kitap», «Cilt 3»): cevapta «kitap» kelimesi geçince atıf o
+# karta kayıyor, sayfa orada bulunmuyordu (ZEKI-70). Yalnız bu türden sözcük ve sayılardan oluşan ad, anılış sayılmaz.
+_GENERIC = frozenset({"kitap", "kitabi", "kitaplar", "cilt", "adsiz", "roman", "oyku", "hikaye", "siir", "masal",
+                      "dergi", "sayi", "bolum", "dosya"})
+
+
+def _meaningful(name: str) -> bool:
+    return any(not w.isdigit() and w not in _GENERIC for w in name.split())
+
+
 def card_names(card: dict) -> list[str]:
     names = [card.get("title") or "", ((card.get("publisher") or {}).get("title") or "")]
-    return list(dict.fromkeys(n for n in (norm(x) for x in names) if n))
+    return list(dict.fromkeys(n for n in (norm(x) for x in names) if n and _meaningful(n)))
 
 
 def _last_mention(segment: str, books: list[dict]) -> Optional[str]:

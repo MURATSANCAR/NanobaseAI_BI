@@ -14,6 +14,7 @@ const GROUPS: Record<string, ContributorModule & { tab: string }> = {
     lead: "CRM'de yazar olarak eser kaydı olan kişiler: eserleri, sözleşmeleri ve projeleri. Randevu ve görüşme notları kişinin «İlişki» bölümünde; bütün yazarların ısı haritası ve aday havuzu Yazar ilişkileri ekranında.",
     roles: CONTRIBUTOR_ROLES.authors,
     people: 'yazar',
+    workOrder: { first: ['Yazar'] },
     relations: true,
   },
   cevirmen: {
@@ -24,6 +25,7 @@ const GROUPS: Record<string, ContributorModule & { tab: string }> = {
     lead: "CRM'de tercüme rolüyle eser kaydı olan kişiler ve çevirdikleri kitaplar; sözleşmesinde girilen kaynak dile göre süzülebilir. Çeviri işleri, ilerleme, terim bankası ve kalite raporu «Çeviri» ekranındadır.",
     roles: CONTRIBUTOR_ROLES.translators,
     people: 'çevirmen',
+    workOrder: { first: ['Tercüme'] },
     languages: true,
   },
   cizer: {
@@ -34,6 +36,7 @@ const GROUPS: Record<string, ContributorModule & { tab: string }> = {
     lead: "CRM'de çizer, kapak tasarım, mizanpaj, redaksiyon ve yayına hazırlama rolleriyle eser kaydı olan kişiler. İş dağıtımı, kapasite, teslim ve hakediş «Serbest çalışanlar» ekranında; kişiyi oraya kartındaki düğmeyle ekleyin.",
     roles: CONTRIBUTOR_ROLES.freelancers,
     people: 'kişi',
+    workOrder: { alpha: true },
   },
 };
 

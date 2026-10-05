@@ -52,7 +52,7 @@ export default function CoverScreen() {
 
   const title = job.data?.state.title || 'Kapak';
   const frame = (body: ReactNode) => (
-    <ModuleFrame route="/kitap-tasarim" crumb="Kapak" title={title} lead="Ön kapağın tarzını seçin: resimli, kolaj ya da tipografik (yalnız yazı). Seçim ön kapağı yeniden kurar; arka kapak, sırt ve barkod her tarzda aynıdır."
+    <ModuleFrame route="/kitap-tasarim" parent="Kitap Tasarım Stüdyosu" crumb="Kapak" title={title} lead="Ön kapağın tarzını seçin: resimli, kolaj ya da tipografik (yalnız yazı). Seçim ön kapağı yeniden kurar; arka kapak, sırt ve barkod her tarzda aynıdır."
       source={`İş ${jobId}`}
       aside={
         <div className="flex flex-wrap items-center gap-2">

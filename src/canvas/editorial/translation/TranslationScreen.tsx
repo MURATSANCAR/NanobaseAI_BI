@@ -453,9 +453,9 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
             <div className="mt-2">
               <ProgressBar done={j.words.done} approved={j.words.approved} total={j.words.total} label="İş ilerlemesi" />
             </div>
-            <dl className="mt-2.5 grid grid-cols-2 gap-2 text-[11.5px] sm:grid-cols-4">
+            <dl className="mt-2.5 grid grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-2 text-[11.5px]">
               {(['bos', 'taslak', 'cevrildi', 'onaylandi'] as const).map((k) => (
-                <div key={k}>
+                <div key={k} className="min-w-0">
                   <dt className="text-canvas-muted">{{ bos: 'Boş', taslak: 'Taslak', cevrildi: 'Çevrildi', onaylandi: 'Onaylı' }[k]} segment</dt>
                   <dd className="font-mono text-[14px] font-bold tabular-nums">{nf.format(j.segments[k])}</dd>
                 </div>

@@ -122,13 +122,13 @@ function DayRow({ g }: { g: ImportantDay }) {
   const date = g.precision === 'hafta' && range ? `${fmt(g.startsOn!)} – ${fmt(g.endsOn!)}` : `${fmt(g.day)} ${fmtWeekday(g.day)}`;
   const holiday = g.kind === 'tatil' || g.holiday;
   return (
-    <li className="flex items-start gap-2.5">
+    <li className="flex flex-wrap items-start gap-x-2.5 gap-y-1">
       <span
         className={`kp-mono mt-0.5 w-14 shrink-0 rounded-md px-1 py-0.5 text-center text-[11px] font-semibold ${holiday ? 'bg-rose-50 text-rose-700' : 'bg-sky-50 text-sky-700'}`}
       >
         {when(g.daysLeft)}
       </span>
-      <div className="min-w-0">
+      <div className="min-w-[10rem] flex-1">
         <p className="font-bold leading-snug text-ink">{g.title}</p>
         <p className="text-[11px] text-muted">
           {g.precision === 'yaklasik' ? '≈ ' : ''}

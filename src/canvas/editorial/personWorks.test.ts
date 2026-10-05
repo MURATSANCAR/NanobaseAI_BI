@@ -5,15 +5,20 @@ const w = (title: string, role: string | null, bookId: string | null = title): P
 
 describe('kişi ayrıntısında eserler (ZEKI-27)', () => {
   it('yazar ve çevirmen olan kişide «Yazar» grubu önce gelir, çeviriler karışmaz', () => {
-    const g = groupWorks([w('Çeviri 1', 'Tercüme'), w('Kendi kitabı', 'Yazar'), w('Çeviri 2', 'Tercüme'), w('Çeviri 3', 'Tercüme')]);
+    const g = groupWorks([w('Çeviri 1', 'Tercüme'), w('Kendi kitabı', 'Yazar'), w('Çeviri 2', 'Tercüme'), w('Çeviri 3', 'Tercüme')], { first: ['Yazar'] });
     expect(g.map((x) => x.role)).toEqual(['Yazar', 'Tercüme']);
     expect(g[0].works.map((x) => x.title)).toEqual(['Kendi kitabı']);
     expect(g[1].works.map((x) => x.title)).toEqual(['Çeviri 1', 'Çeviri 2', 'Çeviri 3']);
   });
 
-  it('ekranın rolleri yazardan sonra, diğerleri eser sayısına göre', () => {
-    const g = groupWorks([w('a', 'Redaktör'), w('b', 'Çizer'), w('c', 'Çizer'), w('d', 'Tercüme'), w('e', null)], ['Tercüme']);
-    expect(g.map((x) => x.role)).toEqual(['Tercüme', 'Çizer', 'Redaktör', NO_ROLE]);
+  it('Çevirmenler sekmesinde «Tercüme» önce, diğerleri eser sayısına göre', () => {
+    const g = groupWorks([w('a', 'Redaktör'), w('b', 'Çizer'), w('c', 'Çizer'), w('y', 'Yazar'), w('d', 'Tercüme'), w('e', null)], { first: ['Tercüme'] });
+    expect(g.map((x) => x.role)).toEqual(['Tercüme', 'Çizer', 'Redaktör', 'Yazar', NO_ROLE]);
+  });
+
+  it('Çizer ve serbest sekmesinde öncelik yok: roller alfabetik, rolsüz en sonda', () => {
+    const g = groupWorks([w('a', 'Redaktör'), w('b', 'Tashih'), w('c', 'Tashih'), w('d', 'Çizer'), w('e', null), w('f', 'Danışman')], { alpha: true });
+    expect(g.map((x) => x.role)).toEqual(['Çizer', 'Danışman', 'Redaktör', 'Tashih', NO_ROLE]);
   });
 
   it('aynı kitap aynı rolde bir kez yazılır; farklı rolde ayrı durur', () => {

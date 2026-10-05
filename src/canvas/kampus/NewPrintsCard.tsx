@@ -31,7 +31,7 @@ export default function NewPrintsCard({ canOpenProduction }: { canOpenProduction
 
   return (
     <section id="yeni-kitaplar" className="kp-card rounded-3xl border border-white/80 bg-white/90 p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <div className="flex min-w-0 items-center gap-2">
           <BookOpen aria-hidden className="h-4 w-4 shrink-0 text-violet" />
           <h3 className="kp-display truncate text-xs font-bold uppercase tracking-wider text-ink">Matbaadan Yeni Çıkanlar</h3>
@@ -40,14 +40,14 @@ export default function NewPrintsCard({ canOpenProduction }: { canOpenProduction
           {data.items.length} baskı · {data.days} gün
         </span>
       </div>
-      <ul className="grid grid-cols-3 gap-x-3 gap-y-4">
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-x-3 gap-y-4">
         {rows.map((b) => (
           <li key={b.cardId} className="min-w-0">
             <Cover title={b.title} src={b.cover ?? null} />
             <p className="mt-1.5 line-clamp-2 text-[11px] font-bold leading-snug text-ink" title={b.title ?? undefined}>
               {b.title ?? 'Adsız kitap'}
             </p>
-            <p className="mt-0.5 flex items-center justify-between gap-1 text-[10px]">
+            <p className="mt-0.5 flex flex-wrap items-center justify-between gap-x-1 text-[10px]">
               <span className={b.firstPrint ? 'font-semibold text-violet' : 'font-semibold text-emerald-700'}>{printLabel(b)}</span>
               <span className="kp-mono shrink-0 text-muted">{dayLabel(b.day)}</span>
             </p>

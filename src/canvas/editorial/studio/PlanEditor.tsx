@@ -445,7 +445,7 @@ export default function PlanEditor() {
 
   if (state.status === 'loading' || (!plan && state.status !== 'no-plan')) {
     return (
-      <ModuleFrame route="/kitap-tasarim" crumb="Sayfa düzeni" title={title} lead={LEAD} source={`İş ${job}`} aside={aside}>
+      <ModuleFrame route="/kitap-tasarim" parent="Kitap Tasarım Stüdyosu" crumb="Sayfa düzeni" title={title} lead={LEAD} source={`İş ${job}`} aside={aside}>
         <Panel>{state.error ? <Note tone="err">{state.error}</Note> : state.status === 'auth' ? <Note tone="warn">Oturumunuz kapanmış. Yeniden giriş yapınca sayfa düzeni açılır.</Note> : <Loading />}</Panel>
       </ModuleFrame>
     );
@@ -453,7 +453,7 @@ export default function PlanEditor() {
 
   if (state.status === 'no-plan' || !plan || !ctx) {
     return (
-      <ModuleFrame route="/kitap-tasarim" crumb="Sayfa düzeni" title={title} lead={LEAD} source={`İş ${job}`} aside={aside}>
+      <ModuleFrame route="/kitap-tasarim" parent="Kitap Tasarım Stüdyosu" crumb="Sayfa düzeni" title={title} lead={LEAD} source={`İş ${job}`} aside={aside}>
         <Panel><PlanPreparing job={job} onReady={() => sync.reload()} /></Panel>
       </ModuleFrame>
     );
@@ -461,7 +461,7 @@ export default function PlanEditor() {
 
   const ratio = plan.page.w / plan.page.h;
   return (
-    <ModuleFrame route="/kitap-tasarim" crumb="Sayfa düzeni" title={title} lead={lead} source={`İş ${job}`} aside={aside}>
+    <ModuleFrame route="/kitap-tasarim" parent="Kitap Tasarım Stüdyosu" crumb="Sayfa düzeni" title={title} lead={lead} source={`İş ${job}`} aside={aside}>
       <div className="pe-root flex flex-col gap-3">
         {state.status === 'error' && state.error && (
           <Note tone="err">

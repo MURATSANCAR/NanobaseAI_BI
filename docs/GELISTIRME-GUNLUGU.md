@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-10-05 — Jira ZEKI panosu: 7 kayıt kodda düzeltildi (kurulum yok)
+
+- **Neden:** kullanıcı ZEKI panosundaki açık kayıtları «tek tek düzelt, kurma, sistemlerde kesinti olmasın» dedi. Kod `main`e girdi; test sunucusuna ve VM'e kurulmadı. Derleme ve birim testleri test sunucusunda geçici klasörde (`/tmp/claude-jira5`), canlı servis yeniden başlatılmadan.
+- **ZEKI-70 (Kitaba sor, aynı sayfa bir yerde açılıp diğerinde açılmıyor):** katalogda adı «Kitap» / «2. Kitap» gibi ad taşımayan kart var; cevabın sonraki paragrafında «Kitap, …» geçince atıf imleci o karta kayıyor, sayfa orada olmadığı için «bu sayfa yok» çıkıyordu. `editorial_citations.card_names` yalnız genel sözcük ve sayıdan oluşan adı anılış saymaz (`_GENERIC`). Test: `test_generic_card_name_is_not_a_mention`.
+- **ZEKI-28 (sohbet saati GMT+0):** önceki düzeltme yalnız zeki-chat konteynerlerinin saat dilimini değiştirmişti; Kitaba sor ekranı damgayı (`…+00:00`) `format.dateTime` ile kesip yazıyordu. Saat dilimi taşıyan damga artık İstanbul saatine çevrilir; dilimsiz damga (CRM tarihleri) eskisi gibi.
+- **ZEKI-27 (kişi eserleri sırası):** geri bildirim: Yazarlar sekmesinde «Yazar», Çevirmenler'de «Tercüme» en üstte; Çizer ve serbest'te öncelik yok, roller alfabetik. `groupWorks(works, {first, alpha})`, sekme ayarı `modules.tsx` `workOrder`.
+- **ZEKI-71 (Fiyatlama arama listesi alttaki kartın arkasında):** `backdrop-filter` her paneli ayrı katman yapıyor; arama paneli `relative z-30` (`Panel` artık `className` alır).
+- **ZEKI-66 (Tasarımlardan stüdyoya dönüş):** `ModuleFrame` `parent` alır; detay sayfasında «Masam»ın yanında «Kitap Tasarım Stüdyosu» bağlantısı (iş akışı, sayfa stüdyosu, sayfa düzeni, kapak).
+- **ZEKI-67 (yakınlaştırmada taşma, bildirilen üç yer):** Masam önemli günler satırı sarılır (rozet üstte, metin en az 10rem); Matbaadan yeni çıkanlar ızgarası `auto-fill minmax(5.5rem)`, baskı etiketi ve tarih sarılır; Çeviri ilerleme sayaçları `auto-fit minmax(5.5rem)`. Kabuğun kendi yakınlaştırması CSS `zoom` kullandığı için ekran genişliği kırılımları (lg/sm) yakınlaştırmada değişmiyor; arayüz genelindeki çözüm (kapsayıcı sorgusu) ayrı iş.
+- **Açık kalanlar (karar bekliyor):** ZEKI-68 — Alex Schulman ve Barış Şehri CRM'de durumu «Etkin», durum nedeni «Pasif» (statuscode 100000000) kişiler; 09-29 kuralı bunları gizliyor. Eser kaydı olan 3.579 kişinin 2.414'ü bu durumda. ZEKI-63/62 — eski motorun hatası artık oluşmuyor; yeni motor «satış tutarı» geçen her soruda tutar türünü geri soruyor (`planner.py` NEEDS_CLARIFICATION), «tipi kitap» süzgeci yok (UNSUPPORTED_CAPABILITY; CRM `new_Tip` ile Logo aynı sorguda birleşemiyor).
+
 ## 2026-10-05 — GPU kurulumu: kart sırası + işçi döngüsü düzeltmesi (61bad26a), canlı doğrulama
 
 - **Kurulum:** kullanıcı onayıyla gündüz (okumalar sürerken) `61bad26a` kuruldu: `releases/61bad26a`, imajlar `editor-py(-studio):0.15.9-61bad26a`, yeni imajda tam set 1202 geçti / 0 kırmızı, 9 servis yeni sürümde, `._*` 0. Arkasından iki oturum `e384da86` (11:29 UTC) ve `8733cd4e` (11:54 UTC) kurdu; ikisi de bu düzeltmeyi içeriyor (ata denetimi + dosya denetimi).

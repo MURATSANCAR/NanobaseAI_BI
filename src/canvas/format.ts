@@ -15,9 +15,24 @@ export function money(v: number | null | undefined): string {
   return nf(0).format(v);
 }
 
-/** ISO damgasını "11.09.2026 09:00" biçimine çevirir; saat yoksa yalnız tarih. */
+const istanbulFmt = new Intl.DateTimeFormat('tr-TR', {
+  timeZone: 'Europe/Istanbul',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** ISO damgasını "11.09.2026 09:00" biçimine çevirir; saat yoksa yalnız tarih. Saat dilimi taşıyan damga
+ *  («…Z», «…+00:00») İstanbul saatine çevrilir — kesip yazınca UTC görünüyordu (ZEKI-28). Dilimsiz damga olduğu gibi. */
 export function dateTime(iso: string | undefined | null): string {
   if (!iso) return '—';
+  if (/T\d\d:\d\d.*([zZ]|[+-]\d\d:?\d\d)$/.test(iso)) {
+    const t = Date.parse(iso);
+    if (Number.isFinite(t)) return istanbulFmt.format(t).replace(',', '');
+  }
   const s = iso.slice(0, 19).replace('T', ' ');
   const [d, tm] = s.split(' ');
   const parts = d?.split('-');

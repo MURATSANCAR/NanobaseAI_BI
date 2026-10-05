@@ -29,8 +29,11 @@ export function ModuleFrame({
   aside,
   section = 'Editoryal',
   home = true,
+  parent,
   children,
 }: {
+  /** Detay sayfasında «Masam»ın yanında modülün ana ekranına dönüş (ör. «Kitap Tasarım Stüdyosu», ZEKI-66). */
+  parent?: string;
   /** Üst şeritteki ana modül adı (ayrı ana modüldeki ekran, ör. Kitap Eczanesi, kendi adını verir). */
   section?: string;
   /** Başlığın üstündeki «Masam» dönüş bağlantısı; Editoryal dışındaki ana modülde false (yerine `section` yazar). */
@@ -62,10 +65,18 @@ export function ModuleFrame({
               {!home ? (
                 section !== title && <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">{section}</div>
               ) : route !== '/editoryal' ? (
-                <Link to="/editoryal" className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-violet hover:underline">
-                  <ChevronLeft aria-hidden className="h-3.5 w-3.5" />
-                  Masam
-                </Link>
+                <nav aria-label="Geri dön" className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <Link to="/editoryal" className="inline-flex min-h-6 items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-violet hover:underline">
+                    <ChevronLeft aria-hidden className="h-3.5 w-3.5" />
+                    Masam
+                  </Link>
+                  {onDetail && parent && (
+                    <Link to={route} className="inline-flex min-h-6 items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-violet hover:underline">
+                      <ChevronLeft aria-hidden className="h-3.5 w-3.5" />
+                      {parent}
+                    </Link>
+                  )}
+                </nav>
               ) : (
                 <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Editoryal Süreç</div>
               )}
@@ -138,8 +149,8 @@ export function KpiRow({ children }: { children: ReactNode }) {
 
 /** `min-w-0`: ızgara hücresinde içindeki geniş tablo (TableWrap, min 640px) kolonu genişletmesin; tablo kendi
  *  kutusunda kaysın, yandaki paneller kırpılmasın. */
-export function Panel({ children }: { children: ReactNode }) {
-  return <section className="glass-panel min-w-0 rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">{children}</section>;
+export function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <section className={`glass-panel min-w-0 rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 ${className}`}>{children}</section>;
 }
 
 /**

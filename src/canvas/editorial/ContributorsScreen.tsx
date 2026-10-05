@@ -14,7 +14,7 @@ import SqlInfo from '../components/SqlInfo';
 import SearchSelect from '../components/SearchSelect';
 import { RightChips, RightsDetails } from './crmRights';
 import { EmptyHint, Explain } from '../components/Explain';
-import { groupWorks } from './personWorks';
+import { groupWorks, type WorkOrder } from './personWorks';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -32,6 +32,8 @@ export type ContributorModule = {
   relations?: boolean;
   /** Kaynak dil süzgeci ve satırda kişinin kaynak dilleri (çevirmenler: sözleşmedeki orijinal dil alanından). */
   languages?: boolean;
+  /** Kişi ayrıntısında eser gruplarının sırası (ZEKI-27): sekmenin öncelikli rolü ya da alfabetik. */
+  workOrder?: WorkOrder;
 };
 
 const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
@@ -74,8 +76,8 @@ function Block({ title, count, info, defaultOpen = false, children }: { title: s
 }
 
 /** Eserler rol başlığı altında: «Yazar» önce, sonra bu ekranın rolleri, sonra diğerleri (bkz. `personWorks`). */
-function Works({ works, screenRoles }: { works: PersonDetail['works']; screenRoles: string[] }) {
-  const groups = useMemo(() => groupWorks(works, screenRoles), [works, screenRoles]);
+function Works({ works, order }: { works: PersonDetail['works']; order?: WorkOrder }) {
+  const groups = useMemo(() => groupWorks(works, order), [works, order]);
   if (!groups.length) return <p className="mt-1.5 text-[12px] text-canvas-muted">Eser katılım kaydı yok.</p>;
   return (
     <div className="zk-scroll mt-1 max-h-80 space-y-3 overflow-y-auto overscroll-contain pr-1">
@@ -145,7 +147,7 @@ function Relations({ p }: { p: PersonDetail }) {
   );
 }
 
-function Detail({ p, onClose, relations, screenRoles }: { p: PersonDetail; onClose: () => void; relations?: boolean; screenRoles: string[] }) {
+function Detail({ p, onClose, relations, workOrder }: { p: PersonDetail; onClose: () => void; relations?: boolean; workOrder?: WorkOrder }) {
   return (
     <div className="text-[12.5px]">
       <div className="flex items-start justify-between gap-2">
@@ -161,7 +163,7 @@ function Detail({ p, onClose, relations, screenRoles }: { p: PersonDetail; onClo
 
       <Block title="Eserler" count={p.works.length} defaultOpen info={<SqlInfo k={p.kaynaklar} alan="sayac.eser" label="Eserler" />}>
         {p.truncated && <p className="mt-1 text-[11px] text-canvas-muted">Liste çok uzun olduğu için kısaltıldı; eserlerin tamamı gösterilmiyor.</p>}
-        <Works works={p.works} screenRoles={screenRoles} />
+        <Works works={p.works} order={workOrder} />
       </Block>
 
       <WebSection kind="person" id={p.id} />
@@ -419,7 +421,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
         {/* Telefonda ayrıntı listenin üstüne gelir; masaüstünde sağda durur. */}
         {open && (
           <div className="order-first lg:sticky lg:top-0 lg:order-none">
-            <Panel>{person.data && sameId(person.data.id, open) ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} screenRoles={m.roles} /> : <Loading />}</Panel>
+            <Panel>{person.data && sameId(person.data.id, open) ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} workOrder={m.workOrder} /> : <Loading />}</Panel>
           </div>
         )}
       </div>

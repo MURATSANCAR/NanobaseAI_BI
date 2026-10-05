@@ -288,7 +288,8 @@ export default function CalcPane({ ov }: { ov: Overview }) {
 
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
-      <Panel>
+      {/* backdrop-filter her paneli ayrı katman yapar: arama listesi alttaki panelin arkasında kalıyordu (ZEKI-71). */}
+      <Panel className="relative z-30">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <BookPicker
             disabled={!ready}
