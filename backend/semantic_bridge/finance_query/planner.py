@@ -423,7 +423,8 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "Birden çok Logo family ölçüsü yalnız customer/channel/day/month/year ortak kırılımlarında birleştirilebilir; her aile önce ayrı toplanır. CRM count aileleri karıştırılmaz. Kayıt sayısına ürün kırılımı uydurma. "
               "Filtreden geçen özel isimler filters'a aynen yazılır; anlamlı sıfatlar kaybolamaz. "
               "dimensionValues kırılımların kaynaktaki gerçek değerleridir (ör. satış kanalları): kullanıcının günlük ifadesi "
-              "('yurt dışına', 'kitapçılara', 'e-ticaretten') bunlardan birine karşılık geliyorsa o kırılımın süzgecine kaynaktaki değeri yaz. "
+              "('yurt dışına', 'kitapçılara', 'e-ticaretten') bunlardan birine karşılık geliyorsa o kırılımın süzgecine kaynaktaki değeri yaz; "
+              "yayınevi/marka adı ('timaş çocuk', 'mavi kirpi') publisher süzgecidir, kitap adı araması değildir. "
               "Top N yalnız açıkça istenirse. Önceki plan yalnız açık takip sorularında bağlamdır.\n"
               + json.dumps({"contract": CONTRACT, "groupedFamilyPopulation": GROUPED_FAMILY_POPULATION, "output": schema, "parsedPeriods": periods,
                             "parsedGrain": grain, "referenceDate": str(today), "previous": previous, "dimensionValues": DIMENSION_VALUES, "crmCapabilities": CRM_CAPABILITIES, "crmReportCapabilities": CRM_REPORT_CAPABILITIES, "relationalCapabilities": RELATIONAL_CAPABILITIES,
