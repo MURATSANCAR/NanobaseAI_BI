@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-10-05 (öğlen) — SEO → CRM: müşteride ilk gerçek yazım
+
+- BT `zekiai`'ye 5 yeni kolonda UPDATE izni verdi (HAS_PERMS 5/5 = 1). VM'e `e5e15f82` kuruldu (`ModifiedOn`'a dokunmayan sürüm; ._* 0, 5 konteyner ayakta). Kurulum ekran derlemesinde 25 dk takıldı: VM belleği dolu (köprü 3,9 GB + vite 1,4 GB + ChatGPT tarayıcı konteyneri 1 GB); tarayıcı durduruldu, köprü yeniden başlatıldı → 3,5 GB boş, kurulum bitti. VM'e bellek artırımı (12–16 GB) önerilecek.
+- Kip Yönetim ayarıyla (DB) «acik»; ilk 20: 16 yazıldı, 4 barkod eşleşmedi, hata 0. Geri okuma 16/16 birebir, `ModifiedOn` eski tarihinde. Kalanlar `--yaz --onayla` ile VM'de arka planda (başlıkta yazar yoksa onaylanmaz).
+- TİMAŞ VPN: 12:10'da iki deneme AUTH_FAILED (biri telefon onayı süresi dolunca, biri MFA'ya geçmeden); üçüncü denemede telefon onayıyla açıldı.
+
 ## 2026-10-05 — SEO → CRM: mevcut kolonlara dokunulmaz; müşteride yazma izni yok
 
 - Kullanıcı kuralı: Timaş SEO/GEO için yeni alanlar açtı; CRM'in mevcut kolonlarında güncelleme olmayacak. `crm_write.update_sql` artık `ModifiedOn`'u da güncellemiyor; yalnız `new_seobaslik`, `new_seoaciklama`, `new_kapakalt`, `new_seodurum`, `new_seoguncelleme`. Not: aktarım uygulaması değişikliği `ModifiedOn` ile izliyorsa yeni alan değişikliğini görmeyebilir; eşlemeyi kuran taraf `new_seoguncelleme`'ye bakmalı.
