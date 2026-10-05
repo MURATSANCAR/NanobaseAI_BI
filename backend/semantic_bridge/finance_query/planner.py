@@ -1191,7 +1191,12 @@ def source_answer_permissions(question, by_id, llm, trace):
     return permission_map
 
 
+#: Raporun işlem dönemi şart olan türleri (logo_reports.validate_logo_report ile aynı küme).
+PERIOD_REPORTS = {"customer_balances", "payment_movements", "currencies", "purchase_prices"}
+
+
 def build_report(data, question, llm, periods, today, trace, source_question=None, inherited_period=False):
+    report_notes = []
     from .logo_reports import validate_logo_report, LOGO_REPORT_CAPABILITIES, describe_logo_report_output
     from .crm_reports import validate_crm_report, CRM_REPORT_CAPABILITIES, describe_crm_report_output
     if data.get("relational_query") is not None:
@@ -1236,6 +1241,11 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
                 expected_as_of = raw["as_of"]
             if raw.get("as_of") is not None and raw["as_of"] != expected_as_of:
                 raise ContractError("Raporun itibarıyla tarihi istenen iş tarihiyle uyuşmuyor.", code="PLAN_INVALID")
+            if (branch == "logo_report" and mode in PERIOD_REPORTS and not raw.get("start") and not raw.get("end") and not periods):
+                # Dönem yazılmamış: diğer sorulardaki gibi yılbaşından bugüne («en çok borcu olan müşteriler» = bugünkü bakiye).
+                raw["start"], raw["end"] = str(date(today.year, 1, 1)), str(today + timedelta(days=1))
+                report_notes.append(f"Soruda dönem belirtilmediği için {today.year} yılbaşından bugüne "
+                                    f"(01.01.{today.year}–{today:%d.%m.%Y}) hesaplandı.")
             if raw.get("as_of") is None:
                 raw["as_of"] = expected_as_of
                 if trace is not None:
@@ -1409,7 +1419,7 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
                   + (" İzin: " + permissions[check["permission_id"]]["question_quote"]
                      if check["status"] == "unverified_with_permission" else ""),
     } for check in checks if check["status"] == "unverified_with_permission")
-    return Plan((), (), periods, gaps=fallback_gaps, **{branch: report})
+    return Plan((), (), periods, gaps=fallback_gaps, notes=tuple(report_notes), **{branch: report})
 
 
 # --- "iadeleri de ekle": deterministic scope extension of an earlier invoice count ---
