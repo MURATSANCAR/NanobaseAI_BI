@@ -154,8 +154,7 @@ def execute_relational_query(executor, plan):
         if isinstance(value,Decimal): return float(value)
         return value
     records=[{k:scalar(v) for k,v in row.items()} for row in rows]
-    notes=["CRM ilişkisel sonuç güncel aktif kaynakları kullanır; tarihçe veya kesin kimlik birleştirmesi iddiası içermez.",
-           "Yalnız doğrulanmış çocuk-üst kayıt ilişkileri kullanılır; kaynaklar tekil anahtarlarla kontrol edilir. LEFT JOIN aktiflik koşulu ON içinde uygulanır.",
-           "Süzgeçler AND; range başlangıç dahil/bitiş hariçtir. is_null boş metni kapsamaz. Tarih-only süzgeç değeri İstanbul gece yarısından UTCye dönüştürülür."]
+    # Teknik kurallar (aktif kayıt, ilişki yönü, tarih sınırı) tanımda; son kullanıcıya tek, anlaşılır not.
+    notes=["CRM'deki güncel aktif kayıtlardan hesaplandı; pasif kayıtlar dahil değildir."]
     if plan["limit"] is not None: notes.append("Kullanıcı planındaki sonuç sınırı: "+str(plan["limit"])+"; teknik kesilme değil.")
     return {"records":records,"output_fields":fields,"numeric_fields":numeric,"notes":notes,"gaps":[]}
