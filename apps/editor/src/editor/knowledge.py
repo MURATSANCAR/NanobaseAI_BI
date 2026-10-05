@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import threading
 from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -43,20 +44,29 @@ def director_capacity() -> int:
     return max(1, settings().page_concurrency)
 
 
-_director_slots: dict[int, tuple[Any, asyncio.Semaphore]] = {}
+_director_slots: dict[str, Any] = {}
+_director_slots_lock = threading.Lock()
 
 
-def director_slots() -> asyncio.Semaphore:
-    """One semaphore per event loop, shared by every book this worker process reads at the same
-    time. Measured 2026-10-02: one book's critic sent 1.115 repair calls at once; 48 activities
-    doing that together queued thousands of requests behind a model that serves 32. Waiting here
-    costs nothing; waiting inside the model's queue holds the worker's sockets and memory."""
-    loop = asyncio.get_running_loop()
-    held = _director_slots.get(id(loop))
-    if held is None or held[0] is not loop:
-        held = (loop, asyncio.Semaphore(director_capacity()))
-        _director_slots[id(loop)] = held
-    return held[1]
+def director_slots():
+    """One semaphore for the whole worker process, shared by every book it reads at the same time.
+    Measured 2026-10-02: one book's critic sent 1.115 repair calls at once; 48 activities doing that
+    together queued thousands of requests behind a model that serves 32. Waiting here costs nothing;
+    waiting inside the model's queue holds the worker's sockets and memory.
+
+    Since 2026-10-05 every activity runs on its own event loop (editor.offloop), so the semaphore is
+    shared across loops (offloop.SharedSemaphore), not one per loop. Created once per process (a
+    changed EDITOR_DIRECTOR_CONCURRENCY makes a new one, for tests)."""
+    import os
+
+    from .offloop import SharedSemaphore
+    key = os.environ.get("EDITOR_DIRECTOR_CONCURRENCY", "")
+    with _director_slots_lock:
+        held = _director_slots.get(key)
+        if held is None:
+            _director_slots.clear()
+            held = _director_slots[key] = SharedSemaphore(director_capacity())
+    return held
 
 
 # --------------------------------------------------------------- chapters

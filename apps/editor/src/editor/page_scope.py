@@ -769,9 +769,15 @@ def main(argv: list[str] | None = None) -> int:
     out = open(a.json, "w", encoding="utf-8") if a.json else None
     print(f"{len(gens)} nesil; {'kuru koşu (yazılmaz)' if a.dry_run else 'GERÇEK KOŞU'}", file=sys.stderr)
 
+    from . import batch_guard
+    skipped = batch_guard.Skipped("page_scope rebuild")
+
     async def run_all():
         # tek olay döngüsü: model istemcisi (llm.client) döngüye bağlı
         for i, x in enumerate(gens):
+            # okuması süren nesle dokunulmaz (2026-10-05: toplu düzeltme süren okumaları düşürdü); sonda listelenir
+            if not await asyncio.to_thread(skipped.check, x["id"], x.get("title")):
+                continue
             try:
                 res = await (dry_run(x["id"], model=i < a.model) if a.dry_run else regenerate(x["id"]))
             except Exception as e:  # noqa: BLE001 — bir kitap ötekileri durdurmaz
@@ -783,6 +789,7 @@ def main(argv: list[str] | None = None) -> int:
             print(row_text(res) if a.dry_run and "error" not in res
                   else json.dumps(res, ensure_ascii=False, default=str)[:600], flush=True)
     asyncio.run(run_all())
+    skipped.report()
     return 0
 
 

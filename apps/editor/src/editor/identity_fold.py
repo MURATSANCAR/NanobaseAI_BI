@@ -39,7 +39,7 @@ import argparse
 import json
 from collections import Counter
 
-from . import db, source
+from . import batch_guard, db, source
 from .identity import proper_name_test, same_name_plan  # noqa: F401 - same rule as the reading
 from .identity import family_address, name_key
 from . import identity_links
@@ -188,16 +188,21 @@ def apply(p: dict) -> dict:
     return {"generation_id": gid, "applied": done, "alias_fixed": fixed}
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="identity_fold")
     ap.add_argument("--generation", action="append", default=[])
     ap.add_argument("--apply", action="store_true", help="yaz (yoksa kuru koşu)")
     ap.add_argument("--details", action="store_true", help="birleşen ve reddedilen her çift")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     gens = [{"id": g, "title": None} for g in args.generation] or _latest_generations()
     total = {"generations": 0, "records_folded": 0, "records_blocked": 0}
     rules: Counter = Counter()
+    # a generation a reading is still working on is never folded (2026-10-05: --apply deleted the characters of
+    # a running reading → FK error and SUPERSEDED, two readings failed); listed at the end
+    skipped = batch_guard.Skipped("identity_fold")
     for g in gens:
+        if not skipped.check(str(g["id"]), g.get("title")):
+            continue
         p = plan(str(g["id"]), g.get("title"))
         total["generations"] += 1
         total["records_folded"] += p["records_folded"]
@@ -210,10 +215,15 @@ def main() -> None:
                               "blocked": len(j["blocked_by_attributes"])} for j in p["joins"]]
             line["refused"] = dict(Counter(r["reason"] for r in p["refused"]))
         if args.apply and (p["joins"] or p["alias_conflicts"] or p["_unnamed"]):
-            line["result"] = apply(p)
+            # checked again right before writing: a reading may have started while the plan was made
+            if skipped.check(str(g["id"]), g.get("title")):
+                line["result"] = apply(p)
+            else:
+                line["result"] = {"skipped": skipped.items[-1]["reason"]}
         print(json.dumps(line, ensure_ascii=False, default=str), flush=True)
-    print(json.dumps({"total": {**total, "joins_by_rule": dict(rules)}, "dry_run": not args.apply},
-                     ensure_ascii=False))
+    print(json.dumps({"total": {**total, "joins_by_rule": dict(rules)}, "dry_run": not args.apply,
+                      "skipped_running": [x["generation_id"] for x in skipped.items]}, ensure_ascii=False))
+    skipped.report()
 
 
 if __name__ == "__main__":

@@ -113,6 +113,13 @@ def plan(wanted: tuple[str, ...] = STEPS, generations: list[str] | None = None) 
                 item["state"] = state(c, gid)
                 item["actions"] = actions(steps, row["profile"])
             out.append(item)
+    # a generation a reading (e.g. a redaction job on it) is still working on is left alone (batch_guard)
+    from . import batch_guard
+    running = batch_guard.busy(x["generation_id"] for x in out if not x.get("skip"))
+    for x in out:
+        if x["generation_id"] in running:
+            x["skip"] = running[x["generation_id"]]
+            x.pop("actions", None)
     return out
 
 
@@ -281,9 +288,18 @@ def main(argv: list[str] | None = None) -> int:
             emit(x, row_text(x))
         return 0
 
+    from . import batch_guard
+    skipped = batch_guard.Skipped("backfill steps")
+    for x in items:
+        if x.get("skip") and str(x["skip"]).startswith("okuma sürüyor"):
+            skipped.add(x["generation_id"], x["skip"], x.get("title"))
+
     async def run_all():
         # tek olay döngüsü: model istemcisi (llm.client) döngüye bağlı
         for x in todo:
+            # yazmadan hemen önce yeniden: plan yapılırken bir okuma başlamış olabilir
+            if not await asyncio.to_thread(skipped.check, x["generation_id"], x.get("title")):
+                continue
             t0 = time.time()
             try:
                 res = await apply_one(x)
@@ -293,6 +309,7 @@ def main(argv: list[str] | None = None) -> int:
             emit(x, json.dumps({k: x[k] for k in ("generation_id", "title", "steps", "result", "seconds")},
                                ensure_ascii=False, default=str)[:800])
     asyncio.run(run_all())
+    skipped.report()
     return 0
 
 

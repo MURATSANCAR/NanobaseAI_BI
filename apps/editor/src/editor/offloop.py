@@ -20,6 +20,7 @@ The model client is per loop (editor.llm.client); it is closed when the inner lo
 from __future__ import annotations
 
 import asyncio
+import collections
 import contextvars
 import threading
 from typing import Any, Awaitable, Callable
@@ -47,6 +48,79 @@ async def _close_loop_resources() -> None:
         await llm.close_client()
     except Exception:  # noqa: BLE001 - closing must never mask the step's own result
         pass
+    import sys
+    retrieval = sys.modules.get(f"{__package__}.retrieval")   # only if the step used it
+    if retrieval is not None:
+        try:
+            await retrieval.close_qdrant()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+class SharedSemaphore:
+    """An asyncio semaphore every event loop of the process can share (asyncio.Semaphore belongs to one loop).
+
+    Steps run on their own loops (`run`), yet some limits are the process's, not a loop's: the director model
+    serves N requests at once for every book this worker reads (knowledge.director_slots). Waiters are served
+    in arrival order; a slot handed to a waiter that was cancelled meanwhile is passed on, never lost."""
+
+    def __init__(self, value: int) -> None:
+        self._lock = threading.Lock()
+        self._value = value
+        self._waiters: collections.deque = collections.deque()
+
+    @property
+    def value(self) -> int:
+        return self._value
+
+    def locked(self) -> bool:
+        return self._value <= 0
+
+    async def acquire(self) -> bool:
+        loop = asyncio.get_running_loop()
+        with self._lock:
+            if self._value > 0 and not self._waiters:
+                self._value -= 1
+                return True
+            fut = loop.create_future()
+            entry = (loop, fut)
+            self._waiters.append(entry)
+        try:
+            await fut
+        except asyncio.CancelledError:
+            with self._lock:
+                try:
+                    self._waiters.remove(entry)
+                    handed = False
+                except ValueError:
+                    handed = True                # a release already gave this waiter the slot
+            if handed:
+                self.release()
+            raise
+        return True
+
+    def release(self) -> None:
+        with self._lock:
+            while self._waiters:
+                loop, fut = self._waiters.popleft()
+                try:
+                    loop.call_soon_threadsafe(_wake, fut)
+                    return
+                except RuntimeError:             # that loop is closed: its waiter is gone
+                    continue
+            self._value += 1
+
+    async def __aenter__(self) -> None:
+        await self.acquire()
+
+    async def __aexit__(self, *exc: Any) -> None:
+        self.release()
+
+
+def _wake(fut: asyncio.Future) -> None:
+    if not fut.done():
+        fut.set_result(True)
+    # a cancelled waiter returns the slot itself (SharedSemaphore.acquire)
 
 
 async def run(fn: Callable[..., Awaitable[Any]], *args: Any, **kwargs: Any) -> Any:

@@ -80,11 +80,30 @@ def visual_pages(book_version_id: str) -> dict:
     """Kitabın görsel taramaya girecek sayfaları; düz metin sayfası görsel modele gitmez."""
     from . import document
     doc, _ = document._open_version(book_version_id, repair=False)
-    measures = [measure_page(p) for p in doc]
+    return _visual_result([measure_page(p) for p in doc])
+
+
+def _visual_result(measures: list[tuple]) -> dict:
+    from . import document
     pages = select_visual(measures)
     return {"pages": pages, "page_count": len(measures), "visual": len(pages),
             "rule": {"image_share": IMAGE_SHARE, "min_drawings": MIN_DRAWINGS, "cover": 1,
                      "layerless_ink": document.LAYERLESS_INK_MIN}}
+
+
+def measure_chunk(path: str, page_nos: list[int]) -> list[tuple]:
+    """`measure_page` over some pages of the PDF at `path` (a pool task, editor.pdfproc)."""
+    from . import pdfproc
+    doc = pdfproc.open_doc(path, repair=False)
+    return [measure_page(doc[i - 1]) for i in page_nos]
+
+
+async def visual_pages_async(book_version_id: str) -> dict:
+    """`visual_pages` with the page measurements in the worker's PDF processes (editor.pdfproc)."""
+    from . import document, pdfproc
+    bv = await asyncio.to_thread(document._version_row, book_version_id)
+    n = await pdfproc.run(pdfproc.page_count, bv["file_path"])
+    return _visual_result(await pdfproc.map_pages(measure_chunk, bv["file_path"], range(1, n + 1)))
 
 
 # ------------------------------------------------------------------ klasör → okur kitlesi / tür

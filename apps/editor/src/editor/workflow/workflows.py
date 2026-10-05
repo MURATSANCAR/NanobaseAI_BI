@@ -28,6 +28,18 @@ LONG = timedelta(hours=2)
 INFRA_STEP_RETRY = "infra-step-retry-v1"
 INFRA_STEP_DELAYS = (timedelta(minutes=10), timedelta(minutes=30))
 
+#: Liveness heartbeat timeout. 60 s until 2026-10-05: one 81–93 s stall of the worker's loop then killed every
+#: activity running at that moment. The cure is keeping work off the loop (activities, editor.pdfproc); the
+#: wider margin only keeps a single stall from costing an attempt. Activity options are not part of replay
+#: checks, so running histories take it without a marker.
+HEARTBEAT = timedelta(seconds=180)
+
+#: Outputs could not be published because another process changed the generation while they were built
+#: (SUPERSEDED: a correction, a batch fix). Not a verdict on the book: built again, a few times, after a pause.
+OUTPUTS_SUPERSEDED_RETRY = "outputs-superseded-retry-v1"
+SUPERSEDED_RETRIES = 3
+SUPERSEDED_PAUSE = timedelta(minutes=2)
+
 
 def infrastructure_failure(e: ActivityError) -> bool:
     """The activity lost its worker (heartbeat / start-to-close timeout) or ended in a connection,
@@ -49,7 +61,7 @@ class BookFullAnalysis:
         self.strict_coverage = False
 
     async def act(self, name: str, *args, timeout: timedelta = LONG):
-        options = {"heartbeat_timeout": timedelta(seconds=60)} if self.activity_heartbeats else {}
+        options = {"heartbeat_timeout": HEARTBEAT} if self.activity_heartbeats else {}
         return await workflow.execute_activity(name, args=list(args), start_to_close_timeout=timeout,
                                                retry_policy=RETRY, **options)
 
@@ -76,6 +88,20 @@ class BookFullAnalysis:
                                         key, round_ + 1, error, INFRA_STEP_DELAYS[round_])
                 await workflow.sleep(INFRA_STEP_DELAYS[round_])
         return None
+
+    async def _superseded_again(self, status: str, so_far: int) -> bool:
+        """SUPERSEDED (another process changed the generation while the outputs were built, e.g. a batch
+        fix): build again after SUPERSEDED_PAUSE, at most SUPERSEDED_RETRIES times (OUTPUTS_SUPERSEDED_RETRY).
+        Until 2026-10-05 the reading failed at once («Output revision did not stabilize (SUPERSEDED)»); the
+        marker is recorded only when this happens, so other histories replay unchanged."""
+        if status != "SUPERSEDED" or so_far >= SUPERSEDED_RETRIES:
+            return False
+        if not workflow.patched(OUTPUTS_SUPERSEDED_RETRY):
+            return False
+        workflow.logger.warning("outputs superseded (%d/%d); building again in %s", so_far + 1,
+                                SUPERSEDED_RETRIES, SUPERSEDED_PAUSE)
+        await workflow.sleep(SUPERSEDED_PAUSE)
+        return True
 
     async def step(self, n: int, label: str, extra: dict | None = None) -> None:
         await self.act("set_step", self.job_id, n, label, extra or {}, timeout=SHORT)
@@ -213,7 +239,7 @@ class BookFullAnalysis:
             # is a queue, not a defect: the book waits for its turn instead of failing.
             # Without this it failed outright («kahramanini-yutan-kitap», 2026-09-23).
             if workflow.patched("rebuild-capacity-wait-v1"):
-                waited = 0
+                waited = superseded = 0
                 for attempt in range(40):
                     produced = await self.act(outputs_activity, gid, timeout=timedelta(hours=6))
                     status = produced["technical_status"]
@@ -225,6 +251,9 @@ class BookFullAnalysis:
                     if status == "CAPACITY_WAIT" and waited < 12:      # up to ~1 saat
                         waited += 1
                         await workflow.sleep(timedelta(minutes=5))
+                        continue
+                    if await self._superseded_again(status, superseded):
+                        superseded += 1
                         continue
                     break
             else:
@@ -301,7 +330,7 @@ class BookFullAnalysis:
         await self.step(14, "Editör kuyruğu")
         con = {**found, **await self.act("queue_contradictions", gid, timeout=SHORT)}
         await self.step(13, "Doğrulama → sürümlü özet, rapor ve indeks")
-        produced, waited = None, 0
+        produced, waited, superseded = None, 0, 0
         for attempt in range(40):
             produced = await self.act("rebuild_outputs", gid, timeout=timedelta(hours=6))
             status = produced["technical_status"]
@@ -313,6 +342,9 @@ class BookFullAnalysis:
             if status == "CAPACITY_WAIT" and waited < 12:
                 waited += 1
                 await workflow.sleep(timedelta(minutes=5))
+                continue
+            if await self._superseded_again(status, superseded):
+                superseded += 1
                 continue
             break
         if produced["technical_status"] not in ("SUCCEEDED", "ALREADY_CURRENT"):

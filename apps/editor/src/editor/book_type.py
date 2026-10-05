@@ -403,14 +403,21 @@ def main(argv: list[str] | None = None) -> int:
     rc.add_argument("--generation", action="append", default=[])
     rc.add_argument("--apply", action="store_true", help="yaz (varsayılan: kuru, yalnız listeler)")
     a = ap.parse_args(argv)
+    from . import batch_guard
     gens = [{"id": g, "title": ""} for g in a.generation] or _read_generations()
     changed = 0
+    # okuması süren nesle yazılmaz (2026-10-05: toplu düzeltme süren okumaları düşürdü); sonda listelenir
+    skipped = batch_guard.Skipped("book_type recheck")
     for g in gens:
+        if not skipped.check(str(g["id"]), g.get("title")):
+            continue
         r = recheck(str(g["id"]), apply=a.apply)
         if r and r["changed"]:
             changed += 1
             print(json.dumps({"title": g.get("title"), **r}, ensure_ascii=False, default=str))
-    print(json.dumps({"generations": len(gens), "changed": changed, "applied": a.apply}, ensure_ascii=False))
+    print(json.dumps({"generations": len(gens), "changed": changed, "applied": a.apply,
+                      "skipped_running": [x["generation_id"] for x in skipped.items]}, ensure_ascii=False))
+    skipped.report()
     return 0
 
 
