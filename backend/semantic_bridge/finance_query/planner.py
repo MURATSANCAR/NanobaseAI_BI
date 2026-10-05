@@ -155,6 +155,17 @@ def _think_deadline():
         return 90.0
 
 
+def _think_budget():
+    """Reasoning-token cap of the reasoning plan attempt (FINANCE_PLAN_THINK_BUDGET, 0 = none). Without it the
+    reasoning often used the whole 8.192-token reply and left no JSON: 2026-10-05, 49 of 179 first attempts cut
+    by length (avg 68 s) and 48 by the 90 s deadline, each followed by a full retry without reasoning. With the cap
+    vLLM closes the reasoning and the same call writes the plan; completed attempts had median 12k, p90 24k chars."""
+    try:
+        return max(0, int(os.environ.get("FINANCE_PLAN_THINK_BUDGET", "5000") or 0))
+    except ValueError:
+        return 5000
+
+
 def _object(llm, messages, max_tokens, schema, name, trace=None):
     """One bounded format retry; an incomplete plan never reaches the executor."""
     request_messages = list(messages)
@@ -184,9 +195,14 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
                 extra["on_admitted"] = lambda _ticket: timer.start()
             else:
                 timer.start()
+        think_budget = _think_budget() if thinking_requested else 0
+        if think_budget:
+            extra_body = {"thinking_token_budget": min(think_budget, budget - 1024)}
+        else:
+            extra_body = {}
         try:
             choice = llm.complete(ordered_messages, max_tokens=budget, **({"stream": False} | extra),
-                                  body={"max_tokens": budget, "temperature": 0.0,
+                                  body={**extra_body, "max_tokens": budget, "temperature": 0.0,
                                         "chat_template_kwargs": {"enable_thinking": thinking_requested},
                                         "response_format": {"type": "json_schema", "json_schema": {
                                             "name": name, "strict": True, "schema": schema}}})
@@ -220,7 +236,8 @@ def _object(llm, messages, max_tokens, schema, name, trace=None):
                  "maxTokens": budget, "finishReason": choice.get("finish_reason"),
                  "contentChars": len(content), "reasoningChars": len(reasoning),
                  "contentSha256": hashlib.sha256(content.encode()).hexdigest(),
-                 "thinkingRequested": thinking_requested, "elapsedSeconds": round(elapsed, 3)}
+                 "thinkingRequested": thinking_requested, "elapsedSeconds": round(elapsed, 3),
+                 **({"thinkingTokenBudget": extra_body["thinking_token_budget"]} if extra_body else {})}
         if trace is not None:
             trace.append(event)
         if choice.get("finish_reason") == "length":
@@ -335,7 +352,9 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
               "yasaklanan davranışı gerçekleştirme, talimatı da yok sayma. "
               "Tek raporun output_contracts kayıt türleri istenen özet ve detayı zaten içeriyorsa tek rapor kullan. "
               "Yalnız tek raporun karşılamadığı farklı kırılımlar/bağımsız kaynak bölümleri gerekiyorsa sections kullan (en fazla 4 yaprak). "
-              "Her section title, anlamı koruyan question ve tek leaf plan içerir; leaf plan iç içe sections içermez. "
+              "Her section title, question ve tek leaf plan içerir; leaf plan iç içe sections içermez. "
+              "Bölüm question yalnız o bölüme düşen isteği tek başına soran sorudur: ana sorunun o bölüme ait kısmını ve ortak koşullarını taşır, "
+              "diğer bölümlerin isteklerini içermez; ana soruyu aynen kopyalama, çünkü her yaprak yalnız kendi sorusuna göre denetlenir. "
               "Her bölüm sorusu ortak dönemi ve o bölüme ait özel koşulları korumalıdır; tek ortak dönem deterministik miras alınabilir, farklı dönemler bölüm sorusunda açık olmalıdır. "
               "Root sections doluyken metrics/dimensions/filters/derived/having/analytics boş; crm/logo_report/crm_report/relational_query/comparison/limit/order_by null, uncovered boş liste ve clarification boş metin olsun. Kök bölüm planlarından alan miras almaz. "
               "YALNIZ sections dolu olan bölümlü kökte her bağımsız isteği coverage'a özgün sorudan harfi harfine kesintisiz alınmış requirement metniyle bağla; büyük/küçük harf, noktalama ve ekleri değiştirme. Özet veya section question metni alıntı yerine geçmez. sections sıfır tabanlı bölüm indeksleri, "
@@ -449,12 +468,19 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
     if len(branches) > 1:
         raise ContractError("Bir yaprak planda birden çok kaynak raporu seçilemez.", code="PLAN_INVALID")
     if any(data.get(k) is not None for k in ("logo_report", "crm_report", "relational_query")):
-        return build_report(data, question, llm, periods, today, trace, source_question)
+        return build_report(data, question, llm, periods, today, trace, source_question, inherited_period=inherited_period)
     if data.get("crm") is not None:
         from .crm_query import validate_crm_plan
         if any(data.get(k) for k in ("metrics", "dimensions", "derived", "having", "comparison", "filters", "analytics")):
             raise ContractError("CRM kart planı ile finans hesap planı aynı dalda karıştırılamaz.", code="PLAN_INVALID")
         crm = validate_crm_plan(data["crm"])
+        if inherited_period and not any(f.get("field") in {"created_at", "updated_at"} for f in crm.get("filters", [])):
+            # The section question names no date; the original's single period was only inferred for it. A CRM
+            # card count without a record-time filter is the current population; composite_review still checks
+            # the whole question, so a date the user meant for this section is not silently dropped.
+            periods = ()
+            if trace is not None:
+                trace.append({"stage":"section_period_not_applied", "reason":"crm_plan_without_record_time"})
         crm = validate_crm_dates(crm, question, periods)
         crm_limit = crm.get("limit")
         if crm_limit is not None and (not re.search(r"\b" + str(crm_limit) + r"\b", normalize_numbers(question)) or not re.search(r"\b(ilk|en cok|en az|en yuksek|en dusuk)\b", q)):
@@ -936,7 +962,7 @@ def validate_analytics(raw, metrics, dims, periods, question):
 
 def build_composite(data, question, llm, previous, trace, today, depth):
     from .crm_query import CRM_CAPABILITIES
-    from .relational_plan import describe_relational_output
+    from .relational_plan import describe_relational_output, RELATIONAL_CAPABILITIES
     from .crm_reports import CRM_REPORT_CAPABILITIES, describe_crm_report_output
     from .logo_reports import LOGO_REPORT_CAPABILITIES, describe_logo_report_output
     if depth or not isinstance(data["sections"], list) or not 1 <= len(data["sections"]) <= 4:
@@ -967,10 +993,15 @@ def build_composite(data, question, llm, previous, trace, today, depth):
         if gap is not None: used_gaps.add(gap)
     if used_sections != set(range(len(data["sections"]))) or used_gaps != set(range(len(gaps))):
         raise ContractError("Soruyla bağlantısı gösterilmeyen bölüm veya eksik kapsam var.", code="PLAN_INVALID")
-    plans = []
     for section in data["sections"]:
         if not isinstance(section, dict) or set(section) != {"title", "question", "plan"} or not isinstance(section["title"], str) or not section["title"].strip() or not isinstance(section["question"], str) or not section["question"].strip():
             raise ContractError("Rapor bölümü geçersiz.", code="PLAN_INVALID")
+    if len(data["sections"]) > 1 and any(fold(section["question"]).strip(" .?!") == fold(question).strip(" .?!") for section in data["sections"]):
+        # Each leaf is reviewed against its own question only; a copied whole question makes every leaf
+        # "miss" the other sections' requests (2026-10-05: 7 of 12 composite plans, all rejected late).
+        raise ContractError("Bölüm sorusu ana soruyu aynen kopyalıyor; her bölüm sorusu yalnız o bölüme düşen isteği ve ortak koşulları içermeli.", code="PLAN_INVALID")
+    plans = []
+    for section in data["sections"]:
         leaf_trace = []
         try:
             leaf = build(section["question"], llm, previous, leaf_trace, _data=section["plan"], _depth=depth+1, _source_question=question)
@@ -994,13 +1025,23 @@ def build_composite(data, question, llm, previous, trace, today, depth):
         "işlem sırasını da denetle. Bölümlere ayırmak veya gap eklemek yanlış nüfusu doğru yapmaz. "
         "Kaynak doğruluğu/kayıt bağlantısı/aynı toplam şartlarını atlama. Özet ve detay ayrı bölümler olabilir, "
         "fakat henüz yapılmayan bölüm arası karşılaştırma veya neden-sonuç çıkarımını yapılıyormuş sayma. "
-        "Eksik kalan hesaplar açık gaps olduğunda kısmî rapor kabul edilir; tam cevap kabul edilmez. JSON ok/missing."},
+        "Eksik kalan hesaplar açık gaps olduğunda kısmî rapor kabul edilir; tam cevap kabul edilmez. "
+        "Her yaprak kendi bölüm sorusuna göre ayrıca denetlendi ve geçti: ölçü tanımı, dönemin uygulandığı tarih alanı, "
+        "saat dilimi dönüşümü ve kaynak varlığı orada doğrulandı; bunları yeniden yargılama. Burada bölüm sorularının ana "
+        "sorunun isteklerini eksiksiz ve anlamını bozmadan paylaştırıp paylaştırmadığını, bölüm planının kendi bölüm sorusunun "
+        "istediği kaynağı ve nüfusu taşıyıp taşımadığını ve bölümler arası koşulları denetle; bölüm sorusu ana sorudan farklı "
+        "bir dönem veya nüfus seçiyorsa reddet. sectionPeriods her bölüme uygulanan [başlangıç dahil, bitiş hariç) yerel "
+        "tarihlerdir; göreli ifadeler referenceDate'e göre çözülür. CRM kart planındaki created_at/updated_at sınırları bu yerel "
+        "tarihlerin UTC karşılığıdır (İstanbul gece yarısı = önceki gün 21:00 UTC); bu kayma hata değildir. relational_query "
+        "bölümleri relationalEntities içindeki doğrulanmış CRM süreç varlıklarını okur; crmCapabilities yalnız crm kart dalıdır. JSON ok/missing."},
         {"role": "user", "content": json.dumps({"question": question, "referenceDate": str(today),
          "sections": [{"question": raw["question"], "plan": p.to_dict()} for raw,p in zip(data["sections"],plans)],
          "selectedReportOutputs": {
              **{"relational:"+str(i):describe_relational_output(p.relational_query) for i,p in enumerate(plans) if p.relational_query},
              **{"crm:"+p.crm_report["report"]:describe_crm_report_output(p.crm_report["report"]) for p in plans if p.crm_report},
              **{"logo:"+p.logo_report["mode"]:describe_logo_report_output(p.logo_report["mode"]) for p in plans if p.logo_report}},
+         "sectionPeriods": [list(map(list, p.periods)) for p in plans],
+         "relationalEntities": {key: entity.get("label_tr") or key for key, entity in RELATIONAL_CAPABILITIES["entities"].items()},
          "gaps": gaps, "coverage": coverage, "contract": CONTRACT, "crmCapabilities": CRM_CAPABILITIES,
          "crmReportCapabilities": CRM_REPORT_CAPABILITIES, "logoReportCapabilities": LOGO_REPORT_CAPABILITIES}, ensure_ascii=False)}], 2400, REVIEW_SCHEMA, "composite_review", trace)
     if review.get("ok") is not True or review.get("missing"):
@@ -1109,7 +1150,7 @@ def source_answer_permissions(question, by_id, llm, trace):
     return permission_map
 
 
-def build_report(data, question, llm, periods, today, trace, source_question=None):
+def build_report(data, question, llm, periods, today, trace, source_question=None, inherited_period=False):
     from .logo_reports import validate_logo_report, LOGO_REPORT_CAPABILITIES, describe_logo_report_output
     from .crm_reports import validate_crm_report, CRM_REPORT_CAPABILITIES, describe_crm_report_output
     if data.get("relational_query") is not None:
@@ -1118,6 +1159,12 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
             raise ContractError("İlişkisel plan başka yürütme dallarıyla karıştırılamaz.", code="PLAN_INVALID")
         branch = "relational_query"
         report = validate_relational_query(data[branch], source_question or question, today)
+        if inherited_period and not any(v["type"] == "date" for f in report["filters"] for v in f["values"]):
+            # Same rule as the CRM card branch: a period only inferred for this section is not shown on a
+            # current-population count that applies no date filter.
+            periods = ()
+            if trace is not None:
+                trace.append({"stage":"section_period_not_applied", "reason":"relational_plan_without_date_filter"})
         capabilities = {"output_contract": describe_relational_output(report)}
     else:
         branch = "logo_report" if data.get("logo_report") is not None else "crm_report"
