@@ -38,6 +38,8 @@ class Connector:
         elif "INFORMATION_SCHEMA" in sql:
             tables = re.findall(r"N'([^']+)'", sql)
             rows = [{"TABLE_NAME": t, "COLUMN_NAME": c, "DATA_TYPE": "float"} for t in tables for c in COLUMNS]
+        elif "COUNT_BIG(*) AS n FROM dbo.[LG_" in sql and "] m WHERE" in sql:
+            rows = [{"n": 1}]                              # ad süzgecinin ana kayıt denetimi: ad var
         else:
             self.sql.append(sql)
             rows = self.answer(sql)
@@ -94,7 +96,7 @@ def test_breakdown_note_has_one_total_with_the_same_filter_and_sale_kind():
     assert len(rows) == 2
     probe = sql[-1]
     # Filter columns may group the probe; the rows are summed, breakdown columns are not read.
-    assert "c.SPECODE2=N'KURUM'" in probe and "f.TRCODE IN (8,3)" in probe and "customer_code" not in probe
+    assert "c.SPECODE2 COLLATE Turkish_CI_AI=N'KURUM'" in probe and "f.TRCODE IN (8,3)" in probe and "customer_code" not in probe
     assert engine.notes[-1].startswith("Bu dönemde seçilen koşullarla 120 iade faturası var")
 
 
@@ -350,9 +352,25 @@ def price_answer(sql):
 def test_sales_answer_carries_the_separately_invoiced_price_difference():
     engine, rows, sql = run(Plan(("net_sales",), ("channel",), SEPT, filters=(("channel", "eq", "KITAPCI"),)), price_answer)
     note = [s for s in sql if "611%" in s]
-    assert len(note) == 1 and "f.LINETYPE=4" in note[0] and "h.DATE_>='2026-09-01'" in note[0] and "c.SPECODE2=N'KITAPCI'" in note[0]
+    assert len(note) == 1 and "f.LINETYPE=4" in note[0] and "h.DATE_>='2026-09-01'" in note[0] and "c.SPECODE2 COLLATE Turkish_CI_AI=N'KITAPCI'" in note[0]
     assert any("iskonto fiyat farkı 1.234,50 TL" in n for n in engine.notes)
     assert engine.source_periods == [{"start": "2026-09-01", "end": "2026-10-01", "sourceCode": "411", "periodCode": "01"}], \
         "not okuması kapsamı ikinci kez yazmaz"
     engine, _, _ = run(Plan(("sold_quantity",), ("channel",), SEPT), price_answer)
     assert not any("fiyat farkı" in n for n in engine.notes), "adet cevabında not yok"
+
+
+def test_a_name_with_a_turkish_suffix_is_found_by_its_stem_and_an_unknown_name_is_not_zero():
+    from semantic_bridge.finance_query.executor import name_stems
+    assert name_stems("kitapyurduna")[0] == "kitapyurdun" and "kitapyurdu" in name_stems("kitapyurduna")
+    assert name_stems("D&R'dan")[0] == "D&R"
+
+    def master(sql):
+        if "] m WHERE" in sql:
+            return [{"n": 1 if "%kitapyurdu%" in sql else 0}]
+        return [{"invoice_amount": 5}]
+    engine, rows, sql = run(Plan(("invoice_amount",), (), SEPT, filters=(("customer", "eq", "kitapyurduna"),)), master)
+    main = next(s for s in sql if "AS [invoice_amount]" in s)
+    assert "LIKE N'%kitapyurdu%'" in main and any("«kitapyurdu» içeren ad olarak arandı" in n for n in engine.notes)
+    with pytest.raises(ContractError, match="bulunamadı"):
+        run(Plan(("invoice_amount",), (), SEPT, filters=(("customer", "eq", "olmayanfirma"),)), lambda sql: [{"n": 0}])
