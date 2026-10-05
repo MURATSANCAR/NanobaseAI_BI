@@ -108,6 +108,27 @@ def compile_relational_query(plan, active=None):
     if order: sql+=" ORDER BY "+",".join(order)
     return sql, list(types), numeric
 
+def _resolve_text_filter(executor, aliases, predicate, active, notes):
+    """Metin eşitliği kayıttaki adla birebir tutmuyorsa («9» ↔ «9 Yaş», «istanbul'daki» ↔ «İSTANBUL») tam kelime olarak
+    aranır, sonra Türkçe eki atılmış kökle; hiçbir kayıt yoksa «0» yerine «bulunamadı». Bulunan adlar IN süzgecine yazılır."""
+    from .executor import name_stems
+    if predicate["op"]!="eq": return predicate
+    entity=ENTITY_REGISTRY[aliases[predicate["field"]["alias"]]];spec=entity["fields"][predicate["field"]["field"]]
+    if spec["type"]!="text": return predicate
+    value=predicate["values"][0]["value"];col="r."+_identifier(spec["column"])
+    def names(where):
+        rows=executor.read("SELECT DISTINCT TOP (20) "+col+" AS v FROM "+_table(entity)+" AS r WHERE ("+active(entity,"r")+") AND "+where,source="crm")
+        return [r["v"] for r in rows if r.get("v") is not None]
+    if names(col+"="+_text(value)): return predicate
+    for cand in [value,*name_stems(value)]:
+        esc=cand.replace("~","~~").replace("%","~%").replace("_","~_").replace("[","~[")
+        found=names("("+" OR ".join(col+" LIKE "+_text(p)+" ESCAPE N'~'" for p in (esc+" %","% "+esc,"% "+esc+" %",esc))+")")
+        if found:
+            notes.append("«"+value+"» CRM'de "+", ".join("«"+str(n).strip()+"»" for n in found[:5])+(" …" if len(found)>5 else "")+" olarak bulundu.")
+            return {**predicate,"op":"in","values":[{"type":"text","value":str(n)} for n in found]}
+    raise ContractError("«"+value+"» CRM'de "+(spec.get("label_tr") or "bu alan")+" olarak bulunamadı; adı kontrol edip yeniden sorun.",code="NEEDS_CLARIFICATION")
+
+
 def execute_relational_query(executor, plan):
     plan=validate_relational_query(plan,"",date.today())
     aliases=alias_entities(plan)
@@ -145,6 +166,8 @@ def execute_relational_query(executor, plan):
         check+=" GROUP BY r."+pk+" HAVING COUNT_BIG(*)>1 OR r."+pk+" IS NULL"
         if executor.read(check,source="crm"):
             raise ContractError("CRM anahtar tekilliği bozulmuş; çoğaltan ilişki yürütülmedi.",code="SOURCE_CONTRACT_VIOLATION")
+    resolved_notes=[]
+    plan={**plan,"filters":[_resolve_text_filter(executor,aliases,predicate,active,resolved_notes) for predicate in plan["filters"]]}
     sql,fields,numeric=compile_relational_query(plan,active)
     rows=executor.read(sql,source="crm")
     if len(rows)>MAX_RESULT_ROWS:
@@ -156,5 +179,6 @@ def execute_relational_query(executor, plan):
     records=[{k:scalar(v) for k,v in row.items()} for row in rows]
     # Teknik kurallar (aktif kayıt, ilişki yönü, tarih sınırı) tanımda; son kullanıcıya tek, anlaşılır not.
     notes=["CRM'deki güncel aktif kayıtlardan hesaplandı; pasif kayıtlar dahil değildir."]
+    notes.extend(resolved_notes)
     if plan["limit"] is not None: notes.append("Kullanıcı planındaki sonuç sınırı: "+str(plan["limit"])+"; teknik kesilme değil.")
     return {"records":records,"output_fields":fields,"numeric_fields":numeric,"notes":notes,"gaps":[]}
