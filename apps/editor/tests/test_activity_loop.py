@@ -23,6 +23,23 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import pytest  # noqa: E402
+import types  # noqa: E402
+
+
+class _Stub(types.ModuleType):
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        sub = _Stub(f"{self.__name__}.{name}")
+        sys.modules[sub.__name__] = sub
+        return sub
+
+
+# Öteki test dosyaları gibi: gerçek veritabanı sürücüsü yüklenmez. Bu dosya alfabede ilk sırada; gerçek psycopg'yi
+# o yüklerse sonraki dosyaların DB'ye dokunan testleri (ör. test_loop_and_rebuild_queue) sahte sürücüde hemen
+# düşmek yerine DB'siz ortamda 300 sn havuz bekler ve tam set saatlerce sürer.
+for _mod in ("psycopg", "psycopg.rows", "psycopg.types", "psycopg.types.json", "psycopg_pool"):
+    sys.modules.setdefault(_mod, _Stub(_mod))
 
 pytest.importorskip("temporalio")
 

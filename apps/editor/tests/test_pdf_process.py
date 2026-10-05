@@ -17,6 +17,21 @@ import time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 import pytest  # noqa: E402
+import types  # noqa: E402
+
+
+class _Stub(types.ModuleType):
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        sub = _Stub(f"{self.__name__}.{name}")
+        sys.modules[sub.__name__] = sub
+        return sub
+
+
+# öteki test dosyaları gibi gerçek veritabanı sürücüsü yüklenmez (DB'siz ortamda havuz beklemesin)
+for _mod in ("psycopg", "psycopg.rows", "psycopg.types", "psycopg.types.json", "psycopg_pool"):
+    sys.modules.setdefault(_mod, _Stub(_mod))
 
 pymupdf = pytest.importorskip("pymupdf")
 pytest.importorskip("numpy")
