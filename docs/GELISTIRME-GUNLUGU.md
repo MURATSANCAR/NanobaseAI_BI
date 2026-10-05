@@ -41,6 +41,12 @@
 - Kullanıcı kuralı: Timaş SEO/GEO için yeni alanlar açtı; CRM'in mevcut kolonlarında güncelleme olmayacak. `crm_write.update_sql` artık `ModifiedOn`'u da güncellemiyor; yalnız `new_seobaslik`, `new_seoaciklama`, `new_kapakalt`, `new_seodurum`, `new_seoguncelleme`. Not: aktarım uygulaması değişikliği `ModifiedOn` ile izliyorsa yeni alan değişikliğini görmeyebilir; eşlemeyi kuran taraf `new_seoguncelleme`'ye bakmalı.
 - Müşteri VM'inde (10-04) ilk 5 yazma «UPDATE permission was denied (229)»: `zekiai` hesabının `new_kitapBase`'de UPDATE izni yok, 5 yeni alanın kolon izinleri de 0. Kip «deneme»ye döndü; CRM'de değişiklik yok. BT'den: `GRANT UPDATE (new_seobaslik, new_seoaciklama, new_kapakalt, new_seodurum, new_seoguncelleme) ON dbo.new_kitapBase TO zekiai`.
 - VM toplu onay/deneme koşusu (4.210 öneri) sürerken TİMAŞ VPN düştü; sonuç VPN açılınca okunacak.
+## 2026-10-05 — «Bekleyen ürün» tanımı: durumu Bekleyen olanlar (kullanıcı kararı)
+
+- **Neden:** «CRM'deki bekleyen ürün kayıt sayısı» model tarafından bazen bütün kayıtlar (699.483), bazen durumu Bekleyen olanlar (21.715) okunuyordu. Kullanıcı kararı: varsayılan durum = Bekleyen; siparişe eklenen (54.970) ve iptal edilen (622.798) yalnız açıkça istenirse.
+- **Ne:** `pending_item` anlam notu (`relational_process.py` + üretici `scripts/crm-process/build_process_registry.py` NOTES, aynı metin; üretici yeniden koşturulmadı çünkü sözlüğün ölçümlerini de tazelerdi).
+- **Sınama (yan köprü 8812, 4 soru × 3, gerçek CRM .28):** 12/12 tutarlı — üç «bekleyen ürün» sorusu 21.715 (statuscode 1), «iptal edilenler ve siparişe eklenenler dahil bütün kayıtlar» 699.483; bölümlü soruda da 21.715. Referans (doğrudan SQL, etkin kayıt): Bekleyen 21.715, Siparişe Eklendi 54.970, İptal 622.798.
+
 ## 2026-10-05 — Bölümlü finans soruları ve düşünme bütçesi
 
 - **Belirti:** Logo + CRM'i birlikte soran bölümlü sorular çoğunlukla PLAN_INVALID (4 soru × 3, main 1–2/12 başarılı); düşünmeli ilk plan denemelerinin yarıdan fazlası boşa gidiyordu (önceki koşulardaki 179 denemenin 49'u 8.192 jetonu düşünceye harcayıp JSON'suz kesildi, ort. 68 sn; 48'i 90 sn süre sınırına takıldı; her birinin ardından düşünmesiz tam deneme).
