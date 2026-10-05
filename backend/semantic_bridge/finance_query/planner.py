@@ -561,9 +561,13 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
         period_notes.append(f"Soruda dönem belirtilmediği için {today.year} yılbaşından bugüne "
                             f"(01.01.{today.year}–{today:%d.%m.%Y}) hesaplandı.")
     if not family.startswith("crm_"):
-        for start, _ in periods:
+        for start, end in periods:
             if date.fromisoformat(start) > today:
                 period_notes.append(f"{date.fromisoformat(start):%d.%m.%Y} ile başlayan dönem henüz gelmedi; bu dönemde hareket olmaması beklenir.")
+            elif date.fromisoformat(end) > today + timedelta(days=1) and not period_notes:
+                # «Bu ay», «bu yıl», «bu çeyrek» bitmeden sorulur; rakam ayın tamamı sanılmasın.
+                period_notes.append(f"Dönem sürüyor: {date.fromisoformat(start):%d.%m.%Y}–{today:%d.%m.%Y} (bugün dahil) arasındaki "
+                                    "kayıtlar hesaplandı; dönem tamamlanmadı.")
     if family.startswith("crm_") and (periods or dims):
         raise ContractError("CRM kayıt sayımı güncel aktif kayıtları kapsar; tarihli veya kırılımlı sayım ayrıca tanımlanmalıdır.")
     if families & {"invoice", "collection"} and set(dims) & {"book", "author", "publisher", "subbrand", "author_group"}:

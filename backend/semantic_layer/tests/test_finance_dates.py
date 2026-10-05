@@ -144,3 +144,14 @@ def test_default_period_is_not_marked_as_parsed_from_the_question():
     build("Net satış tutarı nedir?", spy, _data=_plan_data())
     assert spy.review["plan"]["tarih_kaynağı"] is None
     assert isinstance(spy.review["plan"]["uygulanan_tarih_aralıkları"], list)
+
+
+def test_an_ongoing_period_says_how_far_its_data_reaches():
+    from datetime import date
+    from semantic_bridge.finance_query.planner import build
+    plan = build("Ekim 2026 net satış tutarı nedir?", _ReviewSpy(), _data=_plan_data())
+    today = date.today()
+    if date(2026, 10, 1) <= today < date(2026, 10, 31):
+        assert any(n.startswith("Dönem sürüyor: 01.10.2026") for n in plan.notes)
+    else:
+        assert not any(n.startswith("Dönem sürüyor") for n in plan.notes)
