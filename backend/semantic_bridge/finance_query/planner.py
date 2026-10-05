@@ -803,24 +803,10 @@ def _build(question, llm, previous=None, trace=None, *, _data=None, _depth=0, _s
                                                 "sharedPeriodContext": {"originalQuestion":source_question,"inheritedPeriods":periods} if inherited_period else None}, ensure_ascii=False)}], 1400, REVIEW_SCHEMA, "finance_review", trace)
     if trace is not None:
         trace.append({"stage": "review", "output": review})
-    if rule_parsed and review.get("ok") is not True and review.get("missing"):
-        # Dönem kurallı ayrıştırıcıdan gelir ve denetim dışıdır; denetçi aralığı görmediği için «tarih aralığı eksik» diyebilir.
-        kept = [m for m in review["missing"] if not _period_objection(m)]
-        if not kept and trace is not None:
-            trace.append({"stage": "review_period_objection_ignored", "missing": review["missing"]})
-        review = {**review, "ok": not kept, "missing": kept}
     if review.get("ok") is not True or review.get("missing"):
         raise unmet_error("Sorunun bütün koşulları plana taşınamadı: ", review.get("missing") or ["ölçü/kırılım uyumu"])
     return Plan(metrics, dims, periods, tuple(filters), kind, limit, order, data.get("descending", True), derived, having, comparison, analytics=analytics, notes=tuple(period_notes))
 
-
-_MONTHS = "ocak|şubat|subat|mart|nisan|mayıs|mayis|haziran|temmuz|ağustos|agustos|eylül|eylul|ekim|kasım|kasim|aralık|aralik"
-
-
-def _period_objection(text):
-    """Denetçinin itirazı yalnız tarih aralığı hakkında mı (dönem kelimesi + tarih/ay/yıl)?"""
-    t = str(text or "").lower()
-    return bool(re.search(r"tarih|dönem|aralı", t) and re.search(r"\d{4}|" + _MONTHS + r"|\byıl|çeyrek|hafta|gün", t))
 
 
 def align_ongoing_comparison(periods, comparison, today):

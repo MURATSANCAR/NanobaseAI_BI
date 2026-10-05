@@ -163,7 +163,7 @@ def dates(question, today):
             if free(m):
                 d = date(today.year, MONTHS[m[2]], int(m[1])); add(*m.span(), d, d + timedelta(days=1))
         # Relative year belongs to the named month, not an additional whole-year period.
-        month_suffix = r"(?:'?(?:da|de|ta|te|un|in|unda|inde))?"
+        month_suffix = r"(?:'?\w*)"   # her çekim eki: eylülde, eylülle, eylülü, eylülün, eylülüyle
         for m in re.finditer(r"\b(bu|gecen|onceki|1 onceki)\s+(?:yil\w*|sene\w*)\s+(" + month_names + r")" + month_suffix + r"\b", q):
             if free(m):
                 year = today.year - int(m[1] != "bu")

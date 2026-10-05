@@ -173,9 +173,11 @@ def test_comparing_a_finished_month_with_the_running_one_uses_the_same_days():
     assert periods == (("2025-01-01", "2025-10-06"), ("2026-01-01", "2026-10-06"))
 
 
-def test_a_reviewer_objection_about_rule_parsed_dates_does_not_block_the_plan():
-    from semantic_bridge.finance_query.planner import _period_objection
-    assert _period_objection("Eylül ayına özel tarih aralığı (2025-09-01 - 2025-10-01 ve 2026-09-01 - 2026-10-01)")
-    assert _period_objection("Son çeyrek dönemi yerine yılbaşından bugüne kullanılmış")
-    assert not _period_objection("İade faturaları hariç tutulmamış")
-    assert not _period_objection("Kanal kırılımı eksik")
+
+@pytest.mark.parametrize("q", ["geçen yıl eylülle bu yıl eylülü karşılaştır satış olarak",
+                               "bu yıl eylülü geçen yıl eylülüyle kıyasla", "geçen sene eylülde ve bu sene eylülde satış"])
+def test_a_relative_year_with_any_suffix_on_the_month_is_that_month(q):
+    from datetime import date
+    from semantic_bridge.finance_query.language import dates
+    periods, _ = dates(q, date(2026, 10, 5))
+    assert sorted(periods) == [("2025-09-01", "2025-10-01"), ("2026-09-01", "2026-10-01")]
