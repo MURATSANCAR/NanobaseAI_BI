@@ -1244,6 +1244,7 @@ def build_report(data, question, llm, periods, today, trace, source_question=Non
             if (branch == "logo_report" and mode in PERIOD_REPORTS and not raw.get("start") and not raw.get("end") and not periods):
                 # Dönem yazılmamış: diğer sorulardaki gibi yılbaşından bugüne («en çok borcu olan müşteriler» = bugünkü bakiye).
                 raw["start"], raw["end"] = str(date(today.year, 1, 1)), str(today + timedelta(days=1))
+                periods = ((raw["start"], raw["end"]),)       # sonraki «dönem uyuşuyor mu» denetimi bu dönemi görür
                 report_notes.append(f"Soruda dönem belirtilmediği için {today.year} yılbaşından bugüne "
                                     f"(01.01.{today.year}–{today:%d.%m.%Y}) hesaplandı.")
             if raw.get("as_of") is None:
