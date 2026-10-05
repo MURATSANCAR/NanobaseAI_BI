@@ -1,5 +1,6 @@
 """Closed output shapes supplied to the model server, not just described in a prompt."""
 from .contracts import METRICS, DIMENSIONS, CODED_DIMENSIONS
+from .crm_book_scope import VALUE_IDS as CRM_VALUE_IDS
 
 
 def obj(properties):
@@ -21,8 +22,8 @@ PLAN_SCHEMA = obj({
     "derived": {"type": "array", "maxItems": 8, "items": obj({
         "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
         "op": {"type": "string", "enum": ["ratio", "difference", "percent_change"]},
-        "left": {"type": "string", "enum": list(METRICS)},
-        "right": {"type": "string", "enum": list(METRICS)},
+        "left": {"type": "string", "enum": [*METRICS, *CRM_VALUE_IDS]},
+        "right": {"type": "string", "enum": [*METRICS, *CRM_VALUE_IDS]},
         "scale": {"type": "number", "enum": [1, 100]},
     })},
     "having": {"type": "array", "maxItems": 8, "items": obj({
@@ -61,6 +62,8 @@ ANALYTIC_SCHEMA = obj({
 })
 for field, schema in {
     "relational_query": {"anyOf": [{"type": "null"}, RELATIONAL_SCHEMA]},
+    # CRM kitap kümesi × Logo satışı (crm_book_scope); yalnız ölçülü planda dolu olabilir.
+    "crm_books": {"anyOf": [{"type": "null"}, RELATIONAL_SCHEMA]},
     "logo_report": {"anyOf": [{"type": "null"}, LOGO_REPORT_SCHEMA]},
     "crm_report": {"anyOf": [{"type": "null"}, CRM_REPORT_SCHEMA]},
     "analytics": {"type": "array", "maxItems": 3, "items": ANALYTIC_SCHEMA},
@@ -136,11 +139,11 @@ def _leaf_variants(base):
         alternatives.append(_closed_variant(base, {
             **{key:_EMPTY_ARRAY for key in _EXECUTION_ARRAYS},
             **{key:{"type":"object"} if key == selected else _NULL for key in _SOURCE_BRANCHES},
-            **{key:_NULL for key in ("comparison","limit","order_by")},
+            **{key:_NULL for key in ("comparison","limit","order_by","crm_books")},
         }, late=_LATE))
     alternatives.append(_closed_variant(base, {
         **{key:_EMPTY_ARRAY for key in _EXECUTION_ARRAYS},
-        **{key:_NULL for key in (*_SOURCE_BRANCHES,"comparison","limit","order_by")},
+        **{key:_NULL for key in (*_SOURCE_BRANCHES,"comparison","limit","order_by","crm_books")},
     }, late=_LATE))
     return alternatives
 
@@ -161,7 +164,7 @@ _single_base = _closed_variant(PLAN_SCHEMA,{key:_EMPTY_ARRAY for key in ("sectio
 _root_alternatives = _leaf_variants(_single_base)
 _root_alternatives.append(_closed_variant(PLAN_SCHEMA,{
     **{key:_EMPTY_ARRAY for key in (*_EXECUTION_ARRAYS,"uncovered")},
-    **{key:_NULL for key in (*_SOURCE_BRANCHES,"comparison","limit","order_by")},
+    **{key:_NULL for key in (*_SOURCE_BRANCHES,"comparison","limit","order_by","crm_books")},
     "clarification":{"type":"string","maxLength":0},
     "sections":{"type":"array","minItems":1,"maxItems":4},
     "coverage":{"type":"array","minItems":1,"maxItems":30},

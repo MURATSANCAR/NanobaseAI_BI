@@ -64,6 +64,7 @@ DIMENSIONS = {
     "author": "Aktif CRM kitap kartındaki new_yazartext künye metni; kişi kimliği veya telif sahibi değildir",
     "publisher": "CRM kitap kartının new_yayineviid ilişkisindeki aktif marka/yayınevi",
     "subbrand": "CRM new_yayinciid aktif Marka kimliği ve adı; alternatif new_YayneviAltMarka değildir",
+    "crm_attribute": "crm_books kümesinin stok kodu dışındaki CRM kolonları (yaş grubu, kategori, sınıf…); çok değerli kitabın satışı her değerde ayrı sayılır",
     "author_group": "Aktif Yazar katılım rolüyle bağlı gerçek kişi UUID kümesi; ortak yazarlı kitabın satışı kümede bir kez sayılır, kişilere dağıtılmaz",
     "day": "İşlem günü (satışta fatura tarihi)", "month": "İşlem yılı ve ayı (satışta fatura tarihi)", "year": "İşlem yılı (satışta fatura tarihi)",
     # Logo kodlu alanlar (logo_codes.CODED): kodların anlamı canlı veriyle doğrulandı 2026-10-03.
@@ -79,7 +80,7 @@ DIMENSIONS = {
 # Logo kodlu kırılım ve süzgeçler; hangi kayıt düzeyinde okundukları logo_codes.CODED'da.
 CODED_DIMENSIONS = ("sale_type", "e_document", "einvoice_scenario", "einvoice_type", "einvoice_status", "vat_exemption",
                     "customer_einvoice_user", "customer_legal_form")
-CONTRACT = {"version": "2.6", "metrics": {k: asdict(v) for k, v in METRICS.items()},
+CONTRACT = {"version": "2.7", "metrics": {k: asdict(v) for k, v in METRICS.items()},
             "dimensions": DIMENSIONS,
             "sources": "Tek şirket. SEMANTIC_FIRMS kapsamı ile L_CAPIPERIOD dönemleri; çakışmada tahmin yok.",
             "joins": "Logo ITEMS.CODE -> CRM new_kitapBase.new_stokkodu; aktif anahtar tekilliği zorunlu; alt marka/kişi grubu kırılımında çoğul kodlar eşleştirilmeden NULL ve kapsam açıklamasıyla korunur. LEFT JOIN; ölçüler çoğalmaz. Eşleşmeyen satışlar NULL CRM alanlarıyla korunur ve toplam kontrol edilir.",

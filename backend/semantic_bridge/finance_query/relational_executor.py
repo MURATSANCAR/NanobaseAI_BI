@@ -125,7 +125,8 @@ def _resolve_text_filter(executor, aliases, predicate, active, notes):
         found=names(col+" LIKE "+_text("%"+esc+"%")+" ESCAPE N'~'")
         if found:
             notes.append("«"+value+"» içeren "+(spec.get("label_tr") or "kayıt")+" adları sayıldı: "+", ".join("«"+str(n).strip()+"»" for n in found[:8])+(" …" if len(found)>8 else "")+".")
-        return predicate
+            return predicate
+        raise ContractError("«"+value+"» içeren "+(spec.get("label_tr") or "kayıt")+" CRM'de bulunamadı; adı kontrol edip yeniden sorun.",code="NEEDS_CLARIFICATION")
     if names(col+"="+_text(value)): return predicate
     for cand in [value,*name_stems(value)]:
         esc=cand.replace("~","~~").replace("%","~%").replace("_","~_").replace("[","~[")

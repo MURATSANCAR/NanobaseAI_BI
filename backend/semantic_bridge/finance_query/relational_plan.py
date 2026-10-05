@@ -93,6 +93,20 @@ def _value(value, field_type):
         _invalid("Süzgeç değeri geçerli sonlu sayı/kimlik/tarih değil.")
     return {"type":field_type,"value":text}
 
+def in_numeric_range(value, question):
+    """«7-9 yaş» CRM'de tek tek «7 Yaş», «8 Yaş», «9 Yaş» kayıtlıdır: değer, sorudaki aralığın içinde bir sayı ve
+    sayı dışındaki sözcükleri soruda geçiyorsa sorudan gelmiş sayılır. Aralık dışı ya da sözcüğü sorulmamış değer geçmez."""
+    text = fold(value)
+    number = re.match(r"\s*(\d+)\s*(.*)$", text)
+    if not number:
+        return False
+    n, rest = int(number.group(1)), number.group(2).strip(" .")
+    q = fold(question)
+    if rest and not all(word in q for word in re.findall(r"[a-z]+", rest)):
+        return False
+    return any(int(a) <= n <= int(b) for a, b in re.findall(r"\b(\d+)\s*[-–]\s*(\d+)\b", q))
+
+
 def ROOT_PK(data, aliases):
     return {"alias":"root","field":ENTITY_REGISTRY[aliases["root"]]["primary_key"]}
 
@@ -176,7 +190,7 @@ def validate_relational_query(data, question, reference_date):
         normalized=[_value(v,field["type"]) for v in values]
         if question and field["type"] in {"text","identity"}:
             for value in normalized:
-                if fold(value["value"]) not in fold(question):
+                if fold(value["value"]) not in fold(question) and not in_numeric_range(value["value"], question):
                     _invalid("Süzgeç metni/kimliği özgün kullanıcı sorusunda bulunamadı.")
         if op=="range":
             pair=[Decimal(v["value"]) if field["type"]=="number" else datetime.fromisoformat(v["value"]) for v in normalized]

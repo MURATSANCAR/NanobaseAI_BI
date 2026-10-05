@@ -37,6 +37,15 @@ def refresh_dimension_values(runtime, ttl=3600):
         brands = engine.read("SELECT DISTINCT LTRIM(RTRIM(m.new_name)) AS v FROM [Timas_MSCRM].[dbo].[new_markaBase] m"
                              " WHERE m.new_name IS NOT NULL" + ("" if rule == "1=1" else " AND " + rule), source="crm")
         values["publisher"] = sorted({r["v"] for r in brands if r.get("v")})
+        # CRM sınıflama adları (yaş, sınıf, kategori): «7-9 yaş», «masal» gibi günlük ifade kayıttaki adlara bağlansın.
+        from .relational_contracts import ENTITY_REGISTRY
+        for entity_id, field in (("age_group", "yas"), ("class_category", "sinif"), ("product_category", "ad")):
+            entity = ENTITY_REGISTRY[entity_id]
+            column = entity["fields"][field]["column"]
+            rule = engine.crm_active(entity["table"], "r")
+            rows = engine.read(f"SELECT DISTINCT LTRIM(RTRIM(r.[{column}])) AS v FROM [Timas_MSCRM].[dbo].[{entity['table']}] r"
+                               f" WHERE r.[{column}] IS NOT NULL" + ("" if rule == "1=1" else " AND " + rule), source="crm")
+            values[f"crm:{entity_id}.{field}"] = sorted({r["v"] for r in rows if r.get("v")})
         _planner.DIMENSION_VALUES = values
     except Exception:  # noqa: BLE001 — bilgi amaçlı; soru bunsuz da planlanır
         logging.getLogger(__name__).warning("kırılım değerleri okunamadı", exc_info=True)

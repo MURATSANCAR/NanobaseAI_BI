@@ -392,18 +392,29 @@ class Executor:
             return rows
         enrichment = bool((set(plan.dimensions) | {d for d, _, _ in plan.filters}) & {"author", "publisher", "subbrand", "author_group"})
         books = self.crm_dimension_books(plan) if enrichment else {}
+        from . import crm_book_scope
+        crm_scope = getattr(plan, "crm_books", None)
+        scope_books = crm_book_scope.run(self, crm_scope) if crm_scope else None
+        scope_values = list(crm_scope["values"]) if crm_scope else []
+        if scope_books is not None and any(h.metric in scope_values for h in plan.having):
+            # Kitap başına CRM sayısına konan koşul («yazar sayısı ≥ 2», «hedefi 1000 üstü») kitap seçer: toplamın değil
+            # her kitabın sayısına uygulanır, satış yalnız seçilen kitaplarda toplanır.
+            scope_books = crm_book_scope.select(scope_books, [h for h in plan.having if h.metric in scope_values])
+            plan = replace(plan, having=tuple(h for h in plan.having if h.metric not in scope_values))
+        scope_sold = set()
         answer = []
         period_rows = []
         group_fields = []
         for d in plan.dimensions:
-            group_fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else ["subbrand_id", "subbrand"] if d == "subbrand" else ["author_group_ids", "author_group_names"] if d == "author_group" else [d])
+            group_fields.extend(["book_code", "book_name"] if d == "book" else ["customer_code", "customer_name"] if d == "customer" else ["subbrand_id", "subbrand"] if d == "subbrand" else ["author_group_ids", "author_group_names"] if d == "author_group" else
+                                list(crm_scope["attributes"]) if d == "crm_attribute" else [d])
         returns_probe = self.returns_probe(plan)
         return_counts = []
         for start, end in plan.periods:
             partials = []
             returns = Decimal(0)
             for a, b, firm, period in self.partitions(date.fromisoformat(start), date.fromisoformat(end)):
-                partials.extend(self.aggregate_families(plan, a, b, firm, period, enrichment))
+                partials.extend(self.aggregate_families(plan, a, b, firm, period, enrichment or scope_books is not None))
                 if returns_probe:
                     returns += sum((number(r["return_invoice_count"]) for r in self.aggregate(returns_probe, "invoice", a, b, firm, period, False)), Decimal(0))
             if returns_probe:
@@ -450,14 +461,25 @@ class Executor:
                     self.notes.append(f"{count} satış kırılımında {label} bilgisi bulunamadı; değer tahmin edilmedi.")
             # Enrichment filters explicitly narrow the population, after conservation was checked.
             selected = [r for r in partials if all(self.matches(r.get(d), op, value) for d, op, value in plan.filters if d in ("author", "publisher", "subbrand"))]
+            if scope_books is not None:
+                selected = self.apply_crm_book_scope(selected, scope_books, crm_scope, plan, scope_sold)
             totals = {}
             for r in selected:
                 key = tuple(r.get(d) for d in group_fields)
                 item = totals.setdefault(key, {**dict(zip(group_fields, key)), **{m: Decimal(0) for m in plan.metrics}})
                 for m in plan.metrics:
                     item[m] += number(r[m])
+                if scope_values:
+                    item.setdefault("_books", set()).add(crm_book_scope.key(r.get("book_code")))
             if not totals and not group_fields:
                 totals[()] = {m: Decimal(0) for m in plan.metrics}
+            for item in totals.values():
+                if scope_values:
+                    # Kitap başına CRM sayısı grubun kitaplarında bir kez toplanır; satış satırı sayısı onu çoğaltmaz.
+                    codes = item.pop("_books", set())
+                    for v in scope_values:
+                        found = [scope_books[c]["values"].get(v) for c in codes if c in scope_books]
+                        item[v] = sum((x for x in found if x is not None), Decimal(0)) if any(x is not None for x in found) else None
             rows = operations.derived(list(totals.values()), plan.derived)
             rows = operations.analytics(rows, getattr(plan, "analytics", ()), plan.metrics, group_fields)
             period_rows.append(rows)
@@ -472,7 +494,7 @@ class Executor:
             self.output_fields = [*group_fields, "base_period_start", "base_period_end_exclusive",
                                   "target_period_start", "target_period_end_exclusive", "base_value", "target_value", plan.comparison.id]
         else:
-            self.output_fields = (["period_start", "period_end_exclusive"] if len(plan.periods)>1 else []) + group_fields + list(plan.metrics) + [d.id for d in plan.derived]
+            self.output_fields = (["period_start", "period_end_exclusive"] if len(plan.periods)>1 else []) + group_fields + list(plan.metrics) + scope_values + [d.id for d in plan.derived]
             for spec in getattr(plan, "analytics", ()):
                 self.output_fields += [spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct")] if spec["op"] == "contribution" else ["row_kind"]
         from .logo_codes import CODED
@@ -485,13 +507,39 @@ class Executor:
         if returns_probe:
             self.return_invoice_counts = [{"start": a, "end": b, "returnInvoiceCount": n} for a, b, n in return_counts]
             self.notes.append(return_invoice_note(return_counts, bool(plan.filters) or plan.sale_kind != "all"))
-        self.numeric_fields = {k for k in self.output_fields if k in plan.metrics or k in {d.id for d in plan.derived}}
+        if scope_books is not None:
+            self.notes.append(crm_book_scope.coverage_note(scope_books, scope_sold))
+        self.numeric_fields = {k for k in self.output_fields if k in plan.metrics or k in scope_values or k in {d.id for d in plan.derived}}
         if plan.comparison:
             self.numeric_fields.update(("base_value", "target_value", plan.comparison.id))
         for spec in getattr(plan, "analytics", ()):
             if spec["op"] == "contribution":
                 self.numeric_fields.update(spec["id"]+suffix for suffix in ("_group_total", "_share_pct", "_cumulative_pct"))
         return [{k: float(v) if isinstance(v, Decimal) else v for k, v in r.items()} for r in answer]
+
+    def apply_crm_book_scope(self, rows, scope_books, scope, plan, sold):
+        """Satış satırlarını CRM kümesine indirger; kırılım değerlerine açar; CRM sayısı varken satışsız kitabı 0 ile korur."""
+        from . import crm_book_scope
+        sold.update(k for k in (crm_book_scope.key(r.get("book_code")) for r in rows) if k in scope_books)
+        kept = [r for r in rows if crm_book_scope.key(r.get("book_code")) in scope_books]
+        attributes = scope["attributes"]
+        if attributes and "crm_attribute" in plan.dimensions:
+            spread = []
+            for r in kept:
+                values = sorted(scope_books[crm_book_scope.key(r.get("book_code"))]["attributes"], key=str)
+                spread.extend({**r, **dict(zip(attributes, value))} for value in values)
+            if any(len(b["attributes"]) > 1 for b in scope_books.values()):
+                note = ("Bazı kitaplar CRM'de birden çok değere bağlı; bu kitapların satışı her değerde ayrı sayıldı, "
+                        "değerlerin toplamı genel toplam değildir.")
+                if note not in self.notes:
+                    self.notes.append(note)
+            kept = spread
+        if scope["values"]:
+            present = {crm_book_scope.key(r.get("book_code")) for r in kept}
+            for k, book in scope_books.items():
+                if k not in present:
+                    kept.append({"book_code": book["code"], "book_name": book["name"], **{m: Decimal(0) for m in plan.metrics}})
+        return kept
 
     def report_result(self, result):
         if isinstance(result, list):

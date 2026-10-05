@@ -88,10 +88,15 @@ def _metadata(plan):
     for key in plan.metrics:
         metric = METRICS[key]
         labels[key] = {"label": metric.label, "unit": metric.unit, "definition": public_definition(key)}
+    from types import SimpleNamespace
+    from .crm_book_scope import column_labels
+    crm_columns = column_labels(getattr(plan, "crm_books", None))
+    labels.update(crm_columns)
+    operand = lambda key: METRICS[key] if key in METRICS else SimpleNamespace(label=crm_columns.get(key, {}).get("label", key), unit=crm_columns.get(key, {}).get("unit", ""))
     for spec in plan.derived:
-        left, right = METRICS[spec.left], METRICS[spec.right]
+        left, right = operand(spec.left), operand(spec.right)
         if spec.op == "difference":
-            label, unit = f"{left.label} − {right.label}", left.unit
+            label, unit = f"{left.label} − {right.label}", left.unit or right.unit
             formula = f"{spec.left}−{spec.right}"
         elif spec.op == "percent_change":
             label, unit = f"{left.label}, {right.label} bazına göre değişim", "%"
