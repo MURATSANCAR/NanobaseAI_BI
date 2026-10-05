@@ -609,7 +609,8 @@ class Executor:
 
     def name_predicate(self, dim, op, value, firm, alias):
         """Ad süzgecini ana kayıtta çözer: soruda geçtiği gibi bulunmazsa eki atılmış kökü dener; hiçbiri yoksa «0» değil
-        «bulunamadı» der. Türkçe büyük/küçük harf ve aksan duyarsız (Turkish_CI_AI)."""
+        «bulunamadı» der. Latin1_General_CI_AI: Logo kodları Türkçe harfsiz yazılı (E-TICARET, KITAPCI, YURTDISI); Türkçe
+        karşılaştırmada «i» ile «I» ayrı harftir ve «e-ticaret» hiçbir kartı bulmaz (2026-10-05 ölçüldü: 0 / 21.402)."""
         key = (dim, op, value, firm, alias)
         cache = self.__dict__.setdefault("_name_cache", {})
         if key in cache:
@@ -619,8 +620,8 @@ class Executor:
         def pred(a, o, v):
             if o == "contains":
                 esc = v.replace("~", "~~").replace("%", "~%").replace("_", "~_").replace("[", "~[")
-                return "(" + " OR ".join(f"{a}.{c} COLLATE Turkish_CI_AI LIKE {literal('%' + esc + '%')} ESCAPE '~'" for c in cols) + ")"
-            return "(" + " OR ".join(f"{a}.{c} COLLATE Turkish_CI_AI={literal(v)}" for c in cols) + ")"
+                return "(" + " OR ".join(f"{a}.{c} COLLATE Latin1_General_CI_AI LIKE {literal('%' + esc + '%')} ESCAPE '~'" for c in cols) + ")"
+            return "(" + " OR ".join(f"{a}.{c} COLLATE Latin1_General_CI_AI={literal(v)}" for c in cols) + ")"
 
         tries = [(op, value)] + ([("contains", value)] if op == "eq" else []) + [("contains", stem) for stem in name_stems(value)]
         for o, v in tries:

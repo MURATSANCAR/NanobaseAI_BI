@@ -97,7 +97,7 @@ def test_breakdown_note_has_one_total_with_the_same_filter_and_sale_kind():
     assert len(rows) == 2
     probe = sql[-1]
     # Filter columns may group the probe; the rows are summed, breakdown columns are not read.
-    assert "c.SPECODE2 COLLATE Turkish_CI_AI=N'KURUM'" in probe and "f.TRCODE IN (8,3)" in probe and "customer_code" not in probe
+    assert "c.SPECODE2 COLLATE Latin1_General_CI_AI=N'KURUM'" in probe and "f.TRCODE IN (8,3)" in probe and "customer_code" not in probe
     assert engine.notes[-1].startswith("Bu dönemde seçilen koşullarla 120 iade faturası var")
 
 
@@ -353,7 +353,7 @@ def price_answer(sql):
 def test_sales_answer_carries_the_separately_invoiced_price_difference():
     engine, rows, sql = run(Plan(("net_sales",), ("channel",), SEPT, filters=(("channel", "eq", "KITAPCI"),)), price_answer)
     note = [s for s in sql if "611%" in s]
-    assert len(note) == 1 and "f.LINETYPE=4" in note[0] and "h.DATE_>='2026-09-01'" in note[0] and "c.SPECODE2 COLLATE Turkish_CI_AI=N'KITAPCI'" in note[0]
+    assert len(note) == 1 and "f.LINETYPE=4" in note[0] and "h.DATE_>='2026-09-01'" in note[0] and "c.SPECODE2 COLLATE Latin1_General_CI_AI=N'KITAPCI'" in note[0]
     assert any("iskonto fiyat farkı 1.234,50 TL" in n for n in engine.notes)
     assert engine.source_periods == [{"start": "2026-09-01", "end": "2026-10-01", "sourceCode": "411", "periodCode": "01"}], \
         "not okuması kapsamı ikinci kez yazmaz"
