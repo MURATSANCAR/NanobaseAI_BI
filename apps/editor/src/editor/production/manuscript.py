@@ -13,6 +13,7 @@ Türkçe sözlükte geçerliyse yapılır.
 
 from __future__ import annotations
 
+import collections
 import re
 from dataclasses import asdict, dataclass, field
 
@@ -453,6 +454,21 @@ def index_pages(by_page: dict[int, str]) -> set[int]:
 _MARK = re.compile(r"\[\[(\d+):(\d+)\]\]")
 
 
+def _cut_after(text: str, head: str, folded: bool = False) -> int:
+    """Metnin, `head` satırının harflerini (katlanmış anahtar) tükettiği konum; metin o satırla başlamıyorsa 0.
+    `folded`: `head` zaten katlanmış anahtardır."""
+    from .print_layout import fold
+    want = head if folded else fold(head)
+    if not want or not fold(text).startswith(want):
+        return 0
+    got = ""
+    for i, ch in enumerate(text):
+        got += fold(ch)
+        if len(got) >= len(want):
+            return i + 1
+    return 0
+
+
 def _apply_layout(paras: list[tuple[int, str]], pages: dict, tables: bool = True) -> tuple[list[tuple], dict]:
     """Okunmuş paragraflar dizgiyle: üst başlık/sayfa no ve dipnot/tablo bölgesindeki paragraf düşer, gönderme
     numarası «[[sayfa:no]]» işareti olur, paragrafa dizgiden tür yazılır, tablo ilk tablo paragrafının yerine girer.
@@ -477,6 +493,8 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict, tables: bool = True
                 last_note = (p, num)
                 notes[last_note] = text
     used: dict[int, set[str]] = {}
+    # sayfa üst başlığı birçok sayfada tekrar eder; tek sayfadaki «baş» satırı (sayfa başında açılan ara başlık) değil
+    repeated = collections.Counter(h for pg in pages.values() for h in pg.heads)
     index = index_pages({p: "\n".join(t for q, t in paras if q == p) for p in {q for q, _ in paras}})
     for p, text in paras:
         if p in index:                                # dizin e-kitaba girmez
@@ -490,6 +508,27 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict, tables: bool = True
         prev = pages.get(p - 1)
         if k in pg.heads or not k:
             continue
+        # okumada sayfa üst başlığı alttaki paragrafla birleşmiş olabilir («OSMANLI’DA … TEMELLERİ DERS KİTAPLARI…»)
+        for h in sorted(pg.heads, key=len, reverse=True):
+            if len(h) >= 8 and k.startswith(h) and len(k) > len(h) and repeated[h] >= 3:
+                cut = _cut_after(text, h, folded=True)
+                if cut:
+                    text, k = text[cut:].strip(), fold(text[cut:])
+                break
+        # okumada sayfanın son paragrafı o sayfanın dipnotlarıyla birleşmiş olabilir («… sorunu. 2 Fredde Lokkegaard…»):
+        # notlar sayfanın notlarından zaten alınır, paragraf ilk notun başladığı yerde kesilir
+        if pg.notes and pg.notes[0][1]:
+            nk = fold(pg.notes[0][1])[:30]
+            at = k.find(nk) if len(nk) >= 20 else -1
+            if at > 0 and k[at:] and k[at:][:200] in pg.note_key + fold(" ".join(t for _, t in pg.notes[1:])):
+                cut = _cut_after(text, k[:at], folded=True)
+                while cut and cut < len(text) and text[cut] in ".,;:!?…”\"’')]»":
+                    cut += 1                              # cümle sonu noktalaması paragrafta kalır
+                if cut:
+                    body = text[:cut].rstrip()
+                    if pg.notes[0][0]:
+                        body = re.sub(rf"\s*{pg.notes[0][0]}\s*$", "", body)
+                    text, k = body, fold(body)
         probe = k[: min(40, len(k))]
         if len(k) >= 6 and (probe in pg.note_key or (prev is not None and probe in prev.note_key)) \
                 and probe not in pg.body_key:
@@ -511,7 +550,20 @@ def _apply_layout(paras: list[tuple[int, str]], pages: dict, tables: bool = True
                 text = new
                 used[p].add(n)
         lines = para_lines(pg, text)
-        kind, poem = kind_of(lines, pg.left, pg.right, pg.size)
+        font = getattr(pg, "font", "")
+        # Okumada ara başlık altındaki paragrafla birleşmiş olabilir («YUNAN AYAKLANMASI Erken bir tarihte…»): ilk
+        # satırı tek başına alt başlıksa ve ikinci satır değilse başlık ayrı paragraf olur.
+        head = 0
+        while head < min(3, len(lines) - 1) and kind_of(lines[head:head + 1], pg.left, pg.right, pg.size,
+                                                        font)[0] == "subhead":
+            head += 1
+        if head and kind_of(lines[:head], pg.left, pg.right, pg.size, font)[0] == "subhead":
+            cut = _cut_after(text, " ".join(ln.text for ln in lines[:head]))
+            if cut:
+                out.append((p, text[:cut].strip(), "subhead"))
+                ys.append(lines[0].y0)
+                text, lines = text[cut:].strip(), lines[head:]
+        kind, poem = kind_of(lines, pg.left, pg.right, pg.size, font)
         out.append((p, poem if poem and "[[" not in text else text, kind if kind != "para" else None))
         ys.append(lines[0].y0 if lines else None)
     # Gönderme numarası metinde bulunamayan not kaybolmaz: sayfanın son paragrafının sonuna bağlanır.
@@ -612,6 +664,9 @@ def _finish_layout(ms: Manuscript, pages: dict, notes: dict, print_style: bool =
             if b.kind == "poem" and merged and merged[-1].kind == "poem":
                 merged[-1].text += "\n\n" + b.text
                 merged[-1].pages += [p for p in b.pages if p not in merged[-1].pages]
+            elif (b.kind == "subhead" and merged and merged[-1].kind == "subhead" and b.pages[:1] == merged[-1].pages[-1:]
+                  and len(merged[-1].text) + len(b.text) <= 160):
+                merged[-1].text += " " + b.text           # iki satıra bölünmüş ara başlık («… ÖRGÜTLENMESİ:» + «SOSYAL …»)
             else:
                 merged.append(b)
         ch.blocks = merged
