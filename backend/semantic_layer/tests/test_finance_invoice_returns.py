@@ -39,7 +39,8 @@ class Connector:
             tables = re.findall(r"N'([^']+)'", sql)
             rows = [{"TABLE_NAME": t, "COLUMN_NAME": c, "DATA_TYPE": "float"} for t in tables for c in COLUMNS]
         elif "COUNT_BIG(*) AS n FROM dbo.[LG_" in sql and "] m WHERE" in sql:
-            rows = [{"n": 1}]                              # ad süzgecinin ana kayıt denetimi: ad var
+            given = self.answer(sql)                       # ad süzgecinin ana kayıt denetimi: testin cevabı yoksa ad var
+            rows = given if given and "n" in given[0] else [{"n": 1}]
         else:
             self.sql.append(sql)
             rows = self.answer(sql)
