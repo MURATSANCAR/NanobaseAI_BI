@@ -267,17 +267,19 @@ def rewrite_meta(llm: Any, p: dict[str, Any], title: str, lim: dict[str, int], t
     src = rules.text_of(" ".join(str(p.get(k) or "") for k in ("ProductName", "Model", "Brand", "Details", "ShortDescription")))[:3000]
     messages = [{"role": "user", "content": META_PROMPT.format(meta_min=lim["meta_min"], meta_max=lim["meta_max"] - 5,
                                                                title=title, source=src)}]
+    best = None
     for _ in range(tries):
         raw = llm.chat(messages, max_tokens=400, temperature=0.3) or ""
         text = re.sub(r"<think>.*?</think>", "", raw, flags=re.S).strip().strip('"“”')
         text = re.sub(r"\s+", " ", text)
-        got = fit_meta(text, lim["meta_max"], floor=lim["meta_min"] - 30)
-        if got and lim["meta_min"] - 30 <= len(got) <= lim["meta_max"]:
+        got = fit_meta(text, lim["meta_max"], floor=lim["meta_min"])
+        if got and lim["meta_min"] <= len(got) <= lim["meta_max"]:
             return got
+        best = got or best
         messages += [{"role": "assistant", "content": raw},
                      {"role": "user", "content": f"Olmadı: {len(text)} karakter ya da tam cümleyle bitmiyor. "
                                                  f"{lim['meta_min']}–{lim['meta_max'] - 5} karakter, nokta ile biten tam cümle(ler)."}]
-    return None
+    return best
 
 
 def violations(fields: dict[str, str], lim: dict[str, int]) -> list[str]:

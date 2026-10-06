@@ -418,7 +418,26 @@ def test_repair_metas_trims_or_rewrites(env):
             return "Yazar bu kitapta okura sade bir dille önemli bir konuyu anlatıyor ve her yaştan okura hitap eden akıcı bir anlatım sunuyor."
 
     st = w.repair_metas(seo, _Llm(), log_line=lambda s: None)
-    assert st["bozuk"] == 1 and st["yeniden_yazildi"] == 1
+    assert st["bozuk"] == 1 and st["yeniden_yazildi"] == 1 and st["aralik_disi_kaldi"] == 0
     with seo.engine().connect() as c:
         m = _json.loads(c.execute(_sa.select(PROPOSALS.c.fields_json).where(PROPOSALS.c.id == "pr1")).scalar())["SeoDescription"]
-    assert m.endswith(".") and 90 <= len(m) <= 160
+    assert m.endswith(".") and 120 <= len(m) <= 160
+
+
+
+def test_repair_never_leaves_meta_empty_and_rewrites_short(env):
+    seo, db, mp = env
+    seo.conf = lambda k: ""
+    short = "Betül Işıkçeviren'in kaleminden Sahaflar Şeyhi Muzaffer Ozak'ın hayatı, anıları ve sahaflık serüveni."
+    with seo.engine().begin() as c:
+        c.execute(PROPOSALS.update().where(PROPOSALS.c.id == "pr1").values(fields_json=_json.dumps(
+            {"SeoTitle": "Kitap - Yazar | Timaş", "SeoDescription": short})))
+
+    class _Bad:
+        def chat(self, messages, **k):
+            return "Kısa."
+
+    st = w.repair_metas(seo, _Bad(), log_line=lambda s: None)
+    with seo.engine().connect() as c:
+        m = _json.loads(c.execute(_sa.select(PROPOSALS.c.fields_json).where(PROPOSALS.c.id == "pr1")).scalar())["SeoDescription"]
+    assert st["aralik_disi_kaldi"] == 1 and m  # model olmadıysa boş kalmaz, en iyi tam cümle kalır

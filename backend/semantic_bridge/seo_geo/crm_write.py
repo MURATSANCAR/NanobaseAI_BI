@@ -168,40 +168,50 @@ def meta_max() -> int:
 
 
 def repair_metas(seo, llm: Any = None, log_line: Callable[[str], None] = print) -> dict[str, int]:
-    """Onaylı ve bekleyen önerilerde tam cümleyle bitmeyen meta açıklamayı onarır (e-ticaret ekibi 10-06): önce cümle
-    sonundan kısaltma; sığan tam cümle yoksa `llm` ile yalnız açıklama yeniden yazılır. Öneri kaydı güncellenir; CRM'e
-    yazım sonraki `run(write=True)` ile (eski değer saklanır). Onarılamayan açıklama boş bırakılır, yarım kalmaz."""
+    """Bekleyen ve onaylı önerilerde meta açıklama SEO kuralına uymuyorsa onarır: tam cümleyle biter VE 120–160
+    karakter (Yönetim'deki SEO_META_MIN/MAX). Boş bırakılmaz (kullanıcı kararı 10-06: «yazmaktan vazgeçme»):
+    1) mevcut metin uyuyorsa dokunulmaz; 2) cümle sonundan kısaltılmış hâli aralığa giriyorsa o; 3) değilse `llm` ile
+    5 denemeye kadar yeniden yazılır; 4) hepsi olmazsa en iyi tam-cümle hâli (aralık dışı da olsa) kalır, sayılır.
+    Öneri kaydı güncellenir; CRM'e yazım sonraki `run(write=True)` ile (eski değer saklanır)."""
     from semantic_bridge.seo_geo import propose, rules
 
     eng, tenant = seo.engine(), seo.tenant()
     lim = rules.thresholds(seo.conf) if hasattr(seo, "conf") else {"meta_min": 120, "meta_max": meta_max()}
+    lo, hi = lim["meta_min"], lim["meta_max"]
+    ok = lambda x: bool(x) and propose.complete_sentence(x) and lo <= len(x) <= hi  # noqa: E731
     with eng.connect() as c:
         rows = c.execute(sa.select(PROPOSALS.c.id, PROPOSALS.c.fields_json, PRODUCTS.c.data_json)
                          .join(PRODUCTS, sa.and_(PRODUCTS.c.tenant_id == PROPOSALS.c.tenant_id,
                                                  PRODUCTS.c.product_id == PROPOSALS.c.product_id))
                          .where(PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status.in_(["hazir", "onaylandi"]))).all()
-    st = {"bozuk": 0, "kisaltildi": 0, "yeniden_yazildi": 0, "bos_birakildi": 0}
+    st = {"uygun": 0, "bozuk": 0, "kisaltildi": 0, "yeniden_yazildi": 0, "aralik_disi_kaldi": 0}
     for pid, fj, dj in rows:
         f = json.loads(fj or "{}")
         m = _clean(f.get("SeoDescription"))
-        if not m or (propose.complete_sentence(m) and len(m) <= lim["meta_max"]):
+        if ok(m):
+            st["uygun"] += 1
             continue
         st["bozuk"] += 1
-        new = propose.fit_meta(m, lim["meta_max"])
-        if new:
+        new = propose.fit_meta(m, hi) if m else None
+        if ok(new):
             st["kisaltildi"] += 1
-        elif llm is not None:
-            try:
-                new = propose.rewrite_meta(llm, json.loads(dj or "{}"), f.get("SeoTitle") or "", lim)
-            except Exception as e:  # noqa: BLE001
-                log.warning("meta yeniden yazılamadı %s: %s", pid, e)
-            if new:
+        else:
+            got = None
+            if llm is not None:
+                try:
+                    got = propose.rewrite_meta(llm, json.loads(dj or "{}"), f.get("SeoTitle") or "", lim, tries=5)
+                except Exception as e:  # noqa: BLE001
+                    log.warning("meta yeniden yazılamadı %s: %s", pid, e)
+            if ok(got):
+                new = got
                 st["yeniden_yazildi"] += 1
-        if not new:
-            st["bos_birakildi"] += 1
-        f["SeoDescription"] = new or ""
-        with eng.begin() as c:
-            c.execute(PROPOSALS.update().where(PROPOSALS.c.id == pid).values(fields_json=json.dumps(f, ensure_ascii=False)))
+            else:
+                new = got or new or propose.fit_meta(m, hi, floor=1) or m
+                st["aralik_disi_kaldi"] += 1
+        if new and new != m:
+            f["SeoDescription"] = new
+            with eng.begin() as c:
+                c.execute(PROPOSALS.update().where(PROPOSALS.c.id == pid).values(fields_json=json.dumps(f, ensure_ascii=False)))
     log_line(f"meta onarımı: {json.dumps(st, ensure_ascii=False)}")
     return st
 
