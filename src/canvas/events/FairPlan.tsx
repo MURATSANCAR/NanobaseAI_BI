@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { FileSpreadsheet, MapPin, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, MapPin, Upload } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, errText } from '../admin/ui';
 import { MONTHS, evApi, fileToBase64, fmtShort, type PlanFair } from './api';
@@ -99,6 +99,11 @@ export default function FairPlan() {
               e.target.value = '';
               if (f) up.mutate(f);
             }} />
+          <a href={evApi.planTemplateUrl()} download className={`${btnGhost} active:scale-[0.97]`}
+            title="Güncel listeyle dolu şablon: tarihler tarih hücresi, katılımcı açılır listeden. Doldurup «Excel yükle» ile geri yükleyin.">
+            <Download aria-hidden className="h-4 w-4" />
+            Şablonu indir
+          </a>
           <button type="button" className={`${btnGhost} active:scale-[0.97]`} disabled={up.isPending} onClick={() => fileRef.current?.click()}>
             <Upload aria-hidden className="h-4 w-4" />
             {up.isPending ? 'Okunuyor…' : 'Excel yükle'}
@@ -120,7 +125,7 @@ export default function FairPlan() {
         {p && all.length === 0 && (
           <div className="flex flex-col items-start gap-1 rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-[12.5px] text-canvas-muted">
             <FileSpreadsheet aria-hidden className="h-5 w-5 text-canvas-violet" />
-            Henüz fuar takvimi yüklenmedi.{p.canEdit ? ' «Excel yükle» ile FUARLAR.xlsx dosyasını seçin; ay, gün, fuar alanı, düzenleyen ve katılımcı sütunları okunur.' : ''}
+            Henüz fuar takvimi yüklenmedi.{p.canEdit ? ' «Şablonu indir» ile şablonu alın, doldurup «Excel yükle» ile geri yükleyin.' : ''}
           </div>
         )}
 

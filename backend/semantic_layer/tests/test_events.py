@@ -581,3 +581,41 @@ def test_fair_plan_endpoints(client, monkeypatch):
     assert [(i["phase"], i["daysLeft"]) for i in got["items"]] == [("bitti", -2), ("suruyor", 5), ("yaklasan", 95)]
     assert A.rule_for("/api/v1/events/me/fair-plan") == A.OPEN
     assert A.features_for("POST", "/api/v1/events/fair-plan") == ["ozellik:etkinlik.duzenle"]
+
+
+def test_fair_plan_template_round_trip_and_bad_rows():
+    """Şablon güncel listeyle iner, aynen geri yüklenince aynı takvim çıkar; eksik/ters tarihli satır atlanır."""
+    import io
+
+    from openpyxl import load_workbook
+
+    from semantic_bridge import fair_plan as FP
+
+    today = date(2026, 10, 6)
+    src = FP.parse_workbook(_plan_xlsx(), today)
+    data = FP.template({"items": src["items"], "pending": src["pending"]})
+    back = FP.parse_workbook(data, today)
+    keep = ("name", "startsOn", "endsOn", "venue", "organizer", "participant")
+    assert back["sheet"] == "Fuarlar" and back["warnings"] == []
+    assert [{k: i[k] for k in keep} for i in back["items"]] == [{k: i[k] for k in keep} for i in src["items"]]
+    assert back["pending"]["items"] == ["Arnavutköy", "Bursa"]
+    wb = load_workbook(io.BytesIO(data))
+    ws = wb["Fuarlar"]
+    assert [c.value for c in ws[1]] == FP.TEMPLATE_HEAD and ws["B2"].number_format == "DD.MM.YYYY"
+    assert any("TİMAŞ,Bayi" in (dv.formula1 or "") for dv in ws.data_validations.dataValidation)
+    ws.append(["Tarihsiz Fuar", None, None, None, None, "Bayi"])               # tarih yok: satır boş sayılır
+    ws.append(["Ters Fuar", date(2026, 11, 5), date(2026, 11, 1), None, None, "Bayi"])
+    ws.append(["Metin Tarihli", "05.11.2026", "2026-11-08", None, None, "TİMAŞ"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    p = FP.parse_workbook(buf.getvalue(), today)
+    names = [i["name"] for i in p["items"]]
+    assert "Metin Tarihli" in names and "Ters Fuar" not in names and "Tarihsiz Fuar" not in names
+    assert any("Ters Fuar" in w and "önce" in w for w in p["warnings"])
+
+
+def test_fair_plan_template_endpoint(client):
+    c, _svc = client
+    assert A.features_for("GET", "/api/v1/events/fair-plan/template.xlsx") == ["ozellik:etkinlik.duzenle"]
+    r = c.get("/api/v1/events/fair-plan/template.xlsx", headers={"x-user": "a"})
+    assert r.status_code == 200 and r.content[:2] == b"PK" and "sablon" in r.headers["content-disposition"]

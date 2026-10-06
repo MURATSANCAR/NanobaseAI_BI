@@ -421,6 +421,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         engine, tenant, user, _ = ctx(request)
         return plan_out(engine, tenant, user)
 
+    @app.get(f"{P}/fair-plan/template.xlsx")
+    def events_fair_plan_template(request: Request) -> Response:
+        """Doldurulacak şablon (güncel listeyle dolu). Yükleme bunu ve eski dosyayı okur."""
+        engine, tenant, _, _ = ctx(request)
+        data = FP.template(FP.read(engine, tenant, E.today()))
+        return Response(content=data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": "attachment; filename=fuar-takvimi-sablon.xlsx"})
+
     @app.post(f"{P}/fair-plan")
     def events_fair_plan_upload(body: dict[str, Any], request: Request) -> dict[str, Any]:
         """Excel yükleme (`{fileName, dataBase64}`): okunur, eski takvimin yerine geçer."""

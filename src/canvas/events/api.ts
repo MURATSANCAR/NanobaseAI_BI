@@ -365,6 +365,7 @@ export const evApi = {
   clients: () => send<{ items: Array<{ kod: string; ad: string | null; sehir: string | null; pasif: boolean }>; channel: string }>('GET', '/lookup/clients', undefined, 180_000),
   plan: () => send<FairPlan>('GET', '/me/fair-plan'),
   uploadPlan: (b: { fileName: string; dataBase64: string }) => send<FairPlan>('POST', '/fair-plan', b, 180_000),
+  planTemplateUrl: () => `${ENGINE_BASE}${B}/fair-plan/template.xlsx`,
   awards: () => send<{ items: Award[]; statuses: Record<string, string>; today: string; kaynaklar?: Kaynaklar }>('GET', '/awards'),
   createAward: (b: Partial<Award>) => send<{ items: Award[] }>('POST', '/awards', b),
   updateAward: (id: string, b: Partial<Award>) => send<{ items: Award[] }>('PATCH', `/awards/${enc(id)}`, b),

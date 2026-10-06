@@ -1073,6 +1073,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      "ozellik:etkinlik.duzenle"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/events/fairs/[^/]+/tasks(/[^/]+)?$", "ozellik:etkinlik.duzenle"),
     (frozenset({"POST"}), r"^/api/v1/events/fair-plan$", "ozellik:etkinlik.duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/events/fair-plan/template\.xlsx$", "ozellik:etkinlik.duzenle"),   # doldurulacak şablon
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/events/(awards(/[^/]+(/entries)?)?|award-entries/[^/]+)$",
      "ozellik:odul.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/events/fairs/[^/]+/result/export\.pdf$", "ozellik:veri.disa-aktar"),

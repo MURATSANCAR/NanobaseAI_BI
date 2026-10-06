@@ -6,6 +6,10 @@ satırın tarih sütunundan önceki ilk metni addır. Yıl, ilk sütundaki 2026/
 gidince bir artar. Birden çok sayfa varsa en çok fuar ve en çok alan okunan sayfa seçilir. «… netleşmedi» başlıklı hücrenin
 altındaki adlar tarihi belli olmayan fuarlardır.
 
+Portalın şablonu (`template`): «Fuarlar» sayfasında Fuar Adı · Başlangıç · Bitiş (tarih hücresi) · Fuar Alanı ·
+Düzenleyen · Katılımcı (açılır liste), «Tarihi belli değil» sayfasında yalnız ad. Şablon güncel listeyle dolu iner;
+okuyucu hem şablonu hem pazarlamanın eski dosyasını okur.
+
 Kiracı başına tek takvim tutulur; yeni yükleme eskisinin yerine geçer. Fuar kartlarına (FAIRS) dokunmaz; CRM'e ve Logo'ya
 yazılmaz.
 """
@@ -106,6 +110,8 @@ def _year_cell(v: Any) -> Optional[int]:
 
 
 _HEADS = {
+    "start": ("baslangic",),
+    "end": ("bitis",),
     "date": ("fuar tarihi", "tarih"),
     "name": ("fuar adi", "fuar ismi"),
     "days": ("gun sayisi",),
@@ -123,7 +129,31 @@ def _header(row: tuple) -> Optional[dict[str, int]]:
             if c and any(w in c for w in words):
                 found.setdefault(key, i)
                 break
+    if "start" in found and "end" in found:           # şablon: ayrı başlangıç/bitiş tarih sütunu
+        if found.get("date") in (found["start"], found["end"]):
+            found.pop("date")
+        return found
+    found.pop("start", None)
+    found.pop("end", None)
     return found if "date" in found else None
+
+
+_DMY = re.compile(r"^\s*(\d{1,2})[./-](\d{1,2})[./-](\d{4})\s*$")
+
+
+def _cell_date(v: Any) -> Optional[date]:
+    """Tarih hücresi ya da «24.10.2026» / «2026-10-24» metni."""
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    t = str(v or "").strip()
+    try:
+        if m := _DMY.match(t):
+            return date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        return date.fromisoformat(t[:10]) if t else None
+    except ValueError:
+        return None
 
 
 def _parse_sheet(rows: list[tuple], today: date) -> dict[str, Any]:
@@ -131,7 +161,8 @@ def _parse_sheet(rows: list[tuple], today: date) -> dict[str, Any]:
     pending = _pending(rows)
     if cols is None:
         return {"items": [], "fields": 0, "pending": pending, "warnings": []}
-    dc = cols["date"]
+    split = "start" in cols
+    dc = cols["start"] if split else cols["date"]
     year: Optional[int] = None
     last_month: Optional[int] = None
     items: list[dict[str, Any]] = []
@@ -151,9 +182,18 @@ def _parse_sheet(rows: list[tuple], today: date) -> dict[str, Any]:
         if not name:
             warnings.append(f"{n}. satırda tarih var ama fuar adı yok; atlandı.")
             continue
-        y0 = year or today.year
-        rng = parse_range(raw, y0)
-        if rng and year is None and last_month and rng[0].month < last_month:
+        if split:
+            a = _cell_date(raw)
+            b = _cell_date(r[cols["end"]] if cols["end"] < len(r) else None) if a else None
+            if not a or not b or b < a:
+                why = "başlangıç tarihi okunamadı" if not a else "bitiş tarihi okunamadı" if not b else "bitiş başlangıçtan önce"
+                warnings.append(f"{n}. satır «{name}»: {why}; atlandı.")
+                continue
+            rng: Optional[tuple[date, date]] = (a, b)
+        else:
+            y0 = year or today.year
+            rng = parse_range(raw, y0)
+        if not split and rng and year is None and last_month and rng[0].month < last_month:
             y0 += 1                                     # yıl satırı yok: ay geriye gitti → ertesi yıl
             year = y0
             rng = parse_range(raw, y0)
@@ -170,12 +210,12 @@ def _parse_sheet(rows: list[tuple], today: date) -> dict[str, Any]:
             warnings.append(f"«{name}»: dosyada {m.group()} gün yazıyor, tarihe göre {days} gün.")
         items.append({
             "name": name, "startsOn": rng[0].isoformat(), "endsOn": rng[1].isoformat(), "days": days,
-            "dateText": _text(raw) if not isinstance(raw, (date, datetime)) else None,
+            "dateText": _text(raw) if not split and not isinstance(raw, (date, datetime)) else None,
             "venue": get("venue"), "organizer": get("organizer"),
             "participant": pkey if pkey in PARTICIPANTS else (pkey or None),
             "participantLabel": PARTICIPANTS.get(pkey or "", part),
         })
-    fields = sum(1 for k in ("venue", "organizer", "participant", "days") if k in cols)
+    fields = sum(1 for k in ("venue", "organizer", "participant", "days", "start") if k in cols)
     return {"items": items, "fields": fields, "pending": pending, "warnings": warnings}
 
 
@@ -205,6 +245,10 @@ def parse_workbook(data: bytes, today: date) -> dict[str, Any]:
     pending = None
     for name in wb.sheetnames:
         rows = [tuple(r) for r in wb[name].iter_rows(values_only=True)]
+        if any(w in _norm(name) for w in ("belli degil", "netles")):   # şablonun «Tarihi belli değil» sayfası
+            names = [t for r in rows[1:] if r and (t := _text(r[0]))]
+            pending = pending or {"title": name, "items": names}
+            continue
         p = _parse_sheet(rows, today)
         pending = pending or p["pending"]
         if best is None or (len(p["items"]), p["fields"]) > (len(best[1]["items"]), best[1]["fields"]):
@@ -252,3 +296,70 @@ def read(engine: sa.engine.Engine, tenant: str, today: date) -> dict[str, Any]:
     return {"items": items, "pending": json.loads(r.pending_json) if r.pending_json else None,
             "warnings": json.loads(r.warnings_json or "[]"), "fileName": r.file_name, "sheet": r.sheet,
             "uploadedBy": r.uploaded_by, "uploadedAt": at.isoformat(), "today": today.isoformat()}
+
+
+TEMPLATE_HEAD = ["Fuar Adı", "Başlangıç", "Bitiş", "Fuar Alanı", "Düzenleyen", "Katılımcı"]
+PENDING_SHEET = "Tarihi belli değil"
+
+
+def template(plan: dict[str, Any]) -> bytes:
+    """Doldurulacak şablon: güncel listeyle dolu; tarih sütunları tarih hücresi, katılımcı açılır liste."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fuarlar"
+    ws.append(TEMPLATE_HEAD)
+    head_fill = PatternFill("solid", fgColor="5B4BDB")
+    for c in ws[1]:
+        c.font = Font(bold=True, color="FFFFFF")
+        c.fill = head_fill
+        c.alignment = Alignment(vertical="center")
+    for it in plan.get("items") or []:
+        ws.append([it["name"], date.fromisoformat(it["startsOn"]), date.fromisoformat(it["endsOn"]), it.get("venue"),
+                   it.get("organizer"), PARTICIPANTS.get(it.get("participant") or "", it.get("participantLabel"))])
+    last = max(ws.max_row, 2) + 300                    # boş satırlara da biçim ve liste
+    for row in range(2, last + 1):
+        for col in ("B", "C"):
+            ws[f"{col}{row}"].number_format = "DD.MM.YYYY"
+    who = DataValidation(type="list", formula1='"TİMAŞ,Bayi"', allow_blank=True, showErrorMessage=True,
+                         errorTitle="Katılımcı", error="Listeden seçin: TİMAŞ ya da Bayi.")
+    days = DataValidation(type="date", operator="greaterThan", formula1="DATE(2000,1,1)", allow_blank=True,
+                          showErrorMessage=True, errorTitle="Tarih", error="Tarih girin, ör. 24.10.2026.")
+    ws.add_data_validation(who)
+    ws.add_data_validation(days)
+    who.add(f"F2:F{last}")
+    days.add(f"B2:C{last}")
+    for col, w in zip("ABCDEF", (36, 13, 13, 34, 24, 12)):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = "A2"
+
+    pw = wb.create_sheet(PENDING_SHEET)
+    pw.append(["Fuar Adı"])
+    pw["A1"].font = Font(bold=True, color="FFFFFF")
+    pw["A1"].fill = head_fill
+    pw.column_dimensions["A"].width = 40
+    for n in ((plan.get("pending") or {}).get("items") or []):
+        pw.append([n])
+
+    hw = wb.create_sheet("Nasıl doldurulur")
+    hw.column_dimensions["A"].width = 100
+    for line in (
+        "Fuar takvimi şablonu",
+        "",
+        "• «Fuarlar» sayfasında her satır bir fuar. Fuar Adı, Başlangıç ve Bitiş zorunlu.",
+        "• Başlangıç ve Bitiş tarih olarak girilir: 24.10.2026. Bitiş başlangıçtan önce olamaz.",
+        "• Katılımcı listeden seçilir: TİMAŞ (kendi standımız) ya da Bayi.",
+        "• Fuar Alanı ve Düzenleyen isteğe bağlı.",
+        "• Tarihi henüz belli olmayan fuarları «Tarihi belli değil» sayfasına yalnız adıyla yazın.",
+        "• Sütun başlıklarını değiştirmeyin. Satır sırası önemli değil; ekranda tarihe göre dizilir.",
+        "• Yüklenen dosya önceki listenin yerine geçer: listede olmayan fuar ekrandan kalkar.",
+    ):
+        hw.append([line])
+    hw["A1"].font = Font(bold=True, size=13)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
