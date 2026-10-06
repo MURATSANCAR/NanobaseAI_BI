@@ -94,8 +94,9 @@ def audit(p: dict[str, Any], lim: dict[str, int], duplicate_titles: set[str]) ->
     if not title:
         add("title_missing", "SeoTitle alanı boş.")
     else:
-        if not lim["title_min"] <= len(title) <= lim["title_max"]:
-            add("title_length", f"{len(title)} karakter; beklenen {lim['title_min']}–{lim['title_max']}.")
+        core = title.rsplit(" | ", 1)[0].strip() if " | " in title else title  # yayınevi eki sayılmaz (10-06)
+        if not lim["title_min"] <= len(core) <= lim["title_max"]:
+            add("title_length", f"«| Yayınevi» öncesi {len(core)} karakter; beklenen {lim['title_min']}–{lim['title_max']}.")
         if title.lower() in duplicate_titles:
             add("title_duplicate", f"«{title}» başlığı başka ürünlerde de kullanılıyor.")
 

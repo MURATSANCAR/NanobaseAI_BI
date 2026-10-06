@@ -22,7 +22,7 @@ Aşağıdaki kitap ürününün kaydını iyileştir. Kurallar:
   yazar biyografisi, tarih UYDURMA. Emin olmadığın bilgiyi yazma.
 - SeoTitle: {title_min}–{title_max} karakter. Biçim: "Kitap adı - Yazar | Yayınevi". Yazar kayıtta varsa MUTLAKA başlıkta
   olsun (çok yazarlıysa ilk yazar). Yayınevi kayıttaki Brand ile birebir aynı yazılır, kısaltılmaz ("Timaş Çocuk"
-  "Timaş" olmaz); sığmıyorsa "| Yayınevi" kısmı tamamen çıkarılır. Kategori adı başlığa girmez.
+  "Timaş" olmaz); karakter sınırı yalnız "Kitap adı - Yazar" kısmına uygulanır, yayınevi her zaman eklenir. Kategori adı başlığa girmez.
 - SeoDescription: {meta_min}–{meta_max} karakter (sınırı aşma, say), kitabı anlatan tek paragraf; başlığı tekrar etme,
   tırnak ve emoji yok. Yazar adını geçir.
 - SearchKeywords: virgülle ayrılmış 5–10 arama kelimesi (kitap adı, yazar, konu, tür; yazım varyantları).
@@ -140,31 +140,68 @@ def _cut(text: str, limit: int) -> str:
 
 
 def publisher_title(title: str, brand: Optional[str], max_len: int) -> str:
-    """Başlığın «| Yayınevi» kısmı ürünün yayınevi (T-soft Brand) ile birebir aynı olur; kısaltma yok (müşteri
-    bildirimi 2026-10-05: «Timaş Çocuk» kitabında «Timaş» yazıyordu). Sığmazsa yayınevi kısmı çıkar. Sitede yayınevi
-    boşsa başlıkta yayınevi gösterilmez (tahmin edilen yayınevi çoğu kez yanlıştı; kullanıcı kararı 10-05)."""
+    """Başlık «Kitap adı - Yazar | Yayınevi». Yayınevi ürünün yayınevi (T-soft Brand) ile birebir, kısaltmasız ve HER
+    ZAMAN yazılır (e-ticaret ekibi 10-06: «60–65 karakterde marka düşüyordu»); karakter sınırı yalnız «Kitap adı -
+    Yazar» kısmına uygulanır, bütün başlık CRM alanının 100 karakterini aşmaz. Sitede yayınevi boşsa yayınevi
+    gösterilmez (tahmin edilen yayınevi çoğu kez yanlıştı; kullanıcı kararı 10-05)."""
     t, b = (title or "").strip(), re.sub(r"\s+", " ", str(brand or "")).strip()
     if not t:
         return t
-    base = t.rsplit(" | ", 1)[0].strip() if " | " in t else t
+    base = core_title(t)
+    if len(base) > max_len:
+        base = _cut(base, max_len)
     if not b:
         return base
     full = f"{base} | {b}"
-    return full if len(full) <= max_len else base
+    return full if len(full) <= TITLE_HARD_MAX else _cut(base, TITLE_HARD_MAX - len(b) - 3) + f" | {b}"
+
+
+#: CRM SEO başlığı alanının uzunluğu; yayınevi eklenmiş başlık bunu aşmaz.
+TITLE_HARD_MAX = 100
+_SENT_END = re.compile(r"[.!?…][\"'»”’)]*$")
+_SENT_SPLIT = re.compile(r"[.!?…][\"'»”’)]*(?=\s|$)")
+
+
+def core_title(title: str) -> str:
+    """Başlığın «| Yayınevi» öncesi kısmı (uzunluk kuralı buna uygulanır)."""
+    t = (title or "").strip()
+    return t.rsplit(" | ", 1)[0].strip() if " | " in t else t
+
+
+def complete_sentence(text: str) -> bool:
+    """Metin tam cümleyle mi bitiyor (nokta, ünlem, soru, üç nokta; ardından tırnak/parantez olabilir)."""
+    return bool(_SENT_END.search((text or "").strip()))
+
+
+def fit_meta(text: str, max_len: int, floor: int = 70) -> Optional[str]:
+    """Meta açıklama asla yarım cümleyle bitmez (e-ticaret ekibi 10-06: 216 açıklama «…okuyucuya eşsiz bir» diye
+    kesilmişti). Sınıra sığan en uzun tam-cümle öneki döner; tam cümle `floor` karakterden kısa kalırsa ya da hiç
+    yoksa None (açıklama yeniden yazılmalı; kelime ortasından/cümle ortasından kesilmez)."""
+    t = re.sub(r"\s+", " ", (text or "")).strip()
+    if not t:
+        return None
+    if len(t) <= max_len and complete_sentence(t):
+        return t
+    best = None
+    for m in _SENT_SPLIT.finditer(t):
+        if m.end() <= max_len:
+            best = t[:m.end()].strip()
+    return best if best and len(best) >= floor else None
 
 
 def enforce(fields: dict[str, str], lim: dict[str, int], brand: Optional[str] = None) -> dict[str, str]:
-    """Model sayamasa da sınır aşılmaz: başlığın yayınevi kısmı ürünün yayınevine eşitlenir (verildiyse), sığmazsa
-    yayınevi ("| …") düşer, sonra kelime sınırından kesilir; meta açıklama cümle sonundan kısaltılır."""
+    """Model sayamasa da sınır aşılmaz: ürün önerisinde (brand verilir) başlık «Ad - Yazar | Yayınevi» olur, sınır
+    yalnız «Ad - Yazar» kısmına uygulanır; rehber/sayfa önerisinde başlık kelime sınırından kısalır. Meta açıklama
+    yalnız cümle sonundan kısalır; sığan tam cümle yoksa boş bırakılır (yarım cümle hiçbir yere gitmez)."""
     out = dict(fields)
     t = out.get("SeoTitle", "")
     if brand is not None:  # ürün önerisi: yayınevi birebir ya da yok; rehber/sayfa önerileri brand vermez
         t = publisher_title(t, brand, lim["title_max"])
-    if len(t) > lim["title_max"] and " | " in t:
-        t = t.rsplit(" | ", 1)[0].strip()
-    out["SeoTitle"] = _cut(t, lim["title_max"]) if t else t
+    elif len(t) > lim["title_max"]:
+        t = _cut(t, lim["title_max"])
+    out["SeoTitle"] = t
     m = out.get("SeoDescription", "")
-    out["SeoDescription"] = _cut(m, lim["meta_max"]) if m else m
+    out["SeoDescription"] = (fit_meta(m, lim["meta_max"]) or "") if m else m
     return out
 
 
@@ -214,14 +251,46 @@ def unsupported(p: dict[str, Any], fields: dict[str, str]) -> list[str]:
     return found
 
 
+META_PROMPT = """Aşağıdaki kitap ürünü için arama sonucunda görünecek meta açıklamayı yaz.
+- {meta_min}–{meta_max} karakter (sınırı aşma, say). Tek paragraf, bir ya da iki TAM cümle; son cümle nokta ile biter.
+- Kitabı anlat; yazar adını geçir. Başlığı tekrar etme. Tırnak, emoji, HTML yok.
+- YALNIZ aşağıdaki kayıtta yazan bilgiyi kullan; kayıtta olmayan bilgi uydurma.
+Yalnız açıklama metnini döndür, başka hiçbir şey yazma.
+
+Başlık: {title}
+Kayıt:
+{source}"""
+
+
+def rewrite_meta(llm: Any, p: dict[str, Any], title: str, lim: dict[str, int], tries: int = 3) -> Optional[str]:
+    """Yalnız meta açıklamayı yeniden yazdırır; tam cümleyle biten ve sınıra uyan ilk cevap döner, olmazsa None."""
+    src = rules.text_of(" ".join(str(p.get(k) or "") for k in ("ProductName", "Model", "Brand", "Details", "ShortDescription")))[:3000]
+    messages = [{"role": "user", "content": META_PROMPT.format(meta_min=lim["meta_min"], meta_max=lim["meta_max"] - 5,
+                                                               title=title, source=src)}]
+    for _ in range(tries):
+        raw = llm.chat(messages, max_tokens=400, temperature=0.3) or ""
+        text = re.sub(r"<think>.*?</think>", "", raw, flags=re.S).strip().strip('"“”')
+        text = re.sub(r"\s+", " ", text)
+        got = fit_meta(text, lim["meta_max"], floor=lim["meta_min"] - 30)
+        if got and lim["meta_min"] - 30 <= len(got) <= lim["meta_max"]:
+            return got
+        messages += [{"role": "assistant", "content": raw},
+                     {"role": "user", "content": f"Olmadı: {len(text)} karakter ya da tam cümleyle bitmiyor. "
+                                                 f"{lim['meta_min']}–{lim['meta_max'] - 5} karakter, nokta ile biten tam cümle(ler)."}]
+    return None
+
+
 def violations(fields: dict[str, str], lim: dict[str, int]) -> list[str]:
     """Önerinin uzunluk sınırlarına uymayan alanları, modele geri söylenecek biçimde."""
     out = []
     t, m = fields.get("SeoTitle", ""), fields.get("SeoDescription", "")
-    if t and not lim["title_min"] <= len(t) <= lim["title_max"]:
-        out.append(f"SeoTitle {len(t)} karakter, {lim['title_min']}–{lim['title_max']} olmalı")
+    c = core_title(t)
+    if t and not lim["title_min"] <= len(c) <= lim["title_max"]:
+        out.append(f"SeoTitle «| Yayınevi» öncesi {len(c)} karakter, {lim['title_min']}–{lim['title_max']} olmalı")
     if m and not lim["meta_min"] <= len(m) <= lim["meta_max"]:
         out.append(f"SeoDescription {len(m)} karakter, {lim['meta_min']}–{lim['meta_max']} olmalı")
+    if m and not complete_sentence(m):
+        out.append("SeoDescription tam cümleyle bitmiyor; son cümleyi tamamla ya da kısalt, nokta ile bitir")
     if t and m and t.strip().lower() == m.strip().lower():
         out.append("SeoDescription SeoTitle ile aynı olmamalı")
     return out

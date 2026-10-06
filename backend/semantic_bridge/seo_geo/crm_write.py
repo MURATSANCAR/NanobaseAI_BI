@@ -121,7 +121,13 @@ def build(product: dict[str, Any], proposal_fields: dict[str, Any], stamp: datet
         fixed["SeoTitle"] = propose.publisher_title(_clean(fixed["SeoTitle"]), product.get("Brand"), title_max())
     for src, dst in FROM_PROPOSAL.items():
         v = _clean(fixed.get(src))
-        if v:
+        if not v:
+            continue
+        if dst == "new_seoaciklama":  # yarım cümle CRM'e gitmez: cümle sonundan kısalır, olmuyorsa yazılmaz
+            v = propose.fit_meta(v, min(meta_max(), FIELDS[dst])) or ""
+            if v:
+                out[dst] = v
+        else:
             out[dst] = _cut(v, FIELDS[dst])
     alt = alt_text(product.get("ProductName") or product.get("name"), product.get("Model"))
     if alt:
@@ -150,6 +156,54 @@ def title_max() -> int:
         return min(int(admin_mod.conf("SEO_TITLE_MAX") or 65), FIELDS["new_seobaslik"])
     except Exception:  # noqa: BLE001
         return 65
+
+
+def meta_max() -> int:
+    """Meta açıklama üst sınırı: Yönetim'deki SEO_META_MAX (CRM alanı 300'ü aşmaz)."""
+    try:
+        from semantic_bridge import admin as admin_mod
+        return min(int(admin_mod.conf("SEO_META_MAX") or 160), FIELDS["new_seoaciklama"])
+    except Exception:  # noqa: BLE001
+        return 160
+
+
+def repair_metas(seo, llm: Any = None, log_line: Callable[[str], None] = print) -> dict[str, int]:
+    """Onaylı ve bekleyen önerilerde tam cümleyle bitmeyen meta açıklamayı onarır (e-ticaret ekibi 10-06): önce cümle
+    sonundan kısaltma; sığan tam cümle yoksa `llm` ile yalnız açıklama yeniden yazılır. Öneri kaydı güncellenir; CRM'e
+    yazım sonraki `run(write=True)` ile (eski değer saklanır). Onarılamayan açıklama boş bırakılır, yarım kalmaz."""
+    from semantic_bridge.seo_geo import propose, rules
+
+    eng, tenant = seo.engine(), seo.tenant()
+    lim = rules.thresholds(seo.conf) if hasattr(seo, "conf") else {"meta_min": 120, "meta_max": meta_max()}
+    with eng.connect() as c:
+        rows = c.execute(sa.select(PROPOSALS.c.id, PROPOSALS.c.fields_json, PRODUCTS.c.data_json)
+                         .join(PRODUCTS, sa.and_(PRODUCTS.c.tenant_id == PROPOSALS.c.tenant_id,
+                                                 PRODUCTS.c.product_id == PROPOSALS.c.product_id))
+                         .where(PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status.in_(["hazir", "onaylandi"]))).all()
+    st = {"bozuk": 0, "kisaltildi": 0, "yeniden_yazildi": 0, "bos_birakildi": 0}
+    for pid, fj, dj in rows:
+        f = json.loads(fj or "{}")
+        m = _clean(f.get("SeoDescription"))
+        if not m or (propose.complete_sentence(m) and len(m) <= lim["meta_max"]):
+            continue
+        st["bozuk"] += 1
+        new = propose.fit_meta(m, lim["meta_max"])
+        if new:
+            st["kisaltildi"] += 1
+        elif llm is not None:
+            try:
+                new = propose.rewrite_meta(llm, json.loads(dj or "{}"), f.get("SeoTitle") or "", lim)
+            except Exception as e:  # noqa: BLE001
+                log.warning("meta yeniden yazılamadı %s: %s", pid, e)
+            if new:
+                st["yeniden_yazildi"] += 1
+        if not new:
+            st["bos_birakildi"] += 1
+        f["SeoDescription"] = new or ""
+        with eng.begin() as c:
+            c.execute(PROPOSALS.update().where(PROPOSALS.c.id == pid).values(fields_json=json.dumps(f, ensure_ascii=False)))
+    log_line(f"meta onarımı: {json.dumps(st, ensure_ascii=False)}")
+    return st
 
 
 def fix_publisher_titles(seo, log_line: Callable[[str], None] = print) -> dict[str, int]:
@@ -561,6 +615,7 @@ if __name__ == "__main__":
     g.add_argument("--yaz", action="store_true", help="CRM'e yaz (SEO_CRM_WRITE=acik şart)")
     g.add_argument("--sonuc-tazele", action="store_true", help="öneri «Sonuç» metnini yazım kaydından tazele")
     g.add_argument("--yayinevi-duzelt", action="store_true", help="önerilerin başlığındaki yayınevini ürünün yayınevine eşitle")
+    g.add_argument("--meta-onar", action="store_true", help="tam cümleyle bitmeyen meta açıklamaları onar (Zeki AI ile)")
     ap.add_argument("--onayla", action="store_true", help="bekleyen önerileri önce ZEKİ AI adına onayla")
     ap.add_argument("--sinir", type=int, help="bu koşuda en çok kaç kitap")
     a = ap.parse_args()
@@ -570,5 +625,8 @@ if __name__ == "__main__":
         refresh_results(_app.state.seo_geo)
     elif a.yayinevi_duzelt:
         fix_publisher_titles(_app.state.seo_geo)
+    elif a.meta_onar:
+        _seo = _app.state.seo_geo
+        repair_metas(_seo, _seo.runtime().llm_for("seo"))
     else:
         run(_app.state.seo_geo, approve_ready=a.onayla, write=a.yaz, limit=a.sinir)

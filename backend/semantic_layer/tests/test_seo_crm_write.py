@@ -364,9 +364,9 @@ def test_publisher_is_written_exactly_never_shortened():
     t = "Levent Kayseri'de - Mustafa Orakçı | Timaş"
     assert propose.publisher_title(t, "Timaş Çocuk", 65) == "Levent Kayseri'de - Mustafa Orakçı | Timaş Çocuk"
     assert propose.publisher_title("Kitap - Yazar", "Timaş Tarih", 65) == "Kitap - Yazar | Timaş Tarih"
-    # sığmıyorsa yayınevi kısaltılmaz, çıkarılır
+    # yayınevi her zaman eklenir; sınır yalnız «Ad - Yazar» kısmına (e-ticaret ekibi 10-06)
     long = "Bir Dehanın İzleri - II. Abdülhamid Han - Talha Uğurluel | Timaş"
-    assert propose.publisher_title(long, "Timaş Tarih", 65) == "Bir Dehanın İzleri - II. Abdülhamid Han - Talha Uğurluel"
+    assert propose.publisher_title(long, "Timaş Tarih", 65) == "Bir Dehanın İzleri - II. Abdülhamid Han - Talha Uğurluel | Timaş Tarih"
     assert propose.publisher_title(t, "", 65) == "Levent Kayseri'de - Mustafa Orakçı"  # sitede yayınevi boşsa gösterilmez
     f = w.build({"ProductName": "Levent", "Model": "Mustafa Orakçı", "Brand": "Timaş Çocuk"}, {"SeoTitle": t}, STAMP)
     assert f["new_seobaslik"].endswith("| Timaş Çocuk")
@@ -379,3 +379,44 @@ def test_enforce_drops_publisher_when_site_has_none_but_not_for_guides():
     lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
     assert propose.enforce({"SeoTitle": "Kelebeği Yakala - Betül Özlü | Timaş", "SeoDescription": ""}, lim, "")["SeoTitle"] == "Kelebeği Yakala - Betül Özlü"
     assert propose.enforce({"SeoTitle": "Rehber | Timaş", "SeoDescription": ""}, lim)["SeoTitle"] == "Rehber | Timaş"
+
+
+
+# ------------------------------------------------------------------ yarım meta açıklama (e-ticaret ekibi 10-06)
+def test_meta_never_ends_mid_sentence():
+    from semantic_bridge.seo_geo import propose
+    cut = "Eser tasavvufi derinliği ve hitabî tarzıyla okuyucuya eşsiz bir"
+    assert not propose.complete_sentence(cut)
+    two = "Nevzat Tarhan duygusal zekayı Doğu ve Batı bakışıyla ele alıyor. Kendini tanımak isteyenler için kapsamlı bir rehber sunan eser ayrıca"
+    got = propose.fit_meta(two, 160)
+    assert got == "Nevzat Tarhan duygusal zekayı Doğu ve Batı bakışıyla ele alıyor."
+    assert propose.fit_meta("Kısa. Ama sonu yarım kalan çok uzun bir ikinci cümle" * 3, 160) is None  # tam cümle çok kısa
+    assert propose.fit_meta("Tam ve sığan bir cümle, okur için yazılmış bir açıklama metni burada bitiyor.", 160).endswith(".")
+    lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
+    out = propose.enforce({"SeoTitle": "Kitap - Yazar", "SeoDescription": cut + " " * 0}, lim, "Timaş")
+    assert out["SeoDescription"] == "" and out["SeoTitle"] == "Kitap - Yazar | Timaş"
+    assert any("tam cümle" in v for v in propose.violations({"SeoTitle": "Kitap - Yazar | Timaş", "SeoDescription": cut}, lim))
+
+
+def test_crm_build_skips_incomplete_meta_but_writes_title():
+    f = w.build({"ProductName": "Kitap", "Model": "Yazar", "Brand": "Timaş"},
+                {"SeoTitle": "Kitap - Yazar", "SeoDescription": "Eser okuyucuya eşsiz bir"}, STAMP)
+    assert "new_seoaciklama" not in f and f["new_seobaslik"] == "Kitap - Yazar | Timaş" and "new_kapakalt" in f
+
+
+def test_repair_metas_trims_or_rewrites(env):
+    seo, db, mp = env
+    seo.conf = lambda k: ""
+    with seo.engine().begin() as c:
+        c.execute(PROPOSALS.update().where(PROPOSALS.c.id == "pr1").values(fields_json=_json.dumps(
+            {"SeoTitle": "Kitap - Yazar | Timaş", "SeoDescription": "Eser okuyucuya eşsiz bir"})))
+
+    class _Llm:
+        def chat(self, messages, **k):
+            return "Yazar bu kitapta okura sade bir dille önemli bir konuyu anlatıyor ve her yaştan okura hitap eden akıcı bir anlatım sunuyor."
+
+    st = w.repair_metas(seo, _Llm(), log_line=lambda s: None)
+    assert st["bozuk"] == 1 and st["yeniden_yazildi"] == 1
+    with seo.engine().connect() as c:
+        m = _json.loads(c.execute(_sa.select(PROPOSALS.c.fields_json).where(PROPOSALS.c.id == "pr1")).scalar())["SeoDescription"]
+    assert m.endswith(".") and 90 <= len(m) <= 160
