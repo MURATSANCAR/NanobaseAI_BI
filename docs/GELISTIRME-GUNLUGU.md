@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-06 — Dijital baskı: dolaylı gider yayınevine göre, ekrandan düzenlenir (test sunucusunda; VM onay bekliyor)
+
+- **Neden:** dijital Excel'lerde dolaylı gider yayınevine göre değişiyor (Timaş İnanç ve Timaş Tarih %70; Sufi 12.05.2026 dosyalarında %50, 05.10.2026 Aşıkların Halleri'nde %40). Kullanıcı: «öyle yap ama ekranda da güncellenebilsin».
+- **Karar:** Sufi için en yeni dosyanın oranı (%40). Listede olmayan yayınevi genel dijital oran (%40).
+- **Yapılan:** `form_tariff.json` `dijital.dolayliYayinevi` (Sufi 40, Timaş İnanç 70, Timaş Tarih 70); `form_dijital.default_overhead` girdide dolaylı yoksa yayınevinin oranını kullanır; `store._save_dijital` `dolayliYayinevi` alır (boş kutu listeden çıkarır). Kitap hesabında baskı türü ya da yayınevi değişince kutu, elle değiştirilmediyse yeni varsayılana geçer. Veri ve varsayımlar → Dijital baskı fiyatları: «Yayınevine göre iskonto ve dolaylı gider» tablosu (boş kutuda genel oran yer tutucu).
+- **Doğrulama (test sunucusu, `0bfadfefe`):** pytest 27/27 (+1), `tsc -b` temiz, vitest 4/4; dijital kabul 28/29 (bilinen 13,5X21), ofset 37/37. Sunucu dosyaları kurulumdan önce eski main ile md5 aynı; köprü 70 sn'de hazır; yayın `index-D_RGuEZT.js`, `._*` 0. Görünmez tarayıcı: ofset 90 → dijital 40 → Timaş İnanç 70 → Sufi 40; elle 55 yazınca yayınevi/baskı türü değişiminde 55 kaldı; konsol hatası 0; tablo ekran görüntüsüyle görüldü. Test oturumu silindi.
+
 ## 2026-10-06 — Kitap hesabı: dijital baskı (TBK dijital Excel'i) — test sunucusunda ve müşteri VM'inde
 
 - **Neden:** kullanıcı «kitap fiyat tahmini ekranında cevapsız kalan sorular» için Sufi Kitap'ın «AŞIKLARIN HALLERİ-TBK DİJİTAL-05102026.xlsx» dosyasını verdi. Dosya 37 ofset formundan farklı bir şablon: 200 adetlik dijital baskı; Kitap hesabı bunu hesaplayamıyordu (yalnız ofset: kâğıt + kalıp + cilt).
