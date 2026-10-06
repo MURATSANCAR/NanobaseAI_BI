@@ -159,3 +159,17 @@ def test_access_rules_cover_pricing():
     keys = A.all_keys()
     for role in S.APPROVERS:
         assert S.approve_key(role) in keys
+
+
+def test_backlist_prices(engine):
+    with pytest.raises(S.PricingError, match="Yazılacak"):
+        S.set_backlist_prices(engine, T, "u", [])
+    with pytest.raises(S.PricingError, match="Yeni fiyat"):
+        S.set_backlist_prices(engine, T, "u", [{"code": "15201.01.1", "price": 0}])
+    assert S.set_backlist_prices(engine, T, "u", [{"code": "15201.01.1", "price": "250"},
+                                                 {"code": "15201.01.2", "price": 300.456}]) == {"written": 2, "removed": 0}
+    got = S.backlist_prices(engine, T)
+    assert got["15201.01.1"]["price"] == 250 and got["15201.01.2"]["price"] == 300.46 and got["15201.01.1"]["by"] == "u"
+    assert S.set_backlist_prices(engine, T, "v", [{"code": "15201.01.1", "price": None}]) == {"written": 0, "removed": 1}
+    assert set(S.backlist_prices(engine, T)) == {"15201.01.2"} and S.backlist_prices(engine, "baska") == {}
+    assert A.features_for("PUT", "/api/v1/pricing/backlist-prices") == ["ozellik:fiyatlama.yaz"]

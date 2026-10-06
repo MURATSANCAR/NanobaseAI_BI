@@ -1188,7 +1188,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # Fiyatlama (M9): analiz, pazar fiyatı, varsayılan ve toplu zam teklifi yazımı. Hesap (`calc`) ve okuma sayfayla
     # gelir; onay imzaları açıkça verilen `fiyatlama.onay-<rol>` ile ucun içinde denetlenir.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
-     r"^/api/v1/pricing/(analyses(/[^/]+(/(submit|withdraw|archive))?)?|market(/[^/]+)?|defaults|proposals|refresh)$",
+     r"^/api/v1/pricing/(analyses(/[^/]+(/(submit|withdraw|archive))?)?|market(/[^/]+)?|defaults|proposals|refresh|backlist-prices)$",
      "ozellik:fiyatlama.yaz"),
     # M1 başvuru: kayıt, dosya, editör raporu ve kararı, kurul raporu, yazışma. Kurul üyesinin oyu sayfa yetkisi +
     # oturum üyeliğiyle olur; oturum yönetimi açıkça verilen `yayin-kurulu.yonet` ile ucun içinde denetlenir.

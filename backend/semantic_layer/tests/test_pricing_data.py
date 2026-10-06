@@ -42,21 +42,41 @@ def _fake_run(copies=(("211", "2021-01-02", "2025-12-31", 500000), ("411", "2026
                     {"kod": "15001.230.070100.BR", "ad": "70X100  BRİSTOL 230 GR KAĞIT", "miktar": 100, "tutar": 3000, "satir": 1, "son": "2026-07-01"},
                     {"kod": "15001.000.000001.BD", "ad": "BANDROL", "miktar": 10000, "tutar": 3000, "satir": 1, "son": "2026-07-01"}]
         if "StringMap" in sql:
-            return [{"varlik": "new_uretim", "alan": "new_ciltlemesekli", "deger": 1, "ad": "Amerikan Cilt"},
+            return [{"varlik": "new_Uretim", "alan": "new_ciltlemesekli", "deger": 1, "ad": "Amerikan Cilt"},
                     {"varlik": "new_sozlesme", "alan": "new_teliftipi", "deger": 2, "ad": "Satıştan Ödeme"},
                     {"varlik": "new_sozlesme", "alan": "new_telifturu", "deger": 1, "ad": "Brüt"}]
+        if "ROUND(S.PRICE, 2)" in sql:     # logo_fiyat: kitap × ay × fiyat satır sayısı
+            if "LG_411" in sql:
+                return [{"kod": "15201.01.1", "ay": 202601, "fiyat": 180, "satir": 5, "ilk": "2026-01-05"},
+                        {"kod": "15201.01.1", "ay": 202603, "fiyat": 200, "satir": 9, "ilk": "2026-03-10"},
+                        {"kod": "15201.01.1", "ay": 202603, "fiyat": 180, "satir": 2, "ilk": "2026-03-01"},
+                        # Müşteriye özel indirimli fiyat ayın çoğunluğu olsa da liste fiyatı (200) değişmez.
+                        {"kod": "15201.01.1", "ay": 202605, "fiyat": 140, "satir": 15, "ilk": "2026-05-02"},
+                        {"kod": "15201.01.1", "ay": 202605, "fiyat": 200, "satir": 13, "ilk": "2026-05-01"},
+                        {"kod": "15201.01.1", "ay": 202607, "fiyat": 200, "satir": 4, "ilk": "2026-07-02"},
+                        {"kod": "15201.01.1", "ay": 202607, "fiyat": 260, "satir": 1, "ilk": "2026-07-09"}]
+            return [{"kod": "15201.01.1", "ay": 202512, "fiyat": 180, "satir": 7, "ilk": "2025-12-01"},
+                    {"kod": "15201.01.2", "ay": 202512, "fiyat": 250, "satir": 3, "ilk": "2025-12-03"}]
+        if "new_sozlemetipiBase" in sql:
+            return [{"kitap": "AAA", "id": "S1", "ad": "2020-1", "tur": "Metin (Eser Sözleşmesi)", "karton": 7, "sert": None,
+                     "tek_odeme": None, "olusturma": "2020-01-01"},
+                    {"kitap": "AAA", "id": "S2", "ad": "2023-1", "tur": "Metin (Eser Sözleşmesi)", "karton": 8, "sert": 5,
+                     "tek_odeme": None, "olusturma": "2023-01-01"},
+                    {"kitap": "aaa", "id": "S3", "ad": "2024-1", "tur": "Tercüme", "karton": None, "sert": None,
+                     "tek_odeme": 440, "olusturma": "2024-01-01"}]
         if "new_kitapBase" in sql:
             return [{"id": "AAA", "ad": "Bir", "kod": "15201.01.1", "sayfa": 200, "ebat": "13,5x21", "fiyat": 200, "kdv": 0,
-                     "telif": 10, "telif_turu": 1, "telif_tipi": 2, "avans": 5000, "avans_para": 1},
+                     "telif": 10, "telif_turu": 1, "telif_tipi": 2, "avans": 5000, "avans_para": 1, "stok": 1610,
+                     "son_baski": "2026-04-30T21:00:00", "son_baski_adet": 3000, "kapak_cilt": "Amerikan Cilt, Kuşe Kapak"},
                     {"id": "BBB", "ad": "İki", "kod": "15201.01.2", "sayfa": 210, "ebat": "13,5x21", "fiyat": 250, "kdv": 0},
                     {"id": "CCC", "ad": "Üç", "kod": "15201.01.3", "sayfa": 190, "ebat": "13,5x21", "fiyat": 220, "kdv": 0}]
         if "new_UretimBase" in sql:
             return [{"kod": "15201.01.1", "baski_no": 2, "yil": 2026, "tarih": "2026-05-01", "adet": 3000, "fiyat": 200,
-                     "sayfa": 200, "cilt": 1, "gramaj": 60},
+                     "sayfa": 200, "cilt": 1, "gramaj": 60, "renk": 1},
                     {"kod": "15201.01.2", "baski_no": 1, "yil": 2026, "tarih": "2026-06-01", "adet": 1000, "fiyat": 250,
-                     "sayfa": 210, "cilt": 1, "gramaj": 60},
+                     "sayfa": 210, "cilt": 1, "gramaj": 60, "renk": 1},
                     {"kod": "15201.01.3", "baski_no": 1, "yil": 2026, "tarih": "2026-07-01", "adet": 5000, "fiyat": 220,
-                     "sayfa": 190, "cilt": 1, "gramaj": 60}]
+                     "sayfa": 190, "cilt": 1, "gramaj": 60, "renk": 1}]
         raise AssertionError(sql[:80])
     return run, seen
 
@@ -227,3 +247,73 @@ def test_store_unwritable_dir(tmp_path, monkeypatch):
     st = D.Store(lambda name: None)
     st.refresh()
     assert "yazılamıyor" in st.status()["error"] and st.get() is None
+
+
+def test_snapshot_backlist_fields(snap):
+    """Fiyat Çalışması Excel'inin sütunları: stok, son baskı, son fiyat değişimi, tür başına telif, tek ödeme."""
+    b = snap["books"]["15201.01.1"]
+    assert snap["version"] == D.SNAPSHOT_VERSION
+    assert b["stock"] == 1610 and b["lastPrintDate"] == "2026-04-30" and b["lastPrintQty"] == 3000
+    assert b["coverNote"] == "Amerikan Cilt, Kuşe Kapak"
+    # 180 → 200: değişim, 200'ün ilk görüldüğü gün; iki kopyanın ayları birleşir.
+    assert b["priceChange"] == {"price": 200, "date": "2026-03-10", "prev": 180, "since": None}
+    # Aynı türde iki sözleşme: en yenisi (8/5); yalnız tek ödemeli tercüme oranı boş bırakmaz, tutarı toplanır.
+    assert b["royalties"] == {"Metin (Eser Sözleşmesi)": {"karton": 8, "sert": 5, "contract": "2023-1"}}
+    assert b["singlePay"] == 440 and b["contracts"] == 3
+    two = snap["books"]["15201.01.2"]
+    assert two["priceChange"]["date"] is None and two["priceChange"]["since"] == "2025-12-01"
+    assert two["royalties"] == {} and two["singlePay"] is None
+    assert not any("fiyat geçmişi" in w or "sözleşme" in w for w in snap["warnings"])
+
+
+def test_price_change_edges():
+    assert D.price_change([]) is None
+    # Liste fiyatı bir ay düşüp geri döndü: son değişim dönüşün olduğu ay.
+    got = D.price_change([(202501, 100, 5, None), (202502, 90, 5, "2025-02-03"), (202503, 100, 5, "2025-03-04")])
+    assert got == {"price": 100, "date": "2025-03-04", "prev": 90, "since": None}
+    assert D.price_change([(202501, 100, 3, None)])["since"] == "2025-01-01"
+    # Tek satırlık fiyat (yanlış giriş) ve payı %15'in altındaki fiyat liste fiyatı sayılmaz.
+    assert D.month_list_prices([(202501, 300, 1, None), (202501, 100, 20, None), (202501, 120, 2, None)]) == [(202501, 100, None)]
+
+
+def test_backlist_ladder_and_manual_prices(snap):
+    from semantic_bridge.pricing import form as F
+    from semantic_bridge.pricing import karsilastir as KS
+    res = KS.compare_all(snap, defaults={"targetMargin": 0.15, "variableRate": 0.05, "overheadRate": 0.0, "sellThrough": 1.0,
+                                         "qtys": [1000, 2000, 3000, 5000], "channelMix": None},
+                         tariff=F.default_tariff(), kur=None, freelance={}, market={}, calculate=P.calculate)
+    one = next(r for r in res["rows"] if r["code"] == "15201.01.1")
+    assert one["stock"] == 1610 and one["perPage"] == 1.0 and one["color"] == "Tek renk"
+    assert one["priceChanged"] == "2026-03-10" and one["prevPrice"] == 180 and one["singlePay"] == 440
+    # Üç kitap aynı grupta (ebat, renk, cilt aynı); merdiven sayfa başına en yüksek fiyat, kitabın basamağı kendi sayfası.
+    g = next(x for x in res["groups"] if x["key"] == one["group"])
+    assert [(s["pages"], s["price"]) for s in g["steps"]] == [(190, 220), (200, 200), (210, 250)] and g["books"] == 3
+    assert one["ladder"] == {"pages": 200, "price": 200, "code": "15201.01.1", "nextPages": 210, "nextPrice": 250}
+    assert one["group"].endswith("13,5x21 · Tek renk · Amerikan cilt")
+    sel = KS.select(res, new=True, manual={"15201.01.1": {"price": 250, "by": "u", "at": None}}, entered=True)
+    assert sel["count"] == 1 and sel["entered"] == 1
+    row = sel["rows"][0]
+    assert row["newPrice"] == 250 and row["newPct"] == 0.25 and row["newPerPage"] == 1.25 and sel["avgNewPct"] == 0.25
+    assert KS.select(res, new=True, group="yok")["count"] == 0
+    from semantic_bridge.pricing import compare_csv
+    csv_text = compare_csv(sel["rows"])
+    assert "Metin (Eser Sözleşmesi) karton" in csv_text and "250,00" in csv_text and "25,0%" in csv_text
+
+
+def test_compare_cache_persists(tmp_path):
+    """Sonuç diske yazılır: yeni süreç (köprü yeniden başladı) aynı girdilerle beklemeden hazır döner."""
+    import time
+    from semantic_bridge.pricing import karsilastir as KS
+    path = tmp_path / "compare.json"
+    c1 = KS.Cache(lambda: path)
+    assert c1.get("k1", lambda: {"rows": [1]})["ready"] is False
+    for _ in range(100):
+        if path.exists() and c1.get("k1", lambda: {})["ready"]:
+            break
+        time.sleep(0.01)
+    c2 = KS.Cache(lambda: path)
+    got = c2.get("k1", lambda: {"rows": []})
+    assert got["ready"] is True and got["result"] == {"rows": [1]}
+    # Girdiler değişti: eski sonuç hemen «eski» diye gelir, yenisi arkada hesaplanır.
+    got = c2.get("k2", lambda: {"rows": [2]})
+    assert got["ready"] is False and got["stale"] is True and got["result"] == {"rows": [1]}

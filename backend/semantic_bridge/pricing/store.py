@@ -123,6 +123,17 @@ PROPOSALS = sa.Table(
     sa.Column("decision_note", sa.Text),
 )
 
+#: Eski kitap fiyat çalışması: kullanıcının kitap başına yazdığı yeni kapak fiyatı (Excel'deki «Yeni Fiyat» sütunu).
+#: Kayıt yalnız bu ekranın çalışma notudur; CRM'e ya da e-ticarete yazılmaz, onay için toplu teklife dondurulur.
+BACKLIST_PRICES = sa.Table(
+    "semantic_pricing_backlist_prices", _md,
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("code", sa.String(40), primary_key=True),
+    sa.Column("price", sa.Float, nullable=False),
+    sa.Column("updated_by", sa.String(120)),
+    _ts("updated_at"),
+)
+
 #: Kullanıcı değiştirmedikçe geçerli varsayılanlar. Ölçülen değerler (kanal iskontosu, baskı eğrisi) bunların
 #: üstüne gelir; burada yalnız veride karşılığı olmayan iş kararları var (ekranda «varsayım» diye yazılır).
 BASE_DEFAULTS: dict[str, Any] = {
@@ -742,3 +753,38 @@ def reset_form_tariff(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.begin() as c:
         c.execute(FORM_TARIFF.delete().where(FORM_TARIFF.c.tenant_id == tenant))
     return get_form_tariff(engine, tenant)
+
+
+# ------------------------------------------------------------------ eski kitap fiyat çalışması (elle yeni fiyat)
+
+def backlist_prices(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, Any]]:
+    """Stok kodu → {price, by, at}: kullanıcının yazdığı yeni kapak fiyatları."""
+    with engine.connect() as c:
+        rows = c.execute(sa.select(BACKLIST_PRICES).where(BACKLIST_PRICES.c.tenant_id == tenant)).mappings().all()
+    return {r["code"]: {"price": r["price"], "by": r["updated_by"], "at": _iso(r["updated_at"])} for r in rows}
+
+
+def set_backlist_prices(engine: sa.engine.Engine, tenant: str, user: str, items: list[dict]) -> dict[str, Any]:
+    """Toplu yaz: `price` boşsa kitabın yeni fiyatı silinir. Kodlar görüntüde var mı denetimini çağıran yapar."""
+    if not items:
+        raise PricingError("Yazılacak kitap yok.")
+    if len(items) > 20000:
+        raise PricingError("Tek seferde en çok 20.000 kitap yazılır.")
+    clean: list[tuple[str, Optional[float]]] = []
+    for it in items:
+        code = str(it.get("code") or "").strip()
+        if not code or len(code) > 40:
+            raise PricingError("Stok kodu geçersiz.")
+        v = it.get("price")
+        clean.append((code, None if v in (None, "") else _pos(v, "Yeni fiyat", allow_zero=False)))
+    now, written, removed = _now(), 0, 0
+    with engine.begin() as c:
+        for code, price in clean:
+            c.execute(BACKLIST_PRICES.delete().where(BACKLIST_PRICES.c.tenant_id == tenant, BACKLIST_PRICES.c.code == code))
+            if price is None:
+                removed += 1
+                continue
+            c.execute(BACKLIST_PRICES.insert().values(tenant_id=tenant, code=code, price=round(price, 2),
+                                                      updated_by=user, updated_at=now))
+            written += 1
+    return {"written": written, "removed": removed}

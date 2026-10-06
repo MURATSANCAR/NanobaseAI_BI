@@ -202,22 +202,41 @@ export type CompareRow = {
   status: CompareStatus; reason?: string; ours?: number | null; floor?: number | null; median?: number | null; band?: [number | null, number | null];
   unitCost?: number | null; qty?: number | null; margin?: number | null; targetMargin?: number | null; comparables?: number | null;
   diff?: number; diffPct?: number;
+  /** Fiyat Çalışması Excel'inin sütunları: künye (CRM kartı + son üretim kaydı), Logo'dan son fiyat değişimi, sözleşmeler. */
+  perPage: number | null; stock: number | null; trim: string | null; binding: string | null; color: string | null; gsm: number | null;
+  cover: string | null; lastPrintDate: string | null; lastPrintQty: number | null;
+  /** Logo satış satırlarında liste fiyatının değiştiği ilk gün; pencere boyunca değişmediyse boş, `priceSince` pencere başı. */
+  priceChanged: string | null; prevPrice: number | null; priceSince: string | null;
+  singlePay: number | null; royalties: Record<string, { karton: number | null; sert: number | null; contract: string | null }>;
+  /** Emsal grubu (yayınevi · ebat · renk · cilt) ve kitabın merdivendeki basamağı. */
+  group: string; ladder: LadderStep | null;
+  /** Kullanıcının yazdığı yeni fiyat (Excel'deki «Yeni Fiyat»). */
+  newPrice?: number; newPct?: number | null; newPerPage?: number | null; newBy?: string | null; newAt?: string | null;
 };
-export type CompareSort = 'diffPct' | 'diffPctAsc' | 'sold' | 'name';
+export type LadderStep = { pages: number; price: number; code: string; nextPages: number | null; nextPrice: number | null };
+export type LadderGroupHead = { key: string; publisher: string | null; trim: string | null; color: string | null; binding: string | null; books: number;
+  stepCount: number };
+export type LadderGroup = Omit<LadderGroupHead, 'stepCount'> & {
+  steps: Array<{ pages: number; price: number; code: string; name: string; margin: number | null; firstPub: string | null }> };
+export type CompareSort = 'diffPct' | 'diffPctAsc' | 'sold' | 'name' | 'stock' | 'pages' | 'newPct' | 'priceChanged';
 export type Compare = { kaynaklar?: Kaynaklar;
   /** Güncel girdilerle hesap hazır mı; değilse arka planda sürüyor (`stale`: gösterilen önceki hesap). */
   ready: boolean; stale: boolean; error: string | null; startedAt: number | null;
   kur: { USD: number; EUR: number } | null; kurKaynak: 'logo' | 'elle'; logoKur: Partial<Record<'USD' | 'EUR', { rate: number; date: string | null }>>;
   dataEnd: string | null; since: string | null; targetMargin: number | null; seconds: number | null; offset: number; limit: number;
   rows?: CompareRow[]; count?: number; total?: number; counts?: Record<CompareStatus, number>; avgDiffPct?: number | null; newHidden?: number;
+  entered?: number; avgNewPct?: number | null; groups: LadderGroupHead[];
+  /** Seçilen emsal grubunun merdiveni (grup seçilmediyse boş). */ ladder: LadderGroup | null;
 };
-export type CompareQuery = { q?: string; status?: CompareStatus | ''; new?: boolean; minSold?: number | null; sort?: CompareSort; offset?: number; limit?: number };
+export type CompareQuery = { q?: string; status?: CompareStatus | ''; new?: boolean; minSold?: number | null; sort?: CompareSort; offset?: number; limit?: number;
+  entered?: boolean; group?: string };
 
 export type Proposal = { kaynaklar?: Kaynaklar; id: string; title: string; status: AnalysisStatus; statusLabel: string; count: number; params: {
     /** Eski teklifler (maliyet/fiyat oranı yöntemi). */ target?: number; measuredTarget?: number; dataEnd?: string;
-    /** «Kitap hesabı» yöntemi. */ method?: 'kitap-hesabi'; targetMargin?: number; kur?: { USD: number; EUR: number } | null; kurKaynak?: 'logo' | 'elle' };
+    /** «Kitap hesabı» yöntemi; `manual`: yeni fiyatı elle yazılmış kitap sayısı. */ method?: 'kitap-hesabi'; manual?: number; targetMargin?: number; kur?: { USD: number; EUR: number } | null; kurKaynak?: 'logo' | 'elle' };
   createdBy: string; createdAt: string; decidedBy: string | null; decidedAt: string | null; decisionNote: string | null;
-  items?: Array<{ code: string; name: string; price: number; proposed: number; increase: number; unit: number; qty?: number; margin?: number | null; sold2y: number; lastPrintDate: string | null }> };
+  items?: Array<{ code: string; name: string; price: number; proposed: number; increase: number; unit: number; qty?: number; margin?: number | null; sold2y: number; lastPrintDate: string | null;
+    /** Önerilen fiyat elle mi yazıldı, bizim hesap mı. */ source?: 'elle' | 'hesap'; ours?: number | null; stock?: number | null }> };
 
 export type Sources = { kaynaklar?: Kaynaklar; sources: Array<{ id: string; connection: 'logo' | 'crm'; title: string; description: string; sql: string; runs: number; stats: { rows: number; ms: number } | null }>;
   copies: Array<{ firm: string; from: string; to: string; last: string }> | null; dataEnd: string | null; asOf: string | null };
@@ -325,7 +344,8 @@ const qs = (o: Record<string, string | number | undefined | null>) => {
   return p.length ? `?${p.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&')}` : '';
 };
 const enc = encodeURIComponent;
-const compareParams = (p: CompareQuery) => ({ ...p, new: p.new ? 'true' : undefined, minSold: p.minSold || undefined });
+const compareParams = (p: CompareQuery) => ({ ...p, new: p.new ? 'true' : undefined, minSold: p.minSold || undefined,
+  entered: p.entered ? 'true' : undefined, group: p.group || undefined });
 
 export const pricingApi = {
   overview: () => send<Overview>('GET', '/overview'),
@@ -360,6 +380,9 @@ export const pricingApi = {
   proposals: () => send<{ items: Proposal[]; kaynaklar?: Kaynaklar }>('GET', '/proposals'),
   proposal: (id: string) => send<Proposal>('GET', `/proposals/${enc(id)}`),
   createProposal: (b: { title: string; codes: string[] }) => send<Proposal>('POST', '/proposals', b),
+  /** Eski kitap yeni fiyatı (elle); `price: null` siler. CRM'e yazılmaz. */
+  setBacklistPrices: (items: Array<{ code: string; price: number | null }>) =>
+    send<{ written: number; removed: number }>('PUT', '/backlist-prices', { items }),
   decideProposal: (id: string, b: { decision: 'onay' | 'ret'; note: string }) => send<Proposal>('POST', `/proposals/${enc(id)}/decide`, b),
   formSetup: (kitap?: string | null) => send<FormSetup>('GET', `/form/setup${qs({ kitap })}`),
   formCalc: (b: { inputs: FormInputs }) => send<FormResult>('POST', '/form/calc', b),

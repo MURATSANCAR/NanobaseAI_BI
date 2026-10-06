@@ -264,17 +264,37 @@ def for_actuals(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[s
     return k
 
 
-def for_compare(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[str]) -> P.Kaynaklar:
+def for_compare(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[str], engine: Any = None,
+                tenant: Optional[str] = None) -> P.Kaynaklar:
     k = _new(snap)
     ref = k.hesap("karsilastir", F_KARSILASTIR + " " + F_FORM + " " + F_SENARYO + " " + F_EMSAL,
                   snap_sources(k, snap, ["crm_kitap", "crm_baski", "crm_secenek", "logo_baski", "logo_kagit", "logo_kur",
                                          "logo_satis", "logo_kanal", "logo_nakliye"], logo_db, crm_db))
-    k.alanlar({"rows[]": ref, "count": ref, "total": ref, "counts": ref, "avgDiffPct": ref, "kur": ref, "targetMargin": ref,
-               "newHidden": ref, "logoKur": ref,
-               "seconds": k.hesap("hazirlik", "Karşılaştırmanın son hesaplanma süresi (saniye) ve başladığı an; yalnız hesap "
-                                             "durumunu anlatır.", [ref]), "startedAt": "hesap:hazirlik",
-               "secim": k.hesap("secim", "Seçilen = tabloda işaretlenen kitap sayısı; ortalama değişim = seçilen kitapların "
-                                         "fark yüzdelerinin aritmetik ortalaması (ekranda hesaplanır).", [ref])})
+    kunye = k.hesap("kunye", "Stok, son baskı tarihi/adedi ve kapak-cilt notu CRM kitap kartından; cilt, renk ve iç kâğıt "
+                             "gramajı kitabın son CRM üretim kaydından; son fiyat değişimi Logo satış satırlarında ay başına en "
+                             "çok geçen birim fiyatın değiştiği ilk gün; telif oranları ve tek ödeme kitaba bağlı yürürlükteki "
+                             "sözleşmelerden (türde birden çok sözleşme varsa en yenisi, tek ödeme toplanır).",
+                    snap_sources(k, snap, ["crm_kitap", "crm_baski", "crm_sozlesme", "logo_fiyat"], logo_db, crm_db))
+    merdiven = k.hesap("merdiven", "Emsal merdiveni (Fiyat Çalışması Excel'indeki «Mak Fiyat» pivotu): aynı yayınevi × ebat × "
+                                   "renk × cilt grubundaki kitapların sayfa sayısı başına en yüksek güncel kapak fiyatı. Kitabın "
+                                   "merdiven fiyatı, sayfa sayısı kendisininkine eşit ya da altındaki en yakın basamak.", [ref, kunye])
+    alanlar: dict[str, Any] = {
+        "rows[]": ref, "count": ref, "total": ref, "counts": ref, "avgDiffPct": ref, "kur": ref, "targetMargin": ref,
+        "newHidden": ref, "logoKur": ref, "kunye": kunye, "groups[]": merdiven, "ladder": merdiven,
+        "seconds": k.hesap("hazirlik", "Karşılaştırmanın son hesaplanma süresi (saniye) ve başladığı an; yalnız hesap "
+                                     "durumunu anlatır.", [ref]), "startedAt": "hesap:hazirlik",
+        "secim": k.hesap("secim", "Seçilen = tabloda işaretlenen kitap sayısı; ortalama değişim = seçilen kitapların "
+                                  "fark yüzdelerinin aritmetik ortalaması (ekranda hesaplanır).", [ref])}
+    src = [ref]
+    if engine is not None and tenant:
+        import sqlalchemy as sa
+        src.insert(0, k.portal("portal.fiyat.eski-yeni", "Eski kitap yeni fiyatları (elle)",
+                               sa.select(S.BACKLIST_PRICES).where(S.BACKLIST_PRICES.c.tenant_id == tenant), engine,
+                               description="Kullanıcının kitap başına yazdığı yeni kapak fiyatı; CRM'e yazılmaz."))
+    yeni = k.hesap("yeni", "Yeni fiyat elle yazılır; artış = yeni ÷ güncel − 1, zamlı birim fiyat = yeni ÷ sayfa. Yeni fiyat "
+                           "yazılan = süzgece uyan kitaplardan yeni fiyatı olanlar, ortalama artış onların aritmetik ortalaması.", src)
+    alanlar.update({"entered": yeni, "avgNewPct": yeni, "yeni": yeni})
+    k.alanlar(alanlar)
     return k
 
 

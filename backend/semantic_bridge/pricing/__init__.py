@@ -182,27 +182,48 @@ def market_all(engine: Any, tenant: str) -> dict[str, list[float]]:
     return out
 
 
+#: Sözleşme türlerinin dökümdeki sırası (Excel «Yetişkin Fiyat Çalışması»); listede olmayan tür sona eklenir.
+ROYALTY_ORDER = ("Metin (Eser Sözleşmesi)", "Yayına Hazırlama", "Çizim- İllüstrasyon", "Tercüme",
+                 "Ajans-Yabancı Yayınevi Telif Sözleşmesi (Alış)", "Metin (Yabancı Eser Sözleşmesi)",
+                 "Çizim- İllüstrasyon (Yabancı)", "Edisyon", "Danışmanlık", "Grafik Tasarım Mizanpaj")
+
+
 def compare_csv(rows: list[dict]) -> str:
-    """Karşılaştırma listesi CSV (Excel eşi ortak katmandan, `bicim=xlsx`). Süzgece uyan bütün satırlar."""
+    """Eski kitap fiyat çalışması CSV (Excel eşi ortak katmandan, `bicim=xlsx`). Süzgece uyan bütün satırlar; sütunlar
+    Fiyat Çalışması Excel'inin sırasında, sonda bizim hesap."""
     import csv
     import io
     label = {"zam": "Zam gerekiyor", "yuksek": "Güncel fiyat hesabın üstünde", "esit": "Aynı", "hesaplanamadi": "Hesaplanamadı"}
+    seen = {t for r in rows for t in (r.get("royalties") or {})}
+    types = [t for t in ROYALTY_ORDER if t in seen] + sorted(seen - set(ROYALTY_ORDER))
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";")
-    w.writerow(["Stok kodu", "Kitap", "Yazar", "Yayınevi", "İlk yayın", "Son baskı faturası", "Sayfa", "Satış (2 yıl, adet)",
-                "Hesap adedi", "Birim maliyet", "Güncel fiyat", "Bizim hesap", "Fark (TL)", "Fark (%)", "Güncel fiyatla marj",
-                "Maliyet alt sınırı", "Emsal ortancası", "Durum", "Neden"])
+    w.writerow(["Stok kodu", "Yayınevi", "Kitaplık", "Kitap", "Yazar", "Sayfa", "Fiyat", "Stok", "Kâr % (güncel fiyatla)",
+                "Yeni fiyat", "Artış (%)", "Sayfa birim fiyatı", "Zamlı birim fiyat", "Ebat", "Cilt", "Renk", "İç kâğıt (gr)",
+                "Kapak ve cilt (CRM)", "Son fiyat değişimi", "Önceki fiyat", "Son baskı tarihi", "Son baskı adedi",
+                "Tek ödeme tutarı", *[f"{t} karton" for t in types], *[f"{t} sert" for t in types],
+                "Emsal grubu", "Merdiven sayfası", "Merdiven fiyatı", "Satış (2 yıl, adet)", "Birim maliyet",
+                "Bizim hesap", "Fark (%)", "Maliyet alt sınırı", "Emsal ortancası", "Durum", "Neden", "Yeni fiyatı yazan"])
 
     def n(v: Any, d: int = 2) -> str:
         return "" if v is None else f"{v:.{d}f}".replace(".", ",")
 
+    def pct(v: Any) -> str:
+        return "" if v is None else n(v * 100, 1) + "%"
+
     for r in rows:
-        w.writerow([r["code"], r["name"], r.get("author") or "", r.get("publisher") or "", r.get("firstPub") or "",
-                    r.get("lastPrint") or "", r.get("pages") or "", n(r.get("sold2y"), 0), r.get("qty") or "",
-                    n(r.get("unitCost")), n(r.get("price")), n(r.get("ours")), n(r.get("diff")),
-                    "" if r.get("diffPct") is None else n(r["diffPct"] * 100, 1) + "%",
-                    "" if r.get("margin") is None else n(r["margin"] * 100, 1) + "%", n(r.get("floor")), n(r.get("median")),
-                    label.get(r["status"], r["status"]), r.get("reason") or ""])
+        roy = r.get("royalties") or {}
+        lad = r.get("ladder") or {}
+        w.writerow([r["code"], r.get("publisher") or "", r.get("library") or "", r["name"], r.get("author") or "",
+                    r.get("pages") or "", n(r.get("price")), n(r.get("stock"), 0), pct(r.get("margin")),
+                    n(r.get("newPrice")), pct(r.get("newPct")), n(r.get("perPage")), n(r.get("newPerPage")),
+                    r.get("trim") or "", r.get("binding") or "", r.get("color") or "", n(r.get("gsm"), 0), r.get("cover") or "",
+                    r.get("priceChanged") or (f"{r['priceSince']} öncesi" if r.get("priceSince") else ""), n(r.get("prevPrice")),
+                    r.get("lastPrintDate") or "", r.get("lastPrintQty") or "", n(r.get("singlePay")),
+                    *[n((roy.get(t) or {}).get("karton"), 1) for t in types], *[n((roy.get(t) or {}).get("sert"), 1) for t in types],
+                    r.get("group") or "", lad.get("pages") or "", n(lad.get("price")), n(r.get("sold2y"), 0),
+                    n(r.get("unitCost")), n(r.get("ours")), pct(r.get("diffPct")), n(r.get("floor")), n(r.get("median")),
+                    label.get(r["status"], r["status"]), r.get("reason") or "", r.get("newBy") or ""])
     return "\ufeff" + buf.getvalue()
 
 
@@ -382,7 +403,7 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         out["rows"] = out["rows"][offset:offset + limit]
         return P.bagla(out, lambda: K.for_actuals(snap, *dbs()))
 
-    compare_cache = KS.Cache()
+    compare_cache = KS.Cache(lambda: D.cache_dir() / "compare.json")
 
     def compare_result(engine: Any, tenant: str, snap: dict) -> dict[str, Any]:
         """Eski kitap karşılaştırmasının güncel girdilerle sonucu (hazır değilse arka planda başlar)."""
@@ -397,36 +418,58 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         got["kur"] = kur or tariff.get("kur")
         return got
 
-    def compare_select(got: dict, q: str, status: str, new: bool, min_sold: float, sort: str) -> Optional[dict]:
+    def compare_select(engine: Any, tenant: str, got: dict, q: str, status: str, new: bool, min_sold: float, sort: str,
+                       entered: bool = False, group: str = "") -> Optional[dict]:
         if status and status not in KS.STATUS:
             raise HTTPException(400, detail={"code": "PRICING", "message": "Durum zam, yuksek, esit ya da hesaplanamadi olmalı."})
         res = got.get("result")
-        return KS.select(res, q=q, status=status, new=new, min_sold=max(0.0, min_sold), sort=sort) if res else None
+        return KS.select(res, q=q, status=status, new=new, min_sold=max(0.0, min_sold), sort=sort,
+                         manual=S.backlist_prices(engine, tenant), entered=entered, group=group) if res else None
 
     @app.get("/api/v1/pricing/compare")
     def pricing_compare(request: Request, q: str = "", status: str = "", new: bool = False, minSold: float = 0.0,  # noqa: N803
-                        sort: str = "diffPct", offset: int = 0, limit: int = 100) -> dict[str, Any]:
+                        sort: str = "diffPct", offset: int = 0, limit: int = 100, entered: bool = False,
+                        group: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ses(request)
         snap = need_snap()
         got = compare_result(engine, tenant, snap)
-        sel = compare_select(got, q, status, new, minSold, sort)
+        sel = compare_select(engine, tenant, got, q, status, new, minSold, sort, entered, group)
         res = got.get("result") or {}
         offset, limit = max(0, offset), max(1, limit)
         out = {"ready": got["ready"], "stale": got["stale"], "error": got.get("error"), "startedAt": got.get("startedAt"),
                "kur": got["kur"], "kurKaynak": got["kurKaynak"], "logoKur": snap.get("kur") or {},
                "dataEnd": res.get("dataEnd"), "since": res.get("since"), "targetMargin": res.get("targetMargin"),
-               "seconds": res.get("seconds"), "offset": offset, "limit": limit}
+               "seconds": res.get("seconds"), "offset": offset, "limit": limit,
+               # Grup listesi özet (seçim kutusu); basamaklar yalnız seçilen grubun (yanıt her 3 sn'de bir sorulabiliyor).
+               "groups": [{k: v for k, v in g.items() if k != "steps"} | {"stepCount": len(g.get("steps") or [])}
+                          for g in res.get("groups") or []],
+               "ladder": next((g for g in res.get("groups") or [] if group and g["key"] == group), None)}
         if sel:
             out.update({k: v for k, v in sel.items() if k != "rows"}, rows=sel["rows"][offset:offset + limit])
-        return P.bagla(out, lambda: K.for_compare(snap, *dbs()))
+        return P.bagla(out, lambda: K.for_compare(snap, *dbs(), engine, tenant))
+
+    @app.put("/api/v1/pricing/backlist-prices")
+    def pricing_backlist_prices(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Eski kitap fiyat çalışması: kitap başına elle yeni kapak fiyatı (boş = sil). CRM'e yazılmaz."""
+        engine, tenant, user, _ = ses(request)
+        books = need_snap().get("books") or {}
+        items = body.get("items") if isinstance(body.get("items"), list) else []
+        unknown = [str(i.get("code")) for i in items if isinstance(i, dict) and str(i.get("code") or "") not in books]
+        if unknown:
+            raise HTTPException(400, detail={"code": "PRICING", "message": f"Bu stok kodları bulunamadı: {', '.join(unknown[:5])}"})
+        out = call(S.set_backlist_prices, engine, tenant, user, [i for i in items if isinstance(i, dict)])
+        audit(engine, user, "update", "pricing_backlist_price", tenant, "Eski kitap yeni fiyatı",
+              {"yazilan": out["written"], "silinen": out["removed"],
+               "kitaplar": [{"kod": i.get("code"), "fiyat": i.get("price")} for i in items[:50]]})
+        return out
 
     @app.get("/api/v1/pricing/compare.csv")
     def pricing_compare_csv(request: Request, q: str = "", status: str = "", new: bool = False, minSold: float = 0.0,  # noqa: N803
-                            sort: str = "diffPct"):
+                            sort: str = "diffPct", entered: bool = False, group: str = ""):
         from fastapi.responses import Response
         engine, tenant, user, _ = ses(request)
         got = compare_result(engine, tenant, need_snap())
-        sel = compare_select(got, q, status, new, minSold, sort)
+        sel = compare_select(engine, tenant, got, q, status, new, minSold, sort, entered, group)
         if not sel:
             raise HTTPException(409, detail={"code": "PRICING_WARMING", "message": "Karşılaştırma hesaplanıyor; biraz sonra yeniden deneyin."})
         audit(engine, user, "export", "pricing_compare", tenant, "Eski kitap fiyat karşılaştırması", {"satir": len(sel["rows"])})
@@ -641,12 +684,24 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
                                              "hesaplanıyor; bir dakika sonra teklifi yeniden oluşturun."})
         # Teklif sunucudaki son hesaptan dondurulur; ekrandan yalnız seçilen kodlar gelir.
         res = got["result"]
-        items = [{"code": r["code"], "name": r["name"], "price": r["price"], "proposed": r["ours"], "increase": r["diffPct"],
-                  "unit": r["unitCost"], "qty": r["qty"], "margin": r["margin"], "sold2y": r["sold2y"],
-                  "lastPrintDate": r["lastPrint"]}
-                 for r in res["rows"] if r["code"] in codes and r.get("ours")]
+        manual = S.backlist_prices(engine, tenant)
+        items = []
+        for r0 in res["rows"]:
+            if r0["code"] not in codes:
+                continue
+            r = KS.with_manual(r0, manual.get(r0["code"]))
+            # Kullanıcının yazdığı yeni fiyat varsa teklif odur; yoksa bizim hesap.
+            proposed = r.get("newPrice") if r.get("newPrice") is not None else r.get("ours")
+            if not proposed:
+                continue
+            items.append({"code": r["code"], "name": r["name"], "price": r["price"], "proposed": proposed,
+                          "source": "elle" if r.get("newPrice") is not None else "hesap", "ours": r.get("ours"),
+                          "increase": round(proposed / r["price"] - 1, 4) if r.get("price") else None,
+                          "unit": r.get("unitCost"), "qty": r.get("qty"), "margin": r.get("margin"), "sold2y": r["sold2y"],
+                          "stock": r.get("stock"), "lastPrintDate": r.get("lastPrintDate") or r.get("lastPrint")})
         out = call(S.proposal_create, engine, tenant, user, str(body.get("title") or ""), items,
-                   {"method": "kitap-hesabi", "targetMargin": res["targetMargin"], "kur": got["kur"],
+                   {"method": "kitap-hesabi", "manual": sum(1 for i in items if i["source"] == "elle"),
+                    "targetMargin": res["targetMargin"], "kur": got["kur"],
                     "kurKaynak": got["kurKaynak"], "dataEnd": res["dataEnd"]})
         audit(engine, user, "create", "pricing_proposal", out["id"], out["title"], {"kitap": out["count"]})
         return out

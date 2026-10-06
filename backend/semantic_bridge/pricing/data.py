@@ -25,6 +25,9 @@ from semantic_layer.firm_scope import firm_in_scope
 log = logging.getLogger("semantic.pricing")
 
 REFRESH_SECONDS = int(os.environ.get("PRICING_REFRESH_SECONDS", "21600"))
+#: Görüntünün alan sürümü: kaynak eklenince artar; diskteki eski sürüm açılışta bir kez yeniden kurulur.
+#: 2 = stok, son baskı, kapak/renk notu, son fiyat değişimi (logo_fiyat), sözleşme telifleri ve tek ödeme (crm_sozlesme).
+SNAPSHOT_VERSION = 2
 QUERY_TIMEOUT = int(os.environ.get("PRICING_QUERY_TIMEOUT_SEC", "900"))
 MAX_ROWS = 2_000_000
 
@@ -213,6 +216,20 @@ class Builder:
                     x["amount"] += _f(r.get("tutar")) or 0
                     x["rows"] += _i(r.get("satir")) or 0
                     x["last"] = max(filter(None, [x["last"], _day(r.get("son"))]), default=None)
+        # Liste fiyatı geçmişi (son fiyat değişimi): ay başına en çok satırda geçen birim fiyat.
+        pc_start = (end_d - timedelta(days=PRICE_HISTORY_MONTHS * 31)).replace(day=1).isoformat()
+        price_months: dict[str, list[tuple[int, float, int, Optional[str]]]] = {}
+        for c in copies:
+            if c["to"] <= pc_start:
+                continue
+            a, b = ymd(max(c["from"], pc_start)), ymd(c["to"])
+            try:
+                for r in self._q("logo_fiyat", "logo", SRC.logo_sql("logo_fiyat", c["firm"], a, b)):
+                    code, ay, fiyat = _s(r.get("kod")), _i(r.get("ay")), _f(r.get("fiyat"))
+                    if code and ay and fiyat:
+                        price_months.setdefault(code, []).append((ay, fiyat, _i(r.get("satir")) or 0, _day(r.get("ilk"))))
+            except Exception as e:  # noqa: BLE001 — fiyat geçmişi yalnız bilgi sütunu; görüntü onsuz da kurulur
+                self.warnings.append(f"Logo'da {c['firm']} kopyasından fiyat geçmişi okunamadı ({type(e).__name__}).")
         kur: dict[str, Any] = {}
         try:
             for r in self._q("logo_kur", "logo", SRC.logo_sql("logo_kur", copies[-1]["firm"], "", ymd(copies[-1]["to"]))):
@@ -227,7 +244,8 @@ class Builder:
 
         labels: dict[str, dict[str, str]] = {}
         for r in self._q("crm_secenek", "crm", SRC.crm_sql("crm_secenek")):
-            key = f"{r.get('varlik')}.{str(r.get('alan') or '').lower()}"
+            # Varlık adı CRM'de «new_Uretim» gibi büyük harfli gelebilir; anahtar küçük harf (aramalar «new_uretim.…»).
+            key = f"{str(r.get('varlik') or '').lower()}.{str(r.get('alan') or '').lower()}"
             labels.setdefault(key, {}).setdefault(str(_i(r.get("deger"))), _s(r.get("ad")) or "")
 
         books: dict[str, dict] = {}
@@ -241,7 +259,24 @@ class Builder:
                 "vat": _f(r.get("kdv")), "author": _s(r.get("yazar")), "publisher": _s(r.get("yayinevi")),
                 "library": _s(r.get("kitaplik")), "firstPub": _day(r.get("ilk_yayin")),
                 "royalty": royalty_of(r, labels),
+                "stock": _f(r.get("stok")), "lastPrintDate": _day(r.get("son_baski")),
+                "lastPrintQty": _i(r.get("son_baski_adet")) or None, "coverNote": _s(r.get("kapak_cilt")),
+                "colorNote": _s(r.get("renk_resim")), "bindingCard": _s(r.get("cilt_adi")),
+                "priceChange": price_change(price_months.get(code) or []),
             }
+        contracts: dict[str, list[dict]] = {}
+        try:
+            for r in self._q("crm_sozlesme", "crm", SRC.crm_sql("crm_sozlesme")):
+                bid = str(r.get("kitap") or "").lower()
+                if bid:
+                    contracts.setdefault(bid, []).append({
+                        "id": str(r.get("id") or "").lower(), "name": _s(r.get("ad")), "type": _s(r.get("tur")) or "Türü yok",
+                        "karton": _f(r.get("karton")), "sert": _f(r.get("sert")), "single": _f(r.get("tek_odeme")),
+                        "created": _day(r.get("olusturma"))})
+        except Exception as e:  # noqa: BLE001 — sözleşme sütunları bilgi; görüntü onsuz da kurulur
+            self.warnings.append(f"CRM sözleşmeleri okunamadı ({type(e).__name__}); telif ve tek ödeme sütunları boş kalır.")
+        for b in books.values():
+            b.update(contract_summary(contracts.get(b.get("id") or "") or []))
         crm_prints: dict[str, list[dict]] = {}
         for r in self._q("crm_baski", "crm", SRC.crm_sql("crm_baski")):
             code = _s(r.get("kod"))
@@ -257,7 +292,7 @@ class Builder:
             rows.sort(key=lambda p: ((p["no"] or 0), p["date"] or ""))
 
         return {
-            "version": 1, "asOf": datetime.now(timezone.utc).isoformat(), "durationMs": int((time.time() - started) * 1000),
+            "version": SNAPSHOT_VERSION, "asOf": datetime.now(timezone.utc).isoformat(), "durationMs": int((time.time() - started) * 1000),
             "dataEnd": data_end, "copies": copies, "books": books, "prints": prints, "crmPrints": crm_prints,
             "sales": sales, "channels": channels, "paper": paper_table(list(paper_items.values())), "kur": kur,
             "distribution": {"freight": round(freight, 2), "net": round(net12, 2),
@@ -265,6 +300,61 @@ class Builder:
             "labels": labels, "sources": {k: {"rows": v["rows"], "ms": v["ms"]} for k, v in self.stats.items()},
             "sql": {k: v["sql"] for k, v in self.stats.items()}, "warnings": self.warnings,
         }
+
+
+#: «Son fiyat değişimi» için geriye bakılan ay sayısı (kaynak `logo_fiyat`).
+PRICE_HISTORY_MONTHS = 36
+
+
+#: Ayın liste fiyatı sayılması için bir fiyatın ayın satırlarındaki en küçük payı (ve en az satır sayısı).
+LIST_PRICE_SHARE = 0.15
+LIST_PRICE_MIN_LINES = 2
+
+
+def month_list_prices(rows: list[tuple[int, float, int, Optional[str]]]) -> list[tuple[int, float, Optional[str]]]:
+    """(YYYYMM, fiyat, satır, ilk gün) → ay başına liste fiyatı: ayın satırlarının en az LIST_PRICE_SHARE'inde geçen en
+    yüksek fiyat. Müşteriye özel indirimli fiyat liste fiyatının altında kalır; çok satırlı olsa da liste fiyatını
+    gölgelemez (TİMAŞ 15201.01.0733, Mayıs 2026: 175 ₺ 15 satır, liste 250 ₺ 13 satır)."""
+    by: dict[int, list[tuple[float, int, Optional[str]]]] = {}
+    for ay, fiyat, satir, ilk in rows:
+        by.setdefault(ay, []).append((fiyat, satir, ilk))
+    out = []
+    for ay in sorted(by):
+        xs = by[ay]
+        total = sum(n for _, n, _ in xs)
+        ok = [x for x in xs if x[1] >= LIST_PRICE_MIN_LINES and x[1] >= LIST_PRICE_SHARE * total]
+        if ok:
+            f, _, ilk = max(ok, key=lambda x: x[0])
+            out.append((ay, f, ilk))
+    return out
+
+
+def price_change(rows: list[tuple[int, float, int, Optional[str]]]) -> Optional[dict]:
+    """Son liste fiyatı değişimi: en son ayın liste fiyatına ilk geçilen ay, önceki fiyat ve o fiyatın o ayki ilk satış
+    günü. Pencere boyunca değişmediyse `date` boş, `since` pencerenin ilk ayı."""
+    seq = month_list_prices(rows)
+    if not seq:
+        return None
+    cur = seq[-1][1]
+    i = len(seq) - 1
+    while i > 0 and abs(seq[i - 1][1] - cur) < 0.005:
+        i -= 1
+    if i == 0:
+        return {"price": cur, "date": None, "prev": None, "since": f"{seq[0][0] // 100}-{seq[0][0] % 100:02d}-01"}
+    ay, _, ilk = seq[i]
+    return {"price": cur, "date": ilk or f"{ay // 100}-{ay % 100:02d}-01", "prev": seq[i - 1][1], "since": None}
+
+
+def contract_summary(rows: list[dict]) -> dict[str, Any]:
+    """Kitabın sözleşmeleri → tür başına karton/sert telif (türde birden çok sözleşme varsa en yenisi; Excel'in
+    «Yetişkin Fiyat Çalışması» dökümüyle aynı) ve tek ödeme toplamı."""
+    by_type: dict[str, dict] = {}
+    for r in sorted(rows, key=lambda x: x.get("created") or ""):
+        if r.get("karton") is None and r.get("sert") is None:
+            continue          # yalnız tek ödemeli sözleşme oranı silmez; tutarı aşağıda toplanır
+        by_type[r["type"]] = {"karton": r.get("karton"), "sert": r.get("sert"), "contract": r.get("name")}
+    single = round(sum(r.get("single") or 0 for r in rows), 2)
+    return {"royalties": by_type, "singlePay": single or None, "contracts": len(rows)}
 
 
 def _label(labels: dict, key: str, value: Any) -> Optional[str]:
@@ -725,12 +815,15 @@ class Store:
 
     def start(self) -> None:
         def loop():
+            upgraded = False
             while not self.stopping.is_set():
                 st = self.status()
                 last = max(st.get("updatedAt") or 0, st.get("failedAt") or 0)
                 wait = REFRESH_SECONDS if not st.get("failedAt") or (st.get("updatedAt") or 0) > (st.get("failedAt") or 0) \
                     else min(REFRESH_SECONDS, 1800)
-                if time.time() - last >= wait:
+                old = (self.get() or {}).get("version", SNAPSHOT_VERSION) < SNAPSHOT_VERSION
+                if time.time() - last >= wait or (old and not upgraded):
+                    upgraded = upgraded or old
                     self.start_refresh()
                 self.stopping.wait(60)
         threading.Thread(target=loop, daemon=True, name="pricing-scheduler").start()

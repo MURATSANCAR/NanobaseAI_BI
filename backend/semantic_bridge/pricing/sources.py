@@ -119,19 +119,52 @@ SOURCES: list[Source] = [
         "GROUP BY I.TRCURR, CONVERT(date, I.DATE_)",
     ),
     Source(
+        "logo_fiyat", "logo", "Kitap liste fiyatı geçmişi (son 36 ay)",
+        "Satış satırlarındaki birim fiyat (STLINE.PRICE), kitap × ay × fiyat başına satır sayısı. Ayın liste fiyatı, ayın "
+        "satırlarının en az %15'inde geçen en yüksek fiyattır (ayda tek satırda geçen fiyat okunmaz): müşteriye özel "
+        "indirimli fiyatlar liste fiyatının altında kalır. Liste fiyatının değiştiği ilk gün «son fiyat değişimi» olur.",
+        "SELECT IT.CODE AS kod, YEAR(SH.DATE_) * 100 + MONTH(SH.DATE_) AS ay, ROUND(S.PRICE, 2) AS fiyat,\n"
+        "       COUNT(*) AS satir, MIN(CONVERT(date, SH.DATE_)) AS ilk\n"
+        "FROM dbo.LG_{f}_01_STLINE S\n"
+        "JOIN dbo.LG_{f}_01_INVOICE SH ON SH.LOGICALREF = S.INVOICEREF AND SH.CANCELLED = 0\n"
+        "JOIN dbo.LG_{f}_ITEMS IT ON IT.LOGICALREF = S.STOCKREF\n"
+        "WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.TRCODE IN (7, 8) AND S.INVOICEREF <> 0 AND S.PRICE > 0\n"
+        "  AND IT.CODE LIKE '152%' AND SH.DATE_ >= '{start}' AND SH.DATE_ < '{end}'\n"
+        "GROUP BY IT.CODE, YEAR(SH.DATE_) * 100 + MONTH(SH.DATE_), ROUND(S.PRICE, 2)\n"
+        "HAVING COUNT(*) >= 2",
+    ),
+    Source(
         "crm_kitap", "crm", "CRM kitap kartları",
-        "Kitap künyesi (stok kodu, sayfa, ebat, KDV dahil fiyat, KDV oranı), yayınevi ve kitaplık adı, yürürlükteki "
-        "sözleşmenin telif oranı, türü (brüt/net), ödeme tipi (baskıdan/satıştan) ve avansı.",
-        "SELECT k.new_kitapId AS id, k.new_name AS ad, k.new_StokKodu AS kod, k.new_sayfasayisi AS sayfa, k.new_Ebat AS ebat,\n"
+        "Kitap künyesi (stok kodu, sayfa, ebat (metin alanı, boşsa ebat seçimi), KDV dahil fiyat, KDV oranı), yayınevi "
+        "(kartın yayınevi alanı, boşsa yayıncı), kitaplık adı, güncel stok, son baskı tarihi ve adedi, cilt şekli, "
+        "kapak/cilt ve renk notu, yürürlükteki sözleşmenin telif oranı, türü (brüt/net), ödeme tipi (baskıdan/satıştan) "
+        "ve avansı.",
+        "SELECT k.new_kitapId AS id, k.new_name AS ad, k.new_StokKodu AS kod, k.new_sayfasayisi AS sayfa,\n"
+        "       COALESCE(k.new_Ebat, eb.new_name) AS ebat,\n"
         "       k.new_kdvdahilfiyat AS fiyat, k.new_kdvorani AS kdv, k.new_ciltlemesekli AS cilt, k.new_yazartext AS yazar,\n"
         "       y.new_name AS yayinevi, kl.new_name AS kitaplik, k.new_ilkyayintarihi AS ilk_yayin,\n"
+        "       k.new_guncelstok AS stok, k.new_baskitarihi AS son_baski, k.new_baskiadedi AS son_baski_adet,\n"
+        "       k.new_KapakveCilt AS kapak_cilt, k.new_RenkveResim AS renk_resim, cs.new_name AS cilt_adi,\n"
         "       s.new_Telif AS telif, s.new_telifturu AS telif_turu, s.new_TelifTipi AS telif_tipi,\n"
         "       s.new_sozlesmeavanstutari AS avans, s.new_sozlesmeparabirimi AS avans_para\n"
         "FROM new_kitapBase k\n"
-        "LEFT JOIN new_markaBase y ON y.new_markaId = k.new_yayinciid\n"
+        "LEFT JOIN new_markaBase y ON y.new_markaId = COALESCE(k.new_yayineviid, k.new_yayinciid)\n"
+        "LEFT JOIN new_ciltsekliBase cs ON cs.new_ciltsekliId = k.new_ciltsekliid\n"
+        "LEFT JOIN new_baskibilgisiBase eb ON eb.new_baskibilgisiId = k.new_new_kitapebatid\n"
         "LEFT JOIN new_kitaplikBase kl ON kl.new_kitaplikId = k.new_kitaplikid\n"
         "LEFT JOIN new_sozlesmeBase s ON s.new_sozlesmeId = k.new_aktifsozlesmeid AND s.statecode = 0\n"
         "WHERE k.statecode = 0 AND k.new_StokKodu LIKE '152%'",
+    ),
+    Source(
+        "crm_sozlesme", "crm", "CRM kitap sözleşmeleri (telif ve tek ödeme)",
+        "Kitaba bağlı yürürlükteki sözleşmeler: sözleşme türü (metin, tercüme, yayına hazırlama, çizim…), karton ve sert "
+        "kapak telif oranı, tek ödeme tutarı. Hak satışı sözleşmeleri («Satış») maliyet olmadığı için alınmaz.",
+        "SELECT nk.new_kitapid AS kitap, s.new_sozlesmeId AS id, s.new_name AS ad, t.new_name AS tur,\n"
+        "       s.new_Telif AS karton, s.new_sertkapaktelif AS sert, s.new_TekdemeTutari AS tek_odeme, s.createdon AS olusturma\n"
+        "FROM new_new_sozlesme_new_kitapBase nk\n"
+        "JOIN new_sozlesmeBase s ON s.new_sozlesmeId = nk.new_sozlesmeid AND s.statecode = 0\n"
+        "LEFT JOIN new_sozlemetipiBase t ON t.new_sozlemetipiId = s.new_sozlesmetipiid\n"
+        "WHERE ISNULL(t.new_name, N'') NOT LIKE N'%(Satış)%'",
     ),
     Source(
         "crm_baski", "crm", "CRM üretim (baskı) kayıtları",
