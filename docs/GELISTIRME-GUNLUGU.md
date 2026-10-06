@@ -15,6 +15,8 @@
 - **Kod:** `crm.book_barcode` — kitap barkodu = 13 hane, 978/979. CRM yazımında kitap barkodu olmayan ürün `kapsam_disi` (Sonuç: «Kitap barkodu değil (set ya da siteye özel ürün kodu); CRM'e yazılmaz.»), «eşleşmeyen» sayılmaz. Hak ekranında «CRM'de eşleşmeyen» sayısı ve süzgeci yalnız kitap barkodlu ürünler (`BOOK_EAN`); açıklama metni buna göre.
 - **Ölçüm (VM verisi, salt okuma):** 5.730 aktif üründe eşleşmeyen 197 → 1 (kalan: «Mervin Ararsan Bulursun» 9789756107874); onaylı önerilerde eşleşmeyen 59 → 0. Ayrılan 196: 181 set (1978/1979…), 13 on dört haneli kod, 2 on iki haneli.
 - **Testler:** `test_unmatched_only_for_book_barcodes` (set, siteye özel, eksik haneli, gerçek kitap); `test_seo_hazir_hiz2` eski SQL karşılığı yeni kurala göre. SEO testleri 540 geçti (test sunucusu).
+- **Hazır kayıt:** CRM özeti/satırları veri damgasıyla önbellekte; kural değişince eski 197 dönüyordu → damgaya kural sürümü (`CRM_RULE`) eklendi (`a568ea55`).
+- **Kurulum:** test sunucusu 4 dosya (md5 = önceki main, sonra = main), köprü yeniden başladı, arayüz derlemesi `index-D2cRH_vX.js`, `._*` 0; timasai kısa oturumuyla `/seo-geo/crm`: eşleşmeyen 1 (Mervin), süzgeç 1 satır; oturum silindi. Müşteri VM'i `5b11f75d` (`vm-deploy-5b11f75d`, arada başka iki işin dosyaları test sunucusunda kuruluydu), başarı, `._*` 0, köprüde üç dosyanın md5'i main, VM verisinde eşleşmeyen 1.
 
 ## 2026-10-06 — SEO → CRM: «Pasif» kitap kartları artık eşleşiyor, 842 kitap daha yazıldı
 
