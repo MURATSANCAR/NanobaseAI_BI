@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-06 — SEO → CRM: set ve siteye özel ürün kodu «eşleşmeyen» sayılmaz
+
+- **Neden:** 10-05 Excel'indeki dört sınıf (733 «yalnız ürün kartı», 95 «ne kitap ne ürün kartı», 11 «barkod alanı yanlış», 62 «kitap barkodu yok») yeniden incelendi: ilk üçü (839) ve sonuncunun 3'ü «Pasif» kartlardı, 842'si bugün yazıldı. Kalan 59'un hepsi set ya da siteye özel kod (45 «1» + kitap EAN'ı, 12 siteye özel kod, 2 eksik haneli set barkodu). Kullanıcı kararı: bunlara CRM'de kart açılmayacak, siteye özel kodlar yok sayılsın.
+- **Kod:** `crm.book_barcode` — kitap barkodu = 13 hane, 978/979. CRM yazımında kitap barkodu olmayan ürün `kapsam_disi` (Sonuç: «Kitap barkodu değil (set ya da siteye özel ürün kodu); CRM'e yazılmaz.»), «eşleşmeyen» sayılmaz. Hak ekranında «CRM'de eşleşmeyen» sayısı ve süzgeci yalnız kitap barkodlu ürünler (`BOOK_EAN`); açıklama metni buna göre.
+- **Ölçüm (VM verisi, salt okuma):** 5.730 aktif üründe eşleşmeyen 197 → 1 (kalan: «Mervin Ararsan Bulursun» 9789756107874); onaylı önerilerde eşleşmeyen 59 → 0. Ayrılan 196: 181 set (1978/1979…), 13 on dört haneli kod, 2 on iki haneli.
+- **Testler:** `test_unmatched_only_for_book_barcodes` (set, siteye özel, eksik haneli, gerçek kitap); `test_seo_hazir_hiz2` eski SQL karşılığı yeni kurala göre. SEO testleri 540 geçti (test sunucusu).
+
 ## 2026-10-06 — SEO → CRM: «Pasif» kitap kartları artık eşleşiyor, 842 kitap daha yazıldı
 
 - **Neden:** 10-05 toplu yazımda 901 ürün «CRM'de barkodla eşleşen kart yok» sayılmıştı; kullanıcı «CRM arayüzünde var» dedi. Süzgeçsiz ölçüm: 842'si aynı EAN'la CRM'de, hepsi `statecode = 0` + durum nedeni «Pasif» (100000000). SEO modülünün kitap kopyası (`semantic_seo_crm_books`) CRM bağlantısının etkin kayıt süzgecinden (`crm_active`) geçtiği için bu kartları hiç görmüyordu; 10-05 Excel'indeki «kitap kartı açılmamış» (733) / «ne kitap ne ürün kartı» (95) analizi de aynı süzgeçli bağlantıyla yapıldığı için yanlıştı.
