@@ -41,6 +41,8 @@ def _json_num(key: str) -> Any:
 SALES, VIEWS = _json_num("CountTotalSales"), _json_num("StatViews")
 #: T-soft barkodu yalnız rakamlarıyla: CRM kitap kartına (EAN-13) bağlanır.
 EAN = sa.func.regexp_replace(sa.func.coalesce(sa.cast(PRODUCTS.c.data_json, sa.JSON)["Barcode"].as_string(), ""), "[^0-9]", "", "g")
+#: CRM'de karşılığı aranan ürün: barkodu kitap barkodu (`crm.book_barcode`). Set ve siteye özel kod «eşleşmeyen» sayılmaz.
+BOOK_EAN = EAN.op("~")("^97[89][0-9]{10}$")
 
 
 class Decision(BaseModel):
@@ -1459,7 +1461,7 @@ def register(app, runtime, authorize, session_user):
                 return {"books": 0}
             j = _crm_join()
             total = c.execute(sa.select(sa.func.count()).select_from(j).where(active)).scalar() or 0
-            unmatched = c.execute(sa.select(sa.func.count()).select_from(j).where(active, CRM_BOOKS.c.ean.is_(None))).scalar() or 0
+            unmatched = c.execute(sa.select(sa.func.count()).select_from(j).where(active, CRM_BOOKS.c.ean.is_(None), BOOK_EAN)).scalar() or 0
             rights = dict(c.execute(sa.select(CRM_BOOKS.c.rights, sa.func.count()).select_from(j).where(
                 active, CRM_BOOKS.c.ean.isnot(None)).group_by(CRM_BOOKS.c.rights)).all())
             flags = dict(c.execute(sa.select(CRM_BOOKS.c.status_flag, sa.func.count()).select_from(j).where(
@@ -1497,7 +1499,7 @@ def register(app, runtime, authorize, session_user):
         data = sa.cast(CRM_BOOKS.c.data_json, sa.JSON)
         with seo.engine().connect() as c:
             rows = c.execute(sa.select(PRODUCTS.c.product_id, CRM_BOOKS.c.rights, CRM_BOOKS.c.status_flag.isnot(None),
-                                       CRM_BOOKS.c.ean.is_(None), data["previewPdf"].as_string().isnot(None),
+                                       sa.and_(CRM_BOOKS.c.ean.is_(None), BOOK_EAN), data["previewPdf"].as_string().isnot(None),
                                        data["video"].as_string().isnot(None))
                              .select_from(_crm_join()).where(PRODUCTS.c.tenant_id == seo.tenant(), PRODUCTS.c.active.is_(True))
                              .order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.product_id)).all()

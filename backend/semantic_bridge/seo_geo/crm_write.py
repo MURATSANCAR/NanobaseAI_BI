@@ -67,6 +67,7 @@ RESULT_TEXT = {"yazildi": "CRM kitap kartına yazıldı (SEO başlığı, meta a
                "deneme": "Deneme kipi: CRM'e yazılacak değer kaydedildi, yazılmadı.",
                "degisiklik_yok": "CRM kitap kartında bu değerler zaten var.",
                "eslesmeyen": "CRM'de barkodla eşleşen kitap kartı yok; yazılmadı.",
+               "kapsam_disi": "Kitap barkodu değil (set ya da siteye özel ürün kodu); CRM'e yazılmaz.",
                "hata": "CRM'e yazılamadı; ayrıntı CRM yazım kaydında."}
 
 
@@ -369,7 +370,7 @@ def run(seo, *, approve_ready: bool, write: bool, limit: Optional[int] = None, u
             status = _process(seo, conn, p, prod, prop, books, write=write, user=user, stamp=stamp)
             set_result(seo, prop["id"], status)
             stats[status] = stats.get(status, 0) + 1
-            if status not in ("eslesmeyen", "bos"):
+            if status not in ("eslesmeyen", "kapsam_disi", "bos"):
                 stats["kitap"] += 1
             if status == "hata" and stats["hata"] >= 5 and stats["yazildi"] == 0 and stats["deneme"] == 0:
                 log_line("ilk 5 kayıt hata verdi; koşu durdu (izin ya da bağlantı sorunu)")
@@ -386,7 +387,7 @@ def _process(seo, conn, p: str, prod: Optional[dict[str, Any]], prop: dict[str, 
     data = json.loads(prod["data_json"]) if prod else {}
     book = books.get(crm.ean_key(data.get("Barcode")))
     if not book:
-        return "eslesmeyen"
+        return "eslesmeyen" if crm.book_barcode(data.get("Barcode")) else "kapsam_disi"
     fields = build(data, json.loads(prop["fields_json"] or "{}"), stamp)
     if not fields:
         return "bos"

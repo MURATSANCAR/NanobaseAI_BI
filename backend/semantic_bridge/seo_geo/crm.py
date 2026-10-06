@@ -57,6 +57,14 @@ def ean_key(v: Any) -> str:
     return re.sub(r"[^0-9]", "", str(v or ""))
 
 
+def book_barcode(v: Any) -> bool:
+    """Kitap barkodu mu: 13 haneli ISBN-EAN (978/979). Set («1» + setteki bir kitabın EAN'ı), siteye özel ürün kodu ve
+    eksik haneli barkod kitap barkodu değildir; CRM'de kartları açılmaz (kullanıcı kararı 2026-10-06), «eşleşmeyen»
+    sayılmaz."""
+    k = ean_key(v)
+    return len(k) == 13 and k[:3] in ("978", "979")
+
+
 def _day(v: Any) -> Optional[date]:
     if isinstance(v, datetime):
         return v.date()

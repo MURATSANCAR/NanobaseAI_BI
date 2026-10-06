@@ -93,7 +93,7 @@ export default function SeoRights() {
         <>
           <section className="sg-kpis" aria-label="Özet">
             <Kpi label="Satıştaki kitap" value={fmt(s.products)} note={`CRM kartıyla eşleşmeyen ${fmt(s.unmatched)} · son okuma ${dateTime(s.lastRead)}`} info={<SeoInfo k={detail.data?.kaynaklar} label="Satıştaki kitap" />}
-              explain="T-soft’ta satışta olan kitap sayısı. Barkodu CRM’deki bir kitap kartıyla eşleşmeyenler ayrıca sayılır; onların hak durumu bilinmez." />
+              explain="T-soft’ta satışta olan kitap sayısı. Barkodu CRM’deki bir kitap kartıyla eşleşmeyenler ayrıca sayılır; onların hak durumu bilinmez. Set ve siteye özel ürün kodları kitap barkodu olmadığı için bu sayıya girmez." />
             <Kpi label="Hak var" value={fmt(s.rights?.var)} note="Bütün telif alış sözleşmelerinde internet hakkı" tone="good" info={<SeoInfo k={detail.data?.kaynaklar} label="Hak var" />}
               explain="Kitaba bağlı ve yürürlükte olan bütün telif alış sözleşmeleri internette gösterime izin veriyor." />
             <Kpi label="Hak eksik ya da incelenmeli" value={fmt((s.rights?.eksik ?? 0) + (s.rights?.incele ?? 0))} note={`Eksik ${fmt(s.rights?.eksik)} · hak notu var ${fmt(s.rights?.incele)}`} tone="bad" info={<SeoInfo k={detail.data?.kaynaklar} label="Hak eksik ya da incelenmeli" />}

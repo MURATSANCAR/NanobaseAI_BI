@@ -348,6 +348,25 @@ def test_bulk_run_updates_result_text(env):
     assert r == "Onaylandı. " + w.RESULT_TEXT["yazildi"]
 
 
+@pytest.mark.parametrize("barcode,status", [
+    ("19786255978486", "kapsam_disi"),   # set: «1» + setteki bir kitabın EAN'ı
+    ("11520501876113", "kapsam_disi"),   # siteye özel ürün kodu
+    ("978605058405", "kapsam_disi"),     # eksik haneli
+    ("9786050584059", "eslesmeyen"),     # kitap barkodu, CRM'de kartı yok
+])
+def test_unmatched_only_for_book_barcodes(env, barcode, status):
+    seo, db, mp = env
+    mp.setattr(w, "mode", lambda: "acik")
+    with seo.engine().begin() as c:
+        c.execute(PRODUCTS.update().where(PRODUCTS.c.product_id == "p1").values(data_json=_json.dumps(
+            {"Barcode": barcode, "ProductName": "Set", "Model": "Yazar", "SeoTitle": "Set - Yazar | Timaş"})))
+    stats = w.run(seo, approve_ready=False, write=True, log_line=lambda s: None)
+    assert stats[status] == 1 and stats["kitap"] == 0 and db.commits == 0
+    with seo.engine().connect() as c:
+        r = c.execute(_sa.select(PROPOSALS.c.result).where(PROPOSALS.c.id == "pr1")).scalar()
+    assert r == "Onaylandı. " + w.RESULT_TEXT[status]
+
+
 def test_refresh_results_prefers_written(env):
     seo, db, mp = env
     mp.setattr(w, "mode", lambda: "acik")
