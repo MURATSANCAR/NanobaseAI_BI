@@ -160,7 +160,8 @@ def publisher_title(title: str, brand: Optional[str], max_len: int) -> str:
 TITLE_HARD_MAX = 100
 _SENT_END = re.compile(r"[.!?…][\"'»”’)]*$")
 _SENT_SPLIT = re.compile(r"[.!?…][\"'»”’)]*(?=\s|$)")
-
+#: Nokta taşıyan ama cümle bitirmeyen kısaltmalar ve tek harfli baş harf («Sharon M.», «Prof. Dr.»).
+_ABBREV = re.compile(r"(?:\b[A-ZÇĞİÖŞÜ]|\b(?:Dr|Prof|Doç|Yrd|Av|Op|Uzm|Hz|Sn|St|vb|vs|bkz|Mr|Mrs|Ms|Jr|No|s|c|Cilt|Haz|Çev|Ed))\.$", re.I)
 
 def core_title(title: str) -> str:
     """Başlığın «| Yayınevi» öncesi kısmı (uzunluk kuralı buna uygulanır)."""
@@ -170,7 +171,8 @@ def core_title(title: str) -> str:
 
 def complete_sentence(text: str) -> bool:
     """Metin tam cümleyle mi bitiyor (nokta, ünlem, soru, üç nokta; ardından tırnak/parantez olabilir)."""
-    return bool(_SENT_END.search((text or "").strip()))
+    t = (text or "").strip()
+    return bool(_SENT_END.search(t)) and not _ABBREV.search(t)
 
 
 def fit_meta(text: str, max_len: int, floor: int = 70) -> Optional[str]:
@@ -184,7 +186,7 @@ def fit_meta(text: str, max_len: int, floor: int = 70) -> Optional[str]:
         return t
     best = None
     for m in _SENT_SPLIT.finditer(t):
-        if m.end() <= max_len:
+        if m.end() <= max_len and not _ABBREV.search(t[:m.end()]):
             best = t[:m.end()].strip()
     return best if best and len(best) >= floor else None
 
@@ -210,6 +212,13 @@ def _source_text(p: dict[str, Any]) -> str:
                                 "SearchKeywords", "ShortDescription", "Details", "DefaultCategoryPath",
                                 "DefaultCategoryName")]
     return _lower(rules.text_of(" ".join(str(x) for x in parts if x)))
+
+
+def _fold(s: str) -> str:
+    """Karşılaştırma için aksan ve ı/i farkı silinmiş küçük harf («Gazzâlî» = «Gazzali», «İskender» = «Iskender»)."""
+    import unicodedata
+    s = _lower(s or "").replace("ı", "i")
+    return "".join(ch for ch in unicodedata.normalize("NFKD", s) if not unicodedata.combining(ch))
 
 
 def _lower(s: str) -> str:
@@ -275,7 +284,7 @@ def meta_problems(text: str, p: dict[str, Any], title: str, lim: dict[str, int])
     if not lim["meta_min"] <= len(t) <= lim["meta_max"]:
         out.append(f"{len(t)} karakter; {lim['meta_min']}–{lim['meta_max']} olmalı")
     author = re.split(r"\s*[,;&]\s*|\s+ve\s+", rules.text_of(p.get("Model") or ""))[0].strip()
-    if author and _lower(author.split()[-1]) not in _lower(t):
+    if author and _fold(author.split()[-1]) not in _fold(t):
         out.append(f"yazar adı ({author}) geçmiyor")
     if title and _lower(core_title(title)) == _lower(t.rstrip(".")):
         out.append("başlığın aynısı")

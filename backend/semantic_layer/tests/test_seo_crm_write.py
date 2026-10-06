@@ -472,3 +472,12 @@ def test_meta_quality_gate():
     assert any("kayıtta olmayan" in x for x in propose.meta_problems(good.replace("Batı", "Batı ve Ahmet Hamdi"), p, "", lim))
     assert any("karakter" in x for x in propose.meta_problems("Nevzat Tarhan kısa yazdı.", p, "", lim))
     assert any("ünlem" in x for x in propose.meta_problems(good.replace("rehber.", "rehber!"), p, "", lim))
+
+
+def test_initials_are_not_sentence_ends_and_author_match_folds_accents():
+    from semantic_bridge.seo_geo import propose
+    assert not propose.complete_sentence("Judy yatılı okul hayatını mektuplarla anlatır. Alice J.")
+    assert propose.fit_meta("Judy yatılı okul hayatını gizemli bir hayırsevere yazdığı mektuplarla anlatıyor, okura sıcak bir hikâye sunuyor. Alice J. Webster bu", 160).endswith("sunuyor.")
+    lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
+    m = "Nestor İskender, 1453 İstanbul Kuşatması'na tanıklık eden bir Ortodoks Hristiyan olarak fetih anlarını günü gününe aktarıyor ve okura sunuyor."
+    assert not any("yazar" in x for x in propose.meta_problems(m, {"Model": "Nestor Iskender", "Details": m}, "", lim))
