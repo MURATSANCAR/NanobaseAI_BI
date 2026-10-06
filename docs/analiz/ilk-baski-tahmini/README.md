@@ -106,15 +106,55 @@ kayıp satıştır. Ekranda bütün kurallar kitap başına tükenme olasılığ
    Yeni kitabın düşüşünü (ilk ay dağıtım, sonra iniş) birkaç aylık geçmişten öğrenemiyor → kullanılmıyor. Kitap bir
    yılı doldurunca Baskı Öneri'nin tahmin sekmesi (M11, aynı model) devralır.
 
+## Yazar geçmişi (2026-10-06)
+
+Soru (kullanıcı): emsal puanında «aynı yazar» var ama yazarın satış gücü ayrıca ölçülüyor mu? Ölçülmüyordu: aynı
+yazarın kitapları K emsal içinde seyreliyordu. Örnek: Mert Arık «Babası Kılıklı» (Ağustos 2026) — yazarın önceki 11
+kitabı ilk 6 ayda 65–148 bin sattı (tipik ~113 bin), emsal tahmini 9.091 (öneri 15.000); yayınevi 100.000 bastı,
+ilk 2 ayda 80.586 satıldı.
+
+**Ölçüm (canlı veri kümesi, 2026-09 son tam ay; `betikler/yazar_bt.py`, `tani.py`):** sınama kitaplarının %61'inde
+(820'de 501) yazarın ilk 6 ayı dolmuş önceki kitabı var. Yazarı çok satan (≥3 önceki kitap, ortanca ≥20 bin) 21
+sınama kitabında emsal tahmini gerçekleşenin ortanca **7,5 kat** altında; yalnız yazar ortancası bu kitaplarda çok daha
+isabetli (|log| ortancası 2,03 → 0,49). Sıradan yazarda tersi: emsal tahmini yazar ortancasından iyi (dağınık
+geçmişte yazar ortancası 1,15, emsal 0,65). Sonuç: yazarın ağırlığı sabit olamaz, kitap sayısına ve tutarlılığa bağlı.
+
+**Yöntem (`ilk_baski_model.author_effect`, `AUTHOR`):** yazar düzeyi μ = önceki kitapların log ilk 6 ayının yaşla
+(e^(−yaş/2 yıl)) ağırlıklı ortalaması; dağınıklık s² önsel s0 = 0,3 ile (ν = 3 kitap) yumuşatılır; ağırlık
+a = n / (n + 16 · s²) (n etkin kitap sayısı); çarpan = exp(a · (μ − log baz₆)). Çarpan yalnız ilk 6 aydan hesaplanır
+ve 12 aya aynen uygulanır (ayrı ayar seçilince 12 ay tahmini 6 aydan küçük çıkıyordu). Emsal ayarları (`PARAMS`)
+değişmedi; yazar ayarları **2019-01…2023-12** lansmanlarıyla seçildi (2021-07 sonrası dönemde çok satan yazar örneği
+yalnız 1 idi), sınama 2024+ (seçimde yok). Denenip bırakılanlar: sabit ağırlıklı harman (A), yazarın kendi tahmin
+artığı (B) — ikisi de çok satan yazarı düzeltmedi; tutarlılık ağırlıklı artık (CB) 6 ayda CA'ya yakın, Babası
+Kılıklı'yı 33 bin veriyor.
+
+**Sonuç (raporun kendi sınaması, kalibrasyon dahil; yazarsız → yazarlı):**
+
+| | 6 ay (820) | 12 ay (630) |
+| --- | --- | --- |
+| Tipik sapma | %47,2 → **%45,9** | %55,1 → %55,4 |
+| Toplam adette sapma (WAPE) | %67,5 → **%60,5** | %73,0 → **%67,9** |
+| 2 kat içinde | %63,7 → %64,5 | %54,6 → %54,0 |
+| %80 aralığın kapsaması | %74,4 → **%77,8** | %71,7 → %73,5 |
+| Önerilen baskıda 6 ayda tükenme | %21,5 → %21,2 | — |
+
+Çok satan yazarlı 21 kitapta (6 ay): tahmin/gerçekleşen yanı 7,5 kat → 2,1 kat; 2 kat içinde %10 → %43.
+Babası Kılıklı: baz 8.302 → 61.071, öneri 15.000 → **102.000**, 12 ay baz 14.162 → 105.758.
+
+Sınır: yazar kırılımı (Anıl Basılı «Anne Terliği»: geçmiş ~20 bin, gerçekleşen 132 bin) öngörülmez; yazarın düşüşü
+(Talha Uğurluel: geçmiş ~22 bin, yeni kitaplar 3–6 bin) çarpanı yanıltır. Aynı eserin özel baskısı («Bez Ciltli»)
+yeni kitap sayılıyor ve yazar geçmişini aşağı çeker — ayrı iş.
+
 ## Açık noktalar
 
 - Canlı Logo (.25) yok: satış 17.08.2026'da bitiyor; Ağustos–Eylül 2026'da çıkan kitaplar «yayımlanacak» listesinde.
 - Tükenen kitapların ilk baskı adedi (adil karşılaştırma) ve birim maliyet (M9) yok; ciro var, katkı yok.
-- Pazarlama planı (M15) ve yazar bilinirliği (M7 sosyal medya) şartnamede var, veri kaynağı yok; yazar etkisi yalnız
-  «aynı yazar» emsaliyle giriyor.
+- Pazarlama planı (M15) ve yazar bilinirliği (M7 sosyal medya) şartnamede var, veri kaynağı yok; yazar etkisi «aynı
+  yazar» emsali ve yazar geçmişi çarpanıyla giriyor (yalnız yazarın daha önce bizde çıkmış kitapları).
 - CRM emsal bağının girildiği tarih tutulmuyor: sınamada emsal, kitabın bugünkü kartından okunuyor (çıkıştan sonra
   eklenmiş emsal sınamayı iyimser gösterebilir).
 - Ayarlar kitap + set karışık havuzda seçildi; kapsam kitaba daraltılınca yeniden seçilmedi (sınama sayıları kitap
   kapsamıyla).
 
-Betikler `betikler/`: `bt.py` (ayar seçimi ve sınama), `bt2.py` (Aşama 2 zaman serisi deneyi). Test sunucusunda koşar.
+Betikler `betikler/`: `bt.py` (ayar seçimi ve sınama), `bt2.py` (Aşama 2 zaman serisi deneyi), `yazar_bt.py` (yazar
+geçmişi yöntemleri ve ayar seçimi), `tani.py` (yazar geçmişi isabeti, kitap sayısı ve dağınıklığa göre). Test sunucusunda koşar.

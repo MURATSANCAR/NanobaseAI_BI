@@ -11,6 +11,8 @@ tahmin edilir:
 3. Tahmin: en yüksek puanlı K emsalin ilk 6 / 12 aylık satışının puan ağırlıklı ortancası (baz). Emsalin çıktığı
    dönem ile yeni kitabın döneminin pazar düzeyi farklıysa (okul dönemi, büyüme), portföy toplamının oranıyla
    düzeltilir; yeni kitabın dönemi gelecekteyse portföy düzeyi ZEKİ AI tahmin modelinden gelir.
+   Yazar geçmişi (`author_effect`): yazarın önceki kitaplarının ilk 6 ayı, kitap sayısı ve tutarlılığı oranında bazı
+   kendi düzeyine çeker (çok satan yazarda emsaller düzeyi tutturamıyordu).
 4. Senaryolar ve güven aralığı: geçmiş sınamadaki gerçekleşen/tahmin oranlarının dağılımından (kalibre edilmiş;
    emsal sayısı az ya da zayıfsa aralık geniş).
 
@@ -39,6 +41,17 @@ PARAMS: dict[int, dict[str, float]] = {
     12: {"w_emsal": 6, "w_author": 2, "w_series": 2, "w_library": 0, "w_publisher": 1, "w_audience": 0,
          "w_genre": 0.5, "w_price": 2, "w_pages": 0.5, "base": 0.05, "tau_years": 3.0, "k": 10, "beta": 0.0},
 }
+
+
+# Yazar geçmişi (2026-10-06): yazarın önceki kitaplarının ilk 6 ayı, emsal tahmininden ayrı bir sinyal. Emsal puanındaki
+# «aynı yazar» K emsal içinde seyrelir; çok satan yazarda (Mert Arık, Anıl Basılı…) emsal tahmini gerçekleşenin ~7 kat
+# altında kalıyordu. Yazar düzeyi = önceki kitapların log satışının yaşla (e^(−yaş/tau)) ağırlıklı ortalaması; ağırlık
+# a = amax · n / (n + lam · s²), n = etkin kitap sayısı, s² = önceki kitapların dağınıklığı (s0 ile `nu` kitaplık önsel).
+# Çok kitaplı ve tutarlı yazarda a → 1, tek kitaplı ya da dağınık yazarda a küçük. Çarpan = exp(a · (düzey − log baz6)),
+# yalnız ilk 6 aydan hesaplanır ve iki ufka aynen uygulanır (12 ay tahmini 6 aydan küçük çıkamaz). Ayarlar seçim
+# dönemi 2019-01…2023-12 ile seçildi, sınama 2024+ (bkz. docs/analiz/ilk-baski-tahmini/README.md «Yazar geçmişi»).
+AUTHOR: dict[str, float] = {"lam": 16.0, "s0": 0.3, "nu": 3.0, "tau_years": 2.0, "amax": 1.0}
+AUTHOR_H = 6
 
 
 def params_for(h: int, p: dict | None = None) -> dict:
@@ -372,6 +385,16 @@ class Forecast:
     values: list[float]
     weights: list[float]
     strength: float  # emsal gücü: puanların toplamı (güven düzeyi)
+    emsal_base: float | None = None  # yazar çarpanından önceki baz (yalnız emsallerden)
+    author: dict | None = None       # yazar geçmişi (`author_effect`); çarpan baz'a uygulanmışsa dolu
+
+    def apply_author(self, eff: dict | None) -> "Forecast":
+        """Yazar çarpanını baz'a uygular (bir kez)."""
+        self.emsal_base = self.base
+        self.author = eff
+        if eff:
+            self.base = self.base * eff["factor"]
+        return self
 
 
 def pool_for(ds: Dataset, cutoff: int, h: int) -> list[str]:
@@ -406,6 +429,44 @@ def forecast(ds: Dataset, t: Book, t_launch: int, cutoff: int, h: int, p: dict |
                      "sales": round(y), "adjusted": round(y * f), "factor": round(f, 3)})
     return Forecast(h=h, base=wquantile(vals, wts, 0.5), analogs=rows, values=vals, weights=wts,
                     strength=sum(w for w in wts))
+
+
+def author_effect(ds: Dataset, t: Book, t_launch: int, base6: float, pool6: list[str],
+                  cfg: dict | None = None) -> dict | None:
+    """Yazar geçmişi çarpanı ve gerekçesi. `pool6`: kesimde ilk 6 ayı tam gözlenmiş lansmanlar (geleceği görmez)."""
+    cfg = cfg or AUTHOR
+    if not t.authors or base6 <= 0:
+        return None
+    books = []
+    for c in pool6:
+        if c == t.code:
+            continue
+        a = ds.books[c]
+        shared = a.authors & t.authors
+        if not shared:
+            continue
+        y = ds.outcomes[c].total(AUTHOR_H)
+        if not y or y <= 0:
+            continue
+        age = max(0, t_launch - a.launch) / 12
+        books.append({"code": c, "name": a.name, "authors": a.authors_text or None, "launch": ms(a.launch),
+                      "sales6": round(y), "sales12": round(v) if (v := ds.outcomes[c].total(12)) else None,
+                      "w": math.exp(-age / cfg["tau_years"])})
+    if not books:
+        return None
+    w = [b["w"] for b in books]
+    lg = [math.log(max(b["sales6"], 1)) for b in books]
+    n = sum(w)
+    mu = sum(x * wi for x, wi in zip(lg, w)) / n
+    var = sum(wi * (x - mu) ** 2 for x, wi in zip(lg, w)) / n
+    var = (n * var + cfg["nu"] * cfg["s0"] ** 2) / (n + cfg["nu"])
+    a = cfg["amax"] * n / (n + cfg["lam"] * var)
+    f = math.exp(a * (mu - math.log(base6)))
+    books.sort(key=lambda b: b["launch"], reverse=True)
+    for b in books:
+        b["weight"] = round(b.pop("w") / n, 4)
+    return {"factor": f, "weight": a, "level6": math.exp(mu), "spread": math.sqrt(var), "count": len(books),
+            "base6": base6, "books": books}
 
 
 def confidence_tier(fc: Forecast, p: dict | None = None) -> str:

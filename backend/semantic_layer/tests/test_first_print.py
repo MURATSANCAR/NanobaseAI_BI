@@ -199,3 +199,73 @@ def test_non_book_codes_are_not_analogs():
 def test_market_factor_neutral_without_level(ds):
     assert M.market_factor(ds, M.mi(2022, 1), M.mi(2030, 1), 6, None) == 1.0
     assert not math.isnan(M.market_factor(ds, M.mi(2022, 1), M.mi(2022, 6), 6, None))
+
+
+def _star_ds(n_prior: int, prior_sales: list[int]):
+    """Yıldız yazar: editörün emsal gösterdiği aynı dizideki kitaplar düşük satar, yazarın önceki kitapları yüksek
+    (Babası Kılıklı / Mert Arık durumu)."""
+    books, sales = [], []
+    for i in range(20):  # yazarın olmadığı, aynı dizide düşük satan çocuk kitapları
+        code = f"15201.01.1{i:03d}"
+        books.append(_book(code, f"2022-{i % 12 + 1:02d}-01", author=f"Başka {i}", library="Çocuk", series="Yeni Dizi"))
+        sales += _sales(code, f"2022-{i % 12 + 1:02d}", [100] * 14)
+    for i in range(n_prior):
+        code = f"15201.01.2{i:03d}"
+        start = f"2023-{i + 1:02d}"
+        books.append(_book(code, start + "-01", author="Yıldız Yazar", library="Edebiyat"))
+        sales += _sales(code, start, [prior_sales[i] // 6] * 12)
+    books.append(_book("15201.01.3000", "2027-01-01", author="Yıldız Yazar", library="Çocuk", series="Yeni Dizi"))
+    books.append(_book("15201.01.3001", "2027-01-01", author="Yeni Yazar", library="Çocuk", series="Yeni Dizi"))
+    emsal = [{"stok_kodu": "15201.01.3000", "emsal_stok_kodu": f"15201.01.1{i:03d}"} for i in range(8)]
+    return M.build_dataset(books, emsal, sales, end=M.mi(2024, 12))
+
+
+def _engine(ds):
+    eng = IB.Engine(ds, None, {}, [1000, 5000, 10000, 100000], M.PARAMS)
+    eng.calib = {h: {"hepsi": {"0.1": 0.5, "0.2": 0.7, "0.5": 1.0, "0.8": 1.4, "0.9": 2.0},
+                     "ratios": {"hepsi": [0.5, 0.8, 1.0, 1.2, 2.0]}} for h in ("6", "12")}
+    return eng
+
+
+def test_author_history_pulls_consistent_bestseller_to_its_level():
+    ds = _star_ds(8, [120000, 110000, 130000, 125000, 100000, 140000, 115000, 120000])
+    eng = _engine(ds)
+    t = ds.books["15201.01.3000"]
+    fc6, fc12 = eng.raw(t, M.mi(2025, 1), ds.end, 6), eng.raw(t, M.mi(2025, 1), ds.end, 12)
+    assert fc6.author["count"] == 8 and fc6.author["weight"] > 0.7
+    assert fc6.emsal_base < 1000 and fc6.base > 40000           # emsaller tutturamıyor, yazar düzeyi baskın
+    # çarpan yalnız ilk 6 aydan: 12 ay aynı oranla büyür, 6 aydan küçük kalamaz
+    assert fc12.base / fc12.emsal_base == pytest.approx(fc6.base / fc6.emsal_base)
+    assert fc12.base >= fc6.base
+    out = eng.full(t, M.mi(2025, 1))
+    assert out["author"]["count"] == 8 and out["author"]["books"][0]["launch"] >= out["author"]["books"][-1]["launch"]
+    assert sum(b["weight"] for b in out["author"]["books"]) == pytest.approx(1, abs=0.01)
+    assert any("Yazarın daha önce çıkmış 8 kitabı" in r for r in out["reasons"])
+    assert out["horizons"]["6"]["emsalBase"] < out["horizons"]["6"]["raw"]
+
+
+def test_author_history_weak_when_single_or_scattered_and_absent_for_new_author():
+    one = _star_ds(1, [120000])
+    eng = _engine(one)
+    fc = eng.raw(one.books["15201.01.3000"], M.mi(2025, 1), one.end, 6)
+    assert fc.author["count"] == 1 and fc.author["weight"] < 0.5
+    scattered = _star_ds(4, [500, 120000, 2000, 90000])
+    fc_s = _engine(scattered).raw(scattered.books["15201.01.3000"], M.mi(2025, 1), scattered.end, 6)
+    consistent = _star_ds(4, [100000, 120000, 110000, 90000])
+    fc_c = _engine(consistent).raw(consistent.books["15201.01.3000"], M.mi(2025, 1), consistent.end, 6)
+    assert fc_s.author["weight"] < fc_c.author["weight"]
+    new = _engine(one).full(one.books["15201.01.3001"], M.mi(2025, 1))
+    assert new["author"] is None and any("tahmin yalnız emsallerden" in r for r in new["reasons"])
+
+
+def test_author_history_never_sees_the_future():
+    ds = _star_ds(8, [120000] * 8)
+    eng = _engine(ds)
+    t = ds.books["15201.01.3000"]
+    # kesim 2023-05: yazarın ilk kitabı 2023-01'de çıktı, hiçbirinin ilk 6 ayı dolmamış
+    assert eng.raw(t, M.mi(2023, 7), M.mi(2023, 5), 6).author is None
+    # kesim 2023-06: yalnız 2023-01 kitabının 6 ayı dolmuş
+    assert eng.raw(t, M.mi(2023, 8), M.mi(2023, 6), 6).author["count"] == 1
+    eng.author = None  # kapalı: baz yalnız emsallerden
+    fc = eng.raw(t, M.mi(2025, 1), ds.end, 6)
+    assert fc.author is None and fc.base == fc.emsal_base

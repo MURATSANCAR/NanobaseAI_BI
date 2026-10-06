@@ -51,7 +51,11 @@ FORMULAS = [
                 "baskının devamıdır, emsal olmaz)."),
     ("Emsal puanı", "CRM emsali + aynı yazar + aynı dizi + aynı kitaplık + aynı yayınevi + aynı hedef kitle + tür "
                     "örtüşmesi + fiyat (çıktığı yılın fiyatlarına göre) ve sayfa yakınlığı; eski lansmanın puanı azalır."),
-    ("Baz tahmin", "En yüksek puanlı emsallerin ilk 6 / 12 aylık net satışının puan ağırlıklı ortancası × kalibrasyon."),
+    ("Baz tahmin", "En yüksek puanlı emsallerin ilk 6 / 12 aylık net satışının puan ağırlıklı ortancası × yazar "
+                   "geçmişi çarpanı × kalibrasyon."),
+    ("Yazar geçmişi", "Yazarın daha önce çıkmış kitaplarının ilk 6 aylık satış düzeyi (yeni kitaplar daha ağır). Emsal "
+                      "tahmini bu düzeye yazarın kitap sayısı ve kitaplarının ne kadar tutarlı sattığı oranında "
+                      "yaklaştırılır; çarpan ilk 6 aydan hesaplanır, 12 aya da aynen uygulanır."),
     ("Senaryolar", "Kötümser / baz / iyimser: geçmiş sınamada gerçekleşenin tahmine oranının %20 / %50 / %80 "
                    "noktaları; güven aralığı %10–%90. Emsal gücü azsa aralık geniştir."),
     ("İlk baskı önerisi", "Baz senaryonun ilk 6 aylık satışı, yayınevinin kullandığı en yakın üst baskı adedine "
@@ -110,6 +114,7 @@ class Engine:
         self.ds, self.level, self.calib, self.steps = ds, level, calib, steps
         self.p = params or M.PARAMS
         self.baski = baski or {}
+        self.author: dict | None = dict(M.AUTHOR)  # None: yazar geçmişi kapalı (karşılaştırma için)
         self.rule_stats: dict[str, dict] = {}  # geçmiş sınamada kural başına tükenme / elde kalan
         self._pools: dict[tuple[int, int], list[str]] = {}
 
@@ -120,6 +125,17 @@ class Engine:
         return self._pools[key]
 
     def raw(self, book: M.Book, launch: int, cutoff: int, h: int, emsal: list[str] | None = None) -> M.Forecast | None:
+        """Emsal tahmini × yazar geçmişi çarpanı (çarpan ilk 6 aydan; iki ufka aynı oran)."""
+        fc = self._emsal(book, launch, cutoff, h, emsal)
+        if fc is None:
+            return None
+        fc6 = fc if h == M.AUTHOR_H else self._emsal(book, launch, cutoff, M.AUTHOR_H, emsal)
+        eff = None
+        if self.author and fc6 is not None:
+            eff = M.author_effect(self.ds, book, launch, fc6.base, self.pool(cutoff, M.AUTHOR_H), self.author)
+        return fc.apply_author(eff)
+
+    def _emsal(self, book: M.Book, launch: int, cutoff: int, h: int, emsal: list[str] | None) -> M.Forecast | None:
         return M.forecast(self.ds, book, launch, cutoff, h, M.params_for(h, self.p), level=self.level,
                           pool=self.pool(cutoff, h), emsal=emsal)
 
@@ -213,6 +229,7 @@ class Engine:
                                "revenue": round(v[q] * unit) if unit else None} for sid, lab, q in M.SCENARIOS],
                 "band": {"low": round(v[0.1]), "high": round(v[0.9])},
                 "raw": round(fc.base),
+                "emsalBase": round(fc.emsal_base) if fc.emsal_base is not None else None,
                 "curve": cum,
                 "unitRevenue": round(unit, 2) if unit else None, "discount": round(1 - ratio, 3) if ratio else None,
                 "analogs": fc.analogs,
@@ -243,6 +260,7 @@ class Engine:
             "stockout6": rec["stockout6"],
             "options": options,
         }
+        out["author"] = author_public(fc6.author, book)
         out["reasons"] = self.reasons(book, out, fc6)
         return out
 
@@ -261,6 +279,14 @@ class Engine:
         if vals:
             lines.append(f"Emsallerin ilk 6 ayı {vals[0]:,} ile {vals[-1]:,} adet arasında; ortanca "
                          f"{vals[len(vals) // 2]:,}.".replace(",", "."))
+        au = fc.author
+        if au:
+            fx = f"{au['factor']:.2f}".replace(".", ",")
+            lines.append(f"Yazarın daha önce çıkmış {au['count']} kitabı ilk 6 ayda tipik olarak {fmt(au['level6'])} adet "
+                         f"sattı; emsallerden çıkan {fmt(au['base6'])} adet bu düzeye %{round(au['weight'] * 100)} oranında "
+                         f"yaklaştırıldı (×{fx}).")
+        elif book.authors:
+            lines.append("Yazarın daha önce çıkmış ve ilk 6 ayı dolmuş kitabı yok; tahmin yalnız emsallerden.")
         tier = {"yuksek": "yüksek", "orta": "orta", "dusuk": "düşük"}[h6["tier"]]
         lines.append(f"Güven düzeyi {tier}: aralık, geçmiş sınamada bu güven düzeyindeki kitapların gerçekleşen / "
                      f"tahmin oranlarından kuruldu.")
@@ -270,6 +296,19 @@ class Engine:
             c0 = h6["channels"][0]
             lines.append(f"Emsallerde satışın en büyük kanalı {c0['channel']} (%{round(c0['share'] * 100)}).")
         return lines
+
+
+def fmt(x: float) -> str:
+    return f"{round(x):,}".replace(",", ".")
+
+
+def author_public(eff: dict | None, book: M.Book) -> dict | None:
+    """Ekranın «Yazarın önceki kitapları» bölümü: çarpan, ağırlık ve kitaplar (en yeni önce)."""
+    if not eff:
+        return None
+    return {"authors": book.authors_text or None, "count": eff["count"], "level6": round(eff["level6"]),
+            "base6": round(eff["base6"]), "weight": round(eff["weight"], 3), "factor": round(eff["factor"], 3),
+            "spread": round(eff["spread"], 3), "books": eff["books"]}
 
 
 # ---------------------------------------------------------------- sınama

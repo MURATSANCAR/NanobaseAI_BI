@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, field } from '../admin/ui';
-import { AnalogTable, Box, ChannelBars, ForecastChart, FpFrame, Legend, ScenarioCards, Segmented, TierPill } from './parts';
+import { AnalogTable, AuthorBooks, Box, ChannelBars, ForecastChart, FpFrame, Legend, ScenarioCards, Segmented, TierPill } from './parts';
 import DecisionBox from './DecisionBox';
 import MarketContext from './MarketContext';
 import SqlInfo from '../components/SqlInfo';
@@ -164,6 +164,16 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
           </ul>
         </Box>
       </div>
+
+      {fc.author && (
+        <Box
+          title={`Yazarın önceki kitapları (${fc.author.count})`}
+          info={<SqlInfo k={fc.kaynaklar} alan="author" label="Yazarın önceki kitapları" />}
+          help="Yazarın daha önce çıkmış ve ilk 6 ayı dolmuş kitapları. Emsallerden çıkan tahmin, yazarın bu kitaplardaki satış düzeyine yaklaştırılır; yazarın kitabı ne kadar çok ve satışları ne kadar tutarlıysa ağırlık o kadar yüksektir. Aynı oran 12 aylık tahmine de uygulanır."
+        >
+          <AuthorBooks a={fc.author} />
+        </Box>
+      )}
 
       <Box title={`Emsal kitaplar (${hz.analogs.length})`} info={<SqlInfo k={fc.kaynaklar} alan={`horizons.${h}.analogs`} label="Emsal kitaplar" />} help="Bu kitaba en çok benzeyen, daha önce çıkmış kitaplar. Tahmin, bunların satışından benzerlik puanına göre ağırlıklandırılarak çıkar. Emsal adına basınca onun tahmini ve gerçekleşeni açılır.">
         <AnalogTable h={hz} />

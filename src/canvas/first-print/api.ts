@@ -149,11 +149,25 @@ export type Horizon = {
   scenarios: Array<{ id: 'kotumser' | 'baz' | 'iyimser'; label: string; units: number; revenue: number | null }>;
   band: { low: number; high: number };
   raw: number;
+  /** Yazar geçmişi çarpanından önceki baz (yalnız emsallerden). */
+  emsalBase?: number | null;
   curve: CurvePoint[];
   unitRevenue: number | null;
   discount: number | null;
   analogs: Analog[];
   channels: Array<{ channel: string; share: number; units: number }>;
+};
+
+/** Yazarın önceki kitapları: emsal tahmini bu düzeye kitap sayısı ve tutarlılık oranında yaklaştırılır. */
+export type AuthorHistory = {
+  authors: string | null;
+  count: number;
+  level6: number;
+  base6: number;
+  weight: number;
+  factor: number;
+  spread: number;
+  books: Array<{ code: string; name: string; authors: string | null; launch: string; sales6: number; sales12: number | null; weight: number }>;
 };
 
 export type Forecast = {
@@ -171,6 +185,7 @@ export type Forecast = {
     options: Array<{ rule: string; label: string; units: number; stockout6: number | null; history: RuleStats | null }>;
   };
   reasons: string[];
+  author?: AuthorHistory | null;
   mode: 'upcoming' | 'launched' | 'free';
   actual?: Array<{ month: string; label: string; units: number; cum: number }>;
   revised?: Record<string, number | null>;

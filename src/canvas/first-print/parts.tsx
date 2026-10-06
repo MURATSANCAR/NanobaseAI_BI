@@ -7,7 +7,7 @@ import Shell, { ZoomStage } from '../stitch/Shell';
 import { ENGINE_ENABLED } from '../engine';
 import { Pill, TableWrap, field, td, th } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
-import { TIER, firstPrintApi, fmtMoney, fmtUnits, monthName, pct, type Forecast, type Horizon } from './api';
+import { TIER, firstPrintApi, fmtMoney, fmtUnits, monthName, pct, type AuthorHistory, type Forecast, type Horizon } from './api';
 import { Explain, ExplainLabel } from '../components/Explain';
 
 /** M10 ekranlarının ortak parçaları: çerçeve, senaryo kartları, grafik, kanal, emsal tablosu, kitap arama. */
@@ -261,6 +261,58 @@ export function AnalogTable({ h }: { h: Horizon }) {
         ))}
       </tbody>
     </TableWrap>
+  );
+}
+
+/** Yazarın önceki kitapları: ilk 6 / 12 ay satışı ve tahmindeki payı (yeni kitap daha ağır). */
+export function AuthorBooks({ a }: { a: AuthorHistory }) {
+  const nav = useNavigate();
+  return (
+    <>
+      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <Stat label="Yazarın tipik ilk 6 ayı" value={fmtUnits(a.level6)} hint={`${a.count} kitabın ağırlıklı düzeyi, adet`} />
+        <Stat label="Yalnız emsallerden" value={fmtUnits(a.base6)} hint="yazar geçmişi olmadan ilk 6 ay, adet" />
+        <Stat label="Yazar geçmişinin ağırlığı" value={pct(a.weight)} hint={`tahmin ×${a.factor.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}`} />
+      </div>
+      <TableWrap>
+        <thead>
+          <tr className="border-b border-slate-100">
+            <th className={th}>Kitap</th>
+            <th className={th}>Çıkış</th>
+            <th className={`${th} text-right`}>İlk 6 ay</th>
+            <th className={`${th} text-right`}>İlk 12 ay</th>
+            <th className={`${th} text-right`}>
+              <ExplainLabel label="Pay">Kitabın yazar düzeyindeki payı. Yeni çıkan kitap eskisinden daha ağır sayılır.</ExplainLabel>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {a.books.map((b) => (
+            <tr key={b.code} className="border-b border-slate-50 last:border-0">
+              <td className={td}>
+                <button type="button" className="text-left font-bold text-canvas-ink hover:text-canvas-violet hover:underline" onClick={() => nav(`/ilk-baski/kitap/${encodeURIComponent(b.code)}`)}>
+                  {b.name}
+                </button>
+              </td>
+              <td className={`${td} whitespace-nowrap`}>{monthName(b.launch)}</td>
+              <td className={`${td} text-right font-mono tabular-nums`}>{fmtUnits(b.sales6)}</td>
+              <td className={`${td} text-right font-mono tabular-nums`}>{b.sales12 !== null ? fmtUnits(b.sales12) : <span className="text-canvas-muted">dolmadı</span>}</td>
+              <td className={`${td} text-right font-mono tabular-nums`}>{pct(b.weight)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </TableWrap>
+    </>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-slate-100 bg-white/70 p-2.5">
+      <div className="truncate text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="mt-0.5 font-mono text-[20px] font-bold leading-tight tabular-nums">{value}</div>
+      <div className="text-[11px] leading-snug text-canvas-muted">{hint}</div>
+    </div>
   );
 }
 

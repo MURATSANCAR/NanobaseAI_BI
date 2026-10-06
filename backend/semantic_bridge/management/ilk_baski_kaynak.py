@@ -107,6 +107,9 @@ def for_forecast(out: dict[str, Any], data: dict[str, Any], dbs: dict[str, Optio
         fields[f"horizons.{h}.curve[]"] = k.hesap("egri", "Birikimli eğri = emsallerin ay ay satış payı × senaryo "
                                                           "değeri (kötümser, baz, iyimser, %10–%90 bant).", every)
         fields[f"horizons.{h}.scenarios[]"] = "hesap:tahmin"
+    if out.get("author"):
+        fields["author"] = k.hesap("yazar", F["Yazar geçmişi"] + " Kitap başına ilk 6 / 12 ay satışı Logo'dan (net adet).",
+                                   sales)
     if out.get("actual"):
         fields["actual[]"] = k.hesap("gerceklesen", "Gerçekleşen = Logo'daki ay ay net satış adedi ve birikimli toplam.",
                                      sales)
