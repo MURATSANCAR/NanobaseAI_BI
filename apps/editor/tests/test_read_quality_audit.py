@@ -166,7 +166,7 @@ def test_summary_checks():
 
 
 def test_front_kind_reads_the_page_rules():
-    texts = {4: "Annem ve babama,", 40: "Sabah erkenden kalktı ve dükkânın kepengini yavaşça kaldırdı, içeri serin"
+    texts = {4: "Ekin’e, şu an birlikte koşup oynadıklarına ve onları sarıp sarmalayanlara...\nİstanbul 2025", 40: "Sabah erkenden kalktı ve dükkânın kepengini yavaşça kaldırdı, içeri serin"
              " bir koku doldu; sokak henüz uyanmamıştı ve martılar çatıların üstünde dönüp duruyordu."}
     assert RA.front_kind([4], texts, set(), 200) == "ithaf"
     assert RA.front_kind([40], texts, set(), 200) is None                 # gövde sayfası
