@@ -392,7 +392,7 @@ def test_meta_never_ends_mid_sentence():
     two = "Nevzat Tarhan duygusal zekayı Doğu ve Batı bakışıyla, günlük hayattan örneklerle ele alıyor. Kendini tanımak isteyenler için kapsamlı bir rehber sunan eser ayrıca"
     got = propose.fit_meta(two, 160)
     assert got == "Nevzat Tarhan duygusal zekayı Doğu ve Batı bakışıyla, günlük hayattan örneklerle ele alıyor."
-    assert propose.fit_meta("Kısa. Ama sonu yarım kalan çok uzun bir ikinci cümle" * 3, 160) is None  # tam cümle çok kısa
+    assert propose.fit_meta("Kısa. " + "ama sonu yarım kalan çok uzun bir ikinci cümle " * 6, 160) is None  # tam cümle çok kısa
     assert propose.fit_meta("Tam ve sığan bir cümle, okur için yazılmış bir açıklama metni burada bitiyor.", 160).endswith(".")
     lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
     out = propose.enforce({"SeoTitle": "Kitap - Yazar", "SeoDescription": cut + " " * 0}, lim, "Timaş")
