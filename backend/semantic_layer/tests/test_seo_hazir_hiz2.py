@@ -176,7 +176,7 @@ def test_shopping_equals_old_calculation(client, crm_all):
 
 # ================================================================== CRM listesi
 def _old_crm(eng, seo, filter="", q="", start=0, limit=50):
-    from semantic_bridge.seo_geo import EAN, SALES, VIEWS, _product_view
+    from semantic_bridge.seo_geo import BOOK_EAN, EAN, SALES, VIEWS, _product_view
 
     site = seo.conf("SEO_SITE_URL")
     data = sa.cast(CRM_BOOKS.c.data_json, sa.JSON)
@@ -185,8 +185,8 @@ def _old_crm(eng, seo, filter="", q="", start=0, limit=50):
         cond.append(CRM_BOOKS.c.rights == filter)
     elif filter == "durum":
         cond.append(CRM_BOOKS.c.status_flag.isnot(None))
-    elif filter == "eslesmedi":
-        cond.append(CRM_BOOKS.c.ean.is_(None))
+    elif filter == "eslesmedi":  # 2026-10-06: yalnız kitap barkodlu ürün (set/siteye özel kod sayılmaz)
+        cond.append(sa.and_(CRM_BOOKS.c.ean.is_(None), BOOK_EAN))
     elif filter == "onizleme":
         cond.append(data["previewPdf"].as_string().isnot(None))
     elif filter == "video":
