@@ -528,7 +528,7 @@ def _plan_xlsx() -> bytes:
     g.title = "GÜNCEL FUAR TAKVİMİ"
     g.append([None, *range(1, 32), "Fuar Tarihi", "Fuar Gün sayısı", "Fuar Alanı", "Düzenleyen Fuar Firması", "Katılımcı Firma"])
     g.append([2026])
-    pad = lambda col, name: [None] * col + [name] + [None] * (31 - col)  # noqa: E731
+    pad = lambda col, name: [None] * col + [name] + [None] * (30 - col)  # noqa: E731  (1–31. gün sütunları)
     g.append(["EYLÜL", *pad(24, "Uşak Kitap Fuarı"), "25 EYLÜL-04 EKİM", "10 GÜN", None, None, "bayi"])
     g.append(["EKİM", "Rami", *[None] * 30])                                # tarihsiz kısa ad: atlanır
     g.append([None, *pad(2, "Kocaeli Kitap Fuarı"), "03 EKİM-11 EKİM", "   9 GÜN", "Kocaeli kongre merkezi", "ka2 ajans", "TİMAŞ"])

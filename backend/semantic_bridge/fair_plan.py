@@ -66,7 +66,7 @@ def _norm(v: Any) -> str:
 def _text(v: Any) -> Optional[str]:
     if v is None:
         return None
-    s = " ".join(str(v).split())
+    s = " ".join(str(v).split()).replace("( ", "(").replace(" )", ")")
     return s or None
 
 
