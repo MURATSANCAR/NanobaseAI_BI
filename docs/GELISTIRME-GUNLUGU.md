@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-10-06 — CRM seçenek adları uçtan uca denetim (yazım hataları ve tuhaf seçenekler)
+
+- **Neden:** seçenek adları artık CRM'den geldiği için CRM'deki hatalar ekrana çıkıyor; kullanıcı «başka var mı, uçtan uca bak» dedi.
+- **Yöntem (canlı CRM .28, salt okuma):** 16.046 Türkçe adın 4.412'si özel alan; ekrana çıkan 49 alanın bütün adları gözle okundu, sohbet kataloğu (1.280 kolon) kurallı tarandı (Türkçe harf eksikliği, tek harf farkı, yer tutucu); şüphelilerin kaç kayıtta kullanıldığı sayıldı. Sunucuda Türkçe yazım denetleyicisi yok; otomatik «tek harf» ölçütü ek farkını hata sanıyor, gözle eleme şart.
+- **Ekrana çıkan, kayıtta kullanılan hatalar:** «İnstagram» (mecra, 130 kayıt), «Degerlendirme Testi» (promosyon tipi, 133), «Ekitap»/«SesliKitap» (kitap tipi, 1.525/118; ürün tipinde «E-Kitap»), «Pos» (tahsilat tipi, 1.393), «Kültür Editorya» (müşteri/kişi/talep departmanı, 1.393) ↔ sözleşmede «Kültür Editörya» (5.731) tutarsız, yayıncılık statüsünde iki ayrı YS08 seçeneği («… / YS07 ye Alınacak» 466, «… / YS05 e Alınacak» 123).
+- **Hatalı ama kullanılmayan:** «Üniversieler», «Craft Paket» (0 kayıt); destek talebi departmanı «Şatış», «Bılgiislem» (34 talepten 2'sinde dolu); hedef bölgesi «POİNT», «B2C B2C», «BATIKARADENİZ+İÇANADOLU» (hedef kayıtlarında bölge boş); sohbet kataloğunda 13 alanda « öğesi» yer tutucu (0 kayıt), baskı kırım şeklinde «Test» seçeneği (1 kayıt).
+- **Satış hedefinde tuhaf yıllar (yazım değil, veri sorusu):** `new_satishedefleri.new_yil` seçenekleri 2023/2024/2025/**2000**/2026/**1991**. «2000» = 41.907 kayıt, hepsi 2025 Şubat–Nisan'da oluşturulmuş, 9 bölge müdürü × ~4.659 kitap, 37.246'sı 2025'te aynı kitap+kişiyle zaten var (toplam 7,79 Mn adet; 2025 11,02 Mn). «1991» = 4.020 kayıt, Şubat 2026, tek kişi (Rıdvan İşkey), hepsi 2026'da aynı kitap+kişiyle var (2,65 Mn adet). Hedef ekranları yılı etiketle seçtiği için bu kayıtlar hiçbir yılın toplamına girmiyor — kopya/park edilmiş hedef gibi; doğrusu satış tarafına sorulacak. Ayrıca 9.427 hedef kaydında yıl boş (2025).
+- **Kod değişikliği yok.** Düzeltme yeri CRM; adlar 6 saat içinde ekrana gelir.
+
 ## 2026-10-06 — Dijital baskı: dolaylı gider yayınevine göre, ekrandan düzenlenir (test sunucusunda; VM onay bekliyor)
 
 - **Neden:** dijital Excel'lerde dolaylı gider yayınevine göre değişiyor (Timaş İnanç ve Timaş Tarih %70; Sufi 12.05.2026 dosyalarında %50, 05.10.2026 Aşıkların Halleri'nde %40). Kullanıcı: «öyle yap ama ekranda da güncellenebilsin».
