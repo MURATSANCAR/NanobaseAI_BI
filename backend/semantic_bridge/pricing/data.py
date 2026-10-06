@@ -357,6 +357,24 @@ def contract_summary(rows: list[dict]) -> dict[str, Any]:
     return {"royalties": by_type, "singlePay": single or None, "contracts": len(rows)}
 
 
+#: Canlı Logo'da okuma sorgusu yazan işlemle kilitlenip kurban seçilirse (SQL Server 1205) bu kadar yeniden denenir.
+DEADLOCK_RETRIES = 3
+
+
+def run_retrying(fn: Callable[[], Any], retries: int = DEADLOCK_RETRIES, wait: float = 5.0) -> Any:
+    """Kilitlenme kurbanı olan sorguyu artan beklemeyle yeniden çalıştırır; başka hata hemen yükselir.
+    (2026-10-06 VM: görüntü yenilemesi canlı Logo .25'te «deadlock victim … Rerun the transaction» ile düştü.)"""
+    for i in range(retries + 1):
+        try:
+            return fn()
+        except Exception as e:  # noqa: BLE001 — sürücüye bağlı hata sınıfı; yalnız 1205 yeniden denenir
+            if i == retries or "1205" not in str(e) and "deadlock" not in str(e).lower():
+                raise
+            log.warning("pricing: sorgu kilitlenmede kurban seçildi, yeniden deneniyor (%d/%d)", i + 1, retries)
+            time.sleep(wait * (i + 1))
+    raise AssertionError("ulaşılmaz")
+
+
 def _label(labels: dict, key: str, value: Any) -> Optional[str]:
     v = _i(value)
     if v is None:
@@ -775,7 +793,7 @@ class Store:
             def run(name: str, sql: str) -> list[dict]:
                 if name not in conns:
                     conns[name] = self._connect(name)
-                _, rows, truncated = conns[name].execute(sql, MAX_ROWS)
+                rows, truncated = run_retrying(lambda: conns[name].execute(sql, MAX_ROWS)[1:])
                 if truncated:
                     raise RuntimeError("Kaynak sorgusu satır sınırını aştı; görüntü eksik kalırdı.")
                 return rows

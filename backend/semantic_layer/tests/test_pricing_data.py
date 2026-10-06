@@ -317,3 +317,18 @@ def test_compare_cache_persists(tmp_path):
     # Girdiler değişti: eski sonuç hemen «eski» diye gelir, yenisi arkada hesaplanır.
     got = c2.get("k2", lambda: {"rows": [2]})
     assert got["ready"] is False and got["stale"] is True and got["result"] == {"rows": [1]}
+
+
+def test_deadlock_victim_is_retried():
+    calls = []
+
+    def fn():
+        calls.append(1)
+        if len(calls) < 3:
+            raise RuntimeError("[42000] Transaction (Process ID 174) was deadlocked on lock ... (1205)")
+        return "ok"
+    assert D.run_retrying(fn, wait=0) == "ok" and len(calls) == 3
+    with pytest.raises(ValueError):
+        D.run_retrying(lambda: (_ for _ in ()).throw(ValueError("başka hata")), wait=0)
+    with pytest.raises(RuntimeError):
+        D.run_retrying(lambda: (_ for _ in ()).throw(RuntimeError("deadlocked (1205)")), retries=1, wait=0)
