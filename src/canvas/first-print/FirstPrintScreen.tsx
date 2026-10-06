@@ -9,7 +9,7 @@ import { BookSearch, Box, FpFrame, TierPill } from './parts';
 import BacktestTab from './BacktestTab';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
-import { NotReadyError, dayName, firstPrintApi, fmtMoney, fmtUnits, monthName, pct, signedPct, trackTone, type Summary } from './api';
+import { NotReadyError, dayName, firstPrintApi, fmtMoney, fmtUnits, monthName, pct, reprintTone, signedPct, trackTone, type Summary } from './api';
 
 /** M10 İlk baskı ve satış tahmini: yayımlanacak kitaplar, ilk satış takibi, geçmiş sınama. Sekme adreste (?sekme=). */
 
@@ -43,6 +43,7 @@ export default function FirstPrintScreen() {
   const s = q.data;
   const bt6 = s?.backtest?.['6'];
   const alerts = s?.tracking.filter((r) => r.alert).length ?? null;
+  const reprints = s?.tracking.filter((r) => r.reprint && r.reprint.status !== 'yeterli').length ?? 0;
 
   const aside = (
     <div className="flex flex-col gap-2">
@@ -77,7 +78,7 @@ export default function FirstPrintScreen() {
 
       <KpiRow>
         <Kpi label="Yayımlanacak kitap" value={s?.ready ? fmtUnits(s.upcoming.length) : '—'} help="CRM'de yayın tarihi gelecekte, satışı yok" active={tab === 'yeni'} onClick={() => setTab('yeni')} explain="CRM'de ilk yayın tarihi Logo verisinin son tam ayından sonra olan ve henüz satışı olmayan kitaplar. Karta dokunursanız listesi açılır." info={<SqlInfo k={s?.kaynaklar} alan="kpi.yayimlanacak" label="Yayımlanacak kitap" />} />
-        <Kpi label="İlk satış takibinde" value={s?.ready ? fmtUnits(s.tracking.length) : '—'} help="Son 6 ayda çıkan kitaplar" active={tab === 'takip'} onClick={() => setTab('takip')} explain="Son 6 ayda çıkmış kitaplar. Her birinin gerçekleşen satışı, çıkıştan önce yapılabilecek tahminle karşılaştırılır." info={<SqlInfo k={s?.kaynaklar} alan="kpi.takip" label="İlk satış takibinde" />} />
+        <Kpi label="İlk satış takibinde" value={s?.ready ? fmtUnits(s.tracking.length) : '—'} help={reprints ? `Son 12 ayda çıkan kitaplar · ${fmtUnits(reprints)} kitapta yeniden baskı gerekli` : 'Son 12 ayda çıkan kitaplar'} active={tab === 'takip'} onClick={() => setTab('takip')} explain="Son 12 ayda çıkmış kitaplar. Her birinin gerçekleşen satışı, çıkıştan önce yapılabilecek tahminle karşılaştırılır; elde kalan stok ilk 12 ay dolmadan tükenecekse yeniden baskı uyarısı verilir." info={<SqlInfo k={s?.kaynaklar} alan="kpi.takip" label="İlk satış takibinde" />} />
         <Kpi label="Kötümserin altında" value={alerts === null || !s?.ready ? '—' : fmtUnits(alerts)} help="Gerçekleşen satış kötümser senaryonun da altında" onClick={() => setTab('takip')} explain="Takipteki kitaplardan, bugüne kadarki satışı en kötü senaryonun bile altında kalanlar. Pazarlama için erken uyarıdır." info={<SqlInfo k={s?.kaynaklar} alan="kpi.kotumser" label="Kötümserin altında" />} />
         <Kpi label="Tipik sapma (6 ay)" value={bt6?.model ? pct(bt6.model.mdape) : '—'} help={bt6?.model ? `Geçmişte çıkan ${fmtUnits(bt6.model.n)} kitapta tahminle gerçekleşen arasındaki ortanca fark` : 'Geçmiş sınama'} active={tab === 'sinama'} onClick={() => setTab('sinama')} explain="Geçmişte çıkmış kitaplarda, çıkıştan önce yapılacak tahmin ile gerçekleşen ilk 6 ay satışı arasındaki yüzde farkın ortancası. Kitapların yarısında fark bundan küçüktür." info={<SqlInfo k={s?.kaynaklar} alan="kpi.sapma" label="Tipik sapma (6 ay)" />} />
       </KpiRow>
@@ -183,10 +184,10 @@ function TrackingTab({ s }: { s: Summary }) {
   return (
     <Box
       title="İlk satış takibi"
-      help={`Son 6 ayda çıkan kitaplar: çıkıştan 2 ay önce yapılabilecek tahmin ile ${monthName(s.meta.lastFullMonth)} sonuna kadar gerçekleşen satış. Sapma, bugüne kadar beklenen satışa göredir; revize tahmin gerçekleşen ilk aylardan kurulur. Kötümser senaryonun da altında kalan kitap pazarlama için uyarıdır.`}
+      help={`Son 12 ayda çıkan kitaplar: çıkıştan 2 ay önce yapılabilecek tahmin ile ${monthName(s.meta.lastFullMonth)} sonuna kadar gerçekleşen satış. Sapma, bugüne kadar beklenen satışa göredir; revize tahmin gerçekleşen ilk aylardan kurulur. Kötümser senaryonun da altında kalan kitap pazarlama için uyarıdır. Stok sütunu, elde kalanın ilk 12 ay dolmadan hangi ay tükeneceğini ve ek baskı adedini gösterir.`}
     >
       {s.tracking.length === 0 ? (
-        <EmptyHint title="Son 6 ayda çıkan kitap yok" why="Yeni bir kitap çıkıp satışı Logo'ya düştüğünde burada tahminle karşılaştırılarak izlenir." />
+        <EmptyHint title="Son 12 ayda çıkan kitap yok" why="Yeni bir kitap çıkıp satışı Logo'ya düştüğünde burada tahminle karşılaştırılarak izlenir." />
       ) : (
         <TableWrap>
           <thead>
@@ -203,6 +204,12 @@ function TrackingTab({ s }: { s: Summary }) {
               </th>
               <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="tracking[]" label="İlk 6 ay: ilk tahmin → revize">İlk 6 ay: ilk tahmin → revize</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="tracking[]" label="İlk 12 ay revize">İlk 12 ay revize</InfoLabel></th>
+              <th className={th}>
+                <span className="inline-flex items-center gap-1">
+                  <InfoLabel k={s.kaynaklar} alan="tracking[]" label="Stok ve yeniden baskı">Stok</InfoLabel>
+                  <Explain label="Stok">Elde kalan (depo stoku − bekleyen sipariş) ilk 12 ay dolmadan biterse tükenme ayı ve 12. aya kadar gereken ek baskı adedi.</Explain>
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -232,6 +239,18 @@ function TrackingTab({ s }: { s: Summary }) {
                     {fmtUnits(f6.base)} → <span className="font-bold">{fmtUnits(f6.revised)}</span>
                   </td>
                   <td className={`${td} text-right font-mono tabular-nums`}>{fmtUnits(f12?.revised)}</td>
+                  <td className={`${td} whitespace-nowrap`}>
+                    {r.reprint ? (
+                      <>
+                        <Pill tone={reprintTone(r.reprint)}>{r.reprint.status === 'yeterli' ? 'Yeterli' : r.reprint.status === 'yok' ? 'Stok yok' : r.reprint.runOutName}</Pill>
+                        <div className="mt-0.5 text-[11px] text-canvas-muted">
+                          {r.reprint.units ? `+${fmtUnits(r.reprint.units)} baskı` : `elde ${fmtUnits(r.reprint.available)}`}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-canvas-muted">—</span>
+                    )}
+                  </td>
                 </tr>
               );
             })}

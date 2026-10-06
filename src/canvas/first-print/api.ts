@@ -46,6 +46,47 @@ export type TrackForecast = {
   revised: number | null;
 };
 
+/** Çıkmış kitabın ilk 12 ayı için stok ve yeniden baskı (elde kalan = depo stoku − bekleyen sipariş). */
+export type Reprint = {
+  stock: number;
+  orders: number;
+  available: number;
+  asOf: string | null;
+  sold: number;
+  observed: number;
+  revised12: number;
+  remaining: Record<'0.2' | '0.5' | '0.8', number>;
+  runOut: string | null;
+  runOutName: string | null;
+  monthsLeft: number | null;
+  status: 'yok' | 'acil' | 'gerekli' | 'yeterli';
+  need: Record<'0.2' | '0.5' | '0.8', number>;
+  units: number;
+  unitsHigh: number;
+  window: string;
+  plan: Array<{ month: string; label: string; units: number; cum: number; left: number }>;
+  lastPrint: { count: number | null; units: number | null; date: string | null } | null;
+  typicalError: number | null;
+};
+
+export const REPRINT_LABEL: Record<Reprint['status'], string> = {
+  yok: 'Stok yok',
+  acil: 'Yeniden baskı acil',
+  gerekli: 'Yeniden baskı gerekli',
+  yeterli: 'Stok yeterli',
+};
+
+export function reprintTone(r: Pick<Reprint, 'status'>): 'err' | 'warn' | 'ok' {
+  return r.status === 'yeterli' ? 'ok' : r.status === 'gerekli' ? 'warn' : 'err';
+}
+
+/** Tek cümle: ne zaman biter, 12. aya kadar kaç adet daha gerekir. */
+export function reprintSentence(r: Reprint): string {
+  if (r.status === 'yeterli') return `Elde kalan ${fmtUnits(r.available)} adet, ${r.window} sonuna kadarki beklenen satışı karşılıyor.`;
+  const when = r.status === 'yok' ? 'Satılabilir stok kalmadı' : `Stok ${r.runOutName} içinde tükenir`;
+  return `${when}; ${r.window} sonuna kadar yaklaşık ${fmtUnits(r.need['0.5'])} adet daha satılması bekleniyor.`;
+}
+
 export type TrackingRow = BookInfo & {
   months: Array<{ month: string; label: string; units: number }>;
   actual: number;
@@ -53,6 +94,7 @@ export type TrackingRow = BookInfo & {
   forecast: Record<string, TrackForecast>;
   deviation: number | null;
   alert: boolean;
+  reprint?: Reprint | null;
 };
 
 export type Metrics = {
@@ -189,6 +231,7 @@ export type Forecast = {
   mode: 'upcoming' | 'launched' | 'free';
   actual?: Array<{ month: string; label: string; units: number; cum: number }>;
   revised?: Record<string, number | null>;
+  reprint?: Reprint | null;
   emsalCrm?: string[];
   emsalOverride?: boolean;
   kaynaklar?: Kaynaklar;

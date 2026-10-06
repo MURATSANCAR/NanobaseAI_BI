@@ -243,6 +243,7 @@ def book_forecast(eng: IB.Engine, code: str, launch: int | None = None, emsal: l
         out["actual"] = cum
         out["revised"] = {str(h): (round(v) if (v := M.revise(ds, fc, o.months[:h], h)) is not None else None)
                           for h in IB.HORIZONS if (fc := eng.raw(b, launch, cutoff, h, emsal)) is not None}
+        out["reprint"] = eng.reprint(b, launch, o.months)
         out["mode"] = "launched"
     else:
         out["mode"] = "upcoming"

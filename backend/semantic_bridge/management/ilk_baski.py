@@ -33,7 +33,8 @@ HORIZONS = (6, 12)    # ilk 6 ay (en az ilk baskı) ve ilk 12 ay
 FIT_FROM, FIT_TO = (2021, 7), (2023, 12)  # kalibrasyon (ayar seçimi) dönemi; sınama 2024 başından
 TEST_FROM = (2024, 1)
 CALIB_MIN = 100      # güven düzeyine özel kalibrasyon için en az örnek; azsa bütün seçim dönemi (2026-09-28: 20 ile düşük güvende kapsama %49)
-TRACK_MONTHS = 6      # ilk satış takibi: son 6 ayda çıkan kitaplar
+TRACK_MONTHS = 12     # ilk satış takibi: son 12 ayda çıkan kitaplar (sonrasını Baskı Öneri devralır)
+REPRINT_URGENT = 2    # stokun tükenmesine bu kadar ay ya da daha az kaldıysa yeniden baskı acil
 UPCOMING_BACK_MONTHS = 18  # ilk yayını boş kartlarda: son 18 ayda açılmış kart «yayımlanacak» sayılır
 CLOSED_STATUS = ("YS01", "YS05", "YS07", "YS08", "YS10P", "YS11")  # iptal, bizim değil, basılmayacak…
 
@@ -42,6 +43,10 @@ SOURCES = [
      "kitle, tür, sayfa, fiyat) ve ilk yayın tarihi."),
     ("crm_emsal", "crm", "Emsal kitaplar", "Kitap kartında editörün girdiği emsal kitaplar."),
     ("crm_baski", "crm", "Baskı adetleri", "Kitabın baskı sayısı ve son baskı adedi: geçmiş ilk baskı kararları."),
+    ("logo_depo_stok", "logo", "Depo stoku", "Logo depo stok toplamı (Baskı Öneri ile aynı): ilk satış takibindeki "
+     "kitabın elde kalanı."),
+    ("crm_bekleyen_siparis", "crm", "Bekleyen sipariş", "Açık sipariş satırları (Baskı Öneri ile aynı kural): elde "
+     "kalandan düşülür."),
     ("logo_son_fatura", "logo", "Son fatura tarihi", "Logo'daki en son fatura günü; son tam ayı belirler."),
     ("logo_aylik_kanal", "logo", "Aylık kanal satışı",
      "Kitap × ay × kanal net satış adedi ve tutarı; 2015'ten bu yana her yıl ayrı okunur."),
@@ -62,6 +67,10 @@ FORMULAS = [
                           "yuvarlanır. Tükenme olasılığı: geçmiş sınamada bu kadar basılsaydı 6 ayda tükenen kitap oranı."),
     ("Ciro", "Adet × kapak fiyatı × emsallerin ilk 6 ayındaki net tutar / liste tutarı oranı (iskonto)."),
     ("Revize tahmin", "Gerçekleşen ilk aylar × emsallerin aynı aydan 6. / 12. aya büyümesi (puan ağırlıklı ortanca)."),
+    ("Yeniden baskı", "Elde kalan = Logo depo stoku − CRM'de bekleyen sipariş. 12. aya kadar kalan satış = 12 aylık revize "
+                      "tahmin − gerçekleşen, emsallerin aylık dağılımıyla aylara bölünür; birikimli satış elde kalanı "
+                      "geçtiği ay tükenme ayıdır. Ek baskı = kalan satış − elde kalan, yayınevinin baskı adedine "
+                      "yuvarlanır; aralık, geçmişte aynı ayda revize tahminin gerçekleşene oranından (%20 / %80)."),
 ]
 NOTES = [
     "Satış Logo'daki faturalı satıştır, iade düşülmüş net adettir (Baskı Öneri ile aynı satırlar).",
@@ -116,6 +125,9 @@ class Engine:
         self.baski = baski or {}
         self.author: dict | None = dict(M.AUTHOR)  # None: yazar geçmişi kapalı (karşılaştırma için)
         self.rule_stats: dict[str, dict] = {}  # geçmiş sınamada kural başına tükenme / elde kalan
+        self.stock: dict[str, list] = {}       # stok kodu → [depo stoku, bekleyen sipariş] (takipteki kitaplar)
+        self.prints: dict[str, dict] = {}      # stok kodu → CRM baskı sayısı / son baskı adedi / tarihi
+        self.stock_asof: str | None = None     # stokun okunduğu gün
         self._pools: dict[tuple[int, int], list[str]] = {}
 
     def pool(self, cutoff: int, h: int) -> list[str]:
@@ -264,6 +276,54 @@ class Engine:
         out["reasons"] = self.reasons(book, out, fc6)
         return out
 
+    def reprint(self, book: M.Book, launch: int, months: list[float]) -> dict | None:
+        """Çıkmış kitabın ilk 12 ayı için stok ve yeniden baskı: elde kalan, tükenme ayı, ek baskı adedi."""
+        st = self.stock.get(book.code)
+        m = len(months)
+        if st is None or m == 0 or m >= 12:
+            return None
+        fc = self.raw(book, launch, launch - GAP, 12)
+        if fc is None:
+            return None
+        rev = M.revise(self.ds, fc, months, 12)
+        if rev is None:
+            return None
+        got = sum(months)
+        stock, orders = float(st[0] or 0), float(st[1] or 0)
+        avail = stock - orders
+        q = revise_ratios(self.calib, m)
+        remaining = {k: max(rev * r - got, 0.0) for k, r in q.items()}
+        tail = self.curve(fc, 12)[m:]
+        tot = sum(tail)
+        shares = [x / tot for x in tail] if tot > 0 else [1 / len(tail)] * len(tail)
+        first = launch + m  # verinin son tam ayından sonraki ay
+        run, plan, out_month = 0.0, [], None
+        for j, sh in enumerate(shares):
+            u = remaining["0.5"] * sh
+            run += u
+            plan.append({"month": M.ms(first + j), "label": M.month_name(first + j), "units": round(u),
+                         "cum": round(run), "left": round(avail - run)})
+            if out_month is None and run > avail:
+                out_month = first + j
+        if avail <= 0:
+            out_month = first
+        need = {k: max(v - avail, 0.0) for k, v in remaining.items()}
+        left = (out_month - first) if out_month is not None else None
+        status = ("yok" if avail <= 0 else "acil" if left is not None and left < REPRINT_URGENT
+                  else "gerekli" if out_month is not None else "yeterli")
+        units = round_print(need["0.5"], self.steps) if need["0.5"] > 0 else 0
+        hist = (self.calib.get("revise12") or {}).get(str(m)) or {}
+        return {"stock": round(stock), "orders": round(orders), "available": round(avail), "asOf": self.stock_asof,
+                "sold": round(got), "observed": m, "revised12": round(rev),
+                "remaining": {k: round(v) for k, v in remaining.items()},
+                "runOut": M.ms(out_month) if out_month is not None else None,
+                "runOutName": M.month_name(out_month) if out_month is not None else None,
+                "monthsLeft": left, "status": status,
+                "need": {k: round(v) for k, v in need.items()},
+                "units": units, "unitsHigh": round_print(need["0.8"], self.steps) if need["0.8"] > 0 else 0,
+                "window": M.month_name(launch + 11), "plan": plan,
+                "lastPrint": self.prints.get(book.code), "typicalError": hist.get("mdape")}
+
     def reasons(self, book: M.Book, out: dict, fc: M.Forecast) -> list[str]:
         h6 = out["horizons"]["6"]
         an = fc.analogs
@@ -330,6 +390,52 @@ def calibrate(eng: Engine, h: int) -> dict:
             continue
         out[tier] = {str(q): v for q, v in _quantiles(r).items()}
         out["ratios"][tier] = sorted(round(x, 4) for x in r)
+    return out
+
+
+def revise_ratios(calib: dict, m: int) -> dict[str, float]:
+    """Revize 12 ay tahmininin geçmişte gerçekleşene oranı (%20 / %50 / %80), gerçekleşen ay sayısına göre."""
+    c = calib.get("revise12") or {}
+    for k in [m] + [x for d in range(1, 12) for x in (m - d, m + d)]:
+        r = (c.get(str(k)) or {}).get("q")
+        if r:
+            return {q: float(r[q]) for q in ("0.2", "0.5", "0.8")}
+    return {"0.2": 1.0, "0.5": 1.0, "0.8": 1.0}
+
+
+def calibrate_revise(eng: Engine) -> dict:
+    """Seçim döneminde (12 ayı gözlenmiş) gerçekleşen ilk m aydan revize 12 ay tahmininin gerçekleşene oranı; sınama
+    döneminde aynı aşamada kalan satışın (12 ay − ilk m ay) tipik sapması. Yeniden baskı adedi ve aralığı buradan."""
+    ds = eng.ds
+    fit: dict[int, list[float]] = defaultdict(list)
+    test: dict[int, list[tuple[float, float]]] = defaultdict(list)
+    for lo, hi, acc in ((M.mi(*FIT_FROM), M.mi(*FIT_TO), "fit"), (M.mi(*TEST_FROM), ds.end, "test")):
+        for c in targets(ds, lo, hi, 12):
+            b = ds.books[c]
+            o = ds.outcomes[c]
+            a12 = o.total(12)
+            if not a12 or a12 <= 0:
+                continue
+            fc = eng.raw(b, b.launch, b.launch - GAP, 12)
+            if fc is None:
+                continue
+            for m in range(1, 12):
+                rev = M.revise(ds, fc, o.months[:m], 12)
+                if not rev or rev <= 0:
+                    continue
+                if acc == "fit":
+                    fit[m].append(a12 / rev)
+                else:
+                    got = sum(o.months[:m])
+                    test[m].append((max(rev - got, 1.0), max(a12 - got, 1.0)))
+    out = {}
+    for m in range(1, 12):
+        if len(fit[m]) < CALIB_MIN:
+            continue
+        qs = _quantiles(fit[m])
+        met = _metrics(test[m]) if test[m] else None
+        out[str(m)] = {"n": len(fit[m]), "q": {str(q): qs[q] for q in (0.2, 0.5, 0.8)},
+                       "mdape": met["mdape"] if met else None, "nTest": met["n"] if met else 0}
     return out
 
 
@@ -543,6 +649,7 @@ def tracking(eng: Engine) -> list[dict]:
         dev = (got / f6["expectedSoFar"] - 1) if f6["expectedSoFar"] > 0 else None
         out.append({**b.public(), "months": [{"month": M.ms(b.launch + j), "label": M.month_name(b.launch + j),
                                                "units": round(q)} for j, q in enumerate(o.months)],
+                    "reprint": eng.reprint(b, b.launch, o.months),
                     "actual": round(got), "observed": len(o.months), "forecast": fcs, "deviation": dev,
                     "alert": got < f6["pessSoFar"]})
     return sorted(out, key=lambda x: (x["deviation"] if x["deviation"] is not None else 0))
@@ -561,6 +668,7 @@ def serialize(eng: Engine) -> dict:
         "priceMedian": {str(k): v for k, v in ds.price_median.items()},
         "level": {str(k): v for k, v in (eng.level or {}).items()},
         "calib": eng.calib, "steps": eng.steps, "params": eng.p, "ruleStats": eng.rule_stats,
+        "stock": eng.stock, "prints": eng.prints, "stockAsOf": eng.stock_asof,
         "sold": sorted(c for c, s in ds.sales.items() if sum(v for v in s.values() if v > 0) > 0),
     }
 
@@ -581,6 +689,9 @@ def engine_from(model: dict) -> Engine:
     level = {int(k): v for k, v in (model.get("level") or {}).items()} or None
     eng = Engine(ds, level, model["calib"], model["steps"], model.get("params"))
     eng.rule_stats = model.get("ruleStats") or {}
+    eng.stock = model.get("stock") or {}
+    eng.prints = model.get("prints") or {}
+    eng.stock_asof = model.get("stockAsOf")
     return eng
 
 
@@ -637,8 +748,20 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None,
             level_note = str(e)
     eng = Engine(ds, level, {}, steps, M.PARAMS)
     eng.calib = {str(h): calibrate(eng, h) for h in HORIZONS}
+    eng.calib["revise12"] = calibrate_revise(eng)
+    # Stok ve bekleyen sipariş yalnız takipteki (son 12 ayda çıkan) kitaplar için saklanır.
+    tracked = {c for c in ds.by_launch if ds.books[c].launch >= end - TRACK_MONTHS + 1}
+    depo = {str(r["stok_kodu"]).strip(): M.num(r.get("depo_stok")) or 0.0 for r in rows("logo_depo_stok")}
+    acik = {str(r["stok_kodu"]).strip(): M.num(r.get("bekleyen_siparis")) or 0.0 for r in rows("crm_bekleyen_siparis")}
+    eng.stock = {c: [depo.get(c, 0.0), acik.get(c, 0.0)] for c in tracked}
+    eng.prints = {str(r["stok_kodu"]).strip(): {"count": int(r["baski_sayisi"]) if M.num(r.get("baski_sayisi")) else None,
+                                                "units": int(r["son_baski_adet"]) if M.num(r.get("son_baski_adet")) else None,
+                                                "date": str(r["son_baski_tarihi"])[:10] if r.get("son_baski_tarihi") else None}
+                  for r in baski if str(r.get("stok_kodu") or "").strip() in tracked}
+    eng.stock_asof = today.isoformat()
     bt = {str(h): backtest(eng, h) for h in HORIZONS}
     bt["print"] = print_rules_backtest(eng, their)
+    bt["reprint"] = {m: {k: v[k] for k in ("mdape", "nTest")} for m, v in eng.calib["revise12"].items()}
     eng.rule_stats = {r["id"]: {k: r.get(k) for k in ("n", "stockout6", "stockout12", "leftover12")} for r in bt["print"]["rules"]}
     up = [r for r in (summary_row(eng, b, L) for b, L in upcoming_books(ds, today)) if r]
     return {

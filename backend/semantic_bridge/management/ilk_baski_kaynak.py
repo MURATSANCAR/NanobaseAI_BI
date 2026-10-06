@@ -16,7 +16,8 @@ from semantic_bridge.management.kaynak import is_template
 F = dict(IB.FORMULAS)
 F_YENI = " ".join(F[x] for x in ("Baz tahmin", "Senaryolar", "İlk baskı önerisi", "Ciro"))
 F_TAKIP = ("Beklenen (bugüne) = baz tahmin × emsallerin aynı aya kadarki satış payı; sapma = gerçekleşen ÷ beklenen − 1; "
-           "kötümser senaryonun aynı aya kadarki değerinin altında kalan kitap uyarıdır. " + F["Revize tahmin"])
+           "kötümser senaryonun aynı aya kadarki değerinin altında kalan kitap uyarıdır. " + F["Revize tahmin"] + " "
+           + F["Yeniden baskı"])
 F_SINAMA = ("Geçmiş sınama: 2024 başından çıkan her kitap için lansmandan 2 ay önceki veriyle tahmin kurulur ve ilk 6 / 12 "
             "ayın gerçekleşeniyle karşılaştırılır. Tipik sapma = |tahmin ÷ gerçekleşen − 1| ortancası; ±%25 / ±%50 içinde "
             "kalan pay; 2 kat dışı; toplam adette sapma; yön. Karşılaştırma: CRM emsali ve son 12 ay ortancası aynı ölçüyle. "
@@ -65,7 +66,8 @@ def for_summary(out: dict[str, Any], data: dict[str, Any], dbs: dict[str, Option
     sales = src.get("logo_aylik_kanal", []) + src.get("logo_son_fatura", [])
     crm = src.get("crm_kitaplar", []) + src.get("crm_emsal", []) + src.get("crm_baski", [])
     yeni = k.hesap("yeni", F_YENI, every)
-    takip = k.hesap("takip", F_TAKIP, (sales + crm) or every)
+    stok = src.get("logo_depo_stok", []) + src.get("crm_bekleyen_siparis", [])
+    takip = k.hesap("takip", F_TAKIP, (sales + crm + stok) or every)
     sinama = k.hesap("sinama", F_SINAMA, every)
     k.alanlar({
         "upcoming[]": yeni, "tracking[]": takip, "backtest": sinama,
@@ -74,7 +76,8 @@ def for_summary(out: dict[str, Any], data: dict[str, Any], dbs: dict[str, Option
         "status.durationMs": "hesap:okuma",
         "kpi.yayimlanacak": k.hesap("kpiYeni", "Yayımlanacak kitap = CRM'de ilk yayın tarihi verinin son tam ayından "
                                                "sonra olan, satışı olmayan, kapanmamış kitap sayısı.", crm or every),
-        "kpi.takip": k.hesap("kpiTakip", "İlk satış takibinde = son 6 ayda lansmanı olan kitap sayısı.", sales or every),
+        "kpi.takip": k.hesap("kpiTakip", "İlk satış takibinde = son 12 ayda lansmanı olan kitap sayısı; yeniden baskı "
+                                         "= tükenme ayı ilk 12 ay içinde kalan kitap sayısı.", (sales + stok) or every),
         "kpi.kotumser": k.hesap("kpiKotumser", "Kötümserin altında = takipteki kitaplardan gerçekleşeni kötümser "
                                                "senaryonun bugüne düşen değerinin altında kalanların sayısı.", [takip]),
         "kpi.sapma": k.hesap("kpiSapma", "Tipik sapma (6 ay) = geçmiş sınamada ilk 6 ay tahmini ile gerçekleşen "
@@ -113,6 +116,9 @@ def for_forecast(out: dict[str, Any], data: dict[str, Any], dbs: dict[str, Optio
     if out.get("actual"):
         fields["actual[]"] = k.hesap("gerceklesen", "Gerçekleşen = Logo'daki ay ay net satış adedi ve birikimli toplam.",
                                      sales)
+    if out.get("reprint"):
+        fields["reprint"] = k.hesap("yenidenBaski", F["Yeniden baskı"],
+                                    (src.get("logo_depo_stok", []) + src.get("crm_bekleyen_siparis", []) + sales) or every)
     if out.get("revised"):
         fields["revised"] = k.hesap("revize", F["Revize tahmin"], every)
     k.alanlar(fields)

@@ -7,7 +7,7 @@ import Shell, { ZoomStage } from '../stitch/Shell';
 import { ENGINE_ENABLED } from '../engine';
 import { Pill, TableWrap, field, td, th } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
-import { TIER, firstPrintApi, fmtMoney, fmtUnits, monthName, pct, type AuthorHistory, type Forecast, type Horizon } from './api';
+import { REPRINT_LABEL, TIER, firstPrintApi, fmtMoney, fmtUnits, monthName, pct, reprintSentence, reprintTone, type AuthorHistory, type Forecast, type Horizon, type Reprint } from './api';
 import { Explain, ExplainLabel } from '../components/Explain';
 
 /** M10 ekranlarının ortak parçaları: çerçeve, senaryo kartları, grafik, kanal, emsal tablosu, kitap arama. */
@@ -261,6 +261,36 @@ export function AnalogTable({ h }: { h: Horizon }) {
         ))}
       </tbody>
     </TableWrap>
+  );
+}
+
+/** Çıkmış kitabın stok ve yeniden baskı durumu: elde kalan, tükenme ayı, 12. aya kadar ek baskı. */
+export function ReprintPanel({ r }: { r: Reprint }) {
+  const lp = r.lastPrint;
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <Pill tone={reprintTone(r)}>{REPRINT_LABEL[r.status]}</Pill>
+        <p className="min-w-0 flex-1 text-[13px] font-semibold leading-snug">{reprintSentence(r)}</p>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <Stat label="Elde kalan" value={fmtUnits(r.available)} hint={`depo ${fmtUnits(r.stock)} − bekleyen sipariş ${fmtUnits(r.orders)}`} />
+        <Stat label="Tükenme" value={r.runOutName ?? 'Yok'} hint={r.monthsLeft !== null ? (r.monthsLeft === 0 ? 'bu ay' : `${r.monthsLeft} ay sonra`) : `${r.window} sonuna kadar yetiyor`} />
+        <Stat label={`${r.window} sonuna kadar`} value={fmtUnits(r.remaining['0.5'])} hint={`kalan satış; gerçekleşen ${fmtUnits(r.sold)} + kalan = ${fmtUnits(r.revised12)}`} />
+        <Stat
+          label="Ek baskı önerisi"
+          value={r.units ? fmtUnits(r.units) : '—'}
+          hint={r.units ? `iyimser senaryoda ${fmtUnits(r.unitsHigh)}` : 'şimdilik gerekmiyor'}
+        />
+      </div>
+      <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
+        Kalan satış {r.observed} aylık gerçekleşenden kuruldu
+        {r.typicalError !== null ? `; geçmişte bu aşamada kalan satış tahmini tipik olarak ${pct(r.typicalError)} şaştı` : ''}. Aralık
+        (kötümser – iyimser) {fmtUnits(r.need['0.2'])} – {fmtUnits(r.need['0.8'])} adet ek ihtiyaç.
+        {lp?.units ? ` CRM'de son baskı: ${lp.count ? `${lp.count}. baskı, ` : ''}${fmtUnits(lp.units)} adet${lp.date ? ` (${lp.date.split('-').reverse().join('.')})` : ''}.` : ''}
+        {r.asOf ? ` Stok ${r.asOf.split('-').reverse().join('.')} tarihli.` : ''} Bir yılı dolan kitabı Baskı Öneri raporu izler.
+      </p>
+    </>
   );
 }
 

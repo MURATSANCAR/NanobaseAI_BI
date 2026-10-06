@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, field } from '../admin/ui';
-import { AnalogTable, AuthorBooks, Box, ChannelBars, ForecastChart, FpFrame, Legend, ScenarioCards, Segmented, TierPill } from './parts';
+import { AnalogTable, AuthorBooks, Box, ReprintPanel, ChannelBars, ForecastChart, FpFrame, Legend, ScenarioCards, Segmented, TierPill } from './parts';
 import DecisionBox from './DecisionBox';
 import MarketContext from './MarketContext';
 import SqlInfo from '../components/SqlInfo';
@@ -82,6 +82,15 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
           tahmindir; siyah çizgi gerçekleşen birikimli satıştır. Revize tahmin: ilk 6 ay {fmtUnits(fc.revised?.['6'])}, ilk 12 ay {fmtUnits(fc.revised?.['12'])}.
           <SqlInfo k={fc.kaynaklar} alan="revised" label="Revize tahmin" className="ml-0.5" />
         </Note>
+      )}
+      {fc.reprint && (
+        <Box
+          title="Stok ve yeniden baskı"
+          info={<SqlInfo k={fc.kaynaklar} alan="reprint" label="Stok ve yeniden baskı" />}
+          help="Elde kalan stokun, gerçekleşen ilk aylardan kurulan 12 aylık revize tahmine göre hangi ay tükeneceği ve ilk 12 ayı karşılamak için kaç adet daha basılması gerektiği."
+        >
+          <ReprintPanel r={fc.reprint} />
+        </Box>
       )}
       {fc.book.salesTarget ? <Note tone="info">CRM'deki ilk yıl satış hedefi: {fmtUnits(fc.book.salesTarget)} adet.<SqlInfo k={fc.kaynaklar} alan="book" label="CRM ilk yıl satış hedefi" className="ml-0.5" /></Note> : null}
 
