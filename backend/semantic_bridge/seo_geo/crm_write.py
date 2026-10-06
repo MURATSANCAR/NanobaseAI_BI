@@ -179,7 +179,7 @@ def repair_metas(seo, llm: Any = None, log_line: Callable[[str], None] = print) 
     eng, tenant = seo.engine(), seo.tenant()
     lim = rules.thresholds(seo.conf) if hasattr(seo, "conf") else {"meta_min": 120, "meta_max": meta_max()}
     lo, hi = lim["meta_min"], lim["meta_max"]
-    ok = lambda x: bool(x) and propose.complete_sentence(x) and lo <= len(x) <= hi  # noqa: E731
+    ok = lambda x, d={}: bool(x) and not propose.meta_problems(x, d, "", lim)  # noqa: E731
     with eng.connect() as c:
         rows = c.execute(sa.select(PROPOSALS.c.id, PROPOSALS.c.fields_json, PRODUCTS.c.data_json)
                          .join(PRODUCTS, sa.and_(PRODUCTS.c.tenant_id == PROPOSALS.c.tenant_id,
@@ -188,22 +188,23 @@ def repair_metas(seo, llm: Any = None, log_line: Callable[[str], None] = print) 
     st = {"uygun": 0, "bozuk": 0, "kisaltildi": 0, "yeniden_yazildi": 0, "aralik_disi_kaldi": 0}
     for pid, fj, dj in rows:
         f = json.loads(fj or "{}")
+        data = json.loads(dj or "{}")
         m = _clean(f.get("SeoDescription"))
-        if ok(m):
+        if ok(m, data):
             st["uygun"] += 1
             continue
         st["bozuk"] += 1
         new = propose.fit_meta(m, hi) if m else None
-        if ok(new):
+        if ok(new, data):
             st["kisaltildi"] += 1
         else:
             got = None
             if llm is not None:
                 try:
-                    got = propose.rewrite_meta(llm, json.loads(dj or "{}"), f.get("SeoTitle") or "", lim, tries=5)
+                    got = propose.rewrite_meta(llm, data, f.get("SeoTitle") or "", lim, tries=8)
                 except Exception as e:  # noqa: BLE001
                     log.warning("meta yeniden yazılamadı %s: %s", pid, e)
-            if ok(got):
+            if ok(got, data):
                 new = got
                 st["yeniden_yazildi"] += 1
             else:

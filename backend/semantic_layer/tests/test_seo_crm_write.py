@@ -460,3 +460,15 @@ def test_repair_never_leaves_meta_empty_and_rewrites_short(env):
     with seo.engine().connect() as c:
         m = _json.loads(c.execute(_sa.select(PROPOSALS.c.fields_json).where(PROPOSALS.c.id == "pr1")).scalar())["SeoDescription"]
     assert st["aralik_disi_kaldi"] == 1 and m  # model olmadıysa boş kalmaz, en iyi tam cümle kalır
+
+
+def test_meta_quality_gate():
+    from semantic_bridge.seo_geo import propose
+    lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
+    p = {"ProductName": "Duyguların Psikolojisi", "Model": "Nevzat Tarhan", "Details": "Nevzat Tarhan duygusal zekayı Doğu ve Batı perspektifleriyle ele alıyor; kendini tanımak isteyenlere rehber."}
+    good = "Nevzat Tarhan duygusal zekayı Doğu ve Batı perspektifleriyle ele alıyor. Kendini tanımak ve duygularını anlamak isteyen okurlar için bir rehber."
+    assert propose.meta_problems(good, p, "Duyguların Psikolojisi - Nevzat Tarhan | Timaş", lim) == []
+    assert any("yazar" in x for x in propose.meta_problems(good.replace("Nevzat Tarhan", "Yazar"), p, "", lim))
+    assert any("kayıtta olmayan" in x for x in propose.meta_problems(good.replace("Batı", "Batı ve Ahmet Hamdi"), p, "", lim))
+    assert any("karakter" in x for x in propose.meta_problems("Nevzat Tarhan kısa yazdı.", p, "", lim))
+    assert any("ünlem" in x for x in propose.meta_problems(good.replace("rehber.", "rehber!"), p, "", lim))

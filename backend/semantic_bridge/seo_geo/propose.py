@@ -251,10 +251,11 @@ def unsupported(p: dict[str, Any], fields: dict[str, str]) -> list[str]:
     return found
 
 
-META_PROMPT = """Aşağıdaki kitap ürünü için arama sonucunda görünecek meta açıklamayı yaz.
-- {meta_min}–{meta_max} karakter (sınırı aşma, say). Tek paragraf, bir ya da iki TAM cümle; son cümle nokta ile biter.
-- Kitabı anlat; yazar adını geçir. Başlığı tekrar etme. Tırnak, emoji, HTML yok.
-- YALNIZ aşağıdaki kayıtta yazan bilgiyi kullan; kayıtta olmayan bilgi uydurma.
+META_PROMPT = """Aşağıdaki kitap için Google arama sonucunda görünecek meta açıklamayı yaz.
+- {lo}–{hi} karakter (boşluk dahil; say). Bir ya da iki TAM cümle; son cümle nokta ile biter, yarım cümle yok.
+- İlk cümlede kitabın ne anlattığı; yazar adı ({author}) mutlaka geçer. Okura neden okuması gerektiğini sade söyle.
+- Başlığı aynen tekrar etme. Tırnak, emoji, ünlem, HTML, «Hemen inceleyin» gibi satış kalıbı yok.
+- YALNIZ aşağıdaki kayıtta yazan bilgiyi kullan; kayıtta olmayan kişi, yer, ödül, sayı, yaş UYDURMA.
 Yalnız açıklama metnini döndür, başka hiçbir şey yazma.
 
 Başlık: {title}
@@ -262,23 +263,56 @@ Kayıt:
 {source}"""
 
 
-def rewrite_meta(llm: Any, p: dict[str, Any], title: str, lim: dict[str, int], tries: int = 3) -> Optional[str]:
-    """Yalnız meta açıklamayı yeniden yazdırır; tam cümleyle biten ve sınıra uyan ilk cevap döner, olmazsa None."""
-    src = rules.text_of(" ".join(str(p.get(k) or "") for k in ("ProductName", "Model", "Brand", "Details", "ShortDescription")))[:3000]
-    messages = [{"role": "user", "content": META_PROMPT.format(meta_min=lim["meta_min"], meta_max=lim["meta_max"] - 5,
-                                                               title=title, source=src)}]
-    best = None
-    for _ in range(tries):
-        raw = llm.chat(messages, max_tokens=400, temperature=0.3) or ""
+def meta_problems(text: str, p: dict[str, Any], title: str, lim: dict[str, int]) -> list[str]:
+    """Meta açıklamanın kalite denetimi (boş liste = kabul): tam cümle, 120–160 karakter, yazar adı, başlığın
+    aynısı değil, kayıtta olmayan isim/sayı yok, tırnak/emoji/HTML/ünlem yok."""
+    out = []
+    t = (text or "").strip()
+    if not t:
+        return ["boş"]
+    if not complete_sentence(t):
+        out.append("tam cümleyle bitmiyor")
+    if not lim["meta_min"] <= len(t) <= lim["meta_max"]:
+        out.append(f"{len(t)} karakter; {lim['meta_min']}–{lim['meta_max']} olmalı")
+    author = re.split(r"\s*[,;&]\s*|\s+ve\s+", rules.text_of(p.get("Model") or ""))[0].strip()
+    if author and _lower(author.split()[-1]) not in _lower(t):
+        out.append(f"yazar adı ({author}) geçmiyor")
+    if title and _lower(core_title(title)) == _lower(t.rstrip(".")):
+        out.append("başlığın aynısı")
+    if re.search(r"[\"“”«»<>!]|[\U0001F300-\U0001FAFF]", t):
+        out.append("tırnak/ünlem/emoji/HTML var")
+    bad = unsupported(p, {"SeoDescription": t})
+    if bad:
+        out.append("kayıtta olmayan: " + ", ".join(bad[:5]))
+    return out
+
+
+def rewrite_meta(llm: Any, p: dict[str, Any], title: str, lim: dict[str, int], tries: int = 8) -> Optional[str]:
+    """Yalnız meta açıklamayı yeniden yazdırır; `meta_problems` boş olan ilk cevap döner. Olmazsa en az sorunlu tam
+    cümleli cevap döner (çağıran «aralık dışı» sayar). Her denemede neyin yanlış olduğu modele açıkça söylenir."""
+    src = rules.text_of(" ".join(str(p.get(k) or "") for k in ("ProductName", "Model", "Brand", "ShortDescription", "Details")))[:3500]
+    author = re.split(r"\s*[,;&]\s*|\s+ve\s+", rules.text_of(p.get("Model") or ""))[0].strip() or "kayıtta yok"
+    lo, hi = lim["meta_min"] + 10, lim["meta_max"] - 5
+    messages = [{"role": "user", "content": META_PROMPT.format(lo=lo, hi=hi, author=author, title=title, source=src)}]
+    best, best_n = None, 99
+    for k in range(tries):
+        raw = llm.chat(messages, max_tokens=400, temperature=0.3 if k < 3 else 0.5) or ""
         text = re.sub(r"<think>.*?</think>", "", raw, flags=re.S).strip().strip('"“”')
         text = re.sub(r"\s+", " ", text)
-        got = fit_meta(text, lim["meta_max"], floor=lim["meta_min"])
-        if got and lim["meta_min"] <= len(got) <= lim["meta_max"]:
-            return got
-        best = got or best
+        cand = fit_meta(text, lim["meta_max"], floor=1) or text
+        probs = meta_problems(cand, p, title, lim)
+        if not probs:
+            return cand
+        if complete_sentence(cand) and len(probs) < best_n:
+            best, best_n = cand, len(probs)
+        fix = []
+        if len(text) < lim["meta_min"]:
+            fix.append(f"şu an {len(text)} karakter, çok kısa: kayıttaki bilgiden bir tam cümle daha ekle, toplam {lo}–{hi} karakter olsun")
+        elif len(text) > lim["meta_max"]:
+            fix.append(f"şu an {len(text)} karakter, çok uzun: kısalt, toplam {lo}–{hi} karakter olsun")
+        fix += [x for x in probs if "karakter" not in x]
         messages += [{"role": "assistant", "content": raw},
-                     {"role": "user", "content": f"Olmadı: {len(text)} karakter ya da tam cümleyle bitmiyor. "
-                                                 f"{lim['meta_min']}–{lim['meta_max'] - 5} karakter, nokta ile biten tam cümle(ler)."}]
+                     {"role": "user", "content": "Düzelt: " + "; ".join(fix) + ". Yalnız açıklamayı döndür."}]
     return best
 
 
