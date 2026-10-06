@@ -338,3 +338,28 @@ def test_empty_page_image_is_rendered_again(tmp_path):
     assert out.stat().st_mtime_ns == before
     out.write_bytes(out.read_bytes()[:-20])                      # yarım yazılmış
     assert not document.png_complete(out)
+
+
+def test_failed_cache_lookup_falls_back_to_model(monkeypatch):
+    """Önbellek yalnız kısayol: DB araması düşerse model çağrılır."""
+    sent = []
+
+    async def post(path, req):
+        sent.append(req)
+        return _answer("yeni")
+
+    async def aliases():
+        return META
+
+    async def record(self, *a, **k):
+        return 1
+
+    def broken(*a, **k):
+        raise RuntimeError("db yok")
+
+    monkeypatch.setattr(llm, "_post", post)
+    monkeypatch.setattr(llm, "aliases", aliases)
+    monkeypatch.setattr(llm.Llm, "_record", record)
+    monkeypatch.setattr(llm.db, "one", broken)
+    out, _ = asyncio.run(llm.Llm("g").chat("book-vision-deep", MSG, temperature=0))
+    assert out == "yeni" and len(sent) == 1

@@ -235,13 +235,16 @@ class Llm:
         real, rev = meta.get("real_model"), meta.get("revision")
         if not real or not rev or rev in ("?", "unknown"):
             return None
-        return await asyncio.to_thread(
-            db.one,
-            "SELECT m.id, m.response FROM model_call m WHERE m.request_digest=%s AND m.ok AND m.alias=%s"
-            " AND m.real_model=%s AND m.revision=%s AND m.response IS NOT NULL AND m.generation_id IN"
-            " (SELECT g.id FROM generation g WHERE g.book_version_id=(SELECT book_version_id FROM generation"
-            " WHERE id=%s)) ORDER BY m.id DESC LIMIT 1",
-            request_digest(req), alias, real, rev, self.generation_id)
+        try:
+            return await asyncio.to_thread(
+                db.one,
+                "SELECT m.id, m.response FROM model_call m WHERE m.request_digest=%s AND m.ok AND m.alias=%s"
+                " AND m.real_model=%s AND m.revision=%s AND m.response IS NOT NULL AND m.generation_id IN"
+                " (SELECT g.id FROM generation g WHERE g.book_version_id=(SELECT book_version_id FROM generation"
+                " WHERE id=%s)) ORDER BY m.id DESC LIMIT 1",
+                request_digest(req), alias, real, rev, self.generation_id)
+        except Exception:  # noqa: BLE001 — a shortcut only: a failed lookup asks the model as before
+            return None
 
     async def chat(self, alias: str, messages: list[dict], *, prompt: PromptRef | None = None,
                    schema: dict | None = None, pages: list[int] | None = None,
