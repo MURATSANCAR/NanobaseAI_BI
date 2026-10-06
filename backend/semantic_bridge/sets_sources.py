@@ -36,6 +36,7 @@ from datetime import date, datetime
 from typing import Any, Callable, Iterable, Optional
 
 from semantic_bridge import budget_sources as bsrc
+from semantic_bridge import crm_labels
 
 log = logging.getLogger("semantic.sets.sources")
 
@@ -50,15 +51,25 @@ _CODE = re.compile(r"^[^'\x00-\x1f]{1,60}$")
 _GUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 #: CRM kitap kartı `new_Tip`.
-CRM_TIP = {1: "Kitap", 2: "Promosyon", 4: "Set", 5: "Dergi", 7: "Pazarlama Materyalleri", 8: "Ekitap", 9: "SesliKitap"}
-CRM_SET_TIPI = {1: "Normal Set", 2: "Toplama Set", 3: "Dergi Set"}
-CRM_SATIS_KANALI = {1: "Timaş Satış Kanalı", 2: "Market", 3: "KDD", 4: "Toplama Set", 6: "Diğer", 7: "Toptan & Eticaret",
-                    8: "B2C Toplama Set"}
-CRM_PROMOSYON_TIPI = {1: "Kutu", 2: "Koli", 3: "Değerlendirme Testi", 4: "Bez Çanta", 5: "Bayrak", 6: "Afiş", 7: "Kart Postal",
-                      8: "Defter", 9: "Gazete", 10: "Ebeveyn Rehberi", 11: "Kalem", 12: "Stand", 13: "Fincan"}
+CRM_TIP = crm_labels.Labels("new_kitap", "new_tip", {
+    1: "Kitap", 2: "Promosyon", 4: "Set", 5: "Dergi", 7: "Pazarlama Materyalleri", 8: "Ekitap", 9: "SesliKitap",
+})
+CRM_SET_TIPI = crm_labels.Labels("new_kitap", "new_settipi", {1: "Normal Set", 2: "Toplama Set", 3: "Dergi Set"})
+CRM_SATIS_KANALI = crm_labels.Labels("new_kitap", "new_satiskanallari", {
+    1: "Timaş Satış Kanalı", 2: "Market", 3: "KDD", 4: "Toplama Set", 6: "Diğer", 7: "Toptan & Eticaret",
+    8: "B2C Toplama Set",
+})
+CRM_PROMOSYON_TIPI = crm_labels.Labels("new_kitap", "new_promosyontipi", {
+    1: "Kutu", 2: "Koli", 3: "Değerlendirme Testi", 4: "Bez Çanta", 5: "Bayrak", 6: "Afiş", 7: "Kart Postal",
+    8: "Defter", 9: "Gazete", 10: "Ebeveyn Rehberi", 11: "Kalem", 12: "Stand", 13: "Fincan",
+})
 #: CRM «Paketleme» türleri (`new_paketlemeBase.new_paketlemetipi`).
-PAKETLEME = {0: "Shrink", 1: "Şerit çember", 2: "Vakumlu paket", 3: "Kraft paket", 4: "Kutulama", 5: "Kolileme"}
-HEDIYE_TALEP_DURUM = {1: "Yeni", 100000000: "Onay bekliyor", 100000001: "Onaylandı", 2: "İptal", 100000002: "Sevk edildi"}
+PAKETLEME = crm_labels.Labels("new_paketleme", "new_paketlemetipi", {
+    0: "Shrink", 1: "Şerit çember", 2: "Vakumlu paket", 3: "Kraft paket", 4: "Kutulama", 5: "Kolileme",
+}, fixed=True)
+HEDIYE_TALEP_DURUM = crm_labels.Labels("new_hediyetalebi", "statuscode", {
+    1: "Yeni", 100000000: "Onay bekliyor", 100000001: "Onaylandı", 2: "İptal", 100000002: "Sevk edildi",
+})
 
 
 def prefix(schema: str) -> str:

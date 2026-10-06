@@ -35,6 +35,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Optional
 from urllib.parse import quote
 
+from semantic_bridge import crm_labels
 from semantic_bridge.field_sales_sources import (  # aynı yardımcılar (M30); SQL'e yalnız doğrulanmış ad/değer girer
     SourceError, _guid_literal, day, firm, guid, lower_keys, num, opt_num, prefix, text,
 )
@@ -50,24 +51,31 @@ FORBIDDEN_COLUMNS = (
 )
 
 #: CRM sipariş durumu (Kural C13); CRM'in StringMap'i okunamazsa bu etiketler.
-ORDER_STATUS = {
+ORDER_STATUS = crm_labels.Labels("new_siparis", "statuscode", {
     1: "Taslak", 2: "Etkin değil", 100000000: "Sevk edildi", 100000001: "İptal", 100000002: "Sipariş",
     100000003: "Birleştirildi", 100000004: "Risk limit onayı bekliyor", 100000005: "Pazarlama bütçesi onayı bekliyor",
     100000011: "Depoda bekliyor", 100000012: "Pusula alındı, toplanıyor", 100000013: "Kutulanıyor",
     100000014: "Kutulandı", 100000015: "Tamamlandı", 100000016: "Risk bilgisi bekleniyor",
-}
+})
 #: «Bekleyen» sayılmayan durumlar (C13): Tamamlandı, Sevk edildi, İptal, Birleştirildi, Etkin değil.
 NOT_PENDING = (100000015, 100000000, 100000001, 100000003, 2)
 RISK_STATUS = (100000004, 100000016)
-ORDER_TYPE = {1: "B2B", 2: "Dağılım", 3: "Standart", 4: "Fuar", 5: "Etkinlik", 6: "Telif", 7: "Market", 8: "B2C",
-              9: "Pazaryeri", 10: "Okul örneği", 11: "Öğretmen örneği", 12: "Tanıtım gönderimi", 13: "Okul satışı",
-              14: "Amazon konsinye", 15: "Bağış", 16: "İmza siparişi", 17: "Kırmızı / Mor"}
-RISK_REASON = {1: "Açık hesap limiti", 2: "Çek-senet limiti", 3: "Toplam limit", 4: "Sorunlu müşteri"}
-SHIPMENT_KIND = {1: "Üretimden giriş", 2: "Faturalı kabul", 4: "İade", 5: "Raf transferi", 6: "Depolar arası sevk",
-                 7: "İrsaliye", 8: "Sayım eksiği"}
-CHANNEL = {100000008: "Bayi", 100000004: "Dağıtıcı", 100000001: "Kitapçı", 100000003: "Perakende",
-           100000005: "E-ticaret", 100000002: "Market", 100000006: "Fuar", 100000009: "Tüketici-okur",
-           100000000: "Sincap Kitap", 100000007: "Diğer"}
+ORDER_TYPE = crm_labels.Labels("new_siparis", "new_siparistipi", {
+    1: "B2B", 2: "Dağılım", 3: "Standart", 4: "Fuar", 5: "Etkinlik", 6: "Telif", 7: "Market", 8: "B2C",
+    9: "Pazaryeri", 10: "Okul örneği", 11: "Öğretmen örneği", 12: "Tanıtım gönderimi", 13: "Okul satışı",
+    14: "Amazon konsinye", 15: "Bağış", 16: "İmza siparişi", 17: "Kırmızı / Mor",
+})
+RISK_REASON = crm_labels.Labels("new_siparis", "new_risketakilmasebebi", {
+    1: "Açık hesap limiti", 2: "Çek-senet limiti", 3: "Toplam limit", 4: "Sorunlu müşteri",
+})
+SHIPMENT_KIND = crm_labels.Labels("new_sevkiyat", "new_sevkiyat_islemturu", {
+    1: "Üretimden giriş", 2: "Faturalı kabul", 4: "İade", 5: "Raf transferi", 6: "Depolar arası sevk", 7: "İrsaliye",
+    8: "Sayım eksiği",
+})
+CHANNEL = crm_labels.Labels("account", "new_firmakanal", {
+    100000008: "Bayi", 100000004: "Dağıtıcı", 100000001: "Kitapçı", 100000003: "Perakende", 100000005: "E-ticaret",
+    100000002: "Market", 100000006: "Fuar", 100000009: "Tüketici-okur", 100000000: "Sincap Kitap", 100000007: "Diğer",
+})
 SALES_TR, RETURN_TR = (7, 8, 9), (2, 3)
 
 

@@ -45,6 +45,7 @@ from typing import Any, Callable, Optional
 from zoneinfo import ZoneInfo
 
 from semantic_layer.firm_scope import firm_in_scope
+from semantic_bridge import crm_labels
 
 log = logging.getLogger("semantic.school_visits.sources")
 TZ = ZoneInfo("Europe/Istanbul")
@@ -57,19 +58,30 @@ _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _FIRM = re.compile(r"^[0-9]{3}$")
 
 #: Ziyaret tipi (etkinlik `new_ziyarettipi`) — okul ziyareti sayılanlar.
-VISIT_TYPES = {1: "MEB okulları", 2: "Özel okullar", 3: "Üniversiteler"}
-VISIT_FORMS = {1: "Cari ile ziyaret", 2: "Doğrudan ziyaret"}
-VISIT_STATUS = {1: "Planlandı", 100000002: "Tamamlandı", 100000000: "İptal edildi"}
+VISIT_TYPES = crm_labels.Labels("new_etkinlik", "new_ziyarettipi", {
+    1: "MEB okulları", 2: "Özel okullar", 3: "Üniversiteler",
+}, fixed=True)
+VISIT_FORMS = crm_labels.Labels("new_etkinlik", "new_ziyaretsekli", {1: "Cari ile ziyaret", 2: "Doğrudan ziyaret"})
+VISIT_STATUS = crm_labels.Labels("new_etkinlik", "statuscode", {
+    1: "Planlandı", 100000002: "Tamamlandı", 100000000: "İptal edildi",
+})
 VISIT_DONE = 100000002
 #: Sipariş tipi: okul örneği, öğretmen örneği, okul satışı.
 ORDER_TYPES = {10: "Okul örneği", 11: "Öğretmen örneği", 13: "Okul satışı"}
 #: Firma kanalı: bayi ve kitapçı okul yönlendirmesinde aday olur.
 DEALER_CHANNELS = {100000008: "Bayi", 100000001: "Kitapçı"}
-KURUM_TIPI = {1: "Okul", 3: "Üniversite", 5: "Milli Eğitim", 6: "Belediye", 7: "Kaymakamlık", 8: "Valilik", 4: "Diğer"}
-KURUM_TURU = {1: "Devlet", 2: "Özel", 3: "Vakıf"}
-OKUL_TURU = {1: "Okul Öncesi", 2: "Anadolu Lisesi", 3: "Eğitim Merkezleri", 4: "Fen Lisesi", 5: "Fen ve Teknoloji Lisesi",
-             6: "İmam Hatip", 7: "Meslek Lisesi", 8: "Sosyal Bilimler Lisesi", 9: "Temel Eğitim", 10: "Yatılı Bölge Okulu"}
-KADEME = {1: "Anaokulu", 2: "Bilim ve Sanat Merkezi", 3: "İlkokul", 4: "Lise", 5: "Ortaokul", 6: "Rehberlik ve Araştırma Merkezi"}
+KURUM_TIPI = crm_labels.Labels("new_ziyaretyerleri", "new_kurumtipi", {
+    1: "Okul", 3: "Üniversite", 5: "Milli Eğitim", 6: "Belediye", 7: "Kaymakamlık", 8: "Valilik", 4: "Diğer",
+})
+KURUM_TURU = crm_labels.Labels("new_ziyaretyerleri", "new_kurumturu", {1: "Devlet", 2: "Özel", 3: "Vakıf"})
+OKUL_TURU = crm_labels.Labels("new_ziyaretyerleri", "new_okulturu", {
+    1: "Okul Öncesi", 2: "Anadolu Lisesi", 3: "Eğitim Merkezleri", 4: "Fen Lisesi", 5: "Fen ve Teknoloji Lisesi",
+    6: "İmam Hatip", 7: "Meslek Lisesi", 8: "Sosyal Bilimler Lisesi", 9: "Temel Eğitim", 10: "Yatılı Bölge Okulu",
+})
+KADEME = crm_labels.Labels("new_ziyaretyerleri", "new_okulkademesi", {
+    1: "Anaokulu", 2: "Bilim ve Sanat Merkezi", 3: "İlkokul", 4: "Lise", 5: "Ortaokul",
+    6: "Rehberlik ve Araştırma Merkezi",
+})
 #: Kitabın yayıncılık statüsü: bu statülerdeki kitap tanıtım kataloğuna girmez (iptal, ertelendi, artık bizim değil,
 #: hakları devredildi). Baskısı biten (YS07) stokta kaldıkça girer — stok süzgeci ayrıca uygulanır.
 BOOK_EXCLUDED_STATUS = (100000001, 100000003, 100000005, 100000006)

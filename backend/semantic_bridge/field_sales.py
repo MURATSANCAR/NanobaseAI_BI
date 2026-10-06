@@ -777,8 +777,9 @@ def reason_prompt(textv: str) -> str:
             f"Red nedeni hangi sınıfa girer?\n\nAçıklama: {textv[:500]}")
 
 
-#: Sınıflama seçenekleri → CRM red sebebi kodu (aynı küme; uydurma sınıf olamaz).
-REASON_CHOICES = {label: code for code, label in src.REJECT_REASON.items()}
+def reason_choices() -> dict[str, int]:
+    """Sınıflama seçenekleri → CRM red sebebi kodu (aynı küme; uydurma sınıf olamaz). Adlar CRM'den, çağrı anında."""
+    return {label: code for code, label in src.REJECT_REASON.items()}
 #: Öneri eşiği (docs/analiz/llm-choose.md): ekranda «Zeki AI'ya göre» diye gösterilir, CRM kaydını değiştirmez.
 REASON_MIN_PROB, REASON_MIN_MARGIN = 0.70, 0.30
 

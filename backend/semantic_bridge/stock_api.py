@@ -173,7 +173,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         engine, tenant, user, display = ctx(request)
         s = settings()
         last = store.meta_get(engine, tenant, "son-kosu")
-        return {"states": S.STATES, "diffClasses": S.DIFF_CLASSES, "transferKinds": S.TRANSFER_KINDS,
+        return {"states": S.STATES, "diffClasses": S.DIFF_CLASSES, "transferKinds": dict(S.TRANSFER_KINDS),
                 "errorClasses": S.ERROR_CLASSES, "suggestionKinds": store.SUGGESTION_KINDS,
                 "suggestionStates": store.SUGGESTION_STATES, "targets": store.TARGETS, "thresholdStates": store.THRESHOLD_STATES,
                 "params": {k: s[k] for k in ("runoutDays", "safetyDays", "leadDays", "excessDays", "deadDays", "pickDays",

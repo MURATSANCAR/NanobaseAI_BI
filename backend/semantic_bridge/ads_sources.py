@@ -29,6 +29,7 @@ from typing import Any, Callable, Optional
 from semantic_bridge import ads as A
 from semantic_bridge import budget_sources as bsrc
 from semantic_bridge import hizli_kaynak as HK
+from semantic_bridge import crm_labels
 
 Runner = Callable[[str], list[dict[str, Any]]]
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -621,9 +622,15 @@ WHERE m.statecode = 0 AND m.new_baslangictarihi < '{_utc(to + timedelta(days=1))
 
 
 #: CRM seçenek adları (`new_pazarlamatipi`, `new_mecratipi4/5`; CRM'in Türkçe etiket tablosundan, 2026-09-09).
-CRM_TYPES = {1: "Basın", 2: "Medya", 3: "Promosyon", 4: "Sosyal Medya", 5: "Dijital Pazarlama", 6: "Satış Kampanyası"}
-CRM_MEDIA4 = {1: "Facebook", 2: "Instagram", 3: "Twitter", 4: "Pinterest", 5: "Linkedin", 6: "Influencer", 7: "Video"}
-CRM_MEDIA5 = {1: "Adwords", 2: "Seo", 3: "TSınav", 4: "Timaş Okul", 5: "Sizbiz TV", 6: "TKitab", 7: "TLand", 8: "Website"}
+CRM_TYPES = crm_labels.Labels("new_pazarlamamodulu", "new_pazarlamatipi", {
+    1: "Basın", 2: "Medya", 3: "Promosyon", 4: "Sosyal Medya", 5: "Dijital Pazarlama", 6: "Satış Kampanyası",
+})
+CRM_MEDIA4 = crm_labels.Labels("new_pazarlamamodulu", "new_mecratipi4", {
+    1: "Facebook", 2: "Instagram", 3: "Twitter", 4: "Pinterest", 5: "Linkedin", 6: "Influencer", 7: "Video",
+})
+CRM_MEDIA5 = crm_labels.Labels("new_pazarlamamodulu", "new_mecratipi5", {
+    1: "Adwords", 2: "Seo", 3: "TSınav", 4: "Timaş Okul", 5: "Sizbiz TV", 6: "TKitab", 7: "TLand", 8: "Website",
+})
 AD_PLAN_STATUS = {100000004: "Taslak", 100000000: "Planlandı", 100000002: "Tamamlandı", 100000003: "İptal Edildi", 1: "Etkin", 2: "Etkin değil"}
 #: Reklam sayılan CRM pazarlama tipleri (Sosyal Medya, Dijital Pazarlama).
 AD_TYPES = (4, 5)

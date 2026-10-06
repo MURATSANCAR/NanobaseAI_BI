@@ -34,6 +34,8 @@ from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
 
+from semantic_bridge import crm_labels
+
 log = logging.getLogger("semantic.editorial_intake")
 
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -85,7 +87,7 @@ DECISIONS = {1: "Kabul", 100000000: "Red", 100000001: "Bekleme", 100000002: "Yen
 DEC_ACCEPT, DEC_REJECT = 1, 100000000
 # new_projeBase.new_projeturu (StringMapBase, 2026-09-29; panodaki 2.112 projenin hepsinde dolu). Etiket SQL'de
 # StringMapBase'ten okunamaz: köprünün sorgu yolu katalogda olmayan tabloyu reddeder (aday köprüde görüldü).
-PROJECT_TYPES = {1: "Editoryal", 2: "Satış", 3: "Pazarlama"}
+PROJECT_TYPES = crm_labels.Labels("new_proje", "new_projeturu", {1: "Editoryal", 2: "Satış", 3: "Pazarlama"})
 # new_proje öznitelik sütun numaraları (MetadataSchema.Attribute.ColumnNumber): denetim kaydının AttributeMask'i.
 AUDIT_COLUMNS = {"editor": 439, "report": 55}
 

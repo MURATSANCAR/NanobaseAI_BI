@@ -180,7 +180,8 @@ class Service:
         if llm is None or not callable(getattr(llm, "choose", None)):
             return {"labelled": 0, "waiting": len(todo), "note": "Zeki AI bağlı değil"}
         done = unsure = 0
-        choices = list(F.REASON_CHOICES)
+        reasons = F.reason_choices()
+        choices = list(reasons)
         for t in todo:
             try:
                 res = llm.choose(F.reason_prompt(text(t.get("red_metin")) or ""), choices)
@@ -191,7 +192,7 @@ class Service:
                 unsure += 1
                 continue
             with engine.begin() as c:
-                c.execute(F.REASONS.insert().values(tahsilat_id=guid(t.get("id")), etiket=F.REASON_CHOICES[res.choice],
+                c.execute(F.REASONS.insert().values(tahsilat_id=guid(t.get("id")), etiket=reasons[res.choice],
                                                     olasilik=round(float(res.probability or 0), 4), kaynak="zeki", zaman=F._now()))
             done += 1
         return {"labelled": done, "unsure": unsure, "waiting": len(todo) - done - unsure}

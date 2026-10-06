@@ -42,6 +42,7 @@ from zoneinfo import ZoneInfo
 
 from semantic_bridge import hizli_kaynak as HK
 from semantic_layer.firm_scope import firm_in_scope
+from semantic_bridge import crm_labels
 
 log = logging.getLogger("semantic.events.sources")
 TZ = ZoneInfo("Europe/Istanbul")
@@ -54,7 +55,9 @@ _CODE = re.compile(r"^[^'\";\\]{1,60}$")
 IN_CHUNK = 500
 
 #: CRM etkinlik durumu.
-CRM_STATUS = {1: "Planlandı", 100000002: "Tamamlandı", 100000000: "İptal edildi", 2: "Etkin değil"}
+CRM_STATUS = crm_labels.Labels("new_etkinlik", "statuscode", {
+    1: "Planlandı", 100000002: "Tamamlandı", 100000000: "İptal edildi", 2: "Etkin değil",
+})
 CRM_CANCELLED = 100000000
 #: CRM sipariş tipi (yalnız bu modülün baktıkları; hangilerinin sayılacağı ayardır).
 ORDER_TYPES = {4: "Fuar", 5: "Etkinlik", 16: "İmza siparişi"}

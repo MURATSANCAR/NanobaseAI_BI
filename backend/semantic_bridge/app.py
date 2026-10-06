@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
+from semantic_bridge import crm_labels
 from semantic_bridge import provenance as P
 from semantic_bridge import soru_kaynak as SK
 from semantic_layer import SEMANTIC_LAYER_VERSION
@@ -200,6 +201,9 @@ class Runtime:
                 self.crm_connector = connector_from_file(_crm_file)
             except Exception as _e:  # noqa: BLE001
                 log.warning("CRM connector kurulamadi: %s", str(_e)[:200])
+            else:
+                # CRM seçenek adları (StringMapBase) arka planda okunmaya başlar; ilk ekran isteği beklemez.
+                crm_labels.warm()
         # One model serves everyone: requests that need it are admitted in arrival order, never rejected.
         _t = time.perf_counter()
         self.queue = queue or LlmQueue.from_env(self.store.engine)

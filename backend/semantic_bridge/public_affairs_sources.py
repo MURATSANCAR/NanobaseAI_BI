@@ -28,6 +28,7 @@ from typing import Any, Iterable, Optional
 
 from semantic_bridge import budget_sources as bsrc
 from semantic_bridge.relations_core import TZ, crm_prefix, guid, like
+from semantic_bridge import crm_labels
 
 SourceError = bsrc.SourceError
 Runner = bsrc.Runner
@@ -35,8 +36,10 @@ runner = bsrc.runner
 
 PAGE_SIZE = 20
 
-KURUM_TIPI = {1: "Okul", 3: "Üniversite", 5: "Milli Eğitim", 6: "Belediye", 7: "Kaymakamlık", 8: "Valilik", 4: "Diğer"}
-KURUM_TURU = {1: "Devlet", 2: "Özel", 3: "Vakıf"}
+KURUM_TIPI = crm_labels.Labels("new_ziyaretyerleri", "new_kurumtipi", {
+    1: "Okul", 3: "Üniversite", 5: "Milli Eğitim", 6: "Belediye", 7: "Kaymakamlık", 8: "Valilik", 4: "Diğer",
+})
+KURUM_TURU = crm_labels.Labels("new_ziyaretyerleri", "new_kurumturu", {1: "Devlet", 2: "Özel", 3: "Vakıf"})
 ROLE = {1: "Karar Veren", 2: "Çalışan", 3: "Etkileyen"}
 KURUM_ROLU = {1: "Müşteri", 2: "Devlet Kurumu", 3: "Resmi", 4: "Özel STK"}
 HEDEF_KITLE = {1: "Çocuk", 2: "Genç", 3: "Yetişkin"}

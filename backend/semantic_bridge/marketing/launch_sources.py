@@ -30,6 +30,7 @@ from typing import Any, Callable, Iterable, Optional
 
 from semantic_bridge import budget_sources as bsrc
 from semantic_bridge.marketing.sources import SourceError, _d, _s, _utc_bound, code, guid, prefix
+from semantic_bridge import crm_labels
 
 Runner = Callable[[str], list[dict[str, Any]]]
 #: Sipariş tipi «Dağılım» (CRM `new_siparistipi`).
@@ -37,7 +38,9 @@ ORDER_DISTRIBUTION = 2
 #: Etkinlik durumu «Tamamlandı» (CRM `new_etkinlik.statuscode`).
 EVENT_DONE = 100000002
 EVENT_CANCELLED = 100000000
-EVENT_STATUS = {1: "Planlandı", 100000002: "Tamamlandı", 100000000: "İptal edildi", 2: "Etkin değil"}
+EVENT_STATUS = crm_labels.Labels("new_etkinlik", "statuscode", {
+    1: "Planlandı", 100000002: "Tamamlandı", 100000000: "İptal edildi", 2: "Etkin değil",
+})
 
 
 def _codes(codes: Iterable[str]) -> str:

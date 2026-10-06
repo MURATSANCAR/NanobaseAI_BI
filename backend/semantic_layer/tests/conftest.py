@@ -23,6 +23,11 @@ def _no_live_label_dictionary(monkeypatch, tmp_path):
     monkeypatch.setattr(label_values, "PATH", str(tmp_path / "label-values.json"))
 
 @pytest.fixture(autouse=True)
+def _no_live_crm_labels(monkeypatch):
+    """Seçenek adları sunucuda canlı CRM'den okunur; test yazılı sözlüğü görür (test_crm_labels kendi okuyucusunu verir)."""
+    monkeypatch.setenv("CRM_LABELS", "0")
+
+@pytest.fixture(autouse=True)
 def _no_live_response_cache(monkeypatch, tmp_path):
     """Köprüyü kuran testler canlının hazır cevap klasörüne (ve kişi kaydına) yazmasın: her test kendi klasöründe."""
     monkeypatch.setenv("RESPONSE_CACHE_DIR", str(tmp_path / "response-cache"))

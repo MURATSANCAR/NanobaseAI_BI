@@ -40,6 +40,7 @@ from zoneinfo import ZoneInfo
 
 from semantic_bridge import budget_sources as bsrc
 from semantic_bridge.field_sales_sources import prefix
+from semantic_bridge import crm_labels
 
 log = logging.getLogger("semantic.shipping.sources")
 
@@ -62,18 +63,22 @@ FORBIDDEN_COLUMNS = (
 PERSONAL_COLUMNS = ", b.new_alici AS alici, b.new_TeslimAlan AS teslim_alan"
 
 #: CRM sipariş durumu (Kural C13).
-ORDER_STATUS = {
-    1: "Taslak", 2: "Etkin değil", 100000000: "Sevk edildi", 100000001: "İptal", 100000002: "Sipariş", 100000003: "Birleştirildi",
-    100000004: "Risk limit onayı bekliyor", 100000005: "Pazarlama bütçesi onayı bekliyor", 100000011: "Depoda bekliyor",
-    100000012: "Pusula alındı, toplanıyor", 100000013: "Kutulanıyor", 100000014: "Kutulandı", 100000015: "Tamamlandı",
-    100000016: "Risk bilgisi bekleniyor",
-}
-ORDER_TYPE = {1: "B2B", 2: "Dağılım", 3: "Standart", 4: "Fuar", 5: "Etkinlik", 6: "Telif", 7: "Market", 8: "B2C", 9: "Pazar yeri",
-              10: "Okul örneği", 11: "Öğretmen örneği", 12: "Tanıtım gönderimi", 13: "Okul satışı", 14: "Amazon konsinye",
-              15: "Bağış", 16: "İmza siparişi", 17: "Kırmızı / Mor"}
-SHIPMENT_KIND = {1: "Üretimden giriş", 2: "Faturalı kabul", 4: "İade", 5: "Raf transferi", 6: "Depolar arası sevk",
-                 7: "İrsaliye", 8: "Sayım eksiği"}
-PAYMENT = {1: "Gönderici öder", 2: "Alıcı öder"}
+ORDER_STATUS = crm_labels.Labels("new_siparis", "statuscode", {
+    1: "Taslak", 2: "Etkin değil", 100000000: "Sevk edildi", 100000001: "İptal", 100000002: "Sipariş",
+    100000003: "Birleştirildi", 100000004: "Risk limit onayı bekliyor", 100000005: "Pazarlama bütçesi onayı bekliyor",
+    100000011: "Depoda bekliyor", 100000012: "Pusula alındı, toplanıyor", 100000013: "Kutulanıyor",
+    100000014: "Kutulandı", 100000015: "Tamamlandı", 100000016: "Risk bilgisi bekleniyor",
+})
+ORDER_TYPE = crm_labels.Labels("new_siparis", "new_siparistipi", {
+    1: "B2B", 2: "Dağılım", 3: "Standart", 4: "Fuar", 5: "Etkinlik", 6: "Telif", 7: "Market", 8: "B2C",
+    9: "Pazar yeri", 10: "Okul örneği", 11: "Öğretmen örneği", 12: "Tanıtım gönderimi", 13: "Okul satışı",
+    14: "Amazon konsinye", 15: "Bağış", 16: "İmza siparişi", 17: "Kırmızı / Mor",
+})
+SHIPMENT_KIND = crm_labels.Labels("new_sevkiyat", "new_sevkiyat_islemturu", {
+    1: "Üretimden giriş", 2: "Faturalı kabul", 4: "İade", 5: "Raf transferi", 6: "Depolar arası sevk", 7: "İrsaliye",
+    8: "Sayım eksiği",
+})
+PAYMENT = crm_labels.Labels("new_siparis", "new_kargoodemesekli", {1: "Gönderici öder", 2: "Alıcı öder"})
 #: Entegrasyon alanı öneki → ekranda firma adı.
 INTEGRATIONS = (("aras", "Aras"), ("ups", "UPS"), ("mng", "MNG"), ("akademi", "Akademi"))
 #: Durum grupları (sipariş listesi süzgeci).

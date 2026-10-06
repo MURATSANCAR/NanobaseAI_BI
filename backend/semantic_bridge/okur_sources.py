@@ -41,6 +41,7 @@ from typing import Any, Callable, Optional
 
 from semantic_bridge import budget_sources as bsrc
 from semantic_bridge import okur as O
+from semantic_bridge import crm_labels
 
 log = logging.getLogger("semantic.okur.sources")
 
@@ -267,7 +268,9 @@ def events_sql(schema: str, year: int, exclude_visits: bool, types: list[str]) -
     )
 
 
-EVENT_STATES = {1: "Planlandı", 100000002: "Tamamlandı", 100000000: "İptal edildi", 2: "Etkin değil"}
+EVENT_STATES = crm_labels.Labels("new_etkinlik", "statuscode", {
+    1: "Planlandı", 100000002: "Tamamlandı", 100000000: "İptal edildi", 2: "Etkin değil",
+})
 DONE = 100000002
 
 

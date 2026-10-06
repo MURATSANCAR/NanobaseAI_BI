@@ -56,6 +56,7 @@ from semantic_bridge import stock_sources as src
 from semantic_bridge import stock_store as store
 from semantic_bridge.management import baski_oneri
 from semantic_bridge.stock_store import PAGE_SIZE, StockError
+from semantic_bridge import crm_labels
 
 log = logging.getLogger("semantic.stock")
 TZ = ZoneInfo("Europe/Istanbul")
@@ -81,9 +82,13 @@ DEFAULTS: dict[str, str] = {
 
 STATES = {"stoksuz": "Stokta yok", "bitecek": "Bitecek", "yeterli": "Yeterli", "fazla": "Fazla stok",
           "olu": "Hareketsiz", "satissiz": "Satışı yok", "pasif": "Stok ve satış yok"}
-TRANSFER_KINDS = {1: "Üretimden giriş", 2: "Faturalı kabul", 3: "Sayım fazlası", 4: "İade", 5: "Raf transferi",
-                  6: "Depolar arası sevk", 7: "İrsaliye", 8: "Sayım eksiği", 9: "Set işlemi"}
-TRANSFER_STATUS = {100000000: "Taslak", 1: "Etkin", 2: "Etkin değil"}
+TRANSFER_KINDS = crm_labels.Labels("new_malzemehareketi", "new_islemturu", {
+    1: "Üretimden giriş", 2: "Faturalı kabul", 3: "Sayım fazlası", 4: "İade", 5: "Raf transferi",
+    6: "Depolar arası sevk", 7: "İrsaliye", 8: "Sayım eksiği", 9: "Set işlemi",
+})
+TRANSFER_STATUS = crm_labels.Labels("new_malzemehareketi", "statuscode", {
+    100000000: "Taslak", 1: "Etkin", 2: "Etkin değil",
+})
 #: Aktarım hata mesajının kapalı kümesi (analiz §13). Model yalnız bunlardan birini seçer.
 ERROR_CLASSES = ["Cari ya da stok kartı yok", "Dönem kapalı", "Miktar yetersiz", "Bağlantı hatası", "Diğer"]
 DIFF_CLASSES = {"aktarim": "Logo'ya aktarılmamış hareket açıklıyor", "kismen": "Aktarılmamış hareket kısmen açıklıyor",

@@ -42,6 +42,8 @@ from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
 
+from semantic_bridge import crm_labels
+
 log = logging.getLogger("semantic.field.sources")
 TZ = ZoneInfo("Europe/Istanbul")
 UTC = ZoneInfo("UTC")
@@ -52,20 +54,29 @@ _CODE_PREFIX = re.compile(r"^[0-9A-Za-z.]{1,20}$")
 
 #: CRM tahsilat durumu (`new_tahsilatBase.statuscode`).
 T_PENDING, T_APPROVED, T_REJECTED, T_TRANSFERRED = 100000000, 100000001, 100000002, 100000003
-COLLECTION_STATUS = {T_PENDING: "Onay bekliyor", T_APPROVED: "Onaylandı", T_REJECTED: "Reddedildi",
-                     T_TRANSFERRED: "Logo'ya aktarıldı", 2: "Etkin değil"}
-COLLECTION_TYPE = {100000004: "Nakit", 100000000: "Çek", 100000001: "Senet", 100000002: "POS",
-                   100000003: "Mail order", 100000005: "Telif satış tahsilatı"}
-REJECT_REASON = {100000000: "Şekil şartı eksikliği", 100000001: "Makbuz ile evrak uyumsuzluğu",
-                 100000002: "Vade uyumsuzluğu", 100000003: "Diğer"}
+COLLECTION_STATUS = crm_labels.Labels("new_tahsilat", "statuscode", {
+    T_PENDING: "Onay bekliyor", T_APPROVED: "Onaylandı", T_REJECTED: "Reddedildi", T_TRANSFERRED: "Logo'ya aktarıldı",
+    2: "Etkin değil",
+})
+COLLECTION_TYPE = crm_labels.Labels("new_tahsilat", "new_tahsilattipi", {
+    100000004: "Nakit", 100000000: "Çek", 100000001: "Senet", 100000002: "POS", 100000003: "Mail order",
+    100000005: "Telif satış tahsilatı",
+})
+REJECT_REASON = crm_labels.Labels("new_tahsilat", "new_tahsilatreddilmesebebi", {
+    100000000: "Şekil şartı eksikliği", 100000001: "Makbuz ile evrak uyumsuzluğu", 100000002: "Vade uyumsuzluğu",
+    100000003: "Diğer",
+})
 #: Siparişin riske takıldığı durumlar (`new_siparisBase.statuscode`): Risk Limit Onayı Bekliyor, Risk Bilgisi Bekleniyor.
 ORDER_RISK_STATUS = (100000004, 100000016)
-ORDER_RISK_REASON = {1: "Açık hesap limiti", 2: "Çek-senet limiti", 3: "Toplam limit", 4: "Sorunlu müşteri"}
+ORDER_RISK_REASON = crm_labels.Labels("new_siparis", "new_risketakilmasebebi", {
+    1: "Açık hesap limiti", 2: "Çek-senet limiti", 3: "Toplam limit", 4: "Sorunlu müşteri",
+})
 #: CRM `AccountBase.new_BMTilveyaCari`: 0 = BMT İl (il tablosundaki temsilci), 1 = BMT Cari (kaydın sahibi).
 BMT_IL, BMT_CARI = 0, 1
-CHANNEL = {100000008: "Bayi", 100000004: "Dağıtıcı", 100000001: "Kitapçı", 100000003: "Perakende",
-           100000005: "E-ticaret", 100000002: "Market", 100000006: "Fuar", 100000009: "Tüketici-okur",
-           100000000: "Sincap Kitap", 100000007: "Diğer"}
+CHANNEL = crm_labels.Labels("account", "new_firmakanal", {
+    100000008: "Bayi", 100000004: "Dağıtıcı", 100000001: "Kitapçı", 100000003: "Perakende", 100000005: "E-ticaret",
+    100000002: "Market", 100000006: "Fuar", 100000009: "Tüketici-okur", 100000000: "Sincap Kitap", 100000007: "Diğer",
+})
 
 
 class SourceError(RuntimeError):
