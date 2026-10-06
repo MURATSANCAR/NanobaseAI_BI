@@ -707,7 +707,7 @@ class SeoGeo:
         try:
             con = crm.connector()  # köprünün ortak bağlantısı sohbetle paylaşılmasın diye ayrı bağlantı
             try:
-                books = crm.read(admin_mod.conf("CRM_SCHEMA"), con.execute)
+                books = crm.read(admin_mod.conf("CRM_SCHEMA"), con.execute, book_execute=crm.raw(con).execute)
             finally:
                 try:
                     con.close()
@@ -715,9 +715,12 @@ class SeoGeo:
                     pass
             stamp = now()
             rows = {}
-            for b in books:  # aynı EAN iki kartta olabilir: T-soft'ta aktif olan, sonra yürürlükte sözleşmesi olan önde
+            def rank(b):  # aynı EAN iki kartta olabilir: T-soft'ta aktif, yürürlükte sözleşmesi olan, etkin kart önde
+                return (b["tsoftActive"], b["inForce"], b.get("cardActive", True))
+
+            for b in books:
                 prev = rows.get(b["ean"])
-                if prev is None or (b["tsoftActive"], b["inForce"]) > (prev["tsoftActive"], prev["inForce"]):
+                if prev is None or rank(b) > rank(prev):
                     rows[b["ean"]] = b
             with eng.begin() as c:
                 c.execute(CRM_BOOKS.delete().where(CRM_BOOKS.c.tenant_id == tenant))

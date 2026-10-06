@@ -45,7 +45,7 @@ def test_sql_only_listed_columns_and_modifiedon():
     sql = w.update_sql("Timas_MSCRM.dbo.", ["new_seobaslik", "new_seodurum"])
     assert sql.startswith("UPDATE Timas_MSCRM.dbo.new_kitapBase SET new_seobaslik = ?, new_seodurum = ? WHERE")
     assert "ModifiedOn" not in sql  # mevcut kolonlara dokunulmaz
-    assert sql.endswith("WHERE new_kitapId = ? AND statecode = 0")
+    assert sql.endswith("WHERE new_kitapId = ?")  # kart durumuna bakılmaz (2026-10-06)
     with pytest.raises(ValueError):
         w.update_sql("dbo.", ["new_seobaslik", "new_ozet"])
     with pytest.raises(ValueError):

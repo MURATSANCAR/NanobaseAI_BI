@@ -254,7 +254,7 @@ def update_sql(p: str, keys: list[str]) -> str:
     if bad or not keys:
         raise ValueError(f"liste dışı alan: {bad}" if bad else "yazılacak alan yok")
     sets = ", ".join(f"{k} = ?" for k in keys)
-    return f"UPDATE {p}new_kitapBase SET {sets} WHERE new_kitapId = ? AND statecode = 0"
+    return f"UPDATE {p}new_kitapBase SET {sets} WHERE new_kitapId = ?"  # kart durumuna bakılmaz (crm.py başı)
 
 
 # ------------------------------------------------------------------ CRM bağlantısı (yazma)
@@ -488,7 +488,7 @@ def verify(seo, log_line: Callable[[str], None] = lambda s: log.info(s)) -> dict
     try:
         for i in range(0, len(ids), 500):
             chunk = ", ".join(f"'{x}'" for x in ids[i:i + 500])
-            _, out, _ = con.execute(f"SELECT new_kitapId AS id, {', '.join(FIELDS)} FROM {p}new_kitapBase "
+            _, out, _ = crm.raw(con).execute(f"SELECT new_kitapId AS id, {', '.join(FIELDS)} FROM {p}new_kitapBase "
                                     f"WHERE new_kitapId IN ({chunk})", 100000)
             for r in out:
                 current[str(r["id"]).lower()] = r

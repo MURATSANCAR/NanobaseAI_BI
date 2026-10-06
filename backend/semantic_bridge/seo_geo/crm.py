@@ -2,6 +2,10 @@
 
 Ne okunur (2026-09-26/27 canlı CRM .28 ölçümü, docs/analiz/seo-geo-modul-2026-09-25.md → «CRM»):
 - Kitap kartı `new_kitapBase`: T-soft ürününe `new_ean13` ile bağlanır (T-soft'ta aktif 6.578 kartın hepsinde dolu).
+  Kartın durumuna (etkin/pasif, durum nedeni «Pasif», yayıncılık statüsü) bakılmaz, hepsi okunur (kullanıcı kararı
+  2026-10-06): Timaş'ın CRM otomasyonu kitap kartlarını «Pasif» durum nedeniyle açıyor; süzgeçle okununca sitede
+  satılan 842 kitap «CRM'de kart yok» sayılmış, SEO alanları yazılmamıştı. Bu yüzden kitap sorgusu bağlantının
+  etkin kayıt süzgecinden (`crm_active`) geçmez — `read(..., book_execute=...)`, `raw()`.
   SEO/GEO'ya yarayan alanlar: yayıncılık durumu, özgün ad/dil, ilk yayın, hedef kitle, yazar/çizer/çevirmen,
   tadımlık PDF (`new_okumalink`), video (`new_ProductWebsite`/`new_youtubelink`), spot, özet, tanıtım, öne çıkanlar,
   alıntılar, anahtar kelimeler. İç yazışma alanları (editör görüşü, baskı önerisi) okunmaz.
@@ -67,7 +71,7 @@ def _day(v: Any) -> Optional[date]:
 def book_sql(p: str) -> str:
     return (
         "SELECT k.new_kitapId AS id, k.new_name AS name, k.new_ean13 AS ean, k.new_isbn13 AS isbn, k.new_ekitapisbn AS ebook_isbn,"
-        " k.new_kitap_yayincilikstatusu AS status, k.new_Tip AS kind, CAST(ISNULL(k.new_tsoftaktif, 0) AS int) AS tsoft,"
+        " k.new_kitap_yayincilikstatusu AS status, k.new_Tip AS kind, k.statecode AS state, CAST(ISNULL(k.new_tsoftaktif, 0) AS int) AS tsoft,"
         " k.new_orjinaladi AS original_title, k.new_orijinaldil AS original_language, k.new_ilkyayintarihi AS first_published,"
         " k.new_ilkyayinulkesi AS first_country, k.new_hedefkitle AS audience, k.new_hedefkitleyasbaslangic AS age_from,"
         " k.new_hedefkitleyasbitis AS age_to, k.new_yazartext AS authors, k.new_cizerlertext AS illustrators,"
@@ -77,7 +81,7 @@ def book_sql(p: str) -> str:
         " k.new_oncekiyayinevitext AS previous_publisher,"
         " LEFT(k.new_kitapspotu, 1200) AS spot, LEFT(k.new_ozet, 4000) AS summary, LEFT(k.new_TantmFyMetni, 3000) AS promo,"
         " LEFT(k.new_kitabinonecikanyanlari, 2000) AS highlights, LEFT(k.new_alintlar, 2000) AS quotes"
-        f" FROM {p}new_kitapBase k WHERE k.statecode = 0 AND k.new_ean13 IS NOT NULL"
+        f" FROM {p}new_kitapBase k WHERE k.new_ean13 IS NOT NULL"
     )
 
 
@@ -156,12 +160,14 @@ def status_flag(label: Optional[str]) -> Optional[str]:
     return STATUS_FLAGS.get(code)
 
 
-def read(schema: str, execute: Callable[[str, int], Any], today: Optional[date] = None) -> list[dict[str, Any]]:
-    """CRM'den bütün kitap kartlarını, hak özetiyle birlikte okur. `execute(sql, limit)` → (kolonlar, satırlar, kesik)."""
+def read(schema: str, execute: Callable[[str, int], Any], today: Optional[date] = None,
+         book_execute: Optional[Callable[[str, int], Any]] = None) -> list[dict[str, Any]]:
+    """CRM'den bütün kitap kartlarını, hak özetiyle birlikte okur. `execute(sql, limit)` → (kolonlar, satırlar, kesik).
+    `book_execute`: kitap kartı sorgusu için süzgeçsiz bağlantı (durumuna bakılmadan her kart); yoksa `execute`."""
     p, today = _prefix(schema), today or date.today()
 
-    def rows(sql: str) -> list[dict[str, Any]]:
-        _, out, truncated = execute(sql, LIMIT)
+    def rows(sql: str, run: Optional[Callable[[str, int], Any]] = None) -> list[dict[str, Any]]:
+        _, out, truncated = (run or execute)(sql, LIMIT)
         if truncated:
             raise RuntimeError("CRM sonucu kesildi; eksik veriyle karar verilmez.")
         return out
@@ -179,7 +185,7 @@ def read(schema: str, execute: Callable[[str, int], Any], today: Optional[date] 
         c = {**r, "parties": parties.get(str(r["id"]).upper(), [])}
         by_book.setdefault(str(r["book_id"]).upper(), []).append(c)
     out = []
-    for b in rows(book_sql(p)):
+    for b in rows(book_sql(p), book_execute):
         ean = ean_key(b.get("ean"))
         if len(ean) < 8:
             continue
@@ -192,6 +198,7 @@ def read(schema: str, execute: Callable[[str, int], Any], today: Optional[date] 
         out.append({
             "ean": ean, "bookId": str(b["id"]), "name": b.get("name"), "rights": decision, "rightsWhy": why,
             "statusLabel": label, "statusFlag": status_flag(label), "kind": kind, "tsoftActive": bool(b.get("tsoft")),
+            "cardActive": b.get("state") is None or int(b["state"]) == 0,
             "isbn": clean(b.get("isbn")), "ebookIsbn": clean(b.get("ebook_isbn")),
             "originalTitle": clean(b.get("original_title")), "originalLanguage": clean(b.get("original_language")),
             "firstPublished": str(_day(b.get("first_published")) or "") or None, "firstCountry": clean(b.get("first_country")),
@@ -219,3 +226,8 @@ def connector():
     from semantic_layer.profiler.connectors import connector_from_file
 
     return connector_from_file(CONNECTION_FILE)
+
+
+def raw(con: Any) -> Any:
+    """Etkin kayıt süzgecinin altındaki bağlantı: kitap kartı durumuna bakılmadan okunur (modül başındaki not)."""
+    return getattr(con, "inner", con)

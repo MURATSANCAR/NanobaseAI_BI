@@ -77,6 +77,28 @@ def test_read_joins_books_contracts_and_parties():
     assert b["video"] == "https://www.youtube.com/embed/x"
 
 
+def test_books_read_regardless_of_card_state():
+    """Kitap kartı durumuna bakılmaz (2026-10-06): sorguda statecode koşulu yok, kart sorgusu süzgeçsiz bağlantıdan."""
+    assert "statecode = 0" not in crm.book_sql("Timas_MSCRM.dbo.")
+    seen = []
+
+    def filtered(sql, limit):
+        assert "FROM Timas_MSCRM.dbo.new_kitapBase k" not in sql
+        return [], [], False
+
+    def raw(sql, limit):
+        seen.append(sql)
+        return [], [{"id": "a", "name": "Pasif kart", "ean": "9786259524382", "status": None, "state": 0},
+                    {"id": "b", "name": "Etkin değil", "ean": "9786259524383", "status": None, "state": 1}], False
+
+    out = crm.read("Timas_MSCRM.dbo", filtered, TODAY, book_execute=raw)
+    assert len(seen) == 1 and [b["cardActive"] for b in out] == [True, False]
+
+    class Wrapped:
+        inner = "asıl"
+    assert crm.raw(Wrapped()) == "asıl" and crm.raw("düz") == "düz"
+
+
 def test_truncated_crm_result_stops():
     import pytest
 
