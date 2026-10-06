@@ -556,3 +556,50 @@ def test_redaction_is_not_audited():
     from test_step_retry import _finish, _run
     out, calls, hist = _run("redaction", {})
     assert "quality_audit" not in [n for n, _ in calls]
+
+
+# ------------------------------------------------------------------ K20–K23 ve olgusuz özet
+def test_k20_production_note_and_foreign_line_in_chapter_titles():
+    for t in ("Pencere açıldığında görünen kısım BIÇAK", "BIÇAK", "EBAT: 22 X 30", "KAPAK İÇİ içine baskı",
+              "Wo versteckt sich der gelbe Schmetterling?"):
+        assert RA.production_note(t), t
+    for t in ("Bıçaklı Adam", "Kapak", "Ebatlar ve Ölçüler", "Birinci Bölüm", "Der Engel", "Pencere"):
+        assert not RA.production_note(t), t
+    out = RA.evaluate(base(chapters=[{"title": "Giriş", "page_from": 3}, {"title": "EBAT: 22 X 30", "page_from": 9}]))
+    assert codes(out) == ["chapters_production_note"]
+
+
+def test_k21_body_sentences_as_chapters_only_in_a_short_book():
+    sent = ["Çengel zıplaya zıplaya geldi", "Atlar alçalıp yükseldi, bulutlar kaçtı", "Kedi bahçede uyuyordu sessizce",
+            "Sonra hep birlikte eve döndüler"]
+    chs = [{"title": t, "page_from": i * 6} for i, t in enumerate(sent)]
+    assert RA.body_sentence_chapters(chs, 32)
+    assert not RA.body_sentence_chapters(chs, 49)                         # uzun kitap
+    assert not RA.body_sentence_chapters(chs[:3], 32)                     # az bölüm
+    named = [{"title": t, "page_from": i} for i, t in enumerate(("Orman", "Deniz Kenarı", "Kar Yağınca", "Eve Dönüş"))]
+    assert not RA.body_sentence_chapters(named, 32)
+    assert codes(RA.evaluate(base(chapters=chs, pages_n=32))) == ["chapters_body_sentence"]
+
+
+def test_k22_summary_opens_with_an_author_biography():
+    bio = "Yazar 1975 yılında İstanbul'da doğmuş, edebiyat bölümünden mezun olmuş."
+    assert RA.bio_sentence(bio) and not RA.bio_sentence("Ali sabah okula gitti ve arkadaşlarıyla oynadı.")
+    s = {"status": "SOURCE_SUPPORTED_DRAFT", "n": 4, "first_pages": [2], "first_text": bio}
+    assert codes(RA.evaluate(base(summary=s))) == ["summary_author_bio"]
+    # sayfa kuralı zaten kitap dışı dediyse tek bulgu (summary_front_matter)
+    assert codes(RA.evaluate(base(summary={**s, "first_front_kind": "yazar tanıtımı"}))) == ["summary_front_matter"]
+
+
+def test_k23_duplicate_book_record():
+    c = _Conn([{"id": "b2", "title": "Gizemli Ada", "page_count": 129}])
+    assert RA.duplicate_books(c, "b1", "Gizemli Ada", 128) == [{"book_id": "b2", "pages": 129}]
+    assert RA.duplicate_books(c, "b1", "Kitap", 128) == []                # ad taşımayan ad
+    assert RA.duplicate_books(c, "b1", "Gizemli Ada", None) == []
+    assert codes(RA.evaluate(base(duplicate_books=[{"book_id": "b2", "pages": 129}]))) == ["duplicate_book_record"]
+
+
+def test_no_facts_without_a_not_a_book_mark_goes_to_review():
+    s = {"status": "NO_VERIFIED_FACTS", "n": 0}
+    assert codes(RA.evaluate(base(summary=s, events_n=0))) == ["summary_no_facts"]
+    assert not RA.evaluate(base(summary=s, events_n=0, form="NOT_A_BOOK", not_a_book=True, characters_n=0,
+                                metadata={}, recommendation=None))

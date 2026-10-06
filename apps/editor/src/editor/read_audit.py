@@ -178,6 +178,94 @@ def kunye_pages_of(texts: dict[int, str], out_of_scope: set[int], last_page: int
                                 and kunye_hits(t) >= KUNYE_PAGE_HITS}
 
 
+# ------------------------------------------------------------------ K20–K23 tespitleri
+# Düzeltmeleri chapters / page_scope / archive'de ayrı bir işte yazılıyor; o modüller saf tespit fonksiyonunu
+# verdiğinde (`HOOKS`: modül, ad) denetim onu kullanır, yoksa buradaki basit kural koşar. Bağlama tek yer burası.
+HOOKS = {"production_note": ("chapters", "production_note"),
+         "body_sentence_chapters": ("chapters", "body_sentence_chapters"),
+         "bio_sentence": ("page_scope", "bio_sentence")}
+
+
+def _hook(name: str):
+    mod, attr = HOOKS[name]
+    try:
+        import importlib
+        return getattr(importlib.import_module(f"editor.{mod}"), attr, None)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+#: K20: baskı/üretim notu (kesim, ebat, pencere/kapak içi talimatı) bölüm adına girmiş.
+_PRODUCTION = re.compile(r"\bB[IıI]ÇAK\b|\bEBAT\s*:|\b\d+\s*[xX×]\s*\d+\s*(cm|mm)?\b|Pencere aç[ıi]ld[ıi][ğg][ıi]nda|"
+                         r"i[çc]ine bask[ıi]|kapak i[çc]i|kesim [çc]izgisi|bindirme|\bCMYK\b|\bPANTONE\b|\bDPI\b", re.I)
+#: K20: kitabın dilinde olmayan satır (yabancı dilin işlev sözcükleri; Türkçe kitapta ≥ 4 kelimelik başlıkta pay).
+_FOREIGN = frozenset({"der", "die", "das", "und", "ist", "sich", "ein", "eine", "wo", "was", "wie", "nicht", "mit",
+                      "the", "and", "of", "is", "are", "where", "what", "with", "le", "la", "les", "et", "est", "du"})
+FOREIGN_SHARE = 0.3
+
+
+def production_note(title: str) -> bool:
+    """K20 (saf): bölüm adı baskı/üretim notu ya da yabancı dilde uzun satır."""
+    fn = _hook("production_note")
+    if fn is not None:
+        return bool(fn(title))
+    t = (title or "").strip()
+    if not t:
+        return False
+    if _PRODUCTION.search(t):
+        return True
+    words = re.findall(r"[^\W\d_]+", t.casefold())
+    return len(words) >= 4 and sum(1 for w in words if w in _FOREIGN) >= FOREIGN_SHARE * len(words)
+
+
+#: K21: resimli (kısa) kitap ve bölüm sayısı; cümle biçimli başlık payı.
+PICTURE_BOOK_PAGES = 48
+BODY_SENTENCE_MIN_CHAPTERS = 4
+BODY_SENTENCE_SHARE = 0.5
+_VERB_END = re.compile(r"(d[ıiuü]|t[ıiuü]|m[ıiuü]ş|yor|ecek|acak|d[ıiuü]l[ae]r|di[kn]|du[kn])[.!?…,]*$", re.I)
+
+
+def _sentence_title(t: str) -> bool:
+    words = t.split()
+    return len(words) >= 4 and ("," in t or bool(_VERB_END.search(t)) or t.rstrip()[-1:] in ".!?…")
+
+
+def body_sentence_chapters(chapters: list[dict], pages_n: int) -> bool:
+    """K21 (saf): kısa resimli kitapta çok sayıda bölüm ve başlıkların en az yarısı virgüllü/fiilli cümle parçası."""
+    fn = _hook("body_sentence_chapters")
+    if fn is not None:
+        return bool(fn(chapters, pages_n))
+    if not pages_n or pages_n > PICTURE_BOOK_PAGES or len(chapters) < BODY_SENTENCE_MIN_CHAPTERS:
+        return False
+    n = sum(1 for c in chapters if _sentence_title((c.get("title") or "").strip()))
+    return n >= BODY_SENTENCE_SHARE * len(chapters)
+
+
+_BIO = re.compile(r"\b(do[ğg](du|mu[şs])|d[üu]nyaya gel(di|mi[şs])|mezun ol(du|mu[şs])|[öo][ğg]renimini|"
+                  r"e[ğg]itimini .{0,60}tamamla(d[ıi]|m[ıi][şs])|y[ıi]l[ıi]nda .{0,40}(do[ğg]|vefat))", re.I)
+
+
+def bio_sentence(text: str) -> bool:
+    """K22 (saf): cümle yazar özgeçmişi gibi («… doğmuş, … mezun olmuş»)."""
+    fn = _hook("bio_sentence")
+    if fn is not None:
+        return bool(fn(text))
+    return bool(_BIO.search(text or ""))
+
+
+def duplicate_books(c, book_id: str, title: str | None, pages: int | None) -> list[dict]:
+    """K23: aynı adla (Türkçe harf/büyük-küçük farkı gözetmeden) ve ±2 sayfa içinde başka bir kitap kaydı okunmuş mu
+    (kopya dosya). Ad taşımayan ad («Kitap») sayılmaz. Salt okuma."""
+    key = fold(title)
+    if len(key) < 4 or key in ("kitap", "adsiz") or not pages:
+        return []
+    rows = c.execute("SELECT DISTINCT b.id::text AS id, b.title, bv.page_count FROM ed.book b JOIN ed.book_version bv"
+                     " ON bv.book_id=b.id JOIN ed.generation g ON g.book_version_id=bv.id WHERE b.id::text<>%s AND"
+                     " lower(b.title)=lower(%s) AND abs(coalesce(bv.page_count,0)-%s)<=2", (book_id, title, pages)
+                     ).fetchall()
+    return [{"book_id": r["id"], "pages": r["page_count"]} for r in rows if fold(r["title"]) == key]
+
+
 # ------------------------------------------------------------------ bulgular
 #: Bulgu sınıfı → (önem, ekrandaki ad, düzeltme eylemi ya da None). Önem: critical | warn | info. info hiçbir zaman
 #: «Gözden geçir»e düşürmez (bilgi; künyenin dizi adı gibi okurken zaten düzeltilen işaretler).
@@ -202,6 +290,12 @@ CLASSES: dict[str, tuple[str, str, str | None]] = {
     "chapters_imprint": ("warn", "Bölüm adına künye ya da imza karışmış", "outputs"),
     "chapters_spaced": ("warn", "Bölüm adı harf aralıklı yazılmış", "outputs"),
     "chapters_midsentence": ("warn", "Bölüm adı cümle ortasından alınmış", "outputs"),
+    # K20–K23 (2026-10-06, 44 arşiv kitabı): düzeltmesi chapters/page_scope/archive'de ayrı işte; burada tespit
+    "chapters_production_note": ("warn", "Bölüm adında baskı/üretim notu ya da kitabın dilinde olmayan satır", "outputs"),
+    "chapters_body_sentence": ("warn", "Resimli kitapta gövde cümleleri bölüm adı olmuş", "outputs"),
+    "summary_author_bio": ("warn", "Özet yazar özgeçmişiyle başlıyor", "scope"),
+    "duplicate_book_record": ("warn", "Aynı kitap iki ayrı kayıtla okunmuş (kopya dosya)", None),
+    "summary_no_facts": ("warn", "Özet ve olay yok, ama dosya «kitap değil» diye de işaretlenmemiş", None),
     "characters_duplicate": ("warn", "Aynı adla birden çok karakter kaydı", "fold"),
     "characters_out_of_scope": ("warn", "Yalnız kitap dışı sayfalarda geçen karakter", "scope"),
     "characters_imprint_person": ("warn", "Künyedeki bir kişi karakter sayılmış", "scope"),
@@ -315,6 +409,10 @@ def evaluate(f: dict) -> list[dict]:
         out.append(finding("summary_missing", {"status": summ.get("status")}))
     if summ.get("status") == "EXTRACTIVE_FALLBACK":
         out.append(finding("summary_fallback"))
+    if book and summ.get("status") == "NO_VERIFIED_FACTS" and not f.get("events_n"):
+        out.append(finding("summary_no_facts"))
+    if summ.get("first_text") and bio_sentence(summ["first_text"]) and not summ.get("first_front_kind"):
+        out.append(finding("summary_author_bio", {"pages": summ.get("first_pages")}))
     if summ.get("first_front_kind"):
         out.append(finding("summary_front_matter", {"pages": summ.get("first_pages"), "kind": summ["first_front_kind"]},
                            title=f"Özet kitap dışı bir sayfayla ({summ['first_front_kind']}) başlıyor"))
@@ -337,10 +435,18 @@ def evaluate(f: dict) -> list[dict]:
     for c in chs:
         for p in chapter_title_problems(c.get("title") or "", f.get("imprint_names") or [], lower_ok=lower_ok):
             probs[p].append({"title": (c.get("title") or "")[:80], "page": c.get("page_from")})
+    for c in chs:
+        if production_note(c.get("title") or ""):
+            probs["production"].append({"title": (c.get("title") or "")[:80], "page": c.get("page_from")})
     for p, code in (("imprint", "chapters_imprint"), ("spaced", "chapters_spaced"),
-                    ("midsentence", "chapters_midsentence")):
+                    ("midsentence", "chapters_midsentence"), ("production", "chapters_production_note")):
         if probs.get(p):
             out.append(finding(code, {"chapters": probs[p][:5], "count": len(probs[p])}))
+    if book and body_sentence_chapters(chs, pages_n):
+        out.append(finding("chapters_body_sentence", {"count": len(chs), "pages_n": pages_n},
+                           title=f"Resimli kitapta gövde cümleleri bölüm adı olmuş ({len(chs)} bölüm, {pages_n} sayfa)"))
+    if f.get("duplicate_books"):
+        out.append(finding("duplicate_book_record", {"books": f["duplicate_books"][:5]}))
     # 8. karakterler
     if f.get("duplicate_names"):
         out.append(finding("characters_duplicate", {"names": f["duplicate_names"][:10]},
@@ -485,6 +591,7 @@ def gather(c, gid: str, *, failures: dict | None = None, profile: str | None = N
     rec = c.execute("SELECT status, audience, age_from, age_to FROM ed.book_recommendation WHERE generation_id=%s",
                     (gid,)).fetchone()
     f["recommendation"] = dict(rec) if rec else None
+    f["duplicate_books"] = duplicate_books(c, f["book_id"], job["title"], job["page_count"])
     f["recommend_expected"] = True
     if snap is None:
         return f
@@ -529,6 +636,7 @@ def gather(c, gid: str, *, failures: dict | None = None, profile: str | None = N
         first = sorted(set(sents[0].get("pages") or []))
         f["summary"]["first_pages"] = first[:5]
         f["summary"]["first_front_kind"] = front_kind(first, texts, oos, f["pages_n"], imprint_names)
+        f["summary"]["first_text"] = (sents[0].get("text") or "")[:400]
     # bölümler
     f["chapters"] = [{"title": ch.get("title"), "page_from": ch.get("page_from"), "page_to": ch.get("page_to")}
                      for ch in snap.get("chapters") or []]
@@ -918,11 +1026,14 @@ def note_job(job_id: str, summary: dict, cleared: list[str]) -> None:
 
 def checks_view(findings: list[dict]) -> dict:
     names = ("adım", "karakter", "son okuma", "metin", "künye", "özet", "bölüm", "kişi kaydı", "olay", "öneri",
-             "dizin", "soru")
+             "dizin", "soru", "kayıt")
     by = {"adım": ("step_failed", "outputs_missing"), "karakter": ("characters_zero",),
           "son okuma": ("proofing_incomplete",), "metin": ("pages_unread", "text_garbled"),
-          "künye": ("metadata_missing",), "özet": ("summary_missing", "summary_fallback", "summary_front_matter"),
-          "bölüm": ("chapters_single", "chapters_repeated", "chapters_imprint", "chapters_spaced", "chapters_midsentence"),
+          "künye": ("metadata_missing",), "özet": ("summary_missing", "summary_fallback", "summary_front_matter",
+                                         "summary_author_bio", "summary_no_facts"),
+          "bölüm": ("chapters_single", "chapters_repeated", "chapters_imprint", "chapters_spaced", "chapters_midsentence",
+                    "chapters_production_note", "chapters_body_sentence"),
+          "kayıt": ("duplicate_book_record",),
           "kişi kaydı": ("characters_duplicate", "characters_out_of_scope", "characters_imprint_person"),
           "olay": ("events_out_of_scope", "events_on_imprint_page", "scope_stale"),
           "öneri": ("recommendation_missing", "recommendation_not_a_book", "recommendation_conflict"),
