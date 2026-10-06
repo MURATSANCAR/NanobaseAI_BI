@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-06 — SEO → CRM: «Pasif» kitap kartları artık eşleşiyor, 842 kitap daha yazıldı
+
+- **Neden:** 10-05 toplu yazımda 901 ürün «CRM'de barkodla eşleşen kart yok» sayılmıştı; kullanıcı «CRM arayüzünde var» dedi. Süzgeçsiz ölçüm: 842'si aynı EAN'la CRM'de, hepsi `statecode = 0` + durum nedeni «Pasif» (100000000). SEO modülünün kitap kopyası (`semantic_seo_crm_books`) CRM bağlantısının etkin kayıt süzgecinden (`crm_active`) geçtiği için bu kartları hiç görmüyordu; 10-05 Excel'indeki «kitap kartı açılmamış» (733) / «ne kitap ne ürün kartı» (95) analizi de aynı süzgeçli bağlantıyla yapıldığı için yanlıştı.
+- **Karar (kullanıcı):** SEO modülünde kart durumuna ve yayıncılık statüsüne bakılmaz, hepsi alınır. Diğer modüllerin pasif kuralı aynen.
+- **Kod (`6da1e078`):** `crm.book_sql` statecode koşulsuz, `crm.read(..., book_execute=)` kitap sorgusu süzgeçsiz bağlantıdan (`crm.raw`), aynı EAN'da etkin kart önde (`cardActive`); `crm_write.update_sql` statecode koşulsuz, gece doğrulaması süzgeçsiz okur.
+- **Kurulum/yazım:** test sunucusu kopyası 8.654 → 12.604; VM `6da1e078` (`._*` 0), kopya 12.604, yalnız bu 901 öneri hedeflenerek 842 kitap yazıldı (hata 0, CRM'den geri okuma 842/842 birebir; önceden yazılmış kartlara dokunulmadı). Kalan 59: 45 set (barkod «1»+kitap EAN'ı, setin kendi kartı yok), 12 siteye özel kod, 2 eksik haneli barkod.
+
 ## 2026-10-06 — Fuar takvimi Excel'den: takvim ekranında çizelge, Kampüs'te süren/sıradaki fuarlar
 
 - **Neden:** pazarlama fuar listesini `FUARLAR.xlsx`'te tutuyor (Eylül 2026 – Ocak 2027, 31 fuar; 6'sında TİMAŞ standı, 25'inde bayi; ikinci sayfada tarihi netleşmemiş 8 fuar). Kullanıcı istedi: dosya Excel olarak değil ekranda, fuar ekranında okunaklı; ana sayfanın fuar alanına uygun özet.
