@@ -283,7 +283,7 @@ def test_reprint_runout_month_and_extra_print(ds):
     assert [p["units"] for p in r["plan"]] == [150, 150, 150, 150]
     # birikimli 150, 300, 450: elde kalan (300) üçüncü ayda aşılır → Kasım 2024, 2 ay kaldı
     assert r["runOut"] == "2024-11" and r["monthsLeft"] == 2 and r["status"] == "gerekli"
-    assert r["need"]["0.5"] == pytest.approx(300, abs=2) and r["units"] == 500
+    assert r["need"]["0.5"] == pytest.approx(300, abs=2) and r["units"] == 1000
     assert r["window"] == "Aralık 2024"
     eng.stock = {b.code: [250, 0]}
     assert eng.reprint(b, b.launch, months)["status"] == "acil"          # 2. ayda biter
@@ -305,5 +305,6 @@ def test_reprint_range_uses_revise_calibration(ds):
     r = eng.reprint(b, b.launch, ds.outcomes[b.code].months)
     # 0,8 kantili: 1.800 × 1,2 = 2.160 − 1.200 = 960 kalan, elde 300 → 660 ek
     assert r["need"]["0.8"] == pytest.approx(660, abs=3) and r["unitsHigh"] == 1000 and r["typicalError"] == 0.1
+    assert [IB.round_reprint(x) for x in (0, 300, 9001, 45829, 91535)] == [0, 1000, 10000, 50000, 100000]
     assert IB.revise_ratios({"revise12": {"7": {"q": {"0.2": 0.5, "0.5": 1.1, "0.8": 2.0}}}}, 8)["0.5"] == 1.1
     assert IB.revise_ratios({}, 3) == {"0.2": 1.0, "0.5": 1.0, "0.8": 1.0}

@@ -69,8 +69,8 @@ FORMULAS = [
     ("Revize tahmin", "Gerçekleşen ilk aylar × emsallerin aynı aydan 6. / 12. aya büyümesi (puan ağırlıklı ortanca)."),
     ("Yeniden baskı", "Elde kalan = Logo depo stoku − CRM'de bekleyen sipariş. 12. aya kadar kalan satış = 12 aylık revize "
                       "tahmin − gerçekleşen, emsallerin aylık dağılımıyla aylara bölünür; birikimli satış elde kalanı "
-                      "geçtiği ay tükenme ayıdır. Ek baskı = kalan satış − elde kalan, yayınevinin baskı adedine "
-                      "yuvarlanır; aralık, geçmişte aynı ayda revize tahminin gerçekleşene oranından (%20 / %80)."),
+                      "geçtiği ay tükenme ayıdır. Ek baskı = kalan satış − elde kalan, üste yuvarlanır (10 bine "
+                      "kadar binlik, 50 bine kadar 5 binlik, üstü 10 binlik); aralık, geçmişte aynı ayda revize tahminin gerçekleşene oranından (%20 / %80)."),
 ]
 NOTES = [
     "Satış Logo'daki faturalı satıştır, iade düşülmüş net adettir (Baskı Öneri ile aynı satırlar).",
@@ -99,6 +99,15 @@ def round_print(x: float, steps: list[int]) -> int:
             return s
     unit = 1000 if steps else 500
     return int(math.ceil(max(x, 1) / unit) * unit)
+
+
+def round_reprint(x: float) -> int:
+    """Yeniden baskı adedi: ihtiyaca yakın üst yuvarlama (10 bine kadar binlik, 50 bine kadar 5 binlik, üstü 10 binlik).
+    İlk baskı basamakları (`print_steps`) 30.000'den sonra 100.000'e sıçradığı için burada kullanılmaz."""
+    if x <= 0:
+        return 0
+    unit = 1000 if x <= 10000 else 5000 if x <= 50000 else 10000
+    return int(math.ceil(x / unit) * unit)
 
 
 def _quantiles(values: list[float]) -> dict[float, float]:
@@ -311,7 +320,7 @@ class Engine:
         left = (out_month - first) if out_month is not None else None
         status = ("yok" if avail <= 0 else "acil" if left is not None and left < REPRINT_URGENT
                   else "gerekli" if out_month is not None else "yeterli")
-        units = round_print(need["0.5"], self.steps) if need["0.5"] > 0 else 0
+        units = round_reprint(need["0.5"])
         hist = (self.calib.get("revise12") or {}).get(str(m)) or {}
         return {"stock": round(stock), "orders": round(orders), "available": round(avail), "asOf": self.stock_asof,
                 "sold": round(got), "observed": m, "revised12": round(rev),
@@ -320,7 +329,7 @@ class Engine:
                 "runOutName": M.month_name(out_month) if out_month is not None else None,
                 "monthsLeft": left, "status": status,
                 "need": {k: round(v) for k, v in need.items()},
-                "units": units, "unitsHigh": round_print(need["0.8"], self.steps) if need["0.8"] > 0 else 0,
+                "units": units, "unitsHigh": round_reprint(need["0.8"]),
                 "window": M.month_name(launch + 11), "plan": plan,
                 "lastPrint": self.prints.get(book.code), "typicalError": hist.get("mdape")}
 
