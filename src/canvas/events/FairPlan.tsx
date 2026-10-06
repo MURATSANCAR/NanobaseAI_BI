@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { FileSpreadsheet, MapPin, Upload } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, errText } from '../admin/ui';
-import { MONTHS, evApi, fileToBase64, fmtShort, type FairPlan as Plan, type PlanFair } from './api';
+import { MONTHS, evApi, fileToBase64, fmtShort, type PlanFair } from './api';
 import { Block } from './parts';
 
 /** Fuar takvimi: pazarlamanın FUARLAR.xlsx dosyası ekranda. Excel'deki ay × gün çizelgesi masaüstünde zaman çizelgesi
