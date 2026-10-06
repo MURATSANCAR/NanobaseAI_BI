@@ -5,7 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, TableWrap, btnGhost, btnPrimary, errText, fmtDate, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import SqlInfo, { type FieldHelp } from '../components/SqlInfo';
-import { day, num, pricingApi, type Tariff } from './api';
+import { day, num, pricingApi, type DigitalTariff, type Tariff } from './api';
 import { NumField, Select } from './parts';
 
 /** Matbaa ve malzeme fiyat listesi: basım Excel'indeki fiyatların portaldaki hâli. Değiştirmek «Fiyat analizi hazırlama» ister. */
@@ -32,7 +32,13 @@ export default function TariffPanel() {
     if (setup.data && !t) setT(setup.data.tariff);
   }, [setup.data, t]);
   const save = useMutation({
-    mutationFn: (reset: boolean) => (reset ? pricingApi.saveTariff({ reset: true }) : pricingApi.saveTariff(t!)),
+    mutationFn: (reset: boolean) => {
+      if (reset) return pricingApi.saveTariff({ reset: true });
+      // Dijital tablo yalnız değiştiyse gönderilir: değişmeyen tablo saklanmaz, fiyat listesinin ilk hâli geçerli kalır.
+      const { dijital, ...rest } = t!;
+      const changed = JSON.stringify(dijital) !== JSON.stringify(setup.data?.tariff.dijital);
+      return pricingApi.saveTariff(changed && dijital ? { ...rest, dijital } : rest);
+    },
     onSuccess: (out) => {
       setT(out);
       qc.invalidateQueries({ queryKey: ['pricing', 'form'] });
@@ -171,7 +177,70 @@ export default function TariffPanel() {
         </div>
         <p className="mt-2 text-[11px] text-canvas-muted">Ebat tablosu ({num(t.trims.length)} ebat) ve klişe fiyatları basım Excel'inden olduğu gibi alınır.</p>
       </details>
+
+      {t.dijital && <DigitalPrices d={t.dijital} can={can} onChange={(dijital) => up({ dijital })} />}
     </Panel>
+  );
+}
+
+const DIG_ITEM_LABELS: Record<string, string> = {
+  ayracAtma: 'Ayraç kitabın içine atma (adet)', ayracBaski: 'Ayraç baskı (renk)', gofre: 'Gofre', kulakli: 'Kulaklı kapak (1.000 adet)',
+  kapakBaski: 'Ek kapak baskısı (renk)', selofan: 'Selofan (m²; en az 250 ₺)', lokalLak: 'Lokal lak (iş)',
+};
+
+/** Dijital baskı fiyatları: «TBK dijital» Excel'inin ebat × kâğıt tablosu, ek pay, dolaylı gider, ek işlemler, iskontolar. */
+function DigitalPrices({ d, can, onChange }: { d: DigitalTariff; can: boolean; onChange: (d: DigitalTariff) => void }) {
+  const cols = [...d.kagitlar, ...d.kapakKagitlari];
+  const setCell = (ebat: string, col: string, v: number | null) =>
+    onChange({ ...d, tablo: d.tablo.map((r) => (r.ebat === ebat ? { ...r, fiyat: { ...r.fiyat, [col]: v ?? 0 } } : r)) });
+  return (
+    <details className="group mt-2">
+      <summary className="min-h-11 cursor-pointer text-[12.5px] font-bold text-canvas-violet sm:min-h-0">
+        Dijital baskı fiyatları ({num(d.tablo.length)} ebat{d.guncelleme ? ` · ${day(d.guncelleme)}` : ''})
+      </summary>
+      <p className="mt-1 text-[11.5px] text-canvas-muted">
+        İç sayfa: sayfa başına ₺ (kâğıt dahil). Kuşe / bristol: kapak baskı + selofan + cilt, adet başına ₺. 0 olan hücrede kitap hesabı fiyatı elle ister.
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <NumField label="Matbaa ek payı" suffix="%" disabled={!can} value={d.pay} onChange={(v) => onChange({ ...d, pay: v ?? 0 })}
+          info={i(help('Sayfa, kapak ve lokal lak fiyatlarına eklenen pay (yeni hesaptaki varsayılan).', { excel: 'G17.' }), 'Matbaa ek payı')} />
+        <NumField label="Dolaylı gider (dijital)" suffix="%" disabled={!can} value={d.dolayli} onChange={(v) => onChange({ ...d, dolayli: v ?? 0 })}
+          info={i(help('Baskı türü dijital seçilince dolaylı gider kutusuna gelen oran.', { excel: 'I33.' }), 'Dolaylı gider (dijital)')} />
+      </div>
+      <div className="mt-2">
+        <TableWrap>
+          <thead>
+            <tr>
+              <th className={th}>Ebat</th>
+              {cols.map((c) => <th key={c} className={`${th} min-w-24 text-right`}>{c}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {d.tablo.map((r) => (
+              <tr key={r.ebat} className="border-t border-slate-100">
+                <td className={`${td} font-bold`}>{r.ebat}</td>
+                {cols.map((c) => (
+                  <td key={c} className={`${td} w-28`}>
+                    <NumField label="" digits={4} value={r.fiyat[c] ?? 0} disabled={!can} onChange={(v) => setCell(r.ebat, c, v)} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </TableWrap>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        {Object.entries(d.kalemler).map(([k, v]) => (
+          <NumField key={k} label={DIG_ITEM_LABELS[k] ?? v.label} suffix="₺" disabled={!can} value={v.m}
+            onChange={(x) => onChange({ ...d, kalemler: { ...d.kalemler, [k]: { ...v, m: x ?? 0 } } })} />
+        ))}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        {Object.entries(d.publishers).map(([k, v]) => (
+          <NumField key={k} label={`${k} (dijital)`} suffix="%" disabled={!can} value={v} onChange={(x) => onChange({ ...d, publishers: { ...d.publishers, [k]: x ?? 0 } })} />
+        ))}
+      </div>
+    </details>
   );
 }
 

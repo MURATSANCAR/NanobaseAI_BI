@@ -616,7 +616,7 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         reset = bool(body.get("reset"))
         before = S.get_form_tariff(engine, tenant)
         out = call(S.reset_form_tariff, engine, tenant) if reset else call(S.save_form_tariff, engine, tenant, user, body)
-        keys = ("kur", "kurKaynak", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")
+        keys = ("kur", "kurKaynak", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers", "dijital")
         audit(engine, user, "update", "pricing_form_tariff", tenant, "Matbaa ve malzeme fiyat listesi",
               {"sifirla": reset} if reset else {k: "değişti" for k in keys if before.get(k) != out.get(k)})
         return out

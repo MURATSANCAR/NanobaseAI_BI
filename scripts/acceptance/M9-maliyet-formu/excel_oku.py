@@ -44,6 +44,67 @@ def is_form(ws) -> bool:
     return str(ws["A2"].value or "").strip().lower().startswith("kitab") and "maliyet" in str(ws["F1"].value or "").lower()
 
 
+def is_dijital(ws) -> bool:
+    """«TBK dijital» şablonu (59 satır): diğer giderler 29. satırda, iç baskı sayfa fiyatıyla (Excel A28 kapak+cilt)."""
+    return is_form(ws) and str(ws["A29"].value or "").strip().upper().startswith("DİĞER GİDER")
+
+
+#: Dijital formun sonuç hücreleri (ofset formundaki aynı anlamlı anahtarlarla).
+RESULT_CELLS_DIJITAL = {"forma": "F4", "iskonto": "I5", "satisFiyati": "J5", "matbaaToplam": "J19", "digerToplam": "J29",
+                        "toplam": "J32", "dolayli": "J33", "genelToplam": "J34", "birimMaliyet": "J38", "karAdet": "J40",
+                        "toplamKar": "J41", "karYuzde": "J42", "kitapMaliyeti": "D31", "kagitAdet": "D32",
+                        "matbaaAdet": "D33", "telifAdet": "D34"}
+
+
+def tariff_dijital(wv, base: dict) -> dict:
+    """Dijital Excel'in kendi fiyatları (M37:Z52 ebat × kâğıt tablosu, O18:P32 yayınevi iskontosu, G21–G27 ek işlemler)
+    varsayılan tarifenin `dijital` bölümüne yazılır; ofset kısmı (kur vb.) varsayılandan."""
+    cols = [s(wv.cell(37, c).value) for c in range(14, 27)]
+    tablo = []
+    for r in range(38, 53):
+        e = s(wv[f"M{r}"].value)
+        if e:
+            tablo.append({"ebat": e, "fiyat": {c: num(wv.cell(r, 14 + i).value) or 0.0 for i, c in enumerate(cols) if c}})
+    pubs = {}
+    for r in range(18, 40):
+        k = s(wv[f"O{r}"].value)
+        if not k:
+            break
+        pubs[k] = num(wv[f"P{r}"].value)
+    d = dict(base.get("dijital") or {})
+    kal = {k: dict(v) for k, v in (d.get("kalemler") or {}).items()}
+    for key, cell in (("ayracBaski", "G22"), ("kapakBaski", "G25"), ("kulakli", "G24"), ("selofan", "G26")):
+        kal.setdefault(key, {})["m"] = num(wv[cell].value) or 0.0
+    kal.setdefault("gofre", {})["m"] = num(wv["G23"].value) or 0.0
+    kal.setdefault("lokalLak", {})["m"] = num(wv["O54"].value) or 0.0
+    d.update(tablo=tablo, kagitlar=[c for c in cols[:11] if c], kapakKagitlari=[c for c in cols[11:] if c],
+             publishers=pubs, kalemler=kal, pay=d.get("pay", 25.0))
+    return {**base, "dijital": d}
+
+
+def inputs_dijital(wf, wv) -> dict:
+    tarih = wv["J1"].value
+    return {
+        "baski": "dijital",
+        "yayinevi": s(wv["A1"].value), "kitap": s(wv["F2"].value), "yazar": s(wv["F3"].value),
+        "tarih": tarih.date().isoformat() if isinstance(tarih, datetime) else None,
+        "simdikiFiyat": num(wv["J2"].value), "fiyat": num(wv["J3"].value), "ozelIskonto": num(wv["I4"].value),
+        "matbaaAyar": num(wv["I1"].value), "sayfa": num(wv["G4"].value), "adet": num(wv["F5"].value), "ebat": s(wv["G5"].value),
+        "dijital": {
+            "icKagit": s(wv["D18"].value), "renkliSayfa": num(wv["B17"].value), "renkliKagit": s(wv["D17"].value),
+            "kapakKagit": s(wv["D28"].value), "kapakGr": num(wv["B28"].value),
+            # G17 boşsa Excel ek pay uygulamaz (H17 = F17).
+            "pay": num(wv["G17"].value) or 0.0,
+            "ekler": {"ayracAtma": x(wv["B21"].value), "ayracRenk": num(wv["B22"].value), "gofre": x(wv["B23"].value),
+                      "kulakli": x(wv["B24"].value), "kapakRenk": num(wv["B25"].value), "selofan": x(wv["B26"].value),
+                      "lokalLak": (s(wv["A27"].value) or "").upper() == "LOKAL LAK"},
+        },
+        "diger": {"yanKagit": num(wv["J20"].value), "nakliyeAdet": num(wv["I21"].value), "hediye": num(wv["J22"].value),
+                  "zayiat": num(wv["J23"].value), "reklam": num(wv["J24"].value), "diger": num(wv["J28"].value)},
+        "telif": num(wv["I27"].value), "dolayli": num(wv["I33"].value) or 0.0,
+    }
+
+
 def x(v) -> bool:
     return v is not None and str(v).strip() != ""
 
@@ -168,6 +229,12 @@ def inputs(wf, wv) -> dict:
     }
 
 
+def default_tariff() -> dict:
+    """Depodaki varsayılan tarife (dijital formun ofset dışı alanları için)."""
+    p = Path(__file__).resolve().parents[3] / "backend/semantic_bridge/pricing/form_tariff.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+
+
 def read(path: Path) -> list[dict]:
     wbf = load_workbook(path, data_only=False)
     wbv = load_workbook(path, data_only=True)
@@ -176,6 +243,11 @@ def read(path: Path) -> list[dict]:
         if not is_form(wf):
             continue
         wv = wbv[wf.title]
+        if is_dijital(wf):
+            out.append({"file": path.name, "sheet": wf.title, "inputs": inputs_dijital(wf, wv),
+                        "tariff": tariff_dijital(wv, default_tariff()),
+                        "excel": {k: num(wv[c].value) for k, c in RESULT_CELLS_DIJITAL.items()}})
+            continue
         out.append({"file": path.name, "sheet": wf.title, "inputs": inputs(wf, wv), "tariff": tariff(wf, wv),
                     "excel": {k: num(wv[c].value) for k, c in RESULT_CELLS.items()}})
     return out

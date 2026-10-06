@@ -1658,5 +1658,365 @@
   "digerKagit": 1000.0
  },
  "dolayli": 90.0,
- "kapakBolen": 3.0
+ "kapakBolen": 3.0,
+ "dijital": {
+  "guncelleme": "2026-04-17",
+  "kagitlar": [
+   "1/1- 55gr KİTAP KAĞIDI",
+   "1/1- 60gr KİTAP KAĞIDI",
+   "1/1- 70gr KİTAP KAĞIDI",
+   "4/4- 60gr KİTAP KAĞIDI",
+   "4/4-70gr 1.HAMUR",
+   "4/4-80gr 1.HAMUR",
+   "4/4- 60gr KİTAP KAĞIDI-KALİTELİ",
+   "4/4- 115gr KUŞE-KALİTELİ",
+   "4/4- 130gr KUŞE-KALİTELİ",
+   "4/4- 150gr KUŞE-KALİTELİ",
+   "4/4- 170gr KUŞE-KALİTELİ"
+  ],
+  "kapakKagitlari": [
+   "KUŞE",
+   "BRİSTOL"
+  ],
+  "tablo": [
+   {
+    "ebat": "12X16,5",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.16,
+     "1/1- 60gr KİTAP KAĞIDI": 0.165,
+     "1/1- 70gr KİTAP KAĞIDI": 0.19,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 2.9,
+     "BRİSTOL": 2.9
+    }
+   },
+   {
+    "ebat": "13X19,5",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.16,
+     "1/1- 60gr KİTAP KAĞIDI": 0.165,
+     "1/1- 70gr KİTAP KAĞIDI": 0.19,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 2.9,
+     "BRİSTOL": 2.9
+    }
+   },
+   {
+    "ebat": "13,5X19,5",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.16,
+     "1/1- 60gr KİTAP KAĞIDI": 0.165,
+     "1/1- 70gr KİTAP KAĞIDI": 0.19,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 2.9,
+     "BRİSTOL": 2.9
+    }
+   },
+   {
+    "ebat": "13X21",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.165,
+     "1/1- 60gr KİTAP KAĞIDI": 0.17,
+     "1/1- 70gr KİTAP KAĞIDI": 0.2,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 2.9,
+     "BRİSTOL": 2.9
+    }
+   },
+   {
+    "ebat": "13,5X21",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.165,
+     "1/1- 60gr KİTAP KAĞIDI": 0.17,
+     "1/1- 70gr KİTAP KAĞIDI": 0.2,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 2.9,
+     "BRİSTOL": 2.9
+    }
+   },
+   {
+    "ebat": "15X21",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.2,
+     "1/1- 60gr KİTAP KAĞIDI": 0.21,
+     "1/1- 70gr KİTAP KAĞIDI": 0.23,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 2.9,
+     "BRİSTOL": 2.9
+    }
+   },
+   {
+    "ebat": "15X23,5",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.2,
+     "1/1- 60gr KİTAP KAĞIDI": 0.21,
+     "1/1- 70gr KİTAP KAĞIDI": 0.23,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   },
+   {
+    "ebat": "16,5X23,5",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.22,
+     "1/1- 60gr KİTAP KAĞIDI": 0.23,
+     "1/1- 70gr KİTAP KAĞIDI": 0.25,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   },
+   {
+    "ebat": "16X24",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.22,
+     "1/1- 60gr KİTAP KAĞIDI": 0.23,
+     "1/1- 70gr KİTAP KAĞIDI": 0.25,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   },
+   {
+    "ebat": "16,5X24",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.22,
+     "1/1- 60gr KİTAP KAĞIDI": 0.23,
+     "1/1- 70gr KİTAP KAĞIDI": 0.25,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   },
+   {
+    "ebat": "16X23,5",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0.22,
+     "1/1- 60gr KİTAP KAĞIDI": 0.23,
+     "1/1- 70gr KİTAP KAĞIDI": 0.25,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   },
+   {
+    "ebat": "19,5X27,5",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0,
+     "1/1- 60gr KİTAP KAĞIDI": 0,
+     "1/1- 70gr KİTAP KAĞIDI": 0,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   },
+   {
+    "ebat": "19X27",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0,
+     "1/1- 60gr KİTAP KAĞIDI": 0,
+     "1/1- 70gr KİTAP KAĞIDI": 0,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   },
+   {
+    "ebat": "21,5X27,5",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0,
+     "1/1- 60gr KİTAP KAĞIDI": 0,
+     "1/1- 70gr KİTAP KAĞIDI": 0,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   },
+   {
+    "ebat": "21X29,7",
+    "fiyat": {
+     "1/1- 55gr KİTAP KAĞIDI": 0,
+     "1/1- 60gr KİTAP KAĞIDI": 0,
+     "1/1- 70gr KİTAP KAĞIDI": 0,
+     "4/4- 60gr KİTAP KAĞIDI": 0,
+     "4/4-70gr 1.HAMUR": 0,
+     "4/4-80gr 1.HAMUR": 0,
+     "4/4- 60gr KİTAP KAĞIDI-KALİTELİ": 0,
+     "4/4- 115gr KUŞE-KALİTELİ": 0,
+     "4/4- 130gr KUŞE-KALİTELİ": 0,
+     "4/4- 150gr KUŞE-KALİTELİ": 0,
+     "4/4- 170gr KUŞE-KALİTELİ": 0,
+     "KUŞE": 0,
+     "BRİSTOL": 0
+    }
+   }
+  ],
+  "pay": 25.0,
+  "dolayli": 40.0,
+  "fire": {
+   "kapak": 600
+  },
+  "kapak": {
+   "en": 70,
+   "boy": 100,
+   "verim": 8
+  },
+  "kalemler": {
+   "ayracAtma": {
+    "m": 0.08,
+    "n": 0.06,
+    "label": "Ayraç kitabın içine atma işçilik (adet; 5.000 üstü ikinci fiyat)"
+   },
+   "ayracBaski": {
+    "m": 95,
+    "label": "Ayraç baskı (renk başına)"
+   },
+   "gofre": {
+    "m": 400,
+    "n": 200,
+    "label": "Gofre (sabit + 1.000 adette)"
+   },
+   "kulakli": {
+    "m": 200,
+    "label": "Kulaklı kapak (1.000 adette)"
+   },
+   "kapakBaski": {
+    "m": 95,
+    "label": "Kapak baskısı (renk başına)"
+   },
+   "selofan": {
+    "m": 0.9,
+    "label": "Kapak selofan (m², en az 250 ₺)"
+   },
+   "lokalLak": {
+    "m": 3200,
+    "label": "Lokal lak (iş başına)"
+   }
+  },
+  "publishers": {
+   "Antik Kitap": 45.0,
+   "Carpe Diem Kitap": 45.0,
+   "Eğlenceli Bilgi": 45.0,
+   "Genç Timaş": 40.0,
+   "Gülce Kitap": 45.0,
+   "İlk Genç Timaş": 40.0,
+   "Mavi Kirpi Kitap": 45.0,
+   "Portakal Kitap": 40.0,
+   "Sufi Kitap": 40.0,
+   "Timaş Akademi": 35.0,
+   "Timaş Çocuk": 45.0,
+   "Timas Publishing": 40.0,
+   "Timaş Tarih": 40.0,
+   "Timaş İnanç": 40.0,
+   "Timaş Yayınları": 40.0
+  },
+  "kapakGramajlari": [
+   170,
+   200,
+   230,
+   250,
+   270,
+   300,
+   350
+  ]
+ }
 }

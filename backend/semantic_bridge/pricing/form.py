@@ -193,6 +193,9 @@ def compute(inputs: dict[str, Any], tariff: dict[str, Any], *, paper_source: str
     """Formun bütün hesabı. Kâğıt fiyatı `paper_source` «logo»: Logo alışı (alışı olmayan kâğıtta fiyat listesi);
     «tarife»: yalnız fiyat listesi — Excel'deki elle yazılmış ton fiyatlarıyla birebir karşılaştırma (kabul) için."""
     inp = inputs or {}
+    if inp.get("baski") == "dijital":
+        from semantic_bridge.pricing import form_dijital
+        return form_dijital.compute(inp, tariff)
     t = tariff
     kur_in = inp.get("kur") or {}
     if any(_f(kur_in.get(c)) for c in ("USD", "EUR")):
@@ -567,7 +570,8 @@ def to_analysis(inputs: dict, tariff: dict, *, paper_source: str = "logo", snap_
     if ka < 0 or ma < 0:  # adetle düşmeyen bir yapı: adet başına bedel olduğu gibi
         ka, kb, ma, mb = base["summary"]["kagitAdet"], 0.0, base["summary"]["matbaaAdet"], 0.0
     kapak = next((ln for ln in base["lines"] if ln["key"] == "kapakUcreti"), None)
-    extra = sum(ln["total"] for ln in base["lines"] if ln["key"] in ("nakliye", "mizanpaj", "digerGider"))
+    extra = sum(ln["total"] for ln in base["lines"]
+                if ln["key"] in ("nakliye", "mizanpaj", "digerGider", "yanKagit", "hediye", "zayiat", "reklam"))
     return {
         "printService": round(ma, 4), "paperPerCopy": round(ka, 4), "printSetup": round(mb + kb, 2),
         "overheadRate": (base["summary"]["dolayliOran"] or 0) / 100.0,
@@ -644,7 +648,13 @@ def blank_inputs(tariff: dict, *, kur: Optional[dict] = None) -> dict[str, Any]:
         "diger": {"kapakUcreti": None, "kapakBolen": tariff.get("kapakBolen", 3), "kapakEtiket": "Kapak", "nakliye": None,
                   "mizanpaj": None, "diger": None},
         "telif": None, "dolayli": tariff.get("dolayli", 90),
+        "baski": "ofset", "dijital": _dijital_blank(tariff),
     }
+
+
+def _dijital_blank(tariff: dict) -> dict[str, Any]:
+    from semantic_bridge.pricing import form_dijital
+    return form_dijital.blank(tariff)
 
 
 def from_book(detail: dict, tariff: dict, *, kur: Optional[dict] = None) -> dict[str, Any]:

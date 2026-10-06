@@ -237,8 +237,24 @@ export type FormInputs = {
   ekler: Record<'yanKagit' | 'somiz' | 'ayrac' | 'mukavva' | 'ciltBezi' | 'digerKagit', FormPart> & {
     kenarBoyama: number | null; vakum: boolean; icSelofan: { var: boolean; tur: string } };
   cilt: { tur: string; birim: number | null };
-  diger: { kapakUcreti: number | null; kapakBolen: number | null; kapakEtiket: string | null; nakliye: number | null; mizanpaj: number | null; diger: number | null };
+  diger: { kapakUcreti: number | null; kapakBolen: number | null; kapakEtiket: string | null; nakliye: number | null; mizanpaj: number | null; diger: number | null;
+    /** Dijital formun diğer giderleri (Excel J20–J28). */
+    yanKagit?: number | null; nakliyeAdet?: number | null; hediye?: number | null; zayiat?: number | null; reklam?: number | null };
   telif: number | null; dolayli: number | null;
+  /** Baskı türü: «ofset» (varsayılan) ya da «dijital» (TBK dijital Excel'i; alanları `dijital` ve `diger`'in dijital kalemleri). */
+  baski?: 'ofset' | 'dijital';
+  dijital?: DigitalInputs;
+};
+export type DigitalInputs = {
+  icKagit: string | null; icBirim?: number | null; renkliSayfa: number | null; renkliKagit: string | null; renkliBirim?: number | null;
+  kapakKagit: string | null; kapakGr: number | null; kapakBirim?: number | null; pay: number | null;
+  ekler: { ayracAtma: boolean; ayracRenk: number | null; gofre: boolean; kulakli: boolean; kapakRenk: number | null; selofan: boolean; lokalLak: boolean };
+};
+export type DigitalTariff = {
+  guncelleme: string | null; kagitlar: string[]; kapakKagitlari: string[];
+  tablo: Array<{ ebat: string; fiyat: Record<string, number> }>;
+  pay: number; dolayli: number; fire: { kapak: number }; kapak: { en: number; boy: number; verim: number };
+  kalemler: Record<string, { m: number; n?: number; label: string }>; publishers: Record<string, number>; kapakGramajlari: number[];
 };
 export type ExtraKey = keyof Omit<FormInputs['ekler'], 'kenarBoyama' | 'vakum' | 'icSelofan'>;
 export type TariffPaper = { name: string; base: number; cur: 'USD' | 'EUR'; unit: 'ton' | 'adet' };
@@ -251,6 +267,7 @@ export type Tariff = {
   trims: Array<{ ebat: string; taslama: number | null; kapakTakma: number | null; mukavvaVerim: number | null; icVerim: number | null; icEn: number | null; icBoy: number | null }>;
   cliche: Record<string, { pieces: number; price: number }>; publishers: Record<string, number>; fire: Record<string, number>;
   dolayli: number; kapakBolen: number; updatedBy: string | null; updatedAt: string | null; isDefault: boolean;
+  dijital?: DigitalTariff;
 };
 export type FormSetup = { kaynaklar?: Kaynaklar;
   tariff: Tariff; bindings: string[]; laminates: string[]; varnishes: string[];
@@ -268,9 +285,11 @@ export type FormSummary = {
   forma: number; kagitAdet: number; matbaaAdet: number; telifAdet: number; kitapMaliyeti: number; kitapMaliyetiToplam: number; matbaaToplam: number;
   digerToplam: number; toplam: number; dolayliOran: number; dolayli: number; genelToplam: number; birimMaliyet: number; iskonto: number; kapakFiyati: number;
   satisFiyati: number; karAdet: number; toplamKar: number; karYuzde: number | null; adet: number; sayfa: number; kapakPayi: number; sayfaBasi: number;
+  baski?: 'dijital'; ekPay?: number; kapakTabaka?: number;
 };
 export type FormResult = { kaynaklar?: Kaynaklar;
-  lines: FormLine[]; summary: FormSummary; warnings: string[]; paperSource: 'logo' | 'tarife'; prices: FormPrice[]; kur: { USD: number; EUR: number }; vade: number;
+  lines: FormLine[]; summary: FormSummary; warnings: string[]; paperSource: 'logo' | 'tarife' | 'dijital'; prices: FormPrice[]; kur: { USD: number; EUR: number }; vade: number | null;
+  baski?: 'dijital'; tabloTarihi?: string | null;
   fire: { ic: number; icPay: number };
   analysis: { printService: number; paperPerCopy: number; printSetup: number; overheadRate: number; royaltyRate: number; royaltyBase: 'kapak'; royaltyOn: 'baski';
     chosenQty: number; price: number | null; fixed: { grafik: number; diger: number }; note: string } | null;
@@ -344,7 +363,7 @@ export const pricingApi = {
   decideProposal: (id: string, b: { decision: 'onay' | 'ret'; note: string }) => send<Proposal>('POST', `/proposals/${enc(id)}/decide`, b),
   formSetup: (kitap?: string | null) => send<FormSetup>('GET', `/form/setup${qs({ kitap })}`),
   formCalc: (b: { inputs: FormInputs }) => send<FormResult>('POST', '/form/calc', b),
-  saveTariff: (b: Partial<Tariff> & { reset?: boolean }) => send<Tariff>('PUT', '/form/tariff', b),
+  saveTariff: (b: Omit<Partial<Tariff>, 'dijital'> & { reset?: boolean; dijital?: Partial<DigitalTariff> }) => send<Tariff>('PUT', '/form/tariff', b),
 };
 
 // ---- biçimler

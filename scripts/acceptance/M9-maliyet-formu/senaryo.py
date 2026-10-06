@@ -53,17 +53,49 @@ SENARYOLAR: dict[str, dict[str, object]] = {
     "32-dolayli-telif-yok": {"I41": None, "I35": None},
 }
 
+#: «TBK dijital» şablonu (taban: AŞIKLARIN HALLERİ-TBK DİJİTAL). Fiyatı boş ebat/kâğıt hücreleri senaryoya alınmadı:
+#: Excel onları sessizce 0 ₺ sayar, sistem elle fiyat ister (bilinçli fark).
+SENARYOLAR_DIJITAL: dict[str, dict[str, object]] = {
+    "d00-kontrol": {},
+    "d01-adet": {"F5": 1000},
+    "d02-sayfa": {"G4": 352},
+    "d03-ebat-15x21": {"G5": "15X21"},
+    "d04-ebat-12x16": {"G5": "12X16,5"},
+    "d05-ebat-13-5x19-5": {"G5": "13,5X19,5"},
+    # Bilinçli fark: Excel E18 `VLOOKUP(G5; M3:X16; …)` yaklaşık eşleşmeyle sırasız tabloda arar; pycel 13,5X21 için
+    # 12X16,5 satırını (0,165 ₺) bulur, tablodaki fiyat 0,17 ₺. Sistem ebatı birebir eşleştirir (2026-10-06: 22/23).
+    "d06-ebat-13-5x21": {"G5": "13,5X21"},
+    "d07-kagit-55": {"D18": " 1/1- 55gr KİTAP KAĞIDI"},
+    "d08-kagit-70": {"D18": " 1/1- 70gr KİTAP KAĞIDI"},
+    "d09-kapak-kuse": {"D28": "KUŞE"},
+    "d10-ek-pay-15": {"G17": 15},
+    "d11-ek-pay-yok": {"G17": None},
+    "d12-ozel-iskonto": {"I4": 30},
+    "d13-kesinlesen-fiyat": {"J3": 220},
+    "d14-matbaa-ayar": {"I1": 10},
+    "d15-ayrac": {"B21": X, "B22": 4},
+    "d16-gofre-kulakli": {"B23": X, "B24": X},
+    "d17-kapak-baski-selofan": {"B25": 4, "B26": X},
+    "d18-lokal-lak": {"A27": "LOKAL LAK"},
+    "d19-diger-giderler": {"J20": 500, "I21": 2, "J22": 300, "J23": 150, "J24": 400, "J28": 250},
+    "d20-dolayli-telif-yok": {"I33": None, "I27": None},
+    "d21-buyuk-baski-ekler": {"F5": 6000, "B21": X, "B22": 2, "B23": X, "B25": 4, "B26": X},
+    "d22-yayinevi-akademi": {"A1": "TİMAŞ AKADEMİ"},
+}
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--taban", required=True, help="temel Excel (formüller dokunulmadan kopyalanır)")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--dijital", action="store_true", help="TBK dijital şablonunun senaryoları")
     a = ap.parse_args()
+    senaryolar = SENARYOLAR_DIJITAL if a.dijital else SENARYOLAR
     out = Path(a.out)
     src = out / "girdi"
     shutil.rmtree(out, ignore_errors=True)
     src.mkdir(parents=True)
-    for name, cells in SENARYOLAR.items():
+    for name, cells in senaryolar.items():
         wb = load_workbook(a.taban)  # formüller korunur; kayıtta önbellek değerleri düşer, LibreOffice yeniden hesaplar
         for ws in wb.worksheets:
             for ref, val in cells.items():
@@ -71,7 +103,7 @@ def main() -> int:
                     raise SystemExit(f"{name}: {ref} formül hücresi, girdi değil")
                 ws[ref].value = val
         wb.save(src / f"{name}.xlsx")
-    print(f"{len(SENARYOLAR)} senaryo dosyası → {src} (hesap: pycel_referans.py --senaryo)")
+    print(f"{len(senaryolar)} senaryo dosyası → {src} (hesap: pycel_referans.py --senaryo)")
     return 0
 
 

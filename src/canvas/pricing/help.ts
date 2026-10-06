@@ -183,6 +183,42 @@ export const FORM_HELP: Record<string, FieldHelp> = {
     excel: 'I41, bedel J41.',
     dikkat: 'Excel\'de olduğu gibi telif ve kapak ücretine de uygulanır.',
   },
+  baski: {
+    ne: 'Kitabın nasıl basılacağı. Ofset: kâğıt, kalıp, cilt ayrı ayrı hesaplanır (büyük baskı). Dijital: sayfa başına fiyat (kâğıt dahil) ve kapak + cilt adet fiyatıyla hesaplanır (küçük baskı, ör. 100–500 adet).',
+    nereden: 'Elle seçilir. Dijital hesap TİMAŞ\'ın «TBK dijital» basım Excel\'iyle aynı kuralları uygular.',
+    excel: 'Ofset: «Kitap Maliyet Formu» (222 satır). Dijital: «TBK. dijital» sayfası (59 satır).',
+    dikkat: 'Dijitale geçince dolaylı gider %40\'a (dijital Excel\'in oranı), ofsete dönünce fiyat listesindeki orana döner; elle değiştirdiyseniz değer korunur.',
+  },
+  dijitalKagit: {
+    ne: 'İç sayfaların basılacağı kâğıt ve renk (1/1 tek renk, 4/4 renkli). Sayfa başına fiyat bu seçimle ebada göre dijital fiyat tablosundan gelir; kâğıt fiyatın içindedir.',
+    nereden: 'Dijital fiyat tablosu (Veri ve varsayımlar → Dijital baskı fiyatları). Tabloda fiyatı olmayan seçimde «Sayfa fiyatı (elle)» girilir.',
+    excel: 'D18 (renkli sayfalar D17); fiyat M37:Z52 tablosundan (E18, E17).',
+  },
+  dijitalBirim: {
+    ne: 'Bu kitap için matbaanın verdiği birim fiyat. Doluysa tablodaki fiyatın yerine geçer (yalnız bu hesapta).',
+    nereden: 'Elle. Boşken altında tablodaki fiyat yazar.',
+    dikkat: 'Excel tabloda fiyatı boş olan ebat/kâğıtta sessizce 0 ₺ hesaplar; burada hesap fiyat ister.',
+  },
+  dijitalKapak: {
+    ne: 'Kapak baskı + selofan + cilt, adet başına tek fiyat. Kapak kartonu (bristol ya da kuşe) ve ebada göre dijital fiyat tablosundan gelir.',
+    nereden: 'Dijital fiyat tablosunun KUŞE / BRİSTOL sütunu. Gramaj bilgi içindir, fiyatı değiştirmez.',
+    excel: 'D28, fiyat E28; toplam F28 = adet × fiyat × (1 + ek pay).',
+  },
+  dijitalPay: {
+    ne: 'Matbaa sayfa ve kapak fiyatlarının üstüne eklenen pay. Sayfa baskısına, kapağa ve lokal laka uygulanır.',
+    nereden: 'Dijital fiyat listesindeki varsayılan (%25). Kitaba göre değiştirilebilir; 0 yazınca pay eklenmez.',
+    excel: 'G17 (G18 = G17).',
+  },
+  dijitalEk: {
+    ne: 'Dijital baskıda isteğe bağlı işlemler. İşaretlenmeyen işlem hesaba girmez.',
+    nereden: 'Fiyatlar dijital fiyat listesinden: ayraç atma 0,08 ₺/adet (5.000 üstü 0,06), ayraç ve kapak baskısı renk başına 95 ₺, gofre 400 ₺ (+ 1.000 adette 200 ₺), kulaklı kapak 1.000 adette 200 ₺, selofan m² başına 0,90 ₺ (en az 250 ₺), lokal lak 3.200 ₺.',
+    excel: 'B21–B26 ve A27 (LOKAL LAK); bedeller F21–F27. Kapak tabakası (adet + 600) ÷ 8 (F10).',
+  },
+  dijitalDiger: {
+    ne: 'Bu baskıya özgü yan kâğıdı, hediye, zayiat, reklam ya da başka gider (toplam ₺) ve adet başına nakliye. Toplama olduğu gibi eklenir.',
+    nereden: 'Elle.',
+    excel: 'J20 yan kâğıdı, I21 nakliye (adet başına; J21 = I21 × adet), J22 hediye, J23 zayiat, J24 reklam, J28 diğer.',
+  },
   nakliye: {
     ne: 'Bu baskıya özgü nakliye, iç mizanpaj ya da başka bir gider. Toplama olduğu gibi eklenir.',
     nereden: 'Elle.',

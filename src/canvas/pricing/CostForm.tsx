@@ -5,6 +5,7 @@ import SqlInfo, { type FieldHelp } from '../components/SqlInfo';
 import { day, num, pct, tl0, tl2, type ExtraKey, type FormInputs, type FormPart, type FormResult, type FormSetup } from './api';
 import { Group, NumField, Select, TextField, Toggle } from './parts';
 import { FORM_HELP as H, FORM_RESULT_HELP as R } from './help';
+import { DigitalGroups, digitalOf } from './DigitalForm';
 
 /**
  * Kitap hesabının maliyet alanları: TİMAŞ basım Excel'indeki «Kitap Maliyet Formu»yla aynı alanlar ve aynı hesap
@@ -34,6 +35,14 @@ export function setters(setForm: (fn: (f: FormInputs | null) => FormInputs | nul
 
 /** Maliyet alanlarının altı adımı (Excel'in sol tarafı). */
 export function CostGroups({ form, s, st, r }: { form: FormInputs; s: FormSetup; st: Setters; r?: FormResult }) {
+  if (form.baski === 'dijital') {
+    return (
+      <>
+        <BookGroup form={form} s={s} set={st.set} />
+        <DigitalGroups form={form} s={s} st={st} r={r} />
+      </>
+    );
+  }
   return (
     <>
       <BookGroup form={form} s={s} set={st.set} />
@@ -63,7 +72,17 @@ function More({ children, label = 'Ayrıntılar' }: { children: ReactNode; label
 }
 
 function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: Partial<FormInputs>) => void }) {
-  const pubs = Object.keys(s.tariff.publishers);
+  const dig = form.baski === 'dijital';
+  const dt = s.tariff.dijital;
+  // Dijital Excel'in kendi iskonto listesi ofsetinkinin üstüne (ör. Mavi Kirpi ofsette %60, dijitalde %45).
+  const rates: Record<string, number> = dig ? { ...s.tariff.publishers, ...(dt?.publishers ?? {}) } : s.tariff.publishers;
+  const pubs = Object.keys(rates);
+  // Baskı türü değişince dolaylı gider, elle değiştirilmediyse o türün varsayılanına geçer (ofset %90, dijital %40).
+  const switchTo = (b: 'ofset' | 'dijital') => {
+    const from = dig ? (dt?.dolayli ?? 40) : s.tariff.dolayli;
+    const to = b === 'dijital' ? (dt?.dolayli ?? 40) : s.tariff.dolayli;
+    set({ baski: b, dijital: digitalOf(form, dt), ...(form.dolayli == null || form.dolayli === from ? { dolayli: to } : {}) });
+  };
   const o = s.origin;
   const logoKur = s.logoKur;
   const kf = (v: number) => v.toLocaleString('tr-TR', { maximumFractionDigits: 4 });
@@ -75,40 +94,51 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
   };
   return (
     <Group step={1} title="Kitap ve baskı">
+      <Select<'ofset' | 'dijital'>
+        label="Baskı türü"
+        info={i(H.baski, 'Baskı türü')}
+        value={dig ? 'dijital' : 'ofset'}
+        onChange={switchTo}
+        options={[{ value: 'ofset', label: 'Ofset' }, ...(dt ? [{ value: 'dijital' as const, label: 'Dijital (küçük baskı)' }] : [])]}
+      />
       <Select<string>
         label="Yayınevi"
         info={i(H.yayinevi, 'Yayınevi')}
         value={form.yayinevi ?? ''}
         onChange={(v) => set({ yayinevi: v || null })}
-        options={[{ value: '', label: 'Seçin' }, ...pubs.map((p) => ({ value: p, label: `${p} · vadeli iskonto %${num(s.tariff.publishers[p])}` }))]}
+        options={[{ value: '', label: 'Seçin' }, ...pubs.map((p) => ({ value: p, label: `${p} · vadeli iskonto %${num(rates[p])}` }))]}
         hint={o.yayinevi}
       />
       <NumField label="Sayfa sayısı" info={i(H.sayfa, 'Sayfa sayısı')} digits={0} value={form.sayfa} onChange={(v) => set({ sayfa: v })} hint={o.sayfa} />
       <NumField label="Baskı adedi" info={i(H.adet, 'Baskı adedi')} digits={0} value={form.adet} onChange={(v) => set({ adet: v })} hint={o.adet} />
-      <TextField label="Ebat (cm)" info={i(H.ebat, 'Ebat')} value={form.ebat} onChange={(v) => set({ ebat: v || null })} list={s.tariff.trims.map((t) => t.ebat)} placeholder="13,5x21" hint={o.ebat} />
+      <TextField label="Ebat (cm)" info={i(H.ebat, 'Ebat')} value={form.ebat} onChange={(v) => set({ ebat: v || null })} list={dig && dt ? dt.tablo.map((t) => t.ebat) : s.tariff.trims.map((t) => t.ebat)} placeholder="13,5x21" hint={o.ebat} />
       <NumField label="Kapak fiyatı (KDV dahil)" info={i(H.fiyat, 'Kapak fiyatı')} suffix="₺" value={form.fiyat} onChange={(v) => set({ fiyat: v })} hint={o.fiyat} />
       <NumField label="Telif oranı" info={i(H.telif, 'Telif oranı')} suffix="%" value={form.telif} onChange={(v) => set({ telif: v })} hint={o.telif} />
-      <More label="Özel iskonto, matbaa ayarı, kur">
+      <More label={dig ? 'Özel iskonto, matbaa ayarı' : 'Özel iskonto, matbaa ayarı, kur'}>
         <NumField label="Özel iskonto" info={i(H.ozelIskonto, 'Özel iskonto')} suffix="%" value={form.ozelIskonto} onChange={(v) => set({ ozelIskonto: v })} placeholder="Yayınevi iskontosu" />
         <NumField label="Matbaa fiyat ayarı" info={i(H.matbaaAyar, 'Matbaa fiyat ayarı')} suffix="%" value={form.matbaaAyar} onChange={(v) => set({ matbaaAyar: v })} placeholder="Ör. -15" />
-        <NumField
-          label="1 dolar"
-          info={i(H.kur, 'Kur')}
-          suffix="₺"
-          value={form.kur?.USD ?? null}
-          onChange={(v) => set({ kur: { ...(form.kur ?? {}), USD: v } })}
-          placeholder={kf(s.tariff.kur.USD)}
-          hint={kurHint('USD')}
-        />
-        <NumField
-          label="1 euro"
-          info={i(H.kur, 'Kur')}
-          suffix="₺"
-          value={form.kur?.EUR ?? null}
-          onChange={(v) => set({ kur: { ...(form.kur ?? {}), EUR: v } })}
-          placeholder={kf(s.tariff.kur.EUR)}
-          hint={kurHint('EUR')}
-        />
+        {!dig && (
+          <>
+            <NumField
+              label="1 dolar"
+              info={i(H.kur, 'Kur')}
+              suffix="₺"
+              value={form.kur?.USD ?? null}
+              onChange={(v) => set({ kur: { ...(form.kur ?? {}), USD: v } })}
+              placeholder={kf(s.tariff.kur.USD)}
+              hint={kurHint('USD')}
+            />
+            <NumField
+              label="1 euro"
+              info={i(H.kur, 'Kur')}
+              suffix="₺"
+              value={form.kur?.EUR ?? null}
+              onChange={(v) => set({ kur: { ...(form.kur ?? {}), EUR: v } })}
+              placeholder={kf(s.tariff.kur.EUR)}
+              hint={kurHint('EUR')}
+            />
+          </>
+        )}
       </More>
     </Group>
   );
@@ -336,11 +366,12 @@ function Mini({ label, value, note, tone, help }: { label: string; value: string
 
 function Breakdown({ sm }: { sm: FormResult['summary'] }) {
   const other = sm.birimMaliyet - sm.kagitAdet - sm.matbaaAdet - sm.telifAdet - sm.dolayli / sm.adet;
+  const dig = sm.baski === 'dijital';
   const parts = [
-    { label: 'Kâğıt', v: sm.kagitAdet, c: 'bg-sky-500' },
-    { label: 'Matbaa', v: sm.matbaaAdet, c: 'bg-violet-500' },
+    ...(dig ? [] : [{ label: 'Kâğıt', v: sm.kagitAdet, c: 'bg-sky-500' }]),
+    { label: dig ? 'Baskı, kapak ve cilt (kâğıt dahil)' : 'Matbaa', v: sm.matbaaAdet, c: 'bg-violet-500' },
     { label: 'Telif', v: sm.telifAdet, c: 'bg-amber-500' },
-    { label: 'Kapak ücreti ve diğer', v: Math.max(0, other), c: 'bg-slate-400' },
+    { label: dig ? 'Diğer giderler' : 'Kapak ücreti ve diğer', v: Math.max(0, other), c: 'bg-slate-400' },
     { label: `Dolaylı gider %${num(sm.dolayliOran)}`, v: sm.dolayli / sm.adet, c: 'bg-rose-400' },
   ];
   const total = parts.reduce((a, p) => a + Math.max(0, p.v), 0) || 1;
@@ -374,6 +405,9 @@ function Breakdown({ sm }: { sm: FormResult['summary'] }) {
 }
 
 export function Lines({ r }: { r: FormResult }) {
+  const dig = r.baski === 'dijital';
+  // Toplam satırlarının Excel hücreleri iki şablonda farklı (ofset J40–J46, dijital J32–J38).
+  const cell = dig ? { toplam: 'J32', dolayli: 'J33', genel: 'J34 · J38' } : { toplam: 'J40', dolayli: 'J41', genel: 'J42 · J46' };
   const groups: Array<[FormResult['lines'][number]['group'], string]> = [['kagit', 'Kâğıt'], ['matbaa', 'Matbaa ve işçilik'], ['telif', 'Telif'], ['diger', 'Diğer giderler']];
   const sm = r.summary;
   return (
@@ -410,7 +444,7 @@ export function Lines({ r }: { r: FormResult }) {
                   <td className={td}>
                     <span className="inline-flex items-center gap-1 font-bold">
                       {l.name}
-                      {i({ ne: l.formula ?? 'Fiyat listesindeki bedel.', nereden: lineSource(l), excel: `${l.excel} hücresi.` }, l.name)}
+                      {i({ ne: l.formula ?? 'Fiyat listesindeki bedel.', nereden: lineSource(l, dig), excel: `${l.excel} hücresi.` }, l.name)}
                     </span>
                     {l.material && <div className="text-[11px] text-canvas-muted">{l.material}</div>}
                   </td>
@@ -419,7 +453,11 @@ export function Lines({ r }: { r: FormResult }) {
                   </td>
                   <td className={`${td} text-right tabular-nums`}>
                     {l.unitPrice != null ? `${l.unitPrice.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ${l.unit ?? '₺'}` : '—'}
-                    {l.priceSource && <div className="text-[10.5px] text-canvas-muted">{l.priceSource === 'logo' ? 'Logo alışı' : l.priceSource === 'elle' ? 'Elle girildi' : 'Fiyat listesi (Logo\'da alış yok)'}</div>}
+                    {l.priceSource && (
+                      <div className="text-[10.5px] text-canvas-muted">
+                        {l.priceSource === 'logo' ? 'Logo alışı' : l.priceSource === 'elle' ? 'Elle girildi' : dig ? 'Dijital fiyat tablosu' : 'Fiyat listesi (Logo\'da alış yok)'}
+                      </div>
+                    )}
                   </td>
                   <td className={`${td} text-right tabular-nums`}>{tl0(l.total)}</td>
                   <td className={`${td} text-right tabular-nums`}>{tl2(l.perCopy)}</td>
@@ -432,13 +470,13 @@ export function Lines({ r }: { r: FormResult }) {
             <td className={`${td} font-extrabold`} colSpan={3}>Toplam (matbaa + diğer giderler)</td>
             <td className={`${td} text-right font-extrabold tabular-nums`}>{tl0(sm.toplam)}</td>
             <td className={`${td} text-right font-extrabold tabular-nums`}>{tl2(sm.toplam / sm.adet)}</td>
-            <td className={`${td} font-mono text-[11px] text-canvas-muted`}>J40</td>
+            <td className={`${td} font-mono text-[11px] text-canvas-muted`}>{cell.toplam}</td>
           </tr>
           <tr className="border-t border-slate-100">
             <td className={td} colSpan={3}>Dolaylı gider %{num(sm.dolayliOran)}</td>
             <td className={`${td} text-right tabular-nums`}>{tl0(sm.dolayli)}</td>
             <td className={`${td} text-right tabular-nums`}>{tl2(sm.dolayli / sm.adet)}</td>
-            <td className={`${td} font-mono text-[11px] text-canvas-muted`}>J41</td>
+            <td className={`${td} font-mono text-[11px] text-canvas-muted`}>{cell.dolayli}</td>
           </tr>
           <tr className="border-t border-slate-100 bg-violet-50/60">
             <td className={`${td} font-extrabold`} colSpan={3}>
@@ -446,7 +484,7 @@ export function Lines({ r }: { r: FormResult }) {
             </td>
             <td className={`${td} text-right font-extrabold tabular-nums`}>{tl0(sm.genelToplam)}</td>
             <td className={`${td} text-right font-extrabold tabular-nums`}>{tl2(sm.birimMaliyet)}</td>
-            <td className={`${td} font-mono text-[11px] text-canvas-muted`}>J42 · J46</td>
+            <td className={`${td} font-mono text-[11px] text-canvas-muted`}>{cell.genel}</td>
           </tr>
         </tbody>
       </TableWrap>
@@ -455,7 +493,12 @@ export function Lines({ r }: { r: FormResult }) {
   );
 }
 
-function lineSource(l: FormResult['lines'][number]): string {
+function lineSource(l: FormResult['lines'][number], dig = false): string {
+  if (dig) {
+    if (l.priceSource === 'elle') return 'Bu kitap için elle girilen birim fiyat (tablodaki fiyatın yerine).';
+    if (l.priceSource === 'tarife') return 'Birim fiyat dijital baskı fiyat tablosundan (ebat × kâğıt; Veri ve varsayımlar → Dijital baskı fiyatları).';
+    return 'Dijital baskı fiyat listesinden ya da elle girilen tutar.';
+  }
   if (l.priceSource === 'logo') return 'Kâğıt fiyatı Logo\'daki son 6 ayın alış faturalarından (aynı cins ve gramaj, kg ağırlıklı ortalama).';
   if (l.priceSource === 'elle') return 'Bu kitap için elle girilen kâğıt fiyatı (Logo alışının yerine).';
   if (l.priceSource === 'tarife') return 'Bu kâğıdın Logo\'da son 6 ayda alışı yok; fiyat listesindeki ton fiyatı × vade farkı × kur kullanıldı.';

@@ -664,6 +664,11 @@ def save_form_tariff(engine: sa.engine.Engine, tenant: str, user: str, body: dic
     varsayılandan gelir."""
     cur = get_form_tariff(engine, tenant)
     out = {k: cur[k] for k in ("kur", "kurKaynak", "vade", "papers", "prices", "fire", "dolayli", "kapakBolen", "publishers")}
+    with engine.connect() as c:
+        row = c.execute(form_tariff_stmt(tenant)).mappings().first()
+    if "dijital" in body or "dijital" in (_j(row["values_json"], {}) if row else {}):
+        # Dijital tablo yalnız değiştirildiyse saklanır; değiştirilmediyse varsayılan (Excel) güncellemesi geçerli kalır.
+        out["dijital"] = _save_dijital(cur.get("dijital") or {}, body.get("dijital"))
     if "kurKaynak" in body:
         if body["kurKaynak"] not in ("logo", "elle"):
             raise PricingError("Kur kaynağı «logo» ya da «elle» olmalı.")
@@ -697,6 +702,36 @@ def save_form_tariff(engine: sa.engine.Engine, tenant: str, user: str, body: dic
         c.execute(FORM_TARIFF.insert().values(tenant_id=tenant, values_json=json.dumps(out, ensure_ascii=False),
                                               updated_by=user, updated_at=_now()))
     return get_form_tariff(engine, tenant)
+
+
+def _save_dijital(cur: dict[str, Any], body: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """Dijital baskı tablosunun değiştirilebilen kısımları: ebat × kâğıt sayfa/kapak fiyatları, ek pay, dolaylı gider,
+    ek işlem fiyatları, yayınevi iskontoları. Ebat ve kâğıt adları varsayılandan gelir (yeni satır/sütun eklenmez)."""
+    out = json.loads(json.dumps(cur))
+    if not body:
+        return out
+    if "tablo" in body:
+        by = {r["ebat"]: r for r in out.get("tablo") or []}
+        for r in body["tablo"] or []:
+            row = by.get(r.get("ebat"))
+            if not row:
+                continue
+            for k, v in (r.get("fiyat") or {}).items():
+                if k in row["fiyat"]:
+                    row["fiyat"][k] = _pos(v or 0, f"{r['ebat']} · {k} fiyatı")
+    if "pay" in body:
+        out["pay"] = _pos(body["pay"], "Dijital ek pay")
+    if "dolayli" in body:
+        out["dolayli"] = _pos(body["dolayli"], "Dijital dolaylı gider oranı")
+    if "kalemler" in body:
+        for k, v in (body["kalemler"] or {}).items():
+            if k in (out.get("kalemler") or {}):
+                for col in ("m", "n"):
+                    if col in (v or {}) and col in out["kalemler"][k]:
+                        out["kalemler"][k][col] = _pos(v[col], f"«{out['kalemler'][k].get('label', k)}»")
+    if "publishers" in body:
+        out["publishers"] = {str(k): _pos(v, f"«{k}» iskontosu") for k, v in (body["publishers"] or {}).items() if str(k).strip()}
+    return out
 
 
 def reset_form_tariff(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:

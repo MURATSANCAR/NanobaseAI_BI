@@ -45,10 +45,10 @@ def explicit_intersection(path: Path) -> Path:
     return out
 
 
-def pycel_results(path: Path, sheet: str) -> dict:
+def pycel_results(path: Path, sheet: str, cells: dict | None = None) -> dict:
     xl = ExcelCompiler(filename=str(explicit_intersection(path)))
     out = {}
-    for k, cell in E.RESULT_CELLS.items():
+    for k, cell in (cells or E.RESULT_CELLS).items():
         v = xl.evaluate(f"'{sheet}'!{cell}")
         out[k] = E.num(v) if not isinstance(v, str) else None
     return out
@@ -66,7 +66,7 @@ def main() -> int:
         for f in sorted(p for p in Path(a.denetim).glob("*.xlsx") if not p.name.endswith(".kesisim.xlsx")):
             for form in E.read(f):
                 try:
-                    got = pycel_results(f, form["sheet"])
+                    got = pycel_results(f, form["sheet"], E.RESULT_CELLS_DIJITAL if form["inputs"].get("baski") == "dijital" else None)
                 except Exception as e:  # noqa: BLE001
                     print(f"[HATA] {f.name} [{form['sheet']}] {type(e).__name__}: {str(e)[:200]}")
                     bad += 1
@@ -84,12 +84,14 @@ def main() -> int:
     for f in sorted(p for p in Path(a.senaryo).glob("*.xlsx") if not p.name.endswith(".kesisim.xlsx")):
         wf = load_workbook(f, data_only=False).worksheets[0]
         wv = load_workbook(f, data_only=True).worksheets[0]
+        dij = E.is_dijital(wf)
         try:
-            res = pycel_results(f, wf.title)
+            res = pycel_results(f, wf.title, E.RESULT_CELLS_DIJITAL if dij else None)
         except Exception as e:  # noqa: BLE001
             print(f"[HATA] {f.name}: {type(e).__name__}: {str(e)[:200]}")
             continue
-        forms.append({"file": f.name, "sheet": wf.title, "inputs": E.inputs(wf, wv), "tariff": base["tariff"], "excel": res})
+        forms.append({"file": f.name, "sheet": wf.title, "inputs": E.inputs_dijital(wf, wv) if dij else E.inputs(wf, wv),
+                      "tariff": base["tariff"], "excel": res})
         print(f"{f.name}: birim {res['birimMaliyet']}")
     Path(a.out).write_text(json.dumps(forms, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{len(forms)} senaryo → {a.out}")
