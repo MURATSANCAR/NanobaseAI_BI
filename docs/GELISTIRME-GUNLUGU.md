@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-10-06 — SEO meta kalite kapısı, yayınevi her başlıkta, Cloudflare yapay zekâ ayarları
+
+- E-ticaret ekibi Excel'i: 216 meta yarım («…okuyucuya eşsiz bir»), 142 başlıkta marka eksik. Neden: `_cut` cümle sonu %60'tan önceyse kelime sınırından kesiyordu; başlıkta 65 karakteri aşınca yayınevi düşüyordu.
+- Kural (propose): meta yalnız `meta_problems` boşsa kabul — tam cümle (baş harf/kısaltma «Sharon M.» cümle sonu sayılmaz), 120–160 karakter, yazar adı (aksan/ı-i katlanmış), başlığın aynısı değil, kayıtta olmayan isim/sayı yok (`unsupported`), tırnak/ünlem/emoji/HTML yok. Uymazsa `rewrite_meta` eksikleri tek tek söyleyerek 8 deneme; boş bırakılmaz. Başlık «Ad - Yazar | Yayınevi»: yayınevi sitedeki Brand ile birebir ve her zaman; 65 sınırı yalnız «Ad - Yazar» kısmına; sitede yayınevi boşsa yayınevi yok. CRM'e yarım meta gitmez.
+- Müşteri CRM (doğrudan okuma, 2.899 kart): başlık 2.862 yayınevi birebir + 37 yayınevsiz, **sorunlu 0**; meta 2.797 kapıdan geçer (%96,5), 89 kısa (75–118), 13 kayıtta olmayan isim. CRM ekibi kitap kartlarını açtı: eşleşmeyen 901 → 0.
+- Cloudflare (Timaş hesabı, tarayıcıdan yalnız okuma; değişiklikleri kullanıcı yaptı): Training=Allow (GPTBot/ClaudeBot/CCBot/Bytespider, Claude-User, Amazonbot açık), Markdown for Agents açık (Accept: text/markdown → text/markdown doğrulandı). robots.txt hâlâ T-soft dosyası (Content Signals satırı yok; `cf_robots_variant=off`). Not: bot adı taklidi doğrulanmış-bot engelini göstermez; kesin bilgi `bot_management` ucundan.
+- VM olayları: iki oturumun VM kurulumu aynı anda koştu → portal ~10 dk kapalı (d91cb747 bitince kalktı). 19:37:48 Postgres arka uç işlemi mesajsız exit code 2 ile kapandı, 1,7 sn kurtarma, veri kaybı yok; öncesinde VM «memory pressure», aynı dakikada başka kurulum. Önerildi (yapılmadı): kurulum kilidi, Postgres ayrıntılı günlük, shm 64 MB → 1 GB.
+
 ## 2026-10-06 — İlk baskı tahmini: stok ve yeniden baskı uyarısı (tükenme ayı + ek baskı adedi)
 
 - **Neden:** kullanıcı: «Babası Kılıklı» için firma «stok yetmedi» diyerek 100.000 daha bastı; «bunu da söylersek güzel olmaz mı». Ekran 12 ay revize tahmini gösteriyordu ama stokla karşılaştırmıyordu; kitap bir yılı doldurana kadar yeniden baskı uyarısı yoktu.
