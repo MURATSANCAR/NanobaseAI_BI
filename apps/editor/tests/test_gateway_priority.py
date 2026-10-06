@@ -99,7 +99,9 @@ def test_policy_arg_forms(G):
 
 def test_quick_answer_sends_interactive_header():
     src = (Path(__file__).resolve().parents[1] / "src" / "editor" / "quick_answer.py").read_text()
-    assert 'llm._post("/v1/chat/completions", req, llm.INTERACTIVE)' in src
+    # varsayılan etkileşimli; yalnız okuma kalite denetiminin duman testi `headers={}` (arka plan) verir
+    assert 'llm._post("/v1/chat/completions", req, llm.INTERACTIVE if headers is None else headers)' in src
+    assert "headers: dict | None = None" in src
 
 
 # ---------------------------------------------------------- etkileşimli taşma
