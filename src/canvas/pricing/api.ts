@@ -253,7 +253,7 @@ export type DigitalInputs = {
 export type DigitalTariff = {
   guncelleme: string | null; kagitlar: string[]; kapakKagitlari: string[];
   tablo: Array<{ ebat: string; fiyat: Record<string, number> }>;
-  pay: number; dolayli: number; fire: { kapak: number }; kapak: { en: number; boy: number; verim: number };
+  pay: number; dolayli: number; dolayliYayinevi?: Record<string, number>; fire: { kapak: number }; kapak: { en: number; boy: number; verim: number };
   kalemler: Record<string, { m: number; n?: number; label: string }>; publishers: Record<string, number>; kapakGramajlari: number[];
 };
 export type ExtraKey = keyof Omit<FormInputs['ekler'], 'kenarBoyama' | 'vakum' | 'icSelofan'>;

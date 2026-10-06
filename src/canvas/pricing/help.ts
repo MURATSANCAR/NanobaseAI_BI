@@ -179,15 +179,15 @@ export const FORM_HELP: Record<string, FieldHelp> = {
 
   dolayli: {
     ne: 'İşletme (genel) giderlerinin kitaba yüklenen payı: kâğıt + matbaa + diğer giderler toplamının yüzdesi. Birim maliyetin çoğu zaman en büyük kalemidir.',
-    nereden: 'Fiyat listesindeki varsayılan (%90; basım Excel\'lerinin çoğunda bu). Kitaba göre değiştirilebilir.',
-    excel: 'I41, bedel J41.',
+    nereden: 'Ofsette fiyat listesindeki varsayılan (%90; basım Excel\'lerinin çoğunda bu). Dijitalde yayınevinin dijital oranı (Veri ve varsayımlar → Dijital baskı fiyatları; Timaş İnanç/Tarih %70, diğerleri %40). Kitaba göre değiştirilebilir.',
+    excel: 'Ofset I41, bedel J41; dijital I33, bedel J33.',
     dikkat: 'Excel\'de olduğu gibi telif ve kapak ücretine de uygulanır.',
   },
   baski: {
     ne: 'Kitabın nasıl basılacağı. Ofset: kâğıt, kalıp, cilt ayrı ayrı hesaplanır (büyük baskı). Dijital: sayfa başına fiyat (kâğıt dahil) ve kapak + cilt adet fiyatıyla hesaplanır (küçük baskı, ör. 100–500 adet).',
     nereden: 'Elle seçilir. Dijital hesap TİMAŞ\'ın «TBK dijital» basım Excel\'iyle aynı kuralları uygular.',
     excel: 'Ofset: «Kitap Maliyet Formu» (222 satır). Dijital: «TBK. dijital» sayfası (59 satır).',
-    dikkat: 'Dijitale geçince dolaylı gider %40\'a (dijital Excel\'in oranı), ofsete dönünce fiyat listesindeki orana döner; elle değiştirdiyseniz değer korunur.',
+    dikkat: 'Dijitale geçince dolaylı gider yayınevinin dijital oranına (Timaş İnanç/Tarih %70, diğerleri %40), ofsete dönünce fiyat listesindeki orana geçer; elle değiştirdiyseniz değer korunur. Oranlar Veri ve varsayımlar → Dijital baskı fiyatları\'ndan değişir.',
   },
   dijitalKagit: {
     ne: 'İç sayfaların basılacağı kâğıt ve renk (1/1 tek renk, 4/4 renkli). Sayfa başına fiyat bu seçimle ebada göre dijital fiyat tablosundan gelir; kâğıt fiyatın içindedir.',

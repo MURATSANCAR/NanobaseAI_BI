@@ -77,12 +77,17 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
   // Dijital Excel'in kendi iskonto listesi ofsetinkinin üstüne (ör. Mavi Kirpi ofsette %60, dijitalde %45).
   const rates: Record<string, number> = dig ? { ...s.tariff.publishers, ...(dt?.publishers ?? {}) } : s.tariff.publishers;
   const pubs = Object.keys(rates);
-  // Baskı türü değişince dolaylı gider, elle değiştirilmediyse o türün varsayılanına geçer (ofset %90, dijital %40).
-  const switchTo = (b: 'ofset' | 'dijital') => {
-    const from = dig ? (dt?.dolayli ?? 40) : s.tariff.dolayli;
-    const to = b === 'dijital' ? (dt?.dolayli ?? 40) : s.tariff.dolayli;
-    set({ baski: b, dijital: digitalOf(form, dt), ...(form.dolayli == null || form.dolayli === from ? { dolayli: to } : {}) });
+  // Dolaylı gider varsayılanı: ofsette fiyat listesindeki oran; dijitalde yayınevinin oranı, yoksa genel dijital oran.
+  // Baskı türü ya da yayınevi değişince kutu, elle değiştirilmediyse (eski varsayılanda duruyorsa) yeni varsayılana geçer.
+  const overhead = (b: 'ofset' | 'dijital', pub: string | null | undefined) => {
+    if (b === 'ofset') return s.tariff.dolayli;
+    const key = (x: string | null | undefined) => (x ?? '').trim().toLocaleUpperCase('tr-TR');
+    const hit = Object.entries(dt?.dolayliYayinevi ?? {}).find(([k]) => key(k) === key(pub));
+    return hit ? hit[1] : (dt?.dolayli ?? 40);
   };
+  const auto = (next: number) => (form.dolayli == null || form.dolayli === overhead(dig ? 'dijital' : 'ofset', form.yayinevi) ? { dolayli: next } : {});
+  const switchTo = (b: 'ofset' | 'dijital') => set({ baski: b, dijital: digitalOf(form, dt), ...auto(overhead(b, form.yayinevi)) });
+  const setPub = (v: string | null) => set({ yayinevi: v, ...auto(overhead(dig ? 'dijital' : 'ofset', v)) });
   const o = s.origin;
   const logoKur = s.logoKur;
   const kf = (v: number) => v.toLocaleString('tr-TR', { maximumFractionDigits: 4 });
@@ -105,7 +110,7 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
         label="Yayınevi"
         info={i(H.yayinevi, 'Yayınevi')}
         value={form.yayinevi ?? ''}
-        onChange={(v) => set({ yayinevi: v || null })}
+        onChange={(v) => setPub(v || null)}
         options={[{ value: '', label: 'Seçin' }, ...pubs.map((p) => ({ value: p, label: `${p} · vadeli iskonto %${num(rates[p])}` }))]}
         hint={o.yayinevi}
       />

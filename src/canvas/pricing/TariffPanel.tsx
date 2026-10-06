@@ -204,8 +204,8 @@ function DigitalPrices({ d, can, onChange }: { d: DigitalTariff; can: boolean; o
       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <NumField label="Matbaa ek payı" suffix="%" disabled={!can} value={d.pay} onChange={(v) => onChange({ ...d, pay: v ?? 0 })}
           info={i(help('Sayfa, kapak ve lokal lak fiyatlarına eklenen pay (yeni hesaptaki varsayılan).', { excel: 'G17.' }), 'Matbaa ek payı')} />
-        <NumField label="Dolaylı gider (dijital)" suffix="%" disabled={!can} value={d.dolayli} onChange={(v) => onChange({ ...d, dolayli: v ?? 0 })}
-          info={i(help('Baskı türü dijital seçilince dolaylı gider kutusuna gelen oran.', { excel: 'I33.' }), 'Dolaylı gider (dijital)')} />
+        <NumField label="Dolaylı gider (genel dijital)" suffix="%" disabled={!can} value={d.dolayli} onChange={(v) => onChange({ ...d, dolayli: v ?? 0 })}
+          info={i(help('Baskı türü dijital seçilince, aşağıdaki listede kendi oranı olmayan yayınevlerinde dolaylı gider kutusuna gelen oran.', { excel: 'I33.' }), 'Dolaylı gider (dijital)')} />
       </div>
       <div className="mt-2">
         <TableWrap>
@@ -235,10 +235,42 @@ function DigitalPrices({ d, can, onChange }: { d: DigitalTariff; can: boolean; o
             onChange={(x) => onChange({ ...d, kalemler: { ...d.kalemler, [k]: { ...v, m: x ?? 0 } } })} />
         ))}
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-        {Object.entries(d.publishers).map(([k, v]) => (
-          <NumField key={k} label={`${k} (dijital)`} suffix="%" disabled={!can} value={v} onChange={(x) => onChange({ ...d, publishers: { ...d.publishers, [k]: x ?? 0 } })} />
-        ))}
+      <div className="mt-3">
+        <div className="flex items-center gap-1 text-[12px] font-bold text-canvas-ink">
+          Yayınevine göre iskonto ve dolaylı gider
+          {i(help('Dijital hesapta yayınevi seçilince satış iskontosu ve dolaylı gider varsayılanı buradan gelir. Dolaylı gider boşsa yukarıdaki genel dijital oran kullanılır. Kitap hesabında her ikisi de kitaba göre değiştirilebilir.', { excel: 'İskonto O18:P32 (I5); dolaylı I33. Dolaylı oran dijital Excel\'lerde yayınevine göre değişiyor (Timaş İnanç/Tarih %70, Sufi 05.10.2026 dosyasında %40, 12.05.2026 dosyalarında %50).' }), 'Yayınevine göre iskonto ve dolaylı gider')}
+        </div>
+        <TableWrap>
+          <thead>
+            <tr>
+              <th className={th}>Yayınevi</th>
+              <th className={`${th} text-right`}>İskonto</th>
+              <th className={`${th} text-right`}>Dolaylı gider</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(d.publishers).map(([k, v]) => {
+              const oh = d.dolayliYayinevi?.[k];
+              return (
+                <tr key={k} className="border-t border-slate-100">
+                  <td className={td}>{k}</td>
+                  <td className={`${td} w-32`}>
+                    <NumField label="" suffix="%" disabled={!can} value={v} onChange={(x) => onChange({ ...d, publishers: { ...d.publishers, [k]: x ?? 0 } })} />
+                  </td>
+                  <td className={`${td} w-32`}>
+                    <NumField label="" suffix="%" disabled={!can} value={oh ?? null} placeholder={num(d.dolayli)}
+                      onChange={(x) => {
+                        const next = { ...(d.dolayliYayinevi ?? {}) };
+                        if (x == null) delete next[k];
+                        else next[k] = x;
+                        onChange({ ...d, dolayliYayinevi: next });
+                      }} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </TableWrap>
       </div>
     </details>
   );

@@ -731,6 +731,10 @@ def _save_dijital(cur: dict[str, Any], body: Optional[dict[str, Any]]) -> dict[s
                         out["kalemler"][k][col] = _pos(v[col], f"«{out['kalemler'][k].get('label', k)}»")
     if "publishers" in body:
         out["publishers"] = {str(k): _pos(v, f"«{k}» iskontosu") for k, v in (body["publishers"] or {}).items() if str(k).strip()}
+    if "dolayliYayinevi" in body:
+        # Boş bırakılan yayınevi listeden çıkar (genel dijital oran geçerli olur).
+        out["dolayliYayinevi"] = {str(k): _pos(v, f"«{k}» dolaylı gider oranı") for k, v in (body["dolayliYayinevi"] or {}).items()
+                                  if str(k).strip() and v is not None}
     return out
 
 

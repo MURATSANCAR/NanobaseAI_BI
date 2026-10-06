@@ -2017,6 +2017,11 @@
    270,
    300,
    350
-  ]
+  ],
+  "dolayliYayinevi": {
+   "Sufi Kitap": 40.0,
+   "Timaş İnanç": 70.0,
+   "Timaş Tarih": 70.0
+  }
  }
 }

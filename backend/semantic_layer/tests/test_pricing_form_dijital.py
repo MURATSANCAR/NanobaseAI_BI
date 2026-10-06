@@ -85,3 +85,16 @@ def test_blank_inputs_carry_digital_defaults_and_analysis_runs():
     assert b["baski"] == "ofset" and b["dijital"]["kapakKagit"] == "BRİSTOL"
     a = F.to_analysis(_inputs(), t)
     assert a["printService"] > 0 and a["paperPerCopy"] == 0
+
+
+def test_overhead_default_follows_publisher():
+    t = F.default_tariff()
+    inp = _inputs(yayinevi="TİMAŞ İNANÇ")
+    inp.pop("dolayli")
+    assert F.compute(inp, t)["summary"]["dolayliOran"] == 70
+    inp["yayinevi"] = "Sufi Kitap"
+    assert F.compute(inp, t)["summary"]["dolayliOran"] == 40
+    inp["yayinevi"] = "Timaş Akademi"  # listede yok → genel dijital oran
+    assert F.compute(inp, t)["summary"]["dolayliOran"] == 40
+    inp["dolayli"] = 55  # elle girilen her zaman geçerli
+    assert F.compute(inp, t)["summary"]["dolayliOran"] == 55

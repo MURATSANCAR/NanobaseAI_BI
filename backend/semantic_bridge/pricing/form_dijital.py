@@ -42,6 +42,16 @@ def page_price(dt: dict, ebat: Optional[str], kagit: Optional[str], adjust_pct: 
     return float(v) * (1 + (adjust_pct or 0) / 100.0)
 
 
+def default_overhead(tariff: dict, yayinevi: Optional[str]) -> float:
+    """Dijitalde dolaylı gider varsayılanı: yayınevinin oranı (Excel'lerde yayınevine göre değişiyor: Timaş İnanç/Tarih
+    %70, Sufi %40), listede yoksa genel dijital oran. Kitap hesabında elle değiştirilebilir."""
+    F = _helpers()
+    dt = tariff.get("dijital") or {}
+    by = dt.get("dolayliYayinevi") or {}
+    v = next((float(x) for k, x in by.items() if F._norm(k) == F._norm(yayinevi)), None)
+    return v if v is not None else float(dt.get("dolayli", 40))
+
+
 def compute(inp: dict[str, Any], tariff: dict[str, Any]) -> dict[str, Any]:
     F = _helpers()
     f = F._f
@@ -164,7 +174,7 @@ def compute(inp: dict[str, Any], tariff: dict[str, Any]) -> dict[str, Any]:
 
     j29 = f28 + extra + other + j27
     j32 = j19 + j29
-    dolayli = f(inp.get("dolayli"), float(dt.get("dolayli", 40)))
+    dolayli = f(inp.get("dolayli"), default_overhead(tariff, inp.get("yayinevi")))
     dolayli = 0.0 if dolayli is None else dolayli
     j33 = j32 * dolayli / 100.0
     j34 = j32 + j33
