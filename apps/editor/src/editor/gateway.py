@@ -907,12 +907,50 @@ async def proxy(path: str, req: Request):
 
             return StreamingResponse(gen(), status_code=upstream.status_code,
                                      media_type=upstream.headers.get("content-type"))
-        r = await http.post(url, content=body, headers=headers)
+        try:
+            r = await _unless_client_gone(req, http.post(url, content=body, headers=headers))
+        except ClientGone:
+            release()
+            log.info("client gone, upstream %s request cancelled (%s)", a.name, path)
+            return Response(status_code=499)
         release()
         return Response(r.content, status_code=r.status_code,
                         headers={k: v for k, v in r.headers.items() if k.lower() not in HOP})
     except BaseException:
         release()
+        raise
+
+
+class ClientGone(Exception):
+    """The caller hung up (its read timeout) while the model request was still queued or running."""
+
+
+#: How often a waiting non-streaming request checks that its caller is still there.
+DISCONNECT_POLL_SEC = float(os.environ.get("EDITOR_DISCONNECT_POLL_SEC", "5"))
+
+
+async def _unless_client_gone(req: Request, call):
+    """Await the upstream call, but cancel it when the caller has gone. Measured 2026-10-04..06: 182 deep page scans
+    waited the client's whole read timeout in the model's queue; the caller sent the page again while this
+    handler kept its upstream request, so the model later read the same page for nobody. Cancelling closes the
+    upstream connection and vLLM aborts the request (its chat endpoint is `with_cancellation`)."""
+    task = asyncio.ensure_future(call)
+    check = getattr(req, "is_disconnected", None)
+    if check is None:
+        return await task
+    try:
+        while True:
+            done, _ = await asyncio.wait({task}, timeout=DISCONNECT_POLL_SEC)
+            if done:
+                return task.result()
+            if await check():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+                raise ClientGone()
+    except BaseException:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
         raise
 
 

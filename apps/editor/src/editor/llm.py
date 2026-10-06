@@ -39,7 +39,7 @@ def client() -> httpx.AsyncClient:
         held = (loop, httpx.AsyncClient(
             base_url=s.gateway_url,
             headers={"authorization": f"Bearer {s.gateway_key}"},
-            timeout=httpx.Timeout(3600.0, connect=15.0),
+            timeout=httpx.Timeout(float(s.model_timeout_seconds), connect=15.0),
             limits=httpx.Limits(max_connections=128, max_keepalive_connections=64),
         ))
         _clients[id(loop)] = held
@@ -78,6 +78,23 @@ def image_part(png: bytes) -> dict:
             "image_url": {"url": "data:image/png;base64," + base64.b64encode(png).decode()}}
 
 
+def request_digest(req: dict) -> str:
+    """The ledger's digest of a request: images replaced by their sha256 (ed.model_call.request_digest)."""
+    return hashlib.sha256(json.dumps(_redact(req), sort_keys=True).encode()).hexdigest()
+
+
+def cacheable(req: dict) -> bool:
+    """May this request be answered from an earlier identical call («aynı istek önbelleği»)?
+    Only a deterministic request: temperature 0 and one answer. A sampled call (temperature > 0) is never
+    answered from the ledger: a single visual reading is noisy (the same model agreed 18/26 times with itself)
+    and the votes / rechecks (text_visual_vote, continuity_vote, text_visual_recheck, 0.1-0.6) exist precisely
+    to sample it again; a cached answer would turn n votes into one vote counted n times."""
+    if not settings().llm_cache:
+        return False
+    t = req.get("temperature")
+    return t is not None and float(t) == 0.0 and int(req.get("n") or 1) == 1
+
+
 def _redact(obj: Any) -> Any:
     """Replace inline images with their digest so the ledger stays small."""
     if isinstance(obj, dict):
@@ -108,13 +125,28 @@ INTERACTIVE = {"x-editor-interactive": "1"}
 NO_WAIT = {**INTERACTIVE, "x-editor-no-wait": "1"}
 
 
+#: The request never reached the gateway (its container is being recreated: the name does not resolve, the port
+#: refuses): sending it again is safe. Measured 2026-10-03..05: 13 such windows, each <= 12 s, 1.000+ calls lost
+#: («[Errno -3] Temporary failure in name resolution»); two in-call retries 2 + 4 s apart did not span them.
+_GATEWAY_DOWN = (httpx.ConnectError, httpx.ConnectTimeout)
+
+
 async def _post(path: str, req: dict, headers: dict | None = None) -> httpx.Response:
     """POST to the gateway; while it answers gpu_busy, wait for room instead of failing.
     Holders of the GPU that are not the editor's are never stopped, so waiting is the only
-    honest move; the window is a setting and ends in the same error it would have raised."""
+    honest move; the window is a setting and ends in the same error it would have raised.
+    While the gateway itself cannot be reached, a background request (no INTERACTIVE / NO_WAIT headers)
+    waits for it too (EDITOR_GATEWAY_DOWN_WAIT_SECONDS) instead of spending its attempts in seconds."""
     deadline = time.time() + settings().gpu_wait_seconds
+    down_deadline = time.time() + settings().gateway_down_wait_seconds
     while True:
-        r = await client().post(path, json=req, headers=headers)
+        try:
+            r = await client().post(path, json=req, headers=headers)
+        except _GATEWAY_DOWN:
+            if headers or time.time() >= down_deadline:
+                raise
+            await asyncio.sleep(5)
+            continue
         if r.status_code == 503 and "gpu_busy" in r.text and time.time() < deadline:
             await asyncio.sleep(30)
             continue
@@ -123,6 +155,22 @@ async def _post(path: str, req: dict, headers: dict | None = None) -> httpx.Resp
 
 class ModelError(RuntimeError):
     pass
+
+
+def _error_text(e: BaseException | None) -> str:
+    """The ledger's error text. A transport error carries its class name: an httpx timeout's own text is empty,
+    and 182 page scans were recorded with no error at all (2026-10-04..06). editor.transient reads the name."""
+    if e is None:
+        return ""
+    if isinstance(e, httpx.HTTPError):
+        return f"{type(e).__name__}: {e}"[:2000]
+    return str(e)[:2000]
+
+
+def _timed_out(e: BaseException) -> bool:
+    """A read/write/pool timeout: the request was sent and waited the whole window. (A connect timeout never
+    reached the gateway; _post already waited for it.)"""
+    return isinstance(e, httpx.TimeoutException) and not isinstance(e, httpx.ConnectTimeout)
 
 
 class ContextOverflow(ModelError):
@@ -163,7 +211,7 @@ class Llm:
                       ok: bool, error: str | None) -> int:
         meta = (await aliases()).get(alias, {})
         red = _redact(request)
-        digest = hashlib.sha256(json.dumps(red, sort_keys=True).encode()).hexdigest()
+        digest = request_digest(request)
         row = await asyncio.to_thread(
             db.one,
             "INSERT INTO model_call(generation_id, alias, real_model, revision, prompt_name,"
@@ -177,11 +225,35 @@ class Llm:
             int((time.time() - t0) * 1000), ok, error)
         return row["id"]
 
+    async def _cached(self, alias: str, req: dict) -> dict | None:
+        """The newest successful ed.model_call with this exact request (same digest, alias, model and
+        revision) in this book version's readings: a repeated reading or a repair asks the same questions
+        again. None when there is no scope (no generation), the revision is unknown, or nothing matches."""
+        if not self.generation_id:
+            return None
+        meta = (await aliases()).get(alias, {})
+        real, rev = meta.get("real_model"), meta.get("revision")
+        if not real or not rev or rev in ("?", "unknown"):
+            return None
+        return await asyncio.to_thread(
+            db.one,
+            "SELECT m.id, m.response FROM model_call m WHERE m.request_digest=%s AND m.ok AND m.alias=%s"
+            " AND m.real_model=%s AND m.revision=%s AND m.response IS NOT NULL AND m.generation_id IN"
+            " (SELECT g.id FROM generation g WHERE g.book_version_id=(SELECT book_version_id FROM generation"
+            " WHERE id=%s)) ORDER BY m.id DESC LIMIT 1",
+            request_digest(req), alias, real, rev, self.generation_id)
+
     async def chat(self, alias: str, messages: list[dict], *, prompt: PromptRef | None = None,
                    schema: dict | None = None, pages: list[int] | None = None,
                    max_tokens: int = 4096, temperature: float = 0.2,
-                   thinking: bool | None = None, retries: int = 2) -> tuple[Any, int]:
-        """Returns (parsed JSON if schema else text, model_call id)."""
+                   thinking: bool | None = None, think_budget: int | None = None,
+                   cache: bool = True, retries: int = 2) -> tuple[Any, int]:
+        """Returns (parsed JSON if schema else text, model_call id).
+
+        `think_budget`: vLLM `thinking_token_budget`: after this many reasoning tokens vLLM forces the end of
+        thinking and the model writes its answer in the same call (needs --reasoning-parser on the server;
+        vLLM 0.29 refuses the field otherwise). `max_tokens` must leave room for the answer after it.
+        `cache`: a deterministic request (`cacheable`) is first looked up in the ledger; False never is."""
         req: dict[str, Any] = {"model": alias, "messages": messages,
                                "max_tokens": max_tokens, "temperature": temperature}
         if schema is not None:
@@ -190,6 +262,16 @@ class Llm:
                 "schema": schema, "strict": True}}
         if thinking is not None:
             req["chat_template_kwargs"] = {"enable_thinking": thinking}
+        if think_budget:
+            req["thinking_token_budget"] = int(think_budget)
+        if cache and cacheable(req):
+            hit = await self._cached(alias, req)
+            content = ((hit or {}).get("response") or {}).get("content")
+            if hit and isinstance(content, str) and len(content) < 200000:
+                try:
+                    return (json.loads(content) if schema is not None else content), hit["id"]
+                except json.JSONDecodeError:
+                    pass
         last_err = None
         for attempt in range(retries + 1):
             t0 = time.time()
@@ -216,12 +298,17 @@ class Llm:
                 return out, cid
             except (ModelError, json.JSONDecodeError, httpx.HTTPError, KeyError) as e:
                 last_err = e
-                await self._record(alias, prompt, pages or [], req, resp, usage, t0, False,
-                                   str(e)[:2000])
+                await self._record(alias, prompt, pages or [], req, resp, usage, t0, False, _error_text(e))
                 if isinstance(e, ContextOverflow):
                     raise
                 if isinstance(e, ModelError) and "gpu_busy" in str(e):
                     raise
+                if _timed_out(e):
+                    # Waited the whole read timeout (in the gateway's card queue or the model's): a second
+                    # attempt would start at the back of the queue and outlive the activity (LONG). It is an
+                    # infrastructure failure; the activity's retry policy sends it again.
+                    raise ModelError(f"{alias} timed out after {settings().model_timeout_seconds}s: "
+                                     f"{_error_text(e)}") from e
                 # A deterministic retry repeats a degenerate loop token for token:
                 # move away from it instead (measured 2026-09-19, page 8 x3 identical).
                 _content = (resp or {}).get("content") or ""
@@ -242,7 +329,7 @@ class Llm:
                 req["temperature"] = min(0.7, temperature + 0.3 * (attempt + 1))
                 req["repetition_penalty"] = 1.1
                 await asyncio.sleep(2 * (attempt + 1))
-        raise ModelError(f"{alias} failed after {retries + 1} attempts: {last_err}")
+        raise ModelError(f"{alias} failed after {retries + 1} attempts: {_error_text(last_err)}") from last_err
 
     async def choose(self, alias: str, messages: list[dict], choices: list[str], *,
                      prompt: PromptRef | None = None, pages: list[int] | None = None,
@@ -256,6 +343,13 @@ class Llm:
                                "temperature": 0, "seed": seed, "logprobs": True, "top_logprobs": 20,
                                "structured_outputs": {"choice": choices},
                                "chat_template_kwargs": {"enable_thinking": False}}
+        if cacheable(req):
+            # one token read as a distribution at temperature 0 with a fixed seed: the same request gives the
+            # same probabilities (measured 2026-10-06: 31.197 repeated choose calls in 3 days)
+            hit = await self._cached(alias, req)
+            probs = ((hit or {}).get("response") or {}).get("probs")
+            if hit and isinstance(probs, dict) and set(probs) == set(choices):
+                return {c: float(probs[c]) for c in choices}, hit["id"]
         last_err = None
         for attempt in range(retries + 1):
             t0 = time.time()
@@ -281,14 +375,17 @@ class Llm:
                 return probs, cid
             except (ModelError, httpx.HTTPError, KeyError, IndexError, TypeError) as e:
                 last_err = e
-                await self._record(alias, prompt, pages or [], req, resp, None, t0, False,
-                                   str(e)[:2000])
+                await self._record(alias, prompt, pages or [], req, resp, None, t0, False, _error_text(e))
                 if isinstance(e, ContextOverflow):
                     raise
                 if isinstance(e, ModelError) and "gpu_busy" in str(e):
                     raise
+                if _timed_out(e):
+                    raise ModelError(f"{alias} choose timed out after {settings().model_timeout_seconds}s: "
+                                     f"{_error_text(e)}") from e
                 await asyncio.sleep(2 * (attempt + 1))
-        raise ModelError(f"{alias} choose failed after {retries + 1} attempts: {last_err}")
+        raise ModelError(f"{alias} choose failed after {retries + 1} attempts: {_error_text(last_err)}") \
+            from last_err
 
     async def embed(self, texts: list[str], *, instruction: str | None = None,
                     headers: dict | None = None) -> list[list[float]]:

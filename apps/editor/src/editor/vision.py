@@ -28,6 +28,21 @@ def contradicts(chk: dict) -> bool:
     return chk.get("relation") == "CONTRADICTS" if "relation" in chk else not chk.get("consistent", True)
 
 
+#: Answer room of a deep page scan after its thinking budget. Measured 2026-10-06 (3.724 scans): the JSON answer
+#: is p99 ~11.8k characters, longest 24k (~8k tokens); budget 8000 + 8192 keeps the old 16.384 ceiling.
+SCAN_ANSWER_TOKENS = 8192
+DEEP_SCAN_MAX_TOKENS = 16384
+
+
+def deep_scan_limits() -> tuple[int, int | None]:
+    """(max_tokens, thinking budget) of page_scan_deep (scan_page_deep and scan_page_deep_key).
+    EDITOR_VISION_THINK_BUDGET=0: no budget, the old 16.384 ceiling."""
+    budget = settings().vision_think_budget
+    if not budget:
+        return DEEP_SCAN_MAX_TOKENS, None
+    return budget + SCAN_ANSWER_TOKENS, budget
+
+
 EMPTY_SCAN = {"scene": {"setting": "", "time_of_day": "", "mood": "", "description": ""},
               "characters": [], "objects": [], "text_in_image": [], "text_visual_checks": [],
               "important_event": False, "uncertain": False, "uncertainty_reasons": []}
@@ -84,6 +99,7 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
         ref, body = prompts.render("page_scan_fast", page_no=str(page_no), page_text=text,
                                    known_names=", ".join(known_names(generation_id)) or "-")
         alias, pass_, max_tokens, thinking = "book-vision-fast", "FAST", 4096, None
+        budget = None
     else:
         fast = db.one("SELECT result, uncertainty_reasons FROM page_scan WHERE generation_id=%s "
                       "AND page_no=%s AND pass='FAST'", generation_id, page_no)
@@ -96,11 +112,12 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
             json.dumps((fast or {}).get("result") or {}, ensure_ascii=False),
             page_text=text, context_text=ctx or "-",
             known_characters=known_characters_text(generation_id))
-        alias, pass_, max_tokens, thinking = "book-vision-deep", "DEEP", 16384, None
+        max_tokens, budget = deep_scan_limits()
+        alias, pass_, thinking = "book-vision-deep", "DEEP", None
     out, call_id = await Llm(generation_id).chat(
         alias, [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
         prompt=ref, schema=schemas.PAGE_SCAN, pages=[page_no], max_tokens=max_tokens,
-        temperature=0.1, thinking=thinking)
+        temperature=0.1, thinking=thinking, think_budget=budget)
     if depth == "fast":
         # Which pages need the deep model is decided by evidence, not by the fast model's
         # own word (measured: it misnames figures on ~1 in 4 illustrated pages, sometimes

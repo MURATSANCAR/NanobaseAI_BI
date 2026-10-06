@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from pathlib import Path
 
@@ -243,10 +244,37 @@ def _version_row(book_version_id: str) -> dict:
     return bv
 
 
+_PNG_END = b"IEND\xaeB`\x82"
+
+
+def png_complete(path: Path) -> bool:
+    """A whole PNG: the signature at the start and the IEND chunk at the end. Measured 2026-10-06: one page
+    image of 23.639 was 0 bytes (written while its process died); every reading sent it to the model again and
+    the model answered «Failed to load image: cannot identify image file» 24 times in a row, never re-rendered."""
+    try:
+        size = path.stat().st_size
+        if size < 64:
+            return False
+        with path.open("rb") as f:
+            head = f.read(8)
+            f.seek(size - 8)
+            return head == b"\x89PNG\r\n\x1a\n" and f.read(8) == _PNG_END
+    except OSError:
+        return False
+
+
 def _render_to(page: pymupdf.Page, out: Path, long_side_px: int) -> dict:
+    """Render once and keep. Written to a temporary name and renamed into place, so a reader (another process
+    rendering the same page, a model call) never sees a half-written file; an existing file that is not a whole
+    PNG is rendered again."""
     zoom = long_side_px / max(page.rect.width, page.rect.height)
-    if not out.exists():
-        page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False).save(out)
+    if not png_complete(out):
+        tmp = out.with_name(f".{out.name}.{os.getpid()}.tmp")
+        try:
+            page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False).save(str(tmp), output="png")
+            os.replace(tmp, out)
+        finally:
+            tmp.unlink(missing_ok=True)
     return {"page_no": page.number + 1, "path": str(out), "dpi": round(72 * zoom)}
 
 

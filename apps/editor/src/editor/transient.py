@@ -39,12 +39,21 @@ _MODEL_STATUS = ("502", "503", "504")
 _DETERMINISTIC = ("context length", "finish_reason=length", "maximum context")
 
 
+#: The gateway could not be reached or never answered in time (editor.llm writes the transport error's class
+#: name into the message: «book-vision-deep failed after 3 attempts: ConnectError: [Errno -3] Temporary failure
+#: in name resolution», «… timed out after 6600s: ReadTimeout: »). Measured 2026-10-03..06: 48 cluster_name and
+#: 700+ other calls lost to the gateway's container being recreated; 182 page scans to a queue timeout.
+_UNREACHABLE = ("name resolution", "connection refused", "all connection attempts failed", " timed out after ")
+
+
 def model_text_transient(text: str) -> bool:
-    """A ModelError message from editor.llm: transient when the model was busy / down."""
+    """A ModelError message from editor.llm: transient when the model was busy / down / unreachable."""
     low = (text or "").lower()
     if any(m in low for m in _DETERMINISTIC):
         return False
-    if any(m in low for m in _MODEL_BUSY):
+    if any(m in low for m in _MODEL_BUSY) or any(m in low for m in _UNREACHABLE):
+        return True
+    if any(f"{t.lower()}:" in low for t in INFRA_TYPES):
         return True
     return any(low.startswith(s) or f": {s}" in low for s in _MODEL_STATUS)
 

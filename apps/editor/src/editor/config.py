@@ -41,6 +41,11 @@ class Settings:
     cluster_name_margin: float
     proper_name_min_share: float
     proper_name_min_uses: int
+    vision_think_budget: int
+    cluster_think_budget: int
+    model_timeout_seconds: int
+    gateway_down_wait_seconds: int
+    llm_cache: bool
 
     @property
     def storage(self) -> Path:
@@ -118,4 +123,20 @@ def settings() -> Settings:
         # must give before the share is read at all; at 1 a single use decides.
         proper_name_min_share=float(env("EDITOR_PROPER_NAME_MIN_SHARE", "0.8")),
         proper_name_min_uses=int(env("EDITOR_PROPER_NAME_MIN_USES", "1")),
+        # Düşünme bütçesi (vLLM `thinking_token_budget`, 0 = sınırsız/eski davranış). Bütçe dolunca vLLM `</think>`
+        # yazdırır, model aynı çağrıda cevabı yazar. Ölçüm 2026-10-06 (book-vision-deep, 3 gün): page_scan_deep
+        # 3.724 çağrıda düşünme payı ~%62, 136 çağrı 16.384 sınırına vurup 0 karakter cevapla düştü (2,23 M token);
+        # 8000'de yalnız 4 çağrı kesilirdi. cluster_name: düşünme %95, 141 uzunluk düşüşü; 4000'de %6 kesilir.
+        vision_think_budget=max(0, int(env("EDITOR_VISION_THINK_BUDGET", "8000") or 0)),
+        cluster_think_budget=max(0, int(env("EDITOR_CLUSTER_THINK_BUDGET", "4000") or 0)),
+        # Model çağrısının okuma zaman aşımı. Gateway'in modelden önceki en uzun bekleyişi kart sırası (YIELD_MAX
+        # 1500 sn) + model açılışı (start_timeout 1800 sn) = 3300 sn; başarılı derin taramanın p99 süresi (kuyruk
+        # dahil) 3335 sn. 3600'de 182 page_scan_deep sırada bekleyip düşüyor, aynı istek yeniden kuyruğa giriyordu.
+        # Aktivite süresi (LONG) 7200 sn: 6600 ona 10 dk pay bırakır; zaman aşımı çağrı içinde yeniden denenmez.
+        model_timeout_seconds=int(env("EDITOR_MODEL_TIMEOUT_SECONDS", "6600")),
+        # Gateway'e hiç bağlanılamıyorsa (konteyner yeniden kuruluyor: «Temporary failure in name resolution»,
+        # bağlantı reddi) bu kadar beklenir; deneme hakkı harcanmaz. Ölçüm: 13 kesinti, her biri ≤ 12 sn.
+        gateway_down_wait_seconds=int(env("EDITOR_GATEWAY_DOWN_WAIT_SECONDS", "300")),
+        # Aynı istek önbelleği (editor.llm): yalnız sıcaklık 0 ve oylama olmayan çağrılar ("0": kapalı).
+        llm_cache=env("EDITOR_LLM_CACHE", "1") != "0",
     )

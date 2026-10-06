@@ -34,7 +34,7 @@ from pathlib import Path
 
 import httpx
 
-from . import db, ledger, prompts, schemas
+from . import db, ledger, prompts, schemas, transient
 from .config import settings
 from .document import page_text_numbered, render_page
 from .llm import Llm, image_part
@@ -227,6 +227,21 @@ def cluster_scores(generation_id: str, clusters: dict) -> tuple[list[dict], dict
     return chars, scores, []
 
 
+#: cluster_name's answer is a few hundred characters (measured 2026-10-06: longest 413); the rest is thinking.
+CLUSTER_ANSWER_TOKENS = 2048
+CLUSTER_MAX_TOKENS = 6144
+
+
+def cluster_name_limits() -> tuple[int, int | None]:
+    """(max_tokens, thinking budget) of cluster_name. Measured 2026-10-06: 95% of its tokens were thinking and
+    141 calls ran into the 6.144 ceiling with no answer; a 4000 budget (EDITOR_CLUSTER_THINK_BUDGET) cuts ~6% of
+    the thinking short and always leaves room for the answer under the old ceiling. 0 = no budget (old)."""
+    budget = settings().cluster_think_budget
+    if not budget:
+        return CLUSTER_MAX_TOKENS, None
+    return max(CLUSTER_MAX_TOKENS, budget + CLUSTER_ANSWER_TOKENS), budget
+
+
 async def adjudicate(generation_id: str, clusters: dict, chars: list[dict], scores: dict,
                      cids: list[str]) -> dict:
     """Every cluster — but only once per cluster, not once per figure — is shown to the
@@ -275,13 +290,19 @@ async def adjudicate(generation_id: str, clusters: dict, chars: list[dict], scor
             "cluster_name", pages=", ".join(map(str, clusters["pages"][cid])),
             candidates="\n".join(card(k) for k in cands),
             pages_text="\n".join(page_text_numbered(generation_id, p) for p in pages))
+        max_tokens, budget = cluster_name_limits()
         try:
             async with sem:
                 out, _ = await llm.chat("book-vision-deep",
                                         [{"role": "user", "content": parts + [{"type": "text", "text": body}]}],
                                         prompt=ref, schema=schemas.CLUSTER_NAME,
-                                        pages=clusters["pages"][cid], max_tokens=6144, temperature=0.0)
-        except Exception:  # noqa: BLE001
+                                        pages=clusters["pages"][cid], max_tokens=max_tokens, temperature=0.0,
+                                        think_budget=budget)
+        except Exception as e:  # noqa: BLE001
+            if transient.is_transient(e):
+                # the gateway or the model was not there: the cluster is not «unnamed», the step is retried
+                # (verdicts already written are read back from cluster_verdict, not asked again)
+                raise
             return cid, None
         pick = next((k for k in cands if ledger.norm(chars[k]["canonical_name"]) == ledger.norm(out["name"])),
                     None)
