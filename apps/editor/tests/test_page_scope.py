@@ -48,7 +48,8 @@ def test_imprint_and_advert_tail_found_without_any_suggestion():
     found = page_scope.classify(pages, set(), 120, ["Deneme Kitabı"], [])
     assert found[2][0] == "FRONT_MATTER"       # güçlü künye işareti (ISBN + sertifika)
     assert found[119] == ("NON_STORY", "yayınevi tanıtımı")     # kitabın son sayfaları aday
-    assert 4 not in found and 7 not in found   # yazar tanıtımı, ithaf yalnız öneriyle
+    # K22 (2026-10-06): yazar/çevirmen özgeçmişi ön sayfada okumanın önerisi olmadan da tanınır; ithaf yine öneriyle
+    assert found[4] == ("FRONT_MATTER", "yazar tanıtımı") and 7 not in found
 
 
 def test_out_of_scope_only_from_editor_or_rule():
