@@ -1448,6 +1448,9 @@ def register(app, runtime, authorize, session_user):
     # ------------------------------------------------------------------ CRM kitap kartı ve haklar
     CRM_FILTERS = {"eksik", "yok", "incele", "var", "koruma_disi", "durum", "eslesmedi", "onizleme", "video"}
 
+    #: Hazır kaydın kural sürümü: eşleşmeyen sayımının kuralı değişince eski kayıt kullanılmaz.
+    CRM_RULE = ("kitap-barkodu-2026-10-06",)
+
     def _crm_join():
         return PRODUCTS.outerjoin(CRM_BOOKS, sa.and_(CRM_BOOKS.c.tenant_id == PRODUCTS.c.tenant_id, CRM_BOOKS.c.ean == EAN))
 
@@ -1477,7 +1480,7 @@ def register(app, runtime, authorize, session_user):
 
     def crm_counts() -> dict[str, Any]:
         seo.engine()
-        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)])
+        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)], CRM_RULE)
         return hazir.al(seo, "crm.summary", st, _crm_counts)
 
     hazir.kaydet(seo, "crm.summary", crm_counts)
@@ -1508,7 +1511,7 @@ def register(app, runtime, authorize, session_user):
 
     def crm_rows() -> list[list[Any]]:
         seo.engine()
-        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)])
+        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)], CRM_RULE)
         return hazir.al(seo, "crm.rows", st, _crm_rows)
 
     hazir.kaydet(seo, "crm.rows", crm_rows)
