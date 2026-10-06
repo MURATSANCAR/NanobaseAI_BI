@@ -270,11 +270,16 @@ async def dispatch_once() -> str | None:
         foundation.assert_enabled()
     except RuntimeError:
         return None  # bakım: kuyruk bekler
-    nxt = db.one("SELECT id FROM analysis_job WHERE status='QUEUED' AND workflow_id IS NULL ORDER BY "
+    nxt = db.one("SELECT id, profile FROM analysis_job WHERE status='QUEUED' AND workflow_id IS NULL ORDER BY "
                  + QUEUE_ORDER + " LIMIT 1")
     if not nxt:
         return None
     job_id = str(nxt["id"])
+    if nxt.get("profile") == "archive":
+        # aynı kitabın başka dosyası okunmuş/okunuyor ya da önce okunacaksa bu dosya kopyadır: bekletilir (K23)
+        from . import archive
+        if await archive.hold_if_duplicate(job_id):
+            return None
     wf_id = f"book-analysis-{job_id}"
     try:
         await (await jobs.temporal()).start_workflow(jobs.WORKFLOW, job_id, id=wf_id, task_queue=settings().task_queue)

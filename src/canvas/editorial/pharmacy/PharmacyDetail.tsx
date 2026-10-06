@@ -409,6 +409,12 @@ export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string;
                 .filter(Boolean)
                 .join(' · ')}
             </p>
+            {!!b.copies?.length && (
+              <p className="mt-1 break-words text-[12px] text-canvas-muted">
+                {nf.format(b.files ?? b.copies.length + 1)} dosya — kopyalar okunmaz, bekletilir:{' '}
+                {b.copies.map((c) => (c.pages ? `${nf.format(c.pages)} sayfalık dosya` : 'dosya')).join(', ')}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Pill tone={pill.tone}>Okuma: {pill.text}</Pill>
               {red && <Pill tone={red.tone}>{red.text}</Pill>}

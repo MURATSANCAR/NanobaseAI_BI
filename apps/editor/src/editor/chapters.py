@@ -118,11 +118,36 @@ def _strip_running_heads(raw: dict[int, list[dict]], names=()) -> dict[int, list
     return out
 
 
+def strip_print_notes(raw: dict[int, list[dict]]) -> dict[int, list[dict]]:
+    """Baskı/üretim notu ve dizgi dosyasında kalmış özgün dil satırı (`editor.print_note`, K20: «BIÇAK», «KAPAK
+    içine baskı», «PANTONE 129», «EBAT: 22 X 22», «Ist ein Geräusch aus dem …») bölüm açılışı aranmadan atılır;
+    dizgi dosyasında notla metnin aynı satırda durduğu satırdan («KAPAK içine baskı İşte burada!») not parçası
+    çıkar. Kitabın dili ve dosyanın dizgi dosyası olup olmadığı bütün satırlardan (`print_note.book_context`)."""
+    from . import print_note
+    ctx = print_note.book_context([ln["text"] for ls in raw.values() for ln in ls])
+    production = print_note.is_production_file(ctx)
+    out = {}
+    for i, ls in raw.items():
+        kept = []
+        for ln in ls:
+            if print_note.note_kind(ln["text"], ctx):
+                continue
+            if production and print_note.note_spans(ln["text"]):
+                text = print_note.strip_notes(ln["text"])
+                if not re.search(r"[^\W\d_]", text):
+                    continue
+                ln = {**ln, "text": text}
+            kept.append(ln)
+        out[i] = kept
+    return out
+
+
 def page_layout(doc, page_lines, names=()) -> dict:
     """Kitabın gövde puntosu, satır aralığı ve normal metnin üst kenarı; sayfa başlığı/altlığı ayıklanmış satırlar.
     `names`: kitabın adı/yazarı — kenarda tekrar eden bu satır az sayfada olsa da sayfa başlığıdır."""
-    raw = _strip_running_heads({i: [ln for ln in page_lines(p) if ln["text"].strip() and not ln["text"].strip().isdigit()]
-                                for i, p in enumerate(doc, 1)}, names)
+    raw = _strip_running_heads(strip_print_notes({i: [ln for ln in page_lines(p) if ln["text"].strip()
+                                                      and not ln["text"].strip().isdigit()]
+                                                  for i, p in enumerate(doc, 1)}), names)
     sizes: Counter = Counter()
     for ls in raw.values():
         for ln in ls:
@@ -200,9 +225,21 @@ def _opening(v: dict, L: dict) -> dict | None:
     title = " ".join(ln["text"].strip() for ln in _reading_order(head))
     if title[:1].islower() and not sunk:
         return None
-    if _sentence(title) or _UNFINISHED.search(title):
+    if _sentence(title) or _UNFINISHED.search(title) or continues_as_sentence(title, ls[i]["text"] if i < len(ls) else ""):
         return {"title": "", "size": 0, "kind": "sunk"} if sunk else None
     return {"title": title, "size": max(ln["size"] for ln in head), "kind": "sunk" if sunk else "head"}
+
+
+def continues_as_sentence(title: str, next_line: str) -> bool:
+    """Başlık adayı altındaki satırla tek cümle (K21, resimli kitabın iri puntolu gövdesi: «Bahçede yürürken
+    kabuğuna bir şey ‘tık’» / «diye çarptı.»): aday cümle sonu noktalamasıyla bitmiyor, en az 4 kelime ve içinde
+    küçük harfle başlayan kelime var, alttaki satır küçük harfle başlıyor. Büyük harfli/Başlık Yazımlı başlık ve
+    kısa şiir başlığı («Bir Kış Gecesi» / «kar yağıyordu») bu değildir."""
+    t, n = (title or "").strip(), (next_line or "").strip()
+    words = re.findall(r"[^\W\d_][\w’'‛-]*", t)
+    if len(words) < 4 or re.search(r"[.!?…:;]['\"”’»)]?$", t) or not n[:1].islower():
+        return False
+    return any(w[0].islower() for w in words[1:])
 
 
 def _title_continues(ln: dict, nxt: dict | None, gap: float) -> bool:
@@ -424,6 +461,64 @@ def _sentence_like(title: str) -> bool:
     return sum(w[0].islower() for w in rest) >= 0.75 * len(rest)
 
 
+def sentence_heading(title: str) -> bool:
+    """Başlık adayı bir cümle parçası mı (K21, 2026-10-06: resimli kitapta iri puntolu gövde bölüm adı oldu —
+    «Salsal ve Uğur, Çomar’ın önerisini…», «Sessizce konuşulanları dinleyen Kirpik Kirpik», «Annesi Annesi
+    gülümseyerek cevap verdi:»). `_sentence_like` (¾ küçük harf) ya da: ≥ 5 kelime ve ilk kelimeden sonrakilerin
+    yarısı küçük harfle (karakter adları büyük harflidir), virgülle süren ≥ 5 kelime ve %40 küçük harf, konuşmayı
+    açan iki nokta ile biten ≥ 3 kelime. Büyük harfli ya da Başlık Yazımlı başlık («YENİ PADİŞAH», «Kalelerin Fethi
+    Tekerlekli Kuleler») ve kısa ad öbeği («Ali, Veli ve Ben») değildir."""
+    t = (title or "").strip()
+    words = re.findall(r"[^\W\d_][\w’'‛-]*", t)
+    if _sentence_like(t):
+        return True
+    if len(words) < 3 or not words[0][0].isupper():
+        return False
+    rest = words[1:]
+    low = sum(w[0].islower() for w in rest)
+    if t.endswith(":") and low >= 1:
+        return True
+    if len(words) >= 5 and low >= 0.5 * len(rest):
+        return True
+    return len(words) >= 5 and bool(re.search(r"\w,\s+\w", t)) and low >= 0.4 * len(rest)
+
+
+#: Mektup hitabı: «Sevgili Kaptan Uzunbacak!», «Canım Annem,», «Dear John»
+_SALUTATION = re.compile(r"^(sevgili|canım|canim|aziz|azizim|değerli|degerli|kıymetli|muhterem|dear|liebe|lieber|"
+                         r"cher|chère)\b", re.I)
+
+
+def salutation(title: str) -> bool:
+    """Başlık adayı bir mektubun hitabı mı (≤ 6 kelime, «Sevgili …» ile açılır)."""
+    t = (title or "").strip()
+    return len(t.split()) <= 6 and bool(_SALUTATION.match(t.replace("İ", "i").replace("I", "ı")))
+
+
+def picture_body_headings(starts: list[dict], last_page: int) -> bool:
+    """Resimli kitabın (≤ `PICTURE_PAGES` sayfa) iri puntolu gövdesi başlık sanılmış mı: açılışların en az yarısı
+    yalnız iri puntoyla (bölüm başı boşluğu ya da başlık sayfası olmadan, `kind='head'`) tanınmış cümle parçası
+    (`sentence_heading`). Bilgi kitabının büyük harfli konu başlıkları («YENİ PADİŞAH», «BARIŞ»; 32 sayfada 28
+    başlık) cümle değildir; bölüm başı boşluğuyla dizilmiş şiir başlıkları (cümle biçimli dize) iri punto gövde
+    değildir — ikisi de kalır. Kalite denetimi için de: [{title, kind}] ve sayfa sayısıyla saf hesap."""
+    if not starts or last_page > PICTURE_PAGES:
+        return False
+    frag = sum(1 for s in starts if s.get("kind", "head") == "head" and sentence_heading(s.get("title") or ""))
+    return 2 * frag >= len(starts)
+
+
+def _contributor_bio(lines: list[str], names, page: int, last_page: int) -> bool:
+    """Ön/arka penceredeki sayfa yazar/çevirmen/çizer özgeçmişi mi (`page_scope.is_author_bio`, K22)."""
+    from .page_scope import edge_windows, is_author_bio
+    front, back = edge_windows(last_page)
+    return (page <= front or page >= back) and is_author_bio([t for t in lines if t], list(names or ()))
+
+
+#: Mektup romanı: bütün açılışlar hitapsa ve en az bu kadarsa mektuplar bölümdür (adları olduğu gibi kalır)
+LETTER_MIN = 3
+#: Resimli kitap: bu kadar ya da daha az sayfalık kitapta açılışların yarısı cümle parçasıysa iri punto gövdedir
+PICTURE_PAGES = 64
+
+
 def _scattered_weak(title: str) -> bool:
     """Harfleri dağılmış başlık, parçaları 1–2 harfli («KS DE T O», «LARI UN K A MU», «e v miş git», «M Zİ Bİ
     ÜKOSMAN Y»): en az üç harfli parça, yarısı ya da fazlası 1–2 harfli ve en az biri sözcük olmayan tek harf.
@@ -531,8 +626,9 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
     """Sayfalar (page_no + spans) ve dizgi açılışlarından bölümler: [{title, page_from, page_to}]. Sayfa
     başlığı/altlığı spanları (`source.RUNNING_HEAD`) sayfanın metni sayılmaz. `book_title`: kitabın adı ya da
     adları (kayıt, künye TITLE, CRM); `names`: yazar/çizer/çevirmen adları (künye, CRM) — başlıktaki imza atılır."""
+    from .source import NOT_BODY
     by_page = {p["page_no"]: [s["text"].strip() for s in p["spans"]
-                              if s["text"].strip() and s.get("role") != "running_head"] for p in pages}
+                              if s["text"].strip() and s.get("role") not in NOT_BODY] for p in pages}
     last_page = max(by_page, default=0)
     starts, pending = [], None
     for p in sorted(by_page):
@@ -550,6 +646,9 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
                     continue
         if h and h["title"] and _dedication(h["title"], by_page[p], p, last_page):
             pending = None              # ithaf sayfası bölüm açmaz (page_scope'un ithaf kuralı)
+            continue
+        if h and h["title"] and _contributor_bio(by_page[p], names, p, last_page):
+            pending = None              # yazar/çevirmen özgeçmişi («Ünver Alibey» başlıklı sayfa) bölüm açmaz
             continue
         near = pending is not None and p - pending["last"] <= 2
         if h and h["title"] and _CONTINUED.search(h["title"]):
@@ -603,8 +702,20 @@ def chapters_from_pages(pages: list[dict], headings: dict[int, dict], book_title
     # açılışlar azınlıksa (< %25) ve konuşma işareti taşıyorsa. Şiir kitabının dize başlıkları, cümle biçimli
     # başlıklı kitap (çoğunluk) ve isim öbeği başlık («Yeniden imparator olma girişimi») kalır.
     starts = [s for s in starts if not _garbled(s["title"])]
+    # K21: resimli kitapta (≤ PICTURE_PAGES sayfa) açılışların en az yarısı cümle parçasıysa iri punto gövdedir,
+    # kitabın başlık dizgisi değil: bölüm yok (kalan tek kelimelik «Salsal» da aynı iri gövdenin parçası).
+    if starts and picture_body_headings(starts, last_page):
+        starts = []
+    # Mektup hitabı («Sevgili Kaptan Uzunbacak!») mektubun ilk satırıdır. Bütün açılışlar hitapsa ve en az
+    # LETTER_MIN ise kitap mektup romanıdır, mektuplar bölüm kalır (ad olduğu gibi: hangi mektubun yakalandığı
+    # dizgiye bağlı, «3. Mektup» diye numaralamak yanlış sıra söylerdi); azınlıktaki ya da tek tük hitap düşer.
+    sal = [s for s in starts if salutation(s["title"])]
+    if sal and not (len(sal) == len(starts) and len(sal) >= LETTER_MIN):
+        starts = [s for s in starts if not salutation(s["title"])]
     sentences = [s for s in starts if s["kind"] != "page" and _sentence_like(s["title"])]
-    if sentences and len(starts) <= 2:
+    if len(starts) <= 2 and any(s["kind"] != "page" and sentence_heading(s["title"]) for s in starts):
+        # en çok iki açılışlı kitapta (resimli tek öykü) cümle parçası da düşer (K21: «Salsal ve Uğur, Çomar’ın …»)
+        sentences = [s for s in starts if s["kind"] != "page" and sentence_heading(s["title"])]
         drop = {id(s) for s in sentences}
     else:                                      # azınlıkta, konuşma işaretli («Genç adam dedi ki, ‘Sen…»)
         talk = [s for s in sentences if re.search(r"[,‘“”\"]", s["title"])]   # kesme (’ ') iyeliktir, konuşma değil

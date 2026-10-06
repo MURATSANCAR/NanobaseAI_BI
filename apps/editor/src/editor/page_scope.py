@@ -120,8 +120,14 @@ _BIO_CORE = re.compile(r"\b(do[ğg]du|d[üu]nyaya geldi|mezun oldu|e[ğg]itimini
 _BIO_CAREER = re.compile(r"\byazar(d[ıi]r|[ıi]|l[ıi][ğg]a|l[ıi]k|l[ıi][ğg][ıi])\b|yazmaya ba[şs]la|yay[ıi]mlan(d[ıi]|an|m[ıi][şs])|"
                          r"bas[ıi]ld[ıi]\b|eserler(i|inden)\b|[öo]d[üu]l(ü|[üu]n[üu]|ler|leri)\b|"
                          r"yazar[ıi]n\b.{0,60}\bkitab|kitaplar[ıi] (var|bulunmaktad|yay[ıi]mlan)|"
-                         r"[çc]ocuklar i[çc]in yaz", re.I)
+                         r"[çc]ocuklar i[çc]in yaz|"
+                         # K22 (2026-10-06): çevirmen/çizer/editör özgeçmişi («… çevirileri var», «editör olarak
+                         # çalıştı»): kitabın künyesinde adı olmayan katkıcı
+                         r"[çc]eviri(ler|leri|lerine|lerinde|si)\b|[çc]evirmen|[çc]evirdi[ğg]i\b|"
+                         r"edit[öo]r(l[üu][ğk]|[üu])?\b|ill[üu]strat[öo]r|resimledi[ğg]i\b|yay[ıi]nevlerinde", re.I)
 _FIRST_PERSON_BIO = re.compile(r"\b(do[ğg]dum|mezun oldum|d[üu]nyaya geldim)\b", re.I)
+#: Özgeçmiş sayfasının başlığı olan kişi adı («Ünver Alibey»): 2–4 büyük harfle başlayan sözcük, rakam/cümle yok
+_NAME_HEADING = re.compile(r"^(?:[A-ZÇĞİÖŞÜÂÎÛ][^\W\d_]*\.?['’-]?\s+){1,3}[A-ZÇĞİÖŞÜÂÎÛ][^\W\d_]*$")
 BIO_WORDS = 300
 #: Arka kapak tanıtım yazısı: pazarlama sözü şart, ve bir tanıtım sözü daha (ya da okumanın önerisi). Kurgu dışı
 #: kitabın «Sonuç» sayfası «bu kitapta…» diyebilir ama pazarlama dili taşımaz.
@@ -296,7 +302,21 @@ def is_author_bio(lines: list[str], names: list[str], *, need_name: bool = False
         return False
     keys = _name_keys(names)
     named = bool(keys) and any(k in _fold(text) for k in keys)
-    return named or (not need_name and bool(_BIO_CAREER.search(text)))
+    # K22: sayfa bir kişi adıyla başlıyor ve altı üçüncü şahıs özgeçmişi («Ünver Alibey» / «… doğdu, … mezun
+    # oldu»): künyede adı olmayan çevirmenin ya da çizerin özgeçmişi. Biyografi türünde ad künyeden gelmeli.
+    headed = len(lines) >= 2 and bool(_NAME_HEADING.match(" ".join(lines[0].split())))
+    return named or (not need_name and (headed or bool(_BIO_CAREER.search(text))))
+
+
+def author_bio_pages(pages: dict[int, list[str]], last_page: int, names: list[str], *,
+                     form: str | None = None) -> set[int]:
+    """Ön/arka penceredeki yazar/çevirmen/çizer özgeçmişi sayfaları (`is_author_bio`; saf hesap — kalite denetimi
+    özetin ilk cümlesinin bu sayfalara dayanıp dayanmadığına bakabilir, K22). `pages`: {sayfa: paragraflar}."""
+    from . import running_head
+    front_end, back_start = edge_windows(last_page)
+    clean = running_head.strip_paragraphs(pages)
+    return {p for p, ps in clean.items() if (p <= front_end or p >= back_start)
+            and is_author_bio([t for t in ps if t.strip()], names, need_name=form == "NARRATIVE_NONFICTION")}
 
 
 def is_back_cover(lines: list[str], *, suggested: bool = False) -> bool:

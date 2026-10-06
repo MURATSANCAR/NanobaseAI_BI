@@ -193,6 +193,267 @@ def clean_title(path: str) -> str:
     return t[:300] or Path(path).stem[:300]
 
 
+# ------------------------------------------------------------------ aynı kitabın birden çok dosyası (K23)
+#: Aynı kitabın iki dosyası (özalit / iç baskı / «(2)» kopyası / çift sayfa düzeni) ayrı kitap olarak okunuyordu
+#: (2026-10-06: «Kulaklarını Kocaman Aç» 55 ve 27 sayfa). 2026-10-04 ölçümü: aynı adlı 225 grup / 507 kitap; metin
+#: katmanı benzerliği güvenilmez (özalitin katmanı farklı), görsel karma güvenilir (1453 çifti 0,98).
+#: Kural: aynı katlanmış ad + uyumlu sayfa sayısı (±%10 ya da biri ötekinin ~2 katı: iki sayfa tek PDF sayfasında)
+#: + örnek sayfaların küçük resim karması benzerliği ≥ DUP_SIMILARITY → aynı kitap. Kopyanın sıradaki işi
+#: `progress.hold='kopya'` ile bekletilir (CANCELLED; veri silinmez), Kitap Eczanesi'nde ana kitabın altında
+#: «N dosya». Okunmuş kopyaya dokunulmaz (yalnız raporlanır).
+DUP_HOLD = "kopya"
+DUP_SIMILARITY = float(os.environ.get("EDITOR_DUP_SIMILARITY", "0.85"))
+DUP_SAMPLE = int(os.environ.get("EDITOR_DUP_SAMPLE", "16"))
+DUP_ALL_PAGES = 80
+_HASH = 16                      # 16×16 fark karması (256 bit)
+
+
+def title_key(title: str) -> str:
+    """Kitap adının karşılaştırma anahtarı: katlanmış, noktalamasız, dosya hâli sözcükleri (özalit, baskı, iç…) yok."""
+    s = re.sub(r"\(\d+\)", " ", fold(title or ""))
+    s = re.sub(r"\d+\s*\.?\s*bask\w*", " ", s)
+    return " ".join(t for t in re.split(r"[^a-z0-9]+", s) if t and t not in NOISE)
+
+
+def pages_compatible(a: int, b: int) -> bool:
+    """Sayfa sayıları aynı kitabın iki dosyası olabilir mi: ±%10 ya da biri ötekinin ~2 katı (±2 sayfa: kapak)."""
+    lo, hi = sorted((int(a or 0), int(b or 0)))
+    if lo <= 0:
+        return False
+    return hi <= lo * 1.1 + 1 or abs(hi - 2 * lo) <= max(2, round(0.05 * hi))
+
+
+def _dhash(gray, w: int, h: int) -> int:
+    """Gri piksel dizisinden (w×h, satır satır bayt) 16×16 fark karması: komşu sütunların parlaklık farkı."""
+    cols, rows = _HASH + 1, _HASH
+    bits = 0
+    for r in range(rows):
+        y = min(h - 1, int((r + 0.5) * h / rows))
+        line = [gray[y * w + min(w - 1, int((cx + 0.5) * w / cols))] for cx in range(cols)]
+        for cx in range(_HASH):
+            bits = (bits << 1) | (1 if line[cx] > line[cx + 1] else 0)
+    return bits
+
+
+def page_hashes(path: str, page_nos: list[int]) -> list[list[int]]:
+    """Sayfa başına küçük resim karmaları (bir pdfproc görevi; `pdfproc.map_pages` imzası). Yatay geniş sayfa (iki
+    sayfa yan yana, en ≥ 1,2 × boy) bütün sayfanın yanında sol ve sağ yarısının karmasını da verir."""
+    import pymupdf
+    from . import pdfproc
+    doc = pdfproc.open_doc(path, repair=False)
+    out = []
+    for n in page_nos:
+        page = doc[n - 1]
+        r = page.rect
+        scale = 96.0 / max(r.width, r.height, 1.0)
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), colorspace=pymupdf.csGRAY, alpha=False)
+        g, w, h = pix.samples, pix.width, pix.height
+        hs = [_dhash(g, w, h)]
+        if r.width >= 1.2 * r.height and w >= 4:
+            half = w // 2
+            for x0 in (0, half):
+                part = bytes(b for y in range(h) for b in g[y * w + x0:y * w + x0 + half])
+                hs.append(_dhash(part, half, h))
+        out.append(hs)
+    return out
+
+
+def sample_pages(n: int, k: int = DUP_SAMPLE) -> list[int]:
+    """Karması alınacak sayfalar: kısa kitapta (≤ `DUP_ALL_PAGES`) hepsi — çift sayfa düzenli dosyanın yarımları
+    öteki dosyanın aynı sayfalarına denk gelsin; uzun kitapta eşit aralıklı `k` iç sayfa."""
+    if n <= DUP_ALL_PAGES:
+        return list(range(1, n + 1))
+    inner = list(range(2, n))
+    return sorted({inner[round(i * (len(inner) - 1) / (k - 1))] for i in range(k)})
+
+
+def _one_way(a: list[list[int]], b: list[list[int]]) -> float:
+    fa = [hs[0] for hs in a if hs]
+    fb = [x for hs in b for x in hs]
+    if not fa or not fb:
+        return 0.0
+    bits = _HASH * _HASH
+    best = sorted((max(1 - bin(x ^ y).count("1") / bits for y in fb) for x in fa), reverse=True)
+    top = best[:max(1, len(best) - len(best) // 4)]   # en kötü dörtte biri (kapak, boş sayfa, ek sayfa) sayılmaz
+    return sum(top) / len(top)
+
+
+def hash_similarity(a: list[list[int]], b: list[list[int]]) -> float:
+    """İki dosyanın sayfa karmalarının benzerliği (0–1): bir dosyanın her sayfası için ötekinin bütün karmaları
+    (yatay sayfanın yarımları dahil) içinde en yakını, en kötü dörtte biri atılarak ortalama; iki yönün büyüğü.
+    Sayfa kayması ve çift sayfa düzeni (tek sayfa ↔ yarım sayfa) sonucu değiştirmez."""
+    return max(_one_way(a, b), _one_way(b, a))
+
+
+_DRAFT = frozenset({"ozalit", "tashih", "kapak", "convert", "conv", "alm"})
+
+
+def file_rank(f: dict) -> tuple:
+    """Okunacak dosyanın önceliği (küçük önce): okunmuş/okunan dosya, özalit/tashih/kapak olmayan ad, sayfa başına
+    daha çok metin (tam metinli baskı dosyası), tek sayfa düzeni (daha çok sayfa), eski kayıt."""
+    toks = set(re.split(r"[^a-z0-9]+", fold(Path(f.get("path") or "").stem)))
+    read = 0 if f.get("status") in ("SUCCEEDED", "RUNNING") or f.get("workflow_id") else 1
+    tpp = (f.get("text_chars") or 0) / max(1, f.get("pages") or 1)
+    return (read, 1 if toks & _DRAFT else 0, -round(tpp / 50), -(f.get("pages") or 0), str(f.get("created_at") or ""),
+            str(f.get("book_id")))
+
+
+def duplicate_clusters(files: list[dict], hashes: dict[str, list[list[int]]],
+                       threshold: float = DUP_SIMILARITY) -> list[dict]:
+    """Saf hesap: [{key, primary, copies:[{…, similarity}]}]. `files`: {book_id, title, pages, path, status, …};
+    `hashes`: book_id → `page_hashes` sonucu. Aynı `title_key` + `pages_compatible` + benzerlik ≥ `threshold`
+    olan dosyalar tek küme (bağlantılı bileşen); ana dosya `file_rank`'a göre."""
+    groups: dict[str, list[dict]] = collections.defaultdict(list)
+    for f in files:
+        k = title_key(f.get("title") or "")
+        if k:
+            groups[k].append(f)
+    out = []
+    for k, grp in groups.items():
+        if len(grp) < 2:
+            continue
+        parent = {str(f["book_id"]): str(f["book_id"]) for f in grp}
+
+        def root(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+        sims: dict[tuple, float] = {}
+        for i, a in enumerate(grp):
+            for b in grp[i + 1:]:
+                ia, ib = str(a["book_id"]), str(b["book_id"])
+                if not pages_compatible(a.get("pages"), b.get("pages")) or ia not in hashes or ib not in hashes:
+                    continue
+                s = hash_similarity(hashes[ia], hashes[ib])
+                sims[(ia, ib)] = sims[(ib, ia)] = s
+                if s >= threshold:
+                    parent[root(ia)] = root(ib)
+        comps: dict[str, list[dict]] = collections.defaultdict(list)
+        for f in grp:
+            comps[root(str(f["book_id"]))].append(f)
+        for members in comps.values():
+            if len(members) < 2:
+                continue
+            members = sorted(members, key=file_rank)
+            p = members[0]
+            out.append({"key": k, "primary": p,
+                        "copies": [{**m, "similarity": round(max((v for (x, y), v in sims.items()
+                                                                   if x == str(m["book_id"])), default=0.0), 3)}
+                                   for m in members[1:]]})
+    return out
+
+
+def archive_files(c) -> list[dict]:
+    """Arşiv kipindeki kitaplar, kitap başına son arşiv işiyle (salt okuma)."""
+    rows = c.execute(
+        "SELECT DISTINCT ON (bv.book_id) bv.book_id, b.title, bv.id AS book_version_id, bv.file_path, bv.page_count"
+        " AS pages, bv.pdf_meta->>'archive_path' AS path, bv.created_at, j.id AS job_id, j.status, j.workflow_id,"
+        " j.progress->>'hold' AS hold FROM ed.analysis_job j JOIN ed.book_version bv ON bv.id=j.book_version_id"
+        " JOIN ed.book b ON b.id=bv.book_id WHERE j.profile=%s ORDER BY bv.book_id, j.created_at DESC",
+        (PROFILE,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def candidate_groups(files: list[dict]) -> list[list[dict]]:
+    """Karması hesaplanacak dosyalar: aynı adda, sayfa sayısı uyumlu en az iki dosya."""
+    groups: dict[str, list[dict]] = collections.defaultdict(list)
+    for f in files:
+        k = title_key(f.get("title") or "")
+        if k:
+            groups[k].append(f)
+    out = []
+    for grp in groups.values():
+        keep = [a for a in grp if any(a is not b and pages_compatible(a.get("pages"), b.get("pages")) for b in grp)]
+        if len(keep) >= 2:
+            out.append(keep)
+    return out
+
+
+async def file_hashes(files: list[dict]) -> dict[str, list[list[int]]]:
+    """Dosyaların örnek sayfa karmaları, PDF işlem havuzunda (`editor.pdfproc`). Açılamayan dosya atlanır."""
+    from . import pdfproc
+    out = {}
+    for f in files:
+        try:
+            n = int(f.get("pages") or 0) or await pdfproc.run(pdfproc.page_count, f["file_path"])
+            out[str(f["book_id"])] = await pdfproc.run(page_hashes, f["file_path"], sample_pages(n))
+        except Exception:  # noqa: BLE001 — dosyası açılamayan kitap kümeye girmez
+            continue
+    return out
+
+
+def hold_actions(clusters: list[dict]) -> list[dict]:
+    """Bekletilecek işler: kopyanın son işi sırada (QUEUED, başlatılmamış). Okunmuş/okunan/bekletilmiş kopya yalnız
+    rapora girer."""
+    out = []
+    for cl in clusters:
+        p = cl["primary"]
+        for m in cl["copies"]:
+            if m.get("status") == "QUEUED" and not m.get("workflow_id"):
+                out.append({"job_id": str(m["job_id"]), "book_id": str(m["book_id"]),
+                            "duplicate_of": {"book_id": str(p["book_id"]), "job_id": str(p["job_id"]),
+                                             "title": p.get("title"), "similarity": m.get("similarity")}})
+    return out
+
+
+def apply_holds(c, actions: list[dict]) -> int:
+    """Kopyanın sıradaki işini bekletir (`CANCELLED` + `progress.hold='kopya'` + `duplicate_of`). Yalnız hâlâ
+    sırada ve başlatılmamış iş; veri silinmez, `hold` kaldırılıp iş yeniden sıraya alınabilir."""
+    from . import db
+    n = 0
+    for a in actions:
+        row = c.execute("UPDATE ed.analysis_job SET status='CANCELLED', progress=coalesce(progress,'{}'::jsonb)"
+                        " || jsonb_build_object('hold', %s::text, 'duplicate_of', %s::jsonb)"
+                        " WHERE id=%s AND status='QUEUED' AND workflow_id IS NULL RETURNING id",
+                        (DUP_HOLD, db.J(a["duplicate_of"]), a["job_id"])).fetchone()
+        n += row is not None
+    return n
+
+
+def duplicates_report(clusters: list[dict], actions: list[dict]) -> str:
+    held = {a["job_id"] for a in actions}
+    lines = [f"{len(clusters)} küme, {sum(len(c['copies']) + 1 for c in clusters)} dosya, "
+             f"{sum(len(c['copies']) for c in clusters)} fazla kopya; bekletilecek iş {len(actions)}"]
+    for cl in clusters:
+        p = cl["primary"]
+        lines.append(f"- {p.get('title')} — okunacak: {p.get('path') or p.get('book_id')} ({p.get('pages')} s., "
+                     f"{p.get('status')})")
+        for m in cl["copies"]:
+            tag = "bekletilecek" if str(m.get("job_id")) in held else f"dokunulmaz ({m.get('status')})"
+            lines.append(f"    kopya: {m.get('path') or m.get('book_id')} ({m.get('pages')} s., benzerlik "
+                         f"{m.get('similarity')}) {tag}")
+    return "\n".join(lines)
+
+
+async def hold_if_duplicate(job_id: str) -> dict | None:
+    """Sıradaki arşiv işi başlamadan: kitap okunmuş/okunan ya da sırada daha öncelikli bir dosyanın kopyasıysa iş
+    bekletilir (`apply_holds`). Kuyruk servisi her başlatmadan önce sorar; hata kuyruğu durdurmaz (None)."""
+    from . import db, foundation
+    try:
+        with foundation.read_snapshot() as c:
+            me = c.execute("SELECT bv.book_id FROM ed.analysis_job j JOIN ed.book_version bv ON"
+                           " bv.id=j.book_version_id WHERE j.id=%s AND j.profile=%s", (job_id, PROFILE)).fetchone()
+            if me is None:
+                return None
+            files = archive_files(c)
+        mine = next((f for f in files if str(f["book_id"]) == str(me["book_id"])), None)
+        if mine is None:
+            return None
+        grp = next((g for g in candidate_groups(files) if any(f is mine for f in g)), None)
+        if not grp:
+            return None
+        clusters = duplicate_clusters(grp, await file_hashes(grp))
+        acts = [a for a in hold_actions(clusters) if a["job_id"] == str(job_id)]
+        if not acts:
+            return None
+        with db.tx() as c:
+            apply_holds(c, acts)
+        return acts[0]
+    except Exception:  # noqa: BLE001 — kopya denetimi okumayı durdurmaz
+        return None
+
+
 # ------------------------------------------------------------------ plan (kuru koşu ve gerçek koşu aynı)
 def _sha(path: Path) -> str:
     h = hashlib.sha256()
@@ -384,17 +645,20 @@ def listing_data(c, book_id: str | None = None) -> tuple[list[dict], set[str], l
     `book_id` verilirse yalnız o kitap."""
     from . import book_title
     from . import portal_books as PB
-    one = " AND bv.book_id=%s" if book_id else ""
+    # tek kitapta: kendisi ve bekletilen kopyaları (ana kitabın «N dosya»sı)
+    one = (" AND (bv.book_id=%s OR bv.book_id IN (SELECT bv2.book_id FROM ed.analysis_job j2 JOIN ed.book_version bv2"
+           " ON bv2.id=j2.book_version_id WHERE j2.progress->'duplicate_of'->>'book_id'=%s::text))") if book_id else ""
     tcols = ("b.title_source, b.title_review" if book_title.has_columns(c)
              else "NULL::text AS title_source, '{}'::text[] AS title_review")
     rows = c.execute(
         "SELECT DISTINCT ON (bv.book_id, j.profile) bv.book_id, b.title, " + tcols + ", j.id, j.profile, j.status, j.step,"
         " j.workflow_id, j.requested_by, j.created_at, j.finished_at, coalesce((j.progress->>'attempt')::int, 1)"
-        " AS attempt, j.progress->>'hold' AS hold, j.progress->'archive'->>'category' AS category, bv.page_count,"
+        " AS attempt, j.progress->>'hold' AS hold, j.progress->'duplicate_of'->>'book_id' AS duplicate_of,"
+        " j.progress->'archive'->>'category' AS category, bv.page_count,"
         " min(j.created_at) OVER (PARTITION BY bv.book_id, j.profile) AS submitted_at"
         " FROM ed.analysis_job j JOIN ed.book_version bv ON bv.id=j.book_version_id JOIN ed.book b ON b.id=bv.book_id"
         " WHERE j.profile IN ('archive','redaction')" + one +
-        " ORDER BY bv.book_id, j.profile, j.created_at DESC, j.id DESC", (book_id,) if book_id else ()).fetchall()
+        " ORDER BY bv.book_id, j.profile, j.created_at DESC, j.id DESC", (book_id, book_id) if book_id else ()).fetchall()
     ids = list({str(r["book_id"]) for r in rows})
     proofed = {str(r["book_id"]) for r in c.execute(
         "SELECT DISTINCT v.book_id FROM ed.proof_run r JOIN ed.generation g ON g.id=r.generation_id"
@@ -448,7 +712,29 @@ def shape(rows: list[dict], proofed: set[str], waiting: list[str], busy: int) ->
             b["redaction"] = it
     # Redaksiyon işi olan ama arşiv okuması bu listede görünmeyen kitap olmaz (redaksiyon arşiv neslinden açılır);
     # yine de okuma satırı yoksa kitap gösterilir, okuma durumu bilinmez (None).
-    return list(by.values())
+    return fold_copies(list(by.values()), {str(r["book_id"]): r.get("duplicate_of") for r in rows
+                                           if r["profile"] == PROFILE and r.get("hold") == DUP_HOLD
+                                           and r.get("duplicate_of")})
+
+
+def fold_copies(books: list[dict], copy_of: dict[str, str]) -> list[dict]:
+    """Kopya olarak bekletilen kitap (K23) listede ayrı satır değil, ana kitabın dosyasıdır: ana satırda `files`
+    (dosya sayısı, kendisi dahil) ve `copies` [{id, title, pages}]. Ana kitap listede yoksa kopya kendi satırında
+    kalır (kaybolmaz)."""
+    ids = {b["id"] for b in books}
+    for b in books:
+        b.setdefault("files", 1)
+        b.setdefault("copies", [])
+    by = {b["id"]: b for b in books}
+    out = []
+    for b in books:
+        main = copy_of.get(b["id"])
+        if main and main in ids and main != b["id"]:
+            by[main]["files"] += 1
+            by[main]["copies"].append({"id": b["id"], "title": b["title"], "pages": b.get("pages")})
+            continue
+        out.append(b)
+    return out
 
 
 def _stamp(b: dict) -> str:
@@ -631,6 +917,30 @@ def report_text(p: dict) -> str:
     return "\n".join(lines)
 
 
+def duplicates_main(apply: bool, json_path: str | None = None) -> int:
+    """`python -m editor.archive duplicates [--apply]`: kuru varsayılan (yalnız okur, raporlar)."""
+    from . import db, foundation
+
+    async def find():
+        with foundation.read_snapshot() as c:
+            files = archive_files(c)
+        cand = [f for grp in candidate_groups(files) for f in grp]
+        return duplicate_clusters(cand, await file_hashes(cand))
+    clusters = asyncio.run(find())
+    actions = hold_actions(clusters)
+    if json_path:
+        Path(json_path).write_text(json.dumps({"clusters": clusters, "actions": actions}, ensure_ascii=False,
+                                              indent=1, default=str), encoding="utf-8")
+    print(duplicates_report(clusters, actions))
+    if not apply:
+        print("\nKuru koşu: hiçbir şey yazılmadı.")
+        return 0
+    with db.tx() as c:
+        n = apply_holds(c, actions)
+    print(f"bekletmeye alınan iş: {n}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m editor.archive")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -643,7 +953,13 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("redaction", help="arşivde okunmuş kitabı redaksiyona aç (atlanan adımlar koşar)")
     r.add_argument("--generation", required=True)
     r.add_argument("--by", default="editor")
+    d = sub.add_parser("duplicates", help="aynı kitabın birden çok dosyası: kümeler; --apply ile kopyanın sıradaki "
+                                          "işi bekletilir (okunmuşa dokunulmaz)")
+    d.add_argument("--apply", action="store_true", help="sıradaki (QUEUED) kopya işlerini bekletmeye al")
+    d.add_argument("--json", help="kümeleri bu dosyaya yaz")
     a = ap.parse_args(argv)
+    if a.cmd == "duplicates":
+        return duplicates_main(a.apply, a.json)
     if a.cmd == "redaction":
         print(json.dumps(open_for_redaction(a.generation, a.by), ensure_ascii=False))
         return 0
@@ -665,6 +981,9 @@ def main(argv: list[str] | None = None) -> int:
             done["failed"] += 1
             print(f"alınamadı: {r_['path']}: {ex}", file=sys.stderr)
     print(json.dumps(dict(done), ensure_ascii=False))
+    # yeni alınan dosya sıradaki ya da okunmuş bir kitabın kopyasıysa işi bekletilir (K23)
+    if done["queued"]:
+        duplicates_main(apply=True)
     return 0
 
 

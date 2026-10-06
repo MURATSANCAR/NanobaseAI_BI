@@ -3043,6 +3043,10 @@ export type PharmacyBook = {
   title_review?: string[];
   category: PharmacyCategory | null;
   pages: number | null;
+  /** Aynı kitabın dosya sayısı (kendisi dahil): kopya dosyalar bu kitabın altında bekletilir, ayrı okunmaz. */
+  files?: number;
+  /** Bekletilen kopya dosyalar (aynı kitabın özalit / iç baskı / ikinci dosyası). */
+  copies?: { id: string; title: string; pages: number | null }[];
   read: PharmacyJob | null;
   /** Redaksiyon (son okuma) işi; açılmadıysa null. */
   redaction: PharmacyJob | null;

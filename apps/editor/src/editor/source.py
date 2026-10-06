@@ -46,16 +46,27 @@ def _span(gid: str, page: int, source: dict, start: int, end: int, role="body") 
 #: doğrulaması aynı), ama okumaya (numbered), aramaya (passages), ad sayımına ve bölüm bulmaya girmez
 #: (`editor.running_head`). Rol span kimliğine girmez: eski kanıtların span bağı geçerli kalır.
 RUNNING_HEAD = "running_head"
+#: Baskı/üretim notu ve dizgi dosyasında kalmış özgün dil satırı (`editor.print_note`, K20): sayfa başlığı gibi metin
+#: olarak korunur, okumaya/aramaya/ad sayımına/bölüm bulmaya girmez.
+PRINT_NOTE = "print_note"
+NOT_BODY = (RUNNING_HEAD, PRINT_NOTE)
 
 
 def body_spans(page: dict) -> list[dict]:
-    """Sayfanın gövde spanları (sayfa başlığı/altlığı hariç)."""
-    return [s for s in page["spans"] if s.get("role") != RUNNING_HEAD]
+    """Sayfanın gövde spanları (sayfa başlığı/altlığı ve baskı notu hariç)."""
+    return [s for s in page["spans"] if s.get("role") not in NOT_BODY]
+
+
+def shown(span: dict) -> str:
+    """Spanın okumaya/aramaya giden metni: dizgi dosyasında satırdaki baskı notu parçası çıkarılmış hâli
+    («KAPAK içine baskı İşte burada!» → «İşte burada!»; `display`), yoksa metnin kendisi. Kanıt doğrulaması `text`'e
+    bakar: gösterilen metin onun parçasıdır."""
+    return span.get("display") or span["text"]
 
 
 def body_text(pages: list[dict], sep: str = "\n") -> str:
     """Kitabın yazılı metni, sayfa başlığı/altlığı olmadan (özel ad sayımı: `naming.is_proper_name`)."""
-    return sep.join(s["text"] for p in pages for s in body_spans(p))
+    return sep.join(shown(s) for p in pages for s in body_spans(p))
 
 
 def _unreliable(page: dict) -> bool:
@@ -71,8 +82,10 @@ def base_source(page: dict, by_source: dict) -> str | None:
 
 
 def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | None = None,
-                 running=frozenset()) -> dict:
-    """`running`: bu sayfanın sayfa başlığı/altlığı olan kenar blokları ({"top", "bottom"}; `running_heads`)."""
+                 running=frozenset(), notes: dict | None = None) -> dict:
+    """`running`: bu sayfanın sayfa başlığı/altlığı olan kenar blokları ({"top", "bottom"}; `running_heads`).
+    `notes`: kitabın baskı notu bağlamı (`print_note.book_context`; `page_marks`) — bütünüyle not olan blok
+    `PRINT_NOTE` rolü alır, dizgi dosyasında notla metnin karıştığı satırın gösterilen metninden not çıkar."""
     ocr_attempted = any(s["source"] == "OCR" for s in sources)
     by_source = {s["source"]: s for s in sources if s["text"].strip()}
     layer, ocr = by_source.get("TEXT_LAYER"), by_source.get("OCR")
@@ -152,6 +165,8 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
             for span in spans:
                 if span["source"] == base["source"] and lo <= span["start"] and span["end"] <= hi:
                     span["role"] = RUNNING_HEAD
+    if notes and base:
+        _mark_notes(spans, base["source"], notes)
     for idx,span in enumerate(spans,1):
         span["idx"] = idx
     if not spans:
@@ -174,10 +189,34 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
         "spans":spans,"alternatives":alternatives}
 
 
+def _mark_notes(spans: list[dict], base: str, notes: dict) -> None:
+    """Taban okumanın spanlarında baskı notu (`editor.print_note`): bütünüyle not olan blok `PRINT_NOTE`; dizgi
+    dosyasında notla metnin aynı satırda durduğu blokta gösterilen metin (`display`) notsuz."""
+    from . import print_note
+    production = print_note.is_production_file(notes)
+    for span in spans:
+        if span["source"] != base or span.get("role") in NOT_BODY:
+            continue
+        if print_note.block_is_note(span["text"], notes):
+            span["role"] = PRINT_NOTE
+        elif production:
+            lines = span["text"].split("\n")
+            kept = [print_note.strip_notes(ln) if print_note.note_spans(ln) else ln for ln in lines]
+            if kept != lines:
+                span["display"] = "\n".join(ln for ln in kept if ln.strip())
+
+
 def running_heads(conn, generation_id: str, book_version_id) -> dict[int, set[str]]:
     """{sayfa: {"top"/"bottom"}} — kitabın sayfa başlığı/altlığı olan kenar blokları (`editor.running_head`).
     Bütün kitaba bakar ama sayfa metinlerinin yalnız kenarlarını okur (tek sayfalık sorguda da ucuz)."""
-    from . import running_head
+    return page_marks(conn, generation_id, book_version_id)[0]
+
+
+def page_marks(conn, generation_id: str, book_version_id) -> tuple[dict[int, set[str]], dict]:
+    """(`running_heads`, baskı notu bağlamı) — ikisi de sayfa metinlerinin yalnız kenarlarından (ilk/son
+    `running_head.WINDOW` karakter): notlar dizgi dosyasında sayfanın kenar bloklarıdır, kitabın dili de bu
+    örnekten sayılır (`print_note.book_context`)."""
+    from . import print_note, running_head
     w = running_head.WINDOW
     health = {r["page_no"]: r for r in conn.execute(
         "SELECT page_no,layer_health FROM ed.page WHERE book_version_id=%s", (book_version_id,))}
@@ -187,13 +226,17 @@ def running_heads(conn, generation_id: str, book_version_id) -> dict[int, set[st
     by_page: dict[int, dict] = {}
     for r in rows:
         by_page.setdefault(r["page_no"], {})[r["source"]] = r
-    edges = {}
+    edges, lines = {}, []
     for p, srcs in by_page.items():
         base = base_source(health.get(p) or {}, srcs)
         if base is None:
             continue
-        edges[p] = running_head.edge_texts(srcs[base]["head"], srcs[base]["tail"], srcs[base]["n"])
-    return running_head.detect(edges, len(edges), book_names(conn, generation_id))
+        r = srcs[base]
+        edges[p] = running_head.edge_texts(r["head"], r["tail"], r["n"])
+        sample = r["head"] if r["n"] <= len(r["head"]) else r["head"] + "\n" + r["tail"]
+        lines += [ln for ln in sample.splitlines() if ln.strip()]
+    heads = running_head.detect(edges, len(edges), book_names(conn, generation_id))
+    return heads, print_note.book_context(lines)
 
 
 def book_names(conn, generation_id: str) -> list[str]:
@@ -225,9 +268,9 @@ def load(conn, generation_id: str, page_no: int | None = None) -> list[dict]:
     by_page = {}
     for row in data:
         by_page.setdefault(row["page_no"],[]).append(row)
-    heads = running_heads(conn, generation_id, gen["book_version_id"])
+    heads, notes = page_marks(conn, generation_id, gen["book_version_id"])
     return [project_page(str(generation_id),p,by_page.get(p["page_no"],[]),roles.get(p["page_no"]),
-                         heads.get(p["page_no"], frozenset())) for p in pages]
+                         heads.get(p["page_no"], frozenset()), notes) for p in pages]
 
 
 def read(generation_id: str, page_no: int | None = None) -> list[dict]:
@@ -241,7 +284,7 @@ def numbered(page: dict) -> str:
     lines=[]
     for span in body_spans(page):
         tag = " [OCR eki; okuma sırası belirsiz]" if span.get("reading_order") else ""
-        lines.append(f"[s{page['page_no']} p{span['idx']}]{tag} {span['text']}")
+        lines.append(f"[s{page['page_no']} p{span['idx']}]{tag} {shown(span)}")
     if page["issues"]:
         lines.append("[KAYNAK UYARISI: " + ", ".join(page["issues"]) + "]")
     return "\n".join(lines) or "(metin yok)"
@@ -261,7 +304,7 @@ def coverage(generation_id: str) -> dict:
 def passages(generation_id: str) -> list[dict]:
     return [{"kind":"paragraph", "page_no":p["page_no"],
              "ref":f"s{p['page_no']}p{s['idx']}", "paragraph_idx":s["idx"],
-             "text":s["text"], "source_policy":POLICY, "reading_sha256":p["reading_sha256"],
+             "text":shown(s), "source_policy":POLICY, "reading_sha256":p["reading_sha256"],
              "source_span":{k:s[k] for k in ("span_id","source","source_sha256","start","end")},
              "source_issues":p["issues"]}
             for p in read(generation_id) for s in body_spans(p)]

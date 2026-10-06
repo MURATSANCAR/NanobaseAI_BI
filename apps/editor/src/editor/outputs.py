@@ -158,7 +158,7 @@ def snapshot_passages(snap: dict) -> list[dict]:
     for page in snap['sources']:
         for span in source.body_spans(page):     # sayfa başlığı/altlığı aranmaz
             out.append({'kind':'paragraph','page_no':page['page_no'],'paragraph_idx':span['idx'],
-                'ref':span['span_id'],'text':span['text'],'source_issues':page['issues']})
+                'ref':span['span_id'],'text':source.shown(span),'source_issues':page['issues']})
     for event in snap['events']:
         out.append({'kind':'event','page_no':event['page_from'],'ref':'event:'+event['id'],
                     'text':event['summary'],'claim_id':event['claim_id']})

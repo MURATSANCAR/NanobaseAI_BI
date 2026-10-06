@@ -76,7 +76,7 @@ function Row({ b, selected, onPick }: { b: PharmacyBook; selected: boolean; onPi
         <span className="min-w-0 flex-1">
           <span className="line-clamp-2 break-words text-[13px] font-bold leading-snug">{b.title}</span>
           <span className="mt-0.5 block truncate text-[11.5px] text-canvas-muted">
-            {[b.pages ? `${nf.format(b.pages)} sayfa` : null, b.site?.found ? b.site.categories[0] : b.site ? 'sitede bulunamadı' : null]
+            {[b.pages ? `${nf.format(b.pages)} sayfa` : null, (b.files ?? 1) > 1 ? `${nf.format(b.files ?? 1)} dosya` : null, b.site?.found ? b.site.categories[0] : b.site ? 'sitede bulunamadı' : null]
               .filter(Boolean)
               .join(' · ')}
           </span>
