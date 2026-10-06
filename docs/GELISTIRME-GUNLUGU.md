@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-10-06 — İlk baskı tahmini: stok ve yeniden baskı uyarısı (tükenme ayı + ek baskı adedi)
+
+- **Neden:** kullanıcı: «Babası Kılıklı» için firma «stok yetmedi» diyerek 100.000 daha bastı; «bunu da söylersek güzel olmaz mı». Ekran 12 ay revize tahmini gösteriyordu ama stokla karşılaştırmıyordu; kitap bir yılı doldurana kadar yeniden baskı uyarısı yoktu.
+- **Yapılan:** rapora iki kaynak (`logo_depo_stok`, `crm_bekleyen_siparis`; Baskı Öneri ile aynı SQL). `Engine.reprint`: elde kalan = depo − bekleyen sipariş; 12. aya kadar kalan satış revize tahminden, emsallerin aylık payıyla; tükenme ayı, durum (stok yok / acil < 2 ay / gerekli / yeterli), ek baskı (ihtiyaca yakın üst yuvarlama, `round_reprint`), aralık `calibrate_revise` (seçim döneminde revize/gerçekleşen oranı, ay sayısına göre). İlk satış takibi 6 → 12 ay (sonrasını Baskı Öneri izler). Ekran: kitap sayfasında «Stok ve yeniden baskı», takip sekmesinde «Stok» sütunu, kartta «N kitapta yeniden baskı gerekli»; sorgu bilgisinde `reprint` alanı.
+- **Gerçek veri (2026-10-06):** stok görünümü 2026 kitapları için güncel (Babası Kılıklı depo 16.955, bekleyen 1.820). Babası Kılıklı: Kasım 2026'da tükenir, ek baskı 91.535 → öneri 100.000 (firma 100.000 bastı). Takipteki 357 kitap: 26 acil, 7 stok yok, 58 gerekli. Kalan satış tahmininin geçmişteki tipik sapması %70–%79 — ekranda aralıkla birlikte. CRM'de Babası Kılıklı'nın ikinci baskısı henüz işlenmemiş.
+- **Testler:** `test_first_print.py` +2 (tükenme ayı, durumlar, bekleyen sipariş stoğu aşınca, 12 ayı dolan kitap, aralık kalibrasyonu, yuvarlama). Test sunucusunda 29/29, `tsc -b` temiz, vitest 4/4.
+
 ## 2026-10-06 — CRM seçenek adları uçtan uca denetim (yazım hataları ve tuhaf seçenekler)
 
 - **Neden:** seçenek adları artık CRM'den geldiği için CRM'deki hatalar ekrana çıkıyor; kullanıcı «başka var mı, uçtan uca bak» dedi.

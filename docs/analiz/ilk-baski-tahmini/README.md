@@ -145,6 +145,28 @@ Sınır: yazar kırılımı (Anıl Basılı «Anne Terliği»: geçmiş ~20 bin,
 (Talha Uğurluel: geçmiş ~22 bin, yeni kitaplar 3–6 bin) çarpanı yanıltır. Aynı eserin özel baskısı («Bez Ciltli»)
 yeni kitap sayılıyor ve yazar geçmişini aşağı çeker — ayrı iş.
 
+## Stok ve yeniden baskı (2026-10-06)
+
+Soru (kullanıcı): «Babası Kılıklı» için firma «stok yetmedi» diyerek 100.000 daha bastı; ekran 12 ay revize tahmini
+(194.353) gösteriyordu ama «stok bitecek, şu kadar daha basın» demiyordu. Kitap bir yılı doldurana kadar yeniden baskı
+uyarısı yoktu (Baskı Öneri'nin yeni kitap görünümü Power BI formülü: stok ÷ son 1 yıl ortalaması).
+
+**Yöntem (`Engine.reprint`, `calibrate_revise`):** elde kalan = Logo depo stoku (`EOS_DEPO_STOK_KONTROL_211`, Baskı
+Öneri ile aynı; 2026 kitapları için güncel — Babası Kılıklı 16.955 ≈ 100.000 − 80.586) − CRM bekleyen sipariş (aynı
+kural). 12. aya kadar kalan satış = 12 ay revize − gerçekleşen, emsallerin aylık payıyla aylara bölünür; birikimli
+satış elde kalanı geçtiği ay tükenme ayı. Aralık: seçim döneminde (12 ayı gözlenmiş 842 kitap) gerçekleşenin revize
+tahmine oranı, gerçekleşen ay sayısına göre (%20 / %50 / %80; m = 2'de 0,68 / 0,96 / 1,46). Ek baskı üste
+yuvarlanır (10 bine kadar binlik, 50 bine kadar 5 binlik, üstü 10 binlik; ilk baskı basamakları 30.000'den sonra
+100.000'e sıçradığı için kullanılmadı). Durum: stok yok · acil (< 2 ay) · gerekli (12. ay dolmadan biter) · yeterli.
+
+**Sınama (2024+, 630 kitap):** kalan satışın (12 ay − ilk m ay) tipik sapması m = 1…11 için %70–%79 — tek sayı
+olarak zayıf; bu yüzden ekran aralığı ve bu sapmayı yanında gösterir. Stokun geçmiş hâli tutulmadığı için tükenme
+ayının kendisi geçmişte sınanamaz.
+
+**Bugünkü sonuç (stok 2026-10-06):** takipteki 357 kitaptan 26 acil, 7 stok yok, 58 gerekli, 237 yeterli. Babası
+Kılıklı: elde 15.135, Kasım 2026'da tükenir, Temmuz 2027'ye kadar kalan satış 106.670 → ek baskı 91.535 → öneri
+**100.000** (aralık 36.128 – 187.352); firma 100.000 bastı. CRM'de ikinci baskı henüz yok (baskı sayısı 1).
+
 ## Açık noktalar
 
 - Canlı Logo (.25) yok: satış 17.08.2026'da bitiyor; Ağustos–Eylül 2026'da çıkan kitaplar «yayımlanacak» listesinde.
