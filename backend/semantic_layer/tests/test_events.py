@@ -512,3 +512,72 @@ def test_book_card_sql_uses_crm_column_spelling():
     """CRM harmanlaması Türkçe (I → ı): new_kitapid yazımı 207 ile düşüyordu, kitap önerisi 502 (2026-09-28 kabul)."""
     sql = S.books_sql("Timas_MSCRM.dbo")
     assert "k.new_kitapId AS id" in sql and "k.new_StokKodu AS stok_kodu" in sql and "new_kitapid" not in sql
+
+
+# ------------------------------------------------------------------ fuar takvimi (Excel)
+
+
+def _plan_xlsx() -> bytes:
+    """FUARLAR.xlsx'in iki sayfası: Gantt (ad başladığı günün sütununda, yıl satırları) + düz liste ve «netleşmedi» notu."""
+    import io
+
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    g = wb.active
+    g.title = "GÜNCEL FUAR TAKVİMİ"
+    g.append([None, *range(1, 32), "Fuar Tarihi", "Fuar Gün sayısı", "Fuar Alanı", "Düzenleyen Fuar Firması", "Katılımcı Firma"])
+    g.append([2026])
+    pad = lambda col, name: [None] * col + [name] + [None] * (31 - col)  # noqa: E731
+    g.append(["EYLÜL", *pad(24, "Uşak Kitap Fuarı"), "25 EYLÜL-04 EKİM", "10 GÜN", None, None, "bayi"])
+    g.append(["EKİM", "Rami", *[None] * 30])                                # tarihsiz kısa ad: atlanır
+    g.append([None, *pad(2, "Kocaeli Kitap Fuarı"), "03 EKİM-11 EKİM", "   9 GÜN", "Kocaeli kongre merkezi", "ka2 ajans", "TİMAŞ"])
+    g.append([None, *pad(0, "Bozuk Fuar"), "yakında", None, None, None, "bayi"])
+    g.append([2027])
+    g.append(["OCAK", *pad(8, "Çukurova Kitap Fuarı"), "09 OCAK-17 OCAK", "   9 GÜN", "Adana", "TÜYAP", "TİMAŞ"])
+    s = wb.create_sheet("fuar liste")
+    s.append([None])
+    s.append(["Sıra no", "Fuar Adı", "Fuar Tarihi", "KATILIMCI FİRMA", None, None, None, "2027 fuarlar  tarih netleşmedi"])
+    s.append([1, "Uşak kitap fuarı ", "25 EYLÜL-04 EKİM", "BAYİ", None, None, None, "Arnavutköy "])
+    s.append([2, "Kocaeli Kitap Fuarı", "03 - 11 EKİM", "TİMAŞ", None, None, None, "Bursa"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_fair_plan_parses_gantt_sheet_years_and_pending():
+    from semantic_bridge import fair_plan as FP
+
+    p = FP.parse_workbook(_plan_xlsx(), date(2026, 10, 6))
+    assert p["sheet"] == "GÜNCEL FUAR TAKVİMİ"                       # alanı çok olan sayfa seçilir
+    names = [i["name"] for i in p["items"]]
+    assert names == ["Uşak Kitap Fuarı", "Kocaeli Kitap Fuarı", "Çukurova Kitap Fuarı"]
+    u, k, c = p["items"]
+    assert (u["startsOn"], u["endsOn"], u["days"]) == ("2026-09-25", "2026-10-04", 10)
+    assert k["participant"] == "timas" and k["participantLabel"] == "TİMAŞ" and k["venue"] == "Kocaeli kongre merkezi"
+    assert u["participant"] == "bayi" and u["participantLabel"] == "Bayi"
+    assert c["startsOn"] == "2027-01-09"                                # 2027 yıl satırı
+    assert p["pending"] == {"title": "2027 fuarlar tarih netleşmedi", "items": ["Arnavutköy", "Bursa"]}
+    assert any("Bozuk Fuar" in w for w in p["warnings"])
+    assert FP.parse_range("02 - 11 EKİM", 2026) == (date(2026, 10, 2), date(2026, 10, 11))
+    assert FP.parse_range("28 ARALIK-03 OCAK", 2026) == (date(2026, 12, 28), date(2027, 1, 3))
+    with pytest.raises(FP.PlanError):
+        FP.parse_workbook(b"not an excel", date(2026, 10, 6))
+
+
+def test_fair_plan_endpoints(client, monkeypatch):
+    c, _svc = client
+    monkeypatch.setattr(E, "today", lambda: date(2026, 10, 6))
+    a, m = {"x-user": "a"}, {"x-user": "m"}
+    empty = c.get("/api/v1/events/me/fair-plan", headers=m).json()
+    assert empty["items"] == [] and not empty["canEdit"]
+    body = {"fileName": "FUARLAR.xlsx", "dataBase64": base64.b64encode(_plan_xlsx()).decode()}
+    assert c.post("/api/v1/events/fair-plan", json=body, headers=m).status_code == 403          # düzenleme yetkisi yok
+    bad = c.post("/api/v1/events/fair-plan", json={"dataBase64": "!!"}, headers=a)
+    assert bad.status_code == 422
+    out = c.post("/api/v1/events/fair-plan", json=body, headers=a).json()
+    assert len(out["items"]) == 3 and out["fileName"] == "FUARLAR.xlsx" and out["uploadedBy"] == "ayse"
+    got = c.get("/api/v1/events/me/fair-plan", headers=m).json()
+    assert [(i["phase"], i["daysLeft"]) for i in got["items"]] == [("bitti", -2), ("suruyor", 5), ("yaklasan", 95)]
+    assert A.rule_for("/api/v1/events/me/fair-plan") == A.OPEN
+    assert A.features_for("POST", "/api/v1/events/fair-plan") == ["ozellik:etkinlik.duzenle"]

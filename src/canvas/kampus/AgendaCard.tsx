@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, Cake, Calendar, Flag } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { evApi, fmtWeekday, type AgendaItem, type ImportantDay } from '../events/api';
+import { evApi, fmtWeekday, type AgendaItem, type ImportantDay, type PlanFair } from '../events/api';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 
@@ -12,6 +12,8 @@ import { kaynakOf } from '../components/kaynakOf';
  *  - Önemli günler (herkese aynı, `agenda_days.py`): CRM özel günleri (bağlı kitap sayısıyla) ve İK resmî tatilleri.
  *  - Doğum günleri: İK kaydından gün/ay. Gerçek kayıt yokken ÖRNEK satırlar gösterilir (kullanıcı isteği 2026-09-30:
  *    kart boş görünmesin); «örnek» etiketlidir, İK'ya ilk doğum günü girilince kendiliğinden kalkar.
+ *  - Fuar takvimi: pazarlamanın yüklediği FUARLAR.xlsx (`/me/fair-plan`, herkese aynı): şu an süren fuarlar (TİMAŞ
+ *    standı önde) ve sıradakiler; sıradaki TİMAŞ standı ayrı kutuda.
  *  Her bölümde ilk beşi gösterilir, kalanın sayısı yazılır. */
 
 const SHOW = 5;
@@ -44,6 +46,7 @@ export default function AgendaCard({ className = '' }: { className?: string }) {
   const realBdays = d?.birthdays ?? [];
   const sample = d != null && realBdays.length === 0;
   const bdays = sample ? sampleBirthdays(d.today) : realBdays;
+  const plan = useQuery({ queryKey: ['ev', 'plan'], queryFn: evApi.plan, enabled: ENGINE_ENABLED, retry: false, staleTime: 5 * 60_000 });
 
   return (
     <section id="ajanda" className={`kp-card rounded-3xl border border-white/80 bg-white/90 p-4 ${className}`}>
@@ -76,6 +79,8 @@ export default function AgendaCard({ className = '' }: { className?: string }) {
       {fairs.map((f) => (
         <FairBox key={f.id} f={f} />
       ))}
+
+      {plan.data && plan.data.items.length > 0 && <FairPlanPart items={plan.data.items} canOpen={plan.data.canOpen} />}
 
       {special.length > 0 && (
         <>
@@ -195,5 +200,65 @@ function FairBox({ f }: { f: AgendaItem }) {
         {f.status === 'aday' ? ' · katılım kararı bekleniyor' : ''}
       </p>
     </Link>
+  );
+}
+
+const short = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const fmtS = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return short.format(new Date(Date.UTC(y, m - 1, d)));
+};
+
+/** Fuar takvimi (Excel): şu an sürenler, sıradakiler ve sıradaki TİMAŞ standı. */
+function FairPlanPart({ items, canOpen }: { items: PlanFair[]; canOpen: boolean }) {
+  const timas = (f: PlanFair) => f.participant === 'timas';
+  const live = items.filter((f) => f.phase === 'suruyor').sort((a, b) => Number(timas(b)) - Number(timas(a)) || a.daysLeft - b.daysLeft);
+  const soon = items.filter((f) => f.phase === 'yaklasan');
+  const rows = [...live, ...soon].slice(0, SHOW);
+  const more = live.length + soon.length - rows.length;
+  const nextTimas = soon.find(timas);
+  if (rows.length === 0) return null;
+  return (
+    <>
+      <SubHead action={canOpen ? <Link to="/etkinlikler#fuar-takvimi" className="text-[11px] font-medium normal-case tracking-normal text-violet hover:underline">Fuar takvimi</Link> : null}>
+        Fuarlar{live.length ? ` · ${live.length} fuar sürüyor` : ''}
+      </SubHead>
+      <ul className="space-y-2 text-xs">
+        {rows.map((f) => (
+          <li key={f.id} className="flex items-start gap-2.5">
+            <span className={`kp-mono mt-0.5 w-14 shrink-0 rounded-md px-1 py-0.5 text-center text-[11px] font-semibold ${
+              f.phase === 'suruyor' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'
+            }`}>
+              {f.phase === 'suruyor' ? 'Sürüyor' : when(f.daysLeft)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 font-bold leading-snug text-ink">
+                <span className="min-w-0 truncate">{f.name}</span>
+                {timas(f) && <span className="shrink-0 rounded bg-violet/10 px-1 text-[10px] font-bold text-violet">TİMAŞ</span>}
+              </p>
+              <p className="truncate text-[11px] text-muted">
+                {fmtS(f.startsOn)} – {fmtS(f.endsOn)}
+                {f.phase === 'suruyor' ? ` · ${f.daysLeft === 0 ? 'son gün' : `${f.daysLeft} gün kaldı`}` : ''}
+                {f.venue ? ` · ${f.venue}` : ''}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {more > 0 && <p className="mt-2 text-[11px] text-muted">+{more} fuar daha</p>}
+      {nextTimas && !rows.includes(nextTimas) && (
+        <div className="mt-3 rounded-xl border border-violet/20 bg-violet/5 p-3 text-xs">
+          <div className="flex items-center justify-between gap-2 font-bold text-ink">
+            <span className="flex min-w-0 items-center gap-1">
+              <Flag className="h-3.5 w-3.5 shrink-0 text-violet" aria-hidden /> <span className="truncate">{nextTimas.name}</span>
+            </span>
+            <span className="kp-mono whitespace-nowrap rounded bg-violet/10 px-1.5 py-0.5 text-[11px] text-violet">{nextTimas.daysLeft} Gün</span>
+          </div>
+          <p className="mt-1 text-[11px] text-muted">
+            Sıradaki TİMAŞ standı · {fmtS(nextTimas.startsOn)} – {fmtS(nextTimas.endsOn)}{nextTimas.venue ? ` · ${nextTimas.venue}` : ''}
+          </p>
+        </div>
+      )}
+    </>
   );
 }

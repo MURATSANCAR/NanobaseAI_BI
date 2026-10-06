@@ -233,6 +233,34 @@ export type ImportantDay = {
   where?: string | null;
 };
 
+/** Fuar takvimi (pazarlamanın FUARLAR.xlsx dosyası, `fair_plan.py`). `daysLeft`: yaklaşanda başlangıca, sürende bitişe kalan gün. */
+export type PlanFair = {
+  id: string;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  days: number;
+  dateText: string | null;
+  venue: string | null;
+  organizer: string | null;
+  participant: string | null;
+  participantLabel: string | null;
+  phase: 'yaklasan' | 'suruyor' | 'bitti';
+  daysLeft: number;
+};
+export type FairPlan = {
+  items: PlanFair[];
+  pending: { title: string | null; items: string[] } | null;
+  warnings: string[];
+  fileName: string | null;
+  sheet: string | null;
+  uploadedBy: string | null;
+  uploadedAt: string | null;
+  today: string;
+  canEdit: boolean;
+  canOpen: boolean;
+};
+
 export type BookHit = { id: string | null; stokKodu: string | null; ad: string | null; yazar: string | null; ilkYayin: string | null };
 
 const B = '/api/v1/events';
@@ -335,6 +363,8 @@ export const evApi = {
   books_: (q: string) => send<{ items: BookHit[]; total: number; shown: number; kaynaklar?: Kaynaklar }>('GET', `/lookup/books${qs({ q })}`, undefined, 180_000),
   authors: (q: string) => send<{ items: Array<{ id: string; ad: string }>; total: number; shown: number }>('GET', `/lookup/authors${qs({ q })}`, undefined, 180_000),
   clients: () => send<{ items: Array<{ kod: string; ad: string | null; sehir: string | null; pasif: boolean }>; channel: string }>('GET', '/lookup/clients', undefined, 180_000),
+  plan: () => send<FairPlan>('GET', '/me/fair-plan'),
+  uploadPlan: (b: { fileName: string; dataBase64: string }) => send<FairPlan>('POST', '/fair-plan', b, 180_000),
   awards: () => send<{ items: Award[]; statuses: Record<string, string>; today: string; kaynaklar?: Kaynaklar }>('GET', '/awards'),
   createAward: (b: Partial<Award>) => send<{ items: Award[] }>('POST', '/awards', b),
   updateAward: (id: string, b: Partial<Award>) => send<{ items: Award[] }>('PATCH', `/awards/${enc(id)}`, b),

@@ -10,6 +10,7 @@ import { Kpi, KpiRow } from '../editorial/kit';
 import { CLASS_TONE, MONTHS, STATUS_TONE, evApi, fmtRange, fmtShort, type ClassKey, type CrmEvent, type Fair } from './api';
 import { Block, ClassPill, DaysLeft, EventsFrame, PrepBar } from './parts';
 import FairForm from './FairForm';
+import FairPlan from './FairPlan';
 
 /** M27 ilk açılış: yıl takvimi (ay şeridi) + yaklaşanlar + ödül son tarihleri. Süzgeçler adres çubuğunda
  *  (?yil=, ?sinif=fuar,imza, ?siniflanmamis=1). Satış ziyaretleri ve sınıflanmamış CRM kayıtları varsayılan gizli. */
@@ -118,6 +119,8 @@ export default function EventsCalendar() {
             explain="CRM'deki etkinlik tiplerinden henüz fuar, imza günü, söyleşi gibi bir sınıfa bağlanmamış olanlar. Bağlanmayan tipin kayıtları takvimde «Sınıfsız» görünür; karta dokunup eşleyin." />
         </KpiRow>
       )}
+
+      <FairPlan />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
         <div className="flex min-w-0 flex-col gap-3 lg:col-span-2 lg:gap-4">

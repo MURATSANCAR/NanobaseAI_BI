@@ -607,6 +607,7 @@ RULES: list[tuple[str, Any]] = [
     # M27 Fuar, etkinlik ve ödül. Kampüs ajandası oturumla açılır (yalnız kişinin kendi kayıtları döner).
     ("/api/v1/events/run-due", SYSTEM),
     ("/api/v1/events/me/agenda", OPEN),
+    ("/api/v1/events/me/fair-plan", OPEN),     # fuar takvimi (Excel) Kampüs'te de görünür
     ("/api/v1/events/", frozenset({page("etkinlikler")})),
     # M42 Platform ve kanallar (M40/M41 kendi alt yollarını ve sayfa anahtarlarını buraya ekler). Ortak uçlar (meta,
     # durum, yenileme, dışa aktarma) dört sayfada; dışa aktarılan listenin sayfası ucun içinde ayrıca denetlenir.
@@ -1071,6 +1072,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      r"^/api/v1/events/(fairs(/[^/]+(/(suggest-books|books|costs(/[^/]+)?|authors(/[^/]+)?))?)?|type-map(/suggest)?)$",
      "ozellik:etkinlik.duzenle"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/events/fairs/[^/]+/tasks(/[^/]+)?$", "ozellik:etkinlik.duzenle"),
+    (frozenset({"POST"}), r"^/api/v1/events/fair-plan$", "ozellik:etkinlik.duzenle"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/events/(awards(/[^/]+(/entries)?)?|award-entries/[^/]+)$",
      "ozellik:odul.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/events/fairs/[^/]+/result/export\.pdf$", "ozellik:veri.disa-aktar"),

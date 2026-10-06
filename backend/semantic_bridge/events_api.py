@@ -12,6 +12,8 @@ CRM'e ve Logo'ya yazılmaz.
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import logging
 import threading
@@ -24,6 +26,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
 from semantic_bridge import events as E
+from semantic_bridge import fair_plan as FP
 from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import events_kaynak as K
 from semantic_bridge import events_sources as src
@@ -403,6 +406,37 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(svc.start_classify, engine, tenant, user, not bool(hepsi))
         audit(engine, user, "run", "events_type_map", None, "Zeki AI etkinlik tipi önerisi başlatıldı", {"hepsi": bool(hepsi)})
         return out
+
+    # ---- fuar takvimi (Excel)
+
+    def plan_out(engine, tenant: str, user: str) -> dict[str, Any]:
+        out = FP.read(engine, tenant, E.today())
+        out["canEdit"] = allowed(user, "ozellik:etkinlik.duzenle")
+        out["canOpen"] = allowed(user, "sayfa:etkinlikler")
+        return out
+
+    @app.get(f"{P}/me/fair-plan")
+    def events_fair_plan(request: Request) -> dict[str, Any]:
+        """Pazarlamanın yüklediği fuar takvimi (FUARLAR.xlsx). Kampüs'te de görünür; oturum yeter."""
+        engine, tenant, user, _ = ctx(request)
+        return plan_out(engine, tenant, user)
+
+    @app.post(f"{P}/fair-plan")
+    def events_fair_plan_upload(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Excel yükleme (`{fileName, dataBase64}`): okunur, eski takvimin yerine geçer."""
+        engine, tenant, user, _ = ctx(request)
+        need(user, "ozellik:etkinlik.duzenle", "Fuar takvimi yükleme")
+        try:
+            data = base64.b64decode(str(body.get("dataBase64") or ""), validate=True)
+            parsed = FP.parse_workbook(data, E.today())
+        except (ValueError, binascii.Error) as e:
+            msg = str(e) if isinstance(e, FP.PlanError) else "Dosya okunamadı."
+            raise HTTPException(status_code=422, detail={"code": "EVENTS", "message": msg}) from e
+        name = str(body.get("fileName") or "")[:300]
+        FP.save(engine, tenant, user, name, parsed)
+        audit(engine, user, "import", "events_fair_plan", None, f"Fuar takvimi yüklendi ({len(parsed['items'])} fuar)",
+              {"dosya": name, "sayfa": parsed["sheet"], "fuar": len(parsed["items"]), "uyari": parsed["warnings"]})
+        return plan_out(engine, tenant, user)
 
     # ---- kartlar
 
