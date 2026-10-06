@@ -28,7 +28,9 @@ def test_build_maps_only_invisible_fields_and_skips_empty():
 
 def test_build_cuts_to_crm_length():
     f = w.build({}, {"SeoDescription": "kelime " * 80}, STAMP)
-    assert len(f["new_seoaciklama"]) <= 300
+    assert "new_seoaciklama" not in f  # tam cümle yok: yarım açıklama yazılmaz
+    f = w.build({}, {"SeoDescription": "Bu kitap okura sade ve akıcı bir dille önemli bir konuyu anlatıyor. " * 4}, STAMP)
+    assert len(f["new_seoaciklama"]) <= 160 and f["new_seoaciklama"].endswith(".")
 
 
 def test_check_rejects_unlisted_and_too_long():
@@ -135,7 +137,7 @@ def env(monkeypatch):
                                                                                     "SeoTitle": "Kitap - Yazar | Timaş", "Brand": "Timaş"}), synced_at=now))
         c.execute(CRM_BOOKS.insert().values(tenant_id="t", ean="9781", book_id=BOOK, rights="var", data_json="{}", synced_at=now))
         c.execute(PROPOSALS.insert().values(id="pr1", tenant_id="t", product_id="p1", status="onaylandi",
-                                            fields_json=_json.dumps({"SeoTitle": "Kitap - Yazar | Timaş", "SeoDescription": "Açıklama"}),
+                                            fields_json=_json.dumps({"SeoTitle": "Kitap - Yazar | Timaş", "SeoDescription": "Bu kitap okura sade ve akıcı bir dille önemli bir konuyu anlatıyor."}),
                                             before_json="{}", created_at=now, decided_at=now))
     return _Seo(eng), db, monkeypatch
 
@@ -387,9 +389,9 @@ def test_meta_never_ends_mid_sentence():
     from semantic_bridge.seo_geo import propose
     cut = "Eser tasavvufi derinliği ve hitabî tarzıyla okuyucuya eşsiz bir"
     assert not propose.complete_sentence(cut)
-    two = "Nevzat Tarhan duygusal zekayı Doğu ve Batı bakışıyla ele alıyor. Kendini tanımak isteyenler için kapsamlı bir rehber sunan eser ayrıca"
+    two = "Nevzat Tarhan duygusal zekayı Doğu ve Batı bakışıyla, günlük hayattan örneklerle ele alıyor. Kendini tanımak isteyenler için kapsamlı bir rehber sunan eser ayrıca"
     got = propose.fit_meta(two, 160)
-    assert got == "Nevzat Tarhan duygusal zekayı Doğu ve Batı bakışıyla ele alıyor."
+    assert got == "Nevzat Tarhan duygusal zekayı Doğu ve Batı bakışıyla, günlük hayattan örneklerle ele alıyor."
     assert propose.fit_meta("Kısa. Ama sonu yarım kalan çok uzun bir ikinci cümle" * 3, 160) is None  # tam cümle çok kısa
     assert propose.fit_meta("Tam ve sığan bir cümle, okur için yazılmış bir açıklama metni burada bitiyor.", 160).endswith(".")
     lim = {"title_min": 30, "title_max": 65, "meta_min": 120, "meta_max": 160}
