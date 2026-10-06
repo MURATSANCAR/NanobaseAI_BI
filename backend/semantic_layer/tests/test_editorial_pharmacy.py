@@ -28,20 +28,38 @@ def _status(code, detail):
 def test_list_passes_filters(client, monkeypatch):
     seen = {}
 
-    def fake(q, category, state, sort, offset, limit, review, title_review):
+    def fake(q, category, state, sort, offset, limit, review, title_review, quality=""):
         seen.update(q=q, category=category, state=state, sort=sort, offset=offset, limit=limit, review=review,
-                    title_review=title_review)
+                    title_review=title_review, quality=quality)
         return {"items": [], "total": 0}
 
     monkeypatch.setattr(editorial_cards, "archive_books", fake)
     r = client.get("/api/v1/editorial/pharmacy/books", params={"q": "çalı", "category": "Kurgu", "state": "hazir", "offset": 50})
     assert r.status_code == 200 and r.json()["total"] == 0
     assert seen == {"q": "çalı", "category": "Kurgu", "state": "hazir", "sort": "title", "offset": 50, "limit": 50,
-                    "review": False, "title_review": False}
+                    "review": False, "title_review": False, "quality": ""}
     client.get("/api/v1/editorial/pharmacy/books", params={"review": "true"})
     assert seen["review"] is True and seen["title_review"] is False
     client.get("/api/v1/editorial/pharmacy/books", params={"title_review": "true", "state": "beklemede"})
     assert seen["title_review"] is True and seen["review"] is False and seen["state"] == "beklemede"
+    client.get("/api/v1/editorial/pharmacy/books", params={"quality": "gozden"})
+    assert seen["quality"] == "gozden"
+
+
+def test_quality_filter_is_checked_before_the_engine(monkeypatch):
+    """Okuma kalite süzgeci yalnız üç değer alır; geçersiz değer servise gitmez (köprü 422 verir)."""
+    sent = []
+    monkeypatch.setattr(editorial_cards, "request", lambda path: sent.append(path))
+    with pytest.raises(ValueError):
+        editorial_cards.archive_books(quality="hepsi")
+    assert sent == [] and editorial_cards.QUALITY_FILTERS == ("temiz", "duzeltildi", "gozden")
+
+    class R:
+        def json(self):
+            return {"items": []}
+    monkeypatch.setattr(editorial_cards, "request", lambda path: sent.append(path) or R())
+    editorial_cards.archive_books(quality="duzeltildi")
+    assert "quality=duzeltildi" in sent[-1]
 
 
 def test_archive_states_include_on_hold():

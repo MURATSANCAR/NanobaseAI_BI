@@ -1,4 +1,4 @@
-import { PHARMACY_CATEGORIES, type NotABookReason, type PharmacyAudience, type PharmacyBook, type PharmacyJob, type PharmacyState } from '../../engine';
+import { PHARMACY_CATEGORIES, type NotABookReason, type PharmacyAudience, type PharmacyBook, type PharmacyJob, type PharmacyQuality, type PharmacyQualityFilter, type PharmacyState } from '../../engine';
 
 /** Kitap Eczanesi'nin ekran dili: kategori ve durum adları, durumun rengi ve kısa açıklaması. Teknik ad yok. */
 
@@ -59,6 +59,36 @@ export function redactionPill(b: PharmacyBook): { tone: Tone; text: string } | n
   if (b.proofed) return { tone: 'ok', text: 'Son okuma hazır' };
   if (b.redaction?.state === 'okunamadi') return { tone: 'err', text: 'Son okuma tamamlanamadı' };
   return null;
+}
+
+/* ------------------------------------------------------------------ okuma kalitesi */
+
+/** Okuma kalite denetiminin süzgeçleri (Zeki AI her okumayı bitince kendisi denetler ve düzeltebildiğini düzeltir). */
+export const QUALITY_FILTERS: Array<{ key: PharmacyQualityFilter; label: string }> = [
+  { key: 'temiz', label: 'Temiz' },
+  { key: 'duzeltildi', label: 'Düzeltildi' },
+  { key: 'gozden', label: 'Gözden geçir' },
+];
+
+/** Satırdaki kalite rozeti; denetlenmemiş kitapta null. */
+export function qualityPill(q: PharmacyQuality | null | undefined): { tone: Tone; text: string } | null {
+  if (!q) return null;
+  switch (q.status) {
+    case 'CLEAN':
+      return { tone: 'ok', text: 'Temiz' };
+    case 'FIXED':
+      return { tone: 'ok', text: 'Düzeltildi' };
+    case 'REREAD':
+      return { tone: 'muted', text: 'Yeniden okunacak' };
+    default:
+      return { tone: 'warn', text: q.open > 0 ? `Gözden geçir · ${q.open}` : 'Gözden geçir' };
+  }
+}
+
+/** Bulgunun sayfaları kısa yazımla («s. 4, 7, 12 …»); sayfa yoksa null. */
+export function pagesText(pages: number[] | null | undefined, max = 6): string | null {
+  if (!pages?.length) return null;
+  return `s. ${pages.slice(0, max).join(', ')}${pages.length > max ? ` … (+${pages.length - max})` : ''}`;
 }
 
 /* ------------------------------------------------------------------ kitap değil */

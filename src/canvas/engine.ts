@@ -3062,7 +3062,24 @@ export type PharmacyBook = {
   review?: { review: boolean; reasons: Array<'CATEGORY' | 'AUDIENCE' | 'AGE'> };
   /** Dosya kitap değil: karakter, olay ve kategori/yaş önerisi çıkarılmadı. Kitapsa null. */
   not_a_book?: { reason: NotABookReason } | null;
+  /** Okuma kalite denetiminin son durumu (Zeki AI okumayı kendisi denetler, düzeltir); denetlenmemişse null. Ayrıntı
+   *  ucunda bulgu listesiyle (`issues`, `fixed`, `notes`, `fixes`) gelir. */
+  quality?: PharmacyQuality | null;
 };
+export type PharmacyQualityStatus = 'CLEAN' | 'FIXED' | 'REVIEW' | 'REREAD';
+export type PharmacyQualityItem = { code: string; severity: 'critical' | 'warn' | 'info'; title: string; pages: number[] | null };
+export type PharmacyQuality = {
+  status: PharmacyQualityStatus;
+  label: string;
+  /** Açık (gözden geçirilecek) bulgu sayısı. */
+  open: number;
+  at?: string;
+  issues?: PharmacyQualityItem[];
+  fixed?: PharmacyQualityItem[];
+  notes?: PharmacyQualityItem[];
+  fixes?: Array<{ text: string; ok: boolean }>;
+};
+export type PharmacyQualityFilter = 'temiz' | 'duzeltildi' | 'gozden';
 export type PharmacyAudience = 'CHILD' | 'YOUNG' | 'ADULT';
 export type PharmacySite =
   | { found: false }
@@ -3089,6 +3106,8 @@ export type PharmacyQuery = {
   review?: boolean;
   /** Adı doğrulanmamış (dosya adından tahmin edilen) kitaplar. */
   titleReview?: boolean;
+  /** Okuma kalite denetiminin durumu: Temiz, Düzeltildi, Gözden geçir. */
+  quality?: PharmacyQualityFilter | '';
 };
 export type PharmacyPage = {
   items: PharmacyBook[];
@@ -3098,12 +3117,18 @@ export type PharmacyPage = {
   /** Eczanedeki bütün kitaplar (süzgeçsiz). */
   all: number;
   /** review: kategoriyi gözden geçir; title_review: adı gözden geçir (ikisi de diğer süzgeçlerden sonra). */
-  facets: { categories: Record<string, number>; states: Partial<Record<PharmacyState, number>>; review?: number; title_review?: number };
+  facets: {
+    categories: Record<string, number>;
+    states: Partial<Record<PharmacyState, number>>;
+    review?: number;
+    title_review?: number;
+    quality?: Partial<Record<PharmacyQualityFilter, number>>;
+  };
 };
 const PH = '/api/v1/editorial/pharmacy/books';
 export const pharmacyApi = {
   books: (o: PharmacyQuery) =>
-    send<PharmacyPage>('GET', `${PH}${qs({ q: o.q, category: o.category, state: o.state, sort: o.sort, offset: o.offset, limit: o.limit, review: o.review ? 'true' : undefined, title_review: o.titleReview ? 'true' : undefined })}`, undefined, 30_000),
+    send<PharmacyPage>('GET', `${PH}${qs({ q: o.q, category: o.category, state: o.state, sort: o.sort, offset: o.offset, limit: o.limit, review: o.review ? 'true' : undefined, title_review: o.titleReview ? 'true' : undefined, quality: o.quality || undefined })}`, undefined, 30_000),
   book: (id: string) => send<PharmacyBook>('GET', `${PH}/${encodeURIComponent(id)}`, undefined, 30_000),
   /** Son okuma raporu kitap kimliğiyle (Son okuma ekranındaki biçim). */
   proofing: (id: string, title?: string) => send<ProofingReport>('GET', `${PH}/${encodeURIComponent(id)}/proofing${qs({ title })}`, undefined, 30_000),

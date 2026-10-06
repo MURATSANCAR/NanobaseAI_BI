@@ -837,15 +837,22 @@ def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by,
 ARCHIVE_STATES=('sirada','okunuyor','hazir','yeniden','beklemede','okunamadi','redaksiyon')
 
 
-def archive_books(q='', category='', state='', sort='title', offset=0, limit=50, review=False, title_review=False) -> dict:
+#: Okuma kalite denetiminin süzgeci (editör `archive.QUALITY_FILTERS`): Temiz, Düzeltildi, Gözden geçir.
+QUALITY_FILTERS = ('temiz', 'duzeltildi', 'gozden')
+
+
+def archive_books(q='', category='', state='', sort='title', offset=0, limit=50, review=False, title_review=False,
+                  quality='') -> dict:
     """Arşiv kipinde okunan kitaplar (sayfa sayfa). Süzgeç değerleri burada da biçimle sınırlanır; servise serbest
-    metin yalnız arama kutusundan gider (URL kodlu)."""
+    metin yalnız arama kutusundan gider (URL kodlu). `quality`: okuma kalite denetiminin durumu (QUALITY_FILTERS)."""
     if state and state not in ARCHIVE_STATES: raise ValueError('Durum geçersiz.')
     if sort not in ('title','recent'): raise ValueError('Sıralama geçersiz.')
+    if quality and quality not in QUALITY_FILTERS: raise ValueError('Kalite süzgeci geçersiz.')
     params={'q':(q or '')[:200],'category':(category or '')[:64],'state':state or '','sort':sort,
             'offset':max(0,int(offset)),'limit':min(200,max(1,int(limit)))}
     if review: params['review']='true'
     if title_review: params['title_review']='true'
+    if quality: params['quality']=quality
     return request('/v1/archive/books?'+urllib.parse.urlencode(params)).json()
 
 

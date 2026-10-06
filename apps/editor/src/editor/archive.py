@@ -636,6 +636,8 @@ def open_for_redaction(generation_id: str, who: str) -> dict:
 # ------------------------------------------------------------------ Kitap Eczanesi listesi (kart servisi /v1/archive/books)
 #: Okuma durumu (portal_books.item ile aynı sözlük) + «redaksiyon»: son okuması açılmış ya da koşmuş kitaplar.
 LIST_STATES = ("sirada", "okunuyor", "hazir", "yeniden", "beklemede", "okunamadi", "redaksiyon")
+#: Okuma kalite denetiminin süzgeci (editor.read_audit): ekrandaki ad → kayıt durumları.
+QUALITY_FILTERS = {"temiz": ("CLEAN",), "duzeltildi": ("FIXED",), "gozden": ("REVIEW", "REREAD")}
 SORTS = ("title", "recent")
 
 
@@ -754,15 +756,21 @@ def _title_review(b: dict) -> bool:
     return bool(b.get("title_review"))
 
 
+def _quality(b: dict) -> str | None:
+    return (b.get("quality") or {}).get("status")
+
+
 def select(books: list[dict], q: str = "", category: str = "", state: str = "", sort: str = "title",
-           offset: int = 0, limit: int = 50, review: bool = False, title_review: bool = False) -> dict:
+           offset: int = 0, limit: int = 50, review: bool = False, title_review: bool = False,
+           quality: str = "") -> dict:
     """Arama (Türkçe harf ve büyük/küçük harf farkı gözetmez) → kategori → durum süzgeci, sıralama ve sayfa.
     `facets`: aramaya uyan kitapların kategori sayıları ve (kategori süzgeciyle) durum sayıları; ekran süzgeç
     düğmelerinde gösterir. `total` süzülmüş kitap sayısı; hiçbir kitap kesilmez, sayfalar `offset` ile gezilir.
     `review`: yalnız sitedeki kategori ile Zeki AI önerisi ayrışan kitaplar («gözden geçir»; editor.recommend);
     `facets.review` süzgeçlerden sonra kaç kitabın gözden geçirileceğini söyler. `title_review`: yalnız adı
     doğrulanmamış kitaplar (`book.title_review` dolu, «Adı gözden geçir»); `facets.title_review` sayısı. İki
-    gözden geçirme ayrı şeyler sayar, birbirinin sayısını süzmez."""
+    gözden geçirme ayrı şeyler sayar, birbirinin sayısını süzmez. `quality` (temiz | duzeltildi | gozden): okuma
+    kalite denetiminin son durumu (`QUALITY_FILTERS`); `facets.quality` süzgeçlerden önceki sayılar."""
     key = fold(q).strip()
     hit = [b for b in books if not key or key in fold(b["title"] or "")]
     cats: dict[str, int] = collections.Counter((b["category"] or "") for b in hit)
@@ -777,6 +785,9 @@ def select(books: list[dict], q: str = "", category: str = "", state: str = "", 
         out = in_cat
     to_review = sum(1 for b in out if _review(b))
     to_title = sum(1 for b in out if _title_review(b))
+    qual = {k: sum(1 for b in out if _quality(b) in v) for k, v in QUALITY_FILTERS.items()}
+    if quality in QUALITY_FILTERS:
+        out = [b for b in out if _quality(b) in QUALITY_FILTERS[quality]]
     if review:
         out = [b for b in out if _review(b)]
     if title_review:
@@ -788,7 +799,7 @@ def select(books: list[dict], q: str = "", category: str = "", state: str = "", 
     page = out[offset:offset + limit]
     return {"items": page, "total": len(out), "offset": offset, "limit": limit, "all": len(books),
             "facets": {"categories": dict(cats), "states": {k: v for k, v in states.items() if k},
-                       "review": to_review, "title_review": to_title}}
+                       "review": to_review, "title_review": to_title, "quality": qual}}
 
 
 # ------------------------------------------------------------------ arşiv çıktıları (rebuild.run'ın arşiv eşi)

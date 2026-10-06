@@ -621,10 +621,12 @@ def _library_parts(question: str, books: list[dict], found: list[dict], c, room:
     return parts
 
 
-async def context(question: str, book_title: str | None, deep: bool = False) -> tuple[str, list[dict], bool]:
+async def context(question: str, book_title: str | None, deep: bool = False,
+                  generation_id: str | None = None) -> tuple[str, list[dict], bool]:
     """(bağlam, kitaplar, kitap seçili mi). Seçili kitapta sayfa soruluysa kitabın sözlüğüne `asked_pages` yazılır
     (answer). `deep`: künye sayfaları, bölüm listesi ve daha çok metin parçası eklenir (seçili kitapta); kütüphane
-    sorusunda ilk adayların daha çok metin parçası.
+    sorusunda ilk adayların daha çok metin parçası. `generation_id`: seçili kitap bu nesil (okuma kalite denetiminin
+    duman testi, editor.read_audit; aynı adlı iki kitap karışmaz).
 
     Kütüphane sorusu (kitap adı yok): aday kitaplar `library_search.candidates` (anlamsal + sözcük + karakter adı) ve
     yaş/tür eşleşmesinden gelir; kitaplara `candidate` yazılır (answer derin okumayı yalnız aday varken yapar)."""
@@ -637,8 +639,9 @@ async def context(question: str, book_title: str | None, deep: bool = False) -> 
     room = call.input - budget.estimate(DEEP_SYSTEM if deep else SYSTEM) - budget.estimate(question) - 200
     with foundation.read_snapshot() as c:
         books = library(c)
-        chosen = [b for b in books if book_title and norm(book_title) in {norm(n) for n in b["names"] if n}]
-        named = [b for b in mentioned(question, books) if b not in chosen]
+        chosen = [b for b in books if (generation_id and b["generation_id"] == generation_id) or
+                  (not generation_id and book_title and norm(book_title) in {norm(n) for n in b["names"] if n})]
+        named = [b for b in mentioned(question, books) if b not in chosen] if not generation_id else []
         weak: list[dict] = []
         if not chosen and named and library_intent(question) and all(weak_mention(question, b) for b in named):
             weak, named = named, []         # kütüphane sorusu; kısa adı geçen kitap aday olarak kalır
@@ -689,8 +692,10 @@ async def context(question: str, book_title: str | None, deep: bool = False) -> 
     return fit(fixed, [t for _, t in blocks], room), chosen, True
 
 
-async def _ask(system: str, ctx: str, user: str, history: list[dict] | None, max_tokens: int):
-    """Tek model çağrısı (düşünme kapalı). Dönüş: (metin, finish_reason, usage) ya da model hatasında None."""
+async def _ask(system: str, ctx: str, user: str, history: list[dict] | None, max_tokens: int,
+               headers: dict | None = None):
+    """Tek model çağrısı (düşünme kapalı). Dönüş: (metin, finish_reason, usage) ya da model hatasında None.
+    `headers`: varsayılan etkileşimli öncelik; `{}` arka plan (okuma kalite denetiminin duman testi)."""
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": "KAYITLAR:\n\n" + ctx},
                 {"role": "assistant", "content": "Kayıtları okudum. Soruyu sorabilirsiniz."},
@@ -700,7 +705,7 @@ async def _ask(system: str, ctx: str, user: str, history: list[dict] | None, max
            "chat_template_kwargs": {"enable_thinking": False}}
     # Etkileşimli başlık: gateway soruyu yönetici modelin sırasında okumaların önüne koyar (vLLM priority) ve
     # koltuklar doluyken GPU 0 eşine taşıyabilir. Kart servisi istemci adıyla da tanınır; başlık adı çözülemese de geçer.
-    r = await llm._post("/v1/chat/completions", req, llm.INTERACTIVE)
+    r = await llm._post("/v1/chat/completions", req, llm.INTERACTIVE if headers is None else headers)
     if r.status_code >= 400:
         log.warning("quick answer model %s: %s", r.status_code, r.text[:300])
         return None

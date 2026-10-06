@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Search, X } from 'lucide-react';
-import { ENGINE_ENABLED, pharmacyApi, type PharmacyBook, type PharmacyState } from '../../engine';
+import { ENGINE_ENABLED, pharmacyApi, type PharmacyBook, type PharmacyQualityFilter, type PharmacyState } from '../../engine';
 import { Note, Pill, errText, nf } from '../../admin/ui';
 import { EmptyHint } from '../../components/Explain';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from '../kit';
@@ -10,7 +10,7 @@ import { UploadBar } from '../BookUploadDock';
 import PharmacyAsk from './PharmacyAsk';
 import PharmacyUpload from './PharmacyUpload';
 import PharmacyDetail, { isTab, type Tab } from './PharmacyDetail';
-import { STATE_FILTERS, moving, readPill, redactionPill } from './labels';
+import { QUALITY_FILTERS, STATE_FILTERS, moving, qualityPill, readPill, redactionPill } from './labels';
 
 /** Kitap Eczanesi: arşiv kipinde okunan kitaplar (Zeki'ye sor için ~4.000 kitap) ve kitap başına işler.
  *
@@ -63,6 +63,7 @@ function queueHelp(tf: Partial<Record<PharmacyState, number>>): string {
 function Row({ b, selected, onPick }: { b: PharmacyBook; selected: boolean; onPick: () => void }) {
   const pill = readPill(b.read);
   const red = redactionPill(b);
+  const qual = qualityPill(b.quality);
   return (
     <li>
       <button
@@ -83,6 +84,7 @@ function Row({ b, selected, onPick }: { b: PharmacyBook; selected: boolean; onPi
           <span className="mt-1 flex flex-wrap gap-1">
             <Pill tone={pill.tone}>{pill.text}</Pill>
             {red && <Pill tone={red.tone}>{red.text}</Pill>}
+            {qual && <Pill tone={qual.tone}>{qual.text}</Pill>}
             {b.not_a_book && <Pill tone="muted">Kitap değil</Pill>}
             {b.review?.review && <Pill tone="warn">Kategoriyi gözden geçir</Pill>}
             {!!b.title_review?.length && <Pill tone="muted">Adı gözden geçir</Pill>}
@@ -110,6 +112,8 @@ export default function PharmacyScreen() {
   const page = Math.max(0, Number(params.get('sayfa') ?? 0) || 0);
   const review = params.get('gg') === '1';
   const titleReview = params.get('ad') === '1';
+  const kalite = params.get('kalite') ?? '';
+  const quality = (QUALITY_FILTERS.some((f) => f.key === kalite) ? kalite : '') as PharmacyQualityFilter | '';
   const picked = params.get('kitap');
   const sekme = params.get('sekme');
   const tab: Tab = isTab(sekme) ? sekme : 'son-okuma';
@@ -138,8 +142,8 @@ export default function PharmacyScreen() {
   }, [debounced, q, set]);
 
   const list = useQuery({
-    queryKey: ['pharmacy', 'books', { q, cat, state, sort, page, review, titleReview }],
-    queryFn: () => pharmacyApi.books({ q, category: cat, state, sort, offset: page * PAGE, limit: PAGE, review, titleReview }),
+    queryKey: ['pharmacy', 'books', { q, cat, state, sort, page, review, titleReview, quality }],
+    queryFn: () => pharmacyApi.books({ q, category: cat, state, sort, offset: page * PAGE, limit: PAGE, review, titleReview, quality }),
     enabled: ENGINE_ENABLED,
     placeholderData: keepPreviousData,
     // Sayfada okunan/sırada kitap varsa durum kendiliğinden ilerler; dakikada bir tazelenir.
@@ -239,6 +243,18 @@ export default function PharmacyScreen() {
               <Chip on={review} label="Kategoriyi gözden geçir" count={data?.facets.review ?? 0} onClick={() => set({ gg: review ? null : '1', sayfa: null })} />
               <Chip on={titleReview} label="Adı gözden geçir" count={data?.facets.title_review ?? 0} onClick={() => set({ ad: titleReview ? null : '1', sayfa: null })} />
             </div>
+            {/* Okuma kalitesi: Zeki AI her okumayı bitince denetler; düzeltemediği bulgu «Gözden geçir»e düşer. */}
+            <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Okuma kalitesi">
+              {QUALITY_FILTERS.map((f) => (
+                <Chip
+                  key={f.key}
+                  on={quality === f.key}
+                  label={f.label}
+                  count={data?.facets.quality?.[f.key] ?? 0}
+                  onClick={() => set({ kalite: quality === f.key ? null : f.key, sayfa: null })}
+                />
+              ))}
+            </div>
             <div className="mt-2 flex items-center justify-end gap-1 text-[11.5px]">
               <span className="font-bold text-canvas-muted">Sırala:</span>
               {(['title', 'recent'] as const).map((k) => (
@@ -263,8 +279,8 @@ export default function PharmacyScreen() {
             {!list.isLoading && !items.length && !list.error ? (
               <div className="mt-2">
                 <EmptyHint
-                  title={q || cat || state || review || titleReview ? 'Süzgece uyan kitap yok' : 'Kitap Eczanesi boş'}
-                  why={q || cat || state || review || titleReview ? 'Aramayı ya da süzgeçleri değiştirin.' : 'Yukarıdan kitap yükleyin; okunmaya başlayan kitap burada görünür.'}
+                  title={q || cat || state || review || titleReview || quality ? 'Süzgece uyan kitap yok' : 'Kitap Eczanesi boş'}
+                  why={q || cat || state || review || titleReview || quality ? 'Aramayı ya da süzgeçleri değiştirin.' : 'Yukarıdan kitap yükleyin; okunmaya başlayan kitap burada görünür.'}
                 />
               </div>
             ) : (

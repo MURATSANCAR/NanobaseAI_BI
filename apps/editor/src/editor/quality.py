@@ -617,3 +617,13 @@ def create_analysis_report(generation_id: str, kind: str = "ANALYSIS") -> dict:
     row = db.one("INSERT INTO report(generation_id, kind, content, markdown) VALUES (%s,%s,%s,%s) RETURNING id",
                  generation_id, kind, db.J(json.loads(json.dumps(content, default=str))), text)
     return {"report_id": str(row["id"]), "kind": kind, "markdown": text}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """`python -m editor.quality audit --all-read [--fix] [--ask]`: okuma kalite denetimi (editor.read_audit)."""
+    from . import read_audit
+    return read_audit.main(argv)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

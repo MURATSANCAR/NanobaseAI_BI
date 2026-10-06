@@ -50,6 +50,15 @@ SUPERSEDED_PAUSE = timedelta(minutes=2)
 #: output validation folds again (rebuild.validate / archive.validate).
 IDENTITY_FOLD = "identity-fold-v1"
 
+#: Reading quality audit (2026-10-06, editor.read_audit): after the outputs and the category/age suggestion the reading
+#: checks itself the way the manual audits did (failed steps, characters, final-read checks, unread/garbled pages,
+#: imprint, summary, chapters, people records, events, suggestion, search index, two «Zeki'ye sor» questions), fixes
+#: what a class has a fix for (at most two fix rounds, each action once per generation) and leaves the rest to the
+#: editor («Gözden geçir» in Kitap Eczanesi). Full and archive profiles. A failure never fails the reading
+#: (failures.quality_audit); a book that must be read again is queued after the job has ended (quality_reread).
+#: Histories recorded before the marker replay without the step.
+QUALITY_AUDIT = "quality-audit-v1"
+
 
 def infrastructure_failure(e: ActivityError) -> bool:
     """The activity lost its worker (heartbeat / start-to-close timeout) or ended in a connection,
@@ -290,12 +299,15 @@ class BookFullAnalysis:
                     recommendation = await self.act("archive_recommend", gid, timeout=SHORT)
                 except ActivityError as e:
                     failures["recommend"] = [str(e.cause or e)[:500]]
+            audit = await self._quality_audit(job_id, gid, "archive" if archive else "full", failures)
             summary = {"generation_id":gid,"pages":len(pages),"outputs":produced,
                 "step_order":"verified-revision-outputs-v1","accepted":False,
                 "analytical_status":"NEEDS_REVIEW",
                 "failures":{k:v for k,v in failures.items() if v}}
             if recommendation is not None:
                 summary["recommendation"] = recommendation
+            if audit is not None:
+                summary["quality_audit"] = {k: v for k, v in audit.items() if k not in ("cleared", "reread")}
             if fold is not None:
                 summary["identity_fold"] = fold
             if archive:
@@ -303,6 +315,13 @@ class BookFullAnalysis:
                                deferred=["proofreading", "confirm_text_visual", "continuity_checks",
                                          "detect_contradictions", "queue_contradictions"])
             await self.act("finish_job", job_id, "SUCCEEDED", summary, timeout=SHORT)
+            if audit is not None and audit.get("reread"):
+                # the book is read again only after this job has ended (one QUEUED/RUNNING job per book version);
+                # a failure here leaves the audit's «Yeniden okunacak» record for the editor, the reading stands
+                try:
+                    await self.act("quality_reread", job_id, timeout=SHORT)
+                except ActivityError as e:
+                    workflow.logger.warning("quality reread not queued: %s", str(e.cause or e)[:300])
             return summary
         except BaseException as e:
             status = "CANCELLED" if isinstance(e, asyncio.CancelledError) else "FAILED"
@@ -312,6 +331,24 @@ class BookFullAnalysis:
         finally:
             await workflow.execute_activity("release_models", args=[[]], start_to_close_timeout=SHORT,
                                             retry_policy=RETRY)
+
+    async def _quality_audit(self, job_id: str, gid: str, profile: str, failures: dict) -> dict | None:
+        """QUALITY_AUDIT: the reading audits and repairs itself (editor.read_audit.run_step). The steps it repaired
+        leave `failures`; None when the history predates the marker or the audit itself failed (recorded in
+        `failures.quality_audit`, the reading goes on)."""
+        if not workflow.patched(QUALITY_AUDIT):
+            return None
+        await self.step(15, "Kalite denetimi")
+        try:
+            out = await self.act("quality_audit", job_id, gid, profile,
+                                 {k: v for k, v in failures.items() if v}, timeout=timedelta(hours=6))
+        except ActivityError as e:
+            failures["quality_audit"] = [str(e.cause or e)[:500]]
+            return None
+        out = out or {}
+        for key in out.get("cleared") or []:
+            failures.pop(key, None)
+        return out
 
     async def _run_redaction(self, job_id: str, gid: str) -> dict:
         """A book read in the archive profile, opened for redaction: the steps the archive reading

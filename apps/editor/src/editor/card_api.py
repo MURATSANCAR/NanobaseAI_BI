@@ -375,40 +375,51 @@ def book_read_jobs(requested_by: str = Query(default='')):
 def archive_books(q: str = Query(default='', max_length=200), category: str = Query(default='', max_length=64),
                   state: str = Query(default='', max_length=20), sort: str = Query(default='title', max_length=10),
                   offset: int = Query(default=0, ge=0), limit: int = Query(default=50, ge=1, le=200),
-                  review: bool = Query(default=False), title_review: bool = Query(default=False)):
+                  review: bool = Query(default=False), title_review: bool = Query(default=False),
+                  quality: str = Query(default='', max_length=12)):
     """Kitap Eczanesi: arşiv kipinde okunan kitaplar (toplu arşiv + portaldan arşiv kipinde yüklenen), okuma ve
     redaksiyon durumuyla; arama, kategori ve durum süzgeci, sayfa. Salt okuma. Sayfa boyu bir istekte en çok 200;
     bütün kitaplar `offset` ile gezilir, `total` süzülmüş sayıdır (kesilmez). Her satırda `site` (kitabın
     timas.com.tr'deki kategori yolları, olduğu gibi; bulunamadıysa found=false), `suggestion` (Zeki AI önerisi)
     ve `review` (ikisi ayrışıyor mu, neden); `review=true` yalnız gözden geçirilecekleri verir; `title_review=true`
-    yalnız adı doğrulanmamış kitapları («Adı gözden geçir»). Durum `beklemede`: okuma bilerek durdurulmuş (hata değil)."""
-    from . import archive, recommend
+    yalnız adı doğrulanmamış kitapları («Adı gözden geçir»). Durum `beklemede`: okuma bilerek durdurulmuş (hata değil).
+    Her satırda `quality` (okuma kalite denetiminin son durumu: {status CLEAN|FIXED|REVIEW|REREAD, label, open} ya da
+    null — denetlenmemiş); `quality=temiz|duzeltildi|gozden` o durumdakileri verir, `facets.quality` sayıları."""
+    from . import archive, read_audit, recommend
     from . import portal_books as PB
     if state and state not in archive.LIST_STATES:
         raise HTTPException(422,'state geçersiz')
     if sort not in archive.SORTS:
         raise HTTPException(422,'sort geçersiz')
+    if quality and quality not in archive.QUALITY_FILTERS:
+        raise HTTPException(422,'quality geçersiz')
     with foundation.read_snapshot() as c:
         rows,proofed,waiting=archive.listing_data(c)
         books=archive.shape(rows,proofed,waiting,PB.busy_count())
         extra=recommend.listing_extra(c,[b['id'] for b in books])
+        audits=read_audit.listing(c,[b['id'] for b in books])
     recommend.attach(books,extra,recommend.site_index())
+    for b in books:
+        b['quality']=audits.get(b['id'])
     return archive.select(books,q=q,category=category,state=state,sort=sort,offset=offset,limit=limit,review=review,
-                         title_review=title_review)
+                         title_review=title_review,quality=quality)
 
 @app.get('/v1/archive/books/{book_id}')
 def archive_book(book_id: UUID):
-    """Kitap Eczanesi'nde tek kitabın satırı (ayrıntı ekranının yoklaması; bütün listeyi okumaz)."""
-    from . import archive, recommend
+    """Kitap Eczanesi'nde tek kitabın satırı (ayrıntı ekranının yoklaması; bütün listeyi okumaz). `quality`: okuma
+    kalite denetiminin son kaydı — durum, açık bulgular (`open`), düzeltilenler (`fixed`), bilgi notları (`notes`) ve
+    yapılan düzeltmeler (`fixes`); denetlenmemişse null."""
+    from . import archive, read_audit, recommend
     from . import portal_books as PB
     with foundation.read_snapshot() as c:
         rows,proofed,waiting=archive.listing_data(c,str(book_id))
         books=archive.shape(rows,proofed,waiting,PB.busy_count())
         extra=recommend.listing_extra(c,[b['id'] for b in books])
+        quality=read_audit.detail(c,str(book_id)) if books else None
     if not books:
         raise HTTPException(404,'book not found')
     recommend.attach(books,extra,recommend.site_index())
-    return books[0]
+    return {**books[0],'quality':quality}
 
 @app.get('/v1/documents')
 def document_list(uploaded_by: str = Query(default='')):

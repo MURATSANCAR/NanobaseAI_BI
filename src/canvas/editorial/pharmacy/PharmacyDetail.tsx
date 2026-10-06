@@ -8,6 +8,7 @@ import {
   pharmacyApi,
   studioApi,
   type PharmacyBook,
+  type PharmacyQualityItem,
   type StudioArtMode,
   type StudioJobRow,
 } from '../../engine';
@@ -25,7 +26,7 @@ import { EpubSection } from '../studio/epub';
 import { NarrationSection } from '../studio/narration';
 import { ART_MODES, ArtModePicker, artModeDuration } from '../studio/ArtMode';
 import { StepIcon, ago, ghostBtn, gradientBtn } from '../studio/shared';
-import { AUDIENCE_LABEL, ageText, jobNote, moving, notABookText, readPill, redactionPill, reviewText } from './labels';
+import { AUDIENCE_LABEL, ageText, jobNote, moving, notABookText, pagesText, qualityPill, readPill, redactionPill, reviewText } from './labels';
 
 /** Kitap Eczanesi'nde seçili kitap: okuma durumu ve dört iş — son okuma (redaksiyon), e-kitap, sesli kitap,
  *  Kitap Tasarım Stüdyosu. Her biri var olan ekranların bileşenleriyle: son okuma bulguları, kararlar, Word çıktısı,
@@ -297,6 +298,79 @@ function StudioTab({ b, tab }: { b: PharmacyBook; tab: Exclude<Tab, 'son-okuma'>
 
 /* ------------------------------------------------------------------ önerilen kategori / yaş */
 
+/* ------------------------------------------------------------------ okuma kalitesi */
+
+function QualityRow({ x, tone }: { x: PharmacyQualityItem; tone: 'warn' | 'ok' | 'muted' }) {
+  const dot = tone === 'warn' ? (x.severity === 'critical' ? 'bg-rose-500' : 'bg-amber-500') : tone === 'ok' ? 'bg-emerald-500' : 'bg-slate-300';
+  const pages = pagesText(x.pages);
+  return (
+    <li className="flex min-w-0 gap-2 py-1.5">
+      <span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden />
+      <span className="min-w-0 break-words text-[12.5px] leading-snug">
+        {x.title}
+        {pages && <span className="text-canvas-muted"> · {pages}</span>}
+      </span>
+    </li>
+  );
+}
+
+/** «Okuma kalitesi»: Zeki AI'ın okuma bitince yaptığı denetim — açık bulgular (gözden geçirilecek), kendisinin
+ *  düzelttikleri ve bilgi notları. Kayıt yoksa (denetlenmemiş okuma) panel görünmez. */
+function QualityPanel({ b }: { b: PharmacyBook }) {
+  const q = b.quality;
+  const pill = qualityPill(q);
+  if (!q || !pill) return null;
+  const issues = q.issues ?? [];
+  const fixed = q.fixed ?? [];
+  const notes = q.notes ?? [];
+  const fixes = (q.fixes ?? []).filter((f) => f.ok);
+  const lead =
+    q.status === 'CLEAN'
+      ? 'Zeki AI okumayı denetledi; sorun bulmadı.'
+      : q.status === 'FIXED'
+        ? 'Zeki AI okumada bulduğu sorunları kendisi düzeltti.'
+        : q.status === 'REREAD'
+          ? 'Zeki AI kitabın yeniden okunmasına karar verdi; yeni okuma bitince yeniden denetlenir.'
+          : 'Zeki AI\'ın kendiliğinden düzeltemediği bulgular aşağıda; bir editörün bakması gerekiyor.';
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <SectionHead title="Okuma kalitesi">{lead}</SectionHead>
+        <Pill tone={pill.tone}>{pill.text}</Pill>
+      </div>
+      {issues.length > 0 && (
+        <section aria-label="Gözden geçirilecekler" className="mt-2.5 rounded-2xl border border-amber-200 bg-amber-50/60 px-3 py-1.5">
+          <ul className="divide-y divide-amber-100">
+            {issues.map((x, i) => (
+              <QualityRow key={`${x.code}-${i}`} x={x} tone="warn" />
+            ))}
+          </ul>
+        </section>
+      )}
+      {(fixed.length > 0 || fixes.length > 0) && (
+        <section aria-label="Düzeltilenler" className="mt-2.5 rounded-2xl border border-slate-100 bg-white/85 px-3 py-1.5">
+          <ColHead>Düzeltilenler</ColHead>
+          <ul className="divide-y divide-slate-100">
+            {fixed.map((x, i) => (
+              <QualityRow key={`${x.code}-${i}`} x={x} tone="ok" />
+            ))}
+            {fixed.length === 0 &&
+              fixes.map((f, i) => <QualityRow key={`f-${i}`} x={{ code: 'fix', severity: 'info', title: f.text, pages: null }} tone="ok" />)}
+          </ul>
+        </section>
+      )}
+      {notes.length > 0 && (
+        <ul className="mt-2 px-1 text-canvas-muted">
+          {notes.map((x, i) => (
+            <QualityRow key={`${x.code}-${i}`} x={x} tone="muted" />
+          ))}
+        </ul>
+      )}
+      {q.at && <p className="mt-1.5 px-1 text-[11.5px] text-canvas-muted">Denetim: {dateTime(q.at)}</p>}
+    </Panel>
+  );
+}
+
 function ColHead({ children }: { children: ReactNode }) {
   return <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{children}</div>;
 }
@@ -447,6 +521,8 @@ export default function PharmacyDetail({ id, tab, onTab, onBack }: { id: string;
           </div>
         </div>
       </Panel>
+
+      <QualityPanel b={b} />
 
       <CategoryCompare b={b} />
 

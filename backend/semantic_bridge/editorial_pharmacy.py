@@ -72,16 +72,20 @@ def register(app, deps: dict[str, Any] | Any) -> None:
                  dis_adi='Editör kart servisi (okuma kuyruğu)')
     def pharmacy_books(request: Request, q: str = "", category: str = "", state: str = "", sort: str = "title",
                        offset: int = 0, limit: int = 50, review: bool = False,
-                       title_review: bool = False) -> dict[str, Any]:
+                       title_review: bool = False, quality: str = "") -> dict[str, Any]:
         """Sayfa sayfa liste; arama, kategori («-» = kategorisiz), durum ve «gözden geçir» süzgeci (sitedeki kategori
         ile Zeki AI önerisi ayrışanlar) ve «adı gözden geçir» süzgeci (`title_review`: adı dosya adından tahmin edilen
         kitaplar; `facets.title_review` sayısı). Durum `beklemede`: okuma bilerek bekletiliyor (hata değil).
         `total` süzülmüş sayı. Satırda `not_a_book` ({reason: FEW_PAGES |
         CATALOGUE | MODEL} ya da null): dosya kitap değil (katalog, bülten, broşür, yalnız kapak) — karakter, olay ve
-        kategori/yaş önerisi çıkarılmadı; ekran «Kitap değil» rozeti gösterir. Kart servisinin alanı olduğu gibi gelir."""
+        kategori/yaş önerisi çıkarılmadı; ekran «Kitap değil» rozeti gösterir. Kart servisinin alanı olduğu gibi gelir.
+        Satırda `quality`: okuma kalite denetiminin son durumu ({status CLEAN|FIXED|REVIEW|REREAD, label, open} ya da
+        null); `quality=temiz|duzeltildi|gozden` süzgeci, `facets.quality` sayıları. Ayrıntı ucu (`/books/{id}`)
+        bulgu listesini (`quality.open`, `fixed`, `notes`, `fixes`) taşır."""
         auth(request)
         try:
-            return editorial_cards.archive_books(q, category, state, sort, offset, limit, review, title_review)
+            return editorial_cards.archive_books(q, category, state, sort, offset, limit, review, title_review,
+                                                 quality)
         except Exception as e:  # noqa: BLE001
             _engine_error(e, "Kitap listesi şu an alınamadı.")
 
