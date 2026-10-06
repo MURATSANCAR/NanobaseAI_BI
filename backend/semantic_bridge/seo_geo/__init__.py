@@ -42,7 +42,7 @@ SALES, VIEWS = _json_num("CountTotalSales"), _json_num("StatViews")
 #: T-soft barkodu yalnız rakamlarıyla: CRM kitap kartına (EAN-13) bağlanır.
 EAN = sa.func.regexp_replace(sa.func.coalesce(sa.cast(PRODUCTS.c.data_json, sa.JSON)["Barcode"].as_string(), ""), "[^0-9]", "", "g")
 #: CRM'de karşılığı aranan ürün: barkodu kitap barkodu (`crm.book_barcode`). Set ve siteye özel kod «eşleşmeyen» sayılmaz.
-BOOK_EAN = EAN.op("~")("^97[89][0-9]{10}$")
+BOOK_EAN = EAN.regexp_match("^97[89][0-9]{10}$")
 
 
 class Decision(BaseModel):
