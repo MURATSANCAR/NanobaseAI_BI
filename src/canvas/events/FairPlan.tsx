@@ -230,7 +230,7 @@ function Gantt({ items, today }: { items: PlanFair[]; today: string }) {
             {months.map((m) => (
               <div key={m.key} className="absolute top-0 h-full border-l border-slate-200" style={{ left: m.x, width: m.w }}>
                 <div className="truncate px-2 pt-1 text-[11.5px] font-extrabold text-canvas-ink">{m.label}</div>
-                {[1, 8, 15, 22, 29].map((d) => d * DAY <= m.w && (
+                {[1, 8, 15, 22].map((d) => (
                   <span key={d} className="absolute bottom-1 font-mono text-[9.5px] tabular-nums text-canvas-muted" style={{ left: (d - 1) * DAY }}>{d}</span>
                 ))}
               </div>
@@ -295,18 +295,27 @@ function Gantt({ items, today }: { items: PlanFair[]; today: string }) {
 
 /** Telefon: aya göre kartlar (yatay çizelge dar ekranda okunmuyor). */
 function MonthList({ items }: { items: PlanFair[] }) {
+  const [showPast, setShowPast] = useState(false);
+  const past = items.filter((f) => f.phase === 'bitti').length;
   const groups = useMemo(() => {
     const gs: Array<{ key: string; items: PlanFair[] }> = [];
     for (const f of items) {
+      if (!showPast && f.phase === 'bitti') continue;
       const k = f.startsOn.slice(0, 7);
       const g = gs[gs.length - 1];
       if (g && g.key === k) g.items.push(f);
       else gs.push({ key: k, items: [f] });
     }
     return gs;
-  }, [items]);
+  }, [items, showPast]);
   return (
     <div className="flex flex-col gap-3">
+      {past > 0 && (
+        <button type="button" onClick={() => setShowPast((v) => !v)} aria-expanded={showPast}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-100 px-3 text-[12.5px] font-bold text-canvas-ink transition-transform duration-150 active:scale-[0.97]">
+          {showPast ? `Biten ${past} fuarı gizle` : `Biten ${past} fuarı da göster`}
+        </button>
+      )}
       {groups.map((g) => (
         <section key={g.key}>
           <h3 className="mb-1.5 px-1 text-[11.5px] font-extrabold uppercase tracking-wide text-canvas-violet">
@@ -324,12 +333,13 @@ function MonthList({ items }: { items: PlanFair[] }) {
                       <WhoPill f={f} />
                     </div>
                     <div className="mt-0.5 font-mono text-[11.5px] tabular-nums text-canvas-ink">{fmtShort(f.startsOn)} – {fmtShort(f.endsOn)} · {f.days} gün</div>
-                    {(f.venue || f.organizer) && (
+                    {f.venue && (
                       <div className="mt-0.5 flex items-start gap-1 text-[11.5px] text-canvas-muted">
                         <MapPin aria-hidden className="mt-0.5 h-3 w-3 shrink-0" />
-                        <span className="min-w-0">{[f.venue, f.organizer].filter(Boolean).join(' · ')}</span>
+                        <span className="min-w-0">{f.venue}</span>
                       </div>
                     )}
+                    {f.organizer && <div className="mt-0.5 text-[11.5px] text-canvas-muted">Düzenleyen: {f.organizer}</div>}
                     <span className={`mt-1.5 inline-flex rounded-md px-1.5 py-0.5 text-[10.5px] font-bold ${st.cls}`}>{st.text}</span>
                   </div>
                 </li>
