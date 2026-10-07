@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import re
 import sys
 import types
 import xml.etree.ElementTree as ET
@@ -342,8 +343,60 @@ def test_guess_voice_ignores_comparisons_and_follows_stated_sex():
     assert N.guess_voice("wombat", "female wombat, a bit larger than the father") == "genc-kadin"
     assert N.guess_voice("mother wombat", "larger than the father") == "genc-kadin"
     assert N.guess_voice("lion", "a big man with a mane") == "genc-erkek"
-    assert N.guess_voice("son of the king", "") == "genc-erkek"           # küçük çocuk sesi yok: genç ses
+    assert N.guess_voice("son of the king", "") == N.canonical("cocuk-erkek")  # çocuk sesi onay bekliyorsa genç ses
     assert N.guess_voice("tree", "old and tall") is None
+
+
+def _child_approved(monkeypatch, ids=("cocuk-erkek", "cocuk-kiz", "kucuk-erkek", "kucuk-kiz")):
+    """Çocuk seslerinin onaylandığı durumu kayıt dosyası olmadan kurar: kimlikler katalogda, yönlendirme yok."""
+    from editor.production import voices_zeki as Z
+    monkeypatch.setattr(N, "ALIASES", {k: v for k, v in N.ALIASES.items() if k not in ids})
+    monkeypatch.setattr(N, "VOICE_IDS", N.VOICE_IDS | set(ids))
+    return Z
+
+
+def test_child_voices_wait_for_approval_and_fall_back_to_young_voice():
+    """2026-10-07: çocuk sesleri (karakter grubu) kullanıcı dinleyip seçene kadar katalogda görünmez; kimlikleri genç
+    sese gider, çocuk karakteri bugünkü gibi okunur."""
+    from editor.production import voices_zeki as Z
+    ids = {v["id"] for v in Z.CHILD_VOICES}
+    assert ids == {"cocuk-erkek", "cocuk-kiz", "kucuk-erkek", "kucuk-kiz"}
+    assert all(v["group"] == "karakter" for v in Z.CHILD_VOICES)
+    assert all(v["id"] not in Z.PINNED for v in Z.PENDING)
+    for v in Z.PENDING:
+        assert v["id"] not in N.VOICE_IDS and N.is_voice(v["id"])
+        assert N.canonical(v["id"]) in N.VOICE_IDS
+        assert N.canonical(v["id"]).endswith("-kadin" if "kiz" in v["id"] else "-erkek")
+    assert not {v["id"] for v in Z.PENDING} & {v["id"] for v in N.all_voices()}
+    # sesin kişisi (efekt ipuçları): yönlendirildiği sesin kişisi
+    from editor.production import sfx
+    assert {sfx.voice_person(v["id"]) for v in Z.PENDING} <= {"kadın", "erkek", "kız çocuğu", "erkek çocuğu"}
+    # tarif kişi değil, yaş söyler
+    for v in Z.CHILD_VOICES:
+        assert re.search(r"\b(boy|girl)\b", v["design"]) and re.search(r"year-old|years old|age \w+", v["design"])
+        assert not re.search(r"\b(clone|voice of|sounds like|imitat)", v["design"], re.I)
+
+
+def test_child_state_lists_approved_and_chains_fallback():
+    from editor.production import voices_zeki as Z
+    listed, pending, aliases = Z.child_state({})
+    assert listed == [] and aliases == {"cocuk-erkek": "genc-erkek", "cocuk-kiz": "genc-kadin",
+                                        "kucuk-erkek": "genc-erkek", "kucuk-kiz": "genc-kadin"}
+    listed, pending, aliases = Z.child_state({"cocuk-erkek": {}, "cocuk-kiz": {}})
+    assert {v["id"] for v in listed} == {"cocuk-erkek", "cocuk-kiz"}
+    assert aliases == {"kucuk-erkek": "cocuk-erkek", "kucuk-kiz": "cocuk-kiz"}     # küçük önce büyük çocuğa
+    listed, pending, aliases = Z.child_state({v["id"]: {} for v in Z.CHILD_VOICES})
+    assert len(listed) == 4 and pending == [] and aliases == {}
+
+
+def test_guess_voice_picks_child_voice_by_age_when_approved(monkeypatch):
+    _child_approved(monkeypatch)
+    assert N.guess_voice("boy", "an eight-year-old boy with a school bag") == "cocuk-erkek"
+    assert N.guess_voice("son of the king", "a little boy") == "cocuk-erkek"      # «little» yaş söylemez
+    assert N.guess_voice("girl", "a kindergarten girl with pigtails") == "kucuk-kiz"
+    assert N.guess_voice("boy", "a five-year-old boy") == "kucuk-erkek"
+    assert N.guess_voice("child", "a 6-year-old girl") == "kucuk-kiz"
+    assert N.guess_voice("mother", "a young mother") == "genc-kadin"
 
 
 def test_short_exclamation_gets_min_duration():

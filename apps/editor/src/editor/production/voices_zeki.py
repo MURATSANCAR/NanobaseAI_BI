@@ -12,6 +12,9 @@ kaydın kendisi sabittir: `sesler/zeki/<ses>.wav` (imajla gelir), sha256 burada;
 klonda referans metnidir. Tarif yine saklanır: sesin kişisi (kadın/erkek/yaşlı) ondan okunur (sfx.voice_person).
 
 Kayıt düzeni `narration.PINNED` ile aynıdır; dosya yoksa ya da özeti tutmazsa ses üretilmez.
+
+Çizgi film çocuk sesleri (CHILD_VOICES, 2026-10-07) aynı yöntemle üretildi; sabit kaydı (PINNED) olmayan çocuk sesi
+«onay bekliyor»dur: katalogda görünmez, kimliği genç sese yönlenir (ayrıntı dosyanın sonunda).
 """
 
 from __future__ import annotations
@@ -24,6 +27,9 @@ READER_TEXT = ("Kitabın ilk sayfasını açtığında, yıllardır beklediği c
                "Satırlar ilerledikçe, kendi hikâyesini başka birinin kaleminden okuyormuş gibi hissetti.")
 FILM_TEXT = ("Yıllar önce, bu dağların ardında bir köy vardı. Kimse adını hatırlamaz artık. "
              "Ama ben hatırlarım, evlat. Otur da sana anlatayım.")
+# Çocuk sesleri setinin cümlesi (deploy/ses/cocuk_sesleri.py TEXT ile aynı).
+CHILD_TEXT = ("Anne, bak! Bahçede kocaman bir kaplumbağa var. Adını Pamuk koyalım mı? "
+              "Ben ona her gün su veririm, şimdi söz veriyorum.")
 
 
 def _v(vid: str, label: str, note: str, group: str, design: str) -> dict:
@@ -100,7 +106,8 @@ DEFAULT_MALE_NARRATOR = "roman-erkek"
 RECOMMENDED = {"roman-kadin", "roman-erkek"}
 
 # Kaldırılan kimlik → en yakın yeni ses (kayıtlı kitap ayarı, API isteği ve karakter önerisi çalışmaya devam eder).
-# Küçük çocuk sesleri kaldırıldı (kullanıcı 2026-10-03: «çok kötü»); çocuk karakteri genç ses okur.
+# Eski küçük çocuk sesleri kaldırıldı (kullanıcı 2026-10-03: «çok kötü»). Yeni çocuk sesleri (CHILD_VOICES, aşağıda)
+# onaylanana kadar `cocuk-kiz` / `cocuk-erkek` kimlikleri CHILD_FALLBACK ile genç sese gider.
 ALIASES = {
     "anlatici-erkek": DEFAULT_MALE_NARRATOR,
     "anlatici-kadin": "roman-kadin", "anlatici-erkek-masalci": "masal-baba", "anlatici-kadin-berrak": "gelisim-kadin",
@@ -110,7 +117,7 @@ ALIASES = {
     "masal-erkek-baba": "masal-baba", "masal-erkek-ogretmen": "masal-baba", "masal-erkek-dede": "masal-dede",
     "yetiskin-kadin-roman": "roman-kadin", "yetiskin-kadin-deneme": "deneme-kadin", "yetiskin-kadin-cagdas": "roman-kadin",
     "yetiskin-erkek-roman": "roman-erkek", "yetiskin-erkek-deneme": "deneme-erkek", "yetiskin-erkek-cagdas": "roman-erkek",
-    "cocuk-kiz": "genc-kadin", "cocuk-erkek": "genc-erkek", "yasli-kadin": "masal-nine", "yasli-erkek": "bilge-dede",
+    "yasli-kadin": "masal-nine", "yasli-erkek": "bilge-dede",
     "canli-kadin-masalci": "masal-anne", "canli-kadin-sahne": "roman-kadin", "canli-kadin-nine": "masal-nine",
     "canli-erkek-masalci": "masal-baba", "canli-erkek-radyo": "roman-erkek", "canli-erkek-dede": "masal-dede",
 }
@@ -144,3 +151,45 @@ PINNED: dict[str, dict] = {
     "yasli-kaptan": _p("yasli-kaptan", FILM_TEXT, "d555cb85add0fc04b45a605293aab2d2e6e459b070044d305842e25ff103fc90"),  # tohum 89
     "fragman-anlatici": _p("fragman-anlatici", FILM_TEXT, "63a913e9af90e134cfccc4b5577c114a7aaba12357ef0f1af3334da8bcaa59e7"),  # tohum 11
 }
+
+# Çizgi film çocuk sesleri (2026-10-07; aday üretimi ve ölçüm docs/analiz/sesli-okuma-cocuk-sesleri.md,
+# deploy/ses/cocuk_sesleri.py). Tarifler hazır, adaylar ölçüldü; kullanıcı dinleyip seçene kadar «onay bekliyor»
+# (PENDING): katalogda görünmez, kimliği CHILD_FALLBACK'teki genç sese gider (çocuk karakteri bugünkü gibi okunur).
+# Onay = seçilen aday `sesler/zeki/<ses>.wav` olarak konur ve PINNED'e `_p(<ses>, CHILD_TEXT, <sha256>)` eklenir; ses
+# kendiliğinden kataloğa (karakter grubu) girer, yönlendirme kalkar. Geçici olarak en iyi aday sabitlenmedi: sabit kayıt
+# kitap boyunca sesin kimliğidir, sonradan değişirse o sesle okunmuş bütün sayfalar «güncel değil» olur.
+# Tarif: ölçümde ilk sıradaki adayın tarifi; kullanıcı başka tariften bir aday seçerse onunki yazılır (sesin kişisi
+# tariften okunur). «high/tiny/very high» geçen tarifler 330–530 Hz cıyaklamaya kaçtı, kullanılmadı.
+CHILD_VOICES: list[dict] = [
+    _v("cocuk-erkek", "Erkek çocuk · 7–10 yaş", "ilkokul çağı, doğal", "karakter",
+       "A ten-year-old boy with a natural child's voice, not squeaky, speaking calmly and clearly at a moderate pace"),
+    _v("cocuk-kiz", "Kız çocuk · 7–10 yaş", "ilkokul çağı, doğal", "karakter",
+       "A primary school girl, about eight years old, speaking slowly and clearly to her mother, gentle and sincere"),
+    _v("kucuk-erkek", "Küçük erkek çocuk · 4–6 yaş", "okul öncesi, yumuşak", "karakter",
+       "A five-year-old boy telling his mother about his day, soft and natural little child's voice, slow and clear"),
+    _v("kucuk-kiz", "Küçük kız çocuk · 4–6 yaş", "okul öncesi, sakin", "karakter",
+       "A kindergarten girl, about six years old, calm, clear and sincere, speaking slowly word by word"),
+]
+# onay bekleyen ses → yedeği (küçük çocuk önce büyük çocuğa, o da onay bekliyorsa genç sese)
+CHILD_FALLBACK = {"cocuk-erkek": "genc-erkek", "cocuk-kiz": "genc-kadin",
+                  "kucuk-erkek": "cocuk-erkek", "kucuk-kiz": "cocuk-kiz"}
+
+
+def child_state(pinned: dict) -> tuple[list[dict], list[dict], dict[str, str]]:
+    """Sabit kaydı olan çocuk sesleri kataloğa girer, olmayanlar onay bekler ve yedeğine yönlenir:
+    (kataloğa girenler, onay bekleyenler, yönlendirmeler)."""
+    listed = [v for v in CHILD_VOICES if v["id"] in pinned]
+    pending = [v for v in CHILD_VOICES if v["id"] not in pinned]
+    waiting = {v["id"] for v in pending}
+
+    def fallback(vid: str) -> str:
+        while vid in waiting:
+            vid = CHILD_FALLBACK[vid]
+        return vid
+
+    return listed, pending, {v["id"]: fallback(v["id"]) for v in pending}
+
+
+_listed, PENDING, _child_aliases = child_state(PINNED)
+VOICES += _listed
+ALIASES.update(_child_aliases)

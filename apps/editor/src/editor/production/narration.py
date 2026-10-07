@@ -133,7 +133,8 @@ def all_voices() -> list[dict]:
 
 
 # Karakter tarifinden (artplan: species/look, İngilizce) sese öneri: genel kelimeler, kitaba özel değil. Sağdaki
-# kimlikler kişi sınıfıdır; katalogdaki sese canonical() çevirir (çocuk → genç ses, yaşlı → masalcı nine / bilge dede).
+# kimlikler kişi sınıfıdır; katalogdaki sese canonical() çevirir (yaşlı → masalcı nine / bilge dede; çocuk → çocuk
+# sesi, o onay bekliyorsa genç ses: voices_zeki.CHILD_VOICES). Okul öncesi yaşı söyleyen tarif küçük çocuk sesine gider.
 _GUESS = [
     (r"\b(grand(ma|mother)|old (woman|lady)|granny|elderly woman|nine)\b", "yasli-kadin"),
     (r"\b(grand(pa|father)|old man|elderly man|dede)\b", "yasli-erkek"),
@@ -151,6 +152,11 @@ _FEMALE = re.compile(r"\b(female|she|her|woman|girl|mother|mom|lady|queen|prince
 _MALE = re.compile(r"\b(male|he|his|man|boy|father|dad|king|prince|brother|uncle)\b")
 _SWAP = {"genc-erkek": "genc-kadin", "yasli-erkek": "yasli-kadin", "cocuk-erkek": "cocuk-kiz",
          "genc-kadin": "genc-erkek", "yasli-kadin": "yasli-erkek", "cocuk-kiz": "cocuk-erkek"}
+# Okul öncesi (4–6 yaş): yaşı ya da okul öncesini açıkça söyleyen tarif. «little/young/small» her yaştaki çocuk için
+# kullanıldığından (ilkokul çağındaki «a little boy») küçük çocuk sayılmaz.
+LITTLE = re.compile(r"\b(toddler|preschool(er)?|kindergarten(er)?|nursery|tiny)\b"
+                     r"|\b([2-6]|two|three|four|five|six)[- ]years?[- ]old\b")
+_KUCUK = {"cocuk-erkek": "kucuk-erkek", "cocuk-kiz": "kucuk-kiz"}
 
 
 def guess_voice(species: str, look: str = "") -> str | None:
@@ -169,6 +175,8 @@ def guess_voice(species: str, look: str = "") -> str | None:
         vid = _SWAP[vid]
     elif vid in ("genc-kadin", "yasli-kadin", "cocuk-kiz") and mal and not fem:
         vid = _SWAP[vid]
+    if vid in _KUCUK and LITTLE.search(main):
+        vid = _KUCUK[vid]
     return canonical(vid)          # kişi sınıfı (yaşlı/çocuk/genç) katalogdaki sese: ALIASES (voices_zeki.py)
 
 

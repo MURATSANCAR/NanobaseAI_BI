@@ -15,9 +15,12 @@ from .. import narration
 from ..characters import CardSet
 from . import spec, store
 
-# (yaş, cinsiyet) → aday sesler (sırayla dağıtılır). Katalogda çocuk sesi yok: çocuk karakter genç sesle okunur.
+# (yaş, cinsiyet) → aday sesler (sırayla dağıtılır). Çocuk karakter önce çocuk sesleriyle okunur (ilkokul çağı, sonra
+# okul öncesi; voices_zeki.CHILD_VOICES); onay bekleyen ses katalogda yoktur, kimliği genç sese gider (canonical) ve
+# listede tek kez sayılır — o zaman çocuk karakter eskisi gibi genç sesle okunur.
 CANDIDATES = {
-    ("cocuk", "kadin"): ["genc-kadin", "masal-anne"], ("cocuk", "erkek"): ["genc-erkek", "masal-baba"],
+    ("cocuk", "kadin"): ["cocuk-kiz", "kucuk-kiz", "genc-kadin", "masal-anne"],
+    ("cocuk", "erkek"): ["cocuk-erkek", "kucuk-erkek", "genc-erkek", "masal-baba"],
     ("genc", "kadin"): ["genc-kadin", "roman-kadin"], ("genc", "erkek"): ["genc-erkek", "roman-erkek"],
     ("yetiskin", "kadin"): ["roman-kadin", "masal-anne", "tarih-kadin", "gelisim-kadin"],
     ("yetiskin", "erkek"): ["roman-erkek", "masal-baba", "tarih-erkek", "gelisim-erkek"],
@@ -43,7 +46,11 @@ def pick_voice(member: dict, used: set[str]) -> str:
     key = (member.get("age", "yetiskin"), member.get("gender", "belirsiz"))
     if key[1] == "belirsiz":
         key = (key[0], "kadin")
-    cands = [v for v in CANDIDATES.get(key, CANDIDATES[("yetiskin", "kadin")]) if _ok(v)]
+    cands = list(dict.fromkeys(narration.canonical(v) for v in CANDIDATES.get(key, CANDIDATES[("yetiskin", "kadin")])
+                               if _ok(v)))
+    if key[0] == "cocuk" and narration.LITTLE.search(f"{member.get('look_en', '')} {role}".lower()):
+        little = [v for v in cands if v.startswith("kucuk-")]   # okul öncesi yaşı söyleyen tarif: küçük çocuk sesi önce
+        cands = little + [v for v in cands if v not in little]
     for v in cands:
         if v not in used:
             return v

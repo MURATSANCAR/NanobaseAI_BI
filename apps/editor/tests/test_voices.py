@@ -157,7 +157,10 @@ def test_voice_library_groups_and_designs():
         ws = [v for v in N.VOICES if v["group"] == g]
         assert any("Kadın" in v["label"] or "kadın" in v["label"] for v in ws), g
         assert any("Erkek" in v["label"] or "erkek" in v["label"] or "adam" in v["label"] for v in ws), g
-    assert not any(re.search(r"\b(child|girl|boy)\b", v["design"]) for v in N.VOICES)   # küçük çocuk sesi yok
+    # çocuk sesi yalnız onaylanmış çocuk sesleri (voices_zeki.CHILD_VOICES, karakter grubu) arasından gelir
+    from editor.production import voices_zeki as Z
+    child = {v["id"] for v in Z.CHILD_VOICES}
+    assert all(v["id"] in child for v in N.VOICES if re.search(r"\b(child|girl|boy)\b", v["design"]))
     assert N.DEFAULT_NARRATOR == "roman-kadin"
 
 
@@ -206,7 +209,7 @@ def test_catalog_voices_use_packaged_reference(root, monkeypatch, tmp_path_facto
         assert w.getnchannels() == 1 and 5.0 < w.getnframes() / w.getframerate() < 16.0
         ref = asyncio.run(N.voice_ref(vid))
         assert base64.b64decode(ref["ref_audio"]) == data and ref["ref_text"] == meta["text"]
-        assert meta["text"] in (Z.READER_TEXT, Z.FILM_TEXT)
+        assert meta["text"] in (Z.READER_TEXT, Z.FILM_TEXT, Z.CHILD_TEXT)
     vid = N.DEFAULT_MALE_NARRATOR
     data = (N.PINNED_DIR / N.PINNED[vid]["file"]).read_bytes()
     assert base64.b64decode(asyncio.run(N.voice_ref("anlatici-erkek"))["ref_audio"]) == data

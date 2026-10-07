@@ -163,6 +163,31 @@ def test_voice_pick_spreads_and_respects_roles(monkeypatch):
     assert cast_mod.pick_voice({"age": "yasli", "gender": "kadin", "role": "kötü cadı"}, set()) != "karanlik-lord"
 
 
+def test_child_cast_uses_child_voices_with_young_fallback(monkeypatch):
+    """Çocuk karakter önce çocuk sesini alır; ses onay bekliyorsa (katalogda yok) eski genç ses yedeği kalır."""
+    from editor.production import narration as N
+    from editor.production import voices_zeki as Z
+    boy, girl = {"age": "cocuk", "gender": "erkek", "role": "kahraman"}, {"age": "cocuk", "gender": "kadin", "role": ""}
+    if Z.PENDING:                                   # bugünkü durum: seçilmemiş ses genç sese gider, iki kez sayılmaz
+        pend = {v["id"] for v in Z.PENDING}
+        assert {"cocuk-erkek", "kucuk-erkek"} <= pend
+        assert cast_mod.pick_voice(boy, set()) == "genc-erkek"
+        assert cast_mod.pick_voice(boy, {"genc-erkek"}) == "masal-baba"
+    # onaylanmış durum (kayıt dosyası olmadan): kimlikler katalogda, yönlendirme yok
+    ids = {v["id"] for v in Z.CHILD_VOICES}
+    monkeypatch.setattr(N, "ALIASES", {k: v for k, v in N.ALIASES.items() if k not in ids})
+    monkeypatch.setattr(N, "VOICE_IDS", N.VOICE_IDS | ids)
+    used: set[str] = set()
+    a = cast_mod.pick_voice(boy, used)
+    used.add(a)
+    b = cast_mod.pick_voice({**boy, "role": "kardeş"}, used)
+    assert (a, b) == ("cocuk-erkek", "kucuk-erkek")
+    assert cast_mod.pick_voice(girl, set()) == "cocuk-kiz"
+    assert cast_mod.pick_voice({**girl, "look_en": "a five-year-old girl with pigtails"}, set()) == "kucuk-kiz"
+    assert cast_mod.pick_voice({**boy, "look_en": "a little boy in a school uniform"}, set()) == "cocuk-erkek"
+    assert cast_mod.pick_voice({"age": "genc", "gender": "erkek"}, set()) == "genc-erkek"
+
+
 def test_voice_of_falls_back_to_narrator():
     rec = {"narrator": "roman-kadin", "members": [{"name": "Elif", "voice": "genc-kadin"}]}
     assert cast_mod.voice_of(rec, "elif") == "genc-kadin"
