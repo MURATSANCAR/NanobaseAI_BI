@@ -594,3 +594,17 @@ def test_silent_script_and_monotone_camera_are_fatal_when_asked():
     texts = " ".join(p.text for p in spec.fatal(probs))
     assert "0/6 tanesinde ses" in texts and "üst üste 4 kez" in texts
     assert not any("ses var" in p.text for p in spec.check(sc, "cizgi-film", {"Elif"}))   # varsayılan kapalı
+
+
+def test_first_person_narration_is_added_from_book_sentences():
+    from editor.production.film import script as sm
+    text = "Annem bana kalem aldı. Ben resim yaptım. Kardeşim de yaptı. - Ben de resim, dedi Mert."
+    sc = _script([_shot(3, quote="Ben resim yaptım."), _shot(3, quote="- Ben de resim, dedi Mert."),
+                  _shot(3, [{"speaker": "Elif", "text": "Merhaba.", "emotion": "notr"}], quote="Annem bana kalem aldı.")])
+    sc["cast"][0]["role"] = "kahraman"
+    assert sm.first_person(text) and sm.narrator_of(sc, text) == "Elif"
+    assert sm.add_narration(sc, "Elif") == 1                      # konuşma cümlesi ve replikli çekim atlanır
+    first = spec.shots(sc)[0]
+    assert first["lines"][0] == {"speaker": "Elif", "text": "Ben resim yaptım.", "emotion": "notr"}
+    assert not sm.first_person("Ayşe parka gitti. Kedi ağaca çıktı. Rüzgâr esiyordu.")
+    assert sm.narrator_of(sc, "Ayşe parka gitti. Kedi ağaca çıktı.") == spec.NARRATOR

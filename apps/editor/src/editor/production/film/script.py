@@ -8,6 +8,7 @@ planından gelir; model aynı adları kullanır, yeni karakteri `cast`a ekler.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from .. import marketing as mk
@@ -50,6 +51,43 @@ def book_text(d: Path) -> str:
     return "\n\n".join(f"{s.title}\n{s.text}" if s.title else s.text for s in mk.sections(d)).strip()
 
 
+_FIRST = re.compile(r"\b\w+(?:d|t)[ıiuü]m\b|\b(?:annem|babam|kardeşim|ablam|abim|dedem|ninem|ben)\b", re.I)
+_SPEECH = ("-", "–", "—", "«", '"', "“")
+
+
+def first_person(text: str) -> bool:
+    """Birinci tekil anlatım mı: 100 kelimede en az 2 birinci tekil iz («gittim», «annem», «ben»). Dil kuralı;
+    kitaba özel değil."""
+    n = max(spec.words(text), 1)
+    return len(_FIRST.findall(text)) * 100 / n >= 2
+
+
+def narrator_of(script: dict, text: str) -> str:
+    """Dış sesi kim söyler: birinci tekil anlatımda kahraman (rolü «kahraman»/«anlatıcı» olan, yoksa ilk oyuncu),
+    değilse «anlatıcı»."""
+    cast = script.get("cast", [])
+    if not cast or not first_person(text):
+        return spec.NARRATOR
+    hero = next((c for c in cast if (c.get("role") or "").casefold() in ("kahraman", "anlatıcı", "anlatici")), cast[0])
+    return hero["name"]
+
+
+def add_narration(script: dict, narrator: str) -> int:
+    """Sessiz çekime dış ses: çekimin kitaptan birebir cümlesi (`quote`) konuşma değilse anlatım satırı olur;
+    çekim süresi satıra göre uzar (üst sınır spec.MAX_SHOT). Model bu satırları güvenilir yazmıyordu
+    (2026-10-07: istem ve geri bildirimle üç denemede 11/33). Dönen: eklenen satır sayısı."""
+    n = 0
+    for sc in script.get("scenes", []):
+        for sh in sc.get("shots", []):
+            q = (sh.get("quote") or "").strip()
+            if sh.get("lines") or not q or q.startswith(_SPEECH):
+                continue
+            sh["lines"] = [{"speaker": narrator, "text": q, "emotion": "notr"}]
+            sh["seconds"] = min(spec.MAX_SHOT, spec.fit_seconds(float(sh.get("seconds") or 0), [spec.speech_seconds(q)]))
+            n += 1
+    return n
+
+
 def book_checker(d: Path):
     book = mk.norm("\n".join(s.text for s in mk.sections(d)))
     return lambda q: mk.in_book(mk.clean_quote(q), book)
@@ -84,6 +122,8 @@ async def write(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, llm
     for attempt in range(1, ATTEMPTS + 1):
         progress(attempt, ATTEMPTS, "Senaryo yazılıyor")
         out = await mk._ask(llm, PROMPT, spec.SCHEMA, max_tokens=24000, temperature=0.4, feedback=feedback, **kw)
+        if full:
+            add_narration(out, narrator_of(out, text))
         problems = spec.check(out, m["format"], {c["name"] for c in out.get("cast", [])}, in_book,
                               target=target, grounded_min=GROUNDED_MIN if full else None,
                               voiced_min=VOICED_MIN if full else None)
