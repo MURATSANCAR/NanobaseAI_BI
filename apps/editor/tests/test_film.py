@@ -1,5 +1,6 @@
 """Kitaptan film ve reels (editor.production.film): senaryo şeması ve denetimi, çekim süresinin replikle uzaması,
-adım/onay geçişleri, ses seçimi, zaman çizelgesi, altyazı, kurgu ve kesit komutları. Model yok. Kurgu komutunun gerçek
+adım/onay geçişleri, ses seçimi, zaman çizelgesi, altyazı, kurgu ve kesit komutları, sahne müziği (plan, çapraz geçiş,
+konuşmada kısma, servis yokken müziksiz kurgu). Model yok. Kurgu komutunun gerçek
 çalıştırılması ffmpeg ister; yoksa atlanır. Çalıştır:
 
     pytest apps/editor/tests/test_film.py
@@ -32,7 +33,8 @@ for _mod in ("psycopg", "psycopg.rows", "psycopg.types", "psycopg.types.json", "
     sys.modules.setdefault(_mod, _Stub(_mod))
 
 from editor.production.film import cast as cast_mod  # noqa: E402
-from editor.production.film import mix, shoot, social, spec, store  # noqa: E402
+from editor.production.film import mix, music, shoot, social, spec, store  # noqa: E402
+from editor.production.film import script as script_mod  # noqa: E402
 
 import importlib.util  # noqa: E402
 
@@ -413,3 +415,157 @@ def test_enhance_failure_falls_back_to_raw_and_is_reported(film, monkeypatch):
     assert hd == 0 and videos["s01c01"].endswith("s01c01.v1.mp4")
     monkeypatch.setenv("EDITOR_FILM_ENHANCE", "0")
     assert asyncio.run(shoot.enhance_selected(f, None))["error"].startswith("iyileştirme kapalı")
+
+
+# ------------------------------------------------------------------ müzik
+def _three_scenes():
+    sc = _script([_shot(3, [{"speaker": "Elif", "text": "Merhaba.", "emotion": "neseli"}]), _shot(4)])
+    sc["scenes"].append({"setting": "Ev", "setting_en": "a house", "time": "aksam", "shots": [_shot(5), _shot(2)]})
+    sc["scenes"].append({"setting": "Göl", "setting_en": "a lake", "time": "gece", "shots": [_shot(6)]})
+    return sc
+
+
+def test_music_scene_plan_matches_timeline_scene_spans():
+    sc = _three_scenes()
+    v = _voice(sc)
+    plan = music.scene_plan(sc, v)
+    tl = mix.timeline(sc, v, {s["id"]: "a.mp4" for s in spec.shots(sc)}, {})
+    assert [p["scene"] for p in plan] == [1, 2, 3]
+    assert plan[1]["start"] == tl["shots"][2]["start"] and plan[2]["start"] == tl["shots"][4]["start"]
+    assert round(sum(p["seconds"] for p in plan), 3) == tl["total"]
+    assert plan[0]["emotions"] == ["neseli"] and plan[1]["setting"] == "Ev"
+    assert tl["music"] == []                                     # müzik verilmedi: iz boş
+
+
+def test_music_track_crossfades_only_between_scored_neighbours():
+    sc = _three_scenes()
+    v = _voice(sc)
+    plan = music.scene_plan(sc, v)
+    tl = mix.timeline(sc, v, {s["id"]: "a.mp4" for s in spec.shots(sc)}, {}, {"1": "/m/1.wav", "2": "/m/2.wav"})
+    a, b = tl["music"]
+    half = music.XFADE / 2
+    end1 = plan[0]["start"] + plan[0]["seconds"]
+    end2 = plan[1]["start"] + plan[1]["seconds"]
+    assert a["start"] == 0 and a["fade_in"] == mix.MUSIC_EDGE              # film başı: yumuşak açılış
+    assert round(a["start"] + a["seconds"], 3) == round(end1 + half, 3)     # sınırı yarım geçiş taşar
+    assert b["start"] == round(end1 - half, 3)                              # öbürü yarım geçiş önce başlar
+    assert a["fade_out"] == music.XFADE and b["fade_in"] == music.XFADE     # üst üste binen kısım = çapraz geçiş
+    assert round(b["start"] + b["seconds"], 3) == round(end2, 3)            # 3. sahne müziksiz: taşma yok
+    assert b["fade_out"] == half
+
+
+def test_music_bus_is_ducked_under_dialogue():
+    sc = _three_scenes()
+    tl = mix.timeline(sc, _voice(sc), {s["id"]: "a.mp4" for s in spec.shots(sc)}, {}, {"1": "/m/1.wav"})
+    args = mix.command(tl, "cizgi-film", Path("/v"), Path("/o.mp4"), None)
+    g = args[args.index("-filter_complex") + 1]
+    assert f"volume={mix.MUSIC_DB}dB" in g and f"sidechaincompress={mix.MUSIC_DUCK}[mud]" in g
+    assert "[dlg]asplit=3[dlg1][dlg2][dlg3]" in g and "[dlg1][fxd][mud]amix=inputs=3" in g
+    assert args.count("/m/1.wav") == 1 and args[args.index("/m/1.wav") - 3] == "-stream_loop"
+
+
+def test_command_without_music_is_unchanged():
+    sc = _script([_shot(3, [{"speaker": "Elif", "text": "Merhaba.", "emotion": "notr"}])])
+    picks = {"sfx": {"s01c01": ["/x/k.wav"]}, "amb": {"1": "/x/o.wav"}}
+    tl = mix.timeline(sc, _voice(sc), {"s01c01": "a.mp4"}, picks)
+    old = {k: v for k, v in tl.items() if k != "music"}                    # müzik alanı öncesi zaman çizelgesi
+    base = mix.command(old, "reels", Path("/v"), Path("/o.mp4"), Path("/f.srt"))
+    assert mix.command(tl, "reels", Path("/v"), Path("/o.mp4"), Path("/f.srt")) == base
+    tl2 = mix.timeline(sc, _voice(sc), {"s01c01": "a.mp4"}, picks, {})
+    assert mix.command(tl2, "reels", Path("/v"), Path("/o.mp4"), Path("/f.srt")) == base
+    T = tl["total"]
+    g = base[base.index("-filter_complex") + 1]
+    assert g.endswith(f"[dlg]asplit=2[dlg1][dlg2];[fxb][dlg2]sidechaincompress={mix.DUCK}[fxd];"
+                      f"[dlg1][fxd]amix=inputs=2:normalize=0:duration=longest,atrim=0:{T},"
+                      f"loudnorm=I=-14.0:TP=-1.5:LRA=11[aout]")
+    assert "[m" not in g and "sil2" not in g
+
+
+def test_music_cues_fit_the_scene_plan():
+    plan = [{"scene": 1, "start": 0.0, "seconds": 7.0}, {"scene": 2, "start": 7.0, "seconds": 9.0},
+            {"scene": 3, "start": 16.0, "seconds": 6.0}]
+    raw = [{"scene": 2, "music": True, "prompt_en": "soft strings", "mood": "hüzün", "bpm": 300, "key": "D minor"},
+           {"scene": 9, "music": True, "prompt_en": "x", "mood": "", "bpm": 90, "key": ""},
+           {"scene": 1, "music": True, "prompt_en": "  ", "mood": "", "bpm": 90, "key": ""},
+           {"scene": 2, "music": False, "prompt_en": "ikinci kayıt yok sayılır", "mood": "", "bpm": 90, "key": ""}]
+    cues = music.clean_cues(raw, plan)
+    assert [c["scene"] for c in cues] == [1, 2, 3]
+    assert cues[0]["music"] is False and cues[2]["music"] is False        # boş tarif, eksik sahne
+    assert cues[1]["music"] and cues[1]["bpm"] == music.MAX_BPM and cues[1]["key"] == "D minor"
+    assert music.piece_seconds(cues[1]) == 9.0 + music.XFADE
+
+
+def _ready_film(film):
+    d, f = film
+    sc = _three_scenes()
+    script_mod.save(f, sc, "test", [])
+    store.write(f, "ses.json", _voice(sc))
+    store.set_stage(f, "cekim", status="hazir")
+    return d, f
+
+
+def test_music_skipped_silently_without_service(film, monkeypatch):
+    import asyncio
+    d, f = _ready_film(film)
+
+    async def no():
+        return False
+    monkeypatch.setattr(music, "available", no)
+    res = asyncio.run(music.build(d, f, "test"))
+    assert res["music"] == "yok" and not (f / "muzik.json").exists()
+    assert music.scene_files(f, res) == {}
+
+
+def test_music_build_saves_and_reuses_pieces(film, monkeypatch, tmp_path):
+    import asyncio
+    import base64
+    d, f = _ready_film(film)
+    calls, asks = [], []
+
+    async def yes():
+        return True
+
+    async def cues(d_, f_, plan, theme, llm=None):
+        asks.append(theme)
+        return {"cues": music.clean_cues([{"scene": p["scene"], "music": p["scene"] != 3, "prompt_en": "calm piano",
+                                           "mood": "sakin", "bpm": 80, "key": "C major"} for p in plan], plan),
+                "theme": {"title": "Elif", "lyrics": "[Chorus]\nElif, Elif", "style": "children's pop"}
+                if theme else None}
+
+    async def call(http, body):
+        calls.append(body)
+        return {"audio": base64.b64encode(b"RIFFfake").decode(), "seconds": body["seconds"], "engine": "e"}
+
+    async def rel(http):
+        return None
+    monkeypatch.setattr(music, "available", yes)
+    monkeypatch.setattr(music, "write_cues", cues)
+    monkeypatch.setattr(music, "_call", call)
+    monkeypatch.setattr(music, "release", rel)
+    res = asyncio.run(music.build(d, f, "test", theme=True))
+    assert res["music"] == "var" and len(calls) == 3                      # iki sahne + tema şarkısı
+    assert [c["kind"] for c in calls] == ["score", "score", "song"] and calls[0]["bpm"] == 80
+    assert set(music.scene_files(f, res)) == {"1", "2"} and (f / "muzik" / "tema.wav").is_file()
+    again = asyncio.run(music.build(d, f, "test", theme=True))             # girdi aynı: model ve üretim yok
+    assert len(calls) == 3 and asks == [True] and again["music"] == "var"
+
+
+@pytest.mark.skipif(not FFMPEG, reason="ffmpeg yok")
+def test_command_with_music_runs_end_to_end(tmp_path):
+    def run(*a):
+        subprocess.run(["ffmpeg", "-v", "error", "-y", *a], check=True)
+    run("-f", "lavfi", "-i", "testsrc=size=320x180:rate=16", "-t", "2", str(tmp_path / "a.mp4"))
+    run("-f", "lavfi", "-i", "sine=frequency=440:duration=1", str(tmp_path / "s01c01-0.wav"))
+    run("-f", "lavfi", "-i", "sine=frequency=220:duration=2", str(tmp_path / "m1.wav"))
+    run("-f", "lavfi", "-i", "sine=frequency=330:duration=9", str(tmp_path / "m2.wav"))
+    sc = _script([_shot(3, [{"speaker": "Elif", "text": "Merhaba.", "emotion": "notr"}])])
+    sc["scenes"].append({"setting": "Ev", "setting_en": "a house", "time": "gece", "shots": [_shot(4)]})
+    v = _voice(sc)
+    v["lines"]["s01c01"][0]["file"] = "s01c01-0.wav"
+    videos = {s["id"]: str(tmp_path / "a.mp4") for s in spec.shots(sc)}
+    tl = mix.timeline(sc, v, videos, {}, {"1": str(tmp_path / "m1.wav"), "2": str(tmp_path / "m2.wav")})
+    out = tmp_path / "o.mp4"
+    subprocess.run(mix.command(tl, "cizgi-film", tmp_path, out, None), check=True)   # m1 kısa: döngüyle dolar
+    probe = json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json",
+                                       str(out)], capture_output=True, text=True).stdout)
+    assert abs(float(probe["format"]["duration"]) - tl["total"]) < 0.2

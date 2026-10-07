@@ -5,13 +5,14 @@ uygulama düzeyindeki Bearer denetimidir, yazanlar `X-Editor` ister.
     POST   films                               {format, style, title} → yeni film
     GET    films/{fid}                         bütün görünüm (adımlar, senaryo, oyuncular, ses, kareler, çekimler, kurgu,
                                                paylaşım, kayıt)
-    POST   films/{fid}/stages/{stage}          {only?, direction?, platforms?} adımı başlat (GPU adımları kuyruğa)
+    POST   films/{fid}/stages/{stage}          {only?, direction?, platforms?, theme_song?} adımı başlat (GPU adımları
+                                               kuyruğa; kurgu önce sahne müziğini, `theme_song` ile tema şarkısını yapar)
     PUT    films/{fid}/script                  {script, rev}     editör düzeltmesi (denetim yeniden koşar, onay düşer)
     PUT    films/{fid}/cast/voice              {name, voice, rev}
     POST   films/{fid}/frames/{shot}/select    {v}
     POST   films/{fid}/approve/{stage}         {ok}
     PUT    films/{fid}/share/text              {caption, hashtags, hook}
-    GET    films/{fid}/media/{path}            kare, çekim, replik sesi, kurgu; paylaşım dosyası yalnız onaylıysa indirilir
+    GET    films/{fid}/media/{path}            kare, çekim, replik sesi, müzik, kurgu; paylaşım dosyası yalnız onaylıysa indirilir
 
 Oyuncular adımı modelsizdir, istekte biter. Öbür adımlar Temporal'da (film/flow.py) yürür; ekran film.json'u izler.
 Hiçbir uç dışarıya gönderim yapmaz.
@@ -38,7 +39,7 @@ Stage = Literal["senaryo", "oyuncular", "ses", "kareler", "cekim", "kurgu", "pay
 # adım → başlamadan önce hazır/onaylı olması gerekenler (store.require)
 NEEDS = {"senaryo": [], "oyuncular": ["senaryo"], "ses": ["oyuncular"], "kareler": ["oyuncular"],
          "cekim": ["ses", "kareler"], "kurgu": ["cekim"], "paylasim": ["kurgu"]}
-MEDIA_DIRS = ("kare", "cekim", "ses", "cikti")
+MEDIA_DIRS = ("kare", "cekim", "ses", "muzik", "cikti")
 MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".mp4": "video/mp4", ".wav": "audio/wav",
                ".srt": "application/x-subrip"}
 
@@ -93,7 +94,8 @@ def view(job: str, fid: str) -> dict:
     _, f = _film(job, fid)
     return {"film": store.meta(f), "script": store.read(f, "senaryo.json"), "cast": store.read(f, "oyuncular.json"),
             "voice": store.read(f, "ses.json"), "frames": store.read(f, "kareler.json"),
-            "shots": store.read(f, "cekimler.json"), "cut": store.read(f, "kurgu.json"),
+            "shots": store.read(f, "cekimler.json"), "music": store.read(f, "muzik.json"),
+            "cut": store.read(f, "kurgu.json"),
             "share": store.read(f, "paylasim.json"), "events": store.events(f)[:100]}
 
 
@@ -101,6 +103,7 @@ class StageOpts(BaseModel):
     only: list[str] | None = None
     direction: str = Field("", max_length=600)
     platforms: list[str] | None = None
+    theme_song: bool | None = None
 
 
 @router.post("/{fid}/stages/{stage}")

@@ -5,6 +5,9 @@ model kapanır ve ana model geri kalkar (production.flow._release_if_idle, gatew
 Adımlar arasında editör onayı olduğu için iş akışı tek adımdır; «hepsini sırayla» yalnız onay istemeyen ardışık adımlar
 için (ses → kareler) API tarafında iki ayrı başlatmadır. Yarıda kalan adım kaldığı yerden sürer: kareler ve çekimler
 tek tek kaydedilir, yeniden koşan adım yalnız eksiği üretir.
+
+Kurgu adımı önce sahne müziğini (music.py, `book-music`; servis yoksa sessizce atlanır, `opts.theme_song` ile tema
+şarkısı) sonra kurguyu (mix.py) yapar; müzik ayrı bir adım değildir (ekranın adım listesi değişmez).
 """
 
 from __future__ import annotations
@@ -18,15 +21,15 @@ BEAT = timedelta(minutes=3)
 RETRY = RetryPolicy(initial_interval=timedelta(seconds=30), backoff_coefficient=2.0, maximum_attempts=3,
                     non_retryable_error_types=["ValueError", "KeyError", "FileNotFoundError", "FilmError"])
 TIMEOUT = {"senaryo": timedelta(hours=2), "ses": timedelta(hours=2), "kareler": timedelta(hours=4),
-           "cekim": timedelta(hours=12), "kurgu": timedelta(hours=1), "paylasim": timedelta(hours=1)}
-GPU = {"ses", "kareler", "cekim"}
+           "cekim": timedelta(hours=12), "kurgu": timedelta(hours=3), "paylasim": timedelta(hours=1)}
+GPU = {"ses", "kareler", "cekim"}       # kurgu müzik modelini kendisi kapatır (music.release)
 
 
 @activity.defn(name="production_film_stage")
 async def film_stage_activity(job: str, fid: str, stage: str, by: str, opts: dict) -> None:
     from .. import studio
     from ..flow import _beating, _release_if_idle
-    from . import dialogue, frames, mix, script, shoot, social, store
+    from . import dialogue, frames, script, shoot, social, store
     d = studio.job_dir(job)
     f = store.fdir(d, fid)
 
@@ -39,7 +42,7 @@ async def film_stage_activity(job: str, fid: str, stage: str, by: str, opts: dic
         "ses": lambda: dialogue.synth(d, f, by, progress),
         "kareler": lambda: frames.build(d, f, by, progress, only=opts.get("only"), direction=opts.get("direction", "")),
         "cekim": lambda: shoot.shoot(d, f, by, progress, only=opts.get("only")),
-        "kurgu": lambda: _sync(mix.build, d, f, by, progress),
+        "kurgu": lambda: _cut(d, f, by, progress, bool(opts.get("theme_song"))),
         "paylasim": lambda: social.build(d, f, by, opts.get("platforms") or [], progress),
     }
     if stage not in runs:
@@ -55,6 +58,17 @@ async def film_stage_activity(job: str, fid: str, stage: str, by: str, opts: dic
     finally:
         if stage in GPU:
             await _release_if_idle(d)
+
+
+async def _cut(d, f, by: str, progress, theme: bool):
+    """Kurgu: müzik (varsa) → ses miksi. Müzik servisi yoksa kurgu müziksiz yapılır; kurgu.json ve film.json'un kurgu
+    adımında `music: "var" | "yok"`."""
+    from . import mix, music, store
+    store.require(f, "cekim")
+    store.set_stage(f, "kurgu", status="calisiyor")
+    res = await music.build(d, f, by, progress, theme=theme)
+    files = music.scene_files(f, res) if res.get("music") == "var" else {}
+    return await _sync(mix.build, d, f, by, progress, files)
 
 
 async def _sync(fn, *args):

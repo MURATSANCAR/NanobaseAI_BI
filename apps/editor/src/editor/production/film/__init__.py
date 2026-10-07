@@ -10,7 +10,8 @@ Hat (bir film = stüdyo işinin altında `film/<fid>/`, store.py):
     3. ses       (dialogue.py) replikler duygusuyla seslendirme servisinde okunur; çekim süresi sese göre ayarlanır
     4. kareler   (frames.py)   her çekimin ilk karesi görsel modelde, karakter kartı referansıyla      → EDİTÖR ONAYI
     5. çekim     (shoot.py)    ilk kare video modelinde hareketlenir (gateway `book-video`), gece kuyruğu
-    6. kurgu     (mix.py)      çekimler + replik + efekt + ortam sesi; konuşmada kısma, ses düzeyi; altyazı
+    6. kurgu     (music.py)    sahne müziği (+ isteğe bağlı tema şarkısı), gateway `book-music`; servis yoksa atlanır
+                 (mix.py)      çekimler + replik + efekt + ortam + müzik; konuşmada kısma, ses düzeyi; altyazı
     7. paylaşım  (social.py)   platform kesitleri, kapak karesi, açıklama ve etiket taslağı             → EDİTÖR ONAYI
 
 Hiçbir adım dışarıya gönderim yapmaz: sosyal medyaya otomatik paylaşım yoktur, onaylı dosya indirilir. Ekranda model ya

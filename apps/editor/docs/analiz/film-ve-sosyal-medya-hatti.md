@@ -24,7 +24,7 @@ Instagram Reels, TikTok, YouTube Shorts, YouTube, Instagram kare (`spec.PLATFORM
 | 3 | ses | Replikler duygusuyla okunur; çekim süresi gerçek ses süresine uzar | `book-voice` | — |
 | 4 | kareler | Her çekimin ilk karesi, karakter referansıyla; görsel denetçi | `book-image`, `book-vision-fast` | editör |
 | 5 | çekim | İlk kare hareketlenir; tek konuşanlı yakın planda ağız sese uyar | `book-video` (KAPALI) | — |
-| 6 | kurgu | Çekim + replik + efekt + ortam; kısma; ses düzeyi; altyazı | — (ffmpeg) | editör |
+| 6 | kurgu | Sahne müziği (+ isteğe bağlı tema şarkısı), sonra çekim + replik + efekt + ortam + müzik; kısma; ses düzeyi; altyazı | `book-director` (müzik ipucu), `book-music` (KAPALI) + ffmpeg | editör |
 | 7 | paylaşım | Platform kesitleri, kapak karesi, açıklama + etiket taslağı | `book-director` | editör |
 
 Bir adım yeniden üretilince sonraki adımlar «eski» olur (`store.set_stage`). Onaysız paylaşım paketi indirilemez.
@@ -154,6 +154,68 @@ Kaç çekimin iyileştirildiği film.json'da kurgu adımına `enhanced: n/toplam
     enhance/seedvr2/  ← SeedVR2/{seedvr2_ema_7b_sharp_fp16, ema_vae_fp16}.safetensors
     enhance/rife/     ← RIFE/4.26/train_log
 
+## Müzik (2026-10-07)
+
+Kullanıcı kararı: «en iyi açık kaynak»; kurumun bütün motorlar için lisansı var (2026-10-07). Kod
+`production/film/music.py`, servis `images/music/` (`editor-music:1`), gateway takma adı `book-music`
+(`POST /v1/audio/music`, `PASSTHROUGH` `audio/music`; `models.yaml`'da YORUM SATIRI), indirme `deploy/muzik/`.
+
+| İş | Sıra | Motor (anahtar) | Lisans | Ağırlık |
+|---|---|---|---|---|
+| Sözsüz sahne müziği | 1 | Stable Audio 3.0 Medium (`stable-audio-3`) — tempo, ton, süre tutar | Stability AI Community License (+ Gemma Terms, metin kodlayıcı) | HF kapılı: anahtar bekleniyor |
+| | 2 | ACE-Step 1.5 XL-SFT (4B DiT) + LM 4B (`acestep15`) — tempo/ton istenmez | MIT | indiriliyor |
+| | 3 | YuE2 sözsüz kipi (`yue2`) | CC BY-NC 4.0 (+ kurum lisansı) | indiriliyor |
+| Tema şarkısı | 1 | YuE2-3B + YuE2-Vae (`yue2`) — WildSongBench 6,73, PER %8,4 | CC BY-NC 4.0 (+ kurum lisansı) | indiriliyor |
+| | 2 | MiniMax Music 3 (`minimax-music3`) — PER %6,3 (açıklar içinde en düşük) | MiniMax-Music3 Community License | indiriliyor |
+| | 3 | HeartMuLa-oss-3B happy-new-year + HeartCodec (`heartmula`) — 6,25, PER %10,7 | Apache-2.0 | indiriliyor |
+
+İstekte `engine` yoksa servis kurulu ve açık ilk motoru seçer; `MUSIC_DISABLED_ENGINES` (virgüllü) bir motoru kapatır.
+ACE-Step şarkıyı yalnız açıkça istenirse yapar. Türkçe söz hiçbir motorda belgelenmedi: ilk kurulumda üç şarkı motoru
+aynı Türkçe sözle karşılaştırılıp sıra gerekirse değişir. ACE-Step varyantı modelin kartından: XL-SFT «Highest
+Quality» (50 adım, CFG), XL + 4B LM «Full quality»; turbo/base alınmadı. HeartMuLa sürümü heartlib README'sinden:
+happy-new-year «best open-sourced… lyrics controllability and music quality» (RL-20260123 değil).
+
+**Lisans koşulları (kullanımda uyulacak):**
+- Stable Audio 3: Stability AI Community License — yıllık geliri 1 M $ üstü kurum için kurumsal (Enterprise) lisans
+  şart (kurumun lisansı var, kullanıcı beyanı). Metin kodlayıcı Gemma Terms of Use (kullanım kısıtları §3.2) ile
+  dağıtılır. Depo kapılı olduğundan LICENSE.md henüz okunamadı; atıf koşulu indirilince oradan doğrulanacak.
+- YuE2: CC BY-NC 4.0 — atıf (eser sahibi, lisans bağlantısı, değişiklik belirtme); ticari kullanım kurumun ayrı
+  lisansına dayanır. Üçüncü taraf kod lisansları (SnakeBeta NVIDIA-MIT, stable-audio-tools MIT) klasördeki licenses/.
+- MiniMax Music 3: MiniMax-Music3 Community License — ticari üründe arayüzde «MiniMax-Music3» adının belirgin
+  gösterilmesi şart (madde 3.1; projenin «ekranda teknoloji adı yok» kuralıyla ÇELİŞİR — kurumun lisansı bu maddeyi
+  kaldırmıyorsa kullanıcı kararı gerekir); yıllık gelir 20 M $ üstünde MiniMax'ın yazılı izni; kötüye kullanıma karşı
+  önlem yükümlülüğü (madde 4) ve Kabul Edilebilir Kullanım Politikası (Ek A).
+- ACE-Step 1.5: MIT — telif bildirimi ve lisans metni korunur (klasörde LICENSE, kod deposundan sabit commit).
+  Model kartı: üretilen müzik ticari kullanılabilir.
+- HeartMuLa: Apache-2.0 — LICENSE korunur, değişiklik belirtilir (klasörde LICENSE, heartlib sabit commit).
+
+Ağırlıklar `/data/editor/models/book-music/<anahtar>` (sabit revizyon ve bayt `_indirme/muzik-durum.json`). Stable
+Audio 3 için: HF'de şartları kabul edip okuma anahtarını `/data/editor/secrets/hf-token`'a koyun (gpuubuntu
+okuyabilmeli), sonra `sh /data/editor/models/_indirme/muzik_baslat.sh` — biten modeller atlanır.
+
+Akış (kurgu adımının parçası; `store.STAGES` değişmedi, ekran bozulmaz):
+
+1. **Sahne planı** (modelsiz, `music.scene_plan`): sahne başlangıcı ve süresi kurgu zaman çizelgesiyle aynı hesap.
+2. **Müzik ipucu** (`book-director`, istem `production_film_music` v1): sahne başına İngilizce sözsüz tarif, tempo,
+   ton, Türkçe duygu etiketi, `music: false` ile sessiz sahne; istenirse (`theme_song: true`) Türkçe tema şarkısı
+   sözü + tarzı (okur yaşına göre, kitaba özel kural yok). Girdinin özeti aynıysa yeniden istenmez.
+3. **Üretim**: sahne süresi + 2 sn (çapraz geçiş payı) kadar `kind: score`; tema şarkısı `kind: song` (120 sn
+   istenir). Aynı tarif+süre yeniden üretilmez; sahne hatası filmi düşürmez (muzik.json'da `error`). İş bitince model
+   gateway iç ucuyla kapatılır.
+4. **Kurgu** (`mix.py`): müzik ayrı bir bus; sahne parçası sınırda XFADE/2 taşar, komşu müzikli sahneyle 2 sn çapraz
+   geçer, film başı/sonu 1,5 sn açılış/kapanış; parça kısa gelirse döngü, uzunsa kesilir (ACE-Step tempo/süre
+   tutmasına güvenilmez). `MUSIC_DB` −17 dB, konuşmada ayrıca `MUSIC_DUCK` sidechain (efektten yavaş geri açılır).
+
+Servis yoksa (takma ad listesinde değil ya da 404) müzik sessizce atlanır, komut müziksiz kurguyla birebir aynıdır.
+Kayıt: `<film>/muzik/s<NN>.wav`, `muzik/tema.wav`, `muzik.json`; `kurgu.json` ve film.json'un kurgu adımında
+`music: "var" | "yok"`. Tema şarkısı filme karıştırılmaz (ayrı dosya; medya ucundan `muzik/` dinlenir). Uç: kurgu
+başlatma gövdesinde `theme_song`. Ekranda motor/teknoloji adı geçmez.
+
+ÖLÇÜLMEDİ / DOĞRULANMADI: motorlar GPU'da hiç koşturulmadı (çağrılar kaynak belgelerden; ayrıntı
+`images/music/worker.py` başı); Türkçe söz kalitesi; açılış süresi, bellek tepesi (pay 0.40 tahmin); Stable Audio 3
+`model_config.json`'ındaki metin kodlayıcı yolunun yerel kopyaya yönlendirilmesi (depo kapılı, dosya okunamadı);
+ACE-Step'in salt okunur checkpoint klasöründe çalışması (/tmp gölge klasörüyle çözüldü, denenmedi).
+
 ## Henüz yapılmayan (bilerek)
 
 - **Modeller ayağa kaldırılmadı** (kullanıcı kararı 2026-10-04). `models.yaml`'daki `book-video` bloğu yorum
@@ -164,5 +226,6 @@ Kaç çekimin iyileştirildiği film.json'da kurgu adımına `enhanced: n/toplam
   (ComfyUI), SeedVR2 CLI ve RIFE çağrıları kaynak kodla satır satır eşlendi (her işçinin başındaki belge), ilk
   kurulumda doğrulanacak. İmaj `editor-video:1` GPU'da derlendi, içe aktarma denetimi GPU'suz yapıldı.
 - «MiniMax H3» adının ekranda gösterimi (lisans IV.2) yapılmadı — kullanıcı karar verecek.
-- Müzik yok; efekt ve ortam sesi GPU'daki telifsiz efekt havuzundan.
+- Müzik servisi ayağa kaldırılmadı (`book-music` yorum satırı); kurgu o güne dek müziksizdir. Efekt ve ortam sesi
+  GPU'daki telifsiz efekt havuzundan.
 - Portal ekranı ve köprü vekili yok (sonraki adım).

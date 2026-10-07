@@ -7,6 +7,7 @@
         ses/<çekim>-<n>.wav, ses.json       replik sesleri ve gerçek süreleri (dialogue.py)
         kare/<çekim>.vK.png, kareler.json   ilk kareler (frames.py)
         cekim/<çekim>.vK.mp4, cekimler.json video çekimleri (shoot.py)
+        muzik/s<sahne>.wav, muzik/tema.wav, muzik.json   sahne müziği ve tema şarkısı (music.py, kurgu adımında)
         cikti/                           kurgu, altyazı, platform kesitleri, kapak (mix.py, social.py)
         kayit.jsonl      kim ne zaman ne yaptı (onaylar dahil)
 

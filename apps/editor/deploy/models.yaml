@@ -287,6 +287,36 @@ aliases:
   #   entrypoint: [python, /srv/server.py]
   #   args: []
 
+  # Kitaptan çizgi film — müzik (production/film/music.py, kullanıcı kararı 2026-10-07 «en iyi açık kaynak»; kurumun
+  # hepsi için lisansı var): sahne başına sözsüz fon müziği (kind: score) ve isteğe bağlı Türkçe sözlü tema şarkısı
+  # (kind: song), POST /v1/audio/music (images/music/server.py). Klasör başına bir motor, seçim sırası:
+  #   score: stable-audio-3/ (Stable Audio 3.0 Medium; HF kapılı — anahtar /data/editor/secrets/hf-token'a konunca
+  #          indirilir) > acestep15/ (ACE-Step 1.5 XL-SFT + LM 4B, MIT) > yue2/ (sözsüz kip)
+  #   song:  yue2/ (YuE2-3B + Vae) > minimax-music3/ (MiniMax Music 3) > heartmula/ (HeartMuLa-oss-3B, Apache-2.0)
+  # Motor MUSIC_DISABLED_ENGINES env'iyle kapatılır. Lisans koşulları: docs/analiz/film-ve-sosyal-medya-hatti.md
+  # «Müzik». Türkçe söz hiçbir motorda belgelenmedi: ilk kurulumda şarkı motorları karşılaştırılır. Motorların
+  # kütüphaneleri çakışır: her biri imajda ayrı sanal ortamda, servis tek motoru ayrı süreçte açar, öbürünü kapatır.
+  # Ağırlıklar 2026-10-07'den beri indiriliyor (deploy/muzik/, _indirme/muzik-durum.json), kurulumda MANIFEST'e
+  # sha256 ile yazılır. Pay 0.40 tahmindir (en büyük: MiniMax tam hassasiyet ~24 GB belgede; ACE-Step XL + LM 4B
+  # «≥24 GB tam kalite»; YuE2 tepe 14 GiB; SA3 6,5 GB): ana model 0.70 ile sığmaz, açılışta ana model durur.
+  # ÖLÇÜLMEDİ: açılış süresi, bellek tepesi, parça başı süre.
+  # KAPALI (2026-10-07): kurulum günü açılır — açmadan önce ağırlık MANIFEST'e yazılmalı (verify_models.py kayıtsız
+  # takma adı BAD sayar) ve editor-music:1 imajı derlenmeli (GPU'da 2026-10-07'de derlendi; editorctl install satırı
+  # o gün eklenir). Kapalıyken kurgu müziksiz yapılır (music.available → yok).
+  # book-music:
+  #   container: editor-model-music
+  #   model_dir: book-music
+  #   real_model: stabilityai/stable-audio-3-medium+ACE-Step/acestep-v15-xl-sft+m-a-p/YuE2-3B+MiniMaxAI/MiniMax-Music3+HeartMuLa/HeartMuLa-oss-3B-happy-new-year
+  #   role: Kitaptan film — sahne müziği ve tema şarkısı
+  #   kind: music
+  #   gpu: 1
+  #   mem_fraction: 0.40
+  #   idle_stop_sec: 300
+  #   start_timeout_sec: 900
+  #   image: editor-music:1
+  #   entrypoint: [python, /srv/server.py]
+  #   args: []
+
   book-voice:
     container: editor-model-voice
     model_dir: book-voice
