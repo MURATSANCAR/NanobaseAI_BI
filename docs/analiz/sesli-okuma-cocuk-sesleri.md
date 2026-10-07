@@ -7,8 +7,10 @@ Neden: ses kataloğunda (`voices_zeki.py`) çocuk sesi yoktu; kitaptan çizgi fi
 İstenen: «karakter» grubuna dört ses — erkek çocuk (7–10), kız çocuk (7–10), küçük erkek çocuk (4–6), küçük kız çocuk
 (4–6).
 
-**Durum: adaylar üretildi ve ölçüldü, kullanıcının dinleyip seçmesi bekleniyor.** Sesler kodda «onay bekliyor»
-(`voices_zeki.CHILD_VOICES`, `PENDING`): katalogda görünmez, kimliği genç sese gider; çocuk karakteri bugünkü gibi okunur.
+**Durum:** 1. yöntemin (yalnız tarif) adaylarını kullanıcı dinledi: «daha iyilerini üret». 2. yöntem (tını
+dönüştürme + klon, aşağıda «2. yöntem») ölçümle dört öneri verdi; kullanıcı seçimi ölçüme bıraktı, ana oturum doğrulayıp
+sabitleyecek. Sesler kodda hâlâ «onay bekliyor» (`voices_zeki.CHILD_VOICES`, `PENDING`): katalogda görünmez, kimliği genç
+sese gider; çocuk karakteri bugünkü gibi okunur.
 
 ## Yöntem
 
@@ -151,3 +153,112 @@ bandın alt sınırının (265) 2 Hz altında kaldığı için listeye girmedi.
 2. `voices_zeki.PINNED`'e `"<ses>": _p("<ses>", CHILD_TEXT, "<sha256>")` (sha256 `aday/liste.json`'da) eklenir.
 3. Seçilen aday ilk sıradaki değilse `CHILD_VOICES`'teki tarif o adayın tarifiyle değiştirilir.
 4. Testler: `test_voices.py::test_catalog_voices_use_packaged_reference` kaydı ve süresini (5–16 sn) denetler.
+
+(Yukarıdaki onay adımı 1. yönteme aittir; 2. yöntemde metin `method.metin`, kayıt `aday2/`'den — aşağıda.)
+
+---
+
+# 2. yöntem: tını dönüştürme + klon (2026-10-07)
+
+Kullanıcı 1. yöntemin adaylarını dinledi: «daha iyilerini üret». Seçimi sonra ölçüme bıraktı («sen seç, en iyisi
+olsun»).
+
+## Yöntem
+
+Çocuk sesi = yüksek F0 + kısa ses yolu (formantlar ~%15–25 yukarı). Ses modele tarif ettirilmez, temiz okuyan bir
+kayıttan sinyal işlemeyle yapılır. Betik `apps/editor/deploy/ses/cocuk_donustur.py`; çıktı
+`tt-gpu:/data/editor/ses-havuzu/cocuk/v2/` ve `aday2/`.
+
+1. **Dönüşüm (CPU, ağsız geçici kap `editor-voice:5` + parselmouth 0.4.7 + pyworld 0.3.5):** 19 kaynak kayıt —
+   katalogdan en temiz okuyan 6 ses (genç/roman/masal/gelişim kadın, genç/gelişim erkek) ve 1. yöntemin 13 adayı. Kaynak
+   kayıtların hepsi modelimizin ürettiği seslerdir; gerçek kişi kaydı yok. Izgara: Praat «Change gender» formant oranı
+   {1,12; 1,18; 1,24; 1,30} × hedef ortanca perde {250…330 Hz} × perde aralığı {1,0; 1,2; 1,4}; WORLD aynı formant ve perde
+   ızgarası, aralık 1,2 (F0 log düzleminde, zarf ve aperiyodiklik frekans ekseninde sıkıştırılır). 1.520 dönüşüm.
+   Kız çocuğu yalnız kadın kaynaktan, erkek çocuğu iki kaynaktan.
+2. **Klon (GPU, yalnız gateway üzerinden book-voice, tek toplu çalıştırma 263 sn):** ses başına 8 dönüştürülmüş kayıt,
+   sayfa okumasıyla aynı düzen (ref_audio + ref_text, tam klon, tohum yok), iki metin: ölçüm cümlesi ve 60 kelimelik
+   paragraf (bu iş için yazıldı: kar yağan sabah, kardan adam). 64 klon.
+3. **Ölçüm (CPU):** perde (pyin), harf hatası iki tanıyıcıyla — ses servisinin hizalayıcısı (wav2vec2 Türkçe) ve
+   Whisper large-v3-turbo (MIT) —, yaş/cinsiyet (audeering wav2vec2-large-robust-24-ft-age-gender: kadın/erkek/çocuk
+   olasılığı + yaş; **lisansı CC BY-NC-SA 4.0**, yalnız ölçüm aracı olarak kullanıldı, ürüne/imaja girmez), konuşmacı
+   benzerliği (microsoft wavlm-base-plus-sv, MIT), bozulma belirtisi (paragrafta > 7 yarım ton perde sıçraması,
+   ortancanın 15 dB üstünde enerji).
+4. **Seçim (ana oturumun ölçütü):** eleme harf hatası ≤ 0,10 (iki metnin ortalaması ve paragraf ayrı); puan =
+   0,45·çocuk olasılığı + 0,25·(1 − |yaş − hedef|/5) + 0,20·(1 − cer/0,10) + 0,10·paragrafta klon↔referans benzerliği,
+   bozulmada −0,10. Hedef yaş çocuk 8,5, küçük 5. Çocuk olasılığı ve yaş iki klonun ortalaması (sayfayı klon okur).
+   Önerilen: elenmeyenlerden, öteki önerilenlerle paragraf klonu benzerliği 0,85'i aşmayan en yüksek puanlı (bütün ses
+   sıraları denenir); ayrışan yoksa en yüksek puanlı + uyarı.
+
+## Bulgular
+
+1. **Yaş modeli katalogu ve 1. yöntemi doğru okuyor.** Katalogdaki 21 sesin hepsi yetişkin (çocuk olasılığı ≤ 0,001, yaş
+   30–67; kadın/erkek olasılığı ≥ 0,98). 1. yöntemin dinlemeye giden 12 adayından 8'i yetişkin çıktı (çocuk olasılığı < 0,2) — ör. `cocuk-erkek-1`
+   36 yaşında erkek (0,996), `cocuk-kiz-1` 32 yaşında kadın; kullanıcının «daha iyi» istemesiyle tutarlı. 172 adayın
+   ortanca çocuk olasılığı 0,18, yaşı 22.
+2. **Dönüşümde çocuksuluk formant oranıyla geliyor.** Katalog kaynağında formant 1,12 → çocuk olasılığı ortanca 0,003,
+   yaş 29; 1,30 → 0,43, yaş 20; en çocuksu dönüşümler 0,98–0,996 (yaş 7–11). 1. yöntem adaylarından 1,12 bile 0,99+.
+   Perde tek başına yetmiyor (1,12 / 330 Hz yine yetişkin kadın).
+3. **Hizalayıcının harf hatası çocuksu seste tanıyıcı yanlılığı; Whisper ikinci görüş.** Çocuksu dönüşümlerde hizalayıcı
+   0,29–0,54 verdi; aynı kayıtları Whisper 0,000–0,043 okudu. Klonların hepsinde Whisper harf hatası 0–0,011 (ortanca 0),
+   katalogda 0–0,007, genç seslerin çocuk cümlesinde 0–0,043. Hizalayıcı yetişkin konuşmasıyla eğitilmiş; klonda telaffuz
+   modelden gelir. Hizalayıcı ölçütüyle 32 klondan yalnız 2'si elemeyi geçiyor ve ikisi de yetişkin (çocuk 0,06–0,09, yaş
+   21–29). **Elemede Whisper harf hatası kullanıldı** (`CER_KAYNAK=cer_w`); iki puan tabloda yan yana. Not: Whisper'ın dil
+   modeli bozuk telaffuzu tahminle düzeltebilir; harf hatası 0 «kusursuz telaffuz» demek değildir.
+4. **Klon dönüşüm tınısını tutuyor.** Paragraf klonu ↔ dönüştürülmüş referans benzerliği 0,94–0,996; klon ↔ çevrilmemiş
+   kaynak 0,42–0,94 (formant oranı büyüdükçe düşüyor). Klonların çocuk olasılığı referansınkiyle aynı bantta.
+5. **Konuşmacı benzerliği bu seslerde ayırt etmiyor.** Farklı kaynaklı aday çiftleri arasında benzerlik en az 0,801,
+   ortanca 0,949, en çok 0,990 (441 çift). 0,85 eşiği bu ölçekte «aynı kişi» anlamına gelmiyor; önerilen dört sesten dört
+   çift > 0,85 (en yükseği kız çocuk ↔ küçük kız 0,989, kaynakları farklı tohumdan iki kız sesi). Ayrışma kulakla
+   doğrulanmalı.
+6. **Bozulma belirtisi yok.** 32 paragrafta perde sıçraması 0; enerji patlaması en çok %0,86 (eşik %1).
+7. Aynı kayıt iki seste: `kucuk-erkek-2` ve `kucuk-kiz-3` aynı dönüşüm (genç kadın, WORLD 1,30 / 330 Hz) — ikisi
+   birlikte seçilmemeli.
+
+## Önerilen ve dinlemedeki adaylar (Whisper elemesi)
+
+Dosyalar `tt-gpu:/data/editor/ses-havuzu/cocuk/aday2/<aday>-{referans,klon-cumle,klon-paragraf}.wav`; karşılaştırma için
+1. yöntemin ilk adayı `<ses>-0-onceki.wav`; tam liste `aday2/liste.json` ve `aday2/sec.md`. Hücreler: f0 / harf hatası
+(hizalayıcı·Whisper) / çocuk olasılığı / yaş.
+
+| Aday | Puan W (h) | Yöntem | Referans | Klon cümle | Klon paragraf | Benzerlik par↔ref / ↔kaynak |
+|---|---|---|---|---|---|---|
+| **cocuk-erkek-1 önerilen** | 0,983 (0,783×) | WORLD, genç kadın, 1,30 / 290 / 1,2 | 295,5 / 0,379·0,007 / 0,99 / 10,2 | 329,7 / 0,287·0 / 0,99 / 9,5 | 313,0 / 0,414·0 / 1,00 / 7,0 | 0,992 / 0,556 |
+| cocuk-erkek-2 | 0,949 (0,749×) | WORLD, gelişim kadın, 1,30 / 290 / 1,2 | 293,8 / 0,268·0,007 / 0,97 / 12,8 | 305,9 / 0,298·0 / 0,98 / 10,9 | 331,7 / 0,32·0 / 1,00 / 7,9 | 0,984 / 0,584 |
+| cocuk-erkek-3 | 0,934 (0,734×) | WORLD, 1. yöntem küçük erkek-1, 1,12 / 270 / 1,2 | 272,5 / 0,309·0 / 1,00 / 4,8 | 289,6 / 0,266·0 / 0,99 / 8,8 | 292,1 / 0,304·0 / 0,99 / 10,5 | 0,943 / 0,772 |
+| **cocuk-kiz-1 önerilen** | 0,992 (0,791×) | WORLD, 1. yöntem kız-2, 1,30 / 290 / 1,2 | 295,5 / 0,394·0,043 / 0,99 / 8,6 | 283,8 / 0,372·0 / 0,99 / 9,9 | 285,4 / 0,542·0 / 1,00 / 7,1 | 0,944 / 0,535 |
+| cocuk-kiz-2 | 0,944 (0,744×) | Praat, 1. yöntem küçük kız d/613, 1,30 / 250 / 1,2 | 254,3 / 0,383·0 / 0,99 / 7,3 | 242,8 / 0,426·0 / 0,98 / 9,0 | 266,3 / 0,461·0 / 1,00 / 6,0 | 0,984 / 0,576 |
+| cocuk-kiz-3 | 0,914 (0,714×) | Praat, 1. yöntem kız-3, 1,12 / 250 / 1,0 | 252,8 / 0,149·0 / 1,00 / 7,4 | 249,9 / 0,138·0 / 1,00 / 4,9 | 249,9 / 0,172·0 / 1,00 / 8,8 | 0,970 / 0,809 |
+| **kucuk-erkek-1 önerilen** | 0,928 (0,728×) | Praat, 1. yöntem küçük erkek-1, 1,12 / 330 / 1,0 | 337,5 / 0,106·0 / 1,00 / 5,1 | 333,6 / 0,128·0 / 1,00 / 6,2 | 341,4 / 0,188·0 / 1,00 / 6,6 | 0,989 / 0,942 |
+| kucuk-erkek-2 | 0,897 (0,697×) | WORLD, genç kadın, 1,30 / 330 / 1,2 | 335,5 / 0,379·0,007 / 1,00 / 7,2 | 361,7 / 0,309·0 / 0,99 / 7,8 | 357,5 / 0,436·0 / 1,00 / 6,2 | 0,991 / 0,562 |
+| kucuk-erkek-3 | 0,887 (0,687×) | WORLD, 1. yöntem küçük erkek-1, 1,18 / 330 / 1,2 | 333,6 / 0,362·0 / 1,00 / 5,1 | 343,4 / 0,351·0 / 1,00 / 6,9 | 368,0 / 0,489·0 / 1,00 / 7,4 | 0,961 / 0,739 |
+| **kucuk-kiz-1 önerilen** | 0,988 (0,788×) | WORLD, 1. yöntem kız-3, 1,30 / 310 / 1,2 | 317,6 / 0,394·0 / 1,00 / 5,8 | 316,7 / 0,404·0 / 1,00 / 4,7 | 313,0 / 0,48·0 / 1,00 / 5,1 | 0,941 / 0,586 |
+| kucuk-kiz-2 | 0,914 (0,717×) | Praat, 1. yöntem kız-3, 1,24 / 290 / 1,0 | 293,8 / 0,309·0 / 1,00 / 5,0 | 293,8 / 0,351·0 / 0,99 / 6,7 | 292,1 / 0,351·0,003 / 1,00 / 6,4 | 0,957 / 0,641 |
+| kucuk-kiz-3 | 0,885 (0,685×) | WORLD, genç kadın, 1,30 / 330 / 1,2 | 335,5 / 0,379·0,007 / 1,00 / 7,2 | 365,9 / 0,351·0 / 0,99 / 8,6 | 339,4 / 0,414·0 / 1,00 / 5,9 | 0,993 / 0,566 |
+
+Önerilen dört kayıt (sabitlenmedi; referanslar 48 kHz tek kanal, 9,0–11,8 sn):
+
+| Ses | Dosya | Metin | sha256 |
+|---|---|---|---|
+| cocuk-erkek | `aday2/cocuk-erkek-1-referans.wav` | READER_TEXT | `14c66310d7d561ae7e2359bfb2d683cdaee334dbcc9d89819b0683d6bd9534f6` |
+| cocuk-kiz | `aday2/cocuk-kiz-1-referans.wav` | CHILD_TEXT | `aed6240f456e900de6c8a1cef111a92a4087c2bdefa4a11ffb2d1ddb5940cf3a` |
+| kucuk-erkek | `aday2/kucuk-erkek-1-referans.wav` | CHILD_TEXT | `4afba5879027735174b8ce831169ad90fa574741fadf33f75da082aa07c6e54a` |
+| kucuk-kiz | `aday2/kucuk-kiz-1-referans.wav` | CHILD_TEXT | `ff164e52bb9fa1020c713ca930eed64c73b0c2b58ecb57dcb4dfa941503db41f` |
+
+Hazır PINNED satırları (ana oturum doğrulayınca, wav `sesler/zeki/<ses>.wav` olarak konup):
+
+```python
+    "cocuk-erkek": _p("cocuk-erkek", READER_TEXT, "14c66310d7d561ae7e2359bfb2d683cdaee334dbcc9d89819b0683d6bd9534f6"),
+    "cocuk-kiz": _p("cocuk-kiz", CHILD_TEXT, "aed6240f456e900de6c8a1cef111a92a4087c2bdefa4a11ffb2d1ddb5940cf3a"),
+    "kucuk-erkek": _p("kucuk-erkek", CHILD_TEXT, "4afba5879027735174b8ce831169ad90fa574741fadf33f75da082aa07c6e54a"),
+    "kucuk-kiz": _p("kucuk-kiz", CHILD_TEXT, "ff164e52bb9fa1020c713ca930eed64c73b0c2b58ecb57dcb4dfa941503db41f"),
+```
+
+`CHILD_VOICES[*].method` bu dört kaydın yöntemini taşır; başka aday seçilirse o adayın `liste.json`'daki `yontem`'i yazılır.
+
+## Doğrulanamayanlar
+
+- Erkek/kız ayrımı ölçülmedi: yaş modelinin «çocuk» sınıfında cinsiyet yok. Erkek çocuk önerisi kadın kaynaktan
+  (genç kadın, formant 1,30); erkek mi kız mı duyulduğu kulakla doğrulanmalı.
+- Konuşmacı benzerliği modeli bu seslerde ayırt edici değil (bulgu 5); dört sesin birbirinden ayrışması ölçülemedi.
+- Whisper'ın 0 harf hatası dil modeli düzeltmesini içerebilir; telaffuz netliği dinlenmeli.
+- Dönüştürülmüş referans tam klonda sayfa okumasına (sözcük zamanı, uzun bölüm) sokulmadı; yalnız iki metin okundu.

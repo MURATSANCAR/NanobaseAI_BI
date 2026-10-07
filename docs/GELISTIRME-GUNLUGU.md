@@ -37,6 +37,16 @@
 - **Doğrulama:** hiçbir model çalıştırılmadı (kullanıcı kararı); her çağrı kaynak satırlarıyla eşlendi (işçi
   belgeleri). Testler stüdyo imajında (`editor-py-studio:0.15.9-f70ebaf0`, f70ebaf0 kopyası + değişen dosyalar):
   `test_film.py` 26/26, tam editör takımı 1369 geçti / 2 atlandı. `editor-video:1` derlemesi GPU'da (pip yavaş).
+## 2026-10-07 — Çocuk sesleri 2. yöntem: tını dönüştürme + klon, yaş ölçümüyle seçim (sabitleme ana oturumda)
+
+- **Neden:** kullanıcı 1. yöntemin (yalnız tarif) adaylarını dinledi: «daha iyilerini üret»; sonra seçimi ölçüme bıraktı.
+- **Yöntem (`apps/editor/deploy/ses/cocuk_donustur.py`):** 19 kaynak kayıt (katalogdan 6 temiz okuyan ses + 1. yöntemin 13 adayı) → Praat «Change gender» ve WORLD ızgarası (formant 1,12–1,30, perde 250–330 Hz, aralık 1,0–1,4; 1.520 dönüşüm, CPU, ağsız geçici kap) → ses başına 8 dönüştürülmüş kayıt gateway üzerinden VoxCPM2 tam klonla iki metin okudu (ölçüm cümlesi + 60 kelimelik paragraf; 64 klon, GPU 263 sn) → yaş/cinsiyet (audeering, CC BY-NC-SA — yalnız ölçüm), konuşmacı benzerliği (WavLM-SV), harf hatası iki tanıyıcıyla (servis hizalayıcısı + Whisper large-v3-turbo).
+- **Bulgular:** yaş modeli katalogdaki 21 sesi yetişkin, 1. yöntemin dinlenen 12 adayından 8'ini yetişkin okudu. Çocuksuluğu formant getiriyor (katalog kaynağında 1,12 → çocuk olasılığı 0,003; 1,30 → 0,43, en iyiler 0,99). Servis hizalayıcısı çocuksu seste 0,29–0,54 harf hatası veriyor, Whisper aynı kayıtlarda 0–0,043, klonlarda 0–0,011 → elemede Whisper. Klon dönüşüm tınısını tutuyor (paragraf↔referans 0,94–0,996). Konuşmacı benzerliği bu seslerde ayırt etmiyor (farklı kaynak çiftleri ortanca 0,949). Bozulma belirtisi yok.
+- **Öneriler (bileşik puan, `tt-gpu:/data/editor/ses-havuzu/cocuk/aday2/`):** cocuk-erkek-1 (WORLD, genç kadın, 1,30/290; 0,983), cocuk-kiz-1 (WORLD, 1. yöntem kız-2, 1,30/290; 0,992), kucuk-erkek-1 (Praat, 1. yöntem küçük erkek-1, 1,12/330; 0,928), kucuk-kiz-1 (WORLD, 1. yöntem kız-3, 1,30/310; 0,988). Klon paragraf yaşı 7,0 / 7,1 / 6,6 / 5,1. sha256 ve hazır PINNED satırları ölçüm belgesinde; **sabitlenmedi**.
+- **Kod:** `voices_zeki.CHILD_VOICES` → `_c(...)` + `method` (kaynak, yol, formant, perde, aralık, metin, klon). Davranış değişmedi (sesler hâlâ onay bekliyor). Testler (GPU, stüdyo imajı, sürüm kopyası üstüne değişen dosyalar): ilgili 139 geçti/1 atlandı; tam takım 1.363 geçti, 2 atlandı, 1 kaldı (`test_portal_read` OCR sıra testi, önceki turda da aynı, ilgisiz).
+- **Doğrulanamayan:** erkek/kız ayrımı (yaş modelinin çocuk sınıfında cinsiyet yok; erkek çocuk önerisi kadın kaynaktan), dört sesin birbirinden ayrışması, Whisper'ın dil modeli düzeltmesi. Kulakla doğrulanmalı.
+- **İşletim notu:** `multiprocessing.Pool` işçileri librosa'nın numba önbelleğinde aynı anda çöktü (segfault ip 0), havuz ölü işi sonsuza dek bekledi → süreç başına `NUMBA_CACHE_DIR` + kırılan havuzu yeniden kuran `_pmap`.
+
 ## 2026-10-07 — Çizgi film çocuk sesleri: 4 ses üretildi ve ölçüldü, kullanıcı onayı bekliyor
 
 - **Neden:** katalogda çocuk sesi yoktu; kitaptan çizgi filmde çocuk karakter («Levent» serisi, ilkokul çağı erkek çocuk) genç sesle konuşuyordu.
