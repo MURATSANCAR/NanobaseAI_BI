@@ -1,45 +1,51 @@
-"""book-video: kareden video (i2v) ve sesten konuşan çekim (s2v) servisi; gateway takma adı olarak istekte açılır.
+"""book-video: kareden video (i2v), sesten konuşan çekim (s2v) ve çekim iyileştirme servisi; gateway takma adı olarak
+istekte açılır.
 
-Motor Wan 2.2'dir (Apache-2.0; kod imajda sabit sürüm, ağırlıklar /data/editor/models/book-video altında):
-    <model_dir>/i2v   Wan2.2-I2V-A14B   (iki uzman: yüksek/düşük gürültü)
-    <model_dir>/s2v   Wan2.2-S2V-14B    (ses kodlayıcı wav2vec2 klasörün içinde)
-Motorların karşılaştırması (MiniMax-H3, HunyuanVideo 1.5) bitince kazanan bu sözleşmenin arkasına girer; istemci
-(production/film/shoot.py) değişmez. Yanıtta `engine` hangi motorun ürettiğini söyler (kayda girer).
+Motorlar (gövdede `engine`, yoksa VIDEO_ENGINE ortam değişkeni, o da yoksa h3; sıra: h3, fast-h3 hızlı kip, wan2.2
+yedek; VIDEO_LICENSED_ENGINES verilirse yalnız listedekiler açık):
+    wan2.2   Wan 2.2 I2V-A14B / S2V-14B (Apache-2.0)                         <model_dir>/i2v, <model_dir>/s2v
+    h3       MiniMax-H3 Base, diffusers ModularPipeline (fl2va / ref2va)      <model_dir>/h3
+    fast-h3  FastVideo FastH3 8-Step V2, ComfyUI düğümleri (fl2va)            <model_dir>/fast-h3 (+ h3/text_encoder)
+İyileştirme: SeedVR2 7B sharp + Practical-RIFE 4.26                          <model_dir>/enhance/{seedvr2,rife}
 
-Bellek: iki motor aynı kartta birlikte tutulmaz; istenen kip yüklü değilse öbürü boşaltılır. Ağırlıklar dağıtım
-sırasında CPU'ya indirilir (offload_model), T5 CPU'da: tek H100'de (94 GB) 720p çalışır. Gateway payı 0.95: ana model
-açılıştan önce durur, servis boşta kalınca kapanır, ana model geri kalkar.
+Her motor ayrı süreçte çalışır (worker_*.py; Wan ana Python'da, diğerleri /opt/h3 ortamında — Wan
+transformers ≤4.51.3 ister, H3'ün Qwen3-VL kodlayıcısı daha yenisini). Kartta aynı anda tek işçi vardır: başka motor
+istenince yüklü işçi kapatılır, GPU ve CPU belleği süreçle birlikte boşalır. İstekler sırayla işlenir (tek kart).
 
-Süre: Wan 16 kare/sn üretir; bir parça en çok 81 kare (≈5 sn) — daha uzun çekim, bir önceki parçanın son karesinden
-devam eden parçalarla üretilir (i2v), s2v kendi parçalarını (`num_repeat`) sesle sürdürür.
+H3 ve FastH3 görüntüyle birlikte ses de üretir; o ses atılır. Filmin sesi bizim Türkçe replik izimizdir (kurgu,
+production/film/mix.py). s2v'de replik izi H3'e ağız hareketi için verilir (plan.h3_task).
 
     GET  /health
     POST /v1/video/generations  {model, mode: i2v|s2v, image: png b64, prompt, negative_prompt, seconds, width, height,
-                                 seed, audio?: wav b64 (s2v), steps?}  → {video: mp4 b64, seconds, fps, frames, engine}
+                                 seed, audio?: wav b64 (s2v), steps?, engine?: wan2.2|h3|fast-h3,
+                                 refs?: [png b64] (karakter kartları)}
+                                 → {video: mp4 b64, seconds, fps, frames, engine}
+                                 409: motor bu kurulumda lisans ayarıyla kapalı (VIDEO_LICENSED_ENGINES)
+    POST /v1/video/enhance      {model, video: mp4 b64, target: 1080p|4k, fps: 24|30}
+                                 → {video: mp4 b64, width, height, fps, engine}
 """
+
+from __future__ import annotations
 
 import argparse
 import asyncio
 import base64
-import gc
-import io
-import math
+import itertools
+import json
+import os
+import subprocess
 import sys
 import tempfile
 import threading
 import time
 from pathlib import Path
 
-import torch
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from PIL import Image
 from pydantic import BaseModel, Field
 
-sys.path.insert(0, "/opt/Wan2.2")
-import wan  # noqa: E402
-from wan.configs import WAN_CONFIGS  # noqa: E402
-from wan.utils.utils import save_video  # noqa: E402
+sys.path.insert(0, str(Path(__file__).parent))
+import plan  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("model_dir")
@@ -49,48 +55,60 @@ ap.add_argument("--port", type=int, default=8000)
 args, _ = ap.parse_known_args()
 
 ROOT = Path(args.model_dir)
-FPS = 16
-CLIP = 81                     # bir parçanın en çok karesi (4n+1)
-S2V_CLIP = 80                 # s2v parça boyu (infer_frames)
-STEPS = 40
-ENGINE = {"i2v": "wan2.2-i2v-a14b", "s2v": "wan2.2-s2v-14b"}
+HERE = Path(__file__).parent
+PYTHON = {"wan": sys.executable, "h3": "/opt/h3/bin/python", "fasth3": "/opt/h3/bin/python",
+          "enhance": "/opt/h3/bin/python"}
+DEFAULT_ENGINE = plan.default_engine()
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 _lock = threading.Lock()
-_loaded: dict[str, object] = {}
+_ids = itertools.count(1)
 
 
-def _engine(mode: str):
-    """İstenen kipin motoru; öbürü yüklüyse önce boşaltılır (tek kart)."""
-    if mode in _loaded:
-        return _loaded[mode]
-    for k in list(_loaded):
-        del _loaded[k]
-    gc.collect()
-    torch.cuda.empty_cache()
-    common = dict(device_id=0, rank=0, t5_fsdp=False, dit_fsdp=False, use_sp=False, t5_cpu=True,
-                  convert_model_dtype=True)
-    if mode == "i2v":
-        _loaded[mode] = wan.WanI2V(config=WAN_CONFIGS["i2v-A14B"], checkpoint_dir=str(ROOT / "i2v"), **common)
-    else:
-        _loaded[mode] = wan.WanS2V(config=WAN_CONFIGS["s2v-14B"], checkpoint_dir=str(ROOT / "s2v"), **common)
-    return _loaded[mode]
+class Worker:
+    """Kartta yüklü tek işçi süreci."""
+
+    def __init__(self):
+        self.name: str | None = None
+        self.proc: subprocess.Popen | None = None
+
+    def stop(self) -> None:
+        if self.proc and self.proc.poll() is None:
+            self.proc.stdin.close()
+            try:
+                self.proc.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+                self.proc.wait()
+        self.proc, self.name = None, None
+
+    def call(self, name: str, req: dict, td: Path) -> dict:
+        if self.name != name or self.proc is None or self.proc.poll() is not None:
+            self.stop()
+            self.proc = subprocess.Popen([PYTHON[name], str(HERE / f"worker_{name}.py"), str(ROOT)],
+                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr, text=True,
+                                         bufsize=1)
+            self.name = name
+        mid = next(_ids)
+        self.proc.stdin.write(json.dumps({"id": mid, "req": req, "td": str(td)}) + "\n")
+        self.proc.stdin.flush()
+        line = self.proc.stdout.readline()
+        if not line:
+            code = self.proc.wait()
+            self.proc, self.name = None, None
+            raise HTTPException(500, f"{name} işçisi kapandı (çıkış {code})")
+        rep = json.loads(line)
+        if not rep["ok"]:
+            raise HTTPException(rep.get("status", 500), rep["error"])
+        return rep["out"]
 
 
-def frames_for(seconds: float, cap: int = CLIP) -> list[int]:
-    """Çekim süresini parçalara böler: her parça 4n+1 kare, en çok `cap`; ilk parçadan sonrakiler bir kare örtüşür."""
-    total = max(17, round(seconds * FPS) + 1)
-    out, left = [], total
-    while left > 0:
-        n = min(left + (1 if out else 0), cap)
-        n = max(17, (n - 1) // 4 * 4 + 1)
-        out.append(n)
-        left -= n - (1 if len(out) > 1 else 0)
-    return out
+_worker = Worker()
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "loaded": list(_loaded), "engines": ENGINE}
+    return {"ok": True, "loaded": _worker.name, "default_engine": DEFAULT_ENGINE, "engines": list(plan.ENGINES),
+            "licensed": sorted(plan.licensed_engines())}
 
 
 class Req(BaseModel):
@@ -104,56 +122,75 @@ class Req(BaseModel):
     height: int = Field(720, ge=256, le=1920)
     seed: int = 0
     audio: str | None = None
-    steps: int = Field(STEPS, ge=8, le=60)
+    steps: int | None = Field(None, ge=2, le=60)
+    engine: str | None = Field(None, pattern=r"^(wan2\.2|h3|fast-h3)$")
+    refs: list[str] = Field(default_factory=list, max_length=plan.MAX_REFS)
 
 
-def _i2v(r: Req, img: Image.Image) -> torch.Tensor:
-    eng = _engine("i2v")
-    parts, cur = [], img
-    for k, n in enumerate(frames_for(r.seconds)):
-        v = eng.generate(r.prompt, cur, max_area=r.width * r.height, frame_num=n, shift=5.0, sample_solver="unipc",
-                         sampling_steps=r.steps, guide_scale=(3.5, 3.5), n_prompt=r.negative_prompt,
-                         seed=r.seed + k, offload_model=True)            # [C, T, H, W], -1..1
-        parts.append(v if k == 0 else v[:, 1:])
-        last = ((v[:, -1].clamp(-1, 1) + 1) * 127.5).to(torch.uint8).permute(1, 2, 0).cpu().numpy()
-        cur = Image.fromarray(last)
-    return torch.cat(parts, dim=1)
+class EnhanceReq(BaseModel):
+    model: str = "book-video"
+    video: str
+    target: str = Field("1080p", pattern="^(1080p|4k)$")
+    fps: int = Field(24)
 
 
-def _s2v(r: Req, img: Image.Image, td: Path) -> torch.Tensor:
-    if not r.audio:
+def _b64file(data: str, path: Path) -> str:
+    path.write_bytes(base64.b64decode(data))
+    return str(path)
+
+
+def _generate(r: Req) -> dict:
+    engine = r.engine or DEFAULT_ENGINE
+    why = plan.license_error(engine)
+    if why:
+        raise HTTPException(409, why)
+    if r.mode == "s2v" and not r.audio:
         raise HTTPException(422, "s2v için ses gerekli")
-    eng = _engine("s2v")
-    ref, wav = td / "ref.png", td / "a.wav"
-    img.save(ref)
-    wav.write_bytes(base64.b64decode(r.audio))
-    repeat = max(1, math.ceil(r.seconds * FPS / S2V_CLIP))
-    v = eng.generate(input_prompt=r.prompt, ref_image_path=str(ref), audio_path=str(wav), enable_tts=False,
-                     tts_prompt_audio=None, tts_prompt_text=None, tts_text=None, num_repeat=repeat,
-                     max_area=r.width * r.height, infer_frames=S2V_CLIP, shift=3.0, sample_solver="unipc",
-                     sampling_steps=r.steps, guide_scale=4.5, n_prompt=r.negative_prompt, seed=r.seed,
-                     offload_model=True, init_first_frame=True)
-    return v[:, : round(r.seconds * FPS)]
-
-
-def _run(r: Req) -> dict:
-    img = Image.open(io.BytesIO(base64.b64decode(r.image))).convert("RGB")
     t0 = time.time()
     with _lock, tempfile.TemporaryDirectory() as td:
         td = Path(td)
-        video = _i2v(r, img) if r.mode == "i2v" else _s2v(r, img, td)
-        out = td / "v.mp4"
-        save_video(video[None], save_file=str(out), fps=FPS, nrow=1, normalize=True, value_range=(-1, 1))
-        data = out.read_bytes()
-    frames = int(video.shape[1])
-    return {"video": base64.b64encode(data).decode(), "seconds": round(frames / FPS, 3), "fps": FPS,
-            "frames": frames, "engine": ENGINE[r.mode], "took": round(time.time() - t0, 1)}
+        req = {"mode": r.mode, "prompt": r.prompt, "negative_prompt": r.negative_prompt, "seconds": r.seconds,
+               "width": r.width, "height": r.height, "seed": r.seed,
+               "steps": r.steps or (40 if engine == "wan2.2" else None),
+               "image": _b64file(r.image, td / "first.png"),
+               "audio": _b64file(r.audio, td / "talk.wav") if r.audio else None,
+               "refs": [_b64file(x, td / f"ref{i}.png") for i, x in enumerate(r.refs, 1)]}
+        out = _worker.call(plan.worker_of(engine), req, td)
+        data = Path(out["file"]).read_bytes()
+    res = {"video": base64.b64encode(data).decode(), "seconds": round(out["frames"] / out["fps"], 3),
+           "fps": out["fps"], "frames": out["frames"], "engine": out["engine"], "took": round(time.time() - t0, 1)}
+    for k in ("canvas", "steps", "refs_used"):
+        if k in out:
+            res[k] = out[k]
+    return res
+
+
+def _enhance(r: EnhanceReq) -> dict:
+    if r.fps not in (24, 30):
+        raise HTTPException(422, "fps 24 ya da 30 olmalı")
+    t0 = time.time()
+    with _lock, tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        out = _worker.call("enhance", {"video": _b64file(r.video, td / "in.mp4"), "target": r.target, "fps": r.fps},
+                           td)
+        data = Path(out["file"]).read_bytes()
+    return {"video": base64.b64encode(data).decode(), "width": out["width"], "height": out["height"],
+            "fps": out["fps"], "engine": out["engine"], "took": round(time.time() - t0, 1)}
 
 
 @app.post("/v1/video/generations")
 async def generate(r: Req) -> dict:
-    return await asyncio.to_thread(_run, r)
+    return await asyncio.to_thread(_generate, r)
+
+
+@app.post("/v1/video/enhance")
+async def enhance(r: EnhanceReq) -> dict:
+    return await asyncio.to_thread(_enhance, r)
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="warning")
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")      # ağırlıklar yerelde; işçiler HF'ye çıkmaz
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="warning")
+    finally:
+        _worker.stop()

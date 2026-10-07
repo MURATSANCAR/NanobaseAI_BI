@@ -6,8 +6,10 @@ Efekt ve ortam sesi, Sesli Okuma'nın efekt havuzundan (sfx_library, GPU'daki te
 tarifiyle aranır; seçim `kurgu.json`'a yazılır (editör değiştirebilir), kaynakça dosyası çıktının yanındadır.
 
 Zaman çizelgesi (`timeline`) ve ffmpeg komutu (`command`) modelsiz ve deterministiktir; testler ikisini doğrudan
-çağırır. Video büyütme ve ara kare (servis tarafı, `book-video` iyileştirme kipi) bu adımdan önce çekimlere uygulanır;
-servis yoksa ölçekleme lanczos'tur.
+çağırır. Video büyütme ve ara kare (SeedVR2 + RIFE, `book-video` /v1/video/enhance) çekim adımının sonunda her seçili
+çekime bir kez uygulanır (shoot.enhance_selected, `cekim/<id>.vK.hd.mp4`); kurgu varsa iyileştirilmiş kopyayı alır,
+yoksa ham çekimi lanczos ile ölçekler. Kaç çekimin iyileştirildiği film.json kurgu adımına `enhanced: n/toplam`
+olarak yazılır.
 """
 
 from __future__ import annotations
@@ -182,6 +184,16 @@ def pick_sounds(sc: dict, old: dict | None = None) -> dict:
     return picks
 
 
+def pick_videos(f: Path, shot_ids: list[str]) -> tuple[dict[str, str], int]:
+    """Çekim → kurguya girecek dosya (iyileştirilmiş kopya varsa o) ve iyileştirilmiş çekim sayısı."""
+    videos, hd = {}, 0
+    for sid in shot_ids:
+        p, is_hd = shoot_mod.for_mix(f, sid)
+        videos[sid] = str(p)
+        hd += is_hd
+    return videos, hd
+
+
 def build(d: Path, f: Path, by: str, progress=lambda n, t, w="": None) -> dict:
     store.require(f, "cekim")
     m = store.meta(f)
@@ -191,7 +203,7 @@ def build(d: Path, f: Path, by: str, progress=lambda n, t, w="": None) -> dict:
     progress(1, 3, "Sesler seçiliyor")
     old = store.read(f, "kurgu.json") or {}
     picks = pick_sounds(sc, old.get("picks"))
-    videos = {s["id"]: str(shoot_mod.selected(f, s["id"])) for s in spec.shots(sc)}
+    videos, hd = pick_videos(f, [s["id"] for s in spec.shots(sc)])
     tl = timeline(sc, voice, videos, picks)
     od = f / "cikti"
     od.mkdir(exist_ok=True)
@@ -205,10 +217,11 @@ def build(d: Path, f: Path, by: str, progress=lambda n, t, w="": None) -> dict:
     if picks["ids"]:
         from .. import sfx_library as L
         credits = L.credits(sorted(set(picks["ids"])))
+    enhanced = f"{hd}/{len(videos)}"
     rec = {"picks": picks, "timeline": tl, "credits": credits, "by": by, "at": store.now(),
-           "file": "cikti/film.mp4", "subtitles": "cikti/film.srt", "seconds": tl["total"]}
+           "file": "cikti/film.mp4", "subtitles": "cikti/film.srt", "seconds": tl["total"], "enhanced": enhanced}
     store.write(f, "kurgu.json", rec)
-    store.set_stage(f, "kurgu", status="hazir", seconds=tl["total"])
-    store.log(f, by, "kurgu yapıldı", seconds=tl["total"])
+    store.set_stage(f, "kurgu", status="hazir", seconds=tl["total"], enhanced=enhanced)
+    store.log(f, by, "kurgu yapıldı", seconds=tl["total"], enhanced=enhanced)
     progress(3, 3, "Bitti")
     return rec

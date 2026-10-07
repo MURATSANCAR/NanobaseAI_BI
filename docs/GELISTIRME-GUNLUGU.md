@@ -1,5 +1,28 @@
 # Geliştirme Günlüğü
 
+## 2026-10-07 — Film video servisi: MiniMax-H3 + FastH3 motorları, SeedVR2 + RIFE iyileştirme (çalıştırılmadı)
+
+- **Ne:** `images/video` üç motorlu: `h3` (MiniMax-H3, diffusers `c6df88a5` ModularPipeline; i2v → fl2va, s2v → ref2va:
+  ilk kare + karakter kartları + replik izi `fully_copy`), `fast-h3` (FastH3 8-Step V2, ComfyUI `b00c6e95` düğümleri
+  grafiksiz; s2v'de replik izi `MiniMaxH3AddGuide` ile 0. kareye ses çıpası), `wan2.2` (yedek). Kullanıcı kararı:
+  varsayılan `h3`, lisans kapısı `VIDEO_LICENSED_ENGINES` (verilmezse hepsi açık; «kurumların hepsinin lisansı var»);
+  H3 lisansı IV.2 «MiniMax H3» adını arayüzde ister — ekran kararı kullanıcıda, kod ad yazmaz. Sözleşmeye isteğe bağlı
+  `engine`, `refs`; yeni `POST /v1/video/enhance` (SeedVR2 7B sharp CLI + Practical-RIFE 4.26 kendi döngümüzle).
+- **Neden ayrı süreçler:** Wan transformers ≤4.51.3 ister, H3'ün Qwen3-VL kodlayıcısı ≥4.57 → imajda iki Python ortamı
+  (`/opt/h3` venv); motor değişince işçi süreci kapanır, GPU/CPU belleği boşalır.
+- **Neden FastH3 ComfyUI ile:** indirilen FastH3-Comfy dosyası «pruned» (`adaln_t_table`); diffusers açıkça reddeder,
+  FastVideo kendi HF biçimini yükler. Metin kodlayıcı indirilmediği için `h3/text_encoder` HF parçaları ComfyUI önek
+  çevirisi + 50 katman kesimiyle yükleniyor (doğrulanmadı; `FAST_H3_TE` ile ComfyUI dosyası verilebilir).
+- **Tek kart:** diffusers «tek 80 GB kart» tarifi (ComponentsManager auto CPU offload, pay 12 GB); FP8 gerekmez.
+- **Hat:** çekim adımının sonunda seçili çekimler bir kez iyileştirilir (`cekim/<id>.vK.hd.mp4`), kurgu varsa onu alır;
+  hata `hd_error` + çekim/kurgu adımında `enhanced: n/toplam`, servis yoksa lanczos yolu aynen.
+- **İndirme:** RIFE 4.26 (README'deki resmî Google Drive) salt okunur kapla `/data/editor/models/RIFE/4.26/train_log`
+  (zip sha256 c2452dd2…, `__MACOSX`/`._*` imzası doğrulanıp silindi). SeedVR2 dosyalarının sha256'sı numz kayıt
+  defteriyle birebir.
+- **Doğrulama:** hiçbir model çalıştırılmadı (kullanıcı kararı); her çağrı kaynak satırlarıyla eşlendi (işçi
+  belgeleri). Testler stüdyo imajında (`editor-py-studio:0.15.9-f70ebaf0`, f70ebaf0 kopyası + değişen dosyalar):
+  `test_film.py` 26/26, tam editör takımı 1369 geçti / 2 atlandı. `editor-video:1` derlemesi GPU'da (pip yavaş).
+
 ## 2026-10-06 — SEO meta kalite kapısı, yayınevi her başlıkta, Cloudflare yapay zekâ ayarları
 
 - E-ticaret ekibi Excel'i: 216 meta yarım («…okuyucuya eşsiz bir»), 142 başlıkta marka eksik. Neden: `_cut` cümle sonu %60'tan önceyse kelime sınırından kesiyordu; başlıkta 65 karakteri aşınca yayınevi düşüyordu.

@@ -34,6 +34,14 @@ for _mod in ("psycopg", "psycopg.rows", "psycopg.types", "psycopg.types.json", "
 from editor.production.film import cast as cast_mod  # noqa: E402
 from editor.production.film import mix, shoot, social, spec, store  # noqa: E402
 
+import importlib.util  # noqa: E402
+
+# images/video/plan.py: video servisinin modelsiz hesapları (torch içe aktarmaz)
+_spec = importlib.util.spec_from_file_location(
+    "book_video_plan", Path(__file__).resolve().parents[1] / "images" / "video" / "plan.py")
+video_plan = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(video_plan)
+
 FFMPEG = shutil.which("ffmpeg") is not None
 
 
@@ -240,3 +248,143 @@ def test_command_runs_end_to_end(tmp_path):
     assert abs(float(probe["format"]["duration"]) - tl["total"]) < 0.2
     assert {"width": 1920, "height": 1080} in [{k: s[k] for k in ("width", "height")}
                                                 for s in probe["streams"] if "width" in s]
+
+
+# ------------------------------------------------------------------ video servisi: motor, kare, tuval, lisans
+def test_wan_frames_for_chunks_overlap_and_are_4n_plus_1():
+    assert video_plan.frames_for(2) == [33]
+    parts = video_plan.frames_for(10)                 # 161 kare → 81 + 81 (bir kare örtüşür)
+    assert parts == [81, 81] and all((n - 1) % 4 == 0 and n <= 81 for n in parts)
+    assert sum(parts) - (len(parts) - 1) >= round(10 * video_plan.WAN_FPS) + 1
+
+
+def test_h3_frames_snap_to_17n_plus_5_within_5_to_15_seconds():
+    assert video_plan.h3_frames(2.0) == 124            # 5 sn altı: en az 124, sunucu keser
+    assert video_plan.h3_frames(5.0) == 124
+    assert video_plan.h3_frames(10.0) == 243           # 240 → 17·14+5
+    assert video_plan.h3_frames(15.0) == 345           # 362 = 15,08 sn reddedilir
+    for s in (2, 4.4, 6.1, 9.9, 12, 15):
+        n = video_plan.h3_frames(s)
+        assert n % 17 == 5 and 120 <= n <= 360
+
+
+def test_h3_canvas_matches_diffusers_rule():
+    assert video_plan.h3_canvas(1280, 720) == (1344, 768)          # 16:9, alan tavanı 768×1344
+    assert video_plan.h3_canvas(720, 1280) == (768, 1344)
+    assert video_plan.h3_canvas(1280, 720, short_edge=544) == (960, 544)   # FastH3 H100 ölçü tuvali
+    w, h = video_plan.h3_canvas(1080, 1080)
+    assert w == h == 768
+    with pytest.raises(ValueError):
+        video_plan.h3_canvas(1920, 256)
+
+
+def test_engine_task_choice_and_prompt():
+    assert video_plan.h3_task("h3", "i2v", 3) == "fl2va"
+    assert video_plan.h3_task("h3", "s2v", 2) == "ref2va"
+    assert video_plan.h3_task("fast-h3", "s2v", 2) == "fl2va+audio"     # FastH3'te ref2va yok
+    assert video_plan.worker_of("fast-h3") == "fasth3" and video_plan.worker_of("wan2.2") == "wan"
+    p = video_plan.h3_prompt("ref2va", "close-up, a girl at the door.", 2)
+    assert "<Picture 1> is the first frame" in p and "<Picture 3>" in p and "fully_copy" in p
+    q = video_plan.h3_prompt("fl2va", "x", 0)
+    assert q.startswith("For the target video") and "nobody speaks" in q
+
+
+def test_default_engine_and_license_gate(monkeypatch):
+    monkeypatch.delenv("VIDEO_ENGINE", raising=False)
+    monkeypatch.delenv("VIDEO_LICENSED_ENGINES", raising=False)
+    assert video_plan.default_engine() == "h3"                       # kullanıcı kararı 2026-10-07
+    assert all(video_plan.license_error(e) is None for e in video_plan.ENGINES)   # varsayılan hepsi açık
+    monkeypatch.setenv("VIDEO_LICENSED_ENGINES", "wan2.2")
+    assert "lisans ayarıyla kapalı" in video_plan.license_error("h3") and video_plan.license_error("fast-h3")
+    monkeypatch.setenv("VIDEO_LICENSED_ENGINES", "h3, bilinmeyen")
+    assert video_plan.license_error("h3") is None and video_plan.license_error("fast-h3")
+    assert video_plan.licensed_engines() == {"wan2.2", "h3"}          # wan2.2 Apache-2.0: her zaman açık
+    monkeypatch.setenv("VIDEO_ENGINE", "sora")
+    with pytest.raises(ValueError):
+        video_plan.default_engine()
+
+
+def test_enhance_params():
+    assert video_plan.target_size(1280, 720, "1080p") == (1920, 1080)
+    assert video_plan.target_size(720, 1280, "4k") == (2160, 3840)
+    assert video_plan.rife_multi(24, 24) == 1 and video_plan.rife_multi(16, 24) == 3
+    assert video_plan.rife_multi(24, 30) == 2 and video_plan.rife_multi(16, 30) == 2
+    assert video_plan.rife_scale(2160, 3840) == 0.5 and video_plan.rife_scale(1080, 1920) == 1.0
+    a = video_plan.seedvr2_args("i.mp4", "o.mp4", "/m", "4k", 120)
+    assert a[a.index("--resolution") + 1] == "2160" and "--vae_decode_tiled" in a
+    assert a[a.index("--dit_model") + 1] == "seedvr2_ema_7b_sharp_fp16.safetensors"
+    assert (int(a[a.index("--batch_size") + 1]) - 1) % 4 == 0
+    b = video_plan.seedvr2_args("i.mp4", "o.mp4", "/m", "1080p", 17)
+    assert int(b[b.index("--batch_size") + 1]) == 17 and "--vae_decode_tiled" not in b
+    assert shoot.ENHANCE_FPS == mix.FPS
+
+
+# ------------------------------------------------------------------ istemci: gövde, iyileştirme, kurgu seçimi
+def _shot_film(f, ids=("s01c01", "s01c02")):
+    (f / "cekim").mkdir(exist_ok=True)
+    rec = {"shots": {}}
+    for sid in ids:
+        (f / "cekim" / f"{sid}.v1.mp4").write_bytes(b"raw")
+        rec["shots"][sid] = {"versions": [{"v": 1, "file": f"{sid}.v1.mp4", "mode": "i2v", "qc": {"ok": True}}],
+                             "selected": 1}
+    store.write(f, "cekimler.json", rec)
+
+
+def test_body_engine_override_and_refs_only_for_talking_shots(film, monkeypatch):
+    _, f = film
+    (f / "kare").mkdir()
+    (f / "kare" / "oyuncu-00.png").write_bytes(b"png-elif")
+    store.write(f, "oyuncular.json", {"rev": 1, "narrator": "x", "members": [
+        {"name": "Elif", "look_en": "a girl", "ref": None}, {"name": "Ali", "look_en": "a boy", "ref": None}]})
+    first = f / "kare" / "first.png"
+    first.write_bytes(b"first")
+    monkeypatch.setattr(shoot, "talk_track", lambda *a: b"wav")
+    monkeypatch.delenv("EDITOR_VIDEO_ENGINE", raising=False)
+    b = shoot.body_for(f, {**_shot(framing="yakin"), "id": "s01c01"}, first, "i2v", 3.0, 1280, 720, "2b", [])
+    assert "engine" not in b and "refs" not in b and "audio" not in b
+    monkeypatch.setenv("EDITOR_VIDEO_ENGINE", "h3")
+    b = shoot.body_for(f, {**_shot(framing="yakin", chars=("Elif", "Ali")), "id": "s01c01"}, first, "s2v", 3.0,
+                       1280, 720, "2b", [{"speaker": "Elif"}])
+    assert b["engine"] == "h3" and b["audio"] and len(b["refs"]) == 1     # Ali'nin görseli yok: atlanır
+
+
+def test_enhance_saves_hd_once_and_mix_prefers_it(film, monkeypatch):
+    import asyncio
+    import base64
+    _, f = film
+    _shot_film(f)
+    calls = []
+
+    async def ok(http, mp4, target):
+        calls.append(target)
+        return {"video": base64.b64encode(b"hd").decode(), "width": 1920, "height": 1080, "fps": 24,
+                "engine": "seedvr2-7b-sharp"}
+    monkeypatch.setattr(shoot, "_enhance_call", ok)
+    monkeypatch.delenv("EDITOR_FILM_ENHANCE", raising=False)
+    monkeypatch.delenv("EDITOR_FILM_ENHANCE_TARGET", raising=False)
+    res = asyncio.run(shoot.enhance_selected(f, None))
+    assert res == {"done": 2, "total": 2, "error": None} and calls == ["1080p", "1080p"]
+    assert (f / "cekim" / "s01c01.v1.hd.mp4").read_bytes() == b"hd"
+    assert asyncio.run(shoot.enhance_selected(f, None))["done"] == 2 and len(calls) == 2   # bir kez
+    videos, hd = mix.pick_videos(f, ["s01c01", "s01c02"])
+    assert hd == 2 and videos["s01c02"].endswith("s01c02.v1.hd.mp4")
+
+
+def test_enhance_failure_falls_back_to_raw_and_is_reported(film, monkeypatch):
+    import asyncio
+    _, f = film
+    _shot_film(f)
+
+    async def down(http, mp4, target):
+        raise shoot.VideoUnavailable("iyileştirme servisi bu kurulumda açık değil")
+    monkeypatch.setattr(shoot, "_enhance_call", down)
+    monkeypatch.delenv("EDITOR_FILM_ENHANCE", raising=False)
+    res = asyncio.run(shoot.enhance_selected(f, None))
+    assert res["done"] == 0 and res["total"] == 2 and "açık değil" in res["error"]
+    rec = store.read(f, "cekimler.json")
+    assert "açık değil" in rec["shots"]["s01c01"]["versions"][0]["hd_error"]
+    assert "hd_error" not in rec["shots"]["s01c02"]["versions"][0]               # servis yok: kalan denenmedi
+    videos, hd = mix.pick_videos(f, ["s01c01", "s01c02"])
+    assert hd == 0 and videos["s01c01"].endswith("s01c01.v1.mp4")
+    monkeypatch.setenv("EDITOR_FILM_ENHANCE", "0")
+    assert asyncio.run(shoot.enhance_selected(f, None))["error"].startswith("iyileştirme kapalı")

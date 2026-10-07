@@ -3,8 +3,18 @@ gece kuyruğunda, Temporal'da çekim çekim yürür (flow: FilmShoot), yarıda k
 
 Uç sözleşmesi (POST /v1/video/generations, gövde JSON):
     {"model": "book-video", "mode": "i2v" | "s2v", "image": <png b64>, "prompt", "negative_prompt",
-     "seconds", "width", "height", "seed", "audio": <wav b64, yalnız s2v>}
+     "seconds", "width", "height", "seed", "audio": <wav b64, yalnız s2v>,
+     "engine"?: "wan2.2" | "h3" | "fast-h3", "refs"?: [<png b64>]}
     → {"video": <mp4 b64>, "seconds", "fps", "frames", "engine"}
+`engine` yalnız EDITOR_VIDEO_ENGINE verilmişse gönderilir (yoksa servisin VIDEO_ENGINE'i). `refs` yalnız s2v'de:
+çekimdeki karakterlerin kart görselleri (H3 ref2va'da karakter kimliği; Wan ve FastH3 yok sayar). Lisansı olmayan
+motor 409 döner → editöre Türkçe hata.
+
+İyileştirme (POST /v1/video/enhance {model, video, target, fps} → {video, width, height, fps, engine}): çekimler
+bittikten sonra her seçili çekim bir kez SeedVR2 + RIFE'tan geçer, `cekim/<id>.vK.hd.mp4` olarak saklanır; kurgu
+varsa onu kullanır. Servis yoksa ya da hata verirse çekimin `hd_error`'una yazılır, kurgu lanczos yoluna düşer ve
+film.json'daki kurgu adımına `enhanced: n/toplam` yazılır (sessiz düşüş yok). Bir sonraki çekim koşusu eksik
+iyileştirmeleri yeniden dener.
 `i2v`: kareden hareket. `s2v`: konuşan çekim — karakterin ağzı verilen replik sesine uyar (yalnız tek konuşanlı,
 yakın/bel planda; çok kişili sahne ve geniş plan i2v + kurguda ses).
 
@@ -22,6 +32,7 @@ from pathlib import Path
 
 import httpx
 
+from . import cast as cast_mod
 from . import dialogue
 from . import frames as F
 from . import script as script_mod
@@ -29,6 +40,8 @@ from . import spec, store
 
 ALIAS = "book-video"
 RETRIES = 1
+ENHANCE_FPS = 24             # kurgu kare hızı (mix.FPS)
+MAX_REFS = 8
 TALK_FRAMINGS = {"yakin", "cok-yakin", "bel", "omuz-ustu"}
 
 
@@ -55,6 +68,50 @@ async def available() -> bool:
         return r.status_code == 200 and any(m.get("id") == ALIAS for m in r.json().get("data", []))
     except (httpx.HTTPError, ValueError):
         return False
+
+
+def engine_override() -> str | None:
+    return os.environ.get("EDITOR_VIDEO_ENGINE", "").strip() or None
+
+
+def enhance_target() -> str | None:
+    """Kurgu öncesi iyileştirme hedefi (1080p | 4k); EDITOR_FILM_ENHANCE=0 kapatır."""
+    if os.environ.get("EDITOR_FILM_ENHANCE", "1").strip() == "0":
+        return None
+    return os.environ.get("EDITOR_FILM_ENHANCE_TARGET", "1080p").strip() or "1080p"
+
+
+def char_refs(f: Path, shot: dict) -> list[Path]:
+    """Çekimdeki karakterlerin referans görselleri, oyuncu listesi sırasıyla: onaylı kartın görseli, yoksa kareler
+    adımının çizdiği `kare/oyuncu-<n>.png` (frames._char_refs ile aynı ad). Görseli olmayan karakter atlanır."""
+    try:
+        cast = cast_mod.load(f)
+    except store.FilmError:
+        return []
+    out = []
+    for i, m in enumerate(cast["members"]):
+        if m["name"] not in shot.get("characters", []):
+            continue
+        p = Path(m["ref"]) if m.get("ref") else f / "kare" / f"oyuncu-{i:02d}.png"
+        if p.is_file():
+            out.append(p)
+    return out[:MAX_REFS]
+
+
+def body_for(f: Path, shot: dict, first: Path, mode: str, seconds: float, W: int, H: int, style: str,
+             lines: list[dict]) -> dict:
+    body = {"mode": mode, "image": base64.b64encode(first.read_bytes()).decode(),
+            "prompt": spec.shot_prompt(shot, style, {}), "negative_prompt": F.NEGATIVE,
+            "seconds": seconds, "width": W, "height": H}
+    eng = engine_override()
+    if eng:
+        body["engine"] = eng
+    if mode == "s2v":
+        body["audio"] = base64.b64encode(talk_track(f, lines, seconds)).decode()
+        refs = char_refs(f, shot)
+        if refs:
+            body["refs"] = [base64.b64encode(p.read_bytes()).decode() for p in refs]
+    return body
 
 
 def mode_of(shot: dict, lines: list[dict]) -> str:
@@ -104,8 +161,79 @@ async def _call(http, body: dict) -> dict:
         raise VideoUnavailable(f"video servisine ulaşılamadı: {type(e).__name__}") from None
     if r.status_code == 404:
         raise VideoUnavailable("video servisi bu kurulumda açık değil")
+    if r.status_code == 409:
+        raise store.FilmError(_detail(r))
     r.raise_for_status()
     return r.json()
+
+
+def _detail(r) -> str:
+    try:
+        return str(r.json().get("detail") or r.text)[:300]
+    except ValueError:
+        return r.text[:300]
+
+
+async def _enhance_call(http, mp4: bytes, target: str) -> dict:
+    url, hd = _endpoint()
+    try:
+        r = await http.post(f"{url}/v1/video/enhance", headers=hd,
+                            json={"model": ALIAS, "video": base64.b64encode(mp4).decode(), "target": target,
+                                  "fps": ENHANCE_FPS})
+    except httpx.HTTPError as e:
+        raise VideoUnavailable(f"iyileştirme servisine ulaşılamadı: {type(e).__name__}") from None
+    if r.status_code == 404:
+        raise VideoUnavailable("iyileştirme servisi bu kurulumda açık değil")
+    if r.status_code >= 400:
+        raise RuntimeError(f"iyileştirme hatası {r.status_code}: {_detail(r)}")
+    return r.json()
+
+
+def hd_name(file: str) -> str:
+    """`s01c02.v3.mp4` → `s01c02.v3.hd.mp4`."""
+    return file[:-4] + ".hd.mp4"
+
+
+def _mark(f: Path, sid: str, v: int, **fields) -> None:
+    rec = store.read(f, "cekimler.json") or {"shots": {}}
+    ver = rec["shots"][sid]["versions"][v - 1]
+    for k, val in fields.items():
+        if val is None:
+            ver.pop(k, None)
+        else:
+            ver[k] = val
+    store.write(f, "cekimler.json", rec)
+
+
+async def enhance_selected(f: Path, http, progress=lambda n, t, w="": None) -> dict:
+    """Her seçili çekimi bir kez iyileştirir (iyileştirilmiş kopyası yoksa). Dönüş {done, total, error}.
+    Hata çekim adımını durdurmaz: nedeni sürümün `hd_error`'una yazılır, kurgu ham çekimle sürer. Servise hiç
+    ulaşılamıyorsa kalan çekimler denenmez."""
+    target = enhance_target()
+    rec = store.read(f, "cekimler.json") or {"shots": {}}
+    sel = [(sid, x["versions"][x["selected"] - 1]) for sid, x in sorted(rec["shots"].items()) if x.get("selected")]
+    res = {"done": 0, "total": len(sel), "error": None}
+    if target is None:
+        res["error"] = "iyileştirme kapalı (EDITOR_FILM_ENHANCE=0)"
+    todo = [] if target is None else [(sid, v) for sid, v in sel
+                                      if not ((v.get("hd") or {}).get("file") and (f / "cekim" / v["hd"]["file"]).is_file())]
+    for n, (sid, v) in enumerate(todo, 1):
+        progress(n, len(todo), "Çekimler iyileştiriliyor")
+        try:
+            out = await _enhance_call(http, (f / "cekim" / v["file"]).read_bytes(), target)
+        except (VideoUnavailable, RuntimeError, httpx.HTTPError, ValueError) as e:
+            res["error"] = str(e)[:300]
+            _mark(f, sid, v["v"], hd_error=res["error"])
+            if isinstance(e, VideoUnavailable):
+                break
+            continue
+        name = hd_name(v["file"])
+        (f / "cekim" / name).write_bytes(base64.b64decode(out["video"]))
+        _mark(f, sid, v["v"], hd={"file": name, "width": out.get("width"), "height": out.get("height"),
+                                   "fps": out.get("fps"), "engine": out.get("engine"), "target": target,
+                                   "at": store.now()}, hd_error=None)
+    res["done"] = sum(1 for sid, _ in sel if for_mix(f, sid)[1])
+    return res
 
 
 async def shoot_one(f: Path, shot: dict, by: str, seed: int, http) -> dict:
@@ -116,11 +244,7 @@ async def shoot_one(f: Path, shot: dict, by: str, seed: int, http) -> dict:
     seconds = voice["seconds"].get(shot["id"], float(shot["seconds"]))
     first = F.selected(f, shot["id"])
     mode = mode_of(shot, lines)
-    body = {"mode": mode, "image": base64.b64encode(first.read_bytes()).decode(),
-            "prompt": spec.shot_prompt(shot, m["style"], {}), "negative_prompt": F.NEGATIVE,
-            "seconds": seconds, "width": W, "height": H}
-    if mode == "s2v":
-        body["audio"] = base64.b64encode(talk_track(f, lines, seconds)).decode()
+    body = body_for(f, shot, first, mode, seconds, W, H, m["style"], lines)
     res, qc = None, {"ok": None, "problems": []}
     for k in range(RETRIES + 1):
         res = await _call(http, {**body, "seed": seed + k})
@@ -166,11 +290,27 @@ async def shoot(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
         for n, s in enumerate(todo, 1):
             progress(n, len(todo), "Çekimler yapılıyor")
             await shoot_one(f, s, by, 5000 + 53 * n, http)
+        hd = await enhance_selected(f, http, progress)
     rec = store.read(f, "cekimler.json") or {"shots": {}}
     failed = sum(1 for x in rec["shots"].values() if x["versions"][x["selected"] - 1]["qc"].get("ok") is False)
-    store.set_stage(f, "cekim", status="hazir", shot=len(todo), failed_qc=failed)
-    store.log(f, by, "çekimler yapıldı", count=len(todo), failed_qc=failed)
+    store.set_stage(f, "cekim", status="hazir", shot=len(todo), failed_qc=failed,
+                    enhanced=f"{hd['done']}/{hd['total']}", enhance_error=hd["error"])
+    store.log(f, by, "çekimler yapıldı", count=len(todo), failed_qc=failed, enhanced=hd["done"],
+              enhance_error=hd["error"])
     return rec
+
+
+def for_mix(f: Path, shot_id: str) -> tuple[Path, bool]:
+    """Kurguya girecek dosya: seçili sürümün iyileştirilmiş kopyası varsa o (True), yoksa ham çekim (False)."""
+    rec = store.read(f, "cekimler.json") or {"shots": {}}
+    cur = rec["shots"].get(shot_id)
+    if not cur or not cur.get("selected"):
+        raise store.FilmError(f"{shot_id} çekimi yok.")
+    v = cur["versions"][cur["selected"] - 1]
+    hd = (v.get("hd") or {}).get("file")
+    if hd and (f / "cekim" / hd).is_file():
+        return f / "cekim" / hd, True
+    return f / "cekim" / v["file"], False
 
 
 def selected(f: Path, shot_id: str) -> Path:
