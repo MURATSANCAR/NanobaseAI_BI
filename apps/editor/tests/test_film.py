@@ -608,3 +608,14 @@ def test_first_person_narration_is_added_from_book_sentences():
     assert first["lines"][0] == {"speaker": "Elif", "text": "Ben resim yaptım.", "emotion": "notr"}
     assert not sm.first_person("Ayşe parka gitti. Kedi ağaca çıktı. Rüzgâr esiyordu.")
     assert sm.narrator_of(sc, "Ayşe parka gitti. Kedi ağaca çıktı.") == spec.NARRATOR
+
+
+def test_book_cast_consolidate_drops_misnamed_detections():
+    from editor.production.film import book_cast as bc
+    found = [{"name": "Levent", "sure": True, "hair": "orange messy", "top": "yellow sweater", "area": 0.2, "page": 3},
+             {"name": "Levent", "sure": True, "hair": "orange spiky", "top": "yellow sweater", "area": 0.3, "page": 5},
+             {"name": "Levent", "sure": False, "hair": "blond curly", "top": "green sweater", "area": 0.4, "page": 7},
+             {"name": "Mert", "sure": True, "hair": "blond curly", "top": "green sweater", "area": 0.1, "page": 3}]
+    g = bc.consolidate(found)
+    assert [p["page"] for p in g["Levent"]] == [5, 3]           # yanlış adlandırılan (sarı saç, yeşil kazak) elendi
+    assert [p["page"] for p in g["Mert"]] == [3]
