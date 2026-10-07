@@ -19,6 +19,8 @@ PROMPT = "production_film_script"
 ATTEMPTS = 3
 SUMMARY_CHARS = 24000          # özet bu uzunluğu aşarsa her bölümün özeti orantılı kısaltılır
 QUOTES = 80
+FULL_TEXT_MAX = 24000          # metni bundan kısa kitapta (resimli kitap, öykü) yazar bütün metni görür
+GROUNDED_MIN = 0.75            # tam metin verildiğinde çekimlerin en az bu kadarı kitaptan birebir cümleye bağlanmalı
 
 
 def known_characters(d: Path) -> list[str]:
@@ -42,6 +44,11 @@ def summary_text(dg: dict, limit: int = SUMMARY_CHARS) -> str:
     return "\n".join(f"{s['title']}: {s['summary'][:share].rsplit(' ', 1)[0]}…" for s in secs)
 
 
+def book_text(d: Path) -> str:
+    """Kitabın okunmuş metni, bölüm sırasıyla (künye ve sorular okuma sırasında ayrıldıysa onlar yok)."""
+    return "\n\n".join(f"{s.title}\n{s.text}" if s.title else s.text for s in mk.sections(d)).strip()
+
+
 def book_checker(d: Path):
     book = mk.norm("\n".join(s.text for s in mk.sections(d)))
     return lambda q: mk.in_book(mk.clean_quote(q), book)
@@ -52,21 +59,32 @@ async def write(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, llm
     fmt, style = spec.FORMATS[m["format"]], spec.STYLES[m["style"]]
     llm = llm or mk.make_llm(d)
     store.set_stage(f, "senaryo", status="calisiyor")
-    dg = await mk.digest(d, llm, progress)
+    text = book_text(d)
+    full = len(text) <= FULL_TEXT_MAX
+    target = spec.target_seconds(m["format"], spec.words(text))
+    if full:
+        # Kısa kitap (resimli kitap, öykü): yazar kitabın kendisini görür; özet ayrıntıyı (kim ne dedi, olay sırası)
+        # kaybettiriyordu (2026-10-07, 16 sayfalık kitapta 56 sn'lik, olayları değişmiş senaryo).
+        source, quotes = text, "(alıntıları yukarıdaki metinden birebir al)"
+    else:
+        dg = await mk.digest(d, llm, progress)
+        source = summary_text(dg)
+        quotes = "\n".join(f"- {q['text']}" for q in dg["quotes"][:QUOTES]) or "(yok)"
     known = known_characters(d)
     in_book = book_checker(d)
     hook = (f"İlk {fmt['hook_sec']:.0f} saniye izleyiciyi yakalamalı: en çarpıcı an ya da soru ilk çekimde."
             if fmt["hook_sec"] else "")
     kw = dict(format=fmt["label"].lower(), title=studio._manuscript(d).title, kind=mk._kind_text(d),
-              min_sec=str(fmt["min_sec"]), max_sec=str(fmt["max_sec"]), style=style["label"], hook=hook,
-              summary=summary_text(dg), quotes="\n".join(f"- {q['text']}" for q in dg["quotes"][:QUOTES]) or "(yok)",
-              known="\n".join(f"- {n}" for n in known) or "(yok)",
+              target_sec=str(target), style=style["label"], hook=hook,
+              source_label="Kitabın tam metni" if full else "Kitabın bölüm bölüm özeti", source=source,
+              quotes=quotes, known="\n".join(f"- {n}" for n in known) or "(yok)",
               min_shot=f"{spec.MIN_SHOT:.0f}", max_shot=f"{spec.MAX_SHOT:.0f}")
     feedback, out, problems = "", None, []
     for attempt in range(1, ATTEMPTS + 1):
         progress(attempt, ATTEMPTS, "Senaryo yazılıyor")
-        out = await mk._ask(llm, PROMPT, spec.SCHEMA, max_tokens=16000, temperature=0.5, feedback=feedback, **kw)
-        problems = spec.check(out, m["format"], {c["name"] for c in out.get("cast", [])}, in_book)
+        out = await mk._ask(llm, PROMPT, spec.SCHEMA, max_tokens=24000, temperature=0.4, feedback=feedback, **kw)
+        problems = spec.check(out, m["format"], {c["name"] for c in out.get("cast", [])}, in_book,
+                              target=target, grounded_min=GROUNDED_MIN if full else None)
         bad = spec.fatal(problems)
         if not bad:
             break

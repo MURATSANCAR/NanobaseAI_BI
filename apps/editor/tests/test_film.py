@@ -569,3 +569,20 @@ def test_command_with_music_runs_end_to_end(tmp_path):
     probe = json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json",
                                        str(out)], capture_output=True, text=True).stdout)
     assert abs(float(probe["format"]["duration"]) - tl["total"]) < 0.2
+
+# ------------------------------------------------------------------ tam metin, süre hedefi, kitaba bağlılık
+def test_target_seconds_scales_with_book_for_cartoon_only():
+    assert spec.target_seconds("cizgi-film", 520) > 300          # 16 sayfalık resimli kitap ~5–7 dk
+    assert spec.target_seconds("cizgi-film", 10) == spec.FORMATS["cizgi-film"]["min_sec"]
+    assert spec.target_seconds("cizgi-film", 10**6) == spec.FORMATS["cizgi-film"]["max_sec"]
+    assert spec.target_seconds("reels", 520) == (15 + 90) // 2
+
+
+def test_short_film_and_ungrounded_shots_are_fatal_with_target():
+    sc = _script([_shot(5) for _ in range(12)])                    # 60 sn
+    probs = spec.check(sc, "cizgi-film", {"Elif"}, in_book=lambda q: False, target=360, grounded_min=0.75)
+    texts = [p.text for p in spec.fatal(probs)]
+    assert any("hedef yaklaşık 360" in t for t in texts)
+    assert any("0/12" in t for t in texts)
+    ok = spec.check(sc, "cizgi-film", {"Elif"}, in_book=lambda q: True, target=70, grounded_min=0.75)
+    assert not spec.fatal(ok)

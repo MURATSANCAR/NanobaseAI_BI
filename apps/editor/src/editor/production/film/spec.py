@@ -172,7 +172,8 @@ class Problem:
         return {"where": self.where, "text": self.text, "fatal": self.fatal}
 
 
-def check(script: dict, fmt: str, cast: set[str], in_book=None) -> list[Problem]:
+def check(script: dict, fmt: str, cast: set[str], in_book=None, target: int | None = None,
+          grounded_min: float | None = None) -> list[Problem]:
     """Senaryo denetimi. `cast`: oyuncu adları; `in_book(quote) -> bool` verilirse alıntılar kitapta aranır.
     Ölümcül sorun senaryonun yeniden istenmesini gerektirir; ölümcül olmayan (kanıtsız alıntı) editöre gösterilir."""
     f = FORMATS[fmt]
@@ -184,6 +185,9 @@ def check(script: dict, fmt: str, cast: set[str], in_book=None) -> list[Problem]
     total = total_seconds(script)
     if total < f["min_sec"] * 0.8 or total > f["max_sec"] * 1.1:
         out.append(Problem("senaryo", f"Toplam süre {total:.0f} sn; bu biçim {f['min_sec']}–{f['max_sec']} sn ister."))
+    if target and total < target * 0.75:
+        out.append(Problem("senaryo", f"Film {total:.0f} sn; kitabı kısaltmadan anlatmak için hedef yaklaşık {target} sn. "
+                                      "Kitaptaki olayların hepsini sırasıyla çek, atlama."))
     if f["hook_sec"] and float(sh[0].get("seconds") or 0) > f["hook_sec"]:
         out.append(Problem(sh[0]["id"], f"İlk çekim {f['hook_sec']:.0f} sn'yi geçmemeli (izleyiciyi ilk saniyelerde "
                                         "yakalamak için).", fatal=False))
@@ -210,7 +214,23 @@ def check(script: dict, fmt: str, cast: set[str], in_book=None) -> list[Problem]
         q = (s.get("quote") or "").strip()
         if in_book is not None and (not q or not in_book(q)):
             out.append(Problem(s["id"], "Çekimin dayandığı cümle kitapta bulunamadı (kanıtsız).", fatal=False))
+    if grounded_min is not None and in_book is not None:
+        ok = sum(1 for s in sh if (s.get("quote") or "").strip() and in_book(s["quote"]))
+        if ok < grounded_min * len(sh):
+            out.append(Problem("senaryo", f"Çekimlerin yalnız {ok}/{len(sh)} tanesi kitaptaki bir cümleye birebir "
+                                          "bağlı. Her çekimin `quote`'u metinden kelimesi kelimesine kopyalanmalı."))
     return out
+
+
+def target_seconds(fmt: str, book_words: int) -> int:
+    """Biçimin hedef süresi. Çizgi film kitabı kısaltmadan anlatır: konuşma (kelime ÷ okuma hızı, çocuk temposu
+    biraz yavaş) + sözsüz anlar (konuşmanın ~%40'ı) + açılış/kapanış; biçimin aralığına sıkıştırılır. Fragman ve
+    reels kitabı özetler: aralığın ortası."""
+    f = FORMATS[fmt]
+    if fmt != "cizgi-film":
+        return int((f["min_sec"] + f["max_sec"]) / 2)
+    speech = book_words / (WORDS_PER_SEC * 0.92)
+    return int(min(f["max_sec"], max(f["min_sec"], speech * 1.4 + 25)))
 
 
 def fatal(problems: list[Problem]) -> list[Problem]:
