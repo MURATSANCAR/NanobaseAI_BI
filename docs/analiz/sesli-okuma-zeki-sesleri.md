@@ -45,7 +45,7 @@ erkek sesleri istendi, beğenildi; aynı yöntemle Timaş kitap türlerine göre
 
 Gözlem: «extremely deep / very deep bass» tarifinde bazı tohumlar perdeyi 150–190 Hz'e çıkardı ya da sesli oranı
 0,05–0,25'e düştü (fısıltı/hırıltı) — tohum taraması bu yüzden şart. Küçük çocuk sesleri (8 yaş) kalitede tutmadı,
-katalogdan çıkarıldı; çocuk karakteri genç ses okur.
+katalogdan çıkarıldı; çocuk karakteri genç ses okur. 2026-10-07: çizgi film için dört yeni çocuk sesi üretildi, kullanıcı onayı bekliyor (`sesli-okuma-cocuk-sesleri.md`).
 
 ## Kaldırılanlar
 

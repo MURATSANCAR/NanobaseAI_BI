@@ -22,6 +22,14 @@
 - **Doğrulama:** hiçbir model çalıştırılmadı (kullanıcı kararı); her çağrı kaynak satırlarıyla eşlendi (işçi
   belgeleri). Testler stüdyo imajında (`editor-py-studio:0.15.9-f70ebaf0`, f70ebaf0 kopyası + değişen dosyalar):
   `test_film.py` 26/26, tam editör takımı 1369 geçti / 2 atlandı. `editor-video:1` derlemesi GPU'da (pip yavaş).
+## 2026-10-07 — Çizgi film çocuk sesleri: 4 ses üretildi ve ölçüldü, kullanıcı onayı bekliyor
+
+- **Neden:** katalogda çocuk sesi yoktu; kitaptan çizgi filmde çocuk karakter («Levent» serisi, ilkokul çağı erkek çocuk) genç sesle konuşuyordu.
+- **Üretim (tt-gpu, geçici kap, gateway üzerinden VoxCPM2, yalnız tarif):** `apps/editor/deploy/ses/cocuk_sesleri.py`; 3 tur, 172 aday (8 tarif × 4–6 tohum, küçük kızda +12) + 12 taban kaydı. Çıktı `/data/editor/ses-havuzu/cocuk/` (`ham/`, `olcum.json`, `sec.md`, `aday/` ses başına 3 wav + `liste.json`). Çalışan kaplara dokunulmadı.
+- **Bulgular:** «high/very high/tiny» tarifleri 330–555 Hz cıyaklama, harf hatası %10–63 (1. tur tamamen elendi); perde kelimesi yerine yaş + sakin/net okuma 250–320 Hz verdi. Katalogdaki %5 eşiği bu ünlemli çocuk cümlesinde yetişkin genç seste de tutmuyor (taban cer 0,053–0,213, ortanca 0,080) → eşik 0,10. Perde çocuğu yetişkin kadından ayırmıyor (genç kadın tarifi aynı cümlede 300–335 Hz); son karar kulak. Dinlemeye giden 12 aday: cer 0,064–0,096, f0 248–360 Hz.
+- **Kod:** `voices_zeki.CHILD_VOICES` (karakter grubu; `cocuk-erkek`, `cocuk-kiz`, `kucuk-erkek`, `kucuk-kiz`). Sabit kaydı olmayan ses «onay bekliyor»: katalogda görünmez, kimliği genç sese gider (`child_state`; küçük → büyük çocuk → genç). Geçici sabitleme yapılmadı: sabit kayıt müşteriye gider, değişirse o sesle okunmuş sayfalar bayatlar. `film/cast.py` çocuk karakterde çocuk → küçük çocuk → genç sırası (bekleyen kimlik bir kez sayılır, bugünkü dağılım değişmez; okul öncesi yaşı söyleyen görünüş küçük sesi öne alır). `narration.guess_voice` okul öncesini açıkça söyleyen tarifi (`LITTLE`) küçük çocuk sesine götürür.
+- **Testler (GPU, `editor-py-studio:0.15.9-f70ebaf0`, sürüm klasörü üstüne yalnız değişen dosyalar):** ilgili 5 dosya 139 geçti/1 atlandı; tam takım 1.363 geçti, 2 atlandı, 1 kaldı (`test_portal_read::test_read_ocr_only_needed_and_requested_pages` OCR çağrı sırası, yük altında; tek başına 3/3 geçiyor, değişiklikle ilgisiz).
+- **Bekleyen:** kullanıcı dinleyip her sesten birini seçecek; onay adımı `docs/analiz/sesli-okuma-cocuk-sesleri.md` → «Onay adımı». Kurulum yapılmadı (davranış değişikliği yok).
 
 ## 2026-10-06 — SEO meta kalite kapısı, yayınevi her başlıkta, Cloudflare yapay zekâ ayarları
 
