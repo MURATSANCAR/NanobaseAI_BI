@@ -173,7 +173,7 @@ class Problem:
 
 
 def check(script: dict, fmt: str, cast: set[str], in_book=None, target: int | None = None,
-          grounded_min: float | None = None) -> list[Problem]:
+          grounded_min: float | None = None, voiced_min: float | None = None) -> list[Problem]:
     """Senaryo denetimi. `cast`: oyuncu adları; `in_book(quote) -> bool` verilirse alıntılar kitapta aranır.
     Ölümcül sorun senaryonun yeniden istenmesini gerektirir; ölümcül olmayan (kanıtsız alıntı) editöre gösterilir."""
     f = FORMATS[fmt]
@@ -214,6 +214,18 @@ def check(script: dict, fmt: str, cast: set[str], in_book=None, target: int | No
         q = (s.get("quote") or "").strip()
         if in_book is not None and (not q or not in_book(q)):
             out.append(Problem(s["id"], "Çekimin dayandığı cümle kitapta bulunamadı (kanıtsız).", fatal=False))
+    if voiced_min is not None:
+        voiced = sum(1 for s in sh if any((x.get("text") or "").strip() for x in s.get("lines", [])))
+        if voiced < voiced_min * len(sh):
+            out.append(Problem("senaryo", f"Çekimlerin yalnız {voiced}/{len(sh)} tanesinde ses var. Kitabın anlatım "
+                                          "cümlelerini dış ses satırı olarak ekle (birinci tekil anlatımda konuşan "
+                                          "anlatan karakterdir); sessiz çekim yalnız kısa geçiş ve tepki için."))
+        run = 1
+        for a, b in zip(sh, sh[1:]):
+            run = run + 1 if a.get("framing") == b.get("framing") else 1
+            if run > 3:
+                out.append(Problem(b["id"], f"Aynı çekim türü ({b['framing']}) üst üste {run} kez; çekim türünü değiştir."))
+                break
     if grounded_min is not None and in_book is not None:
         ok = sum(1 for s in sh if (s.get("quote") or "").strip() and in_book(s["quote"]))
         if ok < grounded_min * len(sh):

@@ -1,4 +1,4 @@
-<!-- name: production_film_script version: 2 -->
+<!-- name: production_film_script version: 4 -->
 Bir kitaptan {{format}} çekeceğiz. Sen senaristsin ve yönetmensin: çekim listesini yaz.
 
 Kitap: «{{title}}», {{kind}}.
@@ -21,7 +21,10 @@ Bilinen karakterler (bu adları aynen kullan; listede olmayan karakter gerekiyor
 Kurallar:
 - SADAKAT: Hikâye kitabın hikâyesidir. Kitaptaki olayların HEPSİNİ kitaptaki sırayla çek; hiçbirini atlama, birleştirip özetleme, yerini değiştirme. Kitapta olmayan olay, sahne, replik ya da duygu ekleme. Kim ne dediyse o söyler; söyleyeni değiştirme.
 - SÜRE: Toplam süre hedefe yakın olsun. Uzun olaylar için birden çok çekim kullan (genel plan, yakın plan, tepki); sessiz anlara (hediye açma, resim çizme, kovalamaca, şaşkınlık) da çekim ayır. Sayfa başına kabaca 2–4 çekim.
-- ANLATICI: Kitap birinci tekil şahısla anlatılıyorsa («ben», «annem», «kardeşim») anlatım cümlelerini o karakter söyler: `speaker` o karakterin adıdır, ayrı bir «anlatıcı» kullanma. Kitap üçüncü şahısla anlatılıyorsa anlatım cümlelerinin konuşanı «anlatıcı»dır. Anlatımı kitaptaki cümlelerden kısaltarak al; uydurma.
+- ANLATIM (dış ses): Kitabın konuşma dışındaki anlatım cümleleri filmde DIŞ SES olarak duyulur; çekimlerin çoğunda ya bir replik ya bir anlatım satırı olsun, sessiz çekim yalnız kısa geçişler ve tepkiler için. Kitap birinci tekil şahısla anlatılıyorsa («ben», «annem», «kardeşim») anlatım satırlarının `speaker`'ı o karakterin adıdır (ayrı «anlatıcı» kullanma); üçüncü şahısla anlatılıyorsa «anlatıcı». Anlatım satırı kitaptaki cümledir (gerekirse kısaltılmış, kelimeleri değiştirilmemiş). Biçim örneği (bu kitaptan değil): `{"speaker": "Ayşe", "text": "O sabah erkenden kalktım.", "emotion": "notr"}` — birinci tekil anlatımda Ayşe hem konuşur hem anlatır.
+- SAHNE: Yer ya da zaman değişince yeni sahne aç (başka oda, başka gün, «birkaç gün sonra»). `setting` o sahnenin gerçek yeri.
+- KAMERA: Aynı çekim türünü (`framing`) üst üste en çok iki kez kullan. Duygu ve tepki anlarında yakın plan, yeni mekânda genel plan, iki kişi konuşurken omuz üstü; komik doruk anında yaklaşma ya da kuş bakışı. Sabit kamerayı hareketle dengele.
+- DUYGU: `emotion` repliğin bağlamına uysun (teşekkür neşeli, uyarı öfkeli ya da ciddi, sevinç çığlığı heyecanlı); kitapta ağlama yazmıyorsa «aglayarak» kullanma.
 - `cast`: filmde görünen ya da konuşan her karakter. `age`: metindeki ipuçlarına göre (kardeşinden büyük ama okula giden çocuk «cocuk»; küçük kardeş, dili tam dönmeyen «cocuk»); çocuk kitabının birinci tekil anlatıcısı aksi yazmıyorsa okur yaşında bir çocuktur. `look_en` İngilizce görünüş tarifi (yaş, beden, saç, yüz, kıyafet; kitapta yazanla çelişme). `role` Türkçe tek kelime (kahraman, kardeş, anne, baba, komşu…).
 - Her çekim {{min_shot}}–{{max_shot}} saniye. Çekim türlerini değiştir; kamerayı anlamlı oynat.
 - `action_en`: çekimde GÖRÜNEN şeyin İngilizce, somut tarifi (kim nerede ne yapıyor, ifadesi, ışık). Tek an, tek hareket. Yazı, tabela, altyazı isteme.

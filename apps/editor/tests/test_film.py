@@ -586,3 +586,11 @@ def test_short_film_and_ungrounded_shots_are_fatal_with_target():
     assert any("0/12" in t for t in texts)
     ok = spec.check(sc, "cizgi-film", {"Elif"}, in_book=lambda q: True, target=70, grounded_min=0.75)
     assert not spec.fatal(ok)
+
+
+def test_silent_script_and_monotone_camera_are_fatal_when_asked():
+    sc = _script([_shot(5, framing="genel") for _ in range(6)])
+    probs = spec.check(sc, "cizgi-film", {"Elif"}, voiced_min=0.7)
+    texts = " ".join(p.text for p in spec.fatal(probs))
+    assert "0/6 tanesinde ses" in texts and "üst üste 4 kez" in texts
+    assert not any("ses var" in p.text for p in spec.check(sc, "cizgi-film", {"Elif"}))   # varsayılan kapalı

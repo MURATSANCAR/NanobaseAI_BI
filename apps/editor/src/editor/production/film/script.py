@@ -21,6 +21,7 @@ SUMMARY_CHARS = 24000          # özet bu uzunluğu aşarsa her bölümün özet
 QUOTES = 80
 FULL_TEXT_MAX = 24000          # metni bundan kısa kitapta (resimli kitap, öykü) yazar bütün metni görür
 GROUNDED_MIN = 0.75            # tam metin verildiğinde çekimlerin en az bu kadarı kitaptan birebir cümleye bağlanmalı
+VOICED_MIN = 0.7               # tam metin verildiğinde çekimlerin en az bu kadarında ses (replik ya da dış ses) olmalı
 
 
 def known_characters(d: Path) -> list[str]:
@@ -84,7 +85,8 @@ async def write(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, llm
         progress(attempt, ATTEMPTS, "Senaryo yazılıyor")
         out = await mk._ask(llm, PROMPT, spec.SCHEMA, max_tokens=24000, temperature=0.4, feedback=feedback, **kw)
         problems = spec.check(out, m["format"], {c["name"] for c in out.get("cast", [])}, in_book,
-                              target=target, grounded_min=GROUNDED_MIN if full else None)
+                              target=target, grounded_min=GROUNDED_MIN if full else None,
+                              voiced_min=VOICED_MIN if full else None)
         bad = spec.fatal(problems)
         if not bad:
             break
