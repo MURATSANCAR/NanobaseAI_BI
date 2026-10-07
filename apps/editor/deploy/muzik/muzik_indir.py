@@ -62,12 +62,15 @@ def save(done):
     os.replace(tmp, STATE)
 
 
-def size_of(path, top_only=False):
-    if top_only:
-        return sum(os.path.getsize(os.path.join(path, f)) for f in os.listdir(path)
-                   if os.path.isfile(os.path.join(path, f)))
+def size_of(path):
     return sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(path)
                if "/.cache" not in r for f in fs)
+
+
+def own_size(d):
+    """Klasörün bu depodan gelen baytı: içindeki, ayrı depodan inen alt klasörler (PLAN) düşülür."""
+    subs = [x[0] for x in PLAN if x[0].startswith(d + "/")]
+    return size_of(f"{DST}/{d}") - sum(size_of(f"{DST}/{x}") for x in subs if os.path.isdir(f"{DST}/{x}"))
 
 
 def fetch(done, d, repo, rev, allow, token=None):
@@ -76,8 +79,7 @@ def fetch(done, d, repo, rev, allow, token=None):
             log(f"BASLA {repo} rev={rev} deneme={attempt}")
             snapshot_download(repo, revision=rev, local_dir=f"{DST}/{d}", allow_patterns=allow, max_workers=8,
                               token=token)
-            # alt klasörü olan kökte (acestep15, heartmula) yalnız bu deponun dosyaları sayılır
-            size = size_of(f"{DST}/{d}", top_only=allow is not None or d in ("acestep15",))
+            size = own_size(d)
             done[d] = {"ok": True, "repo": repo, "revision": rev, "bytes": size, "bitis": time.strftime("%F %T")}
             save(done)
             log(f"BITTI {repo} {size/1e9:.2f} GB")
@@ -91,8 +93,9 @@ def fetch(done, d, repo, rev, allow, token=None):
 
 def main():
     done = json.load(open(STATE)) if os.path.exists(STATE) else {}
-    for k in ("yue2", "minimax-music3"):           # önceki planın «indirilmedi» kayıtları
-        done.pop(k, None)
+    for d, *_ in PLAN:                              # bayt sayımı düzeltmesi (2026-10-07): ayrı inen alt klasör düşülür
+        if done.get(d, {}).get("ok") and os.path.isdir(f"{DST}/{d}"):
+            done[d]["bytes"] = own_size(d)
     save(done)
     d, repo, rev, allow = SA3
     if not done.get(d, {}).get("ok"):
