@@ -1,145 +1,118 @@
-"""FastH3 8-Step V2 işçisi: ComfyUI'nin MiniMax-H3 düğümleri grafiksiz (kütüphane olarak) çağrılır.
+"""FastH3 8-Step V2 işçisi: FastVideo'nun resmî çıkarım yolu (/opt/fastvideo ortamı, FastVideo commit Dockerfile'da
+sabit). İki anahtar: `fast-h3` (FastVideo/FastVideo-FastH3-8-Step-V2, bf16) ve `fast-h3-fp8`
+(FastVideo/FastVideo-FastH3-8-Step-V2-FP8: transformer FP8 E4M3 kanal başı ölçek, Qwen3-VL NVFP4 → FP4'süz kartta katman
+başı açılır, LynnReal hafif video VAE'si).
 
-Neden ComfyUI: indirilen ağırlık FastVideo/FastVideo-FastH3-Comfy'dir (diffusion_models + vae). Bu dosya «pruned»
-biçimdedir (`adaln_t_table` [1025, 8] + blok başına rank-8 adaLN izdüşümü); diffusers bunu açıkça reddeder
-(single_file_utils.py:4250 «This is a pruned MiniMax-H3 checkpoint ... does not support»), FastVideo kendi HF
-biçimini yükler (registry.py:1272-1296, dosyada `adaln_t_table` geçmez). Yükleyen tek kod ComfyUI'dir
-(comfy/model_detection.py:403, comfy/ldm/minimax/model.py:501/744).
+ÇALIŞTIRILMADI (kullanıcı kararı). Kaynakla eşleme (FastVideo d1416b59):
+- Yapılandırma ve istek examples/inference/basic/basic_fasth3.py:283-354 (`build_generator_config`, `build_request`)
+  ile aynı alanlar; tek kart: num_gpus=1, FSDP yok, sp_size=1 (kart: «GPU sayısı 56 dikkat başını bölmeli»).
+- Ortam değişkenleri aynı dosyanın `profile_environment`'ı (:196-223), «strict» profil + `--vsa-kernel triton
+  --no-fa4` (Hopper'da sm100a çekirdeği ve FA4 yok; model kartı: «add --no-replicated-dit --vsa-kernel triton
+  --no-fa4»). V2 VSA-H3 dikkat arka ucunu ister (kart); seyreklik 0,8, döşeme 64 (fastvideo_inference.json).
+- Adım: 9 sigma noktası = 8 ileri geçiş; başka ızgara reddedilir (basic_fasth3_8step.py). Kayma 10/3 ve DMD
+  basamakları checkpoint'teki fastvideo_inference.json'dan otomatik okunur.
+- V2 indirmesi yalnız transformer + yapılandırma taşır; ortak parçalar MiniMax-H3 ile birebir (34/34 özet). Klasör,
+  basic_fasth3_omniref_pdd.py:145-191 `compose_model_dir` desenindeki gibi sembolik bağlarla birleştirilir.
 
-ÇALIŞTIRILMADI (kullanıcı kararı). Düğüm sırası Comfy-Org/workflow_templates video_fastvideo_fasth3_i2v.json alt
-grafiğinin aynısıdır (düğüm kimlikleri parantezde); her çağrının imzası ComfyUI b00c6e95 kaynağından:
-  UNETLoader(6) → comfy.sd.load_diffusion_model                      sd.py:2426
-  VAELoader(11, 24) → comfy.sd.VAE(sd, metadata)                        nodes.py:844-864
-  CLIPLoader(13, type minimax) → comfy.sd.load_text_encoder_state_dicts  sd.py:1777, QWEN3VL_32B dalı 1995
-  MiniMaxH3SigmaShift(143) shift 10 / 3                                 nodes_minimax_h3.py:392
-  MiniMaxH3ImageToVideo(104)                                            nodes_minimax_h3.py:139
-  [yalnız s2v] MiniMaxH3AddGuide(audio, frame_idx=0)                    nodes_minimax_h3.py:191
-  BasicScheduler(9) simple / 8 / 1.0, KSamplerSelect(17) res_multistep  nodes_custom_sampler.py:33, 390
-  BasicGuider(16), RandomNoise(15), SamplerCustomAdvanced(14)           nodes_custom_sampler.py:816, 1014, 1040
-  VAEDecode(10)                                                         nodes.py:338
-Şablondaki iki hız düğümü kullanılmaz: BlockSparseAttention(127, VSA %10 tutma, adımların %20'sinden sonra) ve
-ModelAttentionBackend(128). İkisi de yoğun dikkatin yaklaşığıdır; yoğun dikkat doğruluk açısından güvenli yoldur, hız
-ölçüsü ilk kurulumda alınır.
-
-Metin kodlayıcı: FastH3-Comfy'nin text_encoders/ klasörü indirilmedi. Aynı ağırlık (Qwen3-VL-32B, H3 tokenizer'ı)
-MiniMax-H3/text_encoder altında HF parçaları olarak var; ComfyUI'nin kendi Qwen3-VL dallarında yaptığı önek çevirisi
-(sd.py:1957 `{"model.language_model.": "model.", "model.visual.": "visual.", "lm_head.": "model.lm_head."}`)
-uygulanır ve 50. katmandan sonrası, son norm ve lm_head atılır (ComfyUI'nin dönüştürülmüş dosyası da 50 katmanda
-kesik, son normsuz: text_encoders/llama.py:366-374 Qwen3VL_32BConfig). Algılama anahtarları
-(sd.py:1731 `visual.deepstack_merger_list.0.norm.weight` + `model.layers.49.self_attn.q_proj.weight`) bu çeviriden
-sonra oluşur. DOĞRULANMADI: bu yol ComfyUI'nin kendi dosyasıyla bayt bayt aynı değil; ilk kurulumda iki yolun
-koşullama çıktısı karşılaştırılmalı ya da qwen3vl_32b_minimax_h3_bf16.safetensors indirilmeli (FAST_H3_TE ile verilir).
-
-Ses: s2v'de replik izimiz 0. kareye ses çıpası olarak verilir (koşul satırı, her adımda sabit; PackedLayout
-model.py:387-394). Üretilen ses atılır, film bizim izimizle kurgulanır. Karakter kartları (refs) FastH3'te
-kullanılmaz: damıtılan öğrenci yalnız transformer/ (t2va/fl2va) bölümüdür, ref2va yoktur.
+KAPSAM (model kartı «Scope»): V2 yalnız metinden video+ses (T2VA) damıtıldı; «FL2VA and Ref2VA were not distilled»,
+FastVideo yemek kitabı da CUDA'da FL2VA/Ref2VA'yı yalnız tam H3 için listeler. Bu yüzden:
+- i2v → t2va: onaylı ilk kare modele GİRMEZ (yanıtta `first_frame_used: false`); karakter tutarlılığı yalnız
+  istemle sağlanır.
+- s2v → 422: replik izine dudak uyumu bu checkpoint'te yok; konuşan çekim için `h3`.
 """
 
 from __future__ import annotations
 
-import json
 import os
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
-import numpy as np
-import soundfile as sf
-import torch
-from PIL import Image
-
-sys.path.insert(0, "/opt/ComfyUI")
 sys.path.insert(0, str(Path(__file__).parent))
-import comfy.options  # noqa: E402,F401 — args_parsing False: ComfyUI argv okumaz, varsayılan ayarlar
-import comfy.sd  # noqa: E402
-import comfy.utils  # noqa: E402
-import nodes  # noqa: E402
-from comfy_extras.nodes_custom_sampler import (  # noqa: E402
-    BasicGuider, BasicScheduler, KSamplerSelect, RandomNoise, SamplerCustomAdvanced)
-from comfy_extras.nodes_minimax_h3 import (  # noqa: E402
-    MiniMaxH3AddGuide, MiniMaxH3ImageToVideo, MiniMaxH3SigmaShift)
-from safetensors.torch import load_file  # noqa: E402
-
 import plan  # noqa: E402
-from worker_common import Refused, pad_wav, serve, write_mp4  # noqa: E402
+from worker_common import Refused, serve  # noqa: E402
 
 MODELS = Path(sys.argv[1])
-ROOT = MODELS / "fast-h3"
-DIT = os.environ.get("FAST_H3_DIT", "fastvideo_fasth3_8step_v2_pruned_bf16.safetensors")
-VIDEO_VAE = "minimax_h3_video_vae_fp16.safetensors"
-AUDIO_VAE = "minimax_h3_audio_vae_fp32.safetensors"
-TE = os.environ.get("FAST_H3_TE", "")                  # boşsa h3/text_encoder HF parçaları
+VARIANT = os.environ.get("FAST_H3_VARIANT", "fast-h3")            # server.py işçiyi motor adıyla başlatır
 SHORT_EDGE = int(os.environ.get("FAST_H3_SHORT_EDGE", str(plan.FAST_H3_SHORT_EDGE)))
-STEPS, SHIFT_VIDEO, SHIFT_AUDIO, SAMPLER = 8, 10.0, 3.0, "res_multistep"
-TE_LAYERS = 50
-_m: dict = {}
+STEPS = 9
+SHARED = ("text_encoder", "tokenizer", "processor", "vae", "audio_vae", "model_index.json")
+ENV = {                                          # basic_fasth3.profile_environment, strict + triton VSA, FA4 yok
+    "FASTVIDEO_ATTENTION_BACKEND": "VIDEO_SPARSE_ATTN_H3", "FASTVIDEO_VSA_SM100A": "0", "FASTVIDEO_VSA_TK": "0",
+    "FASTVIDEO_VSA_CUTEDSL": "0", "FASTVIDEO_DISABLE_ATTENTION_COMPILE": "0", "FASTVIDEO_FA4": "0",
+    "FASTVIDEO_NVFP4_FA4": "0", "FASTVIDEO_MINIMAX_H3_FA4_PACKED_VARLEN": "0", "FASTVIDEO_MINIMAX_H3_FUSIONS": "0",
+    "FASTVIDEO_INFERENCE_TORCH_COMPILE": "0", "FASTVIDEO_VAE_PARALLEL_DECODE": "0", "FASTVIDEO_VAE_PARALLEL_ENCODE": "0",
+    "FASTVIDEO_VAE_PARALLEL_DECODE_STRATEGY": "gather", "FASTVIDEO_STAGE_LOGGING": "1"}
+_gen = None
 
 
-def _vae(path: Path):
-    sd, metadata = comfy.utils.load_torch_file(str(path), return_metadata=True)
-    vae = comfy.sd.VAE(sd=sd, metadata=metadata)
-    vae.throw_exception_if_invalid()
-    return vae
-
-
-def _hf_text_encoder() -> dict:
-    """MiniMax-H3/text_encoder HF parçaları → ComfyUI'nin MiniMax Qwen3-VL-32B anahtar düzeni (50 katman)."""
-    d = MODELS / "h3" / "text_encoder"
-    index = json.loads((d / "model.safetensors.index.json").read_text())["weight_map"]
-    sd: dict = {}
-    for shard in sorted(set(index.values())):
-        sd.update(load_file(str(d / shard)))
-    sd = comfy.utils.state_dict_prefix_replace(sd, {"model.language_model.": "model.", "model.visual.": "visual.",
-                                                     "lm_head.": "model.lm_head."})
-    drop = [k for k in sd if k.startswith("model.lm_head.") or k == "model.norm.weight" or
-            (k.startswith("model.layers.") and int(k.split(".")[2]) >= TE_LAYERS)]
-    for k in drop:
-        del sd[k]
-    return sd
+def compose(variant_dir: Path, base_dir: Path, out: Path) -> Path:
+    """Damıtılmış parçalar (transformer, zamanlayıcılar, fastvideo_inference.json, dizin) variant'tan, eksik ortak
+    parçalar MiniMax-H3'ten — sembolik bağlı tek model klasörü. FP8 deposu tam olduğu için ondan hiçbir şey eksik
+    kalmaz, yalnız kendi dosyalarına bağlanır."""
+    out.mkdir(parents=True, exist_ok=True)
+    for p in variant_dir.iterdir():
+        if not p.name.startswith("."):
+            (out / p.name).symlink_to(p)
+    for name in SHARED:
+        if not (out / name).exists():
+            src = base_dir / name
+            if not src.exists():
+                raise RuntimeError(f"FastH3 ortak parça yok: {src}")
+            (out / name).symlink_to(src)
+    return out
 
 
 def _load():
-    if _m:
-        return _m
-    _m["model"] = MiniMaxH3SigmaShift.execute(comfy.sd.load_diffusion_model(str(ROOT / "diffusion_models" / DIT)),
-                                              SHIFT_VIDEO, SHIFT_AUDIO).args[0]
-    _m["vae"] = _vae(ROOT / "vae" / VIDEO_VAE)
-    _m["audio_vae"] = _vae(ROOT / "vae" / AUDIO_VAE)
-    if TE:
-        _m["clip"] = comfy.sd.load_clip(ckpt_paths=[TE], clip_type=comfy.sd.CLIPType.MINIMAX)
-    else:
-        _m["clip"] = comfy.sd.load_text_encoder_state_dicts([_hf_text_encoder()], clip_type=comfy.sd.CLIPType.MINIMAX)
-    return _m
+    global _gen
+    if _gen is not None:
+        return _gen
+    os.environ.update(ENV)
+    from fastvideo import VideoGenerator
+    from fastvideo.api import (CompileConfig, ComponentConfig, EngineConfig, GeneratorConfig, OffloadConfig,
+                               ParallelismConfig, PipelineSelection)
+    model = compose(MODELS / VARIANT, MODELS / "h3", Path(tempfile.mkdtemp(prefix="fasth3-")) / "model")
+    cfg = GeneratorConfig(
+        model_path=str(model),
+        pipeline=PipelineSelection(
+            components=ComponentConfig(),
+            experimental={"attention_backend": "VIDEO_SPARSE_ATTN_H3", "inference_torch_compile": False,
+                          "vae_parallel_decode": False, "vae_parallel_decode_strategy": "gather",
+                          "VSA_sparsity": 0.8, "VSA_tile_size": 64}),
+        engine=EngineConfig(
+            num_gpus=1, execution_backend="mp", use_fsdp_inference=False,
+            parallelism=ParallelismConfig(tp_size=1, sp_size=1),
+            # Tek kart: transformer kartta (bf16 ~70 GB / fp8 daha az), Qwen3-VL ve VAE iş bitince CPU'ya iner.
+            offload=OffloadConfig(dit=False, dit_layerwise=os.environ.get("FAST_H3_DIT_LAYERWISE") == "1",
+                                  text_encoder=True, vae=True, pin_cpu_memory=True, lazy_module_load=None),
+            compile=CompileConfig(enabled=False)))
+    _gen = VideoGenerator.from_config(cfg)
+    return _gen
 
 
 def handle(r: dict, td: Path) -> dict:
     task = plan.h3_task("fast-h3", r["mode"], 0)
-    if task == "fl2va+audio" and not r.get("audio"):
-        raise Refused("s2v için ses gerekli")
-    m = _load()
+    if task != "t2va":
+        raise Refused("fast-h3 (FastH3 V2) yalnız metinden video üretir; konuşan çekim (s2v) için h3 kullanın")
+    from fastvideo.api import GenerationRequest, OutputConfig, SamplingConfig
+    gen = _load()
     W, H = plan.h3_canvas(r["width"], r["height"], short_edge=SHORT_EDGE)
     n = plan.h3_frames(r["seconds"])
-    img = torch.from_numpy(np.asarray(Image.open(r["image"]).convert("RGB"), dtype=np.float32) / 255.0)[None]
-    cond, latent = MiniMaxH3ImageToVideo.execute(m["clip"], m["vae"], plan.h3_prompt(task, r["prompt"], 0), W, H, n,
-                                                 first_frame=img).args
-    if task == "fl2va+audio":
-        wav = td / "a32k.wav"
-        pad_wav(Path(r["audio"]), n / plan.H3_FPS, wav, 32000)
-        data, sr = sf.read(str(wav), dtype="float32", always_2d=True)          # (N, 1)
-        stereo = torch.from_numpy(np.repeat(data.T, 2, axis=0).copy())[None]     # [1, 2, N]: H3 stereo
-        cond = MiniMaxH3AddGuide.execute(cond, latent, 0, audio_vae=m["audio_vae"],
-                                         audio={"waveform": stereo, "sample_rate": sr}).args[0]
-    sigmas = BasicScheduler.execute(m["model"], "simple", STEPS, 1.0).args[0]
-    sampler = KSamplerSelect.execute(SAMPLER).args[0]
-    guider = BasicGuider.execute(m["model"], cond).args[0]
-    noise = RandomNoise.execute(r["seed"]).args[0]
-    out = SamplerCustomAdvanced.execute(noise, guider, sampler, sigmas, latent).args[0]
-    images = nodes.VAEDecode().decode(m["vae"], out)[0]                         # [T, H, W, C], 0..1
-    keep = min(images.shape[0], max(1, round(r["seconds"] * plan.H3_FPS)))
-    u8 = (images[:keep].clamp(0, 1) * 255).round().to(torch.uint8).cpu().numpy()
-    path = td / "v.mp4"
-    write_mp4(u8, plan.H3_FPS, path)
-    return {"file": str(path), "fps": plan.H3_FPS, "frames": int(keep), "engine": f"fasth3-8step-v2-{task}",
-            "canvas": [W, H], "steps": STEPS, "refs_used": 0}
+    raw = td / "fasth3.mp4"
+    res = gen.generate(GenerationRequest(
+        prompt=plan.h3_prompt(task, r["prompt"], 0), negative_prompt="",
+        sampling=SamplingConfig(height=H, width=W, num_frames=n, fps=plan.H3_FPS, num_inference_steps=STEPS,
+                                guidance_scale=1.0, batch_cfg=False, seed=r["seed"]),
+        output=OutputConfig(output_path=str(raw), save_video=True, return_frames=False)))
+    src = Path(getattr(res, "video_path", None) or raw)
+    keep = min(n, max(1, round(r["seconds"] * plan.H3_FPS)))
+    out = td / "v.mp4"
+    # Üretilen ses atılır (-an), istenen süreye kesilir.
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-frames:v", str(keep), "-an", "-c:v", "libx264",
+                    "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", str(out)], check=True, timeout=600)
+    return {"file": str(out), "fps": plan.H3_FPS, "frames": int(keep), "engine": f"{VARIANT}-8step-v2-t2va",
+            "canvas": [W, H], "steps": STEPS - 1, "refs_used": 0, "first_frame_used": False}
 
 
 if __name__ == "__main__":

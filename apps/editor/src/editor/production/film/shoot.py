@@ -161,7 +161,7 @@ async def _call(http, body: dict) -> dict:
         raise VideoUnavailable(f"video servisine ulaşılamadı: {type(e).__name__}") from None
     if r.status_code == 404:
         raise VideoUnavailable("video servisi bu kurulumda açık değil")
-    if r.status_code == 409:
+    if r.status_code in (409, 422):           # motor kapalı / bu motor bu kipi desteklemiyor (örn. fast-h3 s2v)
         raise store.FilmError(_detail(r))
     r.raise_for_status()
     return r.json()

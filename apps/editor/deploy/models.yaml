@@ -259,11 +259,12 @@ aliases:
   # ana model 0.70 + 0.12 = 0.82 (2026-10-02'ye dek 0.48); görsel model 0.62 + büyütücü 0.06 + 0.12 = 0.80 (FIT_TOGETHER 0.92).
   # Kitaptan film ve reels (production/film/, kullanıcı kararı 2026-10-04): kareden video (i2v) ve sesten konuşan
   # çekim (s2v) + çekim iyileştirme (/v1/video/enhance). Motorlar (images/video/server.py, 2026-10-07): h3 (MiniMax-H3,
-  # varsayılan; VIDEO_ENGINE), fast-h3 (FastH3 8 adım, hızlı kip), wan2.2 (yedek, Apache-2.0); VIDEO_LICENSED_ENGINES
-  # verilirse yalnız listedekiler açık. Kurulumda /data/editor/models altından buraya taşınacak klasörler:
-  #   i2v/ ← Wan2.2-I2V-A14B   s2v/ ← Wan2.2-S2V-14B   h3/ ← MiniMax-H3 (FL2VA/Ref2VA yok; FastH3 kodlayıcıyı buradan alır)
-  #   fast-h3/ ← FastH3 (diffusion_models/, vae/)   enhance/seedvr2/ ← SeedVR2 (7b_sharp_fp16 + ema_vae_fp16)
-  #   enhance/rife/ ← RIFE/4.26 (train_log/)
+  # varsayılan; VIDEO_ENGINE), fast-h3 / fast-h3-fp8 (FastH3 8-Step V2, FastVideo; yalnız metinden video, hızlı
+  # kip), wan2.2 (yedek, Apache-2.0); VIDEO_LICENSED_ENGINES verilirse yalnız listedekiler açık. Kurulumda
+  # /data/editor/models altından buraya taşınacak klasörler:
+  #   i2v/ ← Wan2.2-I2V-A14B   s2v/ ← Wan2.2-S2V-14B   h3/ ← MiniMax-H3 (FL2VA/Ref2VA yok; fast-h3 ortak parçaları buradan)
+  #   fast-h3/ ← FastH3-V2   fast-h3-fp8/ ← FastH3-V2-FP8   enhance/seedvr2/ ← SeedVR2 (7b_sharp_fp16 + ema_vae_fp16)
+  #   enhance/rife/ ← RIFE/4.26 (train_log/)   (FastH3 = eski FastVideo-FastH3-Comfy paketi taşınmaz)
   # Ağırlıklar 2026-10-03/04'te indirildi (_indirme/durum.json; RIFE 2026-10-07, RIFE/durum.json), taşınınca MANIFEST'e
   # sha256 ile yazılır. Kartın tamamını ister (0.95): açılıştan önce ana model durur;
   # boşta 5 dk sonra kapanır, ana model geri kalkar. ÖLÇÜLMEDİ: açılış süresi, bellek tepesi, çekim başı süre
@@ -273,7 +274,7 @@ aliases:
   # book-video:
   #   container: editor-model-video
   #   model_dir: book-video
-  #   real_model: MiniMaxAI/MiniMax-H3+FastVideo/FastVideo-FastH3-Comfy+Wan-AI/Wan2.2-I2V-A14B+Wan2.2-S2V-14B+SeedVR2-7B+RIFE-4.26
+  #   real_model: MiniMaxAI/MiniMax-H3+FastVideo/FastVideo-FastH3-8-Step-V2(+FP8)+Wan-AI/Wan2.2-I2V-A14B+Wan2.2-S2V-14B+SeedVR2-7B+RIFE-4.26
   #   role: Kitaptan film — kareden video, konuşan çekim, çekim iyileştirme
   #   kind: video
   #   gpu: 1

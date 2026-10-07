@@ -13,16 +13,21 @@
 ## 2026-10-07 — Film video servisi: MiniMax-H3 + FastH3 motorları, SeedVR2 + RIFE iyileştirme (çalıştırılmadı)
 
 - **Ne:** `images/video` üç motorlu: `h3` (MiniMax-H3, diffusers `c6df88a5` ModularPipeline; i2v → fl2va, s2v → ref2va:
-  ilk kare + karakter kartları + replik izi `fully_copy`), `fast-h3` (FastH3 8-Step V2, ComfyUI `b00c6e95` düğümleri
-  grafiksiz; s2v'de replik izi `MiniMaxH3AddGuide` ile 0. kareye ses çıpası), `wan2.2` (yedek). Kullanıcı kararı:
+  ilk kare + karakter kartları + replik izi `fully_copy`), `fast-h3` / `fast-h3-fp8` (FastH3 8-Step V2 / V2-FP8,
+  FastVideo `d1416b59` resmî `VideoGenerator` yolu, tek kart + Triton VSA), `wan2.2` (yedek). Kullanıcı kararı:
   varsayılan `h3`, lisans kapısı `VIDEO_LICENSED_ENGINES` (verilmezse hepsi açık; «kurumların hepsinin lisansı var»);
   H3 lisansı IV.2 «MiniMax H3» adını arayüzde ister — ekran kararı kullanıcıda, kod ad yazmaz. Sözleşmeye isteğe bağlı
   `engine`, `refs`; yeni `POST /v1/video/enhance` (SeedVR2 7B sharp CLI + Practical-RIFE 4.26 kendi döngümüzle).
 - **Neden ayrı süreçler:** Wan transformers ≤4.51.3 ister, H3'ün Qwen3-VL kodlayıcısı ≥4.57 → imajda iki Python ortamı
   (`/opt/h3` venv); motor değişince işçi süreci kapanır, GPU/CPU belleği boşalır.
-- **Neden FastH3 ComfyUI ile:** indirilen FastH3-Comfy dosyası «pruned» (`adaln_t_table`); diffusers açıkça reddeder,
-  FastVideo kendi HF biçimini yükler. Metin kodlayıcı indirilmediği için `h3/text_encoder` HF parçaları ComfyUI önek
-  çevirisi + 50 katman kesimiyle yükleniyor (doğrulanmadı; `FAST_H3_TE` ile ComfyUI dosyası verilebilir).
+- **FastH3:** ilk sürüm ComfyUI paketini (FastH3-Comfy v1, «pruned» `adaln_t_table`, diffusers reddediyor) ComfyUI
+  düğümleriyle sürüyordu; aynı gün V2 (diffusers düzeni) çıkınca FastVideo resmî yoluna geçildi, ComfyUI imajdan
+  çıktı. **V2 yalnız T2VA damıtıldı** (kart: «FL2VA and Ref2VA were not distilled») → fast-h3'te onaylı ilk kare
+  modele girmez (`first_frame_used: false`), s2v 422; hızlı kip taslak içindir. Tek H100 tahmini (ölçülmedi, FastVideo'nun
+  Preview Hopper ölçümlerinden): 960×544 14,4 sn video ≈ 110 sn, 5 sn çekim ≈ 30–40 sn.
+- **Wan imaj denetimi hatası (önceki Dockerfile'da):** `import wan` GPU'suz derlemede çöküyor (t5.py sınıf tanımında
+  `torch.cuda.current_device()`); 2026-10-04 Dockerfile'ı hiç derlenmemişti. Denetim sözdizimi + bağımlılık içe
+  aktarmaya çevrildi.
 - **Tek kart:** diffusers «tek 80 GB kart» tarifi (ComponentsManager auto CPU offload, pay 12 GB); FP8 gerekmez.
 - **Hat:** çekim adımının sonunda seçili çekimler bir kez iyileştirilir (`cekim/<id>.vK.hd.mp4`), kurgu varsa onu alır;
   hata `hd_error` + çekim/kurgu adımında `enhanced: n/toplam`, servis yoksa lanczos yolu aynen.

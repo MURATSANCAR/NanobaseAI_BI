@@ -1,14 +1,17 @@
-# book-video (images/video/server.py): Wan 2.2 + MiniMax-H3 (diffusers) + FastH3 (ComfyUI düğümleri) + iyileştirme
+# book-video (images/video/server.py): Wan 2.2 + MiniMax-H3 (diffusers) + FastH3 V2 (FastVideo) + iyileştirme
 # (SeedVR2 7B sharp, Practical-RIFE). Ağırlıklar imaja girmez: gateway /data/editor/models/book-video'yu bağlar.
 #
-# İki Python ortamı (server.py belgesi):
-#  - ana (/opt/conda): sunucu + Wan. Bağımlılıklar Wan'ın requirements*.txt'sinden (transformers ≤4.51.3, numpy<2);
-#    flash-attn yok (Wan PyTorch dikkatine düşer). S2V'nin CosyVoice parçası kullanılmaz ama modül düzeyinde içe
-#    aktarılanlar kurulur.
-#  - /opt/h3 (venv, --system-site-packages: torch ana ortamdan): diffusers (MiniMax-H3 modular pipeline yalnız
-#    main'de), Qwen3-VL için yeni transformers, ComfyUI requirements.txt, SeedVR2 requirements.txt. Practical-RIFE'ın
-#    requirements'ındaki sk-video/moviepy kurulmaz: kendi döngümüz (worker_enhance.py) kareleri ffmpeg ile okur/yazar.
-# Kaynak kodlar sabit commit'te; .git silinir.
+# Üç Python ortamı (server.py belgesi), çünkü sabitlemeler çakışıyor:
+#  - ana (/opt/conda, Py 3.11, torch 2.8): sunucu + Wan. Wan'ın requirements*.txt'si (transformers ≤4.51.3, numpy<2);
+#    flash-attn yok (Wan PyTorch dikkatine düşer). S2V'nin CosyVoice parçası kullanılmaz.
+#  - /opt/h3 (venv, --system-site-packages: torch ana ortamdan): diffusers (MiniMax-H3 modular pipeline yalnız main'de),
+#    Qwen3-VL için transformers ≥4.57, SeedVR2 requirements.txt. Practical-RIFE'ın sk-video/moviepy'si kurulmaz: kendi
+#    döngümüz (worker_enhance.py) kareleri ffmpeg ile okur/yazar.
+#  - /opt/fastvideo (uv venv, Py 3.12): FastVideo pyproject'i torch==2.12.0, transformers>=5.15 ister; fastvideo-kernel
+#    0.3.5 tekeri yalnız cp312. torch cu130 (sürücü 580 = CUDA 13). FA4/sm100a eklentileri (fasth3 ekstrası, Blackwell)
+#    kurulmaz; Hopper'da VSA Triton çekirdeğiyle çalışır (model kartı: --vsa-kernel triton --no-fa4).
+# Kaynak kodlar sabit commit'te; .git silinir. İçe aktarma denetimleri GPU'suz yapılır (Wan'ın t5.py'si sınıf
+# tanımında torch.cuda.current_device() çağırdığı için `import wan` GPU'suz derlemede çöker → yalnız sözdizimi).
 FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
 ENV DEBIAN_FRONTEND=noninteractive PYTHONDONTWRITEBYTECODE=1 HF_HUB_OFFLINE=1
 RUN apt-get update && apt-get install -y --no-install-recommends git ffmpeg libsndfile1 libgl1 libglib2.0-0 \
@@ -21,33 +24,44 @@ RUN git clone https://github.com/Wan-Video/Wan2.2.git /opt/Wan2.2 && git -C /opt
 RUN pip install --no-cache-dir "diffusers>=0.31.0" "transformers>=4.49.0,<=4.51.3" "tokenizers>=0.20.3" \
         "accelerate>=1.1.1" tqdm "imageio[ffmpeg]" imageio-ffmpeg easydict ftfy "numpy>=1.23.5,<2" \
         opencv-python-headless safetensors decord librosa omegaconf HyperPyYAML inflect onnxruntime \
-        fastapi "uvicorn[standard]" pydantic \
-    && python -c "import sys; sys.path.insert(0, '/opt/Wan2.2'); import wan, decord, librosa"
+        fastapi "uvicorn[standard]" pydantic
+RUN python -m compileall -q /opt/Wan2.2/wan && python -c "import decord, librosa, easydict, ftfy, diffusers, transformers, fastapi, uvicorn"
 
-# ---------------------------------------------------------------- H3 / FastH3 / iyileştirme (/opt/h3)
-# diffusers main 2026-10-06 (MiniMax-H3 modular_pipelines/minimax_h3, AutoencoderKLMiniMaxH3[Audio])
+# ---------------------------------------------------------------- H3 + iyileştirme (/opt/h3)
+# diffusers main 2026-10-06 (modular_pipelines/minimax_h3, AutoencoderKLMiniMaxH3[Audio])
 ARG DIFFUSERS_COMMIT=c6df88a511a98740646ee55577b590c9852650ce
-# ComfyUI 2026-10-07 (comfy/ldm/minimax, comfy_extras/nodes_minimax_h3.py — pruned FastH3 yükleyicisi)
-ARG COMFY_COMMIT=b00c6e95279053474955540ba4f551646722b9aa
 # numz/ComfyUI-SeedVR2_VideoUpscaler v2.5.x (inference_cli.py; seedvr2_ema_7b_sharp_fp16 kayıtlı)
 ARG SEEDVR2_COMMIT=4490bd1f482e026674543386bb2a4d176da245b9
 # hzwer/Practical-RIFE (model/warplayer.py, model/loss.py, model/pytorch_msssim; ağırlık 4.26 ayrı)
 ARG RIFE_COMMIT=bbfd2ea90910789a860ea3e2b32a240cd577b75e
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI && git -C /opt/ComfyUI checkout ${COMFY_COMMIT} \
-    && git clone https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git /opt/SeedVR2 \
+RUN git clone https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git /opt/SeedVR2 \
     && git -C /opt/SeedVR2 checkout ${SEEDVR2_COMMIT} \
     && git clone https://github.com/hzwer/Practical-RIFE.git /opt/Practical-RIFE \
     && git -C /opt/Practical-RIFE checkout ${RIFE_COMMIT} \
-    && rm -rf /opt/ComfyUI/.git /opt/SeedVR2/.git /opt/Practical-RIFE/.git /opt/SeedVR2/docs /opt/SeedVR2/example_workflows
+    && rm -rf /opt/SeedVR2/.git /opt/Practical-RIFE/.git /opt/SeedVR2/docs /opt/SeedVR2/example_workflows
 RUN python -m venv --system-site-packages /opt/h3 \
     && /opt/h3/bin/pip install --no-cache-dir \
         "diffusers @ git+https://github.com/huggingface/diffusers.git@${DIFFUSERS_COMMIT}" \
         "transformers>=4.57.1,<5" "accelerate>=1.1.1" "safetensors>=0.8.0" "huggingface-hub>=1.32.0,<2.0" \
         "numpy>=1.25,<2" soundfile "av>=17.0.0" imageio imageio-ffmpeg torchao \
-        -r /opt/ComfyUI/requirements.txt -r /opt/SeedVR2/requirements.txt \
-    && /opt/h3/bin/python -c "import diffusers, transformers; from diffusers import ComponentsManager, ModularPipeline; \
+        -r /opt/SeedVR2/requirements.txt
+RUN /opt/h3/bin/python -c "import diffusers, transformers, soundfile; from diffusers import ComponentsManager, ModularPipeline; \
 from diffusers.modular_pipelines.minimax_h3 import MiniMaxH3AudioReference, MiniMaxH3ImageReference; \
-from transformers import Qwen3VLForConditionalGeneration; print(diffusers.__version__, transformers.__version__)"
+from transformers import Qwen3VLForConditionalGeneration; import omegaconf, rotary_embedding_torch, peft, cv2; \
+print('h3', diffusers.__version__, transformers.__version__)"
+
+# ---------------------------------------------------------------- FastH3 V2 (/opt/fastvideo)
+# hao-ai-lab/FastVideo 2026-10-07 (registry: FastVideo/FastVideo-FastH3-8-Step-V2; FP8 yükleyici fsdp_load.py)
+ARG FASTVIDEO_COMMIT=d1416b59301d830f12c48f08b08f825f206b6328
+RUN pip install --no-cache-dir uv \
+    && git clone https://github.com/hao-ai-lab/FastVideo.git /opt/FastVideo && git -C /opt/FastVideo checkout ${FASTVIDEO_COMMIT} \
+    && rm -rf /opt/FastVideo/.git \
+    && uv venv --python 3.12 --seed /opt/fastvideo \
+    && UV_TORCH_BACKEND=cu130 uv pip install --python /opt/fastvideo/bin/python --no-cache \
+        --no-sources-package fastvideo-kernel -e /opt/FastVideo
+RUN /opt/fastvideo/bin/python -c "import torch, transformers; from fastvideo import VideoGenerator; \
+from fastvideo.api import GenerationRequest, GeneratorConfig, OffloadConfig, SamplingConfig; import fastvideo_kernel; \
+print('fastvideo', torch.__version__, transformers.__version__)"
 
 COPY images/video/server.py images/video/plan.py images/video/worker_common.py images/video/worker_wan.py \
      images/video/worker_h3.py images/video/worker_fasth3.py images/video/worker_enhance.py /srv/

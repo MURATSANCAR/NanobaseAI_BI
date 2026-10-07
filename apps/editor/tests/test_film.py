@@ -308,12 +308,19 @@ def test_h3_canvas_matches_diffusers_rule():
 def test_engine_task_choice_and_prompt():
     assert video_plan.h3_task("h3", "i2v", 3) == "fl2va"
     assert video_plan.h3_task("h3", "s2v", 2) == "ref2va"
-    assert video_plan.h3_task("fast-h3", "s2v", 2) == "fl2va+audio"     # FastH3'te ref2va yok
-    assert video_plan.worker_of("fast-h3") == "fasth3" and video_plan.worker_of("wan2.2") == "wan"
+    for fast in ("fast-h3", "fast-h3-fp8"):                            # V2 yalnız t2va damıtıldı
+        assert video_plan.h3_task(fast, "i2v", 2) == "t2va"
+        assert video_plan.h3_task(fast, "s2v", 2) == "unsupported"
+        assert video_plan.worker_of(fast) == "fasth3"
+    assert video_plan.worker_of("wan2.2") == "wan" and set(video_plan.FAST) < set(video_plan.ENGINES)
+    with pytest.raises(ValueError):
+        video_plan.h3_task("wan2.2", "i2v", 0)
     p = video_plan.h3_prompt("ref2va", "close-up, a girl at the door.", 2)
     assert "<Picture 1> is the first frame" in p and "<Picture 3>" in p and "fully_copy" in p
     q = video_plan.h3_prompt("fl2va", "x", 0)
     assert q.startswith("For the target video") and "nobody speaks" in q
+    t = video_plan.h3_prompt("t2va", "x", 0)
+    assert t.startswith("integrated_multimodal_description") and "<Picture" not in t
 
 
 def test_default_engine_and_license_gate(monkeypatch):
@@ -322,7 +329,7 @@ def test_default_engine_and_license_gate(monkeypatch):
     assert video_plan.default_engine() == "h3"                       # kullanıcı kararı 2026-10-07
     assert all(video_plan.license_error(e) is None for e in video_plan.ENGINES)   # varsayılan hepsi açık
     monkeypatch.setenv("VIDEO_LICENSED_ENGINES", "wan2.2")
-    assert "lisans ayarıyla kapalı" in video_plan.license_error("h3") and video_plan.license_error("fast-h3")
+    assert "lisans ayarıyla kapalı" in video_plan.license_error("h3") and video_plan.license_error("fast-h3-fp8")
     monkeypatch.setenv("VIDEO_LICENSED_ENGINES", "h3, bilinmeyen")
     assert video_plan.license_error("h3") is None and video_plan.license_error("fast-h3")
     assert video_plan.licensed_engines() == {"wan2.2", "h3"}          # wan2.2 Apache-2.0: her zaman açık

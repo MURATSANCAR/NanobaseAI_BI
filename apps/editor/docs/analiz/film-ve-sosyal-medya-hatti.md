@@ -46,8 +46,8 @@ Otomatik paylaşım yoktur (dış gönderim kapalı).
 ## Video servisi sözleşmesi (`images/video/server.py`)
 
 `POST /v1/video/generations` `{model: book-video, mode: i2v|s2v, image, prompt, negative_prompt, seconds, width,
-height, seed, audio?, steps?, engine?: wan2.2|h3|fast-h3, refs?: [png b64]}` → `{video, seconds, fps, frames,
-engine}` (+ H3'te `canvas`, `steps`, `refs_used`). `engine` yoksa servisin `VIDEO_ENGINE`'i — varsayılan **`h3`**
+height, seed, audio?, steps?, engine?: wan2.2|h3|fast-h3|fast-h3-fp8, refs?: [png b64]}` → `{video, seconds, fps,
+frames, engine}` (+ H3'te `canvas`, `steps`, `refs_used`; FastH3'te `first_frame_used: false`). `engine` yoksa servisin `VIDEO_ENGINE`'i — varsayılan **`h3`**
 (kullanıcı kararı 2026-10-07: h3 birinci, `fast-h3` hızlı kip, `wan2.2` yedek); istemci yalnız `EDITOR_VIDEO_ENGINE`
 verilmişse gönderir. `refs` karakter kartlarıdır (en çok 8), istemci yalnız s2v'de yollar. `VIDEO_LICENSED_ENGINES`
 ile kapatılmış motor **409** döner (aşağıda).
@@ -61,10 +61,12 @@ engine}`.
 |---|---|---|---|---|
 | `wan2.2` | Wan2.2 `1ea34ff4` | `i2v/`, `s2v/` | I2V-A14B, 16 fps, 81 karelik parçalar son kareden sürer | S2V-14B, ses sürdürür |
 | `h3` | diffusers `c6df88a5` (`ModularPipeline`, MiniMax-H3) | `h3/` | `fl2va`: ilk kare tuvale bağlı | `ref2va`: ilk kare + kartlar + replik izi |
-| `fast-h3` | ComfyUI `b00c6e95` düğümleri | `fast-h3/` + `h3/text_encoder` | `fl2va`, 8 adım | `fl2va` + 0. kareye ses çıpası |
+| `fast-h3` | FastVideo `d1416b59` (`VideoGenerator`) | `fast-h3/` (V2 bf16) + `h3/` ortak parçalar | `t2va` (ilk kare girmez), 8 ileri geçiş | yok → 422 |
+| `fast-h3-fp8` | FastVideo `d1416b59` | `fast-h3-fp8/` (V2-FP8, tam depo) | `t2va` | yok → 422 |
 
-Her motor ayrı süreçte (worker_*.py); Wan ana Python'da (transformers ≤4.51.3), H3/FastH3/iyileştirme `/opt/h3`
-ortamında (Qwen3-VL için yeni transformers). Kartta aynı anda tek işçi; başka motor istenince süreç kapanır, GPU/CPU
+Her motor ayrı süreçte (worker_*.py). Üç Python ortamı, çünkü sabitlemeler çakışıyor: ana (Wan; transformers ≤4.51.3),
+`/opt/h3` (diffusers H3 + SeedVR2 + RIFE; transformers ≥4.57), `/opt/fastvideo` (FastVideo: torch 2.12, transformers
+≥5.15, Python 3.12, fastvideo-kernel 0.3.5). Kartta aynı anda tek işçi; başka motor istenince süreç kapanır, GPU/CPU
 belleği onunla boşalır. Hesap kuralları (kare sayısı, tuval, lisans, iyileştirme bayrakları) `images/video/plan.py`'de,
 torch'suz ve testli.
 
@@ -82,19 +84,37 @@ biçimi (`transformer/` = t2va/fl2va, `transformer_ref/` = ref2va, ortak VAE/ses
   complete source audio serves as the target video's complete final audio track»). Ağız bu sese göre üretilir; uyum
   modelin istemi izlemesine bağlıdır (koşul, zorlama değil). ref2va ilk kareyi tuvale **bağlamaz** — yalnız istemde
   «first frame» denir; kare kayması olabilir, ölçülecek.
-- `fast-h3` s2v → ComfyUI `MiniMaxH3AddGuide(audio, frame_idx=0)`: replik izi hedef zaman çizgisine sabit koşul satırı
-  olarak girer (comfy/ldm/minimax/model.py `PackedLayout`, `cond_audio` güncellenmez); ilk kare bağlı kalır. Diffusers'ta
-  fl2va'ya ses çıpası yok, bu yalnız ComfyUI yolunda var. Kartlar FastH3'te kullanılmaz (öğrenci ref2va değil).
+- `fast-h3` / `fast-h3-fp8`: dudak uyumu yok (aşağıda); konuşan çekim için `h3`. Not: ComfyUI'de
+  `MiniMaxH3AddGuide(audio, frame_idx=0)` ile fl2va'ya ses çıpası vermek mümkün (tam H3 ağırlığıyla); bu yol
+  kurulmadı, diffusers'ta fl2va'ya ses çıpası yok.
 - Türkçe H3'ün «kararlı 11 dil» listesinde değil («diğer diller değişen ölçüde»); `<d>[Turkish] …</d>` diyalog metni
   sözleşmede olmadığı için istemde yazılmaz. Dudak uyumu ilk kurulumda gözle ve ölçüyle değerlendirilecek.
 
-**FastH3 neden ComfyUI:** indirilen FastVideo-FastH3-Comfy dosyası «pruned» (`adaln_t_table` [1025, 8] + rank-8 adaLN);
-diffusers bunu açıkça reddeder (single_file_utils.py:4250), FastVideo kendi HF biçimini yükler. Düğüm sırası Comfy-Org
-`video_fastvideo_fasth3_i2v.json` şablonuyla aynı: SigmaShift 10/3, BasicScheduler simple 8, res_multistep,
-BasicGuider. Şablondaki BlockSparseAttention (VSA) ve dikkat arka ucu düğümleri hız içindir, kullanılmadı (yoğun dikkat).
-Tuval 960×544 (FastVideo H100 ölçü profili; `FAST_H3_SHORT_EDGE`). Metin kodlayıcı indirilmedi: `h3/text_encoder` HF
-parçaları ComfyUI'nin Qwen3-VL önek çevirisiyle 50 katmana kesilerek yüklenir — **doğrulanmadı**; sorun çıkarsa
-`qwen3vl_32b_minimax_h3_bf16.safetensors` indirilip `FAST_H3_TE` ile verilir.
+**FastH3 V2 (FastVideo resmî yolu):** `FastVideo/FastVideo-FastH3-8-Step-V2` (diffusers düzeni; indirme yalnız
+transformer + yapılandırma, ortak parçalar MiniMax-H3 ile birebir — 34/34 özet) ve `…-V2-FP8` (transformer FP8 E4M3
+kanal başı, Qwen3-VL NVFP4 → FP4'süz kartta katman başı açılır, LynnReal hafif VAE; tam depo). İşçi
+examples/inference/basic/basic_fasth3.py'nin `build_generator_config`/`build_request`'ini tek kart için kurar
+(num_gpus 1, FSDP yok, Qwen3-VL ve VAE CPU'ya iner, transformer kartta; `FAST_H3_DIT_LAYERWISE=1` katman katman
+indirme), ortam «strict» profil + Triton VSA (Hopper'da sm100a çekirdeği ve FA4 yok; kart: `--vsa-kernel triton
+--no-fa4`), VSA seyreklik 0,8 / döşeme 64, 9 sigma noktası (= 8 ileri geçiş; kayma 10/3 ve DMD basamakları
+`fastvideo_inference.json`'dan). V2 klasörü `basic_fasth3_omniref_pdd.py` `compose_model_dir` desenindeki gibi
+sembolik bağlarla MiniMax-H3 ortak parçalarıyla birleştirilir.
+
+**FastH3 V2 kapsam sınırı (model kartı «Scope»):** «This checkpoint supports text-to-audio-video generation. FL2VA and
+Ref2VA were not distilled.» FastVideo yemek kitabı da CUDA'da FL2VA/Ref2VA'yı yalnız tam H3 için listeler. Sonuç:
+`fast-h3` i2v'de **onaylı ilk kare modele girmez** (t2va; karakter/sahne tutarlılığı yalnız istemle), s2v desteklenmez
+(422 → editöre Türkçe hata). Yani hızlı kip ön izleme/taslak içindir; editörün onayladığı kareden film için `h3`.
+(Eski FastVideo-FastH3-Comfy v1 paketi — ComfyUI'nin «pruned» biçimi — artık kullanılmıyor; klasör kurulumda taşınmaz.)
+
+**V2 için tek H100'de beklenen süre (ölçülmedi; kaynaktaki ölçümlerden tahmin):** FastVideo'nun kayıtlı Hopper
+ölçümleri FastH3 *Preview* (4 ileri geçiş) içindir: 8×H100 1344×768 345 kare (14,4 sn) 13,5 sn; 4×H100 NVLink 960×544
+345 kare 13,0–14,0 sn (examples/inference/basic/README.md «Hopper»). V2 8 ileri geçiş yapar (2×). Kusursuz ölçekleme
+varsayımıyla tek kart: 960×544 / 14,4 sn video ≈ 4 × 13,5 × 2 ≈ **~110 sn**, 1344×768 ≈ 8 × 13,5 × 2 ≈ **~215 sn**;
+tek kartta dizi paralelliği iletişimi olmadığı için biraz daha iyi, kodlayıcı/VAE CPU'dan gidip geldiği için (her
+istekte ~62 GB kodlayıcı taşınır) birkaç on saniye daha kötü. 5 sn'lik (124 kare) çekim dikkat karesel olduğundan
+bunun ~⅓'ünden az: 960×544'te **~30–40 sn** mertebesi. FP8 sürümü bellek için; Hopper FP8 matmul ile hız kazancı
+beklenir ama ölçümü yok. Kart, 66 GB bf16 DiT'in 80 GB H100'e çoğaltılarak sığmadığını yazıyor; 94 GB H100 NVL'de
+kodlayıcı CPU'da iken sığması bekleniyor — sığmazsa `FAST_H3_DIT_LAYERWISE=1` ya da `fast-h3-fp8`.
 
 ### Tek kart (H100 NVL 94 GB, 2 TB RAM) planı
 
@@ -105,9 +125,8 @@ karta alır, yer gerekince ötekini indirir (önce kodlayıcı çalışır, sonr
 bölümü (fl2va + ref2va) birlikte CPU'ya yüklenir (~186 GB RAM). FP8/int8 gerekmez; 94 GB kartta 62 GB transformer +
 etkinlikler sığar. Gerekirse kaynakta iki seçenek: torchao `Int8WeightOnlyConfig(version=2)` + blok düzeyi grup
 indirme (tüketici kart tarifi) ve `set_attention_backend("_flash_3_hub")` (Hopper ~3×, çekirdek Hub'dan iner;
-`H3_ATTENTION`). Hız kolu tuvaldir: 960×544, 1344×768'e göre adım başına ~2,3× hızlı (diffusers belgesi). FastH3: 44 GB
-bf16 transformer kartta, kodlayıcıyı ComfyUI'nin bellek yöneticisi kodlamadan sonra indirir. ÖLÇÜLMEDİ: açılış,
-bellek tepesi, çekim başı süre.
+`H3_ATTENTION`). Hız kolu tuvaldir: 960×544, 1344×768'e göre adım başına ~2,3× hızlı (diffusers belgesi). FastH3 V2:
+yukarıda. ÖLÇÜLMEDİ: açılış, bellek tepesi, çekim başı süre.
 
 ### Lisans (MiniMax H3 Community License — `h3` ve `fast-h3`)
 
@@ -123,7 +142,7 @@ bellek tepesi, çekim başı süre.
 - Kod kapısı: `VIDEO_LICENSED_ENGINES` verilmezse üç motor da açık. Verilirse yalnız listedekiler açılır (örn.
   `wan2.2` yazmak H3 ve FastH3'ü kapatır, istek 409 döner); `wan2.2` (Apache-2.0) her zaman açık. SeedVR2
   (Apache-2.0) ve RIFE (MIT) serbest.
-- ComfyUI GPL-3.0: kendi sunucumuzda iç hizmet olarak çalışır, dağıtılmaz.
+- FastH3 V2 / V2-FP8 MiniMax H3 Community License'ı devralır (model kartı); FastVideo kodu Apache-2.0.
 
 ### İyileştirme (SeedVR2 + RIFE)
 
@@ -149,8 +168,9 @@ Kaç çekimin iyileştirildiği film.json'da kurgu adımına `enhanced: n/toplam
 ### Ağırlık klasörü (kurulumda `/data/editor/models/book-video/` altına taşınır)
 
     i2v/       ← Wan2.2-I2V-A14B          s2v/   ← Wan2.2-S2V-14B
-    h3/        ← MiniMax-H3 (FL2VA/ Ref2VA/ hariç; FastH3 kodlayıcıyı buradan alır)
-    fast-h3/   ← FastH3 (diffusion_models/, vae/)
+    h3/        ← MiniMax-H3 (FL2VA/ Ref2VA/ hariç; fast-h3 ortak parçaları buradan alır)
+    fast-h3/   ← FastH3-V2 (transformer/, scheduler/, audio_scheduler/, fastvideo_inference.json, modular_model_index.json)
+    fast-h3-fp8/ ← FastH3-V2-FP8 (tam depo)
     enhance/seedvr2/  ← SeedVR2/{seedvr2_ema_7b_sharp_fp16, ema_vae_fp16}.safetensors
     enhance/rife/     ← RIFE/4.26/train_log
 
@@ -223,7 +243,7 @@ ACE-Step'in salt okunur checkpoint klasöründe çalışması (/tmp gölge klas�
   `/data/editor/models/book-video/{i2v,s2v}` altına taşı → MANIFEST'e sha256 → `editor-video:1` derle → bloğu aç →
   açılış süresi, bellek tepesi, çekim başı süre ölç ve buraya yaz.
 - Video servisi kodu GPU'da hiç çalıştırılmadı (2026-10-07'de de; kullanıcı kararı): Wan, H3 (diffusers), FastH3
-  (ComfyUI), SeedVR2 CLI ve RIFE çağrıları kaynak kodla satır satır eşlendi (her işçinin başındaki belge), ilk
+  V2 (FastVideo), SeedVR2 CLI ve RIFE çağrıları kaynak kodla satır satır eşlendi (her işçinin başındaki belge), ilk
   kurulumda doğrulanacak. İmaj `editor-video:1` GPU'da derlendi, içe aktarma denetimi GPU'suz yapıldı.
 - «MiniMax H3» adının ekranda gösterimi (lisans IV.2) yapılmadı — kullanıcı karar verecek.
 - Müzik servisi ayağa kaldırılmadı (`book-music` yorum satırı); kurgu o güne dek müziksizdir. Efekt ve ortam sesi

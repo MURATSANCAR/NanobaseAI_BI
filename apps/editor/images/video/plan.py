@@ -7,9 +7,8 @@ Her sayı kaynağıyla birlikte yazılıdır (kaynak commit'leri Dockerfile'da s
   modular_pipelines/minimax_h3/modular_pipeline.py `align_num_frames`, `min_duration`/`max_duration`;
   before_denoise.py: süre *yuvarlanmış* kare sayısıyla denetlenir → en çok 345 kare). Tuval: kısa kenar 768, alan
   tavanı 768×1344, iki eksen 32'nin katı (`resolve_canvas_size`).
-- FastH3 8-Step V2: 9 sigma noktası = 8 ileri geçiş, video/ses kayması 10/3 (FastVideo
-  examples/inference/basic/basic_fasth3_8step.py; ComfyUI şablonu video_fastvideo_fasth3_i2v.json: BasicScheduler
-  simple/8, KSamplerSelect res_multistep, MiniMaxH3SigmaShift 10/3). H100 ölçü tuvali 960×544
+- FastH3 8-Step V2 (FastVideo): 9 sigma noktası = 8 ileri geçiş, video/ses kayması 10/3, yalnız T2VA
+  (examples/inference/basic/basic_fasth3_8step.py, model kartı «Scope»). H100 ölçü tuvali 960×544
   (basic_fasth3_h100.yaml request.sampling).
 - SeedVR2 CLI: batch_size 4n+1; 4K için VAE döşemesi (numz/ComfyUI-SeedVR2_VideoUpscaler README «High Resolution»).
 - Practical-RIFE: yalnız tam kat ara kare (`--multi`), oran kesirliyse kat alınıp sonra kare hızına indirilir.
@@ -20,7 +19,8 @@ from __future__ import annotations
 import math
 import os
 
-ENGINES = ("wan2.2", "h3", "fast-h3")
+ENGINES = ("wan2.2", "h3", "fast-h3", "fast-h3-fp8")
+FAST = ("fast-h3", "fast-h3-fp8")
 MODES = ("i2v", "s2v")
 MAX_REFS = 8                  # H3 ref2va en çok 9 görsel; 1'i ilk kare
 
@@ -83,14 +83,14 @@ def h3_task(engine: str, mode: str, refs: int) -> str:
     - s2v, h3 → `ref2va`: <Picture 1> ilk kare, sonraki görseller karakter kartları, <Audio 1> bizim replik izimiz
       `fully_copy` (H3 rehberi: «The complete source audio serves as the target video's complete final audio track»);
       ağız bu sese göre üretilir. ref2va ilk kareyi bağlamaz, yalnız istemle «first frame» der.
-    - s2v, fast-h3 → `fl2va+audio`: FastH3 yalnız transformer/ (t2va/fl2va) öğrencisidir, ref2va yoktur; ses ComfyUI
-      `MiniMaxH3AddGuide` ile 0. kareye çıpalanır (koşul satırı, gürültüden arındırılmaz). Kartlar kullanılmaz.
+    - fast-h3 / fast-h3-fp8 (FastH3 V2): yalnız `t2va` damıtıldı (model kartı: «FL2VA and Ref2VA were not
+      distilled») → i2v `t2va` olur, ilk kare modele girmez; s2v desteklenmez (`unsupported` → 422).
     """
-    if engine not in ("h3", "fast-h3"):
+    if engine in FAST:
+        return "t2va" if mode == "i2v" else "unsupported"
+    if engine != "h3":
         raise ValueError(engine)
-    if mode == "i2v":
-        return "fl2va"
-    return "ref2va" if engine == "h3" else "fl2va+audio"
+    return "fl2va" if mode == "i2v" else "ref2va"
 
 
 DEFAULT_ENGINE = "h3"         # kullanıcı kararı 2026-10-07: h3 birinci, fast-h3 hızlı kip, wan2.2 yedek
@@ -128,7 +128,7 @@ def license_error(engine: str) -> str | None:
 
 def worker_of(engine: str) -> str:
     """Bir motorun işçisi; aynı anda karta tek işçi yüklenir, başka işçi istenince öbürü kapatılır."""
-    return {"wan2.2": "wan", "h3": "h3", "fast-h3": "fasth3", "enhance": "enhance"}[engine]
+    return {"wan2.2": "wan", "h3": "h3", "fast-h3": "fasth3", "fast-h3-fp8": "fasth3", "enhance": "enhance"}[engine]
 
 
 def h3_prompt(task: str, prompt: str, refs: int) -> str:
@@ -137,13 +137,13 @@ def h3_prompt(task: str, prompt: str, refs: int) -> str:
     Bölüm adları rehberdeki gibi İngilizce; diyalog metni gelmediği için `<d>` yazılmaz."""
     p = prompt.strip()
     quiet = "Quiet ambient room tone only; nobody speaks."
-    if task in ("fl2va", "fl2va+audio"):
-        talk = (" The on-screen character speaks Turkish; lip movements follow the anchored dialogue audio exactly "
-                "and the mouth closes during silences." if task == "fl2va+audio" else "")
-        sound = "The character's spoken Turkish dialogue, clean and close." if task == "fl2va+audio" else quiet
+    if task == "t2va":
+        return (f"integrated_multimodal_description: [Shot 1] {p}\n\noverall_soundscape: {quiet}\n\n"
+                "non_diegetic_music: None.")
+    if task == "fl2va":
         return ("For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully "
-                f"referenced.\n\nintegrated_multimodal_description: [Shot 1] {p}{talk}\n\n"
-                f"overall_soundscape: {sound}\n\nnon_diegetic_music: None.")
+                f"referenced.\n\nintegrated_multimodal_description: [Shot 1] {p}\n\n"
+                f"overall_soundscape: {quiet}\n\nnon_diegetic_music: None.")
     cards = "".join(f"<Subject {i}> is the character shown in <Picture {i + 1}>; keep face, hair and clothing.\n"
                     for i in range(1, refs + 1))
     speaker = "<Subject 1>" if refs else "the on-screen character"

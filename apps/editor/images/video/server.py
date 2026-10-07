@@ -3,21 +3,23 @@ istekte açılır.
 
 Motorlar (gövdede `engine`, yoksa VIDEO_ENGINE ortam değişkeni, o da yoksa h3; sıra: h3, fast-h3 hızlı kip, wan2.2
 yedek; VIDEO_LICENSED_ENGINES verilirse yalnız listedekiler açık):
-    wan2.2   Wan 2.2 I2V-A14B / S2V-14B (Apache-2.0)                         <model_dir>/i2v, <model_dir>/s2v
-    h3       MiniMax-H3 Base, diffusers ModularPipeline (fl2va / ref2va)      <model_dir>/h3
-    fast-h3  FastVideo FastH3 8-Step V2, ComfyUI düğümleri (fl2va)            <model_dir>/fast-h3 (+ h3/text_encoder)
-İyileştirme: SeedVR2 7B sharp + Practical-RIFE 4.26                          <model_dir>/enhance/{seedvr2,rife}
+    wan2.2       Wan 2.2 I2V-A14B / S2V-14B (Apache-2.0)                   <model_dir>/i2v, <model_dir>/s2v
+    h3           MiniMax-H3 Base, diffusers ModularPipeline (fl2va/ref2va) <model_dir>/h3
+    fast-h3      FastH3 8-Step V2 bf16, FastVideo (yalnız t2va)            <model_dir>/fast-h3 (+ h3 ortak parçalar)
+    fast-h3-fp8  FastH3 8-Step V2 FP8, FastVideo (yalnız t2va)             <model_dir>/fast-h3-fp8
+İyileştirme: SeedVR2 7B sharp + Practical-RIFE 4.26                      <model_dir>/enhance/{seedvr2,rife}
 
-Her motor ayrı süreçte çalışır (worker_*.py; Wan ana Python'da, diğerleri /opt/h3 ortamında — Wan
-transformers ≤4.51.3 ister, H3'ün Qwen3-VL kodlayıcısı daha yenisini). Kartta aynı anda tek işçi vardır: başka motor
-istenince yüklü işçi kapatılır, GPU ve CPU belleği süreçle birlikte boşalır. İstekler sırayla işlenir (tek kart).
+Her motor ayrı süreçte çalışır (worker_*.py). Üç Python ortamı: ana (Wan; transformers ≤4.51.3), /opt/h3 (diffusers
+H3 + SeedVR2 + RIFE), /opt/fastvideo (FastVideo: torch 2.12, transformers ≥5.15, Python 3.12). Kartta aynı anda tek
+işçi vardır: başka motor istenince yüklü işçi kapatılır, GPU ve CPU belleği süreçle birlikte boşalır. İstekler sırayla
+işlenir (tek kart).
 
 H3 ve FastH3 görüntüyle birlikte ses de üretir; o ses atılır. Filmin sesi bizim Türkçe replik izimizdir (kurgu,
 production/film/mix.py). s2v'de replik izi H3'e ağız hareketi için verilir (plan.h3_task).
 
     GET  /health
     POST /v1/video/generations  {model, mode: i2v|s2v, image: png b64, prompt, negative_prompt, seconds, width, height,
-                                 seed, audio?: wav b64 (s2v), steps?, engine?: wan2.2|h3|fast-h3,
+                                 seed, audio?: wav b64 (s2v), steps?, engine?: wan2.2|h3|fast-h3|fast-h3-fp8,
                                  refs?: [png b64] (karakter kartları)}
                                  → {video: mp4 b64, seconds, fps, frames, engine}
                                  409: motor bu kurulumda lisans ayarıyla kapalı (VIDEO_LICENSED_ENGINES)
@@ -56,7 +58,7 @@ args, _ = ap.parse_known_args()
 
 ROOT = Path(args.model_dir)
 HERE = Path(__file__).parent
-PYTHON = {"wan": sys.executable, "h3": "/opt/h3/bin/python", "fasth3": "/opt/h3/bin/python",
+PYTHON = {"wan": sys.executable, "h3": "/opt/h3/bin/python", "fasth3": "/opt/fastvideo/bin/python",
           "enhance": "/opt/h3/bin/python"}
 DEFAULT_ENGINE = plan.default_engine()
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -81,13 +83,15 @@ class Worker:
                 self.proc.wait()
         self.proc, self.name = None, None
 
-    def call(self, name: str, req: dict, td: Path) -> dict:
-        if self.name != name or self.proc is None or self.proc.poll() is not None:
+    def call(self, name: str, req: dict, td: Path, variant: str = "") -> dict:
+        key = f"{name}:{variant}" if variant else name
+        if self.name != key or self.proc is None or self.proc.poll() is not None:
             self.stop()
+            env = {**os.environ, **({"FAST_H3_VARIANT": variant} if variant else {})}
             self.proc = subprocess.Popen([PYTHON[name], str(HERE / f"worker_{name}.py"), str(ROOT)],
                                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr, text=True,
-                                         bufsize=1)
-            self.name = name
+                                         bufsize=1, env=env)
+            self.name = key
         mid = next(_ids)
         self.proc.stdin.write(json.dumps({"id": mid, "req": req, "td": str(td)}) + "\n")
         self.proc.stdin.flush()
@@ -123,7 +127,7 @@ class Req(BaseModel):
     seed: int = 0
     audio: str | None = None
     steps: int | None = Field(None, ge=2, le=60)
-    engine: str | None = Field(None, pattern=r"^(wan2\.2|h3|fast-h3)$")
+    engine: str | None = Field(None, pattern=r"^(wan2\.2|h3|fast-h3|fast-h3-fp8)$")
     refs: list[str] = Field(default_factory=list, max_length=plan.MAX_REFS)
 
 
@@ -155,11 +159,11 @@ def _generate(r: Req) -> dict:
                "image": _b64file(r.image, td / "first.png"),
                "audio": _b64file(r.audio, td / "talk.wav") if r.audio else None,
                "refs": [_b64file(x, td / f"ref{i}.png") for i, x in enumerate(r.refs, 1)]}
-        out = _worker.call(plan.worker_of(engine), req, td)
+        out = _worker.call(plan.worker_of(engine), req, td, engine if engine in plan.FAST else "")
         data = Path(out["file"]).read_bytes()
     res = {"video": base64.b64encode(data).decode(), "seconds": round(out["frames"] / out["fps"], 3),
            "fps": out["fps"], "frames": out["frames"], "engine": out["engine"], "took": round(time.time() - t0, 1)}
-    for k in ("canvas", "steps", "refs_used"):
+    for k in ("canvas", "steps", "refs_used", "first_frame_used"):
         if k in out:
             res[k] = out[k]
     return res
