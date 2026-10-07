@@ -34,6 +34,16 @@ VISION = "book-vision-fast"
 REFS = 4
 MIN_AREA = 0.02            # sayfanın bu oranından küçük kutu referans olmaz
 KIND = {"cocuk": "çocuk", "genc": "genç", "yetiskin": "yetişkin", "yasli": "yaşlı"}
+# Senaryonun yaş sınıfı → tarifteki yaş gerçeği (görsel okuyucu çizgi film oranlarında yaşı yanlış tahmin ediyordu:
+# anneyi «8 yaşında kız» okudu, 2026-10-07). Kardeş/küçük ayrımı rolden gelir (ROLE_EN).
+AGE_EN = {("cocuk", "erkek"): "a boy (child)", ("cocuk", "kadin"): "a girl (child)", ("cocuk", "belirsiz"): "a child",
+          ("genc", "erkek"): "a teenage boy", ("genc", "kadin"): "a teenage girl", ("genc", "belirsiz"): "a teenager",
+          ("yetiskin", "erkek"): "an adult man", ("yetiskin", "kadin"): "an adult woman",
+          ("yetiskin", "belirsiz"): "an adult", ("yasli", "erkek"): "an elderly man", ("yasli", "kadin"): "an elderly woman",
+          ("yasli", "belirsiz"): "an elderly person"}
+ROLE_EN = {"kahraman": "the main character", "kardeş": "the main character's younger sibling",
+           "anne": "the mother", "baba": "the father", "dede": "the grandfather", "nine": "the grandmother",
+           "öğretmen": "the teacher", "arkadaş": "the main character's friend"}
 
 PAGE_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["people"], "properties": {"people": {
     "type": "array", "items": {"type": "object", "additionalProperties": False,
@@ -143,15 +153,45 @@ def crop(path: str, box: list[int], margin: float = 0.06) -> bytes:
 
 
 async def describe(http, png: bytes, member: dict) -> dict | None:
-    ask = (f"This is {member['name']} ({member.get('role', '')}) from a children's book, as drawn by the book's "
-           "illustrator. Describe the FIXED appearance so another illustrator can draw the same character in every "
-           "picture: `look_en` one English paragraph ≤ 70 words (apparent age, body, face, eyes, hair colour and style, "
-           "everyday clothes with colours, drawing style cues); `look_tr` the same in Turkish; `species_en` e.g. "
-           "'a boy of about 8' ; hex colours of hair, skin, eyes and main outfit as seen.")
+    age = AGE_EN.get((member.get("age", ""), member.get("gender", "")), "")
+    ask = (f"This is {member['name']}, {ROLE_EN.get((member.get('role') or '').casefold(), member.get('role', ''))} in a "
+           f"children's book, as drawn by the book's illustrator. FACT (do not contradict): {member['name']} is {age}. "
+           "Cartoon proportions (big head, round eyes) do not change the age. Describe the FIXED appearance so another "
+           "illustrator can draw the same character in every picture: `look_en` one English paragraph ≤ 70 words "
+           "starting with the age fact (body, face, eyes, hair colour and style, everyday clothes with colours, "
+           f"drawing style cues); `look_tr` the same in Turkish; `species_en` = '{age}'; hex colours of hair, skin, "
+           "eyes and main outfit as seen.")
     return await _ask(http, [{"type": "text", "text": ask},
                              {"type": "image_url", "image_url": {"url": "data:image/png;base64," +
                                                                   base64.b64encode(png).decode()}}],
                       LOOK_SCHEMA, "look", max_tokens=700)
+
+
+async def refresh_looks(d: Path, f: Path, by: str, names: list[str] | None = None) -> list[str]:
+    """Kitaptan çıkarılmış TASLAK kartların tarifini birincil referansından yeniden yazar (referanslar aynı kalır)."""
+    sc = script_mod.load(f)
+    series = C.job_series(d)
+    data = C.load(series["id"])
+    done = []
+    async with httpx.AsyncClient(timeout=httpx.Timeout(900.0, connect=10.0)) as http:
+        for m in sc.get("cast", []):
+            card = next((c for c in data["cards"] if C.fold(c["name"]) == C.fold(m["name"])), None)
+            if (names and m["name"] not in names) or not card or card.get("status") == "approved" or \
+                    (card.get("origin") or {}).get("from") != "kitabın çizimleri":
+                continue
+            refs = C.CardSet(series, [card]).refs(card)
+            if not refs:
+                continue
+            look = await describe(http, refs[0].read_bytes(), m) or {}
+            if not look:
+                continue
+            upd = {**card, "species_en": look.get("species_en", card.get("species_en", "")),
+                   "look_tr": look.get("look_tr") or card.get("look_tr", ""),
+                   "look_en": look.get("look_en") or card.get("look_en", ""),
+                   "colors": {k: look[k] for k in ("hair", "skin", "eyes", "outfit") if look.get(k)}}
+            C.update_card(series, None, card["id"], upd, by)
+            done.append(m["name"])
+    return done
 
 
 async def build(d: Path, f: Path, by: str, series_name: str | None = None,
