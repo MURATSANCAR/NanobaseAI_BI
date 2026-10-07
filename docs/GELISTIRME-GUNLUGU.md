@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-10-07 — Dal temizliği: kalan dallar main'e taşındı
+
+- **Ne:** 32 yerel dal tarandı; main'de olmayan iş 7 dalda kaldı. Taşınan: film video motorları (H3/FastH3/SeedVR2),
+  çizgi film çocuk sesleri, film müziği (`book-music`), finans Logo kart alanları kırılımı (`logo-fields.json`, «deneme»
+  commit'i, yan köprüde doğrulanmıştı). Film müziği ile video iyileştirmesi aynı yerlere dokunuyordu: `mix.build`
+  ikisini birlikte yazar (`enhanced` + `music`), testler ikisi de korundu.
+- **Taşınmayan (zaten main'de):** «dinle» ön üretimi + Alania silme, okuma denetimi K20–K23, ithaf örneği.
+- **Doğrulanmadı:** çakışma çözümünden sonra testler koşulmadı (Mac'te işlem yok); finans kırılımı için tam set
+  regresyonu ve film testleri test sunucusunda koşulmalı, kurulum ondan sonra.
+
 ## 2026-10-07 — Film video servisi: MiniMax-H3 + FastH3 motorları, SeedVR2 + RIFE iyileştirme (çalıştırılmadı)
 
 - **Ne:** `images/video` üç motorlu: `h3` (MiniMax-H3, diffusers `c6df88a5` ModularPipeline; i2v → fl2va, s2v → ref2va:
