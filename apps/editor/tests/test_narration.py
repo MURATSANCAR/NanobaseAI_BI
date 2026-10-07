@@ -375,6 +375,12 @@ def test_child_voices_wait_for_approval_and_fall_back_to_young_voice():
     for v in Z.CHILD_VOICES:
         assert re.search(r"\b(boy|girl)\b", v["design"]) and re.search(r"year-old|years old|age \w+", v["design"])
         assert not re.search(r"\b(clone|voice of|sounds like|imitat)", v["design"], re.I)
+        # yöntem kaydı (2. yöntem: perde + formant kaydırma, sonra tam klon): sabit kaydın nasıl yapıldığı
+        m = v["method"]
+        assert m["yol"] in ("praat", "world") and 1.0 < m["formant"] <= 1.3 and 200 <= m["perde"] <= 400
+        assert m["metin"] in ("READER_TEXT", "CHILD_TEXT") and m["kaynak"]
+        if v["id"] in Z.PINNED:                       # sabitlenmişse kaydın metni yöntemdeki metindir
+            assert Z.PINNED[v["id"]]["text"] == getattr(Z, m["metin"])
 
 
 def test_child_state_lists_approved_and_chains_fallback():

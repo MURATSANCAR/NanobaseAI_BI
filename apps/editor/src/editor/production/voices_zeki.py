@@ -153,22 +153,39 @@ PINNED: dict[str, dict] = {
 }
 
 # Çizgi film çocuk sesleri (2026-10-07; aday üretimi ve ölçüm docs/analiz/sesli-okuma-cocuk-sesleri.md,
-# deploy/ses/cocuk_sesleri.py). Tarifler hazır, adaylar ölçüldü; kullanıcı dinleyip seçene kadar «onay bekliyor»
+# deploy/ses/cocuk_sesleri.py, cocuk_donustur.py). Adaylar ölçüldü; seçim doğrulanıp sabitlenene kadar «onay bekliyor»
 # (PENDING): katalogda görünmez, kimliği CHILD_FALLBACK'teki genç sese gider (çocuk karakteri bugünkü gibi okunur).
-# Onay = seçilen aday `sesler/zeki/<ses>.wav` olarak konur ve PINNED'e `_p(<ses>, CHILD_TEXT, <sha256>)` eklenir; ses
-# kendiliğinden kataloğa (karakter grubu) girer, yönlendirme kalkar. Geçici olarak en iyi aday sabitlenmedi: sabit kayıt
+# Onay = seçilen kayıt `sesler/zeki/<ses>.wav` olarak konur ve PINNED'e `_p(<ses>, <method.metin>, <sha256>)`
+# eklenir; ses kendiliğinden kataloğa (karakter grubu) girer, yönlendirme kalkar. Geçici olarak en iyi aday sabitlenmedi: sabit kayıt
 # kitap boyunca sesin kimliğidir, sonradan değişirse o sesle okunmuş bütün sayfalar «güncel değil» olur.
-# Tarif: ölçümde ilk sıradaki adayın tarifi; kullanıcı başka tariften bir aday seçerse onunki yazılır (sesin kişisi
-# tariften okunur). «high/tiny/very high» geçen tarifler 330–530 Hz cıyaklamaya kaçtı, kullanılmadı.
+# 2. yöntem (kullanıcı 1. yöntemin adaylarını dinledi: «daha iyilerini üret»): ses tariften değil, temiz okuyan bir
+# kayıttan sinyal işlemeyle yapılır — perde + formant kaydırma (Praat «Change gender» ya da WORLD vokoder), sonra
+# dönüştürülmüş kayıt sabit referans olur ve sayfayı VoxCPM2 onunla tam klon okur (deploy/ses/cocuk_donustur.py).
+# `method`: sabit kaydın nasıl yapıldığı (kaynak kayıt, yol, formant oranı, hedef ortanca perde, perde aralığı) —
+# ölçümdeki önerilen aday; ana oturum doğrulayıp PINNED'e ekleyince bu kayıt geçerli olur. `design` yalnız sesin
+# kişisini anlatır (efekt ipuçları onu okur), ses ondan üretilmez.
+def _c(vid: str, label: str, note: str, design: str, method: dict) -> dict:
+    return {**_v(vid, label, note, "karakter", design), "method": method}
+
+
+def _m(kaynak: str, yol: str, formant: float, perde: int, aralik: float, metin: str) -> dict:
+    return {"kaynak": kaynak, "yol": yol, "formant": formant, "perde": perde, "aralik": aralik, "metin": metin,
+            "klon": "tam (ref_audio + ref_text)"}
+
+
 CHILD_VOICES: list[dict] = [
-    _v("cocuk-erkek", "Erkek çocuk · 7–10 yaş", "ilkokul çağı, doğal", "karakter",
-       "A ten-year-old boy with a natural child's voice, not squeaky, speaking calmly and clearly at a moderate pace"),
-    _v("cocuk-kiz", "Kız çocuk · 7–10 yaş", "ilkokul çağı, doğal", "karakter",
-       "A primary school girl, about eight years old, speaking slowly and clearly to her mother, gentle and sincere"),
-    _v("kucuk-erkek", "Küçük erkek çocuk · 4–6 yaş", "okul öncesi, yumuşak", "karakter",
-       "A five-year-old boy telling his mother about his day, soft and natural little child's voice, slow and clear"),
-    _v("kucuk-kiz", "Küçük kız çocuk · 4–6 yaş", "okul öncesi, sakin", "karakter",
-       "A kindergarten girl, about six years old, calm, clear and sincere, speaking slowly word by word"),
+    _c("cocuk-erkek", "Erkek çocuk · 7–10 yaş", "ilkokul çağı, doğal",
+       "A ten-year-old boy with a natural child's voice, not squeaky, speaking calmly and clearly at a moderate pace",
+       _m("genc-kadin", "world", 1.30, 290, 1.2, "READER_TEXT")),
+    _c("cocuk-kiz", "Kız çocuk · 7–10 yaş", "ilkokul çağı, doğal",
+       "A primary school girl, about eight years old, speaking slowly and clearly to her mother, gentle and sincere",
+       _m("1. yöntem cocuk-kiz-2 (tarif g, tohum 131)", "world", 1.30, 290, 1.2, "CHILD_TEXT")),
+    _c("kucuk-erkek", "Küçük erkek çocuk · 4–6 yaş", "okul öncesi, yumuşak",
+       "A five-year-old boy telling his mother about his day, soft and natural little child's voice, slow and clear",
+       _m("1. yöntem kucuk-erkek-1 (tarif f, tohum 131)", "praat", 1.12, 330, 1.0, "CHILD_TEXT")),
+    _c("kucuk-kiz", "Küçük kız çocuk · 4–6 yaş", "okul öncesi, sakin",
+       "A kindergarten girl, about six years old, calm, clear and sincere, speaking slowly word by word",
+       _m("1. yöntem cocuk-kiz-3 (tarif h, tohum 131)", "world", 1.30, 310, 1.2, "CHILD_TEXT")),
 ]
 # onay bekleyen ses → yedeği (küçük çocuk önce büyük çocuğa, o da onay bekliyorsa genç sese)
 CHILD_FALLBACK = {"cocuk-erkek": "genc-erkek", "cocuk-kiz": "genc-kadin",
