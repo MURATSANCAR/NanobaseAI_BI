@@ -114,6 +114,14 @@ def body_for(f: Path, shot: dict, first: Path, mode: str, seconds: float, W: int
     return body
 
 
+def cast_lines_of(f: Path) -> dict[str, str]:
+    from . import cast as cast_mod
+    try:
+        return cast_mod.card_lines(cast_mod.load(f))
+    except store.FilmError:
+        return {}
+
+
 def mode_of(shot: dict, lines: list[dict]) -> str:
     speakers = {x["speaker"] for x in lines if x["speaker"].casefold() != spec.NARRATOR}
     if len(speakers) == 1 and shot["framing"] in TALK_FRAMINGS and len(shot.get("characters", [])) == 1:
@@ -249,7 +257,8 @@ async def shoot_one(f: Path, shot: dict, by: str, seed: int, http) -> dict:
     for k in range(RETRIES + 1):
         res = await _call(http, {**body, "seed": seed + k})
         mp4 = base64.b64decode(res["video"])
-        checks = [await F.review(http, fr, shot) for fr in sample_frames(mp4)]
+        lines_of = cast_lines_of(f)
+        checks = [await F.review(http, fr, shot, lines_of) for fr in sample_frames(mp4)]
         bad = [p for c in checks if c["ok"] is False for p in c["problems"]]
         qc = {"ok": None if all(c["ok"] is None for c in checks) else not bad, "problems": sorted(set(bad))}
         if qc["ok"] is not False:
