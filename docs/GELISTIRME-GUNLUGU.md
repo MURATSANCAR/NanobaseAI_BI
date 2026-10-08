@@ -1,5 +1,27 @@
 # Geliştirme Günlüğü
 
+## 2026-10-08 — Dönüşümlü ses türü; erkek çocuk sesi = masal-anne + WORLD
+
+- **Ne:** Ses kataloğuna yeni tür: `voices_zeki.TRANSFORMS` (`{source_voice, transform}`). Satır kaynak sesin sabit
+  kaydıyla okunur, ses servisi (`images/voice/server.py`, `voice.transform`) WORLD ya da Praat ile perde + formant
+  çevirir; hizalama ve ölçüm dönüşmüş sesten. Sesli okuma sayfası, «Dinle», ifade örneği, film replikleri ve sesli
+  bülten hepsi `narration.voice_ref` → `_call` yolundan geçtiği için tek yerde çözüldü. `cocuk-erkek` artık bu tür:
+  masal-anne → WORLD formant 1,30, ortanca 270 Hz, aralık 1,2 («Erkek çocuk · 9–12 yaş»); eski sabit kaydı silindi,
+  kimlik aynı kaldı (ALIASES'taki eski kimlikler ve yedek zinciri çalışır). İmaj `editor-voice:6` (pyworld 0.3.5,
+  praat-parselmouth 0.4.7, `--no-deps`).
+- **Neden:** Levent pilotunda kullanıcı bu tarifi seçti; dönüştürülmüş kaydı klon referansı yapmak kararsızdı
+  (5 kelimeye 10 sn, 13 kelimeye 2,6 sn; 633e2b41e geri alındı). Çalışan yol pilotta elle yapılmıştı (kaynak sesle oku,
+  satır başına WORLD, perde kaynak kaydın ortancasına göre) — yeniden seslendirmede kaybolmasın diye kalıcı oldu.
+- **Güvenlik:** önbellek anahtarları (sayfa özeti, örnek, replik) dönüşümü içerir; dönüşümsüz seslerin anahtarı aynı
+  (eski kayıtlar yeniden okunmaz). Eski servis `transform`'u yok sayardı → servis parçayı `transform` ile işaretler,
+  işaretsiz yanıtta editör kayıt yazmaz.
+- **Doğrulama (GPU, sunucuda):** `test_narration/test_film/test_voices/test_sfx` 171 geçti, 1 atlandı
+  (`editor-py-studio:0.15.9-aa9f2938` + yamalı ağaç). `editor-voice:6` derlendi; servis dönüşümü pilotun 6 satırında
+  `levent_donustur.py` çıktısıyla aynı (en büyük fark 3e-05 = 1 PCM16 adımı, korelasyon 1,0; kaynak ortanca 204,3 Hz,
+  dönüşmüş satır 256,8 Hz). Praat yolu duman testi geçti.
+- **Bekleyen:** gateway'e geçiş (`models.yaml` :6) — o sırada pilotun çekim adımı GPU'da sürüyordu, kurulum ertelendi
+  (21:00 sonrası ya da pilot bitince `gpu-release.sh`). Uçtan uca servis denemesi geçişten sonra.
+
 ## 2026-10-08 — Editör testi: çocuk sesi kişisi + kurulum testine images/
 
 - **Ne:** `tests/test_sfx.py::test_voice_person_from_voice_identity` beklentisi güncellendi: `cocuk-kiz`/`kucuk-kiz` →
