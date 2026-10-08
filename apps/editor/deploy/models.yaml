@@ -266,7 +266,7 @@ aliases:
   #   fast-h3/ ← FastH3-V2   fast-h3-fp8/ ← FastH3-V2-FP8   enhance/seedvr2/ ← SeedVR2 (7b_sharp_fp16 + ema_vae_fp16)
   #   enhance/rife/ ← RIFE/4.26 (train_log/)   (FastH3 = eski FastVideo-FastH3-Comfy paketi taşınmaz)
   # Ağırlıklar 2026-10-03/04'te indirildi (_indirme/durum.json; RIFE 2026-10-07, RIFE/durum.json), taşınınca MANIFEST'e
-  # sha256 ile yazılır. Kart 0'ın tamamını ister (0.95; kullanıcı kararı 2026-10-08): çekim sırasında ana model durur,
+  # sha256 ile yazılır. Kart 0'ın neredeyse tamamını ister (0.90; kullanıcı kararı 2026-10-08): çekim sırasında ana model durur,
   # kart 0 videoya verilir (GPU 0'daki ana sohbet modeli qwen38-27b gateway'in dışındadır, çekim başlarken elle
   # durdurulur); görsel denetçi, ses ve görsel model GPU 1'de kalır, çekimle aynı anda çalışabilir. Boşta 5 dk sonra
   # kapanır. ÖLÇÜLMEDİ: açılış süresi, bellek tepesi, çekim başı süre
@@ -281,7 +281,9 @@ aliases:
     role: Kitaptan film — kareden video, konuşan çekim, çekim iyileştirme
     kind: video
     gpu: 0
-    mem_fraction: 0.95
+    # 0.95 sığmadı: kart 0'da müşterinin baskı tahmin servisi (bi-forecast, gateway dışı) 3,5 GiB tutuyor
+    # (2026-10-08: gpu_busy need 90,4 / free 89,6 GiB).
+    mem_fraction: 0.90
     idle_stop_sec: 300
     start_timeout_sec: 1800
     env:
