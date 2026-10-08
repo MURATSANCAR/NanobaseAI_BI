@@ -660,3 +660,18 @@ def test_on_screen_adds_mentioned_cast_but_not_possessives():
     assert spec.on_screen(sh, cast) == ["Mert", "Anne"]
     sh = {"characters": ["Anne"], "action_en": "Mother looks at Levent and speaks."}
     assert spec.on_screen(sh, cast) == ["Anne", "Levent"]
+
+
+def test_pick_best_prefers_first_pass_for_current_frame(tmp_path):
+    def v(n, ff, ok, probs=()):
+        return {"v": n, "file": f"x.v{n}.mp4", "first_frame": ff, "qc": {"ok": ok, "problems": list(probs)}}
+    store.write(tmp_path, "cekimler.json", {"shots": {"s01c01": {"selected": 4, "versions": [
+        v(1, "old.png", True), v(2, "new.png", False, ["a", "b"]), v(3, "new.png", False, ["a"]),
+        v(4, "new.png", False, ["a", "b", "c"])]}}})
+    assert shoot._pick_best(tmp_path, "s01c01") is False
+    assert store.read(tmp_path, "cekimler.json")["shots"]["s01c01"]["selected"] == 3
+    rec = store.read(tmp_path, "cekimler.json")
+    rec["shots"]["s01c01"]["versions"].append(v(5, "new.png", True))
+    store.write(tmp_path, "cekimler.json", rec)
+    assert shoot._pick_best(tmp_path, "s01c01") is True
+    assert store.read(tmp_path, "cekimler.json")["shots"]["s01c01"]["selected"] == 5

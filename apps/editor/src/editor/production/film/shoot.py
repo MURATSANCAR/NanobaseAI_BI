@@ -24,6 +24,7 @@ yeni tohumla yeniden çekilir; yine geçmezse editörün önüne «denetimden ge
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import os
 import subprocess
@@ -197,6 +198,19 @@ async def _enhance_call(http, mp4: bytes, target: str) -> dict:
     return r.json()
 
 
+def _pick_best(f: Path, sid: str) -> bool:
+    """Çekimin seçili sürümü: bu kareyle çekilmiş sürümlerden ilk geçen, yoksa en az sorunlu. Dönen: geçen var mı."""
+    rec = store.read(f, "cekimler.json") or {"shots": {}}
+    cur = rec["shots"][sid]
+    first = cur["versions"][cur["selected"] - 1]["first_frame"]
+    cands = [v for v in cur["versions"] if v["first_frame"] == first]
+    ok = [v for v in cands if v["qc"].get("ok") is not False]
+    best = ok[0] if ok else min(cands, key=lambda v: len(v["qc"].get("problems", [])))
+    cur["selected"] = best["v"]
+    store.write(f, "cekimler.json", rec)
+    return bool(ok)
+
+
 def hd_name(file: str) -> str:
     """`s01c02.v3.mp4` → `s01c02.v3.hd.mp4`."""
     return file[:-4] + ".hd.mp4"
@@ -244,7 +258,8 @@ async def enhance_selected(f: Path, http, progress=lambda n, t, w="": None) -> d
     return res
 
 
-async def shoot_one(f: Path, shot: dict, by: str, seed: int, http) -> dict:
+async def take(f: Path, shot: dict, by: str, seed: int, http) -> dict:
+    """Bir çekim alır ve sürüm olarak kaydeder (denetimsiz, qc «bekliyor»). Seçili sürüm, çekimin ilk sürümüyse bu olur."""
     m = store.meta(f)
     W, H = spec.FORMATS[m["format"]]["gen"]
     voice = dialogue.load(f)
@@ -252,30 +267,42 @@ async def shoot_one(f: Path, shot: dict, by: str, seed: int, http) -> dict:
     seconds = voice["seconds"].get(shot["id"], float(shot["seconds"]))
     first = F.selected(f, shot["id"])
     mode = mode_of(shot, lines)
-    body = body_for(f, shot, first, mode, seconds, W, H, m["style"], lines)
-    res, qc = None, {"ok": None, "problems": []}
-    for k in range(RETRIES + 1):
-        res = await _call(http, {**body, "seed": seed + k})
-        mp4 = base64.b64decode(res["video"])
-        lines_of = cast_lines_of(f)
-        checks = [await F.review(http, fr, shot, lines_of) for fr in sample_frames(mp4)]
-        bad = [p for c in checks if c["ok"] is False for p in c["problems"]]
-        qc = {"ok": None if all(c["ok"] is None for c in checks) else not bad, "problems": sorted(set(bad))}
-        if qc["ok"] is not False:
-            break
+    res = await _call(http, {**body_for(f, shot, first, mode, seconds, W, H, m["style"], lines), "seed": seed})
     rec = store.read(f, "cekimler.json") or {"shots": {}}
     cur = rec["shots"].setdefault(shot["id"], {"versions": [], "selected": None})
     v = len(cur["versions"]) + 1
     cd = f / "cekim"
     cd.mkdir(exist_ok=True)
     name = f"{shot['id']}.v{v}.mp4"
-    (cd / name).write_bytes(mp4)
+    (cd / name).write_bytes(base64.b64decode(res["video"]))
     cur["versions"].append({"v": v, "file": name, "mode": mode, "seconds": res.get("seconds", seconds),
-                            "engine": res.get("engine"), "first_frame": first.name, "qc": qc, "by": by,
-                            "at": store.now()})
+                            "engine": res.get("engine"), "first_frame": first.name,
+                            "qc": {"ok": None, "problems": [], "pending": True}, "by": by, "at": store.now()})
     cur["selected"] = v
     store.write(f, "cekimler.json", rec)
     return cur["versions"][-1]
+
+
+async def check(f: Path, shot: dict, ver: dict, http) -> dict:
+    """Çekimden üç kare görsel denetçiye; sonuç sürümün `qc`'sine yazılır."""
+    lines_of = cast_lines_of(f)
+    mp4 = (f / "cekim" / ver["file"]).read_bytes()
+    checks = [await F.review(http, fr, shot, lines_of) for fr in sample_frames(mp4)]
+    bad = [p for c in checks if c["ok"] is False for p in c["problems"]]
+    qc = {"ok": None if all(c["ok"] is None for c in checks) else not bad, "problems": sorted(set(bad))}
+    _mark(f, shot["id"], ver["v"], qc=qc)
+    return qc
+
+
+async def shoot_one(f: Path, shot: dict, by: str, seed: int, http) -> dict:
+    """Tek çekim: al, denetle, geçmezse yeni tohumla yeniden (en çok RETRIES)."""
+    ver = None
+    for k in range(RETRIES + 1):
+        ver = await take(f, shot, by, seed + k, http)
+        ver["qc"] = await check(f, shot, ver, http)
+        if ver["qc"]["ok"] is not False:
+            break
+    return ver
 
 
 async def shoot(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, only: list[str] | None = None) -> dict:
@@ -296,9 +323,21 @@ async def shoot(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
             todo.append(s)
     store.set_stage(f, "cekim", status="calisiyor")
     async with httpx.AsyncClient(timeout=httpx.Timeout(3600.0, connect=10.0)) as http:
-        for n, s in enumerate(todo, 1):
-            progress(n, len(todo), "Çekimler yapılıyor")
-            await shoot_one(f, s, by, 5000 + 53 * n, http)
+        # Video modeli bir kartta, görsel denetçi öbüründe: çekimler sırayla alınırken önceki çekimin denetimi aynı
+        # anda koşar (aynı karttaysa gateway sıraya koyar). Geçmeyenler turun sonunda yeniden çekilir; en iyi sürüm
+        # seçilir (2026-10-08: kare başına model değiştirmek dakikalar kaybettiriyordu).
+        seeds = {s["id"]: 5000 + 53 * n for n, s in enumerate(todo, 1)}
+        round_ = todo
+        for k in range(RETRIES + 1):
+            qcs = []
+            for n, s in enumerate(round_, 1):
+                progress(n, len(round_), "Çekimler yapılıyor" if k == 0 else "Geçmeyen çekimler yeniden çekiliyor")
+                ver = await take(f, s, by, seeds[s["id"]] + k, http)
+                qcs.append(asyncio.create_task(check(f, s, ver, http)))
+            await asyncio.gather(*qcs)
+            round_ = [s for s in round_ if not _pick_best(f, s["id"])]
+            if not round_:
+                break
         hd = await enhance_selected(f, http, progress)
     rec = store.read(f, "cekimler.json") or {"shots": {}}
     failed = sum(1 for x in rec["shots"].values() if x["versions"][x["selected"] - 1]["qc"].get("ok") is False)
