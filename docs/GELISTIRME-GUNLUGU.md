@@ -8,7 +8,13 @@
   `output_type="np"` açıkça verilir, `sf.write(out, audio.T, sr)`.
 - **Neden:** motor çağrısı belgeden yazılmıştı, GPU'da ilk kez `{"kind":"song","engine":"minimax-music3"}` ile koştu.
 - **Test:** worker modülü içe aktarılırken stdout'u ayırıp argv okuyor; modelsiz birim testi yok, doğrulama gerçek
-  istekle (aşağıda / PROJECT-MEMORY).
+  istekle.
+- **Doğrulama (GPU, 21:08, video modelleri boştayken):** `editor-music:1` main `110f82108`'den derlendi; gateway
+  (`editor-studio-worker` anahtarıyla) `minimax-music3` şarkı, 40 sn, tohum 9100 → HTTP 200, 108 sn (model yükleme
+  dahil), 40,04 sn, 48 kHz, PCM16 stereo.
+- **Tuzak:** gateway kapsayıcıyı imaj *etiketine* göre yeniden kullanır (spec = etiket, kimlik değil); aynı etiketle
+  yeniden derlenen imaj, duran eski kapsayıcı silinmeden devreye girmez — ilk deneme eski kodla yine 500 verdi.
+  Etiket değişmiyorsa duran `editor-model-<ad>` kapsayıcısı `docker rm` ile kaldırılır, gateway yenisini yaratır.
 
 ## 2026-10-08 — Dönüşümlü ses türü; erkek çocuk sesi = masal-anne + WORLD
 
