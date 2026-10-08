@@ -6,7 +6,9 @@
 #    flash-attn yok (Wan PyTorch dikkatine düşer). S2V'nin CosyVoice parçası kullanılmaz.
 #  - /opt/h3 (venv, --system-site-packages: torch ana ortamdan): diffusers (MiniMax-H3 modular pipeline yalnız main'de),
 #    transformers 5.x (diffusers main huggingface-hub ≥1.32 ister; transformers 4.57 hub<1 ister → çözülemez),
-#    SeedVR2 requirements.txt. Practical-RIFE'ın sk-video/moviepy'si kurulmaz: kendi
+#    SeedVR2 requirements.txt. torchao kurulmaz (2026-10-08 derlemesi): diffusers/transformers onu yalnız varsa yükler
+#    (is_torchao_available), bizde nicemleme yok; sabitsiz 0.18 torch ≥2.11 istiyor (ScalingType), torch 2.8 eşi 0.13
+#    ise diffusers main'in istediği FqnToConfig'i (≥0.15) taşımıyor. Practical-RIFE'ın sk-video/moviepy'si kurulmaz: kendi
 #    döngümüz (worker_enhance.py) kareleri ffmpeg ile okur/yazar.
 #  - /opt/fastvideo (uv venv, Py 3.12): FastVideo pyproject'i torch==2.12.0, transformers>=5.15 ister; fastvideo-kernel
 #    0.3.5 tekeri yalnız cp312. torch cu130 (sürücü 580 = CUDA 13). FA4/sm100a eklentileri (fasth3 ekstrası, Blackwell)
@@ -44,7 +46,7 @@ RUN python -m venv --system-site-packages /opt/h3 \
     && /opt/h3/bin/pip install --no-cache-dir --retries 10 --timeout 120 \
         "diffusers @ https://github.com/huggingface/diffusers/archive/${DIFFUSERS_COMMIT}.tar.gz" \
         "transformers>=5.15,<6" "accelerate>=1.1.1" "safetensors>=0.8.0" "huggingface-hub>=1.32.0,<2.0" \
-        "numpy>=1.25,<2" soundfile "av>=17.0.0" imageio imageio-ffmpeg torchao \
+        "numpy>=1.25,<2" soundfile "av>=17.0.0" imageio imageio-ffmpeg \
         -r /opt/SeedVR2/requirements.txt
 RUN /opt/h3/bin/python -c "import diffusers, transformers, soundfile; from diffusers import ComponentsManager, ModularPipeline; \
 from diffusers.modular_pipelines.minimax_h3 import MiniMaxH3AudioReference, MiniMaxH3ImageReference; \
@@ -60,9 +62,17 @@ RUN pip install --no-cache-dir uv \
     && uv venv --python 3.12 --seed /opt/fastvideo \
     && UV_TORCH_BACKEND=cu130 uv pip install --python /opt/fastvideo/bin/python --no-cache \
         --no-sources-package fastvideo-kernel -e /opt/FastVideo
-RUN /opt/fastvideo/bin/python -c "import torch, transformers; from fastvideo import VideoGenerator; \
-from fastvideo.api import GenerationRequest, GeneratorConfig, OffloadConfig, SamplingConfig; import fastvideo_kernel; \
-print('fastvideo', torch.__version__, transformers.__version__)"
+# GPU'suz denetim: fastvideo'yu (alt modülü dahil) içe aktarmak fastvideo_kernel'in Triton çekirdeklerini yükler, Triton da
+# modül yüklenirken etkin GPU sürücüsü arar ("0 active drivers", 2026-10-08) → burada yalnız kurulu sürümler, worker_fasth3'ün
+# fastvideo.api'den aldığı adlar (kaynağın sözdizim ağacından) ve derlenebilirlik denetlenir; gerçek içe aktarma GPU'da olur.
+RUN /opt/fastvideo/bin/python -c "import ast, torch, transformers, importlib.metadata as m; \
+t = ast.parse(open('/opt/FastVideo/fastvideo/api/__init__.py').read()); \
+have = {a.asname or a.name for n in ast.walk(t) if isinstance(n, ast.ImportFrom) for a in n.names}; \
+need = {'CompileConfig', 'ComponentConfig', 'EngineConfig', 'GeneratorConfig', 'OffloadConfig', 'ParallelismConfig', \
+'PipelineSelection', 'GenerationRequest', 'OutputConfig', 'SamplingConfig'}; assert need <= have, need - have; \
+print('fastvideo', m.version('fastvideo'), m.version('fastvideo-kernel'), torch.__version__, transformers.__version__)" \
+    && /opt/fastvideo/bin/python -m compileall -q /opt/FastVideo/fastvideo >/dev/null \
+    && grep -q "^from fastvideo.entrypoints.video_generator import VideoGenerator" /opt/FastVideo/fastvideo/__init__.py
 
 COPY images/video/server.py images/video/plan.py images/video/worker_common.py images/video/worker_wan.py \
      images/video/worker_h3.py images/video/worker_fasth3.py images/video/worker_enhance.py /srv/

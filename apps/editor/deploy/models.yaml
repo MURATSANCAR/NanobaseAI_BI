@@ -266,27 +266,30 @@ aliases:
   #   fast-h3/ ← FastH3-V2   fast-h3-fp8/ ← FastH3-V2-FP8   enhance/seedvr2/ ← SeedVR2 (7b_sharp_fp16 + ema_vae_fp16)
   #   enhance/rife/ ← RIFE/4.26 (train_log/)   (FastH3 = eski FastVideo-FastH3-Comfy paketi taşınmaz)
   # Ağırlıklar 2026-10-03/04'te indirildi (_indirme/durum.json; RIFE 2026-10-07, RIFE/durum.json), taşınınca MANIFEST'e
-  # sha256 ile yazılır. Kartın tamamını ister (0.95): açılıştan önce ana model durur;
-  # boşta 5 dk sonra kapanır, ana model geri kalkar. ÖLÇÜLMEDİ: açılış süresi, bellek tepesi, çekim başı süre
+  # sha256 ile yazılır. Kart 0'ın tamamını ister (0.95; kullanıcı kararı 2026-10-08): çekim sırasında ana model durur,
+  # kart 0 videoya verilir (GPU 0'daki ana sohbet modeli qwen38-27b gateway'in dışındadır, çekim başlarken elle
+  # durdurulur); görsel denetçi, ses ve görsel model GPU 1'de kalır, çekimle aynı anda çalışabilir. Boşta 5 dk sonra
+  # kapanır. ÖLÇÜLMEDİ: açılış süresi, bellek tepesi, çekim başı süre
   # (ilk kurulumda ölçülüp buraya yazılacak). Kullanıcı kararı 2026-10-04: modeller şimdilik ayağa kaldırılmaz.
-  # KAPALI (2026-10-04): kurulum günü açılır — açmadan önce ağırlık MANIFEST'e yazılmalı (verify_models.py
-  # kayıtsız takma adı BAD sayar) ve editor-video:1 imajı derlenmeli (editorctl install satırı).
-  # book-video:
-  #   container: editor-model-video
-  #   model_dir: book-video
-  #   real_model: MiniMaxAI/MiniMax-H3+FastVideo/FastVideo-FastH3-8-Step-V2(+FP8)+Wan-AI/Wan2.2-I2V-A14B+Wan2.2-S2V-14B+SeedVR2-7B+RIFE-4.26
-  #   role: Kitaptan film — kareden video, konuşan çekim, çekim iyileştirme
-  #   kind: video
-  #   gpu: 1
-  #   mem_fraction: 0.95
-  #   idle_stop_sec: 300
-  #   start_timeout_sec: 1800
-  #   env:
-  #     PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
-  #     VIDEO_ENGINE: h3
-  #   image: editor-video:1
-  #   entrypoint: [python, /srv/server.py]
-  #   args: []
+  # AÇIK (2026-10-08): klasör /data/editor/models/book-video kuruldu (yukarıdaki klasörlerin sabit bağları; asıllar
+  # yerinde duruyor), ağırlık MANIFEST'te sha256 ile (anahtar = real_model, revision = dosya listesinin özeti,
+  # bileşen revizyonları components altında), editor-video:1 GPU'da derlendi (editorctl install satırı).
+  book-video:
+    container: editor-model-video
+    model_dir: book-video
+    real_model: MiniMaxAI/MiniMax-H3+FastVideo/FastVideo-FastH3-8-Step-V2(+FP8)+Wan-AI/Wan2.2-I2V-A14B+Wan2.2-S2V-14B+SeedVR2-7B+RIFE-4.26
+    role: Kitaptan film — kareden video, konuşan çekim, çekim iyileştirme
+    kind: video
+    gpu: 0
+    mem_fraction: 0.95
+    idle_stop_sec: 300
+    start_timeout_sec: 1800
+    env:
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+      VIDEO_ENGINE: h3
+    image: editor-video:1
+    entrypoint: [python, /srv/server.py]
+    args: []
 
   # Kitaptan çizgi film — müzik (production/film/music.py, kullanıcı kararı 2026-10-07 «en iyi açık kaynak»; kurumun
   # hepsi için lisansı var): sahne başına sözsüz fon müziği (kind: score) ve isteğe bağlı Türkçe sözlü tema şarkısı
@@ -301,22 +304,22 @@ aliases:
   # sha256 ile yazılır. Pay 0.40 tahmindir (en büyük: MiniMax tam hassasiyet ~24 GB belgede; ACE-Step XL + LM 4B
   # «≥24 GB tam kalite»; YuE2 tepe 14 GiB; SA3 6,5 GB): ana model 0.70 ile sığmaz, açılışta ana model durur.
   # ÖLÇÜLMEDİ: açılış süresi, bellek tepesi, parça başı süre.
-  # KAPALI (2026-10-07): kurulum günü açılır — açmadan önce ağırlık MANIFEST'e yazılmalı (verify_models.py kayıtsız
-  # takma adı BAD sayar) ve editor-music:1 imajı derlenmeli (GPU'da 2026-10-07'de derlendi; editorctl install satırı
-  # o gün eklenir). Kapalıyken kurgu müziksiz yapılır (music.available → yok).
-  # book-music:
-  #   container: editor-model-music
-  #   model_dir: book-music
-  #   real_model: stabilityai/stable-audio-3-medium+ACE-Step/acestep-v15-xl-sft+m-a-p/YuE2-3B+MiniMaxAI/MiniMax-Music3+HeartMuLa/HeartMuLa-oss-3B-happy-new-year
-  #   role: Kitaptan film — sahne müziği ve tema şarkısı
-  #   kind: music
-  #   gpu: 1
-  #   mem_fraction: 0.40
-  #   idle_stop_sec: 300
-  #   start_timeout_sec: 900
-  #   image: editor-music:1
-  #   entrypoint: [python, /srv/server.py]
-  #   args: []
+  # AÇIK (2026-10-08): ağırlık MANIFEST'te sha256 ile (anahtar = real_model, revision = dosya listesinin özeti), editor-music:1
+  # GPU'da derlendi (editorctl install satırı). stable-audio-3/ henüz yok (HF anahtarı bekleniyor): servis o motoru
+  # atlar; indirilince MANIFEST kaydı yeniden yazılmalı. Servis kapalıysa kurgu müziksiz yapılır (music.available → yok).
+  book-music:
+    container: editor-model-music
+    model_dir: book-music
+    real_model: stabilityai/stable-audio-3-medium+ACE-Step/acestep-v15-xl-sft+m-a-p/YuE2-3B+MiniMaxAI/MiniMax-Music3+HeartMuLa/HeartMuLa-oss-3B-happy-new-year
+    role: Kitaptan film — sahne müziği ve tema şarkısı
+    kind: music
+    gpu: 1
+    mem_fraction: 0.40
+    idle_stop_sec: 300
+    start_timeout_sec: 900
+    image: editor-music:1
+    entrypoint: [python, /srv/server.py]
+    args: []
 
   book-voice:
     container: editor-model-voice

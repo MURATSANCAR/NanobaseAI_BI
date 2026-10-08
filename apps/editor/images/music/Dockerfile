@@ -22,8 +22,14 @@ ARG HEARTLIB_COMMIT=96ef96e0ee2346e8a3ca3300aabfdff85e0231be
 RUN git clone https://github.com/HeartMuLa/heartlib.git /opt/heartlib && git -C /opt/heartlib checkout ${HEARTLIB_COMMIT} \
     && rm -rf /opt/heartlib/.git /opt/heartlib/assets \
     && uv venv -p 3.10 /opt/venv/heartmula \
-    && uv pip install --python /opt/venv/heartmula /opt/heartlib \
-    && /opt/venv/heartmula/bin/python -c "import torch, torchaudio, soundfile; from heartlib import HeartMuLaGenPipeline; torchaudio.save('/tmp/s.wav', torch.zeros(2, 480), 48000)" \
+    && uv pip install --python /opt/venv/heartmula /opt/heartlib torch==2.10.0 torchaudio==2.10.0 torchcodec==0.10.0 \
+        datasets==5.0.1
+# torchaudio 2.10'un save'i torchcodec ister (heartlib postprocess torchaudio.save ile yazar; 2026-10-08 derlemesi
+# bunsuz ImportError ile düştü). torch heartlib'in sınırı (<2.11) içinde sabit, torchcodec 0.10 onun eşi. datasets sabit:
+# torchcodec eklenince çözücü 2.14.4'e indi, o da pyarrow 25'te kalkan PyExtensionType'ı arıyor (torchtune içe aktarırken
+# düşüyor); 2026-10-07 derlemesinde çözülen 5.0.1 ile sorun yok. Denetim ayrı
+# katmanda: düşerse kurulum katmanı önbellekte kalır.
+RUN /opt/venv/heartmula/bin/python -c "import torch, torchaudio, soundfile; from heartlib import HeartMuLaGenPipeline; torchaudio.save('/tmp/s.wav', torch.zeros(2, 480), 48000)" \
     && rm -f /tmp/s.wav
 
 # --- ACE-Step 1.5 XL (film müziği yedeği, ticari serbest)
@@ -35,6 +41,10 @@ RUN git clone https://github.com/ace-step/ACE-Step-1.5.git /opt/acestep && git -
 
 # --- Stable Audio 3 (film müziği ana), YuE2 (şarkı ana + sözsüz yedek), MiniMax Music 3 (şarkı yedeği)
 ARG ENGINES="stable-audio-3 yue2 minimax-music3"
+# pypi.nvidia.com GPU sunucusundan zaman zaman yavaş akıyor: uv'nin 30 sn'lik okuma süresi ve 3 denemesi torch'un CUDA
+# tekerleklerinde iki kez düştü (2026-10-08, «operation timed out»). ARG olarak buradan sonraki RUN'lara ortam değişkeni geçer;
+# önceki katmanların önbelleği bozulmaz.
+ARG UV_HTTP_TIMEOUT=600 UV_HTTP_RETRIES=10 UV_CONCURRENT_DOWNLOADS=4
 ARG SA3_COMMIT=3a82c807b69cf4b7c5c05270011a5d5e47abac18
 ARG FLASH_ATTN_WHL=https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.6.3+cu126torch2.7-cp310-cp310-linux_x86_64.whl
 ARG YUE_COMMIT=1647252d68b70cbead046ffd3f7caf036dde47ee
