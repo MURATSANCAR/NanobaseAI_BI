@@ -148,13 +148,37 @@ def fit_seconds(planned: float, line_secs: list[float]) -> float:
     return round(max(MIN_SHOT, float(planned or 0), need), 2)
 
 
+# Rolün İngilizce tarifte geçen adları (dil sözlüğü; kitaba özel değil).
+ROLE_WORDS_EN = {"anne": ("mother", "mom", "mum"), "baba": ("father", "dad"), "dede": ("grandfather", "grandpa"),
+                 "nine": ("grandmother", "grandma"), "babaanne": ("grandmother", "grandma"),
+                 "anneanne": ("grandmother", "grandma"), "öğretmen": ("teacher",), "boyacı": ("painter",)}
+
+
+def on_screen(shot: dict, cast: list[dict]) -> list[str]:
+    """Karede görünen oyuncular: çekimin `characters` listesi + `action_en`'de adıyla ya da rolüyle özne/nesne olarak
+    geçenler («Levent's drawings» gibi iyelik sayılmaz). Model listeyi eksik yazıyordu; listede olmayan karakter
+    kartsız çiziliyor, başka saç ve giysiyle ya da ikinci kopya olarak çıkıyordu (2026-10-08: 35 karede 6)."""
+    out = list(shot.get("characters", []))
+    text = shot.get("action_en", "")
+    for m in cast:
+        if m["name"] in out:
+            continue
+        words = (re.escape(m["name"]),) + tuple(ROLE_WORDS_EN.get((m.get("role") or "").casefold(), ()))
+        if re.search(r"\b(?:" + "|".join(words) + r")\b(?!['’]s\b)", text, re.I):
+            out.append(m["name"])
+    return out
+
+
 def shots(script: dict) -> list[dict]:
-    """Senaryonun çekimleri sırayla, sahne bilgisiyle düzleştirilmiş: id `s{sahne}c{çekim}`."""
+    """Senaryonun çekimleri sırayla, sahne bilgisiyle düzleştirilmiş: id `s{sahne}c{çekim}`; `characters` karede
+    görünen herkes (on_screen)."""
     out = []
+    cast = script.get("cast", [])
     for si, sc in enumerate(script.get("scenes", []), 1):
         for ci, sh in enumerate(sc.get("shots", []), 1):
-            out.append({**sh, "id": f"s{si:02d}c{ci:02d}", "scene": si, "setting": sc.get("setting", ""),
-                        "setting_en": sc.get("setting_en", ""), "time": sc.get("time", "gunduz")})
+            out.append({**sh, "characters": on_screen(sh, cast), "id": f"s{si:02d}c{ci:02d}", "scene": si,
+                        "setting": sc.get("setting", ""), "setting_en": sc.get("setting_en", ""),
+                        "time": sc.get("time", "gunduz")})
     return out
 
 

@@ -650,3 +650,13 @@ def test_best_picks_first_pass_else_fewest_problems():
     assert fr.best([{"ok": False, "problems": ["a"]}, {"ok": True, "problems": []}, {"ok": None}]) == 1
     assert fr.best([{"ok": False, "problems": ["a", "b"]}, {"ok": False, "problems": ["c"]}]) == 1
     assert fr.best([{"ok": None, "problems": []}, {"ok": True, "problems": []}]) == 0
+
+
+def test_on_screen_adds_mentioned_cast_but_not_possessives():
+    cast = [{"name": "Levent", "role": "kahraman"}, {"name": "Mert", "role": "kardeş"}, {"name": "Anne", "role": "anne"}]
+    sh = {"characters": ["Anne"], "action_en": "Mother hangs Levent's drawings. Mert looks at his drawing."}
+    assert spec.on_screen(sh, cast) == ["Anne", "Mert"]
+    sh = {"characters": ["Mert"], "action_en": "Mert comes out. His mother runs to him."}
+    assert spec.on_screen(sh, cast) == ["Mert", "Anne"]
+    sh = {"characters": ["Anne"], "action_en": "Mother looks at Levent and speaks."}
+    assert spec.on_screen(sh, cast) == ["Anne", "Levent"]
