@@ -636,3 +636,10 @@ def test_qc_decision_is_made_in_code_from_yes_no_answers():
     bad = {**clean, "extra_copy": True, "characters": [{"name": "levent", "present": True, "matches": False}]}
     r = fr.qc_result(bad, ["Levent", "Mert"])
     assert r["ok"] is False and len(r["problems"]) == 3     # kopya, Levent uymuyor, Mert yok
+
+
+def test_ref_note_names_references_in_order_and_counts_people():
+    from editor.production.film import frames as fr
+    n = fr.ref_note(["Levent", "Mert"], ["Levent", "Mert", "Anne"])
+    assert "reference image 1 shows Levent; reference image 2 shows Mert" in n
+    assert "exactly 3 people (Levent, Mert, Anne)" in n and "no duplicates" in n

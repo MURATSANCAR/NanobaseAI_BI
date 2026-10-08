@@ -22,7 +22,7 @@ from . import cast as cast_mod
 from . import script as script_mod
 from . import spec, store
 
-VISION = "book-vision-fast"
+VISION = "book-vision-deep"     # hızlı okuyucu karakter karışıklığını görmüyordu (2026-10-08: 8/8 yanlış «geçti»)
 RETRIES = 2
 NEGATIVE = ("text, letters, subtitles, watermark, logo, blurry, low quality, deformed hands, extra fingers, "
             "extra limbs, distorted face, duplicate character")
@@ -114,7 +114,8 @@ async def review(http, png: bytes, shot: dict, cast_lines: dict[str, str] | None
            "extra_copy: does any of these characters appear twice, or is there an extra person who looks like one of "
            "them?\n"
            f"action_shown: does the picture show this moment: \"{shot['action_en']}\"?")
-    body = {"model": VISION, "max_tokens": 400, "temperature": 0.0, "chat_template_kwargs": {"enable_thinking": False},
+    # düşünme AÇIK: kapalıyken derin model de karakter karışıklığını kaçırıyordu; cevap düşünmeden sonra JSON
+    body = {"model": VISION, "max_tokens": 6000, "temperature": 0.0,
             "response_format": {"type": "json_schema", "json_schema": {"name": "qc", "schema": QC_SCHEMA,
                                                                         "strict": True}},
             "messages": [{"role": "user", "content": [
@@ -145,19 +146,30 @@ async def _char_refs(http, f: Path, cast: dict, style: str, W: int) -> dict[str,
     return out
 
 
+def ref_note(named: list[str], everyone: list[str]) -> str:
+    """Referans görsellerin sırası adıyla ve karedeki kişi sayısı. Birden çok karakterli karede model saçı/giysiyi
+    karakterler arasında karıştırıyor ve aynı karakteri iki kez çiziyordu (2026-10-08: 8 karede)."""
+    order = "; ".join(f"reference image {i} shows {n}" for i, n in enumerate(named, 1))
+    people = ", ".join(everyone)
+    return (f" Reference images, in order: {order}. Draw each character exactly like their OWN reference image (face, "
+            f"hair colour and style, clothes, colours, size); never swap hair or clothes between characters. The picture "
+            f"shows exactly {len(everyone)} {'person' if len(everyone) == 1 else 'people'} ({people}); draw each of "
+            f"them once, no duplicates, no other people.")
+
+
 async def draw(f: Path, shot: dict, cast: dict, refs: dict[str, str], style: str, seed: int,
                direction: str = "", http=None) -> tuple[bytes, dict, str]:
     W, H = spec.FORMATS[store.meta(f)["format"]]["gen"]
     prompt = spec.shot_prompt(shot, style, cast_mod.card_lines(cast))
     if direction.strip():
         prompt += f" Editor's direction (follow it): {direction.strip()}."
-    chars = [refs[c] for c in shot.get("characters", []) if c in refs]
+    named = [c for c in shot.get("characters", []) if c in refs][:I.MAX_REFS]
+    chars = [refs[c] for c in named]
     qc = {"ok": None, "problems": []}
     png = b""
     for k in range(RETRIES + 1):
         if chars:
-            png = await _edit(http, prompt + " Keep each character's face, body, clothes and colours exactly as in the "
-                                             "reference images.", chars, W, H, seed + k)
+            png = await _edit(http, prompt + ref_note(named, shot.get("characters", [])), chars, W, H, seed + k)
         else:
             png = await _generate(http, prompt, W, H, seed + k)
         qc = await review(http, png, shot, cast_mod.card_lines(cast))
