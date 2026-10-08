@@ -130,7 +130,16 @@ def narration_of(quoted: list[str]) -> list[str]:
     return [q for q in quoted if not any(t and t in _n(q) for t in talk)]
 
 
-def scene_problems(shots: list[dict], quoted: list[str], scene_sec: float, last: str | None = None) -> list[str]:
+def ending(sents: list[str]) -> list[str]:
+    """Bölümün son satır(lar)ı: kitabın son cümlesi; kısaysa (5 kelimeden az) bir öncekiyle birlikte («Çünkü Mert
+    boya kalemleriyle çok tehlikeliymiş. Annem öyle söyledi.» — espri iki cümle)."""
+    if not sents:
+        return []
+    return sents[-2:] if len(sents) > 1 and spec.words(sents[-1]) < 5 else sents[-1:]
+
+
+def scene_problems(shots: list[dict], quoted: list[str], scene_sec: float,
+                   last: str | list[str] | None = None) -> list[str]:
     """Bir sahnenin çekim listesi: kitaptaki konuşmalar kelimesi kelimesine, iç ses oranı, kitabın son cümlesi,
     ekleme sınırı, süre."""
     probs = []
@@ -144,8 +153,9 @@ def scene_problems(shots: list[dict], quoted: list[str], scene_sec: float, last:
     if len(narr) >= 2 and len(kept) < NARR_MIN * len(narr):
         probs.append(f"Anlatım cümlelerinin yalnız {len(kept)}/{len(narr)} tanesi iç seste; en önemlilerinden (geçiş, "
                      "duygu, espri) en az üçte birini anlatıcının ağzından kelimesi kelimesine söylet.")
-    if last and not any(_n(x) in spoken for x in (speech_lines(last) or [last])):
-        probs.append(f"Kitabın son cümlesi bölümün son satırı olmalı, kelimesi kelimesine: «{last}»")
+    for one in ([last] if isinstance(last, str) else last or []):
+        if not any(_n(x) in spoken for x in (speech_lines(one) or [one])):
+            probs.append(f"Kitabın son cümlesi bölümün son satırı olmalı, kelimesi kelimesine: «{one}»")
     probs += [f"Kitaptaki konuşma eksik ya da değişmiş: «{q}»" for q in speech_lines("\n".join(quoted))
               if _n(q) not in spoken]
     added = [ln for ln in lines if ln.get("added")]
@@ -154,6 +164,14 @@ def scene_problems(shots: list[dict], quoted: list[str], scene_sec: float, last:
                      "sessiz tepki çekimi (yüz ifadesi, beden dili) kullan.")
     probs += [f"Eklenen satır en çok {ADDED_WORDS} kelime: «{ln.get('text')}»" for ln in added
               if spec.words(ln.get("text", "")) > ADDED_WORDS]
+    run, worst = 1, (1, None)
+    for i in range(1, len(shots)):
+        run = run + 1 if shots[i].get("framing") == shots[i - 1].get("framing") else 1
+        if run > worst[0]:
+            worst = (run, shots[i].get("framing"))
+    if worst[0] > 2:
+        probs.append(f"Aynı çekim türü ({worst[1]}) üst üste {worst[0]} kez; en çok iki kez üst üste (geniş, yakın, "
+                     "omuz üstü, tepki, kuş bakışı… değiştir).")
     long = [i for i, s in enumerate(shots, 1) if float(s.get("seconds") or 0) > SHOT_MAX + 1]
     if long:
         probs.append(f"{', '.join(map(str, long))}. çekim {SHOT_MAX:.0f} sn'den uzun: böl (genel plan + yakın + tepki); "
@@ -326,15 +344,15 @@ async def write(d: Path, f: Path, by: str, target: int, progress=lambda n, t, w=
                                 setting_en=bs[0]["setting_en"], time=bs[0]["time"],
                                 scene_sec=f"{sum(float(b['seconds']) for b in bs):.0f}", beats=btxt,
                                 dialogue="\n".join(f"- {q}" for q in dialog), cast=cast_names, narrator=narrator,
-                                narration_hint=(f"Kitabın son cümlesi («{sents[-1]}») bu sahnenin SON satırıdır."
-                                                if k == len(scenes_no) else ""),
+                                narration_hint=("Kitabın son cümleleri («" + " ".join(ending(sents)) + "») bu sahnenin SON "
+                                                 "satırıdır, kelimesi kelimesine." if k == len(scenes_no) else ""),
                                 **{k2: base[k2] for k2 in ("title", "kind", "style")})
             shots = out.get("shots", [])
             for sh_ in shots:                     # «Levent (Anlatıcı)» → «Levent»: konuşan oyuncu adıdır
                 for ln in sh_.get("lines", []):
                     ln["speaker"] = re.sub(r"\s*\(.*?\)\s*$", "", ln.get("speaker", "")).strip() or narrator
             probs = scene_problems(shots, quoted, sum(float(b["seconds"]) for b in bs),
-                                   sents[-1] if k == len(scenes_no) else None)
+                                   ending(sents) if k == len(scenes_no) else None)
             if not probs and not spec.shape_errors(out, SCENE_SCHEMA):
                 break
             fb = "Önceki denemendeki sorunlar (hepsini düzelt):\n" + "\n".join(f"- {p}" for p in probs)

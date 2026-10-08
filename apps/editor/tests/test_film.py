@@ -887,7 +887,8 @@ def test_adapt_write_two_passes(monkeypatch, tmp_path):
                 {"scene": 1, "setting": "oda", "setting_en": "room", "time": "gunduz", "purpose": "kapanis", "summary": "s",
                  "sentences": list(range(1, n + 1)), "seconds": 13}]}
         L = lambda who, t, add=False: {"speaker": who, "text": t, "emotion": "neseli", "added": add}  # noqa: E731
-        S = lambda lines: {"seconds": 3, "framing": "yakin", "move": "sabit", "characters": ["Levent"], "action": "a",  # noqa: E731
+        fr = iter(["genel", "yakin", "omuz-ustu", "yakin", "genel"])
+        S = lambda lines: {"seconds": 3, "framing": next(fr), "move": "sabit", "characters": ["Levent"], "action": "a",  # noqa: E731
                            "action_en": "a", "quote": "Hediyemi hemen açtım.", "lines": lines, "sfx": [], "ambience": "",
                            "beat": 1}
         return {"shots": [S([L("Levent", "Hediyemi hemen açtım.")]), S([L("Anne", "Ressam olacak benim oğlum.")]),
@@ -958,3 +959,11 @@ def test_adapt_backmatter_spelling_and_narrator_alias():
     assert adapt.restore_book_spelling(sc, book) == 1
     ln = sc["scenes"][0]["shots"][0]["lines"][0]
     assert ln == {"speaker": "Levent", "text": "Hediyemi hemen açtım."}
+
+
+def test_adapt_ending_and_framing_run():
+    from editor.production.film import adapt
+    assert adapt.ending(["Mert çok tehlikeliymiş.", "Annem öyle söyledi."]) == ["Mert çok tehlikeliymiş.", "Annem öyle söyledi."]
+    assert adapt.ending(["A b c.", "Sonunda herkes çok mutlu oldu."]) == ["Sonunda herkes çok mutlu oldu."]
+    sh = [{"seconds": 3, "framing": "omuz-ustu", "lines": []} for _ in range(3)]
+    assert any("üst üste 3" in p for p in adapt.scene_problems(sh, [], 9))
