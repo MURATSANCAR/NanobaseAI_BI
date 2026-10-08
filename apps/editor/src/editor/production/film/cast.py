@@ -115,6 +115,13 @@ def voice_of(rec: dict, speaker: str) -> str:
     return rec["narrator"]
 
 
-def card_lines(rec: dict) -> dict[str, str]:
-    """Oyuncu → istem satırı (İngilizce görünüş)."""
-    return {m["name"]: f"{m['name']}: {m['look_en'].rstrip('.')}." for m in rec["members"] if m.get("look_en")}
+_DRAWING = re.compile(r"\s*(?:Drawing|Art|Illustration)\s+style:[^.]*(?:\.|$)", re.I)
+
+
+def card_lines(rec: dict, style: str | None = None) -> dict[str, str]:
+    """Oyuncu → istem satırı (İngilizce görünüş). Film 2B değilse kartın kitaptan gelen çizim tarzı cümlesi düşer:
+    3B filmde «thick black ink outlines» karakterleri 2B çizdiriyordu (2026-10-08)."""
+    def look(m: dict) -> str:
+        t = m["look_en"]
+        return _DRAWING.sub("", t).strip() if style and style != "2b" else t
+    return {m["name"]: f"{m['name']}: {look(m).rstrip('.')}." for m in rec["members"] if m.get("look_en")}

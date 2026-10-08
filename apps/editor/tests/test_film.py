@@ -731,7 +731,7 @@ def test_is_speech_tells_dialogue_from_first_person_narration():
     assert shoot.is_speech("Mert, bu yüzünün hâli ne?", book) is True   # tire düşmüş, «diye sordu» kalmış
     shot = {"framing": "yakin", "characters": ["Levent"]}
     narr = [{"speaker": "Levent", "text": "Hediyemi hemen açtım."}]
-    assert shoot.mode_of(shot, narr, book) == "i2v"
+    assert shoot.mode_of(shot, narr, book) == "s2v-sessiz"
     assert shoot.mode_of(shot, [{"speaker": "Levent", "text": "Sen kendin yap."}], book) == "s2v"
     wide = {"framing": "genel", "characters": ["Anne", "Mert"]}
     assert shoot.mode_of(wide, [{"speaker": "Anne", "text": "Mert, bu yüzünün hâli ne?"}], book) == "s2v"
@@ -767,3 +767,23 @@ def test_voiced_shot_does_not_wait_after_the_line():
     assert spec.fit_seconds(4, [3.16]) == 4                                    # senaryo payı küçükse o
     assert spec.fit_seconds(8, [0.6]) == spec.MIN_VOICED or spec.fit_seconds(8, [0.6]) == round(0.6 + spec.SHOT_TAIL + spec.ACTION_PAD, 2)
     assert spec.fit_seconds(8, []) == 8                                        # sessiz çekim senaryonun süresi
+
+
+def test_set_reference_comes_first(tmp_path):
+    from editor.production.film import frames as fr
+    (tmp_path / "kare").mkdir()
+    (tmp_path / "kare" / "set-oda.png").write_bytes(b"x")
+    store.write(tmp_path, "setler.json", {"levent'in odası": "set-oda.png"})
+    assert fr.set_of(tmp_path, {"setting": "Levent'in odası "}) == str(tmp_path / "kare" / "set-oda.png")
+    assert fr.set_of(tmp_path, {"setting": "Mutfak"}) is None
+    n = fr.ref_note(["Levent"], ["Levent"], with_set=True)
+    assert "reference image 1 shows the location" in n and "reference image 2 shows Levent" in n
+
+
+def test_card_lines_drop_book_drawing_style_for_3d():
+    rec = {"members": [{"name": "Levent", "look_en": "A boy with orange hair. Drawing style: thick black ink outlines, "
+                                                     "watercolour fills. He wears a yellow sweater."}]}
+    assert "ink outlines" in cast_mod.card_lines(rec)["Levent"]
+    assert "ink outlines" in cast_mod.card_lines(rec, "2b")["Levent"]
+    three = cast_mod.card_lines(rec, "3b")["Levent"]
+    assert "ink outlines" not in three and "yellow sweater" in three and "orange hair" in three

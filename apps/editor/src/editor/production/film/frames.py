@@ -146,10 +146,23 @@ async def _char_refs(http, f: Path, cast: dict, style: str, W: int) -> dict[str,
     return out
 
 
-def ref_note(named: list[str], everyone: list[str]) -> str:
+def set_of(f: Path, shot: dict) -> str | None:
+    """Çekimin mekân seti (onaylı 3B/çizim set görseli): film klasöründeki `setler.json` {sahne yeri (küçük harf): dosya}.
+    Aynı oda çekimden çekime aynı kalsın diye ilk referans olur (2026-10-08, 3B pilot)."""
+    sets = store.read(f, "setler.json") or {}
+    name = sets.get((shot.get("setting") or "").strip().casefold())
+    p = f / "kare" / name if name else None
+    return str(p) if p and p.is_file() else None
+
+
+def ref_note(named: list[str], everyone: list[str], with_set: bool = False) -> str:
     """Referans görsellerin sırası adıyla ve karedeki kişi sayısı. Birden çok karakterli karede model saçı/giysiyi
-    karakterler arasında karıştırıyor ve aynı karakteri iki kez çiziyordu (2026-10-08: 8 karede)."""
-    order = "; ".join(f"reference image {i} shows {n}" for i, n in enumerate(named, 1))
+    karakterler arasında karıştırıyor ve aynı karakteri iki kez çiziyordu (2026-10-08: 8 karede). `with_set`: ilk
+    referans mekân seti."""
+    off = 2 if with_set else 1
+    room = ("reference image 1 shows the location (an empty film set): keep its architecture, furniture, colours and "
+            "lighting, choose the camera angle the shot asks for; ") if with_set else ""
+    order = room + "; ".join(f"reference image {i} shows {n}" for i, n in enumerate(named, off))
     people = ", ".join(everyone)
     return (f" Reference images, in order: {order}. Draw each character exactly like their OWN reference image (face, "
             f"hair colour and style, clothes, colours, size); never swap hair or clothes between characters. The picture "
@@ -161,13 +174,14 @@ async def render(f: Path, shot: dict, cast: dict, refs: dict[str, str], style: s
                  direction: str = "", http=None) -> tuple[bytes, str]:
     """Tek aday kare (denetimsiz). Karakter kartı varsa kartlarla düzenleme, yoksa düz üretim."""
     W, H = spec.FORMATS[store.meta(f)["format"]]["gen"]
-    prompt = spec.shot_prompt(shot, style, cast_mod.card_lines(cast))
+    prompt = spec.shot_prompt(shot, style, cast_mod.card_lines(cast, style))
     if direction.strip():
         prompt += f" Editor's direction (follow it): {direction.strip()}."
-    named = [c for c in shot.get("characters", []) if c in refs][:I.MAX_REFS]
-    if named:
-        png = await _edit(http, prompt + ref_note(named, shot.get("characters", [])), [refs[c] for c in named],
-                          W, H, seed)
+    room = set_of(f, shot)
+    named = [c for c in shot.get("characters", []) if c in refs][:I.MAX_REFS - (1 if room else 0)]
+    if named or room:
+        png = await _edit(http, prompt + ref_note(named, shot.get("characters", []), bool(room)),
+                          ([room] if room else []) + [refs[c] for c in named], W, H, seed)
     else:
         png = await _generate(http, prompt, W, H, seed)
     return png, prompt
@@ -179,7 +193,7 @@ async def draw(f: Path, shot: dict, cast: dict, refs: dict[str, str], style: str
     qc, png, prompt = {"ok": None, "problems": []}, b"", ""
     for k in range(RETRIES + 1):
         png, prompt = await render(f, shot, cast, refs, style, seed + k, direction, http)
-        qc = await review(http, png, shot, cast_mod.card_lines(cast))
+        qc = await review(http, png, shot, cast_mod.card_lines(cast, style))
         if qc["ok"] is not False:
             break
     return png, qc, prompt
@@ -220,7 +234,7 @@ async def build(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
                 (kd / name).write_bytes(png)
                 cands.append((name, png, prompt))
             pending.append((s, cur, v0, cands))
-        lines = cast_mod.card_lines(cast)
+        lines = cast_mod.card_lines(cast, m["style"])
         for n, (s, cur, v0, cands) in enumerate(pending, 1):
             progress(n, len(pending), "Kareler denetleniyor")
             qcs = [await review(http, png, s, lines) for _, png, _ in cands]

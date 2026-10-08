@@ -108,12 +108,19 @@ def body_for(f: Path, shot: dict, first: Path, mode: str, seconds: float, W: int
     """`talking`: çekimde gerçek konuşma var mı (is_speech). Yoksa i2v'de ağızlar kapalı (dış ses); birden çok konuşan
     varsa (i2v) konuşanlar doğal konuşur. None: eski davranış (satır varsa ağızlar kapalı değil, ek yok)."""
     body = {"mode": mode, "image": base64.b64encode(first.read_bytes()).decode(),
-            "prompt": spec.shot_prompt(shot, style, {}) + _mouths(mode, lines, talking),
+            "prompt": spec.shot_prompt(shot, style, {}) + _mouths(mode, lines, talking)
+            + (QUIET_MOUTHS if mode == "s2v-sessiz" else ""),
             "negative_prompt": F.NEGATIVE,
             "seconds": seconds, "width": W, "height": H}
     eng = engine_override()
     if eng:
         body["engine"] = eng
+    if mode == "s2v-sessiz":
+        body["mode"] = "s2v"
+        body["audio"] = base64.b64encode(silence(seconds)).decode()
+        refs = char_refs(f, shot, (shot.get("characters") or [None])[0])[:S2V_REFS]
+        if refs:
+            body["refs"] = [base64.b64encode(p.read_bytes()).decode() for p in refs]
     if mode == "s2v":
         body["audio"] = base64.b64encode(talk_track(f, lines, seconds)).decode()
         refs = char_refs(f, shot, next((x["speaker"] for x in lines if x["speaker"].casefold() != spec.NARRATOR),
@@ -126,7 +133,7 @@ def body_for(f: Path, shot: dict, first: Path, mode: str, seconds: float, W: int
 def cast_lines_of(f: Path) -> dict[str, str]:
     from . import cast as cast_mod
     try:
-        return cast_mod.card_lines(cast_mod.load(f))
+        return cast_mod.card_lines(cast_mod.load(f), store.meta(f).get("style"))
     except store.FilmError:
         return {}
 
@@ -166,11 +173,22 @@ def mode_of(shot: dict, lines: list[dict], book: str | None = None) -> str:
     spoken = [x for x in lines if x["speaker"].casefold() != spec.NARRATOR
               and (book is None or is_speech(x["text"], book))]
     speakers = {x["speaker"] for x in spoken}
+    if book is not None and lines and not spoken and shot.get("characters"):
+        return "s2v-sessiz"         # dış ses: ağız sessiz ize bağlanır (istemle «konuşmasın» tutmuyordu, 2026-10-08)
     if len(speakers) != 1:
         return "i2v"
     if book is not None:            # kitaba bakılabiliyorsa: tek konuşan her çekimde ağız sesle eşlenir (kartı ilk referans)
         return "s2v"
     return "s2v" if shot["framing"] in TALK_FRAMINGS and len(shot.get("characters", [])) == 1 else "i2v"
+
+
+def silence(seconds: float) -> bytes:
+    """Dış ses çekiminin ses izi: çekim boyu sessizlik (wav, 24 kHz mono)."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "s.wav"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono", "-t",
+                        f"{seconds:.3f}", str(out)], check=True, timeout=60)
+        return out.read_bytes()
 
 
 def talk_track(f: Path, lines: list[dict], seconds: float) -> bytes:

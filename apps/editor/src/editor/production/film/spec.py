@@ -28,8 +28,11 @@ FORMATS = {
 STYLES = {
     "2b": {"label": "2B çizgi film", "en": "2D hand-drawn animation, clean bold outlines, flat cel shading, vivid "
                                             "harmonious colours, expressive faces"},
-    "3b": {"label": "3B animasyon", "en": "stylised 3D animated feature film look, soft global illumination, "
-                                          "appealing rounded character design"},
+    "3b": {"label": "3B animasyon", "en": "high-end 3D animated family feature film, cinematic CGI, soft global "
+                                          "illumination, subsurface skin, detailed hair and fabric, richly detailed "
+                                          "lived-in set, cinematic lighting and depth of field, appealing rounded "
+                                          "character design; fully 3D-rendered characters, no outlines, no 2D "
+                                          "drawing or cel shading"},
     "suluboya": {"label": "Suluboya", "en": "animated watercolour storybook, soft paper texture, gentle washes"},
     "gercekci": {"label": "Gerçekçi", "en": "cinematic live-action film look, natural light, shallow depth of field, "
                                                 "film grain"},
