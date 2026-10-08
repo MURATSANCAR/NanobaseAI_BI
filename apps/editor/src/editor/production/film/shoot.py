@@ -173,8 +173,10 @@ def mode_of(shot: dict, lines: list[dict], book: str | None = None) -> str:
     spoken = [x for x in lines if x["speaker"].casefold() != spec.NARRATOR
               and (book is None or is_speech(x["text"], book))]
     speakers = {x["speaker"] for x in spoken}
-    if book is not None and lines and not spoken and shot.get("characters"):
-        return "s2v-sessiz"         # dış ses: ağız sessiz ize bağlanır (istemle «konuşmasın» tutmuyordu, 2026-10-08)
+    if book is not None and lines and not spoken and shot.get("characters") and shot["framing"] in TALK_FRAMINGS:
+        # dış ses, yüz büyük görünüyor: ağız sessiz ize bağlanır (istemle «konuşmasın» tutmuyordu, 2026-10-08). Bu kip
+        # ~3 kat yavaş ve ilk kareden biraz kayıyor; geniş planda ağız seçilmediği için normal kip (istemle sessiz)
+        return "s2v-sessiz"
     if len(speakers) != 1:
         return "i2v"
     if book is not None:            # kitaba bakılabiliyorsa: tek konuşan her çekimde ağız sesle eşlenir (kartı ilk referans)

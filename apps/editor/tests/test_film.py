@@ -731,7 +731,8 @@ def test_is_speech_tells_dialogue_from_first_person_narration():
     assert shoot.is_speech("Mert, bu yüzünün hâli ne?", book) is True   # tire düşmüş, «diye sordu» kalmış
     shot = {"framing": "yakin", "characters": ["Levent"]}
     narr = [{"speaker": "Levent", "text": "Hediyemi hemen açtım."}]
-    assert shoot.mode_of(shot, narr, book) == "s2v-sessiz"
+    assert shoot.mode_of(shot, narr, book) == "s2v-sessiz"                  # yakın plan
+    assert shoot.mode_of({**shot, "framing": "genel"}, narr, book) == "i2v"   # geniş plan
     assert shoot.mode_of(shot, [{"speaker": "Levent", "text": "Sen kendin yap."}], book) == "s2v"
     wide = {"framing": "genel", "characters": ["Anne", "Mert"]}
     assert shoot.mode_of(wide, [{"speaker": "Anne", "text": "Mert, bu yüzünün hâli ne?"}], book) == "s2v"
