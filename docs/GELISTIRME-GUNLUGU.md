@@ -49,6 +49,24 @@
   yazılıyordu ve yalnız tests/connectors/deploy bağlıyordu; `tests/test_film.py` `images/video/plan.py`'yi
   yükleyemediği için toplanamıyordu (imaj `images/` taşımaz).
 
+## 2026-10-08/09 — Çizgi film: 3B sinema, uyarlama kipi, dudak senkronu, foley, jenerik
+
+- **Ne:** Levent pilotu «gerçek çizgi film» hedefiyle yeniden kuruldu. (1) 3B sinema üslubu: kitap kartlarından 3B
+  karakter kartları, mekân setleri (`setler.json`, ilk referans), 2B dışı filmde kartın kitap çizim tarzı cümlesi
+  düşer. (2) Uyarlama kipi `film/adapt.py`: olay örgüsü (her kitap cümlesi sırayla bir beat'e) + sahne sahne çekim;
+  kitaptaki konuşmalar kelimesi kelimesine, iç ses dengesi (anlatımın 1/4–3/5'i), kanca/isim/kapanış, çekim 1,5–6 sn,
+  aynı çerçeve en çok iki, eklenti sınırı; etkinlik/soru bölümü hikâyeden ayrılır; ad yazımı ve Türkçe harf
+  kitaptan düzeltilir. 7 dk hedefte 110 çekim. (3) Çekim: video kart 0 (+ `book-video-2` kart 1), bütün çekimler
+  hızlı i2v (`EDITOR_FILM_LIPSYNC=1`), tur sonunda denetim, tek çekim hatası durdurmaz. (4) Dudak senkronu
+  `film/lipsync.py` + `images/lipsync` (InfiniteTalk V2V, toplu kip): karedeki konuşan sesine, öbür kişi sessizliğe;
+  «tam» kip (yama kipi hayalet bırakıyordu). (5) Foley `images/foley` (HunyuanVideo-Foley) + Demucs ile insan sesi
+  ayıklama; kurguda arşiv efektinin yerine. (6) Açılış/kapanış jeneriği `film/titles.py` (tema şarkısı, logo, kayan
+  isimler; model adı yok). (7) Konuşmalı çekimin süresi sesten (ölü bekleme kalktı); öpücük yanaktan kuralı.
+- **Neden:** kullanıcı geri bildirimi: ağız-ses uyumsuz, anlatım sırasında ağızlar oynuyor, efektler senkron değil,
+  cümleden sonra boş bekleme, «sesli kitap gibi», TV çizgi filmi kalitesi isteniyor.
+- **Açık:** v2 bölümü (film f_45e9c6d9) üretimde; Lyra 2.0 mekân seti ağırlıkları indi (entegrasyon planı
+  `apps/editor/docs/analiz/lyra-mekan-seti.md`), LTX Dub-It ve Gemma için HF anahtarı bekliyor.
+
 ## 2026-10-08 — Çizgi film pilotu: kareler düzeltildi, video/müzik servisi açıldı, çekim iki kartta
 
 - **Ne:** Levent pilotunda (16 sayfa, 35 çekim, 213 sn ses) 35 ilk kare kartlara uygun hale getirildi; replikler
