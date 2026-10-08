@@ -143,8 +143,11 @@ def alfa_maskesi(w: int, h: int, bolge: tuple[int, int, int, int], kutular: list
 # ----------------------------------------------------------------------------- ana akış
 def argumanlar() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Tek çekim dudak senkronu (InfiniteTalk V2V)")
-    p.add_argument("--video", required=True, help="girdi çekim (mp4)")
-    p.add_argument("--cikti", required=True, help="çıktı mp4")
+    p.add_argument("--video", help="girdi çekim (mp4)")
+    p.add_argument("--cikti", help="çıktı mp4")
+    p.add_argument("--isler", default=None,
+                   help="toplu iş: JSON [{video, cikti, konusmaci:[WAV@kutu], sessiz_kisi:[kutu], sessiz}]; model bir "
+                        "kez yüklenir (çekim başına 2–3 dk yükleme kalkar); biten (çıktısı var) iş atlanır")
     p.add_argument("--konusmaci", action="append", default=[], metavar="WAV[@x1,y1,x2,y2]",
                    help="konuşan kişi: replik sesi ve (çok kişide şart) kutusu. En çok 2.")
     p.add_argument("--sessiz-kisi", action="append", default=[], metavar="x1,y1,x2,y2",
@@ -183,9 +186,56 @@ def argumanlar() -> argparse.Namespace:
     return p.parse_args()
 
 
+_BORU: dict = {}       # (ağırlık, lora) → InfiniteTalkPipeline; toplu işte yeniden kullanılır
+
+
+def _boru(wan, WAN_CONFIGS, a, agirlik, lora):
+    key = (agirlik, lora)
+    if key not in _BORU:
+        for k in list(_BORU):                      # tek kartta iki boru sığmaz (14B ×2): öncekini bırak
+            del _BORU[k]
+        import torch
+        torch.cuda.empty_cache()
+        _BORU[key] = wan.InfiniteTalkPipeline(
+            config=WAN_CONFIGS["infinitetalk-14B"], checkpoint_dir=a.wan, quant_dir=None, device_id=0, rank=0,
+            t5_fsdp=False, dit_fsdp=False, use_usp=False, t5_cpu=False,
+            lora_dir=[lora] if lora else None, lora_scales=[a.lora_olcek] if lora else None,
+            quant=None, dit_path=None, infinitetalk_dir=agirlik)
+        if a.dusuk_bellek:
+            _BORU[key].vram_management = True
+            _BORU[key].enable_vram_management(num_persistent_param_in_dit=0)
+    return _BORU[key]
+
+
 def main() -> int:
     a = argumanlar()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s dub %(message)s", stream=sys.stderr)
+    if not a.isler:
+        if not (a.video and a.cikti):
+            raise SystemExit("--video ve --cikti (ya da --isler) gerekli")
+        return isle(a)
+    isler = json.load(open(a.isler))
+    # ağırlığa göre sırala: tek kişili işler önce, iki kişili sonra (boru bir kez değişir)
+    isler.sort(key=lambda j: len(j.get("konusmaci", [])) + len(j.get("sessiz_kisi", [])) >= 2)
+    hata = 0
+    for n, j in enumerate(isler, 1):
+        if os.path.exists(j["cikti"]):
+            continue
+        b = SimpleNamespace(**vars(a))
+        b.video, b.cikti = j["video"], j["cikti"]
+        b.konusmaci, b.sessiz_kisi, b.sessiz = j.get("konusmaci", []), j.get("sessiz_kisi", []), bool(j.get("sessiz"))
+        b.is_dizini, b.isler = None, None
+        log.info("iş %d/%d %s", n, len(isler), b.video)
+        try:
+            isle(b)
+        except BaseException as e:  # noqa: BLE001 - bir çekimin hatası ötekileri durdurmaz
+            hata += 1
+            print(json.dumps({"hata": f"{type(e).__name__}: {e}"[:400], "video": b.video}, ensure_ascii=False),
+                  flush=True)
+    return 1 if hata == len(isler) and isler else 0
+
+
+def isle(a) -> int:
     t0 = time.time()
 
     meta = ffprobe(a.video)
@@ -302,14 +352,7 @@ def main() -> int:
             girdi["bbox"] = {f"person{i}": [k[1][1], k[1][0], k[1][3], k[1][2]] for i, k in enumerate(kisiler, 1)}
 
         t1 = time.time()
-        boru = wan.InfiniteTalkPipeline(
-            config=WAN_CONFIGS["infinitetalk-14B"], checkpoint_dir=a.wan, quant_dir=None, device_id=0, rank=0,
-            t5_fsdp=False, dit_fsdp=False, use_usp=False, t5_cpu=False,
-            lora_dir=[lora] if lora else None, lora_scales=[a.lora_olcek] if lora else None,
-            quant=None, dit_path=None, infinitetalk_dir=agirlik)
-        if a.dusuk_bellek:
-            boru.vram_management = True
-            boru.enable_vram_management(num_persistent_param_in_dit=0)
+        boru = _boru(wan, WAN_CONFIGS, a, agirlik, lora)
         t2 = time.time()
         ek = SimpleNamespace(use_teacache=a.teacache, teacache_thresh=a.teacache_esik, size=kova, use_apg=a.apg,
                              apg_momentum=-0.75, apg_norm_threshold=55)
@@ -321,7 +364,7 @@ def main() -> int:
         tepe_gb = torch.cuda.max_memory_allocated() / 1e9
         uretim = ((video.float().clamp(-1, 1) + 1) * 127.5).round().to(torch.uint8)  # C T h w
         uretim = uretim.permute(1, 2, 3, 0).cpu().numpy()                             # T h w C
-        del video, boru
+        del video
         torch.cuda.empty_cache()
         if len(uretim) < T25:
             log.warning("üretim %d kare < beklenen %d: son kare tekrarlanır", len(uretim), T25)
@@ -382,7 +425,7 @@ def main() -> int:
         ozet = {**plan, "cikti": a.cikti, "cikti_boyut": f"{cikti['w']}x{cikti['h']}", "cikti_fps": cikti["fps_str"],
                 "uretim_boyut": f"{tw}x{th}", "uretim_bolgesi": bolge, "tepe_gpu_gb": round(tepe_gb, 1),
                 "sn_yukleme": round(t2 - t1, 1), "sn_uretim": round(t3 - t2, 1), "sn_toplam": round(time.time() - t0, 1)}
-        print(json.dumps(ozet, ensure_ascii=False))
+        print(json.dumps(ozet, ensure_ascii=False), flush=True)
         return 0
     finally:
         if not a.is_dizini:
