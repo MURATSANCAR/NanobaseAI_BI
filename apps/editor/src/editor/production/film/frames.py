@@ -26,8 +26,15 @@ VISION = "book-vision-fast"
 RETRIES = 2
 NEGATIVE = ("text, letters, subtitles, watermark, logo, blurry, low quality, deformed hands, extra fingers, "
             "extra limbs, distorted face, duplicate character")
-QC_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["ok", "problems"],
-             "properties": {"ok": {"type": "boolean"}, "problems": {"type": "array", "items": {"type": "string"}}}}
+QC_SCHEMA = {"type": "object", "additionalProperties": False,
+             "required": ["has_text", "deformed", "characters", "extra_copy", "action_shown"],
+             "properties": {"has_text": {"type": "boolean"}, "deformed": {"type": "boolean"},
+                            "characters": {"type": "array", "items": {
+                                "type": "object", "additionalProperties": False,
+                                "required": ["name", "present", "matches"],
+                                "properties": {"name": {"type": "string"}, "present": {"type": "boolean"},
+                                               "matches": {"type": "boolean"}}}},
+                            "extra_copy": {"type": "boolean"}, "action_shown": {"type": "boolean"}}}
 
 
 def _gateway() -> tuple[str, dict]:
@@ -71,15 +78,43 @@ def _jpeg(png: bytes, side: int = 1280) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
-async def review(http, png: bytes, shot: dict) -> dict:
-    """Görsel denetçi. Ulaşılamazsa {"ok": None}: kare kullanılır, ekranda «denetlenemedi»."""
+def qc_result(out: dict, expected: list[str]) -> dict:
+    """Denetçinin evet/hayır cevaplarından karar ve Türkçe sorun listesi (karar modelde değil, burada; model
+    «problems» alanına temiz denetimleri de yazıyordu, 2026-10-07: 35 karenin 30'u boşuna «geçmedi»)."""
+    probs = []
+    if out.get("has_text"):
+        probs.append("Karede yazı, harf ya da rakam var.")
+    if out.get("deformed"):
+        probs.append("El, yüz ya da beden bozuk.")
+    if out.get("extra_copy"):
+        probs.append("Bir karakter karede iki kez çizilmiş.")
+    seen = {(c.get("name") or "").casefold(): c for c in out.get("characters", [])}
+    for name in expected:
+        c = seen.get(name.casefold())
+        if c is None or not c.get("present"):
+            probs.append(f"{name} karede yok.")
+        elif not c.get("matches"):
+            probs.append(f"{name} karakter kartındaki gibi değil (saç, giysi ya da yaş).")
+    if out.get("action_shown") is False:
+        probs.append("Kare, çekimin tarif ettiği anı göstermiyor.")
+    return {"ok": not probs, "problems": probs}
+
+
+async def review(http, png: bytes, shot: dict, cast_lines: dict[str, str] | None = None) -> dict:
+    """Görsel denetçi: her denetim ayrı evet/hayır, her beklenen karakter için «var mı, kartına uyuyor mu»; karar
+    `qc_result`'ta. Ulaşılamazsa {"ok": None}: kare kullanılır, ekranda «denetlenemedi»."""
     url, hd = _gateway()
-    n = len(shot.get("characters", []))
-    ask = ("You check one frame of an animated film before it is animated. Answer ok=false if ANY of these is true: "
-           "there is visible text, letters, numbers or a watermark; a hand, face or body is deformed or has extra "
-           f"parts; the number of main characters is clearly not {n}; the picture clearly does not show this action: "
-           f"\"{shot['action_en']}\". List each problem briefly in Turkish. Otherwise ok=true and no problems.")
-    body = {"model": VISION, "max_tokens": 300, "temperature": 0.0, "chat_template_kwargs": {"enable_thinking": False},
+    expected = list(shot.get("characters", []))
+    who = "\n".join(f"- {cast_lines[c]}" if cast_lines and c in cast_lines else f"- {c}" for c in expected) or "- (none)"
+    ask = ("You check one frame of an animated film before it is animated. Answer each question about THIS image:\n"
+           "has_text: is any text, letter, number or watermark visible?\n"
+           "deformed: is any hand, face or body clearly deformed or with extra parts?\n"
+           f"characters: for EACH of these expected characters give name, present (is this character in the picture?) "
+           f"and matches (do hair colour, clothes and apparent age match the description?):\n{who}\n"
+           "extra_copy: does any of these characters appear twice, or is there an extra person who looks like one of "
+           "them?\n"
+           f"action_shown: does the picture show this moment: \"{shot['action_en']}\"?")
+    body = {"model": VISION, "max_tokens": 400, "temperature": 0.0, "chat_template_kwargs": {"enable_thinking": False},
             "response_format": {"type": "json_schema", "json_schema": {"name": "qc", "schema": QC_SCHEMA,
                                                                         "strict": True}},
             "messages": [{"role": "user", "content": [
@@ -88,10 +123,9 @@ async def review(http, png: bytes, shot: dict) -> dict:
     try:
         r = await http.post(f"{url}/v1/chat/completions", json=body, headers=hd, timeout=600)
         r.raise_for_status()
-        return json.loads(r.json()["choices"][0]["message"]["content"])
+        return qc_result(json.loads(r.json()["choices"][0]["message"]["content"]), expected)
     except Exception:  # noqa: BLE001
         return {"ok": None, "problems": []}
-
 
 async def _char_refs(http, f: Path, cast: dict, style: str, W: int) -> dict[str, str]:
     """Kartı olmayan oyuncuya bir kez referans çizer (düz zemin, tam boy)."""
@@ -126,7 +160,7 @@ async def draw(f: Path, shot: dict, cast: dict, refs: dict[str, str], style: str
                                              "reference images.", chars, W, H, seed + k)
         else:
             png = await _generate(http, prompt, W, H, seed + k)
-        qc = await review(http, png, shot)
+        qc = await review(http, png, shot, cast_mod.card_lines(cast))
         if qc["ok"] is not False:
             break
     return png, qc, prompt

@@ -626,3 +626,13 @@ def test_book_cast_consolidate_drops_misnamed_detections():
     g = bc.consolidate(found)
     assert [p["page"] for p in g["Levent"]] == [5, 3]           # yanlış adlandırılan (sarı saç, yeşil kazak) elendi
     assert [p["page"] for p in g["Mert"]] == [3]
+
+
+def test_qc_decision_is_made_in_code_from_yes_no_answers():
+    from editor.production.film import frames as fr
+    clean = {"has_text": False, "deformed": False, "extra_copy": False, "action_shown": True,
+             "characters": [{"name": "Levent", "present": True, "matches": True}]}
+    assert fr.qc_result(clean, ["Levent"]) == {"ok": True, "problems": []}
+    bad = {**clean, "extra_copy": True, "characters": [{"name": "levent", "present": True, "matches": False}]}
+    r = fr.qc_result(bad, ["Levent", "Mert"])
+    assert r["ok"] is False and len(r["problems"]) == 3     # kopya, Levent uymuyor, Mert yok
