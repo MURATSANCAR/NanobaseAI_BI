@@ -152,7 +152,8 @@ PINNED: dict[str, dict] = {
     "fragman-anlatici": _p("fragman-anlatici", FILM_TEXT, "63a913e9af90e134cfccc4b5577c114a7aaba12357ef0f1af3334da8bcaa59e7"),  # tohum 11
     # Çizgi film çocuk sesleri (2026-10-08, ana oturum ölçümle seçti — kullanıcı «sen seç»): perde + formant
     # dönüşümlü referans, tam klon; yöntem CHILD_VOICES[*].method, ölçüm docs/analiz/sesli-okuma-cocuk-sesleri.md.
-    "cocuk-erkek": _p("cocuk-erkek", READER_TEXT, "14c66310d7d561ae7e2359bfb2d683cdaee334dbcc9d89819b0683d6bd9534f6"),
+    # 2026-10-08 kullanıcı seçimi (Levent pilotu, 5 adaydan 5.): daha pes (f0 ~273 Hz) ve oğlansı; eskisi ~310 Hz kızımsıydı
+    "cocuk-erkek": _p("cocuk-erkek", CHILD_TEXT, "8506f09140976029f03528dbf613bd0b3f725ef64d558c2872981f7ea715729e"),
     "cocuk-kiz": _p("cocuk-kiz", CHILD_TEXT, "aed6240f456e900de6c8a1cef111a92a4087c2bdefa4a11ffb2d1ddb5940cf3a"),
     "kucuk-erkek": _p("kucuk-erkek", CHILD_TEXT, "4afba5879027735174b8ce831169ad90fa574741fadf33f75da082aa07c6e54a"),
     "kucuk-kiz": _p("kucuk-kiz", CHILD_TEXT, "ff164e52bb9fa1020c713ca930eed64c73b0c2b58ecb57dcb4dfa941503db41f"),
@@ -180,9 +181,9 @@ def _m(kaynak: str, yol: str, formant: float, perde: int, aralik: float, metin: 
 
 
 CHILD_VOICES: list[dict] = [
-    _c("cocuk-erkek", "Erkek çocuk · 7–10 yaş", "ilkokul çağı, doğal",
+    _c("cocuk-erkek", "Erkek çocuk · 9–12 yaş", "ilkokul çağı, doğal",
        "A ten-year-old boy with a natural child's voice, not squeaky, speaking calmly and clearly at a moderate pace",
-       _m("genc-kadin", "world", 1.30, 290, 1.2, "READER_TEXT")),
+       _m("masal-anne", "world", 1.30, 270, 1.2, "CHILD_TEXT")),
     _c("cocuk-kiz", "Kız çocuk · 7–10 yaş", "ilkokul çağı, doğal",
        "A primary school girl, about eight years old, speaking slowly and clearly to her mother, gentle and sincere",
        _m("1. yöntem cocuk-kiz-2 (tarif g, tohum 131)", "world", 1.30, 290, 1.2, "CHILD_TEXT")),
