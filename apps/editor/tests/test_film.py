@@ -721,7 +721,8 @@ def test_pick_sounds_skips_silence_music_and_weak_matches(monkeypatch):
     assert asked == ["bağırma sesi"]
 
 
-def test_is_speech_tells_dialogue_from_first_person_narration():
+def test_is_speech_tells_dialogue_from_first_person_narration(monkeypatch):
+    monkeypatch.setattr(shoot, "LIPSYNC_AFTER", False)
     book = ("Hediyemi hemen açtım. Paketin içinden boya kalemleri çıktı.\nAnnem:\n- Ressam olacak benim oğlum, "
             "diyordu.\n«Sen kendin yap.» desem de fayda etmiyordu.\nMert, bu yüzünün hâli ne, diye sordu.")
     assert shoot.is_speech("Hediyemi hemen açtım.", book) is False
@@ -745,7 +746,8 @@ def test_kiss_is_on_the_cheek():
     assert spec.KISS_RULE not in spec.shot_prompt(shot, next(iter(spec.STYLES)), {})
 
 
-def test_mouth_hint_by_speech():
+def test_mouth_hint_by_speech(monkeypatch):
+    monkeypatch.setattr(shoot, "LIPSYNC_AFTER", False)
     assert shoot._mouths("i2v", [{"speaker": "Levent"}], False) == shoot.QUIET_MOUTHS
     assert shoot._mouths("i2v", [{"speaker": "Anne"}, {"speaker": "Mert"}], True) == shoot.TALKING
     assert shoot._mouths("s2v", [{"speaker": "Anne"}], True) == ""
@@ -788,3 +790,10 @@ def test_card_lines_drop_book_drawing_style_for_3d():
     assert "ink outlines" in cast_mod.card_lines(rec, "2b")["Levent"]
     three = cast_mod.card_lines(rec, "3b")["Levent"]
     assert "ink outlines" not in three and "yellow sweater" in three and "orange hair" in three
+
+
+def test_lipsync_after_shoots_everything_fast(monkeypatch):
+    monkeypatch.setattr(shoot, "LIPSYNC_AFTER", True)
+    shot = {"framing": "yakin", "characters": ["Levent"]}
+    assert shoot.mode_of(shot, [{"speaker": "Levent", "text": "Sen kendin yap."}], "«Sen kendin yap.»") == "i2v"
+    assert shoot._mouths("i2v", [{"speaker": "Levent"}], False) == ""

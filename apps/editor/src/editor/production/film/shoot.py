@@ -150,7 +150,7 @@ TALKING = " The characters who speak move their mouths naturally while talking; 
 
 
 def _mouths(mode: str, lines: list[dict], talking: bool | None) -> str:
-    if mode != "i2v" or not lines or talking is None:
+    if mode != "i2v" or not lines or talking is None or LIPSYNC_AFTER:
         return ""
     return TALKING if talking else QUIET_MOUTHS
 
@@ -169,7 +169,15 @@ def is_speech(text: str, book: str) -> bool:
     return (j >= 0 and book[j] in _SPEECH_MARKS) or bool(_SAID.match(book[i:]))
 
 
+LIPSYNC_AFTER = os.environ.get("EDITOR_FILM_LIPSYNC", "1") == "1"
+
+
 def mode_of(shot: dict, lines: list[dict], book: str | None = None) -> str:
+    """Çekim kipi. Dudak senkronu çekimden sonra yapılıyorsa (LIPSYNC_AFTER, 2026-10-08) her çekim hızlı ve ilk kareye
+    sadık i2v: konuşanın ağzı sesle, konuşmayanınki sessizlikle sonradan eşlenir (sessiz iz kipi ~3 kat yavaştı,
+    birinci tekil anlatımda kahraman ekrandaysa anlatımı kendisi konuşur)."""
+    if LIPSYNC_AFTER and book is not None:
+        return "i2v"
     spoken = [x for x in lines if x["speaker"].casefold() != spec.NARRATOR
               and (book is None or is_speech(x["text"], book))]
     speakers = {x["speaker"] for x in spoken}
