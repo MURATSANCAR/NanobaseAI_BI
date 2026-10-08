@@ -52,7 +52,8 @@ u.urlretrieve('https://github.com/Dao-AILab/flash-attention/releases/download/v2
 
 # xformers 0.0.32 FA ≤2.8.2 ister; torch 2.8 için 2.8.2 tekeri yok (yalnız torch 2.7). 2.8.3 ile API aynı: denetim kapalı.
 ENV XFORMERS_IGNORE_FLASH_VERSION_CHECK=1
-RUN python -c "import torch, flash_attn, xformers.ops, xfuser.core.distributed, optimum.quanto, decord, librosa, \
+# xfuser.core.distributed içe aktarılırken CUDA sürücüsü arıyor (GPU'suz derlemede düşer): yalnız paket bulunuyor mu
+RUN python -c "import importlib.util as u; assert u.find_spec('xfuser')" && python -c "import torch, flash_attn, xformers.ops, optimum.quanto, decord, librosa, \
 pyloudnorm, skimage, cv2, easydict, ftfy, loguru, einops, diffusers, transformers, accelerate, soundfile; \
 from diffusers.models.modeling_utils import no_init_weights, ContextManagers; \
 from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2Model; \
