@@ -643,3 +643,10 @@ def test_ref_note_names_references_in_order_and_counts_people():
     n = fr.ref_note(["Levent", "Mert"], ["Levent", "Mert", "Anne"])
     assert "reference image 1 shows Levent; reference image 2 shows Mert" in n
     assert "exactly 3 people (Levent, Mert, Anne)" in n and "no duplicates" in n
+
+
+def test_best_picks_first_pass_else_fewest_problems():
+    from editor.production.film import frames as fr
+    assert fr.best([{"ok": False, "problems": ["a"]}, {"ok": True, "problems": []}, {"ok": None}]) == 1
+    assert fr.best([{"ok": False, "problems": ["a", "b"]}, {"ok": False, "problems": ["c"]}]) == 1
+    assert fr.best([{"ok": None, "problems": []}, {"ok": True, "problems": []}]) == 0

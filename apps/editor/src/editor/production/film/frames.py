@@ -157,25 +157,40 @@ def ref_note(named: list[str], everyone: list[str]) -> str:
             f"them once, no duplicates, no other people.")
 
 
-async def draw(f: Path, shot: dict, cast: dict, refs: dict[str, str], style: str, seed: int,
-               direction: str = "", http=None) -> tuple[bytes, dict, str]:
+async def render(f: Path, shot: dict, cast: dict, refs: dict[str, str], style: str, seed: int,
+                 direction: str = "", http=None) -> tuple[bytes, str]:
+    """Tek aday kare (denetimsiz). Karakter kartı varsa kartlarla düzenleme, yoksa düz üretim."""
     W, H = spec.FORMATS[store.meta(f)["format"]]["gen"]
     prompt = spec.shot_prompt(shot, style, cast_mod.card_lines(cast))
     if direction.strip():
         prompt += f" Editor's direction (follow it): {direction.strip()}."
     named = [c for c in shot.get("characters", []) if c in refs][:I.MAX_REFS]
-    chars = [refs[c] for c in named]
-    qc = {"ok": None, "problems": []}
-    png = b""
+    if named:
+        png = await _edit(http, prompt + ref_note(named, shot.get("characters", [])), [refs[c] for c in named],
+                          W, H, seed)
+    else:
+        png = await _generate(http, prompt, W, H, seed)
+    return png, prompt
+
+
+async def draw(f: Path, shot: dict, cast: dict, refs: dict[str, str], style: str, seed: int,
+               direction: str = "", http=None) -> tuple[bytes, dict, str]:
+    """Tek çekim: çiz, denetle, geçmezse yeni tohumla yeniden (en çok RETRIES). Çok çekimde `build` toplu çalışır."""
+    qc, png, prompt = {"ok": None, "problems": []}, b"", ""
     for k in range(RETRIES + 1):
-        if chars:
-            png = await _edit(http, prompt + ref_note(named, shot.get("characters", [])), chars, W, H, seed + k)
-        else:
-            png = await _generate(http, prompt, W, H, seed + k)
+        png, prompt = await render(f, shot, cast, refs, style, seed + k, direction, http)
         qc = await review(http, png, shot, cast_mod.card_lines(cast))
         if qc["ok"] is not False:
             break
     return png, qc, prompt
+
+
+def best(qcs: list[dict]) -> int:
+    """Adaylardan seçilecek olan: ilk geçen; hiçbiri geçmediyse en az sorunlu (eşitlikte ilk)."""
+    for i, q in enumerate(qcs):
+        if q.get("ok") is not False:
+            return i
+    return min(range(len(qcs)), key=lambda i: len(qcs[i].get("problems", [])))
 
 
 async def build(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, only: list[str] | None = None,
@@ -191,16 +206,28 @@ async def build(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
     shots = [s for s in spec.shots(sc) if not only or s["id"] in only]
     async with httpx.AsyncClient(timeout=httpx.Timeout(1800.0, connect=10.0)) as http:
         refs = await _char_refs(http, f, cast, m["style"], spec.FORMATS[m["format"]]["gen"][0])
+        # Toplu: önce bütün adaylar çizilir, sonra hepsi denetlenir. Çizer ve denetçi aynı kartta sırayla
+        # duruyor; kare başına sıra değiştirmek her seferinde 2–4 dk yükleme demekti (2026-10-08: 9 dk'da 1 kare).
+        pending = []
         for n, s in enumerate(shots, 1):
             progress(n, len(shots), "İlk kareler çiziliyor")
             cur = rec["shots"].setdefault(s["id"], {"versions": [], "selected": None})
-            v = len(cur["versions"]) + 1
-            png, qc, prompt = await draw(f, s, cast, refs, m["style"], 1000 + 37 * n + 101 * v, direction, http)
-            name = f"{s['id']}.v{v}.png"
-            (kd / name).write_bytes(png)
-            cur["versions"].append({"v": v, "file": name, "prompt": prompt, "qc": qc, "by": by, "at": store.now(),
-                                    **({"direction": direction} if direction else {})})
-            cur["selected"] = v
+            v0 = len(cur["versions"]) + 1
+            cands = []
+            for k in range(RETRIES + 1):
+                png, prompt = await render(f, s, cast, refs, m["style"], 1000 + 37 * n + 101 * v0 + k, direction, http)
+                name = f"{s['id']}.v{v0 + k}.png"
+                (kd / name).write_bytes(png)
+                cands.append((name, png, prompt))
+            pending.append((s, cur, v0, cands))
+        lines = cast_mod.card_lines(cast)
+        for n, (s, cur, v0, cands) in enumerate(pending, 1):
+            progress(n, len(pending), "Kareler denetleniyor")
+            qcs = [await review(http, png, s, lines) for _, png, _ in cands]
+            for k, ((name, _, prompt), qc) in enumerate(zip(cands, qcs)):
+                cur["versions"].append({"v": v0 + k, "file": name, "prompt": prompt, "qc": qc, "by": by,
+                                        "at": store.now(), **({"direction": direction} if direction else {})})
+            cur["selected"] = v0 + best(qcs)
             store.write(f, "kareler.json", rec)
     failed = sum(1 for x in rec["shots"].values() if x["versions"][x["selected"] - 1]["qc"].get("ok") is False)
     store.set_stage(f, "kareler", status="hazir", failed_qc=failed)
