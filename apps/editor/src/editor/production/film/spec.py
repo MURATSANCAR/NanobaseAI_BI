@@ -274,11 +274,17 @@ def fatal(problems: list[Problem]) -> list[Problem]:
 
 
 # ------------------------------------------------------------------ istem
+_KISS = re.compile(r"\bkiss", re.I)
+KISS_RULE = "Any kiss is a gentle family kiss on the cheek, never on the lips."
+
+
 def shot_prompt(shot: dict, style: str, cast_lines: dict[str, str]) -> str:
-    """Çekimin görsel istemi (ilk kare ve video için aynı tarif). `cast_lines`: oyuncu → kart satırı (İngilizce)."""
+    """Çekimin görsel istemi (ilk kare ve video için aynı tarif). `cast_lines`: oyuncu → kart satırı (İngilizce).
+    Öpme geçen çekimde öpücük yanaktan (çocuk kitabı; 2026-10-08 video modeli dudaktan öptürdü)."""
     who = " ".join(cast_lines[c] for c in shot.get("characters", []) if c in cast_lines)
     light = {"sabah": "soft morning light", "gunduz": "daylight", "aksam": "warm golden-hour light",
              "gece": "night, moonlight and lamp light"}[shot.get("time", "gunduz")]
     return (f"{FRAMINGS[shot['framing']]}, {MOVES[shot['move']]}. {shot['action_en'].strip()} "
             f"Setting: {shot.get('setting_en', '').strip()}, {light}. {who} "
+            f"{KISS_RULE + ' ' if _KISS.search(shot.get('action_en', '')) else ''}"
             f"Style: {STYLES[style]['en']}. No text, letters, subtitles or watermarks.").replace("  ", " ")

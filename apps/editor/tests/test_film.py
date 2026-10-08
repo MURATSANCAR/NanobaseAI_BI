@@ -699,3 +699,33 @@ def test_pick_sounds_skips_silence_music_and_weak_matches(monkeypatch):
     p = mix.pick_sounds(sc)
     assert p["sfx"]["s01c01"] == [None, None] and p["amb"] == {} and p["ids"] == []
     assert asked == ["bağırma sesi"]
+
+
+def test_is_speech_tells_dialogue_from_first_person_narration():
+    book = ("Hediyemi hemen açtım. Paketin içinden boya kalemleri çıktı.\nAnnem:\n- Ressam olacak benim oğlum, "
+            "diyordu.\n«Sen kendin yap.» desem de fayda etmiyordu.\nMert, bu yüzünün hâli ne, diye sordu.")
+    assert shoot.is_speech("Hediyemi hemen açtım.", book) is False
+    assert shoot.is_speech("Ressam olacak benim oğlum.", book) is True
+    assert shoot.is_speech("Sen kendin yap.", book) is True
+    assert shoot.is_speech("Teşekkür ederim.", book) is True          # kitapta yok: senaryonun repliği
+    assert shoot.is_speech("Mert, bu yüzünün hâli ne?", book) is True   # tire düşmüş, «diye sordu» kalmış
+    shot = {"framing": "yakin", "characters": ["Levent"]}
+    narr = [{"speaker": "Levent", "text": "Hediyemi hemen açtım."}]
+    assert shoot.mode_of(shot, narr, book) == "i2v"
+    assert shoot.mode_of(shot, [{"speaker": "Levent", "text": "Sen kendin yap."}], book) == "s2v"
+    wide = {"framing": "genel", "characters": ["Anne", "Mert"]}
+    assert shoot.mode_of(wide, [{"speaker": "Anne", "text": "Mert, bu yüzünün hâli ne?"}], book) == "s2v"
+
+
+def test_kiss_is_on_the_cheek():
+    shot = {"framing": "genel", "move": "sabit", "action_en": "Levent kisses his mother.", "setting_en": "room"}
+    assert spec.KISS_RULE in spec.shot_prompt(shot, next(iter(spec.STYLES)), {})
+    shot["action_en"] = "Levent draws."
+    assert spec.KISS_RULE not in spec.shot_prompt(shot, next(iter(spec.STYLES)), {})
+
+
+def test_mouth_hint_by_speech():
+    assert shoot._mouths("i2v", [{"speaker": "Levent"}], False) == shoot.QUIET_MOUTHS
+    assert shoot._mouths("i2v", [{"speaker": "Anne"}, {"speaker": "Mert"}], True) == shoot.TALKING
+    assert shoot._mouths("s2v", [{"speaker": "Anne"}], True) == ""
+    assert shoot._mouths("i2v", [], False) == ""

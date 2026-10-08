@@ -83,7 +83,7 @@ def enhance_target() -> str | None:
     return os.environ.get("EDITOR_FILM_ENHANCE_TARGET", "1080p").strip() or "1080p"
 
 
-def char_refs(f: Path, shot: dict) -> list[Path]:
+def char_refs(f: Path, shot: dict, first: str | None = None) -> list[Path]:
     """Çekimdeki karakterlerin referans görselleri, oyuncu listesi sırasıyla: onaylı kartın görseli, yoksa kareler
     adımının çizdiği `kare/oyuncu-<n>.png` (frames._char_refs ile aynı ad). Görseli olmayan karakter atlanır."""
     try:
@@ -91,7 +91,8 @@ def char_refs(f: Path, shot: dict) -> list[Path]:
     except store.FilmError:
         return []
     out = []
-    for i, m in enumerate(cast["members"]):
+    members = sorted(enumerate(cast["members"]), key=lambda im: im[1]["name"] != first)   # konuşan önce (<Subject 1>)
+    for i, m in members:
         if m["name"] not in shot.get("characters", []):
             continue
         p = Path(m["ref"]) if m.get("ref") else f / "kare" / f"oyuncu-{i:02d}.png"
@@ -101,16 +102,19 @@ def char_refs(f: Path, shot: dict) -> list[Path]:
 
 
 def body_for(f: Path, shot: dict, first: Path, mode: str, seconds: float, W: int, H: int, style: str,
-             lines: list[dict]) -> dict:
+             lines: list[dict], talking: bool | None = None) -> dict:
+    """`talking`: çekimde gerçek konuşma var mı (is_speech). Yoksa i2v'de ağızlar kapalı (dış ses); birden çok konuşan
+    varsa (i2v) konuşanlar doğal konuşur. None: eski davranış (satır varsa ağızlar kapalı değil, ek yok)."""
     body = {"mode": mode, "image": base64.b64encode(first.read_bytes()).decode(),
-            "prompt": spec.shot_prompt(shot, style, {}), "negative_prompt": F.NEGATIVE,
+            "prompt": spec.shot_prompt(shot, style, {}) + _mouths(mode, lines, talking),
+            "negative_prompt": F.NEGATIVE,
             "seconds": seconds, "width": W, "height": H}
     eng = engine_override()
     if eng:
         body["engine"] = eng
     if mode == "s2v":
         body["audio"] = base64.b64encode(talk_track(f, lines, seconds)).decode()
-        refs = char_refs(f, shot)
+        refs = char_refs(f, shot, next((x["speaker"] for x in lines if x["speaker"].casefold() != spec.NARRATOR), None))
         if refs:
             body["refs"] = [base64.b64encode(p.read_bytes()).decode() for p in refs]
     return body
@@ -124,11 +128,46 @@ def cast_lines_of(f: Path) -> dict[str, str]:
         return {}
 
 
-def mode_of(shot: dict, lines: list[dict]) -> str:
-    speakers = {x["speaker"] for x in lines if x["speaker"].casefold() != spec.NARRATOR}
-    if len(speakers) == 1 and shot["framing"] in TALK_FRAMINGS and len(shot.get("characters", [])) == 1:
+_SPEECH_MARKS = ("-", "–", "—", "«", '"', "“", ":")
+# Konuşma etiketi: «…, diye sordu», «…, dedi», «…, diyordu». Okuma tireyi/tırnağı düşürebiliyor (2026-10-08: Levent
+# kitabında hiçbir replikte tire kalmamıştı); etiket metinde kalır. Dil kuralı, kitaba özel değil.
+_SAID = re.compile(r"^[^\n]{0,160}?[,!?…]\s*(?:diye\b|de(?:d|r)i\b|dedi[mk]?\b|diyordu[mk]?\b|diyor\w*|sordu\b|"
+                   r"bağırdı\b|seslendi\b)", re.I)
+QUIET_MOUTHS = " The characters do not talk: mouths stay closed (the words are a voice-over narration)."
+
+
+TALKING = " The characters who speak move their mouths naturally while talking; the others listen."
+
+
+def _mouths(mode: str, lines: list[dict], talking: bool | None) -> str:
+    if mode != "i2v" or not lines or talking is None:
+        return ""
+    return TALKING if talking else QUIET_MOUTHS
+
+
+def is_speech(text: str, book: str) -> bool:
+    """Satır kitapta konuşma mı (tire, tırnak ya da iki nokta ardından)? Birinci tekil anlatımda dış ses satırının
+    konuşanı da kahramandır; anlatımı ağızdan konuşturmak dudak uyumsuzluğu yapıyordu (2026-10-08). Kitapta
+    bulunamayan satır (senaryonun yazdığı replik) konuşma sayılır."""
+    probe = " ".join(text.split()[:4]).strip(" .,!?…")
+    i = book.find(probe) if probe else -1
+    if i < 0:
+        return True
+    j = i - 1
+    while j >= 0 and book[j] in " \t\n":
+        j -= 1
+    return (j >= 0 and book[j] in _SPEECH_MARKS) or bool(_SAID.match(book[i:]))
+
+
+def mode_of(shot: dict, lines: list[dict], book: str | None = None) -> str:
+    spoken = [x for x in lines if x["speaker"].casefold() != spec.NARRATOR
+              and (book is None or is_speech(x["text"], book))]
+    speakers = {x["speaker"] for x in spoken}
+    if len(speakers) != 1:
+        return "i2v"
+    if book is not None:            # kitaba bakılabiliyorsa: tek konuşan her çekimde ağız sesle eşlenir (kartı ilk referans)
         return "s2v"
-    return "i2v"
+    return "s2v" if shot["framing"] in TALK_FRAMINGS and len(shot.get("characters", [])) == 1 else "i2v"
 
 
 def talk_track(f: Path, lines: list[dict], seconds: float) -> bytes:
@@ -283,8 +322,11 @@ async def take(f: Path, shot: dict, by: str, seed: int, http, alias: str = ALIAS
     lines = voice["lines"].get(shot["id"], [])
     seconds = voice["seconds"].get(shot["id"], float(shot["seconds"]))
     first = F.selected(f, shot["id"])
-    mode = mode_of(shot, lines)
-    res = await _call(http, {**body_for(f, shot, first, mode, seconds, W, H, m["style"], lines), "seed": seed}, alias)
+    book = script_mod.book_text(f.parent.parent)
+    mode = mode_of(shot, lines, book)
+    talking = any(x["speaker"].casefold() != spec.NARRATOR and is_speech(x["text"], book) for x in lines)
+    res = await _call(http, {**body_for(f, shot, first, mode, seconds, W, H, m["style"], lines, talking),
+                             "seed": seed}, alias)
     rec = store.read(f, "cekimler.json") or {"shots": {}}
     cur = rec["shots"].setdefault(shot["id"], {"versions": [], "selected": None})
     v = len(cur["versions"]) + 1
