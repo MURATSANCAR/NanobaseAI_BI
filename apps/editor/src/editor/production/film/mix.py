@@ -19,6 +19,7 @@ olarak yazılır.
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -202,6 +203,16 @@ def command(tl: dict, fmt: str, voice_dir: Path, out: Path, srt_path: Path | Non
     return args
 
 
+SFX_MIN_SCORE = 0.30         # altında eşleşme yanlış ses getiriyordu («bağırma» → ayak sesi 0,28; doğru öpücük 0,33)
+SILENT_AMBIENCE = {"", "-", "yok", "sessiz", "sessizlik", "sessiz oda"}
+_MUSIC_WORDS = re.compile(r"müzik|şarkı|melodi|ezgi", re.I)   # müzik efekt havuzundan değil müzik kanalından gelir
+
+
+def _best(L, q: str, kind: str) -> dict | None:
+    res = L.search(q, kind=kind, k=1)
+    return res[0] if res and res[0].get("score", 1.0) >= SFX_MIN_SCORE else None
+
+
 def pick_sounds(sc: dict, old: dict | None = None) -> dict:
     """Senaryonun efekt ve ortam tarifleri → havuzdan dosya. Editörün seçtiği (`source: editor`) korunur. Arama
     sonucu ekrana giden alanları taşır (yolsuz, `public`); dosya katalog satırından (`get`) bulunur."""
@@ -217,18 +228,18 @@ def pick_sounds(sc: dict, old: dict | None = None) -> dict:
             continue
         files = []
         for q in s.get("sfx", [])[:3]:
-            res = L.search(q, kind="anlik", k=1)
-            files.append(str(L.file_of(L.get(res[0]["id"]))) if res else None)
-            if res:
-                picks["ids"].append(res[0]["id"])
+            hit = None if _MUSIC_WORDS.search(q) else _best(L, q, "anlik")
+            files.append(str(L.file_of(L.get(hit["id"]))) if hit else None)
+            if hit:
+                picks["ids"].append(hit["id"])
         picks["sfx"][s["id"]] = files
     for si, scene in enumerate(sc.get("scenes", []), 1):
-        q = next((sh.get("ambience") for sh in scene.get("shots", []) if (sh.get("ambience") or "").strip()), "")
-        if q:
-            res = L.search(q, kind="ortam", k=1)
-            if res:
-                picks["amb"][str(si)] = str(L.file_of(L.get(res[0]["id"])))
-                picks["ids"].append(res[0]["id"])
+        q = next((sh.get("ambience") for sh in scene.get("shots", [])
+                  if (sh.get("ambience") or "").strip().casefold() not in SILENT_AMBIENCE), "")
+        hit = _best(L, q, "ortam") if q else None
+        if hit:
+            picks["amb"][str(si)] = str(L.file_of(L.get(hit["id"])))
+            picks["ids"].append(hit["id"])
     return picks
 
 

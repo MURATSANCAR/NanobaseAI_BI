@@ -681,10 +681,21 @@ def test_pick_sounds_resolves_files_from_catalog_rows(monkeypatch):
     from editor.production import sfx_library as L
     rows = {"a1": {"id": "a1", "path": "x/kalem.wav"}, "o1": {"id": "o1", "path": "y/oda.wav"}}
     monkeypatch.setattr(L, "available", lambda: True)
-    monkeypatch.setattr(L, "search", lambda q, kind=None, k=1: [{"id": "a1" if kind == "anlik" else "o1"}])
+    monkeypatch.setattr(L, "search", lambda q, kind=None, k=1: [{"id": "a1" if kind == "anlik" else "o1", "score": 0.5}])
     monkeypatch.setattr(L, "get", lambda sid: rows[sid])
     monkeypatch.setattr(L, "file_of", lambda row: Path("/havuz") / row["path"])
     sc = {"scenes": [{"shots": [{"sfx": ["kalem sesi"], "ambience": "oda"}]}]}
     p = mix.pick_sounds(sc)
     assert p["sfx"]["s01c01"] == ["/havuz/x/kalem.wav"]
     assert p["amb"]["1"] == "/havuz/y/oda.wav"
+
+
+def test_pick_sounds_skips_silence_music_and_weak_matches(monkeypatch):
+    from editor.production import sfx_library as L
+    asked = []
+    monkeypatch.setattr(L, "available", lambda: True)
+    monkeypatch.setattr(L, "search", lambda q, kind=None, k=1: asked.append(q) or [{"id": "z", "score": 0.2}])
+    sc = {"scenes": [{"shots": [{"sfx": ["neşeli müzik başlangıcı", "bağırma sesi"], "ambience": "sessiz"}]}]}
+    p = mix.pick_sounds(sc)
+    assert p["sfx"]["s01c01"] == [None, None] and p["amb"] == {} and p["ids"] == []
+    assert asked == ["bağırma sesi"]
