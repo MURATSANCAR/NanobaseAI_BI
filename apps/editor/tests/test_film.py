@@ -759,3 +759,11 @@ def test_pick_best_only_among_versions_taken_this_run(tmp_path):
     assert store.read(tmp_path, "cekimler.json")["shots"]["s01c01"]["selected"] == 2
     assert shoot._pick_best(tmp_path, "s01c01", []) is False           # bu koşuda alınamadı: yeniden çekilir
     assert shoot._pick_best(tmp_path, "s02c01", []) is False
+
+
+def test_voiced_shot_does_not_wait_after_the_line():
+    need = 3.16 + spec.SHOT_TAIL
+    assert spec.fit_seconds(8, [3.16]) == round(need + spec.ACTION_PAD, 2)     # 8 sn değil
+    assert spec.fit_seconds(4, [3.16]) == 4                                    # senaryo payı küçükse o
+    assert spec.fit_seconds(8, [0.6]) == spec.MIN_VOICED or spec.fit_seconds(8, [0.6]) == round(0.6 + spec.SHOT_TAIL + spec.ACTION_PAD, 2)
+    assert spec.fit_seconds(8, []) == 8                                        # sessiz çekim senaryonun süresi

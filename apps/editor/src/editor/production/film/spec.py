@@ -142,10 +142,18 @@ def speech_seconds(text: str) -> float:
     return round(words(text) / WORDS_PER_SEC, 2)
 
 
+MIN_VOICED = 3.0             # konuşmalı çekimin alt sınırı
+ACTION_PAD = 1.5             # repliğin üstüne senaryonun süresinden en çok bu kadar hareket payı
+
+
 def fit_seconds(planned: float, line_secs: list[float]) -> float:
-    """Çekim süresi: senaryonun istediği ile repliklerin sığdığı sürenin büyüğü; alt sınırın altına inmez."""
-    need = sum(line_secs) + LINE_GAP * max(len(line_secs) - 1, 0) + (SHOT_TAIL if line_secs else 0)
-    return round(max(MIN_SHOT, float(planned or 0), need), 2)
+    """Çekim süresi. Sessiz çekim: senaryonun süresi (alt sınır MIN_SHOT). Konuşmalı çekim: replikler + nefes payı;
+    senaryo daha uzun istediyse en çok ACTION_PAD kadar hareket payı. Eskiden senaryonun süresi her zaman alınıyordu:
+    3 sn'lik cümleden sonra 5 sn kimse bir şey yapmadan bekliyordu (2026-10-08, filmde toplam ~40 sn ölü süre)."""
+    if not line_secs:
+        return round(max(MIN_SHOT, float(planned or 0)), 2)
+    need = sum(line_secs) + LINE_GAP * max(len(line_secs) - 1, 0) + SHOT_TAIL
+    return round(max(MIN_VOICED, need, min(float(planned or 0), need + ACTION_PAD)), 2)
 
 
 # Rolün İngilizce tarifte geçen adları (dil sözlüğü; kitaba özel değil).
