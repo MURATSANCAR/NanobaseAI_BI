@@ -5,7 +5,8 @@
 #  - ana (/opt/conda, Py 3.11, torch 2.8): sunucu + Wan. Wan'ın requirements*.txt'si (transformers ≤4.51.3, numpy<2);
 #    flash-attn yok (Wan PyTorch dikkatine düşer). S2V'nin CosyVoice parçası kullanılmaz.
 #  - /opt/h3 (venv, --system-site-packages: torch ana ortamdan): diffusers (MiniMax-H3 modular pipeline yalnız main'de),
-#    Qwen3-VL için transformers ≥4.57, SeedVR2 requirements.txt. Practical-RIFE'ın sk-video/moviepy'si kurulmaz: kendi
+#    transformers 5.x (diffusers main huggingface-hub ≥1.32 ister; transformers 4.57 hub<1 ister → çözülemez),
+#    SeedVR2 requirements.txt. Practical-RIFE'ın sk-video/moviepy'si kurulmaz: kendi
 #    döngümüz (worker_enhance.py) kareleri ffmpeg ile okur/yazar.
 #  - /opt/fastvideo (uv venv, Py 3.12): FastVideo pyproject'i torch==2.12.0, transformers>=5.15 ister; fastvideo-kernel
 #    0.3.5 tekeri yalnız cp312. torch cu130 (sürücü 580 = CUDA 13). FA4/sm100a eklentileri (fasth3 ekstrası, Blackwell)
@@ -40,9 +41,9 @@ RUN git clone https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git /opt/See
     && git -C /opt/Practical-RIFE checkout ${RIFE_COMMIT} \
     && rm -rf /opt/SeedVR2/.git /opt/Practical-RIFE/.git /opt/SeedVR2/docs /opt/SeedVR2/example_workflows
 RUN python -m venv --system-site-packages /opt/h3 \
-    && /opt/h3/bin/pip install --no-cache-dir \
-        "diffusers @ git+https://github.com/huggingface/diffusers.git@${DIFFUSERS_COMMIT}" \
-        "transformers>=4.57.1,<5" "accelerate>=1.1.1" "safetensors>=0.8.0" "huggingface-hub>=1.32.0,<2.0" \
+    && /opt/h3/bin/pip install --no-cache-dir --retries 10 --timeout 120 \
+        "diffusers @ https://github.com/huggingface/diffusers/archive/${DIFFUSERS_COMMIT}.tar.gz" \
+        "transformers>=5.15,<6" "accelerate>=1.1.1" "safetensors>=0.8.0" "huggingface-hub>=1.32.0,<2.0" \
         "numpy>=1.25,<2" soundfile "av>=17.0.0" imageio imageio-ffmpeg torchao \
         -r /opt/SeedVR2/requirements.txt
 RUN /opt/h3/bin/python -c "import diffusers, transformers, soundfile; from diffusers import ComponentsManager, ModularPipeline; \
