@@ -815,3 +815,125 @@ def test_foley_replaces_library_sfx_and_scene_ambience(tmp_path):
     (tmp_path / "foley").mkdir()
     (tmp_path / "foley" / "s01c01.wav").write_bytes(b"x")
     assert mix.foley_files(tmp_path, ["s01c01", "s02c01"]) == {"s01c01": str(tmp_path / "foley" / "s01c01.wav")}
+
+
+# ------------------------------------------------------------------ uyarlama (adapt)
+_BOOK = ("Hediyemi hemen açtım. İçinden boya kalemleri çıktı.\nAnnem gelip resimlerime baktı.\n"
+         "Ressam olacak benim oğlum, diyordu.\nMert de istedi.\n- Ben de resim, ben de resim, diye tutturdu.")
+
+
+def test_adapt_sentences_and_book_dialogue():
+    from editor.production.film import adapt
+    s = adapt.sentences(_BOOK)
+    assert s[0] == "Hediyemi hemen açtım." and "Mert de istedi." in s
+    sp = adapt.speech_lines(_BOOK)
+    assert "Ressam olacak benim oğlum" in sp and "Ben de resim, ben de resim" in sp
+    assert not any("Hediyemi" in x for x in sp)
+
+
+def test_adapt_outline_must_cover_book_in_order():
+    from editor.production.film import adapt
+    s = adapt.sentences(_BOOK)
+    good = {"beats": [{"purpose": "kanca", "sentences": [], "seconds": 5}, {"purpose": "isim", "sentences": [], "seconds": 5},
+                      {"purpose": "olay", "sentences": [1, 2], "seconds": 30}, {"purpose": "olay", "sentences": [3, 4], "seconds": 30},
+                      {"purpose": "kapanis", "sentences": list(range(5, len(s) + 1)), "seconds": 30}]}
+    assert adapt.check_outline(good, s, 100) == []
+    skipped = {"beats": [{"sentences": [1], "seconds": 100}]}
+    assert any("bağlı değil" in p for p in adapt.check_outline(skipped, s, 100))
+    unordered = {"beats": [{"sentences": [3], "seconds": 50}, {"sentences": [1, 2, 4, 5, 6], "seconds": 50}]}
+    assert any("sırayla" in p for p in adapt.check_outline(unordered, s, 100))
+
+
+def test_adapt_episode_requires_every_book_line_verbatim():
+    from editor.production.film import adapt
+
+    def shot(lines, secs=3):
+        return {"seconds": secs, "framing": "yakin", "move": "sabit", "characters": [], "action": "a", "action_en": "a",
+                "quote": "", "lines": lines, "sfx": [], "ambience": ""}
+    ok = {"cast": [], "scenes": [{"setting": "oda", "shots": [
+        shot([{"speaker": "Anne", "text": "Ressam olacak benim oğlum!", "emotion": "neseli", "added": False}]),
+        shot([{"speaker": "Mert", "text": "Ben de resim, ben de resim.", "emotion": "heyecanli", "added": False}]),
+        shot([{"speaker": "Levent", "text": "Vaaay!", "emotion": "heyecanli", "added": True}])]}]}
+    assert not [p for p in adapt.check_episode(ok, _BOOK, 9) if p.fatal]
+    bad = {"cast": [], "scenes": [{"setting": "oda", "shots": [
+        shot([{"speaker": "Anne", "text": "Sen ressam olacaksın!", "emotion": "neseli", "added": False}]),
+        shot([{"speaker": "Levent", "text": "Bu çok güzel bir hediye oldu bence.", "emotion": "neseli", "added": True}])]}]}
+    probs = [p.text for p in adapt.check_episode(bad, _BOOK, 6) if p.fatal]
+    assert any("Ressam olacak" in p for p in probs) and any("en çok" in p for p in probs)
+
+
+def test_adapt_write_two_passes(monkeypatch, tmp_path):
+    import asyncio
+    from editor.production import marketing as mk2
+    from editor.production.film import adapt
+    from editor.production.film import script as sm
+    monkeypatch.setattr(sm, "book_text", lambda d: _BOOK)
+    monkeypatch.setattr(sm, "known_characters", lambda d: ["Levent", "Mert", "Anne"])
+    monkeypatch.setattr(sm, "book_checker", lambda d: (lambda q: True))
+    monkeypatch.setattr(adapt.studio, "_manuscript", lambda d: types.SimpleNamespace(title="Levent"))
+    monkeypatch.setattr(mk2, "_kind_text", lambda d: "çocuk kitabı")
+    cast = [{"name": n, "role": r, "look_en": "x", "age": a, "gender": g} for n, r, a, g in
+            (("Levent", "kahraman", "cocuk", "erkek"), ("Mert", "kardeş", "cocuk", "erkek"), ("Anne", "anne", "yetiskin", "kadin"))]
+    n = len(adapt.sentences(_BOOK))
+    calls = []
+
+    async def fake(llm, name, schema, **kw):
+        calls.append(name)
+        if name == adapt.OUTLINE_PROMPT:
+            return {"title": "t", "logline": "l", "cast": cast, "beats": [
+                {"scene": 1, "setting": "oda", "setting_en": "room", "time": "gunduz", "purpose": "kanca", "summary": "s",
+                 "sentences": [], "seconds": 1}, {"scene": 1, "setting": "oda", "setting_en": "room", "time": "gunduz",
+                 "purpose": "isim", "summary": "s", "sentences": [], "seconds": 1},
+                {"scene": 1, "setting": "oda", "setting_en": "room", "time": "gunduz", "purpose": "kapanis", "summary": "s",
+                 "sentences": list(range(1, n + 1)), "seconds": 13}]}
+        L = lambda who, t, add=False: {"speaker": who, "text": t, "emotion": "neseli", "added": add}  # noqa: E731
+        S = lambda lines: {"seconds": 3, "framing": "yakin", "move": "sabit", "characters": ["Levent"], "action": "a",  # noqa: E731
+                           "action_en": "a", "quote": "Hediyemi hemen açtım.", "lines": lines, "sfx": [], "ambience": "",
+                           "beat": 1}
+        return {"shots": [S([L("Levent", "Hediyemi hemen açtım.")]), S([L("Anne", "Ressam olacak benim oğlum.")]),
+                          S([L("Mert", "Ben de resim, ben de resim!")]), S([L("Levent", "Vaaay!", True)]),
+                          S([L("Levent", "Mert de istedi.")])]}
+    monkeypatch.setattr(mk2, "_ask", fake)
+    d = tmp_path / "job"
+    d.mkdir()
+    f = store.create(d, "cizgi-film", "3b", "Levent", "t")
+    rec = asyncio.run(adapt.write(d, f, "t", 15, llm=object()))
+    assert calls == [adapt.OUTLINE_PROMPT, adapt.SCENE_PROMPT]
+    sc = rec["script"]
+    assert sc["adapted"] and len(spec.shots(sc)) == 5 and not [p for p in rec["problems"] if p["fatal"]]
+
+
+def test_adapt_speech_does_not_swallow_neighbour_sentence():
+    from editor.production.film import adapt
+    b = "Odama gittim. İçeri girmek istedim. Ama Mert sinirle: - Appi diiiiit, diye bağırdı. Annem:\nMeeert!"
+    sp = adapt.speech_lines(b)
+    assert "Appi diiiiit" in sp and "Meeert!" in sp or "Meeert" in sp
+    assert not any("İçeri girmek" in x or "Odama" in x for x in sp)
+
+
+def test_adapt_scene_problems_duration_and_added():
+    from editor.production.film import adapt
+    sh = [{"seconds": 2, "lines": [{"text": "Vay!", "added": True}, {"text": "Hı?", "added": True}]}]
+    probs = adapt.scene_problems(sh, ["Hediyemi açtım."], 10)
+    assert any("Eklenen satır 2/2" in p for p in probs) and any("Sahne 2 sn" in p for p in probs)
+
+
+def test_adapt_outline_needs_hook_title_and_ending():
+    from editor.production.film import adapt
+    s = adapt.sentences(_BOOK)
+    o = {"beats": [{"purpose": "olay", "sentences": list(range(1, len(s) + 1)), "seconds": 100}]}
+    assert any("kanca" in p for p in adapt.check_outline(o, s, 100))
+    o = {"beats": [{"purpose": "kanca", "sentences": [], "seconds": 6}, {"purpose": "isim", "sentences": [], "seconds": 4},
+                   {"purpose": "kapanis", "sentences": list(range(1, len(s) + 1)), "seconds": 90}]}
+    assert adapt.check_outline(o, s, 100) == []
+
+
+def test_adapt_scene_keeps_inner_voice_and_last_line():
+    from editor.production.film import adapt
+    q = ["Hediyemi hemen açtım.", "İçinden boya kalemleri çıktı.", "Annem gelip resimlerime baktı."]
+    silent = [{"seconds": 12, "lines": []}]
+    probs = adapt.scene_problems(silent, q, 10, last="Annem gelip resimlerime baktı.")
+    assert any("iç seste" in p for p in probs) and any("son cümlesi" in p for p in probs)
+    voiced = [{"seconds": 5, "lines": []}, {"seconds": 6, "lines": [{"speaker": "Levent",
+                                                                       "text": "Annem gelip resimlerime baktı.", "added": False}]}]
+    assert adapt.scene_problems(voiced, q, 10, last="Annem gelip resimlerime baktı.") == []
