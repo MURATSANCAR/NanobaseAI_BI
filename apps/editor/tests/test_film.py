@@ -937,3 +937,24 @@ def test_adapt_scene_keeps_inner_voice_and_last_line():
     voiced = [{"seconds": 5, "lines": []}, {"seconds": 6, "lines": [{"speaker": "Levent",
                                                                        "text": "Annem gelip resimlerime baktı.", "added": False}]}]
     assert adapt.scene_problems(voiced, q, 10, last="Annem gelip resimlerime baktı.") == []
+
+
+def test_adapt_normalize_names_to_cast_spelling():
+    from editor.production.film import adapt
+    sc = {"cast": [{"name": "Boyacı"}, {"name": "Levent"}], "scenes": [{"shots": [
+        {"characters": ["Boyaci", "levent"], "lines": [{"speaker": "Levent (Anlatıcı)", "text": "x"}]}]}]}
+    assert adapt.normalize_names(sc, "Levent") == 3
+    sh = sc["scenes"][0]["shots"][0]
+    assert sh["characters"] == ["Boyacı", "Levent"] and sh["lines"][0]["speaker"] == "Levent"
+
+
+def test_adapt_backmatter_spelling_and_narrator_alias():
+    from editor.production.film import adapt
+    book = "Hediyemi hemen açtım.\nAnnem öyle söyledi.\n* * *\nAşağıdaki soruları hikâyeye göre cevaplayınız.\n1. Ne oldu?"
+    assert adapt.sentences(book)[-1] == "Annem öyle söyledi."
+    sc = {"cast": [{"name": "Levent"}], "scenes": [{"shots": [{"characters": [], "lines": [
+        {"speaker": "Anlatıcı", "text": "Hediyemi hemen actim."}]}]}]}
+    adapt.normalize_names(sc, "Levent")
+    assert adapt.restore_book_spelling(sc, book) == 1
+    ln = sc["scenes"][0]["shots"][0]["lines"][0]
+    assert ln == {"speaker": "Levent", "text": "Hediyemi hemen açtım."}

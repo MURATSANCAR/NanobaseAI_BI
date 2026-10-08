@@ -62,10 +62,23 @@ SCENE_SCHEMA = {
 _SPLIT = re.compile(r"(?<=[.!?…])\s+|\n+")
 
 
+# Hikâyeden sonra gelen etkinlik/soru bölümü (çocuk kitaplarında yaygın): ilk işaretten sonrası hikâye değildir.
+# 2026-10-08: «Aşağıdaki soruları hikâyeye göre cevaplayınız.» kitabın son cümlesi sanılıp filmin son repliği olmuştu.
+_BACKMATTER = re.compile(r"^\s*(?:aşağıdaki\s+soru|sorular\s*$|etkinlik|soruları\s+.*cevaplayınız|"
+                         r"haydi\s+cevaplayalım|okuduğunu\s+anlama)", re.I | re.M)
+
+
+def story_text(text: str) -> str:
+    """Kitap metninin hikâye kısmı: etkinlik/soru bölümü ve ayraçlar («* * *») düşer."""
+    m = _BACKMATTER.search(text)
+    t = text[:m.start()] if m else text
+    return re.sub(r"(?m)^\s*(?:\*\s*){2,}\s*$", "", t).strip()
+
+
 def sentences(text: str) -> list[str]:
     """Kitap metni → cümleler (en az 3 kelime; başlık ve tek kelimelik satırlar düşer). Konuşma tireleri korunur."""
     out = []
-    for s in _SPLIT.split(text):
+    for s in _SPLIT.split(story_text(text)):
         s = s.strip()
         if spec.words(s) >= 3:
             out.append(s)
@@ -88,7 +101,7 @@ def speech_lines(book: str) -> list[str]:
     «Ressam olacak benim oğlum». Komşu cümleye taşmaz (2026-10-08: «İçeri girmek istedim. Ama Mert sinirle: - Appi
     diiiiit, diye bağırdı.» bütünüyle konuşma sanılıyordu)."""
     out, prev = [], ""
-    for s in (x.strip() for x in _SPLIT.split(book)):
+    for s in (x.strip() for x in _SPLIT.split(story_text(book))):
         if not s:
             continue
         after_colon = prev.rstrip().endswith(":")
@@ -219,6 +232,54 @@ async def _ask(llm, name: str, schema: dict, max_tokens: int, **kw) -> dict:
     return out
 
 
+_FOLD = str.maketrans("ıİğĞüÜşŞöÖçÇâÂîÎûÛ", "iIgGuUsSoOcCaAiIuU")
+
+
+def _fold(name: str) -> str:
+    return re.sub(r"\s*\(.*?\)\s*$", "", name or "").translate(_FOLD).casefold().strip()
+
+
+def normalize_names(script: dict, narrator: str) -> int:
+    """Çekimdeki karakter ve konuşan adlarını oyuncu listesindeki yazıma bağlar (Türkçe harf/büyük-küçük/parantez
+    farkı: «Boyaci» → «Boyacı», «Levent (Anlatıcı)» → «Levent»). Dönen: düzeltilen ad sayısı."""
+    names = {_fold(c["name"]): c["name"] for c in script.get("cast", [])}
+    names.setdefault(_fold(narrator), narrator)
+    for alias in (spec.NARRATOR, "anlatici", "narrator", "ic ses", "iç ses"):       # «Anlatıcı» = kitabın anlatıcısı
+        names[_fold(alias)] = narrator
+    n = 0
+    for sc in script.get("scenes", []):
+        for sh in sc.get("shots", []):
+            fixed = [names.get(_fold(c), c) for c in sh.get("characters", [])]
+            n += sum(a != b for a, b in zip(fixed, sh.get("characters", [])))
+            sh["characters"] = fixed
+            for ln in sh.get("lines", []):
+                v = names.get(_fold(ln.get("speaker", "")), ln.get("speaker", ""))
+                n += v != ln.get("speaker")
+                ln["speaker"] = v
+    return n
+
+
+def _key(s: str) -> str:
+    return re.sub(r"\W+", " ", _fold(mk.norm(mk.clean_quote(s)))).strip()
+
+
+def restore_book_spelling(script: dict, book: str) -> int:
+    """Kitaptaki bir cümle (ya da konuşma) ile yalnız harf/noktalama farkı olan satırı kitabın yazımıyla değiştirir
+    (model bazen Türkçe harfsiz yazıyordu: «sayfasina … ucak»; seslendirme yanlış okur). Dönen: düzeltilen satır."""
+    ref = {}
+    for x in sentences(book) + speech_lines(book):
+        ref.setdefault(_key(x), mk.clean_quote(x))
+    n = 0
+    for sc in script.get("scenes", []):
+        for sh in sc.get("shots", []):
+            for ln in sh.get("lines", []):
+                k = _key(ln.get("text", ""))
+                if k in ref and ref[k] != ln.get("text"):
+                    ln["text"] = ref[k]
+                    n += 1
+    return n
+
+
 def _outline_text(o: dict) -> str:
     return "\n".join(f"{i}. [{b['purpose']}] sahne {int(b['scene'])} ({b['setting']}), {b['seconds']:.0f} sn: "
                      f"{b['summary']}" for i, b in enumerate(o["beats"], 1))
@@ -281,6 +342,8 @@ async def write(d: Path, f: Path, by: str, target: int, progress=lambda n, t, w=
                        "shots": shots})
     script = {"title": outline.get("title", ""), "logline": outline.get("logline", ""), "cast": outline["cast"],
               "scenes": scenes, "outline": beats, "adapted": True, "target_sec": target}
+    normalize_names(script, narrator)
+    restore_book_spelling(script, book)
     problems = check_episode(script, book, target) + spec.check(
         script, m["format"], {c["name"] for c in outline["cast"]}, script_mod.book_checker(d))
     # uyarlamada çekim 1,5 sn'den başlar; toplam süre biçim aralığına değil hedefe göre (check_episode) denetlenir
