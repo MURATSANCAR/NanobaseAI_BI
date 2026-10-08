@@ -190,6 +190,26 @@ def test_child_cast_uses_child_voices_with_young_fallback(monkeypatch):
     assert cast_mod.pick_voice({"age": "genc", "gender": "erkek"}, set()) == "genc-erkek"
 
 
+def test_transformed_child_voice_line_has_own_key_and_transform():
+    """Dönüşümlü erkek çocuk sesi (voices_zeki.TRANSFORMS): replik kaynak sesin (masal-anne) referansıyla ve dönüşümle
+    servise gider; önbellek anahtarı kaynak sesin aynı replikteki anahtarından ayrıdır, dönüşümsüz seslerin anahtarı
+    değişmez (eski replikler yeniden okunmaz)."""
+    import asyncio
+    import hashlib
+
+    from editor.production import narration as N
+    from editor.production.film import dialogue
+    boy, src = asyncio.run(N.voice_ref("cocuk-erkek")), asyncio.run(N.voice_ref("masal-anne"))
+    assert boy["ref_audio"] == src["ref_audio"] and boy["transform"]["path"] == "world"
+    assert dialogue._key(boy, "kardan adam", "notr") != dialogue._key(src, "kardan adam", "notr")
+    old = hashlib.sha256(json.dumps({"v": dialogue.VERSION, "ref": hashlib.sha256(src["ref_audio"].encode()).hexdigest(),
+                                     "t": "kardan adam", "e": "notr"}, sort_keys=True).encode()).hexdigest()[:20]
+    assert dialogue._key(src, "kardan adam", "notr") == old
+    seg, piece = dialogue.segment("kardan adam", boy, "cocuk-erkek", "neseli")
+    assert seg["voice"]["transform"] == boy["transform"] and piece.voice == "cocuk-erkek"
+    assert cast_mod.pick_voice({"age": "cocuk", "gender": "erkek", "role": "kahraman"}, set()) == "cocuk-erkek"
+
+
 def test_voice_of_falls_back_to_narrator():
     rec = {"narrator": "roman-kadin", "members": [{"name": "Elif", "voice": "genc-kadin"}]}
     assert cast_mod.voice_of(rec, "elif") == "genc-kadin"

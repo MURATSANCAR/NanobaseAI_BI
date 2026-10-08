@@ -54,6 +54,7 @@ VERSION = 1
 # kimlikler ALIASES ile yeni seslere gider. Varsayılanlar (DEFAULT_NARRATOR) kullanıcı seçene kadar değişmez.
 from .voices_zeki import ALIASES, DEFAULT_MALE_NARRATOR, DEFAULT_NARRATOR, GROUPS, RECOMMENDED, VOICES  # noqa: E402
 from .voices_zeki import PINNED as _ZEKI  # noqa: E402
+from .voices_zeki import TRANSFORMS  # noqa: E402
 
 VOICE_IDS = {v["id"] for v in VOICES}
 # Referans cümle (sabit kaydı olmayan tarifli ses için): Türkçe seslerin hepsini (ı, ğ, ş, ç, ö, ü) taşır; ses bir kez
@@ -75,6 +76,13 @@ class PinnedVoiceMissing(ValueError):
 def canonical(vid: str | None) -> str | None:
     """Eski ses kimliklerini (ALIASES) güncel sese çevirir; bilinmeyeni olduğu gibi bırakır."""
     return ALIASES.get(vid, vid) if vid else vid
+
+
+def transform_of(vid: str | None) -> dict | None:
+    """Dönüşümlü sesin servis dönüşümü (voices_zeki.TRANSFORMS; değilse None). Önbellek anahtarları ve sayfa özeti
+    bunu içerir: aynı kaynak sesle okunan dönüşümsüz ses aynı kaydı paylaşmaz."""
+    t = TRANSFORMS.get(canonical(vid) or "")
+    return dict(t["transform"]) if t else None
 
 
 def _label(vid: str) -> str:
@@ -884,9 +892,10 @@ def page_input(d: Path, pg: dict, cfg: dict | None = None, lex: Lexicon | None =
     from . import expression
     plist, x = expression.apply(d, pg, units, plist)
     ex = [excl_min_sec(p, units) for p in plist]
+    tf = {v: t for v in sorted({p.voice for p in plist}) if (t := transform_of(v))}
     h = _hash({"v": VERSION, "p": [(p.text, p.voice, p.pause_ms) for p in plist],
                "w": [[w.text for w in u.words] for u in units], **({"x": x} if x else {}),
-               **({"e": ex} if any(ex) else {})})
+               **({"e": ex} if any(ex) else {}), **({"tf": tf} if tf else {})})
     return units, plist, h
 
 
@@ -979,7 +988,16 @@ async def _call(body: dict, timeout: float = 1800.0) -> dict:
     if r.status_code == 404:
         raise VoiceUnavailable("seslendirme servisi bu kurulumda açık değil")
     r.raise_for_status()
-    return r.json()
+    return check_transformed(body, r.json())
+
+
+def check_transformed(body: dict, out: dict) -> dict:
+    """Dönüşümlü ses: eski servis `voice.transform`'u tanımaz, sessizce kaynak sesle okurdu. Servis uyguladığı parçayı
+    `transform` ile işaretler; işaretsiz parça varsa kayıt yazılmaz (VoiceUnavailable)."""
+    for seg, got in zip(body.get("segments") or [], out.get("segments") or []):
+        if (seg.get("voice") or {}).get("transform") and not got.get("transform"):
+            raise VoiceUnavailable("seslendirme servisi bu sesin dönüşümünü yapmıyor; ses servisi güncellenmeli")
+    return out
 
 
 async def available() -> bool:
@@ -998,9 +1016,12 @@ async def available() -> bool:
 
 async def voice_ref(vid: str) -> dict:
     """Sesin referansı (yayınevi düzeyinde, bir kez): tarifle üretilir, sonra hep bununla klonlanır. Sabit referanslı
-    seste (PINNED) paketteki seçilmiş kayıttır. Kütüphaneye
+    seste (PINNED) paketteki seçilmiş kayıttır. Dönüşümlü seste (TRANSFORMS) kaynak sesin referansı + `transform`: okuma
+    kaynak sesle yapılır, servis satırı dönüştürür. Kütüphaneye
     yüklenmiş seste referans kaydın kendisidir (metinsiz: model yalnız sesi örnek alır); kaldırılmış ses kullanılmaz."""
     vid = canonical(vid)
+    if vid in TRANSFORMS:
+        return {**await voice_ref(TRANSFORMS[vid]["source_voice"]), "transform": transform_of(vid)}
     v = voice(vid)
     if vid in PINNED:
         # seçilmiş sabit kayıt: tariften yeniden üretilmez (üretim her seferinde biraz farklı ses verebilir)
@@ -1086,7 +1107,7 @@ async def sample(text: str, vid: str, lex: Lexicon) -> bytes:
     vid = canonical(vid)
     ref = await voice_ref(vid)
     key = _hash({"v": VERSION, "voice": vid, "ref": hashlib.sha256(ref["ref_audio"].encode()).hexdigest(),
-                 "text": spoken})
+                 "text": spoken, **({"tf": ref["transform"]} if ref.get("transform") else {})})
     cache = _root() / "ornek" / f"{key}.mp3"
     if cache.exists():
         return cache.read_bytes()

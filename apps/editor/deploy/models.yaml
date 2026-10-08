@@ -361,6 +361,7 @@ aliases:
     # (sha256:b0cf45d34e28…, GPU'da derlendi; :1 ile aynı taban ve voxcpm katmanı, yalnız server.py değişti).
     # :3 (2026-09-28) insan kaydı: gövdede recording + words = yalnız hizalama (üretim yok), uzun kayıtta pencereli
     # hizalama; yine yalnız server.py değişti. Kurulumda `editorctl` derler; gateway yeniden okuyunca geçer.
-    image: editor-voice:5
+    # :6 (2026-10-08) dönüşümlü ses: voice.transform (WORLD / Praat perde + formant), pyworld + parselmouth katmanı.
+    image: editor-voice:6
     entrypoint: [python, /srv/server.py]
     args: []

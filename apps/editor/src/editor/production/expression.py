@@ -411,6 +411,11 @@ async def example(vid: str, label: str, ref: dict) -> str | None:
     """Sesin bu ifadedeki örneği (base64 WAV; yoksa None). Yayınevi düzeyinde bir kez: referans cümlesi talimatla üç
     tohumda okunur, ölçülür (servisin `measure`'ı), `pick_example` seçer; referans ya da talimat değişince yenilenir."""
     import base64
+    if ref.get("transform"):
+        # dönüşümlü ses: satır kaynak sesle okunup sonra dönüştürülür, ifade örneği de kaynak sesin örneğidir (devam
+        # kipinin `prompt_audio`'su dönüşümsüz kaynak tınısında olmalı; ölçüm de kaynak sesin perdesiyle kıyaslanır)
+        vid = N.TRANSFORMS[N.canonical(vid)]["source_voice"]
+        ref = {k: v for k, v in ref.items() if k != "transform"}
     row = TABLE[label]
     ref_sha = hashlib.sha256(ref["ref_audio"].encode()).hexdigest()[:16]
     dd = _example_dir(vid)

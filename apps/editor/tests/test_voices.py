@@ -199,7 +199,9 @@ def test_catalog_voices_use_packaged_reference(root, monkeypatch, tmp_path_facto
     ses üretilmez (başka ses sessizce gelmez)."""
     import hashlib
     from editor.production import voices_zeki as Z
-    assert set(Z.PINNED) == N.VOICE_IDS                               # bütün katalog sabit kayıtlı
+    assert set(Z.PINNED) | set(Z.TRANSFORMS) == N.VOICE_IDS          # bütün katalog sabit kayıtlı ya da dönüşümlü
+    assert not set(Z.PINNED) & set(Z.TRANSFORMS)
+    assert all(t["source_voice"] in Z.PINNED for t in Z.TRANSFORMS.values())   # dönüşüm sabit kayıtlı sesten
     calls = []
     monkeypatch.setattr(N, "_call", _fake_service(calls))
     for vid, meta in Z.PINNED.items():

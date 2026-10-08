@@ -34,7 +34,9 @@ EMOTION = {"notr": ("notr", 0.0), "neseli": ("nese", 0.0), "heyecanli": ("heyeca
 
 def _key(ref: dict, spoken: str, emotion: str) -> str:
     h = hashlib.sha256(json.dumps({"v": VERSION, "ref": hashlib.sha256(ref["ref_audio"].encode()).hexdigest(),
-                                   "t": spoken, "e": emotion}, sort_keys=True).encode())
+                                   "t": spoken, "e": emotion,
+                                   **({"tf": ref["transform"]} if ref.get("transform") else {})},
+                                  sort_keys=True).encode())
     return h.hexdigest()[:20]
 
 

@@ -30,6 +30,11 @@ sonra perdeyi koruyan zaman esnetme (rubberband; yoksa atempo), kelime zamanlar�
 `pause_before_ms` parçadan önce sessizliktir; `cfg` parçanın yönlendirme gücüdür (boşsa `--cfg`).
 Tam klonda talimat metne girerse model onu sesli okur (ölçüm: harf hatası %45–111); tam klonda ton, `voice.prompt_audio`
 ile verilir: aynı sesin referans cümlesini ifadeyle okuyan örnek, devam kipi onun tonunu sürdürür, kimlik referanstan.
+Dönüşümlü ses (editörün voices_zeki.TRANSFORMS'u): `voice.transform` {path: world|praat, formant, pitch, range,
+f0_floor, f0_ceil} varsa parça referansla (kaynak sesle) okunur, sonra perde + formant dönüşümüyle çevrilir; hizalama
+ve ölçüm dönüşmüş sesten yapılır. Perde kaynak sesin referans kaydının ortancasına göre taşınır (satırın kendi
+ortancasına göre değil): bütün satırlar aynı perdede kalır. Dönen parça `transform: <yol>` ile işaretlenir (editör
+işaretsiz parçayı kabul etmez). Dönüşüm işlemcide (pyworld / parselmouth), satır başına ~1 sn.
 `measure: true` her parçaya `measure` ekler (ortanca perde, enerji, sesli oranı, tanıyıcıyla harf hatası oranı):
 ifade örneği adayları bununla seçilir.
 
@@ -116,7 +121,17 @@ def health() -> dict:
     if DEVICE.startswith("cuda"):
         mem = {"reserved_gib": round(torch.cuda.memory_reserved() / 2**30, 2),
                "peak_gib": round(torch.cuda.max_memory_reserved() / 2**30, 2)}
-    return {"ok": TTS is not None, "aligner": ALIGNER is not None, "sample_rate": SR, "device": DEVICE, **mem}
+    return {"ok": TTS is not None, "aligner": ALIGNER is not None, "sample_rate": SR, "device": DEVICE,
+            "transforms": ["world", "praat"], **mem}
+
+
+class Transform(BaseModel):
+    path: str = Field(pattern="^(world|praat)$")   # world: WORLD vokoder; praat: Praat «Change gender»
+    formant: float = Field(ge=0.7, le=1.5)          # formant oranı: yeni(f) = eski(f / oran)
+    pitch: float = Field(ge=60, le=500)             # hedef ortanca perde (Hz)
+    range: float = Field(1.0, ge=0.3, le=2.0)       # perde aralığı çarpanı (log düzlemde ortanca çevresinde)
+    f0_floor: float = Field(100, ge=40, le=400)     # perde arama tabanı/tavanı (kaynak sesin cinsine göre)
+    f0_ceil: float = Field(500, ge=150, le=1000)
 
 
 class Voice(BaseModel):
@@ -124,6 +139,7 @@ class Voice(BaseModel):
     ref_audio: str | None = None       # base64 WAV (klon)
     ref_text: str | None = None
     prompt_audio: str | None = None    # base64 WAV: devam kipinin örnek sesi (ifade örneği; metni ref_text), kimlik ref_audio'dan
+    transform: Transform | None = None  # dönüşümlü ses: okumadan sonra perde + formant (ortanca ref_audio'dan)
 
 
 class Segment(BaseModel):
@@ -229,7 +245,81 @@ def _speak(seg: Segment, tmp: str) -> np.ndarray:
         wav = _stretch(wav, max(MIN_STRETCH, len(wav) / SR / seg.min_sec))
     if seg.gain_db:
         wav = (wav * np.float32(10 ** (seg.gain_db / 20))).astype(np.float32)
+    if v.transform is not None and len(wav):
+        if not ref:
+            raise HTTPException(400, "voice.transform referans sesi (ref_audio) ister")
+        wav = transform(wav, SR, v.transform, _ref_median(ref, v.transform))
     return _fade(wav)
+
+
+# ------------------------------------------------------------------ dönüşüm (perde + formant)
+_medians: dict[tuple, float] = {}
+
+
+def _read_wav(path: str) -> tuple[np.ndarray, int]:
+    import soundfile as sf
+    x, fs = sf.read(path, dtype="float64")
+    return (x.mean(axis=1) if x.ndim > 1 else x), int(fs)
+
+
+def _median_f0(x: np.ndarray, fs: int, t: Transform) -> float:
+    """Ortanca perde, dönüşümün kendi perde izleyicisiyle (world: harvest, praat: Praat Pitch)."""
+    if t.path == "world":
+        import pyworld as pw
+        f0, _ = pw.harvest(np.ascontiguousarray(x, dtype=np.float64), fs, f0_floor=t.f0_floor, f0_ceil=t.f0_ceil)
+        f0 = f0[f0 > 0]
+    else:
+        import parselmouth
+        snd = parselmouth.Sound(np.ascontiguousarray(x, dtype=np.float64), sampling_frequency=fs)
+        f0 = snd.to_pitch(pitch_floor=t.f0_floor, pitch_ceiling=t.f0_ceil).selected_array["frequency"]
+        f0 = f0[f0 > 0]
+    return float(np.median(f0)) if len(f0) else 0.0
+
+
+def _ref_median(ref_path: str, t: Transform) -> float:
+    """Kaynak sesin referans kaydının ortanca perdesi (dosya + izleyici + aralık başına bir kez)."""
+    with open(ref_path, "rb") as f:
+        key = (hash(f.read()), t.path, t.f0_floor, t.f0_ceil)
+    if key not in _medians:
+        _medians[key] = _median_f0(*_read_wav(ref_path), t)
+    if _medians[key] <= 0:
+        raise HTTPException(400, "referans kaydında perde bulunamadı")
+    return _medians[key]
+
+
+def transform(x: np.ndarray, fs: int, t: Transform, ref_med: float) -> np.ndarray:
+    """Perde + formant dönüşümü; uzunluk değişmez, tepe düzeyi kaynağınki (en çok 0,95).
+    world: F0 log düzlemde `ref_med` → `pitch` (aralık çarpanıyla); spektral zarf ve aperiyodiklik frekans ekseninde
+    formant oranıyla sıkıştırılır. deploy/ses/cocuk_donustur.py `_world` ve Levent pilotunun betiğiyle aynı hesap.
+    praat: «Change gender»; satırın kendi ortancası `ref_med`'e göre taşınıp hedefe eşlenir (bütün satırlar aynı perde)."""
+    x64 = np.ascontiguousarray(x, dtype=np.float64)
+    if t.path == "world":
+        import pyworld as pw
+        f0, tt = pw.harvest(x64, fs, f0_floor=t.f0_floor, f0_ceil=t.f0_ceil)
+        sp = pw.cheaptrick(x64, f0, tt, fs)
+        ap = pw.d4c(x64, f0, tt, fs)
+        v = f0 > 0
+        nf0 = np.zeros_like(f0)
+        nf0[v] = np.exp(np.log(t.pitch) + t.range * (np.log(f0[v]) - np.log(ref_med)))
+        bins = sp.shape[1]
+        idx = np.arange(bins) / t.formant
+        warp = lambda a: np.stack([np.interp(idx, np.arange(bins), r) for r in a])   # noqa: E731
+        y = pw.synthesize(nf0, np.ascontiguousarray(warp(sp)), np.ascontiguousarray(np.clip(warp(ap), 0, 1)), fs)
+    else:
+        import parselmouth
+        from parselmouth.praat import call
+        snd = parselmouth.Sound(x64, sampling_frequency=fs)
+        own = _median_f0(x64, fs, t)
+        target = t.pitch * (own / ref_med) ** t.range if own > 0 else t.pitch
+        new = call(snd, "Change gender", t.f0_floor, t.f0_ceil, t.formant, float(target), t.range, 1.0)
+        y = new.values[0]
+        if int(new.sampling_frequency) != fs:
+            y = np.interp(np.arange(int(len(y) * fs / new.sampling_frequency)) * new.sampling_frequency / fs,
+                          np.arange(len(y)), y)
+    y = np.asarray(y, dtype=np.float64)
+    y = y[:len(x)] if len(y) >= len(x) else np.pad(y, (0, len(x) - len(y)))
+    y = y / max(1e-6, np.abs(y).max()) * min(0.95, np.abs(x64).max() + 1e-6)
+    return np.clip(y, -1, 1).astype(np.float32)
 
 
 # ------------------------------------------------------------------ hizalama
@@ -434,7 +524,8 @@ def narrate(req: Narrate) -> dict:
             out.append({"start": round(start, 3), "end": round((pos + len(wav)) / SR, 3), "aligned": ALIGNER is not None,
                         "words": [None if w is None else {**w, "start": round(w["start"] + start, 3),
                                                           "end": round(w["end"] + start, 3)} for w in words],
-                        **({"measure": _measure(wav, seg.text)} if req.measure else {})})
+                        **({"measure": _measure(wav, seg.text)} if req.measure else {}),
+                        **({"transform": seg.voice.transform.path} if seg.voice.transform else {})})
             gap = np.zeros(int(SR * seg.pause_ms / 1000), dtype=np.float32)
             parts += [wav, gap]
             pos += len(wav) + len(gap)

@@ -4,5 +4,9 @@
 # 2.30.7 → 2.29.7'ye indirmek istedi); tabanın Torch/CUDA kümesi olduğu gibi kalır.
 FROM vllm/vllm-omni@sha256:38c59f79fd8fc4831348a3d800a882833a1ca1c50a67458988d693f3aa80360c
 RUN pip install --no-cache-dir --no-deps voxcpm==2.0.3 && python -c "import voxcpm, torchaudio, transformers"
+# Dönüşümlü sesler (voice.transform, server.py): WORLD vokoder (pyworld, MIT) ve Praat «Change gender» (parselmouth,
+# GPL-3.0; ayrı paket, servis içinde çağrılır). İkisi de yalnız numpy ister, tabanınki kullanılır.
+RUN pip install --no-cache-dir --no-deps pyworld==0.3.5 praat-parselmouth==0.4.7 \
+    && python -c "import pyworld, parselmouth, soundfile"
 COPY images/voice/server.py /srv/server.py
 ENTRYPOINT ["python", "/srv/server.py"]

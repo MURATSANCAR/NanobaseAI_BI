@@ -118,7 +118,7 @@ EOV
   docker build -q -t editor-embed:latest -f "$APP/images/embed/Dockerfile" "$APP" >/dev/null
   docker build -q -t editor-upscale:1 -f "$APP/images/upscale/Dockerfile" "$APP" >/dev/null
   docker build -q -t editor-embed-cpu:1 -f "$APP/images/embed-cpu/Dockerfile" "$APP" >/dev/null   # models.yaml book-embedding-cpu
-  docker build -q -t editor-voice:5 -f "$APP/images/voice/Dockerfile" "$APP" >/dev/null   # models.yaml book-voice ile aynı etiket
+  docker build -q -t editor-voice:6 -f "$APP/images/voice/Dockerfile" "$APP" >/dev/null   # models.yaml book-voice ile aynı etiket
   # Film hattı (models.yaml book-video / book-music). İlk derleme saatler sürer (çok sayıda torch ortamı); sonrası önbellekten.
   docker build -q -t editor-video:1 -f "$APP/images/video/Dockerfile" "$APP" >/dev/null
   docker build -q -t editor-music:1 -f "$APP/images/music/Dockerfile" "$APP" >/dev/null

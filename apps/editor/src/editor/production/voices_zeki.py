@@ -13,8 +13,13 @@ klonda referans metnidir. Tarif yine saklanır: sesin kişisi (kadın/erkek/yaş
 
 Kayıt düzeni `narration.PINNED` ile aynıdır; dosya yoksa ya da özeti tutmazsa ses üretilmez.
 
-Çizgi film çocuk sesleri (CHILD_VOICES, 2026-10-07) aynı yöntemle üretildi; sabit kaydı (PINNED) olmayan çocuk sesi
-«onay bekliyor»dur: katalogda görünmez, kimliği genç sese yönlenir (ayrıntı dosyanın sonunda).
+Çizgi film çocuk sesleri (CHILD_VOICES, 2026-10-07) aynı yöntemle üretildi; sabit kaydı (PINNED) ya da dönüşümü
+(TRANSFORMS) olmayan çocuk sesi «onay bekliyor»dur: katalogda görünmez, kimliği genç sese yönlenir (ayrıntı dosyanın
+sonunda).
+
+Dönüşümlü ses (TRANSFORMS, 2026-10-08): kendi sabit kaydı yoktur; her satır kaynak sesin (`source_voice`) sabit kaydıyla
+okunur, sonra seslendirme servisi satırı perde + formant dönüşümüyle çevirir (`voice.transform`, images/voice/server.py).
+Dönüştürülmüş kaydı klon referansı yapmak kararsızdı (5 kelimeye 10 sn, 13 kelimeye 2,6 sn; 633e2b41e geri alındı).
 """
 
 from __future__ import annotations
@@ -152,7 +157,7 @@ PINNED: dict[str, dict] = {
     "fragman-anlatici": _p("fragman-anlatici", FILM_TEXT, "63a913e9af90e134cfccc4b5577c114a7aaba12357ef0f1af3334da8bcaa59e7"),  # tohum 11
     # Çizgi film çocuk sesleri (2026-10-08, ana oturum ölçümle seçti — kullanıcı «sen seç»): perde + formant
     # dönüşümlü referans, tam klon; yöntem CHILD_VOICES[*].method, ölçüm docs/analiz/sesli-okuma-cocuk-sesleri.md.
-    "cocuk-erkek": _p("cocuk-erkek", READER_TEXT, "14c66310d7d561ae7e2359bfb2d683cdaee334dbcc9d89819b0683d6bd9534f6"),
+    # Erkek çocuk sesi sabit kayıt değil, dönüşümlü sestir (TRANSFORMS, aşağıda).
     "cocuk-kiz": _p("cocuk-kiz", CHILD_TEXT, "aed6240f456e900de6c8a1cef111a92a4087c2bdefa4a11ffb2d1ddb5940cf3a"),
     "kucuk-erkek": _p("kucuk-erkek", CHILD_TEXT, "4afba5879027735174b8ce831169ad90fa574741fadf33f75da082aa07c6e54a"),
     "kucuk-kiz": _p("kucuk-kiz", CHILD_TEXT, "ff164e52bb9fa1020c713ca930eed64c73b0c2b58ecb57dcb4dfa941503db41f"),
@@ -179,10 +184,23 @@ def _m(kaynak: str, yol: str, formant: float, perde: int, aralik: float, metin: 
             "klon": "tam (ref_audio + ref_text)"}
 
 
+def _t(path: str, formant: float, pitch: int, rng: float, f0: tuple[int, int]) -> dict:
+    """Servisin satıra uyguladığı dönüşüm (images/voice/server.py `Transform`): yol (world | praat), formant oranı,
+    hedef ortanca perde (Hz), perde aralığı çarpanı, perde arama tabanı/tavanı (kaynak sesin cinsine göre). Satırın
+    perdesi kaynak sesin sabit kaydının ortancasına göre taşınır, satırın kendi ortancasına göre değil: bütün satırlar
+    aynı perdede kalır."""
+    return {"path": path, "formant": formant, "pitch": pitch, "range": rng, "f0_floor": f0[0], "f0_ceil": f0[1]}
+
+
 CHILD_VOICES: list[dict] = [
-    _c("cocuk-erkek", "Erkek çocuk · 7–10 yaş", "ilkokul çağı, doğal",
-       "A ten-year-old boy with a natural child's voice, not squeaky, speaking calmly and clearly at a moderate pace",
-       _m("genc-kadin", "world", 1.30, 290, 1.2, "READER_TEXT")),
+    # 2026-10-08 kullanıcı seçimi (Levent pilotu): masal-anne → WORLD f1.30 p270 r1.2; dinlenen kayıt GPU'da
+    # /data/editor/ses-havuzu/cocuk/v2/donusum/masal-anne/world-f1.30-p270-r1.2.wav. Dönüşümlü ses (TRANSFORMS).
+    {**_c("cocuk-erkek", "Erkek çocuk · 9–12 yaş", "ilkokul çağı, oğlansı",
+          "An eleven-year-old boy with a natural child's voice, not squeaky, speaking calmly and clearly at a moderate "
+          "pace",
+          {**_m("masal-anne", "world", 1.30, 270, 1.2, "READER_TEXT"),
+           "klon": "yok: kaynak sesin sabit kaydıyla okunur, satır satır dönüştürülür"}),
+     "source_voice": "masal-anne", "transform": _t("world", 1.30, 270, 1.2, (100, 500))},
     _c("cocuk-kiz", "Kız çocuk · 7–10 yaş", "ilkokul çağı, doğal",
        "A primary school girl, about eight years old, speaking slowly and clearly to her mother, gentle and sincere",
        _m("1. yöntem cocuk-kiz-2 (tarif g, tohum 131)", "world", 1.30, 290, 1.2, "CHILD_TEXT")),
@@ -198,11 +216,18 @@ CHILD_FALLBACK = {"cocuk-erkek": "genc-erkek", "cocuk-kiz": "genc-kadin",
                   "kucuk-erkek": "cocuk-erkek", "kucuk-kiz": "cocuk-kiz"}
 
 
-def child_state(pinned: dict) -> tuple[list[dict], list[dict], dict[str, str]]:
-    """Sabit kaydı olan çocuk sesleri kataloğa girer, olmayanlar onay bekler ve yedeğine yönlenir:
-    (kataloğa girenler, onay bekleyenler, yönlendirmeler)."""
-    listed = [v for v in CHILD_VOICES if v["id"] in pinned]
-    pending = [v for v in CHILD_VOICES if v["id"] not in pinned]
+# Dönüşümlü sesler: ses kimliği → {source_voice, transform}. Kaynak ses sabit kayıtlı bir katalog sesidir; okuma onun
+# kaydıyla yapılır, `transform` servis gövdesinde sesin yanında gider (narration.voice_ref). Önbellek anahtarları ve
+# sayfa özeti dönüşümü içerir: tarif değişince o sesle okunmuş sayfa «güncel değil» olur.
+TRANSFORMS: dict[str, dict] = {v["id"]: {"source_voice": v["source_voice"], "transform": v["transform"]}
+                               for v in CHILD_VOICES if v.get("transform")}
+
+
+def child_state(ready) -> tuple[list[dict], list[dict], dict[str, str]]:
+    """Sabit kaydı ya da dönüşümü olan (`ready`: kimlikler) çocuk sesleri kataloğa girer, olmayanlar onay bekler ve
+    yedeğine yönlenir: (kataloğa girenler, onay bekleyenler, yönlendirmeler)."""
+    listed = [v for v in CHILD_VOICES if v["id"] in ready]
+    pending = [v for v in CHILD_VOICES if v["id"] not in ready]
     waiting = {v["id"] for v in pending}
 
     def fallback(vid: str) -> str:
@@ -213,6 +238,7 @@ def child_state(pinned: dict) -> tuple[list[dict], list[dict], dict[str, str]]:
     return listed, pending, {v["id"]: fallback(v["id"]) for v in pending}
 
 
-_listed, PENDING, _child_aliases = child_state(PINNED)
+assert all(t["source_voice"] in PINNED for t in TRANSFORMS.values())     # kaynak ses sabit kayıtlı olmalı
+_listed, PENDING, _child_aliases = child_state({**PINNED, **TRANSFORMS})
 VOICES += _listed
 ALIASES.update(_child_aliases)

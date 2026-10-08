@@ -407,6 +407,70 @@ def test_guess_voice_picks_child_voice_by_age_when_approved(monkeypatch):
     assert N.guess_voice("mother", "a young mother") == "genc-kadin"
 
 
+def test_transformed_boy_voice_reads_with_source_and_sends_transform():
+    """2026-10-08: erkek çocuk sesi dönüşümlü sestir — kendi kaydı yok; satır kaynak sesin (masal-anne) sabit kaydıyla
+    okunur, servis WORLD ile çevirir (formant 1,30, ortanca 270 Hz, aralık 1,2; Levent pilotunda seçilen tarif)."""
+    from editor.production import voices_zeki as Z
+    assert "cocuk-erkek" not in Z.PINNED and "cocuk-erkek" in N.VOICE_IDS and N.canonical("cocuk-erkek") == "cocuk-erkek"
+    assert Z.TRANSFORMS["cocuk-erkek"] == {"source_voice": "masal-anne", "transform": {
+        "path": "world", "formant": 1.30, "pitch": 270, "range": 1.2, "f0_floor": 100, "f0_ceil": 500}}
+    shown = {v["id"]: v for v in N.all_voices()}
+    assert shown["cocuk-erkek"]["label"] == "Erkek çocuk · 9–12 yaş" and shown["cocuk-erkek"]["group"] == "karakter"
+    boy, src = asyncio.run(N.voice_ref("cocuk-erkek")), asyncio.run(N.voice_ref("masal-anne"))
+    assert boy == {**src, "transform": Z.TRANSFORMS["cocuk-erkek"]["transform"]} and "transform" not in src
+    assert N.transform_of("cocuk-erkek")["path"] == "world" and N.transform_of("masal-anne") is None
+    # oyuncu seçimi ve tarif tahmini erkek çocuğu doğrudan bu sese verir (genç sese yönlenmez)
+    assert N.guess_voice("boy", "an eight-year-old boy with a school bag") == "cocuk-erkek"
+
+
+def test_transformed_voice_page_hash_sample_cache_and_service_check(job, monkeypatch):
+    calls = []
+    monkeypatch.setattr(N, "_call", _fake_service(calls))
+    N.set_settings(job, "anlatici-kadin", {"Elif": "cocuk-erkek"}, "editör")
+    asyncio.run(N.narrate_page(job, "p_1", "editör"))
+    segs = calls[-1]["segments"]
+    assert any(s["voice"].get("transform", {}).get("path") == "world" for s in segs)
+    assert any("transform" not in s["voice"] for s in segs)                 # anlatıcı dönüşümsüz
+    assert {r["id"]: r["status"] for r in N.status(job)}["p_1"] == "done"
+    # tarif değişirse o sesle okunmuş sayfa güncel değil olur
+    from editor.production import voices_zeki as Z
+    chosen = Z.TRANSFORMS["cocuk-erkek"]
+    monkeypatch.setitem(Z.TRANSFORMS, "cocuk-erkek", {**chosen, "transform": {**chosen["transform"], "pitch": 290}})
+    assert {r["id"]: r["status"] for r in N.status(job)}["p_1"] == "stale"
+    monkeypatch.setitem(Z.TRANSFORMS, "cocuk-erkek", chosen)
+    assert {r["id"]: r["status"] for r in N.status(job)}["p_1"] == "done"
+    # «dinle» örneği kaynak sesinkinden ayrı saklanır, ikinci kez üretilmez
+    n = len(calls)
+    lex = N.lexicon(job)
+    asyncio.run(N.sample(N.SAMPLE_TEXT, "masal-anne", lex))
+    asyncio.run(N.sample(N.SAMPLE_TEXT, "cocuk-erkek", lex))
+    assert len(calls) == n + 2 and calls[-1]["segments"][0]["voice"]["transform"]["pitch"] == 270
+    asyncio.run(N.sample(N.SAMPLE_TEXT, "cocuk-erkek", lex))
+    assert len(calls) == n + 2
+    # dönüşümü yapmayan (eski) servis: parça işaretsiz döner, kayıt yazılmaz
+    body = {"segments": [{"text": "a", "voice": {"ref_audio": "x", "transform": {"path": "world"}}, "pause_ms": 0}]}
+    with pytest.raises(N.VoiceUnavailable, match="dönüşüm"):
+        N.check_transformed(body, {"segments": [{"start": 0, "end": 1}]})
+    assert N.check_transformed(body, {"segments": [{"start": 0, "end": 1, "transform": "world"}]})
+
+
+def test_transformed_voice_expression_example_uses_source_voice(job, monkeypatch):
+    """İfade örneği (devam kipinin prompt_audio'su) dönüşümsüz kaynak sesin örneğidir: satır kaynak sesle okunur,
+    dönüşüm sonra gelir."""
+    from editor.production import expression as X
+    seen = []
+
+    async def call(body, timeout=1800.0):
+        seen.append(body)
+        return {"audio": "", "segments": [{"start": 0, "end": 1, "measure": {}} for _ in body["segments"]]}
+    monkeypatch.setattr(N, "_call", call)
+    boy = asyncio.run(N.voice_ref("cocuk-erkek"))
+    asyncio.run(X.example("cocuk-erkek", "uzuntu", boy))
+    assert seen and all("transform" not in s["voice"] for s in seen[-1]["segments"])
+    assert (N._root() / "ifade" / "masal-anne" / "uzuntu.json").exists()
+    assert not (N._root() / "ifade" / "cocuk-erkek").exists()
+
+
 def test_short_exclamation_gets_min_duration():
     t = "Tüh! O da ne! Bu çok güzel bir gün oldu! Nerede?"
     u = N.Unit("x", "para", None, "anlatici-kadin", t, N.read(t))
