@@ -53,6 +53,12 @@
 - **İndirme (GPU, salt okunur kap `muzik-indir`, `--restart no`, günlük kapalı; betik `apps/editor/deploy/muzik/`):** sabit revizyonlar `_indirme/muzik-durum.json`'da; HF'de LICENSE dosyası olmayan ACE-Step ve HeartMuLa klasörlerine kod deposunun LICENSE'ı yazılır. Stable Audio 3 HF'de kapılı: anahtar `/data/editor/secrets/hf-token`'a konunca `muzik_baslat.sh` yeniden çalıştırılır.
 - **Testler (GPU, stüdyo imajı, f70ebaf0 kopyası + değişen dosyalar `git archive` ile, `._*` 0):** `test_film.py` 25/25 (8 yeni: zaman çizelgesi, çapraz geçiş, kısma, müziksiz komutun birebir aynı kalması, ipucu temizliği, servis yokken atlama, üretim + yeniden kullanım, ffmpeg uçtan uca). Tam editör takımı: öncesi 1359 geçti + 1 kaldı (`test_portal_read::test_read_ocr_only_needed_and_requested_pages`, değişikliğin dokunmadığı dosya), sonrası 1368 geçti, 2 atlandı.
 - **Yapılmayan:** modeller ayağa kaldırılmadı, gateway'e istek atılmadı, çalışan kaplara dokunulmadı; main'e taşınmadı. Ekran: tema şarkısı seçeneği ve müzik dinleme henüz ekranda yok.
+  `test_film.py` 26/26, tam editör takımı 1369 geçti / 2 atlandı (V2 değişikliğinden sonra ikinci koşu 1368 + 1
+  kararsız `test_portal_read` — tek başına 3/3 geçiyor). **`editor-video:1` derlenmedi:** Wan katmanı geçti (pip
+  ~77 dk, ağ yavaş), /opt/h3 katmanı iki kez düştü (diffusers git klonu koptu → arşiv adresi; transformers 4.57 ×
+  diffusers hub ≥1.32 çakışması → transformers 5.x), üçüncü deneme başlatılamadan TT VPN koptu. FastVideo katmanı
+  hiç denenmedi. Sürdürme: `/data/editor/bench/claude-video-build`'e güncel images/video'yu koyup
+  `docker build -t editor-video:1 -f images/video/Dockerfile .` (ilk 6 katman önbellekte).
 
 ## 2026-10-06 — SEO meta kalite kapısı, yayınevi her başlıkta, Cloudflare yapay zekâ ayarları
 
