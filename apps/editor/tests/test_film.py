@@ -749,3 +749,13 @@ def test_mouth_hint_by_speech():
     assert shoot._mouths("i2v", [{"speaker": "Anne"}, {"speaker": "Mert"}], True) == shoot.TALKING
     assert shoot._mouths("s2v", [{"speaker": "Anne"}], True) == ""
     assert shoot._mouths("i2v", [], False) == ""
+
+
+def test_pick_best_only_among_versions_taken_this_run(tmp_path):
+    def v(n, ok):
+        return {"v": n, "file": f"x.v{n}.mp4", "first_frame": "k.png", "qc": {"ok": ok, "problems": []}}
+    store.write(tmp_path, "cekimler.json", {"shots": {"s01c01": {"selected": 2, "versions": [v(1, None), v(2, False)]}}})
+    assert shoot._pick_best(tmp_path, "s01c01", [2]) is False          # eski kuralla çekilmiş v1 aday değil
+    assert store.read(tmp_path, "cekimler.json")["shots"]["s01c01"]["selected"] == 2
+    assert shoot._pick_best(tmp_path, "s01c01", []) is False           # bu koşuda alınamadı: yeniden çekilir
+    assert shoot._pick_best(tmp_path, "s02c01", []) is False

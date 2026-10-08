@@ -289,6 +289,8 @@ aliases:
     env:
       PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
       VIDEO_ENGINE: h3
+      # 12 GB payla konuşan çekimde (ilk kare + 3 kart + ses) metin kodlayıcı bellek aştı (2026-10-08, OOM 1,76 GiB)
+      H3_MEMORY_MARGIN: 20GB
     image: editor-video:1
     entrypoint: [python, /srv/server.py]
     args: []
@@ -309,6 +311,8 @@ aliases:
     env:
       PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
       VIDEO_ENGINE: h3
+      # 12 GB payla konuşan çekimde (ilk kare + 3 kart + ses) metin kodlayıcı bellek aştı (2026-10-08, OOM 1,76 GiB)
+      H3_MEMORY_MARGIN: 20GB
     image: editor-video:1
     entrypoint: [python, /srv/server.py]
     args: []

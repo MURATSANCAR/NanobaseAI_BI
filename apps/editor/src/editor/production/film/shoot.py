@@ -254,12 +254,20 @@ async def _enhance_call(http, mp4: bytes, target: str) -> dict:
     return r.json()
 
 
-def _pick_best(f: Path, sid: str) -> bool:
-    """Çekimin seçili sürümü: bu kareyle çekilmiş sürümlerden ilk geçen, yoksa en az sorunlu. Dönen: geçen var mı."""
+def _pick_best(f: Path, sid: str, taken: list[int] | None = None) -> bool:
+    """Çekimin seçili sürümü: `taken` (bu koşuda alınan sürümler; verilmezse seçili sürümün karesiyle çekilmiş bütün
+    sürümler) içinden ilk geçen, yoksa en az sorunlu. Dönen: geçen var mı. Hiç sürüm yoksa False (yeniden çekilir)."""
     rec = store.read(f, "cekimler.json") or {"shots": {}}
-    cur = rec["shots"][sid]
-    first = cur["versions"][cur["selected"] - 1]["first_frame"]
-    cands = [v for v in cur["versions"] if v["first_frame"] == first]
+    cur = rec["shots"].get(sid)
+    if not cur or not cur.get("versions"):
+        return False
+    if taken is None:
+        first = cur["versions"][cur["selected"] - 1]["first_frame"]
+        cands = [v for v in cur["versions"] if v["first_frame"] == first]
+    else:
+        cands = [v for v in cur["versions"] if v["v"] in taken]
+    if not cands:
+        return False
     ok = [v for v in cands if v["qc"].get("ok") is not False]
     best = ok[0] if ok else min(cands, key=lambda v: len(v["qc"].get("problems", [])))
     cur["selected"] = best["v"]
@@ -389,9 +397,11 @@ async def shoot(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
         aliases = await workers()
         seeds = {s["id"]: 5000 + 53 * n for n, s in enumerate(todo, 1)}
         round_ = todo
+        taken: dict[str, list[int]] = {}
         for k in range(RETRIES + 1):
             queue = list(round_)
             done: list[tuple[dict, dict]] = []
+            failed: dict[str, str] = {}
             qcs = []
             label = "Çekimler yapılıyor" if k == 0 else "Geçmeyen çekimler yeniden çekiliyor"
 
@@ -399,8 +409,15 @@ async def shoot(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
                 while queue:
                     s = queue.pop(0)
                     progress(len(done) + 1, len(round_), label)
-                    ver = await take(f, s, by, seeds[s["id"]] + k, http, alias)
+                    try:
+                        ver = await take(f, s, by, seeds[s["id"]] + k, http, alias)
+                    except (httpx.HTTPError, store.FilmError) as e:
+                        # tek çekimin hatası çekim adımını durdurmaz (2026-10-08: bir OOM 35 çekimi kesti); çekim
+                        # sonraki turda yeniden denenir
+                        failed[s["id"]] = str(e)[:300]
+                        continue
                     done.append((s, ver))
+                    taken.setdefault(s["id"], []).append(ver["v"])
                     if len(aliases) == 1:
                         qcs.append(asyncio.create_task(check(f, s, ver, http)))
 
@@ -410,7 +427,9 @@ async def shoot(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
                     progress(n, len(done), "Çekimler denetleniyor")
                     await check(f, s, ver, http)
             await asyncio.gather(*qcs)
-            round_ = [s for s in round_ if not _pick_best(f, s["id"])]
+            round_ = [s for s in round_ if not _pick_best(f, s["id"], taken.get(s["id"], []))]
+            if failed:
+                store.log(f, by, "çekim hatası", shots=failed)
             if not round_:
                 break
         hd = await enhance_selected(f, http, progress)
