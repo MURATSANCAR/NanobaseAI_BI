@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -162,10 +163,26 @@ def sample_frames(mp4: bytes, n: int = 3) -> list[bytes]:
         return out
 
 
-async def _call(http, body: dict) -> dict:
+async def workers() -> list[str]:
+    """Çekim alabilecek takma adlar: `book-video` + gateway'de tanımlıysa `book-video-2`, `book-video-3`… (her biri
+    ayrı kartta ayrı video modeli). Çekimler aralarında paylaştırılır."""
+    if os.environ.get("EDITOR_VIDEO_URL"):
+        return [ALIAS]
     url, hd = _endpoint()
     try:
-        r = await http.post(f"{url}/v1/video/generations", json={"model": ALIAS, **body}, headers=hd)
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.get(f"{url}/v1/models", headers=hd)
+        ids = [m.get("id", "") for m in r.json().get("data", [])] if r.status_code == 200 else []
+    except (httpx.HTTPError, ValueError):
+        ids = []
+    extra = sorted(i for i in ids if re.fullmatch(re.escape(ALIAS) + r"-\d+", i))
+    return [ALIAS] + extra
+
+
+async def _call(http, body: dict, alias: str = ALIAS) -> dict:
+    url, hd = _endpoint()
+    try:
+        r = await http.post(f"{url}/v1/video/generations", json={"model": alias, **body}, headers=hd)
     except httpx.HTTPError as e:
         raise VideoUnavailable(f"video servisine ulaşılamadı: {type(e).__name__}") from None
     if r.status_code == 404:
@@ -258,7 +275,7 @@ async def enhance_selected(f: Path, http, progress=lambda n, t, w="": None) -> d
     return res
 
 
-async def take(f: Path, shot: dict, by: str, seed: int, http) -> dict:
+async def take(f: Path, shot: dict, by: str, seed: int, http, alias: str = ALIAS) -> dict:
     """Bir çekim alır ve sürüm olarak kaydeder (denetimsiz, qc «bekliyor»). Seçili sürüm, çekimin ilk sürümüyse bu olur."""
     m = store.meta(f)
     W, H = spec.FORMATS[m["format"]]["gen"]
@@ -267,7 +284,7 @@ async def take(f: Path, shot: dict, by: str, seed: int, http) -> dict:
     seconds = voice["seconds"].get(shot["id"], float(shot["seconds"]))
     first = F.selected(f, shot["id"])
     mode = mode_of(shot, lines)
-    res = await _call(http, {**body_for(f, shot, first, mode, seconds, W, H, m["style"], lines), "seed": seed})
+    res = await _call(http, {**body_for(f, shot, first, mode, seconds, W, H, m["style"], lines), "seed": seed}, alias)
     rec = store.read(f, "cekimler.json") or {"shots": {}}
     cur = rec["shots"].setdefault(shot["id"], {"versions": [], "selected": None})
     v = len(cur["versions"]) + 1
@@ -324,16 +341,32 @@ async def shoot(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
     store.set_stage(f, "cekim", status="calisiyor")
     async with httpx.AsyncClient(timeout=httpx.Timeout(3600.0, connect=10.0)) as http:
         # Video modeli bir kartta, görsel denetçi öbüründe: çekimler sırayla alınırken önceki çekimin denetimi aynı
-        # anda koşar (aynı karttaysa gateway sıraya koyar). Geçmeyenler turun sonunda yeniden çekilir; en iyi sürüm
-        # seçilir (2026-10-08: kare başına model değiştirmek dakikalar kaybettiriyordu).
+        # anda koşar (aynı karttaysa gateway sıraya koyar). Birden çok video modeli varsa (`workers`) çekimler
+        # aralarında paylaşılır ve denetim tur sonunda yapılır (denetçinin kartı da çekimde). Geçmeyenler turun
+        # sonunda yeniden çekilir; en iyi sürüm seçilir (2026-10-08: tek kartta çekim başı 25 dk).
+        aliases = await workers()
         seeds = {s["id"]: 5000 + 53 * n for n, s in enumerate(todo, 1)}
         round_ = todo
         for k in range(RETRIES + 1):
+            queue = list(round_)
+            done: list[tuple[dict, dict]] = []
             qcs = []
-            for n, s in enumerate(round_, 1):
-                progress(n, len(round_), "Çekimler yapılıyor" if k == 0 else "Geçmeyen çekimler yeniden çekiliyor")
-                ver = await take(f, s, by, seeds[s["id"]] + k, http)
-                qcs.append(asyncio.create_task(check(f, s, ver, http)))
+            label = "Çekimler yapılıyor" if k == 0 else "Geçmeyen çekimler yeniden çekiliyor"
+
+            async def run(alias: str) -> None:
+                while queue:
+                    s = queue.pop(0)
+                    progress(len(done) + 1, len(round_), label)
+                    ver = await take(f, s, by, seeds[s["id"]] + k, http, alias)
+                    done.append((s, ver))
+                    if len(aliases) == 1:
+                        qcs.append(asyncio.create_task(check(f, s, ver, http)))
+
+            await asyncio.gather(*(run(a) for a in aliases))
+            if len(aliases) > 1:
+                for n, (s, ver) in enumerate(done, 1):
+                    progress(n, len(done), "Çekimler denetleniyor")
+                    await check(f, s, ver, http)
             await asyncio.gather(*qcs)
             round_ = [s for s in round_ if not _pick_best(f, s["id"])]
             if not round_:

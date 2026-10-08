@@ -292,6 +292,26 @@ aliases:
     image: editor-video:1
     entrypoint: [python, /srv/server.py]
     args: []
+  # İkinci video modeli (kullanıcı onayı 2026-10-08): aynı ağırlık ve imaj, kart 1'de. Film çekimi (film/shoot.py
+  # `workers`) çekimleri book-video ile buna paylaştırır; tek kartta çekim başı 25 dk (H3 50 adım, 1344×768, 8 sn).
+  # Açılırken kart 1'deki editör modellerini durdurur (ana model dahil; o süre Zeki AI/BI sohbeti ve editör analizi
+  # cevap vermez); görsel denetim çekim turunun sonunda yapılır.
+  book-video-2:
+    container: editor-model-video-2
+    model_dir: book-video
+    real_model: MiniMaxAI/MiniMax-H3+FastVideo/FastVideo-FastH3-8-Step-V2(+FP8)+Wan-AI/Wan2.2-I2V-A14B+Wan2.2-S2V-14B+SeedVR2-7B+RIFE-4.26
+    role: Kitaptan film — ikinci kartta kareden video (çekimler paylaşılır)
+    kind: video
+    gpu: 1
+    mem_fraction: 0.90
+    idle_stop_sec: 300
+    start_timeout_sec: 1800
+    env:
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+      VIDEO_ENGINE: h3
+    image: editor-video:1
+    entrypoint: [python, /srv/server.py]
+    args: []
 
   # Kitaptan çizgi film — müzik (production/film/music.py, kullanıcı kararı 2026-10-07 «en iyi açık kaynak»; kurumun
   # hepsi için lisansı var): sahne başına sözsüz fon müziği (kind: score) ve isteğe bağlı Türkçe sözlü tema şarkısı
