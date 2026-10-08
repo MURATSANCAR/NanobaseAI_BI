@@ -257,7 +257,8 @@ def test_narrate_page_status_overlay_and_smil(job, monkeypatch):
     # katalog sesleri pakettaki sabit kayıtla klonlanır (tariften üretim çağrısı yok); eski kimlikler yeni seslere
     assert len(calls) == 1 and not any(s["voice"].get("design") for s in calls[0]["segments"])
     refs = {s["voice"]["ref_audio"] for s in calls[0]["segments"]}
-    assert refs <= {base64.b64encode(N.pinned_ref(v)).decode() for v in ("roman-kadin", "genc-kadin")}
+    # cocuk-kiz 2026-10-08'den beri sabit kayıtlı (önceden onay bekliyor → genc-kadin'e gidiyordu)
+    assert refs <= {base64.b64encode(N.pinned_ref(v)).decode() for v in ("roman-kadin", "cocuk-kiz")}
     page_call = calls[-1]
     assert all(s["voice"].get("ref_audio") and s["voice"].get("ref_text") for s in page_call["segments"])
     assert page_call["format"] == "mp3" and page_call["align"] is True
@@ -320,7 +321,8 @@ def test_default_voices_from_character_descriptions(job):
         {"name": "Dede", "species": "human", "base_look": "an old man with a white beard"},
         {"name": "Tilki", "species": "a small fox", "base_look": ""}]})
     cfg = N.settings_of(job)
-    assert cfg["source"] == "auto" and cfg["characters"] == {"Elif": "genc-kadin", "Dede": "bilge-dede"}
+    # 7 yaşında kız → sabit kayıtlı kız çocuk sesi (2026-10-08'den önce onay bekliyordu → genc-kadin)
+    assert cfg["source"] == "auto" and cfg["characters"] == {"Elif": "cocuk-kiz", "Dede": "bilge-dede"}
 
 
 def test_clock():
