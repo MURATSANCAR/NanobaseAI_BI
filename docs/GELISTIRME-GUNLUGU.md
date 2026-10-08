@@ -1,5 +1,19 @@
 # Geliştirme Günlüğü
 
+## 2026-10-08 — Çizgi film pilotu: kareler düzeltildi, video/müzik servisi açıldı, çekim iki kartta
+
+- **Ne:** Levent pilotunda (16 sayfa, 35 çekim, 213 sn ses) 35 ilk kare kartlara uygun hale getirildi; replikler
+  seslendirildi (Levent `cocuk-erkek`, Mert `kucuk-erkek`). `book-video` ve `book-music` `models.yaml`'da açıldı
+  (imajlar `editor-video:1`, `editor-music:1` GPU'da derlendi; ağırlıklar `book-video/` altında sabit bağla, MANIFEST
+  sha256, `verify_models` OK). Video kart 0'da: çekim sırasında ana model (qwen38-27b) elle durur (kullanıcı onayı).
+- **Neden:** (1) Kare başına çizer ↔ denetçi model değişimi 2–4 dk kaybettiriyordu → `frames.build` önce bütün
+  adayları çizer, sonra hepsini denetler; `shoot.shoot` tur tur, video alınırken önceki çekimin denetimi aynı anda.
+  (2) Senaryo çekim listesinde karakteri eksik yazıyordu (35 karede 8); listede olmayan karakter kartsız ya da kopya
+  çiziliyordu → `spec.on_screen` eylem tarifinde adı/rolü geçeni ekler (iyelik sayılmaz). (3) Derin denetçi bile
+  yanlış kareyi geçirebiliyor: pilotta kareler gözle de incelendi.
+- **Açık:** kök disk %75 (Docker derleme önbelleği, silinmedi); Stable Audio 3 HF anahtarı bekliyor; FastVideo/Wan GPU'da
+  ilk açılışta denenecek.
+
 ## 2026-10-07 — Dal temizliği: kalan dallar main'e taşındı
 
 - **Ne:** 32 yerel dal tarandı; main'de olmayan iş 7 dalda kaldı. Taşınan: film video motorları (H3/FastH3/SeedVR2),
