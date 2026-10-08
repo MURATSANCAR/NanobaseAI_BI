@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-10-08 — Editör testi: çocuk sesi kişisi + kurulum testine images/
+
+- **Ne:** `tests/test_sfx.py::test_voice_person_from_voice_identity` beklentisi güncellendi: `cocuk-kiz`/`kucuk-kiz` →
+  «kız çocuğu», `cocuk-erkek`/`kucuk-erkek` → «erkek çocuğu». GPU kurulum betiği depoya alındı
+  (`apps/editor/deploy/gpu-release.sh <sha8>`); test adımı artık `-v $REL/images:/app/images` bağlar.
+- **Neden:** (1) Kod doğruydu, test eskimişti: çocuk sesleri 10-08'de PINNED'e girince (11a5893e6) `ALIASES` ile
+  genç sese yönlenmez oldu; `voice_person` sesin kendi adını («Kız çocuk · 7–10 yaş») okur. Efekt seçiminde çocuk
+  karakterin iç çekişi için çocuk sesi aranması istenen davranış. (2) Kurulum betiği her oturumda GPU `/tmp`'de elle
+  yazılıyordu ve yalnız tests/connectors/deploy bağlıyordu; `tests/test_film.py` `images/video/plan.py`'yi
+  yükleyemediği için toplanamıyordu (imaj `images/` taşımaz).
+
 ## 2026-10-08 — Çizgi film pilotu: kareler düzeltildi, video/müzik servisi açıldı, çekim iki kartta
 
 - **Ne:** Levent pilotunda (16 sayfa, 35 çekim, 213 sn ses) 35 ilk kare kartlara uygun hale getirildi; replikler

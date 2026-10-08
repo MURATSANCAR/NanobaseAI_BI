@@ -362,11 +362,14 @@ def test_rule_cue_when_model_misses_strong_sound(job):
 
 # ------------------------------------------------------------------ 2026-09-29: sesi çıkaran ve üst üste binme
 def test_voice_person_from_voice_identity():
-    """Kişi sesin kimliğinden (ad, not, tarif) — kitaptan bağımsız; bilinmeyen ses bilgi vermez."""
+    """Kişi sesin kimliğinden (ad, not, tarif) — kitaptan bağımsız; bilinmeyen ses bilgi vermez.
+    Çocuk sesleri 2026-10-08'den beri sabit kayıtlı (voices_zeki.PINNED): artık genç sese yönlenmez, kişisi çocuktur."""
     got = {v: sfx.voice_person(v) for v in ("anlatici-kadin", "canli-erkek-radyo", "anlatici-erkek", "cocuk-kiz",
-                                             "cocuk-erkek", "yasli-kadin", "masal-erkek-dede", "masal-kadin-anne")}
+                                             "cocuk-erkek", "kucuk-kiz", "kucuk-erkek", "yasli-kadin",
+                                             "masal-erkek-dede", "masal-kadin-anne")}
     assert got == {"anlatici-kadin": "kadın", "canli-erkek-radyo": "erkek", "anlatici-erkek": "erkek",
-                   "cocuk-kiz": "kadın", "cocuk-erkek": "erkek", "yasli-kadin": "yaşlı kadın",   # çocuk → genç ses
+                   "cocuk-kiz": "kız çocuğu", "cocuk-erkek": "erkek çocuğu", "kucuk-kiz": "kız çocuğu",
+                   "kucuk-erkek": "erkek çocuğu", "yasli-kadin": "yaşlı kadın",
                    "masal-erkek-dede": "yaşlı erkek", "masal-kadin-anne": "kadın"}
     assert sfx.voice_person("yok-boyle-ses") is None and sfx.voice_person(None) is None
 
