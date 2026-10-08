@@ -337,14 +337,14 @@ async def enhance_selected(f: Path, http, progress=lambda n, t, w="": None) -> d
     for n, (sid, v) in enumerate(todo, 1):
         progress(n, len(todo), "Çekimler iyileştiriliyor")
         try:
-            out = await _enhance_call(http, (f / "cekim" / v["file"]).read_bytes(), target)
+            out = await _enhance_call(http, source_of(f, v).read_bytes(), target)
         except (VideoUnavailable, RuntimeError, httpx.HTTPError, ValueError) as e:
             res["error"] = str(e)[:300]
             _mark(f, sid, v["v"], hd_error=res["error"])
             if isinstance(e, VideoUnavailable):
                 break
             continue
-        name = hd_name(v["file"])
+        name = hd_name(source_of(f, v).name)
         (f / "cekim" / name).write_bytes(base64.b64decode(out["video"]))
         _mark(f, sid, v["v"], hd={"file": name, "width": out.get("width"), "height": out.get("height"),
                                    "fps": out.get("fps"), "engine": out.get("engine"), "target": target,
@@ -483,7 +483,13 @@ def for_mix(f: Path, shot_id: str) -> tuple[Path, bool]:
     hd = (v.get("hd") or {}).get("file")
     if hd and (f / "cekim" / hd).is_file():
         return f / "cekim" / hd, True
-    return f / "cekim" / v["file"], False
+    return source_of(f, v), False
+
+
+def source_of(f: Path, v: dict) -> Path:
+    """Çekimin işlenecek hali: dudak senkronlu kopya (`.dub.mp4`, film/lipsync.py) varsa o, yoksa ham çekim."""
+    dub = f / "cekim" / (v["file"][:-4] + ".dub.mp4")
+    return dub if dub.is_file() else f / "cekim" / v["file"]
 
 
 def selected(f: Path, shot_id: str) -> Path:

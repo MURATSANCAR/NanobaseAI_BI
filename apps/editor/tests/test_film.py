@@ -967,3 +967,23 @@ def test_adapt_ending_and_framing_run():
     assert adapt.ending(["A b c.", "Sonunda herkes çok mutlu oldu."]) == ["Sonunda herkes çok mutlu oldu."]
     sh = [{"seconds": 3, "framing": "omuz-ustu", "lines": []} for _ in range(3)]
     assert any("üst üste 3" in p for p in adapt.scene_problems(sh, [], 9))
+
+
+def test_lipsync_plan_speaker_silent_and_skip():
+    from editor.production.film import lipsync
+    boxes = {"Levent": [100, 100, 300, 600], "Anne": [400, 50, 700, 700], "Mert": [800, 300, 900, 600]}
+    shot = {"framing": "genel"}
+    p = lipsync.plan(shot, [{"speaker": "anlatıcı", "text": "x"}], boxes, "Levent")
+    assert p["speak"] == [("Levent", boxes["Levent"])] and p["silent"] == [boxes["Anne"]]   # büyük olan sessiz tutulur
+    assert lipsync.plan(shot, [], boxes, "Levent") is None                                   # geniş, konuşma yok
+    p = lipsync.plan({"framing": "yakin"}, [{"speaker": "Baba", "text": "x"}], {"Mert": [1, 1, 5, 5]}, "Levent")
+    assert p == {"speak": [], "silent": [], "all_silent": True}                              # konuşan karede yok
+    assert lipsync.dub_name("s01c02.v3.mp4") == "s01c02.v3.dub.mp4"
+
+
+def test_for_mix_prefers_dub_then_hd(tmp_path):
+    (tmp_path / "cekim").mkdir()
+    for n in ("s01c01.v1.mp4", "s01c01.v1.dub.mp4"):
+        (tmp_path / "cekim" / n).write_bytes(b"x")
+    store.write(tmp_path, "cekimler.json", {"shots": {"s01c01": {"selected": 1, "versions": [{"v": 1, "file": "s01c01.v1.mp4"}]}}})
+    assert shoot.for_mix(tmp_path, "s01c01") == (tmp_path / "cekim" / "s01c01.v1.dub.mp4", False)
