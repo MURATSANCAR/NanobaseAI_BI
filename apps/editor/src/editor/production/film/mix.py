@@ -203,7 +203,8 @@ def command(tl: dict, fmt: str, voice_dir: Path, out: Path, srt_path: Path | Non
 
 
 def pick_sounds(sc: dict, old: dict | None = None) -> dict:
-    """Senaryonun efekt ve ortam tarifleri → havuzdan dosya. Editörün seçtiği (`source: editor`) korunur."""
+    """Senaryonun efekt ve ortam tarifleri → havuzdan dosya. Editörün seçtiği (`source: editor`) korunur. Arama
+    sonucu ekrana giden alanları taşır (yolsuz, `public`); dosya katalog satırından (`get`) bulunur."""
     from .. import sfx_library as L
     old = old or {}
     picks = {"sfx": {}, "amb": {}, "ids": []}
@@ -217,7 +218,7 @@ def pick_sounds(sc: dict, old: dict | None = None) -> dict:
         files = []
         for q in s.get("sfx", [])[:3]:
             res = L.search(q, kind="anlik", k=1)
-            files.append(str(L.file_of(res[0])) if res else None)
+            files.append(str(L.file_of(L.get(res[0]["id"]))) if res else None)
             if res:
                 picks["ids"].append(res[0]["id"])
         picks["sfx"][s["id"]] = files
@@ -226,7 +227,7 @@ def pick_sounds(sc: dict, old: dict | None = None) -> dict:
         if q:
             res = L.search(q, kind="ortam", k=1)
             if res:
-                picks["amb"][str(si)] = str(L.file_of(res[0]))
+                picks["amb"][str(si)] = str(L.file_of(L.get(res[0]["id"])))
                 picks["ids"].append(res[0]["id"])
     return picks
 

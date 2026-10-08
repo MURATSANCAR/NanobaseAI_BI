@@ -675,3 +675,16 @@ def test_pick_best_prefers_first_pass_for_current_frame(tmp_path):
     store.write(tmp_path, "cekimler.json", rec)
     assert shoot._pick_best(tmp_path, "s01c01") is True
     assert store.read(tmp_path, "cekimler.json")["shots"]["s01c01"]["selected"] == 5
+
+
+def test_pick_sounds_resolves_files_from_catalog_rows(monkeypatch):
+    from editor.production import sfx_library as L
+    rows = {"a1": {"id": "a1", "path": "x/kalem.wav"}, "o1": {"id": "o1", "path": "y/oda.wav"}}
+    monkeypatch.setattr(L, "available", lambda: True)
+    monkeypatch.setattr(L, "search", lambda q, kind=None, k=1: [{"id": "a1" if kind == "anlik" else "o1"}])
+    monkeypatch.setattr(L, "get", lambda sid: rows[sid])
+    monkeypatch.setattr(L, "file_of", lambda row: Path("/havuz") / row["path"])
+    sc = {"scenes": [{"shots": [{"sfx": ["kalem sesi"], "ambience": "oda"}]}]}
+    p = mix.pick_sounds(sc)
+    assert p["sfx"]["s01c01"] == ["/havuz/x/kalem.wav"]
+    assert p["amb"]["1"] == "/havuz/y/oda.wav"
