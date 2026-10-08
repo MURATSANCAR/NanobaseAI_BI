@@ -44,6 +44,8 @@ ALIAS = "book-video"
 RETRIES = 1
 ENHANCE_FPS = 24             # kurgu kare hızı (mix.FPS)
 MAX_REFS = 8
+S2V_REFS = 1                 # konuşan çekimde yalnız konuşanın kartı: 3 kart + ilk kare + ses H3'ün metin kodlayıcısında
+                             # bellek aşıyordu (2026-10-08, H100 94 GB, iki kez OOM); öbür karakterler ilk karede
 TALK_FRAMINGS = {"yakin", "cok-yakin", "bel", "omuz-ustu"}
 
 
@@ -114,7 +116,8 @@ def body_for(f: Path, shot: dict, first: Path, mode: str, seconds: float, W: int
         body["engine"] = eng
     if mode == "s2v":
         body["audio"] = base64.b64encode(talk_track(f, lines, seconds)).decode()
-        refs = char_refs(f, shot, next((x["speaker"] for x in lines if x["speaker"].casefold() != spec.NARRATOR), None))
+        refs = char_refs(f, shot, next((x["speaker"] for x in lines if x["speaker"].casefold() != spec.NARRATOR),
+                                       None))[:S2V_REFS]
         if refs:
             body["refs"] = [base64.b64encode(p.read_bytes()).decode() for p in refs]
     return body
