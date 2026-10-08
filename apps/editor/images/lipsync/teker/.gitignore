@@ -1,0 +1,2 @@
+# Derleme ağı GitHub sürüm dosyalarında takılırsa tekerlek buraya elle konur (depoya girmez).
+*.whl

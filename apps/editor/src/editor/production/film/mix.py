@@ -31,6 +31,7 @@ from . import spec, store
 
 FPS = 24
 FX_DB = -8.0                 # anlık efekt, replikten alçak
+FOLEY_DB = -10.0             # görüntüden üretilen efekt+ortam (foley/<çekim>.wav); arşiv efekti ve ortam sesi yerine
 AMB_DB = -20.0               # ortam sesi
 FX_MAX = 4.0                 # anlık efektin en uzun kısmı (sn)
 FADE = 0.25
@@ -62,17 +63,20 @@ def timeline(sc: dict, voice: dict, videos: dict[str, str], picks: dict, music: 
         secs = float(voice["seconds"].get(s["id"], s["seconds"]))
         ls = voice["lines"].get(s["id"], [])
         starts = line_starts([x["duration"] for x in ls])
-        fx = [{"file": p, "start": round(t + 0.2 + 0.6 * k, 3)}
-              for k, p in enumerate(picks.get("sfx", {}).get(s["id"], [])) if p]
+        foley = picks.get("foley", {}).get(s["id"])
+        fx = [] if foley else [{"file": p, "start": round(t + 0.2 + 0.6 * k, 3)}
+                               for k, p in enumerate(picks.get("sfx", {}).get(s["id"], [])) if p]
         shots.append({"id": s["id"], "start": round(t, 3), "seconds": secs, "video": videos[s["id"]],
                       "lines": [{"file": x["file"], "start": round(t + st, 3), "duration": x["duration"],
                                  "text": x["text"], "speaker": x["speaker"]} for x, st in zip(ls, starts)],
-                      "sfx": fx})
+                      "sfx": fx, **({"foley": {"file": foley, "start": round(t, 3), "seconds": secs}} if foley else {})})
         span = scene_span.setdefault(s["scene"], [t, t])
         span[1] = t + secs
         t += secs
+    with_foley = {x["id"][:3] for x in shots if x.get("foley")}          # foley ortamı da taşır: o sahnede arşiv ortamı yok
     amb = [{"file": picks["amb"][str(sc_no)], "start": round(a, 3), "seconds": round(b - a, 3)}
-           for sc_no, (a, b) in scene_span.items() if picks.get("amb", {}).get(str(sc_no))]
+           for sc_no, (a, b) in scene_span.items()
+           if picks.get("amb", {}).get(str(sc_no)) and f"s{sc_no:02d}" not in with_foley]
     return {"shots": shots, "ambience": amb, "music": music_track(scene_span, music or {}, t), "total": round(t, 3)}
 
 
@@ -149,6 +153,14 @@ def command(tl: dict, fmt: str, voice_dir: Path, out: Path, srt_path: Path | Non
             ms = int(ln["start"] * 1000)
             af.append(f"[{n}:a]{norm},adelay={ms}|{ms}[d{n}]")
             dl.append(f"[d{n}]")
+            n += 1
+        if s.get("foley"):
+            x = s["foley"]
+            args += ["-i", x["file"]]
+            ms, S = int(x["start"] * 1000), x["seconds"]
+            af.append(f"[{n}:a]{norm},atrim=0:{S},afade=t=in:d=0.05,afade=t=out:st={max(S - 0.05, 0)}:d=0.05,"
+                      f"volume={FOLEY_DB}dB,adelay={ms}|{ms}[x{n}]")
+            fx.append(f"[x{n}]")
             n += 1
         for x in s["sfx"]:
             args += ["-i", x["file"]]
@@ -243,6 +255,18 @@ def pick_sounds(sc: dict, old: dict | None = None) -> dict:
     return picks
 
 
+def foley_files(f: Path, shot_ids: list[str]) -> dict[str, str]:
+    """Çekimin görüntüsünden üretilmiş efekt sesi (`foley/<çekim>.wav`, HunyuanVideo-Foley; images/foley). Varsa
+    arşivden seçilen efekt ve sahne ortamı yerine o kullanılır: arşiv sesi çekim başına konuyordu, hareketle senkron
+    değildi (2026-10-08, paket açma sesi)."""
+    out = {}
+    for sid in shot_ids:
+        p = f / "foley" / f"{sid}.wav"
+        if p.is_file():
+            out[sid] = str(p)
+    return out
+
+
 def pick_videos(f: Path, shot_ids: list[str]) -> tuple[dict[str, str], int]:
     """Çekim → kurguya girecek dosya (iyileştirilmiş kopya varsa o) ve iyileştirilmiş çekim sayısı."""
     videos, hd = {}, 0
@@ -263,6 +287,7 @@ def build(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, music: di
     progress(1, 3, "Sesler seçiliyor")
     old = store.read(f, "kurgu.json") or {}
     picks = pick_sounds(sc, old.get("picks"))
+    picks["foley"] = foley_files(f, [s["id"] for s in spec.shots(sc)])
     videos, hd = pick_videos(f, [s["id"] for s in spec.shots(sc)])
     tl = timeline(sc, voice, videos, picks, music)
     od = f / "cikti"

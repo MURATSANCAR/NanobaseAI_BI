@@ -797,3 +797,21 @@ def test_lipsync_after_shoots_everything_fast(monkeypatch):
     shot = {"framing": "yakin", "characters": ["Levent"]}
     assert shoot.mode_of(shot, [{"speaker": "Levent", "text": "Sen kendin yap."}], "«Sen kendin yap.»") == "i2v"
     assert shoot._mouths("i2v", [{"speaker": "Levent"}], False) == ""
+
+
+def test_foley_replaces_library_sfx_and_scene_ambience(tmp_path):
+    sc = {"scenes": [{"shots": [{"seconds": 3, "sfx": ["kapı"], "ambience": "oda"}]},
+                     {"shots": [{"seconds": 2, "sfx": ["kalem"], "ambience": "oda"}]}]}
+    voice = {"seconds": {"s01c01": 3, "s02c01": 2}, "lines": {}}
+    picks = {"sfx": {"s01c01": ["/a/kapi.wav"], "s02c01": ["/a/kalem.wav"]}, "amb": {"1": "/a/oda.wav", "2": "/a/oda.wav"},
+             "foley": {"s01c01": "/f/s01c01.wav"}}
+    tl = mix.timeline(sc, voice, {"s01c01": "a.mp4", "s02c01": "b.mp4"}, picks)
+    a, b = tl["shots"]
+    assert a["sfx"] == [] and a["foley"] == {"file": "/f/s01c01.wav", "start": 0.0, "seconds": 3.0}
+    assert b["sfx"] and "foley" not in b
+    assert [x["start"] for x in tl["ambience"]] == [3.0]                    # yalnız foley'siz sahnede ortam
+    cmd = " ".join(mix.command(tl, next(iter(spec.FORMATS)), tmp_path, tmp_path / "o.mp4", None))
+    assert "/f/s01c01.wav" in cmd and f"volume={mix.FOLEY_DB}dB" in cmd
+    (tmp_path / "foley").mkdir()
+    (tmp_path / "foley" / "s01c01.wav").write_bytes(b"x")
+    assert mix.foley_files(tmp_path, ["s01c01", "s02c01"]) == {"s01c01": str(tmp_path / "foley" / "s01c01.wav")}
