@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-10-08 — Müzik servisi: MiniMax Music 3 şarkısı 500 dönüyordu
+
+- **Ne:** `images/music/worker.py` MiniMax Music 3 yolu çıktıyı torch tensörü sanıp `.float().cpu()` çağırıyordu;
+  diffusers `minimax_music3/decoders.py` varsayılan `output_type="np"` ile float32 numpy `(kanal, örnek)` döner →
+  `AttributeError: 'numpy.ndarray' object has no attribute 'float'` (worker.py:240), gateway 500. Şimdi
+  `output_type="np"` açıkça verilir, `sf.write(out, audio.T, sr)`.
+- **Neden:** motor çağrısı belgeden yazılmıştı, GPU'da ilk kez `{"kind":"song","engine":"minimax-music3"}` ile koştu.
+- **Test:** worker modülü içe aktarılırken stdout'u ayırıp argv okuyor; modelsiz birim testi yok, doğrulama gerçek
+  istekle (aşağıda / PROJECT-MEMORY).
+
 ## 2026-10-08 — Dönüşümlü ses türü; erkek çocuk sesi = masal-anne + WORLD
 
 - **Ne:** Ses kataloğuna yeni tür: `voices_zeki.TRANSFORMS` (`{source_voice, transform}`). Satır kaynak sesin sabit

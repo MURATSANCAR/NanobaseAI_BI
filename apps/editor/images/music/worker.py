@@ -23,7 +23,9 @@ Motorların çağrısı kaynak belgelerinden okundu (2026-10-07), GPU'da henüz 
   YuE2 notayı yazar → Vocal notaları Ins'e taşınır → sözsüz istekle yeniden üretilir. Betik her adımda boru hattını
   yeniden açar; burada yüklü olan boru hattı verilir (kapatılmaz), sonuç dosyası aynıdır.
 - MiniMax Music 3: diffusers `ModularPipeline.from_pretrained(<yerel>)` + `load_components(bfloat16)`,
-  `pipe(prompt, lyrics, audio_duration, generator, output="audios")` (MiniMaxAI/MiniMax-Music3 README).
+  `pipe(prompt, lyrics, audio_duration, generator, output="audios")` (MiniMaxAI/MiniMax-Music3 README). Çıktı
+  varsayılanı numpy (output_type="np", minimax_music3/decoders.py) — tensör değil; 2026-10-08 GPU'da ilk koşuda
+  `.float()` bu yüzden düştü.
 - HeartMuLa: heartlib README + examples/run_music_generation.py — `HeartMuLaGenPipeline.from_pretrained(<ckpt>,
   device, dtype={mula: bf16, codec: fp32}, version="3B")`, `pipe({"lyrics", "tags"}, max_audio_length_ms, save_path,
   topk=50, temperature=1.0, cfg_scale=3.0)` (örnek betiğin varsayılanı; README metni 1.5 der). Etiketler virgülle
@@ -235,9 +237,11 @@ class MiniMaxMusic3:
         import soundfile as sf
         import torch
         audio = self.pipe(prompt=style_of(job, False), lyrics=job["lyrics"], audio_duration=float(job["seconds"]),
-                          generator=torch.Generator("cuda").manual_seed(int(job["seed"])), output="audios")[0]
+                          generator=torch.Generator("cuda").manual_seed(int(job["seed"])), output_type="np",
+                          output="audios")[0]
+        # Kod çözücü (decoders.py) float32, [-1, 1] numpy döner: (kanal, örnek). soundfile (örnek, kanal) ister.
         sr = int(self.pipe.sampling_rate)
-        sf.write(job["out"], audio.T.float().cpu().numpy(), sr)
+        sf.write(job["out"], audio.T, sr)
         return {"seconds": audio.shape[-1] / sr, "sample_rate": sr, "truncated": False}
 
 
