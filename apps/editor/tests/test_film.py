@@ -1050,5 +1050,10 @@ def test_foley_prompt_and_jobs(tmp_path):
 
 
 def test_gateway_passes_video_enhance():
-    from editor import gateway
-    assert "video/enhance" in gateway.PASSTHROUGH and "video/generations" in gateway.PASSTHROUGH
+    # gateway içe aktarılınca docker'a bağlanır (test konteynerinde soket yok): kaynaktan okunur
+    import ast
+    src = (Path(__file__).parents[1] / "src/editor/gateway.py").read_text()
+    node = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Assign)
+                and any(getattr(t, "id", "") == "PASSTHROUGH" for t in n.targets))
+    vals = {c.value for c in ast.walk(node.value) if isinstance(c, ast.Constant)}
+    assert "video/enhance" in vals and "video/generations" in vals
