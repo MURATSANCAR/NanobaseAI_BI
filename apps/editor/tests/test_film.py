@@ -991,3 +991,32 @@ def test_for_mix_prefers_dub_then_hd(tmp_path):
 
 def test_over_shoulder_framing_forbids_duplicate():
     assert "NOT drawn a second time" in spec.FRAMINGS["omuz-ustu"]
+
+
+def test_take_retries_transient_error(monkeypatch, tmp_path):
+    import asyncio
+    import httpx as hx
+    monkeypatch.setattr(shoot, "TAKE_BACKOFF", 0.0)
+    calls = []
+
+    async def flaky(f, s, by, seed, http, alias=shoot.ALIAS):
+        calls.append(s["id"])
+        if len(calls) == 1:
+            raise hx.ConnectError("servis açılıyor")
+        return {"v": 1, "file": f"{s['id']}.v1.mp4", "qc": {"ok": None, "problems": []}, "first_frame": "k.png"}
+
+    async def no_check(*a, **k):
+        return {"ok": None, "problems": []}
+
+    async def one(): return [shoot.ALIAS]
+    monkeypatch.setattr(shoot, "take", flaky)
+    monkeypatch.setattr(shoot, "check", no_check)
+    monkeypatch.setattr(shoot, "workers", one)
+    monkeypatch.setattr(shoot, "enhance_selected", lambda f, http, progress=None: asyncio.sleep(0, {"done": 0, "total": 0, "error": None}))
+    monkeypatch.setattr(shoot, "_pick_best", lambda f, sid, taken=None: True)
+    monkeypatch.setattr(shoot.store, "require", lambda f, st: None)
+    monkeypatch.setattr(shoot.script_mod, "load", lambda f: {"scenes": [{"shots": [{"seconds": 3}]}]})
+    f = tmp_path / "film"; f.mkdir()
+    store.write(f, "film.json", {"id": "f_x", "format": "cizgi-film", "style": "3b", "stages": {"cekim": {}}})
+    asyncio.run(shoot.shoot(tmp_path, f, "t", only=["s01c01"]))
+    assert calls == ["s01c01", "s01c01"]

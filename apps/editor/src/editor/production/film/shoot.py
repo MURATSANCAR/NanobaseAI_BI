@@ -42,6 +42,8 @@ from . import spec, store
 
 ALIAS = "book-video"
 RETRIES = 1
+TAKE_TRIES = 3               # bir çekimin anlık hatada yeniden denenmesi (tur içinde)
+TAKE_BACKOFF = 60.0          # sn; deneme başına artan bekleme
 ENHANCE_FPS = 24             # kurgu kare hızı (mix.FPS)
 MAX_REFS = 8
 S2V_REFS = 1                 # konuşan çekimde yalnız konuşanın kartı: 3 kart + ilk kare + ses H3'ün metin kodlayıcısında
@@ -440,12 +442,19 @@ async def shoot(d: Path, f: Path, by: str, progress=lambda n, t, w="": None, onl
                 while queue:
                     s = queue.pop(0)
                     progress(len(done) + 1, len(round_), label)
-                    try:
-                        ver = await take(f, s, by, seeds[s["id"]] + k, http, alias)
-                    except (httpx.HTTPError, store.FilmError) as e:
-                        # tek çekimin hatası çekim adımını durdurmaz (2026-10-08: bir OOM 35 çekimi kesti); çekim
-                        # sonraki turda yeniden denenir
-                        failed[s["id"]] = str(e)[:300]
+                    ver, err = None, None
+                    for attempt in range(TAKE_TRIES):
+                        try:
+                            ver = await take(f, s, by, seeds[s["id"]] + k, http, alias)
+                            break
+                        except (httpx.HTTPError, store.FilmError) as e:
+                            # tek çekimin hatası çekim adımını durdurmaz (2026-10-08: bir OOM 35 çekimi kesti). Hata
+                            # anlık olabilir (servis yeniden açılıyor): bekleyip aynı çekimi yeniden dene; yoksa kuyruk
+                            # saniyeler içinde «hatalı» diye tükeniyordu (2026-10-09: 102 çekim, ilk tur boşa).
+                            err = str(e)[:300]
+                            await asyncio.sleep(TAKE_BACKOFF * (attempt + 1))
+                    if ver is None:
+                        failed[s["id"]] = err or "bilinmeyen hata"
                         continue
                     done.append((s, ver))
                     taken.setdefault(s["id"], []).append(ver["v"])
