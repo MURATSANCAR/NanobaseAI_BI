@@ -987,3 +987,7 @@ def test_for_mix_prefers_dub_then_hd(tmp_path):
         (tmp_path / "cekim" / n).write_bytes(b"x")
     store.write(tmp_path, "cekimler.json", {"shots": {"s01c01": {"selected": 1, "versions": [{"v": 1, "file": "s01c01.v1.mp4"}]}}})
     assert shoot.for_mix(tmp_path, "s01c01") == (tmp_path / "cekim" / "s01c01.v1.dub.mp4", False)
+
+
+def test_over_shoulder_framing_forbids_duplicate():
+    assert "NOT drawn a second time" in spec.FRAMINGS["omuz-ustu"]

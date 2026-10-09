@@ -49,7 +49,7 @@ PLATFORMS = {
 
 # ------------------------------------------------------------------ çekim dili (kapalı kümeler)
 FRAMINGS = {"genel": "extreme wide establishing shot", "boy": "full shot", "bel": "medium shot",
-            "yakin": "close-up", "cok-yakin": "extreme close-up", "omuz-ustu": "over-the-shoulder shot",
+            "yakin": "close-up", "cok-yakin": "extreme close-up", "omuz-ustu": "over-the-shoulder shot (the character whose shoulder is in the foreground is seen only from behind and is NOT drawn a second time facing the camera)",
             "kus-bakisi": "high-angle bird's-eye view"}
 MOVES = {"sabit": "static camera", "yaklasma": "slow dolly-in", "uzaklasma": "slow dolly-out",
          "kaydirma": "smooth lateral tracking", "takip": "camera follows the character",
