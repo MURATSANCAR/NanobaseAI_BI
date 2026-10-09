@@ -272,11 +272,11 @@ def _detail(r) -> str:
         return r.text[:300]
 
 
-async def _enhance_call(http, mp4: bytes, target: str) -> dict:
+async def _enhance_call(http, mp4: bytes, target: str, alias: str = ALIAS) -> dict:
     url, hd = _endpoint()
     try:
         r = await http.post(f"{url}/v1/video/enhance", headers=hd,
-                            json={"model": ALIAS, "video": base64.b64encode(mp4).decode(), "target": target,
+                            json={"model": alias, "video": base64.b64encode(mp4).decode(), "target": target,
                                   "fps": ENHANCE_FPS})
     except httpx.HTTPError as e:
         raise VideoUnavailable(f"iyileştirme servisine ulaşılamadı: {type(e).__name__}") from None
@@ -336,21 +336,30 @@ async def enhance_selected(f: Path, http, progress=lambda n, t, w="": None) -> d
         res["error"] = "iyileştirme kapalı (EDITOR_FILM_ENHANCE=0)"
     todo = [] if target is None else [(sid, v) for sid, v in sel
                                       if not ((v.get("hd") or {}).get("file") and (f / "cekim" / v["hd"]["file"]).is_file())]
-    for n, (sid, v) in enumerate(todo, 1):
-        progress(n, len(todo), "Çekimler iyileştiriliyor")
-        try:
-            out = await _enhance_call(http, source_of(f, v).read_bytes(), target)
-        except (VideoUnavailable, RuntimeError, httpx.HTTPError, ValueError) as e:
-            res["error"] = str(e)[:300]
-            _mark(f, sid, v["v"], hd_error=res["error"])
-            if isinstance(e, VideoUnavailable):
-                break
-            continue
-        name = hd_name(source_of(f, v).name)
-        (f / "cekim" / name).write_bytes(base64.b64decode(out["video"]))
-        _mark(f, sid, v["v"], hd={"file": name, "width": out.get("width"), "height": out.get("height"),
-                                   "fps": out.get("fps"), "engine": out.get("engine"), "target": target,
-                                   "at": store.now()}, hd_error=None)
+    queue, n_done, down = list(todo), [0], [False]
+
+    async def run(alias: str) -> None:
+        # iyileştirme her video modeline paylaştırılır (iki kart → yarı süre; 2026-10-09)
+        while queue and not down[0]:
+            sid, v = queue.pop(0)
+            n_done[0] += 1
+            progress(n_done[0], len(todo), "Çekimler iyileştiriliyor")
+            try:
+                out = await _enhance_call(http, source_of(f, v).read_bytes(), target, alias)
+            except (VideoUnavailable, RuntimeError, httpx.HTTPError, ValueError) as e:
+                res["error"] = str(e)[:300]
+                _mark(f, sid, v["v"], hd_error=res["error"])
+                if isinstance(e, VideoUnavailable):
+                    down[0] = True
+                continue
+            name = hd_name(source_of(f, v).name)
+            (f / "cekim" / name).write_bytes(base64.b64decode(out["video"]))
+            _mark(f, sid, v["v"], hd={"file": name, "width": out.get("width"), "height": out.get("height"),
+                                       "fps": out.get("fps"), "engine": out.get("engine"), "target": target,
+                                       "at": store.now()}, hd_error=None)
+
+    if todo:
+        await asyncio.gather(*(run(a) for a in await workers()))
     res["done"] = sum(1 for sid, _ in sel if for_mix(f, sid)[1])
     return res
 

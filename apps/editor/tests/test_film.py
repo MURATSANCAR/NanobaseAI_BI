@@ -409,7 +409,7 @@ def test_enhance_saves_hd_once_and_mix_prefers_it(film, monkeypatch):
     _shot_film(f)
     calls = []
 
-    async def ok(http, mp4, target):
+    async def ok(http, mp4, target, alias=None):
         calls.append(target)
         return {"video": base64.b64encode(b"hd").decode(), "width": 1920, "height": 1080, "fps": 24,
                 "engine": "seedvr2-7b-sharp"}
@@ -429,7 +429,7 @@ def test_enhance_failure_falls_back_to_raw_and_is_reported(film, monkeypatch):
     _, f = film
     _shot_film(f)
 
-    async def down(http, mp4, target):
+    async def down(http, mp4, target, alias=None):
         raise shoot.VideoUnavailable("iyileştirme servisi bu kurulumda açık değil")
     monkeypatch.setattr(shoot, "_enhance_call", down)
     monkeypatch.delenv("EDITOR_FILM_ENHANCE", raising=False)
