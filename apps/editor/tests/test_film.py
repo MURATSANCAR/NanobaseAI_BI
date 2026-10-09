@@ -1020,3 +1020,12 @@ def test_take_retries_transient_error(monkeypatch, tmp_path):
     store.write(f, "film.json", {"id": "f_x", "format": "cizgi-film", "style": "3b", "stages": {"cekim": {}}})
     asyncio.run(shoot.shoot(tmp_path, f, "t", only=["s01c01"]))
     assert calls == ["s01c01", "s01c01"]
+
+
+def test_black_spans_detects_fade_to_black(tmp_path):
+    p = tmp_path / "v.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=white:s=64x64:d=1", "-f", "lavfi",
+                    "-i", "color=c=black:s=64x64:d=0.6", "-filter_complex", "[0:v][1:v]concat=n=2:v=1[v]", "-map", "[v]",
+                    str(p)], check=True)
+    spans = shoot.black_spans(p)
+    assert spans and spans[0][0] >= 0.9

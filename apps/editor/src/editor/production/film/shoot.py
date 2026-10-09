@@ -383,11 +383,25 @@ async def take(f: Path, shot: dict, by: str, seed: int, http, alias: str = ALIAS
     return cur["versions"][-1]
 
 
+BLACK_MIN = 0.2             # sn; bundan uzun kararma çekimi geçirmez
+
+
+def black_spans(path: Path) -> list[tuple[float, float]]:
+    """Videodaki kararmalar (ffmpeg blackdetect). Video modeli bazen çekimin sonunda siyaha kararıyordu
+    (2026-10-09: kanca çekiminde 0,6 sn); kurguda kesme gibi görünür."""
+    out = subprocess.run(["ffmpeg", "-i", str(path), "-vf", f"blackdetect=d={BLACK_MIN}:pix_th=0.08", "-an", "-f",
+                          "null", "-"], capture_output=True, text=True, timeout=120).stderr
+    import re as _re
+    return [(float(a), float(b)) for a, b in _re.findall(r"black_start:([\d.]+) black_end:([\d.]+)", out)]
+
+
 async def check(f: Path, shot: dict, ver: dict, http) -> dict:
-    """Çekimden üç kare görsel denetçiye; sonuç sürümün `qc`'sine yazılır."""
+    """Çekimden üç kare görsel denetçiye + kararma denetimi; sonuç sürümün `qc`'sine yazılır."""
     lines_of = cast_lines_of(f)
     mp4 = (f / "cekim" / ver["file"]).read_bytes()
     checks = [await F.review(http, fr, shot, lines_of) for fr in sample_frames(mp4)]
+    if black_spans(f / "cekim" / ver["file"]):
+        checks.append({"ok": False, "problems": ["Çekimde kararma (siyah kareler) var."]})
     bad = [p for c in checks if c["ok"] is False for p in c["problems"]]
     qc = {"ok": None if all(c["ok"] is None for c in checks) else not bad, "problems": sorted(set(bad))}
     _mark(f, shot["id"], ver["v"], qc=qc)
