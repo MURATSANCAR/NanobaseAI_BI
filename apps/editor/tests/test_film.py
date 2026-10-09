@@ -1029,3 +1029,21 @@ def test_black_spans_detects_fade_to_black(tmp_path):
                     str(p)], check=True)
     spans = shoot.black_spans(p)
     assert spans and spans[0][0] >= 0.9
+
+
+def test_foley_prompt_and_jobs(tmp_path):
+    from editor.production.film import foley
+    shot = {"action_en": "Levent tears the gift paper.", "sfx": ["paper tearing", ""], "ambience": "quiet room"}
+    p = foley.prompt_of(shot)
+    assert "tears the gift paper" in p and "paper tearing" in p and "quiet room" in p
+    f = tmp_path
+    (f / "cekim").mkdir(); (f / "foley").mkdir()
+    (f / "cekim" / "s01c01.v1.mp4").write_bytes(b"x")
+    (f / "cekim" / "s01c01.v1.dub.mp4").write_bytes(b"x")
+    store.write(f, "senaryo.json", {"rev": 1, "script": {"scenes": [{"shots": [{**shot, "seconds": 3}]}]}})
+    store.write(f, "cekimler.json", {"shots": {"s01c01": {"selected": 1, "versions": [{"v": 1, "file": "s01c01.v1.mp4"}]}}})
+    js = foley.jobs(f)
+    assert len(js) == 1 and js[0]["video"].endswith("s01c01.v1.dub.mp4") and js[0]["out"].endswith("foley/s01c01.wav")
+    (f / "foley" / "s01c01.wav").write_bytes(b"x")
+    foley.mark_done(f, js)
+    assert foley.jobs(f) == []
