@@ -134,6 +134,7 @@ PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score
                "images/upscale",          # book-upscale (Real-ESRGAN, images/upscale/server.py)
                "audio/narrate",           # book-voice (seslendirme + kelime zamanı, images/voice/server.py)
                "video/generations",       # book-video (kareden video / konuşan çekim, images/video/server.py)
+               "video/enhance",           # book-video (SeedVR2 + RIFE iyileştirme; 2026-10-10: listede yoktu → 404)
                "audio/music"}             # book-music (film müziği + tema şarkısı, images/music/server.py)
 HOP = {"content-length", "transfer-encoding", "connection", "keep-alive", "content-encoding"}
 # vLLM serves these at its root, not under /v1 (/tokenize, /detokenize). The editor counts a long

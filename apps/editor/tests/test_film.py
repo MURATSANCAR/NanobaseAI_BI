@@ -1047,3 +1047,8 @@ def test_foley_prompt_and_jobs(tmp_path):
     (f / "foley" / "s01c01.wav").write_bytes(b"x")
     foley.mark_done(f, js)
     assert foley.jobs(f) == []
+
+
+def test_gateway_passes_video_enhance():
+    from editor import gateway
+    assert "video/enhance" in gateway.PASSTHROUGH and "video/generations" in gateway.PASSTHROUGH
