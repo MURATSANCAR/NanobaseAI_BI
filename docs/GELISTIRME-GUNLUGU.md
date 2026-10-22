@@ -3637,8 +3637,6 @@ main'e taşınmadı, test sunucusuna/GPU'ya/VM'e kurulmadı. **DOĞRULANAMADI �
   okunur; `install.sh`; `voice-note-tunnel.service` 18892 — test sunucusu sshd `PermitListen`'e eklenmeli;
   `add-voice-route.py` GPU üretim nginx'i için **kullanıcı onayı bekliyor**), `deploy/nanobase-direct/add-voice-note-route.py`
   (genel API sınırı 10 MB, 5 dk WAV 9,6 MB), VM web şablonuna aynı konum (VM genel sınırı 8 MB idi).
-- **Not:** GPU 0'daki boş bellek o an koşan işlere göre değişiyor (ölçüm başında 13 GB; sonunda başka bir oturumun
-  `laya-egit.py` eğitimi 8 GB tutuyordu → 5 GB). Kurulumda `nvidia-smi` bakılmalı; yer yoksa CPU yolu.
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 
@@ -8330,7 +8328,6 @@ M6'dan sonra aynı gün beş ekran daha. Hepsi salt okunur, hepsi `backend/seman
 
 ## 2026-09-20 23:30 — Editör: "kim ne yaptı" tek token + olasılıkla; ana model koşu başına bir kez açılır (kod main'de, sunucuda ÖLÇÜLMEDİ)
 
-**Neden:** `NandhaKishorM/laya` (0,4B kodlayıcı karar modeli; 19 Eylül'de `convaiinnovations/laya` adıyla bakılıp alınmamıştı) yeniden, bu kez kodu okunarak incelendi. Yine alınmadı: görsel girişi yok, Türkçede 20 seçenekli görevde 0,37 (İngilizce 0,78), eğitimsiz hâli çoğunluk sınıfının altında, ~20 seçenek ve ~768 token durum sınırı, fayda ancak müşteriye özel ince ayarla. Ama övülen fikir — metin üretmeden, tek geçişte, olasılığıyla tipli karar — kendi modelimizle eğitimsiz alınabiliyor ve editör bunu hiçbir yerde kullanmıyordu (`logprobs` sıfır eşleşme).
 
 **ÖLÇÜLDÜ (nesil `37527916`, 693 çift, 668 sn, düşen çağrı 0):** varlık ayrımı çok güvenilir (450 ABSENT, 447'si çıkarımın da listelemediği; `p_actor` ortalaması listelenenlerde 0,346, listelenmeyenlerde 0,011). Üç ayrışma çıktı, üçü de haklı — çıkarımın hatasını yakaladı (sahnede olmayan ama metinde anılan kişi, "Grup" denen olaya yazılmış isim, proje adı). Kusur: karakter açıkça eylemi yaparken bile kütlenin ~%25'i C'de kalıyor; üç ham olasılık üzerinde tek eşik 128 çifti belirsiz sayıyordu. Karar iki aşamalı yapıldı (önce varlık, sonra yalnız A–B arasında yapan/yer alan): belirsiz 128 → 44, çıkarımın listelediklerinde 57 → 14; açılan kararlar gözle doğru. Kalan zayıflık çoğul özne ("Çocuklar... toplar") — üyeler ACTOR değil INVOLVED okunuyor.
 
@@ -8446,7 +8443,6 @@ Aynı kitap ("Ekrana Sığmayan Macera") her düzeltmeden sonra yeni nesil olara
 - **Genel mekanizmalar (nesil 2):** sayfanın metin dışı mürekkep oranı (`page.nontext_ink`) — %2 altı sayfaya görsel model sorulmaz; figür kutusunda mürekkep yoksa figür kaydedilmez; ad sayfa/komşu sayfa metninde geçmiyorsa ya da sayfa ön sayfaysa kimlik belirsiz kalır; çıkarım hikâye dışı sayfaları işaretler (`page_role`); prompt v2 (söz eylemi/içerik ayrımı, güven ölçüsü); birleştirme yalnız aynı/komşu sayfa; sınırına takılan çağrı açıkça kaydedilir, yeniden denemede düşünme kapanır ve sıcaklık artar; metin alanlarına uzunluk sınırı; regresyona 6 yeni değişmez.
 - **Nesil 3 (kullanıcı kararı, karar metninden ölçüme dayalı sapma):** resimli sayfalar doğrudan 32B derin modele (`EDITOR_VISION_SCREEN=deep`), 8B yalnız OCR. Ölçüm: hızlı model resimli sayfaların %23'ünde figürü yanlış adlandırmış, bir kısmında işaretsiz ve yüksek güvenle; resimli 26 sayfanın 26'sı zaten derine gidiyordu. "Önemli olay" kararı tek sayfaya bakan modelden alınmaz (derin model de 22 sayfanın 17'sine önemli diyordu): ana model birleştirilmiş zaman çizelgesinde anlatı rolü verir (`event.narrative_role`; bu kitapta 1 giriş, 1 tetikleyici, 2 dönüm noktası, 1 doruk, 2 çözüm).
 - **Açık:** sohbet ajanı uçtan uca hiç denenmedi (sohbetle iş başlatma, skill'ler, Critic/Editor Review alt ajanları, soru-cevap); editör kararı döngüsü denenmedi; arayüz yok; bütün eşikler tek kitapta ölçüldü — ikinci kitap şart; editör kuyruğunun büyümesi (güvenler artık şişkin değil, 0,55 eşiğinin hemen altında ~24 duygu/tema iddiası) eşik mi formül mü, ikinci kitapla bakılacak; nesil 3'te bir birleştirme hâlâ tartışmalı (aynı sayfada ardışık iki eylem); derin model sayfa başına 2–8 dk ve düşünme bazen 16K sınırına takılıyor (FP8 sürümü seçenek, karar kullanıcıda).
-- `convaiinnovations/laya` (0,4B karar modeli) incelendi, alınmadı: görsel yok, Türkçe 0,437, kendi kartına göre yanlışken de güveni ≥0,885, sıfır atışta şansa yakın; aynı çıktı kendi modelimizden `choice`+`logprobs` ile eğitimsiz alınır.
 
 ## 2026-09-19 18:40 — Editör modülü (sohbet ajanı (Book Director)): hazırlık ve kurulum
 
